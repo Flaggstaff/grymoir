@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.0).
+ * Spécification : docs/vm.md (révision 1.2).
  */
 #include "vm.h"
 #include "decimal.h"
@@ -71,12 +71,22 @@ typedef struct {
     Valeur ancienne;
 } Ecriture;
 
+typedef struct {
+    char *nom;
+    Bloc *bloc;
+    size_t *liaison;   /* noms du bloc → cases globales */
+} Formule;
+
 struct Machine {
     Case *cases;
     size_t nb_cases, cap_cases;
     Ecriture *journal;
     size_t nb_journal, cap_journal;
+    Formule *formules;
+    size_t nb_formules;
 };
+
+#define APPELS_MAX 1000   /* profondeur d'appels : au-delà, « Trop d'appels imbriqués » */
 
 Machine *machine_creer(void) {
     Machine *m = grym_allouer(sizeof *m);
@@ -92,6 +102,12 @@ void machine_detruire(Machine *m) {
     }
     free(m->cases);
     free(m->journal);
+    for (size_t i = 0; i < m->nb_formules; i++) {
+        free(m->formules[i].nom);
+        bloc_detruire(m->formules[i].bloc);
+        free(m->formules[i].liaison);
+    }
+    free(m->formules);
     free(m);
 }
 
@@ -194,25 +210,97 @@ static char *message_statut(StatutDecimal st) {
     }
 }
 
-int machine_executer(Machine *m, const Bloc *b, Chaine *sortie, Diagnostic *diag) {
+static size_t *lier(Machine *m, const Bloc *b) {
+    size_t *liaison = grym_allouer((b->nb_noms ? b->nb_noms : 1) * sizeof *liaison);
+    for (size_t i = 0; i < b->nb_noms; i++) liaison[i] = case_de(m, b->noms[i]);
+    return liaison;
+}
+
+static Formule *formule_de(Machine *m, const char *nom) {
+    for (size_t i = 0; i < m->nb_formules; i++)
+        if (strcmp(m->formules[i].nom, nom) == 0) return &m->formules[i];
+    return NULL;
+}
+
+/* Remplacements effectués par un module, pour revenir en arrière en cas d'échec. */
+typedef struct {
+    size_t index;
+    Bloc *bloc;
+    size_t *liaison;
+} Remplacement;
+
+/* Cadre d'appel : le bloc exécuté, sa position, ses cases locales. */
+typedef struct {
+    const Bloc *b;
+    const size_t *liaison;
+    size_t ip;
+    Valeur *locaux;
+    unsigned char *definis;
+} Cadre;
+
+static void liberer_cadre(Cadre *c) {
+    if (c->locaux)
+        for (int k = 0; k < c->b->nb_locaux; k++)
+            if (c->definis[k]) valeur_liberer(&c->locaux[k]);
+    free(c->locaux);
+    free(c->definis);
+}
+
+int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *diag) {
     diag->message = NULL;
     diag->ligne = diag->colonne = 0;
 
     char *erreur = NULL;
-    if (!bloc_verifier(b, &erreur)) {
+    if (!module_verifier(module, &erreur)) {
         diag->message = grym_formater("Bytecode invalide : %s", erreur);
         free(erreur);
         return 0;
     }
 
-    /* Liaison des noms du bloc aux cases de la machine. */
-    size_t *liaison = grym_allouer((b->nb_noms ? b->nb_noms : 1) * sizeof *liaison);
-    for (size_t i = 0; i < b->nb_noms; i++) liaison[i] = case_de(m, b->noms[i]);
+    /* Enregistrement des formules (docs/vm.md, § 5) : une formule du même nom est remplacée. */
+    size_t nb_avant = m->nb_formules;
+    Remplacement *remplaces = grym_allouer(module->nb * sizeof *remplaces);
+    size_t nb_remplaces = 0;
+    for (size_t k = 1; k < module->nb; k++) {
+        Bloc *f = module->blocs[k];
+        module->blocs[k] = NULL;
+        Formule *ex = formule_de(m, f->nom);
+        if (ex) {
+            remplaces[nb_remplaces].index = (size_t)(ex - m->formules);
+            remplaces[nb_remplaces].bloc = ex->bloc;
+            remplaces[nb_remplaces].liaison = ex->liaison;
+            nb_remplaces++;
+            ex->bloc = f;
+            ex->liaison = lier(m, f);
+        } else {
+            Formule *t = grym_allouer((m->nb_formules + 1) * sizeof *t);
+            if (m->nb_formules) memcpy(t, m->formules, m->nb_formules * sizeof *t);
+            free(m->formules);
+            m->formules = t;
+            Formule *nf = &m->formules[m->nb_formules++];
+            nf->nom = grym_dupliquer(f->nom);
+            nf->bloc = f;
+            nf->liaison = lier(m, f);
+        }
+    }
+
+    const Bloc *principal = module->blocs[0];
+    size_t *liaison_principale = lier(m, principal);
+    Cadre *cadres = grym_allouer(8 * sizeof *cadres);
+    size_t nb_cadres = 1, cap_cadres = 8;
+    cadres[0].b = principal;
+    cadres[0].liaison = liaison_principale;
+    cadres[0].ip = 0;
+    cadres[0].locaux = NULL;
+    cadres[0].definis = NULL;
 
     Pile pile = { NULL, 0, 0 };
     int ok = 1;
-    size_t ip = 0;
     for (;;) {
+        Cadre *cadre = &cadres[nb_cadres - 1];
+        const Bloc *b = cadre->b;
+        const size_t *liaison = cadre->liaison;
+        size_t ip = cadre->ip;
         size_t debut = ip;
         CodeInstruction code = (CodeInstruction)b->code[ip];
         unsigned op = 0;
@@ -223,7 +311,14 @@ int machine_executer(Machine *m, const Bloc *b, Chaine *sortie, Diagnostic *diag
             cible = (size_t)b->code[ip + 1] | ((size_t)b->code[ip + 2] << 8)
                   | ((size_t)b->code[ip + 3] << 16) | ((size_t)b->code[ip + 4] << 24);
         ip += instruction_taille(code);
-        if (code == I_RETOUR) break;
+        cadre->ip = ip;
+
+        if (code == I_RETOUR || code == I_RENDRE) {
+            if (nb_cadres == 1) break;                  /* fin du programme */
+            liberer_cadre(cadre);
+            nb_cadres--;                                /* la valeur rendue reste au sommet de la pile */
+            continue;
+        }
 
         switch (code) {
         case I_CONSTANTE: {
@@ -349,7 +444,7 @@ int machine_executer(Machine *m, const Bloc *b, Chaine *sortie, Diagnostic *diag
             break;
         }
         case I_SAUTER:
-            ip = cible;
+            cadre->ip = cible;
             break;
         case I_SAUTER_SI_FAUX: {
             Valeur v = depiler(&pile);
@@ -357,9 +452,63 @@ int machine_executer(Machine *m, const Bloc *b, Chaine *sortie, Diagnostic *diag
                 ok = echouer(diag, b, debut, grym_formater(
                     "Condition ni vraie ni fausse : la valeur est %s.", nom_type(v.type)));
             } else if (!v.vrai) {
-                ip = cible;
+                cadre->ip = cible;
             }
             valeur_liberer(&v);
+            break;
+        }
+        case I_LIRE_LOCAL:
+            if (!cadre->definis[op]) {
+                ok = echouer(diag, b, debut, grym_formater("Case locale %u sans valeur.", op));
+                break;
+            }
+            empiler(&pile, valeur_copier(&cadre->locaux[op]));
+            break;
+        case I_ECRIRE_LOCAL:
+            if (cadre->definis[op]) valeur_liberer(&cadre->locaux[op]);
+            cadre->locaux[op] = depiler(&pile);
+            cadre->definis[op] = 1;
+            break;
+        case I_APPELER: {
+            const char *nom = b->noms[op];
+            unsigned nb_args = b->code[debut + 3];
+            int rend = b->code[debut + 4];
+            Formule *f = formule_de(m, nom);
+            if (!f) {
+                ok = echouer(diag, b, debut, grym_formater("Formule « %s » inconnue.", nom));
+                break;
+            }
+            if ((f->bloc->sorte == B_CALCUL) != rend || f->bloc->nb_parametres != (int)nb_args) {
+                ok = echouer(diag, b, debut, grym_formater(
+                    "Appel de « %s » incompatible : %s à %d paramètre%s attendu.", nom,
+                    f->bloc->sorte == B_CALCUL ? "un calcul" : "une action",
+                    f->bloc->nb_parametres, f->bloc->nb_parametres > 1 ? "s" : ""));
+                break;
+            }
+            if (nb_cadres >= APPELS_MAX) {
+                ok = echouer(diag, b, debut, grym_formater(
+                    "Trop d'appels imbriqués : plus de %d. Une formule s'appelle-t-elle sans fin ?", APPELS_MAX));
+                break;
+            }
+            if (nb_cadres == cap_cadres) {
+                cap_cadres *= 2;
+                Cadre *nc = grym_allouer(cap_cadres * sizeof *nc);
+                memcpy(nc, cadres, nb_cadres * sizeof *nc);
+                free(cadres);
+                cadres = nc;
+            }
+            Cadre *n = &cadres[nb_cadres++];
+            n->b = f->bloc;
+            n->liaison = f->liaison;
+            n->ip = 0;
+            int nl = f->bloc->nb_locaux;
+            n->locaux = grym_allouer((nl ? (size_t)nl : 1) * sizeof *n->locaux);
+            n->definis = grym_allouer(nl ? (size_t)nl : 1);
+            memset(n->definis, 0, nl ? (size_t)nl : 1);
+            for (unsigned k = nb_args; k > 0; k--) {       /* le dernier argument est au sommet */
+                n->locaux[k - 1] = depiler(&pile);
+                n->definis[k - 1] = 1;
+            }
             break;
         }
         default:
@@ -370,8 +519,32 @@ int machine_executer(Machine *m, const Bloc *b, Chaine *sortie, Diagnostic *diag
     }
 
     vider(&pile);
-    free(liaison);
-    if (ok) valider(m);
-    else annuler(m);
+    for (size_t k = nb_cadres; k > 0; k--) liberer_cadre(&cadres[k - 1]);
+    free(cadres);
+    free(liaison_principale);
+    if (ok) {
+        valider(m);
+        for (size_t k = 0; k < nb_remplaces; k++) {
+            bloc_detruire(remplaces[k].bloc);
+            free(remplaces[k].liaison);
+        }
+    } else {
+        annuler(m);
+        /* La table des formules revient à son état d'avant. */
+        for (size_t k = nb_remplaces; k > 0; k--) {
+            Formule *f = &m->formules[remplaces[k - 1].index];
+            bloc_detruire(f->bloc);
+            free(f->liaison);
+            f->bloc = remplaces[k - 1].bloc;
+            f->liaison = remplaces[k - 1].liaison;
+        }
+        while (m->nb_formules > nb_avant) {
+            Formule *f = &m->formules[--m->nb_formules];
+            free(f->nom);
+            bloc_detruire(f->bloc);
+            free(f->liaison);
+        }
+    }
+    free(remplaces);
     return ok;
 }

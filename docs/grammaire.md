@@ -1,10 +1,10 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.3 de la spécification, révisée le 21 septembre 2026.
+Version 1.4 de la spécification, révisée le 21 septembre 2026.
 Référence : Charte de GrymoiR v1.6, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
-Périmètre : nommer, calculer, afficher, décider (§ 5), et le calcul des suites attendues (§ 8). Tout le reste attend les versions suivantes.
+Périmètre : nommer, calculer, afficher, décider (§ 5), définir des formules (§ 9), et le calcul des suites attendues (§ 8). Tout le reste attend les versions suivantes.
 
 ---
 
@@ -97,7 +97,8 @@ Correspondance prévue en forme compacte (v0.2) : `_soit total << 5` pour créer
 
 - Un nom peut compter plusieurs mots (`prix unitaire`, `date de création`).
 - Dans une expression, le parser retient la plus longue correspondance parmi les noms déjà déclarés. Si `prix` et `prix unitaire` coexistent, `prix unitaire × 2` désigne `prix unitaire`.
-- Les mots réservés ne peuvent pas faire partie d'un nom écrit sans crochets : `vaut`, `devient`, `puis`, `est`, `et`, `ou`, `si`, `sinon`, `vrai`, `faux`, ainsi que l'élision `n'` devant `est`.
+- Les mots réservés ne peuvent pas faire partie d'un nom écrit sans crochets : `vaut`, `devient`, `puis`, `est`, `et`, `ou`, `si`, `sinon`, `vrai`, `faux`, `rendre`, ainsi que l'élision `n'` devant `est`.
+- La suite `d'un` ou `d'une` annonce un paramètre (§ 9.3) : elle ne fait jamais partie d'un nom.
 - Un nom qui contient un mot réservé s'écrit entre crochets, à sa création comme à chaque usage : `Le [frais de port et d'emballage] vaut 12.` Tout nom peut s'écrire entre crochets : `[total]` et `total` désignent le même nom. L'aide à la saisie propose ces noms avec leurs crochets.
 - Un nom entre crochets s'écrit seul entre l'article et le verbe, et ne commence pas par un article.
 - Un nom ne commence ni par un article ni par une élision. Articles et élisions sont permis à l'intérieur : `la date de la vente`, `le prix de l'article`.
@@ -269,7 +270,14 @@ Sinon :
 ```
 programme    = bloc ;
 bloc         = { phrase } ;                      (* alignées sur une même colonne, § 5.4 *)
-phrase       = création | modification | affichage | si | remarque ;
+phrase       = création | modification | affichage | si | remarque
+             | calcul | action | rendre | appel-action ;
+calcul       = article nom paramètres-de ( "vaut" valeur "." | ":" bloc-indenté ) ;
+paramètres-de = "d'" un nom { "et" "d'" un nom } ;
+action       = "Pour" nom [ un nom { "et" un nom } ] ":" bloc-indenté ;
+un           = "un" | "une" ;
+rendre       = "Rendre" valeur "." ;
+appel-action = nom-d-action [ comparaison { "et" comparaison } ] "." ;
 création     = article nom "vaut" valeur "." ;
 modification = article nom "devient" valeur "." ;
 affichage    = "Afficher" élément { "puis" élément } "." ;
@@ -293,7 +301,8 @@ expression   = terme { ( "+" | "−" ) terme } ;
 terme        = unaire { ( "×" | "÷" ) unaire } ;
 unaire       = "−" unaire | puissance ;
 puissance    = base [ "^" unaire ] ;
-base         = nombre | [ article ] ( nom | "[" nom "]" ) | "(" expression ")" ;
+base         = nombre | [ article ] ( nom | "[" nom "]" ) [ arguments ] | "(" expression ")" ;
+arguments    = de unaire { "et" de unaire } ;   (* seulement après le nom d'un calcul *)
 article      = "le" | "la" | "l'" ;
 ```
 
@@ -303,6 +312,7 @@ Limites de cette notation :
 - `"n'" "est" "pas"` : l'élision et `pas` vont ensemble ; `n'est` sans `pas` est une erreur.
 - Une parenthèse ouvre un groupe logique si elle contient, à son premier niveau, une comparaison, `et`, `ou`, `vrai` ou `faux` ; sinon elle groupe un calcul.
 - L'alignement des blocs et la règle « pas de mélange de `et` et `ou` » ne s'expriment pas en EBNF (§ 5.3, § 5.4).
+- Qu'un nom désigne une variable, un calcul ou une action dépend des déclarations qui précèdent (§ 9.5).
 - Les équivalents ASCII des opérateurs (§ 1.4) sont traités au lexer.
 
 ---
@@ -331,6 +341,11 @@ Limites de cette notation :
 | Condition non booléenne (exécution) | « Condition ni vraie ni fausse : la valeur est un nombre. » |
 | Indentation | « Indentation inattendue : seul un bloc ouvert par « : » s'indente. » |
 | `Sinon` mal placé | « « Sinon » doit être aligné sur son « Si ». » |
+| Variable lue dans un calcul | « « taux » n'est pas visible dans un calcul : un calcul ne voit que ses paramètres. Passez la valeur en paramètre. » |
+| Nombre d'arguments | « « carré » attend 1 paramètre, 2 donnés. » |
+| Calcul sans `Rendre` final | « Le calcul « valeur » doit se terminer par « Rendre … ». » |
+| Affichage dans un calcul | « Un calcul n'affiche rien : il rend une valeur. Pour afficher, écrivez une action. » |
+| Récursion sans fin (exécution) | « Trop d'appels imbriqués : plus de 1000. Une formule s'appelle-t-elle sans fin ? » |
 
 Chaque message est précédé du fichier, de la ligne et de la colonne (charte, art. 8) : `facture.grym:7:18 : erreur : Division par zéro.`
 
@@ -340,8 +355,9 @@ Chaque message est précédé du fichier, de la ligne et de la colonne (charte, 
 
 À chaque position, l'analyseur calcule l'ensemble exact des suites valides (charte, art. 9).
 
-- Catégories : début de phrase (`Le`, `La`, `L'`, `Afficher`, `Si`, `Remarque :`), nombre, nom déclaré, nouveau nom, parenthèse, négation, texte, `vrai` et `faux`, opérateurs, comparaisons (`est`, `n'est pas`, symboles), `et` et `ou`, parenthèse fermante, `vaut` et `devient`, `,` et `:` après une condition, `puis`, point final.
+- Catégories : début de phrase (`Le`, `La`, `L'`, `Afficher`, `Si`, `Pour`, `Remarque :`, et les actions déclarées, avec une majuscule), nombre, nom déclaré, nouveau nom, parenthèse, négation, texte, `vrai` et `faux`, opérateurs, comparaisons (`est`, `n'est pas`, symboles), `et` et `ou`, parenthèse fermante, `vaut` et `devient`, `,` et `:` après une condition, `puis`, point final.
 - Après `est`, les tournures accordées au genre du sujet (`supérieure à`, `positive`…) ; après `supérieur`, `à`, `au` ou `ou`.
+- Après le nom d'un calcul, `de` ou `du`. Dans un calcul, seuls ses paramètres, ses noms locaux et les formules sont proposés.
 - S'y ajoutent les mots qui prolongent un nom composé déclaré : après `prix`, `unitaire` si `prix unitaire` existe.
 - Premier usage : les messages d'erreur (« `« 2 » inattendu, attendu : un opérateur ou un point final.` »).
 - Second usage : l'aide à la saisie. Les suites sont calculées à la position du curseur ; si un mot est en cours de frappe, seules les suites qui le prolongent sont proposées, sans tenir compte de la casse.
@@ -354,6 +370,67 @@ Limites de la v0.1 :
 
 ---
 
+## 9. Formules
+
+Une formule est un calcul, qui vaut quelque chose, ou une action, qui fait quelque chose.
+
+### 9.1 Calculs
+
+Un calcul se définit comme il s'utilise :
+
+```
+Le carré d'un nombre vaut nombre × nombre.
+Afficher le carré de 7.                        →  49
+```
+
+En bloc, quand il faut plusieurs étapes, chaque chemin se termine par `Rendre` :
+
+```
+La valeur absolue d'un nombre :
+    Si nombre est négatif, rendre −nombre.
+    Rendre nombre.
+```
+
+- Appel : `le carré de 7`, `la moyenne de 4 et de 6`, `le carré du prix` (contraction, § 5.2). L'article est facultatif ; s'il est écrit, il s'accorde avec le genre du calcul.
+- Un argument se lie plus fort que les opérateurs : `le carré de 3 + 1` vaut 10. Pour passer une somme, parenthésez : `le carré de (3 + 1)`.
+- `et` suivi de `de`, `d'` ou `du` continue la liste des arguments ; sinon c'est le `et` logique.
+- Un calcul en bloc se termine par une phrase `Rendre` au premier niveau de son bloc.
+
+### 9.2 Actions
+
+```
+Pour relancer un client :
+    Si le client est négatif, afficher « Relance ».
+
+Relancer le client.
+```
+
+- Une action s'écrit en bloc, après `Pour` et son nom (un ou plusieurs mots, à l'infinitif).
+- Appel : le nom de l'action commence la phrase, suivi des arguments séparés par `et`. Chaque argument est une comparaison ou une expression ; un `et` logique dans un argument demande des parenthèses.
+- Une action ne rend rien : `Rendre` y est une erreur.
+
+### 9.3 Paramètres
+
+- L'article indéfini déclare un paramètre et fixe son genre : `d'un nombre` (calcul), `un client` (action), `une remise` (féminin).
+- Plusieurs paramètres : `d'un premier nombre et d'un second nombre`, `un montant et une remise`.
+- Dans le corps, un paramètre se nomme comme tout autre nom : `nombre`, `le nombre`. Deux paramètres d'une même formule portent des noms distincts.
+
+### 9.4 Pureté et visibilité
+
+- **Un calcul ne voit que ses paramètres, ses noms locaux et les formules.** Les variables du programme lui sont invisibles, il n'affiche rien et n'appelle pas d'action. Même entrée, même résultat.
+- **Une action voit et modifie les variables du programme.** Elle peut afficher et appeler d'autres formules.
+- Un nom créé dans une formule lui est local et disparaît à la fin de l'appel.
+
+### 9.5 Règles de définition
+
+- Une formule se définit au premier niveau du programme, hors de tout bloc, et avant son premier usage.
+- Une formule peut s'appeler elle-même (récursion). Au-delà de 1000 appels imbriqués, l'exécution s'arrête avec une erreur.
+- Un calcul ne se modifie pas (`devient` est une erreur) ; un nom de formule ne se réutilise pas.
+- Une action qui échoue n'écrit rien (charte, art. 7) : comme toute exécution, elle est annulée par le journal (docs/vm.md, § 6).
+- Dans la boucle interactive, une formule définie par une saisie ratée n'existe pas.
+
+---
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -362,3 +439,4 @@ Limites de la v0.1 :
 | 1.1 | 2026-09-21 | Puissance avant négation (`−2 ^ 2` = `−4`). Guillemets `“ ”` et tiret `–` acceptés ; trait d'union toujours opérateur. Règles des noms (mots réservés, article initial interdit). Remarques en début de ligne. Boucle interactive : point final facultatif, saisie atomique. Nouveau § 7 : suites attendues |
 | 1.2 | 2026-09-21 | Arithmétique précisée : division finie exacte, zéros de fin, multiplication exacte, puissance à exposant entier (`0 ^ 0` = 1), limite de 1'000 chiffres. Afficher : séparateur espace, signe `−`. Boucle interactive : `quitter`, atomicité étendue aux erreurs de calcul. Messages d'erreur d'exécution |
 | 1.3 | 2026-09-21 | Nouveau § 5 : décider (comparaisons en mots et en symboles, sens courant de positif, accords, contractions au et du, et et ou sans mélange, Si en forme courte et en bloc, portée des blocs, booléens). Noms entre crochets, mots réservés étendus, tabulations interdites en début de ligne. Renumérotation : EBNF § 6, messages § 7, suites § 8 |
+| 1.4 | 2026-09-21 | Nouveau § 9 : formules. Calculs (définis comme ils s'utilisent, forme courte et bloc avec `Rendre`), actions (`Pour`), paramètres par l'article indéfini, calculs purs, récursion limitée à 1000 appels. `rendre` réservé, `d'un` réservé aux paramètres |

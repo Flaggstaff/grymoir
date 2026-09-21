@@ -25,9 +25,9 @@ static char *executer_source(Portee *portee, Machine *m, const char *src, int in
         return msg;
     }
     Chaine s = {0};
-    Bloc *b = compiler(&p, &d);
+    Module *b = compiler(&p, &d);
     int ok = b && machine_executer(m, b, &s, &d);
-    bloc_detruire(b);
+    module_detruire(b);
     programme_liberer(&p);
     char *r = chaine_rendre(&s);
     if (!ok) {
@@ -170,6 +170,31 @@ int main(void) {
     PROG("Le t vaut vrai.\nAfficher 1 = t.", "~Comparaison impossible entre un nombre et un booléen.");
     PROG("Le t vaut 3.\nAfficher t et vrai.", "~Condition ni vraie ni fausse");
 
+    /* --- Formules (grammaire, § 9 ; docs/vm.md, § 3) --- */
+    PROG("Le carré d'un nombre vaut nombre × nombre.\nAfficher le carré de 7 puis le carré de −1,5.", "49 2,25");
+    PROG("La moyenne d'un premier nombre et d'un second nombre vaut (premier nombre + second nombre) ÷ 2.\n"
+         "Afficher la moyenne de 4 et de 6 puis la moyenne de 1 et de 2.", "5 1,5");
+    PROG("La valeur absolue d'un nombre :\n    Si nombre est négatif, rendre −nombre.\n    Rendre nombre.\n"
+         "Afficher la valeur absolue de −5 puis la valeur absolue de 3.", "5 3");
+    PROG("La factorielle d'un nombre :\n    Si nombre ≤ 1, rendre 1.\n    Rendre nombre × la factorielle de (nombre − 1).\n"
+         "Afficher la factorielle de 20.", "2'432'902'008'176'640'000");
+    PROG("Le carré d'un nombre vaut nombre × nombre.\nLa somme des carrés d'un a et d'un b vaut carré de a + carré de b.\n"
+         "Afficher la somme des carrés de 3 et de 4.", "25");
+    PROG("Le double d'un nombre :\n    Le résultat vaut nombre × 2.\n    Le résultat devient résultat + 0.\n"
+         "    Rendre résultat.\nAfficher le double de 21.", "42");
+    PROG("Le total vaut 0.\nPour ajouter un montant :\n    Le total devient total + montant.\n"
+         "Ajouter 5.\nAjouter 2,50.\nAfficher le total.", "7,50");
+    PROG("Pour saluer :\n    Afficher « Bonjour ».\nSaluer.\nSaluer.", "Bonjour\nBonjour");
+    PROG("Pour payer un montant et une remise :\n    Afficher montant − remise.\nPayer 10 et 2.", "8");
+    PROG("Le compteur vaut 0.\nPour compter un nombre :\n    Si nombre > 0 :\n        Le compteur devient compteur + 1.\n"
+         "        Compter nombre − 1.\nCompter 50.\nAfficher le compteur.", "50");
+    PROG("La boucle d'un nombre vaut la boucle de nombre + 1.\nAfficher la boucle de 1.",
+         "~Trop d'appels imbriqués : plus de 1000.");
+    PROG("L'inverse d'un nombre vaut 1 ÷ nombre.\nAfficher 1.\nAfficher l'inverse de 0.", "ERREUR 1:30 Division par zéro.");
+    /* une action qui échoue n'écrit rien (charte, art. 7) */
+    PROG("Le total vaut 1.\nPour casser :\n    Le total devient 99.\n    Le total devient total ÷ 0.\nCasser.",
+         "ERREUR 4:28 Division par zéro.");
+
     /* --- Boucle interactive : une saisie ratée n'a aucun effet (§ 3.3, docs/vm.md § 6) --- */
     {
         total++;
@@ -193,6 +218,109 @@ int main(void) {
         }
         machine_detruire(m);
         portee_detruire(p);
+    }
+
+    /* --- Formules dans la boucle interactive --- */
+    {
+        total++;
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        const char *saisies[] = {
+            "Le carré d'un nombre vaut nombre × nombre.",
+            "carré de 9",
+            "Le cube d'un nombre vaut nombre × carré de nombre. Afficher 1 ÷ 0.",
+            "cube de 2",
+            "Le total vaut 1.",
+            "Pour doubler :\n    Le total devient total × 2.",
+            "Doubler.",
+            "total",
+            "Doubler. Le total devient total ÷ 0.",
+            "total"
+        };
+        const char *attendus[] = { "", "81", "~Division par zéro", "~« cube de » inconnu", "", "", "", "2",
+                                   "~Division par zéro", "2" };
+        for (int i = 0; i < 10; i++) {
+            Portee *sp = portee_cloner(p);
+            char *r = executer_source(p, m, saisies[i], 1);
+            int echec = strncmp(r, "ERREUR", 6) == 0;
+            int ok = attendus[i][0] == '~' ? strstr(r, attendus[i] + 1) != NULL
+                                            : strcmp(r, attendus[i]) == 0;
+            if (echec) { portee_detruire(p); p = sp; } else portee_detruire(sp);
+            if (!ok) { signaler(__LINE__, saisies[i], attendus[i], r); free(r); break; }
+            free(r);
+        }
+        machine_detruire(m);
+        portee_detruire(p);
+    }
+
+    /* --- Module à plusieurs blocs : désassemblage et fichier --- */
+    {
+        total++;
+        const char *src = "Le carré d'un nombre vaut nombre × nombre.\nAfficher le carré de 3.";
+        const char *attendu =
+            "Programme\n"
+            "   2  0000  CONSTANTE         0     ; 3\n"
+            "      0003  APPELER           0     ; carré (1 argument, rend une valeur)\n"
+            "      0008  AFFICHER          1\n"
+            "      0011  RETOUR\n"
+            "\n"
+            "Calcul « carré » : 1 paramètre, 1 case locale\n"
+            "   1  0000  LIRE_LOCAL        0     ; paramètre 1\n"
+            "      0003  LIRE_LOCAL        0     ; paramètre 1\n"
+            "      0006  MULTIPLICATION\n"
+            "      0007  RENDRE\n";
+        Portee *p = portee_creer();
+        Programme prog;
+        Diagnostic d;
+        analyser(src, strlen(src), p, 0, &prog, &d);
+        Module *b = compiler(&prog, &d);
+        programme_liberer(&prog);
+        portee_detruire(p);
+        char *r = module_desassembler(b);
+        if (strcmp(r, attendu) != 0) signaler(__LINE__, src, attendu, r);
+        free(r);
+        /* aller-retour et exécution du fichier relu */
+        total++;
+        size_t taille;
+        unsigned char *octets = module_serialiser(b, &taille);
+        char *err = NULL;
+        Module *relu = module_lire(octets, taille, &err);
+        Machine *m = machine_creer();
+        Chaine s = {0};
+        if (!relu || !machine_executer(m, relu, &s, &d)) signaler(__LINE__, "relecture", "9", err ? err : d.message);
+        else if (strcmp(s.d, "9\n") != 0) signaler(__LINE__, "relecture", "9", s.d);
+        free(s.d);
+        free(err);
+        machine_detruire(m);
+        module_detruire(relu);
+        free(octets);
+        module_detruire(b);
+
+        /* un fichier au format 1 (un seul bloc) reste lisible */
+        total++;
+        const unsigned char v1[] = { 'G','R','Y','M', 1,0, 0,0,0,0, 0,0,0,0, 1,0,0,0, I_RETOUR, 0,0,0,0 };
+        Module *ancien = module_lire(v1, sizeof v1, &err);
+        if (!ancien) signaler(__LINE__, "format 1", "lisible", err);
+        free(err);
+        err = NULL;
+        module_detruire(ancien);
+
+        /* appel d'une formule absente (fichier fabriqué) */
+        total++;
+        Bloc *x = bloc_creer();
+        long k = bloc_nom(x, "fantôme");
+        bloc_emettre_appel(x, (uint16_t)k, 0, 0, 1, 1);
+        bloc_emettre(x, I_RETOUR, 0, 1, 1);
+        Module *mx = module_creer();
+        module_ajouter(mx, x);
+        Machine *m2 = machine_creer();
+        Chaine s2 = {0};
+        if (machine_executer(m2, mx, &s2, &d) || !strstr(d.message, "Formule « fantôme » inconnue"))
+            signaler(__LINE__, "formule absente", "Formule « fantôme » inconnue", d.message ? d.message : "(acceptée)");
+        else diagnostic_liberer(&d);
+        free(s2.d);
+        machine_detruire(m2);
+        module_detruire(mx);
     }
 
     /* --- Désassemblage (docs/vm.md, § 9) --- */
@@ -222,9 +350,9 @@ int main(void) {
         Diagnostic d;
         char *r = NULL;
         if (analyser(src, strlen(src), p, 0, &prog, &d)) {
-            Bloc *b = compiler(&prog, &d);
-            r = bloc_desassembler(b);
-            bloc_detruire(b);
+            Module *b = compiler(&prog, &d);
+            r = module_desassembler(b);
+            module_detruire(b);
             programme_liberer(&prog);
         } else {
             r = grym_dupliquer(d.message);
@@ -242,17 +370,17 @@ int main(void) {
         Programme prog;
         Diagnostic d;
         analyser(src, strlen(src), p, 0, &prog, &d);
-        Bloc *b = compiler(&prog, &d);
+        Module *b = compiler(&prog, &d);
         programme_liberer(&prog);
         portee_detruire(p);
         size_t taille;
-        unsigned char *octets = bloc_serialiser(b, &taille);
+        unsigned char *octets = module_serialiser(b, &taille);
 
         /* aller-retour : même désassemblage, même résultat */
         total++;
         char *err = NULL;
-        Bloc *relu = bloc_lire(octets, taille, &err);
-        char *d1 = bloc_desassembler(b), *d2 = relu ? bloc_desassembler(relu) : grym_dupliquer(err);
+        Module *relu = module_lire(octets, taille, &err);
+        char *d1 = module_desassembler(b), *d2 = relu ? module_desassembler(relu) : grym_dupliquer(err);
         if (strcmp(d1, d2) != 0) signaler(__LINE__, "aller-retour .grymb", d1, d2);
         free(d1); free(d2); free(err);
         total++;
@@ -264,7 +392,7 @@ int main(void) {
             if (strcmp(r, "x = 256\n") != 0) signaler(__LINE__, "exécution du .grymb relu", "x = 256", r);
             free(r);
             machine_detruire(m);
-            bloc_detruire(relu);
+            module_detruire(relu);
         } else {
             signaler(__LINE__, "exécution du .grymb relu", "x = 256", "fichier illisible");
         }
@@ -284,10 +412,10 @@ int main(void) {
             if (t > taille) copie[taille] = 0;
             if (cas[k].octet >= 0) copie[cas[k].pos] = (unsigned char)cas[k].octet;
             char *e = NULL;
-            Bloc *x = bloc_lire(copie, t, &e);
+            Module *x = module_lire(copie, t, &e);
             if (x || !e || !strstr(e, cas[k].fragment))
                 signaler(__LINE__, cas[k].nom, cas[k].fragment, e ? e : "(accepté)");
-            bloc_detruire(x);
+            module_detruire(x);
             free(e);
             free(copie);
         }
@@ -314,18 +442,20 @@ int main(void) {
             x->code = grym_allouer(codes[k].n);
             memcpy(x->code, codes[k].code, codes[k].n);
             x->taille_code = x->cap_code = codes[k].n;
+            Module *mx = module_creer();
+            module_ajouter(mx, x);
             Machine *m = machine_creer();
             Chaine s = {0};
             Diagnostic dd;
-            int ok = machine_executer(m, x, &s, &dd);
+            int ok = machine_executer(m, mx, &s, &dd);
             if (ok || !dd.message || !strstr(dd.message, codes[k].fragment))
                 signaler(__LINE__, codes[k].nom, codes[k].fragment, dd.message ? dd.message : "(accepté)");
             if (!ok) diagnostic_liberer(&dd);
             free(s.d);
             machine_detruire(m);
-            bloc_detruire(x);
+            module_detruire(mx);
         }
-        bloc_detruire(b);
+        module_detruire(b);
     }
 
     printf("%d/%d tests réussis\n", total - echecs, total);

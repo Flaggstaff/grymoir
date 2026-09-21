@@ -12,6 +12,8 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->negation = 0;
     n->forme = 0;
     n->crochets = 0;
+    n->local = -1;
+    n->entier = 0;
     n->article = ART_AUCUN;
     n->texte = NULL;
     n->enfants = NULL;
@@ -148,6 +150,35 @@ static void decrire(const Noeud *n, Chaine *c) {
             chaine_ajouter(c, " ");
             decrire(n->enfants[k], c);
         }
+        chaine_ajouter(c, ")");
+        return;
+    case N_APPEL:
+    case P_APPEL:
+        chaine_ajouter(c, n->type == N_APPEL ? "(appel [" : "(action-appel [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "]");
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            chaine_ajouter(c, " ");
+            decrire(n->enfants[k], c);
+        }
+        chaine_ajouter(c, ")");
+        return;
+    case P_CALCUL:
+    case P_ACTION:
+        chaine_ajouter(c, n->type == P_CALCUL ? "(calcul [" : "(action [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "] (");
+        for (size_t k = 0; k < n->enfants[0]->nb_enfants; k++) {
+            if (k) chaine_ajouter(c, " ");
+            decrire(n->enfants[0]->enfants[k], c);
+        }
+        chaine_ajouter(c, ") ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
+    case P_RENDRE:
+        chaine_ajouter(c, "(rendre ");
+        decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
     case P_SI:

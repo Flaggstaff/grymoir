@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.3), § 2 à 8.
+ * Spécification : docs/grammaire.md (révision 1.4), § 2 à 9.
  *
  * L'analyseur construit l'arbre et résout les noms dans le même passage :
  * la plus longue correspondance des noms composés (§ 2.2) exige de connaître

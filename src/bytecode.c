@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.0).
+ * Spécification : docs/vm.md (révision 1.2).
  */
 #include "bytecode.h"
 #include "decimal.h"
@@ -29,6 +29,7 @@ void bloc_detruire(Bloc *b) {
     free(b->noms);
     free(b->code);
     free(b->positions);
+    free(b->nom);
     free(b);
 }
 
@@ -85,6 +86,12 @@ void bloc_emettre(Bloc *b, CodeInstruction code, uint16_t operande, int ligne, i
     }
 }
 
+void bloc_emettre_appel(Bloc *b, uint16_t nom, uint8_t nb_arguments, int rend, int ligne, int colonne) {
+    bloc_emettre(b, I_APPELER, nom, ligne, colonne);
+    octet(b, nb_arguments);
+    octet(b, (uint8_t)(rend ? 1 : 0));
+}
+
 size_t bloc_emettre_saut(Bloc *b, CodeInstruction code, int ligne, int colonne) {
     bloc_emettre(b, code, 0, ligne, colonne);
     size_t pos = b->taille_code;
@@ -122,12 +129,17 @@ const char *instruction_nom(CodeInstruction code) {
     case I_NON:            return "NON";
     case I_SAUTER:         return "SAUTER";
     case I_SAUTER_SI_FAUX: return "SAUTER_SI_FAUX";
+    case I_APPELER:        return "APPELER";
+    case I_RENDRE:         return "RENDRE";
+    case I_LIRE_LOCAL:     return "LIRE_LOCAL";
+    case I_ECRIRE_LOCAL:   return "ÉCRIRE_LOCAL";
     }
     return "INCONNUE";
 }
 
 int instruction_a_operande(CodeInstruction code) {
-    return code == I_CONSTANTE || code == I_LIRE || code == I_ECRIRE || code == I_AFFICHER;
+    return code == I_CONSTANTE || code == I_LIRE || code == I_ECRIRE || code == I_AFFICHER
+        || code == I_APPELER || code == I_LIRE_LOCAL || code == I_ECRIRE_LOCAL;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -135,7 +147,8 @@ static int est_saut(CodeInstruction code) {
 }
 
 size_t instruction_taille(CodeInstruction code) {
-    return 1 + (instruction_a_operande(code) ? 2 : 0) + (est_saut(code) ? 4 : 0);
+    return 1 + (instruction_a_operande(code) ? 2 : 0) + (est_saut(code) ? 4 : 0)
+             + (code == I_APPELER ? 2 : 0);
 }
 
 void bloc_position(const Bloc *b, size_t decalage, int *ligne, int *colonne) {
@@ -162,7 +175,8 @@ static int refuser(char **erreur, char *message) {
  * chaque point de rencontre, jamais négative, nulle à RETOUR). */
 int bloc_verifier(const Bloc *b, char **erreur) {
     size_t n = b->taille_code;
-    if (n == 0) return refuser(erreur, grym_dupliquer("le bloc ne se termine pas par RETOUR."));
+    if (n == 0) return refuser(erreur, grym_dupliquer(b->sorte == B_CALCUL
+        ? "le calcul ne se termine pas par RENDRE." : "le bloc ne se termine pas par RETOUR."));
     uint8_t *debut_instr = grym_allouer(n);
     memset(debut_instr, 0, n);
     size_t ip = 0, dernier = 0;
@@ -188,12 +202,23 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             ok = refuser(erreur, grym_formater("nom %u inexistant (octet %lu).", op, (unsigned long)d));
         else if (c == I_AFFICHER && op == 0)
             ok = refuser(erreur, grym_formater("AFFICHER sans élément (octet %lu).", (unsigned long)d));
+        else if ((c == I_LIRE_LOCAL || c == I_ECRIRE_LOCAL) && (int)op >= b->nb_locaux)
+            ok = refuser(erreur, grym_formater("case locale %u inexistante (octet %lu).", op, (unsigned long)d));
+        else if (c == I_APPELER && (op >= b->nb_noms || b->code[d + 4] > 1))
+            ok = refuser(erreur, grym_formater("appel mal formé (octet %lu).", (unsigned long)d));
+        else if (c == I_RENDRE && b->sorte != B_CALCUL)
+            ok = refuser(erreur, grym_formater("RENDRE hors d'un calcul (octet %lu).", (unsigned long)d));
+        else if (c == I_RETOUR && b->sorte == B_CALCUL)
+            ok = refuser(erreur, grym_formater("RETOUR dans un calcul (octet %lu).", (unsigned long)d));
         debut_instr[d] = 1;
         dernier = d;
         ip += t;
     }
-    if (ok && b->code[dernier] != I_RETOUR)
-        ok = refuser(erreur, grym_dupliquer("le bloc ne se termine pas par RETOUR."));
+    if (ok && b->code[dernier] != (b->sorte == B_CALCUL ? I_RENDRE : I_RETOUR))
+        ok = refuser(erreur, grym_dupliquer(b->sorte == B_CALCUL ? "le calcul ne se termine pas par RENDRE."
+                                                                 : "le bloc ne se termine pas par RETOUR."));
+    if (ok && (b->nb_parametres < 0 || b->nb_parametres > b->nb_locaux))
+        ok = refuser(erreur, grym_dupliquer("plus de paramètres que de cases locales."));
     /* cibles des sauts */
     for (ip = 0; ok && ip < n; ip += instruction_taille((CodeInstruction)b->code[ip])) {
         if (!est_saut((CodeInstruction)b->code[ip])) continue;
@@ -219,8 +244,13 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             unsigned op = instruction_a_operande(c) ? (unsigned)b->code[d + 1] | ((unsigned)b->code[d + 2] << 8) : 0;
             long besoin = 0, effet = 0;
             switch (c) {
-            case I_CONSTANTE: case I_LIRE: effet = 1; break;
-            case I_ECRIRE: besoin = 1; effet = -1; break;
+            case I_CONSTANTE: case I_LIRE: case I_LIRE_LOCAL: effet = 1; break;
+            case I_ECRIRE: case I_ECRIRE_LOCAL: besoin = 1; effet = -1; break;
+            case I_APPELER:
+                besoin = b->code[d + 3];
+                effet = -(long)b->code[d + 3] + b->code[d + 4];
+                break;
+            case I_RENDRE: besoin = 1; break;
             case I_NEGATION: case I_NON: besoin = 1; break;
             case I_ADDITION: case I_SOUSTRACTION: case I_MULTIPLICATION: case I_DIVISION:
             case I_PUISSANCE: case I_EGAL: case I_DIFFERENT: case I_INFERIEUR: case I_SUPERIEUR:
@@ -238,6 +268,12 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             if (c == I_RETOUR) {
                 if (p != 0)
                     ok = refuser(erreur, grym_formater("RETOUR avec une pile non vide (octet %lu).",
+                                                       (unsigned long)d));
+                continue;
+            }
+            if (c == I_RENDRE) {
+                if (p != 1)
+                    ok = refuser(erreur, grym_formater("RENDRE sans exactement une valeur (octet %lu).",
                                                        (unsigned long)d));
                 continue;
             }
@@ -283,7 +319,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 8)                                 */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 2   /* la version 1 (sans conditions) reste lisible */
+#define VERSION_FORMAT 3   /* versions 1 et 2 (un seul bloc) restent lisibles */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -318,24 +354,36 @@ static void ecrire_chaine(Octets *o, const char *s) {
     ecrire_octets(o, s, l);
 }
 
-unsigned char *bloc_serialiser(const Bloc *b, size_t *taille) {
+static void ecrire_corps(Octets *o, const Bloc *b) {
+    ecrire_u32(o, (uint32_t)b->nb_constantes);
+    for (size_t i = 0; i < b->nb_constantes; i++) {
+        ecrire_u8(o, b->constantes[i].type);
+        ecrire_chaine(o, b->constantes[i].texte);
+    }
+    ecrire_u32(o, (uint32_t)b->nb_noms);
+    for (size_t i = 0; i < b->nb_noms; i++) ecrire_chaine(o, b->noms[i]);
+    ecrire_u32(o, (uint32_t)b->taille_code);
+    ecrire_octets(o, b->code, b->taille_code);
+    ecrire_u32(o, (uint32_t)b->nb_positions);
+    for (size_t i = 0; i < b->nb_positions; i++) {
+        ecrire_u32(o, b->positions[i].decalage);
+        ecrire_u32(o, b->positions[i].ligne);
+        ecrire_u32(o, b->positions[i].colonne);
+    }
+}
+
+unsigned char *module_serialiser(const Module *m, size_t *taille) {
     Octets o = { NULL, 0, 0 };
     ecrire_octets(&o, "GRYM", 4);
     ecrire_u16(&o, VERSION_FORMAT);
-    ecrire_u32(&o, (uint32_t)b->nb_constantes);
-    for (size_t i = 0; i < b->nb_constantes; i++) {
-        ecrire_u8(&o, b->constantes[i].type);
-        ecrire_chaine(&o, b->constantes[i].texte);
-    }
-    ecrire_u32(&o, (uint32_t)b->nb_noms);
-    for (size_t i = 0; i < b->nb_noms; i++) ecrire_chaine(&o, b->noms[i]);
-    ecrire_u32(&o, (uint32_t)b->taille_code);
-    ecrire_octets(&o, b->code, b->taille_code);
-    ecrire_u32(&o, (uint32_t)b->nb_positions);
-    for (size_t i = 0; i < b->nb_positions; i++) {
-        ecrire_u32(&o, b->positions[i].decalage);
-        ecrire_u32(&o, b->positions[i].ligne);
-        ecrire_u32(&o, b->positions[i].colonne);
+    ecrire_u32(&o, (uint32_t)m->nb);
+    for (size_t k = 0; k < m->nb; k++) {
+        const Bloc *b = m->blocs[k];
+        ecrire_chaine(&o, b->nom ? b->nom : "");
+        ecrire_u8(&o, (unsigned)b->sorte);
+        ecrire_u16(&o, (unsigned)b->nb_parametres);
+        ecrire_u16(&o, (unsigned)b->nb_locaux);
+        ecrire_corps(&o, b);
     }
     *taille = o.n;
     return o.d;
@@ -398,77 +446,148 @@ static char *lire_chaine(Lecture *l) {
     return s;
 }
 
-static Bloc *echec_lecture(Bloc *b, char **erreur, char *detail) {
-    bloc_detruire(b);
-    *erreur = grym_formater("Fichier .grymb invalide : %s", detail);
-    free(detail);
-    return NULL;
-}
-
-Bloc *bloc_lire(const unsigned char *donnees, size_t taille, char **erreur) {
-    Lecture l = { donnees, taille, 0, 0 };
-    Bloc *b = bloc_creer();
-    if (!est_fichier_bytecode(donnees, taille))
-        return echec_lecture(b, erreur, grym_dupliquer("en-tête « GRYM » absent."));
-    l.pos = 4;
-    uint32_t version = lire_u(&l, 2);
-    if (!l.echec && (version < 1 || version > VERSION_FORMAT))
-        return echec_lecture(b, erreur, grym_formater(
-            "format version %u, cette version de grym lit la version %d.", (unsigned)version, VERSION_FORMAT));
-
-    uint32_t nc = lire_u(&l, 4);
-    if (l.echec || nc > (taille - l.pos) / 5)
-        return echec_lecture(b, erreur, grym_dupliquer("table des constantes tronquée."));
+/* Constantes, noms, code et positions d'un bloc. Renvoie NULL ou un message d'erreur. */
+static char *lire_corps(Lecture *l, Bloc *b) {
+    size_t taille = l->n;
+    uint32_t nc = lire_u(l, 4);
+    if (l->echec || nc > (taille - l->pos) / 5) return grym_dupliquer("table des constantes tronquée.");
     b->constantes = grym_allouer((nc ? nc : 1) * sizeof *b->constantes);
     for (uint32_t i = 0; i < nc; i++) {
-        uint32_t type = lire_u(&l, 1);
-        char *t = lire_chaine(&l);
+        uint32_t type = lire_u(l, 1);
+        char *t = lire_chaine(l);
         if (!t || (type != C_NOMBRE && type != C_TEXTE && type != C_BOOLEEN)) {
             free(t);
-            return echec_lecture(b, erreur, grym_formater("constante %u illisible.", (unsigned)i));
+            return grym_formater("constante %u illisible.", (unsigned)i);
         }
         b->constantes[i].type = (TypeConstante)type;
         b->constantes[i].texte = t;
         b->nb_constantes++;
     }
-
-    uint32_t nn = lire_u(&l, 4);
-    if (l.echec || nn > (taille - l.pos) / 4)
-        return echec_lecture(b, erreur, grym_dupliquer("table des noms tronquée."));
+    uint32_t nn = lire_u(l, 4);
+    if (l->echec || nn > (taille - l->pos) / 4) return grym_dupliquer("table des noms tronquée.");
     b->noms = grym_allouer((nn ? nn : 1) * sizeof *b->noms);
     for (uint32_t i = 0; i < nn; i++) {
-        char *t = lire_chaine(&l);
+        char *t = lire_chaine(l);
         if (!t || !*t) {
             free(t);
-            return echec_lecture(b, erreur, grym_formater("nom %u illisible.", (unsigned)i));
+            return grym_formater("nom %u illisible.", (unsigned)i);
         }
         b->noms[i] = t;
         b->nb_noms++;
     }
-
-    uint32_t tc = lire_u(&l, 4);
-    if (!reste(&l, tc)) return echec_lecture(b, erreur, grym_dupliquer("code tronqué."));
+    uint32_t tc = lire_u(l, 4);
+    if (!reste(l, tc)) return grym_dupliquer("code tronqué.");
     b->code = grym_allouer(tc ? tc : 1);
-    memcpy(b->code, l.d + l.pos, tc);
+    memcpy(b->code, l->d + l->pos, tc);
     b->taille_code = b->cap_code = tc;
-    l.pos += tc;
-
-    uint32_t np = lire_u(&l, 4);
-    if (l.echec || np > (taille - l.pos) / 12)
-        return echec_lecture(b, erreur, grym_dupliquer("table des positions tronquée."));
+    l->pos += tc;
+    uint32_t np = lire_u(l, 4);
+    if (l->echec || np > (taille - l->pos) / 12) return grym_dupliquer("table des positions tronquée.");
     b->positions = grym_allouer((np ? np : 1) * sizeof *b->positions);
     for (uint32_t i = 0; i < np; i++) {
-        b->positions[i].decalage = lire_u(&l, 4);
-        b->positions[i].ligne = lire_u(&l, 4);
-        b->positions[i].colonne = lire_u(&l, 4);
+        b->positions[i].decalage = lire_u(l, 4);
+        b->positions[i].ligne = lire_u(l, 4);
+        b->positions[i].colonne = lire_u(l, 4);
     }
     b->nb_positions = b->cap_positions = np;
-    if (l.echec) return echec_lecture(b, erreur, grym_dupliquer("table des positions tronquée."));
-    if (l.pos != taille) return echec_lecture(b, erreur, grym_dupliquer("octets en trop à la fin du fichier."));
+    if (l->echec) return grym_dupliquer("table des positions tronquée.");
+    return NULL;
+}
 
+static Module *echec_module(Module *m, char **erreur, char *detail) {
+    module_detruire(m);
+    *erreur = grym_formater("Fichier .grymb invalide : %s", detail);
+    free(detail);
+    return NULL;
+}
+
+Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) {
+    Lecture l = { donnees, taille, 0, 0 };
+    Module *m = module_creer();
+    if (!est_fichier_bytecode(donnees, taille))
+        return echec_module(m, erreur, grym_dupliquer("en-tête « GRYM » absent."));
+    l.pos = 4;
+    uint32_t version = lire_u(&l, 2);
+    if (!l.echec && (version < 1 || version > VERSION_FORMAT))
+        return echec_module(m, erreur, grym_formater(
+            "format version %u, cette version de grym lit les versions 1 à %d.", (unsigned)version, VERSION_FORMAT));
+    if (l.echec) return echec_module(m, erreur, grym_dupliquer("en-tête tronqué."));
+
+    uint32_t nb = 1;
+    if (version >= 3) {
+        nb = lire_u(&l, 4);
+        if (l.echec || nb == 0 || nb > (taille - l.pos) / 25)
+            return echec_module(m, erreur, grym_dupliquer("table des blocs tronquée."));
+    }
+    for (uint32_t k = 0; k < nb; k++) {
+        Bloc *b = bloc_creer();
+        module_ajouter(m, b);
+        if (version >= 3) {
+            char *nom = lire_chaine(&l);
+            uint32_t sorte = lire_u(&l, 1);
+            b->nb_parametres = (int)lire_u(&l, 2);
+            b->nb_locaux = (int)lire_u(&l, 2);
+            if (!nom || l.echec || sorte > B_ACTION) {
+                free(nom);
+                return echec_module(m, erreur, grym_formater("en-tête du bloc %u illisible.", (unsigned)k));
+            }
+            b->sorte = (SorteBloc)sorte;
+            if (*nom) b->nom = nom;
+            else free(nom);
+        }
+        char *detail = lire_corps(&l, b);
+        if (detail) return echec_module(m, erreur, detail);
+    }
+    if (l.pos != taille) return echec_module(m, erreur, grym_dupliquer("octets en trop à la fin du fichier."));
     char *detail = NULL;
-    if (!bloc_verifier(b, &detail)) return echec_lecture(b, erreur, detail);
-    return b;
+    if (!module_verifier(m, &detail)) return echec_module(m, erreur, detail);
+    return m;
+}
+
+/* ---------------------------------------------------------------- */
+/* Modules                                                          */
+/* ---------------------------------------------------------------- */
+
+Module *module_creer(void) {
+    Module *m = grym_allouer(sizeof *m);
+    m->blocs = NULL;
+    m->nb = 0;
+    return m;
+}
+
+void module_ajouter(Module *m, Bloc *b) {
+    m->blocs = agrandir(m->blocs, m->nb + 1, sizeof *m->blocs);
+    m->blocs[m->nb++] = b;
+}
+
+void module_detruire(Module *m) {
+    if (!m) return;
+    for (size_t k = 0; k < m->nb; k++) bloc_detruire(m->blocs[k]);
+    free(m->blocs);
+    free(m);
+}
+
+/* Bloc 0 : le programme ; les suivants : des formules nommées, sans doublon. */
+int module_verifier(const Module *m, char **erreur) {
+    if (m->nb == 0 || !m->blocs[0] || m->blocs[0]->sorte != B_PROGRAMME || m->blocs[0]->nom)
+        return refuser(erreur, grym_dupliquer("le premier bloc doit être le programme."));
+    for (size_t k = 0; k < m->nb; k++) {
+        const Bloc *b = m->blocs[k];
+        if (k > 0) {
+            if (b->sorte == B_PROGRAMME || !b->nom)
+                return refuser(erreur, grym_formater("bloc %lu : une formule doit avoir un nom.", (unsigned long)k));
+            for (size_t q = 1; q < k; q++)
+                if (strcmp(m->blocs[q]->nom, b->nom) == 0)
+                    return refuser(erreur, grym_formater("formule « %s » définie deux fois.", b->nom));
+        }
+        char *detail = NULL;
+        if (!bloc_verifier(b, &detail)) {
+            *erreur = b->nom ? grym_formater("formule « %s » : %s", b->nom, detail) : grym_dupliquer(detail);
+            free(detail);
+            return 0;
+        }
+    }
+    return 1;
 }
 
 /* ---------------------------------------------------------------- */
@@ -506,10 +625,11 @@ char *bloc_desassembler(const Bloc *b) {
             continue;
         }
         completer(&c, instruction_nom(code), 18);
-        unsigned long op = t == 5 ? lire_u32(&b->code[debut + 1])
-                                  : (unsigned long)(b->code[debut + 1] | (b->code[debut + 2] << 8));
+        int saut = est_saut(code);
+        unsigned long op = saut ? lire_u32(&b->code[debut + 1])
+                                : (unsigned long)(b->code[debut + 1] | (b->code[debut + 2] << 8));
         char nombre[16];
-        snprintf(nombre, sizeof nombre, t == 5 ? "%04lu" : "%lu", op);
+        snprintf(nombre, sizeof nombre, saut ? "%04lu" : "%lu", op);
         completer(&c, nombre, 6);
         char *commentaire = NULL;
         if (code == I_CONSTANTE && op < b->nb_constantes) {
@@ -525,6 +645,12 @@ char *bloc_desassembler(const Bloc *b) {
             }
         } else if ((code == I_LIRE || code == I_ECRIRE) && op < b->nb_noms) {
             commentaire = grym_dupliquer(b->noms[op]);
+        } else if (code == I_APPELER && op < b->nb_noms) {
+            unsigned na = b->code[debut + 3];
+            commentaire = grym_formater("%s (%u argument%s%s)", b->noms[op], na, na > 1 ? "s" : "",
+                                        b->code[debut + 4] ? ", rend une valeur" : "");
+        } else if ((code == I_LIRE_LOCAL || code == I_ECRIRE_LOCAL) && (int)op < b->nb_parametres) {
+            commentaire = grym_formater("paramètre %lu", op + 1);
         }
         if (commentaire) {
             chaine_ajouter(&c, "; ");
@@ -533,6 +659,34 @@ char *bloc_desassembler(const Bloc *b) {
         }
         while (c.n && c.d[c.n - 1] == ' ') c.d[--c.n] = '\0';
         chaine_ajouter(&c, "\n");
+    }
+    return chaine_rendre(&c);
+}
+
+char *module_desassembler(const Module *m) {
+    Chaine c = {0};
+    for (size_t k = 0; k < m->nb; k++) {
+        const Bloc *b = m->blocs[k];
+        if (m->nb > 1) {
+            char *titre;
+            if (b->sorte == B_PROGRAMME) {
+                titre = grym_dupliquer("Programme\n");
+            } else {
+                titre = grym_formater("%s« %s » : %d paramètre%s, %d case%s locale%s\n",
+                                      k > 0 ? "\n" : "",
+                                      b->nom, b->nb_parametres, b->nb_parametres > 1 ? "s" : "",
+                                      b->nb_locaux, b->nb_locaux > 1 ? "s" : "", b->nb_locaux > 1 ? "s" : "");
+                char *t2 = grym_formater("%s%s", b->sorte == B_CALCUL ? "Calcul " : "Action ", titre + (k > 0));
+                free(titre);
+                titre = grym_formater("%s%s", k > 0 ? "\n" : "", t2);
+                free(t2);
+            }
+            chaine_ajouter(&c, titre);
+            free(titre);
+        }
+        char *texte = bloc_desassembler(b);
+        chaine_ajouter(&c, texte);
+        free(texte);
     }
     return chaine_rendre(&c);
 }

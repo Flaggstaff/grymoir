@@ -5,7 +5,8 @@
 #include <stdlib.h>
 
 typedef struct {
-    Bloc *b;
+    Bloc *b;           /* bloc en cours de compilation */
+    Module *module;
     Diagnostic *diag;
     int echec;
 } Compilation;
@@ -30,6 +31,7 @@ static void constante(Compilation *c, TypeConstante type, const char *texte, con
 }
 
 static void expression(Compilation *c, const Noeud *n);
+static void appel(Compilation *c, const Noeud *n, int rend);
 
 /* Condition : après son code, la pile porte vrai ou faux. SAUTER_SI_FAUX vérifie
  * au passage que chaque membre de « et » et « ou » est bien un booléen. */
@@ -87,6 +89,15 @@ static void comparaison(Compilation *c, const Noeud *n) {
     if (n->negation) emettre(c, I_NON, 0, l, col);
 }
 
+/* Arguments empilés dans l'ordre, puis APPELER (docs/vm.md, § 3). */
+static void appel(Compilation *c, const Noeud *n, int rend) {
+    if (n->nb_enfants > 255) { trop_grand(c, n); return; }
+    for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
+    long nom = bloc_nom(c->b, n->texte);
+    if (nom < 0) { trop_grand(c, n); return; }
+    bloc_emettre_appel(c->b, (uint16_t)nom, (uint8_t)n->nb_enfants, rend, n->ligne, n->colonne);
+}
+
 static void expression(Compilation *c, const Noeud *n) {
     if (c->echec) return;
     switch (n->type) {
@@ -98,11 +109,18 @@ static void expression(Compilation *c, const Noeud *n) {
         return;
     }
     case N_NOM: {
+        if (n->local >= 0) {
+            emettre(c, I_LIRE_LOCAL, n->local, n->ligne, n->colonne);
+            return;
+        }
         long k = bloc_nom(c->b, n->texte);
         if (k < 0) { trop_grand(c, n); return; }
         emettre(c, I_LIRE, k, n->ligne, n->colonne);
         return;
     }
+    case N_APPEL:
+        appel(c, n, 1);
+        return;
     case N_GROUPE:
         expression(c, n->enfants[0]);
         return;
@@ -146,6 +164,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_CREATION:
     case P_MODIFICATION: {
         expression(c, ph->enfants[0]);
+        if (ph->local >= 0) {
+            emettre(c, I_ECRIRE_LOCAL, ph->local, ph->ligne, ph->colonne);
+            return;
+        }
         long k = bloc_nom(c->b, ph->texte);
         if (k < 0) { trop_grand(c, ph); return; }
         emettre(c, I_ECRIRE, k, ph->ligne, ph->colonne);
@@ -179,21 +201,52 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case N_BLOC:
         phrases(c, ph->enfants, ph->nb_enfants);
         return;
+    case P_RENDRE:
+        expression(c, ph->enfants[0]);
+        emettre(c, I_RENDRE, 0, ph->ligne, ph->colonne);
+        return;
+    case P_APPEL:
+        appel(c, ph, 0);
+        return;
+    case P_CALCUL:
+    case P_ACTION: {
+        /* Une formule se compile dans son propre bloc ; le programme n'en garde aucune trace. */
+        Bloc *prec = c->b;
+        Bloc *f = bloc_creer();
+        f->nom = grym_dupliquer(ph->texte);
+        f->sorte = ph->type == P_CALCUL ? B_CALCUL : B_ACTION;
+        f->nb_parametres = (int)ph->enfants[0]->nb_enfants;
+        f->nb_locaux = ph->entier;
+        module_ajouter(c->module, f);
+        c->b = f;
+        const Noeud *corps = ph->enfants[1];
+        if (ph->type == P_CALCUL && ph->forme == 0) {
+            expression(c, corps);
+            emettre(c, I_RENDRE, 0, corps->ligne, corps->colonne);
+        } else {
+            phrase(c, corps);
+            if (ph->type == P_ACTION) emettre(c, I_RETOUR, 0, ph->ligne, 0);
+        }
+        c->b = prec;
+        return;
+    }
     default:   /* P_REMARQUE : rien à exécuter */
         return;
     }
 }
 
-Bloc *compiler(const Programme *p, Diagnostic *diag) {
-    Compilation c = { bloc_creer(), diag, 0 };
+Module *compiler(const Programme *p, Diagnostic *diag) {
+    Module *m = module_creer();
+    Compilation c = { bloc_creer(), m, diag, 0 };
+    module_ajouter(m, c.b);
     diag->message = NULL;
     diag->ligne = diag->colonne = 0;
     phrases(&c, p->phrases, p->nb);
     if (c.echec) {
-        bloc_detruire(c.b);
+        module_detruire(m);
         return NULL;
     }
     int ligne = p->nb ? p->phrases[p->nb - 1]->ligne : 0;
-    bloc_emettre(c.b, I_RETOUR, 0, ligne, 0);
-    return c.b;
+    bloc_emettre(m->blocs[0], I_RETOUR, 0, ligne, 0);
+    return m;
 }

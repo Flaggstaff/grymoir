@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle, v0.2
- * Spécification : docs/vm.md (révision 1.0).
+ * Spécification : docs/vm.md (révision 1.2).
  */
 #ifndef GRYM_VM_H
 #define GRYM_VM_H
@@ -15,9 +15,11 @@ typedef struct Machine Machine;
 Machine *machine_creer(void);
 void machine_detruire(Machine *m);
 
-/* Vérifie puis exécute un bloc. Chaque AFFICHER ajoute une ligne à *sortie.
- * En cas d'échec, le journal d'annulation rend à chaque nom la valeur qu'il
- * avait avant l'exécution (docs/vm.md, § 6), et *diag décrit l'erreur. */
-int machine_executer(Machine *m, const Bloc *b, Chaine *sortie, Diagnostic *diag);
+/* Vérifie un module, enregistre ses formules (la machine en prend possession :
+ * les entrées correspondantes du module passent à NULL ; une formule du même nom
+ * est remplacée), puis exécute le programme. Chaque AFFICHER ajoute une ligne à *sortie.
+ * En cas d'échec, le journal d'annulation rend à chaque nom sa valeur d'avant,
+ * la table des formules revient à son état d'avant (docs/vm.md, § 6), et *diag décrit l'erreur. */
+int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *diag);
 
 #endif

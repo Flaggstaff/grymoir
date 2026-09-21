@@ -74,7 +74,7 @@ static void signaler(const char *fichier, const Diagnostic *d) {
 }
 
 /* Charge un fichier : bytecode s'il commence par « GRYM », source sinon (compilée). */
-static Bloc *charger(const char *chemin) {
+static Module *charger(const char *chemin) {
     FILE *f = fopen(chemin, "rb");
     if (!f) {
         fprintf(stderr, "Impossible d'ouvrir « %s ».\n", chemin);
@@ -85,10 +85,10 @@ static Bloc *charger(const char *chemin) {
     fclose(f);
     if (!donnees) return NULL;
 
-    Bloc *b = NULL;
+    Module *b = NULL;
     if (est_fichier_bytecode((const unsigned char *)donnees, taille)) {
         char *erreur = NULL;
-        b = bloc_lire((const unsigned char *)donnees, taille, &erreur);
+        b = module_lire((const unsigned char *)donnees, taille, &erreur);
         if (!b) {
             fprintf(stderr, "%s : erreur : %s\n", chemin, erreur);
             free(erreur);
@@ -115,7 +115,7 @@ static Bloc *charger(const char *chemin) {
 }
 
 static int lancer(const char *chemin) {
-    Bloc *b = charger(chemin);
+    Module *b = charger(chemin);
     if (!b) return EXIT_FAILURE;
     Machine *m = machine_creer();
     Chaine sortie = {0};
@@ -129,19 +129,19 @@ static int lancer(const char *chemin) {
         diagnostic_liberer(&d);
     }
     machine_detruire(m);
-    bloc_detruire(b);
+    module_detruire(b);
     return ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 static int compiler_fichier(const char *chemin) {
-    Bloc *b = charger(chemin);
+    Module *b = charger(chemin);
     if (!b) return EXIT_FAILURE;
     size_t l = strlen(chemin);
     char *cible = (l > 5 && strcmp(chemin + l - 5, ".grym") == 0)
                 ? grym_formater("%sb", chemin)
                 : grym_formater("%s.grymb", chemin);
     size_t taille = 0;
-    unsigned char *octets = bloc_serialiser(b, &taille);
+    unsigned char *octets = module_serialiser(b, &taille);
     FILE *f = fopen(cible, "wb");
     int ok = f && fwrite(octets, 1, taille, f) == taille;
     if (f && fclose(f) != 0) ok = 0;
@@ -149,17 +149,17 @@ static int compiler_fichier(const char *chemin) {
     else fprintf(stderr, "Impossible d'écrire « %s ».\n", cible);
     free(octets);
     free(cible);
-    bloc_detruire(b);
+    module_detruire(b);
     return ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 static int desassembler(const char *chemin) {
-    Bloc *b = charger(chemin);
+    Module *b = charger(chemin);
     if (!b) return EXIT_FAILURE;
-    char *texte = bloc_desassembler(b);
+    char *texte = module_desassembler(b);
     fputs(texte, stdout);
     free(texte);
-    bloc_detruire(b);
+    module_detruire(b);
     return EXIT_SUCCESS;
 }
 
@@ -216,10 +216,10 @@ static int boucle(void) {
         Chaine sortie = {0};
         int ok = analyser(ligne, strlen(ligne), portee, 1, &p, &d);
         if (ok) {
-            Bloc *b = compiler(&p, &d);
+            Module *b = compiler(&p, &d);
             ok = b != NULL;
             if (ok) ok = machine_executer(m, b, &sortie, &d);
-            bloc_detruire(b);
+            module_detruire(b);
             programme_liberer(&p);
         }
         if (ok) {

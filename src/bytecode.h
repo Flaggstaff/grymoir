@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.0).
+ * Spécification : docs/vm.md (révision 1.2).
  */
 #ifndef GRYM_BYTECODE_H
 #define GRYM_BYTECODE_H
@@ -27,10 +27,16 @@ typedef enum {
     I_SUPERIEUR_OU_EGAL,
     I_NON,
     I_SAUTER,
-    I_SAUTER_SI_FAUX
+    I_SAUTER_SI_FAUX,
+    I_APPELER,
+    I_RENDRE,
+    I_LIRE_LOCAL,
+    I_ECRIRE_LOCAL
 } CodeInstruction;
 
-#define I_DERNIER I_SAUTER_SI_FAUX
+#define I_DERNIER I_ECRIRE_LOCAL
+
+typedef enum { B_PROGRAMME = 0, B_CALCUL = 1, B_ACTION = 2 } SorteBloc;
 
 typedef enum { C_NOMBRE = 1, C_TEXTE = 2, C_BOOLEEN = 3 } TypeConstante;
 
@@ -45,6 +51,10 @@ typedef struct {
 } Position;
 
 typedef struct {
+    char *nom;            /* nom de la formule ; NULL pour le programme */
+    SorteBloc sorte;
+    int nb_parametres;
+    int nb_locaux;        /* paramètres compris */
     Constante *constantes;
     size_t nb_constantes;
     char **noms;
@@ -65,6 +75,9 @@ long bloc_constante(Bloc *b, TypeConstante type, const char *texte);
 long bloc_nom(Bloc *b, const char *nom);
 void bloc_emettre(Bloc *b, CodeInstruction code, uint16_t operande, int ligne, int colonne);
 
+/* APPELER : nom de la formule, nombre d'arguments, 1 si un résultat est attendu (calcul). */
+void bloc_emettre_appel(Bloc *b, uint16_t nom, uint8_t nb_arguments, int rend, int ligne, int colonne);
+
 /* Sauts : émis avec une cible provisoire, corrigée quand elle est connue.
  * bloc_emettre_saut renvoie la position de l'opérande à corriger. */
 size_t bloc_emettre_saut(Bloc *b, CodeInstruction code, int ligne, int colonne);
@@ -81,12 +94,24 @@ void bloc_position(const Bloc *b, size_t decalage, int *ligne, int *colonne);
  * sinon 0 et un message à libérer dans *erreur. */
 int bloc_verifier(const Bloc *b, char **erreur);
 
-/* Fichier .grymb (docs/vm.md, § 8). */
-unsigned char *bloc_serialiser(const Bloc *b, size_t *taille);
-Bloc *bloc_lire(const unsigned char *donnees, size_t taille, char **erreur);   /* lit et vérifie */
-int est_fichier_bytecode(const unsigned char *donnees, size_t taille);
-
 /* Instructions en clair, une par ligne (docs/vm.md, § 9). */
 char *bloc_desassembler(const Bloc *b);
+
+/* Un module : le programme (bloc 0) et ses formules. */
+typedef struct {
+    Bloc **blocs;
+    size_t nb;
+} Module;
+
+Module *module_creer(void);
+void module_ajouter(Module *m, Bloc *b);
+void module_detruire(Module *m);          /* ignore les entrées mises à NULL */
+int module_verifier(const Module *m, char **erreur);
+
+/* Fichier .grymb (docs/vm.md, § 8). */
+unsigned char *module_serialiser(const Module *m, size_t *taille);
+Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur);   /* lit et vérifie */
+int est_fichier_bytecode(const unsigned char *donnees, size_t taille);
+char *module_desassembler(const Module *m);
 
 #endif

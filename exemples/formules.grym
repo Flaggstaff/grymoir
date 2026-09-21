@@ -1,0 +1,18 @@
+Remarque : calculs purs et actions
+Le carré d'un nombre vaut nombre × nombre.
+La valeur absolue d'un nombre :
+    Si nombre est négatif, rendre −nombre.
+    Rendre nombre.
+La factorielle d'un nombre :
+    Si nombre ≤ 1, rendre 1.
+    Rendre nombre × la factorielle de (nombre − 1).
+
+Le total vaut 0.
+Pour encaisser un montant :
+    Le total devient total + la valeur absolue du montant.
+    Afficher « Encaissé : » puis montant.
+
+Encaisser 12,50.
+Encaisser −7.
+Afficher « Total : » puis le total.
+Afficher « 20! = » puis la factorielle de 20.

@@ -191,7 +191,7 @@ int main(void) {
        "« prix unitair » inconnu, vouliez-vous « prix unitaire » ?");
     VE("Le x vaut y.", 1, 11, "« y » inconnu.");
     VE("Le total vaut total + 1.", 1, 15, "« total » inconnu");
-    VE("3 + 4.", 1, 1, "une phrase commence par Le, La, L', Afficher ou Si");
+    VE("3 + 4.", 1, 1, "une phrase commence par Le, La, L', Afficher, Si, Pour ou le nom d'une action");
     VE("Le x vaut 3. Remarque : non", 1, 14, "Une remarque doit commencer une ligne");
     VE("Le x vaut 1 +\nRemarque : coupe\n2.", 2, 1, "ne peut pas couper une phrase");
     VE("Le x vaut (1 + 2.", 1, 17, "Parenthèse fermante manquante");
@@ -303,9 +303,57 @@ int main(void) {
     VE("Si vrai, si vrai, afficher 1.", 1, 10, "la forme courte n'accepte qu'une phrase simple");
     VE("Si vrai afficher 1.", 1, 9, "attendu : « et », « ou », « , » ou « : »");
 
+    /* --- Formules (§ 9) --- */
+    V("Le carré d'un nombre vaut nombre × nombre.\nAfficher le carré de 7.",
+      "(calcul [carré] ([nombre]) (× [nombre] [nombre]))\n(afficher (appel [carré] 7))");
+    V("La moyenne d'un premier nombre et d'un second nombre vaut (premier nombre + second nombre) ÷ 2.\n"
+      "Afficher la moyenne de 4 et de 6.",
+      "(calcul [moyenne] ([premier nombre] [second nombre]) (÷ (groupe (+ [premier nombre] [second nombre])) 2))\n"
+      "(afficher (appel [moyenne] 4 6))");
+    V("La valeur absolue d'un nombre :\n    Si nombre est négatif, rendre −nombre.\n    Rendre nombre.",
+      "(calcul [valeur absolue] ([nombre]) (bloc (si (négatif [nombre]) (bloc (rendre (− [nombre])))) (rendre [nombre])))");
+    V("Le carré d'un nombre vaut nombre × nombre.\nLe prix vaut 3.\nAfficher le carré du prix + 1 puis carré de (2 + 1).",
+      "(calcul [carré] ([nombre]) (× [nombre] [nombre]))\n(créer [prix] 3)\n"
+      "(afficher (+ (appel [carré] [prix]) 1) (appel [carré] (groupe (+ 2 1))))");
+    V("Le total vaut 0.\nPour relancer un client :\n    Si le client est négatif, afficher « Relance ».\n"
+      "    Le total devient total + 1.\nRelancer −3.",
+      "(créer [total] 0)\n(action [relancer] ([client]) (bloc (si (négatif [client]) (bloc (afficher «Relance»))) "
+      "(modifier [total] (+ [total] 1))))\n(action-appel [relancer] (− 3))");
+    V("Pour saluer :\n    Afficher « Bonjour ».\nSaluer.", "(action [saluer] () (bloc (afficher «Bonjour»)))\n(action-appel [saluer])");
+    V("Pour payer un montant et une remise :\n    Afficher montant − remise.\nPayer 10 et 2.",
+      "(action [payer] ([montant] [remise]) (bloc (afficher (− [montant] [remise]))))\n(action-appel [payer] 10 2)");
+    V("La factorielle d'un nombre :\n    Si nombre ≤ 1, rendre 1.\n    Rendre nombre × la factorielle de (nombre − 1).",
+      "(calcul [factorielle] ([nombre]) (bloc (si (≤ [nombre] 1) (bloc (rendre 1))) "
+      "(rendre (× [nombre] (appel [factorielle] (groupe (− [nombre] 1)))))))");
+    V("Le double d'une quantité vaut quantité × 2.\nAfficher la quantité est positive.",
+      "ERREUR 2:13 « quantité » inconnu.");
+    V("Le x vaut 1.\nLe carré d'un nombre vaut nombre × nombre.\nLe nombre vaut 2.",
+      "(créer [x] 1)\n(calcul [carré] ([nombre]) (× [nombre] [nombre]))\n(créer [nombre] 2)");
+
+    /* --- Erreurs de formules --- */
+    VE("Le taux vaut 2.\nLe double d'un nombre vaut nombre × taux.", 2, 37,
+       "« taux » n'est pas visible dans un calcul");
+    VE("Le carré d'un nombre vaut nombre × nombre.\nAfficher le carré de 1 et de 2.", 2, 10, "« carré » attend 1 paramètre, 2 donnés.");
+    VE("Le carré d'un nombre vaut nombre × nombre.\nAfficher le carré.", 2, 18, "« carré » est un calcul");
+    VE("Le carré d'un nombre vaut nombre × nombre.\nAfficher le carré de le x.", 2, 19, "« de le » s'écrit « du ».");
+    VE("La valeur d'un nombre :\n    Si nombre > 0, rendre 1.", 1, 1, "doit se terminer par « Rendre … »");
+    VE("Le double d'un nombre :\n    Afficher nombre.\n    Rendre nombre.", 2, 5, "Un calcul n'affiche rien");
+    VE("Pour saluer :\n    Rendre 1.", 2, 5, "Une action ne rend rien");
+    VE("Rendre 1.", 1, 1, "« Rendre » ne s'emploie que dans un calcul.");
+    VE("Pour saluer :\n    Afficher 1.\nLe f d'un nombre :\n    Saluer.\n    Rendre 1.", 4, 5,
+       "Un calcul n'appelle pas d'action");
+    VE("Si vrai :\n    Pour saluer :\n        Afficher 1.", 2, 5, "au premier niveau du programme");
+    VE("Pour saluer un client :\n    Afficher 1.\nSaluer.", 3, 1, "« saluer » attend 1 paramètre, 0 donné.");
+    VE("Pour saluer :\n    Afficher 1.\nAfficher saluer.", 3, 10, "« saluer » est une action");
+    VE("Le carré d'un nombre vaut nombre × nombre.\nLe carré devient 3.", 2, 4, "« carré » est un calcul : il ne se modifie pas.");
+    VE("Le carré d'un nombre vaut nombre × nombre.\nLe carré d'un x vaut x.", 2, 4, "« carré » existe déjà.");
+    VE("Le f d'un a et d'un a vaut a.", 1, 21, "Paramètre « a » déjà nommé.");
+    VE("Pour saluer, afficher 1.", 1, 12, "« : » attendu");
+    VE("Le carré d'un nombre devient 3.", 1, 22, "Un calcul ne se modifie pas");
+
     /* --- Aide à la saisie (§ 8) --- */
-    VS("", "Le | La | L' | Afficher | Si | Remarque :");
-    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Remarque :");
+    VS("", "Le | La | L' | Afficher | Si | Pour | Remarque :");
+    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Pour | Remarque :");
     VS("Af", "Afficher");
     VS("l", "Le | La | L'");
     VS("Le total vaut 1.\nLe ", "total | (nouveau nom)");
@@ -338,6 +386,9 @@ int main(void) {
     VS("Le x vaut 1.\nSi x est inférieur ", "ou | à | au");
     VS("Le [a et b] vaut 1.\nAfficher ", "[a et b] | (nombre) | ( | − | vrai | faux | « … »");
     VS("Le [a et b] vaut 1.\nAfficher [a", "[a et b]");
+    VS("Pour relancer :\n    Afficher 1.\nRel", "Relancer");
+    VS("Le taux vaut 2.\nLe double d'un nombre vaut ", "double | nombre | (nombre) | ( | − | vrai | faux");
+    VS("Le carré d'un nombre vaut nombre × nombre.\nAfficher le carré ", "de | du");
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

@@ -22,14 +22,20 @@ typedef enum {
                         forme : 1 si écrite avec un symbole (<, ≤…), 0 avec des mots */
     N_LOGIQUE,       /* op : 'e' (et) ou 'o' (ou) ; enfants[0], enfants[1] */
     N_BLOC,          /* enfants : phrases d'un bloc indenté ou d'une forme courte */
+    N_APPEL,         /* appel d'un calcul : texte : nom ; enfants : arguments */
     /* phrases */
     P_CREATION,      /* texte : nom ; enfants[0] : expression */
     P_MODIFICATION,  /* texte : nom ; enfants[0] : expression */
     P_AFFICHAGE,     /* enfants : éléments */
     P_REMARQUE,      /* texte : contenu */
     P_EXPRESSION,    /* boucle interactive : enfants[0] */
-    P_SI             /* enfants[0] : condition ; enfants[1] : N_BLOC alors ; enfants[2] : N_BLOC sinon (facultatif) ;
+    P_SI,            /* enfants[0] : condition ; enfants[1] : N_BLOC alors ; enfants[2] : N_BLOC sinon (facultatif) ;
                         forme : bit 0 = bloc indenté (sinon forme courte), bit 1 = introduit par « Sinon si » */
+    P_CALCUL,        /* texte : nom ; enfants[0] : N_BLOC des paramètres (N_NOM) ; enfants[1] : corps,
+                        une valeur (forme 0, « vaut ») ou un N_BLOC (forme 1) ; entier : nombre de locaux */
+    P_ACTION,        /* texte : nom ; enfants[0] : N_BLOC des paramètres ; enfants[1] : N_BLOC ; entier : locaux */
+    P_RENDRE,        /* enfants[0] : valeur rendue par un calcul */
+    P_APPEL          /* appel d'une action : texte : nom ; enfants : arguments */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L } Article;
@@ -42,6 +48,8 @@ typedef struct Noeud {
     int negation;         /* N_COMPARAISON : « n'est pas » */
     int forme;            /* variante d'écriture, conservée pour la traduction sans perte */
     int crochets;         /* N_NOM, P_CREATION, P_MODIFICATION : nom écrit entre crochets */
+    int local;            /* N_NOM, P_CREATION, P_MODIFICATION : case locale d'une formule, −1 si nom global */
+    int entier;           /* P_CALCUL, P_ACTION : nombre de cases locales (paramètres compris) */
     Article article;      /* article écrit devant le nom (N_NOM, P_CREATION, P_MODIFICATION) */
     char *texte;
     struct Noeud **enfants;

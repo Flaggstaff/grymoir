@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.1 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.3, § 5.
+Version 1.2 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.4, § 5 et § 9.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -58,6 +58,18 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 18 | `NON` | aucun | remplace le booléen au sommet par son contraire |
 | 19 | `SAUTER` | cible (4 octets) | continue à la cible |
 | 20 | `SAUTER_SI_FAUX` | cible (4 octets) | dépile un booléen ; s'il est faux, continue à la cible |
+| 21 | `APPELER` | nom (2 octets), nombre d'arguments (1 octet), rend (1 octet : 1 pour un calcul) | dépile les arguments dans les premières cases locales de la formule appelée, puis l'exécute |
+| 22 | `RENDRE` | aucun | termine un calcul ; la valeur au sommet devient le résultat de l'appel |
+| 23 | `LIRE_LOCAL` | case locale | empile la valeur de la case |
+| 24 | `ÉCRIRE_LOCAL` | case locale | dépile une valeur dans la case |
+
+### 3.1 Formules et appels
+
+- Un module réunit le programme (bloc 0) et un bloc par formule. Chaque bloc de formule porte son nom, sa sorte (calcul ou action), son nombre de paramètres et son nombre de cases locales (paramètres compris).
+- `APPELER` désigne la formule par son nom, résolu au moment de l'appel dans la table des formules de la machine (§ 5). La machine vérifie que la formule existe, qu'elle est de la sorte attendue et qu'elle reçoit le bon nombre d'arguments ; sinon, erreur d'exécution.
+- Chaque appel crée un cadre : ses cases locales, sa position. Un calcul se termine par `RENDRE`, une action par `RETOUR`, qui rend la main à l'appelant. `RETOUR` dans le programme termine l'exécution.
+- Au-delà de 1000 cadres imbriqués : « Trop d'appels imbriqués : plus de 1000. »
+- Une variable locale s'adresse par son numéro de case, un nom global par son nom (`LIRE`, `ÉCRIRE`). Un calcul ne contient jamais `LIRE` ni `ÉCRIRE` d'une variable : l'analyse le garantit (grammaire, § 9.4).
 
 - Une phrase `Afficher` à n éléments compile en `AFFICHER n`. Dans la boucle interactive, une expression seule compile en `AFFICHER 1`.
 - La création et la modification compilent toutes deux en `ÉCRIRE` : la distinction entre `vaut` et `devient` se vérifie à la compilation (grammaire, § 2.1).
@@ -79,8 +91,9 @@ Si c, x.  Sinon, y.  :  c ; SAUTER_SI_FAUX S ; x ; SAUTER Fin ; S: y ; Fin:
 
 Un fichier `.grymb` peut venir d'ailleurs. Avant toute exécution, la machine vérifie le bloc entier, en deux passes :
 
-1. Décodage linéaire : chaque code d'instruction existe, son opérande est présent, chaque index de constante ou de nom existe, chaque cible de saut commence une instruction, et la dernière instruction est `RETOUR`.
-2. Parcours de tous les chemins d'exécution : la pile ne descend jamais sous zéro, chaque `AFFICHER n` trouve n valeurs, deux chemins qui se rejoignent arrivent avec la même profondeur de pile, et chaque `RETOUR` trouve la pile vide.
+1. Décodage linéaire : chaque code d'instruction existe, son opérande est présent, chaque index de constante, de nom ou de case locale existe, chaque cible de saut commence une instruction, et la dernière instruction est `RETOUR` (programme, action) ou `RENDRE` (calcul). `RENDRE` n'apparaît que dans un calcul, `RETOUR` jamais dans un calcul.
+2. Parcours de tous les chemins d'exécution : la pile ne descend jamais sous zéro, chaque `AFFICHER n` et chaque `APPELER` trouvent leurs valeurs, deux chemins qui se rejoignent arrivent avec la même profondeur de pile, chaque `RETOUR` trouve la pile vide et chaque `RENDRE` exactement une valeur.
+3. Pour le module : le bloc 0 est le programme, les autres des formules nommées, sans doublon.
 
 Limite connue : un saut vers l'arrière forme une boucle, que la vérification n'interdit pas (les boucles viendront avec `Tant que`). Un fichier fabriqué à la main peut donc tourner sans fin.
 
@@ -93,6 +106,7 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - Un bloc contient la liste des noms qu'il utilise. `LIRE 2` désigne le troisième nom de cette liste, pas une case mémoire.
 - Au chargement, la machine associe chaque nom à une case de sa table globale, en la créant si besoin.
 - Les valeurs vivent dans la machine, pas dans le bloc. Charger un nouveau bloc, ou recharger une formule modifiée, conserve donc les valeurs existantes.
+- La machine tient une table des formules par nom. Exécuter un module y enregistre ses formules ; une formule du même nom est remplacée. C'est le mécanisme du développement vivant (charte, art. 10) : les appels suivants trouvent la nouvelle version.
 
 ---
 
@@ -102,6 +116,9 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - Si l'exécution échoue (division par zéro, nombre trop grand), la machine rejoue le journal du plus récent au plus ancien, puis le vide. Aucun nom ne garde de valeur écrite pendant l'exécution ratée.
 - Si l'exécution réussit, le journal se vide.
 - La boucle interactive exécute chaque saisie comme une unité (grammaire, § 3.3).
+- En cas d'échec, la table des formules revient aussi à son état d'avant : les formules ajoutées disparaissent, les formules remplacées retrouvent leur version précédente.
+- Les cases locales ne passent pas par le journal : elles disparaissent avec leur cadre.
+- En v0.2, une erreur annule toute l'exécution ; une action qui échoue n'écrit donc rien (charte, art. 7). La reprise après erreur, qui exigera un point de reprise par appel, viendra plus tard.
 
 ---
 
@@ -116,7 +133,12 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 2
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 3
+blocs         nombre : u32, puis pour chacun :
+                nom : longueur u32 et octets UTF-8 (vide pour le programme)
+                sorte : u8 (0 = programme, 1 = calcul, 2 = action)
+                paramètres : u16, cases locales : u16
+                puis constantes, noms, code et positions :
 constantes    nombre : u32, puis pour chacune :
                 type : u8 (1 = nombre, 2 = texte, 3 = booléen), longueur : u32, octets UTF-8
 noms          nombre : u32, puis pour chacun : longueur : u32, octets UTF-8
@@ -126,8 +148,8 @@ positions     nombre : u32, puis pour chacune :
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`.
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes. Un fichier de version 1 reste lisible.
-- En v0.2, un fichier contient un seul bloc, le programme principal. Les blocs de formules s'ajouteront avec les formules.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 24. Les fichiers de versions 1 et 2 (un seul bloc, le programme) restent lisibles.
+
 
 ---
 
@@ -140,7 +162,7 @@ positions     nombre : u32, puis pour chacune :
 | `grym lancer facture.grymb` | exécute un bytecode déjà compilé |
 | `grym desassembler facture.grymb` | affiche les instructions en clair |
 
-Chaque ligne donne la ligne source (quand elle change), le décalage de l'instruction, puis l'instruction ; les cibles des sauts renvoient aux décalages.
+Chaque ligne donne la ligne source (quand elle change), le décalage de l'instruction, puis l'instruction ; les cibles des sauts renvoient aux décalages. Un module à plusieurs blocs affiche le programme, puis chaque formule sous un titre (« Calcul « carré » : 1 paramètre, 1 case locale »).
 
 ```
    4  0018  LIRE              0     ; total
@@ -161,3 +183,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 |---------|------|------------|
 | 1.0 | 2026-09-21 | Spécification initiale : machine à pile, onze instructions, liaison par nom, journal d'annulation, vérification, format `.grymb` |
 | 1.1 | 2026-09-21 | Booléens, six comparaisons, `NON`, sauts (`SAUTER`, `SAUTER_SI_FAUX`, cible sur quatre octets), vérification de tous les chemins, constantes booléennes, format version 2, décalages au désassemblage |
+| 1.2 | 2026-09-21 | Formules : modules à plusieurs blocs, `APPELER`, `RENDRE`, `LIRE_LOCAL`, `ÉCRIRE_LOCAL`, cadres d'appel limités à 1000, table des formules par nom avec remplacement et restauration, vérification par sorte de bloc, format version 3 |
