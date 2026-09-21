@@ -238,6 +238,28 @@ int main(void) {
         grym_interruption = 0;
     }
 
+    /* --- Objets (grammaire, § 13) --- */
+    PROG("Un client a :\n    un nom,\n    un solde.\nLe c vaut un nouveau client :\n    Le nom vaut « Dupont ».\n"
+         "    Le solde vaut 100.\nLe solde du c devient solde du c − 30.\nAfficher le nom du c puis le solde du c puis c.",
+         "Dupont 70 un client");
+    PROG("Un client a : un solde.\nPour créditer un client et un montant :\n    Le solde du client devient solde du client + montant.\n"
+         "Le solde initial d'un client vaut solde du client × 2.\nLe c vaut un nouveau client :\n    Le solde vaut 5.\n"
+         "Créditer c et 10.\nAfficher solde du c puis solde initial de c.", "15 30");
+    PROG("Un client a : un nom.\nLe a vaut un nouveau client.\nLe b vaut a.\nLe c vaut un nouveau client.\n"
+         "Afficher a = b puis a = c puis a ≠ c.", "vrai faux vrai");
+    PROG("Un client a : un nom.\nLe b vaut un nouveau client.\nLe nom du b devient « x ».\nLe a vaut b.\n"
+         "Le nom du a devient « y ».\nAfficher nom du b.", "y");
+    PROG("Un client a : un solde.\nLe c vaut un nouveau client.\nAfficher le solde du c.",
+         "ERREUR 3:10 Le champ « solde » n'a pas de valeur.");
+    PROG("Un client a : un nom.\nUne facture a : un montant.\nLe c vaut un nouveau client.\nAfficher montant du c.",
+         "ERREUR 4:10 Un client n'a pas de champ « montant ».");
+    PROG("Un client a : un nom.\nLe x vaut 3.\nAfficher le nom du x.",
+         "ERREUR 3:10 « nom » : la valeur n'est pas un objet, c'est un nombre.");
+    PROG("Un nœud a : un suivant, une valeur.\nLe premier vaut un nouveau nœud :\n    La valeur vaut 1.\n"
+         "Le courant vaut premier.\nPour chaque i de 2 à 5 :\n    Le suivant du courant devient un nouveau nœud :\n"
+         "        La valeur vaut i.\n    Le courant devient suivant du courant.\n"
+         "Afficher valeur du suivant du suivant du premier.", "3");
+
     /* --- Boucle interactive : une saisie ratée n'a aucun effet (§ 3.3, docs/vm.md § 6) --- */
     {
         total++;
@@ -255,6 +277,47 @@ int main(void) {
             int echec = strncmp(r, "ERREUR", 6) == 0;
             int ok = attendus[i][0] == '~' ? strstr(r, attendus[i] + 1) != NULL
                                             : strcmp(r, attendus[i]) == 0;
+            if (echec) { portee_detruire(p); p = sp; } else portee_detruire(sp);
+            if (!ok) { signaler(__LINE__, saisies[i], attendus[i], r); free(r); break; }
+            free(r);
+        }
+        machine_detruire(m);
+        portee_detruire(p);
+    }
+
+    /* --- Ramasse-miettes : cycles et objets abandonnés --- */
+    {
+        total++;
+        const char *src =
+            "Un maillon a : un autre.\nLe dernier vaut un nouveau maillon.\n"
+            "Répéter 50000 fois :\n    Le a vaut un nouveau maillon.\n    Le b vaut un nouveau maillon.\n"
+            "    L'autre du a devient b.\n    L'autre du b devient a.\n    Le dernier devient a.\n";
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        char *r = executer_source(p, m, src, 0);
+        size_t vivants = machine_objets_vivants(m);
+        if (strcmp(r, "") != 0 || vivants != 2) {
+            char *o = grym_formater("sortie « %s », %lu objets vivants", r, (unsigned long)vivants);
+            signaler(__LINE__, "ramasse-miettes", "2 objets vivants (le dernier maillon et son vis-à-vis)", o);
+            free(o);
+        }
+        free(r);
+        machine_detruire(m);
+        portee_detruire(p);
+    }
+    /* un champ modifié par une saisie ratée retrouve sa valeur */
+    {
+        total++;
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        const char *saisies[] = { "Un client a : un solde.", "Le c vaut un nouveau client :\n    Le solde vaut 100.",
+                                  "Le solde du c devient 5. Afficher 1 ÷ 0.", "solde du c" };
+        const char *attendus[] = { "", "", "~Division par zéro", "100" };
+        for (int i = 0; i < 4; i++) {
+            Portee *sp = portee_cloner(p);
+            char *r = executer_source(p, m, saisies[i], 1);
+            int echec = strncmp(r, "ERREUR", 6) == 0;
+            int ok = attendus[i][0] == '~' ? strstr(r, attendus[i] + 1) != NULL : strcmp(r, attendus[i]) == 0;
             if (echec) { portee_detruire(p); p = sp; } else portee_detruire(sp);
             if (!ok) { signaler(__LINE__, saisies[i], attendus[i], r); free(r); break; }
             free(r);
@@ -366,7 +429,7 @@ int main(void) {
         module_detruire(mx);
     }
 
-    /* --- Désassemblage (docs/vm.md, § 9) --- */
+    /* --- Désassemblage (docs/vm.md, § 10) --- */
     {
         total++;
         const char *src =
@@ -406,7 +469,7 @@ int main(void) {
         portee_detruire(p);
     }
 
-    /* --- Fichier .grymb : aller-retour et fichiers corrompus (docs/vm.md, § 4 et 8) --- */
+    /* --- Fichier .grymb : aller-retour et fichiers corrompus (docs/vm.md, § 4 et 9) --- */
     {
         const char *src = "Le x vaut 2 ^ 10.\nAfficher « x = » puis x ÷ 4.";
         Portee *p = portee_creer();

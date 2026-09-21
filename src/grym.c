@@ -4,7 +4,7 @@
  *   grym lancer fichier.grym            compile puis exécute
  *   grym lancer fichier.grymb           exécute un bytecode compilé
  *   grym compiler fichier.grym          produit fichier.grymb
- *   grym desassembler fichier.grym(b)   affiche les instructions (docs/vm.md, § 9)
+ *   grym desassembler fichier.grym(b)   affiche les instructions (docs/vm.md, § 10)
  */
 #ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L   /* fileno, isatty */

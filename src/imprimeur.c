@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.7), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.8), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "decimal.h"
@@ -58,6 +58,8 @@ static void aj(Impression *im, const char *s) { chaine_ajouter(&im->c, s); }
 static void retrait(Impression *im, int niveau) {
     for (int k = 0; k < niveau; k++) aj(im, "    ");
 }
+
+const char *article_ecrit(Article a, Genre g, const char *nom);
 
 /* Commence par une voyelle (élision : l', d') ; le « h » est laissé de côté. */
 static int voyelle(const char *s) {
@@ -159,6 +161,15 @@ static int argument_simple(const Noeud *n) {
 /* « à » ou « de » suivi d'une expression, avec contraction et élision (§ 5.2). */
 static void preposition(Impression *im, const char *prep, const Noeud *x) {
     int a = strcmp(prep, "à") == 0;
+    if (x->type == N_CHAMP && x->article != ART_AUCUN && !im->compact) {
+        /* « du solde du client » : l'article du champ se contracte avec la préposition */
+        if (x->article == ART_LE) aj(im, a ? "au " : "du ");
+        else { aj(im, a ? "à " : "de "); aj(im, x->article == ART_LA ? "la " : "l'"); }
+        ecrire_nom(im, x->texte, 0);
+        aj(im, " ");
+        preposition(im, "de", x->enfants[0]);
+        return;
+    }
     if (x->type == N_NOM && x->article != ART_AUCUN) {
         if (x->article == ART_LE) { aj(im, a ? "au " : "du "); ecrire_nom(im, x->texte, x->crochets); return; }
         aj(im, a ? "à " : "de ");
@@ -303,10 +314,66 @@ static void expression(Impression *im, const Noeud *n) {
         return;
     case N_SUJET:
         return;
+    case N_CHAMP:
+        if (im->compact) {
+            const Noeud *o = n->enfants[0];
+            int simple = o->type == N_NOM || o->type == N_CHAMP || o->type == N_APPEL;
+            if (!simple) aj(im, "(");
+            expression(im, o);
+            if (!simple) aj(im, ")");
+            aj(im, ".");
+            ecrire_nom(im, n->texte, 0);
+            return;
+        }
+        if (n->article == ART_LE) aj(im, "le ");
+        else if (n->article == ART_LA) aj(im, "la ");
+        else if (n->article == ART_L) aj(im, "l'");
+        ecrire_nom(im, n->texte, 0);
+        aj(im, " ");
+        preposition(im, "de", n->enfants[0]);
+        return;
+    case N_NOUVEAU: {
+        if (im->compact) {
+            aj(im, "_nouveau ");
+            ecrire_nom(im, n->texte, 0);
+            if (n->forme) aj(im, " _avec");
+            return;
+        }
+        Genre g = genre_de_nom(im, n->texte);
+        aj(im, g == G_FEMININ ? "une nouvelle " : voyelle(n->texte) ? "un nouvel " : "un nouveau ");
+        ecrire_nom(im, n->texte, 0);
+        return;
+    }
     default:
         aj(im, "?");
         return;
     }
+}
+
+/* Bloc qui initialise un nouvel objet, après la phrase qui le crée. */
+static void initialisation(Impression *im, const Noeud *nv, int niveau) {
+    for (size_t k = 0; k < nv->nb_enfants; k++) {
+        const Noeud *init = nv->enfants[k];
+        retrait(im, niveau + 1);
+        if (im->compact) {
+            ecrire_nom(im, init->texte, 0);
+            aj(im, " << ");
+            expression(im, init->enfants[0]);
+            aj(im, "\n");
+        } else {
+            Genre g = genre_de_nom(im, init->texte);
+            aj(im, article_ecrit(init->article, g, init->texte));
+            ecrire_nom(im, init->texte, 0);
+            aj(im, " vaut ");
+            expression(im, init->enfants[0]);
+            aj(im, ".\n");
+        }
+    }
+    if (im->compact) { retrait(im, niveau); aj(im, "_fin\n"); }
+}
+
+static const Noeud *nouveau_en_bloc(const Noeud *v) {
+    return v->type == N_NOUVEAU && v->forme ? v : NULL;
 }
 
 /* ---------------------------------------------------------------- */
@@ -316,7 +383,7 @@ static void expression(Impression *im, const Noeud *n) {
 static void phrase(Impression *im, const Noeud *n, int niveau);
 static void bloc(Impression *im, const Noeud *b, int niveau);
 
-static const char *article_ecrit(Article a, Genre g, const char *nom) {
+const char *article_ecrit(Article a, Genre g, const char *nom) {
     if (a == ART_LE) return "Le ";
     if (a == ART_LA) return "La ";
     if (a == ART_L) return "L'";
@@ -420,6 +487,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     case P_CREATION:
     case P_MODIFICATION: {
         Genre g = n->type == P_CREATION ? genre_article(n->article) : genre_de_nom(im, n->texte);
+        const Noeud *bloc_init = nouveau_en_bloc(n->enfants[0]);
         if (c) {
             if (n->type == P_CREATION)
                 aj(im, n->article == ART_LA ? "_la " : n->article == ART_L ? "_l'" : "_le ");
@@ -432,8 +500,9 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             ecrire_nom(im, n->texte, n->crochets);
             aj(im, n->type == P_CREATION ? " vaut " : " devient ");
             expression(im, n->enfants[0]);
-            aj(im, ".\n");
+            aj(im, bloc_init ? " :\n" : ".\n");
         }
+        if (bloc_init) initialisation(im, bloc_init, niveau);
         if (n->type == P_CREATION) retenir(im, n->texte, g);
         return;
     }
@@ -577,6 +646,50 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         branche(im, corps, corps->ligne == n->ligne, niveau);
         fin_compacte(im, niveau);
         im->nb = sauve;
+        return;
+    }
+    case P_CLASSE:
+        retenir(im, n->texte, n->forme == 2 ? G_FEMININ : G_MASCULIN);
+        if (c) {
+            aj(im, n->forme == 2 ? "_classe _une " : "_classe _un ");
+            ecrire_nom(im, n->texte, 0);
+            aj(im, "\n");
+        } else {
+            aj(im, n->forme == 2 ? "Une " : "Un ");
+            ecrire_nom(im, n->texte, 0);
+            aj(im, " a :\n");
+        }
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            const Noeud *ch = n->enfants[k];
+            retenir(im, ch->texte, ch->forme == 2 ? G_FEMININ : G_MASCULIN);
+            retrait(im, niveau + 1);
+            aj(im, c ? (ch->forme == 2 ? "_une " : "_un ") : (ch->forme == 2 ? "une " : "un "));
+            ecrire_nom(im, ch->texte, 0);
+            aj(im, c ? "\n" : k + 1 < n->nb_enfants ? ",\n" : ".\n");
+        }
+        if (c) { retrait(im, niveau); aj(im, "_fin\n"); }
+        return;
+    case P_MODIF_CHAMP: {
+        const Noeud *bloc_init = nouveau_en_bloc(n->enfants[1]);
+        if (c) {
+            Noeud champ = *n;
+            champ.type = N_CHAMP;
+            champ.nb_enfants = 1;
+            expression(im, &champ);
+            aj(im, " << ");
+            expression(im, n->enfants[1]);
+            aj(im, "\n");
+        } else {
+            Genre g = genre_de_nom(im, n->texte);
+            aj(im, article_ecrit(n->article, g, n->texte));
+            ecrire_nom(im, n->texte, 0);
+            aj(im, " ");
+            preposition(im, "de", n->enfants[0]);
+            aj(im, " devient ");
+            expression(im, n->enfants[1]);
+            aj(im, bloc_init ? " :\n" : ".\n");
+        }
+        if (bloc_init) initialisation(im, bloc_init, niveau);
         return;
     }
     case P_SORTIR:

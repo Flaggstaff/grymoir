@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle, v0.2
- * Spécification : docs/vm.md (révision 1.3).
+ * Spécification : docs/vm.md (révision 1.4).
  */
 #ifndef GRYM_VM_H
 #define GRYM_VM_H
@@ -27,5 +27,8 @@ void machine_detruire(Machine *m);
  * En cas d'échec, le journal d'annulation rend à chaque nom sa valeur d'avant,
  * la table des formules revient à son état d'avant (docs/vm.md, § 6), et *diag décrit l'erreur. */
 int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *diag);
+
+/* Objets encore vivants après le dernier ramassage (pour les tests). */
+size_t machine_objets_vivants(const Machine *m);
 
 #endif

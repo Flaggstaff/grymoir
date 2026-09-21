@@ -1,0 +1,27 @@
+# classes, objets et champs
+_classe _un client
+    _un nom
+    _un solde
+_fin
+_classe _une facture
+    _un client
+    _un montant
+_fin
+
+_le client << _nouveau client _avec
+    nom << « Dupont »
+    solde << 100
+_fin
+
+_action facturer(_un client ; _un montant)
+    _la facture << _nouveau facture _avec
+        client << client
+        montant << montant
+    _fin
+    client.solde << client.solde − facture.montant
+    _afficher « Facture de » ; facture.montant ; « pour » ; facture.client.nom
+_fin
+
+facturer(client ; 30)
+facturer(client ; 12,50)
+_afficher « Solde de » ; client.nom ; « : » ; client.solde

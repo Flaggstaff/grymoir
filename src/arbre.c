@@ -191,6 +191,49 @@ static void decrire(const Noeud *n, Chaine *c) {
         }
         chaine_ajouter(c, ")");
         return;
+    case N_CHAMP:
+        chaine_ajouter(c, "(champ [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "] ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
+    case N_NOUVEAU:
+        chaine_ajouter(c, "(nouveau [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "]");
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            chaine_ajouter(c, " ");
+            decrire(n->enfants[k], c);
+        }
+        chaine_ajouter(c, ")");
+        return;
+    case N_INIT:
+        chaine_ajouter(c, "([");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "] ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
+    case P_CLASSE:
+        chaine_ajouter(c, "(classe [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "]");
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            chaine_ajouter(c, " ");
+            decrire(n->enfants[k], c);
+        }
+        chaine_ajouter(c, ")");
+        return;
+    case P_MODIF_CHAMP:
+        chaine_ajouter(c, "(modifier-champ [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "] ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_APPEL:
     case P_APPEL:
         chaine_ajouter(c, n->type == N_APPEL ? "(appel [" : "(action-appel [");

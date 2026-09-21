@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.7), § 2 à 12.
+ * Spécification : docs/grammaire.md (révision 1.8), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -32,16 +32,36 @@ typedef struct {
     int local;         /* case locale dans une formule, −1 pour un nom global */
 } Symbole;
 
+/* Classe déclarée (§ 11 de la charte, grammaire § 13) : son nom, son genre, ses champs. */
+typedef struct {
+    char *nom;
+    Genre genre;
+    char **champs;
+    Genre *genres;     /* genre de chaque champ */
+    size_t nb;
+} Classe;
+
 struct Portee {
     Symbole *s;
     size_t n, cap;
+    Classe *classes;
+    size_t nb_classes;
 };
 
 Portee *portee_creer(void) {
     Portee *p = grym_allouer(sizeof *p);
     p->s = NULL;
     p->n = p->cap = 0;
+    p->classes = NULL;
+    p->nb_classes = 0;
     return p;
+}
+
+static void classe_liberer(Classe *c) {
+    free(c->nom);
+    for (size_t k = 0; k < c->nb; k++) free(c->champs[k]);
+    free(c->champs);
+    free(c->genres);
 }
 
 static void portee_vider(Portee *p) {
@@ -49,6 +69,10 @@ static void portee_vider(Portee *p) {
     free(p->s);
     p->s = NULL;
     p->n = p->cap = 0;
+    for (size_t i = 0; i < p->nb_classes; i++) classe_liberer(&p->classes[i]);
+    free(p->classes);
+    p->classes = NULL;
+    p->nb_classes = 0;
 }
 
 void portee_detruire(Portee *p) {
@@ -73,6 +97,38 @@ static void portee_copier(Portee *dst, const Portee *src) {
         dst->s[i] = src->s[i];
         dst->s[i].nom = grym_dupliquer(src->s[i].nom);
     }
+    dst->nb_classes = src->nb_classes;
+    dst->classes = src->nb_classes ? grym_allouer(src->nb_classes * sizeof *dst->classes) : NULL;
+    for (size_t i = 0; i < src->nb_classes; i++) {
+        const Classe *c = &src->classes[i];
+        Classe *d = &dst->classes[i];
+        d->nom = grym_dupliquer(c->nom);
+        d->genre = c->genre;
+        d->nb = c->nb;
+        d->champs = grym_allouer((c->nb ? c->nb : 1) * sizeof *d->champs);
+        d->genres = grym_allouer((c->nb ? c->nb : 1) * sizeof *d->genres);
+        for (size_t k = 0; k < c->nb; k++) {
+            d->champs[k] = grym_dupliquer(c->champs[k]);
+            d->genres[k] = c->genres[k];
+        }
+    }
+}
+
+static Classe *classe_de(Portee *p, const char *nom) {
+    for (size_t i = 0; i < p->nb_classes; i++)
+        if (strcmp(p->classes[i].nom, nom) == 0) return &p->classes[i];
+    return NULL;
+}
+
+/* Champ déclaré dans au moins une classe ; *g reçoit son genre. */
+static int champ_connu(Portee *p, const char *nom, Genre *g) {
+    for (size_t i = 0; i < p->nb_classes; i++)
+        for (size_t k = 0; k < p->classes[i].nb; k++)
+            if (strcmp(p->classes[i].champs[k], nom) == 0) {
+                if (g) *g = p->classes[i].genres[k];
+                return 1;
+            }
+    return 0;
 }
 
 static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
@@ -580,6 +636,47 @@ static Noeud *appel_calcul(Analyse *a, Symbole *s, const Jeton *premier) {
     return n;
 }
 
+static Noeud *base(Analyse *a);
+static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase);
+
+/* « de », « d' » ou « du » à l'index k : introduit l'objet dont on lit un champ. */
+static int complement_de(const Analyse *a, size_t k) {
+    const Jeton *t = &a->j[k];
+    return est_mot(t, "de") || est_mot(t, "du") || (t->type == J_ELISION && strcmp(t->valeur, "d") == 0);
+}
+
+/* « le solde du client » : champ, puis l'objet après « de » / « du » (grammaire, § 13.3). */
+static Noeud *acces_champ(Analyse *a, char *champ, Genre g, const Jeton *tart, Article art,
+                          const Jeton *premier, size_t k) {
+    if (tart && !tart->synthetique && (art == ART_LE || art == ART_LA) && g != GENRE_LIBRE && genre_de(art) != g) {
+        erreur(a, tart, grym_formater("« %s » est un champ %s.", champ, g == GENRE_MASCULIN ? "masculin" : "féminin"));
+        free(champ);
+        return NULL;
+    }
+    a->i = k;
+    Jeton *t = cour(a);
+    avancer(a);
+    if (est_mot(t, "du")) {
+        a->article_force = ART_LE;
+        a->jeton_force = t;
+    } else if (est_mot(cour(a), "le")) {
+        erreur(a, t, grym_dupliquer("« de le » s'écrit « du »."));
+        free(champ);
+        return NULL;
+    }
+    Noeud *objet = base(a);
+    a->article_force = ART_AUCUN;
+    if (!objet) { free(champ); return NULL; }
+    Noeud *n = noeud_creer(N_CHAMP, premier->ligne, premier->colonne, premier->debut);
+    n->texte = champ;
+    n->article = art == ART_IMPLICITE ? ART_AUCUN : art;
+    n->op_ligne = premier->ligne;
+    n->op_colonne = premier->colonne;
+    noeud_ajouter(n, objet);
+    n->fin = objet->fin;
+    return n;
+}
+
 /* [ article ] nom, résolu par plus longue correspondance (§ 2.2).
  * L'article peut venir d'une contraction : « au » (à le), « du » (de le). */
 static Noeud *nom_expression(Analyse *a) {
@@ -611,6 +708,12 @@ static Noeud *nom_expression(Analyse *a) {
 
     Symbole *s = NULL;
     size_t d = a->i, fin;
+    const Jeton *premier_jeton = tart ? tart : &a->j[d];
+    if (a->j[d].type == J_CROCHETS && complement_de(a, d + 1)) {
+        Genre g;
+        if (champ_connu(a->portee, a->j[d].valeur, &g))
+            return acces_champ(a, grym_dupliquer(a->j[d].valeur), g, tart, art, premier_jeton, d + 1);
+    }
     if (a->j[d].type == J_CROCHETS) {
         /* Nom entre crochets : correspondance exacte. */
         s = visible(a, a->j[d].valeur);
@@ -632,6 +735,14 @@ static Noeud *nom_expression(Analyse *a) {
             s = visible(a, c);
             free(c);
             if (s) { fin = k; break; }
+        }
+        /* Un champ suivi de « de » l'emporte sur un nom au moins aussi court (§ 13.3). */
+        for (size_t k = f; k > d; k--) {
+            if (!complement_de(a, k) || (s && fin > k)) continue;
+            char *c = cle(a, d, k);
+            Genre g;
+            if (champ_connu(a->portee, c, &g)) return acces_champ(a, c, g, tart, art, premier_jeton, k);
+            free(c);
         }
         int arret = 0;
         for (int q = 0; q < a->nb_arrets && fin < f; q++) if (est_mot(&a->j[fin], a->arrets[q])) arret = 1;
@@ -685,8 +796,72 @@ static Noeud *nom_expression(Analyse *a) {
 
 static Noeud *unaire(Analyse *a);
 
+/* Commence par une voyelle : « un nouvel employé », « l'addition ». Le « h » est laissé de côté. */
+static int voyelle_initiale(const char *s) {
+    static const char *const V[] = { "a", "e", "i", "o", "u", "y", "à", "â", "ä", "é", "è", "ê", "ë",
+                                     "î", "ï", "ô", "ö", "ù", "û", "ü", "œ" };
+    for (size_t k = 0; k < sizeof V / sizeof *V; k++)
+        if (strncmp(s, V[k], strlen(V[k])) == 0) return 1;
+    return 0;
+}
+
+static int est_nouveau(const Jeton *t) {
+    return est_mot(t, "nouveau") || est_mot(t, "nouvel") || est_mot(t, "nouvelle");
+}
+
+/* « un nouveau client », « une nouvelle facture », « un nouvel employé » (§ 13.2). */
+static Noeud *nouveau(Analyse *a) {
+    Jeton *tun = cour(a);
+    Genre ga = est_mot(tun, "une") ? GENRE_FEMININ : GENRE_MASCULIN;
+    avancer(a);
+    Jeton *tn = cour(a);
+    avancer(a);
+    size_t d = a->i, f = d;
+    Classe *c = NULL;
+    if (a->j[d].type == J_CROCHETS) {
+        c = classe_de(a->portee, a->j[d].valeur);
+        f = d + 1;
+    } else {
+        size_t k = d;
+        while (k < a->n && mot_de_nom(a, k)) k++;
+        for (f = k; f > d && !c; f--) {
+            char *cl = cle(a, d, f);
+            c = classe_de(a->portee, cl);
+            free(cl);
+            if (c) break;
+        }
+    }
+    if (!c) {
+        if (d == a->n - 1 || !debut_de_nom(a, d))
+            return erreur(a, &a->j[d], grym_dupliquer("Nom de classe attendu : « un nouveau client »."));
+        size_t k = d + 1;
+        while (k < a->n && mot_de_nom(a, k)) k++;
+        char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+        erreur(a, &a->j[d], grym_formater("Classe « %s » inconnue.", nom));
+        free(nom);
+        return NULL;
+    }
+    if (!tun->synthetique) {
+        const char *juste = c->genre == GENRE_FEMININ ? "une nouvelle"
+                          : voyelle_initiale(c->nom) ? "un nouvel" : "un nouveau";
+        char *ecrit = grym_formater("%s %s", tun->valeur, tn->valeur);
+        int ok = strcmp(ecrit, juste) == 0 || (c->genre == GENRE_MASCULIN && ga == GENRE_MASCULIN
+                                               && est_mot(tn, "nouveau") && voyelle_initiale(c->nom));
+        free(ecrit);
+        if (!ok)
+            return erreur(a, tun, grym_formater("« %s » est %s : écrivez « %s %s ».", c->nom,
+                                               c->genre == GENRE_FEMININ ? "féminin" : "masculin", juste, c->nom));
+    }
+    Noeud *n = noeud_creer(N_NOUVEAU, tun->ligne, tun->colonne, tun->debut);
+    n->texte = grym_dupliquer(c->nom);
+    a->i = a->j[d].type == J_CROCHETS ? d + 1 : f;
+    n->fin = fin_jeton(&a->j[a->i - 1]);
+    return n;
+}
+
 static Noeud *base(Analyse *a) {
     Jeton *t = cour(a);
+    if ((est_mot(t, "un") || est_mot(t, "une")) && est_nouveau(voir(a, 1))) return nouveau(a);
     if (a->article_force != ART_AUCUN && !debut_de_nom(a, a->i) && article_de(t) == ART_AUCUN) {
         char *x = texte_jeton(a->jeton_force);
         a->article_force = ART_AUCUN;
@@ -724,9 +899,11 @@ static Noeud *base(Analyse *a) {
         avancer(a);
         return g;
     }
-    case J_TEXTE:
-        return erreur(a, t, grym_dupliquer(
-            "Un texte ne peut apparaître que dans une phrase Afficher."));
+    case J_TEXTE: {             /* un texte est une valeur (§ 13 : les champs en contiennent) */
+        Noeud *n = feuille(N_TEXTE, t);
+        avancer(a);
+        return n;
+    }
     case J_MOT:
     case J_ELISION:
         if (!mot_de_nom(a, a->i) && article_de(t) == ART_AUCUN) return erreur_inattendu(a, t);
@@ -1208,6 +1385,8 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
     }
     char *nom;
     int crochets = a->j[d].type == J_CROCHETS;
+    if (crochets && f > d + 1 && complement_de(a, d + 1) && champ_connu(a->portee, a->j[d].valeur, NULL))
+        crochets = 0;   /* « [nom] du client devient … » : un champ, traité plus bas */
     if (crochets) {
         if (f != d + 1) {
             char *x = texte_jeton(&a->j[d + 1]);
@@ -1223,6 +1402,8 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
             free(nom);
             return erreur(a, &a->j[d], grym_dupliquer("Un nom ne peut pas commencer par un article."));
         }
+    } else if (a->j[d].type == J_CROCHETS) {
+        nom = grym_dupliquer(a->j[d].valeur);   /* champ entre crochets, suivi de « de » */
     } else {
         for (size_t k = d; k < f; k++) {
             Jeton *t = &a->j[k];
@@ -1253,6 +1434,61 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
 
     int creation = est_mot(verbe, "vaut");
     Symbole *s = visible(a, nom);
+
+    /* « Le solde du client devient … » : modification d'un champ (§ 13.3). Avec « vaut »,
+     * c'est un champ seulement si ce qui suit « de » désigne un nom existant : « Le prix de
+     * vente vaut 3. » crée un nom, même si « prix » est un champ. */
+    if (!s && !crochets) {
+        int champ = a->j[d].type == J_CROCHETS;
+        for (size_t k = d + 1; k < f && !champ; k++) {
+            if (!complement_de(a, k)) continue;
+            char *c = cle(a, d, k);
+            champ = champ_connu(a->portee, c, NULL);
+            free(c);
+            if (champ && creation) {
+                size_t r = k + 1;
+                if (r < f && article_de(&a->j[r]) != ART_AUCUN) r++;
+                char *reste = r < f ? cle(a, r, f) : grym_dupliquer("");
+                champ = r < f && visible(a, reste) != NULL;
+                free(reste);
+            }
+        }
+        if (champ) {
+            free(nom);
+            if (creation)
+                return erreur(a, verbe, grym_dupliquer("Un champ se modifie avec « devient » : "
+                                                       "« Le solde du client devient … »."));
+            if (a->formule == 1)
+                return erreur(a, tart, grym_dupliquer("Un calcul ne modifie pas les champs d'un objet."));
+            a->i = (size_t)(tart - a->j);
+            Noeud *cible = nom_expression(a);
+            if (!cible) return NULL;
+            if (cible->type != N_CHAMP || a->i != f) {
+                noeud_liberer(cible);
+                return erreur(a, &a->j[a->i], grym_dupliquer("« devient » attendu après le champ."));
+            }
+            a->i = f + 1;
+            Noeud *v = valeur(a);
+            if (!v) { noeud_liberer(cible); return NULL; }
+            if (v->type == N_NOUVEAU && cour(a)->type == J_DEUX_POINTS) {
+                if (!bloc_initialisation(a, v, tart)) { noeud_liberer(cible); noeud_liberer(v); return NULL; }
+            } else if (!fin_phrase(a, 0)) {
+                noeud_liberer(cible);
+                noeud_liberer(v);
+                return NULL;
+            }
+            Noeud *n = noeud_creer(P_MODIF_CHAMP, tart->ligne, tart->colonne, tart->debut);
+            n->texte = cible->texte;
+            n->article = cible->article;
+            cible->texte = NULL;
+            noeud_ajouter(n, cible->enfants[0]);
+            cible->nb_enfants = 0;
+            noeud_liberer(cible);
+            noeud_ajouter(n, v);
+            n->fin = v->fin;
+            return n;
+        }
+    }
     char *ecrit_nom = crochets || nom_a_crochets(nom) ? grym_formater("[%s]", nom) : grym_dupliquer(nom);
 
     if (creation && s) {
@@ -1301,7 +1537,9 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
     a->i = f + 1; /* après le verbe */
     Noeud *e = valeur(a);
     if (!e) { free(nom); return NULL; }
-    if (!fin_phrase(a, 0)) { noeud_liberer(e); free(nom); return NULL; }
+    if (e->type == N_NOUVEAU && cour(a)->type == J_DEUX_POINTS) {
+        if (!bloc_initialisation(a, e, tart)) { noeud_liberer(e); free(nom); return NULL; }
+    } else if (!fin_phrase(a, 0)) { noeud_liberer(e); free(nom); return NULL; }
 
     /* Le nom n'existe qu'après la phrase : « Le total vaut total + 1. » échoue. */
     int local = -1;
@@ -1552,6 +1790,11 @@ static Noeud *definition_calcul(Analyse *a, size_t marque, size_t fin_entete, in
             return erreur(a, &a->j[k], m);
         }
     char *nom = crochets ? grym_dupliquer(a->j[d].valeur) : cle(a, d, marque);
+    if (champ_connu(a->portee, nom, NULL)) {
+        erreur(a, &a->j[d], grym_formater("« %s » est un champ : un calcul ne peut pas porter ce nom.", nom));
+        free(nom);
+        return NULL;
+    }
     if (visible(a, nom)) {
         erreur(a, &a->j[d], grym_formater("« %s » existe déjà.", nom));
         free(nom);
@@ -2010,6 +2253,172 @@ static Noeud *selon(Analyse *a, int colonne) {
     return n;
 }
 
+/* ---------------------------------------------------------------- */
+/* Classes et objets (§ 13)                                         */
+/* ---------------------------------------------------------------- */
+
+/* « Un client a : un nom, un solde. » */
+static Noeud *definition_classe(Analyse *a) {
+    Jeton *tun = cour(a);
+    Genre g = est_mot(tun, "une") ? GENRE_FEMININ : GENRE_MASCULIN;
+    if (!premier_niveau(a, tun)) return NULL;
+    avancer(a);
+    size_t d = a->i, k = d;
+    if (a->j[k].type == J_CROCHETS) k++;
+    else while (mot_de_nom(a, k) && !est_mot(&a->j[k], "a")) k++;
+    if (k == d)
+        return erreur(a, cour(a), grym_dupliquer("Nom de classe attendu : « Un client a : »."));
+    if (!est_mot(&a->j[k], "a") || a->j[k + 1].type != J_DEUX_POINTS) {
+        a->i = k;
+        attendre_mot(a, k, "a :", 3);
+        return erreur_inattendu(a, &a->j[k]);
+    }
+    if (article_de(&a->j[d]) != ART_AUCUN)
+        return erreur(a, &a->j[d], grym_dupliquer("Un nom de classe ne commence pas par un article."));
+    char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+    if (classe_de(a->portee, nom)) {
+        erreur(a, &a->j[d], grym_formater("La classe « %s » existe déjà.", nom));
+        free(nom);
+        return NULL;
+    }
+    a->i = k + 2;
+    Noeud *n = noeud_creer(P_CLASSE, tun->ligne, tun->colonne, tun->debut);
+    n->texte = nom;
+    n->forme = g == GENRE_FEMININ ? 2 : 1;
+    for (;;) {
+        Jeton *u = cour(a);
+        Genre gc;
+        attendre_mot(a, a->i, "un", 2);
+        attendre_mot(a, a->i, "une", 3);
+        if (!est_un(u, &gc)) {
+            noeud_liberer(n);
+            return erreur(a, u, grym_dupliquer("Champ attendu : « un nom », « une date »."));
+        }
+        avancer(a);
+        size_t dc = a->i, kc = dc;
+        if (a->j[kc].type == J_CROCHETS) kc++;
+        else while (mot_de_nom(a, kc)) kc++;
+        if (kc == dc) {
+            noeud_liberer(n);
+            return erreur(a, cour(a), grym_dupliquer("Nom de champ attendu après « un »."));
+        }
+        if (article_de(&a->j[dc]) != ART_AUCUN) {
+            noeud_liberer(n);
+            return erreur(a, &a->j[dc], grym_dupliquer("Un nom de champ ne commence pas par un article."));
+        }
+        char *champ = a->j[dc].type == J_CROCHETS ? grym_dupliquer(a->j[dc].valeur) : cle(a, dc, kc);
+        char *probleme = NULL;
+        Genre autre;
+        for (size_t q = 0; q < n->nb_enfants && !probleme; q++)
+            if (strcmp(n->enfants[q]->texte, champ) == 0) probleme = grym_formater("Champ « %s » déjà nommé.", champ);
+        Symbole *sy = visible(a, champ);
+        if (!probleme && sy && sy->sorte != S_VARIABLE)
+            probleme = grym_formater("« %s » est %s : un champ ne peut pas porter ce nom.", champ,
+                                     sy->sorte == S_CALCUL ? "un calcul" : "une action");
+        if (!probleme && champ_connu(a->portee, champ, &autre) && autre != gc)
+            probleme = grym_formater("« %s » est déjà un champ %s dans une autre classe.", champ,
+                                     autre == GENRE_MASCULIN ? "masculin" : "féminin");
+        if (probleme) {
+            free(champ);
+            noeud_liberer(n);
+            return erreur(a, &a->j[dc], probleme);
+        }
+        Noeud *c = noeud_creer(N_NOM, u->ligne, u->colonne, u->debut);
+        c->texte = champ;
+        c->forme = gc == GENRE_FEMININ ? 2 : 1;
+        noeud_ajouter(n, c);
+        a->i = kc;
+        attendre(a, A_POINT);
+        attendre_mot(a, a->i, ",", 1);
+        if (cour(a)->type == J_VIRGULE) { avancer(a); continue; }
+        if (cour(a)->type == J_POINT) { avancer(a); break; }
+        noeud_liberer(n);
+        return erreur_inattendu(a, cour(a));
+    }
+    /* La classe entre dans la portée (conservée d'une saisie à l'autre). */
+    Portee *p = a->portee;
+    Classe *t = grym_allouer((p->nb_classes + 1) * sizeof *t);
+    if (p->nb_classes) memcpy(t, p->classes, p->nb_classes * sizeof *t);
+    free(p->classes);
+    p->classes = t;
+    Classe *c = &p->classes[p->nb_classes++];
+    c->nom = grym_dupliquer(n->texte);
+    c->genre = g;
+    c->nb = n->nb_enfants;
+    c->champs = grym_allouer((c->nb ? c->nb : 1) * sizeof *c->champs);
+    c->genres = grym_allouer((c->nb ? c->nb : 1) * sizeof *c->genres);
+    for (size_t q = 0; q < c->nb; q++) {
+        c->champs[q] = grym_dupliquer(n->enfants[q]->texte);
+        c->genres[q] = n->enfants[q]->forme == 2 ? GENRE_FEMININ : GENRE_MASCULIN;
+    }
+    return n;
+}
+
+/* Bloc qui initialise un nouvel objet : « Le nom vaut « Dupont ». » (§ 13.2). */
+static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
+    Jeton *dp = cour(a);
+    avancer(a);
+    Jeton *premier = cour(a);
+    if (premier->type == J_FIN || premier->ligne == dp->ligne || premier->retrait <= tphrase->retrait) {
+        erreur(a, premier->type == J_FIN || premier->ligne == dp->ligne ? dp : premier, grym_dupliquer(
+            "Bloc vide : après « : », initialisez les champs sur les lignes suivantes, indentées."));
+        return 0;
+    }
+    Classe *cl = classe_de(a->portee, nv->texte);
+    int c = premier->retrait;
+    for (;;) {
+        Jeton *u = cour(a);
+        if (u->type == J_FIN || !premier_de_ligne(a, a->i) || u->retrait < c) break;
+        if (u->retrait > c) {
+            erreur(a, u, grym_dupliquer("Indentation inattendue : les champs s'alignent les uns sous les autres."));
+            return 0;
+        }
+        Article art = article_de(u);
+        if (art == ART_AUCUN) {
+            erreur(a, u, grym_formater("Initialisation attendue : « Le %s vaut … ».", cl->nb ? cl->champs[0] : "champ"));
+            return 0;
+        }
+        avancer(a);
+        size_t d = a->i, k = d;
+        if (a->j[k].type == J_CROCHETS) k++;
+        else while (mot_de_nom(a, k)) k++;
+        char *champ = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+        size_t q = 0;
+        while (q < cl->nb && strcmp(cl->champs[q], champ) != 0) q++;
+        if (q == cl->nb) {
+            erreur(a, &a->j[d], grym_formater("%s « %s » n'a pas de champ « %s ».",
+                                              cl->genre == GENRE_FEMININ ? "Une" : "Un", cl->nom, champ));
+            free(champ);
+            return 0;
+        }
+        for (size_t r = 0; r < nv->nb_enfants; r++)
+            if (strcmp(nv->enfants[r]->texte, champ) == 0) {
+                erreur(a, &a->j[d], grym_formater("Champ « %s » déjà initialisé.", champ));
+                free(champ);
+                return 0;
+            }
+        if (!u->synthetique && (art == ART_LE || art == ART_LA) && genre_de(art) != cl->genres[q]) {
+            erreur(a, u, grym_formater("« %s » est %s.", champ, cl->genres[q] == GENRE_FEMININ ? "féminin" : "masculin"));
+            free(champ);
+            return 0;
+        }
+        a->i = k;
+        static const char *const VAUT[] = { "vaut" };
+        if (!mots_fixes(a, VAUT, 1)) { free(champ); return 0; }
+        Noeud *v = valeur(a);
+        if (!v) { free(champ); return 0; }
+        if (!fin_phrase(a, 0)) { free(champ); noeud_liberer(v); return 0; }
+        Noeud *init = noeud_creer(N_INIT, u->ligne, u->colonne, u->debut);
+        init->texte = champ;
+        init->article = art == ART_IMPLICITE ? ART_AUCUN : art;
+        noeud_ajouter(init, v);
+        init->fin = v->fin;
+        noeud_ajouter(nv, init);
+    }
+    nv->forme = 1;
+    return 1;
+}
+
 /* Mots qui commencent une construction et ne peuvent donc pas commencer le nom d'une action. */
 static int mot_de_construction(const Jeton *t) {
     static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
@@ -2042,6 +2451,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "cas") || est_mot(t, "autrement"))
         return erreur(a, t, grym_formater("« %s » hors d'un « Selon ».", est_mot(t, "cas") ? "Cas" : "Autrement"));
     if (est_mot(t, "pour")) return definition_action(a, colonne);
+    if ((est_mot(t, "un") || est_mot(t, "une")) && !est_nouveau(voir(a, 1))) return definition_classe(a);
     if (est_mot(t, "rendre")) {
         if (a->formule != 1)
             return erreur(a, t, grym_dupliquer(a->formule == 2

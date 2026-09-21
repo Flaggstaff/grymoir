@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.3 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.5, § 5, § 9 et § 10.
+Version 1.4 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.8, § 5, § 9, § 10 et § 13.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -27,8 +27,9 @@ Règle de nommage : instructions, outils et messages s'écrivent en toutes lettr
 | nombre | décimal exact (grammaire, § 3.2) |
 | texte | chaîne UTF-8 |
 | booléen | vrai ou faux |
+| objet | référence vers un objet du tas : sa classe et ses champs |
 
-Les objets et l'absence de valeur s'ajouteront avec les constructions qui en ont besoin.
+Copier une valeur objet copie la référence, jamais l'objet. L'absence de valeur s'ajoutera avec les constructions qui en ont besoin.
 
 ---
 
@@ -64,6 +65,10 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 24 | `ÉCRIRE_LOCAL` | case locale | dépile une valeur dans la case |
 | 25 | `ÉCHOUER` | index d'une constante texte | arrête l'exécution avec ce message |
 | 26 | `EXIGER_ENTIER_NATUREL` | aucun | vérifie que le sommet est un entier positif ou nul ; sinon, erreur |
+| 27 | `NOUVEAU` | nom de classe | empile un nouvel objet, champs sans valeur |
+| 28 | `INITIALISER_CHAMP` | nom de champ | dépile une valeur, la range dans l'objet au sommet (qui reste) |
+| 29 | `LIRE_CHAMP` | nom de champ | remplace l'objet au sommet par la valeur de son champ |
+| 30 | `ÉCRIRE_CHAMP` | nom de champ | dépile une valeur, puis un objet ; range la valeur dans le champ |
 
 ### 3.1 Boucles et Selon
 
@@ -95,6 +100,7 @@ Pour chaque i de a à b       a → i ; b → fin ; pas (écrit, ou ±1 selon a 
 - `est positif`, `est négatif`, `est nul` compilent en une comparaison avec la constante 0 ; `est vrai`, `est faux` en `ÉGAL` avec une constante booléenne ; `n'est pas` ajoute `NON`.
 - Les comparaisons d'ordre n'acceptent que deux nombres ; `ÉGAL` et `DIFFÉRENT` acceptent deux valeurs du même type. Sinon : erreur d'exécution.
 - `SAUTER_SI_FAUX` exige un booléen : « Condition ni vraie ni fausse : la valeur est un nombre. »
+- Les instructions de champ désignent la classe et le champ par leur nom, résolu à l'exécution : la machine vérifie que la valeur est un objet et que sa classe a ce champ. `ÉGAL` compare deux objets par identité.
 - `et` et `ou` compilent en sauts (court-circuit). Chaque membre passe par `SAUTER_SI_FAUX`, qui vérifie qu'il s'agit d'un booléen :
 
 ```
@@ -131,7 +137,7 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 
 ## 6. Journal d'annulation
 
-- Chaque `ÉCRIRE` range dans le journal le nom et son ancienne valeur (ou l'absence de valeur).
+- Chaque `ÉCRIRE` range dans le journal le nom et son ancienne valeur (ou l'absence de valeur) ; chaque `ÉCRIRE_CHAMP`, l'objet, le champ et l'ancienne valeur. Les champs d'un objet créé pendant l'exécution n'entrent pas au journal : l'objet disparaît avec elle.
 - Si l'exécution échoue (division par zéro, nombre trop grand), la machine rejoue le journal du plus récent au plus ancien, puis le vide. Aucun nom ne garde de valeur écrite pendant l'exécution ratée.
 - Si l'exécution réussit, le journal se vide.
 - La boucle interactive exécute chaque saisie comme une unité (grammaire, § 3.3).
@@ -143,18 +149,26 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 
 ---
 
-## 7. Positions
+## 7. Ramasse-miettes
+
+- Tous les objets sont chaînés dans le tas de la machine. Le ramassage marque ce qui est atteignable depuis les racines, puis libère le reste.
+- Racines : les cases globales, la pile, les cases locales de chaque cadre, les anciennes valeurs du journal et les objets qu'il mentionne.
+- Le marquage suit les champs avec une pile explicite : une longue chaîne d'objets ne fait pas déborder la pile du C.
+- Un ramassage a lieu à la fin de chaque exécution, et pendant l'exécution quand le nombre d'objets créés depuis le dernier dépasse un seuil (10'000, ou le double des objets vivants).
+- Les cycles sont libérés comme le reste.
+
+## 8. Positions
 
 Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pour une opération, c'est la position de l'opérateur. Une erreur d'exécution s'exprime ainsi comme une erreur de compilation (charte, art. 8) : `facture.grym:7:18 : erreur : Division par zéro.`
 
 ---
 
-## 8. Format du fichier `.grymb`
+## 9. Format du fichier `.grymb`
 
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 3
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 4
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 sorte : u8 (0 = programme, 1 = calcul, 2 = action)
@@ -166,15 +180,19 @@ noms          nombre : u32, puis pour chacun : longueur : u32, octets UTF-8
 code          longueur : u32, puis les octets des instructions
 positions     nombre : u32, puis pour chacune :
                 décalage dans le code : u32, ligne : u32, colonne : u32
+classes       nombre : u32, puis pour chacune :
+                nom : longueur u32 et octets UTF-8, féminin : u8 (0 ou 1),
+                champs : nombre u32, puis pour chacun : longueur u32 et octets UTF-8
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`.
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26. Les fichiers de versions 1 et 2 (un seul bloc, le programme) restent lisibles.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30. Les fichiers des versions 1 à 3 restent lisibles.
+- Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
 ---
 
-## 9. Outils
+## 10. Outils
 
 | Commande | Rôle |
 |----------|------|
@@ -206,3 +224,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.1 | 2026-09-21 | Booléens, six comparaisons, `NON`, sauts (`SAUTER`, `SAUTER_SI_FAUX`, cible sur quatre octets), vérification de tous les chemins, constantes booléennes, format version 2, décalages au désassemblage |
 | 1.2 | 2026-09-21 | Formules : modules à plusieurs blocs, `APPELER`, `RENDRE`, `LIRE_LOCAL`, `ÉCRIRE_LOCAL`, cadres d'appel limités à 1000, table des formules par nom avec remplacement et restauration, vérification par sorte de bloc, format version 3 |
 | 1.3 | 2026-09-21 | Boucles et Selon : `ÉCHOUER`, `EXIGER_ENTIER_NATUREL`, cases locales du programme principal, schémas de compilation, journal limité à la première écriture de chaque nom, interruption par Ctrl+C |
+| 1.4 | 2026-09-21 | Objets : valeur objet, `NOUVEAU`, `INITIALISER_CHAMP`, `LIRE_CHAMP`, `ÉCRIRE_CHAMP`, journal des champs, ramasse-miettes par marquage et balayage, classes dans le module, format version 4 |

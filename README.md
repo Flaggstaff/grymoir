@@ -2,7 +2,7 @@
 
 Langage de programmation francophone. Référence : `docs/charte-grymoir.md`, `docs/grammaire.md` et `docs/vm.md`.
 
-## État : v0.2 en cours (machine virtuelle, conditions, formules, boucles, forme compacte)
+## État : v0.2 en cours (machine virtuelle, conditions, formules, boucles, forme compacte, objets)
 
 Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
 

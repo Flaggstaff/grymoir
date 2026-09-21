@@ -1,0 +1,22 @@
+Remarque : classes, objets et champs
+Un client a :
+    un nom,
+    un solde.
+Une facture a :
+    un client,
+    un montant.
+
+Le client vaut un nouveau client :
+    Le nom vaut « Dupont ».
+    Le solde vaut 100.
+
+Pour facturer un client et un montant :
+    La facture vaut une nouvelle facture :
+        Le client vaut client.
+        Le montant vaut montant.
+    Le solde du client devient solde du client − montant de la facture.
+    Afficher « Facture de » puis montant de la facture puis « pour » puis nom du client de la facture.
+
+Facturer client et 30.
+Facturer client et 12,50.
+Afficher « Solde de » puis nom du client puis « : » puis solde du client.

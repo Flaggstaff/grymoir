@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.7), § 11.
+ * Spécification : docs/grammaire.md (révision 1.8), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE } Ouverture;
+typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE, O_CLASSE, O_INIT } Ouverture;
 
 typedef struct {
     Ouverture type;
@@ -150,9 +150,47 @@ static void arguments(Reecriture *r, size_t d, size_t f, int de, const Jeton *o)
     }
 }
 
+/* Fin d'une valeur simple commençant en k : nom, appel f(…) ou parenthèse. */
+static size_t fin_simple(const Reecriture *r, size_t k, size_t f) {
+    if (r->e[k].type == J_PAR_OUV) {
+        size_t fin = fermante(r, k, f);
+        return fin == f ? f : fin + 1;
+    }
+    if (r->e[k].type == J_CROCHETS && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
+        size_t fin = fermante(r, k + 1, f);
+        return fin == f ? f : fin + 1;
+    }
+    return k + 1;
+}
+
 static void expression(Reecriture *r, size_t d, size_t f) {
     for (size_t k = d; k < f && !r->echec; k++) {
         const Jeton *t = &r->e[k];
+        if (t->type == J_CROCHETS || t->type == J_PAR_OUV) {
+            /* facture.client.nom → nom de client de facture (§ 13.3) */
+            size_t b = fin_simple(r, k, f), q = b, nb = 0;
+            while (q + 1 < f && r->e[q].type == J_POINT && r->e[q + 1].type == J_CROCHETS) { q += 2; nb++; }
+            if (nb) {
+                for (size_t i = q; i > b; i -= 2) {
+                    copier(r, &r->e[i - 1]);
+                    mot(r, "de", &r->e[i - 2]);
+                }
+                expression(r, k, b);
+                k = q - 1;
+                continue;
+            }
+        }
+        if (est_cle(t, "nouveau")) {
+            if (k + 1 >= f || r->e[k + 1].type != J_CROCHETS) {
+                echouer(r, t, grym_dupliquer("Nom de classe attendu après « _nouveau »."));
+                return;
+            }
+            mot(r, "un", t);
+            mot(r, "nouveau", t);
+            copier(r, &r->e[k + 1]);
+            k++;
+            continue;
+        }
         if (t->type == J_CROCHETS && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
             /* appel de calcul : carré(7) → carré de (7) */
             size_t fin = fermante(r, k + 1, f);
@@ -321,6 +359,58 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         fixer_retrait(r, premier, prof);
         return;
     }
+    if (t->type == J_MOT_CLE && !strcmp(t->valeur, "fin") && haut && haut->type == O_CLASSE && f == d + 1) {
+        /* dernier champ : la virgule devient le point final */
+        if (!r->ns || r->s[r->ns - 1].type != J_VIRGULE) {
+            echouer(r, t, grym_dupliquer("Une classe déclare au moins un champ : « _un nom »."));
+            return;
+        }
+        r->s[r->ns - 1].type = J_POINT;
+        if (r->s[r->ns - 1].ligne_fin < t->ligne) r->s[r->ns - 1].ligne_fin = t->ligne;
+        r->np--;
+        return;
+    }
+    if (haut && haut->type == O_CLASSE) {
+        if (!(est_cle(t, "un") || est_cle(t, "une")) || f != d + 2 || r->e[d + 1].type != J_CROCHETS) {
+            echouer(r, t, grym_dupliquer("Champ attendu : « _un nom » ou « _une date »."));
+            return;
+        }
+        mot(r, t->valeur, t);
+        copier(r, &r->e[d + 1]);
+        emettre(r, J_VIRGULE, NULL, &r->e[d + 1], 1);
+        return;
+    }
+    if (haut && haut->type == O_INIT && !(t->type == J_MOT_CLE && !strcmp(t->valeur, "fin"))) {
+        if (t->type != J_CROCHETS || f < d + 3 || r->e[d + 1].type != J_AFFECTE) {
+            echouer(r, t, grym_dupliquer("Initialisation attendue : « nom << valeur »."));
+            return;
+        }
+        emettre(r, J_ARTICLE_IMPLICITE, NULL, t, 1);
+        copier(r, t);
+        mot(r, "vaut", &r->e[d + 1]);
+        expression(r, d + 2, f);
+        point(r, f);
+        fixer_retrait(r, premier, prof);
+        return;
+    }
+    /* « … << _nouveau client _avec » : le bloc qui suit initialise l'objet (§ 13.2) */
+    int avec = r->e[f - 1].type == J_MOT_CLE && f >= d + 3 && est_cle(&r->e[f - 1], "avec") && r->e[f - 2].type == J_CROCHETS
+               && est_cle(&r->e[f - 3], "nouveau");
+    if (avec) f--;
+    if (t->type == J_MOT_CLE && !strcmp(t->valeur, "classe")) {
+        if (f != d + 3 || !(est_cle(&r->e[d + 1], "un") || est_cle(&r->e[d + 1], "une"))
+            || r->e[d + 2].type != J_CROCHETS) {
+            echouer(r, t, grym_dupliquer("Forme attendue : « _classe _un client »."));
+            return;
+        }
+        mot(r, r->e[d + 1].valeur, t);
+        copier(r, &r->e[d + 2]);
+        mot(r, "a", t);
+        emettre(r, J_DEUX_POINTS, NULL, &r->e[d + 2], 1);
+        fixer_retrait(r, premier, prof);
+        ouvrir(r, O_CLASSE, prof, t);
+        return;
+    }
     if (t->type == J_MOT_CLE) {
         const char *c = t->valeur;
         if (!strcmp(c, "fin")) {
@@ -388,6 +478,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             copier(r, &r->e[d + 1]);
             mot(r, "vaut", &r->e[d + 2]);
             expression(r, d + 3, f);
+            if (avec) { emettre(r, J_DEUX_POINTS, NULL, &r->e[f], 1); fixer_retrait(r, premier, prof); ouvrir(r, O_INIT, prof, t); return; }
             point(r, f);
         } else if (!strcmp(c, "afficher")) {
             mot(r, "afficher", t);
@@ -511,11 +602,15 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         echouer(r, t, grym_dupliquer("« _cas » ou « _autrement » attendu dans un « _selon »."));
         return;
     }
-    if (t->type == J_CROCHETS && d + 1 < f && r->e[d + 1].type == J_AFFECTE) {
+    size_t affecte = d;
+    while (affecte < f && r->e[affecte].type != J_AFFECTE) affecte++;
+    if (t->type == J_CROCHETS && affecte < f && affecte > d
+        && (affecte == d + 1 || r->e[d + 1].type == J_POINT)) {
         emettre(r, J_ARTICLE_IMPLICITE, NULL, t, 1);   /* total << … → Le total devient … */
-        copier(r, t);
-        mot(r, "devient", &r->e[d + 1]);
-        expression(r, d + 2, f);
+        expression(r, d, affecte);                     /* client.solde → solde de client */
+        mot(r, "devient", &r->e[affecte]);
+        expression(r, affecte + 1, f);
+        if (avec) { emettre(r, J_DEUX_POINTS, NULL, &r->e[f], 1); fixer_retrait(r, premier, prof); ouvrir(r, O_INIT, prof, t); return; }
         point(r, f);
     } else if (t->type == J_CROCHETS && d + 1 < f && r->e[d + 1].type == J_PAR_OUV && fermante(r, d + 1, f) == f - 1) {
         copier(r, t);                                 /* relancer(client) → Relancer client. */

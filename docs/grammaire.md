@@ -1,10 +1,10 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.7 de la spécification, révisée le 21 septembre 2026.
+Version 1.8 de la spécification, révisée le 21 septembre 2026.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
-Périmètre : nommer, calculer, afficher, décider (§ 5), définir des formules (§ 9), répéter (§ 10), le calcul des suites attendues (§ 8), la forme compacte (§ 11) et la forme canonique (§ 12). Tout le reste attend les versions suivantes.
+Périmètre : nommer, calculer, afficher, décider (§ 5), définir des formules (§ 9), répéter (§ 10), le calcul des suites attendues (§ 8), la forme compacte (§ 11), la forme canonique (§ 12) et les objets (§ 13). Tout le reste attend les versions suivantes.
 
 ---
 
@@ -178,7 +178,7 @@ Afficher « Total à payer : » puis le total.
 ```
 
 - `Afficher` suivi d'un ou plusieurs éléments reliés par `puis`.
-- Un élément est un texte ou une expression. En v0.1, un texte n'apparaît que dans `Afficher`.
+- Un élément est un texte ou une expression. Un texte est une valeur comme une autre : il se range dans un nom ou un champ (`Le nom vaut « Dupont ».`), se compare par égalité, mais ne se calcule pas.
 - Les éléments s'affichent séparés par une espace, suivis d'un saut de ligne : `Afficher « Total : » puis 3.` produit `Total : 3`.
 
 ### 4.1 Format des nombres affichés
@@ -272,7 +272,11 @@ programme    = bloc ;
 bloc         = { phrase } ;                      (* alignées sur une même colonne, § 5.4 *)
 phrase       = création | modification | affichage | si | remarque
              | calcul | action | rendre | appel-action
-             | tant-que | répéter | pour-chaque | sortir | passer | selon ;
+             | tant-que | répéter | pour-chaque | sortir | passer | selon
+             | classe | modif-champ ;
+classe       = un nom "a" ":" un nom { "," un nom } "." ;
+modif-champ  = article nom de base "devient" valeur ( "." | ":" initialisation ) ;
+initialisation = { article nom "vaut" valeur "." } ;      (* indentée, après « un nouveau … : » *)
 tant-que     = "Tant" "que" valeur branche ;
 répéter      = "Répéter" expression "fois" branche ;
 pour-chaque  = "Pour" "chaque" nom ( de | "du" ) expression à expression
@@ -312,7 +316,10 @@ expression   = terme { ( "+" | "−" ) terme } ;
 terme        = unaire { ( "×" | "÷" ) unaire } ;
 unaire       = "−" unaire | puissance ;
 puissance    = base [ "^" unaire ] ;
-base         = nombre | [ article ] ( nom | "[" nom "]" ) [ arguments ] | "(" expression ")" ;
+base         = nombre | texte | nouveau | champ
+             | [ article ] ( nom | "[" nom "]" ) [ arguments ] | "(" expression ")" ;
+nouveau      = ( "un" ( "nouveau" | "nouvel" ) | "une" "nouvelle" ) nom ;
+champ        = [ article ] nom de base ;          (* nom : un champ déclaré dans une classe *)
 arguments    = de unaire { "et" de unaire } ;   (* seulement après le nom d'un calcul *)
 article      = "le" | "la" | "l'" ;
 ```
@@ -362,6 +369,12 @@ Limites de cette notation :
 | Hors d'une boucle | « « Sortir de la boucle » hors d'une boucle. » |
 | Cas après Autrement | « « Autrement » vient après tous les cas. » |
 | Interruption (exécution) | « Interrompu (Ctrl+C). » |
+| Classe inconnue | « Classe « fournisseur » inconnue. » |
+| Accord de « nouveau » | « « client » est masculin : écrivez « un nouveau client ». » |
+| Champ modifié avec `vaut` | « Un champ se modifie avec « devient » : « Le solde du client devient … ». » |
+| Champ absent (exécution) | « Un client n'a pas de champ « montant ». » |
+| Champ vide (exécution) | « Le champ « solde » n'a pas de valeur. » |
+| Pas un objet (exécution) | « « nom » : la valeur n'est pas un objet, c'est un nombre. » |
 | Récursion sans fin (exécution) | « Trop d'appels imbriqués : plus de 1000. Une formule s'appelle-t-elle sans fin ? » |
 
 Chaque message est précédé du fichier, de la ligne et de la colonne (charte, art. 8) : `facture.grym:7:18 : erreur : Division par zéro.`
@@ -561,6 +574,11 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `Pour chaque i de 1 à 9 par pas de 2 :` | `_pour_chaque i _de 1 _à 9 _pas 2` … `_fin` |
 | `Sortir de la boucle.`, `Passer au tour suivant.` | `_sortir`, `_passer` |
 | `Selon x :` / `Cas 1 ou de 2 à 3` / `Cas supérieur à 10` / `Autrement` | `_selon x` / `_cas 1 _ou _de 2 _à 3` / `_cas > 10` / `_autrement` … `_fin` |
+| `Un client a : un nom, une date.` | `_classe _un client` / `_un nom` / `_une date` / `_fin` |
+| `un nouveau client`, `une nouvelle facture` | `_nouveau client`, `_nouveau facture` |
+| `Le c vaut un nouveau client :` + `Le nom vaut « a ».` | `_le c << _nouveau client _avec` / `nom << « a »` / `_fin` |
+| `le nom du client de la facture` | `facture.client.nom` |
+| `Le solde du client devient 0.` | `client.solde << 0` |
 
 - La forme compacte ne connaît pas les formes courtes : chaque construction ouvre un bloc fermé par `_fin` (sauf `_sinon`, `_sinon_si`, `_cas` et `_autrement`, qui continuent la construction en cours).
 - Un argument de calcul est délimité par les parenthèses et les `;` : `carré(3 + 1)` vaut 16.
@@ -596,6 +614,60 @@ Garanties de la traduction (charte, art. 4) :
 
 Vérification (21 septembre 2026) : sur les 147 programmes valides des suites de tests, la forme littéraire et sa traduction compacte donnent la même sortie à l'exécution, et les garanties 1 et 3 tiennent sans exception.
 
+## 13. Objets
+
+### 13.1 Classes
+
+```
+Un client a :
+    un nom,
+    un solde.
+```
+
+- Une classe est un nom : l'article indéfini fixe son genre (`Une facture a :`), comme pour chaque champ.
+- Les champs se séparent par des virgules ; le dernier se termine par un point. La présentation est libre : `Un point a : un x, un y.`
+- Les champs ne sont pas typés en v0.2 (charte, art. 5).
+- Une classe se déclare au premier niveau du programme, avant son premier usage. Un nom de classe ne se réutilise pas.
+- Un champ ne porte pas le nom d'un calcul ou d'une action. Un même nom de champ peut servir dans plusieurs classes, avec le même genre.
+
+### 13.2 Créer un objet
+
+```
+Le client vaut un nouveau client.
+Le client vaut un nouveau client :
+    Le nom vaut « Dupont ».
+    Le solde vaut 0.
+```
+
+- `un nouveau`, `un nouvel` (devant une voyelle), `une nouvelle` : l'article et l'adjectif s'accordent avec le genre de la classe.
+- Le bloc facultatif initialise des champs de la classe, chacun au plus une fois, avec `vaut`.
+- Un champ non initialisé n'a pas de valeur : le lire est une erreur à l'exécution, jamais une valeur par défaut.
+
+### 13.3 Champs
+
+```
+Afficher le nom du client.
+Le solde du client devient solde du client − 10.
+Afficher le nom du client de la facture.            →  nom de (client de (facture))
+```
+
+- Un champ se lit par le complément du nom : `le solde du client`, `la date de la facture`, `le nom de l'employé`. Les compléments s'enchaînent de droite à gauche.
+- Un champ se modifie avec `devient`, jamais avec `vaut`.
+- Quand un nom de champ suivi de `de` peut aussi se lire comme un nom déclaré, la plus longue correspondance l'emporte ; à longueur égale, le champ l'emporte. `Le prix de vente vaut 3.` crée un nom, même si `prix` est un champ, tant que `vente` n'est pas un nom existant.
+- Un calcul lit les champs de ses paramètres, mais ne les modifie pas (§ 9.4).
+- Qu'un objet ait bien le champ demandé se vérifie à l'exécution.
+
+### 13.4 Identité, affichage, ramasse-miettes
+
+- `a = b` compare l'identité : vrai si les deux noms désignent le même objet, pas si leurs champs sont égaux.
+- `Afficher le client.` écrit `un client`.
+- Un objet vit tant qu'un nom, un champ ou une case locale le désigne ; le ramasse-miettes libère les autres, même quand ils forment des cycles.
+- Une modification de champ passe par le journal : une saisie ratée rend à chaque champ sa valeur d'avant (§ 3.3).
+
+### 13.5 À venir
+
+L'héritage (`Un membre est une personne.`), les méthodes (formules choisies selon la classe de leur paramètre) et les aptitudes (`Une chose horodatée a :`) suivent, dans cet ordre.
+
 ---
 
 ## Journal des révisions
@@ -610,3 +682,4 @@ Vérification (21 septembre 2026) : sur les 147 programmes valides des suites de
 | 1.5 | 2026-09-21 | Nouveau § 10 : répéter. `Tant que`, `Répéter … fois`, `Pour chaque … de … à … [par pas de …]` (bornes incluses, sens automatique, pas décimaux exacts, compteur en lecture seule), `Sortir de la boucle`, `Passer au tour suivant`, `Selon` / `Cas` / `Autrement` (valeurs séparées par `ou`, intervalles, tournures, pas de chute), interruption par Ctrl+C |
 | 1.6 | 2026-09-21 | Nouveaux § 11 (forme compacte : règles de lecture, table des correspondances) et § 12 (forme canonique, garanties de la traduction). `grym formater`, `grym traduire` vers la forme compacte |
 | 1.7 | 2026-09-21 | § 11 : lecture de la forme compacte (réécriture en phrases littéraires, positions conservées), outils, suffixes de comparaison, instructions sur plusieurs lignes, limite des messages. § 12 : garanties vérifiées |
+| 1.8 | 2026-09-21 | Nouveau § 13 : classes, création d'objets (`un nouveau`, bloc d'initialisation), champs (`le solde du client`, `devient`), identité, ramasse-miettes. Les textes deviennent des valeurs. Correspondances compactes |

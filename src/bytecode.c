@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.3).
+ * Spécification : docs/vm.md (révision 1.4).
  */
 #include "bytecode.h"
 #include "decimal.h"
@@ -135,13 +135,18 @@ const char *instruction_nom(CodeInstruction code) {
     case I_ECRIRE_LOCAL:   return "ÉCRIRE_LOCAL";
     case I_ECHOUER:        return "ÉCHOUER";
     case I_EXIGER_ENTIER_NATUREL: return "EXIGER_ENTIER_NATUREL";
+    case I_NOUVEAU:        return "NOUVEAU";
+    case I_INITIALISER_CHAMP: return "INITIALISER_CHAMP";
+    case I_LIRE_CHAMP:     return "LIRE_CHAMP";
+    case I_ECRIRE_CHAMP:   return "ÉCRIRE_CHAMP";
     }
     return "INCONNUE";
 }
 
 int instruction_a_operande(CodeInstruction code) {
     return code == I_CONSTANTE || code == I_LIRE || code == I_ECRIRE || code == I_AFFICHER
-        || code == I_APPELER || code == I_LIRE_LOCAL || code == I_ECRIRE_LOCAL || code == I_ECHOUER;
+        || code == I_APPELER || code == I_LIRE_LOCAL || code == I_ECRIRE_LOCAL || code == I_ECHOUER
+        || code == I_NOUVEAU || code == I_INITIALISER_CHAMP || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -200,7 +205,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                     ? (unsigned)b->code[d + 1] | ((unsigned)b->code[d + 2] << 8) : 0;
         if (c == I_CONSTANTE && op >= b->nb_constantes)
             ok = refuser(erreur, grym_formater("constante %u inexistante (octet %lu).", op, (unsigned long)d));
-        else if ((c == I_LIRE || c == I_ECRIRE) && op >= b->nb_noms)
+        else if ((c == I_LIRE || c == I_ECRIRE || c == I_NOUVEAU || c == I_INITIALISER_CHAMP
+                  || c == I_LIRE_CHAMP || c == I_ECRIRE_CHAMP) && op >= b->nb_noms)
             ok = refuser(erreur, grym_formater("nom %u inexistant (octet %lu).", op, (unsigned long)d));
         else if (c == I_AFFICHER && op == 0)
             ok = refuser(erreur, grym_formater("AFFICHER sans élément (octet %lu).", (unsigned long)d));
@@ -256,6 +262,10 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                 break;
             case I_RENDRE: besoin = 1; break;
             case I_EXIGER_ENTIER_NATUREL: besoin = 1; break;
+            case I_NOUVEAU: effet = 1; break;
+            case I_INITIALISER_CHAMP: besoin = 2; effet = -1; break;
+            case I_LIRE_CHAMP: besoin = 1; break;
+            case I_ECRIRE_CHAMP: besoin = 2; effet = -2; break;
             case I_ECHOUER: break;
             case I_NEGATION: case I_NON: besoin = 1; break;
             case I_ADDITION: case I_SOUSTRACTION: case I_MULTIPLICATION: case I_DIVISION:
@@ -323,10 +333,10 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 }
 
 /* ---------------------------------------------------------------- */
-/* Fichier .grymb (docs/vm.md, § 8)                                 */
+/* Fichier .grymb (docs/vm.md, § 9)                                 */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 3   /* versions 1 et 2 (un seul bloc) restent lisibles */
+#define VERSION_FORMAT 4   /* versions 1 et 2 (un seul bloc) et 3 (sans classes) restent lisibles */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -391,6 +401,14 @@ unsigned char *module_serialiser(const Module *m, size_t *taille) {
         ecrire_u16(&o, (unsigned)b->nb_parametres);
         ecrire_u16(&o, (unsigned)b->nb_locaux);
         ecrire_corps(&o, b);
+    }
+    ecrire_u32(&o, (uint32_t)m->nb_classes);
+    for (size_t k = 0; k < m->nb_classes; k++) {
+        const ClasseModule *c = &m->classes[k];
+        ecrire_chaine(&o, c->nom);
+        ecrire_u8(&o, c->feminin ? 1u : 0u);
+        ecrire_u32(&o, (uint32_t)c->nb_champs);
+        for (size_t q = 0; q < c->nb_champs; q++) ecrire_chaine(&o, c->champs[q]);
     }
     *taille = o.n;
     return o.d;
@@ -545,6 +563,32 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
         char *detail = lire_corps(&l, b);
         if (detail) return echec_module(m, erreur, detail);
     }
+    if (version >= 4) {
+        uint32_t nc = lire_u(&l, 4);
+        if (l.echec || nc > (taille - l.pos) / 9)
+            return echec_module(m, erreur, grym_dupliquer("table des classes tronquée."));
+        for (uint32_t k = 0; k < nc; k++) {
+            char *nom = lire_chaine(&l);
+            uint32_t fem = lire_u(&l, 1);
+            uint32_t nch = lire_u(&l, 4);
+            if (!nom || !*nom || l.echec || fem > 1 || nch > (taille - l.pos) / 4) {
+                free(nom);
+                return echec_module(m, erreur, grym_formater("classe %u illisible.", (unsigned)k));
+            }
+            ClasseModule *c = module_ajouter_classe(m, nom, (int)fem);
+            free(nom);
+            for (uint32_t q = 0; q < nch; q++) {
+                char *ch = lire_chaine(&l);
+                if (!ch || !*ch) {
+                    free(ch);
+                    return echec_module(m, erreur, grym_formater("champ %u de la classe %u illisible.",
+                                                                 (unsigned)q, (unsigned)k));
+                }
+                classe_ajouter_champ(c, ch);
+                free(ch);
+            }
+        }
+    }
     if (l.pos != taille) return echec_module(m, erreur, grym_dupliquer("octets en trop à la fin du fichier."));
     char *detail = NULL;
     if (!module_verifier(m, &detail)) return echec_module(m, erreur, detail);
@@ -559,6 +603,8 @@ Module *module_creer(void) {
     Module *m = grym_allouer(sizeof *m);
     m->blocs = NULL;
     m->nb = 0;
+    m->classes = NULL;
+    m->nb_classes = 0;
     return m;
 }
 
@@ -567,10 +613,31 @@ void module_ajouter(Module *m, Bloc *b) {
     m->blocs[m->nb++] = b;
 }
 
+ClasseModule *module_ajouter_classe(Module *m, const char *nom, int feminin) {
+    m->classes = agrandir(m->classes, m->nb_classes + 1, sizeof *m->classes);
+    ClasseModule *c = &m->classes[m->nb_classes++];
+    c->nom = grym_dupliquer(nom);
+    c->feminin = feminin;
+    c->champs = NULL;
+    c->nb_champs = 0;
+    return c;
+}
+
+void classe_ajouter_champ(ClasseModule *c, const char *champ) {
+    c->champs = agrandir(c->champs, c->nb_champs + 1, sizeof *c->champs);
+    c->champs[c->nb_champs++] = grym_dupliquer(champ);
+}
+
 void module_detruire(Module *m) {
     if (!m) return;
     for (size_t k = 0; k < m->nb; k++) bloc_detruire(m->blocs[k]);
     free(m->blocs);
+    for (size_t k = 0; k < m->nb_classes; k++) {
+        free(m->classes[k].nom);
+        for (size_t q = 0; q < m->classes[k].nb_champs; q++) free(m->classes[k].champs[q]);
+        free(m->classes[k].champs);
+    }
+    free(m->classes);
     free(m);
 }
 
@@ -594,11 +661,22 @@ int module_verifier(const Module *m, char **erreur) {
             return 0;
         }
     }
+    for (size_t k = 0; k < m->nb_classes; k++) {
+        const ClasseModule *c = &m->classes[k];
+        for (size_t q = 0; q < k; q++)
+            if (strcmp(m->classes[q].nom, c->nom) == 0)
+                return refuser(erreur, grym_formater("classe « %s » définie deux fois.", c->nom));
+        for (size_t a = 0; a < c->nb_champs; a++)
+            for (size_t q = 0; q < a; q++)
+                if (strcmp(c->champs[q], c->champs[a]) == 0)
+                    return refuser(erreur, grym_formater("champ « %s » déclaré deux fois dans « %s ».",
+                                                         c->champs[a], c->nom));
+    }
     return 1;
 }
 
 /* ---------------------------------------------------------------- */
-/* Désassemblage (docs/vm.md, § 9)                                  */
+/* Désassemblage (docs/vm.md, § 10)                                  */
 /* ---------------------------------------------------------------- */
 
 static void completer(Chaine *c, const char *s, size_t largeur) {
@@ -650,7 +728,8 @@ char *bloc_desassembler(const Bloc *b) {
             } else {
                 commentaire = grym_formater("« %s »", k->texte);
             }
-        } else if ((code == I_LIRE || code == I_ECRIRE) && op < b->nb_noms) {
+        } else if ((code == I_LIRE || code == I_ECRIRE || code == I_NOUVEAU || code == I_INITIALISER_CHAMP
+                    || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP) && op < b->nb_noms) {
             commentaire = grym_dupliquer(b->noms[op]);
         } else if (code == I_APPELER && op < b->nb_noms) {
             unsigned na = b->code[debut + 3];

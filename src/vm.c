@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.3).
+ * Spécification : docs/vm.md (révision 1.4).
  */
 #include "vm.h"
 #include "decimal.h"
@@ -11,17 +11,38 @@
 /* Valeurs (docs/vm.md, § 2)                                        */
 /* ---------------------------------------------------------------- */
 
-typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN } TypeValeur;
+typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET } TypeValeur;
+
+struct Objet;
 
 typedef struct {
     TypeValeur type;
     Decimal nombre;
     char *texte;
     int vrai;
+    struct Objet *objet;   /* référence : l'objet appartient au tas, pas à la valeur */
 } Valeur;
 
+/* Classe connue de la machine (grammaire, § 13). */
+typedef struct {
+    char *nom;
+    int feminin;
+    char **champs;
+    size_t nb_champs;
+} ClasseVM;
+
+/* Objet du tas : sa classe, ses champs, et de quoi le ramasser (docs/vm.md, § 7). */
+typedef struct Objet {
+    const ClasseVM *classe;
+    Valeur *champs;
+    unsigned char *definis;
+    unsigned long *epoques;   /* exécution où le champ est entré au journal */
+    int marque;
+    struct Objet *suivant;
+} Objet;
+
 static const char *nom_type(TypeValeur t) {
-    return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : "un booléen";
+    return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen" : "un objet";
 }
 
 static Valeur valeur_copier(const Valeur *v) {
@@ -30,6 +51,7 @@ static Valeur valeur_copier(const Valeur *v) {
     r.nombre = v->type == V_NOMBRE ? dec_copier(&v->nombre) : dec_zero();
     r.texte = v->type == V_TEXTE ? grym_dupliquer(v->texte) : NULL;
     r.vrai = v->vrai;
+    r.objet = v->objet;
     return r;
 }
 
@@ -45,6 +67,7 @@ static Valeur valeur_nombre(Decimal d) {
     v.nombre = d;
     v.texte = NULL;
     v.vrai = 0;
+    v.objet = NULL;
     return v;
 }
 
@@ -68,6 +91,8 @@ typedef struct {
 
 typedef struct {
     size_t c;          /* case modifiée */
+    Objet *objet;      /* ou champ modifié : objet et index (objet NULL pour une case) */
+    size_t index;
     int etait_definie;
     Valeur ancienne;
 } Ecriture;
@@ -86,7 +111,13 @@ struct Machine {
     Formule *formules;
     size_t nb_formules;
     unsigned long epoque;   /* numéro de l'exécution en cours */
+    ClasseVM **classes;     /* la dernière déclarée l'emporte à nom égal */
+    size_t nb_classes;
+    Objet *tas;             /* tous les objets vivants ou non encore ramassés */
+    size_t nb_objets, depuis_ramassage, seuil;
 };
+
+#define SEUIL_RAMASSAGE 10000   /* objets créés entre deux ramassages, au minimum */
 
 volatile sig_atomic_t grym_interruption = 0;
 
@@ -112,6 +143,23 @@ void machine_detruire(Machine *m) {
         free(m->formules[i].liaison);
     }
     free(m->formules);
+    while (m->tas) {
+        Objet *o = m->tas;
+        m->tas = o->suivant;
+        for (size_t k = 0; k < o->classe->nb_champs; k++)
+            if (o->definis[k]) valeur_liberer(&o->champs[k]);
+        free(o->champs);
+        free(o->definis);
+        free(o->epoques);
+        free(o);
+    }
+    for (size_t i = 0; i < m->nb_classes; i++) {
+        free(m->classes[i]->nom);
+        for (size_t k = 0; k < m->classes[i]->nb_champs; k++) free(m->classes[i]->champs[k]);
+        free(m->classes[i]->champs);
+        free(m->classes[i]);
+    }
+    free(m->classes);
     free(m);
 }
 
@@ -153,16 +201,51 @@ static void ecrire(Machine *m, size_t c, Valeur v) {
     }
     Ecriture *e = &m->journal[m->nb_journal++];
     e->c = c;
+    e->objet = NULL;
+    e->index = 0;
     e->etait_definie = m->cases[c].definie;
     if (e->etait_definie) e->ancienne = m->cases[c].valeur;   /* la valeur passe au journal */
     m->cases[c].valeur = v;
     m->cases[c].definie = 1;
 }
 
+/* Écriture d'un champ, journalisée comme celle d'une case (première écriture seulement). */
+static void ecrire_champ(Machine *m, Objet *o, size_t k, Valeur v) {
+    if (o->epoques[k] == m->epoque) {
+        if (o->definis[k]) valeur_liberer(&o->champs[k]);
+        o->champs[k] = v;
+        o->definis[k] = 1;
+        return;
+    }
+    o->epoques[k] = m->epoque;
+    if (m->nb_journal == m->cap_journal) {
+        m->cap_journal = m->cap_journal ? m->cap_journal * 2 : 16;
+        Ecriture *j = grym_allouer(m->cap_journal * sizeof *j);
+        if (m->nb_journal) memcpy(j, m->journal, m->nb_journal * sizeof *j);
+        free(m->journal);
+        m->journal = j;
+    }
+    Ecriture *e = &m->journal[m->nb_journal++];
+    e->c = 0;
+    e->objet = o;
+    e->index = k;
+    e->etait_definie = o->definis[k];
+    if (e->etait_definie) e->ancienne = o->champs[k];
+    o->champs[k] = v;
+    o->definis[k] = 1;
+}
+
 /* Rejoue le journal du plus récent au plus ancien. */
 static void annuler(Machine *m) {
     while (m->nb_journal) {
         Ecriture *e = &m->journal[--m->nb_journal];
+        if (e->objet) {
+            Objet *o = e->objet;
+            valeur_liberer(&o->champs[e->index]);
+            o->definis[e->index] = e->etait_definie;
+            if (e->etait_definie) o->champs[e->index] = e->ancienne;
+            continue;
+        }
         Case *c = &m->cases[e->c];
         valeur_liberer(&c->valeur);
         c->definie = e->etait_definie;
@@ -261,6 +344,99 @@ static void liberer_cadre(Cadre *c) {
     free(c->definis);
 }
 
+/* ---------------------------------------------------------------- */
+/* Ramasse-miettes : marquage et balayage (docs/vm.md, principe 4)  */
+/* ---------------------------------------------------------------- */
+
+typedef struct {
+    Objet **o;
+    size_t n, cap;
+} Pile_objets;
+
+static void marquer(Pile_objets *p, const Valeur *v) {
+    if (v->type != V_OBJET || !v->objet || v->objet->marque) return;
+    v->objet->marque = 1;
+    if (p->n == p->cap) {
+        p->cap = p->cap ? p->cap * 2 : 64;
+        Objet **t = grym_allouer(p->cap * sizeof *t);
+        if (p->n) memcpy(t, p->o, p->n * sizeof *t);
+        free(p->o);
+        p->o = t;
+    }
+    p->o[p->n++] = v->objet;
+}
+
+/* Racines : cases globales, pile, cases locales des cadres, anciennes valeurs du journal.
+ * Le marquage suit les champs avec une pile explicite : une longue chaîne d'objets
+ * ne fait pas déborder la pile du C. */
+static void ramasser(Machine *m, const Pile *pile, const Cadre *cadres, size_t nb_cadres) {
+    Pile_objets p = { NULL, 0, 0 };
+    for (size_t i = 0; i < m->nb_cases; i++)
+        if (m->cases[i].definie) marquer(&p, &m->cases[i].valeur);
+    for (size_t i = 0; pile && i < pile->n; i++) marquer(&p, &pile->v[i]);
+    for (size_t c = 0; c < nb_cadres; c++)
+        for (int k = 0; k < cadres[c].b->nb_locaux; k++)
+            if (cadres[c].definis[k]) marquer(&p, &cadres[c].locaux[k]);
+    for (size_t i = 0; i < m->nb_journal; i++) {
+        if (m->journal[i].etait_definie) marquer(&p, &m->journal[i].ancienne);
+        if (m->journal[i].objet) {
+            Valeur v = valeur_nombre(dec_zero());
+            v.type = V_OBJET;
+            v.objet = m->journal[i].objet;
+            marquer(&p, &v);
+            dec_liberer(&v.nombre);
+        }
+    }
+    while (p.n) {
+        Objet *o = p.o[--p.n];
+        for (size_t k = 0; k < o->classe->nb_champs; k++)
+            if (o->definis[k]) marquer(&p, &o->champs[k]);
+    }
+    free(p.o);
+    /* balayage */
+    Objet **lien = &m->tas;
+    size_t vivants = 0;
+    while (*lien) {
+        Objet *o = *lien;
+        if (o->marque) {
+            o->marque = 0;
+            vivants++;
+            lien = &o->suivant;
+            continue;
+        }
+        *lien = o->suivant;
+        for (size_t k = 0; k < o->classe->nb_champs; k++)
+            if (o->definis[k]) valeur_liberer(&o->champs[k]);
+        free(o->champs);
+        free(o->definis);
+        free(o->epoques);
+        free(o);
+    }
+    m->nb_objets = vivants;
+    m->depuis_ramassage = 0;
+    m->seuil = vivants * 2 > SEUIL_RAMASSAGE ? vivants * 2 : SEUIL_RAMASSAGE;
+}
+
+size_t machine_objets_vivants(const Machine *m) {
+    return m->nb_objets;
+}
+
+static const ClasseVM *classe_vm(const Machine *m, const char *nom) {
+    for (size_t i = m->nb_classes; i > 0; i--)
+        if (strcmp(m->classes[i - 1]->nom, nom) == 0) return m->classes[i - 1];
+    return NULL;
+}
+
+static long index_champ(const ClasseVM *c, const char *champ) {
+    for (size_t k = 0; k < c->nb_champs; k++)
+        if (strcmp(c->champs[k], champ) == 0) return (long)k;
+    return -1;
+}
+
+static char *article_classe(const ClasseVM *c) {
+    return grym_formater("%s %s", c->feminin ? "une" : "un", c->nom);
+}
+
 int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *diag) {
     diag->message = NULL;
     diag->ligne = diag->colonne = 0;
@@ -298,6 +474,23 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             nf->liaison = lier(m, f);
         }
     }
+
+    /* Classes du module : ajoutées à la machine ; une redéclaration l'emporte pour la suite. */
+    for (size_t k = 0; k < module->nb_classes; k++) {
+        const ClasseModule *cm = &module->classes[k];
+        ClasseVM *c = grym_allouer(sizeof *c);
+        c->nom = grym_dupliquer(cm->nom);
+        c->feminin = cm->feminin;
+        c->nb_champs = cm->nb_champs;
+        c->champs = grym_allouer((cm->nb_champs ? cm->nb_champs : 1) * sizeof *c->champs);
+        for (size_t q = 0; q < cm->nb_champs; q++) c->champs[q] = grym_dupliquer(cm->champs[q]);
+        ClasseVM **t = grym_allouer((m->nb_classes + 1) * sizeof *t);
+        if (m->nb_classes) memcpy(t, m->classes, m->nb_classes * sizeof *t);
+        free(m->classes);
+        m->classes = t;
+        m->classes[m->nb_classes++] = c;
+    }
+    if (m->seuil == 0) m->seuil = SEUIL_RAMASSAGE;
 
     m->epoque++;
     const Bloc *principal = module->blocs[0];
@@ -418,6 +611,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     chaine_ajouter(sortie, v->texte);
                 } else if (v->type == V_BOOLEEN) {
                     chaine_ajouter(sortie, v->vrai ? "vrai" : "faux");
+                } else if (v->type == V_OBJET) {
+                    char *t = article_classe(v->objet->classe);
+                    chaine_ajouter(sortie, t);
+                    free(t);
                 } else {
                     char *s = dec_formater(&v->nombre);
                     chaine_ajouter(sortie, s);
@@ -445,7 +642,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                          : code == I_INFERIEUR ? c < 0 : code == I_SUPERIEUR ? c > 0
                          : code == I_INFERIEUR_OU_EGAL ? c <= 0 : c >= 0;
             } else {
-                int egaux = va.type == V_BOOLEEN ? va.vrai == vb.vrai : strcmp(va.texte, vb.texte) == 0;
+                int egaux = va.type == V_BOOLEEN ? va.vrai == vb.vrai
+                          : va.type == V_OBJET  ? va.objet == vb.objet       /* identité */
+                          : strcmp(va.texte, vb.texte) == 0;
                 resultat = code == I_EGAL ? egaux : !egaux;
             }
             valeur_liberer(&va);
@@ -494,6 +693,70 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 cadre->ip = cible;
             }
             valeur_liberer(&v);
+            break;
+        }
+        case I_NOUVEAU: {
+            const ClasseVM *cl = classe_vm(m, b->noms[op]);
+            if (!cl) {
+                ok = echouer(diag, b, debut, grym_formater("Classe « %s » inconnue.", b->noms[op]));
+                break;
+            }
+            if (m->depuis_ramassage >= m->seuil) ramasser(m, &pile, cadres, nb_cadres);
+            Objet *o = grym_allouer(sizeof *o);
+            size_t nc = cl->nb_champs ? cl->nb_champs : 1;
+            o->classe = cl;
+            o->champs = grym_allouer(nc * sizeof *o->champs);
+            o->definis = grym_allouer(nc);
+            memset(o->definis, 0, nc);
+            o->epoques = grym_allouer(nc * sizeof *o->epoques);
+            for (size_t q = 0; q < nc; q++) o->epoques[q] = m->epoque;   /* objet neuf : rien à journaliser */
+            o->marque = 0;
+            o->suivant = m->tas;
+            m->tas = o;
+            m->nb_objets++;
+            m->depuis_ramassage++;
+            Valeur v = valeur_nombre(dec_zero());
+            v.type = V_OBJET;
+            v.objet = o;
+            empiler(&pile, v);
+            break;
+        }
+        case I_INITIALISER_CHAMP:
+        case I_ECRIRE_CHAMP:
+        case I_LIRE_CHAMP: {
+            /* INITIALISER : objet, valeur → objet ; ÉCRIRE : objet, valeur → rien ; LIRE : objet → valeur */
+            Valeur *vo = &pile.v[pile.n - (code == I_LIRE_CHAMP ? 1 : 2)];
+            const char *champ = b->noms[op];
+            if (vo->type != V_OBJET) {
+                ok = echouer(diag, b, debut, grym_formater(
+                    "« %s » : la valeur n'est pas un objet, c'est %s.", champ, nom_type(vo->type)));
+                break;
+            }
+            Objet *o = vo->objet;
+            long k = index_champ(o->classe, champ);
+            if (k < 0) {
+                char *qui = article_classe(o->classe);
+                qui[0] = (char)(qui[0] - 32);
+                ok = echouer(diag, b, debut, grym_formater("%s n'a pas de champ « %s ».", qui, champ));
+                free(qui);
+                break;
+            }
+            if (code == I_LIRE_CHAMP) {
+                if (!o->definis[k]) {
+                    ok = echouer(diag, b, debut, grym_formater("Le champ « %s » n'a pas de valeur.", champ));
+                    break;
+                }
+                Valeur v = valeur_copier(&o->champs[k]);
+                valeur_liberer(vo);
+                *vo = v;
+            } else {
+                Valeur v = depiler(&pile);
+                ecrire_champ(m, o, (size_t)k, v);
+                if (code == I_ECRIRE_CHAMP) {
+                    Valeur ob = depiler(&pile);
+                    valeur_liberer(&ob);
+                }
+            }
             break;
         }
         case I_LIRE_LOCAL:
@@ -566,14 +829,15 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     for (size_t k = nb_cadres; k > 0; k--) liberer_cadre(&cadres[k - 1]);
     free(cadres);
     free(liaison_principale);
+    if (ok) valider(m);
+    else annuler(m);
+    ramasser(m, NULL, NULL, 0);
     if (ok) {
-        valider(m);
         for (size_t k = 0; k < nb_remplaces; k++) {
             bloc_detruire(remplaces[k].bloc);
             free(remplaces[k].liaison);
         }
     } else {
-        annuler(m);
         /* La table des formules revient à son état d'avant. */
         for (size_t k = nb_remplaces; k > 0; k--) {
             Formule *f = &m->formules[remplaces[k - 1].index];

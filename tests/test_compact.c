@@ -137,6 +137,11 @@ int main(void) {
     EXEC("_répéter 2 _fois\n    _afficher 1\n    _sortir\n_fin\n", "1\n");
     EXEC("_le x << 5\n_afficher x ÷ 0\n", "ERREUR 2:13 Division par zéro.");
 
+    EXEC("_classe _un client\n    _un nom\n    _un solde\n_fin\n_le c << _nouveau client _avec\n    nom << « Dupont »\n"
+         "    solde << 10\n_fin\nc.solde << c.solde + 5\n_afficher c.nom ; c.solde ; c\n", "Dupont 15 un client\n");
+    EXEC("_classe _un nœud\n    _un suivant\n    _une valeur\n_fin\n_le a << _nouveau nœud _avec\n    valeur << 1\n_fin\n"
+         "a.suivant << _nouveau nœud _avec\n    valeur << 2\n_fin\n_afficher a.suivant.valeur\n", "2\n");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");
@@ -173,6 +178,13 @@ int main(void) {
     ALLER_RETOUR("_calcul _le carré(_un nombre) << nombre × nombre\n_afficher carré(3 + 1) ; carré(2) + 1 ; carré(carré(2))\n",
                  "Le carré d'un nombre vaut nombre × nombre.\n"
                  "Afficher carré de (3 + 1) puis carré de 2 + 1 puis carré de carré de 2.\n");
+
+    ALLER_RETOUR("_classe _une facture\n    _un montant\n_fin\n_la f << _nouveau facture _avec\n    montant << 3\n_fin\n"
+                 "f.montant << f.montant × 2\n_afficher f.montant\n",
+                 "Une facture a :\n    un montant.\nLa f vaut une nouvelle facture :\n    Le montant vaut 3.\n"
+                 "Le montant de f devient montant de f × 2.\nAfficher montant de f.\n");
+    ERR("_classe _un client\n    _un nom\n", 1, 1, "« _fin » manquant");
+    ERR("_classe _un client\n_fin\n", 2, 1, "au moins un champ");
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

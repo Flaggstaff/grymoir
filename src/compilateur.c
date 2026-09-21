@@ -135,6 +135,26 @@ static void expression(Compilation *c, const Noeud *n) {
     case N_APPEL:
         appel(c, n, 1);
         return;
+    case N_NOUVEAU: {
+        long k = bloc_nom(c->b, n->texte);
+        if (k < 0) { trop_grand(c, n); return; }
+        emettre(c, I_NOUVEAU, k, n->ligne, n->colonne);
+        for (size_t q = 0; q < n->nb_enfants; q++) {
+            const Noeud *init = n->enfants[q];
+            expression(c, init->enfants[0]);
+            long ch = bloc_nom(c->b, init->texte);
+            if (ch < 0) { trop_grand(c, n); return; }
+            emettre(c, I_INITIALISER_CHAMP, ch, init->ligne, init->colonne);
+        }
+        return;
+    }
+    case N_CHAMP: {
+        expression(c, n->enfants[0]);
+        long ch = bloc_nom(c->b, n->texte);
+        if (ch < 0) { trop_grand(c, n); return; }
+        emettre(c, I_LIRE_CHAMP, ch, n->op_ligne, n->op_colonne);
+        return;
+    }
     case N_GROUPE:
         expression(c, n->enfants[0]);
         return;
@@ -443,6 +463,19 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_SELON:
         selon(c, ph);
         return;
+    case P_CLASSE: {
+        ClasseModule *cm = module_ajouter_classe(c->module, ph->texte, ph->forme == 2);
+        for (size_t q = 0; q < ph->nb_enfants; q++) classe_ajouter_champ(cm, ph->enfants[q]->texte);
+        return;
+    }
+    case P_MODIF_CHAMP: {
+        expression(c, ph->enfants[0]);
+        expression(c, ph->enfants[1]);
+        long ch = bloc_nom(c->b, ph->texte);
+        if (ch < 0) { trop_grand(c, ph); return; }
+        emettre(c, I_ECRIRE_CHAMP, ch, ph->ligne, ph->colonne);
+        return;
+    }
     case P_CALCUL:
     case P_ACTION: {
         /* Une formule se compile dans son propre bloc ; le programme n'en garde aucune trace. */

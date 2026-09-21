@@ -196,7 +196,7 @@ int main(void) {
     VE("Le x vaut 1 +\nRemarque : coupe\n2.", 2, 1, "ne peut pas couper une phrase");
     VE("Le x vaut (1 + 2.", 1, 17, "Parenthèse fermante manquante");
     VE("Le x vaut 1 +.", 1, 14, "Expression incomplète");
-    VE("Le x vaut « a ».", 1, 11, "Un texte ne peut apparaître que dans une phrase Afficher.");
+    V("Le x vaut « a ».", "(créer [x] «a»)");
     VE("Afficher.", 1, 9, "Rien à afficher");
     VE("Afficher 1 puis.", 1, 16, "Élément manquant après « puis »");
     VE("Le vaut 3.", 1, 4, "Nom manquant entre « le » et « vaut ».");
@@ -391,6 +391,38 @@ int main(void) {
     VE("Pour répéter :\n    Afficher 1.", 1, 6, "commence une construction du langage");
     VE("Pour chaque i de 1 à 2 :\n    Pour saluer :\n        Afficher 1.", 2, 5, "au premier niveau");
     VE("Tant que vrai :\n    Le carré d'un n vaut n.", 2, 5, "au premier niveau");
+
+    /* --- Classes et objets (§ 13) --- */
+    V("Un client a :\n    un nom,\n    un solde.\nLe c vaut un nouveau client :\n    Le nom vaut « Dupont ».\n"
+      "Afficher le nom du c.",
+      "(classe [client] [nom] [solde])\n(créer [c] (nouveau [client] ([nom] «Dupont»)))\n(afficher (champ [nom] [c]))");
+    V("Un point a : un x, un y.\nLe p vaut un nouveau point.\nLe x du p devient 3.",
+      "(classe [point] [x] [y])\n(créer [p] (nouveau [point]))\n(modifier-champ [x] [p] 3)");
+    V("Un employé a : un nom.\nUne facture a : un employé.\nLe e vaut un nouvel employé.\nLa f vaut une nouvelle facture.\n"
+      "Afficher le nom de l'employé de la f.",
+      "(classe [employé] [nom])\n(classe [facture] [employé])\n(créer [e] (nouveau [employé]))\n"
+      "(créer [f] (nouveau [facture]))\n(afficher (champ [nom] (champ [employé] [f])))");
+    V("Un client a : un nom.\nLe nom vaut 1.\nLe c vaut un nouveau client.\nAfficher nom du c puis nom.",
+      "(classe [client] [nom])\n(créer [nom] 1)\n(créer [c] (nouveau [client]))\n(afficher (champ [nom] [c]) [nom])");
+    V("Un article a : un prix.\nLe prix de vente vaut 3.\nAfficher prix de vente.",
+      "(classe [article] [prix])\n(créer [prix de vente] 3)\n(afficher [prix de vente])");
+    V("Un client a : un solde.\nLe carré d'un n vaut n × n.\nLe c vaut un nouveau client.\nAfficher le carré du solde du c.",
+      "(classe [client] [solde])\n(calcul [carré] ([n]) (× [n] [n]))\n(créer [c] (nouveau [client]))\n"
+      "(afficher (appel [carré] (champ [solde] [c])))");
+    VE("Un client a : un nom.\nLe c vaut une nouvelle client.", 2, 11, "« client » est masculin : écrivez « un nouveau client ».");
+    VE("Le c vaut un nouveau fournisseur.", 1, 22, "Classe « fournisseur » inconnue.");
+    VE("Un client a : un nom.\nUn client a : un solde.", 2, 4, "La classe « client » existe déjà.");
+    VE("Un client a : un nom, un nom.", 1, 26, "Champ « nom » déjà nommé.");
+    VE("Le carré d'un n vaut n × n.\nUn client a : un carré.", 2, 18, "« carré » est un calcul");
+    VE("Un client a : un carré.\nLe carré d'un n vaut n × n.", 2, 4, "« carré » est un champ");
+    VE("Un client a : un nom.\nUne facture a : une nom.", 2, 21, "« nom » est déjà un champ masculin");
+    VE("Un client a : un nom.\nLe c vaut un nouveau client.\nLe nom du c vaut 1.", 3, 13, "Un champ se modifie avec « devient »");
+    VE("Un client a : un nom.\nAfficher la nom du c.", 2, 10, "« nom » est un champ masculin.");
+    VE("Un client a : un nom.\nLe c vaut un nouveau client :\n    Le solde vaut 1.", 3, 8, "Un « client » n'a pas de champ « solde ».");
+    VE("Un client a : un nom.\nLe c vaut un nouveau client :\n    Le nom vaut 1.\n    Le nom vaut 2.", 4, 8, "Champ « nom » déjà initialisé.");
+    VE("Un client a : un solde.\nLa f d'un c :\n    Le solde du c devient 0.\n    Rendre 1.", 3, 5, "Un calcul ne modifie pas les champs");
+    VE("Si vrai :\n    Un client a : un nom.", 2, 5, "au premier niveau");
+    VE("Un client : un nom.", 1, 11, "« : » inattendu");
 
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

@@ -120,6 +120,16 @@ int main(void) {
          "_le x << 1\n_selon x\n    _cas 1 _ou _de 2 _à 3\n        _afficher 1\n    _cas ≥ 10 _ou _négatif\n"
          "        _afficher 2\n    _autrement\n        _afficher 3\n_fin\n");
 
+    /* --- Objets (§ 13) --- */
+    LITT("Un client a : un nom, un solde.\nLe c vaut un nouveau client :\n  Le nom vaut « Dupont ».\n"
+         "Le solde du c devient 3.\nAfficher le nom du c.",
+         "Un client a :\n    un nom,\n    un solde.\nLe c vaut un nouveau client :\n    Le nom vaut « Dupont ».\n"
+         "Le solde du c devient 3.\nAfficher le nom du c.\n");
+    COMP("Une facture a : un montant, une date.\nLa f vaut une nouvelle facture :\n    Le montant vaut 3.\n"
+         "Le montant de la f devient montant de la f × 2.\nAfficher la f.",
+         "_classe _une facture\n    _un montant\n    _une date\n_fin\n_la f << _nouveau facture _avec\n"
+         "    montant << 3\n_fin\nf.montant << f.montant × 2\n_afficher f\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }
