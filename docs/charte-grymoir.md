@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.7, révisée le 21 septembre 2026.
+Version 1.8, révisée le 21 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -146,13 +146,15 @@ Horizon post-v1, sans date :
 
 ## 12. Jalons
 
-| Version | Contenu |
-|---------|---------|
-| v0.1 | Lexer, parser de la forme littéraire, suites attendues, boucle interactive de calcul |
-| v0.2 | Bytecode et VM (remplacent l'évaluateur provisoire de la v0.1), conditions (`Si`, comparaisons, booléens), forme compacte et `grym traduire`, objets, formules, héritage, aptitudes |
-| v0.3 | Entités et SQLite |
-| v0.4 | Serveur d'aide à la saisie (LSP) |
-| v1.0 | Application console complète |
+| Version | Contenu | État |
+|---------|---------|------|
+| v0.1 | Lexer, parser de la forme littéraire, suites attendues, boucle interactive de calcul | livrée |
+| v0.2 | Bytecode et VM (remplacent l'évaluateur provisoire de la v0.1), conditions (`Si`, comparaisons, booléens), boucles et `Selon`, forme compacte et `grym traduire` dans les deux sens, forme canonique et `grym formater`, formules, objets, héritage, méthodes, aptitudes, ramasse-miettes | livrée le 21 septembre 2026 |
+| v0.3 | Entités et SQLite | à venir |
+| v0.4 | Serveur d'aide à la saisie (LSP) | à venir |
+| v1.0 | Application console complète | à venir |
+
+Reportés sans jalon fixé (grammaire, § 13.8) : appel de la version parente depuis une méthode, listes d'objets, absence de valeur, affichage des objets. Chacun demandera sa propre conception avant d'entrer dans un jalon.
 
 ---
 
@@ -168,3 +170,4 @@ Horizon post-v1, sans date :
 | 1.5 | 2026-09-21 | Jalons : bytecode et VM en v0.2 (art. 3 et 12) |
 | 1.6 | 2026-09-21 | Jalons : conditions en v0.2 (art. 12) |
 | 1.7 | 2026-09-21 | Art. 4 : traduction sans perte de programme ni de remarque, vers une forme littéraire canonique ; `grym formater` |
+| 1.8 | 2026-09-21 | Art. 12 : colonne « État » ; v0.2 livrée, contenu complété (boucles, `Selon`, forme canonique, méthodes, ramasse-miettes) ; suites reportées sans jalon |
