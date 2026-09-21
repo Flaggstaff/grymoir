@@ -1,0 +1,21 @@
+Remarque : une formule par classe, choisie selon la classe réelle
+Une personne a :
+    un nom.
+Un membre est une personne.
+Un membre a :
+    une licence.
+Un invité est une personne.
+
+Pour saluer une personne :
+    Afficher « Bonjour » puis nom de la personne.
+Pour saluer un membre :
+    Afficher « Salut » puis nom du membre puis « licence » puis licence du membre.
+
+Le m vaut un nouveau membre :
+    Le nom vaut « Ana ».
+    La licence vaut 42.
+Le i vaut un nouvel invité :
+    Le nom vaut « Bo ».
+
+Saluer m.
+Saluer i.

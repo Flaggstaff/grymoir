@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.9), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.10), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -30,6 +30,7 @@ typedef struct {
     int lecture_seule; /* compteur d'une boucle Pour chaque */
     int nb_parametres; /* calculs et actions */
     int local;         /* case locale dans une formule, −1 pour un nom global */
+    char *classe;      /* méthode : classe de son premier paramètre (§ 13.6), sinon NULL */
 } Symbole;
 
 /* Classe déclarée (§ 11 de la charte, grammaire § 13) : son nom, son genre, ses champs. */
@@ -67,7 +68,7 @@ static void classe_liberer(Classe *c) {
 }
 
 static void portee_vider(Portee *p) {
-    for (size_t i = 0; i < p->n; i++) free(p->s[i].nom);
+    for (size_t i = 0; i < p->n; i++) { free(p->s[i].nom); free(p->s[i].classe); }
     free(p->s);
     p->s = NULL;
     p->n = p->cap = 0;
@@ -98,6 +99,7 @@ static void portee_copier(Portee *dst, const Portee *src) {
     for (size_t i = 0; i < src->n; i++) {
         dst->s[i] = src->s[i];
         dst->s[i].nom = grym_dupliquer(src->s[i].nom);
+        dst->s[i].classe = src->s[i].classe ? grym_dupliquer(src->s[i].classe) : NULL;
     }
     dst->nb_classes = src->nb_classes;
     dst->classes = src->nb_classes ? grym_allouer(src->nb_classes * sizeof *dst->classes) : NULL;
@@ -164,13 +166,18 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->ligne_genre = ligne;
     s->sorte = S_VARIABLE;
     s->lecture_seule = 0;
+    s->classe = NULL;
     s->nb_parametres = 0;
     s->local = -1;
 }
 
 /* Fin d'un bloc : les noms créés dans le bloc disparaissent (grammaire, § 5). */
 static void portee_tronquer(Portee *p, size_t n) {
-    while (p->n > n) free(p->s[--p->n].nom);
+    while (p->n > n) {
+        --p->n;
+        free(p->s[p->n].nom);
+        free(p->s[p->n].classe);
+    }
 }
 
 /* ---------------------------------------------------------------- */
@@ -1748,6 +1755,42 @@ static Noeud *parametres(Analyse *a, size_t d, size_t f, int avec_de) {
     return liste;
 }
 
+/* Une formule peut avoir plusieurs versions, une par classe de son premier paramètre (§ 13.6).
+ * Renvoie la classe de la nouvelle version (NULL si son premier paramètre n'est pas une classe),
+ * ou met *refus à 1 après avoir signalé l'erreur. */
+static char *version_de_formule(Analyse *a, const char *nom, Sorte sorte, const Noeud *params,
+                                const Jeton *t, int *refus) {
+    *refus = 0;
+    char *classe = NULL;
+    if (params->nb_enfants && classe_de(a->portee, params->enfants[0]->texte))
+        classe = grym_dupliquer(params->enfants[0]->texte);
+    for (size_t i = 0; i < a->portee->n; i++) {
+        const Symbole *s = &a->portee->s[i];
+        if (strcmp(s->nom, nom) != 0) continue;
+        char *m = NULL;
+        if (s->sorte == S_VARIABLE || !s->classe || !classe)
+            m = s->sorte != S_VARIABLE && (s->classe || classe)
+              ? grym_formater("« %s » existe déjà : chaque version d'une formule a pour premier paramètre "
+                              "une classe différente.", nom)
+              : grym_formater("« %s » existe déjà.", nom);
+        else if (strcmp(s->classe, classe) == 0)
+            m = grym_formater("« %s » existe déjà pour « %s ».", nom, classe);
+        else if (s->sorte != sorte)
+            m = grym_formater("« %s » est déjà %s : toutes ses versions sont de la même sorte.", nom,
+                              s->sorte == S_CALCUL ? "un calcul" : "une action");
+        else if (s->nb_parametres != (int)params->nb_enfants)
+            m = grym_formater("« %s » a déjà %d paramètre%s : toutes ses versions en ont autant.", nom,
+                              s->nb_parametres, s->nb_parametres > 1 ? "s" : "");
+        if (m) {
+            erreur(a, t, m);
+            free(classe);
+            *refus = 1;
+            return NULL;
+        }
+    }
+    return classe;
+}
+
 typedef struct { int formule, nb_locaux, niveau, boucle; size_t barriere; } Contexte;
 
 /* Entre dans le corps d'une formule : les paramètres deviennent les premières cases locales. */
@@ -1813,18 +1856,17 @@ static Noeud *definition_calcul(Analyse *a, size_t marque, size_t fin_entete, in
         free(nom);
         return NULL;
     }
-    if (visible(a, nom)) {
-        erreur(a, &a->j[d], grym_formater("« %s » existe déjà.", nom));
-        free(nom);
-        return NULL;
-    }
     Noeud *params = parametres(a, marque, fin_entete, 1);
     if (!params) { free(nom); return NULL; }
+    int refus;
+    char *classe = version_de_formule(a, nom, S_CALCUL, params, &a->j[d], &refus);
+    if (refus) { noeud_liberer(params); free(nom); return NULL; }
 
     portee_declarer(a->portee, nom, genre_de(art), tart->ligne);
     Symbole *s = &a->portee->s[a->portee->n - 1];
     s->sorte = S_CALCUL;
     s->nb_parametres = (int)params->nb_enfants;
+    s->classe = classe;
 
     Contexte ctx = entrer_formule(a, 1, params);
     Jeton *verbe = &a->j[fin_entete];
@@ -1858,6 +1900,7 @@ static Noeud *definition_calcul(Analyse *a, size_t marque, size_t fin_entete, in
     }
     Noeud *n = noeud_creer(P_CALCUL, tart->ligne, tart->colonne, tart->debut);
     n->texte = nom;
+    n->texte2 = classe ? grym_dupliquer(classe) : NULL;
     n->article = art;
     n->forme = forme;
     n->entier = locaux;
@@ -1895,18 +1938,17 @@ static Noeud *definition_action(Analyse *a, int colonne) {
         return erreur(a, &a->j[fin], grym_dupliquer(
             "« : » attendu : une action s'écrit en bloc (« Pour relancer un client : »)."));
     char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
-    if (visible(a, nom)) {
-        erreur(a, &a->j[d], grym_formater("« %s » existe déjà.", nom));
-        free(nom);
-        return NULL;
-    }
     Noeud *params = parametres(a, k, fin, 0);
     if (!params) { free(nom); return NULL; }
+    int refus;
+    char *classe = version_de_formule(a, nom, S_ACTION, params, &a->j[d], &refus);
+    if (refus) { noeud_liberer(params); free(nom); return NULL; }
 
     portee_declarer(a->portee, nom, GENRE_LIBRE, tpour->ligne);
     Symbole *s = &a->portee->s[a->portee->n - 1];
     s->sorte = S_ACTION;
     s->nb_parametres = (int)params->nb_enfants;
+    s->classe = classe;
 
     Contexte ctx = entrer_formule(a, 2, params);
     a->i = fin + 1;
@@ -1916,6 +1958,7 @@ static Noeud *definition_action(Analyse *a, int colonne) {
     if (!corps) { noeud_liberer(params); free(nom); return NULL; }
     Noeud *n = noeud_creer(P_ACTION, tpour->ligne, tpour->colonne, tpour->debut);
     n->texte = nom;
+    n->texte2 = classe ? grym_dupliquer(classe) : NULL;
     n->forme = 1;
     n->entier = locaux;
     noeud_ajouter(n, params);

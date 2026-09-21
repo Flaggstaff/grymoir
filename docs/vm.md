@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.5 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.9, § 5, § 9, § 10 et § 13.
+Version 1.6 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.10, § 5, § 9, § 10 et § 13.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -90,6 +90,7 @@ Pour chaque i de a à b       a → i ; b → fin ; pas (écrit, ou ±1 selon a 
 
 - Un module réunit le programme (bloc 0) et un bloc par formule. Chaque bloc de formule porte son nom, sa sorte (calcul ou action), son nombre de paramètres et son nombre de cases locales (paramètres compris).
 - `APPELER` désigne la formule par son nom, résolu au moment de l'appel dans la table des formules de la machine (§ 5). La machine vérifie que la formule existe, qu'elle est de la sorte attendue et qu'elle reçoit le bon nombre d'arguments ; sinon, erreur d'exécution.
+- Méthodes : un bloc de formule peut porter une classe. Plusieurs blocs partagent alors le même nom, chacun avec une classe différente. À l'appel, la machine prend la classe réelle du premier argument et remonte sa lignée jusqu'à trouver une version (grammaire, § 13.6).
 - Chaque appel crée un cadre : ses cases locales, sa position. Un calcul se termine par `RENDRE`, une action par `RETOUR`, qui rend la main à l'appelant. `RETOUR` dans le programme termine l'exécution.
 - Au-delà de 1000 cadres imbriqués : « Trop d'appels imbriqués : plus de 1000. »
 - Le programme principal a lui aussi des cases locales : compteurs de boucle, bornes, sujets de `Selon`.
@@ -119,7 +120,7 @@ Un fichier `.grymb` peut venir d'ailleurs. Avant toute exécution, la machine v�
 
 1. Décodage linéaire : chaque code d'instruction existe, son opérande est présent, chaque index de constante, de nom ou de case locale existe, `ÉCHOUER` désigne une constante texte, chaque cible de saut commence une instruction, et la dernière instruction est `RETOUR` (programme, action) ou `RENDRE` (calcul). `RENDRE` n'apparaît que dans un calcul, `RETOUR` jamais dans un calcul.
 2. Parcours de tous les chemins d'exécution : la pile ne descend jamais sous zéro, chaque `AFFICHER n` et chaque `APPELER` trouvent leurs valeurs, deux chemins qui se rejoignent arrivent avec la même profondeur de pile, chaque `RETOUR` trouve la pile vide et chaque `RENDRE` exactement une valeur.
-3. Pour le module : le bloc 0 est le programme, les autres des formules nommées, sans doublon.
+3. Pour le module : le bloc 0 est le programme, les autres des formules nommées. Deux blocs de même nom sont deux versions d'une méthode : chacun a une classe différente, et ils ont même sorte et même nombre de paramètres.
 
 Limite connue : un saut vers l'arrière forme une boucle, que la vérification n'interdit pas (les boucles viendront avec `Tant que`). Un fichier fabriqué à la main peut donc tourner sans fin.
 
@@ -169,9 +170,10 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 5
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 6
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
+                classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
                 sorte : u8 (0 = programme, 1 = calcul, 2 = action)
                 paramètres : u16, cases locales : u16
                 puis constantes, noms, code et positions :
@@ -188,7 +190,7 @@ classes       nombre : u32, puis pour chacune :
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`.
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente. Les fichiers des versions 1 à 4 restent lisibles.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes. Les fichiers des versions 1 à 5 restent lisibles.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -228,3 +230,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.3 | 2026-09-21 | Boucles et Selon : `ÉCHOUER`, `EXIGER_ENTIER_NATUREL`, cases locales du programme principal, schémas de compilation, journal limité à la première écriture de chaque nom, interruption par Ctrl+C |
 | 1.4 | 2026-09-21 | Objets : valeur objet, `NOUVEAU`, `INITIALISER_CHAMP`, `LIRE_CHAMP`, `ÉCRIRE_CHAMP`, journal des champs, ramasse-miettes par marquage et balayage, classes dans le module, format version 4 |
 | 1.5 | 2026-09-21 | Héritage : classe parente dans le module, champs hérités en tête, format version 5 |
+| 1.6 | 2026-09-21 | Méthodes : classe du premier paramètre dans le bloc, choix de la version à l'appel selon la lignée, format version 6 |

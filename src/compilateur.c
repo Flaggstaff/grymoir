@@ -483,6 +483,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         Bloc *prec = c->b;
         Bloc *f = bloc_creer();
         f->nom = grym_dupliquer(ph->texte);
+        f->classe = ph->texte2 ? grym_dupliquer(ph->texte2) : NULL;
         f->sorte = ph->type == P_CALCUL ? B_CALCUL : B_ACTION;
         f->nb_parametres = (int)ph->enfants[0]->nb_enfants;
         f->nb_locaux = ph->entier;

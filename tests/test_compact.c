@@ -147,6 +147,10 @@ int main(void) {
          "    licence << 1\n_fin\n_afficher m.nom ; m.licence ; m\n", "Ana 1 un membre\n");
     ERR("_classe _un membre _est _une personne\n_fin\n", 1, 30, "Classe « personne » inconnue");
 
+    EXEC("_classe _une personne\n    _un nom\n_fin\n_classe _un membre _est _une personne\n_fin\n"
+         "_action saluer(_une personne)\n    _afficher 1\n_fin\n_action saluer(_un membre)\n    _afficher 2\n_fin\n"
+         "_le p << _nouveau personne\n_le m << _nouveau membre\nsaluer(p)\nsaluer(m)\n", "1\n2\n");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

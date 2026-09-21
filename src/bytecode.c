@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.5).
+ * Spécification : docs/vm.md (révision 1.6).
  */
 #include "bytecode.h"
 #include "decimal.h"
@@ -30,6 +30,7 @@ void bloc_detruire(Bloc *b) {
     free(b->code);
     free(b->positions);
     free(b->nom);
+    free(b->classe);
     free(b);
 }
 
@@ -336,7 +337,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 9)                                 */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 5   /* versions 1 et 2 (un seul bloc), 3 (sans classes) et 4 (sans héritage) restent lisibles */
+#define VERSION_FORMAT 6   /* versions 1 à 5 restent lisibles : un seul bloc (1, 2), sans classes (3),
+                              sans héritage (4), sans méthodes (5) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -397,6 +399,7 @@ unsigned char *module_serialiser(const Module *m, size_t *taille) {
     for (size_t k = 0; k < m->nb; k++) {
         const Bloc *b = m->blocs[k];
         ecrire_chaine(&o, b->nom ? b->nom : "");
+        ecrire_chaine(&o, b->classe ? b->classe : "");
         ecrire_u8(&o, (unsigned)b->sorte);
         ecrire_u16(&o, (unsigned)b->nb_parametres);
         ecrire_u16(&o, (unsigned)b->nb_locaux);
@@ -550,6 +553,9 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
         module_ajouter(m, b);
         if (version >= 3) {
             char *nom = lire_chaine(&l);
+            char *classe = version >= 6 ? lire_chaine(&l) : grym_dupliquer("");
+            if (classe && *classe) b->classe = classe;
+            else free(classe);
             uint32_t sorte = lire_u(&l, 1);
             b->nb_parametres = (int)lire_u(&l, 2);
             b->nb_locaux = (int)lire_u(&l, 2);
@@ -657,9 +663,17 @@ int module_verifier(const Module *m, char **erreur) {
         if (k > 0) {
             if (b->sorte == B_PROGRAMME || !b->nom)
                 return refuser(erreur, grym_formater("bloc %lu : une formule doit avoir un nom.", (unsigned long)k));
-            for (size_t q = 1; q < k; q++)
-                if (strcmp(m->blocs[q]->nom, b->nom) == 0)
+            for (size_t q = 1; q < k; q++) {
+                const Bloc *o = m->blocs[q];
+                if (strcmp(o->nom, b->nom) != 0) continue;
+                /* plusieurs versions : chacune a une classe différente, même sorte, même nombre de paramètres */
+                if (!o->classe || !b->classe || strcmp(o->classe, b->classe) == 0)
                     return refuser(erreur, grym_formater("formule « %s » définie deux fois.", b->nom));
+                if (o->sorte != b->sorte || o->nb_parametres != b->nb_parametres)
+                    return refuser(erreur, grym_formater("versions incompatibles de « %s ».", b->nom));
+            }
+            if (b->classe && b->nb_parametres < 1)
+                return refuser(erreur, grym_formater("méthode « %s » sans paramètre.", b->nom));
         }
         char *detail = NULL;
         if (!bloc_verifier(b, &detail)) {
@@ -765,10 +779,12 @@ char *module_desassembler(const Module *m) {
             if (b->sorte == B_PROGRAMME) {
                 titre = grym_dupliquer("Programme\n");
             } else {
-                titre = grym_formater("%s« %s » : %d paramètre%s, %d case%s locale%s\n",
+                char *pour = b->classe ? grym_formater(" pour « %s »", b->classe) : grym_dupliquer("");
+                titre = grym_formater("%s« %s »%s : %d paramètre%s, %d case%s locale%s\n",
                                       k > 0 ? "\n" : "",
-                                      b->nom, b->nb_parametres, b->nb_parametres > 1 ? "s" : "",
+                                      b->nom, pour, b->nb_parametres, b->nb_parametres > 1 ? "s" : "",
                                       b->nb_locaux, b->nb_locaux > 1 ? "s" : "", b->nb_locaux > 1 ? "s" : "");
+                free(pour);
                 char *t2 = grym_formater("%s%s", b->sorte == B_CALCUL ? "Calcul " : "Action ", titre + (k > 0));
                 free(titre);
                 titre = grym_formater("%s%s", k > 0 ? "\n" : "", t2);

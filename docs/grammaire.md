@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.9 de la spécification, révisée le 21 septembre 2026.
+Version 1.10 de la spécification, révisée le 21 septembre 2026.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -372,6 +372,8 @@ Limites de cette notation :
 | Interruption (exécution) | « Interrompu (Ctrl+C). » |
 | Classe inconnue | « Classe « fournisseur » inconnue. » |
 | Champ hérité redéclaré | « « nom » est déjà un champ hérité de « personne ». » |
+| Version en double | « « saluer » existe déjà pour « personne ». » |
+| Aucune version (exécution) | « Aucune version de « saluer » pour une ville. » |
 | Accord de « nouveau » | « « client » est masculin : écrivez « un nouveau client ». » |
 | Champ modifié avec `vaut` | « Un champ se modifie avec « devient » : « Le solde du client devient … ». » |
 | Champ absent (exécution) | « Un client n'a pas de champ « montant ». » |
@@ -683,9 +685,28 @@ Un membre a :
 - Un objet d'une classe héritière s'initialise et se lit avec tous ses champs, hérités compris.
 - En forme compacte : `_classe _un membre _est _une personne`, puis les champs propres et `_fin`.
 
-### 13.6 À venir
+### 13.6 Méthodes
 
-Les méthodes (formules choisies selon la classe de leur paramètre) et les aptitudes (`Une chose horodatée a :`) suivent, dans cet ordre.
+```
+Pour saluer une personne :
+    Afficher « Bonjour » puis nom de la personne.
+Pour saluer un membre :
+    Afficher « Salut » puis nom du membre.
+
+Saluer m.
+```
+
+- Quand le premier paramètre d'une formule porte le nom d'une classe, la formule est une méthode de cette classe. Rien d'autre à écrire.
+- Une formule peut avoir plusieurs versions : une par classe de son premier paramètre. Toutes ont le même nombre de paramètres et sont de la même sorte (calcul ou action).
+- L'appel choisit la version à l'exécution, selon la classe réelle du premier argument : celle de sa classe, sinon celle de la classe parente la plus proche. Un membre est salué par `Pour saluer un membre`, un invité par `Pour saluer une personne`.
+- Seul le premier paramètre choisit la version ; les autres ne sont pas vérifiés.
+- Erreurs à l'exécution : un premier argument qui n'est pas un objet, ou une classe sans version dans sa lignée (« Aucune version de « saluer » pour une ville. »).
+- Une formule sans classe et une méthode ne partagent pas un nom.
+- Dans la boucle interactive, une saisie peut ajouter une version à une formule existante ; les appels suivants la trouvent.
+
+### 13.7 À venir
+
+Les aptitudes (`Une chose horodatée a :`) suivent.
 
 ---
 
@@ -703,3 +724,4 @@ Les méthodes (formules choisies selon la classe de leur paramètre) et les apti
 | 1.7 | 2026-09-21 | § 11 : lecture de la forme compacte (réécriture en phrases littéraires, positions conservées), outils, suffixes de comparaison, instructions sur plusieurs lignes, limite des messages. § 12 : garanties vérifiées |
 | 1.8 | 2026-09-21 | Nouveau § 13 : classes, création d'objets (`un nouveau`, bloc d'initialisation), champs (`le solde du client`, `devient`), identité, ramasse-miettes. Les textes deviennent des valeurs. Correspondances compactes |
 | 1.9 | 2026-09-21 | § 13.5 : héritage simple (`Un membre est une personne.`, champs propres dans la phrase suivante), forme compacte `_est` |
+| 1.10 | 2026-09-21 | § 13.6 : méthodes ; versions d'une formule par classe du premier paramètre, choix à l'exécution selon la classe réelle et sa lignée |

@@ -300,6 +300,23 @@ int main(void) {
          "Le m vaut un nouveau membre.\nLa ville du m devient une nouvelle ville :\n    Le nom vaut « Bulle ».\n"
          "Afficher nom de la ville du m.", "Bulle");
 
+    /* --- Méthodes : la version la plus précise, selon la classe réelle --- */
+    PROG("Une personne a : un nom.\nUn membre est une personne. Un membre a : une licence.\nUn invité est une personne.\n"
+         "Pour saluer une personne :\n    Afficher « Bonjour » puis nom de la personne.\n"
+         "Pour saluer un membre :\n    Afficher « Salut » puis nom du membre puis licence du membre.\n"
+         "La description d'une personne vaut « personne ».\nLa description d'un invité vaut « invité ».\n"
+         "Le m vaut un nouveau membre :\n    Le nom vaut « Ana ».\n    La licence vaut 7.\n"
+         "Le i vaut un nouvel invité :\n    Le nom vaut « Bo ».\nSaluer m.\nSaluer i.\n"
+         "Afficher la description de m puis la description de i.",
+         "Salut Ana 7\nBonjour Bo\npersonne invité");
+    PROG("Une chose a : un nom.\nUn outil est une chose.\nUn marteau est un outil.\n"
+         "Le poids d'une chose vaut 1.\nLe poids d'un outil vaut 2.\nLe h vaut un nouveau marteau.\nAfficher poids de h.", "2");
+    PROG("Une personne a : un nom.\nPour saluer une personne :\n    Afficher 1.\nSaluer 3.",
+         "ERREUR 4:1 « saluer » choisit sa version selon la classe de son premier argument : "
+         "celui-ci n'est pas un objet, c'est un nombre.");
+    PROG("Une personne a : un nom.\nUne ville a : un nom.\nPour saluer une personne :\n    Afficher 1.\n"
+         "La v vaut une nouvelle ville.\nSaluer v.", "ERREUR 6:1 Aucune version de « saluer » pour une ville.");
+
     /* --- Ramasse-miettes : cycles et objets abandonnés --- */
     {
         total++;
@@ -335,6 +352,26 @@ int main(void) {
             int ok = attendus[i][0] == '~' ? strstr(r, attendus[i] + 1) != NULL : strcmp(r, attendus[i]) == 0;
             if (echec) { portee_detruire(p); p = sp; } else portee_detruire(sp);
             if (!ok) { signaler(__LINE__, saisies[i], attendus[i], r); free(r); break; }
+            free(r);
+        }
+        machine_detruire(m);
+        portee_detruire(p);
+    }
+
+    /* --- Une nouvelle version, ajoutée dans une saisie ultérieure --- */
+    {
+        total++;
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        const char *saisies[] = { "Une personne a : un nom.\nUn membre est une personne.",
+                                  "La sorte d'une personne vaut « personne ».", "Le m vaut un nouveau membre.",
+                                  "sorte de m", "La sorte d'un membre vaut « membre ».", "sorte de m" };
+        const char *attendus[] = { "", "", "", "personne", "", "membre" };
+        for (int i = 0; i < 6; i++) {
+            Portee *sp = portee_cloner(p);
+            char *r = executer_source(p, m, saisies[i], 1);
+            if (strncmp(r, "ERREUR", 6) == 0) { portee_detruire(p); p = sp; } else portee_detruire(sp);
+            if (strcmp(r, attendus[i]) != 0) { signaler(__LINE__, saisies[i], attendus[i], r); free(r); break; }
             free(r);
         }
         machine_detruire(m);

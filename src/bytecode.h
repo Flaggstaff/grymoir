@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.5).
+ * Spécification : docs/vm.md (révision 1.6).
  */
 #ifndef GRYM_BYTECODE_H
 #define GRYM_BYTECODE_H
@@ -58,6 +58,7 @@ typedef struct {
 
 typedef struct {
     char *nom;            /* nom de la formule ; NULL pour le programme */
+    char *classe;         /* méthode : classe de son premier paramètre (grammaire, § 13.6), sinon NULL */
     SorteBloc sorte;
     int nb_parametres;
     int nb_locaux;        /* paramètres compris */

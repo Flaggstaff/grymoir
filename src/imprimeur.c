@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.9), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.10), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "decimal.h"

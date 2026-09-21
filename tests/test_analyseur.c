@@ -442,6 +442,20 @@ int main(void) {
     VE("Une personne a : un nom.\nUn membre est une personne.\nLe m vaut un nouveau membre :\n    La licence vaut 1.", 4, 8,
        "Un « membre » n'a pas de champ « licence ».");
 
+    /* --- Méthodes (§ 13.6) --- */
+    V("Une personne a : un nom.\nUn membre est une personne.\nPour saluer une personne :\n    Afficher 1.\n"
+      "Pour saluer un membre :\n    Afficher 2.\nLe m vaut un nouveau membre.\nSaluer m.",
+      "(classe [personne] [nom])\n(classe [membre] (est [personne]))\n(action [saluer] ([personne]) (bloc (afficher 1)))\n"
+      "(action [saluer] ([membre]) (bloc (afficher 2)))\n(créer [m] (nouveau [membre]))\n(action-appel [saluer] [m])");
+    VE("Une personne a : un nom.\nPour saluer une personne :\n    Afficher 1.\nPour saluer une personne :\n    Afficher 2.",
+       4, 6, "« saluer » existe déjà pour « personne ».");
+    VE("Une personne a : un nom.\nPour saluer un truc :\n    Afficher 1.\nPour saluer une personne :\n    Afficher 2.",
+       4, 6, "chaque version d'une formule a pour premier paramètre une classe différente");
+    VE("Une personne a : un nom.\nUn membre est une personne.\nPour saluer une personne :\n    Afficher 1.\n"
+       "Pour saluer un membre et un mot :\n    Afficher 2.", 5, 6, "« saluer » a déjà 1 paramètre");
+    VE("Une personne a : un nom.\nUn membre est une personne.\nPour saluer une personne :\n    Afficher 1.\n"
+       "Le saluer d'un membre vaut 2.", 5, 4, "« saluer » est déjà une action");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

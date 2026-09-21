@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.5).
+ * Spécification : docs/vm.md (révision 1.6).
  */
 #include "vm.h"
 #include "decimal.h"
@@ -315,9 +315,15 @@ static size_t *lier(Machine *m, const Bloc *b) {
     return liaison;
 }
 
-static Formule *formule_de(Machine *m, const char *nom) {
+static int meme_classe(const char *a, const char *b) {
+    return (!a && !b) || (a && b && strcmp(a, b) == 0);
+}
+
+/* Version exacte d'une formule : même nom, même classe (NULL pour une formule sans classe). */
+static Formule *formule_de(Machine *m, const char *nom, const char *classe) {
     for (size_t i = 0; i < m->nb_formules; i++)
-        if (strcmp(m->formules[i].nom, nom) == 0) return &m->formules[i];
+        if (strcmp(m->formules[i].nom, nom) == 0 && meme_classe(m->formules[i].bloc->classe, classe))
+            return &m->formules[i];
     return NULL;
 }
 
@@ -438,6 +444,33 @@ static char *article_classe(const ClasseVM *c) {
     return grym_formater("%s %s", c->feminin ? "une" : "un", c->nom);
 }
 
+/* Version appelée (grammaire, § 13.6) : la formule sans classe si elle existe ; sinon, la version
+ * dont la classe est la plus proche de celle du premier argument, en remontant sa lignée. */
+static Formule *choisir_version(Machine *m, const char *nom, const Valeur *premier, char **pourquoi) {
+    Formule *f = formule_de(m, nom, NULL);
+    if (f) return f;
+    int versions = 0;
+    for (size_t i = 0; i < m->nb_formules; i++) if (strcmp(m->formules[i].nom, nom) == 0) versions++;
+    if (!versions) {
+        *pourquoi = grym_formater("Formule « %s » inconnue.", nom);
+        return NULL;
+    }
+    if (!premier || premier->type != V_OBJET) {
+        *pourquoi = grym_formater("« %s » choisit sa version selon la classe de son premier argument : "
+                                  "celui-ci n'est pas un objet, c'est %s.", nom,
+                                  premier ? nom_type(premier->type) : "absent");
+        return NULL;
+    }
+    for (const ClasseVM *c = premier->objet->classe; c; c = c->parent) {
+        f = formule_de(m, nom, c->nom);
+        if (f) return f;
+    }
+    char *qui = article_classe(premier->objet->classe);
+    *pourquoi = grym_formater("Aucune version de « %s » pour %s.", nom, qui);
+    free(qui);
+    return NULL;
+}
+
 int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *diag) {
     diag->message = NULL;
     diag->ligne = diag->colonne = 0;
@@ -489,7 +522,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     for (size_t k = 1; k < module->nb; k++) {
         Bloc *f = module->blocs[k];
         module->blocs[k] = NULL;
-        Formule *ex = formule_de(m, f->nom);
+        Formule *ex = formule_de(m, f->nom, f->classe);
         if (ex) {
             remplaces[nb_remplaces].index = (size_t)(ex - m->formules);
             remplaces[nb_remplaces].bloc = ex->bloc;
@@ -794,9 +827,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             const char *nom = b->noms[op];
             unsigned nb_args = b->code[debut + 3];
             int rend = b->code[debut + 4];
-            Formule *f = formule_de(m, nom);
+            char *pourquoi = NULL;
+            Formule *f = choisir_version(m, nom, nb_args ? &pile.v[pile.n - nb_args] : NULL, &pourquoi);
             if (!f) {
-                ok = echouer(diag, b, debut, grym_formater("Formule « %s » inconnue.", nom));
+                ok = echouer(diag, b, debut, pourquoi);
                 break;
             }
             if ((f->bloc->sorte == B_CALCUL) != rend || f->bloc->nb_parametres != (int)nb_args) {

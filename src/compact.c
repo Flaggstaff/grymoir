@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.9), § 11.
+ * Spécification : docs/grammaire.md (révision 1.10), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur

@@ -1,0 +1,27 @@
+# une formule par classe, choisie selon la classe réelle
+_classe _une personne
+    _un nom
+_fin
+_classe _un membre _est _une personne
+    _une licence
+_fin
+_classe _un invité _est _une personne
+_fin
+
+_action saluer(_une personne)
+    _afficher « Bonjour » ; personne.nom
+_fin
+_action saluer(_un membre)
+    _afficher « Salut » ; membre.nom ; « licence » ; membre.licence
+_fin
+
+_le m << _nouveau membre _avec
+    nom << « Ana »
+    licence << 42
+_fin
+_le i << _nouveau invité _avec
+    nom << « Bo »
+_fin
+
+saluer(m)
+saluer(i)
