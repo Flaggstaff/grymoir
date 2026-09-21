@@ -1,5 +1,5 @@
 /* GrymoiR : représentation interne des valeurs, partagée par la machine et la base
- * Spécification : docs/vm.md (révision 1.12), § 2.
+ * Spécification : docs/vm.md (révision 1.13), § 2.
  */
 #ifndef GRYM_VM_INTERNE_H
 #define GRYM_VM_INTERNE_H
@@ -50,6 +50,7 @@ typedef struct ClasseVM {
     size_t nb_aptitudes;
     char **champs;        /* champs hérités d'abord, puis champs propres */
     char **types;         /* type de chaque champ (grammaire, § 16.1), ou NULL */
+    char **departs;       /* valeur de départ (§ 16.7), forme canonique, ou NULL */
     const struct ClasseVM **proprietaires;   /* entité dont la table porte le champ (base.c) */
     unsigned char *uniques;
     size_t nb_champs;

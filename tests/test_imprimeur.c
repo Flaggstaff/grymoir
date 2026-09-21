@@ -183,6 +183,11 @@ int main(void) {
          "    _afficher facture\n_fin\n_l'a << _l'avoir _conservé _dont motif = « x »\n"
          "_afficher _nombre_de avoir _conservé\n");
 
+    COMP("Un client, conservé, a : un pays (texte), « Suisse » au départ, un code (nombre), unique, −1 au départ, "
+         "un actif (vrai ou faux), vrai au départ.",
+         "_classe _un client _conservé\n    _un pays (texte) _départ « Suisse »\n    _un code (nombre) _unique _départ −1\n"
+         "    _un actif (vrai_ou_faux) _départ _vrai\n_fin\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

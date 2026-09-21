@@ -542,6 +542,12 @@ static void phrase(Compilation *c, const Noeud *ph) {
             else {
                 classe_ajouter_champ(cm, ch->texte);
                 classe_typer_dernier_champ(cm, ch->texte2, ch->op == 'U');
+                if (ch->nb_enfants) {   /* valeur de départ, sous forme canonique */
+                    const Noeud *v = ch->enfants[0];
+                    char *t = v->type == N_NEGATION ? grym_formater("-%s", v->enfants[0]->texte) : grym_dupliquer(v->texte);
+                    classe_depart_dernier_champ(cm, t);
+                    free(t);
+                }
             }
         }
         return;

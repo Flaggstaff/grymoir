@@ -157,6 +157,10 @@ static int lancer(const char *chemin) {
         fflush(stdout);
         signaler(chemin, &d);
         diagnostic_liberer(&d);
+        /* ce qui s'est affiché reste, mais rien de ce qui a été écrit (§ 3.3, § 16.6) */
+        char *annule = machine_annulation(m, 0);
+        if (annule) fprintf(stderr, "%s\n", annule);
+        free(annule);
     }
     machine_detruire(m);
     module_detruire(b);
@@ -312,11 +316,12 @@ static int boucle(const char *base) {
         Diagnostic d;
         Chaine sortie = {0};
         int ok = analyser(ligne, strlen(ligne), portee, 1, &p, &d);
+        int execute = 0;
         if (ok) {
             Module *b = compiler(&p, &d);
             ok = b != NULL;
             grym_interruption = 0;   /* un Ctrl+C tapé à l'invite ne compte pas */
-            if (ok) ok = machine_executer(m, b, &sortie, &d);
+            if (ok) { execute = 1; ok = machine_executer(m, b, &sortie, &d); }
             module_detruire(b);
             programme_liberer(&p);
         }
@@ -326,8 +331,14 @@ static int boucle(const char *base) {
         } else {
             if (tty && d.ligne == 1 && d.colonne > 0 && !strchr(ligne, '\n'))
                 printf("%*s^\n", d.colonne + 1, "");   /* curseur sous la colonne fautive */
+            if (execute && sortie.d) fputs(sortie.d, stdout);   /* ce qui s'est affiché avant l'erreur */
             printf("Erreur : %s\n", d.message);
             diagnostic_liberer(&d);
+            if (execute) {
+                char *annule = machine_annulation(m, 1);
+                if (annule) printf("%s\n", annule);
+                free(annule);
+            }
             portee_detruire(portee);
             portee = sauve;
         }

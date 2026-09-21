@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.18), § 11.
+ * Spécification : docs/grammaire.md (révision 1.19), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -424,6 +424,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         if (type) q += 3;
         int unique = q < f && est_cle(&r->e[q], "unique");
         if (unique) q++;
+        size_t depart = 0, fin_depart = 0;   /* _départ « Suisse », _départ −3,5 */
+        if (q < f && est_cle(&r->e[q], "départ")) {
+            depart = q + 1;
+            fin_depart = depart < f && r->e[depart].type == J_MOINS ? depart + 2 : depart + 1;
+            q = fin_depart;
+        }
         if (!(est_cle(t, "un") || est_cle(t, "une")) || d + 1 >= f || r->e[d + 1].type != J_CROCHETS || q != f) {
             echouer(r, t, grym_dupliquer("Champ attendu : « _un nom », « _un nom (texte) » ou « _une licence (texte) _unique »."));
             return;
@@ -447,6 +453,16 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         if (unique) {
             emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
             mot(r, "unique", &r->e[f - 1]);
+        }
+        if (depart) {
+            emettre(r, J_VIRGULE, NULL, &r->e[depart - 1], 1);
+            for (size_t v = depart; v < fin_depart; v++) {
+                const Jeton *x = &r->e[v];
+                if (x->type == J_MOT_CLE && (!strcmp(x->valeur, "vrai") || !strcmp(x->valeur, "faux"))) mot(r, x->valeur, x);
+                else copier(r, x);
+            }
+            mot(r, "au", &r->e[fin_depart - 1]);
+            mot(r, "départ", &r->e[fin_depart - 1]);
         }
         emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
         return;

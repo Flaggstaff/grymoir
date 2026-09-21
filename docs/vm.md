@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.12 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.18, § 5, § 9, § 10, § 13 à 16.
+Version 1.13 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.19, § 3.3, § 5, § 9, § 10, § 13 à 16.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -182,6 +182,8 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - Collations enregistrées auprès de SQLite : `GRYM_NOMBRE` compare deux nombres canoniques en décimal exact ; `GRYM_TEXTE` compare sans accents ni casse, puis octet par octet.
 - Liste : valeur interne, jamais visible du langage, figée au moment de la recherche (identifiants et classes).
 - Carte d'identité : identifiant en base → objet en mémoire. Un objet retrouvé est une coquille de sa classe réelle ; `LIRE_CHAMP`, `ÉCRIRE_CHAMP` et `SUPPRIMER` lisent d'abord ses champs. Ses liens deviennent des coquilles à leur tour. Le ramasse-miettes retire de la carte les objets qu'il libère.
+- Migrations : à la préparation d'une entité, la machine compare sa définition à celle de `grym_schema`. Colonne nouvelle : `ALTER TABLE … ADD COLUMN`, avec la valeur de départ en `DEFAULT` (un lien ajouté reste sans `NOT NULL` en base, la machine vérifie qu'il est rempli) ; unicité nouvelle : index `"u <entité>.<champ>"` ; nombre entier devenu nombre : colonne recopiée en texte canonique ; colonne retirée d'une table vide : `DROP COLUMN`. Tout autre changement est refusé, avant toute écriture, dans la transaction de l'exécution.
+- `machine_annulation` dit, après une exécution ratée, ce qui a été annulé (grammaire, § 3.3).
 - Transaction : `BEGIN IMMEDIATE` au début de chaque exécution qui connaît une entité ; à la fin, écritures sur le disque, puis `COMMIT` ; en cas d'échec ou d'interruption, `ROLLBACK`, et les fichiers déjà écrits par cette fin d'exécution sont retirés.
 
 ## 9. Ramasse-miettes
@@ -203,7 +205,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 12
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 13
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -222,11 +224,12 @@ classes       nombre : u32, puis pour chacune :
                 pluriel : longueur u32 et octets UTF-8 (vide sauf pluriel irrégulier),
                 aptitudes adoptées : nombre u32, puis pour chacune : longueur u32 et octets UTF-8,
                 champs : nombre u32, puis pour chacun : nom (longueur u32 et octets UTF-8),
-                  type (longueur u32 et octets UTF-8, vide sans type), unique : u8 (0 ou 1)
+                  type (longueur u32 et octets UTF-8, vide sans type), unique : u8 (0 ou 1),
+                  valeur de départ (longueur u32 et octets UTF-8, forme canonique, vide sans valeur)
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38. Les fichiers des versions 1 à 11 restent lisibles.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ. Les fichiers des versions 1 à 12 restent lisibles.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -273,3 +276,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.10 | 2026-09-21 | Entités : type et unicité des champs, bit d'entité, pluriel ; vérification des types avant toute écriture de champ ; format version 10 |
 | 1.11 | 2026-09-21 | Base des entités (§ 8) : schéma, types SQL, identifiants, transaction ; `CONSERVER`, `SUPPRIMER` ; format version 11 ; renumérotation des § 9 à 12 |
 | 1.12 | 2026-09-21 | Recherche : constante de type 5, `CHERCHER`, `TAILLE_LISTE`, `ÉLÉMENT`, collations exactes, carte d'identité, chargement à la demande ; format version 12 |
+| 1.13 | 2026-09-21 | Migrations de schéma, valeur de départ des champs, format version 13 ; `machine_annulation` |

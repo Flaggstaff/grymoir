@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.18 de la spécification, révisée le 21 septembre 2026. Les § 14 à 16 sont implémentés, sauf les migrations (§ 16.7).
+Version 1.19 de la spécification, révisée le 21 septembre 2026. Les § 14 à 16 sont implémentés.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -166,6 +166,7 @@ Les décimales écrites se conservent, comme en comptabilité.
 
 - Une phrase complète, avec point, s'exécute normalement. Le point final de la dernière phrase saisie est facultatif.
 - Une saisie ratée n'a aucun effet : aucun nom créé, aucun genre fixé, aucune valeur modifiée, même par une phrase réussie de la même saisie. Cela vaut aussi pour les erreurs de calcul (division par zéro).
+- Ce qu'une exécution ratée a affiché avant l'erreur reste affiché : afficher n'est pas écrire. Après le message d'erreur, une phrase dit ce qui a été annulé, pour qu'aucun affichage ne laisse croire le contraire. Dans la boucle interactive : « Saisie annulée : aucun nom n'a changé », complété de « rien n'a été conservé dans la base » ou « aucun fichier n'a été écrit » s'il y a lieu. Avec `grym lancer`, sur la sortie d'erreur, seulement si une base ou des fichiers étaient en jeu : « Exécution annulée : rien n'a été conservé, ni dans la base ni sur le disque. »
 - `quitter`, ou la fin de l'entrée (Ctrl+D, Ctrl+Z sous Windows), termine la boucle.
 
 ---
@@ -391,6 +392,8 @@ Limites de cette notation :
 | Lien vers un objet non conservé | « Le champ « parrain » désigne un client qui n'est pas conservé : conservez-le d'abord. » |
 | Unicité | « « licence » est unique : un autre client conservé a déjà « A-1 ». » |
 | Suppression refusée | « Ce client est encore désigné par le champ « parrain » de 2 clients. » |
+| Champ nouveau sans valeur de départ | « « pays » est nouveau, et 12 clients sont déjà conservés : donnez-lui une valeur de départ, après son type : « (texte), … au départ ». » |
+| Champ retiré | « « pays » a disparu de « client » : 12 valeurs conservées seraient perdues. … » |
 | Recherche sans résultat unique | « 3 clients conservés répondent à cette condition : « le client conservé dont … » en attend un seul. » |
 | Condition « dont » mal formée | « Une condition « dont » compare un champ du client à une valeur : « dont le solde est négatif ». » |
 | Classe inconnue | « Classe « fournisseur » inconnue. » |
@@ -960,8 +963,16 @@ La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1
 | champ retiré, renommé ou retypé | refusé, avec un message qui dit combien de valeurs seraient perdues |
 | `(nombre entier)` devenu `(nombre)` | accepté : aucune perte |
 
-- Le schéma connu est rangé dans la base elle-même.
-- Retirer un champ pour de bon demandera une commande explicite de l'outil `grym`, à concevoir ; un renommage ne se devine pas.
+- Le schéma connu est rangé dans la base elle-même. La migration a lieu au début de l'exécution, dans sa transaction : si l'exécution échoue ensuite, la base garde son ancien schéma.
+- La valeur de départ suit le type, et `, unique` s'il y a lieu : `un code (texte), unique, « C-1 » au départ`. C'est une constante (texte, nombre, date, vrai ou faux), vérifiée contre le type ; elle ne sert qu'aux objets déjà conservés au moment où le champ apparaît.
+- Un champ nouveau et unique ne reçoit une valeur de départ que si un seul objet est déjà conservé.
+- Un lien ou un fichier nouveau ne s'ajoute qu'à une entité sans objet conservé : il n'a pas de valeur de départ.
+- Un champ retiré d'une entité sans objet conservé disparaît, sauf s'il est unique ou s'il est un lien.
+- `, unique` s'ajoute à un champ existant si ses valeurs sont déjà toutes différentes. Il se retire seulement s'il a été ajouté par une migration.
+- `(nombre entier)` devient `(nombre)` si le champ n'est pas unique.
+- Changer la classe parente d'une entité est refusé.
+- Retirer un champ pour de bon, le renommer, ou lever les limites ci-dessus demandera une commande explicite de l'outil `grym`, à concevoir.
+- Ces limites viennent de ce que SQLite modifie une table existante : il n'ajoute ni contrainte `UNIQUE` ni lien obligatoire à une colonne nouvelle, et ne retire pas une colonne unique ou liée.
 
 ### 16.8 Forme compacte
 
@@ -973,6 +984,7 @@ La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1
 | `un âge (nombre entier)`, `un actif (vrai ou faux)` | `_un âge (nombre_entier)`, `_un actif (vrai_ou_faux)` |
 | `un nom (texte)` | `_un nom (texte)` |
 | `une licence (texte), unique` | `_une licence (texte) _unique` |
+| `un pays (texte), « Suisse » au départ` | `_un pays (texte) _départ « Suisse »` |
 | `un pays (texte), « Suisse » au départ` | `_un pays (texte) _départ « Suisse »` |
 | `Conserver le client.` / `Supprimer le client.` | `_conserver client` / `_supprimer client` |
 | `Pour chaque client conservé dont le solde est négatif, par nom décroissant :` | `_pour_chaque client _conservé _dont solde _négatif _par nom _décroissant` |
@@ -1012,3 +1024,4 @@ La charte 1.9 reprend ce paragraphe : transaction par exécution (art. 7), typag
 | 1.16 | 2026-09-21 | § 16.1 et 16.2 implémentés ; accord de `conservé`, types réservés aux entités et aptitudes, héritage entre entités, lien vers soi, portée de la vérification à l'analyse, `(nombre entier)` et `3,0`, forme compacte des types |
 | 1.17 | 2026-09-21 | § 16.3, 16.5, 16.6 implémentés ; lien vers soi, identifiants jamais réattribués, définition changée refusée en attendant les migrations, ordre fichiers puis base, tables créées dans la transaction |
 | 1.18 | 2026-09-21 | § 16.4 implémenté : champs de l'objet examiné, `est valeur`, comparaisons permises, décimal exact et ordre du dictionnaire, héritage, liste figée, chargement à la demande. § 16.8 : champs sans préfixe dans une condition compacte, `_nombre_de` |
+| 1.19 | 2026-09-21 | § 3.3 : sortie d'une exécution ratée conservée, suivie d'une phrase d'annulation. § 16.7 implémenté : valeur de départ, règles et limites imposées par SQLite |

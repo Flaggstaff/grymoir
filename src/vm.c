@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.12).
+ * Spécification : docs/vm.md (révision 1.13).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -146,6 +146,8 @@ struct Machine {
     char *dossier;          /* dossier du programme : base des chemins relatifs */
     char *chemin_base;      /* fichier de la base des entités, NULL : en mémoire (§ 16.5) */
     Base *base;             /* ouverte au premier besoin */
+    int base_engagee;       /* dernière exécution : une base était en jeu (message d'annulation, § 3.3) */
+    int fichiers_prevus;    /* dernière exécution : des fichiers devaient être écrits */
     long *carte_cles;       /* carte d'identité : identifiant en base → objet en mémoire (§ 16.4) */
     Objet **carte_objets;   /* clé 0 : case vide ; clé −1 : case libérée */
     size_t carte_cap, carte_n;
@@ -235,6 +237,18 @@ static void carte_retirer(Machine *m, long id, const Objet *o) {
     }
 }
 
+char *machine_annulation(const Machine *m, int interactif) {
+    const char *base = m->base_engagee ? "rien n'a été conservé dans la base" : NULL;
+    const char *disque = m->fichiers_prevus ? "aucun fichier n'a été écrit" : NULL;
+    if (interactif)
+        return grym_formater("Saisie annulée : aucun nom n'a changé%s%s%s%s.", base ? ", " : "", base ? base : "",
+                             disque ? ", " : "", disque ? disque : "");
+    if (base && disque) return grym_dupliquer("Exécution annulée : rien n'a été conservé, ni dans la base ni sur le disque.");
+    if (base) return grym_formater("Exécution annulée : %s.", base);
+    if (disque) return grym_formater("Exécution annulée : %s.", disque);
+    return NULL;
+}
+
 void machine_base(Machine *m, const char *chemin) {
     free(m->chemin_base);
     m->chemin_base = chemin ? grym_dupliquer(chemin) : NULL;
@@ -277,7 +291,11 @@ void machine_detruire(Machine *m) {
     for (size_t i = 0; i < m->nb_classes; i++) {
         free(m->classes[i]->nom);
         for (size_t k = 0; k < m->classes[i]->nb_champs; k++) free(m->classes[i]->champs[k]);
-        for (size_t k = 0; k < m->classes[i]->nb_champs; k++) free(m->classes[i]->types[k]);
+        for (size_t k = 0; k < m->classes[i]->nb_champs; k++) {
+            free(m->classes[i]->types[k]);
+            free(m->classes[i]->departs[k]);
+        }
+        free(m->classes[i]->departs);
         free(m->classes[i]->types);
         free(m->classes[i]->uniques);
         free(m->classes[i]->pluriel);
@@ -943,21 +961,25 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         for (size_t q = 0; q < cm->nb_aptitudes && !probleme; q++) total += aptitudes[q]->nb_champs;
         char **champs = grym_allouer((total ? total : 1) * sizeof *champs);
         char **types = grym_allouer((total ? total : 1) * sizeof *types);
+        char **departs = grym_allouer((total ? total : 1) * sizeof *departs);
         unsigned char *uniques = grym_allouer(total ? total : 1);
         size_t n = 0;
         for (size_t q = 0; parent && q < parent->nb_champs; q++) {
             types[n] = parent->types[q];
+            departs[n] = parent->departs[q];
             uniques[n] = parent->uniques[q];
             champs[n++] = parent->champs[q];
         }
         for (size_t q = 0; q < cm->nb_aptitudes && !probleme; q++)
             for (size_t r = 0; r < aptitudes[q]->nb_champs; r++) {
                 types[n] = aptitudes[q]->types[r];
+                departs[n] = aptitudes[q]->departs[r];
                 uniques[n] = 0;
                 champs[n++] = aptitudes[q]->champs[r];
             }
         for (size_t q = 0; q < cm->nb_champs && !probleme; q++) {
             types[n] = cm->types ? cm->types[q] : NULL;
+            departs[n] = cm->departs ? cm->departs[q] : NULL;
             uniques[n] = cm->uniques ? cm->uniques[q] : 0;
             champs[n++] = cm->champs[q];
         }
@@ -980,6 +1002,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             free(probleme);
             free(champs);
             free(types);
+            free(departs);
             free(uniques);
             free(aptitudes);
             return 0;   /* rien n'est encore enregistré : aucune formule, aucun cadre */
@@ -996,13 +1019,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         c->pluriel = cm->pluriel ? grym_dupliquer(cm->pluriel) : NULL;
         c->champs = grym_allouer((n ? n : 1) * sizeof *c->champs);
         c->types = grym_allouer((n ? n : 1) * sizeof *c->types);
+        c->departs = grym_allouer((n ? n : 1) * sizeof *c->departs);
         c->uniques = uniques;
         for (size_t q = 0; q < n; q++) {
             c->champs[q] = grym_dupliquer(champs[q]);
             c->types[q] = types[q] ? grym_dupliquer(types[q]) : NULL;
+            c->departs[q] = departs[q] ? grym_dupliquer(departs[q]) : NULL;
         }
         free(champs);
         free(types);
+        free(departs);
         /* Table qui porte chaque champ : celle de la classe parente pour un champ hérité, la sienne sinon. */
         c->proprietaires = grym_allouer((n ? n : 1) * sizeof *c->proprietaires);
         for (size_t q = 0; q < n; q++)
@@ -1016,6 +1042,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     /* Base des entités (§ 16.5, § 16.6) : ouverte au premier besoin, une transaction par exécution. */
     int entites = 0;
     for (size_t i = 0; i < m->nb_classes; i++) entites |= m->classes[i]->conserve;
+    m->base_engagee = entites;
+    m->fichiers_prevus = 0;
     if (entites) {
         char *erreur = NULL;
         if (!m->base) m->base = base_ouvrir(m->chemin_base, &erreur);
@@ -1606,6 +1634,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     free(cadres);
     free(liaison_principale);
     size_t ecrits = 0;
+    m->fichiers_prevus = m->nb_a_ecrire > 0;
     if (ok && m->nb_a_ecrire) {
         /* écritures sur le disque, seulement si l'exécution a réussi (§ 15.2) */
         char *erreur = ecrire_sur_le_disque(m);

@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle, v0.2
- * Spécification : docs/vm.md (révision 1.12).
+ * Spécification : docs/vm.md (révision 1.13).
  */
 #ifndef GRYM_VM_H
 #define GRYM_VM_H
@@ -36,5 +36,9 @@ void machine_dossier(Machine *m, const char *dossier);
 
 /* Fichier de la base des entités (§ 16.5) ; NULL : base en mémoire. Ouverte au premier besoin. */
 void machine_base(Machine *m, const char *chemin);
+
+/* Après une exécution ratée : ce qui a été annulé, à dire à l'utilisateur (§ 3.3), ou NULL
+ * s'il n'y a rien à dire. À libérer. */
+char *machine_annulation(const Machine *m, int interactif);
 
 #endif

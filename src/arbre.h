@@ -1,5 +1,5 @@
 /* GrymoiR : arbre syntaxique, v0.1
- * Spécification : docs/grammaire.md (révision 1.18), § 6.
+ * Spécification : docs/grammaire.md (révision 1.19), § 6.
  * Chaque nœud garde sa position dans la source (debut, fin), pour les
  * messages d'erreur et, en v0.2, pour la traduction sans perte.
  */
@@ -61,7 +61,8 @@ typedef enum {
                         (N_NOM, forme = genre) et aptitudes adoptées (N_TEXTE, forme féminine) ;
                         texte2 : classe parente (« Un membre est une personne. »), ou NULL ;
                         forme : bit 16 = déclarée par « est », bit 32 = entité (« conservé ») ;
-                        un champ d'entité porte son type en texte2, et op = 'U' s'il est unique */
+                        un champ d'entité porte son type en texte2, op = 'U' s'il est unique, et sa
+                        valeur de départ en enfants[0] (§ 16.7) */
     P_MODIF_CHAMP,   /* « Le solde du client devient … » : texte : champ ; enfants[0] : objet ; enfants[1] : valeur */
     P_POUR_CONSERVE, /* « Pour chaque client conservé dont … : » : texte : entité (nom du compteur, case `local`) ;
                         enfants[0] : N_CHERCHER ; enfants[1] : N_BLOC ; entier : case de la liste, entier + 1 : rang ;

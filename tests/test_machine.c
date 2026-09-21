@@ -647,6 +647,81 @@ int main(void) {
         remove("_essai_relire.txt");
         remove("_essai_relire.grymd");
     }
+    /* --- Migrations (§ 16.7) : une même base, des déclarations qui évoluent --- */
+    {
+        remove("_essai_mig.grymd");
+        const char *etapes[][2] = {
+            { "Un client, conservé, a : un nom (texte), unique, un âge (nombre entier).\n"
+              "Le c vaut un nouveau client :\n    Le nom vaut « Ana ».\n    L'âge vaut 30.\nConserver c.\n", "" },
+            { "Un client, conservé, a : un nom (texte), unique, un âge (nombre entier), un pays (texte).\n",
+              "~« pays » est nouveau, et 1 client est déjà conservé : donnez-lui une valeur de départ" },
+            { "Un client, conservé, a : un nom (texte), unique, un âge (nombre entier), un pays (texte), « Suisse » au départ, "
+              "un actif (vrai ou faux), vrai au départ.\nPour chaque client conservé, afficher pays du client puis actif du client.\n",
+              "Suisse vrai" },
+            { "Un client, conservé, a : un nom (texte), unique, un âge (nombre), un pays (texte), un actif (vrai ou faux).\n"
+              "Le a vaut le client conservé dont le nom est « Ana ».\nL'âge du a devient 30,5.\n"
+              "Afficher le nombre de clients conservés dont l'âge > 30,25.\n", "1" },
+            { "Un client, conservé, a : un nom (texte), unique, un âge (nombre), un pays (texte).\n",
+              "~« actif » a disparu de « client » : 1 valeur conservée serait perdue." },
+            { "Un client, conservé, a : un nom (nombre), un âge (nombre), un pays (texte), un actif (vrai ou faux).\n",
+              "~« nom » ne peut pas passer de « texte » à « nombre »" },
+            { "Un client, conservé, a : un nom (texte), unique, un âge (nombre), un pays (texte), un actif (vrai ou faux), "
+              "un parrain (client).\n", "~un lien n'a pas de valeur de départ" },
+            { "Un client, conservé, a : un nom (texte), unique, un âge (nombre), un pays (texte), unique, un actif (vrai ou faux).\n"
+              "Le d vaut un nouveau client :\n    Le nom vaut « Bo ».\n    L'âge vaut 1.\n    Le pays vaut « Suisse ».\n"
+              "    L'actif vaut faux.\nConserver d.\n", "~« pays » est unique : un autre client conservé a déjà « Suisse »." },
+            { "Un client, conservé, a : un nom (texte), unique, un âge (nombre), un pays (texte), un actif (vrai ou faux).\n"
+              "Afficher âge du client conservé dont le nom est « Ana » puis le nombre de clients conservés.\n", "30,5 1" },
+        };
+        for (int i = 0; i < 9; i++) {
+            total++;
+            Portee *p = portee_creer();
+            Machine *m = machine_creer();
+            machine_base(m, "_essai_mig.grymd");
+            char *r = executer_source(p, m, etapes[i][0], 0);
+            const char *att = etapes[i][1];
+            int ok = att[0] == '~' ? strstr(r, att + 1) != NULL : strcmp(r, att) == 0;
+            if (!ok) signaler(__LINE__, etapes[i][0], att, r);
+            free(r);
+            machine_detruire(m);
+            portee_detruire(p);
+        }
+        total++;
+        sqlite3 *db = NULL;
+        sqlite3_stmt *st = NULL;
+        char lu[100] = "";
+        if (sqlite3_open("_essai_mig.grymd", &db) == SQLITE_OK
+            && sqlite3_prepare_v2(db, "PRAGMA integrity_check", -1, &st, NULL) == SQLITE_OK && sqlite3_step(st) == SQLITE_ROW)
+            snprintf(lu, sizeof lu, "%s", (const char *)sqlite3_column_text(st, 0));
+        sqlite3_finalize(st);
+        sqlite3_close(db);
+        if (strcmp(lu, "ok") != 0) signaler(__LINE__, "intégrité après migrations", "ok", lu);
+        remove("_essai_mig.grymd");
+    }
+    /* --- Message d'annulation (§ 3.3) --- */
+    {
+        total++;
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        char *r = executer_source(p, m, "Un client, conservé, a : un nom (texte).\nAfficher 1 ÷ 0.", 0);
+        char *a = machine_annulation(m, 0), *b = machine_annulation(m, 1);
+        if (!a || strcmp(a, "Exécution annulée : rien n'a été conservé dans la base.") != 0
+            || strcmp(b, "Saisie annulée : aucun nom n'a changé, rien n'a été conservé dans la base.") != 0)
+            signaler(__LINE__, "annulation", "Exécution annulée : rien n'a été conservé dans la base.", a ? a : "(rien)");
+        free(r); free(a); free(b);
+        machine_detruire(m);
+        portee_detruire(p);
+        p = portee_creer();
+        m = machine_creer();
+        r = executer_source(p, m, "Afficher 1 ÷ 0.", 0);
+        a = machine_annulation(m, 0);
+        total++;
+        if (a) signaler(__LINE__, "annulation sans base", "(rien)", a);
+        free(r); free(a);
+        machine_detruire(m);
+        portee_detruire(p);
+    }
+
     /* --- La base dans un fichier : ce qui est validé y reste, le reste n'y entre pas --- */
     {
         remove("_essai.grymd");
@@ -658,7 +733,7 @@ int main(void) {
                            "    La date vaut 01.01.2026.\n    L'actif vaut faux.\nConserver b.\nAfficher 1 ÷ 0.\n";
         const char *autre = "Un client, conservé, a : un nom (texte).\n";
         const char *sources[] = { prog, rate, autre };
-        const char *attendus[] = { "", "~Division par zéro", "~La base « _essai.grymd » connaît « client » avec une autre définition" };
+        const char *attendus[] = { "", "~Division par zéro", "~« solde » a disparu de « client » : 1 valeur conservée serait perdue." };
         for (int i = 0; i < 3; i++) {
             total++;
             Portee *p = portee_creer();

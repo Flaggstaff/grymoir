@@ -1,5 +1,5 @@
 /* GrymoiR : compilateur de l'arbre vers le bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.12), § 3.
+ * Spécification : docs/vm.md (révision 1.13), § 3.
  */
 #ifndef GRYM_COMPILATEUR_H
 #define GRYM_COMPILATEUR_H

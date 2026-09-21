@@ -597,6 +597,17 @@ int main(void) {
     VE(CL "Pour chaque client conservé, par âge, afficher 1.", 2, 34, "« âge » n'est pas un champ du client.");
     VE(CL "Pour chaque client conservé, par parrain, afficher 1.", 2, 34, "Tri attendu sur un champ");
 
+    /* --- Valeur de départ (§ 16.7) --- */
+    V("Un client, conservé, a : un pays (texte), « Suisse » au départ, un code (texte), unique, « x » au départ, "
+      "un solde (nombre), −3,5 au départ, un actif (vrai ou faux), faux au départ, une date (date), 01.01.2026 au départ.",
+      "(entité [client] [pays : texte départ «Suisse»] [code : texte unique départ «x»] [solde : nombre départ (− 3.5)] "
+      "[actif : vrai ou faux départ faux] [date : date départ (date 2026-01-01)])");
+    VE("Un client, conservé, a : un âge (nombre entier), 2,5 au départ.", 1, 50,
+       "Le champ « âge » attend un nombre entier, pas un nombre à virgule.");
+    VE("Un client, conservé, a : un pays (texte), 3 au départ.", 1, 43, "Le champ « pays » attend un texte, pas un nombre.");
+    VE("Une personne a : un nom, « a » au départ.", 1, 26, "Seul un champ d'entité a une valeur de départ.");
+    VE("Un client, conservé, a : une photo (image), « a » au départ.", 1, 45, "Le champ « photo » attend une image");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

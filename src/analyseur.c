@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.18), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.19), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -2826,6 +2826,12 @@ static char *lire_type(Analyse *a, const char *soi) {
     return type;
 }
 
+static Noeud *unaire(Analyse *a);
+
+static int est_fichier_type(const char *t) {
+    return t && (strcmp(t, "fichier") == 0 || strcmp(t, "image") == 0);
+}
+
 /* Champs : mode 0 classe ordinaire (sans type), 1 entité (type obligatoire, « unique » permis),
  * 2 aptitude (type facultatif). */
 static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const char *soi) {
@@ -2888,14 +2894,49 @@ static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const
             erreur(a, cour(a), grym_formater("Type attendu entre parenthèses : « un %s (texte) ».", champ));
             return 0;
         }
-        if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "unique")) {
-            if (mode != 1) {
-                erreur(a, voir(a, 1), grym_dupliquer("Seul un champ d'entité est unique."));
-                return 0;
+        for (;;) {
+            if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "unique") && c->op != 'U') {
+                if (mode != 1) {
+                    erreur(a, voir(a, 1), grym_dupliquer("Seul un champ d'entité est unique."));
+                    return 0;
+                }
+                c->op = 'U';
+                avancer(a);
+                avancer(a);
+                continue;
             }
-            c->op = 'U';
-            avancer(a);
-            avancer(a);
+            /* « , « Suisse » au départ » : valeur des objets déjà conservés quand le champ apparaît (§ 16.7) */
+            size_t q = a->i + 1;
+            if (a->j[q].type == J_MOINS) q++;
+            int litteral = a->j[q].type == J_TEXTE || a->j[q].type == J_NOMBRE || a->j[q].type == J_DATE
+                           || est_mot(&a->j[q], "vrai") || est_mot(&a->j[q], "faux");
+            if (cour(a)->type == J_VIRGULE && litteral && est_mot(&a->j[q + 1], "au") && est_mot(&a->j[q + 2], "départ")
+                && !c->nb_enfants) {
+                if (mode != 1) {
+                    erreur(a, &a->j[q], grym_dupliquer("Seul un champ d'entité a une valeur de départ."));
+                    return 0;
+                }
+                avancer(a);
+                Noeud *v;
+                if (est_mot(cour(a), "vrai") || est_mot(cour(a), "faux")) {
+                    v = feuille(N_BOOLEEN, cour(a));
+                    avancer(a);
+                } else {
+                    v = unaire(a);
+                }
+                if (!v) return 0;
+                if (!verifier_type(a, champ, c->texte2, v)) { noeud_liberer(v); return 0; }
+                if (est_fichier_type(c->texte2) || !type_de_base(c->texte2)) {
+                    erreur(a, cour(a), grym_formater("« %s » : un fichier ou un lien n'a pas de valeur de départ.", champ));
+                    noeud_liberer(v);
+                    return 0;
+                }
+                noeud_ajouter(c, v);
+                avancer(a);
+                avancer(a);
+                continue;
+            }
+            break;
         }
         attendre(a, A_POINT);
         attendre_mot(a, a->i, ",", 1);

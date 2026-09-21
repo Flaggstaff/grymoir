@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.18), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.19), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -458,6 +458,11 @@ static void type_de_champ(Impression *im, const Noeud *ch) {
     else aj(im, ch->texte2);   /* « (vrai ou faux) » : un type, pas un nom, jamais entre crochets */
     aj(im, ")");
     if (ch->op == 'U') aj(im, im->compact ? " _unique" : ", unique");
+    if (ch->nb_enfants) {   /* valeur de départ (§ 16.7) */
+        aj(im, im->compact ? " _départ " : ", ");
+        expression(im, ch->enfants[0]);
+        if (!im->compact) aj(im, " au départ");
+    }
 }
 
 /* Bloc qui initialise un nouvel objet, après la phrase qui le crée. */

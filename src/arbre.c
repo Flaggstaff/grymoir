@@ -299,6 +299,7 @@ static void decrire(const Noeud *n, Chaine *c) {
                 chaine_ajouter(c, " : ");
                 chaine_ajouter(c, ch->texte2);
                 if (ch->op == 'U') chaine_ajouter(c, " unique");
+                if (ch->nb_enfants) { chaine_ajouter(c, " départ "); decrire(ch->enfants[0], c); }
                 chaine_ajouter(c, "]");
             } else {
                 decrire(ch, c);

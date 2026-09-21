@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.18), § 16 ; docs/vm.md (révision 1.12), § 8.
+ * Spécification : docs/grammaire.md (révision 1.19), § 16 ; docs/vm.md (révision 1.13), § 8.
  */
 #include "base.h"
 #include "date.h"
@@ -169,6 +169,277 @@ static char *definition(const ClasseVM *c) {
     return chaine_rendre(&d);
 }
 
+/* ---------------------------------------------------------------- */
+/* Migrations (grammaire, § 16.7)                                   */
+/* ---------------------------------------------------------------- */
+
+typedef struct {
+    char *parent;
+    char **noms, **types;
+    int *uniques;
+    size_t n;
+} Definition;
+
+/* « parent=P;nom:type[:unique];… » */
+static void lire_definition(const char *d, Definition *x) {
+    memset(x, 0, sizeof *x);
+    char *copie = grym_dupliquer(d);
+    size_t cap = 8;
+    x->noms = grym_allouer(cap * sizeof *x->noms);
+    x->types = grym_allouer(cap * sizeof *x->types);
+    x->uniques = grym_allouer(cap * sizeof *x->uniques);
+    char *p = copie;
+    int premier = 1;
+    while (p) {
+        char *fin = strchr(p, ';');
+        if (fin) *fin = '\0';
+        if (premier) {
+            x->parent = grym_dupliquer(strncmp(p, "parent=", 7) == 0 ? p + 7 : "");
+            premier = 0;
+        } else {
+            if (x->n == cap) {
+                cap *= 2;
+                char **n2 = grym_allouer(cap * sizeof *n2), **t2 = grym_allouer(cap * sizeof *t2);
+                int *u2 = grym_allouer(cap * sizeof *u2);
+                memcpy(n2, x->noms, x->n * sizeof *n2);
+                memcpy(t2, x->types, x->n * sizeof *t2);
+                memcpy(u2, x->uniques, x->n * sizeof *u2);
+                free(x->noms); free(x->types); free(x->uniques);
+                x->noms = n2; x->types = t2; x->uniques = u2;
+            }
+            char *d1 = strchr(p, ':');
+            char *d2 = d1 ? strchr(d1 + 1, ':') : NULL;
+            if (d1) *d1 = '\0';
+            if (d2) *d2 = '\0';
+            x->noms[x->n] = grym_dupliquer(p);
+            x->types[x->n] = grym_dupliquer(d1 ? d1 + 1 : "");
+            x->uniques[x->n] = d2 && strcmp(d2 + 1, "unique") == 0;
+            x->n++;
+        }
+        p = fin ? fin + 1 : NULL;
+    }
+    free(copie);
+}
+
+static void liberer_definition(Definition *x) {
+    for (size_t k = 0; k < x->n; k++) { free(x->noms[k]); free(x->types[k]); }
+    free(x->noms); free(x->types); free(x->uniques); free(x->parent);
+}
+
+static long chercher_champ(const Definition *x, const char *nom) {
+    for (size_t k = 0; k < x->n; k++) if (strcmp(x->noms[k], nom) == 0) return (long)k;
+    return -1;
+}
+
+static long compter_lignes(Base *b, const ClasseVM *c) {
+    Chaine sql = {0};
+    chaine_ajouter(&sql, "SELECT count(*) FROM ");
+    ajouter_nom(&sql, "e ", c->nom);
+    char *t = chaine_rendre(&sql);
+    sqlite3_stmt *st = NULL;
+    sqlite3_prepare_v2(b->db, t, -1, &st, NULL);
+    free(t);
+    long n = sqlite3_step(st) == SQLITE_ROW ? (long)sqlite3_column_int64(st, 0) : 0;
+    sqlite3_finalize(st);
+    return n;
+}
+
+/* Littéral SQL d'une valeur de départ (forme canonique), ou d'une valeur neutre pour une table vide. */
+static void ajouter_litteral(Chaine *sql, const char *type, const char *depart) {
+    if (strcmp(type, "nombre entier") == 0) {
+        char *t = grym_dupliquer(depart ? depart : "0");
+        char *point = strchr(t, '.');
+        if (point) *point = '\0';                 /* « 3.0 » : un entier */
+        chaine_ajouter(sql, t);
+        free(t);
+    } else if (strcmp(type, "vrai ou faux") == 0) {
+        chaine_ajouter(sql, depart && strcmp(depart, "vrai") == 0 ? "1" : "0");
+    } else {
+        const char *v = depart ? depart : strcmp(type, "nombre") == 0 ? "0" : strcmp(type, "date") == 0 ? "0001-01-01" : "";
+        chaine_ajouter(sql, "'");
+        for (const char *p = v; *p; p++) chaine_ajouter(sql, *p == '\'' ? "''" : (char[2]){ *p, 0 });
+        chaine_ajouter(sql, "'");
+    }
+}
+
+static int executer_chaine(Base *b, Chaine *sql, char **erreur) {
+    char *t = chaine_rendre(sql);
+    int ok = executer(b, t, erreur);
+    free(t);
+    return ok;
+}
+
+/* Index d'unicité ajouté par une migration (une contrainte UNIQUE ne s'ajoute pas à une table existante). */
+static int creer_index_unique(Base *b, const ClasseVM *c, const char *champ, char **erreur) {
+    Chaine sql = {0};
+    chaine_ajouter(&sql, "CREATE UNIQUE INDEX ");
+    char *nom = grym_formater("%s.%s", c->nom, champ);
+    ajouter_nom(&sql, "u ", nom);
+    free(nom);
+    chaine_ajouter(&sql, " ON ");
+    ajouter_nom(&sql, "e ", c->nom);
+    chaine_ajouter(&sql, " (");
+    ajouter_nom(&sql, "c ", champ);
+    chaine_ajouter(&sql, ")");
+    char *t = chaine_rendre(&sql);
+    int ok = sqlite3_exec(b->db, t, NULL, NULL, NULL) == SQLITE_OK;
+    free(t);
+    if (!ok) *erreur = grym_formater("« %s » devient unique, mais des %s conservés partagent déjà une même valeur.",
+                                     champ, c->pluriel ? c->pluriel : c->nom);
+    return ok;
+}
+
+/* « 1 client est déjà conservé », « 3 clients sont déjà conservés » */
+static char *deja_conserves(const ClasseVM *c, long n) {
+    if (n == 1) return grym_formater("1 %s est déjà conservé%s", c->nom, c->feminin ? "e" : "");
+    char *pl = c->pluriel ? grym_dupliquer(c->pluriel) : grym_formater("%ss", c->nom);
+    char *r = grym_formater("%ld %s sont déjà conservé%ss", n, pl, c->feminin ? "e" : "");
+    free(pl);
+    return r;
+}
+
+static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *nouvelle, char **erreur) {
+    Definition a, n;
+    lire_definition(ancienne, &a);
+    lire_definition(nouvelle, &n);
+    long lignes = compter_lignes(b, c);
+    char *pl = c->pluriel ? grym_dupliquer(c->pluriel) : grym_formater("%ss", c->nom);
+    int ok = 1;
+    char *deja = deja_conserves(c, lignes);
+    if (strcmp(a.parent, n.parent) != 0) {
+        *erreur = grym_formater("« %s » ne peut pas changer de classe parente : %s.", c->nom, deja);
+        ok = 0;
+    }
+    /* un champ retiré, ou renommé : ses valeurs seraient perdues */
+    for (size_t k = 0; ok && k < a.n; k++)
+        if (chercher_champ(&n, a.noms[k]) < 0 && lignes > 0) {
+            *erreur = grym_formater("« %s » a disparu de « %s » : %ld valeur%s conservée%s serai%s perdue%s. Remettez ce "
+                                    "champ ; un renommage se déclare comme un retrait suivi d'un ajout, et n'est pas "
+                                    "encore pris en charge.", a.noms[k], c->nom, lignes, lignes > 1 ? "s" : "",
+                                    lignes > 1 ? "s" : "", lignes > 1 ? "ent" : "t", lignes > 1 ? "s" : "");
+            ok = 0;
+        } else if (chercher_champ(&n, a.noms[k]) < 0) {
+            Chaine sql = {0};   /* table vide : la colonne part sans rien emporter */
+            chaine_ajouter(&sql, "ALTER TABLE ");
+            ajouter_nom(&sql, "e ", c->nom);
+            chaine_ajouter(&sql, " DROP COLUMN ");
+            ajouter_nom(&sql, "c ", a.noms[k]);
+            if (est_fichier(a.types[k])) {
+                chaine_ajouter(&sql, "; ALTER TABLE ");
+                ajouter_nom(&sql, "e ", c->nom);
+                chaine_ajouter(&sql, " DROP COLUMN ");
+                ajouter_nom(&sql, "n ", a.noms[k]);
+            }
+            if (!executer_chaine(b, &sql, erreur)) {
+                free(*erreur);
+                *erreur = grym_formater("« %s » ne peut pas être retiré de « %s » : c'est un champ unique ou un lien, "
+                                        "ce que SQLite ne retire pas d'une table existante.", a.noms[k], c->nom);
+                ok = 0;
+            }
+        }
+    /* un champ gardé : même type, ou nombre entier devenu nombre */
+    for (size_t k = 0; ok && k < n.n; k++) {
+        long i = chercher_champ(&a, n.noms[k]);
+        if (i < 0) continue;
+        if (strcmp(a.types[i], n.types[k]) != 0) {
+            if (strcmp(a.types[i], "nombre entier") != 0 || strcmp(n.types[k], "nombre") != 0 || a.uniques[i]) {
+                *erreur = grym_formater("« %s » ne peut pas passer de « %s » à « %s » : seul un nombre entier non unique "
+                                        "devient un nombre sans perte.", n.noms[k], a.types[i], n.types[k]);
+                ok = 0;
+                break;
+            }
+            Chaine sql = {0};
+            chaine_ajouter(&sql, "ALTER TABLE "); ajouter_nom(&sql, "e ", c->nom);
+            chaine_ajouter(&sql, " ADD COLUMN "); ajouter_nom(&sql, "x ", n.noms[k]);
+            chaine_ajouter(&sql, " TEXT NOT NULL DEFAULT '0'; UPDATE "); ajouter_nom(&sql, "e ", c->nom);
+            chaine_ajouter(&sql, " SET "); ajouter_nom(&sql, "x ", n.noms[k]);
+            chaine_ajouter(&sql, " = CAST("); ajouter_nom(&sql, "c ", n.noms[k]); chaine_ajouter(&sql, " AS TEXT); ALTER TABLE ");
+            ajouter_nom(&sql, "e ", c->nom); chaine_ajouter(&sql, " DROP COLUMN "); ajouter_nom(&sql, "c ", n.noms[k]);
+            chaine_ajouter(&sql, "; ALTER TABLE "); ajouter_nom(&sql, "e ", c->nom); chaine_ajouter(&sql, " RENAME COLUMN ");
+            ajouter_nom(&sql, "x ", n.noms[k]); chaine_ajouter(&sql, " TO "); ajouter_nom(&sql, "c ", n.noms[k]);
+            chaine_ajouter(&sql, ";");
+            ok = executer_chaine(b, &sql, erreur);
+        }
+        if (ok && !a.uniques[i] && n.uniques[k]) ok = creer_index_unique(b, c, n.noms[k], erreur);
+        if (ok && a.uniques[i] && !n.uniques[k]) {
+            /* un index ajouté par migration se retire ; une contrainte d'origine, pas encore */
+            Chaine sql = {0};
+            chaine_ajouter(&sql, "DROP INDEX ");
+            char *nom = grym_formater("%s.%s", c->nom, n.noms[k]);
+            ajouter_nom(&sql, "u ", nom);
+            free(nom);
+            char *t = chaine_rendre(&sql);
+            ok = sqlite3_exec(b->db, t, NULL, NULL, NULL) == SQLITE_OK;
+            free(t);
+            if (!ok) *erreur = grym_formater("« %s » ne peut pas cesser d'être unique : ce n'est pas encore pris en charge.",
+                                             n.noms[k]);
+        }
+    }
+    /* un champ nouveau */
+    for (size_t k = 0; ok && k < n.n; k++) {
+        if (chercher_champ(&a, n.noms[k]) >= 0) continue;
+        long q = -1;
+        for (size_t j = 0; j < c->nb_champs && q < 0; j++)
+            if (c->proprietaires[j] == c && strcmp(c->champs[j], n.noms[k]) == 0) q = (long)j;
+        const char *depart = q >= 0 ? c->departs[q] : NULL;
+        const char *t = n.types[k];
+        int lien = !(strcmp(t, "texte") == 0 || strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0
+                     || strcmp(t, "vrai ou faux") == 0 || strcmp(t, "date") == 0 || est_fichier(t));
+        if (lignes > 0 && !depart) {
+            *erreur = lien || est_fichier(t)
+                ? grym_formater("« %s » est nouveau, et %s : un %s n'a pas de valeur de départ, il ne s'ajoute qu'à une "
+                                "entité sans objet conservé.", n.noms[k], deja, lien ? "lien" : "fichier")
+                : grym_formater("« %s » est nouveau, et %s : donnez-lui une valeur de départ, après son type : "
+                                "« (%s), … au départ ».", n.noms[k], deja, t);
+            ok = 0;
+            break;
+        }
+        if (n.uniques[k] && lignes > 1) {
+            *erreur = grym_formater("« %s » est nouveau et unique : une même valeur de départ pour %ld %s n'est pas possible.",
+                                    n.noms[k], lignes, pl);
+            ok = 0;
+            break;
+        }
+        Chaine sql = {0};
+        chaine_ajouter(&sql, "ALTER TABLE ");
+        ajouter_nom(&sql, "e ", c->nom);
+        chaine_ajouter(&sql, " ADD COLUMN ");
+        ajouter_nom(&sql, "c ", n.noms[k]);
+        if (lien) {
+            /* SQLite n'ajoute une colonne de lien que sans NOT NULL : la machine vérifie qu'elle est remplie */
+            chaine_ajouter(&sql, " INTEGER REFERENCES ");
+            ajouter_nom(&sql, "e ", t);
+            chaine_ajouter(&sql, "(id)");
+        } else if (est_fichier(t)) {
+            chaine_ajouter(&sql, " BLOB NOT NULL DEFAULT x''; ALTER TABLE ");
+            ajouter_nom(&sql, "e ", c->nom);
+            chaine_ajouter(&sql, " ADD COLUMN ");
+            ajouter_nom(&sql, "n ", n.noms[k]);
+            chaine_ajouter(&sql, " TEXT NOT NULL DEFAULT ''");
+        } else {
+            chaine_ajouter(&sql, strcmp(t, "nombre entier") == 0 || strcmp(t, "vrai ou faux") == 0 ? " INTEGER" : " TEXT");
+            chaine_ajouter(&sql, " NOT NULL DEFAULT ");
+            ajouter_litteral(&sql, t, depart);
+        }
+        chaine_ajouter(&sql, ";");
+        ok = executer_chaine(b, &sql, erreur) && (!n.uniques[k] || creer_index_unique(b, c, n.noms[k], erreur));
+    }
+    if (ok) {
+        sqlite3_stmt *st = NULL;
+        sqlite3_prepare_v2(b->db, "UPDATE grym_schema SET definition = ? WHERE entite = ?", -1, &st, NULL);
+        sqlite3_bind_text(st, 1, nouvelle, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(st, 2, c->nom, -1, SQLITE_TRANSIENT);
+        ok = sqlite3_step(st) == SQLITE_DONE;
+        sqlite3_finalize(st);
+        if (!ok) *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+    }
+    free(pl);
+    free(deja);
+    liberer_definition(&a);
+    liberer_definition(&n);
+    return ok;
+}
+
 int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
     if (!c->conserve) return 1;
     char *def = definition(c);
@@ -177,13 +448,12 @@ int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
     sqlite3_bind_text(st, 1, c->nom, -1, SQLITE_TRANSIENT);
     int rc = sqlite3_step(st);
     if (rc == SQLITE_ROW) {
-        int pareil = strcmp((const char *)sqlite3_column_text(st, 0), def) == 0;
+        char *ancienne = grym_dupliquer((const char *)sqlite3_column_text(st, 0));
         sqlite3_finalize(st);
+        int ok = strcmp(ancienne, def) == 0 || migrer(b, c, ancienne, def, erreur);
+        free(ancienne);
         free(def);
-        if (pareil) return 1;
-        *erreur = grym_formater("La base « %s » connaît « %s » avec une autre définition : les migrations de schéma "
-                                "ne sont pas encore prises en charge.", b->chemin, c->nom);
-        return 0;
+        return ok;
     }
     sqlite3_finalize(st);
 
