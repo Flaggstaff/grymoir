@@ -2342,7 +2342,7 @@ static Noeud *selon(Analyse *a, int colonne) {
     Noeud *n = noeud_creer(P_SELON, t->ligne, t->colonne, t->debut);
     n->entier = a->nb_locaux++;
     noeud_ajouter(n, s);
-    int autrement = 0, nb_cas = 0;
+    int autrement = 0;
     for (;;) {
         Jeton *u = cour(a);
         if (u->type == J_FIN) break;
@@ -2394,7 +2394,6 @@ static Noeud *selon(Analyse *a, int colonne) {
         cas->fin = corps->fin;
         noeud_ajouter(n, cas);
         n->fin = corps->fin;
-        nb_cas++;
     }
     return n;
 }
