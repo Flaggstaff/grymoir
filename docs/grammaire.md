@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.11 de la spécification, révisée le 21 septembre 2026.
+Version 1.13 de la spécification, révisée le 21 septembre 2026. Les § 14 à 16 (v0.3) sont validés, pas encore implémentés.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -740,6 +740,201 @@ Pour dater une chose horodatée :
 
 Appeler la version de la classe parente depuis une méthode, les listes d'objets, l'absence de valeur et un vrai affichage des objets demandent chacun leur propre conception.
 
+## 14. Dates *(v0.3)*
+
+### 14.1 Écriture
+
+```
+La date d'inscription du membre devient 21.09.2026.
+```
+
+- Une date s'écrit `jour.mois.année`, l'année sur quatre chiffres : trois groupes de chiffres séparés par des points, sans espace. `21.09` ou `21.9.26` sont des erreurs.
+- Le lexeur la distingue d'un nombre sans ambiguïté : le point décimal est déjà refusé (`3.5`), et le point final d'une phrase suit la date sans la toucher (`… 21.09.2026.`).
+- Forme canonique : jour et mois sur deux chiffres. `1.3.2026` devient `01.03.2026`.
+- Calendrier grégorien, années 1 à 9999. Une date impossible est refusée à l'analyse : « Le 31 février 2026 n'existe pas. » Le 29 février n'existe que les années bissextiles.
+
+### 14.2 Calcul
+
+| Opération | Résultat |
+|---|---|
+| date + nombre entier | date, tant de jours plus tard |
+| date − nombre entier | date, tant de jours plus tôt |
+| date − date | nombre de jours, négatif si la seconde est plus tardive |
+| `=`, `≠`, `<`, `≤`, `>`, `≥` entre deux dates | ordre chronologique |
+
+- Ajouter des mois ou des années est reporté : « le 31 janvier plus un mois » n'a pas de réponse évidente.
+- Toute autre opération est une erreur à l'exécution : « On n'additionne pas deux dates. »
+
+### 14.3 `aujourd'hui`
+
+- `aujourd'hui` vaut la date du jour, selon l'horloge locale, lue une fois au début de l'exécution : une exécution qui franchit minuit garde la même date du début à la fin.
+- Un calcul ne peut pas l'utiliser (§ 9.4, pureté) : « Un calcul ne dépend pas du jour : passez la date en paramètre. »
+- En forme compacte : `_aujourd'hui`.
+
+### 14.4 Affichage et stockage
+
+- En base : texte ISO 8601, `2026-09-21`, qui se trie dans l'ordre chronologique.
+- `Afficher` écrit la forme de la source : `21.09.2026`.
+- Reporté : l'heure, un type `(moment)`, et les fuseaux horaires.
+
+## 15. Fichiers et images *(v0.3)*
+
+### 15.1 Valeurs
+
+- Deux sortes de valeurs : un **fichier**, contenu quelconque, et une **image**, dont les premiers octets désignent un format PNG, JPEG, GIF ou WebP.
+- Leur contenu voyage avec la valeur : dans une entité, il est rangé dans la base, pas sous forme de chemin.
+- Taille maximale : celle de SQLite, 1 000 000 000 octets (`SQLITE_MAX_LENGTH`).
+
+### 15.2 Lire et écrire
+
+```
+La photo du membre devient le fichier « photos/ana.jpg ».
+Enregistrer la photo du membre dans « copie.jpg ».
+```
+
+- `le fichier « chemin »` lit un fichier du disque. Chemin relatif au dossier du programme. Fichier absent ou illisible : erreur à l'exécution.
+- Une image est un fichier dont la signature est reconnue. Ranger dans un champ `(image)` un fichier qui n'en est pas une est une erreur : « « rapport.pdf » n'est pas une image (PNG, JPEG, GIF ou WebP). »
+- `Enregistrer … dans « chemin ».` écrit le contenu. Un fichier existant n'est jamais écrasé en silence : erreur. *(Écraser explicitement demandera sa propre tournure.)*
+- Lire ou écrire sur le disque est un effet de bord : réservé aux actions, jamais aux calculs.
+- Écrire sur le disque ne s'annule pas avec la transaction : les écritures sur le disque sont donc différées à la fin de l'exécution, et n'ont lieu que si elle réussit.
+
+### 15.3 Ce qu'on en connaît
+
+| Tournure | Valeur |
+|---|---|
+| `la taille de la photo` | nombre d'octets |
+| `le format de la photo` | texte : `« PNG »`, `« JPEG »`, `« GIF »`, `« WebP »`, ou `« inconnu »` pour un fichier |
+| `le nom de fichier de la photo` | texte : le nom du fichier d'origine, sans son dossier |
+
+- Ces trois noms (`taille`, `format`, `nom de fichier`) sont des champs de toute valeur fichier. Une classe peut déclarer des champs du même nom pour ses propres objets.
+- `Afficher la photo.` écrit `une image JPEG de 2,3 Mo`. Unités : octets, Ko, Mo, Go, en puissances de 1000.
+- Afficher l'image elle-même attend les interfaces graphiques (charte, art. 11).
+
+## 16. Entités *(v0.3)*
+
+### 16.1 Déclaration
+
+```
+Un client, conservé, a :
+    un nom (texte),
+    un solde (nombre),
+    un nombre de commandes (nombre entier),
+    un statut actif (vrai ou faux),
+    une date d'inscription (date),
+    une photo (image),
+    un contrat (fichier),
+    un parrain (client),
+    une licence (texte), unique.
+```
+
+- `, conservé,` (ou `, conservée,` pour une entité féminine) fait d'une classe une entité : ses objets peuvent survivre au programme. Héritage, méthodes et aptitudes s'y appliquent comme aux classes.
+- Chaque champ déclare son type entre parenthèses, obligatoirement.
+
+| Type | En base |
+|---|---|
+| `(texte)` | `TEXT` |
+| `(nombre)` | `TEXT`, décimal exact sous forme canonique |
+| `(nombre entier)` | `INTEGER` |
+| `(vrai ou faux)` | `INTEGER`, 0 ou 1 |
+| `(date)` | `TEXT`, ISO 8601 |
+| `(fichier)`, `(image)` | `BLOB`, plus le nom de fichier d'origine |
+| `(client)`, le nom d'une entité | clé étrangère |
+
+- Un lien pointe vers une entité, jamais vers une classe ordinaire.
+- `, unique` : deux objets conservés n'ont pas la même valeur pour ce champ.
+- Tout champ est obligatoire : conserver un objet incomplet est une erreur. Les champs facultatifs attendent l'absence de valeur (§ 13.8).
+- Une entité hérite d'une entité, jamais d'une classe ordinaire, et une classe ordinaire n'hérite pas d'une entité. Une aptitude adoptée par une entité doit typer ses champs.
+- Pluriel : `s` ajouté au nom ; un pluriel irrégulier se déclare entre parenthèses, comme le masculin d'une aptitude : `Un cheval (chevaux), conservé, a :` (charte, art. 4).
+
+### 16.2 Typage strict
+
+Le typage des entités est vérifié (charte, art. 5) :
+
+- **à l'analyse**, quand le type de la valeur y est connu (une constante, un champ d'entité, une date, `aujourd'hui`, un nouvel objet) : `Le solde du client devient « abc ».` est refusé avant toute exécution ;
+- **sinon, avant toute écriture** : la valeur est vérifiée au moment de la ranger dans le champ, et jamais une valeur du mauvais type n'atteint la base.
+
+Un `(nombre entier)` refuse `2,5` ; un `(nombre)` accepte `2`.
+
+### 16.3 Conserver, modifier, supprimer
+
+```
+Le client vaut un nouveau client :
+    Le nom vaut « Ana ».
+    …
+Conserver le client.
+Le solde du client devient 100.
+Supprimer le client.
+```
+
+- Un nouvel objet vit en mémoire. `Conserver le client.` le range dans la base ; conserver deux fois le même objet est une erreur.
+- Modifier un champ d'un objet conservé modifie la base aussitôt, dans la transaction de l'exécution (§ 16.6). Pas de second `Conserver`.
+- `Supprimer le client.` le retire de la base. Un objet encore désigné par un lien ne se supprime pas : « Ce client est encore le parrain de 2 clients. » L'objet reste en mémoire, mais n'est plus conservé.
+- Conserver, modifier et supprimer sont des effets de bord : réservés aux actions.
+
+### 16.4 Retrouver
+
+```
+Pour chaque client conservé :
+    …
+Pour chaque client conservé dont le solde est négatif, par nom :
+    …
+Le client vaut le client conservé dont la licence est « A-12 ».
+Afficher le nombre de clients conservés dont le statut actif est vrai.
+```
+
+- `Pour chaque client conservé` parcourt les objets conservés ; dans le corps, `le client` désigne l'objet du tour.
+- `dont` introduit une condition sur les champs de l'entité : comparaisons et tournures du § 5, reliées par `et` / `ou`. Le programme ne voit jamais de SQL.
+- `, par nom` trie ; `, par solde décroissant` trie à l'envers. Sans tri : dans l'ordre de conservation.
+- `le client conservé dont …` exige exactement un objet. Aucun, ou plusieurs : erreur, avec leur nombre.
+- `le nombre de clients conservés [dont …]` compte, au pluriel (§ 16.1).
+- Un même objet conservé, retrouvé deux fois dans une exécution, est le même objet en mémoire : `=` compare toujours l'identité (§ 13.4).
+- Un calcul ne lit pas la base : son résultat changerait d'une exécution à l'autre, pour la même raison qu'il n'emploie pas `aujourd'hui` (§ 9.4). Règle prudente, qu'on pourra assouplir ; l'inverse serait impossible sans casser des programmes.
+
+### 16.5 La base
+
+- Un programme `factures.grym` utilise la base `factures.grymd`, à côté de lui, créée au premier besoin.
+- La boucle interactive utilise une base en mémoire, perdue à la sortie, sauf si on lui donne un fichier : `grym --base factures.grymd`.
+- Aucune base n'est ouverte si le programme ne déclare aucune entité.
+
+### 16.6 Transaction
+
+- Une exécution, une transaction : chaque programme lancé, et chaque saisie de la boucle interactive, s'exécute dans une seule transaction.
+- Si l'exécution réussit, la transaction est validée. Si elle échoue, ou si on l'interrompt par Ctrl+C, elle est annulée : le journal de la machine restaure la mémoire, SQLite restaure la base.
+- Pendant l'exécution, la base est verrouillée en écriture pour les autres programmes.
+
+### 16.7 Migrations
+
+La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1 interdit de détruire des données en silence.
+
+| Changement dans le programme | Effet sur la base |
+|---|---|
+| nouvelle entité | table créée |
+| nouveau champ, table vide | colonne ajoutée |
+| nouveau champ, table non vide | refusé, sauf valeur de départ : `un pays (texte), « Suisse » au départ` |
+| champ retiré, renommé ou retypé | refusé, avec un message qui dit combien de valeurs seraient perdues |
+| `(nombre entier)` devenu `(nombre)` | accepté : aucune perte |
+
+- Le schéma connu est rangé dans la base elle-même.
+- Retirer un champ pour de bon demandera une commande explicite de l'outil `grym`, à concevoir ; un renommage ne se devine pas.
+
+### 16.8 Forme compacte
+
+| Littéraire | Compacte |
+|---|---|
+| `Un client, conservé, a :` | `_classe _un client _conservé` |
+| `un nom (texte)` | `_un nom (texte)` |
+| `une licence (texte), unique` | `_une licence (texte) _unique` |
+| `un pays (texte), « Suisse » au départ` | `_un pays (texte) _départ « Suisse »` |
+| `Conserver le client.` / `Supprimer le client.` | `_conserver client` / `_supprimer client` |
+| `Pour chaque client conservé dont le solde est négatif, par nom :` | `_pour_chaque client _conservé _dont client.solde _négatif _par client.nom` |
+| `le client conservé dont la licence est « A-12 »` | `_le client _conservé _dont client.licence = « A-12 »` |
+| `le fichier « photos/ana.jpg »` | `_fichier « photos/ana.jpg »` |
+| `21.09.2026`, `aujourd'hui` | `21.09.2026`, `_aujourd'hui` |
+
+### 16.9 Accord avec la charte
+
+La charte 1.9 reprend ce paragraphe : transaction par exécution (art. 7), typage vérifié à l'analyse ou avant toute écriture (art. 5), type `montant` retiré pour la v0.3, puisque tout `(nombre)` est déjà un décimal exact.
+
 ---
 
 ## Journal des révisions
@@ -758,3 +953,5 @@ Appeler la version de la classe parente depuis une méthode, les listes d'objets
 | 1.9 | 2026-09-21 | § 13.5 : héritage simple (`Un membre est une personne.`, champs propres dans la phrase suivante), forme compacte `_est` |
 | 1.10 | 2026-09-21 | § 13.6 : méthodes ; versions d'une formule par classe du premier paramètre, choix à l'exécution selon la classe réelle et sa lignée |
 | 1.11 | 2026-09-21 | § 13.7 : aptitudes (adjectifs, formes masculines, adoption accordée, champs apportés, versions d'aptitude, ordre de choix, conflits tranchés par la classe) ; § 13.8 : suites |
+| 1.12 | 2026-09-21 | Proposition soumise à relecture : § 14 dates, § 15 fichiers et images, § 16 entités (déclaration, typage strict, conserver, retrouver, base, transaction, migrations, forme compacte, écarts avec la charte) |
+| 1.13 | 2026-09-21 | § 14 à 16 validés. Un calcul ne lit pas la base (§ 16.4). § 16.9 : accord avec la charte 1.9 |

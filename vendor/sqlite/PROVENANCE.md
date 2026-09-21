@@ -1,6 +1,6 @@
 # SQLite embarqué
 
-GrymoiR embarque SQLite (charte, art. 10 : « SQLite embarqué, invisible pour le développeur »).
+GrymoiR embarque SQLite (charte, art. 7 : « SQLite embarqué, invisible pour le développeur »).
 
 | | |
 |---|---|
@@ -21,6 +21,8 @@ GrymoiR embarque SQLite (charte, art. 10 : « SQLite embarqué, invisible pour l
 
 Le nom officiel doit figurer dans la chronologie du dépôt Fossil de SQLite, à l'adresse
 `https://sqlite.org/src/info/bf7c7f30031888f4`, comme la version 3.53.4.
+
+Vérifié par Flaggstaff le 21 septembre 2026 : la page désigne bien la version 3.53.4. La chaîne de confiance est complète, du dépôt Fossil officiel jusqu'à `sqlite3.c`.
 
 ## Réglages de compilation (Makefile)
 

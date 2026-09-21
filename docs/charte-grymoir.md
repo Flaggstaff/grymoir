@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.8, révisée le 21 septembre 2026.
+Version 1.9, révisée le 21 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -67,7 +67,7 @@ _fin
 ## 5. Typage
 
 - Code ordinaire : typage dynamique.
-- Entités persistées : typage strict, vérifié à la compilation.
+- Entités persistées : typage strict, vérifié à la compilation quand le type de la valeur y est connu, sinon avant toute écriture. Aucune valeur d'un mauvais type n'atteint la base.
 
 Justification : l'erreur la plus coûteuse est celle qui corrompt la base (principe 1). La rigueur se concentre là.
 
@@ -108,9 +108,9 @@ La grammaire exacte de la forme littéraire reste à spécifier. Ces exemples mo
 
 - L'entité est une construction du langage.
 - Moteur : SQLite embarqué, invisible pour le développeur, qui n'écrit jamais de SQL.
-- Chaque formule forme une transaction implicite : une formule qui échoue n'écrit rien.
-- Migrations de schéma automatiques.
-- Type `montant` : décimal exact, jamais de flottant.
+- Chaque exécution forme une transaction implicite : un programme lancé, ou une saisie de la boucle interactive, qui échoue ou qu'on interrompt n'écrit rien, ni en mémoire ni dans la base. Aucune construction ne rattrapant une erreur, une formule qui échoue n'écrit donc rien non plus.
+- Migrations de schéma automatiques pour tout ajout ; aucune donnée détruite en silence.
+- Tout nombre est un décimal exact, jamais un flottant, en mémoire comme en base. Un type `montant` (devise, arrondi) n'est pas prévu pour la v0.3.
 - Versions parallèles des données : horizon post-v1.
 
 ## 8. Erreurs
@@ -171,3 +171,4 @@ Reportés sans jalon fixé (grammaire, § 13.8) : appel de la version parente de
 | 1.6 | 2026-09-21 | Jalons : conditions en v0.2 (art. 12) |
 | 1.7 | 2026-09-21 | Art. 4 : traduction sans perte de programme ni de remarque, vers une forme littéraire canonique ; `grym formater` |
 | 1.8 | 2026-09-21 | Art. 12 : colonne « État » ; v0.2 livrée, contenu complété (boucles, `Selon`, forme canonique, méthodes, ramasse-miettes) ; suites reportées sans jalon |
+| 1.9 | 2026-09-21 | Art. 5 : typage des entités vérifié à l'analyse ou avant toute écriture. Art. 7 : transaction par exécution ; migrations automatiques pour les ajouts ; type `montant` retiré, tout nombre étant exact |
