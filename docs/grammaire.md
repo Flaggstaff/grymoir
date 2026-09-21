@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.14 de la spécification, révisée le 21 septembre 2026. Le § 14 (dates) est implémenté ; les § 15 et 16 sont validés, pas encore implémentés.
+Version 1.15 de la spécification, révisée le 21 septembre 2026. Les § 14 (dates) et 15 (fichiers) sont implémentés ; le § 16 (entités) est validé, pas encore implémenté.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -320,7 +320,9 @@ expression   = terme { ( "+" | "−" ) terme } ;
 terme        = unaire { ( "×" | "÷" ) unaire } ;
 unaire       = "−" unaire | puissance ;
 puissance    = base [ "^" unaire ] ;
-base         = nombre | texte | date | "aujourd'hui" | nouveau | champ
+base         = nombre | texte | date | "aujourd'hui" | fichier | nouveau | champ
+fichier      = "le" "fichier" ( texte | "(" expression ")" ) ;
+enregistrer  = "Enregistrer" expression "dans" valeur "." ;
              | [ article ] ( nom | "[" nom "]" ) [ arguments ] | "(" expression ")" ;
 nouveau      = ( "un" ( "nouveau" | "nouvel" ) | "une" "nouvelle" ) nom ;
 champ        = [ article ] nom de base ;          (* nom : un champ déclaré dans une classe *)
@@ -379,6 +381,9 @@ Limites de cette notation :
 | Décalage non entier (exécution) | « Une date se décale d'un nombre entier de jours. » |
 | Hors du calendrier (exécution) | « Date hors du calendrier : du 01.01.0001 au 31.12.9999. » |
 | `aujourd'hui` dans un calcul | « Un calcul ne dépend pas du jour : passez la date en paramètre. » |
+| Fichier absent (exécution) | « Fichier « photos/ana.jpg » introuvable ou illisible. » |
+| Écrasement (exécution) | « « copie.jpg » existe déjà : il n'est jamais écrasé. » |
+| Fichier lu dans un calcul | « Un calcul ne lit pas le disque : lisez le fichier dans une action. » |
 | Classe inconnue | « Classe « fournisseur » inconnue. » |
 | Champ hérité redéclaré | « « nom » est déjà un champ hérité de « personne ». » |
 | Version en double | « « saluer » existe déjà pour « personne ». » |
@@ -801,11 +806,13 @@ La photo du membre devient le fichier « photos/ana.jpg ».
 Enregistrer la photo du membre dans « copie.jpg ».
 ```
 
-- `le fichier « chemin »` lit un fichier du disque. Chemin relatif au dossier du programme. Fichier absent ou illisible : erreur à l'exécution.
+- `le fichier « chemin »` lit un fichier du disque. Le chemin est un texte écrit tel quel, ou une expression entre parenthèses : `le fichier (chemin)`. Sans texte ni parenthèse après lui, `le fichier` reste un nom ordinaire.
+- Un chemin relatif part du dossier du programme ; dans la boucle interactive, du dossier courant. Fichier absent ou illisible : erreur à l'exécution.
 - Une image est un fichier dont la signature est reconnue. Ranger dans un champ `(image)` un fichier qui n'en est pas une est une erreur : « « rapport.pdf » n'est pas une image (PNG, JPEG, GIF ou WebP). »
-- `Enregistrer … dans « chemin ».` écrit le contenu. Un fichier existant n'est jamais écrasé en silence : erreur. *(Écraser explicitement demandera sa propre tournure.)*
+- `Enregistrer … dans « chemin ».` écrit le contenu. Un fichier existant n'est jamais écrasé : erreur, vérifiée à la phrase puis au moment d'écrire. Enregistrer deux fois au même chemin dans une exécution est aussi une erreur. *(Écraser explicitement demandera sa propre tournure.)*
+- `enregistrer` ne peut pas commencer le nom d'une action.
 - Lire ou écrire sur le disque est un effet de bord : réservé aux actions, jamais aux calculs.
-- Écrire sur le disque ne s'annule pas avec la transaction : les écritures sur le disque sont donc différées à la fin de l'exécution, et n'ont lieu que si elle réussit.
+- Écrire sur le disque ne s'annule pas avec la transaction : les écritures sur le disque sont donc différées à la fin de l'exécution, et n'ont lieu que si elle réussit. Elles se font toutes ou aucune : si l'une échoue, celles déjà faites sont retirées, et l'exécution échoue.
 
 ### 15.3 Ce qu'on en connaît
 
@@ -815,8 +822,9 @@ Enregistrer la photo du membre dans « copie.jpg ».
 | `le format de la photo` | texte : `« PNG »`, `« JPEG »`, `« GIF »`, `« WebP »`, ou `« inconnu »` pour un fichier |
 | `le nom de fichier de la photo` | texte : le nom du fichier d'origine, sans son dossier |
 
-- Ces trois noms (`taille`, `format`, `nom de fichier`) sont des champs de toute valeur fichier. Une classe peut déclarer des champs du même nom pour ses propres objets.
-- `Afficher la photo.` écrit `une image JPEG de 2,3 Mo`. Unités : octets, Ko, Mo, Go, en puissances de 1000.
+- Ces trois noms (`taille`, `format`, `nom de fichier`) sont des champs de toute valeur fichier. Ils ne réservent rien : une classe peut déclarer des champs du même nom, un calcul peut s'appeler `taille`, et un nom déclaré l'emporte toujours.
+- Un fichier ne se modifie pas. Deux fichiers sont égaux s'ils ont le même contenu ; ils ne se comparent pas par ordre.
+- `Afficher la photo.` écrit `une image JPEG de 2,3 Mo`, ou `un fichier de 7 octets`. Unités : octets, Ko, Mo, Go, en puissances de 1000, une décimale au plus, arrondie au plus proche (1 050 octets : `1,1 Ko`).
 - Afficher l'image elle-même attend les interfaces graphiques (charte, art. 11).
 
 ## 16. Entités *(v0.3)*
@@ -938,6 +946,8 @@ La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1
 | `Pour chaque client conservé dont le solde est négatif, par nom :` | `_pour_chaque client _conservé _dont client.solde _négatif _par client.nom` |
 | `le client conservé dont la licence est « A-12 »` | `_le client _conservé _dont client.licence = « A-12 »` |
 | `le fichier « photos/ana.jpg »` | `_fichier « photos/ana.jpg »` |
+| `la taille de la photo` | `photo.taille` ; `(_fichier « a.jpg »).taille` |
+| `Enregistrer la photo dans « copie.jpg ».` | `_enregistrer photo _dans « copie.jpg »` |
 | `21.09.2026`, `aujourd'hui` | `21.09.2026`, `_aujourd'hui` |
 
 ### 16.9 Accord avec la charte
@@ -965,3 +975,4 @@ La charte 1.9 reprend ce paragraphe : transaction par exécution (art. 7), typag
 | 1.12 | 2026-09-21 | Proposition soumise à relecture : § 14 dates, § 15 fichiers et images, § 16 entités (déclaration, typage strict, conserver, retrouver, base, transaction, migrations, forme compacte, écarts avec la charte) |
 | 1.13 | 2026-09-21 | § 14 à 16 validés. Un calcul ne lit pas la base (§ 16.4). § 16.9 : accord avec la charte 1.9 |
 | 1.14 | 2026-09-21 | § 14 implémenté ; dates dans les boucles et `Selon` ; messages d'erreur des dates |
+| 1.15 | 2026-09-21 | § 15 implémenté ; chemin entre parenthèses, dossier de référence, écritures toutes ou aucune, champs des fichiers qui ne réservent rien, égalité par contenu, arrondi des tailles |

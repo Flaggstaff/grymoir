@@ -1,0 +1,9 @@
+Remarque : fichiers et images, lus depuis le dossier du programme
+La photo vaut le fichier « pixel.png ».
+Afficher photo.
+Afficher « Format : » puis format de la photo.
+Afficher « Taille en octets : » puis taille de la photo.
+
+Remarque : l'écriture n'a lieu qu'à la fin, si l'exécution réussit.
+Remarque : relancer ce programme échoue, parce que « copie.png » existe déjà.
+Enregistrer la photo dans « copie.png ».

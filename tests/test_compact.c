@@ -164,6 +164,12 @@ int main(void) {
     ALLER_RETOUR("_le jour << 01.03.2026\n_si _aujourd'hui > jour _alors\n    _afficher jour − 01.01.2026\n_fin\n",
                  "Le jour vaut 01.03.2026.\nSi aujourd'hui > jour :\n    Afficher jour − 01.01.2026.\n");
 
+    ALLER_RETOUR("_la photo << _fichier « a.jpg »\n_afficher (_fichier « b.png »).taille ; photo.format\n"
+                 "_enregistrer photo _dans « c.jpg »\n",
+                 "La photo vaut le fichier « a.jpg ».\nAfficher taille de (le fichier « b.png ») puis format de photo.\n"
+                 "Enregistrer photo dans « c.jpg ».\n");
+    ERR("_enregistrer photo\n", 1, 1, "Forme attendue : « _enregistrer photo _dans « copie.jpg » »");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

@@ -142,6 +142,14 @@ int main(void) {
     COMP("Le jour vaut 1.3.2026.\nSi aujourd'hui > jour, afficher jour + 1.",
          "_le jour << 01.03.2026\n_si _aujourd'hui > jour _alors\n    _afficher jour + 1\n_fin\n");
 
+    /* --- Fichiers (§ 15) --- */
+    LITT("La photo vaut le fichier « a.jpg ».\nAfficher la taille du fichier « b.png ».\nEnregistrer la photo dans « c.jpg ».",
+         "La photo vaut le fichier « a.jpg ».\nAfficher la taille du fichier « b.png ».\nEnregistrer la photo dans « c.jpg ».\n");
+    COMP("La photo vaut le fichier « a.jpg ».\nAfficher la taille du fichier « b.png » puis nom de fichier de photo.\n"
+         "Enregistrer la photo dans « c.jpg ».",
+         "_la photo << _fichier « a.jpg »\n_afficher (_fichier « b.png »).taille ; photo.nom_de_fichier\n"
+         "_enregistrer photo _dans « c.jpg »\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

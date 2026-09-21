@@ -497,6 +497,21 @@ int main(void) {
        "Un calcul ne dépend pas du jour : passez la date en paramètre.");
     VE("Le jour vaut 30.02.2026.", 1, 14, "Le 30 février 2026 n'existe pas.");
 
+    /* --- Fichiers (§ 15) --- */
+    V("La photo vaut le fichier « a.jpg ».\nAfficher la taille de la photo puis le nom de fichier de la photo.\n"
+      "Afficher le format du fichier « b.png ».\nEnregistrer la photo dans « c.jpg ».",
+      "(créer [photo] (fichier «a.jpg»))\n(afficher (champ [taille] [photo]) (champ [nom de fichier] [photo]))\n"
+      "(afficher (champ [format] (fichier «b.png»)))\n(enregistrer [photo] «c.jpg»)");
+    V("Le chemin vaut « a.jpg ».\nLa photo vaut le fichier (chemin).", "(créer [chemin] «a.jpg»)\n(créer [photo] (fichier (groupe [chemin])))");
+    V("Le fichier vaut 3.\nAfficher le fichier.", "(créer [fichier] 3)\n(afficher [fichier])");
+    V("La taille d'un nombre vaut nombre × 2.\nAfficher la taille de 3.", "(calcul [taille] ([nombre]) (× [nombre] 2))\n(afficher (appel [taille] 3))");
+    VE("Le poids d'un nom vaut taille du fichier (nom).", 1, 34, "Un calcul ne lit pas le disque");
+    V("Pour sauver un x :\n    Enregistrer x dans « a ».", "(action [sauver] ([x]) (bloc (enregistrer [x] «a»)))");
+    VE("Le f d'un x vaut x.\nPour g un x :\n    Enregistrer f de x dans « a ».\nLe h d'un x :\n"
+       "    Enregistrer x dans « b ».\n    Rendre 1.", 5, 5, "Un calcul n'écrit pas sur le disque");
+    VE("Pour enregistrer un x :\n    Afficher x.", 1, 6, "« enregistrer » commence une construction du langage");
+    VE("Enregistrer 3 « a ».", 1, 15, "attendu : un opérateur ou « dans »");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

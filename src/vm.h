@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle, v0.2
- * Spécification : docs/vm.md (révision 1.8).
+ * Spécification : docs/vm.md (révision 1.9).
  */
 #ifndef GRYM_VM_H
 #define GRYM_VM_H
@@ -30,5 +30,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
 
 /* Objets encore vivants après le dernier ramassage (pour les tests). */
 size_t machine_objets_vivants(const Machine *m);
+
+/* Dossier du programme : les chemins relatifs des fichiers (§ 15.2) partent de là. */
+void machine_dossier(Machine *m, const char *dossier);
 
 #endif

@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.8).
+ * Spécification : docs/vm.md (révision 1.9).
  */
 #include "vm.h"
 #include "date.h"
@@ -13,9 +13,18 @@
 /* Valeurs (docs/vm.md, § 2)                                        */
 /* ---------------------------------------------------------------- */
 
-typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET, V_DATE } TypeValeur;
+typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET, V_DATE, V_FICHIER } TypeValeur;
 
 struct Objet;
+
+/* Contenu d'un fichier (grammaire, § 15) : immuable, partagé entre les valeurs qui le désignent. */
+typedef struct Fichier {
+    size_t references;
+    unsigned char *octets;
+    size_t taille;
+    char *nom;            /* nom d'origine, sans dossier */
+    const char *format;   /* « PNG », « JPEG », « GIF », « WebP » ou NULL */
+} Fichier;
 
 typedef struct {
     TypeValeur type;
@@ -24,6 +33,7 @@ typedef struct {
     int vrai;
     struct Objet *objet;   /* référence : l'objet appartient au tas, pas à la valeur */
     long jours;            /* date : jours depuis le 01.01.1970 (date.h) */
+    Fichier *fichier;      /* fichier : contenu partagé, compté */
 } Valeur;
 
 /* Classe connue de la machine (grammaire, § 13). */
@@ -38,7 +48,7 @@ typedef struct ClasseVM {
     size_t nb_champs;
 } ClasseVM;
 
-/* Objet du tas : sa classe, ses champs, et de quoi le ramasser (docs/vm.md, § 7). */
+/* Objet du tas : sa classe, ses champs, et de quoi le ramasser (docs/vm.md, § 8). */
 typedef struct Objet {
     const ClasseVM *classe;
     Valeur *champs;
@@ -50,7 +60,7 @@ typedef struct Objet {
 
 static const char *nom_type(TypeValeur t) {
     return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen"
-         : t == V_DATE ? "une date" : "un objet";
+         : t == V_DATE ? "une date" : t == V_FICHIER ? "un fichier" : "un objet";
 }
 
 static Valeur valeur_copier(const Valeur *v) {
@@ -61,6 +71,8 @@ static Valeur valeur_copier(const Valeur *v) {
     r.vrai = v->vrai;
     r.objet = v->objet;
     r.jours = v->jours;
+    r.fichier = v->fichier;
+    if (r.fichier) r.fichier->references++;
     return r;
 }
 
@@ -68,6 +80,12 @@ static void valeur_liberer(Valeur *v) {
     dec_liberer(&v->nombre);
     free(v->texte);
     v->texte = NULL;
+    if (v->fichier && --v->fichier->references == 0) {
+        free(v->fichier->octets);
+        free(v->fichier->nom);
+        free(v->fichier);
+    }
+    v->fichier = NULL;
 }
 
 static Valeur valeur_nombre(Decimal d) {
@@ -78,6 +96,7 @@ static Valeur valeur_nombre(Decimal d) {
     v.vrai = 0;
     v.objet = NULL;
     v.jours = 0;
+    v.fichier = NULL;
     return v;
 }
 
@@ -147,7 +166,17 @@ typedef struct {
     size_t *liaison;   /* noms du bloc → cases globales */
 } Formule;
 
+/* Écriture sur le disque, différée à la fin de l'exécution (§ 15.2). */
+typedef struct {
+    char *chemin;      /* chemin effectif */
+    char *ecrit;       /* chemin tel qu'écrit dans le programme */
+    Fichier *fichier;
+} Ecriture_disque;
+
 struct Machine {
+    char *dossier;          /* dossier du programme : base des chemins relatifs */
+    Ecriture_disque *a_ecrire;
+    size_t nb_a_ecrire;
     Case *cases;
     size_t nb_cases, cap_cases;
     Ecriture *journal;
@@ -173,8 +202,14 @@ Machine *machine_creer(void) {
     return m;
 }
 
+void machine_dossier(Machine *m, const char *dossier) {
+    free(m->dossier);
+    m->dossier = dossier && *dossier ? grym_dupliquer(dossier) : NULL;
+}
+
 void machine_detruire(Machine *m) {
     if (!m) return;
+    free(m->dossier);
     for (size_t i = 0; i < m->nb_cases; i++) {
         free(m->cases[i].nom);
         if (m->cases[i].definie) valeur_liberer(&m->cases[i].valeur);
@@ -466,6 +501,125 @@ static void ramasser(Machine *m, const Pile *pile, const Cadre *cadres, size_t n
     m->nb_objets = vivants;
     m->depuis_ramassage = 0;
     m->seuil = vivants * 2 > SEUIL_RAMASSAGE ? vivants * 2 : SEUIL_RAMASSAGE;
+}
+
+/* ---------------------------------------------------------------- */
+/* Fichiers (grammaire, § 15)                                       */
+/* ---------------------------------------------------------------- */
+
+#define FICHIER_TAILLE_MAX 1000000000UL   /* SQLITE_MAX_LENGTH, pour ranger le contenu en base */
+
+/* Format d'image reconnu à sa signature, ou NULL. Signatures : PNG (89 50 4E 47 0D 0A 1A 0A),
+ * JPEG (FF D8 FF), GIF (« GIF87a », « GIF89a »), WebP (« RIFF », 4 octets, « WEBP »). */
+static const char *format_image(const unsigned char *o, size_t n) {
+    static const unsigned char PNG[8] = { 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A };
+    if (n >= 8 && memcmp(o, PNG, 8) == 0) return "PNG";
+    if (n >= 3 && o[0] == 0xFF && o[1] == 0xD8 && o[2] == 0xFF) return "JPEG";
+    if (n >= 6 && (memcmp(o, "GIF87a", 6) == 0 || memcmp(o, "GIF89a", 6) == 0)) return "GIF";
+    if (n >= 12 && memcmp(o, "RIFF", 4) == 0 && memcmp(o + 8, "WEBP", 4) == 0) return "WebP";
+    return NULL;
+}
+
+static char *chemin_effectif(const Machine *m, const char *ecrit) {
+    if (ecrit[0] == '/' || !m->dossier) return grym_dupliquer(ecrit);
+    return grym_formater("%s/%s", m->dossier, ecrit);
+}
+
+/* Lit un fichier du disque ; NULL et *erreur sinon. */
+static Fichier *lire_fichier(const Machine *m, const char *ecrit, char **erreur) {
+    if (!*ecrit) { *erreur = grym_dupliquer("Chemin de fichier vide."); return NULL; }
+    char *chemin = chemin_effectif(m, ecrit);
+    FILE *f = fopen(chemin, "rb");
+    free(chemin);
+    if (!f) { *erreur = grym_formater("Fichier « %s » introuvable ou illisible.", ecrit); return NULL; }
+    Fichier *x = grym_allouer(sizeof *x);
+    size_t cap = 65536;
+    x->octets = grym_allouer(cap);
+    x->taille = 0;
+    for (;;) {
+        if (x->taille == cap) {
+            if (cap > FICHIER_TAILLE_MAX) break;
+            cap *= 2;
+            unsigned char *t = grym_allouer(cap);
+            memcpy(t, x->octets, x->taille);
+            free(x->octets);
+            x->octets = t;
+        }
+        size_t lu = fread(x->octets + x->taille, 1, cap - x->taille, f);
+        x->taille += lu;
+        if (lu == 0) break;
+    }
+    int illisible = ferror(f);
+    fclose(f);
+    if (illisible || x->taille > FICHIER_TAILLE_MAX) {
+        *erreur = illisible ? grym_formater("Fichier « %s » illisible.", ecrit)
+                            : grym_formater("Fichier « %s » trop grand : 1'000'000'000 octets au plus.", ecrit);
+        free(x->octets);
+        free(x);
+        return NULL;
+    }
+    const char *nom = strrchr(ecrit, '/');
+    x->nom = grym_dupliquer(nom ? nom + 1 : ecrit);
+    x->format = format_image(x->octets, x->taille);
+    x->references = 1;
+    return x;
+}
+
+/* « 2,3 Mo » : puissances de 1000, une décimale au plus, arrondie au plus proche. */
+static char *taille_lisible(size_t n) {
+    static const char *const U[] = { "Ko", "Mo", "Go" };
+    if (n < 1000) return grym_formater("%lu octet%s", (unsigned long)n, n > 1 ? "s" : "");
+    size_t u = 0, d = 1000;
+    while (u < 2 && n >= d * 1000) { d *= 1000; u++; }
+    unsigned long dixiemes = (unsigned long)((n * 10 + d / 2) / d);
+    if (dixiemes % 10 == 0) return grym_formater("%lu %s", dixiemes / 10, U[u]);
+    return grym_formater("%lu,%lu %s", dixiemes / 10, dixiemes % 10, U[u]);
+}
+
+static char *decrire_fichier(const Fichier *f) {
+    char *t = taille_lisible(f->taille);
+    char *r = f->format ? grym_formater("une image %s de %s", f->format, t) : grym_formater("un fichier de %s", t);
+    free(t);
+    return r;
+}
+
+static void vider_ecritures(Machine *m) {
+    for (size_t k = 0; k < m->nb_a_ecrire; k++) {
+        Valeur v = valeur_nombre(dec_zero());
+        v.fichier = m->a_ecrire[k].fichier;
+        valeur_liberer(&v);
+        free(m->a_ecrire[k].chemin);
+        free(m->a_ecrire[k].ecrit);
+    }
+    free(m->a_ecrire);
+    m->a_ecrire = NULL;
+    m->nb_a_ecrire = 0;
+}
+
+/* Écritures différées : toutes ou aucune. Un fichier déjà écrit est retiré si une suivante échoue. */
+static char *ecrire_sur_le_disque(Machine *m) {
+    size_t k;
+    char *erreur = NULL;
+    for (k = 0; k < m->nb_a_ecrire && !erreur; k++) {
+        const Ecriture_disque *e = &m->a_ecrire[k];
+        FILE *existe = fopen(e->chemin, "rb");
+        if (existe) {
+            fclose(existe);
+            erreur = grym_formater("« %s » existe déjà : il n'est jamais écrasé.", e->ecrit);
+            break;
+        }
+        FILE *f = fopen(e->chemin, "wb");
+        int ok = f && fwrite(e->fichier->octets, 1, e->fichier->taille, f) == e->fichier->taille;
+        if (f && fclose(f) != 0) ok = 0;
+        if (!ok) {
+            if (f) remove(e->chemin);
+            erreur = grym_formater("Écriture de « %s » impossible.", e->ecrit);
+            break;
+        }
+    }
+    if (erreur) while (k > 0) remove(m->a_ecrire[--k].chemin);
+    vider_ecritures(m);
+    return erreur;
 }
 
 size_t machine_objets_vivants(const Machine *m) {
@@ -786,6 +940,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     chaine_ajouter(sortie, v->texte);
                 } else if (v->type == V_BOOLEEN) {
                     chaine_ajouter(sortie, v->vrai ? "vrai" : "faux");
+                } else if (v->type == V_FICHIER) {
+                    char *t = decrire_fichier(v->fichier);
+                    chaine_ajouter(sortie, t);
+                    free(t);
                 } else if (v->type == V_DATE) {
                     char *t = date_suisse(v->jours);
                     chaine_ajouter(sortie, t);
@@ -824,6 +982,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             } else {
                 int egaux = va.type == V_BOOLEEN ? va.vrai == vb.vrai
                           : va.type == V_OBJET  ? va.objet == vb.objet       /* identité */
+                          : va.type == V_FICHIER ? va.fichier->taille == vb.fichier->taille
+                                                   && memcmp(va.fichier->octets, vb.fichier->octets, va.fichier->taille) == 0
                           : strcmp(va.texte, vb.texte) == 0;
                 resultat = code == I_EGAL ? egaux : !egaux;
             }
@@ -874,6 +1034,63 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&v);
             break;
         }
+        case I_LIRE_FICHIER: {
+            Valeur c = depiler(&pile);
+            if (c.type != V_TEXTE) {
+                ok = echouer(diag, b, debut, grym_formater("Le chemin d'un fichier est un texte, pas %s.",
+                                                           nom_type(c.type)));
+                valeur_liberer(&c);
+                break;
+            }
+            char *erreur = NULL;
+            Fichier *f = lire_fichier(m, c.texte, &erreur);
+            valeur_liberer(&c);
+            if (!f) { ok = echouer(diag, b, debut, erreur); break; }
+            Valeur v = valeur_nombre(dec_zero());
+            v.type = V_FICHIER;
+            v.fichier = f;
+            empiler(&pile, v);
+            break;
+        }
+        case I_ENREGISTRER: {
+            Valeur c = depiler(&pile), v = depiler(&pile);
+            char *probleme = NULL;
+            if (v.type != V_FICHIER) probleme = grym_formater("Seul un fichier s'enregistre : la valeur est %s.",
+                                                              nom_type(v.type));
+            else if (c.type != V_TEXTE) probleme = grym_formater("Le chemin d'un fichier est un texte, pas %s.",
+                                                                  nom_type(c.type));
+            else if (!*c.texte) probleme = grym_dupliquer("Chemin de fichier vide.");
+            char *chemin = probleme ? NULL : chemin_effectif(m, c.texte);
+            if (chemin) {
+                FILE *existe = fopen(chemin, "rb");
+                if (existe) {
+                    fclose(existe);
+                    probleme = grym_formater("« %s » existe déjà : il n'est jamais écrasé.", c.texte);
+                }
+                for (size_t k = 0; k < m->nb_a_ecrire && !probleme; k++)
+                    if (strcmp(m->a_ecrire[k].chemin, chemin) == 0)
+                        probleme = grym_formater("« %s » est déjà enregistré par cette exécution.", c.texte);
+            }
+            if (probleme) {
+                free(chemin);
+                valeur_liberer(&c);
+                valeur_liberer(&v);
+                ok = echouer(diag, b, debut, probleme);
+                break;
+            }
+            Ecriture_disque *t = grym_allouer((m->nb_a_ecrire + 1) * sizeof *t);
+            if (m->nb_a_ecrire) memcpy(t, m->a_ecrire, m->nb_a_ecrire * sizeof *t);
+            free(m->a_ecrire);
+            m->a_ecrire = t;
+            t[m->nb_a_ecrire].chemin = chemin;
+            t[m->nb_a_ecrire].ecrit = grym_dupliquer(c.texte);
+            t[m->nb_a_ecrire].fichier = v.fichier;   /* la référence passe à l'écriture */
+            m->nb_a_ecrire++;
+            v.fichier = NULL;
+            valeur_liberer(&c);
+            valeur_liberer(&v);
+            break;
+        }
         case I_AUJOURDHUI:
             empiler(&pile, valeur_date(aujourdhui));   /* lue une fois, au début de l'exécution (§ 14.3) */
             break;
@@ -909,6 +1126,30 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             /* INITIALISER : objet, valeur → objet ; ÉCRIRE : objet, valeur → rien ; LIRE : objet → valeur */
             Valeur *vo = &pile.v[pile.n - (code == I_LIRE_CHAMP ? 1 : 2)];
             const char *champ = b->noms[op];
+            if (vo->type == V_FICHIER) {
+                /* taille, format, nom de fichier (§ 15.3) ; un fichier ne se modifie pas */
+                const Fichier *f = vo->fichier;
+                Valeur r;
+                if (code != I_LIRE_CHAMP) {
+                    ok = echouer(diag, b, debut, grym_formater("Un fichier ne se modifie pas : « %s ».", champ));
+                    break;
+                } else if (strcmp(champ, "taille") == 0) {
+                    char t[32];
+                    snprintf(t, sizeof t, "%lu", (unsigned long)f->taille);
+                    r = valeur_nombre(dec_depuis_canonique(t));
+                } else if (strcmp(champ, "format") == 0 || strcmp(champ, "nom de fichier") == 0) {
+                    r = valeur_nombre(dec_zero());
+                    r.type = V_TEXTE;
+                    r.texte = grym_dupliquer(strcmp(champ, "format") == 0 ? (f->format ? f->format : "inconnu") : f->nom);
+                } else {
+                    ok = echouer(diag, b, debut, grym_formater(
+                        "Un fichier n'a pas de champ « %s » : taille, format ou nom de fichier.", champ));
+                    break;
+                }
+                valeur_liberer(vo);
+                *vo = r;
+                break;
+            }
             if (vo->type != V_OBJET) {
                 ok = echouer(diag, b, debut, grym_formater(
                     "« %s » : la valeur n'est pas un objet, c'est %s.", champ, nom_type(vo->type)));
@@ -1012,6 +1253,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     for (size_t k = nb_cadres; k > 0; k--) liberer_cadre(&cadres[k - 1]);
     free(cadres);
     free(liaison_principale);
+    if (ok && m->nb_a_ecrire) {
+        /* écritures sur le disque, seulement si l'exécution a réussi (§ 15.2) */
+        char *erreur = ecrire_sur_le_disque(m);
+        if (erreur) {
+            ok = 0;
+            diag->message = erreur;
+            diag->ligne = diag->colonne = 0;
+        }
+    }
+    vider_ecritures(m);
     if (ok) valider(m);
     else annuler(m);
     ramasser(m, NULL, NULL, 0);

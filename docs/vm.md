@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.8 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.14, § 5, § 9, § 10, § 13 et § 14.
+Version 1.9 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.15, § 5, § 9, § 10, § 13, § 14 et § 15.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -29,6 +29,7 @@ Règle de nommage : instructions, outils et messages s'écrivent en toutes lettr
 | booléen | vrai ou faux |
 | objet | référence vers un objet du tas : sa classe et ses champs |
 | date | jour du calendrier grégorien, du 01.01.0001 au 31.12.9999 (grammaire, § 14) |
+| fichier | contenu d'un fichier, son nom d'origine et son format d'image s'il est reconnu (grammaire, § 15). Immuable, partagé entre les valeurs qui le désignent, libéré quand plus aucune ne le désigne |
 
 Copier une valeur objet copie la référence, jamais l'objet. L'absence de valeur s'ajoutera avec les constructions qui en ont besoin.
 
@@ -71,6 +72,8 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 29 | `LIRE_CHAMP` | nom de champ | remplace l'objet au sommet par la valeur de son champ |
 | 30 | `ÉCRIRE_CHAMP` | nom de champ | dépile une valeur, puis un objet ; range la valeur dans le champ |
 | 31 | `AUJOURD'HUI` | aucun | empile la date du jour, lue une fois au début de l'exécution |
+| 32 | `LIRE_FICHIER` | aucun | remplace le chemin au sommet par le fichier lu sur le disque |
+| 33 | `ENREGISTRER` | aucun | dépile un chemin, puis un fichier ; prévoit leur écriture à la fin de l'exécution |
 
 ### 3.1 Boucles et Selon
 
@@ -154,7 +157,14 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 
 ---
 
-## 7. Ramasse-miettes
+## 7. Fichiers
+
+- `LIRE_FICHIER` lit tout le contenu, au plus 1 000 000 000 octets (`SQLITE_MAX_LENGTH`), et reconnaît le format d'image à sa signature : PNG (`89 50 4E 47 0D 0A 1A 0A`), JPEG (`FF D8 FF`), GIF (`GIF87a`, `GIF89a`), WebP (`RIFF`, 4 octets, `WEBP`).
+- Un chemin relatif part du dossier donné à la machine (`machine_dossier`) : celui du programme pour `grym lancer`, le dossier courant sinon.
+- `LIRE_CHAMP` accepte un fichier : `taille`, `format` (`inconnu` sans format d'image), `nom de fichier`. `ÉCRIRE_CHAMP` le refuse.
+- `ENREGISTRER` refuse un chemin déjà existant, ou déjà prévu par l'exécution. À la fin d'une exécution réussie, la machine écrit les fichiers prévus, sans jamais en écraser un ; si une écriture échoue, elle retire celles déjà faites, et l'exécution échoue. Une exécution qui échoue n'écrit rien.
+
+## 8. Ramasse-miettes
 
 - Tous les objets sont chaînés dans le tas de la machine. Le ramassage marque ce qui est atteignable depuis les racines, puis libère le reste.
 - Racines : les cases globales, la pile, les cases locales de chaque cadre, les anciennes valeurs du journal et les objets qu'il mentionne.
@@ -162,18 +172,18 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - Un ramassage a lieu à la fin de chaque exécution, et pendant l'exécution quand le nombre d'objets créés depuis le dernier dépasse un seuil (10'000, ou le double des objets vivants).
 - Les cycles sont libérés comme le reste.
 
-## 8. Positions
+## 9. Positions
 
 Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pour une opération, c'est la position de l'opérateur. Une erreur d'exécution s'exprime ainsi comme une erreur de compilation (charte, art. 8) : `facture.grym:7:18 : erreur : Division par zéro.`
 
 ---
 
-## 9. Format du fichier `.grymb`
+## 10. Format du fichier `.grymb`
 
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 8
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 9
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -194,13 +204,13 @@ classes       nombre : u32, puis pour chacune :
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31. Les fichiers des versions 1 à 7 restent lisibles.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33. Les fichiers des versions 1 à 8 restent lisibles.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
 ---
 
-## 10. Outils
+## 11. Outils
 
 | Commande | Rôle |
 |----------|------|
@@ -237,3 +247,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.6 | 2026-09-21 | Méthodes : classe du premier paramètre dans le bloc, choix de la version à l'appel selon la lignée, format version 6 |
 | 1.7 | 2026-09-21 | Aptitudes : enregistrées comme des classes marquées, adoptées par les classes ; champs apportés ; choix de version classe, puis aptitudes, puis parent ; format version 7 |
 | 1.8 | 2026-09-21 | Dates : valeur date, constante de type 4, `AUJOURD'HUI`, addition et soustraction de dates, comparaisons ; format version 8 |
+| 1.9 | 2026-09-21 | Fichiers : valeur fichier partagée, `LIRE_FICHIER`, `ENREGISTRER`, champs des fichiers, écritures différées toutes ou aucune ; format version 9 ; renumérotation des § 7 à 11 |

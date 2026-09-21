@@ -13,3 +13,5 @@ test_base
 *.o
 *.obj
 *.grymb
+.DS_Store
+exemples/copie.png

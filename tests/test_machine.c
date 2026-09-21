@@ -64,6 +64,18 @@ static void verifier(int l, const char *src, const char *attendu, int interactif
 #define CALC(expr, att)  verifier(__LINE__, expr, att, 1)
 #define PROG(src, att)   verifier(__LINE__, src, att, 0)
 
+/* Fichier d'essai, créé dans le dossier courant et retiré à la fin. */
+static void creer_fichier(const char *nom, const void *octets, size_t n) {
+    FILE *f = fopen(nom, "wb");
+    if (f) { fwrite(octets, 1, n, f); fclose(f); }
+}
+
+static int fichier_existe(const char *nom) {
+    FILE *f = fopen(nom, "rb");
+    if (f) fclose(f);
+    return f != NULL;
+}
+
 #define APT_M "Une chose horodatée a : une date.\nUne chose numérotée a : un numéro.\nUne personne a : un nom.\n"
 
 int main(void) {
@@ -378,6 +390,73 @@ int main(void) {
         portee_detruire(p);
     }
 
+    /* --- Fichiers (§ 15) --- */
+    {
+        static const unsigned char PNG[] = { 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 13 };
+        static const unsigned char JPEG[] = { 0xFF, 0xD8, 0xFF, 0xE0, 0, 16 };
+        static const unsigned char WEBP[] = { 'R', 'I', 'F', 'F', 4, 0, 0, 0, 'W', 'E', 'B', 'P', 'V', 'P' };
+        static const unsigned char FAUX_WEBP[] = { 'R', 'I', 'F', 'F', 4, 0, 0, 0, 'W', 'A', 'V', 'E' };
+        creer_fichier("_essai.png", PNG, sizeof PNG);
+        creer_fichier("_essai.jpg", JPEG, sizeof JPEG);
+        creer_fichier("_essai.gif", "GIF89a....", 10);
+        creer_fichier("_essai.webp", WEBP, sizeof WEBP);
+        creer_fichier("_essai.wav", FAUX_WEBP, sizeof FAUX_WEBP);
+        creer_fichier("_essai.txt", "bonjour", 7);
+        creer_fichier("_essai1.bin", "x", 1);
+        static char gros[2345678];
+        memset(gros, 'x', sizeof gros);
+        creer_fichier("_essai_gros.bin", gros, sizeof gros);
+        creer_fichier("_essai_1000.bin", gros, 1000);
+        creer_fichier("_essai_1050.bin", gros, 1050);
+        creer_fichier("_essai_999.bin", gros, 999);
+        remove("_essai_copie.png");
+        remove("_essai_copie2.png");
+        remove("_essai_rate.png");
+
+        PROG("La photo vaut le fichier « _essai.png ».\n"
+             "Afficher photo puis taille de la photo puis format de la photo puis nom de fichier de la photo.",
+             "une image PNG de 12 octets 12 PNG _essai.png");
+        PROG("Afficher format du fichier « _essai.jpg » puis format du fichier « _essai.gif » "
+             "puis format du fichier « _essai.webp » puis format du fichier « _essai.wav ».",
+             "JPEG GIF WebP inconnu");
+        PROG("Afficher le fichier « _essai.txt » puis le fichier « _essai1.bin ».",
+             "un fichier de 7 octets un fichier de 1 octet");
+        PROG("Afficher le fichier « _essai_999.bin ».\nAfficher le fichier « _essai_1000.bin ».\n"
+             "Afficher le fichier « _essai_1050.bin ».\nAfficher le fichier « _essai_gros.bin ».",
+             "un fichier de 999 octets\nun fichier de 1 Ko\nun fichier de 1,1 Ko\nun fichier de 2,3 Mo");
+        PROG("Afficher le fichier « _essai.png » = le fichier « _essai.png » puis "
+             "le fichier « _essai.png » = le fichier « _essai.jpg ».", "vrai faux");
+        PROG("Le chemin vaut « _essai.txt ».\nAfficher taille du fichier (chemin).", "7");
+        PROG("Afficher le fichier « _absent.png ».", "ERREUR 1:10 Fichier « _absent.png » introuvable ou illisible.");
+        PROG("Afficher le fichier (3).", "ERREUR 1:10 Le chemin d'un fichier est un texte, pas un nombre.");
+        PROG("La photo vaut le fichier « _essai.png ».\nAfficher poids de la photo.", "ERREUR 2:10 « poids de la photo » inconnu.");
+        PROG("Une personne a : un nom, une photo.\nLa p vaut une nouvelle personne :\n"
+             "    La photo vaut le fichier « _essai.jpg ».\nAfficher photo de la p puis format de la photo de la p.",
+             "une image JPEG de 6 octets JPEG");
+        /* écriture différée : rien n'est écrit si l'exécution échoue */
+        PROG("Enregistrer le fichier « _essai.png » dans « _essai_rate.png ».\nAfficher 1 ÷ 0.",
+             "ERREUR 2:12 Division par zéro.");
+        total++;
+        if (fichier_existe("_essai_rate.png")) signaler(__LINE__, "écriture annulée", "absent", "présent");
+        PROG("Enregistrer le fichier « _essai.png » dans « _essai_copie.png ».\nAfficher « écrit ».", "écrit");
+        PROG("Afficher le fichier « _essai_copie.png » = le fichier « _essai.png ».", "vrai");
+        PROG("Enregistrer le fichier « _essai.txt » dans « _essai_copie.png ».",
+             "ERREUR 1:1 « _essai_copie.png » existe déjà : il n'est jamais écrasé.");
+        PROG("Enregistrer le fichier « _essai.txt » dans « _essai_copie2.png ».\n"
+             "Enregistrer le fichier « _essai.txt » dans « _essai_copie2.png ».",
+             "ERREUR 2:1 « _essai_copie2.png » est déjà enregistré par cette exécution.");
+        total++;
+        if (fichier_existe("_essai_copie2.png")) signaler(__LINE__, "écriture annulée", "absent", "présent");
+        PROG("Enregistrer 3 dans « _essai_x ».", "ERREUR 1:1 Seul un fichier s'enregistre : la valeur est un nombre.");
+        PROG("La photo vaut le fichier « _essai.png ».\nAfficher photo < photo.",
+             "~Seuls deux nombres ou deux dates se comparent par ordre");
+
+        const char *essais[] = { "_essai.png", "_essai.jpg", "_essai.gif", "_essai.webp", "_essai.wav", "_essai.txt",
+                                 "_essai1.bin", "_essai_gros.bin", "_essai_1000.bin", "_essai_1050.bin",
+                                 "_essai_999.bin", "_essai_copie.png" };
+        for (size_t k = 0; k < sizeof essais / sizeof *essais; k++) remove(essais[k]);
+    }
+
     /* --- Ramasse-miettes : cycles et objets abandonnés --- */
     {
         total++;
@@ -542,7 +621,7 @@ int main(void) {
         module_detruire(mx);
     }
 
-    /* --- Désassemblage (docs/vm.md, § 10) --- */
+    /* --- Désassemblage (docs/vm.md, § 11) --- */
     {
         total++;
         const char *src =
@@ -619,7 +698,7 @@ int main(void) {
         /* corruptions : chaque cas doit être refusé avec un message, sans planter */
         struct { const char *nom; size_t pos; int octet; size_t coupe; const char *fragment; } cas[] = {
             { "en-tête",           0, 'X', 0, "en-tête" },
-            { "version",           4, 9,   0, "version" },
+            { "version",           4, 99,  0, "version" },
             { "fichier tronqué",   0, -1,  7, "tronqué" },
             { "octet en trop",     0, -1,  (size_t)-1, "en trop" },
         };

@@ -4,7 +4,7 @@
  *   grym lancer fichier.grym            compile puis exécute
  *   grym lancer fichier.grymb           exécute un bytecode compilé
  *   grym compiler fichier.grym          produit fichier.grymb
- *   grym desassembler fichier.grym(b)   affiche les instructions (docs/vm.md, § 10)
+ *   grym desassembler fichier.grym(b)   affiche les instructions (docs/vm.md, § 11)
  */
 #ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L   /* fileno, isatty */
@@ -134,6 +134,12 @@ static int lancer(const char *chemin) {
     Module *b = charger(chemin);
     if (!b) return EXIT_FAILURE;
     Machine *m = machine_creer();
+    const char *barre = strrchr(chemin, '/');
+    if (barre) {   /* les chemins de fichiers du programme partent de son dossier (§ 15.2) */
+        char *dossier = grym_formater("%.*s", (int)(barre - chemin), chemin);
+        machine_dossier(m, *dossier ? dossier : "/");
+        free(dossier);
+    }
     Chaine sortie = {0};
     Diagnostic d;
     grym_interruption = 0;

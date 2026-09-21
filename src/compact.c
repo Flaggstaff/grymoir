@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.14), § 11.
+ * Spécification : docs/grammaire.md (révision 1.15), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -182,6 +182,11 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                 k = q - 1;
                 continue;
             }
+        }
+        if (est_cle(t, "fichier")) {                /* _fichier « a.jpg » → le fichier « a.jpg » */
+            mot(r, "le", t);
+            mot(r, "fichier", t);
+            continue;
         }
         if (est_cle(t, "aujourd'hui")) {            /* _aujourd'hui → aujourd'hui */
             emettre(r, J_ELISION, "aujourd", t, 1);
@@ -621,6 +626,17 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             expression(r, d + 1, f);
             emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
             ouvrir(r, O_SELON, prof, t);
+        } else if (!strcmp(c, "enregistrer")) {
+            size_t dans = chercher(r, d + 1, f, "dans");
+            if (dans == f || dans == d + 1) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _enregistrer photo _dans « copie.jpg » »."));
+                return;
+            }
+            mot(r, "enregistrer", t);
+            expression(r, d + 1, dans);
+            mot(r, "dans", &r->e[dans]);
+            expression(r, dans + 1, f);
+            point(r, f);
         } else if (!strcmp(c, "rendre")) {
             mot(r, "rendre", t);
             expression(r, d + 1, f);

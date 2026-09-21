@@ -1,5 +1,5 @@
 /* GrymoiR : dates du calendrier grégorien, années 1 à 9999
- * Spécification : docs/grammaire.md (révision 1.14), § 14.
+ * Spécification : docs/grammaire.md (révision 1.15), § 14.
  *
  * Conversions jours <-> date civile : algorithmes « days_from_civil » et « civil_from_days »
  * de Howard Hinnant, « chrono-Compatible Low-Level Date Algorithms »

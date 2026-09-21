@@ -157,6 +157,10 @@ static void expression(Compilation *c, const Noeud *n) {
     case N_AUJOURDHUI:
         emettre(c, I_AUJOURDHUI, 0, n->ligne, n->colonne);
         return;
+    case N_FICHIER:
+        expression(c, n->enfants[0]);
+        emettre(c, I_LIRE_FICHIER, 0, n->ligne, n->colonne);
+        return;
     case N_CHAMP: {
         expression(c, n->enfants[0]);
         long ch = bloc_nom(c->b, n->texte);
@@ -483,6 +487,11 @@ static void phrase(Compilation *c, const Noeud *ph) {
         }
         return;
     }
+    case P_ENREGISTRER:
+        expression(c, ph->enfants[0]);
+        expression(c, ph->enfants[1]);
+        emettre(c, I_ENREGISTRER, 0, ph->ligne, ph->colonne);
+        return;
     case P_MODIF_CHAMP: {
         expression(c, ph->enfants[0]);
         expression(c, ph->enfants[1]);

@@ -1,5 +1,5 @@
 /* GrymoiR : arbre syntaxique, v0.1
- * Spécification : docs/grammaire.md (révision 1.14), § 6.
+ * Spécification : docs/grammaire.md (révision 1.15), § 6.
  * Chaque nœud garde sa position dans la source (debut, fin), pour les
  * messages d'erreur et, en v0.2, pour la traduction sans perte.
  */
@@ -28,6 +28,7 @@ typedef enum {
     N_CAS,           /* enfants : conditions, puis le N_BLOC ; forme 1 : « Autrement » (sans condition) */
     N_DATE,          /* « 21.09.2026 » : texte : forme ISO « 2026-09-21 » (§ 14) */
     N_AUJOURDHUI,    /* « aujourd'hui » (§ 14.3) */
+    N_FICHIER,       /* « le fichier « photos/ana.jpg » » : enfants[0] : chemin (§ 15.2) */
     N_CHAMP,         /* « le solde du client » : texte : champ ; enfants[0] : objet ; article : devant le champ */
     N_NOUVEAU,       /* « un nouveau client » : texte : classe ; enfants : N_INIT ; forme 1 : bloc d'initialisation */
     N_INIT,          /* « Le nom vaut … » dans le bloc d'un nouvel objet : texte : champ ; enfants[0] : valeur */
@@ -57,6 +58,7 @@ typedef enum {
                         texte2 : classe parente (« Un membre est une personne. »), ou NULL ;
                         forme : bit 16 = déclarée par « est » */
     P_MODIF_CHAMP,   /* « Le solde du client devient … » : texte : champ ; enfants[0] : objet ; enfants[1] : valeur */
+    P_ENREGISTRER,   /* « Enregistrer … dans « copie.jpg ». » : enfants[0] : fichier ; enfants[1] : chemin (§ 15.2) */
     P_APTITUDE       /* « Une chose horodatée a : » : texte : forme féminine ; texte2 : forme masculine déclarée
                         entre parenthèses, ou NULL si elle se déduit ; enfants : champs (N_NOM) */
 } TypeNoeud;

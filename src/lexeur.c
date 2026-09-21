@@ -1,5 +1,5 @@
 /* GrymoiR : lexeur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.14), § 1.
+ * Spécification : docs/grammaire.md (révision 1.15), § 1.
  */
 #include "lexeur.h"
 #include "date.h"

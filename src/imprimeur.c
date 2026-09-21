@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.14), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.15), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -181,6 +181,11 @@ static int argument_simple(const Noeud *n) {
 /* « à » ou « de » suivi d'une expression, avec contraction et élision (§ 5.2). */
 static void preposition(Impression *im, const char *prep, const Noeud *x) {
     int a = strcmp(prep, "à") == 0;
+    if (x->type == N_FICHIER && !im->compact) {   /* « du fichier « a.jpg » » */
+        aj(im, a ? "au fichier " : "du fichier ");
+        expression(im, x->enfants[0]);
+        return;
+    }
     if (x->type == N_CHAMP && x->article != ART_AUCUN && !im->compact) {
         /* « du solde du client » : l'article du champ se contracte avec la préposition */
         if (x->article == ART_LE) aj(im, a ? "au " : "du ");
@@ -345,10 +350,14 @@ static void expression(Impression *im, const Noeud *n) {
     case N_AUJOURDHUI:
         aj(im, im->compact ? "_aujourd'hui" : "aujourd'hui");
         return;
+    case N_FICHIER:
+        aj(im, im->compact ? "_fichier " : "le fichier ");
+        expression(im, n->enfants[0]);
+        return;
     case N_CHAMP:
         if (im->compact) {
             const Noeud *o = n->enfants[0];
-            int simple = o->type == N_NOM || o->type == N_CHAMP || o->type == N_APPEL;
+            int simple = o->type == N_NOM || o->type == N_CHAMP || o->type == N_APPEL || o->type == N_GROUPE;
             if (!simple) aj(im, "(");
             expression(im, o);
             if (!simple) aj(im, ")");
@@ -791,6 +800,13 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     }
     case P_SORTIR:
         aj(im, c ? "_sortir\n" : "Sortir de la boucle.\n");
+        return;
+    case P_ENREGISTRER:
+        aj(im, c ? "_enregistrer " : "Enregistrer ");
+        expression(im, n->enfants[0]);
+        aj(im, c ? " _dans " : " dans ");
+        expression(im, n->enfants[1]);
+        aj(im, c ? "\n" : ".\n");
         return;
     case P_PASSER:
         aj(im, c ? "_passer\n" : "Passer au tour suivant.\n");

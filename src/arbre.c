@@ -201,6 +201,18 @@ static void decrire(const Noeud *n, Chaine *c) {
     case N_AUJOURDHUI:
         chaine_ajouter(c, "aujourd'hui");
         return;
+    case N_FICHIER:
+        chaine_ajouter(c, "(fichier ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
+    case P_ENREGISTRER:
+        chaine_ajouter(c, "(enregistrer ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_CHAMP:
         chaine_ajouter(c, "(champ [");
         chaine_ajouter(c, n->texte);

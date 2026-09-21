@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.14), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.15), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -169,6 +169,13 @@ static int classe_champ(Portee *p, const Classe *c, const char *nom, Genre *g, c
         }
         c = c->parent ? classe_de(p, c->parent) : NULL;
     }
+    return 0;
+}
+
+/* Champs de toute valeur fichier (§ 15.3) : ils ne réservent pas leur nom. */
+static int champ_integre(const char *nom, Genre *g) {
+    if (strcmp(nom, "taille") == 0) { if (g) *g = GENRE_FEMININ; return 1; }
+    if (strcmp(nom, "format") == 0 || strcmp(nom, "nom de fichier") == 0) { if (g) *g = GENRE_MASCULIN; return 1; }
     return 0;
 }
 
@@ -769,7 +776,8 @@ static Noeud *nom_expression(Analyse *a) {
     const Jeton *premier_jeton = tart ? tart : &a->j[d];
     if (a->j[d].type == J_CROCHETS && complement_de(a, d + 1)) {
         Genre g;
-        if (champ_connu(a->portee, a->j[d].valeur, &g))
+        if (champ_connu(a->portee, a->j[d].valeur, &g)
+            || (!visible(a, a->j[d].valeur) && champ_integre(a->j[d].valeur, &g)))
             return acces_champ(a, grym_dupliquer(a->j[d].valeur), g, tart, art, premier_jeton, d + 1);
     }
     if (a->j[d].type == J_CROCHETS) {
@@ -799,7 +807,8 @@ static Noeud *nom_expression(Analyse *a) {
             if (!complement_de(a, k) || (s && fin > k)) continue;
             char *c = cle(a, d, k);
             Genre g;
-            if (champ_connu(a->portee, c, &g)) return acces_champ(a, c, g, tart, art, premier_jeton, k);
+            if (champ_connu(a->portee, c, &g) || (!s && champ_integre(c, &g)))
+                return acces_champ(a, c, g, tart, art, premier_jeton, k);
             free(c);
         }
         int arret = 0;
@@ -922,6 +931,21 @@ static Noeud *base(Analyse *a) {
     if (t->type == J_DATE) {
         Noeud *n = feuille(N_DATE, t);
         avancer(a);
+        return n;
+    }
+    /* « le fichier « chemin » », « du fichier (…) » (§ 15.2) */
+    size_t f0 = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : 2;
+    if (f0 < 2 && est_mot(voir(a, (int)f0), "fichier")
+        && (voir(a, (int)f0 + 1)->type == J_TEXTE || voir(a, (int)f0 + 1)->type == J_PAR_OUV)) {
+        if (a->formule == 1)
+            return erreur(a, t, grym_dupliquer("Un calcul ne lit pas le disque : lisez le fichier dans une action."));
+        a->article_force = ART_AUCUN;
+        for (size_t q = 0; q <= f0; q++) avancer(a);
+        Noeud *chemin = base(a);
+        if (!chemin) return NULL;
+        Noeud *n = noeud_creer(N_FICHIER, t->ligne, t->colonne, t->debut);
+        noeud_ajouter(n, chemin);
+        n->fin = chemin->fin;
         return n;
     }
     if (t->type == J_ELISION && strcmp(t->valeur, "aujourd") == 0 && est_mot(voir(a, 1), "hui")) {
@@ -2754,7 +2778,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
 /* Mots qui commencent une construction et ne peuvent donc pas commencer le nom d'une action. */
 static int mot_de_construction(const Jeton *t) {
     static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
-                                     "autrement", "afficher", "si", "sinon", "pour", "rendre" };
+                                     "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer" };
     for (size_t k = 0; k < sizeof M / sizeof *M; k++) if (est_mot(t, M[k])) return 1;
     return 0;
 }
@@ -2773,6 +2797,24 @@ static Noeud *phrase(Analyse *a, int colonne) {
             return erreur(a, t, grym_dupliquer("Un calcul n'affiche rien : il rend une valeur. "
                                                "Pour afficher, écrivez une action."));
         return affichage(a);
+    }
+    if (est_mot(t, "enregistrer")) {
+        /* « Enregistrer … dans « chemin ». » (§ 15.2) */
+        if (a->formule == 1)
+            return erreur(a, t, grym_dupliquer("Un calcul n'écrit pas sur le disque : enregistrez dans une action."));
+        avancer(a);
+        Noeud *v = expression_avant(a, "dans", NULL);
+        if (!v) return NULL;
+        static const char *const DANS[] = { "dans" };
+        if (!mots_fixes(a, DANS, 1)) { noeud_liberer(v); return NULL; }
+        Noeud *chemin = valeur(a);
+        if (!chemin) { noeud_liberer(v); return NULL; }
+        if (!fin_phrase(a, 0)) { noeud_liberer(v); noeud_liberer(chemin); return NULL; }
+        Noeud *n = noeud_creer(P_ENREGISTRER, t->ligne, t->colonne, t->debut);
+        noeud_ajouter(n, v);
+        noeud_ajouter(n, chemin);
+        n->fin = chemin->fin;
+        return n;
     }
     if (est_mot(t, "si")) return si(a, colonne, 0);
     if (est_mot(t, "tant") && est_mot(voir(a, 1), "que")) return tant_que(a, colonne);

@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.8).
+ * Spécification : docs/vm.md (révision 1.9).
  */
 #ifndef GRYM_BYTECODE_H
 #define GRYM_BYTECODE_H
@@ -38,10 +38,12 @@ typedef enum {
     I_INITIALISER_CHAMP,
     I_LIRE_CHAMP,
     I_ECRIRE_CHAMP,
-    I_AUJOURDHUI
+    I_AUJOURDHUI,
+    I_LIRE_FICHIER,
+    I_ENREGISTRER
 } CodeInstruction;
 
-#define I_DERNIER I_AUJOURDHUI
+#define I_DERNIER I_ENREGISTRER
 
 typedef enum { B_PROGRAMME = 0, B_CALCUL = 1, B_ACTION = 2 } SorteBloc;
 
@@ -102,7 +104,7 @@ void bloc_position(const Bloc *b, size_t decalage, int *ligne, int *colonne);
  * sinon 0 et un message à libérer dans *erreur. */
 int bloc_verifier(const Bloc *b, char **erreur);
 
-/* Instructions en clair, une par ligne (docs/vm.md, § 10). */
+/* Instructions en clair, une par ligne (docs/vm.md, § 11). */
 char *bloc_desassembler(const Bloc *b);
 
 /* Une classe déclarée dans le module (grammaire, § 13). */
