@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.17), § 16 ; docs/vm.md (révision 1.11), § 8.
+ * Spécification : docs/grammaire.md (révision 1.18), § 16 ; docs/vm.md (révision 1.12), § 8.
  */
 #include "base.h"
 #include "date.h"
@@ -8,6 +8,7 @@
 #include "sqlite3.h"
 
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -75,6 +76,8 @@ static size_t lignee(const ClasseVM *c, const ClasseVM **l, size_t max) {
 
 #define LIGNEE_MAX 256
 
+int base_collations(sqlite3 *db);
+
 /* ---------------------------------------------------------------- */
 /* Ouverture et transaction                                         */
 /* ---------------------------------------------------------------- */
@@ -92,6 +95,11 @@ Base *base_ouvrir(const char *chemin, char **erreur) {
         return NULL;
     }
     sqlite3_busy_timeout(b->db, 2000);
+    if (!base_collations(b->db)) {
+        *erreur = grym_formater("Base « %s » : collations impossibles.", b->chemin);
+        base_fermer(b);
+        return NULL;
+    }
     if (!executer(b, "PRAGMA foreign_keys = ON;"
                      "CREATE TABLE IF NOT EXISTS grym_objet (id INTEGER PRIMARY KEY AUTOINCREMENT, classe TEXT NOT NULL);"
                      "CREATE TABLE IF NOT EXISTS grym_schema (entite TEXT PRIMARY KEY, definition TEXT NOT NULL);",
@@ -444,4 +452,425 @@ int base_supprimer(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_
     }
     *erreur = grym_dupliquer("Un lien désigne encore cet objet.");
     return 0;
+}
+
+/* ---------------------------------------------------------------- */
+/* Collations : comparer comme GrymoiR, pas comme des octets         */
+/* ---------------------------------------------------------------- */
+
+/* GRYM_NOMBRE : deux textes canoniques comparés en décimal exact (« 10 » > « 9 », « 3.0 » = « 3 »). */
+static int collation_nombre(void *ctx, int na, const void *a, int nb, const void *b) {
+    (void)ctx;
+    char *x = grym_allouer((size_t)na + 1), *y = grym_allouer((size_t)nb + 1);
+    memcpy(x, a, (size_t)na);
+    x[na] = '\0';
+    memcpy(y, b, (size_t)nb);
+    y[nb] = '\0';
+    Decimal dx = dec_depuis_canonique(x), dy = dec_depuis_canonique(y);
+    int c = dec_comparer(&dx, &dy);
+    dec_liberer(&dx);
+    dec_liberer(&dy);
+    free(x);
+    free(y);
+    return c;
+}
+
+/* Lettre de base d'une lettre latine accentuée (UTF-8), en minuscule ; 0 si ce n'en est pas une. */
+static int base_lettre(const unsigned char *p, int *longueur) {
+    static const struct { const char *u; char b; } T[] = {
+        { "à", 'a' }, { "â", 'a' }, { "ä", 'a' }, { "á", 'a' }, { "À", 'a' }, { "Â", 'a' }, { "Ä", 'a' },
+        { "ç", 'c' }, { "Ç", 'c' }, { "é", 'e' }, { "è", 'e' }, { "ê", 'e' }, { "ë", 'e' }, { "É", 'e' },
+        { "È", 'e' }, { "Ê", 'e' }, { "Ë", 'e' }, { "î", 'i' }, { "ï", 'i' }, { "í", 'i' }, { "Î", 'i' },
+        { "Ï", 'i' }, { "ô", 'o' }, { "ö", 'o' }, { "ó", 'o' }, { "Ô", 'o' }, { "Ö", 'o' }, { "ù", 'u' },
+        { "û", 'u' }, { "ü", 'u' }, { "ú", 'u' }, { "Ù", 'u' }, { "Û", 'u' }, { "Ü", 'u' }, { "ÿ", 'y' },
+        { "ñ", 'n' }, { "Ñ", 'n' }
+    };
+    for (size_t k = 0; k < sizeof T / sizeof *T; k++) {
+        size_t l = strlen(T[k].u);
+        if (memcmp(p, T[k].u, l) == 0) { *longueur = (int)l; return T[k].b; }
+    }
+    *longueur = 1;
+    if (*p >= 'A' && *p <= 'Z') return *p - 'A' + 'a';
+    return *p;
+}
+
+/* GRYM_TEXTE : ordre du dictionnaire, sans tenir compte des accents ni de la casse, puis octets. */
+static int collation_texte(void *ctx, int na, const void *a, int nb, const void *b) {
+    (void)ctx;
+    const unsigned char *x = a, *y = b;
+    int i = 0, j = 0;
+    while (i < na && j < nb) {
+        int lx, ly;
+        int cx = base_lettre(x + i, &lx), cy = base_lettre(y + j, &ly);
+        if (cx != cy) return cx < cy ? -1 : 1;
+        i += lx;
+        j += ly;
+    }
+    if (i < na || j < nb) return i < na ? 1 : -1;
+    int c = memcmp(a, b, (size_t)(na < nb ? na : nb));
+    return c ? c : (na > nb) - (na < nb);
+}
+
+int base_collations(sqlite3 *db) {
+    return sqlite3_create_collation(db, "GRYM_NOMBRE", SQLITE_UTF8, NULL, collation_nombre) == SQLITE_OK
+        && sqlite3_create_collation(db, "GRYM_TEXTE", SQLITE_UTF8, NULL, collation_texte) == SQLITE_OK;
+}
+
+/* ---------------------------------------------------------------- */
+/* Charger un objet retrouvé                                        */
+/* ---------------------------------------------------------------- */
+
+static char *classe_en_base(Base *b, long id) {
+    sqlite3_stmt *st = NULL;
+    sqlite3_prepare_v2(b->db, "SELECT classe FROM grym_objet WHERE id = ?", -1, &st, NULL);
+    sqlite3_bind_int64(st, 1, (sqlite3_int64)id);
+    char *r = sqlite3_step(st) == SQLITE_ROW ? grym_dupliquer((const char *)sqlite3_column_text(st, 0)) : NULL;
+    sqlite3_finalize(st);
+    return r;
+}
+
+int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
+    const ClasseVM *c = o->classe;
+    const ClasseVM *l[LIGNEE_MAX];
+    size_t n = lignee(c, l, LIGNEE_MAX);
+    for (size_t e = 0; e < n; e++) {
+        Chaine sql = {0};
+        int colonnes = 0;
+        chaine_ajouter(&sql, "SELECT id");
+        for (size_t k = 0; k < c->nb_champs; k++) {
+            if (c->proprietaires[k] != l[e]) continue;
+            chaine_ajouter(&sql, ", ");
+            ajouter_nom(&sql, "c ", c->champs[k]);
+            if (est_fichier(c->types[k])) {
+                chaine_ajouter(&sql, ", ");
+                ajouter_nom(&sql, "n ", c->champs[k]);
+            }
+            colonnes++;
+        }
+        chaine_ajouter(&sql, " FROM ");
+        ajouter_nom(&sql, "e ", l[e]->nom);
+        chaine_ajouter(&sql, " WHERE id = ?");
+        char *texte = chaine_rendre(&sql);
+        sqlite3_stmt *st = NULL;
+        sqlite3_prepare_v2(b->db, texte, -1, &st, NULL);
+        free(texte);
+        sqlite3_bind_int64(st, 1, (sqlite3_int64)o->id);
+        if (sqlite3_step(st) != SQLITE_ROW) {
+            sqlite3_finalize(st);
+            char *qui = un(c);
+            *erreur = grym_formater("%s a disparu de la base « %s ».", qui, b->chemin);
+            free(qui);
+            return 0;
+        }
+        int col = 1;
+        for (size_t k = 0; k < c->nb_champs; k++) {
+            if (c->proprietaires[k] != l[e]) continue;
+            const char *t = c->types[k];
+            Valeur v;
+            if (strcmp(t, "texte") == 0) v = vi_texte((const char *)sqlite3_column_text(st, col));
+            else if (strcmp(t, "nombre") == 0) v = vi_nombre_canonique((const char *)sqlite3_column_text(st, col));
+            else if (strcmp(t, "nombre entier") == 0) {
+                char tampon[32];
+                snprintf(tampon, sizeof tampon, "%lld", (long long)sqlite3_column_int64(st, col));
+                v = vi_nombre_canonique(tampon);
+            } else if (strcmp(t, "vrai ou faux") == 0) v = vi_booleen(sqlite3_column_int(st, col));
+            else if (strcmp(t, "date") == 0) {
+                long jours = 0;
+                date_lire_iso((const char *)sqlite3_column_text(st, col), &jours);
+                v = vi_date(jours);
+            } else if (est_fichier(t)) {
+                v = vi_fichier(sqlite3_column_blob(st, col), (size_t)sqlite3_column_bytes(st, col),
+                               (const char *)sqlite3_column_text(st, col + 1));
+                col++;
+            } else {
+                long id = (long)sqlite3_column_int64(st, col);
+                char *classe = classe_en_base(b, id);
+                Objet *lie = classe ? machine_objet_en_base(m, id, classe, erreur) : NULL;
+                if (!classe && !*erreur) *erreur = grym_formater("Base « %s » : lien vers un objet absent.", b->chemin);
+                free(classe);
+                if (!lie) { sqlite3_finalize(st); return 0; }
+                v = vi_objet(lie);
+            }
+            o->champs[k] = v;
+            o->definis[k] = 1;
+            col++;
+        }
+        (void)colonnes;
+        sqlite3_finalize(st);
+    }
+    return 1;
+}
+
+/* ---------------------------------------------------------------- */
+/* Chercher                                                         */
+/* ---------------------------------------------------------------- */
+
+typedef struct {
+    Base *b;
+    const ClasseVM *e;
+    const ClasseVM *l[LIGNEE_MAX];
+    size_t n;                 /* taille de la lignée ; l[n − 1] est l'entité cherchée */
+    const char *p;            /* position dans la condition */
+    Chaine sql;
+    const Valeur *params;
+    size_t nb_params;
+    /* paramètres liés dans l'ordre de la condition : index, type du champ, nom du champ */
+    size_t liens[64];
+    const char *types[64];
+    const char *champs[64];
+    size_t nb_liens;
+    char *erreur;
+} Recherche;
+
+/* Alias SQL de la table qui porte le champ k : « t0 » pour la racine de la lignée. */
+static int alias_du_champ(const Recherche *r, size_t k) {
+    for (size_t i = 0; i < r->n; i++) if (r->e->proprietaires[k] == r->l[i]) return (int)i;
+    return 0;
+}
+
+static void colonne(Recherche *r, size_t k) {
+    char t[16];
+    snprintf(t, sizeof t, "t%d.", alias_du_champ(r, k));
+    chaine_ajouter(&r->sql, t);
+    ajouter_nom(&r->sql, "c ", r->e->champs[k]);
+}
+
+static int lire_condition(Recherche *r) {
+    if (*r->p != '(') { r->erreur = grym_dupliquer("condition illisible"); return 0; }
+    char op = r->p[1];
+    r->p += 2;
+    if (op == 'e' || op == 'o') {
+        chaine_ajouter(&r->sql, "(");
+        if (!lire_condition(r)) return 0;
+        chaine_ajouter(&r->sql, op == 'e' ? " AND " : " OR ");
+        if (!lire_condition(r)) return 0;
+        chaine_ajouter(&r->sql, ")");
+    } else if (op == 'n') {
+        chaine_ajouter(&r->sql, "NOT ");
+        if (!lire_condition(r)) return 0;
+    } else {
+        if (*r->p != '[') { r->erreur = grym_dupliquer("champ attendu"); return 0; }
+        const char *fin = strchr(r->p, ']');
+        if (!fin) { r->erreur = grym_dupliquer("champ mal fermé"); return 0; }
+        char *champ = grym_formater("%.*s", (int)(fin - r->p - 1), r->p + 1);
+        r->p = fin + 1;
+        long k = -1;
+        for (size_t q = 0; q < r->e->nb_champs && k < 0; q++) if (strcmp(r->e->champs[q], champ) == 0) k = (long)q;
+        free(champ);
+        if (k < 0 || !r->e->types[k]) { r->erreur = grym_dupliquer("champ inconnu"); return 0; }
+        const char *t = r->e->types[k];
+        int nombre = strcmp(t, "nombre") == 0, entier = strcmp(t, "nombre entier") == 0;
+        const char *sqlop = op == '=' ? " = " : op == '!' ? " <> " : op == '<' ? " < " : op == '>' ? " > "
+                          : op == 'l' ? " <= " : op == 'g' ? " >= " : NULL;
+        chaine_ajouter(&r->sql, "(");
+        if (op == 'P' || op == 'N' || op == '0') {
+            const char *o2 = op == 'P' ? " > " : op == 'N' ? " < " : " = ";
+            if (entier) { colonne(r, (size_t)k); chaine_ajouter(&r->sql, o2); chaine_ajouter(&r->sql, "0"); }
+            else { colonne(r, (size_t)k); chaine_ajouter(&r->sql, o2); chaine_ajouter(&r->sql, "'0' COLLATE GRYM_NOMBRE"); }
+        } else if (op == 'V' || op == 'F') {
+            colonne(r, (size_t)k);
+            chaine_ajouter(&r->sql, op == 'V' ? " = 1" : " = 0");
+        } else {
+            if (*r->p != '?' || !sqlop) { r->erreur = grym_dupliquer("paramètre attendu"); return 0; }
+            size_t i = (size_t)strtoul(r->p + 1, (char **)&fin, 10);
+            r->p = fin;
+            if (i < 1 || i > r->nb_params || r->nb_liens == 64) { r->erreur = grym_dupliquer("paramètre invalide"); return 0; }
+            if (entier) { chaine_ajouter(&r->sql, "CAST("); colonne(r, (size_t)k); chaine_ajouter(&r->sql, " AS TEXT)"); }
+            else colonne(r, (size_t)k);
+            chaine_ajouter(&r->sql, sqlop);
+            char tampon[24];
+            snprintf(tampon, sizeof tampon, "?%lu", (unsigned long)(r->nb_liens + 1));
+            chaine_ajouter(&r->sql, tampon);
+            if (nombre || entier) chaine_ajouter(&r->sql, " COLLATE GRYM_NOMBRE");
+            else if (strcmp(t, "texte") == 0 && op != '=' && op != '!') chaine_ajouter(&r->sql, " COLLATE GRYM_TEXTE");
+            r->liens[r->nb_liens] = i - 1;
+            r->types[r->nb_liens] = t;
+            r->champs[r->nb_liens] = r->e->champs[k];
+            r->nb_liens++;
+        }
+        chaine_ajouter(&r->sql, ")");
+    }
+    if (*r->p != ')') { r->erreur = grym_dupliquer("parenthèse attendue"); return 0; }
+    r->p++;
+    return 1;
+}
+
+/* Lie la valeur d'un paramètre, comparée au champ d'un type donné. */
+static int lier_parametre(Recherche *r, sqlite3_stmt *st, int i, const char *type, const char *champ, const Valeur *v) {
+    const char *attendu = NULL;
+    if (strcmp(type, "texte") == 0) {
+        if (v->type == V_TEXTE) { sqlite3_bind_text(st, i, v->texte, -1, SQLITE_TRANSIENT); return 1; }
+        attendu = "un texte";
+    } else if (strcmp(type, "nombre") == 0 || strcmp(type, "nombre entier") == 0) {
+        if (v->type == V_NOMBRE) {
+            char *t = dec_canonique(&v->nombre);
+            sqlite3_bind_text(st, i, t, -1, SQLITE_TRANSIENT);
+            free(t);
+            return 1;
+        }
+        attendu = "un nombre";
+    } else if (strcmp(type, "vrai ou faux") == 0) {
+        if (v->type == V_BOOLEEN) { sqlite3_bind_int(st, i, v->vrai); return 1; }
+        attendu = "vrai ou faux";
+    } else if (strcmp(type, "date") == 0) {
+        if (v->type == V_DATE) {
+            char *t = date_iso(v->jours);
+            sqlite3_bind_text(st, i, t, -1, SQLITE_TRANSIENT);
+            free(t);
+            return 1;
+        }
+        attendu = "une date";
+    } else {
+        if (v->type == V_OBJET) { sqlite3_bind_int64(st, i, (sqlite3_int64)v->objet->id); return 1; }
+        attendu = "un objet";
+    }
+    r->erreur = grym_formater("Le champ « %s » se compare à %s.", champ, attendu);
+    return 0;
+}
+
+int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *params, size_t nb_params,
+                  Valeur *resultat, char **erreur) {
+    /* entité ␟ mode ␟ tri ␟ décroissant ␟ condition */
+    const char *s1 = strchr(d, '\x1f');
+    const char *s2 = s1 ? strchr(s1 + 1, '\x1f') : NULL;
+    const char *s3 = s2 ? strchr(s2 + 1, '\x1f') : NULL;
+    const char *s4 = s3 ? strchr(s3 + 1, '\x1f') : NULL;
+    if (!s4) { *erreur = grym_dupliquer("Recherche mal décrite."); return 0; }
+    char *entite = grym_formater("%.*s", (int)(s1 - d), d);
+    int mode = s1[1] - '0';
+    char *tri = grym_formater("%.*s", (int)(s3 - s2 - 1), s2 + 1);
+    int decroissant = s3[1] == '1';
+    Recherche r;
+    memset(&r, 0, sizeof r);
+    r.b = b;
+    r.e = machine_classe(m, entite);
+    r.params = params;
+    r.nb_params = nb_params;
+    if (!r.e || !r.e->conserve) {
+        *erreur = grym_formater("« %s » n'est pas une entité connue.", entite);
+        free(entite);
+        free(tri);
+        return 0;
+    }
+    free(entite);
+    r.n = lignee(r.e, r.l, LIGNEE_MAX);
+    const ClasseVM *e = r.e;
+
+    /* SELECT … FROM la table de l'entité, jointe à celles de sa lignée */
+    chaine_ajouter(&r.sql, mode == 0 ? "SELECT g.id, g.classe" : "SELECT count(*)");
+    chaine_ajouter(&r.sql, " FROM ");
+    for (size_t i = r.n; i > 0; i--) {
+        char t[64];
+        if (i < r.n) chaine_ajouter(&r.sql, " JOIN ");
+        ajouter_nom(&r.sql, "e ", r.l[i - 1]->nom);
+        snprintf(t, sizeof t, " AS t%lu", (unsigned long)(i - 1));
+        chaine_ajouter(&r.sql, t);
+        if (i < r.n) {
+            snprintf(t, sizeof t, " ON t%lu.id = t%lu.id", (unsigned long)(i - 1), (unsigned long)(r.n - 1));
+            chaine_ajouter(&r.sql, t);
+        }
+    }
+    char t[64];
+    snprintf(t, sizeof t, " JOIN grym_objet AS g ON g.id = t%lu.id", (unsigned long)(r.n - 1));
+    chaine_ajouter(&r.sql, t);
+    int ok = 1;
+    if (s4[1]) {
+        chaine_ajouter(&r.sql, " WHERE ");
+        r.p = s4 + 1;
+        ok = lire_condition(&r);
+    }
+    if (ok && mode == 0) {
+        chaine_ajouter(&r.sql, " ORDER BY ");
+        if (*tri) {
+            long k = -1;
+            for (size_t q = 0; q < e->nb_champs && k < 0; q++) if (strcmp(e->champs[q], tri) == 0) k = (long)q;
+            if (k < 0 || !e->types[k]) { r.erreur = grym_dupliquer("champ du tri inconnu"); ok = 0; }
+            else {
+                colonne(&r, (size_t)k);
+                if (strcmp(e->types[k], "nombre") == 0) chaine_ajouter(&r.sql, " COLLATE GRYM_NOMBRE");
+                else if (strcmp(e->types[k], "texte") == 0) chaine_ajouter(&r.sql, " COLLATE GRYM_TEXTE");
+                if (decroissant) chaine_ajouter(&r.sql, " DESC");
+                chaine_ajouter(&r.sql, ", ");
+            }
+        }
+        chaine_ajouter(&r.sql, "g.id");
+    }
+    free(tri);
+    char *texte = chaine_rendre(&r.sql);
+    sqlite3_stmt *st = NULL;
+    if (ok && sqlite3_prepare_v2(b->db, texte, -1, &st, NULL) != SQLITE_OK) {
+        r.erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+        ok = 0;
+    }
+    free(texte);
+    for (size_t i = 0; ok && i < r.nb_liens; i++)
+        ok = lier_parametre(&r, st, (int)i + 1, r.types[i], r.champs[i], &params[r.liens[i]]);
+    if (!ok) {
+        sqlite3_finalize(st);
+        *erreur = r.erreur ? r.erreur : grym_dupliquer("Recherche impossible.");
+        return 0;
+    }
+    if (mode == 0) {
+        size_t cap = 16, n = 0;
+        long *ids = grym_allouer(cap * sizeof *ids);
+        char **classes = grym_allouer(cap * sizeof *classes);
+        int rc;
+        while ((rc = sqlite3_step(st)) == SQLITE_ROW) {
+            if (n == cap) {
+                cap *= 2;
+                long *i2 = grym_allouer(cap * sizeof *i2);
+                char **c2 = grym_allouer(cap * sizeof *c2);
+                memcpy(i2, ids, n * sizeof *ids);
+                memcpy(c2, classes, n * sizeof *classes);
+                free(ids);
+                free(classes);
+                ids = i2;
+                classes = c2;
+            }
+            ids[n] = (long)sqlite3_column_int64(st, 0);
+            classes[n] = grym_dupliquer((const char *)sqlite3_column_text(st, 1));
+            n++;
+        }
+        sqlite3_finalize(st);
+        if (rc != SQLITE_DONE) {
+            for (size_t k = 0; k < n; k++) free(classes[k]);
+            free(classes);
+            free(ids);
+            *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+            return 0;
+        }
+        *resultat = vi_liste(ids, classes, n);
+        return 1;
+    }
+    long compte = sqlite3_step(st) == SQLITE_ROW ? (long)sqlite3_column_int64(st, 0) : 0;
+    sqlite3_finalize(st);
+    if (mode == 2) {
+        char tampon[32];
+        snprintf(tampon, sizeof tampon, "%ld", compte);
+        *resultat = vi_nombre_canonique(tampon);
+        return 1;
+    }
+    /* mode 1 : exactement un objet */
+    if (compte != 1) {
+        char *qui = pluriel(e);
+        *erreur = compte == 0
+            ? grym_formater("Aucun%s %s conservé%s ne répond à cette condition.", e->feminin ? "e" : "", e->nom,
+                            e->feminin ? "e" : "")
+            : grym_formater("%ld %s conservé%ss répondent à cette condition : « %s %s conservé%s dont … » en "
+                            "attend un seul.", compte, qui, e->feminin ? "e" : "", e->feminin ? "la" : "le", e->nom,
+                            e->feminin ? "e" : "");
+        free(qui);
+        return 0;
+    }
+    /* même recherche, qui rend l'objet */
+    char *d0 = grym_formater("%.*s0%s", (int)(s1 - d + 1), d, s1 + 2);
+    Valeur liste;
+    ok = base_chercher(b, m, d0, params, nb_params, &liste, erreur);
+    free(d0);
+    if (!ok) return 0;
+    Objet *o = machine_objet_en_base(m, liste.liste->ids[0], liste.liste->classes[0], erreur);
+    vi_liberer(&liste);
+    if (!o) return 0;
+    *resultat = vi_objet(o);
+    return 1;
 }

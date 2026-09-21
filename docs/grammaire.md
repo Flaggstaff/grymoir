@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.17 de la spécification, révisée le 21 septembre 2026. Les § 14 (dates), 15 (fichiers), 16.1 à 16.3, 16.5 et 16.6 (entités, base, transaction) sont implémentés ; les § 16.4 (retrouver), 16.7 (migrations) et 16.8 (forme compacte de ce qui manque) restent à implémenter.
+Version 1.18 de la spécification, révisée le 21 septembre 2026. Les § 14 à 16 sont implémentés, sauf les migrations (§ 16.7).
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -391,6 +391,8 @@ Limites de cette notation :
 | Lien vers un objet non conservé | « Le champ « parrain » désigne un client qui n'est pas conservé : conservez-le d'abord. » |
 | Unicité | « « licence » est unique : un autre client conservé a déjà « A-1 ». » |
 | Suppression refusée | « Ce client est encore désigné par le champ « parrain » de 2 clients. » |
+| Recherche sans résultat unique | « 3 clients conservés répondent à cette condition : « le client conservé dont … » en attend un seul. » |
+| Condition « dont » mal formée | « Une condition « dont » compare un champ du client à une valeur : « dont le solde est négatif ». » |
 | Classe inconnue | « Classe « fournisseur » inconnue. » |
 | Champ hérité redéclaré | « « nom » est déjà un champ hérité de « personne ». » |
 | Version en double | « « saluer » existe déjà pour « personne ». » |
@@ -920,6 +922,15 @@ Afficher le nombre de clients conservés dont le statut actif est vrai.
 - `le nombre de clients conservés [dont …]` compte, au pluriel (§ 16.1).
 - Un même objet conservé, retrouvé deux fois dans une exécution, est le même objet en mémoire : `=` compare toujours l'identité (§ 13.4).
 - Un calcul ne lit pas la base : son résultat changerait d'une exécution à l'autre, pour la même raison qu'il n'emploie pas `aujourd'hui` (§ 9.4). Règle prudente, qu'on pourra assouplir ; l'inverse serait impossible sans casser des programmes.
+- Dans une condition `dont`, un champ de l'entité désigne celui de chaque objet examiné. Chaque comparaison met un champ face à une valeur calculée par le programme (une variable, une constante, un calcul) ; deux champs ne se comparent pas entre eux. `0 < solde` vaut `solde > 0`.
+- `est` suivi d'une valeur vaut l'égalité : `dont la licence est « A-12 »`, `dont le parrain est a`, et `n'est pas` sa négation. Cette tournure n'existe que dans une condition `dont`.
+- Ce qui se compare : texte, nombre, nombre entier et date par égalité et par ordre ; vrai ou faux et lien par égalité ; `positif`, `négatif`, `nul` pour un nombre, `vrai`, `faux` pour un vrai ou faux. Un fichier ne se compare pas. Un nombre entier se compare à un nombre à virgule (`dont le rang ≥ 2,5`).
+- Les nombres se comparent et se trient en décimal exact : `100,000000000000000001 > 9`, `0,10 = 0,1`. Les textes se trient comme dans un dictionnaire, sans tenir compte des accents ni de la casse (Ana, Bob, Élodie, émile, Zoé) ; leur égalité reste exacte.
+- Une entité retrouvée inclut les objets des entités qui en héritent : `Pour chaque client conservé` parcourt aussi les membres, qui restent des membres.
+- La liste d'une boucle est figée à son début : un objet conservé pendant la boucle n'y entre pas. `Sortir de la boucle` et `Passer au tour suivant` s'y emploient.
+- Le nom de l'objet du tour est celui de l'entité ; s'il existe déjà, erreur : « « client » existe déjà : renommez-le, car « Pour chaque client conservé » donne ce nom à l'objet de chaque tour. »
+- `par nom` trie selon un champ de texte, de nombre, de date ou vrai ou faux ; à valeurs égales, dans l'ordre de conservation.
+- Un objet retrouvé n'est lu qu'au premier accès à ses champs ; ses liens, à leur tour, au premier accès aux leurs.
 
 ### 16.5 La base
 
@@ -964,8 +975,9 @@ La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1
 | `une licence (texte), unique` | `_une licence (texte) _unique` |
 | `un pays (texte), « Suisse » au départ` | `_un pays (texte) _départ « Suisse »` |
 | `Conserver le client.` / `Supprimer le client.` | `_conserver client` / `_supprimer client` |
-| `Pour chaque client conservé dont le solde est négatif, par nom :` | `_pour_chaque client _conservé _dont client.solde _négatif _par client.nom` |
-| `le client conservé dont la licence est « A-12 »` | `_le client _conservé _dont client.licence = « A-12 »` |
+| `Pour chaque client conservé dont le solde est négatif, par nom décroissant :` | `_pour_chaque client _conservé _dont solde _négatif _par nom _décroissant` |
+| `le client conservé dont la licence est « A-12 »` | `_le client _conservé _dont licence = « A-12 »` |
+| `le nombre de clients conservés dont …` | `_nombre_de client _conservé _dont …` |
 | `le fichier « photos/ana.jpg »` | `_fichier « photos/ana.jpg »` |
 | `la taille de la photo` | `photo.taille` ; `(_fichier « a.jpg »).taille` |
 | `Enregistrer la photo dans « copie.jpg ».` | `_enregistrer photo _dans « copie.jpg »` |
@@ -999,3 +1011,4 @@ La charte 1.9 reprend ce paragraphe : transaction par exécution (art. 7), typag
 | 1.15 | 2026-09-21 | § 15 implémenté ; chemin entre parenthèses, dossier de référence, écritures toutes ou aucune, champs des fichiers qui ne réservent rien, égalité par contenu, arrondi des tailles |
 | 1.16 | 2026-09-21 | § 16.1 et 16.2 implémentés ; accord de `conservé`, types réservés aux entités et aptitudes, héritage entre entités, lien vers soi, portée de la vérification à l'analyse, `(nombre entier)` et `3,0`, forme compacte des types |
 | 1.17 | 2026-09-21 | § 16.3, 16.5, 16.6 implémentés ; lien vers soi, identifiants jamais réattribués, définition changée refusée en attendant les migrations, ordre fichiers puis base, tables créées dans la transaction |
+| 1.18 | 2026-09-21 | § 16.4 implémenté : champs de l'objet examiné, `est valeur`, comparaisons permises, décimal exact et ordre du dictionnaire, héritage, liste figée, chargement à la demande. § 16.8 : champs sans préfixe dans une condition compacte, `_nombre_de` |

@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.17), § 11.
+ * Spécification : docs/grammaire.md (révision 1.18), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -182,6 +182,31 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                 k = q - 1;
                 continue;
             }
+        }
+        if ((est_cle(t, "le") || est_cle(t, "la") || est_cle(t, "l'")) && k + 2 < f
+            && r->e[k + 1].type == J_CROCHETS && (est_cle(&r->e[k + 2], "conservé") || est_cle(&r->e[k + 2], "conservée"))) {
+            /* _le client _conservé → le client conservé (§ 16.4) */
+            if (!strcmp(t->valeur, "l'")) emettre(r, J_ELISION, "l", t, 1);
+            else mot(r, t->valeur, t);
+            copier(r, &r->e[k + 1]);
+            mot(r, "conservé", &r->e[k + 2]);
+            k += 2;
+            continue;
+        }
+        if (est_cle(t, "nombre_de") && k + 2 < f && r->e[k + 1].type == J_CROCHETS
+            && (est_cle(&r->e[k + 2], "conservé") || est_cle(&r->e[k + 2], "conservée"))) {
+            /* _nombre_de client _conservé → le nombre de client conservés */
+            mot(r, "le", t);
+            mot(r, "nombre", t);
+            mot(r, "de", t);
+            copier(r, &r->e[k + 1]);
+            mot(r, "conservés", &r->e[k + 2]);
+            k += 2;
+            continue;
+        }
+        if (est_cle(t, "dont")) {
+            mot(r, "dont", t);
+            continue;
         }
         if (est_cle(t, "fichier")) {                /* _fichier « a.jpg » → le fichier « a.jpg » */
             mot(r, "le", t);
@@ -632,6 +657,36 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "répéter", t);
             expression(r, d + 1, fois);
             mot(r, "fois", &r->e[fois]);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            ouvrir(r, O_BOUCLE, prof, t);
+        } else if (!strcmp(c, "pour_chaque") && d + 2 < f && r->e[d + 1].type == J_CROCHETS
+                   && (est_cle(&r->e[d + 2], "conservé") || est_cle(&r->e[d + 2], "conservée"))) {
+            /* _pour_chaque client _conservé [_dont …] [_par champ [_décroissant]] */
+            mot(r, "pour", t);
+            mot(r, "chaque", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, "conservé", &r->e[d + 2]);
+            size_t par = chercher(r, d + 3, f, "par");
+            if (d + 3 < par) {
+                if (!est_cle(&r->e[d + 3], "dont")) {
+                    echouer(r, &r->e[d + 3], grym_dupliquer("« _dont » ou « _par » attendu après « _conservé »."));
+                    return;
+                }
+                mot(r, "dont", &r->e[d + 3]);
+                expression(r, d + 4, par);
+            }
+            if (par < f) {
+                size_t fin_tri = f;
+                if (est_cle(&r->e[f - 1], "décroissant")) fin_tri = f - 1;
+                if (fin_tri != par + 2 || r->e[par + 1].type != J_CROCHETS) {
+                    echouer(r, &r->e[par], grym_dupliquer("Tri attendu : « _par nom » ou « _par solde _décroissant »."));
+                    return;
+                }
+                emettre(r, J_VIRGULE, NULL, &r->e[par], 1);
+                mot(r, "par", &r->e[par]);
+                copier(r, &r->e[par + 1]);
+                if (fin_tri < f) mot(r, "décroissant", &r->e[f - 1]);
+            }
             emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
             ouvrir(r, O_BOUCLE, prof, t);
         } else if (!strcmp(c, "pour_chaque")) {

@@ -1,5 +1,5 @@
 /* GrymoiR : représentation interne des valeurs, partagée par la machine et la base
- * Spécification : docs/vm.md (révision 1.11), § 2.
+ * Spécification : docs/vm.md (révision 1.12), § 2.
  */
 #ifndef GRYM_VM_INTERNE_H
 #define GRYM_VM_INTERNE_H
@@ -8,7 +8,15 @@
 
 #include <stddef.h>
 
-typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET, V_DATE, V_FICHIER } TypeValeur;
+typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET, V_DATE, V_FICHIER, V_LISTE } TypeValeur;
+
+/* Liste d'objets conservés, figée par une recherche (§ 16.4) : interne, jamais visible du langage. */
+typedef struct Liste {
+    size_t references;
+    long *ids;
+    char **classes;
+    size_t n;
+} Liste;
 
 struct Objet;
 
@@ -29,6 +37,7 @@ typedef struct {
     struct Objet *objet;   /* référence : l'objet appartient au tas, pas à la valeur */
     long jours;            /* date : jours depuis le 01.01.1970 (date.h) */
     Fichier *fichier;      /* fichier : contenu partagé, compté */
+    Liste *liste;          /* liste : partagée, comptée */
 } Valeur;
 
 /* Classe connue de la machine (grammaire, § 13). */
@@ -56,7 +65,22 @@ typedef struct Objet {
     unsigned long *epoques;   /* exécution où le champ est entré au journal */
     int marque;
     long id;                  /* identifiant en base, 0 si l'objet n'est pas conservé (§ 16.3) */
+    int a_charger;            /* objet retrouvé dont les champs ne sont pas encore lus (§ 16.4) */
     struct Objet *suivant;
 } Objet;
+
+/* Services de la machine pour la base (vm.c) */
+struct Machine;
+Valeur vi_nombre_canonique(const char *texte);
+Valeur vi_texte(const char *texte);
+Valeur vi_booleen(int vrai);
+Valeur vi_date(long jours);
+Valeur vi_fichier(const void *octets, size_t taille, const char *nom);
+Valeur vi_objet(Objet *o);
+/* Objet conservé d'identifiant id : le même en mémoire tant qu'il y vit, sinon une coquille à charger. */
+Objet *machine_objet_en_base(struct Machine *m, long id, const char *classe, char **erreur);
+const ClasseVM *machine_classe(const struct Machine *m, const char *nom);
+Valeur vi_liste(long *ids, char **classes, size_t n);   /* prend possession des tableaux */
+void vi_liberer(Valeur *v);
 
 #endif

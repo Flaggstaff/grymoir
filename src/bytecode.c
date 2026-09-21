@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.11).
+ * Spécification : docs/vm.md (révision 1.12).
  */
 #include "bytecode.h"
 #include "date.h"
@@ -42,6 +42,19 @@ static void *agrandir(void *p, size_t n, size_t taille_element) {
         exit(EXIT_FAILURE);
     }
     return q;
+}
+
+long requete_parametres(const char *d) {
+    int separateurs = 0;
+    long n = 0;
+    for (const char *p = d; *p; p++) {
+        if (*p == '\x1f') separateurs++;
+        else if (*p == '?' && separateurs == 4) {
+            long i = strtol(p + 1, NULL, 10);
+            if (i > n) n = i;
+        }
+    }
+    return separateurs == 4 && n <= 64 ? n : -1;
 }
 
 long bloc_constante(Bloc *b, TypeConstante type, const char *texte) {
@@ -146,6 +159,9 @@ const char *instruction_nom(CodeInstruction code) {
     case I_ENREGISTRER:    return "ENREGISTRER";
     case I_CONSERVER:      return "CONSERVER";
     case I_SUPPRIMER:      return "SUPPRIMER";
+    case I_CHERCHER:       return "CHERCHER";
+    case I_TAILLE_LISTE:   return "TAILLE_LISTE";
+    case I_ELEMENT:        return "ÉLÉMENT";
     }
     return "INCONNUE";
 }
@@ -153,7 +169,8 @@ const char *instruction_nom(CodeInstruction code) {
 int instruction_a_operande(CodeInstruction code) {
     return code == I_CONSTANTE || code == I_LIRE || code == I_ECRIRE || code == I_AFFICHER
         || code == I_APPELER || code == I_LIRE_LOCAL || code == I_ECRIRE_LOCAL || code == I_ECHOUER
-        || code == I_NOUVEAU || code == I_INITIALISER_CHAMP || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP;
+        || code == I_NOUVEAU || code == I_INITIALISER_CHAMP || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP
+        || code == I_CHERCHER;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -210,8 +227,11 @@ int bloc_verifier(const Bloc *b, char **erreur) {
         }
         unsigned op = instruction_a_operande((CodeInstruction)c)
                     ? (unsigned)b->code[d + 1] | ((unsigned)b->code[d + 2] << 8) : 0;
-        if (c == I_CONSTANTE && op >= b->nb_constantes)
+        if ((c == I_CONSTANTE || c == I_CHERCHER) && op >= b->nb_constantes)
             ok = refuser(erreur, grym_formater("constante %u inexistante (octet %lu).", op, (unsigned long)d));
+        else if (c == I_CONSTANTE && b->constantes[op].type == C_RECHERCHE)
+            ok = refuser(erreur, grym_formater("constante %u : une recherche ne s'empile pas (octet %lu).", op,
+                                               (unsigned long)d));
         else if ((c == I_LIRE || c == I_ECRIRE || c == I_NOUVEAU || c == I_INITIALISER_CHAMP
                   || c == I_LIRE_CHAMP || c == I_ECRIRE_CHAMP) && op >= b->nb_noms)
             ok = refuser(erreur, grym_formater("nom %u inexistant (octet %lu).", op, (unsigned long)d));
@@ -273,6 +293,19 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_LIRE_FICHIER: besoin = 1; break;
             case I_ENREGISTRER: besoin = 2; effet = -2; break;
             case I_CONSERVER: case I_SUPPRIMER: besoin = 1; effet = -1; break;
+            case I_CHERCHER: {
+                long np = op < b->nb_constantes && b->constantes[op].type == C_RECHERCHE
+                        ? requete_parametres(b->constantes[op].texte) : -1;
+                if (np < 0) {
+                    ok = refuser(erreur, grym_formater("CHERCHER sans recherche valide (octet %lu).", (unsigned long)d));
+                    np = 0;
+                }
+                besoin = np;
+                effet = 1 - np;
+                break;
+            }
+            case I_TAILLE_LISTE: besoin = 1; break;
+            case I_ELEMENT: besoin = 2; effet = -1; break;
             case I_INITIALISER_CHAMP: besoin = 2; effet = -1; break;
             case I_LIRE_CHAMP: besoin = 1; break;
             case I_ECRIRE_CHAMP: besoin = 2; effet = -2; break;
@@ -349,9 +382,9 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 11  /* versions 1 à 10 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 12  /* versions 1 à 11 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
-                              sans fichiers (8), sans entités (9), sans base (10) */
+                              sans fichiers (8), sans entités (9), sans base (10), sans recherche (11) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -504,7 +537,8 @@ static char *lire_corps(Lecture *l, Bloc *b, uint32_t version) {
     for (uint32_t i = 0; i < nc; i++) {
         uint32_t type = lire_u(l, 1);
         char *t = lire_chaine(l);
-        if (!t || (type != C_NOMBRE && type != C_TEXTE && type != C_BOOLEEN && (type != C_DATE || version < 8))) {
+        if (!t || (type != C_NOMBRE && type != C_TEXTE && type != C_BOOLEEN && (type != C_DATE || version < 8)
+                   && (type != C_RECHERCHE || version < 12))) {
             free(t);
             return grym_formater("constante %u illisible.", (unsigned)i);
         }
@@ -817,7 +851,7 @@ char *bloc_desassembler(const Bloc *b) {
         snprintf(nombre, sizeof nombre, saut ? "%04lu" : "%lu", op);
         completer(&c, nombre, 6);
         char *commentaire = NULL;
-        if ((code == I_CONSTANTE || code == I_ECHOUER) && op < b->nb_constantes) {
+        if ((code == I_CONSTANTE || code == I_ECHOUER || code == I_CHERCHER) && op < b->nb_constantes) {
             const Constante *k = &b->constantes[op];
             if (k->type == C_NOMBRE) {
                 Decimal d = dec_depuis_canonique(k->texte);
@@ -828,6 +862,13 @@ char *bloc_desassembler(const Bloc *b) {
             } else if (k->type == C_DATE) {
                 long j = 0;
                 commentaire = date_lire_iso(k->texte, &j) ? date_suisse(j) : grym_dupliquer(k->texte);
+            } else if (k->type == C_RECHERCHE) {
+                Chaine c = {0};
+                for (const char *p = k->texte; *p; p++) {
+                    char t[2] = { *p, 0 };
+                    chaine_ajouter(&c, *p == '\x1f' ? " | " : t);
+                }
+                commentaire = chaine_rendre(&c);
             } else {
                 commentaire = grym_formater("« %s »", k->texte);
             }

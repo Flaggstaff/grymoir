@@ -559,6 +559,94 @@ int main(void) {
         machine_detruire(m);
         portee_detruire(p);
     }
+    /* --- Retrouver (§ 16.4), base en mémoire --- */
+#define RC "Un client, conservé, a : un nom (texte), un solde (nombre), un actif (vrai ou faux), un parrain (client), " \
+           "une inscription (date), un rang (nombre entier).\n" \
+           "Pour créer un nom et un solde et un actif et une inscription et un rang :\n" \
+           "    Le c vaut un nouveau client :\n        Le nom vaut nom.\n        Le solde vaut solde.\n" \
+           "        L'actif vaut actif.\n        L'inscription vaut inscription.\n        Le rang vaut rang.\n" \
+           "    Le parrain du c devient c.\n    Conserver c.\nLe oui vaut vrai.\nLe non vaut faux.\n" \
+           "Créer « Zoé » et −12,50 et oui et 01.03.2026 et 3.\nCréer « émile » et 10 et oui et 15.01.2025 et 1.\n" \
+           "Créer « Ana » et 9 et non et 21.09.2026 et 10.\nCréer « Bob » et −3 et oui et 01.01.2026 et 2.\n" \
+           "Créer « Élodie » et 100,000000000000000001 et oui et 31.12.2025 et 20.\n"
+    PROG(RC "Pour chaque client conservé, par nom, afficher nom du client.", "Ana\nBob\nÉlodie\némile\nZoé");
+    PROG(RC "Pour chaque client conservé, afficher nom du client.", "Zoé\némile\nAna\nBob\nÉlodie");
+    PROG(RC "Pour chaque client conservé, par solde décroissant, afficher solde du client.",
+         "100,000000000000000001\n10\n9\n−3\n−12,50");
+    PROG(RC "Pour chaque client conservé dont le solde est négatif et l'actif est vrai, par solde décroissant, "
+         "afficher nom du client.", "Bob\nZoé");
+    PROG(RC "Afficher le nombre de clients conservés dont le solde > 9 puis le nombre de clients conservés dont le solde ≥ 9 "
+         "puis le nombre de clients conservés dont le solde = 10,00 puis le nombre de clients conservés.", "2 3 1 5");
+    PROG(RC "Afficher le nombre de clients conservés dont l'inscription < 01.01.2026 puis "
+         "le nombre de clients conservés dont le rang ≥ 2,5 puis le nombre de clients conservés dont l'actif est faux.",
+         "2 3 1");
+    PROG(RC "Pour chaque client conservé dont le nom > « b », par nom, afficher nom du client.", "Bob\nÉlodie\némile\nZoé");
+    PROG(RC "Le a vaut le client conservé dont le nom est « Ana ».\nAfficher solde du a puis parrain du a = a puis "
+         "a = le client conservé dont le rang est 10.", "9 vrai vrai");
+    PROG(RC "Le a vaut le client conservé dont le nom est « Ana ».\nLe solde du a devient 1000.\n"
+         "Afficher le nombre de clients conservés dont le solde ≥ 1000.", "1");
+    PROG(RC "Afficher le client conservé dont le solde > 5.",
+         "ERREUR 18:10 3 clients conservés répondent à cette condition : « le client conservé dont … » en attend un seul.");
+    PROG(RC "Afficher le client conservé dont le nom est « Personne ».",
+         "ERREUR 18:10 Aucun client conservé ne répond à cette condition.");
+    PROG(RC "Le a vaut le client conservé dont le nom est « Ana ».\n"
+         "Afficher le nombre de clients conservés dont le parrain est a puis le nombre de clients conservés dont le parrain n'est pas a.",
+         "1 4");
+    PROG(RC "Le x vaut « 9 ».\nAfficher le nombre de clients conservés dont le solde = x.",
+         "ERREUR 19:10 Le champ « solde » se compare à un nombre.");
+    /* la liste d'une boucle est figée à son début ; sortir, passer */
+    PROG(RC "Pour chaque client conservé, par nom :\n    Si nom du client = « Bob », passer au tour suivant.\n"
+         "    Si nom du client = « émile », sortir de la boucle.\n    Créer « N » et 0 et oui et 01.01.2026 et 0.\n"
+         "    Afficher nom du client.\nAfficher le nombre de clients conservés.", "Ana\nÉlodie\n7");
+    PROG(RC "Le compte vaut 0.\nPour chaque client conservé :\n    Le d vaut un nouveau client :\n"
+         "        Le nom vaut « X ».\n        Le solde vaut 0.\n        L'actif vaut vrai.\n        L'inscription vaut 01.01.2026.\n"
+         "        Le rang vaut 0.\n    Le parrain du d devient d.\n    Conserver d.\n    Le compte devient compte + 1.\n"
+         "Afficher compte puis le nombre de clients conservés.", "5 10");
+    /* héritage : un membre est un client */
+    PROG("Un client, conservé, a : un nom (texte).\nUn membre, conservé, est un client. Un membre a : une cotisation (nombre).\n"
+         "Le c vaut un nouveau client :\n    Le nom vaut « C ».\nConserver c.\nLe m vaut un nouveau membre :\n"
+         "    Le nom vaut « M ».\n    La cotisation vaut 5.\nConserver m.\n"
+         "Pour chaque client conservé, par nom, afficher nom du client puis client.\n"
+         "Pour chaque membre conservé dont le nom est « M », afficher cotisation du membre.",
+         "C un client\nM un membre\n5");
+    /* --- Relire, dans une autre exécution, ce qu'une première a conservé --- */
+    {
+        remove("_essai_relire.grymd");
+        const char *decl = "Un client, conservé, a : un nom (texte), un parrain (client), une photo (fichier).\n"
+                           "Un membre, conservé, est un client. Un membre a : une cotisation (nombre).\n";
+        char *ecrire = grym_formater("%s"
+            "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La photo vaut le fichier « _essai_relire.txt ».\n"
+            "Le parrain du a devient a.\nConserver a.\n"
+            "Le m vaut un nouveau membre :\n    Le nom vaut « Mo ».\n    Le parrain vaut a.\n"
+            "    La photo vaut le fichier « _essai_relire.txt ».\n    La cotisation vaut 12,50.\nConserver m.\n", decl);
+        char *lire = grym_formater("%s"
+            "Pour chaque client conservé, par nom :\n"
+            "    Afficher nom du client puis client puis nom du parrain du client puis photo du client.\n"
+            "Le m vaut le membre conservé dont le nom est « Mo ».\nAfficher cotisation du m puis parrain du m = "
+            "le client conservé dont le nom est « Ana ».\nLa cotisation du m devient 20.\n", decl);
+        char *relire = grym_formater("%sAfficher cotisation du membre conservé dont le nom est « Mo ».\n"
+            "Supprimer le membre conservé dont le nom est « Mo ».\nAfficher le nombre de clients conservés.\n", decl);
+        creer_fichier("_essai_relire.txt", "bonjour", 7);
+        const char *sources[] = { ecrire, lire, relire };
+        const char *attendus[] = { "", "Ana un client Ana un fichier de 7 octets\nMo un membre Ana un fichier de 7 octets\n12,50 vrai",
+                                   "20\n1" };
+        for (int i = 0; i < 3; i++) {
+            total++;
+            Portee *p = portee_creer();
+            Machine *m = machine_creer();
+            machine_base(m, "_essai_relire.grymd");
+            char *r = executer_source(p, m, sources[i], 0);
+            if (strcmp(r, attendus[i]) != 0) signaler(__LINE__, sources[i], attendus[i], r);
+            free(r);
+            machine_detruire(m);
+            portee_detruire(p);
+        }
+        free(ecrire);
+        free(lire);
+        free(relire);
+        remove("_essai_relire.txt");
+        remove("_essai_relire.grymd");
+    }
     /* --- La base dans un fichier : ce qui est validé y reste, le reste n'y entre pas --- */
     {
         remove("_essai.grymd");

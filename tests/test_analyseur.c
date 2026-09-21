@@ -568,6 +568,35 @@ int main(void) {
     VE("Pour conserver un x :\n    Afficher x.", 1, 6, "« conserver » commence une construction du langage");
     VE("Conserver.", 1, 10, "Expression incomplète");
 
+    /* --- Retrouver (§ 16.4) --- */
+#define CL "Un client, conservé, a : un nom (texte), un solde (nombre), un actif (vrai ou faux), un parrain (client).\n"
+    V(CL "Pour chaque client conservé dont le solde est négatif et l'actif est vrai, par nom décroissant :\n"
+      "    Afficher client.",
+      "(entité [client] [nom : texte] [solde : nombre] [actif : vrai ou faux] [parrain : client])\n"
+      "(pour-chaque-conservé [client] (conservés [client] (dont (et (négatif (champ-dont [solde])) "
+      "(vrai (champ-dont [actif])))) (par [nom] décroissant)) (bloc (afficher [client])))");
+    V(CL "Le a vaut le client conservé dont le nom est « Ana ».\nAfficher le nombre de clients conservés dont le parrain est a.",
+      "(entité [client] [nom : texte] [solde : nombre] [actif : vrai ou faux] [parrain : client])\n"
+      "(créer [a] (le-conservé [client] (dont (= (champ-dont [nom]) «Ana»))))\n"
+      "(afficher (nombre-conservés [client] (dont (= (champ-dont [parrain]) [a]))))");
+    V(CL "Le plafond vaut 3.\nAfficher le nombre de clients conservés dont 0 < solde ou le solde n'est pas supérieur au plafond.",
+      "(entité [client] [nom : texte] [solde : nombre] [actif : vrai ou faux] [parrain : client])\n(créer [plafond] 3)\n"
+      "(afficher (nombre-conservés [client] (dont (ou (> (champ-dont [solde]) 0) (non (> (champ-dont [solde]) [plafond]))))))");
+    V("Un cheval (chevaux), conservé, a : un nom (texte).\nAfficher le nombre de chevaux conservés.",
+      "(entité [cheval] (pluriel chevaux) [nom : texte])\n(afficher (nombre-conservés [cheval]))");
+    VE(CL "Afficher le client conservée.", 2, 20, "Accord : « conservé ».");
+    VE(CL "Afficher le nombre de clients conservé.", 2, 31, "Accord : « conservés ».");
+    VE(CL "Afficher la client conservé.", 2, 10, "« client » est masculin : « le client conservé ».");
+    VE(CL "Le x vaut 3.\nAfficher le nombre de clients conservés dont x est nul.", 3, 46, "Une condition « dont » compare un champ du client");
+    VE(CL "Afficher le nombre de clients conservés dont le nom est positif.", 2, 53, "« nom » : positif, négatif et nul s'appliquent à un nombre.");
+    VE(CL "Le a vaut 1.\nAfficher le nombre de clients conservés dont le parrain > a.", 3, 57, "« parrain » : ce champ ne se compare que par égalité.");
+    VE(CL "Afficher le nombre de clients conservés dont le solde est « a ».", 2, 59, "Le champ « solde » attend un nombre, pas un texte.");
+    VE(CL "Afficher le nombre de clients conservés dont le solde = le nom.", 2, 46, "Une condition « dont » compare un champ du client");
+    VE(CL "Le f d'un x vaut le nombre de clients conservés.", 2, 18, "Un calcul ne lit pas la base");
+    VE(CL "Le client vaut 1.\nPour chaque client conservé, afficher 1.", 3, 13, "« client » existe déjà : renommez-le");
+    VE(CL "Pour chaque client conservé, par âge, afficher 1.", 2, 34, "« âge » n'est pas un champ du client.");
+    VE(CL "Pour chaque client conservé, par parrain, afficher 1.", 2, 34, "Tri attendu sur un champ");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

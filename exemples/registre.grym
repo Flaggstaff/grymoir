@@ -1,0 +1,19 @@
+Remarque : chaque exécution ajoute un passage au registre, puis relit tous les passages.
+Remarque : lancez ce programme plusieurs fois ; registre.grymd garde la mémoire d'une fois à l'autre.
+Un passage, conservé, a :
+    un numéro (nombre entier), unique,
+    une date (date),
+    une note (texte).
+
+Le suivant vaut le nombre de passages conservés + 1.
+Le p vaut un nouveau passage :
+    Le numéro vaut suivant.
+    La date vaut aujourd'hui.
+    La note vaut « passage ordinaire ».
+Si suivant = 3, la note du p devient « troisième, fêté ».
+Conserver p.
+
+Afficher « Registre, du plus récent au plus ancien : ».
+Pour chaque passage conservé, par numéro décroissant :
+    Afficher numéro du passage puis date du passage puis note du passage.
+Afficher « Passages fêtés : » puis le nombre de passages conservés dont la note est « troisième, fêté ».

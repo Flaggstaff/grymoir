@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.11 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.17, § 5, § 9, § 10, § 13 à 16.
+Version 1.12 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.18, § 5, § 9, § 10, § 13 à 16.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -76,6 +76,9 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 33 | `ENREGISTRER` | aucun | dépile un chemin, puis un fichier ; prévoit leur écriture à la fin de l'exécution |
 | 34 | `CONSERVER` | aucun | dépile un objet d'entité et le range dans la base |
 | 35 | `SUPPRIMER` | aucun | dépile un objet conservé et le retire de la base |
+| 36 | `CHERCHER` | constante de recherche | dépile les valeurs comparées ; empile une liste, un objet ou un nombre |
+| 37 | `TAILLE_LISTE` | aucun | remplace une liste par son nombre d'éléments |
+| 38 | `ÉLÉMENT` | aucun | dépile un rang et une liste ; empile l'objet à ce rang |
 
 ### 3.1 Boucles et Selon
 
@@ -175,6 +178,10 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - `grym_objet` distribue les identifiants (`AUTOINCREMENT` : jamais réattribués) et note la classe réelle ; `grym_schema` garde la définition de chaque entité.
 - Un objet porte son identifiant en base, 0 s'il n'est pas conservé. `CONSERVER` et `SUPPRIMER` le changent au journal, qui le restaure si l'exécution échoue.
 - `ÉCRIRE_CHAMP` sur un objet conservé écrit aussi la colonne en base.
+- Recherche : une constante de type 5 décrit la recherche, « entité ␟ mode ␟ champ du tri ␟ décroissant ␟ condition », avec le séparateur U+001F. Mode 0 : liste (boucle), 1 : un seul objet, 2 : nombre. La condition s'écrit en préfixe : `(e A B)`, `(o A B)`, `(n A)`, `(op [champ] ?k)` pour `=`, `!`, `<`, `>`, `l` (≤), `g` (≥), et `(P [champ])`, `N`, `0`, `V`, `F` pour les tournures ; `?k` désigne la k-ième valeur dépilée. La machine traduit en SQL, jointures de la lignée comprises.
+- Collations enregistrées auprès de SQLite : `GRYM_NOMBRE` compare deux nombres canoniques en décimal exact ; `GRYM_TEXTE` compare sans accents ni casse, puis octet par octet.
+- Liste : valeur interne, jamais visible du langage, figée au moment de la recherche (identifiants et classes).
+- Carte d'identité : identifiant en base → objet en mémoire. Un objet retrouvé est une coquille de sa classe réelle ; `LIRE_CHAMP`, `ÉCRIRE_CHAMP` et `SUPPRIMER` lisent d'abord ses champs. Ses liens deviennent des coquilles à leur tour. Le ramasse-miettes retire de la carte les objets qu'il libère.
 - Transaction : `BEGIN IMMEDIATE` au début de chaque exécution qui connaît une entité ; à la fin, écritures sur le disque, puis `COMMIT` ; en cas d'échec ou d'interruption, `ROLLBACK`, et les fichiers déjà écrits par cette fin d'exécution sont retirés.
 
 ## 9. Ramasse-miettes
@@ -196,7 +203,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 11
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 12
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -204,7 +211,7 @@ blocs         nombre : u32, puis pour chacun :
                 paramètres : u16, cases locales : u16
                 puis constantes, noms, code et positions :
 constantes    nombre : u32, puis pour chacune :
-                type : u8 (1 = nombre, 2 = texte, 3 = booléen, 4 = date), longueur : u32, octets UTF-8
+                type : u8 (1 = nombre, 2 = texte, 3 = booléen, 4 = date, 5 = recherche), longueur : u32, octets UTF-8
 noms          nombre : u32, puis pour chacun : longueur : u32, octets UTF-8
 code          longueur : u32, puis les octets des instructions
 positions     nombre : u32, puis pour chacune :
@@ -219,7 +226,7 @@ classes       nombre : u32, puis pour chacune :
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35. Les fichiers des versions 1 à 10 restent lisibles.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38. Les fichiers des versions 1 à 11 restent lisibles.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -265,3 +272,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.9 | 2026-09-21 | Fichiers : valeur fichier partagée, `LIRE_FICHIER`, `ENREGISTRER`, champs des fichiers, écritures différées toutes ou aucune ; format version 9 ; renumérotation des § 7 à 11 |
 | 1.10 | 2026-09-21 | Entités : type et unicité des champs, bit d'entité, pluriel ; vérification des types avant toute écriture de champ ; format version 10 |
 | 1.11 | 2026-09-21 | Base des entités (§ 8) : schéma, types SQL, identifiants, transaction ; `CONSERVER`, `SUPPRIMER` ; format version 11 ; renumérotation des § 9 à 12 |
+| 1.12 | 2026-09-21 | Recherche : constante de type 5, `CHERCHER`, `TAILLE_LISTE`, `ÉLÉMENT`, collations exactes, carte d'identité, chargement à la demande ; format version 12 |

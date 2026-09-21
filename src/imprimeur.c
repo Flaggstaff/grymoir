@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.17), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.18), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -30,6 +30,8 @@ typedef struct {
     size_t nb, cap;
     int compact;
     Aptitude *aptitudes;   /* formes des aptitudes déclarées, pour les accorder */
+    Aptitude *pluriels;    /* pluriels irréguliers des entités (feminin : nom, masculin : pluriel) */
+    size_t nb_pluriels;
     size_t nb_aptitudes;
     char **a_liberer;      /* formes masculines déduites */
     size_t nb_a_liberer;
@@ -228,6 +230,12 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
     int adjectif = strchr("PN0VF", n->op) != NULL;
     if (im->compact) {
         if (n->forme == 2) { expression(im, droite); return; }            /* cas : une valeur */
+        if (n->forme == 3 && !n->negation) {                             /* « est valeur » : « = » */
+            expression(im, sujet);
+            aj(im, " = ");
+            expression(im, droite);
+            return;
+        }
         if (n->negation) aj(im, "_non (");
         if (!sans_sujet) { expression(im, sujet); aj(im, " "); }
         if (adjectif) aj(im, adjectif_compact(n->op));
@@ -236,6 +244,12 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
         return;
     }
     if (n->forme == 2) { expression(im, droite); return; }                /* cas : une valeur */
+    if (n->forme == 3) {                                                   /* « dont la licence est « A » » */
+        expression(im, sujet);
+        aj(im, n->negation ? " n'est pas " : " est ");
+        expression(im, droite);
+        return;
+    }
     if (n->forme == 1 && !sans_sujet) {                                    /* écrit en symbole */
         expression(im, sujet);
         aj(im, " ");
@@ -248,7 +262,7 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
         expression(im, sujet);
         aj(im, n->negation ? " n'est pas " : " est ");
     }
-    Genre g = sujet->type == N_NOM ? genre_de_nom(im, sujet->texte) : G_MASCULIN;
+    Genre g = sujet->type == N_NOM || sujet->type == N_CHAMP_DONT ? genre_de_nom(im, sujet->texte) : G_MASCULIN;
     int k = relation(n->op);
     aj(im, g == G_FEMININ ? RELATIONS[k].f : RELATIONS[k].m);
     if (RELATIONS[k].complement) {
@@ -350,6 +364,52 @@ static void expression(Impression *im, const Noeud *n) {
     case N_AUJOURDHUI:
         aj(im, im->compact ? "_aujourd'hui" : "aujourd'hui");
         return;
+    case N_CHAMP_DONT:
+        if (!im->compact) {   /* l'article s'écrit toujours : « dont le solde … » */
+            Article art = n->article;
+            if (art == ART_AUCUN) art = voyelle(n->texte) ? ART_L : genre_de_nom(im, n->texte) == G_FEMININ ? ART_LA : ART_LE;
+            aj(im, art == ART_LA ? "la " : art == ART_L ? "l'" : "le ");
+        }
+        ecrire_nom(im, n->texte, 0);
+        return;
+    case N_CHERCHER: {
+        Genre g = genre_de_nom(im, n->texte);
+        int fem = g == G_FEMININ;
+        if (n->forme == 2) {   /* « le nombre de clients conservés » */
+            if (im->compact) {
+                aj(im, "_nombre_de ");
+                ecrire_nom(im, n->texte, 0);
+                aj(im, " _conservé");
+            } else {
+                const char *pl = NULL;
+                for (size_t k = 0; k < im->nb_pluriels && !pl; k++)
+                    if (strcmp(im->pluriels[k].feminin, n->texte) == 0) pl = im->pluriels[k].masculin;
+                char *p = pl ? grym_dupliquer(pl) : grym_formater("%ss", n->texte);
+                aj(im, voyelle(p) ? "le nombre d'" : "le nombre de ");
+                aj(im, p);
+                free(p);
+                aj(im, fem ? " conservées" : " conservés");
+            }
+        } else {               /* « le client conservé » ; la boucle écrit elle-même son début */
+            if (n->forme == 1) {
+                const char *art = voyelle(n->texte) ? "l'" : fem ? "la " : "le ";
+                if (im->compact) aj(im, "_");
+                aj(im, art);
+                ecrire_nom(im, n->texte, 0);
+            }
+            if (n->forme == 1) aj(im, im->compact ? " _conservé" : fem ? " conservée" : " conservé");
+        }
+        if (n->nb_enfants) {
+            aj(im, im->compact ? " _dont " : " dont ");
+            expression(im, n->enfants[0]);
+        }
+        if (n->texte2) {
+            aj(im, im->compact ? " _par " : ", par ");
+            ecrire_nom(im, n->texte2, 0);
+            if (n->entier) aj(im, im->compact ? " _décroissant" : " décroissant");
+        }
+        return;
+    }
     case N_FICHIER:
         aj(im, im->compact ? "_fichier " : "le fichier ");
         expression(im, n->enfants[0]);
@@ -673,6 +733,20 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         branche(im, n->enfants[1], !n->forme, niveau);
         fin_compacte(im, niveau);
         return;
+    case P_POUR_CONSERVE: {
+        size_t sauve = im->nb;
+        int fem = genre_de_nom(im, n->texte) == G_FEMININ;
+        aj(im, c ? "_pour_chaque " : "Pour chaque ");
+        ecrire_nom(im, n->texte, 0);
+        aj(im, c ? " _conservé" : fem ? " conservée" : " conservé");
+        expression(im, n->enfants[0]);   /* « dont … » et « , par … » */
+        retenir(im, n->texte, fem ? G_FEMININ : G_MASCULIN);
+        const Noeud *corps = n->enfants[1];
+        branche(im, corps, corps->ligne == n->ligne, niveau);
+        fin_compacte(im, niveau);
+        im->nb = sauve;
+        return;
+    }
     case P_POUR_CHAQUE: {
         size_t sauve = im->nb;
         if (c) {
@@ -728,6 +802,14 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     case P_CLASSE: {
         int fem = (n->forme & 3) == 2;
         retenir(im, n->texte, fem ? G_FEMININ : G_MASCULIN);
+        if (n->texte3) {
+            Aptitude *t = grym_allouer((im->nb_pluriels + 1) * sizeof *t);
+            if (im->nb_pluriels) memcpy(t, im->pluriels, im->nb_pluriels * sizeof *t);
+            free(im->pluriels);
+            im->pluriels = t;
+            im->pluriels[im->nb_pluriels].feminin = n->texte;
+            im->pluriels[im->nb_pluriels++].masculin = n->texte3;
+        }
         int herite = (n->forme & 16) != 0;
         int fem_base = !n->texte2 || genre_de_nom(im, n->texte2) == G_FEMININ;   /* « chose » est féminin */
         size_t nb_champs = 0, nb_apt = 0;
@@ -886,6 +968,7 @@ static char *imprimer(const Programme *p, int compact) {
     }
     free(im.genres);
     free(im.aptitudes);
+    free(im.pluriels);
     for (size_t k = 0; k < im.nb_a_liberer; k++) free(im.a_liberer[k]);
     free(im.a_liberer);
     return chaine_rendre(&im.c);

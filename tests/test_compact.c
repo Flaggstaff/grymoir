@@ -184,6 +184,19 @@ int main(void) {
          "ERREUR 11:1 « nom » est unique : un autre client conservé a déjà « Ana ».");
     ERR("_conserver\n", 1, 1, "Forme attendue : « _conserver client »");
 
+    EXEC("_classe _un client _conservé\n    _un nom (texte)\n    _un solde (nombre)\n_fin\n"
+         "_action créer(_un nom ; _un solde)\n    _le c << _nouveau client _avec\n        nom << nom\n"
+         "        solde << solde\n    _fin\n    _conserver c\n_fin\ncréer(« B » ; 10)\ncréer(« a » ; 9)\ncréer(« C » ; −1)\n"
+         "_pour_chaque client _conservé _dont solde _positif _par nom _décroissant\n    _afficher client.nom\n_fin\n"
+         "_afficher _nombre_de client _conservé _dont solde > 9 ; (_le client _conservé _dont nom = « a »).solde\n",
+         "B\na\n1 9\n");
+    ALLER_RETOUR("_classe _une facture _conservé\n    _un montant (nombre)\n_fin\n"
+                 "_pour_chaque facture _conservé _dont _non (montant _nul) _par montant _décroissant\n    _afficher facture\n_fin\n"
+                 "_la f << _la facture _conservé _dont montant = 3\n_afficher _nombre_de facture _conservé\n",
+                 "Une facture, conservée, a :\n    un montant (nombre).\n"
+                 "Pour chaque facture conservée dont le montant n'est pas nul, par montant décroissant :\n    Afficher facture.\n"
+                 "La f vaut la facture conservée dont le montant = 3.\nAfficher le nombre de factures conservées.\n");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

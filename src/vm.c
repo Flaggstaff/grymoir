@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.11).
+ * Spécification : docs/vm.md (révision 1.12).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -18,7 +18,7 @@
 
 static const char *nom_type(TypeValeur t) {
     return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen"
-         : t == V_DATE ? "une date" : t == V_FICHIER ? "un fichier" : "un objet";
+         : t == V_DATE ? "une date" : t == V_FICHIER ? "un fichier" : t == V_LISTE ? "une liste" : "un objet";
 }
 
 static Valeur valeur_copier(const Valeur *v) {
@@ -31,6 +31,8 @@ static Valeur valeur_copier(const Valeur *v) {
     r.jours = v->jours;
     r.fichier = v->fichier;
     if (r.fichier) r.fichier->references++;
+    r.liste = v->liste;
+    if (r.liste) r.liste->references++;
     return r;
 }
 
@@ -44,6 +46,13 @@ static void valeur_liberer(Valeur *v) {
         free(v->fichier);
     }
     v->fichier = NULL;
+    if (v->liste && --v->liste->references == 0) {
+        for (size_t k = 0; k < v->liste->n; k++) free(v->liste->classes[k]);
+        free(v->liste->classes);
+        free(v->liste->ids);
+        free(v->liste);
+    }
+    v->liste = NULL;
 }
 
 static Valeur valeur_nombre(Decimal d) {
@@ -55,6 +64,7 @@ static Valeur valeur_nombre(Decimal d) {
     v.objet = NULL;
     v.jours = 0;
     v.fichier = NULL;
+    v.liste = NULL;
     return v;
 }
 
@@ -136,6 +146,9 @@ struct Machine {
     char *dossier;          /* dossier du programme : base des chemins relatifs */
     char *chemin_base;      /* fichier de la base des entités, NULL : en mémoire (§ 16.5) */
     Base *base;             /* ouverte au premier besoin */
+    long *carte_cles;       /* carte d'identité : identifiant en base → objet en mémoire (§ 16.4) */
+    Objet **carte_objets;   /* clé 0 : case vide ; clé −1 : case libérée */
+    size_t carte_cap, carte_n;
     Ecriture_disque *a_ecrire;
     size_t nb_a_ecrire;
     Case *cases;
@@ -163,6 +176,65 @@ Machine *machine_creer(void) {
     return m;
 }
 
+/* ---------------------------------------------------------------- */
+/* Carte d'identité : un objet conservé n'existe qu'une fois en mémoire */
+/* ---------------------------------------------------------------- */
+
+static size_t carte_case(long id, size_t cap) {
+    unsigned long h = (unsigned long)id * 2654435761UL;
+    return (size_t)(h % cap);
+}
+
+static Objet *carte_trouver(const Machine *m, long id) {
+    if (!m->carte_cap || id <= 0) return NULL;
+    for (size_t i = carte_case(id, m->carte_cap), q = 0; q < m->carte_cap; q++, i = (i + 1) % m->carte_cap) {
+        if (m->carte_cles[i] == 0) return NULL;
+        if (m->carte_cles[i] == id) return m->carte_objets[i];
+    }
+    return NULL;
+}
+
+static void carte_mettre(Machine *m, long id, Objet *o);
+
+static void carte_agrandir(Machine *m) {
+    long *cles = m->carte_cles;
+    Objet **objets = m->carte_objets;
+    size_t cap = m->carte_cap;
+    m->carte_cap = cap ? cap * 2 : 64;
+    m->carte_cles = grym_allouer(m->carte_cap * sizeof *m->carte_cles);
+    m->carte_objets = grym_allouer(m->carte_cap * sizeof *m->carte_objets);
+    memset(m->carte_cles, 0, m->carte_cap * sizeof *m->carte_cles);
+    m->carte_n = 0;
+    for (size_t i = 0; i < cap; i++) if (cles[i] > 0) carte_mettre(m, cles[i], objets[i]);
+    free(cles);
+    free(objets);
+}
+
+static void carte_mettre(Machine *m, long id, Objet *o) {
+    if (id <= 0) return;
+    if ((m->carte_n + 1) * 2 > m->carte_cap) carte_agrandir(m);
+    size_t libre = (size_t)-1;
+    for (size_t i = carte_case(id, m->carte_cap), q = 0; q < m->carte_cap; q++, i = (i + 1) % m->carte_cap) {
+        if (m->carte_cles[i] == id) { m->carte_objets[i] = o; return; }
+        if (m->carte_cles[i] == -1 && libre == (size_t)-1) libre = i;
+        if (m->carte_cles[i] == 0) { if (libre == (size_t)-1) libre = i; break; }
+    }
+    m->carte_cles[libre] = id;
+    m->carte_objets[libre] = o;
+    m->carte_n++;
+}
+
+static void carte_retirer(Machine *m, long id, const Objet *o) {
+    if (!m->carte_cap || id <= 0) return;
+    for (size_t i = carte_case(id, m->carte_cap), q = 0; q < m->carte_cap; q++, i = (i + 1) % m->carte_cap) {
+        if (m->carte_cles[i] == 0) return;
+        if (m->carte_cles[i] == id) {
+            if (m->carte_objets[i] == o) { m->carte_cles[i] = -1; m->carte_objets[i] = NULL; }
+            return;
+        }
+    }
+}
+
 void machine_base(Machine *m, const char *chemin) {
     free(m->chemin_base);
     m->chemin_base = chemin ? grym_dupliquer(chemin) : NULL;
@@ -176,6 +248,8 @@ void machine_dossier(Machine *m, const char *dossier) {
 void machine_detruire(Machine *m) {
     if (!m) return;
     base_fermer(m->base);
+    free(m->carte_cles);
+    free(m->carte_objets);
     free(m->chemin_base);
     free(m->dossier);
     for (size_t i = 0; i < m->nb_cases; i++) {
@@ -303,7 +377,9 @@ static void ecrire_id(Machine *m, Objet *o, long id) {
     e->index = (size_t)-1;
     e->ancien_id = o->id;
     e->etait_definie = 0;
+    carte_retirer(m, o->id, o);
     o->id = id;
+    carte_mettre(m, id, o);
 }
 
 /* Rejoue le journal du plus récent au plus ancien. */
@@ -311,7 +387,9 @@ static void annuler(Machine *m) {
     while (m->nb_journal) {
         Ecriture *e = &m->journal[--m->nb_journal];
         if (e->objet && e->index == (size_t)-1) {
+            carte_retirer(m, e->objet->id, e->objet);
             e->objet->id = e->ancien_id;
+            carte_mettre(m, e->objet->id, e->objet);
             continue;
         }
         if (e->objet) {
@@ -486,6 +564,7 @@ static void ramasser(Machine *m, const Pile *pile, const Cadre *cadres, size_t n
             continue;
         }
         *lien = o->suivant;
+        carte_retirer(m, o->id, o);
         for (size_t k = 0; k < o->classe->nb_champs; k++)
             if (o->definis[k]) valeur_liberer(&o->champs[k]);
         free(o->champs);
@@ -627,6 +706,110 @@ static char *decrire_valeur_pour_type(const Valeur *v) {
         return grym_formater("%s %s", v->objet->classe->feminin ? "une" : "un", v->objet->classe->nom);
     }
     return grym_dupliquer(nom_type(v->type));
+}
+
+/* Nouvel objet du tas ; epoque : exécution où ses champs comptent comme déjà journalisés. */
+static Objet *creer_objet(Machine *m, const ClasseVM *cl, unsigned long epoque) {
+    Objet *o = grym_allouer(sizeof *o);
+    size_t nc = cl->nb_champs ? cl->nb_champs : 1;
+    o->classe = cl;
+    o->champs = grym_allouer(nc * sizeof *o->champs);
+    o->definis = grym_allouer(nc);
+    memset(o->definis, 0, nc);
+    o->epoques = grym_allouer(nc * sizeof *o->epoques);
+    for (size_t q = 0; q < nc; q++) o->epoques[q] = epoque;
+    o->marque = 0;
+    o->id = 0;
+    o->a_charger = 0;
+    o->suivant = m->tas;
+    m->tas = o;
+    m->nb_objets++;
+    m->depuis_ramassage++;
+    return o;
+}
+
+/* ---------------------------------------------------------------- */
+/* Services pour la base (vm_interne.h)                             */
+/* ---------------------------------------------------------------- */
+
+Valeur vi_nombre_canonique(const char *texte) { return valeur_nombre(dec_depuis_canonique(texte)); }
+
+Valeur vi_texte(const char *texte) {
+    Valeur v = valeur_nombre(dec_zero());
+    v.type = V_TEXTE;
+    v.texte = grym_dupliquer(texte);
+    return v;
+}
+
+Valeur vi_booleen(int vrai) {
+    Valeur v = valeur_nombre(dec_zero());
+    v.type = V_BOOLEEN;
+    v.vrai = vrai != 0;
+    return v;
+}
+
+Valeur vi_date(long jours) { return valeur_date(jours); }
+
+Valeur vi_fichier(const void *octets, size_t taille, const char *nom) {
+    Fichier *f = grym_allouer(sizeof *f);
+    f->octets = grym_allouer(taille ? taille : 1);
+    if (taille) memcpy(f->octets, octets, taille);
+    f->taille = taille;
+    f->nom = grym_dupliquer(nom);
+    f->format = format_image(f->octets, taille);
+    f->references = 1;
+    Valeur v = valeur_nombre(dec_zero());
+    v.type = V_FICHIER;
+    v.fichier = f;
+    return v;
+}
+
+Valeur vi_objet(Objet *o) {
+    Valeur v = valeur_nombre(dec_zero());
+    v.type = V_OBJET;
+    v.objet = o;
+    return v;
+}
+
+static const ClasseVM *classe_vm(const Machine *m, const char *nom);
+
+const ClasseVM *machine_classe(const Machine *m, const char *nom) { return classe_vm(m, nom); }
+
+void vi_liberer(Valeur *v) { valeur_liberer(v); }
+
+Valeur vi_liste(long *ids, char **classes, size_t n) {
+    Liste *l = grym_allouer(sizeof *l);
+    l->references = 1;
+    l->ids = ids;
+    l->classes = classes;
+    l->n = n;
+    Valeur v = valeur_nombre(dec_zero());
+    v.type = V_LISTE;
+    v.liste = l;
+    return v;
+}
+
+Objet *machine_objet_en_base(Machine *m, long id, const char *classe, char **erreur) {
+    Objet *o = carte_trouver(m, id);
+    if (o && o->id == id) return o;
+    const ClasseVM *c = classe_vm(m, classe);
+    if (!c || !c->conserve) {
+        *erreur = grym_formater("La base contient un objet « %s », que ce programme ne déclare pas comme entité.", classe);
+        return NULL;
+    }
+    o = creer_objet(m, c, 0);   /* ses champs, une fois lus, entreront au journal à la première écriture */
+    o->id = id;
+    o->a_charger = 1;
+    carte_mettre(m, id, o);
+    return o;
+}
+
+/* Lit les champs d'un objet retrouvé, au premier accès. */
+static int charger(Machine *m, Objet *o, char **erreur) {
+    if (!o->a_charger) return 1;
+    if (!base_charger(m->base, m, o, erreur)) return 0;
+    o->a_charger = 0;
+    return 1;
 }
 
 size_t machine_objets_vivants(const Machine *m) {
@@ -1183,6 +1366,45 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&v);
             break;
         }
+        case I_CHERCHER: {
+            /* recherche dans la base (§ 16.4) : les valeurs comparées sont au sommet de la pile */
+            long np = requete_parametres(b->constantes[op].texte);
+            Valeur r;
+            char *erreur = NULL;
+            int trouve = base_chercher(m->base, m, b->constantes[op].texte, &pile.v[pile.n - (size_t)np],
+                                       (size_t)np, &r, &erreur);
+            for (long q = 0; q < np; q++) {
+                Valeur x = depiler(&pile);
+                valeur_liberer(&x);
+            }
+            if (!trouve) { ok = echouer(diag, b, debut, erreur); break; }
+            empiler(&pile, r);
+            break;
+        }
+        case I_TAILLE_LISTE: {
+            Valeur l = depiler(&pile);
+            char t[32];
+            snprintf(t, sizeof t, "%lu", (unsigned long)(l.type == V_LISTE ? l.liste->n : 0));
+            valeur_liberer(&l);
+            empiler(&pile, valeur_nombre(dec_depuis_canonique(t)));
+            break;
+        }
+        case I_ELEMENT: {
+            Valeur rang = depiler(&pile), l = depiler(&pile);
+            long k = -1;
+            if (l.type == V_LISTE && rang.type == V_NOMBRE && dec_en_jours(&rang.nombre, &k)) {}
+            char *erreur = NULL;
+            Objet *o = k >= 0 && l.type == V_LISTE && (size_t)k < l.liste->n
+                     ? machine_objet_en_base(m, l.liste->ids[k], l.liste->classes[k], &erreur) : NULL;
+            valeur_liberer(&rang);
+            valeur_liberer(&l);
+            if (!o) {
+                ok = echouer(diag, b, debut, erreur ? erreur : grym_dupliquer("Rang hors de la liste."));
+                break;
+            }
+            empiler(&pile, vi_objet(o));
+            break;
+        }
         case I_CONSERVER:
         case I_SUPPRIMER: {
             Valeur v = depiler(&pile);
@@ -1211,7 +1433,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             } else if (code == I_CONSERVER) {
                 long id = 0;
                 if (base_conserver(m->base, v.objet, &id, &probleme)) ecrire_id(m, v.objet, id);
-            } else if (base_supprimer(m->base, v.objet, m->classes, m->nb_classes, &probleme)) {
+            } else if (charger(m, v.objet, &probleme)   /* l'objet reste en mémoire, avec ses valeurs */
+                       && base_supprimer(m->base, v.objet, m->classes, m->nb_classes, &probleme)) {
                 ecrire_id(m, v.objet, 0);   /* l'objet reste en mémoire, mais n'est plus conservé */
             }
             valeur_liberer(&v);
@@ -1228,20 +1451,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             if (m->depuis_ramassage >= m->seuil) ramasser(m, &pile, cadres, nb_cadres);
-            Objet *o = grym_allouer(sizeof *o);
-            size_t nc = cl->nb_champs ? cl->nb_champs : 1;
-            o->classe = cl;
-            o->champs = grym_allouer(nc * sizeof *o->champs);
-            o->definis = grym_allouer(nc);
-            memset(o->definis, 0, nc);
-            o->epoques = grym_allouer(nc * sizeof *o->epoques);
-            for (size_t q = 0; q < nc; q++) o->epoques[q] = m->epoque;   /* objet neuf : rien à journaliser */
-            o->marque = 0;
-            o->id = 0;
-            o->suivant = m->tas;
-            m->tas = o;
-            m->nb_objets++;
-            m->depuis_ramassage++;
+            Objet *o = creer_objet(m, cl, m->epoque);   /* objet neuf : rien à journaliser */
             Valeur v = valeur_nombre(dec_zero());
             v.type = V_OBJET;
             v.objet = o;
@@ -1284,6 +1494,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             Objet *o = vo->objet;
+            {
+                char *erreur = NULL;
+                if (!charger(m, o, &erreur)) { ok = echouer(diag, b, debut, erreur); break; }
+            }
             long k = index_champ(o->classe, champ);
             if (k < 0) {
                 char *qui = article_classe(o->classe);

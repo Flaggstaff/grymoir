@@ -221,6 +221,36 @@ static void decrire(const Noeud *n, Chaine *c) {
         decrire(n->enfants[1], c);
         chaine_ajouter(c, ")");
         return;
+    case N_CHAMP_DONT:
+        chaine_ajouter(c, "(champ-dont [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "])");
+        return;
+    case N_CHERCHER:
+        chaine_ajouter(c, n->forme == 1 ? "(le-conservé [" : n->forme == 2 ? "(nombre-conservés [" : "(conservés [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "]");
+        if (n->nb_enfants) {
+            chaine_ajouter(c, " (dont ");
+            decrire(n->enfants[0], c);
+            chaine_ajouter(c, ")");
+        }
+        if (n->texte2) {
+            chaine_ajouter(c, " (par [");
+            chaine_ajouter(c, n->texte2);
+            chaine_ajouter(c, n->entier ? "] décroissant)" : "])");
+        }
+        chaine_ajouter(c, ")");
+        return;
+    case P_POUR_CONSERVE:
+        chaine_ajouter(c, "(pour-chaque-conservé [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "] ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_CHAMP:
         chaine_ajouter(c, "(champ [");
         chaine_ajouter(c, n->texte);

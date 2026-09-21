@@ -2,7 +2,7 @@
 
 Langage de programmation francophone. Référence : `docs/charte-grymoir.md`, `docs/grammaire.md` et `docs/vm.md`.
 
-## État : v0.2 livrée ; v0.3 en cours (SQLite embarqué, dates, fichiers, entités conservées)
+## État : v0.2 livrée ; v0.3 en cours (SQLite embarqué, dates, fichiers, entités conservées et retrouvées ; reste : migrations)
 
 Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
 
@@ -16,6 +16,7 @@ Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
     ./grym traduire exemples/formules.grym   # forme compacte : exemples/formules.grymc
     ./grym lancer exemples/formules.grymc    # la forme compacte s'exécute aussi
     ./grym lancer exemples/conserver.grym    # base conserver.grymd, créée à côté
+    ./grym lancer exemples/registre.grym     # se relit d'une exécution à l'autre (registre.grymd)
     ./grym --base essai.grymd                # boucle interactive sur une base conservée
     ./grym-lexeur exemples/facture.grym      # jetons
     ./grym-arbre exemples/facture.grym    # arbre syntaxique

@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.17), § 16 ; docs/vm.md (révision 1.11), § 8.
+ * Spécification : docs/grammaire.md (révision 1.18), § 16 ; docs/vm.md (révision 1.12), § 8.
  *
  * Schéma : une table « e <entité> » par entité, qui porte ses champs propres et ceux de ses
  * aptitudes ; son identifiant désigne la ligne de sa classe parente, ou de « grym_objet »
@@ -32,6 +32,17 @@ int base_conserver(Base *b, const Objet *o, long *id, char **erreur);
 
 /* Écrit dans la base le champ k d'un objet conservé. */
 int base_ecrire_champ(Base *b, const Objet *o, size_t k, char **erreur);
+
+struct Machine;
+
+/* Lit les champs d'un objet retrouvé ; ses liens deviennent des objets à charger à leur tour. */
+int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur);
+
+/* Recherche décrite par le compilateur (grammaire, § 16.4 ; docs/vm.md, § 8) :
+ * « entité ␟ mode ␟ champ du tri ␟ décroissant ␟ condition ». *resultat reçoit une liste (mode 0),
+ * un objet (mode 1) ou un nombre (mode 2). */
+int base_chercher(Base *b, struct Machine *m, const char *descripteur, const Valeur *params, size_t nb_params,
+                  Valeur *resultat, char **erreur);
 
 /* Retire un objet ; refusé si un lien le désigne encore. classes : toutes les classes connues,
  * pour dire lequel. */

@@ -166,6 +166,23 @@ int main(void) {
     COMP("Un client, conservé, a : un nom (texte).\nLe c vaut un nouveau client.\nConserver le c.\nSupprimer c.",
          "_classe _un client _conservé\n    _un nom (texte)\n_fin\n_le c << _nouveau client\n_conserver c\n_supprimer c\n");
 
+    /* --- Retrouver (§ 16.4) --- */
+    LITT("Une facture, conservée, a : un montant (nombre), un payé (vrai ou faux).\n"
+         "Pour chaque facture conservée dont le montant > 100 et le payé est faux, par montant décroissant :\n"
+         "  Afficher facture.\nLa f vaut la facture conservée dont le montant est 3.\n"
+         "Afficher le nombre de factures conservées dont montant n'est pas nul.",
+         "Une facture, conservée, a :\n    un montant (nombre),\n    un payé (vrai ou faux).\n"
+         "Pour chaque facture conservée dont le montant > 100 et le payé est faux, par montant décroissant :\n"
+         "    Afficher facture.\nLa f vaut la facture conservée dont le montant est 3.\n"
+         "Afficher le nombre de factures conservées dont le montant n'est pas nul.\n");
+    COMP("Une facture, conservée, a : un montant (nombre).\nUn avoir (avoirs), conservé, a : un motif (texte).\n"
+         "Pour chaque facture conservée dont le montant est positif, par montant, afficher facture.\n"
+         "L'a vaut l'avoir conservé dont le motif est « x ».\nAfficher le nombre d'avoirs conservés.",
+         "_classe _une facture _conservé\n    _un montant (nombre)\n_fin\n_classe _un avoir (avoirs) _conservé\n"
+         "    _un motif (texte)\n_fin\n_pour_chaque facture _conservé _dont montant _positif _par montant\n"
+         "    _afficher facture\n_fin\n_l'a << _l'avoir _conservé _dont motif = « x »\n"
+         "_afficher _nombre_de avoir _conservé\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

@@ -2,6 +2,7 @@
 #include "compilateur.h"
 #include "texte.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -109,6 +110,55 @@ static void appel(Compilation *c, const Noeud *n, int rend) {
     bloc_emettre_appel(c->b, (uint16_t)nom, (uint8_t)n->nb_enfants, rend, n->ligne, n->colonne);
 }
 
+/* ---------------------------------------------------------------- */
+/* Recherche dans la base (grammaire, § 16.4)                       */
+/* ---------------------------------------------------------------- */
+
+static void expression(Compilation *c, const Noeud *n);
+
+/* Condition « dont » en descripteur ; chaque valeur comparée est calculée ici et devient « ?n ». */
+static void condition_dont(Compilation *c, const Noeud *n, Chaine *d, int *parametres) {
+    if (n->type == N_GROUPE) { condition_dont(c, n->enfants[0], d, parametres); return; }
+    if (n->type == N_LOGIQUE) {
+        chaine_ajouter(d, n->op == 'e' ? "(e" : "(o");
+        condition_dont(c, n->enfants[0], d, parametres);
+        condition_dont(c, n->enfants[1], d, parametres);
+        chaine_ajouter(d, ")");
+        return;
+    }
+    /* N_COMPARAISON, champ à gauche (vérifié à l'analyse) */
+    if (n->negation) chaine_ajouter(d, "(n");
+    char op[4] = { '(', n->op, '[', 0 };
+    chaine_ajouter(d, op);
+    chaine_ajouter(d, n->enfants[0]->texte);
+    chaine_ajouter(d, "]");
+    if (n->nb_enfants == 2) {
+        expression(c, n->enfants[1]);
+        char t[16];
+        snprintf(t, sizeof t, "?%d", ++*parametres);
+        chaine_ajouter(d, t);
+    }
+    chaine_ajouter(d, ")");
+    if (n->negation) chaine_ajouter(d, ")");
+}
+
+static void chercher(Compilation *c, const Noeud *n) {
+    Chaine d = {0};
+    chaine_ajouter(&d, n->texte);
+    char t[8];
+    snprintf(t, sizeof t, "\x1f%d\x1f", n->forme);
+    chaine_ajouter(&d, t);
+    if (n->texte2) chaine_ajouter(&d, n->texte2);
+    chaine_ajouter(&d, n->entier ? "\x1f" "1\x1f" : "\x1f" "0\x1f");
+    int parametres = 0;
+    if (n->nb_enfants) condition_dont(c, n->enfants[0], &d, &parametres);
+    char *texte = chaine_rendre(&d);
+    long k = bloc_constante(c->b, C_RECHERCHE, texte);
+    free(texte);
+    if (k < 0) { trop_grand(c, n); return; }
+    emettre(c, I_CHERCHER, k, n->ligne, n->colonne);
+}
+
 static void expression(Compilation *c, const Noeud *n) {
     if (c->echec) return;
     switch (n->type) {
@@ -156,6 +206,9 @@ static void expression(Compilation *c, const Noeud *n) {
     }
     case N_AUJOURDHUI:
         emettre(c, I_AUJOURDHUI, 0, n->ligne, n->colonne);
+        return;
+    case N_CHERCHER:
+        chercher(c, n);
         return;
     case N_FICHIER:
         expression(c, n->enfants[0]);
@@ -491,6 +544,36 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 classe_typer_dernier_champ(cm, ch->texte2, ch->op == 'U');
             }
         }
+        return;
+    }
+    case P_POUR_CONSERVE: {
+        /* liste figée au début de la boucle, parcourue par rang (§ 16.4) */
+        int v = ph->local, liste = ph->entier, rang = ph->entier + 1, l = ph->ligne, col = ph->colonne;
+        chercher(c, ph->enfants[0]);
+        emettre(c, I_ECRIRE_LOCAL, liste, l, col);
+        constante(c, C_NOMBRE, "0", ph, l, col);
+        emettre(c, I_ECRIRE_LOCAL, rang, l, col);
+        size_t test = c->b->taille_code;
+        emettre(c, I_LIRE_LOCAL, rang, l, col);
+        emettre(c, I_LIRE_LOCAL, liste, l, col);
+        emettre(c, I_TAILLE_LISTE, 0, l, col);
+        emettre(c, I_INFERIEUR, 0, l, col);
+        size_t sortie = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+        emettre(c, I_LIRE_LOCAL, liste, l, col);
+        emettre(c, I_LIRE_LOCAL, rang, l, col);
+        emettre(c, I_ELEMENT, 0, l, col);
+        emettre(c, I_ECRIRE_LOCAL, v, l, col);
+        entrer_boucle(c, 0, 0);
+        phrase(c, ph->enfants[1]);
+        cible_suivant(c, c->b->taille_code);
+        emettre(c, I_LIRE_LOCAL, rang, l, col);
+        constante(c, C_NOMBRE, "1", ph, l, col);
+        emettre(c, I_ADDITION, 0, l, col);
+        emettre(c, I_ECRIRE_LOCAL, rang, l, col);
+        size_t retour = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+        bloc_corriger_saut(c->b, retour, test);
+        bloc_corriger_saut(c->b, sortie, c->b->taille_code);
+        sortir_boucle(c);
         return;
     }
     case P_CONSERVER:

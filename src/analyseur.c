@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.17), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.18), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -264,6 +264,7 @@ typedef struct {
     int nb_locaux;           /* cases locales allouées dans la formule en cours */
     int niveau;              /* 0 : premier niveau du programme ; > 0 : dans un bloc */
     char *a_completer;       /* classe déclarée par « est » à la phrase précédente, sans champs encore */
+    const char *dont;        /* entité dont une condition « dont » examine les champs (§ 16.4), ou NULL */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
     const char *arrets[3];   /* mots qui peuvent suivre un nom dans le contexte courant (« à », « fois »…) */
     int nb_arrets;
@@ -887,6 +888,32 @@ static Noeud *nom_expression(Analyse *a) {
     Symbole *s = NULL;
     size_t d = a->i, fin;
     const Jeton *premier_jeton = tart ? tart : &a->j[d];
+    if (a->dont) {
+        /* Dans « dont », un champ de l'entité examinée désigne celui de chaque objet (§ 16.4). */
+        const Classe *e = classe_de(a->portee, a->dont);
+        size_t f = d;
+        if (a->j[d].type == J_CROCHETS) f = d + 1;
+        else while (f < a->n && mot_de_nom(a, f)) f++;
+        for (size_t k = f; e && k > d; k--) {
+            char *c = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+            Genre g;
+            if (classe_champ(a->portee, e, c, &g, NULL)) {
+                if (tart && !tart->synthetique && (art == ART_LE || art == ART_LA) && genre_de(art) != g) {
+                    erreur(a, tart, grym_formater("« %s » est un champ %s.", c, g == GENRE_MASCULIN ? "masculin" : "féminin"));
+                    free(c);
+                    return NULL;
+                }
+                Noeud *n = noeud_creer(N_CHAMP_DONT, premier_jeton->ligne, premier_jeton->colonne, premier_jeton->debut);
+                n->texte = c;
+                n->article = art == ART_IMPLICITE ? ART_AUCUN : art;
+                a->i = k;
+                n->fin = fin_jeton(&a->j[k - 1]);
+                return n;
+            }
+            free(c);
+            if (a->j[d].type == J_CROCHETS) break;
+        }
+    }
     if (a->j[d].type == J_CROCHETS && complement_de(a, d + 1)) {
         Genre g;
         if (champ_connu(a->portee, a->j[d].valeur, &g)
@@ -985,6 +1012,134 @@ static int voyelle_initiale(const char *s) {
     return 0;
 }
 
+/* ---------------------------------------------------------------- */
+/* Retrouver les objets conservés (§ 16.4)                          */
+/* ---------------------------------------------------------------- */
+
+static Noeud *valeur(Analyse *a);
+static int de_ou_d(const Jeton *t);
+
+static int contient_champ_dont(const Noeud *n) {
+    if (n->type == N_CHAMP_DONT) return 1;
+    for (size_t k = 0; k < n->nb_enfants; k++) if (contient_champ_dont(n->enfants[k])) return 1;
+    return 0;
+}
+
+static int est_conserve_mot(const Jeton *t) {
+    return est_mot(t, "conservé") || est_mot(t, "conservée") || est_mot(t, "conservés") || est_mot(t, "conservées");
+}
+
+static char *pluriel_de(const Classe *c) {
+    return c->pluriel ? grym_dupliquer(c->pluriel) : grym_formater("%ss", c->nom);
+}
+
+/* À l'index k : « client conservé » (pluriel 0) ou « clients conservés » (pluriel 1).
+ * Renvoie l'entité et *apres, l'index qui suit « conservé » ; NULL si la tournure n'y est pas.
+ * Une faute d'accord est signalée (a->echec). */
+static Classe *entite_conservee(Analyse *a, size_t k, int pluriel, size_t *apres) {
+    if (k >= a->n) return NULL;
+    size_t f = k;
+    if (a->j[k].type == J_CROCHETS) f = k + 1;
+    else while (f < a->n && mot_de_nom(a, f) && !est_conserve_mot(&a->j[f])) f++;
+    if (f == k || f >= a->n || !est_conserve_mot(&a->j[f])) return NULL;
+    char *nom = a->j[k].type == J_CROCHETS ? grym_dupliquer(a->j[k].valeur) : cle(a, k, f);
+    Classe *e = NULL;
+    for (size_t i = 0; i < a->portee->nb_classes && !e; i++) {
+        Classe *c = &a->portee->classes[i];
+        if (c->aptitude || !c->conserve) continue;
+        char *pl = pluriel_de(c);
+        if (strcmp(pluriel ? pl : c->nom, nom) == 0 || (a->j[k].synthetique && strcmp(c->nom, nom) == 0)) e = c;
+        free(pl);
+    }
+    free(nom);
+    if (!e) return NULL;
+    const Jeton *tc = &a->j[f];
+    if (!tc->synthetique) {
+        const char *juste = e->genre == GENRE_FEMININ ? (pluriel ? "conservées" : "conservée")
+                                                      : (pluriel ? "conservés" : "conservé");
+        if (!est_mot(tc, juste)) {
+            erreur(a, tc, grym_formater("Accord : « %s ».", juste));
+            return NULL;
+        }
+    }
+    *apres = f + 1;
+    return e;
+}
+
+/* Une condition « dont » compare un champ de l'objet examiné à une valeur (§ 16.4). */
+static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
+    if (n->type == N_GROUPE) return verifier_dont(a, e, n->enfants[0]);
+    if (n->type == N_LOGIQUE) return verifier_dont(a, e, n->enfants[0]) && verifier_dont(a, e, n->enfants[1]);
+    if (n->type == N_COMPARAISON) {
+        if (n->nb_enfants == 2 && n->enfants[1]->type == N_CHAMP_DONT && n->enfants[0]->type != N_CHAMP_DONT
+            && n->forme == 1) {
+            /* « 0 < solde » : le champ passe à gauche, l'opérateur se retourne */
+            Noeud *x = n->enfants[0];
+            n->enfants[0] = n->enfants[1];
+            n->enfants[1] = x;
+            n->op = n->op == '<' ? '>' : n->op == '>' ? '<' : n->op == 'l' ? 'g' : n->op == 'g' ? 'l' : n->op;
+        }
+        const Noeud *champ = n->enfants[0];
+        if (champ->type == N_CHAMP_DONT && (n->nb_enfants == 1 || !contient_champ_dont(n->enfants[1]))) {
+            const char *t = type_du_champ(a->portee, e, champ->texte);
+            char op = n->op;
+            const char *refus = NULL;
+            if (!t || strcmp(t, "fichier") == 0 || strcmp(t, "image") == 0)
+                refus = "un fichier ne se compare pas";
+            else if ((op == 'P' || op == 'N' || op == '0') && strcmp(t, "nombre") != 0 && strcmp(t, "nombre entier") != 0)
+                refus = "positif, négatif et nul s'appliquent à un nombre";
+            else if ((op == 'V' || op == 'F') && strcmp(t, "vrai ou faux") != 0)
+                refus = "vrai et faux s'appliquent à un champ vrai ou faux";
+            else if ((op == '<' || op == '>' || op == 'l' || op == 'g')
+                     && (strcmp(t, "vrai ou faux") == 0 || !type_de_base(t)))
+                refus = "ce champ ne se compare que par égalité";
+            if (refus) {
+                erreur_a(a, n->op_ligne, n->op_colonne, grym_formater("« %s » : %s.", champ->texte, refus));
+                return 0;
+            }
+            if (n->nb_enfants == 1) return 1;
+            const char *vu = type_statique(n->enfants[1]);
+            if (vu && strcmp(t, "nombre entier") == 0 && strcmp(vu, "nombre") == 0) return 1;   /* « rang ≥ 2,5 » */
+            return verifier_type(a, champ->texte, t, n->enfants[1]);
+        }
+    }
+    erreur_a(a, n->ligne, n->colonne, grym_formater(
+        "Une condition « dont » compare un champ %s %s à une valeur : « dont le solde est négatif ».",
+        e->genre == GENRE_FEMININ ? "de la" : "du", e->nom));
+    return 0;
+}
+
+/* « dont … » facultatif ; *cond reçoit la condition, ou NULL. Renvoie 0 en cas d'erreur. */
+static int clause_dont(Analyse *a, const Classe *e, Noeud **cond) {
+    *cond = NULL;
+    if (!est_mot(cour(a), "dont")) return 1;
+    avancer(a);
+    const char *avant = a->dont;
+    a->dont = e->nom;
+    Noeud *c = valeur(a);
+    a->dont = avant;
+    if (!c) return 0;
+    if (!verifier_dont(a, e, c)) { noeud_liberer(c); return 0; }
+    *cond = c;
+    return 1;
+}
+
+/* « le client conservé dont … », « le nombre de clients conservés dont … » */
+static Noeud *chercher(Analyse *a, const Jeton *t, const Classe *e, int mode, size_t apres) {
+    if (a->formule == 1)
+        return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
+    a->i = apres;
+    a->article_force = ART_AUCUN;
+    Noeud *cond;
+    if (!clause_dont(a, e, &cond)) return NULL;
+    Noeud *n = noeud_creer(N_CHERCHER, t->ligne, t->colonne, t->debut);
+    n->texte = grym_dupliquer(e->nom);
+    n->forme = mode;
+    if (cond) noeud_ajouter(n, cond);
+    n->fin = fin_jeton(&a->j[a->i - 1]);
+    return n;
+}
+
 static int est_nouveau(const Jeton *t) {
     return est_mot(t, "nouveau") || est_mot(t, "nouvel") || est_mot(t, "nouvelle");
 }
@@ -1041,6 +1196,29 @@ static Noeud *nouveau(Analyse *a) {
 
 static Noeud *base(Analyse *a) {
     Jeton *t = cour(a);
+    {
+        /* « le client conservé dont … » ; « le nombre de clients conservés dont … » (§ 16.4) */
+        size_t apres;
+        Classe *e = NULL;
+        if (a->article_force == ART_LE && (e = entite_conservee(a, a->i, 0, &apres)) != NULL)
+            return chercher(a, a->jeton_force, e, 1, apres);
+        if (a->echec) return NULL;
+        if (article_de(t) != ART_AUCUN && article_de(t) != ART_IMPLICITE
+            && (e = entite_conservee(a, a->i + 1, 0, &apres)) != NULL) {
+            Article art = article_de(t);
+            if (!t->synthetique && (art == ART_LE || art == ART_LA) && genre_de(art) != e->genre)
+                return erreur(a, t, grym_formater("« %s » est %s : « %s %s conservé%s ».", e->nom,
+                                                  e->genre == GENRE_FEMININ ? "féminin" : "masculin",
+                                                  e->genre == GENRE_FEMININ ? "la" : "le", e->nom,
+                                                  e->genre == GENRE_FEMININ ? "e" : ""));
+            return chercher(a, t, e, 1, apres);
+        }
+        if (a->echec) return NULL;
+        if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2))
+            && (e = entite_conservee(a, a->i + 3, 1, &apres)) != NULL)
+            return chercher(a, t, e, 2, apres);
+        if (a->echec) return NULL;
+    }
     if (t->type == J_DATE) {
         Noeud *n = feuille(N_DATE, t);
         avancer(a);
@@ -1314,6 +1492,21 @@ static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test
     for (size_t k = 0; k < NB_RELATIONS && !r; k++) {
         if (est_mot(t, RELATIONS[k].m)) { r = &RELATIONS[k]; g = GENRE_MASCULIN; }
         else if (est_mot(t, RELATIONS[k].f)) { r = &RELATIONS[k]; g = GENRE_FEMININ; }
+    }
+    if (!r && a->dont && sujet->type == N_CHAMP_DONT) {
+        /* « dont la licence est « A-12 » » : égalité (§ 16.4) */
+        Noeud *droite = expression(a);
+        if (!droite) { noeud_liberer(sujet); return NULL; }
+        Noeud *n = noeud_creer(N_COMPARAISON, sujet->ligne, sujet->colonne, sujet->debut);
+        n->op = '=';
+        n->forme = 3;   /* « est valeur » : réimprimé tel quel */
+        n->negation = negation;
+        n->op_ligne = test->ligne;
+        n->op_colonne = test->colonne;
+        noeud_ajouter(n, sujet);
+        noeud_ajouter(n, droite);
+        n->fin = droite->fin;
+        return n;
     }
     if (!r) { noeud_liberer(sujet); return erreur_inattendu(a, t); }
 
@@ -2299,10 +2492,83 @@ static Noeud *repeter(Analyse *a, int colonne) {
 }
 
 /* Pour chaque nom de début à fin [ par pas de pas ] , phrase | : bloc */
+/* « Pour chaque client conservé [dont …] [, par nom [décroissant]] : » (§ 16.4) */
+static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, const Classe *e, size_t apres) {
+    if (a->formule == 1)
+        return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
+    const Jeton *tnom = cour(a);
+    char *nom = grym_dupliquer(e->nom);
+    if (visible(a, nom)) {
+        erreur(a, tnom, grym_formater("« %s » existe déjà : renommez-le, car « Pour chaque %s %s » donne ce nom "
+                                      "à l'objet de chaque tour.", nom, nom,
+                                      e->genre == GENRE_FEMININ ? "conservée" : "conservé"));
+        free(nom);
+        return NULL;
+    }
+    a->i = apres;
+    Noeud *cond;
+    if (!clause_dont(a, e, &cond)) { free(nom); return NULL; }
+    Noeud *cherche = noeud_creer(N_CHERCHER, t->ligne, t->colonne, t->debut);
+    cherche->texte = grym_dupliquer(e->nom);
+    cherche->forme = 0;
+    if (cond) noeud_ajouter(cherche, cond);
+    if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "par")) {
+        avancer(a);
+        avancer(a);
+        size_t d = a->i, k = d;
+        if (a->j[k].type == J_CROCHETS) k++;
+        else while (mot_de_nom(a, k) && !est_mot(&a->j[k], "décroissant") && !est_mot(&a->j[k], "croissant")) k++;
+        if (k > d && article_de(&a->j[d]) != ART_AUCUN) d++;   /* « par le nom » */
+        char *champ = k > d ? (a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k)) : NULL;
+        const char *type = champ ? type_du_champ(a->portee, e, champ) : NULL;
+        if (!champ || !type || strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0 || !type_de_base(type)) {
+            erreur(a, &a->j[d], champ && !type
+                ? grym_formater("« %s » n'est pas un champ %s %s.", champ, e->genre == GENRE_FEMININ ? "de la" : "du", e->nom)
+                : grym_dupliquer("Tri attendu sur un champ de texte, de nombre, de date ou vrai ou faux : « , par nom »."));
+            free(champ);
+            free(nom);
+            noeud_liberer(cherche);
+            return NULL;
+        }
+        cherche->texte2 = champ;
+        a->i = k;
+        if (est_mot(cour(a), "décroissant")) { cherche->entier = 1; avancer(a); }
+        else if (est_mot(cour(a), "croissant")) avancer(a);
+    }
+    size_t sauve = a->portee->n;
+    portee_declarer(a->portee, nom, e->genre, t->ligne);
+    Symbole *objet = &a->portee->s[a->portee->n - 1];
+    objet->lecture_seule = 1;
+    int case_objet = objet->local = a->nb_locaux++;
+    int case_liste = a->nb_locaux++;
+    a->nb_locaux++;   /* rang dans la liste */
+    int forme = 0;
+    a->boucle++;
+    Noeud *corps = branche(a, colonne, "Pour chaque", &forme);
+    a->boucle--;
+    portee_tronquer(a->portee, sauve);
+    if (!corps) { noeud_liberer(cherche); free(nom); return NULL; }
+    Noeud *n = noeud_creer(P_POUR_CONSERVE, t->ligne, t->colonne, t->debut);
+    n->texte = nom;
+    n->local = case_objet;
+    n->entier = case_liste;
+    n->forme = forme;
+    noeud_ajouter(n, cherche);
+    noeud_ajouter(n, corps);
+    n->fin = corps->fin;
+    return n;
+}
+
 static Noeud *pour_chaque(Analyse *a, int colonne) {
     Jeton *t = cour(a);
     avancer(a);
     avancer(a);   /* chaque */
+    {
+        size_t apres;
+        Classe *e = entite_conservee(a, a->i, 0, &apres);
+        if (e) return pour_chaque_conserve(a, colonne, t, e, apres);
+        if (a->echec) return NULL;
+    }
     size_t d = a->i, k = d;
     if (a->j[k].type == J_CROCHETS) k++;
     else while (mot_de_nom(a, k) && !de_ou_d(&a->j[k]) && !est_mot(&a->j[k], "du")) k++;
@@ -3334,6 +3600,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.boucle = 0;
     a.nb_arrets = 0;
     a.a_completer = NULL;
+    a.dont = NULL;
 
     /* Colonne de référence : celle de la première phrase (les remarques ne comptent pas). */
     int colonne = 1;

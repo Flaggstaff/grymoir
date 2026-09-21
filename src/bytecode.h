@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.11).
+ * Spécification : docs/vm.md (révision 1.12).
  */
 #ifndef GRYM_BYTECODE_H
 #define GRYM_BYTECODE_H
@@ -42,14 +42,21 @@ typedef enum {
     I_LIRE_FICHIER,
     I_ENREGISTRER,
     I_CONSERVER,
-    I_SUPPRIMER
+    I_SUPPRIMER,
+    I_CHERCHER,
+    I_TAILLE_LISTE,
+    I_ELEMENT
 } CodeInstruction;
 
-#define I_DERNIER I_SUPPRIMER
+#define I_DERNIER I_ELEMENT
+
+/* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
+long requete_parametres(const char *descripteur);
 
 typedef enum { B_PROGRAMME = 0, B_CALCUL = 1, B_ACTION = 2 } SorteBloc;
 
-typedef enum { C_NOMBRE = 1, C_TEXTE = 2, C_BOOLEEN = 3, C_DATE = 4 } TypeConstante;   /* date : « 2026-09-21 » */
+/* date : « 2026-09-21 » ; recherche : descripteur « entité ␟ mode ␟ tri ␟ décroissant ␟ condition » */
+typedef enum { C_NOMBRE = 1, C_TEXTE = 2, C_BOOLEEN = 3, C_DATE = 4, C_RECHERCHE = 5 } TypeConstante;
 
 typedef struct {
     TypeConstante type;
