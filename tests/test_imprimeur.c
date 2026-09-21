@@ -130,6 +130,12 @@ int main(void) {
          "_classe _une facture\n    _un montant\n    _une date\n_fin\n_la f << _nouveau facture _avec\n"
          "    montant << 3\n_fin\nf.montant << f.montant × 2\n_afficher f\n");
 
+    LITT("Une personne a : un nom.\nUn membre est une personne. Un membre a : une licence.",
+         "Une personne a :\n    un nom.\nUn membre est une personne.\nUn membre a :\n    une licence.\n");
+    COMP("Une personne a : un nom.\nUn membre est une personne.\nUn invité est une personne.\nUn invité a : un hôte.",
+         "_classe _une personne\n    _un nom\n_fin\n_classe _un membre _est _une personne\n_fin\n"
+         "_classe _un invité _est _une personne\n    _un hôte\n_fin\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

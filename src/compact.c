@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.8), § 11.
+ * Spécification : docs/grammaire.md (révision 1.9), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -20,6 +20,9 @@ typedef struct {
     int profondeur;        /* profondeur de la ligne qui ouvre */
     const Jeton *mot;      /* pour les messages */
     int dans_cas;          /* Selon : un « _cas » ou « _autrement » a déjà ouvert un corps */
+    const Jeton *classe;   /* classe héritière : son nom et son article, pour la phrase des champs */
+    const Jeton *article;
+    int champs;            /* classe : champs déjà écrits */
 } Niveau;
 
 typedef struct {
@@ -266,6 +269,9 @@ static void ouvrir(Reecriture *r, Ouverture type, int profondeur, const Jeton *m
     r->pile[r->np].profondeur = profondeur;
     r->pile[r->np].mot = mot_;
     r->pile[r->np].dans_cas = 0;
+    r->pile[r->np].classe = NULL;
+    r->pile[r->np].article = NULL;
+    r->pile[r->np].champs = 0;
     r->np++;
 }
 
@@ -360,6 +366,11 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         return;
     }
     if (t->type == J_MOT_CLE && !strcmp(t->valeur, "fin") && haut && haut->type == O_CLASSE && f == d + 1) {
+        if (haut->classe && !haut->champs) {   /* héritière sans champ propre */
+            if (r->ns && r->s[r->ns - 1].ligne_fin < t->ligne) r->s[r->ns - 1].ligne_fin = t->ligne;
+            r->np--;
+            return;
+        }
         /* dernier champ : la virgule devient le point final */
         if (!r->ns || r->s[r->ns - 1].type != J_VIRGULE) {
             echouer(r, t, grym_dupliquer("Une classe déclare au moins un champ : « _un nom »."));
@@ -375,6 +386,15 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             echouer(r, t, grym_dupliquer("Champ attendu : « _un nom » ou « _une date »."));
             return;
         }
+        if (haut->classe && !haut->champs) {
+            /* « Un membre a : » : seconde phrase, après « Un membre est une personne. » */
+            mot(r, haut->article->valeur, t);
+            copier(r, haut->classe);
+            mot(r, "a", t);
+            emettre(r, J_DEUX_POINTS, NULL, t, 1);
+            fixer_retrait(r, premier, haut->profondeur);   /* la seconde phrase s'aligne sur la première */
+        }
+        haut->champs++;
         mot(r, t->valeur, t);
         copier(r, &r->e[d + 1]);
         emettre(r, J_VIRGULE, NULL, &r->e[d + 1], 1);
@@ -398,17 +418,30 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                && est_cle(&r->e[f - 3], "nouveau");
     if (avec) f--;
     if (t->type == J_MOT_CLE && !strcmp(t->valeur, "classe")) {
-        if (f != d + 3 || !(est_cle(&r->e[d + 1], "un") || est_cle(&r->e[d + 1], "une"))
+        int herite = f == d + 6 && est_cle(&r->e[d + 3], "est")
+                     && (est_cle(&r->e[d + 4], "un") || est_cle(&r->e[d + 4], "une")) && r->e[d + 5].type == J_CROCHETS;
+        if ((f != d + 3 && !herite) || !(est_cle(&r->e[d + 1], "un") || est_cle(&r->e[d + 1], "une"))
             || r->e[d + 2].type != J_CROCHETS) {
-            echouer(r, t, grym_dupliquer("Forme attendue : « _classe _un client »."));
+            echouer(r, t, grym_dupliquer("Forme attendue : « _classe _un client » ou « _classe _un membre _est _une personne »."));
             return;
         }
         mot(r, r->e[d + 1].valeur, t);
         copier(r, &r->e[d + 2]);
-        mot(r, "a", t);
-        emettre(r, J_DEUX_POINTS, NULL, &r->e[d + 2], 1);
+        if (herite) {
+            mot(r, "est", &r->e[d + 3]);
+            mot(r, r->e[d + 4].valeur, &r->e[d + 4]);
+            copier(r, &r->e[d + 5]);
+            point(r, f);
+        } else {
+            mot(r, "a", t);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[d + 2], 1);
+        }
         fixer_retrait(r, premier, prof);
         ouvrir(r, O_CLASSE, prof, t);
+        if (herite) {
+            r->pile[r->np - 1].classe = &r->e[d + 2];
+            r->pile[r->np - 1].article = &r->e[d + 1];
+        }
         return;
     }
     if (t->type == J_MOT_CLE) {

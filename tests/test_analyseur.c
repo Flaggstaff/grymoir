@@ -424,6 +424,24 @@ int main(void) {
     VE("Si vrai :\n    Un client a : un nom.", 2, 5, "au premier niveau");
     VE("Un client : un nom.", 1, 11, "« : » inattendu");
 
+    /* --- Héritage (§ 13.5) --- */
+    V("Une personne a : un nom.\nUn membre est une personne.\nUn membre a :\n    une licence.\n"
+      "Le m vaut un nouveau membre :\n    Le nom vaut « Ana ».\nAfficher nom du m.",
+      "(classe [personne] [nom])\n(classe [membre] (est [personne]) [licence])\n"
+      "(créer [m] (nouveau [membre] ([nom] «Ana»)))\n(afficher (champ [nom] [m]))");
+    V("Une personne a : un nom.\nUn membre est une personne. Un membre a : une licence.\nUn invité est une personne.",
+      "(classe [personne] [nom])\n(classe [membre] (est [personne]) [licence])\n(classe [invité] (est [personne]))");
+    V("Une chose a : un nom.\nUn outil est une chose.\nUn marteau est un outil.\nUn marteau a : un poids.",
+      "(classe [chose] [nom])\n(classe [outil] (est [chose]))\n(classe [marteau] (est [outil]) [poids])");
+    VE("Un membre est une personne.", 1, 19, "Classe « personne » inconnue");
+    VE("Une personne a : un nom.\nUn membre est un personne.", 2, 15, "« personne » est féminin : écrivez « une personne ».");
+    VE("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : un nom.", 3, 18,
+       "« nom » est déjà un champ hérité de « personne ».");
+    VE("Une personne a : un nom.\nUn membre est une personne.\nLe x vaut 1.\nUn membre a : une licence.", 4, 4,
+       "La classe « membre » existe déjà.");
+    VE("Une personne a : un nom.\nUn membre est une personne.\nLe m vaut un nouveau membre :\n    La licence vaut 1.", 4, 8,
+       "Un « membre » n'a pas de champ « licence ».");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

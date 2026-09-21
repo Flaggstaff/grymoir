@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.4).
+ * Spécification : docs/vm.md (révision 1.5).
  */
 #include "vm.h"
 #include "decimal.h"
@@ -24,10 +24,11 @@ typedef struct {
 } Valeur;
 
 /* Classe connue de la machine (grammaire, § 13). */
-typedef struct {
+typedef struct ClasseVM {
     char *nom;
     int feminin;
-    char **champs;
+    const struct ClasseVM *parent;
+    char **champs;        /* champs hérités d'abord, puis champs propres */
     size_t nb_champs;
 } ClasseVM;
 
@@ -448,6 +449,39 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         return 0;
     }
 
+    /* Classes du module : ajoutées à la machine ; une redéclaration l'emporte pour la suite.
+     * Les champs hérités sont recopiés en tête : un champ garde le même rang dans toute la lignée. */
+    for (size_t k = 0; k < module->nb_classes; k++) {
+        const ClasseModule *cm = &module->classes[k];
+        const ClasseVM *parent = NULL;
+        if (cm->parent) {
+            parent = classe_vm(m, cm->parent);
+            char *probleme = NULL;
+            if (!parent) probleme = grym_formater("Classe parente « %s » inconnue.", cm->parent);
+            for (size_t q = 0; parent && q < cm->nb_champs && !probleme; q++)
+                if (index_champ(parent, cm->champs[q]) >= 0)
+                    probleme = grym_formater("« %s » : champ déjà hérité de « %s ».", cm->champs[q], cm->parent);
+            if (probleme) {
+                diag->message = grym_formater("Bytecode invalide : %s", probleme);
+                free(probleme);
+                return 0;   /* rien n'est encore enregistré : aucune formule, aucun cadre */
+            }
+        }
+        size_t herites = parent ? parent->nb_champs : 0;
+        ClasseVM *c = grym_allouer(sizeof *c);
+        c->nom = grym_dupliquer(cm->nom);
+        c->feminin = cm->feminin;
+        c->parent = parent;
+        c->nb_champs = herites + cm->nb_champs;
+        c->champs = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof *c->champs);
+        for (size_t q = 0; q < herites; q++) c->champs[q] = grym_dupliquer(parent->champs[q]);
+        for (size_t q = 0; q < cm->nb_champs; q++) c->champs[herites + q] = grym_dupliquer(cm->champs[q]);
+        ClasseVM **t = grym_allouer((m->nb_classes + 1) * sizeof *t);
+        if (m->nb_classes) memcpy(t, m->classes, m->nb_classes * sizeof *t);
+        free(m->classes);
+        m->classes = t;
+        m->classes[m->nb_classes++] = c;
+    }
     /* Enregistrement des formules (docs/vm.md, § 5) : une formule du même nom est remplacée. */
     size_t nb_avant = m->nb_formules;
     Remplacement *remplaces = grym_allouer(module->nb * sizeof *remplaces);
@@ -475,21 +509,6 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
     }
 
-    /* Classes du module : ajoutées à la machine ; une redéclaration l'emporte pour la suite. */
-    for (size_t k = 0; k < module->nb_classes; k++) {
-        const ClasseModule *cm = &module->classes[k];
-        ClasseVM *c = grym_allouer(sizeof *c);
-        c->nom = grym_dupliquer(cm->nom);
-        c->feminin = cm->feminin;
-        c->nb_champs = cm->nb_champs;
-        c->champs = grym_allouer((cm->nb_champs ? cm->nb_champs : 1) * sizeof *c->champs);
-        for (size_t q = 0; q < cm->nb_champs; q++) c->champs[q] = grym_dupliquer(cm->champs[q]);
-        ClasseVM **t = grym_allouer((m->nb_classes + 1) * sizeof *t);
-        if (m->nb_classes) memcpy(t, m->classes, m->nb_classes * sizeof *t);
-        free(m->classes);
-        m->classes = t;
-        m->classes[m->nb_classes++] = c;
-    }
     if (m->seuil == 0) m->seuil = SEUIL_RAMASSAGE;
 
     m->epoque++;

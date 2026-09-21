@@ -142,6 +142,11 @@ int main(void) {
     EXEC("_classe _un nœud\n    _un suivant\n    _une valeur\n_fin\n_le a << _nouveau nœud _avec\n    valeur << 1\n_fin\n"
          "a.suivant << _nouveau nœud _avec\n    valeur << 2\n_fin\n_afficher a.suivant.valeur\n", "2\n");
 
+    EXEC("_classe _une personne\n    _un nom\n_fin\n_classe _un membre _est _une personne\n    _une licence\n_fin\n"
+         "_classe _un invité _est _une personne\n_fin\n_le m << _nouveau membre _avec\n    nom << « Ana »\n"
+         "    licence << 1\n_fin\n_afficher m.nom ; m.licence ; m\n", "Ana 1 un membre\n");
+    ERR("_classe _un membre _est _une personne\n_fin\n", 1, 30, "Classe « personne » inconnue");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");
@@ -184,6 +189,10 @@ int main(void) {
                  "Une facture a :\n    un montant.\nLa f vaut une nouvelle facture :\n    Le montant vaut 3.\n"
                  "Le montant de f devient montant de f × 2.\nAfficher montant de f.\n");
     ERR("_classe _un client\n    _un nom\n", 1, 1, "« _fin » manquant");
+    ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_classe _un membre _est _une personne\n    _une licence\n_fin\n"
+                 "_classe _un invité _est _une personne\n_fin\n",
+                 "Une personne a :\n    un nom.\nUn membre est une personne.\nUn membre a :\n    une licence.\n"
+                 "Un invité est une personne.\n");
     ERR("_classe _un client\n_fin\n", 2, 1, "au moins un champ");
 
     printf("%d/%d tests réussis\n", total - echecs, total);

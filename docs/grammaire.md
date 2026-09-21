@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.8 de la spécification, révisée le 21 septembre 2026.
+Version 1.9 de la spécification, révisée le 21 septembre 2026.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -274,7 +274,8 @@ phrase       = création | modification | affichage | si | remarque
              | calcul | action | rendre | appel-action
              | tant-que | répéter | pour-chaque | sortir | passer | selon
              | classe | modif-champ ;
-classe       = un nom "a" ":" un nom { "," un nom } "." ;
+classe       = un nom "a" ":" un nom { "," un nom } "."
+             | un nom "est" un nom "." [ un nom "a" ":" un nom { "," un nom } "." ] ;   (* même classe *)
 modif-champ  = article nom de base "devient" valeur ( "." | ":" initialisation ) ;
 initialisation = { article nom "vaut" valeur "." } ;      (* indentée, après « un nouveau … : » *)
 tant-que     = "Tant" "que" valeur branche ;
@@ -370,6 +371,7 @@ Limites de cette notation :
 | Cas après Autrement | « « Autrement » vient après tous les cas. » |
 | Interruption (exécution) | « Interrompu (Ctrl+C). » |
 | Classe inconnue | « Classe « fournisseur » inconnue. » |
+| Champ hérité redéclaré | « « nom » est déjà un champ hérité de « personne ». » |
 | Accord de « nouveau » | « « client » est masculin : écrivez « un nouveau client ». » |
 | Champ modifié avec `vaut` | « Un champ se modifie avec « devient » : « Le solde du client devient … ». » |
 | Champ absent (exécution) | « Un client n'a pas de champ « montant ». » |
@@ -575,6 +577,7 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `Sortir de la boucle.`, `Passer au tour suivant.` | `_sortir`, `_passer` |
 | `Selon x :` / `Cas 1 ou de 2 à 3` / `Cas supérieur à 10` / `Autrement` | `_selon x` / `_cas 1 _ou _de 2 _à 3` / `_cas > 10` / `_autrement` … `_fin` |
 | `Un client a : un nom, une date.` | `_classe _un client` / `_un nom` / `_une date` / `_fin` |
+| `Un membre est une personne.` + `Un membre a : une licence.` | `_classe _un membre _est _une personne` / `_une licence` / `_fin` |
 | `un nouveau client`, `une nouvelle facture` | `_nouveau client`, `_nouveau facture` |
 | `Le c vaut un nouveau client :` + `Le nom vaut « a ».` | `_le c << _nouveau client _avec` / `nom << « a »` / `_fin` |
 | `le nom du client de la facture` | `facture.client.nom` |
@@ -664,9 +667,25 @@ Afficher le nom du client de la facture.            →  nom de (client de (fact
 - Un objet vit tant qu'un nom, un champ ou une case locale le désigne ; le ramasse-miettes libère les autres, même quand ils forment des cycles.
 - Une modification de champ passe par le journal : une saisie ratée rend à chaque champ sa valeur d'avant (§ 3.3).
 
-### 13.5 À venir
+### 13.5 Héritage
 
-L'héritage (`Un membre est une personne.`), les méthodes (formules choisies selon la classe de leur paramètre) et les aptitudes (`Une chose horodatée a :`) suivent, dans cet ordre.
+```
+Une personne a :
+    un nom.
+Un membre est une personne.
+Un membre a :
+    une licence.
+```
+
+- Une classe hérite d'une seule classe, déjà déclarée (charte, art. 6). L'article s'accorde avec la classe parente : `Un membre est une personne.`
+- Ses champs propres se déclarent dans la phrase qui suit immédiatement, avec `a :`. Sans cette phrase, la classe n'a que les champs hérités. Plus loin, redéclarer la classe est une erreur.
+- Une classe a les champs de toute sa lignée. Un champ propre ne reprend pas le nom d'un champ hérité.
+- Un objet d'une classe héritière s'initialise et se lit avec tous ses champs, hérités compris.
+- En forme compacte : `_classe _un membre _est _une personne`, puis les champs propres et `_fin`.
+
+### 13.6 À venir
+
+Les méthodes (formules choisies selon la classe de leur paramètre) et les aptitudes (`Une chose horodatée a :`) suivent, dans cet ordre.
 
 ---
 
@@ -683,3 +702,4 @@ L'héritage (`Un membre est une personne.`), les méthodes (formules choisies se
 | 1.6 | 2026-09-21 | Nouveaux § 11 (forme compacte : règles de lecture, table des correspondances) et § 12 (forme canonique, garanties de la traduction). `grym formater`, `grym traduire` vers la forme compacte |
 | 1.7 | 2026-09-21 | § 11 : lecture de la forme compacte (réécriture en phrases littéraires, positions conservées), outils, suffixes de comparaison, instructions sur plusieurs lignes, limite des messages. § 12 : garanties vérifiées |
 | 1.8 | 2026-09-21 | Nouveau § 13 : classes, création d'objets (`un nouveau`, bloc d'initialisation), champs (`le solde du client`, `devient`), identité, ramasse-miettes. Les textes deviennent des valeurs. Correspondances compactes |
+| 1.9 | 2026-09-21 | § 13.5 : héritage simple (`Un membre est une personne.`, champs propres dans la phrase suivante), forme compacte `_est` |

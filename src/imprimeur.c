@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.8), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.9), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "decimal.h"
@@ -648,14 +648,30 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         im->nb = sauve;
         return;
     }
-    case P_CLASSE:
-        retenir(im, n->texte, n->forme == 2 ? G_FEMININ : G_MASCULIN);
+    case P_CLASSE: {
+        int fem = (n->forme & 3) == 2;
+        retenir(im, n->texte, fem ? G_FEMININ : G_MASCULIN);
+        int fem_parent = n->texte2 && genre_de_nom(im, n->texte2) == G_FEMININ;
         if (c) {
-            aj(im, n->forme == 2 ? "_classe _une " : "_classe _un ");
+            aj(im, fem ? "_classe _une " : "_classe _un ");
             ecrire_nom(im, n->texte, 0);
+            if (n->texte2) {
+                aj(im, fem_parent ? " _est _une " : " _est _un ");
+                ecrire_nom(im, n->texte2, 0);
+            }
             aj(im, "\n");
         } else {
-            aj(im, n->forme == 2 ? "Une " : "Un ");
+            if (n->texte2) {
+                /* « Un membre est une personne. », puis ses champs dans une seconde phrase */
+                aj(im, fem ? "Une " : "Un ");
+                ecrire_nom(im, n->texte, 0);
+                aj(im, fem_parent ? " est une " : " est un ");
+                ecrire_nom(im, n->texte2, 0);
+                aj(im, ".\n");
+                if (!n->nb_enfants) return;
+                retrait(im, niveau);
+            }
+            aj(im, fem ? "Une " : "Un ");
             ecrire_nom(im, n->texte, 0);
             aj(im, " a :\n");
         }
@@ -669,6 +685,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         }
         if (c) { retrait(im, niveau); aj(im, "_fin\n"); }
         return;
+    }
     case P_MODIF_CHAMP: {
         const Noeud *bloc_init = nouveau_en_bloc(n->enfants[1]);
         if (c) {

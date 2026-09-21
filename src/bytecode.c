@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.4).
+ * Spécification : docs/vm.md (révision 1.5).
  */
 #include "bytecode.h"
 #include "decimal.h"
@@ -336,7 +336,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 9)                                 */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 4   /* versions 1 et 2 (un seul bloc) et 3 (sans classes) restent lisibles */
+#define VERSION_FORMAT 5   /* versions 1 et 2 (un seul bloc), 3 (sans classes) et 4 (sans héritage) restent lisibles */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -407,6 +407,7 @@ unsigned char *module_serialiser(const Module *m, size_t *taille) {
         const ClasseModule *c = &m->classes[k];
         ecrire_chaine(&o, c->nom);
         ecrire_u8(&o, c->feminin ? 1u : 0u);
+        ecrire_chaine(&o, c->parent ? c->parent : "");
         ecrire_u32(&o, (uint32_t)c->nb_champs);
         for (size_t q = 0; q < c->nb_champs; q++) ecrire_chaine(&o, c->champs[q]);
     }
@@ -570,12 +571,16 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
         for (uint32_t k = 0; k < nc; k++) {
             char *nom = lire_chaine(&l);
             uint32_t fem = lire_u(&l, 1);
+            char *parent = version >= 5 ? lire_chaine(&l) : grym_dupliquer("");
             uint32_t nch = lire_u(&l, 4);
-            if (!nom || !*nom || l.echec || fem > 1 || nch > (taille - l.pos) / 4) {
+            if (!nom || !*nom || !parent || l.echec || fem > 1 || nch > (taille - l.pos) / 4) {
                 free(nom);
+                free(parent);
                 return echec_module(m, erreur, grym_formater("classe %u illisible.", (unsigned)k));
             }
             ClasseModule *c = module_ajouter_classe(m, nom, (int)fem);
+            if (*parent) c->parent = parent;
+            else free(parent);
             free(nom);
             for (uint32_t q = 0; q < nch; q++) {
                 char *ch = lire_chaine(&l);
@@ -618,6 +623,7 @@ ClasseModule *module_ajouter_classe(Module *m, const char *nom, int feminin) {
     ClasseModule *c = &m->classes[m->nb_classes++];
     c->nom = grym_dupliquer(nom);
     c->feminin = feminin;
+    c->parent = NULL;
     c->champs = NULL;
     c->nb_champs = 0;
     return c;
@@ -634,6 +640,7 @@ void module_detruire(Module *m) {
     free(m->blocs);
     for (size_t k = 0; k < m->nb_classes; k++) {
         free(m->classes[k].nom);
+        free(m->classes[k].parent);
         for (size_t q = 0; q < m->classes[k].nb_champs; q++) free(m->classes[k].champs[q]);
         free(m->classes[k].champs);
     }

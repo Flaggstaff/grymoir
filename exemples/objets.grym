@@ -1,6 +1,8 @@
 Remarque : classes, objets et champs
+Une personne a :
+    un nom.
+Un client est une personne.
 Un client a :
-    un nom,
     un solde.
 Une facture a :
     un client,

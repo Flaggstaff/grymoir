@@ -17,6 +17,7 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->ligne_fin = ligne;
     n->article = ART_AUCUN;
     n->texte = NULL;
+    n->texte2 = NULL;
     n->enfants = NULL;
     n->nb_enfants = 0;
     n->ligne = ligne;
@@ -43,6 +44,7 @@ void noeud_liberer(Noeud *n) {
     for (size_t i = 0; i < n->nb_enfants; i++) noeud_liberer(n->enfants[i]);
     free(n->enfants);
     free(n->texte);
+    free(n->texte2);
     free(n);
 }
 
@@ -219,6 +221,11 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, "(classe [");
         chaine_ajouter(c, n->texte);
         chaine_ajouter(c, "]");
+        if (n->texte2) {
+            chaine_ajouter(c, " (est [");
+            chaine_ajouter(c, n->texte2);
+            chaine_ajouter(c, "])");
+        }
         for (size_t k = 0; k < n->nb_enfants; k++) {
             chaine_ajouter(c, " ");
             decrire(n->enfants[k], c);

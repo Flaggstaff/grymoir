@@ -285,6 +285,21 @@ int main(void) {
         portee_detruire(p);
     }
 
+    /* --- Héritage --- */
+    PROG("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : une licence.\n"
+         "Le m vaut un nouveau membre :\n    Le nom vaut « Ana ».\n    La licence vaut 42.\n"
+         "Le nom du m devient « Anna ».\nAfficher nom du m puis licence du m puis m.", "Anna 42 un membre");
+    PROG("Une chose a : un nom.\nUn outil est une chose. Un outil a : un usage.\nUn marteau est un outil. Un marteau a : un poids.\n"
+         "Le h vaut un nouveau marteau :\n    Le nom vaut « M ».\n    L'usage vaut « clouer ».\n    Le poids vaut 2.\n"
+         "Afficher nom du h puis usage du h puis poids du h.", "M clouer 2");
+    PROG("Une personne a : un nom.\nUn membre est une personne.\nUn invité est une personne.\n"
+         "Pour saluer une personne :\n    Afficher « Bonjour » puis nom de personne.\n"
+         "Le m vaut un nouveau membre :\n    Le nom vaut « Ana ».\nLe i vaut un nouvel invité :\n    Le nom vaut « Bo ».\n"
+         "Saluer m.\nSaluer i.", "Bonjour Ana\nBonjour Bo");
+    PROG("Une personne a : un nom.\nUne ville a : un nom.\nUn membre est une personne. Un membre a : une ville.\n"
+         "Le m vaut un nouveau membre.\nLa ville du m devient une nouvelle ville :\n    Le nom vaut « Bulle ».\n"
+         "Afficher nom de la ville du m.", "Bulle");
+
     /* --- Ramasse-miettes : cycles et objets abandonnés --- */
     {
         total++;

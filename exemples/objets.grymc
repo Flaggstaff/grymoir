@@ -1,6 +1,8 @@
 # classes, objets et champs
-_classe _un client
+_classe _une personne
     _un nom
+_fin
+_classe _un client _est _une personne
     _un solde
 _fin
 _classe _une facture
