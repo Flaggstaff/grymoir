@@ -1,0 +1,37 @@
+# aptitudes, adoptées comme des adjectifs
+_aptitude horodatée
+    _une date
+_fin
+_aptitude numérotée
+    _un numéro
+_fin
+
+_classe _une personne
+    _un nom
+_fin
+_classe _un membre _est _une personne _adopte horodatée ; numérotée
+_fin
+_classe _un document _est _une chose _adopte horodatée
+_fin
+
+_action décrire(_une chose_horodatée)
+    _afficher « créé le » ; chose.date
+_fin
+_action décrire(_une chose_numérotée)
+    _afficher « numéro » ; chose.numéro
+_fin
+_action décrire(_un membre)
+    _afficher membre.nom ; « numéro » ; membre.numéro ; « depuis le » ; membre.date
+_fin
+
+_le m << _nouveau membre _avec
+    nom << « Ana »
+    date << « 1er mars »
+    numéro << 12
+_fin
+_le d << _nouveau document _avec
+    date << « 3 avril »
+_fin
+
+décrire(m)
+décrire(d)

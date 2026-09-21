@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.6).
+ * Spécification : docs/vm.md (révision 1.7).
  */
 #ifndef GRYM_BYTECODE_H
 #define GRYM_BYTECODE_H
@@ -108,7 +108,10 @@ char *bloc_desassembler(const Bloc *b);
 typedef struct {
     char *nom;
     int feminin;
+    int aptitude;         /* 1 : aptitude (grammaire, § 13.7) */
     char *parent;         /* classe dont elle hérite, ou NULL */
+    char **aptitudes;     /* aptitudes adoptées */
+    size_t nb_aptitudes;
     char **champs;        /* champs propres */
     size_t nb_champs;
 } ClasseModule;
@@ -125,6 +128,7 @@ Module *module_creer(void);
 void module_ajouter(Module *m, Bloc *b);
 ClasseModule *module_ajouter_classe(Module *m, const char *nom, int feminin);
 void classe_ajouter_champ(ClasseModule *c, const char *champ);
+void classe_ajouter_aptitude(ClasseModule *c, const char *aptitude);
 void module_detruire(Module *m);          /* ignore les entrées mises à NULL */
 int module_verifier(const Module *m, char **erreur);
 

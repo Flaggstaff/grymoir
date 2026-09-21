@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.10), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.11), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -35,8 +35,13 @@ typedef struct {
 
 /* Classe déclarée (§ 11 de la charte, grammaire § 13) : son nom, son genre, ses champs. */
 typedef struct {
-    char *nom;
+    char *nom;         /* pour une aptitude : sa forme féminine (« horodatée ») */
     Genre genre;
+    int aptitude;      /* 1 : aptitude (§ 13.7), pas une classe */
+    char *masculin;    /* aptitude : forme masculine (« horodaté ») */
+    char **aptitudes;  /* classe : aptitudes adoptées (formes féminines) */
+    size_t nb_aptitudes;
+    int ligne;         /* ligne de déclaration */
     char *parent;      /* classe dont elle hérite, ou NULL */
     char **champs;     /* champs propres (les champs hérités restent dans la classe parente) */
     Genre *genres;     /* genre de chaque champ */
@@ -61,6 +66,9 @@ Portee *portee_creer(void) {
 
 static void classe_liberer(Classe *c) {
     free(c->nom);
+    free(c->masculin);
+    for (size_t k = 0; k < c->nb_aptitudes; k++) free(c->aptitudes[k]);
+    free(c->aptitudes);
     free(c->parent);
     for (size_t k = 0; k < c->nb; k++) free(c->champs[k]);
     free(c->champs);
@@ -108,6 +116,12 @@ static void portee_copier(Portee *dst, const Portee *src) {
         Classe *d = &dst->classes[i];
         d->nom = grym_dupliquer(c->nom);
         d->genre = c->genre;
+        d->aptitude = c->aptitude;
+        d->ligne = c->ligne;
+        d->masculin = c->masculin ? grym_dupliquer(c->masculin) : NULL;
+        d->nb_aptitudes = c->nb_aptitudes;
+        d->aptitudes = c->nb_aptitudes ? grym_allouer(c->nb_aptitudes * sizeof *d->aptitudes) : NULL;
+        for (size_t k = 0; k < c->nb_aptitudes; k++) d->aptitudes[k] = grym_dupliquer(c->aptitudes[k]);
         d->parent = c->parent ? grym_dupliquer(c->parent) : NULL;
         d->nb = c->nb;
         d->champs = grym_allouer((c->nb ? c->nb : 1) * sizeof *d->champs);
@@ -121,19 +135,38 @@ static void portee_copier(Portee *dst, const Portee *src) {
 
 static Classe *classe_de(Portee *p, const char *nom) {
     for (size_t i = 0; i < p->nb_classes; i++)
-        if (strcmp(p->classes[i].nom, nom) == 0) return &p->classes[i];
+        if (!p->classes[i].aptitude && strcmp(p->classes[i].nom, nom) == 0) return &p->classes[i];
     return NULL;
 }
 
-/* Champ de la classe ou d'une classe dont elle hérite ; *g reçoit son genre, *origine la classe qui le déclare. */
+/* Aptitude désignée par l'une de ses formes ; *feminin reçoit 1 si c'est la forme féminine. */
+static Classe *aptitude_de(Portee *p, const char *forme, int *feminin) {
+    for (size_t i = 0; i < p->nb_classes; i++) {
+        Classe *c = &p->classes[i];
+        if (!c->aptitude) continue;
+        if (strcmp(c->nom, forme) == 0) { if (feminin) *feminin = 1; return c; }
+        if (strcmp(c->masculin, forme) == 0) { if (feminin) *feminin = 0; return c; }
+    }
+    return NULL;
+}
+
+static int champ_propre(const Classe *c, const char *nom, Genre *g) {
+    for (size_t k = 0; k < c->nb; k++)
+        if (strcmp(c->champs[k], nom) == 0) {
+            if (g) *g = c->genres[k];
+            return 1;
+        }
+    return 0;
+}
+
+/* Champ de la classe, de ses aptitudes ou de sa lignée ; *g reçoit son genre, *origine qui le déclare. */
 static int classe_champ(Portee *p, const Classe *c, const char *nom, Genre *g, const Classe **origine) {
     while (c) {
-        for (size_t k = 0; k < c->nb; k++)
-            if (strcmp(c->champs[k], nom) == 0) {
-                if (g) *g = c->genres[k];
-                if (origine) *origine = c;
-                return 1;
-            }
+        if (champ_propre(c, nom, g)) { if (origine) *origine = c; return 1; }
+        for (size_t k = 0; k < c->nb_aptitudes; k++) {
+            const Classe *ap = aptitude_de(p, c->aptitudes[k], NULL);
+            if (ap && champ_propre(ap, nom, g)) { if (origine) *origine = ap; return 1; }
+        }
         c = c->parent ? classe_de(p, c->parent) : NULL;
     }
     return 0;
@@ -1730,6 +1763,17 @@ static Noeud *parametres(Analyse *a, size_t d, size_t f, int avec_de) {
             return erreur(a, &a->j[debut], grym_dupliquer("Un paramètre ne commence pas par un article : écrivez « un nombre »."));
         }
         char *nom = a->j[debut].type == J_CROCHETS ? grym_dupliquer(a->j[debut].valeur) : cle(a, debut, k);
+        char *aptitude = NULL;
+        if (strncmp(nom, "chose ", 6) == 0) {
+            /* « une chose horodatée » : paramètre nommé « chose », de l'aptitude « horodatée » (§ 13.7) */
+            int feminin;
+            Classe *ap = aptitude_de(a->portee, nom + 6, &feminin);
+            if (ap && (feminin || tun->synthetique)) {
+                aptitude = grym_dupliquer(ap->nom);
+                free(nom);
+                nom = grym_dupliquer("chose");
+            }
+        }
         for (size_t q = 0; q < liste->nb_enfants; q++)
             if (strcmp(liste->enfants[q]->texte, nom) == 0) {
                 noeud_liberer(liste);
@@ -1739,6 +1783,7 @@ static Noeud *parametres(Analyse *a, size_t d, size_t f, int avec_de) {
             }
         Noeud *p = noeud_creer(N_NOM, tun->ligne, tun->colonne, tun->debut);
         p->texte = nom;
+        p->texte2 = aptitude;
         p->forme = g == GENRE_FEMININ ? 2 : 1;
         noeud_ajouter(liste, p);
         if (k < f && est_mot(&a->j[k], "et")) { k++; continue; }
@@ -1762,7 +1807,9 @@ static char *version_de_formule(Analyse *a, const char *nom, Sorte sorte, const 
                                 const Jeton *t, int *refus) {
     *refus = 0;
     char *classe = NULL;
-    if (params->nb_enfants && classe_de(a->portee, params->enfants[0]->texte))
+    if (params->nb_enfants && params->enfants[0]->texte2)
+        classe = grym_dupliquer(params->enfants[0]->texte2);          /* aptitude */
+    else if (params->nb_enfants && classe_de(a->portee, params->enfants[0]->texte))
         classe = grym_dupliquer(params->enfants[0]->texte);
     for (size_t i = 0; i < a->portee->n; i++) {
         const Symbole *s = &a->portee->s[i];
@@ -2318,6 +2365,66 @@ static Noeud *selon(Analyse *a, int colonne) {
 /* Classes et objets (§ 13)                                         */
 /* ---------------------------------------------------------------- */
 
+/* Liste des champs « un nom, une date. » ; base : classe (avec lignée et aptitudes) dont
+ * les champs ne peuvent pas être repris, ou NULL. */
+static int lire_champs(Analyse *a, Noeud *n, const Classe *base) {
+    for (;;) {
+        Jeton *u = cour(a);
+        Genre gc;
+        attendre_mot(a, a->i, "un", 2);
+        attendre_mot(a, a->i, "une", 3);
+        if (!est_un(u, &gc)) {
+            erreur(a, u, grym_dupliquer("Champ attendu : « un nom », « une date »."));
+            return 0;
+        }
+        avancer(a);
+        size_t dc = a->i, kc = dc;
+        if (a->j[kc].type == J_CROCHETS) kc++;
+        else while (mot_de_nom(a, kc)) kc++;
+        if (kc == dc) {
+            erreur(a, cour(a), grym_dupliquer("Nom de champ attendu après « un »."));
+            return 0;
+        }
+        if (article_de(&a->j[dc]) != ART_AUCUN) {
+            erreur(a, &a->j[dc], grym_dupliquer("Un nom de champ ne commence pas par un article."));
+            return 0;
+        }
+        char *champ = a->j[dc].type == J_CROCHETS ? grym_dupliquer(a->j[dc].valeur) : cle(a, dc, kc);
+        char *probleme = NULL;
+        Genre autre;
+        for (size_t q = 0; q < n->nb_enfants && !probleme; q++)
+            if (strcmp(n->enfants[q]->texte, champ) == 0) probleme = grym_formater("Champ « %s » déjà nommé.", champ);
+        Symbole *sy = visible(a, champ);
+        if (!probleme && sy && sy->sorte != S_VARIABLE)
+            probleme = grym_formater("« %s » est %s : un champ ne peut pas porter ce nom.", champ,
+                                     sy->sorte == S_CALCUL ? "un calcul" : "une action");
+        const Classe *origine = NULL;
+        if (!probleme && base && classe_champ(a->portee, base, champ, NULL, &origine))
+            probleme = grym_formater("« %s » est déjà un champ %s « %s ».", champ,
+                                     origine->aptitude ? "de l'aptitude" : "hérité de", origine->nom);
+        if (!probleme && champ_connu(a->portee, champ, &autre) && autre != gc)
+            probleme = grym_formater("« %s » est déjà un champ %s dans une autre classe.", champ,
+                                     autre == GENRE_MASCULIN ? "masculin" : "féminin");
+        if (probleme) {
+            free(champ);
+            erreur(a, &a->j[dc], probleme);
+            return 0;
+        }
+        Noeud *c = noeud_creer(N_NOM, u->ligne, u->colonne, u->debut);
+        c->texte = champ;
+        c->forme = gc == GENRE_FEMININ ? 2 : 1;
+        noeud_ajouter(n, c);
+        a->i = kc;
+        attendre(a, A_POINT);
+        attendre_mot(a, a->i, ",", 1);
+        if (cour(a)->type == J_VIRGULE) { avancer(a); continue; }
+        if (cour(a)->type == J_POINT) { avancer(a); break; }
+        erreur_inattendu(a, cour(a));
+        return 0;
+    }
+    return 1;
+}
+
 /* Nouvelle classe dans la portée (conservée d'une saisie à l'autre). */
 static Classe *ajouter_classe(Portee *p, const char *nom, Genre g, const char *parent) {
     Classe *t = grym_allouer((p->nb_classes + 1) * sizeof *t);
@@ -2328,10 +2435,73 @@ static Classe *ajouter_classe(Portee *p, const char *nom, Genre g, const char *p
     c->nom = grym_dupliquer(nom);
     c->genre = g;
     c->parent = parent ? grym_dupliquer(parent) : NULL;
+    c->aptitude = 0;
+    c->masculin = NULL;
+    c->aptitudes = NULL;
+    c->nb_aptitudes = 0;
+    c->ligne = 0;
     c->champs = NULL;
     c->genres = NULL;
     c->nb = 0;
     return c;
+}
+
+/* Forme masculine régulière : « horodatée » → « horodaté ». */
+static char *masculin_regulier(const char *feminin) {
+    size_t l = strlen(feminin);
+    if (l > 1 && feminin[l - 1] == 'e') return grym_formater("%.*s", (int)(l - 1), feminin);
+    return grym_dupliquer(feminin);
+}
+
+/* « Une chose horodatée a : » ; forme masculine irrégulière entre parenthèses : « Une chose active (actif) a : ». */
+static Noeud *definition_aptitude(Analyse *a, const Jeton *tun) {
+    if (!tun->synthetique && !est_mot(tun, "une"))
+        return erreur(a, tun, grym_dupliquer("« chose » est féminin : « Une chose horodatée a : »."));
+    avancer(a);   /* chose */
+    Jeton *tadj = cour(a);
+    if (!(tadj->type == J_CROCHETS || (tadj->type == J_MOT && !est_reserve(tadj) && !est_mot(tadj, "a"))))
+        return erreur(a, tadj, grym_dupliquer("Adjectif attendu : « Une chose horodatée a : »."));
+    char *fem = grym_dupliquer(tadj->valeur);
+    avancer(a);
+    char *masc = NULL;
+    if (cour(a)->type == J_PAR_OUV) {
+        Jeton *tm = voir(a, 1);
+        if (!(tm->type == J_MOT || tm->type == J_CROCHETS) || voir(a, 2)->type != J_PAR_FERM) {
+            free(fem);
+            return erreur(a, cour(a), grym_dupliquer("Forme masculine attendue entre parenthèses : « (actif) »."));
+        }
+        masc = grym_dupliquer(tm->valeur);
+        avancer(a); avancer(a); avancer(a);
+    }
+    char *probleme = NULL;
+    if (aptitude_de(a->portee, fem, NULL) || (masc && aptitude_de(a->portee, masc, NULL)))
+        probleme = grym_formater("L'aptitude « %s » existe déjà.", fem);
+    else if (classe_de(a->portee, fem))
+        probleme = grym_formater("« %s » est déjà une classe.", fem);
+    if (!probleme && (!est_mot(cour(a), "a") || voir(a, 1)->type != J_DEUX_POINTS)) {
+        free(fem);
+        free(masc);
+        attendre_mot(a, a->i, "a :", 3);
+        return erreur_inattendu(a, cour(a));
+    }
+    if (probleme) { free(fem); free(masc); return erreur(a, tadj, probleme); }
+    avancer(a); avancer(a);
+    Noeud *n = noeud_creer(P_APTITUDE, tun->ligne, tun->colonne, tun->debut);
+    n->texte = fem;
+    n->texte2 = masc;
+    if (!lire_champs(a, n, NULL)) { noeud_liberer(n); return NULL; }
+    Classe *c = ajouter_classe(a->portee, fem, GENRE_FEMININ, NULL);
+    c->aptitude = 1;
+    c->masculin = masc ? grym_dupliquer(masc) : masculin_regulier(fem);
+    c->ligne = tun->ligne;
+    c->nb = n->nb_enfants;
+    c->champs = grym_allouer((c->nb ? c->nb : 1) * sizeof *c->champs);
+    c->genres = grym_allouer((c->nb ? c->nb : 1) * sizeof *c->genres);
+    for (size_t q = 0; q < c->nb; q++) {
+        c->champs[q] = grym_dupliquer(n->enfants[q]->texte);
+        c->genres[q] = n->enfants[q]->forme == 2 ? GENRE_FEMININ : GENRE_MASCULIN;
+    }
+    return n;
 }
 
 /* « Un membre est une personne. » (§ 13.5) */
@@ -2345,7 +2515,14 @@ static Noeud *heritage(Analyse *a, const Jeton *tun, Genre g, char *nom, size_t 
     avancer(a);
     size_t d = a->i, f = d;
     Classe *parent = NULL;
-    if (a->j[d].type == J_CROCHETS) {
+    int chose = est_mot(&a->j[d], "chose");
+    if (chose) {
+        f = d + 1;
+        if (!tp->synthetique && gp != GENRE_FEMININ) {
+            free(nom);
+            return erreur(a, tp, grym_dupliquer("« chose » est féminin : écrivez « une chose »."));
+        }
+    } else if (a->j[d].type == J_CROCHETS) {
         parent = classe_de(a->portee, a->j[d].valeur);
         f = d + 1;
     } else {
@@ -2358,7 +2535,7 @@ static Noeud *heritage(Analyse *a, const Jeton *tun, Genre g, char *nom, size_t 
             if (parent) break;
         }
     }
-    if (!parent) {
+    if (!parent && !chose) {
         size_t q = d + 1;
         while (q < a->n && mot_de_nom(a, q)) q++;
         char *p = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, q);
@@ -2367,20 +2544,69 @@ static Noeud *heritage(Analyse *a, const Jeton *tun, Genre g, char *nom, size_t 
         free(nom);
         return NULL;
     }
-    if (!tp->synthetique && gp != parent->genre) {
+    if (parent && !tp->synthetique && gp != parent->genre) {
         erreur(a, tp, grym_formater("« %s » est %s : écrivez « %s %s ».", parent->nom,
                                     parent->genre == GENRE_FEMININ ? "féminin" : "masculin",
                                     parent->genre == GENRE_FEMININ ? "une" : "un", parent->nom));
         free(nom);
         return NULL;
     }
+    /* Aptitudes adoptées : adjectifs accordés au nom qu'ils suivent (§ 13.7). */
     a->i = f;
-    if (!fin_phrase(a, 0)) { free(nom); return NULL; }
+    Genre gn = chose ? GENRE_FEMININ : parent->genre;
     Noeud *n = noeud_creer(P_CLASSE, tun->ligne, tun->colonne, tun->debut);
     n->texte = nom;
-    n->texte2 = grym_dupliquer(parent->nom);
-    ajouter_classe(a->portee, nom, g, n->texte2);   /* après : l'ajout déplace le tableau des classes */
-    n->forme = g == GENRE_FEMININ ? 2 : 1;
+    n->texte2 = parent ? grym_dupliquer(parent->nom) : NULL;
+    n->forme = (g == GENRE_FEMININ ? 2 : 1) | 16;
+    for (;;) {
+        Jeton *t = cour(a);
+        if (!(t->type == J_CROCHETS || (t->type == J_MOT && !est_reserve(t)))) break;
+        int feminin;
+        Classe *ap = aptitude_de(a->portee, t->valeur, &feminin);
+        char *probleme = NULL;
+        if (!ap) probleme = grym_formater("Aptitude « %s » inconnue.", t->valeur);
+        else if (!t->synthetique && (gn == GENRE_FEMININ) != feminin)
+            probleme = grym_formater("Accord : « %s %s ».", chose ? "chose" : parent->nom,
+                                     gn == GENRE_FEMININ ? ap->nom : ap->masculin);
+        for (size_t q = 0; ap && q < n->nb_enfants && !probleme; q++)
+            if (strcmp(n->enfants[q]->texte, ap->nom) == 0)
+                probleme = grym_formater("Aptitude « %s » adoptée deux fois.", ap->nom);
+        if (probleme) { noeud_liberer(n); return erreur(a, t, probleme); }
+        Noeud *x = noeud_creer(N_TEXTE, t->ligne, t->colonne, t->debut);
+        x->texte = grym_dupliquer(ap->nom);
+        noeud_ajouter(n, x);
+        avancer(a);
+        if (cour(a)->type == J_VIRGULE || est_mot(cour(a), "et")) { avancer(a); continue; }
+        break;
+    }
+    if (chose && !n->nb_enfants) {
+        noeud_liberer(n);
+        return erreur(a, cour(a), grym_dupliquer("Aptitude attendue : « Un document est une chose horodatée. »."));
+    }
+    /* Deux sources ne fournissent pas le même champ. */
+    for (size_t q = 0; q < n->nb_enfants; q++) {
+        Classe *ap = aptitude_de(a->portee, n->enfants[q]->texte, NULL);
+        for (size_t k = 0; k < ap->nb; k++) {
+            const Classe *origine = NULL;
+            int deja = parent && classe_champ(a->portee, parent, ap->champs[k], NULL, &origine);
+            for (size_t r = 0; r < q && !deja; r++) {
+                Classe *autre = aptitude_de(a->portee, n->enfants[r]->texte, NULL);
+                if (champ_propre(autre, ap->champs[k], NULL)) { deja = 1; origine = autre; }
+            }
+            if (deja) {
+                erreur(a, &a->j[a->i - 1], grym_formater("« %s » : l'aptitude « %s » apporte un champ que « %s » a déjà.",
+                                                         ap->champs[k], ap->nom, origine->nom));
+                noeud_liberer(n);
+                return NULL;
+            }
+        }
+    }
+    if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
+    Classe *c = ajouter_classe(a->portee, nom, g, n->texte2);   /* l'ajout déplace le tableau des classes */
+    c->ligne = tun->ligne;
+    c->nb_aptitudes = n->nb_enfants;
+    c->aptitudes = n->nb_enfants ? grym_allouer(n->nb_enfants * sizeof *c->aptitudes) : NULL;
+    for (size_t q = 0; q < n->nb_enfants; q++) c->aptitudes[q] = grym_dupliquer(n->enfants[q]->texte);
     free(a->a_completer);
     a->a_completer = grym_dupliquer(nom);   /* ses champs peuvent suivre, à la phrase suivante */
     return n;
@@ -2392,6 +2618,7 @@ static Noeud *definition_classe(Analyse *a) {
     Genre g = est_mot(tun, "une") ? GENRE_FEMININ : GENRE_MASCULIN;
     if (!premier_niveau(a, tun)) return NULL;
     avancer(a);
+    if (est_mot(cour(a), "chose")) return definition_aptitude(a, tun);
     size_t d = a->i, k = d;
     if (a->j[k].type == J_CROCHETS) k++;
     else while (mot_de_nom(a, k) && !est_mot(&a->j[k], "a")) k++;
@@ -2407,6 +2634,11 @@ static Noeud *definition_classe(Analyse *a) {
     if (article_de(&a->j[d]) != ART_AUCUN)
         return erreur(a, &a->j[d], grym_dupliquer("Un nom de classe ne commence pas par un article."));
     char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+    if (aptitude_de(a->portee, nom, NULL)) {
+        erreur(a, &a->j[d], grym_formater("« %s » est une aptitude, pas une classe.", nom));
+        free(nom);
+        return NULL;
+    }
     Classe *existante = classe_de(a->portee, nom);
     int complement = existante && !herite && a->a_completer && strcmp(a->a_completer, nom) == 0
                      && existante->nb == 0;
@@ -2425,60 +2657,8 @@ static Noeud *definition_classe(Analyse *a) {
     Noeud *n = noeud_creer(P_CLASSE, tun->ligne, tun->colonne, tun->debut);
     n->texte = nom;
     n->forme = (g == GENRE_FEMININ ? 2 : 1) | (complement ? 4 : 0);
-    const Classe *parent = complement && existante->parent ? classe_de(a->portee, existante->parent) : NULL;
-    for (;;) {
-        Jeton *u = cour(a);
-        Genre gc;
-        attendre_mot(a, a->i, "un", 2);
-        attendre_mot(a, a->i, "une", 3);
-        if (!est_un(u, &gc)) {
-            noeud_liberer(n);
-            return erreur(a, u, grym_dupliquer("Champ attendu : « un nom », « une date »."));
-        }
-        avancer(a);
-        size_t dc = a->i, kc = dc;
-        if (a->j[kc].type == J_CROCHETS) kc++;
-        else while (mot_de_nom(a, kc)) kc++;
-        if (kc == dc) {
-            noeud_liberer(n);
-            return erreur(a, cour(a), grym_dupliquer("Nom de champ attendu après « un »."));
-        }
-        if (article_de(&a->j[dc]) != ART_AUCUN) {
-            noeud_liberer(n);
-            return erreur(a, &a->j[dc], grym_dupliquer("Un nom de champ ne commence pas par un article."));
-        }
-        char *champ = a->j[dc].type == J_CROCHETS ? grym_dupliquer(a->j[dc].valeur) : cle(a, dc, kc);
-        char *probleme = NULL;
-        Genre autre;
-        for (size_t q = 0; q < n->nb_enfants && !probleme; q++)
-            if (strcmp(n->enfants[q]->texte, champ) == 0) probleme = grym_formater("Champ « %s » déjà nommé.", champ);
-        Symbole *sy = visible(a, champ);
-        if (!probleme && sy && sy->sorte != S_VARIABLE)
-            probleme = grym_formater("« %s » est %s : un champ ne peut pas porter ce nom.", champ,
-                                     sy->sorte == S_CALCUL ? "un calcul" : "une action");
-        const Classe *origine = NULL;
-        if (!probleme && parent && classe_champ(a->portee, parent, champ, NULL, &origine))
-            probleme = grym_formater("« %s » est déjà un champ hérité de « %s ».", champ, origine->nom);
-        if (!probleme && champ_connu(a->portee, champ, &autre) && autre != gc)
-            probleme = grym_formater("« %s » est déjà un champ %s dans une autre classe.", champ,
-                                     autre == GENRE_MASCULIN ? "masculin" : "féminin");
-        if (probleme) {
-            free(champ);
-            noeud_liberer(n);
-            return erreur(a, &a->j[dc], probleme);
-        }
-        Noeud *c = noeud_creer(N_NOM, u->ligne, u->colonne, u->debut);
-        c->texte = champ;
-        c->forme = gc == GENRE_FEMININ ? 2 : 1;
-        noeud_ajouter(n, c);
-        a->i = kc;
-        attendre(a, A_POINT);
-        attendre_mot(a, a->i, ",", 1);
-        if (cour(a)->type == J_VIRGULE) { avancer(a); continue; }
-        if (cour(a)->type == J_POINT) { avancer(a); break; }
-        noeud_liberer(n);
-        return erreur_inattendu(a, cour(a));
-    }
+
+    if (!lire_champs(a, n, complement ? existante : NULL)) { noeud_liberer(n); return NULL; }
     /* La classe entre dans la portée ; un complément remplit la classe déclarée par « est ». */
     Classe *c = complement ? existante : ajouter_classe(a->portee, n->texte, g, NULL);
     free(c->champs);
@@ -2692,7 +2872,9 @@ static Noeud *bloc(Analyse *a, int colonne, int racine) {
         Noeud *p = phrase(a, colonne);
         if (!p) { noeud_liberer(b); if (!racine) a->niveau--; return NULL; }
         p->ligne_fin = a->i > 0 ? a->j[a->i - 1].ligne_fin : p->ligne;
-        if (!(p->type == P_CLASSE && p->texte2 && p->nb_enfants == 0)) {
+        int champs = 0;
+        for (size_t q = 0; p->type == P_CLASSE && q < p->nb_enfants; q++) champs += p->enfants[q]->type == N_NOM;
+        if (!(p->type == P_CLASSE && (p->forme & 16) && champs == 0)) {
             free(a->a_completer);
             a->a_completer = NULL;
         }
@@ -2719,6 +2901,39 @@ static Noeud *bloc(Analyse *a, int colonne, int racine) {
 /* ---------------------------------------------------------------- */
 /* Point d'entrée                                                   */
 /* ---------------------------------------------------------------- */
+
+/* Charte, art. 6 : si deux aptitudes d'une classe définissent la même formule, la classe tranche
+ * avec sa propre version ; sinon, l'analyse échoue (§ 13.7). */
+static void verifier_conflits(Analyse *a) {
+    Portee *p = a->portee;
+    for (size_t i = 0; i < p->nb_classes && !a->echec; i++) {
+        const Classe *c = &p->classes[i];
+        if (c->aptitude || c->nb_aptitudes < 2) continue;
+        for (size_t s1 = 0; s1 < p->n && !a->echec; s1++) {
+            const Symbole *v = &p->s[s1];
+            if (v->sorte == S_VARIABLE || !v->classe) continue;
+            size_t k1 = 0;
+            while (k1 < c->nb_aptitudes && strcmp(c->aptitudes[k1], v->classe) != 0) k1++;
+            if (k1 == c->nb_aptitudes) continue;
+            for (size_t s2 = s1 + 1; s2 < p->n; s2++) {
+                const Symbole *w = &p->s[s2];
+                if (w->sorte == S_VARIABLE || !w->classe || strcmp(w->nom, v->nom) != 0) continue;
+                size_t k2 = 0;
+                while (k2 < c->nb_aptitudes && strcmp(c->aptitudes[k2], w->classe) != 0) k2++;
+                if (k2 == c->nb_aptitudes) continue;
+                int tranche = 0;
+                for (size_t s3 = 0; s3 < p->n && !tranche; s3++)
+                    tranche = p->s[s3].classe && strcmp(p->s[s3].nom, v->nom) == 0 && strcmp(p->s[s3].classe, c->nom) == 0;
+                if (!tranche) {
+                    erreur_a(a, c->ligne, 1, grym_formater(
+                        "« %s » est défini par les aptitudes « %s » et « %s » de « %s » : définissez sa version "
+                        "pour « %s » afin de trancher.", v->nom, v->classe, w->classe, c->nom, c->nom));
+                    break;
+                }
+            }
+        }
+    }
+}
 
 static void liberer_jetons(Jeton *j, size_t n) {
     for (size_t k = 0; k < n; k++) jeton_liberer(&j[k]);
@@ -2820,6 +3035,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     for (size_t k = 0; k < n; k++)
         if (j[k].type != J_REMARQUE) { colonne = j[k].type == J_FIN ? 1 : j[k].retrait; break; }
     Noeud *racine = bloc(&a, colonne, 1);
+    if (racine && !a.echec) verifier_conflits(&a);
     programme->nb_locaux = a.nb_locaux;
     if (racine) {
         programme->phrases = racine->enfants;

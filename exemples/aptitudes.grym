@@ -1,0 +1,27 @@
+Remarque : aptitudes, adoptées comme des adjectifs
+Une chose horodatée a :
+    une date.
+Une chose numérotée a :
+    un numéro.
+
+Une personne a :
+    un nom.
+Un membre est une personne horodatée et numérotée.
+Un document est une chose horodatée.
+
+Pour décrire une chose horodatée :
+    Afficher « créé le » puis date de la chose.
+Pour décrire une chose numérotée :
+    Afficher « numéro » puis numéro de la chose.
+Pour décrire un membre :
+    Afficher nom du membre puis « numéro » puis numéro du membre puis « depuis le » puis date du membre.
+
+Le m vaut un nouveau membre :
+    Le nom vaut « Ana ».
+    La date vaut « 1er mars ».
+    Le numéro vaut 12.
+Le d vaut un nouveau document :
+    La date vaut « 3 avril ».
+
+Décrire m.
+Décrire d.

@@ -232,6 +232,16 @@ static void decrire(const Noeud *n, Chaine *c) {
         }
         chaine_ajouter(c, ")");
         return;
+    case P_APTITUDE:
+        chaine_ajouter(c, "(aptitude [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "]");
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            chaine_ajouter(c, " ");
+            decrire(n->enfants[k], c);
+        }
+        chaine_ajouter(c, ")");
+        return;
     case P_MODIF_CHAMP:
         chaine_ajouter(c, "(modifier-champ [");
         chaine_ajouter(c, n->texte);

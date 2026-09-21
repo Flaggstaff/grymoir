@@ -105,6 +105,8 @@ static void verifier_suites(int l, const char *src, const char *attendu) {
 #define VE(src, li, co, frag)  verifier_erreur(__LINE__, src, li, co, frag)
 #define SESSION(s, a)          verifier_session(__LINE__, s, a, (int)(sizeof s / sizeof *s))
 
+#define APT "Une chose horodatée a : une date.\nUne chose numérotée a : un numéro.\nUne personne a : un nom.\n"
+
 int main(void) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
@@ -431,8 +433,8 @@ int main(void) {
       "(créer [m] (nouveau [membre] ([nom] «Ana»)))\n(afficher (champ [nom] [m]))");
     V("Une personne a : un nom.\nUn membre est une personne. Un membre a : une licence.\nUn invité est une personne.",
       "(classe [personne] [nom])\n(classe [membre] (est [personne]) [licence])\n(classe [invité] (est [personne]))");
-    V("Une chose a : un nom.\nUn outil est une chose.\nUn marteau est un outil.\nUn marteau a : un poids.",
-      "(classe [chose] [nom])\n(classe [outil] (est [chose]))\n(classe [marteau] (est [outil]) [poids])");
+    V("Un objet a : un nom.\nUn outil est un objet.\nUn marteau est un outil.\nUn marteau a : un poids.",
+      "(classe [objet] [nom])\n(classe [outil] (est [objet]))\n(classe [marteau] (est [outil]) [poids])");
     VE("Un membre est une personne.", 1, 19, "Classe « personne » inconnue");
     VE("Une personne a : un nom.\nUn membre est un personne.", 2, 15, "« personne » est féminin : écrivez « une personne ».");
     VE("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : un nom.", 3, 18,
@@ -455,6 +457,35 @@ int main(void) {
        "Pour saluer un membre et un mot :\n    Afficher 2.", 5, 6, "« saluer » a déjà 1 paramètre");
     VE("Une personne a : un nom.\nUn membre est une personne.\nPour saluer une personne :\n    Afficher 1.\n"
        "Le saluer d'un membre vaut 2.", 5, 4, "« saluer » est déjà une action");
+
+    /* --- Aptitudes (§ 13.7) --- */
+    V("Une chose horodatée a : une date.\nUne chose active (actif) a : un état.\nUne personne a : un nom.\n"
+      "Un membre est une personne horodatée et active.\nUn document est une chose horodatée.\n"
+      "Un employé est une personne.\nUn contrat est un employé horodaté et actif.\n"
+      "Pour dater une chose horodatée :\n    La date de la chose devient 1.",
+      "(aptitude [horodatée] [date])\n(aptitude [active] [état])\n(classe [personne] [nom])\n"
+      "(classe [membre] (est [personne]) «horodatée» «active»)\n(classe [document] «horodatée»)\n"
+      "(classe [employé] (est [personne]))\n(classe [contrat] (est [employé]) «horodatée» «active»)\n"
+      "(action [dater] ([chose]) (bloc (modifier-champ [date] [chose] 1)))");
+    VE(APT "Un membre est une personne horodaté.", 4, 28, "Accord : « personne horodatée ».");
+    VE(APT "Un membre est une personne datée.", 4, 28, "Aptitude « datée » inconnue.");
+    VE(APT "Un document est une chose.", 4, 26, "Aptitude attendue");
+    VE(APT "Un membre est une personne horodatée, horodatée.", 4, 39, "adoptée deux fois");
+    VE("Une chose nommée a : un nom.\nUne personne a : un nom.\nUn membre est une personne nommée.", 3, 28,
+       "« nom » : l'aptitude « nommée » apporte un champ que « personne » a déjà.");
+    VE(APT "Un membre est une personne horodatée.\nUn membre a : une date.", 5, 19, "« date » est déjà un champ de l'aptitude « horodatée ».");
+    VE(APT "Une chose horodatée a : un jour.", 4, 11, "L'aptitude « horodatée » existe déjà.");
+    VE(APT "Une horodatée a : un jour.", 4, 5, "« horodatée » est une aptitude, pas une classe.");
+    VE(APT "Un membre est une personne horodatée et numérotée.\n"
+       "Pour décrire une chose horodatée :\n    Afficher 1.\nPour décrire une chose numérotée :\n    Afficher 2.", 4, 1,
+       "« décrire » est défini par les aptitudes « horodatée » et « numérotée » de « membre » : "
+       "définissez sa version pour « membre » afin de trancher.");
+    V(APT "Un membre est une personne horodatée et numérotée.\n"
+      "Pour décrire une chose horodatée :\n    Afficher 1.\nPour décrire une chose numérotée :\n    Afficher 2.\n"
+      "Pour décrire un membre :\n    Afficher 3.",
+      "(aptitude [horodatée] [date])\n(aptitude [numérotée] [numéro])\n(classe [personne] [nom])\n"
+      "(classe [membre] (est [personne]) «horodatée» «numérotée»)\n(action [décrire] ([chose]) (bloc (afficher 1)))\n"
+      "(action [décrire] ([chose]) (bloc (afficher 2)))\n(action [décrire] ([membre]) (bloc (afficher 3)))");
 
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

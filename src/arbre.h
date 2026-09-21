@@ -1,5 +1,5 @@
 /* GrymoiR : arbre syntaxique, v0.1
- * Spécification : docs/grammaire.md (révision 1.10), § 6.
+ * Spécification : docs/grammaire.md (révision 1.11), § 6.
  * Chaque nœud garde sa position dans la source (debut, fin), pour les
  * messages d'erreur et, en v0.2, pour la traduction sans perte.
  */
@@ -51,8 +51,12 @@ typedef enum {
     P_PASSER,        /* « Passer au tour suivant. » */
     P_SELON,         /* enfants[0] : sujet ; puis les N_CAS ; entier : case du sujet */
     P_CLASSE,        /* « Un client a : » : texte : classe ; forme : 1 masculin, 2 féminin ; enfants : champs propres
-                        (N_NOM, forme = genre) ; texte2 : classe parente (« Un membre est une personne. »), ou NULL */
-    P_MODIF_CHAMP    /* « Le solde du client devient … » : texte : champ ; enfants[0] : objet ; enfants[1] : valeur */
+                        (N_NOM, forme = genre) et aptitudes adoptées (N_TEXTE, forme féminine) ;
+                        texte2 : classe parente (« Un membre est une personne. »), ou NULL ;
+                        forme : bit 16 = déclarée par « est » */
+    P_MODIF_CHAMP,   /* « Le solde du client devient … » : texte : champ ; enfants[0] : objet ; enfants[1] : valeur */
+    P_APTITUDE       /* « Une chose horodatée a : » : texte : forme féminine ; texte2 : forme masculine déclarée
+                        entre parenthèses, ou NULL si elle se déduit ; enfants : champs (N_NOM) */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE } Article;

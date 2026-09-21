@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.6).
+ * Spécification : docs/vm.md (révision 1.7).
  */
 #include "vm.h"
 #include "decimal.h"
@@ -27,7 +27,10 @@ typedef struct {
 typedef struct ClasseVM {
     char *nom;
     int feminin;
+    int aptitude;
     const struct ClasseVM *parent;
+    const struct ClasseVM **aptitudes;   /* aptitudes adoptées, dans l'ordre */
+    size_t nb_aptitudes;
     char **champs;        /* champs hérités d'abord, puis champs propres */
     size_t nb_champs;
 } ClasseVM;
@@ -158,6 +161,7 @@ void machine_detruire(Machine *m) {
         free(m->classes[i]->nom);
         for (size_t k = 0; k < m->classes[i]->nb_champs; k++) free(m->classes[i]->champs[k]);
         free(m->classes[i]->champs);
+        free(m->classes[i]->aptitudes);
         free(m->classes[i]);
     }
     free(m->classes);
@@ -430,7 +434,13 @@ size_t machine_objets_vivants(const Machine *m) {
 
 static const ClasseVM *classe_vm(const Machine *m, const char *nom) {
     for (size_t i = m->nb_classes; i > 0; i--)
-        if (strcmp(m->classes[i - 1]->nom, nom) == 0) return m->classes[i - 1];
+        if (!m->classes[i - 1]->aptitude && strcmp(m->classes[i - 1]->nom, nom) == 0) return m->classes[i - 1];
+    return NULL;
+}
+
+static const ClasseVM *aptitude_vm(const Machine *m, const char *nom) {
+    for (size_t i = m->nb_classes; i > 0; i--)
+        if (m->classes[i - 1]->aptitude && strcmp(m->classes[i - 1]->nom, nom) == 0) return m->classes[i - 1];
     return NULL;
 }
 
@@ -464,6 +474,21 @@ static Formule *choisir_version(Machine *m, const char *nom, const Valeur *premi
     for (const ClasseVM *c = premier->objet->classe; c; c = c->parent) {
         f = formule_de(m, nom, c->nom);
         if (f) return f;
+        /* sinon, une version d'aptitude : deux aptitudes à égalité, c'est un conflit (charte, art. 6) */
+        Formule *trouvee = NULL;
+        const ClasseVM *source = NULL;
+        for (size_t k = 0; k < c->nb_aptitudes; k++) {
+            Formule *g = formule_de(m, nom, c->aptitudes[k]->nom);
+            if (!g) continue;
+            if (trouvee) {
+                *pourquoi = grym_formater("« %s » est défini par les aptitudes « %s » et « %s » de « %s ».",
+                                          nom, source->nom, c->aptitudes[k]->nom, c->nom);
+                return NULL;
+            }
+            trouvee = g;
+            source = c->aptitudes[k];
+        }
+        if (trouvee) return trouvee;
     }
     char *qui = article_classe(premier->objet->classe);
     *pourquoi = grym_formater("Aucune version de « %s » pour %s.", nom, qui);
@@ -487,28 +512,47 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     for (size_t k = 0; k < module->nb_classes; k++) {
         const ClasseModule *cm = &module->classes[k];
         const ClasseVM *parent = NULL;
+        char *probleme = NULL;
         if (cm->parent) {
             parent = classe_vm(m, cm->parent);
-            char *probleme = NULL;
             if (!parent) probleme = grym_formater("Classe parente « %s » inconnue.", cm->parent);
-            for (size_t q = 0; parent && q < cm->nb_champs && !probleme; q++)
-                if (index_champ(parent, cm->champs[q]) >= 0)
-                    probleme = grym_formater("« %s » : champ déjà hérité de « %s ».", cm->champs[q], cm->parent);
-            if (probleme) {
-                diag->message = grym_formater("Bytecode invalide : %s", probleme);
-                free(probleme);
-                return 0;   /* rien n'est encore enregistré : aucune formule, aucun cadre */
-            }
         }
-        size_t herites = parent ? parent->nb_champs : 0;
+        const ClasseVM **aptitudes = grym_allouer((cm->nb_aptitudes ? cm->nb_aptitudes : 1) * sizeof *aptitudes);
+        for (size_t q = 0; q < cm->nb_aptitudes && !probleme; q++) {
+            aptitudes[q] = aptitude_vm(m, cm->aptitudes[q]);
+            if (!aptitudes[q]) probleme = grym_formater("Aptitude « %s » inconnue.", cm->aptitudes[q]);
+        }
+        /* Champs, dans l'ordre : hérités, apportés par les aptitudes, propres. Aucun nom en double. */
+        size_t total = (parent ? parent->nb_champs : 0) + cm->nb_champs;
+        for (size_t q = 0; q < cm->nb_aptitudes && !probleme; q++) total += aptitudes[q]->nb_champs;
+        char **champs = grym_allouer((total ? total : 1) * sizeof *champs);
+        size_t n = 0;
+        for (size_t q = 0; parent && q < parent->nb_champs; q++) champs[n++] = parent->champs[q];
+        for (size_t q = 0; q < cm->nb_aptitudes && !probleme; q++)
+            for (size_t r = 0; r < aptitudes[q]->nb_champs; r++) champs[n++] = aptitudes[q]->champs[r];
+        for (size_t q = 0; q < cm->nb_champs && !probleme; q++) champs[n++] = cm->champs[q];
+        for (size_t q = 0; q < n && !probleme; q++)
+            for (size_t r = 0; r < q && !probleme; r++)
+                if (strcmp(champs[q], champs[r]) == 0)
+                    probleme = grym_formater("« %s » : champ fourni deux fois dans « %s ».", champs[q], cm->nom);
+        if (probleme) {
+            diag->message = grym_formater("Bytecode invalide : %s", probleme);
+            free(probleme);
+            free(champs);
+            free(aptitudes);
+            return 0;   /* rien n'est encore enregistré : aucune formule, aucun cadre */
+        }
         ClasseVM *c = grym_allouer(sizeof *c);
         c->nom = grym_dupliquer(cm->nom);
         c->feminin = cm->feminin;
+        c->aptitude = cm->aptitude;
         c->parent = parent;
-        c->nb_champs = herites + cm->nb_champs;
-        c->champs = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof *c->champs);
-        for (size_t q = 0; q < herites; q++) c->champs[q] = grym_dupliquer(parent->champs[q]);
-        for (size_t q = 0; q < cm->nb_champs; q++) c->champs[herites + q] = grym_dupliquer(cm->champs[q]);
+        c->aptitudes = aptitudes;
+        c->nb_aptitudes = cm->nb_aptitudes;
+        c->nb_champs = n;
+        c->champs = grym_allouer((n ? n : 1) * sizeof *c->champs);
+        for (size_t q = 0; q < n; q++) c->champs[q] = grym_dupliquer(champs[q]);
+        free(champs);
         ClasseVM **t = grym_allouer((m->nb_classes + 1) * sizeof *t);
         if (m->nb_classes) memcpy(t, m->classes, m->nb_classes * sizeof *t);
         free(m->classes);

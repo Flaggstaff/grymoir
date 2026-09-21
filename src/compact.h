@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.10), § 11.
+ * Spécification : docs/grammaire.md (révision 1.11), § 11.
  */
 #ifndef GRYM_COMPACT_H
 #define GRYM_COMPACT_H

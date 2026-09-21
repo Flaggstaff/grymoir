@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.6).
+ * Spécification : docs/vm.md (révision 1.7).
  */
 #include "bytecode.h"
 #include "decimal.h"
@@ -337,8 +337,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 9)                                 */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 6   /* versions 1 à 5 restent lisibles : un seul bloc (1, 2), sans classes (3),
-                              sans héritage (4), sans méthodes (5) */
+#define VERSION_FORMAT 7   /* versions 1 à 6 restent lisibles : un seul bloc (1, 2), sans classes (3),
+                              sans héritage (4), sans méthodes (5), sans aptitudes (6) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -409,8 +409,10 @@ unsigned char *module_serialiser(const Module *m, size_t *taille) {
     for (size_t k = 0; k < m->nb_classes; k++) {
         const ClasseModule *c = &m->classes[k];
         ecrire_chaine(&o, c->nom);
-        ecrire_u8(&o, c->feminin ? 1u : 0u);
+        ecrire_u8(&o, (c->feminin ? 1u : 0u) | (c->aptitude ? 2u : 0u));
         ecrire_chaine(&o, c->parent ? c->parent : "");
+        ecrire_u32(&o, (uint32_t)c->nb_aptitudes);
+        for (size_t q = 0; q < c->nb_aptitudes; q++) ecrire_chaine(&o, c->aptitudes[q]);
         ecrire_u32(&o, (uint32_t)c->nb_champs);
         for (size_t q = 0; q < c->nb_champs; q++) ecrire_chaine(&o, c->champs[q]);
     }
@@ -578,16 +580,30 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
             char *nom = lire_chaine(&l);
             uint32_t fem = lire_u(&l, 1);
             char *parent = version >= 5 ? lire_chaine(&l) : grym_dupliquer("");
-            uint32_t nch = lire_u(&l, 4);
-            if (!nom || !*nom || !parent || l.echec || fem > 1 || nch > (taille - l.pos) / 4) {
+            uint32_t nap = version >= 7 ? lire_u(&l, 4) : 0;
+            if (!nom || !*nom || !parent || l.echec || fem > 3 || nap > (taille - l.pos) / 4) {
                 free(nom);
                 free(parent);
                 return echec_module(m, erreur, grym_formater("classe %u illisible.", (unsigned)k));
             }
-            ClasseModule *c = module_ajouter_classe(m, nom, (int)fem);
+            ClasseModule *c = module_ajouter_classe(m, nom, (int)(fem & 1));
+            c->aptitude = (fem & 2) != 0;
             if (*parent) c->parent = parent;
             else free(parent);
             free(nom);
+            for (uint32_t q = 0; q < nap; q++) {
+                char *ap = lire_chaine(&l);
+                if (!ap || !*ap) {
+                    free(ap);
+                    return echec_module(m, erreur, grym_formater("aptitude %u de la classe %u illisible.",
+                                                                 (unsigned)q, (unsigned)k));
+                }
+                classe_ajouter_aptitude(c, ap);
+                free(ap);
+            }
+            uint32_t nch = lire_u(&l, 4);
+            if (l.echec || nch > (taille - l.pos) / 4)
+                return echec_module(m, erreur, grym_formater("classe %u illisible.", (unsigned)k));
             for (uint32_t q = 0; q < nch; q++) {
                 char *ch = lire_chaine(&l);
                 if (!ch || !*ch) {
@@ -630,9 +646,17 @@ ClasseModule *module_ajouter_classe(Module *m, const char *nom, int feminin) {
     c->nom = grym_dupliquer(nom);
     c->feminin = feminin;
     c->parent = NULL;
+    c->aptitude = 0;
+    c->aptitudes = NULL;
+    c->nb_aptitudes = 0;
     c->champs = NULL;
     c->nb_champs = 0;
     return c;
+}
+
+void classe_ajouter_aptitude(ClasseModule *c, const char *aptitude) {
+    c->aptitudes = agrandir(c->aptitudes, c->nb_aptitudes + 1, sizeof *c->aptitudes);
+    c->aptitudes[c->nb_aptitudes++] = grym_dupliquer(aptitude);
 }
 
 void classe_ajouter_champ(ClasseModule *c, const char *champ) {
@@ -647,6 +671,8 @@ void module_detruire(Module *m) {
     for (size_t k = 0; k < m->nb_classes; k++) {
         free(m->classes[k].nom);
         free(m->classes[k].parent);
+        for (size_t q = 0; q < m->classes[k].nb_aptitudes; q++) free(m->classes[k].aptitudes[q]);
+        free(m->classes[k].aptitudes);
         for (size_t q = 0; q < m->classes[k].nb_champs; q++) free(m->classes[k].champs[q]);
         free(m->classes[k].champs);
     }

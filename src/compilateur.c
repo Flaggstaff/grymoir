@@ -463,10 +463,15 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_SELON:
         selon(c, ph);
         return;
-    case P_CLASSE: {
-        ClasseModule *cm = module_ajouter_classe(c->module, ph->texte, (ph->forme & 3) == 2);
-        if (ph->texte2) cm->parent = grym_dupliquer(ph->texte2);
-        for (size_t q = 0; q < ph->nb_enfants; q++) classe_ajouter_champ(cm, ph->enfants[q]->texte);
+    case P_CLASSE:
+    case P_APTITUDE: {
+        ClasseModule *cm = module_ajouter_classe(c->module, ph->texte, ph->type == P_APTITUDE || (ph->forme & 3) == 2);
+        cm->aptitude = ph->type == P_APTITUDE;
+        if (ph->type == P_CLASSE && ph->texte2) cm->parent = grym_dupliquer(ph->texte2);
+        for (size_t q = 0; q < ph->nb_enfants; q++) {
+            if (ph->enfants[q]->type == N_TEXTE) classe_ajouter_aptitude(cm, ph->enfants[q]->texte);
+            else classe_ajouter_champ(cm, ph->enfants[q]->texte);
+        }
         return;
     }
     case P_MODIF_CHAMP: {

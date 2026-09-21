@@ -151,6 +151,14 @@ int main(void) {
          "_action saluer(_une personne)\n    _afficher 1\n_fin\n_action saluer(_un membre)\n    _afficher 2\n_fin\n"
          "_le p << _nouveau personne\n_le m << _nouveau membre\nsaluer(p)\nsaluer(m)\n", "1\n2\n");
 
+    EXEC("_aptitude horodatée\n    _une date\n_fin\n_classe _un document _est _une chose _adopte horodatée\n_fin\n"
+         "_action dater(_une chose_horodatée)\n    chose.date << 5\n_fin\n_le d << _nouveau document\ndater(d)\n"
+         "_afficher d.date\n", "5\n");
+    ALLER_RETOUR("_aptitude active (actif)\n    _un état\n_fin\n_classe _une personne\n    _un nom\n_fin\n"
+                 "_classe _un employé _est _une personne\n_fin\n_classe _un cadre _est _un employé _adopte active\n_fin\n",
+                 "Une chose active (actif) a :\n    un état.\nUne personne a :\n    un nom.\n"
+                 "Un employé est une personne.\nUn cadre est un employé actif.\n");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

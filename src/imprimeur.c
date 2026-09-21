@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.10), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.11), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "decimal.h"
@@ -20,11 +20,30 @@ typedef struct {
 } Entree;
 
 typedef struct {
+    const char *feminin, *masculin;
+} Aptitude;
+
+typedef struct {
     Chaine c;
     Entree *genres;
     size_t nb, cap;
     int compact;
+    Aptitude *aptitudes;   /* formes des aptitudes déclarées, pour les accorder */
+    size_t nb_aptitudes;
+    char **a_liberer;      /* formes masculines déduites */
+    size_t nb_a_liberer;
 } Impression;
+
+static char *masculin_deduit(const char *f) {
+    size_t l = strlen(f);
+    return l > 1 && f[l - 1] == 'e' ? grym_formater("%.*s", (int)(l - 1), f) : grym_dupliquer(f);
+}
+
+static const char *forme_masculine(const Impression *im, const char *feminin) {
+    for (size_t k = 0; k < im->nb_aptitudes; k++)
+        if (strcmp(im->aptitudes[k].feminin, feminin) == 0) return im->aptitudes[k].masculin;
+    return feminin;
+}
 
 static void retenir(Impression *im, const char *nom, Genre g) {
     if (im->nb == im->cap) {
@@ -444,6 +463,7 @@ static void parametres(Impression *im, const Noeud *liste, int de) {
             aj(im, p->forme == 2 ? "une " : "un ");
         }
         ecrire_nom(im, p->texte, 0);
+        if (p->texte2) { aj(im, im->compact ? "_" : " "); aj(im, p->texte2); }   /* une chose horodatée */
     }
 }
 
@@ -648,33 +668,20 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         im->nb = sauve;
         return;
     }
-    case P_CLASSE: {
-        int fem = (n->forme & 3) == 2;
-        retenir(im, n->texte, fem ? G_FEMININ : G_MASCULIN);
-        int fem_parent = n->texte2 && genre_de_nom(im, n->texte2) == G_FEMININ;
-        if (c) {
-            aj(im, fem ? "_classe _une " : "_classe _un ");
-            ecrire_nom(im, n->texte, 0);
-            if (n->texte2) {
-                aj(im, fem_parent ? " _est _une " : " _est _un ");
-                ecrire_nom(im, n->texte2, 0);
-            }
-            aj(im, "\n");
-        } else {
-            if (n->texte2) {
-                /* « Un membre est une personne. », puis ses champs dans une seconde phrase */
-                aj(im, fem ? "Une " : "Un ");
-                ecrire_nom(im, n->texte, 0);
-                aj(im, fem_parent ? " est une " : " est un ");
-                ecrire_nom(im, n->texte2, 0);
-                aj(im, ".\n");
-                if (!n->nb_enfants) return;
-                retrait(im, niveau);
-            }
-            aj(im, fem ? "Une " : "Un ");
-            ecrire_nom(im, n->texte, 0);
-            aj(im, " a :\n");
-        }
+    case P_APTITUDE: {
+        Aptitude *t = grym_allouer((im->nb_aptitudes + 1) * sizeof *t);
+        if (im->nb_aptitudes) memcpy(t, im->aptitudes, im->nb_aptitudes * sizeof *t);
+        free(im->aptitudes);
+        im->aptitudes = t;
+        char *masc = n->texte2 ? grym_dupliquer(n->texte2) : masculin_deduit(n->texte);
+        im->a_liberer = realloc(im->a_liberer, (im->nb_a_liberer + 1) * sizeof *im->a_liberer);
+        im->a_liberer[im->nb_a_liberer++] = masc;
+        im->aptitudes[im->nb_aptitudes].feminin = n->texte;
+        im->aptitudes[im->nb_aptitudes++].masculin = masc;
+        aj(im, c ? "_aptitude " : "Une chose ");
+        aj(im, n->texte);
+        if (n->texte2) { aj(im, " ("); aj(im, n->texte2); aj(im, ")"); }
+        aj(im, c ? "\n" : " a :\n");
         for (size_t k = 0; k < n->nb_enfants; k++) {
             const Noeud *ch = n->enfants[k];
             retenir(im, ch->texte, ch->forme == 2 ? G_FEMININ : G_MASCULIN);
@@ -682,6 +689,67 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             aj(im, c ? (ch->forme == 2 ? "_une " : "_un ") : (ch->forme == 2 ? "une " : "un "));
             ecrire_nom(im, ch->texte, 0);
             aj(im, c ? "\n" : k + 1 < n->nb_enfants ? ",\n" : ".\n");
+        }
+        if (c) { retrait(im, niveau); aj(im, "_fin\n"); }
+        return;
+    }
+    case P_CLASSE: {
+        int fem = (n->forme & 3) == 2;
+        retenir(im, n->texte, fem ? G_FEMININ : G_MASCULIN);
+        int herite = (n->forme & 16) != 0;
+        int fem_base = !n->texte2 || genre_de_nom(im, n->texte2) == G_FEMININ;   /* « chose » est féminin */
+        size_t nb_champs = 0, nb_apt = 0;
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            if (n->enfants[k]->type == N_TEXTE) nb_apt++;
+            else nb_champs++;
+        }
+        if (c) {
+            aj(im, fem ? "_classe _une " : "_classe _un ");
+            ecrire_nom(im, n->texte, 0);
+            if (herite) {
+                aj(im, fem_base ? " _est _une " : " _est _un ");
+                ecrire_nom(im, n->texte2 ? n->texte2 : "chose", 0);
+                size_t q = 0;
+                for (size_t k = 0; k < n->nb_enfants; k++) {
+                    if (n->enfants[k]->type != N_TEXTE) continue;
+                    aj(im, q++ ? " ; " : " _adopte ");
+                    aj(im, n->enfants[k]->texte);
+                }
+            }
+            aj(im, "\n");
+        } else {
+            if (herite) {
+                /* « Un membre est une personne horodatée. », puis ses champs dans une seconde phrase */
+                aj(im, fem ? "Une " : "Un ");
+                ecrire_nom(im, n->texte, 0);
+                aj(im, fem_base ? " est une " : " est un ");
+                ecrire_nom(im, n->texte2 ? n->texte2 : "chose", 0);
+                size_t q = 0;
+                for (size_t k = 0; k < n->nb_enfants; k++) {
+                    if (n->enfants[k]->type != N_TEXTE) continue;
+                    aj(im, q == 0 ? " " : q + 1 == nb_apt ? " et " : ", ");
+                    q++;
+                    const char *f = n->enfants[k]->texte;
+                    aj(im, fem_base ? f : forme_masculine(im, f));
+                }
+                aj(im, ".\n");
+                if (!nb_champs) return;
+                retrait(im, niveau);
+            }
+            aj(im, fem ? "Une " : "Un ");
+            ecrire_nom(im, n->texte, 0);
+            aj(im, " a :\n");
+        }
+        size_t vus = 0;
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            const Noeud *ch = n->enfants[k];
+            if (ch->type == N_TEXTE) continue;
+            vus++;
+            retenir(im, ch->texte, ch->forme == 2 ? G_FEMININ : G_MASCULIN);
+            retrait(im, niveau + 1);
+            aj(im, c ? (ch->forme == 2 ? "_une " : "_un ") : (ch->forme == 2 ? "une " : "un "));
+            ecrire_nom(im, ch->texte, 0);
+            aj(im, c ? "\n" : vus < nb_champs ? ",\n" : ".\n");
         }
         if (c) { retrait(im, niveau); aj(im, "_fin\n"); }
         return;
@@ -763,6 +831,9 @@ static char *imprimer(const Programme *p, int compact) {
         phrase(&im, p->phrases[k], 0);
     }
     free(im.genres);
+    free(im.aptitudes);
+    for (size_t k = 0; k < im.nb_a_liberer; k++) free(im.a_liberer[k]);
+    free(im.a_liberer);
     return chaine_rendre(&im.c);
 }
 

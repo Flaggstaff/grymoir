@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.6 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.10, § 5, § 9, § 10 et § 13.
+Version 1.7 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.11, § 5, § 9, § 10 et § 13.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -90,7 +90,7 @@ Pour chaque i de a à b       a → i ; b → fin ; pas (écrit, ou ±1 selon a 
 
 - Un module réunit le programme (bloc 0) et un bloc par formule. Chaque bloc de formule porte son nom, sa sorte (calcul ou action), son nombre de paramètres et son nombre de cases locales (paramètres compris).
 - `APPELER` désigne la formule par son nom, résolu au moment de l'appel dans la table des formules de la machine (§ 5). La machine vérifie que la formule existe, qu'elle est de la sorte attendue et qu'elle reçoit le bon nombre d'arguments ; sinon, erreur d'exécution.
-- Méthodes : un bloc de formule peut porter une classe. Plusieurs blocs partagent alors le même nom, chacun avec une classe différente. À l'appel, la machine prend la classe réelle du premier argument et remonte sa lignée jusqu'à trouver une version (grammaire, § 13.6).
+- Méthodes : un bloc de formule peut porter une classe ou une aptitude. Plusieurs blocs partagent alors le même nom, chacun avec une classe ou une aptitude différente. À l'appel, la machine part de la classe réelle du premier argument ; pour chaque classe de la lignée, elle prend la version de la classe, sinon celle d'une de ses aptitudes, sinon elle passe à la classe parente (grammaire, § 13.6 et § 13.7). Deux aptitudes d'une même classe qui fournissent chacune une version sont une erreur d'exécution ; l'analyse l'interdit déjà.
 - Chaque appel crée un cadre : ses cases locales, sa position. Un calcul se termine par `RENDRE`, une action par `RETOUR`, qui rend la main à l'appelant. `RETOUR` dans le programme termine l'exécution.
 - Au-delà de 1000 cadres imbriqués : « Trop d'appels imbriqués : plus de 1000. »
 - Le programme principal a lui aussi des cases locales : compteurs de boucle, bornes, sujets de `Selon`.
@@ -102,7 +102,7 @@ Pour chaque i de a à b       a → i ; b → fin ; pas (écrit, ou ±1 selon a 
 - Les comparaisons d'ordre n'acceptent que deux nombres ; `ÉGAL` et `DIFFÉRENT` acceptent deux valeurs du même type. Sinon : erreur d'exécution.
 - `SAUTER_SI_FAUX` exige un booléen : « Condition ni vraie ni fausse : la valeur est un nombre. »
 - Les instructions de champ désignent la classe et le champ par leur nom, résolu à l'exécution : la machine vérifie que la valeur est un objet et que sa classe a ce champ. `ÉGAL` compare deux objets par identité.
-- Héritage : à l'enregistrement d'une classe, la machine place les champs hérités en tête, puis les champs propres. Un champ garde ainsi le même rang dans toute la lignée. La classe parente doit être connue (déclarée plus tôt dans le module, ou par un module précédent) ; un champ propre ne reprend pas un nom hérité. Sinon, le module est refusé avant toute exécution.
+- Héritage et aptitudes : à l'enregistrement d'une classe, la machine place les champs hérités en tête, puis ceux des aptitudes dans l'ordre d'adoption, puis les champs propres. Un champ garde ainsi le même rang dans toute la lignée. La classe parente et les aptitudes doivent être connues (déclarées plus tôt dans le module, ou par un module précédent) ; aucun champ n'est fourni deux fois. Sinon, le module est refusé avant toute exécution.
 - `et` et `ou` compilent en sauts (court-circuit). Chaque membre passe par `SAUTER_SI_FAUX`, qui vérifie qu'il s'agit d'un booléen :
 
 ```
@@ -170,7 +170,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 6
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 7
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -184,13 +184,14 @@ code          longueur : u32, puis les octets des instructions
 positions     nombre : u32, puis pour chacune :
                 décalage dans le code : u32, ligne : u32, colonne : u32
 classes       nombre : u32, puis pour chacune :
-                nom : longueur u32 et octets UTF-8, féminin : u8 (0 ou 1),
+                nom : longueur u32 et octets UTF-8, sorte : u8 (bit 0 féminin, bit 1 aptitude),
                 classe parente : longueur u32 et octets UTF-8 (vide sans héritage),
+                aptitudes adoptées : nombre u32, puis pour chacune : longueur u32 et octets UTF-8,
                 champs : nombre u32, puis pour chacun : longueur u32 et octets UTF-8
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`.
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes. Les fichiers des versions 1 à 5 restent lisibles.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées. Les fichiers des versions 1 à 6 restent lisibles.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -231,3 +232,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.4 | 2026-09-21 | Objets : valeur objet, `NOUVEAU`, `INITIALISER_CHAMP`, `LIRE_CHAMP`, `ÉCRIRE_CHAMP`, journal des champs, ramasse-miettes par marquage et balayage, classes dans le module, format version 4 |
 | 1.5 | 2026-09-21 | Héritage : classe parente dans le module, champs hérités en tête, format version 5 |
 | 1.6 | 2026-09-21 | Méthodes : classe du premier paramètre dans le bloc, choix de la version à l'appel selon la lignée, format version 6 |
+| 1.7 | 2026-09-21 | Aptitudes : enregistrées comme des classes marquées, adoptées par les classes ; champs apportés ; choix de version classe, puis aptitudes, puis parent ; format version 7 |

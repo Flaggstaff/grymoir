@@ -63,6 +63,8 @@ static void verifier(int l, const char *src, const char *attendu, int interactif
 #define CALC(expr, att)  verifier(__LINE__, expr, att, 1)
 #define PROG(src, att)   verifier(__LINE__, src, att, 0)
 
+#define APT_M "Une chose horodatée a : une date.\nUne chose numérotée a : un numéro.\nUne personne a : un nom.\n"
+
 int main(void) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
@@ -289,7 +291,7 @@ int main(void) {
     PROG("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : une licence.\n"
          "Le m vaut un nouveau membre :\n    Le nom vaut « Ana ».\n    La licence vaut 42.\n"
          "Le nom du m devient « Anna ».\nAfficher nom du m puis licence du m puis m.", "Anna 42 un membre");
-    PROG("Une chose a : un nom.\nUn outil est une chose. Un outil a : un usage.\nUn marteau est un outil. Un marteau a : un poids.\n"
+    PROG("Un objet a : un nom.\nUn outil est un objet. Un outil a : un usage.\nUn marteau est un outil. Un marteau a : un poids.\n"
          "Le h vaut un nouveau marteau :\n    Le nom vaut « M ».\n    L'usage vaut « clouer ».\n    Le poids vaut 2.\n"
          "Afficher nom du h puis usage du h puis poids du h.", "M clouer 2");
     PROG("Une personne a : un nom.\nUn membre est une personne.\nUn invité est une personne.\n"
@@ -309,13 +311,31 @@ int main(void) {
          "Le i vaut un nouvel invité :\n    Le nom vaut « Bo ».\nSaluer m.\nSaluer i.\n"
          "Afficher la description de m puis la description de i.",
          "Salut Ana 7\nBonjour Bo\npersonne invité");
-    PROG("Une chose a : un nom.\nUn outil est une chose.\nUn marteau est un outil.\n"
-         "Le poids d'une chose vaut 1.\nLe poids d'un outil vaut 2.\nLe h vaut un nouveau marteau.\nAfficher poids de h.", "2");
+    PROG("Un objet a : un nom.\nUn outil est un objet.\nUn marteau est un outil.\n"
+         "Le poids d'un objet vaut 1.\nLe poids d'un outil vaut 2.\nLe h vaut un nouveau marteau.\nAfficher poids de h.", "2");
     PROG("Une personne a : un nom.\nPour saluer une personne :\n    Afficher 1.\nSaluer 3.",
          "ERREUR 4:1 « saluer » choisit sa version selon la classe de son premier argument : "
          "celui-ci n'est pas un objet, c'est un nombre.");
     PROG("Une personne a : un nom.\nUne ville a : un nom.\nPour saluer une personne :\n    Afficher 1.\n"
          "La v vaut une nouvelle ville.\nSaluer v.", "ERREUR 6:1 Aucune version de « saluer » pour une ville.");
+
+    /* --- Aptitudes : champs apportés, versions, ordre de choix --- */
+    PROG(APT_M "Un membre est une personne horodatée.\nUn membre a : une licence.\n"
+         "Pour dater une chose horodatée :\n    La date de la chose devient « lundi ».\n"
+         "Le m vaut un nouveau membre :\n    Le nom vaut « Ana ».\n    La licence vaut 3.\n"
+         "Dater m.\nAfficher nom du m puis date du m puis licence du m.", "Ana lundi 3");
+    PROG(APT_M "Un document est une chose horodatée et numérotée.\n"
+         "Le d vaut un nouveau document :\n    La date vaut 1.\n    Le numéro vaut 2.\nAfficher date du d puis numéro du d puis d.",
+         "1 2 un document");
+    /* la classe l'emporte sur ses aptitudes, qui l'emportent sur la classe parente */
+    PROG(APT_M "Un employé est une personne horodatée.\nUn cadre est un employé.\n"
+         "La sorte d'une personne vaut « personne ».\nLa sorte d'une chose horodatée vaut « horodatée ».\n"
+         "La sorte d'un cadre vaut « cadre ».\n"
+         "Le e vaut un nouvel employé.\nLe c vaut un nouveau cadre.\nLa p vaut une nouvelle personne.\n"
+         "Afficher sorte de e puis sorte de c puis sorte de p.", "horodatée cadre personne");
+    PROG(APT_M "Un membre est une personne horodatée et numérotée.\n"
+         "Pour décrire une chose horodatée :\n    Afficher 1.\nPour décrire une chose numérotée :\n    Afficher 2.\n"
+         "Pour décrire un membre :\n    Afficher 3.\nLe m vaut un nouveau membre.\nDécrire m.", "3");
 
     /* --- Ramasse-miettes : cycles et objets abandonnés --- */
     {

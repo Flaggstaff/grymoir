@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.10 de la spécification, révisée le 21 septembre 2026.
+Version 1.11 de la spécification, révisée le 21 septembre 2026.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -275,7 +275,10 @@ phrase       = création | modification | affichage | si | remarque
              | tant-que | répéter | pour-chaque | sortir | passer | selon
              | classe | modif-champ ;
 classe       = un nom "a" ":" un nom { "," un nom } "."
-             | un nom "est" un nom "." [ un nom "a" ":" un nom { "," un nom } "." ] ;   (* même classe *)
+             | un nom "est" un ( nom | "chose" ) [ adjectifs ] "."
+               [ un nom "a" ":" un nom { "," un nom } "." ] ;                  (* même classe *)
+aptitude     = "une" "chose" adjectif [ "(" adjectif ")" ] "a" ":" un nom { "," un nom } "." ;
+adjectifs    = adjectif { ( "," | "et" ) adjectif } ;
 modif-champ  = article nom de base "devient" valeur ( "." | ":" initialisation ) ;
 initialisation = { article nom "vaut" valeur "." } ;      (* indentée, après « un nouveau … : » *)
 tant-que     = "Tant" "que" valeur branche ;
@@ -374,6 +377,8 @@ Limites de cette notation :
 | Champ hérité redéclaré | « « nom » est déjà un champ hérité de « personne ». » |
 | Version en double | « « saluer » existe déjà pour « personne ». » |
 | Aucune version (exécution) | « Aucune version de « saluer » pour une ville. » |
+| Accord d'une aptitude | « Accord : « personne horodatée ». » |
+| Conflit d'aptitudes | « « décrire » est défini par les aptitudes « horodatée » et « numérotée » de « membre » : définissez sa version pour « membre » afin de trancher. » |
 | Accord de « nouveau » | « « client » est masculin : écrivez « un nouveau client ». » |
 | Champ modifié avec `vaut` | « Un champ se modifie avec « devient » : « Le solde du client devient … ». » |
 | Champ absent (exécution) | « Un client n'a pas de champ « montant ». » |
@@ -580,6 +585,9 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `Selon x :` / `Cas 1 ou de 2 à 3` / `Cas supérieur à 10` / `Autrement` | `_selon x` / `_cas 1 _ou _de 2 _à 3` / `_cas > 10` / `_autrement` … `_fin` |
 | `Un client a : un nom, une date.` | `_classe _un client` / `_un nom` / `_une date` / `_fin` |
 | `Un membre est une personne.` + `Un membre a : une licence.` | `_classe _un membre _est _une personne` / `_une licence` / `_fin` |
+| `Une chose horodatée a : une date.` | `_aptitude horodatée` / `_une date` / `_fin` |
+| `Un membre est une personne horodatée et active.` | `_classe _un membre _est _une personne _adopte horodatée ; active` |
+| `Pour dater une chose horodatée :` | `_action dater(_une chose_horodatée)` |
 | `un nouveau client`, `une nouvelle facture` | `_nouveau client`, `_nouveau facture` |
 | `Le c vaut un nouveau client :` + `Le nom vaut « a ».` | `_le c << _nouveau client _avec` / `nom << « a »` / `_fin` |
 | `le nom du client de la facture` | `facture.client.nom` |
@@ -704,9 +712,33 @@ Saluer m.
 - Une formule sans classe et une méthode ne partagent pas un nom.
 - Dans la boucle interactive, une saisie peut ajouter une version à une formule existante ; les appels suivants la trouvent.
 
-### 13.7 À venir
+### 13.7 Aptitudes
 
-Les aptitudes (`Une chose horodatée a :`) suivent.
+```
+Une chose horodatée a :
+    une date de création.
+Une chose active (actif) a :
+    un état.
+
+Un membre est une personne horodatée et active.
+Un document est une chose horodatée.
+
+Pour dater une chose horodatée :
+    La date de création de la chose devient …
+```
+
+- Une aptitude est un adjectif. Elle se déclare avec `Une chose` et sa forme féminine ; sa forme masculine se déduit en retirant le « e » final, ou se déclare entre parenthèses quand elle est irrégulière.
+- Une classe adopte des aptitudes en les ajoutant après sa classe parente. L'adjectif s'accorde avec le nom qu'il suit : `une personne horodatée`, `un employé horodaté`. Avec `une chose`, la classe n'a pas de parent, seulement ses aptitudes.
+- `chose` est réservé aux aptitudes : ce n'est pas un nom de classe. Une aptitude et une classe ne partagent pas un nom.
+- Une classe reçoit les champs de ses aptitudes. Deux sources (classe parente, aptitudes, champs propres) ne fournissent pas le même champ.
+- `Pour dater une chose horodatée` : le premier paramètre s'appelle `chose` dans le corps, et la formule devient une version pour l'aptitude.
+- Choix de la version, pour chaque classe de la lignée, en partant de la classe réelle : la version de la classe, sinon celle de l'une de ses aptitudes, sinon on passe à la classe parente.
+- Conflit (charte, art. 6) : si deux aptitudes d'une classe définissent la même formule, la classe doit définir sa propre version, sinon l'analyse échoue. Aucune résolution implicite.
+- En forme compacte : `_aptitude horodatée`, `_aptitude active (actif)` ; `_classe _un membre _est _une personne _adopte horodatée ; active` ; `_une chose_horodatée` pour le paramètre.
+
+### 13.8 À venir
+
+Appeler la version de la classe parente depuis une méthode, les listes d'objets, l'absence de valeur et un vrai affichage des objets demandent chacun leur propre conception.
 
 ---
 
@@ -725,3 +757,4 @@ Les aptitudes (`Une chose horodatée a :`) suivent.
 | 1.8 | 2026-09-21 | Nouveau § 13 : classes, création d'objets (`un nouveau`, bloc d'initialisation), champs (`le solde du client`, `devient`), identité, ramasse-miettes. Les textes deviennent des valeurs. Correspondances compactes |
 | 1.9 | 2026-09-21 | § 13.5 : héritage simple (`Un membre est une personne.`, champs propres dans la phrase suivante), forme compacte `_est` |
 | 1.10 | 2026-09-21 | § 13.6 : méthodes ; versions d'une formule par classe du premier paramètre, choix à l'exécution selon la classe réelle et sa lignée |
+| 1.11 | 2026-09-21 | § 13.7 : aptitudes (adjectifs, formes masculines, adoption accordée, champs apportés, versions d'aptitude, ordre de choix, conflits tranchés par la classe) ; § 13.8 : suites |
