@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.2).
+ * Spécification : docs/vm.md (révision 1.3).
  */
 #include "bytecode.h"
 #include "decimal.h"
@@ -133,13 +133,15 @@ const char *instruction_nom(CodeInstruction code) {
     case I_RENDRE:         return "RENDRE";
     case I_LIRE_LOCAL:     return "LIRE_LOCAL";
     case I_ECRIRE_LOCAL:   return "ÉCRIRE_LOCAL";
+    case I_ECHOUER:        return "ÉCHOUER";
+    case I_EXIGER_ENTIER_NATUREL: return "EXIGER_ENTIER_NATUREL";
     }
     return "INCONNUE";
 }
 
 int instruction_a_operande(CodeInstruction code) {
     return code == I_CONSTANTE || code == I_LIRE || code == I_ECRIRE || code == I_AFFICHER
-        || code == I_APPELER || code == I_LIRE_LOCAL || code == I_ECRIRE_LOCAL;
+        || code == I_APPELER || code == I_LIRE_LOCAL || code == I_ECRIRE_LOCAL || code == I_ECHOUER;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -206,6 +208,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             ok = refuser(erreur, grym_formater("case locale %u inexistante (octet %lu).", op, (unsigned long)d));
         else if (c == I_APPELER && (op >= b->nb_noms || b->code[d + 4] > 1))
             ok = refuser(erreur, grym_formater("appel mal formé (octet %lu).", (unsigned long)d));
+        else if (c == I_ECHOUER && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
+            ok = refuser(erreur, grym_formater("ÉCHOUER sans message (octet %lu).", (unsigned long)d));
         else if (c == I_RENDRE && b->sorte != B_CALCUL)
             ok = refuser(erreur, grym_formater("RENDRE hors d'un calcul (octet %lu).", (unsigned long)d));
         else if (c == I_RETOUR && b->sorte == B_CALCUL)
@@ -251,6 +255,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                 effet = -(long)b->code[d + 3] + b->code[d + 4];
                 break;
             case I_RENDRE: besoin = 1; break;
+            case I_EXIGER_ENTIER_NATUREL: besoin = 1; break;
+            case I_ECHOUER: break;
             case I_NEGATION: case I_NON: besoin = 1; break;
             case I_ADDITION: case I_SOUSTRACTION: case I_MULTIPLICATION: case I_DIVISION:
             case I_PUISSANCE: case I_EGAL: case I_DIFFERENT: case I_INFERIEUR: case I_SUPERIEUR:
@@ -271,6 +277,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                                                        (unsigned long)d));
                 continue;
             }
+            if (c == I_ECHOUER) continue;   /* l'exécution s'arrête : pas de suite */
             if (c == I_RENDRE) {
                 if (p != 1)
                     ok = refuser(erreur, grym_formater("RENDRE sans exactement une valeur (octet %lu).",
@@ -632,7 +639,7 @@ char *bloc_desassembler(const Bloc *b) {
         snprintf(nombre, sizeof nombre, saut ? "%04lu" : "%lu", op);
         completer(&c, nombre, 6);
         char *commentaire = NULL;
-        if (code == I_CONSTANTE && op < b->nb_constantes) {
+        if ((code == I_CONSTANTE || code == I_ECHOUER) && op < b->nb_constantes) {
             const Constante *k = &b->constantes[op];
             if (k->type == C_NOMBRE) {
                 Decimal d = dec_depuis_canonique(k->texte);

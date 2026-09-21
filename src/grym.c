@@ -17,6 +17,7 @@
 #include "texte.h"
 
 #include <ctype.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,6 +67,13 @@ static char *lire_ligne(void) {
     if (n && l[n - 1] == '\r') n--;
     l[n] = '\0';
     return l;
+}
+
+/* Ctrl+C : la machine s'arrête proprement au prochain saut arrière ou appel (docs/vm.md, § 6). */
+static void sur_interruption(int signal_recu) {
+    (void)signal_recu;
+    grym_interruption = 1;
+    signal(SIGINT, sur_interruption);   /* certains systèmes réinstallent le gestionnaire par défaut */
 }
 
 static void signaler(const char *fichier, const Diagnostic *d) {
@@ -120,6 +128,7 @@ static int lancer(const char *chemin) {
     Machine *m = machine_creer();
     Chaine sortie = {0};
     Diagnostic d;
+    grym_interruption = 0;
     int ok = machine_executer(m, b, &sortie, &d);
     if (sortie.d) fputs(sortie.d, stdout);
     free(sortie.d);
@@ -218,6 +227,7 @@ static int boucle(void) {
         if (ok) {
             Module *b = compiler(&p, &d);
             ok = b != NULL;
+            grym_interruption = 0;   /* un Ctrl+C tapé à l'invite ne compte pas */
             if (ok) ok = machine_executer(m, b, &sortie, &d);
             module_detruire(b);
             programme_liberer(&p);
@@ -248,6 +258,7 @@ int main(int argc, char **argv) {
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 #endif
+    signal(SIGINT, sur_interruption);
     if (argc == 1) return boucle();
     if (argc == 3 && strcmp(argv[1], "lancer") == 0) return lancer(argv[2]);
     if (argc == 3 && strcmp(argv[1], "compiler") == 0) return compiler_fichier(argv[2]);

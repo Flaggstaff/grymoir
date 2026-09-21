@@ -351,9 +351,50 @@ int main(void) {
     VE("Pour saluer, afficher 1.", 1, 12, "« : » attendu");
     VE("Le carré d'un nombre devient 3.", 1, 22, "Un calcul ne se modifie pas");
 
+    /* --- Boucles et Selon (§ 10) --- */
+    V("Le x vaut 3.\nTant que x > 0, le x devient x − 1.",
+      "(créer [x] 3)\n(tant-que (> [x] 0) (bloc (modifier [x] (− [x] 1))))");
+    V("Répéter 3 fois :\n    Afficher 1.", "(répéter 3 (bloc (afficher 1)))");
+    V("Le n vaut 2.\nRépéter n fois, afficher n.", "(créer [n] 2)\n(répéter [n] (bloc (afficher [n])))");
+    V("Pour chaque mois de 1 à 12, afficher mois.", "(pour-chaque [mois] 1 12 (bloc (afficher [mois])))");
+    V("Pour chaque t de 0 à 1 par pas de 0,25, afficher t.", "(pour-chaque [t] 0 1 0.25 (bloc (afficher [t])))");
+    V("Le début vaut 1.\nLa fin vaut 3.\nPour chaque i du début à la fin, afficher i.",
+      "(créer [début] 1)\n(créer [fin] 3)\n(pour-chaque [i] [début] [fin] (bloc (afficher [i])))");
+    V("Le début vaut 1.\nLa fin vaut 3.\nPour chaque i de début à fin par pas de 1, afficher i.",
+      "(créer [début] 1)\n(créer [fin] 3)\n(pour-chaque [i] [début] [fin] 1 (bloc (afficher [i])))");
+    V("Tant que vrai :\n    Sortir de la boucle.", "(tant-que vrai (bloc (sortir)))");
+    V("Pour chaque i de 1 à 3 :\n    Si i = 2, passer au tour suivant.\n    Afficher i.",
+      "(pour-chaque [i] 1 3 (bloc (si (= [i] 2) (bloc (passer))) (afficher [i])))");
+    V("Le x vaut 1.\nSelon x :\n    Cas 1 ou 2 :\n        Afficher « a ».\n    Cas de 3 à 5 ou négatif, afficher « b ».\n"
+      "    Autrement, afficher « c ».",
+      "(créer [x] 1)\n(selon [x] (cas (= (sujet) 1) (= (sujet) 2) (bloc (afficher «a»))) "
+      "(cas (entre 3 5) (négatif (sujet)) (bloc (afficher «b»))) (autrement (bloc (afficher «c»))))");
+    V("Le x vaut 1.\nSelon x :\n    Cas supérieur ou égal à 10, afficher 1.",
+      "(créer [x] 1)\n(selon [x] (cas (≥ (sujet) 10) (bloc (afficher 1))))");
+    V("La somme d'un n :\n    Le total vaut 0.\n    Pour chaque i de 1 à n, le total devient total + i.\n    Rendre total.",
+      "(calcul [somme] ([n]) (bloc (créer [total] 0) (pour-chaque [i] 1 [n] (bloc (modifier [total] (+ [total] [i])))) "
+      "(rendre [total])))");
+
+    /* --- Erreurs de boucles --- */
+    VE("Pour chaque i de 1 à 3, le i devient 5.", 1, 28, "« i » est le compteur de la boucle");
+    VE("Pour chaque i de 1 à 3, afficher i.\nAfficher i.", 2, 10, "« i » inconnu.");
+    VE("Sortir de la boucle.", 1, 1, "« Sortir de la boucle » hors d'une boucle.");
+    VE("Tant que vrai :\n    Passer au tour.", 2, 19, "« . » inattendu, attendu : « suivant »");
+    VE("Tant que 3, afficher 1.", 1, 1, "Condition attendue après « Tant que »");
+    VE("Répéter 3, afficher 1.", 1, 10, "attendu : un opérateur ou « fois »");
+    VE("Pour chaque de 1 à 3, afficher 1.", 1, 13, "Nom du compteur attendu");
+    VE("Le i vaut 1.\nPour chaque i de 1 à 3, afficher i.", 2, 13, "« i » existe déjà");
+    VE("Selon 1 :\n    Afficher 1.", 2, 5, "« Cas » ou « Autrement » attendu");
+    VE("Selon 1 :\n    Autrement, afficher 1.\n    Cas 1, afficher 2.", 3, 5, "« Autrement » vient après tous les cas.");
+    VE("Selon 1 :\nAfficher 1.", 2, 1, "« Selon » sans cas");
+    VE("Cas 1, afficher 1.", 1, 1, "« Cas » hors d'un « Selon ».");
+    VE("Pour répéter :\n    Afficher 1.", 1, 6, "commence une construction du langage");
+    VE("Pour chaque i de 1 à 2 :\n    Pour saluer :\n        Afficher 1.", 2, 5, "au premier niveau");
+    VE("Tant que vrai :\n    Le carré d'un n vaut n.", 2, 5, "au premier niveau");
+
     /* --- Aide à la saisie (§ 8) --- */
-    VS("", "Le | La | L' | Afficher | Si | Pour | Remarque :");
-    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Pour | Remarque :");
+    VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
+    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Af", "Afficher");
     VS("l", "Le | La | L'");
     VS("Le total vaut 1.\nLe ", "total | (nouveau nom)");
@@ -389,6 +430,8 @@ int main(void) {
     VS("Pour relancer :\n    Afficher 1.\nRel", "Relancer");
     VS("Le taux vaut 2.\nLe double d'un nombre vaut ", "double | nombre | (nombre) | ( | − | vrai | faux");
     VS("Le carré d'un nombre vaut nombre × nombre.\nAfficher le carré ", "de | du");
+    VS("Tant que vrai :\n    Afficher 1.\n    S", "Si | Selon | Sortir de la boucle");
+    VS("Répéter 3 ", "fois | + | − | × | ÷ | ^");
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle, v0.2
- * Spécification : docs/vm.md (révision 1.2).
+ * Spécification : docs/vm.md (révision 1.3).
  */
 #ifndef GRYM_VM_H
 #define GRYM_VM_H
@@ -7,6 +7,12 @@
 #include "analyseur.h"
 #include "bytecode.h"
 #include "texte.h"
+
+#include <signal.h>
+
+/* Mis à 1 par un gestionnaire de Ctrl+C : l'exécution en cours s'arrête proprement
+ * au prochain saut arrière ou appel, et le journal l'annule (docs/vm.md, § 6). */
+extern volatile sig_atomic_t grym_interruption;
 
 /* Une machine garde les valeurs des noms d'une exécution à l'autre
  * (boucle interactive, rechargement de blocs). */

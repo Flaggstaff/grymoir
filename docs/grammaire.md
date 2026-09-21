@@ -1,10 +1,10 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.4 de la spécification, révisée le 21 septembre 2026.
+Version 1.5 de la spécification, révisée le 21 septembre 2026.
 Référence : Charte de GrymoiR v1.6, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
-Périmètre : nommer, calculer, afficher, décider (§ 5), définir des formules (§ 9), et le calcul des suites attendues (§ 8). Tout le reste attend les versions suivantes.
+Périmètre : nommer, calculer, afficher, décider (§ 5), définir des formules (§ 9), répéter (§ 10), et le calcul des suites attendues (§ 8). Tout le reste attend les versions suivantes.
 
 ---
 
@@ -271,7 +271,18 @@ Sinon :
 programme    = bloc ;
 bloc         = { phrase } ;                      (* alignées sur une même colonne, § 5.4 *)
 phrase       = création | modification | affichage | si | remarque
-             | calcul | action | rendre | appel-action ;
+             | calcul | action | rendre | appel-action
+             | tant-que | répéter | pour-chaque | sortir | passer | selon ;
+tant-que     = "Tant" "que" valeur branche ;
+répéter      = "Répéter" expression "fois" branche ;
+pour-chaque  = "Pour" "chaque" nom ( de | "du" ) expression à expression
+               [ "par" "pas" de expression ] branche ;
+sortir       = "Sortir" "de" "la" "boucle" "." ;
+passer       = "Passer" "au" "tour" "suivant" "." ;
+selon        = "Selon" valeur ":" { cas } [ autrement ] ;   (* cas et autrement indentés, alignés *)
+cas          = "Cas" condition-de-cas { "ou" condition-de-cas } branche ;
+autrement    = "Autrement" branche ;
+condition-de-cas = de expression à expression | relation | expression ;
 calcul       = article nom paramètres-de ( "vaut" valeur "." | ":" bloc-indenté ) ;
 paramètres-de = "d'" un nom { "et" "d'" un nom } ;
 action       = "Pour" nom [ un nom { "et" un nom } ] ":" bloc-indenté ;
@@ -345,6 +356,12 @@ Limites de cette notation :
 | Nombre d'arguments | « « carré » attend 1 paramètre, 2 donnés. » |
 | Calcul sans `Rendre` final | « Le calcul « valeur » doit se terminer par « Rendre … ». » |
 | Affichage dans un calcul | « Un calcul n'affiche rien : il rend une valeur. Pour afficher, écrivez une action. » |
+| Compteur modifié | « « mois » est le compteur de la boucle : il avance tout seul et ne se modifie pas. » |
+| Nombre de tours (exécution) | « Nombre de tours invalide : un entier positif ou nul est attendu, pas 2,5. » |
+| Pas nul (exécution) | « Pas nul : la boucle ne finirait jamais. » |
+| Hors d'une boucle | « « Sortir de la boucle » hors d'une boucle. » |
+| Cas après Autrement | « « Autrement » vient après tous les cas. » |
+| Interruption (exécution) | « Interrompu (Ctrl+C). » |
 | Récursion sans fin (exécution) | « Trop d'appels imbriqués : plus de 1000. Une formule s'appelle-t-elle sans fin ? » |
 
 Chaque message est précédé du fichier, de la ligne et de la colonne (charte, art. 8) : `facture.grym:7:18 : erreur : Division par zéro.`
@@ -357,6 +374,7 @@ Chaque message est précédé du fichier, de la ligne et de la colonne (charte, 
 
 - Catégories : début de phrase (`Le`, `La`, `L'`, `Afficher`, `Si`, `Pour`, `Remarque :`, et les actions déclarées, avec une majuscule), nombre, nom déclaré, nouveau nom, parenthèse, négation, texte, `vrai` et `faux`, opérateurs, comparaisons (`est`, `n'est pas`, symboles), `et` et `ou`, parenthèse fermante, `vaut` et `devient`, `,` et `:` après une condition, `puis`, point final.
 - Après `est`, les tournures accordées au genre du sujet (`supérieure à`, `positive`…) ; après `supérieur`, `à`, `au` ou `ou`.
+- `Tant que`, `Répéter`, `Pour chaque` et `Selon` en début de phrase ; dans une boucle, `Sortir de la boucle` et `Passer au tour suivant`.
 - Après le nom d'un calcul, `de` ou `du`. Dans un calcul, seuls ses paramètres, ses noms locaux et les formules sont proposés.
 - S'y ajoutent les mots qui prolongent un nom composé déclaré : après `prix`, `unitaire` si `prix unitaire` existe.
 - Premier usage : les messages d'erreur (« `« 2 » inattendu, attendu : un opérateur ou un point final.` »).
@@ -431,6 +449,81 @@ Relancer le client.
 
 ---
 
+## 10. Répéter
+
+### 10.1 Tant que
+
+```
+Tant que le solde est négatif :
+    Le solde devient solde + 100.
+```
+
+Même forme que `Si` (§ 5.4) : une condition, puis une phrase après une virgule ou un bloc après deux-points. La condition se teste avant chaque tour.
+
+### 10.2 Répéter … fois
+
+```
+Répéter 3 fois :
+    Afficher « Bip ».
+```
+
+- Le nombre de tours se calcule une fois, avant le premier tour.
+- Il doit être un entier positif ou nul (`3`, `3,00`, `0`). `2,5` ou `−1` produisent une erreur à l'exécution, jamais un arrondi.
+
+### 10.3 Pour chaque
+
+```
+Pour chaque mois de 1 à 12 :
+    Afficher mois.
+Pour chaque i du début à la fin, afficher i.
+Pour chaque taux de 0 à 1 par pas de 0,25, afficher taux.
+```
+
+- Les deux bornes sont incluses. Début, fin et pas se calculent une fois, avant le premier tour.
+- Sans pas écrit, le sens est automatique : `+1` si le début est inférieur ou égal à la fin, `−1` sinon. `de 10 à 1` compte à rebours.
+- Avec un pas écrit, la boucle avance du pas tant que le compteur ne dépasse pas la fin, dans le sens du pas. Un pas qui s'éloigne de la fin donne zéro tour.
+- Les pas décimaux sont exacts : `de 0 à 1 par pas de 0,1` fait exactement 11 tours. Les valeurs gardent les décimales du pas (§ 3.2) : `0`, `0,25`, `0,50`.
+- Un pas nul est une erreur à l'exécution.
+- Le compteur est un nom créé par la boucle, en lecture seule, sans article (`Pour chaque mois`). Il disparaît à la fin de la boucle et ne doit pas déjà exister.
+- Le nom du compteur s'arrête au premier `de`, `d'` ou `du` : il ne peut pas en contenir.
+
+### 10.4 Sortir, passer
+
+- `Sortir de la boucle.` quitte la boucle la plus proche.
+- `Passer au tour suivant.` saute à la fin du tour en cours : test suivant (`Tant que`, `Répéter`) ou incrémentation du compteur (`Pour chaque`).
+- Hors d'une boucle, ces phrases sont des erreurs. Une formule ne voit pas les boucles de son appelant.
+
+### 10.5 Selon
+
+```
+Selon le mois :
+    Cas 2 :
+        Le nombre de jours devient 28.
+    Cas 4 ou 6 ou 9 ou 11 :
+        Le nombre de jours devient 30.
+    Autrement :
+        Le nombre de jours devient 31.
+```
+
+- Le sujet se calcule une seule fois.
+- Les cas s'alignent sous le `Selon`, plus indentés, chacun en forme courte ou en bloc (comme `Si`).
+- Une condition de cas est une valeur (égalité par valeur, `1,0` = `1`), un intervalle `de a à b` (bornes incluses, dans un ordre quelconque) ou une tournure de `est` sans le `est` (`négatif`, `supérieur ou égal à 100`, `vrai`).
+- Plusieurs conditions se séparent par `ou`, jamais par une virgule : `Cas 1,3` désigne le nombre 1,3.
+- Seul le premier cas vrai s'exécute : aucun cas ne « tombe » dans le suivant.
+- `Autrement`, facultatif, vient en dernier. Sans lui, si aucun cas ne convient, rien ne se passe.
+- `Cas` et `Autrement` hors d'un `Selon` sont des erreurs.
+
+### 10.6 Boucles infinies et interruption
+
+- Aucune limite de tours : `Tant que vrai` est un programme légitime.
+- Ctrl+C interrompt l'exécution proprement : « Interrompu (Ctrl+C). » Dans la boucle interactive, la saisie interrompue est annulée comme toute saisie ratée (§ 3.3).
+
+### 10.7 Mots de construction
+
+`tant`, `répéter`, `chaque`, `sortir`, `passer`, `selon`, `cas`, `autrement` (avec `afficher`, `si`, `sinon`, `pour`, `rendre`) commencent des constructions : ils ne peuvent pas commencer le nom d'une action.
+
+---
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -440,3 +533,4 @@ Relancer le client.
 | 1.2 | 2026-09-21 | Arithmétique précisée : division finie exacte, zéros de fin, multiplication exacte, puissance à exposant entier (`0 ^ 0` = 1), limite de 1'000 chiffres. Afficher : séparateur espace, signe `−`. Boucle interactive : `quitter`, atomicité étendue aux erreurs de calcul. Messages d'erreur d'exécution |
 | 1.3 | 2026-09-21 | Nouveau § 5 : décider (comparaisons en mots et en symboles, sens courant de positif, accords, contractions au et du, et et ou sans mélange, Si en forme courte et en bloc, portée des blocs, booléens). Noms entre crochets, mots réservés étendus, tabulations interdites en début de ligne. Renumérotation : EBNF § 6, messages § 7, suites § 8 |
 | 1.4 | 2026-09-21 | Nouveau § 9 : formules. Calculs (définis comme ils s'utilisent, forme courte et bloc avec `Rendre`), actions (`Pour`), paramètres par l'article indéfini, calculs purs, récursion limitée à 1000 appels. `rendre` réservé, `d'un` réservé aux paramètres |
+| 1.5 | 2026-09-21 | Nouveau § 10 : répéter. `Tant que`, `Répéter … fois`, `Pour chaque … de … à … [par pas de …]` (bornes incluses, sens automatique, pas décimaux exacts, compteur en lecture seule), `Sortir de la boucle`, `Passer au tour suivant`, `Selon` / `Cas` / `Autrement` (valeurs séparées par `ou`, intervalles, tournures, pas de chute), interruption par Ctrl+C |

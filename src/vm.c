@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.2).
+ * Spécification : docs/vm.md (révision 1.3).
  */
 #include "vm.h"
 #include "decimal.h"
@@ -63,6 +63,7 @@ typedef struct {
     char *nom;
     int definie;
     Valeur valeur;
+    unsigned long epoque;   /* exécution au cours de laquelle la case est entrée au journal */
 } Case;
 
 typedef struct {
@@ -84,7 +85,10 @@ struct Machine {
     size_t nb_journal, cap_journal;
     Formule *formules;
     size_t nb_formules;
+    unsigned long epoque;   /* numéro de l'exécution en cours */
 };
+
+volatile sig_atomic_t grym_interruption = 0;
 
 #define APPELS_MAX 1000   /* profondeur d'appels : au-delà, « Trop d'appels imbriqués » */
 
@@ -125,10 +129,21 @@ static size_t case_de(Machine *m, const char *nom) {
     Case *c = &m->cases[m->nb_cases];
     c->nom = grym_dupliquer(nom);
     c->definie = 0;
+    c->epoque = 0;
     return m->nb_cases++;
 }
 
+/* Seule la première écriture d'une case au cours d'une exécution entre au journal :
+ * c'est la valeur d'avant l'exécution qu'il faut pouvoir rendre. Une boucle qui
+ * modifie un nom un million de fois n'occupe ainsi qu'une entrée. */
 static void ecrire(Machine *m, size_t c, Valeur v) {
+    Case *k = &m->cases[c];
+    if (k->epoque == m->epoque) {
+        valeur_liberer(&k->valeur);
+        k->valeur = v;
+        return;
+    }
+    k->epoque = m->epoque;
     if (m->nb_journal == m->cap_journal) {
         m->cap_journal = m->cap_journal ? m->cap_journal * 2 : 16;
         Ecriture *j = grym_allouer(m->cap_journal * sizeof *j);
@@ -284,6 +299,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
     }
 
+    m->epoque++;
     const Bloc *principal = module->blocs[0];
     size_t *liaison_principale = lier(m, principal);
     Cadre *cadres = grym_allouer(8 * sizeof *cadres);
@@ -291,8 +307,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     cadres[0].b = principal;
     cadres[0].liaison = liaison_principale;
     cadres[0].ip = 0;
-    cadres[0].locaux = NULL;
-    cadres[0].definis = NULL;
+    {
+        int nl = principal->nb_locaux;
+        cadres[0].locaux = grym_allouer((nl ? (size_t)nl : 1) * sizeof *cadres[0].locaux);
+        cadres[0].definis = grym_allouer(nl ? (size_t)nl : 1);
+        memset(cadres[0].definis, 0, nl ? (size_t)nl : 1);
+    }
 
     Pile pile = { NULL, 0, 0 };
     int ok = 1;
@@ -444,8 +464,27 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_SAUTER:
+            if (cible <= debut && grym_interruption) {
+                grym_interruption = 0;
+                ok = echouer(diag, b, debut, grym_dupliquer("Interrompu (Ctrl+C)."));
+                break;
+            }
             cadre->ip = cible;
             break;
+        case I_ECHOUER:
+            ok = echouer(diag, b, debut, grym_dupliquer(b->constantes[op].texte));
+            break;
+        case I_EXIGER_ENTIER_NATUREL: {
+            Valeur *x = &pile.v[pile.n - 1];
+            if (x->type != V_NOMBRE || x->nombre.negatif || !dec_est_entier(&x->nombre)) {
+                char *v = x->type == V_NOMBRE ? dec_formater(&x->nombre)
+                                              : grym_dupliquer(x->type == V_TEXTE ? "un texte" : "un booléen");
+                ok = echouer(diag, b, debut, grym_formater(
+                    "Nombre de tours invalide : un entier positif ou nul est attendu, pas %s.", v));
+                free(v);
+            }
+            break;
+        }
         case I_SAUTER_SI_FAUX: {
             Valeur v = depiler(&pile);
             if (v.type != V_BOOLEEN) {
@@ -483,6 +522,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     "Appel de « %s » incompatible : %s à %d paramètre%s attendu.", nom,
                     f->bloc->sorte == B_CALCUL ? "un calcul" : "une action",
                     f->bloc->nb_parametres, f->bloc->nb_parametres > 1 ? "s" : ""));
+                break;
+            }
+            if (grym_interruption) {
+                grym_interruption = 0;
+                ok = echouer(diag, b, debut, grym_dupliquer("Interrompu (Ctrl+C)."));
                 break;
             }
             if (nb_cadres >= APPELS_MAX) {

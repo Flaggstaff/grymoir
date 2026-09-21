@@ -23,6 +23,9 @@ typedef enum {
     N_LOGIQUE,       /* op : 'e' (et) ou 'o' (ou) ; enfants[0], enfants[1] */
     N_BLOC,          /* enfants : phrases d'un bloc indenté ou d'une forme courte */
     N_APPEL,         /* appel d'un calcul : texte : nom ; enfants : arguments */
+    N_SUJET,         /* le sujet d'un Selon, rangé dans la case locale `local` */
+    N_INTERVALLE,    /* cas « de a à b » : enfants[0], enfants[1] ; bornes dans un ordre quelconque */
+    N_CAS,           /* enfants : conditions, puis le N_BLOC ; forme 1 : « Autrement » (sans condition) */
     /* phrases */
     P_CREATION,      /* texte : nom ; enfants[0] : expression */
     P_MODIFICATION,  /* texte : nom ; enfants[0] : expression */
@@ -35,7 +38,14 @@ typedef enum {
                         une valeur (forme 0, « vaut ») ou un N_BLOC (forme 1) ; entier : nombre de locaux */
     P_ACTION,        /* texte : nom ; enfants[0] : N_BLOC des paramètres ; enfants[1] : N_BLOC ; entier : locaux */
     P_RENDRE,        /* enfants[0] : valeur rendue par un calcul */
-    P_APPEL          /* appel d'une action : texte : nom ; enfants : arguments */
+    P_APPEL,         /* appel d'une action : texte : nom ; enfants : arguments */
+    P_TANT_QUE,      /* enfants[0] : condition ; enfants[1] : N_BLOC */
+    P_REPETER,       /* enfants[0] : nombre de tours ; enfants[1] : N_BLOC ; entier : case du compte à rebours */
+    P_POUR_CHAQUE,   /* texte : compteur (case `local`) ; enfants : début, fin, [pas], N_BLOC ;
+                        forme 1 : pas écrit ; entier : case de la fin, entier + 1 : case du pas */
+    P_SORTIR,        /* « Sortir de la boucle. » */
+    P_PASSER,        /* « Passer au tour suivant. » */
+    P_SELON          /* enfants[0] : sujet ; puis les N_CAS ; entier : case du sujet */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L } Article;

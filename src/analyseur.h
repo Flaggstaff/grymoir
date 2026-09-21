@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.4), § 2 à 9.
+ * Spécification : docs/grammaire.md (révision 1.5), § 2 à 10.
  *
  * L'analyseur construit l'arbre et résout les noms dans le même passage :
  * la plus longue correspondance des noms composés (§ 2.2) exige de connaître
@@ -21,6 +21,7 @@ Portee *portee_cloner(const Portee *p);
 typedef struct {
     Noeud **phrases;
     size_t nb;
+    int nb_locaux;   /* cases locales du programme principal (compteurs de boucles, sujets de Selon) */
 } Programme;
 
 typedef struct {

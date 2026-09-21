@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.2).
+ * Spécification : docs/vm.md (révision 1.3).
  */
 #ifndef GRYM_BYTECODE_H
 #define GRYM_BYTECODE_H
@@ -31,10 +31,12 @@ typedef enum {
     I_APPELER,
     I_RENDRE,
     I_LIRE_LOCAL,
-    I_ECRIRE_LOCAL
+    I_ECRIRE_LOCAL,
+    I_ECHOUER,
+    I_EXIGER_ENTIER_NATUREL
 } CodeInstruction;
 
-#define I_DERNIER I_ECRIRE_LOCAL
+#define I_DERNIER I_EXIGER_ENTIER_NATUREL
 
 typedef enum { B_PROGRAMME = 0, B_CALCUL = 1, B_ACTION = 2 } SorteBloc;
 

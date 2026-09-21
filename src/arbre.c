@@ -152,6 +152,44 @@ static void decrire(const Noeud *n, Chaine *c) {
         }
         chaine_ajouter(c, ")");
         return;
+    case N_SUJET:
+        chaine_ajouter(c, "(sujet)");
+        return;
+    case N_INTERVALLE:
+        chaine_ajouter(c, "(entre ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
+    case P_SORTIR:
+        chaine_ajouter(c, "(sortir)");
+        return;
+    case P_PASSER:
+        chaine_ajouter(c, "(passer)");
+        return;
+    case P_TANT_QUE:
+    case P_REPETER:
+    case P_SELON:
+    case N_CAS:
+        chaine_ajouter(c, n->type == P_TANT_QUE ? "(tant-que" : n->type == P_REPETER ? "(répéter"
+                        : n->type == P_SELON ? "(selon" : n->forme ? "(autrement" : "(cas");
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            chaine_ajouter(c, " ");
+            decrire(n->enfants[k], c);
+        }
+        chaine_ajouter(c, ")");
+        return;
+    case P_POUR_CHAQUE:
+        chaine_ajouter(c, "(pour-chaque [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "]");
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            chaine_ajouter(c, " ");
+            decrire(n->enfants[k], c);
+        }
+        chaine_ajouter(c, ")");
+        return;
     case N_APPEL:
     case P_APPEL:
         chaine_ajouter(c, n->type == N_APPEL ? "(appel [" : "(action-appel [");

@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.4), § 2 à 9.
+ * Spécification : docs/grammaire.md (révision 1.5), § 2 à 10.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -26,6 +26,7 @@ typedef struct {
     int ligne_decl;    /* ligne de la création */
     int ligne_genre;   /* ligne où le genre a été fixé */
     Sorte sorte;
+    int lecture_seule; /* compteur d'une boucle Pour chaque */
     int nb_parametres; /* calculs et actions */
     int local;         /* case locale dans une formule, −1 pour un nom global */
 } Symbole;
@@ -88,6 +89,7 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->ligne_decl = ligne;
     s->ligne_genre = ligne;
     s->sorte = S_VARIABLE;
+    s->lecture_seule = 0;
     s->nb_parametres = 0;
     s->local = -1;
 }
@@ -113,6 +115,9 @@ typedef struct {
     size_t barriere;         /* dans un calcul, les variables d'index inférieur sont invisibles */
     int nb_locaux;           /* cases locales allouées dans la formule en cours */
     int niveau;              /* 0 : premier niveau du programme ; > 0 : dans un bloc */
+    int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
+    const char *arrets[3];   /* mots qui peuvent suivre un nom dans le contexte courant (« à », « fois »…) */
+    int nb_arrets;
     char **noms_fin;         /* noms visibles au dernier passage à la fin de la source (§ 8) */
     int *sortes_fin;
     size_t nb_noms_fin;
@@ -142,7 +147,8 @@ enum {
     A_COMPARAISON= 1u << 12, /* est, n'est pas, =, ≠, <, >, ≤, ≥ */
     A_LOGIQUE    = 1u << 13, /* et, ou */
     A_SUITE_SI   = 1u << 14, /* « , » ou « : » après la condition */
-    A_BOOLEEN    = 1u << 15  /* vrai, faux */
+    A_BOOLEEN    = 1u << 15, /* vrai, faux */
+    A_BOUCLE     = 1u << 16  /* Sortir de la boucle, Passer au tour suivant */
 };
 #define A_OPERATEUR (A_OP_PUISS | A_OP_MUL | A_OP_ADD)
 
@@ -618,7 +624,9 @@ static Noeud *nom_expression(Analyse *a) {
             free(c);
             if (s) { fin = k; break; }
         }
-        if (!s || (fin < f && s->sorte != S_CALCUL)) {
+        int arret = 0;
+        for (int q = 0; q < a->nb_arrets && fin < f; q++) if (est_mot(&a->j[fin], a->arrets[q])) arret = 1;
+        if (!s || (fin < f && s->sorte != S_CALCUL && !arret)) {
             char *tout = cle(a, d, f);
             if (!s && a->formule == 1) {
                 /* Le nom existe peut-être hors du calcul : les calculs sont purs (§ 9.4). */
@@ -1256,6 +1264,13 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
             free(nom);
             return NULL;
         }
+        if (s->lecture_seule) {
+            erreur(a, &a->j[d], grym_formater(
+                "« %s » est le compteur de la boucle : il avance tout seul et ne se modifie pas.", nom));
+            free(ecrit_nom);
+            free(nom);
+            return NULL;
+        }
         if (s->sorte != S_VARIABLE) {
             erreur(a, &a->j[d], grym_formater("« %s » est %s ne se modifie pas.", nom,
                                               s->sorte == S_CALCUL ? "un calcul : il" : "une action : elle"));
@@ -1321,7 +1336,7 @@ static Noeud *phrase_courte(Analyse *a, int colonne) {
 }
 
 /* Corps d'une branche : « , phrase » ou « : » suivi d'un bloc indenté. */
-static Noeud *branche(Analyse *a, int colonne, const Jeton *mot, int *forme_bloc) {
+static Noeud *branche(Analyse *a, int colonne, const char *mot, int *forme_bloc) {
     attendre(a, A_SUITE_SI);
     Jeton *t = cour(a);
     if (t->type == J_VIRGULE) {
@@ -1337,7 +1352,7 @@ static Noeud *branche(Analyse *a, int colonne, const Jeton *mot, int *forme_bloc
         || est_mot(suivant, "sinon")) {
         char *m = grym_formater("Bloc vide : après « : », écrivez les phrases du bloc sur les lignes "
                                 "suivantes, plus indentées que « %s ».",
-                                est_mot(mot, "sinon") ? "Sinon" : "Si");
+                                mot);
         return erreur(a, suivant->type == J_FIN || suivant->ligne == t->ligne ? t : suivant, m);
     }
     return bloc(a, suivant->colonne, 0);
@@ -1356,7 +1371,7 @@ static Noeud *si(Analyse *a, int colonne, int sinon_si) {
             "« Si le total est supérieur à 100 ». Un calcul seul n'est ni vrai ni faux."));
     }
     int forme_bloc = 0;
-    Noeud *alors = branche(a, colonne, t, &forme_bloc);
+    Noeud *alors = branche(a, colonne, "Si", &forme_bloc);
     if (!alors) { noeud_liberer(cond); return NULL; }
     Noeud *n = noeud_creer(P_SI, t->ligne, t->colonne, t->debut);
     n->forme = (forme_bloc ? 1 : 0) | (sinon_si ? 2 : 0);
@@ -1382,7 +1397,7 @@ static Noeud *si(Analyse *a, int colonne, int sinon_si) {
         autre->fin = imbrique->fin;
     } else {
         int f = 0;
-        autre = branche(a, colonne, s, &f);
+        autre = branche(a, colonne, "Sinon", &f);
         if (!autre) { noeud_liberer(n); return NULL; }
     }
     noeud_ajouter(n, autre);
@@ -1393,6 +1408,8 @@ static Noeud *si(Analyse *a, int colonne, int sinon_si) {
 /* ---------------------------------------------------------------- */
 /* Formules (§ 9)                                                   */
 /* ---------------------------------------------------------------- */
+
+static int mot_de_construction(const Jeton *t);
 
 static int est_un(const Jeton *t, Genre *g) {
     if (est_mot(t, "un"))  { *g = GENRE_MASCULIN; return 1; }
@@ -1457,12 +1474,13 @@ static Noeud *parametres(Analyse *a, size_t d, size_t f, int avec_de) {
     return liste;
 }
 
-typedef struct { int formule, nb_locaux, niveau; size_t barriere; } Contexte;
+typedef struct { int formule, nb_locaux, niveau, boucle; size_t barriere; } Contexte;
 
 /* Entre dans le corps d'une formule : les paramètres deviennent les premières cases locales. */
 static Contexte entrer_formule(Analyse *a, int sorte, Noeud *params) {
-    Contexte c = { a->formule, a->nb_locaux, a->niveau, a->barriere };
+    Contexte c = { a->formule, a->nb_locaux, a->niveau, a->boucle, a->barriere };
     a->formule = sorte;
+    a->boucle = 0;
     a->nb_locaux = 0;
     a->barriere = a->portee->n;
     for (size_t k = 0; k < params->nb_enfants; k++) {
@@ -1478,6 +1496,7 @@ static void sortir_formule(Analyse *a, Contexte c) {
     a->formule = c.formule;
     a->nb_locaux = c.nb_locaux;
     a->niveau = c.niveau;
+    a->boucle = c.boucle;
     a->barriere = c.barriere;
 }
 
@@ -1579,6 +1598,13 @@ static Noeud *definition_action(Analyse *a, int colonne) {
     if (k == d)
         return erreur(a, cour(a), grym_dupliquer(
             "Nom d'action attendu après « Pour » : « Pour relancer un client : »."));
+    if (mot_de_construction(&a->j[d])) {
+        char *x = texte_jeton(&a->j[d]);
+        char *m = grym_formater("« %s » commence une construction du langage : il ne peut pas "
+                                "commencer le nom d'une action.", x);
+        free(x);
+        return erreur(a, &a->j[d], m);
+    }
     size_t fin = k;
     while (a->j[fin].type != J_DEUX_POINTS && a->j[fin].type != J_POINT && a->j[fin].type != J_FIN
            && a->j[fin].type != J_VIRGULE)
@@ -1661,9 +1687,319 @@ static Symbole *action_en_tete(Analyse *a, size_t *fin) {
     return NULL;
 }
 
+/* ---------------------------------------------------------------- */
+/* Boucles et Selon (§ 10)                                          */
+/* ---------------------------------------------------------------- */
+
+/* Consomme une suite de mots fixes (« de la boucle ») ; 0 et une erreur sinon. */
+static int mots_fixes(Analyse *a, const char *const *mots, int nb) {
+    for (int k = 0; k < nb; k++) {
+        attendre_mot(a, a->i, mots[k], strlen(mots[k]));
+        if (!est_mot(cour(a), mots[k])) {
+            erreur_inattendu(a, cour(a));
+            return 0;
+        }
+        avancer(a);
+    }
+    return 1;
+}
+
+static void arrets(Analyse *a, const char *m1, const char *m2) {
+    a->nb_arrets = 0;
+    if (m1) a->arrets[a->nb_arrets++] = m1;
+    if (m2) a->arrets[a->nb_arrets++] = m2;
+}
+
+/* Expression suivie d'un mot de liaison : « de 1 à 12 », « 3 fois ». */
+static Noeud *expression_avant(Analyse *a, const char *m1, const char *m2) {
+    arrets(a, m1, m2);
+    Noeud *e = expression(a);
+    arrets(a, NULL, NULL);
+    return e;
+}
+
+static int de_ou_d(const Jeton *t) {
+    return est_mot(t, "de") || (t->type == J_ELISION && strcmp(t->valeur, "d") == 0);
+}
+
+/* Tant que condition , phrase | : bloc */
+static Noeud *tant_que(Analyse *a, int colonne) {
+    Jeton *t = cour(a);
+    avancer(a);
+    static const char *const QUE[] = { "que" };
+    if (!mots_fixes(a, QUE, 1)) return NULL;
+    Noeud *cond = valeur(a);
+    if (!cond) return NULL;
+    if (!peut_etre_condition(cond)) {
+        noeud_liberer(cond);
+        return erreur(a, t, grym_dupliquer("Condition attendue après « Tant que » : un calcul seul "
+                                           "n'est ni vrai ni faux."));
+    }
+    int forme = 0;
+    a->boucle++;
+    Noeud *corps = branche(a, colonne, "Tant que", &forme);
+    a->boucle--;
+    if (!corps) { noeud_liberer(cond); return NULL; }
+    Noeud *n = noeud_creer(P_TANT_QUE, t->ligne, t->colonne, t->debut);
+    n->forme = forme;
+    noeud_ajouter(n, cond);
+    noeud_ajouter(n, corps);
+    n->fin = corps->fin;
+    return n;
+}
+
+/* Répéter expression fois , phrase | : bloc */
+static Noeud *repeter(Analyse *a, int colonne) {
+    Jeton *t = cour(a);
+    avancer(a);
+    Noeud *nb = expression_avant(a, "fois", NULL);
+    if (!nb) return NULL;
+    static const char *const FOIS[] = { "fois" };
+    if (!mots_fixes(a, FOIS, 1)) { noeud_liberer(nb); return NULL; }
+    int case_reste = a->nb_locaux++;
+    int forme = 0;
+    a->boucle++;
+    Noeud *corps = branche(a, colonne, "Répéter", &forme);
+    a->boucle--;
+    if (!corps) { noeud_liberer(nb); return NULL; }
+    Noeud *n = noeud_creer(P_REPETER, t->ligne, t->colonne, t->debut);
+    n->forme = forme;
+    n->entier = case_reste;
+    noeud_ajouter(n, nb);
+    noeud_ajouter(n, corps);
+    n->fin = corps->fin;
+    return n;
+}
+
+/* Pour chaque nom de début à fin [ par pas de pas ] , phrase | : bloc */
+static Noeud *pour_chaque(Analyse *a, int colonne) {
+    Jeton *t = cour(a);
+    avancer(a);
+    avancer(a);   /* chaque */
+    size_t d = a->i, k = d;
+    while (mot_de_nom(a, k) && !de_ou_d(&a->j[k]) && !est_mot(&a->j[k], "du")) k++;
+    if (k == d)
+        return erreur(a, cour(a), grym_dupliquer(
+            "Nom du compteur attendu : « Pour chaque mois de 1 à 12 : »."));
+    if (article_de(&a->j[d]) != ART_AUCUN)
+        return erreur(a, &a->j[d], grym_dupliquer(
+            "Le compteur se nomme sans article : « Pour chaque mois de 1 à 12 : »."));
+    char *nom = cle(a, d, k);
+    if (visible(a, nom)) {
+        erreur(a, &a->j[d], grym_formater("« %s » existe déjà : choisissez un autre nom de compteur.", nom));
+        free(nom);
+        return NULL;
+    }
+    a->i = k;
+    attendre_mot(a, a->i, "de", 2);
+    attendre_mot(a, a->i, "du", 2);
+    if (est_mot(cour(a), "du")) {             /* « du début » : de + le */
+        a->article_force = ART_LE;
+        a->jeton_force = cour(a);
+    } else if (!de_ou_d(cour(a))) {
+        free(nom);
+        return erreur_inattendu(a, cour(a));
+    }
+    avancer(a);
+    Noeud *debut = expression_avant(a, "à", "au");
+    a->article_force = ART_AUCUN;
+    Noeud *fin = NULL, *pas = NULL;
+    if (debut && complement(a, 'a')) {
+        fin = expression_avant(a, "par", NULL);
+        a->article_force = ART_AUCUN;
+    }
+    if (fin) {
+        attendre_mot(a, a->i, "par pas de", 10);
+        if (est_mot(cour(a), "par")) {
+            static const char *const PAS[] = { "par", "pas" };
+            if (mots_fixes(a, PAS, 2)) {
+                attendre_mot(a, a->i, "de", 2);
+                if (!de_ou_d(cour(a))) erreur_inattendu(a, cour(a));
+                else { avancer(a); pas = expression(a); }
+            }
+            if (!pas) { noeud_liberer(fin); fin = NULL; }
+        }
+    }
+    if (!fin) { noeud_liberer(debut); free(nom); return NULL; }
+
+    size_t sauve = a->portee->n;
+    portee_declarer(a->portee, nom, GENRE_LIBRE, t->ligne);
+    Symbole *compteur = &a->portee->s[a->portee->n - 1];
+    compteur->lecture_seule = 1;
+    int case_compteur = compteur->local = a->nb_locaux++;
+    int case_fin = a->nb_locaux++;
+    a->nb_locaux++;   /* case du pas */
+    int forme = 0;
+    a->boucle++;
+    Noeud *corps = branche(a, colonne, "Pour chaque", &forme);
+    a->boucle--;
+    portee_tronquer(a->portee, sauve);
+    if (!corps) {
+        noeud_liberer(debut);
+        noeud_liberer(fin);
+        noeud_liberer(pas);
+        free(nom);
+        return NULL;
+    }
+    Noeud *n = noeud_creer(P_POUR_CHAQUE, t->ligne, t->colonne, t->debut);
+    n->texte = nom;
+    n->local = case_compteur;
+    n->entier = case_fin;
+    n->forme = pas ? 1 : 0;
+    noeud_ajouter(n, debut);
+    noeud_ajouter(n, fin);
+    if (pas) noeud_ajouter(n, pas);
+    noeud_ajouter(n, corps);
+    n->fin = corps->fin;
+    return n;
+}
+
+/* Sortir de la boucle. | Passer au tour suivant. */
+static Noeud *sortie_de_boucle(Analyse *a) {
+    Jeton *t = cour(a);
+    int sortir = est_mot(t, "sortir");
+    avancer(a);
+    static const char *const SORTIR[] = { "de", "la", "boucle" };
+    static const char *const PASSER[] = { "au", "tour", "suivant" };
+    if (!mots_fixes(a, sortir ? SORTIR : PASSER, 3)) return NULL;
+    if (!fin_phrase(a, 0)) return NULL;
+    if (a->boucle == 0)
+        return erreur(a, t, grym_formater("« %s » hors d'une boucle.",
+                                          sortir ? "Sortir de la boucle" : "Passer au tour suivant"));
+    return noeud_creer(sortir ? P_SORTIR : P_PASSER, t->ligne, t->colonne, t->debut);
+}
+
+static Noeud *sujet(const Jeton *t, int case_sujet) {
+    Noeud *n = noeud_creer(N_SUJET, t->ligne, t->colonne, t->debut);
+    n->local = case_sujet;
+    return n;
+}
+
+/* Une condition de cas : une valeur, « de a à b », ou une tournure (« négatif », « supérieur à 100 »). */
+static Noeud *element_cas(Analyse *a, int case_sujet) {
+    Jeton *t = cour(a);
+    if (de_ou_d(t)) {
+        avancer(a);
+        Noeud *x = expression_avant(a, "à", "au");
+        if (!x) return NULL;
+        if (!complement(a, 'a')) { noeud_liberer(x); return NULL; }
+        Noeud *y = expression(a);
+        a->article_force = ART_AUCUN;
+        if (!y) { noeud_liberer(x); return NULL; }
+        Noeud *n = noeud_creer(N_INTERVALLE, t->ligne, t->colonne, t->debut);
+        noeud_ajouter(n, x);
+        noeud_ajouter(n, y);
+        n->fin = y->fin;
+        return n;
+    }
+    for (size_t k = 0; k < NB_RELATIONS; k++)
+        if (est_mot(t, RELATIONS[k].m) || est_mot(t, RELATIONS[k].f))
+            return relation(a, sujet(t, case_sujet), 0, t);
+    Noeud *v = expression(a);
+    if (!v) return NULL;
+    Noeud *n = noeud_creer(N_COMPARAISON, v->ligne, v->colonne, v->debut);
+    n->op = '=';
+    n->forme = 2;   /* égalité implicite d'un cas */
+    n->op_ligne = v->ligne;
+    n->op_colonne = v->colonne;
+    noeud_ajouter(n, sujet(t, case_sujet));
+    noeud_ajouter(n, v);
+    n->fin = v->fin;
+    return n;
+}
+
+/* Selon valeur : puis, indentés, des « Cas … » et un « Autrement » final facultatif. */
+static Noeud *selon(Analyse *a, int colonne) {
+    Jeton *t = cour(a);
+    avancer(a);
+    Noeud *s = valeur(a);
+    if (!s) return NULL;
+    attendre_en(a, a->i, 0);
+    attendre_mot(a, a->i, ":", 1);
+    if (cour(a)->type != J_DEUX_POINTS) {
+        noeud_liberer(s);
+        return erreur_inattendu(a, cour(a));
+    }
+    Jeton *dp = cour(a);
+    avancer(a);
+    Jeton *premier = cour(a);
+    if (premier->type == J_FIN || premier->ligne == dp->ligne || premier->colonne <= colonne) {
+        noeud_liberer(s);
+        return erreur(a, premier->type == J_FIN || premier->ligne == dp->ligne ? dp : premier,
+                      grym_dupliquer("« Selon » sans cas : écrivez les « Cas … » sur les lignes suivantes, indentés."));
+    }
+    int c = premier->colonne;
+    Noeud *n = noeud_creer(P_SELON, t->ligne, t->colonne, t->debut);
+    n->entier = a->nb_locaux++;
+    noeud_ajouter(n, s);
+    int autrement = 0, nb_cas = 0;
+    for (;;) {
+        Jeton *u = cour(a);
+        if (u->type == J_FIN) break;
+        if (u->type == J_REMARQUE) {
+            noeud_ajouter(n, feuille(P_REMARQUE, u));
+            avancer(a);
+            continue;
+        }
+        if (!premier_de_ligne(a, a->i) || u->colonne < c) break;
+        if (u->colonne > c) {
+            noeud_liberer(n);
+            return erreur(a, u, grym_dupliquer("Indentation inattendue : les cas s'alignent les uns sous les autres."));
+        }
+        attendre_mot(a, a->i, "Cas", 3);
+        attendre_mot(a, a->i, "Autrement", 9);
+        Noeud *cas;
+        if (est_mot(u, "cas")) {
+            if (autrement) {
+                noeud_liberer(n);
+                return erreur(a, u, grym_dupliquer("« Autrement » vient après tous les cas."));
+            }
+            avancer(a);
+            cas = noeud_creer(N_CAS, u->ligne, u->colonne, u->debut);
+            for (;;) {
+                Noeud *e = element_cas(a, n->entier);
+                if (!e) { noeud_liberer(cas); noeud_liberer(n); return NULL; }
+                noeud_ajouter(cas, e);
+                attendre_mot(a, a->i, "ou", 2);
+                if (!est_mot(cour(a), "ou")) break;
+                avancer(a);
+            }
+        } else if (est_mot(u, "autrement")) {
+            if (autrement) {
+                noeud_liberer(n);
+                return erreur(a, u, grym_dupliquer("Un seul « Autrement » par « Selon »."));
+            }
+            autrement = 1;
+            avancer(a);
+            cas = noeud_creer(N_CAS, u->ligne, u->colonne, u->debut);
+            cas->forme = 1;
+        } else {
+            noeud_liberer(n);
+            return erreur(a, u, grym_dupliquer("« Cas » ou « Autrement » attendu dans un « Selon »."));
+        }
+        int forme = 0;
+        Noeud *corps = branche(a, c, est_mot(u, "cas") ? "Cas" : "Autrement", &forme);
+        if (!corps) { noeud_liberer(cas); noeud_liberer(n); return NULL; }
+        noeud_ajouter(cas, corps);
+        cas->fin = corps->fin;
+        noeud_ajouter(n, cas);
+        n->fin = corps->fin;
+        nb_cas++;
+    }
+    return n;
+}
+
+/* Mots qui commencent une construction et ne peuvent donc pas commencer le nom d'une action. */
+static int mot_de_construction(const Jeton *t) {
+    static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
+                                     "autrement", "afficher", "si", "sinon", "pour", "rendre" };
+    for (size_t k = 0; k < sizeof M / sizeof *M; k++) if (est_mot(t, M[k])) return 1;
+    return 0;
+}
+
 static Noeud *phrase(Analyse *a, int colonne) {
     Jeton *t = cour(a);
-    attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0));
+    attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0) | (a->boucle ? A_BOUCLE : 0));
 
     if (t->type == J_REMARQUE) {
         Noeud *n = feuille(P_REMARQUE, t);
@@ -1677,6 +2013,13 @@ static Noeud *phrase(Analyse *a, int colonne) {
         return affichage(a);
     }
     if (est_mot(t, "si")) return si(a, colonne, 0);
+    if (est_mot(t, "tant") && est_mot(voir(a, 1), "que")) return tant_que(a, colonne);
+    if (est_mot(t, "répéter")) return repeter(a, colonne);
+    if (est_mot(t, "pour") && est_mot(voir(a, 1), "chaque")) return pour_chaque(a, colonne);
+    if (est_mot(t, "sortir") || est_mot(t, "passer")) return sortie_de_boucle(a);
+    if (est_mot(t, "selon")) return selon(a, colonne);
+    if (est_mot(t, "cas") || est_mot(t, "autrement"))
+        return erreur(a, t, grym_formater("« %s » hors d'un « Selon ».", est_mot(t, "cas") ? "Cas" : "Autrement"));
     if (est_mot(t, "pour")) return definition_action(a, colonne);
     if (est_mot(t, "rendre")) {
         if (a->formule != 1)
@@ -1756,7 +2099,7 @@ static Noeud *bloc(Analyse *a, int colonne, int racine) {
     size_t sauve = a->portee->n;
     if (!racine) a->niveau++;
     for (;;) {
-        attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0));
+        attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0) | (a->boucle ? A_BOUCLE : 0));
         Jeton *t = cour(a);
         if (t->type == J_FIN) break;
         if (t->type != J_REMARQUE && premier_de_ligne(a, a->i)) {
@@ -1809,6 +2152,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
                             Programme *programme, Diagnostic *diag, Capture *capture) {
     programme->phrases = NULL;
     programme->nb = 0;
+    programme->nb_locaux = 0;
     diag->message = NULL;
     diag->ligne = diag->colonne = 0;
 
@@ -1868,12 +2212,15 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.noms_fin = NULL;
     a.sortes_fin = NULL;
     a.nb_noms_fin = 0;
+    a.boucle = 0;
+    a.nb_arrets = 0;
 
     /* Colonne de référence : celle de la première phrase (les remarques ne comptent pas). */
     int colonne = 1;
     for (size_t k = 0; k < n; k++)
         if (j[k].type != J_REMARQUE) { colonne = j[k].type == J_FIN ? 1 : j[k].colonne; break; }
     Noeud *racine = bloc(&a, colonne, 1);
+    programme->nb_locaux = a.nb_locaux;
     if (racine) {
         programme->phrases = racine->enfants;
         programme->nb = racine->nb_enfants;
@@ -2007,6 +2354,10 @@ Suggestions suites_valides(const char *source, size_t taille) {
             proposer(&r, "L'", pre, lp, 0);
             proposer(&r, "Afficher", pre, lp, 0);
             proposer(&r, "Si", pre, lp, 0);
+            proposer(&r, "Tant que", pre, lp, 0);
+            proposer(&r, "Répéter", pre, lp, 0);
+            proposer(&r, "Pour chaque", pre, lp, 0);
+            proposer(&r, "Selon", pre, lp, 0);
             proposer(&r, "Pour", pre, lp, 0);
             proposer(&r, "Remarque :", pre, lp, 0);
             for (size_t k = 0; k < c.nb_noms; k++)
@@ -2036,6 +2387,10 @@ Suggestions suites_valides(const char *source, size_t taille) {
             proposer(&r, "(nombre)", pre, lp, 1);
             proposer(&r, "(", pre, lp, 1);
             proposer(&r, "−", pre, lp, 1);
+        }
+        if (m & A_BOUCLE) {
+            proposer(&r, "Sortir de la boucle", pre, lp, 0);
+            proposer(&r, "Passer au tour suivant", pre, lp, 0);
         }
         if (m & A_BOOLEEN) { proposer(&r, "vrai", pre, lp, 0); proposer(&r, "faux", pre, lp, 0); }
         if (m & A_TEXTE) proposer(&r, "« … »", pre, lp, 1);

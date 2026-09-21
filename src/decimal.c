@@ -229,6 +229,13 @@ Decimal dec_negation(const Decimal *a) {
     return r;
 }
 
+int dec_est_entier(const Decimal *a) {
+    if (!a->n || a->exp >= 0) return 1;
+    size_t f = (size_t)(-a->exp);
+    for (size_t i = 0; i < f && i < a->n; i++) if (a->ch[i]) return 0;
+    return 1;
+}
+
 int dec_comparer(const Decimal *a, const Decimal *b) {
     int sa = a->n ? (a->negatif ? -1 : 1) : 0;
     int sb = b->n ? (b->negatif ? -1 : 1) : 0;

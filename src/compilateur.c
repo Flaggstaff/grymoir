@@ -3,12 +3,23 @@
 #include "texte.h"
 
 #include <stdlib.h>
+#include <string.h>
+
+/* Boucle en cours : où va « Passer au tour suivant », quels sauts « Sortir » doit corriger. */
+typedef struct {
+    size_t suivant;          /* cible de « Passer », si elle est déjà connue */
+    int suivant_connu;
+    size_t *sorties, nb_sorties;
+    size_t *suivants, nb_suivants;   /* « Passer » en attente de leur cible */
+} Boucle;
 
 typedef struct {
     Bloc *b;           /* bloc en cours de compilation */
     Module *module;
     Diagnostic *diag;
     int echec;
+    Boucle *boucles;
+    size_t nb_boucles;
 } Compilation;
 
 static void trop_grand(Compilation *c, const Noeud *n) {
@@ -108,6 +119,9 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_CONSTANTE, k, n->ligne, n->colonne);
         return;
     }
+    case N_SUJET:
+        emettre(c, I_LIRE_LOCAL, n->local, n->ligne, n->colonne);
+        return;
     case N_NOM: {
         if (n->local >= 0) {
             emettre(c, I_LIRE_LOCAL, n->local, n->ligne, n->colonne);
@@ -153,7 +167,121 @@ static void expression(Compilation *c, const Noeud *n) {
     }
 }
 
+static void ajouter_saut(size_t **liste, size_t *nb, size_t pos) {
+    size_t *t = grym_allouer((*nb + 1) * sizeof *t);
+    if (*nb) memcpy(t, *liste, *nb * sizeof *t);
+    free(*liste);
+    *liste = t;
+    (*liste)[(*nb)++] = pos;
+}
+
+static void entrer_boucle(Compilation *c, size_t suivant, int connu) {
+    Boucle *t = grym_allouer((c->nb_boucles + 1) * sizeof *t);
+    if (c->nb_boucles) memcpy(t, c->boucles, c->nb_boucles * sizeof *t);
+    free(c->boucles);
+    c->boucles = t;
+    Boucle *b = &c->boucles[c->nb_boucles++];
+    b->suivant = suivant;
+    b->suivant_connu = connu;
+    b->sorties = b->suivants = NULL;
+    b->nb_sorties = b->nb_suivants = 0;
+}
+
+/* Fixe la cible des « Passer » en attente (tour suivant). */
+static void cible_suivant(Compilation *c, size_t cible) {
+    Boucle *b = &c->boucles[c->nb_boucles - 1];
+    for (size_t k = 0; k < b->nb_suivants; k++) bloc_corriger_saut(c->b, b->suivants[k], cible);
+    b->nb_suivants = 0;
+    b->suivant = cible;
+    b->suivant_connu = 1;
+}
+
+/* Termine la boucle : les « Sortir » sautent ici. */
+static void sortir_boucle(Compilation *c) {
+    Boucle *b = &c->boucles[--c->nb_boucles];
+    for (size_t k = 0; k < b->nb_sorties; k++) bloc_corriger_saut(c->b, b->sorties[k], c->b->taille_code);
+    free(b->sorties);
+    free(b->suivants);
+}
+
+static void echouer_si(Compilation *c, const char *message, const Noeud *n) {
+    long k = bloc_constante(c->b, C_TEXTE, message);
+    if (k < 0) { trop_grand(c, n); return; }
+    emettre(c, I_ECHOUER, k, n->ligne, n->colonne);
+}
+
+/* Selon : le sujet est rangé une fois ; chaque cas teste ses conditions dans l'ordre. */
+static void condition_de_cas(Compilation *c, const Noeud *e, int case_sujet) {
+    if (e->type == N_INTERVALLE) {
+        /* Entre deux bornes, dans un ordre quelconque : (s ≥ a et s ≤ b) ou (s ≤ a et s ≥ b).
+         * Les bornes peuvent être calculées deux fois : ce sont des expressions sans effet. */
+        int l = e->ligne, col = e->colonne;
+        emettre(c, I_LIRE_LOCAL, case_sujet, l, col);
+        expression(c, e->enfants[0]);
+        emettre(c, I_SUPERIEUR_OU_EGAL, 0, l, col);
+        size_t autre1 = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+        emettre(c, I_LIRE_LOCAL, case_sujet, l, col);
+        expression(c, e->enfants[1]);
+        emettre(c, I_INFERIEUR_OU_EGAL, 0, l, col);
+        size_t autre2 = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+        constante(c, C_BOOLEEN, "vrai", e, l, col);
+        size_t fin1 = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+        bloc_corriger_saut(c->b, autre1, c->b->taille_code);
+        bloc_corriger_saut(c->b, autre2, c->b->taille_code);
+        emettre(c, I_LIRE_LOCAL, case_sujet, l, col);
+        expression(c, e->enfants[0]);
+        emettre(c, I_INFERIEUR_OU_EGAL, 0, l, col);
+        size_t faux = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+        emettre(c, I_LIRE_LOCAL, case_sujet, l, col);
+        expression(c, e->enfants[1]);
+        emettre(c, I_SUPERIEUR_OU_EGAL, 0, l, col);
+        size_t fin2 = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+        bloc_corriger_saut(c->b, faux, c->b->taille_code);
+        constante(c, C_BOOLEEN, "faux", e, l, col);
+        bloc_corriger_saut(c->b, fin1, c->b->taille_code);
+        bloc_corriger_saut(c->b, fin2, c->b->taille_code);
+        return;
+    }
+    expression(c, e);   /* N_COMPARAISON dont le sujet est un N_SUJET */
+}
+
 static void phrase(Compilation *c, const Noeud *ph);
+
+static void selon(Compilation *c, const Noeud *ph) {
+    int cs = ph->entier;
+    expression(c, ph->enfants[0]);
+    emettre(c, I_ECRIRE_LOCAL, cs, ph->ligne, ph->colonne);
+    size_t *vers_fin = NULL, nb_fin = 0;
+    for (size_t k = 1; k < ph->nb_enfants && !c->echec; k++) {
+        const Noeud *cas = ph->enfants[k];
+        if (cas->type != N_CAS) continue;   /* remarques */
+        const Noeud *corps = cas->enfants[cas->nb_enfants - 1];
+        if (cas->forme == 1) {               /* Autrement */
+            phrase(c, corps);
+            continue;
+        }
+        size_t *vers_corps = NULL, nb_corps = 0;
+        size_t vers_suivant = 0;
+        size_t nb_cond = cas->nb_enfants - 1;
+        for (size_t q = 0; q < nb_cond; q++) {
+            condition_de_cas(c, cas->enfants[q], cs);
+            size_t faux = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, cas->ligne, cas->colonne);
+            if (q + 1 < nb_cond) {
+                ajouter_saut(&vers_corps, &nb_corps, bloc_emettre_saut(c->b, I_SAUTER, cas->ligne, cas->colonne));
+                bloc_corriger_saut(c->b, faux, c->b->taille_code);
+            } else {
+                vers_suivant = faux;
+            }
+        }
+        for (size_t q = 0; q < nb_corps; q++) bloc_corriger_saut(c->b, vers_corps[q], c->b->taille_code);
+        free(vers_corps);
+        phrase(c, corps);
+        ajouter_saut(&vers_fin, &nb_fin, bloc_emettre_saut(c->b, I_SAUTER, cas->ligne, cas->colonne));
+        bloc_corriger_saut(c->b, vers_suivant, c->b->taille_code);
+    }
+    for (size_t q = 0; q < nb_fin; q++) bloc_corriger_saut(c->b, vers_fin[q], c->b->taille_code);
+    free(vers_fin);
+}
 
 static void phrases(Compilation *c, Noeud *const *liste, size_t nb) {
     for (size_t i = 0; i < nb && !c->echec; i++) phrase(c, liste[i]);
@@ -208,6 +336,113 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_APPEL:
         appel(c, ph, 0);
         return;
+    case P_TANT_QUE: {
+        /* test ; si faux → sortie ; corps ; → test */
+        size_t test = c->b->taille_code;
+        const Noeud *cond = ph->enfants[0];
+        expression(c, cond);
+        size_t sortie = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, cond->ligne, cond->colonne);
+        entrer_boucle(c, test, 1);
+        phrase(c, ph->enfants[1]);
+        size_t retour = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+        bloc_corriger_saut(c->b, retour, test);
+        bloc_corriger_saut(c->b, sortie, c->b->taille_code);
+        sortir_boucle(c);
+        return;
+    }
+    case P_REPETER: {
+        /* reste ← n (entier ≥ 0) ; test : reste > 0 ? ; reste ← reste − 1 ; corps ; → test */
+        int r = ph->entier, l = ph->ligne, col = ph->colonne;
+        expression(c, ph->enfants[0]);
+        emettre(c, I_EXIGER_ENTIER_NATUREL, 0, ph->enfants[0]->ligne, ph->enfants[0]->colonne);
+        emettre(c, I_ECRIRE_LOCAL, r, l, col);
+        size_t test = c->b->taille_code;
+        emettre(c, I_LIRE_LOCAL, r, l, col);
+        constante(c, C_NOMBRE, "0", ph, l, col);
+        emettre(c, I_SUPERIEUR, 0, l, col);
+        size_t sortie = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+        emettre(c, I_LIRE_LOCAL, r, l, col);
+        constante(c, C_NOMBRE, "1", ph, l, col);
+        emettre(c, I_SOUSTRACTION, 0, l, col);
+        emettre(c, I_ECRIRE_LOCAL, r, l, col);
+        entrer_boucle(c, test, 1);
+        phrase(c, ph->enfants[1]);
+        size_t retour = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+        bloc_corriger_saut(c->b, retour, test);
+        bloc_corriger_saut(c->b, sortie, c->b->taille_code);
+        sortir_boucle(c);
+        return;
+    }
+    case P_POUR_CHAQUE: {
+        int i = ph->local, f = ph->entier, p = ph->entier + 1, l = ph->ligne, col = ph->colonne;
+        const Noeud *corps = ph->enfants[ph->nb_enfants - 1];
+        expression(c, ph->enfants[0]);
+        emettre(c, I_ECRIRE_LOCAL, i, l, col);
+        expression(c, ph->enfants[1]);
+        emettre(c, I_ECRIRE_LOCAL, f, l, col);
+        if (ph->forme) {
+            expression(c, ph->enfants[2]);
+        } else {
+            /* sens automatique : +1 si début ≤ fin, sinon −1 */
+            emettre(c, I_LIRE_LOCAL, i, l, col);
+            emettre(c, I_LIRE_LOCAL, f, l, col);
+            emettre(c, I_INFERIEUR_OU_EGAL, 0, l, col);
+            size_t desc = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+            constante(c, C_NOMBRE, "1", ph, l, col);
+            size_t apres = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+            bloc_corriger_saut(c->b, desc, c->b->taille_code);
+            constante(c, C_NOMBRE, "-1", ph, l, col);
+            bloc_corriger_saut(c->b, apres, c->b->taille_code);
+        }
+        emettre(c, I_ECRIRE_LOCAL, p, l, col);
+        /* un pas nul ne finirait jamais */
+        emettre(c, I_LIRE_LOCAL, p, l, col);
+        constante(c, C_NOMBRE, "0", ph, l, col);
+        emettre(c, I_EGAL, 0, l, col);
+        size_t non_nul = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+        echouer_si(c, "Pas nul : la boucle ne finirait jamais.", ph);
+        bloc_corriger_saut(c->b, non_nul, c->b->taille_code);
+        /* test : compteur ≤ fin (pas positif) ou compteur ≥ fin (pas négatif) */
+        size_t test = c->b->taille_code;
+        emettre(c, I_LIRE_LOCAL, p, l, col);
+        constante(c, C_NOMBRE, "0", ph, l, col);
+        emettre(c, I_SUPERIEUR, 0, l, col);
+        size_t descendant = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+        emettre(c, I_LIRE_LOCAL, i, l, col);
+        emettre(c, I_LIRE_LOCAL, f, l, col);
+        emettre(c, I_INFERIEUR_OU_EGAL, 0, l, col);
+        size_t verdict = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+        bloc_corriger_saut(c->b, descendant, c->b->taille_code);
+        emettre(c, I_LIRE_LOCAL, i, l, col);
+        emettre(c, I_LIRE_LOCAL, f, l, col);
+        emettre(c, I_SUPERIEUR_OU_EGAL, 0, l, col);
+        bloc_corriger_saut(c->b, verdict, c->b->taille_code);
+        size_t sortie = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+        entrer_boucle(c, 0, 0);
+        phrase(c, corps);
+        cible_suivant(c, c->b->taille_code);
+        emettre(c, I_LIRE_LOCAL, i, l, col);
+        emettre(c, I_LIRE_LOCAL, p, l, col);
+        emettre(c, I_ADDITION, 0, l, col);
+        emettre(c, I_ECRIRE_LOCAL, i, l, col);
+        size_t retour = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+        bloc_corriger_saut(c->b, retour, test);
+        bloc_corriger_saut(c->b, sortie, c->b->taille_code);
+        sortir_boucle(c);
+        return;
+    }
+    case P_SORTIR:
+    case P_PASSER: {
+        Boucle *b = &c->boucles[c->nb_boucles - 1];
+        size_t saut = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+        if (ph->type == P_SORTIR) ajouter_saut(&b->sorties, &b->nb_sorties, saut);
+        else if (b->suivant_connu) bloc_corriger_saut(c->b, saut, b->suivant);
+        else ajouter_saut(&b->suivants, &b->nb_suivants, saut);
+        return;
+    }
+    case P_SELON:
+        selon(c, ph);
+        return;
     case P_CALCUL:
     case P_ACTION: {
         /* Une formule se compile dans son propre bloc ; le programme n'en garde aucune trace. */
@@ -219,6 +454,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
         f->nb_locaux = ph->entier;
         module_ajouter(c->module, f);
         c->b = f;
+        Boucle *boucles = c->boucles;
+        size_t nb_boucles = c->nb_boucles;
+        c->boucles = NULL;
+        c->nb_boucles = 0;
         const Noeud *corps = ph->enfants[1];
         if (ph->type == P_CALCUL && ph->forme == 0) {
             expression(c, corps);
@@ -227,6 +466,9 @@ static void phrase(Compilation *c, const Noeud *ph) {
             phrase(c, corps);
             if (ph->type == P_ACTION) emettre(c, I_RETOUR, 0, ph->ligne, 0);
         }
+        free(c->boucles);
+        c->boucles = boucles;
+        c->nb_boucles = nb_boucles;
         c->b = prec;
         return;
     }
@@ -237,11 +479,13 @@ static void phrase(Compilation *c, const Noeud *ph) {
 
 Module *compiler(const Programme *p, Diagnostic *diag) {
     Module *m = module_creer();
-    Compilation c = { bloc_creer(), m, diag, 0 };
+    Compilation c = { bloc_creer(), m, diag, 0, NULL, 0 };
+    c.b->nb_locaux = p->nb_locaux;
     module_ajouter(m, c.b);
     diag->message = NULL;
     diag->ligne = diag->colonne = 0;
     phrases(&c, p->phrases, p->nb);
+    free(c.boucles);
     if (c.echec) {
         module_detruire(m);
         return NULL;

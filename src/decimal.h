@@ -38,6 +38,7 @@ void dec_liberer(Decimal *a);
 
 Decimal dec_negation(const Decimal *a);
 int dec_comparer(const Decimal *a, const Decimal *b);   /* −1, 0 ou 1 ; 1,0 = 1 */
+int dec_est_entier(const Decimal *a);                   /* 3 et 3,00 oui ; 2,5 non */
 StatutDecimal dec_addition(const Decimal *a, const Decimal *b, Decimal *r);
 StatutDecimal dec_soustraction(const Decimal *a, const Decimal *b, Decimal *r);
 StatutDecimal dec_multiplication(const Decimal *a, const Decimal *b, Decimal *r);

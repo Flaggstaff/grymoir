@@ -1,0 +1,18 @@
+Remarque : boucles et Selon
+Pour chaque mois de 1 à 12 :
+    Selon mois :
+        Cas 2 :
+            Afficher mois puis « : 28 jours ».
+        Cas 4 ou 6 ou 9 ou 11 :
+            Afficher mois puis « : 30 jours ».
+        Autrement :
+            Afficher mois puis « : 31 jours ».
+
+Le total vaut 0.
+Pour chaque t de 0 à 1 par pas de 0,1, le total devient total + 1.
+Afficher « Tours avec un pas de 0,1 : » puis le total.
+
+Le reste vaut 100.
+Tant que le reste est positif :
+    Le reste devient reste − 37.
+Afficher « Reste : » puis le reste.

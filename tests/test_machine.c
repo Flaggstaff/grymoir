@@ -195,6 +195,49 @@ int main(void) {
     PROG("Le total vaut 1.\nPour casser :\n    Le total devient 99.\n    Le total devient total ÷ 0.\nCasser.",
          "ERREUR 4:28 Division par zéro.");
 
+    /* --- Boucles et Selon (grammaire, § 10) --- */
+    PROG("Le x vaut 3.\nTant que x > 0 :\n    Afficher x.\n    Le x devient x − 1.", "3\n2\n1");
+    PROG("Répéter 3 fois, afficher « Bip ».", "Bip\nBip\nBip");
+    PROG("Répéter 0 fois, afficher « jamais ».\nAfficher « fin ».", "fin");
+    PROG("Répéter 2,00 fois, afficher 1.", "1\n1");
+    PROG("Répéter 2,5 fois, afficher 1.",
+         "ERREUR 1:9 Nombre de tours invalide : un entier positif ou nul est attendu, pas 2,5.");
+    PROG("Répéter −1 fois, afficher 1.", "~pas −1");
+    PROG("Pour chaque mois de 1 à 4, afficher mois.", "1\n2\n3\n4");
+    PROG("Pour chaque n de 3 à 1, afficher n.", "3\n2\n1");
+    PROG("Pour chaque n de 1 à 1, afficher n.", "1");
+    PROG("Pour chaque n de 1 à 10 par pas de 4, afficher n.", "1\n5\n9");
+    PROG("Pour chaque n de 10 à 1 par pas de −4, afficher n.", "10\n6\n2");
+    PROG("Pour chaque n de 1 à 3 par pas de −1, afficher n.\nAfficher « rien ».", "rien");
+    PROG("Le total vaut 0.\nPour chaque t de 0 à 1 par pas de 0,1, le total devient total + 1.\nAfficher le total.", "11");
+    PROG("Pour chaque t de 0 à 0,5 par pas de 0,25, afficher t.", "0\n0,25\n0,50");
+    PROG("Pour chaque n de 1 à 3 par pas de 0, afficher n.", "ERREUR 1:1 Pas nul : la boucle ne finirait jamais.");
+    PROG("Pour chaque i de 1 à 5 :\n    Si i = 2, passer au tour suivant.\n    Si i = 4, sortir de la boucle.\n    Afficher i.",
+         "1\n3");
+    PROG("Le x vaut 0.\nTant que vrai :\n    Le x devient x + 1.\n    Si x = 3, sortir de la boucle.\nAfficher x.", "3");
+    PROG("Le x vaut 0.\nTant que x < 5 :\n    Le x devient x + 1.\n    Si x < 3, passer au tour suivant.\n    Afficher x.",
+         "3\n4\n5");
+    PROG("Le n vaut 3.\nRépéter n fois :\n    Le n devient n + 1.\n    Si n > 10, sortir de la boucle.\nAfficher n.", "6");
+    /* boucles imbriquées : Sortir ne quitte que la plus proche */
+    PROG("Pour chaque i de 1 à 3 :\n    Pour chaque j de 1 à 3 :\n        Si j > i, sortir de la boucle.\n"
+         "        Afficher i × 10 + j.", "11\n21\n22\n31\n32\n33");
+    PROG("La somme d'un n :\n    Le total vaut 0.\n    Pour chaque i de 1 à n, le total devient total + i.\n"
+         "    Rendre total.\nAfficher la somme de 100.", "5'050");
+    PROG("Le x vaut 7.\nSelon x :\n    Cas 1 ou 2 :\n        Afficher « un ou deux ».\n    Cas de 3 à 9 :\n"
+         "        Afficher « chiffre ».\n    Autrement :\n        Afficher « autre ».", "chiffre");
+    PROG("Le x vaut 10.\nSelon x :\n    Cas négatif, afficher « négatif ».\n    Cas supérieur ou égal à 10, afficher « grand ».\n"
+         "    Cas 10, afficher « jamais atteint ».", "grand");
+    PROG("Le x vaut 2.\nSelon x :\n    Cas 1, afficher 1.\nAfficher « fin ».", "fin");
+    PROG("Le t vaut vrai.\nSelon le t :\n    Cas vrai, afficher « oui ».\n    Cas faux, afficher « non ».", "oui");
+    PROG("Le carré d'un n vaut n × n.\nSelon le carré de 3 :\n    Cas 9, afficher « neuf ».", "neuf");
+    PROG("Le x vaut 1.\nSelon x :\n    Cas vrai, afficher 1.", "~Comparaison impossible entre un nombre et un booléen.");
+    /* interruption (Ctrl+C) : l'exécution s'arrête au premier saut arrière */
+    {
+        grym_interruption = 1;
+        PROG("Le x vaut 0.\nTant que vrai, le x devient x + 1.", "~Interrompu (Ctrl+C).");
+        grym_interruption = 0;
+    }
+
     /* --- Boucle interactive : une saisie ratée n'a aucun effet (§ 3.3, docs/vm.md § 6) --- */
     {
         total++;
