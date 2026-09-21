@@ -13,6 +13,7 @@
 #include "analyseur.h"
 #include "bytecode.h"
 #include "compilateur.h"
+#include "imprimeur.h"
 #include "vm.h"
 #include "texte.h"
 
@@ -162,6 +163,64 @@ static int compiler_fichier(const char *chemin) {
     return ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+/* Analyse un fichier source littéraire ; NULL et un message en cas d'erreur. */
+static int analyser_fichier(const char *chemin, Programme *p) {
+    FILE *f = fopen(chemin, "rb");
+    if (!f) {
+        fprintf(stderr, "Impossible d'ouvrir « %s ».\n", chemin);
+        return 0;
+    }
+    size_t taille = 0;
+    char *source = lire_fichier(f, &taille);
+    fclose(f);
+    if (!source) return 0;
+    Portee *portee = portee_creer();
+    Diagnostic d;
+    int ok = analyser(source, taille, portee, 0, p, &d);
+    if (!ok) {
+        signaler(chemin, &d);
+        diagnostic_liberer(&d);
+    }
+    portee_detruire(portee);
+    free(source);
+    return ok;
+}
+
+/* grym formater : forme littéraire canonique sur la sortie standard (§ 12). */
+static int formater(const char *chemin) {
+    Programme p;
+    if (!analyser_fichier(chemin, &p)) return EXIT_FAILURE;
+    char *t = imprimer_litteraire(&p);
+    fputs(t, stdout);
+    free(t);
+    programme_liberer(&p);
+    return EXIT_SUCCESS;
+}
+
+/* grym traduire : forme littéraire → forme compacte, dans fichier.grymc (§ 11). */
+static int traduire(const char *chemin) {
+    size_t l = strlen(chemin);
+    if (l > 6 && strcmp(chemin + l - 6, ".grymc") == 0) {
+        fprintf(stderr, "La traduction de la forme compacte vers la forme littéraire arrive "
+                        "avec le lecteur de la forme compacte (prochaine étape).\n");
+        return EXIT_FAILURE;
+    }
+    Programme p;
+    if (!analyser_fichier(chemin, &p)) return EXIT_FAILURE;
+    char *t = imprimer_compact(&p);
+    programme_liberer(&p);
+    char *cible = (l > 5 && strcmp(chemin + l - 5, ".grym") == 0)
+                ? grym_formater("%sc", chemin) : grym_formater("%s.grymc", chemin);
+    FILE *f = fopen(cible, "wb");
+    int ok = f && fputs(t, f) >= 0;
+    if (f && fclose(f) != 0) ok = 0;
+    if (ok) printf("%s\n", cible);
+    else fprintf(stderr, "Impossible d'écrire « %s ».\n", cible);
+    free(cible);
+    free(t);
+    return ok ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
 static int desassembler(const char *chemin) {
     Module *b = charger(chemin);
     if (!b) return EXIT_FAILURE;
@@ -262,6 +321,8 @@ int main(int argc, char **argv) {
     if (argc == 1) return boucle();
     if (argc == 3 && strcmp(argv[1], "lancer") == 0) return lancer(argv[2]);
     if (argc == 3 && strcmp(argv[1], "compiler") == 0) return compiler_fichier(argv[2]);
+    if (argc == 3 && strcmp(argv[1], "formater") == 0) return formater(argv[2]);
+    if (argc == 3 && strcmp(argv[1], "traduire") == 0) return traduire(argv[2]);
     if (argc == 3 && (strcmp(argv[1], "desassembler") == 0 || strcmp(argv[1], "désassembler") == 0))
         return desassembler(argv[2]);
     fprintf(stderr,
@@ -271,6 +332,8 @@ int main(int argc, char **argv) {
             "  grym lancer fichier.grym            compile puis exécute\n"
             "  grym lancer fichier.grymb           exécute un bytecode compilé\n"
             "  grym compiler fichier.grym          produit fichier.grymb\n"
-            "  grym desassembler fichier.grym(b)   affiche les instructions\n", VERSION);
+            "  grym desassembler fichier.grym(b)   affiche les instructions\n"
+            "  grym formater fichier.grym          affiche la forme littéraire canonique\n"
+            "  grym traduire fichier.grym          produit la forme compacte fichier.grymc\n", VERSION);
     return EXIT_FAILURE;
 }

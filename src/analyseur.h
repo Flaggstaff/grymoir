@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.5), § 2 à 10.
+ * Spécification : docs/grammaire.md (révision 1.6), § 2 à 12.
  *
  * L'analyseur construit l'arbre et résout les noms dans le même passage :
  * la plus longue correspondance des noms composés (§ 2.2) exige de connaître
@@ -39,6 +39,9 @@ int analyser(const char *source, size_t taille, Portee *portee, int interactif,
              Programme *programme, Diagnostic *diag);
 
 void programme_liberer(Programme *p);
+
+/* Vrai si le nom contient un mot réservé : il s'écrit alors entre crochets (§ 2.2). */
+int nom_exige_crochets(const char *nom);
 
 /* Aide à la saisie (§ 8, charte art. 9) : suites valides à la fin de `source`,
  * c'est-à-dire à la position du curseur. Si un mot est en cours de frappe,

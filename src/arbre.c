@@ -14,6 +14,7 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->crochets = 0;
     n->local = -1;
     n->entier = 0;
+    n->ligne_fin = ligne;
     n->article = ART_AUCUN;
     n->texte = NULL;
     n->enfants = NULL;

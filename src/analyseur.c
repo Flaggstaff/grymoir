@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.5), § 2 à 10.
+ * Spécification : docs/grammaire.md (révision 1.6), § 2 à 12.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -223,6 +223,8 @@ static int est_mot(const Jeton *t, const char *m) {
     return t->type == J_MOT && strcmp(t->valeur, m) == 0;
 }
 
+static int nom_a_crochets(const char *nom);
+
 /* Mots qui structurent la phrase et ne peuvent pas entrer dans un nom
  * (sauf entre crochets, § 2.2). */
 static const char *const RESERVES[] = {
@@ -240,6 +242,10 @@ static int est_reserve(const Jeton *t) {
 }
 
 /* Vrai si le nom contient un mot réservé : il s'écrit alors entre crochets. */
+int nom_exige_crochets(const char *nom) {
+    return nom_a_crochets(nom);
+}
+
 static int nom_a_crochets(const char *nom) {
     char mot[64];
     size_t k = 0;
@@ -655,7 +661,9 @@ static Noeud *nom_expression(Analyse *a) {
     const Jeton *premier = tart ? tart : &a->j[d];
     if (s->sorte == S_CALCUL) {
         a->i = fin;
-        return appel_calcul(a, s, premier);
+        Noeud *appel = appel_calcul(a, s, premier);
+        if (appel) appel->article = art;
+        return appel;
     }
     if (s->sorte == S_ACTION)
         return erreur(a, &a->j[d], grym_formater(
@@ -1399,6 +1407,7 @@ static Noeud *si(Analyse *a, int colonne, int sinon_si) {
         int f = 0;
         autre = branche(a, colonne, "Sinon", &f);
         if (!autre) { noeud_liberer(n); return NULL; }
+        if (f) n->forme |= 4;   /* « Sinon » en bloc */
     }
     noeud_ajouter(n, autre);
     n->fin = autre->fin;
@@ -2118,6 +2127,7 @@ static Noeud *bloc(Analyse *a, int colonne, int racine) {
         if (est_mot(t, "sinon") && !racine) break;
         Noeud *p = phrase(a, colonne);
         if (!p) { noeud_liberer(b); if (!racine) a->niveau--; return NULL; }
+        p->ligne_fin = a->i > 0 ? a->j[a->i - 1].ligne : p->ligne;
         noeud_ajouter(b, p);
         b->fin = p->fin;
     }

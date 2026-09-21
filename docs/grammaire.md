@@ -1,10 +1,10 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.5 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 4, 9 et 12.
+Version 1.6 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
-Périmètre : nommer, calculer, afficher, décider (§ 5), définir des formules (§ 9), répéter (§ 10), et le calcul des suites attendues (§ 8). Tout le reste attend les versions suivantes.
+Périmètre : nommer, calculer, afficher, décider (§ 5), définir des formules (§ 9), répéter (§ 10), le calcul des suites attendues (§ 8), la forme compacte (§ 11) et la forme canonique (§ 12). Tout le reste attend les versions suivantes.
 
 ---
 
@@ -524,6 +524,69 @@ Selon le mois :
 
 ---
 
+## 11. Forme compacte
+
+La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préfixés d'un souligné. Elle produit le même arbre que la forme littéraire (charte, art. 4).
+
+### 11.1 Règles de lecture
+
+- Les mots-clés commencent par un souligné : `_si`, `_fin`. Tout mot sans souligné initial est un nom.
+- Un nom composé s'écrit avec des soulignés internes : `prix_unitaire` désigne `prix unitaire`. L'apostrophe d'une élision reste : `prix_de_l'article`. Aucun crochet n'est nécessaire : `frais_de_port_et_d'emballage`.
+- Nombres, textes et opérateurs s'écrivent comme en forme littéraire (§ 1). Les comparaisons s'écrivent en symboles.
+- Une instruction par ligne ; un bloc se ferme par `_fin`. L'indentation est libre ; l'imprimeur indente de quatre espaces.
+- `#` commence une remarque jusqu'à la fin de la ligne.
+- Les éléments d'une liste (`_afficher`, arguments, paramètres) se séparent par `;`, jamais par une virgule (virgule décimale).
+
+### 11.2 Correspondances
+
+| Forme littéraire | Forme compacte |
+|------------------|----------------|
+| `Remarque : note` | `# note` |
+| `Le total vaut 0.` / `La quantité vaut 3.` / `L'addition vaut 0.` | `_le total << 0` / `_la quantité << 3` / `_l'addition << 0` |
+| `Le total devient total + 1.` | `total << total + 1` |
+| `Afficher « a » puis x.` | `_afficher « a » ; x` |
+| `le total est supérieur à 100` | `total > 100` |
+| `x est positif`, `négatif`, `nul`, `vrai`, `faux` | `x _positif`, `_négatif`, `_nul`, `_vrai`, `_faux` |
+| `x n'est pas nul` | `_non (x _nul)` |
+| `et`, `ou`, `vrai`, `faux` | `_et`, `_ou`, `_vrai`, `_faux` |
+| `Si c :` … `Sinon si d :` … `Sinon :` … | `_si c _alors` … `_sinon_si d _alors` … `_sinon` … `_fin` |
+| `Le carré d'un nombre vaut nombre × nombre.` | `_calcul _le carré(_un nombre) << nombre × nombre` |
+| `La valeur absolue d'un nombre :` + bloc | `_calcul _la valeur_absolue(_un nombre)` + bloc + `_fin` |
+| `le carré de 7`, `la moyenne de 4 et de 6` | `carré(7)`, `moyenne(4 ; 6)` |
+| `Pour relancer un client :` + bloc | `_action relancer(_un client)` + bloc + `_fin` |
+| `Relancer le client.`, `Saluer.` | `relancer(client)`, `saluer()` |
+| `Rendre x.` | `_rendre x` |
+| `Tant que c :` | `_tant_que c` … `_fin` |
+| `Répéter 3 fois :` | `_répéter 3 _fois` … `_fin` |
+| `Pour chaque i de 1 à 9 par pas de 2 :` | `_pour_chaque i _de 1 _à 9 _pas 2` … `_fin` |
+| `Sortir de la boucle.`, `Passer au tour suivant.` | `_sortir`, `_passer` |
+| `Selon x :` / `Cas 1 ou de 2 à 3` / `Cas supérieur à 10` / `Autrement` | `_selon x` / `_cas 1 _ou _de 2 _à 3` / `_cas > 10` / `_autrement` … `_fin` |
+
+- La forme compacte ne connaît pas les formes courtes : chaque construction ouvre un bloc fermé par `_fin` (sauf `_sinon`, `_sinon_si`, `_cas` et `_autrement`, qui continuent la construction en cours).
+- Un argument de calcul est délimité par les parenthèses et les `;` : `carré(3 + 1)` vaut 16.
+- Les articles n'apparaissent qu'à la création et dans l'en-tête d'un calcul : ils portent le genre, qui sert aux accords quand on revient à la forme littéraire.
+
+### 11.3 État en v0.2
+
+- `grym traduire fichier.grym` produit `fichier.grymc`.
+- La lecture de la forme compacte (`grym lancer fichier.grymc`, `grym traduire fichier.grymc`) est la prochaine étape.
+
+## 12. Forme canonique
+
+`grym formater fichier.grym` réécrit un programme dans la forme littéraire canonique.
+
+- Le programme est conservé : même arbre, mêmes noms, mêmes valeurs, mêmes remarques, mêmes choix d'écriture (articles, crochets, tournures en mots ou en symboles, contractions, formes courtes ou en bloc).
+- La présentation est normalisée : une phrase par ligne, indentation de quatre espaces, majuscule en début de phrase, espaces simples, nombres au style suisse (`1'000`, `12,50`), textes entre `« »` (ou `" "` si le texte commence ou finit par une espace, ce que `« »` rognerait), une seule ligne vide là où la source en avait une ou plusieurs.
+- La forme canonique est un point fixe : la formater ne change plus rien.
+
+Garanties de la traduction (charte, art. 4) :
+
+1. Compacte → littéraire → compacte : le texte compact revient à l'identique, une fois écrit par l'imprimeur.
+2. Littéraire → compacte → littéraire : le même programme, en forme canonique. Les choix d'écriture que la forme compacte ne porte pas (articles dans les expressions, tournures en mots, contractions, formes courtes) prennent leur forme par défaut.
+3. Un texte littéraire canonique écrit sans ces choix fait l'aller-retour à l'identique.
+
+---
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -534,3 +597,4 @@ Selon le mois :
 | 1.3 | 2026-09-21 | Nouveau § 5 : décider (comparaisons en mots et en symboles, sens courant de positif, accords, contractions au et du, et et ou sans mélange, Si en forme courte et en bloc, portée des blocs, booléens). Noms entre crochets, mots réservés étendus, tabulations interdites en début de ligne. Renumérotation : EBNF § 6, messages § 7, suites § 8 |
 | 1.4 | 2026-09-21 | Nouveau § 9 : formules. Calculs (définis comme ils s'utilisent, forme courte et bloc avec `Rendre`), actions (`Pour`), paramètres par l'article indéfini, calculs purs, récursion limitée à 1000 appels. `rendre` réservé, `d'un` réservé aux paramètres |
 | 1.5 | 2026-09-21 | Nouveau § 10 : répéter. `Tant que`, `Répéter … fois`, `Pour chaque … de … à … [par pas de …]` (bornes incluses, sens automatique, pas décimaux exacts, compteur en lecture seule), `Sortir de la boucle`, `Passer au tour suivant`, `Selon` / `Cas` / `Autrement` (valeurs séparées par `ou`, intervalles, tournures, pas de chute), interruption par Ctrl+C |
+| 1.6 | 2026-09-21 | Nouveaux § 11 (forme compacte : règles de lecture, table des correspondances) et § 12 (forme canonique, garanties de la traduction). `grym formater`, `grym traduire` vers la forme compacte |

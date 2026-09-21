@@ -6,6 +6,7 @@ grym-suites
 test_lexeur
 test_analyseur
 test_machine
+test_imprimeur
 *.exe
 *.o
 *.obj

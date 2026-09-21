@@ -33,7 +33,8 @@ typedef enum {
     P_REMARQUE,      /* texte : contenu */
     P_EXPRESSION,    /* boucle interactive : enfants[0] */
     P_SI,            /* enfants[0] : condition ; enfants[1] : N_BLOC alors ; enfants[2] : N_BLOC sinon (facultatif) ;
-                        forme : bit 0 = bloc indenté (sinon forme courte), bit 1 = introduit par « Sinon si » */
+                        forme : bit 0 = bloc indenté (sinon forme courte), bit 1 = introduit par « Sinon si »,
+                        bit 2 = « Sinon » en bloc */
     P_CALCUL,        /* texte : nom ; enfants[0] : N_BLOC des paramètres (N_NOM) ; enfants[1] : corps,
                         une valeur (forme 0, « vaut ») ou un N_BLOC (forme 1) ; entier : nombre de locaux */
     P_ACTION,        /* texte : nom ; enfants[0] : N_BLOC des paramètres ; enfants[1] : N_BLOC ; entier : locaux */
@@ -60,6 +61,7 @@ typedef struct Noeud {
     int crochets;         /* N_NOM, P_CREATION, P_MODIFICATION : nom écrit entre crochets */
     int local;            /* N_NOM, P_CREATION, P_MODIFICATION : case locale d'une formule, −1 si nom global */
     int entier;           /* P_CALCUL, P_ACTION : nombre de cases locales (paramètres compris) */
+    int ligne_fin;        /* phrases : dernière ligne occupée (lignes vides conservées à l'impression) */
     Article article;      /* article écrit devant le nom (N_NOM, P_CREATION, P_MODIFICATION) */
     char *texte;
     struct Noeud **enfants;

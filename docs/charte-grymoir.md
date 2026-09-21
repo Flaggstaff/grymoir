@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.6, révisée le 21 septembre 2026.
+Version 1.7, révisée le 21 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -38,7 +38,7 @@ GrymoiR s'écrit sous deux formes équivalentes.
 Règles communes :
 
 - Les deux formes produisent le même arbre syntaxique. Tout ce qui suit l'analyse (vérification, bytecode, VM) ignore la forme d'origine.
-- `grym traduire` convertit un fichier d'une forme à l'autre, sans perte. L'aller-retour redonne exactement le même programme, commentaires compris. L'arbre conserve donc commentaires et blancs.
+- `grym traduire` convertit un fichier d'une forme à l'autre sans perte de programme ni de remarque. Compacte → littéraire → compacte redonne le texte compact à l'identique ; littéraire → compacte → littéraire redonne le même programme en forme littéraire canonique. L'arbre conserve remarques, lignes vides et choix d'écriture ; `grym formater` écrit la forme canonique (grammaire, § 12).
 - Une seule forme par fichier.
 - Toute construction existe dans les deux formes.
 - La forme littéraire fait référence : chaque nouvelle fonction se conçoit d'abord en français courant, puis se dérive en forme compacte.
@@ -167,3 +167,4 @@ Horizon post-v1, sans date :
 | 1.4 | 2026-09-21 | Art. 11 : horizon post-v1, éditeur par blocs et éditeur visuel d'interfaces |
 | 1.5 | 2026-09-21 | Jalons : bytecode et VM en v0.2 (art. 3 et 12) |
 | 1.6 | 2026-09-21 | Jalons : conditions en v0.2 (art. 12) |
+| 1.7 | 2026-09-21 | Art. 4 : traduction sans perte de programme ni de remarque, vers une forme littéraire canonique ; `grym formater` |
