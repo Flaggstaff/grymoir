@@ -16,6 +16,7 @@
 typedef struct Portee Portee;
 Portee *portee_creer(void);
 void portee_detruire(Portee *p);
+Portee *portee_cloner(const Portee *p);
 
 typedef struct {
     Noeud **phrases;

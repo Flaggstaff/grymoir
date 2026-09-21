@@ -34,6 +34,7 @@ typedef struct Noeud {
     struct Noeud **enfants;
     size_t nb_enfants;
     int ligne, colonne;   /* position du premier jeton */
+    int op_ligne, op_colonne; /* position de l'opérateur (N_OPERATION), pour les erreurs d'exécution */
     size_t debut, fin;    /* en points de code dans la source normalisée */
 } Noeud;
 

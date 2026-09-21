@@ -15,6 +15,8 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->nb_enfants = 0;
     n->ligne = ligne;
     n->colonne = colonne;
+    n->op_ligne = ligne;
+    n->op_colonne = colonne;
     n->debut = debut;
     n->fin = debut;
     return n;

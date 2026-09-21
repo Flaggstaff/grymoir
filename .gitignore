@@ -1,9 +1,11 @@
 # Exécutables produits par make
+grym
 grym-lex
 grym-arbre
 grym-suites
 test_lexeur
 test_analyseur
+test_evaluateur
 *.exe
 *.o
 *.obj

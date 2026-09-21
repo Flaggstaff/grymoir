@@ -50,6 +50,14 @@ void portee_detruire(Portee *p) {
     free(p);
 }
 
+static void portee_copier(Portee *dst, const Portee *src);
+
+Portee *portee_cloner(const Portee *p) {
+    Portee *c = grym_allouer(sizeof *c);
+    portee_copier(c, p);
+    return c;
+}
+
 static void portee_copier(Portee *dst, const Portee *src) {
     dst->n = src->n;
     dst->cap = src->n;
@@ -370,9 +378,11 @@ static Noeud *feuille(TypeNoeud type, const Jeton *t) {
     return n;
 }
 
-static Noeud *operation(char op, Noeud *g, Noeud *d) {
+static Noeud *operation(char op, const Jeton *top, Noeud *g, Noeud *d) {
     Noeud *n = noeud_creer(N_OPERATION, g->ligne, g->colonne, g->debut);
     n->op = op;
+    n->op_ligne = top->ligne;
+    n->op_colonne = top->colonne;
     noeud_ajouter(n, g);
     noeud_ajouter(n, d);
     n->fin = d->fin;
@@ -481,11 +491,12 @@ static Noeud *puissance(Analyse *a) {
         noeud_liberer(g);
         return erreur(a, cour(a), grym_dupliquer("Expression trop imbriquée."));
     }
+    Jeton *top = cour(a);
     avancer(a);
     Noeud *d = unaire(a);
     a->profondeur--;
     if (!d) { noeud_liberer(g); return NULL; }
-    return operation('^', g, d);
+    return operation('^', top, g, d);
 }
 
 /* unaire = "−" unaire | puissance   (−2 ^ 2 vaut −4) */
@@ -512,10 +523,11 @@ static Noeud *terme(Analyse *a) {
         attendre(a, A_OP_MUL);
         if (cour(a)->type != J_FOIS && cour(a)->type != J_DIVISE) break;
         char op = cour(a)->type == J_FOIS ? '*' : '/';
+        Jeton *top = cour(a);
         avancer(a);
         Noeud *d = unaire(a);
         if (!d) { noeud_liberer(g); return NULL; }
-        g = operation(op, g, d);
+        g = operation(op, top, g, d);
     }
     return g;
 }
@@ -527,10 +539,11 @@ static Noeud *expression(Analyse *a) {
         attendre(a, A_OP_ADD);
         if (cour(a)->type != J_PLUS && cour(a)->type != J_MOINS) break;
         char op = cour(a)->type == J_PLUS ? '+' : '-';
+        Jeton *top = cour(a);
         avancer(a);
         Noeud *d = terme(a);
         if (!d) { noeud_liberer(g); return NULL; }
-        g = operation(op, g, d);
+        g = operation(op, top, g, d);
     }
     return g;
 }
