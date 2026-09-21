@@ -1,0 +1,6 @@
+# Exécutables produits par make
+grym-lex
+test_lexeur
+*.exe
+*.o
+*.obj

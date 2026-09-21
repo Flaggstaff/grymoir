@@ -1,0 +1,6 @@
+Remarque : premier programme GrymoiR
+Le prix unitaire vaut 12,50.
+La quantité vaut 3.
+Le total vaut prix unitaire × quantité.
+Le total devient total + 1'000.
+Afficher « Total à payer : » puis le total.
