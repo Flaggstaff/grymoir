@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.3, révisée le 21 septembre 2026.
+Version 1.4, révisée le 21 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -139,6 +139,11 @@ L'architecture de la VM prévoit la recompilation à chaud d'une formule dans un
 
 Interface graphique, réseau, concurrence, optimisation.
 
+Horizon post-v1, sans date :
+
+- Éditeur par blocs, conçu comme une troisième forme de l'arbre syntaxique (art. 4), convertible sans perte vers les deux autres.
+- Éditeur visuel d'interfaces, conditionné à l'arrivée des interfaces graphiques.
+
 ## 12. Jalons
 
 | Version | Contenu |
@@ -159,3 +164,4 @@ Interface graphique, réseau, concurrence, optimisation.
 | 1.1 | 2026-09-20 | Double syntaxe : forme littéraire (référence) et forme compacte, traduction sans perte (art. 3, 4, 6, 8) |
 | 1.2 | 2026-09-20 | Jalons : forme littéraire dès v0.1, forme compacte et traduction en v0.2 (art. 11) |
 | 1.3 | 2026-09-21 | Nouvel art. 9 : aide à la saisie. Renumérotation des art. 9 à 11 en 10 à 12. Jalons : suites attendues en v0.1, serveur LSP en v0.4 |
+| 1.4 | 2026-09-21 | Art. 11 : horizon post-v1, éditeur par blocs et éditeur visuel d'interfaces |
