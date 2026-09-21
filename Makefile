@@ -3,10 +3,10 @@ CFLAGS ?= -std=c99 -Wall -Wextra -pedantic -O2
 
 LEXEUR    = src/lexeur.c
 ANALYSEUR = src/analyseur.c src/arbre.c src/texte.c $(LEXEUR)
-EXECUTION = src/evaluateur.c src/decimal.c $(ANALYSEUR)
-ENTETES   = src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/evaluateur.h src/decimal.h
+EXECUTION = src/compilateur.c src/vm.c src/bytecode.c src/decimal.c $(ANALYSEUR)
+ENTETES   = src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
 
-all: grym grym-lex grym-arbre grym-suites test_lexeur test_analyseur test_evaluateur
+all: grym grym-lex grym-arbre grym-suites test_lexeur test_analyseur test_machine
 
 grym: src/grym.c $(EXECUTION) $(ENTETES)
 	$(CC) $(CFLAGS) -o $@ src/grym.c $(EXECUTION)
@@ -26,15 +26,15 @@ test_lexeur: tests/test_lexeur.c $(LEXEUR) $(ENTETES)
 test_analyseur: tests/test_analyseur.c $(ANALYSEUR) $(ENTETES)
 	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_analyseur.c $(ANALYSEUR)
 
-test_evaluateur: tests/test_evaluateur.c $(EXECUTION) $(ENTETES)
-	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_evaluateur.c $(EXECUTION)
+test_machine: tests/test_machine.c $(EXECUTION) $(ENTETES)
+	$(CC) $(CFLAGS) -Isrc -o $@ tests/test_machine.c $(EXECUTION)
 
-test: test_lexeur test_analyseur test_evaluateur
+test: test_lexeur test_analyseur test_machine
 	./test_lexeur
 	./test_analyseur
-	./test_evaluateur
+	./test_machine
 
 clean:
-	rm -f grym grym-lex grym-arbre grym-suites test_lexeur test_analyseur test_evaluateur *.exe
+	rm -f grym grym-lex grym-arbre grym-suites test_lexeur test_analyseur test_machine *.exe
 
 .PHONY: all test clean

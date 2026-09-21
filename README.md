@@ -1,22 +1,24 @@
 # GrymoiR
 
-Langage de programmation francophone. Référence : `docs/charte-grymoir.md` et `docs/grammaire.md`.
+Langage de programmation francophone. Référence : `docs/charte-grymoir.md`, `docs/grammaire.md` et `docs/vm.md`.
 
-## État : v0.1 (lexer, analyseur, suites attendues, calcul décimal exact, boucle interactive)
+## État : v0.2 en cours (bytecode et machine virtuelle en place)
 
 Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
 
     make
     make test
     ./grym                                # boucle interactive
-    ./grym lancer exemples/facture.grym   # exécuter un fichier
+    ./grym lancer exemples/facture.grym   # compiler puis exécuter
+    ./grym compiler exemples/facture.grym # produire exemples/facture.grymb
+    ./grym desassembler exemples/facture.grymb
     ./grym-lex exemples/facture.grym      # jetons
     ./grym-arbre exemples/facture.grym    # arbre syntaxique
     printf 'Le total vaut 1.\nLe to' | ./grym-suites   # aide à la saisie
 
 Sous Windows sans `make` :
 
-    gcc -std=c99 -O2 -o grym.exe src/grym.c src/evaluateur.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/lexeur.c
+    gcc -std=c99 -O2 -o grym.exe src/grym.c src/compilateur.c src/vm.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/lexeur.c
     gcc -std=c99 -O2 -o grym-lex.exe src/grym-lex.c src/lexeur.c
     gcc -std=c99 -O2 -Isrc -o test_lexeur.exe tests/test_lexeur.c src/lexeur.c
     gcc -std=c99 -O2 -o grym-arbre.exe src/grym-arbre.c src/analyseur.c src/arbre.c src/texte.c src/lexeur.c

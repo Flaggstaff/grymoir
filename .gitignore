@@ -5,7 +5,8 @@ grym-arbre
 grym-suites
 test_lexeur
 test_analyseur
-test_evaluateur
+test_machine
 *.exe
 *.o
 *.obj
+*.grymb

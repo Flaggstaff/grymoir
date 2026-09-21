@@ -31,7 +31,8 @@ typedef enum {
 } StatutDecimal;
 
 Decimal dec_zero(void);
-Decimal dec_depuis_canonique(const char *s);   /* « 123.45 », forme produite par le lexeur */
+Decimal dec_depuis_canonique(const char *s);   /* « 123.45 », « -3 » : forme du lexeur et du bytecode */
+int dec_canonique_valide(const char *s);       /* vrai si s respecte cette forme */
 Decimal dec_copier(const Decimal *a);
 void dec_liberer(Decimal *a);
 

@@ -187,6 +187,8 @@ Decimal dec_zero(void) {
 }
 
 Decimal dec_depuis_canonique(const char *s) {
+    int negatif = s[0] == '-';
+    if (negatif) s++;
     size_t l = strlen(s);
     Nat x = nat_vide(l);
     long apres_point = -1;
@@ -196,7 +198,18 @@ Decimal dec_depuis_canonique(const char *s) {
         if (c >= '0' && c <= '9') x.d[x.n++] = (uint8_t)(c - '0');
     }
     nat_normaliser(&x);
-    return dec_depuis_nat(x, 0, apres_point < 0 ? 0 : -apres_point);
+    return dec_depuis_nat(x, negatif, apres_point < 0 ? 0 : -apres_point);
+}
+
+int dec_canonique_valide(const char *s) {
+    if (*s == '-') s++;
+    int chiffres = 0, point = 0;
+    for (; *s; s++) {
+        if (*s >= '0' && *s <= '9') chiffres++;
+        else if (*s == '.' && !point && chiffres) point = 1;
+        else return 0;
+    }
+    return chiffres > 0 && s[-1] != '.';
 }
 
 Decimal dec_copier(const Decimal *a) {
