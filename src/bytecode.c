@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.9).
+ * Spécification : docs/vm.md (révision 1.10).
  */
 #include "bytecode.h"
 #include "date.h"
@@ -346,9 +346,9 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 10)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 9   /* versions 1 à 8 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 10  /* versions 1 à 9 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
-                              sans fichiers (8) */
+                              sans fichiers (8), sans entités (9) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -419,12 +419,17 @@ unsigned char *module_serialiser(const Module *m, size_t *taille) {
     for (size_t k = 0; k < m->nb_classes; k++) {
         const ClasseModule *c = &m->classes[k];
         ecrire_chaine(&o, c->nom);
-        ecrire_u8(&o, (c->feminin ? 1u : 0u) | (c->aptitude ? 2u : 0u));
+        ecrire_u8(&o, (c->feminin ? 1u : 0u) | (c->aptitude ? 2u : 0u) | (c->conserve ? 4u : 0u));
         ecrire_chaine(&o, c->parent ? c->parent : "");
+        ecrire_chaine(&o, c->pluriel ? c->pluriel : "");
         ecrire_u32(&o, (uint32_t)c->nb_aptitudes);
         for (size_t q = 0; q < c->nb_aptitudes; q++) ecrire_chaine(&o, c->aptitudes[q]);
         ecrire_u32(&o, (uint32_t)c->nb_champs);
-        for (size_t q = 0; q < c->nb_champs; q++) ecrire_chaine(&o, c->champs[q]);
+        for (size_t q = 0; q < c->nb_champs; q++) {
+            ecrire_chaine(&o, c->champs[q]);
+            ecrire_chaine(&o, c->types && c->types[q] ? c->types[q] : "");
+            ecrire_u8(&o, c->uniques && c->uniques[q] ? 1u : 0u);
+        }
     }
     *taille = o.n;
     return o.d;
@@ -590,14 +595,19 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
             char *nom = lire_chaine(&l);
             uint32_t fem = lire_u(&l, 1);
             char *parent = version >= 5 ? lire_chaine(&l) : grym_dupliquer("");
+            char *pluriel = version >= 10 ? lire_chaine(&l) : grym_dupliquer("");
             uint32_t nap = version >= 7 ? lire_u(&l, 4) : 0;
-            if (!nom || !*nom || !parent || l.echec || fem > 3 || nap > (taille - l.pos) / 4) {
+            if (!nom || !*nom || !parent || !pluriel || l.echec || fem > 7 || nap > (taille - l.pos) / 4) {
                 free(nom);
                 free(parent);
+                free(pluriel);
                 return echec_module(m, erreur, grym_formater("classe %u illisible.", (unsigned)k));
             }
             ClasseModule *c = module_ajouter_classe(m, nom, (int)(fem & 1));
             c->aptitude = (fem & 2) != 0;
+            c->conserve = (fem & 4) != 0;
+            if (*pluriel) c->pluriel = pluriel;
+            else free(pluriel);
             if (*parent) c->parent = parent;
             else free(parent);
             free(nom);
@@ -623,6 +633,17 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
                 }
                 classe_ajouter_champ(c, ch);
                 free(ch);
+                if (version >= 10) {
+                    char *type = lire_chaine(&l);
+                    uint32_t unique = lire_u(&l, 1);
+                    if (!type || l.echec || unique > 1) {
+                        free(type);
+                        return echec_module(m, erreur, grym_formater("type du champ %u de la classe %u illisible.",
+                                                                     (unsigned)q, (unsigned)k));
+                    }
+                    classe_typer_dernier_champ(c, *type ? type : NULL, (int)unique);
+                    free(type);
+                }
             }
         }
     }
@@ -656,6 +677,10 @@ ClasseModule *module_ajouter_classe(Module *m, const char *nom, int feminin) {
     c->nom = grym_dupliquer(nom);
     c->feminin = feminin;
     c->parent = NULL;
+    c->conserve = 0;
+    c->pluriel = NULL;
+    c->types = NULL;
+    c->uniques = NULL;
     c->aptitude = 0;
     c->aptitudes = NULL;
     c->nb_aptitudes = 0;
@@ -671,7 +696,18 @@ void classe_ajouter_aptitude(ClasseModule *c, const char *aptitude) {
 
 void classe_ajouter_champ(ClasseModule *c, const char *champ) {
     c->champs = agrandir(c->champs, c->nb_champs + 1, sizeof *c->champs);
+    c->types = agrandir(c->types, c->nb_champs + 1, sizeof *c->types);
+    c->uniques = agrandir(c->uniques, c->nb_champs + 1, sizeof *c->uniques);
+    c->types[c->nb_champs] = NULL;
+    c->uniques[c->nb_champs] = 0;
     c->champs[c->nb_champs++] = grym_dupliquer(champ);
+}
+
+void classe_typer_dernier_champ(ClasseModule *c, const char *type, int unique) {
+    if (!c->nb_champs) return;
+    free(c->types[c->nb_champs - 1]);
+    c->types[c->nb_champs - 1] = type ? grym_dupliquer(type) : NULL;
+    c->uniques[c->nb_champs - 1] = (unsigned char)(unique != 0);
 }
 
 void module_detruire(Module *m) {
@@ -681,6 +717,10 @@ void module_detruire(Module *m) {
     for (size_t k = 0; k < m->nb_classes; k++) {
         free(m->classes[k].nom);
         free(m->classes[k].parent);
+        free(m->classes[k].pluriel);
+        for (size_t q = 0; q < m->classes[k].nb_champs; q++) free(m->classes[k].types[q]);
+        free(m->classes[k].types);
+        free(m->classes[k].uniques);
         for (size_t q = 0; q < m->classes[k].nb_aptitudes; q++) free(m->classes[k].aptitudes[q]);
         free(m->classes[k].aptitudes);
         for (size_t q = 0; q < m->classes[k].nb_champs; q++) free(m->classes[k].champs[q]);

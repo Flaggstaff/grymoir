@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.9).
+ * Spécification : docs/vm.md (révision 1.10).
  */
 #include "vm.h"
 #include "date.h"
@@ -45,7 +45,11 @@ typedef struct ClasseVM {
     const struct ClasseVM **aptitudes;   /* aptitudes adoptées, dans l'ordre */
     size_t nb_aptitudes;
     char **champs;        /* champs hérités d'abord, puis champs propres */
+    char **types;         /* type de chaque champ (grammaire, § 16.1), ou NULL */
+    unsigned char *uniques;
     size_t nb_champs;
+    int conserve;         /* entité */
+    char *pluriel;
 } ClasseVM;
 
 /* Objet du tas : sa classe, ses champs, et de quoi le ramasser (docs/vm.md, § 8). */
@@ -235,6 +239,10 @@ void machine_detruire(Machine *m) {
     for (size_t i = 0; i < m->nb_classes; i++) {
         free(m->classes[i]->nom);
         for (size_t k = 0; k < m->classes[i]->nb_champs; k++) free(m->classes[i]->champs[k]);
+        for (size_t k = 0; k < m->classes[i]->nb_champs; k++) free(m->classes[i]->types[k]);
+        free(m->classes[i]->types);
+        free(m->classes[i]->uniques);
+        free(m->classes[i]->pluriel);
         free(m->classes[i]->champs);
         free(m->classes[i]->aptitudes);
         free(m->classes[i]);
@@ -622,6 +630,19 @@ static char *ecrire_sur_le_disque(Machine *m) {
     return erreur;
 }
 
+static char *decrire_valeur_pour_type(const Valeur *v) {
+    if (v->type == V_NOMBRE) {
+        char *n = dec_formater(&v->nombre);
+        char *r = grym_formater("%s", n);
+        free(n);
+        return r;
+    }
+    if (v->type == V_OBJET) {
+        return grym_formater("%s %s", v->objet->classe->feminin ? "une" : "un", v->objet->classe->nom);
+    }
+    return grym_dupliquer(nom_type(v->type));
+}
+
 size_t machine_objets_vivants(const Machine *m) {
     return m->nb_objets;
 }
@@ -642,6 +663,38 @@ static long index_champ(const ClasseVM *c, const char *champ) {
     for (size_t k = 0; k < c->nb_champs; k++)
         if (strcmp(c->champs[k], champ) == 0) return (long)k;
     return -1;
+}
+
+static char *decrire_valeur_pour_type(const Valeur *v);
+
+/* Typage strict (grammaire, § 16.2) : la valeur convient-elle au type du champ ? NULL si oui, sinon le message. */
+static char *verifier_type_champ(const Machine *m, const char *champ, const char *type, const Valeur *v) {
+    if (!type) return NULL;
+    int ok = 0;
+    if (strcmp(type, "texte") == 0) ok = v->type == V_TEXTE;
+    else if (strcmp(type, "nombre") == 0) ok = v->type == V_NOMBRE;
+    else if (strcmp(type, "nombre entier") == 0) ok = v->type == V_NOMBRE && dec_est_entier(&v->nombre);
+    else if (strcmp(type, "vrai ou faux") == 0) ok = v->type == V_BOOLEEN;
+    else if (strcmp(type, "date") == 0) ok = v->type == V_DATE;
+    else if (strcmp(type, "fichier") == 0) ok = v->type == V_FICHIER;
+    else if (strcmp(type, "image") == 0) {
+        if (v->type == V_FICHIER && !v->fichier->format)
+            return grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF ou WebP).", v->fichier->nom);
+        ok = v->type == V_FICHIER;
+    } else if (v->type == V_OBJET) {
+        for (const ClasseVM *c = v->objet->classe; c && !ok; c = c->parent) ok = strcmp(c->nom, type) == 0;
+    }
+    if (ok) return NULL;
+    const ClasseVM *e = classe_vm(m, type);
+    char *attendu = strcmp(type, "vrai ou faux") == 0 ? grym_dupliquer("vrai ou faux")
+                  : strcmp(type, "date") == 0 || strcmp(type, "image") == 0 ? grym_formater("une %s", type)
+                  : e ? grym_formater("%s %s", e->feminin ? "une" : "un", type)
+                  : grym_formater("un %s", type);
+    char *vu = decrire_valeur_pour_type(v);
+    char *r = grym_formater("Le champ « %s » attend %s, pas %s.", champ, attendu, vu);
+    free(attendu);
+    free(vu);
+    return r;
 }
 
 static char *article_classe(const ClasseVM *c) {
@@ -720,11 +773,35 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         size_t total = (parent ? parent->nb_champs : 0) + cm->nb_champs;
         for (size_t q = 0; q < cm->nb_aptitudes && !probleme; q++) total += aptitudes[q]->nb_champs;
         char **champs = grym_allouer((total ? total : 1) * sizeof *champs);
+        char **types = grym_allouer((total ? total : 1) * sizeof *types);
+        unsigned char *uniques = grym_allouer(total ? total : 1);
         size_t n = 0;
-        for (size_t q = 0; parent && q < parent->nb_champs; q++) champs[n++] = parent->champs[q];
+        for (size_t q = 0; parent && q < parent->nb_champs; q++) {
+            types[n] = parent->types[q];
+            uniques[n] = parent->uniques[q];
+            champs[n++] = parent->champs[q];
+        }
         for (size_t q = 0; q < cm->nb_aptitudes && !probleme; q++)
-            for (size_t r = 0; r < aptitudes[q]->nb_champs; r++) champs[n++] = aptitudes[q]->champs[r];
-        for (size_t q = 0; q < cm->nb_champs && !probleme; q++) champs[n++] = cm->champs[q];
+            for (size_t r = 0; r < aptitudes[q]->nb_champs; r++) {
+                types[n] = aptitudes[q]->types[r];
+                uniques[n] = 0;
+                champs[n++] = aptitudes[q]->champs[r];
+            }
+        for (size_t q = 0; q < cm->nb_champs && !probleme; q++) {
+            types[n] = cm->types ? cm->types[q] : NULL;
+            uniques[n] = cm->uniques ? cm->uniques[q] : 0;
+            champs[n++] = cm->champs[q];
+        }
+        /* Un type désigne un type de base ou une entité connue (ou la classe elle-même). */
+        static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image" };
+        for (size_t q = 0; q < n && !probleme; q++) {
+            if (!types[q]) continue;
+            int ok_type = strcmp(types[q], cm->nom) == 0 && cm->conserve;
+            for (size_t r = 0; r < sizeof BASE / sizeof *BASE; r++) ok_type |= strcmp(types[q], BASE[r]) == 0;
+            const ClasseVM *e = classe_vm(m, types[q]);
+            if (!ok_type && !(e && e->conserve))
+                probleme = grym_formater("« %s » : type « %s » inconnu.", champs[q], types[q]);
+        }
         for (size_t q = 0; q < n && !probleme; q++)
             for (size_t r = 0; r < q && !probleme; r++)
                 if (strcmp(champs[q], champs[r]) == 0)
@@ -733,6 +810,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             diag->message = grym_formater("Bytecode invalide : %s", probleme);
             free(probleme);
             free(champs);
+            free(types);
+            free(uniques);
             free(aptitudes);
             return 0;   /* rien n'est encore enregistré : aucune formule, aucun cadre */
         }
@@ -744,9 +823,17 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         c->aptitudes = aptitudes;
         c->nb_aptitudes = cm->nb_aptitudes;
         c->nb_champs = n;
+        c->conserve = cm->conserve;
+        c->pluriel = cm->pluriel ? grym_dupliquer(cm->pluriel) : NULL;
         c->champs = grym_allouer((n ? n : 1) * sizeof *c->champs);
-        for (size_t q = 0; q < n; q++) c->champs[q] = grym_dupliquer(champs[q]);
+        c->types = grym_allouer((n ? n : 1) * sizeof *c->types);
+        c->uniques = uniques;
+        for (size_t q = 0; q < n; q++) {
+            c->champs[q] = grym_dupliquer(champs[q]);
+            c->types[q] = types[q] ? grym_dupliquer(types[q]) : NULL;
+        }
         free(champs);
+        free(types);
         ClasseVM **t = grym_allouer((m->nb_classes + 1) * sizeof *t);
         if (m->nb_classes) memcpy(t, m->classes, m->nb_classes * sizeof *t);
         free(m->classes);
@@ -1163,6 +1250,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 ok = echouer(diag, b, debut, grym_formater("%s n'a pas de champ « %s ».", qui, champ));
                 free(qui);
                 break;
+            }
+            if (code != I_LIRE_CHAMP) {
+                char *probleme = verifier_type_champ(m, champ, o->classe->types[k], &pile.v[pile.n - 1]);
+                if (probleme) { ok = echouer(diag, b, debut, probleme); break; }
             }
             if (code == I_LIRE_CHAMP) {
                 if (!o->definis[k]) {

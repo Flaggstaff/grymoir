@@ -170,6 +170,15 @@ int main(void) {
                  "Enregistrer photo dans « c.jpg ».\n");
     ERR("_enregistrer photo\n", 1, 1, "Forme attendue : « _enregistrer photo _dans « copie.jpg » »");
 
+    ALLER_RETOUR("_aptitude datée\n    _une date (date)\n_fin\n_classe _une facture (factures) _conservé\n"
+                 "    _un montant (nombre)\n    _un payé (vrai_ou_faux)\n    _un numéro (nombre_entier) _unique\n_fin\n"
+                 "_classe _un avoir _conservé _est _une facture _adopte datée\n    _un motif (texte)\n_fin\n",
+                 "Une chose datée a :\n    une date (date).\nUne facture (factures), conservée, a :\n    un montant (nombre),\n"
+                 "    un payé (vrai ou faux),\n    un numéro (nombre entier), unique.\n"
+                 "Un avoir, conservé, est une facture datée.\nUn avoir a :\n    un motif (texte).\n");
+    EXEC("_classe _un client _conservé\n    _un âge (nombre_entier)\n_fin\n_le c << _nouveau client _avec\n"
+         "    âge << 2,5\n_fin\n", "ERREUR 5:12 Le champ « âge » attend un nombre entier, pas un nombre à virgule.");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

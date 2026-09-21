@@ -512,6 +512,54 @@ int main(void) {
     VE("Pour enregistrer un x :\n    Afficher x.", 1, 6, "« enregistrer » commence une construction du langage");
     VE("Enregistrer 3 « a ».", 1, 15, "attendu : un opérateur ou « dans »");
 
+    /* --- Entités : déclaration et typage strict (§ 16.1, § 16.2) --- */
+    V("Un client, conservé, a :\n    un nom (texte),\n    un âge (nombre entier),\n    un statut (vrai ou faux),\n"
+      "    un parrain (client),\n    une licence (texte), unique.",
+      "(entité [client] [nom : texte] [âge : nombre entier] [statut : vrai ou faux] [parrain : client] "
+      "[licence : texte unique])");
+    V("Un cheval (chevaux), conservé, a : un nom (texte).\nUne facture, conservée, a : un cheval (cheval).",
+      "(entité [cheval] (pluriel chevaux) [nom : texte])\n(entité [facture] [cheval : cheval])");
+    V("Une chose datée a : une date (date).\nUn client, conservé, a : un nom (texte).\n"
+      "Un membre, conservé, est un client daté.\nUn membre a : une cotisation (nombre).\n"
+      "Un document, conservé, est une chose datée.",
+      "(aptitude [datée] [date : date])\n(entité [client] [nom : texte])\n"
+      "(entité [membre] (est [client]) «datée» [cotisation : nombre])\n(entité [document] «datée»)");
+    VE("Un client, conservé, a : un nom.", 1, 32, "Type attendu entre parenthèses : « un nom (texte) ».");
+    VE("Une personne a : un nom (texte).", 1, 25, "Seuls les champs d'une entité ou d'une aptitude ont un type");
+    VE("Une personne a : un nom, unique.", 1, 26, "Seul un champ d'entité est unique.");
+    VE("Un client, conservée, a : un nom (texte).", 1, 12, "Accord : « conservé ».");
+    VE("Un client (clients) a : un nom.", 1, 12, "Seule une entité déclare son pluriel");
+    VE("Un client, conservé, a : un nom (chaîne).", 1, 34, "Type « chaîne » inconnu");
+    VE("Une personne a : un nom.\nUn client, conservé, a : un ami (personne).", 2, 34,
+       "« personne » n'est pas une entité : un lien pointe vers une entité conservée.");
+    VE("Une personne a : un nom.\nUn membre, conservé, est une personne.", 2, 30,
+       "« personne » n'est pas une entité : une entité hérite d'une entité.");
+    VE("Un client, conservé, a : un nom (texte).\nUn membre est un client.", 2, 18,
+       "« client » est une entité : écrivez « Un membre, conservé, est un client. ».");
+    VE("Une chose datée a : une date.\nUn client, conservé, est une chose datée.", 2, 36,
+       "L'aptitude « datée » a un champ sans type (« date ») : une entité ne l'adopte pas.");
+    VE("Un client, conservé, a : un solde (nombre).\nLe c vaut un nouveau client :\n    Le solde vaut « abc ».", 3, 19,
+       "Le champ « solde » attend un nombre, pas un texte.");
+    VE("Un client, conservé, a : un âge (nombre entier).\nLe c vaut un nouveau client :\n    L'âge vaut 2,5.", 3, 16,
+       "Le champ « âge » attend un nombre entier, pas un nombre à virgule.");
+    V("Un client, conservé, a : un âge (nombre entier).\nLe c vaut un nouveau client :\n    L'âge vaut 3,0.",
+      "(entité [client] [âge : nombre entier])\n(créer [c] (nouveau [client] ([âge] 3.0)))");
+    VE("Un client, conservé, a : un solde (nombre).\nLe c vaut un nouveau client.\nLe solde du c devient vrai.", 3, 23,
+       "Le champ « solde » attend un nombre, pas vrai ou faux.");
+    V("Un client, conservé, a : un solde (nombre).\nUne personne a : un solde.\nLe c vaut un nouveau client.\n"
+      "Le solde du c devient vrai.",
+      "(entité [client] [solde : nombre])\n(classe [personne] [solde])\n(créer [c] (nouveau [client]))\n"
+      "(modifier-champ [solde] [c] vrai)");
+    VE("Un client, conservé, a : un parrain (client).\nUne facture, conservée, a : un client (client).\n"
+       "La f vaut une nouvelle facture :\n    Le client vaut une nouvelle facture.", 4, 20,
+       "Le champ « client » attend un client, pas une facture.");
+    V("Un client, conservé, a : un parrain (client).\nUn membre, conservé, est un client.\n"
+      "Le c vaut un nouveau client :\n    Le parrain vaut un nouveau membre.",
+      "(entité [client] [parrain : client])\n(entité [membre] (est [client]))\n"
+      "(créer [c] (nouveau [client] ([parrain] (nouveau [membre]))))");
+    VE("Une chose datée a : une date (date).\nUn doc, conservé, est une chose datée.\nLe d vaut un nouveau doc :\n"
+       "    La date vaut 3.", 4, 18, "Le champ « date » attend une date, pas un nombre.");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

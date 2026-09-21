@@ -18,6 +18,7 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->article = ART_AUCUN;
     n->texte = NULL;
     n->texte2 = NULL;
+    n->texte3 = NULL;
     n->enfants = NULL;
     n->nb_enfants = 0;
     n->ligne = ligne;
@@ -45,6 +46,7 @@ void noeud_liberer(Noeud *n) {
     free(n->enfants);
     free(n->texte);
     free(n->texte2);
+    free(n->texte3);
     free(n);
 }
 
@@ -238,27 +240,33 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, ")");
         return;
     case P_CLASSE:
-        chaine_ajouter(c, "(classe [");
+    case P_APTITUDE:
+        chaine_ajouter(c, n->type == P_APTITUDE ? "(aptitude [" : (n->forme & 32) ? "(entité [" : "(classe [");
         chaine_ajouter(c, n->texte);
         chaine_ajouter(c, "]");
-        if (n->texte2) {
+        if (n->texte3) {
+            chaine_ajouter(c, " (pluriel ");
+            chaine_ajouter(c, n->texte3);
+            chaine_ajouter(c, ")");
+        }
+        if (n->type == P_CLASSE && n->texte2) {
             chaine_ajouter(c, " (est [");
             chaine_ajouter(c, n->texte2);
             chaine_ajouter(c, "])");
         }
         for (size_t k = 0; k < n->nb_enfants; k++) {
+            const Noeud *ch = n->enfants[k];
             chaine_ajouter(c, " ");
-            decrire(n->enfants[k], c);
-        }
-        chaine_ajouter(c, ")");
-        return;
-    case P_APTITUDE:
-        chaine_ajouter(c, "(aptitude [");
-        chaine_ajouter(c, n->texte);
-        chaine_ajouter(c, "]");
-        for (size_t k = 0; k < n->nb_enfants; k++) {
-            chaine_ajouter(c, " ");
-            decrire(n->enfants[k], c);
+            if (ch->type == N_NOM && ch->texte2) {   /* champ typé : [nom : texte], [licence : texte unique] */
+                chaine_ajouter(c, "[");
+                chaine_ajouter(c, ch->texte);
+                chaine_ajouter(c, " : ");
+                chaine_ajouter(c, ch->texte2);
+                if (ch->op == 'U') chaine_ajouter(c, " unique");
+                chaine_ajouter(c, "]");
+            } else {
+                decrire(ch, c);
+            }
         }
         chaine_ajouter(c, ")");
         return;

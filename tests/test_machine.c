@@ -457,6 +457,41 @@ int main(void) {
         for (size_t k = 0; k < sizeof essais / sizeof *essais; k++) remove(essais[k]);
     }
 
+    /* --- Entités : typage strict avant toute écriture (§ 16.2) --- */
+    PROG("Un client, conservé, a : un nom (texte), un âge (nombre entier), un solde (nombre), un actif (vrai ou faux), "
+         "une inscription (date).\nLe c vaut un nouveau client :\n    Le nom vaut « Ana ».\n    L'âge vaut 30.\n"
+         "    Le solde vaut 12,50.\n    L'actif vaut vrai.\n    L'inscription vaut 21.09.2026.\n"
+         "Afficher nom du c puis âge du c puis solde du c puis actif du c puis inscription du c.",
+         "Ana 30 12,50 vrai 21.09.2026");
+    PROG("Un client, conservé, a : un âge (nombre entier).\nLe v vaut 2,5.\nLe c vaut un nouveau client :\n    L'âge vaut v.",
+         "ERREUR 4:5 Le champ « âge » attend un nombre entier, pas 2,5.");
+    PROG("Un client, conservé, a : un nom (texte).\nLe c vaut un nouveau client.\nLe x vaut 3.\nLe nom du c devient x.",
+         "ERREUR 4:1 Le champ « nom » attend un texte, pas 3.");
+    PROG("Un client, conservé, a : un parrain (client).\nUne personne a : un nom.\nLe p vaut une nouvelle personne.\n"
+         "Le c vaut un nouveau client.\nLe parrain du c devient p.",
+         "ERREUR 5:1 Le champ « parrain » attend un client, pas une personne.");
+    PROG("Un client, conservé, a : un parrain (client).\nUn membre, conservé, est un client.\n"
+         "Le m vaut un nouveau membre.\nLe c vaut un nouveau client.\nLe parrain du c devient m.\nAfficher parrain du c.",
+         "un membre");
+    PROG("Une chose datée a : une date (date).\nUn document, conservé, est une chose datée.\nLe x vaut « lundi ».\n"
+         "Le d vaut un nouveau document.\nLa date du d devient x.",
+         "ERREUR 5:1 Le champ « date » attend une date, pas un texte.");
+    PROG("Un client, conservé, a : un nom (texte).\nUne personne a : un nom.\nLe p vaut une nouvelle personne.\n"
+         "Le nom du p devient 3.\nAfficher nom du p.", "3");
+    {
+        static const unsigned char PNG[] = { 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A };
+        creer_fichier("_essai_img.png", PNG, sizeof PNG);
+        creer_fichier("_essai_doc.pdf", "%PDF-1.7", 8);
+        PROG("Un client, conservé, a : une photo (image), un contrat (fichier).\nLe c vaut un nouveau client :\n"
+             "    La photo vaut le fichier « _essai_img.png ».\n    Le contrat vaut le fichier « _essai_doc.pdf ».\n"
+             "Afficher photo du c puis contrat du c.", "une image PNG de 8 octets un fichier de 8 octets");
+        PROG("Un client, conservé, a : une photo (image).\nLe c vaut un nouveau client :\n"
+             "    La photo vaut le fichier « _essai_doc.pdf ».",
+             "ERREUR 3:5 « _essai_doc.pdf » n'est pas une image (PNG, JPEG, GIF ou WebP).");
+        remove("_essai_img.png");
+        remove("_essai_doc.pdf");
+    }
+
     /* --- Ramasse-miettes : cycles et objets abandonnés --- */
     {
         total++;

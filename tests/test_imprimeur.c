@@ -150,6 +150,17 @@ int main(void) {
          "_la photo << _fichier « a.jpg »\n_afficher (_fichier « b.png »).taille ; photo.nom_de_fichier\n"
          "_enregistrer photo _dans « c.jpg »\n");
 
+    /* --- Entités (§ 16.1) --- */
+    LITT("Un cheval (chevaux), conservé, a : un nom (texte), un actif (vrai ou faux), une licence (texte), unique.\n"
+         "Une facture, conservée, a : un cheval (cheval).\nUn poney, conservé, est un cheval. Un poney a : une taille (nombre).",
+         "Un cheval (chevaux), conservé, a :\n    un nom (texte),\n    un actif (vrai ou faux),\n"
+         "    une licence (texte), unique.\nUne facture, conservée, a :\n    un cheval (cheval).\n"
+         "Un poney, conservé, est un cheval.\nUn poney a :\n    une taille (nombre).\n");
+    COMP("Un cheval (chevaux), conservé, a : un nom (texte), un âge (nombre entier), une licence (texte), unique.\n"
+         "Un poney, conservé, est un cheval.",
+         "_classe _un cheval (chevaux) _conservé\n    _un nom (texte)\n    _un âge (nombre_entier)\n"
+         "    _une licence (texte) _unique\n_fin\n_classe _un poney _conservé _est _un cheval\n_fin\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

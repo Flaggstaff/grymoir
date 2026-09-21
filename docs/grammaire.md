@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.15 de la spécification, révisée le 21 septembre 2026. Les § 14 (dates) et 15 (fichiers) sont implémentés ; le § 16 (entités) est validé, pas encore implémenté.
+Version 1.16 de la spécification, révisée le 21 septembre 2026. Les § 14 (dates), 15 (fichiers), 16.1 et 16.2 (déclaration et typage des entités) sont implémentés ; le reste du § 16 est validé, pas encore implémenté.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -384,6 +384,9 @@ Limites de cette notation :
 | Fichier absent (exécution) | « Fichier « photos/ana.jpg » introuvable ou illisible. » |
 | Écrasement (exécution) | « « copie.jpg » existe déjà : il n'est jamais écrasé. » |
 | Fichier lu dans un calcul | « Un calcul ne lit pas le disque : lisez le fichier dans une action. » |
+| Champ d'entité sans type | « Type attendu entre parenthèses : « un nom (texte) ». » |
+| Type d'une valeur (analyse ou exécution) | « Le champ « solde » attend un nombre, pas un texte. » |
+| Lien vers une classe ordinaire | « « personne » n'est pas une entité : un lien pointe vers une entité conservée. » |
 | Classe inconnue | « Classe « fournisseur » inconnue. » |
 | Champ hérité redéclaré | « « nom » est déjà un champ hérité de « personne ». » |
 | Version en double | « « saluer » existe déjà pour « personne ». » |
@@ -860,6 +863,9 @@ Un client, conservé, a :
 - Un lien pointe vers une entité, jamais vers une classe ordinaire.
 - `, unique` : deux objets conservés n'ont pas la même valeur pour ce champ.
 - Tout champ est obligatoire : conserver un objet incomplet est une erreur. Les champs facultatifs attendent l'absence de valeur (§ 13.8).
+- `conservé` s'accorde avec le genre de l'entité (`Une facture, conservée, a :`). Seule une entité déclare un type, `, unique` ou un pluriel ; une aptitude peut typer ses champs, sans `, unique`.
+- Une entité peut se désigner elle-même dans un lien (`un parrain (client)` dans `client`) ; un lien vers une autre entité suppose qu'elle soit déclarée avant.
+- Une entité qui hérite se déclare `Un membre, conservé, est un client.` ; ses champs propres suivent dans la phrase suivante, `Un membre a :`, sans répéter `conservé`. `Un document, conservé, est une chose datée.` déclare une entité qui n'a que des aptitudes.
 - Une entité hérite d'une entité, jamais d'une classe ordinaire, et une classe ordinaire n'hérite pas d'une entité. Une aptitude adoptée par une entité doit typer ses champs.
 - Pluriel : `s` ajouté au nom ; un pluriel irrégulier se déclare entre parenthèses, comme le masculin d'une aptitude : `Un cheval (chevaux), conservé, a :` (charte, art. 4).
 
@@ -867,10 +873,10 @@ Un client, conservé, a :
 
 Le typage des entités est vérifié (charte, art. 5) :
 
-- **à l'analyse**, quand le type de la valeur y est connu (une constante, un champ d'entité, une date, `aujourd'hui`, un nouvel objet) : `Le solde du client devient « abc ».` est refusé avant toute exécution ;
+- **à l'analyse**, quand le type de la valeur y est connu (une constante, une date, `aujourd'hui`, un fichier lu, un nouvel objet, une comparaison) et le type du champ aussi : dans le bloc d'un nouvel objet, dont la classe est connue ; ailleurs, quand toutes les classes qui déclarent ce nom de champ lui donnent le même type. `Le solde du client devient « abc ».` est alors refusé avant toute exécution ;
 - **sinon, avant toute écriture** : la valeur est vérifiée au moment de la ranger dans le champ, et jamais une valeur du mauvais type n'atteint la base.
 
-Un `(nombre entier)` refuse `2,5` ; un `(nombre)` accepte `2`.
+Un `(nombre entier)` refuse `2,5` et accepte `3,0` ; un `(nombre)` accepte `2`. Un lien accepte un objet de l'entité ou d'une entité qui en hérite. Une `(image)` refuse un fichier dont le format n'est pas reconnu : « « rapport.pdf » n'est pas une image (PNG, JPEG, GIF ou WebP). »
 
 ### 16.3 Conserver, modifier, supprimer
 
@@ -938,7 +944,10 @@ La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1
 
 | Littéraire | Compacte |
 |---|---|
-| `Un client, conservé, a :` | `_classe _un client _conservé` |
+| `Un client, conservé, a :` | `_classe _un client _conservé` (le genre n'est pas écrit) |
+| `Un cheval (chevaux), conservé, a :` | `_classe _un cheval (chevaux) _conservé` |
+| `Un membre, conservé, est un client daté.` | `_classe _un membre _conservé _est _un client _adopte datée` |
+| `un âge (nombre entier)`, `un actif (vrai ou faux)` | `_un âge (nombre_entier)`, `_un actif (vrai_ou_faux)` |
 | `un nom (texte)` | `_un nom (texte)` |
 | `une licence (texte), unique` | `_une licence (texte) _unique` |
 | `un pays (texte), « Suisse » au départ` | `_un pays (texte) _départ « Suisse »` |
@@ -976,3 +985,4 @@ La charte 1.9 reprend ce paragraphe : transaction par exécution (art. 7), typag
 | 1.13 | 2026-09-21 | § 14 à 16 validés. Un calcul ne lit pas la base (§ 16.4). § 16.9 : accord avec la charte 1.9 |
 | 1.14 | 2026-09-21 | § 14 implémenté ; dates dans les boucles et `Selon` ; messages d'erreur des dates |
 | 1.15 | 2026-09-21 | § 15 implémenté ; chemin entre parenthèses, dossier de référence, écritures toutes ou aucune, champs des fichiers qui ne réservent rien, égalité par contenu, arrondi des tailles |
+| 1.16 | 2026-09-21 | § 16.1 et 16.2 implémentés ; accord de `conservé`, types réservés aux entités et aptitudes, héritage entre entités, lien vers soi, portée de la vérification à l'analyse, `(nombre entier)` et `3,0`, forme compacte des types |

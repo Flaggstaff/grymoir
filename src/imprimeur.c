@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.15), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.16), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -390,6 +390,16 @@ static void expression(Impression *im, const Noeud *n) {
     }
 }
 
+/* « (texte) », « (nombre entier), unique » ; en compacte « (nombre_entier) _unique ». */
+static void type_de_champ(Impression *im, const Noeud *ch) {
+    if (!ch->texte2) return;
+    aj(im, " (");
+    if (im->compact) ecrire_nom(im, ch->texte2, 0);
+    else aj(im, ch->texte2);   /* « (vrai ou faux) » : un type, pas un nom, jamais entre crochets */
+    aj(im, ")");
+    if (ch->op == 'U') aj(im, im->compact ? " _unique" : ", unique");
+}
+
 /* Bloc qui initialise un nouvel objet, après la phrase qui le crée. */
 static void initialisation(Impression *im, const Noeud *nv, int niveau) {
     for (size_t k = 0; k < nv->nb_enfants; k++) {
@@ -709,6 +719,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             retrait(im, niveau + 1);
             aj(im, c ? (ch->forme == 2 ? "_une " : "_un ") : (ch->forme == 2 ? "une " : "un "));
             ecrire_nom(im, ch->texte, 0);
+            type_de_champ(im, ch);
             aj(im, c ? "\n" : k + 1 < n->nb_enfants ? ",\n" : ".\n");
         }
         if (c) { retrait(im, niveau); aj(im, "_fin\n"); }
@@ -724,9 +735,12 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             if (n->enfants[k]->type == N_TEXTE) nb_apt++;
             else nb_champs++;
         }
+        int conserve = (n->forme & 32) != 0;
         if (c) {
             aj(im, fem ? "_classe _une " : "_classe _un ");
             ecrire_nom(im, n->texte, 0);
+            if (n->texte3) { aj(im, " ("); ecrire_nom(im, n->texte3, 0); aj(im, ")"); }
+            if (conserve) aj(im, " _conservé");
             if (herite) {
                 aj(im, fem_base ? " _est _une " : " _est _un ");
                 ecrire_nom(im, n->texte2 ? n->texte2 : "chose", 0);
@@ -743,6 +757,8 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 /* « Un membre est une personne horodatée. », puis ses champs dans une seconde phrase */
                 aj(im, fem ? "Une " : "Un ");
                 ecrire_nom(im, n->texte, 0);
+                if (n->texte3) { aj(im, " ("); aj(im, n->texte3); aj(im, ")"); }
+                if (conserve) aj(im, fem ? ", conservée," : ", conservé,");
                 aj(im, fem_base ? " est une " : " est un ");
                 ecrire_nom(im, n->texte2 ? n->texte2 : "chose", 0);
                 size_t q = 0;
@@ -759,6 +775,8 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             }
             aj(im, fem ? "Une " : "Un ");
             ecrire_nom(im, n->texte, 0);
+            if (!herite && n->texte3) { aj(im, " ("); aj(im, n->texte3); aj(im, ")"); }
+            if (!herite && conserve) aj(im, fem ? ", conservée," : ", conservé,");
             aj(im, " a :\n");
         }
         size_t vus = 0;
@@ -770,6 +788,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             retrait(im, niveau + 1);
             aj(im, c ? (ch->forme == 2 ? "_une " : "_un ") : (ch->forme == 2 ? "une " : "un "));
             ecrire_nom(im, ch->texte, 0);
+            type_de_champ(im, ch);
             aj(im, c ? "\n" : vus < nb_champs ? ",\n" : ".\n");
         }
         if (c) { retrait(im, niveau); aj(im, "_fin\n"); }

@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.15), § 11.
+ * Spécification : docs/grammaire.md (révision 1.16), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -392,8 +392,15 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         return;
     }
     if (haut && haut->type == O_CLASSE) {
-        if (!(est_cle(t, "un") || est_cle(t, "une")) || f != d + 2 || r->e[d + 1].type != J_CROCHETS) {
-            echouer(r, t, grym_dupliquer("Champ attendu : « _un nom » ou « _une date »."));
+        /* _un nom [(type)] [_unique] */
+        size_t q = d + 2;
+        int type = q + 2 < f && r->e[q].type == J_PAR_OUV && r->e[q + 1].type == J_CROCHETS
+                   && r->e[q + 2].type == J_PAR_FERM;
+        if (type) q += 3;
+        int unique = q < f && est_cle(&r->e[q], "unique");
+        if (unique) q++;
+        if (!(est_cle(t, "un") || est_cle(t, "une")) || d + 1 >= f || r->e[d + 1].type != J_CROCHETS || q != f) {
+            echouer(r, t, grym_dupliquer("Champ attendu : « _un nom », « _un nom (texte) » ou « _une licence (texte) _unique »."));
             return;
         }
         if (haut->classe && !haut->champs) {
@@ -407,7 +414,16 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         haut->champs++;
         mot(r, t->valeur, t);
         copier(r, &r->e[d + 1]);
-        emettre(r, J_VIRGULE, NULL, &r->e[d + 1], 1);
+        if (type) {
+            emettre(r, J_PAR_OUV, NULL, &r->e[d + 2], 1);
+            copier(r, &r->e[d + 3]);
+            emettre(r, J_PAR_FERM, NULL, &r->e[d + 4], 1);
+        }
+        if (unique) {
+            emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
+            mot(r, "unique", &r->e[f - 1]);
+        }
+        emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
         return;
     }
     if (haut && haut->type == O_INIT && !(t->type == J_MOT_CLE && !strcmp(t->valeur, "fin"))) {
@@ -450,10 +466,22 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         return;
     }
     if (t->type == J_MOT_CLE && !strcmp(t->valeur, "classe")) {
-        /* _classe _un membre _est _une personne [_adopte horodatée ; active] */
+        /* _classe _un cheval [(chevaux)] [_conservé] [_est _une personne [_adopte horodatée ; active]] */
+        size_t p = d + 3;
+        const Jeton *pluriel = NULL, *conserve = NULL;
+        if (p + 2 < f && r->e[p].type == J_PAR_OUV && r->e[p + 1].type == J_CROCHETS
+            && r->e[p + 2].type == J_PAR_FERM) {
+            pluriel = &r->e[p + 1];
+            p += 3;
+        }
+        if (p < f && (est_cle(&r->e[p], "conservé") || est_cle(&r->e[p], "conservée"))) {
+            conserve = &r->e[p];
+            p++;
+        }
+        size_t decale = p - (d + 3);   /* jetons de pluriel et de « _conservé » avant « _est » */
         size_t adopte = chercher(r, d + 1, f, "adopte");
-        int herite = adopte == d + 6 && est_cle(&r->e[d + 3], "est")
-                     && (est_cle(&r->e[d + 4], "un") || est_cle(&r->e[d + 4], "une")) && r->e[d + 5].type == J_CROCHETS;
+        int herite = adopte == d + 6 + decale && est_cle(&r->e[p], "est")
+                     && (est_cle(&r->e[p + 1], "un") || est_cle(&r->e[p + 1], "une")) && r->e[p + 2].type == J_CROCHETS;
         if (herite && adopte < f) {
             for (size_t q = adopte + 1; q < f; q += 2)
                 if (r->e[q].type != J_CROCHETS || (q + 1 < f && r->e[q + 1].type != J_POINT_VIRGULE)) herite = 0;
@@ -463,18 +491,29 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             echouer(r, t, grym_dupliquer("Forme attendue : « _classe _un membre _est _une personne _adopte horodatée »."));
             return;
         }
-        if ((f != d + 3 && !herite) || !(est_cle(&r->e[d + 1], "un") || est_cle(&r->e[d + 1], "une"))
+        if ((f != p && !herite) || !(est_cle(&r->e[d + 1], "un") || est_cle(&r->e[d + 1], "une"))
             || r->e[d + 2].type != J_CROCHETS) {
-            echouer(r, t, grym_dupliquer("Forme attendue : « _classe _un client » ou « _classe _un membre _est _une personne »."));
+            echouer(r, t, grym_dupliquer("Forme attendue : « _classe _un client [_conservé] » ou "
+                                         "« _classe _un membre [_conservé] _est _une personne »."));
             return;
         }
         mot(r, r->e[d + 1].valeur, t);
         copier(r, &r->e[d + 2]);
+        if (pluriel) {
+            emettre(r, J_PAR_OUV, NULL, pluriel, 1);
+            copier(r, pluriel);
+            emettre(r, J_PAR_FERM, NULL, pluriel, 1);
+        }
+        if (conserve) {
+            emettre(r, J_VIRGULE, NULL, conserve, 1);
+            mot(r, conserve->valeur, conserve);   /* synthétique : l'accord n'est pas vérifié */
+            emettre(r, J_VIRGULE, NULL, conserve, 1);
+        }
         if (herite) {
-            mot(r, "est", &r->e[d + 3]);
-            mot(r, r->e[d + 4].valeur, &r->e[d + 4]);
-            if (!strcmp(r->e[d + 5].valeur, "chose")) mot(r, "chose", &r->e[d + 5]);   /* aptitudes seules */
-            else copier(r, &r->e[d + 5]);
+            mot(r, "est", &r->e[p]);
+            mot(r, r->e[p + 1].valeur, &r->e[p + 1]);
+            if (!strcmp(r->e[p + 2].valeur, "chose")) mot(r, "chose", &r->e[p + 2]);   /* aptitudes seules */
+            else copier(r, &r->e[p + 2]);
             for (size_t q = adopte + 1; q < f; q += 2) {
                 if (q > adopte + 1) mot(r, "et", &r->e[q - 1]);
                 copier(r, &r->e[q]);                       /* adjectif : l'accord n'est pas vérifié */

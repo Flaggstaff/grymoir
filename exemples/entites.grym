@@ -1,0 +1,23 @@
+Remarque : entités déclarées et typées ; la base arrive à l'étape suivante
+Une chose datée a :
+    une date de création (date).
+
+Un client, conservé, a :
+    un nom (texte),
+    un solde (nombre),
+    un parrain (client),
+    une licence (texte), unique.
+Un membre, conservé, est un client daté.
+Un membre a :
+    une cotisation (nombre).
+
+Le fondateur vaut un nouveau client :
+    Le nom vaut « Ana ».
+    Le solde vaut 0.
+    La licence vaut « A-1 ».
+Le m vaut un nouveau membre :
+    Le nom vaut « Bo ».
+    Le solde vaut 120,50.
+    Le parrain vaut fondateur.
+    La date de création vaut aujourd'hui.
+Afficher nom du m puis « parrainé par » puis nom du parrain du m.

@@ -480,10 +480,16 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_APTITUDE: {
         ClasseModule *cm = module_ajouter_classe(c->module, ph->texte, ph->type == P_APTITUDE || (ph->forme & 3) == 2);
         cm->aptitude = ph->type == P_APTITUDE;
+        cm->conserve = ph->type == P_CLASSE && (ph->forme & 32);
+        if (ph->type == P_CLASSE && ph->texte3) cm->pluriel = grym_dupliquer(ph->texte3);
         if (ph->type == P_CLASSE && ph->texte2) cm->parent = grym_dupliquer(ph->texte2);
         for (size_t q = 0; q < ph->nb_enfants; q++) {
-            if (ph->enfants[q]->type == N_TEXTE) classe_ajouter_aptitude(cm, ph->enfants[q]->texte);
-            else classe_ajouter_champ(cm, ph->enfants[q]->texte);
+            const Noeud *ch = ph->enfants[q];
+            if (ch->type == N_TEXTE) classe_ajouter_aptitude(cm, ch->texte);
+            else {
+                classe_ajouter_champ(cm, ch->texte);
+                classe_typer_dernier_champ(cm, ch->texte2, ch->op == 'U');
+            }
         }
         return;
     }

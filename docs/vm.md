@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.9 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.15, § 5, § 9, § 10, § 13, § 14 et § 15.
+Version 1.10 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.16, § 5, § 9, § 10, § 13 à 16.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -108,7 +108,8 @@ Pour chaque i de a à b       a → i ; b → fin ; pas (écrit, ou ±1 selon a 
 - `ADDITION` accepte une date et un nombre entier de jours, dans les deux ordres ; `SOUSTRACTION`, une date moins des jours (une date) ou deux dates (un nombre de jours). Un résultat hors du calendrier est une erreur.
 - `SAUTER_SI_FAUX` exige un booléen : « Condition ni vraie ni fausse : la valeur est un nombre. »
 - Les instructions de champ désignent la classe et le champ par leur nom, résolu à l'exécution : la machine vérifie que la valeur est un objet et que sa classe a ce champ. `ÉGAL` compare deux objets par identité.
-- Héritage et aptitudes : à l'enregistrement d'une classe, la machine place les champs hérités en tête, puis ceux des aptitudes dans l'ordre d'adoption, puis les champs propres. Un champ garde ainsi le même rang dans toute la lignée. La classe parente et les aptitudes doivent être connues (déclarées plus tôt dans le module, ou par un module précédent) ; aucun champ n'est fourni deux fois. Sinon, le module est refusé avant toute exécution.
+- Typage strict (grammaire, § 16.2) : un champ d'entité ou d'aptitude porte un type. `INITIALISER_CHAMP` et `ÉCRIRE_CHAMP` vérifient la valeur avant de la ranger : texte, nombre, nombre entier, vrai ou faux, date, fichier, image (format reconnu), ou objet de l'entité liée ou d'une entité qui en hérite. Sinon, erreur d'exécution, et rien n'est écrit.
+- Héritage et aptitudes : à l'enregistrement d'une classe, la machine place les champs hérités en tête, puis ceux des aptitudes dans l'ordre d'adoption, puis les champs propres, chacun avec son type. Un champ garde ainsi le même rang dans toute la lignée. La classe parente et les aptitudes doivent être connues (déclarées plus tôt dans le module, ou par un module précédent) ; aucun champ n'est fourni deux fois. Sinon, le module est refusé avant toute exécution.
 - `et` et `ou` compilent en sauts (court-circuit). Chaque membre passe par `SAUTER_SI_FAUX`, qui vérifie qu'il s'agit d'un booléen :
 
 ```
@@ -183,7 +184,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 9
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 10
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -197,14 +198,16 @@ code          longueur : u32, puis les octets des instructions
 positions     nombre : u32, puis pour chacune :
                 décalage dans le code : u32, ligne : u32, colonne : u32
 classes       nombre : u32, puis pour chacune :
-                nom : longueur u32 et octets UTF-8, sorte : u8 (bit 0 féminin, bit 1 aptitude),
+                nom : longueur u32 et octets UTF-8, sorte : u8 (bit 0 féminin, bit 1 aptitude, bit 2 entité),
                 classe parente : longueur u32 et octets UTF-8 (vide sans héritage),
+                pluriel : longueur u32 et octets UTF-8 (vide sauf pluriel irrégulier),
                 aptitudes adoptées : nombre u32, puis pour chacune : longueur u32 et octets UTF-8,
-                champs : nombre u32, puis pour chacun : longueur u32 et octets UTF-8
+                champs : nombre u32, puis pour chacun : nom (longueur u32 et octets UTF-8),
+                  type (longueur u32 et octets UTF-8, vide sans type), unique : u8 (0 ou 1)
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33. Les fichiers des versions 1 à 8 restent lisibles.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs. Les fichiers des versions 1 à 9 restent lisibles.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -248,3 +251,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.7 | 2026-09-21 | Aptitudes : enregistrées comme des classes marquées, adoptées par les classes ; champs apportés ; choix de version classe, puis aptitudes, puis parent ; format version 7 |
 | 1.8 | 2026-09-21 | Dates : valeur date, constante de type 4, `AUJOURD'HUI`, addition et soustraction de dates, comparaisons ; format version 8 |
 | 1.9 | 2026-09-21 | Fichiers : valeur fichier partagée, `LIRE_FICHIER`, `ENREGISTRER`, champs des fichiers, écritures différées toutes ou aucune ; format version 9 ; renumérotation des § 7 à 11 |
+| 1.10 | 2026-09-21 | Entités : type et unicité des champs, bit d'entité, pluriel ; vérification des types avant toute écriture de champ ; format version 10 |
