@@ -1,0 +1,567 @@
+/* GrymoiR : lecture de la forme compacte, v0.2
+ * Spécification : docs/grammaire.md (révision 1.7), § 11.
+ *
+ * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
+ * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
+ * littéraire fait ensuite le reste : les deux formes partagent ainsi toutes
+ * les vérifications (genre, pureté, portée) et produisent le même arbre.
+ * Les blocs, fermés par « _fin », deviennent un retrait calculé (§ 5.4).
+ */
+#include "compact.h"
+#include "texte.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE } Ouverture;
+
+typedef struct {
+    Ouverture type;
+    int profondeur;        /* profondeur de la ligne qui ouvre */
+    const Jeton *mot;      /* pour les messages */
+    int dans_cas;          /* Selon : un « _cas » ou « _autrement » a déjà ouvert un corps */
+} Niveau;
+
+typedef struct {
+    const Jeton *e;        /* jetons compacts, terminés par J_FIN */
+    size_t n;
+    Jeton *s;              /* jetons littéraires produits */
+    size_t ns, cap;
+    Niveau *pile;
+    size_t np, capp;
+    Diagnostic *diag;
+    int echec;
+} Reecriture;
+
+/* ---------------------------------------------------------------- */
+/* Production                                                       */
+/* ---------------------------------------------------------------- */
+
+static void emettre(Reecriture *r, TypeJeton type, const char *valeur, const Jeton *origine, int synthetique) {
+    if (r->ns == r->cap) {
+        r->cap = r->cap ? r->cap * 2 : 128;
+        Jeton *t = grym_allouer(r->cap * sizeof *t);
+        if (r->ns) memcpy(t, r->s, r->ns * sizeof *t);
+        free(r->s);
+        r->s = t;
+    }
+    Jeton *j = &r->s[r->ns++];
+    j->type = type;
+    j->debut = origine->debut;
+    j->longueur = origine->longueur;
+    j->ligne = origine->ligne;
+    j->colonne = origine->colonne;
+    j->valeur = valeur ? grym_dupliquer(valeur) : NULL;
+    j->retrait = origine->colonne;
+    j->synthetique = synthetique;
+    j->ligne_fin = origine->ligne;
+}
+
+static void mot(Reecriture *r, const char *m, const Jeton *o) { emettre(r, J_MOT, m, o, 1); }
+
+static void copier(Reecriture *r, const Jeton *t) {
+    emettre(r, t->type, t->valeur, t, t->synthetique);
+}
+
+static void echouer(Reecriture *r, const Jeton *t, char *message) {
+    if (r->echec) { free(message); return; }
+    r->echec = 1;
+    r->diag->message = message;
+    r->diag->ligne = t->ligne;
+    r->diag->colonne = t->colonne;
+}
+
+static int est_cle(const Jeton *t, const char *m) {
+    return t->type == J_MOT_CLE && strcmp(t->valeur, m) == 0;
+}
+
+/* ---------------------------------------------------------------- */
+/* Expressions                                                      */
+/* ---------------------------------------------------------------- */
+
+static void expression(Reecriture *r, size_t d, size_t f);
+
+/* Jeton qui termine une valeur : un suffixe « _positif » s'y rapporte. */
+static int finit_valeur(const Jeton *t) {
+    return t->type == J_CROCHETS || t->type == J_NOMBRE || t->type == J_TEXTE || t->type == J_PAR_FERM
+        || (t->type == J_MOT && (strcmp(t->valeur, "vrai") == 0 || strcmp(t->valeur, "faux") == 0));
+}
+
+static const char *adjectif(const Jeton *t) {
+    static const char *const A[] = { "positif", "négatif", "nul", "vrai", "faux" };
+    if (t->type != J_MOT_CLE) return NULL;
+    for (size_t k = 0; k < 5; k++) if (strcmp(t->valeur, A[k]) == 0) return A[k];
+    return NULL;
+}
+
+/* Tournure littéraire d'un comparateur : « > » → « supérieur à ». */
+static void tournure(Reecriture *r, const Jeton *t) {
+    switch (t->type) {
+    case J_EGAL:      mot(r, "égal", t); mot(r, "à", t); break;
+    case J_DIFFERENT: mot(r, "différent", t); mot(r, "de", t); break;
+    case J_INFERIEUR: mot(r, "inférieur", t); mot(r, "à", t); break;
+    case J_SUPERIEUR: mot(r, "supérieur", t); mot(r, "à", t); break;
+    case J_INF_EGAL:  mot(r, "inférieur", t); mot(r, "ou", t); mot(r, "égal", t); mot(r, "à", t); break;
+    case J_SUP_EGAL:  mot(r, "supérieur", t); mot(r, "ou", t); mot(r, "égal", t); mot(r, "à", t); break;
+    default: break;
+    }
+}
+
+static int est_comparateur(const Jeton *t) {
+    return t->type >= J_EGAL && t->type <= J_SUP_EGAL;
+}
+
+/* Fin de la parenthèse ouverte en d (index de la fermante), ou f si absente. */
+static size_t fermante(const Reecriture *r, size_t d, size_t f) {
+    int p = 0;
+    for (size_t k = d; k < f; k++) {
+        if (r->e[k].type == J_PAR_OUV) p++;
+        else if (r->e[k].type == J_PAR_FERM && --p == 0) return k;
+    }
+    return f;
+}
+
+/* Arguments « a ; b » entre d et f : chaque argument, séparé par « et » et précédé de « de ». */
+static void arguments(Reecriture *r, size_t d, size_t f, int de, const Jeton *o) {
+    size_t debut = d;
+    int p = 0, premier = 1;
+    for (size_t k = d; k <= f; k++) {
+        if (k < f) {
+            if (r->e[k].type == J_PAR_OUV) p++;
+            else if (r->e[k].type == J_PAR_FERM) p--;
+            if (!(p == 0 && r->e[k].type == J_POINT_VIRGULE)) continue;
+        }
+        if (k == debut) {
+            if (k < f || !premier) echouer(r, k < f ? &r->e[k] : o, grym_dupliquer("Argument vide entre « ; »."));
+            return;
+        }
+        if (!premier) mot(r, "et", &r->e[debut]);
+        if (de) {
+            /* « de (arg) » : parenthèses synthétiques, sans nœud de groupe dans l'arbre */
+            mot(r, "de", &r->e[debut]);
+            emettre(r, J_PAR_OUV, NULL, &r->e[debut], 1);
+            expression(r, debut, k);
+            emettre(r, J_PAR_FERM, NULL, &r->e[k < f ? k : f - 1], 1);
+        } else {
+            expression(r, debut, k);
+        }
+        premier = 0;
+        debut = k + 1;
+    }
+}
+
+static void expression(Reecriture *r, size_t d, size_t f) {
+    for (size_t k = d; k < f && !r->echec; k++) {
+        const Jeton *t = &r->e[k];
+        if (t->type == J_CROCHETS && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
+            /* appel de calcul : carré(7) → carré de (7) */
+            size_t fin = fermante(r, k + 1, f);
+            if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+            copier(r, t);
+            arguments(r, k + 2, fin, 1, t);
+            k = fin;
+            continue;
+        }
+        if (t->type == J_MOT_CLE) {
+            const char *adj = adjectif(t);
+            if (strcmp(t->valeur, "et") == 0 || strcmp(t->valeur, "ou") == 0) {
+                mot(r, t->valeur, t);
+            } else if (adj && r->ns && finit_valeur(&r->s[r->ns - 1]) && k > d) {
+                mot(r, "est", t);          /* x _positif → x est positif */
+                mot(r, adj, t);
+            } else if (strcmp(t->valeur, "vrai") == 0 || strcmp(t->valeur, "faux") == 0) {
+                mot(r, t->valeur, t);      /* valeur booléenne */
+            } else if (strcmp(t->valeur, "non") == 0) {
+                /* _non (x > 0) → x n'est pas supérieur à 0 */
+                if (k + 1 >= f || r->e[k + 1].type != J_PAR_OUV) {
+                    echouer(r, t, grym_dupliquer("« _non » s'applique à une comparaison entre parenthèses : "
+                                                 "_non (x > 0)."));
+                    return;
+                }
+                size_t fin = fermante(r, k + 1, f);
+                size_t op = 0;
+                int p = 0;
+                for (size_t q = k + 2; q < fin; q++) {
+                    if (r->e[q].type == J_PAR_OUV) p++;
+                    else if (r->e[q].type == J_PAR_FERM) p--;
+                    else if (p == 0 && (est_comparateur(&r->e[q]) || adjectif(&r->e[q]))) { op = q; break; }
+                }
+                if (!op || fin == f) {
+                    echouer(r, t, grym_dupliquer("« _non » s'applique à une comparaison : _non (x > 0)."));
+                    return;
+                }
+                expression(r, k + 2, op);
+                emettre(r, J_ELISION, "n", &r->e[op], 1);
+                mot(r, "est", &r->e[op]);
+                mot(r, "pas", &r->e[op]);
+                if (adjectif(&r->e[op])) mot(r, adjectif(&r->e[op]), &r->e[op]);
+                else { tournure(r, &r->e[op]); expression(r, op + 1, fin); }
+                k = fin;
+            } else {
+                echouer(r, t, grym_formater("« _%s » inattendu dans une expression.", t->valeur));
+                return;
+            }
+            continue;
+        }
+        if (t->type == J_AFFECTE || t->type == J_POINT_VIRGULE) {
+            echouer(r, t, grym_formater("« %s » inattendu dans une expression.",
+                                        t->type == J_AFFECTE ? "<<" : ";"));
+            return;
+        }
+        copier(r, t);
+    }
+}
+
+/* ---------------------------------------------------------------- */
+/* Instructions                                                     */
+/* ---------------------------------------------------------------- */
+
+static void ouvrir(Reecriture *r, Ouverture type, int profondeur, const Jeton *mot_) {
+    if (r->np == r->capp) {
+        r->capp = r->capp ? r->capp * 2 : 16;
+        Niveau *t = grym_allouer(r->capp * sizeof *t);
+        if (r->np) memcpy(t, r->pile, r->np * sizeof *t);
+        free(r->pile);
+        r->pile = t;
+    }
+    r->pile[r->np].type = type;
+    r->pile[r->np].profondeur = profondeur;
+    r->pile[r->np].mot = mot_;
+    r->pile[r->np].dans_cas = 0;
+    r->np++;
+}
+
+/* Profondeur des phrases du bloc courant. */
+static int profondeur_corps(const Reecriture *r) {
+    if (!r->np) return 0;
+    const Niveau *h = &r->pile[r->np - 1];
+    return h->profondeur + (h->type == O_SELON ? 2 : 1);
+}
+
+/* Premier jeton émis pour une ligne : son retrait porte la structure des blocs. */
+static void fixer_retrait(Reecriture *r, size_t premier, int profondeur) {
+    if (premier < r->ns) r->s[premier].retrait = 1 + 4 * profondeur;
+}
+
+/* Index du premier mot-clé m entre d et f, au premier niveau de parenthèses, ou f. */
+static size_t chercher(const Reecriture *r, size_t d, size_t f, const char *m) {
+    int p = 0;
+    for (size_t k = d; k < f; k++) {
+        if (r->e[k].type == J_PAR_OUV) p++;
+        else if (r->e[k].type == J_PAR_FERM) p--;
+        else if (p == 0 && est_cle(&r->e[k], m)) return k;
+    }
+    return f;
+}
+
+static void point(Reecriture *r, size_t f) {
+    emettre(r, J_POINT, NULL, &r->e[f - 1], 1);
+}
+
+/* Paramètres « _un x ; _une y » entre d et f. */
+static void parametres(Reecriture *r, size_t d, size_t f, int de) {
+    size_t k = d;
+    int premier = 1;
+    while (k < f && !r->echec) {
+        const Jeton *t = &r->e[k];
+        if (!est_cle(t, "un") && !est_cle(t, "une")) {
+            echouer(r, t, grym_dupliquer("Paramètre attendu : « _un nombre » ou « _une remise »."));
+            return;
+        }
+        if (k + 1 >= f || r->e[k + 1].type != J_CROCHETS) {
+            echouer(r, t, grym_dupliquer("Nom de paramètre attendu après « _un »."));
+            return;
+        }
+        if (!premier) mot(r, "et", t);
+        if (de) emettre(r, J_ELISION, "d", t, 1);
+        mot(r, t->valeur, t);
+        copier(r, &r->e[k + 1]);
+        premier = 0;
+        k += 2;
+        if (k < f) {
+            if (r->e[k].type != J_POINT_VIRGULE) {
+                echouer(r, &r->e[k], grym_dupliquer("« ; » attendu entre deux paramètres."));
+                return;
+            }
+            k++;
+        }
+    }
+}
+
+/* Une condition de cas : « 1 », « _de 2 _à 3 », « > 10 », « _négatif ». */
+static void condition_de_cas(Reecriture *r, size_t d, size_t f) {
+    if (d >= f) { echouer(r, &r->e[d > 0 ? d - 1 : 0], grym_dupliquer("Condition de cas vide.")); return; }
+    const Jeton *t = &r->e[d];
+    if (est_cle(t, "de")) {
+        size_t a = chercher(r, d + 1, f, "à");
+        if (a == f) { echouer(r, t, grym_dupliquer("« _à » attendu : « _cas _de 2 _à 3 »."));  return; }
+        mot(r, "de", t);
+        expression(r, d + 1, a);
+        mot(r, "à", &r->e[a]);
+        expression(r, a + 1, f);
+    } else if (est_comparateur(t)) {
+        tournure(r, t);
+        expression(r, d + 1, f);
+    } else if (adjectif(t) && d + 1 == f) {
+        mot(r, adjectif(t), t);
+    } else {
+        expression(r, d, f);
+    }
+}
+
+/* Une instruction compacte, jetons d à f (exclus), à la profondeur donnée. */
+static void instruction(Reecriture *r, size_t d, size_t f) {
+    const Jeton *t = &r->e[d];
+    size_t premier = r->ns;
+    int prof = profondeur_corps(r);
+    Niveau *haut = r->np ? &r->pile[r->np - 1] : NULL;
+
+    if (t->type == J_REMARQUE) {
+        copier(r, t);
+        fixer_retrait(r, premier, prof);
+        return;
+    }
+    if (t->type == J_MOT_CLE) {
+        const char *c = t->valeur;
+        if (!strcmp(c, "fin")) {
+            if (f != d + 1) { echouer(r, &r->e[d + 1], grym_dupliquer("« _fin » s'écrit seul sur sa ligne.")); return; }
+            if (!r->np) { echouer(r, t, grym_dupliquer("« _fin » sans construction ouverte.")); return; }
+            r->np--;
+            /* la construction occupe aussi la ligne de son « _fin » (lignes vides, § 12) */
+            if (r->ns && r->s[r->ns - 1].ligne_fin < t->ligne) r->s[r->ns - 1].ligne_fin = t->ligne;
+            return;
+        }
+        if (!strcmp(c, "sinon") || !strcmp(c, "sinon_si")) {
+            if (!haut || haut->type != O_SI) {
+                echouer(r, t, grym_formater("« _%s » hors d'un « _si ».", c));
+                return;
+            }
+            mot(r, "sinon", t);
+            fixer_retrait(r, premier, haut->profondeur);
+            if (!strcmp(c, "sinon_si")) {
+                size_t alors = chercher(r, d + 1, f, "alors");
+                if (alors != f - 1) { echouer(r, t, grym_dupliquer("« _alors » attendu en fin de ligne.")); return; }
+                mot(r, "si", t);
+                expression(r, d + 1, alors);
+            } else if (f != d + 1) {
+                echouer(r, &r->e[d + 1], grym_dupliquer("« _sinon » s'écrit seul sur sa ligne."));
+                return;
+            }
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            return;
+        }
+        if (!strcmp(c, "cas") || !strcmp(c, "autrement")) {
+            if (!haut || haut->type != O_SELON) {
+                echouer(r, t, grym_formater("« _%s » hors d'un « _selon ».", c));
+                return;
+            }
+            mot(r, c, t);
+            haut->dans_cas = 1;
+            fixer_retrait(r, premier, haut->profondeur + 1);
+            if (!strcmp(c, "cas")) {
+                size_t debut = d + 1;
+                for (;;) {
+                    size_t ou = chercher(r, debut, f, "ou");
+                    condition_de_cas(r, debut, ou);
+                    if (ou == f || r->echec) break;
+                    mot(r, "ou", &r->e[ou]);
+                    debut = ou + 1;
+                }
+            } else if (f != d + 1) {
+                echouer(r, &r->e[d + 1], grym_dupliquer("« _autrement » s'écrit seul sur sa ligne."));
+                return;
+            }
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            return;
+        }
+        if (haut && haut->type == O_SELON && !haut->dans_cas) {
+            echouer(r, t, grym_dupliquer("« _cas » ou « _autrement » attendu dans un « _selon »."));
+            return;
+        }
+        if (!strcmp(c, "le") || !strcmp(c, "la") || !strcmp(c, "l'")) {
+            if (d + 2 >= f || r->e[d + 1].type != J_CROCHETS || r->e[d + 2].type != J_AFFECTE) {
+                echouer(r, t, grym_formater("Création attendue : « _%s nom << valeur ».", c));
+                return;
+            }
+            if (!strcmp(c, "l'")) emettre(r, J_ELISION, "l", t, 1);
+            else mot(r, c, t);
+            copier(r, &r->e[d + 1]);
+            mot(r, "vaut", &r->e[d + 2]);
+            expression(r, d + 3, f);
+            point(r, f);
+        } else if (!strcmp(c, "afficher")) {
+            mot(r, "afficher", t);
+            size_t debut = d + 1;
+            int p = 0;
+            for (size_t k = d + 1; k <= f; k++) {
+                if (k < f) {
+                    if (r->e[k].type == J_PAR_OUV) p++;
+                    else if (r->e[k].type == J_PAR_FERM) p--;
+                    if (!(p == 0 && r->e[k].type == J_POINT_VIRGULE)) continue;
+                }
+                if (debut > d + 1) mot(r, "puis", &r->e[debut - 1]);
+                expression(r, debut, k);
+                debut = k + 1;
+            }
+            point(r, f);
+        } else if (!strcmp(c, "si") || !strcmp(c, "tant_que")) {
+            size_t alors = !strcmp(c, "si") ? chercher(r, d + 1, f, "alors") : f;
+            if (!strcmp(c, "si") && alors != f - 1) {
+                echouer(r, t, grym_dupliquer("« _alors » attendu en fin de ligne : « _si x > 0 _alors »."));
+                return;
+            }
+            if (!strcmp(c, "si")) mot(r, "si", t);
+            else { mot(r, "tant", t); mot(r, "que", t); }
+            expression(r, d + 1, alors);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            ouvrir(r, !strcmp(c, "si") ? O_SI : O_BOUCLE, prof, t);
+        } else if (!strcmp(c, "répéter")) {
+            size_t fois = chercher(r, d + 1, f, "fois");
+            if (fois != f - 1) { echouer(r, t, grym_dupliquer("« _fois » attendu : « _répéter 3 _fois »."));  return; }
+            mot(r, "répéter", t);
+            expression(r, d + 1, fois);
+            mot(r, "fois", &r->e[fois]);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            ouvrir(r, O_BOUCLE, prof, t);
+        } else if (!strcmp(c, "pour_chaque")) {
+            size_t de = chercher(r, d + 1, f, "de"), a = chercher(r, d + 1, f, "à"), pas = chercher(r, d + 1, f, "pas");
+            if (de != d + 2 || r->e[d + 1].type != J_CROCHETS || a == f || a < de) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _pour_chaque i _de 1 _à 9 [_pas 2] »."));
+                return;
+            }
+            mot(r, "pour", t);
+            mot(r, "chaque", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, "de", &r->e[de]);
+            expression(r, de + 1, a);
+            mot(r, "à", &r->e[a]);
+            expression(r, a + 1, pas);
+            if (pas < f) {
+                mot(r, "par", &r->e[pas]);
+                mot(r, "pas", &r->e[pas]);
+                mot(r, "de", &r->e[pas]);
+                expression(r, pas + 1, f);
+            }
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            ouvrir(r, O_BOUCLE, prof, t);
+        } else if (!strcmp(c, "sortir") || !strcmp(c, "passer")) {
+            if (f != d + 1) { echouer(r, &r->e[d + 1], grym_formater("« _%s » s'écrit seul.", c)); return; }
+            if (!strcmp(c, "sortir")) { mot(r, "sortir", t); mot(r, "de", t); mot(r, "la", t); mot(r, "boucle", t); }
+            else { mot(r, "passer", t); mot(r, "au", t); mot(r, "tour", t); mot(r, "suivant", t); }
+            point(r, f);
+        } else if (!strcmp(c, "selon")) {
+            mot(r, "selon", t);
+            expression(r, d + 1, f);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            ouvrir(r, O_SELON, prof, t);
+        } else if (!strcmp(c, "rendre")) {
+            mot(r, "rendre", t);
+            expression(r, d + 1, f);
+            point(r, f);
+        } else if (!strcmp(c, "calcul") || !strcmp(c, "action")) {
+            int calcul = !strcmp(c, "calcul");
+            size_t k = d + 1;
+            const Jeton *art = NULL;
+            if (calcul) {
+                art = &r->e[k];
+                if (!est_cle(art, "le") && !est_cle(art, "la") && !est_cle(art, "l'")) {
+                    echouer(r, art, grym_dupliquer("Article attendu : « _calcul _le carré(_un nombre) … »."));
+                    return;
+                }
+                k++;
+            }
+            if (k + 1 >= f || r->e[k].type != J_CROCHETS || r->e[k + 1].type != J_PAR_OUV) {
+                echouer(r, t, grym_formater("Forme attendue : « _%s nom(_un paramètre) ».", c));
+                return;
+            }
+            size_t ferme = fermante(r, k + 1, f);
+            if (ferme == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+            if (calcul) {
+                if (!strcmp(art->valeur, "l'")) emettre(r, J_ELISION, "l", art, 1);
+                else mot(r, art->valeur, art);
+            } else {
+                mot(r, "pour", t);
+            }
+            copier(r, &r->e[k]);
+            parametres(r, k + 2, ferme, calcul);
+            if (calcul && ferme + 1 < f) {
+                if (r->e[ferme + 1].type != J_AFFECTE) {
+                    echouer(r, &r->e[ferme + 1], grym_dupliquer("« << » ou fin de ligne attendu après les paramètres."));
+                    return;
+                }
+                mot(r, "vaut", &r->e[ferme + 1]);
+                expression(r, ferme + 2, f);
+                point(r, f);
+            } else {
+                if (ferme + 1 < f) {
+                    echouer(r, &r->e[ferme + 1], grym_dupliquer("Fin de ligne attendue : le corps suit, fermé par « _fin »."));
+                    return;
+                }
+                emettre(r, J_DEUX_POINTS, NULL, &r->e[ferme], 1);
+                ouvrir(r, O_FORMULE, prof, t);
+            }
+        } else {
+            echouer(r, t, grym_formater("« _%s » ne commence pas une instruction.", c));
+            return;
+        }
+        fixer_retrait(r, premier, prof);
+        return;
+    }
+    if (haut && haut->type == O_SELON && !haut->dans_cas) {
+        echouer(r, t, grym_dupliquer("« _cas » ou « _autrement » attendu dans un « _selon »."));
+        return;
+    }
+    if (t->type == J_CROCHETS && d + 1 < f && r->e[d + 1].type == J_AFFECTE) {
+        emettre(r, J_ARTICLE_IMPLICITE, NULL, t, 1);   /* total << … → Le total devient … */
+        copier(r, t);
+        mot(r, "devient", &r->e[d + 1]);
+        expression(r, d + 2, f);
+        point(r, f);
+    } else if (t->type == J_CROCHETS && d + 1 < f && r->e[d + 1].type == J_PAR_OUV && fermante(r, d + 1, f) == f - 1) {
+        copier(r, t);                                 /* relancer(client) → Relancer client. */
+        arguments(r, d + 2, f - 1, 0, t);
+        point(r, f);
+    } else {
+        expression(r, d, f);
+        point(r, f);
+    }
+    fixer_retrait(r, premier, prof);
+}
+
+int compact_vers_litteraire(Jeton *e, size_t n, Jeton **sortie, size_t *nb_sortie, Diagnostic *diag) {
+    Reecriture r;
+    memset(&r, 0, sizeof r);
+    r.e = e;
+    r.n = n;
+    r.diag = diag;
+    size_t k = 0;
+    while (k < n && e[k].type != J_FIN && !r.echec) {
+        /* une instruction : jusqu'au changement de ligne, hors parenthèses */
+        size_t d = k;
+        int p = 0;
+        k++;
+        if (e[d].type == J_PAR_OUV) p++;
+        while (k < n && e[k].type != J_FIN && (p > 0 || e[k].ligne == e[k - 1].ligne) && e[d].type != J_REMARQUE) {
+            if (e[k].type == J_PAR_OUV) p++;
+            else if (e[k].type == J_PAR_FERM) p--;
+            k++;
+        }
+        instruction(&r, d, k);
+    }
+    if (!r.echec && r.np) {
+        const Niveau *h = &r.pile[r.np - 1];
+        echouer(&r, h->mot, grym_formater("« _fin » manquant : « _%s », ligne %d, n'est pas fermé.",
+                                          h->mot->valeur, h->mot->ligne));
+    }
+    const Jeton *fin = &e[n - 1];
+    emettre(&r, J_FIN, NULL, fin, 1);
+    free(r.pile);
+    if (r.echec) {
+        for (size_t q = 0; q < r.ns; q++) free(r.s[q].valeur);
+        free(r.s);
+        return 0;
+    }
+    *sortie = r.s;
+    *nb_sortie = r.ns;
+    return 1;
+}

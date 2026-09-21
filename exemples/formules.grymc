@@ -1,0 +1,25 @@
+# calculs purs et actions
+_calcul _le carré(_un nombre) << nombre × nombre
+_calcul _la valeur_absolue(_un nombre)
+    _si nombre _négatif _alors
+        _rendre −nombre
+    _fin
+    _rendre nombre
+_fin
+_calcul _la factorielle(_un nombre)
+    _si nombre ≤ 1 _alors
+        _rendre 1
+    _fin
+    _rendre nombre × factorielle(nombre − 1)
+_fin
+
+_le total << 0
+_action encaisser(_un montant)
+    total << total + valeur_absolue(montant)
+    _afficher « Encaissé : » ; montant
+_fin
+
+encaisser(12,50)
+encaisser(−7)
+_afficher « Total : » ; total
+_afficher « 20! = » ; factorielle(20)

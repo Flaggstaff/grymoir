@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.6), § 2 à 12.
+ * Spécification : docs/grammaire.md (révision 1.7), § 2 à 12.
  *
  * L'analyseur construit l'arbre et résout les noms dans le même passage :
  * la plus longue correspondance des noms composés (§ 2.2) exige de connaître
@@ -37,6 +37,10 @@ typedef struct {
  * et le point final de la dernière phrase est facultatif. */
 int analyser(const char *source, size_t taille, Portee *portee, int interactif,
              Programme *programme, Diagnostic *diag);
+
+/* Même analyse pour un fichier en forme compacte (grammaire, § 11). */
+int analyser_compact(const char *source, size_t taille, Portee *portee,
+                     Programme *programme, Diagnostic *diag);
 
 void programme_liberer(Programme *p);
 

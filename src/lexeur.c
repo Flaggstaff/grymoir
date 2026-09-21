@@ -16,6 +16,7 @@ struct Lexeur {
     int colonne;
     int debut_ligne;   /* vrai si seuls des blancs précèdent pos sur la ligne */
     int termine;
+    int compact;       /* forme compacte (§ 11.1) */
 };
 
 /* ---------------------------------------------------------------- */
@@ -226,6 +227,13 @@ Lexeur *lexeur_creer(const char *source, size_t taille, char **erreur) {
     lx->colonne = 1;
     lx->debut_ligne = 1;
     lx->termine = 0;
+    lx->compact = 0;
+    return lx;
+}
+
+Lexeur *lexeur_creer_compact(const char *source, size_t taille, char **erreur) {
+    Lexeur *lx = lexeur_creer(source, taille, erreur);
+    if (lx) lx->compact = 1;
     return lx;
 }
 
@@ -245,7 +253,8 @@ const char *type_jeton_nom(TypeJeton t) {
         "FIN", "MOT", "ÉLISION", "NOMBRE", "TEXTE", "PLUS", "MOINS", "FOIS",
         "DIVISE", "PUISSANCE", "PAR_OUV", "PAR_FERM", "POINT", "VIRGULE",
         "DEUX_POINTS", "REMARQUE", "ÉGAL", "DIFFÉRENT", "INFÉRIEUR", "SUPÉRIEUR",
-        "INFÉRIEUR_OU_ÉGAL", "SUPÉRIEUR_OU_ÉGAL", "CROCHETS", "ERREUR"
+        "INFÉRIEUR_OU_ÉGAL", "SUPÉRIEUR_OU_ÉGAL", "CROCHETS", "ARTICLE_IMPLICITE", "MOT_CLÉ",
+        "AFFECTE", "POINT_VIRGULE", "ERREUR"
     };
     return (t >= J_FIN && t <= J_ERREUR) ? NOMS[t] : "?";
 }
@@ -286,6 +295,9 @@ static Jeton faire(const Lexeur *lx, TypeJeton type, size_t debut,
     j.ligne = ligne;
     j.colonne = col;
     j.valeur = valeur;
+    j.retrait = col;
+    j.synthetique = 0;
+    j.ligne_fin = ligne;
     return j;
 }
 
@@ -496,6 +508,43 @@ static int ligne_blanche(const Lexeur *lx) {
     return 1;
 }
 
+/* ---------- Forme compacte (§ 11.1) ---------- */
+
+/* « _sinon_si », « _l' » : mot-clé ; « prix_de_l'article » : nom. */
+static Jeton lire_compact(Lexeur *lx, size_t debut, int ligne, int col) {
+    int cle = voir(lx, 0) == '_';
+    if (cle) avancer(lx);
+    if (!reste(lx, 0) || !est_lettre(voir(lx, 0))) {
+        return echec(lx, debut, ligne, col, formater(cle
+            ? "« _ » seul : un mot-clé s'écrit « _si », « _fin »…"
+            : "Nom attendu."));
+    }
+    Tampon t = {0};
+    for (;;) {
+        uint32_t c = voir(lx, 0);
+        if (est_lettre(c) || est_chiffre(c)) {
+            tampon_cp(&t, minuscule(c));
+            avancer(lx);
+        } else if (c == '_' && reste(lx, 1) && est_lettre(voir(lx, 1))) {
+            tampon_octet(&t, (unsigned char)(cle ? '_' : ' '));
+            avancer(lx);
+        } else if (est_apostrophe(c)) {
+            tampon_octet(&t, '\'');
+            avancer(lx);
+            if (cle) break;                                   /* « _l' » */
+            if (!reste(lx, 0) || !est_lettre(voir(lx, 0))) {
+                free(t.d);
+                return echec(lx, debut, ligne, col, formater("Une élision est suivie d'une lettre : « prix_de_l'article »."));
+            }
+        } else {
+            break;
+        }
+    }
+    Jeton j = faire(lx, cle ? J_MOT_CLE : J_CROCHETS, debut, ligne, col, tampon_rendre(&t));
+    j.synthetique = !cle;
+    return j;
+}
+
 /* ---------- Aiguillage ---------- */
 
 Jeton lexeur_suivant(Lexeur *lx) {
@@ -519,6 +568,29 @@ Jeton lexeur_suivant(Lexeur *lx) {
     int en_debut_ligne = lx->debut_ligne;
     lx->debut_ligne = 0;
     uint32_t c = voir(lx, 0);
+
+    if (lx->compact) {
+        if (est_lettre(c) || c == '_') return lire_compact(lx, debut, ligne, col);
+        if (c == '<' && voir(lx, 1) == '<') return double_(lx, J_AFFECTE, debut, ligne, col);
+        if (c == ';') return simple(lx, J_POINT_VIRGULE, debut, ligne, col);
+        if (c == '[' || c == ']')
+            return echec(lx, debut, ligne, col, formater(
+                "Pas de crochets en forme compacte : écrivez le nom avec des soulignés (frais_de_port)."));
+        if (c == '#') {
+            if (!en_debut_ligne)
+                return echec(lx, debut, ligne, col, formater(
+                    "Une remarque commence une ligne : passez à la ligne avant « # »."));
+            avancer(lx);
+            while (reste(lx, 0) && voir(lx, 0) != '\n' && est_blanc(voir(lx, 0))) avancer(lx);
+            size_t d = lx->pos, f = lx->pos;
+            while (f < lx->n && lx->cp[f] != '\n') f++;
+            size_t fin_ligne = f;
+            while (f > d && est_blanc(lx->cp[f - 1])) f--;
+            char *contenu = extrait(lx, d, f);
+            while (lx->pos < fin_ligne) avancer(lx);
+            return faire(lx, J_REMARQUE, debut, ligne, col, contenu);
+        }
+    }
 
     if (est_lettre(c)) return lire_mot(lx, debut, ligne, col, en_debut_ligne);
     if (est_chiffre(c)) return lire_nombre(lx, debut, ligne, col);

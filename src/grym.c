@@ -83,6 +83,11 @@ static void signaler(const char *fichier, const Diagnostic *d) {
 }
 
 /* Charge un fichier : bytecode s'il commence par « GRYM », source sinon (compilée). */
+static int est_compact(const char *chemin) {
+    size_t l = strlen(chemin);
+    return l > 6 && strcmp(chemin + l - 6, ".grymc") == 0;
+}
+
 static Module *charger(const char *chemin) {
     FILE *f = fopen(chemin, "rb");
     if (!f) {
@@ -106,7 +111,9 @@ static Module *charger(const char *chemin) {
         Portee *portee = portee_creer();
         Programme p;
         Diagnostic d;
-        if (!analyser(donnees, taille, portee, 0, &p, &d)) {
+        int lu = est_compact(chemin) ? analyser_compact(donnees, taille, portee, &p, &d)
+                                     : analyser(donnees, taille, portee, 0, &p, &d);
+        if (!lu) {
             signaler(chemin, &d);
             diagnostic_liberer(&d);
         } else {
@@ -176,7 +183,8 @@ static int analyser_fichier(const char *chemin, Programme *p) {
     if (!source) return 0;
     Portee *portee = portee_creer();
     Diagnostic d;
-    int ok = analyser(source, taille, portee, 0, p, &d);
+    int ok = est_compact(chemin) ? analyser_compact(source, taille, portee, p, &d)
+                                 : analyser(source, taille, portee, 0, p, &d);
     if (!ok) {
         signaler(chemin, &d);
         diagnostic_liberer(&d);
@@ -186,31 +194,38 @@ static int analyser_fichier(const char *chemin, Programme *p) {
     return ok;
 }
 
-/* grym formater : forme littéraire canonique sur la sortie standard (§ 12). */
+/* grym formater : forme canonique sur la sortie standard (§ 12), dans la forme du fichier. */
 static int formater(const char *chemin) {
     Programme p;
     if (!analyser_fichier(chemin, &p)) return EXIT_FAILURE;
-    char *t = imprimer_litteraire(&p);
+    char *t = est_compact(chemin) ? imprimer_compact(&p) : imprimer_litteraire(&p);
     fputs(t, stdout);
     free(t);
     programme_liberer(&p);
     return EXIT_SUCCESS;
 }
 
-/* grym traduire : forme littéraire → forme compacte, dans fichier.grymc (§ 11). */
+/* grym traduire : .grym → .grymc, ou .grymc → .grym (§ 11). Le fichier produit ne doit pas exister :
+ * écraser un fichier source en silence ferait perdre du travail. */
 static int traduire(const char *chemin) {
     size_t l = strlen(chemin);
-    if (l > 6 && strcmp(chemin + l - 6, ".grymc") == 0) {
-        fprintf(stderr, "La traduction de la forme compacte vers la forme littéraire arrive "
-                        "avec le lecteur de la forme compacte (prochaine étape).\n");
-        return EXIT_FAILURE;
-    }
+    int compact = est_compact(chemin);
     Programme p;
     if (!analyser_fichier(chemin, &p)) return EXIT_FAILURE;
-    char *t = imprimer_compact(&p);
+    char *t = compact ? imprimer_litteraire(&p) : imprimer_compact(&p);
     programme_liberer(&p);
-    char *cible = (l > 5 && strcmp(chemin + l - 5, ".grym") == 0)
-                ? grym_formater("%sc", chemin) : grym_formater("%s.grymc", chemin);
+    char *cible;
+    if (compact) cible = grym_formater("%.*s", (int)(l - 1), chemin);                 /* .grymc → .grym */
+    else if (l > 5 && strcmp(chemin + l - 5, ".grym") == 0) cible = grym_formater("%sc", chemin);
+    else cible = grym_formater("%s.grymc", chemin);
+    FILE *existe = fopen(cible, "rb");
+    if (existe) {
+        fclose(existe);
+        fprintf(stderr, "« %s » existe déjà : supprimez-le ou renommez-le avant de traduire.\n", cible);
+        free(cible);
+        free(t);
+        return EXIT_FAILURE;
+    }
     FILE *f = fopen(cible, "wb");
     int ok = f && fputs(t, f) >= 0;
     if (f && fclose(f) != 0) ok = 0;
@@ -333,7 +348,8 @@ int main(int argc, char **argv) {
             "  grym lancer fichier.grymb           exécute un bytecode compilé\n"
             "  grym compiler fichier.grym          produit fichier.grymb\n"
             "  grym desassembler fichier.grym(b)   affiche les instructions\n"
-            "  grym formater fichier.grym          affiche la forme littéraire canonique\n"
-            "  grym traduire fichier.grym          produit la forme compacte fichier.grymc\n", VERSION);
+            "  grym formater fichier.grym(c)       affiche la forme canonique\n"
+            "  grym traduire fichier.grym          produit la forme compacte fichier.grymc\n"
+            "  grym traduire fichier.grymc         produit la forme littéraire fichier.grym\n", VERSION);
     return EXIT_FAILURE;
 }

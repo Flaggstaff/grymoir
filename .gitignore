@@ -7,6 +7,7 @@ test_lexeur
 test_analyseur
 test_machine
 test_imprimeur
+test_compact
 *.exe
 *.o
 *.obj

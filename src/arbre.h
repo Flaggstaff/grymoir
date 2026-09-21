@@ -49,7 +49,7 @@ typedef enum {
     P_SELON          /* enfants[0] : sujet ; puis les N_CAS ; entier : case du sujet */
 } TypeNoeud;
 
-typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L } Article;
+typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE } Article;
 
 typedef struct Noeud {
     TypeNoeud type;

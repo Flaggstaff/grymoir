@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.6 de la spécification, révisée le 21 septembre 2026.
+Version 1.7 de la spécification, révisée le 21 septembre 2026.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -566,10 +566,19 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 - Un argument de calcul est délimité par les parenthèses et les `;` : `carré(3 + 1)` vaut 16.
 - Les articles n'apparaissent qu'à la création et dans l'en-tête d'un calcul : ils portent le genre, qui sert aux accords quand on revient à la forme littéraire.
 
-### 11.3 État en v0.2
+- Un suffixe `_positif`, `_négatif`, `_nul`, `_vrai`, `_faux` après une valeur est une comparaison ; ailleurs, `_vrai` et `_faux` sont des valeurs. Une tournure écrite en forme compacte ne porte pas de genre : aucun accord n'y est vérifié.
+- Une instruction occupe une ligne ; elle continue sur la ligne suivante tant qu'une parenthèse reste ouverte.
 
-- `grym traduire fichier.grym` produit `fichier.grymc`.
-- La lecture de la forme compacte (`grym lancer fichier.grymc`, `grym traduire fichier.grymc`) est la prochaine étape.
+### 11.3 Outils
+
+- `grym lancer`, `grym compiler`, `grym desassembler` et `grym formater` acceptent les fichiers `.grymc`.
+- `grym traduire fichier.grym` produit `fichier.grymc` ; `grym traduire fichier.grymc` produit `fichier.grym`. Le fichier produit ne doit pas exister : `grym traduire` n'écrase jamais un fichier.
+
+### 11.4 Lecture
+
+La lecture réécrit chaque instruction compacte en la phrase littéraire équivalente, puis l'analyse comme telle. Les deux formes passent donc par les mêmes vérifications et produisent le même arbre. Les erreurs sont localisées dans le fichier compact (ligne et colonne).
+
+Limite de la v0.2 : les erreurs de structure propres à la forme compacte (`_fin` manquant, `_alors` attendu…) s'expriment en forme compacte ; les autres (nom inconnu, accord, pureté) empruntent encore le vocabulaire de la forme littéraire (charte, art. 8).
 
 ## 12. Forme canonique
 
@@ -585,6 +594,8 @@ Garanties de la traduction (charte, art. 4) :
 2. Littéraire → compacte → littéraire : le même programme, en forme canonique. Les choix d'écriture que la forme compacte ne porte pas (articles dans les expressions, tournures en mots, contractions, formes courtes) prennent leur forme par défaut.
 3. Un texte littéraire canonique écrit sans ces choix fait l'aller-retour à l'identique.
 
+Vérification (21 septembre 2026) : sur les 147 programmes valides des suites de tests, la forme littéraire et sa traduction compacte donnent la même sortie à l'exécution, et les garanties 1 et 3 tiennent sans exception.
+
 ---
 
 ## Journal des révisions
@@ -598,3 +609,4 @@ Garanties de la traduction (charte, art. 4) :
 | 1.4 | 2026-09-21 | Nouveau § 9 : formules. Calculs (définis comme ils s'utilisent, forme courte et bloc avec `Rendre`), actions (`Pour`), paramètres par l'article indéfini, calculs purs, récursion limitée à 1000 appels. `rendre` réservé, `d'un` réservé aux paramètres |
 | 1.5 | 2026-09-21 | Nouveau § 10 : répéter. `Tant que`, `Répéter … fois`, `Pour chaque … de … à … [par pas de …]` (bornes incluses, sens automatique, pas décimaux exacts, compteur en lecture seule), `Sortir de la boucle`, `Passer au tour suivant`, `Selon` / `Cas` / `Autrement` (valeurs séparées par `ou`, intervalles, tournures, pas de chute), interruption par Ctrl+C |
 | 1.6 | 2026-09-21 | Nouveaux § 11 (forme compacte : règles de lecture, table des correspondances) et § 12 (forme canonique, garanties de la traduction). `grym formater`, `grym traduire` vers la forme compacte |
+| 1.7 | 2026-09-21 | § 11 : lecture de la forme compacte (réécriture en phrases littéraires, positions conservées), outils, suffixes de comparaison, instructions sur plusieurs lignes, limite des messages. § 12 : garanties vérifiées |

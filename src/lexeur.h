@@ -31,6 +31,10 @@ typedef enum {
     J_INF_EGAL,     /* ≤  <= */
     J_SUP_EGAL,     /* ≥  >= */
     J_CROCHETS,     /* nom entre crochets ; valeur : clé du nom, « frais de port et d'emballage » */
+    J_ARTICLE_IMPLICITE, /* forme compacte : phrase de modification sans article (« total << 1 ») */
+    J_MOT_CLE,      /* forme compacte : « _si » ; valeur : « si » */
+    J_AFFECTE,      /* forme compacte : << */
+    J_POINT_VIRGULE,/* forme compacte : ; */
     J_ERREUR        /* valeur : message en français */
 } TypeJeton;
 
@@ -41,6 +45,9 @@ typedef struct {
     int ligne;        /* à partir de 1 */
     int colonne;      /* en points de code, à partir de 1 */
     char *valeur;     /* UTF-8, appartient au jeton, NULL si sans objet */
+    int retrait;      /* colonne qui compte pour les blocs (§ 5.4) ; la forme compacte la calcule */
+    int synthetique;  /* jeton produit par la lecture de la forme compacte, sans équivalent écrit */
+    int ligne_fin;    /* dernière ligne occupée par la construction qu'il termine (« _fin » compris) */
 } Jeton;
 
 typedef struct Lexeur Lexeur;
@@ -48,6 +55,11 @@ typedef struct Lexeur Lexeur;
 /* Renvoie NULL si la source n'est pas de l'UTF-8 valide ;
  * *erreur reçoit alors un message à libérer avec free(). */
 Lexeur *lexeur_creer(const char *source, size_t taille, char **erreur);
+
+/* Lecture de la forme compacte (grammaire, § 11.1) : mots-clés « _si », noms à soulignés
+ * (rendus comme des jetons CROCHETS synthétiques, « prix_unitaire » → « prix unitaire »),
+ * « << », « ; » et remarques « # ». */
+Lexeur *lexeur_creer_compact(const char *source, size_t taille, char **erreur);
 
 /* Renvoie le jeton suivant. Après J_FIN ou J_ERREUR, renvoie toujours J_FIN. */
 Jeton lexeur_suivant(Lexeur *lx);

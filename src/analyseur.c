@@ -1,8 +1,9 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.6), § 2 à 12.
+ * Spécification : docs/grammaire.md (révision 1.7), § 2 à 12.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
+#include "compact.h"
 #include "lexeur.h"
 #include "texte.h"
 
@@ -267,6 +268,7 @@ static Article article_de(const Jeton *t) {
     if (est_mot(t, "le")) return ART_LE;
     if (est_mot(t, "la")) return ART_LA;
     if (t->type == J_ELISION && strcmp(t->valeur, "l") == 0) return ART_L;
+    if (t->type == J_ARTICLE_IMPLICITE) return ART_IMPLICITE;
     return ART_AUCUN;
 }
 
@@ -326,7 +328,8 @@ static char *texte_jeton(const Jeton *t) {
     case J_SUPERIEUR: return grym_dupliquer(">");
     case J_INF_EGAL:  return grym_dupliquer("≤");
     case J_SUP_EGAL:  return grym_dupliquer("≥");
-    case J_CROCHETS:  return grym_formater("[%s]", t->valeur);
+    case J_CROCHETS:  return t->synthetique ? grym_dupliquer(t->valeur) : grym_formater("[%s]", t->valeur);
+    case J_ARTICLE_IMPLICITE: return grym_dupliquer("");
     default:          return grym_dupliquer("fin du texte");
     }
 }
@@ -672,7 +675,7 @@ static Noeud *nom_expression(Analyse *a) {
     Noeud *n = noeud_creer(N_NOM, premier->ligne, premier->colonne, premier->debut);
     n->texte = grym_dupliquer(s->nom);
     n->article = art;
-    n->crochets = a->j[d].type == J_CROCHETS;
+    n->crochets = a->j[d].type == J_CROCHETS && !a->j[d].synthetique;
     n->local = s->local;
     n->fin = fin_jeton(&a->j[fin - 1]);
     a->i = fin;
@@ -704,6 +707,10 @@ static Noeud *base(Analyse *a) {
         Noeud *e = expression(a);
         a->profondeur--;
         if (!e) return NULL;
+        if (t->synthetique && cour(a)->type == J_PAR_FERM) {   /* argument compact : f(a ; b) */
+            avancer(a);
+            return e;
+        }
         attendre(a, A_PAR_FERM);
         if (cour(a)->type != J_PAR_FERM) {
             noeud_liberer(e);
@@ -941,7 +948,7 @@ static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test
                 noeud_liberer(sujet);
                 return erreur_inattendu(a, te);
             }
-            if (ge != g) {
+            if (ge != g && !te->synthetique) {
                 noeud_liberer(sujet);
                 return erreur(a, te, grym_formater("Accord : écrivez « %s ou %s ».",
                                                    g == GENRE_FEMININ ? r->f : r->m,
@@ -955,7 +962,8 @@ static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test
     char *juste = ou_egal ? grym_formater("%s ou %s", g == GENRE_FEMININ ? r->m : r->f,
                                           g == GENRE_FEMININ ? "égal" : "égale")
                           : grym_dupliquer(g == GENRE_FEMININ ? r->m : r->f);
-    int ok = accorder(a, s, g, adjectif, juste);
+    /* Une tournure produite par la forme compacte n'a pas de genre écrit : pas d'accord à vérifier. */
+    int ok = adjectif->synthetique ? 1 : accorder(a, s, g, adjectif, juste);
     free(juste);
     if (!ok) { noeud_liberer(sujet); return NULL; }
 
@@ -1308,8 +1316,8 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
                            tart->ligne, tart->colonne, tart->debut);
     n->local = local;
     n->texte = nom;
-    n->article = art;
-    n->crochets = crochets;
+    n->article = art == ART_IMPLICITE ? ART_AUCUN : art;
+    n->crochets = crochets && !a->j[d].synthetique;
     noeud_ajouter(n, e);
     n->fin = e->fin;
     return n;
@@ -1356,14 +1364,14 @@ static Noeud *branche(Analyse *a, int colonne, const char *mot, int *forme_bloc)
     avancer(a);
     *forme_bloc = 1;
     Jeton *suivant = cour(a);
-    if (suivant->type == J_FIN || suivant->ligne == t->ligne || suivant->colonne <= colonne
+    if (suivant->type == J_FIN || suivant->ligne == t->ligne || suivant->retrait <= colonne
         || est_mot(suivant, "sinon")) {
         char *m = grym_formater("Bloc vide : après « : », écrivez les phrases du bloc sur les lignes "
                                 "suivantes, plus indentées que « %s ».",
                                 mot);
         return erreur(a, suivant->type == J_FIN || suivant->ligne == t->ligne ? t : suivant, m);
     }
-    return bloc(a, suivant->colonne, 0);
+    return bloc(a, suivant->retrait, 0);
 }
 
 /* si = "Si" valeur branche [ "Sinon" ( "si" … | branche ) ] (§ 5.4) */
@@ -1390,8 +1398,8 @@ static Noeud *si(Analyse *a, int colonne, int sinon_si) {
     /* « Sinon » : sur la même ligne qu'une forme courte, ou aligné sur « Si ». */
     Jeton *s = cour(a);
     if (!est_mot(s, "sinon")) return n;
-    if (premier_de_ligne(a, a->i) && s->colonne != colonne) {
-        if (s->colonne < colonne) return n;   /* appartient à un bloc englobant */
+    if (premier_de_ligne(a, a->i) && s->retrait != colonne) {
+        if (s->retrait < colonne) return n;   /* appartient à un bloc englobant */
         noeud_liberer(n);
         return erreur(a, s, grym_dupliquer("« Sinon » doit être aligné sur son « Si »."));
     }
@@ -1445,7 +1453,8 @@ static Noeud *parametres(Analyse *a, size_t d, size_t f, int avec_de) {
         if (!est_un(&a->j[k], &g)) break;
         Jeton *tun = &a->j[k++];
         size_t debut = k;
-        while (k < f && mot_de_nom(a, k)) k++;
+        if (k < f && a->j[k].type == J_CROCHETS) k++;
+        else while (k < f && mot_de_nom(a, k)) k++;
         if (k == debut) {
             noeud_liberer(liste);
             char *x = texte_jeton(tun);
@@ -1457,7 +1466,7 @@ static Noeud *parametres(Analyse *a, size_t d, size_t f, int avec_de) {
             noeud_liberer(liste);
             return erreur(a, &a->j[debut], grym_dupliquer("Un paramètre ne commence pas par un article : écrivez « un nombre »."));
         }
-        char *nom = cle(a, debut, k);
+        char *nom = a->j[debut].type == J_CROCHETS ? grym_dupliquer(a->j[debut].valeur) : cle(a, debut, k);
         for (size_t q = 0; q < liste->nb_enfants; q++)
             if (strcmp(liste->enfants[q]->texte, nom) == 0) {
                 noeud_liberer(liste);
@@ -1518,11 +1527,11 @@ static int premier_niveau(Analyse *a, const Jeton *t) {
 /* Corps en bloc après « : » (même règles qu'un Si, § 5.4). */
 static Noeud *corps_en_bloc(Analyse *a, const Jeton *deux_points, int colonne) {
     Jeton *suivant = cour(a);
-    if (suivant->type == J_FIN || suivant->ligne == deux_points->ligne || suivant->colonne <= colonne)
+    if (suivant->type == J_FIN || suivant->ligne == deux_points->ligne || suivant->retrait <= colonne)
         return erreur(a, suivant->type == J_FIN || suivant->ligne == deux_points->ligne ? deux_points : suivant,
                       grym_dupliquer("Bloc vide : après « : », écrivez les phrases de la formule sur les "
                                      "lignes suivantes, indentées."));
-    return bloc(a, suivant->colonne, 0);
+    return bloc(a, suivant->retrait, 0);
 }
 
 /* Calcul : « Le carré d'un nombre vaut nombre × nombre. » ou « … d'un nombre : » suivi d'un bloc. */
@@ -1534,14 +1543,15 @@ static Noeud *definition_calcul(Analyse *a, size_t marque, size_t fin_entete, in
     size_t d = a->i;
     if (d == marque)
         return erreur(a, &a->j[d], grym_dupliquer("Nom du calcul attendu : « Le carré d'un nombre vaut … »."));
-    for (size_t k = d; k < marque; k++)
+    int crochets = a->j[d].type == J_CROCHETS && marque == d + 1;
+    for (size_t k = d; k < marque && !crochets; k++)
         if (!mot_de_nom(a, k)) {
             char *x = texte_jeton(&a->j[k]);
             char *m = grym_formater("« %s » ne peut pas faire partie du nom d'un calcul.", x);
             free(x);
             return erreur(a, &a->j[k], m);
         }
-    char *nom = cle(a, d, marque);
+    char *nom = crochets ? grym_dupliquer(a->j[d].valeur) : cle(a, d, marque);
     if (visible(a, nom)) {
         erreur(a, &a->j[d], grym_formater("« %s » existe déjà.", nom));
         free(nom);
@@ -1603,7 +1613,8 @@ static Noeud *definition_action(Analyse *a, int colonne) {
     avancer(a);
     size_t d = a->i, k = d;
     Genre g;
-    while (mot_de_nom(a, k) && !est_un(&a->j[k], &g)) k++;
+    if (a->j[k].type == J_CROCHETS) k++;
+    else while (mot_de_nom(a, k) && !est_un(&a->j[k], &g)) k++;
     if (k == d)
         return erreur(a, cour(a), grym_dupliquer(
             "Nom d'action attendu après « Pour » : « Pour relancer un client : »."));
@@ -1622,7 +1633,7 @@ static Noeud *definition_action(Analyse *a, int colonne) {
     if (a->j[fin].type != J_DEUX_POINTS)
         return erreur(a, &a->j[fin], grym_dupliquer(
             "« : » attendu : une action s'écrit en bloc (« Pour relancer un client : »)."));
-    char *nom = cle(a, d, k);
+    char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
     if (visible(a, nom)) {
         erreur(a, &a->j[d], grym_formater("« %s » existe déjà.", nom));
         free(nom);
@@ -1786,14 +1797,15 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
     avancer(a);
     avancer(a);   /* chaque */
     size_t d = a->i, k = d;
-    while (mot_de_nom(a, k) && !de_ou_d(&a->j[k]) && !est_mot(&a->j[k], "du")) k++;
+    if (a->j[k].type == J_CROCHETS) k++;
+    else while (mot_de_nom(a, k) && !de_ou_d(&a->j[k]) && !est_mot(&a->j[k], "du")) k++;
     if (k == d)
         return erreur(a, cour(a), grym_dupliquer(
             "Nom du compteur attendu : « Pour chaque mois de 1 à 12 : »."));
     if (article_de(&a->j[d]) != ART_AUCUN)
         return erreur(a, &a->j[d], grym_dupliquer(
             "Le compteur se nomme sans article : « Pour chaque mois de 1 à 12 : »."));
-    char *nom = cle(a, d, k);
+    char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
     if (visible(a, nom)) {
         erreur(a, &a->j[d], grym_formater("« %s » existe déjà : choisissez un autre nom de compteur.", nom));
         free(nom);
@@ -1932,12 +1944,12 @@ static Noeud *selon(Analyse *a, int colonne) {
     Jeton *dp = cour(a);
     avancer(a);
     Jeton *premier = cour(a);
-    if (premier->type == J_FIN || premier->ligne == dp->ligne || premier->colonne <= colonne) {
+    if (premier->type == J_FIN || premier->ligne == dp->ligne || premier->retrait <= colonne) {
         noeud_liberer(s);
         return erreur(a, premier->type == J_FIN || premier->ligne == dp->ligne ? dp : premier,
                       grym_dupliquer("« Selon » sans cas : écrivez les « Cas … » sur les lignes suivantes, indentés."));
     }
-    int c = premier->colonne;
+    int c = premier->retrait;
     Noeud *n = noeud_creer(P_SELON, t->ligne, t->colonne, t->debut);
     n->entier = a->nb_locaux++;
     noeud_ajouter(n, s);
@@ -1950,8 +1962,8 @@ static Noeud *selon(Analyse *a, int colonne) {
             avancer(a);
             continue;
         }
-        if (!premier_de_ligne(a, a->i) || u->colonne < c) break;
-        if (u->colonne > c) {
+        if (!premier_de_ligne(a, a->i) || u->retrait < c) break;
+        if (u->retrait > c) {
             noeud_liberer(n);
             return erreur(a, u, grym_dupliquer("Indentation inattendue : les cas s'alignent les uns sous les autres."));
         }
@@ -2090,6 +2102,10 @@ static Noeud *phrase(Analyse *a, int colonne) {
 
     size_t fin_action;
     Symbole *action = action_en_tete(a, &fin_action);
+    if (t->type == J_CROCHETS) {
+        Symbole *s = visible(a, t->valeur);
+        if (s && s->sorte == S_ACTION) { action = s; fin_action = a->i + 1; }
+    }
     if (action) return appel_action(a, action, fin_action);
 
     if (a->interactif) return phrase_expression(a);
@@ -2112,13 +2128,13 @@ static Noeud *bloc(Analyse *a, int colonne, int racine) {
         Jeton *t = cour(a);
         if (t->type == J_FIN) break;
         if (t->type != J_REMARQUE && premier_de_ligne(a, a->i)) {
-            if (t->colonne < colonne) {
+            if (t->retrait < colonne) {
                 if (!racine) break;
                 noeud_liberer(b);
                 return erreur(a, t, grym_dupliquer(
                     "Indentation incohérente : cette ligne est moins indentée que le début du programme."));
             }
-            if (t->colonne > colonne) {
+            if (t->retrait > colonne) {
                 noeud_liberer(b);
                 return erreur(a, t, grym_dupliquer(
                     "Indentation inattendue : seul un bloc ouvert par « : » s'indente."));
@@ -2127,7 +2143,7 @@ static Noeud *bloc(Analyse *a, int colonne, int racine) {
         if (est_mot(t, "sinon") && !racine) break;
         Noeud *p = phrase(a, colonne);
         if (!p) { noeud_liberer(b); if (!racine) a->niveau--; return NULL; }
-        p->ligne_fin = a->i > 0 ? a->j[a->i - 1].ligne : p->ligne;
+        p->ligne_fin = a->i > 0 ? a->j[a->i - 1].ligne_fin : p->ligne;
         noeud_ajouter(b, p);
         b->fin = p->fin;
     }
@@ -2159,7 +2175,7 @@ typedef struct {
 } Capture;
 
 static int analyser_interne(const char *source, size_t taille, Portee *portee, int interactif,
-                            Programme *programme, Diagnostic *diag, Capture *capture) {
+                            Programme *programme, Diagnostic *diag, Capture *capture, int compact) {
     programme->phrases = NULL;
     programme->nb = 0;
     programme->nb_locaux = 0;
@@ -2167,7 +2183,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     diag->ligne = diag->colonne = 0;
 
     char *err = NULL;
-    Lexeur *lx = lexeur_creer(source, taille, &err);
+    Lexeur *lx = compact ? lexeur_creer_compact(source, taille, &err) : lexeur_creer(source, taille, &err);
     if (!lx) {
         diag->message = err;
         return 0;
@@ -2197,6 +2213,17 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
         if (t.type == J_FIN) break;
     }
     lexeur_detruire(lx);
+
+    if (compact) {
+        /* La forme compacte est réécrite en jetons littéraires (§ 11). */
+        Jeton *lj = NULL;
+        size_t ln = 0;
+        int ok = compact_vers_litteraire(j, n, &lj, &ln, diag);
+        liberer_jetons(j, n);
+        if (!ok) return 0;
+        j = lj;
+        n = ln;
+    }
 
     Portee copie;
     portee_copier(&copie, portee);
@@ -2228,7 +2255,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     /* Colonne de référence : celle de la première phrase (les remarques ne comptent pas). */
     int colonne = 1;
     for (size_t k = 0; k < n; k++)
-        if (j[k].type != J_REMARQUE) { colonne = j[k].type == J_FIN ? 1 : j[k].colonne; break; }
+        if (j[k].type != J_REMARQUE) { colonne = j[k].type == J_FIN ? 1 : j[k].retrait; break; }
     Noeud *racine = bloc(&a, colonne, 1);
     programme->nb_locaux = a.nb_locaux;
     if (racine) {
@@ -2271,7 +2298,12 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
 
 int analyser(const char *source, size_t taille, Portee *portee, int interactif,
              Programme *programme, Diagnostic *diag) {
-    return analyser_interne(source, taille, portee, interactif, programme, diag, NULL);
+    return analyser_interne(source, taille, portee, interactif, programme, diag, NULL, 0);
+}
+
+int analyser_compact(const char *source, size_t taille, Portee *portee,
+                     Programme *programme, Diagnostic *diag) {
+    return analyser_interne(source, taille, portee, 0, programme, diag, NULL, 1);
 }
 
 /* ---------------------------------------------------------------- */
@@ -2352,7 +2384,7 @@ Suggestions suites_valides(const char *source, size_t taille) {
     Programme prog;
     Diagnostic diag;
     Capture c = { 0, 0, NULL, 0, NULL, NULL, 0 };
-    if (analyser_interne(source, d, portee, 0, &prog, &diag, &c)) programme_liberer(&prog);
+    if (analyser_interne(source, d, portee, 0, &prog, &diag, &c, 0)) programme_liberer(&prog);
     else diagnostic_liberer(&diag);
     portee_detruire(portee);
 

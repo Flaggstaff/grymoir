@@ -1,0 +1,23 @@
+# boucles et Selon
+_pour_chaque mois _de 1 _à 12
+    _selon mois
+        _cas 2
+            _afficher mois ; « : 28 jours »
+        _cas 4 _ou 6 _ou 9 _ou 11
+            _afficher mois ; « : 30 jours »
+        _autrement
+            _afficher mois ; « : 31 jours »
+    _fin
+_fin
+
+_le total << 0
+_pour_chaque t _de 0 _à 1 _pas 0,1
+    total << total + 1
+_fin
+_afficher « Tours avec un pas de 0,1 : » ; total
+
+_le reste << 100
+_tant_que reste _positif
+    reste << reste − 37
+_fin
+_afficher « Reste : » ; reste
