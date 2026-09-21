@@ -522,3 +522,17 @@ char *dec_formater(const Decimal *a) {
     free(tampon);
     return chaine_rendre(&c);
 }
+
+char *dec_canonique(const Decimal *a) {
+    char *f = dec_formater(a);
+    char *r = grym_allouer(strlen(f) + 1);
+    size_t k = 0;
+    for (const char *p = f; *p; p++) {
+        if (*p == '\'') continue;
+        if (strncmp(p, "−", strlen("−")) == 0) { r[k++] = '-'; p += strlen("−") - 1; continue; }
+        r[k++] = *p == ',' ? '.' : *p;
+    }
+    r[k] = '\0';
+    free(f);
+    return r;
+}

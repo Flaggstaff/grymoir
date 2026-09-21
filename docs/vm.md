@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.10 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.16, § 5, § 9, § 10, § 13 à 16.
+Version 1.11 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.17, § 5, § 9, § 10, § 13 à 16.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -74,6 +74,8 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 31 | `AUJOURD'HUI` | aucun | empile la date du jour, lue une fois au début de l'exécution |
 | 32 | `LIRE_FICHIER` | aucun | remplace le chemin au sommet par le fichier lu sur le disque |
 | 33 | `ENREGISTRER` | aucun | dépile un chemin, puis un fichier ; prévoit leur écriture à la fin de l'exécution |
+| 34 | `CONSERVER` | aucun | dépile un objet d'entité et le range dans la base |
+| 35 | `SUPPRIMER` | aucun | dépile un objet conservé et le retire de la base |
 
 ### 3.1 Boucles et Selon
 
@@ -165,7 +167,17 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - `LIRE_CHAMP` accepte un fichier : `taille`, `format` (`inconnu` sans format d'image), `nom de fichier`. `ÉCRIRE_CHAMP` le refuse.
 - `ENREGISTRER` refuse un chemin déjà existant, ou déjà prévu par l'exécution. À la fin d'une exécution réussie, la machine écrit les fichiers prévus, sans jamais en écraser un ; si une écriture échoue, elle retire celles déjà faites, et l'exécution échoue. Une exécution qui échoue n'écrit rien.
 
-## 8. Ramasse-miettes
+## 8. Base des entités
+
+- `src/base.c` parle à SQLite ; la machine l'ouvre au premier besoin, quand une classe enregistrée est une entité, sur le fichier donné par `machine_base` (celui du programme : `factures.grymd`), ou en mémoire.
+- Schéma : une table `"e <entité>"` par entité, avec ses champs propres et ceux de ses aptitudes, en colonnes `"c <champ>"` (plus `"n <champ>"`, le nom d'origine, pour un fichier ou une image). Sa colonne `id` désigne la ligne de la classe parente, ou de `grym_objet` pour une entité sans parent, avec `ON DELETE CASCADE`. Un objet conservé a donc une ligne dans chaque table de sa lignée.
+- Types SQL : texte, nombre (forme canonique, exacte), date (ISO 8601) en `TEXT` ; nombre entier en `INTEGER` ; vrai ou faux en `INTEGER` 0 ou 1 ; fichier et image en `BLOB` ; lien en `INTEGER` qui référence la table de l'entité liée. Tous `NOT NULL` ; `, unique` en `UNIQUE`.
+- `grym_objet` distribue les identifiants (`AUTOINCREMENT` : jamais réattribués) et note la classe réelle ; `grym_schema` garde la définition de chaque entité.
+- Un objet porte son identifiant en base, 0 s'il n'est pas conservé. `CONSERVER` et `SUPPRIMER` le changent au journal, qui le restaure si l'exécution échoue.
+- `ÉCRIRE_CHAMP` sur un objet conservé écrit aussi la colonne en base.
+- Transaction : `BEGIN IMMEDIATE` au début de chaque exécution qui connaît une entité ; à la fin, écritures sur le disque, puis `COMMIT` ; en cas d'échec ou d'interruption, `ROLLBACK`, et les fichiers déjà écrits par cette fin d'exécution sont retirés.
+
+## 9. Ramasse-miettes
 
 - Tous les objets sont chaînés dans le tas de la machine. Le ramassage marque ce qui est atteignable depuis les racines, puis libère le reste.
 - Racines : les cases globales, la pile, les cases locales de chaque cadre, les anciennes valeurs du journal et les objets qu'il mentionne.
@@ -173,18 +185,18 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - Un ramassage a lieu à la fin de chaque exécution, et pendant l'exécution quand le nombre d'objets créés depuis le dernier dépasse un seuil (10'000, ou le double des objets vivants).
 - Les cycles sont libérés comme le reste.
 
-## 9. Positions
+## 10. Positions
 
 Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pour une opération, c'est la position de l'opérateur. Une erreur d'exécution s'exprime ainsi comme une erreur de compilation (charte, art. 8) : `facture.grym:7:18 : erreur : Division par zéro.`
 
 ---
 
-## 10. Format du fichier `.grymb`
+## 11. Format du fichier `.grymb`
 
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 10
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 11
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -207,13 +219,13 @@ classes       nombre : u32, puis pour chacune :
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs. Les fichiers des versions 1 à 9 restent lisibles.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35. Les fichiers des versions 1 à 10 restent lisibles.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
 ---
 
-## 11. Outils
+## 12. Outils
 
 | Commande | Rôle |
 |----------|------|
@@ -252,3 +264,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.8 | 2026-09-21 | Dates : valeur date, constante de type 4, `AUJOURD'HUI`, addition et soustraction de dates, comparaisons ; format version 8 |
 | 1.9 | 2026-09-21 | Fichiers : valeur fichier partagée, `LIRE_FICHIER`, `ENREGISTRER`, champs des fichiers, écritures différées toutes ou aucune ; format version 9 ; renumérotation des § 7 à 11 |
 | 1.10 | 2026-09-21 | Entités : type et unicité des champs, bit d'entité, pluriel ; vérification des types avant toute écriture de champ ; format version 10 |
+| 1.11 | 2026-09-21 | Base des entités (§ 8) : schéma, types SQL, identifiants, transaction ; `CONSERVER`, `SUPPRIMER` ; format version 11 ; renumérotation des § 9 à 12 |

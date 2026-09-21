@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.16), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.17), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -3011,7 +3011,8 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
 /* Mots qui commencent une construction et ne peuvent donc pas commencer le nom d'une action. */
 static int mot_de_construction(const Jeton *t) {
     static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
-                                     "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer" };
+                                     "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer",
+                                     "conserver", "supprimer" };
     for (size_t k = 0; k < sizeof M / sizeof *M; k++) if (est_mot(t, M[k])) return 1;
     return 0;
 }
@@ -3030,6 +3031,21 @@ static Noeud *phrase(Analyse *a, int colonne) {
             return erreur(a, t, grym_dupliquer("Un calcul n'affiche rien : il rend une valeur. "
                                                "Pour afficher, écrivez une action."));
         return affichage(a);
+    }
+    if (est_mot(t, "conserver") || est_mot(t, "supprimer")) {
+        /* « Conserver le client. », « Supprimer le client. » (§ 16.3) */
+        int conserver = est_mot(t, "conserver");
+        if (a->formule == 1)
+            return erreur(a, t, grym_formater("Un calcul ne %s pas : faites-le dans une action.",
+                                              conserver ? "conserve" : "supprime"));
+        avancer(a);
+        Noeud *v = valeur(a);
+        if (!v) return NULL;
+        if (!fin_phrase(a, 0)) { noeud_liberer(v); return NULL; }
+        Noeud *n = noeud_creer(conserver ? P_CONSERVER : P_SUPPRIMER, t->ligne, t->colonne, t->debut);
+        noeud_ajouter(n, v);
+        n->fin = v->fin;
+        return n;
     }
     if (est_mot(t, "enregistrer")) {
         /* « Enregistrer … dans « chemin ». » (§ 15.2) */

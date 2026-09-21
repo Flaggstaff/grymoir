@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.10).
+ * Spécification : docs/vm.md (révision 1.11).
  */
 #include "bytecode.h"
 #include "date.h"
@@ -144,6 +144,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_AUJOURDHUI:     return "AUJOURD'HUI";
     case I_LIRE_FICHIER:   return "LIRE_FICHIER";
     case I_ENREGISTRER:    return "ENREGISTRER";
+    case I_CONSERVER:      return "CONSERVER";
+    case I_SUPPRIMER:      return "SUPPRIMER";
     }
     return "INCONNUE";
 }
@@ -270,6 +272,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_NOUVEAU: case I_AUJOURDHUI: effet = 1; break;
             case I_LIRE_FICHIER: besoin = 1; break;
             case I_ENREGISTRER: besoin = 2; effet = -2; break;
+            case I_CONSERVER: case I_SUPPRIMER: besoin = 1; effet = -1; break;
             case I_INITIALISER_CHAMP: besoin = 2; effet = -1; break;
             case I_LIRE_CHAMP: besoin = 1; break;
             case I_ECRIRE_CHAMP: besoin = 2; effet = -2; break;
@@ -343,12 +346,12 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 }
 
 /* ---------------------------------------------------------------- */
-/* Fichier .grymb (docs/vm.md, § 10)                                */
+/* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 10  /* versions 1 à 9 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 11  /* versions 1 à 10 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
-                              sans fichiers (8), sans entités (9) */
+                              sans fichiers (8), sans entités (9), sans base (10) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -773,7 +776,7 @@ int module_verifier(const Module *m, char **erreur) {
 }
 
 /* ---------------------------------------------------------------- */
-/* Désassemblage (docs/vm.md, § 11)                                  */
+/* Désassemblage (docs/vm.md, § 12)                                  */
 /* ---------------------------------------------------------------- */
 
 static void completer(Chaine *c, const char *s, size_t largeur) {

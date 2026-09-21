@@ -179,6 +179,11 @@ int main(void) {
     EXEC("_classe _un client _conservé\n    _un âge (nombre_entier)\n_fin\n_le c << _nouveau client _avec\n"
          "    âge << 2,5\n_fin\n", "ERREUR 5:12 Le champ « âge » attend un nombre entier, pas un nombre à virgule.");
 
+    EXEC("_classe _un client _conservé\n    _un nom (texte) _unique\n_fin\n_le a << _nouveau client _avec\n"
+         "    nom << « Ana »\n_fin\n_conserver a\n_le b << _nouveau client _avec\n    nom << « Ana »\n_fin\n_conserver b\n",
+         "ERREUR 11:1 « nom » est unique : un autre client conservé a déjà « Ana ».");
+    ERR("_conserver\n", 1, 1, "Forme attendue : « _conserver client »");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

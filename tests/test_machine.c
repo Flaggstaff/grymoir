@@ -4,6 +4,7 @@
 #include "compilateur.h"
 #include "vm.h"
 #include "date.h"
+#include "sqlite3.h"
 #include "texte.h"
 
 #include <stdio.h>
@@ -492,6 +493,111 @@ int main(void) {
         remove("_essai_doc.pdf");
     }
 
+    /* --- La base : conserver, modifier, supprimer (§ 16.3), base en mémoire --- */
+#define CLIENT "Un client, conservé, a : un nom (texte), un parrain (client), une licence (texte), unique.\n"
+#define ANA "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A-1 ».\n    Le parrain vaut a.\n"
+    PROG(CLIENT ANA "Afficher « avant ».", "ERREUR 5:21 « a » inconnu.");   /* un objet ne se désigne qu'une fois créé */
+    PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A-1 ».\n"
+         "Le parrain du a devient a.\nConserver a.\nLe nom du a devient « Anna ».\nAfficher nom du a puis nom du parrain du a.",
+         "Anna Anna");
+    PROG("Une personne a : un nom.\nLa p vaut une nouvelle personne.\nConserver p.",
+         "ERREUR 3:1 « personne » n'est pas une entité : ses objets ne se conservent pas. "
+         "Déclarez « Une personne, conservée, a : ».");
+    PROG("Conserver 3.", "ERREUR 1:1 Seul un objet se conserve : la valeur est un nombre.");
+    PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\nConserver a.",
+         "ERREUR 4:1 Le champ « parrain » n'a pas de valeur : un client incomplet ne se conserve pas.");
+    PROG(CLIENT "Le b vaut un nouveau client :\n    Le nom vaut « Bo ».\n    La licence vaut « B ».\n"
+         "Le parrain du b devient b.\nLe a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
+         "    Le parrain vaut b.\nConserver a.",
+         "ERREUR 10:1 Le champ « parrain » désigne un client qui n'est pas conservé : conservez-le d'abord.");
+    PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
+         "Le parrain du a devient a.\nConserver a.\nConserver a.",
+         "ERREUR 7:1 Un client déjà conservé ne se conserve pas deux fois.");
+    PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
+         "Le parrain du a devient a.\nConserver a.\nLe b vaut un nouveau client :\n    Le nom vaut « Bo ».\n"
+         "    La licence vaut « A ».\n    Le parrain vaut a.\nConserver b.",
+         "ERREUR 11:1 « licence » est unique : un autre client conservé a déjà « A ».");
+    PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
+         "Le parrain du a devient a.\nConserver a.\nLe b vaut un nouveau client :\n    Le nom vaut « Bo ».\n"
+         "    La licence vaut « B ».\n    Le parrain vaut a.\nConserver b.\nLa licence du b devient « A ».",
+         "ERREUR 12:1 « licence » est unique : un autre client conservé a déjà « A ».");
+    PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
+         "Le parrain du a devient a.\nConserver a.\nLe b vaut un nouveau client :\n    Le nom vaut « Bo ».\n"
+         "    La licence vaut « B ».\n    Le parrain vaut a.\nConserver b.\nSupprimer a.",
+         "ERREUR 12:1 Ce client est encore désigné par le champ « parrain » d'un client.");
+    PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
+         "Le parrain du a devient a.\nConserver a.\nSupprimer a.\nSupprimer a.",
+         "ERREUR 8:1 Un client qui n'est pas conservé ne se supprime pas.");
+    PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
+         "Le parrain du a devient a.\nConserver a.\nSupprimer a.\nConserver a.\nAfficher nom du a.", "Ana");
+    PROG("Une adhésion, conservée, a : un numéro (nombre entier).\nLa x vaut une nouvelle adhésion :\n"
+         "    Le numéro vaut 99999999999999999999.\nConserver x.",
+         "ERREUR 4:1 Le champ « numéro » est trop grand pour la base : un nombre entier y tient entre "
+         "−9'223'372'036'854'775'808 et 9'223'372'036'854'775'807.");
+    PROG("Une facture, conservée, a : un montant (nombre).\nUn avoir, conservé, est une facture.\n"
+         "Un contrat, conservé, a : une facture (facture).\nL'a vaut un nouvel avoir :\n    Le montant vaut −5.\n"
+         "Conserver a.\nLe c vaut un nouveau contrat :\n    La facture vaut a.\nConserver c.\nSupprimer a.",
+         "ERREUR 10:1 Cet avoir est encore désigné par le champ « facture » d'un contrat.");
+    /* une saisie ratée rend à l'objet son état « non conservé » */
+    {
+        total++;
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        const char *saisies[] = { "Un client, conservé, a : un nom (texte).",
+                                  "Le c vaut un nouveau client :\n    Le nom vaut « Ana ».",
+                                  "Conserver c. Afficher 1 ÷ 0.", "Conserver c. Afficher « conservé »." };
+        const char *attendus[] = { "", "", "~Division par zéro", "conservé" };
+        for (int i = 0; i < 4; i++) {
+            Portee *sp = portee_cloner(p);
+            char *r = executer_source(p, m, saisies[i], 1);
+            int echec = strncmp(r, "ERREUR", 6) == 0;
+            int ok = attendus[i][0] == '~' ? strstr(r, attendus[i] + 1) != NULL : strcmp(r, attendus[i]) == 0;
+            if (echec) { portee_detruire(p); p = sp; } else portee_detruire(sp);
+            if (!ok) { signaler(__LINE__, saisies[i], attendus[i], r); free(r); break; }
+            free(r);
+        }
+        machine_detruire(m);
+        portee_detruire(p);
+    }
+    /* --- La base dans un fichier : ce qui est validé y reste, le reste n'y entre pas --- */
+    {
+        remove("_essai.grymd");
+        const char *prog = "Un client, conservé, a : un nom (texte), un solde (nombre), une date (date), un actif (vrai ou faux).\n"
+                           "Le a vaut un nouveau client :\n    Le nom vaut « Thérèse ».\n    Le solde vaut 0,1.\n"
+                           "    La date vaut 21.09.2026.\n    L'actif vaut vrai.\nConserver a.\n";
+        const char *rate = "Un client, conservé, a : un nom (texte), un solde (nombre), une date (date), un actif (vrai ou faux).\n"
+                           "Le b vaut un nouveau client :\n    Le nom vaut « Bo ».\n    Le solde vaut 1.\n"
+                           "    La date vaut 01.01.2026.\n    L'actif vaut faux.\nConserver b.\nAfficher 1 ÷ 0.\n";
+        const char *autre = "Un client, conservé, a : un nom (texte).\n";
+        const char *sources[] = { prog, rate, autre };
+        const char *attendus[] = { "", "~Division par zéro", "~La base « _essai.grymd » connaît « client » avec une autre définition" };
+        for (int i = 0; i < 3; i++) {
+            total++;
+            Portee *p = portee_creer();
+            Machine *m = machine_creer();
+            machine_base(m, "_essai.grymd");
+            char *r = executer_source(p, m, sources[i], 0);
+            int ok = attendus[i][0] == '~' ? strstr(r, attendus[i] + 1) != NULL : strcmp(r, attendus[i]) == 0;
+            if (!ok) signaler(__LINE__, sources[i], attendus[i], r);
+            free(r);
+            machine_detruire(m);
+            portee_detruire(p);
+        }
+        total++;
+        sqlite3 *db = NULL;
+        sqlite3_stmt *st = NULL;
+        char lu[200] = "";
+        if (sqlite3_open("_essai.grymd", &db) == SQLITE_OK
+            && sqlite3_prepare_v2(db, "SELECT (SELECT count(*) FROM grym_objet) || ' ' || \"c nom\" || ' ' || \"c solde\" "
+                                      "|| ' ' || \"c date\" || ' ' || \"c actif\" FROM \"e client\"", -1, &st, NULL) == SQLITE_OK
+            && sqlite3_step(st) == SQLITE_ROW)
+            snprintf(lu, sizeof lu, "%s", (const char *)sqlite3_column_text(st, 0));
+        sqlite3_finalize(st);
+        sqlite3_close(db);
+        if (strcmp(lu, "1 Thérèse 0.1 2026-09-21 1") != 0) signaler(__LINE__, "contenu de la base", "1 Thérèse 0.1 2026-09-21 1", lu);
+        remove("_essai.grymd");
+    }
+
     /* --- Ramasse-miettes : cycles et objets abandonnés --- */
     {
         total++;
@@ -656,7 +762,7 @@ int main(void) {
         module_detruire(mx);
     }
 
-    /* --- Désassemblage (docs/vm.md, § 11) --- */
+    /* --- Désassemblage (docs/vm.md, § 12) --- */
     {
         total++;
         const char *src =

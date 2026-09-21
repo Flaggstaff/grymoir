@@ -4,7 +4,7 @@
  *   grym lancer fichier.grym            compile puis exécute
  *   grym lancer fichier.grymb           exécute un bytecode compilé
  *   grym compiler fichier.grym          produit fichier.grymb
- *   grym desassembler fichier.grym(b)   affiche les instructions (docs/vm.md, § 11)
+ *   grym desassembler fichier.grym(b)   affiche les instructions (docs/vm.md, § 12)
  */
 #ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L   /* fileno, isatty */
@@ -140,6 +140,13 @@ static int lancer(const char *chemin) {
         machine_dossier(m, *dossier ? dossier : "/");
         free(dossier);
     }
+    /* factures.grym, .grymc ou .grymb : base factures.grymd, à côté (§ 16.5) */
+    size_t l = strlen(chemin);
+    size_t coupe = l > 6 && (strcmp(chemin + l - 6, ".grymc") == 0 || strcmp(chemin + l - 6, ".grymb") == 0) ? l - 6
+                 : l > 5 && strcmp(chemin + l - 5, ".grym") == 0 ? l - 5 : l;
+    char *base = grym_formater("%.*s.grymd", (int)coupe, chemin);
+    machine_base(m, base);
+    free(base);
     Chaine sortie = {0};
     Diagnostic d;
     grym_interruption = 0;
@@ -272,11 +279,12 @@ static int termine_par_deux_points(const char *l) {
 /* Boucle interactive : une saisie ratée n'a aucun effet (grammaire, § 3.3).
  * La machine annule ses propres écritures (journal) ; la portée de l'analyseur,
  * qui a déjà enregistré les noms de la saisie, est restaurée à part. */
-static int boucle(void) {
+static int boucle(const char *base) {
     int tty = terminal();
     if (tty) printf("GrymoiR %s, boucle interactive. Tapez « quitter » pour sortir.\n", VERSION);
     Portee *portee = portee_creer();
     Machine *m = machine_creer();
+    machine_base(m, base);   /* NULL : base en mémoire, perdue à la sortie (§ 16.5) */
     for (;;) {
         if (tty) { fputs("> ", stdout); fflush(stdout); }
         char *ligne = lire_ligne();
@@ -339,7 +347,8 @@ int main(int argc, char **argv) {
     SetConsoleCP(CP_UTF8);
 #endif
     signal(SIGINT, sur_interruption);
-    if (argc == 1) return boucle();
+    if (argc == 1) return boucle(NULL);
+    if (argc == 3 && strcmp(argv[1], "--base") == 0) return boucle(argv[2]);
     if (argc == 3 && strcmp(argv[1], "lancer") == 0) return lancer(argv[2]);
     if (argc == 3 && strcmp(argv[1], "compiler") == 0) return compiler_fichier(argv[2]);
     if (argc == 3 && strcmp(argv[1], "formater") == 0) return formater(argv[2]);
@@ -354,6 +363,7 @@ int main(int argc, char **argv) {
             "  grym lancer fichier.grymb           exécute un bytecode compilé\n"
             "  grym compiler fichier.grym          produit fichier.grymb\n"
             "  grym desassembler fichier.grym(b)   affiche les instructions\n"
+            "  grym --base fichier.grymd           boucle interactive sur une base conservée\n"
             "  grym formater fichier.grym(c)       affiche la forme canonique\n"
             "  grym traduire fichier.grym          produit la forme compacte fichier.grymc\n"
             "  grym traduire fichier.grymc         produit la forme littéraire fichier.grym\n", VERSION);

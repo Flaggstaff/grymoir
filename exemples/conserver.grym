@@ -1,0 +1,26 @@
+Remarque : une entité conservée dans conserver.grymd, à côté de ce programme.
+Remarque : chaque exécution est une transaction : tout est écrit, ou rien.
+Remarque : relancer ce programme échoue, parce que la licence « A-1 » est déjà prise.
+Un client, conservé, a :
+    un nom (texte),
+    un solde (nombre),
+    un parrain (client),
+    une licence (texte), unique.
+
+La fondatrice vaut un nouveau client :
+    Le nom vaut « Ana ».
+    Le solde vaut 0.
+    La licence vaut « A-1 ».
+Le parrain de la fondatrice devient fondatrice.
+Conserver la fondatrice.
+
+Le nouveau vaut un nouveau client :
+    Le nom vaut « Bo ».
+    Le solde vaut 120,50.
+    Le parrain vaut fondatrice.
+    La licence vaut « B-7 ».
+Conserver le nouveau.
+
+Remarque : un objet conservé se modifie dans la base aussitôt.
+Le solde du nouveau devient solde du nouveau − 20.
+Afficher nom du nouveau puis solde du nouveau puis « parrainé par » puis nom du parrain du nouveau.

@@ -161,6 +161,11 @@ int main(void) {
          "_classe _un cheval (chevaux) _conservé\n    _un nom (texte)\n    _un âge (nombre_entier)\n"
          "    _une licence (texte) _unique\n_fin\n_classe _un poney _conservé _est _un cheval\n_fin\n");
 
+    LITT("Un client, conservé, a : un nom (texte).\nLe c vaut un nouveau client.\nConserver le c.\nSupprimer c.",
+         "Un client, conservé, a :\n    un nom (texte).\nLe c vaut un nouveau client.\nConserver le c.\nSupprimer c.\n");
+    COMP("Un client, conservé, a : un nom (texte).\nLe c vaut un nouveau client.\nConserver le c.\nSupprimer c.",
+         "_classe _un client _conservé\n    _un nom (texte)\n_fin\n_le c << _nouveau client\n_conserver c\n_supprimer c\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

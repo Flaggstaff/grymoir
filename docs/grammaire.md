@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.16 de la spécification, révisée le 21 septembre 2026. Les § 14 (dates), 15 (fichiers), 16.1 et 16.2 (déclaration et typage des entités) sont implémentés ; le reste du § 16 est validé, pas encore implémenté.
+Version 1.17 de la spécification, révisée le 21 septembre 2026. Les § 14 (dates), 15 (fichiers), 16.1 à 16.3, 16.5 et 16.6 (entités, base, transaction) sont implémentés ; les § 16.4 (retrouver), 16.7 (migrations) et 16.8 (forme compacte de ce qui manque) restent à implémenter.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -387,6 +387,10 @@ Limites de cette notation :
 | Champ d'entité sans type | « Type attendu entre parenthèses : « un nom (texte) ». » |
 | Type d'une valeur (analyse ou exécution) | « Le champ « solde » attend un nombre, pas un texte. » |
 | Lien vers une classe ordinaire | « « personne » n'est pas une entité : un lien pointe vers une entité conservée. » |
+| Objet incomplet (exécution) | « Le champ « nom » n'a pas de valeur : un client incomplet ne se conserve pas. » |
+| Lien vers un objet non conservé | « Le champ « parrain » désigne un client qui n'est pas conservé : conservez-le d'abord. » |
+| Unicité | « « licence » est unique : un autre client conservé a déjà « A-1 ». » |
+| Suppression refusée | « Ce client est encore désigné par le champ « parrain » de 2 clients. » |
 | Classe inconnue | « Classe « fournisseur » inconnue. » |
 | Champ hérité redéclaré | « « nom » est déjà un champ hérité de « personne ». » |
 | Version en double | « « saluer » existe déjà pour « personne ». » |
@@ -892,7 +896,11 @@ Supprimer le client.
 - Un nouvel objet vit en mémoire. `Conserver le client.` le range dans la base ; conserver deux fois le même objet est une erreur.
 - Modifier un champ d'un objet conservé modifie la base aussitôt, dans la transaction de l'exécution (§ 16.6). Pas de second `Conserver`.
 - `Supprimer le client.` le retire de la base. Un objet encore désigné par un lien ne se supprime pas : « Ce client est encore le parrain de 2 clients. » L'objet reste en mémoire, mais n'est plus conservé.
-- Conserver, modifier et supprimer sont des effets de bord : réservés aux actions.
+- Conserver, modifier et supprimer sont des effets de bord : réservés aux actions. `conserver` et `supprimer` ne commencent pas le nom d'une action.
+- Un lien d'un objet conservé désigne un objet conservé : « Le champ « parrain » désigne un client qui n'est pas conservé : conservez-le d'abord. » Un objet peut se désigner lui-même (`Le parrain du a devient a.`, puis `Conserver a.`). Deux objets neufs qui se désignent l'un l'autre ne se conservent pas encore : il faudrait un champ facultatif (§ 13.8).
+- `, unique` est vérifié à la conservation et à chaque modification : « « licence » est unique : un autre client conservé a déjà « A-1 ». »
+- Un objet supprimé puis conservé à nouveau reçoit un nouvel identifiant : un identifiant n'est jamais réattribué.
+- Une saisie ratée rend aussi à un objet son état : conservé ou non.
 
 ### 16.4 Retrouver
 
@@ -917,13 +925,17 @@ Afficher le nombre de clients conservés dont le statut actif est vrai.
 
 - Un programme `factures.grym` utilise la base `factures.grymd`, à côté de lui, créée au premier besoin.
 - La boucle interactive utilise une base en mémoire, perdue à la sortie, sauf si on lui donne un fichier : `grym --base factures.grymd`.
+- `factures.grymc` et `factures.grymb` utilisent aussi `factures.grymd`.
+- Tant que les migrations (§ 16.7) ne sont pas là, une entité dont la définition a changé depuis la dernière exécution est refusée : « La base « factures.grymd » connaît « client » avec une autre définition… » La base n'est pas touchée.
 - Aucune base n'est ouverte si le programme ne déclare aucune entité.
 
 ### 16.6 Transaction
 
 - Une exécution, une transaction : chaque programme lancé, et chaque saisie de la boucle interactive, s'exécute dans une seule transaction.
 - Si l'exécution réussit, la transaction est validée. Si elle échoue, ou si on l'interrompt par Ctrl+C, elle est annulée : le journal de la machine restaure la mémoire, SQLite restaure la base.
-- Pendant l'exécution, la base est verrouillée en écriture pour les autres programmes.
+- Pendant l'exécution, la base est verrouillée en écriture pour les autres programmes. Après deux secondes d'attente : « La base « … » est utilisée par un autre programme. »
+- Les fichiers enregistrés (§ 15.2) sont écrits juste avant la validation de la base ; si la validation échoue, ils sont retirés.
+- La création des tables fait partie de la transaction : une première exécution ratée ne laisse aucune table.
 
 ### 16.7 Migrations
 
@@ -986,3 +998,4 @@ La charte 1.9 reprend ce paragraphe : transaction par exécution (art. 7), typag
 | 1.14 | 2026-09-21 | § 14 implémenté ; dates dans les boucles et `Selon` ; messages d'erreur des dates |
 | 1.15 | 2026-09-21 | § 15 implémenté ; chemin entre parenthèses, dossier de référence, écritures toutes ou aucune, champs des fichiers qui ne réservent rien, égalité par contenu, arrondi des tailles |
 | 1.16 | 2026-09-21 | § 16.1 et 16.2 implémentés ; accord de `conservé`, types réservés aux entités et aptitudes, héritage entre entités, lien vers soi, portée de la vérification à l'analyse, `(nombre entier)` et `3,0`, forme compacte des types |
+| 1.17 | 2026-09-21 | § 16.3, 16.5, 16.6 implémentés ; lien vers soi, identifiants jamais réattribués, définition changée refusée en attendant les migrations, ordre fichiers puis base, tables créées dans la transaction |

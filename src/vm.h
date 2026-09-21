@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle, v0.2
- * Spécification : docs/vm.md (révision 1.10).
+ * Spécification : docs/vm.md (révision 1.11).
  */
 #ifndef GRYM_VM_H
 #define GRYM_VM_H
@@ -33,5 +33,8 @@ size_t machine_objets_vivants(const Machine *m);
 
 /* Dossier du programme : les chemins relatifs des fichiers (§ 15.2) partent de là. */
 void machine_dossier(Machine *m, const char *dossier);
+
+/* Fichier de la base des entités (§ 16.5) ; NULL : base en mémoire. Ouverte au premier besoin. */
+void machine_base(Machine *m, const char *chemin);
 
 #endif

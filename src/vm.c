@@ -1,7 +1,9 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.10).
+ * Spécification : docs/vm.md (révision 1.11).
  */
 #include "vm.h"
+#include "vm_interne.h"
+#include "base.h"
 #include "date.h"
 #include "decimal.h"
 
@@ -13,54 +15,6 @@
 /* Valeurs (docs/vm.md, § 2)                                        */
 /* ---------------------------------------------------------------- */
 
-typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET, V_DATE, V_FICHIER } TypeValeur;
-
-struct Objet;
-
-/* Contenu d'un fichier (grammaire, § 15) : immuable, partagé entre les valeurs qui le désignent. */
-typedef struct Fichier {
-    size_t references;
-    unsigned char *octets;
-    size_t taille;
-    char *nom;            /* nom d'origine, sans dossier */
-    const char *format;   /* « PNG », « JPEG », « GIF », « WebP » ou NULL */
-} Fichier;
-
-typedef struct {
-    TypeValeur type;
-    Decimal nombre;
-    char *texte;
-    int vrai;
-    struct Objet *objet;   /* référence : l'objet appartient au tas, pas à la valeur */
-    long jours;            /* date : jours depuis le 01.01.1970 (date.h) */
-    Fichier *fichier;      /* fichier : contenu partagé, compté */
-} Valeur;
-
-/* Classe connue de la machine (grammaire, § 13). */
-typedef struct ClasseVM {
-    char *nom;
-    int feminin;
-    int aptitude;
-    const struct ClasseVM *parent;
-    const struct ClasseVM **aptitudes;   /* aptitudes adoptées, dans l'ordre */
-    size_t nb_aptitudes;
-    char **champs;        /* champs hérités d'abord, puis champs propres */
-    char **types;         /* type de chaque champ (grammaire, § 16.1), ou NULL */
-    unsigned char *uniques;
-    size_t nb_champs;
-    int conserve;         /* entité */
-    char *pluriel;
-} ClasseVM;
-
-/* Objet du tas : sa classe, ses champs, et de quoi le ramasser (docs/vm.md, § 8). */
-typedef struct Objet {
-    const ClasseVM *classe;
-    Valeur *champs;
-    unsigned char *definis;
-    unsigned long *epoques;   /* exécution où le champ est entré au journal */
-    int marque;
-    struct Objet *suivant;
-} Objet;
 
 static const char *nom_type(TypeValeur t) {
     return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen"
@@ -159,7 +113,8 @@ typedef struct {
 typedef struct {
     size_t c;          /* case modifiée */
     Objet *objet;      /* ou champ modifié : objet et index (objet NULL pour une case) */
-    size_t index;
+    size_t index;      /* SIZE_MAX : identifiant en base de l'objet (Conserver, Supprimer) */
+    long ancien_id;
     int etait_definie;
     Valeur ancienne;
 } Ecriture;
@@ -179,6 +134,8 @@ typedef struct {
 
 struct Machine {
     char *dossier;          /* dossier du programme : base des chemins relatifs */
+    char *chemin_base;      /* fichier de la base des entités, NULL : en mémoire (§ 16.5) */
+    Base *base;             /* ouverte au premier besoin */
     Ecriture_disque *a_ecrire;
     size_t nb_a_ecrire;
     Case *cases;
@@ -206,6 +163,11 @@ Machine *machine_creer(void) {
     return m;
 }
 
+void machine_base(Machine *m, const char *chemin) {
+    free(m->chemin_base);
+    m->chemin_base = chemin ? grym_dupliquer(chemin) : NULL;
+}
+
 void machine_dossier(Machine *m, const char *dossier) {
     free(m->dossier);
     m->dossier = dossier && *dossier ? grym_dupliquer(dossier) : NULL;
@@ -213,6 +175,8 @@ void machine_dossier(Machine *m, const char *dossier) {
 
 void machine_detruire(Machine *m) {
     if (!m) return;
+    base_fermer(m->base);
+    free(m->chemin_base);
     free(m->dossier);
     for (size_t i = 0; i < m->nb_cases; i++) {
         free(m->cases[i].nom);
@@ -244,6 +208,7 @@ void machine_detruire(Machine *m) {
         free(m->classes[i]->uniques);
         free(m->classes[i]->pluriel);
         free(m->classes[i]->champs);
+        free(m->classes[i]->proprietaires);
         free(m->classes[i]->aptitudes);
         free(m->classes[i]);
     }
@@ -323,10 +288,32 @@ static void ecrire_champ(Machine *m, Objet *o, size_t k, Valeur v) {
     o->definis[k] = 1;
 }
 
+/* Identifiant en base d'un objet, journalisé : une exécution ratée le rend tel qu'avant. */
+static void ecrire_id(Machine *m, Objet *o, long id) {
+    if (m->nb_journal == m->cap_journal) {
+        m->cap_journal = m->cap_journal ? m->cap_journal * 2 : 16;
+        Ecriture *j = grym_allouer(m->cap_journal * sizeof *j);
+        if (m->nb_journal) memcpy(j, m->journal, m->nb_journal * sizeof *j);
+        free(m->journal);
+        m->journal = j;
+    }
+    Ecriture *e = &m->journal[m->nb_journal++];
+    e->c = 0;
+    e->objet = o;
+    e->index = (size_t)-1;
+    e->ancien_id = o->id;
+    e->etait_definie = 0;
+    o->id = id;
+}
+
 /* Rejoue le journal du plus récent au plus ancien. */
 static void annuler(Machine *m) {
     while (m->nb_journal) {
         Ecriture *e = &m->journal[--m->nb_journal];
+        if (e->objet && e->index == (size_t)-1) {
+            e->objet->id = e->ancien_id;
+            continue;
+        }
         if (e->objet) {
             Objet *o = e->objet;
             valeur_liberer(&o->champs[e->index]);
@@ -626,7 +613,6 @@ static char *ecrire_sur_le_disque(Machine *m) {
         }
     }
     if (erreur) while (k > 0) remove(m->a_ecrire[--k].chemin);
-    vider_ecritures(m);
     return erreur;
 }
 
@@ -834,11 +820,30 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         free(champs);
         free(types);
+        /* Table qui porte chaque champ : celle de la classe parente pour un champ hérité, la sienne sinon. */
+        c->proprietaires = grym_allouer((n ? n : 1) * sizeof *c->proprietaires);
+        for (size_t q = 0; q < n; q++)
+            c->proprietaires[q] = parent && q < parent->nb_champs ? parent->proprietaires[q] : c;
         ClasseVM **t = grym_allouer((m->nb_classes + 1) * sizeof *t);
         if (m->nb_classes) memcpy(t, m->classes, m->nb_classes * sizeof *t);
         free(m->classes);
         m->classes = t;
         m->classes[m->nb_classes++] = c;
+    }
+    /* Base des entités (§ 16.5, § 16.6) : ouverte au premier besoin, une transaction par exécution. */
+    int entites = 0;
+    for (size_t i = 0; i < m->nb_classes; i++) entites |= m->classes[i]->conserve;
+    if (entites) {
+        char *erreur = NULL;
+        if (!m->base) m->base = base_ouvrir(m->chemin_base, &erreur);
+        int pret = m->base && base_commencer(m->base, &erreur);
+        for (size_t i = m->nb_classes - module->nb_classes; pret && i < m->nb_classes; i++)
+            pret = base_preparer(m->base, m->classes[i], &erreur);
+        if (!pret) {
+            if (m->base) base_annuler(m->base);
+            diag->message = erreur;
+            return 0;
+        }
     }
     /* Enregistrement des formules (docs/vm.md, § 5) : une formule du même nom est remplacée. */
     size_t nb_avant = m->nb_formules;
@@ -1178,6 +1183,41 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&v);
             break;
         }
+        case I_CONSERVER:
+        case I_SUPPRIMER: {
+            Valeur v = depiler(&pile);
+            const char *verbe = code == I_CONSERVER ? "conserve" : "supprime";
+            char *probleme = NULL;
+            if (v.type != V_OBJET)
+                probleme = grym_formater("Seul un objet se %s : la valeur est %s.", verbe, nom_type(v.type));
+            else if (!v.objet->classe->conserve)
+                probleme = grym_formater("« %s » n'est pas une entité : ses objets ne se %s pas. "
+                                         "Déclarez « %s %s, %s, a : ».", v.objet->classe->nom,
+                                         code == I_CONSERVER ? "conservent" : "suppriment",
+                                         v.objet->classe->feminin ? "Une" : "Un", v.objet->classe->nom,
+                                         v.objet->classe->feminin ? "conservée" : "conservé");
+            else if (code == I_CONSERVER && v.objet->id) {
+                char *qui = article_classe(v.objet->classe);
+                qui[0] = (char)(qui[0] - 32);
+                probleme = grym_formater("%s déjà conservé%s ne se conserve pas deux fois.", qui,
+                                         v.objet->classe->feminin ? "e" : "");
+                free(qui);
+            } else if (code == I_SUPPRIMER && !v.objet->id) {
+                char *qui = article_classe(v.objet->classe);
+                qui[0] = (char)(qui[0] - 32);
+                probleme = grym_formater("%s qui n'est pas conservé%s ne se supprime pas.", qui,
+                                         v.objet->classe->feminin ? "e" : "");
+                free(qui);
+            } else if (code == I_CONSERVER) {
+                long id = 0;
+                if (base_conserver(m->base, v.objet, &id, &probleme)) ecrire_id(m, v.objet, id);
+            } else if (base_supprimer(m->base, v.objet, m->classes, m->nb_classes, &probleme)) {
+                ecrire_id(m, v.objet, 0);   /* l'objet reste en mémoire, mais n'est plus conservé */
+            }
+            valeur_liberer(&v);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
         case I_AUJOURDHUI:
             empiler(&pile, valeur_date(aujourdhui));   /* lue une fois, au début de l'exécution (§ 14.3) */
             break;
@@ -1197,6 +1237,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             o->epoques = grym_allouer(nc * sizeof *o->epoques);
             for (size_t q = 0; q < nc; q++) o->epoques[q] = m->epoque;   /* objet neuf : rien à journaliser */
             o->marque = 0;
+            o->id = 0;
             o->suivant = m->tas;
             m->tas = o;
             m->nb_objets++;
@@ -1269,6 +1310,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 if (code == I_ECRIRE_CHAMP) {
                     Valeur ob = depiler(&pile);
                     valeur_liberer(&ob);
+                    /* objet conservé : la base suit aussitôt, dans la transaction (§ 16.3) */
+                    char *erreur = NULL;
+                    if (o->id && !base_ecrire_champ(m->base, o, (size_t)k, &erreur)) {
+                        ok = echouer(diag, b, debut, erreur);
+                        break;
+                    }
                 }
             }
             break;
@@ -1344,6 +1391,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     for (size_t k = nb_cadres; k > 0; k--) liberer_cadre(&cadres[k - 1]);
     free(cadres);
     free(liaison_principale);
+    size_t ecrits = 0;
     if (ok && m->nb_a_ecrire) {
         /* écritures sur le disque, seulement si l'exécution a réussi (§ 15.2) */
         char *erreur = ecrire_sur_le_disque(m);
@@ -1351,6 +1399,20 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             ok = 0;
             diag->message = erreur;
             diag->ligne = diag->colonne = 0;
+        } else {
+            ecrits = m->nb_a_ecrire;
+        }
+    }
+    if (m->base) {
+        /* la base valide en dernier ; si elle échoue, les fichiers écrits sont retirés */
+        char *erreur = NULL;
+        if (ok && !base_valider(m->base, &erreur)) {
+            ok = 0;
+            diag->message = erreur;
+            diag->ligne = diag->colonne = 0;
+            for (size_t k = 0; k < ecrits; k++) remove(m->a_ecrire[k].chemin);
+        } else if (!ok) {
+            base_annuler(m->base);
         }
     }
     vider_ecritures(m);

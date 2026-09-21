@@ -493,6 +493,11 @@ static void phrase(Compilation *c, const Noeud *ph) {
         }
         return;
     }
+    case P_CONSERVER:
+    case P_SUPPRIMER:
+        expression(c, ph->enfants[0]);
+        emettre(c, ph->type == P_CONSERVER ? I_CONSERVER : I_SUPPRIMER, 0, ph->ligne, ph->colonne);
+        return;
     case P_ENREGISTRER:
         expression(c, ph->enfants[0]);
         expression(c, ph->enfants[1]);

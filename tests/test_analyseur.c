@@ -560,6 +560,14 @@ int main(void) {
     VE("Une chose datée a : une date (date).\nUn doc, conservé, est une chose datée.\nLe d vaut un nouveau doc :\n"
        "    La date vaut 3.", 4, 18, "Le champ « date » attend une date, pas un nombre.");
 
+    /* --- Conserver, supprimer (§ 16.3) --- */
+    V("Un client, conservé, a : un nom (texte).\nLe c vaut un nouveau client.\nConserver le c.\nSupprimer c.",
+      "(entité [client] [nom : texte])\n(créer [c] (nouveau [client]))\n(conserver [c])\n(supprimer [c])");
+    VE("Le f d'un x :\n    Conserver x.\n    Rendre 1.", 2, 5, "Un calcul ne conserve pas : faites-le dans une action.");
+    VE("Le f d'un x :\n    Supprimer x.\n    Rendre 1.", 2, 5, "Un calcul ne supprime pas");
+    VE("Pour conserver un x :\n    Afficher x.", 1, 6, "« conserver » commence une construction du langage");
+    VE("Conserver.", 1, 10, "Expression incomplète");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

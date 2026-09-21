@@ -15,3 +15,4 @@ test_base
 *.grymb
 .DS_Store
 exemples/copie.png
+*.grymd

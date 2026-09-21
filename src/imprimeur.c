@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.16), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.17), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -819,6 +819,13 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     }
     case P_SORTIR:
         aj(im, c ? "_sortir\n" : "Sortir de la boucle.\n");
+        return;
+    case P_CONSERVER:
+    case P_SUPPRIMER:
+        if (c) aj(im, n->type == P_CONSERVER ? "_conserver " : "_supprimer ");
+        else aj(im, n->type == P_CONSERVER ? "Conserver " : "Supprimer ");
+        expression(im, n->enfants[0]);
+        aj(im, c ? "\n" : ".\n");
         return;
     case P_ENREGISTRER:
         aj(im, c ? "_enregistrer " : "Enregistrer ");

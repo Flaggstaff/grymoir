@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.10).
+ * Spécification : docs/vm.md (révision 1.11).
  */
 #ifndef GRYM_BYTECODE_H
 #define GRYM_BYTECODE_H
@@ -40,10 +40,12 @@ typedef enum {
     I_ECRIRE_CHAMP,
     I_AUJOURDHUI,
     I_LIRE_FICHIER,
-    I_ENREGISTRER
+    I_ENREGISTRER,
+    I_CONSERVER,
+    I_SUPPRIMER
 } CodeInstruction;
 
-#define I_DERNIER I_ENREGISTRER
+#define I_DERNIER I_SUPPRIMER
 
 typedef enum { B_PROGRAMME = 0, B_CALCUL = 1, B_ACTION = 2 } SorteBloc;
 
@@ -104,7 +106,7 @@ void bloc_position(const Bloc *b, size_t decalage, int *ligne, int *colonne);
  * sinon 0 et un message à libérer dans *erreur. */
 int bloc_verifier(const Bloc *b, char **erreur);
 
-/* Instructions en clair, une par ligne (docs/vm.md, § 11). */
+/* Instructions en clair, une par ligne (docs/vm.md, § 12). */
 char *bloc_desassembler(const Bloc *b);
 
 /* Une classe déclarée dans le module (grammaire, § 13). */
@@ -140,7 +142,7 @@ void classe_typer_dernier_champ(ClasseModule *c, const char *type, int unique);
 void module_detruire(Module *m);          /* ignore les entrées mises à NULL */
 int module_verifier(const Module *m, char **erreur);
 
-/* Fichier .grymb (docs/vm.md, § 10). */
+/* Fichier .grymb (docs/vm.md, § 11). */
 unsigned char *module_serialiser(const Module *m, size_t *taille);
 Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur);   /* lit et vérifie */
 int est_fichier_bytecode(const unsigned char *donnees, size_t taille);
