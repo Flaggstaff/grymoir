@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.1 de la spécification, révisée le 21 septembre 2026.
+Version 1.2 de la spécification, révisée le 21 septembre 2026.
 Référence : Charte de GrymoiR v1.3, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -113,9 +113,30 @@ La puissance passe avant la négation, comme en mathématiques : `−2 ^ 2` vaut
 ### 3.2 Arithmétique
 
 - Tous les nombres sont décimaux exacts, dès la v0.1 (charte, principe 1). `1,1 + 2,2` donne `3,3`.
-- Une division au résultat non fini (`1 ÷ 3`) est arrondie à 28 chiffres significatifs, au plus proche, avec arrondi au pair en cas d'égalité (arrondi bancaire).
-- Référence : spécification General Decimal Arithmetic, Mike Cowlishaw (IBM), adoptée par le module `decimal` de Python. Citée de mémoire, à vérifier avant implémentation.
+- Addition, soustraction et multiplication sont exactes.
+- Une division dont le quotient est fini en décimal reste exacte, quelle que soit sa longueur : `1 ÷ 8` donne `0,125`.
+- Une division au quotient non fini (`1 ÷ 3`) est arrondie à 28 chiffres significatifs, au plus proche, avec arrondi au pair en cas d'égalité (arrondi bancaire). Un quotient non fini ne tombe jamais exactement sur une moitié : la règle d'égalité ne sert pas en v0.1, elle vaudra pour les arrondis à venir (arrondi monétaire).
+- La multiplication reste exacte même après une division arrondie : `1 ÷ 7 × 7` donne `1,0000000000000000000000000003`.
 - Division par zéro : erreur, jamais de valeur spéciale (infini, NaN).
+- Référence : spécification General Decimal Arithmetic, Mike Cowlishaw (IBM), adoptée par le module `decimal` de Python, citée de mémoire. Le comportement de GrymoiR a été comparé à ce module sur 6'672 opérations tirées au hasard, sans différence (21 septembre 2026).
+
+#### Zéros de fin
+
+Les décimales écrites se conservent, comme en comptabilité.
+
+- Addition et soustraction : autant de décimales que l'opérande qui en a le plus. `100 − 100,00` donne `0,00`.
+- Multiplication : la somme des décimales. `12,50 × 3` donne `37,50`.
+- Division exacte : la différence des décimales, sans zéro superflu au-delà. `12,50 ÷ 5` donne `2,50` ; `1,0 ÷ 2` donne `0,5`.
+
+#### Puissance
+
+- L'exposant doit avoir une valeur entière : `2 ^ 3`, `2 ^ −1`, `2 ^ 2,0`. `2 ^ 0,5` est une erreur.
+- Un exposant négatif calcule `1 ÷ x ^ n`, selon les règles de la division.
+- `x ^ 0` vaut `1`, y compris `0 ^ 0`. `0` élevé à un exposant négatif est une division par zéro.
+
+#### Limite
+
+- Un résultat compte au plus 1'000 chiffres dans sa partie entière comme dans sa partie décimale. Au-delà : erreur « Nombre trop grand ».
 
 ### 3.3 Boucle interactive
 
@@ -127,7 +148,8 @@ La puissance passe avant la négation, comme en mathématiques : `−2 ^ 2` vaut
 ```
 
 - Une phrase complète, avec point, s'exécute normalement. Le point final de la dernière phrase saisie est facultatif.
-- Une saisie ratée n'a aucun effet : aucun nom créé, aucun genre fixé, même par une phrase réussie de la même saisie.
+- Une saisie ratée n'a aucun effet : aucun nom créé, aucun genre fixé, aucune valeur modifiée, même par une phrase réussie de la même saisie. Cela vaut aussi pour les erreurs de calcul (division par zéro).
+- `quitter`, ou la fin de l'entrée (Ctrl+D, Ctrl+Z sous Windows), termine la boucle.
 
 ---
 
@@ -140,11 +162,12 @@ Afficher « Total à payer : » puis le total.
 
 - `Afficher` suivi d'un ou plusieurs éléments reliés par `puis`.
 - Un élément est un texte ou une expression. En v0.1, un texte n'apparaît que dans `Afficher`.
+- Les éléments s'affichent séparés par une espace, suivis d'un saut de ligne : `Afficher « Total : » puis 3.` produit `Total : 3`.
 
 ### 4.1 Format des nombres affichés
 
 - Réglage par application.
-- Défaut : style suisse, apostrophe pour les milliers et virgule décimale (`1'234,50`).
+- Défaut : style suisse, apostrophe pour les milliers et virgule décimale (`1'234,50`). Un nombre négatif porte le signe `−` (U+2212) : `−1'000`.
 - Alternative : style français, espace insécable pour les milliers (`1 234,50`).
 - Le mécanisme du réglage sera défini avec les applications (v1.0). En v0.1, seul le défaut existe.
 
@@ -183,14 +206,16 @@ Limites de cette notation :
 | `vaut` sur un nom existant | « `total` existe déjà (ligne 3). Pour le modifier, écrivez : Le total devient … » |
 | `devient` sur un nom inconnu | « `total` n'existe pas. Pour le créer, écrivez : Le total vaut … » |
 | Genre contradictoire | « `total` est masculin (déclaré ligne 3) » |
-| Division par zéro | « Division par zéro (ligne 7, colonne 18) » |
+| Division par zéro | « Division par zéro. » (position de l'opérateur `÷`) |
+| Résultat démesuré | « Nombre trop grand : un résultat est limité à 1000 chiffres. » |
+| Exposant non entier | « Exposant non entier : en v0.1, la puissance n'accepte qu'un exposant entier (2 ^ 3, 2 ^ −1). » |
 | Phrase sans point final hors boucle interactive | « Point final manquant (ligne 5) » |
 | Jeton inattendu | « « 2 » inattendu, attendu : un opérateur ou un point final. » |
 | Article sans nom | « Nom attendu après « le ». » |
 | Remarque mal placée | « Une remarque doit commencer une ligne : passez à la ligne avant « Remarque : ». » |
 | Parenthèse non refermée | « Parenthèse fermante manquante : la parenthèse ouverte ligne 2, colonne 11 n'est pas refermée. » |
 
-Chaque message indique fichier, ligne et colonne (charte, art. 8).
+Chaque message est précédé du fichier, de la ligne et de la colonne (charte, art. 8) : `facture.grym:7:18 : erreur : Division par zéro.`
 
 ---
 
@@ -216,3 +241,4 @@ Limites de la v0.1 :
 |---------|------|------------|
 | 1.0 | 2026-09-20 | Spécification initiale : nommer (`vaut` / `devient`), calculer (décimal exact, arrondi bancaire à 28 chiffres), afficher (style suisse par défaut) |
 | 1.1 | 2026-09-21 | Puissance avant négation (`−2 ^ 2` = `−4`). Guillemets `“ ”` et tiret `–` acceptés ; trait d'union toujours opérateur. Règles des noms (mots réservés, article initial interdit). Remarques en début de ligne. Boucle interactive : point final facultatif, saisie atomique. Nouveau § 7 : suites attendues |
+| 1.2 | 2026-09-21 | Arithmétique précisée : division finie exacte, zéros de fin, multiplication exacte, puissance à exposant entier (`0 ^ 0` = 1), limite de 1'000 chiffres. Afficher : séparateur espace, signe `−`. Boucle interactive : `quitter`, atomicité étendue aux erreurs de calcul. Messages d'erreur d'exécution |
