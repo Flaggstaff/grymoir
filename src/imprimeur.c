@@ -1,7 +1,8 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.11), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.14), § 11 et § 12.
  */
 #include "imprimeur.h"
+#include "date.h"
 #include "decimal.h"
 #include "texte.h"
 
@@ -332,6 +333,17 @@ static void expression(Impression *im, const Noeud *n) {
         }
         return;
     case N_SUJET:
+        return;
+    case N_DATE: {
+        long j = 0;
+        date_lire_iso(n->texte, &j);
+        char *t = date_suisse(j);   /* forme canonique : jour et mois sur deux chiffres (§ 14.1) */
+        aj(im, t);
+        free(t);
+        return;
+    }
+    case N_AUJOURDHUI:
+        aj(im, im->compact ? "_aujourd'hui" : "aujourd'hui");
         return;
     case N_CHAMP:
         if (im->compact) {

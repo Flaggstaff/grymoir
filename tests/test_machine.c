@@ -3,6 +3,7 @@
 #include "bytecode.h"
 #include "compilateur.h"
 #include "vm.h"
+#include "date.h"
 #include "texte.h"
 
 #include <stdio.h>
@@ -168,7 +169,7 @@ int main(void) {
     /* erreurs d'exécution */
     PROG("Le x vaut 3.\nSi x, afficher 1.", "ERREUR 2:4 Condition ni vraie ni fausse : la valeur est un nombre.");
     PROG("Le t vaut vrai.\nAfficher t + 1.", "~ADDITION impossible : un des opérandes est un booléen.");
-    PROG("Le t vaut vrai.\nLe u vaut faux.\nAfficher t < u.", "~Seuls deux nombres se comparent par ordre");
+    PROG("Le t vaut vrai.\nLe u vaut faux.\nAfficher t < u.", "~Seuls deux nombres ou deux dates se comparent par ordre");
     PROG("Le t vaut vrai.\nAfficher 1 = t.", "~Comparaison impossible entre un nombre et un booléen.");
     PROG("Le t vaut 3.\nAfficher t et vrai.", "~Condition ni vraie ni fausse");
 
@@ -336,6 +337,46 @@ int main(void) {
     PROG(APT_M "Un membre est une personne horodatée et numérotée.\n"
          "Pour décrire une chose horodatée :\n    Afficher 1.\nPour décrire une chose numérotée :\n    Afficher 2.\n"
          "Pour décrire un membre :\n    Afficher 3.\nLe m vaut un nouveau membre.\nDécrire m.", "3");
+
+    /* --- Dates (§ 14) --- */
+    PROG("La facture vaut 21.09.2026.\nL'échéance vaut facture + 30.\n"
+         "Afficher échéance puis échéance − facture puis facture − 5 puis 1 + facture.",
+         "21.10.2026 30 16.09.2026 22.09.2026");
+    PROG("Afficher 29.02.2024 + 365 puis 28.02.2023 + 1 puis 31.12.2026 + 1 puis 01.03.2024 − 1.",
+         "28.02.2025 01.03.2023 01.01.2027 29.02.2024");
+    PROG("Afficher 01.01.2027 − 01.01.2026 puis 01.01.2025 − 01.01.2024 puis 01.01.2026 − 21.09.2026.",
+         "365 366 −263");
+    PROG("Afficher 21.09.2026 + 3,00 puis 21.09.2026 < 22.09.2026 puis 21.09.2026 = 21.09.2026 puis 1.3.2026.",
+         "24.09.2026 vrai vrai 01.03.2026");
+    PROG("Pour chaque j de 30.12.2026 à 02.01.2027, afficher j.", "30.12.2026\n31.12.2026\n01.01.2027\n02.01.2027");
+    PROG("Pour chaque j de 03.01.2026 à 01.01.2026, afficher j.", "03.01.2026\n02.01.2026\n01.01.2026");
+    PROG("Pour chaque j de 01.01.2026 à 15.01.2026 par pas de 7, afficher j.", "01.01.2026\n08.01.2026\n15.01.2026");
+    PROG("Le jour vaut 14.07.2026.\nSelon jour :\n    Cas de 01.07.2026 à 31.08.2026, afficher « été ».\n"
+         "    Autrement, afficher « autre ».", "été");
+    PROG("Afficher aujourd'hui = aujourd'hui puis aujourd'hui > 01.01.2026.", "vrai vrai");
+    PROG("Afficher 21.09.2026 + 21.09.2026.", "ERREUR 1:21 On n'additionne pas deux dates.");
+    PROG("Afficher 21.09.2026 + 0,5.", "ERREUR 1:21 Une date se décale d'un nombre entier de jours.");
+    PROG("Afficher 31.12.9999 + 1.", "ERREUR 1:21 Date hors du calendrier : du 01.01.0001 au 31.12.9999.");
+    PROG("Afficher 01.01.0001 − 1.", "ERREUR 1:21 Date hors du calendrier : du 01.01.0001 au 31.12.9999.");
+    PROG("Afficher 21.09.2026 + 99999999.", "ERREUR 1:21 Une date se décale d'un nombre entier de jours.");
+    PROG("Afficher 3 − 21.09.2026.", "ERREUR 1:12 On ne soustrait pas une date d'un nombre.");
+    PROG("Afficher 21.09.2026 + « a ».", "ERREUR 1:21 ADDITION impossible entre une date et un texte.");
+    PROG("Afficher 21.09.2026 < 3.", "ERREUR 1:21 Comparaison impossible entre une date et un nombre.");
+    PROG("Afficher −21.09.2026.", "ERREUR 1:10 Opposé impossible : la valeur est une date.");
+    PROG("Répéter 21.09.2026 fois, afficher 1.",
+         "~Nombre de tours invalide : un entier positif ou nul est attendu, pas une date.");
+    {
+        total++;
+        char *attendu = date_suisse(date_aujourdhui());
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        char *r = executer_source(p, m, "Afficher aujourd'hui.", 0);
+        if (strcmp(r, attendu) != 0) signaler(__LINE__, "Afficher aujourd'hui.", attendu, r);
+        free(r);
+        free(attendu);
+        machine_detruire(m);
+        portee_detruire(p);
+    }
 
     /* --- Ramasse-miettes : cycles et objets abandonnés --- */
     {

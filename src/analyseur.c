@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.11), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.14), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -919,6 +919,20 @@ static Noeud *nouveau(Analyse *a) {
 
 static Noeud *base(Analyse *a) {
     Jeton *t = cour(a);
+    if (t->type == J_DATE) {
+        Noeud *n = feuille(N_DATE, t);
+        avancer(a);
+        return n;
+    }
+    if (t->type == J_ELISION && strcmp(t->valeur, "aujourd") == 0 && est_mot(voir(a, 1), "hui")) {
+        if (a->formule == 1)
+            return erreur(a, t, grym_dupliquer("Un calcul ne dépend pas du jour : passez la date en paramètre."));
+        Noeud *n = noeud_creer(N_AUJOURDHUI, t->ligne, t->colonne, t->debut);
+        avancer(a);
+        n->fin = fin_jeton(cour(a));
+        avancer(a);
+        return n;
+    }
     if ((est_mot(t, "un") || est_mot(t, "une")) && est_nouveau(voir(a, 1))) return nouveau(a);
     if (a->article_force != ART_AUCUN && !debut_de_nom(a, a->i) && article_de(t) == ART_AUCUN) {
         char *x = texte_jeton(a->jeton_force);

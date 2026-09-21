@@ -487,6 +487,16 @@ int main(void) {
       "(classe [membre] (est [personne]) «horodatée» «numérotée»)\n(action [décrire] ([chose]) (bloc (afficher 1)))\n"
       "(action [décrire] ([chose]) (bloc (afficher 2)))\n(action [décrire] ([membre]) (bloc (afficher 3)))");
 
+    /* --- Dates (§ 14) --- */
+    V("Le jour vaut 21.09.2026 + 30.", "(créer [jour] (+ (date 2026-09-21) 30))");
+    V("Si aujourd'hui > 01.01.2026, afficher aujourd'hui.",
+      "(si (> aujourd'hui (date 2026-01-01)) (bloc (afficher aujourd'hui)))");
+    V("Pour chaque j du 01.01.2026 au 03.01.2026, afficher j.",
+      "(pour-chaque [j] (date 2026-01-01) (date 2026-01-03) (bloc (afficher [j])))");
+    VE("Le délai d'une date vaut aujourd'hui − date.", 1, 26,
+       "Un calcul ne dépend pas du jour : passez la date en paramètre.");
+    VE("Le jour vaut 30.02.2026.", 1, 14, "Le 30 février 2026 n'existe pas.");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

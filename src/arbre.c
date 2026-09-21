@@ -193,6 +193,14 @@ static void decrire(const Noeud *n, Chaine *c) {
         }
         chaine_ajouter(c, ")");
         return;
+    case N_DATE:
+        chaine_ajouter(c, "(date ");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, ")");
+        return;
+    case N_AUJOURDHUI:
+        chaine_ajouter(c, "aujourd'hui");
+        return;
     case N_CHAMP:
         chaine_ajouter(c, "(champ [");
         chaine_ajouter(c, n->texte);

@@ -1,9 +1,11 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.7).
+ * Spécification : docs/vm.md (révision 1.8).
  */
 #include "vm.h"
+#include "date.h"
 #include "decimal.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -11,7 +13,7 @@
 /* Valeurs (docs/vm.md, § 2)                                        */
 /* ---------------------------------------------------------------- */
 
-typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET } TypeValeur;
+typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET, V_DATE } TypeValeur;
 
 struct Objet;
 
@@ -21,6 +23,7 @@ typedef struct {
     char *texte;
     int vrai;
     struct Objet *objet;   /* référence : l'objet appartient au tas, pas à la valeur */
+    long jours;            /* date : jours depuis le 01.01.1970 (date.h) */
 } Valeur;
 
 /* Classe connue de la machine (grammaire, § 13). */
@@ -46,7 +49,8 @@ typedef struct Objet {
 } Objet;
 
 static const char *nom_type(TypeValeur t) {
-    return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen" : "un objet";
+    return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen"
+         : t == V_DATE ? "une date" : "un objet";
 }
 
 static Valeur valeur_copier(const Valeur *v) {
@@ -56,6 +60,7 @@ static Valeur valeur_copier(const Valeur *v) {
     r.texte = v->type == V_TEXTE ? grym_dupliquer(v->texte) : NULL;
     r.vrai = v->vrai;
     r.objet = v->objet;
+    r.jours = v->jours;
     return r;
 }
 
@@ -72,7 +77,42 @@ static Valeur valeur_nombre(Decimal d) {
     v.texte = NULL;
     v.vrai = 0;
     v.objet = NULL;
+    v.jours = 0;
     return v;
+}
+
+static Valeur valeur_date(long jours) {
+    Valeur v = valeur_nombre(dec_zero());
+    v.type = V_DATE;
+    v.jours = jours;
+    return v;
+}
+
+/* Nombre entier de jours, borné à la largeur du calendrier ; 0 sinon. */
+static int dec_en_jours(const Decimal *d, long *r) {
+    if (!dec_est_entier(d)) return 0;
+    Decimal borne = dec_depuis_canonique("3652059");
+    Decimal inf = dec_negation(&borne);
+    int dedans = dec_comparer(d, &borne) <= 0 && dec_comparer(d, &inf) >= 0;
+    dec_liberer(&borne);
+    dec_liberer(&inf);
+    if (!dedans) return 0;
+    long v = 0;
+    for (size_t i = 0; i < d->n; i++) {
+        long rang = (long)i + d->exp;
+        if (rang < 0) continue;                 /* décimales nulles d'un entier (« 3,00 ») */
+        long q = 1;
+        for (long e = 0; e < rang; e++) q *= 10;
+        v += d->ch[i] * q;
+    }
+    *r = d->negatif ? -v : v;
+    return 1;
+}
+
+static Decimal dec_depuis_long(long v) {
+    char t[32];
+    snprintf(t, sizeof t, "%ld", v);
+    return dec_depuis_canonique(t);
 }
 
 static Valeur valeur_booleen(int vrai) {
@@ -589,6 +629,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     if (m->seuil == 0) m->seuil = SEUIL_RAMASSAGE;
 
     m->epoque++;
+    long aujourdhui = date_aujourdhui();
     const Bloc *principal = module->blocs[0];
     size_t *liaison_principale = lier(m, principal);
     Cadre *cadres = grym_allouer(8 * sizeof *cadres);
@@ -635,6 +676,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             Valeur v;
             if (k->type == C_NOMBRE) {
                 v = valeur_nombre(dec_depuis_canonique(k->texte));
+            } else if (k->type == C_DATE) {
+                long j = 0;
+                date_lire_iso(k->texte, &j);   /* vérifiée au chargement */
+                v = valeur_date(j);
             } else if (k->type == C_BOOLEEN) {
                 v = valeur_booleen(strcmp(k->texte, "vrai") == 0);
             } else {
@@ -672,6 +717,40 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_ADDITION: case I_SOUSTRACTION: case I_MULTIPLICATION:
         case I_DIVISION: case I_PUISSANCE: {
             Valeur vb = depiler(&pile), va = depiler(&pile);
+            if ((va.type == V_DATE || vb.type == V_DATE) && (code == I_ADDITION || code == I_SOUSTRACTION)) {
+                /* date ± jours, jours + date, date − date (§ 14.2) */
+                char *probleme = NULL;
+                Valeur r = valeur_nombre(dec_zero());
+                long j = 0;
+                if (va.type == V_DATE && vb.type == V_DATE) {
+                    if (code == I_ADDITION) probleme = grym_dupliquer("On n'additionne pas deux dates.");
+                    else { dec_liberer(&r.nombre); r = valeur_nombre(dec_depuis_long(va.jours - vb.jours)); }
+                } else {
+                    const Valeur *d = va.type == V_DATE ? &va : &vb, *x = va.type == V_DATE ? &vb : &va;
+                    if (x->type != V_NOMBRE)
+                        probleme = grym_formater("%s impossible entre une date et %s.", instruction_nom(code),
+                                                 nom_type(x->type));
+                    else if (code == I_SOUSTRACTION && vb.type == V_DATE)
+                        probleme = grym_dupliquer("On ne soustrait pas une date d'un nombre.");
+                    else if (!dec_en_jours(&x->nombre, &j))
+                        probleme = grym_dupliquer("Une date se décale d'un nombre entier de jours.");
+                    else {
+                        long n = code == I_ADDITION ? d->jours + j : d->jours - j;
+                        if (n < DATE_MIN || n > DATE_MAX)
+                            probleme = grym_dupliquer("Date hors du calendrier : du 01.01.0001 au 31.12.9999.");
+                        else { valeur_liberer(&r); r = valeur_date(n); }
+                    }
+                }
+                valeur_liberer(&va);
+                valeur_liberer(&vb);
+                if (probleme) {
+                    valeur_liberer(&r);
+                    ok = echouer(diag, b, debut, probleme);
+                    break;
+                }
+                empiler(&pile, r);
+                break;
+            }
             if (va.type != V_NOMBRE || vb.type != V_NOMBRE) {
                 valeur_liberer(&va);
                 valeur_liberer(&vb);
@@ -707,6 +786,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     chaine_ajouter(sortie, v->texte);
                 } else if (v->type == V_BOOLEEN) {
                     chaine_ajouter(sortie, v->vrai ? "vrai" : "faux");
+                } else if (v->type == V_DATE) {
+                    char *t = date_suisse(v->jours);
+                    chaine_ajouter(sortie, t);
+                    free(t);
                 } else if (v->type == V_OBJET) {
                     char *t = article_classe(v->objet->classe);
                     chaine_ajouter(sortie, t);
@@ -726,14 +809,15 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             Valeur vb = depiler(&pile), va = depiler(&pile);
             int egalite = code == I_EGAL || code == I_DIFFERENT;
             int resultat = 0;
-            if (va.type != vb.type || (!egalite && va.type != V_NOMBRE)) {
+            if (va.type != vb.type || (!egalite && va.type != V_NOMBRE && va.type != V_DATE)) {
                 ok = echouer(diag, b, debut, va.type != vb.type
                     ? grym_formater("Comparaison impossible entre %s et %s.",
                                     nom_type(va.type), nom_type(vb.type))
-                    : grym_formater("Seuls deux nombres se comparent par ordre : la valeur est %s.",
+                    : grym_formater("Seuls deux nombres ou deux dates se comparent par ordre : la valeur est %s.",
                                     nom_type(va.type)));
-            } else if (va.type == V_NOMBRE) {
-                int c = dec_comparer(&va.nombre, &vb.nombre);
+            } else if (va.type == V_NOMBRE || va.type == V_DATE) {
+                int c = va.type == V_DATE ? (va.jours > vb.jours) - (va.jours < vb.jours)
+                                          : dec_comparer(&va.nombre, &vb.nombre);
                 resultat = code == I_EGAL ? c == 0 : code == I_DIFFERENT ? c != 0
                          : code == I_INFERIEUR ? c < 0 : code == I_SUPERIEUR ? c > 0
                          : code == I_INFERIEUR_OU_EGAL ? c <= 0 : c >= 0;
@@ -772,8 +856,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_EXIGER_ENTIER_NATUREL: {
             Valeur *x = &pile.v[pile.n - 1];
             if (x->type != V_NOMBRE || x->nombre.negatif || !dec_est_entier(&x->nombre)) {
-                char *v = x->type == V_NOMBRE ? dec_formater(&x->nombre)
-                                              : grym_dupliquer(x->type == V_TEXTE ? "un texte" : "un booléen");
+                char *v = x->type == V_NOMBRE ? dec_formater(&x->nombre) : grym_dupliquer(nom_type(x->type));
                 ok = echouer(diag, b, debut, grym_formater(
                     "Nombre de tours invalide : un entier positif ou nul est attendu, pas %s.", v));
                 free(v);
@@ -791,6 +874,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&v);
             break;
         }
+        case I_AUJOURDHUI:
+            empiler(&pile, valeur_date(aujourdhui));   /* lue une fois, au début de l'exécution (§ 14.3) */
+            break;
         case I_NOUVEAU: {
             const ClasseVM *cl = classe_vm(m, b->noms[op]);
             if (!cl) {

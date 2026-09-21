@@ -234,6 +234,27 @@ int main(void) {
     VP("Remarque : a\nLe x", 1, 2, 1);
     VP("x 3.5", 1, 1, 3);
 
+    /* --- Dates (§ 14.1) --- */
+    V("Le jour vaut 21.09.2026.", "MOT(le) MOT(jour) MOT(vaut) DATE(2026-09-21) POINT");
+    V("1.3.2026", "DATE(2026-03-01)");
+    V("29.02.2024 31.12.9999 01.01.0001", "DATE(2024-02-29) DATE(9999-12-31) DATE(0001-01-01)");
+    V("21.09.2026+1", "DATE(2026-09-21) PLUS NOMBRE(1)");
+    VM("31.02.2026", "Le 31 février 2026 n'existe pas.");
+    VM("29.02.2025", "Le 29 février 2025 n'existe pas.");
+    VM("29.02.1900", "Le 29 février 1900 n'existe pas.");
+    V("29.02.2000", "DATE(2000-02-29)");
+    VM("21.13.2026", "Mois 13 impossible");
+    VM("00.01.2026", "Jour 0 impossible");
+    VM("01.01.0000", "Année 0 hors du calendrier");
+    VM("21.9.26", "Date mal formée « 21.9.26 »");
+    VM("021.09.2026", "Date mal formée");
+    VM("21.09.20266", "Date mal formée");
+    VM("21.09", "ajoutez l'année : 21.09.2026");
+    VM("3.5", "Écrivez « 3,5 », ou, pour une date");
+    VM("1234.5", "Écrivez « 1234,5 ».");
+    VP("Le x vaut 21.09.2026.", 3, 1, 11);
+    VP("Le x vaut 21.09.2026.", 4, 1, 21);
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

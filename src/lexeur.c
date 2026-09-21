@@ -1,7 +1,8 @@
 /* GrymoiR : lexeur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.11), § 1.
+ * Spécification : docs/grammaire.md (révision 1.14), § 1.
  */
 #include "lexeur.h"
+#include "date.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -253,7 +254,7 @@ const char *type_jeton_nom(TypeJeton t) {
         "FIN", "MOT", "ÉLISION", "NOMBRE", "TEXTE", "PLUS", "MOINS", "FOIS",
         "DIVISE", "PUISSANCE", "PAR_OUV", "PAR_FERM", "POINT", "VIRGULE",
         "DEUX_POINTS", "REMARQUE", "ÉGAL", "DIFFÉRENT", "INFÉRIEUR", "SUPÉRIEUR",
-        "INFÉRIEUR_OU_ÉGAL", "SUPÉRIEUR_OU_ÉGAL", "CROCHETS", "ARTICLE_IMPLICITE", "MOT_CLÉ",
+        "INFÉRIEUR_OU_ÉGAL", "SUPÉRIEUR_OU_ÉGAL", "CROCHETS", "DATE", "ARTICLE_IMPLICITE", "MOT_CLÉ",
         "AFFECTE", "POINT_VIRGULE", "ERREUR"
     };
     return (t >= J_FIN && t <= J_ERREUR) ? NOMS[t] : "?";
@@ -398,6 +399,38 @@ static Jeton lire_nombre(Lexeur *lx, size_t debut, int ligne, int col) {
             return echec(lx, debut, ligne, col, m);
         }
     } else if (voir(lx, 0) == '.' && reste(lx, 1) && est_chiffre(voir(lx, 1))) {
+        /* Date « 21.09.2026 » (§ 14.1) : trois groupes de chiffres séparés par des points. */
+        size_t k = 1, g2 = 0, g3 = 0;
+        while (reste(lx, k) && est_chiffre(voir(lx, k))) { k++; g2++; }
+        if (reste(lx, k + 1) && voir(lx, k) == '.' && est_chiffre(voir(lx, k + 1))) {
+            size_t q = k + 1;
+            while (reste(lx, q) && est_chiffre(voir(lx, q))) { q++; g3++; }
+            int colle = reste(lx, q) && est_lettre(voir(lx, q));
+            size_t g1 = strlen(t.d ? t.d : "");
+            int jour = atoi(t.d ? t.d : "0");
+            free(t.d);
+            size_t fin = lx->pos + q;
+            if (separateur_vu || g1 > 2 || g2 > 2 || g3 != 4 || colle) {
+                while (lx->pos < fin) avancer(lx);
+                char *texte = extrait(lx, debut, lx->pos);
+                char *m = formater("Date mal formée « %s » : écrivez jour.mois.année, "
+                                   "l'année sur quatre chiffres (21.09.2026).", texte);
+                free(texte);
+                return echec(lx, debut, ligne, col, m);
+            }
+            avancer(lx);
+            int mois = 0, annee = 0;
+            while (est_chiffre(voir(lx, 0))) { mois = mois * 10 + (int)(voir(lx, 0) - '0'); avancer(lx); }
+            avancer(lx);
+            while (lx->pos < fin) { annee = annee * 10 + (int)(voir(lx, 0) - '0'); avancer(lx); }
+            char *probleme = NULL;
+            if (!date_verifier(annee, mois, jour, &probleme)) {
+                char *m = formater("%s", probleme);
+                free(probleme);
+                return echec(lx, debut, ligne, col, m);
+            }
+            return faire(lx, J_DATE, debut, ligne, col, date_iso(date_jours(annee, mois, jour)));
+        }
         /* Point décimal à l'anglaise : erreur avec correction. */
         free(t.d);
         avancer(lx);
@@ -405,8 +438,10 @@ static Jeton lire_nombre(Lexeur *lx, size_t debut, int ligne, int col) {
         char *texte = extrait(lx, debut, lx->pos);
         char *correction = extrait(lx, debut, lx->pos);
         for (char *p = correction; *p; p++) if (*p == '.') *p = ',';
+        int court = strlen(texte) <= 5;   /* « 21.09 » : peut-être une date sans année */
         char *m = formater("« %s » : en GrymoiR, la virgule sert de séparateur décimal. "
-                           "Écrivez « %s ».", texte, correction);
+                           "Écrivez « %s »%s", texte, correction,
+                           court ? ", ou, pour une date, ajoutez l'année : 21.09.2026." : ".");
         free(texte);
         free(correction);
         return echec(lx, debut, ligne, col, m);
@@ -531,6 +566,11 @@ static Jeton lire_compact(Lexeur *lx, size_t debut, int ligne, int col) {
         } else if (est_apostrophe(c)) {
             tampon_octet(&t, '\'');
             avancer(lx);
+            if (cle && t.n == 8 && memcmp(t.d, "aujourd'", 8) == 0 && voir(lx, 0) == 'h'
+                && voir(lx, 1) == 'u' && voir(lx, 2) == 'i') {
+                for (int q = 0; q < 3; q++) { tampon_octet(&t, (unsigned char)voir(lx, 0)); avancer(lx); }
+                break;                                        /* « _aujourd'hui » */
+            }
             if (cle) break;                                   /* « _l' » */
             if (!reste(lx, 0) || !est_lettre(voir(lx, 0))) {
                 free(t.d);

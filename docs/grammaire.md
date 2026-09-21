@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.13 de la spécification, révisée le 21 septembre 2026. Les § 14 à 16 (v0.3) sont validés, pas encore implémentés.
+Version 1.14 de la spécification, révisée le 21 septembre 2026. Le § 14 (dates) est implémenté ; les § 15 et 16 sont validés, pas encore implémentés.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -320,7 +320,7 @@ expression   = terme { ( "+" | "−" ) terme } ;
 terme        = unaire { ( "×" | "÷" ) unaire } ;
 unaire       = "−" unaire | puissance ;
 puissance    = base [ "^" unaire ] ;
-base         = nombre | texte | nouveau | champ
+base         = nombre | texte | date | "aujourd'hui" | nouveau | champ
              | [ article ] ( nom | "[" nom "]" ) [ arguments ] | "(" expression ")" ;
 nouveau      = ( "un" ( "nouveau" | "nouvel" ) | "une" "nouvelle" ) nom ;
 champ        = [ article ] nom de base ;          (* nom : un champ déclaré dans une classe *)
@@ -373,6 +373,12 @@ Limites de cette notation :
 | Hors d'une boucle | « « Sortir de la boucle » hors d'une boucle. » |
 | Cas après Autrement | « « Autrement » vient après tous les cas. » |
 | Interruption (exécution) | « Interrompu (Ctrl+C). » |
+| Date impossible | « Le 31 février 2026 n'existe pas. » |
+| Date mal écrite | « Date mal formée « 21.9.26 » : écrivez jour.mois.année, l'année sur quatre chiffres (21.09.2026). » |
+| Deux dates additionnées (exécution) | « On n'additionne pas deux dates. » |
+| Décalage non entier (exécution) | « Une date se décale d'un nombre entier de jours. » |
+| Hors du calendrier (exécution) | « Date hors du calendrier : du 01.01.0001 au 31.12.9999. » |
+| `aujourd'hui` dans un calcul | « Un calcul ne dépend pas du jour : passez la date en paramètre. » |
 | Classe inconnue | « Classe « fournisseur » inconnue. » |
 | Champ hérité redéclaré | « « nom » est déjà un champ hérité de « personne ». » |
 | Version en double | « « saluer » existe déjà pour « personne ». » |
@@ -764,6 +770,9 @@ La date d'inscription du membre devient 21.09.2026.
 
 - Ajouter des mois ou des années est reporté : « le 31 janvier plus un mois » n'a pas de réponse évidente.
 - Toute autre opération est une erreur à l'exécution : « On n'additionne pas deux dates. »
+- `jours + date` vaut `date + jours`. Le décalage accepte `3,00`, pas `2,5`.
+- Les boucles et `Selon` acceptent les dates : `Pour chaque jour du 01.01.2026 au 31.01.2026` avance d'un jour, `par pas de 7` d'une semaine ; `Cas de 01.07.2026 à 31.08.2026` teste un intervalle.
+- Vérification (21 septembre 2026) : les 3 652 059 jours du calendrier et 2 951 opérations tirées au hasard donnent les mêmes résultats que le module `datetime` de Python.
 
 ### 14.3 `aujourd'hui`
 
@@ -955,3 +964,4 @@ La charte 1.9 reprend ce paragraphe : transaction par exécution (art. 7), typag
 | 1.11 | 2026-09-21 | § 13.7 : aptitudes (adjectifs, formes masculines, adoption accordée, champs apportés, versions d'aptitude, ordre de choix, conflits tranchés par la classe) ; § 13.8 : suites |
 | 1.12 | 2026-09-21 | Proposition soumise à relecture : § 14 dates, § 15 fichiers et images, § 16 entités (déclaration, typage strict, conserver, retrouver, base, transaction, migrations, forme compacte, écarts avec la charte) |
 | 1.13 | 2026-09-21 | § 14 à 16 validés. Un calcul ne lit pas la base (§ 16.4). § 16.9 : accord avec la charte 1.9 |
+| 1.14 | 2026-09-21 | § 14 implémenté ; dates dans les boucles et `Selon` ; messages d'erreur des dates |

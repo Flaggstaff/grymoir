@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.7).
+ * Spécification : docs/vm.md (révision 1.8).
  */
 #ifndef GRYM_BYTECODE_H
 #define GRYM_BYTECODE_H
@@ -37,14 +37,15 @@ typedef enum {
     I_NOUVEAU,
     I_INITIALISER_CHAMP,
     I_LIRE_CHAMP,
-    I_ECRIRE_CHAMP
+    I_ECRIRE_CHAMP,
+    I_AUJOURDHUI
 } CodeInstruction;
 
-#define I_DERNIER I_ECRIRE_CHAMP
+#define I_DERNIER I_AUJOURDHUI
 
 typedef enum { B_PROGRAMME = 0, B_CALCUL = 1, B_ACTION = 2 } SorteBloc;
 
-typedef enum { C_NOMBRE = 1, C_TEXTE = 2, C_BOOLEEN = 3 } TypeConstante;
+typedef enum { C_NOMBRE = 1, C_TEXTE = 2, C_BOOLEEN = 3, C_DATE = 4 } TypeConstante;   /* date : « 2026-09-21 » */
 
 typedef struct {
     TypeConstante type;

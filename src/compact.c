@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.11), § 11.
+ * Spécification : docs/grammaire.md (révision 1.14), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -182,6 +182,11 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                 k = q - 1;
                 continue;
             }
+        }
+        if (est_cle(t, "aujourd'hui")) {            /* _aujourd'hui → aujourd'hui */
+            emettre(r, J_ELISION, "aujourd", t, 1);
+            mot(r, "hui", t);
+            continue;
         }
         if (est_cle(t, "nouveau")) {
             if (k + 1 >= f || r->e[k + 1].type != J_CROCHETS) {

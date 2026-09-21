@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.11), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.14), § 11 et § 12.
  *
  * L'arbre retient presque tout ce que la forme littéraire exprime (articles,
  * crochets, tournures en mots ou en symboles, contractions, formes courtes) :

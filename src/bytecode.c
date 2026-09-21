@@ -1,7 +1,8 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.7).
+ * Spécification : docs/vm.md (révision 1.8).
  */
 #include "bytecode.h"
+#include "date.h"
 #include "decimal.h"
 #include "texte.h"
 
@@ -140,6 +141,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_INITIALISER_CHAMP: return "INITIALISER_CHAMP";
     case I_LIRE_CHAMP:     return "LIRE_CHAMP";
     case I_ECRIRE_CHAMP:   return "ÉCRIRE_CHAMP";
+    case I_AUJOURDHUI:     return "AUJOURD'HUI";
     }
     return "INCONNUE";
 }
@@ -263,7 +265,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                 break;
             case I_RENDRE: besoin = 1; break;
             case I_EXIGER_ENTIER_NATUREL: besoin = 1; break;
-            case I_NOUVEAU: effet = 1; break;
+            case I_NOUVEAU: case I_AUJOURDHUI: effet = 1; break;
             case I_INITIALISER_CHAMP: besoin = 2; effet = -1; break;
             case I_LIRE_CHAMP: besoin = 1; break;
             case I_ECRIRE_CHAMP: besoin = 2; effet = -2; break;
@@ -327,6 +329,9 @@ int bloc_verifier(const Bloc *b, char **erreur) {
         const Constante *k = &b->constantes[i];
         if (k->type == C_NOMBRE && !dec_canonique_valide(k->texte))
             return refuser(erreur, grym_formater("constante %lu : nombre mal formé.", (unsigned long)i));
+        long jours;
+        if (k->type == C_DATE && !date_lire_iso(k->texte, &jours))
+            return refuser(erreur, grym_formater("constante %lu : date invalide.", (unsigned long)i));
         if (k->type == C_BOOLEEN && strcmp(k->texte, "vrai") != 0 && strcmp(k->texte, "faux") != 0)
             return refuser(erreur, grym_formater("constante %lu : booléen mal formé.", (unsigned long)i));
     }
@@ -337,8 +342,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 9)                                 */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 7   /* versions 1 à 6 restent lisibles : un seul bloc (1, 2), sans classes (3),
-                              sans héritage (4), sans méthodes (5), sans aptitudes (6) */
+#define VERSION_FORMAT 8   /* versions 1 à 7 restent lisibles : un seul bloc (1, 2), sans classes (3),
+                              sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -478,7 +483,7 @@ static char *lire_chaine(Lecture *l) {
 }
 
 /* Constantes, noms, code et positions d'un bloc. Renvoie NULL ou un message d'erreur. */
-static char *lire_corps(Lecture *l, Bloc *b) {
+static char *lire_corps(Lecture *l, Bloc *b, uint32_t version) {
     size_t taille = l->n;
     uint32_t nc = lire_u(l, 4);
     if (l->echec || nc > (taille - l->pos) / 5) return grym_dupliquer("table des constantes tronquée.");
@@ -486,7 +491,7 @@ static char *lire_corps(Lecture *l, Bloc *b) {
     for (uint32_t i = 0; i < nc; i++) {
         uint32_t type = lire_u(l, 1);
         char *t = lire_chaine(l);
-        if (!t || (type != C_NOMBRE && type != C_TEXTE && type != C_BOOLEEN)) {
+        if (!t || (type != C_NOMBRE && type != C_TEXTE && type != C_BOOLEEN && (type != C_DATE || version < 8))) {
             free(t);
             return grym_formater("constante %u illisible.", (unsigned)i);
         }
@@ -569,7 +574,7 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
             if (*nom) b->nom = nom;
             else free(nom);
         }
-        char *detail = lire_corps(&l, b);
+        char *detail = lire_corps(&l, b, version);
         if (detail) return echec_module(m, erreur, detail);
     }
     if (version >= 4) {
@@ -772,6 +777,9 @@ char *bloc_desassembler(const Bloc *b) {
                 dec_liberer(&d);
             } else if (k->type == C_BOOLEEN) {
                 commentaire = grym_dupliquer(k->texte);
+            } else if (k->type == C_DATE) {
+                long j = 0;
+                commentaire = date_lire_iso(k->texte, &j) ? date_suisse(j) : grym_dupliquer(k->texte);
             } else {
                 commentaire = grym_formater("« %s »", k->texte);
             }

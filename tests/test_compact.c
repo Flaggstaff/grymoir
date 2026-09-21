@@ -159,6 +159,11 @@ int main(void) {
                  "Une chose active (actif) a :\n    un état.\nUne personne a :\n    un nom.\n"
                  "Un employé est une personne.\nUn cadre est un employé actif.\n");
 
+    EXEC("_la f << 21.09.2026\n_afficher f + 30 ; _aujourd'hui = _aujourd'hui ; 01.01.2027 − f\n",
+         "21.10.2026 vrai 102\n");
+    ALLER_RETOUR("_le jour << 01.03.2026\n_si _aujourd'hui > jour _alors\n    _afficher jour − 01.01.2026\n_fin\n",
+                 "Le jour vaut 01.03.2026.\nSi aujourd'hui > jour :\n    Afficher jour − 01.01.2026.\n");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

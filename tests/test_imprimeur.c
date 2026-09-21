@@ -136,6 +136,12 @@ int main(void) {
          "_classe _une personne\n    _un nom\n_fin\n_classe _un membre _est _une personne\n_fin\n"
          "_classe _un invité _est _une personne\n    _un hôte\n_fin\n");
 
+    /* --- Dates (§ 14) --- */
+    LITT("Le jour vaut 1.3.2026 + 30.\nSi aujourd'hui > jour, afficher 21.9.2026.",
+         "Le jour vaut 01.03.2026 + 30.\nSi aujourd'hui > jour, afficher 21.09.2026.\n");
+    COMP("Le jour vaut 1.3.2026.\nSi aujourd'hui > jour, afficher jour + 1.",
+         "_le jour << 01.03.2026\n_si _aujourd'hui > jour _alors\n    _afficher jour + 1\n_fin\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

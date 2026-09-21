@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.7 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.11, § 5, § 9, § 10 et § 13.
+Version 1.8 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.14, § 5, § 9, § 10, § 13 et § 14.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -28,6 +28,7 @@ Règle de nommage : instructions, outils et messages s'écrivent en toutes lettr
 | texte | chaîne UTF-8 |
 | booléen | vrai ou faux |
 | objet | référence vers un objet du tas : sa classe et ses champs |
+| date | jour du calendrier grégorien, du 01.01.0001 au 31.12.9999 (grammaire, § 14) |
 
 Copier une valeur objet copie la référence, jamais l'objet. L'absence de valeur s'ajoutera avec les constructions qui en ont besoin.
 
@@ -69,6 +70,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 28 | `INITIALISER_CHAMP` | nom de champ | dépile une valeur, la range dans l'objet au sommet (qui reste) |
 | 29 | `LIRE_CHAMP` | nom de champ | remplace l'objet au sommet par la valeur de son champ |
 | 30 | `ÉCRIRE_CHAMP` | nom de champ | dépile une valeur, puis un objet ; range la valeur dans le champ |
+| 31 | `AUJOURD'HUI` | aucun | empile la date du jour, lue une fois au début de l'exécution |
 
 ### 3.1 Boucles et Selon
 
@@ -99,7 +101,8 @@ Pour chaque i de a à b       a → i ; b → fin ; pas (écrit, ou ±1 selon a 
 - Une phrase `Afficher` à n éléments compile en `AFFICHER n`. Dans la boucle interactive, une expression seule compile en `AFFICHER 1`.
 - La création et la modification compilent toutes deux en `ÉCRIRE` : la distinction entre `vaut` et `devient` se vérifie à la compilation (grammaire, § 2.1).
 - `est positif`, `est négatif`, `est nul` compilent en une comparaison avec la constante 0 ; `est vrai`, `est faux` en `ÉGAL` avec une constante booléenne ; `n'est pas` ajoute `NON`.
-- Les comparaisons d'ordre n'acceptent que deux nombres ; `ÉGAL` et `DIFFÉRENT` acceptent deux valeurs du même type. Sinon : erreur d'exécution.
+- Les comparaisons d'ordre n'acceptent que deux nombres ou deux dates ; `ÉGAL` et `DIFFÉRENT` acceptent deux valeurs du même type. Sinon : erreur d'exécution.
+- `ADDITION` accepte une date et un nombre entier de jours, dans les deux ordres ; `SOUSTRACTION`, une date moins des jours (une date) ou deux dates (un nombre de jours). Un résultat hors du calendrier est une erreur.
 - `SAUTER_SI_FAUX` exige un booléen : « Condition ni vraie ni fausse : la valeur est un nombre. »
 - Les instructions de champ désignent la classe et le champ par leur nom, résolu à l'exécution : la machine vérifie que la valeur est un objet et que sa classe a ce champ. `ÉGAL` compare deux objets par identité.
 - Héritage et aptitudes : à l'enregistrement d'une classe, la machine place les champs hérités en tête, puis ceux des aptitudes dans l'ordre d'adoption, puis les champs propres. Un champ garde ainsi le même rang dans toute la lignée. La classe parente et les aptitudes doivent être connues (déclarées plus tôt dans le module, ou par un module précédent) ; aucun champ n'est fourni deux fois. Sinon, le module est refusé avant toute exécution.
@@ -170,7 +173,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 7
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 8
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -178,7 +181,7 @@ blocs         nombre : u32, puis pour chacun :
                 paramètres : u16, cases locales : u16
                 puis constantes, noms, code et positions :
 constantes    nombre : u32, puis pour chacune :
-                type : u8 (1 = nombre, 2 = texte, 3 = booléen), longueur : u32, octets UTF-8
+                type : u8 (1 = nombre, 2 = texte, 3 = booléen, 4 = date), longueur : u32, octets UTF-8
 noms          nombre : u32, puis pour chacun : longueur : u32, octets UTF-8
 code          longueur : u32, puis les octets des instructions
 positions     nombre : u32, puis pour chacune :
@@ -190,8 +193,8 @@ classes       nombre : u32, puis pour chacune :
                 champs : nombre u32, puis pour chacun : longueur u32 et octets UTF-8
 ```
 
-- Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`.
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées. Les fichiers des versions 1 à 6 restent lisibles.
+- Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31. Les fichiers des versions 1 à 7 restent lisibles.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -233,3 +236,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.5 | 2026-09-21 | Héritage : classe parente dans le module, champs hérités en tête, format version 5 |
 | 1.6 | 2026-09-21 | Méthodes : classe du premier paramètre dans le bloc, choix de la version à l'appel selon la lignée, format version 6 |
 | 1.7 | 2026-09-21 | Aptitudes : enregistrées comme des classes marquées, adoptées par les classes ; champs apportés ; choix de version classe, puis aptitudes, puis parent ; format version 7 |
+| 1.8 | 2026-09-21 | Dates : valeur date, constante de type 4, `AUJOURD'HUI`, addition et soustraction de dates, comparaisons ; format version 8 |

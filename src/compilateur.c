@@ -148,6 +148,15 @@ static void expression(Compilation *c, const Noeud *n) {
         }
         return;
     }
+    case N_DATE: {
+        long k = bloc_constante(c->b, C_DATE, n->texte);
+        if (k < 0) { trop_grand(c, n); return; }
+        emettre(c, I_CONSTANTE, k, n->ligne, n->colonne);
+        return;
+    }
+    case N_AUJOURDHUI:
+        emettre(c, I_AUJOURDHUI, 0, n->ligne, n->colonne);
+        return;
     case N_CHAMP: {
         expression(c, n->enfants[0]);
         long ch = bloc_nom(c->b, n->texte);

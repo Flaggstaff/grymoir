@@ -1,5 +1,5 @@
 /* GrymoiR : lexeur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.11), § 1.
+ * Spécification : docs/grammaire.md (révision 1.14), § 1.
  */
 #ifndef GRYM_LEXEUR_H
 #define GRYM_LEXEUR_H
@@ -31,6 +31,7 @@ typedef enum {
     J_INF_EGAL,     /* ≤  <= */
     J_SUP_EGAL,     /* ≥  >= */
     J_CROCHETS,     /* nom entre crochets ; valeur : clé du nom, « frais de port et d'emballage » */
+    J_DATE,         /* « 21.09.2026 » ; valeur : forme ISO « 2026-09-21 » (grammaire, § 14) */
     J_ARTICLE_IMPLICITE, /* forme compacte : phrase de modification sans article (« total << 1 ») */
     J_MOT_CLE,      /* forme compacte : « _si » ; valeur : « si » */
     J_AFFECTE,      /* forme compacte : << */

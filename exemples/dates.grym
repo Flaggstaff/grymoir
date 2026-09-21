@@ -1,0 +1,11 @@
+Remarque : dates, au format suisse
+La facture vaut 21.09.2026.
+L'échéance vaut facture + 30.
+Afficher « Échéance : » puis échéance.
+Afficher « Délai : » puis échéance − facture puis « jours ».
+
+Si aujourd'hui > échéance, afficher « En retard ».
+Sinon, afficher « Encore » puis échéance − aujourd'hui puis « jours ».
+
+Pour chaque lundi du 05.10.2026 au 02.11.2026 par pas de 7 :
+    Afficher « Réunion le » puis lundi.
