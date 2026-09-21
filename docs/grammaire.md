@@ -1,10 +1,10 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.2 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.3, art. 4, 9 et 12.
+Version 1.3 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
-Périmètre : trois familles de phrases. Nommer, calculer, afficher. Plus le calcul des suites attendues (§ 7). Tout le reste attend les versions suivantes.
+Périmètre : nommer, calculer, afficher, décider (§ 5), et le calcul des suites attendues (§ 8). Tout le reste attend les versions suivantes.
 
 ---
 
@@ -53,7 +53,21 @@ Périmètre : trois familles de phrases. Nommer, calculer, afficher. Plus le cal
 - Le guillemet `„` est refusé.
 - Un texte tient sur une ligne.
 
-### 1.6 Commentaire
+### 1.6 Comparaisons, crochets, indentation
+
+| Comparaison | Forme de référence | Équivalent ASCII |
+|-------------|-------------------|------------------|
+| égal | `=` | `=` |
+| différent | `≠` | `<>` |
+| inférieur | `<` | `<` |
+| supérieur | `>` | `>` |
+| inférieur ou égal | `≤` | `<=` |
+| supérieur ou égal | `≥` | `>=` |
+
+- `[` … `]` délimite un nom écrit entre crochets (§ 2.2). Le contenu tient sur une ligne et ne contient que des mots et des élisions ; la casse et les espaces multiples ne comptent pas.
+- L'indentation délimite les blocs (§ 5.4). Une tabulation en début de ligne est une erreur : « Tabulation en début de ligne : indentez avec des espaces. » Une ligne vide peut contenir des tabulations.
+
+### 1.7 Commentaire
 
 - Une ligne qui commence par `Remarque :` est un commentaire jusqu'à la fin de la ligne.
 - Une remarque commence toujours une ligne. Elle ne peut pas couper une phrase écrite sur plusieurs lignes.
@@ -83,7 +97,9 @@ Correspondance prévue en forme compacte (v0.2) : `_soit total << 5` pour créer
 
 - Un nom peut compter plusieurs mots (`prix unitaire`, `date de création`).
 - Dans une expression, le parser retient la plus longue correspondance parmi les noms déjà déclarés. Si `prix` et `prix unitaire` coexistent, `prix unitaire × 2` désigne `prix unitaire`.
-- Les mots réservés `vaut`, `devient` et `puis` ne peuvent pas faire partie d'un nom.
+- Les mots réservés ne peuvent pas faire partie d'un nom écrit sans crochets : `vaut`, `devient`, `puis`, `est`, `et`, `ou`, `si`, `sinon`, `vrai`, `faux`, ainsi que l'élision `n'` devant `est`.
+- Un nom qui contient un mot réservé s'écrit entre crochets, à sa création comme à chaque usage : `Le [frais de port et d'emballage] vaut 12.` Tout nom peut s'écrire entre crochets : `[total]` et `total` désignent le même nom. L'aide à la saisie propose ces noms avec leurs crochets.
+- Un nom entre crochets s'écrit seul entre l'article et le verbe, et ne commence pas par un article.
 - Un nom ne commence ni par un article ni par une élision. Articles et élisions sont permis à l'intérieur : `la date de la vente`, `le prix de l'article`.
 - Un nom n'existe qu'après la phrase qui le crée : `Le total vaut total + 1.` est une erreur.
 
@@ -173,32 +189,125 @@ Afficher « Total à payer : » puis le total.
 
 ---
 
-## 5. Grammaire formelle (EBNF)
+## 5. Décider
+
+### 5.1 Comparaisons
+
+Une comparaison s'écrit avec des mots ou avec un symbole (§ 1.6). L'arbre retient la forme écrite.
 
 ```
-programme    = { phrase } ;
-phrase       = création | modification | affichage | remarque ;
-création     = article nom "vaut" expression "." ;
-modification = article nom "devient" expression "." ;
+Si le total est supérieur à 100, …
+Si le total > 100, …
+```
+
+| Tournure | Sens |
+|----------|------|
+| `est égal à` | = |
+| `est différent de` | ≠ |
+| `est inférieur à`, `est supérieur à` | <, > |
+| `est inférieur ou égal à`, `est supérieur ou égal à` | ≤, ≥ |
+| `est positif` | > 0 |
+| `est négatif` | < 0 |
+| `est nul` | = 0 |
+| `est vrai`, `est faux` | valeur d'un booléen |
+
+- **Sens courant, pas sens mathématique.** En mathématiques françaises, « positif » inclut zéro. GrymoiR suit la langue courante (charte, principe 2) : un solde nul n'est ni positif ni négatif.
+- **Négation** : `n'est pas` devant toute tournure. `Si le solde n'est pas nul, …`
+- **Accord** : l'adjectif s'accorde avec un nom de genre connu (`la quantité est positive`, `supérieure ou égale à`). Un désaccord produit une erreur qui donne la forme juste. Un adjectif accordé fixe le genre d'un nom encore libre, comme un article (§ 2.3). Avec un sujet qui n'est pas un nom seul (`3 est positif`, `x + 1 est supérieur à 2`), les deux formes sont admises.
+- Une comparaison porte sur les valeurs : `1,0 = 1` est vrai. Seuls deux nombres se comparent par ordre (`<`, `≤`, `>`, `≥`) ; l'égalité compare aussi deux booléens.
+- Une comparaison ne s'enchaîne pas : `1 < x < 3` est une erreur. Écrivez `1 < x et x < 3`.
+
+### 5.2 Contractions
+
+- `à le` s'écrit `au`, `de le` s'écrit `du` : `est inférieur au prix`, `est différent du total`. L'article contenu dans la contraction se vérifie comme un article écrit (§ 2.3).
+- `à le` et `de le` sont des erreurs avec correction : « « à le » s'écrit « au ». »
+- `à la`, `à l'`, `de la`, `de l'`, `d'` s'écrivent normalement.
+
+### 5.3 Et, ou
+
+- `et`, `ou` relient deux conditions. `ou` est inclusif.
+- Évaluation en court-circuit : si le premier membre suffit, le second n'est pas calculé. `Si x ≠ 0 et 1 ÷ x > 1` ne divise jamais par zéro.
+- **Mélanger `et` et `ou` sans parenthèses est une erreur.** Écrivez `(A et B) ou C` ou `A et (B ou C)`.
+- Un calcul seul n'est ni vrai ni faux : `x et 3` est une erreur.
+
+### 5.4 Si
+
+Forme courte, une phrase simple après la virgule :
+
+```
+Si le solde est négatif, afficher « Relance ».
+Si le total > 100, afficher « grand ». Sinon, afficher « petit ».
+```
+
+Forme en bloc, ouverte par deux-points :
+
+```
+Si le total est supérieur à 100 :
+    Le rabais devient 10.
+    Le total devient total − rabais.
+Sinon si le total est supérieur à 50 :
+    Le rabais devient 5.
+Sinon :
+    Le rabais devient 0.
+```
+
+- La condition doit pouvoir être vraie ou fausse : une comparaison, `et`, `ou`, `vrai`, `faux`, ou un nom qui contient un booléen. `Si 3 + 4, …` est une erreur d'analyse ; un nom qui contient un nombre produit une erreur à l'exécution.
+- La forme courte n'accepte qu'une phrase simple (`Le`, `La`, `L'`, `Afficher`).
+- Un bloc commence à la ligne suivant les deux-points, plus indenté que la ligne du `Si`. Ses phrases s'alignent sur la même colonne ; une ligne moins indentée termine le bloc. Une ligne plus indentée sans bloc ouvert est une erreur. Les remarques échappent à la règle.
+- `Sinon` s'aligne sur son `Si`, ou suit une forme courte sur la même ligne. `Sinon si` enchaîne une nouvelle condition.
+- La première phrase du programme fixe la colonne de référence.
+- **Portée** : un nom créé dans un bloc disparaît à la fin du bloc. Pour l'utiliser ensuite, créez-le avant le `Si`, puis modifiez-le dans les branches.
+- Dans la boucle interactive, une ligne terminée par `:` ouvre un bloc ; une ligne vide le termine.
+
+### 5.5 Booléens
+
+- `vrai` et `faux` sont des valeurs : `Le test vaut le total > 100.` Elles s'affichent `vrai` et `faux`.
+- Un booléen ne se calcule pas : `vrai + 1` est une erreur d'exécution.
+
+## 6. Grammaire formelle (EBNF)
+
+```
+programme    = bloc ;
+bloc         = { phrase } ;                      (* alignées sur une même colonne, § 5.4 *)
+phrase       = création | modification | affichage | si | remarque ;
+création     = article nom "vaut" valeur "." ;
+modification = article nom "devient" valeur "." ;
 affichage    = "Afficher" élément { "puis" élément } "." ;
+si           = "Si" valeur branche [ "Sinon" ( si | branche ) ] ;
+branche      = "," phrase-simple | ":" bloc-indenté ;
 remarque     = "Remarque" ":" texte-libre fin-de-ligne ;
-élément      = texte | expression ;
+élément      = texte | valeur ;
+valeur       = logique { "et" logique } | logique { "ou" logique } ;
+logique      = "vrai" | "faux" | "(" valeur ")" | comparaison ;
+comparaison  = expression [ comparateur expression | [ "n'" ] "est" [ "pas" ] relation ] ;
+comparateur  = "=" | "≠" | "<" | ">" | "≤" | "≥" ;
+relation     = ( "égal" | "égale" ) à expression
+             | ( "différent" | "différente" ) de expression
+             | ( "inférieur" | "inférieure" | "supérieur" | "supérieure" )
+               [ "ou" ( "égal" | "égale" ) ] à expression
+             | "positif" | "positive" | "négatif" | "négative" | "nul" | "nulle"
+             | "vrai" | "vraie" | "faux" | "fausse" ;
+à            = "à" | "au" ;
+de           = "de" | "d'" | "du" ;
 expression   = terme { ( "+" | "−" ) terme } ;
 terme        = unaire { ( "×" | "÷" ) unaire } ;
 unaire       = "−" unaire | puissance ;
 puissance    = base [ "^" unaire ] ;
-base         = nombre | [ article ] nom | "(" expression ")" ;
+base         = nombre | [ article ] ( nom | "[" nom "]" ) | "(" expression ")" ;
 article      = "le" | "la" | "l'" ;
 ```
 
 Limites de cette notation :
 
 - `nom` se résout par plus longue correspondance parmi les noms déclarés (§ 2.2), ce que l'EBNF n'exprime pas.
+- `"n'" "est" "pas"` : l'élision et `pas` vont ensemble ; `n'est` sans `pas` est une erreur.
+- Une parenthèse ouvre un groupe logique si elle contient, à son premier niveau, une comparaison, `et`, `ou`, `vrai` ou `faux` ; sinon elle groupe un calcul.
+- L'alignement des blocs et la règle « pas de mélange de `et` et `ou` » ne s'expriment pas en EBNF (§ 5.3, § 5.4).
 - Les équivalents ASCII des opérateurs (§ 1.4) sont traités au lexer.
 
 ---
 
-## 6. Messages d'erreur de référence
+## 7. Messages d'erreur de référence
 
 | Situation | Message |
 |-----------|---------|
@@ -214,16 +323,25 @@ Limites de cette notation :
 | Article sans nom | « Nom attendu après « le ». » |
 | Remarque mal placée | « Une remarque doit commencer une ligne : passez à la ligne avant « Remarque : ». » |
 | Parenthèse non refermée | « Parenthèse fermante manquante : la parenthèse ouverte ligne 2, colonne 11 n'est pas refermée. » |
+| Mot réservé dans un nom | « « et » est un mot réservé : pour l'utiliser dans un nom, écrivez [frais de port et emballage]. » |
+| Accord | « « quantité » est féminin (déclaré ligne 1) : écrivez « positive ». » |
+| Contraction | « « à le » s'écrit « au ». » |
+| Mélange de `et` et `ou` | « « et » et « ou » mélangés sans parenthèses : écrivez « (A et B) ou C » ou « A et (B ou C) » selon le sens voulu. » |
+| Condition arithmétique | « Condition attendue après « Si » : une comparaison, par exemple « Si le total est supérieur à 100 ». Un calcul seul n'est ni vrai ni faux. » |
+| Condition non booléenne (exécution) | « Condition ni vraie ni fausse : la valeur est un nombre. » |
+| Indentation | « Indentation inattendue : seul un bloc ouvert par « : » s'indente. » |
+| `Sinon` mal placé | « « Sinon » doit être aligné sur son « Si ». » |
 
 Chaque message est précédé du fichier, de la ligne et de la colonne (charte, art. 8) : `facture.grym:7:18 : erreur : Division par zéro.`
 
 ---
 
-## 7. Suites attendues
+## 8. Suites attendues
 
 À chaque position, l'analyseur calcule l'ensemble exact des suites valides (charte, art. 9).
 
-- Catégories : début de phrase (`Le`, `La`, `L'`, `Afficher`, `Remarque :`), nombre, nom déclaré, nouveau nom, parenthèse, négation, texte, opérateurs, parenthèse fermante, `vaut` et `devient`, `puis`, point final.
+- Catégories : début de phrase (`Le`, `La`, `L'`, `Afficher`, `Si`, `Remarque :`), nombre, nom déclaré, nouveau nom, parenthèse, négation, texte, `vrai` et `faux`, opérateurs, comparaisons (`est`, `n'est pas`, symboles), `et` et `ou`, parenthèse fermante, `vaut` et `devient`, `,` et `:` après une condition, `puis`, point final.
+- Après `est`, les tournures accordées au genre du sujet (`supérieure à`, `positive`…) ; après `supérieur`, `à`, `au` ou `ou`.
 - S'y ajoutent les mots qui prolongent un nom composé déclaré : après `prix`, `unitaire` si `prix unitaire` existe.
 - Premier usage : les messages d'erreur (« `« 2 » inattendu, attendu : un opérateur ou un point final.` »).
 - Second usage : l'aide à la saisie. Les suites sont calculées à la position du curseur ; si un mot est en cours de frappe, seules les suites qui le prolongent sont proposées, sans tenir compte de la casse.
@@ -231,6 +349,7 @@ Chaque message est précédé du fichier, de la ligne et de la colonne (charte, 
 Limites de la v0.1 :
 
 - Une erreur placée avant le curseur supprime les suggestions. La reprise sur erreur viendra avec le serveur d'aide à la saisie (charte, art. 12, v0.4).
+- Un nom entre crochets en cours de frappe n'est complété que sur son premier mot.
 - Après un article, les noms proposés ne sont pas filtrés par genre.
 
 ---
@@ -242,3 +361,4 @@ Limites de la v0.1 :
 | 1.0 | 2026-09-20 | Spécification initiale : nommer (`vaut` / `devient`), calculer (décimal exact, arrondi bancaire à 28 chiffres), afficher (style suisse par défaut) |
 | 1.1 | 2026-09-21 | Puissance avant négation (`−2 ^ 2` = `−4`). Guillemets `“ ”` et tiret `–` acceptés ; trait d'union toujours opérateur. Règles des noms (mots réservés, article initial interdit). Remarques en début de ligne. Boucle interactive : point final facultatif, saisie atomique. Nouveau § 7 : suites attendues |
 | 1.2 | 2026-09-21 | Arithmétique précisée : division finie exacte, zéros de fin, multiplication exacte, puissance à exposant entier (`0 ^ 0` = 1), limite de 1'000 chiffres. Afficher : séparateur espace, signe `−`. Boucle interactive : `quitter`, atomicité étendue aux erreurs de calcul. Messages d'erreur d'exécution |
+| 1.3 | 2026-09-21 | Nouveau § 5 : décider (comparaisons en mots et en symboles, sens courant de positif, accords, contractions au et du, et et ou sans mélange, Si en forme courte et en bloc, portée des blocs, booléens). Noms entre crochets, mots réservés étendus, tabulations interdites en début de ligne. Renumérotation : EBNF § 6, messages § 7, suites § 8 |

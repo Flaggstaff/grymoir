@@ -18,12 +18,21 @@ typedef enum {
     I_DIVISION,
     I_PUISSANCE,
     I_AFFICHER,
-    I_RETOUR
+    I_RETOUR,
+    I_EGAL,
+    I_DIFFERENT,
+    I_INFERIEUR,
+    I_SUPERIEUR,
+    I_INFERIEUR_OU_EGAL,
+    I_SUPERIEUR_OU_EGAL,
+    I_NON,
+    I_SAUTER,
+    I_SAUTER_SI_FAUX
 } CodeInstruction;
 
-#define I_DERNIER I_RETOUR
+#define I_DERNIER I_SAUTER_SI_FAUX
 
-typedef enum { C_NOMBRE = 1, C_TEXTE = 2 } TypeConstante;
+typedef enum { C_NOMBRE = 1, C_TEXTE = 2, C_BOOLEEN = 3 } TypeConstante;
 
 typedef struct {
     TypeConstante type;
@@ -56,8 +65,14 @@ long bloc_constante(Bloc *b, TypeConstante type, const char *texte);
 long bloc_nom(Bloc *b, const char *nom);
 void bloc_emettre(Bloc *b, CodeInstruction code, uint16_t operande, int ligne, int colonne);
 
+/* Sauts : émis avec une cible provisoire, corrigée quand elle est connue.
+ * bloc_emettre_saut renvoie la position de l'opérande à corriger. */
+size_t bloc_emettre_saut(Bloc *b, CodeInstruction code, int ligne, int colonne);
+void bloc_corriger_saut(Bloc *b, size_t operande, size_t cible);
+
 const char *instruction_nom(CodeInstruction code);   /* en toutes lettres : « MULTIPLICATION » */
 int instruction_a_operande(CodeInstruction code);
+size_t instruction_taille(CodeInstruction code);   /* code et opérande, en octets */
 
 /* Position source de l'instruction commençant au décalage donné (0 si inconnue). */
 void bloc_position(const Bloc *b, size_t decalage, int *ligne, int *colonne);

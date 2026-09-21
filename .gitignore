@@ -1,6 +1,6 @@
 # Exécutables produits par make
 grym
-grym-lex
+grym-lexeur
 grym-arbre
 grym-suites
 test_lexeur

@@ -85,6 +85,21 @@ void bloc_emettre(Bloc *b, CodeInstruction code, uint16_t operande, int ligne, i
     }
 }
 
+size_t bloc_emettre_saut(Bloc *b, CodeInstruction code, int ligne, int colonne) {
+    bloc_emettre(b, code, 0, ligne, colonne);
+    size_t pos = b->taille_code;
+    for (int k = 0; k < 4; k++) octet(b, 0);
+    return pos;
+}
+
+void bloc_corriger_saut(Bloc *b, size_t operande, size_t cible) {
+    for (int k = 0; k < 4; k++) b->code[operande + (size_t)k] = (uint8_t)((cible >> (8 * k)) & 0xFF);
+}
+
+static uint32_t lire_u32(const uint8_t *p) {
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
 const char *instruction_nom(CodeInstruction code) {
     switch (code) {
     case I_CONSTANTE:      return "CONSTANTE";
@@ -98,12 +113,29 @@ const char *instruction_nom(CodeInstruction code) {
     case I_PUISSANCE:      return "PUISSANCE";
     case I_AFFICHER:       return "AFFICHER";
     case I_RETOUR:         return "RETOUR";
+    case I_EGAL:           return "ÉGAL";
+    case I_DIFFERENT:      return "DIFFÉRENT";
+    case I_INFERIEUR:      return "INFÉRIEUR";
+    case I_SUPERIEUR:      return "SUPÉRIEUR";
+    case I_INFERIEUR_OU_EGAL: return "INFÉRIEUR_OU_ÉGAL";
+    case I_SUPERIEUR_OU_EGAL: return "SUPÉRIEUR_OU_ÉGAL";
+    case I_NON:            return "NON";
+    case I_SAUTER:         return "SAUTER";
+    case I_SAUTER_SI_FAUX: return "SAUTER_SI_FAUX";
     }
     return "INCONNUE";
 }
 
 int instruction_a_operande(CodeInstruction code) {
     return code == I_CONSTANTE || code == I_LIRE || code == I_ECRIRE || code == I_AFFICHER;
+}
+
+static int est_saut(CodeInstruction code) {
+    return code == I_SAUTER || code == I_SAUTER_SI_FAUX;
+}
+
+size_t instruction_taille(CodeInstruction code) {
+    return 1 + (instruction_a_operande(code) ? 2 : 0) + (est_saut(code) ? 4 : 0);
 }
 
 void bloc_position(const Bloc *b, size_t decalage, int *ligne, int *colonne) {
@@ -125,68 +157,125 @@ static int refuser(char **erreur, char *message) {
     return 0;
 }
 
+/* Deux passes : décodage linéaire (chaque instruction est complète et ses index
+ * existent), puis parcours de tous les chemins (profondeur de pile identique à
+ * chaque point de rencontre, jamais négative, nulle à RETOUR). */
 int bloc_verifier(const Bloc *b, char **erreur) {
-    size_t ip = 0, pile = 0;
-    int termine = 0;
-    while (ip < b->taille_code) {
-        if (termine)
-            return refuser(erreur, grym_formater("instructions après RETOUR (octet %lu).", (unsigned long)ip));
-        size_t debut = ip;
-        uint8_t c = b->code[ip++];
-        if (c < I_CONSTANTE || c > I_DERNIER)
-            return refuser(erreur, grym_formater("code d'instruction %u inconnu (octet %lu).",
-                                                 (unsigned)c, (unsigned long)debut));
-        unsigned op = 0;
-        if (instruction_a_operande((CodeInstruction)c)) {
-            if (ip + 2 > b->taille_code)
-                return refuser(erreur, grym_formater("opérande tronqué (octet %lu).", (unsigned long)debut));
-            op = (unsigned)b->code[ip] | ((unsigned)b->code[ip + 1] << 8);
-            ip += 2;
-        }
-        size_t besoin = 0;
-        long effet = 0;
-        switch ((CodeInstruction)c) {
-        case I_CONSTANTE:
-            if (op >= b->nb_constantes)
-                return refuser(erreur, grym_formater("constante %u inexistante (octet %lu).", op, (unsigned long)debut));
-            effet = 1;
-            break;
-        case I_LIRE:
-        case I_ECRIRE:
-            if (op >= b->nb_noms)
-                return refuser(erreur, grym_formater("nom %u inexistant (octet %lu).", op, (unsigned long)debut));
-            besoin = c == I_ECRIRE ? 1 : 0;
-            effet = c == I_ECRIRE ? -1 : 1;
-            break;
-        case I_NEGATION:
-            besoin = 1;
-            break;
-        case I_ADDITION: case I_SOUSTRACTION: case I_MULTIPLICATION:
-        case I_DIVISION: case I_PUISSANCE:
-            besoin = 2;
-            effet = -1;
-            break;
-        case I_AFFICHER:
-            if (op == 0)
-                return refuser(erreur, grym_formater("AFFICHER sans élément (octet %lu).", (unsigned long)debut));
-            besoin = op;
-            effet = -(long)op;
-            break;
-        case I_RETOUR:
-            if (pile != 0)
-                return refuser(erreur, grym_formater("RETOUR avec une pile non vide (octet %lu).", (unsigned long)debut));
-            termine = 1;
+    size_t n = b->taille_code;
+    if (n == 0) return refuser(erreur, grym_dupliquer("le bloc ne se termine pas par RETOUR."));
+    uint8_t *debut_instr = grym_allouer(n);
+    memset(debut_instr, 0, n);
+    size_t ip = 0, dernier = 0;
+    int ok = 1;
+    while (ip < n && ok) {
+        size_t d = ip;
+        uint8_t c = b->code[ip];
+        if (c < I_CONSTANTE || c > I_DERNIER) {
+            ok = refuser(erreur, grym_formater("code d'instruction %u inconnu (octet %lu).",
+                                               (unsigned)c, (unsigned long)d));
             break;
         }
-        if (pile < besoin)
-            return refuser(erreur, grym_formater("pile insuffisante pour %s (octet %lu).",
-                                                 instruction_nom((CodeInstruction)c), (unsigned long)debut));
-        pile = (size_t)((long)pile + effet);
+        size_t t = instruction_taille((CodeInstruction)c);
+        if (d + t > n) {
+            ok = refuser(erreur, grym_formater("opérande tronqué (octet %lu).", (unsigned long)d));
+            break;
+        }
+        unsigned op = instruction_a_operande((CodeInstruction)c)
+                    ? (unsigned)b->code[d + 1] | ((unsigned)b->code[d + 2] << 8) : 0;
+        if (c == I_CONSTANTE && op >= b->nb_constantes)
+            ok = refuser(erreur, grym_formater("constante %u inexistante (octet %lu).", op, (unsigned long)d));
+        else if ((c == I_LIRE || c == I_ECRIRE) && op >= b->nb_noms)
+            ok = refuser(erreur, grym_formater("nom %u inexistant (octet %lu).", op, (unsigned long)d));
+        else if (c == I_AFFICHER && op == 0)
+            ok = refuser(erreur, grym_formater("AFFICHER sans élément (octet %lu).", (unsigned long)d));
+        debut_instr[d] = 1;
+        dernier = d;
+        ip += t;
     }
-    if (!termine) return refuser(erreur, grym_dupliquer("le bloc ne se termine pas par RETOUR."));
-    for (size_t i = 0; i < b->nb_constantes; i++)
-        if (b->constantes[i].type == C_NOMBRE && !dec_canonique_valide(b->constantes[i].texte))
+    if (ok && b->code[dernier] != I_RETOUR)
+        ok = refuser(erreur, grym_dupliquer("le bloc ne se termine pas par RETOUR."));
+    /* cibles des sauts */
+    for (ip = 0; ok && ip < n; ip += instruction_taille((CodeInstruction)b->code[ip])) {
+        if (!est_saut((CodeInstruction)b->code[ip])) continue;
+        uint32_t cible = lire_u32(&b->code[ip + 1]);
+        if (cible >= n || !debut_instr[cible])
+            ok = refuser(erreur, grym_formater("saut vers l'octet %lu, qui ne commence pas une instruction "
+                                               "(octet %lu).", (unsigned long)cible, (unsigned long)ip));
+    }
+    /* profondeur de pile sur tous les chemins */
+    long *prof = NULL;
+    size_t *travail = NULL;
+    if (ok) {
+        prof = grym_allouer(n * sizeof *prof);
+        for (size_t k = 0; k < n; k++) prof[k] = -1;
+        travail = grym_allouer(n * sizeof *travail);
+        size_t nt = 0;
+        prof[0] = 0;
+        travail[nt++] = 0;
+        while (nt && ok) {
+            size_t d = travail[--nt];
+            CodeInstruction c = (CodeInstruction)b->code[d];
+            long p = prof[d];
+            unsigned op = instruction_a_operande(c) ? (unsigned)b->code[d + 1] | ((unsigned)b->code[d + 2] << 8) : 0;
+            long besoin = 0, effet = 0;
+            switch (c) {
+            case I_CONSTANTE: case I_LIRE: effet = 1; break;
+            case I_ECRIRE: besoin = 1; effet = -1; break;
+            case I_NEGATION: case I_NON: besoin = 1; break;
+            case I_ADDITION: case I_SOUSTRACTION: case I_MULTIPLICATION: case I_DIVISION:
+            case I_PUISSANCE: case I_EGAL: case I_DIFFERENT: case I_INFERIEUR: case I_SUPERIEUR:
+            case I_INFERIEUR_OU_EGAL: case I_SUPERIEUR_OU_EGAL:
+                besoin = 2; effet = -1; break;
+            case I_AFFICHER: besoin = (long)op; effet = -(long)op; break;
+            case I_SAUTER_SI_FAUX: besoin = 1; effet = -1; break;
+            case I_SAUTER: case I_RETOUR: break;
+            }
+            if (p < besoin) {
+                ok = refuser(erreur, grym_formater("pile insuffisante pour %s (octet %lu).",
+                                                   instruction_nom(c), (unsigned long)d));
+                break;
+            }
+            if (c == I_RETOUR) {
+                if (p != 0)
+                    ok = refuser(erreur, grym_formater("RETOUR avec une pile non vide (octet %lu).",
+                                                       (unsigned long)d));
+                continue;
+            }
+            long q = p + effet;
+            size_t suites[2];
+            int ns = 0;
+            if (c == I_SAUTER) {
+                suites[ns++] = lire_u32(&b->code[d + 1]);
+            } else {
+                suites[ns++] = d + instruction_taille(c);
+                if (c == I_SAUTER_SI_FAUX) suites[ns++] = lire_u32(&b->code[d + 1]);
+            }
+            for (int k = 0; k < ns && ok; k++) {
+                size_t s = suites[k];
+                if (s >= n) {
+                    ok = refuser(erreur, grym_formater("le code se termine sans RETOUR (octet %lu).",
+                                                       (unsigned long)d));
+                } else if (prof[s] < 0) {
+                    prof[s] = q;
+                    travail[nt++] = s;
+                } else if (prof[s] != q) {
+                    ok = refuser(erreur, grym_formater("profondeur de pile incohérente à l'octet %lu.",
+                                                       (unsigned long)s));
+                }
+            }
+        }
+    }
+    free(prof);
+    free(travail);
+    free(debut_instr);
+    if (!ok) return 0;
+    for (size_t i = 0; i < b->nb_constantes; i++) {
+        const Constante *k = &b->constantes[i];
+        if (k->type == C_NOMBRE && !dec_canonique_valide(k->texte))
             return refuser(erreur, grym_formater("constante %lu : nombre mal formé.", (unsigned long)i));
+        if (k->type == C_BOOLEEN && strcmp(k->texte, "vrai") != 0 && strcmp(k->texte, "faux") != 0)
+            return refuser(erreur, grym_formater("constante %lu : booléen mal formé.", (unsigned long)i));
+    }
     return 1;
 }
 
@@ -194,7 +283,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 8)                                 */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 1
+#define VERSION_FORMAT 2   /* la version 1 (sans conditions) reste lisible */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -323,7 +412,7 @@ Bloc *bloc_lire(const unsigned char *donnees, size_t taille, char **erreur) {
         return echec_lecture(b, erreur, grym_dupliquer("en-tête « GRYM » absent."));
     l.pos = 4;
     uint32_t version = lire_u(&l, 2);
-    if (!l.echec && version != VERSION_FORMAT)
+    if (!l.echec && (version < 1 || version > VERSION_FORMAT))
         return echec_lecture(b, erreur, grym_formater(
             "format version %u, cette version de grym lit la version %d.", (unsigned)version, VERSION_FORMAT));
 
@@ -334,7 +423,7 @@ Bloc *bloc_lire(const unsigned char *donnees, size_t taille, char **erreur) {
     for (uint32_t i = 0; i < nc; i++) {
         uint32_t type = lire_u(&l, 1);
         char *t = lire_chaine(&l);
-        if (!t || (type != C_NOMBRE && type != C_TEXTE)) {
+        if (!t || (type != C_NOMBRE && type != C_TEXTE && type != C_BOOLEEN)) {
             free(t);
             return echec_lecture(b, erreur, grym_formater("constante %u illisible.", (unsigned)i));
         }
@@ -397,31 +486,30 @@ char *bloc_desassembler(const Bloc *b) {
     size_t ip = 0;
     while (ip < b->taille_code) {
         size_t debut = ip;
-        CodeInstruction code = (CodeInstruction)b->code[ip++];
-        unsigned op = 0;
-        int avec = instruction_a_operande(code);
-        if (avec && ip + 2 <= b->taille_code) {
-            op = (unsigned)b->code[ip] | ((unsigned)b->code[ip + 1] << 8);
-            ip += 2;
-        }
+        CodeInstruction code = (CodeInstruction)b->code[ip];
+        size_t t = instruction_taille(code);
+        if (ip + t > b->taille_code) t = b->taille_code - ip;
+        ip += t;
         int ligne, colonne;
         bloc_position(b, debut, &ligne, &colonne);
-        char marge[16];
+        char marge[32];
         if (ligne != ligne_prec && ligne > 0) {
-            snprintf(marge, sizeof marge, "%4d  ", ligne);
+            snprintf(marge, sizeof marge, "%4d  %04lu  ", ligne, (unsigned long)debut);
             ligne_prec = ligne;
         } else {
-            snprintf(marge, sizeof marge, "      ");
+            snprintf(marge, sizeof marge, "      %04lu  ", (unsigned long)debut);
         }
         chaine_ajouter(&c, marge);
-        if (!avec) {
+        if (t == 1) {
             chaine_ajouter(&c, instruction_nom(code));
             chaine_ajouter(&c, "\n");
             continue;
         }
-        completer(&c, instruction_nom(code), 17);
+        completer(&c, instruction_nom(code), 18);
+        unsigned long op = t == 5 ? lire_u32(&b->code[debut + 1])
+                                  : (unsigned long)(b->code[debut + 1] | (b->code[debut + 2] << 8));
         char nombre[16];
-        snprintf(nombre, sizeof nombre, "%u", op);
+        snprintf(nombre, sizeof nombre, t == 5 ? "%04lu" : "%lu", op);
         completer(&c, nombre, 6);
         char *commentaire = NULL;
         if (code == I_CONSTANTE && op < b->nb_constantes) {
@@ -430,6 +518,8 @@ char *bloc_desassembler(const Bloc *b) {
                 Decimal d = dec_depuis_canonique(k->texte);
                 commentaire = dec_formater(&d);
                 dec_liberer(&d);
+            } else if (k->type == C_BOOLEEN) {
+                commentaire = grym_dupliquer(k->texte);
             } else {
                 commentaire = grym_formater("« %s »", k->texte);
             }
@@ -441,7 +531,6 @@ char *bloc_desassembler(const Bloc *b) {
             chaine_ajouter(&c, commentaire);
             free(commentaire);
         }
-        /* retirer les espaces de fin */
         while (c.n && c.d[c.n - 1] == ' ') c.d[--c.n] = '\0';
         chaine_ajouter(&c, "\n");
     }

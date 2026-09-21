@@ -134,17 +134,54 @@ int main(void) {
          "19,25");
     PROG("Le x vaut 5.\nAfficher x.\nLe y vaut x ÷ 0.\nAfficher y.", "ERREUR 3:13 Division par zéro.");
 
+    /* --- Conditions (grammaire, § 5) --- */
+    PROG("Le x vaut 5.\nSi x > 3, afficher « grand ». Sinon, afficher « petit ».", "grand");
+    PROG("Le x vaut 2.\nSi x > 3, afficher « grand ». Sinon, afficher « petit ».", "petit");
+    PROG("Afficher 1,0 = 1 puis 2 > 3 puis 0 est nul puis −1 est négatif puis 0 est positif.",
+         "vrai faux vrai vrai faux");
+    PROG("Afficher 3 ≤ 3 puis 3 < 3 puis 3 ≥ 4 puis 3 ≠ 3,00 puis 2 n'est pas inférieur à 1.",
+         "vrai faux faux faux vrai");
+    PROG("Afficher vrai et faux puis vrai ou faux puis (faux ou faux) et vrai.",
+         "faux vrai faux");
+    PROG("Le t vaut vrai.\nLe u vaut vrai.\nAfficher t = u puis t ≠ u.", "vrai faux");
+    PROG("Le total vaut 120.\nLe rabais vaut 0.\n"
+         "Si le total est supérieur à 100 :\n    Le rabais devient 10.\n"
+         "Sinon si le total est supérieur ou égal à 50 :\n    Le rabais devient 5.\n"
+         "Afficher le rabais.", "10");
+    PROG("Le total vaut 70.\nLe rabais vaut 0.\n"
+         "Si le total est supérieur à 100 :\n    Le rabais devient 10.\n"
+         "Sinon si le total est supérieur ou égal à 50 :\n    Le rabais devient 5.\n"
+         "Afficher le rabais.", "5");
+    PROG("Le total vaut 10.\nLe rabais vaut 0.\n"
+         "Si le total est supérieur à 100 :\n    Le rabais devient 10.\n"
+         "Sinon si le total est supérieur ou égal à 50 :\n    Le rabais devient 5.\n"
+         "Afficher le rabais.", "0");
+    PROG("Le x vaut 5.\nSi x > 0 :\n  Si x > 3 :\n    Afficher 1.\n  Sinon :\n    Afficher 2.\n  Afficher 3.\n"
+         "Afficher 4.", "1\n3\n4");
+    /* court-circuit : le second membre n'est pas calculé */
+    PROG("Le x vaut 0.\nSi x ≠ 0 et 1 ÷ x > 1, afficher 1. Sinon, afficher 2.", "2");
+    PROG("Le x vaut 0.\nSi x = 0 ou 1 ÷ x > 1, afficher 3.", "3");
+    PROG("Le t vaut 2 > 1.\nSi le t, afficher « oui ».\nAfficher le t est faux.", "oui\nfaux");
+    PROG("Le [frais et port] vaut 7,50.\nAfficher [frais et port] × 2.", "15,00");
+    /* erreurs d'exécution */
+    PROG("Le x vaut 3.\nSi x, afficher 1.", "ERREUR 2:4 Condition ni vraie ni fausse : la valeur est un nombre.");
+    PROG("Le t vaut vrai.\nAfficher t + 1.", "~ADDITION impossible : un des opérandes est un booléen.");
+    PROG("Le t vaut vrai.\nLe u vaut faux.\nAfficher t < u.", "~Seuls deux nombres se comparent par ordre");
+    PROG("Le t vaut vrai.\nAfficher 1 = t.", "~Comparaison impossible entre un nombre et un booléen.");
+    PROG("Le t vaut 3.\nAfficher t et vrai.", "~Condition ni vraie ni fausse");
+
     /* --- Boucle interactive : une saisie ratée n'a aucun effet (§ 3.3, docs/vm.md § 6) --- */
     {
         total++;
         Portee *p = portee_creer();
         Machine *m = machine_creer();
         const char *saisies[] = { "Le a vaut 1.", "Le a devient 5. Le b vaut 1 ÷ 0.", "a", "b",
-                                  "Le a devient a + 1. Le a devient a × 10. Le a devient a ÷ 0.", "a" };
+                                  "Le a devient a + 1. Le a devient a × 10. Le a devient a ÷ 0.", "a",
+                                  "Si vrai :\n    Le a devient 7.\n    Le a devient a ÷ 0.", "a" };
         const char *attendus[] = { "", "~Division par zéro", "1", "~« b » inconnu",
-                                   "~Division par zéro", "1" };
+                                   "~Division par zéro", "1", "~Division par zéro", "1" };
         /* Comme la boucle de grym : la machine annule ses écritures, la portée est restaurée. */
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 8; i++) {
             Portee *sp = portee_cloner(p);
             char *r = executer_source(p, m, saisies[i], 1);
             int echec = strncmp(r, "ERREUR", 6) == 0;
@@ -167,19 +204,19 @@ int main(void) {
             "Le total vaut prix unitaire × quantité.\n"
             "Afficher « Total : » puis −total.";
         const char *attendu =
-            "   1  CONSTANTE        0     ; 12,50\n"
-            "      ÉCRIRE           0     ; prix unitaire\n"
-            "   2  CONSTANTE        1     ; 3\n"
-            "      ÉCRIRE           1     ; quantité\n"
-            "   3  LIRE             0     ; prix unitaire\n"
-            "      LIRE             1     ; quantité\n"
-            "      MULTIPLICATION\n"
-            "      ÉCRIRE           2     ; total\n"
-            "   4  CONSTANTE        2     ; « Total : »\n"
-            "      LIRE             2     ; total\n"
-            "      NÉGATION\n"
-            "      AFFICHER         2\n"
-            "      RETOUR\n";
+            "   1  0000  CONSTANTE         0     ; 12,50\n"
+            "      0003  ÉCRIRE            0     ; prix unitaire\n"
+            "   2  0006  CONSTANTE         1     ; 3\n"
+            "      0009  ÉCRIRE            1     ; quantité\n"
+            "   3  0012  LIRE              0     ; prix unitaire\n"
+            "      0015  LIRE              1     ; quantité\n"
+            "      0018  MULTIPLICATION\n"
+            "      0019  ÉCRIRE            2     ; total\n"
+            "   4  0022  CONSTANTE         2     ; « Total : »\n"
+            "      0025  LIRE              2     ; total\n"
+            "      0028  NÉGATION\n"
+            "      0029  AFFICHER          2\n"
+            "      0032  RETOUR\n";
         Portee *p = portee_creer();
         Programme prog;
         Diagnostic d;
@@ -257,13 +294,17 @@ int main(void) {
         free(octets);
 
         /* code invalide : vérification avant exécution */
-        struct { const char *nom; uint8_t code[8]; size_t n; const char *fragment; } codes[] = {
+        struct { const char *nom; uint8_t code[16]; size_t n; const char *fragment; } codes[] = {
             { "code inconnu",       { 99 }, 1, "inconnu" },
             { "pile vide",          { I_ADDITION, I_RETOUR }, 2, "pile insuffisante" },
             { "constante absente",  { I_CONSTANTE, 7, 0, I_RETOUR }, 4, "inexistante" },
             { "sans RETOUR",        { I_CONSTANTE, 0, 0, I_AFFICHER, 1, 0 }, 6, "RETOUR" },
             { "pile non vide",      { I_CONSTANTE, 0, 0, I_RETOUR }, 4, "non vide" },
-            { "après RETOUR",       { I_RETOUR, I_RETOUR }, 2, "après RETOUR" },
+            { "saut hors code",     { I_SAUTER, 9, 0, 0, 0, I_RETOUR }, 6, "ne commence pas une instruction" },
+            { "saut au milieu",     { I_SAUTER, 1, 0, 0, 0, I_RETOUR }, 6, "ne commence pas une instruction" },
+            { "sortie sans RETOUR", { I_CONSTANTE, 0, 0, I_SAUTER_SI_FAUX, 11, 0, 0, 0 }, 8, "RETOUR" },
+            { "pile incohérente",   { I_CONSTANTE, 0, 0, I_SAUTER_SI_FAUX, 11, 0, 0, 0,
+                                      I_CONSTANTE, 0, 0, I_AFFICHER, 1, 0, I_RETOUR }, 15, "Bytecode invalide" },
             { "opérande tronqué",   { I_CONSTANTE, 0 }, 2, "tronqué" },
         };
         for (size_t k = 0; k < sizeof codes / sizeof *codes; k++) {

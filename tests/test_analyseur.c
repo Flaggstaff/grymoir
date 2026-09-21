@@ -163,7 +163,7 @@ int main(void) {
     V("Afficher « a » puis 1 + 1 puis « b ».", "(afficher «a» (+ 1 1) «b»)");
     V("Afficher 3.", "(afficher 3)");
 
-    /* --- Remarques (§ 1.6) --- */
+    /* --- Remarques (§ 1.7) --- */
     V("Remarque : début\nLe x vaut 1.\nRemarque : fin",
       "(remarque «début»)\n(créer [x] 1)\n(remarque «fin»)");
 
@@ -191,7 +191,7 @@ int main(void) {
        "« prix unitair » inconnu, vouliez-vous « prix unitaire » ?");
     VE("Le x vaut y.", 1, 11, "« y » inconnu.");
     VE("Le total vaut total + 1.", 1, 15, "« total » inconnu");
-    VE("3 + 4.", 1, 1, "une phrase commence par Le, La, L' ou Afficher");
+    VE("3 + 4.", 1, 1, "une phrase commence par Le, La, L', Afficher ou Si");
     VE("Le x vaut 3. Remarque : non", 1, 14, "Une remarque doit commencer une ligne");
     VE("Le x vaut 1 +\nRemarque : coupe\n2.", 2, 1, "ne peut pas couper une phrase");
     VE("Le x vaut (1 + 2.", 1, 17, "Parenthèse fermante manquante");
@@ -201,11 +201,11 @@ int main(void) {
     VE("Afficher 1 puis.", 1, 16, "Élément manquant après « puis »");
     VE("Le vaut 3.", 1, 4, "Nom manquant entre « le » et « vaut ».");
     VE("Le x 3.", 1, 1, "Verbe manquant");
-    VE("Le x vaut 1 2.", 1, 13, "« 2 » inattendu, attendu : un opérateur ou un point final.");
+    VE("Le x vaut 1 2.", 1, 13, "« 2 » inattendu, attendu : un opérateur, une comparaison (est, =, <…) ou un point final.");
     VE("Le x vaut (1 2).", 1, 14, "Parenthèse fermante manquante");
-    VE("Afficher 1 2.", 1, 12, "« 2 » inattendu, attendu : un opérateur, « puis » ou un point final.");
-    VE("Le x vaut 1 puis 2.", 1, 13, "« puis » inattendu, attendu : un opérateur ou un point final.");
-    VE("Le x vaut vaut.", 1, 11, "« vaut » inattendu, attendu : un nombre, un nom ou une parenthèse.");
+    VE("Afficher 1 2.", 1, 12, "« 2 » inattendu, attendu : un opérateur, une comparaison (est, =, <…), « puis » ou un point final.");
+    VE("Le x vaut 1 puis 2.", 1, 13, "« puis » inattendu, attendu : un opérateur, une comparaison (est, =, <…) ou un point final.");
+    VE("Le x vaut vaut.", 1, 11, "« vaut » inattendu, attendu : un nombre, un nom, une parenthèse, « vrai » ou « faux ».");
     VE("Le prix puis vaut 3.", 1, 9, "« puis » est un mot réservé");
     VE("Le la vaut 3.", 1, 4, "Un nom ne peut pas commencer par « la ».");
     VE("Le x vaut 1.\nAfficher le x puis le.", 2, 20, "Nom attendu après « le ».");
@@ -236,9 +236,76 @@ int main(void) {
         SESSION(s, a);
     }
 
-    /* --- Aide à la saisie (§ 7) --- */
-    VS("", "Le | La | L' | Afficher | Remarque :");
-    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Remarque :");
+    /* --- Conditions (§ 5) --- */
+    V("Le x vaut 3.\nSi x est positif, afficher x.",
+      "(créer [x] 3)\n(si (positif [x]) (bloc (afficher [x])))");
+    V("Le x vaut 1.\nAfficher x < 2 puis x ≥ 1 puis x <> 1 puis x = 1.",
+      "(créer [x] 1)\n(afficher (< [x] 2) (≥ [x] 1) (≠ [x] 1) (= [x] 1))");
+    V("Le x vaut 1.\nAfficher x est égal à 1 puis x est différent de 2 puis x est inférieur ou égal à 3 "
+      "puis x n'est pas supérieur à 0.",
+      "(créer [x] 1)\n(afficher (= [x] 1) (≠ [x] 2) (≤ [x] 3) (non (> [x] 0)))");
+    V("La quantité vaut 3.\nAfficher la quantité est supérieure à 2 puis la quantité est nulle.",
+      "(créer [quantité] 3)\n(afficher (> [quantité] 2) (nul [quantité]))");
+    V("Le prix vaut 3.\nLe x vaut 1.\nAfficher x est inférieur au prix puis x est différent du prix.",
+      "(créer [prix] 3)\n(créer [x] 1)\n(afficher (< [x] [prix]) (≠ [x] [prix]))");
+    V("Le x vaut 1.\nAfficher (x > 0 et x < 2) ou x = 5.",
+      "(créer [x] 1)\n(afficher (ou (groupe (et (> [x] 0) (< [x] 2))) (= [x] 5)))");
+    V("Le x vaut 1.\nAfficher (x + 1) × 2 > 3.",
+      "(créer [x] 1)\n(afficher (> (× (groupe (+ [x] 1)) 2) 3))");
+    V("Le t vaut 1 < 2.\nSi le t est vrai, afficher 1.",
+      "(créer [t] (< 1 2))\n(si (vrai [t]) (bloc (afficher 1)))");
+    V("Si faux, afficher 1. Sinon, afficher 2.",
+      "(si faux (bloc (afficher 1)) (sinon (bloc (afficher 2))))");
+    V("Le x vaut 5.\nSi x > 3 :\n    Afficher « grand ».\n    Afficher x.\nSinon :\n    Afficher « petit ».\n"
+      "Afficher « fin ».",
+      "(créer [x] 5)\n(si (> [x] 3) (bloc (afficher «grand») (afficher [x])) (sinon (bloc (afficher «petit»))))\n"
+      "(afficher «fin»)");
+    V("Le x vaut 5.\nSi x > 3 :\n    Afficher 1.\nSinon si x > 1 :\n    Afficher 2.\nSinon :\n    Afficher 3.",
+      "(créer [x] 5)\n(si (> [x] 3) (bloc (afficher 1)) (sinon (bloc (si (> [x] 1) (bloc (afficher 2)) "
+      "(sinon (bloc (afficher 3)))))))");
+    V("Le x vaut 5.\nSi x > 0 :\n  Si x > 3 :\n    Afficher 1.\n  Sinon :\n    Afficher 2.\n  Afficher 3.",
+      "(créer [x] 5)\n(si (> [x] 0) (bloc (si (> [x] 3) (bloc (afficher 1)) (sinon (bloc (afficher 2)))) "
+      "(afficher 3)))");
+    V("Si vrai :\n    Le y vaut 2.\nLe y vaut 3.",
+      "(si vrai (bloc (créer [y] 2)))\n(créer [y] 3)");
+    V("Si vrai :\n    Remarque : commentaire libre\n    Afficher 1.",
+      "(si vrai (bloc (remarque «commentaire libre») (afficher 1)))");
+    V("  Le x vaut 1.\n  Afficher x.", "(créer [x] 1)\n(afficher [x])");
+
+    /* --- Noms entre crochets (§ 2.2) --- */
+    V("Le [frais et port] vaut 3.\nAfficher [frais et port] × 2.",
+      "(créer [frais et port] 3)\n(afficher (× [frais et port] 2))");
+    V("Le total vaut 1.\nAfficher [total] puis le [total].", "(créer [total] 1)\n(afficher [total] [total])");
+    VE("Le frais et port vaut 3.", 1, 10,
+       "« et » est un mot réservé : pour l'utiliser dans un nom, écrivez [frais et port].");
+    VE("Le [a et b] vaut 1.\nLe [a et b] vaut 2.", 2, 4, "Pour le modifier, écrivez : Le [a et b] devient …");
+    VE("Le [a et b] 3 vaut 2.", 1, 13, "un nom entre crochets s'écrit seul");
+    VE("Afficher [inconnu].", 1, 10, "« [inconnu] » inconnu.");
+
+    /* --- Erreurs de conditions --- */
+    VE("La quantité vaut 3.\nAfficher la quantité est positif.", 2, 26,
+       "« quantité » est féminin (déclaré ligne 1) : écrivez « positive ».");
+    VE("L'addition vaut 3.\nAfficher l'addition est positive.\nLe x vaut le addition.", 3, 11,
+       "« addition » est féminin (déclaré ligne 2).");
+    VE("Le x vaut 1.\nAfficher x est inférieur à le x.", 2, 26, "« à le » s'écrit « au ».");
+    VE("La quantité vaut 1.\nAfficher 3 est supérieur au quantité.", 2, 26, "« quantité » est féminin");
+    VE("Le x vaut 1.\nAfficher x > 0 et x < 2 ou x = 5.", 2, 25, "mélangés sans parenthèses");
+    VE("Le x vaut 1.\nAfficher x et 3.", 2, 12, "ce qui suit n'est ni vrai ni faux");
+    VE("Si 3 + 4, afficher 1.", 1, 1, "Condition attendue après « Si »");
+    VE("Le x vaut 1.\nAfficher x n'est égal à 1.", 2, 18, "« n'est » doit être suivi de « pas ».");
+    VE("Le x vaut 1.\nSi x > 0 :\n    Le y vaut 2.\nAfficher y.", 4, 10, "« y » inconnu.");
+    VE("Le x vaut 1.\n  Afficher x.", 2, 3, "Indentation inattendue");
+    VE("Si vrai :\n    Afficher 1.\n  Afficher 2.", 3, 3, "Indentation inattendue");
+    VE("Si vrai :\nAfficher 1.", 2, 1, "plus indentées que « Si »");
+    VE("Si vrai : Afficher 1.", 1, 9, "Bloc vide");
+    VE("Si vrai :\n    Afficher 1.\n  Sinon :\n    Afficher 2.", 3, 3, "doit être aligné sur son « Si »");
+    VE("Sinon, afficher 1.", 1, 1, "« Sinon » sans « Si » correspondant.");
+    VE("Si vrai, si vrai, afficher 1.", 1, 10, "la forme courte n'accepte qu'une phrase simple");
+    VE("Si vrai afficher 1.", 1, 9, "attendu : « et », « ou », « , » ou « : »");
+
+    /* --- Aide à la saisie (§ 8) --- */
+    VS("", "Le | La | L' | Afficher | Si | Remarque :");
+    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Remarque :");
     VS("Af", "Afficher");
     VS("l", "Le | La | L'");
     VS("Le total vaut 1.\nLe ", "total | (nouveau nom)");
@@ -246,14 +313,14 @@ int main(void) {
     VS("Le total vaut 1.\nLe total ", "vaut | devient");
     VS("Le total vaut 1.\nLe total d", "devient");
     VS("Le prix vaut 1.\nLe prix unitaire vaut 2.\nLe prix ", "unitaire | vaut | devient");
-    VS("Le prix unitaire vaut 2.\nLe x vaut ", "prix unitaire | (nombre) | ( | −");
+    VS("Le prix unitaire vaut 2.\nLe x vaut ", "prix unitaire | (nombre) | ( | − | vrai | faux");
     VS("Le prix unitaire vaut 2.\nLe x vaut pr", "prix unitaire");
     VS("Le prix vaut 1.\nLe prix unitaire vaut 2.\nLe x vaut prix ",
-       "unitaire | + | − | × | ÷ | ^ | .");
+       "unitaire | + | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | .");
     VS("Le prix vaut 1.\nLe prix unitaire vaut 2.\nLe x vaut prix u", "unitaire");
     VS("Le x vaut (1 + 2", "+ | − | × | ÷ | ^ | )");
-    VS("Le x vaut 1.\nAfficher ", "x | (nombre) | ( | − | « … »");
-    VS("Le x vaut 1.\nAfficher x ", "+ | − | × | ÷ | ^ | puis | .");
+    VS("Le x vaut 1.\nAfficher ", "x | (nombre) | ( | − | vrai | faux | « … »");
+    VS("Le x vaut 1.\nAfficher x ", "+ | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | puis | .");
     VS("Le x vaut 1.\nAfficher x p", "puis");
     VS("Afficher « a » ", "puis | .");
     VS("Le prix de l'article vaut 1.\nAfficher le prix de ", "l'");
@@ -261,6 +328,16 @@ int main(void) {
     VS("Le prix de l'article vaut 1.\nAfficher le prix d", "de");
     VS("Le x vaut 1 +\nLe y", "");            /* erreur plus haut : pas de suggestion */
     VS("Afficher « ouvert", "");              /* au milieu d'un texte : rien */
+    VS("Le x vaut 1.\nSi ", "x | (nombre) | ( | − | vrai | faux");
+    VS("Le x vaut 1.\nSi x ",
+       "+ | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | , | :");
+    VS("Le x vaut 1.\nSi x est ",
+       "égal à | différent de | inférieur à | inférieur ou égal à | supérieur à | supérieur ou égal à | "
+       "positif | négatif | nul | vrai | faux");
+    VS("La quantité vaut 1.\nSi la quantité est s", "supérieure à | supérieure ou égale à");
+    VS("Le x vaut 1.\nSi x est inférieur ", "ou | à | au");
+    VS("Le [a et b] vaut 1.\nAfficher ", "[a et b] | (nombre) | ( | − | vrai | faux | « … »");
+    VS("Le [a et b] vaut 1.\nAfficher [a", "[a et b]");
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

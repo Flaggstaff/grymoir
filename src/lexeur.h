@@ -1,5 +1,5 @@
 /* GrymoiR : lexeur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.1), § 1.
+ * Spécification : docs/grammaire.md (révision 1.3), § 1.
  */
 #ifndef GRYM_LEXEUR_H
 #define GRYM_LEXEUR_H
@@ -24,6 +24,13 @@ typedef enum {
     J_VIRGULE,
     J_DEUX_POINTS,
     J_REMARQUE,     /* contenu d'une ligne « Remarque : … » */
+    J_EGAL,         /* =  */
+    J_DIFFERENT,    /* ≠  <> */
+    J_INFERIEUR,    /* <  */
+    J_SUPERIEUR,    /* >  */
+    J_INF_EGAL,     /* ≤  <= */
+    J_SUP_EGAL,     /* ≥  >= */
+    J_CROCHETS,     /* nom entre crochets ; valeur : clé du nom, « frais de port et d'emballage » */
     J_ERREUR        /* valeur : message en français */
 } TypeJeton;
 

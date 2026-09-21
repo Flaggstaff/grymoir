@@ -37,6 +37,7 @@ Decimal dec_copier(const Decimal *a);
 void dec_liberer(Decimal *a);
 
 Decimal dec_negation(const Decimal *a);
+int dec_comparer(const Decimal *a, const Decimal *b);   /* −1, 0 ou 1 ; 1,0 = 1 */
 StatutDecimal dec_addition(const Decimal *a, const Decimal *b, Decimal *r);
 StatutDecimal dec_soustraction(const Decimal *a, const Decimal *b, Decimal *r);
 StatutDecimal dec_multiplication(const Decimal *a, const Decimal *b, Decimal *r);

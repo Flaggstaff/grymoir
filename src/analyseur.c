@@ -1,6 +1,6 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.1), § 2 à 7.
- * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 5).
+ * Spécification : docs/grammaire.md (révision 1.3), § 2 à 8.
+ * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
 #include "lexeur.h"
@@ -90,6 +90,11 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->ligne_genre = ligne;
 }
 
+/* Fin d'un bloc : les noms créés dans le bloc disparaissent (grammaire, § 5). */
+static void portee_tronquer(Portee *p, size_t n) {
+    while (p->n > n) free(p->s[--p->n].nom);
+}
+
 /* ---------------------------------------------------------------- */
 /* État de l'analyse                                                */
 /* ---------------------------------------------------------------- */
@@ -101,9 +106,11 @@ typedef struct {
     Portee *portee;    /* copie de travail, validée seulement en cas de succès */
     int interactif;
     int profondeur;
+    Article article_force;   /* article contenu dans « au » ou « du » (grammaire, § 5.2) */
+    const Jeton *jeton_force;
     Diagnostic *diag;
     int echec;
-    /* Suites attendues à la position la plus avancée atteinte (§ 7) */
+    /* Suites attendues à la position la plus avancée atteinte (§ 8) */
     size_t att_pos;    /* index de jeton */
     unsigned att;      /* catégories A_… */
     char **att_mots;   /* mots qui prolongent un nom composé déclaré */
@@ -122,7 +129,11 @@ enum {
     A_PAR_FERM   = 1u << 8,
     A_VERBE      = 1u << 9,  /* vaut, devient */
     A_PUIS       = 1u << 10,
-    A_POINT      = 1u << 11
+    A_POINT      = 1u << 11,
+    A_COMPARAISON= 1u << 12, /* est, n'est pas, =, ≠, <, >, ≤, ≥ */
+    A_LOGIQUE    = 1u << 13, /* et, ou */
+    A_SUITE_SI   = 1u << 14, /* « , » ou « : » après la condition */
+    A_BOOLEEN    = 1u << 15  /* vrai, faux */
 };
 #define A_OPERATEUR (A_OP_PUISS | A_OP_MUL | A_OP_ADD)
 
@@ -170,9 +181,38 @@ static int est_mot(const Jeton *t, const char *m) {
     return t->type == J_MOT && strcmp(t->valeur, m) == 0;
 }
 
-/* Mots qui structurent la phrase et ne peuvent pas entrer dans un nom. */
+/* Mots qui structurent la phrase et ne peuvent pas entrer dans un nom
+ * (sauf entre crochets, § 2.2). */
+static const char *const RESERVES[] = {
+    "vaut", "devient", "puis", "est", "et", "ou", "si", "sinon", "vrai", "faux"
+};
+
+static int est_mot_reserve(const char *m) {
+    for (size_t k = 0; k < sizeof RESERVES / sizeof *RESERVES; k++)
+        if (strcmp(m, RESERVES[k]) == 0) return 1;
+    return 0;
+}
+
 static int est_reserve(const Jeton *t) {
-    return est_mot(t, "vaut") || est_mot(t, "devient") || est_mot(t, "puis");
+    return t->type == J_MOT && est_mot_reserve(t->valeur);
+}
+
+/* Vrai si le nom contient un mot réservé : il s'écrit alors entre crochets. */
+static int nom_a_crochets(const char *nom) {
+    char mot[64];
+    size_t k = 0;
+    for (const char *p = nom;; p++) {
+        if (*p == ' ' || *p == '\'' || *p == '\0') {
+            mot[k] = '\0';
+            if (est_mot_reserve(mot)) return 1;
+            if (*p == '\'' && k == 1 && mot[0] == 'n' && strncmp(p + 1, "est", 3) == 0
+                && (p[4] == ' ' || p[4] == '\0')) return 1;
+            k = 0;
+            if (!*p) return 0;
+        } else if (k + 1 < sizeof mot) {
+            mot[k++] = *p;
+        }
+    }
 }
 
 static Article article_de(const Jeton *t) {
@@ -182,8 +222,19 @@ static Article article_de(const Jeton *t) {
     return ART_AUCUN;
 }
 
-static int est_mot_de_nom(const Jeton *t) {
-    return (t->type == J_MOT && !est_reserve(t)) || t->type == J_ELISION;
+/* Le jeton d'index k peut-il faire partie d'un nom écrit sans crochets ?
+ * « n' » suivi de « est » ouvre une négation, pas un nom. */
+static int mot_de_nom(const Analyse *a, size_t k) {
+    const Jeton *t = &a->j[k];
+    if (t->type == J_MOT) return !est_reserve(t);
+    if (t->type == J_ELISION)
+        return !(strcmp(t->valeur, "n") == 0 && k + 1 < a->n && est_mot(&a->j[k + 1], "est"));
+    return 0;
+}
+
+/* Début d'un nom : un mot, une élision ou un nom entre crochets. */
+static int debut_de_nom(const Analyse *a, size_t k) {
+    return a->j[k].type == J_CROCHETS || mot_de_nom(a, k);
 }
 
 static Genre genre_de(Article art) {
@@ -221,6 +272,13 @@ static char *texte_jeton(const Jeton *t) {
     case J_VIRGULE:   return grym_dupliquer(",");
     case J_DEUX_POINTS: return grym_dupliquer(":");
     case J_REMARQUE:  return grym_dupliquer("Remarque");
+    case J_EGAL:      return grym_dupliquer("=");
+    case J_DIFFERENT: return grym_dupliquer("≠");
+    case J_INFERIEUR: return grym_dupliquer("<");
+    case J_SUPERIEUR: return grym_dupliquer(">");
+    case J_INF_EGAL:  return grym_dupliquer("≤");
+    case J_SUP_EGAL:  return grym_dupliquer("≥");
+    case J_CROCHETS:  return grym_formater("[%s]", t->valeur);
     default:          return grym_dupliquer("fin du texte");
     }
 }
@@ -242,9 +300,9 @@ static void *erreur(Analyse *a, const Jeton *t, char *message) {
     return erreur_a(a, t->ligne, t->colonne, message);
 }
 
-static char *decrire_attendus(unsigned m);
+static char *decrire_attendus(unsigned m, char **mots, size_t nb_mots);
 
-/* « X » inattendu, attendu : … (liste calculée, § 7). */
+/* « X » inattendu, attendu : … (liste calculée, § 8). */
 static void *erreur_inattendu(Analyse *a, const Jeton *t) {
     if (t->type == J_REMARQUE)
         return erreur(a, t, grym_dupliquer(
@@ -258,8 +316,8 @@ static void *erreur_inattendu(Analyse *a, const Jeton *t) {
         free(brut);
     }
     char *m;
-    if ((size_t)(t - a->j) == a->att_pos && a->att) {
-        char *att = decrire_attendus(a->att);
+    if ((size_t)(t - a->j) == a->att_pos && (a->att || a->att_nb)) {
+        char *att = decrire_attendus(a->att, a->att_mots, a->att_nb);
         m = grym_formater("%s inattendu, attendu : %s.", x, att);
         free(att);
     } else {
@@ -301,25 +359,36 @@ static void attendre_suites_nom(Analyse *a, size_t pos, const char *debut) {
 }
 
 /* « un nombre, un nom ou une parenthèse » : forme française d'un ensemble attendu. */
-static char *decrire_attendus(unsigned m) {
-    const char *at[16];
+static char *decrire_attendus(unsigned m, char **mots, size_t nb_mots) {
+    const char *at[32];
     int n = 0;
-    if (m & A_DEBUT)              at[n++] = "le début d'une phrase (Le, La, L', Afficher)";
+    if (m & A_DEBUT)              at[n++] = "le début d'une phrase (Le, La, L', Afficher, Si)";
     if (m & A_VALEUR)             at[n++] = "un nombre";
     if (m & (A_VALEUR | A_NOM))   at[n++] = "un nom";
     if (m & A_NOUVEAU && !(m & (A_VALEUR | A_NOM))) at[n++] = "un nom";
     if (m & A_VALEUR)             at[n++] = "une parenthèse";
     if (m & A_TEXTE)              at[n++] = "un texte";
+    if (m & A_BOOLEEN)          { at[n++] = "« vrai »"; at[n++] = "« faux »"; }
     if (m & A_OPERATEUR)          at[n++] = "un opérateur";
+    if (m & A_COMPARAISON)        at[n++] = "une comparaison (est, =, <…)";
+    if (m & A_LOGIQUE)          { at[n++] = "« et »"; at[n++] = "« ou »"; }
     if (m & A_PAR_FERM)           at[n++] = "« ) »";
     if (m & A_VERBE)            { at[n++] = "« vaut »"; at[n++] = "« devient »"; }
+    if (m & A_SUITE_SI)         { at[n++] = "« , »"; at[n++] = "« : »"; }
     if (m & A_PUIS)               at[n++] = "« puis »";
+    char *cites[16];
+    size_t nc = 0;
+    for (size_t k = 0; k < nb_mots && nc < 16 && n < 31; k++) {
+        cites[nc] = grym_formater("« %s »", mots[k]);
+        at[n++] = cites[nc++];
+    }
     if (m & A_POINT)              at[n++] = "un point final";
     Chaine c = {0};
     for (int k = 0; k < n; k++) {
         if (k > 0) chaine_ajouter(&c, k == n - 1 ? " ou " : ", ");
         chaine_ajouter(&c, at[k]);
     }
+    for (size_t k = 0; k < nc; k++) free(cites[k]);
     return chaine_rendre(&c);
 }
 
@@ -366,7 +435,7 @@ static int verifier_genre(Analyse *a, Symbole *s, Article art, const Jeton *t) {
 }
 
 /* ---------------------------------------------------------------- */
-/* Expressions (§ 3.1, § 5)                                         */
+/* Expressions (§ 3.1, § 6)                                         */
 /* ---------------------------------------------------------------- */
 
 static Noeud *expression(Analyse *a);
@@ -389,13 +458,26 @@ static Noeud *operation(char op, const Jeton *top, Noeud *g, Noeud *d) {
     return n;
 }
 
-/* [ article ] nom, résolu par plus longue correspondance (§ 2.2). */
+/* [ article ] nom, résolu par plus longue correspondance (§ 2.2).
+ * L'article peut venir d'une contraction : « au » (à le), « du » (de le). */
 static Noeud *nom_expression(Analyse *a) {
-    Jeton *tart = NULL;
-    Article art = article_de(cour(a));
-    if (art != ART_AUCUN) {
+    const Jeton *tart = NULL;
+    Article art = ART_AUCUN;
+    if (a->article_force != ART_AUCUN) {
+        art = a->article_force;
+        tart = a->jeton_force;
+        a->article_force = ART_AUCUN;
+        if (article_de(cour(a)) != ART_AUCUN) {
+            char *x = texte_jeton(tart), *y = texte_jeton(cour(a));
+            char *m = grym_formater("« %s %s » : l'article est déjà contenu dans « %s ».", x, y, x);
+            free(x);
+            free(y);
+            return erreur(a, cour(a), m);
+        }
+    } else if (article_de(cour(a)) != ART_AUCUN) {
+        art = article_de(cour(a));
         attendre_en(a, a->i + 1, A_NOM);
-        if (!est_mot_de_nom(voir(a, 1))) {
+        if (!debut_de_nom(a, a->i + 1)) {
             char *x = texte_jeton(cour(a));
             char *m = grym_formater("Nom attendu après « %s ».", x);
             free(x);
@@ -405,23 +487,37 @@ static Noeud *nom_expression(Analyse *a) {
         avancer(a);
     }
 
-    size_t d = a->i, f = d;
-    while (f < a->n && est_mot_de_nom(&a->j[f])) f++;
-
     Symbole *s = NULL;
-    size_t fin = d;
-    for (size_t k = f; k > d; k--) {
-        char *c = cle(a, d, k);
-        s = portee_chercher(a->portee, c);
-        free(c);
-        if (s) { fin = k; break; }
-    }
-    if (!s || fin < f) {
-        char *tout = cle(a, d, f);
-        if (a->j[f].type == J_FIN) attendre_suites_nom(a, f, tout); /* nom en cours de frappe */
-        erreur_inconnu(a, &a->j[d], tout);
-        free(tout);
-        return NULL;
+    size_t d = a->i, fin;
+    if (a->j[d].type == J_CROCHETS) {
+        /* Nom entre crochets : correspondance exacte. */
+        s = portee_chercher(a->portee, a->j[d].valeur);
+        if (!s) {
+            char *x = texte_jeton(&a->j[d]);
+            const char *sug = suggerer(a, a->j[d].valeur);
+            if (sug) erreur(a, &a->j[d], grym_formater("« %s » inconnu, vouliez-vous « %s » ?", x, sug));
+            else     erreur(a, &a->j[d], grym_formater("« %s » inconnu.", x));
+            free(x);
+            return NULL;
+        }
+        fin = d + 1;
+    } else {
+        size_t f = d;
+        while (f < a->n && mot_de_nom(a, f)) f++;
+        fin = d;
+        for (size_t k = f; k > d; k--) {
+            char *c = cle(a, d, k);
+            s = portee_chercher(a->portee, c);
+            free(c);
+            if (s) { fin = k; break; }
+        }
+        if (!s || fin < f) {
+            char *tout = cle(a, d, f);
+            if (a->j[f].type == J_FIN) attendre_suites_nom(a, f, tout); /* nom en cours de frappe */
+            erreur_inconnu(a, &a->j[d], tout);
+            free(tout);
+            return NULL;
+        }
     }
     if (tart && !verifier_genre(a, s, art, tart)) return NULL;
 
@@ -429,9 +525,10 @@ static Noeud *nom_expression(Analyse *a) {
     Noeud *n = noeud_creer(N_NOM, premier->ligne, premier->colonne, premier->debut);
     n->texte = grym_dupliquer(s->nom);
     n->article = art;
+    n->crochets = a->j[d].type == J_CROCHETS;
     n->fin = fin_jeton(&a->j[fin - 1]);
     a->i = fin;
-    attendre_suites_nom(a, a->i, s->nom);
+    if (!n->crochets) attendre_suites_nom(a, a->i, s->nom);
     return n;
 }
 
@@ -439,6 +536,13 @@ static Noeud *unaire(Analyse *a);
 
 static Noeud *base(Analyse *a) {
     Jeton *t = cour(a);
+    if (a->article_force != ART_AUCUN && !debut_de_nom(a, a->i) && article_de(t) == ART_AUCUN) {
+        char *x = texte_jeton(a->jeton_force);
+        a->article_force = ART_AUCUN;
+        char *m = grym_formater("Nom attendu après « %s ».", x);
+        free(x);
+        return erreur(a, t, m);
+    }
     switch (t->type) {
     case J_NOMBRE: {
         Noeud *n = feuille(N_NOMBRE, t);
@@ -470,7 +574,9 @@ static Noeud *base(Analyse *a) {
             "Un texte ne peut apparaître que dans une phrase Afficher."));
     case J_MOT:
     case J_ELISION:
-        if (est_reserve(t)) return erreur_inattendu(a, t);
+        if (!mot_de_nom(a, a->i) && article_de(t) == ART_AUCUN) return erreur_inattendu(a, t);
+        return nom_expression(a);
+    case J_CROCHETS:
         return nom_expression(a);
     case J_POINT:
     case J_FIN:
@@ -552,6 +658,323 @@ static Noeud *expression(Analyse *a) {
 /* Phrases (§ 2, § 4, § 5)                                          */
 /* ---------------------------------------------------------------- */
 
+/* ---------------------------------------------------------------- */
+/* Conditions (§ 5)                                                 */
+/* ---------------------------------------------------------------- */
+
+static Noeud *valeur(Analyse *a);
+
+/* Une expression purement arithmétique n'est jamais vraie ni fausse. */
+static int est_arithmetique(const Noeud *n) {
+    switch (n->type) {
+    case N_NOMBRE: case N_OPERATION: case N_NEGATION: case N_TEXTE:
+        return 1;
+    case N_GROUPE:
+        return est_arithmetique(n->enfants[0]);
+    default:
+        return 0;
+    }
+}
+
+/* Un nom peut contenir un booléen : il reste acceptable comme condition. */
+static int peut_etre_condition(const Noeud *n) {
+    return !est_arithmetique(n);
+}
+
+typedef struct {
+    const char *m, *f;   /* forme masculine, forme féminine */
+    char op;
+    char complement;     /* 0 : aucun ; 'a' : à ; 'd' : de ; 'c' : à, ou « ou égal à » */
+} Relation;
+
+static const Relation RELATIONS[] = {
+    { "égal",      "égale",      '=', 'a' },
+    { "différent", "différente", '!', 'd' },
+    { "inférieur", "inférieure", '<', 'c' },
+    { "supérieur", "supérieure", '>', 'c' },
+    { "positif",   "positive",   'P', 0 },
+    { "négatif",   "négative",   'N', 0 },
+    { "nul",       "nulle",      '0', 0 },
+    { "vrai",      "vraie",      'V', 0 },
+    { "faux",      "fausse",     'F', 0 },
+};
+#define NB_RELATIONS (sizeof RELATIONS / sizeof *RELATIONS)
+
+/* Suites possibles après « est » : les tournures, accordées au genre du sujet. */
+static void attendre_relations(Analyse *a, Genre g) {
+    for (size_t k = 0; k < NB_RELATIONS; k++) {
+        const char *mot = g == GENRE_FEMININ ? RELATIONS[k].f : RELATIONS[k].m;
+        char *t;
+        switch (RELATIONS[k].complement) {
+        case 'a': t = grym_formater("%s à", mot); break;
+        case 'd': t = grym_formater("%s de", mot); break;
+        case 'c':
+            t = grym_formater("%s à", mot);
+            attendre_mot(a, a->i, t, strlen(t));
+            free(t);
+            t = grym_formater("%s ou %s à", mot, g == GENRE_FEMININ ? "égale" : "égal");
+            break;
+        default:  t = grym_dupliquer(mot); break;
+        }
+        attendre_mot(a, a->i, t, strlen(t));
+        free(t);
+    }
+}
+
+/* Accord de l'adjectif avec un nom de genre connu ; un genre libre se fixe ici. */
+static int accorder(Analyse *a, Symbole *s, Genre g, const Jeton *t, const char *forme_juste) {
+    if (!s) return 1;
+    if (s->genre == GENRE_LIBRE) {
+        s->genre = g;
+        s->ligne_genre = t->ligne;
+        return 1;
+    }
+    if (s->genre != g) {
+        erreur(a, t, grym_formater("« %s » est %s (déclaré ligne %d) : écrivez « %s ».", s->nom,
+                                   s->genre == GENRE_MASCULIN ? "masculin" : "féminin",
+                                   s->ligne_genre, forme_juste));
+        return 0;
+    }
+    return 1;
+}
+
+/* « à » ou « au » (à le) ; « de », « d' » ou « du » (de le). */
+static int complement(Analyse *a, char quoi) {
+    const char *simple = quoi == 'a' ? "à" : "de";
+    const char *contracte = quoi == 'a' ? "au" : "du";
+    attendre_mot(a, a->i, simple, strlen(simple));
+    attendre_mot(a, a->i, contracte, strlen(contracte));
+    Jeton *t = cour(a);
+    if (est_mot(t, simple) || (quoi == 'd' && t->type == J_ELISION && strcmp(t->valeur, "d") == 0)) {
+        avancer(a);
+        if (est_mot(cour(a), "le")) {
+            erreur(a, t, grym_formater("« %s le » s'écrit « %s ».", simple, contracte));
+            return 0;
+        }
+        return 1;
+    }
+    if (est_mot(t, contracte)) {
+        avancer(a);
+        a->article_force = ART_LE;
+        a->jeton_force = t;
+        return 1;
+    }
+    erreur_inattendu(a, t);
+    return 0;
+}
+
+/* Ce qui suit « est » ou « n'est pas » (§ 5.1). */
+static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test) {
+    Symbole *s = sujet->type == N_NOM ? portee_chercher(a->portee, sujet->texte) : NULL;
+    attendre_relations(a, s ? s->genre : GENRE_LIBRE);
+    Jeton *t = cour(a);
+    const Relation *r = NULL;
+    Genre g = GENRE_MASCULIN;
+    for (size_t k = 0; k < NB_RELATIONS && !r; k++) {
+        if (est_mot(t, RELATIONS[k].m)) { r = &RELATIONS[k]; g = GENRE_MASCULIN; }
+        else if (est_mot(t, RELATIONS[k].f)) { r = &RELATIONS[k]; g = GENRE_FEMININ; }
+    }
+    if (!r) { noeud_liberer(sujet); return erreur_inattendu(a, t); }
+
+    char op = r->op, quoi = r->complement;
+    const Jeton *adjectif = t;
+    avancer(a);
+    int ou_egal = 0;
+    if (quoi == 'c') {
+        quoi = 'a';
+        attendre_mot(a, a->i, "ou", 2);
+        if (est_mot(cour(a), "ou")) {
+            avancer(a);
+            Jeton *te = cour(a);
+            Genre ge = est_mot(te, "égale") ? GENRE_FEMININ : GENRE_MASCULIN;
+            const char *egal = g == GENRE_FEMININ ? "égale" : "égal";
+            attendre_mot(a, a->i, egal, strlen(egal));
+            if (!est_mot(te, "égal") && !est_mot(te, "égale")) {
+                noeud_liberer(sujet);
+                return erreur_inattendu(a, te);
+            }
+            if (ge != g) {
+                noeud_liberer(sujet);
+                return erreur(a, te, grym_formater("Accord : écrivez « %s ou %s ».",
+                                                   g == GENRE_FEMININ ? r->f : r->m,
+                                                   g == GENRE_FEMININ ? "égale" : "égal"));
+            }
+            avancer(a);
+            ou_egal = 1;
+            op = op == '<' ? 'l' : 'g';
+        }
+    }
+    char *juste = ou_egal ? grym_formater("%s ou %s", g == GENRE_FEMININ ? r->m : r->f,
+                                          g == GENRE_FEMININ ? "égal" : "égale")
+                          : grym_dupliquer(g == GENRE_FEMININ ? r->m : r->f);
+    int ok = accorder(a, s, g, adjectif, juste);
+    free(juste);
+    if (!ok) { noeud_liberer(sujet); return NULL; }
+
+    Noeud *droite = NULL;
+    if (quoi) {
+        if (!complement(a, quoi)) { noeud_liberer(sujet); return NULL; }
+        droite = expression(a);
+        a->article_force = ART_AUCUN;
+        if (!droite) { noeud_liberer(sujet); return NULL; }
+    }
+    Noeud *n = noeud_creer(N_COMPARAISON, sujet->ligne, sujet->colonne, sujet->debut);
+    n->op = op;
+    n->negation = negation;
+    n->op_ligne = test->ligne;
+    n->op_colonne = test->colonne;
+    noeud_ajouter(n, sujet);
+    if (droite) noeud_ajouter(n, droite);
+    n->fin = droite ? droite->fin : fin_jeton(&a->j[a->i - 1]);
+    return n;
+}
+
+/* comparaison = expression [ comparateur expression | "est" relation | "n'est pas" relation ] */
+static Noeud *comparaison(Analyse *a) {
+    Noeud *x = expression(a);
+    if (!x) return NULL;
+    attendre(a, A_COMPARAISON);
+    Jeton *t = cour(a);
+    char op = 0;
+    switch (t->type) {
+    case J_EGAL:      op = '='; break;
+    case J_DIFFERENT: op = '!'; break;
+    case J_INFERIEUR: op = '<'; break;
+    case J_SUPERIEUR: op = '>'; break;
+    case J_INF_EGAL:  op = 'l'; break;
+    case J_SUP_EGAL:  op = 'g'; break;
+    default: break;
+    }
+    if (op) {
+        avancer(a);
+        Noeud *y = expression(a);
+        if (!y) { noeud_liberer(x); return NULL; }
+        Noeud *n = noeud_creer(N_COMPARAISON, x->ligne, x->colonne, x->debut);
+        n->op = op;
+        n->forme = 1;
+        n->op_ligne = t->ligne;
+        n->op_colonne = t->colonne;
+        noeud_ajouter(n, x);
+        noeud_ajouter(n, y);
+        n->fin = y->fin;
+        return n;
+    }
+    if (est_mot(t, "est")) {
+        avancer(a);
+        return relation(a, x, 0, t);
+    }
+    if (t->type == J_ELISION && strcmp(t->valeur, "n") == 0 && est_mot(voir(a, 1), "est")) {
+        avancer(a);
+        avancer(a);
+        attendre_mot(a, a->i, "pas", 3);
+        if (!est_mot(cour(a), "pas")) {
+            noeud_liberer(x);
+            return erreur(a, cour(a), grym_dupliquer("« n'est » doit être suivi de « pas »."));
+        }
+        avancer(a);
+        return relation(a, x, 1, t);
+    }
+    return x;
+}
+
+/* Une parenthèse ouvre-t-elle un groupe logique plutôt qu'un calcul ?
+ * Oui si elle contient, à son premier niveau, une comparaison, « et » ou « ou ». */
+static int groupe_logique(Analyse *a) {
+    int profondeur = 0;
+    for (size_t k = a->i; k < a->n; k++) {
+        const Jeton *t = &a->j[k];
+        if (t->type == J_PAR_OUV) profondeur++;
+        else if (t->type == J_PAR_FERM) { if (--profondeur == 0) return 0; }
+        else if (t->type == J_POINT || t->type == J_FIN || t->type == J_VIRGULE
+                 || t->type == J_DEUX_POINTS) return 0;
+        else if (profondeur == 1 &&
+                 (est_mot(t, "est") || est_mot(t, "et") || est_mot(t, "ou") || est_mot(t, "vrai")
+                  || est_mot(t, "faux") || (t->type >= J_EGAL && t->type <= J_SUP_EGAL)
+                  || (t->type == J_ELISION && strcmp(t->valeur, "n") == 0)))
+            return 1;
+    }
+    return 0;
+}
+
+static Noeud *element_logique(Analyse *a) {
+    Jeton *t = cour(a);
+    attendre(a, A_BOOLEEN);
+    if (est_mot(t, "vrai") || est_mot(t, "faux")) {
+        Noeud *n = feuille(N_BOOLEEN, t);
+        avancer(a);
+        return n;
+    }
+    if (t->type == J_PAR_OUV && groupe_logique(a)) {
+        if (++a->profondeur > PROFONDEUR_MAX)
+            return erreur(a, t, grym_dupliquer("Expression trop imbriquée."));
+        avancer(a);
+        Noeud *v = valeur(a);
+        a->profondeur--;
+        if (!v) return NULL;
+        attendre(a, A_PAR_FERM);
+        if (cour(a)->type != J_PAR_FERM) {
+            noeud_liberer(v);
+            return erreur(a, cour(a), grym_formater(
+                "Parenthèse fermante manquante : la parenthèse ouverte ligne %d, "
+                "colonne %d n'est pas refermée.", t->ligne, t->colonne));
+        }
+        Noeud *g = noeud_creer(N_GROUPE, t->ligne, t->colonne, t->debut);
+        noeud_ajouter(g, v);
+        g->fin = fin_jeton(cour(a));
+        avancer(a);
+        return g;
+    }
+    return comparaison(a);
+}
+
+/* valeur = élément { ("et" | "ou") élément }, sans mélange de « et » et « ou » (§ 5.3). */
+static Noeud *valeur(Analyse *a) {
+    Noeud *g = element_logique(a);
+    char mode = 0;
+    while (g) {
+        if (peut_etre_condition(g)) attendre(a, A_LOGIQUE);
+        Jeton *t = cour(a);
+        char op = est_mot(t, "et") ? 'e' : est_mot(t, "ou") ? 'o' : 0;
+        if (!op) break;
+        if (mode && op != mode) {
+            noeud_liberer(g);
+            return erreur(a, t, grym_dupliquer(
+                "« et » et « ou » mélangés sans parenthèses : écrivez « (A et B) ou C » "
+                "ou « A et (B ou C) » selon le sens voulu."));
+        }
+        mode = op;
+        if (!peut_etre_condition(g)) {
+            noeud_liberer(g);
+            return erreur(a, t, grym_formater(
+                "« %s » relie deux conditions : ce qui précède n'est ni vrai ni faux.",
+                op == 'e' ? "et" : "ou"));
+        }
+        avancer(a);
+        Noeud *d = element_logique(a);
+        if (!d) { noeud_liberer(g); return NULL; }
+        if (!peut_etre_condition(d)) {
+            noeud_liberer(g);
+            noeud_liberer(d);
+            return erreur(a, t, grym_formater(
+                "« %s » relie deux conditions : ce qui suit n'est ni vrai ni faux.",
+                op == 'e' ? "et" : "ou"));
+        }
+        Noeud *n = noeud_creer(N_LOGIQUE, g->ligne, g->colonne, g->debut);
+        n->op = op;
+        n->op_ligne = t->ligne;
+        n->op_colonne = t->colonne;
+        noeud_ajouter(n, g);
+        noeud_ajouter(n, d);
+        n->fin = d->fin;
+        g = n;
+    }
+    return g;
+}
+
+/* ---------------------------------------------------------------- */
+/* Phrases (§ 2, § 4, § 5)                                          */
+/* ---------------------------------------------------------------- */
+
 static int fin_phrase(Analyse *a, int avec_puis) {
     Jeton *t = cour(a);
     attendre(a, A_POINT | (avec_puis ? A_PUIS : 0));
@@ -572,7 +995,7 @@ static int fin_phrase(Analyse *a, int avec_puis) {
 
 static Noeud *phrase_expression(Analyse *a) {
     Jeton *t = cour(a);
-    Noeud *e = expression(a);
+    Noeud *e = valeur(a);
     if (!e) return NULL;
     if (!fin_phrase(a, 0)) { noeud_liberer(e); return NULL; }
     Noeud *n = noeud_creer(P_EXPRESSION, t->ligne, t->colonne, t->debut);
@@ -588,7 +1011,7 @@ static Noeud *affichage(Analyse *a) {
     Noeud *n = noeud_creer(P_AFFICHAGE, t->ligne, t->colonne, t->debut);
     for (;;) {
         Jeton *e = cour(a);
-        attendre(a, A_VALEUR | A_TEXTE);
+        attendre(a, A_VALEUR | A_TEXTE | A_BOOLEEN);
         if (e->type == J_POINT || e->type == J_FIN) {
             noeud_liberer(n);
             return erreur(a, e, grym_dupliquer(a->i > 0 && est_mot(&a->j[a->i - 1], "puis")
@@ -600,7 +1023,7 @@ static Noeud *affichage(Analyse *a) {
             el = feuille(N_TEXTE, e);
             avancer(a);
         } else {
-            el = expression(a);
+            el = valeur(a);
             if (!el) { noeud_liberer(n); return NULL; }
         }
         noeud_ajouter(n, el);
@@ -612,8 +1035,8 @@ static Noeud *affichage(Analyse *a) {
     return n;
 }
 
-/* création     = article nom "vaut" expression "."
- * modification = article nom "devient" expression "." */
+/* création     = article nom "vaut" valeur "."
+ * modification = article nom "devient" valeur "." */
 static Noeud *declaration(Analyse *a, size_t iverbe) {
     Jeton *tart = cour(a);
     Article art = article_de(tart);
@@ -627,35 +1050,62 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
         free(x);
         return erreur(a, verbe, m);
     }
-    for (size_t k = d; k < f; k++) {
-        Jeton *t = &a->j[k];
-        if (est_reserve(t))
-            return erreur(a, t, grym_formater(
-                "« %s » est un mot réservé et ne peut pas faire partie d'un nom.", t->valeur));
-        if (!est_mot_de_nom(t)) {
-            char *x = texte_jeton(t);
-            char *m = grym_formater("« %s » ne peut pas faire partie d'un nom.", x);
+    char *nom;
+    int crochets = a->j[d].type == J_CROCHETS;
+    if (crochets) {
+        if (f != d + 1) {
+            char *x = texte_jeton(&a->j[d + 1]);
+            char *m = grym_formater("« %s » inattendu : un nom entre crochets s'écrit seul.", x);
             free(x);
-            return erreur(a, t, m);
+            return erreur(a, &a->j[d + 1], m);
         }
-    }
-    if (article_de(&a->j[d]) != ART_AUCUN || a->j[d].type == J_ELISION) {
-        char *x = texte_jeton(&a->j[d]);
-        char *m = grym_formater("Un nom ne peut pas commencer par « %s ».", x);
-        free(x);
-        return erreur(a, &a->j[d], m);
+        nom = grym_dupliquer(a->j[d].valeur);
+        const char *p = nom;
+        int article = strncmp(p, "le ", 3) == 0 || strncmp(p, "la ", 3) == 0 || strncmp(p, "l'", 2) == 0
+                   || strcmp(p, "le") == 0 || strcmp(p, "la") == 0;
+        if (article) {
+            free(nom);
+            return erreur(a, &a->j[d], grym_dupliquer("Un nom ne peut pas commencer par un article."));
+        }
+    } else {
+        for (size_t k = d; k < f; k++) {
+            Jeton *t = &a->j[k];
+            if (est_reserve(t) || (t->type == J_ELISION && !mot_de_nom(a, k))) {
+                char *nomx = cle(a, d, f);
+                char *x = texte_jeton(t);
+                char *m = grym_formater(
+                    "« %s » est un mot réservé : pour l'utiliser dans un nom, écrivez [%s].", x, nomx);
+                free(x);
+                free(nomx);
+                return erreur(a, t, m);
+            }
+            if (!mot_de_nom(a, k)) {
+                char *x = texte_jeton(t);
+                char *m = grym_formater("« %s » ne peut pas faire partie d'un nom.", x);
+                free(x);
+                return erreur(a, t, m);
+            }
+        }
+        if (article_de(&a->j[d]) != ART_AUCUN || a->j[d].type == J_ELISION) {
+            char *x = texte_jeton(&a->j[d]);
+            char *m = grym_formater("Un nom ne peut pas commencer par « %s ».", x);
+            free(x);
+            return erreur(a, &a->j[d], m);
+        }
+        nom = cle(a, d, f);
     }
 
-    char *nom = cle(a, d, f);
     int creation = est_mot(verbe, "vaut");
     Symbole *s = portee_chercher(a->portee, nom);
+    char *ecrit_nom = crochets || nom_a_crochets(nom) ? grym_formater("[%s]", nom) : grym_dupliquer(nom);
 
     if (creation && s) {
-        char *ecrit = ecrire_avec_article(art, nom);
+        char *ecrit = ecrire_avec_article(art, ecrit_nom);
         erreur(a, &a->j[d], grym_formater(
             "« %s » existe déjà (ligne %d). Pour le modifier, écrivez : %s devient …",
             nom, s->ligne_decl, ecrit));
         free(ecrit);
+        free(ecrit_nom);
         free(nom);
         return NULL;
     }
@@ -665,19 +1115,21 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
             if (sug) {
                 erreur(a, &a->j[d], grym_formater("« %s » inconnu, vouliez-vous « %s » ?", nom, sug));
             } else {
-                char *ecrit = ecrire_avec_article(art, nom);
+                char *ecrit = ecrire_avec_article(art, ecrit_nom);
                 erreur(a, &a->j[d], grym_formater(
                     "« %s » n'existe pas. Pour le créer, écrivez : %s vaut …", nom, ecrit));
                 free(ecrit);
             }
+            free(ecrit_nom);
             free(nom);
             return NULL;
         }
-        if (!verifier_genre(a, s, art, tart)) { free(nom); return NULL; }
+        if (!verifier_genre(a, s, art, tart)) { free(ecrit_nom); free(nom); return NULL; }
     }
+    free(ecrit_nom);
 
     a->i = f + 1; /* après le verbe */
-    Noeud *e = expression(a);
+    Noeud *e = valeur(a);
     if (!e) { free(nom); return NULL; }
     if (!fin_phrase(a, 0)) { noeud_liberer(e); free(nom); return NULL; }
 
@@ -688,14 +1140,113 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
                            tart->ligne, tart->colonne, tart->debut);
     n->texte = nom;
     n->article = art;
+    n->crochets = crochets;
     noeud_ajouter(n, e);
     n->fin = e->fin;
     return n;
 }
 
-static Noeud *phrase(Analyse *a) {
+static Noeud *phrase(Analyse *a, int colonne);
+static Noeud *bloc(Analyse *a, int colonne, int racine);
+
+static int premier_de_ligne(const Analyse *a, size_t k) {
+    return k == 0 || a->j[k - 1].ligne < a->j[k].ligne;
+}
+
+/* Forme courte : une seule phrase simple après la virgule. */
+static Noeud *phrase_courte(Analyse *a, int colonne) {
     Jeton *t = cour(a);
-    attendre(a, A_DEBUT | (a->interactif ? A_VALEUR : 0));
+    attendre(a, A_DEBUT);
+    if (est_mot(t, "si") || est_mot(t, "sinon") || t->type == J_REMARQUE) {
+        char *x = texte_jeton(t);
+        char *m = grym_formater("« %s » inattendu : la forme courte n'accepte qu'une phrase simple "
+                                "(Le, La, L', Afficher). Pour davantage, ouvrez un bloc avec « : ».", x);
+        free(x);
+        return erreur(a, t, m);
+    }
+    size_t sauve = a->portee->n;
+    Noeud *p = phrase(a, colonne);
+    portee_tronquer(a->portee, sauve);
+    if (!p) return NULL;
+    Noeud *b = noeud_creer(N_BLOC, p->ligne, p->colonne, p->debut);
+    noeud_ajouter(b, p);
+    b->fin = p->fin;
+    return b;
+}
+
+/* Corps d'une branche : « , phrase » ou « : » suivi d'un bloc indenté. */
+static Noeud *branche(Analyse *a, int colonne, const Jeton *mot, int *forme_bloc) {
+    attendre(a, A_SUITE_SI);
+    Jeton *t = cour(a);
+    if (t->type == J_VIRGULE) {
+        avancer(a);
+        *forme_bloc = 0;
+        return phrase_courte(a, colonne);
+    }
+    if (t->type != J_DEUX_POINTS) return erreur_inattendu(a, t);
+    avancer(a);
+    *forme_bloc = 1;
+    Jeton *suivant = cour(a);
+    if (suivant->type == J_FIN || suivant->ligne == t->ligne || suivant->colonne <= colonne
+        || est_mot(suivant, "sinon")) {
+        char *m = grym_formater("Bloc vide : après « : », écrivez les phrases du bloc sur les lignes "
+                                "suivantes, plus indentées que « %s ».",
+                                est_mot(mot, "sinon") ? "Sinon" : "Si");
+        return erreur(a, suivant->type == J_FIN || suivant->ligne == t->ligne ? t : suivant, m);
+    }
+    return bloc(a, suivant->colonne, 0);
+}
+
+/* si = "Si" valeur branche [ "Sinon" ( "si" … | branche ) ] (§ 5.4) */
+static Noeud *si(Analyse *a, int colonne, int sinon_si) {
+    Jeton *t = cour(a);
+    avancer(a);
+    Noeud *cond = valeur(a);
+    if (!cond) return NULL;
+    if (!peut_etre_condition(cond)) {
+        noeud_liberer(cond);
+        return erreur(a, t, grym_dupliquer(
+            "Condition attendue après « Si » : une comparaison, par exemple "
+            "« Si le total est supérieur à 100 ». Un calcul seul n'est ni vrai ni faux."));
+    }
+    int forme_bloc = 0;
+    Noeud *alors = branche(a, colonne, t, &forme_bloc);
+    if (!alors) { noeud_liberer(cond); return NULL; }
+    Noeud *n = noeud_creer(P_SI, t->ligne, t->colonne, t->debut);
+    n->forme = (forme_bloc ? 1 : 0) | (sinon_si ? 2 : 0);
+    noeud_ajouter(n, cond);
+    noeud_ajouter(n, alors);
+    n->fin = alors->fin;
+
+    /* « Sinon » : sur la même ligne qu'une forme courte, ou aligné sur « Si ». */
+    Jeton *s = cour(a);
+    if (!est_mot(s, "sinon")) return n;
+    if (premier_de_ligne(a, a->i) && s->colonne != colonne) {
+        if (s->colonne < colonne) return n;   /* appartient à un bloc englobant */
+        noeud_liberer(n);
+        return erreur(a, s, grym_dupliquer("« Sinon » doit être aligné sur son « Si »."));
+    }
+    avancer(a);
+    Noeud *autre;
+    if (est_mot(cour(a), "si")) {
+        Noeud *imbrique = si(a, colonne, 1);
+        if (!imbrique) { noeud_liberer(n); return NULL; }
+        autre = noeud_creer(N_BLOC, imbrique->ligne, imbrique->colonne, imbrique->debut);
+        noeud_ajouter(autre, imbrique);
+        autre->fin = imbrique->fin;
+    } else {
+        int f = 0;
+        autre = branche(a, colonne, s, &f);
+        if (!autre) { noeud_liberer(n); return NULL; }
+    }
+    noeud_ajouter(n, autre);
+    n->fin = autre->fin;
+    return n;
+}
+
+static Noeud *phrase(Analyse *a, int colonne) {
+    Jeton *t = cour(a);
+    attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0));
 
     if (t->type == J_REMARQUE) {
         Noeud *n = feuille(P_REMARQUE, t);
@@ -703,6 +1254,9 @@ static Noeud *phrase(Analyse *a) {
         return n;
     }
     if (est_mot(t, "afficher")) return affichage(a);
+    if (est_mot(t, "si")) return si(a, colonne, 0);
+    if (est_mot(t, "sinon"))
+        return erreur(a, t, grym_dupliquer("« Sinon » sans « Si » correspondant."));
     if (est_mot(t, "remarque") && voir(a, 1)->type == J_DEUX_POINTS)
         return erreur(a, t, grym_dupliquer(
             "Une remarque doit commencer une ligne : passez à la ligne avant « Remarque : »."));
@@ -716,12 +1270,14 @@ static Noeud *phrase(Analyse *a) {
         if (est_mot(&a->j[k], "vaut") || est_mot(&a->j[k], "devient"))
             return declaration(a, k);
 
-        /* Aide à la saisie (§ 7) : après l'article, un nom ; après le nom, le verbe. */
+        /* Aide à la saisie (§ 8) : après l'article, un nom ; après le nom, le verbe. */
         size_t d = a->i + 1;
         int que_des_mots = 1;
-        for (size_t q = d; q < k; q++) if (!est_mot_de_nom(&a->j[q])) que_des_mots = 0;
+        for (size_t q = d; q < k; q++) if (!mot_de_nom(a, q)) que_des_mots = 0;
         if (k == d) {
             attendre_en(a, k, A_NOM | A_NOUVEAU);
+        } else if (k == d + 1 && a->j[d].type == J_CROCHETS) {
+            attendre_en(a, k, A_VERBE);
         } else if (que_des_mots) {
             attendre_en(a, k, A_VERBE);
             char *debut = cle(a, d, k);
@@ -739,9 +1295,42 @@ static Noeud *phrase(Analyse *a) {
     if (a->interactif) return phrase_expression(a);
     char *x = texte_jeton(t);
     char *m = grym_formater("« %s » ne peut pas commencer une phrase : "
-                            "une phrase commence par Le, La, L' ou Afficher.", x);
+                            "une phrase commence par Le, La, L', Afficher ou Si.", x);
     free(x);
     return erreur(a, t, m);
+}
+
+/* Suite de phrases alignées sur une même colonne (§ 5.4). À la racine, les noms
+ * restent déclarés ; dans un bloc, ils disparaissent à la fin du bloc. */
+static Noeud *bloc(Analyse *a, int colonne, int racine) {
+    Jeton *t0 = cour(a);
+    Noeud *b = noeud_creer(N_BLOC, t0->ligne, t0->colonne, t0->debut);
+    size_t sauve = a->portee->n;
+    for (;;) {
+        attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0));
+        Jeton *t = cour(a);
+        if (t->type == J_FIN) break;
+        if (t->type != J_REMARQUE && premier_de_ligne(a, a->i)) {
+            if (t->colonne < colonne) {
+                if (!racine) break;
+                noeud_liberer(b);
+                return erreur(a, t, grym_dupliquer(
+                    "Indentation incohérente : cette ligne est moins indentée que le début du programme."));
+            }
+            if (t->colonne > colonne) {
+                noeud_liberer(b);
+                return erreur(a, t, grym_dupliquer(
+                    "Indentation inattendue : seul un bloc ouvert par « : » s'indente."));
+            }
+        }
+        if (est_mot(t, "sinon") && !racine) break;
+        Noeud *p = phrase(a, colonne);
+        if (!p) { noeud_liberer(b); return NULL; }
+        noeud_ajouter(b, p);
+        b->fin = p->fin;
+    }
+    if (!racine) portee_tronquer(a->portee, sauve);
+    return b;
 }
 
 /* ---------------------------------------------------------------- */
@@ -817,24 +1406,22 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.att = 0;
     a.att_mots = NULL;
     a.att_nb = 0;
+    a.article_force = ART_AUCUN;
+    a.jeton_force = NULL;
 
-    size_t cap_p = 0;
-    for (;;) {
-        attendre(&a, A_DEBUT | (interactif ? A_VALEUR : 0));
-        if (cour(&a)->type == J_FIN) break;
-        Noeud *p = phrase(&a);
-        if (!p) {
-            if (!a.echec) erreur(&a, cour(&a), grym_dupliquer("Erreur interne de l'analyseur."));
-            break;
-        }
-        if (programme->nb == cap_p) {
-            cap_p = cap_p ? cap_p * 2 : 16;
-            Noeud **np = grym_allouer(cap_p * sizeof *np);
-            if (programme->nb) memcpy(np, programme->phrases, programme->nb * sizeof *np);
-            free(programme->phrases);
-            programme->phrases = np;
-        }
-        programme->phrases[programme->nb++] = p;
+    /* Colonne de référence : celle de la première phrase (les remarques ne comptent pas). */
+    int colonne = 1;
+    for (size_t k = 0; k < n; k++)
+        if (j[k].type != J_REMARQUE) { colonne = j[k].type == J_FIN ? 1 : j[k].colonne; break; }
+    Noeud *racine = bloc(&a, colonne, 1);
+    if (racine) {
+        programme->phrases = racine->enfants;
+        programme->nb = racine->nb_enfants;
+        racine->enfants = NULL;
+        racine->nb_enfants = 0;
+        noeud_liberer(racine);
+    } else if (!a.echec) {
+        erreur(&a, cour(&a), grym_dupliquer("Erreur interne de l'analyseur."));
     }
 
     if (capture) {
@@ -867,7 +1454,7 @@ int analyser(const char *source, size_t taille, Portee *portee, int interactif,
 }
 
 /* ---------------------------------------------------------------- */
-/* Aide à la saisie (§ 7, charte art. 9)                            */
+/* Aide à la saisie (§ 8, charte art. 9)                            */
 /* ---------------------------------------------------------------- */
 
 /* Lettre au sens du lexeur (Latin-1, œ, Ÿ) ou chiffre. */
@@ -892,6 +1479,7 @@ static size_t debut_mot_partiel(const char *s, size_t taille) {
         i = k;
     }
     if (i < taille && s[i] >= '0' && s[i] <= '9') return taille; /* un nombre, pas un mot */
+    if (i > 0 && s[i - 1] == '[') i--;                           /* nom entre crochets commencé */
     return i;
 }
 
@@ -954,10 +1542,20 @@ Suggestions suites_valides(const char *source, size_t taille) {
             proposer(&r, "La", pre, lp, 0);
             proposer(&r, "L'", pre, lp, 0);
             proposer(&r, "Afficher", pre, lp, 0);
+            proposer(&r, "Si", pre, lp, 0);
             proposer(&r, "Remarque :", pre, lp, 0);
         }
         if (m & (A_VALEUR | A_NOM))
-            for (size_t k = 0; k < c.nb_noms; k++) proposer(&r, c.noms[k], pre, lp, 0);
+            for (size_t k = 0; k < c.nb_noms; k++) {
+                /* Un nom qui contient un mot réservé se propose entre crochets (§ 2.2). */
+                if (nom_a_crochets(c.noms[k])) {
+                    char *x = grym_formater("[%s]", c.noms[k]);
+                    proposer(&r, x, pre, lp, 0);
+                    free(x);
+                } else {
+                    proposer(&r, c.noms[k], pre, lp, 0);
+                }
+            }
         for (size_t k = 0; k < c.nb_mots; k++) proposer(&r, c.mots[k], pre, lp, 0);
         if (m & A_NOUVEAU) proposer(&r, "(nouveau nom)", pre, lp, 1);
         if (m & A_VALEUR) {
@@ -965,11 +1563,20 @@ Suggestions suites_valides(const char *source, size_t taille) {
             proposer(&r, "(", pre, lp, 1);
             proposer(&r, "−", pre, lp, 1);
         }
+        if (m & A_BOOLEEN) { proposer(&r, "vrai", pre, lp, 0); proposer(&r, "faux", pre, lp, 0); }
         if (m & A_TEXTE) proposer(&r, "« … »", pre, lp, 1);
         if (m & A_OP_ADD) { proposer(&r, "+", pre, lp, 1); proposer(&r, "−", pre, lp, 1); }
         if (m & A_OP_MUL) { proposer(&r, "×", pre, lp, 1); proposer(&r, "÷", pre, lp, 1); }
         if (m & A_OP_PUISS) proposer(&r, "^", pre, lp, 1);
+        if (m & A_COMPARAISON) {
+            proposer(&r, "est", pre, lp, 0);
+            proposer(&r, "n'est pas", pre, lp, 0);
+            static const char *const SYMBOLES[] = { "=", "≠", "<", ">", "≤", "≥" };
+            for (size_t k = 0; k < 6; k++) proposer(&r, SYMBOLES[k], pre, lp, 1);
+        }
+        if (m & A_LOGIQUE) { proposer(&r, "et", pre, lp, 0); proposer(&r, "ou", pre, lp, 0); }
         if (m & A_PAR_FERM) proposer(&r, ")", pre, lp, 1);
+        if (m & A_SUITE_SI) { proposer(&r, ",", pre, lp, 1); proposer(&r, ":", pre, lp, 1); }
         if (m & A_VERBE) { proposer(&r, "vaut", pre, lp, 0); proposer(&r, "devient", pre, lp, 0); }
         if (m & A_PUIS) proposer(&r, "puis", pre, lp, 0);
         if (m & A_POINT) proposer(&r, ".", pre, lp, 1);

@@ -174,6 +174,12 @@ static int est_quitter(const char *l) {
     return *l == '\0';
 }
 
+static int termine_par_deux_points(const char *l) {
+    size_t n = strlen(l);
+    while (n && (l[n - 1] == ' ' || l[n - 1] == '\t')) n--;
+    return n && l[n - 1] == ':';
+}
+
 /* Boucle interactive : une saisie ratée n'a aucun effet (grammaire, § 3.3).
  * La machine annule ses propres écritures (journal) ; la portée de l'analyseur,
  * qui a déjà enregistré les noms de la saisie, est restaurée à part. */
@@ -187,6 +193,22 @@ static int boucle(void) {
         char *ligne = lire_ligne();
         if (!ligne) break;
         if (est_quitter(ligne)) { free(ligne); break; }
+
+        /* Une ligne terminée par « : » ouvre un bloc : on lit la suite jusqu'à une ligne vide. */
+        if (termine_par_deux_points(ligne)) {
+            Chaine saisie = {0};
+            chaine_ajouter(&saisie, ligne);
+            free(ligne);
+            for (;;) {
+                if (tty) { fputs("… ", stdout); fflush(stdout); }
+                char *suite = lire_ligne();
+                if (!suite || suite[strspn(suite, " ")] == '\0') { free(suite); break; }
+                chaine_ajouter(&saisie, "\n");
+                chaine_ajouter(&saisie, suite);
+                free(suite);
+            }
+            ligne = chaine_rendre(&saisie);
+        }
 
         Portee *sauve = portee_cloner(portee);
         Programme p;
@@ -204,7 +226,7 @@ static int boucle(void) {
             if (sortie.d) fputs(sortie.d, stdout);
             portee_detruire(sauve);
         } else {
-            if (tty && d.ligne == 1 && d.colonne > 0)
+            if (tty && d.ligne == 1 && d.colonne > 0 && !strchr(ligne, '\n'))
                 printf("%*s^\n", d.colonne + 1, "");   /* curseur sous la colonne fautive */
             printf("Erreur : %s\n", d.message);
             diagnostic_liberer(&d);

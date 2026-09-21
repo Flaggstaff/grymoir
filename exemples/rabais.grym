@@ -1,0 +1,12 @@
+Le total vaut 120.
+La quantité vaut 3.
+Le rabais vaut 0.
+Si le total est supérieur à 100 :
+    Le rabais devient 10.
+    Le total devient total − rabais.
+Sinon si le total est supérieur ou égal à 50 :
+    Le rabais devient 5.
+Sinon :
+    Le rabais devient 0.
+Si la quantité est positive, afficher « ok ».
+Si la quantité n'est pas nulle et le total > 0, afficher le total.

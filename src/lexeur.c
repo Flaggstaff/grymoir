@@ -1,5 +1,5 @@
 /* GrymoiR : lexeur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.1), § 1.
+ * Spécification : docs/grammaire.md (révision 1.3), § 1.
  */
 #include "lexeur.h"
 
@@ -244,7 +244,8 @@ const char *type_jeton_nom(TypeJeton t) {
     static const char *NOMS[] = {
         "FIN", "MOT", "ÉLISION", "NOMBRE", "TEXTE", "PLUS", "MOINS", "FOIS",
         "DIVISE", "PUISSANCE", "PAR_OUV", "PAR_FERM", "POINT", "VIRGULE",
-        "DEUX_POINTS", "REMARQUE", "ERREUR"
+        "DEUX_POINTS", "REMARQUE", "ÉGAL", "DIFFÉRENT", "INFÉRIEUR", "SUPÉRIEUR",
+        "INFÉRIEUR_OU_ÉGAL", "SUPÉRIEUR_OU_ÉGAL", "CROCHETS", "ERREUR"
     };
     return (t >= J_FIN && t <= J_ERREUR) ? NOMS[t] : "?";
 }
@@ -314,7 +315,7 @@ static Jeton lire_mot(Lexeur *lx, size_t debut, int ligne, int col, int en_debut
         return faire(lx, J_ELISION, debut, ligne, col, mot);
     }
 
-    /* Commentaire : ligne qui commence par « Remarque : » (§ 1.6). */
+    /* Commentaire : ligne qui commence par « Remarque : » (§ 1.7). */
     if (en_debut_ligne && strcmp(mot, "remarque") == 0) {
         size_t p = lx->pos;
         while (p < lx->n && lx->cp[p] != '\n' && est_blanc(lx->cp[p])) p++;
@@ -435,11 +436,77 @@ static Jeton lire_texte(Lexeur *lx, size_t debut, int ligne, int col,
     return faire(lx, J_TEXTE, debut, ligne, col, extrait(lx, d, f));
 }
 
+/* ---------- Noms entre crochets (§ 2.2) ---------- */
+
+/* [frais de port et d'emballage] : un nom qui peut contenir des mots réservés.
+ * La valeur du jeton est la clé du nom, écrite comme l'analyseur l'écrit. */
+static Jeton lire_crochets(Lexeur *lx, size_t debut, int ligne, int col) {
+    avancer(lx); /* [ */
+    Tampon t = {0};
+    int mots = 0, apres_elision = 0;
+    for (;;) {
+        while (reste(lx, 0) && voir(lx, 0) != '\n' && est_blanc(voir(lx, 0))) avancer(lx);
+        if (!reste(lx, 0) || voir(lx, 0) == '\n') {
+            free(t.d);
+            return echec(lx, debut, ligne, col, formater(
+                "Crochet fermant ] manquant avant la fin de la ligne."));
+        }
+        uint32_t c = voir(lx, 0);
+        if (c == ']') {
+            avancer(lx);
+            break;
+        }
+        if (!est_lettre(c)) {
+            free(t.d);
+            char *car = extrait(lx, lx->pos, lx->pos + 1);
+            char *m = formater("« %s » ne peut pas faire partie d'un nom entre crochets.", car);
+            free(car);
+            return echec(lx, debut, ligne, col, m);
+        }
+        if (mots && !apres_elision) tampon_octet(&t, ' ');
+        while (reste(lx, 0) && (est_lettre(voir(lx, 0)) || est_chiffre(voir(lx, 0)))) {
+            tampon_cp(&t, minuscule(voir(lx, 0)));
+            avancer(lx);
+        }
+        apres_elision = reste(lx, 0) && est_apostrophe(voir(lx, 0));
+        if (apres_elision) {
+            tampon_octet(&t, '\'');
+            avancer(lx);
+        }
+        mots++;
+    }
+    if (!mots || apres_elision) {
+        free(t.d);
+        return echec(lx, debut, ligne, col, formater(mots
+            ? "Un nom entre crochets ne peut pas finir par une élision."
+            : "Nom vide entre crochets."));
+    }
+    return faire(lx, J_CROCHETS, debut, ligne, col, tampon_rendre(&t));
+}
+
+static Jeton double_(Lexeur *lx, TypeJeton type, size_t debut, int ligne, int col) {
+    avancer(lx);
+    return simple(lx, type, debut, ligne, col);
+}
+
+/* Vrai si la ligne ne contient plus que des blancs à partir de la position courante. */
+static int ligne_blanche(const Lexeur *lx) {
+    for (size_t p = lx->pos; p < lx->n && lx->cp[p] != '\n'; p++)
+        if (!est_blanc(lx->cp[p])) return 0;
+    return 1;
+}
+
 /* ---------- Aiguillage ---------- */
 
 Jeton lexeur_suivant(Lexeur *lx) {
     if (!lx->termine)
-        while (reste(lx, 0) && est_blanc(voir(lx, 0))) avancer(lx);
+        while (reste(lx, 0) && est_blanc(voir(lx, 0))) {
+            /* L'indentation délimite les blocs (§ 5) : pas de tabulation en début de ligne. */
+            if (voir(lx, 0) == '\t' && lx->debut_ligne && !ligne_blanche(lx))
+                return echec(lx, lx->pos, lx->ligne, lx->colonne, formater(
+                    "Tabulation en début de ligne : indentez avec des espaces."));
+            avancer(lx);
+        }
 
     size_t debut = lx->pos;
     int ligne = lx->ligne, col = lx->colonne;
@@ -471,6 +538,20 @@ Jeton lexeur_suivant(Lexeur *lx) {
     case '.':    return simple(lx, J_POINT, debut, ligne, col);
     case ',':    return simple(lx, J_VIRGULE, debut, ligne, col);
     case ':':    return simple(lx, J_DEUX_POINTS, debut, ligne, col);
+    case '=':    return simple(lx, J_EGAL, debut, ligne, col);
+    case 0x2260: return simple(lx, J_DIFFERENT, debut, ligne, col);
+    case 0x2264: return simple(lx, J_INF_EGAL, debut, ligne, col);
+    case 0x2265: return simple(lx, J_SUP_EGAL, debut, ligne, col);
+    case '<':
+        if (voir(lx, 1) == '=') return double_(lx, J_INF_EGAL, debut, ligne, col);
+        if (voir(lx, 1) == '>') return double_(lx, J_DIFFERENT, debut, ligne, col);
+        return simple(lx, J_INFERIEUR, debut, ligne, col);
+    case '>':
+        if (voir(lx, 1) == '=') return double_(lx, J_SUP_EGAL, debut, ligne, col);
+        return simple(lx, J_SUPERIEUR, debut, ligne, col);
+    case '[':    return lire_crochets(lx, debut, ligne, col);
+    case ']':
+        return echec(lx, debut, ligne, col, formater("Crochet fermant ] sans crochet ouvrant [."));
     case 0xAB:   return lire_texte(lx, debut, ligne, col, 0xBB, 1);
     case '"':    return lire_texte(lx, debut, ligne, col, '"', 0);
 

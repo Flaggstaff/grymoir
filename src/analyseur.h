@@ -1,10 +1,10 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.1), § 2 à 7.
+ * Spécification : docs/grammaire.md (révision 1.3), § 2 à 8.
  *
  * L'analyseur construit l'arbre et résout les noms dans le même passage :
  * la plus longue correspondance des noms composés (§ 2.2) exige de connaître
  * les noms déjà déclarés. Il vérifie aussi vaut/devient (§ 2.1) et le genre (§ 2.3),
- * et calcule à chaque position les suites valides (§ 7), qui servent aux
+ * et calcule à chaque position les suites valides (§ 8), qui servent aux
  * messages d'erreur et à l'aide à la saisie.
  */
 #ifndef GRYM_ANALYSEUR_H
@@ -39,7 +39,7 @@ int analyser(const char *source, size_t taille, Portee *portee, int interactif,
 
 void programme_liberer(Programme *p);
 
-/* Aide à la saisie (§ 7, charte art. 9) : suites valides à la fin de `source`,
+/* Aide à la saisie (§ 8, charte art. 9) : suites valides à la fin de `source`,
  * c'est-à-dire à la position du curseur. Si un mot est en cours de frappe,
  * seules les suites qui le prolongent sont proposées.
  * Les entrées entre parenthèses, « (nombre) », décrivent une catégorie. */

@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.5, révisée le 21 septembre 2026.
+Version 1.6, révisée le 21 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -149,7 +149,7 @@ Horizon post-v1, sans date :
 | Version | Contenu |
 |---------|---------|
 | v0.1 | Lexer, parser de la forme littéraire, suites attendues, boucle interactive de calcul |
-| v0.2 | Bytecode et VM (remplacent l'évaluateur provisoire de la v0.1), forme compacte et `grym traduire`, objets, formules, héritage, aptitudes |
+| v0.2 | Bytecode et VM (remplacent l'évaluateur provisoire de la v0.1), conditions (`Si`, comparaisons, booléens), forme compacte et `grym traduire`, objets, formules, héritage, aptitudes |
 | v0.3 | Entités et SQLite |
 | v0.4 | Serveur d'aide à la saisie (LSP) |
 | v1.0 | Application console complète |
@@ -166,3 +166,4 @@ Horizon post-v1, sans date :
 | 1.3 | 2026-09-21 | Nouvel art. 9 : aide à la saisie. Renumérotation des art. 9 à 11 en 10 à 12. Jalons : suites attendues en v0.1, serveur LSP en v0.4 |
 | 1.4 | 2026-09-21 | Art. 11 : horizon post-v1, éditeur par blocs et éditeur visuel d'interfaces |
 | 1.5 | 2026-09-21 | Jalons : bytecode et VM en v0.2 (art. 3 et 12) |
+| 1.6 | 2026-09-21 | Jalons : conditions en v0.2 (art. 12) |

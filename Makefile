@@ -6,13 +6,13 @@ ANALYSEUR = src/analyseur.c src/arbre.c src/texte.c $(LEXEUR)
 EXECUTION = src/compilateur.c src/vm.c src/bytecode.c src/decimal.c $(ANALYSEUR)
 ENTETES   = src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
 
-all: grym grym-lex grym-arbre grym-suites test_lexeur test_analyseur test_machine
+all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine
 
 grym: src/grym.c $(EXECUTION) $(ENTETES)
 	$(CC) $(CFLAGS) -o $@ src/grym.c $(EXECUTION)
 
-grym-lex: src/grym-lex.c $(LEXEUR) $(ENTETES)
-	$(CC) $(CFLAGS) -o $@ src/grym-lex.c $(LEXEUR)
+grym-lexeur: src/grym-lexeur.c $(LEXEUR) $(ENTETES)
+	$(CC) $(CFLAGS) -o $@ src/grym-lexeur.c $(LEXEUR)
 
 grym-arbre: src/grym-arbre.c $(ANALYSEUR) $(ENTETES)
 	$(CC) $(CFLAGS) -o $@ src/grym-arbre.c $(ANALYSEUR)
@@ -35,6 +35,6 @@ test: test_lexeur test_analyseur test_machine
 	./test_machine
 
 clean:
-	rm -f grym grym-lex grym-arbre grym-suites test_lexeur test_analyseur test_machine *.exe
+	rm -f grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine *.exe
 
 .PHONY: all test clean

@@ -188,7 +188,7 @@ int main(void) {
     VM("„a“", "non reconnu");
     V("fin »", "MOT(fin) ERREUR");
 
-    /* --- Remarques (§ 1.6) --- */
+    /* --- Remarques (§ 1.7) --- */
     V("Remarque : un test  \nLe x vaut 1.",
       "REMARQUE(un test) MOT(le) MOT(x) MOT(vaut) NOMBRE(1) POINT");
     V("remarque\xC2\xA0" ": insécable", "REMARQUE(insécable)");
@@ -196,6 +196,26 @@ int main(void) {
     V("Remarque :", "REMARQUE()");
     V("Le x vaut 1. Remarque : pas en début",
       "MOT(le) MOT(x) MOT(vaut) NOMBRE(1) POINT MOT(remarque) DEUX_POINTS MOT(pas) MOT(en) MOT(début)");
+
+    /* --- Comparaisons et crochets (grammaire, § 1.6 et § 2.2) --- */
+    V("= ≠ <> < > ≤ <= ≥ >=", "ÉGAL DIFFÉRENT DIFFÉRENT INFÉRIEUR SUPÉRIEUR INFÉRIEUR_OU_ÉGAL "
+                            "INFÉRIEUR_OU_ÉGAL SUPÉRIEUR_OU_ÉGAL SUPÉRIEUR_OU_ÉGAL");
+    V("a<b", "MOT(a) INFÉRIEUR MOT(b)");
+    V("[frais de port et d'emballage]", "CROCHETS(frais de port et d'emballage)");
+    V("[ Frais   DE port ]", "CROCHETS(frais de port)");
+    V("[prix de l’article] × 2", "CROCHETS(prix de l'article) FOIS NOMBRE(2)");
+    V("[]", "ERREUR");
+    V("[a b", "ERREUR");
+    V("[a 3]", "ERREUR");
+    V("[a l']", "ERREUR");
+    V("a ]", "MOT(a) ERREUR");
+    VM("[a 3]", "« 3 » ne peut pas faire partie");
+
+    /* --- Indentation : pas de tabulation en début de ligne (§ 1.6) --- */
+    V("Si x :\n\tLe y vaut 1.", "MOT(si) MOT(x) DEUX_POINTS ERREUR");
+    VM("Si x :\n  \tLe y vaut 1.", "Tabulation en début de ligne");
+    VP("Si x :\n  \tLe", 3, 2, 3);
+    V("a\tb", "MOT(a) MOT(b)");
 
     /* --- Encodage --- */
     V("\xEF\xBB\xBF" "Afficher 1.", "MOT(afficher) NOMBRE(1) POINT");

@@ -1,5 +1,5 @@
-/* grym-lex : affiche les jetons d'un fichier .grym (outil de mise au point, v0.1).
- * Usage : grym-lex fichier.grym     ou     grym-lex < fichier.grym
+/* grym-lexeur : affiche les jetons d'un fichier .grym (outil de mise au point, v0.1).
+ * Usage : grym-lexeur fichier.grym     ou     grym-lexeur < fichier.grym
  */
 #include "lexeur.h"
 

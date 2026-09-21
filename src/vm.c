@@ -11,19 +11,25 @@
 /* Valeurs (docs/vm.md, § 2)                                        */
 /* ---------------------------------------------------------------- */
 
-typedef enum { V_NOMBRE, V_TEXTE } TypeValeur;
+typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN } TypeValeur;
 
 typedef struct {
     TypeValeur type;
     Decimal nombre;
     char *texte;
+    int vrai;
 } Valeur;
+
+static const char *nom_type(TypeValeur t) {
+    return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : "un booléen";
+}
 
 static Valeur valeur_copier(const Valeur *v) {
     Valeur r;
     r.type = v->type;
     r.nombre = v->type == V_NOMBRE ? dec_copier(&v->nombre) : dec_zero();
     r.texte = v->type == V_TEXTE ? grym_dupliquer(v->texte) : NULL;
+    r.vrai = v->vrai;
     return r;
 }
 
@@ -38,6 +44,14 @@ static Valeur valeur_nombre(Decimal d) {
     v.type = V_NOMBRE;
     v.nombre = d;
     v.texte = NULL;
+    v.vrai = 0;
+    return v;
+}
+
+static Valeur valeur_booleen(int vrai) {
+    Valeur v = valeur_nombre(dec_zero());
+    v.type = V_BOOLEEN;
+    v.vrai = vrai != 0;
     return v;
 }
 
@@ -200,12 +214,15 @@ int machine_executer(Machine *m, const Bloc *b, Chaine *sortie, Diagnostic *diag
     size_t ip = 0;
     for (;;) {
         size_t debut = ip;
-        CodeInstruction code = (CodeInstruction)b->code[ip++];
+        CodeInstruction code = (CodeInstruction)b->code[ip];
         unsigned op = 0;
-        if (instruction_a_operande(code)) {
-            op = (unsigned)b->code[ip] | ((unsigned)b->code[ip + 1] << 8);
-            ip += 2;
-        }
+        size_t cible = 0;
+        if (instruction_a_operande(code))
+            op = (unsigned)b->code[ip + 1] | ((unsigned)b->code[ip + 2] << 8);
+        if (code == I_SAUTER || code == I_SAUTER_SI_FAUX)
+            cible = (size_t)b->code[ip + 1] | ((size_t)b->code[ip + 2] << 8)
+                  | ((size_t)b->code[ip + 3] << 16) | ((size_t)b->code[ip + 4] << 24);
+        ip += instruction_taille(code);
         if (code == I_RETOUR) break;
 
         switch (code) {
@@ -214,9 +231,11 @@ int machine_executer(Machine *m, const Bloc *b, Chaine *sortie, Diagnostic *diag
             Valeur v;
             if (k->type == C_NOMBRE) {
                 v = valeur_nombre(dec_depuis_canonique(k->texte));
+            } else if (k->type == C_BOOLEEN) {
+                v = valeur_booleen(strcmp(k->texte, "vrai") == 0);
             } else {
+                v = valeur_nombre(dec_zero());
                 v.type = V_TEXTE;
-                v.nombre = dec_zero();
                 v.texte = grym_dupliquer(k->texte);
             }
             empiler(&pile, v);
@@ -237,7 +256,8 @@ int machine_executer(Machine *m, const Bloc *b, Chaine *sortie, Diagnostic *diag
         case I_NEGATION: {
             Valeur *x = &pile.v[pile.n - 1];
             if (x->type != V_NOMBRE) {
-                ok = echouer(diag, b, debut, grym_dupliquer("Un texte n'a pas d'opposé."));
+                ok = echouer(diag, b, debut, grym_formater("Opposé impossible : la valeur est %s.",
+                                                           nom_type(x->type)));
                 break;
             }
             Decimal d = dec_negation(&x->nombre);
@@ -252,7 +272,8 @@ int machine_executer(Machine *m, const Bloc *b, Chaine *sortie, Diagnostic *diag
                 valeur_liberer(&va);
                 valeur_liberer(&vb);
                 ok = echouer(diag, b, debut, grym_formater(
-                    "%s impossible : un des opérandes est un texte.", instruction_nom(code)));
+                    "%s impossible : un des opérandes est %s.", instruction_nom(code),
+                    nom_type(va.type != V_NOMBRE ? va.type : vb.type)));
                 break;
             }
             Decimal r;
@@ -280,6 +301,8 @@ int machine_executer(Machine *m, const Bloc *b, Chaine *sortie, Diagnostic *diag
                 if (k) chaine_ajouter(sortie, " ");
                 if (v->type == V_TEXTE) {
                     chaine_ajouter(sortie, v->texte);
+                } else if (v->type == V_BOOLEEN) {
+                    chaine_ajouter(sortie, v->vrai ? "vrai" : "faux");
                 } else {
                     char *s = dec_formater(&v->nombre);
                     chaine_ajouter(sortie, s);
@@ -288,6 +311,55 @@ int machine_executer(Machine *m, const Bloc *b, Chaine *sortie, Diagnostic *diag
             }
             chaine_ajouter(sortie, "\n");
             while (pile.n > base) valeur_liberer(&pile.v[--pile.n]);
+            break;
+        }
+        case I_EGAL: case I_DIFFERENT: case I_INFERIEUR: case I_SUPERIEUR:
+        case I_INFERIEUR_OU_EGAL: case I_SUPERIEUR_OU_EGAL: {
+            Valeur vb = depiler(&pile), va = depiler(&pile);
+            int egalite = code == I_EGAL || code == I_DIFFERENT;
+            int resultat = 0;
+            if (va.type != vb.type || (!egalite && va.type != V_NOMBRE)) {
+                ok = echouer(diag, b, debut, va.type != vb.type
+                    ? grym_formater("Comparaison impossible entre %s et %s.",
+                                    nom_type(va.type), nom_type(vb.type))
+                    : grym_formater("Seuls deux nombres se comparent par ordre : la valeur est %s.",
+                                    nom_type(va.type)));
+            } else if (va.type == V_NOMBRE) {
+                int c = dec_comparer(&va.nombre, &vb.nombre);
+                resultat = code == I_EGAL ? c == 0 : code == I_DIFFERENT ? c != 0
+                         : code == I_INFERIEUR ? c < 0 : code == I_SUPERIEUR ? c > 0
+                         : code == I_INFERIEUR_OU_EGAL ? c <= 0 : c >= 0;
+            } else {
+                int egaux = va.type == V_BOOLEEN ? va.vrai == vb.vrai : strcmp(va.texte, vb.texte) == 0;
+                resultat = code == I_EGAL ? egaux : !egaux;
+            }
+            valeur_liberer(&va);
+            valeur_liberer(&vb);
+            if (ok) empiler(&pile, valeur_booleen(resultat));
+            break;
+        }
+        case I_NON: {
+            Valeur *x = &pile.v[pile.n - 1];
+            if (x->type != V_BOOLEEN) {
+                ok = echouer(diag, b, debut, grym_formater("Négation impossible : la valeur est %s, "
+                                                           "ni vraie ni fausse.", nom_type(x->type)));
+                break;
+            }
+            x->vrai = !x->vrai;
+            break;
+        }
+        case I_SAUTER:
+            ip = cible;
+            break;
+        case I_SAUTER_SI_FAUX: {
+            Valeur v = depiler(&pile);
+            if (v.type != V_BOOLEEN) {
+                ok = echouer(diag, b, debut, grym_formater(
+                    "Condition ni vraie ni fausse : la valeur est %s.", nom_type(v.type)));
+            } else if (!v.vrai) {
+                ip = cible;
+            }
+            valeur_liberer(&v);
             break;
         }
         default:

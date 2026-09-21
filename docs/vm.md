@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.0 de la spécification, gravée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.5, art. 2, 3, 7, 8, 10 et 12.
+Version 1.1 de la spécification, révisée le 21 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.3, § 5.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -26,14 +26,15 @@ Règle de nommage : instructions, outils et messages s'écrivent en toutes lettr
 |------|---------|
 | nombre | décimal exact (grammaire, § 3.2) |
 | texte | chaîne UTF-8 |
+| booléen | vrai ou faux |
 
-Les objets, les booléens et l'absence de valeur s'ajouteront avec les constructions qui en ont besoin.
+Les objets et l'absence de valeur s'ajouteront avec les constructions qui en ont besoin.
 
 ---
 
 ## 3. Instructions
 
-Chaque instruction commence par un octet (son code). Un opérande, s'il existe, suit sur deux octets, poids faible d'abord.
+Chaque instruction commence par un octet (son code). Un opérande, s'il existe, suit sur deux octets, poids faible d'abord ; la cible d'un saut suit sur quatre octets (décalage absolu dans le code).
 
 | Code | Instruction | Opérande | Effet sur la pile |
 |------|-------------|----------|-------------------|
@@ -48,20 +49,40 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 9 | `PUISSANCE` | aucun | dépile b, puis a ; empile a ^ b |
 | 10 | `AFFICHER` | nombre d'éléments n | dépile n valeurs ; les écrit dans l'ordre, séparées par une espace, puis un saut de ligne |
 | 11 | `RETOUR` | aucun | termine le bloc |
+| 12 | `ÉGAL` | aucun | dépile b, puis a ; empile a = b |
+| 13 | `DIFFÉRENT` | aucun | dépile b, puis a ; empile a ≠ b |
+| 14 | `INFÉRIEUR` | aucun | dépile b, puis a ; empile a < b |
+| 15 | `SUPÉRIEUR` | aucun | dépile b, puis a ; empile a > b |
+| 16 | `INFÉRIEUR_OU_ÉGAL` | aucun | dépile b, puis a ; empile a ≤ b |
+| 17 | `SUPÉRIEUR_OU_ÉGAL` | aucun | dépile b, puis a ; empile a ≥ b |
+| 18 | `NON` | aucun | remplace le booléen au sommet par son contraire |
+| 19 | `SAUTER` | cible (4 octets) | continue à la cible |
+| 20 | `SAUTER_SI_FAUX` | cible (4 octets) | dépile un booléen ; s'il est faux, continue à la cible |
 
 - Une phrase `Afficher` à n éléments compile en `AFFICHER n`. Dans la boucle interactive, une expression seule compile en `AFFICHER 1`.
 - La création et la modification compilent toutes deux en `ÉCRIRE` : la distinction entre `vaut` et `devient` se vérifie à la compilation (grammaire, § 2.1).
+- `est positif`, `est négatif`, `est nul` compilent en une comparaison avec la constante 0 ; `est vrai`, `est faux` en `ÉGAL` avec une constante booléenne ; `n'est pas` ajoute `NON`.
+- Les comparaisons d'ordre n'acceptent que deux nombres ; `ÉGAL` et `DIFFÉRENT` acceptent deux valeurs du même type. Sinon : erreur d'exécution.
+- `SAUTER_SI_FAUX` exige un booléen : « Condition ni vraie ni fausse : la valeur est un nombre. »
+- `et` et `ou` compilent en sauts (court-circuit). Chaque membre passe par `SAUTER_SI_FAUX`, qui vérifie qu'il s'agit d'un booléen :
+
+```
+a et b :  a ; SAUTER_SI_FAUX F ; b ; SAUTER_SI_FAUX F ; CONSTANTE vrai ; SAUTER Fin ; F: CONSTANTE faux ; Fin:
+a ou b :  a ; SAUTER_SI_FAUX B ; CONSTANTE vrai ; SAUTER Fin ;
+          B: b ; SAUTER_SI_FAUX F ; CONSTANTE vrai ; SAUTER Fin ; F: CONSTANTE faux ; Fin:
+Si c, x.  Sinon, y.  :  c ; SAUTER_SI_FAUX S ; x ; SAUTER Fin ; S: y ; Fin:
+```
 
 ---
 
 ## 4. Vérification avant exécution
 
-Un fichier `.grymb` peut venir d'ailleurs. Avant toute exécution, la machine vérifie le bloc entier :
+Un fichier `.grymb` peut venir d'ailleurs. Avant toute exécution, la machine vérifie le bloc entier, en deux passes :
 
-- chaque code d'instruction existe, et son opérande est présent ;
-- chaque index de constante ou de nom existe ;
-- la pile ne descend jamais sous zéro, et chaque `AFFICHER n` trouve n valeurs ;
-- le bloc se termine par `RETOUR`, la pile vide.
+1. Décodage linéaire : chaque code d'instruction existe, son opérande est présent, chaque index de constante ou de nom existe, chaque cible de saut commence une instruction, et la dernière instruction est `RETOUR`.
+2. Parcours de tous les chemins d'exécution : la pile ne descend jamais sous zéro, chaque `AFFICHER n` trouve n valeurs, deux chemins qui se rejoignent arrivent avec la même profondeur de pile, et chaque `RETOUR` trouve la pile vide.
+
+Limite connue : un saut vers l'arrière forme une boucle, que la vérification n'interdit pas (les boucles viendront avec `Tant que`). Un fichier fabriqué à la main peut donc tourner sans fin.
 
 Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb invalide : … ».
 
@@ -95,16 +116,17 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 1
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 2
 constantes    nombre : u32, puis pour chacune :
-                type : u8 (1 = nombre, 2 = texte), longueur : u32, octets UTF-8
+                type : u8 (1 = nombre, 2 = texte, 3 = booléen), longueur : u32, octets UTF-8
 noms          nombre : u32, puis pour chacun : longueur : u32, octets UTF-8
 code          longueur : u32, puis les octets des instructions
 positions     nombre : u32, puis pour chacune :
                 décalage dans le code : u32, ligne : u32, colonne : u32
 ```
 
-- Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte.
+- Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes. Un fichier de version 1 reste lisible.
 - En v0.2, un fichier contient un seul bloc, le programme principal. Les blocs de formules s'ajouteront avec les formules.
 
 ---
@@ -118,17 +140,17 @@ positions     nombre : u32, puis pour chacune :
 | `grym lancer facture.grymb` | exécute un bytecode déjà compilé |
 | `grym desassembler facture.grymb` | affiche les instructions en clair |
 
-Désassemblage de l'exemple de la grammaire :
+Chaque ligne donne la ligne source (quand elle change), le décalage de l'instruction, puis l'instruction ; les cibles des sauts renvoient aux décalages.
 
 ```
-   2  CONSTANTE        0     ; 12,50
-      ÉCRIRE           0     ; prix unitaire
-   3  CONSTANTE        1     ; 3
-      ÉCRIRE           1     ; quantité
-   4  LIRE             0     ; prix unitaire
-      LIRE             1     ; quantité
-      MULTIPLICATION
-      ÉCRIRE           2     ; total
+   4  0018  LIRE              0     ; total
+      0021  CONSTANTE         3     ; 100
+      0024  SUPÉRIEUR
+      0025  SAUTER_SI_FAUX    0051
+   5  0030  CONSTANTE         4     ; 10
+      0033  ÉCRIRE            2     ; rabais
+   4  0046  SAUTER            0080
+   7  0051  LIRE              0     ; total
 ```
 
 ---
@@ -138,3 +160,4 @@ Désassemblage de l'exemple de la grammaire :
 | Version | Date | Changement |
 |---------|------|------------|
 | 1.0 | 2026-09-21 | Spécification initiale : machine à pile, onze instructions, liaison par nom, journal d'annulation, vérification, format `.grymb` |
+| 1.1 | 2026-09-21 | Booléens, six comparaisons, `NON`, sauts (`SAUTER`, `SAUTER_SI_FAUX`, cible sur quatre octets), vérification de tous les chemins, constantes booléennes, format version 2, décalages au désassemblage |

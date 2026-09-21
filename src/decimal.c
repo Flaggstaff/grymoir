@@ -229,6 +229,21 @@ Decimal dec_negation(const Decimal *a) {
     return r;
 }
 
+int dec_comparer(const Decimal *a, const Decimal *b) {
+    int sa = a->n ? (a->negatif ? -1 : 1) : 0;
+    int sb = b->n ? (b->negatif ? -1 : 1) : 0;
+    if (sa != sb) return sa < sb ? -1 : 1;
+    if (sa == 0) return 0;
+    long e = a->exp < b->exp ? a->exp : b->exp;
+    Nat ma = nat_de(a), mb = nat_de(b);
+    Nat xa = nat_decaler(&ma, (size_t)(a->exp - e));
+    Nat xb = nat_decaler(&mb, (size_t)(b->exp - e));
+    int c = nat_comparer(&xa, &xb);
+    nat_liberer(&xa);
+    nat_liberer(&xb);
+    return sa > 0 ? c : -c;
+}
+
 /* Taille affichable : chiffres du coefficient, zéros ajoutés, décimales. */
 static StatutDecimal verifier_taille(Decimal *r) {
     if (!r->n) return DEC_OK;

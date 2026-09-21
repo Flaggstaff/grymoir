@@ -9,6 +9,9 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     Noeud *n = grym_allouer(sizeof *n);
     n->type = type;
     n->op = 0;
+    n->negation = 0;
+    n->forme = 0;
+    n->crochets = 0;
     n->article = ART_AUCUN;
     n->texte = NULL;
     n->enfants = NULL;
@@ -109,6 +112,54 @@ static void decrire(const Noeud *n, Chaine *c) {
     case P_EXPRESSION:
         chaine_ajouter(c, "(évaluer ");
         decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
+    case N_BOOLEEN:
+        chaine_ajouter(c, n->texte);
+        return;
+    case N_COMPARAISON: {
+        static const struct { char op; const char *nom; } R[] = {
+            {'=', "="}, {'!', "≠"}, {'<', "<"}, {'>', ">"}, {'l', "≤"}, {'g', "≥"},
+            {'P', "positif"}, {'N', "négatif"}, {'0', "nul"}, {'V', "vrai"}, {'F', "faux"}
+        };
+        const char *nom = "?";
+        for (size_t k = 0; k < sizeof R / sizeof *R; k++) if (R[k].op == n->op) nom = R[k].nom;
+        if (n->negation) chaine_ajouter(c, "(non ");
+        chaine_ajouter(c, "(");
+        chaine_ajouter(c, nom);
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            chaine_ajouter(c, " ");
+            decrire(n->enfants[k], c);
+        }
+        chaine_ajouter(c, ")");
+        if (n->negation) chaine_ajouter(c, ")");
+        return;
+    }
+    case N_LOGIQUE:
+        chaine_ajouter(c, n->op == 'e' ? "(et " : "(ou ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
+    case N_BLOC:
+        chaine_ajouter(c, "(bloc");
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            chaine_ajouter(c, " ");
+            decrire(n->enfants[k], c);
+        }
+        chaine_ajouter(c, ")");
+        return;
+    case P_SI:
+        chaine_ajouter(c, "(si ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        if (n->nb_enfants > 2) {
+            chaine_ajouter(c, " (sinon ");
+            decrire(n->enfants[2], c);
+            chaine_ajouter(c, ")");
+        }
         chaine_ajouter(c, ")");
         return;
     }
