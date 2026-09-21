@@ -85,6 +85,22 @@ static void verifier_session(int l, const char **saisies, const char **attendus,
     portee_detruire(p);
 }
 
+/* Aide à la saisie : suggestions séparées par « | ». */
+static void verifier_suites(int l, const char *src, const char *attendu) {
+    total++;
+    Suggestions s = suites_valides(src, strlen(src));
+    Chaine c = {0};
+    for (size_t k = 0; k < s.nb; k++) {
+        if (k) chaine_ajouter(&c, " | ");
+        chaine_ajouter(&c, s.items[k]);
+    }
+    char *r = chaine_rendre(&c);
+    if (strcmp(r, attendu) != 0) signaler(l, src, attendu, r);
+    free(r);
+    suggestions_liberer(&s);
+}
+
+#define VS(src, att)           verifier_suites(__LINE__, src, att)
 #define V(src, att)            verifier(__LINE__, src, att)
 #define VE(src, li, co, frag)  verifier_erreur(__LINE__, src, li, co, frag)
 #define SESSION(s, a)          verifier_session(__LINE__, s, a, (int)(sizeof s / sizeof *s))
@@ -114,8 +130,12 @@ int main(void) {
     V("Le x vaut 8 ÷ 4 ÷ 2.", "(créer [x] (÷ (÷ 8 4) 2))");
     V("Le x vaut 2 ^ 3 ^ 2.", "(créer [x] (^ 2 (^ 3 2)))");
     V("Le x vaut 2 × 3 ^ 2.", "(créer [x] (× 2 (^ 3 2)))");
-    V("Le x vaut −2 ^ 2.", "(créer [x] (^ (− 2) 2))");
+    V("Le x vaut −2 ^ 2.", "(créer [x] (− (^ 2 2)))");
+    V("Le x vaut (−2) ^ 2.", "(créer [x] (^ (groupe (− 2)) 2))");
+    V("Le x vaut 2 × −3.", "(créer [x] (× 2 (− 3)))");
+    V("Le x vaut 3 – 1.", "(créer [x] (− 3 1))");
     V("Le x vaut 2 ^ −1.", "(créer [x] (^ 2 (− 1)))");
+    V("Le x vaut −2 ^ −2.", "(créer [x] (− (^ 2 (− 2))))");
     V("Le x vaut - - 3.", "(créer [x] (− (− 3)))");
     V("Le x vaut (1 + 2) × 3.", "(créer [x] (× (groupe (+ 1 2)) 3))");
     V("Le x vaut 2 * 3 / 4 - 1.", "(créer [x] (− (÷ (× 2 3) 4) 1))");
@@ -181,12 +201,17 @@ int main(void) {
     VE("Afficher 1 puis.", 1, 16, "Élément manquant après « puis »");
     VE("Le vaut 3.", 1, 4, "Nom manquant entre « le » et « vaut ».");
     VE("Le x 3.", 1, 1, "Verbe manquant");
-    VE("Le x vaut 1 2.", 1, 13, "« 2 » inattendu");
+    VE("Le x vaut 1 2.", 1, 13, "« 2 » inattendu, attendu : un opérateur ou un point final.");
+    VE("Le x vaut (1 2).", 1, 14, "Parenthèse fermante manquante");
+    VE("Afficher 1 2.", 1, 12, "« 2 » inattendu, attendu : un opérateur, « puis » ou un point final.");
+    VE("Le x vaut 1 puis 2.", 1, 13, "« puis » inattendu, attendu : un opérateur ou un point final.");
+    VE("Le x vaut vaut.", 1, 11, "« vaut » inattendu, attendu : un nombre, un nom ou une parenthèse.");
     VE("Le prix puis vaut 3.", 1, 9, "« puis » est un mot réservé");
     VE("Le la vaut 3.", 1, 4, "Un nom ne peut pas commencer par « la ».");
     VE("Le x vaut 1.\nAfficher le x puis le.", 2, 20, "Nom attendu après « le ».");
     VE("Le x 3 vaut 2.", 1, 6, "« 3 » ne peut pas faire partie d'un nom.");
-    VE("Afficher « a » « b ».", 1, 16, "attendu un opérateur, « puis » ou un point final");
+    VE("Afficher « a » « b ».", 1, 16, "Texte « b » inattendu, attendu : « puis » ou un point final.");
+    VE("Afficher « a » + 1.", 1, 16, "« + » inattendu, attendu : « puis » ou un point final.");
 
     /* --- Boucle interactive (§ 3.3) --- */
     {
@@ -210,6 +235,32 @@ int main(void) {
         const char *a[] = { "(créer [addition] 1)", "~« c » inconnu", "(modifier [addition] 2)" };
         SESSION(s, a);
     }
+
+    /* --- Aide à la saisie (§ 7) --- */
+    VS("", "Le | La | L' | Afficher | Remarque :");
+    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Remarque :");
+    VS("Af", "Afficher");
+    VS("l", "Le | La | L'");
+    VS("Le total vaut 1.\nLe ", "total | (nouveau nom)");
+    VS("Le total vaut 1.\nLe to", "total");
+    VS("Le total vaut 1.\nLe total ", "vaut | devient");
+    VS("Le total vaut 1.\nLe total d", "devient");
+    VS("Le prix vaut 1.\nLe prix unitaire vaut 2.\nLe prix ", "unitaire | vaut | devient");
+    VS("Le prix unitaire vaut 2.\nLe x vaut ", "prix unitaire | (nombre) | ( | −");
+    VS("Le prix unitaire vaut 2.\nLe x vaut pr", "prix unitaire");
+    VS("Le prix vaut 1.\nLe prix unitaire vaut 2.\nLe x vaut prix ",
+       "unitaire | + | − | × | ÷ | ^ | .");
+    VS("Le prix vaut 1.\nLe prix unitaire vaut 2.\nLe x vaut prix u", "unitaire");
+    VS("Le x vaut (1 + 2", "+ | − | × | ÷ | ^ | )");
+    VS("Le x vaut 1.\nAfficher ", "x | (nombre) | ( | − | « … »");
+    VS("Le x vaut 1.\nAfficher x ", "+ | − | × | ÷ | ^ | puis | .");
+    VS("Le x vaut 1.\nAfficher x p", "puis");
+    VS("Afficher « a » ", "puis | .");
+    VS("Le prix de l'article vaut 1.\nAfficher le prix de ", "l'");
+    VS("Le prix de l'article vaut 1.\nAfficher le prix de l'", "article");
+    VS("Le prix de l'article vaut 1.\nAfficher le prix d", "de");
+    VS("Le x vaut 1 +\nLe y", "");            /* erreur plus haut : pas de suggestion */
+    VS("Afficher « ouvert", "");              /* au milieu d'un texte : rien */
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

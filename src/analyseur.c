@@ -1,11 +1,12 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : grammaire-v0.1.md, § 2 à 6.
+ * Spécification : docs/grammaire.md (révision 1.1), § 2 à 7.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 5).
  */
 #include "analyseur.h"
 #include "lexeur.h"
 #include "texte.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -94,7 +95,55 @@ typedef struct {
     int profondeur;
     Diagnostic *diag;
     int echec;
+    /* Suites attendues à la position la plus avancée atteinte (§ 7) */
+    size_t att_pos;    /* index de jeton */
+    unsigned att;      /* catégories A_… */
+    char **att_mots;   /* mots qui prolongent un nom composé déclaré */
+    size_t att_nb;
 } Analyse;
+
+enum {
+    A_DEBUT      = 1u << 0,  /* Le, La, L', Afficher, Remarque */
+    A_VALEUR     = 1u << 1,  /* nombre, nom déclaré, parenthèse, négation */
+    A_NOM        = 1u << 2,  /* nom déclaré seul (après un article) */
+    A_NOUVEAU    = 1u << 3,  /* nom nouveau (création) */
+    A_TEXTE      = 1u << 4,
+    A_OP_PUISS   = 1u << 5,
+    A_OP_MUL     = 1u << 6,
+    A_OP_ADD     = 1u << 7,
+    A_PAR_FERM   = 1u << 8,
+    A_VERBE      = 1u << 9,  /* vaut, devient */
+    A_PUIS       = 1u << 10,
+    A_POINT      = 1u << 11
+};
+#define A_OPERATEUR (A_OP_PUISS | A_OP_MUL | A_OP_ADD)
+
+static void attendre_en(Analyse *a, size_t pos, unsigned m) {
+    if (pos > a->att_pos) {
+        a->att_pos = pos;
+        a->att = 0;
+        for (size_t k = 0; k < a->att_nb; k++) free(a->att_mots[k]);
+        a->att_nb = 0;
+    }
+    if (pos == a->att_pos) a->att |= m;
+}
+
+static void attendre(Analyse *a, unsigned m) { attendre_en(a, a->i, m); }
+
+static void attendre_mot(Analyse *a, size_t pos, const char *mot, size_t longueur) {
+    attendre_en(a, pos, 0);
+    if (pos != a->att_pos) return;
+    for (size_t k = 0; k < a->att_nb; k++)
+        if (strlen(a->att_mots[k]) == longueur && strncmp(a->att_mots[k], mot, longueur) == 0) return;
+    char **m = grym_allouer((a->att_nb + 1) * sizeof *m);
+    if (a->att_nb) memcpy(m, a->att_mots, a->att_nb * sizeof *m);
+    free(a->att_mots);
+    a->att_mots = m;
+    char *w = grym_allouer(longueur + 1);
+    memcpy(w, mot, longueur);
+    w[longueur] = '\0';
+    a->att_mots[a->att_nb++] = w;
+}
 
 static Jeton *cour(Analyse *a) { return &a->j[a->i]; }
 
@@ -185,12 +234,29 @@ static void *erreur(Analyse *a, const Jeton *t, char *message) {
     return erreur_a(a, t->ligne, t->colonne, message);
 }
 
-static void *erreur_inattendu(Analyse *a, const Jeton *t, const char *attendu) {
+static char *decrire_attendus(unsigned m);
+
+/* « X » inattendu, attendu : … (liste calculée, § 7). */
+static void *erreur_inattendu(Analyse *a, const Jeton *t) {
     if (t->type == J_REMARQUE)
         return erreur(a, t, grym_dupliquer(
             "Une remarque ne peut pas couper une phrase : terminez la phrase avant « Remarque : »."));
-    char *x = texte_jeton(t);
-    char *m = grym_formater("« %s » inattendu : %s.", x, attendu);
+    char *x = t->type == J_TEXTE ? grym_formater("Texte « %s »", t->valeur)
+                                 : grym_formater("« %s »", "");
+    if (t->type != J_TEXTE) {
+        char *brut = texte_jeton(t);
+        free(x);
+        x = grym_formater("« %s »", brut);
+        free(brut);
+    }
+    char *m;
+    if ((size_t)(t - a->j) == a->att_pos && a->att) {
+        char *att = decrire_attendus(a->att);
+        m = grym_formater("%s inattendu, attendu : %s.", x, att);
+        free(att);
+    } else {
+        m = grym_formater("%s inattendu.", x);
+    }
     free(x);
     return erreur(a, t, m);
 }
@@ -202,6 +268,49 @@ static char *cle(Analyse *a, size_t d, size_t f) {
         if (k > d && a->j[k - 1].type != J_ELISION) chaine_ajouter(&c, " ");
         chaine_ajouter(&c, a->j[k].valeur);
         if (a->j[k].type == J_ELISION) chaine_ajouter(&c, "'");
+    }
+    return chaine_rendre(&c);
+}
+
+/* Mots qui prolongent `debut` vers un nom composé déclaré plus long :
+ * après « prix », propose « unitaire » si « prix unitaire » existe. */
+static void attendre_suites_nom(Analyse *a, size_t pos, const char *debut) {
+    size_t ld = strlen(debut);
+    for (size_t i = 0; i < a->portee->n; i++) {
+        const char *nom = a->portee->s[i].nom;
+        if (strncmp(nom, debut, ld) != 0) continue;
+        const char *r = nom + ld;
+        if (ld > 0 && debut[ld - 1] != '\'') {
+            if (*r != ' ') continue;
+            r++;
+        }
+        if (!*r) continue;
+        size_t k = 0;
+        while (r[k] && r[k] != ' ' && r[k] != '\'') k++;
+        if (r[k] == '\'') k++;
+        attendre_mot(a, pos, r, k);
+    }
+}
+
+/* « un nombre, un nom ou une parenthèse » : forme française d'un ensemble attendu. */
+static char *decrire_attendus(unsigned m) {
+    const char *at[16];
+    int n = 0;
+    if (m & A_DEBUT)              at[n++] = "le début d'une phrase (Le, La, L', Afficher)";
+    if (m & A_VALEUR)             at[n++] = "un nombre";
+    if (m & (A_VALEUR | A_NOM))   at[n++] = "un nom";
+    if (m & A_NOUVEAU && !(m & (A_VALEUR | A_NOM))) at[n++] = "un nom";
+    if (m & A_VALEUR)             at[n++] = "une parenthèse";
+    if (m & A_TEXTE)              at[n++] = "un texte";
+    if (m & A_OPERATEUR)          at[n++] = "un opérateur";
+    if (m & A_PAR_FERM)           at[n++] = "« ) »";
+    if (m & A_VERBE)            { at[n++] = "« vaut »"; at[n++] = "« devient »"; }
+    if (m & A_PUIS)               at[n++] = "« puis »";
+    if (m & A_POINT)              at[n++] = "un point final";
+    Chaine c = {0};
+    for (int k = 0; k < n; k++) {
+        if (k > 0) chaine_ajouter(&c, k == n - 1 ? " ou " : ", ");
+        chaine_ajouter(&c, at[k]);
     }
     return chaine_rendre(&c);
 }
@@ -275,6 +384,7 @@ static Noeud *nom_expression(Analyse *a) {
     Jeton *tart = NULL;
     Article art = article_de(cour(a));
     if (art != ART_AUCUN) {
+        attendre_en(a, a->i + 1, A_NOM);
         if (!est_mot_de_nom(voir(a, 1))) {
             char *x = texte_jeton(cour(a));
             char *m = grym_formater("Nom attendu après « %s ».", x);
@@ -298,6 +408,7 @@ static Noeud *nom_expression(Analyse *a) {
     }
     if (!s || fin < f) {
         char *tout = cle(a, d, f);
+        if (a->j[f].type == J_FIN) attendre_suites_nom(a, f, tout); /* nom en cours de frappe */
         erreur_inconnu(a, &a->j[d], tout);
         free(tout);
         return NULL;
@@ -310,8 +421,11 @@ static Noeud *nom_expression(Analyse *a) {
     n->article = art;
     n->fin = fin_jeton(&a->j[fin - 1]);
     a->i = fin;
+    attendre_suites_nom(a, a->i, s->nom);
     return n;
 }
+
+static Noeud *unaire(Analyse *a);
 
 static Noeud *base(Analyse *a) {
     Jeton *t = cour(a);
@@ -328,6 +442,7 @@ static Noeud *base(Analyse *a) {
         Noeud *e = expression(a);
         a->profondeur--;
         if (!e) return NULL;
+        attendre(a, A_PAR_FERM);
         if (cour(a)->type != J_PAR_FERM) {
             noeud_liberer(e);
             return erreur(a, cour(a), grym_formater(
@@ -345,22 +460,39 @@ static Noeud *base(Analyse *a) {
             "Un texte ne peut apparaître que dans une phrase Afficher."));
     case J_MOT:
     case J_ELISION:
-        if (est_reserve(t))
-            return erreur_inattendu(a, t, "un nombre, un nom ou une parenthèse était attendu");
+        if (est_reserve(t)) return erreur_inattendu(a, t);
         return nom_expression(a);
     case J_POINT:
     case J_FIN:
         return erreur(a, t, grym_dupliquer(
             "Expression incomplète : il manque un nombre, un nom ou une parenthèse."));
     default:
-        return erreur_inattendu(a, t, "un nombre, un nom ou une parenthèse était attendu");
+        return erreur_inattendu(a, t);
     }
 }
 
-/* unaire = "−" unaire | base */
+/* puissance = base [ "^" unaire ]  (associative à droite, § 3.1) */
+static Noeud *puissance(Analyse *a) {
+    Noeud *g = base(a);
+    if (!g) return NULL;
+    attendre(a, A_OP_PUISS);
+    if (cour(a)->type != J_PUISSANCE) return g;
+    if (++a->profondeur > PROFONDEUR_MAX) {
+        noeud_liberer(g);
+        return erreur(a, cour(a), grym_dupliquer("Expression trop imbriquée."));
+    }
+    avancer(a);
+    Noeud *d = unaire(a);
+    a->profondeur--;
+    if (!d) { noeud_liberer(g); return NULL; }
+    return operation('^', g, d);
+}
+
+/* unaire = "−" unaire | puissance   (−2 ^ 2 vaut −4) */
 static Noeud *unaire(Analyse *a) {
     Jeton *t = cour(a);
-    if (t->type != J_MOINS) return base(a);
+    attendre(a, A_VALEUR);
+    if (t->type != J_MOINS) return puissance(a);
     if (++a->profondeur > PROFONDEUR_MAX)
         return erreur(a, t, grym_dupliquer("Expression trop imbriquée."));
     avancer(a);
@@ -373,29 +505,15 @@ static Noeud *unaire(Analyse *a) {
     return n;
 }
 
-/* facteur = unaire [ "^" facteur ]  (associative à droite) */
-static Noeud *facteur(Analyse *a) {
-    Noeud *g = unaire(a);
-    if (!g) return NULL;
-    if (cour(a)->type != J_PUISSANCE) return g;
-    if (++a->profondeur > PROFONDEUR_MAX) {
-        noeud_liberer(g);
-        return erreur(a, cour(a), grym_dupliquer("Expression trop imbriquée."));
-    }
-    avancer(a);
-    Noeud *d = facteur(a);
-    a->profondeur--;
-    if (!d) { noeud_liberer(g); return NULL; }
-    return operation('^', g, d);
-}
-
-/* terme = facteur { ( "×" | "÷" ) facteur } */
+/* terme = unaire { ( "×" | "÷" ) unaire } */
 static Noeud *terme(Analyse *a) {
-    Noeud *g = facteur(a);
-    while (g && (cour(a)->type == J_FOIS || cour(a)->type == J_DIVISE)) {
+    Noeud *g = unaire(a);
+    while (g) {
+        attendre(a, A_OP_MUL);
+        if (cour(a)->type != J_FOIS && cour(a)->type != J_DIVISE) break;
         char op = cour(a)->type == J_FOIS ? '*' : '/';
         avancer(a);
-        Noeud *d = facteur(a);
+        Noeud *d = unaire(a);
         if (!d) { noeud_liberer(g); return NULL; }
         g = operation(op, g, d);
     }
@@ -405,7 +523,9 @@ static Noeud *terme(Analyse *a) {
 /* expression = terme { ( "+" | "−" ) terme } */
 static Noeud *expression(Analyse *a) {
     Noeud *g = terme(a);
-    while (g && (cour(a)->type == J_PLUS || cour(a)->type == J_MOINS)) {
+    while (g) {
+        attendre(a, A_OP_ADD);
+        if (cour(a)->type != J_PLUS && cour(a)->type != J_MOINS) break;
         char op = cour(a)->type == J_PLUS ? '+' : '-';
         avancer(a);
         Noeud *d = terme(a);
@@ -421,6 +541,7 @@ static Noeud *expression(Analyse *a) {
 
 static int fin_phrase(Analyse *a, int avec_puis) {
     Jeton *t = cour(a);
+    attendre(a, A_POINT | (avec_puis ? A_PUIS : 0));
     if (t->type == J_POINT) {
         avancer(a);
         return 1;
@@ -432,9 +553,7 @@ static int fin_phrase(Analyse *a, int avec_puis) {
                  grym_formater("Point final manquant (ligne %d).", prec->ligne));
         return 0;
     }
-    erreur_inattendu(a, t, avec_puis
-        ? "attendu un opérateur, « puis » ou un point final"
-        : "attendu un opérateur ou un point final");
+    erreur_inattendu(a, t);
     return 0;
 }
 
@@ -456,6 +575,7 @@ static Noeud *affichage(Analyse *a) {
     Noeud *n = noeud_creer(P_AFFICHAGE, t->ligne, t->colonne, t->debut);
     for (;;) {
         Jeton *e = cour(a);
+        attendre(a, A_VALEUR | A_TEXTE);
         if (e->type == J_POINT || e->type == J_FIN) {
             noeud_liberer(n);
             return erreur(a, e, grym_dupliquer(a->i > 0 && est_mot(&a->j[a->i - 1], "puis")
@@ -562,6 +682,7 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
 
 static Noeud *phrase(Analyse *a) {
     Jeton *t = cour(a);
+    attendre(a, A_DEBUT | (a->interactif ? A_VALEUR : 0));
 
     if (t->type == J_REMARQUE) {
         Noeud *n = feuille(P_REMARQUE, t);
@@ -581,6 +702,19 @@ static Noeud *phrase(Analyse *a) {
             k++;
         if (est_mot(&a->j[k], "vaut") || est_mot(&a->j[k], "devient"))
             return declaration(a, k);
+
+        /* Aide à la saisie (§ 7) : après l'article, un nom ; après le nom, le verbe. */
+        size_t d = a->i + 1;
+        int que_des_mots = 1;
+        for (size_t q = d; q < k; q++) if (!est_mot_de_nom(&a->j[q])) que_des_mots = 0;
+        if (k == d) {
+            attendre_en(a, k, A_NOM | A_NOUVEAU);
+        } else if (que_des_mots) {
+            attendre_en(a, k, A_VERBE);
+            char *debut = cle(a, d, k);
+            attendre_suites_nom(a, k, debut);
+            free(debut);
+        }
         if (a->interactif) return phrase_expression(a);
         char *x = texte_jeton(t);
         char *m = grym_formater("Verbe manquant : une phrase qui commence par « %s » attend "
@@ -590,8 +724,11 @@ static Noeud *phrase(Analyse *a) {
     }
 
     if (a->interactif) return phrase_expression(a);
-    return erreur_inattendu(a, t,
-        "une phrase commence par Le, La, L' ou Afficher");
+    char *x = texte_jeton(t);
+    char *m = grym_formater("« %s » ne peut pas commencer une phrase : "
+                            "une phrase commence par Le, La, L' ou Afficher.", x);
+    free(x);
+    return erreur(a, t, m);
 }
 
 /* ---------------------------------------------------------------- */
@@ -603,8 +740,18 @@ static void liberer_jetons(Jeton *j, size_t n) {
     free(j);
 }
 
-int analyser(const char *source, size_t taille, Portee *portee, int interactif,
-             Programme *programme, Diagnostic *diag) {
+/* Ce que l'analyse laisse derrière elle pour l'aide à la saisie. */
+typedef struct {
+    int valide;          /* vrai si les suites concernent la fin de la source */
+    unsigned att;
+    char **mots;
+    size_t nb_mots;
+    char **noms;         /* noms déclarés à la fin de la source */
+    size_t nb_noms;
+} Capture;
+
+static int analyser_interne(const char *source, size_t taille, Portee *portee, int interactif,
+                            Programme *programme, Diagnostic *diag, Capture *capture) {
     programme->phrases = NULL;
     programme->nb = 0;
     diag->message = NULL;
@@ -653,9 +800,15 @@ int analyser(const char *source, size_t taille, Portee *portee, int interactif,
     a.profondeur = 0;
     a.diag = diag;
     a.echec = 0;
+    a.att_pos = 0;
+    a.att = 0;
+    a.att_mots = NULL;
+    a.att_nb = 0;
 
     size_t cap_p = 0;
-    while (cour(&a)->type != J_FIN) {
+    for (;;) {
+        attendre(&a, A_DEBUT | (interactif ? A_VALEUR : 0));
+        if (cour(&a)->type == J_FIN) break;
         Noeud *p = phrase(&a);
         if (!p) {
             if (!a.echec) erreur(&a, cour(&a), grym_dupliquer("Erreur interne de l'analyseur."));
@@ -670,6 +823,19 @@ int analyser(const char *source, size_t taille, Portee *portee, int interactif,
         }
         programme->phrases[programme->nb++] = p;
     }
+
+    if (capture) {
+        capture->valide = a.att_pos == n - 1;
+        capture->att = a.att;
+        capture->mots = a.att_mots;
+        capture->nb_mots = a.att_nb;
+        capture->nb_noms = copie.n;
+        capture->noms = copie.n ? grym_allouer(copie.n * sizeof *capture->noms) : NULL;
+        for (size_t k = 0; k < copie.n; k++) capture->noms[k] = grym_dupliquer(copie.s[k].nom);
+    } else {
+        for (size_t k = 0; k < a.att_nb; k++) free(a.att_mots[k]);
+        free(a.att_mots);
+    }
     liberer_jetons(j, n);
 
     if (a.echec) {
@@ -680,6 +846,133 @@ int analyser(const char *source, size_t taille, Portee *portee, int interactif,
     portee_vider(portee);
     *portee = copie;
     return 1;
+}
+
+int analyser(const char *source, size_t taille, Portee *portee, int interactif,
+             Programme *programme, Diagnostic *diag) {
+    return analyser_interne(source, taille, portee, interactif, programme, diag, NULL);
+}
+
+/* ---------------------------------------------------------------- */
+/* Aide à la saisie (§ 7, charte art. 9)                            */
+/* ---------------------------------------------------------------- */
+
+/* Lettre au sens du lexeur (Latin-1, œ, Ÿ) ou chiffre. */
+static int car_de_mot(uint32_t c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+        || (c >= 0xC0 && c <= 0xFF && c != 0xD7 && c != 0xF7)
+        || c == 0x152 || c == 0x153 || c == 0x178;
+}
+
+/* Début du mot en cours de frappe à la fin de la source (taille si aucun). */
+static size_t debut_mot_partiel(const char *s, size_t taille) {
+    size_t i = taille;
+    while (i > 0) {
+        size_t k = i - 1;
+        while (k > 0 && ((unsigned char)s[k] & 0xC0) == 0x80) k--;
+        const unsigned char *p = (const unsigned char *)s + k;
+        uint32_t c;
+        if (*p < 0x80) c = *p;
+        else if ((*p & 0xE0) == 0xC0 && k + 1 < taille) c = ((uint32_t)(p[0] & 0x1F) << 6) | (p[1] & 0x3F);
+        else break;
+        if (!car_de_mot(c)) break;
+        i = k;
+    }
+    if (i < taille && s[i] >= '0' && s[i] <= '9') return taille; /* un nombre, pas un mot */
+    return i;
+}
+
+/* Minuscules pour comparer : ASCII, Latin-1 (À → à), Œ → œ. */
+static char *plier(const char *s, size_t n) {
+    char *r = grym_allouer(n + 1);
+    memcpy(r, s, n);
+    r[n] = '\0';
+    for (size_t k = 0; k < n; k++) {
+        unsigned char c = (unsigned char)r[k];
+        if (c >= 'A' && c <= 'Z') r[k] = (char)(c + 32);
+        else if (c == 0xC3 && k + 1 < n) {
+            unsigned char d = (unsigned char)r[k + 1];
+            if (d >= 0x80 && d <= 0x9E && d != 0x97) r[k + 1] = (char)(d + 0x20);
+            k++;
+        } else if (c == 0xC5 && k + 1 < n && (unsigned char)r[k + 1] == 0x92) {
+            r[k + 1] = (char)0x93;
+            k++;
+        }
+    }
+    return r;
+}
+
+static void proposer(Suggestions *r, const char *item, const char *prefixe, size_t lp, int generique) {
+    if (lp) {
+        if (generique || strlen(item) < lp) return;
+        char *a = plier(item, lp), *b = plier(prefixe, lp);
+        int ok = strcmp(a, b) == 0;
+        free(a);
+        free(b);
+        if (!ok) return;
+    }
+    for (size_t k = 0; k < r->nb; k++)
+        if (strcmp(r->items[k], item) == 0) return;
+    char **it = grym_allouer((r->nb + 1) * sizeof *it);
+    if (r->nb) memcpy(it, r->items, r->nb * sizeof *it);
+    free(r->items);
+    r->items = it;
+    r->items[r->nb++] = grym_dupliquer(item);
+}
+
+Suggestions suites_valides(const char *source, size_t taille) {
+    Suggestions r = { NULL, 0 };
+    size_t d = debut_mot_partiel(source, taille);
+    const char *pre = source + d;
+    size_t lp = taille - d;
+
+    Portee *portee = portee_creer();
+    Programme prog;
+    Diagnostic diag;
+    Capture c = { 0, 0, NULL, 0, NULL, 0 };
+    if (analyser_interne(source, d, portee, 0, &prog, &diag, &c)) programme_liberer(&prog);
+    else diagnostic_liberer(&diag);
+    portee_detruire(portee);
+
+    if (c.valide) {
+        unsigned m = c.att;
+        if (m & A_DEBUT) {
+            proposer(&r, "Le", pre, lp, 0);
+            proposer(&r, "La", pre, lp, 0);
+            proposer(&r, "L'", pre, lp, 0);
+            proposer(&r, "Afficher", pre, lp, 0);
+            proposer(&r, "Remarque :", pre, lp, 0);
+        }
+        if (m & (A_VALEUR | A_NOM))
+            for (size_t k = 0; k < c.nb_noms; k++) proposer(&r, c.noms[k], pre, lp, 0);
+        for (size_t k = 0; k < c.nb_mots; k++) proposer(&r, c.mots[k], pre, lp, 0);
+        if (m & A_NOUVEAU) proposer(&r, "(nouveau nom)", pre, lp, 1);
+        if (m & A_VALEUR) {
+            proposer(&r, "(nombre)", pre, lp, 1);
+            proposer(&r, "(", pre, lp, 1);
+            proposer(&r, "−", pre, lp, 1);
+        }
+        if (m & A_TEXTE) proposer(&r, "« … »", pre, lp, 1);
+        if (m & A_OP_ADD) { proposer(&r, "+", pre, lp, 1); proposer(&r, "−", pre, lp, 1); }
+        if (m & A_OP_MUL) { proposer(&r, "×", pre, lp, 1); proposer(&r, "÷", pre, lp, 1); }
+        if (m & A_OP_PUISS) proposer(&r, "^", pre, lp, 1);
+        if (m & A_PAR_FERM) proposer(&r, ")", pre, lp, 1);
+        if (m & A_VERBE) { proposer(&r, "vaut", pre, lp, 0); proposer(&r, "devient", pre, lp, 0); }
+        if (m & A_PUIS) proposer(&r, "puis", pre, lp, 0);
+        if (m & A_POINT) proposer(&r, ".", pre, lp, 1);
+    }
+    for (size_t k = 0; k < c.nb_mots; k++) free(c.mots[k]);
+    free(c.mots);
+    for (size_t k = 0; k < c.nb_noms; k++) free(c.noms[k]);
+    free(c.noms);
+    return r;
+}
+
+void suggestions_liberer(Suggestions *s) {
+    for (size_t k = 0; k < s->nb; k++) free(s->items[k]);
+    free(s->items);
+    s->items = NULL;
+    s->nb = 0;
 }
 
 void programme_liberer(Programme *p) {

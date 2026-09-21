@@ -1,6 +1,7 @@
 # Exécutables produits par make
 grym-lex
 grym-arbre
+grym-suites
 test_lexeur
 test_analyseur
 *.exe

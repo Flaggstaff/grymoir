@@ -1,5 +1,5 @@
 /* GrymoiR : arbre syntaxique, v0.1
- * Spécification : grammaire-v0.1.md, § 5.
+ * Spécification : docs/grammaire.md (révision 1.1), § 5.
  * Chaque nœud garde sa position dans la source (debut, fin), pour les
  * messages d'erreur et, en v0.2, pour la traduction sans perte.
  */

@@ -168,8 +168,9 @@ int main(void) {
     V("2 × 3 * 4 ÷ 5 / 6 − 7 - 8 ^ 9 (1)",
       "NOMBRE(2) FOIS NOMBRE(3) FOIS NOMBRE(4) DIVISE NOMBRE(5) DIVISE NOMBRE(6) "
       "MOINS NOMBRE(7) MOINS NOMBRE(8) PUISSANCE NOMBRE(9) PAR_OUV NOMBRE(1) PAR_FERM");
-    V("3 – 2", "NOMBRE(3) ERREUR");
-    VM("3 – 2", "Tiret typographique");
+    V("3 – 2", "NOMBRE(3) MOINS NOMBRE(2)");
+    V("3 — 2", "NOMBRE(3) ERREUR");
+    VM("3 — 2", "Tiret cadratin");
 
     /* --- Texte (§ 1.5) --- */
     V("« Bonjour »", "TEXTE(Bonjour)");
@@ -178,8 +179,13 @@ int main(void) {
     V("« »", "TEXTE()");
     V("« ouvert", "ERREUR");
     V("« a\nb »", "ERREUR");
-    V("“salut”", "ERREUR");
-    VM("“salut”", "Guillemets anglais");
+    V("“salut”", "TEXTE(salut)");
+    V("“ a ”", "TEXTE( a )");
+    V("“ouvert", "ERREUR");
+    VM("“ouvert", "guillemet fermant ”");
+    V("” x", "ERREUR");
+    V("„a“", "ERREUR");
+    VM("„a“", "non reconnu");
     V("fin »", "MOT(fin) ERREUR");
 
     /* --- Remarques (§ 1.6) --- */

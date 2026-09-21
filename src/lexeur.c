@@ -1,5 +1,5 @@
 /* GrymoiR : lexeur de la forme littéraire, v0.1
- * Spécification : grammaire-v0.1.md, § 1.
+ * Spécification : docs/grammaire.md (révision 1.1), § 1.
  */
 #include "lexeur.h"
 
@@ -422,7 +422,8 @@ static Jeton lire_texte(Lexeur *lx, size_t debut, int ligne, int col,
     while (reste(lx, 0) && voir(lx, 0) != fermant && voir(lx, 0) != '\n') avancer(lx);
     if (!reste(lx, 0) || voir(lx, 0) == '\n') {
         char *m = formater("Texte non fermé : il manque le guillemet fermant %s "
-                           "avant la fin de la ligne.", fermant == 0xBB ? "»" : "\"");
+                           "avant la fin de la ligne.",
+                           fermant == 0xBB ? "»" : fermant == 0x201D ? "”" : "\"");
         return echec(lx, debut, ligne, col, m);
     }
     size_t f = lx->pos;
@@ -458,6 +459,7 @@ Jeton lexeur_suivant(Lexeur *lx) {
     switch (c) {
     case '+':    return simple(lx, J_PLUS, debut, ligne, col);
     case '-':
+    case 0x2013: /* tiret demi-cadratin, inséré par la correction automatique de Word */
     case 0x2212: return simple(lx, J_MOINS, debut, ligne, col);
     case '*':
     case 0xD7:   return simple(lx, J_FOIS, debut, ligne, col);
@@ -472,16 +474,19 @@ Jeton lexeur_suivant(Lexeur *lx) {
     case 0xAB:   return lire_texte(lx, debut, ligne, col, 0xBB, 1);
     case '"':    return lire_texte(lx, debut, ligne, col, '"', 0);
 
-    case 0x201C: case 0x201D: case 0x201E:
+    case 0x201C: return lire_texte(lx, debut, ligne, col, 0x201D, 0);
+    case 0x201D:
         return echec(lx, debut, ligne, col, formater(
-            "Guillemets anglais non reconnus : utilisez les guillemets français « » "
-            "ou les guillemets droits \" \"."));
+            "Guillemet fermant ” sans guillemet ouvrant “."));
+    case 0x201E:
+        return echec(lx, debut, ligne, col, formater(
+            "Guillemet „ non reconnu : utilisez « », “ ” ou \" \"."));
     case 0xBB:
         return echec(lx, debut, ligne, col, formater(
             "Guillemet fermant » sans guillemet ouvrant."));
-    case 0x2013: case 0x2014:
+    case 0x2014:
         return echec(lx, debut, ligne, col, formater(
-            "Tiret typographique non reconnu : pour soustraire, utilisez - ou −."));
+            "Tiret cadratin non reconnu : pour soustraire, utilisez -, − ou –."));
     case '\'': case 0x2019:
         return echec(lx, debut, ligne, col, formater(
             "Apostrophe inattendue : l'élision suit une lettre (l'addition), "
