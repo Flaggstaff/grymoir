@@ -1205,6 +1205,99 @@ int main(void) {
         module_detruire(b);
     }
 
+    /* --- Plusieurs vers plusieurs (§ 16.13) --- */
+#define MUL "Une personne, conservée, a : un nom (texte), unique.\n" \
+            "Un genre, conservé, a : un nom (texte).\n" \
+            "Une œuvre, conservée, a : un titre (texte), un compositeur (personne), des interprètes (personne), " \
+            "des genres (genre), des travaux (travail) (genre).\n" \
+            "Pour créer un nom :\n    La p vaut une nouvelle personne :\n        Le nom vaut nom.\n    Conserver p.\n" \
+            "Pour classer un nom :\n    Le g vaut un nouveau genre :\n        Le nom vaut nom.\n    Conserver g.\n" \
+            "Créer « Bach ».\nCréer « Callas ».\nClasser « baroque ».\nClasser « sacré ».\n" \
+            "La bach vaut la personne conservée dont le nom est « Bach ».\n" \
+            "La callas vaut la personne conservée dont le nom est « Callas ».\n" \
+            "Le baroque vaut le genre conservé dont le nom est « baroque ».\n" \
+            "Le sacré vaut le genre conservé dont le nom est « sacré ».\n" \
+            "L'o vaut une nouvelle œuvre :\n    Le titre vaut « Messe ».\n    Le compositeur vaut bach.\nConserver o.\n" \
+            "Les genres de o gagnent baroque.\nLes genres de o gagnent sacré.\nLes genres de o gagnent baroque.\n" \
+            "Les interprètes de o gagnent callas.\n"
+    PROG(MUL "Pour chaque genre de o, par nom décroissant, afficher nom du genre.\nAfficher le nombre de genres de o.",
+         "sacré\nbaroque\n2");
+    PROG(MUL "Pour chaque interprète de o, afficher nom de l'interprète.\nAfficher le nombre d'interprètes de o.",
+         "Callas\n1");
+    PROG(MUL "Pour chaque œuvre de sacré, afficher titre de l'œuvre.",
+         "~Plusieurs champs relient une œuvre à un genre : « genres » et « travaux ». "
+         "Précisez avec « dont … est parmi les genres » ou « dont … est parmi les travaux ».");
+    PROG(MUL "Afficher le nombre d'œuvres de callas.",
+         "~Plusieurs champs relient une œuvre à une personne : « compositeur » et « interprètes ». "
+         "Précisez avec « dont … est le compositeur » ou « dont … est parmi les interprètes ».");
+    PROG(MUL "Afficher le nombre de travaux de o.\nPour chaque travail de o, afficher 1.", "0");
+    PROG(MUL "Pour chaque œuvre conservée dont sacré est parmi les genres, afficher titre de l'œuvre.", "Messe");
+    PROG(MUL "Les travaux de o gagnent sacré.\nPour chaque travail de o, afficher nom du travail.\n"
+         "Afficher le nombre de genres de o.", "sacré\n2");
+    PROG(MUL "Afficher le nombre d'œuvres conservées dont callas est parmi les interprètes puis "
+         "le nombre d'œuvres conservées dont bach est parmi les interprètes puis "
+         "le nombre d'œuvres conservées dont sacré n'est pas parmi les genres puis "
+         "le nombre d'œuvres conservées dont bach est le compositeur et baroque est parmi les genres.", "1 0 0 1");
+    PROG(MUL "Les genres de o perdent sacré.\nLes genres de o perdent sacré.\nAfficher le nombre de genres de o.", "1");
+    /* corbeille : un genre supprimé disparaît des lectures et ne se gagne pas */
+    PROG(MUL "Supprimer sacré.\nAfficher le nombre de genres de o.\nRétablir sacré.\nAfficher le nombre de genres de o.",
+         "1\n2");
+    PROG(MUL "Supprimer sacré.\nLes genres de o gagnent sacré.",
+         "~Le champ « genres » gagnerait un genre supprimé : rétablissez-le d'abord.");
+    /* effacer : une œuvre emporte ses liaisons ; un genre encore gagné ne s'efface pas */
+    PROG(MUL "Supprimer baroque définitivement.",
+         "~Ce genre est encore désigné par le champ « genres » d'une œuvre.");
+    PROG(MUL "Supprimer o définitivement.\nSupprimer baroque définitivement.\nAfficher le nombre de genres conservés.", "1");
+    PROG(MUL "Le g vaut un nouveau genre :\n    Le nom vaut « x ».\nLes genres de o gagnent g.",
+         "~Le champ « genres » gagnerait un genre qui n'est pas conservé : conservez-le d'abord.");
+    PROG(MUL "La n vaut une nouvelle œuvre :\n    Le titre vaut « N ».\n    Le compositeur vaut bach.\n"
+         "Les genres de n gagnent baroque.",
+         "~Une œuvre qui n'est pas conservée ne gagne rien : ses « genres » vivent dans la base.");
+    PROG(MUL "Les genres de o gagnent bach.", "~Le champ « genres » attend un genre, pas une personne.");
+    PROG(MUL "Les genres de o gagnent 3.", "~Le champ « genres » attend un genre, pas un nombre.");
+    PROG(MUL "Afficher le genres de o.", "~« genres » est un champ multiple, pas une valeur");
+    /* un champ multiple qui porte le nom d'une entité : repli sur la relation inverse quand l'objet ne l'a pas */
+    PROG("Un genre, conservé, a : un nom (texte).\nUne œuvre, conservée, a : un titre (texte), un genre (genre).\n"
+         "Une personne, conservée, a : un nom (texte), des œuvres (œuvre).\n"
+         "Le g vaut un nouveau genre :\n    Le nom vaut « b ».\nConserver g.\n"
+         "L'o vaut une nouvelle œuvre :\n    Le titre vaut « O ».\n    Le genre vaut g.\nConserver o.\n"
+         "La p vaut une nouvelle personne :\n    Le nom vaut « P ».\nConserver p.\n"
+         "Pour chaque œuvre de g, afficher titre de l'œuvre.\nAfficher le nombre d'œuvres de p.\n"
+         "Les œuvres de p gagnent o.\nPour chaque œuvre de p, afficher titre de l'œuvre.\n"
+         "Afficher le nombre de personnes conservées dont o est parmi les œuvres.", "O\n0\nO\n1");
+    {   /* migrations : ajout sur une entité peuplée, retrait refusé tant qu'une liaison existe */
+        remove("_essai_mul.grymd");
+        const char *etapes[][2] = {
+            { "Un genre, conservé, a : un nom (texte).\nUne œuvre, conservée, a : un titre (texte).\n"
+              "L'o vaut une nouvelle œuvre :\n    Le titre vaut « X ».\nConserver o.\n", "" },
+            { "Un genre, conservé, a : un nom (texte).\nUne œuvre, conservée, a : un titre (texte), des genres (genre).\n"
+              "Le g vaut un nouveau genre :\n    Le nom vaut « b ».\nConserver g.\n"
+              "Les genres de l'œuvre conservée dont le titre est « X » gagnent g.\n"
+              "Afficher le nombre de genres de l'œuvre conservée dont le titre est « X ».\n", "1" },
+            { "Un genre, conservé, a : un nom (texte).\nUne œuvre, conservée, a : un titre (texte).\n",
+              "~« genres » a disparu de « œuvre » : 1 liaison serait perdue." },
+            { "Un genre, conservé, a : un nom (texte).\nUne œuvre, conservée, a : un titre (texte), un genres (genre), facultatif.\n",
+              "~« genres » ne peut pas devenir un lien simple" },
+            { "Un genre, conservé, a : un nom (texte).\nUne œuvre, conservée, a : un titre (texte), des genres (genre).\n"
+              "Les genres de l'œuvre conservée dont le titre est « X » perdent le genre conservé dont le nom est « b ».\n", "" },
+            { "Un genre, conservé, a : un nom (texte).\nUne œuvre, conservée, a : un titre (texte).\nAfficher 1.\n", "1" },
+        };
+        for (int i = 0; i < 6; i++) {
+            total++;
+            Portee *p = portee_creer();
+            Machine *m = machine_creer();
+            machine_base(m, "_essai_mul.grymd");
+            char *r = executer_source(p, m, etapes[i][0], 0);
+            const char *att = etapes[i][1];
+            int ok = att[0] == '~' ? strstr(r, att + 1) != NULL : strcmp(r, att) == 0;
+            if (!ok) signaler(__LINE__, etapes[i][0], att, r);
+            free(r);
+            machine_detruire(m);
+            portee_detruire(p);
+        }
+        remove("_essai_mul.grymd");
+    }
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

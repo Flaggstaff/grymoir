@@ -156,14 +156,17 @@ static void chercher(Compilation *c, const Noeud *n) {
     if (n->texte2) chaine_ajouter(&d, n->texte2);
     chaine_ajouter(&d, n->entier ? "\x1f" "1\x1f" : "\x1f" "0\x1f");
     int parametres = 0;
-    int inverse = n->op == 'I';   /* « les œuvres de bach » : l'objet en dernier enfant (§ 16.10) */
+    /* « les œuvres de bach » (§ 16.10), « les interprètes de o » (§ 16.13) : l'objet en dernier enfant */
+    int inverse = n->op == 'I' || n->op == 'M';
     int condition = n->nb_enfants > (size_t)inverse;
     if (inverse) {
         if (condition) chaine_ajouter(&d, "(e");
         expression(c, n->enfants[n->nb_enfants - 1]);
         char t[16];
-        snprintf(t, sizeof t, "(I?%d)", ++parametres);
+        snprintf(t, sizeof t, "(%c?%d", n->op, ++parametres);
         chaine_ajouter(&d, t);
+        if (n->op == 'M') { chaine_ajouter(&d, "["); chaine_ajouter(&d, n->texte3); chaine_ajouter(&d, "]"); }
+        chaine_ajouter(&d, ")");
     }
     if (condition) condition_dont(c, n->enfants[0], &d, &parametres);
     if (inverse && condition) chaine_ajouter(&d, ")");
@@ -562,6 +565,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 classe_typer_dernier_champ(cm, ch->texte2, ch->op == 'U');
                 if (ch->entier & 1) classe_facultatif_dernier_champ(cm);
                 if (ch->entier & 2) classe_cascade_dernier_champ(cm);
+                if (ch->forme == 3) classe_multiple_dernier_champ(cm);   /* champ multiple (§ 16.13) */
                 if (ch->nb_enfants) {   /* valeur de départ, sous forme canonique */
                     const Noeud *v = ch->enfants[0];
                     char *t = v->type == N_NEGATION ? grym_formater("-%s", v->enfants[0]->texte) : grym_dupliquer(v->texte);
@@ -613,6 +617,14 @@ static void phrase(Compilation *c, const Noeud *ph) {
         expression(c, ph->enfants[1]);
         emettre(c, I_ENREGISTRER, 0, ph->ligne, ph->colonne);
         return;
+    case P_GAGNER: {   /* « Les genres de o gagnent baroque. » (§ 16.13) */
+        expression(c, ph->enfants[0]);
+        expression(c, ph->enfants[1]);
+        long ch = bloc_nom(c->b, ph->texte);
+        if (ch < 0) { trop_grand(c, ph); return; }
+        emettre(c, ph->forme ? I_PERDRE : I_GAGNER, ch, ph->op_ligne, ph->op_colonne);
+        return;
+    }
     case P_MODIF_CHAMP: {
         expression(c, ph->enfants[0]);
         expression(c, ph->enfants[1]);

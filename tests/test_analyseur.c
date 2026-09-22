@@ -658,6 +658,53 @@ int main(void) {
        "Seul un lien d'entité « disparaît avec » l'objet qu'il désigne.");
     VE(PU "Afficher le nombre de partitions supprimés.", 3, 34, "Accord : « supprimées ».");
 
+    /* --- Plusieurs vers plusieurs (§ 16.13) --- */
+#define MU "Une personne, conservée, a : un nom (texte).\n" \
+           "Une œuvre, conservée, a : un titre (texte), des interprètes (personne), des travaux (travail) (personne).\n" \
+           "La o vaut l'œuvre conservée dont le titre est « a ».\n"
+#define MU_ARBRE "(entité [personne] [nom : texte])\n(entité [œuvre] [titre : texte] [interprètes : personne multiple] " \
+                 "[travaux : personne multiple singulier travail])\n" \
+                 "(créer [o] (le-conservé [œuvre] (dont (= (champ-dont [titre]) «a»))))\n"
+    V(MU "Les interprètes de o gagnent la personne conservée dont le nom est « b ».",
+      MU_ARBRE "(gagner [interprètes] [o] (le-conservé [personne] (dont (= (champ-dont [nom]) «b»))))");
+    V(MU "Les travaux de la o perdent o.", MU_ARBRE "(perdre [travaux] [o] [o])");
+    V(MU "Pour chaque interprète de o, par nom, afficher interprète.",
+      MU_ARBRE "(pour-chaque-conservé [interprète] (conservés [personne] (parmi [interprètes] [o]) (par [nom])) "
+      "(bloc (afficher [interprète])))");
+    V(MU "Pour chaque travail de o dont le nom = « x », afficher travail.",
+      MU_ARBRE "(pour-chaque-conservé [travail] (conservés [personne] (parmi [travaux] [o]) (dont (= (champ-dont [nom]) «x»))) "
+      "(bloc (afficher [travail])))");
+    V(MU "Afficher le nombre d'interprètes de o.", MU_ARBRE "(afficher (nombre-conservés [personne] (parmi [interprètes] [o])))");
+    V(MU "Afficher le nombre d'œuvres conservées dont o n'est pas parmi les travaux.",
+      MU_ARBRE "(afficher (nombre-conservés [œuvre] (dont (non (parmi (champ-dont [travaux]) [o])))))");
+    V("Une personne, conservée, a : un nom (texte), des pièces jointes (personne).\nLa p vaut 1.\n"
+      "Pour chaque pièce jointe de p, afficher 1.",
+      "(entité [personne] [nom : texte] [pièces jointes : personne multiple])\n(créer [p] 1)\n"
+      "(pour-chaque-conservé [pièce jointe] (conservés [personne] (parmi [pièces jointes] [p])) (bloc (afficher 1)))");
+    VE("Une personne, conservée, a : des amis (personne), facultatif.", 1, 51,
+       "« amis » est multiple : il n'est pas facultatif, un ensemble vide lui suffit.");
+    VE("Une personne, conservée, a : des amis (personne), « x » au départ.", 1, 51,
+       "« amis » est multiple : il n'a pas de valeur de départ, il part vide.");
+    VE("Une personne, conservée, a : des amis (personne), et disparaît avec elle.", 1, 51,
+       "« amis » est multiple : « disparaît avec » ne vaut que pour un lien simple.");
+    VE("Une personne, conservée, a : des amis (texte).", 1, 40, "« amis » est multiple : son type est une entité");
+    VE("Une personne, conservée, a : des ami (personne).", 1, 34, "un champ multiple porte un nom au pluriel");
+    VE("Une personne a : des amis (personne).", 1, 18, "Seule une entité a un champ multiple");
+    VE("Une personne, conservée, a : un nom (texte), des amis (personne).\nLa p vaut 1.\nAfficher les amis de p.",
+       3, 10, "« amis » est un champ multiple, pas une valeur");
+    VE("Une personne, conservée, a : un nom (texte), des amis (personne).\nLa p vaut 1.\nAfficher le amis de p.",
+       3, 13, "« amis » est un champ multiple, pas une valeur : il se lit avec « Pour chaque ami de … »");
+    VE("Une personne, conservée, a : un nom (texte), des amis (personne).\nLa p vaut 1.\nSi p est parmi les amis, afficher 1.",
+       3, 10, "« parmi » ne s'emploie encore que dans une condition « dont »");
+    VE("Une personne, conservée, a : un nom (texte), des amis (personne).\nLa p vaut 1.\nLes noms de p gagnent 2.",
+       3, 5, "Champ multiple attendu après « Les »");
+    VE("Une personne, conservée, a : un nom (texte), des amis (personne).\nLa p vaut 1.\nLes amis de p gagnent 2.",
+       3, 23, "Le champ « amis » attend une personne, pas un nombre.");
+    VE("Une personne, conservée, a : un nom (texte), des amis (personne).\n"
+       "Le carré d'un x :\n    Les amis de x gagnent x.\n    Rendre 1.", 3, 5, "Un calcul ne modifie pas la base");
+    VE("Une personne, conservée, a : un nom (texte), des amis (personne).\nUn membre, conservé, est une personne.\n"
+       "Un membre a : un amis (texte).", 3, 18, "« amis » est déjà un champ hérité de « personne ».");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

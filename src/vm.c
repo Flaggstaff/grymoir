@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.16).
+ * Spécification : docs/vm.md (révision 1.17).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -1447,7 +1447,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             long np = requete_parametres(b->constantes[op].texte);
             Valeur r;
             char *erreur = NULL;
-            int trouve = base_chercher(m->base, m, b->constantes[op].texte, &pile.v[pile.n - (size_t)np],
+            /* sans paramètre, la pile peut être vide : aucune adresse calculée sur un pointeur nul */
+            int trouve = base_chercher(m->base, m, b->constantes[op].texte, np ? &pile.v[pile.n - (size_t)np] : NULL,
                                        (size_t)np, &r, &erreur);
             for (long q = 0; q < np; q++) {
                 Valeur x = depiler(&pile);
@@ -1519,6 +1520,40 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                                &probleme);
             }
             valeur_liberer(&v);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
+        case I_GAGNER:
+        case I_PERDRE: {
+            /* « Les genres de o gagnent baroque. » : objet, valeur → rien (grammaire, § 16.13) */
+            const char *champ = b->noms[op];
+            Valeur v = depiler(&pile);
+            Valeur ob = depiler(&pile);
+            char *probleme = NULL;
+            long k = ob.type == V_OBJET ? index_champ(ob.objet->classe, champ) : -1;
+            if (ob.type == V_ABSENT) probleme = message_absent(&ob);
+            else if (ob.type != V_OBJET)
+                probleme = grym_formater("« %s » : la valeur n'est pas un objet, c'est %s.", champ, nom_type(ob.type));
+            else if (k < 0 || !(ob.objet->classe->uniques[k] & 8)) {
+                char *qui = article_classe(ob.objet->classe);
+                qui[0] = (char)(qui[0] - 32);
+                probleme = grym_formater("%s n'a pas de champ multiple « %s ».", qui, champ);
+                free(qui);
+            } else if (!ob.objet->id) {
+                const ClasseVM *c = ob.objet->classe;
+                char *qui = article_classe(c);
+                qui[0] = (char)(qui[0] - 32);
+                probleme = grym_formater("%s qui n'est pas conservé%s ne %s rien : ses « %s » vivent dans la base. "
+                                         "Conservez-%s d'abord.", qui, c->feminin ? "e" : "",
+                                         code == I_GAGNER ? "gagne" : "perd", champ, c->feminin ? "la" : "le");
+                free(qui);
+            } else if (v.type == V_ABSENT) {
+                probleme = message_absent(&v);
+            } else if ((probleme = verifier_type_champ(m, champ, ob.objet->classe->types[k], &v, 0)) == NULL) {
+                base_gagner(m->base, ob.objet, (size_t)k, &v, code == I_PERDRE, &probleme);
+            }
+            valeur_liberer(&v);
+            valeur_liberer(&ob);
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
@@ -1599,6 +1634,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 qui[0] = (char)(qui[0] - 32);
                 ok = echouer(diag, b, debut, grym_formater("%s n'a pas de champ « %s ».", qui, champ));
                 free(qui);
+                break;
+            }
+            if (o->classe->uniques[k] & 8) {   /* champ multiple : un ensemble, pas une valeur (§ 16.13) */
+                ok = echouer(diag, b, debut, grym_formater(
+                    "« %s » est un champ multiple : il se lit avec « Pour chaque … de … » ou « le nombre de … de … », "
+                    "et change avec « gagnent » ou « perdent ».", champ));
                 break;
             }
             if (code != I_LIRE_CHAMP) {

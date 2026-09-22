@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.22), § 11.
+ * Spécification : docs/grammaire.md (révision 1.23), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -218,6 +218,24 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "dont", t);
             continue;
         }
+        if (t->type == J_CROCHETS && k + 1 < f && est_cle(&r->e[k + 1], "contient")) {
+            /* genres _contient baroque → baroque est parmi les genres (§ 16.13) */
+            size_t e = k + 2;
+            int p = 0;
+            while (e < f && !(p == 0 && r->e[e].type == J_MOT_CLE
+                              && (!strcmp(r->e[e].valeur, "et") || !strcmp(r->e[e].valeur, "ou")))) {
+                if (r->e[e].type == J_PAR_OUV) p++;
+                else if (r->e[e].type == J_PAR_FERM) p--;
+                e++;
+            }
+            expression(r, k + 2, e);
+            mot(r, "est", &r->e[k + 1]);
+            mot(r, "parmi", &r->e[k + 1]);
+            mot(r, "les", &r->e[k + 1]);
+            copier(r, t);
+            k = e - 1;
+            continue;
+        }
         if (est_cle(t, "fichier")) {                /* _fichier « a.jpg » → le fichier « a.jpg » */
             mot(r, "le", t);
             mot(r, "fichier", t);
@@ -272,6 +290,18 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                     if (r->e[q].type == J_PAR_OUV) p++;
                     else if (r->e[q].type == J_PAR_FERM) p--;
                     else if (p == 0 && (est_comparateur(&r->e[q]) || adjectif(&r->e[q]))) { op = q; break; }
+                }
+                if (!op && k + 3 < fin && r->e[k + 2].type == J_CROCHETS && est_cle(&r->e[k + 3], "contient")) {
+                    /* _non (genres _contient baroque) → baroque n'est pas parmi les genres (§ 16.13) */
+                    expression(r, k + 4, fin);
+                    emettre(r, J_ELISION, "n", &r->e[k + 3], 1);
+                    mot(r, "est", &r->e[k + 3]);
+                    mot(r, "pas", &r->e[k + 3]);
+                    mot(r, "parmi", &r->e[k + 3]);
+                    mot(r, "les", &r->e[k + 3]);
+                    copier(r, &r->e[k + 2]);
+                    k = fin;
+                    continue;
                 }
                 if (!op || fin == f) {
                     echouer(r, t, grym_dupliquer("« _non » s'applique à une comparaison : _non (x > 0)."));
@@ -425,6 +455,34 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         r->s[r->ns - 1].type = J_POINT;
         if (r->s[r->ns - 1].ligne_fin < t->ligne) r->s[r->ns - 1].ligne_fin = t->ligne;
         r->np--;
+        return;
+    }
+    if (haut && haut->type == O_CLASSE && est_cle(t, "des")) {
+        /* _des interprètes [(singulier)] (type) : champ multiple (§ 16.13) */
+        size_t q = d + 2;
+        int singulier = q + 5 < f + 1 && r->e[q].type == J_PAR_OUV && r->e[q + 1].type == J_CROCHETS
+                        && r->e[q + 2].type == J_PAR_FERM && q + 3 < f && r->e[q + 3].type == J_PAR_OUV;
+        if (singulier) q += 3;
+        int type = q + 2 < f && r->e[q].type == J_PAR_OUV && r->e[q + 1].type == J_CROCHETS && r->e[q + 2].type == J_PAR_FERM;
+        if (d + 1 >= f || r->e[d + 1].type != J_CROCHETS || !type || q + 3 != f) {
+            echouer(r, t, grym_dupliquer("Champ multiple attendu : « _des genres (genre) », ou « _des travaux (travail) (tâche) »."));
+            return;
+        }
+        if (haut->classe && !haut->champs) {
+            mot(r, haut->article->valeur, t);
+            copier(r, haut->classe);
+            mot(r, "a", t);
+            emettre(r, J_DEUX_POINTS, NULL, t, 1);
+            fixer_retrait(r, premier, haut->profondeur);
+        }
+        haut->champs++;
+        mot(r, "des", t);
+        copier(r, &r->e[d + 1]);
+        for (size_t v = d + 2; v < f; v++) {
+            if (r->e[v].type == J_CROCHETS) copier(r, &r->e[v]);
+            else emettre(r, r->e[v].type, NULL, &r->e[v], 1);
+        }
+        emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
         return;
     }
     if (haut && haut->type == O_CLASSE) {
@@ -865,6 +923,20 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     }
     if (haut && haut->type == O_SELON && !haut->dans_cas) {
         echouer(r, t, grym_dupliquer("« _cas » ou « _autrement » attendu dans un « _selon »."));
+        return;
+    }
+    size_t gagne = d;   /* o.genres _gagne baroque → Les genres de o gagnent baroque. (§ 16.13) */
+    while (gagne < f && !est_cle(&r->e[gagne], "gagne") && !est_cle(&r->e[gagne], "perd")) gagne++;
+    if (t->type == J_CROCHETS && gagne < f && gagne >= d + 3 && r->e[gagne - 2].type == J_POINT
+        && r->e[gagne - 1].type == J_CROCHETS) {
+        mot(r, "les", t);
+        copier(r, &r->e[gagne - 1]);
+        mot(r, "de", &r->e[gagne - 2]);
+        expression(r, d, gagne - 2);
+        mot(r, est_cle(&r->e[gagne], "gagne") ? "gagnent" : "perdent", &r->e[gagne]);
+        expression(r, gagne + 1, f);
+        point(r, f);
+        fixer_retrait(r, premier, prof);
         return;
     }
     size_t affecte = d;

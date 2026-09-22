@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.22), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.23), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -52,6 +52,11 @@ typedef struct {
     int *uniques;      /* champ unique */
     int *facultatifs;  /* champ facultatif (§ 16.9) */
     size_t nb;
+    /* champs multiples (§ 16.13), à part : ils ne se lisent pas comme des valeurs */
+    char **multiples;  /* nom au pluriel : « interprètes » */
+    char **singuliers; /* « interprète » */
+    char **types_multiples;
+    size_t nb_multiples;
 } Classe;
 
 struct Portee {
@@ -81,6 +86,16 @@ static void classe_champs_liberer(Classe *c) {
     free(c->uniques);
     free(c->facultatifs);
     c->facultatifs = NULL;
+    for (size_t k = 0; k < c->nb_multiples; k++) {
+        free(c->multiples[k]);
+        free(c->singuliers[k]);
+        free(c->types_multiples[k]);
+    }
+    free(c->multiples);
+    free(c->singuliers);
+    free(c->types_multiples);
+    c->multiples = c->singuliers = c->types_multiples = NULL;
+    c->nb_multiples = 0;
     c->champs = NULL;
     c->genres = NULL;
     c->types = NULL;
@@ -157,6 +172,15 @@ static void portee_copier(Portee *dst, const Portee *src) {
             d->facultatifs[k] = c->facultatifs ? c->facultatifs[k] : 0;
         }
         d->nb = c->nb;
+        d->nb_multiples = c->nb_multiples;
+        d->multiples = grym_allouer((c->nb_multiples ? c->nb_multiples : 1) * sizeof *d->multiples);
+        d->singuliers = grym_allouer((c->nb_multiples ? c->nb_multiples : 1) * sizeof *d->singuliers);
+        d->types_multiples = grym_allouer((c->nb_multiples ? c->nb_multiples : 1) * sizeof *d->types_multiples);
+        for (size_t k = 0; k < c->nb_multiples; k++) {
+            d->multiples[k] = grym_dupliquer(c->multiples[k]);
+            d->singuliers[k] = grym_dupliquer(c->singuliers[k]);
+            d->types_multiples[k] = grym_dupliquer(c->types_multiples[k]);
+        }
         d->champs = grym_allouer((c->nb ? c->nb : 1) * sizeof *d->champs);
         d->genres = grym_allouer((c->nb ? c->nb : 1) * sizeof *d->genres);
         for (size_t k = 0; k < c->nb; k++) {
@@ -203,6 +227,66 @@ static int classe_champ(Portee *p, const Classe *c, const char *nom, Genre *g, c
         c = c->parent ? classe_de(p, c->parent) : NULL;
     }
     return 0;
+}
+
+/* Singulier régulier d'un champ multiple (§ 16.13) : « genres » → « genre », « pièces jointes » → « pièce jointe »,
+ * « numéros de téléphone » → « numéro de téléphone » : chaque mot perd son « s » ou son « x » final, jusqu'au
+ * premier complément. */
+char *singulier_regulier(const char *pluriel) {
+    Chaine c = {0};
+    int complement = 0;
+    const char *p = pluriel;
+    while (*p) {
+        const char *f = p;
+        while (*f && *f != ' ' && *f != '\'') f++;
+        size_t l = (size_t)(f - p);
+        if (*f == '\'' || (l == 2 && (strncmp(p, "de", 2) == 0 || strncmp(p, "du", 2) == 0 || strncmp(p, "au", 2) == 0))
+            || (l == 3 && (strncmp(p, "des", 3) == 0 || strncmp(p, "aux", 3) == 0)) || (l == 2 && strncmp(p, "à", 2) == 0))
+            complement = 1;
+        if (!complement && l > 1 && (p[l - 1] == 's' || p[l - 1] == 'x')) l--;
+        char *mot = grym_formater("%.*s", (int)l, p);
+        chaine_ajouter(&c, mot);
+        free(mot);
+        p += f - p;
+        if (*p) {
+            char sep[2] = { *p, 0 };
+            chaine_ajouter(&c, sep);
+            p++;
+        }
+    }
+    return chaine_rendre(&c);
+}
+
+/* Champ multiple de la classe ou de sa lignée ; *type reçoit son type, *origine la classe qui le déclare. */
+static int classe_multiple(Portee *p, const Classe *c, const char *nom, const char **type, const Classe **origine) {
+    for (; c; c = c->parent ? classe_de(p, c->parent) : NULL)
+        for (size_t k = 0; k < c->nb_multiples; k++)
+            if (strcmp(c->multiples[k], nom) == 0) {
+                if (type) *type = c->types_multiples[k];
+                if (origine) *origine = c;
+                return 1;
+            }
+    return 0;
+}
+
+/* Champ multiple déclaré dans au moins une classe, nommé au pluriel (singulier 0) ou au singulier (1) ;
+ * *type reçoit son type, NULL si les déclarations ne s'accordent pas ; *pluriel son nom au pluriel. */
+static int multiple_connu(Portee *p, const char *nom, int singulier, const char **type, const char **pluriel) {
+    int trouve = 0;
+    for (size_t i = 0; i < p->nb_classes; i++) {
+        const Classe *c = &p->classes[i];
+        for (size_t k = 0; k < c->nb_multiples; k++) {
+            if (strcmp(singulier ? c->singuliers[k] : c->multiples[k], nom) != 0) continue;
+            if (!trouve) {
+                if (type) *type = c->types_multiples[k];
+                if (pluriel) *pluriel = c->multiples[k];
+            } else if (type && *type && strcmp(*type, c->types_multiples[k]) != 0) {
+                *type = NULL;
+            }
+            trouve = 1;
+        }
+    }
+    return trouve;
 }
 
 /* Champs de toute valeur fichier (§ 15.3) : ils ne réservent pas leur nom. */
@@ -839,6 +923,7 @@ static Noeud *appel_calcul(Analyse *a, Symbole *s, const Jeton *premier) {
     return n;
 }
 
+static int voyelle_initiale(const char *s);
 static Noeud *base(Analyse *a);
 static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase);
 
@@ -996,6 +1081,26 @@ static Noeud *nom_expression(Analyse *a) {
                 if (dehors) { free(tout); return NULL; }
             }
             if (a->j[f].type == J_FIN) attendre_suites_nom(a, f, tout); /* nom en cours de frappe */
+            size_t dm = est_mot(&a->j[d], "les") ? d + 1 : d;   /* « les genres de o » comme « le genres de o » */
+            for (size_t k = f; k > dm && !s; k--) {   /* « le genres de o » : un ensemble, pas une valeur (§ 16.13) */
+                if (!complement_de(a, k)) continue;
+                char *c = cle(a, dm, k);
+                const char *type = NULL, *pl = NULL;
+                if (multiple_connu(a->portee, c, 0, &type, &pl)) {
+                    const char *sg = NULL;
+                    for (size_t i = 0; i < a->portee->nb_classes && !sg; i++)
+                        for (size_t q = 0; q < a->portee->classes[i].nb_multiples; q++)
+                            if (strcmp(a->portee->classes[i].multiples[q], pl) == 0) sg = a->portee->classes[i].singuliers[q];
+                    erreur(a, &a->j[d], grym_formater(
+                        "« %s » est un champ multiple, pas une valeur : il se lit avec « Pour chaque %s de … » ou "
+                        "« le nombre %s%s de … », et change avec « Les %s de … gagnent … ».", pl, sg,
+                        voyelle_initiale(pl) ? "d'" : "de ", pl, pl));
+                    free(c);
+                    free(tout);
+                    return NULL;
+                }
+                free(c);
+            }
             erreur_inconnu(a, &a->j[d], tout);
             free(tout);
             return NULL;
@@ -1113,6 +1218,11 @@ static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
             n->op = n->op == '<' ? '>' : n->op == '>' ? '<' : n->op == 'l' ? 'g' : n->op == 'g' ? 'l' : n->op;
         }
         const Noeud *champ = n->enfants[0];
+        if (n->op == 'p') {   /* « dont baroque est parmi les genres » : déjà vérifié à la lecture (§ 16.13) */
+            const char *t = NULL;
+            classe_multiple(a->portee, e, champ->texte, &t, NULL);
+            return verifier_type(a, champ->texte, t, n->enfants[1]);
+        }
         if (champ->type == N_CHAMP_DONT && (n->nb_enfants == 1 || !contient_champ_dont(n->enfants[1]))) {
             const char *t = type_du_champ(a->portee, e, champ->texte);
             char op = n->op;
@@ -1160,7 +1270,19 @@ static int clause_dont(Analyse *a, const Classe *e, Noeud **cond) {
 }
 
 /* L'entité a-t-elle au moins un lien (champ dont le type est une entité), hérité ou apporté compris ? */
+static int apparentees(Portee *p, const Classe *x, const Classe *y) {
+    for (const Classe *c = x; c; c = c->parent ? classe_de(p, c->parent) : NULL) if (c == y) return 1;
+    for (const Classe *c = y; c; c = c->parent ? classe_de(p, c->parent) : NULL) if (c == x) return 1;
+    return 0;
+}
+
 static int a_un_lien(Portee *p, const Classe *c) {
+    /* un champ multiple relie aussi, dans les deux sens (§ 16.13) */
+    for (size_t i = 0; i < p->nb_classes; i++)
+        for (size_t k = 0; k < p->classes[i].nb_multiples; k++) {
+            const Classe *t = classe_de(p, p->classes[i].types_multiples[k]);
+            if ((t && apparentees(p, t, c)) || apparentees(p, &p->classes[i], c)) return 1;
+        }
     for (; c; c = c->parent ? classe_de(p, c->parent) : NULL) {
         for (size_t k = 0; k < c->nb; k++) if (c->types && c->types[k] && !type_de_base(c->types[k])) return 1;
         for (size_t q = 0; q < c->nb_aptitudes; q++) {
@@ -1196,9 +1318,10 @@ static Classe *entite_de(Analyse *a, size_t k, int pluriel, size_t *de) {
     return NULL;
 }
 
-/* L'objet après « de » : « de bach », « du compositeur », « de l'arrangeur de p » (§ 16.10). */
+/* L'objet après « de » : « de bach », « du compositeur », « de l'arrangeur de p » (§ 16.10) ;
+ * e NULL : aucune vérification de lien (champ multiple nommé, § 16.13). */
 static Noeud *objet_de(Analyse *a, const Classe *e, size_t de) {
-    if (!a_un_lien(a->portee, e)) {
+    if (e && !a_un_lien(a->portee, e)) {
         char *pl = pluriel_de(e);
         erreur(a, &a->j[de], grym_formater("%s « %s » n'a aucun lien vers un autre objet : « les %s de … » ne désigne rien.",
                                            e->genre == GENRE_FEMININ ? "Une" : "Un", e->nom, pl));
@@ -1211,6 +1334,42 @@ static Noeud *objet_de(Analyse *a, const Classe *e, size_t de) {
     Noeud *o = base(a);
     a->article_force = ART_AUCUN;
     return o;
+}
+
+/* À l'index k : « interprète de » (pluriel 0) ou « interprètes de » (pluriel 1), un champ multiple suivi de « de »
+ * (§ 16.13). Renvoie l'entité de ses éléments ; *de reçoit l'index de « de », *champ son nom au pluriel,
+ * *singulier le nom au singulier. NULL si la tournure n'y est pas, ou en cas d'erreur (a->echec). */
+static Classe *multiple_de(Analyse *a, size_t k, int pluriel, size_t *de, const char **champ, const char **singulier) {
+    if (k >= a->n) return NULL;
+    size_t f = k;
+    if (a->j[k].type == J_CROCHETS) f = k + 1;
+    else while (f < a->n && mot_de_nom(a, f)) f++;
+    for (size_t q = f; q > k; q--) {
+        if (!complement_de(a, q)) continue;
+        char *nom = a->j[k].type == J_CROCHETS ? grym_dupliquer(a->j[k].valeur) : cle(a, k, q);
+        const char *type = NULL, *pl = NULL;
+        int trouve = multiple_connu(a->portee, nom, !pluriel, &type, &pl)
+                  || (a->j[k].synthetique && pluriel && multiple_connu(a->portee, nom, 1, &type, &pl));
+        if (trouve) {
+            if (!type) {
+                erreur(a, &a->j[k], grym_formater("« %s » ne contient pas le même type d'objets dans toutes les classes : "
+                                                  "renommez l'un des champs.", pl));
+                free(nom);
+                return NULL;
+            }
+            *de = q;
+            *champ = pl;
+            *singulier = NULL;
+            for (size_t i = 0; i < a->portee->nb_classes && !*singulier; i++)
+                for (size_t m = 0; m < a->portee->classes[i].nb_multiples; m++)
+                    if (strcmp(a->portee->classes[i].multiples[m], pl) == 0) *singulier = a->portee->classes[i].singuliers[m];
+            free(nom);
+            return classe_de(a->portee, type);
+        }
+        free(nom);
+        if (a->j[k].type == J_CROCHETS) break;
+    }
+    return NULL;
 }
 
 /* « le client conservé dont … », « le nombre de clients conservés dont … », « le nombre d'œuvres de bach » :
@@ -1314,6 +1473,23 @@ static Noeud *base(Analyse *a) {
             return chercher(a, t, e, 2, apres, NULL);
         if (a->echec) return NULL;
         size_t de;
+        const char *champ, *sg;
+        if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2))
+            && (e = multiple_de(a, a->i + 3, 1, &de, &champ, &sg)) != NULL) {   /* « le nombre d'interprètes de o » */
+            size_t de2;
+            Classe *ent = entite_de(a, a->i + 3, 1, &de2);
+            if (!ent || (ent == e && de2 == de)) {
+                if (a->formule == 1)
+                    return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
+                char *garde = grym_dupliquer(champ);
+                Noeud *objet = objet_de(a, NULL, de);
+                if (!objet) { free(garde); return NULL; }
+                Noeud *n = chercher(a, t, e, 2, 0, objet);
+                if (n) { n->op = 'M'; n->texte3 = garde; } else free(garde);
+                return n;
+            }
+        }
+        if (a->echec) return NULL;
         if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2))
             && (e = entite_de(a, a->i + 3, 1, &de)) != NULL) {   /* « le nombre d'œuvres de bach » (§ 16.10) */
             if (a->formule == 1)
@@ -1322,6 +1498,7 @@ static Noeud *base(Analyse *a) {
             if (!objet) return NULL;
             return chercher(a, t, e, 2, 0, objet);
         }
+
     }
     if (t->type == J_DATE) {
         Noeud *n = feuille(N_DATE, t);
@@ -1606,6 +1783,55 @@ static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test
     for (size_t k = 0; k < NB_RELATIONS && !r; k++) {
         if (est_mot(t, RELATIONS[k].m)) { r = &RELATIONS[k]; g = GENRE_MASCULIN; }
         else if (est_mot(t, RELATIONS[k].f)) { r = &RELATIONS[k]; g = GENRE_FEMININ; }
+    }
+    if (a->dont) attendre_mot(a, a->i, "parmi les", 9);
+    if (!r && est_mot(t, "parmi")) {
+        /* « dont baroque est parmi les genres » (§ 16.13) */
+        const Classe *e = a->dont ? classe_de(a->portee, a->dont) : NULL;
+        if (!e) {
+            noeud_liberer(sujet);
+            return erreur(a, t, grym_dupliquer("« parmi » ne s'emploie encore que dans une condition « dont » : "
+                                               "« Pour chaque œuvre conservée dont baroque est parmi les genres »."));
+        }
+        if (sujet->type == N_CHAMP_DONT || contient_champ_dont(sujet)) {
+            noeud_liberer(sujet);
+            return erreur(a, t, grym_dupliquer("Deux champs ne se comparent pas entre eux : « dont baroque est parmi "
+                                               "les genres » compare une valeur à un champ multiple."));
+        }
+        avancer(a);
+        if (!est_mot(cour(a), "les")) { noeud_liberer(sujet); return erreur_inattendu(a, cour(a)); }
+        avancer(a);
+        size_t d = a->i, f = d;
+        if (a->j[d].type == J_CROCHETS) f = d + 1;
+        else while (f < a->n && mot_de_nom(a, f)) f++;
+        char *champ = NULL;
+        size_t k;
+        for (k = f; k > d; k--) {
+            char *c = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+            if (classe_multiple(a->portee, e, c, NULL, NULL)) { champ = c; break; }
+            free(c);
+            if (a->j[d].type == J_CROCHETS) break;
+        }
+        if (!champ) {
+            for (const Classe *c = e; c; c = c->parent ? classe_de(a->portee, c->parent) : NULL)
+                for (size_t q = 0; q < c->nb_multiples; q++) attendre_mot(a, d, c->multiples[q], strlen(c->multiples[q]));
+            noeud_liberer(sujet);
+            return erreur(a, &a->j[d], grym_formater("Champ multiple %s %s attendu après « parmi les ».",
+                                                      e->genre == GENRE_FEMININ ? "de la" : "du", e->nom));
+        }
+        Noeud *nc = noeud_creer(N_CHAMP_DONT, a->j[d].ligne, a->j[d].colonne, a->j[d].debut);
+        nc->texte = champ;
+        nc->fin = fin_jeton(&a->j[k - 1]);
+        a->i = k;
+        Noeud *n = noeud_creer(N_COMPARAISON, sujet->ligne, sujet->colonne, sujet->debut);
+        n->op = 'p';
+        n->negation = negation;
+        n->op_ligne = test->ligne;
+        n->op_colonne = test->colonne;
+        noeud_ajouter(n, nc);
+        noeud_ajouter(n, sujet);
+        n->fin = nc->fin;
+        return n;
     }
     if (!r && a->dont && sujet->type != N_CHAMP_DONT && article_de(cour(a)) != ART_AUCUN) {
         /* « dont brel est l'auteur » : la relation renversée, pour dire quel lien (§ 16.10) */
@@ -2629,12 +2855,19 @@ static Noeud *repeter(Analyse *a, int colonne) {
 
 /* Pour chaque nom de début à fin [ par pas de pas ] , phrase | : bloc */
 /* « Pour chaque client conservé [dont …] [, par nom [décroissant]] : » (§ 16.4) */
-static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, const Classe *e, size_t apres, size_t de) {
+static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, const Classe *e, size_t apres, size_t de,
+                                   const char *multiple, const char *singulier) {
     int corbeille = !de && a->corbeille;
     if (a->formule == 1)
         return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
     const Jeton *tnom = cour(a);
-    char *nom = grym_dupliquer(e->nom);
+    char *nom = grym_dupliquer(multiple ? singulier : e->nom);
+    if (visible(a, nom) && multiple) {
+        erreur(a, tnom, grym_formater("« %s » existe déjà : renommez-le, car « Pour chaque %s de … » donne ce nom "
+                                      "à l'objet de chaque tour.", nom, nom));
+        free(nom);
+        return NULL;
+    }
     if (visible(a, nom)) {
         erreur(a, tnom, grym_formater("« %s » existe déjà : renommez-le, car « Pour chaque %s %s » donne ce nom "
                                       "à l'objet de chaque tour.", nom, nom,
@@ -2644,7 +2877,7 @@ static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, cons
     }
     Noeud *objet = NULL;
     if (de) {   /* « Pour chaque œuvre de bach » (§ 16.10) */
-        objet = objet_de(a, e, de);
+        objet = objet_de(a, multiple ? NULL : e, de);
         if (!objet) { free(nom); return NULL; }
     } else {
         a->i = apres;
@@ -2656,7 +2889,8 @@ static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, cons
     cherche->forme = 0;
     cherche->negation = corbeille;
     if (cond) noeud_ajouter(cherche, cond);
-    if (objet) { cherche->op = 'I'; noeud_ajouter(cherche, objet); }
+    if (objet) { cherche->op = multiple ? 'M' : 'I'; noeud_ajouter(cherche, objet); }
+    if (multiple) cherche->texte3 = grym_dupliquer(multiple);
     if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "par")) {
         avancer(a);
         avancer(a);
@@ -2681,7 +2915,7 @@ static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, cons
         else if (est_mot(cour(a), "croissant")) avancer(a);
     }
     size_t sauve = a->portee->n;
-    portee_declarer(a->portee, nom, e->genre, t->ligne);
+    portee_declarer(a->portee, nom, multiple ? GENRE_LIBRE : e->genre, t->ligne);
     Symbole *tour = &a->portee->s[a->portee->n - 1];
     tour->lecture_seule = 1;
     int case_objet = tour->local = a->nb_locaux++;
@@ -2711,9 +2945,25 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
     {
         size_t apres;
         Classe *e = entite_conservee(a, a->i, 0, &apres);
-        if (e) return pour_chaque_conserve(a, colonne, t, e, apres, 0);
+        if (e) return pour_chaque_conserve(a, colonne, t, e, apres, 0, NULL, NULL);
         if (a->echec) return NULL;
         size_t de;
+        const char *champ, *sg;
+        /* « Pour chaque interprète de o » (§ 16.13) : le champ multiple l'emporte sur l'entité de même nom
+         * quand il en contient les objets ; la machine revient à la relation inverse si l'objet n'a pas ce champ */
+        e = multiple_de(a, a->i, 0, &de, &champ, &sg);
+        if (a->echec) return NULL;
+        size_t de2;
+        Classe *ent = entite_de(a, a->i, 0, &de2);
+        if (e && (!ent || (ent == e && de2 == de))) {
+            int compteur = 0;
+            for (size_t q = de + 1; q < a->n; q++) {
+                const Jeton *x = &a->j[q];
+                if (x->type == J_DEUX_POINTS || x->type == J_VIRGULE || x->type == J_FIN || est_mot(x, "dont")) break;
+                if (est_mot(x, "à") || est_mot(x, "au")) { compteur = 1; break; }
+            }
+            if (!compteur) return pour_chaque_conserve(a, colonne, t, e, 0, de, champ, sg);
+        }
         e = entite_de(a, a->i, 0, &de);
         if (e) {
             /* « Pour chaque i de 1 à 9 » garde son sens : un « à » avant « dont », « , » ou « : » en fait un compteur */
@@ -2723,9 +2973,10 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
                 if (x->type == J_DEUX_POINTS || x->type == J_VIRGULE || x->type == J_FIN || est_mot(x, "dont")) break;
                 if (est_mot(x, "à") || est_mot(x, "au")) { compteur = 1; break; }
             }
-            if (!compteur) return pour_chaque_conserve(a, colonne, t, e, 0, de);
+            if (!compteur) return pour_chaque_conserve(a, colonne, t, e, 0, de, NULL, NULL);
         }
         if (a->echec) return NULL;
+
     }
     size_t d = a->i, k = d;
     if (a->j[k].type == J_CROCHETS) k++;
@@ -2990,16 +3241,79 @@ static int est_fichier_type(const char *t) {
     return t && (strcmp(t, "fichier") == 0 || strcmp(t, "image") == 0);
 }
 
+static char *lire_type(Analyse *a, const char *soi);
+
+/* Suite d'un champ multiple, après son nom : « (travail) » facultatif, le singulier irrégulier, puis
+ * « (tâche) », le type, une entité (§ 16.13). Aucune autre mention : l'ensemble part vide. */
+static int champ_multiple(Analyse *a, Noeud *c, const char *soi) {
+    const char *champ = c->texte;
+    if (cour(a)->type == J_PAR_OUV) {
+        size_t k = a->i + 1;
+        if (a->j[k].type == J_CROCHETS) k++;   /* forme compacte : « (travail) » en un seul nom */
+        else while (a->j[k].type == J_MOT || a->j[k].type == J_ELISION) k++;
+        if (k > a->i + 1 && a->j[k].type == J_PAR_FERM && a->j[k + 1].type == J_PAR_OUV) {
+            c->texte3 = a->j[a->i + 1].type == J_CROCHETS ? grym_dupliquer(a->j[a->i + 1].valeur) : cle(a, a->i + 1, k);
+            a->i = k + 1;
+        }
+    }
+    if (!c->texte3) {
+        char *sg = singulier_regulier(champ);
+        int pareil = strcmp(sg, champ) == 0;
+        free(sg);
+        if (pareil) {
+            erreur(a, &a->j[a->i - 1], grym_formater(
+                "« %s » : un champ multiple porte un nom au pluriel, « des %ss », ou déclare son singulier entre "
+                "parenthèses, « des %s (singulier) (type) ».", champ, champ, champ));
+            return 0;
+        }
+    }
+    if (cour(a)->type != J_PAR_OUV) {
+        erreur(a, cour(a), grym_formater("Type attendu entre parenthèses : « des %s (genre) », une entité.", champ));
+        return 0;
+    }
+    c->texte2 = lire_type(a, soi);
+    if (!c->texte2) return 0;
+    if (type_de_base(c->texte2)) {
+        erreur(a, &a->j[a->i - 2], grym_formater("« %s » est multiple : son type est une entité, pas « %s ».",
+                                                  champ, c->texte2));
+        return 0;
+    }
+    if (cour(a)->type == J_VIRGULE) {
+        const Jeton *x = voir(a, 1);
+        const char *refus = NULL;
+        if (est_mot(x, "facultatif") || est_mot(x, "facultative"))
+            refus = "il n'est pas facultatif, un ensemble vide lui suffit";
+        else if (est_mot(x, "unique"))
+            refus = "il n'est pas unique, plusieurs objets peuvent gagner le même élément";
+        else if (est_mot(x, "et") && est_mot(voir(a, 2), "disparaît"))
+            refus = "« disparaît avec » ne vaut que pour un lien simple";
+        else if (x->type == J_TEXTE || x->type == J_NOMBRE || x->type == J_DATE || x->type == J_MOINS
+                 || est_mot(x, "vrai") || est_mot(x, "faux"))
+            refus = "il n'a pas de valeur de départ, il part vide";
+        if (refus) {
+            erreur(a, x, grym_formater("« %s » est multiple : %s.", champ, refus));
+            return 0;
+        }
+    }
+    return 1;
+}
+
 /* Champs : mode 0 classe ordinaire (sans type), 1 entité (type obligatoire, « unique » permis),
  * 2 aptitude (type facultatif). */
 static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const char *soi) {
     for (;;) {
         Jeton *u = cour(a);
-        Genre gc;
+        Genre gc = GENRE_LIBRE;
         attendre_mot(a, a->i, "un", 2);
         attendre_mot(a, a->i, "une", 3);
-        if (!est_un(u, &gc)) {
+        if (mode == 1) attendre_mot(a, a->i, "des", 3);
+        int multiple = est_mot(u, "des");   /* « des genres (genre) » : un ensemble (§ 16.13) */
+        if (!multiple && !est_un(u, &gc)) {
             erreur(a, u, grym_dupliquer("Champ attendu : « un nom », « une date »."));
+            return 0;
+        }
+        if (multiple && mode != 1) {
+            erreur(a, u, grym_dupliquer("Seule une entité a un champ multiple : « Une œuvre, conservée, a : des genres (genre). »"));
             return 0;
         }
         avancer(a);
@@ -3027,7 +3341,9 @@ static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const
         if (!probleme && base && classe_champ(a->portee, base, champ, NULL, &origine))
             probleme = grym_formater("« %s » est déjà un champ %s « %s ».", champ,
                                      origine->aptitude ? "de l'aptitude" : "hérité de", origine->nom);
-        if (!probleme && champ_connu(a->portee, champ, &autre) && autre != gc)
+        if (!probleme && base && classe_multiple(a->portee, base, champ, NULL, &origine))
+            probleme = grym_formater("« %s » est déjà un champ hérité de « %s ».", champ, origine->nom);
+        if (!probleme && !multiple && champ_connu(a->portee, champ, &autre) && autre != gc)
             probleme = grym_formater("« %s » est déjà un champ %s dans une autre classe.", champ,
                                      autre == GENRE_MASCULIN ? "masculin" : "féminin");
         if (probleme) {
@@ -3037,9 +3353,18 @@ static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const
         }
         Noeud *c = noeud_creer(N_NOM, u->ligne, u->colonne, u->debut);
         c->texte = champ;
-        c->forme = gc == GENRE_FEMININ ? 2 : 1;
+        c->forme = multiple ? 3 : gc == GENRE_FEMININ ? 2 : 1;
         noeud_ajouter(n, c);
         a->i = kc;
+        if (multiple) {
+            if (!champ_multiple(a, c, soi)) return 0;
+            attendre(a, A_POINT);
+            attendre_mot(a, a->i, ",", 1);
+            if (cour(a)->type == J_VIRGULE) { avancer(a); continue; }
+            if (cour(a)->type == J_POINT) { avancer(a); break; }
+            erreur_inattendu(a, cour(a));
+            return 0;
+        }
         if (cour(a)->type == J_PAR_OUV) {
             if (mode == 0) {
                 erreur(a, cour(a), grym_dupliquer("Seuls les champs d'une entité ou d'une aptitude ont un type : "
@@ -3160,14 +3485,28 @@ static Classe *ajouter_classe(Portee *p, const char *nom, Genre g, const char *p
     c->uniques = NULL;
     c->facultatifs = NULL;
     c->nb = 0;
+    c->multiples = c->singuliers = c->types_multiples = NULL;
+    c->nb_multiples = 0;
     return c;
 }
 
 /* Champs d'une classe ou d'une aptitude, pris dans sa déclaration (N_NOM ; les N_TEXTE sont des aptitudes). */
 static void classe_remplir(Classe *c, const Noeud *n) {
     classe_champs_liberer(c);
-    size_t nb = 0;
-    for (size_t q = 0; q < n->nb_enfants; q++) nb += n->enfants[q]->type == N_NOM;
+    size_t nb = 0, nm = 0;
+    for (size_t q = 0; q < n->nb_enfants; q++) nb += n->enfants[q]->type == N_NOM && n->enfants[q]->forme != 3;
+    for (size_t q = 0; q < n->nb_enfants; q++) nm += n->enfants[q]->type == N_NOM && n->enfants[q]->forme == 3;
+    c->multiples = grym_allouer((nm ? nm : 1) * sizeof *c->multiples);
+    c->singuliers = grym_allouer((nm ? nm : 1) * sizeof *c->singuliers);
+    c->types_multiples = grym_allouer((nm ? nm : 1) * sizeof *c->types_multiples);
+    for (size_t q = 0; q < n->nb_enfants; q++) {
+        const Noeud *ch = n->enfants[q];
+        if (ch->type != N_NOM || ch->forme != 3) continue;
+        c->multiples[c->nb_multiples] = grym_dupliquer(ch->texte);
+        c->singuliers[c->nb_multiples] = ch->texte3 ? grym_dupliquer(ch->texte3) : singulier_regulier(ch->texte);
+        c->types_multiples[c->nb_multiples] = grym_dupliquer(ch->texte2);
+        c->nb_multiples++;
+    }
     c->champs = grym_allouer((nb ? nb : 1) * sizeof *c->champs);
     c->genres = grym_allouer((nb ? nb : 1) * sizeof *c->genres);
     c->types = grym_allouer((nb ? nb : 1) * sizeof *c->types);
@@ -3175,7 +3514,7 @@ static void classe_remplir(Classe *c, const Noeud *n) {
     c->facultatifs = grym_allouer((nb ? nb : 1) * sizeof *c->facultatifs);
     for (size_t q = 0; q < n->nb_enfants; q++) {
         const Noeud *ch = n->enfants[q];
-        if (ch->type != N_NOM) continue;
+        if (ch->type != N_NOM || ch->forme == 3) continue;
         c->champs[c->nb] = grym_dupliquer(ch->texte);
         c->genres[c->nb] = ch->forme == 2 ? GENRE_FEMININ : GENRE_MASCULIN;
         c->types[c->nb] = ch->texte2 ? grym_dupliquer(ch->texte2) : NULL;
@@ -3520,6 +3859,75 @@ static int mot_de_construction(const Jeton *t) {
     return 0;
 }
 
+/* « Les genres de o gagnent baroque. », « … perdent fugue. » (§ 16.13) */
+static Noeud *gagner_perdre(Analyse *a, const Jeton *t) {
+    if (a->formule == 1)
+        return erreur(a, t, grym_dupliquer("Un calcul ne modifie pas la base : faites-le dans une action."));
+    avancer(a);
+    size_t d = a->i, f = d, k;
+    if (a->j[d].type == J_CROCHETS) f = d + 1;
+    else while (f < a->n && mot_de_nom(a, f)) f++;
+    char *champ = NULL;
+    const char *type = NULL;
+    for (k = f; k > d && !champ; k--) {
+        if (!complement_de(a, k)) continue;
+        char *c = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+        if (multiple_connu(a->portee, c, 0, &type, NULL)) { champ = c; break; }
+        free(c);
+    }
+    if (!champ) {
+        if (f < a->n && a->j[f].type == J_FIN) {   /* aide à la saisie : les champs multiples déclarés */
+            for (size_t i = 0; i < a->portee->nb_classes; i++)
+                for (size_t q = 0; q < a->portee->classes[i].nb_multiples; q++)
+                    attendre_mot(a, d, a->portee->classes[i].multiples[q], strlen(a->portee->classes[i].multiples[q]));
+        }
+        return erreur(a, &a->j[d], grym_dupliquer(
+            "Champ multiple attendu après « Les » : « Les genres de l'œuvre gagnent baroque. »"));
+    }
+    const Jeton *tde = &a->j[k];
+    a->i = k + 1;
+    if (est_mot(tde, "du")) {
+        a->article_force = ART_LE;
+        a->jeton_force = tde;
+    } else if (est_mot(cour(a), "le")) {
+        free(champ);
+        return erreur(a, tde, grym_dupliquer("« de le » s'écrit « du »."));
+    }
+    a->nb_arrets = 2;   /* « de o gagnent … » : le nom s'arrête au verbe */
+    a->arrets[0] = "gagnent";
+    a->arrets[1] = "perdent";
+    Noeud *objet = base(a);
+    a->nb_arrets = 0;
+    a->article_force = ART_AUCUN;
+    if (!objet) { free(champ); return NULL; }
+    attendre_mot(a, a->i, "gagnent", 7);
+    attendre_mot(a, a->i, "perdent", 7);
+    const Jeton *verbe = cour(a);
+    if (!est_mot(verbe, "gagnent") && !est_mot(verbe, "perdent")) {
+        free(champ);
+        noeud_liberer(objet);
+        return erreur_inattendu(a, verbe);
+    }
+    avancer(a);
+    Noeud *v = expression(a);
+    if (!v) { free(champ); noeud_liberer(objet); return NULL; }
+    if (!verifier_type(a, champ, type, v) || !fin_phrase(a, 0)) {
+        free(champ);
+        noeud_liberer(objet);
+        noeud_liberer(v);
+        return NULL;
+    }
+    Noeud *n = noeud_creer(P_GAGNER, t->ligne, t->colonne, t->debut);
+    n->texte = champ;
+    n->forme = est_mot(verbe, "perdent");
+    n->op_ligne = verbe->ligne;
+    n->op_colonne = verbe->colonne;
+    noeud_ajouter(n, objet);
+    noeud_ajouter(n, v);
+    n->fin = v->fin;
+    return n;
+}
+
 static Noeud *phrase(Analyse *a, int colonne) {
     Jeton *t = cour(a);
     attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0) | (a->boucle ? A_BOUCLE : 0));
@@ -3553,6 +3961,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
         n->fin = v->fin;
         return n;
     }
+    if (est_mot(t, "les")) return gagner_perdre(a, t);
     if (est_mot(t, "enregistrer")) {
         /* « Enregistrer … dans « chemin ». » (§ 15.2) */
         if (a->formule == 1)

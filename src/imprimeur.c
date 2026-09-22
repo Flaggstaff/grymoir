@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.22), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.23), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -32,6 +32,8 @@ typedef struct {
     Aptitude *aptitudes;   /* formes des aptitudes déclarées, pour les accorder */
     Aptitude *pluriels;    /* pluriels irréguliers des entités (feminin : nom, masculin : pluriel) */
     size_t nb_pluriels;
+    Aptitude *singuliers;  /* champs multiples (feminin : pluriel, masculin : singulier), § 16.13 */
+    size_t nb_singuliers;
     size_t nb_aptitudes;
     char **a_liberer;      /* formes masculines déduites */
     size_t nb_a_liberer;
@@ -231,6 +233,20 @@ static void nom_avec_article(Impression *im, const Noeud *n) {
 static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
     const Noeud *sujet = n->enfants[0];
     const Noeud *droite = n->nb_enfants > 1 ? n->enfants[1] : NULL;
+    if (n->op == 'p') {   /* « baroque est parmi les genres » ; en compacte « genres _contient baroque » (§ 16.13) */
+        if (im->compact) {
+            if (n->negation) aj(im, "_non (");
+            ecrire_nom(im, sujet->texte, 0);
+            aj(im, " _contient ");
+            expression(im, droite);
+            if (n->negation) aj(im, ")");
+        } else {
+            expression(im, droite);
+            aj(im, n->negation ? " n'est pas parmi les " : " est parmi les ");
+            ecrire_nom(im, sujet->texte, 0);
+        }
+        return;
+    }
     int adjectif = strchr("PN0VFAR", n->op) != NULL;
     if (im->compact) {
         if (n->forme == 2) { expression(im, droite); return; }            /* cas : une valeur */
@@ -389,9 +405,27 @@ static void expression(Impression *im, const Noeud *n) {
     case N_CHERCHER: {
         Genre g = genre_de_nom(im, n->texte);
         int fem = g == G_FEMININ;
-        int inverse = n->op == 'I';   /* « de bach » : l'objet en dernier enfant (§ 16.10) */
+        /* « de bach » (§ 16.10), « les interprètes de o » (§ 16.13) : l'objet en dernier enfant */
+        int inverse = n->op == 'I' || n->op == 'M';
         const Noeud *objet = inverse ? n->enfants[n->nb_enfants - 1] : NULL;
-        if (n->forme == 2) {   /* « le nombre de clients conservés », « le nombre d'œuvres de bach » */
+        if (n->forme == 2 && n->op == 'M') {   /* « le nombre d'interprètes de o » */
+            if (im->compact) {
+                const char *sg = NULL;
+                for (size_t k = 0; k < im->nb_singuliers && !sg; k++)
+                    if (strcmp(im->singuliers[k].feminin, n->texte3) == 0) sg = im->singuliers[k].masculin;
+                char *x = sg ? grym_dupliquer(sg) : singulier_regulier(n->texte3);
+                aj(im, "_nombre_de ");
+                ecrire_nom(im, x, 0);
+                free(x);
+                aj(im, " _de ");
+                expression(im, objet);
+            } else {
+                aj(im, voyelle(n->texte3) ? "le nombre d'" : "le nombre de ");
+                aj(im, n->texte3);
+                aj(im, " ");
+                preposition(im, "de", objet);
+            }
+        } else if (n->forme == 2) {   /* « le nombre de clients conservés », « le nombre d'œuvres de bach » */
             if (im->compact) {
                 aj(im, "_nombre_de ");
                 ecrire_nom(im, n->texte, 0);
@@ -772,7 +806,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         int fem = genre_de_nom(im, n->texte) == G_FEMININ;
         aj(im, c ? "_pour_chaque " : "Pour chaque ");
         ecrire_nom(im, n->texte, 0);
-        if (n->enfants[0]->op != 'I') {
+        if (n->enfants[0]->op != 'I' && n->enfants[0]->op != 'M') {
             int sup = n->enfants[0]->negation;
             aj(im, c ? (sup ? " _supprimé" : " _conservé")
                    : sup ? (fem ? " supprimée" : " supprimé") : fem ? " conservée" : " conservé");
@@ -904,14 +938,50 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             const Noeud *ch = n->enfants[k];
             if (ch->type == N_TEXTE) continue;
             vus++;
-            retenir(im, ch->texte, ch->forme == 2 ? G_FEMININ : G_MASCULIN);
             retrait(im, niveau + 1);
+            if (ch->forme == 3) {   /* « des interprètes (personne) », « des travaux (travail) (tâche) » (§ 16.13) */
+                if (ch->texte3) {   /* singulier irrégulier : retenu pour « _nombre_de travail _de o » */
+                    Aptitude *t = grym_allouer((im->nb_singuliers + 1) * sizeof *t);
+                    if (im->nb_singuliers) memcpy(t, im->singuliers, im->nb_singuliers * sizeof *t);
+                    free(im->singuliers);
+                    im->singuliers = t;
+                    im->singuliers[im->nb_singuliers].feminin = ch->texte;
+                    im->singuliers[im->nb_singuliers++].masculin = ch->texte3;
+                }
+                aj(im, c ? "_des " : "des ");
+                ecrire_nom(im, ch->texte, 0);
+                if (ch->texte3) { aj(im, " ("); ecrire_nom(im, ch->texte3, 0); aj(im, ")"); }
+                type_de_champ(im, ch);
+                aj(im, c ? "\n" : vus < nb_champs ? ",\n" : ".\n");
+                continue;
+            }
+            retenir(im, ch->texte, ch->forme == 2 ? G_FEMININ : G_MASCULIN);
             aj(im, c ? (ch->forme == 2 ? "_une " : "_un ") : (ch->forme == 2 ? "une " : "un "));
             ecrire_nom(im, ch->texte, 0);
             type_de_champ(im, ch);
             aj(im, c ? "\n" : vus < nb_champs ? ",\n" : ".\n");
         }
         if (c) { retrait(im, niveau); aj(im, "_fin\n"); }
+        return;
+    }
+    case P_GAGNER: {   /* « Les genres de o gagnent baroque. » ; « o.genres _gagne baroque » (§ 16.13) */
+        if (c) {
+            Noeud champ = *n;
+            champ.type = N_CHAMP;
+            champ.nb_enfants = 1;
+            expression(im, &champ);
+            aj(im, n->forme ? " _perd " : " _gagne ");
+            expression(im, n->enfants[1]);
+            aj(im, "\n");
+        } else {
+            aj(im, "Les ");
+            ecrire_nom(im, n->texte, 0);
+            aj(im, " ");
+            preposition(im, "de", n->enfants[0]);
+            aj(im, n->forme ? " perdent " : " gagnent ");
+            expression(im, n->enfants[1]);
+            aj(im, ".\n");
+        }
         return;
     }
     case P_MODIF_CHAMP: {
@@ -1008,6 +1078,7 @@ static char *imprimer(const Programme *p, int compact) {
     free(im.genres);
     free(im.aptitudes);
     free(im.pluriels);
+    free(im.singuliers);
     for (size_t k = 0; k < im.nb_a_liberer; k++) free(im.a_liberer[k]);
     free(im.a_liberer);
     return chaine_rendre(&im.c);

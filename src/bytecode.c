@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.16).
+ * Spécification : docs/vm.md (révision 1.17).
  */
 #include "bytecode.h"
 #include "date.h"
@@ -166,6 +166,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_EST_ABSENT:     return "EST_ABSENT";
     case I_SUPPRIMER_DEFINITIVEMENT: return "SUPPRIMER_DÉFINITIVEMENT";
     case I_RETABLIR:       return "RÉTABLIR";
+    case I_GAGNER:         return "GAGNER";
+    case I_PERDRE:         return "PERDRE";
     }
     return "INCONNUE";
 }
@@ -174,6 +176,7 @@ int instruction_a_operande(CodeInstruction code) {
     return code == I_CONSTANTE || code == I_LIRE || code == I_ECRIRE || code == I_AFFICHER
         || code == I_APPELER || code == I_LIRE_LOCAL || code == I_ECRIRE_LOCAL || code == I_ECHOUER
         || code == I_NOUVEAU || code == I_INITIALISER_CHAMP || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP
+        || code == I_GAGNER || code == I_PERDRE
         || code == I_CHERCHER;
 }
 
@@ -237,7 +240,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             ok = refuser(erreur, grym_formater("constante %u : une recherche ne s'empile pas (octet %lu).", op,
                                                (unsigned long)d));
         else if ((c == I_LIRE || c == I_ECRIRE || c == I_NOUVEAU || c == I_INITIALISER_CHAMP
-                  || c == I_LIRE_CHAMP || c == I_ECRIRE_CHAMP) && op >= b->nb_noms)
+                  || c == I_LIRE_CHAMP || c == I_ECRIRE_CHAMP || c == I_GAGNER || c == I_PERDRE) && op >= b->nb_noms)
             ok = refuser(erreur, grym_formater("nom %u inexistant (octet %lu).", op, (unsigned long)d));
         else if (c == I_AFFICHER && op == 0)
             ok = refuser(erreur, grym_formater("AFFICHER sans élément (octet %lu).", (unsigned long)d));
@@ -314,7 +317,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_ELEMENT: besoin = 2; effet = -1; break;
             case I_INITIALISER_CHAMP: besoin = 2; effet = -1; break;
             case I_LIRE_CHAMP: besoin = 1; break;
-            case I_ECRIRE_CHAMP: besoin = 2; effet = -2; break;
+            case I_ECRIRE_CHAMP: case I_GAGNER: case I_PERDRE: besoin = 2; effet = -2; break;
             case I_ECHOUER: break;
             case I_NEGATION: case I_NON: besoin = 1; break;
             case I_ADDITION: case I_SOUSTRACTION: case I_MULTIPLICATION: case I_DIVISION:
@@ -388,10 +391,11 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 15  /* versions 1 à 14 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 16  /* versions 1 à 15 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
-                              sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14) */
+                              sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
+                              sans champ multiple (15) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -681,7 +685,7 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
                 if (version >= 10) {
                     char *type = lire_chaine(&l);
                     uint32_t unique = lire_u(&l, 1);
-                    if (!type || l.echec || unique > (version >= 15 ? 7u : version >= 14 ? 3u : 1u)) {
+                    if (!type || l.echec || unique > (version >= 16 ? 15u : version >= 15 ? 7u : version >= 14 ? 3u : 1u)) {
                         free(type);
                         return echec_module(m, erreur, grym_formater("type du champ %u de la classe %u illisible.",
                                                                      (unsigned)q, (unsigned)k));
@@ -689,6 +693,7 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
                     classe_typer_dernier_champ(c, *type ? type : NULL, (int)(unique & 1));
                     if (unique & 2) classe_facultatif_dernier_champ(c);
                     if (unique & 4) classe_cascade_dernier_champ(c);
+                    if (unique & 8) classe_multiple_dernier_champ(c);
                     free(type);
                     if (version >= 13) {
                         char *depart = lire_chaine(&l);
@@ -770,6 +775,10 @@ void classe_cascade_dernier_champ(ClasseModule *c) {
     if (c->nb_champs) c->uniques[c->nb_champs - 1] |= 4;
 }
 
+void classe_multiple_dernier_champ(ClasseModule *c) {
+    if (c->nb_champs) c->uniques[c->nb_champs - 1] |= 8;
+}
+
 void classe_facultatif_dernier_champ(ClasseModule *c) {
     if (c->nb_champs) c->uniques[c->nb_champs - 1] |= 2;
 }
@@ -778,7 +787,7 @@ void classe_typer_dernier_champ(ClasseModule *c, const char *type, int unique) {
     if (!c->nb_champs) return;
     free(c->types[c->nb_champs - 1]);
     c->types[c->nb_champs - 1] = type ? grym_dupliquer(type) : NULL;
-    c->uniques[c->nb_champs - 1] = (unsigned char)((c->uniques[c->nb_champs - 1] & 6) | (unique != 0));
+    c->uniques[c->nb_champs - 1] = (unsigned char)((c->uniques[c->nb_champs - 1] & 14) | (unique != 0));
 }
 
 void module_detruire(Module *m) {
@@ -911,7 +920,7 @@ char *bloc_desassembler(const Bloc *b) {
                 commentaire = grym_formater("« %s »", k->texte);
             }
         } else if ((code == I_LIRE || code == I_ECRIRE || code == I_NOUVEAU || code == I_INITIALISER_CHAMP
-                    || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP) && op < b->nb_noms) {
+                    || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP || code == I_GAGNER || code == I_PERDRE) && op < b->nb_noms) {
             commentaire = grym_dupliquer(b->noms[op]);
         } else if (code == I_APPELER && op < b->nb_noms) {
             unsigned na = b->code[debut + 3];

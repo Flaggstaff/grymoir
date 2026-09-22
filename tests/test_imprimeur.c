@@ -226,6 +226,27 @@ int main(void) {
          "Une partition, conservée, a :\n    un titre (texte).\nUn pupitre, conservé, a :\n"
          "    une partition (partition), et disparaît avec elle.\nPour chaque partition supprimée, afficher partition.\n");
 
+    /* --- Plusieurs vers plusieurs (§ 16.13) --- */
+#define MUI "Une personne, conservée, a : un nom (texte).\nUne œuvre, conservée, a : un titre (texte), " \
+            "des interprètes (personne), des travaux (travail) (personne).\nLa o vaut l'œuvre conservée dont le titre est « a ».\n"
+    LITT(MUI "Les interprètes de la o gagnent o.\nLes travaux de o perdent o.\n"
+         "Pour chaque interprète de o dont le nom > « a », par nom décroissant, afficher interprète.\n"
+         "Afficher le nombre de travaux de o puis le nombre d'œuvres conservées dont o n'est pas parmi les interprètes.",
+         "Une personne, conservée, a :\n    un nom (texte).\nUne œuvre, conservée, a :\n    un titre (texte),\n"
+         "    des interprètes (personne),\n    des travaux (travail) (personne).\n"
+         "La o vaut l'œuvre conservée dont le titre est « a ».\nLes interprètes de la o gagnent o.\nLes travaux d'o perdent o.\n"
+         "Pour chaque interprète d'o dont le nom > « a », par nom décroissant, afficher interprète.\n"
+         "Afficher le nombre de travaux d'o puis le nombre d'œuvres conservées dont o n'est pas parmi les interprètes.\n");
+    COMP(MUI "Les interprètes de o gagnent o.\nLes travaux de o perdent o.\nPour chaque travail de o, afficher travail.\n"
+         "Afficher le nombre de travaux de o puis le nombre d'œuvres conservées dont o est parmi les interprètes "
+         "puis le nombre d'œuvres conservées dont o n'est pas parmi les travaux.",
+         "_classe _une personne _conservé\n    _un nom (texte)\n_fin\n_classe _une œuvre _conservé\n    _un titre (texte)\n"
+         "    _des interprètes (personne)\n    _des travaux (travail) (personne)\n_fin\n"
+         "_la o << _l'œuvre _conservé _dont titre = « a »\no.interprètes _gagne o\no.travaux _perd o\n"
+         "_pour_chaque travail _de o\n    _afficher travail\n_fin\n"
+         "_afficher _nombre_de travail _de o ; _nombre_de œuvre _conservé _dont interprètes _contient o ; "
+         "_nombre_de œuvre _conservé _dont _non (travaux _contient o)\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

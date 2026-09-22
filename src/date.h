@@ -1,5 +1,5 @@
 /* GrymoiR : dates du calendrier grégorien, années 1 à 9999
- * Spécification : docs/grammaire.md (révision 1.22), § 14.
+ * Spécification : docs/grammaire.md (révision 1.23), § 14.
  */
 #ifndef GRYM_DATE_H
 #define GRYM_DATE_H

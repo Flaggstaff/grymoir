@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.22 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
+Version 1.23 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -324,6 +324,8 @@ puissance    = base [ "^" unaire ] ;
 base         = nombre | texte | date | "aujourd'hui" | fichier | nouveau | champ
 fichier      = "le" "fichier" ( texte | "(" expression ")" ) ;
 enregistrer  = "Enregistrer" expression "dans" valeur "." ;
+gagner       = "Les" nom de base ( "gagnent" | "perdent" ) expression "." ;   (* nom : un champ multiple, § 16.13 *)
+multiple     = "des" nom [ "(" nom ")" ] "(" nom ")" ;                          (* dans une entité : singulier, type *)
              | [ article ] ( nom | "[" nom "]" ) [ arguments ] | "(" expression ")" ;
 nouveau      = ( "un" ( "nouveau" | "nouvel" ) | "une" "nouvelle" ) nom ;
 champ        = [ article ] nom de base ;          (* nom : un champ déclaré dans une classe *)
@@ -407,6 +409,11 @@ Limites de cette notation :
 | Champ absent (exécution) | « Un client n'a pas de champ « montant ». » |
 | Champ vide (exécution) | « Le champ « solde » n'a pas de valeur. » |
 | Pas un objet (exécution) | « « nom » : la valeur n'est pas un objet, c'est un nombre. » |
+| Champ multiple lu comme une valeur | « « genres » est un champ multiple, pas une valeur : il se lit avec « Pour chaque genre de … » ou « le nombre de genres de … », et change avec « Les genres de … gagnent … ». » |
+| Champ multiple facultatif, unique, avec valeur de départ | « « genres » est multiple : il n'est pas facultatif, un ensemble vide lui suffit. » |
+| Objet non conservé qui gagne (exécution) | « Une œuvre qui n'est pas conservée ne gagne rien : ses « genres » vivent dans la base. Conservez-la d'abord. » |
+| Élément de la corbeille (exécution) | « Le champ « genres » gagnerait un genre supprimé : rétablissez-le d'abord. » |
+| Ambiguïté d'une relation (exécution) | « Plusieurs champs relient une œuvre à une personne : « compositeur » et « interprètes ». Précisez avec « dont … est le compositeur » ou « dont … est parmi les interprètes ». » |
 | Récursion sans fin (exécution) | « Trop d'appels imbriqués : plus de 1000. Une formule s'appelle-t-elle sans fin ? » |
 
 Chaque message est précédé du fichier, de la ligne et de la colonne (charte, art. 8) : `facture.grym:7:18 : erreur : Division par zéro.`
@@ -1076,6 +1083,55 @@ Afficher le nombre de partitions supprimées.
 - En base : `grym_objet` reçoit `supprime` (la date) et `supprime_avec` (l'objet dont la suppression a entraîné celle-ci). Une base plus ancienne reçoit ces colonnes à l'ouverture ; ses objets restent conservés. La mention `, et disparaît avec elle` ne vit que dans la définition sauvegardée : l'ajouter ou la retirer ne demande aucune migration.
 - Reporté : vider la corbeille des objets supprimés depuis longtemps ; un lien facultatif qui deviendrait absent quand son objet est effacé ; l'autocomplétion des saisies de l'utilisateur, qui pourra puiser dans la corbeille.
 
+### 16.13 Plusieurs vers plusieurs
+
+```
+Une œuvre, conservée, a :
+    un titre (texte),
+    un compositeur (personne),
+    des interprètes (personne),
+    des genres (genre).
+
+Les genres de o gagnent baroque.
+Les genres de o perdent fugue.
+Pour chaque interprète de o, par nom :
+    …
+Afficher le nombre de genres de o.
+Pour chaque œuvre de baroque :
+    …
+Pour chaque œuvre conservée dont callas est parmi les interprètes :
+    …
+```
+
+- `des` suivi d'un nom au pluriel déclare un champ multiple ; son type, entre parenthèses, reste au singulier et désigne une entité. Seule une entité en déclare. Il passe par héritage aux entités filles.
+- Le singulier se déduit : chaque mot perd son `s` ou son `x` final, jusqu'au premier complément (`genres` → `genre`, `pièces jointes` → `pièce jointe`, `numéros de téléphone` → `numéro de téléphone`). Un singulier irrégulier se déclare entre parenthèses, avant le type : `des travaux (travail) (tâche)`. Un nom sans `s` ni `x` final exige ce singulier.
+- C'est un ensemble : gagner deux fois un même objet ne le compte qu'une fois ; perdre un objet que l'ensemble ne contient pas n'est pas une erreur.
+- Un champ multiple n'est ni `, facultatif` (un ensemble vide suffit), ni `, unique`, n'a pas de valeur de départ et ne « disparaît » avec rien : chacune de ces mentions est une erreur, avec son message.
+- `les genres de o` n'est pas une valeur : ni `Afficher`, ni un nom, ni un champ ne le reçoivent. Le champ vit dans cinq tournures : `gagnent`, `perdent`, `Pour chaque genre de o`, `le nombre de genres de o`, `dont … est parmi les genres`.
+- Gagner et perdre sont des effets de bord, réservés aux actions. L'objet qui gagne doit être conservé ; l'objet gagné aussi, et hors de la corbeille. Un objet à la fois : `gagnent baroque et fugue` entrerait en conflit avec le `et` logique.
+- `gagnent` et `perdent` ne sont pas réservés : `Les` en tête de phrase suffit à annoncer la tournure.
+- Lecture par le champ : `Pour chaque interprète de o` (au singulier ; l'objet du tour s'appelle `interprète`, son genre se fixe au premier article), `le nombre d'interprètes de o` (au pluriel). `dont` et `, par` s'y ajoutent comme ailleurs (§ 16.4). Sans tri, l'ordre de conservation des objets.
+- Lecture par l'entité : `Pour chaque genre de o`, `Pour chaque œuvre de baroque` étendent la relation inverse du § 16.10 aux champs multiples, dans les deux sens. Le champ est choisi à l'exécution selon la classe réelle de l'objet ; aucun ou plusieurs : erreur, qui dit comment préciser (« dont … est le compositeur », « dont … est parmi les interprètes », « les travaux de … »).
+- Quand un nom est à la fois celui d'une entité et le singulier d'un champ multiple qui en contient les objets, le champ l'emporte : `le nombre de genres de o` lit le champ `genres` de `o`, sans ambiguïté. Si l'objet n'a pas ce champ, la lecture revient à la relation inverse.
+- `parmi` : `dont baroque est parmi les genres`, `dont sacré n'est pas parmi les genres`. Il compare une valeur calculée par le programme à un champ multiple de l'entité examinée. Hors d'une condition `dont`, `parmi` est une erreur : le test d'appartenance en mémoire (`Si baroque est parmi les genres de o`) est reporté.
+- Une boucle parcourt une liste figée à son début : gagner ou perdre pendant le parcours ne le perturbe pas.
+- Corbeille : un objet supprimé disparaît des lectures, et ne se gagne pas ; rétabli, il retrouve ses ensembles.
+- Effacer l'objet qui porte le champ efface ses liaisons. Effacer un objet encore gagné est refusé : « Ce genre est encore désigné par le champ « genres » d'une œuvre. »
+- En base : une table de liaison `"m <entité>.<champ>"` par champ multiple, invisible pour le programmeur.
+- Migrations : ajouter un champ multiple est toujours permis, les objets déjà conservés partent d'un ensemble vide ; le retirer n'est permis que s'il ne contient rien ; passer d'un lien simple à un champ multiple, ou l'inverse, est refusé.
+- En forme compacte :
+
+| Littéraire | Compacte |
+|---|---|
+| `des interprètes (personne)` | `_des interprètes (personne)` |
+| `des travaux (travail) (tâche)` | `_des travaux (travail) (tâche)` |
+| `Les genres de o gagnent baroque.` | `o.genres _gagne baroque` |
+| `Les genres de o perdent fugue.` | `o.genres _perd fugue` |
+| `Pour chaque interprète de o :` | `_pour_chaque interprète _de o` |
+| `le nombre d'interprètes de o` | `_nombre_de interprète _de o` |
+| `dont rauber est parmi les interprètes` | `_dont interprètes _contient rauber` |
+| `dont rauber n'est pas parmi les interprètes` | `_dont _non (interprètes _contient rauber)` |
+
 ---
 
 ## Journal des révisions
@@ -1105,3 +1161,4 @@ Afficher le nombre de partitions supprimées.
 | 1.20 | 2026-09-22 | § 16.9 : champs facultatifs, valeur `absent`, tests `est absent` et `est présent`, règles en base, en recherche, en tri et en migration ; § 16.10 : ancien § 16.9 |
 | 1.21 | 2026-09-22 | § 16.10 : relations inverses (`les œuvres de bach`, `dont brel est l'auteur`) ; `dont` devient réservé ; § 16.11 : ancien § 16.10 |
 | 1.22 | 2026-09-22 | § 16.12 : corbeille (`Supprimer`, `définitivement`, `Rétablir`, `supprimé`) et cascade (`, et disparaît avec elle`) ; `Supprimer` met désormais dans la corbeille ; `définitivement` réservé |
+| 1.23 | 2026-09-22 | § 16.13 : plusieurs vers plusieurs (`des genres (genre)`, `gagnent`, `perdent`, `Pour chaque interprète de o`, `le nombre de … de …`, `dont … est parmi les …`) ; relation inverse étendue aux champs multiples ; EBNF et messages |

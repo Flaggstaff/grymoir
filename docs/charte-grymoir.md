@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.15, révisée le 22 septembre 2026.
+Version 1.16, révisée le 22 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -157,7 +157,7 @@ Horizon post-v1, sans date :
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
 - objets (grammaire, § 13.8) : appel de la version parente depuis une méthode, listes d'objets, affichage des objets ; racine commune `objet` de toutes les classes, puis nombres, textes et dates comme objets (art. 6, « Tout est objet ») ;
-- relations : « plusieurs vers plusieurs » sans entité intermédiaire écrite à la main ; lien facultatif qui devient absent quand son objet est effacé ;
+- relations : test d'appartenance en mémoire (`Si baroque est parmi les genres de o`), gagner plusieurs objets en une phrase, champs multiples de textes ou de nombres ; lien facultatif qui devient absent quand son objet est effacé ;
 - corbeille (grammaire, § 16.12) : la vider des objets supprimés depuis longtemps ;
 - saisie par l'utilisateur de l'application : autocomplétion des valeurs déjà saisies, y compris celles des objets de la corbeille (avec l'interface des applications) ;
 - base (grammaire, § 16.7) : commande de `grym` qui retire ou renomme un champ, lève les limites des migrations imposées par SQLite, et reconstruit une table ;
@@ -188,3 +188,4 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 | 1.13 | 2026-09-22 | Art. 12 : l'absence de valeur est faite (grammaire, § 16.9) ; reports précisés : racine `objet`, relations |
 | 1.14 | 2026-09-22 | Art. 12 : les relations inverses sont faites (grammaire, § 16.10) |
 | 1.15 | 2026-09-22 | Art. 12 : corbeille et cascade faites (grammaire, § 16.12) ; reports : vider la corbeille, autocomplétion des saisies |
+| 1.16 | 2026-09-22 | Art. 12 : « plusieurs vers plusieurs » fait (grammaire, § 16.13) ; reports : test d'appartenance hors `dont`, plusieurs objets gagnés à la fois, champs multiples de valeurs |

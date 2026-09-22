@@ -127,7 +127,7 @@ static void decrire(const Noeud *n, Chaine *c) {
     case N_COMPARAISON: {
         static const struct { char op; const char *nom; } R[] = {
             {'=', "="}, {'!', "≠"}, {'<', "<"}, {'>', ">"}, {'l', "≤"}, {'g', "≥"},
-            {'P', "positif"}, {'N', "négatif"}, {'0', "nul"}, {'V', "vrai"}, {'F', "faux"}, {'A', "absent"}, {'R', "présent"}
+            {'P', "positif"}, {'N', "négatif"}, {'0', "nul"}, {'V', "vrai"}, {'F', "faux"}, {'A', "absent"}, {'R', "présent"}, {'p', "parmi"}
         };
         const char *nom = "?";
         for (size_t k = 0; k < sizeof R / sizeof *R; k++) if (R[k].op == n->op) nom = R[k].nom;
@@ -218,6 +218,15 @@ static void decrire(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case P_GAGNER:   /* (gagner [genres] [o] [baroque]) (§ 16.13) */
+        chaine_ajouter(c, n->forme ? "(perdre [" : "(gagner [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "] ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
     case P_ENREGISTRER:
         chaine_ajouter(c, "(enregistrer ");
         decrire(n->enfants[0], c);
@@ -236,12 +245,19 @@ static void decrire(const Noeud *n, Chaine *c) {
                           : n->negation ? "(supprimés [" : "(conservés [");
         chaine_ajouter(c, n->texte);
         chaine_ajouter(c, "]");
+        if (n->op == 'M') {   /* éléments d'un champ multiple (§ 16.13) */
+            chaine_ajouter(c, " (parmi [");
+            chaine_ajouter(c, n->texte3);
+            chaine_ajouter(c, "] ");
+            decrire(n->enfants[n->nb_enfants - 1], c);
+            chaine_ajouter(c, ")");
+        }
         if (n->op == 'I') {   /* relation inverse : l'objet en dernier enfant (§ 16.10) */
             chaine_ajouter(c, " (de ");
             decrire(n->enfants[n->nb_enfants - 1], c);
             chaine_ajouter(c, ")");
         }
-        if (n->nb_enfants > (n->op == 'I' ? 1u : 0u)) {
+        if (n->nb_enfants > (n->op == 'I' || n->op == 'M' ? 1u : 0u)) {
             chaine_ajouter(c, " (dont ");
             decrire(n->enfants[0], c);
             chaine_ajouter(c, ")");
@@ -312,6 +328,10 @@ static void decrire(const Noeud *n, Chaine *c) {
                 if (ch->op == 'U') chaine_ajouter(c, " unique");
                 if (ch->entier & 1) chaine_ajouter(c, " facultatif");
                 if (ch->entier & 2) chaine_ajouter(c, " disparaît-avec");
+                if (ch->forme == 3) {   /* champ multiple : [genres : des genre] */
+                    chaine_ajouter(c, " multiple");
+                    if (ch->texte3) { chaine_ajouter(c, " singulier "); chaine_ajouter(c, ch->texte3); }
+                }
                 if (ch->nb_enfants) { chaine_ajouter(c, " départ "); decrire(ch->enfants[0], c); }
                 chaine_ajouter(c, "]");
             } else {

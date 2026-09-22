@@ -1,5 +1,5 @@
 /* GrymoiR : représentation interne des valeurs, partagée par la machine et la base
- * Spécification : docs/vm.md (révision 1.16), § 2.
+ * Spécification : docs/vm.md (révision 1.17), § 2.
  */
 #ifndef GRYM_VM_INTERNE_H
 #define GRYM_VM_INTERNE_H

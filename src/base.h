@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.22), § 16 ; docs/vm.md (révision 1.16), § 8.
+ * Spécification : docs/grammaire.md (révision 1.23), § 16 ; docs/vm.md (révision 1.17), § 8.
  *
  * Schéma : une table « e <entité> » par entité, qui porte ses champs propres et ceux de ses
  * aptitudes ; son identifiant désigne la ligne de sa classe parente, ou de « grym_objet »
@@ -32,6 +32,10 @@ int base_conserver(Base *b, const Objet *o, long *id, char **erreur);
 
 /* Écrit dans la base le champ k d'un objet conservé. */
 int base_ecrire_champ(Base *b, const Objet *o, size_t k, char **erreur);
+
+/* Ajoute v à l'ensemble du champ multiple k d'un objet conservé, ou l'en retire (grammaire, § 16.13).
+ * Gagner deux fois ne compte qu'une fois ; perdre un élément absent n'est pas une erreur. */
+int base_gagner(Base *b, const Objet *o, size_t k, const Valeur *v, int perdre, char **erreur);
 
 struct Machine;
 

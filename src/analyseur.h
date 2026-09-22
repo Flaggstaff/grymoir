@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.22), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.23), § 2 à 13.
  *
  * L'analyseur construit l'arbre et résout les noms dans le même passage :
  * la plus longue correspondance des noms composés (§ 2.2) exige de connaître
@@ -43,6 +43,9 @@ int analyser_compact(const char *source, size_t taille, Portee *portee,
                      Programme *programme, Diagnostic *diag);
 
 void programme_liberer(Programme *p);
+
+/* Singulier régulier d'un champ multiple (§ 16.13) : « genres » → « genre », « pièces jointes » → « pièce jointe ». */
+char *singulier_regulier(const char *pluriel);
 
 /* Vrai si le nom contient un mot réservé : il s'écrit alors entre crochets (§ 2.2). */
 int nom_exige_crochets(const char *nom);

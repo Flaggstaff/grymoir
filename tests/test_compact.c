@@ -215,6 +215,14 @@ int main(void) {
                  "    une partition (partition), et disparaît avec elle.\nPour chaque partition supprimée :\n"
                  "    Rétablir partition.\n");
 
+    /* --- Plusieurs vers plusieurs (§ 16.13) --- */
+    ALLER_RETOUR("_classe _une personne _conservé\n    _un nom (texte)\n    _des amis (personne)\n"
+                 "    _des travaux (travail) (personne)\n_fin\n_la p << _la personne _conservé _dont nom = « a »\n"
+                 "p.amis _gagne p\np.travaux _perd p\n"
+                 "_pour_chaque ami _de p _dont _non (travaux _contient p) _et nom = « b » _par nom\n"
+                 "    _afficher _nombre_de travail _de ami\n_fin\n", NULL);
+    ERR("_classe _une p _conservé\n    _des amis\n_fin\n", 2, 5, "Champ multiple attendu");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.16 de la spécification, révisée le 22 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.22, § 3.3, § 5, § 9, § 10, § 13 à 16.
+Version 1.17 de la spécification, révisée le 22 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.23, § 3.3, § 5, § 9, § 10, § 13 à 16.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -84,6 +84,8 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 40 | `EST_ABSENT` | aucun | remplace la valeur au sommet par vrai si elle est absente, faux sinon |
 | 41 | `SUPPRIMER_DÉFINITIVEMENT` | aucun | dépile un objet conservé et l'efface de la base, avec ceux qui disparaissent avec lui |
 | 42 | `RÉTABLIR` | aucun | dépile un objet de la corbeille et le rétablit, avec ceux qui ont disparu avec lui |
+| 43 | `GAGNER` | nom de champ | dépile une valeur, puis un objet conservé ; ajoute la valeur à l'ensemble du champ multiple |
+| 44 | `PERDRE` | nom de champ | dépile une valeur, puis un objet conservé ; retire la valeur de l'ensemble du champ multiple |
 
 ### 3.1 Boucles et Selon
 
@@ -190,6 +192,8 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - Carte d'identité : identifiant en base → objet en mémoire. Un objet retrouvé est une coquille de sa classe réelle ; `LIRE_CHAMP`, `ÉCRIRE_CHAMP` et `SUPPRIMER` lisent d'abord ses champs. Ses liens deviennent des coquilles à leur tour. Le ramasse-miettes retire de la carte les objets qu'il libère.
 - Migrations : à la préparation d'une entité, la machine compare sa définition à celle de `grym_schema`. Colonne nouvelle : `ALTER TABLE … ADD COLUMN`, avec la valeur de départ en `DEFAULT` (un lien ajouté reste sans `NOT NULL` en base, la machine vérifie qu'il est rempli) ; unicité nouvelle : index `"u <entité>.<champ>"` ; nombre entier devenu nombre : colonne recopiée en texte canonique ; colonne retirée d'une table vide : `DROP COLUMN`. Tout autre changement est refusé, avant toute écriture, dans la transaction de l'exécution.
 - Corbeille : `grym_objet` a deux colonnes, `supprime` (date ISO) et `supprime_avec` (identifiant de l'objet dont la suppression a entraîné celle-ci). Un nouveau lien vers un objet de la corbeille est refusé. La suppression définitive calcule l'ensemble des objets qui disparaissent avec l'objet, vérifie qu'aucun lien extérieur ne les désigne, puis les efface avec `PRAGMA defer_foreign_keys` ; ceux qui vivent en mémoire cessent d'être conservés (journalisé).
+- Champ multiple (grammaire, § 16.13) : bit 3 du champ ; aucune colonne dans la table de l'entité, mais une table de liaison `"m <entité>.<champ>"`, colonnes `a` (l'objet qui porte le champ, `ON DELETE CASCADE`) et `b` (l'objet gagné), clé primaire `(a, b)`, index sur `b`. `GAGNER` écrit `INSERT OR IGNORE`, `PERDRE` écrit `DELETE`. `LIRE_CHAMP`, `ÉCRIRE_CHAMP` et `INITIALISER_CHAMP` le refusent. La suppression définitive compte les liaisons qui désignent l'objet comme les liens simples. Définition dans `grym_schema` : `:multiple`.
+- Conditions des champs multiples : `(I?k)` retient aussi un champ multiple de l'entité (`g.id IN (SELECT a … WHERE b = ?)`) ou de l'objet `?k` (`g.id IN (SELECT b … WHERE a = ?)`) ; `(M?k[champ])` désigne le champ multiple nommé de l'objet `?k`, et revient à `(I?k)` si l'objet ne l'a pas ; `(p[champ]?k)` : l'objet examiné a gagné `?k` dans ce champ (`parmi`).
 - `machine_annulation` dit, après une exécution ratée, ce qui a été annulé (grammaire, § 3.3).
 - Transaction : `BEGIN IMMEDIATE` au début de chaque exécution qui connaît une entité ; à la fin, écritures sur le disque, puis `COMMIT` ; en cas d'échec ou d'interruption, `ROLLBACK`, et les fichiers déjà écrits par cette fin d'exécution sont retirés.
 
@@ -212,7 +216,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 15
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 16
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -232,12 +236,12 @@ classes       nombre : u32, puis pour chacune :
                 aptitudes adoptées : nombre u32, puis pour chacune : longueur u32 et octets UTF-8,
                 champs : nombre u32, puis pour chacun : nom (longueur u32 et octets UTF-8),
                   type (longueur u32 et octets UTF-8, vide sans type), drapeaux : u8 (bit 0 unique, bit 1 facultatif,
-                  bit 2 disparaît avec l'objet désigné),
+                  bit 2 disparaît avec l'objet désigné, bit 3 multiple),
                   valeur de départ (longueur u32 et octets UTF-8, forme canonique, vide sans valeur)
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40 ; la version 15, le bit 2 et les instructions 41 et 42. Les fichiers des versions 1 à 14 restent lisibles ; leur `SUPPRIMER` met désormais dans la corbeille.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40 ; la version 15, le bit 2 et les instructions 41 et 42 ; la version 16, le bit 3 et les instructions 43 et 44. Les fichiers des versions 1 à 15 restent lisibles ; leur `SUPPRIMER` met désormais dans la corbeille.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -288,3 +292,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.14 | 2026-09-22 | Valeur absente, `ABSENT`, `EST_ABSENT`, champs facultatifs (colonnes sans `NOT NULL`, `IS NULL`, absents triés en dernier) ; format version 14 |
 | 1.15 | 2026-09-22 | Condition `(I?k)` : relation inverse |
 | 1.16 | 2026-09-22 | Corbeille et cascade : `SUPPRIMER` met dans la corbeille, `SUPPRIMER_DÉFINITIVEMENT`, `RÉTABLIR`, modes 3 à 5, bit 2 ; format version 15 |
+| 1.17 | 2026-09-22 | Champs multiples : `GAGNER`, `PERDRE`, bit 3 des champs, tables de liaison, conditions `(M?k[champ])` et `(p[champ]?k)`, `(I?k)` étendue ; format version 16 ; `CHERCHER` sans paramètre ne calcule plus d'adresse sur une pile vide |

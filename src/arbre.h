@@ -1,5 +1,5 @@
 /* GrymoiR : arbre syntaxique, v0.1
- * Spécification : docs/grammaire.md (révision 1.22), § 6.
+ * Spécification : docs/grammaire.md (révision 1.23), § 6.
  * Chaque nœud garde sa position dans la source (debut, fin), pour les
  * messages d'erreur et, en v0.2, pour la traduction sans perte.
  */
@@ -33,7 +33,9 @@ typedef enum {
     N_FICHIER,       /* « le fichier « photos/ana.jpg » » : enfants[0] : chemin (§ 15.2) */
     N_CHAMP_DONT,    /* champ de l'objet examiné, dans une condition « dont » : texte : champ (§ 16.4) */
     N_CHERCHER,      /* objets conservés : texte : entité ; forme : 0 liste (boucle), 1 un seul, 2 nombre ;
-                        enfants[0] : condition « dont » (facultative) ; texte2 : champ du tri ; entier : 1 si décroissant */
+                        enfants[0] : condition « dont » (facultative) ; texte2 : champ du tri ; entier : 1 si décroissant ;
+                        op 'I' : relation inverse, l'objet en dernier enfant (§ 16.10) ; op 'M' : les éléments du
+                        champ multiple texte3 de cet objet (§ 16.13) */
     N_CHAMP,         /* « le solde du client » : texte : champ ; enfants[0] : objet ; article : devant le champ */
     N_NOUVEAU,       /* « un nouveau client » : texte : classe ; enfants : N_INIT ; forme 1 : bloc d'initialisation */
     N_INIT,          /* « Le nom vaut … » dans le bloc d'un nouvel objet : texte : champ ; enfants[0] : valeur */
@@ -63,7 +65,9 @@ typedef enum {
                         texte2 : classe parente (« Un membre est une personne. »), ou NULL ;
                         forme : bit 16 = déclarée par « est », bit 32 = entité (« conservé ») ;
                         un champ d'entité porte son type en texte2, op = 'U' s'il est unique, sa
-                        valeur de départ en enfants[0] (§ 16.7), et entier = 1 s'il est facultatif (§ 16.9) */
+                        valeur de départ en enfants[0] (§ 16.7), et entier = 1 s'il est facultatif (§ 16.9) ;
+                        un champ multiple (§ 16.13) a forme 3, son type en texte2 et son singulier irrégulier
+                        déclaré en texte3 (NULL s'il se déduit) */
     P_MODIF_CHAMP,   /* « Le solde du client devient … » : texte : champ ; enfants[0] : objet ; enfants[1] : valeur */
     P_POUR_CONSERVE, /* « Pour chaque client conservé dont … : » : texte : entité (nom du compteur, case `local`) ;
                         enfants[0] : N_CHERCHER ; enfants[1] : N_BLOC ; entier : case de la liste, entier + 1 : rang ;
@@ -71,8 +75,10 @@ typedef enum {
     P_CONSERVER,     /* « Conserver le client. » : enfants[0] : l'objet (§ 16.3) */
     P_SUPPRIMER,     /* « Supprimer le client. » : enfants[0] : l'objet (§ 16.3) */
     P_ENREGISTRER,   /* « Enregistrer … dans « copie.jpg ». » : enfants[0] : fichier ; enfants[1] : chemin (§ 15.2) */
-    P_APTITUDE       /* « Une chose horodatée a : » : texte : forme féminine ; texte2 : forme masculine déclarée
+    P_APTITUDE,      /* « Une chose horodatée a : » : texte : forme féminine ; texte2 : forme masculine déclarée
                         entre parenthèses, ou NULL si elle se déduit ; enfants : champs (N_NOM) */
+    P_GAGNER         /* « Les genres de o gagnent baroque. » : texte : champ multiple ; enfants[0] : objet ;
+                        enfants[1] : valeur ; forme 1 : « perdent » (§ 16.13) */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE } Article;
@@ -81,7 +87,9 @@ typedef struct Noeud {
     TypeNoeud type;
     char op;              /* N_OPERATION : '+', '-', '*', '/', '^'
                              N_COMPARAISON : '=', '!' (≠), '<', '>', 'l' (≤), 'g' (≥),
-                                             'P' (positif), 'N' (négatif), '0' (nul), 'V' (vrai), 'F' (faux) */
+                                             'P' (positif), 'N' (négatif), '0' (nul), 'V' (vrai), 'F' (faux),
+                                             'A' (absent), 'R' (présent), 'p' (parmi, § 16.13 : enfants[0] le
+                                             champ multiple, enfants[1] la valeur cherchée) */
     int negation;         /* N_COMPARAISON : « n'est pas » */
     int forme;            /* variante d'écriture, conservée pour la traduction sans perte */
     int crochets;         /* N_NOM, P_CREATION, P_MODIFICATION : nom écrit entre crochets */

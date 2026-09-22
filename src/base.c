@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.22), § 16 ; docs/vm.md (révision 1.16), § 8.
+ * Spécification : docs/grammaire.md (révision 1.23), § 16 ; docs/vm.md (révision 1.17), § 8.
  */
 #include "base.h"
 #include "date.h"
@@ -75,6 +75,54 @@ static size_t lignee(const ClasseVM *c, const ClasseVM **l, size_t max) {
 }
 
 #define LIGNEE_MAX 256
+
+/* Champ multiple (grammaire, § 16.13) : pas de colonne, une table de liaison « m <entité>.<champ> ». */
+static int multiple(const ClasseVM *c, size_t k) {
+    return (c->uniques[k] & 8) != 0;
+}
+
+static void ajouter_liaison(Chaine *sql, const char *entite, const char *champ) {
+    char *nom = grym_formater("%s.%s", entite, champ);
+    ajouter_nom(sql, "m ", nom);
+    free(nom);
+}
+
+/* Table de liaison : « a » désigne l'objet qui porte le champ, « b » l'objet gagné. Effacer le premier
+ * efface ses liaisons ; effacer le second est refusé tant qu'une liaison le désigne (base_supprimer). */
+static int creer_liaison(Base *b, const char *entite, const char *champ, const char *type, char **erreur) {
+    Chaine sql = {0};
+    chaine_ajouter(&sql, "CREATE TABLE ");
+    ajouter_liaison(&sql, entite, champ);
+    chaine_ajouter(&sql, " (a INTEGER NOT NULL REFERENCES ");
+    ajouter_nom(&sql, "e ", entite);
+    chaine_ajouter(&sql, "(id) ON DELETE CASCADE, b INTEGER NOT NULL REFERENCES ");
+    ajouter_nom(&sql, "e ", type);
+    chaine_ajouter(&sql, "(id), PRIMARY KEY (a, b)); CREATE INDEX ");
+    char *index = grym_formater("%s.%s", entite, champ);
+    ajouter_nom(&sql, "i ", index);
+    free(index);
+    chaine_ajouter(&sql, " ON ");
+    ajouter_liaison(&sql, entite, champ);
+    chaine_ajouter(&sql, " (b);");
+    char *t = chaine_rendre(&sql);
+    int ok = executer(b, t, erreur);
+    free(t);
+    return ok;
+}
+
+static long compter_liaisons(Base *b, const char *entite, const char *champ) {
+    Chaine sql = {0};
+    chaine_ajouter(&sql, "SELECT count(*) FROM ");
+    ajouter_liaison(&sql, entite, champ);
+    char *t = chaine_rendre(&sql);
+    sqlite3_stmt *st = NULL;
+    long n = 0;
+    if (sqlite3_prepare_v2(b->db, t, -1, &st, NULL) == SQLITE_OK && sqlite3_step(st) == SQLITE_ROW)
+        n = (long)sqlite3_column_int64(st, 0);
+    sqlite3_finalize(st);
+    free(t);
+    return n;
+}
 
 int base_collations(sqlite3 *db);
 
@@ -179,6 +227,7 @@ static char *definition(const ClasseVM *c) {
         chaine_ajouter(&d, c->uniques[k] & 1 ? ":unique" : "");
         chaine_ajouter(&d, c->uniques[k] & 2 ? ":facultatif" : "");
         chaine_ajouter(&d, c->uniques[k] & 4 ? ":cascade" : "");
+        chaine_ajouter(&d, c->uniques[k] & 8 ? ":multiple" : "");
     }
     return chaine_rendre(&d);
 }
@@ -223,7 +272,7 @@ static void lire_definition(const char *d, Definition *x) {
             }
             /* « nom:type[:unique][:facultatif] » ; bits : 1 unique, 2 facultatif */
             int drapeaux = (strstr(p, ":unique") ? 1 : 0) | (strstr(p, ":facultatif") ? 2 : 0)
-                         | (strstr(p, ":cascade") ? 4 : 0);
+                         | (strstr(p, ":cascade") ? 4 : 0) | (strstr(p, ":multiple") ? 8 : 0);
             char *d1 = strchr(p, ':');
             char *d2 = d1 ? strchr(d1 + 1, ':') : NULL;
             if (d1) *d1 = '\0';
@@ -329,7 +378,21 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
     }
     /* un champ retiré, ou renommé : ses valeurs seraient perdues */
     for (size_t k = 0; ok && k < a.n; k++)
-        if (chercher_champ(&n, a.noms[k]) < 0 && lignes > 0) {
+        if (chercher_champ(&n, a.noms[k]) < 0 && (a.uniques[k] & 8)) {
+            /* champ multiple retiré : sa table de liaison part si elle est vide (§ 16.13) */
+            long liaisons = compter_liaisons(b, c->nom, a.noms[k]);
+            if (liaisons > 0) {
+                *erreur = grym_formater("« %s » a disparu de « %s » : %ld liaison%s serai%s perdue%s. Remettez ce champ.",
+                                        a.noms[k], c->nom, liaisons, liaisons > 1 ? "s" : "", liaisons > 1 ? "ent" : "t",
+                                        liaisons > 1 ? "s" : "");
+                ok = 0;
+            } else {
+                Chaine sql = {0};
+                chaine_ajouter(&sql, "DROP TABLE ");
+                ajouter_liaison(&sql, c->nom, a.noms[k]);
+                ok = executer_chaine(b, &sql, erreur);
+            }
+        } else if (chercher_champ(&n, a.noms[k]) < 0 && lignes > 0) {
             *erreur = grym_formater("« %s » a disparu de « %s » : %ld valeur%s conservée%s serai%s perdue%s. Remettez ce "
                                     "champ ; un renommage se déclare comme un retrait suivi d'un ajout, et n'est pas "
                                     "encore pris en charge.", a.noms[k], c->nom, lignes, lignes > 1 ? "s" : "",
@@ -358,6 +421,19 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
     for (size_t k = 0; ok && k < n.n; k++) {
         long i = chercher_champ(&a, n.noms[k]);
         if (i < 0) continue;
+        if ((a.uniques[i] & 8) != (n.uniques[k] & 8)) {
+            *erreur = grym_formater("« %s » ne peut pas devenir %s : un lien simple et un champ multiple ne se convertissent "
+                                    "pas encore l'un dans l'autre.", n.noms[k], n.uniques[k] & 8 ? "multiple" : "un lien simple");
+            ok = 0;
+            break;
+        }
+        if ((n.uniques[k] & 8) && strcmp(a.types[i], n.types[k]) != 0) {
+            *erreur = grym_formater("« %s » ne peut pas passer de « %s » à « %s » : ses liaisons seraient perdues.",
+                                    n.noms[k], a.types[i], n.types[k]);
+            ok = 0;
+            break;
+        }
+        if (n.uniques[k] & 8) continue;
         if (strcmp(a.types[i], n.types[k]) != 0) {
             if (strcmp(a.types[i], "nombre entier") != 0 || strcmp(n.types[k], "nombre") != 0 || (a.uniques[i] & 1)) {
                 *erreur = grym_formater("« %s » ne peut pas passer de « %s » à « %s » : seul un nombre entier non unique "
@@ -400,6 +476,10 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
     /* un champ nouveau */
     for (size_t k = 0; ok && k < n.n; k++) {
         if (chercher_champ(&a, n.noms[k]) >= 0) continue;
+        if (n.uniques[k] & 8) {   /* champ multiple nouveau : ensembles vides, quel que soit le nombre d'objets */
+            ok = creer_liaison(b, c->nom, n.noms[k], n.types[k], erreur);
+            continue;
+        }
         long q = -1;
         for (size_t j = 0; j < c->nb_champs && q < 0; j++)
             if (c->proprietaires[j] == c && strcmp(c->champs[j], n.noms[k]) == 0) q = (long)j;
@@ -499,7 +579,7 @@ int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
     else chaine_ajouter(&sql, "grym_objet");
     chaine_ajouter(&sql, "(id) ON DELETE CASCADE");
     for (size_t k = 0; k < c->nb_champs; k++) {
-        if (c->proprietaires[k] != c) continue;
+        if (c->proprietaires[k] != c || multiple(c, k)) continue;
         const char *t = c->types[k];
         const char *nn = c->uniques[k] & 2 ? "" : " NOT NULL";   /* facultatif : NULL permis (§ 16.9) */
         chaine_ajouter(&sql, ", ");
@@ -531,6 +611,8 @@ int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
     char *texte = chaine_rendre(&sql);
     int ok = executer(b, texte, erreur);
     free(texte);
+    for (size_t k = 0; ok && k < c->nb_champs; k++)
+        if (c->proprietaires[k] == c && multiple(c, k)) ok = creer_liaison(b, c->nom, c->champs[k], c->types[k], erreur);
     if (ok) {
         sqlite3_prepare_v2(b->db, "INSERT INTO grym_schema (entite, definition) VALUES (?, ?)", -1, &st, NULL);
         sqlite3_bind_text(st, 1, c->nom, -1, SQLITE_TRANSIENT);
@@ -673,7 +755,7 @@ static char *message_contrainte(Base *b, const Objet *o) {
 int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
     const ClasseVM *c = o->classe;
     for (size_t k = 0; k < c->nb_champs; k++)
-        if (!o->definis[k] && !(c->uniques[k] & 2)) {
+        if (!o->definis[k] && !(c->uniques[k] & 2) && !multiple(c, k)) {
             char *qui = un(c);
             *erreur = grym_formater("Le champ « %s » n'a pas de valeur : %s incomplet%s ne se conserve pas.",
                                     c->champs[k], qui, c->feminin ? "e" : "");
@@ -697,7 +779,7 @@ int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
         chaine_ajouter(&sql, " (id");
         chaine_ajouter(&valeurs, "?");
         for (size_t k = 0; k < c->nb_champs; k++) {
-            if (c->proprietaires[k] != l[e]) continue;
+            if (c->proprietaires[k] != l[e] || multiple(c, k)) continue;
             chaine_ajouter(&sql, ", ");
             ajouter_nom(&sql, "c ", c->champs[k]);
             chaine_ajouter(&valeurs, ", ?");
@@ -718,7 +800,7 @@ int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
         sqlite3_bind_int64(st, 1, (sqlite3_int64)nouvel);
         int i = 2;
         for (size_t k = 0; k < c->nb_champs && i; k++)
-            if (c->proprietaires[k] == l[e])
+            if (c->proprietaires[k] == l[e] && !multiple(c, k))
                 i = lier(b, st, i, c->types[k], c->champs[k], o->definis[k] ? &o->champs[k] : NULL, o, nouvel, erreur);
         ok = i && sqlite3_step(st) == SQLITE_DONE;
         if (i && !ok) *erreur = message_contrainte(b, o);
@@ -732,7 +814,7 @@ int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
 int base_ecrire_champ(Base *b, const Objet *o, size_t k, char **erreur) {
     const ClasseVM *c = o->classe;
     const ClasseVM *table = c->proprietaires[k];
-    if (!table || !c->types[k]) return 1;
+    if (!table || !c->types[k] || multiple(c, k)) return 1;
     Chaine sql = {0};
     chaine_ajouter(&sql, "UPDATE ");
     ajouter_nom(&sql, "e ", table->nom);
@@ -756,6 +838,45 @@ int base_ecrire_champ(Base *b, const Objet *o, size_t k, char **erreur) {
         ok = sqlite3_step(st) == SQLITE_DONE;
         if (!ok) *erreur = message_contrainte(b, o);
     }
+    sqlite3_finalize(st);
+    return ok;
+}
+
+/* ---------------------------------------------------------------- */
+/* Gagner, perdre (grammaire, § 16.13)                              */
+/* ---------------------------------------------------------------- */
+
+int base_gagner(Base *b, const Objet *o, size_t k, const Valeur *v, int perdre, char **erreur) {
+    const ClasseVM *c = o->classe;
+    const Objet *x = v->objet;
+    if (!x->id) {
+        if (perdre) return 1;   /* un objet jamais conservé n'est dans aucun ensemble */
+        char *qui = un(x->classe);
+        *erreur = grym_formater("Le champ « %s » gagnerait %s qui n'est pas conservé%s : conservez-%s d'abord.", c->champs[k],
+                                qui, x->classe->feminin ? "e" : "", x->classe->feminin ? "la" : "le");
+        free(qui);
+        return 0;
+    }
+    if (!perdre && base_est_supprime(b, x->id)) {   /* pas de nouveau lien vers la corbeille (§ 16.12) */
+        const ClasseVM *xc = x->classe;
+        *erreur = grym_formater("Le champ « %s » gagnerait %s %s supprimé%s : rétablissez-%s d'abord.", c->champs[k],
+                                xc->feminin ? "une" : "un", xc->nom, xc->feminin ? "e" : "", xc->feminin ? "la" : "le");
+        return 0;
+    }
+    Chaine sql = {0};
+    chaine_ajouter(&sql, perdre ? "DELETE FROM " : "INSERT OR IGNORE INTO ");
+    ajouter_liaison(&sql, c->proprietaires[k]->nom, c->champs[k]);
+    chaine_ajouter(&sql, perdre ? " WHERE a = ?1 AND b = ?2" : " (a, b) VALUES (?1, ?2)");
+    char *texte = chaine_rendre(&sql);
+    sqlite3_stmt *st = NULL;
+    int ok = sqlite3_prepare_v2(b->db, texte, -1, &st, NULL) == SQLITE_OK;
+    free(texte);
+    if (ok) {
+        sqlite3_bind_int64(st, 1, (sqlite3_int64)o->id);
+        sqlite3_bind_int64(st, 2, (sqlite3_int64)x->id);
+        ok = sqlite3_step(st) == SQLITE_DONE;
+    }
+    if (!ok) *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
     sqlite3_finalize(st);
     return ok;
 }
@@ -804,19 +925,32 @@ static const ClasseVM *classe_nommee(ClasseVM *const *classes, size_t n, const c
 
 /* Le champ k de x (lien) peut-il désigner un objet de la classe c ? */
 static int vise(const ClasseVM *x, size_t k, const ClasseVM *c) {
-    if (x->proprietaires[k] != x || !x->types[k] || !est_lien(x->types[k])) return 0;
+    if (x->proprietaires[k] != x || !x->types[k] || !est_lien(x->types[k]) || multiple(x, k)) return 0;
     for (const ClasseVM *p = c; p; p = p->parent) if (strcmp(p->nom, x->types[k]) == 0) return 1;
     return 0;
 }
 
-/* Objets dont le champ k de x désigne id (sauf id lui-même). */
+/* Le champ multiple k de x peut-il contenir un objet de la classe c ? (§ 16.13) */
+static int contient(const ClasseVM *x, size_t k, const ClasseVM *c) {
+    if (x->proprietaires[k] != x || !multiple(x, k)) return 0;
+    for (const ClasseVM *p = c; p; p = p->parent) if (strcmp(p->nom, x->types[k]) == 0) return 1;
+    return 0;
+}
+
+/* Objets dont le champ k de x désigne id (sauf id lui-même) ; pour un champ multiple, ceux qui l'ont gagné. */
 static void designants(Base *b, const ClasseVM *x, size_t k, long id, Ensemble *sortie) {
     Chaine sql = {0};
-    chaine_ajouter(&sql, "SELECT t.id, g.classe FROM ");
-    ajouter_nom(&sql, "e ", x->nom);
-    chaine_ajouter(&sql, " AS t JOIN grym_objet AS g ON g.id = t.id WHERE t.");
-    ajouter_nom(&sql, "c ", x->champs[k]);
-    chaine_ajouter(&sql, " = ?1 AND t.id <> ?1");
+    if (multiple(x, k)) {
+        chaine_ajouter(&sql, "SELECT t.a, g.classe FROM ");
+        ajouter_liaison(&sql, x->nom, x->champs[k]);
+        chaine_ajouter(&sql, " AS t JOIN grym_objet AS g ON g.id = t.a WHERE t.b = ?1 AND t.a <> ?1");
+    } else {
+        chaine_ajouter(&sql, "SELECT t.id, g.classe FROM ");
+        ajouter_nom(&sql, "e ", x->nom);
+        chaine_ajouter(&sql, " AS t JOIN grym_objet AS g ON g.id = t.id WHERE t.");
+        ajouter_nom(&sql, "c ", x->champs[k]);
+        chaine_ajouter(&sql, " = ?1 AND t.id <> ?1");
+    }
     char *texte = chaine_rendre(&sql);
     sqlite3_stmt *st = NULL;
     sqlite3_prepare_v2(b->db, texte, -1, &st, NULL);
@@ -889,7 +1023,7 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
             const ClasseVM *x = classes[i];
             if (!x->conserve) continue;
             for (size_t k = 0; k < x->nb_champs; k++) {
-                if (!vise(x, k, c)) continue;
+                if (!vise(x, k, c) && !contient(x, k, c)) continue;
                 Ensemble d = {0};
                 designants(b, x, k, e.ids[q], &d);
                 long dehors = 0, en_corbeille = 0;
@@ -1062,7 +1196,7 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
         int colonnes = 0;
         chaine_ajouter(&sql, "SELECT id");
         for (size_t k = 0; k < c->nb_champs; k++) {
-            if (c->proprietaires[k] != l[e]) continue;
+            if (c->proprietaires[k] != l[e] || multiple(c, k)) continue;
             chaine_ajouter(&sql, ", ");
             ajouter_nom(&sql, "c ", c->champs[k]);
             if (est_fichier(c->types[k])) {
@@ -1088,7 +1222,7 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
         }
         int col = 1;
         for (size_t k = 0; k < c->nb_champs; k++) {
-            if (c->proprietaires[k] != l[e]) continue;
+            if (c->proprietaires[k] != l[e] || multiple(c, k)) continue;
             const char *t = c->types[k];
             Valeur v;
             if (sqlite3_column_type(st, col) == SQLITE_NULL) {
@@ -1134,6 +1268,7 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
 
 typedef struct {
     Base *b;
+    struct Machine *m;
     const ClasseVM *e;
     const ClasseVM *l[LIGNEE_MAX];
     size_t n;                 /* taille de la lignée ; l[n − 1] est l'entité cherchée */
@@ -1175,62 +1310,148 @@ static int lire_condition(Recherche *r) {
     } else if (op == 'n') {
         chaine_ajouter(&r->sql, "NOT ");
         if (!lire_condition(r)) return 0;
-    } else if (op == 'I') {
-        /* relation inverse (grammaire, § 16.10) : le lien de l'entité qui peut désigner l'objet ?k */
+    } else if (op == 'I' || op == 'M') {
+        /* relation inverse (grammaire, § 16.10) : le lien de l'entité qui peut désigner l'objet ?k, ou le champ
+         * multiple qui le relie à l'entité, dans un sens ou dans l'autre (§ 16.13) ;
+         * « M » : le champ multiple nommé de l'objet ?k, « (M?k[interprètes]) » */
         char *fin;
         size_t i = (size_t)strtoul(r->p + 1, &fin, 10);
         r->p = fin;
-        if (i < 1 || i > r->nb_params || r->nb_liens == 64) { r->erreur = grym_dupliquer("paramètre invalide"); return 0; }
+        char *nomme = NULL;
+        if (op == 'M') {
+            const char *ferme = *r->p == '[' ? strchr(r->p, ']') : NULL;
+            if (!ferme) { r->erreur = grym_dupliquer("champ attendu"); return 0; }
+            nomme = grym_formater("%.*s", (int)(ferme - r->p - 1), r->p + 1);
+            r->p = ferme + 1;
+        }
+        if (i < 1 || i > r->nb_params || r->nb_liens == 64) {
+            free(nomme);
+            r->erreur = grym_dupliquer("paramètre invalide");
+            return 0;
+        }
         const Valeur *v = &r->params[i - 1];
         if (v->type == V_ABSENT) {
+            free(nomme);
             r->erreur = v->texte ? grym_formater("Le champ « %s » est absent : vérifiez-le d'abord avec « est présent ».", v->texte)
                                  : grym_dupliquer("La valeur est absente.");
             return 0;
         }
         if (v->type != V_OBJET) {
+            free(nomme);
             r->erreur = grym_dupliquer("« de … » désigne un objet : un nombre, un texte ou une date n'a pas de liens.");
             return 0;
         }
-        long trouve = -1;
-        size_t combien = 0;
-        char *noms = NULL;
-        for (size_t k = 0; k < r->e->nb_champs; k++) {
+        const ClasseVM *oc = v->objet->classe;
+        /* candidats : 0 lien de l'entité, 1 champ multiple de l'entité, 2 champ multiple de l'objet */
+        int sortes[64];
+        size_t ks[64], combien = 0;
+        int multiples = 0;
+        for (size_t k = 0; op == 'I' && k < r->e->nb_champs && combien < 64; k++) {
             const char *t = r->e->types[k];
             if (!t || !est_lien(t)) continue;
             int vise = 0;
-            for (const ClasseVM *p = v->objet->classe; p && !vise; p = p->parent) vise = strcmp(p->nom, t) == 0;
+            for (const ClasseVM *p = oc; p && !vise; p = p->parent) vise = strcmp(p->nom, t) == 0;
             if (!vise) continue;
-            if (combien++ == 0) { trouve = (long)k; noms = grym_formater("« %s »", r->e->champs[k]); }
-            else {
-                char *x = grym_formater("%s et « %s »", noms, r->e->champs[k]);
-                free(noms);
-                noms = x;
+            sortes[combien] = multiple(r->e, k) ? 1 : 0;
+            multiples |= sortes[combien];
+            ks[combien++] = k;
+        }
+        for (size_t k = 0; k < oc->nb_champs && combien < 64; k++) {
+            if (!multiple(oc, k) || (nomme && strcmp(oc->champs[k], nomme) != 0)) continue;
+            const ClasseVM *t = machine_classe(r->m, oc->types[k]);
+            int apparente = 0;
+            for (const ClasseVM *p = r->e; p && !apparente; p = p->parent) apparente = p == t;
+            for (const ClasseVM *p = t; p && !apparente; p = p->parent) apparente = p == r->e;
+            if (!apparente) continue;
+            sortes[combien] = 2;
+            multiples = 1;
+            ks[combien++] = k;
+        }
+        if (nomme && combien == 0) {
+            /* « Pour chaque œuvre de baroque », quand une autre entité a « des œuvres » : l'objet n'a pas ce champ,
+             * la relation inverse prend le relais (§ 16.13) */
+            free(nomme);
+            nomme = NULL;
+            for (size_t k = 0; k < r->e->nb_champs && combien < 64; k++) {
+                const char *t = r->e->types[k];
+                if (!t || !est_lien(t)) continue;
+                int vise = 0;
+                for (const ClasseVM *p = oc; p && !vise; p = p->parent) vise = strcmp(p->nom, t) == 0;
+                if (!vise) continue;
+                sortes[combien] = multiple(r->e, k) ? 1 : 0;
+                multiples |= sortes[combien];
+                ks[combien++] = k;
             }
         }
-        char *qui = un(v->objet->classe);
+        char *qui = un(oc);
         if (combien != 1) {
             char *pl = pluriel(r->e);
-            r->erreur = combien == 0
-                ? grym_formater("Aucun champ %s %s ne peut désigner %s : « les %s de … » ne désigne rien.",
-                                r->e->feminin ? "d'une" : "d'un", r->e->nom, qui, pl)
-                : grym_formater("Plusieurs champs %s %s peuvent désigner %s : %s. Précisez avec « dont … est le … », "
-                                "par exemple « dont … est le %s ».", r->e->feminin ? "d'une" : "d'un", r->e->nom, qui,
-                                noms, r->e->champs[trouve]);
+            if (nomme)
+                r->erreur = grym_formater("%s n'a pas de champ multiple « %s » qui contienne des %s.", qui, nomme, pl);
+            else if (combien == 0)
+                r->erreur = grym_formater("Aucun champ %s %s ne peut désigner %s : « les %s de … » ne désigne rien.",
+                                          r->e->feminin ? "d'une" : "d'un", r->e->nom, qui, pl);
+            else if (!multiples) {
+                Chaine noms = {0};
+                for (size_t q = 0; q < combien; q++) {
+                    chaine_ajouter(&noms, q ? " et « " : "« ");
+                    chaine_ajouter(&noms, r->e->champs[ks[q]]);
+                    chaine_ajouter(&noms, " »");
+                }
+                char *n = chaine_rendre(&noms);
+                r->erreur = grym_formater("Plusieurs champs %s %s peuvent désigner %s : %s. Précisez avec "
+                                          "« dont … est le … », par exemple « dont … est le %s ».",
+                                          r->e->feminin ? "d'une" : "d'un", r->e->nom, qui, n, r->e->champs[ks[0]]);
+                free(n);
+            } else {
+                Chaine noms = {0}, precis = {0};
+                for (size_t q = 0; q < combien; q++) {
+                    const char *ch = sortes[q] == 2 ? oc->champs[ks[q]] : r->e->champs[ks[q]];
+                    const char *sep = q == 0 ? "" : q + 1 == combien ? " et " : ", ";
+                    const char *ou = q == 0 ? "" : q + 1 == combien ? " ou " : ", ";
+                    chaine_ajouter(&noms, sep);
+                    chaine_ajouter(&noms, "« ");
+                    chaine_ajouter(&noms, ch);
+                    chaine_ajouter(&noms, " »");
+                    chaine_ajouter(&precis, ou);
+                    chaine_ajouter(&precis, sortes[q] == 0 ? "« dont … est le " : sortes[q] == 1 ? "« dont … est parmi les "
+                                                                                               : "« les ");
+                    chaine_ajouter(&precis, ch);
+                    chaine_ajouter(&precis, sortes[q] == 2 ? " de … »" : " »");
+                }
+                char *n = chaine_rendre(&noms), *pr = chaine_rendre(&precis);
+                char *e1 = un(r->e);
+                r->erreur = grym_formater("Plusieurs champs relient %s à %s : %s. Précisez avec %s.", e1, qui, n, pr);
+                free(e1);
+                free(n);
+                free(pr);
+            }
             free(pl);
             free(qui);
-            free(noms);
+            free(nomme);
             return 0;
         }
         free(qui);
-        free(noms);
-        chaine_ajouter(&r->sql, "(");
-        colonne(r, (size_t)trouve);
-        char t[24];
-        snprintf(t, sizeof t, " = ?%lu)", (unsigned long)(r->nb_liens + 1));
-        chaine_ajouter(&r->sql, t);
+        free(nomme);
+        size_t k = ks[0];
+        char t[40];
+        if (sortes[0] == 0) {
+            chaine_ajouter(&r->sql, "(");
+            colonne(r, k);
+            snprintf(t, sizeof t, " = ?%lu)", (unsigned long)(r->nb_liens + 1));
+            chaine_ajouter(&r->sql, t);
+            r->types[r->nb_liens] = r->e->types[k];
+            r->champs[r->nb_liens] = r->e->champs[k];
+        } else {
+            const ClasseVM *porteur = sortes[0] == 1 ? r->e : oc;
+            chaine_ajouter(&r->sql, sortes[0] == 1 ? "(g.id IN (SELECT a FROM " : "(g.id IN (SELECT b FROM ");
+            ajouter_liaison(&r->sql, porteur->proprietaires[k]->nom, porteur->champs[k]);
+            snprintf(t, sizeof t, sortes[0] == 1 ? " WHERE b = ?%lu))" : " WHERE a = ?%lu))", (unsigned long)(r->nb_liens + 1));
+            chaine_ajouter(&r->sql, t);
+            r->types[r->nb_liens] = porteur->types[k];
+            r->champs[r->nb_liens] = porteur->champs[k];
+        }
         r->liens[r->nb_liens] = i - 1;
-        r->types[r->nb_liens] = r->e->types[trouve];
-        r->champs[r->nb_liens] = r->e->champs[trouve];
         r->nb_liens++;
     } else {
         if (*r->p != '[') { r->erreur = grym_dupliquer("champ attendu"); return 0; }
@@ -1243,6 +1464,28 @@ static int lire_condition(Recherche *r) {
         free(champ);
         if (k < 0 || !r->e->types[k]) { r->erreur = grym_dupliquer("champ inconnu"); return 0; }
         const char *t = r->e->types[k];
+        if (op == 'p' || multiple(r->e, (size_t)k)) {
+            /* « dont baroque est parmi les genres » (§ 16.13) : seule tournure d'un champ multiple */
+            if (op != 'p' || !multiple(r->e, (size_t)k) || *r->p != '?') {
+                r->erreur = grym_formater("« %s » : « parmi » s'emploie avec un champ multiple, et lui seul.", r->e->champs[k]);
+                return 0;
+            }
+            size_t i = (size_t)strtoul(r->p + 1, (char **)&fin, 10);
+            r->p = fin;
+            if (i < 1 || i > r->nb_params || r->nb_liens == 64) { r->erreur = grym_dupliquer("paramètre invalide"); return 0; }
+            char tampon[40];
+            chaine_ajouter(&r->sql, "(g.id IN (SELECT a FROM ");
+            ajouter_liaison(&r->sql, r->e->proprietaires[k]->nom, r->e->champs[k]);
+            snprintf(tampon, sizeof tampon, " WHERE b = ?%lu))", (unsigned long)(r->nb_liens + 1));
+            chaine_ajouter(&r->sql, tampon);
+            r->liens[r->nb_liens] = i - 1;
+            r->types[r->nb_liens] = t;
+            r->champs[r->nb_liens] = r->e->champs[k];
+            r->nb_liens++;
+            if (*r->p != ')') { r->erreur = grym_dupliquer("parenthèse attendue"); return 0; }
+            r->p++;
+            return 1;
+        }
         int nombre = strcmp(t, "nombre") == 0, entier = strcmp(t, "nombre entier") == 0;
         const char *sqlop = op == '=' ? " = " : op == '!' ? " <> " : op == '<' ? " < " : op == '>' ? " > "
                           : op == 'l' ? " <= " : op == 'g' ? " >= " : NULL;
@@ -1332,6 +1575,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
     Recherche r;
     memset(&r, 0, sizeof r);
     r.b = b;
+    r.m = m;
     r.e = machine_classe(m, entite);
     r.params = params;
     r.nb_params = nb_params;
@@ -1374,7 +1618,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
         if (*tri) {
             long k = -1;
             for (size_t q = 0; q < e->nb_champs && k < 0; q++) if (strcmp(e->champs[q], tri) == 0) k = (long)q;
-            if (k < 0 || !e->types[k]) { r.erreur = grym_dupliquer("champ du tri inconnu"); ok = 0; }
+            if (k < 0 || !e->types[k] || multiple(e, (size_t)k)) { r.erreur = grym_dupliquer("champ du tri inconnu"); ok = 0; }
             else {
                 colonne(&r, (size_t)k);
                 if (strcmp(e->types[k], "nombre") == 0) chaine_ajouter(&r.sql, " COLLATE GRYM_NOMBRE");
