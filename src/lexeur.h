@@ -1,5 +1,5 @@
 /* GrymoiR : lexeur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.21), § 1.
+ * Spécification : docs/grammaire.md (révision 1.22), § 1.
  */
 #ifndef GRYM_LEXEUR_H
 #define GRYM_LEXEUR_H

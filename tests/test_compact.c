@@ -208,6 +208,13 @@ int main(void) {
                  "Le x vaut 1.\nSi x > 0 :\n    Si x = 1 :\n        Afficher 1.\n    Sinon :\n        Afficher 2.\n"
                  "    Remarque : avant la boucle.\n    Afficher 3.\n");
 
+    ALLER_RETOUR("_classe _une partition _conservé\n    _un titre (texte)\n_fin\n_classe _un pupitre _conservé\n"
+                 "    _une partition (partition) _disparaît_avec\n_fin\n_pour_chaque partition _supprimé\n"
+                 "    _rétablir partition\n_fin\n",
+                 "Une partition, conservée, a :\n    un titre (texte).\nUn pupitre, conservé, a :\n"
+                 "    une partition (partition), et disparaît avec elle.\nPour chaque partition supprimée :\n"
+                 "    Rétablir partition.\n");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

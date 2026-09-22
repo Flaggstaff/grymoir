@@ -214,6 +214,18 @@ int main(void) {
          "_pour_chaque chanson _de p _dont titre > « a » _par titre\n    _afficher chanson\n_fin\n"
          "_afficher _nombre_de chanson _de p ; _nombre_de chanson _conservé _dont auteur = p\n");
 
+    /* --- Corbeille et cascade (§ 16.12) --- */
+    COMP("Une partition, conservée, a : un titre (texte).\nUn pupitre, conservé, a : une partition (partition), "
+         "et disparaît avec elle.\nLa p vaut la partition supprimée dont le titre est « a ».\nRétablir p.\n"
+         "Supprimer p définitivement.\nAfficher le nombre de pupitres supprimés.",
+         "_classe _une partition _conservé\n    _un titre (texte)\n_fin\n_classe _un pupitre _conservé\n"
+         "    _une partition (partition) _disparaît_avec\n_fin\n_la p << _la partition _supprimé _dont titre = « a »\n"
+         "_rétablir p\n_supprimer p _définitivement\n_afficher _nombre_de pupitre _supprimé\n");
+    LITT("Une partition, conservée, a : un titre (texte).\nUn pupitre, conservé, a : une partition (partition), "
+         "et disparaît avec elle.\nPour chaque partition supprimée, afficher partition.",
+         "Une partition, conservée, a :\n    un titre (texte).\nUn pupitre, conservé, a :\n"
+         "    une partition (partition), et disparaît avec elle.\nPour chaque partition supprimée, afficher partition.\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

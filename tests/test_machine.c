@@ -523,20 +523,28 @@ int main(void) {
          "ERREUR 12:1 « licence » est unique : un autre client conservé a déjà « A ».");
     PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
          "Le parrain du a devient a.\nConserver a.\nLe b vaut un nouveau client :\n    Le nom vaut « Bo ».\n"
-         "    La licence vaut « B ».\n    Le parrain vaut a.\nConserver b.\nSupprimer a.",
+         "    La licence vaut « B ».\n    Le parrain vaut a.\nConserver b.\nSupprimer a définitivement.",
          "ERREUR 12:1 Ce client est encore désigné par le champ « parrain » d'un client.");
+    /* la suppression simple ne casse rien : toujours permise, même désigné (§ 16.12) */
     PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
-         "Le parrain du a devient a.\nConserver a.\nSupprimer a.\nSupprimer a.",
+         "Le parrain du a devient a.\nConserver a.\nLe b vaut un nouveau client :\n    Le nom vaut « Bo ».\n"
+         "    La licence vaut « B ».\n    Le parrain vaut a.\nConserver b.\nSupprimer a.\n"
+         "Afficher le nombre de clients conservés puis nom du parrain du b.", "1 Ana");
+    PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
+         "Le parrain du a devient a.\nConserver a.\nSupprimer a définitivement.\nSupprimer a.",
          "ERREUR 8:1 Un client qui n'est pas conservé ne se supprime pas.");
     PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
-         "Le parrain du a devient a.\nConserver a.\nSupprimer a.\nConserver a.\nAfficher nom du a.", "Ana");
+         "Le parrain du a devient a.\nConserver a.\nSupprimer a.\nSupprimer a.",
+         "ERREUR 8:1 Ce client est déjà supprimé : « Supprimer … définitivement » l'efface de la base.");
+    PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
+         "Le parrain du a devient a.\nConserver a.\nSupprimer a définitivement.\nConserver a.\nAfficher nom du a.", "Ana");
     PROG("Une adhésion, conservée, a : un numéro (nombre entier).\nLa x vaut une nouvelle adhésion :\n"
          "    Le numéro vaut 99999999999999999999.\nConserver x.",
          "ERREUR 4:1 Le champ « numéro » est trop grand pour la base : un nombre entier y tient entre "
          "−9'223'372'036'854'775'808 et 9'223'372'036'854'775'807.");
     PROG("Une facture, conservée, a : un montant (nombre).\nUn avoir, conservé, est une facture.\n"
          "Un contrat, conservé, a : une facture (facture).\nL'a vaut un nouvel avoir :\n    Le montant vaut −5.\n"
-         "Conserver a.\nLe c vaut un nouveau contrat :\n    La facture vaut a.\nConserver c.\nSupprimer a.",
+         "Conserver a.\nLe c vaut un nouveau contrat :\n    La facture vaut a.\nConserver c.\nSupprimer a définitivement.",
          "ERREUR 10:1 Cet avoir est encore désigné par le champ « facture » d'un contrat.");
     /* une saisie ratée rend à l'objet son état « non conservé » */
     {
@@ -688,6 +696,63 @@ int main(void) {
     PROG(INV "Pour chaque œuvre de b, afficher 1.", "~Aucun champ d'une œuvre ne peut désigner une œuvre");
     PROG(INV "Pour chaque œuvre de rauber dont le titre = « Sonate », par titre décroissant, afficher titre de l'œuvre.",
          "Sonate");
+
+    /* --- Corbeille et cascade (§ 16.12) --- */
+#define SD "Une partition, conservée, a : un titre (texte), une cote (texte), unique.\n" \
+           "Un pupitre, conservé, a : une partition (partition), et disparaît avec elle, un instrument (texte).\n" \
+           "Une note, conservée, a : une partition (partition), un texte (texte).\n" \
+           "Pour créer un titre et une cote :\n    La p vaut une nouvelle partition :\n        Le titre vaut titre.\n" \
+           "        La cote vaut cote.\n    Conserver p.\n    Le v vaut un nouveau pupitre :\n        La partition vaut p.\n" \
+           "        L'instrument vaut « violon ».\n    Conserver v.\n" \
+           "Créer « Offrande » et « A-1 ».\nCréer « Sonate » et « A-2 ».\n" \
+           "La o vaut la partition conservée dont la cote est « A-1 ».\n" \
+           "La s vaut la partition conservée dont la cote est « A-2 ».\n"
+    PROG(SD "Supprimer o.\nAfficher le nombre de partitions conservées puis le nombre de partitions supprimées puis "
+         "le nombre de pupitres conservés puis le nombre de pupitres supprimés puis titre de o.\n"
+         "Pour chaque partition supprimée, afficher titre de la partition.\nRétablir o.\n"
+         "Afficher le nombre de partitions conservées puis le nombre de pupitres conservés.",
+         "1 1 1 1 Offrande\nOffrande\n2 2");
+    PROG(SD "La n vaut une nouvelle note :\n    La partition vaut s.\n    Le texte vaut « x ».\nConserver n.\n"
+         "Supprimer s.\nAfficher texte de n puis titre de la partition de n.\nSupprimer n.\nSupprimer s définitivement.",
+         "~Cette partition est encore désignée par le champ « partition » d'une note supprimée : supprimez-la "
+         "définitivement d'abord.");
+    PROG(SD "Supprimer s.\nLa m vaut une nouvelle note :\n    La partition vaut s.\n    Le texte vaut « y ».\nConserver m.",
+         "~Le champ « partition » désignerait une partition supprimée : rétablissez-la d'abord.");
+    PROG(SD "Supprimer s.\nLa q vaut une nouvelle partition :\n    Le titre vaut « Z ».\n    La cote vaut « A-2 ».\nConserver q.",
+         "~« cote » est unique : « A-2 » appartient à une partition supprimée. Rétablissez-la, ou supprimez-la définitivement.");
+    PROG(SD "Rétablir s.", "~Cette partition n'est pas supprimée.");
+    PROG(SD "Supprimer s.\nLe pu vaut le pupitre supprimé dont l'instrument est « violon ».\nRétablir pu.",
+         "~Ce pupitre a disparu avec un autre objet : rétablissez celui-là, et il reviendra avec lui.");
+    PROG(SD "Supprimer s.\nSupprimer o définitivement.\nAfficher le nombre de partitions supprimées puis "
+         "le nombre de pupitres conservés puis le nombre de pupitres supprimés.\nConserver o.\n"
+         "Afficher le nombre de partitions conservées puis titre de o.",
+         "1 0 1\n1 Offrande");
+    {   /* une base d'avant la corbeille reçoit ses colonnes, et ses objets restent conservés */
+        remove("_essai_corbeille.grymd");
+        sqlite3 *db = NULL;
+        sqlite3_open("_essai_corbeille.grymd", &db);
+        sqlite3_exec(db, "CREATE TABLE grym_objet (id INTEGER PRIMARY KEY AUTOINCREMENT, classe TEXT NOT NULL);"
+                         "CREATE TABLE grym_schema (entite TEXT PRIMARY KEY, definition TEXT NOT NULL);"
+                         "INSERT INTO grym_objet (classe) VALUES ('livre');"
+                         "CREATE TABLE \"e livre\" (id INTEGER PRIMARY KEY REFERENCES grym_objet(id) ON DELETE CASCADE,"
+                         " \"c titre\" TEXT NOT NULL);"
+                         "INSERT INTO \"e livre\" VALUES (1, 'X');"
+                         "INSERT INTO grym_schema VALUES ('livre', 'parent=;titre:texte');", NULL, NULL, NULL);
+        sqlite3_close(db);
+        total++;
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        machine_base(m, "_essai_corbeille.grymd");
+        char *r = executer_source(p, m, "Un livre, conservé, a : un titre (texte).\n"
+                                        "Afficher le nombre de livres conservés puis le nombre de livres supprimés.\n"
+                                        "Supprimer le livre conservé dont le titre est « X ».\n"
+                                        "Afficher le nombre de livres supprimés.", 0);
+        if (strcmp(r, "1 0\n1") != 0) signaler(__LINE__, "base d'avant la corbeille", "1 0\n1", r);
+        free(r);
+        machine_detruire(m);
+        portee_detruire(p);
+        remove("_essai_corbeille.grymd");
+    }
 
     /* --- Relire, dans une autre exécution, ce qu'une première a conservé --- */
     {

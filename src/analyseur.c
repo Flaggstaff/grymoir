@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.21), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.22), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -8,6 +8,7 @@
 #include "texte.h"
 
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -270,6 +271,7 @@ typedef struct {
     int niveau;              /* 0 : premier niveau du programme ; > 0 : dans un bloc */
     char *a_completer;       /* classe déclarée par « est » à la phrase précédente, sans champs encore */
     const char *dont;        /* entité dont une condition « dont » examine les champs (§ 16.4), ou NULL */
+    int corbeille;           /* la dernière tournure « … conservé » lue était « … supprimé » (§ 16.12) */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
     const char *arrets[3];   /* mots qui peuvent suivre un nom dans le contexte courant (« à », « fois »…) */
     int nb_arrets;
@@ -383,7 +385,7 @@ static int nom_a_crochets(const char *nom);
 /* Mots qui structurent la phrase et ne peuvent pas entrer dans un nom
  * (sauf entre crochets, § 2.2). */
 static const char *const RESERVES[] = {
-    "vaut", "devient", "puis", "est", "et", "ou", "si", "sinon", "vrai", "faux", "rendre", "dont"
+    "vaut", "devient", "puis", "est", "et", "ou", "si", "sinon", "vrai", "faux", "rendre", "dont", "définitivement"
 };
 
 static int est_mot_reserve(const char *m) {
@@ -1048,8 +1050,14 @@ static int contient_champ_dont(const Noeud *n) {
     return 0;
 }
 
+static int est_supprime_mot(const Jeton *t) {
+    return est_mot(t, "supprimé") || est_mot(t, "supprimée") || est_mot(t, "supprimés") || est_mot(t, "supprimées");
+}
+
+/* « conservé », ou « supprimé » pour la corbeille (§ 16.12) */
 static int est_conserve_mot(const Jeton *t) {
-    return est_mot(t, "conservé") || est_mot(t, "conservée") || est_mot(t, "conservés") || est_mot(t, "conservées");
+    return est_mot(t, "conservé") || est_mot(t, "conservée") || est_mot(t, "conservés") || est_mot(t, "conservées")
+        || est_supprime_mot(t);
 }
 
 static char *pluriel_de(const Classe *c) {
@@ -1077,9 +1085,11 @@ static Classe *entite_conservee(Analyse *a, size_t k, int pluriel, size_t *apres
     free(nom);
     if (!e) return NULL;
     const Jeton *tc = &a->j[f];
+    a->corbeille = est_supprime_mot(tc);
     if (!tc->synthetique) {
-        const char *juste = e->genre == GENRE_FEMININ ? (pluriel ? "conservées" : "conservée")
-                                                      : (pluriel ? "conservés" : "conservé");
+        const char *radical = a->corbeille ? "supprimé" : "conservé";
+        char juste[24];
+        snprintf(juste, sizeof juste, "%s%s%s", radical, e->genre == GENRE_FEMININ ? "e" : "", pluriel ? "s" : "");
         if (!est_mot(tc, juste)) {
             erreur(a, tc, grym_formater("Accord : « %s ».", juste));
             return NULL;
@@ -1206,6 +1216,7 @@ static Noeud *objet_de(Analyse *a, const Classe *e, size_t de) {
 /* « le client conservé dont … », « le nombre de clients conservés dont … », « le nombre d'œuvres de bach » :
  * objet non NULL pour une relation inverse (§ 16.10), rangé en dernier enfant, op = 'I'. */
 static Noeud *chercher(Analyse *a, const Jeton *t, const Classe *e, int mode, size_t apres, Noeud *objet) {
+    int corbeille = !objet && a->corbeille;
     if (a->formule == 1) {
         noeud_liberer(objet);
         return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
@@ -1217,6 +1228,7 @@ static Noeud *chercher(Analyse *a, const Jeton *t, const Classe *e, int mode, si
     Noeud *n = noeud_creer(N_CHERCHER, t->ligne, t->colonne, t->debut);
     n->texte = grym_dupliquer(e->nom);
     n->forme = mode;
+    n->negation = corbeille;   /* dans la corbeille (§ 16.12) */
     if (cond) noeud_ajouter(n, cond);
     if (objet) { n->op = 'I'; noeud_ajouter(n, objet); }
     n->fin = fin_jeton(&a->j[a->i - 1]);
@@ -2618,6 +2630,7 @@ static Noeud *repeter(Analyse *a, int colonne) {
 /* Pour chaque nom de début à fin [ par pas de pas ] , phrase | : bloc */
 /* « Pour chaque client conservé [dont …] [, par nom [décroissant]] : » (§ 16.4) */
 static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, const Classe *e, size_t apres, size_t de) {
+    int corbeille = !de && a->corbeille;
     if (a->formule == 1)
         return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
     const Jeton *tnom = cour(a);
@@ -2641,6 +2654,7 @@ static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, cons
     Noeud *cherche = noeud_creer(N_CHERCHER, t->ligne, t->colonne, t->debut);
     cherche->texte = grym_dupliquer(e->nom);
     cherche->forme = 0;
+    cherche->negation = corbeille;
     if (cond) noeud_ajouter(cherche, cond);
     if (objet) { cherche->op = 'I'; noeud_ajouter(cherche, objet); }
     if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "par")) {
@@ -3040,16 +3054,34 @@ static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const
         }
         for (;;) {
             if (cour(a)->type == J_VIRGULE && (est_mot(voir(a, 1), "facultatif") || est_mot(voir(a, 1), "facultative"))
-                && !c->entier) {
+                && !(c->entier & 1)) {
                 /* « , facultatif » : le champ peut rester absent (§ 16.9) */
                 const Jeton *tf = voir(a, 1);
                 if (!tf->synthetique && est_mot(tf, "facultative") != (gc == GENRE_FEMININ)) {
                     erreur(a, tf, grym_formater("Accord : « %s ».", gc == GENRE_FEMININ ? "facultative" : "facultatif"));
                     return 0;
                 }
-                c->entier = 1;
+                c->entier |= 1;
                 avancer(a);
                 avancer(a);
+                continue;
+            }
+            if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "et") && est_mot(voir(a, 2), "disparaît")
+                && est_mot(voir(a, 3), "avec") && (est_mot(voir(a, 4), "elle") || est_mot(voir(a, 4), "lui"))
+                && !(c->entier & 2)) {
+                /* « , et disparaît avec elle » : supprimé avec l'objet que le lien désigne (§ 16.12) */
+                const Jeton *pron = voir(a, 4);
+                if (!c->texte2 || type_de_base(c->texte2) || mode != 1) {
+                    erreur(a, voir(a, 2), grym_dupliquer("Seul un lien d'entité « disparaît avec » l'objet qu'il désigne."));
+                    return 0;
+                }
+                const Classe *cible = classe_de(a->portee, c->texte2);
+                if (cible && !pron->synthetique && est_mot(pron, "elle") != (cible->genre == GENRE_FEMININ)) {
+                    erreur(a, pron, grym_formater("Accord : « avec %s ».", cible->genre == GENRE_FEMININ ? "elle" : "lui"));
+                    return 0;
+                }
+                c->entier |= 2;
+                for (int q = 0; q < 5; q++) avancer(a);
                 continue;
             }
             if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "unique") && c->op != 'U') {
@@ -3148,7 +3180,7 @@ static void classe_remplir(Classe *c, const Noeud *n) {
         c->genres[c->nb] = ch->forme == 2 ? GENRE_FEMININ : GENRE_MASCULIN;
         c->types[c->nb] = ch->texte2 ? grym_dupliquer(ch->texte2) : NULL;
         c->uniques[c->nb] = ch->op == 'U';
-        c->facultatifs[c->nb] = ch->entier;
+        c->facultatifs[c->nb] = ch->entier & 1;
         c->nb++;
     }
 }
@@ -3483,7 +3515,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
 static int mot_de_construction(const Jeton *t) {
     static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
                                      "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer",
-                                     "conserver", "supprimer" };
+                                     "conserver", "supprimer", "rétablir" };
     for (size_t k = 0; k < sizeof M / sizeof *M; k++) if (est_mot(t, M[k])) return 1;
     return 0;
 }
@@ -3503,17 +3535,20 @@ static Noeud *phrase(Analyse *a, int colonne) {
                                                "Pour afficher, écrivez une action."));
         return affichage(a);
     }
-    if (est_mot(t, "conserver") || est_mot(t, "supprimer")) {
-        /* « Conserver le client. », « Supprimer le client. » (§ 16.3) */
-        int conserver = est_mot(t, "conserver");
+    if (est_mot(t, "conserver") || est_mot(t, "supprimer") || est_mot(t, "rétablir")) {
+        /* « Conserver le client. », « Supprimer le client [définitivement]. », « Rétablir le client. » (§ 16.3, 16.12) */
+        int conserver = est_mot(t, "conserver"), retablir = est_mot(t, "rétablir");
         if (a->formule == 1)
             return erreur(a, t, grym_formater("Un calcul ne %s pas : faites-le dans une action.",
-                                              conserver ? "conserve" : "supprime"));
+                                              conserver ? "conserve" : retablir ? "rétablit" : "supprime"));
         avancer(a);
         Noeud *v = valeur(a);
         if (!v) return NULL;
+        int definitif = 0;
+        if (!conserver && !retablir && est_mot(cour(a), "définitivement")) { definitif = 1; avancer(a); }
         if (!fin_phrase(a, 0)) { noeud_liberer(v); return NULL; }
         Noeud *n = noeud_creer(conserver ? P_CONSERVER : P_SUPPRIMER, t->ligne, t->colonne, t->debut);
+        n->entier = retablir ? 2 : definitif;   /* 0 : mise de côté ; 1 : définitive ; 2 : rétablir */
         noeud_ajouter(n, v);
         n->fin = v->fin;
         return n;
@@ -3813,6 +3848,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.nb_arrets = 0;
     a.a_completer = NULL;
     a.dont = NULL;
+    a.corbeille = 0;
 
     /* Colonne de référence : celle de la première phrase (les remarques ne comptent pas). */
     int colonne = 1;

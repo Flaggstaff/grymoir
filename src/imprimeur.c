@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.21), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.22), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -396,7 +396,7 @@ static void expression(Impression *im, const Noeud *n) {
                 aj(im, "_nombre_de ");
                 ecrire_nom(im, n->texte, 0);
                 if (inverse) { aj(im, " _de "); expression(im, objet); }
-                else aj(im, " _conservé");
+                else aj(im, n->negation ? " _supprimé" : " _conservé");
             } else {
                 const char *pl = NULL;
                 for (size_t k = 0; k < im->nb_pluriels && !pl; k++)
@@ -406,6 +406,7 @@ static void expression(Impression *im, const Noeud *n) {
                 aj(im, p);
                 free(p);
                 if (inverse) { aj(im, " "); preposition(im, "de", objet); }
+                else if (n->negation) aj(im, fem ? " supprimées" : " supprimés");
                 else aj(im, fem ? " conservées" : " conservés");
             }
         } else {               /* « le client conservé » ; la boucle écrit elle-même son début */
@@ -415,7 +416,9 @@ static void expression(Impression *im, const Noeud *n) {
                 aj(im, art);
                 ecrire_nom(im, n->texte, 0);
             }
-            if (n->forme == 1) aj(im, im->compact ? " _conservé" : fem ? " conservée" : " conservé");
+            if (n->forme == 1)
+                aj(im, im->compact ? (n->negation ? " _supprimé" : " _conservé")
+                       : n->negation ? (fem ? " supprimée" : " supprimé") : fem ? " conservée" : " conservé");
             if (n->forme == 0 && inverse) {   /* début de « Pour chaque œuvre de bach » */
                 if (im->compact) { aj(im, " _de "); expression(im, objet); }
                 else { aj(im, " "); preposition(im, "de", objet); }
@@ -480,7 +483,10 @@ static void type_de_champ(Impression *im, const Noeud *ch) {
     else aj(im, ch->texte2);   /* « (vrai ou faux) » : un type, pas un nom, jamais entre crochets */
     aj(im, ")");
     if (ch->op == 'U') aj(im, im->compact ? " _unique" : ", unique");
-    if (ch->entier) aj(im, im->compact ? " _facultatif" : ch->forme == 2 ? ", facultative" : ", facultatif");
+    if (ch->entier & 1) aj(im, im->compact ? " _facultatif" : ch->forme == 2 ? ", facultative" : ", facultatif");
+    if (ch->entier & 2)
+        aj(im, im->compact ? " _disparaît_avec"
+               : genre_de_nom(im, ch->texte2) == G_FEMININ ? ", et disparaît avec elle" : ", et disparaît avec lui");
     if (ch->nb_enfants) {   /* valeur de départ (§ 16.7) */
         aj(im, im->compact ? " _départ " : ", ");
         expression(im, ch->enfants[0]);
@@ -766,7 +772,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         int fem = genre_de_nom(im, n->texte) == G_FEMININ;
         aj(im, c ? "_pour_chaque " : "Pour chaque ");
         ecrire_nom(im, n->texte, 0);
-        if (n->enfants[0]->op != 'I') aj(im, c ? " _conservé" : fem ? " conservée" : " conservé");
+        if (n->enfants[0]->op != 'I') {
+            int sup = n->enfants[0]->negation;
+            aj(im, c ? (sup ? " _supprimé" : " _conservé")
+                   : sup ? (fem ? " supprimée" : " supprimé") : fem ? " conservée" : " conservé");
+        }
         expression(im, n->enfants[0]);   /* « de … », « dont … » et « , par … » */
         retenir(im, n->texte, fem ? G_FEMININ : G_MASCULIN);
         const Noeud *corps = n->enfants[1];
@@ -932,9 +942,10 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         return;
     case P_CONSERVER:
     case P_SUPPRIMER:
-        if (c) aj(im, n->type == P_CONSERVER ? "_conserver " : "_supprimer ");
-        else aj(im, n->type == P_CONSERVER ? "Conserver " : "Supprimer ");
+        if (c) aj(im, n->type == P_CONSERVER ? "_conserver " : n->entier == 2 ? "_rétablir " : "_supprimer ");
+        else aj(im, n->type == P_CONSERVER ? "Conserver " : n->entier == 2 ? "Rétablir " : "Supprimer ");
         expression(im, n->enfants[0]);
+        if (n->type == P_SUPPRIMER && n->entier == 1) aj(im, c ? " _définitivement" : " définitivement");
         aj(im, c ? "\n" : ".\n");
         return;
     case P_ENREGISTRER:

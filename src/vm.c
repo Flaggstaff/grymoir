@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.15).
+ * Spécification : docs/vm.md (révision 1.16).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -837,6 +837,17 @@ Objet *machine_objet_en_base(Machine *m, long id, const char *classe, char **err
 }
 
 /* Lit les champs d'un objet retrouvé, au premier accès. */
+static int charger(Machine *m, Objet *o, char **erreur);
+
+void machine_objet_efface(Machine *m, long id) {
+    Objet *o = carte_trouver(m, id);
+    if (!o || o->id != id) return;
+    char *e = NULL;
+    charger(m, o, &e);   /* ses valeurs restent en mémoire */
+    free(e);
+    ecrire_id(m, o, 0);
+}
+
 static int charger(Machine *m, Objet *o, char **erreur) {
     if (!o->a_charger) return 1;
     if (!base_charger(m->base, m, o, erreur)) return 0;
@@ -1471,16 +1482,18 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_CONSERVER:
-        case I_SUPPRIMER: {
+        case I_SUPPRIMER:
+        case I_SUPPRIMER_DEFINITIVEMENT:
+        case I_RETABLIR: {
             Valeur v = depiler(&pile);
-            const char *verbe = code == I_CONSERVER ? "conserve" : "supprime";
+            const char *verbe = code == I_CONSERVER ? "conserve" : code == I_RETABLIR ? "rétablit" : "supprime";
             char *probleme = NULL;
             if (v.type != V_OBJET)
                 probleme = grym_formater("Seul un objet se %s : la valeur est %s.", verbe, nom_type(v.type));
             else if (!v.objet->classe->conserve)
                 probleme = grym_formater("« %s » n'est pas une entité : ses objets ne se %s pas. "
                                          "Déclarez « %s %s, %s, a : ».", v.objet->classe->nom,
-                                         code == I_CONSERVER ? "conservent" : "suppriment",
+                                         code == I_CONSERVER ? "conservent" : code == I_RETABLIR ? "rétablissent" : "suppriment",
                                          v.objet->classe->feminin ? "Une" : "Un", v.objet->classe->nom,
                                          v.objet->classe->feminin ? "conservée" : "conservé");
             else if (code == I_CONSERVER && v.objet->id) {
@@ -1489,18 +1502,21 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 probleme = grym_formater("%s déjà conservé%s ne se conserve pas deux fois.", qui,
                                          v.objet->classe->feminin ? "e" : "");
                 free(qui);
-            } else if (code == I_SUPPRIMER && !v.objet->id) {
+            } else if (code != I_CONSERVER && !v.objet->id) {
                 char *qui = article_classe(v.objet->classe);
                 qui[0] = (char)(qui[0] - 32);
-                probleme = grym_formater("%s qui n'est pas conservé%s ne se supprime pas.", qui,
-                                         v.objet->classe->feminin ? "e" : "");
+                probleme = grym_formater("%s qui n'est pas conservé%s ne se %s pas.", qui,
+                                         v.objet->classe->feminin ? "e" : "", verbe);
                 free(qui);
             } else if (code == I_CONSERVER) {
                 long id = 0;
                 if (base_conserver(m->base, v.objet, &id, &probleme)) ecrire_id(m, v.objet, id);
-            } else if (charger(m, v.objet, &probleme)   /* l'objet reste en mémoire, avec ses valeurs */
-                       && base_supprimer(m->base, v.objet, m->classes, m->nb_classes, &probleme)) {
-                ecrire_id(m, v.objet, 0);   /* l'objet reste en mémoire, mais n'est plus conservé */
+            } else if (code == I_RETABLIR) {
+                if (charger(m, v.objet, &probleme)) base_retablir(m->base, v.objet, m->classes, m->nb_classes, &probleme);
+            } else if (charger(m, v.objet, &probleme)) {   /* l'objet reste en mémoire, avec ses valeurs */
+                /* simple : mis de côté ; définitive : effacé, et ceux qui disparaissent avec lui (§ 16.12) */
+                base_supprimer(m->base, m, v.objet, m->classes, m->nb_classes, code == I_SUPPRIMER_DEFINITIVEMENT,
+                               &probleme);
             }
             valeur_liberer(&v);
             if (probleme) ok = echouer(diag, b, debut, probleme);

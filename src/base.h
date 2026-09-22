@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.21), § 16 ; docs/vm.md (révision 1.15), § 8.
+ * Spécification : docs/grammaire.md (révision 1.22), § 16 ; docs/vm.md (révision 1.16), § 8.
  *
  * Schéma : une table « e <entité> » par entité, qui porte ses champs propres et ceux de ses
  * aptitudes ; son identifiant désigne la ligne de sa classe parente, ou de « grym_objet »
@@ -46,6 +46,11 @@ int base_chercher(Base *b, struct Machine *m, const char *descripteur, const Val
 
 /* Retire un objet ; refusé si un lien le désigne encore. classes : toutes les classes connues,
  * pour dire lequel. */
-int base_supprimer(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_classes, char **erreur);
+int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *classes, size_t nb_classes,
+                   int definitif, char **erreur);
+/* Rétablit un objet supprimé, et ceux qui ont disparu avec lui (grammaire, § 16.12). */
+int base_retablir(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_classes, char **erreur);
+/* L'objet d'identifiant id est-il dans la corbeille ? */
+int base_est_supprime(Base *b, long id);
 
 #endif

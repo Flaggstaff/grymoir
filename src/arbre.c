@@ -213,7 +213,8 @@ static void decrire(const Noeud *n, Chaine *c) {
         return;
     case P_CONSERVER:
     case P_SUPPRIMER:
-        chaine_ajouter(c, n->type == P_CONSERVER ? "(conserver " : "(supprimer ");
+        chaine_ajouter(c, n->type == P_CONSERVER ? "(conserver " : n->entier == 2 ? "(rétablir "
+                          : n->entier == 1 ? "(supprimer-définitivement " : "(supprimer ");
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
@@ -230,7 +231,9 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, "])");
         return;
     case N_CHERCHER:
-        chaine_ajouter(c, n->forme == 1 ? "(le-conservé [" : n->forme == 2 ? "(nombre-conservés [" : "(conservés [");
+        chaine_ajouter(c, n->forme == 1 ? (n->negation ? "(le-supprimé [" : "(le-conservé [")
+                          : n->forme == 2 ? (n->negation ? "(nombre-supprimés [" : "(nombre-conservés [")
+                          : n->negation ? "(supprimés [" : "(conservés [");
         chaine_ajouter(c, n->texte);
         chaine_ajouter(c, "]");
         if (n->op == 'I') {   /* relation inverse : l'objet en dernier enfant (§ 16.10) */
@@ -307,7 +310,8 @@ static void decrire(const Noeud *n, Chaine *c) {
                 chaine_ajouter(c, " : ");
                 chaine_ajouter(c, ch->texte2);
                 if (ch->op == 'U') chaine_ajouter(c, " unique");
-                if (ch->entier) chaine_ajouter(c, " facultatif");
+                if (ch->entier & 1) chaine_ajouter(c, " facultatif");
+                if (ch->entier & 2) chaine_ajouter(c, " disparaît-avec");
                 if (ch->nb_enfants) { chaine_ajouter(c, " départ "); decrire(ch->enfants[0], c); }
                 chaine_ajouter(c, "]");
             } else {

@@ -13,9 +13,9 @@ Une partition, conservée, a :
     une œuvre (œuvre),
     un éditeur (texte),
     un arrangeur (compositeur), facultatif.
-Remarque : un pupitre relie une partition à un instrument.
+Remarque : un pupitre relie une partition à un instrument, et disparaît avec sa partition.
 Un pupitre, conservé, a :
-    une partition (partition),
+    une partition (partition), et disparaît avec elle,
     un instrument (instrument),
     un nombre de parties (nombre entier).
 
@@ -58,3 +58,4 @@ Pour chaque partition conservée :
     Pour chaque pupitre de la partition, par nombre de parties décroissant :
         Afficher nom de l'instrument du pupitre puis nombre de parties du pupitre.
 Afficher le nombre d'œuvres conservées dont l'année est absente puis « œuvre(s) sans année ».
+Afficher le nombre de partitions supprimées puis « partition(s) dans la corbeille ».

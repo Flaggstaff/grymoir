@@ -151,7 +151,7 @@ static void chercher(Compilation *c, const Noeud *n) {
     Chaine d = {0};
     chaine_ajouter(&d, n->texte);
     char t[8];
-    snprintf(t, sizeof t, "\x1f%d\x1f", n->forme);
+    snprintf(t, sizeof t, "\x1f%d\x1f", n->forme + (n->negation ? 3 : 0));   /* 3 à 5 : la corbeille (§ 16.12) */
     chaine_ajouter(&d, t);
     if (n->texte2) chaine_ajouter(&d, n->texte2);
     chaine_ajouter(&d, n->entier ? "\x1f" "1\x1f" : "\x1f" "0\x1f");
@@ -560,7 +560,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
             else {
                 classe_ajouter_champ(cm, ch->texte);
                 classe_typer_dernier_champ(cm, ch->texte2, ch->op == 'U');
-                if (ch->entier) classe_facultatif_dernier_champ(cm);
+                if (ch->entier & 1) classe_facultatif_dernier_champ(cm);
+                if (ch->entier & 2) classe_cascade_dernier_champ(cm);
                 if (ch->nb_enfants) {   /* valeur de départ, sous forme canonique */
                     const Noeud *v = ch->enfants[0];
                     char *t = v->type == N_NEGATION ? grym_formater("-%s", v->enfants[0]->texte) : grym_dupliquer(v->texte);
@@ -604,7 +605,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_CONSERVER:
     case P_SUPPRIMER:
         expression(c, ph->enfants[0]);
-        emettre(c, ph->type == P_CONSERVER ? I_CONSERVER : I_SUPPRIMER, 0, ph->ligne, ph->colonne);
+        emettre(c, ph->type == P_CONSERVER ? I_CONSERVER : ph->entier == 2 ? I_RETABLIR
+                   : ph->entier == 1 ? I_SUPPRIMER_DEFINITIVEMENT : I_SUPPRIMER, 0, ph->ligne, ph->colonne);
         return;
     case P_ENREGISTRER:
         expression(c, ph->enfants[0]);

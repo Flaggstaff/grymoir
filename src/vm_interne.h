@@ -1,5 +1,5 @@
 /* GrymoiR : représentation interne des valeurs, partagée par la machine et la base
- * Spécification : docs/vm.md (révision 1.15), § 2.
+ * Spécification : docs/vm.md (révision 1.16), § 2.
  */
 #ifndef GRYM_VM_INTERNE_H
 #define GRYM_VM_INTERNE_H
@@ -53,7 +53,7 @@ typedef struct ClasseVM {
     char **types;         /* type de chaque champ (grammaire, § 16.1), ou NULL */
     char **departs;       /* valeur de départ (§ 16.7), forme canonique, ou NULL */
     const struct ClasseVM **proprietaires;   /* entité dont la table porte le champ (base.c) */
-    unsigned char *uniques;   /* bit 1 : unique ; bit 2 : facultatif (§ 16.9) */
+    unsigned char *uniques;   /* bit 1 : unique ; bit 2 : facultatif (§ 16.9) ; bit 4 : disparaît avec (§ 16.12) */
     size_t nb_champs;
     int conserve;         /* entité */
     char *pluriel;
@@ -83,6 +83,8 @@ Valeur vi_absent(const char *champ);
 /* Objet conservé d'identifiant id : le même en mémoire tant qu'il y vit, sinon une coquille à charger. */
 Objet *machine_objet_en_base(struct Machine *m, long id, const char *classe, char **erreur);
 const ClasseVM *machine_classe(const struct Machine *m, const char *nom);
+/* L'objet d'identifiant id vient d'être effacé de la base : s'il vit en mémoire, il n'est plus conservé. */
+void machine_objet_efface(struct Machine *m, long id);
 Valeur vi_liste(long *ids, char **classes, size_t n);   /* prend possession des tableaux */
 void vi_liberer(Valeur *v);
 

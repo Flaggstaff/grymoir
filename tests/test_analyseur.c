@@ -642,6 +642,22 @@ int main(void) {
     VE(CH "Afficher le nombre de chansons conservées dont brel est le prix.", 4, 60, "« prix » inconnu");
     VE("Le prix dont vaut 3.", 1, 9, "« dont » est un mot réservé");
 
+    /* --- Corbeille et cascade (§ 16.12) --- */
+#define PU "Une partition, conservée, a : un titre (texte).\n" \
+           "Un pupitre, conservé, a : une partition (partition), et disparaît avec elle, un rang (nombre).\n"
+#define PU_ARBRE "(entité [partition] [titre : texte])\n(entité [pupitre] [partition : partition disparaît-avec] [rang : nombre])\n"
+    V(PU "La p vaut la partition supprimée dont le titre est « a ».\nRétablir p.\nSupprimer p définitivement.\nSupprimer p.\n"
+         "Pour chaque pupitre supprimé, afficher pupitre.\nAfficher le nombre de partitions supprimées.",
+      PU_ARBRE "(créer [p] (le-supprimé [partition] (dont (= (champ-dont [titre]) «a»))))\n(rétablir [p])\n"
+      "(supprimer-définitivement [p])\n(supprimer [p])\n"
+      "(pour-chaque-conservé [pupitre] (supprimés [pupitre]) (bloc (afficher [pupitre])))\n"
+      "(afficher (nombre-supprimés [partition]))");
+    VE("Une partition, conservée, a : un titre (texte).\nUn pupitre, conservé, a : une partition (partition), et disparaît avec lui.",
+       2, 72, "Accord : « avec elle ».");
+    VE("Un pupitre, conservé, a : un rang (nombre), et disparaît avec lui.", 1, 48,
+       "Seul un lien d'entité « disparaît avec » l'objet qu'il désigne.");
+    VE(PU "Afficher le nombre de partitions supprimés.", 3, 34, "Accord : « supprimées ».");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

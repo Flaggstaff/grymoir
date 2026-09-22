@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.21), § 11.
+ * Spécification : docs/grammaire.md (révision 1.22), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -184,12 +184,12 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             }
         }
         if ((est_cle(t, "le") || est_cle(t, "la") || est_cle(t, "l'")) && k + 2 < f
-            && r->e[k + 1].type == J_CROCHETS && (est_cle(&r->e[k + 2], "conservé") || est_cle(&r->e[k + 2], "conservée"))) {
+            && r->e[k + 1].type == J_CROCHETS && (est_cle(&r->e[k + 2], "conservé") || est_cle(&r->e[k + 2], "conservée") || est_cle(&r->e[k + 2], "supprimé"))) {
             /* _le client _conservé → le client conservé (§ 16.4) */
             if (!strcmp(t->valeur, "l'")) emettre(r, J_ELISION, "l", t, 1);
             else mot(r, t->valeur, t);
             copier(r, &r->e[k + 1]);
-            mot(r, "conservé", &r->e[k + 2]);
+            mot(r, est_cle(&r->e[k + 2], "supprimé") ? "supprimé" : "conservé", &r->e[k + 2]);
             k += 2;
             continue;
         }
@@ -204,13 +204,13 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             continue;
         }
         if (est_cle(t, "nombre_de") && k + 2 < f && r->e[k + 1].type == J_CROCHETS
-            && (est_cle(&r->e[k + 2], "conservé") || est_cle(&r->e[k + 2], "conservée"))) {
+            && (est_cle(&r->e[k + 2], "conservé") || est_cle(&r->e[k + 2], "conservée") || est_cle(&r->e[k + 2], "supprimé"))) {
             /* _nombre_de client _conservé → le nombre de client conservés */
             mot(r, "le", t);
             mot(r, "nombre", t);
             mot(r, "de", t);
             copier(r, &r->e[k + 1]);
-            mot(r, "conservés", &r->e[k + 2]);
+            mot(r, est_cle(&r->e[k + 2], "supprimé") ? "supprimés" : "conservés", &r->e[k + 2]);
             k += 2;
             continue;
         }
@@ -437,6 +437,8 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         if (unique) q++;
         int facultatif = q < f && est_cle(&r->e[q], "facultatif");
         if (facultatif) q++;
+        int cascade = q < f && est_cle(&r->e[q], "disparaît_avec");
+        if (cascade) q++;
         size_t depart = 0, fin_depart = 0;   /* _départ « Suisse », _départ −3,5 */
         if (q < f && est_cle(&r->e[q], "départ")) {
             depart = q + 1;
@@ -470,6 +472,13 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         if (facultatif) {
             emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
             mot(r, "facultatif", &r->e[f - 1]);   /* synthétique : l'accord n'est pas vérifié */
+        }
+        if (cascade) {   /* _disparaît_avec → , et disparaît avec lui (accord non vérifié) */
+            emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
+            mot(r, "et", &r->e[f - 1]);
+            mot(r, "disparaît", &r->e[f - 1]);
+            mot(r, "avec", &r->e[f - 1]);
+            mot(r, "lui", &r->e[f - 1]);
         }
         if (depart) {
             emettre(r, J_VIRGULE, NULL, &r->e[depart - 1], 1);
@@ -693,12 +702,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
             ouvrir(r, O_BOUCLE, prof, t);
         } else if (!strcmp(c, "pour_chaque") && d + 2 < f && r->e[d + 1].type == J_CROCHETS
-                   && (est_cle(&r->e[d + 2], "conservé") || est_cle(&r->e[d + 2], "conservée"))) {
+                   && (est_cle(&r->e[d + 2], "conservé") || est_cle(&r->e[d + 2], "conservée") || est_cle(&r->e[d + 2], "supprimé"))) {
             /* _pour_chaque client _conservé [_dont …] [_par champ [_décroissant]] */
             mot(r, "pour", t);
             mot(r, "chaque", t);
             copier(r, &r->e[d + 1]);
-            mot(r, "conservé", &r->e[d + 2]);
+            mot(r, est_cle(&r->e[d + 2], "supprimé") ? "supprimé" : "conservé", &r->e[d + 2]);
             size_t par = chercher(r, d + 3, f, "par");
             if (d + 3 < par) {
                 if (!est_cle(&r->e[d + 3], "dont")) {
@@ -780,13 +789,15 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             expression(r, d + 1, f);
             emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
             ouvrir(r, O_SELON, prof, t);
-        } else if (!strcmp(c, "conserver") || !strcmp(c, "supprimer")) {
+        } else if (!strcmp(c, "conserver") || !strcmp(c, "supprimer") || !strcmp(c, "rétablir")) {
             if (f == d + 1) {
                 echouer(r, t, grym_formater("Forme attendue : « _%s client ».", c));
                 return;
             }
+            int definitif = !strcmp(c, "supprimer") && f > d + 2 && est_cle(&r->e[f - 1], "définitivement");
             mot(r, c, t);
-            expression(r, d + 1, f);
+            expression(r, d + 1, definitif ? f - 1 : f);
+            if (definitif) mot(r, "définitivement", &r->e[f - 1]);   /* _supprimer c _définitivement (§ 16.12) */
             point(r, f);
         } else if (!strcmp(c, "enregistrer")) {
             size_t dans = chercher(r, d + 1, f, "dans");

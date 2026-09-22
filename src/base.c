@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.21), § 16 ; docs/vm.md (révision 1.15), § 8.
+ * Spécification : docs/grammaire.md (révision 1.22), § 16 ; docs/vm.md (révision 1.16), § 8.
  */
 #include "base.h"
 #include "date.h"
@@ -101,9 +101,21 @@ Base *base_ouvrir(const char *chemin, char **erreur) {
         return NULL;
     }
     if (!executer(b, "PRAGMA foreign_keys = ON;"
-                     "CREATE TABLE IF NOT EXISTS grym_objet (id INTEGER PRIMARY KEY AUTOINCREMENT, classe TEXT NOT NULL);"
+                     "CREATE TABLE IF NOT EXISTS grym_objet (id INTEGER PRIMARY KEY AUTOINCREMENT, classe TEXT NOT NULL, "
+                     "supprime TEXT, supprime_avec INTEGER);"
                      "CREATE TABLE IF NOT EXISTS grym_schema (entite TEXT PRIMARY KEY, definition TEXT NOT NULL);",
                   erreur)) {
+        base_fermer(b);
+        return NULL;
+    }
+    /* Base d'avant la corbeille (§ 16.12) : ses objets reçoivent les deux colonnes, vides. */
+    sqlite3_stmt *st = NULL;
+    int present = 0;
+    sqlite3_prepare_v2(b->db, "SELECT count(*) FROM pragma_table_info('grym_objet') WHERE name = 'supprime'", -1, &st, NULL);
+    if (sqlite3_step(st) == SQLITE_ROW) present = sqlite3_column_int(st, 0);
+    sqlite3_finalize(st);
+    if (!present && !executer(b, "ALTER TABLE grym_objet ADD COLUMN supprime TEXT;"
+                                 "ALTER TABLE grym_objet ADD COLUMN supprime_avec INTEGER;", erreur)) {
         base_fermer(b);
         return NULL;
     }
@@ -166,6 +178,7 @@ static char *definition(const ClasseVM *c) {
         chaine_ajouter(&d, c->types[k] ? c->types[k] : "");
         chaine_ajouter(&d, c->uniques[k] & 1 ? ":unique" : "");
         chaine_ajouter(&d, c->uniques[k] & 2 ? ":facultatif" : "");
+        chaine_ajouter(&d, c->uniques[k] & 4 ? ":cascade" : "");
     }
     return chaine_rendre(&d);
 }
@@ -209,7 +222,8 @@ static void lire_definition(const char *d, Definition *x) {
                 x->noms = n2; x->types = t2; x->uniques = u2;
             }
             /* « nom:type[:unique][:facultatif] » ; bits : 1 unique, 2 facultatif */
-            int drapeaux = (strstr(p, ":unique") ? 1 : 0) | (strstr(p, ":facultatif") ? 2 : 0);
+            int drapeaux = (strstr(p, ":unique") ? 1 : 0) | (strstr(p, ":facultatif") ? 2 : 0)
+                         | (strstr(p, ":cascade") ? 4 : 0);
             char *d1 = strchr(p, ':');
             char *d2 = d1 ? strchr(d1 + 1, ':') : NULL;
             if (d1) *d1 = '\0';
@@ -535,6 +549,15 @@ int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
 
 /* Lie la valeur d'un champ à partir du paramètre i ; renvoie le paramètre suivant, 0 en cas d'erreur. */
 /* soi, id_soi : l'objet en train d'être conservé, qui peut se désigner lui-même (« un parrain (client) »). */
+int base_est_supprime(Base *b, long id) {
+    sqlite3_stmt *st = NULL;
+    sqlite3_prepare_v2(b->db, "SELECT supprime IS NOT NULL FROM grym_objet WHERE id = ?", -1, &st, NULL);
+    sqlite3_bind_int64(st, 1, (sqlite3_int64)id);
+    int r = sqlite3_step(st) == SQLITE_ROW && sqlite3_column_int(st, 0);
+    sqlite3_finalize(st);
+    return r;
+}
+
 static int lier(Base *b, sqlite3_stmt *st, int i, const char *type, const char *champ, const Valeur *v,
                 const Objet *soi, long id_soi, char **erreur) {
     if (!v || v->type == V_ABSENT) {   /* champ facultatif sans valeur : NULL (§ 16.9) */
@@ -580,9 +603,14 @@ static int lier(Base *b, sqlite3_stmt *st, int i, const char *type, const char *
             free(qui);
             return 0;
         }
+        if (base_est_supprime(b, v->objet->id)) {   /* règle 3 : pas de nouveau lien vers la corbeille (§ 16.12) */
+            const ClasseVM *c = v->objet->classe;
+            *erreur = grym_formater("Le champ « %s » désignerait %s %s supprimé%s : rétablissez-%s d'abord.", champ,
+                                    c->feminin ? "une" : "un", c->nom, c->feminin ? "e" : "", c->feminin ? "la" : "le");
+            return 0;
+        }
         sqlite3_bind_int64(st, i, (sqlite3_int64)v->objet->id);
     }
-    (void)b;
     return i + 1;
 }
 
@@ -602,9 +630,34 @@ static char *message_contrainte(Base *b, const Objet *o) {
                    : v->type == V_NOMBRE ? dec_formater(&v->nombre)
                    : v->type == V_DATE ? date_suisse(v->jours) : grym_dupliquer("cette valeur");
         }
-        char *r = grym_formater("« %s » est unique : %s %s conservé%s a déjà %s.", p + 3,
-                                c->feminin ? "une autre" : "un autre", c->nom, c->feminin ? "e" : "",
-                                valeur ? valeur : "cette valeur");
+        /* règle 4 : la valeur est peut-être gardée par un objet de la corbeille (§ 16.12) */
+        int dans_corbeille = 0;
+        for (size_t k = 0; k < c->nb_champs; k++) {
+            if (strcmp(c->champs[k], p + 3) != 0 || !o->definis[k]) continue;
+            Chaine sql = {0};
+            chaine_ajouter(&sql, "SELECT count(*) FROM ");
+            ajouter_nom(&sql, "e ", c->proprietaires[k]->nom);
+            chaine_ajouter(&sql, " AS t JOIN grym_objet AS g ON g.id = t.id WHERE g.supprime IS NOT NULL AND t.");
+            ajouter_nom(&sql, "c ", c->champs[k]);
+            chaine_ajouter(&sql, " = ?");
+            char *texte = chaine_rendre(&sql);
+            sqlite3_stmt *st = NULL;
+            char *ignore = NULL;
+            if (sqlite3_prepare_v2(b->db, texte, -1, &st, NULL) == SQLITE_OK
+                && lier(b, st, 1, c->types[k], c->champs[k], &o->champs[k], o, o->id, &ignore)
+                && sqlite3_step(st) == SQLITE_ROW)
+                dans_corbeille = sqlite3_column_int(st, 0) > 0;
+            free(ignore);
+            sqlite3_finalize(st);
+            free(texte);
+        }
+        char *r = dans_corbeille
+            ? grym_formater("« %s » est unique : %s appartient à %s %s supprimé%s. Rétablissez-%s, ou supprimez-%s "
+                            "définitivement.", p + 3, valeur ? valeur : "cette valeur", c->feminin ? "une" : "un", c->nom,
+                            c->feminin ? "e" : "", c->feminin ? "la" : "le", c->feminin ? "la" : "le")
+            : grym_formater("« %s » est unique : %s %s conservé%s a déjà %s.", p + 3,
+                            c->feminin ? "une autre" : "un autre", c->nom, c->feminin ? "e" : "",
+                            valeur ? valeur : "cette valeur");
         free(valeur);
         return r;
     }
@@ -707,52 +760,222 @@ int base_ecrire_champ(Base *b, const Objet *o, size_t k, char **erreur) {
     return ok;
 }
 
-int base_supprimer(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_classes, char **erreur) {
+/* ---------------------------------------------------------------- */
+/* Supprimer, rétablir (grammaire, § 16.12)                         */
+/* ---------------------------------------------------------------- */
+
+typedef struct {
+    long *ids;
+    char **classes;
+    size_t n, cap;
+} Ensemble;
+
+static int ens_contient(const Ensemble *e, long id) {
+    for (size_t k = 0; k < e->n; k++) if (e->ids[k] == id) return 1;
+    return 0;
+}
+
+static void ens_ajouter(Ensemble *e, long id, const char *classe) {
+    if (ens_contient(e, id)) return;
+    if (e->n == e->cap) {
+        e->cap = e->cap ? e->cap * 2 : 8;
+        long *i2 = grym_allouer(e->cap * sizeof *i2);
+        char **c2 = grym_allouer(e->cap * sizeof *c2);
+        if (e->n) { memcpy(i2, e->ids, e->n * sizeof *i2); memcpy(c2, e->classes, e->n * sizeof *c2); }
+        free(e->ids);
+        free(e->classes);
+        e->ids = i2;
+        e->classes = c2;
+    }
+    e->ids[e->n] = id;
+    e->classes[e->n++] = grym_dupliquer(classe);
+}
+
+static void ens_liberer(Ensemble *e) {
+    for (size_t k = 0; k < e->n; k++) free(e->classes[k]);
+    free(e->ids);
+    free(e->classes);
+}
+
+static const ClasseVM *classe_nommee(ClasseVM *const *classes, size_t n, const char *nom) {
+    for (size_t i = 0; i < n; i++) if (strcmp(classes[i]->nom, nom) == 0) return classes[i];
+    return NULL;
+}
+
+/* Le champ k de x (lien) peut-il désigner un objet de la classe c ? */
+static int vise(const ClasseVM *x, size_t k, const ClasseVM *c) {
+    if (x->proprietaires[k] != x || !x->types[k] || !est_lien(x->types[k])) return 0;
+    for (const ClasseVM *p = c; p; p = p->parent) if (strcmp(p->nom, x->types[k]) == 0) return 1;
+    return 0;
+}
+
+/* Objets dont le champ k de x désigne id (sauf id lui-même). */
+static void designants(Base *b, const ClasseVM *x, size_t k, long id, Ensemble *sortie) {
+    Chaine sql = {0};
+    chaine_ajouter(&sql, "SELECT t.id, g.classe FROM ");
+    ajouter_nom(&sql, "e ", x->nom);
+    chaine_ajouter(&sql, " AS t JOIN grym_objet AS g ON g.id = t.id WHERE t.");
+    ajouter_nom(&sql, "c ", x->champs[k]);
+    chaine_ajouter(&sql, " = ?1 AND t.id <> ?1");
+    char *texte = chaine_rendre(&sql);
     sqlite3_stmt *st = NULL;
-    sqlite3_prepare_v2(b->db, "DELETE FROM grym_objet WHERE id = ?", -1, &st, NULL);
-    sqlite3_bind_int64(st, 1, (sqlite3_int64)o->id);
-    int rc = sqlite3_step(st);
+    sqlite3_prepare_v2(b->db, texte, -1, &st, NULL);
+    free(texte);
+    sqlite3_bind_int64(st, 1, (sqlite3_int64)id);
+    while (sqlite3_step(st) == SQLITE_ROW)
+        ens_ajouter(sortie, (long)sqlite3_column_int64(st, 0), (const char *)sqlite3_column_text(st, 1));
     sqlite3_finalize(st);
-    if (rc == SQLITE_DONE) return 1;
-    if (sqlite3_extended_errcode(b->db) != SQLITE_CONSTRAINT_FOREIGNKEY) {
-        *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+}
+
+/* L'objet et, de proche en proche, ceux qui « disparaissent avec » lui (bit 4). */
+static void fermeture(Base *b, ClasseVM *const *classes, size_t nb, long id, const char *classe, int garder_supprimes,
+                      Ensemble *e) {
+    ens_ajouter(e, id, classe);
+    for (size_t q = 0; q < e->n; q++) {
+        const ClasseVM *c = classe_nommee(classes, nb, e->classes[q]);
+        if (!c) continue;
+        for (size_t i = 0; i < nb; i++) {
+            const ClasseVM *x = classes[i];
+            if (!x->conserve) continue;
+            for (size_t k = 0; k < x->nb_champs; k++) {
+                if (!(x->uniques[k] & 4) || !vise(x, k, c)) continue;
+                Ensemble d = {0};
+                designants(b, x, k, e->ids[q], &d);
+                for (size_t r = 0; r < d.n; r++)
+                    if (garder_supprimes || !base_est_supprime(b, d.ids[r])) ens_ajouter(e, d.ids[r], d.classes[r]);
+                ens_liberer(&d);
+            }
+        }
+    }
+}
+
+static const char *ce(const ClasseVM *c) {
+    return c->feminin ? "Cette" : commence_par_voyelle(c->nom) ? "Cet" : "Ce";
+}
+
+int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *classes, size_t nb_classes,
+                   int definitif, char **erreur) {
+    const ClasseVM *oc = o->classe;
+    if (!definitif && base_est_supprime(b, o->id)) {
+        *erreur = grym_formater("%s %s est déjà supprimé%s : « Supprimer … définitivement » l'efface de la base.",
+                                ce(oc), oc->nom, oc->feminin ? "e" : "");
         return 0;
     }
-    /* Qui le désigne encore ? Un champ de lien vers sa classe ou l'une de ses classes parentes. */
+    Ensemble e = {0};
+    fermeture(b, classes, nb_classes, o->id, oc->nom, definitif, &e);
+    if (!definitif) {
+        /* mise de côté : l'objet, et ceux qui disparaissent avec lui, gardent tout ; la date les cache */
+        long jours = date_aujourdhui();
+        char *date = date_iso(jours);
+        sqlite3_stmt *st = NULL;
+        sqlite3_prepare_v2(b->db, "UPDATE grym_objet SET supprime = ?, supprime_avec = ? WHERE id = ?", -1, &st, NULL);
+        for (size_t k = 0; k < e.n; k++) {
+            sqlite3_bind_text(st, 1, date, -1, SQLITE_TRANSIENT);
+            sqlite3_bind_int64(st, 2, (sqlite3_int64)o->id);
+            sqlite3_bind_int64(st, 3, (sqlite3_int64)e.ids[k]);
+            sqlite3_step(st);
+            sqlite3_reset(st);
+        }
+        sqlite3_finalize(st);
+        free(date);
+        ens_liberer(&e);
+        return 1;
+    }
+    /* définitive : un lien venu d'ailleurs (hors de l'ensemble) l'empêche */
+    for (size_t q = 0; q < e.n; q++) {
+        const ClasseVM *c = classe_nommee(classes, nb_classes, e.classes[q]);
+        if (!c) continue;
+        for (size_t i = 0; i < nb_classes; i++) {
+            const ClasseVM *x = classes[i];
+            if (!x->conserve) continue;
+            for (size_t k = 0; k < x->nb_champs; k++) {
+                if (!vise(x, k, c)) continue;
+                Ensemble d = {0};
+                designants(b, x, k, e.ids[q], &d);
+                long dehors = 0, en_corbeille = 0;
+                for (size_t r = 0; r < d.n; r++)
+                    if (!ens_contient(&e, d.ids[r])) { dehors++; en_corbeille += base_est_supprime(b, d.ids[r]); }
+                ens_liberer(&d);
+                if (!dehors) continue;
+                char *qui = dehors > 1 ? pluriel(x) : un(x);
+                /* s'ils sont tous dans la corbeille, le dire : on ne les voit plus */
+                const char *suite = en_corbeille == dehors
+                    ? (dehors > 1 ? (x->feminin ? " supprimées : supprimez-les définitivement d'abord"
+                                                : " supprimés : supprimez-les définitivement d'abord")
+                                  : (x->feminin ? " supprimée : supprimez-la définitivement d'abord"
+                                                : " supprimé : supprimez-le définitivement d'abord"))
+                    : "";
+                *erreur = dehors > 1
+                    ? grym_formater("%s %s est encore désigné%s par le champ « %s » de %ld %s%s.", ce(c), c->nom,
+                                    c->feminin ? "e" : "", x->champs[k], dehors, qui, suite)
+                    : grym_formater("%s %s est encore désigné%s par le champ « %s » d'%s%s.", ce(c), c->nom,
+                                    c->feminin ? "e" : "", x->champs[k], qui, suite);
+                free(qui);
+                ens_liberer(&e);
+                return 0;
+            }
+        }
+    }
+    /* les liens internes à l'ensemble se vérifient à la validation : l'ordre des effacements n'importe plus */
+    int ok = executer(b, "PRAGMA defer_foreign_keys = ON;", erreur);
+    sqlite3_stmt *st = NULL;
+    sqlite3_prepare_v2(b->db, "DELETE FROM grym_objet WHERE id = ?", -1, &st, NULL);
+    for (size_t k = e.n; ok && k > 0; k--) {
+        machine_objet_efface(m, e.ids[k - 1]);   /* avant l'effacement : ses valeurs sont lues s'il le faut */
+        sqlite3_bind_int64(st, 1, (sqlite3_int64)e.ids[k - 1]);
+        if (sqlite3_step(st) != SQLITE_DONE) {
+            *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+            ok = 0;
+        }
+        sqlite3_reset(st);
+    }
+    sqlite3_finalize(st);
+    ens_liberer(&e);
+    return ok;
+}
+
+int base_retablir(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_classes, char **erreur) {
     const ClasseVM *oc = o->classe;
-    for (size_t i = 0; i < nb_classes; i++) {
-        const ClasseVM *x = classes[i];
-        if (!x->conserve) continue;
-        for (size_t k = 0; k < x->nb_champs; k++) {
-            if (x->proprietaires[k] != x || !x->types[k] || !est_lien(x->types[k])) continue;
-            int vise = 0;
-            for (const ClasseVM *p = oc; p && !vise; p = p->parent) vise = strcmp(p->nom, x->types[k]) == 0;
-            if (!vise) continue;
-            Chaine sql = {0};
-            chaine_ajouter(&sql, "SELECT count(*) FROM ");
-            ajouter_nom(&sql, "e ", x->nom);
-            chaine_ajouter(&sql, " WHERE ");
-            ajouter_nom(&sql, "c ", x->champs[k]);
-            chaine_ajouter(&sql, " = ?1 AND id <> ?1");   /* un objet qui se désigne lui-même ne compte pas */
-            char *texte = chaine_rendre(&sql);
-            sqlite3_prepare_v2(b->db, texte, -1, &st, NULL);
-            free(texte);
-            sqlite3_bind_int64(st, 1, (sqlite3_int64)o->id);
-            long n = sqlite3_step(st) == SQLITE_ROW ? (long)sqlite3_column_int64(st, 0) : 0;
-            sqlite3_finalize(st);
-            if (n == 0) continue;
-            const char *ce = oc->feminin ? "Cette" : commence_par_voyelle(oc->nom) ? "Cet" : "Ce";
-            char *qui = n > 1 ? pluriel(x) : un(x);
-            *erreur = n > 1 ? grym_formater("%s %s est encore désigné%s par le champ « %s » de %ld %s.", ce, oc->nom,
-                                            oc->feminin ? "e" : "", x->champs[k], n, qui)
-                            : grym_formater("%s %s est encore désigné%s par le champ « %s » d'%s.", ce, oc->nom,
-                                            oc->feminin ? "e" : "", x->champs[k], qui);
-            free(qui);
+    sqlite3_stmt *st = NULL;
+    sqlite3_prepare_v2(b->db, "SELECT supprime IS NOT NULL, supprime_avec FROM grym_objet WHERE id = ?", -1, &st, NULL);
+    sqlite3_bind_int64(st, 1, (sqlite3_int64)o->id);
+    int supprime = 0;
+    long avec = 0;
+    if (sqlite3_step(st) == SQLITE_ROW) {
+        supprime = sqlite3_column_int(st, 0);
+        avec = (long)sqlite3_column_int64(st, 1);
+    }
+    sqlite3_finalize(st);
+    if (!supprime) {
+        *erreur = grym_formater("%s %s n'est pas supprimé%s.", ce(oc), oc->nom, oc->feminin ? "e" : "");
+        return 0;
+    }
+    if (avec != o->id) {
+        *erreur = grym_formater("%s %s a disparu avec un autre objet : rétablissez celui-là, et %s reviendra avec lui.",
+                                ce(oc), oc->nom, oc->feminin ? "elle" : "il");
+        return 0;
+    }
+    /* il ne revient pas s'il « disparaît avec » un objet qui, lui, reste supprimé */
+    for (size_t k = 0; k < oc->nb_champs; k++) {
+        if (!(oc->uniques[k] & 4) || !o->definis[k] || o->champs[k].type != V_OBJET) continue;
+        const Objet *cible = o->champs[k].objet;
+        if (cible->id && base_est_supprime(b, cible->id)) {
+            const ClasseVM *c = cible->classe;
+            *erreur = grym_formater("%s %s disparaît avec %s %s qui est supprimé%s : rétablissez-%s d'abord.", ce(oc),
+                                    oc->nom, c->feminin ? "une" : "un", c->nom, c->feminin ? "e" : "",
+                                    c->feminin ? "la" : "le");
             return 0;
         }
     }
-    *erreur = grym_dupliquer("Un lien désigne encore cet objet.");
-    return 0;
+    (void)classes;
+    (void)nb_classes;
+    sqlite3_prepare_v2(b->db, "UPDATE grym_objet SET supprime = NULL, supprime_avec = NULL WHERE supprime_avec = ?",
+                       -1, &st, NULL);
+    sqlite3_bind_int64(st, 1, (sqlite3_int64)o->id);
+    int ok = sqlite3_step(st) == SQLITE_DONE;
+    sqlite3_finalize(st);
+    if (!ok) *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+    return ok;
 }
 
 /* ---------------------------------------------------------------- */
@@ -1102,6 +1325,8 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
     if (!s4) { *erreur = grym_dupliquer("Recherche mal décrite."); return 0; }
     char *entite = grym_formater("%.*s", (int)(s1 - d), d);
     int mode = s1[1] - '0';
+    int corbeille = mode >= 3;   /* « supprimés » (§ 16.12) : modes 3, 4, 5 */
+    if (corbeille) mode -= 3;
     char *tri = grym_formater("%.*s", (int)(s3 - s2 - 1), s2 + 1);
     int decroissant = s3[1] == '1';
     Recherche r;
@@ -1138,8 +1363,9 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
     snprintf(t, sizeof t, " JOIN grym_objet AS g ON g.id = t%lu.id", (unsigned long)(r.n - 1));
     chaine_ajouter(&r.sql, t);
     int ok = 1;
+    chaine_ajouter(&r.sql, corbeille ? " WHERE g.supprime IS NOT NULL" : " WHERE g.supprime IS NULL");
     if (s4[1]) {
-        chaine_ajouter(&r.sql, " WHERE ");
+        chaine_ajouter(&r.sql, " AND ");
         r.p = s4 + 1;
         ok = lire_condition(&r);
     }
@@ -1219,16 +1445,16 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
     if (compte != 1) {
         char *qui = pluriel(e);
         *erreur = compte == 0
-            ? grym_formater("Aucun%s %s conservé%s ne répond à cette condition.", e->feminin ? "e" : "", e->nom,
-                            e->feminin ? "e" : "")
-            : grym_formater("%ld %s conservé%ss répondent à cette condition : « %s %s conservé%s dont … » en "
-                            "attend un seul.", compte, qui, e->feminin ? "e" : "", e->feminin ? "la" : "le", e->nom,
-                            e->feminin ? "e" : "");
+            ? grym_formater("Aucun%s %s %s%s ne répond à cette condition.", e->feminin ? "e" : "", e->nom,
+                            corbeille ? "supprimé" : "conservé", e->feminin ? "e" : "")
+            : grym_formater("%ld %s %s%ss répondent à cette condition : « %s %s %s%s dont … » en "
+                            "attend un seul.", compte, qui, corbeille ? "supprimé" : "conservé", e->feminin ? "e" : "",
+                            e->feminin ? "la" : "le", e->nom, corbeille ? "supprimé" : "conservé", e->feminin ? "e" : "");
         free(qui);
         return 0;
     }
     /* même recherche, qui rend l'objet */
-    char *d0 = grym_formater("%.*s0%s", (int)(s1 - d + 1), d, s1 + 2);
+    char *d0 = grym_formater("%.*s%c%s", (int)(s1 - d + 1), d, corbeille ? '3' : '0', s1 + 2);
     Valeur liste;
     ok = base_chercher(b, m, d0, params, nb_params, &liste, erreur);
     free(d0);

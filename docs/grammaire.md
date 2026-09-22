@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.21 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
+Version 1.22 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -97,7 +97,7 @@ Correspondance prévue en forme compacte (v0.2) : `_soit total << 5` pour créer
 
 - Un nom peut compter plusieurs mots (`prix unitaire`, `date de création`).
 - Dans une expression, le parser retient la plus longue correspondance parmi les noms déjà déclarés. Si `prix` et `prix unitaire` coexistent, `prix unitaire × 2` désigne `prix unitaire`.
-- Les mots réservés ne peuvent pas faire partie d'un nom écrit sans crochets : `vaut`, `devient`, `puis`, `est`, `et`, `ou`, `si`, `sinon`, `vrai`, `faux`, `rendre`, `dont`, ainsi que l'élision `n'` devant `est`.
+- Les mots réservés ne peuvent pas faire partie d'un nom écrit sans crochets : `vaut`, `devient`, `puis`, `est`, `et`, `ou`, `si`, `sinon`, `vrai`, `faux`, `rendre`, `dont`, `définitivement`, ainsi que l'élision `n'` devant `est`.
 - La suite `d'un` ou `d'une` annonce un paramètre (§ 9.3) : elle ne fait jamais partie d'un nom.
 - Un nom qui contient un mot réservé s'écrit entre crochets, à sa création comme à chaque usage : `Le [frais de port et d'emballage] vaut 12.` Tout nom peut s'écrire entre crochets : `[total]` et `total` désignent le même nom. L'aide à la saisie propose ces noms avec leurs crochets.
 - Un nom entre crochets s'écrit seul entre l'article et le verbe, et ne commence pas par un article.
@@ -900,7 +900,7 @@ Supprimer le client.
 
 - Un nouvel objet vit en mémoire. `Conserver le client.` le range dans la base ; conserver deux fois le même objet est une erreur.
 - Modifier un champ d'un objet conservé modifie la base aussitôt, dans la transaction de l'exécution (§ 16.6). Pas de second `Conserver`.
-- `Supprimer le client.` le retire de la base. Un objet encore désigné par un lien ne se supprime pas : « Ce client est encore le parrain de 2 clients. » L'objet reste en mémoire, mais n'est plus conservé.
+- `Supprimer le client.` le met dans la corbeille ; `Supprimer le client définitivement.` l'efface de la base (§ 16.12).
 - Conserver, modifier et supprimer sont des effets de bord : réservés aux actions. `conserver` et `supprimer` ne commencent pas le nom d'une action.
 - Un lien d'un objet conservé désigne un objet conservé : « Le champ « parrain » désigne un client qui n'est pas conservé : conservez-le d'abord. » Un objet peut se désigner lui-même (`Le parrain du a devient a.`, puis `Conserver a.`). Deux objets neufs qui se désignent l'un l'autre ne se conservent pas encore : il faudrait un champ facultatif (§ 13.8).
 - `, unique` est vérifié à la conservation et à chaque modification : « « licence » est unique : un autre client conservé a déjà « A-1 ». »
@@ -987,6 +987,9 @@ La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1
 | `un pays (texte), « Suisse » au départ` | `_un pays (texte) _départ « Suisse »` |
 | `un pays (texte), « Suisse » au départ` | `_un pays (texte) _départ « Suisse »` |
 | `Conserver le client.` / `Supprimer le client.` | `_conserver client` / `_supprimer client` |
+| `Supprimer le client définitivement.` / `Rétablir le client.` | `_supprimer client _définitivement` / `_rétablir client` |
+| `Pour chaque client supprimé :` | `_pour_chaque client _supprimé` |
+| `une partition (partition), et disparaît avec elle` | `_une partition (partition) _disparaît_avec` |
 | `Pour chaque client conservé dont le solde est négatif, par nom décroissant :` | `_pour_chaque client _conservé _dont solde _négatif _par nom _décroissant` |
 | `le client conservé dont la licence est « A-12 »` | `_le client _conservé _dont licence = « A-12 »` |
 | `le nombre de clients conservés dont …` | `_nombre_de client _conservé _dont …` |
@@ -1047,6 +1050,32 @@ Pour chaque chanson conservée dont brel est l'auteur :
 
 La charte 1.9 reprend ce paragraphe : transaction par exécution (art. 7), typage vérifié à l'analyse ou avant toute écriture (art. 5), type `montant` retiré pour la v0.3, puisque tout `(nombre)` est déjà un décimal exact.
 
+### 16.12 Corbeille et cascade
+
+```
+Un pupitre, conservé, a :
+    une partition (partition), et disparaît avec elle,
+    un instrument (instrument).
+
+Supprimer p.                    ← dans la corbeille : invisible, rétablissable
+Supprimer p définitivement.     ← effacée de la base, sans retour
+Rétablir p.
+Pour chaque partition supprimée :
+    …
+Afficher le nombre de partitions supprimées.
+```
+
+- `Supprimer x.` met l'objet dans la corbeille. Il garde ses valeurs, en base comme en mémoire, et la base note la date. La suppression simple ne casse aucun lien : elle est permise même si des liens désignent l'objet.
+- Un objet de la corbeille disparaît de toutes les recherches (`conservés`, `le nombre de…`, `les œuvres de bach`). `supprimé` à la place de `conservé` cherche dans la corbeille : `Pour chaque client supprimé`, `le client supprimé dont …`, `le nombre de clients supprimés`.
+- Les liens existants restent lisibles : la facture d'un client supprimé affiche toujours son client. Un nouveau lien vers un objet de la corbeille est refusé : « Le champ « client » désignerait un client supprimé : rétablissez-le d'abord. »
+- Un objet de la corbeille garde ses valeurs uniques : « « cote » est unique : « A-2 » appartient à une partition supprimée. Rétablissez-la, ou supprimez-la définitivement. »
+- `Rétablir x.` le fait revenir. Supprimer deux fois est une erreur ; rétablir un objet qui n'est pas dans la corbeille aussi.
+- `, et disparaît avec elle` (`avec lui`, accordé avec l'entité désignée) sur un lien : l'objet suit celui qu'il désigne. Il va dans la corbeille avec lui, revient avec lui, est effacé avec lui ; de proche en proche. Il ne se rétablit pas seul : « Ce pupitre a disparu avec un autre objet : rétablissez celui-là, et il reviendra avec lui. » Un objet mis dans la corbeille pour lui-même, puis dont le lien désigne un objet supprimé, ne revient pas avant lui.
+- `Supprimer x définitivement.` efface l'objet et ceux qui disparaissent avec lui, qu'ils soient dans la corbeille ou non. Tout autre lien qui les désigne l'empêche : « Cette partition est encore désignée par le champ « partition » d'une note. » ; si ces objets sont eux-mêmes dans la corbeille, le message le dit et propose de les supprimer définitivement d'abord. En mémoire, les objets effacés restent, mais ne sont plus conservés.
+- `définitivement` est un mot réservé (§ 2).
+- En base : `grym_objet` reçoit `supprime` (la date) et `supprime_avec` (l'objet dont la suppression a entraîné celle-ci). Une base plus ancienne reçoit ces colonnes à l'ouverture ; ses objets restent conservés. La mention `, et disparaît avec elle` ne vit que dans la définition sauvegardée : l'ajouter ou la retirer ne demande aucune migration.
+- Reporté : vider la corbeille des objets supprimés depuis longtemps ; un lien facultatif qui deviendrait absent quand son objet est effacé ; l'autocomplétion des saisies de l'utilisateur, qui pourra puiser dans la corbeille.
+
 ---
 
 ## Journal des révisions
@@ -1075,3 +1104,4 @@ La charte 1.9 reprend ce paragraphe : transaction par exécution (art. 7), typag
 | 1.19 | 2026-09-21 | § 3.3 : sortie d'une exécution ratée conservée, suivie d'une phrase d'annulation. § 16.7 implémenté : valeur de départ, règles et limites imposées par SQLite |
 | 1.20 | 2026-09-22 | § 16.9 : champs facultatifs, valeur `absent`, tests `est absent` et `est présent`, règles en base, en recherche, en tri et en migration ; § 16.10 : ancien § 16.9 |
 | 1.21 | 2026-09-22 | § 16.10 : relations inverses (`les œuvres de bach`, `dont brel est l'auteur`) ; `dont` devient réservé ; § 16.11 : ancien § 16.10 |
+| 1.22 | 2026-09-22 | § 16.12 : corbeille (`Supprimer`, `définitivement`, `Rétablir`, `supprimé`) et cascade (`, et disparaît avec elle`) ; `Supprimer` met désormais dans la corbeille ; `définitivement` réservé |

@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle, v0.2
- * Spécification : docs/vm.md (révision 1.15).
+ * Spécification : docs/vm.md (révision 1.16).
  */
 #ifndef GRYM_VM_H
 #define GRYM_VM_H
