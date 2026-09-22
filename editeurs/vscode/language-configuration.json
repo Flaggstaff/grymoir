@@ -1,0 +1,14 @@
+{
+  "brackets": [["(", ")"], ["[", "]"], ["«", "»"]],
+  "autoClosingPairs": [
+    { "open": "(", "close": ")" },
+    { "open": "[", "close": "]" },
+    { "open": "«", "close": "»" },
+    { "open": "\"", "close": "\"", "notIn": ["string"] }
+  ],
+  "surroundingPairs": [["(", ")"], ["[", "]"], ["«", "»"], ["\"", "\""]],
+  "wordPattern": "[\\p{L}\\p{N}_']+",
+  "onEnterRules": [
+    { "beforeText": ":\\s*$", "action": { "indent": "indent" } }
+  ]
+}

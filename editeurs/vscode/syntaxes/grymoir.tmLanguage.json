@@ -1,0 +1,82 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "GrymoiR",
+  "scopeName": "source.grymoir",
+  "patterns": [
+    {
+      "include": "#remarque"
+    },
+    {
+      "include": "#texte"
+    },
+    {
+      "include": "#date"
+    },
+    {
+      "include": "#type"
+    },
+    {
+      "include": "#nombre"
+    },
+    {
+      "include": "#crochets"
+    },
+    {
+      "include": "#controle"
+    },
+    {
+      "include": "#mots"
+    },
+    {
+      "include": "#operateurs"
+    }
+  ],
+  "repository": {
+    "remarque": {
+      "name": "comment.line.grymoir",
+      "match": "(?i)^\\s*remarque\\s*:.*$"
+    },
+    "texte": {
+      "patterns": [
+        {
+          "name": "string.quoted.other.grymoir",
+          "begin": "«",
+          "end": "»"
+        },
+        {
+          "name": "string.quoted.double.grymoir",
+          "begin": "[\"“]",
+          "end": "[\"”]"
+        }
+      ]
+    },
+    "date": {
+      "name": "constant.numeric.date.grymoir",
+      "match": "\\b\\d{1,2}\\.\\d{1,2}\\.\\d{4}\\b"
+    },
+    "nombre": {
+      "name": "constant.numeric.grymoir",
+      "match": "\\b\\d(?:[\\d']*\\d)?(?:,\\d+)?\\b"
+    },
+    "crochets": {
+      "name": "variable.other.grymoir",
+      "match": "\\[[^\\]\\n]*\\]"
+    },
+    "controle": {
+      "name": "keyword.control.grymoir",
+      "match": "(?i)(?<![\\p{L}\\p{N}_])(autrement|répéter|chaque|sortir|passer|rendre|sinon|selon|fois|pour|tant|cas|que|si)(?![\\p{L}\\p{N}_])"
+    },
+    "mots": {
+      "name": "keyword.other.grymoir",
+      "match": "(?i)(?<![\\p{L}\\p{N}_])(sortir de la boucle|décroissant|enregistrer|inférieure|supérieure|conservées|différente|croissant|conservés|supérieur|supprimer|inférieur|différent|conserver|conservée|afficher|positive|négative|nouvelle|conservé|remarque|aujourd|positif|négatif|nouveau|devient|départ|unique|nouvel|alors|nulle|égale|dont|dans|vaut|égal|faux|vrai|puis|non|hui|nul|les|une|pas|par|est|de|ou|du|et|au|la|le|un|d|a|n|l|à)(?![\\p{L}\\p{N}_])"
+    },
+    "operateurs": {
+      "name": "keyword.operator.grymoir",
+      "match": "[+\\-−×÷^=≠<>≤≥*/]"
+    },
+    "type": {
+      "name": "support.type.grymoir",
+      "match": "(?<=\\()\\s*(texte|nombre entier|nombre|vrai ou faux|date|fichier|image)\\s*(?=\\))"
+    }
+  }
+}

@@ -13,13 +13,13 @@ SQLITE_O     = vendor/sqlite/sqlite3.o
 
 ENTETES   = src/base.h src/vm_interne.h src/date.h src/compact.h src/imprimeur.h src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
 
-all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base
+all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp
 
 $(SQLITE_O): vendor/sqlite/sqlite3.c vendor/sqlite/sqlite3.h
 	$(CC) $(SQLITE_FLAGS) -c -o $@ vendor/sqlite/sqlite3.c
 
-grym: src/grym.c $(EXECUTION) $(ENTETES)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c $(EXECUTION)
+grym: src/grym.c src/lsp.c src/json.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/json.c $(EXECUTION)
 
 grym-lexeur: src/grym-lexeur.c $(LEXEUR) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym-lexeur.c $(LEXEUR)
@@ -48,16 +48,20 @@ test_compact: tests/test_compact.c $(EXECUTION) $(ENTETES)
 test_base: tests/test_base.c $(SQLITE_O)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Ivendor/sqlite -o $@ tests/test_base.c $(SQLITE_O)
 
-test: test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base
+test_lsp: tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR) $(ENTETES) src/lsp.h src/json.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR)
+
+test: test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp
 	./test_lexeur
 	./test_analyseur
 	./test_machine
 	./test_imprimeur
 	./test_compact
 	./test_base
+	./test_lsp
 
 clean:
-	rm -f grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base *.exe
+	rm -f grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp *.exe
 
 # Recompiler SQLite prend une trentaine de secondes : « make clean » le garde, « make distclean » non.
 distclean: clean

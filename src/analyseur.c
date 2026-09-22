@@ -3076,6 +3076,10 @@ static Noeud *heritage(Analyse *a, const Jeton *tun, Genre g, char *nom, size_t 
             if (parent) break;
         }
     }
+    if (!parent && !chose && !(a->j[d].type == J_CROCHETS || mot_de_nom(a, d))) {
+        free(nom);
+        return erreur(a, &a->j[d], grym_dupliquer("Classe parente attendue : « Un membre est une personne. »."));
+    }
     if (!parent && !chose) {
         size_t q = d + 1;
         while (q < a->n && mot_de_nom(a, q)) q++;

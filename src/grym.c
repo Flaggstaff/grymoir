@@ -15,6 +15,7 @@
 #include "compilateur.h"
 #include "imprimeur.h"
 #include "vm.h"
+#include "lsp.h"
 #include "texte.h"
 
 #include <ctype.h>
@@ -360,6 +361,7 @@ int main(int argc, char **argv) {
     signal(SIGINT, sur_interruption);
     if (argc == 1) return boucle(NULL);
     if (argc == 3 && strcmp(argv[1], "--base") == 0) return boucle(argv[2]);
+    if (argc == 2 && strcmp(argv[1], "lsp") == 0) return lsp_servir(stdin, stdout);   /* docs/lsp.md */
     if (argc == 3 && strcmp(argv[1], "lancer") == 0) return lancer(argv[2]);
     if (argc == 3 && strcmp(argv[1], "compiler") == 0) return compiler_fichier(argv[2]);
     if (argc == 3 && strcmp(argv[1], "formater") == 0) return formater(argv[2]);
@@ -375,6 +377,7 @@ int main(int argc, char **argv) {
             "  grym compiler fichier.grym          produit fichier.grymb\n"
             "  grym desassembler fichier.grym(b)   affiche les instructions\n"
             "  grym --base fichier.grymd           boucle interactive sur une base conservée\n"
+            "  grym lsp                            serveur d'aide à la saisie (protocole LSP)\n"
             "  grym formater fichier.grym(c)       affiche la forme canonique\n"
             "  grym traduire fichier.grym          produit la forme compacte fichier.grymc\n"
             "  grym traduire fichier.grymc         produit la forme littéraire fichier.grym\n", VERSION);

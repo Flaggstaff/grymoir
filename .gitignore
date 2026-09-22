@@ -9,6 +9,7 @@ test_machine
 test_imprimeur
 test_compact
 test_base
+test_lsp
 *.exe
 *.o
 *.obj
@@ -16,3 +17,5 @@ test_base
 .DS_Store
 exemples/copie.png
 *.grymd
+editeurs/vscode/node_modules/
+editeurs/vscode/*.vsix

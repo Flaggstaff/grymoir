@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "GrymoiR (forme compacte)",
+  "scopeName": "source.grymoir-compact",
+  "patterns": [
+    {
+      "name": "comment.line.number-sign.grymoir",
+      "match": "^\\s*#.*$"
+    },
+    {
+      "name": "string.quoted.other.grymoir",
+      "begin": "«",
+      "end": "»"
+    },
+    {
+      "name": "string.quoted.double.grymoir",
+      "begin": "[\"“]",
+      "end": "[\"”]"
+    },
+    {
+      "name": "support.type.grymoir",
+      "match": "(?<=\\()\\s*(texte|nombre_entier|nombre|vrai_ou_faux|date|fichier|image)\\s*(?=\\))"
+    },
+    {
+      "name": "constant.numeric.date.grymoir",
+      "match": "\\b\\d{1,2}\\.\\d{1,2}\\.\\d{4}\\b"
+    },
+    {
+      "name": "constant.numeric.grymoir",
+      "match": "\\b\\d(?:[\\d']*\\d)?(?:,\\d+)?\\b"
+    },
+    {
+      "name": "keyword.control.grymoir",
+      "match": "(?<![\\p{L}\\p{N}])_(si|sinon_si|sinon|alors|fin|tant_que|répéter|fois|pour_chaque|sortir|passer|selon|cas|autrement|rendre)(?![\\p{L}\\p{N}_])"
+    },
+    {
+      "name": "keyword.other.grymoir",
+      "match": "(?<![\\p{L}\\p{N}])_[\\p{L}_']+"
+    },
+    {
+      "name": "keyword.operator.grymoir",
+      "match": "<<|[+\\-−×÷^=≠<>≤≥*/;.]"
+    }
+  ]
+}

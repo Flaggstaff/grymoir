@@ -2,7 +2,7 @@
 
 Langage de programmation francophone. Référence : `docs/charte-grymoir.md`, `docs/grammaire.md` et `docs/vm.md`.
 
-## État : v0.3 livrée (SQLite embarqué, entités conservées, retrouvées et migrées, dates, fichiers)
+## État : v0.3 livrée ; v0.4 en cours (serveur d'aide à la saisie, extension VS Code)
 
 Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
 
@@ -25,7 +25,7 @@ Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
 Sous Windows sans `make` :
 
     gcc -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DQS=0 -DSQLITE_DEFAULT_FOREIGN_KEYS=1 -DSQLITE_OMIT_DEPRECATED -DSQLITE_DEFAULT_MEMSTATUS=0 -c -o vendor/sqlite/sqlite3.o vendor/sqlite/sqlite3.c
-    gcc -std=c99 -O2 -Ivendor/sqlite -o grym.exe src/grym.c src/compilateur.c src/vm.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o
+    gcc -std=c99 -O2 -Ivendor/sqlite -o grym.exe src/grym.c src/lsp.c src/json.c src/compilateur.c src/vm.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o
     gcc -std=c99 -O2 -o grym-lexeur.exe src/grym-lexeur.c src/lexeur.c src/date.c src/texte.c
     gcc -std=c99 -O2 -Ivendor/sqlite -o test_base.exe tests/test_base.c vendor/sqlite/sqlite3.o
     gcc -std=c99 -O2 -Isrc -o test_lexeur.exe tests/test_lexeur.c src/lexeur.c src/date.c src/texte.c
@@ -38,3 +38,9 @@ Sous Windows sans `make` :
 ## SQLite embarqué
 
 `vendor/sqlite` contient SQLite 3.53.4, dans le domaine public. Sa provenance et sa vérification sont décrites dans `vendor/sqlite/PROVENANCE.md`. Sa compilation prend une demi-minute ; `make clean` garde `sqlite3.o`, `make distclean` le supprime.
+
+## Éditeur : VS Code
+
+`grym lsp` est un serveur d'aide à la saisie (protocole LSP) : erreurs en direct, autocomplétion,
+mise en forme. L'extension de `editeurs/vscode/` le lance et colore les deux formes. Voir
+`editeurs/vscode/README.md` pour l'installation, et `docs/lsp.md` pour la spécification.
