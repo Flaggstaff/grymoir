@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.19), § 11.
+ * Spécification : docs/grammaire.md (révision 1.20), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -91,9 +91,9 @@ static int finit_valeur(const Jeton *t) {
 }
 
 static const char *adjectif(const Jeton *t) {
-    static const char *const A[] = { "positif", "négatif", "nul", "vrai", "faux" };
+    static const char *const A[] = { "positif", "négatif", "nul", "vrai", "faux", "absent", "présent" };
     if (t->type != J_MOT_CLE) return NULL;
-    for (size_t k = 0; k < 5; k++) if (strcmp(t->valeur, A[k]) == 0) return A[k];
+    for (size_t k = 0; k < 7; k++) if (strcmp(t->valeur, A[k]) == 0) return A[k];
     return NULL;
 }
 
@@ -245,8 +245,9 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             } else if (adj && r->ns && finit_valeur(&r->s[r->ns - 1]) && k > d) {
                 mot(r, "est", t);          /* x _positif → x est positif */
                 mot(r, adj, t);
-            } else if (strcmp(t->valeur, "vrai") == 0 || strcmp(t->valeur, "faux") == 0) {
-                mot(r, t->valeur, t);      /* valeur booléenne */
+            } else if (strcmp(t->valeur, "vrai") == 0 || strcmp(t->valeur, "faux") == 0
+                       || strcmp(t->valeur, "absent") == 0) {
+                mot(r, t->valeur, t);      /* valeur booléenne, ou absente */
             } else if (strcmp(t->valeur, "non") == 0) {
                 /* _non (x > 0) → x n'est pas supérieur à 0 */
                 if (k + 1 >= f || r->e[k + 1].type != J_PAR_OUV) {
@@ -424,6 +425,8 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         if (type) q += 3;
         int unique = q < f && est_cle(&r->e[q], "unique");
         if (unique) q++;
+        int facultatif = q < f && est_cle(&r->e[q], "facultatif");
+        if (facultatif) q++;
         size_t depart = 0, fin_depart = 0;   /* _départ « Suisse », _départ −3,5 */
         if (q < f && est_cle(&r->e[q], "départ")) {
             depart = q + 1;
@@ -453,6 +456,10 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         if (unique) {
             emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
             mot(r, "unique", &r->e[f - 1]);
+        }
+        if (facultatif) {
+            emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
+            mot(r, "facultatif", &r->e[f - 1]);   /* synthétique : l'accord n'est pas vérifié */
         }
         if (depart) {
             emettre(r, J_VIRGULE, NULL, &r->e[depart - 1], 1);

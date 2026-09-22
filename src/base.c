@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.19), § 16 ; docs/vm.md (révision 1.13), § 8.
+ * Spécification : docs/grammaire.md (révision 1.20), § 16 ; docs/vm.md (révision 1.14), § 8.
  */
 #include "base.h"
 #include "date.h"
@@ -164,7 +164,8 @@ static char *definition(const ClasseVM *c) {
         chaine_ajouter(&d, c->champs[k]);
         chaine_ajouter(&d, ":");
         chaine_ajouter(&d, c->types[k] ? c->types[k] : "");
-        chaine_ajouter(&d, c->uniques[k] ? ":unique" : "");
+        chaine_ajouter(&d, c->uniques[k] & 1 ? ":unique" : "");
+        chaine_ajouter(&d, c->uniques[k] & 2 ? ":facultatif" : "");
     }
     return chaine_rendre(&d);
 }
@@ -207,13 +208,15 @@ static void lire_definition(const char *d, Definition *x) {
                 free(x->noms); free(x->types); free(x->uniques);
                 x->noms = n2; x->types = t2; x->uniques = u2;
             }
+            /* « nom:type[:unique][:facultatif] » ; bits : 1 unique, 2 facultatif */
+            int drapeaux = (strstr(p, ":unique") ? 1 : 0) | (strstr(p, ":facultatif") ? 2 : 0);
             char *d1 = strchr(p, ':');
             char *d2 = d1 ? strchr(d1 + 1, ':') : NULL;
             if (d1) *d1 = '\0';
             if (d2) *d2 = '\0';
             x->noms[x->n] = grym_dupliquer(p);
             x->types[x->n] = grym_dupliquer(d1 ? d1 + 1 : "");
-            x->uniques[x->n] = d2 && strcmp(d2 + 1, "unique") == 0;
+            x->uniques[x->n] = drapeaux;
             x->n++;
         }
         p = fin ? fin + 1 : NULL;
@@ -342,7 +345,7 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
         long i = chercher_champ(&a, n.noms[k]);
         if (i < 0) continue;
         if (strcmp(a.types[i], n.types[k]) != 0) {
-            if (strcmp(a.types[i], "nombre entier") != 0 || strcmp(n.types[k], "nombre") != 0 || a.uniques[i]) {
+            if (strcmp(a.types[i], "nombre entier") != 0 || strcmp(n.types[k], "nombre") != 0 || (a.uniques[i] & 1)) {
                 *erreur = grym_formater("« %s » ne peut pas passer de « %s » à « %s » : seul un nombre entier non unique "
                                         "devient un nombre sans perte.", n.noms[k], a.types[i], n.types[k]);
                 ok = 0;
@@ -360,8 +363,13 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
             chaine_ajouter(&sql, ";");
             ok = executer_chaine(b, &sql, erreur);
         }
-        if (ok && !a.uniques[i] && n.uniques[k]) ok = creer_index_unique(b, c, n.noms[k], erreur);
-        if (ok && a.uniques[i] && !n.uniques[k]) {
+        if (ok && (a.uniques[i] & 2) != (n.uniques[k] & 2)) {
+            *erreur = grym_formater("« %s » ne peut pas %s facultatif : ce n'est pas encore pris en charge sur une table "
+                                    "existante.", n.noms[k], n.uniques[k] & 2 ? "devenir" : "cesser d'être");
+            ok = 0;
+        }
+        if (ok && !(a.uniques[i] & 1) && (n.uniques[k] & 1)) ok = creer_index_unique(b, c, n.noms[k], erreur);
+        if (ok && (a.uniques[i] & 1) && !(n.uniques[k] & 1)) {
             /* un index ajouté par migration se retire ; une contrainte d'origine, pas encore */
             Chaine sql = {0};
             chaine_ajouter(&sql, "DROP INDEX ");
@@ -385,7 +393,8 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
         const char *t = n.types[k];
         int lien = !(strcmp(t, "texte") == 0 || strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0
                      || strcmp(t, "vrai ou faux") == 0 || strcmp(t, "date") == 0 || est_fichier(t));
-        if (lignes > 0 && !depart) {
+        int facultatif = (n.uniques[k] & 2) != 0;
+        if (lignes > 0 && !depart && !facultatif) {
             *erreur = lien || est_fichier(t)
                 ? grym_formater("« %s » est nouveau, et %s : un %s n'a pas de valeur de départ, il ne s'ajoute qu'à une "
                                 "entité sans objet conservé.", n.noms[k], deja, lien ? "lien" : "fichier")
@@ -394,7 +403,7 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
             ok = 0;
             break;
         }
-        if (n.uniques[k] && lignes > 1) {
+        if ((n.uniques[k] & 1) && lignes > 1 && depart) {
             *erreur = grym_formater("« %s » est nouveau et unique : une même valeur de départ pour %ld %s n'est pas possible.",
                                     n.noms[k], lignes, pl);
             ok = 0;
@@ -410,6 +419,17 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
             chaine_ajouter(&sql, " INTEGER REFERENCES ");
             ajouter_nom(&sql, "e ", t);
             chaine_ajouter(&sql, "(id)");
+        } else if (facultatif && !depart) {
+            /* facultatif : les objets déjà conservés le reçoivent absent (NULL) */
+            chaine_ajouter(&sql, est_fichier(t) ? " BLOB" : strcmp(t, "nombre entier") == 0 || strcmp(t, "vrai ou faux") == 0
+                                                             ? " INTEGER" : " TEXT");
+            if (est_fichier(t)) {
+                chaine_ajouter(&sql, "; ALTER TABLE ");
+                ajouter_nom(&sql, "e ", c->nom);
+                chaine_ajouter(&sql, " ADD COLUMN ");
+                ajouter_nom(&sql, "n ", n.noms[k]);
+                chaine_ajouter(&sql, " TEXT");
+            }
         } else if (est_fichier(t)) {
             chaine_ajouter(&sql, " BLOB NOT NULL DEFAULT x''; ALTER TABLE ");
             ajouter_nom(&sql, "e ", c->nom);
@@ -422,7 +442,7 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
             ajouter_litteral(&sql, t, depart);
         }
         chaine_ajouter(&sql, ";");
-        ok = executer_chaine(b, &sql, erreur) && (!n.uniques[k] || creer_index_unique(b, c, n.noms[k], erreur));
+        ok = executer_chaine(b, &sql, erreur) && (!(n.uniques[k] & 1) || creer_index_unique(b, c, n.noms[k], erreur));
     }
     if (ok) {
         sqlite3_stmt *st = NULL;
@@ -467,24 +487,30 @@ int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
     for (size_t k = 0; k < c->nb_champs; k++) {
         if (c->proprietaires[k] != c) continue;
         const char *t = c->types[k];
+        const char *nn = c->uniques[k] & 2 ? "" : " NOT NULL";   /* facultatif : NULL permis (§ 16.9) */
         chaine_ajouter(&sql, ", ");
         ajouter_nom(&sql, "c ", c->champs[k]);
-        if (strcmp(t, "nombre entier") == 0) chaine_ajouter(&sql, " INTEGER NOT NULL");
+        if (strcmp(t, "nombre entier") == 0) { chaine_ajouter(&sql, " INTEGER"); chaine_ajouter(&sql, nn); }
         else if (strcmp(t, "vrai ou faux") == 0) {
-            chaine_ajouter(&sql, " INTEGER NOT NULL CHECK (");
+            chaine_ajouter(&sql, " INTEGER");
+            chaine_ajouter(&sql, nn);
+            chaine_ajouter(&sql, " CHECK (");
             ajouter_nom(&sql, "c ", c->champs[k]);
             chaine_ajouter(&sql, " IN (0, 1))");
-        } else if (est_fichier(t)) chaine_ajouter(&sql, " BLOB NOT NULL");
+        } else if (est_fichier(t)) { chaine_ajouter(&sql, " BLOB"); chaine_ajouter(&sql, nn); }
         else if (est_lien(t)) {
-            chaine_ajouter(&sql, " INTEGER NOT NULL REFERENCES ");
+            chaine_ajouter(&sql, " INTEGER");
+            chaine_ajouter(&sql, nn);
+            chaine_ajouter(&sql, " REFERENCES ");
             ajouter_nom(&sql, "e ", t);
             chaine_ajouter(&sql, "(id)");
-        } else chaine_ajouter(&sql, " TEXT NOT NULL");
-        if (c->uniques[k]) chaine_ajouter(&sql, " UNIQUE");
+        } else { chaine_ajouter(&sql, " TEXT"); chaine_ajouter(&sql, nn); }
+        if (c->uniques[k] & 1) chaine_ajouter(&sql, " UNIQUE");
         if (est_fichier(t)) {
             chaine_ajouter(&sql, ", ");
             ajouter_nom(&sql, "n ", c->champs[k]);
-            chaine_ajouter(&sql, " TEXT NOT NULL");
+            chaine_ajouter(&sql, " TEXT");
+            chaine_ajouter(&sql, nn);
         }
     }
     chaine_ajouter(&sql, ");");
@@ -511,6 +537,11 @@ int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
 /* soi, id_soi : l'objet en train d'être conservé, qui peut se désigner lui-même (« un parrain (client) »). */
 static int lier(Base *b, sqlite3_stmt *st, int i, const char *type, const char *champ, const Valeur *v,
                 const Objet *soi, long id_soi, char **erreur) {
+    if (!v || v->type == V_ABSENT) {   /* champ facultatif sans valeur : NULL (§ 16.9) */
+        sqlite3_bind_null(st, i);
+        if (est_fichier(type)) { sqlite3_bind_null(st, i + 1); return i + 2; }
+        return i + 1;
+    }
     if (strcmp(type, "texte") == 0) {
         sqlite3_bind_text(st, i, v->texte, -1, SQLITE_TRANSIENT);
     } else if (strcmp(type, "nombre") == 0) {
@@ -589,7 +620,7 @@ static char *message_contrainte(Base *b, const Objet *o) {
 int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
     const ClasseVM *c = o->classe;
     for (size_t k = 0; k < c->nb_champs; k++)
-        if (!o->definis[k]) {
+        if (!o->definis[k] && !(c->uniques[k] & 2)) {
             char *qui = un(c);
             *erreur = grym_formater("Le champ « %s » n'a pas de valeur : %s incomplet%s ne se conserve pas.",
                                     c->champs[k], qui, c->feminin ? "e" : "");
@@ -635,7 +666,7 @@ int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
         int i = 2;
         for (size_t k = 0; k < c->nb_champs && i; k++)
             if (c->proprietaires[k] == l[e])
-                i = lier(b, st, i, c->types[k], c->champs[k], &o->champs[k], o, nouvel, erreur);
+                i = lier(b, st, i, c->types[k], c->champs[k], o->definis[k] ? &o->champs[k] : NULL, o, nouvel, erreur);
         ok = i && sqlite3_step(st) == SQLITE_DONE;
         if (i && !ok) *erreur = message_contrainte(b, o);
         sqlite3_finalize(st);
@@ -837,7 +868,10 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
             if (c->proprietaires[k] != l[e]) continue;
             const char *t = c->types[k];
             Valeur v;
-            if (strcmp(t, "texte") == 0) v = vi_texte((const char *)sqlite3_column_text(st, col));
+            if (sqlite3_column_type(st, col) == SQLITE_NULL) {
+                v = vi_absent(c->champs[k]);
+                if (est_fichier(t)) col++;
+            } else if (strcmp(t, "texte") == 0) v = vi_texte((const char *)sqlite3_column_text(st, col));
             else if (strcmp(t, "nombre") == 0) v = vi_nombre_canonique((const char *)sqlite3_column_text(st, col));
             else if (strcmp(t, "nombre entier") == 0) {
                 char tampon[32];
@@ -937,6 +971,9 @@ static int lire_condition(Recherche *r) {
             const char *o2 = op == 'P' ? " > " : op == 'N' ? " < " : " = ";
             if (entier) { colonne(r, (size_t)k); chaine_ajouter(&r->sql, o2); chaine_ajouter(&r->sql, "0"); }
             else { colonne(r, (size_t)k); chaine_ajouter(&r->sql, o2); chaine_ajouter(&r->sql, "'0' COLLATE GRYM_NOMBRE"); }
+        } else if (op == 'A' || op == 'R') {
+            colonne(r, (size_t)k);
+            chaine_ajouter(&r->sql, op == 'A' ? " IS NULL" : " IS NOT NULL");
         } else if (op == 'V' || op == 'F') {
             colonne(r, (size_t)k);
             chaine_ajouter(&r->sql, op == 'V' ? " = 1" : " = 0");
@@ -1060,6 +1097,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
                 if (strcmp(e->types[k], "nombre") == 0) chaine_ajouter(&r.sql, " COLLATE GRYM_NOMBRE");
                 else if (strcmp(e->types[k], "texte") == 0) chaine_ajouter(&r.sql, " COLLATE GRYM_TEXTE");
                 if (decroissant) chaine_ajouter(&r.sql, " DESC");
+                chaine_ajouter(&r.sql, " NULLS LAST");   /* les absents en dernier, dans les deux sens */
                 chaine_ajouter(&r.sql, ", ");
             }
         }

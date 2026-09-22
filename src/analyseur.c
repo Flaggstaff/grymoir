@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.19), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.20), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -49,6 +49,7 @@ typedef struct {
     Genre *genres;     /* genre de chaque champ */
     char **types;      /* type de chaque champ, ou NULL (classe ordinaire) */
     int *uniques;      /* champ unique */
+    int *facultatifs;  /* champ facultatif (§ 16.9) */
     size_t nb;
 } Classe;
 
@@ -77,6 +78,8 @@ static void classe_champs_liberer(Classe *c) {
     free(c->genres);
     free(c->types);
     free(c->uniques);
+    free(c->facultatifs);
+    c->facultatifs = NULL;
     c->champs = NULL;
     c->genres = NULL;
     c->types = NULL;
@@ -146,9 +149,11 @@ static void portee_copier(Portee *dst, const Portee *src) {
         d->pluriel = c->pluriel ? grym_dupliquer(c->pluriel) : NULL;
         d->types = c->types ? grym_allouer((c->nb ? c->nb : 1) * sizeof *d->types) : NULL;
         d->uniques = grym_allouer((c->nb ? c->nb : 1) * sizeof *d->uniques);
+        d->facultatifs = grym_allouer((c->nb ? c->nb : 1) * sizeof *d->facultatifs);
         for (size_t k = 0; k < c->nb; k++) {
             if (d->types) d->types[k] = c->types[k] ? grym_dupliquer(c->types[k]) : NULL;
             d->uniques[k] = c->uniques ? c->uniques[k] : 0;
+            d->facultatifs[k] = c->facultatifs ? c->facultatifs[k] : 0;
         }
         d->nb = c->nb;
         d->champs = grym_allouer((c->nb ? c->nb : 1) * sizeof *d->champs);
@@ -555,6 +560,18 @@ static char *nommer_type(Portee *p, const char *t) {
     if (type_de_base(t)) return grym_formater("un %s", t);
     const Classe *c = classe_de(p, t);
     return grym_formater("%s %s", c && c->genre == GENRE_FEMININ ? "une" : "un", t);
+}
+
+/* « La date devient absente. » : « absent » s'accorde avec le champ qu'il remplit (§ 16.9). */
+static int accorder_absent(Analyse *a, Noeud *v, Genre g) {
+    if (v->type != N_ABSENT || g == GENRE_LIBRE) return 1;
+    int forme = g == GENRE_FEMININ ? 2 : 1;
+    if (!v->entier && v->forme != forme) {
+        erreur_a(a, v->ligne, v->colonne, grym_formater("Accord : « %s ».", forme == 2 ? "absente" : "absent"));
+        return 0;
+    }
+    v->forme = forme;
+    return 1;
 }
 
 /* Vérifie qu'une valeur convient au type d'un champ ; sinon, erreur à la position de la valeur. */
@@ -1084,7 +1101,9 @@ static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
             const char *t = type_du_champ(a->portee, e, champ->texte);
             char op = n->op;
             const char *refus = NULL;
-            if (!t || strcmp(t, "fichier") == 0 || strcmp(t, "image") == 0)
+            if (op == 'A' || op == 'R')
+                refus = NULL;   /* « est absent », « est présent » : tout champ */
+            else if (!t || strcmp(t, "fichier") == 0 || strcmp(t, "image") == 0)
                 refus = "un fichier ne se compare pas";
             else if ((op == 'P' || op == 'N' || op == '0') && strcmp(t, "nombre") != 0 && strcmp(t, "nombre entier") != 0)
                 refus = "positif, négatif et nul s'appliquent à un nombre";
@@ -1221,6 +1240,14 @@ static Noeud *base(Analyse *a) {
     }
     if (t->type == J_DATE) {
         Noeud *n = feuille(N_DATE, t);
+        avancer(a);
+        return n;
+    }
+    if (est_mot(t, "absent") || est_mot(t, "absente")) {   /* § 16.9 */
+        Noeud *n = noeud_creer(N_ABSENT, t->ligne, t->colonne, t->debut);
+        n->forme = est_mot(t, "absente") ? 2 : 1;
+        n->entier = t->synthetique;   /* forme compacte : genre non écrit */
+        n->fin = fin_jeton(t);
         avancer(a);
         return n;
     }
@@ -1416,6 +1443,8 @@ static const Relation RELATIONS[] = {
     { "nul",       "nulle",      '0', 0 },
     { "vrai",      "vraie",      'V', 0 },
     { "faux",      "fausse",     'F', 0 },
+    { "absent",    "absente",    'A', 0 },   /* champ facultatif sans valeur (§ 16.9) */
+    { "présent",   "présente",   'R', 0 },
 };
 #define NB_RELATIONS (sizeof RELATIONS / sizeof *RELATIONS)
 
@@ -1872,7 +1901,9 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
             a->i = f + 1;
             Noeud *v = valeur(a);
             if (!v) { noeud_liberer(cible); return NULL; }
-            if (!verifier_type(a, cible->texte, type_commun(a->portee, cible->texte), v)) {
+            Genre gchamp = GENRE_LIBRE;
+            champ_connu(a->portee, cible->texte, &gchamp);
+            if (!verifier_type(a, cible->texte, type_commun(a->portee, cible->texte), v) || !accorder_absent(a, v, gchamp)) {
                 noeud_liberer(cible);
                 noeud_liberer(v);
                 return NULL;
@@ -2895,6 +2926,19 @@ static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const
             return 0;
         }
         for (;;) {
+            if (cour(a)->type == J_VIRGULE && (est_mot(voir(a, 1), "facultatif") || est_mot(voir(a, 1), "facultative"))
+                && !c->entier) {
+                /* « , facultatif » : le champ peut rester absent (§ 16.9) */
+                const Jeton *tf = voir(a, 1);
+                if (!tf->synthetique && est_mot(tf, "facultative") != (gc == GENRE_FEMININ)) {
+                    erreur(a, tf, grym_formater("Accord : « %s ».", gc == GENRE_FEMININ ? "facultative" : "facultatif"));
+                    return 0;
+                }
+                c->entier = 1;
+                avancer(a);
+                avancer(a);
+                continue;
+            }
             if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "unique") && c->op != 'U') {
                 if (mode != 1) {
                     erreur(a, voir(a, 1), grym_dupliquer("Seul un champ d'entité est unique."));
@@ -2969,6 +3013,7 @@ static Classe *ajouter_classe(Portee *p, const char *nom, Genre g, const char *p
     c->genres = NULL;
     c->types = NULL;
     c->uniques = NULL;
+    c->facultatifs = NULL;
     c->nb = 0;
     return c;
 }
@@ -2982,6 +3027,7 @@ static void classe_remplir(Classe *c, const Noeud *n) {
     c->genres = grym_allouer((nb ? nb : 1) * sizeof *c->genres);
     c->types = grym_allouer((nb ? nb : 1) * sizeof *c->types);
     c->uniques = grym_allouer((nb ? nb : 1) * sizeof *c->uniques);
+    c->facultatifs = grym_allouer((nb ? nb : 1) * sizeof *c->facultatifs);
     for (size_t q = 0; q < n->nb_enfants; q++) {
         const Noeud *ch = n->enfants[q];
         if (ch->type != N_NOM) continue;
@@ -2989,6 +3035,7 @@ static void classe_remplir(Classe *c, const Noeud *n) {
         c->genres[c->nb] = ch->forme == 2 ? GENRE_FEMININ : GENRE_MASCULIN;
         c->types[c->nb] = ch->texte2 ? grym_dupliquer(ch->texte2) : NULL;
         c->uniques[c->nb] = ch->op == 'U';
+        c->facultatifs[c->nb] = ch->entier;
         c->nb++;
     }
 }
@@ -3306,7 +3353,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
         if (!mots_fixes(a, VAUT, 1)) { free(champ); return 0; }
         Noeud *v = valeur(a);
         if (!v) { free(champ); return 0; }
-        if (!verifier_type(a, champ, type_du_champ(a->portee, cl, champ), v)
+        if (!verifier_type(a, champ, type_du_champ(a->portee, cl, champ), v) || !accorder_absent(a, v, gchamp)
             || !fin_phrase(a, 0)) { free(champ); noeud_liberer(v); return 0; }
         Noeud *init = noeud_creer(N_INIT, u->ligne, u->colonne, u->debut);
         init->texte = champ;

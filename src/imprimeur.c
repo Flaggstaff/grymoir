@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.19), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.20), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -147,6 +147,8 @@ static const struct { char op; const char *m, *f, *complement; } RELATIONS[] = {
     { '0', "nul",                 "nulle",                  NULL },
     { 'V', "vrai",                "vraie",                  NULL },
     { 'F', "faux",                "fausse",                 NULL },
+    { 'A', "absent",              "absente",                NULL },
+    { 'R', "présent",             "présente",               NULL },
 };
 
 static int relation(char op) {
@@ -161,6 +163,8 @@ static const char *adjectif_compact(char op) {
     case 'N': return "_négatif";
     case '0': return "_nul";
     case 'V': return "_vrai";
+    case 'A': return "_absent";
+    case 'R': return "_présent";
     default:  return "_faux";
     }
 }
@@ -227,7 +231,7 @@ static void nom_avec_article(Impression *im, const Noeud *n) {
 static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
     const Noeud *sujet = n->enfants[0];
     const Noeud *droite = n->nb_enfants > 1 ? n->enfants[1] : NULL;
-    int adjectif = strchr("PN0VF", n->op) != NULL;
+    int adjectif = strchr("PN0VFAR", n->op) != NULL;
     if (im->compact) {
         if (n->forme == 2) { expression(im, droite); return; }            /* cas : une valeur */
         if (n->forme == 3 && !n->negation) {                             /* « est valeur » : « = » */
@@ -262,7 +266,8 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
         expression(im, sujet);
         aj(im, n->negation ? " n'est pas " : " est ");
     }
-    Genre g = sujet->type == N_NOM || sujet->type == N_CHAMP_DONT ? genre_de_nom(im, sujet->texte) : G_MASCULIN;
+    Genre g = sujet->type == N_NOM || sujet->type == N_CHAMP_DONT || sujet->type == N_CHAMP
+            ? genre_de_nom(im, sujet->texte) : G_MASCULIN;
     int k = relation(n->op);
     aj(im, g == G_FEMININ ? RELATIONS[k].f : RELATIONS[k].m);
     if (RELATIONS[k].complement) {
@@ -364,6 +369,9 @@ static void expression(Impression *im, const Noeud *n) {
     case N_AUJOURDHUI:
         aj(im, im->compact ? "_aujourd'hui" : "aujourd'hui");
         return;
+    case N_ABSENT:
+        aj(im, im->compact ? "_absent" : n->forme == 2 ? "absente" : "absent");
+        return;
     case N_CHAMP_DONT:
         if (!im->compact) {   /* l'article s'écrit toujours : « dont le solde … » */
             Article art = n->article;
@@ -458,6 +466,7 @@ static void type_de_champ(Impression *im, const Noeud *ch) {
     else aj(im, ch->texte2);   /* « (vrai ou faux) » : un type, pas un nom, jamais entre crochets */
     aj(im, ")");
     if (ch->op == 'U') aj(im, im->compact ? " _unique" : ", unique");
+    if (ch->entier) aj(im, im->compact ? " _facultatif" : ch->forme == 2 ? ", facultative" : ", facultatif");
     if (ch->nb_enfants) {   /* valeur de départ (§ 16.7) */
         aj(im, im->compact ? " _départ " : ", ");
         expression(im, ch->enfants[0]);

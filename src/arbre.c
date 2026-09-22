@@ -127,7 +127,7 @@ static void decrire(const Noeud *n, Chaine *c) {
     case N_COMPARAISON: {
         static const struct { char op; const char *nom; } R[] = {
             {'=', "="}, {'!', "≠"}, {'<', "<"}, {'>', ">"}, {'l', "≤"}, {'g', "≥"},
-            {'P', "positif"}, {'N', "négatif"}, {'0', "nul"}, {'V', "vrai"}, {'F', "faux"}
+            {'P', "positif"}, {'N', "négatif"}, {'0', "nul"}, {'V', "vrai"}, {'F', "faux"}, {'A', "absent"}, {'R', "présent"}
         };
         const char *nom = "?";
         for (size_t k = 0; k < sizeof R / sizeof *R; k++) if (R[k].op == n->op) nom = R[k].nom;
@@ -202,6 +202,9 @@ static void decrire(const Noeud *n, Chaine *c) {
         return;
     case N_AUJOURDHUI:
         chaine_ajouter(c, "aujourd'hui");
+        return;
+    case N_ABSENT:
+        chaine_ajouter(c, "absent");
         return;
     case N_FICHIER:
         chaine_ajouter(c, "(fichier ");
@@ -299,6 +302,7 @@ static void decrire(const Noeud *n, Chaine *c) {
                 chaine_ajouter(c, " : ");
                 chaine_ajouter(c, ch->texte2);
                 if (ch->op == 'U') chaine_ajouter(c, " unique");
+                if (ch->entier) chaine_ajouter(c, " facultatif");
                 if (ch->nb_enfants) { chaine_ajouter(c, " départ "); decrire(ch->enfants[0], c); }
                 chaine_ajouter(c, "]");
             } else {

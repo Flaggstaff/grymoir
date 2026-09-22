@@ -608,6 +608,22 @@ int main(void) {
     VE("Une personne a : un nom, « a » au départ.", 1, 26, "Seul un champ d'entité a une valeur de départ.");
     VE("Un client, conservé, a : une photo (image), « a » au départ.", 1, 45, "Le champ « photo » attend une image");
 
+    /* --- Champs facultatifs (§ 16.9) --- */
+    V("Une partition, conservée, a : un titre (texte), un arrangeur (texte), facultatif, une édition (date), facultative, "
+      "un code (texte), unique, facultatif.\nLa p vaut une nouvelle partition :\n    L'édition vaut absente.\n"
+      "L'arrangeur de p devient absent.\nSi l'arrangeur de p est présent et l'édition de p n'est pas absente, afficher 1.",
+      "(entité [partition] [titre : texte] [arrangeur : texte facultatif] [édition : date facultatif] "
+      "[code : texte unique facultatif])\n(créer [p] (nouveau [partition] ([édition] absent)))\n"
+      "(modifier-champ [arrangeur] [p] absent)\n"
+      "(si (et (présent (champ [arrangeur] [p])) (non (absent (champ [édition] [p])))) (bloc (afficher 1)))");
+    V("Une note, conservée, a : un texte (texte), facultatif.\nAfficher le nombre de notes conservées dont le texte est absent.",
+      "(entité [note] [texte : texte facultatif])\n(afficher (nombre-conservés [note] (dont (absent (champ-dont [texte])))))");
+    VE("Une p, conservée, a : une date (date), facultatif.", 1, 40, "Accord : « facultative ».");
+    VE("Une p, conservée, a : une date (date), facultative.\nLa x vaut une nouvelle p :\n    La date vaut absent.", 3, 18,
+       "Accord : « absente ».");
+    VE("Une p, conservée, a : une date (date), facultative.\nLa x vaut une nouvelle p.\nLa date de x devient absent.", 3, 22,
+       "Accord : « absente ».");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
@@ -638,7 +654,7 @@ int main(void) {
        "+ | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | , | :");
     VS("Le x vaut 1.\nSi x est ",
        "égal à | différent de | inférieur à | inférieur ou égal à | supérieur à | supérieur ou égal à | "
-       "positif | négatif | nul | vrai | faux");
+       "positif | négatif | nul | vrai | faux | absent | présent");
     VS("La quantité vaut 1.\nSi la quantité est s", "supérieure à | supérieure ou égale à");
     VS("Le x vaut 1.\nSi x est inférieur ", "ou | à | au");
     VS("Le [a et b] vaut 1.\nAfficher ", "[a et b] | (nombre) | ( | − | vrai | faux | « … »");

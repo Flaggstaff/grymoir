@@ -197,6 +197,11 @@ int main(void) {
                  "Pour chaque facture conservée dont le montant n'est pas nul, par montant décroissant :\n    Afficher facture.\n"
                  "La f vaut la facture conservée dont le montant = 3.\nAfficher le nombre de factures conservées.\n");
 
+    ALLER_RETOUR("_classe _une p _conservé\n    _une date (date) _facultatif\n_fin\n_la x << _nouveau p _avec\n"
+                 "    date << _absent\n_fin\n_si x.date _présent _alors\n    _afficher 1\n_fin\n",
+                 "Une p, conservée, a :\n    une date (date), facultative.\nLa x vaut une nouvelle p :\n    La date vaut absente.\n"
+                 "Si date de x est présente :\n    Afficher 1.\n");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

@@ -609,6 +609,59 @@ int main(void) {
          "Pour chaque client conservé, par nom, afficher nom du client puis client.\n"
          "Pour chaque membre conservé dont le nom est « M », afficher cotisation du membre.",
          "C un client\nM un membre\n5");
+    /* --- Champs facultatifs (§ 16.9) --- */
+#define FAC "Un compositeur, conservé, a : un nom (texte), unique, un maître (compositeur), facultatif.\n" \
+            "Une partition, conservée, a : un titre (texte), un arrangeur (compositeur), facultatif, " \
+            "une édition (date), facultative, un tirage (nombre entier), facultatif.\n"
+    PROG(FAC "La p vaut une nouvelle partition :\n    Le titre vaut « A ».\nConserver p.\n"
+         "Afficher arrangeur de p puis édition de p puis arrangeur de p est absent puis tirage de p est présent.",
+         "absent absent vrai faux");
+    PROG(FAC "La p vaut une nouvelle partition :\n    Le titre vaut « A ».\nAfficher tirage de p + 1.",
+         "ERREUR 5:22 Le champ « tirage » est absent : vérifiez-le d'abord avec « est présent ».");
+    PROG(FAC "La p vaut une nouvelle partition :\n    Le titre vaut « A ».\nAfficher nom de l'arrangeur de p.",
+         "ERREUR 5:10 Le champ « arrangeur » est absent : vérifiez-le d'abord avec « est présent ».");
+    PROG(FAC "La p vaut une nouvelle partition :\n    Le titre vaut « A ».\nAfficher édition de p = 01.01.2026.",
+         "~Le champ « édition » est absent");
+    PROG(FAC "Le c vaut un nouveau compositeur.\nLe nom du c devient absent.",
+         "ERREUR 4:1 Le champ « nom » n'est pas facultatif : il ne devient pas absent.");
+    /* deux objets neufs qui se désignent l'un l'autre : possible grâce au champ facultatif */
+    PROG(FAC "Le a vaut un nouveau compositeur :\n    Le nom vaut « A ».\nConserver a.\n"
+         "Le b vaut un nouveau compositeur :\n    Le nom vaut « B ».\n    Le maître vaut a.\nConserver b.\n"
+         "Le maître du a devient b.\nAfficher nom du maître du maître du a.", "A");
+    PROG(FAC "Pour créer un titre et une édition :\n    La p vaut une nouvelle partition :\n        Le titre vaut titre.\n"
+         "    Si édition est présente, l'édition de p devient édition.\n    Conserver p.\n"
+         "Créer « C » et 01.01.2000.\nCréer « A » et absente.\nCréer « B » et 01.01.1990.\n"
+         "Pour chaque partition conservée, par édition, afficher titre de la partition.\n"
+         "Pour chaque partition conservée, par édition décroissant, afficher titre de la partition.\n"
+         "Afficher le nombre de partitions conservées dont l'édition est absente puis "
+         "le nombre de partitions conservées dont l'édition < 01.01.2020.",
+         "B\nC\nA\nC\nB\nA\n1 2");
+    {   /* migration : un champ facultatif s'ajoute à une entité qui a déjà des objets */
+        remove("_essai_fac.grymd");
+        const char *etapes[][2] = {
+            { "Un livre, conservé, a : un titre (texte).\nLe l vaut un nouveau livre :\n    Le titre vaut « X ».\nConserver l.\n", "" },
+            { "Un livre, conservé, a : un titre (texte), un auteur (texte), facultatif, un parrain (livre), facultatif.\n"
+              "Afficher auteur du livre conservé dont le titre est « X » puis le nombre de livres conservés dont l'auteur est absent.\n",
+              "absent 1" },
+            { "Un livre, conservé, a : un titre (texte), facultatif, un auteur (texte), facultatif, un parrain (livre), facultatif.\n",
+              "~« titre » ne peut pas devenir facultatif" },
+        };
+        for (int i = 0; i < 3; i++) {
+            total++;
+            Portee *p = portee_creer();
+            Machine *m = machine_creer();
+            machine_base(m, "_essai_fac.grymd");
+            char *r = executer_source(p, m, etapes[i][0], 0);
+            const char *att = etapes[i][1];
+            int ok = att[0] == '~' ? strstr(r, att + 1) != NULL : strcmp(r, att) == 0;
+            if (!ok) signaler(__LINE__, etapes[i][0], att, r);
+            free(r);
+            machine_detruire(m);
+            portee_detruire(p);
+        }
+        remove("_essai_fac.grymd");
+    }
+
     /* --- Relire, dans une autre exécution, ce qu'une première a conservé --- */
     {
         remove("_essai_relire.grymd");

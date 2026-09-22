@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.13).
+ * Spécification : docs/vm.md (révision 1.14).
  */
 #include "bytecode.h"
 #include "date.h"
@@ -162,6 +162,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_CHERCHER:       return "CHERCHER";
     case I_TAILLE_LISTE:   return "TAILLE_LISTE";
     case I_ELEMENT:        return "ÉLÉMENT";
+    case I_ABSENT:         return "ABSENT";
+    case I_EST_ABSENT:     return "EST_ABSENT";
     }
     return "INCONNUE";
 }
@@ -304,7 +306,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                 effet = 1 - np;
                 break;
             }
-            case I_TAILLE_LISTE: besoin = 1; break;
+            case I_TAILLE_LISTE: case I_EST_ABSENT: besoin = 1; break;
+            case I_ABSENT: effet = 1; break;
             case I_ELEMENT: besoin = 2; effet = -1; break;
             case I_INITIALISER_CHAMP: besoin = 2; effet = -1; break;
             case I_LIRE_CHAMP: besoin = 1; break;
@@ -382,10 +385,10 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 13  /* versions 1 à 12 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 14  /* versions 1 à 13 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
-                              sans valeur de départ (12) */
+                              sans valeur de départ (12), sans champ facultatif (13) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -465,7 +468,7 @@ unsigned char *module_serialiser(const Module *m, size_t *taille) {
         for (size_t q = 0; q < c->nb_champs; q++) {
             ecrire_chaine(&o, c->champs[q]);
             ecrire_chaine(&o, c->types && c->types[q] ? c->types[q] : "");
-            ecrire_u8(&o, c->uniques && c->uniques[q] ? 1u : 0u);
+            ecrire_u8(&o, c->uniques ? c->uniques[q] : 0u);
             ecrire_chaine(&o, c->departs && c->departs[q] ? c->departs[q] : "");
         }
     }
@@ -675,12 +678,13 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
                 if (version >= 10) {
                     char *type = lire_chaine(&l);
                     uint32_t unique = lire_u(&l, 1);
-                    if (!type || l.echec || unique > 1) {
+                    if (!type || l.echec || unique > (version >= 14 ? 3u : 1u)) {
                         free(type);
                         return echec_module(m, erreur, grym_formater("type du champ %u de la classe %u illisible.",
                                                                      (unsigned)q, (unsigned)k));
                     }
-                    classe_typer_dernier_champ(c, *type ? type : NULL, (int)unique);
+                    classe_typer_dernier_champ(c, *type ? type : NULL, (int)(unique & 1));
+                    if (unique & 2) classe_facultatif_dernier_champ(c);
                     free(type);
                     if (version >= 13) {
                         char *depart = lire_chaine(&l);
@@ -758,11 +762,15 @@ void classe_depart_dernier_champ(ClasseModule *c, const char *depart) {
     c->departs[c->nb_champs - 1] = depart ? grym_dupliquer(depart) : NULL;
 }
 
+void classe_facultatif_dernier_champ(ClasseModule *c) {
+    if (c->nb_champs) c->uniques[c->nb_champs - 1] |= 2;
+}
+
 void classe_typer_dernier_champ(ClasseModule *c, const char *type, int unique) {
     if (!c->nb_champs) return;
     free(c->types[c->nb_champs - 1]);
     c->types[c->nb_champs - 1] = type ? grym_dupliquer(type) : NULL;
-    c->uniques[c->nb_champs - 1] = (unsigned char)(unique != 0);
+    c->uniques[c->nb_champs - 1] = (unsigned char)((c->uniques[c->nb_champs - 1] & 2) | (unique != 0));
 }
 
 void module_detruire(Module *m) {

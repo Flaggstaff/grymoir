@@ -1,5 +1,5 @@
 /* GrymoiR : représentation interne des valeurs, partagée par la machine et la base
- * Spécification : docs/vm.md (révision 1.13), § 2.
+ * Spécification : docs/vm.md (révision 1.14), § 2.
  */
 #ifndef GRYM_VM_INTERNE_H
 #define GRYM_VM_INTERNE_H
@@ -8,7 +8,8 @@
 
 #include <stddef.h>
 
-typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET, V_DATE, V_FICHIER, V_LISTE } TypeValeur;
+/* V_ABSENT : un champ facultatif sans valeur (grammaire, § 16.9) ; texte : le champ d'où elle vient, ou NULL. */
+typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET, V_DATE, V_FICHIER, V_LISTE, V_ABSENT } TypeValeur;
 
 /* Liste d'objets conservés, figée par une recherche (§ 16.4) : interne, jamais visible du langage. */
 typedef struct Liste {
@@ -52,7 +53,7 @@ typedef struct ClasseVM {
     char **types;         /* type de chaque champ (grammaire, § 16.1), ou NULL */
     char **departs;       /* valeur de départ (§ 16.7), forme canonique, ou NULL */
     const struct ClasseVM **proprietaires;   /* entité dont la table porte le champ (base.c) */
-    unsigned char *uniques;
+    unsigned char *uniques;   /* bit 1 : unique ; bit 2 : facultatif (§ 16.9) */
     size_t nb_champs;
     int conserve;         /* entité */
     char *pluriel;
@@ -78,6 +79,7 @@ Valeur vi_booleen(int vrai);
 Valeur vi_date(long jours);
 Valeur vi_fichier(const void *octets, size_t taille, const char *nom);
 Valeur vi_objet(Objet *o);
+Valeur vi_absent(const char *champ);
 /* Objet conservé d'identifiant id : le même en mémoire tant qu'il y vit, sinon une coquille à charger. */
 Objet *machine_objet_en_base(struct Machine *m, long id, const char *classe, char **erreur);
 const ClasseVM *machine_classe(const struct Machine *m, const char *nom);

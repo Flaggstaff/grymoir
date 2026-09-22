@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.13 de la spécification, révisée le 21 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.19, § 3.3, § 5, § 9, § 10, § 13 à 16.
+Version 1.14 de la spécification, révisée le 22 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.20, § 3.3, § 5, § 9, § 10, § 13 à 16.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -29,6 +29,7 @@ Règle de nommage : instructions, outils et messages s'écrivent en toutes lettr
 | booléen | vrai ou faux |
 | objet | référence vers un objet du tas : sa classe et ses champs |
 | date | jour du calendrier grégorien, du 01.01.0001 au 31.12.9999 (grammaire, § 14) |
+| absent | valeur d'un champ facultatif sans valeur (grammaire, § 16.9) ; elle garde le nom du champ d'où elle vient, pour les messages |
 | fichier | contenu d'un fichier, son nom d'origine et son format d'image s'il est reconnu (grammaire, § 15). Immuable, partagé entre les valeurs qui le désignent, libéré quand plus aucune ne le désigne |
 
 Copier une valeur objet copie la référence, jamais l'objet. L'absence de valeur s'ajoutera avec les constructions qui en ont besoin.
@@ -79,6 +80,8 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 36 | `CHERCHER` | constante de recherche | dépile les valeurs comparées ; empile une liste, un objet ou un nombre |
 | 37 | `TAILLE_LISTE` | aucun | remplace une liste par son nombre d'éléments |
 | 38 | `ÉLÉMENT` | aucun | dépile un rang et une liste ; empile l'objet à ce rang |
+| 39 | `ABSENT` | aucun | empile la valeur absente |
+| 40 | `EST_ABSENT` | aucun | remplace la valeur au sommet par vrai si elle est absente, faux sinon |
 
 ### 3.1 Boucles et Selon
 
@@ -114,6 +117,7 @@ Pour chaque i de a à b       a → i ; b → fin ; pas (écrit, ou ±1 selon a 
 - `SAUTER_SI_FAUX` exige un booléen : « Condition ni vraie ni fausse : la valeur est un nombre. »
 - Les instructions de champ désignent la classe et le champ par leur nom, résolu à l'exécution : la machine vérifie que la valeur est un objet et que sa classe a ce champ. `ÉGAL` compare deux objets par identité.
 - Typage strict (grammaire, § 16.2) : un champ d'entité ou d'aptitude porte un type. `INITIALISER_CHAMP` et `ÉCRIRE_CHAMP` vérifient la valeur avant de la ranger : texte, nombre, nombre entier, vrai ou faux, date, fichier, image (format reconnu), ou objet de l'entité liée ou d'une entité qui en hérite. Sinon, erreur d'exécution, et rien n'est écrit.
+- Valeur absente : `LIRE_CHAMP` d'un champ facultatif sans valeur empile la valeur absente. Les opérations, les comparaisons, `LIRE_CHAMP` et `ÉCRIRE_CHAMP` sur elle, et le choix d'une version de méthode sur elle sont des erreurs d'exécution ; `AFFICHER` écrit `absent`. `INITIALISER_CHAMP` et `ÉCRIRE_CHAMP` ne rangent la valeur absente que dans un champ facultatif.
 - Héritage et aptitudes : à l'enregistrement d'une classe, la machine place les champs hérités en tête, puis ceux des aptitudes dans l'ordre d'adoption, puis les champs propres, chacun avec son type. Un champ garde ainsi le même rang dans toute la lignée. La classe parente et les aptitudes doivent être connues (déclarées plus tôt dans le module, ou par un module précédent) ; aucun champ n'est fourni deux fois. Sinon, le module est refusé avant toute exécution.
 - `et` et `ou` compilent en sauts (court-circuit). Chaque membre passe par `SAUTER_SI_FAUX`, qui vérifie qu'il s'agit d'un booléen :
 
@@ -205,7 +209,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 13
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 14
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -224,12 +228,12 @@ classes       nombre : u32, puis pour chacune :
                 pluriel : longueur u32 et octets UTF-8 (vide sauf pluriel irrégulier),
                 aptitudes adoptées : nombre u32, puis pour chacune : longueur u32 et octets UTF-8,
                 champs : nombre u32, puis pour chacun : nom (longueur u32 et octets UTF-8),
-                  type (longueur u32 et octets UTF-8, vide sans type), unique : u8 (0 ou 1),
+                  type (longueur u32 et octets UTF-8, vide sans type), drapeaux : u8 (bit 0 unique, bit 1 facultatif),
                   valeur de départ (longueur u32 et octets UTF-8, forme canonique, vide sans valeur)
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ. Les fichiers des versions 1 à 12 restent lisibles.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40. Les fichiers des versions 1 à 13 restent lisibles.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -277,3 +281,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.11 | 2026-09-21 | Base des entités (§ 8) : schéma, types SQL, identifiants, transaction ; `CONSERVER`, `SUPPRIMER` ; format version 11 ; renumérotation des § 9 à 12 |
 | 1.12 | 2026-09-21 | Recherche : constante de type 5, `CHERCHER`, `TAILLE_LISTE`, `ÉLÉMENT`, collations exactes, carte d'identité, chargement à la demande ; format version 12 |
 | 1.13 | 2026-09-21 | Migrations de schéma, valeur de départ des champs, format version 13 ; `machine_annulation` |
+| 1.14 | 2026-09-22 | Valeur absente, `ABSENT`, `EST_ABSENT`, champs facultatifs (colonnes sans `NOT NULL`, `IS NULL`, absents triés en dernier) ; format version 14 |

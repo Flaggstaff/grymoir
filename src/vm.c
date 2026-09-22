@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.13).
+ * Spécification : docs/vm.md (révision 1.14).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -18,14 +18,15 @@
 
 static const char *nom_type(TypeValeur t) {
     return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen"
-         : t == V_DATE ? "une date" : t == V_FICHIER ? "un fichier" : t == V_LISTE ? "une liste" : "un objet";
+         : t == V_DATE ? "une date" : t == V_FICHIER ? "un fichier" : t == V_LISTE ? "une liste"
+         : t == V_ABSENT ? "absente" : "un objet";
 }
 
 static Valeur valeur_copier(const Valeur *v) {
     Valeur r;
     r.type = v->type;
     r.nombre = v->type == V_NOMBRE ? dec_copier(&v->nombre) : dec_zero();
-    r.texte = v->type == V_TEXTE ? grym_dupliquer(v->texte) : NULL;
+    r.texte = (v->type == V_TEXTE || v->type == V_ABSENT) && v->texte ? grym_dupliquer(v->texte) : NULL;
     r.vrai = v->vrai;
     r.objet = v->objet;
     r.jours = v->jours;
@@ -782,6 +783,19 @@ Valeur vi_fichier(const void *octets, size_t taille, const char *nom) {
     return v;
 }
 
+Valeur vi_absent(const char *champ) {
+    Valeur v = valeur_nombre(dec_zero());
+    v.type = V_ABSENT;
+    v.texte = champ ? grym_dupliquer(champ) : NULL;
+    return v;
+}
+
+/* « Le champ « date » est absent. » : une valeur absente ne se laisse pas utiliser par mégarde (§ 16.9). */
+static char *message_absent(const Valeur *v) {
+    return v->texte ? grym_formater("Le champ « %s » est absent : vérifiez-le d'abord avec « est présent ».", v->texte)
+                    : grym_dupliquer("La valeur est absente : vérifiez-la d'abord avec « est présent ».");
+}
+
 Valeur vi_objet(Objet *o) {
     Valeur v = valeur_nombre(dec_zero());
     v.type = V_OBJET;
@@ -855,7 +869,9 @@ static long index_champ(const ClasseVM *c, const char *champ) {
 static char *decrire_valeur_pour_type(const Valeur *v);
 
 /* Typage strict (grammaire, § 16.2) : la valeur convient-elle au type du champ ? NULL si oui, sinon le message. */
-static char *verifier_type_champ(const Machine *m, const char *champ, const char *type, const Valeur *v) {
+static char *verifier_type_champ(const Machine *m, const char *champ, const char *type, const Valeur *v, int facultatif) {
+    if (v->type == V_ABSENT)
+        return facultatif ? NULL : grym_formater("Le champ « %s » n'est pas facultatif : il ne devient pas absent.", champ);
     if (!type) return NULL;
     int ok = 0;
     if (strcmp(type, "texte") == 0) ok = v->type == V_TEXTE;
@@ -897,6 +913,10 @@ static Formule *choisir_version(Machine *m, const char *nom, const Valeur *premi
     for (size_t i = 0; i < m->nb_formules; i++) if (strcmp(m->formules[i].nom, nom) == 0) versions++;
     if (!versions) {
         *pourquoi = grym_formater("Formule « %s » inconnue.", nom);
+        return NULL;
+    }
+    if (premier && premier->type == V_ABSENT) {
+        *pourquoi = message_absent(premier);
         return NULL;
     }
     if (!premier || premier->type != V_OBJET) {
@@ -974,7 +994,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             for (size_t r = 0; r < aptitudes[q]->nb_champs; r++) {
                 types[n] = aptitudes[q]->types[r];
                 departs[n] = aptitudes[q]->departs[r];
-                uniques[n] = 0;
+                uniques[n] = aptitudes[q]->uniques[r] & 2;   /* une aptitude n'a pas de champ unique */
                 champs[n++] = aptitudes[q]->champs[r];
             }
         for (size_t q = 0; q < cm->nb_champs && !probleme; q++) {
@@ -1161,6 +1181,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         case I_NEGATION: {
             Valeur *x = &pile.v[pile.n - 1];
+            if (x->type == V_ABSENT) { ok = echouer(diag, b, debut, message_absent(x)); break; }
             if (x->type != V_NOMBRE) {
                 ok = echouer(diag, b, debut, grym_formater("Opposé impossible : la valeur est %s.",
                                                            nom_type(x->type)));
@@ -1174,6 +1195,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_ADDITION: case I_SOUSTRACTION: case I_MULTIPLICATION:
         case I_DIVISION: case I_PUISSANCE: {
             Valeur vb = depiler(&pile), va = depiler(&pile);
+            if (va.type == V_ABSENT || vb.type == V_ABSENT) {
+                char *m = message_absent(va.type == V_ABSENT ? &va : &vb);
+                valeur_liberer(&va);
+                valeur_liberer(&vb);
+                ok = echouer(diag, b, debut, m);
+                break;
+            }
             if ((va.type == V_DATE || vb.type == V_DATE) && (code == I_ADDITION || code == I_SOUSTRACTION)) {
                 /* date ± jours, jours + date, date − date (§ 14.2) */
                 char *probleme = NULL;
@@ -1243,6 +1271,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     chaine_ajouter(sortie, v->texte);
                 } else if (v->type == V_BOOLEEN) {
                     chaine_ajouter(sortie, v->vrai ? "vrai" : "faux");
+                } else if (v->type == V_ABSENT) {
+                    chaine_ajouter(sortie, "absent");
                 } else if (v->type == V_FICHIER) {
                     char *t = decrire_fichier(v->fichier);
                     chaine_ajouter(sortie, t);
@@ -1268,6 +1298,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_EGAL: case I_DIFFERENT: case I_INFERIEUR: case I_SUPERIEUR:
         case I_INFERIEUR_OU_EGAL: case I_SUPERIEUR_OU_EGAL: {
             Valeur vb = depiler(&pile), va = depiler(&pile);
+            if (va.type == V_ABSENT || vb.type == V_ABSENT) {
+                char *m = message_absent(va.type == V_ABSENT ? &va : &vb);
+                valeur_liberer(&va);
+                valeur_liberer(&vb);
+                ok = echouer(diag, b, debut, m);
+                break;
+            }
             int egalite = code == I_EGAL || code == I_DIFFERENT;
             int resultat = 0;
             if (va.type != vb.type || (!egalite && va.type != V_NOMBRE && va.type != V_DATE)) {
@@ -1469,6 +1506,19 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
+        case I_ABSENT:
+            empiler(&pile, vi_absent(NULL));
+            break;
+        case I_EST_ABSENT: {
+            Valeur v = depiler(&pile);
+            int absent = v.type == V_ABSENT;
+            valeur_liberer(&v);
+            Valeur r = valeur_nombre(dec_zero());
+            r.type = V_BOOLEEN;
+            r.vrai = absent;
+            empiler(&pile, r);
+            break;
+        }
         case I_AUJOURDHUI:
             empiler(&pile, valeur_date(aujourdhui));   /* lue une fois, au début de l'exécution (§ 14.3) */
             break;
@@ -1516,6 +1566,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 *vo = r;
                 break;
             }
+            if (vo->type == V_ABSENT) { ok = echouer(diag, b, debut, message_absent(vo)); break; }
             if (vo->type != V_OBJET) {
                 ok = echouer(diag, b, debut, grym_formater(
                     "« %s » : la valeur n'est pas un objet, c'est %s.", champ, nom_type(vo->type)));
@@ -1535,10 +1586,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             if (code != I_LIRE_CHAMP) {
-                char *probleme = verifier_type_champ(m, champ, o->classe->types[k], &pile.v[pile.n - 1]);
+                char *probleme = verifier_type_champ(m, champ, o->classe->types[k], &pile.v[pile.n - 1],
+                                                     (o->classe->uniques[k] & 2) != 0);
                 if (probleme) { ok = echouer(diag, b, debut, probleme); break; }
             }
             if (code == I_LIRE_CHAMP) {
+                if (!o->definis[k] && (o->classe->uniques[k] & 2)) {   /* facultatif : absent */
+                    valeur_liberer(vo);
+                    *vo = vi_absent(champ);
+                    break;
+                }
                 if (!o->definis[k]) {
                     ok = echouer(diag, b, debut, grym_formater("Le champ « %s » n'a pas de valeur.", champ));
                     break;

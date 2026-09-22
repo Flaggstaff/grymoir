@@ -188,6 +188,16 @@ int main(void) {
          "_classe _un client _conservé\n    _un pays (texte) _départ « Suisse »\n    _un code (nombre) _unique _départ −1\n"
          "    _un actif (vrai_ou_faux) _départ _vrai\n_fin\n");
 
+    /* --- Champs facultatifs (§ 16.9) --- */
+    LITT("Une p, conservée, a : une date (date), facultative, un nom (texte), unique, facultatif.\nLa x vaut une nouvelle p :\n"
+         "    La date vaut absente.\nSi la date de x est présente, afficher 1.",
+         "Une p, conservée, a :\n    une date (date), facultative,\n    un nom (texte), unique, facultatif.\n"
+         "La x vaut une nouvelle p :\n    La date vaut absente.\nSi la date de x est présente, afficher 1.\n");
+    COMP("Une p, conservée, a : une date (date), facultative.\nLa x vaut une nouvelle p :\n    La date vaut absente.\n"
+         "Si la date de x est présente, afficher 1.",
+         "_classe _une p _conservé\n    _une date (date) _facultatif\n_fin\n_la x << _nouveau p _avec\n    date << _absent\n"
+         "_fin\n_si x.date _présent _alors\n    _afficher 1\n_fin\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

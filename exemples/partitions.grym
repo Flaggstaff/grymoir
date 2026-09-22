@@ -1,0 +1,59 @@
+Remarque : une bibliothèque de partitions ; les entités se désignent par des liens,
+Remarque : et certains champs peuvent rester absents.
+Un compositeur, conservé, a :
+    un nom (texte), unique,
+    une naissance (date), facultative.
+Une œuvre, conservée, a :
+    un titre (texte),
+    un compositeur (compositeur),
+    une année (nombre entier), facultative.
+Un instrument, conservé, a :
+    un nom (texte), unique.
+Une partition, conservée, a :
+    une œuvre (œuvre),
+    un éditeur (texte),
+    un arrangeur (compositeur), facultatif.
+Remarque : un pupitre relie une partition à un instrument.
+Un pupitre, conservé, a :
+    une partition (partition),
+    un instrument (instrument),
+    un nombre de parties (nombre entier).
+
+Si le nombre de compositeurs conservés = 0 :
+    Le bach vaut un nouveau compositeur :
+        Le nom vaut « Johann Sebastian Bach ».
+        La naissance vaut 31.03.1685.
+    Conserver bach.
+    L'offrande vaut une nouvelle œuvre :
+        Le titre vaut « L'Offrande musicale ».
+        Le compositeur vaut bach.
+        L'année vaut 1747.
+    Conserver offrande.
+    Le violon vaut un nouvel instrument :
+        Le nom vaut « violon ».
+    Conserver violon.
+    La flûte vaut un nouvel instrument :
+        Le nom vaut « flûte ».
+    Conserver flûte.
+    La p vaut une nouvelle partition :
+        L'œuvre vaut offrande.
+        L'éditeur vaut « Bärenreiter ».
+    Conserver p.
+    Le v vaut un nouveau pupitre :
+        La partition vaut p.
+        L'instrument vaut violon.
+        Le nombre de parties vaut 2.
+    Conserver v.
+    Le f vaut un nouveau pupitre :
+        La partition vaut p.
+        L'instrument vaut flûte.
+        Le nombre de parties vaut 1.
+    Conserver f.
+
+Pour chaque partition conservée :
+    Afficher titre de l'œuvre de la partition puis « chez » puis éditeur de la partition.
+    Si l'arrangeur de la partition est présent, afficher « arrangée par » puis nom de l'arrangeur de la partition.
+    Sinon, afficher « sans arrangement ».
+Pour chaque pupitre conservé, par nombre de parties décroissant :
+    Afficher nom de l'instrument du pupitre puis nombre de parties du pupitre.
+Afficher le nombre d'œuvres conservées dont l'année est absente puis « œuvre(s) sans année ».

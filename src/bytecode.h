@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.13).
+ * Spécification : docs/vm.md (révision 1.14).
  */
 #ifndef GRYM_BYTECODE_H
 #define GRYM_BYTECODE_H
@@ -45,10 +45,12 @@ typedef enum {
     I_SUPPRIMER,
     I_CHERCHER,
     I_TAILLE_LISTE,
-    I_ELEMENT
+    I_ELEMENT,
+    I_ABSENT,
+    I_EST_ABSENT
 } CodeInstruction;
 
-#define I_DERNIER I_ELEMENT
+#define I_DERNIER I_EST_ABSENT
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);
@@ -128,7 +130,7 @@ typedef struct {
     char *pluriel;        /* pluriel irrégulier, ou NULL */
     char **champs;        /* champs propres */
     char **types;         /* type de chaque champ, ou NULL (classe ordinaire) */
-    unsigned char *uniques;
+    unsigned char *uniques;   /* bit 1 : unique ; bit 2 : facultatif (grammaire, § 16.9) */
     char **departs;       /* valeur de départ, forme canonique (« Suisse », « -3.5 », « 2026-09-21 », « vrai »), ou NULL */
     size_t nb_champs;
 } ClasseModule;
@@ -148,6 +150,7 @@ void classe_ajouter_champ(ClasseModule *c, const char *champ);
 void classe_ajouter_aptitude(ClasseModule *c, const char *aptitude);
 void classe_typer_dernier_champ(ClasseModule *c, const char *type, int unique);
 void classe_depart_dernier_champ(ClasseModule *c, const char *depart);
+void classe_facultatif_dernier_champ(ClasseModule *c);
 void module_detruire(Module *m);          /* ignore les entrées mises à NULL */
 int module_verifier(const Module *m, char **erreur);
 

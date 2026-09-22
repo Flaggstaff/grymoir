@@ -1,5 +1,5 @@
 /* GrymoiR : arbre syntaxique, v0.1
- * Spécification : docs/grammaire.md (révision 1.19), § 6.
+ * Spécification : docs/grammaire.md (révision 1.20), § 6.
  * Chaque nœud garde sa position dans la source (debut, fin), pour les
  * messages d'erreur et, en v0.2, pour la traduction sans perte.
  */
@@ -28,6 +28,7 @@ typedef enum {
     N_INTERVALLE,    /* cas « de a à b » : enfants[0], enfants[1] ; bornes dans un ordre quelconque */
     N_CAS,           /* enfants : conditions, puis le N_BLOC ; forme 1 : « Autrement » (sans condition) */
     N_DATE,          /* « 21.09.2026 » : texte : forme ISO « 2026-09-21 » (§ 14) */
+    N_ABSENT,        /* « absent », « absente » : forme 2 si féminin (§ 16.9) */
     N_AUJOURDHUI,    /* « aujourd'hui » (§ 14.3) */
     N_FICHIER,       /* « le fichier « photos/ana.jpg » » : enfants[0] : chemin (§ 15.2) */
     N_CHAMP_DONT,    /* champ de l'objet examiné, dans une condition « dont » : texte : champ (§ 16.4) */
@@ -61,8 +62,8 @@ typedef enum {
                         (N_NOM, forme = genre) et aptitudes adoptées (N_TEXTE, forme féminine) ;
                         texte2 : classe parente (« Un membre est une personne. »), ou NULL ;
                         forme : bit 16 = déclarée par « est », bit 32 = entité (« conservé ») ;
-                        un champ d'entité porte son type en texte2, op = 'U' s'il est unique, et sa
-                        valeur de départ en enfants[0] (§ 16.7) */
+                        un champ d'entité porte son type en texte2, op = 'U' s'il est unique, sa
+                        valeur de départ en enfants[0] (§ 16.7), et entier = 1 s'il est facultatif (§ 16.9) */
     P_MODIF_CHAMP,   /* « Le solde du client devient … » : texte : champ ; enfants[0] : objet ; enfants[1] : valeur */
     P_POUR_CONSERVE, /* « Pour chaque client conservé dont … : » : texte : entité (nom du compteur, case `local`) ;
                         enfants[0] : N_CHERCHER ; enfants[1] : N_BLOC ; entier : case de la liste, entier + 1 : rang ;

@@ -82,6 +82,11 @@ static void comparaison(Compilation *c, const Noeud *n) {
     int l = n->op_ligne, col = n->op_colonne;
     expression(c, n->enfants[0]);
     CodeInstruction code;
+    if (n->op == 'A' || n->op == 'R') {   /* est absent, est présent (§ 16.9) */
+        emettre(c, I_EST_ABSENT, 0, l, col);
+        if ((n->op == 'R') != (n->negation != 0)) emettre(c, I_NON, 0, l, col);
+        return;
+    }
     switch (n->op) {
     case '=': code = I_EGAL; break;
     case '!': code = I_DIFFERENT; break;
@@ -206,6 +211,9 @@ static void expression(Compilation *c, const Noeud *n) {
     }
     case N_AUJOURDHUI:
         emettre(c, I_AUJOURDHUI, 0, n->ligne, n->colonne);
+        return;
+    case N_ABSENT:
+        emettre(c, I_ABSENT, 0, n->ligne, n->colonne);
         return;
     case N_CHERCHER:
         chercher(c, n);
@@ -542,6 +550,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
             else {
                 classe_ajouter_champ(cm, ch->texte);
                 classe_typer_dernier_champ(cm, ch->texte2, ch->op == 'U');
+                if (ch->entier) classe_facultatif_dernier_champ(cm);
                 if (ch->nb_enfants) {   /* valeur de départ, sous forme canonique */
                     const Noeud *v = ch->enfants[0];
                     char *t = v->type == N_NEGATION ? grym_formater("-%s", v->enfants[0]->texte) : grym_dupliquer(v->texte);
