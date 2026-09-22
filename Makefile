@@ -51,7 +51,7 @@ test_base: tests/test_base.c $(SQLITE_O)
 test_lsp: tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR) $(ENTETES) src/lsp.h src/json.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR)
 
-test: test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp
+test: grym test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp
 	./test_lexeur
 	./test_analyseur
 	./test_machine

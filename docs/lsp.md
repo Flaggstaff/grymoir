@@ -1,6 +1,6 @@
 # GrymoiR : serveur d'aide à la saisie (LSP)
 
-Version 1.0 de la spécification, rédigée le 22 septembre 2026. Jalon v0.4 (charte, art. 12).
+Version 1.1 de la spécification, révisée le 22 septembre 2026. Jalon v0.4 (charte, art. 12).
 
 Le serveur rend l'aide à la saisie de la charte (art. 9) disponible dans un éditeur de code, par le
 protocole LSP (Language Server Protocol) 3.17 de Microsoft. Il est écrit en C99, comme le reste du
@@ -59,6 +59,9 @@ langage, sans dépendance : il se lance par `grym lsp`.
 - Coloration par grammaires TextMate (`syntaxes/`), vérifiées avec `vscode-textmate` et
   `vscode-oniguruma`, les bibliothèques de VS Code : mots de la grammaire, structures de contrôle,
   textes, nombres, dates, remarques, types entre parenthèses.
+- En mode restreint (dossier auquel l'utilisateur n'a pas fait confiance), l'extension ne lance pas `grym` :
+  le manifeste le déclare (`untrustedWorkspaces`), et VS Code l'explique. La coloration reste active.
+- Un `grym` introuvable produit un message qui donne le chemin essayé et la marche à suivre.
 - Paquet : `npm install`, puis `npx @vscode/vsce package`. Dépendance : `vscode-languageclient`
   10.1.1, qui demande VS Code 1.91 ou plus récent.
 
@@ -72,3 +75,4 @@ suites en forme compacte ; autres éditeurs (Neovim : quelques lignes de configu
 | Version | Date | Changement |
 |---|---|---|
 | 1.0 | 2026-09-22 | Première version : transport, erreurs en direct, autocomplétion, mise en forme, extension VS Code |
+| 1.1 | 2026-09-22 | Mode restreint déclaré ; message clair quand `grym` est introuvable ; `make test` construit aussi `grym` |

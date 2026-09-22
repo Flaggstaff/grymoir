@@ -2,31 +2,56 @@
   "name": "grymoir",
   "displayName": "GrymoiR",
   "description": "Langage GrymoiR : coloration, erreurs en direct, autocomplétion et mise en forme, pour la forme littéraire (.grym) et la forme compacte (.grymc).",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "flaggstaff",
-  "repository": { "type": "git", "url": "https://github.com/Flaggstaff/grymoir" },
-  "engines": { "vscode": "^1.91.0" },
-  "categories": ["Programming Languages", "Formatters"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Flaggstaff/grymoir"
+  },
+  "engines": {
+    "vscode": "^1.91.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters"
+  ],
   "main": "./extension.js",
   "activationEvents": [],
   "contributes": {
     "languages": [
       {
         "id": "grymoir",
-        "aliases": ["GrymoiR", "grymoir"],
-        "extensions": [".grym"],
+        "aliases": [
+          "GrymoiR",
+          "grymoir"
+        ],
+        "extensions": [
+          ".grym"
+        ],
         "configuration": "./language-configuration.json"
       },
       {
         "id": "grymoir-compact",
-        "aliases": ["GrymoiR (forme compacte)"],
-        "extensions": [".grymc"],
+        "aliases": [
+          "GrymoiR (forme compacte)"
+        ],
+        "extensions": [
+          ".grymc"
+        ],
         "configuration": "./language-configuration-compact.json"
       }
     ],
     "grammars": [
-      { "language": "grymoir", "scopeName": "source.grymoir", "path": "./syntaxes/grymoir.tmLanguage.json" },
-      { "language": "grymoir-compact", "scopeName": "source.grymoir-compact", "path": "./syntaxes/grymoir-compact.tmLanguage.json" }
+      {
+        "language": "grymoir",
+        "scopeName": "source.grymoir",
+        "path": "./syntaxes/grymoir.tmLanguage.json"
+      },
+      {
+        "language": "grymoir-compact",
+        "scopeName": "source.grymoir-compact",
+        "path": "./syntaxes/grymoir-compact.tmLanguage.json"
+      }
     ],
     "configuration": {
       "title": "GrymoiR",
@@ -41,5 +66,11 @@
   },
   "dependencies": {
     "vscode-languageclient": "10.1.1"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "GrymoiR lance l'outil grym indiqué dans le réglage « grymoir.chemin » : VS Code ne le permet que dans un dossier auquel vous faites confiance. Faites confiance au dossier (bandeau « Restricted Mode », puis « Trust ») pour activer les erreurs en direct, l'autocomplétion et la mise en forme. La coloration fonctionne dans tous les cas."
+    }
   }
 }

@@ -10,8 +10,11 @@ comme le reste du langage. Il faut donc avoir construit `grym` (`make` à la rac
 
 1. Construire `grym` : `make` à la racine du dépôt.
 2. Dans VS Code : « Extensions », menu « … », « Installer depuis VSIX… », puis choisir
-   `grymoir-0.4.0.vsix`.
-3. Si `grym` n'est pas dans le `PATH`, indiquer son chemin dans le réglage `grymoir.chemin`.
+   `grymoir-0.4.1.vsix`.
+3. Si `grym` n'est pas dans le `PATH`, indiquer son chemin complet dans le réglage `grymoir.chemin`,
+   puis recharger la fenêtre (commande « Reload Window »).
+4. Faire confiance au dossier du projet : en mode restreint (« Restricted Mode »), VS Code ne laisse pas
+   l'extension lancer `grym`. Seule la coloration fonctionne alors.
 
 ## Ce que fait l'extension
 
