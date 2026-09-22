@@ -705,6 +705,22 @@ int main(void) {
     VE("Une personne, conservée, a : un nom (texte), des amis (personne).\nUn membre, conservé, est une personne.\n"
        "Un membre a : un amis (texte).", 3, 18, "« amis » est déjà un champ hérité de « personne ».");
 
+    /* --- Années (§ 14.5) --- */
+    V("Une œuvre, conservée, a : une composition (année), unique, une reprise (année), 1900 au départ.",
+      "(entité [œuvre] [composition : année unique] [reprise : année départ 1900])");
+    V("Le d vaut 01.01.2000.\nAfficher l'année de d.", "(créer [d] (date 2000-01-01))\n(afficher (champ [année] [d]))");
+    VE("Une œuvre, conservée, a : une composition (année).\nL'o vaut une nouvelle œuvre :\n    La composition vaut 2,5.",
+       3, 25, "Le champ « composition » attend une année (de 1 à 9999), pas 2,5.");
+    VE("Une œuvre, conservée, a : une composition (année).\nL'o vaut une nouvelle œuvre :\n    La composition vaut 10000.",
+       3, 25, "attend une année (de 1 à 9999), pas 10'000.");
+    VE("Une œuvre, conservée, a : une composition (année), 0 au départ.", 1, 52, "attend une année (de 1 à 9999), pas 0.");
+    VE("Une œuvre, conservée, a : une composition (année).\nAfficher le nombre d'œuvres conservées dont la composition "
+       "est positive.", 2, 60, "positif, négatif et nul s'appliquent à un nombre");
+    VE("Une année, conservée, a : un x (texte).", 1, 5, "« année » est un type : une entité ne peut pas porter ce nom.");
+    VE("Une date, conservée, a : un x (texte).", 1, 5, "« date » est un type");
+    VE("Une œuvre, conservée, a : un x (texte).\nAfficher le nombre d'œuvres conservées dont 3 est nul.", 2, 45,
+       "Une condition « dont » compare un champ de l'œuvre à une valeur");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

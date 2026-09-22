@@ -1,8 +1,9 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.23), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.24), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
+#include "decimal.h"
 #include "compact.h"
 #include "lexeur.h"
 #include "texte.h"
@@ -291,7 +292,7 @@ static int multiple_connu(Portee *p, const char *nom, int singulier, const char 
 
 /* Champs de toute valeur fichier (§ 15.3) : ils ne réservent pas leur nom. */
 static int champ_integre(const char *nom, Genre *g) {
-    if (strcmp(nom, "taille") == 0) { if (g) *g = GENRE_FEMININ; return 1; }
+    if (strcmp(nom, "taille") == 0 || strcmp(nom, "année") == 0) { if (g) *g = GENRE_FEMININ; return 1; }   /* année : d'une date */
     if (strcmp(nom, "format") == 0 || strcmp(nom, "nom de fichier") == 0) { if (g) *g = GENRE_MASCULIN; return 1; }
     return 0;
 }
@@ -587,7 +588,8 @@ static void *erreur_a(Analyse *a, int ligne, int colonne, char *message) {
     return NULL;
 }
 
-static const char *const TYPES[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image" };
+static const char *const TYPES[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image",
+                                     "année" };
 
 /* ---------------------------------------------------------------- */
 /* Typage strict des entités, à l'analyse (§ 16.2)                  */
@@ -642,7 +644,7 @@ static int type_de_base(const char *t) {
 
 static char *nommer_type(Portee *p, const char *t) {
     if (strcmp(t, "vrai ou faux") == 0) return grym_dupliquer("vrai ou faux");
-    if (strcmp(t, "date") == 0 || strcmp(t, "image") == 0) return grym_formater("une %s", t);
+    if (strcmp(t, "date") == 0 || strcmp(t, "image") == 0 || strcmp(t, "année") == 0) return grym_formater("une %s", t);
     if (type_de_base(t)) return grym_formater("un %s", t);
     const Classe *c = classe_de(p, t);
     return grym_formater("%s %s", c && c->genre == GENRE_FEMININ ? "une" : "un", t);
@@ -661,11 +663,31 @@ static int accorder_absent(Analyse *a, Noeud *v, Genre g) {
 }
 
 /* Vérifie qu'une valeur convient au type d'un champ ; sinon, erreur à la position de la valeur. */
+/* « 2.5 » → « 2,5 », pour les messages */
+static char *dec_formater_canonique(const char *canonique) {
+    Decimal d = dec_depuis_canonique(canonique);
+    char *r = dec_formater(&d);
+    dec_liberer(&d);
+    return r;
+}
+
 static int verifier_type(Analyse *a, const char *champ, const char *attendu, const Noeud *v) {
     const char *vu = attendu ? type_statique(v) : NULL;
     if (!vu || strcmp(attendu, vu) == 0) return 1;
     if (strcmp(attendu, "nombre") == 0 && strcmp(vu, "nombre entier") == 0) return 1;
     if (strcmp(attendu, "image") == 0 && strcmp(vu, "fichier") == 0) return 1;   /* vérifié à l'exécution */
+    if (strcmp(attendu, "année") == 0 && (strcmp(vu, "nombre entier") == 0 || strcmp(vu, "nombre") == 0)) {
+        /* un nombre entier devient une année dans un champ (année), s'il est dans le calendrier (§ 14.5) */
+        const Noeud *x = v;
+        while (x->type == N_GROUPE) x = x->enfants[0];
+        if (strcmp(vu, "nombre entier") == 0 && x->type != N_NEGATION && (x->type != N_NOMBRE || (strtol(x->texte, NULL, 10) >= 1 && strtol(x->texte, NULL, 10) <= 9999)))
+            return 1;
+        char *n = x->type == N_NEGATION ? grym_dupliquer("un nombre négatif")
+                : x->type == N_NOMBRE ? dec_formater_canonique(x->texte) : grym_dupliquer("un nombre à virgule");
+        erreur_a(a, v->ligne, v->colonne, grym_formater("Le champ « %s » attend une année (de 1 à 9999), pas %s.", champ, n));
+        free(n);
+        return 0;
+    }
     if (!type_de_base(attendu) && !type_de_base(vu)) {
         for (const Classe *c = classe_de(a->portee, vu); c; c = c->parent ? classe_de(a->portee, c->parent) : NULL)
             if (strcmp(c->nom, attendu) == 0) return 1;
@@ -1249,8 +1271,8 @@ static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
         }
     }
     erreur_a(a, n->ligne, n->colonne, grym_formater(
-        "Une condition « dont » compare un champ %s %s à une valeur : « dont le solde est négatif ».",
-        e->genre == GENRE_FEMININ ? "de la" : "du", e->nom));
+        "Une condition « dont » compare un champ %s%s à une valeur : « dont le solde est négatif ».",
+        voyelle_initiale(e->nom) ? "de l'" : e->genre == GENRE_FEMININ ? "de la " : "du ", e->nom));
     return 0;
 }
 
@@ -3746,6 +3768,11 @@ static Noeud *definition_classe(Analyse *a) {
     char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, fin_nom);
     if (aptitude_de(a->portee, nom, NULL)) {
         erreur(a, &a->j[d], grym_formater("« %s » est une aptitude, pas une classe.", nom));
+        free(nom);
+        return NULL;
+    }
+    if (tconserve && type_de_base(nom)) {
+        erreur(a, &a->j[d], grym_formater("« %s » est un type : une entité ne peut pas porter ce nom.", nom));
         free(nom);
         return NULL;
     }

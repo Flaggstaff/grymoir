@@ -1298,6 +1298,65 @@ int main(void) {
         remove("_essai_mul.grymd");
     }
 
+    /* --- Années (§ 14.5) --- */
+#define AN "Une œuvre, conservée, a : un titre (texte), une composition (année), une révision (année), facultative.\n" \
+           "Pour créer un titre et une année :\n    L'o vaut une nouvelle œuvre :\n        Le titre vaut titre.\n" \
+           "        La composition vaut année.\n    Conserver o.\n" \
+           "Créer « A » et 1747.\nCréer « B » et l'année de 21.09.1685.\nCréer « C » et 12.\n" \
+           "L'a vaut l'œuvre conservée dont le titre est « A ».\n"
+    PROG(AN "Afficher composition de a puis composition de a + 3 puis composition de a − 1000 puis "
+         "composition de a − composition de l'œuvre conservée dont le titre est « B ».", "1747 1750 747 62");
+    PROG(AN "Afficher composition de a > 1700 puis 1747 = composition de a puis composition de a ≠ 1747,0 puis "
+         "l'année de 31.12.2026 puis révision de a.", "vrai vrai faux 2026 absent");
+    PROG(AN "Pour chaque œuvre conservée dont la composition < 1700, par composition décroissant, afficher titre de l'œuvre.\n"
+         "Afficher le nombre d'œuvres conservées dont la composition ≥ 12.", "B\nC\n3");
+    PROG(AN "Pour chaque an de composition de a à 1749, afficher an.\nPour chaque an de 1749 à composition de a par pas de −2, "
+         "afficher an.", "1747\n1748\n1749\n1'749\n1'747");
+    PROG(AN "Selon composition de a :\n    Cas de 1700 à 1750, afficher « baroque ».\n    Autrement, afficher « autre ».", "baroque");
+    PROG("Le premier d'un d vaut l'année de d.\nAfficher le premier de 01.01.2000.", "2000");
+    PROG(AN "Afficher composition de a + composition de a.", "~On n'additionne pas deux années.");
+    PROG(AN "Afficher composition de a × 2.", "~On ne multiplie pas une année.");
+    PROG(AN "Afficher −composition de a.", "~On ne prend pas l'opposé d'une année.");
+    PROG(AN "Afficher 3 − composition de a.", "~On ne soustrait pas une année d'un nombre.");
+    PROG(AN "Afficher composition de a + 0,5.", "~Une année se décale d'un nombre entier d'années.");
+    PROG(AN "Afficher composition de a + 8300.", "~Année hors du calendrier : de 1 à 9999.");
+    PROG(AN "Afficher composition de a < 01.01.2000.", "~Une année ne se compare pas à une date");
+    PROG(AN "Afficher composition de a = « 1747 ».", "~Comparaison impossible entre une année et un texte.");
+    PROG(AN "Le x vaut 2,5.\nLa composition de a devient x.", "~Le champ « composition » attend une année (de 1 à 9999), pas 2,5.");
+    PROG(AN "Le x vaut 0.\nLa composition de a devient x.", "~attend une année (de 1 à 9999), pas 0.");
+    PROG("Afficher le mois de 01.01.2000.", "~« mois de » inconnu");
+    PROG("Le d vaut 01.01.2000.\nAfficher taille de d.", "~Une date n'a pas de champ « taille » : seulement « année ».");
+    PROG("Un p a : une taille.\nLa q vaut un nouveau p :\n    La taille vaut 3.\nAfficher 1747 puis taille de q.", "1'747 3");
+    {   /* migrations : nombre entier ↔ année */
+        remove("_essai_an.grymd");
+        const char *etapes[][2] = {
+            { "Un livre, conservé, a : un titre (texte), un an (nombre entier).\n"
+              "Le l vaut un nouveau livre :\n    Le titre vaut « X ».\n    L'an vaut 20000.\nConserver l.\n", "" },
+            { "Un livre, conservé, a : un titre (texte), un an (année).\n",
+              "~« an » ne peut pas devenir une année : 1 valeur conservée est hors de 1 à 9999." },
+            { "Un livre, conservé, a : un titre (texte), un an (nombre entier).\n"
+              "Le l vaut le livre conservé dont le titre est « X ».\nL'an du l devient 1990.\n", "" },
+            { "Un livre, conservé, a : un titre (texte), un an (année), une sortie (année), 2000 au départ.\n"
+              "Le l vaut le livre conservé dont le titre est « X ».\nAfficher an du l + 1 puis sortie du l.\n", "1991 2000" },
+            { "Un livre, conservé, a : un titre (texte), un an (nombre entier), une sortie (année).\n"
+              "Le l vaut le livre conservé dont le titre est « X ».\nAfficher an du l + 1.\n", "1'991" },
+        };
+        for (int i = 0; i < 5; i++) {
+            total++;
+            Portee *p = portee_creer();
+            Machine *m = machine_creer();
+            machine_base(m, "_essai_an.grymd");
+            char *r = executer_source(p, m, etapes[i][0], 0);
+            const char *att = etapes[i][1];
+            int ok = att[0] == '~' ? strstr(r, att + 1) != NULL : strcmp(r, att) == 0;
+            if (!ok) signaler(__LINE__, etapes[i][0], att, r);
+            free(r);
+            machine_detruire(m);
+            portee_detruire(p);
+        }
+        remove("_essai_an.grymd");
+    }
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

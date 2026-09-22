@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.16, révisée le 22 septembre 2026.
+Version 1.17, révisée le 22 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -189,3 +189,4 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 | 1.14 | 2026-09-22 | Art. 12 : les relations inverses sont faites (grammaire, § 16.10) |
 | 1.15 | 2026-09-22 | Art. 12 : corbeille et cascade faites (grammaire, § 16.12) ; reports : vider la corbeille, autocomplétion des saisies |
 | 1.16 | 2026-09-22 | Art. 12 : « plusieurs vers plusieurs » fait (grammaire, § 16.13) ; reports : test d'appartenance hors `dont`, plusieurs objets gagnés à la fois, champs multiples de valeurs |
+| 1.17 | 2026-09-22 | Art. 12 : le type `(année)` est fait (grammaire, § 14.5) ; l'ajout de mois et d'années aux dates reste reporté |

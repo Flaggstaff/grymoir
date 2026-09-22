@@ -247,6 +247,12 @@ int main(void) {
          "_afficher _nombre_de travail _de o ; _nombre_de œuvre _conservé _dont interprètes _contient o ; "
          "_nombre_de œuvre _conservé _dont _non (travaux _contient o)\n");
 
+    /* --- Années (§ 14.5) --- */
+    COMP("Une œuvre, conservée, a : une composition (année), facultative, une reprise (année), 1900 au départ.\n"
+         "Le d vaut 01.01.2000.\nAfficher l'année de d puis l'année d'aujourd'hui.",
+         "_classe _une œuvre _conservé\n    _une composition (année) _facultatif\n    _une reprise (année) _départ 1'900\n_fin\n"
+         "_le d << 01.01.2000\n_afficher d.année ; (_aujourd'hui).année\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

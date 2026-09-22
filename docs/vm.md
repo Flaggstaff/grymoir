@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.17 de la spécification, révisée le 22 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.23, § 3.3, § 5, § 9, § 10, § 13 à 16.
+Version 1.18 de la spécification, révisée le 22 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.24, § 3.3, § 5, § 9, § 10, § 13 à 16.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -29,6 +29,7 @@ Règle de nommage : instructions, outils et messages s'écrivent en toutes lettr
 | booléen | vrai ou faux |
 | objet | référence vers un objet du tas : sa classe et ses champs |
 | date | jour du calendrier grégorien, du 01.01.0001 au 31.12.9999 (grammaire, § 14) |
+| année | année du calendrier, de 1 à 9999 (grammaire, § 14.5) ; s'affiche sans séparateur |
 | absent | valeur d'un champ facultatif sans valeur (grammaire, § 16.9) ; elle garde le nom du champ d'où elle vient, pour les messages |
 | fichier | contenu d'un fichier, son nom d'origine et son format d'image s'il est reconnu (grammaire, § 15). Immuable, partagé entre les valeurs qui le désignent, libéré quand plus aucune ne le désigne |
 
@@ -117,6 +118,7 @@ Pour chaque i de a à b       a → i ; b → fin ; pas (écrit, ou ±1 selon a 
 - La création et la modification compilent toutes deux en `ÉCRIRE` : la distinction entre `vaut` et `devient` se vérifie à la compilation (grammaire, § 2.1).
 - `est positif`, `est négatif`, `est nul` compilent en une comparaison avec la constante 0 ; `est vrai`, `est faux` en `ÉGAL` avec une constante booléenne ; `n'est pas` ajoute `NON`.
 - Les comparaisons d'ordre n'acceptent que deux nombres ou deux dates ; `ÉGAL` et `DIFFÉRENT` acceptent deux valeurs du même type. Sinon : erreur d'exécution.
+- `ADDITION` accepte une année et un nombre entier d'années, dans les deux ordres ; `SOUSTRACTION`, une année moins des années (une année) ou deux années (un nombre). Les comparaisons acceptent une année et une année ou un nombre, par valeur ; jamais une date. `LIRE_CHAMP` « année » sur une date empile son année. `INITIALISER_CHAMP` et `ÉCRIRE_CHAMP` convertissent en année un nombre entier de 1 à 9999 rangé dans un champ `(année)`.
 - `ADDITION` accepte une date et un nombre entier de jours, dans les deux ordres ; `SOUSTRACTION`, une date moins des jours (une date) ou deux dates (un nombre de jours). Un résultat hors du calendrier est une erreur.
 - `SAUTER_SI_FAUX` exige un booléen : « Condition ni vraie ni fausse : la valeur est un nombre. »
 - Les instructions de champ désignent la classe et le champ par leur nom, résolu à l'exécution : la machine vérifie que la valeur est un objet et que sa classe a ce champ. `ÉGAL` compare deux objets par identité.
@@ -293,3 +295,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.15 | 2026-09-22 | Condition `(I?k)` : relation inverse |
 | 1.16 | 2026-09-22 | Corbeille et cascade : `SUPPRIMER` met dans la corbeille, `SUPPRIMER_DÉFINITIVEMENT`, `RÉTABLIR`, modes 3 à 5, bit 2 ; format version 15 |
 | 1.17 | 2026-09-22 | Champs multiples : `GAGNER`, `PERDRE`, bit 3 des champs, tables de liaison, conditions `(M?k[champ])` et `(p[champ]?k)`, `(I?k)` étendue ; format version 16 ; `CHERCHER` sans paramètre ne calcule plus d'adresse sur une pile vide |
+| 1.18 | 2026-09-22 | Valeur année : calculs, comparaisons, affichage, `LIRE_CHAMP` « année » d'une date, conversion à l'écriture d'un champ `(année)`, colonne `INTEGER` |

@@ -1,5 +1,5 @@
 /* GrymoiR : représentation interne des valeurs, partagée par la machine et la base
- * Spécification : docs/vm.md (révision 1.17), § 2.
+ * Spécification : docs/vm.md (révision 1.18), § 2.
  */
 #ifndef GRYM_VM_INTERNE_H
 #define GRYM_VM_INTERNE_H
@@ -9,7 +9,8 @@
 #include <stddef.h>
 
 /* V_ABSENT : un champ facultatif sans valeur (grammaire, § 16.9) ; texte : le champ d'où elle vient, ou NULL. */
-typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET, V_DATE, V_FICHIER, V_LISTE, V_ABSENT } TypeValeur;
+/* V_ANNEE : une année du calendrier, de 1 à 9999, rangée dans `jours` (grammaire, § 14.5). */
+typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET, V_DATE, V_FICHIER, V_LISTE, V_ABSENT, V_ANNEE } TypeValeur;
 
 /* Liste d'objets conservés, figée par une recherche (§ 16.4) : interne, jamais visible du langage. */
 typedef struct Liste {
@@ -77,6 +78,7 @@ Valeur vi_nombre_canonique(const char *texte);
 Valeur vi_texte(const char *texte);
 Valeur vi_booleen(int vrai);
 Valeur vi_date(long jours);
+Valeur vi_annee(long annee);
 Valeur vi_fichier(const void *octets, size_t taille, const char *nom);
 Valeur vi_objet(Objet *o);
 Valeur vi_absent(const char *champ);

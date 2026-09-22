@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.23 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
+Version 1.24 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -378,6 +378,9 @@ Limites de cette notation :
 | Hors d'une boucle | « « Sortir de la boucle » hors d'une boucle. » |
 | Cas après Autrement | « « Autrement » vient après tous les cas. » |
 | Interruption (exécution) | « Interrompu (Ctrl+C). » |
+| Année hors du champ (analyse ou exécution) | « Le champ « composition » attend une année (de 1 à 9999), pas 2,5. » |
+| Calcul sur une année (exécution) | « On n'additionne pas deux années. » |
+| Entité nommée comme un type | « « année » est un type : une entité ne peut pas porter ce nom. » |
 | Date impossible | « Le 31 février 2026 n'existe pas. » |
 | Date mal écrite | « Date mal formée « 21.9.26 » : écrivez jour.mois.année, l'année sur quatre chiffres (21.09.2026). » |
 | Deux dates additionnées (exécution) | « On n'additionne pas deux dates. » |
@@ -810,6 +813,39 @@ La date d'inscription du membre devient 21.09.2026.
 - `Afficher` écrit la forme de la source : `21.09.2026`.
 - Reporté : l'heure, un type `(moment)`, et les fuseaux horaires.
 
+### 14.5 Années
+
+```
+Une œuvre, conservée, a :
+    un titre (texte),
+    une composition (année).
+
+La composition de o devient 1747.
+Afficher composition de o.                         →  1747
+Afficher composition de o + 3.                     →  1750
+Afficher l'année de 21.09.2026.                    →  2026
+Si l'année de la date de sortie > 1700, …
+```
+
+- Une année est une valeur à part entière, de 1 à 9999, comme les dates. Elle s'affiche sans séparateur de milliers : `1747`, jamais `1'747`.
+- Aucun littéral : une année naît d'un champ `(année)`, où un nombre entier de 1 à 9999 devient une année (comme `3,0` devient un nombre entier dans un champ `(nombre entier)`, § 16.2) ; de `l'année de d`, champ intégré de toute date, qui ne réserve rien (§ 15.3) ; ou d'un calcul sur une année. `Le millésime vaut 1747.` crée un nombre.
+- Ranger `2,5`, `0` ou `12000` dans un champ `(année)` est une erreur : « Le champ « composition » attend une année (de 1 à 9999), pas 2,5. »
+
+| Opération | Résultat |
+|---|---|
+| année + nombre entier, nombre entier + année, année − nombre entier | année |
+| année − année | nombre d'années |
+| année + année | erreur : « On n'additionne pas deux années. » |
+| ×, ÷, ^, opposé | erreur : « On ne multiplie pas une année. »… |
+
+- Une année se compare à une année ou à un nombre, par valeur : `année de o > 1700`, `1747 = année de o`. Elle ne se compare pas à une date : « Une année ne se compare pas à une date : comparez l'année de la date, « l'année de d ». »
+- `l'année de d` est permis dans un calcul : il ne dépend que de son paramètre. `l'année d'aujourd'hui` reste réservé aux actions (§ 14.3).
+- Boucles : le compteur est une année dès que le début en est une (`Pour chaque an de l'année de d à 2026`). `Selon` : `Cas de 1700 à 1750` compare par valeur.
+- En base : `INTEGER`. Une condition `dont` compare le champ à une année ou à un nombre ; le tri est numérique.
+- Migrations (§ 16.7) : `(nombre entier)` devient `(année)` si toutes les valeurs conservées sont entre 1 et 9999, sinon refus avec leur nombre ; `(année)` redevient `(nombre entier)` sans perte.
+- `année` est un nom de type : une entité ne peut pas le porter, pas plus que `texte` ou `date`.
+- En forme compacte : `(année)`, `d.année`.
+
 ## 15. Fichiers et images *(v0.3)*
 
 ### 15.1 Valeurs
@@ -873,6 +909,7 @@ Un client, conservé, a :
 | `(nombre entier)` | `INTEGER` |
 | `(vrai ou faux)` | `INTEGER`, 0 ou 1 |
 | `(date)` | `TEXT`, ISO 8601 |
+| `(année)` | `INTEGER`, de 1 à 9999 (§ 14.5) |
 | `(fichier)`, `(image)` | `BLOB`, plus le nom de fichier d'origine |
 | `(client)`, le nom d'une entité | clé étrangère |
 
@@ -969,6 +1006,7 @@ La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1
 | nouveau champ, table non vide | refusé, sauf valeur de départ : `un pays (texte), « Suisse » au départ` |
 | champ retiré, renommé ou retypé | refusé, avec un message qui dit combien de valeurs seraient perdues |
 | `(nombre entier)` devenu `(nombre)` | accepté : aucune perte |
+| `(nombre entier)` devenu `(année)`, et l'inverse | accepté si toutes les valeurs sont entre 1 et 9999 (§ 14.5) |
 
 - Le schéma connu est rangé dans la base elle-même. La migration a lieu au début de l'exécution, dans sa transaction : si l'exécution échoue ensuite, la base garde son ancien schéma.
 - La valeur de départ suit le type, et `, unique` s'il y a lieu : `un code (texte), unique, « C-1 » au départ`. C'est une constante (texte, nombre, date, vrai ou faux), vérifiée contre le type ; elle ne sert qu'aux objets déjà conservés au moment où le champ apparaît.
@@ -1162,3 +1200,4 @@ Pour chaque œuvre conservée dont callas est parmi les interprètes :
 | 1.21 | 2026-09-22 | § 16.10 : relations inverses (`les œuvres de bach`, `dont brel est l'auteur`) ; `dont` devient réservé ; § 16.11 : ancien § 16.10 |
 | 1.22 | 2026-09-22 | § 16.12 : corbeille (`Supprimer`, `définitivement`, `Rétablir`, `supprimé`) et cascade (`, et disparaît avec elle`) ; `Supprimer` met désormais dans la corbeille ; `définitivement` réservé |
 | 1.23 | 2026-09-22 | § 16.13 : plusieurs vers plusieurs (`des genres (genre)`, `gagnent`, `perdent`, `Pour chaque interprète de o`, `le nombre de … de …`, `dont … est parmi les …`) ; relation inverse étendue aux champs multiples ; EBNF et messages |
+| 1.24 | 2026-09-22 | § 14.5 : années (type `(année)`, valeur à part entière, sans littéral, `l'année de d`, calculs, comparaisons, boucles, base, migrations) ; une entité ne porte pas un nom de type |

@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.17).
+ * Spécification : docs/vm.md (révision 1.18).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -7,6 +7,7 @@
 #include "date.h"
 #include "decimal.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +19,7 @@
 
 static const char *nom_type(TypeValeur t) {
     return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen"
-         : t == V_DATE ? "une date" : t == V_FICHIER ? "un fichier" : t == V_LISTE ? "une liste"
+         : t == V_DATE ? "une date" : t == V_ANNEE ? "une année" : t == V_FICHIER ? "un fichier" : t == V_LISTE ? "une liste"
          : t == V_ABSENT ? "absente" : "un objet";
 }
 
@@ -74,6 +75,25 @@ static Valeur valeur_date(long jours) {
     v.type = V_DATE;
     v.jours = jours;
     return v;
+}
+
+static Valeur valeur_annee(long annee) {
+    Valeur v = valeur_nombre(dec_zero());
+    v.type = V_ANNEE;
+    v.jours = annee;
+    return v;
+}
+
+/* Nombre entier, dans [min, max] ; 0 sinon. */
+static int dec_en_long_borne(const Decimal *d, long min, long max, long *r) {
+    if (!dec_est_entier(d)) return 0;
+    char *t = dec_canonique(d), *fin = NULL;
+    errno = 0;
+    long long n = strtoll(t, &fin, 10);
+    int ok = errno == 0 && fin != t && (*fin == '\0' || *fin == '.') && n >= min && n <= max;
+    free(t);
+    if (ok) *r = (long)n;
+    return ok;
 }
 
 /* Nombre entier de jours, borné à la largeur du calendrier ; 0 sinon. */
@@ -768,6 +788,7 @@ Valeur vi_booleen(int vrai) {
 }
 
 Valeur vi_date(long jours) { return valeur_date(jours); }
+Valeur vi_annee(long annee) { return valeur_annee(annee); }
 
 Valeur vi_fichier(const void *octets, size_t taille, const char *nom) {
     Fichier *f = grym_allouer(sizeof *f);
@@ -890,6 +911,16 @@ static char *verifier_type_champ(const Machine *m, const char *champ, const char
     else if (strcmp(type, "nombre entier") == 0) ok = v->type == V_NOMBRE && dec_est_entier(&v->nombre);
     else if (strcmp(type, "vrai ou faux") == 0) ok = v->type == V_BOOLEEN;
     else if (strcmp(type, "date") == 0) ok = v->type == V_DATE;
+    else if (strcmp(type, "année") == 0) {   /* une année, ou un nombre entier de 1 à 9999 (§ 14.5) */
+        long a;
+        ok = v->type == V_ANNEE || (v->type == V_NOMBRE && dec_en_long_borne(&v->nombre, 1, 9999, &a));
+        if (!ok && v->type == V_NOMBRE) {
+            char *n = dec_formater(&v->nombre);
+            char *r = grym_formater("Le champ « %s » attend une année (de 1 à 9999), pas %s.", champ, n);
+            free(n);
+            return r;
+        }
+    }
     else if (strcmp(type, "fichier") == 0) ok = v->type == V_FICHIER;
     else if (strcmp(type, "image") == 0) {
         if (v->type == V_FICHIER && !v->fichier->format)
@@ -901,7 +932,8 @@ static char *verifier_type_champ(const Machine *m, const char *champ, const char
     if (ok) return NULL;
     const ClasseVM *e = classe_vm(m, type);
     char *attendu = strcmp(type, "vrai ou faux") == 0 ? grym_dupliquer("vrai ou faux")
-                  : strcmp(type, "date") == 0 || strcmp(type, "image") == 0 ? grym_formater("une %s", type)
+                  : strcmp(type, "date") == 0 || strcmp(type, "image") == 0 || strcmp(type, "année") == 0
+                    ? grym_formater("une %s", type)
                   : e ? grym_formater("%s %s", e->feminin ? "une" : "un", type)
                   : grym_formater("un %s", type);
     char *vu = decrire_valeur_pour_type(v);
@@ -1015,7 +1047,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             champs[n++] = cm->champs[q];
         }
         /* Un type désigne un type de base ou une entité connue (ou la classe elle-même). */
-        static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image" };
+        static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image",
+                                            "année" };
         for (size_t q = 0; q < n && !probleme; q++) {
             if (!types[q]) continue;
             int ok_type = strcmp(types[q], cm->nom) == 0 && cm->conserve;
@@ -1193,6 +1226,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_NEGATION: {
             Valeur *x = &pile.v[pile.n - 1];
             if (x->type == V_ABSENT) { ok = echouer(diag, b, debut, message_absent(x)); break; }
+            if (x->type == V_ANNEE) { ok = echouer(diag, b, debut, grym_dupliquer("On ne prend pas l'opposé d'une année.")); break; }
             if (x->type != V_NOMBRE) {
                 ok = echouer(diag, b, debut, grym_formater("Opposé impossible : la valeur est %s.",
                                                            nom_type(x->type)));
@@ -1211,6 +1245,39 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 valeur_liberer(&va);
                 valeur_liberer(&vb);
                 ok = echouer(diag, b, debut, m);
+                break;
+            }
+            if (va.type == V_ANNEE || vb.type == V_ANNEE) {
+                /* année ± nombre entier, nombre entier + année, année − année (§ 14.5) */
+                char *probleme = NULL;
+                Valeur r = valeur_nombre(dec_zero());
+                long n = 0;
+                const Valeur *an = va.type == V_ANNEE ? &va : &vb, *x = va.type == V_ANNEE ? &vb : &va;
+                if (code == I_MULTIPLICATION) probleme = grym_dupliquer("On ne multiplie pas une année.");
+                else if (code == I_DIVISION) probleme = grym_dupliquer("On ne divise pas une année.");
+                else if (code == I_PUISSANCE) probleme = grym_dupliquer("On n'élève pas une année à une puissance.");
+                else if (va.type == V_ANNEE && vb.type == V_ANNEE) {
+                    if (code == I_ADDITION) probleme = grym_dupliquer("On n'additionne pas deux années.");
+                    else { dec_liberer(&r.nombre); r = valeur_nombre(dec_depuis_long(va.jours - vb.jours)); }
+                } else if (x->type != V_NOMBRE)
+                    probleme = grym_formater("%s impossible entre une année et %s.", instruction_nom(code), nom_type(x->type));
+                else if (code == I_SOUSTRACTION && vb.type == V_ANNEE)
+                    probleme = grym_dupliquer("On ne soustrait pas une année d'un nombre.");
+                else if (!dec_en_long_borne(&x->nombre, -99999, 99999, &n))
+                    probleme = grym_dupliquer("Une année se décale d'un nombre entier d'années.");
+                else {
+                    long a = code == I_ADDITION ? an->jours + n : an->jours - n;
+                    if (a < 1 || a > 9999) probleme = grym_dupliquer("Année hors du calendrier : de 1 à 9999.");
+                    else { valeur_liberer(&r); r = valeur_annee(a); }
+                }
+                valeur_liberer(&va);
+                valeur_liberer(&vb);
+                if (probleme) {
+                    valeur_liberer(&r);
+                    ok = echouer(diag, b, debut, probleme);
+                    break;
+                }
+                empiler(&pile, r);
                 break;
             }
             if ((va.type == V_DATE || vb.type == V_DATE) && (code == I_ADDITION || code == I_SOUSTRACTION)) {
@@ -1288,6 +1355,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     char *t = decrire_fichier(v->fichier);
                     chaine_ajouter(sortie, t);
                     free(t);
+                } else if (v->type == V_ANNEE) {   /* « 1747 », jamais « 1'747 » (§ 14.5) */
+                    char t[16];
+                    snprintf(t, sizeof t, "%ld", v->jours);
+                    chaine_ajouter(sortie, t);
                 } else if (v->type == V_DATE) {
                     char *t = date_suisse(v->jours);
                     chaine_ajouter(sortie, t);
@@ -1318,6 +1389,24 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             int egalite = code == I_EGAL || code == I_DIFFERENT;
             int resultat = 0;
+            if ((va.type == V_ANNEE && vb.type == V_DATE) || (va.type == V_DATE && vb.type == V_ANNEE)) {
+                valeur_liberer(&va);
+                valeur_liberer(&vb);
+                ok = echouer(diag, b, debut, grym_dupliquer("Une année ne se compare pas à une date : "
+                                                            "comparez l'année de la date, « l'année de d »."));
+                break;
+            }
+            /* une année se compare à une année ou à un nombre, par valeur (§ 14.5) */
+            if (va.type == V_ANNEE && (vb.type == V_ANNEE || vb.type == V_NOMBRE)) {
+                va.type = V_NOMBRE;
+                dec_liberer(&va.nombre);
+                va.nombre = dec_depuis_long(va.jours);
+            }
+            if (vb.type == V_ANNEE && va.type == V_NOMBRE) {
+                vb.type = V_NOMBRE;
+                dec_liberer(&vb.nombre);
+                vb.nombre = dec_depuis_long(vb.jours);
+            }
             if (va.type != vb.type || (!egalite && va.type != V_NOMBRE && va.type != V_DATE)) {
                 ok = echouer(diag, b, debut, va.type != vb.type
                     ? grym_formater("Comparaison impossible entre %s et %s.",
@@ -1617,6 +1706,19 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 *vo = r;
                 break;
             }
+            if (vo->type == V_DATE) {   /* « l'année de d » : le seul champ d'une date (§ 14.5) */
+                if (code != I_LIRE_CHAMP || strcmp(champ, "année") != 0) {
+                    ok = echouer(diag, b, debut, code != I_LIRE_CHAMP
+                        ? grym_formater("Une date ne se modifie pas : « %s ».", champ)
+                        : grym_formater("Une date n'a pas de champ « %s » : seulement « année ».", champ));
+                    break;
+                }
+                int jour, mois, annee;
+                date_civile(vo->jours, &annee, &mois, &jour);
+                valeur_liberer(vo);
+                *vo = valeur_annee(annee);
+                break;
+            }
             if (vo->type == V_ABSENT) { ok = echouer(diag, b, debut, message_absent(vo)); break; }
             if (vo->type != V_OBJET) {
                 ok = echouer(diag, b, debut, grym_formater(
@@ -1662,6 +1764,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 *vo = v;
             } else {
                 Valeur v = depiler(&pile);
+                if (v.type == V_NOMBRE && o->classe->types[k] && strcmp(o->classe->types[k], "année") == 0) {
+                    long a = 1;   /* un nombre entier rangé dans un champ (année) devient une année (§ 14.5) */
+                    dec_en_long_borne(&v.nombre, 1, 9999, &a);
+                    valeur_liberer(&v);
+                    v = valeur_annee(a);
+                }
                 ecrire_champ(m, o, (size_t)k, v);
                 if (code == I_ECRIRE_CHAMP) {
                     Valeur ob = depiler(&pile);

@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.23), § 16 ; docs/vm.md (révision 1.17), § 8.
+ * Spécification : docs/grammaire.md (révision 1.24), § 16 ; docs/vm.md (révision 1.18), § 8.
  */
 #include "base.h"
 #include "date.h"
@@ -47,7 +47,8 @@ static int est_fichier(const char *type) {
 }
 
 static int est_lien(const char *type) {
-    static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image" };
+    static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image",
+                                        "année" };
     for (size_t k = 0; k < sizeof BASE / sizeof *BASE; k++) if (strcmp(type, BASE[k]) == 0) return 0;
     return 1;
 }
@@ -312,8 +313,8 @@ static long compter_lignes(Base *b, const ClasseVM *c) {
 
 /* Littéral SQL d'une valeur de départ (forme canonique), ou d'une valeur neutre pour une table vide. */
 static void ajouter_litteral(Chaine *sql, const char *type, const char *depart) {
-    if (strcmp(type, "nombre entier") == 0) {
-        char *t = grym_dupliquer(depart ? depart : "0");
+    if (strcmp(type, "nombre entier") == 0 || strcmp(type, "année") == 0) {
+        char *t = grym_dupliquer(depart ? depart : strcmp(type, "année") == 0 ? "1" : "0");
         char *point = strchr(t, '.');
         if (point) *point = '\0';                 /* « 3.0 » : un entier */
         chaine_ajouter(sql, t);
@@ -434,7 +435,32 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
             break;
         }
         if (n.uniques[k] & 8) continue;
-        if (strcmp(a.types[i], n.types[k]) != 0) {
+        int vers_annee = strcmp(a.types[i], "nombre entier") == 0 && strcmp(n.types[k], "année") == 0;
+        int depuis_annee = strcmp(a.types[i], "année") == 0 && strcmp(n.types[k], "nombre entier") == 0;
+        if (vers_annee || depuis_annee) {
+            /* même colonne INTEGER : seules les valeurs hors du calendrier empêchent le passage (§ 14.5) */
+            long hors = 0;
+            if (vers_annee) {
+                Chaine sql = {0};
+                chaine_ajouter(&sql, "SELECT count(*) FROM ");
+                ajouter_nom(&sql, "e ", c->nom);
+                chaine_ajouter(&sql, " WHERE ");
+                ajouter_nom(&sql, "c ", n.noms[k]);
+                chaine_ajouter(&sql, " NOT BETWEEN 1 AND 9999");
+                char *t = chaine_rendre(&sql);
+                sqlite3_stmt *st = NULL;
+                if (sqlite3_prepare_v2(b->db, t, -1, &st, NULL) == SQLITE_OK && sqlite3_step(st) == SQLITE_ROW)
+                    hors = (long)sqlite3_column_int64(st, 0);
+                sqlite3_finalize(st);
+                free(t);
+            }
+            if (hors) {
+                *erreur = grym_formater("« %s » ne peut pas devenir une année : %ld valeur%s conservée%s %s hors de 1 à 9999.",
+                                        n.noms[k], hors, hors > 1 ? "s" : "", hors > 1 ? "s" : "", hors > 1 ? "sont" : "est");
+                ok = 0;
+                break;
+            }
+        } else if (strcmp(a.types[i], n.types[k]) != 0) {
             if (strcmp(a.types[i], "nombre entier") != 0 || strcmp(n.types[k], "nombre") != 0 || (a.uniques[i] & 1)) {
                 *erreur = grym_formater("« %s » ne peut pas passer de « %s » à « %s » : seul un nombre entier non unique "
                                         "devient un nombre sans perte.", n.noms[k], a.types[i], n.types[k]);
@@ -486,6 +512,7 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
         const char *depart = q >= 0 ? c->departs[q] : NULL;
         const char *t = n.types[k];
         int lien = !(strcmp(t, "texte") == 0 || strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0
+                     || strcmp(t, "année") == 0
                      || strcmp(t, "vrai ou faux") == 0 || strcmp(t, "date") == 0 || est_fichier(t));
         int facultatif = (n.uniques[k] & 2) != 0;
         if (lignes > 0 && !depart && !facultatif) {
@@ -516,7 +543,7 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
         } else if (facultatif && !depart) {
             /* facultatif : les objets déjà conservés le reçoivent absent (NULL) */
             chaine_ajouter(&sql, est_fichier(t) ? " BLOB" : strcmp(t, "nombre entier") == 0 || strcmp(t, "vrai ou faux") == 0
-                                                             ? " INTEGER" : " TEXT");
+                                                             || strcmp(t, "année") == 0 ? " INTEGER" : " TEXT");
             if (est_fichier(t)) {
                 chaine_ajouter(&sql, "; ALTER TABLE ");
                 ajouter_nom(&sql, "e ", c->nom);
@@ -531,7 +558,8 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
             ajouter_nom(&sql, "n ", n.noms[k]);
             chaine_ajouter(&sql, " TEXT NOT NULL DEFAULT ''");
         } else {
-            chaine_ajouter(&sql, strcmp(t, "nombre entier") == 0 || strcmp(t, "vrai ou faux") == 0 ? " INTEGER" : " TEXT");
+            chaine_ajouter(&sql, strcmp(t, "nombre entier") == 0 || strcmp(t, "vrai ou faux") == 0 || strcmp(t, "année") == 0
+                                 ? " INTEGER" : " TEXT");
             chaine_ajouter(&sql, " NOT NULL DEFAULT ");
             ajouter_litteral(&sql, t, depart);
         }
@@ -584,7 +612,7 @@ int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
         const char *nn = c->uniques[k] & 2 ? "" : " NOT NULL";   /* facultatif : NULL permis (§ 16.9) */
         chaine_ajouter(&sql, ", ");
         ajouter_nom(&sql, "c ", c->champs[k]);
-        if (strcmp(t, "nombre entier") == 0) { chaine_ajouter(&sql, " INTEGER"); chaine_ajouter(&sql, nn); }
+        if (strcmp(t, "nombre entier") == 0 || strcmp(t, "année") == 0) { chaine_ajouter(&sql, " INTEGER"); chaine_ajouter(&sql, nn); }
         else if (strcmp(t, "vrai ou faux") == 0) {
             chaine_ajouter(&sql, " INTEGER");
             chaine_ajouter(&sql, nn);
@@ -667,6 +695,8 @@ static int lier(Base *b, sqlite3_stmt *st, int i, const char *type, const char *
         sqlite3_bind_int64(st, i, (sqlite3_int64)n);
     } else if (strcmp(type, "vrai ou faux") == 0) {
         sqlite3_bind_int(st, i, v->vrai ? 1 : 0);
+    } else if (strcmp(type, "année") == 0) {
+        sqlite3_bind_int64(st, i, (sqlite3_int64)v->jours);
     } else if (strcmp(type, "date") == 0) {
         char *t = date_iso(v->jours);
         sqlite3_bind_text(st, i, t, -1, SQLITE_TRANSIENT);
@@ -757,8 +787,8 @@ int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
     for (size_t k = 0; k < c->nb_champs; k++)
         if (!o->definis[k] && !(c->uniques[k] & 2) && !multiple(c, k)) {
             char *qui = un(c);
-            *erreur = grym_formater("Le champ « %s » n'a pas de valeur : %s incomplet%s ne se conserve pas.",
-                                    c->champs[k], qui, c->feminin ? "e" : "");
+            *erreur = grym_formater("Le champ « %s » n'a pas de valeur : %s %s ne se conserve pas.",
+                                    c->champs[k], qui, c->feminin ? "incomplète" : "incomplet");
             free(qui);
             return 0;
         }
@@ -1235,6 +1265,7 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
                 snprintf(tampon, sizeof tampon, "%lld", (long long)sqlite3_column_int64(st, col));
                 v = vi_nombre_canonique(tampon);
             } else if (strcmp(t, "vrai ou faux") == 0) v = vi_booleen(sqlite3_column_int(st, col));
+            else if (strcmp(t, "année") == 0) v = vi_annee((long)sqlite3_column_int64(st, col));
             else if (strcmp(t, "date") == 0) {
                 long jours = 0;
                 date_lire_iso((const char *)sqlite3_column_text(st, col), &jours);
@@ -1531,7 +1562,22 @@ static int lier_parametre(Recherche *r, sqlite3_stmt *st, int i, const char *typ
     if (strcmp(type, "texte") == 0) {
         if (v->type == V_TEXTE) { sqlite3_bind_text(st, i, v->texte, -1, SQLITE_TRANSIENT); return 1; }
         attendu = "un texte";
+    } else if (strcmp(type, "année") == 0) {
+        if (v->type == V_ANNEE) { sqlite3_bind_int64(st, i, (sqlite3_int64)v->jours); return 1; }
+        if (v->type == V_NOMBRE) {   /* colonne INTEGER : le texte canonique y est comparé comme un nombre */
+            char *t = dec_canonique(&v->nombre);
+            sqlite3_bind_text(st, i, t, -1, SQLITE_TRANSIENT);
+            free(t);
+            return 1;
+        }
+        attendu = "une année ou un nombre";
     } else if (strcmp(type, "nombre") == 0 || strcmp(type, "nombre entier") == 0) {
+        if (v->type == V_ANNEE) {
+            char t[24];
+            snprintf(t, sizeof t, "%ld", v->jours);
+            sqlite3_bind_text(st, i, t, -1, SQLITE_TRANSIENT);
+            return 1;
+        }
         if (v->type == V_NOMBRE) {
             char *t = dec_canonique(&v->nombre);
             sqlite3_bind_text(st, i, t, -1, SQLITE_TRANSIENT);
