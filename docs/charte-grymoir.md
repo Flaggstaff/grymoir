@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.11, révisée le 21 septembre 2026.
+Version 1.12, révisée le 22 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -151,7 +151,7 @@ Horizon post-v1, sans date :
 | v0.1 | Lexer, parser de la forme littéraire, suites attendues, boucle interactive de calcul | livrée |
 | v0.2 | Bytecode et VM (remplacent l'évaluateur provisoire de la v0.1), conditions (`Si`, comparaisons, booléens), boucles et `Selon`, forme compacte et `grym traduire` dans les deux sens, forme canonique et `grym formater`, formules, objets, héritage, méthodes, aptitudes, ramasse-miettes | livrée le 21 septembre 2026 |
 | v0.3 | SQLite embarqué, entités conservées (types, unicité, liens, héritage, aptitudes), conserver, modifier, supprimer, retrouver (`dont`, tri, comptage), migrations, transaction par exécution, dates, fichiers et images | livrée le 21 septembre 2026 |
-| v0.4 | Serveur d'aide à la saisie (LSP) | à venir |
+| v0.4 | Serveur d'aide à la saisie (`grym lsp`, protocole LSP) : erreurs en direct, autocomplétion, mise en forme ; extension VS Code avec coloration des deux formes | livrée le 22 septembre 2026 |
 | v1.0 | Application console complète | à venir |
 
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
@@ -159,7 +159,9 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 - objets (grammaire, § 13.8) : appel de la version parente depuis une méthode, listes d'objets, absence de valeur (et avec elle les champs facultatifs, ainsi que deux objets neufs qui se désignent l'un l'autre), affichage des objets ;
 - base (grammaire, § 16.7) : commande de `grym` qui retire ou renomme un champ, lève les limites des migrations imposées par SQLite, et reconstruit une table ;
 - dates (grammaire, § 14) : ajout de mois et d'années, heure et fuseaux horaires ;
-- langage : modifier le champ d'une recherche sans passer par un nom (`L'âge du client conservé dont … devient …`).
+- langage : modifier le champ d'une recherche sans passer par un nom (`L'âge du client conservé dont … devient …`) ;
+- aide à la saisie (`docs/lsp.md`, § 8) : survol d'un nom, aller à la définition, renommer, rechercher les usages, plusieurs erreurs à la fois, suites en forme compacte, Neovim ;
+- installation pour l'utilisateur final : `grym` embarqué dans l'extension (un paquet par système, construit par GitHub Actions), aucun réglage, fonctionnement en mode restreint, bouton « Lancer », publication sur la place de marché de VS Code et sur Open VSX (licence et comptes d'éditeur requis).
 
 ---
 
@@ -179,3 +181,4 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 | 1.9 | 2026-09-21 | Art. 5 : typage des entités vérifié à l'analyse ou avant toute écriture. Art. 7 : transaction par exécution ; migrations automatiques pour les ajouts ; type `montant` retiré, tout nombre étant exact |
 | 1.10 | 2026-09-21 | Art. 7 : l'affichage d'une exécution ratée reste, suivi d'une phrase d'annulation |
 | 1.11 | 2026-09-21 | Art. 12 : v0.3 livrée, contenu détaillé ; suites reportées regroupées par domaine |
+| 1.12 | 2026-09-22 | Art. 12 : v0.4 livrée ; reports de l'aide à la saisie et de l'installation pour l'utilisateur final |

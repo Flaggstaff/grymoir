@@ -2,7 +2,7 @@
 
 Langage de programmation francophone. Référence : `docs/charte-grymoir.md`, `docs/grammaire.md` et `docs/vm.md`.
 
-## État : v0.3 livrée ; v0.4 en cours (serveur d'aide à la saisie, extension VS Code)
+## État : v0.4 livrée (serveur d'aide à la saisie, extension VS Code)
 
 Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
 
