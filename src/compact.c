@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.20), § 11.
+ * Spécification : docs/grammaire.md (révision 1.21), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -190,6 +190,16 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             else mot(r, t->valeur, t);
             copier(r, &r->e[k + 1]);
             mot(r, "conservé", &r->e[k + 2]);
+            k += 2;
+            continue;
+        }
+        if (est_cle(t, "nombre_de") && k + 2 < f && r->e[k + 1].type == J_CROCHETS && est_cle(&r->e[k + 2], "de")) {
+            /* _nombre_de œuvre _de bach → le nombre de œuvre de bach (§ 16.10) */
+            mot(r, "le", t);
+            mot(r, "nombre", t);
+            mot(r, "de", t);
+            copier(r, &r->e[k + 1]);
+            mot(r, "de", &r->e[k + 2]);
             k += 2;
             continue;
         }
@@ -701,6 +711,33 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             if (par < f) {
                 size_t fin_tri = f;
                 if (est_cle(&r->e[f - 1], "décroissant")) fin_tri = f - 1;
+                if (fin_tri != par + 2 || r->e[par + 1].type != J_CROCHETS) {
+                    echouer(r, &r->e[par], grym_dupliquer("Tri attendu : « _par nom » ou « _par solde _décroissant »."));
+                    return;
+                }
+                emettre(r, J_VIRGULE, NULL, &r->e[par], 1);
+                mot(r, "par", &r->e[par]);
+                copier(r, &r->e[par + 1]);
+                if (fin_tri < f) mot(r, "décroissant", &r->e[f - 1]);
+            }
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            ouvrir(r, O_BOUCLE, prof, t);
+        } else if (!strcmp(c, "pour_chaque") && d + 2 < f && r->e[d + 1].type == J_CROCHETS && est_cle(&r->e[d + 2], "de")
+                   && chercher(r, d + 1, chercher(r, d + 1, f, "dont"), "à") == chercher(r, d + 1, f, "dont")) {
+            /* _pour_chaque œuvre _de bach [_dont …] [_par champ [_décroissant]] (§ 16.10) */
+            size_t dont = chercher(r, d + 3, f, "dont"), par = chercher(r, d + 3, f, "par");
+            size_t fin_objet = dont < par ? dont : par;
+            mot(r, "pour", t);
+            mot(r, "chaque", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, "de", &r->e[d + 2]);
+            expression(r, d + 3, fin_objet);
+            if (dont < par) {
+                mot(r, "dont", &r->e[dont]);
+                expression(r, dont + 1, par);
+            }
+            if (par < f) {
+                size_t fin_tri = est_cle(&r->e[f - 1], "décroissant") ? f - 1 : f;
                 if (fin_tri != par + 2 || r->e[par + 1].type != J_CROCHETS) {
                     echouer(r, &r->e[par], grym_dupliquer("Tri attendu : « _par nom » ou « _par solde _décroissant »."));
                     return;

@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.20), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.21), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -234,7 +234,7 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
     int adjectif = strchr("PN0VFAR", n->op) != NULL;
     if (im->compact) {
         if (n->forme == 2) { expression(im, droite); return; }            /* cas : une valeur */
-        if (n->forme == 3 && !n->negation) {                             /* « est valeur » : « = » */
+        if ((n->forme == 3 || n->forme == 4) && !n->negation) {          /* « est valeur » : « = » */
             expression(im, sujet);
             aj(im, " = ");
             expression(im, droite);
@@ -248,6 +248,12 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
         return;
     }
     if (n->forme == 2) { expression(im, droite); return; }                /* cas : une valeur */
+    if (n->forme == 4) {                                                   /* « dont brel est l'auteur » */
+        expression(im, droite);
+        aj(im, n->negation ? " n'est pas " : " est ");
+        expression(im, sujet);
+        return;
+    }
     if (n->forme == 3) {                                                   /* « dont la licence est « A » » */
         expression(im, sujet);
         aj(im, n->negation ? " n'est pas " : " est ");
@@ -383,11 +389,14 @@ static void expression(Impression *im, const Noeud *n) {
     case N_CHERCHER: {
         Genre g = genre_de_nom(im, n->texte);
         int fem = g == G_FEMININ;
-        if (n->forme == 2) {   /* « le nombre de clients conservés » */
+        int inverse = n->op == 'I';   /* « de bach » : l'objet en dernier enfant (§ 16.10) */
+        const Noeud *objet = inverse ? n->enfants[n->nb_enfants - 1] : NULL;
+        if (n->forme == 2) {   /* « le nombre de clients conservés », « le nombre d'œuvres de bach » */
             if (im->compact) {
                 aj(im, "_nombre_de ");
                 ecrire_nom(im, n->texte, 0);
-                aj(im, " _conservé");
+                if (inverse) { aj(im, " _de "); expression(im, objet); }
+                else aj(im, " _conservé");
             } else {
                 const char *pl = NULL;
                 for (size_t k = 0; k < im->nb_pluriels && !pl; k++)
@@ -396,7 +405,8 @@ static void expression(Impression *im, const Noeud *n) {
                 aj(im, voyelle(p) ? "le nombre d'" : "le nombre de ");
                 aj(im, p);
                 free(p);
-                aj(im, fem ? " conservées" : " conservés");
+                if (inverse) { aj(im, " "); preposition(im, "de", objet); }
+                else aj(im, fem ? " conservées" : " conservés");
             }
         } else {               /* « le client conservé » ; la boucle écrit elle-même son début */
             if (n->forme == 1) {
@@ -406,8 +416,12 @@ static void expression(Impression *im, const Noeud *n) {
                 ecrire_nom(im, n->texte, 0);
             }
             if (n->forme == 1) aj(im, im->compact ? " _conservé" : fem ? " conservée" : " conservé");
+            if (n->forme == 0 && inverse) {   /* début de « Pour chaque œuvre de bach » */
+                if (im->compact) { aj(im, " _de "); expression(im, objet); }
+                else { aj(im, " "); preposition(im, "de", objet); }
+            }
         }
-        if (n->nb_enfants) {
+        if (n->nb_enfants > (size_t)inverse) {
             aj(im, im->compact ? " _dont " : " dont ");
             expression(im, n->enfants[0]);
         }
@@ -752,8 +766,8 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         int fem = genre_de_nom(im, n->texte) == G_FEMININ;
         aj(im, c ? "_pour_chaque " : "Pour chaque ");
         ecrire_nom(im, n->texte, 0);
-        aj(im, c ? " _conservé" : fem ? " conservée" : " conservé");
-        expression(im, n->enfants[0]);   /* « dont … » et « , par … » */
+        if (n->enfants[0]->op != 'I') aj(im, c ? " _conservé" : fem ? " conservée" : " conservé");
+        expression(im, n->enfants[0]);   /* « de … », « dont … » et « , par … » */
         retenir(im, n->texte, fem ? G_FEMININ : G_MASCULIN);
         const Noeud *corps = n->enfants[1];
         branche(im, corps, corps->ligne == n->ligne, niveau);

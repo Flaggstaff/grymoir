@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.20 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
+Version 1.21 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -97,7 +97,7 @@ Correspondance prévue en forme compacte (v0.2) : `_soit total << 5` pour créer
 
 - Un nom peut compter plusieurs mots (`prix unitaire`, `date de création`).
 - Dans une expression, le parser retient la plus longue correspondance parmi les noms déjà déclarés. Si `prix` et `prix unitaire` coexistent, `prix unitaire × 2` désigne `prix unitaire`.
-- Les mots réservés ne peuvent pas faire partie d'un nom écrit sans crochets : `vaut`, `devient`, `puis`, `est`, `et`, `ou`, `si`, `sinon`, `vrai`, `faux`, `rendre`, ainsi que l'élision `n'` devant `est`.
+- Les mots réservés ne peuvent pas faire partie d'un nom écrit sans crochets : `vaut`, `devient`, `puis`, `est`, `et`, `ou`, `si`, `sinon`, `vrai`, `faux`, `rendre`, `dont`, ainsi que l'élision `n'` devant `est`.
 - La suite `d'un` ou `d'une` annonce un paramètre (§ 9.3) : elle ne fait jamais partie d'un nom.
 - Un nom qui contient un mot réservé s'écrit entre crochets, à sa création comme à chaque usage : `Le [frais de port et d'emballage] vaut 12.` Tout nom peut s'écrire entre crochets : `[total]` et `total` désignent le même nom. L'aide à la saisie propose ces noms avec leurs crochets.
 - Un nom entre crochets s'écrit seul entre l'article et le verbe, et ne commence pas par un article.
@@ -1019,7 +1019,31 @@ Pour chaque partition conservée dont l'édition est absente :
 - Migrations (§ 16.7) : un champ facultatif nouveau s'ajoute à une entité qui a déjà des objets, sans valeur de départ ; ils le reçoivent absent. Un champ existant ne devient pas facultatif, ni ne cesse de l'être, sur une table existante.
 - En forme compacte : `_une édition (date) _facultatif`, `_absent`, `x.édition _absent`, `x.édition _présent`.
 
-### 16.10 Accord avec la charte
+### 16.10 Relations inverses
+
+```
+Une chanson, conservée, a :
+    un titre (texte),
+    un compositeur (personne),
+    un auteur (personne), facultatif.
+
+Pour chaque œuvre de bach, par titre :
+    Afficher titre de l'œuvre.
+Afficher le nombre d'œuvres de bach.
+Pour chaque chanson conservée dont brel est l'auteur :
+    …
+```
+
+- `les œuvres de bach` désigne les œuvres conservées dont un lien désigne `bach`. L'inverse se déduit du lien : rien n'est à déclarer. Deux tournures : `Pour chaque œuvre de bach [dont …] [, par …] :` et `le nombre d'œuvres de bach [dont …]`. `conservée` n'y figure pas : un lien ne relie que des objets conservés.
+- L'objet suit `de` : un nom, `du compositeur`, `de l'arrangeur de p`… Il doit être un objet ; absent, c'est l'erreur habituelle (§ 16.9).
+- Le lien est choisi à l'exécution, selon la classe réelle de l'objet (un lien `(personne)` désigne aussi un membre, qui est une personne). S'il n'y en a aucun : « Aucun champ d'une œuvre ne peut désigner une œuvre : « les œuvres de … » ne désigne rien. » S'il y en a plusieurs : « Plusieurs champs d'une chanson peuvent désigner une personne : « compositeur » et « auteur ». Précisez avec « dont … est le … », par exemple « dont … est le compositeur ». »
+- Une entité sans aucun lien est refusée dès l'analyse : « Un « instrument » n'a aucun lien vers un autre objet : « les instruments de … » ne désigne rien. »
+- La relation renversée, dans une condition `dont`, dit quel lien : `dont brel est l'auteur` vaut `dont l'auteur est brel`, écrit dans l'ordre naturel. Elle a sa négation : `dont rauber n'est pas l'auteur`, qui, comme toute condition, écarte les auteurs absents (§ 16.9).
+- `Pour chaque i de 1 à 9` garde son sens de compteur : si un `à` suit `de` avant `dont`, `,` ou `:`, c'est un compteur, même si `i` est le nom d'une entité.
+- `dont` devient un mot réservé (§ 2) : il termine le nom qui le précède.
+- En forme compacte : `_pour_chaque œuvre _de bach _dont … _par titre`, `_nombre_de œuvre _de bach`. La relation renversée s'y écrit dans l'ordre ordinaire : `_dont auteur = brel`.
+
+### 16.11 Accord avec la charte
 
 La charte 1.9 reprend ce paragraphe : transaction par exécution (art. 7), typage vérifié à l'analyse ou avant toute écriture (art. 5), type `montant` retiré pour la v0.3, puisque tout `(nombre)` est déjà un décimal exact.
 
@@ -1050,3 +1074,4 @@ La charte 1.9 reprend ce paragraphe : transaction par exécution (art. 7), typag
 | 1.18 | 2026-09-21 | § 16.4 implémenté : champs de l'objet examiné, `est valeur`, comparaisons permises, décimal exact et ordre du dictionnaire, héritage, liste figée, chargement à la demande. § 16.8 : champs sans préfixe dans une condition compacte, `_nombre_de` |
 | 1.19 | 2026-09-21 | § 3.3 : sortie d'une exécution ratée conservée, suivie d'une phrase d'annulation. § 16.7 implémenté : valeur de départ, règles et limites imposées par SQLite |
 | 1.20 | 2026-09-22 | § 16.9 : champs facultatifs, valeur `absent`, tests `est absent` et `est présent`, règles en base, en recherche, en tri et en migration ; § 16.10 : ancien § 16.9 |
+| 1.21 | 2026-09-22 | § 16.10 : relations inverses (`les œuvres de bach`, `dont brel est l'auteur`) ; `dont` devient réservé ; § 16.11 : ancien § 16.10 |

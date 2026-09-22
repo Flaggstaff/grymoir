@@ -54,6 +54,7 @@ Pour chaque partition conservée :
     Afficher titre de l'œuvre de la partition puis « chez » puis éditeur de la partition.
     Si l'arrangeur de la partition est présent, afficher « arrangée par » puis nom de l'arrangeur de la partition.
     Sinon, afficher « sans arrangement ».
-Pour chaque pupitre conservé, par nombre de parties décroissant :
-    Afficher nom de l'instrument du pupitre puis nombre de parties du pupitre.
+    Remarque : les pupitres de la partition, déduits de leur lien « partition ».
+    Pour chaque pupitre de la partition, par nombre de parties décroissant :
+        Afficher nom de l'instrument du pupitre puis nombre de parties du pupitre.
 Afficher le nombre d'œuvres conservées dont l'année est absente puis « œuvre(s) sans année ».

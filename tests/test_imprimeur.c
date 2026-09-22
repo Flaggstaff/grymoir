@@ -198,6 +198,22 @@ int main(void) {
          "_classe _une p _conservé\n    _une date (date) _facultatif\n_fin\n_la x << _nouveau p _avec\n    date << _absent\n"
          "_fin\n_si x.date _présent _alors\n    _afficher 1\n_fin\n");
 
+    /* --- Relations inverses (§ 16.10) --- */
+    LITT("Une personne, conservée, a : un nom (texte).\nUne chanson, conservée, a : un titre (texte), "
+         "un auteur (personne).\nLa p vaut la personne conservée dont le nom est « a ».\n"
+         "Pour chaque chanson de p, afficher chanson.\nAfficher le nombre de chansons conservées dont p n'est pas l'auteur.",
+         "Une personne, conservée, a :\n    un nom (texte).\nUne chanson, conservée, a :\n    un titre (texte),\n"
+         "    un auteur (personne).\nLa p vaut la personne conservée dont le nom est « a ».\n"
+         "Pour chaque chanson de p, afficher chanson.\nAfficher le nombre de chansons conservées dont p n'est pas l'auteur.\n");
+    COMP("Une personne, conservée, a : un nom (texte).\nUne chanson, conservée, a : un titre (texte), "
+         "un auteur (personne).\nLa p vaut la personne conservée dont le nom est « a ».\n"
+         "Pour chaque chanson de p dont le titre > « a », par titre, afficher chanson.\n"
+         "Afficher le nombre de chansons de p puis le nombre de chansons conservées dont p est l'auteur.",
+         "_classe _une personne _conservé\n    _un nom (texte)\n_fin\n_classe _une chanson _conservé\n    _un titre (texte)\n"
+         "    _un auteur (personne)\n_fin\n_la p << _la personne _conservé _dont nom = « a »\n"
+         "_pour_chaque chanson _de p _dont titre > « a » _par titre\n    _afficher chanson\n_fin\n"
+         "_afficher _nombre_de chanson _de p ; _nombre_de chanson _conservé _dont auteur = p\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

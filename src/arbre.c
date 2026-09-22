@@ -233,7 +233,12 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, n->forme == 1 ? "(le-conservé [" : n->forme == 2 ? "(nombre-conservés [" : "(conservés [");
         chaine_ajouter(c, n->texte);
         chaine_ajouter(c, "]");
-        if (n->nb_enfants) {
+        if (n->op == 'I') {   /* relation inverse : l'objet en dernier enfant (§ 16.10) */
+            chaine_ajouter(c, " (de ");
+            decrire(n->enfants[n->nb_enfants - 1], c);
+            chaine_ajouter(c, ")");
+        }
+        if (n->nb_enfants > (n->op == 'I' ? 1u : 0u)) {
             chaine_ajouter(c, " (dont ");
             decrire(n->enfants[0], c);
             chaine_ajouter(c, ")");

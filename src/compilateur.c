@@ -156,7 +156,17 @@ static void chercher(Compilation *c, const Noeud *n) {
     if (n->texte2) chaine_ajouter(&d, n->texte2);
     chaine_ajouter(&d, n->entier ? "\x1f" "1\x1f" : "\x1f" "0\x1f");
     int parametres = 0;
-    if (n->nb_enfants) condition_dont(c, n->enfants[0], &d, &parametres);
+    int inverse = n->op == 'I';   /* « les œuvres de bach » : l'objet en dernier enfant (§ 16.10) */
+    int condition = n->nb_enfants > (size_t)inverse;
+    if (inverse) {
+        if (condition) chaine_ajouter(&d, "(e");
+        expression(c, n->enfants[n->nb_enfants - 1]);
+        char t[16];
+        snprintf(t, sizeof t, "(I?%d)", ++parametres);
+        chaine_ajouter(&d, t);
+    }
+    if (condition) condition_dont(c, n->enfants[0], &d, &parametres);
+    if (inverse && condition) chaine_ajouter(&d, ")");
     char *texte = chaine_rendre(&d);
     long k = bloc_constante(c->b, C_RECHERCHE, texte);
     free(texte);

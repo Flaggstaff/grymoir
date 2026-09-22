@@ -202,6 +202,12 @@ int main(void) {
                  "Une p, conservée, a :\n    une date (date), facultative.\nLa x vaut une nouvelle p :\n    La date vaut absente.\n"
                  "Si date de x est présente :\n    Afficher 1.\n");
 
+    /* une remarque qui suit un bloc « _sinon … _fin » reste hors du bloc (défaut corrigé) */
+    ALLER_RETOUR("_le x << 1\n_si x > 0 _alors\n    _si x = 1 _alors\n        _afficher 1\n    _sinon\n        _afficher 2\n"
+                 "    _fin\n    # avant la boucle.\n    _afficher 3\n_fin\n",
+                 "Le x vaut 1.\nSi x > 0 :\n    Si x = 1 :\n        Afficher 1.\n    Sinon :\n        Afficher 2.\n"
+                 "    Remarque : avant la boucle.\n    Afficher 3.\n");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

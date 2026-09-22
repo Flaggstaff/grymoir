@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.20), § 16 ; docs/vm.md (révision 1.14), § 8.
+ * Spécification : docs/grammaire.md (révision 1.21), § 16 ; docs/vm.md (révision 1.15), § 8.
  */
 #include "base.h"
 #include "date.h"
@@ -952,6 +952,63 @@ static int lire_condition(Recherche *r) {
     } else if (op == 'n') {
         chaine_ajouter(&r->sql, "NOT ");
         if (!lire_condition(r)) return 0;
+    } else if (op == 'I') {
+        /* relation inverse (grammaire, § 16.10) : le lien de l'entité qui peut désigner l'objet ?k */
+        char *fin;
+        size_t i = (size_t)strtoul(r->p + 1, &fin, 10);
+        r->p = fin;
+        if (i < 1 || i > r->nb_params || r->nb_liens == 64) { r->erreur = grym_dupliquer("paramètre invalide"); return 0; }
+        const Valeur *v = &r->params[i - 1];
+        if (v->type == V_ABSENT) {
+            r->erreur = v->texte ? grym_formater("Le champ « %s » est absent : vérifiez-le d'abord avec « est présent ».", v->texte)
+                                 : grym_dupliquer("La valeur est absente.");
+            return 0;
+        }
+        if (v->type != V_OBJET) {
+            r->erreur = grym_dupliquer("« de … » désigne un objet : un nombre, un texte ou une date n'a pas de liens.");
+            return 0;
+        }
+        long trouve = -1;
+        size_t combien = 0;
+        char *noms = NULL;
+        for (size_t k = 0; k < r->e->nb_champs; k++) {
+            const char *t = r->e->types[k];
+            if (!t || !est_lien(t)) continue;
+            int vise = 0;
+            for (const ClasseVM *p = v->objet->classe; p && !vise; p = p->parent) vise = strcmp(p->nom, t) == 0;
+            if (!vise) continue;
+            if (combien++ == 0) { trouve = (long)k; noms = grym_formater("« %s »", r->e->champs[k]); }
+            else {
+                char *x = grym_formater("%s et « %s »", noms, r->e->champs[k]);
+                free(noms);
+                noms = x;
+            }
+        }
+        char *qui = un(v->objet->classe);
+        if (combien != 1) {
+            char *pl = pluriel(r->e);
+            r->erreur = combien == 0
+                ? grym_formater("Aucun champ %s %s ne peut désigner %s : « les %s de … » ne désigne rien.",
+                                r->e->feminin ? "d'une" : "d'un", r->e->nom, qui, pl)
+                : grym_formater("Plusieurs champs %s %s peuvent désigner %s : %s. Précisez avec « dont … est le … », "
+                                "par exemple « dont … est le %s ».", r->e->feminin ? "d'une" : "d'un", r->e->nom, qui,
+                                noms, r->e->champs[trouve]);
+            free(pl);
+            free(qui);
+            free(noms);
+            return 0;
+        }
+        free(qui);
+        free(noms);
+        chaine_ajouter(&r->sql, "(");
+        colonne(r, (size_t)trouve);
+        char t[24];
+        snprintf(t, sizeof t, " = ?%lu)", (unsigned long)(r->nb_liens + 1));
+        chaine_ajouter(&r->sql, t);
+        r->liens[r->nb_liens] = i - 1;
+        r->types[r->nb_liens] = r->e->types[trouve];
+        r->champs[r->nb_liens] = r->e->champs[trouve];
+        r->nb_liens++;
     } else {
         if (*r->p != '[') { r->erreur = grym_dupliquer("champ attendu"); return 0; }
         const char *fin = strchr(r->p, ']');

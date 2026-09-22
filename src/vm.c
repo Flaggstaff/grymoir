@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.14).
+ * Spécification : docs/vm.md (révision 1.15).
  */
 #include "vm.h"
 #include "vm_interne.h"

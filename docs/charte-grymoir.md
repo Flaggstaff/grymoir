@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.13, révisée le 22 septembre 2026.
+Version 1.14, révisée le 22 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -157,7 +157,7 @@ Horizon post-v1, sans date :
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
 - objets (grammaire, § 13.8) : appel de la version parente depuis une méthode, listes d'objets, affichage des objets ; racine commune `objet` de toutes les classes, puis nombres, textes et dates comme objets (art. 6, « Tout est objet ») ;
-- relations : « un vers plusieurs » lue depuis l'objet désigné (`les œuvres du compositeur`), « plusieurs vers plusieurs » sans entité intermédiaire écrite à la main, suppression en cascade ;
+- relations : « plusieurs vers plusieurs » sans entité intermédiaire écrite à la main, suppression en cascade ;
 - base (grammaire, § 16.7) : commande de `grym` qui retire ou renomme un champ, lève les limites des migrations imposées par SQLite, et reconstruit une table ;
 - dates (grammaire, § 14) : ajout de mois et d'années, heure et fuseaux horaires ;
 - langage : modifier le champ d'une recherche sans passer par un nom (`L'âge du client conservé dont … devient …`) ;
@@ -184,3 +184,4 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 | 1.11 | 2026-09-21 | Art. 12 : v0.3 livrée, contenu détaillé ; suites reportées regroupées par domaine |
 | 1.12 | 2026-09-22 | Art. 12 : v0.4 livrée ; reports de l'aide à la saisie et de l'installation pour l'utilisateur final |
 | 1.13 | 2026-09-22 | Art. 12 : l'absence de valeur est faite (grammaire, § 16.9) ; reports précisés : racine `objet`, relations |
+| 1.14 | 2026-09-22 | Art. 12 : les relations inverses sont faites (grammaire, § 16.10) |

@@ -624,6 +624,24 @@ int main(void) {
     VE("Une p, conservée, a : une date (date), facultative.\nLa x vaut une nouvelle p.\nLa date de x devient absent.", 3, 22,
        "Accord : « absente ».");
 
+    /* --- Relations inverses (§ 16.10) --- */
+#define CH "Une personne, conservée, a : un nom (texte).\n" \
+           "Une chanson, conservée, a : un titre (texte), un compositeur (personne), un auteur (personne), facultatif.\n" \
+           "La brel vaut la personne conservée dont le nom est « Brel ».\n"
+#define CH_ARBRE "(entité [personne] [nom : texte])\n(entité [chanson] [titre : texte] [compositeur : personne] " \
+                 "[auteur : personne facultatif])\n(créer [brel] (le-conservé [personne] (dont (= (champ-dont [nom]) «Brel»))))\n"
+    V(CH "Pour chaque chanson de brel dont le titre > « b », par titre :\n    Afficher chanson.",
+      CH_ARBRE "(pour-chaque-conservé [chanson] (conservés [chanson] (de [brel]) (dont (> (champ-dont [titre]) «b»)) "
+      "(par [titre])) (bloc (afficher [chanson])))");
+    V(CH "Afficher le nombre de chansons de brel puis le nombre de chansons conservées dont brel n'est pas l'auteur.",
+      CH_ARBRE "(afficher (nombre-conservés [chanson] (de [brel])) "
+      "(nombre-conservés [chanson] (dont (non (= (champ-dont [auteur]) [brel])))))");
+    V(CH "Pour chaque chanson de 1 à 2, afficher chanson.", CH_ARBRE "(pour-chaque [chanson] 1 2 (bloc (afficher [chanson])))");
+    VE("Un instrument, conservé, a : un nom (texte).\nLe x vaut 1.\nAfficher le nombre d'instruments de x.", 3, 34,
+       "Un « instrument » n'a aucun lien vers un autre objet : « les instruments de … » ne désigne rien.");
+    VE(CH "Afficher le nombre de chansons conservées dont brel est le prix.", 4, 60, "« prix » inconnu");
+    VE("Le prix dont vaut 3.", 1, 9, "« dont » est un mot réservé");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

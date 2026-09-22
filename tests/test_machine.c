@@ -662,6 +662,33 @@ int main(void) {
         remove("_essai_fac.grymd");
     }
 
+    /* --- Relations inverses (§ 16.10) --- */
+#define INV "Une personne, conservée, a : un nom (texte), unique.\n" \
+            "Un membre, conservé, est une personne.\n" \
+            "Une chanson, conservée, a : un titre (texte), un compositeur (personne), un auteur (personne), facultatif.\n" \
+            "Une œuvre, conservée, a : un titre (texte), un compositeur (personne).\n" \
+            "Pour ajouter un titre et une musique et une parole :\n    La c vaut une nouvelle chanson :\n" \
+            "        Le titre vaut titre.\n        Le compositeur vaut musique.\n" \
+            "    Si parole est présente, l'auteur de c devient parole.\n    Conserver c.\n" \
+            "La brel vaut une nouvelle personne :\n    Le nom vaut « Brel ».\nConserver brel.\n" \
+            "Le rauber vaut un nouveau membre :\n    Le nom vaut « Rauber ».\nConserver rauber.\n" \
+            "Ajouter « Ne me quitte pas » et brel et brel.\nAjouter « La Valse » et brel et absent.\n" \
+            "Ajouter « Madeleine » et rauber et brel.\n" \
+            "La b vaut une nouvelle œuvre :\n    Le titre vaut « Sonate ».\n    Le compositeur vaut rauber.\nConserver b.\n"
+    PROG(INV "Pour chaque œuvre de rauber, afficher titre de l'œuvre.\nAfficher le nombre d'œuvres de brel.", "Sonate\n0");
+    PROG(INV "Pour chaque chanson conservée dont brel est l'auteur, par titre, afficher titre de la chanson.\n"
+         "Afficher le nombre de chansons conservées dont brel est le compositeur et rauber n'est pas l'auteur.",
+         "Madeleine\nNe me quitte pas\n1");
+    PROG(INV "Afficher le nombre de chansons de brel.",
+         "~Plusieurs champs d'une chanson peuvent désigner une personne : « compositeur » et « auteur ».");
+    PROG(INV "Pour chaque œuvre de 3, afficher 1.",
+         "~« de … » désigne un objet : un nombre, un texte ou une date n'a pas de liens.");
+    PROG(INV "La x vaut une nouvelle chanson :\n    Le titre vaut « X ».\n    Le compositeur vaut brel.\n"
+         "Afficher le nombre d'œuvres de l'auteur de x.", "~Le champ « auteur » est absent");
+    PROG(INV "Pour chaque œuvre de b, afficher 1.", "~Aucun champ d'une œuvre ne peut désigner une œuvre");
+    PROG(INV "Pour chaque œuvre de rauber dont le titre = « Sonate », par titre décroissant, afficher titre de l'œuvre.",
+         "Sonate");
+
     /* --- Relire, dans une autre exécution, ce qu'une première a conservé --- */
     {
         remove("_essai_relire.grymd");

@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.20), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.21), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -383,7 +383,7 @@ static int nom_a_crochets(const char *nom);
 /* Mots qui structurent la phrase et ne peuvent pas entrer dans un nom
  * (sauf entre crochets, § 2.2). */
 static const char *const RESERVES[] = {
-    "vaut", "devient", "puis", "est", "et", "ou", "si", "sinon", "vrai", "faux", "rendre"
+    "vaut", "devient", "puis", "est", "et", "ou", "si", "sinon", "vrai", "faux", "rendre", "dont"
 };
 
 static int est_mot_reserve(const char *m) {
@@ -635,7 +635,12 @@ static char *cle(Analyse *a, size_t d, size_t f) {
     Chaine c = {0};
     for (size_t k = d; k < f; k++) {
         if (k > d && a->j[k - 1].type != J_ELISION) chaine_ajouter(&c, " ");
-        chaine_ajouter(&c, a->j[k].valeur);
+        if (a->j[k].valeur) chaine_ajouter(&c, a->j[k].valeur);
+        else {   /* signe de ponctuation égaré dans un nom en cours d'écriture : on le montre tel quel */
+            char *x = texte_jeton(&a->j[k]);
+            chaine_ajouter(&c, x);
+            free(x);
+        }
         if (a->j[k].type == J_ELISION) chaine_ajouter(&c, "'");
     }
     return chaine_rendre(&c);
@@ -1034,6 +1039,7 @@ static int voyelle_initiale(const char *s) {
 /* ---------------------------------------------------------------- */
 
 static Noeud *valeur(Analyse *a);
+static Noeud *base(Analyse *a);
 static int de_ou_d(const Jeton *t);
 
 static int contient_champ_dont(const Noeud *n) {
@@ -1143,18 +1149,76 @@ static int clause_dont(Analyse *a, const Classe *e, Noeud **cond) {
     return 1;
 }
 
-/* « le client conservé dont … », « le nombre de clients conservés dont … » */
-static Noeud *chercher(Analyse *a, const Jeton *t, const Classe *e, int mode, size_t apres) {
-    if (a->formule == 1)
+/* L'entité a-t-elle au moins un lien (champ dont le type est une entité), hérité ou apporté compris ? */
+static int a_un_lien(Portee *p, const Classe *c) {
+    for (; c; c = c->parent ? classe_de(p, c->parent) : NULL) {
+        for (size_t k = 0; k < c->nb; k++) if (c->types && c->types[k] && !type_de_base(c->types[k])) return 1;
+        for (size_t q = 0; q < c->nb_aptitudes; q++) {
+            const Classe *ap = aptitude_de(p, c->aptitudes[q], NULL);
+            for (size_t k = 0; ap && k < ap->nb; k++) if (ap->types && ap->types[k] && !type_de_base(ap->types[k])) return 1;
+        }
+    }
+    return 0;
+}
+
+/* À l'index k : « œuvre de », « œuvres du » : une entité (au pluriel si demandé) suivie de « de ».
+ * Renvoie l'entité, et *de, l'index de « de » ; NULL si la tournure n'y est pas. */
+static Classe *entite_de(Analyse *a, size_t k, int pluriel, size_t *de) {
+    if (k >= a->n) return NULL;
+    size_t f = k;
+    if (a->j[k].type == J_CROCHETS) f = k + 1;
+    else while (f < a->n && mot_de_nom(a, f)) f++;
+    for (size_t q = f; q > k; q--) {
+        if (!complement_de(a, q)) continue;
+        char *nom = a->j[k].type == J_CROCHETS ? grym_dupliquer(a->j[k].valeur) : cle(a, k, q);
+        Classe *e = NULL;
+        for (size_t i = 0; i < a->portee->nb_classes && !e; i++) {
+            Classe *c = &a->portee->classes[i];
+            if (c->aptitude || !c->conserve) continue;
+            char *pl = pluriel_de(c);
+            if (strcmp(pluriel ? pl : c->nom, nom) == 0 || (a->j[k].synthetique && strcmp(c->nom, nom) == 0)) e = c;
+            free(pl);
+        }
+        free(nom);
+        if (e) { *de = q; return e; }
+        if (a->j[k].type == J_CROCHETS) break;
+    }
+    return NULL;
+}
+
+/* L'objet après « de » : « de bach », « du compositeur », « de l'arrangeur de p » (§ 16.10). */
+static Noeud *objet_de(Analyse *a, const Classe *e, size_t de) {
+    if (!a_un_lien(a->portee, e)) {
+        char *pl = pluriel_de(e);
+        erreur(a, &a->j[de], grym_formater("%s « %s » n'a aucun lien vers un autre objet : « les %s de … » ne désigne rien.",
+                                           e->genre == GENRE_FEMININ ? "Une" : "Un", e->nom, pl));
+        free(pl);
+        return NULL;
+    }
+    Jeton *t = &a->j[de];
+    a->i = de + 1;
+    if (est_mot(t, "du")) { a->article_force = ART_LE; a->jeton_force = t; }
+    Noeud *o = base(a);
+    a->article_force = ART_AUCUN;
+    return o;
+}
+
+/* « le client conservé dont … », « le nombre de clients conservés dont … », « le nombre d'œuvres de bach » :
+ * objet non NULL pour une relation inverse (§ 16.10), rangé en dernier enfant, op = 'I'. */
+static Noeud *chercher(Analyse *a, const Jeton *t, const Classe *e, int mode, size_t apres, Noeud *objet) {
+    if (a->formule == 1) {
+        noeud_liberer(objet);
         return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
-    a->i = apres;
+    }
+    if (!objet) a->i = apres;
     a->article_force = ART_AUCUN;
     Noeud *cond;
-    if (!clause_dont(a, e, &cond)) return NULL;
+    if (!clause_dont(a, e, &cond)) { noeud_liberer(objet); return NULL; }
     Noeud *n = noeud_creer(N_CHERCHER, t->ligne, t->colonne, t->debut);
     n->texte = grym_dupliquer(e->nom);
     n->forme = mode;
     if (cond) noeud_ajouter(n, cond);
+    if (objet) { n->op = 'I'; noeud_ajouter(n, objet); }
     n->fin = fin_jeton(&a->j[a->i - 1]);
     return n;
 }
@@ -1220,7 +1284,7 @@ static Noeud *base(Analyse *a) {
         size_t apres;
         Classe *e = NULL;
         if (a->article_force == ART_LE && (e = entite_conservee(a, a->i, 0, &apres)) != NULL)
-            return chercher(a, a->jeton_force, e, 1, apres);
+            return chercher(a, a->jeton_force, e, 1, apres, NULL);
         if (a->echec) return NULL;
         if (article_de(t) != ART_AUCUN && article_de(t) != ART_IMPLICITE
             && (e = entite_conservee(a, a->i + 1, 0, &apres)) != NULL) {
@@ -1230,13 +1294,22 @@ static Noeud *base(Analyse *a) {
                                                   e->genre == GENRE_FEMININ ? "féminin" : "masculin",
                                                   e->genre == GENRE_FEMININ ? "la" : "le", e->nom,
                                                   e->genre == GENRE_FEMININ ? "e" : ""));
-            return chercher(a, t, e, 1, apres);
+            return chercher(a, t, e, 1, apres, NULL);
         }
         if (a->echec) return NULL;
         if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2))
             && (e = entite_conservee(a, a->i + 3, 1, &apres)) != NULL)
-            return chercher(a, t, e, 2, apres);
+            return chercher(a, t, e, 2, apres, NULL);
         if (a->echec) return NULL;
+        size_t de;
+        if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2))
+            && (e = entite_de(a, a->i + 3, 1, &de)) != NULL) {   /* « le nombre d'œuvres de bach » (§ 16.10) */
+            if (a->formule == 1)
+                return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
+            Noeud *objet = objet_de(a, e, de);
+            if (!objet) return NULL;
+            return chercher(a, t, e, 2, 0, objet);
+        }
     }
     if (t->type == J_DATE) {
         Noeud *n = feuille(N_DATE, t);
@@ -1521,6 +1594,26 @@ static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test
     for (size_t k = 0; k < NB_RELATIONS && !r; k++) {
         if (est_mot(t, RELATIONS[k].m)) { r = &RELATIONS[k]; g = GENRE_MASCULIN; }
         else if (est_mot(t, RELATIONS[k].f)) { r = &RELATIONS[k]; g = GENRE_FEMININ; }
+    }
+    if (!r && a->dont && sujet->type != N_CHAMP_DONT && article_de(cour(a)) != ART_AUCUN) {
+        /* « dont brel est l'auteur » : la relation renversée, pour dire quel lien (§ 16.10) */
+        Noeud *champ = nom_expression(a);
+        if (!champ) { noeud_liberer(sujet); return NULL; }
+        if (champ->type != N_CHAMP_DONT) {
+            noeud_liberer(champ);
+            noeud_liberer(sujet);
+            return erreur(a, t, grym_dupliquer("Champ attendu : « dont brel est l'auteur »."));
+        }
+        Noeud *n = noeud_creer(N_COMPARAISON, sujet->ligne, sujet->colonne, sujet->debut);
+        n->op = '=';
+        n->forme = 4;   /* renversée : réimprimée « brel est l'auteur » */
+        n->negation = negation;
+        n->op_ligne = test->ligne;
+        n->op_colonne = test->colonne;
+        noeud_ajouter(n, champ);
+        noeud_ajouter(n, sujet);
+        n->fin = champ->fin;
+        return n;
     }
     if (!r && a->dont && sujet->type == N_CHAMP_DONT) {
         /* « dont la licence est « A-12 » » : égalité (§ 16.4) */
@@ -2524,7 +2617,7 @@ static Noeud *repeter(Analyse *a, int colonne) {
 
 /* Pour chaque nom de début à fin [ par pas de pas ] , phrase | : bloc */
 /* « Pour chaque client conservé [dont …] [, par nom [décroissant]] : » (§ 16.4) */
-static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, const Classe *e, size_t apres) {
+static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, const Classe *e, size_t apres, size_t de) {
     if (a->formule == 1)
         return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
     const Jeton *tnom = cour(a);
@@ -2536,13 +2629,20 @@ static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, cons
         free(nom);
         return NULL;
     }
-    a->i = apres;
+    Noeud *objet = NULL;
+    if (de) {   /* « Pour chaque œuvre de bach » (§ 16.10) */
+        objet = objet_de(a, e, de);
+        if (!objet) { free(nom); return NULL; }
+    } else {
+        a->i = apres;
+    }
     Noeud *cond;
-    if (!clause_dont(a, e, &cond)) { free(nom); return NULL; }
+    if (!clause_dont(a, e, &cond)) { free(nom); noeud_liberer(objet); return NULL; }
     Noeud *cherche = noeud_creer(N_CHERCHER, t->ligne, t->colonne, t->debut);
     cherche->texte = grym_dupliquer(e->nom);
     cherche->forme = 0;
     if (cond) noeud_ajouter(cherche, cond);
+    if (objet) { cherche->op = 'I'; noeud_ajouter(cherche, objet); }
     if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "par")) {
         avancer(a);
         avancer(a);
@@ -2568,9 +2668,9 @@ static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, cons
     }
     size_t sauve = a->portee->n;
     portee_declarer(a->portee, nom, e->genre, t->ligne);
-    Symbole *objet = &a->portee->s[a->portee->n - 1];
-    objet->lecture_seule = 1;
-    int case_objet = objet->local = a->nb_locaux++;
+    Symbole *tour = &a->portee->s[a->portee->n - 1];
+    tour->lecture_seule = 1;
+    int case_objet = tour->local = a->nb_locaux++;
     int case_liste = a->nb_locaux++;
     a->nb_locaux++;   /* rang dans la liste */
     int forme = 0;
@@ -2597,7 +2697,20 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
     {
         size_t apres;
         Classe *e = entite_conservee(a, a->i, 0, &apres);
-        if (e) return pour_chaque_conserve(a, colonne, t, e, apres);
+        if (e) return pour_chaque_conserve(a, colonne, t, e, apres, 0);
+        if (a->echec) return NULL;
+        size_t de;
+        e = entite_de(a, a->i, 0, &de);
+        if (e) {
+            /* « Pour chaque i de 1 à 9 » garde son sens : un « à » avant « dont », « , » ou « : » en fait un compteur */
+            int compteur = 0;
+            for (size_t q = de + 1; q < a->n; q++) {
+                const Jeton *x = &a->j[q];
+                if (x->type == J_DEUX_POINTS || x->type == J_VIRGULE || x->type == J_FIN || est_mot(x, "dont")) break;
+                if (est_mot(x, "à") || est_mot(x, "au")) { compteur = 1; break; }
+            }
+            if (!compteur) return pour_chaque_conserve(a, colonne, t, e, 0, de);
+        }
         if (a->echec) return NULL;
     }
     size_t d = a->i, k = d;
@@ -3518,6 +3631,13 @@ static Noeud *bloc(Analyse *a, int colonne, int racine) {
         attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0) | (a->boucle ? A_BOUCLE : 0));
         Jeton *t = cour(a);
         if (t->type == J_FIN) break;
+        if (t->type == J_REMARQUE && !racine && premier_de_ligne(a, a->i) && t->retrait < colonne) {
+            /* une remarque moins indentée, suivie d'une phrase moins indentée aussi, appartient au bloc
+             * englobant : le bloc s'arrête avant elle (sinon, elle resterait dans le bloc qui se ferme) */
+            size_t k = a->i;
+            while (a->j[k].type == J_REMARQUE) k++;
+            if (a->j[k].type == J_FIN || (premier_de_ligne(a, k) && a->j[k].retrait < colonne)) break;
+        }
         if (t->type != J_REMARQUE && premier_de_ligne(a, a->i)) {
             if (t->retrait < colonne) {
                 if (!racine) break;

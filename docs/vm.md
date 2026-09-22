@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.14 de la spécification, révisée le 22 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.20, § 3.3, § 5, § 9, § 10, § 13 à 16.
+Version 1.15 de la spécification, révisée le 22 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.21, § 3.3, § 5, § 9, § 10, § 13 à 16.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -182,7 +182,7 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - `grym_objet` distribue les identifiants (`AUTOINCREMENT` : jamais réattribués) et note la classe réelle ; `grym_schema` garde la définition de chaque entité.
 - Un objet porte son identifiant en base, 0 s'il n'est pas conservé. `CONSERVER` et `SUPPRIMER` le changent au journal, qui le restaure si l'exécution échoue.
 - `ÉCRIRE_CHAMP` sur un objet conservé écrit aussi la colonne en base.
-- Recherche : une constante de type 5 décrit la recherche, « entité ␟ mode ␟ champ du tri ␟ décroissant ␟ condition », avec le séparateur U+001F. Mode 0 : liste (boucle), 1 : un seul objet, 2 : nombre. La condition s'écrit en préfixe : `(e A B)`, `(o A B)`, `(n A)`, `(op [champ] ?k)` pour `=`, `!`, `<`, `>`, `l` (≤), `g` (≥), et `(P [champ])`, `N`, `0`, `V`, `F` pour les tournures ; `?k` désigne la k-ième valeur dépilée. La machine traduit en SQL, jointures de la lignée comprises.
+- Recherche : une constante de type 5 décrit la recherche, « entité ␟ mode ␟ champ du tri ␟ décroissant ␟ condition », avec le séparateur U+001F. Mode 0 : liste (boucle), 1 : un seul objet, 2 : nombre. La condition s'écrit en préfixe : `(I?k)` pour une relation inverse (le lien de l'entité qui peut désigner l'objet `?k`, choisi à l'exécution selon sa classe réelle ; aucun ou plusieurs : erreur), `(e A B)`, `(o A B)`, `(n A)`, `(op [champ] ?k)` pour `=`, `!`, `<`, `>`, `l` (≤), `g` (≥), et `(P [champ])`, `N`, `0`, `V`, `F` pour les tournures ; `?k` désigne la k-ième valeur dépilée. La machine traduit en SQL, jointures de la lignée comprises.
 - Collations enregistrées auprès de SQLite : `GRYM_NOMBRE` compare deux nombres canoniques en décimal exact ; `GRYM_TEXTE` compare sans accents ni casse, puis octet par octet.
 - Liste : valeur interne, jamais visible du langage, figée au moment de la recherche (identifiants et classes).
 - Carte d'identité : identifiant en base → objet en mémoire. Un objet retrouvé est une coquille de sa classe réelle ; `LIRE_CHAMP`, `ÉCRIRE_CHAMP` et `SUPPRIMER` lisent d'abord ses champs. Ses liens deviennent des coquilles à leur tour. Le ramasse-miettes retire de la carte les objets qu'il libère.
@@ -282,3 +282,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.12 | 2026-09-21 | Recherche : constante de type 5, `CHERCHER`, `TAILLE_LISTE`, `ÉLÉMENT`, collations exactes, carte d'identité, chargement à la demande ; format version 12 |
 | 1.13 | 2026-09-21 | Migrations de schéma, valeur de départ des champs, format version 13 ; `machine_annulation` |
 | 1.14 | 2026-09-22 | Valeur absente, `ABSENT`, `EST_ABSENT`, champs facultatifs (colonnes sans `NOT NULL`, `IS NULL`, absents triés en dernier) ; format version 14 |
+| 1.15 | 2026-09-22 | Condition `(I?k)` : relation inverse |
