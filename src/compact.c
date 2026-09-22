@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.24), § 11.
+ * Spécification : docs/grammaire.md (révision 1.25), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -58,6 +58,7 @@ static void emettre(Reecriture *r, TypeJeton type, const char *valeur, const Jet
     j->retrait = origine->colonne;
     j->synthetique = synthetique;
     j->ligne_fin = origine->ligne;
+    j->groupe = origine->groupe;
 }
 
 static void mot(Reecriture *r, const char *m, const Jeton *o) { emettre(r, J_MOT, m, o, 1); }

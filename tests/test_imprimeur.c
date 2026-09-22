@@ -60,7 +60,7 @@ int main(void) {
     SetConsoleOutputCP(CP_UTF8);
 #endif
     /* --- Forme littéraire canonique (§ 12) : présentation normalisée, programme conservé --- */
-    LITT("le  TOTAL   vaut 1000.   Afficher \"x\" puis TOTAL.\n\n\n\nsi total > 3 :\n      afficher \" a \".\n"
+    LITT("le  TOTAL   vaut 1\u00a0000.   Afficher \"x\" puis TOTAL.\n\n\n\nsi total > 3 :\n      afficher \" a \".\n"
          "SINON, afficher “b”.",
          "Le total vaut 1'000.\nAfficher « x » puis total.\n\nSi total > 3 :\n    Afficher \" a \".\n"
          "Sinon, afficher « b ».\n");
@@ -250,8 +250,14 @@ int main(void) {
     /* --- Années (§ 14.5) --- */
     COMP("Une œuvre, conservée, a : une composition (année), facultative, une reprise (année), 1900 au départ.\n"
          "Le d vaut 01.01.2000.\nAfficher l'année de d puis l'année d'aujourd'hui.",
-         "_classe _une œuvre _conservé\n    _une composition (année) _facultatif\n    _une reprise (année) _départ 1'900\n_fin\n"
+         "_classe _une œuvre _conservé\n    _une composition (année) _facultatif\n    _une reprise (année) _départ 1900\n_fin\n"
          "_le d << 01.01.2000\n_afficher d.année ; (_aujourd'hui).année\n");
+
+    /* --- Séparateur de milliers : l'auteur décide de grouper, le style est normalisé (§ 12) --- */
+    LITT("Le x vaut 1747.\nLe y vaut 1'000.\nLe z vaut 1\u00a0234\u00a0567,50 + 12345,5 − 0,001.",
+         "Le x vaut 1747.\nLe y vaut 1'000.\nLe z vaut 1'234'567,50 + 12345,5 − 0,001.\n");
+    COMP("Le x vaut 1747 + 1'000.", "_le x << 1747 + 1'000\n");
+    FIXE("Le x vaut 1747.\nLe y vaut 1'000.\n");
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.24), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.25), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -1570,6 +1570,7 @@ static Noeud *base(Analyse *a) {
     switch (t->type) {
     case J_NOMBRE: {
         Noeud *n = feuille(N_NOMBRE, t);
+        n->forme = t->groupe;   /* « 1'000 » ou « 1000 » : l'auteur a choisi de grouper ou non (§ 12) */
         avancer(a);
         return n;
     }

@@ -223,6 +223,9 @@ int main(void) {
                  "    _afficher _nombre_de travail _de ami\n_fin\n", NULL);
     ERR("_classe _une p _conservé\n    _des amis\n_fin\n", 2, 5, "Champ multiple attendu");
 
+    /* le séparateur de milliers passe d'une forme à l'autre (§ 12) */
+    ALLER_RETOUR("_le x << 1747 + 1'000\n_afficher x\n", "Le x vaut 1747 + 1'000.\nAfficher x.\n");
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

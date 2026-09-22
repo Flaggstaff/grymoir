@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.24), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.25), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -301,8 +301,14 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
 static void expression(Impression *im, const Noeud *n) {
     switch (n->type) {
     case N_NOMBRE: {
+        /* le style est normalisé (apostrophe), la décision de grouper appartient à l'auteur (§ 12) */
         Decimal d = dec_depuis_canonique(n->texte);
         char *s = dec_formater(&d);
+        if (!n->forme) {
+            char *w = s;
+            for (const char *r = s; *r; r++) if (*r != '\'') *w++ = *r;
+            *w = '\0';
+        }
         aj(im, s);
         free(s);
         dec_liberer(&d);

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.24 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
+Version 1.25 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -20,7 +20,7 @@ Périmètre : nommer, calculer, afficher, décider (§ 5), définir des formules
 
 - Séparateur décimal : la virgule (`3,5`).
 - Règle de désambiguïsation : chiffre, virgule, chiffre collé forment un nombre. `3,5` est un nombre ; `3, 5` en fait deux.
-- Séparateur de milliers accepté en entrée : apostrophe suisse (`1'000`) et espace insécable (U+00A0, U+202F : `1 000`).
+- Séparateur de milliers accepté en entrée : apostrophe suisse (`1'000`) et espace insécable (U+00A0, U+202F : `1 000`). Grouper ou non est un choix d'écriture, conservé dans l'arbre (§ 12) : `1747` reste `1747`.
 - L'apostrophe de milliers suit toujours un chiffre ; l'apostrophe d'élision suit toujours une lettre. Aucune ambiguïté.
 - Les séparateurs de milliers ne sont admis que dans la partie entière, par groupes de trois chiffres (`1'000`, `12'345`) ; `1'00` est une erreur.
 - Le point décimal à l'anglaise est une erreur avec correction : `3.5` produit « Écrivez « 3,5 » ».
@@ -649,7 +649,7 @@ Limite de la v0.2 : les erreurs de structure propres à la forme compacte (`_fin
 `grym formater fichier.grym` réécrit un programme dans la forme littéraire canonique.
 
 - Le programme est conservé : même arbre, mêmes noms, mêmes valeurs, mêmes remarques, mêmes choix d'écriture (articles, crochets, tournures en mots ou en symboles, contractions, formes courtes ou en bloc).
-- La présentation est normalisée : une phrase par ligne, indentation de quatre espaces, majuscule en début de phrase, espaces simples, nombres au style suisse (`1'000`, `12,50`), textes entre `« »` (ou `" "` si le texte commence ou finit par une espace, ce que `« »` rognerait), une seule ligne vide là où la source en avait une ou plusieurs.
+- La présentation est normalisée : une phrase par ligne, indentation de quatre espaces, majuscule en début de phrase, espaces simples, nombres au style suisse (`12,50` ; un nombre groupé l'est par l'apostrophe, `1 000` devient `1'000`, et un nombre écrit sans séparateur le reste, `1747`), textes entre `« »` (ou `" "` si le texte commence ou finit par une espace, ce que `« »` rognerait), une seule ligne vide là où la source en avait une ou plusieurs.
 - La forme canonique est un point fixe : la formater ne change plus rien.
 
 Garanties de la traduction (charte, art. 4) :
@@ -828,7 +828,7 @@ Si l'année de la date de sortie > 1700, …
 ```
 
 - Une année est une valeur à part entière, de 1 à 9999, comme les dates. Elle s'affiche sans séparateur de milliers : `1747`, jamais `1'747`.
-- Aucun littéral : une année naît d'un champ `(année)`, où un nombre entier de 1 à 9999 devient une année (comme `3,0` devient un nombre entier dans un champ `(nombre entier)`, § 16.2) ; de `l'année de d`, champ intégré de toute date, qui ne réserve rien (§ 15.3) ; ou d'un calcul sur une année. `Le millésime vaut 1747.` crée un nombre.
+- Aucun littéral : une année naît d'un champ `(année)`, où un nombre entier de 1 à 9999 devient une année (comme `3,0` devient un nombre entier dans un champ `(nombre entier)`, § 16.2) ; de `l'année de d`, champ intégré de toute date, qui ne réserve rien (§ 15.3) ; ou d'un calcul sur une année. `Le millésime vaut 1747.` crée un nombre : il s'affiche `1'747` (§ 4.1), mais la source garde `1747` (§ 12).
 - Ranger `2,5`, `0` ou `12000` dans un champ `(année)` est une erreur : « Le champ « composition » attend une année (de 1 à 9999), pas 2,5. »
 
 | Opération | Résultat |
@@ -1201,3 +1201,4 @@ Pour chaque œuvre conservée dont callas est parmi les interprètes :
 | 1.22 | 2026-09-22 | § 16.12 : corbeille (`Supprimer`, `définitivement`, `Rétablir`, `supprimé`) et cascade (`, et disparaît avec elle`) ; `Supprimer` met désormais dans la corbeille ; `définitivement` réservé |
 | 1.23 | 2026-09-22 | § 16.13 : plusieurs vers plusieurs (`des genres (genre)`, `gagnent`, `perdent`, `Pour chaque interprète de o`, `le nombre de … de …`, `dont … est parmi les …`) ; relation inverse étendue aux champs multiples ; EBNF et messages |
 | 1.24 | 2026-09-22 | § 14.5 : années (type `(année)`, valeur à part entière, sans littéral, `l'année de d`, calculs, comparaisons, boucles, base, migrations) ; une entité ne porte pas un nom de type |
+| 1.25 | 2026-09-22 | § 1.2 et § 12 : grouper les chiffres par milliers est un choix d'écriture conservé ; la forme canonique n'en normalise que le style (apostrophe) |

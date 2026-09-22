@@ -1,5 +1,5 @@
 /* GrymoiR : arbre syntaxique, v0.1
- * Spécification : docs/grammaire.md (révision 1.24), § 6.
+ * Spécification : docs/grammaire.md (révision 1.25), § 6.
  * Chaque nœud garde sa position dans la source (debut, fin), pour les
  * messages d'erreur et, en v0.2, pour la traduction sans perte.
  */
@@ -10,7 +10,7 @@
 
 typedef enum {
     /* expressions */
-    N_NOMBRE,        /* texte : valeur canonique « 12.50 » */
+    N_NOMBRE,        /* texte : valeur canonique « 12.50 » ; forme 1 : écrit avec un séparateur de milliers */
     N_NOM,           /* texte : clé du nom « prix unitaire » ; article : voir ci-dessous */
     N_NEGATION,      /* enfants[0] */
     N_OPERATION,     /* op, enfants[0], enfants[1] */

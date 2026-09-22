@@ -1,5 +1,5 @@
 /* GrymoiR : lexeur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.24), § 1.
+ * Spécification : docs/grammaire.md (révision 1.25), § 1.
  */
 #ifndef GRYM_LEXEUR_H
 #define GRYM_LEXEUR_H
@@ -49,6 +49,7 @@ typedef struct {
     int retrait;      /* colonne qui compte pour les blocs (§ 5.4) ; la forme compacte la calcule */
     int synthetique;  /* jeton produit par la lecture de la forme compacte, sans équivalent écrit */
     int ligne_fin;    /* dernière ligne occupée par la construction qu'il termine (« _fin » compris) */
+    int groupe;       /* nombre écrit avec un séparateur de milliers (« 1'000 ») : choix d'écriture (§ 12) */
 } Jeton;
 
 typedef struct Lexeur Lexeur;

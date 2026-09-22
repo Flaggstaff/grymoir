@@ -1,5 +1,5 @@
 /* GrymoiR : lexeur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.24), § 1.
+ * Spécification : docs/grammaire.md (révision 1.25), § 1.
  */
 #include "lexeur.h"
 #include "date.h"
@@ -299,6 +299,7 @@ static Jeton faire(const Lexeur *lx, TypeJeton type, size_t debut,
     j.retrait = col;
     j.synthetique = 0;
     j.ligne_fin = ligne;
+    j.groupe = 0;
     return j;
 }
 
@@ -458,7 +459,9 @@ static Jeton lire_nombre(Lexeur *lx, size_t debut, int ligne, int col) {
         return echec(lx, debut, ligne, col, m);
     }
 
-    return faire(lx, J_NOMBRE, debut, ligne, col, tampon_rendre(&t));
+    Jeton j = faire(lx, J_NOMBRE, debut, ligne, col, tampon_rendre(&t));
+    j.groupe = separateur_vu;
+    return j;
 }
 
 /* ---------- Texte (§ 1.5) ---------- */
