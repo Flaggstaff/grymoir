@@ -1483,6 +1483,12 @@ int main(void) {
     PROG("Les nombres s'affichent à la belge.", "~Style attendu");
     PROG("Afficher 1 à droite.", "~« à gauche » et « à droite » suivent une largeur");
 
+    /* --- Effacer l'écran (§ 4.3) : hors d'un terminal, la phrase n'écrit rien --- */
+    PROG("Afficher « a ».\nEffacer l'écran.\nAfficher « b ».", "a\nb");
+    PROG("Le double d'un x :\n    Effacer l'écran.\n    Rendre x.", "~Un calcul n'affiche rien");
+    PROG("Effacer.", "~Écrivez « Effacer l'écran. ».");
+    PROG("Effacer l'écran et le reste.", "~« et » inattendu, attendu : un point final.");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

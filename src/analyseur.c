@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.28), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.29), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -3989,7 +3989,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
 /* Mots qui commencent une construction et ne peuvent donc pas commencer le nom d'une action. */
 static int mot_de_construction(const Jeton *t) {
     static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
-                                     "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer",
+                                     "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer", "effacer",
                                      "conserver", "supprimer", "rétablir" };
     for (size_t k = 0; k < sizeof M / sizeof *M; k++) if (est_mot(t, M[k])) return 1;
     return 0;
@@ -4132,6 +4132,19 @@ static Noeud *phrase(Analyse *a, int colonne) {
     }
     if (est_mot(t, "les") && est_mot(voir(a, 1), "nombres")) return style_des_nombres(a, t);
     if (est_mot(t, "les")) return gagner_perdre(a, t);
+    if (est_mot(t, "effacer") && voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "écran")) {
+        /* « Effacer l'écran. » (§ 4.3) */
+        if (a->formule == 1)
+            return erreur(a, t, grym_dupliquer("Un calcul n'affiche rien : il rend une valeur. "
+                                               "Pour effacer l'écran, écrivez une action."));
+        a->i += 3;
+        Noeud *n = noeud_creer(P_EFFACER, t->ligne, t->colonne, t->debut);
+        if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
+    if (est_mot(t, "effacer"))
+        return erreur(a, t, grym_dupliquer("Écrivez « Effacer l'écran. »."));
     if (est_mot(t, "enregistrer")) {
         /* « Enregistrer … dans « chemin ». » (§ 15.2) */
         if (a->formule == 1)

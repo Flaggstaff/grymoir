@@ -278,6 +278,9 @@ int main(void) {
     COMP("Les nombres s'affichent sans séparateur.\nAfficher « ab » sur 4 à droite, sans passer à la ligne.",
          "_style _sans_séparateur\n_afficher « ab » _sur 4 _droite _sans_ligne\n");
 
+    FIXE("Effacer l'écran.\nAfficher « a ».\n");
+    COMP("Effacer l'écran.", "_effacer\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

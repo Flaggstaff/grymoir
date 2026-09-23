@@ -1,5 +1,5 @@
 /* GrymoiR : arbre syntaxique, v0.1
- * Spécification : docs/grammaire.md (révision 1.28), § 6.
+ * Spécification : docs/grammaire.md (révision 1.29), § 6.
  * Chaque nœud garde sa position dans la source (debut, fin), pour les
  * messages d'erreur et, en v0.2, pour la traduction sans perte.
  */
@@ -82,6 +82,7 @@ typedef enum {
     P_ENREGISTRER,   /* « Enregistrer … dans « copie.jpg ». » : enfants[0] : fichier ; enfants[1] : chemin (§ 15.2) */
     P_APTITUDE,      /* « Une chose horodatée a : » : texte : forme féminine ; texte2 : forme masculine déclarée
                         entre parenthèses, ou NULL si elle se déduit ; enfants : champs (N_NOM) */
+    P_EFFACER,       /* « Effacer l'écran. » (§ 4.3) */
     P_STYLE,         /* « Les nombres s'affichent à la française. » (§ 4.1) : entier 0 suisse, 1 française,
                         2 sans séparateur */
     P_GAGNER         /* « Les genres de o gagnent baroque. » : texte : champ multiple ; enfants[0] : objet ;

@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.28), § 11.
+ * Spécification : docs/grammaire.md (révision 1.29), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -752,6 +752,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "vaut", &r->e[d + 2]);
             expression(r, d + 3, f);
             if (avec) { emettre(r, J_DEUX_POINTS, NULL, &r->e[f], 1); fixer_retrait(r, premier, prof); ouvrir(r, O_INIT, prof, t); return; }
+            point(r, f);
+        } else if (!strcmp(c, "effacer")) {   /* _effacer → Effacer l'écran. */
+            if (d + 1 != f) { echouer(r, t, grym_dupliquer("« _effacer » s'écrit seul.")); return; }
+            mot(r, "effacer", t);
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "écran", t);
             point(r, f);
         } else if (!strcmp(c, "style")) {   /* _style _française → Les nombres s'affichent à la française. */
             const char *st = d + 1 < f && r->e[d + 1].type == J_MOT_CLE ? r->e[d + 1].valeur : NULL;

@@ -28,6 +28,7 @@ Pour chercher :
     Le cherché vaut la réponse à « Quel nom ? ».
     Afficher le nombre de contacts conservés dont le nom est cherché puis « trouvé(s). ».
 
+Effacer l'écran.
 Afficher « 1 ajouter, 2 lister, 3 chercher, 0 quitter ».
 Le choix vaut la réponse en nombre entier à « Votre choix ? ».
 Tant que choix ≠ 0 :

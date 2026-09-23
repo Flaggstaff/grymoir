@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.28 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
+Version 1.29 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -207,6 +207,17 @@ Afficher nom du client sur 20 puis solde du client sur 10 à droite.
 - En forme compacte : `nom _sur 20`, `solde _sur 10 _droite`, `_afficher x _sans_ligne`.
 
 ---
+
+### 4.3 Effacer l'écran
+
+```
+Effacer l'écran.
+```
+
+- Efface l'écran et ramène le curseur en haut à gauche.
+- Hors d'un terminal, la phrase n'écrit rien : une sortie redirigée dans un fichier ou dans un tube reste propre.
+- Effet de bord, donc réservé aux actions. `effacer` ne peut pas commencer le nom d'une action.
+- En forme compacte : `_effacer`.
 
 ## 5. Décider
 
@@ -1245,3 +1256,4 @@ Si la réponse en vrai ou faux à « Encore ? », …
 | 1.26 | 2026-09-22 | § 10.3 et § 12 : « du … au … » de `Pour chaque` conservé par la forme canonique, même devant une valeur sans article |
 | 1.27 | 2026-09-22 | § 17 : questions à l'utilisateur (`la réponse à …`, types, relance) ; § 16.6 et § 3.3 : une question valide ce qui la précède et rend le verrou |
 | 1.28 | 2026-09-22 | § 4.1 : le style des nombres se déclare dans le programme ; § 4.2 : largeur (`sur 20`, `à droite`) et `, sans passer à la ligne` ; `sur` réservé |
+| 1.29 | 2026-09-22 | § 4.3 : « Effacer l'écran. », sans effet hors d'un terminal ; `effacer` réservé |

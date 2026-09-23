@@ -420,6 +420,9 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_ECRIRE, k, ph->ligne, ph->colonne);
         return;
     }
+    case P_EFFACER:   /* « Effacer l'écran. » (§ 4.3) */
+        emettre(c, I_EFFACER, 0, ph->ligne, ph->colonne);
+        return;
     case P_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
         emettre(c, I_STYLE, ph->entier, ph->ligne, ph->colonne);
         return;

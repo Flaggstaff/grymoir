@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.20).
+ * Spécification : docs/vm.md (révision 1.21).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -170,6 +170,7 @@ struct Machine {
     Base *base;             /* ouverte au premier besoin */
     int base_engagee;       /* dernière exécution : une base était en jeu (message d'annulation, § 3.3) */
     int fichiers_prevus;    /* dernière exécution : des fichiers devaient être écrits */
+    int terminal;           /* la sortie est un terminal (§ 4.3) */
     int style;              /* affichage des nombres : 0 suisse, 1 française, 2 sans séparateur (§ 4.1) */
     int question_posee;     /* dernière exécution : une question a validé ce qui précède (§ 17) */
     char *(*lire)(void *contexte, Chaine *sortie, const char *question);
@@ -283,6 +284,10 @@ void machine_lecteur(Machine *m, char *(*lire)(void *contexte, Chaine *sortie, c
                      void *contexte) {
     m->lire = lire;
     m->lire_contexte = contexte;
+}
+
+void machine_terminal(Machine *m, int terminal) {
+    m->terminal = terminal;
 }
 
 void machine_base(Machine *m, const char *chemin) {
@@ -1487,6 +1492,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, valeur_nombre(r));
             break;
         }
+        case I_EFFACER:   /* « Effacer l'écran. » (§ 4.3) : hors d'un terminal, rien n'est écrit */
+            if (m->terminal) chaine_ajouter(sortie, "\033[2J\033[H");
+            break;
         case I_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
             m->style = (int)op;
             break;

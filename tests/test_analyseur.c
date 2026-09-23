@@ -735,6 +735,9 @@ int main(void) {
     VE("Le double d'un x vaut la réponse en nombre à « ? ».", 1, 23,
        "Un calcul ne pose pas de question : demandez dans une action.");
 
+    V("Effacer l'écran.", "(effacer-écran)");
+    VE("Pour effacer un x :\n    Afficher 1.", 1, 6, "« effacer » commence une construction du langage");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

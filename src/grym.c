@@ -85,6 +85,20 @@ static char *lire_pour_la_machine(void *contexte, Chaine *sortie, const char *qu
     return lire_ligne();
 }
 
+/* La sortie standard est-elle un terminal ? Sous Windows, le mode virtuel est activé au passage :
+ * sans lui, les séquences ECMA-48 s'afficheraient en clair (§ 4.3). */
+static int sortie_terminal(void) {
+#ifdef _WIN32
+    if (!_isatty(_fileno(stdout))) return 0;
+    HANDLE h = (HANDLE)_get_osfhandle(_fileno(stdout));
+    DWORD mode = 0;
+    if (h == INVALID_HANDLE_VALUE || !GetConsoleMode(h, &mode)) return 0;
+    return SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0;
+#else
+    return isatty(fileno(stdout));
+#endif
+}
+
 /* Ctrl+C : la machine s'arrête proprement au prochain saut arrière ou appel (docs/vm.md, § 6). */
 static void sur_interruption(int signal_recu) {
     (void)signal_recu;
@@ -150,6 +164,7 @@ static int lancer(const char *chemin) {
     if (!b) return EXIT_FAILURE;
     Machine *m = machine_creer();
     machine_lecteur(m, lire_pour_la_machine, NULL);
+    machine_terminal(m, sortie_terminal());
     const char *barre = strrchr(chemin, '/');
     if (barre) {   /* les chemins de fichiers du programme partent de son dossier (§ 15.2) */
         char *dossier = grym_formater("%.*s", (int)(barre - chemin), chemin);

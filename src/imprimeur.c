@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.28), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.29), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -715,6 +715,9 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         if (n->type == P_CREATION) retenir(im, n->texte, g);
         return;
     }
+    case P_EFFACER:
+        aj(im, c ? "_effacer\n" : "Effacer l'écran.\n");
+        return;
     case P_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
         aj(im, c ? "_style " : "Les nombres s'affichent ");
         aj(im, n->entier == 0 ? (c ? "_suisse" : "à la suisse") : n->entier == 1 ? (c ? "_française" : "à la française")

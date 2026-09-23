@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle, v0.2
- * Spécification : docs/vm.md (révision 1.20).
+ * Spécification : docs/vm.md (révision 1.21).
  */
 #ifndef GRYM_VM_H
 #define GRYM_VM_H
@@ -36,6 +36,9 @@ void machine_dossier(Machine *m, const char *dossier);
 
 /* Fichier de la base des entités (§ 16.5) ; NULL : base en mémoire. Ouverte au premier besoin. */
 void machine_base(Machine *m, const char *chemin);
+
+/* La sortie est un terminal : « Effacer l'écran. » n'écrit sa séquence que dans ce cas (§ 4.3). */
+void machine_terminal(Machine *m, int terminal);
 
 /* Lecteur des réponses de l'utilisateur (grammaire, § 17) : la machine écrit d'abord ce qui attend
  * dans `sortie` et la vide, affiche la question, puis rend la ligne tapée, sans son saut de ligne

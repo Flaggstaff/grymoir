@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.20 de la spécification, révisée le 22 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.28, § 3.3, § 5, § 9, § 10, § 13 à 16.
+Version 1.21 de la spécification, révisée le 22 septembre 2026.
+Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.29, § 3.3, § 5, § 9, § 10, § 13 à 16.
 Toute modification passe par une révision numérotée.
 
 Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
@@ -91,6 +91,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 46 | `CADRER` | sens (0 défaut, 1 gauche, 2 droite) | dépile une largeur, puis une valeur ; empile le texte cadré (§ 4.2) |
 | 47 | `AFFICHER_SANS_LIGNE` | nombre d'éléments n | comme `AFFICHER`, sans le saut de ligne final |
 | 48 | `STYLE` | style (0 suisse, 1 française, 2 sans séparateur) | fixe l'affichage des nombres (§ 4.1) |
+| 49 | `EFFACER` | aucun | écrit `ESC[2J` puis `ESC[H` si la sortie est un terminal, rien sinon (§ 4.3) |
 
 ### 3.1 Boucles et Selon
 
@@ -223,7 +224,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 18
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 19
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -248,7 +249,7 @@ classes       nombre : u32, puis pour chacune :
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40 ; la version 15, le bit 2 et les instructions 41 et 42 ; la version 16, le bit 3 et les instructions 43 et 44 ; la version 17, l'instruction 45 ; la version 18, les instructions 46 à 48. Les fichiers des versions 1 à 17 restent lisibles ; leur `SUPPRIMER` met désormais dans la corbeille.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40 ; la version 15, le bit 2 et les instructions 41 et 42 ; la version 16, le bit 3 et les instructions 43 et 44 ; la version 17, l'instruction 45 ; la version 18, les instructions 46 à 48 ; la version 19, l'instruction 49. Les fichiers des versions 1 à 18 restent lisibles ; leur `SUPPRIMER` met désormais dans la corbeille.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -303,3 +304,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.18 | 2026-09-22 | Valeur année : calculs, comparaisons, affichage, `LIRE_CHAMP` « année » d'une date, conversion à l'écriture d'un champ `(année)`, colonne `INTEGER` |
 | 1.19 | 2026-09-22 | `DEMANDER` : la question valide fichiers, base et journal, puis lit la réponse ; lecteur installé par la machine ; format version 17 |
 | 1.20 | 2026-09-22 | Mise en forme : `CADRER`, `AFFICHER_SANS_LIGNE`, `STYLE` ; format version 18 |
+| 1.21 | 2026-09-22 | `EFFACER` : séquence ECMA-48, seulement sur un terminal ; `machine_terminal` ; format version 19 |
