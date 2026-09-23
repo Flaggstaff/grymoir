@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.27), § 11.
+ * Spécification : docs/grammaire.md (révision 1.28), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -235,6 +235,15 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "les", &r->e[k + 1]);
             copier(r, t);
             k = e - 1;
+            continue;
+        }
+        if (est_cle(t, "sur")) {                    /* nom _sur 20 _droite → nom sur 20 à droite (§ 4.2) */
+            mot(r, "sur", t);
+            continue;
+        }
+        if (est_cle(t, "droite") || est_cle(t, "gauche")) {
+            mot(r, "à", t);
+            mot(r, est_cle(t, "droite") ? "droite" : "gauche", t);
             continue;
         }
         if (est_cle(t, "réponse")) {                /* _réponse (nombre) « Âge ? » → la réponse en nombre à « Âge ? » */
@@ -744,12 +753,29 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             expression(r, d + 3, f);
             if (avec) { emettre(r, J_DEUX_POINTS, NULL, &r->e[f], 1); fixer_retrait(r, premier, prof); ouvrir(r, O_INIT, prof, t); return; }
             point(r, f);
+        } else if (!strcmp(c, "style")) {   /* _style _française → Les nombres s'affichent à la française. */
+            const char *st = d + 1 < f && r->e[d + 1].type == J_MOT_CLE ? r->e[d + 1].valeur : NULL;
+            if (!st || (strcmp(st, "suisse") && strcmp(st, "française") && strcmp(st, "sans_séparateur")) || d + 2 != f) {
+                echouer(r, t, grym_dupliquer("Style attendu : « _style _suisse », « _style _française » "
+                                             "ou « _style _sans_séparateur »."));
+                return;
+            }
+            mot(r, "les", t);
+            mot(r, "nombres", t);
+            emettre(r, J_ELISION, "s", t, 1);
+            mot(r, "affichent", t);
+            if (strcmp(st, "sans_séparateur") == 0) { mot(r, "sans", t); mot(r, "séparateur", t); }
+            else { mot(r, "à", t); mot(r, "la", t); mot(r, st, &r->e[d + 1]); }
+            point(r, f);
         } else if (!strcmp(c, "afficher")) {
             mot(r, "afficher", t);
+            size_t sans = f;
+            if (f > d + 1 && est_cle(&r->e[f - 1], "sans_ligne")) sans = f - 1;   /* § 4.2 */
+            size_t fin_elements = sans;
             size_t debut = d + 1;
             int p = 0;
-            for (size_t k = d + 1; k <= f; k++) {
-                if (k < f) {
+            for (size_t k = d + 1; k <= fin_elements; k++) {
+                if (k < fin_elements) {
                     if (r->e[k].type == J_PAR_OUV) p++;
                     else if (r->e[k].type == J_PAR_FERM) p--;
                     if (!(p == 0 && r->e[k].type == J_POINT_VIRGULE)) continue;
@@ -757,6 +783,14 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 if (debut > d + 1) mot(r, "puis", &r->e[debut - 1]);
                 expression(r, debut, k);
                 debut = k + 1;
+            }
+            if (sans != f) {
+                emettre(r, J_VIRGULE, NULL, &r->e[sans], 1);
+                mot(r, "sans", &r->e[sans]);
+                mot(r, "passer", &r->e[sans]);
+                mot(r, "à", &r->e[sans]);
+                mot(r, "la", &r->e[sans]);
+                mot(r, "ligne", &r->e[sans]);
             }
             point(r, f);
         } else if (!strcmp(c, "si") || !strcmp(c, "tant_que")) {

@@ -103,8 +103,11 @@ static void decrire(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case P_STYLE:
+        chaine_ajouter(c, n->entier == 0 ? "(style suisse)" : n->entier == 1 ? "(style française)" : "(style sans)");
+        return;
     case P_AFFICHAGE:
-        chaine_ajouter(c, "(afficher");
+        chaine_ajouter(c, n->forme ? "(afficher-sans-ligne" : "(afficher");
         for (size_t i = 0; i < n->nb_enfants; i++) {
             chaine_ajouter(c, " ");
             decrire(n->enfants[i], c);
@@ -225,6 +228,13 @@ static void decrire(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, " ");
         decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
+    case N_CADRE:
+        chaine_ajouter(c, "(sur ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, n->forme == 1 ? " gauche " : n->forme == 2 ? " droite " : " ");
+        decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
     case N_REPONSE:

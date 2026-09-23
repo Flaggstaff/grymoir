@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.19).
+ * Spécification : docs/vm.md (révision 1.20).
  */
 #include "bytecode.h"
 #include "date.h"
@@ -169,6 +169,9 @@ const char *instruction_nom(CodeInstruction code) {
     case I_GAGNER:         return "GAGNER";
     case I_PERDRE:         return "PERDRE";
     case I_DEMANDER:       return "DEMANDER";
+    case I_CADRER:         return "CADRER";
+    case I_AFFICHER_SANS_LIGNE: return "AFFICHER_SANS_LIGNE";
+    case I_STYLE:          return "STYLE";
     }
     return "INCONNUE";
 }
@@ -178,6 +181,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_APPELER || code == I_LIRE_LOCAL || code == I_ECRIRE_LOCAL || code == I_ECHOUER
         || code == I_NOUVEAU || code == I_INITIALISER_CHAMP || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP
         || code == I_GAGNER || code == I_PERDRE || code == I_DEMANDER
+        || code == I_CADRER || code == I_AFFICHER_SANS_LIGNE || code == I_STYLE
         || code == I_CHERCHER;
 }
 
@@ -326,7 +330,9 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_PUISSANCE: case I_EGAL: case I_DIFFERENT: case I_INFERIEUR: case I_SUPERIEUR:
             case I_INFERIEUR_OU_EGAL: case I_SUPERIEUR_OU_EGAL:
                 besoin = 2; effet = -1; break;
-            case I_AFFICHER: besoin = (long)op; effet = -(long)op; break;
+            case I_AFFICHER: case I_AFFICHER_SANS_LIGNE: besoin = (long)op; effet = -(long)op; break;
+            case I_CADRER: besoin = 2; effet = -1; break;
+            case I_STYLE: besoin = 0; effet = 0; break;
             case I_SAUTER_SI_FAUX: besoin = 1; effet = -1; break;
             case I_SAUTER: case I_RETOUR: break;
             }
@@ -393,11 +399,12 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 17  /* versions 1 à 16 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 18  /* versions 1 à 17 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
-                              sans champ multiple (15), sans question (16) */
+                              sans champ multiple (15), sans question (16),
+                              sans mise en forme (17) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 

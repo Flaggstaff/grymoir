@@ -1455,6 +1455,34 @@ int main(void) {
         remove("_essai_q.grymd");
     }
 
+    /* --- Mise en forme de l'affichage (§ 4.1, § 4.2) --- */
+    PROG("Afficher « Berthoud » sur 5 puis « |ab ».", "Berth |ab");
+    PROG("Afficher « ab » sur 5 puis « | ».", "ab    |");
+    PROG("Afficher « ab » sur 5 à droite puis « | ».", "   ab |");
+    PROG("Afficher 12,5 sur 6 puis « | ».", "  12,5 |");
+    PROG("Afficher 12,5 sur 6 à gauche puis « | ».", "12,5   |");
+    PROG("Afficher « été » sur 4 puis « | ».", "été  |");   /* caractères, pas octets */
+    PROG("Le l vaut 3.\nAfficher « ab » sur l + 1 puis « | ».", "ab   |");
+    PROG("Afficher « a » sur 3, sans passer à la ligne.\nAfficher « b ».", "a  b");
+    PROG("Afficher « a ».\nAfficher « ».\nAfficher « b ».", "a\n\nb");
+    PROG("Le x vaut « ab » sur 4.\nAfficher x puis « | ».", "ab   |");
+    PROG("Afficher 1 sur 0.", "~Largeur invalide : un nombre entier de 1 à 1000 est attendu.");
+    PROG("Afficher 1 sur 2,5.", "~Largeur invalide");
+    PROG("Afficher 1 sur 1001.", "~Largeur invalide");
+    PROG("Afficher 1 sur « a ».", "~Largeur invalide");
+    /* style des nombres (§ 4.1) */
+    PROG("Afficher 1234567,25.", "1'234'567,25");
+    PROG("Les nombres s'affichent sans séparateur.\nAfficher 1234567,25.", "1234567,25");
+    PROG("Les nombres s'affichent à la suisse.\nAfficher 1234567,25.", "1'234'567,25");
+    PROG("Les nombres s'affichent à la française.\nAfficher 1234567,25 puis −1000.", "1\u202f234\u202f567,25 −1\u202f000");
+    PROG("Les nombres s'affichent à la française.\nLe d vaut 01.02.1990.\nAfficher l'année de d puis d.",
+         "1990 01.02.1990");   /* une année et une date gardent leur forme */
+    PROG("Afficher 1.\nLes nombres s'affichent à la suisse.", "~se déclare avant le premier affichage");
+    PROG("Les nombres s'affichent à la suisse.\nLes nombres s'affichent à la française.", "~une seule fois");
+    PROG("Pour f :\n    Les nombres s'affichent à la suisse.", "~au premier niveau du programme");
+    PROG("Les nombres s'affichent à la belge.", "~Style attendu");
+    PROG("Afficher 1 à droite.", "~« à gauche » et « à droite » suivent une largeur");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

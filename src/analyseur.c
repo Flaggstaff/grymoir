@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.27), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.28), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -348,6 +348,8 @@ typedef struct {
     size_t i;
     Portee *portee;    /* copie de travail, validée seulement en cas de succès */
     int interactif;
+    int style_declare;   /* « Les nombres s'affichent … » : une seule fois (§ 4.1) */
+    int affichage_vu;
     int profondeur;
     Article article_force;   /* article contenu dans « au » ou « du » (grammaire, § 5.2) */
     int formule;             /* 0 : hors formule ; 1 : dans un calcul ; 2 : dans une action (§ 9) */
@@ -470,7 +472,7 @@ static int nom_a_crochets(const char *nom);
 /* Mots qui structurent la phrase et ne peuvent pas entrer dans un nom
  * (sauf entre crochets, § 2.2). */
 static const char *const RESERVES[] = {
-    "vaut", "devient", "puis", "est", "et", "ou", "si", "sinon", "vrai", "faux", "rendre", "dont", "définitivement"
+    "vaut", "devient", "puis", "est", "et", "ou", "si", "sinon", "vrai", "faux", "rendre", "dont", "définitivement", "sur"
 };
 
 static int est_mot_reserve(const char *m) {
@@ -631,6 +633,7 @@ static const char *type_statique(const Noeud *n) {
     case N_BOOLEEN: case N_COMPARAISON: case N_LOGIQUE: return "vrai ou faux";
     case N_DATE: case N_AUJOURDHUI: return "date";
     case N_FICHIER: return "fichier";
+    case N_CADRE: return "texte";
     case N_REPONSE: return n->texte2;
     case N_NOUVEAU: return n->texte;
     case N_GROUPE: case N_NEGATION: return type_statique(n->enfants[0]);
@@ -1715,7 +1718,10 @@ static Noeud *terme(Analyse *a) {
 }
 
 /* expression = terme { ( "+" | "−" ) terme } */
-static Noeud *expression(Analyse *a) {
+static Noeud *cadrer(Analyse *a, Noeud *g);
+
+/* Expression sans la largeur finale : « sur » ne se cadre pas lui-même. */
+static Noeud *expression_simple(Analyse *a) {
     Noeud *g = terme(a);
     while (g) {
         attendre(a, A_OP_ADD);
@@ -1726,6 +1732,42 @@ static Noeud *expression(Analyse *a) {
         Noeud *d = terme(a);
         if (!d) { noeud_liberer(g); return NULL; }
         g = operation(op, top, g, d);
+    }
+    return g;
+}
+
+static Noeud *expression(Analyse *a) {
+    return cadrer(a, expression_simple(a));
+}
+
+/* « … sur 20 », « … sur 20 à droite » (§ 4.2) : une largeur collée à la valeur. */
+static Noeud *cadrer(Analyse *a, Noeud *g) {
+    if (!g) return NULL;
+    attendre_mot(a, a->i, "sur", 3);
+    if (est_mot(cour(a), "sur")) {
+        const Jeton *tsur = cour(a);
+        avancer(a);
+        Noeud *largeur = expression_simple(a);   /* « sur l + 1 » : la largeur se calcule */
+        if (!largeur) { noeud_liberer(g); return NULL; }
+        Noeud *n = noeud_creer(N_CADRE, g->ligne, g->colonne, g->debut);
+        noeud_ajouter(n, g);
+        noeud_ajouter(n, largeur);
+        n->fin = largeur->fin;
+        n->op_ligne = tsur->ligne;
+        n->op_colonne = tsur->colonne;
+        attendre_mot(a, a->i, "à gauche", 8);
+        attendre_mot(a, a->i, "à droite", 8);
+        if (est_mot(cour(a), "à") && (est_mot(voir(a, 1), "gauche") || est_mot(voir(a, 1), "droite"))) {
+            n->forme = est_mot(voir(a, 1), "droite") ? 2 : 1;
+            avancer(a);
+            n->fin = fin_jeton(cour(a));
+            avancer(a);
+        }
+        g = n;
+    } else if (est_mot(cour(a), "à") && (est_mot(voir(a, 1), "gauche") || est_mot(voir(a, 1), "droite"))) {
+        noeud_liberer(g);
+        return erreur(a, cour(a), grym_dupliquer("« à gauche » et « à droite » suivent une largeur : "
+                                                 "« le nom sur 20 à droite »."));
     }
     return g;
 }
@@ -2167,9 +2209,10 @@ static Noeud *phrase_expression(Analyse *a) {
     return n;
 }
 
-/* affichage = "Afficher" élément { "puis" élément } "." */
+/* affichage = "Afficher" élément { "puis" élément } [ "," "sans" "passer" "à" "la" "ligne" ] "." */
 static Noeud *affichage(Analyse *a) {
     Jeton *t = cour(a);
+    a->affichage_vu = 1;
     avancer(a);
     Noeud *n = noeud_creer(P_AFFICHAGE, t->ligne, t->colonne, t->debut);
     for (;;) {
@@ -2185,6 +2228,8 @@ static Noeud *affichage(Analyse *a) {
         if (e->type == J_TEXTE) {
             el = feuille(N_TEXTE, e);
             avancer(a);
+            el = cadrer(a, el);   /* « « x » sur 3 » (§ 4.2) */
+            if (!el) { noeud_liberer(n); return NULL; }
         } else {
             el = valeur(a);
             if (!el) { noeud_liberer(n); return NULL; }
@@ -2193,6 +2238,19 @@ static Noeud *affichage(Analyse *a) {
         n->fin = el->fin;
         if (!est_mot(cour(a), "puis")) break;
         avancer(a);
+    }
+    attendre_mot(a, a->i, ", sans passer à la ligne", strlen(", sans passer à la ligne"));
+    if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "sans")) {   /* § 4.2 */
+        avancer(a);
+        const char *suite[] = { "sans", "passer", "à", "la", "ligne" };
+        for (size_t k = 0; k < 5; k++) {
+            if (!est_mot(cour(a), suite[k])) {
+                noeud_liberer(n);
+                return erreur(a, cour(a), grym_dupliquer("Après « sans », écrivez « sans passer à la ligne »."));
+            }
+            avancer(a);
+        }
+        n->forme = 1;
     }
     if (!fin_phrase(a, 1)) { noeud_liberer(n); return NULL; }
     return n;
@@ -3937,6 +3995,39 @@ static int mot_de_construction(const Jeton *t) {
     return 0;
 }
 
+/* « Les nombres s'affichent à la française. » (§ 4.1) : une fois, au premier niveau, avant tout affichage. */
+static Noeud *style_des_nombres(Analyse *a, const Jeton *t) {
+    static const char *const STYLES[] = { "suisse", "française", "séparateur" };
+    if (!est_mot(voir(a, 3), "affichent") || voir(a, 2)->type != J_ELISION)
+        return erreur(a, t, grym_dupliquer("Écrivez « Les nombres s'affichent à la suisse. », « à la française. » "
+                                           "ou « sans séparateur. »."));
+    a->i += 4;   /* les nombres s'affichent */
+    int style = -1;
+    if (est_mot(cour(a), "à") && est_mot(voir(a, 1), "la")) {
+        if (est_mot(voir(a, 2), STYLES[0])) style = 0;
+        else if (est_mot(voir(a, 2), STYLES[1])) style = 1;
+        if (style >= 0) a->i += 3;
+    } else if (est_mot(cour(a), "sans") && est_mot(voir(a, 1), STYLES[2])) {
+        style = 2;
+        a->i += 2;
+    }
+    if (style < 0)
+        return erreur(a, cour(a), grym_dupliquer("Style attendu : « à la suisse », « à la française » "
+                                                 "ou « sans séparateur »."));
+    if (a->formule || a->niveau)
+        return erreur(a, t, grym_dupliquer("Le style des nombres se déclare au premier niveau du programme."));
+    if (a->style_declare)
+        return erreur(a, t, grym_dupliquer("Le style des nombres se déclare une seule fois."));
+    if (a->affichage_vu)
+        return erreur(a, t, grym_dupliquer("Le style des nombres se déclare avant le premier affichage."));
+    a->style_declare = 1;
+    Noeud *n = noeud_creer(P_STYLE, t->ligne, t->colonne, t->debut);
+    n->entier = style;
+    if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
+    n->fin = fin_jeton(&a->j[a->i - 1]);
+    return n;
+}
+
 /* « Les genres de o gagnent baroque. », « … perdent fugue. » (§ 16.13) */
 static Noeud *gagner_perdre(Analyse *a, const Jeton *t) {
     if (a->formule == 1)
@@ -4039,6 +4130,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
         n->fin = v->fin;
         return n;
     }
+    if (est_mot(t, "les") && est_mot(voir(a, 1), "nombres")) return style_des_nombres(a, t);
     if (est_mot(t, "les")) return gagner_perdre(a, t);
     if (est_mot(t, "enregistrer")) {
         /* « Enregistrer … dans « chemin ». » (§ 15.2) */
@@ -4315,6 +4407,8 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.i = 0;
     a.portee = &copie;
     a.interactif = interactif;
+    a.style_declare = 0;
+    a.affichage_vu = 0;
     a.profondeur = 0;
     a.diag = diag;
     a.echec = 0;

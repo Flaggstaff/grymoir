@@ -17,8 +17,12 @@ Pour ajouter :
 
 Pour lister :
     Afficher le nombre de contacts conservés puis « contact(s) : ».
+    Afficher « Nom » sur 20 puis « Téléphone » sur 15, sans passer à la ligne.
+    Afficher « Naissance ».
     Pour chaque contact conservé, par nom :
-        Afficher nom du contact puis téléphone du contact.
+        Afficher nom du contact sur 20 puis téléphone du contact sur 15, sans passer à la ligne.
+        Si la naissance du contact est présente, afficher naissance du contact.
+        Sinon, afficher « ? ».
 
 Pour chercher :
     Le cherché vaut la réponse à « Quel nom ? ».

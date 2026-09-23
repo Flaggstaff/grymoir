@@ -1,5 +1,5 @@
 /* GrymoiR : arbre syntaxique, v0.1
- * Spécification : docs/grammaire.md (révision 1.27), § 6.
+ * Spécification : docs/grammaire.md (révision 1.28), § 6.
  * Chaque nœud garde sa position dans la source (debut, fin), pour les
  * messages d'erreur et, en v0.2, pour la traduction sans perte.
  */
@@ -30,6 +30,8 @@ typedef enum {
     N_DATE,          /* « 21.09.2026 » : texte : forme ISO « 2026-09-21 » (§ 14) */
     N_ABSENT,        /* « absent », « absente » : forme 2 si féminin (§ 16.9) */
     N_AUJOURDHUI,    /* « aujourd'hui » (§ 14.3) */
+    N_CADRE,         /* « le nom sur 20 à droite » (§ 4.2) : enfants[0] la valeur, enfants[1] la largeur ;
+                        forme 0 : sens par défaut, 1 : à gauche, 2 : à droite */
     N_REPONSE,       /* « la réponse en nombre à « Âge ? » » (§ 17) : texte2 : type demandé ;
                         enfants[0] : la question */
     N_FICHIER,       /* « le fichier « photos/ana.jpg » » : enfants[0] : chemin (§ 15.2) */
@@ -80,6 +82,8 @@ typedef enum {
     P_ENREGISTRER,   /* « Enregistrer … dans « copie.jpg ». » : enfants[0] : fichier ; enfants[1] : chemin (§ 15.2) */
     P_APTITUDE,      /* « Une chose horodatée a : » : texte : forme féminine ; texte2 : forme masculine déclarée
                         entre parenthèses, ou NULL si elle se déduit ; enfants : champs (N_NOM) */
+    P_STYLE,         /* « Les nombres s'affichent à la française. » (§ 4.1) : entier 0 suisse, 1 française,
+                        2 sans séparateur */
     P_GAGNER         /* « Les genres de o gagnent baroque. » : texte : champ multiple ; enfants[0] : objet ;
                         enfants[1] : valeur ; forme 1 : « perdent » (§ 16.13) */
 } TypeNoeud;

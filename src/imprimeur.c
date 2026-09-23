@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.27), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.28), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -475,6 +475,13 @@ static void expression(Impression *im, const Noeud *n) {
         }
         return;
     }
+    case N_CADRE:   /* « le nom sur 20 à droite » ; « nom _sur 20 _droite » (§ 4.2) */
+        expression(im, n->enfants[0]);
+        aj(im, im->compact ? " _sur " : " sur ");
+        expression(im, n->enfants[1]);
+        if (n->forme) aj(im, n->forme == 2 ? (im->compact ? " _droite" : " à droite")
+                                           : (im->compact ? " _gauche" : " à gauche"));
+        return;
     case N_REPONSE: {   /* « la réponse en nombre à « Âge ? » » ; « _réponse (nombre) « Âge ? » » (§ 17) */
         int typé = strcmp(n->texte2, "texte") != 0;
         aj(im, im->compact ? "_réponse " : "la réponse ");
@@ -708,12 +715,19 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         if (n->type == P_CREATION) retenir(im, n->texte, g);
         return;
     }
+    case P_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
+        aj(im, c ? "_style " : "Les nombres s'affichent ");
+        aj(im, n->entier == 0 ? (c ? "_suisse" : "à la suisse") : n->entier == 1 ? (c ? "_française" : "à la française")
+                                                                                : (c ? "_sans_séparateur" : "sans séparateur"));
+        aj(im, c ? "\n" : ".\n");
+        return;
     case P_AFFICHAGE:
         aj(im, c ? "_afficher " : "Afficher ");
         for (size_t k = 0; k < n->nb_enfants; k++) {
             if (k) aj(im, c ? " ; " : " puis ");
             expression(im, n->enfants[k]);
         }
+        if (n->forme) aj(im, c ? " _sans_ligne" : ", sans passer à la ligne");
         aj(im, c ? "\n" : ".\n");
         return;
     case P_EXPRESSION:

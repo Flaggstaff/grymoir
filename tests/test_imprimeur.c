@@ -272,6 +272,12 @@ int main(void) {
     COMP("Le nom vaut la réponse à « Nom ? ».\nL'âge vaut la réponse en nombre entier à « Âge ? ».",
          "_le nom << _réponse « Nom ? »\n_l'âge << _réponse (nombre_entier) « Âge ? »\n");
 
+    /* --- Mise en forme (§ 4.1, § 4.2) --- */
+    FIXE("Les nombres s'affichent à la française.\nLe x vaut « ab » sur 4 à droite.\n"
+         "Afficher x sur 10 puis 3 sur 4 à gauche, sans passer à la ligne.\n");
+    COMP("Les nombres s'affichent sans séparateur.\nAfficher « ab » sur 4 à droite, sans passer à la ligne.",
+         "_style _sans_séparateur\n_afficher « ab » _sur 4 _droite _sans_ligne\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

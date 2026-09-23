@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.19).
+ * Spécification : docs/vm.md (révision 1.20).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -170,6 +170,7 @@ struct Machine {
     Base *base;             /* ouverte au premier besoin */
     int base_engagee;       /* dernière exécution : une base était en jeu (message d'annulation, § 3.3) */
     int fichiers_prevus;    /* dernière exécution : des fichiers devaient être écrits */
+    int style;              /* affichage des nombres : 0 suisse, 1 française, 2 sans séparateur (§ 4.1) */
     int question_posee;     /* dernière exécution : une question a validé ce qui précède (§ 17) */
     char *(*lire)(void *contexte, Chaine *sortie, const char *question);
     void *lire_contexte;
@@ -759,6 +760,37 @@ static char *decrire_valeur_pour_type(const Valeur *v) {
         return grym_formater("%s %s", v->objet->classe->feminin ? "une" : "un", v->objet->classe->nom);
     }
     return grym_dupliquer(nom_type(v->type));
+}
+
+static char *article_classe(const ClasseVM *c);
+
+/* Un nombre au style demandé (§ 4.1) : l'apostrophe des milliers devient une espace insécable
+ * (française, U+202F) ou disparaît (sans séparateur). */
+static char *nombre_au_style(const Decimal *d, int style) {
+    char *s = dec_formater(d);
+    if (!style) return s;
+    Chaine c = {0};
+    for (const char *p = s; *p; p++) {
+        if (*p == '\'') { if (style == 1) chaine_ajouter(&c, "\u202f"); continue; }
+        char m[2] = { *p, 0 };
+        chaine_ajouter(&c, m);
+    }
+    free(s);
+    return chaine_rendre(&c);
+}
+
+/* Le texte d'une valeur, tel que « Afficher » l'écrit (grammaire, § 4). */
+static char *texte_valeur(const Machine *m, const Valeur *v) {
+    switch (v->type) {
+    case V_TEXTE:   return grym_dupliquer(v->texte);
+    case V_BOOLEEN: return grym_dupliquer(v->vrai ? "vrai" : "faux");
+    case V_ABSENT:  return grym_dupliquer("absent");
+    case V_FICHIER: return decrire_fichier(v->fichier);
+    case V_ANNEE:   return grym_formater("%ld", v->jours);   /* « 1747 », jamais « 1'747 » (§ 14.5) */
+    case V_DATE:    return date_suisse(v->jours);
+    case V_OBJET:   return article_classe(v->objet->classe);
+    default:        return nombre_au_style(&v->nombre, m->style);
+    }
 }
 
 /* Réponse de l'utilisateur (grammaire, § 17) : la ligne tapée, lue selon le type demandé.
@@ -1455,41 +1487,60 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, valeur_nombre(r));
             break;
         }
-        case I_AFFICHER: {
+        case I_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
+            m->style = (int)op;
+            break;
+        case I_CADRER: {
+            /* « le nom sur 20 », « le solde sur 10 à droite » (§ 4.2) */
+            Valeur vl = depiler(&pile), vv = depiler(&pile);
+            long largeur = 0;
+            char *probleme = NULL;
+            if (vl.type == V_ABSENT || vv.type == V_ABSENT)
+                probleme = message_absent(vl.type == V_ABSENT ? &vl : &vv);
+            else if (vl.type != V_NOMBRE || !dec_en_long_borne(&vl.nombre, 1, 1000, &largeur))
+                probleme = grym_dupliquer("Largeur invalide : un nombre entier de 1 à 1000 est attendu.");
+            if (probleme) {
+                valeur_liberer(&vl);
+                valeur_liberer(&vv);
+                ok = echouer(diag, b, debut, probleme);
+                break;
+            }
+            int droite = op == 2 || (op == 0 && (vv.type == V_NOMBRE || vv.type == V_ANNEE));
+            char *t = texte_valeur(m, &vv);
+            size_t n = 0, octets = 0;
+            for (const char *p = t; *p; p++) {   /* caractères, pas octets : « é » compte pour un */
+                if (((unsigned char)*p & 0xC0) == 0x80) continue;
+                if (n == (size_t)largeur) break;
+                n++;
+                octets = (size_t)(p - t) + 1;
+                while (((unsigned char)p[1] & 0xC0) == 0x80) { p++; octets++; }
+            }
+            Chaine c = {0};
+            if (droite) for (size_t k = n; k < (size_t)largeur; k++) chaine_ajouter(&c, " ");
+            char *coupe = grym_formater("%.*s", (int)octets, t);
+            chaine_ajouter(&c, coupe);
+            free(coupe);
+            if (!droite) for (size_t k = n; k < (size_t)largeur; k++) chaine_ajouter(&c, " ");
+            free(t);
+            valeur_liberer(&vl);
+            valeur_liberer(&vv);
+            char *r = chaine_rendre(&c);
+            Valeur v = vi_texte(r);
+            free(r);
+            empiler(&pile, v);
+            break;
+        }
+        case I_AFFICHER:
+        case I_AFFICHER_SANS_LIGNE: {
             /* Les éléments sont dans la pile, du premier au dernier. */
             size_t base = pile.n - op;
             for (size_t k = 0; k < op; k++) {
-                Valeur *v = &pile.v[base + k];
                 if (k) chaine_ajouter(sortie, " ");
-                if (v->type == V_TEXTE) {
-                    chaine_ajouter(sortie, v->texte);
-                } else if (v->type == V_BOOLEEN) {
-                    chaine_ajouter(sortie, v->vrai ? "vrai" : "faux");
-                } else if (v->type == V_ABSENT) {
-                    chaine_ajouter(sortie, "absent");
-                } else if (v->type == V_FICHIER) {
-                    char *t = decrire_fichier(v->fichier);
-                    chaine_ajouter(sortie, t);
-                    free(t);
-                } else if (v->type == V_ANNEE) {   /* « 1747 », jamais « 1'747 » (§ 14.5) */
-                    char t[16];
-                    snprintf(t, sizeof t, "%ld", v->jours);
-                    chaine_ajouter(sortie, t);
-                } else if (v->type == V_DATE) {
-                    char *t = date_suisse(v->jours);
-                    chaine_ajouter(sortie, t);
-                    free(t);
-                } else if (v->type == V_OBJET) {
-                    char *t = article_classe(v->objet->classe);
-                    chaine_ajouter(sortie, t);
-                    free(t);
-                } else {
-                    char *s = dec_formater(&v->nombre);
-                    chaine_ajouter(sortie, s);
-                    free(s);
-                }
+                char *t = texte_valeur(m, &pile.v[base + k]);
+                chaine_ajouter(sortie, t);
+                free(t);
             }
-            chaine_ajouter(sortie, "\n");
+            if (code == I_AFFICHER) chaine_ajouter(sortie, "\n");
             while (pile.n > base) valeur_liberer(&pile.v[--pile.n]);
             break;
         }

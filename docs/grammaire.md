@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.27 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
+Version 1.28 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -182,12 +182,29 @@ Afficher « Total à payer : » puis le total.
 - Un élément est un texte ou une expression. Un texte est une valeur comme une autre : il se range dans un nom ou un champ (`Le nom vaut « Dupont ».`), se compare par égalité, mais ne se calcule pas.
 - Les éléments s'affichent séparés par une espace, suivis d'un saut de ligne : `Afficher « Total : » puis 3.` produit `Total : 3`.
 
-### 4.1 Format des nombres affichés
+### 4.1 Style des nombres affichés
 
-- Réglage par application.
 - Défaut : style suisse, apostrophe pour les milliers et virgule décimale (`1'234,50`). Un nombre négatif porte le signe `−` (U+2212) : `−1'000`.
-- Alternative : style français, espace insécable pour les milliers (`1 234,50`).
-- Le mécanisme du réglage sera défini avec les applications (v1.0). En v0.1, seul le défaut existe.
+- Une phrase change le style pour tout le programme : `Les nombres s'affichent à la française.` (espace insécable U+202F, `1 234,50`), `à la suisse.`, ou `sans séparateur.` (`1234,50`).
+- Elle se déclare au premier niveau, hors de toute formule et de tout bloc, une seule fois, avant le premier affichage. Sinon, erreur d'analyse.
+- Le style ne concerne que l'affichage : la source (§ 12), la base (§ 16.1) et les comparaisons gardent la forme canonique. Une année s'affiche sans séparateur quel que soit le style (§ 14.5), une date garde sa forme (§ 14.4).
+- En forme compacte : `_style _suisse`, `_style _française`, `_style _sans_séparateur`.
+
+### 4.2 Largeur et saut de ligne
+
+```
+Afficher « Nom » sur 20 puis « Téléphone » sur 15, sans passer à la ligne.
+Afficher nom du client sur 20 puis solde du client sur 10 à droite.
+```
+
+- `sur <largeur>` colle une largeur à une valeur et rend un texte : il se range dans un nom, se compare, s'affiche. La largeur se calcule (`sur l + 1`) ; elle vaut un nombre entier de 1 à 1000, sinon erreur d'exécution.
+- Trop long, le texte est coupé à la largeur : une colonne qui déborde ruine l'alignement.
+- Sens par défaut : à gauche pour un texte, une date, un booléen ou un fichier, à droite pour un nombre et une année. `à gauche` et `à droite`, après la largeur, forcent l'un ou l'autre. Seuls, ils sont une erreur d'analyse.
+- La largeur compte des caractères, pas des octets : `« été » sur 4` occupe quatre colonnes.
+- `sur` devient un mot réservé (§ 2.2) : un nom qui le contient s'écrit entre crochets.
+- `, sans passer à la ligne` termine une phrase `Afficher` : la sortie s'arrête où elle s'arrête, sans saut de ligne ni espace ajoutée. La phrase suivante reprend au même endroit.
+- Une ligne vide ne demande rien : `Afficher « ».` écrit un texte vide et son saut de ligne.
+- En forme compacte : `nom _sur 20`, `solde _sur 10 _droite`, `_afficher x _sans_ligne`.
 
 ---
 
@@ -1227,3 +1244,4 @@ Si la réponse en vrai ou faux à « Encore ? », …
 | 1.25 | 2026-09-22 | § 1.2 et § 12 : grouper les chiffres par milliers est un choix d'écriture conservé ; la forme canonique n'en normalise que le style (apostrophe) |
 | 1.26 | 2026-09-22 | § 10.3 et § 12 : « du … au … » de `Pour chaque` conservé par la forme canonique, même devant une valeur sans article |
 | 1.27 | 2026-09-22 | § 17 : questions à l'utilisateur (`la réponse à …`, types, relance) ; § 16.6 et § 3.3 : une question valide ce qui la précède et rend le verrou |
+| 1.28 | 2026-09-22 | § 4.1 : le style des nombres se déclare dans le programme ; § 4.2 : largeur (`sur 20`, `à droite`) et `, sans passer à la ligne` ; `sur` réservé |

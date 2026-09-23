@@ -231,6 +231,11 @@ static void expression(Compilation *c, const Noeud *n) {
     case N_CHERCHER:
         chercher(c, n);
         return;
+    case N_CADRE:   /* la valeur, la largeur, puis CADRER avec le sens (§ 4.2) */
+        expression(c, n->enfants[0]);
+        expression(c, n->enfants[1]);
+        emettre(c, I_CADRER, (long)n->forme, n->op_ligne, n->op_colonne);
+        return;
     case N_REPONSE: {   /* la question, puis DEMANDER avec le type (§ 17) */
         expression(c, n->enfants[0]);
         long t = bloc_nom(c->b, n->texte2);
@@ -415,10 +420,13 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_ECRIRE, k, ph->ligne, ph->colonne);
         return;
     }
+    case P_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
+        emettre(c, I_STYLE, ph->entier, ph->ligne, ph->colonne);
+        return;
     case P_AFFICHAGE:
         if (ph->nb_enfants > 0xFFFF) { trop_grand(c, ph); return; }
         for (size_t e = 0; e < ph->nb_enfants; e++) expression(c, ph->enfants[e]);
-        emettre(c, I_AFFICHER, (long)ph->nb_enfants, ph->ligne, ph->colonne);
+        emettre(c, ph->forme ? I_AFFICHER_SANS_LIGNE : I_AFFICHER, (long)ph->nb_enfants, ph->ligne, ph->colonne);
         return;
     case P_EXPRESSION:
         expression(c, ph->enfants[0]);
