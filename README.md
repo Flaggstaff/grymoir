@@ -17,6 +17,7 @@ Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
     ./grym lancer exemples/formules.grymc    # la forme compacte s'exécute aussi
     ./grym lancer exemples/conserver.grym    # base conserver.grymd, créée à côté
     ./grym lancer exemples/registre.grym     # se relit d'une exécution à l'autre (registre.grymd)
+    ./grym lancer exemples/saisie.grym       # carnet d'adresses : questions, colonnes, menu
     ./grym --base essai.grymd                # boucle interactive sur une base conservée
     ./grym-lexeur exemples/facture.grym      # jetons
     ./grym-arbre exemples/facture.grym    # arbre syntaxique
@@ -34,6 +35,8 @@ Sous Windows sans `make` :
     gcc -std=c99 -O2 -Isrc -o test_analyseur.exe tests/test_analyseur.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/decimal.c src/lexeur.c src/date.c
     gcc -std=c99 -O2 -Isrc -Ivendor/sqlite -o test_machine.exe tests/test_machine.c src/compilateur.c src/vm.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o
     gcc -std=c99 -O2 -Isrc -Ivendor/sqlite -o test_compact.exe tests/test_compact.c src/compilateur.c src/vm.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o
+    gcc -std=c99 -O2 -Isrc -o test_imprimeur.exe tests/test_imprimeur.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/decimal.c src/lexeur.c src/date.c
+    gcc -std=c99 -O2 -Isrc -o test_lsp.exe tests/test_lsp.c src/lsp.c src/json.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/decimal.c src/lexeur.c src/date.c
 
 ## SQLite embarqué
 

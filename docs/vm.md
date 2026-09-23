@@ -1,10 +1,10 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.21 de la spécification, révisée le 22 septembre 2026.
-Référence : Charte de GrymoiR v1.6, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.29, § 3.3, § 5, § 9, § 10, § 13 à 16.
+Version 1.22 de la spécification, révisée le 22 septembre 2026.
+Référence : Charte de GrymoiR v1.19, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.30, § 3.3, § 4, § 5, § 9, § 10, § 13 à 17.
 Toute modification passe par une révision numérotée.
 
-Périmètre : ce que la v0.2 remplace dans la v0.1 (l'évaluateur provisoire), et les principes qui guideront les instructions à venir (sauts, appels, objets).
+Périmètre : la machine qui exécute le bytecode, le format du fichier `.grymb`, la base des entités, le ramasse-miettes et le journal d'annulation.
 
 ---
 
@@ -305,3 +305,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.19 | 2026-09-22 | `DEMANDER` : la question valide fichiers, base et journal, puis lit la réponse ; lecteur installé par la machine ; format version 17 |
 | 1.20 | 2026-09-22 | Mise en forme : `CADRER`, `AFFICHER_SANS_LIGNE`, `STYLE` ; format version 18 |
 | 1.21 | 2026-09-22 | `EFFACER` : séquence ECMA-48, seulement sur un terminal ; `machine_terminal` ; format version 19 |
+| 1.22 | 2026-09-22 | En-tête et périmètre remis à jour |

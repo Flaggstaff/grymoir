@@ -1,10 +1,10 @@
-# Grammaire littéraire de GrymoiR, v0.1
+# Grammaire littéraire de GrymoiR
 
-Version 1.29 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
-Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
+Version 1.30 de la spécification, révisée le 22 septembre 2026. Tout ce qui suit est implémenté.
+Référence : Charte de GrymoiR v1.19, art. 4, 5, 7, 9 et 12.
 Toute modification passe par une révision numérotée.
 
-Périmètre : nommer, calculer, afficher, décider (§ 5), définir des formules (§ 9), répéter (§ 10), le calcul des suites attendues (§ 8), la forme compacte (§ 11), la forme canonique (§ 12) et les objets (§ 13). Tout le reste attend les versions suivantes.
+Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4), décider (§ 5), le calcul des suites attendues (§ 8), les formules (§ 9), répéter (§ 10), la forme compacte (§ 11), la forme canonique (§ 12), les objets (§ 13), les dates et les années (§ 14), les fichiers et les images (§ 15), les entités conservées (§ 16) et les questions à l'utilisateur (§ 17). Ce que le langage ne sait pas encore faire est listé dans la charte, art. 11 et 12.
 
 ---
 
@@ -800,7 +800,7 @@ Pour dater une chose horodatée :
 
 ### 13.8 À venir
 
-Appeler la version de la classe parente depuis une méthode, les listes d'objets, l'absence de valeur et un vrai affichage des objets demandent chacun leur propre conception.
+Appeler la version de la classe parente depuis une méthode, les listes d'objets et un vrai affichage des objets demandent chacun leur propre conception. L'absence de valeur est faite (§ 16.9).
 
 ## 14. Dates *(v0.3)*
 
@@ -1257,3 +1257,4 @@ Si la réponse en vrai ou faux à « Encore ? », …
 | 1.27 | 2026-09-22 | § 17 : questions à l'utilisateur (`la réponse à …`, types, relance) ; § 16.6 et § 3.3 : une question valide ce qui la précède et rend le verrou |
 | 1.28 | 2026-09-22 | § 4.1 : le style des nombres se déclare dans le programme ; § 4.2 : largeur (`sur 20`, `à droite`) et `, sans passer à la ligne` ; `sur` réservé |
 | 1.29 | 2026-09-22 | § 4.3 : « Effacer l'écran. », sans effet hors d'un terminal ; `effacer` réservé |
+| 1.30 | 2026-09-22 | En-tête et périmètre remis à jour ; § 13.8 : l'absence de valeur n'est plus à venir |

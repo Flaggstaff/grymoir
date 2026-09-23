@@ -1,4 +1,4 @@
-/* grym : programme principal de GrymoiR, v0.2
+/* grym : programme principal de GrymoiR
  *
  *   grym                                boucle interactive (grammaire, § 3.3)
  *   grym lancer fichier.grym            compile puis exécute
@@ -33,7 +33,7 @@
 #define terminal() isatty(fileno(stdin))
 #endif
 
-#define VERSION "0.2"
+#define VERSION "0.4"   /* dernier jalon livré (charte, art. 12) */
 
 static char *lire_fichier(FILE *f, size_t *taille) {
     size_t cap = 4096, n = 0;

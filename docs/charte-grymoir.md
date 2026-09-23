@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.19, révisée le 22 septembre 2026.
+Version 1.20, révisée le 22 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -152,7 +152,7 @@ Horizon post-v1, sans date :
 | v0.2 | Bytecode et VM (remplacent l'évaluateur provisoire de la v0.1), conditions (`Si`, comparaisons, booléens), boucles et `Selon`, forme compacte et `grym traduire` dans les deux sens, forme canonique et `grym formater`, formules, objets, héritage, méthodes, aptitudes, ramasse-miettes | livrée le 21 septembre 2026 |
 | v0.3 | SQLite embarqué, entités conservées (types, unicité, liens, héritage, aptitudes), conserver, modifier, supprimer, retrouver (`dont`, tri, comptage), migrations, transaction par exécution, dates, fichiers et images | livrée le 21 septembre 2026 |
 | v0.4 | Serveur d'aide à la saisie (`grym lsp`, protocole LSP) : erreurs en direct, autocomplétion, mise en forme ; extension VS Code avec coloration des deux formes | livrée le 22 septembre 2026 |
-| v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), puis menus et mise en forme | en cours |
+| v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4) ; reste à écrire une vraie application pour éprouver l'ensemble | en cours |
 
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
@@ -192,3 +192,4 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 | 1.17 | 2026-09-22 | Art. 12 : le type `(année)` est fait (grammaire, § 14.5) ; l'ajout de mois et d'années aux dates reste reporté |
 | 1.18 | 2026-09-22 | Art. 4 : le groupement des chiffres par milliers compte parmi les choix d'écriture conservés (grammaire, § 12) |
 | 1.19 | 2026-09-22 | Art. 7 : une question à l'utilisateur referme la transaction en cours (grammaire, § 17) ; art. 12 : questions à l'utilisateur faites, en route vers la v1.0 |
+| 1.20 | 2026-09-22 | Art. 12 : mise en forme de l'affichage faite (grammaire, § 4) ; la v1.0 attend une application réelle |
