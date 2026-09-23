@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.26), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.27), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -631,6 +631,7 @@ static const char *type_statique(const Noeud *n) {
     case N_BOOLEEN: case N_COMPARAISON: case N_LOGIQUE: return "vrai ou faux";
     case N_DATE: case N_AUJOURDHUI: return "date";
     case N_FICHIER: return "fichier";
+    case N_REPONSE: return n->texte2;
     case N_NOUVEAU: return n->texte;
     case N_GROUPE: case N_NEGATION: return type_statique(n->enfants[0]);
     default: return NULL;
@@ -1534,6 +1535,50 @@ static Noeud *base(Analyse *a) {
         n->fin = fin_jeton(t);
         avancer(a);
         return n;
+    }
+    /* « la réponse à « Votre nom ? » », « la réponse en nombre à (question) » (§ 17) */
+    {
+        size_t r0 = est_mot(t, "la") ? 1 : est_mot(t, "réponse") ? 0 : 3;
+        if (r0 < 3 && est_mot(voir(a, (int)r0), "réponse")) {
+            size_t q = r0 + 1;
+            const char *type = "texte";
+            if (est_mot(voir(a, (int)q), "en")) {
+                static const char *const T[] = { "nombre entier", "vrai ou faux", "nombre", "date", "année", "texte" };
+                size_t mots = 0;
+                for (size_t k = 0; k < sizeof T / sizeof *T && !mots; k++) {
+                    size_t nb = 1;
+                    for (const char *p = T[k]; *p; p++) nb += *p == ' ';
+                    size_t v = q + 1;
+                    char *vu = NULL;
+                    for (size_t w = 0; w < nb; w++) {
+                        char *x = vu;
+                        vu = x ? grym_formater("%s %s", x, voir(a, (int)(v + w))->valeur ? voir(a, (int)(v + w))->valeur : "")
+                               : grym_dupliquer(voir(a, (int)v)->valeur ? voir(a, (int)v)->valeur : "");
+                        free(x);
+                    }
+                    if (vu && strcmp(vu, T[k]) == 0) { type = T[k]; mots = nb; }
+                    free(vu);
+                }
+                if (mots) q += 1 + mots;
+            }
+            if ((est_mot(voir(a, (int)q), "à") || est_mot(voir(a, (int)q), "au"))
+                && (voir(a, (int)q + 1)->type == J_TEXTE || voir(a, (int)q + 1)->type == J_PAR_OUV)) {
+                if (a->formule == 1)
+                    return erreur(a, t, grym_dupliquer("Un calcul ne pose pas de question : demandez dans une action."));
+                if (a->interactif)
+                    return erreur(a, t, grym_dupliquer("La question se pose dans un programme lancé, "
+                                                       "pas dans la boucle interactive."));
+                a->article_force = ART_AUCUN;
+                for (size_t k = 0; k <= q; k++) avancer(a);
+                Noeud *question = base(a);
+                if (!question) return NULL;
+                Noeud *n = noeud_creer(N_REPONSE, t->ligne, t->colonne, t->debut);
+                n->texte2 = grym_dupliquer(type);
+                noeud_ajouter(n, question);
+                n->fin = question->fin;
+                return n;
+            }
+        }
     }
     /* « le fichier « chemin » », « du fichier (…) » (§ 15.2) */
     size_t f0 = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : 2;

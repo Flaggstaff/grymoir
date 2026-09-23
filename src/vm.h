@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle, v0.2
- * Spécification : docs/vm.md (révision 1.18).
+ * Spécification : docs/vm.md (révision 1.19).
  */
 #ifndef GRYM_VM_H
 #define GRYM_VM_H
@@ -36,6 +36,12 @@ void machine_dossier(Machine *m, const char *dossier);
 
 /* Fichier de la base des entités (§ 16.5) ; NULL : base en mémoire. Ouverte au premier besoin. */
 void machine_base(Machine *m, const char *chemin);
+
+/* Lecteur des réponses de l'utilisateur (grammaire, § 17) : la machine écrit d'abord ce qui attend
+ * dans `sortie` et la vide, affiche la question, puis rend la ligne tapée, sans son saut de ligne
+ * (NULL en fin d'entrée). Sans lecteur, poser une question est une erreur d'exécution. */
+void machine_lecteur(Machine *m, char *(*lire)(void *contexte, Chaine *sortie, const char *question),
+                     void *contexte);
 
 /* Après une exécution ratée : ce qui a été annulé, à dire à l'utilisateur (§ 3.3), ou NULL
  * s'il n'y a rien à dire. À libérer. */

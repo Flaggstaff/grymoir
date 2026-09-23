@@ -71,6 +71,20 @@ static char *lire_ligne(void) {
     return l;
 }
 
+/* Lecteur des réponses (grammaire, § 17) : ce qui attend s'affiche, puis la question, puis on lit. */
+static char *lire_pour_la_machine(void *contexte, Chaine *sortie, const char *question) {
+    (void)contexte;
+    if (sortie->d) {
+        fputs(sortie->d, stdout);
+        sortie->n = 0;
+        sortie->d[0] = '\0';
+    }
+    fputs(question, stdout);
+    fputc(' ', stdout);
+    fflush(stdout);
+    return lire_ligne();
+}
+
 /* Ctrl+C : la machine s'arrête proprement au prochain saut arrière ou appel (docs/vm.md, § 6). */
 static void sur_interruption(int signal_recu) {
     (void)signal_recu;
@@ -135,6 +149,7 @@ static int lancer(const char *chemin) {
     Module *b = charger(chemin);
     if (!b) return EXIT_FAILURE;
     Machine *m = machine_creer();
+    machine_lecteur(m, lire_pour_la_machine, NULL);
     const char *barre = strrchr(chemin, '/');
     if (barre) {   /* les chemins de fichiers du programme partent de son dossier (§ 15.2) */
         char *dossier = grym_formater("%.*s", (int)(barre - chemin), chemin);

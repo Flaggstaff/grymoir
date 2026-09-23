@@ -721,6 +721,20 @@ int main(void) {
     VE("Une œuvre, conservée, a : un x (texte).\nAfficher le nombre d'œuvres conservées dont 3 est nul.", 2, 45,
        "Une condition « dont » compare un champ de l'œuvre à une valeur");
 
+    /* --- Questions à l'utilisateur (§ 17) --- */
+    V("Le nom vaut la réponse à « Nom ? ».", "(créer [nom] (réponse texte «Nom ?»))");
+    V("L'âge vaut la réponse en nombre entier à « Âge ? ».", "(créer [âge] (réponse nombre entier «Âge ?»))");
+    V("La q vaut « ? ».\nLe x vaut la réponse en vrai ou faux à (q).",
+      "(créer [q] «?»)\n(créer [x] (réponse vrai ou faux (groupe [q])))");
+    V("Un client, conservé, a : un nom (texte), un âge (nombre entier).\nLe c vaut un nouveau client :\n"
+      "    Le nom vaut la réponse à « Nom ? ».\n    L'âge vaut la réponse en nombre entier à « Âge ? ».",
+      "(entité [client] [nom : texte] [âge : nombre entier])\n(créer [c] (nouveau [client] ([nom] (réponse texte «Nom ?»)) "
+      "([âge] (réponse nombre entier «Âge ?»))))");
+    VE("Un client, conservé, a : un nom (texte).\nLe c vaut un nouveau client :\n"
+       "    Le nom vaut la réponse en nombre à « Nom ? ».", 3, 17, "Le champ « nom » attend un texte, pas un nombre.");
+    VE("Le double d'un x vaut la réponse en nombre à « ? ».", 1, 23,
+       "Un calcul ne pose pas de question : demandez dans une action.");
+
     /* --- Aide à la saisie (§ 8) --- */
     VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");

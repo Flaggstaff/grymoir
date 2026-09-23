@@ -227,6 +227,13 @@ static void decrire(const Noeud *n, Chaine *c) {
         decrire(n->enfants[1], c);
         chaine_ajouter(c, ")");
         return;
+    case N_REPONSE:
+        chaine_ajouter(c, "(réponse ");
+        chaine_ajouter(c, n->texte2);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
     case P_ENREGISTRER:
         chaine_ajouter(c, "(enregistrer ");
         decrire(n->enfants[0], c);

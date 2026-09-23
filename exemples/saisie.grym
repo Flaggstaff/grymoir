@@ -1,0 +1,36 @@
+Remarque : carnet d'adresses minuscule (grammaire, § 17).
+Remarque : chaque question valide ce qui la précède.
+
+Un contact, conservé, a :
+    un nom (texte), unique,
+    un téléphone (texte),
+    une naissance (date), facultative.
+
+Pour ajouter :
+    Le c vaut un nouveau contact :
+        Le nom vaut la réponse à « Nom ? ».
+        Le téléphone vaut la réponse à « Téléphone ? ».
+    Si la réponse en vrai ou faux à « Date de naissance connue ? » :
+        La naissance du c devient la réponse en date à « Née le ? ».
+    Conserver c.
+    Afficher « Ajouté : » puis nom du c.
+
+Pour lister :
+    Afficher le nombre de contacts conservés puis « contact(s) : ».
+    Pour chaque contact conservé, par nom :
+        Afficher nom du contact puis téléphone du contact.
+
+Pour chercher :
+    Le cherché vaut la réponse à « Quel nom ? ».
+    Afficher le nombre de contacts conservés dont le nom est cherché puis « trouvé(s). ».
+
+Afficher « 1 ajouter, 2 lister, 3 chercher, 0 quitter ».
+Le choix vaut la réponse en nombre entier à « Votre choix ? ».
+Tant que choix ≠ 0 :
+    Selon choix :
+        Cas 1, ajouter.
+        Cas 2, lister.
+        Cas 3, chercher.
+        Autrement, afficher « Choix inconnu. ».
+    Le choix devient la réponse en nombre entier à « Votre choix ? ».
+Afficher « Au revoir. ».

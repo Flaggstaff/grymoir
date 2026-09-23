@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.26), § 11.
+ * Spécification : docs/grammaire.md (révision 1.27), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -235,6 +235,24 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "les", &r->e[k + 1]);
             copier(r, t);
             k = e - 1;
+            continue;
+        }
+        if (est_cle(t, "réponse")) {                /* _réponse (nombre) « Âge ? » → la réponse en nombre à « Âge ? » */
+            mot(r, "la", t);
+            mot(r, "réponse", t);
+            if (k + 2 < f && r->e[k + 1].type == J_PAR_OUV && r->e[k + 2].type == J_CROCHETS
+                && k + 3 < f && r->e[k + 3].type == J_PAR_FERM) {
+                mot(r, "en", t);
+                for (const char *p = r->e[k + 2].valeur; p && *p; ) {
+                    const char *e = strchr(p, ' ');
+                    char *w = e ? grym_formater("%.*s", (int)(e - p), p) : grym_dupliquer(p);
+                    mot(r, w, &r->e[k + 2]);
+                    free(w);
+                    p = e ? e + 1 : p + strlen(p);
+                }
+                k += 3;
+            }
+            mot(r, "à", t);
             continue;
         }
         if (est_cle(t, "fichier")) {                /* _fichier « a.jpg » → le fichier « a.jpg » */

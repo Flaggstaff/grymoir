@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.26), § 16 ; docs/vm.md (révision 1.18), § 8.
+ * Spécification : docs/grammaire.md (révision 1.27), § 16 ; docs/vm.md (révision 1.19), § 8.
  */
 #include "base.h"
 #include "date.h"

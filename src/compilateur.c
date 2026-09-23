@@ -231,6 +231,13 @@ static void expression(Compilation *c, const Noeud *n) {
     case N_CHERCHER:
         chercher(c, n);
         return;
+    case N_REPONSE: {   /* la question, puis DEMANDER avec le type (§ 17) */
+        expression(c, n->enfants[0]);
+        long t = bloc_nom(c->b, n->texte2);
+        if (t < 0) { trop_grand(c, n); return; }
+        emettre(c, I_DEMANDER, t, n->ligne, n->colonne);
+        return;
+    }
     case N_FICHIER:
         expression(c, n->enfants[0]);
         emettre(c, I_LIRE_FICHIER, 0, n->ligne, n->colonne);

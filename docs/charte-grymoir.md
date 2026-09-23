@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.18, révisée le 22 septembre 2026.
+Version 1.19, révisée le 22 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -108,7 +108,7 @@ La grammaire exacte de la forme littéraire reste à spécifier. Ces exemples mo
 
 - L'entité est une construction du langage.
 - Moteur : SQLite embarqué, invisible pour le développeur, qui n'écrit jamais de SQL.
-- Chaque exécution forme une transaction implicite : un programme lancé, ou une saisie de la boucle interactive, qui échoue ou qu'on interrompt n'écrit rien, ni en mémoire ni dans la base. Aucune construction ne rattrapant une erreur, une formule qui échoue n'écrit donc rien non plus. Ce qu'elle a affiché reste affiché, suivi d'une phrase qui dit ce qui a été annulé.
+- Chaque exécution forme une transaction implicite : un programme lancé, ou une saisie de la boucle interactive, qui échoue ou qu'on interrompt n'écrit rien, ni en mémoire ni dans la base. Une question posée à l'utilisateur referme cette transaction et en ouvre une autre : ce qu'il a vu confirmé est acquis, et la base n'est pas verrouillée pendant qu'elle attend. Aucune construction ne rattrapant une erreur, une formule qui échoue n'écrit donc rien non plus. Ce qu'elle a affiché reste affiché, suivi d'une phrase qui dit ce qui a été annulé.
 - Migrations de schéma automatiques pour tout ajout ; aucune donnée détruite en silence.
 - Tout nombre est un décimal exact, jamais un flottant, en mémoire comme en base. Un type `montant` (devise, arrondi) n'est pas prévu pour la v0.3.
 - Versions parallèles des données : horizon post-v1.
@@ -152,7 +152,7 @@ Horizon post-v1, sans date :
 | v0.2 | Bytecode et VM (remplacent l'évaluateur provisoire de la v0.1), conditions (`Si`, comparaisons, booléens), boucles et `Selon`, forme compacte et `grym traduire` dans les deux sens, forme canonique et `grym formater`, formules, objets, héritage, méthodes, aptitudes, ramasse-miettes | livrée le 21 septembre 2026 |
 | v0.3 | SQLite embarqué, entités conservées (types, unicité, liens, héritage, aptitudes), conserver, modifier, supprimer, retrouver (`dont`, tri, comptage), migrations, transaction par exécution, dates, fichiers et images | livrée le 21 septembre 2026 |
 | v0.4 | Serveur d'aide à la saisie (`grym lsp`, protocole LSP) : erreurs en direct, autocomplétion, mise en forme ; extension VS Code avec coloration des deux formes | livrée le 22 septembre 2026 |
-| v1.0 | Application console complète | à venir |
+| v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), puis menus et mise en forme | en cours |
 
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
@@ -191,3 +191,4 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 | 1.16 | 2026-09-22 | Art. 12 : « plusieurs vers plusieurs » fait (grammaire, § 16.13) ; reports : test d'appartenance hors `dont`, plusieurs objets gagnés à la fois, champs multiples de valeurs |
 | 1.17 | 2026-09-22 | Art. 12 : le type `(année)` est fait (grammaire, § 14.5) ; l'ajout de mois et d'années aux dates reste reporté |
 | 1.18 | 2026-09-22 | Art. 4 : le groupement des chiffres par milliers compte parmi les choix d'écriture conservés (grammaire, § 12) |
+| 1.19 | 2026-09-22 | Art. 7 : une question à l'utilisateur referme la transaction en cours (grammaire, § 17) ; art. 12 : questions à l'utilisateur faites, en route vers la v1.0 |

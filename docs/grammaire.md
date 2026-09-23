@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.26 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
+Version 1.27 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -166,7 +166,7 @@ Les décimales écrites se conservent, comme en comptabilité.
 
 - Une phrase complète, avec point, s'exécute normalement. Le point final de la dernière phrase saisie est facultatif.
 - Une saisie ratée n'a aucun effet : aucun nom créé, aucun genre fixé, aucune valeur modifiée, même par une phrase réussie de la même saisie. Cela vaut aussi pour les erreurs de calcul (division par zéro).
-- Ce qu'une exécution ratée a affiché avant l'erreur reste affiché : afficher n'est pas écrire. Après le message d'erreur, une phrase dit ce qui a été annulé, pour qu'aucun affichage ne laisse croire le contraire. Dans la boucle interactive : « Saisie annulée : aucun nom n'a changé », complété de « rien n'a été conservé dans la base » ou « aucun fichier n'a été écrit » s'il y a lieu. Avec `grym lancer`, sur la sortie d'erreur, seulement si une base ou des fichiers étaient en jeu : « Exécution annulée : rien n'a été conservé, ni dans la base ni sur le disque. »
+- Ce qu'une exécution ratée a affiché avant l'erreur reste affiché : afficher n'est pas écrire. Après le message d'erreur, une phrase dit ce qui a été annulé, pour qu'aucun affichage ne laisse croire le contraire. Dans la boucle interactive : « Saisie annulée : aucun nom n'a changé », complété de « rien n'a été conservé dans la base » ou « aucun fichier n'a été écrit » s'il y a lieu. Avec `grym lancer`, sur la sortie d'erreur, seulement si une base ou des fichiers étaient en jeu : « Exécution annulée : rien n'a été conservé, ni dans la base ni sur le disque. » Après une question (§ 17) : « Exécution annulée : rien n'a été conservé depuis la dernière question. »
 - `quitter`, ou la fin de l'entrée (Ctrl+D, Ctrl+Z sous Windows), termine la boucle.
 
 ---
@@ -990,9 +990,9 @@ Afficher le nombre de clients conservés dont le statut actif est vrai.
 
 ### 16.6 Transaction
 
-- Une exécution, une transaction : chaque programme lancé, et chaque saisie de la boucle interactive, s'exécute dans une seule transaction.
+- Une exécution, une transaction : chaque programme lancé, et chaque saisie de la boucle interactive, s'exécute dans une seule transaction. Une question à l'utilisateur la referme et en ouvre une autre après la réponse (§ 17) : une application interactive ne garde donc pas la base verrouillée pendant qu'elle attend.
 - Si l'exécution réussit, la transaction est validée. Si elle échoue, ou si on l'interrompt par Ctrl+C, elle est annulée : le journal de la machine restaure la mémoire, SQLite restaure la base.
-- Pendant l'exécution, la base est verrouillée en écriture pour les autres programmes. Après deux secondes d'attente : « La base « … » est utilisée par un autre programme. »
+- Pendant l'exécution, la base est verrouillée en écriture pour les autres programmes, sauf pendant qu'une question attend sa réponse. Après deux secondes d'attente : « La base « … » est utilisée par un autre programme. »
 - Les fichiers enregistrés (§ 15.2) sont écrits juste avant la validation de la base ; si la validation échoue, ils sont retirés.
 - La création des tables fait partie de la transaction : une première exécution ratée ne laisse aucune table.
 
@@ -1171,6 +1171,28 @@ Pour chaque œuvre conservée dont callas est parmi les interprètes :
 | `dont rauber est parmi les interprètes` | `_dont interprètes _contient rauber` |
 | `dont rauber n'est pas parmi les interprètes` | `_dont _non (interprètes _contient rauber)` |
 
+
+## 17. Questions à l'utilisateur *(v1.0)*
+
+```
+Le nom vaut la réponse à « Votre nom ? ».
+L'âge vaut la réponse en nombre entier à « Âge ? ».
+La naissance vaut la réponse en date à (question).
+Si la réponse en vrai ou faux à « Encore ? », …
+```
+
+- `la réponse à « … »` lit une ligne tapée par l'utilisateur. C'est une valeur comme une autre : elle se range avec `vaut` ou `devient`, s'initialise dans le bloc d'un nouvel objet, se passe en argument. Aucune phrase nouvelle, donc aucune entorse au § 2.1.
+- La question est un texte écrit tel quel, ou une expression entre parenthèses : `la réponse à (question)`. Sans texte ni parenthèse derrière, `la réponse` reste un nom ordinaire.
+- Le type s'intercale : `en nombre`, `en nombre entier`, `en date`, `en année`, `en vrai ou faux`. Sans mention, la réponse est un texte.
+- La question s'affiche telle quelle, suivie d'une espace, sans saut de ligne : le curseur attend sur la même ligne.
+- Lecture : les nombres suivent le § 1.2 (virgule décimale, séparateurs de milliers), les dates le § 14.1, les années le § 14.5 ; `vrai ou faux` accepte `oui`, `non`, `vrai`, `faux`, sans tenir compte de la casse. Les espaces de début et de fin tombent.
+- Relance : une réponse qui ne convient pas est annoncée, puis la question se repose. « « x » n'est pas un nombre. », « « 21.9.26 » n'est pas une date : écrivez jour.mois.année (21.09.2026). », « Répondez par oui ou non. » Une ligne vide convient à un texte, et relance pour les autres types. Le programme ne s'arrête pas parce que l'utilisateur a tapé de travers.
+- Fin de l'entrée (Ctrl+D) : erreur d'exécution, « Plus rien à lire : la réponse à « Âge ? » manque. » Ctrl+C interrompt comme partout ailleurs.
+- **Une question valide ce qui la précède** : les fichiers en attente (§ 15.2) sont écrits, puis la base est validée, puis le journal se vide. Une erreur survenue plus tard n'annule que depuis la dernière question, et le dit (§ 3.3). Le verrou de la base est rendu pendant l'attente, et repris avec la réponse : un autre programme peut donc écrire entre deux questions, et les objets déjà lus gardent en mémoire les valeurs de leur lecture.
+- Effet de bord, donc réservé aux actions : « Un calcul ne pose pas de question : demandez dans une action. » Et interdit dans la boucle interactive, qui lit déjà sur la même entrée.
+- En forme compacte : `_réponse « Nom ? »`, `_réponse (nombre_entier) « Âge ? »`, `_réponse (date) (q)`.
+
+
 ---
 
 ## Journal des révisions
@@ -1204,3 +1226,4 @@ Pour chaque œuvre conservée dont callas est parmi les interprètes :
 | 1.24 | 2026-09-22 | § 14.5 : années (type `(année)`, valeur à part entière, sans littéral, `l'année de d`, calculs, comparaisons, boucles, base, migrations) ; une entité ne porte pas un nom de type |
 | 1.25 | 2026-09-22 | § 1.2 et § 12 : grouper les chiffres par milliers est un choix d'écriture conservé ; la forme canonique n'en normalise que le style (apostrophe) |
 | 1.26 | 2026-09-22 | § 10.3 et § 12 : « du … au … » de `Pour chaque` conservé par la forme canonique, même devant une valeur sans article |
+| 1.27 | 2026-09-22 | § 17 : questions à l'utilisateur (`la réponse à …`, types, relance) ; § 16.6 et § 3.3 : une question valide ce qui la précède et rend le verrou |

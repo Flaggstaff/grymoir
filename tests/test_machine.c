@@ -43,6 +43,34 @@ static char *executer_source(Portee *portee, Machine *m, const char *src, int in
     return r;
 }
 
+static void signaler(int l, const char *src, const char *attendu, const char *obtenu);
+
+/* Réponses scriptées (grammaire, § 17) : la question et ce qui attend vont dans la sortie,
+ * comme à l'écran, puis la ligne suivante du script est rendue. */
+typedef struct { const char *const *lignes; size_t n, i; } Script;
+
+static char *reponses(void *contexte, Chaine *sortie, const char *question) {
+    Script *sc = contexte;
+    chaine_ajouter(sortie, question);
+    chaine_ajouter(sortie, " ");
+    if (sc->i == sc->n) return NULL;
+    return grym_dupliquer(sc->lignes[sc->i++]);
+}
+
+static void verifier_saisie(int l, const char *src, const char *const *lignes, size_t n, const char *attendu) {
+    total++;
+    Portee *p = portee_creer();
+    Machine *m = machine_creer();
+    Script sc = { lignes, n, 0 };
+    machine_lecteur(m, reponses, &sc);
+    char *r = executer_source(p, m, src, 0);
+    int ok = attendu[0] == '~' ? strstr(r, attendu + 1) != NULL : strcmp(r, attendu) == 0;
+    if (!ok) signaler(l, src, attendu, r);
+    free(r);
+    machine_detruire(m);
+    portee_detruire(p);
+}
+
 static void signaler(int l, const char *src, const char *attendu, const char *obtenu) {
     echecs++;
     printf("ÉCHEC (test ligne %d)\n  source  : %s\n  attendu : %s\n  obtenu  : %s\n",
@@ -1355,6 +1383,76 @@ int main(void) {
             portee_detruire(p);
         }
         remove("_essai_an.grymd");
+    }
+
+    /* --- Questions à l'utilisateur (§ 17) --- */
+#define SAISIE_INTER(src, att)  verifier(__LINE__, src, att, 1)
+#define SAISIE(src, att, ...) do { static const char *const L[] = { __VA_ARGS__ }; \
+    verifier_saisie(__LINE__, src, L, sizeof L / sizeof *L, att); } while (0)
+    SAISIE("Le nom vaut la réponse à « Nom ? ».\nAfficher « Bonjour » puis nom.", "Nom ? Bonjour Ana", "  Ana  ");
+    SAISIE("L'âge vaut la réponse en nombre entier à « Âge ? ».\nAfficher âge + 1.", "Âge ? 34", "33");
+    SAISIE("Le x vaut la réponse en nombre à « x ? ».\nAfficher x × 2.", "x ? 2'469,00", "1'234,50");
+    SAISIE("Le d vaut la réponse en date à « Né le ? ».\nAfficher d + 1.", "Né le ? 02.02.1990", "01.02.1990");
+    SAISIE("L'an vaut la réponse en année à « An ? ».\nAfficher an.", "An ? 1747", "1747");
+    SAISIE("Si la réponse en vrai ou faux à « Sûr ? », afficher « oui ». Sinon, afficher « non ».",
+           "Sûr ? non", "NON");
+    SAISIE("La q vaut « Qui ? ».\nAfficher la réponse à (q).", "Qui ? Ana", "Ana");
+    /* relance : la réponse fautive est annoncée, la question se repose */
+    SAISIE("L'âge vaut la réponse en nombre entier à « Âge ? ».\nAfficher âge.",
+           "Âge ? « x » n'est pas un nombre.\nÂge ? « 2,5 » n'est pas un nombre entier.\nÂge ? 7", "x", "2,5", "7");
+    SAISIE("Le d vaut la réponse en date à « Jour ? ».\nAfficher d.",
+           "Jour ? « 21.9.26 » n'est pas une date : écrivez jour.mois.année (21.09.2026).\nJour ? 21.09.2026",
+           "21.9.26", "21.09.2026");
+    SAISIE("L'an vaut la réponse en année à « An ? ».\nAfficher an.",
+           "An ? « 12000 » n'est pas une année : de 1 à 9999.\nAn ? 1900", "12000", "1900");
+    SAISIE("Le x vaut la réponse en vrai ou faux à « ? ».\nAfficher x.",
+           "? Répondez par oui ou non.\n? vrai", "peut-être", "vrai");
+    SAISIE("Le x vaut la réponse en nombre à « ? ».\nAfficher x.", "? Une réponse est attendue.\n? 3", "", "3");
+    SAISIE("Le x vaut la réponse à « ? ».\nAfficher « [ » puis x puis « ] ».", "? [  ]", "");
+    /* fin de l'entrée, pureté, boucle interactive */
+    {   /* fin de l'entrée : aucune réponse à lire */
+        static const char *const L[] = { "" };
+        verifier_saisie(__LINE__, "Le x vaut la réponse à « Nom ? ».\nAfficher x.", L, 0,
+                        "~Plus rien à lire : la réponse à « Nom ? » manque.");
+    }
+    PROG("Le x vaut la réponse à « Nom ? ».\nAfficher x.", "~Aucune entrée : la question ne peut pas être posée ici.");
+    PROG("Le double d'un x vaut la réponse en nombre à « ? ».\nAfficher le double de 1.",
+         "~Un calcul ne pose pas de question : demandez dans une action.");
+    SAISIE_INTER("Le x vaut la réponse à « ? ».", "~La question se pose dans un programme lancé, pas dans la boucle interactive.");
+    {   /* une question valide ce qui la précède ; l'erreur suivante n'annule que depuis là */
+        remove("_essai_q.grymd");
+        static const char *const L[] = { "Ana", "Bob" };
+        const char *src = "Un client, conservé, a : un nom (texte).\n"
+                          "Le a vaut un nouveau client :\n    Le nom vaut la réponse à « 1 ? ».\nConserver a.\n"
+                          "Le b vaut un nouveau client :\n    Le nom vaut la réponse à « 2 ? ».\nConserver b.\n"
+                          "Afficher 1 ÷ 0.\n";
+        total++;
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        Script sc = { L, 2, 0 };
+        machine_lecteur(m, reponses, &sc);
+        machine_base(m, "_essai_q.grymd");
+        char *r = executer_source(p, m, src, 0);
+        char *annule = machine_annulation(m, 0);
+        int ok = strstr(r, "Division par zéro") != NULL && annule
+                 && strcmp(annule, "Exécution annulée : rien n'a été conservé depuis la dernière question.") == 0;
+        if (!ok) signaler(__LINE__, src, "annulation depuis la dernière question", annule ? annule : r);
+        free(annule);
+        free(r);
+        machine_detruire(m);
+        portee_detruire(p);
+
+        total++;
+        p = portee_creer();
+        m = machine_creer();
+        machine_base(m, "_essai_q.grymd");
+        r = executer_source(p, m, "Un client, conservé, a : un nom (texte).\n"
+                                  "Pour chaque client conservé, par nom, afficher nom du client.", 0);
+        if (strcmp(r, "Ana") != 0) signaler(__LINE__, "clients conservés", "Ana", r);
+        free(r);
+        machine_detruire(m);
+        portee_detruire(p);
+        remove("_essai_q.grymd");
     }
 
     printf("%d/%d tests réussis\n", total - echecs, total);

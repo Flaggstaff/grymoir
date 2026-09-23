@@ -266,6 +266,12 @@ int main(void) {
     COMP("Pour chaque jour du 05.10.2026 au 02.11.2026, afficher jour.",
          "_pour_chaque jour _de 05.10.2026 _à 02.11.2026\n    _afficher jour\n_fin\n");
 
+    /* --- Questions à l'utilisateur (§ 17) --- */
+    FIXE("Le nom vaut la réponse à « Nom ? ».\nL'âge vaut la réponse en nombre entier à « Âge ? ».\n"
+         "La q vaut « ? ».\nLe x vaut la réponse en vrai ou faux à (q).\n");
+    COMP("Le nom vaut la réponse à « Nom ? ».\nL'âge vaut la réponse en nombre entier à « Âge ? ».",
+         "_le nom << _réponse « Nom ? »\n_l'âge << _réponse (nombre_entier) « Âge ? »\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

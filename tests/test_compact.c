@@ -226,6 +226,9 @@ int main(void) {
     /* le séparateur de milliers passe d'une forme à l'autre (§ 12) */
     ALLER_RETOUR("_le x << 1747 + 1'000\n_afficher x\n", "Le x vaut 1747 + 1'000.\nAfficher x.\n");
 
+    ALLER_RETOUR("_le nom << _réponse « Nom ? »\n_le x << _réponse (nombre) « Combien ? »\n"
+                 "_le q << « ? »\n_le d << _réponse (date) (q)\n", NULL);
+
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");
     ERR("_si 1 > 0 _alors\n    _afficher 1\n", 1, 1, "« _fin » manquant : « _si », ligne 1, n'est pas fermé.");

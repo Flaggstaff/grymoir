@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.26), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.27), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -473,6 +473,23 @@ static void expression(Impression *im, const Noeud *n) {
             ecrire_nom(im, n->texte2, 0);
             if (n->entier) aj(im, im->compact ? " _décroissant" : " décroissant");
         }
+        return;
+    }
+    case N_REPONSE: {   /* « la réponse en nombre à « Âge ? » » ; « _réponse (nombre) « Âge ? » » (§ 17) */
+        int typé = strcmp(n->texte2, "texte") != 0;
+        aj(im, im->compact ? "_réponse " : "la réponse ");
+        if (typé) {
+            aj(im, im->compact ? "(" : "en ");
+            if (im->compact) {
+                for (const char *p = n->texte2; *p; p++) { char c2[2] = { *p == ' ' ? '_' : *p, 0 }; aj(im, c2); }
+                aj(im, ") ");
+            } else {
+                aj(im, n->texte2);
+                aj(im, " ");
+            }
+        }
+        if (!im->compact) aj(im, "à ");
+        expression(im, n->enfants[0]);
         return;
     }
     case N_FICHIER:

@@ -1,9 +1,10 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.18).
+ * Spécification : docs/vm.md (révision 1.19).
  */
 #include "vm.h"
 #include "vm_interne.h"
 #include "base.h"
+#include "lexeur.h"
 #include "date.h"
 #include "decimal.h"
 
@@ -169,6 +170,9 @@ struct Machine {
     Base *base;             /* ouverte au premier besoin */
     int base_engagee;       /* dernière exécution : une base était en jeu (message d'annulation, § 3.3) */
     int fichiers_prevus;    /* dernière exécution : des fichiers devaient être écrits */
+    int question_posee;     /* dernière exécution : une question a validé ce qui précède (§ 17) */
+    char *(*lire)(void *contexte, Chaine *sortie, const char *question);
+    void *lire_contexte;
     long *carte_cles;       /* carte d'identité : identifiant en base → objet en mémoire (§ 16.4) */
     Objet **carte_objets;   /* clé 0 : case vide ; clé −1 : case libérée */
     size_t carte_cap, carte_n;
@@ -259,6 +263,10 @@ static void carte_retirer(Machine *m, long id, const Objet *o) {
 }
 
 char *machine_annulation(const Machine *m, int interactif) {
+    if (m->question_posee) {   /* une question a validé ce qui la précédait (§ 17) */
+        if (!m->base_engagee && !m->fichiers_prevus) return NULL;
+        return grym_dupliquer("Exécution annulée : rien n'a été conservé depuis la dernière question.");
+    }
     const char *base = m->base_engagee ? "rien n'a été conservé dans la base" : NULL;
     const char *disque = m->fichiers_prevus ? "aucun fichier n'a été écrit" : NULL;
     if (interactif)
@@ -268,6 +276,12 @@ char *machine_annulation(const Machine *m, int interactif) {
     if (base) return grym_formater("Exécution annulée : %s.", base);
     if (disque) return grym_formater("Exécution annulée : %s.", disque);
     return NULL;
+}
+
+void machine_lecteur(Machine *m, char *(*lire)(void *contexte, Chaine *sortie, const char *question),
+                     void *contexte) {
+    m->lire = lire;
+    m->lire_contexte = contexte;
 }
 
 void machine_base(Machine *m, const char *chemin) {
@@ -747,6 +761,107 @@ static char *decrire_valeur_pour_type(const Valeur *v) {
     return grym_dupliquer(nom_type(v->type));
 }
 
+/* Réponse de l'utilisateur (grammaire, § 17) : la ligne tapée, lue selon le type demandé.
+ * *probleme reçoit le message de relance ; la valeur n'est pas rendue. */
+static int lire_reponse(const char *type, const char *ligne, Valeur *v, char **probleme) {
+    while (*ligne == ' ' || *ligne == '\t') ligne++;
+    size_t n = strlen(ligne);
+    while (n && (ligne[n - 1] == ' ' || ligne[n - 1] == '\t')) n--;
+    char *t = grym_formater("%.*s", (int)n, ligne);
+    if (strcmp(type, "texte") == 0) {
+        *v = vi_texte(t);
+        free(t);
+        return 1;
+    }
+    if (!n) {
+        free(t);
+        *probleme = grym_dupliquer("Une réponse est attendue.");
+        return 0;
+    }
+    if (strcmp(type, "vrai ou faux") == 0) {
+        for (char *p = t; *p; p++) if (*p >= 'A' && *p <= 'Z') *p = (char)(*p + 32);
+        int oui = strcmp(t, "oui") == 0 || strcmp(t, "vrai") == 0;
+        int non = strcmp(t, "non") == 0 || strcmp(t, "faux") == 0;
+        free(t);
+        if (!oui && !non) {
+            *probleme = grym_dupliquer("Répondez par oui ou non.");
+            return 0;
+        }
+        *v = vi_booleen(oui);
+        return 1;
+    }
+    /* nombres et dates : les règles du lexeur (§ 1.2, § 14.1) */
+    char *erreur = NULL;
+    Lexeur *lx = lexeur_creer(t, strlen(t), &erreur);
+    free(erreur);
+    int date = strcmp(type, "date") == 0;
+    int negatif = 0, bon = lx != NULL;
+    Jeton j = { 0 }, f = { 0 };
+    if (bon) {
+        j = lexeur_suivant(lx);
+        if (!date && j.type == J_MOINS) { negatif = 1; jeton_liberer(&j); j = lexeur_suivant(lx); }
+        f = lexeur_suivant(lx);
+        bon = j.type == (date ? J_DATE : J_NOMBRE) && f.type == J_FIN;
+    }
+    char *valeur = bon ? grym_dupliquer(j.valeur) : NULL;
+    if (lx) { jeton_liberer(&j); jeton_liberer(&f); lexeur_detruire(lx); }
+    if (!bon) {
+        *probleme = grym_formater(date ? "« %s » n'est pas une date : écrivez jour.mois.année (21.09.2026)."
+                                       : "« %s » n'est pas un nombre.", t);
+        free(t);
+        free(valeur);
+        return 0;
+    }
+    if (date) {
+        long jours = 0;
+        date_lire_iso(valeur, &jours);
+        *v = vi_date(jours);
+    } else {
+        char *canonique = negatif ? grym_formater("-%s", valeur) : grym_dupliquer(valeur);
+        Decimal d = dec_depuis_canonique(canonique);
+        free(canonique);
+        long a = 0;
+        int entier = strcmp(type, "nombre entier") == 0, an = strcmp(type, "année") == 0;
+        if ((entier || an) && !dec_est_entier(&d)) {
+            *probleme = grym_formater("« %s » n'est pas un nombre entier.", t);
+            dec_liberer(&d);
+            free(t);
+            free(valeur);
+            return 0;
+        }
+        if (an && !dec_en_long_borne(&d, 1, 9999, &a)) {
+            *probleme = grym_formater("« %s » n'est pas une année : de 1 à 9999.", t);
+            dec_liberer(&d);
+            free(t);
+            free(valeur);
+            return 0;
+        }
+        if (an) { dec_liberer(&d); *v = vi_annee(a); }
+        else *v = valeur_nombre(d);
+    }
+    free(t);
+    free(valeur);
+    return 1;
+}
+
+/* Une question valide ce qui la précède (grammaire, § 17) : fichiers en attente, puis base, puis
+ * le journal se vide. Le verrou de la base reprend après la réponse. */
+static char *valider_jusqu_ici(Machine *m, Chaine *sortie) {
+    (void)sortie;
+    if (m->nb_a_ecrire) {
+        char *erreur = ecrire_sur_le_disque(m);
+        if (erreur) return erreur;
+        m->fichiers_prevus = 1;
+        vider_ecritures(m);
+    }
+    if (m->base) {
+        char *erreur = NULL;
+        if (!base_valider(m->base, &erreur)) return erreur;
+    }
+    valider(m);
+    return NULL;
+}
+
 /* Nouvel objet du tas ; epoque : exécution où ses champs comptent comme déjà journalisés. */
 static Objet *creer_objet(Machine *m, const ClasseVM *cl, unsigned long epoque) {
     Objet *o = grym_allouer(sizeof *o);
@@ -1108,6 +1223,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     for (size_t i = 0; i < m->nb_classes; i++) entites |= m->classes[i]->conserve;
     m->base_engagee = entites;
     m->fichiers_prevus = 0;
+    m->question_posee = 0;
     if (entites) {
         char *erreur = NULL;
         if (!m->base) m->base = base_ouvrir(m->chemin_base, &erreur);
@@ -1610,6 +1726,62 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             valeur_liberer(&v);
             if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
+        case I_DEMANDER: {
+            /* « la réponse en nombre à « Âge ? » » (grammaire, § 17) */
+            const char *type = b->noms[op];
+            Valeur q = depiler(&pile);
+            if (q.type != V_TEXTE) {
+                char *m2 = grym_formater("La question se pose en texte : la valeur est %s.", nom_type(q.type));
+                valeur_liberer(&q);
+                ok = echouer(diag, b, debut, m2);
+                break;
+            }
+            if (!m->lire) {
+                valeur_liberer(&q);
+                ok = echouer(diag, b, debut, grym_dupliquer("Aucune entrée : la question ne peut pas être posée ici."));
+                break;
+            }
+            char *probleme = valider_jusqu_ici(m, sortie);
+            if (probleme) {
+                valeur_liberer(&q);
+                ok = echouer(diag, b, debut, probleme);
+                break;
+            }
+            m->question_posee = 1;
+            Valeur r;
+            for (;;) {
+                char *ligne = m->lire(m->lire_contexte, sortie, q.texte);
+                if (!ligne) {
+                    probleme = grym_formater("Plus rien à lire : la réponse à « %s » manque.", q.texte);
+                    break;
+                }
+                probleme = NULL;
+                int lu = lire_reponse(type, ligne, &r, &probleme);
+                free(ligne);
+                if (lu) break;
+                chaine_ajouter(sortie, probleme);   /* la relance s'affiche avant la question suivante */
+                chaine_ajouter(sortie, "\n");
+                free(probleme);
+                probleme = NULL;
+                if (grym_interruption) {
+                    grym_interruption = 0;
+                    probleme = grym_dupliquer("Interrompu (Ctrl+C).");
+                    break;
+                }
+            }
+            valeur_liberer(&q);
+            if (probleme) {
+                ok = echouer(diag, b, debut, probleme);
+                break;
+            }
+            if (m->base && !base_commencer(m->base, &probleme)) {   /* le verrou reprend après la réponse */
+                valeur_liberer(&r);
+                ok = echouer(diag, b, debut, probleme);
+                break;
+            }
+            empiler(&pile, r);
             break;
         }
         case I_GAGNER:

@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.18).
+ * Spécification : docs/vm.md (révision 1.19).
  */
 #include "bytecode.h"
 #include "date.h"
@@ -168,6 +168,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_RETABLIR:       return "RÉTABLIR";
     case I_GAGNER:         return "GAGNER";
     case I_PERDRE:         return "PERDRE";
+    case I_DEMANDER:       return "DEMANDER";
     }
     return "INCONNUE";
 }
@@ -176,7 +177,7 @@ int instruction_a_operande(CodeInstruction code) {
     return code == I_CONSTANTE || code == I_LIRE || code == I_ECRIRE || code == I_AFFICHER
         || code == I_APPELER || code == I_LIRE_LOCAL || code == I_ECRIRE_LOCAL || code == I_ECHOUER
         || code == I_NOUVEAU || code == I_INITIALISER_CHAMP || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP
-        || code == I_GAGNER || code == I_PERDRE
+        || code == I_GAGNER || code == I_PERDRE || code == I_DEMANDER
         || code == I_CHERCHER;
 }
 
@@ -240,7 +241,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             ok = refuser(erreur, grym_formater("constante %u : une recherche ne s'empile pas (octet %lu).", op,
                                                (unsigned long)d));
         else if ((c == I_LIRE || c == I_ECRIRE || c == I_NOUVEAU || c == I_INITIALISER_CHAMP
-                  || c == I_LIRE_CHAMP || c == I_ECRIRE_CHAMP || c == I_GAGNER || c == I_PERDRE) && op >= b->nb_noms)
+                  || c == I_LIRE_CHAMP || c == I_ECRIRE_CHAMP || c == I_GAGNER || c == I_PERDRE || c == I_DEMANDER) && op >= b->nb_noms)
             ok = refuser(erreur, grym_formater("nom %u inexistant (octet %lu).", op, (unsigned long)d));
         else if (c == I_AFFICHER && op == 0)
             ok = refuser(erreur, grym_formater("AFFICHER sans élément (octet %lu).", (unsigned long)d));
@@ -318,6 +319,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_INITIALISER_CHAMP: besoin = 2; effet = -1; break;
             case I_LIRE_CHAMP: besoin = 1; break;
             case I_ECRIRE_CHAMP: case I_GAGNER: case I_PERDRE: besoin = 2; effet = -2; break;
+            case I_DEMANDER: besoin = 1; effet = 0; break;   /* dépile la question, empile la réponse */
             case I_ECHOUER: break;
             case I_NEGATION: case I_NON: besoin = 1; break;
             case I_ADDITION: case I_SOUSTRACTION: case I_MULTIPLICATION: case I_DIVISION:
@@ -391,11 +393,11 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 16  /* versions 1 à 15 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 17  /* versions 1 à 16 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
-                              sans champ multiple (15) */
+                              sans champ multiple (15), sans question (16) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -920,7 +922,7 @@ char *bloc_desassembler(const Bloc *b) {
                 commentaire = grym_formater("« %s »", k->texte);
             }
         } else if ((code == I_LIRE || code == I_ECRIRE || code == I_NOUVEAU || code == I_INITIALISER_CHAMP
-                    || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP || code == I_GAGNER || code == I_PERDRE) && op < b->nb_noms) {
+                    || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP || code == I_GAGNER || code == I_PERDRE || code == I_DEMANDER) && op < b->nb_noms) {
             commentaire = grym_dupliquer(b->noms[op]);
         } else if (code == I_APPELER && op < b->nb_noms) {
             unsigned na = b->code[debut + 3];
