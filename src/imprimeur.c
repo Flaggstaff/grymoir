@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.30), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.31), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -482,6 +482,9 @@ static void expression(Impression *im, const Noeud *n) {
         if (n->forme) aj(im, n->forme == 2 ? (im->compact ? " _droite" : " à droite")
                                            : (im->compact ? " _gauche" : " à gauche"));
         return;
+    case N_MOTIF:   /* « le motif de l'échec » ; « _motif » (§ 18) */
+        aj(im, im->compact ? "_motif" : "le motif de l'échec");
+        return;
     case N_REPONSE: {   /* « la réponse en nombre à « Âge ? » » ; « _réponse (nombre) « Âge ? » » (§ 17) */
         int typé = strcmp(n->texte2, "texte") != 0;
         aj(im, im->compact ? "_réponse " : "la réponse ");
@@ -717,6 +720,14 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     }
     case P_EFFACER:
         aj(im, c ? "_effacer\n" : "Effacer l'écran.\n");
+        return;
+    case P_ESSAYER:   /* « Essayer : … En cas d'échec : … » ; « _essayer … _échec … _fin » (§ 18) */
+        aj(im, c ? "_essayer" : "Essayer");
+        branche(im, n->enfants[0], 0, niveau);
+        retrait(im, niveau);
+        aj(im, c ? "_échec" : "En cas d'échec");
+        branche(im, n->enfants[1], !(n->forme & 1), niveau);
+        fin_compacte(im, niveau);
         return;
     case P_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
         aj(im, c ? "_style " : "Les nombres s'affichent ");

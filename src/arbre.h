@@ -1,5 +1,5 @@
 /* GrymoiR : arbre syntaxique, v0.1
- * Spécification : docs/grammaire.md (révision 1.30), § 6.
+ * Spécification : docs/grammaire.md (révision 1.31), § 6.
  * Chaque nœud garde sa position dans la source (debut, fin), pour les
  * messages d'erreur et, en v0.2, pour la traduction sans perte.
  */
@@ -35,6 +35,7 @@ typedef enum {
     N_REPONSE,       /* « la réponse en nombre à « Âge ? » » (§ 17) : texte2 : type demandé ;
                         enfants[0] : la question */
     N_FICHIER,       /* « le fichier « photos/ana.jpg » » : enfants[0] : chemin (§ 15.2) */
+    N_MOTIF,         /* « le motif de l'échec » (§ 18) : local : case du motif */
     N_CHAMP_DONT,    /* champ de l'objet examiné, dans une condition « dont » : texte : champ (§ 16.4) */
     N_CHERCHER,      /* objets conservés : texte : entité ; forme : 0 liste (boucle), 1 un seul, 2 nombre ;
                         enfants[0] : condition « dont » (facultative) ; texte2 : champ du tri ; entier : 1 si décroissant ;
@@ -83,6 +84,8 @@ typedef enum {
     P_APTITUDE,      /* « Une chose horodatée a : » : texte : forme féminine ; texte2 : forme masculine déclarée
                         entre parenthèses, ou NULL si elle se déduit ; enfants : champs (N_NOM) */
     P_EFFACER,       /* « Effacer l'écran. » (§ 4.3) */
+    P_ESSAYER,       /* « Essayer : … En cas d'échec : … » (§ 18) : enfants[0] : N_BLOC essayé ; enfants[1] : N_BLOC
+                        de l'échec ; entier : case du motif ; forme 1 : « En cas d'échec » en bloc (sinon forme courte) */
     P_STYLE,         /* « Les nombres s'affichent à la française. » (§ 4.1) : entier 0 suisse, 1 française,
                         2 sans séparateur */
     P_GAGNER         /* « Les genres de o gagnent baroque. » : texte : champ multiple ; enfants[0] : objet ;

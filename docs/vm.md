@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.22 de la spécification, révisée le 22 septembre 2026.
-Référence : Charte de GrymoiR v1.19, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.30, § 3.3, § 4, § 5, § 9, § 10, § 13 à 17.
+Version 1.23 de la spécification, révisée le 23 septembre 2026.
+Référence : Charte de GrymoiR v1.21, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.31, § 3.3, § 4, § 5, § 9, § 10, § 13 à 18.
 Toute modification passe par une révision numérotée.
 
 Périmètre : la machine qui exécute le bytecode, le format du fichier `.grymb`, la base des entités, le ramasse-miettes et le journal d'annulation.
@@ -92,6 +92,8 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 47 | `AFFICHER_SANS_LIGNE` | nombre d'éléments n | comme `AFFICHER`, sans le saut de ligne final |
 | 48 | `STYLE` | style (0 suisse, 1 française, 2 sans séparateur) | fixe l'affichage des nombres (§ 4.1) |
 | 49 | `EFFACER` | aucun | écrit `ESC[2J` puis `ESC[H` si la sortie est un terminal, rien sinon (§ 4.3) |
+| 50 | `ESSAYER` | cible (4 octets) : début du bloc d'échec | ouvre un point de reprise (§ 6) ; en cas d'erreur, continue à la cible avec le motif au sommet |
+| 51 | `FIN_ESSAI` | aucun | referme le point de reprise le plus récent, sans échec : ce qui a été fait est gardé |
 
 ### 3.1 Boucles et Selon
 
@@ -175,7 +177,13 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - Seule la première écriture d'un nom au cours d'une exécution entre au journal : c'est la valeur d'avant l'exécution qu'il faut pouvoir rendre. Une boucle qui modifie un nom un million de fois n'occupe qu'une entrée.
 - Interruption : un gestionnaire de Ctrl+C lève un drapeau ; la machine le consulte à chaque saut vers l'arrière et à chaque appel, puis échoue avec « Interrompu (Ctrl+C). ». Le journal annule alors l'exécution.
 - `DEMANDER` referme l'unité annulable : il écrit les fichiers en attente, valide la base, vide le journal, puis lit la réponse ; la transaction reprend ensuite (`BEGIN IMMEDIATE`). Une erreur postérieure n'annule que depuis la dernière question. Sans lecteur installé (`machine_lecteur`), la question est une erreur d'exécution.
-- En v0.2, une erreur annule toute l'exécution ; une action qui échoue n'écrit donc rien (charte, art. 7). La reprise après erreur, qui exigera un point de reprise par appel, viendra plus tard.
+- Sans `Essayer`, une erreur annule toute l'exécution ; une action qui échoue n'écrit donc rien (charte, art. 7).
+- Point de reprise (`ESSAYER`, grammaire, § 18) : la machine note le cadre, la profondeur de pile, la marque du journal, les écritures sur le disque déjà prévues, et photographie les cases locales du cadre ; la base ouvre un `SAVEPOINT grym_essai_n` (n : rang de l'essai). Puis l'époque avance : un nom déjà écrit repasse au journal à sa prochaine écriture.
+- Une erreur, s'il y a un point de reprise, remonte au plus récent : les cadres plus profonds disparaissent, la pile revient à sa profondeur, le journal est rejoué jusqu'à la marque, les écritures prévues depuis sont retirées, la base fait `ROLLBACK TO` puis `RELEASE`, les cases locales retrouvent leur photographie. Le motif (le message, sans position) est empilé, et l'exécution continue à la cible : le bloc d'échec commence par `ÉCRIRE_LOCAL` dans la case du motif. L'époque avance encore.
+- `FIN_ESSAI` fait `RELEASE` ; les entrées du journal restent, pour un échec englobant. Le compilateur émet un `FIN_ESSAI` par essai traversé avant `RENDRE` et avant le saut de `Sortir de la boucle` ou `Passer au tour suivant`. `RETOUR` et `RENDRE` referment aussi les essais du cadre qui se termine.
+- `DEMANDER` dans un essai : chaque point de reprise ouvert repart de la question (marques remises à zéro, nouvelle photographie, nouveaux `SAVEPOINT` après `BEGIN IMMEDIATE`). `DEMANDER` fait aussi avancer l'époque.
+- Jamais rattrapées : l'interruption, la fin de l'entrée ou l'absence de lecteur pendant `DEMANDER`, et l'échec d'une opération de transaction (`COMMIT`, `BEGIN`, `SAVEPOINT`, `ROLLBACK TO`, `RELEASE`).
+- Racines du ramasse-miettes : s'y ajoutent les photographies des cases locales.
 
 ---
 
@@ -224,7 +232,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 19
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 20
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -249,7 +257,7 @@ classes       nombre : u32, puis pour chacune :
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40 ; la version 15, le bit 2 et les instructions 41 et 42 ; la version 16, le bit 3 et les instructions 43 et 44 ; la version 17, l'instruction 45 ; la version 18, les instructions 46 à 48 ; la version 19, l'instruction 49. Les fichiers des versions 1 à 18 restent lisibles ; leur `SUPPRIMER` met désormais dans la corbeille.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40 ; la version 15, le bit 2 et les instructions 41 et 42 ; la version 16, le bit 3 et les instructions 43 et 44 ; la version 17, l'instruction 45 ; la version 18, les instructions 46 à 48 ; la version 19, l'instruction 49 ; la version 20, les instructions 50 et 51. Les fichiers des versions 1 à 19 restent lisibles ; leur `SUPPRIMER` met désormais dans la corbeille.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -306,3 +314,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.20 | 2026-09-22 | Mise en forme : `CADRER`, `AFFICHER_SANS_LIGNE`, `STYLE` ; format version 18 |
 | 1.21 | 2026-09-22 | `EFFACER` : séquence ECMA-48, seulement sur un terminal ; `machine_terminal` ; format version 19 |
 | 1.22 | 2026-09-22 | En-tête et périmètre remis à jour |
+| 1.23 | 2026-09-23 | Reprise après erreur : `ESSAYER`, `FIN_ESSAI`, points de reprise (journal, pile, cadres, cases locales, fichiers, `SAVEPOINT`) ; l'époque avance à chaque question ; format version 20 |

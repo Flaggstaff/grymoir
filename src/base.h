@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.30), § 16 ; docs/vm.md (révision 1.22), § 8.
+ * Spécification : docs/grammaire.md (révision 1.31), § 16 ; docs/vm.md (révision 1.23), § 8.
  *
  * Schéma : une table « e <entité> » par entité, qui porte ses champs propres et ceux de ses
  * aptitudes ; son identifiant désigne la ligne de sa classe parente, ou de « grym_objet »
@@ -23,6 +23,13 @@ void base_fermer(Base *b);
 int base_commencer(Base *b, char **erreur);
 int base_valider(Base *b, char **erreur);
 void base_annuler(Base *b);
+
+/* Points de reprise des blocs « Essayer » (grammaire, § 18), numérotés à partir de 1 dans l'ordre
+ * d'ouverture : SAVEPOINT, RELEASE (garder), ROLLBACK TO puis RELEASE (annuler). Sans transaction
+ * ouverte, rien à faire. */
+int base_point(Base *b, size_t n, char **erreur);
+int base_lacher(Base *b, size_t n, char **erreur);
+int base_revenir(Base *b, size_t n, char **erreur);
 
 /* Crée la table d'une entité, ou vérifie que la base la connaît sous la même définition. */
 int base_preparer(Base *b, const ClasseVM *c, char **erreur);

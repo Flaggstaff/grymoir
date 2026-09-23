@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.22).
+ * Spécification : docs/vm.md (révision 1.23).
  */
 #include "bytecode.h"
 #include "date.h"
@@ -173,6 +173,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_AFFICHER_SANS_LIGNE: return "AFFICHER_SANS_LIGNE";
     case I_STYLE:          return "STYLE";
     case I_EFFACER:        return "EFFACER";
+    case I_ESSAYER:        return "ESSAYER";
+    case I_FIN_ESSAI:      return "FIN_ESSAI";
     }
     return "INCONNUE";
 }
@@ -187,7 +189,7 @@ int instruction_a_operande(CodeInstruction code) {
 }
 
 static int est_saut(CodeInstruction code) {
-    return code == I_SAUTER || code == I_SAUTER_SI_FAUX;
+    return code == I_SAUTER || code == I_SAUTER_SI_FAUX || code == I_ESSAYER;
 }
 
 size_t instruction_taille(CodeInstruction code) {
@@ -333,7 +335,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                 besoin = 2; effet = -1; break;
             case I_AFFICHER: case I_AFFICHER_SANS_LIGNE: besoin = (long)op; effet = -(long)op; break;
             case I_CADRER: besoin = 2; effet = -1; break;
-            case I_STYLE: case I_EFFACER: besoin = 0; effet = 0; break;
+            case I_STYLE: case I_EFFACER: case I_FIN_ESSAI: case I_ESSAYER: besoin = 0; effet = 0; break;
             case I_SAUTER_SI_FAUX: besoin = 1; effet = -1; break;
             case I_SAUTER: case I_RETOUR: break;
             }
@@ -362,17 +364,19 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                 suites[ns++] = lire_u32(&b->code[d + 1]);
             } else {
                 suites[ns++] = d + instruction_taille(c);
-                if (c == I_SAUTER_SI_FAUX) suites[ns++] = lire_u32(&b->code[d + 1]);
+                if (c == I_SAUTER_SI_FAUX || c == I_ESSAYER) suites[ns++] = lire_u32(&b->code[d + 1]);
             }
             for (int k = 0; k < ns && ok; k++) {
                 size_t s = suites[k];
+                /* ESSAYER : le bloc « En cas d'échec » commence avec le motif sur la pile */
+                long qk = c == I_ESSAYER && k == 1 ? q + 1 : q;
                 if (s >= n) {
                     ok = refuser(erreur, grym_formater("le code se termine sans RETOUR (octet %lu).",
                                                        (unsigned long)d));
                 } else if (prof[s] < 0) {
-                    prof[s] = q;
+                    prof[s] = qk;
                     travail[nt++] = s;
-                } else if (prof[s] != q) {
+                } else if (prof[s] != qk) {
                     ok = refuser(erreur, grym_formater("profondeur de pile incohérente à l'octet %lu.",
                                                        (unsigned long)s));
                 }
@@ -400,12 +404,13 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 19  /* versions 1 à 18 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 20  /* versions 1 à 19 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
                               sans champ multiple (15), sans question (16),
-                              sans mise en forme (17), sans effacement de l'écran (18) */
+                              sans mise en forme (17), sans effacement de l'écran (18),
+                              sans essai (19) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 

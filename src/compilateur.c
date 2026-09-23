@@ -12,6 +12,7 @@ typedef struct {
     int suivant_connu;
     size_t *sorties, nb_sorties;
     size_t *suivants, nb_suivants;   /* « Passer » en attente de leur cible */
+    int essais;              /* essais ouverts à l'entrée de la boucle */
 } Boucle;
 
 typedef struct {
@@ -21,6 +22,7 @@ typedef struct {
     int echec;
     Boucle *boucles;
     size_t nb_boucles;
+    int essais;        /* blocs « Essayer » ouverts autour de la phrase en cours (§ 18) */
 } Compilation;
 
 static void trop_grand(Compilation *c, const Noeud *n) {
@@ -236,6 +238,9 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[1]);
         emettre(c, I_CADRER, (long)n->forme, n->op_ligne, n->op_colonne);
         return;
+    case N_MOTIF:   /* « le motif de l'échec » : la case où l'échec l'a rangé (§ 18) */
+        emettre(c, I_LIRE_LOCAL, n->local, n->ligne, n->colonne);
+        return;
     case N_REPONSE: {   /* la question, puis DEMANDER avec le type (§ 17) */
         expression(c, n->enfants[0]);
         long t = bloc_nom(c->b, n->texte2);
@@ -304,6 +309,12 @@ static void entrer_boucle(Compilation *c, size_t suivant, int connu) {
     b->suivant_connu = connu;
     b->sorties = b->suivants = NULL;
     b->nb_sorties = b->nb_suivants = 0;
+    b->essais = c->essais;
+}
+
+/* Quitter n essais sans échec : « Sortir de la boucle » ou « Rendre » depuis un bloc « Essayer » (§ 18). */
+static void quitter_essais(Compilation *c, int n, const Noeud *ph) {
+    for (int k = 0; k < n; k++) emettre(c, I_FIN_ESSAI, 0, ph->ligne, ph->colonne);
 }
 
 /* Fixe la cible des « Passer » en attente (tour suivant). */
@@ -420,6 +431,20 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_ECRIRE, k, ph->ligne, ph->colonne);
         return;
     }
+    case P_ESSAYER: {
+        /* ESSAYER → échec ; corps ; FIN_ESSAI ; → fin ; échec : motif → case ; bloc « En cas d'échec » ; fin (§ 18) */
+        size_t vers_echec = bloc_emettre_saut(c->b, I_ESSAYER, ph->ligne, ph->colonne);
+        c->essais++;
+        phrase(c, ph->enfants[0]);
+        c->essais--;
+        emettre(c, I_FIN_ESSAI, 0, ph->ligne, ph->colonne);
+        size_t vers_fin = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+        bloc_corriger_saut(c->b, vers_echec, c->b->taille_code);
+        emettre(c, I_ECRIRE_LOCAL, ph->entier, ph->ligne, ph->colonne);
+        phrase(c, ph->enfants[1]);
+        bloc_corriger_saut(c->b, vers_fin, c->b->taille_code);
+        return;
+    }
     case P_EFFACER:   /* « Effacer l'écran. » (§ 4.3) */
         emettre(c, I_EFFACER, 0, ph->ligne, ph->colonne);
         return;
@@ -456,6 +481,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         return;
     case P_RENDRE:
         expression(c, ph->enfants[0]);
+        quitter_essais(c, c->essais, ph);
         emettre(c, I_RENDRE, 0, ph->ligne, ph->colonne);
         return;
     case P_APPEL:
@@ -559,6 +585,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_SORTIR:
     case P_PASSER: {
         Boucle *b = &c->boucles[c->nb_boucles - 1];
+        quitter_essais(c, c->essais - b->essais, ph);
         size_t saut = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
         if (ph->type == P_SORTIR) ajouter_saut(&b->sorties, &b->nb_sorties, saut);
         else if (b->suivant_connu) bloc_corriger_saut(c->b, saut, b->suivant);
@@ -665,8 +692,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
         c->b = f;
         Boucle *boucles = c->boucles;
         size_t nb_boucles = c->nb_boucles;
+        int essais = c->essais;
         c->boucles = NULL;
         c->nb_boucles = 0;
+        c->essais = 0;
         const Noeud *corps = ph->enfants[1];
         if (ph->type == P_CALCUL && ph->forme == 0) {
             expression(c, corps);
@@ -678,6 +707,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         free(c->boucles);
         c->boucles = boucles;
         c->nb_boucles = nb_boucles;
+        c->essais = essais;
         c->b = prec;
         return;
     }
@@ -688,7 +718,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
 
 Module *compiler(const Programme *p, Diagnostic *diag) {
     Module *m = module_creer();
-    Compilation c = { bloc_creer(), m, diag, 0, NULL, 0 };
+    Compilation c = { bloc_creer(), m, diag, 0, NULL, 0, 0 };
     c.b->nb_locaux = p->nb_locaux;
     module_ajouter(m, c.b);
     diag->message = NULL;

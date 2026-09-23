@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.30), § 16 ; docs/vm.md (révision 1.22), § 8.
+ * Spécification : docs/grammaire.md (révision 1.31), § 16 ; docs/vm.md (révision 1.23), § 8.
  */
 #include "base.h"
 #include "date.h"
@@ -208,6 +208,28 @@ void base_annuler(Base *b) {
     if (!b->transaction) return;
     b->transaction = 0;
     sqlite3_exec(b->db, "ROLLBACK;", NULL, NULL, NULL);
+}
+
+static int point_sql(Base *b, char *sql, char **erreur) {
+    if (!b->transaction) { free(sql); return 1; }
+    int rc = sqlite3_exec(b->db, sql, NULL, NULL, NULL);
+    free(sql);
+    if (rc == SQLITE_OK) return 1;
+    *erreur = grym_formater("Base « %s » : point de reprise impossible (%s).", b->chemin, sqlite3_errmsg(b->db));
+    return 0;
+}
+
+int base_point(Base *b, size_t n, char **erreur) {
+    return point_sql(b, grym_formater("SAVEPOINT grym_essai_%lu;", (unsigned long)n), erreur);
+}
+
+int base_lacher(Base *b, size_t n, char **erreur) {
+    return point_sql(b, grym_formater("RELEASE grym_essai_%lu;", (unsigned long)n), erreur);
+}
+
+int base_revenir(Base *b, size_t n, char **erreur) {
+    return point_sql(b, grym_formater("ROLLBACK TO grym_essai_%lu; RELEASE grym_essai_%lu;", (unsigned long)n,
+                                      (unsigned long)n), erreur);
 }
 
 /* ---------------------------------------------------------------- */

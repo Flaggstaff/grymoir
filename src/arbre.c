@@ -106,6 +106,16 @@ static void decrire(const Noeud *n, Chaine *c) {
     case P_EFFACER:
         chaine_ajouter(c, "(effacer-écran)");
         return;
+    case N_MOTIF:
+        chaine_ajouter(c, "(motif)");
+        return;
+    case P_ESSAYER:
+        chaine_ajouter(c, "(essayer ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " échec ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
     case P_STYLE:
         chaine_ajouter(c, n->entier == 0 ? "(style suisse)" : n->entier == 1 ? "(style française)" : "(style sans)");
         return;

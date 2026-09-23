@@ -738,9 +738,18 @@ int main(void) {
     V("Effacer l'écran.", "(effacer-écran)");
     VE("Pour effacer un x :\n    Afficher 1.", 1, 6, "« effacer » commence une construction du langage");
 
+    V("Essayer :\n    Afficher 1.\nEn cas d'échec, afficher le motif de l'échec.",
+      "(essayer (bloc (afficher 1)) échec (bloc (afficher (motif))))");
+    V("Essayer :\n    Afficher 1.\nEn cas d'échec :\n    Afficher motif de l'échec.",
+      "(essayer (bloc (afficher 1)) échec (bloc (afficher (motif))))");
+    VE("Essayer :\n    Afficher 1.\nAfficher 2.", 3, 1, "attend son « En cas d'échec »");
+    VE("Afficher 1.\nEn cas d'échec, afficher 2.", 2, 1, "sans « Essayer » correspondant");
+    VE("Afficher le motif de l'échec.", 1, 10, "ne s'emploie que dans un bloc « En cas d'échec »");
+    VE("Essayer, afficher 1.", 1, 8, "« Essayer » ouvre un bloc");
+
     /* --- Aide à la saisie (§ 8) --- */
-    VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
-    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Pour | Remarque :");
+    VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Pour | Remarque :");
+    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Pour | Remarque :");
     VS("Af", "Afficher");
     VS("l", "Le | La | L'");
     VS("Le total vaut 1.\nLe ", "total | (nouveau nom)");

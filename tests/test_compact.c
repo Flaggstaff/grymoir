@@ -232,6 +232,10 @@ int main(void) {
     ALLER_RETOUR("_style _française\n_le x << 1\n_afficher « a » _sur 4 _droite ; x _sur 2 _sans_ligne\n", NULL);
 
     ALLER_RETOUR("_effacer\n_afficher « a »\n", "Effacer l'écran.\nAfficher « a ».\n");
+    ALLER_RETOUR("_essayer\n    _afficher 1 ÷ 0\n_échec\n    _afficher « x » ; _motif\n_fin\n",
+                 "Essayer :\n    Afficher 1 ÷ 0.\nEn cas d'échec :\n    Afficher « x » puis le motif de l'échec.\n");
+    ALLER_RETOUR("_essayer\n    _essayer\n        _afficher 1\n    _échec\n        _afficher _motif\n    _fin\n_échec\n"
+                 "    _afficher _motif\n_fin\n", NULL);
 
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");

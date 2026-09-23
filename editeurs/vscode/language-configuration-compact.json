@@ -9,7 +9,7 @@
   "surroundingPairs": [["(", ")"], ["«", "»"], ["\"", "\""]],
   "wordPattern": "[\\p{L}\\p{N}_']+",
   "indentationRules": {
-    "increaseIndentPattern": "^\\s*(_si|_sinon|_sinon_si|_tant_que|_répéter|_pour_chaque|_selon|_cas|_autrement|_calcul|_action|_classe|_aptitude)\\b(?!.*<<\\s*\\S)",
+    "increaseIndentPattern": "^\\s*(_si|_sinon|_sinon_si|_tant_que|_répéter|_pour_chaque|_selon|_cas|_autrement|_essayer|_échec|_calcul|_action|_classe|_aptitude)\\b(?!.*<<\\s*\\S)",
     "decreaseIndentPattern": "^\\s*(_fin|_sinon|_sinon_si|_cas|_autrement)\\b"
   }
 }

@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.22).
+ * Spécification : docs/vm.md (révision 1.23).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -157,6 +157,19 @@ typedef struct {
     size_t *liaison;   /* noms du bloc → cases globales */
 } Formule;
 
+/* Point de reprise d'un bloc « Essayer » (grammaire, § 18 ; docs/vm.md, § 6) : ce qu'il faut
+ * rétablir si le bloc échoue. La base garde le sien sous la forme d'un SAVEPOINT. */
+typedef struct {
+    size_t cadre;          /* cadre qui exécute le bloc */
+    size_t pile;           /* profondeur de la pile */
+    size_t journal;        /* marque dans le journal */
+    size_t a_ecrire;       /* écritures sur le disque déjà prévues */
+    size_t cible;          /* début du bloc « En cas d'échec » */
+    Valeur *locaux;        /* photographie des cases locales du cadre */
+    unsigned char *definis;
+    int nb_locaux;
+} Essai;
+
 /* Écriture sur le disque, différée à la fin de l'exécution (§ 15.2). */
 typedef struct {
     char *chemin;      /* chemin effectif */
@@ -184,6 +197,8 @@ struct Machine {
     size_t nb_cases, cap_cases;
     Ecriture *journal;
     size_t nb_journal, cap_journal;
+    Essai *essais;          /* blocs « Essayer » en cours, du plus ancien au plus récent (§ 18) */
+    size_t nb_essais, cap_essais;
     Formule *formules;
     size_t nb_formules;
     unsigned long epoque;   /* numéro de l'exécution en cours */
@@ -313,6 +328,7 @@ void machine_detruire(Machine *m) {
     }
     free(m->cases);
     free(m->journal);
+    free(m->essais);
     for (size_t i = 0; i < m->nb_formules; i++) {
         free(m->formules[i].nom);
         bloc_detruire(m->formules[i].bloc);
@@ -441,9 +457,9 @@ static void ecrire_id(Machine *m, Objet *o, long id) {
     carte_mettre(m, id, o);
 }
 
-/* Rejoue le journal du plus récent au plus ancien. */
-static void annuler(Machine *m) {
-    while (m->nb_journal) {
+/* Rejoue le journal du plus récent au plus ancien, jusqu'à la marque (0 : tout). */
+static void annuler_jusqu_a(Machine *m, size_t marque) {
+    while (m->nb_journal > marque) {
         Ecriture *e = &m->journal[--m->nb_journal];
         if (e->objet && e->index == (size_t)-1) {
             carte_retirer(m, e->objet->id, e->objet);
@@ -464,6 +480,8 @@ static void annuler(Machine *m) {
         if (e->etait_definie) c->valeur = e->ancienne;
     }
 }
+
+static void annuler(Machine *m) { annuler_jusqu_a(m, 0); }
 
 static void valider(Machine *m) {
     for (size_t i = 0; i < m->nb_journal; i++)
@@ -595,6 +613,9 @@ static void ramasser(Machine *m, const Pile *pile, const Cadre *cadres, size_t n
     for (size_t c = 0; c < nb_cadres; c++)
         for (int k = 0; k < cadres[c].b->nb_locaux; k++)
             if (cadres[c].definis[k]) marquer(&p, &cadres[c].locaux[k]);
+    for (size_t i = 0; i < m->nb_essais; i++)   /* cases locales d'avant chaque essai (§ 18) */
+        for (int k = 0; k < m->essais[i].nb_locaux; k++)
+            if (m->essais[i].definis[k]) marquer(&p, &m->essais[i].locaux[k]);
     for (size_t i = 0; i < m->nb_journal; i++) {
         if (m->journal[i].etait_definie) marquer(&p, &m->journal[i].ancienne);
         if (m->journal[i].objet) {
@@ -896,7 +917,54 @@ static char *valider_jusqu_ici(Machine *m, Chaine *sortie) {
         if (!base_valider(m->base, &erreur)) return erreur;
     }
     valider(m);
+    m->epoque++;   /* ce qui s'écrit ensuite repasse au journal : une erreur l'annulera */
     return NULL;
+}
+
+/* ---------------------------------------------------------------- */
+/* Essais (grammaire, § 18)                                         */
+/* ---------------------------------------------------------------- */
+
+static void photographier(Essai *e, const Cadre *c) {
+    int nl = c->b->nb_locaux;
+    e->nb_locaux = nl;
+    e->locaux = grym_allouer((nl ? (size_t)nl : 1) * sizeof *e->locaux);
+    e->definis = grym_allouer(nl ? (size_t)nl : 1);
+    for (int k = 0; k < nl; k++) {
+        e->definis[k] = c->definis[k];
+        if (c->definis[k]) e->locaux[k] = valeur_copier(&c->locaux[k]);
+    }
+}
+
+static void oublier_photo(Essai *e) {
+    for (int k = 0; k < e->nb_locaux; k++)
+        if (e->definis[k]) valeur_liberer(&e->locaux[k]);
+    free(e->locaux);
+    free(e->definis);
+    e->locaux = NULL;
+    e->definis = NULL;
+    e->nb_locaux = 0;
+}
+
+/* Rend au cadre ses cases locales d'avant l'essai. */
+static void restaurer_photo(const Essai *e, Cadre *c) {
+    for (int k = 0; k < e->nb_locaux; k++) {
+        if (c->definis[k]) valeur_liberer(&c->locaux[k]);
+        c->definis[k] = e->definis[k];
+        if (e->definis[k]) c->locaux[k] = valeur_copier(&e->locaux[k]);
+    }
+}
+
+/* Retire les écritures sur le disque prévues après la marque. */
+static void retirer_ecritures(Machine *m, size_t marque) {
+    while (m->nb_a_ecrire > marque) {
+        Ecriture_disque *w = &m->a_ecrire[--m->nb_a_ecrire];
+        Valeur v = valeur_nombre(dec_zero());
+        v.fichier = w->fichier;
+        valeur_liberer(&v);
+        free(w->chemin);
+        free(w->ecrit);
+    }
 }
 
 /* Nouvel objet du tas ; epoque : exécution où ses champs comptent comme déjà journalisés. */
@@ -1320,6 +1388,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
 
     Pile pile = { NULL, 0, 0 };
     int ok = 1;
+    int fatal = 0;   /* erreur qu'aucun « Essayer » ne rattrape : Ctrl+C, entrée épuisée, base perdue (§ 18) */
     for (;;) {
         Cadre *cadre = &cadres[nb_cadres - 1];
         const Bloc *b = cadre->b;
@@ -1331,13 +1400,24 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         size_t cible = 0;
         if (instruction_a_operande(code))
             op = (unsigned)b->code[ip + 1] | ((unsigned)b->code[ip + 2] << 8);
-        if (code == I_SAUTER || code == I_SAUTER_SI_FAUX)
+        if (code == I_SAUTER || code == I_SAUTER_SI_FAUX || code == I_ESSAYER)
             cible = (size_t)b->code[ip + 1] | ((size_t)b->code[ip + 2] << 8)
                   | ((size_t)b->code[ip + 3] << 16) | ((size_t)b->code[ip + 4] << 24);
         ip += instruction_taille(code);
         cadre->ip = ip;
 
         if (code == I_RETOUR || code == I_RENDRE) {
+            /* un essai du cadre qui se termine se referme sans échec (bytecode écrit à la main) */
+            while (m->nb_essais && m->essais[m->nb_essais - 1].cadre >= nb_cadres - 1) {
+                Essai *e = &m->essais[--m->nb_essais];
+                oublier_photo(e);
+                char *probleme = NULL;
+                if (m->base && !base_lacher(m->base, m->nb_essais + 1, &probleme)) {
+                    ok = echouer(diag, b, debut, probleme);
+                    fatal = 1;
+                }
+            }
+            if (!ok) break;
             if (nb_cadres == 1) break;                  /* fin du programme */
             liberer_cadre(cadre);
             nb_cadres--;                                /* la valeur rendue reste au sommet de la pile */
@@ -1492,6 +1572,49 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, valeur_nombre(r));
             break;
         }
+        case I_ESSAYER: {
+            /* « Essayer : » : point de reprise (grammaire, § 18 ; docs/vm.md, § 6) */
+            if (m->nb_essais == m->cap_essais) {
+                m->cap_essais = m->cap_essais ? m->cap_essais * 2 : 8;
+                Essai *t = grym_allouer(m->cap_essais * sizeof *t);
+                if (m->nb_essais) memcpy(t, m->essais, m->nb_essais * sizeof *t);
+                free(m->essais);
+                m->essais = t;
+            }
+            Essai *e = &m->essais[m->nb_essais];
+            e->cadre = nb_cadres - 1;
+            e->pile = pile.n;
+            e->journal = m->nb_journal;
+            e->a_ecrire = m->nb_a_ecrire;
+            e->cible = cible;
+            photographier(e, cadre);
+            char *probleme = NULL;
+            if (m->base && !base_point(m->base, m->nb_essais + 1, &probleme)) {
+                oublier_photo(e);
+                ok = echouer(diag, b, debut, probleme);
+                fatal = 1;
+                break;
+            }
+            m->nb_essais++;
+            m->epoque++;   /* une case déjà écrite repasse au journal : l'échec saura la rendre */
+            break;
+        }
+        case I_FIN_ESSAI: {
+            /* fin du bloc « Essayer » sans échec : ce qu'il a fait est gardé */
+            if (!m->nb_essais || m->essais[m->nb_essais - 1].cadre != nb_cadres - 1) {
+                ok = echouer(diag, b, debut, grym_dupliquer("FIN_ESSAI sans essai ouvert."));
+                fatal = 1;
+                break;
+            }
+            Essai *e = &m->essais[--m->nb_essais];
+            oublier_photo(e);
+            char *probleme = NULL;
+            if (m->base && !base_lacher(m->base, m->nb_essais + 1, &probleme)) {
+                ok = echouer(diag, b, debut, probleme);
+                fatal = 1;
+            }
+            break;
+        }
         case I_EFFACER:   /* « Effacer l'écran. » (§ 4.3) : hors d'un terminal, rien n'est écrit */
             if (m->terminal) chaine_ajouter(sortie, "\033[2J\033[H");
             break;
@@ -1621,6 +1744,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (cible <= debut && grym_interruption) {
                 grym_interruption = 0;
                 ok = echouer(diag, b, debut, grym_dupliquer("Interrompu (Ctrl+C)."));
+                fatal = 1;
                 break;
             }
             cadre->ip = cible;
@@ -1800,15 +1924,25 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (!m->lire) {
                 valeur_liberer(&q);
                 ok = echouer(diag, b, debut, grym_dupliquer("Aucune entrée : la question ne peut pas être posée ici."));
+                fatal = 1;
                 break;
             }
             char *probleme = valider_jusqu_ici(m, sortie);
             if (probleme) {
                 valeur_liberer(&q);
                 ok = echouer(diag, b, debut, probleme);
+                fatal = 1;
                 break;
             }
             m->question_posee = 1;
+            /* la question a validé ce qui la précède : chaque essai en cours repart d'ici (§ 18) */
+            for (size_t k = 0; k < m->nb_essais; k++) {
+                Essai *e = &m->essais[k];
+                e->journal = 0;
+                e->a_ecrire = 0;
+                oublier_photo(e);
+                photographier(e, &cadres[e->cadre]);
+            }
             Valeur r;
             for (;;) {
                 char *ligne = m->lire(m->lire_contexte, sortie, q.texte);
@@ -1833,11 +1967,21 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&q);
             if (probleme) {
                 ok = echouer(diag, b, debut, probleme);
+                fatal = 1;
                 break;
             }
             if (m->base && !base_commencer(m->base, &probleme)) {   /* le verrou reprend après la réponse */
                 valeur_liberer(&r);
                 ok = echouer(diag, b, debut, probleme);
+                fatal = 1;
+                break;
+            }
+            for (size_t k = 0; m->base && k < m->nb_essais && !probleme; k++)
+                base_point(m->base, k + 1, &probleme);
+            if (probleme) {
+                valeur_liberer(&r);
+                ok = echouer(diag, b, debut, probleme);
+                fatal = 1;
                 break;
             }
             empiler(&pile, r);
@@ -2047,6 +2191,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (grym_interruption) {
                 grym_interruption = 0;
                 ok = echouer(diag, b, debut, grym_dupliquer("Interrompu (Ctrl+C)."));
+                fatal = 1;
                 break;
             }
             if (nb_cadres >= APPELS_MAX) {
@@ -2079,8 +2224,37 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             ok = echouer(diag, b, debut, grym_dupliquer("Instruction inconnue."));
             break;
         }
+        if (!ok && !fatal && m->nb_essais) {
+            /* L'essai le plus récent rattrape l'erreur : tout ce qu'il a fait est annulé, puis son bloc
+             * « En cas d'échec » s'exécute avec le motif sur la pile (grammaire, § 18). */
+            Essai e = m->essais[--m->nb_essais];
+            while (nb_cadres - 1 > e.cadre) liberer_cadre(&cadres[--nb_cadres]);
+            while (pile.n > e.pile) valeur_liberer(&pile.v[--pile.n]);
+            annuler_jusqu_a(m, e.journal);
+            retirer_ecritures(m, e.a_ecrire);
+            char *probleme = NULL;
+            if (m->base && !base_revenir(m->base, m->nb_essais + 1, &probleme)) {
+                oublier_photo(&e);
+                free(diag->message);
+                diag->message = probleme;
+                break;
+            }
+            restaurer_photo(&e, &cadres[e.cadre]);
+            oublier_photo(&e);
+            Valeur motif = valeur_nombre(dec_zero());
+            motif.type = V_TEXTE;
+            motif.texte = diag->message;
+            diag->message = NULL;
+            diag->ligne = diag->colonne = 0;
+            empiler(&pile, motif);
+            cadres[e.cadre].ip = e.cible;
+            m->epoque++;   /* ce que le bloc « En cas d'échec » écrit repasse au journal */
+            ok = 1;
+            continue;
+        }
         if (!ok) break;
     }
+    while (m->nb_essais) oublier_photo(&m->essais[--m->nb_essais]);   /* la transaction les emporte */
 
     vider(&pile);
     for (size_t k = nb_cadres; k > 0; k--) liberer_cadre(&cadres[k - 1]);

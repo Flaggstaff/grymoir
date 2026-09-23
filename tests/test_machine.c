@@ -1489,6 +1489,134 @@ int main(void) {
     PROG("Effacer.", "~Écrivez « Effacer l'écran. ».");
     PROG("Effacer l'écran et le reste.", "~« et » inattendu, attendu : un point final.");
 
+    /* --- Essayer, En cas d'échec (§ 18) --- */
+#define ESS(corps, echec) "Essayer :\n" corps "En cas d'échec :\n" echec
+    PROG(ESS("    Afficher 1 ÷ 0.\n", "    Afficher « échec : » puis le motif de l'échec.\n") "Afficher « suite ».",
+         "échec : Division par zéro.\nsuite");
+    PROG("Le n vaut 0.\n" ESS("    Le n devient 1.\n    Afficher 1 ÷ 0.\n", "    Afficher n.\n") "Afficher n.", "0\n0");
+    PROG("Le n vaut 0.\n" ESS("    Le n devient 1.\n", "    Afficher « jamais ».\n") "Afficher n.", "1");
+    PROG("Essayer :\n    Afficher 1.\nEn cas d'échec, afficher 2.\nAfficher 3.", "1\n3");
+    /* un objet d'avant l'essai retrouve ses champs ; les cases locales d'une action aussi */
+    PROG("Un point a : un x.\nLe p vaut un nouveau point :\n    Le x vaut 1.\n"
+         ESS("    Le x du p devient 9.\n    Afficher 1 ÷ 0.\n", "    Afficher x du p.\n"), "1");
+    PROG("Pour tester un nombre :\n    Le l vaut 1.\n    Essayer :\n        Le l devient 2.\n        Afficher 1 ÷ nombre.\n"
+         "    En cas d'échec :\n        Afficher « l : » puis l.\n    Afficher « après : » puis l.\nTester 0.\nTester 4.",
+         "l : 1\naprès : 1\n0,25\naprès : 2");
+    /* l'erreur remonte des appels imbriqués ; leurs cadres disparaissent */
+    PROG("Pour plonger un nombre :\n    Si nombre = 0, afficher 1 ÷ nombre.\n    Sinon, plonger nombre − 1.\n"
+         ESS("    Plonger 50.\n", "    Afficher le motif de l'échec.\n") "Afficher « suite ».",
+         "Division par zéro.\nsuite");
+    /* imbrication : l'essai interne rattrape ; l'échec externe annule aussi ce que l'interne a gardé */
+    PROG("Le n vaut 0.\nLe m vaut 0.\nEssayer :\n    Essayer :\n        Le n devient 1.\n        Afficher 1 ÷ 0.\n"
+         "    En cas d'échec :\n        Le m devient 5.\n    Afficher n puis m.\n    Afficher 1 ÷ 0.\n"
+         "En cas d'échec :\n    Afficher n puis m.\n", "0 5\n0 0");
+    /* une erreur dans le bloc d'échec n'est pas rattrapée par son propre essai */
+    PROG(ESS("    Afficher 1 ÷ 0.\n", "    Afficher 2 ÷ 0.\n"), "ERREUR 4:16 Division par zéro.");
+    PROG("Essayer :\n    Essayer :\n        Afficher 1 ÷ 0.\n    En cas d'échec :\n        Afficher 2 ÷ 0.\n"
+         "En cas d'échec :\n    Afficher « externe : » puis le motif de l'échec.\n", "externe : Division par zéro.");
+    /* Rendre, Sortir de la boucle et Passer au tour suivant quittent l'essai proprement */
+    PROG("La valeur sûre d'un nombre :\n    Essayer :\n        Si nombre > 100, rendre 1.\n        Rendre 10 ÷ nombre.\n"
+         "    En cas d'échec :\n        Rendre −1.\n    Rendre 0.\n"
+         "Afficher la valeur sûre de 4 puis la valeur sûre de 0 puis la valeur sûre de 200.", "2,5 −1 1");
+    PROG("Pour chaque i de 1 à 5 :\n    Essayer :\n        Si i = 4, sortir de la boucle.\n        Si i = 2, passer au tour suivant.\n"
+         "        Afficher i.\n    En cas d'échec :\n        Afficher « non ».\n"
+         ESS("    Afficher 1 ÷ 0.\n", "    Afficher « rattrapé ».\n"), "1\n3\nrattrapé");
+    /* le ramasse-miettes garde ce que la photographie des cases locales désigne */
+    PROG("Un point a : un x.\nPour tester :\n    Le o vaut un nouveau point :\n        Le x vaut 5.\n"
+         "    Essayer :\n        Le o devient 0.\n        Répéter 30000 fois :\n            Le q vaut un nouveau point.\n"
+         "        Afficher 1 ÷ 0.\n    En cas d'échec :\n        Afficher x du o.\nTester.", "5");
+    /* analyse */
+    PROG("Afficher le motif de l'échec.", "~« le motif de l'échec » ne s'emploie que dans un bloc « En cas d'échec ».");
+    PROG("Essayer :\n    Afficher 1.\nAfficher 2.", "~« Essayer » attend son « En cas d'échec », aligné sur lui");
+    PROG("Essayer :\n    Afficher 1.", "~« Essayer » attend son « En cas d'échec »");
+    PROG("Essayer :\n    Afficher 1.\n    En cas d'échec :\n        Afficher 2.", "~« En cas d'échec » sans « Essayer » correspondant");
+    PROG("En cas d'échec, afficher 1.", "~« En cas d'échec » sans « Essayer » correspondant");
+    PROG("Essayer, afficher 1.", "~« Essayer » ouvre un bloc");
+    PROG("Pour essayer :\n    Afficher 1.", "~« essayer » commence une construction du langage");
+    PROG("Essayer :\n    Afficher 1.\nEn cas d'échec :\n    Afficher 2.\nAfficher le motif de l'échec.",
+         "~ne s'emploie que dans un bloc « En cas d'échec »");
+    /* hors d'un bloc d'échec, les mots gardent leur sens ordinaire */
+    PROG("Un rapport a : un motif.\nL'échec vaut un nouveau rapport :\n    Le motif vaut « panne ».\n"
+         "Afficher le motif de l'échec.", "panne");
+    PROG("Le double d'un x :\n    Essayer :\n        Rendre x × 2.\n    En cas d'échec :\n        Rendre 0.\n    Rendre 0.\n"
+         "Afficher le double de 4.", "8");
+    SAISIE_INTER("Essayer :\n    Afficher 1 ÷ 0.\nEn cas d'échec, afficher le motif de l'échec.", "Division par zéro.");
+    /* entités : l'essai ne garde rien de ce qu'il a conservé ; le programme continue */
+    {
+        remove("_essai_ess.grymd");
+        const char *src = "Un contact, conservé, a : un nom (texte), unique.\n"
+                          "Pour ajouter un nom :\n    Le c vaut un nouveau contact :\n        Le nom vaut nom.\n    Conserver c.\n"
+                          "Essayer :\n    Ajouter « Ana ».\n    Ajouter « Bob ».\n    Ajouter « Ana ».\n"
+                          "En cas d'échec :\n    Afficher le motif de l'échec.\n"
+                          "Ajouter « Zoé ».\nAfficher le nombre de contacts conservés.\n";
+        const char *att = "« nom » est unique : un autre contact conservé a déjà « Ana ».\n1";
+        total++;
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        machine_base(m, "_essai_ess.grymd");
+        char *r = executer_source(p, m, src, 0);
+        if (strcmp(r, att) != 0) signaler(__LINE__, src, att, r);
+        free(r);
+        machine_detruire(m);
+        portee_detruire(p);
+        total++;
+        p = portee_creer();
+        m = machine_creer();
+        machine_base(m, "_essai_ess.grymd");
+        r = executer_source(p, m, "Un contact, conservé, a : un nom (texte), unique.\n"
+                                  "Pour chaque contact conservé, afficher nom du contact.", 0);
+        if (strcmp(r, "Zoé") != 0) signaler(__LINE__, "base relue", "Zoé", r);
+        free(r);
+        machine_detruire(m);
+        portee_detruire(p);
+        remove("_essai_ess.grymd");
+    }
+    /* fichiers : un enregistrement prévu dans un essai raté n'a pas lieu */
+    {
+        creer_fichier("_essai_src.txt", "abc", 3);
+        remove("_essai_rate.txt");
+        remove("_essai_garde.txt");
+        PROG("Le f vaut le fichier « _essai_src.txt ».\n"
+             ESS("    Enregistrer f dans « _essai_rate.txt ».\n    Afficher 1 ÷ 0.\n", "    Afficher « raté ».\n")
+             "Enregistrer f dans « _essai_garde.txt ».", "raté");
+        total++;
+        if (fichier_existe("_essai_rate.txt") || !fichier_existe("_essai_garde.txt"))
+            signaler(__LINE__, "écritures d'un essai raté", "rate absent, garde présent", "autre");
+        remove("_essai_src.txt");
+        remove("_essai_rate.txt");
+        remove("_essai_garde.txt");
+    }
+    /* une question dans un essai : l'échec n'annule que depuis elle */
+    SAISIE("Le n vaut 0.\n" ESS("    Le n devient 1.\n    Le x vaut la réponse à « ? ».\n    Le n devient 2.\n"
+           "    Afficher 1 ÷ 0.\n", "    Afficher n.\n"), "? 1", "oui");
+    SAISIE("Pour tester :\n    Le l vaut 1.\n    Essayer :\n        Le l devient 2.\n        Le x vaut la réponse à « ? ».\n"
+           "        Le l devient 3.\n        Afficher 1 ÷ 0.\n    En cas d'échec :\n        Afficher l.\nTester.", "? 2", "oui");
+    {   /* la fin de l'entrée n'est jamais rattrapée : sinon un menu tournerait sans fin */
+        static const char *const L[] = { "" };
+        verifier_saisie(__LINE__, ESS("    Le x vaut la réponse à « ? ».\n", "    Afficher « rattrapé ».\n"), L, 0,
+                        "~Plus rien à lire");
+    }
+    {   /* base : ce qui précède la question reste conservé malgré l'échec */
+        remove("_essai_essq.grymd");
+        static const char *const L[] = { "ok" };
+        const char *src = "Un contact, conservé, a : un nom (texte).\n"
+                          "Pour ajouter un nom :\n    Le c vaut un nouveau contact :\n        Le nom vaut nom.\n    Conserver c.\n"
+                          "Essayer :\n    Ajouter « Ana ».\n    Le x vaut la réponse à « ? ».\n    Ajouter « Bob ».\n"
+                          "    Afficher 1 ÷ 0.\nEn cas d'échec :\n    Afficher le nombre de contacts conservés.\n";
+        total++;
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        Script sc = { L, 1, 0 };
+        machine_lecteur(m, reponses, &sc);
+        machine_base(m, "_essai_essq.grymd");
+        char *r = executer_source(p, m, src, 0);
+        if (strcmp(r, "? 1") != 0) signaler(__LINE__, src, "? 1", r);
+        free(r);
+        machine_detruire(m);
+        portee_detruire(p);
+        remove("_essai_essq.grymd");
+    }
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

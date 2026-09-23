@@ -64,7 +64,7 @@
     },
     "controle": {
       "name": "keyword.control.grymoir",
-      "match": "(?i)(?<![\\p{L}\\p{N}_])(autrement|répéter|chaque|sortir|passer|rendre|sinon|selon|fois|pour|tant|cas|que|si)(?![\\p{L}\\p{N}_])"
+      "match": "(?i)(?<![\\p{L}\\p{N}_])(autrement|répéter|essayer|chaque|sortir|passer|rendre|sinon|selon|échec|fois|pour|tant|cas|que|si)(?![\\p{L}\\p{N}_])"
     },
     "mots": {
       "name": "keyword.other.grymoir",

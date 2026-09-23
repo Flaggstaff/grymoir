@@ -1,5 +1,6 @@
 Remarque : carnet d'adresses minuscule (grammaire, § 17).
 Remarque : chaque question valide ce qui la précède.
+Remarque : une erreur annule le choix en cours, puis le menu revient (§ 18).
 
 Un contact, conservé, a :
     un nom (texte), unique,
@@ -32,10 +33,12 @@ Effacer l'écran.
 Afficher « 1 ajouter, 2 lister, 3 chercher, 0 quitter ».
 Le choix vaut la réponse en nombre entier à « Votre choix ? ».
 Tant que choix ≠ 0 :
-    Selon choix :
-        Cas 1, ajouter.
-        Cas 2, lister.
-        Cas 3, chercher.
-        Autrement, afficher « Choix inconnu. ».
+    Essayer :
+        Selon choix :
+            Cas 1, ajouter.
+            Cas 2, lister.
+            Cas 3, chercher.
+            Autrement, afficher « Choix inconnu. ».
+    En cas d'échec, afficher « Rien n'a changé : » puis le motif de l'échec.
     Le choix devient la réponse en nombre entier à « Votre choix ? ».
 Afficher « Au revoir. ».

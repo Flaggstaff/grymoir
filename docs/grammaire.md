@@ -1,10 +1,10 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.30 de la spécification, révisée le 22 septembre 2026. Tout ce qui suit est implémenté.
-Référence : Charte de GrymoiR v1.19, art. 4, 5, 7, 9 et 12.
+Version 1.31 de la spécification, révisée le 23 septembre 2026. Tout ce qui suit est implémenté.
+Référence : Charte de GrymoiR v1.21, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
-Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4), décider (§ 5), le calcul des suites attendues (§ 8), les formules (§ 9), répéter (§ 10), la forme compacte (§ 11), la forme canonique (§ 12), les objets (§ 13), les dates et les années (§ 14), les fichiers et les images (§ 15), les entités conservées (§ 16) et les questions à l'utilisateur (§ 17). Ce que le langage ne sait pas encore faire est listé dans la charte, art. 11 et 12.
+Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4), décider (§ 5), le calcul des suites attendues (§ 8), les formules (§ 9), répéter (§ 10), la forme compacte (§ 11), la forme canonique (§ 12), les objets (§ 13), les dates et les années (§ 14), les fichiers et les images (§ 15), les entités conservées (§ 16) les questions à l'utilisateur (§ 17) et la reprise après erreur (§ 18). Ce que le langage ne sait pas encore faire est listé dans la charte, art. 11 et 12.
 
 ---
 
@@ -302,7 +302,8 @@ bloc         = { phrase } ;                      (* alignées sur une même colo
 phrase       = création | modification | affichage | si | remarque
              | calcul | action | rendre | appel-action
              | tant-que | répéter | pour-chaque | sortir | passer | selon
-             | classe | modif-champ ;
+             | classe | modif-champ | essayer ;
+essayer      = "Essayer" ":" bloc-indenté "En" "cas" "d'" "échec" branche ;   (* § 18 *)
 classe       = un nom "a" ":" un nom { "," un nom } "."
              | un nom "est" un ( nom | "chose" ) [ adjectifs ] "."
                [ un nom "a" ":" un nom { "," un nom } "." ] ;                  (* même classe *)
@@ -445,6 +446,8 @@ Limites de cette notation :
 | Objet non conservé qui gagne (exécution) | « Une œuvre qui n'est pas conservée ne gagne rien : ses « genres » vivent dans la base. Conservez-la d'abord. » |
 | Élément de la corbeille (exécution) | « Le champ « genres » gagnerait un genre supprimé : rétablissez-le d'abord. » |
 | Ambiguïté d'une relation (exécution) | « Plusieurs champs relient une œuvre à une personne : « compositeur » et « interprètes ». Précisez avec « dont … est le compositeur » ou « dont … est parmi les interprètes ». » |
+| `Essayer` sans son bloc d'échec | « « Essayer » attend son « En cas d'échec », aligné sur lui : une erreur ne passe jamais sous silence. » |
+| Motif hors du bloc d'échec | « « le motif de l'échec » ne s'emploie que dans un bloc « En cas d'échec ». » |
 | Récursion sans fin (exécution) | « Trop d'appels imbriqués : plus de 1000. Une formule s'appelle-t-elle sans fin ? » |
 
 Chaque message est précédé du fichier, de la ligne et de la colonne (charte, art. 8) : `facture.grym:7:18 : erreur : Division par zéro.`
@@ -457,7 +460,7 @@ Chaque message est précédé du fichier, de la ligne et de la colonne (charte, 
 
 - Catégories : début de phrase (`Le`, `La`, `L'`, `Afficher`, `Si`, `Pour`, `Remarque :`, et les actions déclarées, avec une majuscule), nombre, nom déclaré, nouveau nom, parenthèse, négation, texte, `vrai` et `faux`, opérateurs, comparaisons (`est`, `n'est pas`, symboles), `et` et `ou`, parenthèse fermante, `vaut` et `devient`, `,` et `:` après une condition, `puis`, point final.
 - Après `est`, les tournures accordées au genre du sujet (`supérieure à`, `positive`…) ; après `supérieur`, `à`, `au` ou `ou`.
-- `Tant que`, `Répéter`, `Pour chaque` et `Selon` en début de phrase ; dans une boucle, `Sortir de la boucle` et `Passer au tour suivant`.
+- `Tant que`, `Répéter`, `Pour chaque`, `Selon` et `Essayer` en début de phrase ; dans une boucle, `Sortir de la boucle` et `Passer au tour suivant`.
 - Après le nom d'un calcul, `de` ou `du`. Dans un calcul, seuls ses paramètres, ses noms locaux et les formules sont proposés.
 - S'y ajoutent les mots qui prolongent un nom composé déclaré : après `prix`, `unitaire` si `prix unitaire` existe.
 - Premier usage : les messages d'erreur (« `« 2 » inattendu, attendu : un opérateur ou un point final.` »).
@@ -604,7 +607,7 @@ Selon le mois :
 
 ### 10.7 Mots de construction
 
-`tant`, `répéter`, `chaque`, `sortir`, `passer`, `selon`, `cas`, `autrement` (avec `afficher`, `si`, `sinon`, `pour`, `rendre`) commencent des constructions : ils ne peuvent pas commencer le nom d'une action.
+`tant`, `répéter`, `chaque`, `sortir`, `passer`, `selon`, `cas`, `autrement`, `essayer` (avec `afficher`, `si`, `sinon`, `pour`, `rendre`) commencent des constructions : ils ne peuvent pas commencer le nom d'une action.
 
 ---
 
@@ -1221,6 +1224,27 @@ Si la réponse en vrai ou faux à « Encore ? », …
 - En forme compacte : `_réponse « Nom ? »`, `_réponse (nombre_entier) « Âge ? »`, `_réponse (date) (q)`.
 
 
+## 18. Reprise après erreur *(v1.0)*
+
+```
+Essayer :
+    Ajouter un contact.
+En cas d'échec :
+    Afficher « Rien n'a été ajouté : » puis le motif de l'échec.
+```
+
+- `Essayer :` ouvre un bloc. `En cas d'échec` le suit obligatoirement, aligné sur `Essayer`, en forme courte (`En cas d'échec, afficher …`) ou en bloc. Un `Essayer` sans son bloc d'échec est une erreur d'analyse : une erreur ne passe jamais sous silence (charte, art. 8).
+- Si une erreur survient dans le bloc essayé, y compris au fond d'une formule qu'il appelle, **tout ce que le bloc a fait est annulé** : noms, champs, cases locales, objets conservés, modifiés ou supprimés, fichiers prévus. Le bloc `En cas d'échec` s'exécute alors, et le programme continue après lui. Sans erreur, le bloc d'échec est sauté.
+- Ce qui a été affiché reste affiché, comme pour toute exécution ratée (§ 3.3).
+- `le motif de l'échec` vaut le message de l'erreur, en texte, sans sa position : « Division par zéro. ». Il n'existe que dans le bloc `En cas d'échec` ; ailleurs, les mêmes mots gardent leur sens ordinaire (un champ `motif` d'un objet `échec`), et sans un tel sens, c'est une erreur d'analyse.
+- Une question (§ 17) posée dans le bloc essayé valide ce qui la précède : l'échec n'annule que depuis la dernière question.
+- Une erreur dans le bloc d'échec n'est pas rattrapée par son propre `Essayer` ; un `Essayer` englobant la rattrape, sinon le programme s'arrête. Les essais s'imbriquent : un échec extérieur annule aussi ce qu'un essai intérieur réussi a gardé.
+- Jamais rattrapées : l'interruption (Ctrl+C), la fin de l'entrée pendant une question, l'absence d'entrée, et une base devenue inutilisable. Rattraper la fin de l'entrée ferait tourner un menu sans fin.
+- `Rendre`, `Sortir de la boucle` et `Passer au tour suivant` quittent le bloc essayé sans échec : ce qu'il a fait est gardé.
+- `Essayer` s'emploie partout, calculs compris : rattraper une erreur ne rend pas un calcul impur. `essayer` ne commence pas le nom d'une action.
+- Limite connue : un `Essayer` répété dans une longue boucle sans question garde au journal une entrée par tour et par nom modifié, jusqu'à la fin de l'exécution.
+- En forme compacte : `_essayer` … `_échec` … `_fin`, et `_motif`.
+
 ---
 
 ## Journal des révisions
@@ -1258,3 +1282,4 @@ Si la réponse en vrai ou faux à « Encore ? », …
 | 1.28 | 2026-09-22 | § 4.1 : le style des nombres se déclare dans le programme ; § 4.2 : largeur (`sur 20`, `à droite`) et `, sans passer à la ligne` ; `sur` réservé |
 | 1.29 | 2026-09-22 | § 4.3 : « Effacer l'écran. », sans effet hors d'un terminal ; `effacer` réservé |
 | 1.30 | 2026-09-22 | En-tête et périmètre remis à jour ; § 13.8 : l'absence de valeur n'est plus à venir |
+| 1.31 | 2026-09-23 | § 18 : reprise après erreur (`Essayer`, `En cas d'échec`, `le motif de l'échec`) ; `essayer` réservé aux constructions |

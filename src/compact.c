@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.30), § 11.
+ * Spécification : docs/grammaire.md (révision 1.31), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE, O_CLASSE, O_INIT } Ouverture;
+typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE, O_CLASSE, O_INIT, O_ESSAI } Ouverture;
 
 typedef struct {
     Ouverture type;
@@ -244,6 +244,14 @@ static void expression(Reecriture *r, size_t d, size_t f) {
         if (est_cle(t, "droite") || est_cle(t, "gauche")) {
             mot(r, "à", t);
             mot(r, est_cle(t, "droite") ? "droite" : "gauche", t);
+            continue;
+        }
+        if (est_cle(t, "motif")) {                  /* _motif → le motif de l'échec (§ 18) */
+            mot(r, "le", t);
+            mot(r, "motif", t);
+            mot(r, "de", t);
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "échec", t);
             continue;
         }
         if (est_cle(t, "réponse")) {                /* _réponse (nombre) « Âge ? » → la réponse en nombre à « Âge ? » */
@@ -713,6 +721,23 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
             return;
         }
+        if (!strcmp(c, "échec")) {   /* _échec → En cas d'échec : (§ 18) */
+            if (!haut || haut->type != O_ESSAI) {
+                echouer(r, t, grym_dupliquer("« _échec » hors d'un « _essayer »."));
+                return;
+            }
+            if (f != d + 1) {
+                echouer(r, &r->e[d + 1], grym_dupliquer("« _échec » s'écrit seul sur sa ligne."));
+                return;
+            }
+            mot(r, "en", t);
+            mot(r, "cas", t);
+            emettre(r, J_ELISION, "d", t, 1);
+            mot(r, "échec", t);
+            fixer_retrait(r, premier, haut->profondeur);
+            emettre(r, J_DEUX_POINTS, NULL, t, 1);
+            return;
+        }
         if (!strcmp(c, "cas") || !strcmp(c, "autrement")) {
             if (!haut || haut->type != O_SELON) {
                 echouer(r, t, grym_formater("« _%s » hors d'un « _selon ».", c));
@@ -753,6 +778,11 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             expression(r, d + 3, f);
             if (avec) { emettre(r, J_DEUX_POINTS, NULL, &r->e[f], 1); fixer_retrait(r, premier, prof); ouvrir(r, O_INIT, prof, t); return; }
             point(r, f);
+        } else if (!strcmp(c, "essayer")) {   /* _essayer → Essayer : (§ 18) */
+            if (d + 1 != f) { echouer(r, t, grym_dupliquer("« _essayer » s'écrit seul sur sa ligne.")); return; }
+            mot(r, "essayer", t);
+            emettre(r, J_DEUX_POINTS, NULL, t, 1);
+            ouvrir(r, O_ESSAI, prof, t);
         } else if (!strcmp(c, "effacer")) {   /* _effacer → Effacer l'écran. */
             if (d + 1 != f) { echouer(r, t, grym_dupliquer("« _effacer » s'écrit seul.")); return; }
             mot(r, "effacer", t);

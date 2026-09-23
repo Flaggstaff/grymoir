@@ -280,6 +280,10 @@ int main(void) {
 
     FIXE("Effacer l'écran.\nAfficher « a ».\n");
     COMP("Effacer l'écran.", "_effacer\n");
+    FIXE("Essayer :\n    Afficher 1.\nEn cas d'échec, afficher le motif de l'échec.\n");
+    FIXE("Essayer :\n    Afficher 1.\nEn cas d'échec :\n    Afficher « a ».\n    Afficher le motif de l'échec.\n");
+    COMP("Essayer :\n    Afficher 1.\nEn cas d'échec, afficher le motif de l'échec.",
+         "_essayer\n    _afficher 1\n_échec\n    _afficher _motif\n_fin\n");
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

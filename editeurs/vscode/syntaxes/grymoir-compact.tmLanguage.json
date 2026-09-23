@@ -31,7 +31,7 @@
     },
     {
       "name": "keyword.control.grymoir",
-      "match": "(?<![\\p{L}\\p{N}])_(si|sinon_si|sinon|alors|fin|tant_que|répéter|fois|pour_chaque|sortir|passer|selon|cas|autrement|rendre)(?![\\p{L}\\p{N}_])"
+      "match": "(?<![\\p{L}\\p{N}])_(si|sinon_si|sinon|alors|fin|tant_que|répéter|fois|pour_chaque|sortir|passer|selon|cas|autrement|rendre|essayer|échec)(?![\\p{L}\\p{N}_])"
     },
     {
       "name": "keyword.other.grymoir",

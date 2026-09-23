@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.20, révisée le 22 septembre 2026.
+Version 1.21, révisée le 23 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -108,7 +108,7 @@ La grammaire exacte de la forme littéraire reste à spécifier. Ces exemples mo
 
 - L'entité est une construction du langage.
 - Moteur : SQLite embarqué, invisible pour le développeur, qui n'écrit jamais de SQL.
-- Chaque exécution forme une transaction implicite : un programme lancé, ou une saisie de la boucle interactive, qui échoue ou qu'on interrompt n'écrit rien, ni en mémoire ni dans la base. Une question posée à l'utilisateur referme cette transaction et en ouvre une autre : ce qu'il a vu confirmé est acquis, et la base n'est pas verrouillée pendant qu'elle attend. Aucune construction ne rattrapant une erreur, une formule qui échoue n'écrit donc rien non plus. Ce qu'elle a affiché reste affiché, suivi d'une phrase qui dit ce qui a été annulé.
+- Chaque exécution forme une transaction implicite : un programme lancé, ou une saisie de la boucle interactive, qui échoue ou qu'on interrompt n'écrit rien, ni en mémoire ni dans la base. Une question posée à l'utilisateur referme cette transaction et en ouvre une autre : ce qu'il a vu confirmé est acquis, et la base n'est pas verrouillée pendant qu'elle attend. Une formule qui échoue n'écrit donc rien non plus. Ce qu'elle a affiché reste affiché, suivi d'une phrase qui dit ce qui a été annulé. Un bloc `Essayer` rattrape l'erreur à sa mesure : il annule tout ce qu'il a fait, depuis son début ou depuis la dernière question, puis exécute son bloc `En cas d'échec` (grammaire, § 18).
 - Migrations de schéma automatiques pour tout ajout ; aucune donnée détruite en silence.
 - Tout nombre est un décimal exact, jamais un flottant, en mémoire comme en base. Un type `montant` (devise, arrondi) n'est pas prévu pour la v0.3.
 - Versions parallèles des données : horizon post-v1.
@@ -119,7 +119,7 @@ La grammaire exacte de la forme littéraire reste à spécifier. Ces exemples mo
 - Le message s'exprime dans la forme du fichier concerné.
 - Correction proposée quand c'est possible (« `soldee` inconnu, vouliez-vous `solde` ? »).
 - Une phrase littéraire hors grammaire produit une erreur qui propose la tournure valide la plus proche.
-- Aucune erreur avalée en silence.
+- Aucune erreur avalée en silence : un `Essayer` exige son bloc `En cas d'échec`, qui reçoit le motif de l'erreur.
 
 ## 9. Aide à la saisie
 
@@ -152,7 +152,7 @@ Horizon post-v1, sans date :
 | v0.2 | Bytecode et VM (remplacent l'évaluateur provisoire de la v0.1), conditions (`Si`, comparaisons, booléens), boucles et `Selon`, forme compacte et `grym traduire` dans les deux sens, forme canonique et `grym formater`, formules, objets, héritage, méthodes, aptitudes, ramasse-miettes | livrée le 21 septembre 2026 |
 | v0.3 | SQLite embarqué, entités conservées (types, unicité, liens, héritage, aptitudes), conserver, modifier, supprimer, retrouver (`dont`, tri, comptage), migrations, transaction par exécution, dates, fichiers et images | livrée le 21 septembre 2026 |
 | v0.4 | Serveur d'aide à la saisie (`grym lsp`, protocole LSP) : erreurs en direct, autocomplétion, mise en forme ; extension VS Code avec coloration des deux formes | livrée le 22 septembre 2026 |
-| v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4) ; reste à écrire une vraie application pour éprouver l'ensemble | en cours |
+| v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4), reprise après erreur (§ 18) ; reste à écrire une vraie application pour éprouver l'ensemble | en cours |
 
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
@@ -193,3 +193,4 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 | 1.18 | 2026-09-22 | Art. 4 : le groupement des chiffres par milliers compte parmi les choix d'écriture conservés (grammaire, § 12) |
 | 1.19 | 2026-09-22 | Art. 7 : une question à l'utilisateur referme la transaction en cours (grammaire, § 17) ; art. 12 : questions à l'utilisateur faites, en route vers la v1.0 |
 | 1.20 | 2026-09-22 | Art. 12 : mise en forme de l'affichage faite (grammaire, § 4) ; la v1.0 attend une application réelle |
+| 1.21 | 2026-09-23 | Art. 7 et 8 : reprise après erreur explicite (`Essayer`, `En cas d'échec`) ; art. 12 : faite, en route vers la v1.0 |

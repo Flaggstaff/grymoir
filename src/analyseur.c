@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.30), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.31), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -360,6 +360,7 @@ typedef struct {
     const char *dont;        /* entité dont une condition « dont » examine les champs (§ 16.4), ou NULL */
     int corbeille;           /* la dernière tournure « … conservé » lue était « … supprimé » (§ 16.12) */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
+    int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
     const char *arrets[3];   /* mots qui peuvent suivre un nom dans le contexte courant (« à », « fois »…) */
     int nb_arrets;
     char **noms_fin;         /* noms visibles au dernier passage à la fin de la source (§ 8) */
@@ -635,6 +636,7 @@ static const char *type_statique(const Noeud *n) {
     case N_FICHIER: return "fichier";
     case N_CADRE: return "texte";
     case N_REPONSE: return n->texte2;
+    case N_MOTIF: return "texte";
     case N_NOUVEAU: return n->texte;
     case N_GROUPE: case N_NEGATION: return type_statique(n->enfants[0]);
     default: return NULL;
@@ -1538,6 +1540,26 @@ static Noeud *base(Analyse *a) {
         n->fin = fin_jeton(t);
         avancer(a);
         return n;
+    }
+    /* « le motif de l'échec », dans un bloc « En cas d'échec » (§ 18) */
+    {
+        size_t m0 = est_mot(t, "le") ? 1 : 0;
+        const Jeton *el = voir(a, (int)m0 + 2);
+        if (est_mot(voir(a, (int)m0), "motif") && est_mot(voir(a, (int)m0 + 1), "de") && el->type == J_ELISION
+            && strcmp(el->valeur, "l") == 0 && est_mot(voir(a, (int)m0 + 3), "échec")) {
+            Genre g;
+            if (a->motif >= 0) {
+                a->article_force = ART_AUCUN;
+                Noeud *n = noeud_creer(N_MOTIF, t->ligne, t->colonne, t->debut);
+                n->local = a->motif;
+                n->fin = fin_jeton(voir(a, (int)m0 + 3));
+                for (size_t k = 0; k < m0 + 4; k++) avancer(a);
+                return n;
+            }
+            if (!visible(a, "motif") && !champ_connu(a->portee, "motif", &g))
+                return erreur(a, t, grym_dupliquer("« le motif de l'échec » ne s'emploie que dans un bloc "
+                                                   "« En cas d'échec »."));
+        }
     }
     /* « la réponse à « Votre nom ? » », « la réponse en nombre à (question) » (§ 17) */
     {
@@ -2552,6 +2574,46 @@ static Noeud *si(Analyse *a, int colonne, int sinon_si) {
     }
     noeud_ajouter(n, autre);
     n->fin = autre->fin;
+    return n;
+}
+
+/* « En cas d'échec » à la position k ? */
+static int en_cas_d_echec(Analyse *a, size_t k) {
+    const Jeton *d = &a->j[k + 2 < a->n ? k + 2 : a->n - 1];
+    return est_mot(&a->j[k], "en") && k + 3 < a->n && est_mot(&a->j[k + 1], "cas") && d->type == J_ELISION
+        && strcmp(d->valeur, "d") == 0 && est_mot(&a->j[k + 3], "échec");
+}
+
+/* essayer = "Essayer" ":" bloc-indenté "En" "cas" "d'" "échec" branche (§ 18) */
+static Noeud *essayer(Analyse *a, int colonne) {
+    Jeton *t = cour(a);
+    avancer(a);
+    if (cour(a)->type != J_DEUX_POINTS)
+        return erreur(a, cour(a), grym_dupliquer("« Essayer » ouvre un bloc : écrivez « Essayer : », puis les "
+                                                 "phrases à essayer sur les lignes suivantes, indentées."));
+    int forme = 0;
+    Noeud *corps = branche(a, colonne, "Essayer", &forme);
+    if (!corps) return NULL;
+    Jeton *e = cour(a);
+    if (!en_cas_d_echec(a, a->i) || !premier_de_ligne(a, a->i) || e->retrait != colonne) {
+        noeud_liberer(corps);
+        return erreur(a, e->type == J_FIN ? t : e, grym_dupliquer(
+            "« Essayer » attend son « En cas d'échec », aligné sur lui : une erreur ne passe jamais sous silence."));
+    }
+    a->i += 4;
+    int motif = a->nb_locaux++;
+    int englobant = a->motif;
+    a->motif = motif;
+    int forme_echec = 0;
+    Noeud *echec = branche(a, colonne, "En cas d'échec", &forme_echec);
+    a->motif = englobant;
+    if (!echec) { noeud_liberer(corps); return NULL; }
+    Noeud *n = noeud_creer(P_ESSAYER, t->ligne, t->colonne, t->debut);
+    n->forme = forme_echec;
+    n->entier = motif;
+    noeud_ajouter(n, corps);
+    noeud_ajouter(n, echec);
+    n->fin = echec->fin;
     return n;
 }
 
@@ -3989,7 +4051,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
 /* Mots qui commencent une construction et ne peuvent donc pas commencer le nom d'une action. */
 static int mot_de_construction(const Jeton *t) {
     static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
-                                     "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer", "effacer",
+                                     "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer", "effacer", "essayer",
                                      "conserver", "supprimer", "rétablir" };
     for (size_t k = 0; k < sizeof M / sizeof *M; k++) if (est_mot(t, M[k])) return 1;
     return 0;
@@ -4164,6 +4226,10 @@ static Noeud *phrase(Analyse *a, int colonne) {
         return n;
     }
     if (est_mot(t, "si")) return si(a, colonne, 0);
+    if (est_mot(t, "essayer")) return essayer(a, colonne);
+    if (en_cas_d_echec(a, a->i))
+        return erreur(a, t, grym_dupliquer("« En cas d'échec » sans « Essayer » correspondant : il s'aligne sur "
+                                           "son « Essayer », juste après le bloc essayé."));
     if (est_mot(t, "tant") && est_mot(voir(a, 1), "que")) return tant_que(a, colonne);
     if (est_mot(t, "répéter")) return repeter(a, colonne);
     if (est_mot(t, "pour") && est_mot(voir(a, 1), "chaque")) return pour_chaque(a, colonne);
@@ -4439,6 +4505,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.sortes_fin = NULL;
     a.nb_noms_fin = 0;
     a.boucle = 0;
+    a.motif = -1;
     a.nb_arrets = 0;
     a.a_completer = NULL;
     a.dont = NULL;
@@ -4594,6 +4661,7 @@ Suggestions suites_valides(const char *source, size_t taille) {
             proposer(&r, "Répéter", pre, lp, 0);
             proposer(&r, "Pour chaque", pre, lp, 0);
             proposer(&r, "Selon", pre, lp, 0);
+            proposer(&r, "Essayer", pre, lp, 0);
             proposer(&r, "Pour", pre, lp, 0);
             proposer(&r, "Remarque :", pre, lp, 0);
             for (size_t k = 0; k < c.nb_noms; k++)
