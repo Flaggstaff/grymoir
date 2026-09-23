@@ -1,5 +1,5 @@
 /* GrymoiR : arbre syntaxique, v0.1
- * Spécification : docs/grammaire.md (révision 1.25), § 6.
+ * Spécification : docs/grammaire.md (révision 1.26), § 6.
  * Chaque nœud garde sa position dans la source (debut, fin), pour les
  * messages d'erreur et, en v0.2, pour la traduction sans perte.
  */
@@ -56,7 +56,8 @@ typedef enum {
     P_TANT_QUE,      /* enfants[0] : condition ; enfants[1] : N_BLOC */
     P_REPETER,       /* enfants[0] : nombre de tours ; enfants[1] : N_BLOC ; entier : case du compte à rebours */
     P_POUR_CHAQUE,   /* texte : compteur (case `local`) ; enfants : début, fin, [pas], N_BLOC ;
-                        forme 1 : pas écrit ; entier : case de la fin, entier + 1 : case du pas */
+                        forme 1 : pas écrit ; forme 2 et 4 : « du » et « au » écrits devant une valeur
+                        sans article ; entier : case de la fin, entier + 1 : case du pas */
     P_SORTIR,        /* « Sortir de la boucle. » */
     P_PASSER,        /* « Passer au tour suivant. » */
     P_SELON,         /* enfants[0] : sujet ; puis les N_CAS ; entier : case du sujet */

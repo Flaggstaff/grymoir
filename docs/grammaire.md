@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR, v0.1
 
-Version 1.25 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
+Version 1.26 de la spécification, révisée le 22 septembre 2026. Les § 14 à 16 sont implémentés.
 Référence : Charte de GrymoiR v1.7, art. 4, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -535,6 +535,7 @@ Pour chaque taux de 0 à 1 par pas de 0,25, afficher taux.
 ```
 
 - Les deux bornes sont incluses. Début, fin et pas se calculent une fois, avant le premier tour.
+- `du` et `au` s'écrivent devant une borne sans article (`du 05.10.2026 au 02.11.2026`) ; la forme canonique les conserve, comme toute contraction (§ 12).
 - Sans pas écrit, le sens est automatique : `+1` si le début est inférieur ou égal à la fin, `−1` sinon. `de 10 à 1` compte à rebours.
 - Avec un pas écrit, la boucle avance du pas tant que le compteur ne dépasse pas la fin, dans le sens du pas. Un pas qui s'éloigne de la fin donne zéro tour.
 - Les pas décimaux sont exacts : `de 0 à 1 par pas de 0,1` fait exactement 11 tours. Les valeurs gardent les décimales du pas (§ 3.2) : `0`, `0,25`, `0,50`.
@@ -1202,3 +1203,4 @@ Pour chaque œuvre conservée dont callas est parmi les interprètes :
 | 1.23 | 2026-09-22 | § 16.13 : plusieurs vers plusieurs (`des genres (genre)`, `gagnent`, `perdent`, `Pour chaque interprète de o`, `le nombre de … de …`, `dont … est parmi les …`) ; relation inverse étendue aux champs multiples ; EBNF et messages |
 | 1.24 | 2026-09-22 | § 14.5 : années (type `(année)`, valeur à part entière, sans littéral, `l'année de d`, calculs, comparaisons, boucles, base, migrations) ; une entité ne porte pas un nom de type |
 | 1.25 | 2026-09-22 | § 1.2 et § 12 : grouper les chiffres par milliers est un choix d'écriture conservé ; la forme canonique n'en normalise que le style (apostrophe) |
+| 1.26 | 2026-09-22 | § 10.3 et § 12 : « du … au … » de `Pour chaque` conservé par la forme canonique, même devant une valeur sans article |

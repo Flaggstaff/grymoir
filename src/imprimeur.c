@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.25), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.26), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -834,15 +834,17 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             expression(im, n->enfants[0]);
             aj(im, " _à ");
             expression(im, n->enfants[1]);
-            if (n->forme) { aj(im, " _pas "); expression(im, n->enfants[2]); }
+            if (n->forme & 1) { aj(im, " _pas "); expression(im, n->enfants[2]); }
         } else {
             aj(im, "Pour chaque ");
             ecrire_nom(im, n->texte, 0);
             aj(im, " ");
-            preposition(im, "de", n->enfants[0]);
+            if (n->forme & 2) { aj(im, "du "); expression(im, n->enfants[0]); }   /* contraction écrite (§ 12) */
+            else preposition(im, "de", n->enfants[0]);
             aj(im, " ");
-            preposition(im, "à", n->enfants[1]);
-            if (n->forme) { aj(im, " par pas "); preposition(im, "de", n->enfants[2]); }
+            if (n->forme & 4) { aj(im, "au "); expression(im, n->enfants[1]); }
+            else preposition(im, "à", n->enfants[1]);
+            if (n->forme & 1) { aj(im, " par pas "); preposition(im, "de", n->enfants[2]); }
         }
         retenir(im, n->texte, G_LIBRE);
         const Noeud *corps = n->enfants[n->nb_enfants - 1];

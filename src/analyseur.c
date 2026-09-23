@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.25), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.26), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -3019,7 +3019,9 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
     a->i = k;
     attendre_mot(a, a->i, "de", 2);
     attendre_mot(a, a->i, "du", 2);
+    int contracte = 0;   /* « du 05.10.2026 au 02.11.2026 » : contraction sans article à porter (§ 12) */
     if (est_mot(cour(a), "du")) {             /* « du début » : de + le */
+        contracte |= 2;
         a->article_force = ART_LE;
         a->jeton_force = cour(a);
     } else if (!de_ou_d(cour(a))) {
@@ -3029,11 +3031,14 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
     avancer(a);
     Noeud *debut = expression_avant(a, "à", "au");
     a->article_force = ART_AUCUN;
+    if (debut && debut->article != ART_AUCUN) contracte &= ~2;   /* l'article du nom porte déjà la contraction */
     Noeud *fin = NULL, *pas = NULL;
+    if (debut && est_mot(cour(a), "au")) contracte |= 4;
     if (debut && complement(a, 'a')) {
         fin = expression_avant(a, "par", NULL);
         a->article_force = ART_AUCUN;
     }
+    if (fin && fin->article != ART_AUCUN) contracte &= ~4;
     if (fin) {
         attendre_mot(a, a->i, "par pas de", 10);
         if (est_mot(cour(a), "par")) {
@@ -3071,7 +3076,7 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
     n->texte = nom;
     n->local = case_compteur;
     n->entier = case_fin;
-    n->forme = pas ? 1 : 0;
+    n->forme = (pas ? 1 : 0) | contracte;
     noeud_ajouter(n, debut);
     noeud_ajouter(n, fin);
     if (pas) noeud_ajouter(n, pas);

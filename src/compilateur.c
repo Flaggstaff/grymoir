@@ -487,7 +487,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_ECRIRE_LOCAL, i, l, col);
         expression(c, ph->enfants[1]);
         emettre(c, I_ECRIRE_LOCAL, f, l, col);
-        if (ph->forme) {
+        if (ph->forme & 1) {
             expression(c, ph->enfants[2]);
         } else {
             /* sens automatique : +1 si début ≤ fin, sinon −1 */

@@ -259,6 +259,13 @@ int main(void) {
     COMP("Le x vaut 1747 + 1'000.", "_le x << 1747 + 1'000\n");
     FIXE("Le x vaut 1747.\nLe y vaut 1'000.\n");
 
+    /* --- Contraction « du … au … » dans Pour chaque (§ 12) --- */
+    FIXE("Pour chaque jour du 05.10.2026 au 02.11.2026 par pas de 7, afficher jour.\n");
+    FIXE("Le début vaut 1.\nLa fin vaut 9.\nPour chaque i du début à la fin, afficher i.\n");
+    LITT("Pour chaque mois de 1 à 12, afficher mois.", "Pour chaque mois de 1 à 12, afficher mois.\n");
+    COMP("Pour chaque jour du 05.10.2026 au 02.11.2026, afficher jour.",
+         "_pour_chaque jour _de 05.10.2026 _à 02.11.2026\n    _afficher jour\n_fin\n");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }
