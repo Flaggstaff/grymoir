@@ -1367,7 +1367,8 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
                     if (x) { v = vi_objet(x); pris = 1; }
                     else relance = erreur;
                 } else {
-                    relance = grym_formater("Aucun %s conservé n'a « %s » pour %s.", lie->nom, t, cle);
+                    relance = lie->feminin ? grym_formater("Aucune %s conservée n'a « %s » pour %s.", lie->nom, t, cle)
+                                           : grym_formater("Aucun %s conservé n'a « %s » pour %s.", lie->nom, t, cle);
                 }
                 valeur_liberer(&l);
                 valeur_liberer(&cherche);

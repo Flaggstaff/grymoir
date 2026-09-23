@@ -1,0 +1,133 @@
+Remarque : Partothèque, une bibliothèque de partitions en console (charte, art. 12, v1.0).
+Remarque : chaque entité qu'un formulaire doit désigner porte un champ texte unique (grammaire, § 19).
+
+Un genre, conservé, a :
+    un nom (texte), unique.
+Un compositeur, conservé, a :
+    un nom (texte), unique,
+    une naissance (date), facultative.
+Une œuvre, conservée, a :
+    un catalogue (texte), unique,
+    un titre (texte),
+    un compositeur (compositeur),
+    une année (année), facultative,
+    des genres (genre).
+Un instrument, conservé, a :
+    un nom (texte), unique.
+Une partition, conservée, a :
+    une cote (texte), unique,
+    une œuvre (œuvre),
+    un éditeur (texte),
+    un arrangeur (compositeur), facultatif.
+Un pupitre, conservé, a :
+    une partition (partition), et disparaît avec elle,
+    un instrument (instrument),
+    un nombre de parties (nombre entier), 1 au départ.
+
+Pour recruter :
+    Le c vaut un nouveau compositeur saisi.
+    Conserver c.
+    Afficher « Compositeur ajouté : » puis nom du c.
+
+Pour classer une œuvre :
+    Remarque : un genre inconnu est créé au passage ; une ligne vide termine.
+    Le libellé vaut la réponse à « Genre (vide pour finir) ? ».
+    Tant que libellé ≠ « » :
+        Si le nombre de genres conservés dont le nom est libellé = 0 :
+            Le g vaut un nouveau genre :
+                Le nom vaut libellé.
+            Conserver g.
+        Le g vaut le genre conservé dont le nom est libellé.
+        Les genres de l'œuvre gagnent g.
+        Le libellé devient la réponse à « Genre (vide pour finir) ? ».
+
+Pour cataloguer :
+    L'o vaut une nouvelle œuvre saisie.
+    Conserver o.
+    Classer o.
+    Afficher « Œuvre ajoutée : » puis titre de l'o.
+
+Pour déposer :
+    La p vaut une nouvelle partition saisie.
+    Conserver p.
+    Le libellé vaut la réponse à « Instrument (vide pour finir) ? ».
+    Tant que libellé ≠ « » :
+        Si le nombre d'instruments conservés dont le nom est libellé = 0 :
+            L'i vaut un nouvel instrument :
+                Le nom vaut libellé.
+            Conserver i.
+        Le v vaut un nouveau pupitre saisi :
+            La partition vaut p.
+            L'instrument vaut l'instrument conservé dont le nom est libellé.
+        Conserver v.
+        Le libellé devient la réponse à « Instrument (vide pour finir) ? ».
+    Afficher « Partition ajoutée : » puis cote de la p.
+
+Pour montrer une œuvre :
+    Afficher catalogue de l'œuvre sur 12 puis titre de l'œuvre sur 30 puis nom du compositeur de l'œuvre, sans passer à la ligne.
+    Si l'année de l'œuvre est présente :
+        Afficher " (", sans passer à la ligne.
+        Afficher année de l'œuvre, sans passer à la ligne.
+        Afficher « ) ».
+    Sinon, afficher « ».
+    Pour chaque genre de l'œuvre, par nom, afficher « · » puis nom du genre.
+
+Pour lister :
+    Afficher le nombre d'œuvres conservées puis « œuvre(s) : ».
+    Pour chaque œuvre conservée, par titre, montrer œuvre.
+
+Pour chercher :
+    Le libellé vaut la réponse à « Compositeur ? ».
+    Le c vaut le compositeur conservé dont le nom est libellé.
+    Afficher le nombre d'œuvres de c puis « œuvre(s) de » puis nom du c.
+    Pour chaque œuvre de c, par titre, montrer œuvre.
+    Pour chaque partition conservée dont l'arrangeur est c :
+        Afficher « arrangement : » puis cote de la partition puis titre de l'œuvre de la partition.
+
+Pour détailler :
+    La référence vaut la réponse à « Cote ? ».
+    La p vaut la partition conservée dont la cote est référence.
+    Afficher titre de l'œuvre de la p puis « chez » puis éditeur de la p.
+    Pour chaque pupitre de la p, par nombre de parties décroissant :
+        Afficher « - » puis nom de l'instrument du pupitre puis « × » puis nombre de parties du pupitre.
+
+Pour retirer :
+    La référence vaut la réponse à « Cote de la partition à retirer ? ».
+    La p vaut la partition conservée dont la cote est référence.
+    Supprimer p.
+    Afficher « Dans la corbeille : » puis cote de la p.
+
+Pour vider :
+    Afficher le nombre de partitions supprimées puis « partition(s) dans la corbeille. ».
+    Pour chaque partition supprimée, par cote :
+        Afficher cote de la partition puis titre de l'œuvre de la partition.
+    Si le nombre de partitions supprimées > 0 :
+        La référence vaut la réponse à « Cote à rétablir (vide : aucune) ? ».
+        Si référence ≠ « » :
+            La p vaut la partition supprimée dont la cote est référence.
+            Rétablir p.
+            Afficher « Rétablie : » puis cote de la p.
+
+Pour présenter le menu :
+    Afficher « ».
+    Afficher « 1 compositeur   2 œuvre   3 partition   4 catalogue   5 par compositeur ».
+    Afficher « 6 détail        7 retirer 8 corbeille   0 quitter ».
+
+Présenter le menu.
+Le choix vaut la réponse en nombre entier à « Choix ? ».
+Tant que choix ≠ 0 :
+    Essayer :
+        Selon choix :
+            Cas 1, recruter.
+            Cas 2, cataloguer.
+            Cas 3, déposer.
+            Cas 4, lister.
+            Cas 5, chercher.
+            Cas 6, détailler.
+            Cas 7, retirer.
+            Cas 8, vider.
+            Autrement, afficher « Choix inconnu. ».
+    En cas d'échec, afficher « Rien n'a changé : » puis le motif de l'échec.
+    Présenter le menu.
+    Le choix devient la réponse en nombre entier à « Choix ? ».
+Afficher « Au revoir. ».

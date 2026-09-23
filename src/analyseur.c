@@ -1276,6 +1276,16 @@ static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
             return verifier_type(a, champ->texte, t, n->enfants[1]);
         }
     }
+    if (n->type == N_COMPARAISON && n->nb_enfants == 2 && n->enfants[1]->type == N_CHAMP_DONT
+        && visible(a, n->enfants[1]->texte)) {
+        /* « dont le nom est nom » : la variable porte le nom d'un champ, qui l'emporte */
+        const char *x = n->enfants[1]->texte;
+        erreur_a(a, n->enfants[1]->ligne, n->enfants[1]->colonne, grym_formater(
+            "« %s » est aussi un champ %s%s : dans une condition « dont », il désigne le champ de l'objet "
+            "examiné, pas la variable « %s ». Renommez la variable.", x,
+            voyelle_initiale(e->nom) ? "de l'" : e->genre == GENRE_FEMININ ? "de la " : "du ", e->nom, x));
+        return 0;
+    }
     erreur_a(a, n->ligne, n->colonne, grym_formater(
         "Une condition « dont » compare un champ %s%s à une valeur : « dont le solde est négatif ».",
         voyelle_initiale(e->nom) ? "de l'" : e->genre == GENRE_FEMININ ? "de la " : "du ", e->nom));

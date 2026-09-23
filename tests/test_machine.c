@@ -1673,6 +1673,45 @@ int main(void) {
     PROG(FC "Le double d'un x :\n    Le c vaut un nouveau compositeur saisi.\n    Rendre x.", "~Un calcul ne pose pas de question");
     SAISIE_INTER(FC "Le c vaut un nouveau compositeur saisi.", "~pas dans la boucle interactive");
 
+    /* retours de la Partothèque (exemples/partotheque.grym) */
+    SAISIE(FC FP "Le p vaut une nouvelle partition saisie :\n    Le titre vaut « T ».\n    La cote vaut « C ».\n"
+           "Une pièce, conservée, a : une cote (texte), unique, une partition (partition).\n"
+           "Conserver p.\nLe q vaut une nouvelle pièce saisie.",
+           "~Partition ? Aucune partition conservée n'a « Z » pour cote.\nPartition ? ",
+           "Bach", "", "", "", "1", "oui", "K", "Z", "C");
+    PROG("Un genre, conservé, a : un nom (texte), unique.\nPour f :\n    Le nom vaut « x ».\n"
+         "    Afficher le nombre de genres conservés dont le nom est nom.\nF.",
+         "~« nom » est aussi un champ du genre : dans une condition « dont », il désigne le champ de l'objet examiné");
+    {   /* l'application d'exemple, d'un bout à l'autre */
+        FILE *f = fopen("exemples/partotheque.grym", "rb");
+        char *src = NULL;
+        if (f) {
+            fseek(f, 0, SEEK_END);
+            long n = ftell(f);
+            fseek(f, 0, SEEK_SET);
+            src = grym_allouer((size_t)n + 1);
+            src[fread(src, 1, (size_t)n, f)] = '\0';
+            fclose(f);
+        }
+        static const char *const L[] = { "1", "Johann Sebastian Bach", "", "2", "BWV 1079", "L'Offrande musicale",
+                                         "Johann Sebastian Bach", "1747", "canon", "baroque", "", "3", "P-1", "BWV 1079",
+                                         "Bärenreiter", "", "violon", "2", "", "7", "P-9", "4", "6", "P-1", "0" };
+        total++;
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        Script sc = { L, sizeof L / sizeof *L, 0 };
+        machine_lecteur(m, reponses, &sc);
+        char *r = src ? executer_source(p, m, src, 0) : grym_dupliquer("exemples/partotheque.grym introuvable");
+        if (!strstr(r, "BWV 1079     L'Offrande musicale            Johann Sebastian Bach (1747)\n· baroque\n· canon")
+            || !strstr(r, "Rien n'a changé : Aucune partition conservée ne répond à cette condition.")
+            || !strstr(r, "- violon × 2") || !strstr(r, "Au revoir."))
+            signaler(__LINE__, "exemples/partotheque.grym", "séance complète", r);
+        free(r);
+        free(src);
+        machine_detruire(m);
+        portee_detruire(p);
+    }
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }
