@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.31), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.32), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -528,12 +528,14 @@ static void expression(Impression *im, const Noeud *n) {
         if (im->compact) {
             aj(im, "_nouveau ");
             ecrire_nom(im, n->texte, 0);
+            if (n->op == 'S') aj(im, " _saisi");
             if (n->forme) aj(im, " _avec");
             return;
         }
         Genre g = genre_de_nom(im, n->texte);
         aj(im, g == G_FEMININ ? "une nouvelle " : voyelle(n->texte) ? "un nouvel " : "un nouveau ");
         ecrire_nom(im, n->texte, 0);
+        if (n->op == 'S') aj(im, g == G_FEMININ ? " saisie" : " saisi");
         return;
     }
     default:

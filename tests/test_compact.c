@@ -236,6 +236,10 @@ int main(void) {
                  "Essayer :\n    Afficher 1 ÷ 0.\nEn cas d'échec :\n    Afficher « x » puis le motif de l'échec.\n");
     ALLER_RETOUR("_essayer\n    _essayer\n        _afficher 1\n    _échec\n        _afficher _motif\n    _fin\n_échec\n"
                  "    _afficher _motif\n_fin\n", NULL);
+    ALLER_RETOUR("_classe _une fiche _conservé\n    _un nom (texte)\n_fin\n_action f()\n    _le a << _nouveau fiche _saisi\n"
+                 "    _le b << _nouveau fiche _saisi _avec\n        nom << « x »\n    _fin\n_fin\n",
+                 "Une fiche, conservée, a :\n    un nom (texte).\nPour f :\n    Le a vaut une nouvelle fiche saisie.\n"
+                 "    Le b vaut une nouvelle fiche saisie :\n        Le nom vaut « x ».\n");
 
     /* --- Erreurs, aux positions du fichier compact --- */
     ERR("_le x << 1\n_afficher y\n", 2, 11, "« y » inconnu.");

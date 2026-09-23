@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.31), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.32), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -1472,6 +1472,31 @@ static Noeud *nouveau(Analyse *a) {
     Noeud *n = noeud_creer(N_NOUVEAU, tun->ligne, tun->colonne, tun->debut);
     n->texte = grym_dupliquer(c->nom);
     a->i = a->j[d].type == J_CROCHETS ? d + 1 : f;
+    Jeton *ts = cour(a);
+    if (est_mot(ts, "saisi") || est_mot(ts, "saisie")) {
+        /* « un nouveau client saisi » : un formulaire le remplit (§ 19) */
+        const char *juste = c->genre == GENRE_FEMININ ? "saisie" : "saisi";
+        if (!ts->synthetique && !est_mot(ts, juste)) {
+            noeud_liberer(n);
+            return erreur(a, ts, grym_formater("Accord : « %s ».", juste));
+        }
+        if (!c->conserve) {
+            noeud_liberer(n);
+            return erreur(a, ts, grym_formater("« %s » n'est pas une entité : seul un objet conservable se saisit, "
+                                               "car ses champs ont un type.", c->nom));
+        }
+        if (a->formule == 1) {
+            noeud_liberer(n);
+            return erreur(a, ts, grym_dupliquer("Un calcul ne pose pas de question : demandez dans une action."));
+        }
+        if (a->interactif) {
+            noeud_liberer(n);
+            return erreur(a, ts, grym_dupliquer("La question se pose dans un programme lancé, "
+                                                "pas dans la boucle interactive."));
+        }
+        n->op = 'S';
+        avancer(a);
+    }
     n->fin = fin_jeton(&a->j[a->i - 1]);
     return n;
 }

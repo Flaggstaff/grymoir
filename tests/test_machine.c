@@ -1617,6 +1617,62 @@ int main(void) {
         remove("_essai_essq.grymd");
     }
 
+    /* --- Formulaire : « un nouveau … saisi » (§ 19) --- */
+#define FC "Un compositeur, conservé, a : un nom (texte), unique.\n" \
+           "Le b vaut un nouveau compositeur :\n    Le nom vaut « Bach ».\nConserver b.\n"
+#define FP "Une partition, conservée, a : un titre (texte), une cote (texte), unique, un compositeur (compositeur), " \
+           "un arrangeur (compositeur), facultatif, une édition (date), facultative, un prix (nombre), 20 au départ, " \
+           "une création (année), un actif (vrai ou faux).\n"
+#define FA "Afficher titre de p puis cote de p puis nom du compositeur de p puis arrangeur de p puis édition de p " \
+           "puis prix de p puis création de p puis actif de p."
+    SAISIE(FC FP "Le p vaut une nouvelle partition saisie.\nConserver p.\n" FA,
+           "Titre ? Cote ? Compositeur ? Arrangeur ? Édition ? Prix [20] ? Création ? Actif ? "
+           "Toccata A-1 Bach absent absent 20 1705 vrai",
+           "Toccata", "A-1", "Bach", "", "", "", "1705", "oui");
+    /* relances : vide obligatoire, lien introuvable, type, puis valeurs */
+    SAISIE(FC FP "Le p vaut une nouvelle partition saisie.\n" FA,
+           "Titre ? Une réponse est attendue.\nTitre ? Cote ? Compositeur ? Aucun compositeur conservé n'a « Brahms » pour nom.\n"
+           "Compositeur ? Arrangeur ? Édition ? « 1.2.3 » n'est pas une date : écrivez jour.mois.année (21.09.2026).\n"
+           "Édition ? Prix [20] ? Création ? Actif ? T C Bach un compositeur 01.02.1900 12,5 1720 faux",
+           "", "T", "C", "Brahms", "Bach", "Bach", "1.2.3", "01.02.1900", "12,5", "1720", "non");
+    /* unique : refusé dès la réponse, même pour un objet de la corbeille */
+    SAISIE(FC FP "Le a vaut une nouvelle partition saisie.\nConserver a.\nSupprimer a.\n"
+           "Le p vaut une nouvelle partition saisie.\nAfficher cote de p.",
+           "~Cote ? « A-1 » est déjà pris.\nCote ? Compositeur ",
+           "x", "A-1", "Bach", "", "", "", "1", "oui", "y", "A-1", "B-2", "Bach", "", "", "", "1", "oui");
+    /* les champs du bloc ne sont pas demandés */
+    SAISIE(FC FP "Le p vaut une nouvelle partition saisie :\n    Le titre vaut « Messe ».\n    Le compositeur vaut b.\n"
+           "Afficher titre de p puis nom du compositeur de p.",
+           "Cote ? Arrangeur ? Édition ? Prix [20] ? Création ? Actif ? Messe Bach", "M", "", "", "", "1", "non");
+    /* un lien sans champ texte unique ne se demande pas */
+    SAISIE("Une ville, conservée, a : un nom (texte).\nUn club, conservé, a : un nom (texte), une ville (ville).\n"
+           "Le c vaut un nouveau club saisi.", "~« ville » n'a aucun champ texte unique", "Club");
+    SAISIE("Une ville, conservée, a : un nom (texte).\nUn club, conservé, a : un nom (texte), une ville (ville), facultative.\n"
+           "Le c vaut un nouveau club saisi.\nAfficher nom du c puis ville du c.", "Nom ? Club absent", "Club");
+    /* fichier : un chemin ; une image refuse ce qui n'en est pas une */
+    {
+        creer_fichier("_essai_form.txt", "abc", 3);
+        SAISIE("Un document, conservé, a : un contenu (fichier), une vignette (image), facultative.\n"
+               "Le d vaut un nouveau document saisi.\nAfficher taille du contenu du d.",
+               "Contenu ? Fichier « _absent.txt » introuvable ou illisible.\nContenu ? Vignette ? "
+               "« _essai_form.txt » n'est pas une image (PNG, JPEG, GIF ou WebP).\nVignette ? 3",
+               "_absent.txt", "_essai_form.txt", "_essai_form.txt", "");
+        remove("_essai_form.txt");
+    }
+    /* héritage : les champs hérités d'abord ; le formulaire s'arrête avec l'entrée */
+    SAISIE("Une personne, conservée, a : un nom (texte).\nUn membre, conservé, est une personne.\nUn membre a : une licence (texte).\n"
+           "Le m vaut un nouveau membre saisi.\nAfficher nom du m puis licence du m.", "Nom ? Licence ? Ana L-1", "Ana", "L-1");
+    SAISIE(FC FP "Le p vaut une nouvelle partition saisie.", "~Plus rien à lire : la réponse à « Cote ? » manque.", "T");
+    /* dans un essai : un échec à la conservation reprend le menu */
+    SAISIE(FC ESS("    Le c vaut un nouveau compositeur saisi.\n    Conserver c.\n    Afficher 1 ÷ 0.\n",
+                  "    Afficher le motif de l'échec.\n") "Afficher le nombre de compositeurs conservés.",
+           "Nom ? Division par zéro.\n1", "Liszt");
+    /* analyse */
+    PROG("Un point a : un x.\nLe p vaut un nouveau point saisi.", "~« point » n'est pas une entité");
+    PROG(FC FP "Le p vaut une nouvelle partition saisi.", "~Accord : « saisie ».");
+    PROG(FC "Le double d'un x :\n    Le c vaut un nouveau compositeur saisi.\n    Rendre x.", "~Un calcul ne pose pas de question");
+    SAISIE_INTER(FC "Le c vaut un nouveau compositeur saisi.", "~pas dans la boucle interactive");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

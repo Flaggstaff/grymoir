@@ -216,6 +216,18 @@ static void expression(Compilation *c, const Noeud *n) {
             if (ch < 0) { trop_grand(c, n); return; }
             emettre(c, I_INITIALISER_CHAMP, ch, init->ligne, init->colonne);
         }
+        if (n->op == 'S') {   /* « saisi » : les champs du bloc ne sont pas demandés (§ 19) */
+            Chaine deja = {0};
+            for (size_t q = 0; q < n->nb_enfants; q++) {
+                if (q) chaine_ajouter(&deja, ", ");
+                chaine_ajouter(&deja, n->enfants[q]->texte);
+            }
+            char *t = chaine_rendre(&deja);
+            long k2 = bloc_constante(c->b, C_TEXTE, t);
+            free(t);
+            if (k2 < 0) { trop_grand(c, n); return; }
+            emettre(c, I_SAISIR, k2, n->ligne, n->colonne);
+        }
         return;
     }
     case N_DATE: {

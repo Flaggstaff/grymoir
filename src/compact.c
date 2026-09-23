@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.31), § 11.
+ * Spécification : docs/grammaire.md (révision 1.32), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -291,6 +291,10 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "nouveau", t);
             copier(r, &r->e[k + 1]);
             k++;
+            if (k + 1 < f && est_cle(&r->e[k + 1], "saisi")) {   /* _saisi → saisi (accord non vérifié, § 19) */
+                mot(r, "saisi", &r->e[k + 1]);
+                k++;
+            }
             continue;
         }
         if (t->type == J_CROCHETS && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
@@ -601,8 +605,10 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         return;
     }
     /* « … << _nouveau client _avec » : le bloc qui suit initialise l'objet (§ 13.2) */
-    int avec = r->e[f - 1].type == J_MOT_CLE && f >= d + 3 && est_cle(&r->e[f - 1], "avec") && r->e[f - 2].type == J_CROCHETS
-               && est_cle(&r->e[f - 3], "nouveau");
+    int avec = r->e[f - 1].type == J_MOT_CLE && f >= d + 3 && est_cle(&r->e[f - 1], "avec")
+               && ((r->e[f - 2].type == J_CROCHETS && est_cle(&r->e[f - 3], "nouveau"))
+                   || (f >= d + 4 && est_cle(&r->e[f - 2], "saisi") && r->e[f - 3].type == J_CROCHETS
+                       && est_cle(&r->e[f - 4], "nouveau")));
     if (avec) f--;
     if (t->type == J_MOT_CLE && !strcmp(t->valeur, "aptitude")) {
         /* _aptitude horodatée [(horodaté)] → Une chose horodatée a : */

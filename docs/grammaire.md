@@ -1,10 +1,10 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.31 de la spécification, révisée le 23 septembre 2026. Tout ce qui suit est implémenté.
-Référence : Charte de GrymoiR v1.21, art. 4, 5, 7, 8, 9 et 12.
+Version 1.32 de la spécification, révisée le 23 septembre 2026. Tout ce qui suit est implémenté.
+Référence : Charte de GrymoiR v1.22, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
-Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4), décider (§ 5), le calcul des suites attendues (§ 8), les formules (§ 9), répéter (§ 10), la forme compacte (§ 11), la forme canonique (§ 12), les objets (§ 13), les dates et les années (§ 14), les fichiers et les images (§ 15), les entités conservées (§ 16) les questions à l'utilisateur (§ 17) et la reprise après erreur (§ 18). Ce que le langage ne sait pas encore faire est listé dans la charte, art. 11 et 12.
+Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4), décider (§ 5), le calcul des suites attendues (§ 8), les formules (§ 9), répéter (§ 10), la forme compacte (§ 11), la forme canonique (§ 12), les objets (§ 13), les dates et les années (§ 14), les fichiers et les images (§ 15), les entités conservées (§ 16) les questions à l'utilisateur (§ 17), la reprise après erreur (§ 18) et le formulaire (§ 19). Ce que le langage ne sait pas encore faire est listé dans la charte, art. 11 et 12.
 
 ---
 
@@ -356,7 +356,7 @@ enregistrer  = "Enregistrer" expression "dans" valeur "." ;
 gagner       = "Les" nom de base ( "gagnent" | "perdent" ) expression "." ;   (* nom : un champ multiple, § 16.13 *)
 multiple     = "des" nom [ "(" nom ")" ] "(" nom ")" ;                          (* dans une entité : singulier, type *)
              | [ article ] ( nom | "[" nom "]" ) [ arguments ] | "(" expression ")" ;
-nouveau      = ( "un" ( "nouveau" | "nouvel" ) | "une" "nouvelle" ) nom ;
+nouveau      = ( "un" ( "nouveau" | "nouvel" ) | "une" "nouvelle" ) nom [ "saisi" | "saisie" ] ;   (* § 19 *)
 champ        = [ article ] nom de base ;          (* nom : un champ déclaré dans une classe *)
 arguments    = de unaire { "et" de unaire } ;   (* seulement après le nom d'un calcul *)
 article      = "le" | "la" | "l'" ;
@@ -1245,6 +1245,27 @@ En cas d'échec :
 - Limite connue : un `Essayer` répété dans une longue boucle sans question garde au journal une entrée par tour et par nom modifié, jusqu'à la fin de l'exécution.
 - En forme compacte : `_essayer` … `_échec` … `_fin`, et `_motif`.
 
+## 19. Formulaire *(v1.0)*
+
+```
+Le c vaut un nouveau contact saisi.
+Conserver c.
+Le p vaut une nouvelle partition saisie :
+    Le compositeur vaut bach.
+```
+
+- `saisi` (`saisie`, accordé avec l'entité) après `un nouveau …` demande chaque champ par une question (§ 17), puis rend l'objet. C'est une valeur, comme `la réponse à` : elle se range, s'initialise, se passe en argument. Le formulaire ne conserve rien : `Conserver` reste explicite.
+- Seule une entité se saisit : ses champs ont un type. Comme toute question, le formulaire est réservé aux actions et au programme, jamais à un calcul ni à la boucle interactive.
+- Ordre : les champs hérités, puis ceux des aptitudes, puis les champs propres. Un champ initialisé dans le bloc n'est pas demandé. Un champ multiple (§ 16.13) n'est jamais demandé : il reste vide.
+- Libellé : le nom du champ, première lettre en capitale : « Date d'inscription ? ». Une valeur de départ (§ 16.7) s'affiche entre crochets et répond à une ligne vide : « Pays [Suisse] ? ».
+- Lecture selon le type, avec la relance du § 17. Une ligne vide laisse `absent` un champ facultatif ; pour un champ obligatoire sans valeur de départ, elle relance : « Une réponse est attendue. » (un nom vide n'a jamais voulu dire quelque chose).
+- Fichier ou image : la réponse est un chemin (§ 15.2) ; un fichier illisible ou qui n'est pas une image relance.
+- Lien : la réponse est la valeur du premier champ texte unique de l'entité liée, comparée exactement (§ 16.4) : « Compositeur ? Bach » retrouve le compositeur conservé dont le nom est « Bach ». Aucun : « Aucun compositeur conservé n'a « Brahms » pour nom. », puis relance. Une entité liée sans champ texte unique : un lien facultatif reste absent ; un lien obligatoire est une erreur d'exécution, qui demande de l'initialiser dans le bloc.
+- Unique : la valeur se vérifie dès la réponse, corbeille comprise : « « A-1 » est déjà pris. », puis relance. `Conserver` vérifie encore, car un autre programme peut écrire entre deux questions.
+- Chaque question valide ce qui la précède (§ 17) ; dans un `Essayer` (§ 18), l'échec n'annule que depuis la dernière.
+- Reporté : modifier un objet existant par formulaire, choisir le libellé, l'autocomplétion des réponses.
+- En forme compacte : `_nouveau contact _saisi`, `_nouveau partition _saisi _avec`.
+
 ---
 
 ## Journal des révisions
@@ -1283,3 +1304,4 @@ En cas d'échec :
 | 1.29 | 2026-09-22 | § 4.3 : « Effacer l'écran. », sans effet hors d'un terminal ; `effacer` réservé |
 | 1.30 | 2026-09-22 | En-tête et périmètre remis à jour ; § 13.8 : l'absence de valeur n'est plus à venir |
 | 1.31 | 2026-09-23 | § 18 : reprise après erreur (`Essayer`, `En cas d'échec`, `le motif de l'échec`) ; `essayer` réservé aux constructions |
+| 1.32 | 2026-09-23 | § 19 : formulaire (`un nouveau client saisi`) : ordre, libellés, valeurs de départ, ligne vide, liens par champ texte unique, unicité vérifiée à la réponse |

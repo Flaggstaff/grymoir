@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.23).
+ * Spécification : docs/vm.md (révision 1.24).
  */
 #include "bytecode.h"
 #include "date.h"
@@ -175,6 +175,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_EFFACER:        return "EFFACER";
     case I_ESSAYER:        return "ESSAYER";
     case I_FIN_ESSAI:      return "FIN_ESSAI";
+    case I_SAISIR:         return "SAISIR";
     }
     return "INCONNUE";
 }
@@ -185,7 +186,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_NOUVEAU || code == I_INITIALISER_CHAMP || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP
         || code == I_GAGNER || code == I_PERDRE || code == I_DEMANDER
         || code == I_CADRER || code == I_AFFICHER_SANS_LIGNE || code == I_STYLE
-        || code == I_CHERCHER;
+        || code == I_CHERCHER || code == I_SAISIR;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -256,6 +257,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             ok = refuser(erreur, grym_formater("case locale %u inexistante (octet %lu).", op, (unsigned long)d));
         else if (c == I_APPELER && (op >= b->nb_noms || b->code[d + 4] > 1))
             ok = refuser(erreur, grym_formater("appel mal formé (octet %lu).", (unsigned long)d));
+        else if (c == I_SAISIR && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
+            ok = refuser(erreur, grym_formater("SAISIR sans liste de champs (octet %lu).", (unsigned long)d));
         else if (c == I_ECHOUER && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
             ok = refuser(erreur, grym_formater("ÉCHOUER sans message (octet %lu).", (unsigned long)d));
         else if (c == I_RENDRE && b->sorte != B_CALCUL)
@@ -324,7 +327,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_ABSENT: effet = 1; break;
             case I_ELEMENT: besoin = 2; effet = -1; break;
             case I_INITIALISER_CHAMP: besoin = 2; effet = -1; break;
-            case I_LIRE_CHAMP: besoin = 1; break;
+            case I_LIRE_CHAMP: case I_SAISIR: besoin = 1; break;
             case I_ECRIRE_CHAMP: case I_GAGNER: case I_PERDRE: besoin = 2; effet = -2; break;
             case I_DEMANDER: besoin = 1; effet = 0; break;   /* dépile la question, empile la réponse */
             case I_ECHOUER: break;
@@ -404,13 +407,13 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 20  /* versions 1 à 19 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 21  /* versions 1 à 20 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
                               sans champ multiple (15), sans question (16),
                               sans mise en forme (17), sans effacement de l'écran (18),
-                              sans essai (19) */
+                              sans essai (19), sans formulaire (20) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -913,7 +916,7 @@ char *bloc_desassembler(const Bloc *b) {
         snprintf(nombre, sizeof nombre, saut ? "%04lu" : "%lu", op);
         completer(&c, nombre, 6);
         char *commentaire = NULL;
-        if ((code == I_CONSTANTE || code == I_ECHOUER || code == I_CHERCHER) && op < b->nb_constantes) {
+        if ((code == I_CONSTANTE || code == I_ECHOUER || code == I_CHERCHER || code == I_SAISIR) && op < b->nb_constantes) {
             const Constante *k = &b->constantes[op];
             if (k->type == C_NOMBRE) {
                 Decimal d = dec_depuis_canonique(k->texte);

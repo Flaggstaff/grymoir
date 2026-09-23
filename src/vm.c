@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.23).
+ * Spécification : docs/vm.md (révision 1.24).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -10,6 +10,7 @@
 
 #include <errno.h>
 #include <stdio.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -1213,6 +1214,221 @@ static Formule *choisir_version(Machine *m, const char *nom, const Valeur *premi
     return NULL;
 }
 
+/* ---------------------------------------------------------------- */
+/* Formulaire : « un nouveau client saisi » (grammaire, § 19)       */
+/* ---------------------------------------------------------------- */
+
+/* Avant de lire une ligne : ce qui précède est validé, la base est rendue, chaque essai repart d'ici (§ 17, § 18). */
+static char *ouvrir_attente(Machine *m, Chaine *sortie, Cadre *cadres) {
+    if (!m->lire) return grym_dupliquer("Aucune entrée : la question ne peut pas être posée ici.");
+    char *probleme = valider_jusqu_ici(m, sortie);
+    if (probleme) return probleme;
+    m->question_posee = 1;
+    for (size_t k = 0; k < m->nb_essais; k++) {
+        Essai *e = &m->essais[k];
+        e->journal = 0;
+        e->a_ecrire = 0;
+        oublier_photo(e);
+        photographier(e, &cadres[e->cadre]);
+    }
+    return NULL;
+}
+
+/* Après la ligne lue : le verrou de la base reprend, avec les points de reprise des essais. */
+static char *fermer_attente(Machine *m) {
+    char *probleme = NULL;
+    if (m->base && !base_commencer(m->base, &probleme)) return probleme;
+    for (size_t k = 0; m->base && k < m->nb_essais && !probleme; k++) base_point(m->base, k + 1, &probleme);
+    return probleme;
+}
+
+/* « date d'inscription » → « Date d'inscription » : première lettre en capitale (ASCII, Latin-1, œ). */
+static char *capitale(const char *s) {
+    char *r = grym_dupliquer(s);
+    unsigned char *u = (unsigned char *)r;
+    if (u[0] >= 'a' && u[0] <= 'z') u[0] = (unsigned char)(u[0] - 32);
+    else if (u[0] == 0xC3 && u[1] >= 0xA0 && u[1] <= 0xBE && u[1] != 0xB7) u[1] = (unsigned char)(u[1] - 0x20);
+    else if (u[0] == 0xC5 && u[1] == 0x93) u[1] = 0x92;
+    return r;
+}
+
+/* Valeur de départ d'un champ (§ 16.7), depuis sa forme canonique. */
+static Valeur valeur_de_depart(const char *type, const char *canonique) {
+    long j = 0;
+    if (strcmp(type, "nombre") == 0 || strcmp(type, "nombre entier") == 0) return vi_nombre_canonique(canonique);
+    if (strcmp(type, "vrai ou faux") == 0) return vi_booleen(strcmp(canonique, "vrai") == 0);
+    if (strcmp(type, "date") == 0 && date_lire_iso(canonique, &j)) return vi_date(j);
+    if (strcmp(type, "année") == 0) return vi_annee(atol(canonique));
+    return vi_texte(canonique);
+}
+
+/* Champ texte unique qui désigne un objet de l'entité (le premier), ou NULL (§ 19). */
+static const char *champ_cle(const ClasseVM *c) {
+    for (size_t k = 0; k < c->nb_champs; k++)
+        if (c->types[k] && strcmp(c->types[k], "texte") == 0 && (c->uniques[k] & 1)) return c->champs[k];
+    return NULL;
+}
+
+/* Objets conservés (mode 0 : liste ; 2 : nombre ; 5 : nombre dans la corbeille) dont le champ vaut v. */
+static int chercher_valeur(Machine *m, const char *entite, int mode, const char *champ, const Valeur *v,
+                           Valeur *r, char **erreur) {
+    char *d = grym_formater("%s\x1f%d\x1f\x1f" "0\x1f(=[%s]?1)", entite, mode, champ);
+    int ok = base_chercher(m->base, m, d, v, 1, r, erreur);
+    free(d);
+    return ok;
+}
+
+static long nombre_de(const Valeur *v) {
+    long n = 0;
+    if (v->type == V_NOMBRE) dec_en_long_borne(&v->nombre, 0, LONG_MAX, &n);
+    return n;
+}
+
+/* Le champ saute-t-il le formulaire ? liste : champs initialisés dans le bloc, séparés par « , ». */
+static int initialise(const char *liste, const char *champ) {
+    size_t n = strlen(champ);
+    for (const char *p = liste; *p; ) {
+        const char *f = strstr(p, ", ");
+        size_t l = f ? (size_t)(f - p) : strlen(p);
+        if (l == n && strncmp(p, champ, n) == 0) return 1;
+        p += l + (f ? 2 : 0);
+    }
+    return 0;
+}
+
+/* Remplit l'objet neuf, champ par champ, par des questions (grammaire, § 19). *fatal : erreur qu'aucun
+ * essai ne rattrape (entrée épuisée, base perdue, Ctrl+C). */
+static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadre *cadres, int *fatal) {
+    const ClasseVM *cl = o->classe;
+    for (size_t k = 0; k < cl->nb_champs; k++) {
+        const char *champ = cl->champs[k], *type = cl->types[k];
+        int facultatif = (cl->uniques[k] & 2) != 0, unique = (cl->uniques[k] & 1) != 0;
+        if ((cl->uniques[k] & 8) || initialise(deja, champ) || !type) continue;
+        const ClasseVM *lie = NULL;
+        const char *cle = NULL;
+        int fichier = strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0;
+        static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "année" };
+        int de_base = fichier;
+        for (size_t q = 0; q < sizeof BASE / sizeof *BASE; q++) de_base |= strcmp(type, BASE[q]) == 0;
+        if (!de_base) {
+            lie = classe_vm(m, type);
+            cle = lie ? champ_cle(lie) : NULL;
+            if (!cle) {
+                if (facultatif) continue;
+                return grym_formater("Le champ « %s » ne se demande pas : « %s » n'a aucun champ texte unique qui "
+                                     "désigne un objet. Donnez-lui sa valeur dans le bloc du nouvel objet.", champ, type);
+            }
+        }
+        int a_depart = cl->departs[k] != NULL;
+        Valeur depart = a_depart ? valeur_de_depart(type, cl->departs[k]) : vi_absent(champ);
+        char *nom = capitale(champ), *question;
+        if (a_depart) {
+            char *d = texte_valeur(m, &depart);
+            question = grym_formater("%s [%s] ?", nom, d);
+            free(d);
+        } else {
+            question = grym_formater("%s ?", nom);
+        }
+        free(nom);
+        char *probleme = NULL;
+        for (;;) {
+            probleme = ouvrir_attente(m, sortie, cadres);
+            if (probleme) { *fatal = 1; break; }
+            char *ligne = m->lire(m->lire_contexte, sortie, question);
+            if (!ligne) {
+                probleme = grym_formater("Plus rien à lire : la réponse à « %s » manque.", question);
+                *fatal = 1;
+                break;
+            }
+            probleme = fermer_attente(m);
+            if (probleme) { free(ligne); *fatal = 1; break; }
+            char *t = ligne;
+            while (*t == ' ' || *t == '\t') t++;
+            size_t n = strlen(t);
+            while (n && (t[n - 1] == ' ' || t[n - 1] == '\t')) t[--n] = '\0';
+            Valeur v;
+            int pris = 0;
+            char *relance = NULL;
+            if (!n) {
+                if (facultatif) { free(ligne); break; }   /* reste absent */
+                if (a_depart) { v = valeur_copier(&depart); pris = 1; }
+                else relance = grym_dupliquer("Une réponse est attendue.");
+            } else if (lie) {
+                Valeur cherche = vi_texte(t), l;
+                char *erreur = NULL;
+                if (!chercher_valeur(m, lie->nom, 0, cle, &cherche, &l, &erreur)) {
+                    valeur_liberer(&cherche);
+                    free(ligne);
+                    probleme = erreur;
+                    break;
+                }
+                if (l.type == V_LISTE && l.liste->n) {
+                    Objet *x = machine_objet_en_base(m, l.liste->ids[0], l.liste->classes[0], &erreur);
+                    if (x) { v = vi_objet(x); pris = 1; }
+                    else relance = erreur;
+                } else {
+                    relance = grym_formater("Aucun %s conservé n'a « %s » pour %s.", lie->nom, t, cle);
+                }
+                valeur_liberer(&l);
+                valeur_liberer(&cherche);
+            } else if (fichier) {
+                char *erreur = NULL;
+                Fichier *f = lire_fichier(m, t, &erreur);
+                if (f) {
+                    v = valeur_nombre(dec_zero());
+                    v.type = V_FICHIER;
+                    v.fichier = f;
+                    pris = 1;
+                } else {
+                    relance = erreur;
+                }
+            } else {
+                pris = lire_reponse(type, t, &v, &relance);
+            }
+            free(ligne);
+            if (pris) relance = verifier_type_champ(m, champ, type, &v, facultatif);
+            if (pris && !relance && unique && m->base) {
+                /* une valeur unique déjà prise, même dans la corbeille, se refuse dès la réponse */
+                const char *table = cl->proprietaires[k]->nom;
+                Valeur r1, r2;
+                char *erreur = NULL;
+                if (!chercher_valeur(m, table, 2, champ, &v, &r1, &erreur)) { probleme = erreur; valeur_liberer(&v); break; }
+                if (!chercher_valeur(m, table, 5, champ, &v, &r2, &erreur)) {
+                    valeur_liberer(&r1);
+                    probleme = erreur;
+                    valeur_liberer(&v);
+                    break;
+                }
+                if (nombre_de(&r1) + nombre_de(&r2) > 0) {
+                    char *x = texte_valeur(m, &v);
+                    relance = grym_formater("« %s » est déjà pris.", x);
+                    free(x);
+                }
+                valeur_liberer(&r1);
+                valeur_liberer(&r2);
+            }
+            if (pris && !relance) {
+                ecrire_champ(m, o, k, v);
+                break;
+            }
+            if (pris) valeur_liberer(&v);
+            chaine_ajouter(sortie, relance);
+            chaine_ajouter(sortie, "\n");
+            free(relance);
+            if (grym_interruption) {
+                grym_interruption = 0;
+                probleme = grym_dupliquer("Interrompu (Ctrl+C).");
+                *fatal = 1;
+                break;
+            }
+        }
+        valeur_liberer(&depart);
+        free(question);
+        if (probleme) return probleme;
+    }
+    return NULL;
+}
+
 int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *diag) {
     diag->message = NULL;
     diag->ligne = diag->colonne = 0;
@@ -1985,6 +2201,17 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             empiler(&pile, r);
+            break;
+        }
+        case I_SAISIR: {
+            /* « un nouveau client saisi » : l'objet neuf est au sommet, il y reste (grammaire, § 19) */
+            Valeur *vo = &pile.v[pile.n - 1];
+            if (vo->type != V_OBJET || !vo->objet->classe->conserve) {
+                ok = echouer(diag, b, debut, grym_dupliquer("Seul un objet d'une entité se saisit."));
+                break;
+            }
+            char *probleme = saisir(m, vo->objet, b->constantes[op].texte, sortie, cadres, &fatal);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
         case I_GAGNER:

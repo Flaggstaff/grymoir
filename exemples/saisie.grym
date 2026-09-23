@@ -1,5 +1,6 @@
 Remarque : carnet d'adresses minuscule (grammaire, § 17).
 Remarque : chaque question valide ce qui la précède.
+Remarque : le formulaire demande chaque champ du contact (§ 19).
 Remarque : une erreur annule le choix en cours, puis le menu revient (§ 18).
 
 Un contact, conservé, a :
@@ -8,11 +9,7 @@ Un contact, conservé, a :
     une naissance (date), facultative.
 
 Pour ajouter :
-    Le c vaut un nouveau contact :
-        Le nom vaut la réponse à « Nom ? ».
-        Le téléphone vaut la réponse à « Téléphone ? ».
-    Si la réponse en vrai ou faux à « Date de naissance connue ? » :
-        La naissance du c devient la réponse en date à « Née le ? ».
+    Le c vaut un nouveau contact saisi.
     Conserver c.
     Afficher « Ajouté : » puis nom du c.
 

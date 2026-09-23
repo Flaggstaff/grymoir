@@ -284,6 +284,8 @@ int main(void) {
     FIXE("Essayer :\n    Afficher 1.\nEn cas d'échec :\n    Afficher « a ».\n    Afficher le motif de l'échec.\n");
     COMP("Essayer :\n    Afficher 1.\nEn cas d'échec, afficher le motif de l'échec.",
          "_essayer\n    _afficher 1\n_échec\n    _afficher _motif\n_fin\n");
+    FIXE("Un client, conservé, a :\n    un nom (texte).\nLe c vaut un nouveau client saisi.\n"
+         "Le d vaut un nouveau client saisi :\n    Le nom vaut « x ».\n");
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

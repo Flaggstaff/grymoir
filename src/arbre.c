@@ -316,7 +316,7 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, ")");
         return;
     case N_NOUVEAU:
-        chaine_ajouter(c, "(nouveau [");
+        chaine_ajouter(c, n->op == 'S' ? "(nouveau-saisi [" : "(nouveau [");
         chaine_ajouter(c, n->texte);
         chaine_ajouter(c, "]");
         for (size_t k = 0; k < n->nb_enfants; k++) {

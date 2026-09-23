@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.23).
+ * Spécification : docs/vm.md (révision 1.24).
  */
 #ifndef GRYM_BYTECODE_H
 #define GRYM_BYTECODE_H
@@ -58,10 +58,11 @@ typedef enum {
     I_STYLE,
     I_EFFACER,
     I_ESSAYER,
-    I_FIN_ESSAI
+    I_FIN_ESSAI,
+    I_SAISIR
 } CodeInstruction;
 
-#define I_DERNIER I_FIN_ESSAI
+#define I_DERNIER I_SAISIR
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);
