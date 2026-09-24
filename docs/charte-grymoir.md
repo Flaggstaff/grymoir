@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.30, révisée le 24 septembre 2026.
+Version 1.31, révisée le 24 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -153,7 +153,7 @@ Horizon post-v1, sans date :
 | v0.3 | SQLite embarqué, entités conservées (types, unicité, liens, héritage, aptitudes), conserver, modifier, supprimer, retrouver (`dont`, tri, comptage), migrations, transaction par exécution, dates, fichiers et images | livrée le 21 septembre 2026 |
 | v0.4 | Serveur d'aide à la saisie (`grym lsp`, protocole LSP) : erreurs en direct, autocomplétion, mise en forme ; extension VS Code avec coloration des deux formes | livrée le 22 septembre 2026 |
 | v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4), reprise après erreur (§ 18), formulaire déduit de l'entité (§ 19) ; première application réelle : `exemples/partotheque.grym` ; sortie d'une question par un point seul (§ 17), assemblage de textes (§ 4.4) | livrée le 24 septembre 2026 |
-| v2.0 | L'interface par le navigateur : proposition dans `docs/v2.md`, soumise à relecture | à concevoir |
+| v2.0 | L'interface par le navigateur (`docs/v2.md`) : `grym servir`, tout programme v1 affiché sans modification | en conception |
 
 Critères de sortie de la v1.0, tous remplis :
 
@@ -222,3 +222,4 @@ Une version 1.x promet ce qui suit. Toute exception passe par une révision de l
 | 1.28 | 2026-09-24 | Nouvel art. 13 : compatibilité (bases, sources, comportement, hors promesse, version 2) ; art. 12 : critère 5 |
 | 1.29 | 2026-09-24 | Art. 12 : critères 2 et 4 faits ; la v1.0 attend un passage vert de l'intégration continue sur les trois systèmes |
 | 1.30 | 2026-09-24 | Art. 12 : v1.0 livrée ; v2.0 inscrite, à concevoir (`docs/v2.md`) |
+| 1.31 | 2026-09-24 | Art. 12 : v2.0 en conception, thèse et décisions validées (`docs/v2.md` 0.2) |
