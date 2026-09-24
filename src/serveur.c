@@ -1,5 +1,5 @@
 /* GrymoiR : l'interface par le navigateur, servie en local (v2.0-a).
- * Spécification : docs/v2.md (révision 0.5), § 4, § 5 et § 9 ; docs/vm.md, § 13.
+ * Spécification : docs/v2.md (révision 0.6), § 4, § 5 et § 9 ; docs/vm.md, § 13.
  */
 #ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L
