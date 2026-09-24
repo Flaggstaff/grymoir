@@ -137,6 +137,8 @@ int main(void) {
              grym_dupliquer("POST /reponse HTTP/1.1\r\n" HOTE COOKIE "Content-Length: 11\r\n\r\nq=1&c0=12&"),
              grym_dupliquer("POST /reponse HTTP/1.1\r\n" HOTE COOKIE "Origin: http://evil.example\r\n"
                             "Content-Length: 10\r\n\r\nq=1&c0=12&"),
+             grym_dupliquer("POST /reponse HTTP/1.1\r\n" HOTE COOKIE "Origin: null\r\n"
+                            "Content-Length: 10\r\n\r\nq=1&c0=12&"),
              grym_dupliquer("GET / HTTP/1.1\r\n" HOTE HOTE COOKIE "\r\n"),
              grym_dupliquer("n'importe quoi\r\n\r\n"),
              get("/ailleurs"),
@@ -144,16 +146,18 @@ int main(void) {
              post("q=1&c0=12&action=envoyer"),
              get("/"));
     servir("Le x vaut la réponse en nombre à « Âge ? ».\nAfficher x + 1.", &sc);
-    for (int k = 0; k < 6; k++) CONTIENT(sc.reponses[k], "403 Forbidden");
-    CONTIENT(sc.reponses[6], "400 Bad Request");
+    for (int k = 0; k < 7; k++) CONTIENT(sc.reponses[k], "403 Forbidden");
     CONTIENT(sc.reponses[7], "400 Bad Request");
-    CONTIENT(sc.reponses[8], "404 Not Found");
-    CONTIENT(sc.reponses[9], "text/css");
-    CONTIENT(sc.reponses[10], "303 See Other");
-    CONTIENT(sc.reponses[11], "13");
+    CONTIENT(sc.reponses[8], "400 Bad Request");
+    CONTIENT(sc.reponses[9], "404 Not Found");
+    CONTIENT(sc.reponses[10], "text/css");
+    CONTIENT(sc.reponses[11], "303 See Other");
+    CONTIENT(sc.reponses[12], "13");
     /* chaque réponse porte la politique de contenu stricte */
     for (size_t k = 0; k < sc.nr; k++) CONTIENT(sc.reponses[k], "Content-Security-Policy: default-src 'none'");
     for (size_t k = 0; k < sc.nr; k++) CONTIENT(sc.reponses[k], "X-Content-Type-Options: nosniff");
+    /* same-origin, jamais no-referrer : sinon un navigateur envoie « Origin: null » avec chaque formulaire */
+    for (size_t k = 0; k < sc.nr; k++) CONTIENT(sc.reponses[k], "Referrer-Policy: same-origin\r\n");
     liberer(&sc);
 
     /* Une question : la page, un refus qui garde la saisie, puis la bonne réponse */

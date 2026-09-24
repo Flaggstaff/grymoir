@@ -1,5 +1,5 @@
 /* GrymoiR : l'interface par le navigateur, servie en local (v2.0-a).
- * Spécification : docs/v2.md (révision 0.4), § 4, § 5 et § 9 ; docs/vm.md, § 13.
+ * Spécification : docs/v2.md (révision 0.5), § 4, § 5 et § 9 ; docs/vm.md, § 13.
  */
 #ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L
@@ -59,7 +59,7 @@ struct Serveur {
     Transport t;
     Prise ecoute;
     Prise client;
-    int reseau;           /* ouvert par serveur_ouvrir : prises et WSAStartup à rendre */
+    int reseau;           /* ouvert par serveur_ouvrir : prises et WSAStartup à rendre ; refus notés sur stderr */
     Chaine affichage;     /* depuis le dernier effacement, plafonné à LIGNES_MAX lignes */
     long numero;          /* numéro de la question courante (décision 6) */
     char *avis;           /* message à montrer une fois (réponse à une question close) */
@@ -241,7 +241,7 @@ static void repondre(Serveur *s, const char *statut, const char *type, const cha
         "Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; form-action 'self'; "
         "frame-ancestors 'none'; base-uri 'none'\r\n"
         "X-Content-Type-Options: nosniff\r\n"
-        "Referrer-Policy: no-referrer\r\n"
+        "Referrer-Policy: same-origin\r\n"   /* no-referrer ferait envoyer « Origin: null » aux formulaires */
         "Cache-Control: no-store\r\n"
         "Connection: close\r\n"
         "%s\r\n",
@@ -268,6 +268,12 @@ static void debut_page(const Serveur *s, Chaine *c) {
         echapper(c, s->affichage.d);
         chaine_ajouter(c, "</pre>\n");
     }
+}
+
+/* Un refus se note dans le terminal, avec sa raison : c'est là qu'on cherche quand la page dit « Accès refusé ». */
+static void noter_refus(const Serveur *s, const char *raison, const char *valeur) {
+    if (s->reseau) fprintf(stderr, "grym servir : requête refusée, %s%s%s%s.\n", raison,
+                           valeur ? " (« " : "", valeur ? valeur : "", valeur ? " »)" : "");
 }
 
 static void page_simple(Serveur *s, const char *statut, const char *message) {
@@ -367,6 +373,7 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
     Suite suite = SUITE;
     /* § 5, règle 3 : un nom d'hôte étranger est un détournement par le DNS */
     if (!r.hote || strcmp(r.hote, s->hote) != 0) {
+        noter_refus(s, "nom d'hôte inattendu", r.hote);
         page_simple(s, "403 Forbidden", "Accès refusé.");
     } else if (strcmp(r.methode, "GET") == 0 && strncmp(r.cible, "/?jeton=", 8) == 0) {
         if (meme_jeton(r.cible + 8, strlen(r.cible + 8), s->jeton)) {
@@ -374,9 +381,11 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
             rediriger(s, c);
             free(c);
         } else {
+            noter_refus(s, "jeton faux dans l'adresse", NULL);
             page_simple(s, "403 Forbidden", "Accès refusé : ouvrez l'adresse affichée dans le terminal.");
         }
     } else if (!authentifie(s, &r)) {
+        noter_refus(s, r.cookie ? "cookie sans le bon jeton" : "aucun cookie", r.cible);
         page_simple(s, "403 Forbidden", "Accès refusé : ouvrez l'adresse affichée dans le terminal.");
     } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/style.css") == 0) {
         repondre(s, "200 OK", "text/css; charset=utf-8", STYLE, NULL);
@@ -386,6 +395,7 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
     } else if (strcmp(r.methode, "POST") == 0 && strcmp(r.cible, "/reponse") == 0) {
         /* § 5, règle 3 : un envoi vient de la page de l'application, et d'elle seule */
         if (!r.origine || strcmp(r.origine, s->origine) != 0) {
+            noter_refus(s, r.origine ? "origine inattendue" : "aucune origine", r.origine);
             page_simple(s, "403 Forbidden", "Accès refusé.");
         } else {
             char *corps = grym_formater("%.*s", (int)r.taille_corps, r.corps);

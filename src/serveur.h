@@ -1,5 +1,5 @@
 /* GrymoiR : l'interface par le navigateur, servie en local (v2.0-a).
- * Spécification : docs/v2.md (révision 0.4), § 4, § 5 et § 9 ; docs/vm.md, § 13.
+ * Spécification : docs/v2.md (révision 0.5), § 4, § 5 et § 9 ; docs/vm.md, § 13.
  *
  * Le serveur n'écoute que pendant une question, et à la fin du programme pour servir la page finale.
  * Tout le traitement HTTP passe par un transport : des prises réseau pour `grym servir`, une liste de
