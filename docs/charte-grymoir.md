@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.34, révisée le 24 septembre 2026.
+Version 1.35, révisée le 24 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -139,6 +139,8 @@ L'architecture de la VM prévoit la recompilation à chaud d'une formule dans un
 
 Interface graphique, réseau, concurrence, optimisation.
 
+Depuis la v2.0 : interface graphique par le navigateur, servie par `grym` ; réseau limité à l'écoute locale (127.0.0.1), pendant l'exécution d'un programme (`docs/v2.md`, § 5). Concurrence et optimisation restent hors périmètre.
+
 Horizon post-v1, sans date :
 
 - Éditeur par blocs, conçu comme une troisième forme de l'arbre syntaxique (art. 4), convertible sans perte vers les deux autres.
@@ -153,7 +155,7 @@ Horizon post-v1, sans date :
 | v0.3 | SQLite embarqué, entités conservées (types, unicité, liens, héritage, aptitudes), conserver, modifier, supprimer, retrouver (`dont`, tri, comptage), migrations, transaction par exécution, dates, fichiers et images | livrée le 21 septembre 2026 |
 | v0.4 | Serveur d'aide à la saisie (`grym lsp`, protocole LSP) : erreurs en direct, autocomplétion, mise en forme ; extension VS Code avec coloration des deux formes | livrée le 22 septembre 2026 |
 | v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4), reprise après erreur (§ 18), formulaire déduit de l'entité (§ 19) ; première application réelle : `exemples/partotheque.grym` ; sortie d'une question par un point seul (§ 17), assemblage de textes (§ 4.4) | livrée le 24 septembre 2026 |
-| v2.0 | L'interface par le navigateur (`docs/v2.md`) : `grym servir`, tout programme v1 affiché sans modification | en cours : v2.0-a faite et éprouvée dans Chrome ; v2.0-b faite |
+| v2.0 | L'interface par le navigateur (`docs/v2.md`) : `grym servir`, tout programme v1 affiché sans modification ; formulaires typés, liens avec suggestions, téléversement, images | livrée le 24 septembre 2026 |
 
 Critères de sortie de la v1.0, tous remplis :
 
@@ -226,3 +228,4 @@ Une version 1.x promet ce qui suit. Toute exception passe par une révision de l
 | 1.32 | 2026-09-24 | Art. 12 : v2.0-a faite (`grym servir`, serveur local) |
 | 1.33 | 2026-09-24 | Art. 12 : v2.0-a éprouvée dans un vrai navigateur |
 | 1.34 | 2026-09-24 | Art. 12 : v2.0-b faite (liens, fichiers, images dans le navigateur) |
+| 1.35 | 2026-09-24 | Art. 11 : interface par le navigateur et écoute locale depuis la v2.0 ; art. 12 : v2.0 livrée |

@@ -35,7 +35,7 @@
 #define terminal() isatty(fileno(stdin))
 #endif
 
-#define VERSION "1.0"   /* dernier jalon livré (charte, art. 12) */
+#define VERSION "2.0"   /* dernier jalon livré (charte, art. 12) */
 
 static char *lire_fichier(FILE *f, size_t *taille) {
     size_t cap = 4096, n = 0;

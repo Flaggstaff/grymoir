@@ -1,3 +1,6 @@
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200809L
+#endif
 /* Tests du serveur local (docs/v2.md, § 5 et § 9) : chaque requête passe par un transport scripté,
  * sans réseau. Les règles de sécurité ont chacune leur attaque. */
 #include "analyseur.h"
@@ -12,6 +15,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <dirent.h>
 #endif
 
 static int total = 0, echecs = 0;
@@ -64,6 +69,48 @@ static char *post_multi(const char *corps) {
                          (unsigned long)strlen(corps), corps);
 }
 
+/* Encodage « application/x-www-form-urlencoded » d'une valeur. */
+static char *enc(const char *v) {
+    Chaine c = {0};
+    char t[4];
+    for (const unsigned char *p = (const unsigned char *)v; *p; p++) {
+        if ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9')) { t[0] = (char)*p; t[1] = 0; }
+        else if (*p == ' ') { t[0] = '+'; t[1] = 0; }
+        else snprintf(t, sizeof t, "%%%02X", *p);
+        chaine_ajouter(&c, t);
+    }
+    return chaine_rendre(&c);
+}
+
+/* Réponse à la question suivante : « c0=…&c1=… » à partir des valeurs brutes, séparées par « | ». */
+static long question_suivante;
+static char *reponse(const char *valeurs) {
+    Chaine c = {0};
+    char *debut = grym_formater("q=%ld", ++question_suivante);
+    chaine_ajouter(&c, debut);
+    free(debut);
+    int k = 0;
+    for (const char *p = valeurs; ; k++) {
+        const char *f = strchr(p, '|');
+        char *v = grym_formater("%.*s", (int)(f ? (size_t)(f - p) : strlen(p)), p);
+        char *e = enc(v);
+        char *morceau = grym_formater("&c%d=%s", k, e);
+        chaine_ajouter(&c, morceau);
+        free(morceau);
+        free(e);
+        free(v);
+        if (!f) break;
+        p = f + 1;
+    }
+    chaine_ajouter(&c, "&action=envoyer");
+    char *corps = chaine_rendre(&c);
+    char *r = post(corps);
+    free(corps);
+    return r;
+}
+
+static const char *dossier_des_exemples;
+
 /* Exécute src servi par le transport scripté ; les réponses restent dans *sc. */
 static void servir(const char *src, Script *sc) {
     Transport t = { sc, recevoir, envoyer };
@@ -72,6 +119,7 @@ static void servir(const char *src, Script *sc) {
     Machine *m = machine_creer();
     Interface i = serveur_interface(s);
     machine_interface(m, &i);
+    if (dossier_des_exemples) machine_dossier(m, dossier_des_exemples);
     Programme p;
     Diagnostic d;
     Chaine sortie = {0};
@@ -111,6 +159,35 @@ static void verifier(int ligne, const char *quoi, const char *reponse, const cha
     echecs++;
     printf("ÉCHEC (test ligne %d) : %s\n  %s « %s »\n  réponse : %s\n", ligne, quoi,
            present ? "attendu" : "interdit", fragment, reponse ? reponse : "(aucune)");
+}
+
+static char *lire_tout(const char *chemin) {
+    FILE *f = fopen(chemin, "rb");
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    long n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *d = grym_allouer((size_t)n + 1);
+    d[fread(d, 1, (size_t)n, f)] = '\0';
+    fclose(f);
+    return d;
+}
+
+/* Un exemple du dépôt, servi du début à la fin ; la dernière réponse est la page finale. */
+static void exemple(int ligne, const char *nom, Script *sc, const char *const *fragments) {
+    char *chemin = grym_formater("exemples/%s", nom);
+    char *src = lire_tout(chemin);
+    total++;
+    if (!src) { echecs++; printf("ÉCHEC (test ligne %d) : %s introuvable\n", ligne, chemin); free(chemin); return; }
+    dossier_des_exemples = "exemples";
+    servir(src, sc);
+    dossier_des_exemples = NULL;
+    const char *fin = sc->nr ? sc->reponses[sc->nr - 1] : NULL;
+    verifier(ligne, nom, fin, "Application terminée.", 1);
+    verifier(ligne, nom, fin, "class=\"erreur\"", 0);
+    for (size_t k = 0; fragments && fragments[k]; k++) verifier(ligne, nom, fin, fragments[k], 1);
+    free(src);
+    free(chemin);
 }
 
 #define CONTIENT(r, f)     verifier(__LINE__, #r, r, f, 1)
@@ -331,6 +408,55 @@ int main(void) {
     NE_CONTIENT_PAS(sc.reponses[2], "<img");
     CONTIENT(sc.reponses[3], "404 Not Found");
     liberer(&sc);
+
+    /* --- v2.0 : chaque exemple du dépôt tourne dans le navigateur --- */
+    {
+        static const char *const SANS_QUESTION[] = { "aptitudes.grym", "boucles.grym", "conserver.grym", "dates.grym",
+            "entites.grym", "facture.grym", "fichiers.grym", "formules.grym", "methodes.grym", "objets.grym",
+            "partitions.grym", "rabais.grym", "registre.grym" };
+        for (size_t k = 0; k < sizeof SANS_QUESTION / sizeof *SANS_QUESTION; k++) {
+            memset(&sc, 0, sizeof sc);
+            REQUETES(get("/"));
+            exemple(__LINE__, SANS_QUESTION[k], &sc, NULL);
+            liberer(&sc);
+        }
+        remove("exemples/copie.png");   /* fichiers.grym l'écrit, et n'écrase jamais */
+
+        question_suivante = 0;
+        memset(&sc, 0, sizeof sc);
+        REQUETES(reponse("1"), reponse("Ana|079|"), reponse("2"), reponse("3"), reponse("Ana"), reponse("0"), get("/"));
+        static const char *const SAISIE[] = { "Ajouté : Ana", "1 trouvé(s).", "Au revoir.", NULL };
+        exemple(__LINE__, "saisie.grym", &sc, SAISIE);
+        liberer(&sc);
+
+        question_suivante = 0;
+        memset(&sc, 0, sizeof sc);
+        REQUETES(reponse("1"), reponse("Johann Sebastian Bach|"),
+                 reponse("2"), reponse("BWV 1079|L'Offrande musicale|Johann Sebastian Bach|1747"), reponse("baroque"), reponse(""),
+                 reponse("3"), reponse("P-1|BWV 1079|Bärenreiter|"), reponse("violon"), reponse("2"), reponse(""),
+                 reponse("4"), reponse("5"), reponse("Johann Sebastian Bach"), reponse("6"), reponse("P-1"),
+                 reponse("9"), reponse("P-1"), reponse("P-1|BWV 1079|Henle|"),
+                 reponse("7"), reponse("P-1"), reponse("8"), reponse("P-1"), reponse("0"), get("/"));
+        static const char *const PARTOTHEQUE[] = { "Compositeur ajouté : Johann Sebastian Bach", "Œuvre ajoutée : L&#39;Offrande musicale",
+            "Partition ajoutée : P-1", "BWV 1079     L&#39;Offrande musicale            Johann Sebastian Bach (1747)",
+            "1 œuvre(s) de Johann Sebastian Bach", "L&#39;Offrande musicale chez Bärenreiter", "- violon × 2",
+            "Modifiée : P-1", "Dans la corbeille : P-1", "Rétablie : P-1", "Au revoir.", NULL };
+        exemple(__LINE__, "partotheque.grym", &sc, PARTOTHEQUE);
+        liberer(&sc);
+    }
+#ifndef _WIN32
+    {   /* tout exemple du dépôt figure ci-dessus : un exemple nouveau doit y entrer */
+        int n = 0;
+        DIR *d = opendir("exemples");
+        for (struct dirent *e; d && (e = readdir(d)); ) {
+            size_t l = strlen(e->d_name);
+            if (l > 5 && strcmp(e->d_name + l - 5, ".grym") == 0) n++;
+        }
+        if (d) closedir(d);
+        total++;
+        if (n != 15) { echecs++; printf("ÉCHEC : %d exemples .grym dans exemples/, 15 attendus ici\n", n); }
+    }
+#endif
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
