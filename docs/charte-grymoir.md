@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.25, révisée le 23 septembre 2026.
+Version 1.26, révisée le 24 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -154,6 +154,13 @@ Horizon post-v1, sans date :
 | v0.4 | Serveur d'aide à la saisie (`grym lsp`, protocole LSP) : erreurs en direct, autocomplétion, mise en forme ; extension VS Code avec coloration des deux formes | livrée le 22 septembre 2026 |
 | v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4), reprise après erreur (§ 18), formulaire déduit de l'entité (§ 19) ; première application réelle : `exemples/partotheque.grym` ; sortie d'une question par un point seul (§ 17), assemblage de textes (§ 4.4) | en cours |
 
+Critères de sortie de la v1.0 :
+
+1. Intégration continue : compilation sans avertissement et tests sous Linux, macOS et Windows à chaque poussée (`.github/workflows/tests.yml`). Fait.
+2. Essai manuel, dans la console Windows, d'une saisie accentuée (la Partothèque avec un compositeur « Élodie Müller »).
+3. Modifier un objet conservé par formulaire.
+4. README et charte à jour.
+
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
 - objets (grammaire, § 13.8) : appel de la version parente depuis une méthode, listes d'objets, affichage des objets ; racine commune `objet` de toutes les classes, puis nombres, textes et dates comme objets (art. 6, « Tout est objet ») ;
@@ -198,3 +205,4 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 | 1.23 | 2026-09-23 | Art. 12 : première application réelle (Partothèque) et ses retours |
 | 1.24 | 2026-09-23 | Art. 12 : annulation d'une saisie par un point seul |
 | 1.25 | 2026-09-23 | Art. 12 : assemblage de textes (`suivi de`, élision) |
+| 1.26 | 2026-09-24 | Art. 12 : critères de sortie de la v1.0 ; intégration continue sur les trois systèmes |

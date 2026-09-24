@@ -2,7 +2,9 @@
 
 Langage de programmation francophone. Référence : `docs/charte-grymoir.md`, `docs/grammaire.md` et `docs/vm.md`.
 
-## État : v0.4 livrée (serveur d'aide à la saisie, extension VS Code)
+## État : v1.0 en préparation (application console)
+
+Chaque poussée compile et lance les tests sous Linux (gcc, clang, puis ASan et UBSan), macOS (clang) et Windows (MinGW-w64 gcc) : `.github/workflows/tests.yml`. Critères de sortie de la v1.0 : charte, art. 12.
 
 Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
 
@@ -18,6 +20,7 @@ Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
     ./grym lancer exemples/conserver.grym    # base conserver.grymd, créée à côté
     ./grym lancer exemples/registre.grym     # se relit d'une exécution à l'autre (registre.grymd)
     ./grym lancer exemples/saisie.grym       # carnet d'adresses : questions, colonnes, menu
+    ./grym lancer exemples/partotheque.grym  # bibliothèque de partitions : formulaires, Essayer, corbeille
     ./grym --base essai.grymd                # boucle interactive sur une base conservée
     ./grym-lexeur exemples/facture.grym      # jetons
     ./grym-arbre exemples/facture.grym    # arbre syntaxique

@@ -1,0 +1,60 @@
+# Intégration continue : compilation et tests sur les trois systèmes de la charte (art. 3).
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unix:
+    name: ${{ matrix.os }} (${{ matrix.cc }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, cc: gcc }
+          - { os: ubuntu-latest, cc: clang }
+          - { os: macos-latest, cc: clang }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compilation, sans avertissement toléré
+        run: make CC=${{ matrix.cc }} CFLAGS="-std=c99 -Wall -Wextra -pedantic -O2 -Werror" all
+      - name: Tests
+        run: make CC=${{ matrix.cc }} CFLAGS="-std=c99 -Wall -Wextra -pedantic -O2 -Werror" test
+      - name: Exemples en forme canonique
+        run: |
+          for f in exemples/*.grym; do ./grym formater "$f" > /dev/null; done
+          git diff --exit-code exemples
+
+  sanitizers:
+    name: ubuntu (ASan et UBSan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tests sous AddressSanitizer et UndefinedBehaviorSanitizer
+        run: >
+          make test CC=gcc CFLAGS="-std=c99 -Wall -Wextra -pedantic -O1 -g
+          -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all"
+
+  windows:
+    name: windows (MinGW-w64 gcc)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: make mingw-w64-ucrt-x86_64-gcc
+      - name: Compilation, sans avertissement toléré
+        run: make CC=gcc CFLAGS="-std=c99 -Wall -Wextra -pedantic -O2 -Werror" all
+      - name: Tests
+        run: make CC=gcc CFLAGS="-std=c99 -Wall -Wextra -pedantic -O2 -Werror" test
+      - name: Exemples en forme canonique
+        run: |
+          for f in exemples/*.grym; do ./grym formater "$f" > /dev/null; done
+          git diff --exit-code exemples
