@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.29, révisée le 24 septembre 2026.
+Version 1.30, révisée le 24 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -152,9 +152,10 @@ Horizon post-v1, sans date :
 | v0.2 | Bytecode et VM (remplacent l'évaluateur provisoire de la v0.1), conditions (`Si`, comparaisons, booléens), boucles et `Selon`, forme compacte et `grym traduire` dans les deux sens, forme canonique et `grym formater`, formules, objets, héritage, méthodes, aptitudes, ramasse-miettes | livrée le 21 septembre 2026 |
 | v0.3 | SQLite embarqué, entités conservées (types, unicité, liens, héritage, aptitudes), conserver, modifier, supprimer, retrouver (`dont`, tri, comptage), migrations, transaction par exécution, dates, fichiers et images | livrée le 21 septembre 2026 |
 | v0.4 | Serveur d'aide à la saisie (`grym lsp`, protocole LSP) : erreurs en direct, autocomplétion, mise en forme ; extension VS Code avec coloration des deux formes | livrée le 22 septembre 2026 |
-| v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4), reprise après erreur (§ 18), formulaire déduit de l'entité (§ 19) ; première application réelle : `exemples/partotheque.grym` ; sortie d'une question par un point seul (§ 17), assemblage de textes (§ 4.4) | en cours |
+| v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4), reprise après erreur (§ 18), formulaire déduit de l'entité (§ 19) ; première application réelle : `exemples/partotheque.grym` ; sortie d'une question par un point seul (§ 17), assemblage de textes (§ 4.4) | livrée le 24 septembre 2026 |
+| v2.0 | L'interface par le navigateur : proposition dans `docs/v2.md`, soumise à relecture | à concevoir |
 
-Critères de sortie de la v1.0 :
+Critères de sortie de la v1.0, tous remplis :
 
 1. Intégration continue : compilation sans avertissement et tests sous Linux, macOS et Windows à chaque poussée (`.github/workflows/tests.yml`). Fait.
 2. Essai manuel, dans la console Windows, d'une saisie accentuée (la Partothèque avec un compositeur « Élodie Müller »). Fait.
@@ -220,3 +221,4 @@ Une version 1.x promet ce qui suit. Toute exception passe par une révision de l
 | 1.27 | 2026-09-24 | Art. 12 : modification par formulaire faite |
 | 1.28 | 2026-09-24 | Nouvel art. 13 : compatibilité (bases, sources, comportement, hors promesse, version 2) ; art. 12 : critère 5 |
 | 1.29 | 2026-09-24 | Art. 12 : critères 2 et 4 faits ; la v1.0 attend un passage vert de l'intégration continue sur les trois systèmes |
+| 1.30 | 2026-09-24 | Art. 12 : v1.0 livrée ; v2.0 inscrite, à concevoir (`docs/v2.md`) |

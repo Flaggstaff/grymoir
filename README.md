@@ -2,9 +2,9 @@
 
 Langage de programmation francophone. Référence : `docs/charte-grymoir.md`, `docs/grammaire.md` et `docs/vm.md`.
 
-## État : v1.0 en préparation (application console)
+## État : v1.0 livrée (application console) ; v2 en conception (`docs/v2.md`)
 
-Chaque poussée compile et lance les tests sous Linux (gcc, clang, puis ASan et UBSan), macOS (clang) et Windows (MinGW-w64 gcc) : `.github/workflows/tests.yml`. Critères de sortie de la v1.0 : charte, art. 12.
+Chaque poussée compile et lance les tests sous Linux (gcc, clang, puis ASan et UBSan), macOS (clang) et Windows (MinGW-w64 gcc) : `.github/workflows/tests.yml`. Jalons et critères : charte, art. 12 ; promesses de compatibilité : art. 13.
 
 ## Aperçu
 
