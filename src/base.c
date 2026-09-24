@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.35), § 16 ; docs/vm.md (révision 1.27), § 8.
+ * Spécification : docs/grammaire.md (révision 1.36), § 16 ; docs/vm.md (révision 1.28), § 8.
  */
 #include "base.h"
 #include "date.h"
@@ -149,6 +149,26 @@ Base *base_ouvrir(const char *chemin, char **erreur) {
         base_fermer(b);
         return NULL;
     }
+    /* Format de la base (charte, art. 13) : lu avant toute écriture ; plus récent que nous, refusé. */
+    long format = 0;
+    {
+        sqlite3_stmt *sv = NULL;
+        if (sqlite3_prepare_v2(b->db, "PRAGMA user_version;", -1, &sv, NULL) != SQLITE_OK) {
+            *erreur = grym_formater("Base « %s » : fichier illisible (%s).", b->chemin, sqlite3_errmsg(b->db));
+            sqlite3_finalize(sv);
+            base_fermer(b);
+            return NULL;
+        }
+        if (sqlite3_step(sv) == SQLITE_ROW) format = (long)sqlite3_column_int64(sv, 0);
+        sqlite3_finalize(sv);
+    }
+    if (format > BASE_FORMAT) {
+        *erreur = grym_formater("La base « %s » a le format %ld, plus récent que celui de ce grym (%d) : "
+                                "ouvrez-la avec une version plus récente de grym. Elle n'a pas été modifiée.",
+                                b->chemin, format, BASE_FORMAT);
+        base_fermer(b);
+        return NULL;
+    }
     if (!executer(b, "PRAGMA foreign_keys = ON;"
                      "CREATE TABLE IF NOT EXISTS grym_objet (id INTEGER PRIMARY KEY AUTOINCREMENT, classe TEXT NOT NULL, "
                      "supprime TEXT, supprime_avec INTEGER);"
@@ -167,6 +187,12 @@ Base *base_ouvrir(const char *chemin, char **erreur) {
                                  "ALTER TABLE grym_objet ADD COLUMN supprime_avec INTEGER;", erreur)) {
         base_fermer(b);
         return NULL;
+    }
+    if (format < BASE_FORMAT) {   /* base neuve ou d'avant le numéro : elle reçoit le format courant */
+        char *sql = grym_formater("PRAGMA user_version = %d;", BASE_FORMAT);
+        int ok = executer(b, sql, erreur);
+        free(sql);
+        if (!ok) { base_fermer(b); return NULL; }
     }
     return b;
 }

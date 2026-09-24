@@ -99,6 +99,37 @@ static void creer_fichier(const char *nom, const void *octets, size_t n) {
     if (f) { fwrite(octets, 1, n, f); fclose(f); }
 }
 
+/* Format d'une base (charte, art. 13) : PRAGMA user_version, ou −1 si illisible. */
+static long format_base(const char *chemin) {
+    sqlite3 *db = NULL;
+    long v = -1;
+    if (sqlite3_open_v2(chemin, &db, SQLITE_OPEN_READONLY, NULL) == SQLITE_OK) {
+        sqlite3_stmt *st = NULL;
+        if (sqlite3_prepare_v2(db, "PRAGMA user_version;", -1, &st, NULL) == SQLITE_OK && sqlite3_step(st) == SQLITE_ROW)
+            v = (long)sqlite3_column_int64(st, 0);
+        sqlite3_finalize(st);
+    }
+    sqlite3_close(db);
+    return v;
+}
+
+static void sql_direct(const char *chemin, const char *sql) {
+    sqlite3 *db = NULL;
+    if (sqlite3_open(chemin, &db) == SQLITE_OK) sqlite3_exec(db, sql, NULL, NULL, NULL);
+    sqlite3_close(db);
+}
+
+/* Lance src sur la base chemin ; rend la sortie (à libérer). */
+static char *lancer_sur(const char *chemin, const char *src) {
+    Portee *p = portee_creer();
+    Machine *m = machine_creer();
+    machine_base(m, chemin);
+    char *r = executer_source(p, m, src, 0);
+    machine_detruire(m);
+    portee_detruire(p);
+    return r;
+}
+
 static int fichier_existe(const char *nom) {
     FILE *f = fopen(nom, "rb");
     if (f) fclose(f);
@@ -1806,6 +1837,50 @@ int main(void) {
     PROG("Un point a : un x.\nLe p vaut un nouveau point.\nPour f :\n    Saisir à nouveau p.\nF.", "~Seul un objet d'une entité se saisit.");
     PROG(FC "Le carré d'un n :\n    Saisir à nouveau b.\n    Rendre n.", "~Un calcul ne pose pas de question");
     PROG("Pour saisir un x :\n    Afficher 1.", "~« saisir » commence une construction du langage");
+
+    /* --- Format des bases (charte, art. 13) --- */
+    {
+        const char *B = "_essai_format.grymd";
+        const char *prog = "Un client, conservé, a : un nom (texte).\nPour f :\n    Le c vaut un nouveau client :\n"
+                           "        Le nom vaut « Ana ».\n    Conserver c.\nF.\nAfficher le nombre de clients conservés.";
+        char *r;
+        /* une base neuve reçoit le format courant */
+        remove(B);
+        r = lancer_sur(B, prog);
+        total++;
+        if (strcmp(r, "1") != 0 || format_base(B) != 1) signaler(__LINE__, "base neuve", "1, format 1", r);
+        free(r);
+        /* une base d'avant le numéro (et d'avant la corbeille) s'ouvre, reçoit ses colonnes et le format */
+        remove(B);
+        sql_direct(B, "CREATE TABLE grym_objet (id INTEGER PRIMARY KEY AUTOINCREMENT, classe TEXT NOT NULL);"
+                      "CREATE TABLE grym_schema (entite TEXT PRIMARY KEY, definition TEXT NOT NULL);");
+        r = lancer_sur(B, prog);
+        total++;
+        if (strcmp(r, "1") != 0 || format_base(B) != 1) signaler(__LINE__, "base ancienne", "1, format 1", r);
+        free(r);
+        /* une base plus récente se refuse, sans être touchée */
+        remove(B);
+        sql_direct(B, "PRAGMA user_version = 2;");
+        r = lancer_sur(B, prog);
+        total++;
+        if (!strstr(r, "a le format 2, plus récent que celui de ce grym (1)") || !strstr(r, "Elle n'a pas été modifiée."))
+            signaler(__LINE__, "base plus récente", "refus", r);
+        free(r);
+        {
+            sqlite3 *db = NULL;
+            sqlite3_stmt *st = NULL;
+            int tables = -1;
+            if (sqlite3_open_v2(B, &db, SQLITE_OPEN_READONLY, NULL) == SQLITE_OK
+                && sqlite3_prepare_v2(db, "SELECT count(*) FROM sqlite_master;", -1, &st, NULL) == SQLITE_OK
+                && sqlite3_step(st) == SQLITE_ROW)
+                tables = sqlite3_column_int(st, 0);
+            sqlite3_finalize(st);
+            sqlite3_close(db);
+            total++;
+            if (tables != 0 || format_base(B) != 2) signaler(__LINE__, "base plus récente intacte", "0 table, format 2", "modifiée");
+        }
+        remove(B);
+    }
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

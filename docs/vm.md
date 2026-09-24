@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.27 de la spécification, révisée le 24 septembre 2026.
-Référence : Charte de GrymoiR v1.22, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.35, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
+Version 1.28 de la spécification, révisée le 24 septembre 2026.
+Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
 Périmètre : la machine qui exécute le bytecode, le format du fichier `.grymb`, la base des entités, le ramasse-miettes et le journal d'annulation.
@@ -205,6 +205,7 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - Schéma : une table `"e <entité>"` par entité, avec ses champs propres et ceux de ses aptitudes, en colonnes `"c <champ>"` (plus `"n <champ>"`, le nom d'origine, pour un fichier ou une image). Sa colonne `id` désigne la ligne de la classe parente, ou de `grym_objet` pour une entité sans parent, avec `ON DELETE CASCADE`. Un objet conservé a donc une ligne dans chaque table de sa lignée.
 - Types SQL : texte, nombre (forme canonique, exacte), date (ISO 8601) en `TEXT` ; nombre entier en `INTEGER` ; vrai ou faux en `INTEGER` 0 ou 1 ; fichier et image en `BLOB` ; lien en `INTEGER` qui référence la table de l'entité liée. Tous `NOT NULL` ; `, unique` en `UNIQUE`.
 - `grym_objet` distribue les identifiants (`AUTOINCREMENT` : jamais réattribués) et note la classe réelle ; `grym_schema` garde la définition de chaque entité.
+- Format de la base (charte, art. 13) : `PRAGMA user_version`, lu à l'ouverture avant toute écriture. `BASE_FORMAT` (`src/base.h`) vaut 1. Plus grand : la base est refusée, intacte. 0 (base neuve, ou d'avant ce numéro) : elle reçoit ses colonnes manquantes, puis le format courant. Tout changement de la forme des tables communes (`grym_objet`, `grym_schema`) augmente `BASE_FORMAT` et ajoute sa migration.
 - Un objet porte son identifiant en base, 0 s'il n'est pas conservé. `CONSERVER` et `SUPPRIMER` le changent au journal, qui le restaure si l'exécution échoue.
 - `ÉCRIRE_CHAMP` sur un objet conservé écrit aussi la colonne en base.
 - Recherche : une constante de type 5 décrit la recherche, « entité ␟ mode ␟ champ du tri ␟ décroissant ␟ condition », avec le séparateur U+001F. Mode 0 : liste (boucle), 1 : un seul objet, 2 : nombre ; 3, 4 et 5 : les mêmes, dans la corbeille. Toute recherche écarte (modes 0 à 2) ou ne retient (modes 3 à 5) que les objets dont `grym_objet.supprime` est rempli. La condition s'écrit en préfixe : `(I?k)` pour une relation inverse (le lien de l'entité qui peut désigner l'objet `?k`, choisi à l'exécution selon sa classe réelle ; aucun ou plusieurs : erreur), `(e A B)`, `(o A B)`, `(n A)`, `(op [champ] ?k)` pour `=`, `!`, `<`, `>`, `l` (≤), `g` (≥), et `(P [champ])`, `N`, `0`, `V`, `F` pour les tournures ; `?k` désigne la k-ième valeur dépilée. La machine traduit en SQL, jointures de la lignée comprises.
@@ -324,3 +325,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.25 | 2026-09-23 | Annulation d'une question par un point seul, rattrapable |
 | 1.26 | 2026-09-23 | `COLLER`, `ÉLIDER` : assembler des textes ; format version 22 |
 | 1.27 | 2026-09-24 | `RESAISIR` : modifier par formulaire ; format version 23 |
+| 1.28 | 2026-09-24 | § 8 : format de la base (`PRAGMA user_version`) |

@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.35), § 16 ; docs/vm.md (révision 1.27), § 8.
+ * Spécification : docs/grammaire.md (révision 1.36), § 16 ; docs/vm.md (révision 1.28), § 8.
  *
  * Schéma : une table « e <entité> » par entité, qui porte ses champs propres et ceux de ses
  * aptitudes ; son identifiant désigne la ligne de sa classe parente, ou de « grym_objet »
@@ -28,6 +28,10 @@ void base_annuler(Base *b);
  * d'ouverture : SAVEPOINT, RELEASE (garder), ROLLBACK TO puis RELEASE (annuler). Sans transaction
  * ouverte, rien à faire. */
 int base_point(Base *b, size_t n, char **erreur);
+
+/* Format des bases (charte, art. 13), gravé dans PRAGMA user_version. Une base d'un format plus récent se
+ * refuse avant toute écriture ; 0 : base d'avant ce numéro, lue comme le format 1. */
+#define BASE_FORMAT 1
 int base_lacher(Base *b, size_t n, char **erreur);
 int base_revenir(Base *b, size_t n, char **erreur);
 

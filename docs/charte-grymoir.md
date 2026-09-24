@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.27, révisée le 24 septembre 2026.
+Version 1.28, révisée le 24 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -160,6 +160,7 @@ Critères de sortie de la v1.0 :
 2. Essai manuel, dans la console Windows, d'une saisie accentuée (la Partothèque avec un compositeur « Élodie Müller »).
 3. Modifier un objet conservé par formulaire (grammaire, § 19 : `Saisir à nouveau`). Fait.
 4. README et charte à jour.
+5. Compatibilité promise (art. 13) et numéro de format de chaque base. Fait.
 
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
@@ -172,6 +173,16 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 - langage : modifier le champ d'une recherche sans passer par un nom (`L'âge du client conservé dont … devient …`) ;
 - aide à la saisie (`docs/lsp.md`, § 8) : survol d'un nom, aller à la définition, renommer, rechercher les usages, plusieurs erreurs à la fois, suites en forme compacte, Neovim ;
 - installation pour l'utilisateur final : `grym` embarqué dans l'extension (un paquet par système, construit par GitHub Actions), aucun réglage, fonctionnement en mode restreint, bouton « Lancer », publication sur la place de marché de VS Code et sur Open VSX (licence et comptes d'éditeur requis).
+
+## 13. Compatibilité
+
+Une version 1.x promet ce qui suit. Toute exception passe par une révision de la charte.
+
+1. **Bases.** Une base créée ou modifiée par une version 1.x s'ouvre dans toute version 1.x ultérieure, sans perte, par migration automatique (art. 7). Chaque base porte le numéro de son format. Une version qui rencontre une base d'un format plus récent que le sien la refuse, avant toute écriture, et dit qu'une version plus récente de `grym` l'ouvrira.
+2. **Sources.** Un programme accepté par une version 1.x est accepté par les versions ultérieures et y produit le même effet. Seule exception : un mot nouvellement réservé ou un nouveau mot de construction. Chacun est alors inscrit au journal de la grammaire, et le message d'erreur propose la correction (le nom entre crochets, ou un autre verbe).
+3. **Comportement.** Même programme, même base, mêmes réponses : même résultat (art. 4). Corriger un écart entre le programme et la spécification n'est pas une rupture.
+4. **Hors promesse.** Le libellé des messages d'erreur, le bytecode `.grymb` (on recompile depuis les sources ; la machine lit les anciens formats par commodité), l'interface des fichiers de `src/`.
+5. **Version 2.** Elle peut rompre les sources. Elle ne rompt jamais une base : elle l'ouvre, ou fournit la commande qui la convertit (principe 1).
 
 ---
 
@@ -207,3 +218,4 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 | 1.25 | 2026-09-23 | Art. 12 : assemblage de textes (`suivi de`, élision) |
 | 1.26 | 2026-09-24 | Art. 12 : critères de sortie de la v1.0 ; intégration continue sur les trois systèmes |
 | 1.27 | 2026-09-24 | Art. 12 : modification par formulaire faite |
+| 1.28 | 2026-09-24 | Nouvel art. 13 : compatibilité (bases, sources, comportement, hors promesse, version 2) ; art. 12 : critère 5 |

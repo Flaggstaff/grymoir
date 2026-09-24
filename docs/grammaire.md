@@ -1,7 +1,7 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.35 de la spécification, révisée le 24 septembre 2026. Tout ce qui suit est implémenté.
-Référence : Charte de GrymoiR v1.27, art. 4, 5, 7, 8, 9 et 12.
+Version 1.36 de la spécification, révisée le 24 septembre 2026. Tout ce qui suit est implémenté.
+Référence : Charte de GrymoiR v1.28, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
 Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4), décider (§ 5), le calcul des suites attendues (§ 8), les formules (§ 9), répéter (§ 10), la forme compacte (§ 11), la forme canonique (§ 12), les objets (§ 13), les dates et les années (§ 14), les fichiers et les images (§ 15), les entités conservées (§ 16) les questions à l'utilisateur (§ 17), la reprise après erreur (§ 18) et le formulaire (§ 19). Ce que le langage ne sait pas encore faire est listé dans la charte, art. 11 et 12.
@@ -1035,6 +1035,7 @@ Afficher le nombre de clients conservés dont le statut actif est vrai.
 - `factures.grymc` et `factures.grymb` utilisent aussi `factures.grymd`.
 - Tant que les migrations (§ 16.7) ne sont pas là, une entité dont la définition a changé depuis la dernière exécution est refusée : « La base « factures.grymd » connaît « client » avec une autre définition… » La base n'est pas touchée.
 - Aucune base n'est ouverte si le programme ne déclare aucune entité.
+- Chaque base porte un numéro de format (charte, art. 13). Une base d'un format plus récent que celui de `grym` est refusée avant toute écriture : « La base « factures.grymd » a le format 2, plus récent que celui de ce grym (1) : ouvrez-la avec une version plus récente de grym. Elle n'a pas été modifiée. »
 
 ### 16.6 Transaction
 
@@ -1330,3 +1331,4 @@ Le p vaut une nouvelle partition saisie :
 | 1.33 | 2026-09-23 | § 17 : un point seul annule une question ou un formulaire (« Saisie annulée. »), annoncé à la première relance |
 | 1.34 | 2026-09-23 | § 4.4 : assembler des textes (`suivi de`), élision de `de` et `que` selon la valeur ; `suivi` réservé |
 | 1.35 | 2026-09-24 | § 19 : modifier par formulaire (`Saisir à nouveau p.`), valeurs actuelles entre crochets, `-` pour vider, écriture après la dernière réponse ; `saisir` réservé aux constructions |
+| 1.36 | 2026-09-24 | § 16.5 : numéro de format des bases, base plus récente refusée (charte, art. 13) |
