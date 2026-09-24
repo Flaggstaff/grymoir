@@ -1629,7 +1629,10 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
             size_t nv = 0;
             char *erreur = NULL;
             long kc = index_champ(ci.lie, ci.cle);
-            if (kc >= 0 && base_valeurs(m->base, ci.lie->nom, ci.lie->proprietaires[kc]->nom, ci.cle, 1000, &vals, &nv, &erreur)) {
+            /* 1001 demandées : la millième et unième dit que la liste n'est pas complète (docs/v2.md, § 10) */
+            if (kc >= 0 && base_valeurs(m->base, ci.lie->nom, ci.lie->proprietaires[kc]->nom, ci.cle, 1001, &vals, &nv, &erreur)) {
+                c.suggestions_completes = nv <= 1000;
+                if (nv > 1000) { free(vals[1000]); nv = 1000; }
                 c.suggestions = (const char *const *)vals;
                 c.nb_suggestions = nv;
             } else {

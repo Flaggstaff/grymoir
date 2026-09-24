@@ -346,13 +346,38 @@ int main(void) {
     REQUETES(get("/"), post("q=1&c0=T&c1=Zoé&c2=&c3=12,5&c4=non&c5=&action=envoyer"), get("/"));
     servir(COMPOSITEURS "La p vaut une nouvelle pièce saisie.\nConserver p.\n"
            "Afficher nom du compositeur de p puis prix de p puis édition de p puis tirage de p.", &sc);
-    CONTIENT(sc.reponses[0], "list=\"l1\" autocomplete=\"off\"");
-    CONTIENT(sc.reponses[0], "<datalist id=\"l1\"><option value=\"Bach\"><option value=\"élodie\"><option value=\"Zoé\"></datalist>");
+    CONTIENT(sc.reponses[0], "<select id=\"c1\" name=\"c1\"><option value=\"\" selected></option><option value=\"Bach\">Bach</option>"
+                             "<option value=\"élodie\">élodie</option><option value=\"Zoé\">Zoé</option></select>");
+    NE_CONTIENT_PAS(sc.reponses[0], "<datalist");
     NE_CONTIENT_PAS(sc.reponses[0], "Oublié");
     CONTIENT(sc.reponses[0], "name=\"c3\" value=\"\" inputmode=\"decimal\"");
     CONTIENT(sc.reponses[0], "<select id=\"c4\" name=\"c4\"><option value=\"\" selected></option><option value=\"oui\">oui</option>");
     CONTIENT(sc.reponses[0], "<select id=\"c5\" name=\"c5\"><option value=\"\" selected></option>");
     CONTIENT(sc.reponses[2], "Zoé 12,5 faux absent");
+    liberer(&sc);
+
+    /* modifier : le lien actuel est choisi ; dans la corbeille, il reste proposé et choisi, jamais perdu */
+    memset(&sc, 0, sizeof sc);
+    REQUETES(get("/"), post("q=1&c0=T&c1=Oublié&c2=&c3=1&c4=oui&c5=&action=envoyer"), get("/"));
+    servir(COMPOSITEURS "Rétablir le compositeur supprimé dont le nom est « Oublié ».\n"
+           "La p vaut une nouvelle pièce :\n    Le titre vaut « T ».\n"
+           "    Le compositeur vaut le compositeur conservé dont le nom est « Oublié ».\n"
+           "    Le prix vaut 1.\n    L'édition vaut vrai.\nConserver p.\n"
+           "Supprimer le compositeur conservé dont le nom est « Oublié ».\n"
+           "Saisir à nouveau p.\nAfficher nom du compositeur de p.", &sc);
+    CONTIENT(sc.reponses[0], "<select id=\"c1\" name=\"c1\"><option value=\"\"></option>"
+                             "<option value=\"Oublié\" selected>Oublié</option><option value=\"Bach\">Bach</option>");
+    liberer(&sc);
+
+    /* plus de 1000 objets : le champ texte à suggestions revient, avec les 1000 premières clés */
+    memset(&sc, 0, sizeof sc);
+    REQUETES(get("/"));
+    servir("Un compositeur, conservé, a : un nom (texte), unique.\nUne pièce, conservée, a : un compositeur (compositeur).\n"
+           "Pour peupler :\n    Pour chaque i de 1 à 1001 :\n        Le c vaut un nouveau compositeur :\n"
+           "            Le nom vaut « C » suivi de i.\n        Conserver c.\n"
+           "Peupler.\nLa p vaut une nouvelle pièce saisie.", &sc);
+    CONTIENT(sc.reponses[0], "list=\"l0\" autocomplete=\"off\"");
+    NE_CONTIENT_PAS(sc.reponses[0], "<select");
     liberer(&sc);
 
     /* téléversement : jamais sur le disque, le nom réduit à son dernier segment, l'image affichée à sa place */

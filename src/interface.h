@@ -36,6 +36,7 @@ typedef struct {
     int facultatif;                      /* une réponse vide laisse le champ absent */
     const char *const *suggestions;      /* lien : les clés des objets conservés, dans l'ordre du dictionnaire */
     size_t nb_suggestions;
+    int suggestions_completes;           /* 1 : la liste contient tous les objets (au plus 1000) ; un menu suffit */
     /* fichier ou image reçus par l'interface, au lieu d'un chemin tapé ; la machine en prend possession */
     int fichier_recu;
     unsigned char *octets;

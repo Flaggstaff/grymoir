@@ -547,6 +547,25 @@ static void page_question(Serveur *s, const Question *q) {
                     chaine_ajouter(&c, "</span>");
                 }
             }
+        } else if (ch->suggestions_completes) {   /* un lien, tous les objets connus : un menu (docs/v2.md, § 10) */
+            chaine_ajouter(&c, "<select id=\"");
+            chaine_ajouter(&c, id);
+            chaine_ajouter(&c, "\" name=\"");
+            chaine_ajouter(&c, id);
+            chaine_ajouter(&c, "\"");
+            if (q->acceptes[k]) chaine_ajouter(&c, " disabled");
+            chaine_ajouter(&c, attente);
+            chaine_ajouter(&c, ">");
+            const char *v = valeur ? valeur : "";
+            int trouvee = !*v;
+            for (size_t j = 0; j < ch->nb_suggestions && !trouvee; j++) trouvee = strcmp(ch->suggestions[j], v) == 0;
+            /* le choix vide : absent pour un facultatif, valeur actuelle gardée en modification, sinon refusé */
+            option(&c, "", "", !*v);
+            /* la valeur actuelle hors de la liste (objet dans la corbeille) reste choisie, jamais perdue en silence */
+            if (!trouvee) option(&c, v, v, 1);
+            for (size_t j = 0; j < ch->nb_suggestions; j++)
+                option(&c, ch->suggestions[j], ch->suggestions[j], strcmp(ch->suggestions[j], v) == 0);
+            chaine_ajouter(&c, "</select>");
         } else if (est_oui_non(ch)) {   /* vrai ou faux : oui, non, ou rien pour un champ facultatif */
             chaine_ajouter(&c, "<select id=\"");
             chaine_ajouter(&c, id);

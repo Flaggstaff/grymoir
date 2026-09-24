@@ -8,6 +8,7 @@ test_analyseur
 test_machine
 test_imprimeur
 test_compact
+test_serveur
 test_base
 test_lsp
 *.exe
