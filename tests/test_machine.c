@@ -130,6 +130,75 @@ static char *lancer_sur(const char *chemin, const char *src) {
     return r;
 }
 
+/* Une interface « page » pour les tests (docs/vm.md, § 13) : tous les champs d'un coup, puis seuls les
+ * champs refusés à nouveau, comme un navigateur qui renvoie la page. Réponses spéciales : « ANNULER »,
+ * « VIDER ». Le journal note chaque page, ses champs et ses refus. */
+typedef struct {
+    const char *const *reponses;
+    size_t n, i;
+    Chaine journal;
+    int effacements;
+} Page;
+
+static int page_disponible(void *contexte) { (void)contexte; return 1; }
+
+static Issue page_formulaire(void *contexte, Chaine *sortie, Champ *champs, size_t n, size_t *arret,
+                             Validation valider, void *vcontexte) {
+    Page *p = contexte;
+    (void)sortie;
+    char *acceptes = calloc(n ? n : 1, 1);
+    int refus;
+    chaine_ajouter(&p->journal, "page");
+    do {
+        refus = 0;
+        for (size_t k = 0; k < n; k++) {
+            if (acceptes[k]) continue;
+            chaine_ajouter(&p->journal, " ");
+            chaine_ajouter(&p->journal, champs[k].libelle);
+            if (champs[k].valeur) { chaine_ajouter(&p->journal, "="); chaine_ajouter(&p->journal, champs[k].valeur); }
+            if (champs[k].videable) chaine_ajouter(&p->journal, "(videable)");
+            if (p->i >= p->n) { free(acceptes); *arret = k; return ISSUE_FIN; }
+            const char *r = p->reponses[p->i++];
+            if (strcmp(r, "ANNULER") == 0) { free(acceptes); *arret = k; return ISSUE_ANNULE; }
+            champs[k].vider = strcmp(r, "VIDER") == 0;
+            champs[k].ligne = grym_dupliquer(champs[k].vider ? "" : r);
+            char *message = NULL;
+            int v = valider(vcontexte, k, &message);
+            if (v < 0) { free(message); free(acceptes); *arret = k; return ISSUE_ARRET; }
+            if (v > 0) {
+                chaine_ajouter(&p->journal, " !");
+                chaine_ajouter(&p->journal, message);
+                refus = 1;
+            } else {
+                acceptes[k] = 1;
+            }
+            free(message);
+        }
+    } while (refus);
+    free(acceptes);
+    return ISSUE_REPONDU;
+}
+
+static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page *)contexte)->effacements++; }
+
+/* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
+static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
+    Page pg = { reponses, n, 0, {0}, 0 };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer };
+    Portee *p = portee_creer();
+    Machine *m = machine_creer();
+    machine_interface(m, &i);
+    char *r = executer_source(p, m, src, 0);
+    machine_detruire(m);
+    portee_detruire(p);
+    char *j = chaine_rendre(&pg.journal);
+    char *tout = grym_formater("%s\n%s", r, j);
+    free(r);
+    free(j);
+    if (effacements) *effacements = pg.effacements;
+    return tout;
+}
+
 static int fichier_existe(const char *nom) {
     FILE *f = fopen(nom, "rb");
     if (f) fclose(f);
@@ -1880,6 +1949,46 @@ int main(void) {
             if (tables != 0 || format_base(B) != 2) signaler(__LINE__, "base plus récente intacte", "0 table, format 2", "modifiée");
         }
         remove(B);
+    }
+
+    /* --- Interface d'entrée et de sortie (docs/vm.md, § 13) : une page au lieu de la console --- */
+    {
+        static const char *const R1[] = { "Toccata", "A-1", "Bach", "", "x", "", "1705", "oui", "01.02.1900" };
+        char *r = avec_page(FC FP "Le p vaut une nouvelle partition saisie.\nConserver p.\n" FA, R1, 9, NULL);
+        const char *att = "Toccata A-1 Bach absent 01.02.1900 20 1705 vrai\n"
+                          "page Titre Cote Compositeur Arrangeur Édition "
+                          "!« x » n'est pas une date : écrivez jour.mois.année (21.09.2026). "
+                          "Prix=20 Création Actif Édition";
+        total++;
+        if (strcmp(r, att) != 0) signaler(__LINE__, "formulaire en page", att, r);
+        free(r);
+        /* modification : valeurs actuelles, « vider » explicite, tout ou rien */
+        static const char *const R2[] = { "", "Offrande musicale", "", "VIDER", "" };
+        r = avec_page(FM "Saisir à nouveau p.\n" FMA, R2, 5, NULL);
+        att = "P-1 Offrande musicale Bach absent absent\n"
+              "page Cote=P-1 Titre=Offrande Compositeur=Bach Arrangeur=Webern(videable) Édition";
+        total++;
+        if (strcmp(r, att) != 0) signaler(__LINE__, "modification en page", att, r);
+        free(r);
+        static const char *const R3[] = { "P-9", "Nouveau", "ANNULER" };
+        r = avec_page(FM ESS("    Saisir à nouveau p.\n", "    Afficher le motif de l'échec.\n") FMA, R3, 3, NULL);
+        att = "Saisie annulée.\nP-1 Offrande Bach un compositeur absent\n"
+              "page Cote=P-1 Titre=Offrande Compositeur=Bach";
+        total++;
+        if (strcmp(r, att) != 0) signaler(__LINE__, "annulation en page", att, r);
+        free(r);
+        /* « la réponse à » est un formulaire d'un champ ; « Effacer l'écran » passe par l'interface */
+        static const char *const R4[] = { "douze", "12" };
+        int eff = 0;
+        r = avec_page("Le x vaut la réponse en nombre à « Âge ? ».\nEffacer l'écran.\nAfficher x + 1.", R4, 2, &eff);
+        att = "13\npage Âge ? !« douze » n'est pas un nombre. Âge ?";
+        total++;
+        if (strcmp(r, att) != 0 || eff != 1) signaler(__LINE__, "question en page", att, r);
+        free(r);
+        r = avec_page("Le x vaut la réponse à « ? ».", R4, 0, NULL);
+        total++;
+        if (!strstr(r, "Plus rien à lire : la réponse à « ? » manque.")) signaler(__LINE__, "fin de page", "fin", r);
+        free(r);
     }
 
     printf("%d/%d tests réussis\n", total - echecs, total);

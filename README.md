@@ -67,15 +67,15 @@ Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
 Sous Windows sans `make` :
 
     gcc -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DQS=0 -DSQLITE_DEFAULT_FOREIGN_KEYS=1 -DSQLITE_OMIT_DEPRECATED -DSQLITE_DEFAULT_MEMSTATUS=0 -c -o vendor/sqlite/sqlite3.o vendor/sqlite/sqlite3.c
-    gcc -std=c99 -O2 -Ivendor/sqlite -o grym.exe src/grym.c src/lsp.c src/json.c src/compilateur.c src/vm.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o
+    gcc -std=c99 -O2 -Ivendor/sqlite -o grym.exe src/grym.c src/lsp.c src/json.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o
     gcc -std=c99 -O2 -o grym-lexeur.exe src/grym-lexeur.c src/lexeur.c src/date.c src/texte.c
     gcc -std=c99 -O2 -Ivendor/sqlite -o test_base.exe tests/test_base.c vendor/sqlite/sqlite3.o
     gcc -std=c99 -O2 -Isrc -o test_lexeur.exe tests/test_lexeur.c src/lexeur.c src/date.c src/texte.c
     gcc -std=c99 -O2 -o grym-arbre.exe src/grym-arbre.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/decimal.c src/lexeur.c src/date.c
     gcc -std=c99 -O2 -o grym-suites.exe src/grym-suites.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/decimal.c src/lexeur.c src/date.c
     gcc -std=c99 -O2 -Isrc -o test_analyseur.exe tests/test_analyseur.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/decimal.c src/lexeur.c src/date.c
-    gcc -std=c99 -O2 -Isrc -Ivendor/sqlite -o test_machine.exe tests/test_machine.c src/compilateur.c src/vm.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o
-    gcc -std=c99 -O2 -Isrc -Ivendor/sqlite -o test_compact.exe tests/test_compact.c src/compilateur.c src/vm.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o
+    gcc -std=c99 -O2 -Isrc -Ivendor/sqlite -o test_machine.exe tests/test_machine.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o
+    gcc -std=c99 -O2 -Isrc -Ivendor/sqlite -o test_compact.exe tests/test_compact.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o
     gcc -std=c99 -O2 -Isrc -o test_imprimeur.exe tests/test_imprimeur.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/decimal.c src/lexeur.c src/date.c
     gcc -std=c99 -O2 -Isrc -o test_lsp.exe tests/test_lsp.c src/lsp.c src/json.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/decimal.c src/lexeur.c src/date.c
 

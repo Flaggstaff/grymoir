@@ -4,14 +4,14 @@ CPPFLAGS += -Ivendor/sqlite
 
 LEXEUR    = src/lexeur.c src/date.c src/texte.c
 ANALYSEUR = src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c $(LEXEUR)
-EXECUTION = src/compilateur.c src/vm.c src/base.c src/bytecode.c $(ANALYSEUR) $(SQLITE_O)
+EXECUTION = src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c $(ANALYSEUR) $(SQLITE_O)
 # SQLite embarqué (vendor/sqlite, voir PROVENANCE.md) : compilé une fois, sans les avertissements
 # de GrymoiR (ce code n'est pas le nôtre), avec les réglages de la charte.
 SQLITE_FLAGS = -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DQS=0 \
                -DSQLITE_DEFAULT_FOREIGN_KEYS=1 -DSQLITE_OMIT_DEPRECATED -DSQLITE_DEFAULT_MEMSTATUS=0
 SQLITE_O     = vendor/sqlite/sqlite3.o
 
-ENTETES   = src/base.h src/vm_interne.h src/date.h src/compact.h src/imprimeur.h src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
+ENTETES   = src/interface.h src/base.h src/vm_interne.h src/date.h src/compact.h src/imprimeur.h src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
 
 all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp
 

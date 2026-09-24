@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.28).
+ * Spécification : docs/vm.md (révision 1.29).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -184,12 +184,10 @@ struct Machine {
     Base *base;             /* ouverte au premier besoin */
     int base_engagee;       /* dernière exécution : une base était en jeu (message d'annulation, § 3.3) */
     int fichiers_prevus;    /* dernière exécution : des fichiers devaient être écrits */
-    int terminal;           /* la sortie est un terminal (§ 4.3) */
     int style;              /* affichage des nombres : 0 suisse, 1 française, 2 sans séparateur (§ 4.1) */
     int question_posee;     /* dernière exécution : une question a validé ce qui précède (§ 17) */
-    int annulation_annoncee;   /* « . » pour annuler : dit une fois, à la première relance (§ 17) */
-    char *(*lire)(void *contexte, Chaine *sortie, const char *question);
-    void *lire_contexte;
+    Console console;        /* l'interface par défaut, et son état (docs/vm.md, § 13) */
+    Interface iface;        /* questions, formulaires, effacement : console ou autre */
     long *carte_cles;       /* carte d'identité : identifiant en base → objet en mémoire (§ 16.4) */
     Objet **carte_objets;   /* clé 0 : case vide ; clé −1 : case libérée */
     size_t carte_cap, carte_n;
@@ -219,6 +217,7 @@ volatile sig_atomic_t grym_interruption = 0;
 Machine *machine_creer(void) {
     Machine *m = grym_allouer(sizeof *m);
     memset(m, 0, sizeof *m);
+    m->iface = console_interface(&m->console);
     return m;
 }
 
@@ -299,12 +298,16 @@ char *machine_annulation(const Machine *m, int interactif) {
 
 void machine_lecteur(Machine *m, char *(*lire)(void *contexte, Chaine *sortie, const char *question),
                      void *contexte) {
-    m->lire = lire;
-    m->lire_contexte = contexte;
+    m->console.lire = lire;
+    m->console.contexte = contexte;
 }
 
 void machine_terminal(Machine *m, int terminal) {
-    m->terminal = terminal;
+    m->console.terminal = terminal;
+}
+
+void machine_interface(Machine *m, const Interface *i) {
+    m->iface = i ? *i : console_interface(&m->console);
 }
 
 void machine_base(Machine *m, const char *chemin) {
@@ -1219,28 +1222,8 @@ static Formule *choisir_version(Machine *m, const char *nom, const Valeur *premi
 /* Formulaire : « un nouveau client saisi » (grammaire, § 19)       */
 /* ---------------------------------------------------------------- */
 
-/* Une ligne faite d'un point seul annule la question (§ 17). */
-static int est_annulation(const char *ligne) {
-    while (*ligne == ' ' || *ligne == '\t') ligne++;
-    if (*ligne != '.') return 0;
-    ligne++;
-    while (*ligne == ' ' || *ligne == '\t') ligne++;
-    return *ligne == '\0';
-}
-
-/* Relance après une réponse refusée ; la première de la machine dit comment annuler. */
-static void relancer(Machine *m, Chaine *sortie, const char *message) {
-    chaine_ajouter(sortie, message);
-    if (!m->annulation_annoncee) {
-        chaine_ajouter(sortie, " Tapez « . » seul pour annuler.");
-        m->annulation_annoncee = 1;
-    }
-    chaine_ajouter(sortie, "\n");
-}
-
 /* Avant de lire une ligne : ce qui précède est validé, la base est rendue, chaque essai repart d'ici (§ 17, § 18). */
 static char *ouvrir_attente(Machine *m, Chaine *sortie, Cadre *cadres) {
-    if (!m->lire) return grym_dupliquer("Aucune entrée : la question ne peut pas être posée ici.");
     char *probleme = valider_jusqu_ici(m, sortie);
     if (probleme) return probleme;
     m->question_posee = 1;
@@ -1338,13 +1321,241 @@ static void oublier_modifications(Modification *t, size_t n) {
     free(t);
 }
 
-/* Remplit l'objet, champ par champ, par des questions (grammaire, § 19). modifier : « Saisir à nouveau »,
- * chaque valeur actuelle entre crochets, écrite seulement après la dernière réponse (tout ou rien).
+/* État commun des validations : le motif d'un arrêt, et s'il est rattrapable. */
+typedef struct {
+    Machine *m;
+    int fatal;
+    char *motif;
+} Attente;
+
+/* Pose des champs par l'interface, avec la discipline des questions (§ 17) : ce qui précède est validé
+ * avant, le verrou de la base repris après. NULL : tout est répondu ; sinon le motif, et a->fatal dit
+ * s'il échappe aux essais. */
+static char *poser(Machine *m, Chaine *sortie, Cadre *cadres, Champ *champs, size_t n,
+                   Validation valider, void *vcontexte, Attente *a) {
+    if (!m->iface.disponible(m->iface.contexte)) {
+        a->fatal = 1;
+        return grym_dupliquer("Aucune entrée : la question ne peut pas être posée ici.");
+    }
+    char *probleme = ouvrir_attente(m, sortie, cadres);
+    if (probleme) { a->fatal = 1; return probleme; }
+    size_t k = 0;
+    Issue issue = m->iface.formulaire(m->iface.contexte, sortie, champs, n, &k, valider, vcontexte);
+    if (issue == ISSUE_ARRET) {
+        probleme = a->motif;
+        a->motif = NULL;
+        return probleme ? probleme : grym_dupliquer("Saisie interrompue.");
+    }
+    if (issue == ISSUE_FIN) {
+        char *invite = champ_invite(&champs[k]);
+        probleme = grym_formater("Plus rien à lire : la réponse à « %s » manque.", invite);
+        free(invite);
+        a->fatal = 1;
+        return probleme;
+    }
+    probleme = fermer_attente(m);   /* le verrou reprend : l'essai qui rattrape retrouve une transaction */
+    if (probleme) { a->fatal = 1; return probleme; }
+    if (issue == ISSUE_ANNULE) return grym_dupliquer("Saisie annulée.");
+    return NULL;
+}
+
+/* Une réponse refusée pendant un Ctrl+C : l'arrêt l'emporte sur la relance. */
+static int interrompu(Attente *a, char **message) {
+    if (!grym_interruption) return 0;
+    grym_interruption = 0;
+    free(*message);
+    *message = NULL;
+    a->motif = grym_dupliquer("Interrompu (Ctrl+C).");
+    a->fatal = 1;
+    return 1;
+}
+
+/* « la réponse à » : un champ, lu selon son type (§ 17). */
+typedef struct {
+    Attente a;
+    Champ *champ;
+    const char *type;
+    Valeur r;
+} Demande;
+
+static int valider_demande(void *vcontexte, size_t k, char **message) {
+    (void)k;
+    Demande *d = vcontexte;
+    char *ligne = d->champ->ligne;
+    d->champ->ligne = NULL;
+    Valeur v;
+    char *pb = NULL;
+    int lu = lire_reponse(d->type, ligne, &v, &pb);
+    free(ligne);
+    if (lu) {
+        valeur_liberer(&d->r);
+        d->r = v;
+        return 0;
+    }
+    *message = pb;
+    return interrompu(&d->a, message) ? -1 : 1;
+}
+
+/* Un champ du formulaire, vu par la machine. */
+typedef struct {
+    size_t k;               /* rang du champ dans la classe */
+    const ClasseVM *lie;    /* lien : l'entité liée ; sa clé */
+    const char *cle;
+    int fichier, facultatif, unique;
+    char *actuel;           /* modification : la valeur actuelle montrée ; NULL sinon */
+    int a_depart;
+    Valeur depart;
+} ChampMachine;
+
+typedef struct {
+    Attente a;
+    Objet *o;
+    int modifier;
+    Chaine *sortie;
+    Cadre *cadres;
+    Champ *champs;
+    ChampMachine *infos;
+    Modification *attente;   /* modification : écrite après la dernière réponse (tout ou rien) */
+    size_t nb_attente;
+} Formulaire;
+
+static void en_attente(Formulaire *f, size_t k, Valeur v) {
+    f->attente[f->nb_attente].k = k;
+    f->attente[f->nb_attente++].v = v;
+}
+
+/* Lit la réponse au champ q : 0 acceptée, 1 relance (*message), -1 arrêt (f->a.motif). */
+static int lire_champ(Formulaire *f, size_t q, char **message) {
+    Machine *m = f->a.m;
+    const ChampMachine *ci = &f->infos[q];
+    const ClasseVM *cl = f->o->classe;
+    size_t k = ci->k;
+    const char *champ = cl->champs[k], *type = cl->types[k];
+    char *ligne = f->champs[q].ligne;
+    f->champs[q].ligne = NULL;
+    char *t = ligne;
+    while (*t == ' ' || *t == '\t') t++;
+    size_t n = strlen(t);
+    while (n && (t[n - 1] == ' ' || t[n - 1] == '\t')) t[--n] = '\0';
+    if (f->champs[q].vider) {   /* « - » : le champ devient absent (§ 19) */
+        free(ligne);
+        en_attente(f, k, vi_absent(champ));
+        return 0;
+    }
+    if (ci->actuel && !n) { free(ligne); return 0; }   /* ligne vide : la valeur actuelle reste */
+    Valeur v;
+    int pris = 0;
+    char *relance = NULL;
+    if (!n) {
+        if (ci->facultatif) { free(ligne); return 0; }   /* reste absent */
+        if (ci->a_depart) { v = valeur_copier(&ci->depart); pris = 1; }
+        else relance = grym_dupliquer("Une réponse est attendue.");
+    } else if (ci->lie) {
+        Valeur cherche = vi_texte(t), l;
+        char *erreur = NULL;
+        if (!chercher_valeur(m, ci->lie->nom, 0, ci->cle, &cherche, &l, &erreur)) {
+            valeur_liberer(&cherche);
+            free(ligne);
+            f->a.motif = erreur;
+            return -1;
+        }
+        if (l.type == V_LISTE && l.liste->n) {
+            Objet *x = machine_objet_en_base(m, l.liste->ids[0], l.liste->classes[0], &erreur);
+            if (x) { v = vi_objet(x); pris = 1; }
+            else relance = erreur;
+        } else {
+            relance = ci->lie->feminin
+                    ? grym_formater("Aucune %s conservée n'a « %s » pour %s.", ci->lie->nom, t, ci->cle)
+                    : grym_formater("Aucun %s conservé n'a « %s » pour %s.", ci->lie->nom, t, ci->cle);
+        }
+        valeur_liberer(&l);
+        valeur_liberer(&cherche);
+    } else if (ci->fichier) {
+        char *erreur = NULL;
+        Fichier *fi = lire_fichier(m, t, &erreur);
+        if (fi) {
+            v = valeur_nombre(dec_zero());
+            v.type = V_FICHIER;
+            v.fichier = fi;
+            pris = 1;
+        } else {
+            relance = erreur;
+        }
+    } else {
+        pris = lire_reponse(type, t, &v, &relance);
+    }
+    free(ligne);
+    if (pris) relance = verifier_type_champ(m, champ, type, &v, ci->facultatif);
+    if (pris && !relance && ci->unique && m->base && ci->actuel) {
+        char *x = valeur_montree(m, &v, ci->cle);   /* garder sa propre valeur n'est pas un doublon */
+        int meme = x && strcmp(x, ci->actuel) == 0;
+        free(x);
+        if (meme) { en_attente(f, k, v); return 0; }
+    }
+    if (pris && !relance && ci->unique && m->base) {
+        /* une valeur unique déjà prise, même dans la corbeille, se refuse dès la réponse */
+        const char *table = cl->proprietaires[k]->nom;
+        Valeur r1, r2;
+        char *erreur = NULL;
+        if (!chercher_valeur(m, table, 2, champ, &v, &r1, &erreur)) {
+            valeur_liberer(&v);
+            f->a.motif = erreur;
+            return -1;
+        }
+        if (!chercher_valeur(m, table, 5, champ, &v, &r2, &erreur)) {
+            valeur_liberer(&r1);
+            valeur_liberer(&v);
+            f->a.motif = erreur;
+            return -1;
+        }
+        if (nombre_de(&r1) + nombre_de(&r2) > 0) {
+            char *x = texte_valeur(m, &v);
+            relance = grym_formater("« %s » est déjà pris.", x);
+            free(x);
+        }
+        valeur_liberer(&r1);
+        valeur_liberer(&r2);
+    }
+    if (pris && !relance) {
+        if (f->modifier) en_attente(f, k, v);
+        else ecrire_champ(m, f->o, k, v);
+        return 0;
+    }
+    if (pris) valeur_liberer(&v);
+    *message = relance;
+    return interrompu(&f->a, message) ? -1 : 1;
+}
+
+/* Validation d'un champ du formulaire : le verrou reprend le temps de la vérifier (liens, unicité),
+ * puis se rend avant la question suivante (§ 17). */
+static int valider_champ(void *vcontexte, size_t q, char **message) {
+    Formulaire *f = vcontexte;
+    char *probleme = fermer_attente(f->a.m);
+    if (probleme) {
+        free(f->champs[q].ligne);
+        f->champs[q].ligne = NULL;
+        f->a.motif = probleme;
+        f->a.fatal = 1;
+        return -1;
+    }
+    int r = lire_champ(f, q, message);
+    if (r < 0) return -1;
+    probleme = ouvrir_attente(f->a.m, f->sortie, f->cadres);
+    if (probleme) {
+        free(*message);
+        *message = NULL;
+        f->a.motif = probleme;
+        f->a.fatal = 1;
+        return -1;
+    }
+    return r;
+}
+
+/* Remplit l'objet par un formulaire (grammaire, § 19). modifier : « Saisir à nouveau », chaque valeur
+ * actuelle montrée, les champs écrits seulement après la dernière réponse (tout ou rien).
  * *fatal : erreur qu'aucun essai ne rattrape (entrée épuisée, base perdue, Ctrl+C). */
 static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadre *cadres, int *fatal, int modifier) {
     const ClasseVM *cl = o->classe;
-    Modification *attente = NULL;
-    size_t nb_attente = 0;
     if (modifier) {
         char *erreur = NULL;
         if (o->id && !charger(m, o, &erreur)) return erreur;
@@ -1354,178 +1565,68 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
             free(qui);
             return r;
         }
-        attente = grym_allouer((cl->nb_champs ? cl->nb_champs : 1) * sizeof *attente);
     }
-    for (size_t k = 0; k < cl->nb_champs; k++) {
+    size_t cap = cl->nb_champs ? cl->nb_champs : 1;
+    Formulaire f = { { m, 0, NULL }, o, modifier, sortie, cadres,
+                     grym_allouer(cap * sizeof(Champ)), grym_allouer(cap * sizeof(ChampMachine)),
+                     grym_allouer(cap * sizeof(Modification)), 0 };
+    size_t n = 0;
+    char *probleme = NULL;
+    /* les champs à demander, décrits d'avance : un lien impossible à demander se signale avant toute question */
+    for (size_t k = 0; k < cl->nb_champs && !probleme; k++) {
         const char *champ = cl->champs[k], *type = cl->types[k];
-        int facultatif = (cl->uniques[k] & 2) != 0, unique = (cl->uniques[k] & 1) != 0;
         if ((cl->uniques[k] & 8) || initialise(deja, champ) || !type) continue;
-        const ClasseVM *lie = NULL;
-        const char *cle = NULL;
-        int fichier = strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0;
+        ChampMachine ci = { k, NULL, NULL, 0, (cl->uniques[k] & 2) != 0, (cl->uniques[k] & 1) != 0, NULL, 0, vi_absent(champ) };
+        ci.fichier = strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0;
         static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "année" };
-        int de_base = fichier;
+        int de_base = ci.fichier;
         for (size_t q = 0; q < sizeof BASE / sizeof *BASE; q++) de_base |= strcmp(type, BASE[q]) == 0;
         if (!de_base) {
-            lie = classe_vm(m, type);
-            cle = lie ? champ_cle(lie) : NULL;
-            if (!cle) {
-                if (facultatif) continue;
-                return grym_formater("Le champ « %s » ne se demande pas : « %s » n'a aucun champ texte unique qui "
-                                     "désigne un objet. Donnez-lui sa valeur dans le bloc du nouvel objet.", champ, type);
-            }
-        }
-        char *actuel = modifier && o->definis[k] ? valeur_montree(m, &o->champs[k], cle) : NULL;
-        int a_depart = !modifier && cl->departs[k] != NULL;
-        Valeur depart = a_depart ? valeur_de_depart(type, cl->departs[k]) : vi_absent(champ);
-        char *nom = capitale(champ), *question;
-        if (actuel) {
-            question = grym_formater("%s [%s]%s ?", nom, actuel, facultatif ? " (- pour vider)" : "");
-        } else if (a_depart) {
-            char *d = texte_valeur(m, &depart);
-            question = grym_formater("%s [%s] ?", nom, d);
-            free(d);
-        } else {
-            question = grym_formater("%s ?", nom);
-        }
-        free(nom);
-        char *probleme = NULL;
-        for (;;) {
-            probleme = ouvrir_attente(m, sortie, cadres);
-            if (probleme) { *fatal = 1; break; }
-            char *ligne = m->lire(m->lire_contexte, sortie, question);
-            if (!ligne) {
-                probleme = grym_formater("Plus rien à lire : la réponse à « %s » manque.", question);
-                *fatal = 1;
-                break;
-            }
-            probleme = fermer_attente(m);
-            if (probleme) { free(ligne); *fatal = 1; break; }
-            if (est_annulation(ligne)) {   /* « . » : l'essai englobant reprend la main (§ 17) */
-                free(ligne);
-                probleme = grym_dupliquer("Saisie annulée.");
-                break;
-            }
-            char *t = ligne;
-            while (*t == ' ' || *t == '\t') t++;
-            size_t n = strlen(t);
-            while (n && (t[n - 1] == ' ' || t[n - 1] == '\t')) t[--n] = '\0';
-            Valeur v;
-            int pris = 0;
-            char *relance = NULL;
-            if (actuel && !n) { free(ligne); break; }   /* ligne vide : la valeur actuelle reste */
-            if (actuel && facultatif && strcmp(t, "-") == 0) {   /* « - » : le champ devient absent */
-                free(ligne);
-                attente[nb_attente].k = k;
-                attente[nb_attente++].v = vi_absent(champ);
-                break;
-            }
-            if (!n) {
-                if (facultatif) { free(ligne); break; }   /* reste absent */
-                if (a_depart) { v = valeur_copier(&depart); pris = 1; }
-                else relance = grym_dupliquer("Une réponse est attendue.");
-            } else if (lie) {
-                Valeur cherche = vi_texte(t), l;
-                char *erreur = NULL;
-                if (!chercher_valeur(m, lie->nom, 0, cle, &cherche, &l, &erreur)) {
-                    valeur_liberer(&cherche);
-                    free(ligne);
-                    probleme = erreur;
-                    break;
-                }
-                if (l.type == V_LISTE && l.liste->n) {
-                    Objet *x = machine_objet_en_base(m, l.liste->ids[0], l.liste->classes[0], &erreur);
-                    if (x) { v = vi_objet(x); pris = 1; }
-                    else relance = erreur;
-                } else {
-                    relance = lie->feminin ? grym_formater("Aucune %s conservée n'a « %s » pour %s.", lie->nom, t, cle)
-                                           : grym_formater("Aucun %s conservé n'a « %s » pour %s.", lie->nom, t, cle);
-                }
-                valeur_liberer(&l);
-                valeur_liberer(&cherche);
-            } else if (fichier) {
-                char *erreur = NULL;
-                Fichier *f = lire_fichier(m, t, &erreur);
-                if (f) {
-                    v = valeur_nombre(dec_zero());
-                    v.type = V_FICHIER;
-                    v.fichier = f;
-                    pris = 1;
-                } else {
-                    relance = erreur;
-                }
-            } else {
-                pris = lire_reponse(type, t, &v, &relance);
-            }
-            free(ligne);
-            if (pris) relance = verifier_type_champ(m, champ, type, &v, facultatif);
-            if (pris && !relance && unique && m->base && actuel) {
-                char *x = valeur_montree(m, &v, cle);   /* garder sa propre valeur n'est pas un doublon */
-                int meme = x && strcmp(x, actuel) == 0;
-                free(x);
-                if (meme) {
-                    attente[nb_attente].k = k;
-                    attente[nb_attente++].v = v;
-                    break;
-                }
-            }
-            if (pris && !relance && unique && m->base) {
-                /* une valeur unique déjà prise, même dans la corbeille, se refuse dès la réponse */
-                const char *table = cl->proprietaires[k]->nom;
-                Valeur r1, r2;
-                char *erreur = NULL;
-                if (!chercher_valeur(m, table, 2, champ, &v, &r1, &erreur)) { probleme = erreur; valeur_liberer(&v); break; }
-                if (!chercher_valeur(m, table, 5, champ, &v, &r2, &erreur)) {
-                    valeur_liberer(&r1);
-                    probleme = erreur;
-                    valeur_liberer(&v);
-                    break;
-                }
-                if (nombre_de(&r1) + nombre_de(&r2) > 0) {
-                    char *x = texte_valeur(m, &v);
-                    relance = grym_formater("« %s » est déjà pris.", x);
-                    free(x);
-                }
-                valeur_liberer(&r1);
-                valeur_liberer(&r2);
-            }
-            if (pris && !relance) {
-                if (modifier) {
-                    attente[nb_attente].k = k;
-                    attente[nb_attente++].v = v;
-                } else {
-                    ecrire_champ(m, o, k, v);
-                }
-                break;
-            }
-            if (pris) valeur_liberer(&v);
-            relancer(m, sortie, relance);
-            free(relance);
-            if (grym_interruption) {
-                grym_interruption = 0;
-                probleme = grym_dupliquer("Interrompu (Ctrl+C).");
-                *fatal = 1;
+            ci.lie = classe_vm(m, type);
+            ci.cle = ci.lie ? champ_cle(ci.lie) : NULL;
+            if (!ci.cle) {
+                if (ci.facultatif) { valeur_liberer(&ci.depart); continue; }
+                valeur_liberer(&ci.depart);
+                probleme = grym_formater("Le champ « %s » ne se demande pas : « %s » n'a aucun champ texte unique qui "
+                                         "désigne un objet. Donnez-lui sa valeur dans le bloc du nouvel objet.", champ, type);
                 break;
             }
         }
-        valeur_liberer(&depart);
-        free(question);
-        free(actuel);
-        if (probleme) {
-            if (modifier) oublier_modifications(attente, nb_attente);
-            return probleme;
+        ci.actuel = modifier && o->definis[k] ? valeur_montree(m, &o->champs[k], ci.cle) : NULL;
+        ci.a_depart = !modifier && cl->departs[k] != NULL;
+        if (ci.a_depart) {
+            valeur_liberer(&ci.depart);
+            ci.depart = valeur_de_depart(type, cl->departs[k]);
+        }
+        Champ c = { capitale(champ), 0, type, NULL, ci.actuel && ci.facultatif, NULL, 0 };
+        c.valeur = ci.actuel ? grym_dupliquer(ci.actuel) : ci.a_depart ? texte_valeur(m, &ci.depart) : NULL;
+        f.champs[n] = c;
+        f.infos[n++] = ci;
+    }
+    if (!probleme && n) {
+        probleme = poser(m, sortie, cadres, f.champs, n, valider_champ, &f, &f.a);
+        if (f.a.fatal) *fatal = 1;
+    }
+    if (!probleme && modifier) {
+        /* toutes les réponses sont là : les champs s'écrivent maintenant, et la base les suit (§ 16.3) */
+        for (size_t q = 0; q < f.nb_attente && !probleme; q++) {
+            ecrire_champ(m, o, f.attente[q].k, f.attente[q].v);
+            f.attente[q].v = vi_absent("");
+            if (o->id) base_ecrire_champ(m->base, o, f.attente[q].k, &probleme);
         }
     }
-    if (!modifier) return NULL;
-    /* toutes les réponses sont là : les champs s'écrivent maintenant, et la base les suit (§ 16.3) */
-    char *erreur = NULL;
-    for (size_t q = 0; q < nb_attente && !erreur; q++) {
-        ecrire_champ(m, o, attente[q].k, attente[q].v);
-        attente[q].v = vi_absent("");
-        if (o->id && !base_ecrire_champ(m->base, o, attente[q].k, &erreur)) break;
+    for (size_t q = 0; q < n; q++) {
+        free((char *)f.champs[q].libelle);
+        free((char *)f.champs[q].valeur);
+        free(f.champs[q].ligne);
+        free(f.infos[q].actuel);
+        valeur_liberer(&f.infos[q].depart);
     }
-    oublier_modifications(attente, nb_attente);
-    return erreur;
+    free(f.champs);
+    free(f.infos);
+    oublier_modifications(f.attente, f.nb_attente);
+    free(f.a.motif);
+    return probleme;
 }
 
 int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *diag) {
@@ -1931,7 +2032,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_EFFACER:   /* « Effacer l'écran. » (§ 4.3) : hors d'un terminal, rien n'est écrit */
-            if (m->terminal) chaine_ajouter(sortie, "\033[2J\033[H");
+            m->iface.effacer(m->iface.contexte, sortie);   /* hors d'un terminal, la console n'écrit rien */
             break;
         case I_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
             m->style = (int)op;
@@ -2259,8 +2360,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_DEMANDER: {
-            /* « la réponse en nombre à « Âge ? » » (grammaire, § 17) */
-            const char *type = b->noms[op];
+            /* « la réponse en nombre à « Âge ? » » (grammaire, § 17) : un formulaire d'un seul champ */
             Valeur q = depiler(&pile);
             if (q.type != V_TEXTE) {
                 char *m2 = grym_formater("La question se pose en texte : la valeur est %s.", nom_type(q.type));
@@ -2268,86 +2368,18 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 ok = echouer(diag, b, debut, m2);
                 break;
             }
-            if (!m->lire) {
-                valeur_liberer(&q);
-                ok = echouer(diag, b, debut, grym_dupliquer("Aucune entrée : la question ne peut pas être posée ici."));
-                fatal = 1;
-                break;
-            }
-            char *probleme = valider_jusqu_ici(m, sortie);
-            if (probleme) {
-                valeur_liberer(&q);
-                ok = echouer(diag, b, debut, probleme);
-                fatal = 1;
-                break;
-            }
-            m->question_posee = 1;
-            /* la question a validé ce qui la précède : chaque essai en cours repart d'ici (§ 18) */
-            for (size_t k = 0; k < m->nb_essais; k++) {
-                Essai *e = &m->essais[k];
-                e->journal = 0;
-                e->a_ecrire = 0;
-                oublier_photo(e);
-                photographier(e, &cadres[e->cadre]);
-            }
-            Valeur r = vi_absent("réponse");
-            int annulee = 0;
-            for (;;) {
-                char *ligne = m->lire(m->lire_contexte, sortie, q.texte);
-                if (!ligne) {
-                    probleme = grym_formater("Plus rien à lire : la réponse à « %s » manque.", q.texte);
-                    break;
-                }
-                probleme = NULL;
-                if (est_annulation(ligne)) {   /* « . » seul : la question échoue, un essai la rattrape */
-                    free(ligne);
-                    annulee = 1;
-                    break;
-                }
-                Valeur lue;
-                int lu = lire_reponse(type, ligne, &lue, &probleme);
-                free(ligne);
-                if (lu) {
-                    valeur_liberer(&r);
-                    r = lue;
-                    break;
-                }
-                relancer(m, sortie, probleme);   /* la relance s'affiche avant la question suivante */
-                free(probleme);
-                probleme = NULL;
-                if (grym_interruption) {
-                    grym_interruption = 0;
-                    probleme = grym_dupliquer("Interrompu (Ctrl+C).");
-                    break;
-                }
-            }
+            Champ c = { q.texte, 1, b->noms[op], NULL, 0, NULL, 0 };
+            Demande d = { { m, 0, NULL }, &c, b->noms[op], vi_absent("réponse") };
+            char *probleme = poser(m, sortie, cadres, &c, 1, valider_demande, &d, &d.a);
+            free(c.ligne);
             valeur_liberer(&q);
             if (probleme) {
-                valeur_liberer(&r);
+                valeur_liberer(&d.r);
+                if (d.a.fatal) fatal = 1;
                 ok = echouer(diag, b, debut, probleme);
-                fatal = 1;
                 break;
             }
-            if (m->base && !base_commencer(m->base, &probleme)) {   /* le verrou reprend après la réponse */
-                valeur_liberer(&r);
-                ok = echouer(diag, b, debut, probleme);
-                fatal = 1;
-                break;
-            }
-            for (size_t k = 0; m->base && k < m->nb_essais && !probleme; k++)
-                base_point(m->base, k + 1, &probleme);
-            if (probleme) {
-                valeur_liberer(&r);
-                ok = echouer(diag, b, debut, probleme);
-                fatal = 1;
-                break;
-            }
-            if (annulee) {   /* le verrou est repris : l'échec se rattrape comme un autre */
-                valeur_liberer(&r);
-                ok = echouer(diag, b, debut, grym_dupliquer("Saisie annulée."));
-                break;
-            }
-            empiler(&pile, r);
+            empiler(&pile, d.r);
             break;
         }
         case I_SAISIR: {

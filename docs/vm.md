@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.28 de la spécification, révisée le 24 septembre 2026.
+Version 1.29 de la spécification, révisée le 24 septembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -291,6 +291,19 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
    7  0051  LIRE              0     ; total
 ```
 
+## 13. Interface d'entrée et de sortie
+
+Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), que la console implémente (`src/console.c`) et que le navigateur implémentera (`docs/v2.md`). La machine ne connaît ni le clavier ni l'écran.
+
+- **Affichage** : `AFFICHER` accumule dans une chaîne, que l'interface reçoit à chaque question. La console l'écrit ; une page la montrera au-dessus du formulaire.
+- **Effacement** : `EFFACER` appelle l'interface. La console écrit sa séquence si la sortie est un terminal, rien sinon (grammaire, § 4.3).
+- **Formulaire** : `DEMANDER`, `SAISIR` et `RESAISIR` décrivent des champs (libellé, type, valeur montrée, champ vidable ou non), et l'interface les remplit. `la réponse à` est un formulaire d'un seul champ.
+- **Validation** : l'interface appelle la machine pour chaque réponse. La machine rend « acceptée », « refusée » avec le motif, ou « arrêt ». La console valide champ par champ et relance aussitôt ; une page validera après l'envoi, et redemandera seulement les champs refusés.
+- **Issue** : tout répondu, annulé par l'utilisateur, plus rien à lire, ou arrêt demandé par la validation. Annuler se tape `.` en console et sera un bouton dans une page ; vider un champ se tape `-` en console et sera une case à cocher. Ces conventions appartiennent à l'interface, pas à la machine.
+- **Discipline des questions** (grammaire, § 17) : avant le formulaire, la machine valide ce qui précède et rend le verrou ; chaque validation qui consulte la base (liens, unicité) reprend le verrou puis le rend ; après le formulaire, le verrou reprend, avec les points de reprise des essais (§ 6).
+- **Annonce** : « Tapez « . » seul pour annuler. », à la première relance, est une affaire de console.
+- `machine_interface` remplace la console ; `machine_lecteur` et `machine_terminal` règlent la console.
+
 ---
 
 ## Journal des révisions
@@ -326,3 +339,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.26 | 2026-09-23 | `COLLER`, `ÉLIDER` : assembler des textes ; format version 22 |
 | 1.27 | 2026-09-24 | `RESAISIR` : modifier par formulaire ; format version 23 |
 | 1.28 | 2026-09-24 | § 8 : format de la base (`PRAGMA user_version`) |
+| 1.29 | 2026-09-24 | § 13 : interface d'entrée et de sortie (affichage, effacement, formulaires, validation, issues), implémentée par la console |
