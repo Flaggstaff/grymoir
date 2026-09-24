@@ -56,7 +56,7 @@ L'atelier modifie **la seule phrase concernée**, à sa position dans la source,
 | Jalon | Contenu |
 |---|---|
 | A1 | Squelette : fenêtre, ouvrir un projet (un dossier), liste de ses fichiers, affichage du texte avec coloration et erreurs en direct, bouton « Lancer » qui exécute le programme dans un panneau de l'atelier (l'interface Qt, en mode séquentiel) |
-| A2 | Éditeur de données : schéma des entités (une boîte par entité, une flèche par lien), panneau de propriétés (champs, types, unique, facultatif, valeur de départ, cascade), réécriture chirurgicale (§ 3), aperçu de ce que la migration fera à la base avant de l'appliquer (§ 16.7), et refus expliqué quand elle détruirait des données |
+| A2 | Inclusion d'un fichier dans un autre (grammaire, conçue d'abord) ; éditeur de données : schéma des entités (une boîte par entité, une flèche par lien), panneau de propriétés (champs, types, unique, facultatif, valeur de départ, cascade), réécriture chirurgicale (§ 3), aperçu de ce que la migration fera à la base avant de l'appliquer (§ 16.7), et refus expliqué quand elle détruirait des données |
 | A3 | Les écrans dans le langage : fenêtres, listes, fiches, boutons, modèle par événements. Conception phrase par phrase dans la grammaire, avant tout code |
 | A4 | Éditeur d'écrans : génération d'une liste et d'une fiche par entité, en GrymoiR modifiable ; agencement à la souris |
 
@@ -65,7 +65,7 @@ Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Où ranger qu'une entité est dessinée en haut à gauche ? Ce n'est pas du programme. Proposition : un fichier `.grymatelier` à côté du programme, texte lisible, que l'atelier recrée s'il manque (disposition automatique). Le perdre ne perd jamais rien du programme.
-2. **Un projet, un fichier ?** Aujourd'hui, un programme tient dans un fichier. Une vraie application voudra plusieurs fichiers (données, écrans, traitements). Il faudra une inclusion dans le langage, à concevoir avant A2 ou au plus tard avant A3.
+2. **Un projet, un fichier ?** Aujourd'hui, un programme tient dans un fichier. Une vraie application voudra plusieurs fichiers (données, écrans, traitements). Décidé le 24 septembre 2026 : l'inclusion se conçoit en A2, dans la grammaire, avant l'éditeur de données, qui travaille d'emblée sur un projet à plusieurs fichiers.
 3. **L'éditeur de code** de l'atelier : un éditeur maison sur `QPlainTextEdit`, qui réutilise directement le calcul des suites (grammaire, § 8), ou une bibliothèque d'éditeur de code existante. À décider en A1.
 4. **Distribution** : l'atelier embarque ses bibliothèques Qt (outils de déploiement fournis par Qt sur macOS et Windows). La signature des exécutables pour macOS et Windows est reportée.
 
@@ -83,3 +83,4 @@ Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la
 | Version | Date | Changement |
 |---------|------|------------|
 | 0.1 | 2026-09-24 | Proposition initiale : Qt 6, l'atelier n'écrit que du GrymoiR, réécriture chirurgicale, architecture, jalons A1 à A4, questions ouvertes |
+| 0.2 | 2026-09-24 | § 6.2 : l'inclusion se conçoit en A2, avant l'éditeur de données |
