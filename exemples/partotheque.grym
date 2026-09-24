@@ -112,11 +112,99 @@ Pour vider :
             Rétablir p.
             Afficher « Rétablie : » puis cote de la p.
 
+Remarque : données d'essai, déposées au premier lancement, quand la base ne connaît aucune œuvre.
+Pour inscrire un auteur et un jour :
+    Si le nombre de compositeurs conservés dont le nom est auteur = 0 :
+        Le c vaut un nouveau compositeur :
+            Le nom vaut auteur.
+            La naissance vaut jour.
+        Conserver c.
+
+Pour étiqueter une œuvre et un style :
+    Si le nombre de genres conservés dont le nom est style = 0 :
+        Le g vaut un nouveau genre :
+            Le nom vaut style.
+        Conserver g.
+    Le g vaut le genre conservé dont le nom est style.
+    Les genres de l'œuvre gagnent g.
+
+Pour noter un numéro et un intitulé et un auteur et un millésime et un style :
+    L'o vaut une nouvelle œuvre :
+        Le catalogue vaut numéro.
+        Le titre vaut intitulé.
+        Le compositeur vaut le compositeur conservé dont le nom est auteur.
+        L'année vaut millésime.
+    Conserver o.
+    Étiqueter o et style.
+
+Pour ranger une référence et un numéro et une maison et un transcripteur :
+    La p vaut une nouvelle partition :
+        La cote vaut référence.
+        L'œuvre vaut l'œuvre conservée dont le catalogue est numéro.
+        L'éditeur vaut maison.
+    Si transcripteur ≠ « », l'arrangeur de la p devient le compositeur conservé dont le nom est transcripteur.
+    Conserver p.
+
+Pour équiper une référence et un poste et un effectif :
+    Si le nombre d'instruments conservés dont le nom est poste = 0 :
+        L'i vaut un nouvel instrument :
+            Le nom vaut poste.
+        Conserver i.
+    Le v vaut un nouveau pupitre :
+        La partition vaut la partition conservée dont la cote est référence.
+        L'instrument vaut l'instrument conservé dont le nom est poste.
+        Le nombre de parties vaut effectif.
+    Conserver v.
+
+Pour remplir :
+    Inscrire « Bach » et 31.03.1685.
+    Inscrire « Vivaldi » et 04.03.1678.
+    Inscrire « Mozart » et 27.01.1756.
+    Inscrire « Beethoven » et absent.
+    Inscrire « Liszt » et 22.10.1811.
+    Inscrire « Debussy » et 22.08.1862.
+    Noter « BWV 1007 » et « Suite pour violoncelle nº 1 » et « Bach » et absent et « suite ».
+    Noter « BWV 1048 » et « Concerto brandebourgeois nº 3 » et « Bach » et absent et « concerto ».
+    Noter « RV 269 » et « Le Printemps » et « Vivaldi » et absent et « concerto ».
+    Noter « K. 525 » et « Eine kleine Nachtmusik » et « Mozart » et 1787 et « sérénade ».
+    Noter « K. 331 » et « Sonate pour piano nº 11 » et « Mozart » et absent et « sonate ».
+    Noter « op. 27 nº 2 » et « Sonate nº 14, Clair de lune » et « Beethoven » et 1801 et « sonate ».
+    Noter « op. 67 » et « Symphonie nº 5 » et « Beethoven » et 1808 et « symphonie ».
+    Noter « L. 75 » et « Suite bergamasque » et « Debussy » et absent et « suite ».
+    Pour chaque œuvre conservée dont le catalogue = « K. 331 » ou le catalogue = « op. 27 nº 2 » ou le catalogue = « L. 75 » :
+        Étiqueter œuvre et « piano ».
+    Ranger « P-001 » et « BWV 1007 » et « Bärenreiter » et « ».
+    Équiper « P-001 » et « violoncelle » et 1.
+    Ranger « P-002 » et « BWV 1048 » et « Breitkopf & Härtel » et « ».
+    Équiper « P-002 » et « violon » et 3.
+    Équiper « P-002 » et « alto » et 3.
+    Équiper « P-002 » et « violoncelle » et 3.
+    Équiper « P-002 » et « contrebasse » et 1.
+    Ranger « P-003 » et « RV 269 » et « Ricordi » et « ».
+    Équiper « P-003 » et « violon » et 3.
+    Équiper « P-003 » et « alto » et 1.
+    Équiper « P-003 » et « violoncelle » et 1.
+    Ranger « P-004 » et « K. 525 » et « Bärenreiter » et « ».
+    Équiper « P-004 » et « violon » et 2.
+    Équiper « P-004 » et « alto » et 1.
+    Équiper « P-004 » et « violoncelle » et 1.
+    Équiper « P-004 » et « contrebasse » et 1.
+    Ranger « P-005 » et « op. 27 nº 2 » et « Henle » et « ».
+    Équiper « P-005 » et « piano » et 1.
+    Ranger « P-006 » et « op. 67 » et « Breitkopf & Härtel » et « Liszt ».
+    Équiper « P-006 » et « piano » et 1.
+    Ranger « P-007 » et « L. 75 » et « Henle » et « ».
+    Équiper « P-007 » et « piano » et 1.
+    Ranger « P-008 » et « K. 331 » et « Henle » et « ».
+    Équiper « P-008 » et « piano » et 1.
+    Supprimer la partition conservée dont la cote est « P-008 ».
+
 Pour présenter le menu :
     Afficher « ».
     Afficher « 1 compositeur   2 œuvre   3 partition   4 catalogue   5 par compositeur ».
     Afficher « 6 détail        7 retirer 8 corbeille   9 modifier   0 quitter ».
 
+Si le nombre d'œuvres conservées = 0, remplir.
 Présenter le menu.
 Le choix vaut la réponse en nombre entier à « Choix ? ».
 Tant que choix ≠ 0 :

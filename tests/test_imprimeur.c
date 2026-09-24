@@ -108,6 +108,9 @@ int main(void) {
          "Pour saluer :\n    Afficher 1.\nSaluer.",
          "_le total << 0\n_action ajouter(_un montant)\n    total << total + montant\n_fin\najouter(5)\n"
          "_action saluer()\n    _afficher 1\n_fin\nsaluer()\n");
+    /* initiale accentuée d'une action : capitale en tête de phrase, minuscule après la virgule */
+    LITT("Pour étiqueter :\n    Afficher 1.\nétiqueter.\nSi vrai, Étiqueter.\nPour œuvrer :\n    Afficher 2.\nŒuvrer.",
+         "Pour étiqueter :\n    Afficher 1.\nÉtiqueter.\nSi vrai, étiqueter.\nPour œuvrer :\n    Afficher 2.\nŒuvrer.\n");
     COMP("La valeur absolue d'un nombre :\n    Si nombre est négatif, rendre −nombre.\n    Rendre nombre.",
          "_calcul _la valeur_absolue(_un nombre)\n    _si nombre _négatif _alors\n        _rendre −nombre\n"
          "    _fin\n    _rendre nombre\n_fin\n");

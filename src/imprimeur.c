@@ -39,6 +39,22 @@ typedef struct {
     size_t nb_a_liberer;
 } Impression;
 
+
+/* Initiale d'une phrase : capitale (majuscule 1) ou minuscule (0), lettres accentuées du latin et « œ » comprises
+ * (« Étiqueter o. », « si x, étiqueter o. »). */
+static void initiale(char *s, int majuscule) {
+    unsigned char *u = (unsigned char *)s;
+    if (majuscule) {
+        if (u[0] >= 'a' && u[0] <= 'z') u[0] = (unsigned char)(u[0] - 32);
+        else if (u[0] == 0xC3 && u[1] >= 0xA0 && u[1] <= 0xBE && u[1] != 0xB7) u[1] = (unsigned char)(u[1] - 0x20);
+        else if (u[0] == 0xC5 && u[1] == 0x93) u[1] = 0x92;
+    } else {
+        if (u[0] >= 'A' && u[0] <= 'Z') u[0] = (unsigned char)(u[0] + 32);
+        else if (u[0] == 0xC3 && u[1] >= 0x80 && u[1] <= 0x9E && u[1] != 0x97) u[1] = (unsigned char)(u[1] + 0x20);
+        else if (u[0] == 0xC5 && u[1] == 0x92) u[1] = 0x93;
+    }
+}
+
 static char *masculin_deduit(const char *f) {
     size_t l = strlen(f);
     return l > 1 && f[l - 1] == 'e' ? grym_formater("%.*s", (int)(l - 1), f) : grym_dupliquer(f);
@@ -630,7 +646,7 @@ static void phrase_en_ligne(Impression *im, const Noeud *n) {
     im->cap = tmp.cap;
     size_t l = strlen(t);
     if (l && t[l - 1] == '\n') t[l - 1] = '\0';
-    if (t[0] >= 'A' && t[0] <= 'Z') t[0] = (char)(t[0] + 32);
+    initiale(t, 0);
     aj(im, t);
     free(t);
 }
@@ -857,7 +873,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             aj(im, ")\n");
         } else {
             char *nom = grym_dupliquer(n->texte);
-            if (nom[0] >= 'a' && nom[0] <= 'z') nom[0] = (char)(nom[0] - 32);
+            initiale(nom, 1);
             aj(im, nom);
             free(nom);
             for (size_t k = 0; k < n->nb_enfants; k++) {
