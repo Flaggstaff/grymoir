@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.35, révisée le 24 septembre 2026.
+Version 1.36, révisée le 24 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -167,7 +167,7 @@ Critères de sortie de la v1.0, tous remplis :
 
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
-- objets (grammaire, § 13.8) : appel de la version parente depuis une méthode, listes d'objets, affichage des objets ; racine commune `objet` de toutes les classes, puis nombres, textes et dates comme objets (art. 6, « Tout est objet ») ;
+- objets (grammaire, § 13.8) : appel de la version parente depuis une méthode, listes d'objets ; racine commune `objet` de toutes les classes, puis nombres, textes et dates comme objets (art. 6, « Tout est objet ») ;
 - relations : test d'appartenance en mémoire (`Si baroque est parmi les genres de o`), gagner plusieurs objets en une phrase, champs multiples de textes ou de nombres ; lien facultatif qui devient absent quand son objet est effacé ;
 - corbeille (grammaire, § 16.12) : la vider des objets supprimés depuis longtemps ;
 - saisie par l'utilisateur de l'application : autocomplétion des valeurs déjà saisies, y compris celles des objets de la corbeille (avec l'interface des applications) ;
@@ -229,3 +229,4 @@ Une version 1.x promet ce qui suit. Toute exception passe par une révision de l
 | 1.33 | 2026-09-24 | Art. 12 : v2.0-a éprouvée dans un vrai navigateur |
 | 1.34 | 2026-09-24 | Art. 12 : v2.0-b faite (liens, fichiers, images dans le navigateur) |
 | 1.35 | 2026-09-24 | Art. 11 : interface par le navigateur et écoute locale depuis la v2.0 ; art. 12 : v2.0 livrée |
+| 1.36 | 2026-09-24 | Art. 12 : affichage des objets fait, par la fiche (grammaire, § 20.1) ; v2.x : les objets à l'écran en cours |

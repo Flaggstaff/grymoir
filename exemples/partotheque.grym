@@ -84,6 +84,7 @@ Pour chercher :
 Pour détailler :
     La référence vaut la réponse à « Cote ? ».
     La p vaut la partition conservée dont la cote est référence.
+    Afficher la fiche de la p.
     Afficher titre de l'œuvre de la p puis « chez » puis éditeur de la p.
     Pour chaque pupitre de la p, par nombre de parties décroissant :
         Afficher « - » puis nom de l'instrument du pupitre puis « × » puis nombre de parties du pupitre.

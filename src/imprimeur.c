@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.36), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.37), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -736,6 +736,17 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     }
     case P_EFFACER:
         aj(im, c ? "_effacer\n" : "Effacer l'écran.\n");
+        return;
+    case P_FICHE:   /* « Afficher la fiche de p. » ; « _fiche p » (§ 20) */
+        if (c) {
+            aj(im, "_fiche ");
+            expression(im, n->enfants[0]);
+            aj(im, "\n");
+        } else {
+            aj(im, "Afficher la fiche ");
+            preposition(im, "de", n->enfants[0]);
+            aj(im, ".\n");
+        }
         return;
     case P_RESAISIR:   /* « Saisir à nouveau p. » ; « _saisir p » (§ 19) */
         aj(im, c ? "_saisir " : "Saisir à nouveau ");

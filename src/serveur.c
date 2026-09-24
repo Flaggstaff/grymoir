@@ -46,6 +46,8 @@ struct Image {
     size_t taille;
     const char *type;     /* type MIME, d'après la signature */
     char *description;
+    char *html;           /* une fiche (grammaire, § 20), déjà échappée, à la place d'une image ; ou NULL */
+    int cachee;           /* image d'une fiche : servie, mais montrée par sa fiche */
 };
 
 /* Une question en cours : les champs, ce que l'utilisateur a tapé, les refus. */
@@ -387,7 +389,11 @@ static const char STYLE[] =
     ".refus{display:block;color:#a31d1d;margin-left:12rem}.avis{color:#8a5a00}.erreur{color:#a31d1d}"
     "button{font:inherit;padding:.3rem .9rem;margin-right:.5rem}"
     "select{font:inherit;padding:.2rem .3rem}.actuel,.recu{color:#555;margin-left:.5rem}"
-    "pre.sortie img{display:block;max-width:100%;max-height:24rem;margin:.4rem 0;border-radius:4px}";
+    "pre.sortie img{display:block;max-width:100%;max-height:24rem;margin:.4rem 0;border-radius:4px}"
+    "table.fiche{border-collapse:collapse;margin:.5rem 0 1rem;background:#fff;border:1px solid #d6d6d0}"
+    "table.fiche caption{text-align:left;font-weight:600;padding:.3rem 0}"
+    "table.fiche th{text-align:left;font-weight:500;color:#555;padding:.3rem 1.2rem .3rem .7rem;vertical-align:top}"
+    "table.fiche td{padding:.3rem .7rem}table.fiche img{max-width:16rem;max-height:12rem;border-radius:4px}";
 
 static void repondre_octets(Serveur *s, const char *statut, const char *type, const unsigned char *corps,
                             size_t taille, const char *en_plus) {
@@ -438,7 +444,9 @@ static void debut_page(const Serveur *s, Chaine *c) {
             echapper(c, morceau);
             free(morceau);
             depuis = jusqua;
-            if (k < s->nb_images) {
+            if (k < s->nb_images && s->images[k].html) {
+                chaine_ajouter(c, s->images[k].html);
+            } else if (k < s->nb_images && !s->images[k].cachee) {
                 char *img = grym_formater("<img src=\"/image/%ld\" alt=\"", s->images[k].id);
                 chaine_ajouter(c, img);
                 free(img);
@@ -745,6 +753,7 @@ static void retirer_images(Serveur *s, size_t k) {
         if (s->images[r].position < k) {
             free(s->images[r].octets);
             free(s->images[r].description);
+            free(s->images[r].html);
             continue;
         }
         s->images[r].position -= k;
@@ -813,11 +822,7 @@ static void serveur_effacer(void *contexte, Chaine *sortie) {
     retirer_images(s, (size_t)-1);
 }
 
-/* « Afficher la photo. » : l'image prend place dans le fil (docs/v2.md, § 10). */
-static void serveur_afficher_image(void *contexte, Chaine *sortie, const unsigned char *octets, size_t taille,
-                                   const char *format, const char *description) {
-    Serveur *s = contexte;
-    absorber(s, sortie);
+static struct Image *nouveau_segment(Serveur *s) {
     if (s->nb_images == s->cap_images) {
         s->cap_images = s->cap_images ? s->cap_images * 2 : 8;
         struct Image *t = grym_allouer(s->cap_images * sizeof *t);
@@ -826,18 +831,69 @@ static void serveur_afficher_image(void *contexte, Chaine *sortie, const unsigne
         s->images = t;
     }
     struct Image *im = &s->images[s->nb_images++];
+    memset(im, 0, sizeof *im);
     im->position = s->affichage.n;
     im->id = ++s->prochaine_image;
+    return im;
+}
+
+static const char *type_image(const char *format) {
+    return strcmp(format, "PNG") == 0 ? "image/png" : strcmp(format, "JPEG") == 0 ? "image/jpeg"
+         : strcmp(format, "GIF") == 0 ? "image/gif" : "image/webp";
+}
+
+/* « Afficher la photo. » : l'image prend place dans le fil (docs/v2.md, § 10). */
+static void serveur_afficher_image(void *contexte, Chaine *sortie, const unsigned char *octets, size_t taille,
+                                   const char *format, const char *description) {
+    Serveur *s = contexte;
+    absorber(s, sortie);
+    struct Image *im = nouveau_segment(s);
     im->octets = grym_allouer(taille ? taille : 1);
     if (taille) memcpy(im->octets, octets, taille);
     im->taille = taille;
-    im->type = strcmp(format, "PNG") == 0 ? "image/png" : strcmp(format, "JPEG") == 0 ? "image/jpeg"
-             : strcmp(format, "GIF") == 0 ? "image/gif" : "image/webp";
+    im->type = type_image(format);
     im->description = grym_dupliquer(description);
 }
 
+/* « Afficher la fiche de p. » : un tableau dans le fil, une image montrée en image (grammaire, § 20). */
+static void serveur_afficher_fiche(void *contexte, Chaine *sortie, const char *titre, const LigneFiche *l, size_t n) {
+    Serveur *s = contexte;
+    absorber(s, sortie);
+    Chaine h = {0};
+    chaine_ajouter(&h, "</pre><table class=\"fiche\"><caption>");
+    echapper(&h, titre);
+    chaine_ajouter(&h, "</caption>");
+    for (size_t k = 0; k < n; k++) {
+        chaine_ajouter(&h, "<tr><th>");
+        echapper(&h, l[k].libelle);
+        chaine_ajouter(&h, "</th><td>");
+        if (l[k].format) {
+            struct Image *im = nouveau_segment(s);
+            im->cachee = 1;
+            im->octets = grym_allouer(l[k].taille ? l[k].taille : 1);
+            if (l[k].taille) memcpy(im->octets, l[k].octets, l[k].taille);
+            im->taille = l[k].taille;
+            im->type = type_image(l[k].format);
+            im->description = grym_dupliquer(l[k].texte);
+            char *img = grym_formater("<img src=\"/image/%ld\" alt=\"", im->id);
+            chaine_ajouter(&h, img);
+            free(img);
+            echapper(&h, l[k].texte);
+            chaine_ajouter(&h, "\">");
+        } else {
+            echapper(&h, l[k].texte);
+        }
+        chaine_ajouter(&h, "</td></tr>");
+    }
+    chaine_ajouter(&h, "</table><pre class=\"sortie\">");
+    struct Image *seg = nouveau_segment(s);
+    seg->html = chaine_rendre(&h);
+    seg->description = grym_dupliquer(titre);
+}
+
 Interface serveur_interface(Serveur *s) {
-    Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer, 1, serveur_afficher_image };
+    Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer, 1, serveur_afficher_image,
+                    serveur_afficher_fiche };
     return i;
 }
 

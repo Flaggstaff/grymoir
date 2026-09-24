@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.36), § 16 ; docs/vm.md (révision 1.31), § 8.
+ * Spécification : docs/grammaire.md (révision 1.37), § 16 ; docs/vm.md (révision 1.32), § 8.
  *
  * Schéma : une table « e <entité> » par entité, qui porte ses champs propres et ceux de ses
  * aptitudes ; son identifiant désigne la ligne de sa classe parente, ou de « grym_objet »
@@ -34,6 +34,11 @@ int base_point(Base *b, size_t n, char **erreur);
  * ou un parent). *valeurs, à libérer avec ses éléments ; 0 et *erreur en cas d'échec. */
 int base_valeurs(Base *b, const char *entite, const char *table, const char *champ, size_t max,
                  char ***valeurs, size_t *n, char **erreur);
+
+/* Objets conservés (hors corbeille) d'un champ multiple k de l'objet id : identifiants et classes réelles, dans
+ * l'ordre où ils ont été gagnés (grammaire, § 20). À libérer ; 0 et *erreur en cas d'échec. */
+int base_membres(Base *b, const ClasseVM *c, size_t k, long id, long **ids, char ***classes, size_t *n,
+                 char **erreur);
 
 /* Format des bases (charte, art. 13), gravé dans PRAGMA user_version. Une base d'un format plus récent se
  * refuse avant toute écriture ; 0 : base d'avant ce numéro, lue comme le format 1. */

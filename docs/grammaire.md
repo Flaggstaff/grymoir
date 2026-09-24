@@ -1,7 +1,7 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.36 de la spécification, révisée le 24 septembre 2026. Tout ce qui suit est implémenté.
-Référence : Charte de GrymoiR v1.28, art. 4, 5, 7, 8, 9 et 12.
+Version 1.37 de la spécification, révisée le 24 septembre 2026. Tout ce qui suit est implémenté.
+Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
 Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4), décider (§ 5), le calcul des suites attendues (§ 8), les formules (§ 9), répéter (§ 10), la forme compacte (§ 11), la forme canonique (§ 12), les objets (§ 13), les dates et les années (§ 14), les fichiers et les images (§ 15), les entités conservées (§ 16) les questions à l'utilisateur (§ 17), la reprise après erreur (§ 18) et le formulaire (§ 19). Ce que le langage ne sait pas encore faire est listé dans la charte, art. 11 et 12.
@@ -1289,6 +1289,26 @@ Le p vaut une nouvelle partition saisie :
 - Reporté : choisir les champs demandés ou leur libellé, l'autocomplétion des réponses.
 - En forme compacte : `_nouveau contact _saisi`, `_nouveau partition _saisi _avec`, `_saisir p`.
 
+
+## 20. Les objets à l'écran *(v2)*
+
+Trois constructions, conçues ensemble, pour montrer les objets et passer de l'un à l'autre. Un clic reste une réponse à une question : le programme mène toujours (docs/v2.md, § 7).
+
+### 20.1 La fiche
+
+```
+Afficher la fiche de p.
+Afficher la fiche du compositeur de l'œuvre.
+```
+
+- Un titre (le nom de la classe, suivi de la valeur de sa clé s'il en a une), puis chaque champ avec sa valeur, dans l'ordre des champs : hérités, aptitudes, propres.
+- Chaque valeur s'écrit comme `Afficher` l'écrirait. Un lien s'écrit par la clé de l'objet lié (son premier champ texte unique, § 19), sinon « un compositeur ». Un champ multiple (§ 16.13) liste ses objets, dans l'ordre où ils ont été gagnés, corbeille exclue, ou « aucun ». Un champ sans valeur s'écrit « absent ».
+- En console, les libellés s'alignent en colonne. Dans le navigateur, la fiche est un tableau, et une image s'y montre en image.
+- `Afficher p.` garde son sens (« une partition ») : le changer romprait la charte, art. 13.
+- `la fiche` n'est reconnue qu'en tête d'une phrase `Afficher`, et seulement si `fiche` n'est ni un nom ni un champ déclaré : un champ `fiche` garde son sens ordinaire.
+- Une valeur qui n'est pas un objet : « Une fiche montre un objet : la valeur est un nombre. »
+- En forme compacte : `_fiche p`.
+
 ---
 
 ## Journal des révisions
@@ -1332,3 +1352,4 @@ Le p vaut une nouvelle partition saisie :
 | 1.34 | 2026-09-23 | § 4.4 : assembler des textes (`suivi de`), élision de `de` et `que` selon la valeur ; `suivi` réservé |
 | 1.35 | 2026-09-24 | § 19 : modifier par formulaire (`Saisir à nouveau p.`), valeurs actuelles entre crochets, `-` pour vider, écriture après la dernière réponse ; `saisir` réservé aux constructions |
 | 1.36 | 2026-09-24 | § 16.5 : numéro de format des bases, base plus récente refusée (charte, art. 13) |
+| 1.37 | 2026-09-24 | § 20.1 : la fiche d'un objet (`Afficher la fiche de p.`) |

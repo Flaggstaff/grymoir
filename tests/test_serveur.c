@@ -409,6 +409,25 @@ int main(void) {
     CONTIENT(sc.reponses[3], "404 Not Found");
     liberer(&sc);
 
+    /* --- La fiche d'un objet : un tableau, une image servie à part, tout échappé (§ 20) --- */
+    {
+        FILE *f = fopen("_essai_fiche.png", "wb");
+        if (f) { fputs(PNG, f); fclose(f); }
+    }
+    memset(&sc, 0, sizeof sc);
+    REQUETES(get("/"), get("/image/1"));
+    servir("Un membre, conservé, a : un nom (texte), une photo (image), un parrain (membre), facultatif.\n"
+           "Le m vaut un nouveau membre :\n    Le nom vaut « <b>Ana</b> ».\n    La photo vaut le fichier « _essai_fiche.png ».\n"
+           "Afficher « avant ».\nAfficher la fiche de m.\nAfficher « après ».", &sc);
+    CONTIENT(sc.reponses[0], "avant\n</pre><table class=\"fiche\"><caption>Membre</caption>");
+    CONTIENT(sc.reponses[0], "<tr><th>Nom</th><td>&lt;b&gt;Ana&lt;/b&gt;</td></tr>");
+    CONTIENT(sc.reponses[0], "<tr><th>Photo</th><td><img src=\"/image/1\" alt=\"une image PNG de 13 octets\"></td></tr>");
+    CONTIENT(sc.reponses[0], "<tr><th>Parrain</th><td>absent</td></tr></table><pre class=\"sortie\">après");
+    NE_CONTIENT_PAS(sc.reponses[0], "<b>Ana");
+    CONTIENT(sc.reponses[1], "Content-Type: image/png");
+    liberer(&sc);
+    remove("_essai_fiche.png");
+
     /* --- v2.0 : chaque exemple du dépôt tourne dans le navigateur --- */
     {
         static const char *const SANS_QUESTION[] = { "aptitudes.grym", "boucles.grym", "conserver.grym", "dates.grym",

@@ -1,5 +1,5 @@
 /* GrymoiR : interface d'entrée et de sortie de la machine.
- * Spécification : docs/vm.md (révision 1.31), § 13.
+ * Spécification : docs/vm.md (révision 1.32), § 13.
  *
  * Tout ce qui touche l'utilisateur passe par ici : poser des questions (une seule, ou un formulaire),
  * effacer l'écran. La console l'implémente (console.c) ; le navigateur l'implémentera (docs/v2.md).
@@ -11,6 +11,16 @@
 #include "texte.h"
 
 #include <stddef.h>
+
+/* Une ligne de la fiche d'un objet (grammaire, § 20) : un champ et sa valeur, écrite comme Afficher l'écrirait.
+ * Une image porte aussi ses octets, pour qu'une interface riche la montre. */
+typedef struct {
+    const char *libelle;
+    const char *texte;
+    const unsigned char *octets;
+    size_t taille;
+    const char *format;    /* PNG, JPEG, GIF, WebP ; NULL si ce n'est pas une image */
+} LigneFiche;
 
 /* Un champ à remplir : décrit par la machine, rempli par l'interface. */
 typedef struct {
@@ -61,6 +71,8 @@ typedef struct {
     /* Afficher une image (PNG, JPEG, GIF, WebP) à cet endroit du fil ; NULL : sa description en texte. */
     void (*afficher_image)(void *contexte, Chaine *sortie, const unsigned char *octets, size_t taille,
                            const char *format, const char *description);
+    /* « Afficher la fiche de p. » (grammaire, § 20) ; NULL : la machine l'écrit en colonnes. */
+    void (*afficher_fiche)(void *contexte, Chaine *sortie, const char *titre, const LigneFiche *lignes, size_t n);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

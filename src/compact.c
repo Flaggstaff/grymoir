@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.36), § 11.
+ * Spécification : docs/grammaire.md (révision 1.37), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -951,6 +951,14 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             expression(r, d + 1, f);
             emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
             ouvrir(r, O_SELON, prof, t);
+        } else if (!strcmp(c, "fiche")) {   /* _fiche p → Afficher la fiche de p. (§ 20) */
+            if (f == d + 1) { echouer(r, t, grym_dupliquer("Forme attendue : « _fiche client ».")); return; }
+            mot(r, "afficher", t);
+            mot(r, "la", t);
+            mot(r, "fiche", t);
+            mot(r, "de", t);
+            expression(r, d + 1, f);
+            point(r, f);
         } else if (!strcmp(c, "saisir")) {   /* _saisir p → Saisir à nouveau p. (§ 19) */
             if (f == d + 1) { echouer(r, t, grym_dupliquer("Forme attendue : « _saisir client ».")); return; }
             mot(r, "saisir", t);

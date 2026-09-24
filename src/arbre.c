@@ -121,6 +121,11 @@ static void decrire(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case P_FICHE:
+        chaine_ajouter(c, "(fiche ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
     case P_RESAISIR:
         chaine_ajouter(c, "(saisir-à-nouveau ");
         decrire(n->enfants[0], c);

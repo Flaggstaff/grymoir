@@ -232,6 +232,8 @@ int main(void) {
     ALLER_RETOUR("_style _française\n_le x << 1\n_afficher « a » _sur 4 _droite ; x _sur 2 _sans_ligne\n", NULL);
 
     ALLER_RETOUR("_effacer\n_afficher « a »\n", "Effacer l'écran.\nAfficher « a ».\n");
+    ALLER_RETOUR("_classe _un point\n    _un x\n_fin\n_le p << _nouveau point\n_fiche p\n",
+                 "Un point a :\n    un x.\nLe p vaut un nouveau point.\nAfficher la fiche de p.\n");
     ALLER_RETOUR("_l'année << 1\n_le nom << « a »\n_afficher « ( » _suivi année _suivi « ) » ; _de nom ; _que nom\n",
                  "L'année vaut 1.\nLe nom vaut « a ».\nAfficher « ( » suivi d'année suivi de « ) » puis de nom puis que nom.\n");
     ALLER_RETOUR("_classe _une fiche _conservé\n    _un nom (texte)\n_fin\n_action f(_une fiche)\n    _saisir fiche\n_fin\n",

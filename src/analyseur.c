@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.36), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.37), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -2317,6 +2317,23 @@ static Noeud *affichage(Analyse *a) {
     Jeton *t = cour(a);
     a->affichage_vu = 1;
     avancer(a);
+    {   /* « Afficher la fiche de p. » (§ 20), sauf si « fiche » est un nom ou un champ déclaré */
+        Jeton *p = voir(a, 2);
+        Genre g;
+        if (est_mot(cour(a), "la") && est_mot(voir(a, 1), "fiche") && (de_ou_d(p) || est_mot(p, "du"))
+            && !visible(a, "fiche") && !champ_connu(a->portee, "fiche", &g)) {
+            a->i += 3;
+            if (est_mot(p, "du")) { a->article_force = ART_LE; a->jeton_force = p; }
+            Noeud *x = expression(a);
+            a->article_force = ART_AUCUN;
+            if (!x) return NULL;
+            if (!fin_phrase(a, 1)) { noeud_liberer(x); return NULL; }
+            Noeud *f = noeud_creer(P_FICHE, t->ligne, t->colonne, t->debut);
+            noeud_ajouter(f, x);
+            f->fin = x->fin;
+            return f;
+        }
+    }
     Noeud *n = noeud_creer(P_AFFICHAGE, t->ligne, t->colonne, t->debut);
     for (;;) {
         Jeton *e = cour(a);

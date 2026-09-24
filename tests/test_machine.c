@@ -184,7 +184,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -1989,6 +1989,37 @@ int main(void) {
         total++;
         if (!strstr(r, "Plus rien à lire : la réponse à « ? » manque.")) signaler(__LINE__, "fin de page", "fin", r);
         free(r);
+    }
+
+    /* --- La fiche d'un objet (§ 20) --- */
+#define FF "Un genre, conservé, a : un nom (texte), unique.\n" \
+           "Un compositeur, conservé, a : un nom (texte), unique, une naissance (date), facultative.\n" \
+           "Une œuvre, conservée, a : un catalogue (texte), unique, un titre (texte), un compositeur (compositeur), " \
+           "une année d'édition (année), facultative, des genres (genre).\n" \
+           "Pour préparer :\n    Le b vaut un nouveau compositeur :\n        Le nom vaut « Bach ».\n    Conserver b.\n" \
+           "    Le g vaut un nouveau genre :\n        Le nom vaut « canon ».\n    Conserver g.\n" \
+           "    L'o vaut une nouvelle œuvre :\n        Le catalogue vaut « BWV 1079 ».\n        Le titre vaut « Offrande ».\n" \
+           "        Le compositeur vaut b.\n    Conserver o.\n    Les genres de l'o gagnent g.\nPréparer.\n" \
+           "L'o vaut l'œuvre conservée dont le catalogue est « BWV 1079 ».\n"
+    PROG(FF "Afficher la fiche de l'o.",
+         "Œuvre BWV 1079\n  Catalogue        BWV 1079\n  Titre            Offrande\n  Compositeur      Bach\n"
+         "  Année d'édition  absent\n  Genres           canon");
+    PROG(FF "Afficher la fiche du compositeur de l'o.", "Compositeur Bach\n  Nom        Bach\n  Naissance  absent");
+    /* un objet pas encore conservé : ses multiples sont vides ; une classe ordinaire a sa fiche aussi */
+    PROG(FF "La n vaut une nouvelle œuvre :\n    Le titre vaut « T ».\nAfficher la fiche de n.",
+         "Œuvre\n  Catalogue        absent\n  Titre            T\n  Compositeur      absent\n  Année d'édition  absent\n  Genres           aucun");
+    PROG("Un point a : un x, un y.\nLe p vaut un nouveau point :\n    Le x vaut 1.\nAfficher la fiche de p.", "Point\n  X  1\n  Y  absent");
+    PROG("Afficher la fiche de 3.", "~Une fiche montre un objet : la valeur est un nombre.");
+    PROG("Un point a : un x, un y, facultatif.\nLe p vaut un nouveau point.\nAfficher la fiche du y de p.",
+         "~Le champ « y » est absent");
+    /* « fiche » déclaré garde son sens ordinaire */
+    PROG("Un dossier a : une fiche.\nLe d vaut un nouveau dossier :\n    La fiche vaut « F-1 ».\nAfficher la fiche de d.", "F-1");
+    {   /* une image dans une fiche : sa description en console */
+        creer_fichier("_essai_fiche.png", "\x89PNG\r\n\x1a\nimage", 13);
+        PROG("Un membre, conservé, a : un nom (texte), une photo (image).\nLe m vaut un nouveau membre :\n"
+             "    Le nom vaut « Ana ».\n    La photo vaut le fichier « _essai_fiche.png ».\nAfficher la fiche de m.",
+             "Membre\n  Nom    Ana\n  Photo  une image PNG de 13 octets");
+        remove("_essai_fiche.png");
     }
 
     printf("%d/%d tests réussis\n", total - echecs, total);

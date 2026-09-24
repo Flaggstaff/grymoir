@@ -746,6 +746,8 @@ int main(void) {
     VE("Afficher 1.\nEn cas d'échec, afficher 2.", 2, 1, "sans « Essayer » correspondant");
     VE("Afficher le motif de l'échec.", 1, 10, "ne s'emploie que dans un bloc « En cas d'échec »");
     VE("Essayer, afficher 1.", 1, 8, "« Essayer » ouvre un bloc");
+    V("Un point a : un x.\nLe p vaut un nouveau point.\nAfficher la fiche de p.",
+      "(classe [point] [x])\n(créer [p] (nouveau [point]))\n(fiche [p])");
     V("Un client, conservé, a : un nom (texte).\nLe c vaut un nouveau client saisi.",
       "(entité [client] [nom : texte])\n(créer [c] (nouveau-saisi [client]))");
 

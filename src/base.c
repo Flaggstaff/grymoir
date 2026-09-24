@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.36), § 16 ; docs/vm.md (révision 1.31), § 8.
+ * Spécification : docs/grammaire.md (révision 1.37), § 16 ; docs/vm.md (révision 1.32), § 8.
  */
 #include "base.h"
 #include "date.h"
@@ -234,6 +234,48 @@ void base_annuler(Base *b) {
     if (!b->transaction) return;
     b->transaction = 0;
     sqlite3_exec(b->db, "ROLLBACK;", NULL, NULL, NULL);
+}
+
+int base_membres(Base *b, const ClasseVM *c, size_t k, long id, long **ids, char ***classes, size_t *n,
+                 char **erreur) {
+    *ids = NULL;
+    *classes = NULL;
+    *n = 0;
+    Chaine sql = {0};
+    chaine_ajouter(&sql, "SELECT o.id, o.classe FROM ");
+    ajouter_liaison(&sql, c->proprietaires[k]->nom, c->champs[k]);
+    chaine_ajouter(&sql, " l JOIN grym_objet o ON o.id = l.b WHERE l.a = ?1 AND o.supprime IS NULL ORDER BY l.rowid");
+    sqlite3_stmt *st = NULL;
+    int rc = sqlite3_prepare_v2(b->db, sql.d, -1, &st, NULL);
+    free(sql.d);
+    if (rc != SQLITE_OK) {
+        *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+        sqlite3_finalize(st);
+        return 0;
+    }
+    sqlite3_bind_int64(st, 1, (sqlite3_int64)id);
+    size_t cap = 0;
+    while ((rc = sqlite3_step(st)) == SQLITE_ROW) {
+        if (*n == cap) {
+            cap = cap ? cap * 2 : 8;
+            long *ti = grym_allouer(cap * sizeof *ti);
+            char **tc = grym_allouer(cap * sizeof *tc);
+            if (*n) { memcpy(ti, *ids, *n * sizeof *ti); memcpy(tc, *classes, *n * sizeof *tc); }
+            free(*ids);
+            free(*classes);
+            *ids = ti;
+            *classes = tc;
+        }
+        (*ids)[*n] = (long)sqlite3_column_int64(st, 0);
+        const unsigned char *t = sqlite3_column_text(st, 1);
+        (*classes)[(*n)++] = grym_dupliquer(t ? (const char *)t : "");
+    }
+    sqlite3_finalize(st);
+    if (rc != SQLITE_DONE) {
+        *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+        return 0;
+    }
+    return 1;
 }
 
 int base_valeurs(Base *b, const char *entite, const char *table, const char *champ, size_t max,

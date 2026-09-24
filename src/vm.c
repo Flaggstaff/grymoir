@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.31).
+ * Spécification : docs/vm.md (révision 1.32).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -1670,6 +1670,104 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
     return probleme;
 }
 
+/* ---------------------------------------------------------------- */
+/* Fiche d'un objet (grammaire, § 20)                               */
+/* ---------------------------------------------------------------- */
+
+static size_t largeur_utf8(const char *s) {
+    size_t n = 0;
+    for (; *s; s++) if (((unsigned char)*s & 0xC0) != 0x80) n++;
+    return n;
+}
+
+/* Un objet tel qu'une fiche le nomme : par sa clé, sinon « un compositeur ». */
+static char *nom_objet(Machine *m, Objet *x) {
+    const char *cle = champ_cle(x->classe);
+    Valeur v = vi_objet(x);
+    char *r = cle ? valeur_montree(m, &v, cle) : NULL;
+    valeur_liberer(&v);
+    return r ? r : article_classe(x->classe);
+}
+
+/* « Afficher la fiche de p. » : chaque champ et sa valeur, un lien par sa clé, un multiple par ses objets. */
+static char *afficher_fiche(Machine *m, Objet *o, Chaine *sortie) {
+    char *erreur = NULL;
+    if (o->id && !charger(m, o, &erreur)) return erreur;
+    const ClasseVM *cl = o->classe;
+    size_t n = cl->nb_champs;
+    LigneFiche *l = grym_allouer((n ? n : 1) * sizeof *l);
+    char **textes = grym_allouer((n ? n : 1) * sizeof *textes);
+    char **libelles = grym_allouer((n ? n : 1) * sizeof *libelles);
+    for (size_t k = 0; k < n && !erreur; k++) {
+        memset(&l[k], 0, sizeof l[k]);
+        libelles[k] = capitale(cl->champs[k]);
+        textes[k] = NULL;
+        if (cl->uniques[k] & 8) {   /* un champ multiple : ses objets, dans l'ordre où ils ont été gagnés */
+            Chaine c = {0};
+            long *ids = NULL;
+            char **classes = NULL;
+            size_t nm = 0;
+            if (o->id && m->base && base_membres(m->base, cl, k, o->id, &ids, &classes, &nm, &erreur)) {
+                for (size_t q = 0; q < nm && !erreur; q++) {
+                    Objet *x = machine_objet_en_base(m, ids[q], classes[q], &erreur);
+                    if (!x) break;
+                    char *t = nom_objet(m, x);
+                    if (q) chaine_ajouter(&c, ", ");
+                    chaine_ajouter(&c, t);
+                    free(t);
+                }
+            }
+            for (size_t q = 0; q < nm; q++) free(classes[q]);
+            free(classes);
+            free(ids);
+            textes[k] = c.n ? chaine_rendre(&c) : (free(c.d), grym_dupliquer("aucun"));
+        } else if (!o->definis[k] || o->champs[k].type == V_ABSENT) {
+            textes[k] = grym_dupliquer("absent");
+        } else if (o->champs[k].type == V_OBJET) {
+            textes[k] = nom_objet(m, o->champs[k].objet);
+        } else {
+            textes[k] = texte_valeur(m, &o->champs[k]);
+            if (o->champs[k].type == V_FICHIER && o->champs[k].fichier->format) {
+                l[k].octets = o->champs[k].fichier->octets;
+                l[k].taille = o->champs[k].fichier->taille;
+                l[k].format = o->champs[k].fichier->format;
+            }
+        }
+        l[k].libelle = libelles[k];
+        l[k].texte = textes[k];
+    }
+    if (!erreur) {
+        const char *cle = champ_cle(cl);
+        char *nom = capitale(cl->nom);
+        char *clef = NULL;
+        if (cle) { long kc = index_champ(cl, cle); if (kc >= 0 && o->definis[kc]) clef = texte_valeur(m, &o->champs[kc]); }
+        char *titre = clef ? grym_formater("%s %s", nom, clef) : grym_dupliquer(nom);
+        if (m->iface.afficher_fiche) {
+            m->iface.afficher_fiche(m->iface.contexte, sortie, titre, l, n);
+        } else {   /* la console : le titre, puis une colonne de libellés alignés */
+            size_t large = 0;
+            for (size_t k = 0; k < n; k++) if (largeur_utf8(l[k].libelle) > large) large = largeur_utf8(l[k].libelle);
+            chaine_ajouter(sortie, titre);
+            chaine_ajouter(sortie, "\n");
+            for (size_t k = 0; k < n; k++) {
+                chaine_ajouter(sortie, "  ");
+                chaine_ajouter(sortie, l[k].libelle);
+                for (size_t e = largeur_utf8(l[k].libelle); e < large + 2; e++) chaine_ajouter(sortie, " ");
+                chaine_ajouter(sortie, l[k].texte);
+                chaine_ajouter(sortie, "\n");
+            }
+        }
+        free(titre);
+        free(clef);
+        free(nom);
+    }
+    for (size_t k = 0; k < n; k++) { free(textes[k]); free(libelles[k]); }
+    free(textes);
+    free(libelles);
+    free(l);
+    return erreur;
+}
+
 int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *diag) {
     diag->message = NULL;
     diag->ligne = diag->colonne = 0;
@@ -2440,6 +2538,19 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             char *probleme = saisir(m, vo->objet, b->constantes[op].texte, sortie, cadres, &fatal, 0);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
+        case I_FICHE: {
+            /* « Afficher la fiche de p. » (grammaire, § 20) */
+            Valeur vo = depiler(&pile);
+            char *probleme = NULL;
+            if (vo.type == V_ABSENT) probleme = message_absent(&vo);
+            else if (vo.type != V_OBJET)
+                probleme = grym_formater("Une fiche montre un objet : la valeur est %s.", nom_type(vo.type));
+            else
+                probleme = afficher_fiche(m, vo.objet, sortie);
+            valeur_liberer(&vo);
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }

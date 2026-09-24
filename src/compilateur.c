@@ -452,6 +452,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_ECRIRE, k, ph->ligne, ph->colonne);
         return;
     }
+    case P_FICHE:   /* l'objet, puis FICHE (§ 20) */
+        expression(c, ph->enfants[0]);
+        emettre(c, I_FICHE, 0, ph->ligne, ph->colonne);
+        return;
     case P_RESAISIR:   /* l'objet, puis RESAISIR (§ 19) */
         expression(c, ph->enfants[0]);
         emettre(c, I_RESAISIR, 0, ph->ligne, ph->colonne);
