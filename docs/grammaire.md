@@ -1,7 +1,7 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.34 de la spécification, révisée le 23 septembre 2026. Tout ce qui suit est implémenté.
-Référence : Charte de GrymoiR v1.25, art. 4, 5, 7, 8, 9 et 12.
+Version 1.35 de la spécification, révisée le 24 septembre 2026. Tout ce qui suit est implémenté.
+Référence : Charte de GrymoiR v1.27, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
 Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4), décider (§ 5), le calcul des suites attendues (§ 8), les formules (§ 9), répéter (§ 10), la forme compacte (§ 11), la forme canonique (§ 12), les objets (§ 13), les dates et les années (§ 14), les fichiers et les images (§ 15), les entités conservées (§ 16) les questions à l'utilisateur (§ 17), la reprise après erreur (§ 18) et le formulaire (§ 19). Ce que le langage ne sait pas encore faire est listé dans la charte, art. 11 et 12.
@@ -624,7 +624,7 @@ Selon le mois :
 
 ### 10.7 Mots de construction
 
-`tant`, `répéter`, `chaque`, `sortir`, `passer`, `selon`, `cas`, `autrement`, `essayer` (avec `afficher`, `si`, `sinon`, `pour`, `rendre`) commencent des constructions : ils ne peuvent pas commencer le nom d'une action.
+`tant`, `répéter`, `chaque`, `sortir`, `passer`, `selon`, `cas`, `autrement`, `essayer`, `saisir` (avec `afficher`, `si`, `sinon`, `pour`, `rendre`) commencent des constructions : ils ne peuvent pas commencer le nom d'une action.
 
 ---
 
@@ -1282,8 +1282,11 @@ Le p vaut une nouvelle partition saisie :
 - Unique : la valeur se vérifie dès la réponse, corbeille comprise : « « A-1 » est déjà pris. », puis relance. `Conserver` vérifie encore, car un autre programme peut écrire entre deux questions.
 - Chaque question valide ce qui la précède (§ 17) ; dans un `Essayer` (§ 18), l'échec n'annule que depuis la dernière.
 - Un point seul annule le formulaire entier (§ 17) : l'objet n'est pas rendu.
-- Reporté : modifier un objet existant par formulaire, choisir le libellé, l'autocomplétion des réponses.
-- En forme compacte : `_nouveau contact _saisi`, `_nouveau partition _saisi _avec`.
+- **Modifier** : `Saisir à nouveau p.` pose les mêmes questions sur un objet existant, chaque valeur actuelle entre crochets : « Titre [L'Offrande musicale] ? ». Un lien montre sa clé, un fichier son nom d'origine. Une ligne vide garde la valeur ; un tiret seul `-` vide un champ facultatif, et le libellé l'annonce : « Arrangeur [Anton Webern] (- pour vider) ? ». Un champ sans valeur se demande comme à la création.
+- **Tout ou rien** : les réponses s'accumulent, et les champs ne s'écrivent qu'après la dernière, puis la base suit (§ 16.3). Annuler au milieu (`.`) ne change aucun champ. Garder sa propre valeur unique n'est pas un doublon. Un objet de la corbeille se refuse : « … est dans la corbeille : rétablissez-le d'abord. ».
+- `Saisir à nouveau` est une phrase, réservée aux actions et au programme ; `saisir` ne commence pas le nom d'une action.
+- Reporté : choisir les champs demandés ou leur libellé, l'autocomplétion des réponses.
+- En forme compacte : `_nouveau contact _saisi`, `_nouveau partition _saisi _avec`, `_saisir p`.
 
 ---
 
@@ -1326,3 +1329,4 @@ Le p vaut une nouvelle partition saisie :
 | 1.32 | 2026-09-23 | § 19 : formulaire (`un nouveau client saisi`) : ordre, libellés, valeurs de départ, ligne vide, liens par champ texte unique, unicité vérifiée à la réponse |
 | 1.33 | 2026-09-23 | § 17 : un point seul annule une question ou un formulaire (« Saisie annulée. »), annoncé à la première relance |
 | 1.34 | 2026-09-23 | § 4.4 : assembler des textes (`suivi de`), élision de `de` et `que` selon la valeur ; `suivi` réservé |
+| 1.35 | 2026-09-24 | § 19 : modifier par formulaire (`Saisir à nouveau p.`), valeurs actuelles entre crochets, `-` pour vider, écriture après la dernière réponse ; `saisir` réservé aux constructions |

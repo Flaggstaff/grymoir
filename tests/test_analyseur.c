@@ -750,8 +750,8 @@ int main(void) {
       "(entité [client] [nom : texte])\n(créer [c] (nouveau-saisi [client]))");
 
     /* --- Aide à la saisie (§ 8) --- */
-    VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Pour | Remarque :");
-    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Pour | Remarque :");
+    VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Saisir à nouveau | Pour | Remarque :");
+    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Saisir à nouveau | Pour | Remarque :");
     VS("Af", "Afficher");
     VS("l", "Le | La | L'");
     VS("Le total vaut 1.\nLe ", "total | (nouveau nom)");
@@ -787,7 +787,7 @@ int main(void) {
     VS("Pour relancer :\n    Afficher 1.\nRel", "Relancer");
     VS("Le taux vaut 2.\nLe double d'un nombre vaut ", "double | nombre | (nombre) | ( | − | vrai | faux");
     VS("Le carré d'un nombre vaut nombre × nombre.\nAfficher le carré ", "de | du");
-    VS("Tant que vrai :\n    Afficher 1.\n    S", "Si | Selon | Sortir de la boucle");
+    VS("Tant que vrai :\n    Afficher 1.\n    S", "Si | Selon | Saisir à nouveau | Sortir de la boucle");
     VS("Répéter 3 ", "sur | suivi de | fois | + | − | × | ÷ | ^");
 
     printf("%d/%d tests réussis\n", total - echecs, total);

@@ -88,6 +88,12 @@ Pour détailler :
     Pour chaque pupitre de la p, par nombre de parties décroissant :
         Afficher « - » puis nom de l'instrument du pupitre puis « × » puis nombre de parties du pupitre.
 
+Pour réviser :
+    La référence vaut la réponse à « Cote de la partition à modifier ? ».
+    La p vaut la partition conservée dont la cote est référence.
+    Saisir à nouveau p.
+    Afficher « Modifiée : » puis cote de la p.
+
 Pour retirer :
     La référence vaut la réponse à « Cote de la partition à retirer ? ».
     La p vaut la partition conservée dont la cote est référence.
@@ -108,7 +114,7 @@ Pour vider :
 Pour présenter le menu :
     Afficher « ».
     Afficher « 1 compositeur   2 œuvre   3 partition   4 catalogue   5 par compositeur ».
-    Afficher « 6 détail        7 retirer 8 corbeille   0 quitter ».
+    Afficher « 6 détail        7 retirer 8 corbeille   9 modifier   0 quitter ».
 
 Afficher « Tapez un point seul pour annuler une saisie. ».
 Présenter le menu.
@@ -124,6 +130,7 @@ Tant que choix ≠ 0 :
             Cas 6, détailler.
             Cas 7, retirer.
             Cas 8, vider.
+            Cas 9, réviser.
             Autrement, afficher « Choix inconnu. ».
     En cas d'échec, afficher « Rien n'a changé : » puis le motif de l'échec.
     Présenter le menu.

@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.26).
+ * Spécification : docs/vm.md (révision 1.27).
  */
 #include "bytecode.h"
 #include "date.h"
@@ -178,6 +178,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_SAISIR:         return "SAISIR";
     case I_COLLER:         return "COLLER";
     case I_ELIDER:         return "ÉLIDER";
+    case I_RESAISIR:       return "RESAISIR";
     }
     return "INCONNUE";
 }
@@ -331,6 +332,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_INITIALISER_CHAMP: besoin = 2; effet = -1; break;
             case I_LIRE_CHAMP: case I_SAISIR: case I_ELIDER: besoin = 1; break;
             case I_COLLER: besoin = 2; effet = -1; break;
+            case I_RESAISIR: besoin = 1; effet = -1; break;
             case I_ECRIRE_CHAMP: case I_GAGNER: case I_PERDRE: besoin = 2; effet = -2; break;
             case I_DEMANDER: besoin = 1; effet = 0; break;   /* dépile la question, empile la réponse */
             case I_ECHOUER: break;
@@ -410,14 +412,14 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 22  /* versions 1 à 21 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 23  /* versions 1 à 22 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
                               sans champ multiple (15), sans question (16),
                               sans mise en forme (17), sans effacement de l'écran (18),
                               sans essai (19), sans formulaire (20),
-                              sans assemblage de textes (21) */
+                              sans assemblage de textes (21), sans modification par formulaire (22) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 

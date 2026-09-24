@@ -452,6 +452,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_ECRIRE, k, ph->ligne, ph->colonne);
         return;
     }
+    case P_RESAISIR:   /* l'objet, puis RESAISIR (§ 19) */
+        expression(c, ph->enfants[0]);
+        emettre(c, I_RESAISIR, 0, ph->ligne, ph->colonne);
+        return;
     case P_ESSAYER: {
         /* ESSAYER → échec ; corps ; FIN_ESSAI ; → fin ; échec : motif → case ; bloc « En cas d'échec » ; fin (§ 18) */
         size_t vers_echec = bloc_emettre_saut(c->b, I_ESSAYER, ph->ligne, ph->colonne);

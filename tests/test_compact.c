@@ -234,6 +234,8 @@ int main(void) {
     ALLER_RETOUR("_effacer\n_afficher « a »\n", "Effacer l'écran.\nAfficher « a ».\n");
     ALLER_RETOUR("_l'année << 1\n_le nom << « a »\n_afficher « ( » _suivi année _suivi « ) » ; _de nom ; _que nom\n",
                  "L'année vaut 1.\nLe nom vaut « a ».\nAfficher « ( » suivi d'année suivi de « ) » puis de nom puis que nom.\n");
+    ALLER_RETOUR("_classe _une fiche _conservé\n    _un nom (texte)\n_fin\n_action f(_une fiche)\n    _saisir fiche\n_fin\n",
+                 "Une fiche, conservée, a :\n    un nom (texte).\nPour f une fiche :\n    Saisir à nouveau fiche.\n");
     ALLER_RETOUR("_essayer\n    _afficher 1 ÷ 0\n_échec\n    _afficher « x » ; _motif\n_fin\n",
                  "Essayer :\n    Afficher 1 ÷ 0.\nEn cas d'échec :\n    Afficher « x » puis le motif de l'échec.\n");
     ALLER_RETOUR("_essayer\n    _essayer\n        _afficher 1\n    _échec\n        _afficher _motif\n    _fin\n_échec\n"

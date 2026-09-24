@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.34), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.35), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -4135,7 +4135,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
 /* Mots qui commencent une construction et ne peuvent donc pas commencer le nom d'une action. */
 static int mot_de_construction(const Jeton *t) {
     static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
-                                     "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer", "effacer", "essayer",
+                                     "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer", "effacer", "essayer", "saisir",
                                      "conserver", "supprimer", "rétablir" };
     for (size_t k = 0; k < sizeof M / sizeof *M; k++) if (est_mot(t, M[k])) return 1;
     return 0;
@@ -4311,6 +4311,20 @@ static Noeud *phrase(Analyse *a, int colonne) {
     }
     if (est_mot(t, "si")) return si(a, colonne, 0);
     if (est_mot(t, "essayer")) return essayer(a, colonne);
+    if (est_mot(t, "saisir")) {   /* « Saisir à nouveau p. » (§ 19) */
+        static const char *const A_NOUVEAU[] = { "saisir", "à", "nouveau" };
+        if (!mots_fixes(a, A_NOUVEAU, 3)) return NULL;
+        if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul ne pose pas de question : demandez dans une action."));
+        if (a->interactif)
+            return erreur(a, t, grym_dupliquer("La question se pose dans un programme lancé, pas dans la boucle interactive."));
+        Noeud *x = expression(a);
+        if (!x) return NULL;
+        if (!fin_phrase(a, 1)) { noeud_liberer(x); return NULL; }
+        Noeud *n = noeud_creer(P_RESAISIR, t->ligne, t->colonne, t->debut);
+        noeud_ajouter(n, x);
+        n->fin = x->fin;
+        return n;
+    }
     if (en_cas_d_echec(a, a->i))
         return erreur(a, t, grym_dupliquer("« En cas d'échec » sans « Essayer » correspondant : il s'aligne sur "
                                            "son « Essayer », juste après le bloc essayé."));
@@ -4746,6 +4760,7 @@ Suggestions suites_valides(const char *source, size_t taille) {
             proposer(&r, "Pour chaque", pre, lp, 0);
             proposer(&r, "Selon", pre, lp, 0);
             proposer(&r, "Essayer", pre, lp, 0);
+            proposer(&r, "Saisir à nouveau", pre, lp, 0);
             proposer(&r, "Pour", pre, lp, 0);
             proposer(&r, "Remarque :", pre, lp, 0);
             for (size_t k = 0; k < c.nb_noms; k++)

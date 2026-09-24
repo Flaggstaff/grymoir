@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.34), § 16 ; docs/vm.md (révision 1.26), § 8.
+ * Spécification : docs/grammaire.md (révision 1.35), § 16 ; docs/vm.md (révision 1.27), § 8.
  *
  * Schéma : une table « e <entité> » par entité, qui porte ses champs propres et ceux de ses
  * aptitudes ; son identifiant désigne la ligne de sa classe parente, ou de « grym_objet »

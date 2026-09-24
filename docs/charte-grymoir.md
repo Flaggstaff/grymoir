@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.26, révisée le 24 septembre 2026.
+Version 1.27, révisée le 24 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -158,7 +158,7 @@ Critères de sortie de la v1.0 :
 
 1. Intégration continue : compilation sans avertissement et tests sous Linux, macOS et Windows à chaque poussée (`.github/workflows/tests.yml`). Fait.
 2. Essai manuel, dans la console Windows, d'une saisie accentuée (la Partothèque avec un compositeur « Élodie Müller »).
-3. Modifier un objet conservé par formulaire.
+3. Modifier un objet conservé par formulaire (grammaire, § 19 : `Saisir à nouveau`). Fait.
 4. README et charte à jour.
 
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
@@ -206,3 +206,4 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 | 1.24 | 2026-09-23 | Art. 12 : annulation d'une saisie par un point seul |
 | 1.25 | 2026-09-23 | Art. 12 : assemblage de textes (`suivi de`, élision) |
 | 1.26 | 2026-09-24 | Art. 12 : critères de sortie de la v1.0 ; intégration continue sur les trois systèmes |
+| 1.27 | 2026-09-24 | Art. 12 : modification par formulaire faite |

@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.26).
+ * Spécification : docs/vm.md (révision 1.27).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -1316,10 +1316,46 @@ static int initialise(const char *liste, const char *champ) {
     return 0;
 }
 
-/* Remplit l'objet neuf, champ par champ, par des questions (grammaire, § 19). *fatal : erreur qu'aucun
- * essai ne rattrape (entrée épuisée, base perdue, Ctrl+C). */
-static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadre *cadres, int *fatal) {
+/* Valeur actuelle d'un champ, telle que le formulaire de modification la montre : un lien par sa clé,
+ * un fichier par son nom d'origine. NULL : rien à montrer. */
+static char *valeur_montree(Machine *m, const Valeur *v, const char *cle) {
+    if (v->type == V_ABSENT) return NULL;
+    if (v->type == V_FICHIER) return grym_dupliquer(v->fichier->nom);
+    if (v->type == V_OBJET && cle) {
+        char *erreur = NULL;
+        if (!charger(m, v->objet, &erreur)) { free(erreur); return NULL; }
+        long q = index_champ(v->objet->classe, cle);
+        if (q < 0 || !v->objet->definis[q]) return NULL;
+        return texte_valeur(m, &v->objet->champs[q]);
+    }
+    return texte_valeur(m, v);
+}
+
+typedef struct { size_t k; Valeur v; } Modification;
+
+static void oublier_modifications(Modification *t, size_t n) {
+    for (size_t q = 0; q < n; q++) valeur_liberer(&t[q].v);
+    free(t);
+}
+
+/* Remplit l'objet, champ par champ, par des questions (grammaire, § 19). modifier : « Saisir à nouveau »,
+ * chaque valeur actuelle entre crochets, écrite seulement après la dernière réponse (tout ou rien).
+ * *fatal : erreur qu'aucun essai ne rattrape (entrée épuisée, base perdue, Ctrl+C). */
+static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadre *cadres, int *fatal, int modifier) {
     const ClasseVM *cl = o->classe;
+    Modification *attente = NULL;
+    size_t nb_attente = 0;
+    if (modifier) {
+        char *erreur = NULL;
+        if (o->id && !charger(m, o, &erreur)) return erreur;
+        if (o->id && m->base && base_est_supprime(m->base, o->id)) {
+            char *qui = article_classe(cl);
+            char *r = grym_formater("Cet objet (%s) est dans la corbeille : rétablissez-le d'abord.", qui);
+            free(qui);
+            return r;
+        }
+        attente = grym_allouer((cl->nb_champs ? cl->nb_champs : 1) * sizeof *attente);
+    }
     for (size_t k = 0; k < cl->nb_champs; k++) {
         const char *champ = cl->champs[k], *type = cl->types[k];
         int facultatif = (cl->uniques[k] & 2) != 0, unique = (cl->uniques[k] & 1) != 0;
@@ -1339,10 +1375,13 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
                                      "désigne un objet. Donnez-lui sa valeur dans le bloc du nouvel objet.", champ, type);
             }
         }
-        int a_depart = cl->departs[k] != NULL;
+        char *actuel = modifier && o->definis[k] ? valeur_montree(m, &o->champs[k], cle) : NULL;
+        int a_depart = !modifier && cl->departs[k] != NULL;
         Valeur depart = a_depart ? valeur_de_depart(type, cl->departs[k]) : vi_absent(champ);
         char *nom = capitale(champ), *question;
-        if (a_depart) {
+        if (actuel) {
+            question = grym_formater("%s [%s]%s ?", nom, actuel, facultatif ? " (- pour vider)" : "");
+        } else if (a_depart) {
             char *d = texte_valeur(m, &depart);
             question = grym_formater("%s [%s] ?", nom, d);
             free(d);
@@ -1374,6 +1413,13 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
             Valeur v;
             int pris = 0;
             char *relance = NULL;
+            if (actuel && !n) { free(ligne); break; }   /* ligne vide : la valeur actuelle reste */
+            if (actuel && facultatif && strcmp(t, "-") == 0) {   /* « - » : le champ devient absent */
+                free(ligne);
+                attente[nb_attente].k = k;
+                attente[nb_attente++].v = vi_absent(champ);
+                break;
+            }
             if (!n) {
                 if (facultatif) { free(ligne); break; }   /* reste absent */
                 if (a_depart) { v = valeur_copier(&depart); pris = 1; }
@@ -1413,6 +1459,16 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
             }
             free(ligne);
             if (pris) relance = verifier_type_champ(m, champ, type, &v, facultatif);
+            if (pris && !relance && unique && m->base && actuel) {
+                char *x = valeur_montree(m, &v, cle);   /* garder sa propre valeur n'est pas un doublon */
+                int meme = x && strcmp(x, actuel) == 0;
+                free(x);
+                if (meme) {
+                    attente[nb_attente].k = k;
+                    attente[nb_attente++].v = v;
+                    break;
+                }
+            }
             if (pris && !relance && unique && m->base) {
                 /* une valeur unique déjà prise, même dans la corbeille, se refuse dès la réponse */
                 const char *table = cl->proprietaires[k]->nom;
@@ -1434,7 +1490,12 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
                 valeur_liberer(&r2);
             }
             if (pris && !relance) {
-                ecrire_champ(m, o, k, v);
+                if (modifier) {
+                    attente[nb_attente].k = k;
+                    attente[nb_attente++].v = v;
+                } else {
+                    ecrire_champ(m, o, k, v);
+                }
                 break;
             }
             if (pris) valeur_liberer(&v);
@@ -1449,9 +1510,22 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
         }
         valeur_liberer(&depart);
         free(question);
-        if (probleme) return probleme;
+        free(actuel);
+        if (probleme) {
+            if (modifier) oublier_modifications(attente, nb_attente);
+            return probleme;
+        }
     }
-    return NULL;
+    if (!modifier) return NULL;
+    /* toutes les réponses sont là : les champs s'écrivent maintenant, et la base les suit (§ 16.3) */
+    char *erreur = NULL;
+    for (size_t q = 0; q < nb_attente && !erreur; q++) {
+        ecrire_champ(m, o, attente[q].k, attente[q].v);
+        attente[q].v = vi_absent("");
+        if (o->id && !base_ecrire_champ(m->base, o, attente[q].k, &erreur)) break;
+    }
+    oublier_modifications(attente, nb_attente);
+    return erreur;
 }
 
 int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *diag) {
@@ -2283,7 +2357,19 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 ok = echouer(diag, b, debut, grym_dupliquer("Seul un objet d'une entité se saisit."));
                 break;
             }
-            char *probleme = saisir(m, vo->objet, b->constantes[op].texte, sortie, cadres, &fatal);
+            char *probleme = saisir(m, vo->objet, b->constantes[op].texte, sortie, cadres, &fatal, 0);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
+        case I_RESAISIR: {
+            /* « Saisir à nouveau p. » : le formulaire de modification (grammaire, § 19) */
+            Valeur vo = depiler(&pile);
+            char *probleme = NULL;
+            if (vo.type != V_OBJET || !vo.objet->classe->conserve)
+                probleme = grym_dupliquer("Seul un objet d'une entité se saisit.");
+            else
+                probleme = saisir(m, vo.objet, "", sortie, cadres, &fatal, 1);
+            valeur_liberer(&vo);
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }

@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.26 de la spécification, révisée le 23 septembre 2026.
-Référence : Charte de GrymoiR v1.22, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.34, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
+Version 1.27 de la spécification, révisée le 24 septembre 2026.
+Référence : Charte de GrymoiR v1.22, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.35, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
 Périmètre : la machine qui exécute le bytecode, le format du fichier `.grymb`, la base des entités, le ramasse-miettes et le journal d'annulation.
@@ -97,6 +97,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 52 | `SAISIR` | index d'une constante texte : champs initialisés dans le bloc, séparés par « , » | remplit l'objet neuf au sommet (qui reste) par une question par champ (grammaire, § 19) ; chaque lecture valide ce qui précède, rend le verrou, puis le reprend pour vérifier un lien ou une unicité par une recherche |
 | 53 | `COLLER` | aucun | dépile b, puis a ; empile le texte de a suivi de celui de b, écrits comme `AFFICHER` les écrirait (grammaire, § 4.4) |
 | 54 | `ÉLIDER` | 0 : `de`, 1 : `que` | remplace la valeur au sommet par son texte précédé de `de ` ou `d'` (`que ` ou `qu'`) selon sa première lettre |
+| 55 | `RESAISIR` | aucun | dépile un objet d'entité et le soumet au formulaire de modification (grammaire, § 19) ; les réponses s'accumulent, puis les champs s'écrivent (journal et base) après la dernière |
 
 ### 3.1 Boucles et Selon
 
@@ -236,7 +237,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 22
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 23
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -261,7 +262,7 @@ classes       nombre : u32, puis pour chacune :
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40 ; la version 15, le bit 2 et les instructions 41 et 42 ; la version 16, le bit 3 et les instructions 43 et 44 ; la version 17, l'instruction 45 ; la version 18, les instructions 46 à 48 ; la version 19, l'instruction 49 ; la version 20, les instructions 50 et 51 ; la version 21, l'instruction 52 ; la version 22, les instructions 53 et 54. Les fichiers des versions 1 à 21 restent lisibles ; leur `SUPPRIMER` met désormais dans la corbeille.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40 ; la version 15, le bit 2 et les instructions 41 et 42 ; la version 16, le bit 3 et les instructions 43 et 44 ; la version 17, l'instruction 45 ; la version 18, les instructions 46 à 48 ; la version 19, l'instruction 49 ; la version 20, les instructions 50 et 51 ; la version 21, l'instruction 52 ; la version 22, les instructions 53 et 54 ; la version 23, l'instruction 55. Les fichiers des versions 1 à 22 restent lisibles ; leur `SUPPRIMER` met désormais dans la corbeille.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -322,3 +323,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.24 | 2026-09-23 | `SAISIR` : formulaire d'un objet neuf ; format version 21 |
 | 1.25 | 2026-09-23 | Annulation d'une question par un point seul, rattrapable |
 | 1.26 | 2026-09-23 | `COLLER`, `ÉLIDER` : assembler des textes ; format version 22 |
+| 1.27 | 2026-09-24 | `RESAISIR` : modifier par formulaire ; format version 23 |

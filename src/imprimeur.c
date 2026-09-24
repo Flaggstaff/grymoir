@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.34), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.35), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -736,6 +736,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     }
     case P_EFFACER:
         aj(im, c ? "_effacer\n" : "Effacer l'écran.\n");
+        return;
+    case P_RESAISIR:   /* « Saisir à nouveau p. » ; « _saisir p » (§ 19) */
+        aj(im, c ? "_saisir " : "Saisir à nouveau ");
+        expression(im, n->enfants[0]);
+        aj(im, c ? "\n" : ".\n");
         return;
     case P_ESSAYER:   /* « Essayer : … En cas d'échec : … » ; « _essayer … _échec … _fin » (§ 18) */
         aj(im, c ? "_essayer" : "Essayer");

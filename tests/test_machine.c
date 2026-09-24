@@ -1746,6 +1746,67 @@ int main(void) {
     PROG("Afficher « a » suivi « b ».", "~« suivi » attend « de »");
     PROG("Le suivi vaut 1.", "~« suivi » est un mot réservé");
 
+    /* --- Modifier par formulaire : « Saisir à nouveau » (§ 19) --- */
+#define FM "Un compositeur, conservé, a : un nom (texte), unique.\n" \
+           "Une partition, conservée, a : une cote (texte), unique, un titre (texte), un compositeur (compositeur), " \
+           "un arrangeur (compositeur), facultatif, une édition (date), facultative.\n" \
+           "Pour préparer :\n    Le b vaut un nouveau compositeur :\n        Le nom vaut « Bach ».\n    Conserver b.\n" \
+           "    Le w vaut un nouveau compositeur :\n        Le nom vaut « Webern ».\n    Conserver w.\n" \
+           "    La p vaut une nouvelle partition :\n        La cote vaut « P-1 ».\n        Le titre vaut « Offrande ».\n" \
+           "        Le compositeur vaut b.\n        L'arrangeur vaut w.\n    Conserver p.\n" \
+           "    La q vaut une nouvelle partition :\n        La cote vaut « P-2 ».\n        Le titre vaut « Fugue ».\n" \
+           "        Le compositeur vaut b.\n    Conserver q.\nPréparer.\n" \
+           "La p vaut la partition conservée dont la cote est « P-1 ».\n"
+#define FMA "Afficher cote de p puis titre de p puis nom du compositeur de p puis arrangeur de p puis édition de p."
+    /* ligne vide : la valeur reste ; « - » vide un champ facultatif ; sa propre valeur unique n'est pas un doublon */
+    SAISIE(FM "Saisir à nouveau p.\n" FMA,
+           "Cote [P-1] ? Titre [Offrande] ? Compositeur [Bach] ? Arrangeur [Webern] (- pour vider) ? Édition ? "
+           "P-1 Offrande musicale Webern absent 01.02.1900",
+           "P-1", "Offrande musicale", "Webern", "-", "01.02.1900");
+    SAISIE(FM "Saisir à nouveau p.\n" FMA,
+           "Cote [P-1] ? Titre [Offrande] ? Compositeur [Bach] ? Arrangeur [Webern] (- pour vider) ? Édition ? "
+           "P-1 Offrande Bach un compositeur absent", "", "", "", "", "");
+    SAISIE(FM "Saisir à nouveau p.", "~Cote [P-1] ? « P-2 » est déjà pris. Tapez « . » seul pour annuler.\nCote [P-1] ? ",
+           "P-2", "P-3", "", "", "", "");
+    /* tout ou rien : une annulation au milieu ne change aucun champ */
+    SAISIE(FM ESS("    Saisir à nouveau p.\n", "    Afficher le motif de l'échec.\n") FMA,
+           "Cote [P-1] ? Titre [Offrande] ? Compositeur [Bach] ? Saisie annulée.\nP-1 Offrande Bach un compositeur absent",
+           "P-9", "Nouveau", ".");
+    {   /* la base suit, et relue par une autre exécution */
+        remove("_essai_resaisir.grymd");
+        static const char *const L[] = { "", "Toccata", "", "", "" };
+        const char *src = FM "Saisir à nouveau p.";
+        total++;
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        Script sc = { L, 5, 0 };
+        machine_lecteur(m, reponses, &sc);
+        machine_base(m, "_essai_resaisir.grymd");
+        char *r = executer_source(p, m, src, 0);
+        free(r);
+        machine_detruire(m);
+        portee_detruire(p);
+        p = portee_creer();
+        m = machine_creer();
+        machine_base(m, "_essai_resaisir.grymd");
+        r = executer_source(p, m, "Un compositeur, conservé, a : un nom (texte), unique.\n"
+            "Une partition, conservée, a : une cote (texte), unique, un titre (texte), un compositeur (compositeur), "
+            "un arrangeur (compositeur), facultatif, une édition (date), facultative.\n"
+            "Pour chaque partition conservée, par cote, afficher titre de la partition.", 0);
+        if (strcmp(r, "Toccata\nFugue") != 0) signaler(__LINE__, "base relue après Saisir à nouveau", "Toccata\nFugue", r);
+        free(r);
+        machine_detruire(m);
+        portee_detruire(p);
+        remove("_essai_resaisir.grymd");
+    }
+    SAISIE(FM "Supprimer p.\nSaisir à nouveau p.", "~est dans la corbeille : rétablissez-le d'abord.", "");
+    /* un objet pas encore conservé : les champs sans valeur se demandent comme à la création */
+    SAISIE(FM "La n vaut une nouvelle partition :\n    La cote vaut « N ».\nSaisir à nouveau n.\nAfficher titre de n.",
+           "Cote [N] ? Titre ? Compositeur ? Arrangeur ? Édition ? T", "", "T", "Bach", "", "");
+    PROG("Un point a : un x.\nLe p vaut un nouveau point.\nPour f :\n    Saisir à nouveau p.\nF.", "~Seul un objet d'une entité se saisit.");
+    PROG(FC "Le carré d'un n :\n    Saisir à nouveau b.\n    Rendre n.", "~Un calcul ne pose pas de question");
+    PROG("Pour saisir un x :\n    Afficher 1.", "~« saisir » commence une construction du langage");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }
