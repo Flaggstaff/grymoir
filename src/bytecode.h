@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.29).
+ * Spécification : docs/vm.md (révision 1.30).
  */
 #ifndef GRYM_BYTECODE_H
 #define GRYM_BYTECODE_H

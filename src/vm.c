@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.29).
+ * Spécification : docs/vm.md (révision 1.30).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -1345,6 +1345,11 @@ static char *poser(Machine *m, Chaine *sortie, Cadre *cadres, Champ *champs, siz
         probleme = a->motif;
         a->motif = NULL;
         return probleme ? probleme : grym_dupliquer("Saisie interrompue.");
+    }
+    if (issue == ISSUE_INTERROMPU) {
+        grym_interruption = 0;
+        a->fatal = 1;
+        return grym_dupliquer("Interrompu (Ctrl+C).");
     }
     if (issue == ISSUE_FIN) {
         char *invite = champ_invite(&champs[k]);

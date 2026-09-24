@@ -3,6 +3,7 @@
  *   grym                                boucle interactive (grammaire, § 3.3)
  *   grym lancer fichier.grym            compile puis exécute
  *   grym lancer fichier.grymb           exécute un bytecode compilé
+ *   grym servir fichier.grym            l'application dans le navigateur (docs/v2.md)
  *   grym compiler fichier.grym          produit fichier.grymb
  *   grym desassembler fichier.grym(b)   affiche les instructions (docs/vm.md, § 12)
  */
@@ -15,6 +16,7 @@
 #include "compilateur.h"
 #include "imprimeur.h"
 #include "vm.h"
+#include "serveur.h"
 #include "lsp.h"
 #include "texte.h"
 
@@ -33,7 +35,7 @@
 #define terminal() isatty(fileno(stdin))
 #endif
 
-#define VERSION "0.4"   /* dernier jalon livré (charte, art. 12) */
+#define VERSION "1.0"   /* dernier jalon livré (charte, art. 12) */
 
 static char *lire_fichier(FILE *f, size_t *taille) {
     size_t cap = 4096, n = 0;
@@ -159,12 +161,8 @@ static Module *charger(const char *chemin) {
     return b;
 }
 
-static int lancer(const char *chemin) {
-    Module *b = charger(chemin);
-    if (!b) return EXIT_FAILURE;
-    Machine *m = machine_creer();
-    machine_lecteur(m, lire_pour_la_machine, NULL);
-    machine_terminal(m, sortie_terminal());
+/* Dossier du programme et base à côté de lui (§ 15.2, § 16.5). */
+static void situer(Machine *m, const char *chemin) {
     const char *barre = strrchr(chemin, '/');
     if (barre) {   /* les chemins de fichiers du programme partent de son dossier (§ 15.2) */
         char *dossier = grym_formater("%.*s", (int)(barre - chemin), chemin);
@@ -178,6 +176,15 @@ static int lancer(const char *chemin) {
     char *base = grym_formater("%.*s.grymd", (int)coupe, chemin);
     machine_base(m, base);
     free(base);
+}
+
+static int lancer(const char *chemin) {
+    Module *b = charger(chemin);
+    if (!b) return EXIT_FAILURE;
+    Machine *m = machine_creer();
+    machine_lecteur(m, lire_pour_la_machine, NULL);
+    machine_terminal(m, sortie_terminal());
+    situer(m, chemin);
     Chaine sortie = {0};
     Diagnostic d;
     grym_interruption = 0;
@@ -193,6 +200,66 @@ static int lancer(const char *chemin) {
         if (annule) fprintf(stderr, "%s\n", annule);
         free(annule);
     }
+    machine_detruire(m);
+    module_detruire(b);
+    return ok ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+/* Ouvre l'adresse dans le navigateur de la machine. Elle ne contient que des chiffres, de l'hexadécimal
+ * et des signes fixes : rien ne peut s'y glisser vers le shell. */
+static void ouvrir_navigateur(const char *adresse) {
+    for (const char *p = adresse; *p; p++)
+        if (!strchr("abcdefghijklmnopqrstuvwxyz0123456789:/.?=", *p)) return;
+#ifdef _WIN32
+    char *commande = grym_formater("start \"\" \"%s\"", adresse);
+#elif defined(__APPLE__)
+    char *commande = grym_formater("open '%s'", adresse);
+#else
+    char *commande = grym_formater("xdg-open '%s' >/dev/null 2>&1 &", adresse);
+#endif
+    if (system(commande) != 0) fprintf(stderr, "Ouvrez vous-même l'adresse ci-dessus dans un navigateur.\n");
+    free(commande);
+}
+
+/* grym servir : l'application dans le navigateur (docs/v2.md). */
+static int servir(const char *chemin, int port, int navigateur) {
+    Module *b = charger(chemin);
+    if (!b) return EXIT_FAILURE;
+    const char *nom = strrchr(chemin, '/');
+    char *erreur = NULL;
+    Serveur *s = serveur_ouvrir(port, nom ? nom + 1 : chemin, &erreur);
+    if (!s) {
+        fprintf(stderr, "%s\n", erreur);
+        free(erreur);
+        module_detruire(b);
+        return EXIT_FAILURE;
+    }
+    printf("« %s » est servi à l'adresse :\n  %s\nCtrl+C pour arrêter.\n", chemin, serveur_adresse(s));
+    fflush(stdout);
+    if (navigateur) ouvrir_navigateur(serveur_adresse(s));
+    Machine *m = machine_creer();
+    Interface i = serveur_interface(s);
+    machine_interface(m, &i);
+    situer(m, chemin);
+    Chaine sortie = {0};
+    Diagnostic d;
+    grym_interruption = 0;
+    int ok = machine_executer(m, b, &sortie, &d);
+    char *message = NULL, *annule = NULL;
+    int interrompu = !ok && strcmp(d.message, "Interrompu (Ctrl+C).") == 0;
+    if (!ok) {
+        signaler(chemin, &d);
+        message = d.ligne ? grym_formater("Erreur, ligne %d : %s", d.ligne, d.message) : grym_formater("Erreur : %s", d.message);
+        annule = machine_annulation(m, 0);
+        if (annule) fprintf(stderr, "%s\n", annule);
+        diagnostic_liberer(&d);
+    }
+    grym_interruption = 0;
+    if (!interrompu) serveur_terminer(s, &sortie, message, annule);   /* Ctrl+C : on s'arrête tout de suite */
+    free(message);
+    free(annule);
+    free(sortie.d);
+    serveur_fermer(s);
     machine_detruire(m);
     module_detruire(b);
     return ok ? EXIT_SUCCESS : EXIT_FAILURE;
@@ -393,6 +460,19 @@ int main(int argc, char **argv) {
     if (argc == 3 && strcmp(argv[1], "--base") == 0) return boucle(argv[2]);
     if (argc == 2 && strcmp(argv[1], "lsp") == 0) return lsp_servir(stdin, stdout);   /* docs/lsp.md */
     if (argc == 3 && strcmp(argv[1], "lancer") == 0) return lancer(argv[2]);
+    if (argc >= 3 && strcmp(argv[1], "servir") == 0) {   /* grym servir app.grym [--port N] [--sans-navigateur] */
+        int port = 0, navigateur = 1, bon = 1;
+        for (int k = 3; k < argc && bon; k++) {
+            if (strcmp(argv[k], "--sans-navigateur") == 0) navigateur = 0;
+            else if (strcmp(argv[k], "--port") == 0 && k + 1 < argc) {
+                char *e = NULL;
+                long p = strtol(argv[++k], &e, 10);
+                bon = *e == '\0' && p > 0 && p < 65536;
+                port = (int)p;
+            } else bon = 0;
+        }
+        if (bon) return servir(argv[2], port, navigateur);
+    }
     if (argc == 3 && strcmp(argv[1], "compiler") == 0) return compiler_fichier(argv[2]);
     if (argc == 3 && strcmp(argv[1], "formater") == 0) return formater(argv[2]);
     if (argc == 3 && strcmp(argv[1], "traduire") == 0) return traduire(argv[2]);
@@ -404,6 +484,8 @@ int main(int argc, char **argv) {
             "  grym                                boucle interactive\n"
             "  grym lancer fichier.grym            compile puis exécute\n"
             "  grym lancer fichier.grymb           exécute un bytecode compilé\n"
+            "  grym servir fichier.grym            l'application dans le navigateur\n"
+            "      [--port N] [--sans-navigateur]\n"
             "  grym compiler fichier.grym          produit fichier.grymb\n"
             "  grym desassembler fichier.grym(b)   affiche les instructions\n"
             "  grym --base fichier.grymd           boucle interactive sur une base conservée\n"

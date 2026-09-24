@@ -1,5 +1,5 @@
 /* GrymoiR : interface d'entrée et de sortie de la machine.
- * Spécification : docs/vm.md (révision 1.29), § 13.
+ * Spécification : docs/vm.md (révision 1.30), § 13.
  *
  * Tout ce qui touche l'utilisateur passe par ici : poser des questions (une seule, ou un formulaire),
  * effacer l'écran. La console l'implémente (console.c) ; le navigateur l'implémentera (docs/v2.md).
@@ -28,7 +28,8 @@ typedef enum {
     ISSUE_REPONDU,   /* chaque champ a une réponse acceptée */
     ISSUE_ANNULE,    /* l'utilisateur a annulé (§ 17 : « . » en console) */
     ISSUE_FIN,       /* plus rien à lire */
-    ISSUE_ARRET      /* la validation a demandé l'arrêt ; la machine connaît le motif */
+    ISSUE_ARRET,     /* la validation a demandé l'arrêt ; la machine connaît le motif */
+    ISSUE_INTERROMPU /* Ctrl+C pendant l'attente (docs/vm.md, § 6) */
 } Issue;
 
 /* Validation d'une réponse, appelée par l'interface : en console après chaque champ, dans un navigateur

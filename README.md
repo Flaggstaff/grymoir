@@ -2,7 +2,7 @@
 
 Langage de programmation francophone. Référence : `docs/charte-grymoir.md`, `docs/grammaire.md` et `docs/vm.md`.
 
-## État : v1.0 livrée (application console) ; v2 en conception (`docs/v2.md`)
+## État : v1.0 livrée (application console) ; v2 en cours : l'application dans le navigateur (`docs/v2.md`)
 
 Chaque poussée compile et lance les tests sous Linux (gcc, clang, puis ASan et UBSan), macOS (clang) et Windows (MinGW-w64 gcc) : `.github/workflows/tests.yml`. Jalons et critères : charte, art. 12 ; promesses de compatibilité : art. 13.
 
@@ -59,6 +59,7 @@ Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
     ./grym lancer exemples/registre.grym     # se relit d'une exécution à l'autre (registre.grymd)
     ./grym lancer exemples/saisie.grym       # carnet d'adresses : questions, colonnes, menu
     ./grym lancer exemples/partotheque.grym  # bibliothèque de partitions : formulaires, Essayer, corbeille
+    ./grym servir exemples/partotheque.grym  # la même, dans le navigateur (serveur local, 127.0.0.1)
     ./grym --base essai.grymd                # boucle interactive sur une base conservée
     ./grym-lexeur exemples/facture.grym      # jetons
     ./grym-arbre exemples/facture.grym    # arbre syntaxique
@@ -67,7 +68,7 @@ Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
 Sous Windows sans `make` :
 
     gcc -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DQS=0 -DSQLITE_DEFAULT_FOREIGN_KEYS=1 -DSQLITE_OMIT_DEPRECATED -DSQLITE_DEFAULT_MEMSTATUS=0 -c -o vendor/sqlite/sqlite3.o vendor/sqlite/sqlite3.c
-    gcc -std=c99 -O2 -Ivendor/sqlite -o grym.exe src/grym.c src/lsp.c src/json.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o
+    gcc -std=c99 -O2 -Ivendor/sqlite -o grym.exe src/grym.c src/lsp.c src/json.c src/serveur.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o -lws2_32 -lbcrypt
     gcc -std=c99 -O2 -o grym-lexeur.exe src/grym-lexeur.c src/lexeur.c src/date.c src/texte.c
     gcc -std=c99 -O2 -Ivendor/sqlite -o test_base.exe tests/test_base.c vendor/sqlite/sqlite3.o
     gcc -std=c99 -O2 -Isrc -o test_lexeur.exe tests/test_lexeur.c src/lexeur.c src/date.c src/texte.c
@@ -78,6 +79,7 @@ Sous Windows sans `make` :
     gcc -std=c99 -O2 -Isrc -Ivendor/sqlite -o test_compact.exe tests/test_compact.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o
     gcc -std=c99 -O2 -Isrc -o test_imprimeur.exe tests/test_imprimeur.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/decimal.c src/lexeur.c src/date.c
     gcc -std=c99 -O2 -Isrc -o test_lsp.exe tests/test_lsp.c src/lsp.c src/json.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/decimal.c src/lexeur.c src/date.c
+    gcc -std=c99 -O2 -Isrc -Ivendor/sqlite -o test_serveur.exe tests/test_serveur.c src/serveur.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/decimal.c src/analyseur.c src/arbre.c src/texte.c src/imprimeur.c src/compact.c src/lexeur.c src/date.c vendor/sqlite/sqlite3.o -lws2_32 -lbcrypt
 
 ## SQLite embarqué
 

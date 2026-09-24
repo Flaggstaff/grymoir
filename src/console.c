@@ -1,5 +1,5 @@
 /* GrymoiR : l'interface d'entrée et de sortie en console.
- * Spécification : docs/vm.md (révision 1.29), § 13 ; grammaire, § 4.3, § 17 à 19.
+ * Spécification : docs/vm.md (révision 1.30), § 13 ; grammaire, § 4.3, § 17 à 19.
  */
 #include "interface.h"
 

@@ -11,15 +11,20 @@ SQLITE_FLAGS = -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -
                -DSQLITE_DEFAULT_FOREIGN_KEYS=1 -DSQLITE_OMIT_DEPRECATED -DSQLITE_DEFAULT_MEMSTATUS=0
 SQLITE_O     = vendor/sqlite/sqlite3.o
 
+# Windows : prises réseau et générateur aléatoire du système (grym servir, docs/v2.md)
+ifeq ($(OS),Windows_NT)
+RESEAU = -lws2_32 -lbcrypt
+endif
+
 ENTETES   = src/interface.h src/base.h src/vm_interne.h src/date.h src/compact.h src/imprimeur.h src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
 
-all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp
+all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur
 
 $(SQLITE_O): vendor/sqlite/sqlite3.c vendor/sqlite/sqlite3.h
 	$(CC) $(SQLITE_FLAGS) -c -o $@ vendor/sqlite/sqlite3.c
 
-grym: src/grym.c src/lsp.c src/json.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/json.c $(EXECUTION)
+grym: src/grym.c src/lsp.c src/json.c src/serveur.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h src/serveur.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/json.c src/serveur.c $(EXECUTION) $(RESEAU)
 
 grym-lexeur: src/grym-lexeur.c $(LEXEUR) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym-lexeur.c $(LEXEUR)
@@ -51,7 +56,10 @@ test_base: tests/test_base.c $(SQLITE_O)
 test_lsp: tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR) $(ENTETES) src/lsp.h src/json.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR)
 
-test: grym test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp
+test_serveur: tests/test_serveur.c src/serveur.c $(EXECUTION) $(ENTETES) src/serveur.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_serveur.c src/serveur.c $(EXECUTION) $(RESEAU)
+
+test: grym test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur
 	./test_lexeur
 	./test_analyseur
 	./test_machine
@@ -59,9 +67,10 @@ test: grym test_lexeur test_analyseur test_machine test_imprimeur test_compact t
 	./test_compact
 	./test_base
 	./test_lsp
+	./test_serveur
 
 clean:
-	rm -f grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp *.exe
+	rm -f grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur *.exe
 
 # Recompiler SQLite prend une trentaine de secondes : « make clean » le garde, « make distclean » non.
 distclean: clean
