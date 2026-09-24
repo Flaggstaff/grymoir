@@ -1,7 +1,7 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.32 de la spécification, révisée le 23 septembre 2026. Tout ce qui suit est implémenté.
-Référence : Charte de GrymoiR v1.22, art. 4, 5, 7, 8, 9 et 12.
+Version 1.33 de la spécification, révisée le 23 septembre 2026. Tout ce qui suit est implémenté.
+Référence : Charte de GrymoiR v1.24, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
 Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4), décider (§ 5), le calcul des suites attendues (§ 8), les formules (§ 9), répéter (§ 10), la forme compacte (§ 11), la forme canonique (§ 12), les objets (§ 13), les dates et les années (§ 14), les fichiers et les images (§ 15), les entités conservées (§ 16) les questions à l'utilisateur (§ 17), la reprise après erreur (§ 18) et le formulaire (§ 19). Ce que le langage ne sait pas encore faire est listé dans la charte, art. 11 et 12.
@@ -1218,6 +1218,7 @@ Si la réponse en vrai ou faux à « Encore ? », …
 - La question s'affiche telle quelle, suivie d'une espace, sans saut de ligne : le curseur attend sur la même ligne.
 - Lecture : les nombres suivent le § 1.2 (virgule décimale, séparateurs de milliers), les dates le § 14.1, les années le § 14.5 ; `vrai ou faux` accepte `oui`, `non`, `vrai`, `faux`, sans tenir compte de la casse. Les espaces de début et de fin tombent.
 - Relance : une réponse qui ne convient pas est annoncée, puis la question se repose. « « x » n'est pas un nombre. », « « 21.9.26 » n'est pas une date : écrivez jour.mois.année (21.09.2026). », « Répondez par oui ou non. » Une ligne vide convient à un texte, et relance pour les autres types. Le programme ne s'arrête pas parce que l'utilisateur a tapé de travers.
+- **Annuler** : une ligne faite d'un point seul (espaces permises autour) fait échouer la question : « Saisie annulée. ». Un `Essayer` englobant la rattrape comme toute erreur (§ 18) ; sinon, le programme s'arrête. La première relance d'un programme l'annonce : « … Tapez « . » seul pour annuler. ». Un texte fait d'un point seul ne peut donc pas être répondu ; `..` reste une réponse ordinaire.
 - Fin de l'entrée (Ctrl+D) : erreur d'exécution, « Plus rien à lire : la réponse à « Âge ? » manque. » Ctrl+C interrompt comme partout ailleurs.
 - **Une question valide ce qui la précède** : les fichiers en attente (§ 15.2) sont écrits, puis la base est validée, puis le journal se vide. Une erreur survenue plus tard n'annule que depuis la dernière question, et le dit (§ 3.3). Le verrou de la base est rendu pendant l'attente, et repris avec la réponse : un autre programme peut donc écrire entre deux questions, et les objets déjà lus gardent en mémoire les valeurs de leur lecture.
 - Effet de bord, donc réservé aux actions : « Un calcul ne pose pas de question : demandez dans une action. » Et interdit dans la boucle interactive, qui lit déjà sur la même entrée.
@@ -1263,6 +1264,7 @@ Le p vaut une nouvelle partition saisie :
 - Lien : la réponse est la valeur du premier champ texte unique de l'entité liée, comparée exactement (§ 16.4) : « Compositeur ? Bach » retrouve le compositeur conservé dont le nom est « Bach ». Aucun : « Aucun compositeur conservé n'a « Brahms » pour nom. », puis relance. Une entité liée sans champ texte unique : un lien facultatif reste absent ; un lien obligatoire est une erreur d'exécution, qui demande de l'initialiser dans le bloc.
 - Unique : la valeur se vérifie dès la réponse, corbeille comprise : « « A-1 » est déjà pris. », puis relance. `Conserver` vérifie encore, car un autre programme peut écrire entre deux questions.
 - Chaque question valide ce qui la précède (§ 17) ; dans un `Essayer` (§ 18), l'échec n'annule que depuis la dernière.
+- Un point seul annule le formulaire entier (§ 17) : l'objet n'est pas rendu.
 - Reporté : modifier un objet existant par formulaire, choisir le libellé, l'autocomplétion des réponses.
 - En forme compacte : `_nouveau contact _saisi`, `_nouveau partition _saisi _avec`.
 
@@ -1305,3 +1307,4 @@ Le p vaut une nouvelle partition saisie :
 | 1.30 | 2026-09-22 | En-tête et périmètre remis à jour ; § 13.8 : l'absence de valeur n'est plus à venir |
 | 1.31 | 2026-09-23 | § 18 : reprise après erreur (`Essayer`, `En cas d'échec`, `le motif de l'échec`) ; `essayer` réservé aux constructions |
 | 1.32 | 2026-09-23 | § 19 : formulaire (`un nouveau client saisi`) : ordre, libellés, valeurs de départ, ligne vide, liens par champ texte unique, unicité vérifiée à la réponse |
+| 1.33 | 2026-09-23 | § 17 : un point seul annule une question ou un formulaire (« Saisie annulée. »), annoncé à la première relance |

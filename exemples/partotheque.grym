@@ -113,6 +113,7 @@ Pour présenter le menu :
     Afficher « 1 compositeur   2 œuvre   3 partition   4 catalogue   5 par compositeur ».
     Afficher « 6 détail        7 retirer 8 corbeille   0 quitter ».
 
+Afficher « Tapez un point seul pour annuler une saisie. ».
 Présenter le menu.
 Le choix vaut la réponse en nombre entier à « Choix ? ».
 Tant que choix ≠ 0 :

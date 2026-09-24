@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.24).
+ * Spécification : docs/vm.md (révision 1.25).
  */
 #include "bytecode.h"
 #include "date.h"

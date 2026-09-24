@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.32), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.33), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"

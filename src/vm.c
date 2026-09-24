@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.24).
+ * Spécification : docs/vm.md (révision 1.25).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -187,6 +187,7 @@ struct Machine {
     int terminal;           /* la sortie est un terminal (§ 4.3) */
     int style;              /* affichage des nombres : 0 suisse, 1 française, 2 sans séparateur (§ 4.1) */
     int question_posee;     /* dernière exécution : une question a validé ce qui précède (§ 17) */
+    int annulation_annoncee;   /* « . » pour annuler : dit une fois, à la première relance (§ 17) */
     char *(*lire)(void *contexte, Chaine *sortie, const char *question);
     void *lire_contexte;
     long *carte_cles;       /* carte d'identité : identifiant en base → objet en mémoire (§ 16.4) */
@@ -1218,6 +1219,25 @@ static Formule *choisir_version(Machine *m, const char *nom, const Valeur *premi
 /* Formulaire : « un nouveau client saisi » (grammaire, § 19)       */
 /* ---------------------------------------------------------------- */
 
+/* Une ligne faite d'un point seul annule la question (§ 17). */
+static int est_annulation(const char *ligne) {
+    while (*ligne == ' ' || *ligne == '\t') ligne++;
+    if (*ligne != '.') return 0;
+    ligne++;
+    while (*ligne == ' ' || *ligne == '\t') ligne++;
+    return *ligne == '\0';
+}
+
+/* Relance après une réponse refusée ; la première de la machine dit comment annuler. */
+static void relancer(Machine *m, Chaine *sortie, const char *message) {
+    chaine_ajouter(sortie, message);
+    if (!m->annulation_annoncee) {
+        chaine_ajouter(sortie, " Tapez « . » seul pour annuler.");
+        m->annulation_annoncee = 1;
+    }
+    chaine_ajouter(sortie, "\n");
+}
+
 /* Avant de lire une ligne : ce qui précède est validé, la base est rendue, chaque essai repart d'ici (§ 17, § 18). */
 static char *ouvrir_attente(Machine *m, Chaine *sortie, Cadre *cadres) {
     if (!m->lire) return grym_dupliquer("Aucune entrée : la question ne peut pas être posée ici.");
@@ -1342,6 +1362,11 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
             }
             probleme = fermer_attente(m);
             if (probleme) { free(ligne); *fatal = 1; break; }
+            if (est_annulation(ligne)) {   /* « . » : l'essai englobant reprend la main (§ 17) */
+                free(ligne);
+                probleme = grym_dupliquer("Saisie annulée.");
+                break;
+            }
             char *t = ligne;
             while (*t == ' ' || *t == '\t') t++;
             size_t n = strlen(t);
@@ -1413,8 +1438,7 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
                 break;
             }
             if (pris) valeur_liberer(&v);
-            chaine_ajouter(sortie, relance);
-            chaine_ajouter(sortie, "\n");
+            relancer(m, sortie, relance);
             free(relance);
             if (grym_interruption) {
                 grym_interruption = 0;
@@ -2160,7 +2184,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 oublier_photo(e);
                 photographier(e, &cadres[e->cadre]);
             }
-            Valeur r;
+            Valeur r = vi_absent("réponse");
+            int annulee = 0;
             for (;;) {
                 char *ligne = m->lire(m->lire_contexte, sortie, q.texte);
                 if (!ligne) {
@@ -2168,11 +2193,20 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     break;
                 }
                 probleme = NULL;
-                int lu = lire_reponse(type, ligne, &r, &probleme);
+                if (est_annulation(ligne)) {   /* « . » seul : la question échoue, un essai la rattrape */
+                    free(ligne);
+                    annulee = 1;
+                    break;
+                }
+                Valeur lue;
+                int lu = lire_reponse(type, ligne, &lue, &probleme);
                 free(ligne);
-                if (lu) break;
-                chaine_ajouter(sortie, probleme);   /* la relance s'affiche avant la question suivante */
-                chaine_ajouter(sortie, "\n");
+                if (lu) {
+                    valeur_liberer(&r);
+                    r = lue;
+                    break;
+                }
+                relancer(m, sortie, probleme);   /* la relance s'affiche avant la question suivante */
                 free(probleme);
                 probleme = NULL;
                 if (grym_interruption) {
@@ -2183,6 +2217,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             valeur_liberer(&q);
             if (probleme) {
+                valeur_liberer(&r);
                 ok = echouer(diag, b, debut, probleme);
                 fatal = 1;
                 break;
@@ -2199,6 +2234,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 valeur_liberer(&r);
                 ok = echouer(diag, b, debut, probleme);
                 fatal = 1;
+                break;
+            }
+            if (annulee) {   /* le verrou est repris : l'échec se rattrape comme un autre */
+                valeur_liberer(&r);
+                ok = echouer(diag, b, debut, grym_dupliquer("Saisie annulée."));
                 break;
             }
             empiler(&pile, r);

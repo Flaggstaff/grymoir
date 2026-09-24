@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.23, révisée le 23 septembre 2026.
+Version 1.24, révisée le 23 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -152,7 +152,7 @@ Horizon post-v1, sans date :
 | v0.2 | Bytecode et VM (remplacent l'évaluateur provisoire de la v0.1), conditions (`Si`, comparaisons, booléens), boucles et `Selon`, forme compacte et `grym traduire` dans les deux sens, forme canonique et `grym formater`, formules, objets, héritage, méthodes, aptitudes, ramasse-miettes | livrée le 21 septembre 2026 |
 | v0.3 | SQLite embarqué, entités conservées (types, unicité, liens, héritage, aptitudes), conserver, modifier, supprimer, retrouver (`dont`, tri, comptage), migrations, transaction par exécution, dates, fichiers et images | livrée le 21 septembre 2026 |
 | v0.4 | Serveur d'aide à la saisie (`grym lsp`, protocole LSP) : erreurs en direct, autocomplétion, mise en forme ; extension VS Code avec coloration des deux formes | livrée le 22 septembre 2026 |
-| v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4), reprise après erreur (§ 18), formulaire déduit de l'entité (§ 19) ; première application réelle : `exemples/partotheque.grym` ; restent à concevoir la sortie d'un formulaire en cours et l'assemblage de textes à l'affichage | en cours |
+| v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4), reprise après erreur (§ 18), formulaire déduit de l'entité (§ 19) ; première application réelle : `exemples/partotheque.grym` ; sortie d'une question par un point seul (§ 17) ; reste à concevoir l'assemblage de textes à l'affichage | en cours |
 
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
@@ -196,3 +196,4 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 | 1.21 | 2026-09-23 | Art. 7 et 8 : reprise après erreur explicite (`Essayer`, `En cas d'échec`) ; art. 12 : faite, en route vers la v1.0 |
 | 1.22 | 2026-09-23 | Art. 12 : formulaire déduit de l'entité fait (grammaire, § 19) |
 | 1.23 | 2026-09-23 | Art. 12 : première application réelle (Partothèque) et ses retours |
+| 1.24 | 2026-09-23 | Art. 12 : annulation d'une saisie par un point seul |

@@ -1399,15 +1399,15 @@ int main(void) {
     SAISIE("La q vaut « Qui ? ».\nAfficher la réponse à (q).", "Qui ? Ana", "Ana");
     /* relance : la réponse fautive est annoncée, la question se repose */
     SAISIE("L'âge vaut la réponse en nombre entier à « Âge ? ».\nAfficher âge.",
-           "Âge ? « x » n'est pas un nombre.\nÂge ? « 2,5 » n'est pas un nombre entier.\nÂge ? 7", "x", "2,5", "7");
+           "Âge ? « x » n'est pas un nombre. Tapez « . » seul pour annuler.\nÂge ? « 2,5 » n'est pas un nombre entier.\nÂge ? 7", "x", "2,5", "7");
     SAISIE("Le d vaut la réponse en date à « Jour ? ».\nAfficher d.",
-           "Jour ? « 21.9.26 » n'est pas une date : écrivez jour.mois.année (21.09.2026).\nJour ? 21.09.2026",
+           "Jour ? « 21.9.26 » n'est pas une date : écrivez jour.mois.année (21.09.2026). Tapez « . » seul pour annuler.\nJour ? 21.09.2026",
            "21.9.26", "21.09.2026");
     SAISIE("L'an vaut la réponse en année à « An ? ».\nAfficher an.",
-           "An ? « 12000 » n'est pas une année : de 1 à 9999.\nAn ? 1900", "12000", "1900");
+           "An ? « 12000 » n'est pas une année : de 1 à 9999. Tapez « . » seul pour annuler.\nAn ? 1900", "12000", "1900");
     SAISIE("Le x vaut la réponse en vrai ou faux à « ? ».\nAfficher x.",
-           "? Répondez par oui ou non.\n? vrai", "peut-être", "vrai");
-    SAISIE("Le x vaut la réponse en nombre à « ? ».\nAfficher x.", "? Une réponse est attendue.\n? 3", "", "3");
+           "? Répondez par oui ou non. Tapez « . » seul pour annuler.\n? vrai", "peut-être", "vrai");
+    SAISIE("Le x vaut la réponse en nombre à « ? ».\nAfficher x.", "? Une réponse est attendue. Tapez « . » seul pour annuler.\n? 3", "", "3");
     SAISIE("Le x vaut la réponse à « ? ».\nAfficher « [ » puis x puis « ] ».", "? [  ]", "");
     /* fin de l'entrée, pureté, boucle interactive */
     {   /* fin de l'entrée : aucune réponse à lire */
@@ -1631,14 +1631,14 @@ int main(void) {
            "Toccata", "A-1", "Bach", "", "", "", "1705", "oui");
     /* relances : vide obligatoire, lien introuvable, type, puis valeurs */
     SAISIE(FC FP "Le p vaut une nouvelle partition saisie.\n" FA,
-           "Titre ? Une réponse est attendue.\nTitre ? Cote ? Compositeur ? Aucun compositeur conservé n'a « Brahms » pour nom.\n"
+           "Titre ? Une réponse est attendue. Tapez « . » seul pour annuler.\nTitre ? Cote ? Compositeur ? Aucun compositeur conservé n'a « Brahms » pour nom.\n"
            "Compositeur ? Arrangeur ? Édition ? « 1.2.3 » n'est pas une date : écrivez jour.mois.année (21.09.2026).\n"
            "Édition ? Prix [20] ? Création ? Actif ? T C Bach un compositeur 01.02.1900 12,5 1720 faux",
            "", "T", "C", "Brahms", "Bach", "Bach", "1.2.3", "01.02.1900", "12,5", "1720", "non");
     /* unique : refusé dès la réponse, même pour un objet de la corbeille */
     SAISIE(FC FP "Le a vaut une nouvelle partition saisie.\nConserver a.\nSupprimer a.\n"
            "Le p vaut une nouvelle partition saisie.\nAfficher cote de p.",
-           "~Cote ? « A-1 » est déjà pris.\nCote ? Compositeur ",
+           "~Cote ? « A-1 » est déjà pris. Tapez « . » seul pour annuler.\nCote ? Compositeur ",
            "x", "A-1", "Bach", "", "", "", "1", "oui", "y", "A-1", "B-2", "Bach", "", "", "", "1", "oui");
     /* les champs du bloc ne sont pas demandés */
     SAISIE(FC FP "Le p vaut une nouvelle partition saisie :\n    Le titre vaut « Messe ».\n    Le compositeur vaut b.\n"
@@ -1654,7 +1654,7 @@ int main(void) {
         creer_fichier("_essai_form.txt", "abc", 3);
         SAISIE("Un document, conservé, a : un contenu (fichier), une vignette (image), facultative.\n"
                "Le d vaut un nouveau document saisi.\nAfficher taille du contenu du d.",
-               "Contenu ? Fichier « _absent.txt » introuvable ou illisible.\nContenu ? Vignette ? "
+               "Contenu ? Fichier « _absent.txt » introuvable ou illisible. Tapez « . » seul pour annuler.\nContenu ? Vignette ? "
                "« _essai_form.txt » n'est pas une image (PNG, JPEG, GIF ou WebP).\nVignette ? 3",
                "_absent.txt", "_essai_form.txt", "_essai_form.txt", "");
         remove("_essai_form.txt");
@@ -1677,7 +1677,7 @@ int main(void) {
     SAISIE(FC FP "Le p vaut une nouvelle partition saisie :\n    Le titre vaut « T ».\n    La cote vaut « C ».\n"
            "Une pièce, conservée, a : une cote (texte), unique, une partition (partition).\n"
            "Conserver p.\nLe q vaut une nouvelle pièce saisie.",
-           "~Partition ? Aucune partition conservée n'a « Z » pour cote.\nPartition ? ",
+           "~Partition ? Aucune partition conservée n'a « Z » pour cote. Tapez « . » seul pour annuler.\nPartition ? ",
            "Bach", "", "", "", "1", "oui", "K", "Z", "C");
     PROG("Un genre, conservé, a : un nom (texte), unique.\nPour f :\n    Le nom vaut « x ».\n"
          "    Afficher le nombre de genres conservés dont le nom est nom.\nF.",
@@ -1711,6 +1711,22 @@ int main(void) {
         machine_detruire(m);
         portee_detruire(p);
     }
+
+    /* « . » seul annule une question ou un formulaire ; un essai le rattrape (§ 17) */
+    SAISIE("Le x vaut la réponse à « ? ».\nAfficher x.", "~Saisie annulée.", " . ");
+    SAISIE(ESS("    Le x vaut la réponse en nombre à « ? ».\n    Afficher x.\n", "    Afficher le motif de l'échec.\n")
+           "Afficher « suite ».", "? « a » n'est pas un nombre. Tapez « . » seul pour annuler.\n? Saisie annulée.\nsuite",
+           "a", ".");
+    SAISIE(FC ESS("    Le c vaut un nouveau compositeur saisi.\n    Conserver c.\n", "    Afficher le motif de l'échec.\n")
+           "Le d vaut un nouveau compositeur saisi.\nConserver d.\nAfficher le nombre de compositeurs conservés.",
+           "Nom ? Saisie annulée.\nNom ? 2", ".", "Liszt");
+    SAISIE("Le x vaut la réponse à « ? ».\nAfficher x.", "? ..", "..");
+    /* après une annulation rattrapée, la base est de nouveau sous transaction : l'échec suivant l'annule */
+    SAISIE(FC "Le l vaut un nouveau compositeur :\n    Le nom vaut « Liszt ».\nLe r vaut un nouveau compositeur :\n"
+           "    Le nom vaut « Reger ».\n"
+           ESS("    Le x vaut la réponse à « ? ».\n",
+               "    Conserver l.\n    Essayer :\n        Conserver r.\n        Afficher 1 ÷ 0.\n    En cas d'échec, afficher « non ».\n")
+           "Afficher le nombre de compositeurs conservés.", "? non\n2", ".");
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

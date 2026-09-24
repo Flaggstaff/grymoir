@@ -1,7 +1,7 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.24 de la spécification, révisée le 23 septembre 2026.
-Référence : Charte de GrymoiR v1.22, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.32, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
+Version 1.25 de la spécification, révisée le 23 septembre 2026.
+Référence : Charte de GrymoiR v1.22, art. 2, 3, 7, 8, 10 et 12 ; grammaire 1.33, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
 Périmètre : la machine qui exécute le bytecode, le format du fichier `.grymb`, la base des entités, le ramasse-miettes et le journal d'annulation.
@@ -183,6 +183,7 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - Une erreur, s'il y a un point de reprise, remonte au plus récent : les cadres plus profonds disparaissent, la pile revient à sa profondeur, le journal est rejoué jusqu'à la marque, les écritures prévues depuis sont retirées, la base fait `ROLLBACK TO` puis `RELEASE`, les cases locales retrouvent leur photographie. Le motif (le message, sans position) est empilé, et l'exécution continue à la cible : le bloc d'échec commence par `ÉCRIRE_LOCAL` dans la case du motif. L'époque avance encore.
 - `FIN_ESSAI` fait `RELEASE` ; les entrées du journal restent, pour un échec englobant. Le compilateur émet un `FIN_ESSAI` par essai traversé avant `RENDRE` et avant le saut de `Sortir de la boucle` ou `Passer au tour suivant`. `RETOUR` et `RENDRE` referment aussi les essais du cadre qui se termine.
 - `DEMANDER` dans un essai : chaque point de reprise ouvert repart de la question (marques remises à zéro, nouvelle photographie, nouveaux `SAVEPOINT` après `BEGIN IMMEDIATE`). `DEMANDER` fait aussi avancer l'époque.
+- `DEMANDER` et `SAISIR` : une ligne faite d'un point seul échoue avec « Saisie annulée. », après avoir repris le verrou de la base et les points de reprise : l'essai qui la rattrape retrouve une transaction ouverte.
 - Jamais rattrapées : l'interruption, la fin de l'entrée ou l'absence de lecteur pendant `DEMANDER`, et l'échec d'une opération de transaction (`COMMIT`, `BEGIN`, `SAVEPOINT`, `ROLLBACK TO`, `RELEASE`).
 - Racines du ramasse-miettes : s'y ajoutent les photographies des cases locales.
 
@@ -317,3 +318,4 @@ Chaque ligne donne la ligne source (quand elle change), le décalage de l'instru
 | 1.22 | 2026-09-22 | En-tête et périmètre remis à jour |
 | 1.23 | 2026-09-23 | Reprise après erreur : `ESSAYER`, `FIN_ESSAI`, points de reprise (journal, pile, cadres, cases locales, fichiers, `SAVEPOINT`) ; l'époque avance à chaque question ; format version 20 |
 | 1.24 | 2026-09-23 | `SAISIR` : formulaire d'un objet neuf ; format version 21 |
+| 1.25 | 2026-09-23 | Annulation d'une question par un point seul, rattrapable |
