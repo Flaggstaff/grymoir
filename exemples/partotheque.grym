@@ -65,10 +65,7 @@ Pour déposer :
 
 Pour montrer une œuvre :
     Afficher catalogue de l'œuvre sur 12 puis titre de l'œuvre sur 30 puis nom du compositeur de l'œuvre, sans passer à la ligne.
-    Si l'année de l'œuvre est présente :
-        Afficher " (", sans passer à la ligne.
-        Afficher année de l'œuvre, sans passer à la ligne.
-        Afficher « ) ».
+    Si l'année de l'œuvre est présente, afficher " (" suivi de l'année de l'œuvre suivi de « ) ».
     Sinon, afficher « ».
     Pour chaque genre de l'œuvre, par nom, afficher « · » puis nom du genre.
 
@@ -79,7 +76,7 @@ Pour lister :
 Pour chercher :
     Le libellé vaut la réponse à « Compositeur ? ».
     Le c vaut le compositeur conservé dont le nom est libellé.
-    Afficher le nombre d'œuvres de c puis « œuvre(s) de » puis nom du c.
+    Afficher le nombre d'œuvres de c puis « œuvre(s) » puis de nom du c.
     Pour chaque œuvre de c, par titre, montrer œuvre.
     Pour chaque partition conservée dont l'arrangeur est c :
         Afficher « arrangement : » puis cote de la partition puis titre de l'œuvre de la partition.

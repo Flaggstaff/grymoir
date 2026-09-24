@@ -1,5 +1,5 @@
 /* GrymoiR : imprimeurs de l'arbre, v0.2
- * Spécification : docs/grammaire.md (révision 1.33), § 11 et § 12.
+ * Spécification : docs/grammaire.md (révision 1.34), § 11 et § 12.
  */
 #include "imprimeur.h"
 #include "date.h"
@@ -481,6 +481,20 @@ static void expression(Impression *im, const Noeud *n) {
         expression(im, n->enfants[1]);
         if (n->forme) aj(im, n->forme == 2 ? (im->compact ? " _droite" : " à droite")
                                            : (im->compact ? " _gauche" : " à gauche"));
+        return;
+    case N_COLLAGE:   /* « a suivi de b » ; « a _suivi b » (§ 4.4) */
+        expression(im, n->enfants[0]);
+        if (im->compact) {
+            aj(im, " _suivi ");
+            expression(im, n->enfants[1]);
+        } else {
+            aj(im, " suivi ");
+            preposition(im, "de", n->enfants[1]);
+        }
+        return;
+    case N_ELISION:   /* « de x », « que x » ; « _de x », « _que x » (§ 4.4) */
+        aj(im, n->op == 'q' ? (im->compact ? "_que " : "que ") : (im->compact ? "_de " : "de "));
+        expression(im, n->enfants[0]);
         return;
     case N_MOTIF:   /* « le motif de l'échec » ; « _motif » (§ 18) */
         aj(im, im->compact ? "_motif" : "le motif de l'échec");

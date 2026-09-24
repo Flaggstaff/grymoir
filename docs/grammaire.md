@@ -1,7 +1,7 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.33 de la spécification, révisée le 23 septembre 2026. Tout ce qui suit est implémenté.
-Référence : Charte de GrymoiR v1.24, art. 4, 5, 7, 8, 9 et 12.
+Version 1.34 de la spécification, révisée le 23 septembre 2026. Tout ce qui suit est implémenté.
+Référence : Charte de GrymoiR v1.25, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
 Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4), décider (§ 5), le calcul des suites attendues (§ 8), les formules (§ 9), répéter (§ 10), la forme compacte (§ 11), la forme canonique (§ 12), les objets (§ 13), les dates et les années (§ 14), les fichiers et les images (§ 15), les entités conservées (§ 16) les questions à l'utilisateur (§ 17), la reprise après erreur (§ 18) et le formulaire (§ 19). Ce que le langage ne sait pas encore faire est listé dans la charte, art. 11 et 12.
@@ -97,7 +97,7 @@ Correspondance prévue en forme compacte (v0.2) : `_soit total << 5` pour créer
 
 - Un nom peut compter plusieurs mots (`prix unitaire`, `date de création`).
 - Dans une expression, le parser retient la plus longue correspondance parmi les noms déjà déclarés. Si `prix` et `prix unitaire` coexistent, `prix unitaire × 2` désigne `prix unitaire`.
-- Les mots réservés ne peuvent pas faire partie d'un nom écrit sans crochets : `vaut`, `devient`, `puis`, `est`, `et`, `ou`, `si`, `sinon`, `vrai`, `faux`, `rendre`, `dont`, `définitivement`, ainsi que l'élision `n'` devant `est`.
+- Les mots réservés ne peuvent pas faire partie d'un nom écrit sans crochets : `vaut`, `devient`, `puis`, `est`, `et`, `ou`, `si`, `sinon`, `vrai`, `faux`, `rendre`, `dont`, `définitivement`, `sur`, `suivi`, ainsi que l'élision `n'` devant `est`.
 - La suite `d'un` ou `d'une` annonce un paramètre (§ 9.3) : elle ne fait jamais partie d'un nom.
 - Un nom qui contient un mot réservé s'écrit entre crochets, à sa création comme à chaque usage : `Le [frais de port et d'emballage] vaut 12.` Tout nom peut s'écrire entre crochets : `[total]` et `total` désignent le même nom. L'aide à la saisie propose ces noms avec leurs crochets.
 - Un nom entre crochets s'écrit seul entre l'article et le verbe, et ne commence pas par un article.
@@ -206,8 +206,6 @@ Afficher nom du client sur 20 puis solde du client sur 10 à droite.
 - Une ligne vide ne demande rien : `Afficher « ».` écrit un texte vide et son saut de ligne.
 - En forme compacte : `nom _sur 20`, `solde _sur 10 _droite`, `_afficher x _sans_ligne`.
 
----
-
 ### 4.3 Effacer l'écran
 
 ```
@@ -218,6 +216,23 @@ Effacer l'écran.
 - Hors d'un terminal, la phrase n'écrit rien : une sortie redirigée dans un fichier ou dans un tube reste propre.
 - Effet de bord, donc réservé aux actions. `effacer` ne peut pas commencer le nom d'une action.
 - En forme compacte : `_effacer`.
+
+### 4.4 Assembler des textes
+
+```
+Afficher « ( » suivi de l'année de l'œuvre suivi de « ) ».        →  (1747)
+Le libellé vaut catalogue de l'œuvre suivi de « : » suivi du titre.
+Afficher n puis « œuvre(s) » puis de nom du compositeur.         →  3 œuvre(s) d'Anton Webern
+Afficher « plus ancien » puis que nom du compositeur.            →  plus ancien qu'Anton Webern
+```
+
+- `a suivi de b` colle deux valeurs en un texte, sans espace. Le résultat se range, se compare, s'affiche, comme celui de `sur` (§ 4.2). `suivi du`, `suivi de la`, `suivi d'` suivent les contractions et élisions ordinaires (§ 5.2).
+- Chaque valeur s'écrit comme `Afficher` l'écrirait : un nombre au style du programme (§ 4.1), une date au format suisse, une année sans séparateur, `vrai` ou `faux`. Une valeur absente est une erreur (§ 16.9).
+- `suivi de` lie moins fort que les opérations et que `sur` : `« x » suivi de a + 1`, `« x » suivi de nom sur 10`. Il ne rend jamais une condition : `Si « a » suivi de « b », …` est une erreur d'analyse.
+- **Élision.** En tête d'un élément d'`Afficher`, ou juste après `suivi de`, `de x` et `que x` écrivent `de`/`d'` et `que`/`qu'` selon la première lettre du texte de `x` : élision devant une voyelle, accentuée ou non, `œ`, `æ` ou `y`, jamais devant un `h`. Le h muet (« d'Hélène ») et le h aspiré (« de Haendel ») ne se distinguent pas par l'orthographe : deviner romprait le déterminisme (charte, art. 4). `de 1` s'écrit `de 1`.
+- `suivi` devient un mot réservé (§ 2.2).
+- Reporté : joindre une liste (« baroque, canon »), qui attend les listes d'objets (§ 13.8).
+- En forme compacte : `a _suivi b`, `_de x`, `_que x`.
 
 ## 5. Décider
 
@@ -346,7 +361,9 @@ relation     = ( "égal" | "égale" ) à expression
              | "vrai" | "vraie" | "faux" | "fausse" ;
 à            = "à" | "au" ;
 de           = "de" | "d'" | "du" ;
-expression   = terme { ( "+" | "−" ) terme } ;
+expression   = morceau { "suivi" ( "de" | "d'" | "du" ) morceau } ;   (* § 4.4 *)
+morceau      = [ "de" | "que" ] somme [ "sur" somme [ "à" ( "gauche" | "droite" ) ] ] ;
+somme        = terme { ( "+" | "−" ) terme } ;
 terme        = unaire { ( "×" | "÷" ) unaire } ;
 unaire       = "−" unaire | puissance ;
 puissance    = base [ "^" unaire ] ;
@@ -1308,3 +1325,4 @@ Le p vaut une nouvelle partition saisie :
 | 1.31 | 2026-09-23 | § 18 : reprise après erreur (`Essayer`, `En cas d'échec`, `le motif de l'échec`) ; `essayer` réservé aux constructions |
 | 1.32 | 2026-09-23 | § 19 : formulaire (`un nouveau client saisi`) : ordre, libellés, valeurs de départ, ligne vide, liens par champ texte unique, unicité vérifiée à la réponse |
 | 1.33 | 2026-09-23 | § 17 : un point seul annule une question ou un formulaire (« Saisie annulée. »), annoncé à la première relance |
+| 1.34 | 2026-09-23 | § 4.4 : assembler des textes (`suivi de`), élision de `de` et `que` selon la valeur ; `suivi` réservé |

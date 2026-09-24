@@ -1,5 +1,5 @@
 /* GrymoiR : analyseur de la forme littéraire, v0.1
- * Spécification : docs/grammaire.md (révision 1.33), § 2 à 13.
+ * Spécification : docs/grammaire.md (révision 1.34), § 2 à 13.
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
@@ -473,7 +473,7 @@ static int nom_a_crochets(const char *nom);
 /* Mots qui structurent la phrase et ne peuvent pas entrer dans un nom
  * (sauf entre crochets, § 2.2). */
 static const char *const RESERVES[] = {
-    "vaut", "devient", "puis", "est", "et", "ou", "si", "sinon", "vrai", "faux", "rendre", "dont", "définitivement", "sur"
+    "vaut", "devient", "puis", "est", "et", "ou", "si", "sinon", "vrai", "faux", "rendre", "dont", "définitivement", "sur", "suivi"
 };
 
 static int est_mot_reserve(const char *m) {
@@ -635,6 +635,7 @@ static const char *type_statique(const Noeud *n) {
     case N_DATE: case N_AUJOURDHUI: return "date";
     case N_FICHIER: return "fichier";
     case N_CADRE: return "texte";
+    case N_COLLAGE: case N_ELISION: return "texte";
     case N_REPONSE: return n->texte2;
     case N_MOTIF: return "texte";
     case N_NOUVEAU: return n->texte;
@@ -1793,8 +1794,53 @@ static Noeud *expression_simple(Analyse *a) {
     return g;
 }
 
+static Noeud *coller(Analyse *a, Noeud *g);
+
 static Noeud *expression(Analyse *a) {
+    return coller(a, cadrer(a, expression_simple(a)));
+}
+
+/* Un morceau d'assemblage : « de x », « que x » (élision selon la valeur), ou une valeur cadrée (§ 4.4). */
+static Noeud *morceau(Analyse *a) {
+    Jeton *t = cour(a);
+    if (est_mot(t, "de") || est_mot(t, "que")) {
+        avancer(a);
+        Noeud *x = cadrer(a, expression_simple(a));
+        if (!x) return NULL;
+        Noeud *n = noeud_creer(N_ELISION, t->ligne, t->colonne, t->debut);
+        n->op = est_mot(t, "que") ? 'q' : 'd';
+        noeud_ajouter(n, x);
+        n->fin = x->fin;
+        return n;
+    }
     return cadrer(a, expression_simple(a));
+}
+
+/* « a suivi de b suivi de c » : un texte, sans espace (§ 4.4). */
+static Noeud *coller(Analyse *a, Noeud *g) {
+    while (g) {
+        attendre_mot(a, a->i, "suivi de", 8);
+        if (!est_mot(cour(a), "suivi")) break;
+        Jeton *ts = cour(a), *p = voir(a, 1);
+        if (!de_ou_d(p) && !est_mot(p, "du")) {
+            noeud_liberer(g);
+            return erreur(a, p, grym_dupliquer("« suivi » attend « de » : « a suivi de b »."));
+        }
+        avancer(a);
+        avancer(a);
+        if (est_mot(p, "du")) { a->article_force = ART_LE; a->jeton_force = p; }
+        Noeud *d = est_mot(p, "du") ? cadrer(a, expression_simple(a)) : morceau(a);
+        a->article_force = ART_AUCUN;
+        if (!d) { noeud_liberer(g); return NULL; }
+        Noeud *n = noeud_creer(N_COLLAGE, g->ligne, g->colonne, g->debut);
+        n->op_ligne = ts->ligne;
+        n->op_colonne = ts->colonne;
+        noeud_ajouter(n, g);
+        noeud_ajouter(n, d);
+        n->fin = d->fin;
+        g = n;
+    }
+    return g;
 }
 
 /* « … sur 20 », « … sur 20 à droite » (§ 4.2) : une largeur collée à la valeur. */
@@ -1842,7 +1888,7 @@ static Noeud *valeur(Analyse *a);
 /* Une expression purement arithmétique n'est jamais vraie ni fausse. */
 static int est_arithmetique(const Noeud *n) {
     switch (n->type) {
-    case N_NOMBRE: case N_OPERATION: case N_NEGATION: case N_TEXTE:
+    case N_NOMBRE: case N_OPERATION: case N_NEGATION: case N_TEXTE: case N_COLLAGE: case N_ELISION:
         return 1;
     case N_GROUPE:
         return est_arithmetique(n->enfants[0]);
@@ -2282,10 +2328,13 @@ static Noeud *affichage(Analyse *a) {
                 : "Rien à afficher : ajoutez un texte ou une expression après « Afficher »."));
         }
         Noeud *el;
-        if (e->type == J_TEXTE) {
+        if (est_mot(e, "de") || est_mot(e, "que")) {   /* « puis de nom du c » : élision (§ 4.4) */
+            el = coller(a, morceau(a));
+            if (!el) { noeud_liberer(n); return NULL; }
+        } else if (e->type == J_TEXTE) {
             el = feuille(N_TEXTE, e);
             avancer(a);
-            el = cadrer(a, el);   /* « « x » sur 3 » (§ 4.2) */
+            el = coller(a, cadrer(a, el));   /* « « x » sur 3 » (§ 4.2), « « ( » suivi de … » (§ 4.4) */
             if (!el) { noeud_liberer(n); return NULL; }
         } else {
             el = valeur(a);

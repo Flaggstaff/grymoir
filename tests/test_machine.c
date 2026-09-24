@@ -1728,6 +1728,24 @@ int main(void) {
                "    Conserver l.\n    Essayer :\n        Conserver r.\n        Afficher 1 ÷ 0.\n    En cas d'échec, afficher « non ».\n")
            "Afficher le nombre de compositeurs conservés.", "? non\n2", ".");
 
+    /* --- Assembler des textes : « suivi de », élision de « de » et « que » (§ 4.4) --- */
+    PROG("L'an vaut 1747.\nAfficher « ( » suivi de an suivi de « ) ».", "(1'747)");
+    PROG("Le v vaut vrai.\nAfficher « a » suivi de 1,50 suivi de 21.09.2026 suivi de v.", "a1,5021.09.2026vrai");
+    PROG("Le nom vaut « Anton ».\nAfficher 3 puis « œuvres » puis de nom.", "3 œuvres d'Anton");
+    PROG("Afficher de « Bach » puis de « Élodie » puis de « œil » puis de « Yves » puis de « Hélène » puis de « 1 ».",
+         "de Bach d'Élodie d'œil d'Yves de Hélène de 1");
+    PROG("Afficher « plus » puis que « Ana » puis que « Bob ».", "plus qu'Ana que Bob");
+    PROG("Le nom vaut « Ana ».\nLe t vaut « ami » suivi de de nom suivi du nom.\nAfficher t.\nAfficher t = « amid'AnaAna ».",
+         "amid'AnaAna\nvrai");
+    PROG("Afficher « x » suivi de « y » sur 3 suivi de « z ».", "xy  z");
+    PROG("Les nombres s'affichent sans séparateur.\nAfficher « n° » suivi de 1234.", "n°1234");
+    PROG("Un point a : un b, facultatif.\nLe x vaut un nouveau point.\nAfficher « ( » suivi de b du x.",
+         "~Le champ « b » est absent : vérifiez-le d'abord avec « est présent ».");
+    PROG("Le carré d'un n vaut n × n.\nAfficher « = » suivi du carré de 3.", "=9");
+    PROG("Si « a » suivi de « b », afficher 1.", "~Condition attendue après « Si »");
+    PROG("Afficher « a » suivi « b ».", "~« suivi » attend « de »");
+    PROG("Le suivi vaut 1.", "~« suivi » est un mot réservé");
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

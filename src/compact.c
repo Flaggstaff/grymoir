@@ -1,5 +1,5 @@
 /* GrymoiR : lecture de la forme compacte, v0.2
- * Spécification : docs/grammaire.md (révision 1.33), § 11.
+ * Spécification : docs/grammaire.md (révision 1.34), § 11.
  *
  * Chaque instruction compacte est réécrite en la phrase littéraire équivalente,
  * jeton par jeton, en gardant les positions du fichier compact. L'analyseur
@@ -244,6 +244,15 @@ static void expression(Reecriture *r, size_t d, size_t f) {
         if (est_cle(t, "droite") || est_cle(t, "gauche")) {
             mot(r, "à", t);
             mot(r, est_cle(t, "droite") ? "droite" : "gauche", t);
+            continue;
+        }
+        if (est_cle(t, "suivi")) {                  /* _suivi → suivi de (§ 4.4) */
+            mot(r, "suivi", t);
+            mot(r, "de", t);
+            continue;
+        }
+        if (est_cle(t, "de") || est_cle(t, "que")) {   /* _de x, _que x : élision selon la valeur (§ 4.4) */
+            mot(r, t->valeur, t);
             continue;
         }
         if (est_cle(t, "motif")) {                  /* _motif → le motif de l'échec (§ 18) */

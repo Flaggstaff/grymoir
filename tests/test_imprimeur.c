@@ -280,6 +280,11 @@ int main(void) {
 
     FIXE("Effacer l'écran.\nAfficher « a ».\n");
     COMP("Effacer l'écran.", "_effacer\n");
+    FIXE("L'année vaut 1.\nLe nom vaut « a ».\nAfficher « ( » suivi de année suivi de « ) » puis de nom puis que nom.\n");
+    FIXE("Le nom vaut « a ».\nL'âge vaut 3.\nLa date vaut 01.01.2000.\n"
+         "Le t vaut « n° » suivi du nom suivi de l'âge suivi de la date.\n");
+    COMP("Le nom vaut « a ».\nAfficher « ( » suivi de 1 puis de nom.",
+         "_le nom << « a »\n_afficher « ( » _suivi 1 ; _de nom\n");
     FIXE("Essayer :\n    Afficher 1.\nEn cas d'échec, afficher le motif de l'échec.\n");
     FIXE("Essayer :\n    Afficher 1.\nEn cas d'échec :\n    Afficher « a ».\n    Afficher le motif de l'échec.\n");
     COMP("Essayer :\n    Afficher 1.\nEn cas d'échec, afficher le motif de l'échec.",

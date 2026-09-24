@@ -109,6 +109,18 @@ static void decrire(const Noeud *n, Chaine *c) {
     case N_MOTIF:
         chaine_ajouter(c, "(motif)");
         return;
+    case N_COLLAGE:
+        chaine_ajouter(c, "(suivi ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
+    case N_ELISION:
+        chaine_ajouter(c, n->op == 'q' ? "(que " : "(de ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
     case P_ESSAYER:
         chaine_ajouter(c, "(essayer ");
         decrire(n->enfants[0], c);

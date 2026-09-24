@@ -1,5 +1,5 @@
 /* GrymoiR : arbre syntaxique, v0.1
- * Spécification : docs/grammaire.md (révision 1.33), § 6.
+ * Spécification : docs/grammaire.md (révision 1.34), § 6.
  * Chaque nœud garde sa position dans la source (debut, fin), pour les
  * messages d'erreur et, en v0.2, pour la traduction sans perte.
  */
@@ -36,6 +36,8 @@ typedef enum {
                         enfants[0] : la question */
     N_FICHIER,       /* « le fichier « photos/ana.jpg » » : enfants[0] : chemin (§ 15.2) */
     N_MOTIF,         /* « le motif de l'échec » (§ 18) : local : case du motif */
+    N_COLLAGE,       /* « a suivi de b » (§ 4.4) : enfants[0], enfants[1] ; texte collé, sans espace */
+    N_ELISION,       /* « de x », « que x » dans un assemblage (§ 4.4) : op 'd' ou 'q' ; enfants[0] */
     N_CHAMP_DONT,    /* champ de l'objet examiné, dans une condition « dont » : texte : champ (§ 16.4) */
     N_CHERCHER,      /* objets conservés : texte : entité ; forme : 0 liste (boucle), 1 un seul, 2 nombre ;
                         enfants[0] : condition « dont » (facultative) ; texte2 : champ du tri ; entier : 1 si décroissant ;

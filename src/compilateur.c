@@ -250,6 +250,15 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[1]);
         emettre(c, I_CADRER, (long)n->forme, n->op_ligne, n->op_colonne);
         return;
+    case N_COLLAGE:   /* « a suivi de b » : COLLER (§ 4.4) */
+        expression(c, n->enfants[0]);
+        expression(c, n->enfants[1]);
+        emettre(c, I_COLLER, 0, n->op_ligne, n->op_colonne);
+        return;
+    case N_ELISION:   /* « de x » : ÉLIDER 0 ; « que x » : ÉLIDER 1 (§ 4.4) */
+        expression(c, n->enfants[0]);
+        emettre(c, I_ELIDER, n->op == 'q', n->ligne, n->colonne);
+        return;
     case N_MOTIF:   /* « le motif de l'échec » : la case où l'échec l'a rangé (§ 18) */
         emettre(c, I_LIRE_LOCAL, n->local, n->ligne, n->colonne);
         return;

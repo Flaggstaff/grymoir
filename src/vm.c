@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.25).
+ * Spécification : docs/vm.md (révision 1.26).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -1862,6 +1862,38 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
             m->style = (int)op;
             break;
+        case I_COLLER:
+        case I_ELIDER: {
+            /* « a suivi de b » : les deux textes collés ; « de x » : « de x » ou « d'x » (§ 4.4) */
+            Valeur vb = depiler(&pile), va = code == I_COLLER ? depiler(&pile) : vi_texte("");
+            if (va.type == V_ABSENT || vb.type == V_ABSENT) {
+                char *probleme = message_absent(va.type == V_ABSENT ? &va : &vb);
+                valeur_liberer(&va);
+                valeur_liberer(&vb);
+                ok = echouer(diag, b, debut, probleme);
+                break;
+            }
+            char *ta = texte_valeur(m, &va), *tb = texte_valeur(m, &vb), *r;
+            if (code == I_COLLER) {
+                r = grym_formater("%s%s", ta, tb);
+            } else {
+                /* voyelle, accentuée ou non, œ, æ, y : jamais le h (muet ou aspiré, l'orthographe ne le dit pas) */
+                static const char *const V[] = { "a", "e", "i", "o", "u", "y", "A", "E", "I", "O", "U", "Y",
+                    "à", "â", "ä", "é", "è", "ê", "ë", "î", "ï", "ô", "ö", "ù", "û", "ü", "ÿ", "œ", "æ",
+                    "À", "Â", "Ä", "É", "È", "Ê", "Ë", "Î", "Ï", "Ô", "Ö", "Ù", "Û", "Ü", "Œ", "Æ" };
+                int voy = 0;
+                for (size_t k = 0; k < sizeof V / sizeof *V && !voy; k++) voy = strncmp(tb, V[k], strlen(V[k])) == 0;
+                const char *prep = op ? (voy ? "qu'" : "que ") : (voy ? "d'" : "de ");
+                r = grym_formater("%s%s", prep, tb);
+            }
+            free(ta);
+            free(tb);
+            valeur_liberer(&va);
+            valeur_liberer(&vb);
+            empiler(&pile, vi_texte(r));
+            free(r);
+            break;
+        }
         case I_CADRER: {
             /* « le nom sur 20 », « le solde sur 10 à droite » (§ 4.2) */
             Valeur vl = depiler(&pile), vv = depiler(&pile);

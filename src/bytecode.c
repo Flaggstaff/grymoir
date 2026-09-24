@@ -1,5 +1,5 @@
 /* GrymoiR : blocs de bytecode, v0.2
- * Spécification : docs/vm.md (révision 1.25).
+ * Spécification : docs/vm.md (révision 1.26).
  */
 #include "bytecode.h"
 #include "date.h"
@@ -176,6 +176,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_ESSAYER:        return "ESSAYER";
     case I_FIN_ESSAI:      return "FIN_ESSAI";
     case I_SAISIR:         return "SAISIR";
+    case I_COLLER:         return "COLLER";
+    case I_ELIDER:         return "ÉLIDER";
     }
     return "INCONNUE";
 }
@@ -186,7 +188,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_NOUVEAU || code == I_INITIALISER_CHAMP || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP
         || code == I_GAGNER || code == I_PERDRE || code == I_DEMANDER
         || code == I_CADRER || code == I_AFFICHER_SANS_LIGNE || code == I_STYLE
-        || code == I_CHERCHER || code == I_SAISIR;
+        || code == I_CHERCHER || code == I_SAISIR || code == I_ELIDER;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -327,7 +329,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_ABSENT: effet = 1; break;
             case I_ELEMENT: besoin = 2; effet = -1; break;
             case I_INITIALISER_CHAMP: besoin = 2; effet = -1; break;
-            case I_LIRE_CHAMP: case I_SAISIR: besoin = 1; break;
+            case I_LIRE_CHAMP: case I_SAISIR: case I_ELIDER: besoin = 1; break;
+            case I_COLLER: besoin = 2; effet = -1; break;
             case I_ECRIRE_CHAMP: case I_GAGNER: case I_PERDRE: besoin = 2; effet = -2; break;
             case I_DEMANDER: besoin = 1; effet = 0; break;   /* dépile la question, empile la réponse */
             case I_ECHOUER: break;
@@ -407,13 +410,14 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 21  /* versions 1 à 20 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 22  /* versions 1 à 21 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
                               sans champ multiple (15), sans question (16),
                               sans mise en forme (17), sans effacement de l'écran (18),
-                              sans essai (19), sans formulaire (20) */
+                              sans essai (19), sans formulaire (20),
+                              sans assemblage de textes (21) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 

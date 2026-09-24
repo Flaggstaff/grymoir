@@ -203,17 +203,17 @@ int main(void) {
     VE("Afficher 1 puis.", 1, 16, "Élément manquant après « puis »");
     VE("Le vaut 3.", 1, 4, "Nom manquant entre « le » et « vaut ».");
     VE("Le x 3.", 1, 1, "Verbe manquant");
-    VE("Le x vaut 1 2.", 1, 13, "« 2 » inattendu, attendu : un opérateur, une comparaison (est, =, <…), « sur » ou un point final.");
+    VE("Le x vaut 1 2.", 1, 13, "« 2 » inattendu, attendu : un opérateur, une comparaison (est, =, <…), « sur », « suivi de » ou un point final.");
     VE("Le x vaut (1 2).", 1, 14, "Parenthèse fermante manquante");
-    VE("Afficher 1 2.", 1, 12, "« 2 » inattendu, attendu : un opérateur, une comparaison (est, =, <…), « puis », « sur », « , sans passer à la ligne » ou un point final.");
-    VE("Le x vaut 1 puis 2.", 1, 13, "« puis » inattendu, attendu : un opérateur, une comparaison (est, =, <…), « sur » ou un point final.");
+    VE("Afficher 1 2.", 1, 12, "« 2 » inattendu, attendu : un opérateur, une comparaison (est, =, <…), « puis », « sur », « suivi de », « , sans passer à la ligne » ou un point final.");
+    VE("Le x vaut 1 puis 2.", 1, 13, "« puis » inattendu, attendu : un opérateur, une comparaison (est, =, <…), « sur », « suivi de » ou un point final.");
     VE("Le x vaut vaut.", 1, 11, "« vaut » inattendu, attendu : un nombre, un nom, une parenthèse, « vrai » ou « faux ».");
     VE("Le prix puis vaut 3.", 1, 9, "« puis » est un mot réservé");
     VE("Le la vaut 3.", 1, 4, "Un nom ne peut pas commencer par « la ».");
     VE("Le x vaut 1.\nAfficher le x puis le.", 2, 20, "Nom attendu après « le ».");
     VE("Le x 3 vaut 2.", 1, 6, "« 3 » ne peut pas faire partie d'un nom.");
-    VE("Afficher « a » « b ».", 1, 16, "Texte « b » inattendu, attendu : « puis », « sur », « , sans passer à la ligne » ou un point final.");
-    VE("Afficher « a » + 1.", 1, 16, "« + » inattendu, attendu : « puis », « sur », « , sans passer à la ligne » ou un point final.");
+    VE("Afficher « a » « b ».", 1, 16, "Texte « b » inattendu, attendu : « puis », « sur », « suivi de », « , sans passer à la ligne » ou un point final.");
+    VE("Afficher « a » + 1.", 1, 16, "« + » inattendu, attendu : « puis », « sur », « suivi de », « , sans passer à la ligne » ou un point final.");
 
     /* --- Boucle interactive (§ 3.3) --- */
     {
@@ -383,7 +383,7 @@ int main(void) {
     VE("Sortir de la boucle.", 1, 1, "« Sortir de la boucle » hors d'une boucle.");
     VE("Tant que vrai :\n    Passer au tour.", 2, 19, "« . » inattendu, attendu : « suivant »");
     VE("Tant que 3, afficher 1.", 1, 1, "Condition attendue après « Tant que »");
-    VE("Répéter 3, afficher 1.", 1, 10, "attendu : un opérateur, « sur » ou « fois »");
+    VE("Répéter 3, afficher 1.", 1, 10, "attendu : un opérateur, « sur », « suivi de » ou « fois »");
     VE("Pour chaque de 1 à 3, afficher 1.", 1, 13, "Nom du compteur attendu");
     VE("Le i vaut 1.\nPour chaque i de 1 à 3, afficher i.", 2, 13, "« i » existe déjà");
     VE("Selon 1 :\n    Afficher 1.", 2, 5, "« Cas » ou « Autrement » attendu");
@@ -510,7 +510,7 @@ int main(void) {
     VE("Le f d'un x vaut x.\nPour g un x :\n    Enregistrer f de x dans « a ».\nLe h d'un x :\n"
        "    Enregistrer x dans « b ».\n    Rendre 1.", 5, 5, "Un calcul n'écrit pas sur le disque");
     VE("Pour enregistrer un x :\n    Afficher x.", 1, 6, "« enregistrer » commence une construction du langage");
-    VE("Enregistrer 3 « a ».", 1, 15, "attendu : un opérateur, « sur » ou « dans »");
+    VE("Enregistrer 3 « a ».", 1, 15, "attendu : un opérateur, « sur », « suivi de » ou « dans »");
 
     /* --- Entités : déclaration et typage strict (§ 16.1, § 16.2) --- */
     V("Un client, conservé, a :\n    un nom (texte),\n    un âge (nombre entier),\n    un statut (vrai ou faux),\n"
@@ -762,13 +762,13 @@ int main(void) {
     VS("Le prix unitaire vaut 2.\nLe x vaut ", "prix unitaire | (nombre) | ( | − | vrai | faux");
     VS("Le prix unitaire vaut 2.\nLe x vaut pr", "prix unitaire");
     VS("Le prix vaut 1.\nLe prix unitaire vaut 2.\nLe x vaut prix ",
-       "unitaire | sur | + | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | .");
+       "unitaire | sur | suivi de | + | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | .");
     VS("Le prix vaut 1.\nLe prix unitaire vaut 2.\nLe x vaut prix u", "unitaire");
-    VS("Le x vaut (1 + 2", "sur | + | − | × | ÷ | ^ | )");
+    VS("Le x vaut (1 + 2", "sur | suivi de | + | − | × | ÷ | ^ | )");
     VS("Le x vaut 1.\nAfficher ", "x | (nombre) | ( | − | vrai | faux | « … »");
-    VS("Le x vaut 1.\nAfficher x ", "sur | , sans passer à la ligne | + | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | puis | .");
+    VS("Le x vaut 1.\nAfficher x ", "sur | suivi de | , sans passer à la ligne | + | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | puis | .");
     VS("Le x vaut 1.\nAfficher x p", "puis");
-    VS("Afficher « a » ", "sur | , sans passer à la ligne | puis | .");
+    VS("Afficher « a » ", "sur | suivi de | , sans passer à la ligne | puis | .");
     VS("Le prix de l'article vaut 1.\nAfficher le prix de ", "l'");
     VS("Le prix de l'article vaut 1.\nAfficher le prix de l'", "article");
     VS("Le prix de l'article vaut 1.\nAfficher le prix d", "de");
@@ -776,7 +776,7 @@ int main(void) {
     VS("Afficher « ouvert", "");              /* au milieu d'un texte : rien */
     VS("Le x vaut 1.\nSi ", "x | (nombre) | ( | − | vrai | faux");
     VS("Le x vaut 1.\nSi x ",
-       "sur | + | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | , | :");
+       "sur | suivi de | + | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | , | :");
     VS("Le x vaut 1.\nSi x est ",
        "égal à | différent de | inférieur à | inférieur ou égal à | supérieur à | supérieur ou égal à | "
        "positif | négatif | nul | vrai | faux | absent | présent");
@@ -788,7 +788,7 @@ int main(void) {
     VS("Le taux vaut 2.\nLe double d'un nombre vaut ", "double | nombre | (nombre) | ( | − | vrai | faux");
     VS("Le carré d'un nombre vaut nombre × nombre.\nAfficher le carré ", "de | du");
     VS("Tant que vrai :\n    Afficher 1.\n    S", "Si | Selon | Sortir de la boucle");
-    VS("Répéter 3 ", "sur | fois | + | − | × | ÷ | ^");
+    VS("Répéter 3 ", "sur | suivi de | fois | + | − | × | ÷ | ^");
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
