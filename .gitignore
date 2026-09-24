@@ -20,3 +20,4 @@ exemples/copie.png
 *.grymd
 editeurs/vscode/node_modules/
 editeurs/vscode/*.vsix
+construction/

@@ -47,7 +47,7 @@ L'atelier modifie **la seule phrase concernée**, à sa position dans la source,
 - **Une interface Qt** implémente `src/interface.h`, comme la console et le navigateur l'implémentent déjà : les programmes actuels s'affichent en fenêtre sans modification.
 - **`grym-atelier`** est un exécutable C++ qui lie le cœur directement : il appelle l'analyseur et l'imprimeur sans passer par un processus ni par le protocole LSP.
 - **Qt Widgets**, pas QML : contrôles natifs de bureau, tout en C++, sans second langage de description.
-- **Version : Qt 6.8 au moins**, première version à support long de cinq ans. La version exacte se fixe en A1, sur la plus récente à support long ; le support long annoncé par Qt vise d'abord ses clients commerciaux, et ce que reçoit la version libre reste à vérifier.
+- **Version : Qt 6.4 au moins**, décidé le 24 septembre 2026 : c'est la version des distributions Linux courantes (Ubuntu 24.04, Debian 12), et l'atelier n'emploie que Qt Widgets, stable depuis Qt 6.0. Construit et essayé avec Qt 6.4.2 (Linux) ; Homebrew fournit Qt 6.11.2 sous macOS.
 - **Licence de Qt : LGPLv3**, liée dynamiquement. Le dépôt reste sous tous droits réservés ; la LGPL impose seulement de permettre le remplacement de la bibliothèque Qt, ce que la liaison dynamique assure.
 - **Construction** : le `Makefile` actuel reste pour le cœur et `grym`. La partie Qt, qui a besoin des outils de Qt (`moc`), se construit avec CMake. L'intégration continue ajoute la construction de l'atelier sur les trois systèmes.
 
@@ -59,6 +59,10 @@ L'atelier modifie **la seule phrase concernée**, à sa position dans la source,
 | A2 | Inclusion d'un fichier dans un autre (grammaire, conçue d'abord) ; éditeur de données : schéma des entités (une boîte par entité, une flèche par lien), panneau de propriétés (champs, types, unique, facultatif, valeur de départ, cascade), réécriture chirurgicale (§ 3), aperçu de ce que la migration fera à la base avant de l'appliquer (§ 16.7), et refus expliqué quand elle détruirait des données |
 | A3 | Les écrans dans le langage : fenêtres, listes, fiches, boutons, modèle par événements. Conception phrase par phrase dans la grammaire, avant tout code |
 | A4 | Éditeur d'écrans : génération d'une liste et d'une fiche par entité, en GrymoiR modifiable ; agencement à la souris |
+
+État de A1 (24 septembre 2026) : fait, la fenêtre, l'ouverture d'un projet (un dossier, ou le dernier ouvert), la liste de ses fichiers `.grym` et `.grymc`, l'éditeur (numéros de ligne, coloration par le lexeur, première erreur de l'analyseur soulignée en direct, sa ligne en rouge dans la marge, son message au survol et dans le panneau du bas, un clic y mène), l'enregistrement sûr (écrit à côté, puis remplace). Reste : le bouton « Lancer », l'intégration continue sur les trois systèmes.
+
+Construction : `cmake -B construction`, puis `cmake --build construction` ; essais sans fenêtre : `ctest --test-dir construction` (`tests/test_atelier.cpp`). Le cœur est compilé une seconde fois par CMake, depuis les mêmes sources que le `Makefile`.
 
 Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la fenêtre, le lien avec le cœur et la construction sur trois systèmes, sur quoi tout le reste repose.
 
@@ -85,3 +89,4 @@ Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la
 | 0.1 | 2026-09-24 | Proposition initiale : Qt 6, l'atelier n'écrit que du GrymoiR, réécriture chirurgicale, architecture, jalons A1 à A4, questions ouvertes |
 | 0.2 | 2026-09-24 | § 6.2 : l'inclusion se conçoit en A2, avant l'éditeur de données |
 | 0.3 | 2026-09-24 | § 6.3 : éditeur de code maison, branché sur le lexeur, les suites et l'analyseur |
+| 0.4 | 2026-09-24 | § 4 : Qt 6.4 au moins ; § 5 : A1 commencé (fenêtre, projet, éditeur, coloration, erreurs en direct) |
