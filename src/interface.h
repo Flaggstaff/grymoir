@@ -1,5 +1,5 @@
 /* GrymoiR : interface d'entrée et de sortie de la machine.
- * Spécification : docs/vm.md (révision 1.30), § 13.
+ * Spécification : docs/vm.md (révision 1.31), § 13.
  *
  * Tout ce qui touche l'utilisateur passe par ici : poser des questions (une seule, ou un formulaire),
  * effacer l'écran. La console l'implémente (console.c) ; le navigateur l'implémentera (docs/v2.md).
@@ -22,6 +22,15 @@ typedef struct {
     /* rempli par l'interface avant chaque validation ; la machine prend possession de la ligne */
     char *ligne;           /* la réponse telle que tapée */
     int vider;             /* l'utilisateur demande l'absence (la ligne est alors vide) */
+    /* décrits par la machine (interfaces riches, docs/v2.md, § 10) */
+    int facultatif;                      /* une réponse vide laisse le champ absent */
+    const char *const *suggestions;      /* lien : les clés des objets conservés, dans l'ordre du dictionnaire */
+    size_t nb_suggestions;
+    /* fichier ou image reçus par l'interface, au lieu d'un chemin tapé ; la machine en prend possession */
+    int fichier_recu;
+    unsigned char *octets;
+    size_t taille;
+    char *nom_fichier;     /* nom d'origine, sans dossier */
 } Champ;
 
 typedef enum {
@@ -47,6 +56,11 @@ typedef struct {
                         Validation valider, void *vcontexte);
     /* « Effacer l'écran. » (grammaire, § 4.3) */
     void (*effacer)(void *contexte, Chaine *sortie);
+    /* Interface riche : la machine lui fournit les suggestions des liens. */
+    int riche;
+    /* Afficher une image (PNG, JPEG, GIF, WebP) à cet endroit du fil ; NULL : sa description en texte. */
+    void (*afficher_image)(void *contexte, Chaine *sortie, const unsigned char *octets, size_t taille,
+                           const char *format, const char *description);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

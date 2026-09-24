@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.30 de la spécification, révisée le 24 septembre 2026.
+Version 1.31 de la spécification, révisée le 24 septembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -303,7 +303,8 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 - **Discipline des questions** (grammaire, § 17) : avant le formulaire, la machine valide ce qui précède et rend le verrou ; chaque validation qui consulte la base (liens, unicité) reprend le verrou puis le rend ; après le formulaire, le verrou reprend, avec les points de reprise des essais (§ 6).
 - **Annonce** : « Tapez « . » seul pour annuler. », à la première relance, est une affaire de console.
 - **Issue « interrompu »** : un Ctrl+C pendant l'attente arrête l'exécution, que nul essai ne rattrape (§ 6).
-- Deux implémentations : la console (`src/console.c`) et le navigateur (`src/serveur.c`, docs/v2.md, § 9).
+- **Interface riche** (docs/v2.md, § 10) : la machine décrit aussi si un champ est facultatif et, pour un lien, les clés des objets conservés en suggestions. L'interface peut rendre les octets d'un fichier au lieu d'un chemin tapé, et afficher une image à sa place dans le fil ; sinon, la machine écrit sa description.
+- Deux implémentations : la console (`src/console.c`) et le navigateur (`src/serveur.c`, docs/v2.md, § 9 et § 10).
 - `machine_interface` remplace la console ; `machine_lecteur` et `machine_terminal` règlent la console.
 
 ---
@@ -343,3 +344,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.28 | 2026-09-24 | § 8 : format de la base (`PRAGMA user_version`) |
 | 1.29 | 2026-09-24 | § 13 : interface d'entrée et de sortie (affichage, effacement, formulaires, validation, issues), implémentée par la console |
 | 1.30 | 2026-09-24 | § 13 : issue « interrompu », seconde implémentation (navigateur) |
+| 1.31 | 2026-09-24 | § 13 : interface riche (champ facultatif, suggestions, fichier reçu, image affichée) |

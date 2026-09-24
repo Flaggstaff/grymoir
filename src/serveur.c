@@ -1,5 +1,5 @@
 /* GrymoiR : l'interface par le navigateur, servie en local (v2.0-a).
- * Spécification : docs/v2.md (révision 0.6), § 4, § 5 et § 9 ; docs/vm.md, § 13.
+ * Spécification : docs/v2.md (révision 0.7), § 4, § 5 et § 9 ; docs/vm.md, § 13.
  */
 #ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L
@@ -33,9 +33,20 @@ typedef int Prise;
 #endif
 
 #define ENTETES_MAX 8192          /* octets d'en-têtes (§ 9) */
-#define CORPS_MAX (1024 * 1024)   /* octets de corps en v2.0-a */
+#define CORPS_MAX (50L * 1024 * 1024)   /* octets d'un envoi, fichiers compris (docs/v2.md, § 10) */
 #define LIGNES_MAX 1000           /* affichage gardé dans la page */
 #define ATTENTE_CLIENT 5          /* secondes : un client muet est congédié */
+#define ATTENTE_FIN 2             /* secondes : après la page finale, plus rien n'est demandé */
+
+/* Une image affichée par le programme, à sa place dans le fil. */
+struct Image {
+    size_t position;      /* octet de l'affichage devant lequel elle se place */
+    long id;              /* /image/ID */
+    unsigned char *octets;
+    size_t taille;
+    const char *type;     /* type MIME, d'après la signature */
+    char *description;
+};
 
 /* Une question en cours : les champs, ce que l'utilisateur a tapé, les refus. */
 typedef struct {
@@ -62,6 +73,10 @@ struct Serveur {
     int reseau;           /* ouvert par serveur_ouvrir : prises et WSAStartup à rendre ; refus notés sur stderr */
     Chaine affichage;     /* depuis le dernier effacement, plafonné à LIGNES_MAX lignes */
     long numero;          /* numéro de la question courante (décision 6) */
+    struct Image *images; /* images du fil, par position croissante (docs/v2.md, § 10) */
+    size_t nb_images, cap_images;
+    long prochaine_image;
+    int fin_proche;       /* page finale servie : on ne sert plus que sa feuille et ses images, puis on s'en va */
     char *avis;           /* message à montrer une fois (réponse à une question close) */
 };
 
@@ -133,23 +148,87 @@ static char *decoder(const char *s, size_t n) {
     return r;
 }
 
-/* Valeur du paramètre nom dans un corps « a=1&b=2 », décodée ; NULL si absent, ou mal formé (*mal). */
-static char *parametre_mal(const char *corps, const char *nom, int *mal) {
+
+
+/* Un envoi de formulaire, en « application/x-www-form-urlencoded » ou en « multipart/form-data ». */
+typedef struct {
+    char *nom;
+    char *valeur;          /* texte décodé, ou octets d'un fichier */
+    size_t taille;
+    int fichier;           /* partie de fichier : nom_fichier dit son nom d'origine */
+    int choisi;            /* un fichier a été choisi (le navigateur envoie une partie vide sinon) */
+    char *nom_fichier;
+    int mal;               /* texte illisible : octet nul ou UTF-8 invalide */
+} Partie;
+
+typedef struct {
+    Partie *p;
+    size_t n, cap;
+} Envoi;
+
+static void envoi_ajouter(Envoi *e, Partie x) {
+    if (e->n == e->cap) {
+        e->cap = e->cap ? e->cap * 2 : 8;
+        Partie *t = grym_allouer(e->cap * sizeof *t);
+        if (e->n) memcpy(t, e->p, e->n * sizeof *t);
+        free(e->p);
+        e->p = t;
+    }
+    e->p[e->n++] = x;
+}
+
+static void envoi_liberer(Envoi *e) {
+    for (size_t k = 0; k < e->n; k++) {
+        free(e->p[k].nom);
+        free(e->p[k].valeur);
+        free(e->p[k].nom_fichier);
+    }
+    free(e->p);
+}
+
+static Partie *envoi_partie(Envoi *e, const char *nom) {
+    for (size_t k = 0; k < e->n; k++) if (strcmp(e->p[k].nom, nom) == 0) return &e->p[k];
+    return NULL;
+}
+
+/* Recherche binaire d'une suite d'octets. */
+static const char *chercher_octets(const char *d, size_t n, const char *motif, size_t m) {
+    if (m == 0 || n < m) return NULL;
+    for (size_t k = 0; k + m <= n; k++) if (d[k] == motif[0] && memcmp(d + k, motif, m) == 0) return d + k;
+    return NULL;
+}
+
+/* Nom d'origine d'un fichier : le dernier segment, sans caractère de contrôle, jamais un chemin. */
+static char *nom_de_fichier(const char *brut, size_t n) {
+    size_t debut = 0;
+    for (size_t k = 0; k < n; k++) if (brut[k] == '/' || brut[k] == '\\') debut = k + 1;
+    char *r = grym_allouer(n - debut + 1), *w = r;
+    for (size_t k = debut; k < n && (size_t)(w - r) < 255; k++)
+        if ((unsigned char)brut[k] >= 0x20 && brut[k] != 0x7F) *w++ = brut[k];
+    *w = '\0';
+    if (!*r || !utf8_valide((unsigned char *)r) || strcmp(r, ".") == 0 || strcmp(r, "..") == 0) {
+        free(r);
+        r = grym_dupliquer("fichier");
+    }
+    return r;
+}
+
+/* Valeur d'un attribut d'en-tête : « name="c0" » dans « form-data; name="c0"; filename="a.jpg" ». */
+static char *attribut(const char *entete, size_t n, const char *nom, int *present) {
     size_t ln = strlen(nom);
-    for (const char *p = corps; p && *p; ) {
-        const char *fin = strchr(p, '&');
-        size_t l = fin ? (size_t)(fin - p) : strlen(p);
-        if (l > ln && strncmp(p, nom, ln) == 0 && p[ln] == '=') {
-            char *v = decoder(p + ln + 1, l - ln - 1);
-            if (!v && mal) *mal = 1;
-            return v;
+    for (size_t k = 0; k + ln + 2 <= n; k++) {
+        if ((k == 0 || entete[k - 1] == ' ' || entete[k - 1] == ';') && strncmp(entete + k, nom, ln) == 0
+            && entete[k + ln] == '=' && entete[k + ln + 1] == '"') {
+            const char *v = entete + k + ln + 2;
+            const char *f = memchr(v, '"', n - (size_t)(v - entete));
+            if (!f) return NULL;
+            *present = 1;
+            return grym_formater("%.*s", (int)(f - v), v);
         }
-        p = fin ? fin + 1 : NULL;
     }
     return NULL;
 }
 
-static char *parametre(const char *corps, const char *nom) { return parametre_mal(corps, nom, NULL); }
 
 /* ---------------------------------------------------------------- */
 /* Requêtes                                                         */
@@ -158,7 +237,7 @@ static char *parametre(const char *corps, const char *nom) { return parametre_ma
 typedef struct {
     char methode[8];
     char *cible;          /* « / », « /?jeton=… », « /reponse », « /style.css » */
-    char *hote, *cookie, *origine;
+    char *hote, *cookie, *origine, *type_contenu;
     const char *corps;
     size_t taille_corps;
 } Requete;
@@ -168,6 +247,7 @@ static void requete_liberer(Requete *r) {
     free(r->hote);
     free(r->cookie);
     free(r->origine);
+    free(r->type_contenu);
 }
 
 /* Lit la ligne de requête et les en-têtes utiles. 0 si mal formée. */
@@ -194,13 +274,88 @@ static int lire_requete(const char *d, size_t n, Requete *r) {
         char *valeur = grym_formater("%.*s", (int)(eol - v), v);
         char **cible = ln == 4 && egal_sans_casse(p, "host", 4) ? &r->hote
                      : ln == 6 && egal_sans_casse(p, "cookie", 6) ? &r->cookie
-                     : ln == 6 && egal_sans_casse(p, "origin", 6) ? &r->origine : NULL;
+                     : ln == 6 && egal_sans_casse(p, "origin", 6) ? &r->origine
+                     : ln == 12 && egal_sans_casse(p, "content-type", 12) ? &r->type_contenu : NULL;
         if (cible && *cible) { free(valeur); requete_liberer(r); return 0; }   /* en-tête en double : refus */
         if (cible) *cible = valeur;
         else free(valeur);
     }
     r->corps = fin_entetes + 4;
     r->taille_corps = n - (size_t)(r->corps - d);
+    return 1;
+}
+
+/* Lit le corps d'un envoi. 0 si mal formé. */
+static int lire_envoi(const Requete *r, Envoi *e) {
+    memset(e, 0, sizeof *e);
+    const char *t = r->type_contenu ? r->type_contenu : "application/x-www-form-urlencoded";
+    if (egal_sans_casse(t, "multipart/form-data", strlen("multipart/form-data")) && strlen(t) >= 19) {
+        const char *b = strstr(t, "boundary=");
+        if (!b) return 0;
+        b += 9;
+        size_t lb = strcspn(b, "; ");
+        if (*b == '"') { b++; lb = strcspn(b, "\""); }
+        if (lb == 0 || lb > 70) return 0;
+        char *delim = grym_formater("--%.*s", (int)lb, b);
+        size_t ld = strlen(delim);
+        const char *d = r->corps, *fin = r->corps + r->taille_corps;
+        const char *p = chercher_octets(d, (size_t)(fin - d), delim, ld);
+        int ok = p != NULL;
+        while (ok) {
+            p += ld;
+            if (fin - p >= 2 && p[0] == '-' && p[1] == '-') break;   /* dernier délimiteur */
+            if (fin - p < 2 || p[0] != '\r' || p[1] != '\n') { ok = 0; break; }
+            p += 2;
+            const char *fe = chercher_octets(p, (size_t)(fin - p), "\r\n\r\n", 4);
+            if (!fe) { ok = 0; break; }
+            char *sep = grym_formater("\r\n%s", delim);
+            const char *fd = chercher_octets(fe + 4, (size_t)(fin - fe - 4), sep, ld + 2);
+            free(sep);
+            if (!fd) { ok = 0; break; }
+            int a_nom = 0, a_fichier = 0;
+            char *nom = attribut(p, (size_t)(fe - p), "name", &a_nom);
+            char *brut = attribut(p, (size_t)(fe - p), "filename", &a_fichier);
+            if (!nom) { free(brut); ok = 0; break; }
+            Partie x;
+            memset(&x, 0, sizeof x);
+            x.nom = nom;
+            x.taille = (size_t)(fd - fe - 4);
+            x.valeur = grym_allouer(x.taille + 1);
+            if (x.taille) memcpy(x.valeur, fe + 4, x.taille);
+            x.valeur[x.taille] = '\0';
+            x.fichier = a_fichier;
+            if (a_fichier) {
+                x.nom_fichier = nom_de_fichier(brut, strlen(brut));
+                x.choisi = brut[0] != '\0' || x.taille > 0;
+            }
+            else x.mal = strlen(x.valeur) != x.taille || !utf8_valide((unsigned char *)x.valeur);
+            free(brut);
+            envoi_ajouter(e, x);
+            p = fd + 2;
+        }
+        free(delim);
+        if (!ok) envoi_liberer(e);
+        return ok;
+    }
+    char *corps = grym_formater("%.*s", (int)r->taille_corps, r->corps);
+    for (const char *p = corps; *p; ) {
+        const char *f = strchr(p, '&');
+        size_t l = f ? (size_t)(f - p) : strlen(p);
+        const char *eg = memchr(p, '=', l);
+        if (eg) {
+            Partie x;
+            memset(&x, 0, sizeof x);
+            x.nom = decoder(p, (size_t)(eg - p));
+            x.valeur = decoder(eg + 1, l - (size_t)(eg - p) - 1);
+            if (!x.nom) x.nom = grym_dupliquer("");
+            if (!x.valeur) { x.mal = 1; x.valeur = grym_dupliquer(""); }
+            x.taille = strlen(x.valeur);
+            envoi_ajouter(e, x);
+        }
+        if (!f) break;
+        p = f + 1;
+    }
+    free(corps);
     return 1;
 }
 
@@ -230,9 +385,12 @@ static const char STYLE[] =
     "input[type=text]{font:inherit;padding:.25rem .4rem;width:18rem;border:1px solid #b9b9b2;border-radius:4px}"
     "input[readonly]{background:#eeeeea;color:#555}"
     ".refus{display:block;color:#a31d1d;margin-left:12rem}.avis{color:#8a5a00}.erreur{color:#a31d1d}"
-    "button{font:inherit;padding:.3rem .9rem;margin-right:.5rem}";
+    "button{font:inherit;padding:.3rem .9rem;margin-right:.5rem}"
+    "select{font:inherit;padding:.2rem .3rem}.actuel,.recu{color:#555;margin-left:.5rem}"
+    "pre.sortie img{display:block;max-width:100%;max-height:24rem;margin:.4rem 0;border-radius:4px}";
 
-static void repondre(Serveur *s, const char *statut, const char *type, const char *corps, const char *en_plus) {
+static void repondre_octets(Serveur *s, const char *statut, const char *type, const unsigned char *corps,
+                            size_t taille, const char *en_plus) {
     Chaine r = {0};
     char *entete = grym_formater(
         "HTTP/1.1 %s\r\n"
@@ -245,12 +403,20 @@ static void repondre(Serveur *s, const char *statut, const char *type, const cha
         "Cache-Control: no-store\r\n"
         "Connection: close\r\n"
         "%s\r\n",
-        statut, type, (unsigned long)strlen(corps), en_plus ? en_plus : "");
+        statut, type, (unsigned long)taille, en_plus ? en_plus : "");
     chaine_ajouter(&r, entete);
-    chaine_ajouter(&r, corps);
     free(entete);
-    s->t.envoyer(s->t.contexte, r.d, r.n);
+    size_t n = r.n + taille;
+    char *tout = grym_allouer(n + 1);
+    memcpy(tout, r.d, r.n);
+    if (taille) memcpy(tout + r.n, corps, taille);
+    s->t.envoyer(s->t.contexte, tout, n);
+    free(tout);
     free(r.d);
+}
+
+static void repondre(Serveur *s, const char *statut, const char *type, const char *corps, const char *en_plus) {
+    repondre_octets(s, statut, type, (const unsigned char *)corps, strlen(corps), en_plus);
 }
 
 static void rediriger(Serveur *s, const char *en_plus) {
@@ -263,9 +429,23 @@ static void debut_page(const Serveur *s, Chaine *c) {
     chaine_ajouter(c, "<!DOCTYPE html>\n<html lang=\"fr\"><head><meta charset=\"utf-8\"><title>");
     echapper(c, s->titre);
     chaine_ajouter(c, "</title><link rel=\"stylesheet\" href=\"/style.css\"></head><body><main>\n");
-    if (s->affichage.n) {
+    if (s->affichage.n || s->nb_images) {
         chaine_ajouter(c, "<pre class=\"sortie\">");
-        echapper(c, s->affichage.d);
+        size_t depuis = 0;
+        for (size_t k = 0; k <= s->nb_images; k++) {
+            size_t jusqua = k < s->nb_images ? s->images[k].position : s->affichage.n;
+            char *morceau = grym_formater("%.*s", (int)(jusqua - depuis), s->affichage.d ? s->affichage.d + depuis : "");
+            echapper(c, morceau);
+            free(morceau);
+            depuis = jusqua;
+            if (k < s->nb_images) {
+                char *img = grym_formater("<img src=\"/image/%ld\" alt=\"", s->images[k].id);
+                chaine_ajouter(c, img);
+                free(img);
+                echapper(c, s->images[k].description);
+                chaine_ajouter(c, "\">");
+            }
+        }
         chaine_ajouter(c, "</pre>\n");
     }
 }
@@ -286,6 +466,30 @@ static void page_simple(Serveur *s, const char *statut, const char *message) {
     free(c.d);
 }
 
+static int est_fichier(const Champ *c) {
+    return c->type && (strcmp(c->type, "fichier") == 0 || strcmp(c->type, "image") == 0);
+}
+
+static int est_oui_non(const Champ *c) {
+    return c->type && strcmp(c->type, "vrai ou faux") == 0;
+}
+
+/* « oui », « non » ou « » : la valeur affichée d'un champ vrai ou faux. */
+static const char *oui_non(const char *v) {
+    if (!v) return "";
+    if (strcmp(v, "oui") == 0 || strcmp(v, "vrai") == 0) return "oui";
+    if (strcmp(v, "non") == 0 || strcmp(v, "faux") == 0) return "non";
+    return "";
+}
+
+static void option(Chaine *c, const char *valeur, const char *texte, int choisie) {
+    chaine_ajouter(c, "<option value=\"");
+    echapper(c, valeur);
+    chaine_ajouter(c, choisie ? "\" selected>" : "\">");
+    echapper(c, texte);
+    chaine_ajouter(c, "</option>");
+}
+
 static void page_question(Serveur *s, const Question *q) {
     Chaine c = {0};
     debut_page(s, &c);
@@ -296,29 +500,90 @@ static void page_question(Serveur *s, const Question *q) {
         free(s->avis);
         s->avis = NULL;
     }
+    int multipart = 0;
+    for (size_t k = 0; k < q->n; k++) multipart |= est_fichier(&q->champs[k]) && !q->acceptes[k];
     char *num = grym_formater("%ld", s->numero);
-    chaine_ajouter(&c, "<form method=\"post\" action=\"/reponse\"><input type=\"hidden\" name=\"q\" value=\"");
+    chaine_ajouter(&c, multipart ? "<form method=\"post\" action=\"/reponse\" enctype=\"multipart/form-data\">"
+                                 : "<form method=\"post\" action=\"/reponse\">");
+    chaine_ajouter(&c, "<input type=\"hidden\" name=\"q\" value=\"");
     chaine_ajouter(&c, num);
     chaine_ajouter(&c, "\">\n");
     free(num);
     int focus = 0;
     for (size_t k = 0; k < q->n; k++) {
         const Champ *ch = &q->champs[k];
+        const char *valeur = q->saisi[k] ? q->saisi[k] : ch->valeur ? ch->valeur : "";
         char *id = grym_formater("c%lu", (unsigned long)k);
         chaine_ajouter(&c, "<p class=\"champ\"><label for=\"");
         chaine_ajouter(&c, id);
         chaine_ajouter(&c, "\">");
         echapper(&c, ch->libelle);
-        chaine_ajouter(&c, "</label> <input type=\"text\" id=\"");
-        chaine_ajouter(&c, id);
-        chaine_ajouter(&c, "\" name=\"");
-        chaine_ajouter(&c, id);
-        chaine_ajouter(&c, "\" value=\"");
-        echapper(&c, q->saisi[k] ? q->saisi[k] : ch->valeur ? ch->valeur : "");
-        chaine_ajouter(&c, "\"");
-        if (q->acceptes[k]) chaine_ajouter(&c, " readonly");
-        else if (!focus) { chaine_ajouter(&c, " autofocus"); focus = 1; }
-        chaine_ajouter(&c, ">");
+        chaine_ajouter(&c, "</label> ");
+        const char *attente = !q->acceptes[k] && !focus ? " autofocus" : "";
+        if (!q->acceptes[k]) focus = 1;
+        if (est_fichier(ch)) {   /* un fichier : choisi sur la machine, jamais un chemin (§ 10) */
+            if (q->acceptes[k]) {
+                chaine_ajouter(&c, "<span class=\"recu\">reçu</span>");
+            } else {
+                chaine_ajouter(&c, "<input type=\"file\" id=\"");
+                chaine_ajouter(&c, id);
+                chaine_ajouter(&c, "\" name=\"");
+                chaine_ajouter(&c, id);
+                chaine_ajouter(&c, "\"");
+                if (strcmp(ch->type, "image") == 0) chaine_ajouter(&c, " accept=\"image/png,image/jpeg,image/gif,image/webp\"");
+                chaine_ajouter(&c, attente);
+                chaine_ajouter(&c, ">");
+                if (ch->valeur) {
+                    chaine_ajouter(&c, " <span class=\"actuel\">actuel : ");
+                    echapper(&c, ch->valeur);
+                    chaine_ajouter(&c, "</span>");
+                }
+            }
+        } else if (est_oui_non(ch)) {   /* vrai ou faux : oui, non, ou rien pour un champ facultatif */
+            chaine_ajouter(&c, "<select id=\"");
+            chaine_ajouter(&c, id);
+            chaine_ajouter(&c, "\" name=\"");
+            chaine_ajouter(&c, id);
+            chaine_ajouter(&c, "\"");
+            if (q->acceptes[k]) chaine_ajouter(&c, " disabled");
+            chaine_ajouter(&c, attente);
+            chaine_ajouter(&c, ">");
+            const char *v = oui_non(valeur);
+            if (ch->facultatif || !*v) option(&c, "", "", !*v);
+            option(&c, "oui", "oui", strcmp(v, "oui") == 0);
+            option(&c, "non", "non", strcmp(v, "non") == 0);
+            chaine_ajouter(&c, "</select>");
+        } else {
+            chaine_ajouter(&c, "<input type=\"text\" id=\"");
+            chaine_ajouter(&c, id);
+            chaine_ajouter(&c, "\" name=\"");
+            chaine_ajouter(&c, id);
+            chaine_ajouter(&c, "\" value=\"");
+            echapper(&c, valeur);
+            chaine_ajouter(&c, "\"");
+            if (ch->type && (strcmp(ch->type, "nombre") == 0)) chaine_ajouter(&c, " inputmode=\"decimal\"");
+            else if (ch->type && (strcmp(ch->type, "nombre entier") == 0 || strcmp(ch->type, "année") == 0))
+                chaine_ajouter(&c, " inputmode=\"numeric\"");
+            if (ch->nb_suggestions && !q->acceptes[k]) {
+                chaine_ajouter(&c, " list=\"l");
+                chaine_ajouter(&c, id + 1);
+                chaine_ajouter(&c, "\" autocomplete=\"off\"");
+            }
+            if (q->acceptes[k]) chaine_ajouter(&c, " readonly");
+            chaine_ajouter(&c, attente);
+            chaine_ajouter(&c, ">");
+            if (ch->nb_suggestions && !q->acceptes[k]) {   /* les clés existantes : suggérées, sans script (§ 10) */
+                chaine_ajouter(&c, "<datalist id=\"l");
+                chaine_ajouter(&c, id + 1);
+                chaine_ajouter(&c, "\">");
+                for (size_t j = 0; j < ch->nb_suggestions; j++) {
+                    chaine_ajouter(&c, "<option value=\"");
+                    echapper(&c, ch->suggestions[j]);
+                    chaine_ajouter(&c, "\">");
+                }
+                chaine_ajouter(&c, "</datalist>");
+            }
+        }
         if (ch->videable && !q->acceptes[k]) {
             chaine_ajouter(&c, " <label><input type=\"checkbox\" name=\"v");
             chaine_ajouter(&c, id + 1);
@@ -389,6 +654,14 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
         page_simple(s, "403 Forbidden", "Accès refusé : ouvrez l'adresse affichée dans le terminal.");
     } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/style.css") == 0) {
         repondre(s, "200 OK", "text/css; charset=utf-8", STYLE, NULL);
+    } else if (strcmp(r.methode, "GET") == 0 && strncmp(r.cible, "/image/", 7) == 0) {
+        char *e = NULL;
+        long id = strtol(r.cible + 7, &e, 10);
+        struct Image *im = NULL;
+        for (size_t k = 0; e && *e == '\0' && e != r.cible + 7 && k < s->nb_images; k++)
+            if (s->images[k].id == id) im = &s->images[k];
+        if (im) repondre_octets(s, "200 OK", im->type, im->octets, im->taille, NULL);
+        else page_simple(s, "404 Not Found", "Image inconnue.");
     } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/") == 0) {
         if (q) page_question(s, q);
         else { page_finale(s, erreur, annulation); suite = PAGE_FINALE_SERVIE; }
@@ -398,53 +671,61 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
             noter_refus(s, r.origine ? "origine inattendue" : "aucune origine", r.origine);
             page_simple(s, "403 Forbidden", "Accès refusé.");
         } else {
-            char *corps = grym_formater("%.*s", (int)r.taille_corps, r.corps);
-            char *numero = parametre(corps, "q");
-            char *action = parametre(corps, "action");
-            char attendu[24];
-            snprintf(attendu, sizeof attendu, "%ld", s->numero);
-            if (!q || !numero || strcmp(numero, attendu) != 0) {
-                free(s->avis);   /* décision 6 : une réponse à une question close ne répond à rien */
-                s->avis = grym_dupliquer("Cette question a déjà reçu sa réponse.");
-                rediriger(s, NULL);
-            } else if (action && strcmp(action, "annuler") == 0) {
-                rediriger(s, NULL);
-                suite = FINI_ANNULE;
+            Envoi e;
+            if (!lire_envoi(&r, &e)) {
+                page_simple(s, "400 Bad Request", "Envoi mal formé.");
             } else {
-                int tout = 1;
-                for (size_t k = 0; k < q->n && suite == SUITE; k++) {
-                    if (q->acceptes[k]) continue;
-                    char nom[24];
-                    snprintf(nom, sizeof nom, "c%lu", (unsigned long)k);
-                    int mal = 0;
-                    char *v = parametre_mal(corps, nom, &mal);
-                    snprintf(nom, sizeof nom, "v%lu", (unsigned long)k);
-                    char *vider = parametre(corps, nom);
-                    free(q->saisi[k]);
-                    q->saisi[k] = v ? v : grym_dupliquer("");
-                    free(q->refus[k]);
-                    q->refus[k] = NULL;
-                    if (mal) {   /* octet nul ou UTF-8 invalide : jamais transmis à la machine */
-                        free(vider);
-                        q->refus[k] = grym_dupliquer("Texte illisible : réécrivez-le.");
-                        tout = 0;
-                        continue;
+                Partie *pq = envoi_partie(&e, "q"), *pa = envoi_partie(&e, "action");
+                char attendu[24];
+                snprintf(attendu, sizeof attendu, "%ld", s->numero);
+                if (!q || !pq || pq->fichier || strcmp(pq->valeur, attendu) != 0) {
+                    free(s->avis);   /* décision 6 : une réponse à une question close ne répond à rien */
+                    s->avis = grym_dupliquer("Cette question a déjà reçu sa réponse.");
+                    rediriger(s, NULL);
+                } else if (pa && !pa->fichier && strcmp(pa->valeur, "annuler") == 0) {
+                    rediriger(s, NULL);
+                    suite = FINI_ANNULE;
+                } else {
+                    int tout = 1;
+                    for (size_t k = 0; k < q->n && suite == SUITE; k++) {
+                        if (q->acceptes[k]) continue;
+                        char nom[24];
+                        snprintf(nom, sizeof nom, "c%lu", (unsigned long)k);
+                        Partie *pv = envoi_partie(&e, nom);
+                        snprintf(nom, sizeof nom, "v%lu", (unsigned long)k);
+                        Partie *pvider = envoi_partie(&e, nom);
+                        Champ *ch = &q->champs[k];
+                        free(q->refus[k]);
+                        q->refus[k] = NULL;
+                        free(q->saisi[k]);
+                        q->saisi[k] = grym_dupliquer(pv && !pv->fichier && !pv->mal ? pv->valeur : "");
+                        if (pv && pv->mal) {   /* octet nul ou UTF-8 invalide : jamais transmis à la machine */
+                            q->refus[k] = grym_dupliquer("Texte illisible : réécrivez-le.");
+                            tout = 0;
+                            continue;
+                        }
+                        ch->vider = ch->videable && pvider && !pvider->fichier && strcmp(pvider->valeur, "1") == 0;
+                        if (est_fichier(ch) && pv && pv->fichier && pv->choisi && !ch->vider) {
+                            /* le fichier choisi passe à la machine, sans jamais toucher le disque (§ 10) */
+                            ch->fichier_recu = 1;
+                            ch->octets = (unsigned char *)pv->valeur;
+                            ch->taille = pv->taille;
+                            ch->nom_fichier = pv->nom_fichier;
+                            pv->valeur = NULL;
+                            pv->nom_fichier = NULL;
+                        }
+                        ch->ligne = grym_dupliquer(ch->vider || est_fichier(ch) ? "" : q->saisi[k]);
+                        char *message = NULL;
+                        int res = q->valider(q->vcontexte, k, &message);
+                        if (res < 0) { free(message); suite = FINI_ARRET; break; }
+                        if (res > 0) { q->refus[k] = message ? message : grym_dupliquer("Réponse refusée."); tout = 0; }
+                        else { free(message); q->acceptes[k] = 1; }
                     }
-                    q->champs[k].vider = q->champs[k].videable && vider && strcmp(vider, "1") == 0;
-                    free(vider);
-                    q->champs[k].ligne = grym_dupliquer(q->champs[k].vider ? "" : q->saisi[k]);
-                    char *message = NULL;
-                    int res = q->valider(q->vcontexte, k, &message);
-                    if (res < 0) { free(message); suite = FINI_ARRET; break; }
-                    if (res > 0) { q->refus[k] = message ? message : grym_dupliquer("Réponse refusée."); tout = 0; }
-                    else { free(message); q->acceptes[k] = 1; }
+                    rediriger(s, NULL);
+                    if (suite == SUITE && tout) suite = FINI_REPONDU;
                 }
-                rediriger(s, NULL);
-                if (suite == SUITE && tout) suite = FINI_REPONDU;
+                envoi_liberer(&e);
             }
-            free(numero);
-            free(action);
-            free(corps);
         }
     } else {
         page_simple(s, "404 Not Found", "Page inconnue.");
@@ -456,6 +737,21 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
 /* ---------------------------------------------------------------- */
 /* L'interface                                                      */
 /* ---------------------------------------------------------------- */
+
+/* Les images placées avant l'octet k quittent le fil ; les autres reculent de k. */
+static void retirer_images(Serveur *s, size_t k) {
+    size_t w = 0;
+    for (size_t r = 0; r < s->nb_images; r++) {
+        if (s->images[r].position < k) {
+            free(s->images[r].octets);
+            free(s->images[r].description);
+            continue;
+        }
+        s->images[r].position -= k;
+        s->images[w++] = s->images[r];
+    }
+    s->nb_images = w;
+}
 
 /* Ajoute la sortie de la machine à l'affichage, en gardant les LIGNES_MAX dernières lignes. */
 static void absorber(Serveur *s, Chaine *sortie) {
@@ -471,6 +767,7 @@ static void absorber(Serveur *s, Chaine *sortie) {
     for (size_t trop = lignes - LIGNES_MAX; trop && k < s->affichage.n; k++) if (s->affichage.d[k] == '\n') trop--;
     memmove(s->affichage.d, s->affichage.d + k, s->affichage.n - k + 1);
     s->affichage.n -= k;
+    retirer_images(s, k);
 }
 
 static int serveur_disponible(void *contexte) { (void)contexte; return 1; }
@@ -513,15 +810,41 @@ static void serveur_effacer(void *contexte, Chaine *sortie) {
     if (sortie->n) { sortie->n = 0; sortie->d[0] = '\0'; }   /* ce qui précède l'effacement disparaît */
     s->affichage.n = 0;
     if (s->affichage.d) s->affichage.d[0] = '\0';
+    retirer_images(s, (size_t)-1);
+}
+
+/* « Afficher la photo. » : l'image prend place dans le fil (docs/v2.md, § 10). */
+static void serveur_afficher_image(void *contexte, Chaine *sortie, const unsigned char *octets, size_t taille,
+                                   const char *format, const char *description) {
+    Serveur *s = contexte;
+    absorber(s, sortie);
+    if (s->nb_images == s->cap_images) {
+        s->cap_images = s->cap_images ? s->cap_images * 2 : 8;
+        struct Image *t = grym_allouer(s->cap_images * sizeof *t);
+        if (s->nb_images) memcpy(t, s->images, s->nb_images * sizeof *t);
+        free(s->images);
+        s->images = t;
+    }
+    struct Image *im = &s->images[s->nb_images++];
+    im->position = s->affichage.n;
+    im->id = ++s->prochaine_image;
+    im->octets = grym_allouer(taille ? taille : 1);
+    if (taille) memcpy(im->octets, octets, taille);
+    im->taille = taille;
+    im->type = strcmp(format, "PNG") == 0 ? "image/png" : strcmp(format, "JPEG") == 0 ? "image/jpeg"
+             : strcmp(format, "GIF") == 0 ? "image/gif" : "image/webp";
+    im->description = grym_dupliquer(description);
 }
 
 Interface serveur_interface(Serveur *s) {
-    Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer };
+    Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer, 1, serveur_afficher_image };
     return i;
 }
 
 void serveur_terminer(Serveur *s, Chaine *sortie, const char *erreur, const char *annulation) {
     absorber(s, sortie);
+    /* Après la page finale, le navigateur demande encore sa feuille de style et ses images : on les sert
+     * tant qu'il en demande (le transport réseau abandonne après ATTENTE_FIN secondes de silence). */
     for (;;) {
         size_t taille = 0;
         int interrompu = 0;
@@ -529,7 +852,7 @@ void serveur_terminer(Serveur *s, Chaine *sortie, const char *erreur, const char
         if (!d) return;
         Suite suite = traiter(s, d, taille, NULL, erreur, annulation);
         free(d);
-        if (suite == PAGE_FINALE_SERVIE) return;
+        if (suite == PAGE_FINALE_SERVIE) s->fin_proche = 1;
     }
 }
 
@@ -557,6 +880,8 @@ void serveur_fermer(Serveur *s) {
 #ifdef _WIN32
     if (s->reseau) WSACleanup();
 #endif
+    retirer_images(s, (size_t)-1);
+    free(s->images);
     free(s->titre);
     free(s->affichage.d);
     free(s->avis);
@@ -627,7 +952,7 @@ static long longueur_annoncee(const char *d, size_t fin) {
 static char *recevoir_prise(void *contexte, size_t *taille, int *interrompu) {
     Serveur *s = contexte;
     for (;;) {
-        if (!attendre(s->ecoute, -1, interrompu)) return NULL;
+        if (!attendre(s->ecoute, s->fin_proche ? ATTENTE_FIN : -1, interrompu)) return NULL;
         s->client = accept(s->ecoute, NULL, NULL);
         if (s->client == PRISE_INVALIDE) continue;
         char *d = grym_allouer(ENTETES_MAX + 1);

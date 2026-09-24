@@ -1,5 +1,5 @@
 /* GrymoiR : base de données des entités, sur SQLite embarqué
- * Spécification : docs/grammaire.md (révision 1.36), § 16 ; docs/vm.md (révision 1.30), § 8.
+ * Spécification : docs/grammaire.md (révision 1.36), § 16 ; docs/vm.md (révision 1.31), § 8.
  */
 #include "base.h"
 #include "date.h"
@@ -234,6 +234,45 @@ void base_annuler(Base *b) {
     if (!b->transaction) return;
     b->transaction = 0;
     sqlite3_exec(b->db, "ROLLBACK;", NULL, NULL, NULL);
+}
+
+int base_valeurs(Base *b, const char *entite, const char *table, const char *champ, size_t max,
+                 char ***valeurs, size_t *n, char **erreur) {
+    *valeurs = NULL;
+    *n = 0;
+    Chaine sql = {0};
+    chaine_ajouter(&sql, "SELECT p.");
+    ajouter_nom(&sql, "c ", champ);
+    chaine_ajouter(&sql, " FROM ");
+    ajouter_nom(&sql, "e ", entite);
+    chaine_ajouter(&sql, " l JOIN ");
+    ajouter_nom(&sql, "e ", table);
+    chaine_ajouter(&sql, " p ON p.id = l.id JOIN grym_objet o ON o.id = l.id WHERE o.supprime IS NULL ORDER BY 1 "
+                         "COLLATE GRYM_TEXTE LIMIT ?");
+    sqlite3_stmt *st = NULL;
+    int rc = sqlite3_prepare_v2(b->db, sql.d, -1, &st, NULL);
+    free(sql.d);
+    if (rc != SQLITE_OK) {
+        *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+        sqlite3_finalize(st);
+        return 0;
+    }
+    sqlite3_bind_int64(st, 1, (sqlite3_int64)max);
+    *valeurs = grym_allouer((max ? max : 1) * sizeof **valeurs);
+    while ((rc = sqlite3_step(st)) == SQLITE_ROW && *n < max) {
+        const unsigned char *t = sqlite3_column_text(st, 0);
+        (*valeurs)[(*n)++] = grym_dupliquer(t ? (const char *)t : "");
+    }
+    sqlite3_finalize(st);
+    if (rc != SQLITE_DONE && rc != SQLITE_ROW) {
+        for (size_t k = 0; k < *n; k++) free((*valeurs)[k]);
+        free(*valeurs);
+        *valeurs = NULL;
+        *n = 0;
+        *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+        return 0;
+    }
+    return 1;
 }
 
 static int point_sql(Base *b, char *sql, char **erreur) {

@@ -53,6 +53,17 @@ static char *post(const char *corps) {
                          (unsigned long)strlen(corps), corps);
 }
 
+#define PART(nom, valeur) "--XyZ\r\nContent-Disposition: form-data; name=\"" nom "\"\r\n\r\n" valeur "\r\n"
+#define PARTF(nom, fichier, octets) "--XyZ\r\nContent-Disposition: form-data; name=\"" nom "\"; filename=\"" fichier \
+    "\"\r\nContent-Type: application/octet-stream\r\n\r\n" octets "\r\n"
+#define PNG "\x89PNG\r\n\x1a\nimage"
+
+static char *post_multi(const char *corps) {
+    return grym_formater("POST /reponse HTTP/1.1\r\n" HOTE COOKIE ORIGINE
+                         "Content-Type: multipart/form-data; boundary=XyZ\r\nContent-Length: %lu\r\n\r\n%s",
+                         (unsigned long)strlen(corps), corps);
+}
+
 /* Exécute src servi par le transport scripté ; les réponses restent dans *sc. */
 static void servir(const char *src, Script *sc) {
     Transport t = { sc, recevoir, envoyer };
@@ -245,6 +256,80 @@ int main(void) {
     servir("Le x vaut la réponse à « ? ».\nAfficher « [ » suivi de x suivi de « ] ».", &sc);
     CONTIENT(sc.reponses[2], "[ok]");
     NE_CONTIENT_PAS(sc.reponses[2], "[a");
+    liberer(&sc);
+
+    /* --- v2.0-b (docs/v2.md, § 10) --- */
+#define COMPOSITEURS "Un compositeur, conservé, a : un nom (texte), unique.\nUne pièce, conservée, a : un titre (texte), " \
+    "un compositeur (compositeur), une date (date), facultative, un prix (nombre), une édition (vrai ou faux), " \
+    "un tirage (vrai ou faux), facultatif.\nPour mettre un nom :\n    Le c vaut un nouveau compositeur :\n        Le nom vaut nom.\n" \
+    "    Conserver c.\nMettre « Zoé ».\nMettre « Bach ».\nMettre « élodie ».\nMettre « Oublié ».\n" \
+    "Supprimer le compositeur conservé dont le nom est « Oublié ».\n"
+    /* liens : les clés en suggestions, ordre du dictionnaire, corbeille exclue ; oui/non ; pavé numérique */
+    memset(&sc, 0, sizeof sc);
+    REQUETES(get("/"), post("q=1&c0=T&c1=Zoé&c2=&c3=12,5&c4=non&c5=&action=envoyer"), get("/"));
+    servir(COMPOSITEURS "La p vaut une nouvelle pièce saisie.\nConserver p.\n"
+           "Afficher nom du compositeur de p puis prix de p puis édition de p puis tirage de p.", &sc);
+    CONTIENT(sc.reponses[0], "list=\"l1\" autocomplete=\"off\"");
+    CONTIENT(sc.reponses[0], "<datalist id=\"l1\"><option value=\"Bach\"><option value=\"élodie\"><option value=\"Zoé\"></datalist>");
+    NE_CONTIENT_PAS(sc.reponses[0], "Oublié");
+    CONTIENT(sc.reponses[0], "name=\"c3\" value=\"\" inputmode=\"decimal\"");
+    CONTIENT(sc.reponses[0], "<select id=\"c4\" name=\"c4\"><option value=\"\" selected></option><option value=\"oui\">oui</option>");
+    CONTIENT(sc.reponses[0], "<select id=\"c5\" name=\"c5\"><option value=\"\" selected></option>");
+    CONTIENT(sc.reponses[2], "Zoé 12,5 faux absent");
+    liberer(&sc);
+
+    /* téléversement : jamais sur le disque, le nom réduit à son dernier segment, l'image affichée à sa place */
+    memset(&sc, 0, sizeof sc);
+    REQUETES(get("/"),
+             post_multi(PART("q", "1") PARTF("c0", "", "") PART("action", "envoyer") "--XyZ--\r\n"),
+             post_multi(PART("q", "1") PARTF("c0", "notes.txt", "du texte") PART("action", "envoyer") "--XyZ--\r\n"),
+             get("/"),
+             post_multi(PART("q", "1") PARTF("c0", "../../etc/a.png", PNG) PART("action", "envoyer") "--XyZ--\r\n"),
+             get("/"), get("/image/1"), get("/image/2"), get("/image/x"));
+    servir("Une fiche, conservée, a : une photo (image).\nLa f vaut une nouvelle fiche saisie.\nConserver f.\n"
+           "Afficher « Voici » puis photo de f puis « : » puis nom de fichier de photo de f.", &sc);
+    CONTIENT(sc.reponses[0], "enctype=\"multipart/form-data\"");
+    CONTIENT(sc.reponses[0], "<input type=\"file\" id=\"c0\" name=\"c0\" accept=\"image/png,image/jpeg,image/gif,image/webp\"");
+    CONTIENT(sc.reponses[3], "n&#39;est pas une image");
+    CONTIENT(sc.reponses[5], "Voici <img src=\"/image/1\" alt=\"une image PNG de 13 octets\"> : a.png");
+    CONTIENT(sc.reponses[6], "Content-Type: image/png\r\n");
+    CONTIENT(sc.reponses[6], "Content-Length: 13\r\n");
+    CONTIENT(sc.reponses[6], "\r\n\r\n" PNG);
+    CONTIENT(sc.reponses[7], "404 Not Found");
+    CONTIENT(sc.reponses[8], "404 Not Found");
+    liberer(&sc);
+
+    /* aucun fichier choisi : une réponse est attendue ; modifier garde le fichier actuel */
+    {
+        FILE *f = fopen("_essai_contrat.txt", "wb");
+        if (f) { fputs("contrat", f); fclose(f); }
+    }
+    memset(&sc, 0, sizeof sc);
+    REQUETES(post_multi(PART("q", "1") PARTF("c0", "", "") PART("action", "envoyer") "--XyZ--\r\n"), get("/"),
+             post_multi(PART("q", "1") PART("action", "annuler") "--XyZ--\r\n"),
+             get("/"), post_multi(PART("q", "2") PARTF("c0", "", "") PART("action", "envoyer") "--XyZ--\r\n"), get("/"));
+    servir("Une fiche, conservée, a : un contrat (fichier).\nLa f vaut une nouvelle fiche :\n"
+           "    Le contrat vaut le fichier « _essai_contrat.txt ».\nConserver f.\n"
+           "Essayer :\n    La g vaut une nouvelle fiche saisie.\nEn cas d'échec, afficher le motif de l'échec.\n"
+           "Saisir à nouveau f.\nAfficher nom de fichier de contrat de f.", &sc);
+    CONTIENT(sc.reponses[1], "Une réponse est attendue.");
+    CONTIENT(sc.reponses[3], "Saisie annulée.");
+    CONTIENT(sc.reponses[3], "<span class=\"actuel\">actuel : _essai_contrat.txt</span>");
+    CONTIENT(sc.reponses[5], "_essai_contrat.txt\n</pre>");
+    liberer(&sc);
+    remove("_essai_contrat.txt");
+
+    /* un envoi mal formé ; « Effacer l'écran » retire les images du fil */
+    memset(&sc, 0, sizeof sc);
+    REQUETES(grym_formater("POST /reponse HTTP/1.1\r\n" HOTE COOKIE ORIGINE
+                           "Content-Type: multipart/form-data; boundary=XyZ\r\nContent-Length: 9\r\n\r\ncharabia!"),
+             post_multi(PART("q", "1") PARTF("c0", "a.png", PNG) PART("action", "envoyer") "--XyZ--\r\n"),
+             get("/"), get("/image/1"));
+    servir("Une fiche, conservée, a : une photo (image).\nLa f vaut une nouvelle fiche saisie.\n"
+           "Afficher photo de f.\nEffacer l'écran.\nAfficher « vide ».", &sc);
+    CONTIENT(sc.reponses[0], "400 Bad Request");
+    NE_CONTIENT_PAS(sc.reponses[2], "<img");
+    CONTIENT(sc.reponses[3], "404 Not Found");
     liberer(&sc);
 
     printf("%d/%d tests réussis\n", total - echecs, total);

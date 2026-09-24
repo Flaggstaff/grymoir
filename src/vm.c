@@ -1,5 +1,5 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
- * Spécification : docs/vm.md (révision 1.30).
+ * Spécification : docs/vm.md (révision 1.31).
  */
 #include "vm.h"
 #include "vm_interne.h"
@@ -1436,13 +1436,27 @@ static int lire_champ(Formulaire *f, size_t q, char **message) {
     const ClasseVM *cl = f->o->classe;
     size_t k = ci->k;
     const char *champ = cl->champs[k], *type = cl->types[k];
-    char *ligne = f->champs[q].ligne;
+    char *ligne = f->champs[q].ligne ? f->champs[q].ligne : grym_dupliquer("");
     f->champs[q].ligne = NULL;
     char *t = ligne;
     while (*t == ' ' || *t == '\t') t++;
     size_t n = strlen(t);
     while (n && (t[n - 1] == ' ' || t[n - 1] == '\t')) t[--n] = '\0';
+    Fichier *recu = NULL;   /* un fichier téléversé par l'interface (docs/v2.md, § 10), au lieu d'un chemin */
+    if (f->champs[q].fichier_recu) {
+        recu = grym_allouer(sizeof *recu);
+        recu->octets = f->champs[q].octets;
+        recu->taille = f->champs[q].taille;
+        recu->nom = f->champs[q].nom_fichier ? f->champs[q].nom_fichier : grym_dupliquer("fichier");
+        recu->format = format_image(recu->octets, recu->taille);
+        recu->references = 1;
+        f->champs[q].octets = NULL;
+        f->champs[q].nom_fichier = NULL;
+        f->champs[q].fichier_recu = 0;
+        n = 1;   /* une réponse, même si la ligne est vide */
+    }
     if (f->champs[q].vider) {   /* « - » : le champ devient absent (§ 19) */
+        if (recu) { Valeur x = valeur_nombre(dec_zero()); x.fichier = recu; x.type = V_FICHIER; valeur_liberer(&x); }
         free(ligne);
         en_attente(f, k, vi_absent(champ));
         return 0;
@@ -1477,7 +1491,8 @@ static int lire_champ(Formulaire *f, size_t q, char **message) {
         valeur_liberer(&cherche);
     } else if (ci->fichier) {
         char *erreur = NULL;
-        Fichier *fi = lire_fichier(m, t, &erreur);
+        Fichier *fi = recu ? recu : lire_fichier(m, t, &erreur);
+        recu = NULL;
         if (fi) {
             v = valeur_nombre(dec_zero());
             v.type = V_FICHIER;
@@ -1603,7 +1618,24 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
             valeur_liberer(&ci.depart);
             ci.depart = valeur_de_depart(type, cl->departs[k]);
         }
-        Champ c = { capitale(champ), 0, type, NULL, ci.actuel && ci.facultatif, NULL, 0 };
+        Champ c;
+        memset(&c, 0, sizeof c);
+        c.libelle = capitale(champ);
+        c.type = type;
+        c.videable = ci.actuel && ci.facultatif;
+        c.facultatif = ci.facultatif;
+        if (ci.lie && m->iface.riche && m->base) {   /* un lien : les clés existantes en suggestions (§ 10) */
+            char **vals = NULL;
+            size_t nv = 0;
+            char *erreur = NULL;
+            long kc = index_champ(ci.lie, ci.cle);
+            if (kc >= 0 && base_valeurs(m->base, ci.lie->nom, ci.lie->proprietaires[kc]->nom, ci.cle, 1000, &vals, &nv, &erreur)) {
+                c.suggestions = (const char *const *)vals;
+                c.nb_suggestions = nv;
+            } else {
+                free(erreur);
+            }
+        }
         c.valeur = ci.actuel ? grym_dupliquer(ci.actuel) : ci.a_depart ? texte_valeur(m, &ci.depart) : NULL;
         f.champs[n] = c;
         f.infos[n++] = ci;
@@ -1621,6 +1653,10 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
         }
     }
     for (size_t q = 0; q < n; q++) {
+        for (size_t k2 = 0; k2 < f.champs[q].nb_suggestions; k2++) free((char *)f.champs[q].suggestions[k2]);
+        free((void *)f.champs[q].suggestions);
+        free(f.champs[q].octets);
+        free(f.champs[q].nom_fichier);
         free((char *)f.champs[q].libelle);
         free((char *)f.champs[q].valeur);
         free(f.champs[q].ligne);
@@ -2120,8 +2156,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             size_t base = pile.n - op;
             for (size_t k = 0; k < op; k++) {
                 if (k) chaine_ajouter(sortie, " ");
-                char *t = texte_valeur(m, &pile.v[base + k]);
-                chaine_ajouter(sortie, t);
+                const Valeur *v = &pile.v[base + k];
+                char *t = texte_valeur(m, v);
+                if (v->type == V_FICHIER && v->fichier->format && m->iface.afficher_image)   /* docs/v2.md, § 10 */
+                    m->iface.afficher_image(m->iface.contexte, sortie, v->fichier->octets, v->fichier->taille,
+                                            v->fichier->format, t);
+                else
+                    chaine_ajouter(sortie, t);
                 free(t);
             }
             if (code == I_AFFICHER) chaine_ajouter(sortie, "\n");
@@ -2373,7 +2414,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 ok = echouer(diag, b, debut, m2);
                 break;
             }
-            Champ c = { q.texte, 1, b->noms[op], NULL, 0, NULL, 0 };
+            Champ c;
+            memset(&c, 0, sizeof c);
+            c.libelle = q.texte;
+            c.question = 1;
+            c.type = b->noms[op];
             Demande d = { { m, 0, NULL }, &c, b->noms[op], vi_absent("réponse") };
             char *probleme = poser(m, sortie, cadres, &c, 1, valider_demande, &d, &d.a);
             free(c.ligne);

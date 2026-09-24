@@ -1,5 +1,5 @@
 /* GrymoiR : l'interface d'entrée et de sortie en console.
- * Spécification : docs/vm.md (révision 1.30), § 13 ; grammaire, § 4.3, § 17 à 19.
+ * Spécification : docs/vm.md (révision 1.31), § 13 ; grammaire, § 4.3, § 17 à 19.
  */
 #include "interface.h"
 
@@ -62,6 +62,6 @@ static void console_effacer(void *contexte, Chaine *sortie) {
 }
 
 Interface console_interface(Console *c) {
-    Interface i = { c, console_disponible, console_formulaire, console_effacer };
+    Interface i = { c, console_disponible, console_formulaire, console_effacer, 0, NULL };
     return i;
 }
