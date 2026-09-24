@@ -66,7 +66,7 @@ Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la
 
 1. **Positions des boîtes du schéma.** Où ranger qu'une entité est dessinée en haut à gauche ? Ce n'est pas du programme. Proposition : un fichier `.grymatelier` à côté du programme, texte lisible, que l'atelier recrée s'il manque (disposition automatique). Le perdre ne perd jamais rien du programme.
 2. **Un projet, un fichier ?** Aujourd'hui, un programme tient dans un fichier. Une vraie application voudra plusieurs fichiers (données, écrans, traitements). Décidé le 24 septembre 2026 : l'inclusion se conçoit en A2, dans la grammaire, avant l'éditeur de données, qui travaille d'emblée sur un projet à plusieurs fichiers.
-3. **L'éditeur de code** de l'atelier : un éditeur maison sur `QPlainTextEdit`, qui réutilise directement le calcul des suites (grammaire, § 8), ou une bibliothèque d'éditeur de code existante. À décider en A1.
+3. **L'éditeur de code** de l'atelier. Décidé le 24 septembre 2026 : un éditeur maison sur `QPlainTextEdit`, dont la coloration passe par le lexeur de GrymoiR et l'autocomplétion par le calcul des suites (grammaire, § 8), les erreurs venant de l'analyseur, sans passer par le protocole LSP. Une bibliothèque existante aurait demandé de réécrire sa coloration, et QScintilla, sous GPLv3 ou licence commerciale, aurait imposé la GPL à l'atelier.
 4. **Distribution** : l'atelier embarque ses bibliothèques Qt (outils de déploiement fournis par Qt sur macOS et Windows). La signature des exécutables pour macOS et Windows est reportée.
 
 ## 7. Ce que la charte devra dire
@@ -84,3 +84,4 @@ Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la
 |---------|------|------------|
 | 0.1 | 2026-09-24 | Proposition initiale : Qt 6, l'atelier n'écrit que du GrymoiR, réécriture chirurgicale, architecture, jalons A1 à A4, questions ouvertes |
 | 0.2 | 2026-09-24 | § 6.2 : l'inclusion se conçoit en A2, avant l'éditeur de données |
+| 0.3 | 2026-09-24 | § 6.3 : éditeur de code maison, branché sur le lexeur, les suites et l'analyseur |
