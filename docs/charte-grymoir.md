@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.28, révisée le 24 septembre 2026.
+Version 1.29, révisée le 24 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -157,9 +157,9 @@ Horizon post-v1, sans date :
 Critères de sortie de la v1.0 :
 
 1. Intégration continue : compilation sans avertissement et tests sous Linux, macOS et Windows à chaque poussée (`.github/workflows/tests.yml`). Fait.
-2. Essai manuel, dans la console Windows, d'une saisie accentuée (la Partothèque avec un compositeur « Élodie Müller »).
+2. Essai manuel, dans la console Windows, d'une saisie accentuée (la Partothèque avec un compositeur « Élodie Müller »). Fait.
 3. Modifier un objet conservé par formulaire (grammaire, § 19 : `Saisir à nouveau`). Fait.
-4. README et charte à jour.
+4. README et charte à jour. Fait.
 5. Compatibilité promise (art. 13) et numéro de format de chaque base. Fait.
 
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
@@ -219,3 +219,4 @@ Une version 1.x promet ce qui suit. Toute exception passe par une révision de l
 | 1.26 | 2026-09-24 | Art. 12 : critères de sortie de la v1.0 ; intégration continue sur les trois systèmes |
 | 1.27 | 2026-09-24 | Art. 12 : modification par formulaire faite |
 | 1.28 | 2026-09-24 | Nouvel art. 13 : compatibilité (bases, sources, comportement, hors promesse, version 2) ; art. 12 : critère 5 |
+| 1.29 | 2026-09-24 | Art. 12 : critères 2 et 4 faits ; la v1.0 attend un passage vert de l'intégration continue sur les trois systèmes |

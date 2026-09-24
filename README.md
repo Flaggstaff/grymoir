@@ -6,6 +6,44 @@ Langage de programmation francophone. Référence : `docs/charte-grymoir.md`, `d
 
 Chaque poussée compile et lance les tests sous Linux (gcc, clang, puis ASan et UBSan), macOS (clang) et Windows (MinGW-w64 gcc) : `.github/workflows/tests.yml`. Critères de sortie de la v1.0 : charte, art. 12.
 
+## Aperçu
+
+Une application console complète, base comprise : le formulaire se déduit de l'entité, une erreur annule le choix en cours et le menu revient.
+
+    Un contact, conservé, a :
+        un nom (texte), unique,
+        une naissance (date), facultative.
+
+    Pour ajouter :
+        Le c vaut un nouveau contact saisi.
+        Conserver c.
+        Afficher « Ajouté : » puis nom du c.
+
+    Pour lister :
+        Pour chaque contact conservé, par nom :
+            Afficher nom du contact sur 20 puis naissance du contact.
+
+    Le choix vaut la réponse en nombre entier à « 1 ajouter, 2 lister, 0 quitter ? ».
+    Tant que choix ≠ 0 :
+        Essayer :
+            Selon choix :
+                Cas 1, ajouter.
+                Cas 2, lister.
+        En cas d'échec, afficher « Rien n'a changé : » puis le motif de l'échec.
+        Le choix devient la réponse en nombre entier à « 1 ajouter, 2 lister, 0 quitter ? ».
+
+    1 ajouter, 2 lister, 0 quitter ? 1
+    Nom ? Élodie
+    Naissance ? 21.09.1990
+    Ajouté : Élodie
+    1 ajouter, 2 lister, 0 quitter ? 1
+    Nom ? Élodie
+    « Élodie » est déjà pris. Tapez « . » seul pour annuler.
+
+Pour aller plus loin : `exemples/partotheque.grym`, une bibliothèque de partitions (liens, genres, corbeille, modification par formulaire). La référence du langage est `docs/grammaire.md` ; ce que chaque version promet est l'art. 13 de la charte.
+
+## Compiler
+
 Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
 
     make
