@@ -511,8 +511,10 @@ static void page_question(Serveur *s, const Question *q) {
     int multipart = 0;
     for (size_t k = 0; k < q->n; k++) multipart |= est_fichier(&q->champs[k]) && !q->acceptes[k];
     char *num = grym_formater("%ld", s->numero);
-    chaine_ajouter(&c, multipart ? "<form method=\"post\" action=\"/reponse\" enctype=\"multipart/form-data\">"
-                                 : "<form method=\"post\" action=\"/reponse\">");
+    /* autocomplete="off" : chaque page nomme ses champs c0, c1…, et le navigateur proposerait sous « Choix ? »
+     * tout ce qu'on a tapé un jour dans un premier champ, noms de compositeurs compris (docs/v2.md, § 10) */
+    chaine_ajouter(&c, multipart ? "<form method=\"post\" action=\"/reponse\" autocomplete=\"off\" enctype=\"multipart/form-data\">"
+                                 : "<form method=\"post\" action=\"/reponse\" autocomplete=\"off\">");
     chaine_ajouter(&c, "<input type=\"hidden\" name=\"q\" value=\"");
     chaine_ajouter(&c, num);
     chaine_ajouter(&c, "\">\n");

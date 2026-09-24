@@ -349,6 +349,8 @@ int main(void) {
     CONTIENT(sc.reponses[0], "<select id=\"c1\" name=\"c1\"><option value=\"\" selected></option><option value=\"Bach\">Bach</option>"
                              "<option value=\"élodie\">élodie</option><option value=\"Zoé\">Zoé</option></select>");
     NE_CONTIENT_PAS(sc.reponses[0], "<datalist");
+    /* la mémoire de saisie du navigateur, rangée par nom de champ (c0, c1…), mélangerait toutes les questions */
+    CONTIENT(sc.reponses[0], "<form method=\"post\" action=\"/reponse\" autocomplete=\"off\">");
     NE_CONTIENT_PAS(sc.reponses[0], "Oublié");
     CONTIENT(sc.reponses[0], "name=\"c3\" value=\"\" inputmode=\"decimal\"");
     CONTIENT(sc.reponses[0], "<select id=\"c4\" name=\"c4\"><option value=\"\" selected></option><option value=\"oui\">oui</option>");
