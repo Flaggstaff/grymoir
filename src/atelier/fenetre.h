@@ -4,6 +4,8 @@
 
 #include <QMainWindow>
 
+#include "projet.h"
+
 class Editeur;
 class QFileSystemModel;
 class ModeleProjet;
@@ -12,6 +14,9 @@ class QListWidget;
 class QProcess;
 class QAction;
 class Aide;
+class VueSchema;
+class QTabWidget;
+class QLabel;
 
 class Fenetre : public QMainWindow {
     Q_OBJECT
@@ -48,6 +53,11 @@ private:
     int erreur_ligne = 0, erreur_colonne = 0;
     QString programme_a_lancer();          // le fichier courant s'il est un programme, sinon le programme principal
     void choisir_principal();
+    void rafraichir_schema();              // relit les entités du projet et redessine le schéma (A2-a)
+    FichierProjet projet_fichier;          // projet.grymatelier (docs/atelier.md, § 6.1)
+    VueSchema *schema;
+    QTabWidget *onglets;
+    QLabel *schema_etat;
 };
 
 #endif

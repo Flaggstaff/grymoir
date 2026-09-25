@@ -3,6 +3,8 @@
 #include "editeur.h"
 #include "execution.h"
 #include "aide.h"
+#include "projet.h"
+#include "schema.h"
 #include <QTreeWidget>
 
 #include <QApplication>
@@ -223,6 +225,76 @@ int main(int argc, char **argv) {
         VERIFIER(!a.chercher("zxqwv introuvable"));
         VERIFIER(a.aller_au_titre("16.4"));
         VERIFIER(a.texte()->textCursor().block().text().startsWith("16.4"));
+    }
+
+    // projet.grymatelier : relu tel qu'écrit, trié ; une ligne mal formée s'ignore
+    {
+        QTemporaryDir dossier;
+        FichierProjet p;
+        p.dossier = dossier.path();
+        p.programme_principal = "prog.grym";
+        p.positions.insert("œuvre", QPointF(320, 120));
+        p.positions.insert("compositeur", QPointF(40, 120));
+        VERIFIER(p.ecrire());
+        QFile f(FichierProjet::chemin(dossier.path()));
+        f.open(QIODevice::ReadOnly);
+        const QString t = QString::fromUtf8(f.readAll());
+        f.close();
+        VERIFIER(t == "Remarque : disposition de l'atelier ; sans effet sur le programme.\n"
+                      "programme principal : prog.grym\ncompositeur : 40, 120\nœuvre : 320, 120\n");
+        f.open(QIODevice::Append);
+        f.write("n'importe quoi\n");
+        f.close();
+        FichierProjet q;
+        q.lire(dossier.path());
+        VERIFIER(q.programme_principal == "prog.grym" && q.positions.size() == 2);
+        VERIFIER(q.positions.value("œuvre") == QPointF(320, 120));
+        FichierProjet vide;
+        vide.lire(dossier.filePath("absent"));
+        VERIFIER(vide.positions.isEmpty() && vide.programme_principal.isEmpty());
+    }
+
+    // Le schéma : entités de tous les fichiers (une fois chacune), héritage, complément, liens, plusieurs
+    {
+        QTemporaryDir dossier;
+        auto ecrire = [&](const QString &nom, const QString &texte) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::WriteOnly);
+            f.write(texte.toUtf8());
+        };
+        ecrire("donnees.grym", "Un genre, conservé, a : un nom (texte), unique.\n"
+                               "Une personne, conservée, a : un nom (texte), unique, un maître (personne), facultatif.\n"
+                               "Une œuvre, conservée, a : un titre (texte), un auteur (personne), des genres (genre).\n"
+                               "Un compositeur, conservé, est une personne.\nUn compositeur a : un style (texte).\n"
+                               "Un point a : un x.\n");
+        ecrire("prog.grym", "Utiliser « donnees ».\nAfficher 1.\n");
+        ecrire("faux.grym", "Le x vaut.\n");
+        QStringList problemes;
+        const QVector<EntiteSchema> e = lire_schema(dossier.path(), &problemes);
+        QStringList noms;
+        for (const auto &x : e) noms << x.nom;
+        VERIFIER(noms == QStringList({"compositeur", "genre", "personne", "œuvre"}));   // pas « point » : une classe ordinaire
+        VERIFIER(problemes == QStringList({"faux.grym"}));
+        const EntiteSchema &c = e[0], &o = e[3], &p = e[2];
+        VERIFIER(c.parent == "personne" && c.champs.size() == 1 && c.champs[0].nom == "style");
+        VERIFIER(c.fichier.endsWith("donnees.grym") && c.ligne == 4);
+        VERIFIER(o.champs.size() == 3 && o.champs[1].lien && o.champs[2].multiple && o.champs[2].lien && !o.champs[0].lien);
+        VERIFIER(p.champs[1].facultatif && p.champs[1].lien && p.champs[0].unique);
+        VueSchema vue;
+        QMap<QString, QPointF> places;
+        places.insert("genre", QPointF(500, 500));
+        vue.montrer(e, places);
+        VERIFIER(vue.nombre_de_boites() == 4);
+        VERIFIER(vue.nombre_de_liens() == 4);   // auteur, genres, maître (vers soi), héritage
+        const auto pos = vue.positions();
+        VERIFIER(pos.value("genre") == QPointF(500, 500) && pos.size() == 4);
+        // les entités nouvelles ne se chevauchent pas
+        bool chevauche = false;
+        const QStringList n = pos.keys();
+        for (int i = 0; i < n.size(); i++)
+            for (int j = i + 1; j < n.size(); j++)
+                chevauche |= QRectF(pos[n[i]], QSizeF(180, 60)).intersects(QRectF(pos[n[j]], QSizeF(180, 60)));
+        VERIFIER(!chevauche);
     }
 
     std::printf("%d/%d tests réussis\n", total - echecs, total);

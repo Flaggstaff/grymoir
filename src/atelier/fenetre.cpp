@@ -2,6 +2,7 @@
 #include "fenetre.h"
 #include "editeur.h"
 #include "aide.h"
+#include "schema.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -23,6 +24,9 @@
 #include <QSaveFile>
 #include <QSettings>
 #include <QSplitter>
+#include <QLabel>
+#include <QTabWidget>
+#include <QVBoxLayout>
 #include <QStatusBar>
 #include <QTreeView>
 
@@ -103,7 +107,33 @@ Fenetre::Fenetre() {
     droite->setStretchFactor(0, 1);
     auto *centre = new QSplitter;
     centre->addWidget(arbre);
-    centre->addWidget(droite);
+    // Deux onglets : le code, et le schéma des données (A2-a), qui se relit chaque fois qu'on l'ouvre
+    schema = new VueSchema;
+    schema_etat = new QLabel;
+    schema_etat->setWordWrap(true);
+    auto *donnees = new QWidget;
+    auto *pile = new QVBoxLayout(donnees);
+    pile->setContentsMargins(0, 0, 0, 0);
+    pile->addWidget(schema, 1);
+    pile->addWidget(schema_etat);
+    onglets = new QTabWidget;
+    onglets->addTab(droite, "Code");
+    onglets->addTab(donnees, "Données");
+    connect(onglets, &QTabWidget::currentChanged, this, [this](int k) { if (k == 1) rafraichir_schema(); });
+    auto *garder = new QTimer(this);   // la disposition s'écrit quand on cesse de déplacer les boîtes
+    garder->setSingleShot(true);
+    garder->setInterval(600);
+    connect(schema, &VueSchema::deplacee, garder, qOverload<>(&QTimer::start));
+    connect(garder, &QTimer::timeout, this, [this] {
+        projet_fichier.positions = schema->positions();
+        if (!projet_fichier.ecrire()) statusBar()->showMessage("projet.grymatelier n'a pas pu être écrit.", 5000);
+    });
+    connect(schema, &VueSchema::ouvrir, this, [this](const QString &f, int ligne) {
+        onglets->setCurrentIndex(0);
+        ouvrir_fichier(f);
+        if (QFileInfo(fichier).absoluteFilePath() == QFileInfo(f).absoluteFilePath()) editeur->aller_a(ligne, 1);
+    });
+    centre->addWidget(onglets);
     centre->setStretchFactor(1, 1);
     centre->setSizes({220, 900});
     setCentralWidget(centre);
@@ -174,7 +204,16 @@ void Fenetre::ouvrir_projet(const QString &dossier) {
     editeur->setEnabled(false);
     erreurs->clear();
     arbre->setRootIndex(modele->setRootPath(dossier));
-    QSettings().setValue("dernier projet", dossier);
+    QSettings reglages;
+    reglages.setValue("dernier projet", dossier);
+    projet_fichier.lire(dossier);
+    // le programme principal quittait autrefois les réglages de la machine : il déménage dans le projet
+    const QString ancien = reglages.value("programme principal/" + QFileInfo(dossier).absoluteFilePath()).toString();
+    if (projet_fichier.programme_principal.isEmpty() && !ancien.isEmpty() && QFileInfo::exists(ancien)) {
+        projet_fichier.programme_principal = QDir(dossier).relativeFilePath(ancien);
+        projet_fichier.ecrire();
+    }
+    if (onglets->currentIndex() == 1) rafraichir_schema();
     mettre_a_jour_titre();
 }
 
@@ -295,13 +334,13 @@ void Fenetre::lancer() {
 
 QString Fenetre::programme_a_lancer() {
     if (!editeur->declarations()) return QFileInfo(fichier).absoluteFilePath();
-    QSettings reglages;
-    const QString cle = "programme principal/" + QFileInfo(projet).absoluteFilePath();
-    const QString retenu = reglages.value(cle).toString();
-    if (!retenu.isEmpty() && QFileInfo::exists(retenu) && modele->sorte(retenu) == ModeleProjet::Programme) return retenu;
+    auto retenu = [this] {
+        return projet_fichier.programme_principal.isEmpty() ? QString()
+                                                            : QDir(projet).absoluteFilePath(projet_fichier.programme_principal);
+    };
+    if (!retenu().isEmpty() && QFileInfo::exists(retenu()) && modele->sorte(retenu()) == ModeleProjet::Programme) return retenu();
     choisir_principal();
-    const QString choisi = reglages.value(cle).toString();
-    return QFileInfo::exists(choisi) ? choisi : QString();
+    return QFileInfo::exists(retenu()) ? retenu() : QString();
 }
 
 // Les programmes du projet ; un seul est retenu sans question, plusieurs font demander, une fois.
@@ -324,7 +363,8 @@ void Fenetre::choisir_principal() {
         choix = QInputDialog::getItem(this, "Programme principal", "Programme à lancer :", programmes, 0, false, &ok);
         if (!ok) return;
     }
-    QSettings().setValue("programme principal/" + QFileInfo(projet).absoluteFilePath(), QDir(projet).absoluteFilePath(choix));
+    projet_fichier.programme_principal = choix;   // dans projet.grymatelier : une information du projet
+    if (!projet_fichier.ecrire()) statusBar()->showMessage("projet.grymatelier n'a pas pu être écrit.", 5000);
     statusBar()->showMessage(QString("Programme principal : « %1 ».").arg(choix), 4000);
 }
 
@@ -361,4 +401,23 @@ void Fenetre::execution_finie() {
     action_arreter->setEnabled(false);
     statusBar()->showMessage(erreur_execution.isEmpty() ? "Exécution terminée." : "Exécution terminée sur une erreur.", 5000);
     montrer_diagnostic();
+}
+
+void Fenetre::rafraichir_schema() {
+    if (projet.isEmpty()) return;
+    QStringList problemes;
+    const QVector<EntiteSchema> entites = lire_schema(projet, &problemes);
+    schema->montrer(entites, projet_fichier.positions);
+    // une entité nouvelle vient de recevoir sa place : on la garde, pour qu'elle ne bouge plus
+    const auto positions = schema->positions();
+    if (positions != projet_fichier.positions) {
+        projet_fichier.positions = positions;
+        projet_fichier.ecrire();
+    }
+    QString t = entites.isEmpty() ? QString("Aucune entité conservée dans ce projet.")
+                                  : QString("%1 entité%2. Glissez les boîtes pour les ranger ; double-clic : la déclaration.")
+                                        .arg(entites.size()).arg(entites.size() > 1 ? "s" : "");
+    if (!problemes.isEmpty())
+        t += "\nNon lus, car ils contiennent une erreur : " + problemes.join(", ") + ".";
+    schema_etat->setText(t);
 }
