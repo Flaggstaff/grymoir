@@ -52,14 +52,22 @@ Coût accepté : `quand`, `ouvrir` et `fermer` deviennent des mots de constructi
 - Sans rien écrire : un clic sur le titre d'une colonne trie la liste à l'écran, sans changer le programme ; un champ absent s'affiche vide.
 - Écartés pour l'instant : colonnes calculées, largeur et alignement réglés à la main.
 
+### 3.3 La disposition *(validé le 25 septembre 2026)*
+
+On décrit l'ordre et le voisinage, jamais des pixels : le texte reste lisible, et l'écran s'adapte à toute taille, police ou système. L'éditeur d'écrans d'A4 écrira les mêmes phrases.
+
+- Sans rien écrire : les contrôles s'empilent de haut en bas, dans l'ordre écrit ; des boutons qui se suivent se rangent sur une ligne, en bas à droite ; une liste prend la hauteur libre ; la fenêtre se redimensionne.
+- `côte à côte :` range son bloc à l'horizontale, `l'un sous l'autre :` à la verticale ; les blocs s'emboîtent.
+- Le titre de la fenêtre vient du nom de l'écran (« l'écran des compositeurs » : « Compositeurs » ; « l'écran d'accueil » : « Accueil »), ou se donne entre guillemets : `L'écran des compositeurs, « Nos compositeurs », montre :`.
+- Écartés : positions et tailles au pixel, marges réglées à la main, onglets (à concevoir plus tard).
+
 ## 4. Questions à trancher
 
-1. La disposition des contrôles dans la fenêtre.
-2. Les autres contrôles : champ de saisie, case à cocher, texte fixe, image.
-3. Les événements possibles, et ce qu'ils nomment (`le compositeur` dans `Quand on choisit un compositeur`).
-4. Plusieurs écrans ouverts, écran dans un écran.
-5. La forme compacte.
-6. Les écrans en console et dans le navigateur (`grym lancer`, `grym servir`) : repli, ou refus expliqué.
+1. Les autres contrôles : champ de saisie, case à cocher, texte fixe, image.
+2. Les événements possibles, et ce qu'ils nomment (`le compositeur` dans `Quand on choisit un compositeur`).
+3. Plusieurs écrans ouverts, écran dans un écran.
+4. La forme compacte.
+5. Les écrans en console et dans le navigateur (`grym lancer`, `grym servir`) : repli, ou refus expliqué.
 
 ---
 
@@ -69,3 +77,4 @@ Coût accepté : `quand`, `ouvrir` et `fermer` deviennent des mots de constructi
 |---------|------|------------|
 | 0.1 | 2026-09-25 | Proposition initiale : thèse, exemple de référence, trois piliers validés, questions à trancher |
 | 0.2 | 2026-09-25 | § 3.2 : colonnes d'une liste |
+| 0.3 | 2026-09-25 | § 3.3 : disposition |
