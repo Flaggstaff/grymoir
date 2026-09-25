@@ -72,12 +72,27 @@ Un écran est un objet : ses zones de saisie sont ses champs (charte, art. 6).
 - Une zone de saisie n'est jamais conservée : elle vit le temps de l'écran. `de l'écran` désigne l'écran de l'événement en cours ; ailleurs, c'est une erreur d'analyse.
 - Reportés : images, textes sur plusieurs lignes, graphiques.
 
+### 3.5 Les événements *(validé le 25 septembre 2026)*
+
+| Événement | Quand il arrive |
+|---|---|
+| `Quand on ouvre l'écran des compositeurs :` | avant le premier affichage |
+| `Quand on clique sur « Nouveau » dans l'écran des compositeurs :` | un clic sur ce bouton |
+| `Quand on choisit un compositeur dans l'écran des compositeurs :` | double-clic, ou Entrée, sur une ligne |
+| `Quand on change le pays dans l'écran de recherche :` | une zone validée : Entrée, ou quittée après modification |
+| `Quand on ferme l'écran des compositeurs :` | à la fermeture, par `Fermer l'écran.` ou par la croix |
+
+- `Quand on choisit un compositeur` nomme la ligne `compositeur` dans son corps, comme un paramètre d'action (§ 9.3). Dans tout événement, `le compositeur choisi de l'écran` désigne la ligne sélectionnée, ou `absent`.
+- Un bouton sans événement est une erreur d'analyse ; « Fermer » aussi s'écrit, sans comportement implicite.
+- Un événement qui cite un bouton ou une zone inexistants est une erreur d'analyse, avec la correction la plus proche.
+- La fermeture ne se refuse pas.
+- Deux listes de la même entité dans un écran rendent `Quand on choisit …` ambigu : erreur pour l'instant.
+
 ## 4. Questions à trancher
 
-1. Les événements possibles, et ce qu'ils nomment (`le compositeur` dans `Quand on choisit un compositeur`).
-2. Plusieurs écrans ouverts, écran dans un écran.
-3. La forme compacte.
-4. Les écrans en console et dans le navigateur (`grym lancer`, `grym servir`) : repli, ou refus expliqué.
+1. Plusieurs écrans ouverts, écran dans un écran.
+2. La forme compacte.
+3. Les écrans en console et dans le navigateur (`grym lancer`, `grym servir`) : repli, ou refus expliqué.
 
 ---
 
@@ -89,3 +104,4 @@ Un écran est un objet : ses zones de saisie sont ses champs (charte, art. 6).
 | 0.2 | 2026-09-25 | § 3.2 : colonnes d'une liste |
 | 0.3 | 2026-09-25 | § 3.3 : disposition |
 | 0.4 | 2026-09-25 | § 3.4 : contrôles ; un écran est un objet, ses zones de saisie sont ses champs |
+| 0.5 | 2026-09-25 | § 3.5 : événements |
