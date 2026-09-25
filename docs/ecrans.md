@@ -95,10 +95,30 @@ Un écran est un objet : ses zones de saisie sont ses champs (charte, art. 6).
 - Conséquence : la charte, art. 7, reçoit une exception écrite : « `Ouvrir` un écran découpe l'exécution en transactions, une par événement ».
 - Écartée : une seule transaction pour toute la durée d'un écran, qui verrouillerait la base et perdrait tout au moindre échec.
 
+### 3.7 La forme compacte *(validé le 25 septembre 2026)*
+
+Mêmes règles que la grammaire, § 11 : mots-clés à souligné, noms à soulignés internes, blocs fermés par `_fin`, champs par le point. Le nom d'un écran garde sa préposition (« l'écran des compositeurs » : `des_compositeurs` ; « l'écran d'accueil » : `d'accueil`), pour que l'aller-retour ne perde rien.
+
+| Littéraire | Compacte |
+|---|---|
+| `L'écran des compositeurs, « Nos compositeurs », montre :` | `_écran des_compositeurs « Nos compositeurs »` … `_fin` |
+| `la liste des compositeurs conservés, par nom, avec le nom et la naissance` | `_liste compositeur _conservé _par nom _avec nom ; naissance` |
+| `un bouton « Nouveau »` | `_bouton « Nouveau »` |
+| `le texte « Bienvenue »` | `_texte « Bienvenue »` |
+| `un pays (texte), « Suisse » au départ` | `_un pays (texte) _départ « Suisse »` |
+| `côte à côte :`, `l'un sous l'autre :` | `_côte_à_côte` … `_fin`, `_l'un_sous_l'autre` … `_fin` |
+| `le pays de l'écran` | `_écran.pays` |
+| `le compositeur choisi de l'écran` | `_écran.compositeur_choisi` |
+| `Quand on clique sur « Nouveau » dans l'écran des compositeurs :` | `_quand _clique « Nouveau » _dans des_compositeurs` … `_fin` |
+| `Quand on choisit un compositeur dans l'écran des compositeurs :` | `_quand _choisit _un compositeur _dans des_compositeurs` … `_fin` |
+| `Quand on change le pays dans l'écran de recherche :` | `_quand _change pays _dans de_recherche` … `_fin` |
+| `Quand on ouvre l'écran …`, `Quand on ferme l'écran …` | `_quand _ouvre …`, `_quand _ferme …` |
+| `Ouvrir l'écran des compositeurs.`, `Ouvrir la fiche de c.` | `_ouvrir des_compositeurs`, `_ouvrir _fiche c` |
+| `Fermer l'écran.` | `_fermer` |
+
 ## 4. Questions à trancher
 
-1. La forme compacte.
-2. Les écrans en console et dans le navigateur (`grym lancer`, `grym servir`) : repli, ou refus expliqué.
+1. Les écrans en console et dans le navigateur (`grym lancer`, `grym servir`) : repli, ou refus expliqué.
 
 ---
 
@@ -112,3 +132,4 @@ Un écran est un objet : ses zones de saisie sont ses champs (charte, art. 6).
 | 0.4 | 2026-09-25 | § 3.4 : contrôles ; un écran est un objet, ses zones de saisie sont ses champs |
 | 0.5 | 2026-09-25 | § 3.5 : événements |
 | 0.6 | 2026-09-25 | § 3.6 : écrans empilés ; `Ouvrir` valide ce qui précède, une transaction par événement |
+| 0.7 | 2026-09-25 | § 3.7 : forme compacte |
