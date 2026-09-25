@@ -58,3 +58,48 @@ jobs:
         run: |
           for f in exemples/*.grym; do ./grym formater "$f" > /dev/null; done
           git diff --exit-code exemples
+
+  # L'atelier (docs/atelier.md) : Qt 6 et CMake ; ses essais tournent sans écran (QT_QPA_PLATFORM=offscreen).
+  atelier:
+    name: atelier, ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt 6 (Ubuntu)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev cmake
+      - name: Qt 6 (macOS)
+        if: runner.os == 'macOS'
+        run: brew install qt
+      - name: Construction
+        run: |
+          cmake -B construction -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix qt 2>/dev/null || true)"
+          cmake --build construction --parallel
+      - name: Essais
+        run: ctest --test-dir construction --output-on-failure
+
+  atelier-windows:
+    name: atelier, windows (MinGW-w64, Qt 6)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-qt6-base
+      - name: Construction
+        run: |
+          cmake -B construction -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build construction
+      - name: Essais
+        run: ctest --test-dir construction --output-on-failure

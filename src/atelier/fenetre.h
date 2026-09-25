@@ -8,6 +8,8 @@ class Editeur;
 class QFileSystemModel;
 class QTreeView;
 class QListWidget;
+class QProcess;
+class QAction;
 
 class Fenetre : public QMainWindow {
     Q_OBJECT
@@ -27,12 +29,19 @@ private:
     bool quitter_fichier();   // faux : l'utilisateur renonce
     void mettre_a_jour_titre();
     void montrer_diagnostic();
+    void lancer();
+    void arreter();
+    void execution_finie();
 
     QString projet, fichier;
     Editeur *editeur;
     QFileSystemModel *modele;
     QTreeView *arbre;
     QListWidget *erreurs;
+    QProcess *execution = nullptr;         // le programme lancé, dans son propre processus
+    QAction *action_lancer, *action_arreter;
+    QString erreur_execution;              // la dernière erreur d'exécution, en clair
+    int erreur_ligne = 0, erreur_colonne = 0;
 };
 
 #endif

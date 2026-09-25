@@ -60,7 +60,11 @@ L'atelier modifie **la seule phrase concernée**, à sa position dans la source,
 | A3 | Les écrans dans le langage : fenêtres, listes, fiches, boutons, modèle par événements. Conception phrase par phrase dans la grammaire, avant tout code |
 | A4 | Éditeur d'écrans : génération d'une liste et d'une fiche par entité, en GrymoiR modifiable ; agencement à la souris |
 
-État de A1 (24 septembre 2026) : fait, la fenêtre, l'ouverture d'un projet (un dossier, ou le dernier ouvert), la liste de ses fichiers `.grym` et `.grymc`, l'éditeur (numéros de ligne, coloration par le lexeur, première erreur de l'analyseur soulignée en direct, sa ligne en rouge dans la marge, son message au survol et dans le panneau du bas, un clic y mène), l'enregistrement sûr (écrit à côté, puis remplace). Reste : le bouton « Lancer », l'intégration continue sur les trois systèmes.
+État de A1 (24 septembre 2026) : fait. La fenêtre, l'ouverture d'un projet (un dossier, ou le dernier ouvert), la liste de ses fichiers `.grym` et `.grymc`, l'éditeur (numéros de ligne, coloration par le lexeur, première erreur de l'analyseur soulignée en direct, sa ligne en rouge dans la marge, son message au survol et dans le panneau du bas, un clic y mène), l'enregistrement sûr (écrit à côté, puis remplace).
+
+« Lancer » (Ctrl+R, Cmd+R sous macOS) enregistre le fichier, refuse de lancer s'il porte une erreur connue, puis exécute `grym-atelier --lancer fichier`, décidé le 24 septembre 2026 : un processus à part, pour que l'atelier survive à tout ce qui arrive au programme (charte, principe 1). Le programme a sa fenêtre : le fil de ce qu'il affiche (texte, images, fiches), les réponses acceptées recopiées dans le fil comme en console, et les champs de la question en cours, avec les menus du § 10 de `docs/v2.md` (lien, vrai ou faux), un bouton « Choisir… » pour un fichier ou une image, la case « vider », le refus sous le champ refusé. La machine tourne dans un fil à elle : la fenêtre reste vivante pendant un long calcul. « Arrêter », dans l'atelier ou dans la fenêtre du programme, lève l'interruption de la machine (docs/vm.md, § 6), qui annule l'exécution ; fermer la fenêtre en cours d'exécution fait de même. L'atelier demande l'arrêt par SIGTERM (sous Windows, par la fermeture de la fenêtre), puis, après cinq secondes sans réponse, met fin au processus : SQLite annule alors la transaction inachevée. L'erreur d'exécution, lue sur la sortie d'erreur au format de `grym lancer`, s'ajoute au panneau du bas, et un clic mène à sa ligne.
+
+Intégration continue : l'atelier se construit et ses essais tournent sous Ubuntu, macOS et Windows (MSYS2), dans `.github/workflows/tests.yml`.
 
 Construction : `cmake -B construction`, puis `cmake --build construction` ; essais sans fenêtre : `ctest --test-dir construction` (`tests/test_atelier.cpp`). Le cœur est compilé une seconde fois par CMake, depuis les mêmes sources que le `Makefile`.
 
@@ -90,3 +94,4 @@ Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la
 | 0.2 | 2026-09-24 | § 6.2 : l'inclusion se conçoit en A2, avant l'éditeur de données |
 | 0.3 | 2026-09-24 | § 6.3 : éditeur de code maison, branché sur le lexeur, les suites et l'analyseur |
 | 0.4 | 2026-09-24 | § 4 : Qt 6.4 au moins ; § 5 : A1 commencé (fenêtre, projet, éditeur, coloration, erreurs en direct) |
+| 0.5 | 2026-09-24 | § 5 : A1 fait ; « Lancer » dans un processus à part, fenêtre d'exécution, arrêt, intégration continue |
