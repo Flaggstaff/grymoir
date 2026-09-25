@@ -11,6 +11,7 @@ class QTreeView;
 class QListWidget;
 class QProcess;
 class QAction;
+class Aide;
 
 class Fenetre : public QMainWindow {
     Q_OBJECT
@@ -41,6 +42,7 @@ private:
     QListWidget *erreurs;
     QProcess *execution = nullptr;         // le programme lancé, dans son propre processus
     QAction *action_lancer, *action_arreter;
+    Aide *aide = nullptr;                  // la grammaire, ouverte au premier F1 (§ 6.5)
     QString erreur_execution;              // la dernière erreur d'exécution, en clair
     QString erreur_fichier;                // le fichier de cette erreur (le programme, ou un fichier utilisé)
     int erreur_ligne = 0, erreur_colonne = 0;

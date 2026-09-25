@@ -35,8 +35,10 @@ endif()
 
 add_executable(grym-atelier MACOSX_BUNDLE WIN32
     src/atelier/principal.cpp src/atelier/fenetre.cpp src/atelier/editeur.cpp src/atelier/coloration.cpp
-    src/atelier/execution.cpp)
+    src/atelier/execution.cpp src/atelier/aide.cpp)
 target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets)
+# La grammaire, embarquée : l'aide de l'atelier est toujours celle de sa version (docs/atelier.md, § 6.5).
+qt_add_resources(grym-atelier "documentation" PREFIX "/documentation" BASE docs FILES docs/grammaire.md)
 set_target_properties(grym-atelier PROPERTIES
     MACOSX_BUNDLE_BUNDLE_NAME "GrymoiR"
     MACOSX_BUNDLE_GUI_IDENTIFIER "ch.grymoir.atelier")
@@ -47,7 +49,8 @@ endif()
 # Essais de l'atelier, sans fenêtre (QT_QPA_PLATFORM=offscreen) : ctest --test-dir construction
 enable_testing()
 add_executable(test_atelier tests/test_atelier.cpp src/atelier/coloration.cpp src/atelier/editeur.cpp
-    src/atelier/execution.cpp)
+    src/atelier/execution.cpp src/atelier/aide.cpp)
+qt_add_resources(test_atelier "documentation_essais" PREFIX "/documentation" BASE docs FILES docs/grammaire.md)
 target_include_directories(test_atelier PRIVATE src/atelier)
 target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets)
 add_test(NAME atelier COMMAND test_atelier)

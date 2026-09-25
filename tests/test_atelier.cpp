@@ -2,6 +2,8 @@
 #include "coloration.h"
 #include "editeur.h"
 #include "execution.h"
+#include "aide.h"
+#include <QTreeWidget>
 
 #include <QApplication>
 #include <QComboBox>
@@ -206,6 +208,21 @@ int main(int argc, char **argv) {
             QApplication::processEvents(QEventLoop::AllEvents, 20);
         VERIFIER(e.findChild<QTextBrowser *>()->toPlainText().contains("81"));
         e.close();
+    }
+
+    // L'aide : la grammaire embarquée, son sommaire, la recherche et les titres
+    {
+        Aide a;
+        QStringList titres;
+        for (int k = 0; k < a.table()->topLevelItemCount(); k++) titres << a.table()->topLevelItem(k)->text(0);
+        VERIFIER(titres.contains("21. Fichiers utilisés (atelier, A2)") || titres.join("|").contains("21. Fichiers utilisés"));
+        VERIFIER(titres.size() >= 21);
+        VERIFIER(a.texte()->toPlainText().contains("Utiliser « données »."));
+        VERIFIER(a.chercher("Utilisation circulaire"));
+        VERIFIER(a.texte()->textCursor().selectedText().compare("Utilisation circulaire", Qt::CaseInsensitive) == 0);
+        VERIFIER(!a.chercher("zxqwv introuvable"));
+        VERIFIER(a.aller_au_titre("16.4"));
+        VERIFIER(a.texte()->textCursor().block().text().startsWith("16.4"));
     }
 
     std::printf("%d/%d tests réussis\n", total - echecs, total);

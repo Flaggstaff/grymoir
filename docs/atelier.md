@@ -74,10 +74,12 @@ Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la
 
 ## 6. Questions ouvertes
 
-1. **Positions des boîtes du schéma.** Où ranger qu'une entité est dessinée en haut à gauche ? Ce n'est pas du programme. Proposition : un fichier `.grymatelier` à côté du programme, texte lisible, que l'atelier recrée s'il manque (disposition automatique). Le perdre ne perd jamais rien du programme.
+1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
 2. **Un projet, un fichier ?** Aujourd'hui, un programme tient dans un fichier. Une vraie application voudra plusieurs fichiers (données, écrans, traitements). Décidé le 24 septembre 2026 : l'inclusion se conçoit en A2, dans la grammaire, avant l'éditeur de données, qui travaille d'emblée sur un projet à plusieurs fichiers.
 3. **L'éditeur de code** de l'atelier. Décidé le 24 septembre 2026 : un éditeur maison sur `QPlainTextEdit`, dont la coloration passe par le lexeur de GrymoiR et l'autocomplétion par le calcul des suites (grammaire, § 8), les erreurs venant de l'analyseur, sans passer par le protocole LSP. Une bibliothèque existante aurait demandé de réécrire sa coloration, et QScintilla, sous GPLv3 ou licence commerciale, aurait imposé la GPL à l'atelier.
 4. **Distribution** : l'atelier embarque ses bibliothèques Qt (outils de déploiement fournis par Qt sur macOS et Windows). La signature des exécutables pour macOS et Windows est reportée.
+5. **Aide.** Décidé le 24 septembre 2026, fait : menu « Aide », « Le langage GrymoiR » (F1, Cmd+? sous macOS). La grammaire (`docs/grammaire.md`) est embarquée dans l'exécutable : l'aide est toujours celle de sa version, même hors ligne. Sommaire des sections à gauche, recherche en haut (Entrée : suivant, Maj+Entrée : précédent, Ctrl+F ou Cmd+F pour y aller). Plus tard : l'aide en contexte (F1 sur `Selon` ouvre sa section), et un guide pour débuter, à écrire à part, la grammaire étant une spécification plutôt qu'un manuel.
+6. **Faire évoluer la grammaire.** Demandé le 24 septembre 2026 : prévoir une manière de faire évoluer la grammaire. Le besoin reste à préciser avant toute conception.
 
 ## 7. Ce que la charte devra dire
 
@@ -98,3 +100,4 @@ Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la
 | 0.4 | 2026-09-24 | § 4 : Qt 6.4 au moins ; § 5 : A1 commencé (fenêtre, projet, éditeur, coloration, erreurs en direct) |
 | 0.5 | 2026-09-24 | § 5 : A1 fait ; « Lancer » dans un processus à part, fenêtre d'exécution, arrêt, intégration continue |
 | 0.6 | 2026-09-24 | § 5 : A2 commencé, fichiers utilisés (grammaire, § 21), programme principal |
+| 0.7 | 2026-09-24 | § 6.1 : `projet.grymatelier` ; § 6.5 : aide, la grammaire embarquée ; § 6.6 : faire évoluer la grammaire, à préciser |

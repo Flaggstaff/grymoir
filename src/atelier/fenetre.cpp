@@ -1,6 +1,7 @@
 // GrymoiR : l'atelier, fenêtre principale.
 #include "fenetre.h"
 #include "editeur.h"
+#include "aide.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -125,6 +126,15 @@ Fenetre::Fenetre() {
     action_arreter->setEnabled(false);
     programme->addSeparator();
     programme->addAction("Choisir le programme principal…", this, &Fenetre::choisir_principal);
+    QMenu *menu_aide = menuBar()->addMenu("Aide");
+    QAction *langage = menu_aide->addAction("Le langage GrymoiR", this, [this] {
+        if (!aide) aide = new Aide(this);
+        aide->setWindowFlag(Qt::Window);
+        aide->show();
+        aide->raise();
+        aide->activateWindow();
+    });
+    langage->setShortcut(QKeySequence::HelpContents);   // F1 ; Cmd+? sous macOS
     QToolBar *barre = addToolBar("Programme");
     barre->setMovable(false);
     barre->addAction(action_lancer);
