@@ -82,6 +82,7 @@ QVector<EntiteSchema> lire_schema(const QString &dossier, QStringList *problemes
                     s.facultatif = ch->entier & 1;
                     s.cascade = ch->entier & 2;
                     s.multiple = ch->forme == 3;
+                    s.feminin = ch->forme == 2;
                     e.champs << s;
                 }
             }
@@ -262,6 +263,19 @@ VueSchema::VueSchema(QWidget *parent) : QGraphicsView(parent), scene_(new QGraph
     setRenderHint(QPainter::Antialiasing);
     setDragMode(QGraphicsView::ScrollHandDrag);
     setBackgroundBrush(QColor(0xf3, 0xf3, 0xf0));
+    connect(scene_, &QGraphicsScene::selectionChanged, this, [this] {
+        if (en_construction) return;
+        const auto choix = scene_->selectedItems();
+        const auto *b = choix.isEmpty() ? nullptr : dynamic_cast<Boite *>(choix.first());
+        emit choisie(b ? b->entite.nom : QString());
+    });
+}
+
+void VueSchema::choisir(const QString &entite) {
+    en_construction = true;   // choisir par le programme n'émet rien
+    for (QGraphicsItem *i : scene_->items())
+        if (auto *b = dynamic_cast<Boite *>(i)) b->setSelected(b->entite.nom == entite);
+    en_construction = false;
 }
 
 void VueSchema::montrer(const QVector<EntiteSchema> &e, const QMap<QString, QPointF> &positions) {

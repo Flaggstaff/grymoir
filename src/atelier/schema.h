@@ -10,7 +10,7 @@
 
 struct ChampSchema {
     QString nom, type;
-    bool unique = false, facultatif = false, multiple = false, cascade = false, lien = false;
+    bool unique = false, facultatif = false, multiple = false, cascade = false, lien = false, feminin = false;
 };
 
 struct EntiteSchema {
@@ -35,10 +35,12 @@ public:
     QMap<QString, QPointF> positions() const;
     int nombre_de_boites() const;
     int nombre_de_liens() const;
+    void choisir(const QString &entite);   // sélectionne la boîte, sans rien émettre de plus que « choisie »
 
 signals:
     void deplacee();                                        // une boîte a bougé : la disposition est à garder
     void ouvrir(const QString &fichier, int ligne);          // double-clic : la déclaration dans le code
+    void choisie(const QString &entite);                     // la boîte choisie (vide : aucune)
 
 private:
     void relier();

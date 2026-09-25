@@ -5,6 +5,7 @@
 #include "aide.h"
 #include "projet.h"
 #include "schema.h"
+#include "reecriture.h"
 #include <QTreeWidget>
 
 #include <QApplication>
@@ -295,6 +296,77 @@ int main(int argc, char **argv) {
             for (int j = i + 1; j < n.size(); j++)
                 chevauche |= QRectF(pos[n[i]], QSizeF(180, 60)).intersects(QRectF(pos[n[j]], QSizeF(180, 60)));
         VERIFIER(!chevauche);
+    }
+
+    // Réécriture chirurgicale (A2-b) : seules les phrases concernées changent ; un geste qui casse est annulé
+    {
+        QTemporaryDir dossier;
+        auto ecrire = [&](const QString &nom, const QString &texte) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::WriteOnly);
+            f.write(texte.toUtf8());
+        };
+        auto lire = [&](const QString &nom) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::ReadOnly);
+            return QString::fromUtf8(f.readAll());
+        };
+        const QString donnees = "Remarque :   à   garder   tel quel.\n"
+                                "Un genre, conservé, a : un nom (texte), unique.\n"
+                                "Une œuvre, conservée, a :\n    un titre (texte),\n    des genres (genre).\n"
+                                "Le double d'un n vaut n × 2.\n";
+        ecrire("donnees.grym", donnees);
+        ecrire("prog.grym", "Utiliser « donnees ».\nPour chaque œuvre conservée :\n    Afficher titre de l'œuvre.\n");
+        Geste g;
+        ChampVoulu prix;
+        prix.nom = "prix";
+        prix.type = "nombre";
+        prix.facultatif = true;
+        VERIFIER(ajouter_champ(dossier.path(), "œuvre", prix, &g).isEmpty());
+        VERIFIER(lire("donnees.grym") == "Remarque :   à   garder   tel quel.\n"
+                                         "Un genre, conservé, a : un nom (texte), unique.\n"
+                                         "Une œuvre, conservée, a :\n    un titre (texte),\n    des genres (genre),\n"
+                                         "    un prix (nombre), facultatif.\n"
+                                         "Le double d'un n vaut n × 2.\n");
+        VERIFIER(g.avant.size() == 1 && annuler_geste(g).isEmpty() && lire("donnees.grym") == donnees);
+        // renommer un champ que le programme lit : refusé, le fichier revient
+        ChampVoulu nom;
+        nom.nom = "nom";
+        nom.type = "texte";
+        const QString refus = modifier_champ(dossier.path(), "œuvre", "titre", nom, &g);
+        VERIFIER(refus.startsWith("Geste annulé : il casserait « prog.grym », ligne 3"));
+        VERIFIER(lire("donnees.grym") == donnees);
+        // changer un type, une unicité : la seule phrase de l'entité change
+        ChampVoulu titre;
+        titre.nom = "titre";
+        titre.type = "texte";
+        titre.unique = true;
+        VERIFIER(modifier_champ(dossier.path(), "œuvre", "titre", titre, &g).isEmpty());
+        VERIFIER(lire("donnees.grym").contains("    un titre (texte), unique,\n    des genres (genre).\n"));
+        annuler_geste(g);
+        // renommer une entité : la déclaration et les liens qui la désignent suivent
+        VERIFIER(renommer_entite(dossier.path(), "genre", "style", &g).isEmpty());
+        VERIFIER(lire("donnees.grym").contains("Un style, conservé, a :\n    un nom (texte), unique.\n"));
+        VERIFIER(lire("donnees.grym").contains("    des genres (style).\n"));
+        VERIFIER(lire("donnees.grym").startsWith("Remarque :   à   garder   tel quel.\n"));
+        annuler_geste(g);
+        // une entité nouvelle, après la dernière déclaration
+        VERIFIER(ajouter_entite(dossier.path(), dossier.filePath("donnees.grym"), "partition", true, &g).isEmpty());
+        VERIFIER(lire("donnees.grym").contains("    des genres (genre).\nUne partition, conservée, a :\n    un nom (texte), unique.\n"
+                                               "Le double"));
+        annuler_geste(g);
+        // supprimer une entité qu'une autre désigne : refusé ; la dernière d'un champ aussi
+        VERIFIER(supprimer_entite(dossier.path(), "genre", &g).startsWith("Geste annulé"));
+        VERIFIER(lire("donnees.grym") == donnees);
+        VERIFIER(supprimer_champ(dossier.path(), "genre", "nom", &g).contains("une entité garde au moins un champ"));
+        // supprimer un champ que personne ne lit
+        VERIFIER(supprimer_champ(dossier.path(), "œuvre", "genres", &g).isEmpty());
+        VERIFIER(lire("donnees.grym").contains("Une œuvre, conservée, a :\n    un titre (texte).\nLe double"));
+        annuler_geste(g);
+        VERIFIER(lire("donnees.grym") == donnees);
+        // un nom de champ mal formé
+        prix.nom = "prix (TTC)";
+        VERIFIER(ajouter_champ(dossier.path(), "œuvre", prix, &g).contains("ni ponctuation"));
     }
 
     std::printf("%d/%d tests réussis\n", total - echecs, total);

@@ -5,6 +5,11 @@
 #include <QMainWindow>
 
 #include "projet.h"
+#include "reecriture.h"
+#include "schema.h"
+
+#include <QVector>
+#include <functional>
 
 class Editeur;
 class QFileSystemModel;
@@ -15,6 +20,7 @@ class QProcess;
 class QAction;
 class Aide;
 class VueSchema;
+class PanneauEntite;
 class QTabWidget;
 class QLabel;
 
@@ -58,6 +64,18 @@ private:
     VueSchema *schema;
     QTabWidget *onglets;
     QLabel *schema_etat;
+    PanneauEntite *panneau;
+    QAction *action_annuler_geste;
+    QVector<Geste> gestes;                 // les gestes de l'éditeur de données, du plus ancien au plus récent
+    QString entite_choisie;
+    QVector<EntiteSchema> entites_lues;   // le schéma à sa dernière lecture
+    QStringList types_lus;
+    void montrer_choisie();
+    // Un geste de l'éditeur de données : enregistre d'abord le code en cours, applique, puis relit tout.
+    void appliquer(const std::function<QString(Geste *)> &geste, const QString &choisir_ensuite);
+    void nouvelle_entite();
+    void annuler_dernier_geste();
+    void apres_geste(const QStringList &touches, const QString &choisir_ensuite);
 };
 
 #endif

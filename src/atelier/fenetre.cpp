@@ -3,6 +3,7 @@
 #include "editeur.h"
 #include "aide.h"
 #include "schema.h"
+#include "panneau.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -111,11 +112,42 @@ Fenetre::Fenetre() {
     schema = new VueSchema;
     schema_etat = new QLabel;
     schema_etat->setWordWrap(true);
+    panneau = new PanneauEntite;
+    auto *barre_donnees = new QToolBar;
+    barre_donnees->addAction("Nouvelle entité…", this, &Fenetre::nouvelle_entite);
+    action_annuler_geste = barre_donnees->addAction("Annuler le dernier geste", this, &Fenetre::annuler_dernier_geste);
+    action_annuler_geste->setEnabled(false);
+    auto *cote_a_cote = new QSplitter;
+    cote_a_cote->addWidget(schema);
+    cote_a_cote->addWidget(panneau);
+    cote_a_cote->setStretchFactor(0, 1);
+    cote_a_cote->setSizes({700, 420});
     auto *donnees = new QWidget;
     auto *pile = new QVBoxLayout(donnees);
     pile->setContentsMargins(0, 0, 0, 0);
-    pile->addWidget(schema, 1);
+    pile->addWidget(barre_donnees);
+    pile->addWidget(cote_a_cote, 1);
     pile->addWidget(schema_etat);
+    connect(schema, &VueSchema::choisie, this, [this](const QString &e) {
+        entite_choisie = e;
+        montrer_choisie();
+    });
+    connect(panneau, &PanneauEntite::renommer, this, [this](const QString &a, const QString &n) {
+        appliquer([=](Geste *g) { return renommer_entite(projet, a, n, g); }, n);
+    });
+    connect(panneau, &PanneauEntite::supprimer, this, [this](const QString &e) {
+        if (QMessageBox::question(this, "Supprimer l'entité", QString("Supprimer « %1 » du code ?").arg(e)) != QMessageBox::Yes) return;
+        appliquer([=](Geste *g) { return supprimer_entite(projet, e, g); }, QString());
+    });
+    connect(panneau, &PanneauEntite::ajouter_champ, this, [this](const QString &e, const ChampVoulu &c) {
+        appliquer([=](Geste *g) { return ajouter_champ(projet, e, c, g); }, e);
+    });
+    connect(panneau, &PanneauEntite::modifier_champ, this, [this](const QString &e, const QString &a, const ChampVoulu &c) {
+        appliquer([=](Geste *g) { return modifier_champ(projet, e, a, c, g); }, e);
+    });
+    connect(panneau, &PanneauEntite::supprimer_champ, this, [this](const QString &e, const QString &n) {
+        appliquer([=](Geste *g) { return supprimer_champ(projet, e, n, g); }, e);
+    });
     onglets = new QTabWidget;
     onglets->addTab(droite, "Code");
     onglets->addTab(donnees, "Données");
@@ -407,7 +439,14 @@ void Fenetre::rafraichir_schema() {
     if (projet.isEmpty()) return;
     QStringList problemes;
     const QVector<EntiteSchema> entites = lire_schema(projet, &problemes);
+    const QString garder = entite_choisie;
     schema->montrer(entites, projet_fichier.positions);
+    schema->choisir(garder);
+    entite_choisie = garder;
+    entites_lues = entites;
+    types_lus = QStringList({"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "fichier", "image"});
+    for (const auto &e : entites) types_lus << e.nom;
+    montrer_choisie();
     // une entité nouvelle vient de recevoir sa place : on la garde, pour qu'elle ne bouge plus
     const auto positions = schema->positions();
     if (positions != projet_fichier.positions) {
@@ -420,4 +459,77 @@ void Fenetre::rafraichir_schema() {
     if (!problemes.isEmpty())
         t += "\nNon lus, car ils contiennent une erreur : " + problemes.join(", ") + ".";
     schema_etat->setText(t);
+}
+
+void Fenetre::appliquer(const std::function<QString(Geste *)> &geste, const QString &choisir_ensuite) {
+    if (projet.isEmpty()) return;
+    if (!fichier.isEmpty() && editeur->document()->isModified() && !enregistrer()) return;   // le code d'abord sur le disque
+    Geste g;
+    const QString erreur = geste(&g);
+    if (!erreur.isEmpty()) {
+        schema_etat->setText("<span style='color:#c00'>" + erreur.toHtmlEscaped() + "</span>");
+        rafraichir_schema();
+        schema_etat->setText("<span style='color:#c00'>" + erreur.toHtmlEscaped() + "</span>");
+        return;
+    }
+    gestes.push_back(g);
+    action_annuler_geste->setEnabled(true);
+    action_annuler_geste->setToolTip("Annuler : " + g.description);
+    apres_geste(g.avant.keys(), choisir_ensuite);
+    statusBar()->showMessage(g.description + " : fait.", 4000);
+}
+
+void Fenetre::apres_geste(const QStringList &touches, const QString &choisir_ensuite) {
+    // le fichier ouvert dans l'éditeur a peut-être changé sur le disque : on le relit
+    const QString ouvert = QFileInfo(fichier).absoluteFilePath();
+    if (!fichier.isEmpty() && touches.contains(ouvert)) {
+        const int ligne = editeur->textCursor().blockNumber() + 1;
+        QFile f(ouvert);
+        if (f.open(QIODevice::ReadOnly)) editeur->charger(QString::fromUtf8(f.readAll()), ouvert.endsWith(".grymc"), ouvert);
+        editeur->aller_a(ligne, 1);
+    }
+    entite_choisie = choisir_ensuite;
+    rafraichir_schema();
+}
+
+void Fenetre::nouvelle_entite() {
+    if (projet.isEmpty()) return;
+    bool ok = false;
+    const QString nom = QInputDialog::getText(this, "Nouvelle entité", "Nom (au singulier) :", QLineEdit::Normal, QString(), &ok).trimmed();
+    if (!ok || nom.isEmpty()) return;
+    const QString genre = QInputDialog::getItem(this, "Nouvelle entité", QString("« %1 » est :").arg(nom),
+                                                {"masculin (un " + nom + ")", "féminin (une " + nom + ")"}, 0, false, &ok);
+    if (!ok) return;
+    // Le fichier des données : celui qui déclare le plus d'entités ; à défaut, le programme principal, puis le fichier ouvert.
+    QMap<QString, int> compte;
+    for (const auto &e : lire_schema(projet)) compte[e.fichier]++;
+    QString cible;
+    for (auto i = compte.constBegin(); i != compte.constEnd(); ++i)
+        if (cible.isEmpty() || i.value() > compte.value(cible)) cible = i.key();
+    if (cible.isEmpty() && !projet_fichier.programme_principal.isEmpty()) cible = QDir(projet).absoluteFilePath(projet_fichier.programme_principal);
+    if (cible.isEmpty()) cible = QFileInfo(fichier).absoluteFilePath();
+    if (cible.isEmpty()) {
+        schema_etat->setText("Ouvrez d'abord un fichier du projet : c'est là que l'entité sera déclarée.");
+        return;
+    }
+    const bool feminin = genre.startsWith("féminin");
+    appliquer([=](Geste *g) { return ajouter_entite(projet, cible, nom, feminin, g); }, nom);
+}
+
+void Fenetre::annuler_dernier_geste() {
+    if (gestes.isEmpty()) return;
+    if (!fichier.isEmpty() && editeur->document()->isModified() && !enregistrer()) return;
+    const Geste g = gestes.takeLast();
+    const QString erreur = annuler_geste(g);
+    action_annuler_geste->setEnabled(!gestes.isEmpty());
+    action_annuler_geste->setToolTip(gestes.isEmpty() ? QString() : "Annuler : " + gestes.last().description);
+    apres_geste(g.avant.keys(), entite_choisie);
+    statusBar()->showMessage(erreur.isEmpty() ? "Annulé : " + g.description + "." : erreur, 5000);
+}
+
+void Fenetre::montrer_choisie() {
+    const EntiteSchema *choisie = nullptr;
+    for (const auto &e : entites_lues)
+        if (e.nom == entite_choisie) choisie = &e;
+    panneau->montrer(choisie, types_lus);
 }
