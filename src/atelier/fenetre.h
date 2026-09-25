@@ -6,6 +6,7 @@
 
 class Editeur;
 class QFileSystemModel;
+class ModeleProjet;
 class QTreeView;
 class QListWidget;
 class QProcess;
@@ -35,13 +36,16 @@ private:
 
     QString projet, fichier;
     Editeur *editeur;
-    QFileSystemModel *modele;
+    ModeleProjet *modele;
     QTreeView *arbre;
     QListWidget *erreurs;
     QProcess *execution = nullptr;         // le programme lancé, dans son propre processus
     QAction *action_lancer, *action_arreter;
     QString erreur_execution;              // la dernière erreur d'exécution, en clair
+    QString erreur_fichier;                // le fichier de cette erreur (le programme, ou un fichier utilisé)
     int erreur_ligne = 0, erreur_colonne = 0;
+    QString programme_a_lancer();          // le fichier courant s'il est un programme, sinon le programme principal
+    void choisir_principal();
 };
 
 #endif

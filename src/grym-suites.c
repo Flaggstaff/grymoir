@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     }
     if (f != stdin) fclose(f);
 
-    Suggestions s = suites_valides(d, n);
+    Suggestions s = suites_valides_fichier(d, n, argc > 1 ? argv[1] : NULL);
     for (size_t k = 0; k < s.nb; k++) puts(s.items[k]);
     if (s.nb == 0) fputs("(aucune suite valide)\n", stderr);
     suggestions_liberer(&s);

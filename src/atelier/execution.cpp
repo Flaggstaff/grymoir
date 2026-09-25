@@ -171,6 +171,8 @@ void Travail::run() {
     }
     const QByteArray source = f.readAll();
     Portee *portee = portee_creer();
+    const QByteArray chemin_utf8 = chemin.toUtf8();
+    portee_fichier(portee, chemin_utf8.constData());   // les fichiers utilisés se cherchent à côté (§ 21)
     Programme p = {};
     Diagnostic d = {};
     const bool compacte = chemin.endsWith(".grymc", Qt::CaseInsensitive);
@@ -181,11 +183,13 @@ void Travail::run() {
     portee_detruire(portee);
     auto signaler = [&](const Diagnostic &e) {
         // la même ligne que grym lancer : l'atelier la lit pour mener à l'erreur
-        if (e.ligne) std::fprintf(stderr, "%s:%d:%d : erreur : %s\n", chemin.toUtf8().constData(), e.ligne, e.colonne, e.message);
-        else std::fprintf(stderr, "%s : erreur : %s\n", chemin.toUtf8().constData(), e.message);
+        const QByteArray ou = e.fichier ? QByteArray(e.fichier) : chemin.toUtf8();   // un fichier utilisé, peut-être
+        if (e.ligne) std::fprintf(stderr, "%s:%d:%d : erreur : %s\n", ou.constData(), e.ligne, e.colonne, e.message);
+        else std::fprintf(stderr, "%s : erreur : %s\n", ou.constData(), e.message);
         std::fflush(stderr);
-        return e.ligne ? QString("Erreur, ligne %1 : %2").arg(e.ligne).arg(QString::fromUtf8(e.message))
-                       : QString("Erreur : %1").arg(QString::fromUtf8(e.message));
+        const QString dans = e.fichier ? QString(" dans « %1 »").arg(QFileInfo(QString::fromUtf8(e.fichier)).fileName()) : QString();
+        return e.ligne ? QString("Erreur%1, ligne %2 : %3").arg(dans).arg(e.ligne).arg(QString::fromUtf8(e.message))
+                       : QString("Erreur%1 : %2").arg(dans, QString::fromUtf8(e.message));
     };
     if (!module) {
         const QString message = signaler(d);

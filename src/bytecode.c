@@ -32,6 +32,7 @@ void bloc_detruire(Bloc *b) {
     free(b->positions);
     free(b->nom);
     free(b->classe);
+    free(b->fichier);
     free(b);
 }
 
@@ -413,7 +414,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 24  /* versions 1 à 23 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 25  /* versions 1 à 24 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
@@ -421,7 +422,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                               sans mise en forme (17), sans effacement de l'écran (18),
                               sans essai (19), sans formulaire (20),
                               sans assemblage de textes (21), sans modification par formulaire (22),
-                              sans fiche (23) */
+                              sans fiche (23), sans fichier source des blocs (24) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -483,6 +484,7 @@ unsigned char *module_serialiser(const Module *m, size_t *taille) {
         const Bloc *b = m->blocs[k];
         ecrire_chaine(&o, b->nom ? b->nom : "");
         ecrire_chaine(&o, b->classe ? b->classe : "");
+        ecrire_chaine(&o, b->fichier ? b->fichier : "");
         ecrire_u8(&o, (unsigned)b->sorte);
         ecrire_u16(&o, (unsigned)b->nb_parametres);
         ecrire_u16(&o, (unsigned)b->nb_locaux);
@@ -648,6 +650,9 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
             char *classe = version >= 6 ? lire_chaine(&l) : grym_dupliquer("");
             if (classe && *classe) b->classe = classe;
             else free(classe);
+            char *fichier = version >= 25 ? lire_chaine(&l) : grym_dupliquer("");
+            if (fichier && *fichier) b->fichier = fichier;
+            else free(fichier);
             uint32_t sorte = lire_u(&l, 1);
             b->nb_parametres = (int)lire_u(&l, 2);
             b->nb_locaux = (int)lire_u(&l, 2);
@@ -975,7 +980,9 @@ char *module_desassembler(const Module *m) {
             if (b->sorte == B_PROGRAMME) {
                 titre = grym_dupliquer("Programme\n");
             } else {
-                char *pour = b->classe ? grym_formater(" pour « %s »", b->classe) : grym_dupliquer("");
+                char *pour = b->classe && b->fichier ? grym_formater(" pour « %s » (%s)", b->classe, b->fichier)
+                           : b->classe ? grym_formater(" pour « %s »", b->classe)
+                           : b->fichier ? grym_formater(" (%s)", b->fichier) : grym_dupliquer("");
                 titre = grym_formater("%s« %s »%s : %d paramètre%s, %d case%s locale%s\n",
                                       k > 0 ? "\n" : "",
                                       b->nom, pour, b->nb_parametres, b->nb_parametres > 1 ? "s" : "",

@@ -24,13 +24,13 @@ endif()
 
 # Le cœur, tel que le Makefile le compile (variables ANALYSEUR et EXECUTION) : l'atelier l'appelle directement.
 add_library(grym_coeur STATIC
-    src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c
+    src/chemins.c src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c
     src/lexeur.c src/date.c src/texte.c
     src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c)
 target_include_directories(grym_coeur PUBLIC src)
 target_link_libraries(grym_coeur PUBLIC grym_sqlite)
 if(NOT MSVC)
-    target_compile_options(grym_coeur PRIVATE -Wall -Wextra -pedantic)
+    target_compile_options(grym_coeur PRIVATE -Wall -Wextra -pedantic $<$<COMPILE_LANGUAGE:C>:-Werror=implicit-function-declaration>)
 endif()
 
 add_executable(grym-atelier MACOSX_BUNDLE WIN32

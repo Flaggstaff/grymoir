@@ -752,7 +752,10 @@ int main(void) {
       "(entité [client] [nom : texte])\n(créer [c] (nouveau-saisi [client]))");
 
     /* --- Aide à la saisie (§ 8) --- */
-    VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Saisir à nouveau | Pour | Remarque :");
+    /* « Utiliser » en tête du fichier seulement (§ 21) : après une autre phrase, il n'est plus proposé */
+    VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Saisir à nouveau | Pour | Remarque : | Utiliser");
+    VS("Remarque : x.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Saisir à nouveau | Pour | Remarque : | Utiliser");
+    VS("Ut", "Utiliser");
     VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Saisir à nouveau | Pour | Remarque :");
     VS("Af", "Afficher");
     VS("l", "Le | La | L'");

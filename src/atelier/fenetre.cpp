@@ -7,7 +7,10 @@
 #include <QCoreApplication>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QDirIterator>
 #include <QFileSystemModel>
+#include <QHash>
+#include <QInputDialog>
 #include <QHeaderView>
 #include <QListWidget>
 #include <QMenuBar>
@@ -22,9 +25,51 @@
 #include <QStatusBar>
 #include <QTreeView>
 
+// Les fichiers du projet (grammaire, § 21) : un programme s'écrit en gras, un fichier de déclarations
+// normalement ; le survol dit lequel. La sorte se calcule par l'analyse, et se garde tant que le fichier
+// ne change pas sur le disque.
+class ModeleProjet : public QFileSystemModel {
+public:
+    using QFileSystemModel::QFileSystemModel;
+    enum Sorte { Inconnue, Programme, Declarations };
+
+    Sorte sorte(const QString &chemin) const {
+        const QFileInfo i(chemin);
+        const auto c = cache.constFind(chemin);
+        if (c != cache.constEnd() && c->first == i.lastModified()) return c->second;
+        Sorte s = Inconnue;
+        QFile f(chemin);
+        if (f.open(QIODevice::ReadOnly)) {
+            bool declarations = false;
+            const Diagnostic_atelier d = analyser_source(QString::fromUtf8(f.readAll()),
+                                                         chemin.endsWith(".grymc", Qt::CaseInsensitive), chemin, &declarations);
+            s = !d.message.isEmpty() ? Inconnue : declarations ? Declarations : Programme;
+        }
+        cache.insert(chemin, qMakePair(i.lastModified(), s));
+        return s;
+    }
+
+    QVariant data(const QModelIndex &index, int role) const override {
+        if ((role == Qt::FontRole || role == Qt::ToolTipRole) && index.isValid() && !isDir(index)) {
+            const Sorte s = sorte(filePath(index));
+            if (role == Qt::ToolTipRole)
+                return s == Programme ? QString("Programme") : s == Declarations ? QString("Fichier de déclarations")
+                                                                                 : QString("Contient une erreur");
+            QFont f;
+            f.setBold(s == Programme);
+            f.setItalic(s == Inconnue);
+            return f;
+        }
+        return QFileSystemModel::data(index, role);
+    }
+
+private:
+    mutable QHash<QString, QPair<QDateTime, Sorte>> cache;
+};
+
 Fenetre::Fenetre() {
     editeur = new Editeur;
-    modele = new QFileSystemModel(this);
+    modele = new ModeleProjet(this);
     modele->setNameFilters({"*.grym", "*.grymc"});
     modele->setNameFilterDisables(false);   // les autres fichiers disparaissent, au lieu d'être grisés
     arbre = new QTreeView;
@@ -42,6 +87,11 @@ Fenetre::Fenetre() {
     erreurs->setMaximumHeight(90);
     connect(erreurs, &QListWidget::itemActivated, this, [this](QListWidgetItem *i) {
         const int ligne = i->data(Qt::UserRole).toInt();
+        const QString autre = i->data(Qt::UserRole + 2).toString();   // l'erreur est dans un autre fichier
+        if (!autre.isEmpty() && QFileInfo(autre).absoluteFilePath() != QFileInfo(fichier).absoluteFilePath()) {
+            ouvrir_fichier(QFileInfo(autre).absoluteFilePath());
+            if (QFileInfo(autre).absoluteFilePath() != QFileInfo(fichier).absoluteFilePath()) return;
+        }
         if (ligne > 0) editeur->aller_a(ligne, i->data(Qt::UserRole + 1).toInt());
     });
     connect(erreurs, &QListWidget::itemClicked, erreurs, &QListWidget::itemActivated);
@@ -73,6 +123,8 @@ Fenetre::Fenetre() {
     action_arreter = programme->addAction("Arrêter", this, &Fenetre::arreter);
     action_arreter->setShortcut(QKeySequence("Ctrl+."));
     action_arreter->setEnabled(false);
+    programme->addSeparator();
+    programme->addAction("Choisir le programme principal…", this, &Fenetre::choisir_principal);
     QToolBar *barre = addToolBar("Programme");
     barre->setMovable(false);
     barre->addAction(action_lancer);
@@ -131,7 +183,7 @@ void Fenetre::ouvrir_fichier(const QString &chemin) {
     }
     fichier = chemin;
     editeur->setEnabled(true);
-    editeur->charger(texte, chemin.endsWith(".grymc", Qt::CaseInsensitive));
+    editeur->charger(texte, chemin.endsWith(".grymc", Qt::CaseInsensitive), chemin);
     arbre->setCurrentIndex(modele->index(chemin));
     mettre_a_jour_titre();
 }
@@ -180,20 +232,25 @@ void Fenetre::mettre_a_jour_titre() {
 void Fenetre::montrer_diagnostic() {
     erreurs->clear();
     if (fichier.isEmpty()) return;
-    auto ajouter = [this](const QString &texte, int ligne, int colonne, bool rouge) {
+    auto ajouter = [this](const QString &texte, int ligne, int colonne, bool rouge, const QString &autre = QString()) {
         auto *i = new QListWidgetItem(texte, erreurs);
         i->setData(Qt::UserRole, ligne);
         i->setData(Qt::UserRole + 1, colonne);
+        i->setData(Qt::UserRole + 2, autre);
         if (rouge) i->setForeground(Qt::red);
     };
     const auto &d = editeur->diagnostic();
     if (d.message.isEmpty()) ajouter("Aucune erreur.", 0, 0, false);
     else if (d.ligne > 0) ajouter(QString("Ligne %1, colonne %2 : %3").arg(d.ligne).arg(d.colonne).arg(d.message), d.ligne, d.colonne, true);
     else ajouter(d.message, 0, 0, true);
-    if (!erreur_execution.isEmpty())
-        ajouter(erreur_ligne > 0 ? QString("Exécution, ligne %1, colonne %2 : %3").arg(erreur_ligne).arg(erreur_colonne).arg(erreur_execution)
+    if (!erreur_execution.isEmpty()) {
+        const bool ici = erreur_fichier.isEmpty()
+                      || QFileInfo(erreur_fichier).absoluteFilePath() == QFileInfo(fichier).absoluteFilePath();
+        const QString ou = ici ? QString() : QString("« %1 », ").arg(QDir(projet).relativeFilePath(erreur_fichier));
+        ajouter(erreur_ligne > 0 ? QString("Exécution, %1ligne %2, colonne %3 : %4").arg(ou).arg(erreur_ligne).arg(erreur_colonne).arg(erreur_execution)
                                  : QString("Exécution : %1").arg(erreur_execution),
-                erreur_ligne, erreur_colonne, true);
+                erreur_ligne, erreur_colonne, true, ici ? QString() : erreur_fichier);
+    }
 }
 
 void Fenetre::lancer() {
@@ -205,13 +262,16 @@ void Fenetre::lancer() {
         statusBar()->showMessage("Corrigez d'abord l'erreur signalée.", 4000);
         return;
     }
+    const QString cible = programme_a_lancer();   // un fichier de déclarations lance le programme principal (§ 21)
+    if (cible.isEmpty()) return;
     erreur_execution.clear();
+    erreur_fichier.clear();
     erreur_ligne = erreur_colonne = 0;
     montrer_diagnostic();
     execution = new QProcess(this);
     execution->setProgram(QCoreApplication::applicationFilePath());
-    execution->setArguments({"--lancer", fichier});
-    execution->setWorkingDirectory(QFileInfo(fichier).absolutePath());
+    execution->setArguments({"--lancer", cible});
+    execution->setWorkingDirectory(QFileInfo(cible).absolutePath());
     execution->setProcessChannelMode(QProcess::SeparateChannels);
     connect(execution, &QProcess::finished, this, &Fenetre::execution_finie);
     connect(execution, &QProcess::errorOccurred, this, [this](QProcess::ProcessError e) {
@@ -220,7 +280,42 @@ void Fenetre::lancer() {
     execution->start();
     action_lancer->setEnabled(false);
     action_arreter->setEnabled(true);
-    statusBar()->showMessage(QString("« %1 » tourne.").arg(QFileInfo(fichier).fileName()));
+    statusBar()->showMessage(QString("« %1 » tourne.").arg(QFileInfo(cible).fileName()));
+}
+
+QString Fenetre::programme_a_lancer() {
+    if (!editeur->declarations()) return QFileInfo(fichier).absoluteFilePath();
+    QSettings reglages;
+    const QString cle = "programme principal/" + QFileInfo(projet).absoluteFilePath();
+    const QString retenu = reglages.value(cle).toString();
+    if (!retenu.isEmpty() && QFileInfo::exists(retenu) && modele->sorte(retenu) == ModeleProjet::Programme) return retenu;
+    choisir_principal();
+    const QString choisi = reglages.value(cle).toString();
+    return QFileInfo::exists(choisi) ? choisi : QString();
+}
+
+// Les programmes du projet ; un seul est retenu sans question, plusieurs font demander, une fois.
+void Fenetre::choisir_principal() {
+    if (projet.isEmpty()) return;
+    QStringList programmes;
+    QDirIterator it(projet, {"*.grym", "*.grymc"}, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        const QString c = QFileInfo(it.next()).absoluteFilePath();
+        if (modele->sorte(c) == ModeleProjet::Programme) programmes << QDir(projet).relativeFilePath(c);
+    }
+    programmes.sort(Qt::CaseInsensitive);
+    if (programmes.isEmpty()) {
+        statusBar()->showMessage("Aucun programme dans le projet : ses fichiers ne contiennent que des déclarations.", 6000);
+        return;
+    }
+    QString choix = programmes.first();
+    if (programmes.size() > 1) {
+        bool ok = false;
+        choix = QInputDialog::getItem(this, "Programme principal", "Programme à lancer :", programmes, 0, false, &ok);
+        if (!ok) return;
+    }
+    QSettings().setValue("programme principal/" + QFileInfo(projet).absoluteFilePath(), QDir(projet).absoluteFilePath(choix));
+    statusBar()->showMessage(QString("Programme principal : « %1 ».").arg(choix), 4000);
 }
 
 void Fenetre::arreter() {
@@ -241,6 +336,7 @@ void Fenetre::execution_finie() {
     static const QRegularExpression sans_position("^.* : erreur : (.*)$", QRegularExpression::MultilineOption);
     const auto m = forme.match(sortie);
     if (m.hasMatch()) {
+        erreur_fichier = m.captured(1);
         erreur_ligne = m.captured(2).toInt();
         erreur_colonne = m.captured(3).toInt();
         erreur_execution = m.captured(4);

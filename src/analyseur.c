@@ -3,6 +3,7 @@
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
+#include "chemins.h"
 #include "decimal.h"
 #include "compact.h"
 #include "lexeur.h"
@@ -33,6 +34,7 @@ typedef struct {
     int nb_parametres; /* calculs et actions */
     int local;         /* case locale dans une formule, −1 pour un nom global */
     char *classe;      /* méthode : classe de son premier paramètre (§ 13.6), sinon NULL */
+    int fichier;       /* fichier de la déclaration : 0 celui qu'on analyse, k le k-ième fichier utilisé (§ 21) */
 } Symbole;
 
 /* Classe déclarée (§ 11 de la charte, grammaire § 13) : son nom, son genre, ses champs. */
@@ -44,6 +46,7 @@ typedef struct {
     char **aptitudes;  /* classe : aptitudes adoptées (formes féminines) */
     size_t nb_aptitudes;
     int ligne;         /* ligne de déclaration */
+    int fichier;       /* comme pour un symbole (§ 21) */
     char *parent;      /* classe dont elle hérite, ou NULL */
     int conserve;      /* entité (§ 16) */
     char *pluriel;     /* entité : pluriel irrégulier déclaré, ou NULL */
@@ -65,6 +68,13 @@ struct Portee {
     size_t n, cap;
     Classe *classes;
     size_t nb_classes;
+    /* Fichiers utilisés (§ 21). */
+    char *fichier;        /* chemin du fichier qu'on analyse, tel que donné ; NULL : dossier courant */
+    int fichier_index;    /* 0 : le fichier principal ; k : le k-ième fichier utilisé, en cours d'analyse */
+    char **fichiers;      /* chemins des fichiers utilisés, tels qu'on les montre (« exemples/données.grym ») */
+    char **cles;          /* chemins absolus, pour ne lire chaque fichier qu'une fois */
+    int *lus;             /* 1 : analysé ; 0 : en cours (une utilisation circulaire le retrouve ainsi) */
+    size_t nb_fichiers;
 };
 
 Portee *portee_creer(void) {
@@ -73,8 +83,24 @@ Portee *portee_creer(void) {
     p->n = p->cap = 0;
     p->classes = NULL;
     p->nb_classes = 0;
+    p->fichier = NULL;
+    p->fichier_index = 0;
+    p->fichiers = p->cles = NULL;
+    p->lus = NULL;
+    p->nb_fichiers = 0;
     return p;
 }
+
+void portee_fichier(Portee *p, const char *chemin) {
+    free(p->fichier);
+    p->fichier = chemin ? grym_dupliquer(chemin) : NULL;
+}
+
+/* Chemin d'un fichier du projet, pour les messages (§ 21) : le k-ième fichier utilisé, ou le fichier analysé. */
+static const char *nom_court(const Portee *p, int k) {
+    return k > 0 && (size_t)k <= p->nb_fichiers ? p->fichiers[k - 1] : p->fichier ? p->fichier : "ce fichier";
+}
+
 
 static void classe_champs_liberer(Classe *c) {
     for (size_t k = 0; k < c->nb; k++) {
@@ -123,6 +149,15 @@ static void portee_vider(Portee *p) {
     free(p->classes);
     p->classes = NULL;
     p->nb_classes = 0;
+    free(p->fichier);
+    p->fichier = NULL;
+    for (size_t i = 0; i < p->nb_fichiers; i++) { free(p->fichiers[i]); free(p->cles[i]); }
+    free(p->fichiers);
+    free(p->cles);
+    free(p->lus);
+    p->fichiers = p->cles = NULL;
+    p->lus = NULL;
+    p->nb_fichiers = 0;
 }
 
 void portee_detruire(Portee *p) {
@@ -148,6 +183,17 @@ static void portee_copier(Portee *dst, const Portee *src) {
         dst->s[i].nom = grym_dupliquer(src->s[i].nom);
         dst->s[i].classe = src->s[i].classe ? grym_dupliquer(src->s[i].classe) : NULL;
     }
+    dst->fichier = src->fichier ? grym_dupliquer(src->fichier) : NULL;
+    dst->fichier_index = src->fichier_index;
+    dst->nb_fichiers = src->nb_fichiers;
+    dst->fichiers = src->nb_fichiers ? grym_allouer(src->nb_fichiers * sizeof *dst->fichiers) : NULL;
+    dst->cles = src->nb_fichiers ? grym_allouer(src->nb_fichiers * sizeof *dst->cles) : NULL;
+    dst->lus = src->nb_fichiers ? grym_allouer(src->nb_fichiers * sizeof *dst->lus) : NULL;
+    for (size_t i = 0; i < src->nb_fichiers; i++) {
+        dst->fichiers[i] = grym_dupliquer(src->fichiers[i]);
+        dst->cles[i] = grym_dupliquer(src->cles[i]);
+        dst->lus[i] = src->lus[i];
+    }
     dst->nb_classes = src->nb_classes;
     dst->classes = src->nb_classes ? grym_allouer(src->nb_classes * sizeof *dst->classes) : NULL;
     for (size_t i = 0; i < src->nb_classes; i++) {
@@ -157,6 +203,7 @@ static void portee_copier(Portee *dst, const Portee *src) {
         d->genre = c->genre;
         d->aptitude = c->aptitude;
         d->ligne = c->ligne;
+        d->fichier = c->fichier;
         d->masculin = c->masculin ? grym_dupliquer(c->masculin) : NULL;
         d->nb_aptitudes = c->nb_aptitudes;
         d->aptitudes = c->nb_aptitudes ? grym_allouer(c->nb_aptitudes * sizeof *d->aptitudes) : NULL;
@@ -322,6 +369,7 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->genre = g;
     s->ligne_decl = ligne;
     s->ligne_genre = ligne;
+    s->fichier = p->fichier_index;
     s->sorte = S_VARIABLE;
     s->lecture_seule = 0;
     s->classe = NULL;
@@ -359,6 +407,7 @@ typedef struct {
     char *a_completer;       /* classe déclarée par « est » à la phrase précédente, sans champs encore */
     const char *dont;        /* entité dont une condition « dont » examine les champs (§ 16.4), ou NULL */
     int corbeille;           /* la dernière tournure « … conservé » lue était « … supprimé » (§ 16.12) */
+    int phrase_vue;          /* une phrase autre qu'une remarque ou « Utiliser » a été lue (§ 21) */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
     int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
     const char *arrets[3];   /* mots qui peuvent suivre un nom dans le contexte courant (« à », « fois »…) */
@@ -2819,6 +2868,9 @@ static char *version_de_formule(Analyse *a, const char *nom, Sorte sorte, const 
             m = s->sorte != S_VARIABLE && (s->classe || classe)
               ? grym_formater("« %s » existe déjà : chaque version d'une formule a pour premier paramètre "
                               "une classe différente.", nom)
+              : s->fichier != a->portee->fichier_index
+              ? grym_formater("« %s » existe déjà : déclaré dans « %s », ligne %d.", nom, nom_court(a->portee, s->fichier),
+                              s->ligne_decl)
               : grym_formater("« %s » existe déjà.", nom);
         else if (strcmp(s->classe, classe) == 0)
             m = grym_formater("« %s » existe déjà pour « %s ».", nom, classe);
@@ -3771,6 +3823,7 @@ static Classe *ajouter_classe(Portee *p, const char *nom, Genre g, const char *p
     c->aptitudes = NULL;
     c->nb_aptitudes = 0;
     c->ligne = 0;
+    c->fichier = p->fichier_index;
     c->conserve = 0;
     c->pluriel = NULL;
     c->champs = NULL;
@@ -4052,7 +4105,10 @@ static Noeud *definition_classe(Analyse *a) {
     int complement = existante && !herite && a->a_completer && strcmp(a->a_completer, nom) == 0
                      && existante->nb == 0;
     if (existante && !complement) {
-        erreur(a, &a->j[d], grym_formater("La classe « %s » existe déjà.", nom));
+        erreur(a, &a->j[d], existante->fichier != a->portee->fichier_index
+                            ? grym_formater("La classe « %s » existe déjà : déclarée dans « %s », ligne %d.", nom,
+                                            nom_court(a->portee, existante->fichier), existante->ligne)
+                            : grym_formater("La classe « %s » existe déjà.", nom));
         free(nom);
         return NULL;
     }
@@ -4078,6 +4134,7 @@ static Noeud *definition_classe(Analyse *a) {
     if (!lire_champs(a, n, complement ? existante : NULL, conserve, nom)) { noeud_liberer(n); return NULL; }
     /* La classe entre dans la portée ; un complément remplit la classe déclarée par « est ». */
     Classe *c = complement ? existante : ajouter_classe(a->portee, n->texte, g, NULL);
+    if (!complement) c->ligne = n->ligne;
     c->conserve = conserve;
     if (tpluriel) c->pluriel = grym_dupliquer(tpluriel->valeur);
     classe_remplir(c, n);
@@ -4153,7 +4210,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
 static int mot_de_construction(const Jeton *t) {
     static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
                                      "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer", "effacer", "essayer", "saisir",
-                                     "conserver", "supprimer", "rétablir" };
+                                     "conserver", "supprimer", "rétablir", "utiliser" };
     for (size_t k = 0; k < sizeof M / sizeof *M; k++) if (est_mot(t, M[k])) return 1;
     return 0;
 }
@@ -4260,6 +4317,172 @@ static Noeud *gagner_perdre(Analyse *a, const Jeton *t) {
     return n;
 }
 
+/* ---------------------------------------------------------------- */
+/* Utiliser un fichier de déclarations (§ 21)                        */
+/* ---------------------------------------------------------------- */
+
+struct Capture;
+static int analyser_interne(const char *source, size_t taille, Portee *portee, int interactif,
+                            Programme *programme, Diagnostic *diag, struct Capture *capture, int compact);
+
+/* Les phrases permises dans un fichier utilisé : des déclarations, rien qui s'exécute. */
+static int phrase_de_declaration(const Noeud *n) {
+    return n->type == P_REMARQUE || n->type == P_CLASSE || n->type == P_APTITUDE || n->type == P_CALCUL
+        || n->type == P_ACTION || n->type == P_UTILISER;
+}
+
+/* Dossier d'un chemin, barre finale comprise (« exemples/ »), ou chaîne vide. */
+static char *dossier_de(const char *chemin) {
+    if (!chemin) return grym_dupliquer("");
+    const char *barre = strrchr(chemin, '/');
+#ifdef _WIN32
+    const char *contre = strrchr(chemin, '\\');
+    if (contre && (!barre || contre > barre)) barre = contre;
+#endif
+    return barre ? grym_formater("%.*s", (int)(barre - chemin + 1), chemin) : grym_dupliquer("");
+}
+
+/* « Utiliser « données ». » : en tête du fichier, avant toute autre phrase (les remarques mises à part).
+ * Le fichier utilisé s'analyse dans la même portée, une seule fois par projet ; ses déclarations deviennent
+ * les enfants de la phrase, et le compilateur les compile comme si elles étaient écrites là. */
+static Noeud *utiliser(Analyse *a, const Jeton *t) {
+    if (a->niveau > 0 || a->formule || a->phrase_vue)
+        return erreur(a, t, grym_dupliquer("« Utiliser » se place en tête du fichier, avant toute autre phrase."));
+    avancer(a);
+    const Jeton *tc = cour(a);
+    if (tc->type != J_TEXTE)
+        return erreur(a, tc, grym_dupliquer("Le fichier s'écrit entre guillemets : « Utiliser « données ». »"));
+    avancer(a);
+    if (!fin_phrase(a, 0)) return NULL;
+    const char *ecrit = tc->valeur;
+    size_t l = strlen(ecrit);
+    if (l == 0) return erreur(a, tc, grym_dupliquer("Nom de fichier vide."));
+    if ((l > 5 && strcmp(ecrit + l - 5, ".grym") == 0) || (l > 6 && strcmp(ecrit + l - 6, ".grymc") == 0)) {
+        size_t c = strcmp(ecrit + l - 5, ".grym") == 0 ? l - 5 : l - 6;
+        return erreur(a, tc, grym_formater("Écrivez le fichier sans extension : « Utiliser « %.*s ». » trouve lui-même "
+                                           "la forme littéraire ou compacte.", (int)c, ecrit));
+    }
+    Noeud *n = noeud_creer(P_UTILISER, t->ligne, t->colonne, t->debut);
+    n->texte = grym_dupliquer(ecrit);
+    n->fin = fin_jeton(&a->j[a->i - 1]);
+    if (a->echec) return n;
+
+    /* Le fichier se cherche dans le dossier du fichier qui l'utilise. */
+    Portee *p = a->portee;
+    char *dossier = dossier_de(p->fichier);
+    char *litteral = grym_formater("%s%s.grym", dossier, ecrit);
+    char *compacte = grym_formater("%s%s.grymc", dossier, ecrit);
+    int il = chemin_existe(litteral), ic = chemin_existe(compacte);
+    char *chemin = NULL;
+    if (il && ic) {
+        erreur(a, tc, grym_formater("« %s » désigne à la fois « %s » et « %s » : gardez-en un seul.", ecrit, litteral, compacte));
+    } else if (!il && !ic) {
+        erreur(a, tc, grym_formater("« %s » introuvable : ni « %s » ni « %s ».", ecrit, litteral, compacte));
+    } else {
+        chemin = grym_dupliquer(il ? litteral : compacte);
+    }
+    free(dossier);
+    free(litteral);
+    free(compacte);
+    if (!chemin) return n;
+
+    char *cle = chemin_absolu(chemin);
+    if (!cle) {
+        erreur(a, tc, grym_formater("« %s » ne s'ouvre pas.", chemin));
+        free(chemin);
+        return n;
+    }
+    for (size_t k = 0; k < p->nb_fichiers; k++) {
+        if (strcmp(p->cles[k], cle) != 0) continue;
+        free(cle);
+        free(chemin);
+        if (!p->lus[k])   /* en cours d'analyse : on est revenu sur ses pas */
+            return erreur(a, tc, grym_formater("Utilisation circulaire : « %s » s'utilise lui-même, directement "
+                                               "ou par un autre fichier.", p->fichiers[k])), n;
+        return n;   /* déjà lu : ses déclarations sont déjà là */
+    }
+    if (cle && p->fichier) {   /* le fichier principal ne s'utilise pas lui-même */
+        char *moi = chemin_absolu(p->fichier);
+        int soi = moi && strcmp(moi, cle) == 0;
+        free(moi);
+        if (soi) {
+            free(cle);
+            free(chemin);
+            return erreur(a, tc, grym_dupliquer("Un fichier ne s'utilise pas lui-même.")), n;
+        }
+    }
+
+    size_t taille = 0;
+    char *source = chemin_lire(chemin, &taille);
+    if (!source) {
+        erreur(a, tc, grym_formater("« %s » ne s'ouvre pas.", chemin));
+        free(cle);
+        free(chemin);
+        return n;
+    }
+    /* Le fichier prend sa place dans la liste avant d'être analysé : ses déclarations portent son rang,
+     * et une utilisation circulaire le trouve « en cours ». */
+    size_t rang = p->nb_fichiers + 1;
+    char **f = grym_allouer(rang * sizeof *f), **c = grym_allouer(rang * sizeof *c);
+    int *lus = grym_allouer(rang * sizeof *lus);
+    for (size_t k = 0; k + 1 < rang; k++) { f[k] = p->fichiers[k]; c[k] = p->cles[k]; lus[k] = p->lus[k]; }
+    f[rang - 1] = chemin;
+    c[rang - 1] = cle;
+    lus[rang - 1] = 0;
+    free(p->fichiers);
+    free(p->cles);
+    free(p->lus);
+    p->fichiers = f;
+    p->cles = c;
+    p->lus = lus;
+    p->nb_fichiers = rang;
+
+    char *fichier_prec = p->fichier;
+    int index_prec = p->fichier_index;
+    p->fichier = grym_dupliquer(chemin);
+    p->fichier_index = (int)rang;
+    Programme prog;
+    Diagnostic d;
+    size_t lc = strlen(chemin);
+    int compact = lc > 6 && strcmp(chemin + lc - 6, ".grymc") == 0;
+    int ok = analyser_interne(source, taille, p, 0, &prog, &d, NULL, compact);
+    free(source);
+    /* analyser_interne a remplacé la portée par sa copie validée : on y retrouve nos champs */
+    free(p->fichier);
+    p->fichier = fichier_prec;
+    p->fichier_index = index_prec;
+    if (!ok) {
+        /* l'erreur désigne le fichier fautif, le plus profond s'il y en a plusieurs */
+        if (!a->echec) {
+            a->echec = 1;
+            a->diag->message = d.message;
+            a->diag->ligne = d.ligne;
+            a->diag->colonne = d.colonne;
+            a->diag->fichier = d.fichier ? d.fichier : grym_dupliquer(chemin);
+            a->diag->origine_ligne = t->ligne;     /* chaque niveau la remplace : le plus haut l'emporte */
+            a->diag->origine_colonne = t->colonne;
+        } else {
+            diagnostic_liberer(&d);
+        }
+        return n;
+    }
+    for (size_t k = 0; k < prog.nb; k++) {
+        if (phrase_de_declaration(prog.phrases[k])) continue;
+        erreur(a, tc, grym_formater("« %s » contient une phrase qui s'exécute (ligne %d) : seul un fichier de "
+                                    "déclarations s'utilise.", p->fichiers[rang - 1], prog.phrases[k]->ligne));
+        programme_liberer(&prog);
+        return n;
+    }
+    p->lus[rang - 1] = 1;
+    n->entier = (int)rang;
+    for (size_t k = 0; k < prog.nb; k++) noeud_ajouter(n, prog.phrases[k]);
+    free(prog.phrases);
+    prog.phrases = NULL;
+    prog.nb = 0;
+    programme_liberer(&prog);
+    return n;
+}
+
 static Noeud *phrase(Analyse *a, int colonne) {
     Jeton *t = cour(a);
     attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0) | (a->boucle ? A_BOUCLE : 0));
@@ -4269,6 +4492,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
         avancer(a);
         return n;
     }
+    if (est_mot(t, "utiliser")) return utiliser(a, t);
     if (est_mot(t, "afficher")) {
         if (a->formule == 1)
             return erreur(a, t, grym_dupliquer("Un calcul n'affiche rien : il rend une valeur. "
@@ -4479,6 +4703,7 @@ static Noeud *bloc(Analyse *a, int colonne, int racine) {
             noeud_liberer(p);
             continue;
         }
+        if (racine && p->type != P_REMARQUE && p->type != P_UTILISER) a->phrase_vue = 1;
         noeud_ajouter(b, p);
         b->fin = p->fin;
     }
@@ -4532,7 +4757,7 @@ static void liberer_jetons(Jeton *j, size_t n) {
 }
 
 /* Ce que l'analyse laisse derrière elle pour l'aide à la saisie. */
-typedef struct {
+typedef struct Capture {
     int valide;          /* vrai si les suites concernent la fin de la source */
     unsigned att;
     char **mots;
@@ -4547,8 +4772,12 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     programme->phrases = NULL;
     programme->nb = 0;
     programme->nb_locaux = 0;
+    programme->fichiers = NULL;
+    programme->nb_fichiers = 0;
     diag->message = NULL;
     diag->ligne = diag->colonne = 0;
+    diag->fichier = NULL;
+    diag->origine_ligne = diag->origine_colonne = 0;
 
     char *err = NULL;
     Lexeur *lx = compact ? lexeur_creer_compact(source, taille, &err) : lexeur_creer(source, taille, &err);
@@ -4625,6 +4854,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.a_completer = NULL;
     a.dont = NULL;
     a.corbeille = 0;
+    a.phrase_vue = 0;
 
     /* Colonne de référence : celle de la première phrase (les remarques ne comptent pas). */
     int colonne = 1;
@@ -4667,6 +4897,9 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
         portee_vider(&copie);
         return 0;
     }
+    programme->nb_fichiers = copie.nb_fichiers;
+    programme->fichiers = copie.nb_fichiers ? grym_allouer(copie.nb_fichiers * sizeof *programme->fichiers) : NULL;
+    for (size_t k = 0; k < copie.nb_fichiers; k++) programme->fichiers[k] = grym_dupliquer(copie.fichiers[k]);
     portee_vider(portee);
     *portee = copie;
     return 1;
@@ -4751,12 +4984,40 @@ static void proposer(Suggestions *r, const char *item, const char *prefixe, size
 }
 
 Suggestions suites_valides(const char *source, size_t taille) {
+    return suites_valides_fichier(source, taille, NULL);
+}
+
+/* Le début de la source ne contient que des remarques et des phrases « Utiliser » : on peut encore en écrire une. */
+static int tete_de_fichier(const char *source, size_t taille) {
+    char *err = NULL;
+    Lexeur *lx = lexeur_creer(source, taille, &err);
+    if (!lx) { free(err); return 0; }
+    int ok = 1, etat = 0;   /* 0 : début de phrase ; 1 : après « utiliser » ; 2 : après le texte */
+    for (;;) {
+        Jeton t = lexeur_suivant(lx);
+        int fin = t.type == J_FIN || t.type == J_ERREUR;
+        if (!fin) {
+            if (etat == 0 && t.type == J_REMARQUE) {}
+            else if (etat == 0 && t.type == J_MOT && strcmp(t.valeur, "utiliser") == 0) etat = 1;
+            else if (etat == 1 && t.type == J_TEXTE) etat = 2;
+            else if (etat == 2 && t.type == J_POINT) etat = 0;
+            else ok = 0;
+        }
+        jeton_liberer(&t);
+        if (fin || !ok) break;
+    }
+    lexeur_detruire(lx);
+    return ok && etat == 0;
+}
+
+Suggestions suites_valides_fichier(const char *source, size_t taille, const char *chemin) {
     Suggestions r = { NULL, 0 };
     size_t d = debut_mot_partiel(source, taille);
     const char *pre = source + d;
     size_t lp = taille - d;
 
     Portee *portee = portee_creer();
+    portee_fichier(portee, chemin);
     Programme prog;
     Diagnostic diag;
     Capture c = { 0, 0, NULL, 0, NULL, NULL, 0 };
@@ -4780,6 +5041,7 @@ Suggestions suites_valides(const char *source, size_t taille) {
             proposer(&r, "Saisir à nouveau", pre, lp, 0);
             proposer(&r, "Pour", pre, lp, 0);
             proposer(&r, "Remarque :", pre, lp, 0);
+            if (tete_de_fichier(source, d)) proposer(&r, "Utiliser", pre, lp, 0);   /* en tête seulement (§ 21) */
             for (size_t k = 0; k < c.nb_noms; k++)
                 if (c.sortes[k] == S_ACTION) {
                     /* une action commence la phrase : « Relancer » */
@@ -4850,9 +5112,21 @@ void programme_liberer(Programme *p) {
     free(p->phrases);
     p->phrases = NULL;
     p->nb = 0;
+    for (size_t i = 0; i < p->nb_fichiers; i++) free(p->fichiers[i]);
+    free(p->fichiers);
+    p->fichiers = NULL;
+    p->nb_fichiers = 0;
+}
+
+int programme_declarations_seules(const Programme *p) {
+    for (size_t k = 0; k < p->nb; k++)
+        if (!phrase_de_declaration(p->phrases[k])) return 0;
+    return 1;
 }
 
 void diagnostic_liberer(Diagnostic *d) {
     free(d->message);
     d->message = NULL;
+    free(d->fichier);
+    d->fichier = NULL;
 }

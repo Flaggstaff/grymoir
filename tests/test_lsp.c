@@ -141,6 +141,31 @@ int main(void) {
         free(r);
     }
 
+    {   /* fichiers utilisés (grammaire, § 21) : chemin tiré de l'URI ; erreur posée sur la phrase « Utiliser » */
+        FILE *f = fopen("_l_donnees.grym", "wb");
+        if (f) { fputs("Le carré d'un n vaut n × n.\nLe cube d'un n vaut n × x.\n", f); fclose(f); }
+        f = fopen("_l_bon.grym", "wb");
+        if (f) { fputs("Le carré d'un n vaut n × n.\n", f); fclose(f); }
+        const char *m[] = {
+            "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{\"textDocument\":{\"uri\":\"file://_l_prog%20un.grym\","
+            "\"languageId\":\"grymoir\",\"version\":1,\"text\":\"Remarque : essai.\\nUtiliser « _l_donnees ».\\nAfficher 1.\\n\"}}}",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{\"textDocument\":{\"uri\":\"file://_l_deux.grym\","
+            "\"languageId\":\"grymoir\",\"version\":1,\"text\":\"Utiliser « _l_bon ».\\nLe x vaut le ca\"}}}",
+            "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"textDocument/completion\",\"params\":{\"textDocument\":{\"uri\":\"file://_l_deux.grym\"},"
+            "\"position\":{\"line\":1,\"character\":15}}}",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"exit\"}",
+        };
+        int code;
+        char *r = session(m, 4, &code);
+        V(strstr(r, "\"range\":{\"start\":{\"line\":1,\"character\":0}") != NULL
+          && strstr(r, "« _l_donnees.grym », ligne 2 : « x » inconnu.") != NULL,
+          "erreur d'un fichier utilisé, sur sa phrase « Utiliser »", r);
+        V(strstr(r, "\"label\":\"carré\"") != NULL, "suites : les formules d'un fichier utilisé", r);
+        free(r);
+        remove("_l_donnees.grym");
+        remove("_l_bon.grym");
+    }
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

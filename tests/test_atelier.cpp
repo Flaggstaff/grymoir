@@ -175,6 +175,39 @@ int main(int argc, char **argv) {
     VERIFIER(fil.contains("Suite Bach vrai"));
     VERIFIER(etat == "Terminé.");
 
+    // Fichiers utilisés (grammaire, § 21) : erreur posée sur « Utiliser », fichier de déclarations reconnu,
+    // exécution d'un programme qui utilise un autre fichier
+    {
+        QTemporaryDir dossier;
+        auto ecrire = [&](const QString &nom, const QString &texte) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::WriteOnly);
+            f.write(texte.toUtf8());
+        };
+        ecrire("donnees.grym", "Le carré d'un n vaut n × n.\n");
+        ecrire("faux.grym", "Le carré d'un n vaut n × n.\nLe cube d'un n vaut n × x.\n");
+        bool declarations = false;
+        Diagnostic_atelier d = analyser_source("Remarque : x.\nUtiliser « faux ».\n", false, dossier.filePath("prog.grym"));
+        VERIFIER(d.ligne == 2 && d.colonne == 1);
+        VERIFIER(d.message.startsWith("« ") && d.message.contains("faux.grym », ligne 2 : « x » inconnu."));
+        d = analyser_source("Utiliser « donnees ».\nLe double d'un n vaut n × 2.\n", false, dossier.filePath("lib.grym"), &declarations);
+        VERIFIER(d.message.isEmpty() && declarations);
+        d = analyser_source("Utiliser « donnees ».\nAfficher le carré de 3.\n", false, dossier.filePath("prog.grym"), &declarations);
+        VERIFIER(d.message.isEmpty() && !declarations);
+        ecrire("prog.grym", "Utiliser « donnees ».\nAfficher le carré de 9.\n");
+        Execution e(dossier.filePath("prog.grym"));
+        e.demarrer();
+        QElapsedTimer montre;
+        montre.start();
+        QLabel *etat_prog = nullptr;
+        for (QLabel *l : e.findChildren<QLabel *>())
+            if (l->text() == "En cours…") etat_prog = l;
+        while (montre.elapsed() < 10000 && !etat_prog->text().startsWith("Terminé"))
+            QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(e.findChild<QTextBrowser *>()->toPlainText().contains("81"));
+        e.close();
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }

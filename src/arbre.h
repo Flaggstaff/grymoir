@@ -92,6 +92,8 @@ typedef enum {
                         de l'échec ; entier : case du motif ; forme 1 : « En cas d'échec » en bloc (sinon forme courte) */
     P_STYLE,         /* « Les nombres s'affichent à la française. » (§ 4.1) : entier 0 suisse, 1 française,
                         2 sans séparateur */
+    P_UTILISER,      /* « Utiliser « données ». » (§ 21) : texte : chemin écrit, sans extension ; entier : rang du fichier
+                        dans Programme.fichiers, 0 s'il était déjà lu ; enfants : ses déclarations */
     P_GAGNER         /* « Les genres de o gagnent baroque. » : texte : champ multiple ; enfants[0] : objet ;
                         enfants[1] : valeur ; forme 1 : « perdent » (§ 16.13) */
 } TypeNoeud;

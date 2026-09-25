@@ -4,6 +4,7 @@
 #include "compilateur.h"
 #include "vm.h"
 #include "date.h"
+#include "imprimeur.h"
 #include "sqlite3.h"
 #include "texte.h"
 
@@ -206,6 +207,182 @@ static int fichier_existe(const char *nom) {
 }
 
 #define APT_M "Une chose horodatée a : une date.\nUne chose numérotée a : un numéro.\nUne personne a : un nom.\n"
+
+
+/* ---------------------------------------------------------------- */
+/* Fichiers utilisés (grammaire, § 21)                              */
+/* ---------------------------------------------------------------- */
+
+static void ecrire_source(const char *nom, const char *texte) { creer_fichier(nom, texte, strlen(texte)); }
+
+/* Analyse le fichier `chemin` avec ceux qu'il utilise, le compile, passe le module par le format .grymb
+ * (il doit tourner sans les sources), puis l'exécute. Sortie, ou « ERREUR [fichier:]l:c message ». */
+static char *lancer_fichier(const char *chemin) {
+    FILE *f = fopen(chemin, "rb");
+    if (!f) return grym_dupliquer("ERREUR fichier absent");
+    static char tampon[65536];
+    size_t n = fread(tampon, 1, sizeof tampon - 1, f);
+    fclose(f);
+    tampon[n] = '\0';
+    Portee *portee = portee_creer();
+    portee_fichier(portee, chemin);
+    Programme p;
+    Diagnostic d;
+    size_t l = strlen(chemin);
+    int compact = l > 6 && strcmp(chemin + l - 6, ".grymc") == 0;
+    int ok = compact ? analyser_compact(tampon, n, portee, &p, &d) : analyser(tampon, n, portee, 0, &p, &d);
+    portee_detruire(portee);
+    if (!ok) {
+        char *r = d.fichier ? grym_formater("ERREUR %s:%d:%d %s", d.fichier, d.ligne, d.colonne, d.message)
+                            : grym_formater("ERREUR %d:%d %s", d.ligne, d.colonne, d.message);
+        diagnostic_liberer(&d);
+        return r;
+    }
+    Module *b = compiler(&p, &d);
+    programme_liberer(&p);
+    size_t taille = 0;
+    unsigned char *octets = module_serialiser(b, &taille);
+    module_detruire(b);
+    char *erreur = NULL;
+    b = module_lire(octets, taille, &erreur);
+    free(octets);
+    if (!b) { char *r = grym_formater("ERREUR relecture : %s", erreur); free(erreur); return r; }
+    Machine *m = machine_creer();
+    Chaine s = {0};
+    ok = machine_executer(m, b, &s, &d);
+    module_detruire(b);
+    machine_detruire(m);
+    char *r = chaine_rendre(&s);
+    if (!ok) {
+        free(r);
+        r = d.fichier ? grym_formater("ERREUR %s:%d:%d %s", d.fichier, d.ligne, d.colonne, d.message)
+                      : grym_formater("ERREUR %d:%d %s", d.ligne, d.colonne, d.message);
+        diagnostic_liberer(&d);
+        return r;
+    }
+    size_t lr = strlen(r);
+    if (lr && r[lr - 1] == '\n') r[lr - 1] = '\0';
+    return r;
+}
+
+static void verifier_fichier(int ligne, const char *chemin, const char *attendu) {
+    total++;
+    char *r = lancer_fichier(chemin);
+    int ok = attendu[0] == '~' ? strstr(r, attendu + 1) != NULL : strcmp(r, attendu) == 0;
+    if (!ok) signaler(ligne, chemin, attendu, r);
+    free(r);
+}
+#define FICHIER(chemin, att) verifier_fichier(__LINE__, chemin, att)
+
+static void essais_utiliser(void) {
+    static const char *const FICHIERS[] = {
+        "_u_donnees.grym", "_u_prog.grym", "_u_tard.grym", "_u_exec.grym", "_u_b.grym", "_u_faux.grym",
+        "_u_c.grym", "_u_x.grym", "_u_y.grym", "_u_d.grym", "_u_self.grym", "_u_absent.grym", "_u_ext.grym",
+        "_u_deux.grym", "_u_deux.grymc", "_u_e.grym", "_u_dup.grym", "_u_div.grym", "_u_h.grym",
+        "_u_haut.grym", "_u_gauche.grym", "_u_droite.grym", "_u_bas.grym", "_u_compact.grymc", "_u_k.grym",
+        "tests/_u_commun.grym", "tests/_u_fiches.grym", "_u_sous.grym", "_u_prog.grymc", "_u_texte.grym"
+    };
+    ecrire_source("_u_donnees.grym", "Remarque : les données.\nUn compositeur, conservé, a :\n    un nom (texte), unique.\n"
+                                     "Le carré d'un nombre vaut nombre × nombre.\n");
+    /* l'essentiel : une remarque, puis « Utiliser », puis le programme, qui voit classes et formules */
+    ecrire_source("_u_prog.grym", "Remarque : le programme.\nUtiliser « _u_donnees ».\nAfficher le carré de 7.\n"
+                                  "Le c vaut un nouveau compositeur :\n    Le nom vaut « Bach ».\nAfficher nom du c.\n");
+    FICHIER("_u_prog.grym", "49\nBach");
+    /* en tête du fichier seulement */
+    ecrire_source("_u_tard.grym", "Afficher 1.\nUtiliser « _u_donnees ».\n");
+    FICHIER("_u_tard.grym", "ERREUR 2:1 « Utiliser » se place en tête du fichier, avant toute autre phrase.");
+    /* un fichier utilisé ne contient que des déclarations */
+    ecrire_source("_u_exec.grym", "Le carré d'un n vaut n × n.\nLe x vaut 1.\n");
+    ecrire_source("_u_b.grym", "Utiliser « _u_exec ».\n");
+    FICHIER("_u_b.grym", "ERREUR 1:10 « _u_exec.grym » contient une phrase qui s'exécute (ligne 2) : "
+                         "seul un fichier de déclarations s'utilise.");
+    /* une erreur dans un fichier utilisé désigne ce fichier */
+    ecrire_source("_u_faux.grym", "Un client a :\n    un nom,\n    un nom.\n");
+    ecrire_source("_u_c.grym", "Utiliser « _u_faux ».\n");
+    FICHIER("_u_c.grym", "ERREUR _u_faux.grym:3:8 Champ « nom » déjà nommé.");
+    /* utilisation circulaire, et fichier qui s'utilise lui-même */
+    ecrire_source("_u_x.grym", "Utiliser « _u_y ».\n");
+    ecrire_source("_u_y.grym", "Utiliser « _u_x ».\n");
+    ecrire_source("_u_d.grym", "Utiliser « _u_x ».\n");
+    FICHIER("_u_d.grym", "~Utilisation circulaire : « _u_x.grym » s'utilise lui-même");
+    ecrire_source("_u_self.grym", "Utiliser « _u_self ».\n");
+    FICHIER("_u_self.grym", "ERREUR 1:10 Un fichier ne s'utilise pas lui-même.");
+    /* fichier introuvable, extension écrite, deux formes du même nom */
+    ecrire_source("_u_absent.grym", "Utiliser « _u_rien ».\n");
+    FICHIER("_u_absent.grym", "ERREUR 1:10 « _u_rien » introuvable : ni « _u_rien.grym » ni « _u_rien.grymc ».");
+    ecrire_source("_u_ext.grym", "Utiliser « _u_donnees.grym ».\n");
+    FICHIER("_u_ext.grym", "~Écrivez le fichier sans extension : « Utiliser « _u_donnees ». »");
+    ecrire_source("_u_deux.grymc", "# vide\n");
+    ecrire_source("_u_texte.grym", "Utiliser « _u_deux ».\n");
+    ecrire_source("_u_deux.grym", "Remarque : vide.\n");
+    FICHIER("_u_texte.grym", "~« _u_deux » désigne à la fois « _u_deux.grym » et « _u_deux.grymc »");
+    /* un conflit nomme le fichier de l'autre déclaration */
+    ecrire_source("_u_dup.grym", "Un compositeur a : un nom.\n");
+    ecrire_source("_u_e.grym", "Utiliser « _u_donnees ».\nUtiliser « _u_dup ».\n");
+    FICHIER("_u_e.grym", "ERREUR _u_dup.grym:1:4 La classe « compositeur » existe déjà : déclarée dans "
+                         "« _u_donnees.grym », ligne 2.");
+    /* une erreur d'exécution dans une formule d'un fichier utilisé, après passage par le bytecode */
+    ecrire_source("_u_div.grym", "Le quotient d'un a et d'un b vaut a ÷ b.\n");
+    ecrire_source("_u_h.grym", "Utiliser « _u_div ».\nAfficher le quotient de 1 et de 0.\n");
+    FICHIER("_u_h.grym", "ERREUR _u_div.grym:1:37 Division par zéro.");
+    /* un losange : deux fichiers utilisent le même, lu une seule fois */
+    ecrire_source("_u_bas.grym", "Un point a : un x.\n");
+    ecrire_source("_u_gauche.grym", "Utiliser « _u_bas ».\nLe double d'un n vaut n × 2.\n");
+    ecrire_source("_u_droite.grym", "Utiliser « _u_bas ».\nLe triple d'un n vaut n × 3.\n");
+    ecrire_source("_u_haut.grym", "Utiliser « _u_gauche ».\nUtiliser « _u_droite ».\nLe p vaut un nouveau point :\n"
+                                  "    Le x vaut le double du triple de 2.\nAfficher x de p.\n");
+    FICHIER("_u_haut.grym", "12");
+    /* un fichier utilisé en forme compacte */
+    ecrire_source("_u_compact.grymc", "_calcul _le cube(_un n) << n × n × n\n");
+    ecrire_source("_u_k.grym", "Utiliser « _u_compact ».\nAfficher le cube de 3.\n");
+    FICHIER("_u_k.grym", "27");
+    /* le chemin part du dossier du fichier qui utilise */
+    ecrire_source("tests/_u_commun.grym", "Le double d'un n vaut n × 2.\n");
+    ecrire_source("tests/_u_fiches.grym", "Utiliser « _u_commun ».\nLe triple d'un n vaut n × 3.\n");
+    ecrire_source("_u_sous.grym", "Utiliser « tests/_u_fiches ».\nAfficher le double du triple de 5.\n");
+    FICHIER("_u_sous.grym", "30");
+    /* un programme principal en forme compacte */
+    ecrire_source("_u_prog.grymc", "_utiliser « _u_donnees »\n_afficher carré(4)\n");
+    FICHIER("_u_prog.grymc", "16");
+
+    {   /* l'impression garde la phrase, jamais les déclarations du fichier utilisé ; aller et retour compacts */
+        total += 2;
+        Portee *portee = portee_creer();
+        portee_fichier(portee, "_u_prog.grym");
+        const char *src = "Remarque : le programme.\nUtiliser « _u_donnees ».\nAfficher le carré de 7.\n";
+        Programme p;
+        Diagnostic d;
+        if (analyser(src, strlen(src), portee, 0, &p, &d)) {
+            char *l = imprimer_litteraire(&p), *c = imprimer_compact(&p);
+            if (strcmp(l, src) != 0) signaler(__LINE__, src, src, l);
+            const char *ac = "# le programme.\n_utiliser « _u_donnees »\n_afficher carré(7)\n";
+            if (strcmp(c, ac) != 0) signaler(__LINE__, src, ac, c);
+            free(l);
+            free(c);
+            programme_liberer(&p);
+        } else {
+            signaler(__LINE__, src, "analyse", d.message);
+            diagnostic_liberer(&d);
+            echecs++;
+        }
+        portee_detruire(portee);
+    }
+    {   /* boucle interactive : « Utiliser » depuis le dossier courant ; une seconde fois ne fait rien */
+        total++;
+        Portee *p = portee_creer();
+        Machine *m = machine_creer();
+        char *r1 = executer_source(p, m, "Utiliser « _u_donnees ».\nAfficher le carré de 3.", 1);
+        char *r2 = executer_source(p, m, "Utiliser « _u_donnees ».\nAfficher le carré de 4.", 1);
+        if (strcmp(r1, "9") != 0 || strcmp(r2, "16") != 0) signaler(__LINE__, "interactif", "9 / 16", r2);
+        free(r1);
+        free(r2);
+        machine_detruire(m);
+        portee_detruire(p);
+    }
+    /* « utiliser » ne commence pas le nom d'une action */
+    PROG("Pour utiliser un x :\n    Afficher x.\n", "ERREUR 1:6 « utiliser » commence une construction du langage : il ne peut pas commencer le nom d'une action.");
+    for (size_t k = 0; k < sizeof FICHIERS / sizeof *FICHIERS; k++) remove(FICHIERS[k]);
+}
 
 int main(void) {
 #ifdef _WIN32
@@ -2021,6 +2198,8 @@ int main(void) {
              "Membre\n  Nom    Ana\n  Photo  une image PNG de 13 octets");
         remove("_essai_fiche.png");
     }
+
+    essais_utiliser();
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

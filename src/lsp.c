@@ -140,9 +140,46 @@ static long colonne_utf16(const char *t, int ligne, int colonne, long *fin_mot) 
 /* Diagnostics, suites, formatage                                   */
 /* ---------------------------------------------------------------- */
 
+/* Chemin local d'une URI « file:// », décodée (« %C3%A9 » → « é ») ; NULL pour une autre URI (§ 21 :
+ * sans chemin, les fichiers utilisés se cherchent dans le dossier courant du serveur). À libérer. */
+static int chiffre_hexa(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+static char *uri_vers_chemin(const char *uri) {
+    if (strncmp(uri, "file://", 7) != 0) return NULL;
+    const char *p = uri + 7;
+    if (strncmp(p, "localhost/", 10) == 0) p += 9;
+    size_t n = strlen(p);
+    char *c = malloc(n + 1);
+    if (!c) return NULL;
+    size_t k = 0;
+    for (size_t i = 0; i < n; i++) {
+        int h1, h2;
+        if (p[i] == '%' && i + 2 < n && (h1 = chiffre_hexa(p[i + 1])) >= 0 && (h2 = chiffre_hexa(p[i + 2])) >= 0) {
+            c[k++] = (char)(h1 * 16 + h2);
+            i += 2;
+        } else {
+            c[k++] = p[i];
+        }
+    }
+    c[k] = '\0';
+#ifdef _WIN32
+    /* « /C:/dossier/x.grym » → « C:/dossier/x.grym » */
+    if (c[0] == '/' && c[1] && c[2] == ':') memmove(c, c + 1, k);
+#endif
+    return c;
+}
+
 /* Analyse le document ; *diag reçoit la première erreur. Renvoie 1 si le programme est correct. */
 static int analyser_document(const Document *d, Programme *p, Diagnostic *diag) {
     Portee *portee = portee_creer();
+    char *chemin = uri_vers_chemin(d->uri);
+    portee_fichier(portee, chemin);
+    free(chemin);
     int ok = est_compact(d->uri) ? analyser_compact(d->texte, strlen(d->texte), portee, p, diag)
                                  : analyser(d->texte, strlen(d->texte), portee, 0, p, diag);
     portee_detruire(portee);
@@ -159,9 +196,17 @@ static void publier_diagnostics(Serveur *s, const Document *d) {
     if (analyser_document(d, &p, &diag)) {
         programme_liberer(&p);
     } else {
-        int ligne = diag.ligne > 0 ? diag.ligne : 1;
+        /* une erreur dans un fichier utilisé se signale sur la phrase « Utiliser » qui y mène (§ 21) */
+        int ailleurs = diag.fichier && diag.origine_ligne > 0;
+        int ligne = ailleurs ? diag.origine_ligne : diag.ligne > 0 ? diag.ligne : 1;
+        int colonne = ailleurs ? diag.origine_colonne : diag.colonne;
+        if (ailleurs) {
+            char *m = grym_formater("« %s », ligne %d : %s", diag.fichier, diag.ligne, diag.message);
+            free(diag.message);
+            diag.message = m;
+        }
         long fin;
-        long debut = colonne_utf16(d->texte, ligne, diag.colonne > 0 ? diag.colonne : 1, &fin);
+        long debut = colonne_utf16(d->texte, ligne, colonne > 0 ? colonne : 1, &fin);
         char t[256];
         snprintf(t, sizeof t, "{\"range\":{\"start\":{\"line\":%d,\"character\":%ld},\"end\":{\"line\":%d,\"character\":%ld}},"
                               "\"severity\":1,\"source\":\"grym\",\"message\":", ligne - 1, debut, ligne - 1, fin);
@@ -181,7 +226,9 @@ static void suites(Serveur *s, const Json *id, const Json *params) {
     if (!d || est_compact(d->uri)) { repondre(s, id, "[]"); return; }   /* suites : forme littéraire (§ 8) */
     size_t pos = decalage(d->texte, json_entier(json_chemin(params, "position.line"), 0),
                           json_entier(json_chemin(params, "position.character"), 0));
-    Suggestions g = suites_valides(d->texte, pos);
+    char *chemin = uri_vers_chemin(d->uri);
+    Suggestions g = suites_valides_fichier(d->texte, pos, chemin);
+    free(chemin);
     Chaine c = {0};
     chaine_ajouter(&c, "[");
     int premier = 1;

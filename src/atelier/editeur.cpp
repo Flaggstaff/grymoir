@@ -12,18 +12,26 @@ extern "C" {
 #include "analyseur.h"
 }
 
-Diagnostic_atelier analyser_source(const QString &source, bool compacte) {
+Diagnostic_atelier analyser_source(const QString &source, bool compacte, const QString &chemin, bool *declarations) {
     Diagnostic_atelier r;
     const QByteArray octets = source.toUtf8();
     Portee *portee = portee_creer();
+    const QByteArray c = chemin.toUtf8();
+    if (!chemin.isEmpty()) portee_fichier(portee, c.constData());
     Programme programme = {};
     Diagnostic d = {};
     const int ok = compacte ? analyser_compact(octets.constData(), (size_t)octets.size(), portee, &programme, &d)
                             : analyser(octets.constData(), (size_t)octets.size(), portee, 0, &programme, &d);
+    if (declarations) *declarations = ok && programme_declarations_seules(&programme);
     if (!ok) {
         r.message = QString::fromUtf8(d.message ? d.message : "Erreur.");
         r.ligne = d.ligne;
         r.colonne = d.colonne;
+        if (d.fichier && d.origine_ligne > 0) {   // l'erreur est dans un fichier utilisé : sur sa phrase « Utiliser »
+            r.message = QString("« %1 », ligne %2 : %3").arg(QString::fromUtf8(d.fichier)).arg(d.ligne).arg(r.message);
+            r.ligne = d.origine_ligne;
+            r.colonne = d.origine_colonne;
+        }
     }
     diagnostic_liberer(&d);
     programme_liberer(&programme);
@@ -63,8 +71,9 @@ Editeur::Editeur(QWidget *parent) : QPlainTextEdit(parent), marge(new Marge(this
     setViewportMargins(largeur_marge(), 0, 0, 0);
 }
 
-void Editeur::charger(const QString &texte, bool c) {
+void Editeur::charger(const QString &texte, bool c, const QString &ch) {
     compacte = c;
+    chemin = ch;
     delete coloration;
     coloration = nullptr;
     setPlainText(texte);
@@ -105,7 +114,7 @@ void Editeur::peindre_marge(QPaintEvent *e) {
 }
 
 void Editeur::analyser() {
-    diag = analyser_source(toPlainText(), compacte);
+    diag = analyser_source(toPlainText(), compacte, chemin, &que_des_declarations);
     marquer_erreur();
     marge->update();
     emit diagnostic_change();

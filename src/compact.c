@@ -798,6 +798,14 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "essayer", t);
             emettre(r, J_DEUX_POINTS, NULL, t, 1);
             ouvrir(r, O_ESSAI, prof, t);
+        } else if (!strcmp(c, "utiliser")) {   /* _utiliser « données » → Utiliser « données ». (§ 21) */
+            if (f != d + 2 || r->e[d + 1].type != J_TEXTE) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _utiliser « données » »."));
+                return;
+            }
+            mot(r, "utiliser", t);
+            emettre(r, J_TEXTE, r->e[d + 1].valeur, &r->e[d + 1], 0);
+            point(r, f);
         } else if (!strcmp(c, "effacer")) {   /* _effacer → Effacer l'écran. */
             if (d + 1 != f) { echouer(r, t, grym_dupliquer("« _effacer » s'écrit seul.")); return; }
             mot(r, "effacer", t);

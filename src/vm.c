@@ -526,6 +526,8 @@ static void vider(Pile *p) {
 static int echouer(Diagnostic *d, const Bloc *b, size_t decalage, char *message) {
     d->message = message;
     bloc_position(b, decalage, &d->ligne, &d->colonne);
+    free(d->fichier);   /* une formule d'un fichier utilisé désigne son fichier (§ 21) */
+    d->fichier = b->fichier ? grym_dupliquer(b->fichier) : NULL;
     return 0;
 }
 
@@ -1774,6 +1776,8 @@ static char *afficher_fiche(Machine *m, Objet *o, Chaine *sortie) {
 int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *diag) {
     diag->message = NULL;
     diag->ligne = diag->colonne = 0;
+    diag->fichier = NULL;
+    diag->origine_ligne = diag->origine_colonne = 0;
 
     char *erreur = NULL;
     if (!module_verifier(module, &erreur)) {
@@ -2828,6 +2832,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             motif.texte = diag->message;
             diag->message = NULL;
             diag->ligne = diag->colonne = 0;
+            free(diag->fichier);
+            diag->fichier = NULL;
             empiler(&pile, motif);
             cadres[e.cadre].ip = e.cible;
             m->epoque++;   /* ce que le bloc « En cas d'échec » écrit repasse au journal */
@@ -2851,6 +2857,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             ok = 0;
             diag->message = erreur;
             diag->ligne = diag->colonne = 0;
+            free(diag->fichier);
+            diag->fichier = NULL;
         } else {
             ecrits = m->nb_a_ecrire;
         }
@@ -2862,6 +2870,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             ok = 0;
             diag->message = erreur;
             diag->ligne = diag->colonne = 0;
+            free(diag->fichier);
+            diag->fichier = NULL;
             for (size_t k = 0; k < ecrits; k++) remove(m->a_ecrire[k].chemin);
         } else if (!ok) {
             base_annuler(m->base);

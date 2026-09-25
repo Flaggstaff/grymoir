@@ -109,6 +109,7 @@ static void sur_interruption(int signal_recu) {
 }
 
 static void signaler(const char *fichier, const Diagnostic *d) {
+    if (d->fichier) fichier = d->fichier;   /* l'erreur est dans un fichier utilisé (grammaire, § 21) */
     if (d->ligne) fprintf(stderr, "%s:%d:%d : erreur : %s\n", fichier, d->ligne, d->colonne, d->message);
     else          fprintf(stderr, "%s : erreur : %s\n", fichier, d->message);
 }
@@ -140,6 +141,7 @@ static Module *charger(const char *chemin) {
         }
     } else {
         Portee *portee = portee_creer();
+        portee_fichier(portee, chemin);
         Programme p;
         Diagnostic d;
         int lu = est_compact(chemin) ? analyser_compact(donnees, taille, portee, &p, &d)
@@ -297,6 +299,7 @@ static int analyser_fichier(const char *chemin, Programme *p) {
     fclose(f);
     if (!source) return 0;
     Portee *portee = portee_creer();
+    portee_fichier(portee, chemin);
     Diagnostic d;
     int ok = est_compact(chemin) ? analyser_compact(source, taille, portee, p, &d)
                                  : analyser(source, taille, portee, 0, p, &d);

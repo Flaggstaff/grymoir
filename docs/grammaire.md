@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.37 de la spécification, révisée le 24 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.38 de la spécification, révisée le 24 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -317,7 +317,8 @@ bloc         = { phrase } ;                      (* alignées sur une même colo
 phrase       = création | modification | affichage | si | remarque
              | calcul | action | rendre | appel-action
              | tant-que | répéter | pour-chaque | sortir | passer | selon
-             | classe | modif-champ | essayer ;
+             | classe | modif-champ | essayer | utiliser ;
+utiliser     = "Utiliser" texte "." ;          (* § 21 : en tête du fichier, après les remarques *)
 essayer      = "Essayer" ":" bloc-indenté "En" "cas" "d'" "échec" branche ;   (* § 18 *)
 classe       = un nom "a" ":" un nom { "," un nom } "."
              | un nom "est" un ( nom | "chose" ) [ adjectifs ] "."
@@ -624,7 +625,7 @@ Selon le mois :
 
 ### 10.7 Mots de construction
 
-`tant`, `répéter`, `chaque`, `sortir`, `passer`, `selon`, `cas`, `autrement`, `essayer`, `saisir` (avec `afficher`, `si`, `sinon`, `pour`, `rendre`) commencent des constructions : ils ne peuvent pas commencer le nom d'une action.
+`tant`, `répéter`, `chaque`, `sortir`, `passer`, `selon`, `cas`, `autrement`, `essayer`, `saisir`, `utiliser` (§ 21) (avec `afficher`, `si`, `sinon`, `pour`, `rendre`) commencent des constructions : ils ne peuvent pas commencer le nom d'une action.
 
 ---
 
@@ -1309,6 +1310,67 @@ Afficher la fiche du compositeur de l'œuvre.
 - Une valeur qui n'est pas un objet : « Une fiche montre un objet : la valeur est un nombre. »
 - En forme compacte : `_fiche p`.
 
+## 21. Fichiers utilisés *(atelier, A2)*
+
+Un projet tient dans plusieurs fichiers : les données, les écrans, les traitements. Décidé le 24 septembre 2026 (`docs/atelier.md`, § 6.2).
+
+```
+Remarque : Partothèque, le programme principal.
+Utiliser « données ».
+Utiliser « écrans/fiches ».
+
+Pour recruter :
+    …
+```
+
+### 21.1 La phrase
+
+- `Utiliser « chemin ».` rend visibles, dans tout le fichier, les déclarations du fichier désigné.
+- Elle se place en tête du fichier : après les remarques éventuelles, avant toute autre phrase. Plus bas : « « Utiliser » se place en tête du fichier, avant toute autre phrase. » Les dépendances d'un fichier se lisent ainsi dans ses premières lignes.
+- Le chemin s'écrit entre guillemets, sans extension : `« données »` trouve `données.grym` ou `données.grymc`. Écrire l'extension est une erreur, qui propose la tournure sans elle ; `grym traduire` n'a jamais à réécrire une phrase `Utiliser`.
+- Si les deux fichiers existent, le choix serait arbitraire : « « données » désigne à la fois « données.grym » et « données.grymc » : gardez-en un seul. »
+- `utiliser` devient un mot de construction (§ 10.7) : il ne commence plus le nom d'une action.
+
+### 21.2 Un fichier de déclarations
+
+Un fichier utilisé ne contient que des déclarations : remarques, classes, entités, aptitudes, calculs, actions, et ses propres phrases `Utiliser`. Aucune phrase qui s'exécute : ni `Afficher`, ni `vaut` au premier niveau, ni `Conserver`, ni le réglage des nombres (§ 4.1). Sinon : « « exec.grym » contient une phrase qui s'exécute (ligne 2) : seul un fichier de déclarations s'utilise. »
+
+- Seul le programme principal s'exécute. Un fichier qui contient des phrases exécutables est un programme ; il ne s'utilise pas.
+- Une action d'un fichier utilisé ne voit pas les variables du programme principal : elles n'existent pas encore quand on la lit. Elle passe par ses paramètres (§ 9.4).
+
+### 21.3 Chemins
+
+- Le chemin part du dossier du fichier qui écrit la phrase : si `écrans/fiches.grym` utilise `« commun »`, c'est `écrans/commun.grym`.
+- Dans la boucle interactive, il part du dossier courant.
+- Fichier absent : « « données » introuvable : ni « données.grym » ni « données.grymc ». »
+
+### 21.4 Une seule lecture, aucun cercle
+
+- Un fichier utilisé plusieurs fois, directement ou par un détour, n'est lu qu'une fois par projet : deux fichiers qui utilisent tous deux `« commun »` ne le déclarent pas deux fois.
+- Dans la boucle interactive, utiliser à nouveau un fichier déjà lu ne fait rien.
+- Une utilisation circulaire est une erreur : « Utilisation circulaire : « x.grym » s'utilise lui-même, directement ou par un autre fichier. » De même : « Un fichier ne s'utilise pas lui-même. »
+
+### 21.5 Visibilité et conflits
+
+- Ce qu'un fichier déclare est visible dans tout fichier qui l'utilise, et dans ceux qui utilisent ce dernier : les déclarations se transmettent.
+- Un nom reste unique dans tout le projet. Le message nomme l'autre fichier : « La classe « compositeur » existe déjà : déclarée dans « données.grym », ligne 2. »
+
+### 21.6 Erreurs
+
+- Une erreur dans un fichier utilisé désigne ce fichier : `données.grym:7:18 : erreur : …`, à l'analyse comme à l'exécution.
+- Dans un éditeur (l'atelier, ou VS Code par `grym lsp`), le fichier ouvert porte l'erreur sur sa phrase `Utiliser` qui y mène : « « données.grym », ligne 7 : … ».
+
+### 21.7 Bytecode et base
+
+- `grym compiler` produit un seul `.grymb` pour tout le projet : il tourne sans les sources. Chaque formule y garde le nom de son fichier, pour les messages (`docs/vm.md`, § 11, format 25).
+- La base reste celle du programme principal : `partotheque.grymd`, même si les entités sont déclarées dans `données.grym` (§ 16.5).
+
+### 21.8 Forme compacte et outils
+
+- En forme compacte : `_utiliser « données »`, en tête du fichier aussi.
+- `grym formater` et `grym traduire` écrivent la phrase telle quelle, jamais les déclarations du fichier utilisé.
+- Les suites attendues (§ 8) proposent `Utiliser` en tête du fichier seulement, et, plus bas, les noms déclarés dans les fichiers utilisés.
+
 ---
 
 ## Journal des révisions
@@ -1353,3 +1415,4 @@ Afficher la fiche du compositeur de l'œuvre.
 | 1.35 | 2026-09-24 | § 19 : modifier par formulaire (`Saisir à nouveau p.`), valeurs actuelles entre crochets, `-` pour vider, écriture après la dernière réponse ; `saisir` réservé aux constructions |
 | 1.36 | 2026-09-24 | § 16.5 : numéro de format des bases, base plus récente refusée (charte, art. 13) |
 | 1.37 | 2026-09-24 | § 20.1 : la fiche d'un objet (`Afficher la fiche de p.`) |
+| 1.38 | 2026-09-24 | § 21 : fichiers utilisés (`Utiliser « données ».`), fichiers de déclarations, chemins, lecture unique, cercles refusés, erreurs par fichier ; `utiliser` devient un mot de construction (§ 10.7) |

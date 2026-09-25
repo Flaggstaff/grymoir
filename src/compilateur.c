@@ -23,6 +23,8 @@ typedef struct {
     Boucle *boucles;
     size_t nb_boucles;
     int essais;        /* blocs « Essayer » ouverts autour de la phrase en cours (§ 18) */
+    const Programme *programme;
+    const char *fichier;   /* fichier utilisé dont on compile les déclarations (§ 21), NULL pour le principal */
 } Compilation;
 
 static void trop_grand(Compilation *c, const Noeud *n) {
@@ -32,6 +34,7 @@ static void trop_grand(Compilation *c, const Noeud *n) {
         "Programme trop grand : un bloc accepte au plus 65'536 constantes et 65'536 noms.");
     c->diag->ligne = n->ligne;
     c->diag->colonne = n->colonne;
+    c->diag->fichier = c->fichier ? grym_dupliquer(c->fichier) : NULL;
 }
 
 static void emettre(Compilation *c, CodeInstruction code, long operande, int ligne, int colonne) {
@@ -714,6 +717,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         Bloc *f = bloc_creer();
         f->nom = grym_dupliquer(ph->texte);
         f->classe = ph->texte2 ? grym_dupliquer(ph->texte2) : NULL;
+        f->fichier = c->fichier ? grym_dupliquer(c->fichier) : NULL;
         f->sorte = ph->type == P_CALCUL ? B_CALCUL : B_ACTION;
         f->nb_parametres = (int)ph->enfants[0]->nb_enfants;
         f->nb_locaux = ph->entier;
@@ -740,6 +744,15 @@ static void phrase(Compilation *c, const Noeud *ph) {
         c->b = prec;
         return;
     }
+    case P_UTILISER: {
+        /* Les déclarations d'un fichier utilisé se compilent ici, une seule fois par projet (§ 21). */
+        const char *prec = c->fichier;
+        if (ph->entier > 0 && (size_t)ph->entier <= c->programme->nb_fichiers)
+            c->fichier = c->programme->fichiers[ph->entier - 1];
+        phrases(c, ph->enfants, ph->nb_enfants);
+        c->fichier = prec;
+        return;
+    }
     default:   /* P_REMARQUE : rien à exécuter */
         return;
     }
@@ -747,11 +760,13 @@ static void phrase(Compilation *c, const Noeud *ph) {
 
 Module *compiler(const Programme *p, Diagnostic *diag) {
     Module *m = module_creer();
-    Compilation c = { bloc_creer(), m, diag, 0, NULL, 0, 0 };
+    Compilation c = { bloc_creer(), m, diag, 0, NULL, 0, 0, p, NULL };
     c.b->nb_locaux = p->nb_locaux;
     module_ajouter(m, c.b);
     diag->message = NULL;
     diag->ligne = diag->colonne = 0;
+    diag->fichier = NULL;
+    diag->origine_ligne = diag->origine_colonne = 0;
     phrases(&c, p->phrases, p->nb);
     free(c.boucles);
     if (c.echec) {

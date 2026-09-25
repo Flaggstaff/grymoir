@@ -753,6 +753,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     case P_EFFACER:
         aj(im, c ? "_effacer\n" : "Effacer l'écran.\n");
         return;
+    case P_UTILISER:   /* « Utiliser « données ». » ; « _utiliser « données » » (§ 21) : jamais ses déclarations */
+        aj(im, c ? "_utiliser " : "Utiliser ");
+        ecrire_texte(im, n->texte);
+        aj(im, c ? "\n" : ".\n");
+        return;
     case P_FICHE:   /* « Afficher la fiche de p. » ; « _fiche p » (§ 20) */
         if (c) {
             aj(im, "_fiche ");

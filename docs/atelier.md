@@ -68,6 +68,8 @@ Intégration continue : l'atelier se construit et ses essais tournent sous Ubunt
 
 Construction : `cmake -B construction`, puis `cmake --build construction` ; essais sans fenêtre : `ctest --test-dir construction` (`tests/test_atelier.cpp`). Le cœur est compilé une seconde fois par CMake, depuis les mêmes sources que le `Makefile`.
 
+État de A2 (24 septembre 2026) : les fichiers utilisés sont faits (grammaire, § 21). Dans l'atelier, la liste du projet écrit les programmes en gras et les fichiers de déclarations normalement, le survol dit lequel ; une erreur venue d'un fichier utilisé se signale sur la phrase `Utiliser`. « Lancer », depuis un fichier de déclarations, exécute le programme principal : le seul du projet, ou celui qu'on choisit une fois (menu « Programme », « Choisir le programme principal… »), retenu par projet. Une erreur d'exécution dans un autre fichier l'ouvre au clic. Reste : l'éditeur de données.
+
 Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la fenêtre, le lien avec le cœur et la construction sur trois systèmes, sur quoi tout le reste repose.
 
 ## 6. Questions ouvertes
@@ -95,3 +97,4 @@ Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la
 | 0.3 | 2026-09-24 | § 6.3 : éditeur de code maison, branché sur le lexeur, les suites et l'analyseur |
 | 0.4 | 2026-09-24 | § 4 : Qt 6.4 au moins ; § 5 : A1 commencé (fenêtre, projet, éditeur, coloration, erreurs en direct) |
 | 0.5 | 2026-09-24 | § 5 : A1 fait ; « Lancer » dans un processus à part, fenêtre d'exécution, arrêt, intégration continue |
+| 0.6 | 2026-09-24 | § 5 : A2 commencé, fichiers utilisés (grammaire, § 21), programme principal |

@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.36, révisée le 24 septembre 2026.
+Version 1.37, révisée le 24 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -23,8 +23,9 @@ En cas de conflit entre deux choix, le rang supérieur l'emporte, sans débat.
 
 ## 3. Exécution
 
-- Le compilateur `grym` produit un bytecode unique.
+- Le compilateur `grym` produit un bytecode unique, un seul fichier pour tout un projet, même écrit sur plusieurs fichiers (grammaire, § 21).
 - Une VM écrite en C portable exécute ce bytecode sous Windows, Linux et macOS.
+- Deux exécutables : `grym` (compilateur, VM, console, navigateur, aide à la saisie), en C99 sans dépendance ; `grym-atelier`, l'environnement de développement, en C++ avec Qt 6 (`docs/atelier.md`).
 - Les sources sont en UTF-8, normalisées NFC à la lecture.
 - Extensions : `.grym` (forme littéraire), `.grymc` (forme compacte).
 
@@ -39,7 +40,7 @@ Règles communes :
 
 - Les deux formes produisent le même arbre syntaxique. Tout ce qui suit l'analyse (vérification, bytecode, VM) ignore la forme d'origine.
 - `grym traduire` convertit un fichier d'une forme à l'autre sans perte de programme ni de remarque. Compacte → littéraire → compacte redonne le texte compact à l'identique ; littéraire → compacte → littéraire redonne le même programme en forme littéraire canonique. L'arbre conserve remarques, lignes vides et choix d'écriture ; `grym formater` écrit la forme canonique (grammaire, § 12).
-- Une seule forme par fichier.
+- Une seule forme par fichier. Un projet peut mêler les deux : `Utiliser « données ».` trouve `données.grym` ou `données.grymc` (grammaire, § 21).
 - Toute construction existe dans les deux formes.
 - La forme littéraire fait référence : chaque nouvelle fonction se conçoit d'abord en français courant, puis se dérive en forme compacte.
 - Les calculs gardent la notation mathématique dans les deux formes (`Le total vaut prix × quantité.`).
@@ -141,10 +142,12 @@ Interface graphique, réseau, concurrence, optimisation.
 
 Depuis la v2.0 : interface graphique par le navigateur, servie par `grym` ; réseau limité à l'écoute locale (127.0.0.1), pendant l'exécution d'un programme (`docs/v2.md`, § 5). Concurrence et optimisation restent hors périmètre.
 
+Depuis l'atelier (décidé le 24 septembre 2026, `docs/atelier.md`) : interface graphique native par Qt 6, pour l'atelier et pour les applications qu'il produit ; `grym servir` reste un mode d'affichage parmi d'autres.
+
 Horizon post-v1, sans date :
 
 - Éditeur par blocs, conçu comme une troisième forme de l'arbre syntaxique (art. 4), convertible sans perte vers les deux autres.
-- Éditeur visuel d'interfaces, conditionné à l'arrivée des interfaces graphiques.
+- Éditeur visuel d'interfaces : il quitte l'horizon pour les jalons A3 et A4 de l'atelier.
 
 ## 12. Jalons
 
@@ -156,6 +159,10 @@ Horizon post-v1, sans date :
 | v0.4 | Serveur d'aide à la saisie (`grym lsp`, protocole LSP) : erreurs en direct, autocomplétion, mise en forme ; extension VS Code avec coloration des deux formes | livrée le 22 septembre 2026 |
 | v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4), reprise après erreur (§ 18), formulaire déduit de l'entité (§ 19) ; première application réelle : `exemples/partotheque.grym` ; sortie d'une question par un point seul (§ 17), assemblage de textes (§ 4.4) | livrée le 24 septembre 2026 |
 | v2.0 | L'interface par le navigateur (`docs/v2.md`) : `grym servir`, tout programme v1 affiché sans modification ; formulaires typés, liens avec suggestions, téléversement, images | livrée le 24 septembre 2026 |
+| A1 | L'atelier (`docs/atelier.md`) : fenêtre Qt, projet, éditeur avec coloration par le lexeur et erreurs en direct, « Lancer » dans un processus à part | fait le 24 septembre 2026 |
+| A2 | Fichiers utilisés (grammaire, § 21), puis éditeur de données : schéma des entités, propriétés, réécriture chirurgicale, aperçu des migrations | en cours : § 21 fait |
+| A3 | Les écrans dans le langage : fenêtres, listes, fiches, boutons, événements | à concevoir |
+| A4 | Éditeur d'écrans : liste et fiche générées par entité, agencement à la souris | à venir |
 
 Critères de sortie de la v1.0, tous remplis :
 
@@ -230,3 +237,4 @@ Une version 1.x promet ce qui suit. Toute exception passe par une révision de l
 | 1.34 | 2026-09-24 | Art. 12 : v2.0-b faite (liens, fichiers, images dans le navigateur) |
 | 1.35 | 2026-09-24 | Art. 11 : interface par le navigateur et écoute locale depuis la v2.0 ; art. 12 : v2.0 livrée |
 | 1.36 | 2026-09-24 | Art. 12 : affichage des objets fait, par la fiche (grammaire, § 20.1) ; v2.x : les objets à l'écran en cours |
+| 1.37 | 2026-09-24 | Art. 3 : deux exécutables, `grym` et `grym-atelier` (Qt 6), un bytecode par projet ; art. 4 : un projet sur plusieurs fichiers (grammaire, § 21) ; art. 11 : interface native par Qt, éditeur visuel d'interfaces en A3 et A4 ; art. 12 : jalons A1 (fait) à A4 |

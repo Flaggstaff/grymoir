@@ -89,6 +89,7 @@ typedef struct {
 typedef struct {
     char *nom;            /* nom de la formule ; NULL pour le programme */
     char *classe;         /* méthode : classe de son premier paramètre (grammaire, § 13.6), sinon NULL */
+    char *fichier;        /* fichier source d'une formule déclarée dans un fichier utilisé (§ 21), sinon NULL */
     SorteBloc sorte;
     int nb_parametres;
     int nb_locaux;        /* paramètres compris */

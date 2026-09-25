@@ -106,6 +106,11 @@ static void decrire(const Noeud *n, Chaine *c) {
     case P_EFFACER:
         chaine_ajouter(c, "(effacer-écran)");
         return;
+    case P_UTILISER:   /* (utiliser « données ») : ses déclarations ne se décrivent pas ici (§ 21) */
+        chaine_ajouter(c, "(utiliser « ");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, " »)");
+        return;
     case N_MOTIF:
         chaine_ajouter(c, "(motif)");
         return;
