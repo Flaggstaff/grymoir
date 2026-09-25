@@ -376,6 +376,16 @@ void Fenetre::lancer() {
     }
     const QString cible = programme_a_lancer();   // un fichier de déclarations lance le programme principal (§ 21)
     if (cible.isEmpty()) return;
+    {   // A2-c : une migration que la base refusera se dit avant de lancer, pas au milieu
+        bool refusee = false;
+        const QString a = apercu_migration(cible, &refusee);
+        if (refusee) {
+            QMessageBox::warning(this, "Migration refusée",
+                                 QString("Le lancement de « %1 » serait refusé : la base détruirait des données, et "
+                                         "elle restera telle quelle.\n\n%2").arg(QFileInfo(cible).fileName(), a));
+            return;
+        }
+    }
     erreur_execution.clear();
     erreur_fichier.clear();
     erreur_ligne = erreur_colonne = 0;
@@ -489,6 +499,20 @@ void Fenetre::rafraichir_schema() {
                                         .arg(entites.size()).arg(entites.size() > 1 ? "s" : "");
     if (!problemes.isEmpty())
         t += "\nNon lus, car ils contiennent une erreur : " + problemes.join(", ") + ".";
+    // A2-c : ce que le prochain lancement du programme principal fera à sa base
+    const QString principal = projet_fichier.programme_principal.isEmpty() ? QString()
+                                                                          : QDir(projet).absoluteFilePath(projet_fichier.programme_principal);
+    if (execution) {
+        t += "\nLa base : un programme tourne ; l'aperçu attendra la fin.";
+    } else if (!principal.isEmpty() && QFileInfo::exists(principal) && !entites.isEmpty()) {
+        bool refusee = false;
+        const QString a = apercu_migration(principal, &refusee);
+        t = t.toHtmlEscaped().replace("\n", "<br>");
+        t += QString("<br><b>La base de « %1 »</b> : ").arg(QFileInfo(principal).fileName().toHtmlEscaped());
+        t += refusee ? "<span style='color:#c00'>le prochain lancement sera refusé, et la base restera telle quelle. "
+                           + a.toHtmlEscaped() + "</span>"
+                     : a.toHtmlEscaped().replace("\n", "<br>");
+    }
     schema_etat->setText(t);
 }
 

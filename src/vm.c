@@ -181,6 +181,7 @@ typedef struct {
 struct Machine {
     char *dossier;          /* dossier du programme : base des chemins relatifs */
     char *chemin_base;      /* fichier de la base des entités, NULL : en mémoire (§ 16.5) */
+    Chaine *essai_migration;   /* non NULL : préparer la base, dire ce qui changerait, tout annuler (A2-c) */
     Base *base;             /* ouverte au premier besoin */
     int base_engagee;       /* dernière exécution : une base était en jeu (message d'annulation, § 3.3) */
     int fichiers_prevus;    /* dernière exécution : des fichiers devaient être écrits */
@@ -309,6 +310,8 @@ void machine_terminal(Machine *m, int terminal) {
 void machine_interface(Machine *m, const Interface *i) {
     m->iface = i ? *i : console_interface(&m->console);
 }
+
+void machine_essai_migration(Machine *m, Chaine *rapport) { m->essai_migration = rapport; }
 
 void machine_base(Machine *m, const char *chemin) {
     free(m->chemin_base);
@@ -1888,6 +1891,32 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     /* Base des entités (§ 16.5, § 16.6) : ouverte au premier besoin, une transaction par exécution. */
     int entites = 0;
     for (size_t i = 0; i < m->nb_classes; i++) entites |= m->classes[i]->conserve;
+    if (m->essai_migration) {   /* essai : la base est préparée puis rendue telle quelle, rien ne s'exécute */
+        Chaine *r = m->essai_migration;
+        m->essai_migration = NULL;
+        if (!entites) { chaine_ajouter(r, "Aucune entité conservée : aucune base.\n"); return 1; }
+        FILE *existe = m->chemin_base ? fopen(m->chemin_base, "rb") : NULL;
+        if (m->chemin_base && !existe) {   /* ne pas créer la base pour un essai */
+            size_t n = 0;
+            for (size_t i = m->nb_classes - module->nb_classes; i < m->nb_classes; i++) n += m->classes[i]->conserve;
+            char *l = grym_formater("La base n'existe pas encore : le premier lancement la créera, avec %lu table%s.\n",
+                                    (unsigned long)n, n > 1 ? "s" : "");
+            chaine_ajouter(r, l);
+            free(l);
+            return 1;
+        }
+        if (existe) fclose(existe);
+        char *erreur = NULL;
+        if (!m->base) m->base = base_ouvrir(m->chemin_base, &erreur);
+        int pret = m->base && base_commencer(m->base, &erreur);
+        if (pret) base_rapport(m->base, r);
+        for (size_t i = m->nb_classes - module->nb_classes; pret && i < m->nb_classes; i++)
+            pret = base_preparer(m->base, m->classes[i], &erreur);
+        if (m->base) { base_rapport(m->base, NULL); base_annuler(m->base); }
+        if (!pret) { diag->message = erreur; return 0; }
+        if (!r->n) chaine_ajouter(r, "La base est à jour : rien ne changera.\n");
+        return 1;
+    }
     m->base_engagee = entites;
     m->fichiers_prevus = 0;
     m->question_posee = 0;

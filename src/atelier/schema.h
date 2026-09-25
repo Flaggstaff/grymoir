@@ -26,6 +26,10 @@ struct EntiteSchema {
 // *problemes reçoit les fichiers qui ne s'analysent pas (leurs entités manquent au schéma).
 QVector<EntiteSchema> lire_schema(const QString &dossier, QStringList *problemes = nullptr);
 
+// Ce que le prochain lancement de `programme` fera à sa base, sans rien changer (A2-c) : une ligne par
+// changement. *refusee reçoit vrai si la base refusera la migration ; le texte dit alors pourquoi.
+QString apercu_migration(const QString &programme, bool *refusee);
+
 class QGraphicsScene;
 
 class VueSchema : public QGraphicsView {

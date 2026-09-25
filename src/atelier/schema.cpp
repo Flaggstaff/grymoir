@@ -15,10 +15,13 @@
 #include <QSet>
 #include <QtMath>
 
+#include <cstdlib>
 #include <functional>
 
 extern "C" {
 #include "analyseur.h"
+#include "compilateur.h"
+#include "vm.h"
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -107,6 +110,54 @@ QVector<EntiteSchema> lire_schema(const QString &dossier, QStringList *problemes
     for (auto &e : par_nom) r << e;
     for (auto &e : r)
         for (auto &c : e.champs) c.lien = par_nom.contains(c.type);
+    return r;
+}
+
+QString apercu_migration(const QString &programme, bool *refusee) {
+    *refusee = false;
+    QFile f(programme);
+    if (!f.open(QIODevice::ReadOnly)) return QString("« %1 » ne s'ouvre pas.").arg(programme);
+    const QByteArray source = f.readAll(), c = programme.toUtf8();
+    Portee *portee = portee_creer();
+    portee_fichier(portee, c.constData());
+    Programme p = {};
+    Diagnostic d = {};
+    const bool compacte = programme.endsWith(".grymc", Qt::CaseInsensitive);
+    const int ok = compacte ? analyser_compact(source.constData(), (size_t)source.size(), portee, &p, &d)
+                            : analyser(source.constData(), (size_t)source.size(), portee, 0, &p, &d);
+    portee_detruire(portee);
+    if (!ok) {
+        const QString m = QString::fromUtf8(d.message ? d.message : "erreur");
+        diagnostic_liberer(&d);
+        return "Le programme contient une erreur : " + m;
+    }
+    Module *module = compiler(&p, &d);
+    programme_liberer(&p);
+    if (!module) {
+        const QString m = QString::fromUtf8(d.message ? d.message : "erreur");
+        diagnostic_liberer(&d);
+        return m;
+    }
+    // la base à côté du programme, comme grym lancer (grammaire, § 16.5)
+    const QFileInfo i(programme);
+    const QByteArray dossier = i.absolutePath().toUtf8();
+    const QByteArray base = (i.absolutePath() + "/" + i.completeBaseName() + ".grymd").toUtf8();
+    Machine *m = machine_creer();
+    machine_dossier(m, dossier.constData());
+    machine_base(m, base.constData());
+    Chaine rapport = {}, sortie = {};
+    machine_essai_migration(m, &rapport);
+    const int reussi = machine_executer(m, module, &sortie, &d);
+    machine_detruire(m);
+    module_detruire(module);
+    std::free(sortie.d);
+    QString r = QString::fromUtf8(rapport.d ? rapport.d : "").trimmed();
+    std::free(rapport.d);
+    if (!reussi) {
+        *refusee = true;
+        r = QString::fromUtf8(d.message ? d.message : "migration refusée");
+        diagnostic_liberer(&d);
+    }
     return r;
 }
 

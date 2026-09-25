@@ -16,7 +16,10 @@ struct Base {
     sqlite3 *db;
     char *chemin;     /* tel qu'affiché dans les messages */
     int transaction;
+    Chaine *rapport;  /* ce que les migrations font, une ligne par changement (A2-c), ou NULL */
 };
+
+void base_rapport(Base *b, Chaine *rapport) { b->rapport = rapport; }
 
 /* ---------------------------------------------------------------- */
 /* Outils                                                           */
@@ -135,6 +138,7 @@ Base *base_ouvrir(const char *chemin, char **erreur) {
     Base *b = grym_allouer(sizeof *b);
     b->db = NULL;
     b->transaction = 0;
+    b->rapport = NULL;
     b->chemin = grym_dupliquer(chemin ? chemin : "en mémoire");
     if (sqlite3_open_v2(chemin ? chemin : ":memory:", &b->db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL)
         != SQLITE_OK) {
@@ -695,6 +699,46 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
         chaine_ajouter(&sql, ";");
         ok = executer_chaine(b, &sql, erreur) && (!(n.uniques[k] & 1) || creer_index_unique(b, c, n.noms[k], erreur));
     }
+    if (ok && b->rapport) {   /* ce que la migration a fait, dit en clair (docs/atelier.md, A2-c) */
+        for (size_t k = 0; k < n.n; k++) {
+            int ia = chercher_champ(&a, n.noms[k]);
+            if (ia >= 0) {
+                if (strcmp(a.types[ia], n.types[k]) != 0) {
+                    char *l = grym_formater("« %s » : le champ « %s » passe de « %s » à « %s ».\n", c->nom, n.noms[k],
+                                            a.types[ia], n.types[k]);
+                    chaine_ajouter(b->rapport, l);
+                    free(l);
+                }
+                if ((n.uniques[k] & 1) && !(a.uniques[ia] & 1)) {
+                    char *l = grym_formater("« %s » : le champ « %s » devient unique ; ses %ld valeurs sont déjà toutes "
+                                            "différentes.\n", c->nom, n.noms[k], lignes);
+                    chaine_ajouter(b->rapport, l);
+                    free(l);
+                }
+                continue;
+            }
+            const char *depart = NULL;
+            for (size_t q = 0; q < c->nb_champs; q++)
+                if (strcmp(c->champs[q], n.noms[k]) == 0) depart = c->departs[q];
+            char *l;
+            if (lignes == 0) l = grym_formater("« %s » : champ « %s » ajouté.\n", c->nom, n.noms[k]);
+            else if (n.uniques[k] & 8) l = grym_formater("« %s » : champ « %s » ajouté, vide pour les %ld %s déjà conservés.\n",
+                                                           c->nom, n.noms[k], lignes, pl);
+            else if (!depart) l = grym_formater("« %s » : champ « %s » ajouté ; %ld %s le %s absent.\n",
+                                                c->nom, n.noms[k], lignes, lignes > 1 ? pl : c->nom,
+                                                lignes > 1 ? "reçoivent" : "reçoit");
+            else l = grym_formater("« %s » : champ « %s » ajouté ; %ld %s %s « %s ».\n", c->nom, n.noms[k], lignes,
+                                   lignes > 1 ? pl : c->nom, lignes > 1 ? "reçoivent" : "reçoit", depart);
+            chaine_ajouter(b->rapport, l);
+            free(l);
+        }
+        for (size_t k = 0; k < a.n; k++)
+            if (chercher_champ(&n, a.noms[k]) < 0) {
+                char *l = grym_formater("« %s » : champ « %s » retiré ; aucune valeur n'est perdue.\n", c->nom, a.noms[k]);
+                chaine_ajouter(b->rapport, l);
+                free(l);
+            }
+    }
     if (ok) {
         sqlite3_stmt *st = NULL;
         sqlite3_prepare_v2(b->db, "UPDATE grym_schema SET definition = ? WHERE entite = ?", -1, &st, NULL);
@@ -728,6 +772,11 @@ int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
     }
     sqlite3_finalize(st);
 
+    if (b->rapport) {
+        char *l = grym_formater("« %s » : table créée.\n", c->nom);
+        chaine_ajouter(b->rapport, l);
+        free(l);
+    }
     Chaine sql = {0};
     chaine_ajouter(&sql, "CREATE TABLE ");
     ajouter_nom(&sql, "e ", c->nom);

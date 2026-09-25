@@ -24,6 +24,7 @@
 #include <functional>
 
 extern "C" {
+#include "compilateur.h"
 #include "vm.h"
 }
 
@@ -439,6 +440,48 @@ int main(int argc, char **argv) {
         s.unique = false;
         s.plusieurs = true;
         VERIFIER(sorte_de_lien("œuvre", true, "genre", false, s) == "plusieurs œuvres pour plusieurs genres");
+    }
+
+    // A2-c : l'aperçu de la migration ; il ne crée ni ne change la base
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        auto ecrire = [&](const QString &t) {
+            QFile f(prog);
+            f.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            f.write(t.toUtf8());
+        };
+        const QString v1 = "Un compositeur, conservé, a : un nom (texte), unique.\n"
+                           "Si le nombre de compositeurs conservés = 0 :\n    Le c vaut un nouveau compositeur :\n"
+                           "        Le nom vaut « Bach ».\n    Conserver c.\n";
+        ecrire(v1);
+        bool refusee = false;
+        VERIFIER(apercu_migration(prog, &refusee) == "La base n'existe pas encore : le premier lancement la créera, avec 1 table.");
+        VERIFIER(!refusee && !QFileInfo::exists(dossier.filePath("p.grymd")));
+        {   // un vrai lancement crée la base et y range Bach
+            const QByteArray src = v1.toUtf8(), base = dossier.filePath("p.grymd").toUtf8();
+            Portee *po = portee_creer();
+            Programme pr = {};
+            Diagnostic d = {};
+            analyser(src.constData(), (size_t)src.size(), po, 0, &pr, &d);
+            Module *mo = compiler(&pr, &d);
+            Machine *m = machine_creer();
+            machine_base(m, base.constData());
+            Chaine so = {};
+            machine_executer(m, mo, &so, &d);
+            free(so.d);
+            machine_detruire(m);
+            module_detruire(mo);
+            programme_liberer(&pr);
+            portee_detruire(po);
+        }
+        VERIFIER(apercu_migration(prog, &refusee) == "La base est à jour : rien ne changera.");
+        ecrire(QString(v1).replace("unique.", "unique, un pays (texte), « Suisse » au départ."));
+        VERIFIER(apercu_migration(prog, &refusee) == "« compositeur » : champ « pays » ajouté ; 1 compositeur reçoit « Suisse ».");
+        ecrire(QString(v1).replace("unique.", "unique, un âge (nombre)."));
+        VERIFIER(apercu_migration(prog, &refusee).startsWith("« âge » est nouveau, et 1 compositeur est déjà conservé") && refusee);
+        ecrire(v1);
+        VERIFIER(apercu_migration(prog, &refusee) == "La base est à jour : rien ne changera." && !refusee);
     }
 
     std::printf("%d/%d tests réussis\n", total - echecs, total);

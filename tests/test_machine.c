@@ -384,6 +384,80 @@ static void essais_utiliser(void) {
     for (size_t k = 0; k < sizeof FICHIERS / sizeof *FICHIERS; k++) remove(FICHIERS[k]);
 }
 
+
+/* Essai de migration (docs/atelier.md, A2-c) : le rapport, ou « ERREUR message ». La base ne change pas. */
+static char *essai_migration(const char *chemin, const char *src) {
+    Portee *p = portee_creer();
+    Programme prog;
+    Diagnostic d;
+    if (!analyser(src, strlen(src), p, 0, &prog, &d)) {
+        char *r = grym_formater("ERREUR analyse %s", d.message);
+        diagnostic_liberer(&d);
+        portee_detruire(p);
+        return r;
+    }
+    Module *b = compiler(&prog, &d);
+    programme_liberer(&prog);
+    portee_detruire(p);
+    Machine *m = machine_creer();
+    machine_base(m, chemin);
+    Chaine rapport = {0}, sortie = {0};
+    machine_essai_migration(m, &rapport);
+    int ok = machine_executer(m, b, &sortie, &d);
+    module_detruire(b);
+    machine_detruire(m);
+    free(sortie.d);
+    char *r = chaine_rendre(&rapport);
+    if (!ok) {
+        free(r);
+        r = grym_formater("ERREUR %s", d.message);
+        diagnostic_liberer(&d);
+    }
+    return r;
+}
+
+static void essais_migration(void) {
+    const char *base = "_essai_migration.grymd";
+    remove(base);
+    const char *v1 = "Un compositeur, conservé, a : un nom (texte), unique.\n";
+    const char *v2 = "Un compositeur, conservé, a : un nom (texte), unique, un pays (texte), « Suisse » au départ, "
+                     "une naissance (date), facultative.\n";
+    const char *v3 = "Un compositeur, conservé, a : un nom (texte), unique, un âge (nombre).\n";
+    struct { const char *src, *attendu; int ligne; } cas[] = {
+        { v1, "La base n'existe pas encore : le premier lancement la créera, avec 1 table.\n", __LINE__ },
+    };
+    for (size_t k = 0; k < sizeof cas / sizeof *cas; k++) {
+        total++;
+        char *r = essai_migration(base, cas[k].src);
+        if (strcmp(r, cas[k].attendu) != 0) signaler(cas[k].ligne, cas[k].src, cas[k].attendu, r);
+        free(r);
+    }
+    total++;
+    FILE *f = fopen(base, "rb");   /* l'essai n'a pas créé la base */
+    if (f) { fclose(f); signaler(__LINE__, v1, "pas de base", "base créée"); }
+    char *r = lancer_sur(base, "Un compositeur, conservé, a : un nom (texte), unique.\n"
+                                "Pour remplir :\n    Le c vaut un nouveau compositeur :\n        Le nom vaut « Bach ».\n"
+                                "    Conserver c.\n    Le d vaut un nouveau compositeur :\n        Le nom vaut « Liszt ».\n"
+                                "    Conserver d.\nRemplir.\n");
+    free(r);
+    struct { const char *src, *attendu; int ligne; } suite[] = {
+        { v1, "La base est à jour : rien ne changera.\n", __LINE__ },
+        { v2, "« compositeur » : champ « pays » ajouté ; 2 compositeurs reçoivent « Suisse ».\n"
+              "« compositeur » : champ « naissance » ajouté ; 2 compositeurs le reçoivent absent.\n", __LINE__ },
+        { v1, "La base est à jour : rien ne changera.\n", __LINE__ },   /* l'essai précédent n'a rien écrit */
+        { v3, "ERREUR « âge » est nouveau, et 2 compositeurs sont déjà conservés : donnez-lui une valeur de départ, "
+              "après son type : « (nombre), … au départ ».", __LINE__ },
+        { "Un point a : un x.\n", "Aucune entité conservée : aucune base.\n", __LINE__ },
+    };
+    for (size_t k = 0; k < sizeof suite / sizeof *suite; k++) {
+        total++;
+        char *x = essai_migration(base, suite[k].src);
+        if (strcmp(x, suite[k].attendu) != 0) signaler(suite[k].ligne, suite[k].src, suite[k].attendu, x);
+        free(x);
+    }
+    remove(base);
+}
+
 int main(void) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
@@ -2200,6 +2274,7 @@ int main(void) {
     }
 
     essais_utiliser();
+    essais_migration();
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

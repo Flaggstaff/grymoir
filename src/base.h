@@ -11,6 +11,7 @@
 #ifndef GRYM_BASE_H
 #define GRYM_BASE_H
 
+#include "texte.h"
 #include "vm_interne.h"
 
 typedef struct Base Base;
@@ -45,6 +46,10 @@ int base_membres(Base *b, const ClasseVM *c, size_t k, long id, long **ids, char
 #define BASE_FORMAT 1
 int base_lacher(Base *b, size_t n, char **erreur);
 int base_revenir(Base *b, size_t n, char **erreur);
+
+/* Rapport des migrations (docs/atelier.md, A2-c) : si rapport n'est pas NULL, base_preparer y écrit, une
+ * ligne par changement, ce qu'il fait à la base (table créée, champ ajouté, et combien d'objets le reçoivent). */
+void base_rapport(Base *b, Chaine *rapport);
 
 /* Crée la table d'une entité, ou vérifie que la base la connaît sous la même définition. */
 int base_preparer(Base *b, const ClasseVM *c, char **erreur);

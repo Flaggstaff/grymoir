@@ -55,6 +55,7 @@ Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
     ./grym                                # boucle interactive
     ./grym lancer exemples/facture.grym   # compiler puis exécuter
     ./grym compiler exemples/facture.grym # produire exemples/facture.grymb
+./grym migration prog.grym     # ce que le prochain lancement fera à la base, sans rien changer
     ./grym desassembler exemples/facture.grymb
     ./grym formater exemples/formules.grym   # forme littéraire canonique
     ./grym traduire exemples/formules.grym   # forme compacte : exemples/formules.grymc

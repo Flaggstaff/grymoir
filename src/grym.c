@@ -207,6 +207,30 @@ static int lancer(const char *chemin) {
     return ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+/* grym migration : ce que le prochain lancement fera à la base, sans rien changer (docs/atelier.md, A2-c). */
+static int migration(const char *chemin) {
+    Module *b = charger(chemin);
+    if (!b) return EXIT_FAILURE;
+    Machine *m = machine_creer();
+    situer(m, chemin);
+    Chaine rapport = {0};
+    machine_essai_migration(m, &rapport);
+    Chaine sortie = {0};
+    Diagnostic d;
+    int ok = machine_executer(m, b, &sortie, &d);
+    free(sortie.d);
+    if (rapport.d) fputs(rapport.d, stdout);
+    free(rapport.d);
+    if (!ok) {
+        fprintf(stderr, "Le prochain lancement sera refusé, et la base restera telle quelle :\n");
+        signaler(chemin, &d);
+        diagnostic_liberer(&d);
+    }
+    machine_detruire(m);
+    module_detruire(b);
+    return ok ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
 /* Ouvre l'adresse dans le navigateur de la machine. Elle ne contient que des chiffres, de l'hexadécimal
  * et des signes fixes : rien ne peut s'y glisser vers le shell. */
 static void ouvrir_navigateur(const char *adresse) {
@@ -477,6 +501,7 @@ int main(int argc, char **argv) {
         if (bon) return servir(argv[2], port, navigateur);
     }
     if (argc == 3 && strcmp(argv[1], "compiler") == 0) return compiler_fichier(argv[2]);
+    if (argc == 3 && strcmp(argv[1], "migration") == 0) return migration(argv[2]);
     if (argc == 3 && strcmp(argv[1], "formater") == 0) return formater(argv[2]);
     if (argc == 3 && strcmp(argv[1], "traduire") == 0) return traduire(argv[2]);
     if (argc == 3 && (strcmp(argv[1], "desassembler") == 0 || strcmp(argv[1], "désassembler") == 0))
@@ -490,6 +515,7 @@ int main(int argc, char **argv) {
             "  grym servir fichier.grym            l'application dans le navigateur\n"
             "      [--port N] [--sans-navigateur]\n"
             "  grym compiler fichier.grym          produit fichier.grymb\n"
+            "  grym migration fichier.grym         ce que le prochain lancement fera à la base, sans rien changer\n"
             "  grym desassembler fichier.grym(b)   affiche les instructions\n"
             "  grym --base fichier.grymd           boucle interactive sur une base conservée\n"
             "  grym lsp                            serveur d'aide à la saisie (protocole LSP)\n"

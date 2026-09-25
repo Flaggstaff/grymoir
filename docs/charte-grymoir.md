@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.38, révisée le 24 septembre 2026.
+Version 1.39, révisée le 25 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -160,7 +160,7 @@ Horizon post-v1, sans date :
 | v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4), reprise après erreur (§ 18), formulaire déduit de l'entité (§ 19) ; première application réelle : `exemples/partotheque.grym` ; sortie d'une question par un point seul (§ 17), assemblage de textes (§ 4.4) | livrée le 24 septembre 2026 |
 | v2.0 | L'interface par le navigateur (`docs/v2.md`) : `grym servir`, tout programme v1 affiché sans modification ; formulaires typés, liens avec suggestions, téléversement, images | livrée le 24 septembre 2026 |
 | A1 | L'atelier (`docs/atelier.md`) : fenêtre Qt, projet, éditeur avec coloration par le lexeur et erreurs en direct, « Lancer » dans un processus à part | fait le 24 septembre 2026 |
-| A2 | Fichiers utilisés (grammaire, § 21), puis éditeur de données : schéma des entités, propriétés, réécriture chirurgicale, aperçu des migrations | en cours : § 21, le schéma (A2-a) et sa modification (A2-b) faits ; reste l'aperçu des migrations (A2-c) |
+| A2 | Fichiers utilisés (grammaire, § 21), puis éditeur de données : schéma des entités, propriétés, réécriture chirurgicale, aperçu des migrations | fait le 25 septembre 2026 |
 | A3 | Les écrans dans le langage : fenêtres, listes, fiches, boutons, événements | à concevoir |
 | A4 | Éditeur d'écrans : liste et fiche générées par entité, agencement à la souris | à venir |
 
@@ -247,3 +247,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.36 | 2026-09-24 | Art. 12 : affichage des objets fait, par la fiche (grammaire, § 20.1) ; v2.x : les objets à l'écran en cours |
 | 1.37 | 2026-09-24 | Art. 3 : deux exécutables, `grym` et `grym-atelier` (Qt 6), un bytecode par projet ; art. 4 : un projet sur plusieurs fichiers (grammaire, § 21) ; art. 11 : interface native par Qt, éditeur visuel d'interfaces en A3 et A4 ; art. 12 : jalons A1 (fait) à A4 |
 | 1.38 | 2026-09-24 | Nouvel art. 14 : pérennité ; le manuel du mainteneur (`docs/mainteneur.md`), révisé à chaque changement d'architecture |
+| 1.39 | 2026-09-25 | Art. 12 : A2 fait (fichiers utilisés, schéma des données, modification à la souris, aperçu des migrations) |

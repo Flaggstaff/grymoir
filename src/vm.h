@@ -51,6 +51,12 @@ void machine_lecteur(Machine *m, char *(*lire)(void *contexte, Chaine *sortie, c
  * copiée ; son contexte doit vivre aussi longtemps que la machine. */
 void machine_interface(Machine *m, const Interface *i);
 
+/* Essai de migration (docs/atelier.md, A2-c) : la prochaine machine_executer prépare la base comme pour une
+ * exécution, écrit dans *rapport ce que la migration ferait (une ligne par changement), annule tout, et
+ * s'arrête sans exécuter le programme. Une migration refusée est une erreur, dans *diag, comme au lancement.
+ * Une base qui n'existe pas encore n'est pas créée : le rapport le dit. */
+void machine_essai_migration(Machine *m, Chaine *rapport);
+
 /* Après une exécution ratée : ce qui a été annulé, à dire à l'utilisateur (§ 3.3), ou NULL
  * s'il n'y a rien à dire. À libérer. */
 char *machine_annulation(const Machine *m, int interactif);
