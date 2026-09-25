@@ -88,11 +88,17 @@ Un écran est un objet : ses zones de saisie sont ses champs (charte, art. 6).
 - La fermeture ne se refuse pas.
 - Deux listes de la même entité dans un écran rendent `Quand on choisit …` ambigu : erreur pour l'instant.
 
+### 3.6 Plusieurs écrans, et la transaction *(validé le 25 septembre 2026)*
+
+- Les écrans s'empilent : `Ouvrir` dans un événement ouvre le nouvel écran par-dessus ; seul l'écran du dessus reçoit les événements ; à sa fermeture, l'événement qui l'a ouvert reprend à la phrase suivante. La fiche ouverte depuis une liste fait de même. `Fermer l'écran.` ferme l'écran de l'événement en cours.
+- **`Ouvrir` valide d'abord ce qui précède.** Ce que l'événement, ou le programme, a fait avant `Ouvrir` est conservé ; chaque événement de l'écran ouvert est ensuite sa propre transaction ; après la fermeture, la suite forme une nouvelle transaction. Un clic réussi n'est jamais perdu à cause d'un autre ; chaque clic reste tout ou rien ; un programme sans écran reste une seule transaction.
+- Conséquence : la charte, art. 7, reçoit une exception écrite : « `Ouvrir` un écran découpe l'exécution en transactions, une par événement ».
+- Écartée : une seule transaction pour toute la durée d'un écran, qui verrouillerait la base et perdrait tout au moindre échec.
+
 ## 4. Questions à trancher
 
-1. Plusieurs écrans ouverts, écran dans un écran.
-2. La forme compacte.
-3. Les écrans en console et dans le navigateur (`grym lancer`, `grym servir`) : repli, ou refus expliqué.
+1. La forme compacte.
+2. Les écrans en console et dans le navigateur (`grym lancer`, `grym servir`) : repli, ou refus expliqué.
 
 ---
 
@@ -105,3 +111,4 @@ Un écran est un objet : ses zones de saisie sont ses champs (charte, art. 6).
 | 0.3 | 2026-09-25 | § 3.3 : disposition |
 | 0.4 | 2026-09-25 | § 3.4 : contrôles ; un écran est un objet, ses zones de saisie sont ses champs |
 | 0.5 | 2026-09-25 | § 3.5 : événements |
+| 0.6 | 2026-09-25 | § 3.6 : écrans empilés ; `Ouvrir` valide ce qui précède, une transaction par événement |
