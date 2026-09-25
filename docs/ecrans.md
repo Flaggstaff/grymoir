@@ -61,13 +61,23 @@ On décrit l'ordre et le voisinage, jamais des pixels : le texte reste lisible, 
 - Le titre de la fenêtre vient du nom de l'écran (« l'écran des compositeurs » : « Compositeurs » ; « l'écran d'accueil » : « Accueil »), ou se donne entre guillemets : `L'écran des compositeurs, « Nos compositeurs », montre :`.
 - Écartés : positions et tailles au pixel, marges réglées à la main, onglets (à concevoir plus tard).
 
+### 3.4 Les contrôles *(validé le 25 septembre 2026)*
+
+Un écran est un objet : ses zones de saisie sont ses champs (charte, art. 6).
+
+- Texte fixe : `le texte « … »`.
+- Zone de saisie : `un pays (texte)`, avec les types des entités et les contrôles des formulaires (case à cocher pour `(vrai ou faux)`, menu déroulant pour un lien, champ de date pour `(date)`) ; `, « … » au départ` et `, facultatif` comme pour les entités.
+- Bouton et liste : § 3.1 et § 3.2.
+- Dans un événement : `le pays de l'écran` se lit, `Le pays de l'écran devient « France ».` se modifie, comme le champ d'un objet. Une liste dont le `dont` cite une zone de saisie se relit dès que la zone change.
+- Une zone de saisie n'est jamais conservée : elle vit le temps de l'écran. `de l'écran` désigne l'écran de l'événement en cours ; ailleurs, c'est une erreur d'analyse.
+- Reportés : images, textes sur plusieurs lignes, graphiques.
+
 ## 4. Questions à trancher
 
-1. Les autres contrôles : champ de saisie, case à cocher, texte fixe, image.
-2. Les événements possibles, et ce qu'ils nomment (`le compositeur` dans `Quand on choisit un compositeur`).
-3. Plusieurs écrans ouverts, écran dans un écran.
-4. La forme compacte.
-5. Les écrans en console et dans le navigateur (`grym lancer`, `grym servir`) : repli, ou refus expliqué.
+1. Les événements possibles, et ce qu'ils nomment (`le compositeur` dans `Quand on choisit un compositeur`).
+2. Plusieurs écrans ouverts, écran dans un écran.
+3. La forme compacte.
+4. Les écrans en console et dans le navigateur (`grym lancer`, `grym servir`) : repli, ou refus expliqué.
 
 ---
 
@@ -78,3 +88,4 @@ On décrit l'ordre et le voisinage, jamais des pixels : le texte reste lisible, 
 | 0.1 | 2026-09-25 | Proposition initiale : thèse, exemple de référence, trois piliers validés, questions à trancher |
 | 0.2 | 2026-09-25 | § 3.2 : colonnes d'une liste |
 | 0.3 | 2026-09-25 | § 3.3 : disposition |
+| 0.4 | 2026-09-25 | § 3.4 : contrôles ; un écran est un objet, ses zones de saisie sont ses champs |
