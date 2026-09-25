@@ -79,7 +79,7 @@ Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la
 3. **L'éditeur de code** de l'atelier. Décidé le 24 septembre 2026 : un éditeur maison sur `QPlainTextEdit`, dont la coloration passe par le lexeur de GrymoiR et l'autocomplétion par le calcul des suites (grammaire, § 8), les erreurs venant de l'analyseur, sans passer par le protocole LSP. Une bibliothèque existante aurait demandé de réécrire sa coloration, et QScintilla, sous GPLv3 ou licence commerciale, aurait imposé la GPL à l'atelier.
 4. **Distribution** : l'atelier embarque ses bibliothèques Qt (outils de déploiement fournis par Qt sur macOS et Windows). La signature des exécutables pour macOS et Windows est reportée.
 5. **Aide.** Décidé le 24 septembre 2026, fait : menu « Aide », « Le langage GrymoiR » (F1, Cmd+? sous macOS). La grammaire (`docs/grammaire.md`) est embarquée dans l'exécutable : l'aide est toujours celle de sa version, même hors ligne. Sommaire des sections à gauche, recherche en haut (Entrée : suivant, Maj+Entrée : précédent, Ctrl+F ou Cmd+F pour y aller). Plus tard : l'aide en contexte (F1 sur `Selon` ouvre sa section), et un guide pour débuter, à écrire à part, la grammaire étant une spécification plutôt qu'un manuel.
-6. **Faire évoluer la grammaire.** Demandé le 24 septembre 2026 : prévoir une manière de faire évoluer la grammaire. Le besoin reste à préciser avant toute conception.
+6. **Faire évoluer la grammaire.** Précisé le 24 septembre 2026 : pouvoir continuer à faire évoluer le langage seul, sans aide extérieure. Un éditeur de grammaire en données est écarté : il couvrirait la forme des phrases, jamais leur sens, qui demande du code. Décidé : le manuel du mainteneur (`docs/mainteneur.md`, charte art. 14), puis le vocabulaire en données là où c'est possible (messages, mots de construction, synonymes).
 
 ## 7. Ce que la charte devra dire
 
@@ -101,3 +101,4 @@ Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la
 | 0.5 | 2026-09-24 | § 5 : A1 fait ; « Lancer » dans un processus à part, fenêtre d'exécution, arrêt, intégration continue |
 | 0.6 | 2026-09-24 | § 5 : A2 commencé, fichiers utilisés (grammaire, § 21), programme principal |
 | 0.7 | 2026-09-24 | § 6.1 : `projet.grymatelier` ; § 6.5 : aide, la grammaire embarquée ; § 6.6 : faire évoluer la grammaire, à préciser |
+| 0.8 | 2026-09-24 | § 6.6 : faire évoluer le langage seul ; manuel du mainteneur, puis vocabulaire en données |

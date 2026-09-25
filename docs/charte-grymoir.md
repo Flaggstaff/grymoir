@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.37, révisée le 24 septembre 2026.
+Version 1.38, révisée le 24 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -194,6 +194,14 @@ Une version 1.x promet ce qui suit. Toute exception passe par une révision de l
 4. **Hors promesse.** Le libellé des messages d'erreur, le bytecode `.grymb` (on recompile depuis les sources ; la machine lit les anciens formats par commodité), l'interface des fichiers de `src/`.
 5. **Version 2.** Elle peut rompre les sources. Elle ne rompt jamais une base : elle l'ouvre, ou fournit la commande qui la convertit (principe 1).
 
+
+## 14. Pérennité
+
+GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, humaine ou logicielle.
+
+- `docs/mainteneur.md` décrit l'architecture, les outils de mise au point et la recette pour ajouter une phrase de bout en bout, avec sa liste de contrôle.
+- Il se révise, par une révision numérotée, à chaque changement d'architecture : un fichier qui naît, disparaît ou change de rôle.
+- Le code reste écrit en français, dans le vocabulaire de la grammaire, et chaque construction garde ses essais : ils sont le filet de qui modifie le langage.
 ---
 
 ## Journal des révisions
@@ -238,3 +246,4 @@ Une version 1.x promet ce qui suit. Toute exception passe par une révision de l
 | 1.35 | 2026-09-24 | Art. 11 : interface par le navigateur et écoute locale depuis la v2.0 ; art. 12 : v2.0 livrée |
 | 1.36 | 2026-09-24 | Art. 12 : affichage des objets fait, par la fiche (grammaire, § 20.1) ; v2.x : les objets à l'écran en cours |
 | 1.37 | 2026-09-24 | Art. 3 : deux exécutables, `grym` et `grym-atelier` (Qt 6), un bytecode par projet ; art. 4 : un projet sur plusieurs fichiers (grammaire, § 21) ; art. 11 : interface native par Qt, éditeur visuel d'interfaces en A3 et A4 ; art. 12 : jalons A1 (fait) à A4 |
+| 1.38 | 2026-09-24 | Nouvel art. 14 : pérennité ; le manuel du mainteneur (`docs/mainteneur.md`), révisé à chaque changement d'architecture |

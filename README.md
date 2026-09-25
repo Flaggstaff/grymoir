@@ -42,6 +42,10 @@ Une application console complète, base comprise : le formulaire se déduit de l
 
 Pour aller plus loin : `exemples/partotheque.grym`, une bibliothèque de partitions (liens, genres, corbeille, modification par formulaire). La référence du langage est `docs/grammaire.md` ; ce que chaque version promet est l'art. 13 de la charte.
 
+## Faire évoluer le langage
+
+`docs/mainteneur.md` : l'architecture du compilateur, les outils de mise au point, et la recette pour ajouter une phrase de bout en bout.
+
 ## Compiler
 
 Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
