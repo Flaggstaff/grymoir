@@ -1190,5 +1190,31 @@ static char *imprimer(const Programme *p, int compact) {
     return chaine_rendre(&im.c);
 }
 
+/* Imprime, sans les garder, les déclarations du contexte : l'impression apprend ainsi genres et aptitudes. */
+static void apprendre(Impression *im, Noeud *const *phrases, size_t nb, const Noeud *sauf) {
+    for (size_t k = 0; k < nb; k++) {
+        const Noeud *ph = phrases[k];
+        if (ph == sauf) continue;
+        if (ph->type == P_UTILISER) apprendre(im, ph->enfants, ph->nb_enfants, sauf);
+        else if (ph->type == P_CLASSE || ph->type == P_APTITUDE) phrase(im, ph, 0);
+    }
+}
+
+char *imprimer_phrase(const Programme *contexte, const Noeud *n, int compact) {
+    Impression im;
+    memset(&im, 0, sizeof im);
+    im.compact = compact;
+    if (contexte) apprendre(&im, contexte->phrases, contexte->nb, n);
+    if (im.c.d) { im.c.n = 0; im.c.d[0] = '\0'; }
+    phrase(&im, n, 0);
+    free(im.genres);
+    free(im.aptitudes);
+    free(im.pluriels);
+    free(im.singuliers);
+    for (size_t k = 0; k < im.nb_a_liberer; k++) free(im.a_liberer[k]);
+    free(im.a_liberer);
+    return chaine_rendre(&im.c);
+}
+
 char *imprimer_litteraire(const Programme *p) { return imprimer(p, 0); }
 char *imprimer_compact(const Programme *p)    { return imprimer(p, 1); }

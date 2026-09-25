@@ -4,6 +4,7 @@
 #include "aide.h"
 #include "schema.h"
 #include "panneau.h"
+#include "lien.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -131,6 +132,36 @@ Fenetre::Fenetre() {
     connect(schema, &VueSchema::choisie, this, [this](const QString &e) {
         entite_choisie = e;
         montrer_choisie();
+    });
+    connect(schema, &VueSchema::lier, this, [this](const QString &de, const QString &vers) {
+        bool feminin = false, de_feminin = false;
+        for (const auto &e : entites_lues) {
+            if (e.nom == vers) feminin = e.feminin;
+            if (e.nom == de) de_feminin = e.feminin;
+        }
+        ChampVoulu c;
+        if (!demander_lien(this, de, de_feminin, vers, feminin, &c, false)) return;
+        appliquer([=](Geste *g) { return ajouter_champ(projet, de, c, g); }, de);
+    });
+    connect(schema, &VueSchema::lien_choisi, this, [this](const QString &de, const QString &nom, bool supprimer) {
+        if (supprimer) {
+            appliquer([=](Geste *g) { return supprimer_champ(projet, de, nom, g); }, de);
+            return;
+        }
+        for (const auto &e : entites_lues) {
+            if (e.nom != de) continue;
+            for (const auto &x : e.champs) {
+                if (x.nom != nom) continue;
+                ChampVoulu c;
+                c.nom = x.nom; c.type = x.type; c.feminin = x.feminin; c.unique = x.unique;
+                c.facultatif = x.facultatif; c.plusieurs = x.multiple; c.cascade = x.cascade; c.depart = x.depart;
+                bool feminin = false;
+                for (const auto &v : entites_lues) if (v.nom == x.type) feminin = v.feminin;
+                if (!demander_lien(this, de, e.feminin, x.type, feminin, &c, true)) return;
+                appliquer([=](Geste *g) { return modifier_champ(projet, de, nom, c, g); }, de);
+                return;
+            }
+        }
     });
     connect(panneau, &PanneauEntite::renommer, this, [this](const QString &a, const QString &n) {
         appliquer([=](Geste *g) { return renommer_entite(projet, a, n, g); }, n);

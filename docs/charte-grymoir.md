@@ -160,7 +160,7 @@ Horizon post-v1, sans date :
 | v1.0 | Application console complète : questions à l'utilisateur (grammaire, § 17), mise en forme de l'affichage (§ 4), reprise après erreur (§ 18), formulaire déduit de l'entité (§ 19) ; première application réelle : `exemples/partotheque.grym` ; sortie d'une question par un point seul (§ 17), assemblage de textes (§ 4.4) | livrée le 24 septembre 2026 |
 | v2.0 | L'interface par le navigateur (`docs/v2.md`) : `grym servir`, tout programme v1 affiché sans modification ; formulaires typés, liens avec suggestions, téléversement, images | livrée le 24 septembre 2026 |
 | A1 | L'atelier (`docs/atelier.md`) : fenêtre Qt, projet, éditeur avec coloration par le lexeur et erreurs en direct, « Lancer » dans un processus à part | fait le 24 septembre 2026 |
-| A2 | Fichiers utilisés (grammaire, § 21), puis éditeur de données : schéma des entités, propriétés, réécriture chirurgicale, aperçu des migrations | en cours : § 21, le schéma (A2-a) et la modification des entités et des champs (A2-b, en partie) faits |
+| A2 | Fichiers utilisés (grammaire, § 21), puis éditeur de données : schéma des entités, propriétés, réécriture chirurgicale, aperçu des migrations | en cours : § 21, le schéma (A2-a) et sa modification (A2-b) faits ; reste l'aperçu des migrations (A2-c) |
 | A3 | Les écrans dans le langage : fenêtres, listes, fiches, boutons, événements | à concevoir |
 | A4 | Éditeur d'écrans : liste et fiche générées par entité, agencement à la souris | à venir |
 

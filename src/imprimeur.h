@@ -17,4 +17,9 @@ char *imprimer_litteraire(const Programme *p);
 /* Forme compacte (grym traduire, du littéraire vers le compact). */
 char *imprimer_compact(const Programme *p);
 
+/* Une seule phrase, dans la forme demandée, comme elle s'imprimerait dans `contexte` : les genres, aptitudes
+ * et pluriels des classes et entités qu'il déclare (fichiers utilisés compris) servent aux accords
+ * (« et disparaît avec elle »). Sert à la réécriture chirurgicale de l'atelier (docs/atelier.md, § 3). */
+char *imprimer_phrase(const Programme *contexte, const Noeud *n, int compact);
+
 #endif

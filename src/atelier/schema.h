@@ -10,12 +10,14 @@
 
 struct ChampSchema {
     QString nom, type;
+    QString depart;   // valeur de départ, telle qu'on l'écrit (« Suisse », « 12,50 »), ou vide
     bool unique = false, facultatif = false, multiple = false, cascade = false, lien = false, feminin = false;
 };
 
 struct EntiteSchema {
     QString nom, parent, fichier;   // fichier : chemin absolu de la déclaration
     int ligne = 0;
+    bool feminin = false;
     QStringList aptitudes;
     QVector<ChampSchema> champs;
 };
@@ -41,9 +43,18 @@ signals:
     void deplacee();                                        // une boîte a bougé : la disposition est à garder
     void ouvrir(const QString &fichier, int ligne);          // double-clic : la déclaration dans le code
     void choisie(const QString &entite);                     // la boîte choisie (vide : aucune)
+    void lier(const QString &de, const QString &vers);       // Maj+glisser d'une boîte à l'autre, ou menu « Lier à »
+    void lien_choisi(const QString &de, const QString &champ, bool supprimer);   // double-clic ou menu sur une flèche
 
 private:
     void relier();
+    void contextMenuEvent(QContextMenuEvent *e) override;
+    void mousePressEvent(QMouseEvent *e) override;
+    void mouseMoveEvent(QMouseEvent *e) override;
+    void mouseReleaseEvent(QMouseEvent *e) override;
+    void mouseDoubleClickEvent(QMouseEvent *e) override;
+    class QGraphicsLineItem *trait = nullptr;   // le lien en train d'être tiré (Maj+glisser)
+    QString trait_de;
     QGraphicsScene *scene_;
     bool en_construction = false;   // pendant montrer(), les boîtes qui se placent ne comptent pas comme déplacées
     QVector<EntiteSchema> entites;

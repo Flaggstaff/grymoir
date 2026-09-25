@@ -6,6 +6,7 @@
 #include "projet.h"
 #include "schema.h"
 #include "reecriture.h"
+#include "lien.h"
 #include <QTreeWidget>
 
 #include <QApplication>
@@ -367,6 +368,77 @@ int main(int argc, char **argv) {
         // un nom de champ mal formé
         prix.nom = "prix (TTC)";
         VERIFIER(ajouter_champ(dossier.path(), "œuvre", prix, &g).contains("ni ponctuation"));
+    }
+
+    // Liens (A2-b) : chaque sorte écrit sa tournure ; la cascade s'accorde ; la valeur de départ se relit
+    {
+        QTemporaryDir dossier;
+        auto ecrire = [&](const QString &nom, const QString &texte) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::WriteOnly);
+            f.write(texte.toUtf8());
+        };
+        auto lire = [&](const QString &nom) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::ReadOnly);
+            return QString::fromUtf8(f.readAll());
+        };
+        ecrire("d.grym", "Une partition, conservée, a :\n    une cote (texte), unique.\n"
+                         "Un pupitre, conservé, a :\n    un nom (texte), unique.\n");
+        Geste g;
+        ChampVoulu c;
+        c.nom = "partition";
+        c.type = "partition";
+        c.feminin = true;
+        c.cascade = true;
+        VERIFIER(ajouter_champ(dossier.path(), "pupitre", c, &g).isEmpty());
+        VERIFIER(lire("d.grym").contains("    une partition (partition), et disparaît avec elle.\n"));   // « elle » : partition est féminine
+        annuler_geste(g);
+        c.cascade = false;
+        c.unique = true;
+        VERIFIER(ajouter_champ(dossier.path(), "pupitre", c, &g).isEmpty());
+        VERIFIER(lire("d.grym").contains("    une partition (partition), unique.\n"));
+        annuler_geste(g);
+        c.unique = false;
+        c.plusieurs = true;
+        c.nom = "partitions";
+        VERIFIER(ajouter_champ(dossier.path(), "pupitre", c, &g).isEmpty());
+        VERIFIER(lire("d.grym").contains("    des partitions (partition).\n"));
+        annuler_geste(g);
+        // valeurs de départ : texte, nombre, date ; une valeur qui n'en est pas une est refusée avant d'écrire
+        ChampVoulu pays;
+        pays.nom = "pays";
+        pays.type = "texte";
+        pays.depart = "Suisse";
+        VERIFIER(ajouter_champ(dossier.path(), "pupitre", pays, &g).isEmpty());
+        VERIFIER(lire("d.grym").contains("    un pays (texte), « Suisse » au départ.\n"));
+        VERIFIER(lire_schema(dossier.path()).value(1).champs.value(1).depart == "Suisse");
+        annuler_geste(g);
+        ChampVoulu prix;
+        prix.nom = "prix";
+        prix.type = "nombre";
+        prix.depart = "12,50";
+        VERIFIER(ajouter_champ(dossier.path(), "pupitre", prix, &g).isEmpty());
+        VERIFIER(lire("d.grym").contains("    un prix (nombre), 12,50 au départ.\n"));
+        VERIFIER(lire_schema(dossier.path()).value(1).champs.value(1).depart == "12,50");
+        annuler_geste(g);
+        prix.depart = "douze";
+        VERIFIER(ajouter_champ(dossier.path(), "pupitre", prix, &g).contains("n'est pas une valeur de départ"));
+        ChampVoulu jour;
+        jour.nom = "jour";
+        jour.type = "date";
+        jour.depart = "01.03.2026";
+        VERIFIER(ajouter_champ(dossier.path(), "pupitre", jour, &g).isEmpty());
+        VERIFIER(lire_schema(dossier.path()).value(1).champs.value(1).depart == "01.03.2026");
+        annuler_geste(g);
+        // les phrases des sortes, pour le dialogue
+        ChampVoulu s;
+        VERIFIER(sorte_de_lien("œuvre", true, "compositeur", false, s) == "chaque œuvre a un compositeur ; un compositeur a plusieurs œuvres");
+        s.unique = true;
+        VERIFIER(sorte_de_lien("pupitre", false, "partition", true, s) == "un pupitre pour une partition, et inversement");
+        s.unique = false;
+        s.plusieurs = true;
+        VERIFIER(sorte_de_lien("œuvre", true, "genre", false, s) == "plusieurs œuvres pour plusieurs genres");
     }
 
     std::printf("%d/%d tests réussis\n", total - echecs, total);

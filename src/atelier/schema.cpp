@@ -8,6 +8,9 @@
 #include <QGraphicsItem>
 #include <QGraphicsScene>
 #include <QGraphicsSceneMouseEvent>
+#include <QContextMenuEvent>
+#include <QMenu>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QSet>
 #include <QtMath>
@@ -66,6 +69,7 @@ QVector<EntiteSchema> lire_schema(const QString &dossier, QStringList *problemes
                     e.nom = nom;
                     e.fichier = fichier;
                     e.ligne = n->ligne;
+                    e.feminin = (n->forme & 3) == 2;
                 }
                 if (n->texte2 && e.parent.isEmpty()) e.parent = QString::fromUtf8(n->texte2);
                 for (size_t j = 0; j < n->nb_enfants; j++) {
@@ -83,6 +87,15 @@ QVector<EntiteSchema> lire_schema(const QString &dossier, QStringList *problemes
                     s.cascade = ch->entier & 2;
                     s.multiple = ch->forme == 3;
                     s.feminin = ch->forme == 2;
+                    if (ch->nb_enfants) {   // la valeur de départ, comme on l'écrit (§ 16.7)
+                        const Noeud *v = ch->enfants[0];
+                        const QString t = QString::fromUtf8(v->texte ? v->texte : "");
+                        if (v->type == N_NOMBRE) s.depart = QString(t).replace('.', ',');
+                        else if (v->type == N_DATE && t.size() == 10) s.depart = t.mid(8, 2) + "." + t.mid(5, 2) + "." + t.left(4);
+                        else if (v->type == N_NEGATION && v->nb_enfants && v->enfants[0]->texte)
+                            s.depart = "-" + QString::fromUtf8(v->enfants[0]->texte).replace('.', ',');
+                        else s.depart = t;
+                    }
                     e.champs << s;
                 }
             }
@@ -207,9 +220,17 @@ QPointF bord(const QRectF &r, const QPointF &vers) {
 class Fleche : public QGraphicsItem {
 public:
     enum Sorte { Lien, Multiple, Heritage };
-    Fleche(QGraphicsItem *de, QGraphicsItem *vers, Sorte s, const QString &nom) : a(de), b(vers), sorte(s) {
+    Fleche(QGraphicsItem *de, QGraphicsItem *vers, Sorte s, const QString &nom) : a(de), b(vers), sorte(s), champ(nom) {
         setZValue(-1);
-        setToolTip(nom);
+        setToolTip(s == Heritage ? nom : nom + "\nDouble-clic : modifier ce lien ; clic droit : le supprimer");
+    }
+    // une flèche se saisit près de son trait, pas dans tout le rectangle qui l'entoure
+    QPainterPath shape() const override {
+        QPainterPath p(p1);
+        p.lineTo(p2);
+        QPainterPathStroker s;
+        s.setWidth(10);
+        return s.createStroke(p);
     }
     QRectF boundingRect() const override { return QRectF(p1, p2).normalized().adjusted(-12, -12, 12, 12); }
     void mettre_a_jour() {
@@ -253,8 +274,21 @@ public:
     }
     QGraphicsItem *a, *b;
     Sorte sorte;
+    QString champ;
     QPointF p1, p2;
 };
+
+Boite *boite_sous(QGraphicsScene *s, const QPointF &p) {
+    for (QGraphicsItem *i : s->items(p))
+        if (auto *b = dynamic_cast<Boite *>(i)) return b;
+    return nullptr;
+}
+
+Fleche *fleche_sous(QGraphicsScene *s, const QPointF &p) {
+    for (QGraphicsItem *i : s->items(p))
+        if (auto *f = dynamic_cast<Fleche *>(i)) return f->sorte == Fleche::Heritage ? nullptr : f;
+    return nullptr;
+}
 
 }  // namespace
 
@@ -365,4 +399,68 @@ int VueSchema::nombre_de_liens() const {
     int n = 0;
     for (QGraphicsItem *i : scene_->items()) n += dynamic_cast<Fleche *>(i) != nullptr;
     return n;
+}
+
+void VueSchema::contextMenuEvent(QContextMenuEvent *e) {
+    const QPointF p = mapToScene(e->pos());
+    QMenu menu;
+    if (Boite *b = boite_sous(scene_, p)) {
+        QMenu *vers = menu.addMenu(QString("Lier « %1 » à").arg(b->entite.nom));
+        for (const auto &x : entites) {
+            const QString de = b->entite.nom, cible = x.nom;
+            vers->addAction(cible, this, [this, de, cible] { emit lier(de, cible); });
+        }
+    } else if (Fleche *f = fleche_sous(scene_, p)) {
+        const QString de = static_cast<Boite *>(f->a)->entite.nom, champ = f->champ;
+        menu.addAction(QString("Modifier le lien « %1 »…").arg(champ), this, [this, de, champ] { emit lien_choisi(de, champ, false); });
+        menu.addAction(QString("Supprimer le lien « %1 »").arg(champ), this, [this, de, champ] { emit lien_choisi(de, champ, true); });
+    } else {
+        return;
+    }
+    menu.exec(e->globalPos());
+}
+
+void VueSchema::mousePressEvent(QMouseEvent *e) {
+    // Maj+glisser depuis une boîte : un lien se tire vers une autre boîte (ou vers elle-même)
+    if (e->button() == Qt::LeftButton && (e->modifiers() & Qt::ShiftModifier)) {
+        if (Boite *b = boite_sous(scene_, mapToScene(e->pos()))) {
+            trait_de = b->entite.nom;
+            const QPointF c = b->sceneBoundingRect().center();
+            trait = scene_->addLine(QLineF(c, c), QPen(QColor(0x1f, 0x5f, 0xa8), 2, Qt::DashLine));
+            trait->setZValue(10);
+            return;
+        }
+    }
+    QGraphicsView::mousePressEvent(e);
+}
+
+void VueSchema::mouseMoveEvent(QMouseEvent *e) {
+    if (trait) {
+        QLineF l = trait->line();
+        l.setP2(mapToScene(e->pos()));
+        trait->setLine(l);
+        return;
+    }
+    QGraphicsView::mouseMoveEvent(e);
+}
+
+void VueSchema::mouseReleaseEvent(QMouseEvent *e) {
+    if (trait) {
+        Boite *b = boite_sous(scene_, mapToScene(e->pos()));
+        delete trait;
+        trait = nullptr;
+        if (b) emit lier(trait_de, b->entite.nom);
+        return;
+    }
+    QGraphicsView::mouseReleaseEvent(e);
+}
+
+void VueSchema::mouseDoubleClickEvent(QMouseEvent *e) {
+    const QPointF p = mapToScene(e->pos());
+    if (!boite_sous(scene_, p))
+        if (Fleche *f = fleche_sous(scene_, p)) {
+            emit lien_choisi(static_cast<Boite *>(f->a)->entite.nom, f->champ, false);
+            return;
+        }
+    QGraphicsView::mouseDoubleClickEvent(e);
 }

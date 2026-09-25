@@ -17,6 +17,8 @@ struct Geste {
 struct ChampVoulu {
     QString nom, type;
     bool feminin = false, unique = false, facultatif = false, plusieurs = false;
+    bool cascade = false;   // « , et disparaît avec lui » : pour un lien simple (§ 16.12)
+    QString depart;         // valeur de départ, telle qu'on l'écrit (« Suisse », « 12,50 », « 01.01.2026 ») ; vide : aucune
 };
 
 // Chaque fonction rend un message d'erreur, vide si le geste a réussi ; *geste reçoit de quoi l'annuler.

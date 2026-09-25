@@ -70,9 +70,7 @@ struct FichierAnalyse {
 
     // Une phrase, imprimée seule dans la forme du fichier, sans son dernier saut de ligne.
     QString imprimer(Noeud *n) const {
-        Noeud *une[1] = {n};
-        Programme seul = {une, 1, 0, nullptr, 0};
-        char *t = compacte ? imprimer_compact(&seul) : imprimer_litteraire(&seul);
+        char *t = imprimer_phrase(ok ? &p : nullptr, n, compacte);   // les accords selon les déclarations du fichier
         QString r = QString::fromUtf8(t);
         free(t);
         while (r.endsWith('\n')) r.chop(1);
@@ -170,14 +168,50 @@ public:
     QMap<QString, std::vector<Remplacement>> travaux;
 };
 
-// Nœud champ, tel que l'analyseur l'écrit (arbre.h, P_CLASSE).
-Noeud *nouveau_champ(const ChampVoulu &c) {
+// Une valeur de départ, lue par l'analyseur lui-même : « Le v vaut 12,50. », pour un champ de ce type.
+Noeud *valeur_de_depart(const ChampVoulu &c, QString *erreur) {
+    const QString v = c.depart.trimmed();
+    const QString ecrit = c.type == "texte" ? QString("« %1 »").arg(v) : v;
+    const QByteArray source = QString("Le v vaut %1.").arg(ecrit).toUtf8();
+    Portee *portee = portee_creer();
+    Programme p = {};
+    Diagnostic d = {};
+    Noeud *r = nullptr;
+    if (analyser(source.constData(), (size_t)source.size(), portee, 0, &p, &d) && p.nb == 1
+        && p.phrases[0]->type == P_CREATION && p.phrases[0]->nb_enfants == 1) {
+        const TypeNoeud t = p.phrases[0]->enfants[0]->type;
+        if (t == N_TEXTE || t == N_NOMBRE || t == N_DATE || t == N_BOOLEEN || t == N_NEGATION) {
+            r = p.phrases[0]->enfants[0];
+            p.phrases[0]->nb_enfants = 0;
+        }
+    }
+    if (!r) *erreur = QString("« %1 » n'est pas une valeur de départ pour un champ (%2) : une constante, "
+                              "comme « Suisse », 12,50, 01.01.2026 ou vrai.").arg(v, c.type);
+    diagnostic_liberer(&d);
+    programme_liberer(&p);
+    portee_detruire(portee);
+    return r;
+}
+
+// Nœud champ, tel que l'analyseur l'écrit (arbre.h, P_CLASSE) ; nullptr et *erreur si la valeur de départ est illisible.
+Noeud *nouveau_champ(const ChampVoulu &c, QString *erreur = nullptr) {
+    Noeud *depart = nullptr;
+    if (!c.depart.trimmed().isEmpty() && !c.plusieurs) {
+        QString e;
+        depart = valeur_de_depart(c, &e);
+        if (!depart) {
+            if (erreur) *erreur = e;
+            return nullptr;
+        }
+    }
     Noeud *n = noeud_creer(N_NOM, 0, 0, 0);
     n->texte = grym_dupliquer(c.nom.toUtf8().constData());
     n->texte2 = grym_dupliquer(c.type.toUtf8().constData());
     n->forme = c.plusieurs ? 3 : c.feminin ? 2 : 1;
     if (c.unique && !c.plusieurs) n->op = 'U';
     if (c.facultatif && !c.plusieurs) n->entier |= 1;
+    if (c.cascade && !c.plusieurs) n->entier |= 2;
+    if (depart) noeud_ajouter(n, depart);
     return n;
 }
 
@@ -313,7 +347,10 @@ QString ajouter_champ(const QString &dossier, const QString &entite, const Champ
     Chantier ch(dossier);
     Trouve t = trouver_porteur(ch, entite);
     if (!t.f) return QString("L'entité « %1 » est introuvable, ou son fichier contient une erreur.").arg(entite);
-    noeud_ajouter(t.phrase, nouveau_champ(champ));
+    QString erreur;
+    Noeud *neuf = nouveau_champ(champ, &erreur);
+    if (!neuf) return erreur;
+    noeud_ajouter(t.phrase, neuf);
     const auto e = t.f->etendue(t.k);
     ch.remplacer(*t.f, e.first, e.second, t.f->imprimer(t.phrase));
     geste->description = QString("Ajouter le champ « %1 » à « %2 »").arg(champ.nom, entite);
@@ -327,10 +364,9 @@ QString modifier_champ(const QString &dossier, const QString &entite, const QStr
     Trouve t = trouver_champ(ch, entite, ancien);
     if (!t.f) return QString("Le champ « %1 » de « %2 » est introuvable.").arg(ancien, entite);
     Noeud *vieux = t.phrase->enfants[t.enfant];
-    Noeud *neuf = nouveau_champ(champ);
-    // la valeur de départ et la cascade, que ce panneau ne règle pas encore, se gardent
-    if (vieux->nb_enfants && !champ.plusieurs) { noeud_ajouter(neuf, vieux->enfants[0]); vieux->nb_enfants = 0; }
-    if (!champ.plusieurs) neuf->entier |= vieux->entier & 2;
+    QString erreur;
+    Noeud *neuf = nouveau_champ(champ, &erreur);
+    if (!neuf) return erreur;
     t.phrase->enfants[t.enfant] = neuf;
     noeud_liberer(vieux);
     const auto e = t.f->etendue(t.k);
