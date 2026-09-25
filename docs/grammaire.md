@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.38 de la spécification, révisée le 24 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.39 de la spécification, révisée le 25 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1371,6 +1371,53 @@ Un fichier utilisé ne contient que des déclarations : remarques, classes, enti
 - `grym formater` et `grym traduire` écrivent la phrase telle quelle, jamais les déclarations du fichier utilisé.
 - Les suites attendues (§ 8) proposent `Utiliser` en tête du fichier seulement, et, plus bas, les noms déclarés dans les fichiers utilisés.
 
+## 22. Écrans *(A3 : conçu, pas encore implémenté)*
+
+Conception complète et raisons : `docs/ecrans.md`. Ce paragraphe en fixe les phrases ; elles entreront dans l'analyseur tranche par tranche (A3-a à A3-d).
+
+```
+L'écran des compositeurs montre :
+    la liste des compositeurs conservés, par nom,
+    un bouton « Nouveau »,
+    un bouton « Fermer ».
+
+Quand on choisit un compositeur dans l'écran des compositeurs :
+    Ouvrir la fiche du compositeur.
+
+Quand on clique sur « Nouveau » dans l'écran des compositeurs :
+    Le c vaut un nouveau compositeur saisi.
+    Conserver c.
+
+Quand on clique sur « Fermer » dans l'écran des compositeurs :
+    Fermer l'écran.
+
+Ouvrir l'écran des compositeurs.
+```
+
+### 22.1 Déclaration
+
+- `L'écran des compositeurs montre :`, au premier niveau, suivi de ses éléments séparés par des virgules, le dernier suivi d'un point. Un titre différent du nom se donne entre guillemets : `L'écran des compositeurs, « Nos compositeurs », montre :` ; sinon le titre vient du nom (« Compositeurs », « Accueil »).
+- Éléments : `la liste des … conservés [dont …] [, par …] [, avec le …, le … et le …]` (recherche du § 16.4) ; `un bouton « … »` ; `le texte « … »` ; une zone de saisie déclarée comme un champ d'entité (`un pays (texte), « Suisse » au départ`, `, facultatif`) ; `côte à côte :` et `l'un sous l'autre :`, qui ouvrent un bloc indenté.
+- Colonnes par défaut : les champs simples, dans l'ordre de la déclaration ; un lien montre la clé de l'objet désigné ; fichiers, images et champs « plusieurs » restent hors de la liste.
+- Un écran est un objet : ses zones de saisie sont ses champs, jamais conservés.
+
+### 22.2 Événements
+
+- `Quand on ouvre l'écran X :`, `Quand on clique sur « B » dans l'écran X :`, `Quand on choisit un c dans l'écran X :`, `Quand on change la zone dans l'écran X :`, `Quand on ferme l'écran X :`, suivis d'un bloc. Ce sont des actions (§ 9).
+- `Quand on choisit un compositeur` nomme la ligne `compositeur` dans son corps. `le compositeur choisi de l'écran` désigne la ligne sélectionnée, ou `absent`. `le pays de l'écran` lit une zone ; `Le pays de l'écran devient … .` la modifie. `de l'écran` hors d'un événement est une erreur.
+- Un bouton sans événement, un événement qui cite un bouton ou une zone inexistants, deux listes de la même entité dans un écran : erreurs d'analyse. La fermeture ne se refuse pas.
+
+### 22.3 Ouvrir, fermer, transactions
+
+- `Ouvrir l'écran X.` montre l'écran et attend jusqu'à `Fermer l'écran.` ; `Ouvrir la fiche de c.` ouvre l'écran déduit de l'entité de `c`. Dans un événement, l'écran s'ouvre par-dessus ; à sa fermeture, l'événement reprend.
+- `Ouvrir` valide d'abord ce qui précède ; chaque événement est ensuite sa propre transaction ; après la fermeture, la suite forme une nouvelle transaction (charte, art. 7).
+- `grym lancer` et `grym servir` refusent un programme qui ouvre des écrans, avant toute exécution.
+
+### 22.4 Mots et forme compacte
+
+- `quand`, `ouvrir` et `fermer` deviendront des mots de construction (§ 10.7) à l'implémentation d'A3-a.
+- Forme compacte : `docs/ecrans.md`, § 3.7 (`_écran des_compositeurs` … `_fin`, `_quand _clique « Nouveau » _dans des_compositeurs`, `_ouvrir`, `_fermer`, `_écran.pays`).
+
 ---
 
 ## Journal des révisions
@@ -1416,3 +1463,4 @@ Un fichier utilisé ne contient que des déclarations : remarques, classes, enti
 | 1.36 | 2026-09-24 | § 16.5 : numéro de format des bases, base plus récente refusée (charte, art. 13) |
 | 1.37 | 2026-09-24 | § 20.1 : la fiche d'un objet (`Afficher la fiche de p.`) |
 | 1.38 | 2026-09-24 | § 21 : fichiers utilisés (`Utiliser « données ».`), fichiers de déclarations, chemins, lecture unique, cercles refusés, erreurs par fichier ; `utiliser` devient un mot de construction (§ 10.7) |
+| 1.39 | 2026-09-25 | § 22 : écrans (A3), conçus, pas encore implémentés : déclaration, événements, ouvrir et fermer, une transaction par événement |

@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.39, révisée le 25 septembre 2026.
+Version 1.40, révisée le 25 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -110,6 +110,7 @@ La grammaire exacte de la forme littéraire reste à spécifier. Ces exemples mo
 - L'entité est une construction du langage.
 - Moteur : SQLite embarqué, invisible pour le développeur, qui n'écrit jamais de SQL.
 - Chaque exécution forme une transaction implicite : un programme lancé, ou une saisie de la boucle interactive, qui échoue ou qu'on interrompt n'écrit rien, ni en mémoire ni dans la base. Une question posée à l'utilisateur referme cette transaction et en ouvre une autre : ce qu'il a vu confirmé est acquis, et la base n'est pas verrouillée pendant qu'elle attend. Une formule qui échoue n'écrit donc rien non plus. Ce qu'elle a affiché reste affiché, suivi d'une phrase qui dit ce qui a été annulé. Un bloc `Essayer` rattrape l'erreur à sa mesure : il annule tout ce qu'il a fait, depuis son début ou depuis la dernière question, puis exécute son bloc `En cas d'échec` (grammaire, § 18).
+- Exception, à partir des écrans (grammaire, § 22) : `Ouvrir` un écran valide ce qui précède, puis découpe l'exécution en transactions, une par événement. Un programme sans écran reste une seule transaction.
 - Migrations de schéma automatiques pour tout ajout ; aucune donnée détruite en silence.
 - Tout nombre est un décimal exact, jamais un flottant, en mémoire comme en base. Un type `montant` (devise, arrondi) n'est pas prévu pour la v0.3.
 - Versions parallèles des données : horizon post-v1.
@@ -161,7 +162,7 @@ Horizon post-v1, sans date :
 | v2.0 | L'interface par le navigateur (`docs/v2.md`) : `grym servir`, tout programme v1 affiché sans modification ; formulaires typés, liens avec suggestions, téléversement, images | livrée le 24 septembre 2026 |
 | A1 | L'atelier (`docs/atelier.md`) : fenêtre Qt, projet, éditeur avec coloration par le lexeur et erreurs en direct, « Lancer » dans un processus à part | fait le 24 septembre 2026 |
 | A2 | Fichiers utilisés (grammaire, § 21), puis éditeur de données : schéma des entités, propriétés, réécriture chirurgicale, aperçu des migrations | fait le 25 septembre 2026 |
-| A3 | Les écrans dans le langage (`docs/ecrans.md`) : fenêtres, listes, fiches, boutons, événements | en conception : trois piliers validés |
+| A3 | Les écrans dans le langage (`docs/ecrans.md`) : fenêtres, listes, fiches, boutons, événements | conçu (grammaire, § 22) ; implémentation en tranches A3-a à A3-d |
 | A4 | Éditeur d'écrans : liste et fiche générées par entité, agencement à la souris | à venir |
 
 Critères de sortie de la v1.0, tous remplis :
@@ -248,3 +249,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.37 | 2026-09-24 | Art. 3 : deux exécutables, `grym` et `grym-atelier` (Qt 6), un bytecode par projet ; art. 4 : un projet sur plusieurs fichiers (grammaire, § 21) ; art. 11 : interface native par Qt, éditeur visuel d'interfaces en A3 et A4 ; art. 12 : jalons A1 (fait) à A4 |
 | 1.38 | 2026-09-24 | Nouvel art. 14 : pérennité ; le manuel du mainteneur (`docs/mainteneur.md`), révisé à chaque changement d'architecture |
 | 1.39 | 2026-09-25 | Art. 12 : A2 fait (fichiers utilisés, schéma des données, modification à la souris, aperçu des migrations) |
+| 1.40 | 2026-09-25 | Art. 7 : exception des écrans, une transaction par événement ; art. 12 : A3 conçu |

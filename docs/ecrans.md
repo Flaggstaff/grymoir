@@ -1,6 +1,6 @@
 # GrymoiR : les écrans dans le langage
 
-Proposition soumise à relecture, rédigée le 25 septembre 2026. Rien n'est implémenté.
+Conception validée le 25 septembre 2026. Rien n'est implémenté.
 Référence : Charte de GrymoiR v1.39, art. 2, 4, 7, 11, 12 et 13 ; grammaire 1.38, § 9, § 16, § 19, § 20 ; `docs/atelier.md`, jalon A3.
 Toute décision prise sur ce document passe dans la grammaire et la charte par une révision numérotée.
 
@@ -116,9 +116,23 @@ Mêmes règles que la grammaire, § 11 : mots-clés à souligné, noms à soulig
 | `Ouvrir l'écran des compositeurs.`, `Ouvrir la fiche de c.` | `_ouvrir des_compositeurs`, `_ouvrir _fiche c` |
 | `Fermer l'écran.` | `_fermer` |
 
-## 4. Questions à trancher
+### 3.8 Hors de l'atelier *(validé le 25 septembre 2026)*
 
-1. Les écrans en console et dans le navigateur (`grym lancer`, `grym servir`) : repli, ou refus expliqué.
+- Un programme qui ouvre des écrans est refusé par `grym lancer` et `grym servir`, avant toute exécution : « Ce programme ouvre des écrans : lancez-le dans une fenêtre, avec grym-atelier. » Un programme sans écran tourne partout, comme avant.
+- L'interface de la machine (`src/interface.h`) reçoit les appels des écrans ; les essais les pilotent par script (cliquer, choisir, saisir), sans Qt, pour l'intégration continue.
+- Pour distribuer une application : `grym-atelier --lancer` d'abord ; un exécutable dédié, sans l'atelier, plus tard.
+- Un repli en texte reste possible si un vrai besoin se présente.
+
+## 4. Découpage de l'implémentation
+
+La conception est complète : elle passe dans la grammaire (§ 22) et la charte (art. 7). Chaque tranche livre ses constructions dans les deux formes, avec l'imprimeur, la forme compacte, les suites attendues et la coloration (charte, art. 4), et ses essais pilotés par script.
+
+| Tranche | Contenu |
+|---|---|
+| A3-a | Déclaration d'écran avec liste, bouton et texte fixe ; `Quand on clique …`, `Quand on choisit …` ; `Ouvrir` et `Fermer` ; la boucle d'événements dans la machine, par l'interface ; une transaction par événement ; refus en console et dans le navigateur ; l'affichage Qt dans la fenêtre d'exécution |
+| A3-b | Zones de saisie et `de l'écran` ; `le … choisi de l'écran` ; `Quand on change …`, `Quand on ouvre …`, `Quand on ferme …` ; listes qui suivent les zones |
+| A3-c | La fiche déduite (`Ouvrir la fiche de c.`), les écrans empilés |
+| A3-d | Colonnes choisies (`avec`), disposition (`côte à côte`, `l'un sous l'autre`), titre donné |
 
 ---
 
@@ -133,3 +147,4 @@ Mêmes règles que la grammaire, § 11 : mots-clés à souligné, noms à soulig
 | 0.5 | 2026-09-25 | § 3.5 : événements |
 | 0.6 | 2026-09-25 | § 3.6 : écrans empilés ; `Ouvrir` valide ce qui précède, une transaction par événement |
 | 0.7 | 2026-09-25 | § 3.7 : forme compacte |
+| 0.8 | 2026-09-25 | § 3.8 : hors de l'atelier, refus expliqué ; § 4 : découpage en A3-a à A3-d ; conception validée |
