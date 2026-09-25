@@ -115,7 +115,8 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, ")");
         return;
     case P_QUAND:   /* (quand clic « Nouveau » [des compositeurs] corps) */
-        chaine_ajouter(c, n->forme == 1 ? "(quand clic « " : "(quand choix [");
+        chaine_ajouter(c, n->forme == 1 ? "(quand clic « " : n->forme == 2 ? "(quand choix [" : n->forme == 3 ? "(quand change ["
+                          : n->forme == 4 ? "(quand ouvre [" : "(quand ferme [");
         chaine_ajouter(c, n->enfants[2]->texte);
         chaine_ajouter(c, n->forme == 1 ? " » [" : "] [");
         chaine_ajouter(c, n->texte3);
@@ -130,6 +131,9 @@ static void decrire(const Noeud *n, Chaine *c) {
         return;
     case P_FERMER:
         chaine_ajouter(c, "(fermer-écran)");
+        return;
+    case N_ECRAN:
+        chaine_ajouter(c, "(écran-en-cours)");
         return;
     case N_BOUTON:
         chaine_ajouter(c, "(bouton « ");

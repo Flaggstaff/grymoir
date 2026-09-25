@@ -60,6 +60,7 @@ signals:
     void ecran_lignes(int element, const QStringList &cellules, int nb_lignes);
     void ecran_attente();
     void ecran_erreur(const QString &message);
+    void ecran_valeurs(const QStringList &valeurs);   // une par élément ; vide pour un élément qui n'est pas une zone
     void ecran_ferme();
     void reponses(const QString &echo);   // les réponses acceptées, recopiées dans le fil comme en console
     void fin(bool ok, const QString &erreur, const QString &annulation);
@@ -69,8 +70,11 @@ public:
     void vider_sortie(Chaine *sortie);
     Issue formulaire(Chaine *sortie, Champ *champs, size_t n, size_t *arret, Validation valider, void *vcontexte);
     Issue attendre_evenement(Chaine *sortie, Evenement *e);
-    Evenement evenement = {EVENEMENT_FERMETURE, 0, 0};   // rempli par la fenêtre avant de libérer `reponse`
+    Evenement evenement = {EVENEMENT_FERMETURE, 0, 0, nullptr, nullptr, 0};   // rempli par la fenêtre avant de libérer `reponse`
     QVector<int> nb_colonnes;                             // de chaque élément de l'écran ouvert
+    QStringList types_zones;                              // de chaque élément : le type d'une zone, sinon vide
+    QVector<int> facultatives;
+    QVector<QStringList> choix_zones;                     // zone liée : les clés, pour un menu
     size_t colonnes_de(size_t element) const { return element < (size_t)nb_colonnes.size() ? (size_t)nb_colonnes[(int)element] : 0; }
 
 private:
@@ -106,6 +110,10 @@ private:
     // L'écran ouvert (§ 22) : au-dessus du fil ; ses listes et ses boutons, par élément
     void montrer_ecran(const QString &titre, const QVector<int> &sortes, const QStringList &textes,
                        const QVector<QStringList> &colonnes);
+    QVector<QWidget *> zones;              // zone de saisie de chaque élément, ou nullptr
+    QString texte_zone(int k) const;
+    QVector<long> lignes_choisies;         // envoyées avec chaque événement (§ 22.2)
+    QByteArray texte_envoye;
     void envoyer_evenement(SorteEvenement sorte, int element, int ligne);
     QWidget *vue_ecran = nullptr;
     QLabel *erreur_ecran = nullptr;

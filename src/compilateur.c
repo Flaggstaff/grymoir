@@ -248,6 +248,9 @@ static void expression(Compilation *c, const Noeud *n) {
     case N_CHERCHER:
         chercher(c, n);
         return;
+    case N_ECRAN:   /* « l'écran » : l'objet de l'écran ouvert (§ 22.2) */
+        emettre(c, I_ECRAN_OBJET, 0, n->ligne, n->colonne);
+        return;
     case N_CADRE:   /* la valeur, la largeur, puis CADRER avec le sens (§ 4.2) */
         expression(c, n->enfants[0]);
         expression(c, n->enfants[1]);
@@ -439,6 +442,22 @@ static void selon(Compilation *c, const Noeud *ph) {
 
 static void phrases(Compilation *c, Noeud *const *liste, size_t nb) {
     for (size_t i = 0; i < nb && !c->echec; i++) phrase(c, liste[i]);
+}
+
+static void phrase(Compilation *c, const Noeud *ph);
+
+/* Un événement appelé hors de l'attente (ouverture, fermeture) : ESSAYER ; APPELER ; FIN_ESSAI ; → fin ;
+ * raté : ÉCRAN_ERREUR ; fin. */
+static void evenement_seul(Compilation *c, const Noeud *ph, const Noeud *q) {
+    size_t vers_rate = bloc_emettre_saut(c->b, I_ESSAYER, ph->ligne, ph->colonne);
+    long nom = bloc_nom(c->b, q->texte);
+    if (nom < 0) { trop_grand(c, ph); return; }
+    bloc_emettre_appel(c->b, (uint16_t)nom, 0, 0, ph->ligne, ph->colonne);
+    emettre(c, I_FIN_ESSAI, 0, ph->ligne, ph->colonne);
+    size_t vers_fin = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+    bloc_corriger_saut(c->b, vers_rate, c->b->taille_code);
+    emettre(c, I_ECRAN_ERREUR, 0, ph->ligne, ph->colonne);
+    bloc_corriger_saut(c->b, vers_fin, c->b->taille_code);
 }
 
 /* L'écran de ce nom, et l'événement d'un bouton ou d'une liste, dans tout le programme (§ 22). */
@@ -769,8 +788,29 @@ static void phrase(Compilation *c, const Noeud *ph) {
         c->b = prec;
         return;
     }
-    case P_ECRAN:   /* une déclaration : rien à exécuter ; « Ouvrir » la retrouve */
+    case P_ECRAN: {   /* la classe de l'écran : ses zones, la ligne choisie de chaque liste (§ 22.1) ; « Ouvrir » la retrouve */
+        char *nom = grym_formater("écran %s", ph->texte);
+        ClasseModule *cm = module_ajouter_classe(c->module, nom, 0);
+        free(nom);
+        for (size_t k = 0; k < ph->nb_enfants; k++) {
+            const Noeud *el = ph->enfants[k];
+            if (el->type == N_NOM) {
+                classe_ajouter_champ(cm, el->texte);
+                classe_typer_dernier_champ(cm, el->texte2, 0);
+                if (el->entier & 1) classe_facultatif_dernier_champ(cm);
+            } else if (el->type == N_CHERCHER) {
+                int fem = 0;   /* « le compositeur choisi », « la partition choisie » : le genre de l'entité */
+                for (size_t q = 0; q < c->module->nb_classes; q++)
+                    if (strcmp(c->module->classes[q].nom, el->texte) == 0) fem = c->module->classes[q].feminin;
+                char *choisi = grym_formater("%s %s", el->texte, fem ? "choisie" : "choisi");
+                classe_ajouter_champ(cm, choisi);
+                classe_typer_dernier_champ(cm, el->texte, 0);
+                classe_facultatif_dernier_champ(cm);
+                free(choisi);
+            }
+        }
         return;
+    }
     case P_FERMER:
         emettre(c, I_FERMER_ECRAN, 0, ph->ligne, ph->colonne);
         return;
@@ -787,8 +827,14 @@ static void phrase(Compilation *c, const Noeud *ph) {
         if (e->texte2) chaine_ajouter(&d, e->texte2);
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
-            chaine_ajouter(&d, el->type == N_CHERCHER ? "\x1f" "L" : el->type == N_BOUTON ? "\x1f" "B" : "\x1f" "T");
+            chaine_ajouter(&d, el->type == N_CHERCHER ? "\x1f" "L" : el->type == N_BOUTON ? "\x1f" "B"
+                             : el->type == N_NOM ? "\x1f" "Z" : "\x1f" "T");
             chaine_ajouter(&d, el->texte);
+            if (el->type == N_NOM) {   /* « Zpays ␞ texte ␞ f » : le type, et « f » si facultative */
+                chaine_ajouter(&d, "\x1e");
+                chaine_ajouter(&d, el->texte2);
+                chaine_ajouter(&d, (el->entier & 1) ? "\x1e" "f" : "\x1e" "-");
+            }
         }
         char *desc = chaine_rendre(&d);
         long kd = bloc_constante(c->b, C_TEXTE, desc);
@@ -796,6 +842,18 @@ static void phrase(Compilation *c, const Noeud *ph) {
         if (kd < 0) { trop_grand(c, ph); return; }
         const int ev = ph->local, objet = ph->local + 1;
         emettre(c, I_ECRAN_OUVRIR, kd, ph->ligne, ph->colonne);
+        for (size_t k = 0; k < e->nb_enfants; k++) {   /* les valeurs de départ des zones */
+            const Noeud *el = e->enfants[k];
+            if (el->type != N_NOM || !el->nb_enfants) continue;
+            emettre(c, I_ECRAN_OBJET, 0, ph->ligne, ph->colonne);
+            expression(c, el->enfants[0]);
+            long nz = bloc_nom(c->b, el->texte);
+            if (nz < 0) { trop_grand(c, ph); return; }
+            emettre(c, I_ECRIRE_CHAMP, nz, ph->ligne, ph->colonne);
+        }
+        /* « Quand on ouvre » : une fois, avant la première attente, avec sa propre reprise */
+        const Noeud *qo = trouver_quand(c->programme->phrases, c->programme->nb, e->texte, 4, "ouverture");
+        if (qo) evenement_seul(c, ph, qo);
         size_t tour = c->b->taille_code;
         for (size_t k = 0; k < e->nb_enfants; k++) {
             if (e->enfants[k]->type != N_CHERCHER) continue;
@@ -817,8 +875,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
             if (el->type == N_TEXTE_ECRAN) continue;
-            const Noeud *q = trouver_quand(c->programme->phrases, c->programme->nb, e->texte, el->type == N_BOUTON ? 1 : 2,
-                                           el->type == N_BOUTON ? el->texte : el->texte);
+            const Noeud *q = trouver_quand(c->programme->phrases, c->programme->nb, e->texte,
+                                           el->type == N_BOUTON ? 1 : el->type == N_NOM ? 3 : 2, el->texte);
             if (!q) continue;   /* une liste sans « Quand on choisit » : le choix ne fait rien */
             char num[24];
             snprintf(num, sizeof num, "%lu", (unsigned long)(k + 1));
@@ -843,6 +901,9 @@ static void phrase(Compilation *c, const Noeud *ph) {
         size_t retour2 = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
         bloc_corriger_saut(c->b, retour2, tour);
         bloc_corriger_saut(c->b, vers_sortie, c->b->taille_code);
+        /* « Quand on ferme » : à la fermeture, qui ne se refuse pas ; un échec se montre, et l'écran se ferme quand même */
+        const Noeud *qf = trouver_quand(c->programme->phrases, c->programme->nb, e->texte, 5, "fermeture");
+        if (qf) evenement_seul(c, ph, qf);
         emettre(c, I_ECRAN_FERMER, 0, ph->ligne, ph->colonne);
         return;
     }

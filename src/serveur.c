@@ -914,7 +914,7 @@ static void serveur_afficher_fiche(void *contexte, Chaine *sortie, const char *t
 
 Interface serveur_interface(Serveur *s) {
     Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer, 1, serveur_afficher_image,
-                    serveur_afficher_fiche, NULL, NULL, NULL, NULL, NULL };   /* pas d'écrans (§ 22.3) */
+                    serveur_afficher_fiche, NULL, NULL, NULL, NULL, NULL, NULL };   /* pas d'écrans (§ 22.3) */
     return i;
 }
 

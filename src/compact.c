@@ -88,7 +88,7 @@ static void expression(Reecriture *r, size_t d, size_t f);
 /* Jeton qui termine une valeur : un suffixe « _positif » s'y rapporte. */
 static int finit_valeur(const Jeton *t) {
     return t->type == J_CROCHETS || t->type == J_NOMBRE || t->type == J_TEXTE || t->type == J_PAR_FERM
-        || (t->type == J_MOT && (strcmp(t->valeur, "vrai") == 0 || strcmp(t->valeur, "faux") == 0));
+        || (t->type == J_MOT && (strcmp(t->valeur, "vrai") == 0 || strcmp(t->valeur, "faux") == 0 || strcmp(t->valeur, "écran") == 0));
 }
 
 static const char *adjectif(const Jeton *t) {
@@ -183,6 +183,19 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                 k = q - 1;
                 continue;
             }
+        }
+        if (est_cle(t, "écran") && k + 2 < f && r->e[k + 1].type == J_POINT && r->e[k + 2].type == J_CROCHETS) {
+            /* _écran.pays → pays de l'écran (§ 22.2) */
+            size_t q = k + 1, nb = 0;
+            while (q + 1 < f && r->e[q].type == J_POINT && r->e[q + 1].type == J_CROCHETS) { q += 2; nb++; }
+            for (size_t i = q; i > k + 1; i -= 2) {
+                copier(r, &r->e[i - 1]);
+                mot(r, "de", &r->e[i - 2]);
+            }
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "écran", t);
+            k = q - 1;
+            continue;
         }
         if ((est_cle(t, "le") || est_cle(t, "la") || est_cle(t, "l'")) && k + 2 < f
             && r->e[k + 1].type == J_CROCHETS && (est_cle(&r->e[k + 2], "conservé") || est_cle(&r->e[k + 2], "conservée") || est_cle(&r->e[k + 2], "supprimé"))) {
@@ -551,16 +564,46 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 copier(r, &r->e[par + 1]);
                 if (par + 2 < f) mot(r, "décroissant", &r->e[par + 2]);
             }
+        } else if ((est_cle(t, "un") || est_cle(t, "une")) && d + 4 < f + 1 && r->e[d + 1].type == J_CROCHETS
+                   && r->e[d + 2].type == J_PAR_OUV && r->e[d + 3].type == J_CROCHETS && r->e[d + 4].type == J_PAR_FERM) {
+            /* _un pays (texte) [_départ « Suisse »] [_facultatif] → un pays (texte), « Suisse » au départ, facultatif */
+            mot(r, t->valeur, t);
+            copier(r, &r->e[d + 1]);
+            emettre(r, J_PAR_OUV, NULL, &r->e[d + 2], 1);
+            copier(r, &r->e[d + 3]);
+            emettre(r, J_PAR_FERM, NULL, &r->e[d + 4], 1);
+            size_t k = d + 5;
+            while (k < f) {
+                if (est_cle(&r->e[k], "départ") && k + 1 < f) {
+                    size_t v = k + 1, fv = v + 1;
+                    if (r->e[v].type == J_MOINS) fv++;
+                    emettre(r, J_VIRGULE, NULL, &r->e[k], 1);
+                    for (size_t x = v; x < fv && x < f; x++) {
+                        if (r->e[x].type == J_MOT_CLE) mot(r, r->e[x].valeur, &r->e[x]);
+                        else copier(r, &r->e[x]);
+                    }
+                    mot(r, "au", &r->e[k]);
+                    mot(r, "départ", &r->e[k]);
+                    k = fv;
+                } else if (est_cle(&r->e[k], "facultatif") || est_cle(&r->e[k], "facultative")) {
+                    emettre(r, J_VIRGULE, NULL, &r->e[k], 1);
+                    mot(r, est_cle(t, "une") ? "facultative" : "facultatif", &r->e[k]);
+                    k++;
+                } else {
+                    echouer(r, &r->e[k], grym_dupliquer("« _départ » ou « _facultatif » attendu après une zone."));
+                    return;
+                }
+            }
         } else {
             echouer(r, t, grym_dupliquer("Élément d'écran attendu : « _liste compositeur _conservé », "
-                                         "« _bouton « OK » » ou « _texte « … » »."));
+                                         "« _bouton « OK » », « _texte « … » » ou « _un pays (texte) »."));
             return;
         }
         emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
         fixer_retrait(r, premier, prof);
         return;
     }
-    if (t->type == J_MOT_CLE && !strcmp(t->valeur, "écran")) {
+    if (t->type == J_MOT_CLE && !strcmp(t->valeur, "écran") && !(d + 1 < f && r->e[d + 1].type == J_POINT)) {
         /* _écran des_compositeurs [« Titre »] → L'écran des compositeurs[, « Titre »,] montre : */
         size_t fin_nom = f;
         const Jeton *titre = NULL;
@@ -582,7 +625,35 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     }
     if (t->type == J_MOT_CLE && !strcmp(t->valeur, "quand")) {
         /* _quand _clique « B » _dans X ; _quand _choisit _un c _dans X → Quand on … dans l'écran X : */
+        if (d + 2 < f && (est_cle(&r->e[d + 1], "ouvre") || est_cle(&r->e[d + 1], "ferme"))) {
+            /* _quand _ouvre de_recherche → Quand on ouvre l'écran de recherche : */
+            mot(r, "quand", t);
+            mot(r, "on", t);
+            mot(r, r->e[d + 1].valeur, &r->e[d + 1]);
+            emettre(r, J_ELISION, "l", &r->e[d + 1], 1);
+            mot(r, "écran", &r->e[d + 1]);
+            for (size_t k = d + 2; k < f; k++) copier(r, &r->e[k]);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            fixer_retrait(r, premier, prof);
+            ouvrir(r, O_FORMULE, prof, t);
+            return;
+        }
         size_t dans = chercher(r, d + 1, f, "dans");
+        if (d + 1 < f && est_cle(&r->e[d + 1], "change") && dans == d + 3 && r->e[d + 2].type == J_CROCHETS && dans + 1 < f) {
+            /* _quand _change pays _dans de_recherche → Quand on change pays dans l'écran de recherche : */
+            mot(r, "quand", t);
+            mot(r, "on", t);
+            mot(r, "change", &r->e[d + 1]);
+            copier(r, &r->e[d + 2]);
+            mot(r, "dans", &r->e[dans]);
+            emettre(r, J_ELISION, "l", &r->e[dans], 1);
+            mot(r, "écran", &r->e[dans]);
+            for (size_t k = dans + 1; k < f; k++) copier(r, &r->e[k]);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            fixer_retrait(r, premier, prof);
+            ouvrir(r, O_FORMULE, prof, t);
+            return;
+        }
         int clic = d + 1 < f && est_cle(&r->e[d + 1], "clique") && dans == d + 3 && r->e[d + 2].type == J_TEXTE;
         int choix = d + 1 < f && est_cle(&r->e[d + 1], "choisit") && dans == d + 4
                     && (est_cle(&r->e[d + 2], "un") || est_cle(&r->e[d + 2], "une")) && r->e[d + 3].type == J_CROCHETS;
@@ -825,6 +896,19 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             r->pile[r->np - 1].classe = &r->e[d + 2];
             r->pile[r->np - 1].article = &r->e[d + 1];
         }
+        return;
+    }
+    if (est_cle(t, "écran") && d + 2 < f && r->e[d + 1].type == J_POINT) {
+        /* _écran.pays << « France » → Le pays de l'écran devient « France ». (§ 22.2) */
+        size_t affecte = d;
+        while (affecte < f && r->e[affecte].type != J_AFFECTE) affecte++;
+        if (affecte >= f) { echouer(r, t, grym_dupliquer("« _écran.zone << valeur » attendu.")); return; }
+        emettre(r, J_ARTICLE_IMPLICITE, NULL, t, 1);
+        expression(r, d, affecte);
+        mot(r, "devient", &r->e[affecte]);
+        expression(r, affecte + 1, f);
+        point(r, f);
+        fixer_retrait(r, premier, prof);
         return;
     }
     if (t->type == J_MOT_CLE) {
@@ -1188,7 +1272,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     }
     size_t affecte = d;
     while (affecte < f && r->e[affecte].type != J_AFFECTE) affecte++;
-    if (t->type == J_CROCHETS && affecte < f && affecte > d
+    if ((t->type == J_CROCHETS || (est_cle(t, "écran") && d + 1 < f && r->e[d + 1].type == J_POINT)) && affecte < f && affecte > d
         && (affecte == d + 1 || r->e[d + 1].type == J_POINT)) {
         emettre(r, J_ARTICLE_IMPLICITE, NULL, t, 1);   /* total << … → Le total devient … */
         expression(r, d, affecte);                     /* client.solde → solde de client */

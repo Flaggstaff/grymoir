@@ -211,6 +211,15 @@ int main(void) {
                  "Ouvrir l'écran des compositeurs.\n");
     ALLER_RETOUR("_écran d'accueil\n    _bouton « OK »\n_fin\n_quand _clique « OK » _dans d'accueil\n    _fermer\n_fin\n"
                  "_ouvrir d'accueil\n", NULL);
+    ALLER_RETOUR("_classe _un compositeur _conservé\n    _un nom (texte) _unique\n    _un pays (texte)\n_fin\n"
+                 "_écran de_recherche\n    _un pays (texte) _départ « Suisse »\n    _une ville (texte) _facultatif\n"
+                 "    _liste compositeur _conservé _dont pays = _écran.pays _par nom\n    _bouton « Supprimer »\n_fin\n"
+                 "_quand _ouvre de_recherche\n    _écran.pays << « France »\n_fin\n"
+                 "_quand _change ville _dans de_recherche\n    _afficher _écran.ville\n_fin\n"
+                 "_quand _clique « Supprimer » _dans de_recherche\n    _si _écran.compositeur_choisi _présent _alors\n"
+                 "        _supprimer _écran.compositeur_choisi\n    _fin\n_fin\n"
+                 "_quand _ferme de_recherche\n    _afficher « fermé »\n_fin\n_ouvrir de_recherche\n", NULL);
+    ERR("_écran d'accueil\n    _un pays (texte) _parfois\n    _bouton « OK »\n_fin\n", 2, 22, "_départ");
     ERR("_écran\n    _bouton « OK »\n_fin\n", 1, 1, "_écran des_compositeurs");
     ERR("_écran d'accueil\n    _image\n_fin\n", 2, 5, "Élément d'écran attendu");
     ERR("_écran d'accueil\n    _bouton « OK »\n_fin\n_quand _tape « OK » _dans d'accueil\n    _fermer\n_fin\n", 4, 1,

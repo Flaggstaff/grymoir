@@ -127,6 +127,28 @@ int main(void) {
                   "_quand _choisit _un compositeur _dans des_compositeurs\n    _afficher compositeur.nom\n_fin\n"
                   "_quand _clique « Fermer » _dans des_compositeurs\n    _fermer\n_fin\n"
                   "_ouvrir des_compositeurs\n");
+        /* A3-b : zones, « de l'écran », changement, ouverture, fermeture */
+        const char *zones = "Un compositeur, conservé, a :\n    un nom (texte), unique,\n    un pays (texte).\n"
+                            "L'écran de recherche montre :\n    un pays (texte), « Suisse » au départ,\n"
+                            "    une ville (texte), facultative,\n    un âge (nombre), -3 au départ,\n"
+                            "    la liste des compositeurs conservés dont le pays est le pays de l'écran, par nom,\n"
+                            "    un bouton « Supprimer ».\n"
+                            "Quand on ouvre l'écran de recherche :\n    Le pays de l'écran devient « France ».\n"
+                            "Quand on change la ville dans l'écran de recherche :\n    Afficher la ville de l'écran.\n"
+                            "Quand on clique sur « Supprimer » dans l'écran de recherche :\n"
+                            "    Si le compositeur choisi de l'écran est présent, supprimer le compositeur choisi de l'écran.\n"
+                            "Quand on ferme l'écran de recherche :\n    Afficher « fermé ».\n"
+                            "Ouvrir l'écran de recherche.\n";
+        FIXE(zones);
+        COMP(zones, "_classe _un compositeur _conservé\n    _un nom (texte) _unique\n    _un pays (texte)\n_fin\n"
+                    "_écran de_recherche\n    _un pays (texte) _départ « Suisse »\n    _une ville (texte) _facultatif\n"
+                    "    _un âge (nombre) _départ −3\n"
+                    "    _liste compositeur _conservé _dont pays = _écran.pays _par nom\n    _bouton « Supprimer »\n_fin\n"
+                    "_quand _ouvre de_recherche\n    _écran.pays << « France »\n_fin\n"
+                    "_quand _change ville _dans de_recherche\n    _afficher _écran.ville\n_fin\n"
+                    "_quand _clique « Supprimer » _dans de_recherche\n    _si _écran.compositeur_choisi _présent _alors\n"
+                    "        _supprimer _écran.compositeur_choisi\n    _fin\n_fin\n"
+                    "_quand _ferme de_recherche\n    _afficher « fermé »\n_fin\n_ouvrir de_recherche\n");
         FIXE("L'écran d'accueil montre :\n    un bouton « OK ».\nQuand on clique sur « OK » dans l'écran d'accueil :\n"
              "    Fermer l'écran.\nOuvrir l'écran d'accueil.\n");
     }

@@ -162,7 +162,7 @@ Horizon post-v1, sans date :
 | v2.0 | L'interface par le navigateur (`docs/v2.md`) : `grym servir`, tout programme v1 affiché sans modification ; formulaires typés, liens avec suggestions, téléversement, images | livrée le 24 septembre 2026 |
 | A1 | L'atelier (`docs/atelier.md`) : fenêtre Qt, projet, éditeur avec coloration par le lexeur et erreurs en direct, « Lancer » dans un processus à part | fait le 24 septembre 2026 |
 | A2 | Fichiers utilisés (grammaire, § 21), puis éditeur de données : schéma des entités, propriétés, réécriture chirurgicale, aperçu des migrations | fait le 25 septembre 2026 |
-| A3 | Les écrans dans le langage (`docs/ecrans.md`) : fenêtres, listes, fiches, boutons, événements | en cours : A3-a fait (écran, liste, boutons, événements, ouvrir et fermer) |
+| A3 | Les écrans dans le langage (`docs/ecrans.md`) : fenêtres, listes, fiches, boutons, événements | en cours : A3-a et A3-b faits (écran, liste, boutons, zones de saisie, événements, ouvrir et fermer) |
 | A4 | Éditeur d'écrans : liste et fiche générées par entité, agencement à la souris | à venir |
 
 Critères de sortie de la v1.0, tous remplis :

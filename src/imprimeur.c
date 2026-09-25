@@ -424,6 +424,9 @@ static void expression(Impression *im, const Noeud *n) {
         }
         ecrire_nom(im, n->texte, 0);
         return;
+    case N_ECRAN:   /* « l'écran » ; « _écran » (§ 22.2) */
+        aj(im, im->compact ? "_écran" : "l'écran");
+        return;
     case N_CHERCHER: {
         Genre g = genre_de_nom(im, n->texte);
         int fem = g == G_FEMININ;
@@ -539,7 +542,7 @@ static void expression(Impression *im, const Noeud *n) {
     case N_CHAMP:
         if (im->compact) {
             const Noeud *o = n->enfants[0];
-            int simple = o->type == N_NOM || o->type == N_CHAMP || o->type == N_APPEL || o->type == N_GROUPE;
+            int simple = o->type == N_NOM || o->type == N_CHAMP || o->type == N_APPEL || o->type == N_GROUPE || o->type == N_ECRAN;
             if (!simple) aj(im, "(");
             expression(im, o);
             if (!simple) aj(im, ")");
@@ -774,6 +777,20 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             } else if (el->type == N_TEXTE_ECRAN) {
                 aj(im, c ? "_texte " : "le texte ");
                 ecrire_texte(im, el->texte);
+            } else if (el->type == N_NOM) {   /* zone : « un pays (texte), « Suisse » au départ, facultatif » */
+                int fz = el->forme == 2;
+                retenir(im, el->texte, fz ? G_FEMININ : G_MASCULIN);
+                aj(im, c ? (fz ? "_une " : "_un ") : (fz ? "une " : "un "));
+                ecrire_nom(im, el->texte, 0);
+                aj(im, " (");
+                if (c) ecrire_nom(im, el->texte2, 0); else aj(im, el->texte2);
+                aj(im, ")");
+                if (el->nb_enfants) {
+                    aj(im, c ? " _départ " : ", ");
+                    expression(im, el->enfants[0]);
+                    if (!c) aj(im, " au départ");
+                }
+                if (el->entier & 1) aj(im, c ? " _facultatif" : fz ? ", facultative" : ", facultatif");
             } else if (c) {
                 aj(im, "_liste ");
                 ecrire_nom(im, el->texte, 0);
@@ -798,16 +815,25 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     }
     case P_QUAND: {   /* « Quand on clique sur « B » dans l'écran X : » (§ 22.2) */
         size_t apres_nom = im->nb;
-        if (c) {
-            aj(im, n->forme == 1 ? "_quand _clique " : "_quand _choisit ");
+        if (n->forme >= 4) {   /* « Quand on ouvre l'écran X : », « Quand on ferme … » */
+            if (c) { aj(im, n->forme == 4 ? "_quand _ouvre " : "_quand _ferme "); ecrire_nom(im, n->texte3, 0); aj(im, "\n"); }
+            else { aj(im, n->forme == 4 ? "Quand on ouvre l'écran " : "Quand on ferme l'écran "); aj(im, n->texte3); aj(im, " :\n"); }
+        } else if (c) {
+            aj(im, n->forme == 1 ? "_quand _clique " : n->forme == 3 ? "_quand _change " : "_quand _choisit ");
             if (n->forme == 1) ecrire_texte(im, n->enfants[2]->texte);
+            else if (n->forme == 3) ecrire_nom(im, n->enfants[2]->texte, 0);
             else parametres(im, n->enfants[0], 0);
             aj(im, " _dans ");
             ecrire_nom(im, n->texte3, 0);
             aj(im, "\n");
         } else {
-            aj(im, n->forme == 1 ? "Quand on clique sur " : "Quand on choisit");
+            aj(im, n->forme == 1 ? "Quand on clique sur " : n->forme == 3 ? "Quand on change " : "Quand on choisit");
             if (n->forme == 1) ecrire_texte(im, n->enfants[2]->texte);
+            else if (n->forme == 3) {   /* « le pays », « la ville » : l'article selon le genre retenu */
+                const char *z = n->enfants[2]->texte;
+                aj(im, voyelle(z) ? "l'" : genre_de_nom(im, z) == G_FEMININ ? "la " : "le ");
+                aj(im, z);
+            }
             else parametres(im, n->enfants[0], 0);
             aj(im, " dans l'écran ");
             aj(im, n->texte3);

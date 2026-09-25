@@ -15,19 +15,26 @@
 /* Une ligne de la fiche d'un objet (grammaire, § 20) : un champ et sa valeur, écrite comme Afficher l'écrirait.
  * Une image porte aussi ses octets, pour qu'une interface riche la montre. */
 /* Un élément d'écran, tel que l'interface le montre (grammaire, § 22.1). */
-typedef enum { ELEMENT_LISTE, ELEMENT_BOUTON, ELEMENT_TEXTE } SorteElement;
+typedef enum { ELEMENT_LISTE, ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE } SorteElement;
 typedef struct {
     SorteElement sorte;
     const char *texte;              /* libellé du bouton, texte fixe ; pour une liste, l'entité */
     const char *const *colonnes;    /* liste : les titres des colonnes */
     size_t nb_colonnes;
+    const char *type;               /* zone de saisie : son type (« texte », « vrai ou faux », une entité) */
+    int facultatif;
+    const char *const *choix;       /* zone liée à une entité : les clés de ses objets, pour un menu */
+    size_t nb_choix;
 } ElementEcran;
 
-typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX } SorteEvenement;
+typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT } SorteEvenement;
 typedef struct {
     SorteEvenement sorte;
     size_t element;   /* le bouton cliqué, la liste où l'on a choisi */
     size_t ligne;     /* choix : la ligne, à partir de 0 */
+    const char *texte;          /* changement : le nouveau texte de la zone */
+    const long *choisies;       /* pour chaque élément : la ligne sélectionnée d'une liste, ou −1 ; NULL : aucune */
+    size_t nb_choisies;
 } Evenement;
 
 typedef struct {
@@ -99,6 +106,8 @@ typedef struct {
     Issue (*ecran_attendre)(void *contexte, Chaine *sortie, Evenement *e);
     void (*ecran_erreur)(void *contexte, Chaine *sortie, const char *message);
     void (*ecran_fermer)(void *contexte, Chaine *sortie);
+    /* Avant chaque attente : le texte de chaque zone de saisie (NULL pour un autre élément), à montrer. */
+    void (*ecran_valeurs)(void *contexte, const char *const *valeurs, size_t n);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

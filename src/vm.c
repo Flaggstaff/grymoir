@@ -325,6 +325,7 @@ void machine_dossier(Machine *m, const char *dossier) {
     m->dossier = dossier && *dossier ? grym_dupliquer(dossier) : NULL;
 }
 
+
 struct EcranVM;
 static void ecran_detruire(struct EcranVM *e);
 
@@ -621,6 +622,23 @@ static void marquer(Pile_objets *p, const Valeur *v) {
 /* Racines : cases globales, pile, cases locales des cadres, anciennes valeurs du journal.
  * Le marquage suit les champs avec une pile explicite : une longue chaîne d'objets
  * ne fait pas déborder la pile du C. */
+/* L'écran ouvert (grammaire, § 22). */
+typedef struct EcranVM {
+    char *titre;
+    size_t n;
+    ElementEcran *elements;
+    char **textes;         /* libellés, textes fixes, entités : possédés */
+    char ***colonnes;      /* pour chaque liste : titres des colonnes (possédés) */
+    size_t *nb_colonnes;
+    size_t **champs;       /* pour chaque liste : l'index du champ de chaque colonne */
+    Valeur *listes;        /* pour chaque liste : la dernière liste montrée (sinon type V_ABSENT) */
+    Objet *objet;          /* l'écran est un objet : ses zones et la ligne choisie de chaque liste (§ 22.1) */
+    long *champ;           /* pour chaque élément : zone → son champ ; liste → le champ « … choisi » ; sinon −1 */
+    char **types;          /* zone : son type ; possédés */
+    char ***choix;         /* zone liée à une entité : les clés de ses objets */
+    size_t *nb_choix;
+} EcranVM;
+
 static void ramasser(Machine *m, const Pile *pile, const Cadre *cadres, size_t nb_cadres) {
     Pile_objets p = { NULL, 0, 0 };
     for (size_t i = 0; i < m->nb_cases; i++)
@@ -641,6 +659,13 @@ static void ramasser(Machine *m, const Pile *pile, const Cadre *cadres, size_t n
             marquer(&p, &v);
             dec_liberer(&v.nombre);
         }
+    }
+    if (m->ecran && m->ecran->objet) {   /* l'objet de l'écran ouvert (§ 22.1) */
+        Valeur v = valeur_nombre(dec_zero());
+        v.type = V_OBJET;
+        v.objet = m->ecran->objet;
+        marquer(&p, &v);
+        dec_liberer(&v.nombre);
     }
     while (p.n) {
         Objet *o = p.o[--p.n];
@@ -1786,16 +1811,7 @@ static char *afficher_fiche(Machine *m, Objet *o, Chaine *sortie) {
 /* Écrans (grammaire, § 22)                                          */
 /* ---------------------------------------------------------------- */
 
-typedef struct EcranVM {
-    char *titre;
-    size_t n;
-    ElementEcran *elements;
-    char **textes;         /* libellés, textes fixes, entités : possédés */
-    char ***colonnes;      /* pour chaque liste : titres des colonnes (possédés) */
-    size_t *nb_colonnes;
-    size_t **champs;       /* pour chaque liste : l'index du champ de chaque colonne */
-    Valeur *listes;        /* pour chaque liste : la dernière liste montrée (sinon type V_ABSENT) */
-} EcranVM;
+
 
 static void ecran_detruire(EcranVM *e) {
     if (!e) return;
@@ -1805,7 +1821,14 @@ static void ecran_detruire(EcranVM *e) {
         free(e->colonnes[k]);
         free(e->champs[k]);
         valeur_liberer(&e->listes[k]);
+        free(e->types[k]);
+        for (size_t c = 0; c < e->nb_choix[k]; c++) free(e->choix[k][c]);
+        free(e->choix[k]);
     }
+    free(e->types);
+    free(e->choix);
+    free(e->nb_choix);
+    free(e->champ);
     free(e->titre);
     free(e->elements);
     free(e->textes);
@@ -1845,13 +1868,60 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     e->n = np > 2 ? np - 2 : 0;
     size_t t = e->n ? e->n : 1;
     e->elements = grym_allouer(t * sizeof *e->elements);
+    memset(e->elements, 0, t * sizeof *e->elements);   /* type, choix : seulement pour une zone */
     e->textes = grym_allouer(t * sizeof *e->textes);
     e->colonnes = grym_allouer(t * sizeof *e->colonnes);
     e->nb_colonnes = grym_allouer(t * sizeof *e->nb_colonnes);
     e->champs = grym_allouer(t * sizeof *e->champs);
     e->listes = grym_allouer(t * sizeof *e->listes);
+    e->champ = grym_allouer(t * sizeof *e->champ);
+    e->types = grym_allouer(t * sizeof *e->types);
+    e->choix = grym_allouer(t * sizeof *e->choix);
+    e->nb_choix = grym_allouer(t * sizeof *e->nb_choix);
+    char *nom_classe = grym_formater("écran %s", parts[0]);
+    const ClasseVM *ce = classe_vm(m, nom_classe);
+    free(nom_classe);
     for (size_t k = 0; k < e->n; k++) {
         const char *x = parts[k + 2];
+        e->champ[k] = -1;
+        e->types[k] = NULL;
+        e->choix[k] = NULL;
+        e->nb_choix[k] = 0;
+        if (x[0] == 'Z') {   /* « Zpays ␞ texte ␞ f » : une zone de saisie */
+            const char *s1 = strchr(x, '\x1e'), *s2 = s1 ? strchr(s1 + 1, '\x1e') : NULL;
+            char *nomz = grym_formater("%.*s", (int)(s1 ? s1 - x - 1 : (long)strlen(x + 1)), x + 1);
+            e->types[k] = s1 ? grym_formater("%.*s", (int)(s2 ? s2 - s1 - 1 : (long)strlen(s1 + 1)), s1 + 1) : grym_dupliquer("texte");
+            e->textes[k] = capitale(nomz);
+            e->champ[k] = ce ? index_champ(ce, nomz) : -1;
+            e->elements[k].sorte = ELEMENT_ZONE;
+            e->elements[k].texte = e->textes[k];
+            e->elements[k].colonnes = NULL;
+            e->elements[k].nb_colonnes = 0;
+            e->elements[k].type = e->types[k];
+            e->elements[k].facultatif = s2 && s2[1] == 'f';
+            e->elements[k].choix = NULL;
+            e->elements[k].nb_choix = 0;
+            const ClasseVM *lie = classe_vm(m, e->types[k]);
+            if (lie && lie->conserve && m->base) {   /* un menu des clés, comme les formulaires (docs/v2.md, § 10) */
+                const char *cle = champ_cle(lie);
+                long kc = cle ? index_champ(lie, cle) : -1;
+                char **vals = NULL;
+                size_t nv = 0;
+                char *err = NULL;
+                if (kc >= 0 && base_valeurs(m->base, lie->nom, lie->proprietaires[kc]->nom, cle, 1000, &vals, &nv, &err)) {
+                    e->choix[k] = vals;
+                    e->nb_choix[k] = nv;
+                    e->elements[k].choix = (const char *const *)vals;
+                    e->elements[k].nb_choix = nv;
+                } else free(err);
+            }
+            free(nomz);
+            e->listes[k] = vi_absent(NULL);
+            e->colonnes[k] = NULL;
+            e->nb_colonnes[k] = 0;
+            e->champs[k] = NULL;
+            continue;
+        }
         e->textes[k] = grym_dupliquer(x + 1);
         e->colonnes[k] = NULL;
         e->nb_colonnes[k] = 0;
@@ -1865,6 +1935,11 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         /* Colonnes par défaut : les champs simples, dans l'ordre ; ni fichiers, ni images, ni « plusieurs » (§ 22.1) */
         const ClasseVM *c = classe_vm(m, x + 1);
         if (!c) { *erreur = grym_formater("Entité « %s » inconnue.", x + 1); break; }
+        if (ce) {   /* le champ « … choisi » de la classe de l'écran */
+            char *choisi = grym_formater("%s %s", c->nom, c->feminin ? "choisie" : "choisi");
+            e->champ[k] = index_champ(ce, choisi);
+            free(choisi);
+        }
         e->colonnes[k] = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof(char *));
         e->champs[k] = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof(size_t));
         for (size_t q = 0; q < c->nb_champs; q++) {
@@ -2734,6 +2809,15 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             char *probleme = NULL;
             EcranVM *e = ecran_lire(m, b->constantes[op].texte, &probleme);
             if (e) {
+                /* l'objet de l'écran : ses zones vivent le temps de l'écran, jamais conservées */
+                const char *fin_nom = strchr(b->constantes[op].texte, '\x1f');
+                char *nc = grym_formater("écran %.*s", (int)(fin_nom ? fin_nom - b->constantes[op].texte
+                                                                   : (long)strlen(b->constantes[op].texte)),
+                                         b->constantes[op].texte);
+                const ClasseVM *ce = classe_vm(m, nc);
+                free(nc);
+                if (m->depuis_ramassage >= m->seuil) ramasser(m, &pile, cadres, nb_cadres);
+                e->objet = ce ? creer_objet(m, ce, m->epoque) : NULL;
                 ecran_detruire(m->ecran);
                 m->ecran = e;
                 m->fermer_ecran = 0;
@@ -2756,7 +2840,24 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_ECRAN_ATTENDRE: {
             /* Attendre valide ce qui précède : chaque événement sera sa propre transaction (charte, art. 7). */
             char *probleme = ouvrir_attente(m, sortie, cadres);
-            Evenement ev = { EVENEMENT_FERMETURE, 0, 0 };
+            if (!probleme && m->ecran && m->ecran->objet && m->iface.ecran_valeurs) {   /* les zones, telles qu'elles sont */
+                EcranVM *e = m->ecran;
+                char **v = grym_allouer((e->n ? e->n : 1) * sizeof *v);
+                for (size_t k = 0; k < e->n; k++) {
+                    v[k] = NULL;
+                    if (e->elements[k].sorte != ELEMENT_ZONE || e->champ[k] < 0) continue;
+                    const Objet *o = e->objet;
+                    const size_t q = (size_t)e->champ[k];
+                    if (!o->definis[q] || o->champs[q].type == V_ABSENT) v[k] = grym_dupliquer("");
+                    else if (o->champs[q].type == V_OBJET) v[k] = nom_objet(m, o->champs[q].objet);
+                    else if (o->champs[q].type == V_BOOLEEN) v[k] = grym_dupliquer(o->champs[q].vrai ? "oui" : "non");
+                    else v[k] = texte_valeur(m, &o->champs[q]);
+                }
+                m->iface.ecran_valeurs(m->iface.contexte, (const char *const *)v, e->n);
+                for (size_t k = 0; k < e->n; k++) free(v[k]);
+                free(v);
+            }
+            Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, NULL, 0 };
             Issue issue = ISSUE_REPONDU;
             if (!probleme && !m->fermer_ecran) issue = m->iface.ecran_attendre(m->iface.contexte, sortie, &ev);
             m->fermer_ecran = 0;
@@ -2766,9 +2867,63 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 probleme = grym_dupliquer("Interrompu (Ctrl+C).");
                 fatal = 1;
             }
+            /* la ligne choisie de chaque liste : « le compositeur choisi de l'écran » */
+            for (size_t k = 0; !probleme && m->ecran && m->ecran->objet && k < m->ecran->n; k++) {
+                EcranVM *e = m->ecran;
+                if (e->elements[k].sorte != ELEMENT_LISTE || e->champ[k] < 0) continue;
+                long r = ev.choisies && k < ev.nb_choisies ? ev.choisies[k] : -1;
+                Valeur v = vi_absent(NULL);
+                if (r >= 0 && e->listes[k].type == V_LISTE && (size_t)r < e->listes[k].liste->n) {
+                    Objet *o = machine_objet_en_base(m, e->listes[k].liste->ids[r], e->listes[k].liste->classes[r], &probleme);
+                    if (o) { valeur_liberer(&v); v = vi_objet(o); }
+                }
+                ecrire_champ(m, e->objet, (size_t)e->champ[k], v);
+            }
             Valeur objet = vi_absent(NULL);
             long code_ev = 0;
-            if (!probleme && ev.sorte == EVENEMENT_CLIC && ev.element < m->ecran->n) {
+            if (!probleme && ev.sorte == EVENEMENT_CHANGEMENT && ev.element < m->ecran->n
+                && m->ecran->elements[ev.element].sorte == ELEMENT_ZONE && m->ecran->champ[ev.element] >= 0 && m->ecran->objet) {
+                /* une zone validée : sa valeur, lue selon son type ; refusée, l'écran le dit et rien ne s'exécute */
+                EcranVM *e = m->ecran;
+                const char *type = e->types[ev.element], *t = ev.texte ? ev.texte : "";
+                const ClasseVM *lie = classe_vm(m, type);
+                Valeur v;
+                char *refus = NULL;
+                int lu = 0;
+                while (*t == ' ') t++;
+                if (!*t && e->elements[ev.element].facultatif) { v = vi_absent(NULL); lu = 1; }
+                else if (lie && lie->conserve) {
+                    Valeur cherche = vi_texte(t), l;
+                    const char *cle = champ_cle(lie);
+                    if (cle && chercher_valeur(m, lie->nom, 0, cle, &cherche, &l, &probleme)) {
+                        if (l.type == V_LISTE && l.liste->n) {
+                            Objet *x = machine_objet_en_base(m, l.liste->ids[0], l.liste->classes[0], &probleme);
+                            if (x) { v = vi_objet(x); lu = 1; }
+                        } else {
+                            refus = grym_formater("Aucun %s conservé n'a « %s » pour %s.", lie->nom, t, cle);
+                        }
+                        valeur_liberer(&l);
+                    } else if (!cle) refus = grym_formater("« %s » n'a pas de champ texte unique pour le désigner.", lie->nom);
+                    valeur_liberer(&cherche);
+                } else {
+                    lu = lire_reponse(type, t, &v, &refus);
+                }
+                if (lu && !refus) {
+                    char *mauvais = verifier_type_champ(m, e->objet->classe->champs[e->champ[ev.element]], type, &v,
+                                                        e->elements[ev.element].facultatif);
+                    if (mauvais) { refus = mauvais; valeur_liberer(&v); lu = 0; }
+                }
+                if (probleme) {}
+                else if (!lu) {
+                    if (m->iface.ecran_erreur) m->iface.ecran_erreur(m->iface.contexte, sortie, refus ? refus : "Valeur refusée.");
+                    free(refus);
+                    code_ev = -1;   /* aucun événement ne s'exécute */
+                } else {
+                    ecrire_champ(m, e->objet, (size_t)e->champ[ev.element], v);
+                    code_ev = (long)ev.element + 1;
+                }
+            }
+            if (!probleme && code_ev == 0 && ev.sorte == EVENEMENT_CLIC && ev.element < m->ecran->n) {
                 code_ev = (long)ev.element + 1;
             } else if (!probleme && ev.sorte == EVENEMENT_CHOIX && ev.element < m->ecran->n
                        && m->ecran->listes[ev.element].type == V_LISTE && ev.ligne < m->ecran->listes[ev.element].liste->n) {
@@ -2779,6 +2934,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) { valeur_liberer(&objet); ok = echouer(diag, b, debut, probleme); break; }
             char num[24];
             snprintf(num, sizeof num, "%ld", code_ev);
+            if (code_ev == -1) snprintf(num, sizeof num, "-1");
             empiler(&pile, objet);
             empiler(&pile, valeur_nombre(dec_depuis_canonique(num)));
             break;
@@ -2801,6 +2957,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         case I_FERMER_ECRAN:
             m->fermer_ecran = 1;
+            break;
+        case I_ECRAN_OBJET:
+            if (!m->ecran || !m->ecran->objet) {
+                ok = echouer(diag, b, debut, grym_dupliquer("Aucun écran n'est ouvert."));
+                break;
+            }
+            empiler(&pile, vi_objet(m->ecran->objet));
             break;
         case I_FICHE: {
             /* « Afficher la fiche de p. » (grammaire, § 20) */

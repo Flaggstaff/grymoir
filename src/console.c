@@ -62,6 +62,6 @@ static void console_effacer(void *contexte, Chaine *sortie) {
 }
 
 Interface console_interface(Console *c) {
-    Interface i = { c, console_disponible, console_formulaire, console_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { c, console_disponible, console_formulaire, console_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     return i;
 }

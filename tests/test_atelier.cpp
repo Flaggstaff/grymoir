@@ -11,6 +11,7 @@
 #include <QTableWidget>
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDir>
 #include <QElapsedTimer>
@@ -531,6 +532,59 @@ int main(int argc, char **argv) {
         }));
         bouton("Fermer")->click();
         VERIFIER(attendre([&] { return e.findChild<QTextBrowser *>()->toPlainText().contains("après") && !table(); }));
+        e.close();
+    }
+
+    // A3-b dans la fenêtre : une zone, sa valeur de départ, sa validation, la liste qui suit, la ligne choisie
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("z.grym");
+        QFile f(prog);
+        f.open(QIODevice::WriteOnly);
+        f.write("Un compositeur, conservé, a : un nom (texte), unique, un pays (texte).\n"
+                "Pour remplir un nom et un pays :\n    Le c vaut un nouveau compositeur :\n        Le nom vaut nom.\n"
+                "        Le pays vaut pays.\n    Conserver c.\n"
+                "Si le nombre de compositeurs conservés = 0 :\n    Remplir « Bach » et « Allemagne ».\n"
+                "    Remplir « Chopin » et « Pologne ».\n    Remplir « Schumann » et « Allemagne ».\n"
+                "L'écran de recherche montre :\n    un pays (texte), « Allemagne » au départ,\n"
+                "    une case vivants (vrai ou faux), facultative,\n"
+                "    la liste des compositeurs conservés dont le pays est le pays de l'écran, par nom,\n"
+                "    un bouton « Supprimer »,\n    un bouton « Fermer ».\n"
+                "Quand on clique sur « Supprimer » dans l'écran de recherche :\n"
+                "    Si le compositeur choisi de l'écran est présent, supprimer le compositeur choisi de l'écran.\n"
+                "Quand on clique sur « Fermer » dans l'écran de recherche :\n    Fermer l'écran.\n"
+                "Ouvrir l'écran de recherche.\nAfficher le nombre de compositeurs conservés.\n");
+        f.close();
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 10000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto table = [&]() { return e.findChild<QTableWidget *>(); };
+        auto bouton = [&](const QString &t) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == t) return b;
+            return nullptr;
+        };
+        QLineEdit *pays = nullptr;
+        VERIFIER(attendre([&] {
+            for (QLineEdit *l : e.findChildren<QLineEdit *>()) if (l->text() == "Allemagne") pays = l;
+            return pays && table() && table()->rowCount() == 2 && bouton("Supprimer") && bouton("Supprimer")->isEnabled();
+        }));
+        VERIFIER(e.findChild<QCheckBox *>() != nullptr);   // la zone (vrai ou faux) : une case à cocher
+        pays->setText("Pologne");   // taper, puis quitter la zone : un changement
+        pays->setModified(true);
+        emit pays->editingFinished();
+        VERIFIER(attendre([&] { return table()->rowCount() == 1 && table()->item(0, 0)->text() == "Chopin"
+                                       && bouton("Supprimer")->isEnabled(); }));
+        table()->selectRow(0);
+        bouton("Supprimer")->click();   // la ligne choisie part avec l'événement
+        VERIFIER(attendre([&] { return table()->rowCount() == 0 && bouton("Fermer")->isEnabled(); }));
+        bouton("Fermer")->click();
+        VERIFIER(attendre([&] { return e.findChild<QTextBrowser *>()->toPlainText().contains("2"); }));
         e.close();
     }
 

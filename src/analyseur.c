@@ -87,14 +87,18 @@ typedef struct EcranConnu {
     char **entites;
     size_t nb_entites;
     int ligne;
+    char **zones;      /* zones de saisie (§ 22.1) */
+    size_t nb_zones;
 } EcranConnu;
 
 static void ecran_liberer(EcranConnu *e) {
     free(e->nom);
     for (size_t k = 0; k < e->nb_boutons; k++) free(e->boutons[k]);
     for (size_t k = 0; k < e->nb_entites; k++) free(e->entites[k]);
+    for (size_t k = 0; k < e->nb_zones; k++) free(e->zones[k]);
     free(e->boutons);
     free(e->entites);
+    free(e->zones);
 }
 
 static char **copier_noms(char *const *t, size_t n) {
@@ -231,7 +235,8 @@ static void portee_copier(Portee *dst, const Portee *src) {
     for (size_t i = 0; i < src->nb_ecrans; i++) {
         const EcranConnu *e = &src->ecrans[i];
         dst->ecrans[i] = (EcranConnu){ grym_dupliquer(e->nom), copier_noms(e->boutons, e->nb_boutons), e->nb_boutons,
-                                       copier_noms(e->entites, e->nb_entites), e->nb_entites, e->ligne };
+                                       copier_noms(e->entites, e->nb_entites), e->nb_entites, e->ligne,
+                                       copier_noms(e->zones, e->nb_zones), e->nb_zones };
     }
     dst->nb_classes = src->nb_classes;
     dst->classes = src->nb_classes ? grym_allouer(src->nb_classes * sizeof *dst->classes) : NULL;
@@ -449,6 +454,7 @@ typedef struct {
     int phrase_vue;          /* une phrase autre qu'une remarque ou « Utiliser » a été lue (§ 21) */
     int evenement;           /* dans le corps d'un « Quand on … » (§ 22.2) */
     int essais;              /* blocs « Essayer » englobants (§ 18) */
+    const char *ecran;       /* la classe de l'écran que « l'écran » désigne ici (§ 22.2), ou NULL */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
     int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
     const char *arrets[3];   /* mots qui peuvent suivre un nom dans le contexte courant (« à », « fois »…) */
@@ -1125,7 +1131,9 @@ static Noeud *nom_expression(Analyse *a) {
         for (size_t k = f; e && k > d; k--) {
             char *c = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
             Genre g;
-            if (classe_champ(a->portee, e, c, &g, NULL)) {
+            const int de_l_ecran = k + 2 < a->n && est_mot(&a->j[k], "de") && a->j[k + 1].type == J_ELISION
+                                && est_mot(&a->j[k + 2], "écran");   /* « le pays de l'écran » : la zone (§ 22.1) */
+            if (!de_l_ecran && classe_champ(a->portee, e, c, &g, NULL)) {
                 if (tart && !tart->synthetique && (art == ART_LE || art == ART_LA) && genre_de(art) != g) {
                     erreur(a, tart, grym_formater("« %s » est un champ %s.", c, g == GENRE_MASCULIN ? "masculin" : "féminin"));
                     free(c);
@@ -1604,6 +1612,17 @@ static Noeud *nouveau(Analyse *a) {
 
 static Noeud *base(Analyse *a) {
     Jeton *t = cour(a);
+    if (t->type == J_ELISION && est_mot(voir(a, 1), "écran") && !est_mot(voir(a, 2), "montre")) {
+        /* « le pays de l'écran » : l'écran de l'événement en cours, un objet (§ 22.2) */
+        if (!a->ecran)
+            return erreur(a, t, grym_dupliquer("« l'écran » ne se lit que dans un événement « Quand on … » ou dans "
+                                               "la déclaration d'un écran."));
+        Noeud *n = noeud_creer(N_ECRAN, t->ligne, t->colonne, t->debut);
+        n->texte = grym_dupliquer(a->ecran);
+        a->i += 2;
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
     {
         /* « le client conservé dont … » ; « le nombre de clients conservés dont … » (§ 16.4) */
         size_t apres;
@@ -4364,6 +4383,29 @@ static Noeud *gagner_perdre(Analyse *a, const Jeton *t) {
 /* Écrans (§ 22)                                                     */
 /* ---------------------------------------------------------------- */
 
+/* Un champ de plus dans une classe (les zones d'un écran, § 22.1). */
+static void classe_ajouter_zone(Classe *c, const char *nom, Genre g, const char *type, int facultatif) {
+    size_t n = c->nb + 1;
+    char **ch = grym_allouer(n * sizeof *ch), **ty = grym_allouer(n * sizeof *ty);
+    Genre *ge = grym_allouer(n * sizeof *ge);
+    int *un = grym_allouer(n * sizeof *un), *fa = grym_allouer(n * sizeof *fa);
+    for (size_t k = 0; k < c->nb; k++) {
+        ch[k] = c->champs[k];
+        ty[k] = c->types ? c->types[k] : NULL;
+        ge[k] = c->genres[k];
+        un[k] = c->uniques ? c->uniques[k] : 0;
+        fa[k] = c->facultatifs ? c->facultatifs[k] : 0;
+    }
+    ch[c->nb] = grym_dupliquer(nom);
+    ty[c->nb] = grym_dupliquer(type);
+    ge[c->nb] = g;
+    un[c->nb] = 0;
+    fa[c->nb] = facultatif;
+    free(c->champs); free(c->types); free(c->genres); free(c->uniques); free(c->facultatifs);
+    c->champs = ch; c->types = ty; c->genres = ge; c->uniques = un; c->facultatifs = fa;
+    c->nb = n;
+}
+
 /* Le nom d'un écran, des jetons d à f exclus : « des compositeurs », « d'accueil ». */
 static char *nom_ecran(Analyse *a, size_t d, size_t f) {
     Chaine c = {0};
@@ -4439,7 +4481,13 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     Noeud *n = noeud_creer(P_ECRAN, t->ligne, t->colonne, t->debut);
     n->texte = nom;
     n->texte2 = titre;
-    EcranConnu e = { grym_dupliquer(nom), NULL, 0, NULL, 0, t->ligne };
+    EcranConnu e = { grym_dupliquer(nom), NULL, 0, NULL, 0, t->ligne, NULL, 0 };
+    /* Un écran est un objet : sa classe porte ses zones de saisie et la ligne choisie de chaque liste (§ 22.1) */
+    char *classe = grym_formater("écran %s", nom);
+    ajouter_classe(a->portee, classe, GENRE_MASCULIN, NULL);
+    const size_t ic = a->portee->nb_classes - 1;
+    a->portee->classes[ic].ligne = t->ligne;
+    a->ecran = a->portee->classes[ic].nom;
     for (;;) {
         const Jeton *u = cour(a);
         Noeud *el = NULL;
@@ -4482,6 +4530,72 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 el->fin = fin_jeton(&a->j[a->i - 1]);
             }
             ajouter_nom(&e.entites, &e.nb_entites, c->nom);
+            char *choisi = grym_formater("%s %s", c->nom, c->genre == GENRE_FEMININ ? "choisie" : "choisi");
+            classe_ajouter_zone(&a->portee->classes[ic], choisi, c->genre, c->nom, 1);   /* « le compositeur choisi de l'écran » */
+            free(choisi);
+        } else if ((est_mot(u, "un") || est_mot(u, "une")) && !est_mot(voir(a, 1), "bouton")) {
+            /* zone de saisie : « un pays (texte), « Suisse » au départ, facultatif » (§ 22.1) */
+            Genre g = est_mot(u, "une") ? GENRE_FEMININ : GENRE_MASCULIN;
+            size_t k = a->i + 1;
+            while (k < a->n && a->j[k].type != J_PAR_OUV && a->j[k].type != J_VIRGULE && a->j[k].type != J_POINT
+                   && a->j[k].type != J_FIN) k++;
+            if (k == a->i + 1 || a->j[k].type != J_PAR_OUV) {
+                erreur(a, &a->j[k], grym_dupliquer("Type attendu entre parenthèses : « un pays (texte) »."));
+                break;
+            }
+            size_t q = k + 1;
+            while (q < a->n && a->j[q].type != J_PAR_FERM && a->j[q].type != J_FIN) q++;
+            char *nomz = a->j[a->i + 1].type == J_CROCHETS ? grym_dupliquer(a->j[a->i + 1].valeur) : cle(a, a->i + 1, k);
+            char *type = q == k + 2 && a->j[k + 1].type == J_CROCHETS ? grym_dupliquer(a->j[k + 1].valeur) : cle(a, k + 1, q);
+            const Classe *lie = classe_de(a->portee, type);
+            if (strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0) {
+                erreur(a, &a->j[k + 1], grym_dupliquer("Une zone de fichier ou d'image viendra plus tard."));
+                free(nomz); free(type);
+                break;
+            }
+            if (!type_de_base(type) && !(lie && lie->conserve)) {
+                erreur(a, &a->j[k + 1], grym_formater("« %s » n'est ni un type (texte, nombre, date, vrai ou faux…) ni une "
+                                                      "entité.", type));
+                free(nomz); free(type);
+                break;
+            }
+            for (size_t z = 0; z < e.nb_zones; z++)
+                if (strcmp(e.zones[z], nomz) == 0) { erreur(a, u, grym_formater("La zone « %s » existe déjà.", nomz)); break; }
+            if (a->echec) { free(nomz); free(type); break; }
+            el = noeud_creer(N_NOM, u->ligne, u->colonne, u->debut);
+            el->texte = nomz;
+            el->texte2 = type;
+            el->forme = g == GENRE_FEMININ ? 2 : 1;
+            a->i = q + 1;
+            while (cour(a)->type == J_VIRGULE) {
+                const Jeton *x = voir(a, 1);
+                if (est_mot(x, "facultatif") || est_mot(x, "facultative")) { el->entier |= 1; a->i += 2; continue; }
+                int moins = x->type == J_MOINS;
+                const Jeton *v = moins ? voir(a, 2) : x;
+                size_t apres_v = a->i + (moins ? 3 : 2);
+                if (!(a->j[apres_v].type == J_MOT && est_mot(&a->j[apres_v], "au") && est_mot(&a->j[apres_v + 1], "départ"))) break;
+                Noeud *dv = NULL;
+                const int ok_type = (v->type == J_TEXTE && strcmp(type, "texte") == 0)
+                                 || (v->type == J_NOMBRE && (strcmp(type, "nombre") == 0 || strcmp(type, "nombre entier") == 0
+                                                             || strcmp(type, "année") == 0))
+                                 || (v->type == J_DATE && !moins && strcmp(type, "date") == 0)
+                                 || ((est_mot(v, "vrai") || est_mot(v, "faux")) && !moins && strcmp(type, "vrai ou faux") == 0);
+                if (!ok_type) { erreur(a, v, grym_formater("Valeur de départ attendue pour une zone (%s).", type)); break; }
+                dv = noeud_creer(v->type == J_TEXTE ? N_TEXTE : v->type == J_NOMBRE ? N_NOMBRE : v->type == J_DATE ? N_DATE
+                                 : N_BOOLEEN, v->ligne, v->colonne, v->debut);
+                dv->texte = grym_dupliquer(v->valeur);
+                if (moins) {
+                    Noeud *ng = noeud_creer(N_NEGATION, x->ligne, x->colonne, x->debut);
+                    noeud_ajouter(ng, dv);
+                    dv = ng;
+                }
+                noeud_ajouter(el, dv);
+                a->i = apres_v + 2;
+            }
+            if (a->echec) { noeud_liberer(el); break; }
+            classe_ajouter_zone(&a->portee->classes[ic], el->texte, g, type, el->entier & 1);
+            ajouter_nom(&e.zones, &e.nb_zones, el->texte);
+            el->fin = fin_jeton(&a->j[a->i - 1]);
         } else if ((est_mot(u, "un") && est_mot(voir(a, 1), "bouton") && voir(a, 2)->type == J_TEXTE)
                    || (est_mot(u, "le") && est_mot(voir(a, 1), "texte") && voir(a, 2)->type == J_TEXTE)) {
             const int bouton = est_mot(voir(a, 1), "bouton");
@@ -4498,8 +4612,8 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             a->i += 3;
             el->fin = fin_jeton(&a->j[a->i - 1]);
         } else {
-            erreur(a, u, grym_dupliquer("Élément d'écran attendu : « la liste des … conservés », « un bouton « … » » "
-                                        "ou « le texte « … » »."));
+            erreur(a, u, grym_dupliquer("Élément d'écran attendu : « la liste des … conservés », « un bouton « … » », "
+                                        "« le texte « … » » ou une zone de saisie, « un pays (texte) »."));
             break;
         }
         noeud_ajouter(n, el);
@@ -4510,6 +4624,8 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         }
         avancer(a);
     }
+    a->ecran = NULL;
+    free(classe);
     if (a->echec) {
         ecran_liberer(&e);
         noeud_liberer(n);
@@ -4570,10 +4686,28 @@ static Noeud *quand(Analyse *a, int colonne) {
             return erreur(a, &a->j[k + 1], grym_dupliquer("Un seul objet : « Quand on choisit un compositeur dans … »."));
         }
         tl = &a->j[k + 1];
+    } else if (est_mot(&a->j[k], "change")) {
+        /* « Quand on change le pays dans l'écran X : » */
+        forme = 3;
+        size_t z = k + 1;
+        if (article_de(&a->j[z]) != ART_AUCUN && article_de(&a->j[z]) != ART_IMPLICITE) z++;
+        dans = z;
+        while (dans < a->n && !est_mot(&a->j[dans], "dans") && a->j[dans].type != J_DEUX_POINTS && a->j[dans].type != J_FIN) dans++;
+        if (dans == z) return erreur(a, &a->j[z], grym_dupliquer("Zone attendue : « Quand on change le pays dans l'écran … : »."));
+        tl = &a->j[z];
+        params = noeud_creer(N_BLOC, tq->ligne, tq->colonne, tq->debut);
+        params->texte = a->j[z].type == J_CROCHETS ? grym_dupliquer(a->j[z].valeur) : cle(a, z, dans);   /* la zone */
+    } else if (est_mot(&a->j[k], "ouvre") || est_mot(&a->j[k], "ferme")) {
+        /* « Quand on ouvre l'écran X : », « Quand on ferme l'écran X : » : pas de « dans » */
+        forme = est_mot(&a->j[k], "ouvre") ? 4 : 5;
+        tl = &a->j[k];
+        dans = k;   /* « l'écran » suit le verbe */
+        params = noeud_creer(N_BLOC, tq->ligne, tq->colonne, tq->debut);
     } else {
-        return erreur(a, &a->j[k], grym_dupliquer("Événement attendu : « clique sur « … » » ou « choisit un … »."));
+        return erreur(a, &a->j[k], grym_dupliquer("Événement attendu : « clique sur « … » », « choisit un … », "
+                                                  "« change la zone … », « ouvre l'écran … » ou « ferme l'écran … »."));
     }
-    if (!est_mot(&a->j[dans], "dans")) {
+    if (forme < 4 && !est_mot(&a->j[dans], "dans")) {
         noeud_liberer(params);
         return erreur(a, &a->j[dans], grym_dupliquer("« dans l'écran … » attendu."));
     }
@@ -4587,7 +4721,21 @@ static Noeud *quand(Analyse *a, int colonne) {
         return erreur(a, &a->j[f], grym_dupliquer("« : » attendu : un événement s'écrit en bloc."));
     }
     char *objet = NULL;
-    if (forme == 1) {
+    if (forme >= 4) {
+        objet = grym_dupliquer(forme == 4 ? "ouverture" : "fermeture");
+    } else if (forme == 3) {
+        int trouve = 0;
+        for (size_t q = 0; q < e->nb_zones; q++) trouve |= strcmp(e->zones[q], params->texte) == 0;
+        if (!trouve) {
+            erreur(a, tl, grym_formater("L'écran « %s » n'a pas de zone « %s ».", nom, params->texte));
+            free(nom);
+            noeud_liberer(params);
+            return NULL;
+        }
+        objet = grym_dupliquer(params->texte);
+        free(params->texte);
+        params->texte = NULL;
+    } else if (forme == 1) {
         int trouve = 0;
         for (size_t q = 0; q < e->nb_boutons; q++) trouve |= strcmp(e->boutons[q], tl->valeur) == 0;
         if (!trouve) {
@@ -4620,7 +4768,8 @@ static Noeud *quand(Analyse *a, int colonne) {
         }
         objet = grym_dupliquer(c->nom);
     }
-    char *interne = grym_formater("quand %s « %s » dans l'écran %s", forme == 1 ? "clic" : "choix", objet, nom);
+    static const char *const sortes[] = { "", "clic", "choix", "changement", "ouverture", "fermeture" };
+    char *interne = grym_formater("quand %s « %s » dans l'écran %s", sortes[forme], objet, nom);
     for (size_t q = 0; q < a->portee->n; q++)
         if (strcmp(a->portee->s[q].nom, interne) == 0) {
             erreur(a, tq, grym_formater("Cet événement existe déjà (ligne %d).", a->portee->s[q].ligne_decl));
@@ -4635,9 +4784,13 @@ static Noeud *quand(Analyse *a, int colonne) {
     a->portee->s[a->portee->n - 1].nb_parametres = (int)params->nb_enfants;
     Contexte ctx = entrer_formule(a, 2, params);
     a->evenement = 1;
+    char *classe = grym_formater("écran %s", nom);
+    a->ecran = classe;   /* « l'écran » désigne celui-ci dans le corps (§ 22.2) */
     a->i = f + 1;
     Noeud *corps = corps_en_bloc(a, &a->j[f], colonne);
     a->evenement = 0;
+    a->ecran = NULL;
+    free(classe);
     int locaux = a->nb_locaux;
     sortir_formule(a, ctx);
     if (!corps) { free(interne); free(objet); free(nom); noeud_liberer(params); return NULL; }
@@ -5261,6 +5414,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.phrase_vue = 0;
     a.evenement = 0;
     a.essais = 0;
+    a.ecran = NULL;
 
     /* Colonne de référence : celle de la première phrase (les remarques ne comptent pas). */
     int colonne = 1;

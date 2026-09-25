@@ -185,7 +185,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -482,8 +482,19 @@ static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, cons
     chaine_ajouter(&s->page.journal, "[ouvrir ");
     chaine_ajouter(&s->page.journal, titre);
     for (size_t k = 0; k < n; k++) {
-        chaine_ajouter(&s->page.journal, el[k].sorte == ELEMENT_LISTE ? " ; liste " : el[k].sorte == ELEMENT_BOUTON ? " ; bouton " : " ; texte ");
+        chaine_ajouter(&s->page.journal, el[k].sorte == ELEMENT_LISTE ? " ; liste " : el[k].sorte == ELEMENT_BOUTON ? " ; bouton "
+                                         : el[k].sorte == ELEMENT_ZONE ? " ; zone " : " ; texte ");
         chaine_ajouter(&s->page.journal, el[k].texte);
+        if (el[k].sorte == ELEMENT_ZONE) {
+            chaine_ajouter(&s->page.journal, " (");
+            chaine_ajouter(&s->page.journal, el[k].type);
+            if (el[k].facultatif) chaine_ajouter(&s->page.journal, ", facultatif");
+            for (size_t c = 0; c < el[k].nb_choix; c++) {
+                chaine_ajouter(&s->page.journal, c ? "|" : " : ");
+                chaine_ajouter(&s->page.journal, el[k].choix[c]);
+            }
+            chaine_ajouter(&s->page.journal, ")");
+        }
         for (size_t c = 0; c < el[k].nb_colonnes; c++) {
             chaine_ajouter(&s->page.journal, c ? ", " : " (");
             chaine_ajouter(&s->page.journal, el[k].colonnes[c]);
@@ -507,8 +518,26 @@ static void scene_lignes(void *contexte, size_t element, const char *const *cell
     chaine_ajouter(&s->page.journal, "]\n");
 }
 
+static void scene_valeurs(void *contexte, const char *const *v, size_t n) {
+    Scene *s = contexte;
+    int zones = 0;
+    for (size_t k = 0; k < n; k++) zones |= v[k] != NULL;
+    if (!zones) return;   /* un écran sans zone : rien à noter */
+    chaine_ajouter(&s->page.journal, "[valeurs");
+    for (size_t k = 0; k < n; k++)
+        if (v[k]) {
+            chaine_ajouter(&s->page.journal, " ");
+            chaine_ajouter(&s->page.journal, s->elements[k].texte);
+            chaine_ajouter(&s->page.journal, "=");
+            chaine_ajouter(&s->page.journal, v[k]);
+        }
+    chaine_ajouter(&s->page.journal, "]\n");
+}
+
 static Issue scene_attendre(void *contexte, Chaine *sortie, Evenement *e) {
     Scene *s = contexte;
+    static long choisies[16];
+    static char texte[128];
     if (sortie->n) {   /* ce que l'événement précédent a affiché */
         chaine_ajouter(&s->page.journal, sortie->d);
         sortie->n = 0;
@@ -518,6 +547,29 @@ static Issue scene_attendre(void *contexte, Chaine *sortie, Evenement *e) {
     if (s->i >= s->n) return ISSUE_REPONDU;
     const char *x = s->evenements[s->i++];
     if (strcmp(x, "INTERROMPRE") == 0) return ISSUE_INTERROMPU;
+    /* « … @2 » : la deuxième ligne de la première liste est sélectionnée au moment de l'événement */
+    for (size_t k = 0; k < 16; k++) choisies[k] = -1;
+    e->choisies = choisies;
+    e->nb_choisies = s->nb_elements < 16 ? s->nb_elements : 16;
+    const char *arobase = strchr(x, '@');
+    if (arobase)
+        for (size_t k = 0; k < s->nb_elements && k < 16; k++)
+            if (s->elements[k].sorte == ELEMENT_LISTE) { choisies[k] = atol(arobase + 1) - 1; break; }
+    char evt[128];
+    snprintf(evt, sizeof evt, "%.*s", (int)(arobase ? arobase - x - 1 : (long)strlen(x)), x);
+    x = evt;
+    if (strncmp(x, "change ", 7) == 0) {   /* « change Pays=Pologne » */
+        const char *egal = strchr(x, '=');
+        for (size_t k = 0; egal && k < s->nb_elements; k++)
+            if (s->elements[k].sorte == ELEMENT_ZONE && strncmp(s->elements[k].texte, x + 7, (size_t)(egal - x - 7)) == 0
+                && strlen(s->elements[k].texte) == (size_t)(egal - x - 7)) {
+                e->sorte = EVENEMENT_CHANGEMENT;
+                e->element = k;
+                snprintf(texte, sizeof texte, "%s", egal + 1);
+                e->texte = texte;
+            }
+        return ISSUE_REPONDU;
+    }
     if (strncmp(x, "clic ", 5) == 0) {
         for (size_t k = 0; k < s->nb_elements; k++)
             if (s->elements[k].sorte == ELEMENT_BOUTON && strcmp(s->elements[k].texte, x + 5) == 0) {
@@ -558,7 +610,7 @@ static void scene_fermer(void *contexte, Chaine *sortie) {
 static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, const char *const *rep, size_t nrep) {
     Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0 };
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
-                    scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer };
+                    scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -646,6 +698,57 @@ static void essais_ecrans(void) {
         ECRANS(src, ev, rep, "[ouvrir Accueil ; texte Bonjour ; bouton Fermer]\n[fermer]\n"
                              "[ouvrir Au revoir ; texte Adieu ; bouton OK]\n[fermer]\n");
     }
+    /* A3-b : zones de saisie, « de l'écran », ligne choisie, changement, ouverture, fermeture */
+    {
+        const char *src =
+            "Un compositeur, conservé, a : un nom (texte), unique, un pays (texte).\n"
+            "Pour remplir un nom et un pays :\n    Le c vaut un nouveau compositeur :\n        Le nom vaut nom.\n"
+            "        Le pays vaut pays.\n    Conserver c.\n"
+            "Remplir « Bach » et « Allemagne ».\nRemplir « Chopin » et « Pologne ».\nRemplir « Sweelinck » et « Pays-Bas ».\n"
+            "Remplir « Schumann » et « Allemagne ».\n"
+            "L'écran de recherche montre :\n    un pays (texte), « Suisse » au départ,\n    un âge (nombre), facultatif,\n"
+            "    la liste des compositeurs conservés dont le pays est le pays de l'écran, par nom,\n"
+            "    un bouton « Supprimer »,\n    un bouton « Fermer ».\n"
+            "Quand on ouvre l'écran de recherche :\n    Le pays de l'écran devient « Allemagne ».\n"
+            "Quand on change le pays dans l'écran de recherche :\n    Afficher « pays » puis le pays de l'écran.\n"
+            "Quand on clique sur « Supprimer » dans l'écran de recherche :\n"
+            "    Si le compositeur choisi de l'écran est présent, supprimer le compositeur choisi de l'écran.\n"
+            "Quand on clique sur « Fermer » dans l'écran de recherche :\n    Fermer l'écran.\n"
+            "Quand on ferme l'écran de recherche :\n    Afficher « fermé » puis l'âge de l'écran.\n"
+            "Ouvrir l'écran de recherche.\nAfficher le nombre de compositeurs conservés.\n";
+        const char *ev[] = { "clic Supprimer @2", "change Pays=Pologne", "change Âge=abc", "change Âge=12,5",
+                             "clic Supprimer", "clic Fermer" };
+        const char *rep[] = { "" };
+        ECRANS(src, ev, rep,
+               "[ouvrir Recherche ; zone Pays (texte) ; zone Âge (nombre, facultatif) ; liste compositeur (Nom, Pays) ; "
+               "bouton Supprimer ; bouton Fermer]\n"
+               "[lignes Bach|Allemagne / Schumann|Allemagne]\n"
+               "[valeurs Pays=Allemagne Âge=]\n"
+               "[lignes Bach|Allemagne]\n"
+               "[valeurs Pays=Allemagne Âge=]\n"
+               "[lignes Chopin|Pologne]\n"
+               "[valeurs Pays=Pologne Âge=]\n"
+               "pays Pologne\n"
+               "[erreur « abc » n'est pas un nombre.]\n"
+               "[lignes Chopin|Pologne]\n"
+               "[valeurs Pays=Pologne Âge=]\n"
+               "[lignes Chopin|Pologne]\n"
+               "[valeurs Pays=Pologne Âge=12,5]\n"
+               "[lignes Chopin|Pologne]\n"
+               "[valeurs Pays=Pologne Âge=12,5]\n"
+               "[lignes Chopin|Pologne]\n"
+               "[valeurs Pays=Pologne Âge=12,5]\n"
+               "fermé 12,5\n[fermer]\n"
+               "3");
+    }
+    PROG("L'écran de recherche montre :\n    un pays (texte),\n    un bouton « OK ».\n"
+         "Quand on clique sur « OK » dans l'écran de recherche :\n    Fermer l'écran.\n"
+         "Quand on change la ville dans l'écran de recherche :\n    Afficher 1.\n",
+         "~L'écran « de recherche » n'a pas de zone « ville »");
+    PROG("L'écran de recherche montre :\n    un pays (texte),\n    un bouton « OK ».\n"
+         "Quand on clique sur « OK » dans l'écran de recherche :\n    Fermer l'écran.\n"
+         "Afficher le pays de l'écran.\n", "~« l'écran » ne se lit que dans un événement");
+    PROG("L'écran de recherche montre :\n    une photo (image).\n", "~zone de fichier ou d'image viendra plus tard");
     /* Les erreurs d'analyse */
     PROG("L'écran d'accueil montre :\n    un bouton « OK ».\nAfficher 1.\n",
          "ERREUR 2:5 Le bouton « OK » de l'écran « d'accueil » n'a pas de « Quand on clique sur « OK » dans l'écran d'accueil : ».");
@@ -654,7 +757,8 @@ static void essais_ecrans(void) {
          "ERREUR 3:21 L'écran « d'accueil » n'a pas de bouton « Ok » : « OK ».");
     PROG("Ouvrir l'écran d'accueil.\n", "~Écran « d'accueil » inconnu");
     PROG("Fermer l'écran.\n", "ERREUR 1:1 « Fermer l'écran. » ne s'emploie que dans un événement « Quand on … ».");
-    PROG("L'écran d'accueil montre :\n    le texte « a »,\n    une image.\n", "~Élément d'écran attendu");
+    PROG("L'écran d'accueil montre :\n    le texte « a »,\n    une image.\n", "~Type attendu entre parenthèses");
+    PROG("L'écran d'accueil montre :\n    le texte « a »,\n    la photo.\n", "~Élément d'écran attendu");
     PROG("L'écran d'accueil montre :\n    un bouton « OK »,\n    un bouton « OK ».\n", "~Le bouton « OK » existe déjà");
     PROG("L'écran d'accueil montre :\n    le texte « a ».\nL'écran d'accueil montre :\n    le texte « b ».\n", "~existe déjà");
     PROG("L'écran d'accueil montre :\n    le texte « a ».\nEssayer :\n    Ouvrir l'écran d'accueil.\n"

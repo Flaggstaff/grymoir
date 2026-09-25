@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.34 de la spécification, révisée le 25 septembre 2026.
+Version 1.35 de la spécification, révisée le 25 septembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -105,6 +105,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 60 | `ÉCRAN_ERREUR` | aucun | dépile le motif d'un événement raté, le montre dans l'écran |
 | 61 | `ÉCRAN_FERMER` | aucun | ferme l'écran ouvert |
 | 62 | `FERMER_ÉCRAN` | aucun | « Fermer l'écran. » : l'attente suivante rend la fermeture sans attendre |
+| 63 | `ÉCRAN_OBJET` | aucun | empile l'objet de l'écran ouvert : « le pays de l'écran » (grammaire, § 22.2) |
 
 ### 3.1 Boucles et Selon
 
@@ -272,7 +273,7 @@ classes       nombre : u32, puis pour chacune :
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40 ; la version 15, le bit 2 et les instructions 41 et 42 ; la version 16, le bit 3 et les instructions 43 et 44 ; la version 17, l'instruction 45 ; la version 18, les instructions 46 à 48 ; la version 19, l'instruction 49 ; la version 20, les instructions 50 et 51 ; la version 21, l'instruction 52 ; la version 22, les instructions 53 et 54 ; la version 23, l'instruction 55 ; la version 24, l'instruction 56 ; la version 25, le fichier source de chaque bloc ; la version 26, les instructions 57 à 62. Les fichiers des versions 1 à 25 restent lisibles ; leur `SUPPRIMER` met désormais dans la corbeille.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40 ; la version 15, le bit 2 et les instructions 41 et 42 ; la version 16, le bit 3 et les instructions 43 et 44 ; la version 17, l'instruction 45 ; la version 18, les instructions 46 à 48 ; la version 19, l'instruction 49 ; la version 20, les instructions 50 et 51 ; la version 21, l'instruction 52 ; la version 22, les instructions 53 et 54 ; la version 23, l'instruction 55 ; la version 24, l'instruction 56 ; la version 25, le fichier source de chaque bloc ; la version 26, les instructions 57 à 63. Les fichiers des versions 1 à 25 restent lisibles ; leur `SUPPRIMER` met désormais dans la corbeille.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -357,3 +358,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.32 | 2026-09-24 | `FICHE` ; interface : afficher une fiche ; format version 24 |
 | 1.33 | 2026-09-24 | Fichier source de chaque bloc (grammaire, § 21) : une erreur dans une formule d'un fichier utilisé désigne ce fichier ; format version 25 |
 | 1.34 | 2026-09-25 | Écrans (grammaire, § 22) : instructions 57 à 62 ; « Ouvrir » se compile en boucle d'événements (ÉCRAN_ATTENDRE, ESSAYER, APPELER des événements), chaque attente valide ce qui précède ; interface : ecran_ouvrir, ecran_lignes, ecran_attendre, ecran_erreur, ecran_fermer ; format version 26 |
+| 1.35 | 2026-09-25 | Écrans, A3-b : `ÉCRAN_OBJET` ; un écran est un objet de la classe « écran X » (ses zones, la ligne choisie de chaque liste), racine du ramasse-miettes ; l'attente envoie les valeurs des zones (ecran_valeurs), l'événement rapporte la ligne choisie de chaque liste et le texte d'une zone validée, lu selon son type ; une zone refusée ne déclenche rien |

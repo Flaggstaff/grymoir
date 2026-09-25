@@ -101,6 +101,16 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
     }
     t->nb_colonnes.clear();
     for (const auto &c : colonnes) t->nb_colonnes << c.size();
+    t->types_zones.clear();
+    t->facultatives.clear();
+    t->choix_zones.clear();
+    for (size_t k = 0; k < n; k++) {
+        t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
+        t->facultatives << el[k].facultatif;
+        QStringList ch;
+        for (size_t q = 0; q < el[k].nb_choix; q++) ch << QString::fromUtf8(el[k].choix[q]);
+        t->choix_zones << ch;
+    }
     emit t->ecran_ouvert(QString::fromUtf8(titre), sortes, textes, colonnes);
 }
 
@@ -120,6 +130,12 @@ static void iface_ecran_erreur(void *contexte, Chaine *sortie, const char *messa
     auto *t = static_cast<Travail *>(contexte);
     t->vider_sortie(sortie);
     emit t->ecran_erreur(QString::fromUtf8(message));
+}
+
+static void iface_ecran_valeurs(void *contexte, const char *const *v, size_t n) {
+    QStringList l;
+    for (size_t k = 0; k < n; k++) l << (v[k] ? QString::fromUtf8(v[k]) : QString());
+    emit static_cast<Travail *>(contexte)->ecran_valeurs(l);
 }
 
 static void iface_ecran_fermer(void *contexte, Chaine *sortie) {
@@ -254,7 +270,8 @@ void Travail::run() {
     }
     Machine *m = machine_creer();
     Interface i = {this, iface_disponible, iface_formulaire, iface_effacer, 1, iface_image, iface_fiche,
-                   iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer};
+                   iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
+                   iface_ecran_valeurs};
     machine_interface(m, &i);
     situer(m, chemin);
     Chaine sortie = {};
@@ -375,6 +392,16 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         // l'ordre du programme d'abord ; un tri choisi à l'écran (clic sur un titre) se garde d'une relecture à l'autre
         const int col = t->property("tri").isValid() ? t->property("tri").toInt() : -1;
         if (col >= 0) t->sortItems(col, (Qt::SortOrder)t->property("ordre").toInt());
+    });
+    connect(&travail, &Travail::ecran_valeurs, this, [this](const QStringList &v) {
+        for (int k = 0; k < v.size() && k < zones.size(); k++) {
+            QWidget *z = zones[k];
+            if (!z) continue;
+            QSignalBlocker b(z);   // montrer la valeur n'est pas un changement
+            if (auto *l = qobject_cast<QLineEdit *>(z)) l->setText(v[k]);
+            else if (auto *c = qobject_cast<QCheckBox *>(z)) c->setChecked(v[k] == "oui");
+            else if (auto *m = qobject_cast<QComboBox *>(z)) m->setCurrentIndex(qMax(0, m->findText(v[k])));
+        }
     });
     connect(&travail, &Travail::ecran_attente, this, [this] {
         attente_ecran = true;
@@ -595,6 +622,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                               const QVector<QStringList> &colonnes) {
     delete vue_ecran;
     tables = QVector<QTableWidget *>(sortes.size(), nullptr);
+    zones = QVector<QWidget *>(sortes.size(), nullptr);
     boutons_ecran.clear();
     vue_ecran = new QWidget;
     auto *pile = new QVBoxLayout(vue_ecran);
@@ -608,6 +636,40 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
             auto *l = new QLabel(textes[k]);
             l->setWordWrap(true);
             pile->addWidget(l);
+        } else if (sortes[k] == ELEMENT_ZONE) {
+            /* une zone : les contrôles des formulaires ; la validation (Entrée, ou la quitter) est un événement */
+            const QString type = k < travail.types_zones.size() ? travail.types_zones[k] : QString("texte");
+            QWidget *w;
+            if (type == "vrai ou faux") {
+                auto *c = new QCheckBox;
+                connect(c, &QCheckBox::toggled, this, [this, k](bool v) {
+                    texte_envoye = v ? "oui" : "non";
+                    envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
+                });
+                w = c;
+            } else if (k < travail.choix_zones.size() && !travail.choix_zones[k].isEmpty()) {
+                auto *m = new QComboBox;
+                m->addItem(QString());
+                m->addItems(travail.choix_zones[k]);
+                connect(m, &QComboBox::activated, this, [this, k, m](int) {
+                    texte_envoye = m->currentText().toUtf8();
+                    envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
+                });
+                w = m;
+            } else {
+                auto *l = new QLineEdit;
+                connect(l, &QLineEdit::editingFinished, this, [this, k, l] {
+                    if (!l->isModified()) return;   // quittée sans changement : pas d'événement
+                    l->setModified(false);
+                    texte_envoye = l->text().toUtf8();
+                    envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
+                });
+                w = l;
+            }
+            zones[k] = w;
+            auto *rang = new QFormLayout;
+            rang->addRow(textes[k], w);
+            pile->addLayout(rang);
         } else if (sortes[k] == ELEMENT_LISTE) {
             auto *tab = new QTableWidget(0, colonnes[k].size());
             tab->setHorizontalHeaderLabels(colonnes[k]);
@@ -662,7 +724,14 @@ void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) 
     if (vue_ecran) vue_ecran->setEnabled(false);
     if (erreur_ecran) erreur_ecran->hide();
     etat->setText("En cours…");
-    travail.evenement = {sorte, (size_t)element, (size_t)ligne};
+    // la ligne sélectionnée de chaque liste accompagne l'événement : « le compositeur choisi de l'écran »
+    lignes_choisies = QVector<long>(tables.size(), -1);
+    for (int k = 0; k < tables.size(); k++)
+        if (tables[k] && tables[k]->currentRow() >= 0 && tables[k]->item(tables[k]->currentRow(), 0))
+            lignes_choisies[k] = tables[k]->item(tables[k]->currentRow(), 0)->data(Qt::UserRole).toInt();
+    travail.evenement = {sorte, (size_t)element, (size_t)ligne,
+                         sorte == EVENEMENT_CHANGEMENT ? texte_envoye.constData() : nullptr,
+                         lignes_choisies.constData(), (size_t)lignes_choisies.size()};
     travail.issue = 0;
     travail.reponse.release();
 }
