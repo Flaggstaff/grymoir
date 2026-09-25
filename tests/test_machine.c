@@ -185,7 +185,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -456,6 +456,213 @@ static void essais_migration(void) {
         free(x);
     }
     remove(base);
+}
+
+
+/* ---------------------------------------------------------------- */
+/* Écrans (grammaire, § 22), pilotés par script                      */
+/* ---------------------------------------------------------------- */
+
+/* Une interface d'écrans pour les essais : les événements viennent d'un script (« clic Nouveau », « choix 2 »
+ * pour la deuxième ligne de la première liste, « fermer »), les formulaires de la page ci-dessus.
+ * Le journal note chaque ouverture, chaque liste montrée, chaque erreur et chaque fermeture. */
+typedef struct {
+    Page page;
+    const char *const *evenements;
+    size_t n, i;
+    const ElementEcran *elements;
+    size_t nb_elements;
+} Scene;
+
+static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, const ElementEcran *el, size_t n) {
+    Scene *s = contexte;
+    (void)sortie;
+    s->elements = el;
+    s->nb_elements = n;
+    chaine_ajouter(&s->page.journal, "[ouvrir ");
+    chaine_ajouter(&s->page.journal, titre);
+    for (size_t k = 0; k < n; k++) {
+        chaine_ajouter(&s->page.journal, el[k].sorte == ELEMENT_LISTE ? " ; liste " : el[k].sorte == ELEMENT_BOUTON ? " ; bouton " : " ; texte ");
+        chaine_ajouter(&s->page.journal, el[k].texte);
+        for (size_t c = 0; c < el[k].nb_colonnes; c++) {
+            chaine_ajouter(&s->page.journal, c ? ", " : " (");
+            chaine_ajouter(&s->page.journal, el[k].colonnes[c]);
+            if (c + 1 == el[k].nb_colonnes) chaine_ajouter(&s->page.journal, ")");
+        }
+    }
+    chaine_ajouter(&s->page.journal, "]\n");
+}
+
+static void scene_lignes(void *contexte, size_t element, const char *const *cellules, size_t nb_lignes) {
+    Scene *s = contexte;
+    size_t nc = s->elements[element].nb_colonnes;
+    chaine_ajouter(&s->page.journal, "[lignes");
+    for (size_t r = 0; r < nb_lignes; r++) {
+        chaine_ajouter(&s->page.journal, r ? " / " : " ");
+        for (size_t c = 0; c < nc; c++) {
+            if (c) chaine_ajouter(&s->page.journal, "|");
+            chaine_ajouter(&s->page.journal, cellules[r * nc + c]);
+        }
+    }
+    chaine_ajouter(&s->page.journal, "]\n");
+}
+
+static Issue scene_attendre(void *contexte, Chaine *sortie, Evenement *e) {
+    Scene *s = contexte;
+    if (sortie->n) {   /* ce que l'événement précédent a affiché */
+        chaine_ajouter(&s->page.journal, sortie->d);
+        sortie->n = 0;
+        sortie->d[0] = '\0';
+    }
+    e->sorte = EVENEMENT_FERMETURE;
+    if (s->i >= s->n) return ISSUE_REPONDU;
+    const char *x = s->evenements[s->i++];
+    if (strcmp(x, "INTERROMPRE") == 0) return ISSUE_INTERROMPU;
+    if (strncmp(x, "clic ", 5) == 0) {
+        for (size_t k = 0; k < s->nb_elements; k++)
+            if (s->elements[k].sorte == ELEMENT_BOUTON && strcmp(s->elements[k].texte, x + 5) == 0) {
+                e->sorte = EVENEMENT_CLIC;
+                e->element = k;
+            }
+    } else if (strncmp(x, "choix ", 6) == 0) {
+        for (size_t k = 0; k < s->nb_elements; k++)
+            if (s->elements[k].sorte == ELEMENT_LISTE) {
+                e->sorte = EVENEMENT_CHOIX;
+                e->element = k;
+                e->ligne = (size_t)atoi(x + 6) - 1;
+                break;
+            }
+    }
+    return ISSUE_REPONDU;
+}
+
+static void scene_erreur(void *contexte, Chaine *sortie, const char *message) {
+    Scene *s = contexte;
+    (void)sortie;
+    chaine_ajouter(&s->page.journal, "[erreur ");
+    chaine_ajouter(&s->page.journal, message);
+    chaine_ajouter(&s->page.journal, "]\n");
+}
+
+static void scene_fermer(void *contexte, Chaine *sortie) {
+    Scene *s = contexte;
+    if (sortie->n) {
+        chaine_ajouter(&s->page.journal, sortie->d);
+        sortie->n = 0;
+        sortie->d[0] = '\0';
+    }
+    chaine_ajouter(&s->page.journal, "[fermer]\n");
+}
+
+/* Exécute src avec des écrans pilotés par script ; rend le journal suivi de la sortie finale. */
+static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, const char *const *rep, size_t nrep) {
+    Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0 };
+    Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
+                    scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer };
+    Portee *p = portee_creer();
+    Machine *m = machine_creer();
+    machine_interface(m, &i);
+    char *r = executer_source(p, m, src, 0);
+    machine_detruire(m);
+    portee_detruire(p);
+    char *j = chaine_rendre(&sc.page.journal);
+    char *tout = grym_formater("%s%s", j ? j : "", r);
+    free(r);
+    free(j);
+    return tout;
+}
+
+#define ECRANS(src, ev, rep, att) do { \
+        total++; \
+        char *r_ = avec_ecrans(src, ev, sizeof ev / sizeof *ev, rep, sizeof rep / sizeof *rep); \
+        if (strcmp(r_, att) != 0) signaler(__LINE__, src, att, r_); \
+        free(r_); \
+    } while (0)
+
+static void essais_ecrans(void) {
+    const char *compositeurs =
+        "Un compositeur, conservé, a : un nom (texte), unique, une naissance (date), facultative, une photo (image), facultative.\n"
+        "Pour remplir :\n    Le c vaut un nouveau compositeur :\n        Le nom vaut « Liszt ».\n    Conserver c.\n"
+        "    Le d vaut un nouveau compositeur :\n        Le nom vaut « Bach ».\n        La naissance vaut 31.03.1685.\n"
+        "    Conserver d.\n"
+        "Remplir.\n"
+        "L'écran des compositeurs montre :\n    le texte « Nos compositeurs »,\n"
+        "    la liste des compositeurs conservés, par nom,\n    un bouton « Nouveau »,\n    un bouton « Échouer »,\n"
+        "    un bouton « Fermer ».\n"
+        "Quand on choisit un compositeur dans l'écran des compositeurs :\n    Afficher « choisi » puis nom du compositeur.\n"
+        "Quand on clique sur « Nouveau » dans l'écran des compositeurs :\n    Le c vaut un nouveau compositeur saisi.\n"
+        "    Conserver c.\n"
+        "Quand on clique sur « Échouer » dans l'écran des compositeurs :\n    Le e vaut un nouveau compositeur :\n"
+        "        Le nom vaut « Fantôme ».\n    Conserver e.\n    Afficher 1 ÷ 0.\n"
+        "Quand on clique sur « Fermer » dans l'écran des compositeurs :\n    Fermer l'écran.\n"
+        "Ouvrir l'écran des compositeurs.\n"
+        "Afficher le nombre de compositeurs conservés.\n";
+    /* Ouvrir, choisir la première ligne (Bach : tri par nom), ajouter Chopin, un clic qui échoue, fermer.
+     * Les colonnes : les champs simples, sans l'image ; un champ absent reste vide ; la liste suit l'ajout ;
+     * l'événement raté n'a rien conservé (« Fantôme » n'apparaît pas), et l'écran est resté ouvert. */
+    {
+        const char *ev[] = { "choix 1", "clic Nouveau", "clic Échouer", "clic Fermer" };
+        const char *rep[] = { "Chopin", "", "" };
+        ECRANS(compositeurs, ev, rep,
+               "[ouvrir Compositeurs ; texte Nos compositeurs ; liste compositeur (Nom, Naissance) ; bouton Nouveau ; "
+               "bouton Échouer ; bouton Fermer]\n"
+               "[lignes Bach|31.03.1685 / Liszt|]\n"
+               "[lignes Bach|31.03.1685 / Liszt|]\n"
+               "choisi Bach\n"
+               "page Nom Naissance Photo[lignes Bach|31.03.1685 / Chopin| / Liszt|]\n"
+               "[erreur Division par zéro.]\n"
+               "[lignes Bach|31.03.1685 / Chopin| / Liszt|]\n"
+               "[lignes Bach|31.03.1685 / Chopin| / Liszt|]\n"
+               "[fermer]\n"
+               "3");
+    }
+    /* La croix de la fenêtre ferme l'écran ; le programme continue */
+    {
+        const char *ev[] = { "fermer" };
+        const char *rep[] = { "" };
+        ECRANS(compositeurs, ev, rep,
+               "[ouvrir Compositeurs ; texte Nos compositeurs ; liste compositeur (Nom, Naissance) ; bouton Nouveau ; "
+               "bouton Échouer ; bouton Fermer]\n[lignes Bach|31.03.1685 / Liszt|]\n[fermer]\n2");
+    }
+    /* Interrompre pendant l'attente : ce qui a été validé reste, le reste est annulé */
+    {
+        const char *ev[] = { "clic Nouveau", "INTERROMPRE" };
+        const char *rep[] = { "Chopin", "", "" };
+        char *r = avec_ecrans(compositeurs, ev, 2, rep, 3);
+        total++;
+        if (!strstr(r, "Interrompu (Ctrl+C).")) signaler(__LINE__, compositeurs, "…Interrompu…", r);
+        free(r);
+    }
+    /* Le titre donné ; un nom en « d' » */
+    {
+        const char *src = "L'écran d'accueil montre :\n    le texte « Bonjour »,\n    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Fermer » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                          "Ouvrir l'écran d'accueil.\n"
+                          "L'écran de fin, « Au revoir », montre :\n    le texte « Adieu »,\n    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran de fin :\n    Fermer l'écran.\n"
+                          "Ouvrir l'écran de fin.\n";
+        const char *ev[] = { "clic Fermer", "clic OK" };
+        const char *rep[] = { "" };
+        ECRANS(src, ev, rep, "[ouvrir Accueil ; texte Bonjour ; bouton Fermer]\n[fermer]\n"
+                             "[ouvrir Au revoir ; texte Adieu ; bouton OK]\n[fermer]\n");
+    }
+    /* Les erreurs d'analyse */
+    PROG("L'écran d'accueil montre :\n    un bouton « OK ».\nAfficher 1.\n",
+         "ERREUR 2:5 Le bouton « OK » de l'écran « d'accueil » n'a pas de « Quand on clique sur « OK » dans l'écran d'accueil : ».");
+    PROG("L'écran d'accueil montre :\n    un bouton « OK ».\n"
+         "Quand on clique sur « Ok » dans l'écran d'accueil :\n    Afficher 1.\n",
+         "ERREUR 3:21 L'écran « d'accueil » n'a pas de bouton « Ok » : « OK ».");
+    PROG("Ouvrir l'écran d'accueil.\n", "~Écran « d'accueil » inconnu");
+    PROG("Fermer l'écran.\n", "ERREUR 1:1 « Fermer l'écran. » ne s'emploie que dans un événement « Quand on … ».");
+    PROG("L'écran d'accueil montre :\n    le texte « a »,\n    une image.\n", "~Élément d'écran attendu");
+    PROG("L'écran d'accueil montre :\n    un bouton « OK »,\n    un bouton « OK ».\n", "~Le bouton « OK » existe déjà");
+    PROG("L'écran d'accueil montre :\n    le texte « a ».\nL'écran d'accueil montre :\n    le texte « b ».\n", "~existe déjà");
+    PROG("L'écran d'accueil montre :\n    le texte « a ».\nEssayer :\n    Ouvrir l'écran d'accueil.\n"
+         "En cas d'échec :\n    Afficher 1.\n", "~ne s'ouvre pas dans « Essayer »");
+    PROG("Pour ouvrir un x :\n    Afficher x.\n", "~« ouvrir » commence une construction du langage");
+    /* en console : refusé avant toute exécution, rien n'est affiché */
+    PROG("Afficher 1.\nL'écran d'accueil montre :\n    le texte « a ».\nOuvrir l'écran d'accueil.\n",
+         "ERREUR 0:0 Ce programme ouvre des écrans : lancez-le dans une fenêtre, avec grym-atelier.");
 }
 
 int main(void) {
@@ -2275,6 +2482,7 @@ int main(void) {
 
     essais_utiliser();
     essais_migration();
+    essais_ecrans();
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

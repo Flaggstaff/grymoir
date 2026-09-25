@@ -14,6 +14,22 @@
 
 /* Une ligne de la fiche d'un objet (grammaire, § 20) : un champ et sa valeur, écrite comme Afficher l'écrirait.
  * Une image porte aussi ses octets, pour qu'une interface riche la montre. */
+/* Un élément d'écran, tel que l'interface le montre (grammaire, § 22.1). */
+typedef enum { ELEMENT_LISTE, ELEMENT_BOUTON, ELEMENT_TEXTE } SorteElement;
+typedef struct {
+    SorteElement sorte;
+    const char *texte;              /* libellé du bouton, texte fixe ; pour une liste, l'entité */
+    const char *const *colonnes;    /* liste : les titres des colonnes */
+    size_t nb_colonnes;
+} ElementEcran;
+
+typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX } SorteEvenement;
+typedef struct {
+    SorteEvenement sorte;
+    size_t element;   /* le bouton cliqué, la liste où l'on a choisi */
+    size_t ligne;     /* choix : la ligne, à partir de 0 */
+} Evenement;
+
 typedef struct {
     const char *libelle;
     const char *texte;
@@ -74,6 +90,15 @@ typedef struct {
                            const char *format, const char *description);
     /* « Afficher la fiche de p. » (grammaire, § 20) ; NULL : la machine l'écrit en colonnes. */
     void (*afficher_fiche)(void *contexte, Chaine *sortie, const char *titre, const LigneFiche *lignes, size_t n);
+    /* Écrans (grammaire, § 22). NULL : l'interface n'en montre pas, et un programme qui en ouvre est refusé
+     * avant toute exécution. */
+    void (*ecran_ouvrir)(void *contexte, Chaine *sortie, const char *titre, const ElementEcran *elements, size_t n);
+    /* Les lignes d'une liste : nb_lignes × nb_colonnes cellules, ligne par ligne ; remplace les précédentes. */
+    void (*ecran_lignes)(void *contexte, size_t element, const char *const *cellules, size_t nb_lignes);
+    /* Attend un événement ; ISSUE_INTERROMPU si l'exécution doit s'arrêter. */
+    Issue (*ecran_attendre)(void *contexte, Chaine *sortie, Evenement *e);
+    void (*ecran_erreur)(void *contexte, Chaine *sortie, const char *message);
+    void (*ecran_fermer)(void *contexte, Chaine *sortie);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

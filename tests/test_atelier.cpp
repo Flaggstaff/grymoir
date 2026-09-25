@@ -8,6 +8,7 @@
 #include "reecriture.h"
 #include "lien.h"
 #include <QTreeWidget>
+#include <QTableWidget>
 
 #include <QApplication>
 #include <QComboBox>
@@ -482,6 +483,55 @@ int main(int argc, char **argv) {
         VERIFIER(apercu_migration(prog, &refusee).startsWith("« âge » est nouveau, et 1 compositeur est déjà conservé") && refusee);
         ecrire(v1);
         VERIFIER(apercu_migration(prog, &refusee) == "La base est à jour : rien ne changera." && !refusee);
+    }
+
+    // Écrans (§ 22) dans la fenêtre d'exécution : la liste, le double-clic, les boutons, la fermeture
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("e.grym");
+        QFile f(prog);
+        f.open(QIODevice::WriteOnly);
+        f.write("Un compositeur, conservé, a : un nom (texte), unique, une naissance (date), facultative.\n"
+                "Si le nombre de compositeurs conservés = 0 :\n"
+                "    Le c vaut un nouveau compositeur :\n        Le nom vaut « Liszt ».\n    Conserver c.\n"
+                "    Le d vaut un nouveau compositeur :\n        Le nom vaut « Bach ».\n        La naissance vaut 31.03.1685.\n"
+                "    Conserver d.\n"
+                "L'écran des compositeurs montre :\n    le texte « Choisissez. »,\n"
+                "    la liste des compositeurs conservés, par nom,\n    un bouton « Échouer »,\n    un bouton « Fermer ».\n"
+                "Quand on choisit un compositeur dans l'écran des compositeurs :\n    Afficher « choisi » puis nom du compositeur.\n"
+                "Quand on clique sur « Échouer » dans l'écran des compositeurs :\n    Afficher 1 ÷ 0.\n"
+                "Quand on clique sur « Fermer » dans l'écran des compositeurs :\n    Fermer l'écran.\n"
+                "Ouvrir l'écran des compositeurs.\nAfficher « après ».\n");
+        f.close();
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        QElapsedTimer montre;
+        montre.start();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            while (montre.elapsed() < 10000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto table = [&]() { return e.findChild<QTableWidget *>(); };
+        auto bouton = [&](const QString &t) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == t) return b;
+            return nullptr;
+        };
+        VERIFIER(attendre([&] { return table() && table()->rowCount() == 2 && table()->isEnabled() && table()->window()->isEnabled()
+                                       && bouton("Fermer") && bouton("Fermer")->isEnabled() && bouton("Fermer")->isVisible(); }));
+        VERIFIER(e.windowTitle() == "Compositeurs");
+        VERIFIER(table()->item(0, 0)->text() == "Bach" && table()->item(0, 1)->text() == "31.03.1685" && table()->item(1, 1)->text().isEmpty());
+        emit table()->cellActivated(0, 0);   // double-clic sur Bach
+        VERIFIER(attendre([&] { return e.findChild<QTextBrowser *>()->toPlainText().contains("choisi Bach") && bouton("Échouer")->isEnabled(); }));
+        bouton("Échouer")->click();
+        QLabel *erreur = nullptr;
+        VERIFIER(attendre([&] {
+            for (QLabel *l : e.findChildren<QLabel *>()) if (l->text() == "Division par zéro." && l->isVisible()) erreur = l;
+            return erreur && bouton("Fermer")->isEnabled();
+        }));
+        bouton("Fermer")->click();
+        VERIFIER(attendre([&] { return e.findChild<QTextBrowser *>()->toPlainText().contains("après") && !table(); }));
+        e.close();
     }
 
     std::printf("%d/%d tests réussis\n", total - echecs, total);

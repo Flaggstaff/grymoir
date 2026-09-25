@@ -54,6 +54,13 @@ signals:
     void image(const QByteArray &octets, const QString &description);
     void fiche(const QString &html, const QList<QByteArray> &images);
     void question();
+    // Écrans (grammaire, § 22) : chaque élément en (sorte, texte, colonnes)
+    void ecran_ouvert(const QString &titre, const QVector<int> &sortes, const QStringList &textes,
+                      const QVector<QStringList> &colonnes);
+    void ecran_lignes(int element, const QStringList &cellules, int nb_lignes);
+    void ecran_attente();
+    void ecran_erreur(const QString &message);
+    void ecran_ferme();
     void reponses(const QString &echo);   // les réponses acceptées, recopiées dans le fil comme en console
     void fin(bool ok, const QString &erreur, const QString &annulation);
 
@@ -61,6 +68,10 @@ public:
     // Appelées par la machine, dans ce fil.
     void vider_sortie(Chaine *sortie);
     Issue formulaire(Chaine *sortie, Champ *champs, size_t n, size_t *arret, Validation valider, void *vcontexte);
+    Issue attendre_evenement(Chaine *sortie, Evenement *e);
+    Evenement evenement = {EVENEMENT_FERMETURE, 0, 0};   // rempli par la fenêtre avant de libérer `reponse`
+    QVector<int> nb_colonnes;                             // de chaque élément de l'écran ouvert
+    size_t colonnes_de(size_t element) const { return element < (size_t)nb_colonnes.size() ? (size_t)nb_colonnes[(int)element] : 0; }
 
 private:
     QString chemin;
@@ -92,6 +103,15 @@ private:
     QVector<QWidget *> controles;   // un par champ
     QVector<QWidget *> videurs;     // case « vider », ou nullptr
     QVector<Saisie> fichiers_choisis;
+    // L'écran ouvert (§ 22) : au-dessus du fil ; ses listes et ses boutons, par élément
+    void montrer_ecran(const QString &titre, const QVector<int> &sortes, const QStringList &textes,
+                       const QVector<QStringList> &colonnes);
+    void envoyer_evenement(SorteEvenement sorte, int element, int ligne);
+    QWidget *vue_ecran = nullptr;
+    QLabel *erreur_ecran = nullptr;
+    QVector<class QTableWidget *> tables;
+    QVector<QPushButton *> boutons_ecran;
+    bool attente_ecran = false;
     bool attente = false, fini = false, fermer_a_la_fin = false;
     int images = 0;
 };

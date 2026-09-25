@@ -182,6 +182,8 @@ struct Machine {
     char *dossier;          /* dossier du programme : base des chemins relatifs */
     char *chemin_base;      /* fichier de la base des entités, NULL : en mémoire (§ 16.5) */
     Chaine *essai_migration;   /* non NULL : préparer la base, dire ce qui changerait, tout annuler (A2-c) */
+    struct EcranVM *ecran;     /* l'écran ouvert (§ 22), ou NULL */
+    int fermer_ecran;          /* « Fermer l'écran. » a été demandé par l'événement en cours */
     Base *base;             /* ouverte au premier besoin */
     int base_engagee;       /* dernière exécution : une base était en jeu (message d'annulation, § 3.3) */
     int fichiers_prevus;    /* dernière exécution : des fichiers devaient être écrits */
@@ -323,7 +325,11 @@ void machine_dossier(Machine *m, const char *dossier) {
     m->dossier = dossier && *dossier ? grym_dupliquer(dossier) : NULL;
 }
 
+struct EcranVM;
+static void ecran_detruire(struct EcranVM *e);
+
 void machine_detruire(Machine *m) {
+    ecran_detruire(m->ecran);
     if (!m) return;
     base_fermer(m->base);
     free(m->carte_cles);
@@ -1776,6 +1782,148 @@ static char *afficher_fiche(Machine *m, Objet *o, Chaine *sortie) {
     return erreur;
 }
 
+/* ---------------------------------------------------------------- */
+/* Écrans (grammaire, § 22)                                          */
+/* ---------------------------------------------------------------- */
+
+typedef struct EcranVM {
+    char *titre;
+    size_t n;
+    ElementEcran *elements;
+    char **textes;         /* libellés, textes fixes, entités : possédés */
+    char ***colonnes;      /* pour chaque liste : titres des colonnes (possédés) */
+    size_t *nb_colonnes;
+    size_t **champs;       /* pour chaque liste : l'index du champ de chaque colonne */
+    Valeur *listes;        /* pour chaque liste : la dernière liste montrée (sinon type V_ABSENT) */
+} EcranVM;
+
+static void ecran_detruire(EcranVM *e) {
+    if (!e) return;
+    for (size_t k = 0; k < e->n; k++) {
+        free(e->textes[k]);
+        for (size_t c = 0; c < e->nb_colonnes[k]; c++) free(e->colonnes[k][c]);
+        free(e->colonnes[k]);
+        free(e->champs[k]);
+        valeur_liberer(&e->listes[k]);
+    }
+    free(e->titre);
+    free(e->elements);
+    free(e->textes);
+    free(e->colonnes);
+    free(e->nb_colonnes);
+    free(e->champs);
+    free(e->listes);
+    free(e);
+}
+
+/* « des compositeurs » → « Compositeurs » ; « d'accueil » → « Accueil » (grammaire, § 22.1). */
+static char *titre_d_ecran(const char *nom) {
+    const char *p = nom;
+    static const char *const debuts[] = { "des ", "du ", "de la ", "de l'", "de ", "d'" };
+    for (size_t k = 0; k < sizeof debuts / sizeof *debuts; k++)
+        if (strncmp(p, debuts[k], strlen(debuts[k])) == 0 && p[strlen(debuts[k])]) { p += strlen(debuts[k]); break; }
+    return capitale(p);
+}
+
+/* La description compilée (« nom ␟ titre ␟ Lentité ␟ Bbouton ␟ Ttexte ») devient un écran prêt à montrer. */
+static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
+    size_t nb = 1;
+    for (const char *p = desc; *p; p++) nb += *p == '\x1f';
+    char **parts = grym_allouer(nb * sizeof *parts);
+    size_t np = 0;
+    const char *debut = desc;
+    for (const char *p = desc;; p++) {
+        if (*p == '\x1f' || !*p) {
+            parts[np++] = grym_formater("%.*s", (int)(p - debut), debut);
+            if (!*p) break;
+            debut = p + 1;
+        }
+    }
+    EcranVM *e = grym_allouer(sizeof *e);
+    memset(e, 0, sizeof *e);
+    e->titre = np > 1 && parts[1][0] ? grym_dupliquer(parts[1]) : titre_d_ecran(parts[0]);
+    e->n = np > 2 ? np - 2 : 0;
+    size_t t = e->n ? e->n : 1;
+    e->elements = grym_allouer(t * sizeof *e->elements);
+    e->textes = grym_allouer(t * sizeof *e->textes);
+    e->colonnes = grym_allouer(t * sizeof *e->colonnes);
+    e->nb_colonnes = grym_allouer(t * sizeof *e->nb_colonnes);
+    e->champs = grym_allouer(t * sizeof *e->champs);
+    e->listes = grym_allouer(t * sizeof *e->listes);
+    for (size_t k = 0; k < e->n; k++) {
+        const char *x = parts[k + 2];
+        e->textes[k] = grym_dupliquer(x + 1);
+        e->colonnes[k] = NULL;
+        e->nb_colonnes[k] = 0;
+        e->champs[k] = NULL;
+        e->listes[k] = vi_absent(NULL);
+        e->elements[k].texte = e->textes[k];
+        e->elements[k].colonnes = NULL;
+        e->elements[k].nb_colonnes = 0;
+        e->elements[k].sorte = x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON : ELEMENT_TEXTE;
+        if (x[0] != 'L') continue;
+        /* Colonnes par défaut : les champs simples, dans l'ordre ; ni fichiers, ni images, ni « plusieurs » (§ 22.1) */
+        const ClasseVM *c = classe_vm(m, x + 1);
+        if (!c) { *erreur = grym_formater("Entité « %s » inconnue.", x + 1); break; }
+        e->colonnes[k] = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof(char *));
+        e->champs[k] = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof(size_t));
+        for (size_t q = 0; q < c->nb_champs; q++) {
+            const char *ty = c->types[q];
+            if ((c->uniques[q] & 8) || (ty && (strcmp(ty, "fichier") == 0 || strcmp(ty, "image") == 0))) continue;
+            e->champs[k][e->nb_colonnes[k]] = q;
+            e->colonnes[k][e->nb_colonnes[k]++] = capitale(c->champs[q]);
+        }
+        e->elements[k].colonnes = (const char *const *)e->colonnes[k];
+        e->elements[k].nb_colonnes = e->nb_colonnes[k];
+    }
+    for (size_t k = 0; k < np; k++) free(parts[k]);
+    free(parts);
+    if (*erreur) { ecran_detruire(e); return NULL; }
+    return e;
+}
+
+/* Les cellules d'une liste, ligne par ligne : chaque objet est lu, un lien montre la clé de l'objet désigné,
+ * un champ absent reste vide (§ 22.1). */
+static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
+    char *erreur = NULL;
+    const size_t nc = e->nb_colonnes[k], nl = l->liste->n;
+    char **cellules = grym_allouer((nc * nl > 0 ? nc * nl : 1) * sizeof *cellules);
+    size_t faites = 0;
+    for (size_t r = 0; r < nl && !erreur; r++) {
+        Objet *o = machine_objet_en_base(m, l->liste->ids[r], l->liste->classes[r], &erreur);
+        if (!o || (o->id && !charger(m, o, &erreur))) break;
+        for (size_t c = 0; c < nc; c++) {
+            size_t q = e->champs[k][c];
+            char *t;
+            if (q >= o->classe->nb_champs || !o->definis[q] || o->champs[q].type == V_ABSENT) t = grym_dupliquer("");
+            else if (o->champs[q].type == V_OBJET) t = nom_objet(m, o->champs[q].objet);
+            else t = texte_valeur(m, &o->champs[q]);
+            cellules[faites++] = t;
+        }
+    }
+    if (!erreur) {
+        m->iface.ecran_lignes(m->iface.contexte, k, (const char *const *)cellules, nl);
+        valeur_liberer(&e->listes[k]);
+        e->listes[k] = valeur_copier(l);
+    }
+    for (size_t x = 0; x < faites; x++) free(cellules[x]);
+    free(cellules);
+    return erreur;
+}
+
+/* Vrai si un bloc du module contient cette instruction. */
+static int module_contient(const Module *module, CodeInstruction cherchee) {
+    for (size_t b = 0; b < module->nb; b++) {
+        const Bloc *bl = module->blocs[b];
+        for (size_t d = 0; d < bl->taille_code;) {
+            CodeInstruction c = (CodeInstruction)bl->code[d];
+            if (c == cherchee) return 1;
+            d += instruction_taille(c);
+        }
+    }
+    return 0;
+}
+
 int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *diag) {
     diag->message = NULL;
     diag->ligne = diag->colonne = 0;
@@ -1786,6 +1934,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     if (!module_verifier(module, &erreur)) {
         diag->message = grym_formater("Bytecode invalide : %s", erreur);
         free(erreur);
+        return 0;
+    }
+    if (!m->iface.ecran_ouvrir && module_contient(module, I_ECRAN_OUVRIR)) {   /* grammaire, § 22.3 */
+        diag->message = grym_dupliquer("Ce programme ouvre des écrans : lancez-le dans une fenêtre, avec grym-atelier.");
         return 0;
     }
 
@@ -2577,6 +2729,79 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
+        case I_ECRAN_OUVRIR: {
+            /* « Ouvrir l'écran X. » (grammaire, § 22.3) : l'écran se montre ; la boucle compilée attend ensuite */
+            char *probleme = NULL;
+            EcranVM *e = ecran_lire(m, b->constantes[op].texte, &probleme);
+            if (e) {
+                ecran_detruire(m->ecran);
+                m->ecran = e;
+                m->fermer_ecran = 0;
+                m->iface.ecran_ouvrir(m->iface.contexte, sortie, e->titre, e->elements, e->n);
+            }
+            if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
+        case I_ECRAN_LISTE: {
+            Valeur l = depiler(&pile);
+            char *probleme = NULL;
+            if (!m->ecran || op >= m->ecran->n || l.type != V_LISTE)
+                probleme = grym_dupliquer("Liste d'écran invalide.");
+            else
+                probleme = ecran_montrer_liste(m, m->ecran, op, &l);
+            valeur_liberer(&l);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
+        case I_ECRAN_ATTENDRE: {
+            /* Attendre valide ce qui précède : chaque événement sera sa propre transaction (charte, art. 7). */
+            char *probleme = ouvrir_attente(m, sortie, cadres);
+            Evenement ev = { EVENEMENT_FERMETURE, 0, 0 };
+            Issue issue = ISSUE_REPONDU;
+            if (!probleme && !m->fermer_ecran) issue = m->iface.ecran_attendre(m->iface.contexte, sortie, &ev);
+            m->fermer_ecran = 0;
+            char *reprise = probleme ? NULL : fermer_attente(m);
+            if (!probleme) probleme = reprise;
+            if (!probleme && issue != ISSUE_REPONDU) {
+                probleme = grym_dupliquer("Interrompu (Ctrl+C).");
+                fatal = 1;
+            }
+            Valeur objet = vi_absent(NULL);
+            long code_ev = 0;
+            if (!probleme && ev.sorte == EVENEMENT_CLIC && ev.element < m->ecran->n) {
+                code_ev = (long)ev.element + 1;
+            } else if (!probleme && ev.sorte == EVENEMENT_CHOIX && ev.element < m->ecran->n
+                       && m->ecran->listes[ev.element].type == V_LISTE && ev.ligne < m->ecran->listes[ev.element].liste->n) {
+                const Liste *l = m->ecran->listes[ev.element].liste;
+                Objet *o = machine_objet_en_base(m, l->ids[ev.ligne], l->classes[ev.ligne], &probleme);
+                if (o) { valeur_liberer(&objet); objet = vi_objet(o); code_ev = (long)ev.element + 1; }
+            }
+            if (probleme) { valeur_liberer(&objet); ok = echouer(diag, b, debut, probleme); break; }
+            char num[24];
+            snprintf(num, sizeof num, "%ld", code_ev);
+            empiler(&pile, objet);
+            empiler(&pile, valeur_nombre(dec_depuis_canonique(num)));
+            break;
+        }
+        case I_ECRAN_ERREUR: {
+            /* un événement raté : rien de ce qu'il a fait n'est écrit ; l'écran reste ouvert, avec le motif */
+            Valeur motif = depiler(&pile);
+            char *t = texte_valeur(m, &motif);
+            if (m->iface.ecran_erreur) m->iface.ecran_erreur(m->iface.contexte, sortie, t);
+            free(t);
+            valeur_liberer(&motif);
+            break;
+        }
+        case I_ECRAN_FERMER:
+            if (m->ecran) {
+                m->iface.ecran_fermer(m->iface.contexte, sortie);
+                ecran_detruire(m->ecran);
+                m->ecran = NULL;
+            }
+            break;
+        case I_FERMER_ECRAN:
+            m->fermer_ecran = 1;
+            break;
         case I_FICHE: {
             /* « Afficher la fiche de p. » (grammaire, § 20) */
             Valeur vo = depiler(&pile);
@@ -2877,6 +3102,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     for (size_t k = nb_cadres; k > 0; k--) liberer_cadre(&cadres[k - 1]);
     free(cadres);
     free(liaison_principale);
+    if (m->ecran) {   /* une erreur a interrompu l'écran : il se ferme */
+        if (m->iface.ecran_fermer) m->iface.ecran_fermer(m->iface.contexte, sortie);
+        ecran_detruire(m->ecran);
+        m->ecran = NULL;
+    }
     size_t ecrits = 0;
     m->fichiers_prevus = m->nb_a_ecrire > 0;
     if (ok && m->nb_a_ecrire) {

@@ -38,6 +38,8 @@ typedef enum {
     N_MOTIF,         /* « le motif de l'échec » (§ 18) : local : case du motif */
     N_COLLAGE,       /* « a suivi de b » (§ 4.4) : enfants[0], enfants[1] ; texte collé, sans espace */
     N_ELISION,       /* « de x », « que x » dans un assemblage (§ 4.4) : op 'd' ou 'q' ; enfants[0] */
+    N_BOUTON,        /* élément d'écran : « un bouton « Nouveau » » : texte : libellé (§ 22.1) */
+    N_TEXTE_ECRAN,   /* élément d'écran : « le texte « Bienvenue » » : texte (§ 22.1) */
     N_CHAMP_DONT,    /* champ de l'objet examiné, dans une condition « dont » : texte : champ (§ 16.4) */
     N_CHERCHER,      /* objets conservés : texte : entité ; forme : 0 liste (boucle), 1 un seul, 2 nombre ;
                         enfants[0] : condition « dont » (facultative) ; texte2 : champ du tri ; entier : 1 si décroissant ;
@@ -92,6 +94,13 @@ typedef enum {
                         de l'échec ; entier : case du motif ; forme 1 : « En cas d'échec » en bloc (sinon forme courte) */
     P_STYLE,         /* « Les nombres s'affichent à la française. » (§ 4.1) : entier 0 suisse, 1 française,
                         2 sans séparateur */
+    P_ECRAN,         /* « L'écran des compositeurs montre : … » (§ 22) : texte : nom (« des compositeurs ») ; texte2 : titre
+                        donné, ou NULL ; enfants : N_CHERCHER (liste), N_BOUTON, N_TEXTE_ECRAN, dans l'ordre */
+    P_QUAND,         /* « Quand on clique sur « B » dans l'écran X : » (§ 22.2) : texte : nom interne de la formule ;
+                        texte3 : écran ; forme : 1 clic, 2 choix ; entier : cases locales ; enfants[0] : paramètres
+                        (N_BLOC), enfants[1] : corps, enfants[2] : N_TEXTE, le bouton (clic) ou l'entité (choix) */
+    P_OUVRIR,        /* « Ouvrir l'écran X. » (§ 22.3) : texte : écran ; local : deux cases (événement, objet) */
+    P_FERMER,        /* « Fermer l'écran. » (§ 22.3) */
     P_UTILISER,      /* « Utiliser « données ». » (§ 21) : texte : chemin écrit, sans extension ; entier : rang du fichier
                         dans Programme.fichiers, 0 s'il était déjà lu ; enfants : ses déclarations */
     P_GAGNER         /* « Les genres de o gagnent baroque. » : texte : champ multiple ; enfants[0] : objet ;

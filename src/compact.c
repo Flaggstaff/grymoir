@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE, O_CLASSE, O_INIT, O_ESSAI } Ouverture;
+typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE, O_CLASSE, O_INIT, O_ESSAI, O_ECRAN } Ouverture;
 
 typedef struct {
     Ouverture type;
@@ -504,6 +504,126 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         r->s[r->ns - 1].type = J_POINT;
         if (r->s[r->ns - 1].ligne_fin < t->ligne) r->s[r->ns - 1].ligne_fin = t->ligne;
         r->np--;
+        return;
+    }
+    /* Écrans (grammaire, § 22 ; docs/ecrans.md, § 3.7) */
+    if (t->type == J_MOT_CLE && !strcmp(t->valeur, "fin") && haut && haut->type == O_ECRAN && f == d + 1) {
+        if (!r->ns || r->s[r->ns - 1].type != J_VIRGULE) {
+            echouer(r, t, grym_dupliquer("Un écran montre au moins un élément : « _bouton « OK » »."));
+            return;
+        }
+        r->s[r->ns - 1].type = J_POINT;   /* le dernier élément finit la phrase */
+        if (r->s[r->ns - 1].ligne_fin < t->ligne) r->s[r->ns - 1].ligne_fin = t->ligne;
+        r->np--;
+        return;
+    }
+    if (haut && haut->type == O_ECRAN) {
+        if ((est_cle(t, "bouton") || est_cle(t, "texte")) && f == d + 2 && r->e[d + 1].type == J_TEXTE) {
+            mot(r, est_cle(t, "bouton") ? "un" : "le", t);
+            mot(r, est_cle(t, "bouton") ? "bouton" : "texte", t);
+            copier(r, &r->e[d + 1]);
+        } else if (est_cle(t, "liste") && d + 2 < f && r->e[d + 1].type == J_CROCHETS
+                   && (est_cle(&r->e[d + 2], "conservé") || est_cle(&r->e[d + 2], "conservée")
+                       || est_cle(&r->e[d + 2], "supprimé") || est_cle(&r->e[d + 2], "supprimée"))) {
+            /* _liste compositeur _conservé [_dont …] [_par nom [_décroissant]] */
+            size_t par = chercher(r, d + 3, f, "par");
+            mot(r, "la", t);
+            mot(r, "liste", t);
+            mot(r, "des", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, est_cle(&r->e[d + 2], "supprimé") || est_cle(&r->e[d + 2], "supprimée") ? "supprimés" : "conservés",
+                &r->e[d + 2]);
+            if (d + 3 < par) {
+                if (!est_cle(&r->e[d + 3], "dont")) {
+                    echouer(r, &r->e[d + 3], grym_dupliquer("« _dont » ou « _par » attendu après la liste."));
+                    return;
+                }
+                mot(r, "dont", &r->e[d + 3]);
+                expression(r, d + 4, par);
+            }
+            if (par < f) {
+                if (par + 1 >= f || r->e[par + 1].type != J_CROCHETS) {
+                    echouer(r, &r->e[par], grym_dupliquer("Champ du tri attendu : « _par nom »."));
+                    return;
+                }
+                emettre(r, J_VIRGULE, NULL, &r->e[par], 1);
+                mot(r, "par", &r->e[par]);
+                copier(r, &r->e[par + 1]);
+                if (par + 2 < f) mot(r, "décroissant", &r->e[par + 2]);
+            }
+        } else {
+            echouer(r, t, grym_dupliquer("Élément d'écran attendu : « _liste compositeur _conservé », "
+                                         "« _bouton « OK » » ou « _texte « … » »."));
+            return;
+        }
+        emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
+        fixer_retrait(r, premier, prof);
+        return;
+    }
+    if (t->type == J_MOT_CLE && !strcmp(t->valeur, "écran")) {
+        /* _écran des_compositeurs [« Titre »] → L'écran des compositeurs[, « Titre »,] montre : */
+        size_t fin_nom = f;
+        const Jeton *titre = NULL;
+        if (f > d + 2 && r->e[f - 1].type == J_TEXTE) { titre = &r->e[f - 1]; fin_nom = f - 1; }
+        if (fin_nom <= d + 1) { echouer(r, t, grym_dupliquer("Forme attendue : « _écran des_compositeurs »."));  return; }
+        emettre(r, J_ELISION, "l", t, 1);
+        mot(r, "écran", t);
+        for (size_t k = d + 1; k < fin_nom; k++) copier(r, &r->e[k]);
+        if (titre) {
+            emettre(r, J_VIRGULE, NULL, titre, 1);
+            copier(r, titre);
+            emettre(r, J_VIRGULE, NULL, titre, 1);
+        }
+        mot(r, "montre", t);
+        emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+        fixer_retrait(r, premier, prof);
+        ouvrir(r, O_ECRAN, prof, t);
+        return;
+    }
+    if (t->type == J_MOT_CLE && !strcmp(t->valeur, "quand")) {
+        /* _quand _clique « B » _dans X ; _quand _choisit _un c _dans X → Quand on … dans l'écran X : */
+        size_t dans = chercher(r, d + 1, f, "dans");
+        int clic = d + 1 < f && est_cle(&r->e[d + 1], "clique") && dans == d + 3 && r->e[d + 2].type == J_TEXTE;
+        int choix = d + 1 < f && est_cle(&r->e[d + 1], "choisit") && dans == d + 4
+                    && (est_cle(&r->e[d + 2], "un") || est_cle(&r->e[d + 2], "une")) && r->e[d + 3].type == J_CROCHETS;
+        if ((!clic && !choix) || dans + 1 >= f) {
+            echouer(r, t, grym_dupliquer("Forme attendue : « _quand _clique « OK » _dans d'accueil » ou "
+                                         "« _quand _choisit _un compositeur _dans des_compositeurs »."));
+            return;
+        }
+        mot(r, "quand", t);
+        mot(r, "on", t);
+        if (clic) {
+            mot(r, "clique", &r->e[d + 1]);
+            mot(r, "sur", &r->e[d + 1]);
+            copier(r, &r->e[d + 2]);
+        } else {
+            mot(r, "choisit", &r->e[d + 1]);
+            mot(r, r->e[d + 2].valeur, &r->e[d + 2]);
+            copier(r, &r->e[d + 3]);
+        }
+        mot(r, "dans", &r->e[dans]);
+        emettre(r, J_ELISION, "l", &r->e[dans], 1);
+        mot(r, "écran", &r->e[dans]);
+        for (size_t k = dans + 1; k < f; k++) copier(r, &r->e[k]);
+        emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+        fixer_retrait(r, premier, prof);
+        ouvrir(r, O_FORMULE, prof, t);
+        return;
+    }
+    if (t->type == J_MOT_CLE && (!strcmp(t->valeur, "ouvrir") || !strcmp(t->valeur, "fermer"))) {
+        /* _ouvrir des_compositeurs → Ouvrir l'écran des compositeurs. ; _fermer → Fermer l'écran. */
+        int ouvre = !strcmp(t->valeur, "ouvrir");
+        if (ouvre ? f <= d + 1 : f != d + 1) {
+            echouer(r, t, grym_dupliquer(ouvre ? "Forme attendue : « _ouvrir des_compositeurs »." : "« _fermer » s'écrit seul."));
+            return;
+        }
+        mot(r, t->valeur, t);
+        emettre(r, J_ELISION, "l", t, 1);
+        mot(r, "écran", t);
+        for (size_t k = d + 1; k < f; k++) copier(r, &r->e[k]);
+        point(r, f);
+        fixer_retrait(r, premier, prof);
         return;
     }
     if (haut && haut->type == O_CLASSE && est_cle(t, "des")) {

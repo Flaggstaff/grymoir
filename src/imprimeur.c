@@ -753,6 +753,78 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     case P_EFFACER:
         aj(im, c ? "_effacer\n" : "Effacer l'écran.\n");
         return;
+    case P_ECRAN: {   /* « L'écran des compositeurs montre : … » ; « _écran des_compositeurs … _fin » (§ 22.1) */
+        if (c) {
+            aj(im, "_écran ");
+            ecrire_nom(im, n->texte, 0);
+            if (n->texte2) { aj(im, " "); ecrire_texte(im, n->texte2); }
+            aj(im, "\n");
+        } else {
+            aj(im, "L'écran ");
+            aj(im, n->texte);
+            if (n->texte2) { aj(im, ", "); ecrire_texte(im, n->texte2); aj(im, ","); }
+            aj(im, " montre :\n");
+        }
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            const Noeud *el = n->enfants[k];
+            retrait(im, niveau + 1);
+            if (el->type == N_BOUTON) {
+                aj(im, c ? "_bouton " : "un bouton ");
+                ecrire_texte(im, el->texte);
+            } else if (el->type == N_TEXTE_ECRAN) {
+                aj(im, c ? "_texte " : "le texte ");
+                ecrire_texte(im, el->texte);
+            } else if (c) {
+                aj(im, "_liste ");
+                ecrire_nom(im, el->texte, 0);
+                aj(im, el->negation ? " _supprimé" : " _conservé");
+                expression(im, el);   /* « _dont … » et « _par … » */
+            } else {
+                int fem = genre_de_nom(im, el->texte) == G_FEMININ;
+                const char *pl = NULL;
+                for (size_t q = 0; q < im->nb_pluriels && !pl; q++)
+                    if (strcmp(im->pluriels[q].feminin, el->texte) == 0) pl = im->pluriels[q].masculin;
+                char *x = pl ? grym_dupliquer(pl) : grym_formater("%ss", el->texte);
+                aj(im, "la liste des ");
+                aj(im, x);
+                free(x);
+                aj(im, el->negation ? (fem ? " supprimées" : " supprimés") : fem ? " conservées" : " conservés");
+                expression(im, el);   /* « dont … » et « , par … » */
+            }
+            aj(im, c ? "\n" : k + 1 < n->nb_enfants ? ",\n" : ".\n");
+        }
+        fin_compacte(im, niveau);
+        return;
+    }
+    case P_QUAND: {   /* « Quand on clique sur « B » dans l'écran X : » (§ 22.2) */
+        size_t apres_nom = im->nb;
+        if (c) {
+            aj(im, n->forme == 1 ? "_quand _clique " : "_quand _choisit ");
+            if (n->forme == 1) ecrire_texte(im, n->enfants[2]->texte);
+            else parametres(im, n->enfants[0], 0);
+            aj(im, " _dans ");
+            ecrire_nom(im, n->texte3, 0);
+            aj(im, "\n");
+        } else {
+            aj(im, n->forme == 1 ? "Quand on clique sur " : "Quand on choisit");
+            if (n->forme == 1) ecrire_texte(im, n->enfants[2]->texte);
+            else parametres(im, n->enfants[0], 0);
+            aj(im, " dans l'écran ");
+            aj(im, n->texte3);
+            aj(im, " :\n");
+        }
+        bloc(im, n->enfants[1], niveau + 1);
+        fin_compacte(im, niveau);
+        im->nb = apres_nom;
+        return;
+    }
+    case P_OUVRIR:
+        if (c) { aj(im, "_ouvrir "); ecrire_nom(im, n->texte, 0); aj(im, "\n"); }
+        else { aj(im, "Ouvrir l'écran "); aj(im, n->texte); aj(im, ".\n"); }
+        return;
+    case P_FERMER:
+        aj(im, c ? "_fermer\n" : "Fermer l'écran.\n");
+        return;
     case P_UTILISER:   /* « Utiliser « données ». » ; « _utiliser « données » » (§ 21) : jamais ses déclarations */
         aj(im, c ? "_utiliser " : "Utiliser ");
         ecrire_texte(im, n->texte);

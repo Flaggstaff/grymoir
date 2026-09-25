@@ -111,6 +111,25 @@ int main(void) {
     /* initiale accentuée d'une action : capitale en tête de phrase, minuscule après la virgule */
     LITT("Pour étiqueter :\n    Afficher 1.\nétiqueter.\nSi vrai, Étiqueter.\nPour œuvrer :\n    Afficher 2.\nŒuvrer.",
          "Pour étiqueter :\n    Afficher 1.\nÉtiqueter.\nSi vrai, étiqueter.\nPour œuvrer :\n    Afficher 2.\nŒuvrer.\n");
+    /* écrans (§ 22) : forme canonique et forme compacte */
+    {
+        const char *ecr = "Un compositeur, conservé, a :\n    un nom (texte), unique.\n"
+                          "L'écran des compositeurs, « Nos compositeurs », montre :\n    le texte « Bonjour »,\n"
+                          "    la liste des compositeurs conservés dont le nom ≠ « X », par nom décroissant,\n"
+                          "    un bouton « Fermer ».\n"
+                          "Quand on choisit un compositeur dans l'écran des compositeurs :\n    Afficher nom du compositeur.\n"
+                          "Quand on clique sur « Fermer » dans l'écran des compositeurs :\n    Fermer l'écran.\n"
+                          "Ouvrir l'écran des compositeurs.\n";
+        FIXE(ecr);
+        COMP(ecr, "_classe _un compositeur _conservé\n    _un nom (texte) _unique\n_fin\n"
+                  "_écran des_compositeurs « Nos compositeurs »\n    _texte « Bonjour »\n"
+                  "    _liste compositeur _conservé _dont nom ≠ « X » _par nom _décroissant\n    _bouton « Fermer »\n_fin\n"
+                  "_quand _choisit _un compositeur _dans des_compositeurs\n    _afficher compositeur.nom\n_fin\n"
+                  "_quand _clique « Fermer » _dans des_compositeurs\n    _fermer\n_fin\n"
+                  "_ouvrir des_compositeurs\n");
+        FIXE("L'écran d'accueil montre :\n    un bouton « OK ».\nQuand on clique sur « OK » dans l'écran d'accueil :\n"
+             "    Fermer l'écran.\nOuvrir l'écran d'accueil.\n");
+    }
     COMP("La valeur absolue d'un nombre :\n    Si nombre est négatif, rendre −nombre.\n    Rendre nombre.",
          "_calcul _la valeur_absolue(_un nombre)\n    _si nombre _négatif _alors\n        _rendre −nombre\n"
          "    _fin\n    _rendre nombre\n_fin\n");

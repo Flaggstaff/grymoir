@@ -441,6 +441,30 @@ static void phrases(Compilation *c, Noeud *const *liste, size_t nb) {
     for (size_t i = 0; i < nb && !c->echec; i++) phrase(c, liste[i]);
 }
 
+/* L'écran de ce nom, et l'événement d'un bouton ou d'une liste, dans tout le programme (§ 22). */
+static const Noeud *trouver_ecran(Noeud *const *ph, size_t nb, const char *nom) {
+    for (size_t k = 0; k < nb; k++) {
+        if (ph[k]->type == P_UTILISER) {
+            const Noeud *r = trouver_ecran(ph[k]->enfants, ph[k]->nb_enfants, nom);
+            if (r) return r;
+        }
+        if (ph[k]->type == P_ECRAN && strcmp(ph[k]->texte, nom) == 0) return ph[k];
+    }
+    return NULL;
+}
+
+static const Noeud *trouver_quand(Noeud *const *ph, size_t nb, const char *ecran, int forme, const char *objet) {
+    for (size_t k = 0; k < nb; k++) {
+        if (ph[k]->type == P_UTILISER) {
+            const Noeud *r = trouver_quand(ph[k]->enfants, ph[k]->nb_enfants, ecran, forme, objet);
+            if (r) return r;
+        }
+        if (ph[k]->type == P_QUAND && ph[k]->forme == forme && strcmp(ph[k]->texte3, ecran) == 0
+            && strcmp(ph[k]->enfants[2]->texte, objet) == 0) return ph[k];
+    }
+    return NULL;
+}
+
 static void phrase(Compilation *c, const Noeud *ph) {
     switch (ph->type) {
     case P_CREATION:
@@ -711,6 +735,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         return;
     }
     case P_CALCUL:
+    case P_QUAND:   /* un événement d'écran se compile comme une action (grammaire, § 22.2) */
     case P_ACTION: {
         /* Une formule se compile dans son propre bloc ; le programme n'en garde aucune trace. */
         Bloc *prec = c->b;
@@ -735,13 +760,90 @@ static void phrase(Compilation *c, const Noeud *ph) {
             emettre(c, I_RENDRE, 0, corps->ligne, corps->colonne);
         } else {
             phrase(c, corps);
-            if (ph->type == P_ACTION) emettre(c, I_RETOUR, 0, ph->ligne, 0);
+            if (ph->type != P_CALCUL) emettre(c, I_RETOUR, 0, ph->ligne, 0);
         }
         free(c->boucles);
         c->boucles = boucles;
         c->nb_boucles = nb_boucles;
         c->essais = essais;
         c->b = prec;
+        return;
+    }
+    case P_ECRAN:   /* une déclaration : rien à exécuter ; « Ouvrir » la retrouve */
+        return;
+    case P_FERMER:
+        emettre(c, I_FERMER_ECRAN, 0, ph->ligne, ph->colonne);
+        return;
+    case P_OUVRIR: {
+        /* ÉCRAN_OUVRIR ; T : listes (CHERCHER ; ÉCRAN_LISTE i) ; ÉCRAN_ATTENDRE → objet, code ;
+         * code = 0 → S ; ESSAYER → raté ; aiguillage des événements (APPELER) ; FIN_ESSAI ; → T ;
+         * raté : ÉCRAN_ERREUR ; → T ; S : ÉCRAN_FERMER. Chaque attente valide ce qui précède : un événement
+         * est une transaction, et un événement raté n'écrit rien (grammaire, § 22.3 ; charte, art. 7). */
+        const Noeud *e = trouver_ecran(c->programme->phrases, c->programme->nb, ph->texte);
+        if (!e) { trop_grand(c, ph); return; }
+        Chaine d = {0};
+        chaine_ajouter(&d, e->texte);
+        chaine_ajouter(&d, "\x1f");
+        if (e->texte2) chaine_ajouter(&d, e->texte2);
+        for (size_t k = 0; k < e->nb_enfants; k++) {
+            const Noeud *el = e->enfants[k];
+            chaine_ajouter(&d, el->type == N_CHERCHER ? "\x1f" "L" : el->type == N_BOUTON ? "\x1f" "B" : "\x1f" "T");
+            chaine_ajouter(&d, el->texte);
+        }
+        char *desc = chaine_rendre(&d);
+        long kd = bloc_constante(c->b, C_TEXTE, desc);
+        free(desc);
+        if (kd < 0) { trop_grand(c, ph); return; }
+        const int ev = ph->local, objet = ph->local + 1;
+        emettre(c, I_ECRAN_OUVRIR, kd, ph->ligne, ph->colonne);
+        size_t tour = c->b->taille_code;
+        for (size_t k = 0; k < e->nb_enfants; k++) {
+            if (e->enfants[k]->type != N_CHERCHER) continue;
+            expression(c, e->enfants[k]);
+            emettre(c, I_ECRAN_LISTE, (long)k, ph->ligne, ph->colonne);
+        }
+        emettre(c, I_ECRAN_ATTENDRE, 0, ph->ligne, ph->colonne);
+        emettre(c, I_ECRIRE_LOCAL, ev, ph->ligne, ph->colonne);
+        emettre(c, I_ECRIRE_LOCAL, objet, ph->ligne, ph->colonne);
+        emettre(c, I_LIRE_LOCAL, ev, ph->ligne, ph->colonne);
+        emettre(c, I_CONSTANTE, bloc_constante(c->b, C_NOMBRE, "0"), ph->ligne, ph->colonne);
+        emettre(c, I_EGAL, 0, ph->ligne, ph->colonne);
+        size_t vers_suite = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, ph->ligne, ph->colonne);
+        size_t vers_sortie = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+        bloc_corriger_saut(c->b, vers_suite, c->b->taille_code);
+        size_t vers_rate = bloc_emettre_saut(c->b, I_ESSAYER, ph->ligne, ph->colonne);
+        size_t *vers_apres = grym_allouer((e->nb_enfants ? e->nb_enfants : 1) * sizeof *vers_apres);
+        size_t nb_apres = 0;
+        for (size_t k = 0; k < e->nb_enfants; k++) {
+            const Noeud *el = e->enfants[k];
+            if (el->type == N_TEXTE_ECRAN) continue;
+            const Noeud *q = trouver_quand(c->programme->phrases, c->programme->nb, e->texte, el->type == N_BOUTON ? 1 : 2,
+                                           el->type == N_BOUTON ? el->texte : el->texte);
+            if (!q) continue;   /* une liste sans « Quand on choisit » : le choix ne fait rien */
+            char num[24];
+            snprintf(num, sizeof num, "%lu", (unsigned long)(k + 1));
+            emettre(c, I_LIRE_LOCAL, ev, ph->ligne, ph->colonne);
+            emettre(c, I_CONSTANTE, bloc_constante(c->b, C_NOMBRE, num), ph->ligne, ph->colonne);
+            emettre(c, I_EGAL, 0, ph->ligne, ph->colonne);
+            size_t suivant = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, ph->ligne, ph->colonne);
+            if (q->forme == 2) emettre(c, I_LIRE_LOCAL, objet, ph->ligne, ph->colonne);
+            long nom = bloc_nom(c->b, q->texte);
+            if (nom < 0) { free(vers_apres); trop_grand(c, ph); return; }
+            bloc_emettre_appel(c->b, (uint16_t)nom, (uint8_t)(q->forme == 2 ? 1 : 0), 0, ph->ligne, ph->colonne);
+            vers_apres[nb_apres++] = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+            bloc_corriger_saut(c->b, suivant, c->b->taille_code);
+        }
+        for (size_t k = 0; k < nb_apres; k++) bloc_corriger_saut(c->b, vers_apres[k], c->b->taille_code);
+        free(vers_apres);
+        emettre(c, I_FIN_ESSAI, 0, ph->ligne, ph->colonne);
+        size_t retour = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+        bloc_corriger_saut(c->b, retour, tour);
+        bloc_corriger_saut(c->b, vers_rate, c->b->taille_code);
+        emettre(c, I_ECRAN_ERREUR, 0, ph->ligne, ph->colonne);
+        size_t retour2 = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+        bloc_corriger_saut(c->b, retour2, tour);
+        bloc_corriger_saut(c->b, vers_sortie, c->b->taille_code);
+        emettre(c, I_ECRAN_FERMER, 0, ph->ligne, ph->colonne);
         return;
     }
     case P_UTILISER: {

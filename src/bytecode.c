@@ -181,6 +181,12 @@ const char *instruction_nom(CodeInstruction code) {
     case I_ELIDER:         return "ÉLIDER";
     case I_RESAISIR:       return "RESAISIR";
     case I_FICHE:          return "FICHE";
+    case I_ECRAN_OUVRIR:   return "ÉCRAN_OUVRIR";
+    case I_ECRAN_LISTE:    return "ÉCRAN_LISTE";
+    case I_ECRAN_ATTENDRE: return "ÉCRAN_ATTENDRE";
+    case I_ECRAN_ERREUR:   return "ÉCRAN_ERREUR";
+    case I_ECRAN_FERMER:   return "ÉCRAN_FERMER";
+    case I_FERMER_ECRAN:   return "FERMER_ÉCRAN";
     }
     return "INCONNUE";
 }
@@ -191,7 +197,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_NOUVEAU || code == I_INITIALISER_CHAMP || code == I_LIRE_CHAMP || code == I_ECRIRE_CHAMP
         || code == I_GAGNER || code == I_PERDRE || code == I_DEMANDER
         || code == I_CADRER || code == I_AFFICHER_SANS_LIGNE || code == I_STYLE
-        || code == I_CHERCHER || code == I_SAISIR || code == I_ELIDER;
+        || code == I_CHERCHER || code == I_SAISIR || code == I_ELIDER || code == I_ECRAN_OUVRIR || code == I_ECRAN_LISTE;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -248,7 +254,10 @@ int bloc_verifier(const Bloc *b, char **erreur) {
         }
         unsigned op = instruction_a_operande((CodeInstruction)c)
                     ? (unsigned)b->code[d + 1] | ((unsigned)b->code[d + 2] << 8) : 0;
-        if ((c == I_CONSTANTE || c == I_CHERCHER) && op >= b->nb_constantes)
+        if (c == I_ECRAN_OUVRIR && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
+            ok = refuser(erreur, grym_formater("ÉCRAN_OUVRIR : constante %u absente ou pas un texte (octet %lu).", op,
+                                               (unsigned long)d));
+        else if ((c == I_CONSTANTE || c == I_CHERCHER) && op >= b->nb_constantes)
             ok = refuser(erreur, grym_formater("constante %u inexistante (octet %lu).", op, (unsigned long)d));
         else if (c == I_CONSTANTE && b->constantes[op].type == C_RECHERCHE)
             ok = refuser(erreur, grym_formater("constante %u : une recherche ne s'empile pas (octet %lu).", op,
@@ -335,6 +344,9 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_LIRE_CHAMP: case I_SAISIR: case I_ELIDER: besoin = 1; break;
             case I_COLLER: besoin = 2; effet = -1; break;
             case I_RESAISIR: case I_FICHE: besoin = 1; effet = -1; break;
+            case I_ECRAN_LISTE: case I_ECRAN_ERREUR: besoin = 1; effet = -1; break;
+            case I_ECRAN_ATTENDRE: besoin = 0; effet = 2; break;
+            case I_ECRAN_OUVRIR: case I_ECRAN_FERMER: case I_FERMER_ECRAN: besoin = 0; effet = 0; break;
             case I_ECRIRE_CHAMP: case I_GAGNER: case I_PERDRE: besoin = 2; effet = -2; break;
             case I_DEMANDER: besoin = 1; effet = 0; break;   /* dépile la question, empile la réponse */
             case I_ECHOUER: break;
@@ -414,7 +426,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 25  /* versions 1 à 24 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 26  /* versions 1 à 24 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),

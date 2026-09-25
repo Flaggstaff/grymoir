@@ -190,6 +190,32 @@ int main(void) {
          "_pour_chaque client _conservé _dont solde _positif _par nom _décroissant\n    _afficher client.nom\n_fin\n"
          "_afficher _nombre_de client _conservé _dont solde > 9 ; (_le client _conservé _dont nom = « a »).solde\n",
          "B\na\n1 9\n");
+    /* écrans (§ 22) : compact → littéraire → compact à l'identique ; les erreurs propres à la forme compacte */
+    ALLER_RETOUR("_classe _un compositeur _conservé\n    _un nom (texte) _unique\n_fin\n"
+                 "_écran des_compositeurs « Nos compositeurs »\n    _texte « Bonjour »\n"
+                 "    _liste compositeur _conservé _dont nom ≠ « X » _par nom _décroissant\n    _bouton « Nouveau »\n"
+                 "    _bouton « Fermer »\n_fin\n"
+                 "_quand _choisit _un compositeur _dans des_compositeurs\n    _afficher compositeur.nom\n_fin\n"
+                 "_quand _clique « Nouveau » _dans des_compositeurs\n    _le c << _nouveau compositeur _saisi\n"
+                 "    _conserver c\n_fin\n"
+                 "_quand _clique « Fermer » _dans des_compositeurs\n    _fermer\n_fin\n"
+                 "_ouvrir des_compositeurs\n",
+                 "Un compositeur, conservé, a :\n    un nom (texte), unique.\n"
+                 "L'écran des compositeurs, « Nos compositeurs », montre :\n    le texte « Bonjour »,\n"
+                 "    la liste des compositeurs conservés dont le nom ≠ « X », par nom décroissant,\n"
+                 "    un bouton « Nouveau »,\n    un bouton « Fermer ».\n"
+                 "Quand on choisit un compositeur dans l'écran des compositeurs :\n    Afficher nom de compositeur.\n"
+                 "Quand on clique sur « Nouveau » dans l'écran des compositeurs :\n    Le c vaut un nouveau compositeur saisi.\n"
+                 "    Conserver c.\n"
+                 "Quand on clique sur « Fermer » dans l'écran des compositeurs :\n    Fermer l'écran.\n"
+                 "Ouvrir l'écran des compositeurs.\n");
+    ALLER_RETOUR("_écran d'accueil\n    _bouton « OK »\n_fin\n_quand _clique « OK » _dans d'accueil\n    _fermer\n_fin\n"
+                 "_ouvrir d'accueil\n", NULL);
+    ERR("_écran\n    _bouton « OK »\n_fin\n", 1, 1, "_écran des_compositeurs");
+    ERR("_écran d'accueil\n    _image\n_fin\n", 2, 5, "Élément d'écran attendu");
+    ERR("_écran d'accueil\n    _bouton « OK »\n_fin\n_quand _tape « OK » _dans d'accueil\n    _fermer\n_fin\n", 4, 1,
+        "_quand _clique");
+
     ALLER_RETOUR("_classe _une facture _conservé\n    _un montant (nombre)\n_fin\n"
                  "_pour_chaque facture _conservé _dont _non (montant _nul) _par montant _décroissant\n    _afficher facture\n_fin\n"
                  "_la f << _la facture _conservé _dont montant = 3\n_afficher _nombre_de facture _conservé\n",

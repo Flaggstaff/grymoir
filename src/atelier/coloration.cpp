@@ -10,7 +10,7 @@ extern "C" {
 // Les mots qui ouvrent ou conduisent une construction, puis les autres mots du langage. Même partage que
 // la coloration de l'extension VS Code (editeurs/vscode), pour qu'un fichier ait les mêmes couleurs partout.
 static const QSet<QString> &controles() {
-    static const QSet<QString> s = { "autrement", "répéter", "essayer", "utiliser", "chaque", "sortir", "passer", "rendre",
+    static const QSet<QString> s = { "autrement", "répéter", "essayer", "utiliser", "quand", "ouvrir", "fermer", "chaque", "sortir", "passer", "rendre",
                                      "sinon", "selon", "échec", "fois", "pour", "tant", "cas", "que", "si" };
     return s;
 }
@@ -24,7 +24,7 @@ static const QSet<QString> &mots_cles() {
         "non", "nul", "les", "une", "pas", "par", "est", "de", "ou", "du", "et", "au", "la", "le", "un", "a",
         "à", "des", "supprimé", "supprimée", "supprimés", "supprimées", "rétablir", "définitivement", "absent",
         "absente", "présent", "présente", "facultatif", "facultative", "parmi", "gagnent", "perdent", "suivi",
-        "sur", "saisi", "saisie", "réponse", "hui", "aujourd", "avec", "disparaît", "boucle", "tour", "suivant"};
+        "sur", "saisi", "saisie", "écran", "montre", "liste", "bouton", "texte", "clique", "choisit", "on", "réponse", "hui", "aujourd", "avec", "disparaît", "boucle", "tour", "suivant"};
     return s;
 }
 

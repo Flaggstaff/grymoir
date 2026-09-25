@@ -75,7 +75,33 @@ struct Portee {
     char **cles;          /* chemins absolus, pour ne lire chaque fichier qu'une fois */
     int *lus;             /* 1 : analysé ; 0 : en cours (une utilisation circulaire le retrouve ainsi) */
     size_t nb_fichiers;
+    /* Écrans déclarés (§ 22) : leurs boutons et les entités de leurs listes, pour vérifier les événements. */
+    struct EcranConnu *ecrans;
+    size_t nb_ecrans;
 };
+
+typedef struct EcranConnu {
+    char *nom;
+    char **boutons;
+    size_t nb_boutons;
+    char **entites;
+    size_t nb_entites;
+    int ligne;
+} EcranConnu;
+
+static void ecran_liberer(EcranConnu *e) {
+    free(e->nom);
+    for (size_t k = 0; k < e->nb_boutons; k++) free(e->boutons[k]);
+    for (size_t k = 0; k < e->nb_entites; k++) free(e->entites[k]);
+    free(e->boutons);
+    free(e->entites);
+}
+
+static char **copier_noms(char *const *t, size_t n) {
+    char **r = grym_allouer((n ? n : 1) * sizeof *r);
+    for (size_t k = 0; k < n; k++) r[k] = grym_dupliquer(t[k]);
+    return r;
+}
 
 Portee *portee_creer(void) {
     Portee *p = grym_allouer(sizeof *p);
@@ -88,6 +114,8 @@ Portee *portee_creer(void) {
     p->fichiers = p->cles = NULL;
     p->lus = NULL;
     p->nb_fichiers = 0;
+    p->ecrans = NULL;
+    p->nb_ecrans = 0;
     return p;
 }
 
@@ -158,6 +186,10 @@ static void portee_vider(Portee *p) {
     p->fichiers = p->cles = NULL;
     p->lus = NULL;
     p->nb_fichiers = 0;
+    for (size_t i = 0; i < p->nb_ecrans; i++) ecran_liberer(&p->ecrans[i]);
+    free(p->ecrans);
+    p->ecrans = NULL;
+    p->nb_ecrans = 0;
 }
 
 void portee_detruire(Portee *p) {
@@ -193,6 +225,13 @@ static void portee_copier(Portee *dst, const Portee *src) {
         dst->fichiers[i] = grym_dupliquer(src->fichiers[i]);
         dst->cles[i] = grym_dupliquer(src->cles[i]);
         dst->lus[i] = src->lus[i];
+    }
+    dst->nb_ecrans = src->nb_ecrans;
+    dst->ecrans = src->nb_ecrans ? grym_allouer(src->nb_ecrans * sizeof *dst->ecrans) : NULL;
+    for (size_t i = 0; i < src->nb_ecrans; i++) {
+        const EcranConnu *e = &src->ecrans[i];
+        dst->ecrans[i] = (EcranConnu){ grym_dupliquer(e->nom), copier_noms(e->boutons, e->nb_boutons), e->nb_boutons,
+                                       copier_noms(e->entites, e->nb_entites), e->nb_entites, e->ligne };
     }
     dst->nb_classes = src->nb_classes;
     dst->classes = src->nb_classes ? grym_allouer(src->nb_classes * sizeof *dst->classes) : NULL;
@@ -408,6 +447,8 @@ typedef struct {
     const char *dont;        /* entité dont une condition « dont » examine les champs (§ 16.4), ou NULL */
     int corbeille;           /* la dernière tournure « … conservé » lue était « … supprimé » (§ 16.12) */
     int phrase_vue;          /* une phrase autre qu'une remarque ou « Utiliser » a été lue (§ 21) */
+    int evenement;           /* dans le corps d'un « Quand on … » (§ 22.2) */
+    int essais;              /* blocs « Essayer » englobants (§ 18) */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
     int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
     const char *arrets[3];   /* mots qui peuvent suivre un nom dans le contexte courant (« à », « fois »…) */
@@ -2742,7 +2783,9 @@ static Noeud *essayer(Analyse *a, int colonne) {
         return erreur(a, cour(a), grym_dupliquer("« Essayer » ouvre un bloc : écrivez « Essayer : », puis les "
                                                  "phrases à essayer sur les lignes suivantes, indentées."));
     int forme = 0;
+    a->essais++;
     Noeud *corps = branche(a, colonne, "Essayer", &forme);
+    a->essais--;
     if (!corps) return NULL;
     Jeton *e = cour(a);
     if (!en_cas_d_echec(a, a->i) || !premier_de_ligne(a, a->i) || e->retrait != colonne) {
@@ -4210,7 +4253,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
 static int mot_de_construction(const Jeton *t) {
     static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
                                      "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer", "effacer", "essayer", "saisir",
-                                     "conserver", "supprimer", "rétablir", "utiliser" };
+                                     "conserver", "supprimer", "rétablir", "utiliser", "quand", "ouvrir", "fermer" };
     for (size_t k = 0; k < sizeof M / sizeof *M; k++) if (est_mot(t, M[k])) return 1;
     return 0;
 }
@@ -4315,6 +4358,363 @@ static Noeud *gagner_perdre(Analyse *a, const Jeton *t) {
     noeud_ajouter(n, v);
     n->fin = v->fin;
     return n;
+}
+
+/* ---------------------------------------------------------------- */
+/* Écrans (§ 22)                                                     */
+/* ---------------------------------------------------------------- */
+
+/* Le nom d'un écran, des jetons d à f exclus : « des compositeurs », « d'accueil ». */
+static char *nom_ecran(Analyse *a, size_t d, size_t f) {
+    Chaine c = {0};
+    for (size_t k = d; k < f; k++) {
+        const Jeton *j = &a->j[k];
+        if (j->type == J_ELISION) {
+            chaine_ajouter(&c, j->valeur);
+            chaine_ajouter(&c, "'");
+        } else {
+            chaine_ajouter(&c, j->valeur ? j->valeur : "");
+            if (k + 1 < f) chaine_ajouter(&c, " ");
+        }
+    }
+    return chaine_rendre(&c);
+}
+
+static EcranConnu *ecran_connu(Portee *p, const char *nom) {
+    for (size_t i = 0; i < p->nb_ecrans; i++)
+        if (strcmp(p->ecrans[i].nom, nom) == 0) return &p->ecrans[i];
+    return NULL;
+}
+
+/* « L'écran X montre : » ou « L'écran X, « Titre », montre : » : le mot « montre » sur la même ligne. */
+static int ecran_suit(Analyse *a) {
+    for (size_t k = a->i + 2; k < a->n && a->j[k].type != J_FIN && a->j[k].type != J_POINT; k++) {
+        if (a->j[k].ligne != a->j[a->i].ligne) return 0;
+        if (est_mot(&a->j[k], "montre")) return 1;
+    }
+    return 0;
+}
+
+/* Le nom d'écran à partir de d, jusqu'à « montre », une virgule, « : » ou « . » ; *f reçoit sa fin. NULL si vide. */
+static char *lire_nom_ecran(Analyse *a, size_t d, size_t *f) {
+    size_t k = d;
+    while (k < a->n && a->j[k].type != J_FIN && a->j[k].type != J_POINT && a->j[k].type != J_DEUX_POINTS
+           && a->j[k].type != J_VIRGULE && !est_mot(&a->j[k], "montre") && a->j[k].ligne == a->j[d].ligne) k++;
+    *f = k;
+    return k > d ? nom_ecran(a, d, k) : NULL;
+}
+
+static void ajouter_nom(char ***t, size_t *n, const char *nom) {
+    char **u = grym_allouer((*n + 1) * sizeof *u);
+    for (size_t k = 0; k < *n; k++) u[k] = (*t)[k];
+    u[*n] = grym_dupliquer(nom);
+    free(*t);
+    *t = u;
+    (*n)++;
+}
+
+/* « L'écran des compositeurs montre : » suivi de ses éléments (§ 22.1). */
+static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
+    if (!premier_niveau(a, t)) return NULL;
+    size_t d = a->i + 2, f;
+    char *nom = lire_nom_ecran(a, d, &f);
+    if (!nom) return erreur(a, &a->j[d], grym_dupliquer("Nom d'écran attendu : « L'écran des compositeurs montre : »."));
+    if (ecran_connu(a->portee, nom)) {
+        Noeud *r = erreur(a, &a->j[d], grym_formater("L'écran « %s » existe déjà.", nom));
+        free(nom);
+        return r;
+    }
+    char *titre = NULL;
+    a->i = f;
+    if (cour(a)->type == J_VIRGULE && voir(a, 1)->type == J_TEXTE && voir(a, 2)->type == J_VIRGULE) {
+        titre = grym_dupliquer(voir(a, 1)->valeur);
+        a->i += 3;
+    }
+    if (!est_mot(cour(a), "montre") || voir(a, 1)->type != J_DEUX_POINTS) {
+        free(nom);
+        free(titre);
+        return erreur(a, cour(a), grym_dupliquer("« montre : » attendu : « L'écran des compositeurs montre : »."));
+    }
+    a->i += 2;
+    Noeud *n = noeud_creer(P_ECRAN, t->ligne, t->colonne, t->debut);
+    n->texte = nom;
+    n->texte2 = titre;
+    EcranConnu e = { grym_dupliquer(nom), NULL, 0, NULL, 0, t->ligne };
+    for (;;) {
+        const Jeton *u = cour(a);
+        Noeud *el = NULL;
+        if (est_mot(u, "la") && est_mot(voir(a, 1), "liste") && est_mot(voir(a, 2), "des")) {
+            size_t apres;
+            Classe *c = entite_conservee(a, a->i + 3, 1, &apres);
+            if (!c) {
+                if (!a->echec) erreur(a, voir(a, 3), grym_dupliquer("Liste attendue : « la liste des compositeurs conservés »."));
+                break;
+            }
+            for (size_t k = 0; k < e.nb_entites; k++)
+                if (strcmp(e.entites[k], c->nom) == 0) {
+                    erreur(a, u, grym_formater("Deux listes de « %s » dans un même écran : « Quand on choisit » ne saurait "
+                                               "laquelle. Une seule pour l'instant.", c->nom));
+                    break;
+                }
+            if (a->echec) break;
+            el = chercher(a, u, c, 0, apres, NULL);
+            if (!el) break;
+            if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "par")) {   /* « , par nom [décroissant] » */
+                avancer(a);
+                avancer(a);
+                size_t dd = a->i, k = dd;
+                if (a->j[k].type == J_CROCHETS) k++;   /* forme compacte : « _par nom » */
+                else while (mot_de_nom(a, k) && !est_mot(&a->j[k], "décroissant") && !est_mot(&a->j[k], "croissant")) k++;
+                if (k > dd && article_de(&a->j[dd]) != ART_AUCUN) dd++;
+                char *champ = k > dd ? (a->j[dd].type == J_CROCHETS ? grym_dupliquer(a->j[dd].valeur) : cle(a, dd, k)) : NULL;
+                const char *type = champ ? type_du_champ(a->portee, c, champ) : NULL;
+                if (!type || strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0 || !type_de_base(type)) {
+                    erreur(a, &a->j[dd], grym_dupliquer("Tri attendu sur un champ de texte, de nombre, de date ou vrai ou "
+                                                         "faux : « , par nom »."));
+                    free(champ);
+                    noeud_liberer(el);
+                    break;
+                }
+                el->texte2 = champ;
+                a->i = k;
+                if (est_mot(cour(a), "décroissant")) { el->entier = 1; avancer(a); }
+                else if (est_mot(cour(a), "croissant")) avancer(a);
+                el->fin = fin_jeton(&a->j[a->i - 1]);
+            }
+            ajouter_nom(&e.entites, &e.nb_entites, c->nom);
+        } else if ((est_mot(u, "un") && est_mot(voir(a, 1), "bouton") && voir(a, 2)->type == J_TEXTE)
+                   || (est_mot(u, "le") && est_mot(voir(a, 1), "texte") && voir(a, 2)->type == J_TEXTE)) {
+            const int bouton = est_mot(voir(a, 1), "bouton");
+            const char *libelle = voir(a, 2)->valeur;
+            for (size_t k = 0; bouton && k < e.nb_boutons; k++)
+                if (strcmp(e.boutons[k], libelle) == 0) {
+                    erreur(a, voir(a, 2), grym_formater("Le bouton « %s » existe déjà dans cet écran.", libelle));
+                    break;
+                }
+            if (a->echec) break;
+            el = noeud_creer(bouton ? N_BOUTON : N_TEXTE_ECRAN, u->ligne, u->colonne, u->debut);
+            el->texte = grym_dupliquer(libelle);
+            if (bouton) ajouter_nom(&e.boutons, &e.nb_boutons, libelle);
+            a->i += 3;
+            el->fin = fin_jeton(&a->j[a->i - 1]);
+        } else {
+            erreur(a, u, grym_dupliquer("Élément d'écran attendu : « la liste des … conservés », « un bouton « … » » "
+                                        "ou « le texte « … » »."));
+            break;
+        }
+        noeud_ajouter(n, el);
+        if (cour(a)->type == J_POINT) { avancer(a); break; }
+        if (cour(a)->type != J_VIRGULE) {
+            erreur(a, cour(a), grym_dupliquer("« , » ou « . » attendu après un élément d'écran."));
+            break;
+        }
+        avancer(a);
+    }
+    if (a->echec) {
+        ecran_liberer(&e);
+        noeud_liberer(n);
+        return NULL;
+    }
+    n->fin = fin_jeton(&a->j[a->i - 1]);
+    Portee *p = a->portee;
+    EcranConnu *t2 = grym_allouer((p->nb_ecrans + 1) * sizeof *t2);
+    for (size_t k = 0; k < p->nb_ecrans; k++) t2[k] = p->ecrans[k];
+    t2[p->nb_ecrans] = e;
+    free(p->ecrans);
+    p->ecrans = t2;
+    p->nb_ecrans++;
+    return n;
+}
+
+/* « l'écran X » à partir de l'index k ; *f reçoit la fin du nom. NULL, avec l'erreur, si l'écran est inconnu. */
+static EcranConnu *ecran_nomme(Analyse *a, size_t k, size_t *f, char **nom) {
+    *nom = NULL;
+    if (!(a->j[k].type == J_ELISION && est_mot(&a->j[k + 1], "écran"))) {
+        erreur(a, &a->j[k], grym_dupliquer("« l'écran … » attendu."));
+        return NULL;
+    }
+    *nom = lire_nom_ecran(a, k + 2, f);
+    if (!*nom) {
+        erreur(a, &a->j[k + 2], grym_dupliquer("Nom d'écran attendu."));
+        return NULL;
+    }
+    EcranConnu *e = ecran_connu(a->portee, *nom);
+    if (!e) erreur(a, &a->j[k + 2], grym_formater("Écran « %s » inconnu : déclarez-le avant, avec « L'écran %s montre : ».",
+                                                  *nom, *nom));
+    return e;
+}
+
+/* « Quand on clique sur « B » dans l'écran X : », « Quand on choisit un c dans l'écran X : » (§ 22.2). */
+static Noeud *quand(Analyse *a, int colonne) {
+    Jeton *tq = cour(a);
+    if (!premier_niveau(a, tq)) return NULL;
+    if (!est_mot(voir(a, 1), "on"))
+        return erreur(a, voir(a, 1), grym_dupliquer("« Quand on … » attendu : « Quand on clique sur « Nouveau » dans l'écran … : »."));
+    int forme;
+    size_t k = a->i + 2, dans;
+    const Jeton *tl = NULL;
+    Noeud *params = NULL;
+    if (est_mot(&a->j[k], "clique") && est_mot(&a->j[k + 1], "sur") && a->j[k + 2].type == J_TEXTE) {
+        forme = 1;
+        tl = &a->j[k + 2];
+        dans = k + 3;
+        params = noeud_creer(N_BLOC, tq->ligne, tq->colonne, tq->debut);
+    } else if (est_mot(&a->j[k], "choisit")) {
+        forme = 2;
+        dans = k + 1;
+        while (dans < a->n && !est_mot(&a->j[dans], "dans") && a->j[dans].type != J_DEUX_POINTS && a->j[dans].type != J_FIN) dans++;
+        params = parametres(a, k + 1, dans, 0);
+        if (!params) return NULL;
+        if (params->nb_enfants != 1) {
+            noeud_liberer(params);
+            return erreur(a, &a->j[k + 1], grym_dupliquer("Un seul objet : « Quand on choisit un compositeur dans … »."));
+        }
+        tl = &a->j[k + 1];
+    } else {
+        return erreur(a, &a->j[k], grym_dupliquer("Événement attendu : « clique sur « … » » ou « choisit un … »."));
+    }
+    if (!est_mot(&a->j[dans], "dans")) {
+        noeud_liberer(params);
+        return erreur(a, &a->j[dans], grym_dupliquer("« dans l'écran … » attendu."));
+    }
+    size_t f;
+    char *nom = NULL;
+    EcranConnu *e = ecran_nomme(a, dans + 1, &f, &nom);
+    if (!e) { free(nom); noeud_liberer(params); return NULL; }
+    if (a->j[f].type != J_DEUX_POINTS) {
+        free(nom);
+        noeud_liberer(params);
+        return erreur(a, &a->j[f], grym_dupliquer("« : » attendu : un événement s'écrit en bloc."));
+    }
+    char *objet = NULL;
+    if (forme == 1) {
+        int trouve = 0;
+        for (size_t q = 0; q < e->nb_boutons; q++) trouve |= strcmp(e->boutons[q], tl->valeur) == 0;
+        if (!trouve) {
+            Chaine liste = {0};
+            for (size_t q = 0; q < e->nb_boutons; q++) {
+                chaine_ajouter(&liste, q ? ", « " : "« ");
+                chaine_ajouter(&liste, e->boutons[q]);
+                chaine_ajouter(&liste, " »");
+            }
+            char *l = chaine_rendre(&liste);
+            erreur(a, tl, grym_formater("L'écran « %s » n'a pas de bouton « %s »%s%s.", nom, tl->valeur,
+                                        e->nb_boutons ? " : " : "", l ? l : ""));
+            free(l);
+            free(nom);
+            noeud_liberer(params);
+            return NULL;
+        }
+        objet = grym_dupliquer(tl->valeur);
+    } else {
+        /* le type du paramètre : l'entité de la liste */
+        const Noeud *prm = params->enfants[0];
+        const Classe *c = classe_de(a->portee, prm->texte);
+        int trouve = 0;
+        for (size_t q = 0; c && q < e->nb_entites; q++) trouve |= strcmp(e->entites[q], c->nom) == 0;
+        if (!trouve) {
+            erreur(a, tl, grym_formater("L'écran « %s » n'a pas de liste de « %s ».", nom, prm->texte));
+            free(nom);
+            noeud_liberer(params);
+            return NULL;
+        }
+        objet = grym_dupliquer(c->nom);
+    }
+    char *interne = grym_formater("quand %s « %s » dans l'écran %s", forme == 1 ? "clic" : "choix", objet, nom);
+    for (size_t q = 0; q < a->portee->n; q++)
+        if (strcmp(a->portee->s[q].nom, interne) == 0) {
+            erreur(a, tq, grym_formater("Cet événement existe déjà (ligne %d).", a->portee->s[q].ligne_decl));
+            free(interne);
+            free(objet);
+            free(nom);
+            noeud_liberer(params);
+            return NULL;
+        }
+    portee_declarer(a->portee, interne, GENRE_LIBRE, tq->ligne);   /* un seul événement par bouton ou par liste */
+    a->portee->s[a->portee->n - 1].sorte = S_ACTION;
+    a->portee->s[a->portee->n - 1].nb_parametres = (int)params->nb_enfants;
+    Contexte ctx = entrer_formule(a, 2, params);
+    a->evenement = 1;
+    a->i = f + 1;
+    Noeud *corps = corps_en_bloc(a, &a->j[f], colonne);
+    a->evenement = 0;
+    int locaux = a->nb_locaux;
+    sortir_formule(a, ctx);
+    if (!corps) { free(interne); free(objet); free(nom); noeud_liberer(params); return NULL; }
+    Noeud *n = noeud_creer(P_QUAND, tq->ligne, tq->colonne, tq->debut);
+    n->texte = interne;
+    n->texte3 = nom;
+    n->forme = forme;
+    n->entier = locaux;
+    noeud_ajouter(n, params);
+    noeud_ajouter(n, corps);
+    Noeud *lib = noeud_creer(N_TEXTE, tl->ligne, tl->colonne, tl->debut);
+    lib->texte = objet;
+    noeud_ajouter(n, lib);
+    n->fin = corps->fin;
+    return n;
+}
+
+/* « Ouvrir l'écran X. » (§ 22.3) */
+static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
+    if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'ouvre pas d'écran : ouvrez-le dans une action."));
+    if (a->evenement)
+        return erreur(a, t, grym_dupliquer("Ouvrir un écran depuis un événement viendra avec les écrans empilés."));
+    if (a->essais) return erreur(a, t, grym_dupliquer("Un écran ne s'ouvre pas dans « Essayer » : chaque événement a déjà "
+                                                       "sa propre reprise."));
+    size_t f;
+    char *nom = NULL;
+    EcranConnu *e = ecran_nomme(a, a->i + 1, &f, &nom);
+    if (!e) { free(nom); return NULL; }
+    a->i = f;
+    if (!fin_phrase(a, 0)) { free(nom); return NULL; }
+    Noeud *n = noeud_creer(P_OUVRIR, t->ligne, t->colonne, t->debut);
+    n->texte = nom;
+    n->local = a->nb_locaux;
+    a->nb_locaux += 2;   /* l'événement reçu, et l'objet qu'il désigne */
+    n->fin = fin_jeton(&a->j[a->i - 1]);
+    return n;
+}
+
+/* « Fermer l'écran. » (§ 22.3) */
+static Noeud *fermer_ecran(Analyse *a, const Jeton *t) {
+    if (!(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "écran")))
+        return erreur(a, voir(a, 1), grym_dupliquer("« Fermer l'écran. » attendu."));
+    if (!a->evenement)
+        return erreur(a, t, grym_dupliquer("« Fermer l'écran. » ne s'emploie que dans un événement « Quand on … »."));
+    a->i += 3;
+    if (!fin_phrase(a, 0)) return NULL;
+    Noeud *n = noeud_creer(P_FERMER, t->ligne, t->colonne, t->debut);
+    n->fin = fin_jeton(&a->j[a->i - 1]);
+    return n;
+}
+
+/* Un bouton sans événement est un oubli (§ 22.2) : vérifié sur tout le programme, fichiers utilisés compris. */
+static void chercher_quand(Noeud *const *ph, size_t nb, const char *ecran, const char *bouton, int *trouve) {
+    for (size_t k = 0; k < nb && !*trouve; k++) {
+        const Noeud *n = ph[k];
+        if (n->type == P_UTILISER) chercher_quand(n->enfants, n->nb_enfants, ecran, bouton, trouve);
+        else if (n->type == P_QUAND && n->forme == 1 && strcmp(n->texte3, ecran) == 0
+                 && strcmp(n->enfants[2]->texte, bouton) == 0) *trouve = 1;
+    }
+}
+
+static const Noeud *bouton_orphelin(Noeud *const *tout, size_t nb_tout, Noeud *const *ph, size_t nb, const char **ecran) {
+    for (size_t k = 0; k < nb; k++) {
+        const Noeud *n = ph[k];
+        if (n->type == P_UTILISER) {
+            const Noeud *r = bouton_orphelin(tout, nb_tout, n->enfants, n->nb_enfants, ecran);
+            if (r) return r;
+        }
+        if (n->type != P_ECRAN) continue;
+        for (size_t q = 0; q < n->nb_enfants; q++) {
+            if (n->enfants[q]->type != N_BOUTON) continue;
+            int trouve = 0;
+            chercher_quand(tout, nb_tout, n->texte, n->enfants[q]->texte, &trouve);
+            if (!trouve) { *ecran = n->texte; return n->enfants[q]; }
+        }
+    }
+    return NULL;
 }
 
 /* ---------------------------------------------------------------- */
@@ -4493,6 +4893,10 @@ static Noeud *phrase(Analyse *a, int colonne) {
         return n;
     }
     if (est_mot(t, "utiliser")) return utiliser(a, t);
+    if (t->type == J_ELISION && est_mot(voir(a, 1), "écran") && ecran_suit(a)) return declaration_ecran(a, t);
+    if (est_mot(t, "quand")) return quand(a, colonne);
+    if (est_mot(t, "ouvrir")) return ouvrir_ecran(a, t);
+    if (est_mot(t, "fermer")) return fermer_ecran(a, t);
     if (est_mot(t, "afficher")) {
         if (a->formule == 1)
             return erreur(a, t, grym_dupliquer("Un calcul n'affiche rien : il rend une valeur. "
@@ -4855,6 +5259,8 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.dont = NULL;
     a.corbeille = 0;
     a.phrase_vue = 0;
+    a.evenement = 0;
+    a.essais = 0;
 
     /* Colonne de référence : celle de la première phrase (les remarques ne comptent pas). */
     int colonne = 1;
@@ -4862,6 +5268,17 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
         if (j[k].type != J_REMARQUE) { colonne = j[k].type == J_FIN ? 1 : j[k].retrait; break; }
     Noeud *racine = bloc(&a, colonne, 1);
     if (racine && !a.echec) verifier_conflits(&a);
+    if (racine && !a.echec && !interactif && copie.fichier_index == 0) {   /* un bouton sans événement (§ 22.2) */
+        const char *ecran = NULL;
+        const Noeud *orphelin = bouton_orphelin(racine->enfants, racine->nb_enfants, racine->enfants, racine->nb_enfants, &ecran);
+        if (orphelin) {
+            a.echec = 1;
+            diag->message = grym_formater("Le bouton « %s » de l'écran « %s » n'a pas de « Quand on clique sur « %s » dans "
+                                          "l'écran %s : ».", orphelin->texte, ecran, orphelin->texte, ecran);
+            diag->ligne = orphelin->ligne;
+            diag->colonne = orphelin->colonne;
+        }
+    }
     programme->nb_locaux = a.nb_locaux;
     if (racine) {
         programme->phrases = racine->enfants;
@@ -5040,6 +5457,8 @@ Suggestions suites_valides_fichier(const char *source, size_t taille, const char
             proposer(&r, "Essayer", pre, lp, 0);
             proposer(&r, "Saisir à nouveau", pre, lp, 0);
             proposer(&r, "Pour", pre, lp, 0);
+            proposer(&r, "Quand on", pre, lp, 0);          /* écrans (§ 22) */
+            proposer(&r, "Ouvrir l'écran", pre, lp, 0);
             proposer(&r, "Remarque :", pre, lp, 0);
             if (tete_de_fichier(source, d)) proposer(&r, "Utiliser", pre, lp, 0);   /* en tête seulement (§ 21) */
             for (size_t k = 0; k < c.nb_noms; k++)

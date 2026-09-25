@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.39 de la spécification, révisée le 25 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.40 de la spécification, révisée le 25 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -625,7 +625,7 @@ Selon le mois :
 
 ### 10.7 Mots de construction
 
-`tant`, `répéter`, `chaque`, `sortir`, `passer`, `selon`, `cas`, `autrement`, `essayer`, `saisir`, `utiliser` (§ 21) (avec `afficher`, `si`, `sinon`, `pour`, `rendre`) commencent des constructions : ils ne peuvent pas commencer le nom d'une action.
+`tant`, `répéter`, `chaque`, `sortir`, `passer`, `selon`, `cas`, `autrement`, `essayer`, `saisir`, `utiliser` (§ 21), `quand`, `ouvrir`, `fermer` (§ 22) (avec `afficher`, `si`, `sinon`, `pour`, `rendre`) commencent des constructions : ils ne peuvent pas commencer le nom d'une action.
 
 ---
 
@@ -1371,9 +1371,11 @@ Un fichier utilisé ne contient que des déclarations : remarques, classes, enti
 - `grym formater` et `grym traduire` écrivent la phrase telle quelle, jamais les déclarations du fichier utilisé.
 - Les suites attendues (§ 8) proposent `Utiliser` en tête du fichier seulement, et, plus bas, les noms déclarés dans les fichiers utilisés.
 
-## 22. Écrans *(A3 : conçu, pas encore implémenté)*
+## 22. Écrans *(A3 : en cours ; A3-a implémenté le 25 septembre 2026)*
 
-Conception complète et raisons : `docs/ecrans.md`. Ce paragraphe en fixe les phrases ; elles entreront dans l'analyseur tranche par tranche (A3-a à A3-d).
+Conception complète et raisons : `docs/ecrans.md`. Ce paragraphe en fixe les phrases ; elles entrent dans l'analyseur tranche par tranche.
+
+Implémenté (A3-a) : la déclaration avec liste (recherche, `dont`, `, par`), bouton, texte fixe et titre donné ; `Quand on clique sur « … »` et `Quand on choisit un … dans l'écran …` ; `Ouvrir l'écran …` (programme ou action, hors d'un événement et hors d'`Essayer`) ; `Fermer l'écran.` ; les refus d'analyse du § 22.2 ; le refus de `grym lancer` et `grym servir` ; les deux formes, l'aide à la saisie et la coloration. À venir : zones de saisie, `de l'écran`, `le … choisi`, `Quand on change`, `ouvre`, `ferme` (A3-b) ; la fiche déduite et les écrans empilés (A3-c) ; les colonnes choisies et la disposition (A3-d).
 
 ```
 L'écran des compositeurs montre :
@@ -1415,7 +1417,7 @@ Ouvrir l'écran des compositeurs.
 
 ### 22.4 Mots et forme compacte
 
-- `quand`, `ouvrir` et `fermer` deviendront des mots de construction (§ 10.7) à l'implémentation d'A3-a.
+- `quand`, `ouvrir` et `fermer` sont des mots de construction (§ 10.7) : ils ne commencent plus le nom d'une action.
 - Forme compacte : `docs/ecrans.md`, § 3.7 (`_écran des_compositeurs` … `_fin`, `_quand _clique « Nouveau » _dans des_compositeurs`, `_ouvrir`, `_fermer`, `_écran.pays`).
 
 ---
@@ -1464,3 +1466,4 @@ Ouvrir l'écran des compositeurs.
 | 1.37 | 2026-09-24 | § 20.1 : la fiche d'un objet (`Afficher la fiche de p.`) |
 | 1.38 | 2026-09-24 | § 21 : fichiers utilisés (`Utiliser « données ».`), fichiers de déclarations, chemins, lecture unique, cercles refusés, erreurs par fichier ; `utiliser` devient un mot de construction (§ 10.7) |
 | 1.39 | 2026-09-25 | § 22 : écrans (A3), conçus, pas encore implémentés : déclaration, événements, ouvrir et fermer, une transaction par événement |
+| 1.40 | 2026-09-25 | § 22 : A3-a implémenté (déclaration, clic, choix, ouvrir, fermer) ; § 10.7 : `quand`, `ouvrir`, `fermer` deviennent des mots de construction ; un programme qui les employait comme nom d'action doit les renommer |

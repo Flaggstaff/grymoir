@@ -17,6 +17,8 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSplitter>
+#include <QTableWidget>
+#include <QHeaderView>
 #include <QTextBrowser>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -80,6 +82,59 @@ static void iface_fiche(void *contexte, Chaine *sortie, const char *titre, const
     }
     h += "</table>";
     emit t->fiche(h, images);
+}
+
+// --- Écrans (grammaire, § 22) : la machine décrit, la fenêtre montre ---
+
+static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre, const ElementEcran *el, size_t n) {
+    auto *t = static_cast<Travail *>(contexte);
+    t->vider_sortie(sortie);
+    QVector<int> sortes;
+    QStringList textes;
+    QVector<QStringList> colonnes;
+    for (size_t k = 0; k < n; k++) {
+        sortes << (int)el[k].sorte;
+        textes << QString::fromUtf8(el[k].texte);
+        QStringList c;
+        for (size_t q = 0; q < el[k].nb_colonnes; q++) c << QString::fromUtf8(el[k].colonnes[q]);
+        colonnes << c;
+    }
+    t->nb_colonnes.clear();
+    for (const auto &c : colonnes) t->nb_colonnes << c.size();
+    emit t->ecran_ouvert(QString::fromUtf8(titre), sortes, textes, colonnes);
+}
+
+static void iface_ecran_lignes(void *contexte, size_t element, const char *const *cellules, size_t nb_lignes) {
+    auto *t = static_cast<Travail *>(contexte);
+    // le nombre de colonnes se déduit du total ; la fenêtre connaît les titres
+    QStringList c;   // nb_lignes × nb_colonnes cellules, ligne par ligne
+    for (size_t k = 0; cellules && k < nb_lignes * t->colonnes_de(element); k++) c << QString::fromUtf8(cellules[k]);
+    emit t->ecran_lignes((int)element, c, (int)nb_lignes);
+}
+
+static Issue iface_ecran_attendre(void *contexte, Chaine *sortie, Evenement *e) {
+    return static_cast<Travail *>(contexte)->attendre_evenement(sortie, e);
+}
+
+static void iface_ecran_erreur(void *contexte, Chaine *sortie, const char *message) {
+    auto *t = static_cast<Travail *>(contexte);
+    t->vider_sortie(sortie);
+    emit t->ecran_erreur(QString::fromUtf8(message));
+}
+
+static void iface_ecran_fermer(void *contexte, Chaine *sortie) {
+    auto *t = static_cast<Travail *>(contexte);
+    t->vider_sortie(sortie);
+    emit t->ecran_ferme();
+}
+
+Issue Travail::attendre_evenement(Chaine *sortie, Evenement *e) {
+    vider_sortie(sortie);
+    emit ecran_attente();
+    reponse.acquire();   // la fenêtre remplit `issue` et `evenement`, puis libère
+    if (issue == 2) return ISSUE_INTERROMPU;
+    *e = evenement;
+    return ISSUE_REPONDU;
 }
 
 Travail::Travail(const QString &c) : chemin(c) {}
@@ -198,7 +253,8 @@ void Travail::run() {
         return;
     }
     Machine *m = machine_creer();
-    Interface i = {this, iface_disponible, iface_formulaire, iface_effacer, 1, iface_image, iface_fiche};
+    Interface i = {this, iface_disponible, iface_formulaire, iface_effacer, 1, iface_image, iface_fiche,
+                   iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer};
     machine_interface(m, &i);
     situer(m, chemin);
     Chaine sortie = {};
@@ -304,6 +360,37 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         fil->ensureCursorVisible();
     });
     connect(&travail, &Travail::question, this, &Execution::poser);
+    connect(&travail, &Travail::ecran_ouvert, this, &Execution::montrer_ecran);
+    connect(&travail, &Travail::ecran_lignes, this, [this](int element, const QStringList &cellules, int nb_lignes) {
+        if (element < 0 || element >= tables.size() || !tables[element]) return;
+        QTableWidget *t = tables[element];
+        const int nc = t->columnCount();
+        t->setRowCount(nb_lignes);
+        for (int r = 0; r < nb_lignes; r++)
+            for (int c = 0; c < nc && r * nc + c < cellules.size(); c++) {
+                auto *i = new QTableWidgetItem(cellules[r * nc + c]);
+                i->setData(Qt::UserRole, r);   // le rang dans la liste de la machine, quel que soit le tri à l'écran
+                t->setItem(r, c, i);
+            }
+        // l'ordre du programme d'abord ; un tri choisi à l'écran (clic sur un titre) se garde d'une relecture à l'autre
+        const int col = t->property("tri").isValid() ? t->property("tri").toInt() : -1;
+        if (col >= 0) t->sortItems(col, (Qt::SortOrder)t->property("ordre").toInt());
+    });
+    connect(&travail, &Travail::ecran_attente, this, [this] {
+        attente_ecran = true;
+        if (vue_ecran) vue_ecran->setEnabled(true);
+        etat->setText("L'écran attend.");
+    });
+    connect(&travail, &Travail::ecran_erreur, this, [this](const QString &m) {
+        if (erreur_ecran) { erreur_ecran->setText(m); erreur_ecran->show(); }
+    });
+    connect(&travail, &Travail::ecran_ferme, this, [this] {
+        if (vue_ecran) { vue_ecran->deleteLater(); vue_ecran = nullptr; }
+        tables.clear();
+        boutons_ecran.clear();
+        erreur_ecran = nullptr;
+        attente_ecran = false;
+    });
     connect(&travail, &Travail::reponses, this, [this](const QString &echo) {
         QTextCursor c(fil->document());
         c.movePosition(QTextCursor::End);
@@ -324,6 +411,11 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             if (fini) close();
         }
         if (grym_interruption && attente) envoyer(2);
+        if (grym_interruption && attente_ecran) {
+            attente_ecran = false;
+            travail.issue = 2;
+            travail.reponse.release();
+        }
     });
     veille->start(150);
 }
@@ -335,8 +427,8 @@ void Execution::demarrer() { travail.start(); }
 Execution::~Execution() {
     if (travail.isRunning()) {
         grym_interruption = 1;
-        if (attente) {
-            attente = false;
+        if (attente || attente_ecran) {
+            attente = attente_ecran = false;
             travail.issue = 2;
             travail.reponse.release();
         }
@@ -492,6 +584,87 @@ void Execution::envoyer(int issue) {
 void Execution::arreter() {
     grym_interruption = 1;   // la machine s'arrête au prochain saut arrière ou appel ; le journal annule
     if (attente) envoyer(2);
+    if (attente_ecran) {
+        attente_ecran = false;
+        travail.issue = 2;
+        travail.reponse.release();
+    }
+}
+
+void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, const QStringList &textes,
+                              const QVector<QStringList> &colonnes) {
+    delete vue_ecran;
+    tables = QVector<QTableWidget *>(sortes.size(), nullptr);
+    boutons_ecran.clear();
+    vue_ecran = new QWidget;
+    auto *pile = new QVBoxLayout(vue_ecran);
+    auto *t = new QLabel("<b>" + titre.toHtmlEscaped() + "</b>");
+    pile->addWidget(t);
+    setWindowTitle(titre);
+    QHBoxLayout *rangee = nullptr;   // des boutons qui se suivent : une ligne, en bas à droite (§ 3.3)
+    for (int k = 0; k < sortes.size(); k++) {
+        if (sortes[k] != ELEMENT_BOUTON) rangee = nullptr;
+        if (sortes[k] == ELEMENT_TEXTE) {
+            auto *l = new QLabel(textes[k]);
+            l->setWordWrap(true);
+            pile->addWidget(l);
+        } else if (sortes[k] == ELEMENT_LISTE) {
+            auto *tab = new QTableWidget(0, colonnes[k].size());
+            tab->setHorizontalHeaderLabels(colonnes[k]);
+            tab->horizontalHeader()->setStretchLastSection(true);
+            tab->verticalHeader()->hide();
+            tab->setSelectionBehavior(QAbstractItemView::SelectRows);
+            tab->setSelectionMode(QAbstractItemView::SingleSelection);
+            tab->setEditTriggers(QAbstractItemView::NoEditTriggers);
+            tab->setToolTip("Double-clic ou Entrée : choisir ; clic sur un titre : trier");
+            // Un clic sur un titre trie à l'écran, sans toucher au programme (§ 22.1) ; un second clic inverse.
+            connect(tab->horizontalHeader(), &QHeaderView::sectionClicked, tab, [tab](int c) {
+                const bool meme = tab->property("tri").isValid() && tab->property("tri").toInt() == c;
+                const Qt::SortOrder o = meme && tab->property("ordre").toInt() == Qt::AscendingOrder ? Qt::DescendingOrder
+                                                                                                    : Qt::AscendingOrder;
+                tab->setProperty("tri", c);
+                tab->setProperty("ordre", (int)o);
+                tab->horizontalHeader()->setSortIndicatorShown(true);
+                tab->horizontalHeader()->setSortIndicator(c, o);
+                tab->sortItems(c, o);
+            });
+            connect(tab, &QTableWidget::cellActivated, this, [this, k, tab](int ligne, int) {
+                const QTableWidgetItem *i = tab->item(ligne, 0);
+                envoyer_evenement(EVENEMENT_CHOIX, k, i ? i->data(Qt::UserRole).toInt() : ligne);
+            });
+            tables[k] = tab;
+            pile->addWidget(tab, 1);
+        } else {
+            if (!rangee) {
+                rangee = new QHBoxLayout;
+                rangee->addStretch(1);
+                pile->addLayout(rangee);
+            }
+            auto *b = new QPushButton(textes[k]);
+            connect(b, &QPushButton::clicked, this, [this, k] { envoyer_evenement(EVENEMENT_CLIC, k, 0); });
+            boutons_ecran << b;
+            rangee->addWidget(b);
+        }
+    }
+    erreur_ecran = new QLabel;
+    erreur_ecran->setStyleSheet("color: #c00;");
+    erreur_ecran->setWordWrap(true);
+    erreur_ecran->hide();
+    pile->addWidget(erreur_ecran);
+    vue_ecran->setEnabled(false);   // actif seulement quand la machine attend un événement
+    partage->insertWidget(0, vue_ecran);
+    partage->setSizes({height() * 2 / 3, height() / 6, height() / 6});
+}
+
+void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) {
+    if (!attente_ecran) return;
+    attente_ecran = false;
+    if (vue_ecran) vue_ecran->setEnabled(false);
+    if (erreur_ecran) erreur_ecran->hide();
+    etat->setText("En cours…");
+    travail.evenement = {sorte, (size_t)element, (size_t)ligne};
+    travail.issue = 0;
+    travail.reponse.release();
 }
 
 void Execution::terminer(bool ok, const QString &erreur, const QString &annulation) {
@@ -518,7 +691,12 @@ void Execution::closeEvent(QCloseEvent *e) {
         e->accept();
         return;
     }
-    fermer_a_la_fin = true;   // fermer pendant l'exécution l'arrête d'abord, proprement
-    arreter();
+    fermer_a_la_fin = true;
+    if (attente_ecran) {   // la croix d'un écran le ferme ; le programme continue, puis la fenêtre se ferme (§ 22.2)
+        envoyer_evenement(EVENEMENT_FERMETURE, 0, 0);
+        e->ignore();
+        return;
+    }
+    arreter();   // ailleurs, fermer pendant l'exécution l'arrête d'abord, proprement
     e->ignore();
 }

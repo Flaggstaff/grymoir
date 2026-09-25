@@ -63,10 +63,16 @@ typedef enum {
     I_COLLER,
     I_ELIDER,
     I_RESAISIR,
-    I_FICHE
+    I_FICHE,
+    I_ECRAN_OUVRIR,     /* écrans (grammaire, § 22) : opérande : constante texte, la description de l'écran */
+    I_ECRAN_LISTE,      /* opérande : élément ; dépile une liste, la montre dans l'écran ouvert */
+    I_ECRAN_ATTENDRE,   /* attend un événement (valide ce qui précède) ; empile l'objet (ou absent), puis le code */
+    I_ECRAN_ERREUR,     /* dépile le motif d'un événement raté, et le montre dans l'écran */
+    I_ECRAN_FERMER,     /* ferme l'écran ouvert */
+    I_FERMER_ECRAN      /* « Fermer l'écran. » dans un événement : l'écran se fermera à la fin de l'événement */
 } CodeInstruction;
 
-#define I_DERNIER I_FICHE
+#define I_DERNIER I_FERMER_ECRAN
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);
