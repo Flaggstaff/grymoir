@@ -1,6 +1,7 @@
 // GrymoiR : l'atelier, réécriture chirurgicale.
 #include "reecriture.h"
 #include "editeur.h"
+#include "schema.h"
 
 #include <QDir>
 #include <QDirIterator>
@@ -395,5 +396,128 @@ QString supprimer_champ(const QString &dossier, const QString &entite, const QSt
         ch.remplacer(*t.f, e.first, e.second, t.f->imprimer(t.phrase));
     }
     geste->description = QString("Supprimer le champ « %1 » de « %2 »").arg(nom, entite);
+    return ch.conclure(geste);
+}
+
+// ---------------------------------------------------------------------------------------------
+// A4-b : écrire des écrans (docs/atelier.md, § 5 bis)
+// ---------------------------------------------------------------------------------------------
+
+namespace {
+
+bool voyelle(const QString &m) {   // « l'œuvre », « de l'orgue » : devant une voyelle ou un h (muet par défaut)
+    return !m.isEmpty() && QString("aeiouyhàâäéèêëîïôöùûüœAEIOUYHÀÂÉÈÊÎÔÙÛŒ").contains(m.at(0));
+}
+QString le(const QString &m, bool f) { return voyelle(m) ? "l'" + m : (f ? "la " : "le ") + m; }
+QString un(const QString &m, bool f) { return (f ? "une " : "un ") + m; }
+QString du(const QString &m, bool f) { return voyelle(m) ? "de l'" + m : (f ? "de la " : "du ") + m; }
+QString nouveau(const QString &m, bool f) { return f ? "une nouvelle " + m : voyelle(m) ? "un nouvel " + m : "un nouveau " + m; }
+QString capitale(const QString &s) { return s.isEmpty() ? s : s.left(1).toUpper() + s.mid(1); }
+
+// Après la dernière déclaration (classe, aptitude, écran, événement) ; à défaut après les remarques et
+// « Utiliser » de tête ; à défaut au début. Un écran se déclare avant d'être ouvert (§ 22).
+int position_des_ecrans(const FichierAnalyse &f) {
+    int apres = -1;
+    for (size_t k = 0; k < f.p.nb; k++) {
+        const TypeNoeud t = f.p.phrases[k]->type;
+        if (t == P_CLASSE || t == P_APTITUDE || t == P_ECRAN || t == P_QUAND) apres = (int)k;
+    }
+    if (apres < 0)
+        for (size_t k = 0; k < f.p.nb && (f.p.phrases[k]->type == P_REMARQUE || f.p.phrases[k]->type == P_UTILISER); k++)
+            apres = (int)k;
+    return apres < 0 ? 0 : f.etendue((size_t)apres).second;
+}
+
+QString evenement_fermer(const QString &ecran) {
+    return QString("Quand on clique sur « Fermer » dans l'écran %1 :\n    Fermer l'écran.\n").arg(ecran);
+}
+
+}  // namespace
+
+QString generer_ecran(const QString &dossier, const QString &cible, const QString &entite, Geste *geste) {
+    Chantier ch(dossier);
+    FichierAnalyse *f = ch.fichier(cible);
+    if (!f) return QString("« %1 » n'est pas dans le projet.").arg(cible);
+    if (!f->ok) return QString("« %1 » contient une erreur : corrigez-la d'abord.").arg(QFileInfo(cible).fileName());
+    if (f->compacte) return QString("Les écrans générés s'écrivent en forme littéraire : choisissez un fichier .grym.");
+    EntiteSchema e;
+    for (const auto &x : lire_schema(dossier)) if (x.nom == entite) e = x;
+    if (e.nom.isEmpty()) return QString("L'entité « %1 » est introuvable.").arg(entite);
+    const QString pl = e.pluriel, nom = "des " + pl, titre = capitale(pl);
+    const bool fe = e.feminin;
+    QString cle;   // le tri : le champ texte unique, la clé des menus et des fiches
+    for (const auto &c : e.champs) if (cle.isEmpty() && c.unique && c.type == "texte" && !c.multiple) cle = c.nom;
+    bool existe = false, accueil = false;
+    Noeud *n_accueil = nullptr;
+    FichierAnalyse *f_accueil = nullptr;
+    size_t k_accueil = 0;
+    ch.pour_chaque_phrase([&](FichierAnalyse &x, size_t k) {
+        Noeud *n = x.p.phrases[k];
+        if (n->type != P_ECRAN) return;
+        if (QString::fromUtf8(n->texte) == nom) existe = true;
+        if (QString::fromUtf8(n->texte) == "d'accueil") { accueil = true; n_accueil = n; f_accueil = &x; k_accueil = k; }
+    });
+    if (existe) return QString("L'écran %1 existe déjà.").arg(nom);
+    QString t;
+    t += QString("L'écran %1 montre :\n    la liste des %2 %3%4,\n").arg(nom, pl, fe ? "conservées" : "conservés",
+                                                                    cle.isEmpty() ? QString() : ", par " + cle);
+    t += "    un bouton « Nouveau »,\n    un bouton « Supprimer »,\n    un bouton « Fermer ».\n";
+    t += QString("Quand on choisit %1 dans l'écran %2 :\n    Ouvrir la fiche %3.\n").arg(un(entite, fe), nom, du(entite, fe));
+    t += QString("Quand on clique sur « Nouveau » dans l'écran %1 :\n    Le nouveau vaut %2 %3.\n    Conserver nouveau.\n")
+             .arg(nom, nouveau(entite, fe), fe ? "saisie" : "saisi");
+    const QString choisi = le(entite + (fe ? " choisie" : " choisi"), fe) + " de l'écran";
+    t += QString("Quand on clique sur « Supprimer » dans l'écran %1 :\n    Si %2 est %3, supprimer %2.\n")
+             .arg(nom, choisi, fe ? "présente" : "présent");
+    t += evenement_fermer(nom);
+    // l'écran d'accueil : un bouton par écran généré ; il naît au premier (§ 5 bis)
+    if (!accueil) {
+        t += QString("L'écran d'accueil montre :\n    un bouton « %1 »,\n    un bouton « Fermer ».\n").arg(titre);
+        t += evenement_fermer("d'accueil");
+    } else {
+        for (size_t q = 0; q < n_accueil->nb_enfants; q++)
+            if (n_accueil->enfants[q]->type == N_BOUTON && QString::fromUtf8(n_accueil->enfants[q]->texte) == titre)
+                return QString("L'écran d'accueil a déjà un bouton « %1 ».").arg(titre);
+        Noeud *b = noeud_creer(N_BOUTON, 0, 0, 0);
+        b->texte = grym_dupliquer(titre.toUtf8().constData());
+        noeud_ajouter(n_accueil, b);
+        size_t fermer = n_accueil->nb_enfants - 1;   // avant « Fermer », s'il existe : il reste le dernier
+        for (size_t q = 0; q + 1 < n_accueil->nb_enfants; q++)
+            if (n_accueil->enfants[q]->type == N_BOUTON && strcmp(n_accueil->enfants[q]->texte, "Fermer") == 0) fermer = q;
+        for (size_t q = n_accueil->nb_enfants - 1; q > fermer; q--) n_accueil->enfants[q] = n_accueil->enfants[q - 1];
+        n_accueil->enfants[fermer] = b;
+        const auto et = f_accueil->etendue(k_accueil);
+        ch.remplacer(*f_accueil, et.first, et.second, f_accueil->imprimer(n_accueil));
+    }
+    t += QString("Quand on clique sur « %1 » dans l'écran d'accueil :\n    Ouvrir l'écran %2.\n").arg(titre, nom);
+    const int pos = position_des_ecrans(*f);
+    ch.remplacer(*f, pos, pos, (pos ? "\n" : "") + t.left(t.size() - (pos ? 1 : 0)) + (pos ? "" : "\n"));
+    geste->description = QString("Écran pour « %1 »").arg(entite);
+    return ch.conclure(geste);
+}
+
+QString nouvel_ecran(const QString &dossier, const QString &cible, const QString &nom, Geste *geste) {
+    Chantier ch(dossier);
+    FichierAnalyse *f = ch.fichier(cible);
+    if (!f) return QString("« %1 » n'est pas dans le projet.").arg(cible);
+    if (!f->ok) return QString("« %1 » contient une erreur : corrigez-la d'abord.").arg(QFileInfo(cible).fileName());
+    if (f->compacte) return QString("Les écrans générés s'écrivent en forme littéraire : choisissez un fichier .grym.");
+    const QString n = nom.simplified();
+    if (n.isEmpty()) return "Donnez un nom : « de recherche », « des factures », « d'accueil ».";
+    QString t = QString("L'écran %1 montre :\n    un bouton « Fermer ».\n").arg(n) + evenement_fermer(n);
+    const int pos = position_des_ecrans(*f);
+    ch.remplacer(*f, pos, pos, (pos ? "\n" : "") + t.left(t.size() - (pos ? 1 : 0)) + (pos ? "" : "\n"));
+    geste->description = QString("Nouvel écran « %1 »").arg(n);
+    return ch.conclure(geste);
+}
+
+QString ajouter_phrase_finale(const QString &dossier, const QString &fichier, const QString &phrase, Geste *geste) {
+    Chantier ch(dossier);
+    FichierAnalyse *f = ch.fichier(fichier);
+    if (!f) return QString("« %1 » n'est pas dans le projet.").arg(fichier);
+    QString t = f->texte;
+    int fin = t.size();
+    while (fin > 0 && t.at(fin - 1).isSpace()) fin--;
+    ch.remplacer(*f, fin, t.size(), (fin ? "\n" : "") + phrase + "\n");
+    geste->description = QString("Ajouter « %1 »").arg(phrase);
     return ch.conclure(geste);
 }

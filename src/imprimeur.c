@@ -832,6 +832,16 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 }
             } else {
                 int fem = genre_de_nom(im, el->texte) == G_FEMININ;
+                /* « la partition choisie de l'écran » : ce champ implicite prend le genre de l'entité (§ 22.2) */
+                char *choisi = grym_formater("%s %s", el->texte, fem ? "choisie" : "choisi");
+                retenir(im, choisi, fem ? G_FEMININ : G_MASCULIN);
+                if (im->nb_a_liberer % 16 == 0) {
+                    char **t = grym_allouer((im->nb_a_liberer + 16) * sizeof *t);
+                    if (im->nb_a_liberer) memcpy(t, im->a_liberer, im->nb_a_liberer * sizeof *t);
+                    free(im->a_liberer);
+                    im->a_liberer = t;
+                }
+                im->a_liberer[im->nb_a_liberer++] = choisi;
                 const char *pl = NULL;
                 for (size_t q = 0; q < im->nb_pluriels && !pl; q++)
                     if (strcmp(im->pluriels[q].feminin, el->texte) == 0) pl = im->pluriels[q].masculin;

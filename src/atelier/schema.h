@@ -18,6 +18,7 @@ struct EntiteSchema {
     QString nom, parent, fichier;   // fichier : chemin absolu de la déclaration
     int ligne = 0;
     bool feminin = false;
+    QString pluriel;   // le pluriel déclaré, sinon le nom suivi de « s »
     QStringList aptitudes;
     QVector<ChampSchema> champs;
 };

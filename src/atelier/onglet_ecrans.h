@@ -51,6 +51,8 @@ public:
 
 signals:
     void ouvrir(const QString &fichier, int ligne);   // « Voir l'événement », « Voir la déclaration »
+    void generer();                                   // « Écran pour une entité… » (A4-b)
+    void ecran_vide();                                // « Nouvel écran vide »
 
 protected:
     bool eventFilter(QObject *o, QEvent *e) override;

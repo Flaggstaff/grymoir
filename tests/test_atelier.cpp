@@ -700,6 +700,56 @@ int main(int argc, char **argv) {
         VERIFIER(o.proprietes().contains("Accueil"));
     }
 
+    // A4-b : écran généré pour une entité, écran d'accueil, écran vide, phrase finale
+    {
+        QTemporaryDir dossier;
+        auto ecrire = [&](const QString &nom, const QString &texte) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::WriteOnly);
+            f.write(texte.toUtf8());
+        };
+        auto lire = [&](const QString &nom) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::ReadOnly);
+            return QString::fromUtf8(f.readAll());
+        };
+        const QString debut = "Un compositeur, conservé, a : un nom (texte), unique.\n"
+                              "Une œuvre, conservée, a : un titre (texte), unique, un compositeur (compositeur).\n"
+                              "Afficher « début ».\n";
+        ecrire("p.grym", debut);
+        const QString p = dossier.filePath("p.grym");
+        Geste g;
+        VERIFIER(generer_ecran(dossier.path(), p, "œuvre", &g).isEmpty());
+        const QString t = lire("p.grym");
+        VERIFIER(t.contains("L'écran des œuvres montre :\n    la liste des œuvres conservées, par titre,\n"));
+        VERIFIER(t.contains("Quand on choisit une œuvre dans l'écran des œuvres :\n    Ouvrir la fiche de l'œuvre.\n"));
+        VERIFIER(t.contains("    Le nouveau vaut une nouvelle œuvre saisie.\n"));
+        VERIFIER(t.contains("    Si l'œuvre choisie de l'écran est présente, supprimer l'œuvre choisie de l'écran.\n"));
+        VERIFIER(t.contains("L'écran d'accueil montre :\n    un bouton « Œuvres »,\n    un bouton « Fermer ».\n"));
+        VERIFIER(t.endsWith("Ouvrir l'écran des œuvres.\nAfficher « début ».\n"));   // avant la première phrase exécutable
+        VERIFIER(analyser_source(t, false, p).message.isEmpty());
+        // la deuxième : l'accueil reçoit son bouton, avant « Fermer »
+        VERIFIER(generer_ecran(dossier.path(), p, "compositeur", &g).isEmpty());
+        const QString t2 = lire("p.grym");
+        VERIFIER(t2.contains("L'écran d'accueil montre :\n    un bouton « Œuvres »,\n    un bouton « Compositeurs »,\n"
+                             "    un bouton « Fermer ».\n"));
+        VERIFIER(t2.contains("Quand on choisit un compositeur dans l'écran des compositeurs :\n    Ouvrir la fiche du compositeur.\n"));
+        VERIFIER(t2.contains("Quand on clique sur « Compositeurs » dans l'écran d'accueil :\n    Ouvrir l'écran des compositeurs.\n"));
+        VERIFIER(analyser_source(t2, false, p).message.isEmpty());
+        VERIFIER(generer_ecran(dossier.path(), p, "œuvre", &g).contains("existe déjà"));
+        annuler_geste(g);   // défait la deuxième : l'accueil perd son bouton
+        VERIFIER(lire("p.grym") == t);
+        VERIFIER(nouvel_ecran(dossier.path(), p, "de recherche", &g).isEmpty());
+        VERIFIER(lire("p.grym").contains("L'écran de recherche montre :\n    un bouton « Fermer ».\n"
+                                         "Quand on clique sur « Fermer » dans l'écran de recherche :\n    Fermer l'écran.\n"));
+        VERIFIER(ajouter_phrase_finale(dossier.path(), p, "Ouvrir l'écran d'accueil.", &g).isEmpty());
+        VERIFIER(lire("p.grym").endsWith("Afficher « début ».\nOuvrir l'écran d'accueil.\n"));
+        VERIFIER(analyser_source(lire("p.grym"), false, p).message.isEmpty());
+        // lu par l'onglet
+        const QVector<EcranLu> e = lire_ecrans(dossier.path());
+        VERIFIER(e.size() == 3 && e[0].titre == "Œuvres" && e[1].titre == "Accueil" && e[2].titre == "Recherche");
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }

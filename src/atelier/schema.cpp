@@ -73,6 +73,7 @@ QVector<EntiteSchema> lire_schema(const QString &dossier, QStringList *problemes
                     e.fichier = fichier;
                     e.ligne = n->ligne;
                     e.feminin = (n->forme & 3) == 2;
+                    e.pluriel = n->texte3 ? QString::fromUtf8(n->texte3) : nom + "s";
                 }
                 if (n->texte2 && e.parent.isEmpty()) e.parent = QString::fromUtf8(n->texte2);
                 for (size_t j = 0; j < n->nb_enfants; j++) {

@@ -30,6 +30,14 @@ QString modifier_champ(const QString &dossier, const QString &entite, const QStr
                        Geste *geste);
 QString supprimer_champ(const QString &dossier, const QString &entite, const QString &nom, Geste *geste);
 
+// A4-b : un écran pour une entité (liste, Nouveau, Supprimer, Fermer, et leurs événements), écrit dans `cible`
+// (docs/atelier.md, § 5 bis) ; l'écran d'accueil le reçoit comme bouton, et naît s'il n'existe pas.
+QString generer_ecran(const QString &dossier, const QString &cible, const QString &entite, Geste *geste);
+// Un écran vide : « L'écran <nom> montre : un bouton « Fermer ». », avec son événement.
+QString nouvel_ecran(const QString &dossier, const QString &cible, const QString &nom, Geste *geste);
+// Ajoute une phrase à la fin d'un fichier (« Ouvrir l'écran d'accueil. » dans le programme principal).
+QString ajouter_phrase_finale(const QString &dossier, const QString &fichier, const QString &phrase, Geste *geste);
+
 // Remet chaque fichier touché dans son état d'avant ; message d'erreur, vide si tout est revenu.
 QString annuler_geste(const Geste &geste);
 

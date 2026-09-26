@@ -192,6 +192,46 @@ Fenetre::Fenetre() {
             onglet_ecrans->montrer(projet);
         }
     });
+    // A4-b : écrire des écrans. Le fichier : celui des écrans existants, sinon le programme principal, sinon le fichier ouvert.
+    auto cible_des_ecrans = [this]() {
+        const auto e = lire_ecrans(projet);
+        if (!e.isEmpty()) return e.first().fichier;
+        if (!projet_fichier.programme_principal.isEmpty()) return QDir(projet).absoluteFilePath(projet_fichier.programme_principal);
+        return QFileInfo(fichier).absoluteFilePath();
+    };
+    connect(onglet_ecrans, &OngletEcrans::generer, this, [this, cible_des_ecrans] {
+        if (projet.isEmpty()) return;
+        QStringList noms;
+        for (const auto &e : lire_schema(projet)) noms << e.nom;
+        if (noms.isEmpty()) { statusBar()->showMessage("Aucune entité conservée : déclarez-en une d'abord.", 5000); return; }
+        bool ok = false;
+        const QString entite = QInputDialog::getItem(this, "Écran pour une entité", "Entité :", noms, 0, false, &ok);
+        if (!ok) return;
+        const QString cible = cible_des_ecrans();
+        if (cible.isEmpty()) { statusBar()->showMessage("Ouvrez d'abord un fichier du projet.", 5000); return; }
+        appliquer([=](Geste *g) { return generer_ecran(projet, cible, entite, g); }, entite_choisie);
+        if (gestes.isEmpty() || !gestes.last().description.contains(entite)) return;   // refusé : le message est affiché
+        // le programme principal ouvre-t-il l'écran d'accueil ? sinon, l'atelier propose de l'écrire (§ 5 bis)
+        const QString principal = projet_fichier.programme_principal.isEmpty() ? QString()
+                                                                                : QDir(projet).absoluteFilePath(projet_fichier.programme_principal);
+        QFile f(principal);
+        if (!principal.isEmpty() && f.open(QIODevice::ReadOnly) && !QString::fromUtf8(f.readAll()).contains("Ouvrir l'écran d'accueil")) {
+            f.close();
+            if (QMessageBox::question(this, "Écran d'accueil",
+                                      QString("Écrire « Ouvrir l'écran d'accueil. » à la fin de « %1 » ?").arg(QFileInfo(principal).fileName()))
+                == QMessageBox::Yes)
+                appliquer([=](Geste *g) { return ajouter_phrase_finale(projet, principal, "Ouvrir l'écran d'accueil.", g); }, entite_choisie);
+        }
+    });
+    connect(onglet_ecrans, &OngletEcrans::ecran_vide, this, [this, cible_des_ecrans] {
+        if (projet.isEmpty()) return;
+        bool ok = false;
+        const QString nom = QInputDialog::getText(this, "Nouvel écran vide", "Nom, après « L'écran » (« de recherche », « des factures ») :",
+                                                  QLineEdit::Normal, "de recherche", &ok);
+        if (!ok) return;
+        const QString cible = cible_des_ecrans();
+        appliquer([=](Geste *g) { return nouvel_ecran(projet, cible, nom, g); }, entite_choisie);
+    });
     connect(onglet_ecrans, &OngletEcrans::ouvrir, this, [this](const QString &f, int ligne) {
         onglets->setCurrentIndex(0);
         ouvrir_fichier(f);
@@ -559,6 +599,7 @@ void Fenetre::apres_geste(const QStringList &touches, const QString &choisir_ens
     }
     entite_choisie = choisir_ensuite;
     rafraichir_schema();
+    if (onglets->currentIndex() == 2) onglet_ecrans->montrer(projet);   // l'aperçu suit le code (A4)
 }
 
 void Fenetre::nouvelle_entite() {

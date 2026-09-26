@@ -182,8 +182,18 @@ OngletEcrans::OngletEcrans(QWidget *parent) : QWidget(parent) {
     pd->addWidget(panneau, 1);
     pd->addWidget(voir_evenement);
     pd->addWidget(voir_declaration);
+    auto *gauche = new QWidget;   // les écrans, et de quoi en créer (A4-b)
+    auto *pg = new QVBoxLayout(gauche);
+    pg->setContentsMargins(0, 0, 0, 0);
+    auto *b_generer = new QPushButton("Écran pour une entité…");
+    auto *b_vide = new QPushButton("Nouvel écran vide");
+    connect(b_generer, &QPushButton::clicked, this, &OngletEcrans::generer);
+    connect(b_vide, &QPushButton::clicked, this, &OngletEcrans::ecran_vide);
+    pg->addWidget(b_generer);
+    pg->addWidget(b_vide);
+    pg->addWidget(liste, 1);
     auto *partage = new QSplitter;
-    partage->addWidget(liste);
+    partage->addWidget(gauche);
     partage->addWidget(centre);
     partage->addWidget(droite);
     partage->setStretchFactor(1, 1);
