@@ -106,6 +106,13 @@ Quand on clique sur « Fermer » dans l'écran des compositeurs :
 - « Supprimer » met dans la corbeille (grammaire, § 16.12).
 - Un écran d'accueil, créé au premier écran généré, reçoit un bouton par écran généré ; l'atelier propose d'écrire `Ouvrir l'écran d'accueil.` dans le programme principal.
 
+### L'onglet « Écrans » *(validé le 25 septembre 2026)*
+
+- À gauche, les écrans du projet, lus dans l'arbre ; « Écran pour une entité… » et « Nouvel écran vide ».
+- Au centre, l'aperçu de l'écran choisi, dessiné avec les composants de l'exécution ; redessiné après chaque geste et après chaque modification du code.
+- À droite, les propriétés de l'élément cliqué : bouton (libellé, « Voir l'événement »), texte, zone (nom, type, départ, facultative), liste (entité, tri, colonnes à cocher, condition `dont` en GrymoiR), écran (titre).
+- L'aperçu montre la structure, pas les données : titres des colonnes et deux lignes grisées d'exemple. Les conditions `dont` peuvent citer des zones encore vides ; pour voir les données, « Lancer ».
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -141,3 +148,4 @@ Quand on clique sur « Fermer » dans l'écran des compositeurs :
 | 0.11 | 2026-09-24 | § 5 : A2-b fait : liens tirés à la souris, dialogue des sortes, cascade et valeur de départ, impression dans le contexte |
 | 0.12 | 2026-09-25 | § 5 : A2-c fait (aperçu des migrations, refus avant de lancer, `grym migration`) ; A2 fait |
 | 0.13 | 2026-09-25 | § 5 bis : A4, l'écran généré pour une entité |
+| 0.14 | 2026-09-25 | § 5 bis : l'onglet « Écrans » |
