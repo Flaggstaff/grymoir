@@ -3,9 +3,14 @@
 #include "theme.h"
 #include "coloration.h"
 
+#include <QAbstractItemView>
+#include <QCompleter>
 #include <QFontDatabase>
 #include <QHelpEvent>
+#include <QKeyEvent>
 #include <QPainter>
+#include <QScrollBar>
+#include <QStringListModel>
 #include <QTextBlock>
 #include <QToolTip>
 
@@ -54,7 +59,14 @@ private:
 };
 }  // namespace
 
-Editeur::Editeur(QWidget *parent) : QPlainTextEdit(parent), marge(new Marge(this)) {
+Editeur::Editeur(QWidget *parent)
+    : QPlainTextEdit(parent), marge(new Marge(this)), completion_(new QCompleter(this)), suites_(new QStringListModel(this)) {
+    // Le cœur a déjà filtré les suites par le début de mot : la liste les montre telles quelles, dans son ordre.
+    completion_->setModel(suites_);
+    completion_->setWidget(this);
+    completion_->setCompletionMode(QCompleter::UnfilteredPopupCompletion);
+    completion_->setMaxVisibleItems(10);
+    connect(completion_, qOverload<const QString &>(&QCompleter::activated), this, &Editeur::completer);
     setFont(Theme::courant().police_code(14));
     setProperty("role", "editeur");
     connect(&Theme::courant(), &Theme::change, this, [this] {
@@ -78,6 +90,7 @@ Editeur::Editeur(QWidget *parent) : QPlainTextEdit(parent), marge(new Marge(this
 void Editeur::charger(const QString &texte, bool c, const QString &ch) {
     compacte = c;
     chemin = ch;
+    completion_->popup()->hide();
     delete coloration;
     coloration = nullptr;
     setPlainText(texte);
@@ -181,4 +194,100 @@ bool Editeur::event(QEvent *e) {
         QToolTip::hideText();
     }
     return QPlainTextEdit::event(e);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Aide à la saisie (grammaire, § 8)
+// ------------------------------------------------------------------------------------------------
+
+QString Editeur::debut_de_mot() const {
+    const QTextCursor c = textCursor();
+    const QString avant = c.block().text().left(c.positionInBlock());
+    const int crochet = avant.lastIndexOf('[');
+    if (crochet >= 0 && avant.indexOf(']', crochet) < 0) return avant.mid(crochet);   // [frais et po…
+    int i = avant.size();
+    while (i > 0 && (avant.at(i - 1).isLetterOrNumber() || avant.at(i - 1) == '_' || avant.at(i - 1).isMark())) i--;
+    return avant.mid(i);
+}
+
+QStringList Editeur::suites_au_curseur() const {
+    if (compacte) return {};
+    const QByteArray avant = toPlainText().left(textCursor().position()).toUtf8();
+    const QByteArray c = chemin.toUtf8();
+    Suggestions g = suites_valides_fichier(avant.constData(), (size_t)avant.size(), chemin.isEmpty() ? nullptr : c.constData());
+    QStringList r;
+    for (size_t k = 0; k < g.nb; k++) {
+        const QString x = QString::fromUtf8(g.items[k]);
+        if (x.size() > 1 && x.startsWith('(')) continue;   // « (nombre) » : une catégorie, pas un mot
+        if (x.contains(QChar(0x2026))) continue;           // « « … » » : un gabarit
+        if (!r.contains(x)) r << x;
+    }
+    suggestions_liberer(&g);
+    return r;
+}
+
+void Editeur::completer(const QString &suite) {
+    QTextCursor c = textCursor();
+    const QString debut = debut_de_mot();
+    if (!debut.isEmpty() && suite.startsWith(debut, Qt::CaseInsensitive))
+        c.movePosition(QTextCursor::Left, QTextCursor::KeepAnchor, (int)debut.size());
+    c.insertText(suite);
+    setTextCursor(c);
+    completion_->popup()->hide();
+}
+
+void Editeur::proposer(bool demandee) {
+    if (compacte || (!demandee && debut_de_mot().size() < 2)) {
+        completion_->popup()->hide();
+        return;
+    }
+    const QStringList s = suites_au_curseur();
+    if (s.isEmpty() || (s.size() == 1 && s.first() == debut_de_mot())) {   // rien à proposer, ou déjà écrit
+        completion_->popup()->hide();
+        return;
+    }
+    suites_->setStringList(s);
+    QRect r = cursorRect();
+    r.setWidth(completion_->popup()->sizeHintForColumn(0) + completion_->popup()->verticalScrollBar()->sizeHint().width() + 24);
+    completion_->complete(r);
+    completion_->popup()->setCurrentIndex(suites_->index(0, 0));
+}
+
+void Editeur::keyPressEvent(QKeyEvent *e) {
+    if (completion_->popup()->isVisible()) {
+        switch (e->key()) {
+        case Qt::Key_Return:
+        case Qt::Key_Enter:
+        case Qt::Key_Tab: {
+            const QModelIndex i = completion_->popup()->currentIndex();
+            if (i.isValid()) {
+                completer(i.data().toString());
+                return;
+            }
+            completion_->popup()->hide();
+            break;
+        }
+        case Qt::Key_Escape:
+            completion_->popup()->hide();
+            return;
+        default:
+            break;
+        }
+    }
+    // Ctrl+Espace ouvre la liste à tout moment. Sous macOS, la touche Contrôle (Qt::MetaModifier) :
+    // Cmd+Espace appartient à Spotlight.
+#ifdef Q_OS_MACOS
+    const Qt::KeyboardModifier commande = Qt::MetaModifier;
+#else
+    const Qt::KeyboardModifier commande = Qt::ControlModifier;
+#endif
+    if (e->key() == Qt::Key_Space && (e->modifiers() & commande)) {
+        proposer(true);
+        return;
+    }
+    QPlainTextEdit::keyPressEvent(e);
+    const QString t = e->text();
+    const bool lettre = !t.isEmpty() && (t.at(0).isLetterOrNumber() || t.at(0) == '_' || t.at(0) == '[');
+    if (lettre || (e->key() == Qt::Key_Backspace && completion_->popup()->isVisible())) proposer(false);
+    else completion_->popup()->hide();
 }

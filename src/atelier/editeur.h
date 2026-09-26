@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, éditeur de code (docs/atelier.md, § 6.3) : numéros de ligne, coloration par le
-// lexeur, erreur de l'analyseur signalée en direct, sans passer par le protocole LSP.
+// lexeur, erreur de l'analyseur signalée en direct, suites valides proposées à la frappe (grammaire, § 8 ;
+// charte, art. 9), sans passer par le protocole LSP.
 #ifndef GRYM_ATELIER_EDITEUR_H
 #define GRYM_ATELIER_EDITEUR_H
 
@@ -7,6 +8,8 @@
 #include <QTimer>
 
 class Coloration;
+class QCompleter;
+class QStringListModel;
 
 struct Diagnostic_atelier {
     QString message;   // vide : aucune erreur
@@ -31,12 +34,24 @@ public:
     int largeur_marge() const;
     void peindre_marge(QPaintEvent *e);
 
+    // Aide à la saisie : les suites valides au curseur, calculées par le cœur (grammaire, § 8), sans les
+    // catégories (« (nombre) ») ni les gabarits ; vide en forme compacte, que le calcul ne couvre pas encore.
+    QStringList suites_au_curseur() const;
+    // Le début de mot que la suite choisie remplacera : lettres, chiffres, « _ », ou un nom entre crochets ouvert.
+    QString debut_de_mot() const;
+    // Écrit la suite choisie à la place du début de mot.
+    void completer(const QString &suite);
+    // Ouvre la liste des suites : `demandee` (Ctrl+Espace) l'ouvre même sans début de mot.
+    void proposer(bool demandee);
+    QCompleter *completion() const { return completion_; }
+
 signals:
     void diagnostic_change();
 
 protected:
     void resizeEvent(QResizeEvent *e) override;
     bool event(QEvent *e) override;
+    void keyPressEvent(QKeyEvent *e) override;
 
 private:
     void analyser();
@@ -48,6 +63,8 @@ private:
     QString chemin;
     QTimer attente;
     Diagnostic_atelier diag;
+    QCompleter *completion_;
+    QStringListModel *suites_;
 };
 
 #endif

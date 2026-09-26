@@ -9,15 +9,18 @@
 #include "reecriture.h"
 #include "lien.h"
 #include "onglet_ecrans.h"
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QMimeData>
 #include <QDropEvent>
 #include <QTreeWidget>
 #include <QTableWidget>
 
+#include <QAbstractItemView>
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCompleter>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -175,6 +178,75 @@ int main(int argc, char **argv) {
     VERIFIER(!e.document()->isModified());
     e.charger("La quantité vaut 3.\n", false);
     VERIFIER(e.diagnostic().message.isEmpty());
+
+    // Aide à la saisie : les suites du cœur au curseur, le début de mot remplacé, à la frappe comme sur demande
+    {
+        Editeur a;
+        a.resize(600, 300);
+        a.show();
+        auto au_bout = [&a](const QString &texte) {
+            a.charger(texte, false);
+            QTextCursor c = a.textCursor();
+            c.movePosition(QTextCursor::End);
+            a.setTextCursor(c);
+        };
+        auto taper = [&a](const QString &texte) {
+            for (const QChar ch : texte) {
+                QKeyEvent e(QEvent::KeyPress, ch == ' ' ? Qt::Key_Space : Qt::Key_A, Qt::NoModifier, QString(ch));
+                QApplication::sendEvent(&a, &e);
+            }
+        };
+        au_bout("Le prix unitaire vaut 3.\nAfficher pr");
+        VERIFIER(a.debut_de_mot() == "pr");
+        VERIFIER(a.suites_au_curseur() == QStringList({"prix unitaire"}));
+        a.completer("prix unitaire");
+        VERIFIER(a.toPlainText().endsWith("Afficher prix unitaire"));
+        // un mot qui en prolonge un autre : rien à remplacer
+        au_bout("Le prix unitaire vaut 3.\nAfficher prix ");
+        VERIFIER(a.debut_de_mot().isEmpty() && a.suites_au_curseur().contains("unitaire"));
+        a.completer("unitaire");
+        VERIFIER(a.toPlainText().endsWith("Afficher prix unitaire"));
+        // après une élision, et dans un nom entre crochets
+        au_bout("L'addition vaut 3.\nL'a");
+        VERIFIER(a.debut_de_mot() == "a" && a.suites_au_curseur().contains("addition"));
+        au_bout("Le [frais et port] vaut 3.\nAfficher [fr");
+        VERIFIER(a.debut_de_mot() == "[fr");
+        a.completer("[frais et port]");
+        VERIFIER(a.toPlainText().endsWith("Afficher [frais et port]"));
+        // la casse ne compte pas ; les catégories et les gabarits ne sont pas proposés
+        au_bout("Le x vaut 3.\naff");
+        VERIFIER(a.suites_au_curseur() == QStringList({"Afficher"}));
+        au_bout("Le x vaut 3.\nAfficher ");
+        VERIFIER(a.suites_au_curseur() == QStringList({"x", "(", "−", "vrai", "faux"}));   // sans « (nombre) » ni « « … » »
+        // à la frappe : la liste s'ouvre dès deux lettres ; Entrée écrit la première suite
+        au_bout("Le x vaut 3.\nSi x est ");
+        taper("su");
+        VERIFIER(a.completion()->popup()->isVisible());
+        QKeyEvent entree(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+        QApplication::sendEvent(&a, &entree);
+        VERIFIER(!a.completion()->popup()->isVisible());
+        VERIFIER(a.toPlainText().endsWith("Si x est supérieur à"));
+        // Échap ferme la liste sans rien écrire ; une seule lettre ne l'ouvre pas
+        au_bout("Le x vaut 3.\n");
+        taper("A");
+        VERIFIER(!a.completion()->popup()->isVisible());
+        taper("f");
+        VERIFIER(a.completion()->popup()->isVisible());
+        QKeyEvent echap(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        QApplication::sendEvent(&a, &echap);
+        VERIFIER(!a.completion()->popup()->isVisible() && a.toPlainText().endsWith("\nAf"));
+        // sur demande, même sans début de mot
+        au_bout("Le x vaut 3.\n");
+        a.proposer(true);
+        VERIFIER(a.completion()->popup()->isVisible());
+        VERIFIER(a.completion()->popup()->model()->rowCount() > 5);
+        a.completion()->popup()->hide();
+        // dans un texte, rien ; en forme compacte, rien (le calcul ne la couvre pas encore)
+        au_bout("Le x vaut 3.\nAfficher « bon");
+        VERIFIER(a.suites_au_curseur().isEmpty());
+        a.charger("_le x << 3\n_af", true);
+        VERIFIER(a.suites_au_curseur().isEmpty());
+    }
 
     // Exécution : questions, refus puis nouvelle réponse, affichage
     QString etat;
