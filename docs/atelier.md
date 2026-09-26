@@ -78,6 +78,34 @@ A2-c, fait le 24 septembre 2026 : sous le schéma, l'atelier dit ce que le proch
 
 Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la fenêtre, le lien avec le cœur et la construction sur trois systèmes, sur quoi tout le reste repose.
 
+## 5 bis. A4 : l'éditeur d'écrans, conception
+
+### Écran généré pour une entité *(validé le 25 septembre 2026)*
+
+« Écran pour une entité… » écrit, dans le fichier des écrans, un écran ordinaire, qui appartient au développeur :
+
+```
+L'écran des compositeurs montre :
+    la liste des compositeurs conservés, par nom,
+    un bouton « Nouveau »,
+    un bouton « Supprimer »,
+    un bouton « Fermer ».
+Quand on choisit un compositeur dans l'écran des compositeurs :
+    Ouvrir la fiche du compositeur.
+Quand on clique sur « Nouveau » dans l'écran des compositeurs :
+    Le nouveau vaut un nouveau compositeur saisi.
+    Conserver nouveau.
+Quand on clique sur « Supprimer » dans l'écran des compositeurs :
+    Si le compositeur choisi de l'écran est présent, supprimer le compositeur choisi de l'écran.
+Quand on clique sur « Fermer » dans l'écran des compositeurs :
+    Fermer l'écran.
+```
+
+- Tri par le champ texte unique (la clé des menus et des fiches) ; sans clé, dans l'ordre de conservation.
+- Pas de bouton « Modifier » : la fiche en a un, à un double-clic.
+- « Supprimer » met dans la corbeille (grammaire, § 16.12).
+- Un écran d'accueil, créé au premier écran généré, reçoit un bouton par écran généré ; l'atelier propose d'écrire `Ouvrir l'écran d'accueil.` dans le programme principal.
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -112,3 +140,4 @@ Chaque jalon livre un outil utilisable. A1 est volontairement mince : il pose la
 | 0.10 | 2026-09-24 | § 5 : A2-b commencé : traduction des relations, panneau des propriétés, réécriture chirurgicale, annulation des gestes |
 | 0.11 | 2026-09-24 | § 5 : A2-b fait : liens tirés à la souris, dialogue des sortes, cascade et valeur de départ, impression dans le contexte |
 | 0.12 | 2026-09-25 | § 5 : A2-c fait (aperçu des migrations, refus avant de lancer, `grym migration`) ; A2 fait |
+| 0.13 | 2026-09-25 | § 5 bis : A4, l'écran généré pour une entité |
