@@ -38,6 +38,26 @@ QString nouvel_ecran(const QString &dossier, const QString &cible, const QString
 // Ajoute une phrase à la fin d'un fichier (« Ouvrir l'écran d'accueil. » dans le programme principal).
 QString ajouter_phrase_finale(const QString &dossier, const QString &fichier, const QString &phrase, Geste *geste);
 
+// A4-c : modifier un écran. L'index est celui de l'élément dans la déclaration (EcranLu::elements).
+struct ElementNouveau {
+    int sorte = 0;            // SorteElement (src/interface.h) : bouton, texte, zone, liste
+    QString texte;            // libellé, texte fixe, nom de la zone, entité de la liste
+    QString type;             // zone
+    bool feminin = false, facultatif = false;
+    QString depart;           // zone : valeur de départ, telle qu'on l'écrit ; vide : aucune
+    QString tri;              // liste : champ du tri ; vide : ordre de conservation
+    bool decroissant = false;
+    QStringList colonnes;     // liste : champs à montrer ; vide : les colonnes par défaut
+};
+QString ecran_titre(const QString &dossier, const QString &ecran, const QString &titre, Geste *geste);
+// Ajoute à la fin ; un bouton reçoit son événement (« Remarque : à écrire. »).
+QString ecran_ajouter(const QString &dossier, const QString &ecran, const ElementNouveau &e, Geste *geste);
+// Un bouton part avec son événement, une liste avec son « Quand on choisit », une zone avec son « Quand on change » ;
+// un bloc disparaît, ses éléments restent.
+QString ecran_supprimer(const QString &dossier, const QString &ecran, int index, Geste *geste);
+// Un bouton renommé l'est aussi dans son événement ; une zone renommée, dans son « Quand on change ».
+QString ecran_modifier(const QString &dossier, const QString &ecran, int index, const ElementNouveau &e, Geste *geste);
+
 // Remet chaque fichier touché dans son état d'avant ; message d'erreur, vide si tout est revenu.
 QString annuler_geste(const Geste &geste);
 

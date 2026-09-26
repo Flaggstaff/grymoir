@@ -3,6 +3,10 @@
 #include "editeur.h"
 #include "schema.h"
 
+extern "C" {
+#include "interface.h"
+}
+
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
@@ -519,5 +523,217 @@ QString ajouter_phrase_finale(const QString &dossier, const QString &fichier, co
     while (fin > 0 && t.at(fin - 1).isSpace()) fin--;
     ch.remplacer(*f, fin, t.size(), (fin ? "\n" : "") + phrase + "\n");
     geste->description = QString("Ajouter « %1 »").arg(phrase);
+    return ch.conclure(geste);
+}
+
+// ---------------------------------------------------------------------------------------------
+// A4-c : modifier un écran (docs/atelier.md, § 5 bis)
+// ---------------------------------------------------------------------------------------------
+
+namespace {
+
+Trouve trouver_ecran(Chantier &ch, const QString &nom) {
+    Trouve t;
+    ch.pour_chaque_phrase([&](FichierAnalyse &f, size_t k) {
+        Noeud *n = f.p.phrases[k];
+        if (!t.f && n->type == P_ECRAN && QString::fromUtf8(n->texte) == nom) t = {&f, k, n, 0};
+    });
+    return t;
+}
+
+Trouve trouver_evenement(Chantier &ch, const QString &ecran, int forme, const QString &objet) {
+    Trouve t;
+    ch.pour_chaque_phrase([&](FichierAnalyse &f, size_t k) {
+        Noeud *n = f.p.phrases[k];
+        if (!t.f && n->type == P_QUAND && n->forme == forme && QString::fromUtf8(n->texte3) == ecran
+            && QString::fromUtf8(n->enfants[2]->texte) == objet) t = {&f, k, n, 0};
+    });
+    return t;
+}
+
+void reimprimer(Chantier &ch, const Trouve &t) {
+    const auto e = t.f->etendue(t.k);
+    ch.remplacer(*t.f, e.first, e.second, t.f->imprimer(t.phrase));
+}
+
+void retirer(Chantier &ch, const Trouve &t) {   // la phrase, et sa fin de ligne
+    auto e = t.f->etendue(t.k);
+    if (e.second < t.f->texte.size() && t.f->texte.at(e.second) == '\n') e.second++;
+    ch.remplacer(*t.f, e.first, e.second, QString());
+}
+
+// Après le dernier événement de l'écran, dans son fichier ; à défaut, après sa déclaration.
+int apres_l_ecran(const Trouve &t, const QString &ecran) {
+    size_t dernier = t.k;
+    for (size_t k = t.k + 1; k < t.f->p.nb; k++) {
+        const Noeud *n = t.f->p.phrases[k];
+        if (n->type == P_QUAND && QString::fromUtf8(n->texte3) == ecran) dernier = k;
+    }
+    return t.f->etendue(dernier).second;
+}
+
+void renommer_evenement(Chantier &ch, const QString &ecran, int forme, const QString &ancien, const QString &nouveau) {
+    Trouve q = trouver_evenement(ch, ecran, forme, ancien);
+    if (!q.f) return;
+    Noeud *o = q.phrase->enfants[2];
+    free(o->texte);
+    o->texte = grym_dupliquer(nouveau.toUtf8().constData());
+    reimprimer(ch, q);
+}
+
+// Les colonnes choisies : « le titre ␝ titre ␞ la date de naissance ␝ date de naissance ».
+QString colonnes_ecrites(const QString &entite, const QString &dossier, const QStringList &champs) {
+    EntiteSchema e;
+    for (const auto &x : lire_schema(dossier)) if (x.nom == entite) e = x;
+    QStringList r;
+    for (const QString &c : champs) {
+        bool f = false;
+        for (const auto &ch : e.champs) if (ch.nom == c) f = ch.feminin;
+        r << le(c, f) + QChar(0x1d) + c;
+    }
+    return r.join(QChar(0x1e));
+}
+
+Noeud *nouvel_element(const ElementNouveau &e, const QString &dossier, QString *erreur) {
+    Noeud *n = nullptr;
+    const QByteArray t = e.texte.trimmed().toUtf8();
+    if (e.texte.trimmed().isEmpty()) { *erreur = "Donnez un libellé, un texte ou un nom."; return nullptr; }
+    if (e.sorte == ELEMENT_BOUTON || e.sorte == ELEMENT_TEXTE) {
+        if (e.texte.contains(QChar(0x00BB)) || e.texte.contains(QChar(0x00AB))) { *erreur = "Pas de guillemets « » dans un libellé."; return nullptr; }
+        n = noeud_creer(e.sorte == ELEMENT_BOUTON ? N_BOUTON : N_TEXTE_ECRAN, 0, 0, 0);
+        n->texte = grym_dupliquer(t.constData());
+    } else if (e.sorte == ELEMENT_ZONE) {
+        if (QString e2 = nom_valide(e.texte); !e2.isEmpty()) { *erreur = e2; return nullptr; }
+        n = noeud_creer(N_NOM, 0, 0, 0);
+        n->texte = grym_dupliquer(t.constData());
+        n->texte2 = grym_dupliquer(e.type.toUtf8().constData());
+        n->forme = e.feminin ? 2 : 1;
+        if (e.facultatif) n->entier |= 1;
+        if (!e.depart.trimmed().isEmpty()) {
+            ChampVoulu c;
+            c.type = e.type;
+            c.depart = e.depart;
+            Noeud *d = valeur_de_depart(c, erreur);
+            if (!d) { noeud_liberer(n); return nullptr; }
+            noeud_ajouter(n, d);
+        }
+    } else if (e.sorte == ELEMENT_LISTE) {
+        n = noeud_creer(N_CHERCHER, 0, 0, 0);
+        n->texte = grym_dupliquer(t.constData());
+        if (!e.tri.isEmpty()) n->texte2 = grym_dupliquer(e.tri.toUtf8().constData());
+        n->entier = e.decroissant && !e.tri.isEmpty();
+        if (!e.colonnes.isEmpty()) n->texte3 = grym_dupliquer(colonnes_ecrites(e.texte, dossier, e.colonnes).toUtf8().constData());
+    } else {
+        *erreur = "Élément inconnu.";
+    }
+    return n;
+}
+
+}  // namespace
+
+QString ecran_titre(const QString &dossier, const QString &ecran, const QString &titre, Geste *geste) {
+    Chantier ch(dossier);
+    Trouve t = trouver_ecran(ch, ecran);
+    if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
+    if (titre.contains(QChar(0x00BB)) || titre.contains(QChar(0x00AB))) return "Pas de guillemets « » dans un titre.";
+    free(t.phrase->texte2);
+    t.phrase->texte2 = titre.trimmed().isEmpty() ? nullptr : grym_dupliquer(titre.trimmed().toUtf8().constData());
+    reimprimer(ch, t);
+    geste->description = QString("Titre de l'écran %1").arg(ecran);
+    return ch.conclure(geste);
+}
+
+QString ecran_ajouter(const QString &dossier, const QString &ecran, const ElementNouveau &e, Geste *geste) {
+    Chantier ch(dossier);
+    Trouve t = trouver_ecran(ch, ecran);
+    if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
+    QString erreur;
+    Noeud *n = nouvel_element(e, dossier, &erreur);
+    if (!n) return erreur;
+    noeud_ajouter(t.phrase, n);
+    reimprimer(ch, t);
+    if (e.sorte == ELEMENT_BOUTON) {   // un bouton sans événement serait refusé (§ 22.2)
+        const int pos = apres_l_ecran(t, ecran);
+        ch.remplacer(*t.f, pos, pos, QString("\nQuand on clique sur « %1 » dans l'écran %2 :\n    Remarque : à écrire.")
+                                         .arg(e.texte.trimmed(), ecran));
+    }
+    geste->description = QString("Ajouter à l'écran %1").arg(ecran);
+    return ch.conclure(geste);
+}
+
+QString ecran_supprimer(const QString &dossier, const QString &ecran, int index, Geste *geste) {
+    Chantier ch(dossier);
+    Trouve t = trouver_ecran(ch, ecran);
+    if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
+    Noeud *n = t.phrase;
+    if (index < 0 || (size_t)index >= n->nb_enfants) return "Élément introuvable.";
+    Noeud *el = n->enfants[index];
+    auto enlever = [&](size_t i) {
+        noeud_liberer(n->enfants[i]);
+        for (size_t q = i; q + 1 < n->nb_enfants; q++) n->enfants[q] = n->enfants[q + 1];
+        n->nb_enfants--;
+    };
+    size_t reels = 0;
+    for (size_t q = 0; q < n->nb_enfants; q++) reels += n->enfants[q]->type != N_DISPOSITION;
+    if (el->type != N_DISPOSITION && reels <= 1) return "C'est le dernier élément : un écran montre au moins un élément.";
+    if (el->type == N_DISPOSITION) {   // le bloc disparaît, avec sa fin ; ses éléments remontent d'un niveau
+        int prof = 0;
+        size_t autre = (size_t)index;
+        if (el->forme) {
+            for (size_t q = (size_t)index; q < n->nb_enfants; q++) {
+                if (n->enfants[q]->type != N_DISPOSITION) continue;
+                prof += n->enfants[q]->forme ? 1 : -1;
+                if (prof == 0) { autre = q; break; }
+            }
+        } else {
+            for (size_t q = (size_t)index + 1; q-- > 0;) {
+                if (n->enfants[q]->type != N_DISPOSITION) continue;
+                prof += n->enfants[q]->forme ? -1 : 1;
+                if (prof == 0) { autre = q; break; }
+            }
+        }
+        const size_t a = qMin((size_t)index, autre), b = qMax((size_t)index, autre);
+        enlever(b);
+        if (a != b) enlever(a);
+    } else {
+        const int forme = el->type == N_BOUTON ? 1 : el->type == N_CHERCHER ? 2 : el->type == N_NOM ? 3 : 0;
+        const QString objet = QString::fromUtf8(el->texte);
+        if (forme) {   // son événement part avec lui
+            Trouve q = trouver_evenement(ch, ecran, forme, objet);
+            if (q.f) retirer(ch, q);
+        }
+        enlever((size_t)index);
+    }
+    reimprimer(ch, t);
+    geste->description = QString("Supprimer un élément de l'écran %1").arg(ecran);
+    return ch.conclure(geste);
+}
+
+QString ecran_modifier(const QString &dossier, const QString &ecran, int index, const ElementNouveau &e, Geste *geste) {
+    Chantier ch(dossier);
+    Trouve t = trouver_ecran(ch, ecran);
+    if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
+    Noeud *n = t.phrase;
+    if (index < 0 || (size_t)index >= n->nb_enfants || n->enfants[index]->type == N_DISPOSITION) return "Élément introuvable.";
+    Noeud *vieux = n->enfants[index];
+    const QString ancien = QString::fromUtf8(vieux->texte);
+    ElementNouveau x = e;
+    if (vieux->type == N_CHERCHER) x.texte = ancien;   // l'entité d'une liste ne change pas ici
+    QString erreur;
+    Noeud *neuf = nouvel_element(x, dossier, &erreur);
+    if (!neuf) return erreur;
+    if (vieux->type == N_CHERCHER && vieux->nb_enfants) {   // la condition « dont » reste, telle qu'écrite
+        for (size_t q = 0; q < vieux->nb_enfants; q++) noeud_ajouter(neuf, vieux->enfants[q]);
+        vieux->nb_enfants = 0;
+    }
+    n->enfants[index] = neuf;
+    noeud_liberer(vieux);
+    reimprimer(ch, t);
+    const QString nouveau_nom = x.texte.trimmed();
+    if (nouveau_nom != ancien) {
+        if (neuf->type == N_BOUTON) renommer_evenement(ch, ecran, 1, ancien, nouveau_nom);
+        if (neuf->type == N_NOM) renommer_evenement(ch, ecran, 3, ancien, nouveau_nom);
+    }
+    geste->description = QString("Modifier un élément de l'écran %1").arg(ecran);
     return ch.conclure(geste);
 }

@@ -129,12 +129,14 @@ Chaque geste réécrit la déclaration de l'écran, et elle seule ; il est réan
 |---|---|
 | A4-a *(fait)* | L'onglet « Écrans » : liste des écrans, aperçu (structure, deux lignes d'exemple), sélection d'un élément, propriétés en lecture, « Voir l'événement » |
 | A4-b *(fait)* | « Écran pour une entité… », « Nouvel écran vide », l'écran d'accueil |
-| A4-c | Propriétés modifiables ; ajouter, supprimer, renommer, avec les événements |
+| A4-c *(fait)* | Propriétés modifiables ; ajouter, supprimer, renommer, avec les événements |
 | A4-d | Déplacer à la souris, blocs créés et retirés |
 
 État de A4-a (25 septembre 2026) : fait. Un onglet « Écrans » à côté de « Code » et « Données » ; les écrans du projet, fichiers utilisés compris, relus à chaque ouverture de l'onglet (le code en cours s'enregistre d'abord). L'aperçu est dessiné par `dessiner_ecran` (`src/atelier/vue_ecran.cpp`), le même dessin que l'exécution, qui l'emploie désormais aussi : blocs, boutons en ligne, listes avec leurs colonnes, par défaut ou choisies, et deux lignes « … » grisées. Dans l'aperçu, un clic choisit un élément, cadré en bleu, sans rien déclencher ; le panneau montre ses propriétés, son texte GrymoiR tel qu'écrit dans le fichier, et « Voir l'événement » ou « Voir la déclaration » ouvre le code à la bonne ligne.
 
 État de A4-b (26 septembre 2026) : fait. « Écran pour une entité… » demande l'entité et écrit l'écran validé ci-dessus, accordé au genre et au pluriel de l'entité (« une nouvelle œuvre saisie », « l'œuvre choisie … est présente ») ; « Nouvel écran vide » demande le nom et écrit un écran avec un bouton « Fermer » et son événement. Le fichier : celui des écrans existants, sinon le programme principal, sinon le fichier ouvert ; en forme littéraire seulement. La place : après la dernière déclaration (classe, aptitude, écran, événement), avant la première phrase qui s'exécute, puisqu'un écran se déclare avant d'être ouvert. L'écran d'accueil naît au premier écran généré, reçoit un bouton par écran (avant « Fermer ») et l'événement qui l'ouvre ; l'atelier propose ensuite d'écrire `Ouvrir l'écran d'accueil.` à la fin du programme principal. Chaque geste passe par la réanalyse et s'annule. Conséquence à connaître : un programme qui ouvre un écran ne se lance plus en console ni dans le navigateur (grammaire, § 22.3). L'imprimeur accorde désormais « … choisie de l'écran » au genre de l'entité.
+
+État de A4-c (26 septembre 2026) : fait. Sous les propriétés, un formulaire selon l'élément choisi : le titre de l'écran ; le libellé d'un bouton ou d'un texte ; le nom, le type, le genre, « facultative » et la valeur de départ d'une zone ; le tri, « décroissant » et les colonnes à cocher d'une liste (aucune cochée : les colonnes par défaut). « Appliquer » réécrit la seule déclaration de l'écran, et l'événement concerné : un bouton renommé l'est aussi dans son `Quand on clique`, une zone dans son `Quand on change`. La condition `dont` d'une liste se garde telle qu'écrite ; elle se modifie dans le code. Une palette ajoute un bouton (avec son événement, `Remarque : à écrire.`), un texte, une zone ou une liste à la fin de l'écran. « Supprimer » ou la touche Suppr retire l'élément, et son événement, après avoir montré ce code ; un bloc se retire sans ses éléments ; le dernier élément d'un écran ne se retire pas. Tout passe par la réanalyse (un libellé en double est refusé, rien n'est écrit) et s'annule.
 
 ## 6. Questions ouvertes
 
@@ -175,3 +177,4 @@ Chaque geste réécrit la déclaration de l'écran, et elle seule ; il est réan
 | 0.15 | 2026-09-25 | § 5 bis : les gestes ; découpage A4-a à A4-d |
 | 0.16 | 2026-09-26 | § 5 bis : A4-a fait (onglet « Écrans », aperçu partagé avec l'exécution) |
 | 0.17 | 2026-09-26 | § 5 bis : A4-b fait (écran pour une entité, écran vide, écran d'accueil) |
+| 0.18 | 2026-09-26 | § 5 bis : A4-c fait (propriétés modifiables, palette, suppression avec l'événement) |

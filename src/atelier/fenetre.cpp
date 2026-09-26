@@ -232,6 +232,9 @@ Fenetre::Fenetre() {
         const QString cible = cible_des_ecrans();
         appliquer([=](Geste *g) { return nouvel_ecran(projet, cible, nom, g); }, entite_choisie);
     });
+    connect(onglet_ecrans, &OngletEcrans::geste, this, [this](const std::function<QString(Geste *)> &faire) {
+        appliquer(faire, entite_choisie);   // A4-c : réanalysé, annulé s'il casse, défait par « Annuler le dernier geste »
+    });
     connect(onglet_ecrans, &OngletEcrans::ouvrir, this, [this](const QString &f, int ligne) {
         onglets->setCurrentIndex(0);
         ouvrir_fichier(f);

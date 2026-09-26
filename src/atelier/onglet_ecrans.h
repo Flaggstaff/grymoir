@@ -3,7 +3,10 @@
 #ifndef GRYM_ATELIER_ONGLET_ECRANS_H
 #define GRYM_ATELIER_ONGLET_ECRANS_H
 
+#include "reecriture.h"
 #include "vue_ecran.h"
+
+#include <functional>
 
 #include <QWidget>
 
@@ -12,6 +15,7 @@ struct ElementLu {
     int sorte = 0;           // SorteElement (src/interface.h)
     QString texte;           // libellé, texte fixe, nom de la zone, entité de la liste
     QStringList colonnes;    // liste : titres des colonnes, par défaut ou choisies (« avec »)
+    bool colonnes_choisies = false;
     QString type;            // zone : type
     bool facultatif = false;
     QString depart;          // zone : valeur de départ, telle qu'écrite
@@ -19,6 +23,7 @@ struct ElementLu {
     bool decroissant = false;
     QString ecrit;           // le texte GrymoiR de l'élément, tel qu'il est dans le fichier
     QString evenement_fichier;   // l'événement de l'élément (clic, choix, changement), s'il existe
+    QString evenement_ecrit;     // son texte GrymoiR, pour la confirmation d'une suppression
     int evenement_ligne = 0;
 };
 
@@ -53,12 +58,18 @@ signals:
     void ouvrir(const QString &fichier, int ligne);   // « Voir l'événement », « Voir la déclaration »
     void generer();                                   // « Écran pour une entité… » (A4-b)
     void ecran_vide();                                // « Nouvel écran vide »
+    void geste(const std::function<QString(Geste *)> &faire);   // A4-c : une modification, que la fenêtre applique
 
 protected:
     bool eventFilter(QObject *o, QEvent *e) override;
 
 private:
     void dessiner();
+    void editer();                 // le formulaire de l'élément choisi (A4-c)
+    void supprimer();
+    void ajouter(int sorte);
+    QString dossier;
+    QWidget *edition = nullptr;
     QVector<EcranLu> lus;
     int courant = -1, element = -1;
     VueEcran vue;

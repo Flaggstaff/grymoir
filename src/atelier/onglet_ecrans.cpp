@@ -2,7 +2,14 @@
 #include "onglet_ecrans.h"
 #include "schema.h"
 
+#include <QCheckBox>
+#include <QComboBox>
 #include <QDirIterator>
+#include <QFormLayout>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QMessageBox>
+#include <QShortcut>
 #include <QEvent>
 #include <QFile>
 #include <QFileInfo>
@@ -45,7 +52,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
     for (const auto &e : lire_schema(dossier)) entites.insert(e.nom, e);
     QVector<EcranLu> r;
     QSet<QString> vus;
-    struct Evenement { QString ecran, objet, fichier; int forme, ligne; };
+    struct Evenement { QString ecran, objet, fichier, ecrit; int forme, ligne; };
     QVector<Evenement> evenements;
     QDirIterator it(dossier, {"*.grym", "*.grymc"}, QDir::Files, QDirIterator::Subdirectories);
     QStringList fichiers;
@@ -93,8 +100,10 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                 if (n->type == P_QUAND) {
                     if (vus.contains(cle)) continue;
                     vus.insert(cle);
+                    const int a = utf16.value((int)qMin(n->debut, (size_t)utf16.size() - 1));
+                    const int b = k + 1 < nb ? utf16.value((int)qMin(phrases[k + 1]->debut, (size_t)utf16.size() - 1)) : texte.size();
                     evenements.push_back({QString::fromUtf8(n->texte3), QString::fromUtf8(n->enfants[2]->texte), fichier,
-                                          n->forme, n->ligne});
+                                          ici && b > a ? texte.mid(a, b - a).trimmed() : QString(), n->forme, n->ligne});
                     continue;
                 }
                 if (n->type != P_ECRAN || vus.contains(cle)) continue;
@@ -133,6 +142,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.texte = QString::fromUtf8(el->texte);
                         x.tri = el->texte2 ? QString::fromUtf8(el->texte2) : QString();
                         x.decroissant = el->entier == 1;
+                        x.colonnes_choisies = el->texte3 != nullptr;
                         if (el->texte3) {   // les colonnes choisies : « écrit ␝ chemin », séparées par ␞
                             for (const QString &col : QString::fromUtf8(el->texte3).split(QChar(0x1e))) {
                                 QString ecrit = col.section(QChar(0x1d), 0, 0);
@@ -160,6 +170,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                 if (forme && v.forme == forme && v.ecran == e.nom && v.objet == x.texte) {
                     x.evenement_fichier = v.fichier;
                     x.evenement_ligne = v.ligne;
+                    x.evenement_ecrit = v.ecrit;
                 }
             }
     return r;
@@ -180,6 +191,10 @@ OngletEcrans::OngletEcrans(QWidget *parent) : QWidget(parent) {
     auto *pd = new QVBoxLayout(droite);
     pd->setContentsMargins(0, 0, 0, 0);
     pd->addWidget(panneau, 1);
+    edition = new QWidget;   // les propriétés modifiables de l'élément choisi (A4-c)
+    new QVBoxLayout(edition);
+    edition->layout()->setContentsMargins(0, 0, 0, 0);
+    pd->addWidget(edition);
     pd->addWidget(voir_evenement);
     pd->addWidget(voir_declaration);
     auto *gauche = new QWidget;   // les écrans, et de quoi en créer (A4-b)
@@ -192,9 +207,27 @@ OngletEcrans::OngletEcrans(QWidget *parent) : QWidget(parent) {
     pg->addWidget(b_generer);
     pg->addWidget(b_vide);
     pg->addWidget(liste, 1);
+    auto *palette = new QWidget;   // ajouter un élément à la fin de l'écran (A4-c)
+    auto *pp = new QHBoxLayout(palette);
+    pp->setContentsMargins(0, 0, 0, 0);
+    pp->addWidget(new QLabel("Ajouter :"));
+    for (int sorte : {ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, ELEMENT_LISTE}) {
+        auto *b = new QPushButton(sorte == ELEMENT_BOUTON ? "Bouton" : sorte == ELEMENT_TEXTE ? "Texte"
+                                  : sorte == ELEMENT_ZONE ? "Zone" : "Liste");
+        connect(b, &QPushButton::clicked, this, [this, sorte] { ajouter(sorte); });
+        pp->addWidget(b);
+    }
+    pp->addStretch(1);
+    auto *milieu = new QWidget;
+    auto *pm = new QVBoxLayout(milieu);
+    pm->setContentsMargins(0, 0, 0, 0);
+    pm->addWidget(palette);
+    pm->addWidget(centre, 1);
+    auto *suppr = new QShortcut(QKeySequence::Delete, this);
+    connect(suppr, &QShortcut::activated, this, &OngletEcrans::supprimer);
     auto *partage = new QSplitter;
     partage->addWidget(gauche);
-    partage->addWidget(centre);
+    partage->addWidget(milieu);
     partage->addWidget(droite);
     partage->setStretchFactor(1, 1);
     partage->setSizes({180, 620, 300});
@@ -219,7 +252,8 @@ OngletEcrans::OngletEcrans(QWidget *parent) : QWidget(parent) {
     dessiner();
 }
 
-void OngletEcrans::montrer(const QString &dossier) {
+void OngletEcrans::montrer(const QString &d) {
+    dossier = d;
     const QString avant = courant >= 0 && courant < lus.size() ? lus[courant].nom : QString();
     const int element_avant = element;
     QStringList problemes;
@@ -345,6 +379,150 @@ void OngletEcrans::choisir_element(int k) {
     if (!x.ecrit.isEmpty()) h += "<p style='color:#666'>En GrymoiR :</p><pre>" + x.ecrit.toHtmlEscaped() + "</pre>";
     panneau->setHtml(h);
     voir_evenement->setEnabled(x.evenement_ligne > 0);
+    editer();
+}
+
+// --- A4-c : modifier ---
+
+void OngletEcrans::editer() {
+    QLayout *pile = edition->layout();
+    while (QLayoutItem *i = pile->takeAt(0)) { delete i->widget(); delete i; }
+    if (courant < 0 || courant >= lus.size()) return;
+    const EcranLu &e = lus[courant];
+    const QString ecran = e.nom;
+    auto *cadre = new QWidget;
+    auto *f = new QFormLayout(cadre);
+    f->setContentsMargins(0, 0, 0, 0);
+    auto *appliquer = new QPushButton("Appliquer");
+    auto *retirer = new QPushButton(element >= 0 ? "Supprimer" : "");
+    retirer->setVisible(element >= 0);
+    connect(retirer, &QPushButton::clicked, this, &OngletEcrans::supprimer);
+    if (element < 0 || element >= e.elements.size()) {   // l'écran lui-même : son titre
+        auto *titre = new QLineEdit(e.titre);
+        f->addRow("Titre", titre);
+        connect(appliquer, &QPushButton::clicked, this, [this, ecran, titre] {
+            const QString t = titre->text();
+            emit geste([=](Geste *g) { return ecran_titre(dossier, ecran, t, g); });
+        });
+    } else {
+        const ElementLu &x = e.elements[element];
+        const int k = element;
+        if (x.sorte == ELEMENT_BOUTON || x.sorte == ELEMENT_TEXTE) {
+            auto *texte = new QLineEdit(x.texte);
+            f->addRow(x.sorte == ELEMENT_BOUTON ? "Libellé" : "Texte", texte);
+            const int sorte = x.sorte;
+            connect(appliquer, &QPushButton::clicked, this, [this, ecran, k, texte, sorte] {
+                ElementNouveau n;
+                n.sorte = sorte;
+                n.texte = texte->text();
+                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+            });
+        } else if (x.sorte == ELEMENT_ZONE) {
+            auto *nom = new QLineEdit(x.texte);
+            auto *type = new QComboBox;
+            type->addItems({"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année"});
+            for (const auto &en : lire_schema(dossier)) type->addItem(en.nom);
+            type->setCurrentIndex(qMax(0, type->findText(x.type)));
+            auto *feminin = new QCheckBox("féminin (une …)");
+            auto *facultative = new QCheckBox("facultative");
+            facultative->setChecked(x.facultatif);
+            auto *depart = new QLineEdit(x.depart);
+            f->addRow("Nom", nom);
+            f->addRow("Type", type);
+            f->addRow("", feminin);
+            f->addRow("", facultative);
+            f->addRow("Au départ", depart);
+            connect(appliquer, &QPushButton::clicked, this, [=] {
+                ElementNouveau n;
+                n.sorte = ELEMENT_ZONE;
+                n.texte = nom->text();
+                n.type = type->currentText();
+                n.feminin = feminin->isChecked();
+                n.facultatif = facultative->isChecked();
+                n.depart = depart->text();
+                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+            });
+        } else if (x.sorte == ELEMENT_LISTE) {
+            EntiteSchema en;
+            for (const auto &y : lire_schema(dossier)) if (y.nom == x.texte) en = y;
+            auto *tri = new QComboBox;
+            tri->addItem("(ordre de conservation)");
+            auto *decroissant = new QCheckBox("décroissant");
+            decroissant->setChecked(x.decroissant);
+            auto *colonnes = new QListWidget;   // cochées : les colonnes choisies ; aucune : les colonnes par défaut
+            for (const auto &c : en.champs) {
+                if (c.multiple || c.type == "fichier" || c.type == "image") continue;
+                tri->addItem(c.nom);
+                auto *i = new QListWidgetItem(c.nom, colonnes);
+                const QString titre = c.nom.left(1).toUpper() + c.nom.mid(1);
+                i->setCheckState(x.colonnes_choisies && x.colonnes.contains(titre) ? Qt::Checked : Qt::Unchecked);
+            }
+            tri->setCurrentIndex(qMax(0, tri->findText(x.tri)));
+            colonnes->setMaximumHeight(110);
+            f->addRow("Tri", tri);
+            f->addRow("", decroissant);
+            f->addRow("Colonnes", colonnes);
+            connect(appliquer, &QPushButton::clicked, this, [=] {
+                ElementNouveau n;
+                n.sorte = ELEMENT_LISTE;
+                n.tri = tri->currentIndex() > 0 ? tri->currentText() : QString();
+                n.decroissant = decroissant->isChecked();
+                for (int r = 0; r < colonnes->count(); r++)
+                    if (colonnes->item(r)->checkState() == Qt::Checked) n.colonnes << colonnes->item(r)->text();
+                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+            });
+        } else {   // un bloc : seulement le retirer
+            appliquer->hide();
+            retirer->setText("Retirer le bloc (ses éléments restent)");
+        }
+    }
+    pile->addWidget(cadre);
+    auto *boutons = new QWidget;
+    auto *h = new QHBoxLayout(boutons);
+    h->setContentsMargins(0, 0, 0, 0);
+    h->addWidget(retirer);
+    h->addStretch(1);
+    h->addWidget(appliquer);
+    pile->addWidget(boutons);
+}
+
+void OngletEcrans::supprimer() {
+    if (courant < 0 || element < 0 || element >= lus[courant].elements.size()) return;
+    const ElementLu &x = lus[courant].elements[element];
+    const QString ecran = lus[courant].nom;
+    const int k = element;
+    // un événement part avec son élément : on montre d'abord le code qui disparaîtra (docs/atelier.md, § 5 bis)
+    if (!x.evenement_ecrit.isEmpty()
+        && QMessageBox::question(this, "Supprimer", "Cet élément part avec son événement :\n\n" + x.evenement_ecrit
+                                                        + "\n\nLe supprimer ?") != QMessageBox::Yes)
+        return;
+    element = -1;
+    emit geste([=](Geste *g) { return ecran_supprimer(dossier, ecran, k, g); });
+}
+
+void OngletEcrans::ajouter(int sorte) {
+    if (courant < 0 || courant >= lus.size()) return;
+    const QString ecran = lus[courant].nom;
+    ElementNouveau n;
+    n.sorte = sorte;
+    bool ok = false;
+    if (sorte == ELEMENT_BOUTON) n.texte = QInputDialog::getText(this, "Nouveau bouton", "Libellé :", QLineEdit::Normal, "", &ok);
+    else if (sorte == ELEMENT_TEXTE) n.texte = QInputDialog::getText(this, "Nouveau texte", "Texte :", QLineEdit::Normal, "", &ok);
+    else if (sorte == ELEMENT_ZONE) {
+        n.texte = QInputDialog::getText(this, "Nouvelle zone", "Nom (« pays », « date de début ») :", QLineEdit::Normal, "", &ok);
+        if (ok) {
+            QStringList types = {"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année"};
+            for (const auto &en : lire_schema(dossier)) types << en.nom;
+            n.type = QInputDialog::getItem(this, "Nouvelle zone", "Type :", types, 0, false, &ok);
+        }
+    } else {
+        QStringList entites;
+        for (const auto &en : lire_schema(dossier)) entites << en.nom;
+        if (entites.isEmpty()) return;
+        n.texte = QInputDialog::getItem(this, "Nouvelle liste", "Entité :", entites, 0, false, &ok);
+    }
+    if (!ok) return;
+    emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g); });
 }
 
 QString OngletEcrans::proprietes() const { return panneau->toPlainText(); }

@@ -750,6 +750,102 @@ int main(int argc, char **argv) {
         VERIFIER(e.size() == 3 && e[0].titre == "Œuvres" && e[1].titre == "Accueil" && e[2].titre == "Recherche");
     }
 
+    // A4-c : modifier un écran (titre, ajouter, supprimer, renommer, zone, liste) ; ses événements suivent
+    {
+        QTemporaryDir dossier;
+        auto ecrire = [&](const QString &nom, const QString &texte) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::WriteOnly);
+            f.write(texte.toUtf8());
+        };
+        auto lire = [&](const QString &nom) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::ReadOnly);
+            return QString::fromUtf8(f.readAll());
+        };
+        ecrire("p.grym", "Un compositeur, conservé, a : un nom (texte), unique, une date de naissance (date), facultative.\n"
+                         "L'écran des compositeurs montre :\n    la liste des compositeurs conservés, par nom,\n"
+                         "    un bouton « Fermer ».\n"
+                         "Quand on choisit un compositeur dans l'écran des compositeurs :\n    Ouvrir la fiche du compositeur.\n"
+                         "Quand on clique sur « Fermer » dans l'écran des compositeurs :\n    Fermer l'écran.\n"
+                         "Ouvrir l'écran des compositeurs.\n");
+        const QString d = dossier.path(), p = dossier.filePath("p.grym"), e = "des compositeurs";
+        Geste g;
+        VERIFIER(ecran_titre(d, e, "Nos compositeurs", &g).isEmpty());
+        VERIFIER(lire("p.grym").contains("L'écran des compositeurs, « Nos compositeurs », montre :\n"));
+        ElementNouveau b;
+        b.sorte = ELEMENT_BOUTON;
+        b.texte = "Imprimer";
+        VERIFIER(ecran_ajouter(d, e, b, &g).isEmpty());
+        VERIFIER(lire("p.grym").contains("    un bouton « Fermer »,\n    un bouton « Imprimer ».\n"));
+        VERIFIER(lire("p.grym").contains("    Fermer l'écran.\nQuand on clique sur « Imprimer » dans l'écran des compositeurs :\n"
+                                         "    Remarque : à écrire.\nOuvrir"));
+        b.texte = "Exporter";   // renommer : l'événement suit
+        VERIFIER(ecran_modifier(d, e, 2, b, &g).isEmpty());
+        VERIFIER(lire("p.grym").contains("un bouton « Exporter »") && lire("p.grym").contains("Quand on clique sur « Exporter » dans"));
+        VERIFIER(!lire("p.grym").contains("Imprimer"));
+        ElementNouveau z;
+        z.sorte = ELEMENT_ZONE;
+        z.texte = "pays";
+        z.type = "texte";
+        z.depart = "Suisse";
+        VERIFIER(ecran_ajouter(d, e, z, &g).isEmpty());
+        VERIFIER(lire("p.grym").contains("    un pays (texte), « Suisse » au départ.\n"));
+        ElementNouveau l;   // la liste : colonnes choisies, tri décroissant ; la condition éventuelle reste
+        l.sorte = ELEMENT_LISTE;
+        l.tri = "nom";
+        l.decroissant = true;
+        l.colonnes = QStringList({"nom", "date de naissance"});
+        VERIFIER(ecran_modifier(d, e, 0, l, &g).isEmpty());
+        VERIFIER(lire("p.grym").contains("la liste des compositeurs conservés, par nom décroissant, avec le nom et la date de naissance,\n"));
+        const QString avant = lire("p.grym");
+        VERIFIER(ecran_supprimer(d, e, 2, &g).isEmpty());   // le bouton « Exporter » et son événement
+        VERIFIER(!lire("p.grym").contains("Exporter") && lire("p.grym").contains("un bouton « Fermer »,\n    un pays"));
+        annuler_geste(g);
+        VERIFIER(lire("p.grym") == avant);
+        VERIFIER(ecran_supprimer(d, e, 0, &g).isEmpty());   // la liste, et son « Quand on choisit »
+        VERIFIER(!lire("p.grym").contains("Quand on choisit"));
+        VERIFIER(analyser_source(lire("p.grym"), false, p).message.isEmpty());
+        z.depart = "douze";
+        z.type = "nombre";
+        VERIFIER(ecran_ajouter(d, e, z, &g).contains("n'est pas une valeur de départ"));
+        b.texte = "Fermer";   // un doublon : la réanalyse refuse, rien n'est écrit
+        const QString stable = lire("p.grym");
+        VERIFIER(ecran_ajouter(d, e, b, &g).startsWith("Geste annulé"));
+        VERIFIER(lire("p.grym") == stable);
+    }
+
+    // A4-c dans l'onglet : choisir un bouton, changer son libellé, « Appliquer » : le geste renomme aussi l'événement
+    {
+        QTemporaryDir dossier;
+        QFile f(dossier.filePath("p.grym"));
+        f.open(QIODevice::WriteOnly);
+        f.write("L'écran d'accueil montre :\n    le texte « Bonjour »,\n    un bouton « OK ».\n"
+                "Quand on clique sur « OK » dans l'écran d'accueil :\n    Fermer l'écran.\n");
+        f.close();
+        OngletEcrans o;
+        o.show();
+        o.montrer(dossier.path());
+        VERIFIER(o.ecrans().size() == 1 && o.ecrans()[0].elements[1].evenement_ecrit
+                 == "Quand on clique sur « OK » dans l'écran d'accueil :\n    Fermer l'écran.");
+        Geste g;
+        QString resultat = "pas de geste";
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        o.choisir_element(1);
+        QApplication::processEvents();
+        QLineEdit *libelle = nullptr;
+        for (QLineEdit *l : o.findChildren<QLineEdit *>()) if (l->text() == "OK" && l->isVisible()) libelle = l;
+        VERIFIER(libelle != nullptr);
+        if (libelle) libelle->setText("Terminer");
+        for (QPushButton *b : o.findChildren<QPushButton *>()) if (b->text() == "Appliquer" && b->isVisible()) b->click();
+        if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
+        VERIFIER(resultat.isEmpty());
+        QFile r(dossier.filePath("p.grym"));
+        r.open(QIODevice::ReadOnly);
+        const QString t = QString::fromUtf8(r.readAll());
+        VERIFIER(t.contains("un bouton « Terminer »") && t.contains("Quand on clique sur « Terminer » dans l'écran d'accueil"));
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }
