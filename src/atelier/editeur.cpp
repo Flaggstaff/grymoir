@@ -67,6 +67,9 @@ Editeur::Editeur(QWidget *parent)
     completion_->setCompletionMode(QCompleter::UnfilteredPopupCompletion);
     completion_->setMaxVisibleItems(10);
     connect(completion_, qOverload<const QString &>(&QCompleter::activated), this, &Editeur::completer);
+    // La frappe se lit sur le document, pas sur les touches : sous macOS, un caractère peut arriver par la méthode
+    // de saisie du système (QInputMethodEvent) sans passer par keyPressEvent.
+    connect(document(), &QTextDocument::contentsChange, this, &Editeur::sur_changement);
     setFont(Theme::courant().police_code(14));
     setProperty("role", "editeur");
     connect(&Theme::courant(), &Theme::change, this, [this] {
@@ -93,7 +96,9 @@ void Editeur::charger(const QString &texte, bool c, const QString &ch) {
     completion_->popup()->hide();
     delete coloration;
     coloration = nullptr;
+    chargement = true;
     setPlainText(texte);
+    chargement = false;
     coloration = new Coloration(document(), compacte);
     document()->setModified(false);
     attente.stop();
@@ -286,8 +291,49 @@ void Editeur::keyPressEvent(QKeyEvent *e) {
         return;
     }
     QPlainTextEdit::keyPressEvent(e);
-    const QString t = e->text();
-    const bool lettre = !t.isEmpty() && (t.at(0).isLetterOrNumber() || t.at(0) == '_' || t.at(0) == '[');
-    if (lettre || (e->key() == Qt::Key_Backspace && completion_->popup()->isVisible())) proposer(false);
-    else completion_->popup()->hide();
+}
+
+// Un caractère tapé (ou effacé) : la suite se décide une fois le curseur à sa place, au prochain tour de boucle.
+// On lit la différence nette et le caractère avant le curseur : une frappe par la méthode de saisie du système
+// se signale comme le remplacement d'un passage entier, avec un caractère de plus.
+void Editeur::sur_changement(int /*position*/, int retires, int ajoutes) {
+    // Autant retiré qu'ajouté : une recoloration (QSyntaxHighlighter), pas une frappe.
+    if (chargement || retouche || retires == ajoutes) return;
+    if (ajoutes - retires == 1) {
+        QTimer::singleShot(0, this, [this] {
+            const int p = textCursor().position() - 1;
+            const QChar ch = p >= 0 ? document()->characterAt(p) : QChar();
+            if (ch == '"') guillemet(p);
+            else if (ch.isLetterOrNumber() || ch == '_' || ch == '[') proposer(false);
+            else completion_->popup()->hide();
+        });
+    } else if (ajoutes - retires == -1 && completion_->popup()->isVisible()) {
+        QTimer::singleShot(0, this, [this] { proposer(false); });
+    } else {
+        completion_->popup()->hide();
+    }
+}
+
+void Editeur::guillemet(int position) {
+    if (document()->characterAt(position) != '"' || textCursor().position() != position + 1 || textCursor().hasSelection()) return;
+    const QTextBlock bloc = document()->findBlock(position);
+    const QString ligne = bloc.text();
+    const int k = position - bloc.position();
+    const QString avant = ligne.left(k), apres = ligne.mid(k + 1);
+    QTextCursor c(document());
+    c.setPosition(position);
+    c.setPosition(position + 1, QTextCursor::KeepAnchor);
+    retouche = true;
+    if (apres.startsWith(QString::fromUtf8(" »")) || apres.startsWith(QString::fromUtf8("»"))) {   // fermer : sauter « » »
+        c.removeSelectedText();
+        c.setPosition(position + (apres.startsWith(' ') ? 2 : 1));
+        setTextCursor(c);
+    } else if (avant.count(QString::fromUtf8("«")) > avant.count(QString::fromUtf8("»")) || avant.count('"') % 2 == 1) {
+        // dans un texte déjà ouvert : un « " » ordinaire, ou la fin d'un texte entre « " »
+    } else {
+        c.insertText(QString::fromUtf8("«  »"));
+        c.setPosition(position + 2);
+        setTextCursor(c);
+    }
+    retouche = false;
 }

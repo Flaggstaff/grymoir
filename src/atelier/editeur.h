@@ -44,6 +44,9 @@ public:
     // Ouvre la liste des suites : `demandee` (Ctrl+Espace) l'ouvre même sans début de mot.
     void proposer(bool demandee);
     QCompleter *completion() const { return completion_; }
+    // Un « " » tapé devient « «  » », curseur au milieu ; tapé devant « » » qui ferme un texte, il saute par-dessus.
+    // Il reste « " » dans un texte ouvert par « « » ou par « " ». Ctrl+Z rend le « " » tapé.
+    void guillemet(int position);
 
 signals:
     void diagnostic_change();
@@ -65,6 +68,9 @@ private:
     Diagnostic_atelier diag;
     QCompleter *completion_;
     QStringListModel *suites_;
+    bool chargement = false;   // setPlainText : pas une frappe
+    bool retouche = false;     // une modification faite par l'éditeur lui-même
+    void sur_changement(int position, int retires, int ajoutes);
 };
 
 #endif

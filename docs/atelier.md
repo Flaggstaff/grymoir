@@ -166,6 +166,12 @@ Tranches suivantes : T2, les écrans des applications (espacements et marges des
    - Les suites viennent de `suites_valides_fichier`, sur le texte jusqu'au curseur, comme pour `grym lsp` : noms déclarés, tournures accordées au genre, mots de construction. Les catégories (« (nombre) ») et les gabarits (« « … » ») ne sont pas proposés.
    - La suite remplace le début de mot : lettres, chiffres, `_`, ou un nom entre crochets encore ouvert (`[fr` → `[frais et port]`). Après une élision, seul le mot qui suit est remplacé (`L'a` → `L'addition`).
    - Limite, héritée du cœur : rien en forme compacte (charte, art. 12, reports de l'aide à la saisie).
+   - La frappe se lit sur les changements du document, pas sur les touches : sous macOS, un caractère peut arriver par la méthode de saisie du système, que Qt signale comme le remplacement d'un passage entier avec un caractère de plus. Une recoloration (autant retiré qu'ajouté) n'est pas une frappe.
+
+   Guillemets à la frappe, faits le 26 septembre 2026 : les claviers suisses n'ont pas `«` ni `»`.
+   - Un `"` tapé devient `«  »`, curseur au milieu ; tapé devant le `»` qui ferme le texte, il le franchit. Le fichier reste ainsi en forme canonique (grammaire, § 12).
+   - Il reste `"` dans un texte déjà ouvert par `«`, ou quand il ferme un texte ouvert par `"` (grammaire, § 1.5 : les deux s'acceptent).
+   - Ctrl+Z rend le `"` tapé. Un `"` collé avec d'autres caractères n'est jamais touché.
 4. **Distribution** : l'atelier embarque ses bibliothèques Qt (outils de déploiement fournis par Qt sur macOS et Windows). La signature des exécutables pour macOS et Windows est reportée.
 5. **Aide.** Décidé le 24 septembre 2026, fait : menu « Aide », « Le langage GrymoiR » (F1, Cmd+? sous macOS). La grammaire (`docs/grammaire.md`) est embarquée dans l'exécutable : l'aide est toujours celle de sa version, même hors ligne. Sommaire des sections à gauche, recherche en haut (Entrée : suivant, Maj+Entrée : précédent, Ctrl+F ou Cmd+F pour y aller). Plus tard : l'aide en contexte (F1 sur `Selon` ouvre sa section), et un guide pour débuter, à écrire à part, la grammaire étant une spécification plutôt qu'un manuel.
 6. **Faire évoluer la grammaire.** Précisé le 24 septembre 2026 : pouvoir continuer à faire évoluer le langage seul, sans aide extérieure. Un éditeur de grammaire en données est écarté : il couvrirait la forme des phrases, jamais leur sens, qui demande du code. Décidé : le manuel du mainteneur (`docs/mainteneur.md`, charte art. 14), puis le vocabulaire en données là où c'est possible (messages, mots de construction, synonymes).
@@ -204,3 +210,4 @@ Tranches suivantes : T2, les écrans des applications (espacements et marges des
 | 0.19 | 2026-09-26 | § 5 bis : A4-d fait (glisser-déposer, blocs créés et retirés) ; A4 fait |
 | 0.20 | 2026-09-26 | § 5 ter : le thème, tranche T1 faite (jetons, feuille, polices, icônes, mode clair ou sombre) |
 | 0.21 | 2026-09-26 | § 6.3 : autocomplétion de l'éditeur faite (suites du cœur, à la frappe et par Ctrl+Espace) |
+| 0.22 | 2026-09-26 | § 6.3 : guillemets à la frappe ; frappe lue sur le document (méthode de saisie de macOS) |

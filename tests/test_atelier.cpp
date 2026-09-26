@@ -9,6 +9,7 @@
 #include "reecriture.h"
 #include "lien.h"
 #include "onglet_ecrans.h"
+#include <QInputMethodEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QMimeData>
@@ -192,8 +193,10 @@ int main(int argc, char **argv) {
         };
         auto taper = [&a](const QString &texte) {
             for (const QChar ch : texte) {
-                QKeyEvent e(QEvent::KeyPress, ch == ' ' ? Qt::Key_Space : Qt::Key_A, Qt::NoModifier, QString(ch));
+                QKeyEvent e(QEvent::KeyPress, ch == ' ' ? Qt::Key_Space : ch == '"' ? Qt::Key_QuoteDbl : Qt::Key_A,
+                            Qt::NoModifier, QString(ch));
                 QApplication::sendEvent(&a, &e);
+                QCoreApplication::processEvents();
             }
         };
         au_bout("Le prix unitaire vaut 3.\nAfficher pr");
@@ -241,6 +244,50 @@ int main(int argc, char **argv) {
         VERIFIER(a.completion()->popup()->isVisible());
         VERIFIER(a.completion()->popup()->model()->rowCount() > 5);
         a.completion()->popup()->hide();
+        // par la méthode de saisie du système (le chemin de macOS), sans événement de touche
+        au_bout("Le x vaut 3.\nSi x est ");
+        QInputMethodEvent saisie;
+        saisie.setCommitString("s");
+        QApplication::sendEvent(&a, &saisie);
+        QCoreApplication::processEvents();
+        QInputMethodEvent saisie2;
+        saisie2.setCommitString("u");
+        QApplication::sendEvent(&a, &saisie2);
+        QCoreApplication::processEvents();
+        VERIFIER(a.completion()->popup()->isVisible());
+        a.completion()->popup()->hide();
+        // guillemets : « " » ouvre « «  » », curseur au milieu ; devant « » », il le franchit
+        au_bout("Afficher ");
+        taper("\"");
+        VERIFIER(a.toPlainText() == "Afficher «  »" && a.textCursor().position() == 11);
+        taper("Bonjour");
+        a.completion()->popup()->hide();
+        taper("\"");
+        VERIFIER(a.toPlainText() == "Afficher « Bonjour »" && a.textCursor().position() == a.toPlainText().size());
+        // dans un texte déjà ouvert, ou pour fermer un texte entre « " », il reste « " »
+        au_bout("Afficher « a");
+        taper("\"");
+        VERIFIER(a.toPlainText() == "Afficher « a\"");
+        au_bout("Afficher \"a");
+        taper("\"");
+        VERIFIER(a.toPlainText() == "Afficher \"a\"");
+        // Ctrl+Z rend le « " » tapé
+        au_bout("Afficher ");
+        taper("\"");
+        a.undo();
+        VERIFIER(a.toPlainText() == "Afficher \"");
+        // le même « " », arrivé par la méthode de saisie du système
+        au_bout("Afficher ");
+        QInputMethodEvent saisie3;
+        saisie3.setCommitString("\"");
+        QApplication::sendEvent(&a, &saisie3);
+        QCoreApplication::processEvents();
+        VERIFIER(a.toPlainText() == "Afficher «  »" && a.textCursor().position() == 11);
+        // un « " » collé avec d'autres caractères n'est pas touché
+        au_bout("Afficher ");
+        a.insertPlainText("\"a\"");
+        QCoreApplication::processEvents();
+        VERIFIER(a.toPlainText() == "Afficher \"a\"");
         // dans un texte, rien ; en forme compacte, rien (le calcul ne la couvre pas encore)
         au_bout("Le x vaut 3.\nAfficher « bon");
         VERIFIER(a.suites_au_curseur().isEmpty());
