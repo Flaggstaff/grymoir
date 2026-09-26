@@ -127,10 +127,12 @@ Chaque geste réécrit la déclaration de l'écran, et elle seule ; il est réan
 
 | Tranche | Contenu |
 |---|---|
-| A4-a | L'onglet « Écrans » : liste des écrans, aperçu (structure, deux lignes d'exemple), sélection d'un élément, propriétés en lecture, « Voir l'événement » |
+| A4-a *(fait)* | L'onglet « Écrans » : liste des écrans, aperçu (structure, deux lignes d'exemple), sélection d'un élément, propriétés en lecture, « Voir l'événement » |
 | A4-b | « Écran pour une entité… », « Nouvel écran vide », l'écran d'accueil |
 | A4-c | Propriétés modifiables ; ajouter, supprimer, renommer, avec les événements |
 | A4-d | Déplacer à la souris, blocs créés et retirés |
+
+État de A4-a (25 septembre 2026) : fait. Un onglet « Écrans » à côté de « Code » et « Données » ; les écrans du projet, fichiers utilisés compris, relus à chaque ouverture de l'onglet (le code en cours s'enregistre d'abord). L'aperçu est dessiné par `dessiner_ecran` (`src/atelier/vue_ecran.cpp`), le même dessin que l'exécution, qui l'emploie désormais aussi : blocs, boutons en ligne, listes avec leurs colonnes, par défaut ou choisies, et deux lignes « … » grisées. Dans l'aperçu, un clic choisit un élément, cadré en bleu, sans rien déclencher ; le panneau montre ses propriétés, son texte GrymoiR tel qu'écrit dans le fichier, et « Voir l'événement » ou « Voir la déclaration » ouvre le code à la bonne ligne.
 
 ## 6. Questions ouvertes
 
@@ -169,3 +171,4 @@ Chaque geste réécrit la déclaration de l'écran, et elle seule ; il est réan
 | 0.13 | 2026-09-25 | § 5 bis : A4, l'écran généré pour une entité |
 | 0.14 | 2026-09-25 | § 5 bis : l'onglet « Écrans » |
 | 0.15 | 2026-09-25 | § 5 bis : les gestes ; découpage A4-a à A4-d |
+| 0.16 | 2026-09-26 | § 5 bis : A4-a fait (onglet « Écrans », aperçu partagé avec l'exécution) |

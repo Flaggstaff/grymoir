@@ -7,6 +7,8 @@
 #include "schema.h"
 #include "reecriture.h"
 #include "lien.h"
+#include "onglet_ecrans.h"
+#include <QMouseEvent>
 #include <QTreeWidget>
 #include <QTableWidget>
 
@@ -636,6 +638,66 @@ int main(int argc, char **argv) {
         bouton("Fermer")->click();
         VERIFIER(attendre([&] { return e.findChild<QTextBrowser *>()->toPlainText().contains("fin"); }));
         e.close();
+    }
+
+    // A4-a : l'onglet « Écrans » : lecture, aperçu sans données, choix d'un élément, propriétés, événements
+    {
+        QTemporaryDir dossier;
+        auto ecrire = [&](const QString &nom, const QString &texte) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::WriteOnly);
+            f.write(texte.toUtf8());
+        };
+        ecrire("donnees.grym", "Un compositeur, conservé, a : un nom (texte), unique, une photo (image), facultative.\n"
+                               "Une œuvre, conservée, a : un titre (texte), unique, un compositeur (compositeur).\n");
+        ecrire("prog.grym", "Utiliser « donnees ».\n"
+                            "L'écran des œuvres, « Catalogue », montre :\n    un pays (texte), « Suisse » au départ,\n"
+                            "    côte à côte :\n        la liste des compositeurs conservés, par nom,\n"
+                            "        la liste des œuvres conservées, par titre décroissant, avec le titre et le nom du compositeur,\n"
+                            "    un bouton « Fermer ».\n"
+                            "Quand on choisit une œuvre dans l'écran des œuvres :\n    Ouvrir la fiche de l'œuvre.\n"
+                            "Quand on clique sur « Fermer » dans l'écran des œuvres :\n    Fermer l'écran.\n"
+                            "L'écran d'accueil montre :\n    le texte « Bonjour »,\n    un bouton « OK ».\n"
+                            "Quand on clique sur « OK » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                            "Ouvrir l'écran d'accueil.\n");
+        const QVector<EcranLu> e = lire_ecrans(dossier.path());
+        VERIFIER(e.size() == 2 && e[0].nom == "des œuvres" && e[0].titre == "Catalogue" && e[1].titre == "Accueil");
+        VERIFIER(e[0].ligne == 2 && e[0].fichier.endsWith("prog.grym"));
+        const auto &el = e[0].elements;   // zone, côte à côte, liste, liste, fin, bouton
+        VERIFIER(el.size() == 6 && el[0].sorte == ELEMENT_ZONE && el[1].sorte == ELEMENT_COTE_A_COTE && el[4].sorte == ELEMENT_FIN_DE_BLOC);
+        VERIFIER(el[0].texte == "pays" && el[0].type == "texte" && el[0].depart == "Suisse");
+        VERIFIER(el[2].colonnes == QStringList({"Nom"}));   // la photo (image) n'est pas une colonne par défaut
+        VERIFIER(el[3].colonnes == QStringList({"Titre", "Nom du compositeur"}) && el[3].tri == "titre" && el[3].decroissant);
+        VERIFIER(el[3].evenement_ligne == 8 && el[2].evenement_ligne == 0 && el[5].evenement_ligne == 10);
+        VERIFIER(el[5].ecrit == "un bouton « Fermer »");
+        OngletEcrans o;
+        o.show();
+        o.montrer(dossier.path());
+        VERIFIER(o.proprietes().contains("Titre") && o.proprietes().contains("Catalogue"));   // l'écran lui-même
+        auto *t = qobject_cast<QTableWidget *>(o.controle(3));
+        VERIFIER(t && t->rowCount() == 2 && t->item(0, 0)->text() == "…");   // la structure, pas les données
+        auto cliquer = [&](QWidget *w) {
+            QMouseEvent p(QEvent::MouseButtonPress, QPointF(2, 2), w->mapToGlobal(QPointF(2, 2)), Qt::LeftButton,
+                          Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &p);
+        };
+        auto *b = qobject_cast<QPushButton *>(o.controle(5));
+        int clics = 0;
+        QObject::connect(b, &QPushButton::clicked, [&] { clics++; });
+        cliquer(b);   // choisir le bouton dans l'aperçu : il ne s'enfonce pas
+        VERIFIER(clics == 0 && o.proprietes().contains("Libellé") && o.proprietes().contains("Fermer")
+                 && o.proprietes().contains("prog.grym, ligne 10"));
+        QString fichier_ouvert;
+        int ligne_ouverte = 0;
+        QObject::connect(&o, &OngletEcrans::ouvrir, [&](const QString &f, int l) { fichier_ouvert = f; ligne_ouverte = l; });
+        for (QPushButton *x : o.findChildren<QPushButton *>()) if (x->text() == "Voir l'événement") x->click();
+        VERIFIER(ligne_ouverte == 10 && fichier_ouvert.endsWith("prog.grym"));
+        cliquer(t->viewport());
+        VERIFIER(o.proprietes().contains("Nom du compositeur") && o.proprietes().contains("titre, décroissant"));
+        cliquer(o.controle(0));
+        VERIFIER(o.proprietes().contains("Zone de saisie") && o.proprietes().contains("Suisse"));
+        o.choisir_ecran("d'accueil");
+        VERIFIER(o.proprietes().contains("Accueil"));
     }
 
     std::printf("%d/%d tests réussis\n", total - echecs, total);

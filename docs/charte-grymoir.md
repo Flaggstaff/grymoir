@@ -163,7 +163,7 @@ Horizon post-v1, sans date :
 | A1 | L'atelier (`docs/atelier.md`) : fenêtre Qt, projet, éditeur avec coloration par le lexeur et erreurs en direct, « Lancer » dans un processus à part | fait le 24 septembre 2026 |
 | A2 | Fichiers utilisés (grammaire, § 21), puis éditeur de données : schéma des entités, propriétés, réécriture chirurgicale, aperçu des migrations | fait le 25 septembre 2026 |
 | A3 | Les écrans dans le langage (`docs/ecrans.md`) : fenêtres, listes, fiches, boutons, événements | fait le 25 septembre 2026 |
-| A4 | Éditeur d'écrans : liste et fiche générées par entité, agencement à la souris | à venir |
+| A4 | Éditeur d'écrans : liste et fiche générées par entité, agencement à la souris | en cours : A4-a fait (onglet « Écrans », aperçu) |
 
 Critères de sortie de la v1.0, tous remplis :
 

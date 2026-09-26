@@ -5,6 +5,7 @@
 #include "schema.h"
 #include "panneau.h"
 #include "lien.h"
+#include "onglet_ecrans.h"
 
 #include <QAction>
 #include <QCloseEvent>
@@ -182,7 +183,20 @@ Fenetre::Fenetre() {
     onglets = new QTabWidget;
     onglets->addTab(droite, "Code");
     onglets->addTab(donnees, "Données");
-    connect(onglets, &QTabWidget::currentChanged, this, [this](int k) { if (k == 1) rafraichir_schema(); });
+    onglet_ecrans = new OngletEcrans;   // A4 : les écrans du projet, leur aperçu, leurs propriétés
+    onglets->addTab(onglet_ecrans, "Écrans");
+    connect(onglets, &QTabWidget::currentChanged, this, [this](int k) {
+        if (k == 1) rafraichir_schema();
+        if (k == 2 && !projet.isEmpty()) {
+            if (!fichier.isEmpty() && editeur->document()->isModified()) enregistrer();   // l'aperçu lit les fichiers
+            onglet_ecrans->montrer(projet);
+        }
+    });
+    connect(onglet_ecrans, &OngletEcrans::ouvrir, this, [this](const QString &f, int ligne) {
+        onglets->setCurrentIndex(0);
+        ouvrir_fichier(f);
+        if (QFileInfo(fichier).absoluteFilePath() == QFileInfo(f).absoluteFilePath()) editeur->aller_a(ligne, 1);
+    });
     auto *garder = new QTimer(this);   // la disposition s'écrit quand on cesse de déplacer les boîtes
     garder->setSingleShot(true);
     garder->setInterval(600);

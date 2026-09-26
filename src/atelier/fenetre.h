@@ -21,6 +21,7 @@ class QAction;
 class Aide;
 class VueSchema;
 class PanneauEntite;
+class OngletEcrans;
 class QTabWidget;
 class QLabel;
 
@@ -65,6 +66,7 @@ private:
     QTabWidget *onglets;
     QLabel *schema_etat;
     PanneauEntite *panneau;
+    OngletEcrans *onglet_ecrans;           // A4 : l'onglet « Écrans »
     QAction *action_annuler_geste;
     QVector<Geste> gestes;                 // les gestes de l'éditeur de données, du plus ancien au plus récent
     QString entite_choisie;

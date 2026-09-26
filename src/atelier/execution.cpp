@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, exécution d'un programme dans sa propre fenêtre.
 #include "execution.h"
+#include "vue_ecran.h"
 
 #include <QCheckBox>
 #include <QCloseEvent>
@@ -651,112 +652,51 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         recouverts.push_back({vue_ecran, erreur_ecran, tables, boutons_ecran, zones, windowTitle()});
         vue_ecran = nullptr;
     }
-    tables = QVector<QTableWidget *>(sortes.size(), nullptr);
-    zones = QVector<QWidget *>(sortes.size(), nullptr);
-    boutons_ecran.clear();
-    vue_ecran = new QWidget;
-    auto *pile = new QVBoxLayout(vue_ecran);
-    auto *t = new QLabel("<b>" + titre.toHtmlEscaped() + "</b>");
-    pile->addWidget(t);
-    setWindowTitle(titre);
-    QHBoxLayout *rangee = nullptr;   // des boutons qui se suivent : une ligne, en bas à droite (§ 3.3)
-    QVector<QBoxLayout *> blocs = {pile};   // « côte à côte », « l'un sous l'autre » : des boîtes emboîtées (§ 22.1)
+    QVector<ElementVue> elements(sortes.size());
     for (int k = 0; k < sortes.size(); k++) {
-        if (sortes[k] != ELEMENT_BOUTON) rangee = nullptr;
-        if (sortes[k] == ELEMENT_COTE_A_COTE || sortes[k] == ELEMENT_L_UN_SOUS_L_AUTRE) {
-            QBoxLayout *b = sortes[k] == ELEMENT_COTE_A_COTE ? static_cast<QBoxLayout *>(new QHBoxLayout)
-                                                             : static_cast<QBoxLayout *>(new QVBoxLayout);
-            blocs.last()->addLayout(b, 1);
-            blocs.push_back(b);
-            continue;
-        }
-        if (sortes[k] == ELEMENT_FIN_DE_BLOC) {
-            if (blocs.size() > 1) blocs.pop_back();
-            continue;
-        }
-        QBoxLayout *ici = blocs.last();
-        if (sortes[k] == ELEMENT_TEXTE) {
-            auto *l = new QLabel(textes[k]);
-            l->setWordWrap(true);
-            ici->addWidget(l);
-        } else if (sortes[k] == ELEMENT_ZONE) {
-            /* une zone : les contrôles des formulaires ; la validation (Entrée, ou la quitter) est un événement */
-            const QString type = k < travail.types_zones.size() ? travail.types_zones[k] : QString("texte");
-            QWidget *w;
-            if (type == "vrai ou faux") {
-                auto *c = new QCheckBox;
-                connect(c, &QCheckBox::toggled, this, [this, k](bool v) {
-                    texte_envoye = v ? "oui" : "non";
+        elements[k].sorte = sortes[k];
+        elements[k].texte = textes[k];
+        elements[k].colonnes = colonnes[k];
+        elements[k].type = k < travail.types_zones.size() ? travail.types_zones[k] : QString();
+        elements[k].choix = k < travail.choix_zones.size() ? travail.choix_zones[k] : QStringList();
+    }
+    VueEcran v = dessiner_ecran(titre, elements);   // le même dessin que l'aperçu de l'atelier (src/atelier/vue_ecran.cpp)
+    vue_ecran = v.vue;
+    erreur_ecran = v.erreur;
+    tables = v.tables;
+    zones = v.zones;
+    boutons_ecran = v.boutons;
+    setWindowTitle(titre);
+    for (int k = 0; k < sortes.size(); k++) {   // les événements, branchés sur les contrôles dessinés
+        if (auto *tab = v.tables[k]) {
+            tab->setToolTip("Double-clic ou Entrée : choisir ; clic sur un titre : trier");
+            connect(tab, &QTableWidget::cellActivated, this, [this, k, tab](int ligne, int) {
+                const QTableWidgetItem *i = tab->item(ligne, 0);
+                envoyer_evenement(EVENEMENT_CHOIX, k, i ? i->data(Qt::UserRole).toInt() : ligne);
+            });
+        } else if (QWidget *z = v.zones[k]) {   // la validation d'une zone (Entrée, ou la quitter) est un événement
+            if (auto *c = qobject_cast<QCheckBox *>(z)) {
+                connect(c, &QCheckBox::toggled, this, [this, k](bool x) {
+                    texte_envoye = x ? "oui" : "non";
                     envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
                 });
-                w = c;
-            } else if (k < travail.choix_zones.size() && !travail.choix_zones[k].isEmpty()) {
-                auto *m = new QComboBox;
-                m->addItem(QString());
-                m->addItems(travail.choix_zones[k]);
+            } else if (auto *m = qobject_cast<QComboBox *>(z)) {
                 connect(m, &QComboBox::activated, this, [this, k, m](int) {
                     texte_envoye = m->currentText().toUtf8();
                     envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
                 });
-                w = m;
-            } else {
-                auto *l = new QLineEdit;
+            } else if (auto *l = qobject_cast<QLineEdit *>(z)) {
                 connect(l, &QLineEdit::editingFinished, this, [this, k, l] {
                     if (!l->isModified()) return;   // quittée sans changement : pas d'événement
                     l->setModified(false);
                     texte_envoye = l->text().toUtf8();
                     envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
                 });
-                w = l;
             }
-            zones[k] = w;
-            auto *rang = new QFormLayout;
-            rang->addRow(textes[k], w);
-            ici->addLayout(rang);
-        } else if (sortes[k] == ELEMENT_LISTE) {
-            auto *tab = new QTableWidget(0, colonnes[k].size());
-            tab->setHorizontalHeaderLabels(colonnes[k]);
-            tab->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);   // les titres entiers
-            tab->horizontalHeader()->setStretchLastSection(true);
-            tab->verticalHeader()->hide();
-            tab->setSelectionBehavior(QAbstractItemView::SelectRows);
-            tab->setSelectionMode(QAbstractItemView::SingleSelection);
-            tab->setEditTriggers(QAbstractItemView::NoEditTriggers);
-            tab->setToolTip("Double-clic ou Entrée : choisir ; clic sur un titre : trier");
-            // Un clic sur un titre trie à l'écran, sans toucher au programme (§ 22.1) ; un second clic inverse.
-            connect(tab->horizontalHeader(), &QHeaderView::sectionClicked, tab, [tab](int c) {
-                const bool meme = tab->property("tri").isValid() && tab->property("tri").toInt() == c;
-                const Qt::SortOrder o = meme && tab->property("ordre").toInt() == Qt::AscendingOrder ? Qt::DescendingOrder
-                                                                                                    : Qt::AscendingOrder;
-                tab->setProperty("tri", c);
-                tab->setProperty("ordre", (int)o);
-                tab->horizontalHeader()->setSortIndicatorShown(true);
-                tab->horizontalHeader()->setSortIndicator(c, o);
-                tab->sortItems(c, o);
-            });
-            connect(tab, &QTableWidget::cellActivated, this, [this, k, tab](int ligne, int) {
-                const QTableWidgetItem *i = tab->item(ligne, 0);
-                envoyer_evenement(EVENEMENT_CHOIX, k, i ? i->data(Qt::UserRole).toInt() : ligne);
-            });
-            tables[k] = tab;
-            ici->addWidget(tab, 1);
-        } else {
-            if (!rangee) {
-                rangee = new QHBoxLayout;
-                rangee->addStretch(1);
-                ici->addLayout(rangee);
-            }
-            auto *b = new QPushButton(textes[k]);
+        } else if (auto *b = qobject_cast<QPushButton *>(v.controles[k])) {
             connect(b, &QPushButton::clicked, this, [this, k] { envoyer_evenement(EVENEMENT_CLIC, k, 0); });
-            boutons_ecran << b;
-            rangee->addWidget(b);
         }
     }
-    erreur_ecran = new QLabel;
-    erreur_ecran->setStyleSheet("color: #c00;");
-    erreur_ecran->setWordWrap(true);
-    erreur_ecran->hide();
-    pile->addWidget(erreur_ecran);
     vue_ecran->setEnabled(false);   // actif seulement quand la machine attend un événement
     partage->insertWidget(0, vue_ecran);
     partage->setSizes({height() * 2 / 3, height() / 6, height() / 6});
