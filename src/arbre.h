@@ -101,7 +101,8 @@ typedef enum {
     P_QUAND,         /* « Quand on clique sur « B » dans l'écran X : » (§ 22.2) : texte : nom interne de la formule ;
                         texte3 : écran ; forme : 1 clic, 2 choix, 3 changement, 4 ouverture, 5 fermeture ; entier : cases locales ; enfants[0] : paramètres
                         (N_BLOC), enfants[1] : corps, enfants[2] : N_TEXTE, le bouton (clic) ou l'entité (choix) */
-    P_OUVRIR,        /* « Ouvrir l'écran X. » (§ 22.3) : texte : écran ; local : deux cases (événement, objet) */
+    P_OUVRIR,        /* « Ouvrir l'écran X. » (§ 22.3) : texte : écran ; local : deux cases (événement, objet) ;
+                        forme 1 : « Ouvrir la fiche de c. », enfants[0] : l'objet */
     P_FERMER,        /* « Fermer l'écran. » (§ 22.3) */
     P_UTILISER,      /* « Utiliser « données ». » (§ 21) : texte : chemin écrit, sans extension ; entier : rang du fichier
                         dans Programme.fichiers, 0 s'il était déjà lu ; enfants : ses déclarations */

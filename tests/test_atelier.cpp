@@ -588,6 +588,56 @@ int main(int argc, char **argv) {
         e.close();
     }
 
+    // A3-c dans la fenêtre : la fiche d'une ligne, le lien vers une autre fiche par-dessus, puis le retour
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("f.grym");
+        QFile f(prog);
+        f.open(QIODevice::WriteOnly);
+        f.write("Un compositeur, conservé, a : un nom (texte), unique.\n"
+                "Une œuvre, conservée, a : un titre (texte), unique, un compositeur (compositeur).\n"
+                "Si le nombre d'œuvres conservées = 0 :\n    Le c vaut un nouveau compositeur :\n        Le nom vaut « Bach ».\n"
+                "    Conserver c.\n    Le o vaut une nouvelle œuvre :\n        Le titre vaut « Messe ».\n"
+                "        Le compositeur vaut c.\n    Conserver o.\n"
+                "L'écran des œuvres montre :\n    la liste des œuvres conservées, par titre,\n    un bouton « Fermer ».\n"
+                "Quand on choisit une œuvre dans l'écran des œuvres :\n    Ouvrir la fiche de l'œuvre.\n"
+                "Quand on clique sur « Fermer » dans l'écran des œuvres :\n    Fermer l'écran.\n"
+                "Ouvrir l'écran des œuvres.\nAfficher « fin ».\n");
+        f.close();
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 10000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto bouton = [&](const QString &t) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == t && b->isVisible()) return b;
+            return nullptr;
+        };
+        auto table = [&]() -> QTableWidget * {
+            for (QTableWidget *t : e.findChildren<QTableWidget *>()) if (t->isVisible()) return t;
+            return nullptr;
+        };
+        VERIFIER(attendre([&] { return table() && table()->rowCount() == 1 && bouton("Fermer") && bouton("Fermer")->isEnabled(); }));
+        emit table()->cellActivated(0, 0);
+        VERIFIER(attendre([&] { return e.windowTitle() == "Messe" && bouton("Compositeur : Bach")
+                                       && bouton("Compositeur : Bach")->isEnabled() && !table(); }));
+        bouton("Compositeur : Bach")->click();   // la fiche du lien, par-dessus
+        VERIFIER(attendre([&] { return e.windowTitle() == "Bach" && !bouton("Compositeur : Bach") && bouton("Fermer")
+                                       && bouton("Fermer")->isEnabled(); }));
+        bouton("Fermer")->click();   // retour à la fiche de la Messe
+        VERIFIER(attendre([&] { return e.windowTitle() == "Messe" && bouton("Compositeur : Bach")
+                                       && bouton("Compositeur : Bach")->isEnabled(); }));
+        bouton("Fermer")->click();   // retour à la liste
+        VERIFIER(attendre([&] { return e.windowTitle() == "Œuvres" && table() && bouton("Fermer") && bouton("Fermer")->isEnabled(); }));
+        bouton("Fermer")->click();
+        VERIFIER(attendre([&] { return e.findChild<QTextBrowser *>()->toPlainText().contains("fin"); }));
+        e.close();
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }

@@ -70,10 +70,11 @@ typedef enum {
     I_ECRAN_ERREUR,     /* dépile le motif d'un événement raté, et le montre dans l'écran */
     I_ECRAN_FERMER,     /* ferme l'écran ouvert */
     I_FERMER_ECRAN,     /* « Fermer l'écran. » dans un événement : l'écran se fermera à la fin de l'événement */
-    I_ECRAN_OBJET       /* empile l'objet de l'écran ouvert : « le pays de l'écran » (§ 22.2) */
+    I_ECRAN_OBJET,      /* empile l'objet de l'écran ouvert : « le pays de l'écran » (§ 22.2) */
+    I_FICHE_ECRAN       /* dépile un objet et ouvre sa fiche, l'écran déduit de son entité (§ 22.3) */
 } CodeInstruction;
 
-#define I_DERNIER I_ECRAN_OBJET
+#define I_DERNIER I_FICHE_ECRAN
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

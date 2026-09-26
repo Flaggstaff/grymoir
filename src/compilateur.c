@@ -815,6 +815,11 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_FERMER_ECRAN, 0, ph->ligne, ph->colonne);
         return;
     case P_OUVRIR: {
+        if (ph->forme == 1) {   /* « Ouvrir la fiche de c. » (§ 22.3) */
+            expression(c, ph->enfants[0]);
+            emettre(c, I_FICHE_ECRAN, 0, ph->ligne, ph->colonne);
+            return;
+        }
         /* ÉCRAN_OUVRIR ; T : listes (CHERCHER ; ÉCRAN_LISTE i) ; ÉCRAN_ATTENDRE → objet, code ;
          * code = 0 → S ; ESSAYER → raté ; aiguillage des événements (APPELER) ; FIN_ESSAI ; → T ;
          * raté : ÉCRAN_ERREUR ; → T ; S : ÉCRAN_FERMER. Chaque attente valide ce qui précède : un événement

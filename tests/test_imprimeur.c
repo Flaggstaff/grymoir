@@ -140,6 +140,19 @@ int main(void) {
                             "Quand on ferme l'écran de recherche :\n    Afficher « fermé ».\n"
                             "Ouvrir l'écran de recherche.\n";
         FIXE(zones);
+        /* A3-c : la fiche, et un écran ouvert depuis un événement */
+        const char *fiche = "Un compositeur, conservé, a :\n    un nom (texte), unique.\n"
+                            "L'écran d'aide montre :\n    un bouton « OK ».\n"
+                            "Quand on clique sur « OK » dans l'écran d'aide :\n    Fermer l'écran.\n"
+                            "L'écran des compositeurs montre :\n    la liste des compositeurs conservés,\n"
+                            "    un bouton « Aide ».\n"
+                            "Quand on choisit un compositeur dans l'écran des compositeurs :\n    Ouvrir la fiche du compositeur.\n"
+                            "Quand on clique sur « Aide » dans l'écran des compositeurs :\n    Ouvrir l'écran d'aide.\n"
+                            "Ouvrir l'écran des compositeurs.\n";
+        FIXE(fiche);
+        COMP("Un point a : un x.\nLe p vaut un nouveau point.\nOuvrir la fiche de p.\n",
+             "_classe _un point\n    _un x\n_fin\n_le p << _nouveau point\n_ouvrir _fiche p\n");
+
         COMP(zones, "_classe _un compositeur _conservé\n    _un nom (texte) _unique\n    _un pays (texte)\n_fin\n"
                     "_écran de_recherche\n    _un pays (texte) _départ « Suisse »\n    _une ville (texte) _facultatif\n"
                     "    _un âge (nombre) _départ −3\n"

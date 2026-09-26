@@ -1,6 +1,6 @@
 # GrymoiR : les écrans dans le langage
 
-Conception validée le 25 septembre 2026. A3-a et A3-b implémentés le 25 septembre 2026.
+Conception validée le 25 septembre 2026. A3-a, A3-b et A3-c implémentés le 25 septembre 2026.
 Référence : Charte de GrymoiR v1.39, art. 2, 4, 7, 11, 12 et 13 ; grammaire 1.38, § 9, § 16, § 19, § 20 ; `docs/atelier.md`, jalon A3.
 Toute décision prise sur ce document passe dans la grammaire et la charte par une révision numérotée.
 
@@ -131,7 +131,7 @@ La conception est complète : elle passe dans la grammaire (§ 22) et la charte 
 |---|---|
 | A3-a *(fait)* | Déclaration d'écran avec liste, bouton et texte fixe ; `Quand on clique …`, `Quand on choisit …` ; `Ouvrir` et `Fermer` ; la boucle d'événements dans la machine, par l'interface ; une transaction par événement ; refus en console et dans le navigateur ; l'affichage Qt dans la fenêtre d'exécution |
 | A3-b *(fait)* | Zones de saisie et `de l'écran` ; `le … choisi de l'écran` ; `Quand on change …`, `Quand on ouvre …`, `Quand on ferme …` ; listes qui suivent les zones |
-| A3-c | La fiche déduite (`Ouvrir la fiche de c.`), les écrans empilés |
+| A3-c *(fait)* | La fiche déduite (`Ouvrir la fiche de c.`), les écrans empilés |
 | A3-d | Colonnes choisies (`avec`), disposition (`côte à côte`, `l'un sous l'autre`), titre donné |
 
 ---
@@ -150,3 +150,4 @@ La conception est complète : elle passe dans la grammaire (§ 22) et la charte 
 | 0.8 | 2026-09-25 | § 3.8 : hors de l'atelier, refus expliqué ; § 4 : découpage en A3-a à A3-d ; conception validée |
 | 0.9 | 2026-09-25 | § 4 : A3-a fait |
 | 0.10 | 2026-09-25 | § 4 : A3-b fait |
+| 0.11 | 2026-09-25 | § 4 : A3-c fait ; § 3.4 : l'exemple de case à cocher corrigé, c'est le type `(vrai ou faux)` qui la donne, pas le mot « case » |

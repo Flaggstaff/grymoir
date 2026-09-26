@@ -188,6 +188,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_ECRAN_FERMER:   return "ÉCRAN_FERMER";
     case I_FERMER_ECRAN:   return "FERMER_ÉCRAN";
     case I_ECRAN_OBJET:    return "ÉCRAN_OBJET";
+    case I_FICHE_ECRAN:    return "FICHE_ÉCRAN";
     }
     return "INCONNUE";
 }
@@ -345,7 +346,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_LIRE_CHAMP: case I_SAISIR: case I_ELIDER: besoin = 1; break;
             case I_COLLER: besoin = 2; effet = -1; break;
             case I_RESAISIR: case I_FICHE: besoin = 1; effet = -1; break;
-            case I_ECRAN_LISTE: case I_ECRAN_ERREUR: besoin = 1; effet = -1; break;
+            case I_ECRAN_LISTE: case I_ECRAN_ERREUR: case I_FICHE_ECRAN: besoin = 1; effet = -1; break;
             case I_ECRAN_ATTENDRE: besoin = 0; effet = 2; break;
             case I_ECRAN_OBJET: besoin = 0; effet = 1; break;
             case I_ECRAN_OUVRIR: case I_ECRAN_FERMER: case I_FERMER_ECRAN: besoin = 0; effet = 0; break;

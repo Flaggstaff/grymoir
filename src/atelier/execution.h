@@ -75,6 +75,9 @@ public:
     QStringList types_zones;                              // de chaque élément : le type d'une zone, sinon vide
     QVector<int> facultatives;
     QVector<QStringList> choix_zones;                     // zone liée : les clés, pour un menu
+    // les descriptions des écrans du dessous (écrans empilés, § 22.3), rendues à la fermeture de celui du dessus
+    struct Description { QVector<int> nb_colonnes; QStringList types_zones; QVector<int> facultatives; QVector<QStringList> choix_zones; };
+    QVector<Description> dessous;
     size_t colonnes_de(size_t element) const { return element < (size_t)nb_colonnes.size() ? (size_t)nb_colonnes[(int)element] : 0; }
 
 private:
@@ -116,6 +119,10 @@ private:
     QByteArray texte_envoye;
     void envoyer_evenement(SorteEvenement sorte, int element, int ligne);
     QWidget *vue_ecran = nullptr;
+    // les écrans du dessous, masqués tant qu'un écran les recouvre (§ 22.3)
+    struct EcranMontre { QWidget *vue; QLabel *erreur; QVector<class QTableWidget *> tables; QVector<QPushButton *> boutons;
+                         QVector<QWidget *> zones; QString titre; };
+    QVector<EcranMontre> recouverts;
     QLabel *erreur_ecran = nullptr;
     QVector<class QTableWidget *> tables;
     QVector<QPushButton *> boutons_ecran;

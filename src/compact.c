@@ -685,6 +685,16 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     if (t->type == J_MOT_CLE && (!strcmp(t->valeur, "ouvrir") || !strcmp(t->valeur, "fermer"))) {
         /* _ouvrir des_compositeurs → Ouvrir l'écran des compositeurs. ; _fermer → Fermer l'écran. */
         int ouvre = !strcmp(t->valeur, "ouvrir");
+        if (ouvre && d + 2 < f && est_cle(&r->e[d + 1], "fiche")) {   /* _ouvrir _fiche c → Ouvrir la fiche de c. */
+            mot(r, "ouvrir", t);
+            mot(r, "la", &r->e[d + 1]);
+            mot(r, "fiche", &r->e[d + 1]);
+            mot(r, "de", &r->e[d + 1]);
+            expression(r, d + 2, f);
+            point(r, f);
+            fixer_retrait(r, premier, prof);
+            return;
+        }
         if (ouvre ? f <= d + 1 : f != d + 1) {
             echouer(r, t, grym_dupliquer(ouvre ? "Forme attendue : « _ouvrir des_compositeurs »." : "« _fermer » s'écrit seul."));
             return;

@@ -4811,10 +4811,23 @@ static Noeud *quand(Analyse *a, int colonne) {
 /* « Ouvrir l'écran X. » (§ 22.3) */
 static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
     if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'ouvre pas d'écran : ouvrez-le dans une action."));
-    if (a->evenement)
-        return erreur(a, t, grym_dupliquer("Ouvrir un écran depuis un événement viendra avec les écrans empilés."));
     if (a->essais) return erreur(a, t, grym_dupliquer("Un écran ne s'ouvre pas dans « Essayer » : chaque événement a déjà "
                                                        "sa propre reprise."));
+    /* « Ouvrir la fiche de c. », « Ouvrir la fiche du compositeur. » : l'écran déduit de l'entité (§ 22.3) */
+    if (est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "fiche") && (de_ou_d(voir(a, 3)) || est_mot(voir(a, 3), "du"))) {
+        Jeton *p = voir(a, 3);
+        a->i += 4;
+        if (est_mot(p, "du")) { a->article_force = ART_LE; a->jeton_force = p; }
+        Noeud *objet = expression(a);
+        a->article_force = ART_AUCUN;
+        if (!objet) return NULL;
+        if (!fin_phrase(a, 0)) { noeud_liberer(objet); return NULL; }
+        Noeud *n = noeud_creer(P_OUVRIR, t->ligne, t->colonne, t->debut);
+        n->forme = 1;
+        noeud_ajouter(n, objet);
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
     size_t f;
     char *nom = NULL;
     EcranConnu *e = ecran_nomme(a, a->i + 1, &f, &nom);

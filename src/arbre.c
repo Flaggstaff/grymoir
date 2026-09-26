@@ -125,6 +125,12 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, ")");
         return;
     case P_OUVRIR:
+        if (n->forme == 1) {
+            chaine_ajouter(c, "(ouvrir-fiche ");
+            decrire(n->enfants[0], c);
+            chaine_ajouter(c, ")");
+            return;
+        }
         chaine_ajouter(c, "(ouvrir [");
         chaine_ajouter(c, n->texte);
         chaine_ajouter(c, "])");

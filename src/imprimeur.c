@@ -845,6 +845,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         return;
     }
     case P_OUVRIR:
+        if (n->forme == 1) {   /* « Ouvrir la fiche de c. » ; « _ouvrir _fiche c » */
+            if (c) { aj(im, "_ouvrir _fiche "); expression(im, n->enfants[0]); aj(im, "\n"); }
+            else { aj(im, "Ouvrir la fiche "); preposition(im, "de", n->enfants[0]); aj(im, ".\n"); }
+            return;
+        }
         if (c) { aj(im, "_ouvrir "); ecrire_nom(im, n->texte, 0); aj(im, "\n"); }
         else { aj(im, "Ouvrir l'écran "); aj(im, n->texte); aj(im, ".\n"); }
         return;

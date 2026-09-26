@@ -472,11 +472,23 @@ typedef struct {
     size_t n, i;
     const ElementEcran *elements;
     size_t nb_elements;
+    /* écrans empilés : ceux du dessous, pour les retrouver à la fermeture (§ 22.3) */
+    ElementEcran *pile[8];
+    size_t nb_pile[8];
+    size_t profondeur;
 } Scene;
 
 static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, const ElementEcran *el, size_t n) {
     Scene *s = contexte;
     (void)sortie;
+    /* une copie : l'interface ne garde rien de la machine après l'appel ; les textes restent ceux de la machine,
+       vivants tant que l'écran est ouvert */
+    if (s->profondeur < 8) {
+        s->pile[s->profondeur] = malloc(n * sizeof *el + 1);
+        memcpy(s->pile[s->profondeur], el, n * sizeof *el);
+        s->nb_pile[s->profondeur] = n;
+        s->profondeur++;
+    }
     s->elements = el;
     s->nb_elements = n;
     chaine_ajouter(&s->page.journal, "[ouvrir ");
@@ -604,11 +616,16 @@ static void scene_fermer(void *contexte, Chaine *sortie) {
         sortie->d[0] = '\0';
     }
     chaine_ajouter(&s->page.journal, "[fermer]\n");
+    if (s->profondeur) {   /* l'écran du dessous reprend */
+        free(s->pile[--s->profondeur]);
+        s->elements = s->profondeur ? s->pile[s->profondeur - 1] : NULL;
+        s->nb_elements = s->profondeur ? s->nb_pile[s->profondeur - 1] : 0;
+    }
 }
 
 /* Exécute src avec des écrans pilotés par script ; rend le journal suivi de la sortie finale. */
 static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, const char *const *rep, size_t nrep) {
-    Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0 };
+    Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0, {0}, {0}, 0 };
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs };
     Portee *p = portee_creer();
@@ -617,6 +634,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     char *r = executer_source(p, m, src, 0);
     machine_detruire(m);
     portee_detruire(p);
+    while (sc.profondeur) free(sc.pile[--sc.profondeur]);
     char *j = chaine_rendre(&sc.page.journal);
     char *tout = grym_formater("%s%s", j ? j : "", r);
     free(r);
@@ -749,6 +767,50 @@ static void essais_ecrans(void) {
          "Quand on clique sur « OK » dans l'écran de recherche :\n    Fermer l'écran.\n"
          "Afficher le pays de l'écran.\n", "~« l'écran » ne se lit que dans un événement");
     PROG("L'écran de recherche montre :\n    une photo (image).\n", "~zone de fichier ou d'image viendra plus tard");
+    /* A3-c : la fiche déduite (champs, lien vers la fiche du lien, Modifier) et les écrans empilés */
+    {
+        const char *src2 =
+            "Un compositeur, conservé, a : un nom (texte), unique, une naissance (date), facultative.\n"
+            "Une œuvre, conservée, a : un titre (texte), unique, un compositeur (compositeur).\n"
+            "Pour remplir :\n    Le c vaut un nouveau compositeur :\n        Le nom vaut « Bach ».\n"
+            "        La naissance vaut 31.03.1685.\n    Conserver c.\n"
+            "    Le o vaut une nouvelle œuvre :\n        Le titre vaut « Messe ».\n        Le compositeur vaut c.\n"
+            "    Conserver o.\n"
+            "Remplir.\n"
+            "L'écran des détails montre :\n    le texte « Empilé. »,\n    un bouton « Retour ».\n"
+            "Quand on clique sur « Retour » dans l'écran des détails :\n    Fermer l'écran.\n"
+            "L'écran des œuvres montre :\n    la liste des œuvres conservées, par titre,\n    un bouton « Détails »,\n"
+            "    un bouton « Fermer ».\n"
+            "Quand on choisit une œuvre dans l'écran des œuvres :\n    Ouvrir la fiche de l'œuvre.\n"
+            "Quand on clique sur « Détails » dans l'écran des œuvres :\n    Ouvrir l'écran des détails.\n"
+            "    Afficher « revenu ».\n"
+            "Quand on clique sur « Fermer » dans l'écran des œuvres :\n    Fermer l'écran.\n"
+            "Ouvrir l'écran des œuvres.\nAfficher le titre de l'œuvre conservée dont le titre ≠ « x ».\n";
+        /* la fiche de la Messe ; son lien vers la fiche de Bach, par-dessus ; Fermer ; Modifier (« Requiem ») ;
+           Fermer ; l'écran des détails, empilé ; Retour ; Fermer */
+        const char *ev[] = { "choix 1", "clic Compositeur : Bach", "clic Fermer", "clic Modifier", "clic Fermer",
+                             "clic Détails", "clic Retour", "clic Fermer" };
+        const char *rep[] = { "Requiem", "" };
+        ECRANS(src2, ev, rep,
+               "[ouvrir Œuvres ; liste œuvre (Titre, Compositeur) ; bouton Détails ; bouton Fermer]\n"
+               "[lignes Messe|Bach]\n"
+               "[ouvrir Messe ; texte Titre : Messe ; bouton Compositeur : Bach ; bouton Modifier ; bouton Fermer]\n"
+               "[ouvrir Bach ; texte Nom : Bach ; texte Naissance : 31.03.1685 ; bouton Modifier ; bouton Fermer]\n"
+               "[fermer]\n"
+               "page Titre=Messe Compositeur=Bach[fermer]\n"
+               "[ouvrir Requiem ; texte Titre : Requiem ; bouton Compositeur : Bach ; bouton Modifier ; bouton Fermer]\n"
+               "[fermer]\n"
+               "[lignes Requiem|Bach]\n"
+               "[ouvrir Détails ; texte Empilé. ; bouton Retour]\n"
+               "[fermer]\n"
+               "[lignes Requiem|Bach]\n"
+               "revenu\n"
+               "[lignes Requiem|Bach]\n"
+               "[fermer]\n"
+               "Requiem");
+    }
+    PROG("Un point a : un x.\nLe p vaut un nouveau point.\nOuvrir la fiche de p.\n",
+         "ERREUR 0:0 Ce programme ouvre des écrans : lancez-le dans une fenêtre, avec grym-atelier.");
     /* Les erreurs d'analyse */
     PROG("L'écran d'accueil montre :\n    un bouton « OK ».\nAfficher 1.\n",
          "ERREUR 2:5 Le bouton « OK » de l'écran « d'accueil » n'a pas de « Quand on clique sur « OK » dans l'écran d'accueil : ».");

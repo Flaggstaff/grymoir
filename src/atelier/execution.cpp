@@ -99,6 +99,8 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         for (size_t q = 0; q < el[k].nb_colonnes; q++) c << QString::fromUtf8(el[k].colonnes[q]);
         colonnes << c;
     }
+    if (!t->nb_colonnes.isEmpty() || !t->types_zones.isEmpty())   // un écran est déjà ouvert : il passe dessous
+        t->dessous.push_back({t->nb_colonnes, t->types_zones, t->facultatives, t->choix_zones});
     t->nb_colonnes.clear();
     for (const auto &c : colonnes) t->nb_colonnes << c.size();
     t->types_zones.clear();
@@ -141,6 +143,18 @@ static void iface_ecran_valeurs(void *contexte, const char *const *v, size_t n) 
 static void iface_ecran_fermer(void *contexte, Chaine *sortie) {
     auto *t = static_cast<Travail *>(contexte);
     t->vider_sortie(sortie);
+    if (!t->dessous.isEmpty()) {   // l'écran du dessous reprend sa description
+        const auto d = t->dessous.takeLast();
+        t->nb_colonnes = d.nb_colonnes;
+        t->types_zones = d.types_zones;
+        t->facultatives = d.facultatives;
+        t->choix_zones = d.choix_zones;
+    } else {
+        t->nb_colonnes.clear();
+        t->types_zones.clear();
+        t->facultatives.clear();
+        t->choix_zones.clear();
+    }
     emit t->ecran_ferme();
 }
 
@@ -415,8 +429,20 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         if (vue_ecran) { vue_ecran->deleteLater(); vue_ecran = nullptr; }
         tables.clear();
         boutons_ecran.clear();
+        zones.clear();
         erreur_ecran = nullptr;
         attente_ecran = false;
+        if (!recouverts.isEmpty()) {   // l'écran du dessous revient (§ 22.3)
+            const EcranMontre e = recouverts.takeLast();
+            vue_ecran = e.vue;
+            erreur_ecran = e.erreur;
+            tables = e.tables;
+            boutons_ecran = e.boutons;
+            zones = e.zones;
+            vue_ecran->show();
+            vue_ecran->setEnabled(false);
+            setWindowTitle(e.titre);
+        }
     });
     connect(&travail, &Travail::reponses, this, [this](const QString &echo) {
         QTextCursor c(fil->document());
@@ -620,7 +646,11 @@ void Execution::arreter() {
 
 void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, const QStringList &textes,
                               const QVector<QStringList> &colonnes) {
-    delete vue_ecran;
+    if (vue_ecran) {   // l'écran ouvert passe dessous, masqué ; il reviendra à la fermeture de celui-ci
+        vue_ecran->hide();
+        recouverts.push_back({vue_ecran, erreur_ecran, tables, boutons_ecran, zones, windowTitle()});
+        vue_ecran = nullptr;
+    }
     tables = QVector<QTableWidget *>(sortes.size(), nullptr);
     zones = QVector<QWidget *>(sortes.size(), nullptr);
     boutons_ecran.clear();
