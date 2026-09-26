@@ -48,6 +48,11 @@ Pour aller plus loin : `exemples/partotheque.grym`, une bibliothèque de partiti
 
 ## Compiler
 
+L'atelier, en une commande (construit tout, puis lance ; sous macOS, Qt 6 par Homebrew : `brew install qt`) :
+
+    ./atelier
+    ./appliquer ~/Downloads/grymoir-x.patch   # appliquer un patch, vérifier, publier, relancer
+
 Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
 
     make

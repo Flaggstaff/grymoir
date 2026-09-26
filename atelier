@@ -1,0 +1,60 @@
+#!/bin/sh
+# GrymoiR : construire l'atelier, puis le lancer. Une seule commande, depuis n'importe quel dossier.
+#   ./atelier                le dernier projet ouvert
+#   ./atelier exemples       un dossier (projet) ou un fichier
+#   ./atelier --construire   construire seulement, sans lancer
+# L'atelier déjà ouvert est d'abord fermé : sans cela, macOS remettrait au premier plan l'ancienne version
+# au lieu de lancer celle qu'on vient de construire.
+set -e
+depot="$(cd "$(dirname "$0")" && pwd)"
+cible=""
+construire_seulement=""
+if [ "$1" = "--construire" ]; then construire_seulement=1; shift; fi
+if [ -n "$1" ]; then
+    [ -e "$1" ] || { echo "« $1 » n'existe pas." >&2; exit 1; }
+    cible="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+fi
+cd "$depot"
+
+echo "Construction du cœur…"
+make -s grym
+
+if [ ! -f construction/CMakeCache.txt ]; then
+    echo "Première construction de l'atelier : préparation…"
+    if command -v brew >/dev/null 2>&1 && brew --prefix qt >/dev/null 2>&1; then
+        cmake -B construction -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
+    else
+        cmake -B construction -DCMAKE_BUILD_TYPE=Release
+    fi
+fi
+echo "Construction de l'atelier…"
+processeurs="$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 2)"
+cmake --build construction --parallel "$processeurs"
+[ -z "$construire_seulement" ] || exit 0
+
+case "$(uname)" in
+Darwin)
+    programme="$depot/construction/grym-atelier.app/Contents/MacOS/grym-atelier"
+    if pgrep -f "$programme" >/dev/null 2>&1; then
+        echo "L'atelier est ouvert : je le ferme (il demande d'enregistrer ce qui ne l'est pas)."
+        osascript -e 'tell application id "ch.grymoir.atelier" to quit' >/dev/null 2>&1 || true
+        attente=0
+        while pgrep -f "$programme" >/dev/null 2>&1; do
+            attente=$((attente + 1))
+            if [ "$attente" -gt 60 ]; then
+                echo "L'atelier ne s'est pas fermé (fermeture annulée ?). Fermez-le, puis relancez ./atelier." >&2
+                exit 1
+            fi
+            sleep 1
+        done
+    fi
+    if [ -n "$cible" ]; then open construction/grym-atelier.app --args "$cible"
+    else open construction/grym-atelier.app; fi
+    ;;
+*)
+    pkill -x grym-atelier 2>/dev/null && sleep 1 || true
+    if [ -n "$cible" ]; then nohup construction/grym-atelier "$cible" >/dev/null 2>&1 &
+    else nohup construction/grym-atelier >/dev/null 2>&1 & fi
+    ;;
+esac
+echo "Atelier lancé."

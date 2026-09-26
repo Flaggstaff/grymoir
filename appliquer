@@ -1,0 +1,32 @@
+#!/bin/sh
+# GrymoiR : appliquer un patch reçu, vérifier, publier, puis relancer l'atelier.
+#   ./appliquer ~/Downloads/grymoir-t2.patch
+# Si le patch ne s'applique pas, ou si un essai échoue, rien n'est publié et le dépôt reste tel qu'il était.
+set -e
+depot="$(cd "$(dirname "$0")" && pwd)"
+[ -n "$1" ] || { echo "Usage : ./appliquer chemin/du/fichier.patch" >&2; exit 1; }
+[ -f "$1" ] || { echo "Patch introuvable : $1" >&2; exit 1; }
+patch="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+cd "$depot"
+
+if [ -d .git/rebase-apply ]; then
+    echo "Un patch précédent était resté à moitié appliqué : je l'abandonne."
+    git am --abort
+fi
+avant="$(git rev-parse HEAD)"
+if ! git am "$patch"; then
+    git am --abort
+    echo "Le patch ne s'applique pas : rien n'a changé. Le dépôt est à : $(git log --oneline -1)" >&2
+    exit 1
+fi
+
+echo "Construction et essais…"
+if ! ./atelier --construire || ! make -s test || ! ctest --test-dir construction --output-on-failure; then
+    git reset -q --hard "$avant"
+    echo "Échec de la construction ou d'un essai : le patch est retiré, rien n'est publié." >&2
+    echo "Envoyez-moi ce qui s'est affiché ci-dessus." >&2
+    exit 1
+fi
+
+git push
+exec "$depot/atelier"

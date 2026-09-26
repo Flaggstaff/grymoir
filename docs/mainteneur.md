@@ -38,6 +38,18 @@ Autour : `decimal.c` (nombres décimaux exacts), `date.c` (calendrier), `texte.c
 
 ## 2. Construire et essayer
 
+Au quotidien, deux scripts suffisent, depuis le dossier du dépôt :
+
+```
+./atelier                        # construit le cœur et l'atelier, ferme l'atelier ouvert, lance le nouveau
+./atelier exemples               # idem, sur un projet (un dossier) ou un fichier
+./appliquer ~/Downloads/x.patch  # applique un patch, construit, fait tourner tous les essais, publie (git push), relance
+```
+
+`./appliquer` ne publie rien si le patch ne s'applique pas, ni si la construction ou un essai échoue : le patch est alors retiré, et le dépôt reste tel qu'il était. Sous macOS, `./atelier` ferme d'abord l'atelier ouvert (qui demande d'enregistrer ce qui ne l'est pas) : sans cela, `open` remettrait l'ancienne version au premier plan au lieu de lancer la nouvelle.
+
+Le détail, pour qui veut faire à la main :
+
 ```
 make                 # grym, les outils de mise au point, les programmes d'essai
 make test            # tous les essais du cœur ; chaque programme affiche « n/n tests réussis »
@@ -249,3 +261,4 @@ Le reste du vocabulaire (mots de construction, synonymes) est encore dans le cod
 | Version | Date | Changement |
 |---------|------|------------|
 | 1.0 | 2026-09-24 | Manuel initial : trajet d'un programme, construction et essais, outils de mise au point, recette d'une phrase nouvelle (`Effacer l'écran.`), liste de contrôle, règles de la charte |
+| 1.1 | 2026-09-26 | § 2 : `./atelier` et `./appliquer` |
