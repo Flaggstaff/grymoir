@@ -113,6 +113,25 @@ Quand on clique sur « Fermer » dans l'écran des compositeurs :
 - À droite, les propriétés de l'élément cliqué : bouton (libellé, « Voir l'événement »), texte, zone (nom, type, départ, facultative), liste (entité, tri, colonnes à cocher, condition `dont` en GrymoiR), écran (titre).
 - L'aperçu montre la structure, pas les données : titres des colonnes et deux lignes grisées d'exemple. Les conditions `dont` peuvent citer des zones encore vides ; pour voir les données, « Lancer ».
 
+### Les gestes *(validé le 25 septembre 2026)*
+
+Chaque geste réécrit la déclaration de l'écran, et elle seule ; il est réanalysé, annulé s'il casse quelque chose, et Cmd+Z le défait.
+
+- Ajouter : une palette (bouton, texte, zone, liste) ; glisser à l'endroit voulu, ou un clic pour la fin. Un bouton ajouté reçoit son événement, dont le corps est une remarque (`Remarque : à écrire.`, accepté par le langage, vérifié le 25 septembre 2026).
+- Déplacer : glisser dans l'aperçu ; au-dessus ou en dessous, l'ordre change ; sur le bord gauche ou droit, les deux éléments passent `côte à côte`, dans un bloc créé au besoin ; un bloc réduit à un élément disparaît.
+- Supprimer (Suppr) : un bouton part avec son événement, après confirmation qui montre le code supprimé ; une zone citée ailleurs est refusée par la réanalyse, qui montre la ligne.
+- Renommer un bouton : le libellé change dans la déclaration et dans son événement.
+- Écartés : redimensionner à la souris, positions libres.
+
+### Découpage
+
+| Tranche | Contenu |
+|---|---|
+| A4-a | L'onglet « Écrans » : liste des écrans, aperçu (structure, deux lignes d'exemple), sélection d'un élément, propriétés en lecture, « Voir l'événement » |
+| A4-b | « Écran pour une entité… », « Nouvel écran vide », l'écran d'accueil |
+| A4-c | Propriétés modifiables ; ajouter, supprimer, renommer, avec les événements |
+| A4-d | Déplacer à la souris, blocs créés et retirés |
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -149,3 +168,4 @@ Quand on clique sur « Fermer » dans l'écran des compositeurs :
 | 0.12 | 2026-09-25 | § 5 : A2-c fait (aperçu des migrations, refus avant de lancer, `grym migration`) ; A2 fait |
 | 0.13 | 2026-09-25 | § 5 bis : A4, l'écran généré pour une entité |
 | 0.14 | 2026-09-25 | § 5 bis : l'onglet « Écrans » |
+| 0.15 | 2026-09-25 | § 5 bis : les gestes ; découpage A4-a à A4-d |
