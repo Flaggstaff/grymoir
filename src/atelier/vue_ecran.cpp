@@ -5,7 +5,6 @@
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QComboBox>
-#include <QFormLayout>
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
@@ -22,8 +21,13 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     r.controles = QVector<QWidget *>(n, nullptr);
     r.tables = QVector<QTableWidget *>(n, nullptr);
     r.zones = QVector<QWidget *>(n, nullptr);
+    // Mesures du thème (src/atelier/theme/grymoir-jetons.json) : marges, écarts des blocs, hauteur des lignes.
+    const Theme &t = Theme::courant();
     r.vue = new QWidget;
     auto *pile = new QVBoxLayout(r.vue);
+    const int marge = t.mesure("marge-ecran");
+    pile->setContentsMargins(marge, marge, marge, marge);
+    pile->setSpacing(t.mesure("l-un-sous-l-autre"));
     r.titre = new QLabel(titre);
     r.titre->setTextFormat(Qt::PlainText);
     r.titre->setProperty("niveau", "ecran");   // la taille et la graisse viennent de la feuille du thème
@@ -36,6 +40,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         if (e.sorte == ELEMENT_COTE_A_COTE || e.sorte == ELEMENT_L_UN_SOUS_L_AUTRE) {
             QBoxLayout *b = e.sorte == ELEMENT_COTE_A_COTE ? static_cast<QBoxLayout *>(new QHBoxLayout)
                                                            : static_cast<QBoxLayout *>(new QVBoxLayout);
+            b->setSpacing(t.mesure(e.sorte == ELEMENT_COTE_A_COTE ? "cote-a-cote" : "l-un-sous-l-autre"));
             blocs.last()->addLayout(b, 1);
             blocs.push_back(b);
             continue;
@@ -52,7 +57,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             r.controles[k] = l;
         } else if (e.sorte == ELEMENT_ZONE) {   // les contrôles des formulaires (docs/v2.md, § 10)
             QWidget *w;
-            if (e.type == "vrai ou faux") w = new QCheckBox;
+            if (e.type == "vrai ou faux") w = new QCheckBox(e.texte);   // la case porte son libellé : un clic dessus la coche
             else if (!e.choix.isEmpty()) {
                 auto *m = new QComboBox;
                 m->addItem(QString());
@@ -61,9 +66,16 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             } else w = new QLineEdit;
             r.zones[k] = w;
             auto *conteneur = new QWidget;   // le libellé et le contrôle, un seul élément à choisir dans l'aperçu
-            auto *rang = new QFormLayout(conteneur);
+            auto *rang = new QVBoxLayout(conteneur);   // le libellé au-dessus du contrôle (maquette, § 5 et 8)
             rang->setContentsMargins(0, 0, 0, 0);
-            rang->addRow(e.texte, w);
+            rang->setSpacing(t.mesure("espace-1"));
+            if (!qobject_cast<QCheckBox *>(w)) {
+                auto *libelle = new QLabel(e.texte);
+                libelle->setProperty("niveau", "etiquette");
+                libelle->setBuddy(w);
+                rang->addWidget(libelle);
+            }
+            rang->addWidget(w);
             ici->addWidget(conteneur);
             r.controles[k] = conteneur;
         } else if (e.sorte == ELEMENT_LISTE) {
@@ -72,6 +84,9 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             tab->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);   // les titres entiers
             tab->horizontalHeader()->setStretchLastSection(true);
             tab->verticalHeader()->hide();
+            tab->verticalHeader()->setDefaultSectionSize(t.mesure("hauteur-ligne"));
+            tab->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+            tab->setShowGrid(false);   // les lignes se séparent par un trait (feuille du thème), pas par une grille
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
             QFont chiffres = tab->font();   // chiffres de largeur fixe : les colonnes de nombres s'alignent
             chiffres.setFeature(QFont::Tag("tnum"), 1);
@@ -97,6 +112,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         } else {
             if (!rangee) {
                 rangee = new QHBoxLayout;
+                rangee->setSpacing(t.mesure("espace-2"));
                 rangee->addStretch(1);
                 ici->addLayout(rangee);
             }
@@ -110,6 +126,6 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     r.erreur->setProperty("message", "erreur");   // le cadre du message d'erreur, selon la feuille du thème
     r.erreur->setWordWrap(true);
     r.erreur->hide();
-    pile->addWidget(r.erreur);
+    pile->insertWidget(1, r.erreur);   // sous le titre : l'utilisateur le voit avant de chercher ce qui a raté
     return r;
 }

@@ -69,6 +69,16 @@ QColor Theme::couleur(const QString &jeton) const {
     return v.isEmpty() ? QColor(Qt::magenta) : QColor(v);
 }
 
+int Theme::mesure(const QString &jeton) const {
+    const QJsonObject j = QJsonDocument::fromJson(jetons_).object();
+    for (const char *groupe : {"espaces", "dimensions", "rayons", "traits"}) {
+        const QJsonValue v = j.value(groupe).toObject().value(jeton);
+        if (v.isDouble()) return v.toInt();
+    }
+    std::fprintf(stderr, "grym-atelier : mesure inconnue : %s\n", qPrintable(jeton));
+    return 0;
+}
+
 QString Theme::feuille(Mode mode, const QString &accent) const {
     static const QRegularExpression re("@([a-z0-9-]+)@");
     QString r;

@@ -1,6 +1,7 @@
 // GrymoiR : essais de l'atelier (docs/atelier.md, jalon A1), sans fenêtre.
 #include "coloration.h"
 #include "theme.h"
+#include "vue_ecran.h"
 #include "editeur.h"
 #include "execution.h"
 #include "aide.h"
@@ -19,6 +20,8 @@
 
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QBoxLayout>
+#include <QHeaderView>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCompleter>
@@ -162,6 +165,55 @@ int main(int argc, char **argv) {
         t.appliquer(Theme::Clair, "bleue");
         VERIFIER(couleur_a(12) == QColor("#8F4400"));
         VERIFIER(QApplication::font().family() == "Atkinson Hyperlegible Next");
+    }
+
+    // Dessin d'un écran (T2) : marges, écarts et hauteurs viennent des jetons ; libellé au-dessus de sa zone ;
+    // le message d'erreur sous le titre
+    {
+        Theme &t = Theme::courant();
+        VERIFIER(t.mesure("marge-ecran") == 24 && t.mesure("cote-a-cote") == 16 && t.mesure("hauteur-ligne") == 32);
+        VERIFIER(t.mesure("rayon-controle") == 8 && t.mesure("trait-focus") == 2);
+        QVector<ElementVue> el(6);
+        el[0].sorte = ELEMENT_ZONE;
+        el[0].texte = "Pays";
+        el[0].type = "texte";
+        el[1].sorte = ELEMENT_COTE_A_COTE;
+        el[2].sorte = ELEMENT_LISTE;
+        el[2].colonnes = QStringList({"Nom", "Naissance"});
+        el[3].sorte = ELEMENT_TEXTE;
+        el[3].texte = "À droite";
+        el[4].sorte = ELEMENT_FIN_DE_BLOC;
+        el[5].sorte = ELEMENT_BOUTON;
+        el[5].texte = "Fermer";
+        VueEcran v = dessiner_ecran("Catalogue", el);
+        auto *pile = qobject_cast<QVBoxLayout *>(v.vue->layout());
+        VERIFIER(pile && pile->contentsMargins() == QMargins(24, 24, 24, 24) && pile->spacing() == 12);
+        VERIFIER(pile->itemAt(0)->widget() == v.titre && pile->itemAt(1)->widget() == v.erreur);
+        VERIFIER(v.titre->property("niveau").toString() == "ecran" && v.titre->textFormat() == Qt::PlainText);
+        VERIFIER(v.erreur->property("message").toString() == "erreur" && v.erreur->isHidden());
+        // la zone : un conteneur, libellé au-dessus, le contrôle dessous
+        auto *rang = qobject_cast<QVBoxLayout *>(v.controles[0]->layout());
+        VERIFIER(rang && rang->count() == 2);
+        auto *libelle = qobject_cast<QLabel *>(rang->itemAt(0)->widget());
+        VERIFIER(libelle && libelle->text() == "Pays" && libelle->property("niveau").toString() == "etiquette");
+        VERIFIER(rang->itemAt(1)->widget() == v.zones[0] && libelle->buddy() == v.zones[0]);
+        // le bloc côte à côte, ses écarts ; la liste, sa hauteur de ligne et ses titres à gauche
+        QHBoxLayout *cote = nullptr;
+        for (int k = 0; k < pile->count(); k++)
+            if (auto *h = qobject_cast<QHBoxLayout *>(pile->itemAt(k)->layout()); h && h->indexOf(v.tables[2]) >= 0) cote = h;
+        VERIFIER(cote && cote->spacing() == 16);
+        VERIFIER(v.tables[2]->verticalHeader()->defaultSectionSize() == 32 && !v.tables[2]->showGrid());
+        VERIFIER(v.tables[2]->horizontalHeader()->defaultAlignment() == (Qt::AlignLeft | Qt::AlignVCenter));
+        VERIFIER(v.boutons.size() == 1 && v.boutons[0]->text() == "Fermer");
+        // une case à cocher porte son libellé, sans étiquette au-dessus
+        QVector<ElementVue> el2(1);
+        el2[0].sorte = ELEMENT_ZONE;
+        el2[0].texte = "Actif";
+        el2[0].type = "vrai ou faux";
+        VueEcran v2 = dessiner_ecran("Réglages", el2);
+        VERIFIER(v2.controles[0]->layout()->count() == 1 && qobject_cast<QCheckBox *>(v2.zones[0])->text() == "Actif");
+        delete v.vue;
+        delete v2.vue;
     }
 
     // Analyse : la première erreur, avec sa position ; rien quand tout va bien

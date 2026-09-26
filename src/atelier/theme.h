@@ -35,6 +35,9 @@ public:
     // ou un jeton de coloration préfixé : « syntaxe-nombre ». Un jeton inconnu est une faute de programmation :
     // magenta, pour se voir tout de suite.
     QColor couleur(const QString &jeton) const;
+    // Une mesure des jetons, en pixels : « marge-ecran », « cote-a-cote », « hauteur-ligne »… (espaces,
+    // dimensions, rayons, traits). Une mesure inconnue est une faute de programmation : 0, et un message.
+    int mesure(const QString &jeton) const;
     // La même, en #rrggbb, pour le texte enrichi (HTML) des panneaux.
     QString hex(const QString &jeton) const { return couleur(jeton).name(); }
 

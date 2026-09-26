@@ -153,7 +153,13 @@ Décisions : `docs/ecrans.md`, § 5. Maquettes et jetons : Claude Design, le 26 
 - Piège de Qt, noté dans le modèle : une règle `QHeaderView::up-arrow` ou `::down-arrow` fait réserver la place d'une flèche dans chaque titre de colonne, même sans tri, et rogne le texte. Le modèle n'en a pas ; la flèche de Fusion suit la palette.
 - Limites connues : au changement de mode pendant que l'atelier est ouvert, le cadre de sélection de l'aperçu d'écran et le texte des panneaux de propriétés gardent l'ancienne couleur jusqu'au prochain choix.
 
-Tranches suivantes : T2, les écrans des applications (espacements et marges des jetons dans `vue_ecran.cpp`) ; T3, la phrase `Les écrans ont …` (grammaire, analyse, forme compacte, aperçu, exécution).
+Tranche T2, faite le 26 septembre 2026 : les écrans des applications, dans `vue_ecran.cpp`, donc aussi l'aperçu de l'onglet Écrans.
+- Mesures des jetons, par `Theme::mesure` : marge de l'écran (24), écart des éléments et des blocs « l'un sous l'autre » (12), des blocs « côte à côte » (16), des boutons d'une rangée (8), hauteur des lignes de liste (32).
+- Une zone montre son libellé au-dessus du contrôle, en étiquette ; une case à cocher porte le sien.
+- Une liste n'a plus de grille : ses lignes se séparent par un trait, ses titres s'alignent à gauche.
+- Le titre de l'écran est un texte simple, mis en forme par la feuille ; le message d'un événement raté s'affiche juste dessous.
+
+Tranche suivante : T3, la phrase `Les écrans ont …` (grammaire, analyse, forme compacte, aperçu, exécution).
 
 ## 6. Questions ouvertes
 
@@ -211,3 +217,4 @@ Tranches suivantes : T2, les écrans des applications (espacements et marges des
 | 0.20 | 2026-09-26 | § 5 ter : le thème, tranche T1 faite (jetons, feuille, polices, icônes, mode clair ou sombre) |
 | 0.21 | 2026-09-26 | § 6.3 : autocomplétion de l'éditeur faite (suites du cœur, à la frappe et par Ctrl+Espace) |
 | 0.22 | 2026-09-26 | § 6.3 : guillemets à la frappe ; frappe lue sur le document (méthode de saisie de macOS) |
+| 0.23 | 2026-09-26 | § 5 ter : tranche T2 faite (mesures des jetons dans le dessin des écrans) |
