@@ -1,0 +1,214 @@
+/* GrymoiR, feuille de style Qt Widgets (style Fusion)
+   Modèle : l'atelier remplace les jetons entre arobases à partir de grymoir-jetons.json (src/atelier/theme.cpp).
+   @icones@ désigne le dossier des icônes, recolorées pour le mode courant.
+   Chiffres tabulaires : QSS ne sait pas activer « tnum ». Côté C++ (Qt 6.7 et plus) :
+   QFont f = vue->font(); f.setFeature(QFont::Tag("tnum"), 1); vue->setFont(f);
+   Propriétés dynamiques : role="principal" | "danger" sur QPushButton, erreur="true" sur QLineEdit. */
+
+* {
+    font-family: "Atkinson Hyperlegible Next";
+    font-size: 14px;
+}
+
+QWidget {
+    background: @fond@;
+    color: @texte@;
+    selection-background-color: @accent@;
+    selection-color: @sur-accent@;
+}
+
+/* Un libellé prend le fond de ce qui le porte : sans cette règle, QWidget le peindrait en @fond@. */
+QLabel { background: transparent; }
+
+/* Titres (QLabel avec propriété niveau) */
+QLabel[niveau="accueil"] { font-size: 28px; font-weight: 700; }
+QLabel[niveau="ecran"]   { font-size: 20px; font-weight: 600; }
+QLabel[niveau="panneau"] { font-size: 16px; font-weight: 600; }
+QLabel[niveau="etiquette"] { font-size: 12px; font-weight: 600; color: @texte-2@; }
+QLabel[niveau="legende"] { font-size: 12px; color: @texte-2@; }
+QLabel[erreur="true"]    { font-size: 12px; color: @danger@; }
+
+/* Message d'erreur d'événement */
+QFrame[message="erreur"] {
+    background: @danger-doux@;
+    border: 1px solid @danger@;
+    border-radius: 8px;
+    padding: 12px 16px;
+}
+
+/* ---------- Boutons ---------- */
+QPushButton {
+    min-height: 28px;
+    padding: 0 15px;
+    border: 1px solid @bordure@;
+    border-radius: 8px;
+    background: @surface@;
+    color: @texte@;
+}
+QPushButton:hover   { background: @survol@; border-color: @texte-2@; }
+QPushButton:focus   { border: 2px solid @accent@; padding: 0 14px; }
+QPushButton:pressed,
+QPushButton:checked { background: @accent-doux@; border-color: @accent@; }
+QPushButton:disabled {
+    background: @fond-desactive@;
+    border-color: @separateur@;
+    color: @texte-desactive@;
+}
+
+QPushButton[role="principal"] {
+    border: 2px solid @accent@;
+    padding: 0 14px;
+    background: @accent@;
+    color: @sur-accent@;
+    font-weight: 600;
+}
+QPushButton[role="principal"]:hover   { background: @accent-survol@; border-color: @accent-survol@; }
+QPushButton[role="principal"]:focus   { border-color: @texte@; }
+QPushButton[role="principal"]:pressed { background: @accent-enfonce@; border-color: @accent-enfonce@; }
+QPushButton[role="principal"]:disabled {
+    background: @fond-desactive@; border: 1px solid @separateur@; padding: 0 15px; color: @texte-desactive@;
+}
+
+QPushButton[role="danger"] { border-color: @danger@; color: @danger@; }
+QPushButton[role="danger"]:hover   { background: @danger-doux@; }
+QPushButton[role="danger"]:focus   { border: 2px solid @accent@; padding: 0 14px; }
+QPushButton[role="danger"]:pressed { background: @danger@; color: @sur-danger@; }
+QPushButton[role="danger"]:disabled { border-color: @separateur@; color: @texte-desactive@; background: @fond-desactive@; }
+
+QPushButton[role="accueil"] {
+    min-height: 40px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: left;
+    padding: 0 15px;
+}
+
+/* ---------- Zones de saisie ---------- */
+QLineEdit, QComboBox {
+    min-height: 30px;
+    padding: 0 9px;
+    border: 1px solid @bordure@;
+    border-radius: 8px;
+    background: @surface@;
+    color: @texte@;
+}
+QLineEdit:hover, QComboBox:hover { border-color: @texte-2@; }
+QLineEdit:focus, QComboBox:focus { border: 2px solid @accent@; padding: 0 8px; }
+QLineEdit[erreur="true"] { border: 2px solid @danger@; padding: 0 8px; }
+QLineEdit:disabled, QComboBox:disabled {
+    background: @fond-desactive@; border-color: @separateur@; color: @texte-desactive@;
+}
+QComboBox::drop-down { border: none; width: 24px; }
+QComboBox::down-arrow { image: url(@icones@/chevron-down.png); width: 14px; height: 14px; }
+
+QCheckBox { spacing: 8px; background: transparent; }
+QCheckBox::indicator {
+    width: 14px; height: 14px;
+    border: 1px solid @bordure@;
+    border-radius: 3px;
+    background: @surface@;
+}
+QCheckBox::indicator:checked { background: @accent@; border-color: @accent@; image: url(@icones@/check-sur-accent.png); }
+QCheckBox::indicator:focus { border: 2px solid @accent@; }
+
+/* ---------- Listes ---------- */
+QTableView, QListView, QTreeView {
+    border: 1px solid @bordure@;
+    border-radius: 8px;
+    background: @surface@;
+    gridline-color: @separateur@;
+    outline: none;
+}
+QTableView:focus, QListView:focus, QTreeView:focus { border: 2px solid @accent@; }
+QTableView::item, QListView::item, QTreeView::item {
+    min-height: 32px;
+    padding: 0 12px;
+    border-bottom: 1px solid @separateur@;
+}
+QTableView::item:hover, QListView::item:hover, QTreeView::item:hover { background: @survol@; }
+QTableView::item:selected, QListView::item:selected, QTreeView::item:selected {
+    background: @accent-doux@;
+    color: @texte@;
+    font-weight: 600;
+}
+QTableView::item:focus { border: 2px solid @accent@; }
+QTableView::item:disabled { color: @texte-desactive@; }
+
+QHeaderView::section {
+    min-height: 32px;
+    padding: 0 12px;
+    background: @surface-alt@;
+    color: @texte@;
+    font-weight: 600;
+    border: none;
+    border-bottom: 1px solid @bordure@;
+    border-right: 1px solid @separateur@;
+}
+/* Pas de règle ::up-arrow ni ::down-arrow : Qt y réserverait la place d'une flèche dans chaque titre,
+   même sans tri, et rognerait le texte. La flèche de Fusion suit la palette du thème. */
+
+/* ---------- Atelier ---------- */
+QMenuBar { background: @surface@; border-bottom: 1px solid @separateur@; }
+QMenuBar::item { padding: 4px 10px; background: transparent; }
+QMenuBar::item:selected { background: @accent-doux@; border-radius: 6px; }
+QMenu { background: @surface@; border: 1px solid @bordure@; border-radius: 8px; padding: 4px; }
+QMenu::item { padding: 6px 16px; border-radius: 6px; }
+QMenu::item:selected { background: @accent-doux@; color: @texte@; }
+
+QToolBar { background: @fond@; border: none; border-bottom: 1px solid @separateur@; padding: 10px 12px; spacing: 8px; }
+QToolButton {
+    min-height: 28px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: @texte@;
+}
+QToolButton:hover    { background: @survol@; border-color: @bordure@; }
+QToolButton:pressed  { background: @accent-doux@; }
+QToolButton:disabled { color: @texte-desactive@; }
+QToolButton[role="principal"] { background: @accent@; border-color: @accent@; color: @sur-accent@; font-weight: 600; }
+QToolButton[role="principal"]:hover   { background: @accent-survol@; border-color: @accent-survol@; }
+QToolButton[role="principal"]:pressed { background: @accent-enfonce@; border-color: @accent-enfonce@; }
+QToolButton[role="principal"]:disabled { background: @fond-desactive@; border-color: @separateur@; color: @texte-desactive@; }
+
+QTabBar::tab {
+    min-height: 38px;
+    padding: 0 16px;
+    background: transparent;
+    color: @texte-2@;
+    border: none;
+    border-bottom: 2px solid transparent;
+}
+QTabBar::tab:hover    { color: @texte@; }
+QTabBar::tab:selected { color: @texte@; font-weight: 600; border-bottom: 2px solid @accent@; }
+QTabBar::tab:focus    { background: @accent-doux@; border-radius: 6px 6px 0 0; }
+QTabWidget::pane { border: none; border-top: 1px solid @separateur@; }
+
+QPlainTextEdit[role="editeur"] {
+    font-family: "Atkinson Hyperlegible Mono";
+    font-size: 14px;
+    background: @surface@;
+    border: none;
+}
+QPlainTextEdit[role="console"] {
+    font-family: "Atkinson Hyperlegible Mono";
+    font-size: 13px;
+    color: @texte-2@;
+    background: @surface@;
+    border: none;
+}
+
+QStatusBar { background: @fond@; color: @texte-2@; font-size: 12px; border-top: 1px solid @separateur@; }
+QSplitter::handle { background: @separateur@; }
+QSplitter::handle:horizontal { width: 1px; }
+QSplitter::handle:vertical   { height: 1px; }
+
+QScrollBar:vertical   { width: 12px;  background: transparent; margin: 2px; }
+QScrollBar:horizontal { height: 12px; background: transparent; margin: 2px; }
+QScrollBar::handle { background: @bordure@; border-radius: 4px; min-height: 32px; min-width: 32px; }
+QScrollBar::handle:hover { background: @texte-2@; }
+QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
+QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
+
+QToolTip { background: @texte@; color: @fond@; border: none; border-radius: 6px; padding: 6px 8px; }

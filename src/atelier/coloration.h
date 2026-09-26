@@ -9,7 +9,7 @@
 
 class Coloration : public QSyntaxHighlighter {
 public:
-    enum Sorte { Controle, MotCle, Nombre, Texte, Remarque, Operateur, Nom, Erreur, NbSortes };
+    enum Sorte { Controle, MotCle, Nombre, Texte, Remarque, Operateur, Nom, Erreur, Date, NbSortes };
 
     Coloration(QTextDocument *document, bool compacte);
     // La sorte du caractère à cette position d'une ligne, ou -1 (espace, nom ordinaire). Sert aux tests.
@@ -19,6 +19,7 @@ protected:
     void highlightBlock(const QString &ligne) override;
 
 private:
+    void preparer();   // les formats, selon le thème courant
     bool compacte;
     QTextCharFormat formats[NbSortes];
 };

@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, éditeur de code.
 #include "editeur.h"
+#include "theme.h"
 #include "coloration.h"
 
 #include <QFontDatabase>
@@ -54,9 +55,12 @@ private:
 }  // namespace
 
 Editeur::Editeur(QWidget *parent) : QPlainTextEdit(parent), marge(new Marge(this)) {
-    QFont f = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    f.setPointSize(qMax(f.pointSize(), 13));
-    setFont(f);
+    setFont(Theme::courant().police_code(14));
+    setProperty("role", "editeur");
+    connect(&Theme::courant(), &Theme::change, this, [this] {
+        marquer_erreur();
+        marge->update();
+    });
     setTabStopDistance(fontMetrics().horizontalAdvance(' ') * 4);
     setLineWrapMode(QPlainTextEdit::NoWrap);
     attente.setSingleShot(true);
@@ -104,7 +108,7 @@ void Editeur::peindre_marge(QPaintEvent *e) {
         const int bas = haut + qRound(blockBoundingRect(bloc).height());
         if (bloc.isVisible() && bas >= e->rect().top()) {
             const bool fautive = !diag.message.isEmpty() && diag.ligne == numero;
-            p.setPen(fautive ? QColor(Qt::red) : palette().color(QPalette::PlaceholderText));
+            p.setPen(fautive ? Theme::courant().couleur("danger") : palette().color(QPalette::PlaceholderText));
             p.drawText(0, haut, marge->width() - 8, fontMetrics().height(), Qt::AlignRight, QString::number(numero));
         }
         bloc = bloc.next();
@@ -135,8 +139,8 @@ void Editeur::marquer_erreur() {
         if (bloc.isValid()) {
             QTextEdit::ExtraSelection s;
             s.format.setUnderlineStyle(QTextCharFormat::WaveUnderline);
-            s.format.setUnderlineColor(Qt::red);
-            s.format.setBackground(QColor(255, 0, 0, 28));
+            s.format.setUnderlineColor(Theme::courant().couleur("danger"));
+            s.format.setBackground(Theme::courant().couleur("danger-doux"));
             QTextCursor c(bloc);
             int debut = position_bloc(bloc, diag.colonne);
             const QString t = bloc.text();

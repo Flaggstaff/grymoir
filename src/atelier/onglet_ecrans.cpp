@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, l'onglet « Écrans ».
 #include "onglet_ecrans.h"
+#include "theme.h"
 #include "schema.h"
 
 #include <QCheckBox>
@@ -320,14 +321,14 @@ void OngletEcrans::dessiner() {
             for (int r = 0; r < 2; r++)
                 for (int c = 0; c < t->columnCount(); c++) {
                     auto *i = new QTableWidgetItem("…");
-                    i->setForeground(Qt::gray);
+                    i->setForeground(Theme::courant().couleur("texte-2"));
                     t->setItem(r, c, i);
                 }
         }
     }
     vue.titre->installEventFilter(this);
     repere = new QFrame(vue.vue);
-    repere->setStyleSheet("background: #1f5fa8;");
+    repere->setStyleSheet("background: " + Theme::courant().hex("accent") + ";");
     repere->hide();
     centre->setWidget(vue.vue);
     choisir_element(element < e.elements.size() ? element : -1);
@@ -431,7 +432,7 @@ void OngletEcrans::choisir_element(int k) {
     const EcranLu &e = lus[courant];
     voir_declaration->setEnabled(true);
     auto ligne = [](const QString &nom, const QString &valeur) {
-        return "<tr><td style='color:#666'>" + nom.toHtmlEscaped() + "</td><td>" + valeur.toHtmlEscaped() + "</td></tr>";
+        return "<tr><td style='color:" + Theme::courant().hex("texte-2") + "'>" + nom.toHtmlEscaped() + "</td><td>" + valeur.toHtmlEscaped() + "</td></tr>";
     };
     QString h;
     if (k < 0 || k >= e.elements.size()) {
@@ -443,7 +444,7 @@ void OngletEcrans::choisir_element(int k) {
         return;
     }
     const ElementLu &x = e.elements[k];
-    if (QWidget *w = vue.controles.value(k)) w->setStyleSheet("border: 2px solid #1f5fa8;");
+    if (QWidget *w = vue.controles.value(k)) w->setStyleSheet("border: 2px solid " + Theme::courant().hex("accent") + ";");
     static const char *const noms[] = {"Liste", "Bouton", "Texte", "Zone de saisie", "Côte à côte", "L'un sous l'autre", "Fin de bloc"};
     h = QString("<p><b>%1</b></p><table>").arg(noms[qBound(0, x.sorte, 6)]);
     if (x.sorte == ELEMENT_BOUTON) h += ligne("Libellé", x.texte);
@@ -460,7 +461,7 @@ void OngletEcrans::choisir_element(int k) {
                                                : QString(x.sorte == ELEMENT_BOUTON || x.sorte == ELEMENT_LISTE
                                                          || x.sorte == ELEMENT_ZONE ? "aucun" : "sans objet"));
     h += "</table>";
-    if (!x.ecrit.isEmpty()) h += "<p style='color:#666'>En GrymoiR :</p><pre>" + x.ecrit.toHtmlEscaped() + "</pre>";
+    if (!x.ecrit.isEmpty()) h += "<p style='color:" + Theme::courant().hex("texte-2") + "'>En GrymoiR :</p><pre>" + x.ecrit.toHtmlEscaped() + "</pre>";
     panneau->setHtml(h);
     voir_evenement->setEnabled(x.evenement_ligne > 0);
     editer();
@@ -478,7 +479,9 @@ void OngletEcrans::editer() {
     auto *f = new QFormLayout(cadre);
     f->setContentsMargins(0, 0, 0, 0);
     auto *appliquer = new QPushButton("Appliquer");
+    appliquer->setProperty("role", "principal");
     auto *retirer = new QPushButton(element >= 0 ? "Supprimer" : "");
+    retirer->setProperty("role", "danger");
     retirer->setVisible(element >= 0);
     connect(retirer, &QPushButton::clicked, this, &OngletEcrans::supprimer);
     if (element < 0 || element >= e.elements.size()) {   // l'écran lui-même : son titre

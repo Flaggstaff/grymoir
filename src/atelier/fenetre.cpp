@@ -6,10 +6,12 @@
 #include "panneau.h"
 #include "lien.h"
 #include "onglet_ecrans.h"
+#include "theme.h"
 
 #include <QAction>
 #include <QCloseEvent>
 #include <QCoreApplication>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QDirIterator>
@@ -22,6 +24,7 @@
 #include <QMessageBox>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QTextBrowser>
 #include <QTimer>
 #include <QToolBar>
 #include <QSaveFile>
@@ -285,10 +288,26 @@ Fenetre::Fenetre() {
         aide->activateWindow();
     });
     langage->setShortcut(QKeySequence::HelpContents);   // F1 ; Cmd+? sous macOS
+    // Les polices et les icônes du thème voyagent avec leur licence (OFL 1.1 ; ISC et MIT) : elles se lisent ici.
+    menu_aide->addAction("Licences des polices et des icônes", this, [this] {
+        auto *d = new QTextBrowser;
+        d->setAttribute(Qt::WA_DeleteOnClose);
+        d->setWindowFlag(Qt::Window);
+        d->setWindowTitle("Licences des polices et des icônes");
+        QString t;
+        for (const char *f : {":/licences/atkinson/OFL-Next.txt", ":/licences/atkinson/OFL-Mono.txt", ":/licences/lucide/LICENSE"}) {
+            QFile l(f);
+            if (l.open(QIODevice::ReadOnly)) t += QString::fromUtf8(l.readAll()) + "\n\n────────\n\n";
+        }
+        d->setPlainText("Polices : Atkinson Hyperlegible Next et Mono. Icônes : Lucide.\n\n" + t);
+        d->resize(640, 720);
+        d->show();
+    });
     QToolBar *barre = addToolBar("Programme");
     barre->setMovable(false);
     barre->addAction(action_lancer);
     barre->addAction(action_arreter);
+    if (QWidget *b = barre->widgetForAction(action_lancer)) b->setProperty("role", "principal");   // feuille du thème
 
     connect(editeur, &Editeur::diagnostic_change, this, &Fenetre::montrer_diagnostic);
     connect(editeur->document(), &QTextDocument::modificationChanged, this, &Fenetre::mettre_a_jour_titre);
@@ -406,7 +425,7 @@ void Fenetre::montrer_diagnostic() {
         i->setData(Qt::UserRole, ligne);
         i->setData(Qt::UserRole + 1, colonne);
         i->setData(Qt::UserRole + 2, autre);
-        if (rouge) i->setForeground(Qt::red);
+        if (rouge) i->setForeground(Theme::courant().couleur("danger"));
     };
     const auto &d = editeur->diagnostic();
     if (d.message.isEmpty()) ajouter("Aucune erreur.", 0, 0, false);
@@ -566,7 +585,7 @@ void Fenetre::rafraichir_schema() {
         const QString a = apercu_migration(principal, &refusee);
         t = t.toHtmlEscaped().replace("\n", "<br>");
         t += QString("<br><b>La base de « %1 »</b> : ").arg(QFileInfo(principal).fileName().toHtmlEscaped());
-        t += refusee ? "<span style='color:#c00'>le prochain lancement sera refusé, et la base restera telle quelle. "
+        t += refusee ? "<span style='color:" + Theme::courant().hex("danger") + "'>le prochain lancement sera refusé, et la base restera telle quelle. "
                            + a.toHtmlEscaped() + "</span>"
                      : a.toHtmlEscaped().replace("\n", "<br>");
     }
@@ -579,9 +598,9 @@ void Fenetre::appliquer(const std::function<QString(Geste *)> &geste, const QStr
     Geste g;
     const QString erreur = geste(&g);
     if (!erreur.isEmpty()) {
-        schema_etat->setText("<span style='color:#c00'>" + erreur.toHtmlEscaped() + "</span>");
+        schema_etat->setText("<span style='color:" + Theme::courant().hex("danger") + "'>" + erreur.toHtmlEscaped() + "</span>");
         rafraichir_schema();
-        schema_etat->setText("<span style='color:#c00'>" + erreur.toHtmlEscaped() + "</span>");
+        schema_etat->setText("<span style='color:" + Theme::courant().hex("danger") + "'>" + erreur.toHtmlEscaped() + "</span>");
         return;
     }
     gestes.push_back(g);

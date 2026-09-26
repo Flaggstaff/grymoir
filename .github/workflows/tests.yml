@@ -71,7 +71,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Qt 6 (Ubuntu)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev cmake
+        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev qt6-svg-dev cmake
       - name: Qt 6 (macOS)
         if: runner.os == 'macOS'
         run: brew install qt
@@ -96,7 +96,7 @@ jobs:
           update: true
           install: >-
             mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
-            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-svg
       - name: Construction
         run: |
           cmake -B construction -G Ninja -DCMAKE_BUILD_TYPE=Release

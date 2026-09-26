@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, exécution d'un programme dans sa propre fenêtre.
 #include "execution.h"
+#include "theme.h"
 #include "vue_ecran.h"
 
 #include <QCheckBox>
@@ -74,7 +75,7 @@ static void iface_fiche(void *contexte, Chaine *sortie, const char *titre, const
     QList<QByteArray> images;
     QString h = "<p><b>" + QString::fromUtf8(titre).toHtmlEscaped() + "</b></p><table cellspacing=\"0\" cellpadding=\"3\">";
     for (size_t k = 0; k < n; k++) {
-        h += "<tr><td style=\"color:#666\">" + QString::fromUtf8(lignes[k].libelle).toHtmlEscaped() + "</td><td>";
+        h += "<tr><td style=\"color:" + Theme::courant().hex("texte-2") + "\">" + QString::fromUtf8(lignes[k].libelle).toHtmlEscaped() + "</td><td>";
         if (lignes[k].format && lignes[k].octets) {
             h += QString("<img src=\"image:%1\"><br>").arg(images.size());
             images.append(QByteArray(reinterpret_cast<const char *>(lignes[k].octets), (qsizetype)lignes[k].taille));
@@ -315,9 +316,7 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
     setWindowTitle(QFileInfo(chemin).fileName() + " – exécution");
     fil = new QTextBrowser;
     fil->setOpenLinks(false);
-    QFont f = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    f.setPointSize(qMax(f.pointSize(), 13));
-    fil->setFont(f);
+    fil->setFont(Theme::courant().police_code(13));
 
     zone = new QWidget;
     auto *defilement = new QScrollArea;
@@ -325,6 +324,7 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
     defilement->setWidgetResizable(true);
 
     bouton_envoyer = new QPushButton("Envoyer");
+    bouton_envoyer->setProperty("role", "principal");
     bouton_annuler = new QPushButton("Annuler");
     bouton_arreter = new QPushButton("Arrêter");
     etat = new QLabel("En cours…");
@@ -450,7 +450,7 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         c.movePosition(QTextCursor::End);
         QTextCharFormat format;
         format.setFont(fil->font());
-        format.setForeground(QColor(0x1f, 0x5f, 0xa8));
+        format.setForeground(Theme::courant().couleur("accent"));
         c.insertText(echo, format);
         fil->setTextCursor(c);
         fil->ensureCursorVisible();
@@ -495,7 +495,7 @@ void Execution::ecrire(const QString &t, bool erreur) {
     c.movePosition(QTextCursor::End);
     QTextCharFormat format;
     format.setFont(fil->font());
-    if (erreur) format.setForeground(Qt::red);
+    if (erreur) format.setForeground(Theme::courant().couleur("danger"));
     c.insertText(t, format);
     fil->setTextCursor(c);
     fil->ensureCursorVisible();
@@ -592,7 +592,7 @@ void Execution::poser() {
             v->addLayout(h);
             if (!travail.refus[k].isEmpty()) {
                 auto *r = new QLabel(travail.refus[k]);
-                r->setStyleSheet("color: #c00;");
+                r->setProperty("erreur", true);
                 r->setWordWrap(true);
                 v->addWidget(r);
             }

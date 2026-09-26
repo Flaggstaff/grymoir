@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, panneau des propriétés d'une entité.
 #include "panneau.h"
+#include "theme.h"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -35,6 +36,7 @@ PanneauEntite::PanneauEntite(QWidget *parent) : QWidget(parent) {
     nom = new QLineEdit;
     bouton_renommer = new QPushButton("Renommer");
     bouton_supprimer = new QPushButton("Supprimer l'entité");
+    bouton_supprimer->setProperty("role", "danger");
     champs = new QTableWidget(0, NB_COLONNES);
     champs->setHorizontalHeaderLabels({"Champ", "Type", "Féminin", "Unique", "Facultatif", "Plusieurs",
                                        "Disparaît avec", "Au départ"});
@@ -47,7 +49,9 @@ PanneauEntite::PanneauEntite(QWidget *parent) : QWidget(parent) {
     champs->setSelectionMode(QAbstractItemView::SingleSelection);
     bouton_ajouter = new QPushButton("Nouveau champ");
     bouton_appliquer = new QPushButton("Appliquer");
+    bouton_appliquer->setProperty("role", "principal");
     bouton_retirer = new QPushButton("Supprimer le champ");
+    bouton_retirer->setProperty("role", "danger");
     bouton_appliquer->setToolTip("Écrit dans le code la ligne choisie du tableau");
 
     auto *ligne_nom = new QHBoxLayout;

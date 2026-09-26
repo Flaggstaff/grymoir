@@ -1,5 +1,6 @@
 // GrymoiR : essais de l'atelier (docs/atelier.md, jalon A1), sans fenêtre.
 #include "coloration.h"
+#include "theme.h"
 #include "editeur.h"
 #include "execution.h"
 #include "aide.h"
@@ -24,7 +25,10 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QTemporaryDir>
+#include <QTextBlock>
 #include <QTextBrowser>
+#include <QTextDocument>
+#include <QTextLayout>
 #include <csignal>
 #include <cstdio>
 #include <functional>
@@ -96,7 +100,7 @@ static void verifier(int ligne, bool ok, const char *quoi) {
 
 // La sorte de chaque caractère de `ligne` ; « . » pour aucune couleur, sinon la première lettre de la sorte.
 static QString dessin(const QString &ligne, bool compacte = false) {
-    static const char lettres[] = "cmntroNa";
+    static const char lettres[] = "cmntroNad";
     QString r;
     for (int s : Coloration::sortes(ligne, compacte)) r += s < 0 ? QChar('.') : QChar(lettres[s]);
     return r;
@@ -109,7 +113,7 @@ int main(int argc, char **argv) {
     VERIFIER(dessin("Le total vaut 12,50.") == "mm.......mmmm.nnnnno");
     VERIFIER(dessin("Si x > 3, afficher « a ».") == "cc...o.no.mmmmmmmm.ttttto");
     VERIFIER(dessin("Remarque : bonjour") == "rrrrrrrrrrrrrrrrrr");
-    VERIFIER(dessin("La date vaut 21.09.2026.") == "mm......mmmm.nnnnnnnnnno");
+    VERIFIER(dessin("La date vaut 21.09.2026.") == "mm......mmmm.ddddddddddo");
     VERIFIER(dessin("Le [frais et port] vaut 1.") == "mm.NNNNNNNNNNNNNNN.mmmm.no");
     // points de code hors du plan de base : l'emoji compte pour deux unités UTF-16
     VERIFIER(dessin("Afficher « 😀 » puis 1.") == "mmmmmmmm.tttttt.mmmm.no");
@@ -117,6 +121,44 @@ int main(int argc, char **argv) {
     VERIFIER(dessin("Le x vaut 3.5.").endsWith("aaaa"));
     // forme compacte : mots-clés à souligné, noms à soulignés sans couleur
     VERIFIER(dessin("_si prix_unitaire > 3 _alors", true) == "ccc...............o.n.cccccc");
+
+    // Thème : cinq accents, rose et orange écartés ; chaque contraste déclaré se recalcule et tient son seuil
+    {
+        Theme &t = Theme::courant();
+        VERIFIER(t.accents() == QStringList({"bleue", "verte", "turquoise", "violette", "grise"}));
+        const QString ecarts = t.verifier_contrastes();
+        if (!ecarts.isEmpty()) std::printf("%s", qPrintable(ecarts));
+        VERIFIER(ecarts.isEmpty());
+        VERIFIER(qAbs(Theme::contraste(QColor("#ffffff"), QColor("#000000")) - 21.0) < 1e-9);
+        // une feuille complète pour chaque mode et chaque accent, sans jeton restant
+        for (Theme::Mode m : {Theme::Clair, Theme::Sombre})
+            for (const QString &a : t.accents()) {
+                const QString f = t.feuille(m, a);
+                VERIFIER(!f.isEmpty() && !f.contains('@') && f.contains("QPushButton"));
+            }
+        VERIFIER(t.feuille(Theme::Clair, "bleue").contains("#1F5AC7"));
+        VERIFIER(t.feuille(Theme::Sombre, "verte").contains("#66C991"));
+        // appliquer change la palette, la coloration suit ; un accent inconnu laisse l'accent en place
+        t.installer(app);
+        t.appliquer(Theme::Sombre, "violette");
+        VERIFIER(QApplication::palette().color(QPalette::Window) == QColor("#1B1613"));
+        VERIFIER(t.couleur("accent") == QColor("#B9A5FF"));
+        t.appliquer(Theme::Sombre, "orange");
+        VERIFIER(t.accent() == "violette");
+        VERIFIER(t.couleur("n'existe pas") == QColor(Qt::magenta));
+        QTextDocument doc("Le x vaut 21.09.2026.");
+        Coloration c(&doc, false);
+        c.rehighlight();
+        auto couleur_a = [&doc](int pos) {
+            for (const auto &r : doc.firstBlock().layout()->formats())
+                if (pos >= r.start && pos < r.start + r.length) return r.format.foreground().color();
+            return QColor();
+        };
+        VERIFIER(couleur_a(12) == t.couleur("syntaxe-date"));
+        t.appliquer(Theme::Clair, "bleue");
+        VERIFIER(couleur_a(12) == QColor("#8F4400"));
+        VERIFIER(QApplication::font().family() == "Atkinson Hyperlegible Next");
+    }
 
     // Analyse : la première erreur, avec sa position ; rien quand tout va bien
     Diagnostic_atelier d = analyser_source("Le total vaut 1.\nLe totl devient 2.\n", false);

@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, coloration par le lexeur (docs/atelier.md, § 6.3).
 #include "coloration.h"
+#include "theme.h"
 
 #include <QSet>
 
@@ -43,8 +44,9 @@ static int sorte_jeton(const Jeton &j, bool compacte) {
         return controles().contains(m) || m == "fin" || m == "alors" ? Coloration::Controle : Coloration::MotCle;
     }
     case J_NOMBRE:
-    case J_DATE:
         return Coloration::Nombre;
+    case J_DATE:
+        return Coloration::Date;
     case J_TEXTE:
         return Coloration::Texte;
     case J_REMARQUE:
@@ -100,18 +102,31 @@ QVector<int> Coloration::sortes(const QString &ligne, bool compacte) {
 }
 
 Coloration::Coloration(QTextDocument *document, bool compacte) : QSyntaxHighlighter(document), compacte(compacte) {
-    formats[Controle].setForeground(QColor(0x8e, 0x3b, 0xa8));
-    formats[Controle].setFontWeight(QFont::Bold);
-    formats[MotCle].setForeground(QColor(0x1f, 0x5f, 0xa8));
-    formats[Nombre].setForeground(QColor(0x0b, 0x7a, 0x5b));
-    formats[Texte].setForeground(QColor(0xa8, 0x4a, 0x1f));
-    formats[Remarque].setForeground(QColor(0x80, 0x80, 0x80));
+    preparer();
+    connect(&Theme::courant(), &Theme::change, this, [this] {
+        preparer();
+        rehighlight();
+    });
+}
+
+// Les couleurs des jetons « syntaxe » (src/atelier/theme/grymoir-jetons.json) : un mot de construction
+// en demi-gras, les autres mots du langage dans la même couleur, sans graisse.
+void Coloration::preparer() {
+    const Theme &t = Theme::courant();
+    for (auto &f : formats) f = QTextCharFormat();
+    formats[Controle].setForeground(t.couleur("syntaxe-construction"));
+    formats[Controle].setFontWeight(QFont::DemiBold);
+    formats[MotCle].setForeground(t.couleur("syntaxe-construction"));
+    formats[Nombre].setForeground(t.couleur("syntaxe-nombre"));
+    formats[Date].setForeground(t.couleur("syntaxe-date"));
+    formats[Texte].setForeground(t.couleur("syntaxe-texte-litteral"));
+    formats[Remarque].setForeground(t.couleur("syntaxe-remarque"));
     formats[Remarque].setFontItalic(true);
-    formats[Operateur].setForeground(QColor(0x55, 0x55, 0x55));
-    formats[Nom].setForeground(QColor(0x2b, 0x2b, 0x2b));
+    formats[Operateur].setForeground(t.couleur("syntaxe-nom"));
+    formats[Nom].setForeground(t.couleur("syntaxe-nom"));
     formats[Nom].setFontItalic(true);
     formats[Erreur].setUnderlineStyle(QTextCharFormat::WaveUnderline);
-    formats[Erreur].setUnderlineColor(Qt::red);
+    formats[Erreur].setUnderlineColor(t.couleur("syntaxe-erreur"));
 }
 
 void Coloration::highlightBlock(const QString &ligne) {

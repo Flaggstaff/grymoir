@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, le schéma des données.
 #include "schema.h"
+#include "theme.h"
 
 #include <QDirIterator>
 #include <QFile>
@@ -213,16 +214,17 @@ public:
     void paint(QPainter *p, const QStyleOptionGraphicsItem *, QWidget *) override {
         const QRectF r = boundingRect();
         p->setRenderHint(QPainter::Antialiasing);
-        p->setPen(QPen(isSelected() ? QColor(0x1f, 0x5f, 0xa8) : QColor(0x88, 0x88, 0x88), isSelected() ? 2 : 1));
-        p->setBrush(QColor(0xfc, 0xfc, 0xfa));
+        const Theme &t = Theme::courant();
+        p->setPen(QPen(isSelected() ? t.couleur("accent") : t.couleur("bordure"), isSelected() ? 2 : 1));
+        p->setBrush(t.couleur("surface"));
         p->drawRoundedRect(r, 6, 6);
-        p->setBrush(QColor(0xe4, 0xec, 0xf6));
+        p->setBrush(isSelected() ? t.couleur("accent-doux") : t.couleur("surface-alt"));
         p->setPen(Qt::NoPen);
         p->drawRoundedRect(QRectF(1, 1, r.width() - 2, hauteur_titre), 5, 5);
         QFont gras;
         gras.setBold(true);
         p->setFont(gras);
-        p->setPen(Qt::black);
+        p->setPen(t.couleur("texte"));
         p->drawText(QRectF(MARGE, 0, r.width() - 2 * MARGE, hauteur_titre), Qt::AlignVCenter, titre());
         p->setFont(QFont());
         const QFontMetrics fm((QFont()));
@@ -231,7 +233,7 @@ public:
         for (int k = 0; k < ls.size(); k++) {
             const bool lien = !entite.aptitudes.isEmpty() ? (k > 0 && entite.champs[k - 1].lien)
                                                           : (k < entite.champs.size() && entite.champs[k].lien);
-            p->setPen(lien ? QColor(0x1f, 0x5f, 0xa8) : QColor(0x33, 0x33, 0x33));
+            p->setPen(lien ? t.couleur("accent") : t.couleur("texte"));
             p->drawText(QRectF(MARGE, y, r.width() - 2 * MARGE, fm.height()), Qt::AlignVCenter, ls[k]);
             y += fm.height() + 2;
         }
@@ -298,7 +300,7 @@ public:
     }
     void paint(QPainter *p, const QStyleOptionGraphicsItem *, QWidget *) override {
         p->setRenderHint(QPainter::Antialiasing);
-        QPen stylo(sorte == Heritage ? QColor(0x66, 0x66, 0x66) : QColor(0x1f, 0x5f, 0xa8), 1.4);
+        QPen stylo(sorte == Heritage ? Theme::courant().couleur("texte-2") : Theme::courant().couleur("accent"), 1.4);
         if (sorte == Heritage) stylo.setStyle(Qt::DashLine);
         p->setPen(stylo);
         if (a == b) {
@@ -348,7 +350,11 @@ VueSchema::VueSchema(QWidget *parent) : QGraphicsView(parent), scene_(new QGraph
     setScene(scene_);
     setRenderHint(QPainter::Antialiasing);
     setDragMode(QGraphicsView::ScrollHandDrag);
-    setBackgroundBrush(QColor(0xf3, 0xf3, 0xf0));
+    setBackgroundBrush(Theme::courant().couleur("fond"));
+    connect(&Theme::courant(), &Theme::change, this, [this] {
+        setBackgroundBrush(Theme::courant().couleur("fond"));
+        scene_->update();
+    });
     connect(scene_, &QGraphicsScene::selectionChanged, this, [this] {
         if (en_construction) return;
         const auto choix = scene_->selectedItems();
@@ -478,7 +484,7 @@ void VueSchema::mousePressEvent(QMouseEvent *e) {
         if (Boite *b = boite_sous(scene_, mapToScene(e->pos()))) {
             trait_de = b->entite.nom;
             const QPointF c = b->sceneBoundingRect().center();
-            trait = scene_->addLine(QLineF(c, c), QPen(QColor(0x1f, 0x5f, 0xa8), 2, Qt::DashLine));
+            trait = scene_->addLine(QLineF(c, c), QPen(Theme::courant().couleur("accent"), 2, Qt::DashLine));
             trait->setZValue(10);
             return;
         }

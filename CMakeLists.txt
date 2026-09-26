@@ -11,7 +11,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
 # Qt 6.4 au moins : la version des distributions Linux courantes (Ubuntu 24.04, Debian 12).
-find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets)
+# Svg : les icônes du thème (vendor/lucide), rendues par QSvgRenderer.
+find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets Svg)
 
 # SQLite embarqué, avec les réglages du Makefile (vendor/sqlite, voir PROVENANCE.md).
 add_library(grym_sqlite STATIC vendor/sqlite/sqlite3.c)
@@ -35,10 +36,26 @@ endif()
 
 add_executable(grym-atelier MACOSX_BUNDLE WIN32
     src/atelier/principal.cpp src/atelier/fenetre.cpp src/atelier/editeur.cpp src/atelier/coloration.cpp
-    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp)
-target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets)
+    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp)
+target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg)
 # La grammaire, embarquée : l'aide de l'atelier est toujours celle de sa version (docs/atelier.md, § 6.5).
 qt_add_resources(grym-atelier "documentation" PREFIX "/documentation" BASE docs FILES docs/grammaire.md)
+# Le thème (docs/atelier.md, § 5 ter) : jetons et modèle de feuille, polices (OFL 1.1), icônes (ISC et MIT), et leurs licences.
+set(GRYM_THEME_FICHIERS src/atelier/theme/grymoir-jetons.json src/atelier/theme/grymoir.qss.modele)
+set(GRYM_POLICES
+    vendor/atkinson/AtkinsonHyperlegibleNext-Regular.ttf vendor/atkinson/AtkinsonHyperlegibleNext-Italic.ttf
+    vendor/atkinson/AtkinsonHyperlegibleNext-SemiBold.ttf vendor/atkinson/AtkinsonHyperlegibleNext-Bold.ttf
+    vendor/atkinson/AtkinsonHyperlegibleMono-Regular.ttf vendor/atkinson/AtkinsonHyperlegibleMono-Italic.ttf
+    vendor/atkinson/AtkinsonHyperlegibleMono-SemiBold.ttf)
+set(GRYM_ICONES vendor/lucide/chevron-down.svg vendor/lucide/check.svg)
+set(GRYM_LICENCES vendor/atkinson/OFL-Next.txt vendor/atkinson/OFL-Mono.txt vendor/lucide/LICENSE)
+function(grym_ressources_theme cible)
+    qt_add_resources(${cible} "${cible}_theme" PREFIX "/theme" BASE src/atelier/theme FILES ${GRYM_THEME_FICHIERS})
+    qt_add_resources(${cible} "${cible}_polices" PREFIX "/polices" BASE vendor/atkinson FILES ${GRYM_POLICES})
+    qt_add_resources(${cible} "${cible}_icones" PREFIX "/icones" BASE vendor/lucide FILES ${GRYM_ICONES})
+    qt_add_resources(${cible} "${cible}_licences" PREFIX "/licences" BASE vendor FILES ${GRYM_LICENCES})
+endfunction()
+grym_ressources_theme(grym-atelier)
 set_target_properties(grym-atelier PROPERTIES
     MACOSX_BUNDLE_BUNDLE_NAME "GrymoiR"
     MACOSX_BUNDLE_GUI_IDENTIFIER "ch.grymoir.atelier")
@@ -49,9 +66,10 @@ endif()
 # Essais de l'atelier, sans fenêtre (QT_QPA_PLATFORM=offscreen) : ctest --test-dir construction
 enable_testing()
 add_executable(test_atelier tests/test_atelier.cpp src/atelier/coloration.cpp src/atelier/editeur.cpp
-    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp)
+    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp)
 qt_add_resources(test_atelier "documentation_essais" PREFIX "/documentation" BASE docs FILES docs/grammaire.md)
 target_include_directories(test_atelier PRIVATE src/atelier)
-target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets)
+target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg)
+grym_ressources_theme(test_atelier)
 add_test(NAME atelier COMMAND test_atelier)
 set_tests_properties(atelier PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

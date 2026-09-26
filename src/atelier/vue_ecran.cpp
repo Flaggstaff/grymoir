@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, le dessin d'un écran.
 #include "vue_ecran.h"
+#include "theme.h"
 
 #include <QBoxLayout>
 #include <QCheckBox>
@@ -23,7 +24,9 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     r.zones = QVector<QWidget *>(n, nullptr);
     r.vue = new QWidget;
     auto *pile = new QVBoxLayout(r.vue);
-    r.titre = new QLabel("<b>" + titre.toHtmlEscaped() + "</b>");
+    r.titre = new QLabel(titre);
+    r.titre->setTextFormat(Qt::PlainText);
+    r.titre->setProperty("niveau", "ecran");   // la taille et la graisse viennent de la feuille du thème
     pile->addWidget(r.titre);
     QHBoxLayout *rangee = nullptr;   // des boutons qui se suivent : une ligne, en bas à droite (§ 3.3)
     QVector<QBoxLayout *> blocs = {pile};   // « côte à côte », « l'un sous l'autre » : des boîtes emboîtées (§ 22.1)
@@ -69,6 +72,11 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             tab->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);   // les titres entiers
             tab->horizontalHeader()->setStretchLastSection(true);
             tab->verticalHeader()->hide();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+            QFont chiffres = tab->font();   // chiffres de largeur fixe : les colonnes de nombres s'alignent
+            chiffres.setFeature(QFont::Tag("tnum"), 1);
+            tab->setFont(chiffres);
+#endif
             tab->setSelectionBehavior(QAbstractItemView::SelectRows);
             tab->setSelectionMode(QAbstractItemView::SingleSelection);
             tab->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -99,7 +107,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         }
     }
     r.erreur = new QLabel;
-    r.erreur->setStyleSheet("color: #c00;");
+    r.erreur->setProperty("message", "erreur");   // le cadre du message d'erreur, selon la feuille du thème
     r.erreur->setWordWrap(true);
     r.erreur->hide();
     pile->addWidget(r.erreur);

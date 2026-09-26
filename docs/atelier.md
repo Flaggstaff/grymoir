@@ -140,6 +140,21 @@ Chaque geste réécrit la déclaration de l'écran, et elle seule ; il est réan
 
 État de A4-d (26 septembre 2026) : fait, et A4 avec lui. Dans l'aperçu, on glisse un élément ; un trait bleu montre où il atterrira : le quart gauche ou droit d'un élément met à côté, sa moitié haute au-dessus, sa moitié basse en dessous. Dans le sens du bloc qui contient la cible, l'élément prend simplement sa place ; à travers, les deux forment un bloc : `côte à côte` dans une colonne, `l'un sous l'autre` dans une rangée. Un bloc réduit à un seul élément disparaît. La palette ajoute à la fin (un clic) ; on place ensuite l'élément en le glissant : le glisser directement depuis la palette n'est pas fait. Un bloc ne se glisse pas lui-même : on déplace ses éléments.
 
+## 5 ter. Le thème *(tranche T1 faite le 26 septembre 2026)*
+
+Décisions : `docs/ecrans.md`, § 5. Maquettes et jetons : Claude Design, le 26 septembre 2026.
+
+- `src/atelier/theme/grymoir-jetons.json` : les couleurs, en clair et en sombre, les cinq accents et leurs rapports de contraste, la coloration, la typographie, les espacements. `grymoir.qss.modele` : la feuille de style Qt, dont les `@jetons@` sont remplacés au démarrage.
+- `src/atelier/theme.cpp` : polices embarquées, style Fusion, feuille et palette, icônes recolorées pour chaque mode, suivi du mode du système (Qt 6.5 et plus ; avant, clair). `GRYMOIR_MODE=clair` ou `sombre` impose un mode. L'atelier et les programmes qu'il lance ont le même thème ; leur accent est `bleue` jusqu'à la tranche T3.
+- Polices : Atkinson Hyperlegible Next et Mono (`vendor/atkinson`, SIL Open Font License 1.1). Icônes : Lucide (`vendor/lucide`, ISC ; `check` et `chevron-down` viennent de Feather, MIT). Les licences se lisent dans l'atelier, menu Aide.
+- Nouvelle dépendance : le module Qt SVG, pour rendre les icônes.
+- Plus aucune couleur écrite en dur dans `src/atelier` : tout passe par `Theme::couleur`. Les dates ont leur propre couleur dans l'éditeur.
+- Rôles de boutons : `principal` (Lancer, Appliquer, Envoyer), `danger` (Supprimer).
+- Piège de Qt, noté dans le modèle : une règle `QHeaderView::up-arrow` ou `::down-arrow` fait réserver la place d'une flèche dans chaque titre de colonne, même sans tri, et rogne le texte. Le modèle n'en a pas ; la flèche de Fusion suit la palette.
+- Limites connues : au changement de mode pendant que l'atelier est ouvert, le cadre de sélection de l'aperçu d'écran et le texte des panneaux de propriétés gardent l'ancienne couleur jusqu'au prochain choix.
+
+Tranches suivantes : T2, les écrans des applications (espacements et marges des jetons dans `vue_ecran.cpp`) ; T3, la phrase `Les écrans ont …` (grammaire, analyse, forme compacte, aperçu, exécution).
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -181,3 +196,4 @@ Chaque geste réécrit la déclaration de l'écran, et elle seule ; il est réan
 | 0.17 | 2026-09-26 | § 5 bis : A4-b fait (écran pour une entité, écran vide, écran d'accueil) |
 | 0.18 | 2026-09-26 | § 5 bis : A4-c fait (propriétés modifiables, palette, suppression avec l'événement) |
 | 0.19 | 2026-09-26 | § 5 bis : A4-d fait (glisser-déposer, blocs créés et retirés) ; A4 fait |
+| 0.20 | 2026-09-26 | § 5 ter : le thème, tranche T1 faite (jetons, feuille, polices, icônes, mode clair ou sombre) |

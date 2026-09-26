@@ -3,6 +3,7 @@
 //   grym-atelier --lancer fichier.grym    exécute un programme dans sa propre fenêtre (bouton « Lancer »)
 #include "execution.h"
 #include "fenetre.h"
+#include "theme.h"
 
 #include <QApplication>
 #include <QSettings>
@@ -27,6 +28,7 @@ int main(int argc, char **argv) {
     QApplication app(argc, argv);
     QApplication::setOrganizationName("GrymoiR");
     QApplication::setApplicationName("Atelier");
+    Theme::courant().installer(app);   // l'atelier et les programmes qu'il lance : même thème
     const QStringList args = QApplication::arguments();
     if (args.size() == 3 && args.at(1) == "--lancer") {
         std::signal(SIGINT, sur_arret);

@@ -1,0 +1,799 @@
+{
+  "nom": "GrymoiR",
+  "version": "0.4",
+  "norme": "WCAG 2.1 : 1.4.3 texte 4.5:1, 1.4.11 contours et icônes 3:1. Contrôles désactivés exemptés (1.4.3, « inactive user interface component »).",
+  "couleurs": {
+    "clair": {
+      "fond": "#F5EFE6",
+      "surface": "#FFFCF7",
+      "surface-alt": "#EEE5D8",
+      "bordure": "#86776A",
+      "separateur": "#E0D5C6",
+      "texte": "#2B221B",
+      "texte-2": "#675A4D",
+      "texte-desactive": "#B2A698",
+      "fond-desactive": "#EFE8DE",
+      "danger": "#B42328",
+      "sur-danger": "#FFFFFF",
+      "danger-doux": "#F9EBE6",
+      "survol": "#F6F0E8"
+    },
+    "sombre": {
+      "fond": "#1B1613",
+      "surface": "#241E1A",
+      "surface-alt": "#2F2822",
+      "bordure": "#8E8174",
+      "separateur": "#40372F",
+      "texte": "#F2EAE0",
+      "texte-2": "#C3B6A7",
+      "texte-desactive": "#6B6158",
+      "fond-desactive": "#2A231E",
+      "danger": "#FF7F75",
+      "sur-danger": "#1B1613",
+      "danger-doux": "#472E29",
+      "survol": "#2A231E"
+    }
+  },
+  "accents": {
+    "_defaut": "bleue",
+    "_ordre": [
+      "bleue",
+      "verte",
+      "turquoise",
+      "violette",
+      "grise"
+    ],
+    "bleue": {
+      "clair": {
+        "accent": "#1F5AC7",
+        "accent-survol": "#1B4DAB",
+        "accent-enfonce": "#16418F",
+        "sur-accent": "#FFFFFF",
+        "accent-doux": "#D7DFEE",
+        "contrastes": {
+          "accent / fond": {
+            "rapport": 5.49,
+            "seuil": 4.5
+          },
+          "accent / surface": {
+            "rapport": 6.13,
+            "seuil": 4.5
+          },
+          "accent / surface-alt": {
+            "rapport": 5.03,
+            "seuil": 4.5
+          },
+          "sur-accent / accent": {
+            "rapport": 6.28,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-survol": {
+            "rapport": 7.79,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-enfonce": {
+            "rapport": 9.6,
+            "seuil": 4.5
+          },
+          "texte / accent-doux": {
+            "rapport": 11.64,
+            "seuil": 4.5
+          },
+          "texte-2 / accent-doux": {
+            "rapport": 4.98,
+            "seuil": 4.5
+          },
+          "accent / accent-doux (icônes)": {
+            "rapport": 4.69,
+            "seuil": 3
+          }
+        }
+      },
+      "sombre": {
+        "accent": "#86AEFF",
+        "accent-survol": "#9CBDFF",
+        "accent-enfonce": "#B2CBFF",
+        "sur-accent": "#1B1613",
+        "accent-doux": "#383B48",
+        "contrastes": {
+          "accent / fond": {
+            "rapport": 8.12,
+            "seuil": 4.5
+          },
+          "accent / surface": {
+            "rapport": 7.46,
+            "seuil": 4.5
+          },
+          "accent / surface-alt": {
+            "rapport": 6.57,
+            "seuil": 4.5
+          },
+          "sur-accent / accent": {
+            "rapport": 8.12,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-survol": {
+            "rapport": 9.51,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-enfonce": {
+            "rapport": 11.0,
+            "seuil": 4.5
+          },
+          "texte / accent-doux": {
+            "rapport": 9.34,
+            "seuil": 4.5
+          },
+          "texte-2 / accent-doux": {
+            "rapport": 5.6,
+            "seuil": 4.5
+          },
+          "accent / accent-doux (icônes)": {
+            "rapport": 5.04,
+            "seuil": 3
+          }
+        }
+      }
+    },
+    "verte": {
+      "clair": {
+        "accent": "#1B7340",
+        "accent-survol": "#176337",
+        "accent-enfonce": "#13532E",
+        "sur-accent": "#FFFFFF",
+        "accent-doux": "#D6E3D6",
+        "contrastes": {
+          "accent / fond": {
+            "rapport": 5.14,
+            "seuil": 4.5
+          },
+          "accent / surface": {
+            "rapport": 5.74,
+            "seuil": 4.5
+          },
+          "accent / surface-alt": {
+            "rapport": 4.71,
+            "seuil": 4.5
+          },
+          "sur-accent / accent": {
+            "rapport": 5.88,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-survol": {
+            "rapport": 7.3,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-enfonce": {
+            "rapport": 9.11,
+            "seuil": 4.5
+          },
+          "texte / accent-doux": {
+            "rapport": 11.74,
+            "seuil": 4.5
+          },
+          "texte-2 / accent-doux": {
+            "rapport": 5.03,
+            "seuil": 4.5
+          },
+          "accent / accent-doux (icônes)": {
+            "rapport": 4.43,
+            "seuil": 3
+          }
+        }
+      },
+      "sombre": {
+        "accent": "#66C991",
+        "accent-survol": "#82D3A5",
+        "accent-enfonce": "#9DDCB9",
+        "sur-accent": "#1B1613",
+        "accent-doux": "#314032",
+        "contrastes": {
+          "accent / fond": {
+            "rapport": 8.82,
+            "seuil": 4.5
+          },
+          "accent / surface": {
+            "rapport": 8.1,
+            "seuil": 4.5
+          },
+          "accent / surface-alt": {
+            "rapport": 7.14,
+            "seuil": 4.5
+          },
+          "sur-accent / accent": {
+            "rapport": 8.82,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-survol": {
+            "rapport": 10.09,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-enfonce": {
+            "rapport": 11.42,
+            "seuil": 4.5
+          },
+          "texte / accent-doux": {
+            "rapport": 9.23,
+            "seuil": 4.5
+          },
+          "texte-2 / accent-doux": {
+            "rapport": 5.53,
+            "seuil": 4.5
+          },
+          "accent / accent-doux (icônes)": {
+            "rapport": 5.41,
+            "seuil": 3
+          }
+        }
+      }
+    },
+    "turquoise": {
+      "clair": {
+        "accent": "#0B6B79",
+        "accent-survol": "#095C68",
+        "accent-enfonce": "#084D57",
+        "sur-accent": "#FFFFFF",
+        "accent-doux": "#D3E2E0",
+        "contrastes": {
+          "accent / fond": {
+            "rapport": 5.41,
+            "seuil": 4.5
+          },
+          "accent / surface": {
+            "rapport": 6.05,
+            "seuil": 4.5
+          },
+          "accent / surface-alt": {
+            "rapport": 4.96,
+            "seuil": 4.5
+          },
+          "sur-accent / accent": {
+            "rapport": 6.19,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-survol": {
+            "rapport": 7.66,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-enfonce": {
+            "rapport": 9.5,
+            "seuil": 4.5
+          },
+          "texte / accent-doux": {
+            "rapport": 11.67,
+            "seuil": 4.5
+          },
+          "texte-2 / accent-doux": {
+            "rapport": 5.0,
+            "seuil": 4.5
+          },
+          "accent / accent-doux (icônes)": {
+            "rapport": 4.63,
+            "seuil": 3
+          }
+        }
+      },
+      "sombre": {
+        "accent": "#56C3CF",
+        "accent-survol": "#74CED8",
+        "accent-enfonce": "#93D9E0",
+        "sur-accent": "#1B1613",
+        "accent-doux": "#2E3F3E",
+        "contrastes": {
+          "accent / fond": {
+            "rapport": 8.63,
+            "seuil": 4.5
+          },
+          "accent / surface": {
+            "rapport": 7.92,
+            "seuil": 4.5
+          },
+          "accent / surface-alt": {
+            "rapport": 6.98,
+            "seuil": 4.5
+          },
+          "sur-accent / accent": {
+            "rapport": 8.63,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-survol": {
+            "rapport": 9.88,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-enfonce": {
+            "rapport": 11.31,
+            "seuil": 4.5
+          },
+          "texte / accent-doux": {
+            "rapport": 9.29,
+            "seuil": 4.5
+          },
+          "texte-2 / accent-doux": {
+            "rapport": 5.57,
+            "seuil": 4.5
+          },
+          "accent / accent-doux (icônes)": {
+            "rapport": 5.33,
+            "seuil": 3
+          }
+        }
+      }
+    },
+    "violette": {
+      "clair": {
+        "accent": "#6743BF",
+        "accent-survol": "#593AA4",
+        "accent-enfonce": "#4A308A",
+        "sur-accent": "#FFFFFF",
+        "accent-doux": "#E4DBED",
+        "contrastes": {
+          "accent / fond": {
+            "rapport": 5.87,
+            "seuil": 4.5
+          },
+          "accent / surface": {
+            "rapport": 6.55,
+            "seuil": 4.5
+          },
+          "accent / surface-alt": {
+            "rapport": 5.38,
+            "seuil": 4.5
+          },
+          "sur-accent / accent": {
+            "rapport": 6.71,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-survol": {
+            "rapport": 8.18,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-enfonce": {
+            "rapport": 10.09,
+            "seuil": 4.5
+          },
+          "texte / accent-doux": {
+            "rapport": 11.62,
+            "seuil": 4.5
+          },
+          "texte-2 / accent-doux": {
+            "rapport": 4.98,
+            "seuil": 4.5
+          },
+          "accent / accent-doux (icônes)": {
+            "rapport": 5.0,
+            "seuil": 3
+          }
+        }
+      },
+      "sombre": {
+        "accent": "#B9A5FF",
+        "accent-survol": "#C6B5FF",
+        "accent-enfonce": "#D2C5FF",
+        "sur-accent": "#1B1613",
+        "accent-doux": "#423948",
+        "contrastes": {
+          "accent / fond": {
+            "rapport": 8.45,
+            "seuil": 4.5
+          },
+          "accent / surface": {
+            "rapport": 7.75,
+            "seuil": 4.5
+          },
+          "accent / surface-alt": {
+            "rapport": 6.83,
+            "seuil": 4.5
+          },
+          "sur-accent / accent": {
+            "rapport": 8.45,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-survol": {
+            "rapport": 9.78,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-enfonce": {
+            "rapport": 11.25,
+            "seuil": 4.5
+          },
+          "texte / accent-doux": {
+            "rapport": 9.22,
+            "seuil": 4.5
+          },
+          "texte-2 / accent-doux": {
+            "rapport": 5.53,
+            "seuil": 4.5
+          },
+          "accent / accent-doux (icônes)": {
+            "rapport": 5.18,
+            "seuil": 3
+          }
+        }
+      }
+    },
+    "grise": {
+      "clair": {
+        "accent": "#645A50",
+        "accent-survol": "#564D45",
+        "accent-enfonce": "#48413A",
+        "sur-accent": "#FFFFFF",
+        "accent-doux": "#E3DFD9",
+        "contrastes": {
+          "accent / fond": {
+            "rapport": 5.89,
+            "seuil": 4.5
+          },
+          "accent / surface": {
+            "rapport": 6.58,
+            "seuil": 4.5
+          },
+          "accent / surface-alt": {
+            "rapport": 5.4,
+            "seuil": 4.5
+          },
+          "sur-accent / accent": {
+            "rapport": 6.73,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-survol": {
+            "rapport": 8.26,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-enfonce": {
+            "rapport": 10.03,
+            "seuil": 4.5
+          },
+          "texte / accent-doux": {
+            "rapport": 11.74,
+            "seuil": 4.5
+          },
+          "texte-2 / accent-doux": {
+            "rapport": 5.03,
+            "seuil": 4.5
+          },
+          "accent / accent-doux (icônes)": {
+            "rapport": 5.07,
+            "seuil": 3
+          }
+        }
+      },
+      "sombre": {
+        "accent": "#BCB1A5",
+        "accent-survol": "#C8BFB5",
+        "accent-enfonce": "#D4CDC5",
+        "sur-accent": "#1B1613",
+        "accent-doux": "#423B36",
+        "contrastes": {
+          "accent / fond": {
+            "rapport": 8.52,
+            "seuil": 4.5
+          },
+          "accent / surface": {
+            "rapport": 7.82,
+            "seuil": 4.5
+          },
+          "accent / surface-alt": {
+            "rapport": 6.89,
+            "seuil": 4.5
+          },
+          "sur-accent / accent": {
+            "rapport": 8.52,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-survol": {
+            "rapport": 9.89,
+            "seuil": 4.5
+          },
+          "sur-accent / accent-enfonce": {
+            "rapport": 11.39,
+            "seuil": 4.5
+          },
+          "texte / accent-doux": {
+            "rapport": 9.22,
+            "seuil": 4.5
+          },
+          "texte-2 / accent-doux": {
+            "rapport": 5.53,
+            "seuil": 4.5
+          },
+          "accent / accent-doux (icônes)": {
+            "rapport": 5.22,
+            "seuil": 3
+          }
+        }
+      }
+    }
+  },
+  "syntaxe": {
+    "clair": {
+      "construction": "#7A2A8C",
+      "nom": "#2B221B",
+      "nombre": "#08646D",
+      "texte-litteral": "#2E6612",
+      "date": "#8F4400",
+      "remarque": "#675A4D",
+      "erreur": "#B42328"
+    },
+    "sombre": {
+      "construction": "#DBA3EA",
+      "nom": "#F2EAE0",
+      "nombre": "#63CFD8",
+      "texte-litteral": "#A2D47F",
+      "date": "#F3AE70",
+      "remarque": "#C3B6A7",
+      "erreur": "#FF7F75"
+    }
+  },
+  "contrastes": {
+    "clair": {
+      "texte / fond": {
+        "rapport": 13.64,
+        "seuil": 4.5
+      },
+      "texte / surface": {
+        "rapport": 15.23,
+        "seuil": 4.5
+      },
+      "texte / surface-alt": {
+        "rapport": 12.49,
+        "seuil": 4.5
+      },
+      "texte / survol": {
+        "rapport": 13.77,
+        "seuil": 4.5
+      },
+      "texte / danger-doux": {
+        "rapport": 13.4,
+        "seuil": 4.5
+      },
+      "texte-2 / fond": {
+        "rapport": 5.84,
+        "seuil": 4.5
+      },
+      "texte-2 / surface": {
+        "rapport": 6.52,
+        "seuil": 4.5
+      },
+      "texte-2 / surface-alt": {
+        "rapport": 5.35,
+        "seuil": 4.5
+      },
+      "texte-2 / survol": {
+        "rapport": 5.9,
+        "seuil": 4.5
+      },
+      "bordure / fond": {
+        "rapport": 3.78,
+        "seuil": 3
+      },
+      "bordure / surface": {
+        "rapport": 4.22,
+        "seuil": 3
+      },
+      "bordure / surface-alt": {
+        "rapport": 3.46,
+        "seuil": 3
+      },
+      "danger / fond": {
+        "rapport": 5.72,
+        "seuil": 4.5
+      },
+      "danger / surface": {
+        "rapport": 6.39,
+        "seuil": 4.5
+      },
+      "danger / danger-doux": {
+        "rapport": 5.62,
+        "seuil": 4.5
+      },
+      "sur-danger / danger": {
+        "rapport": 6.54,
+        "seuil": 4.5
+      },
+      "anneau focus principal (texte) / fond": {
+        "rapport": 13.64,
+        "seuil": 3
+      },
+      "syntaxe kw / surface": {
+        "rapport": 8.09,
+        "seuil": 4.5
+      },
+      "syntaxe num / surface": {
+        "rapport": 6.72,
+        "seuil": 4.5
+      },
+      "syntaxe str / surface": {
+        "rapport": 6.78,
+        "seuil": 4.5
+      },
+      "syntaxe date / surface": {
+        "rapport": 6.85,
+        "seuil": 4.5
+      }
+    },
+    "sombre": {
+      "texte / fond": {
+        "rapport": 15.05,
+        "seuil": 4.5
+      },
+      "texte / surface": {
+        "rapport": 13.81,
+        "seuil": 4.5
+      },
+      "texte / surface-alt": {
+        "rapport": 12.17,
+        "seuil": 4.5
+      },
+      "texte / survol": {
+        "rapport": 12.98,
+        "seuil": 4.5
+      },
+      "texte / danger-doux": {
+        "rapport": 10.42,
+        "seuil": 4.5
+      },
+      "texte-2 / fond": {
+        "rapport": 9.03,
+        "seuil": 4.5
+      },
+      "texte-2 / surface": {
+        "rapport": 8.29,
+        "seuil": 4.5
+      },
+      "texte-2 / surface-alt": {
+        "rapport": 7.3,
+        "seuil": 4.5
+      },
+      "texte-2 / survol": {
+        "rapport": 7.79,
+        "seuil": 4.5
+      },
+      "bordure / fond": {
+        "rapport": 4.73,
+        "seuil": 3
+      },
+      "bordure / surface": {
+        "rapport": 4.34,
+        "seuil": 3
+      },
+      "bordure / surface-alt": {
+        "rapport": 3.83,
+        "seuil": 3
+      },
+      "danger / fond": {
+        "rapport": 7.3,
+        "seuil": 4.5
+      },
+      "danger / surface": {
+        "rapport": 6.7,
+        "seuil": 4.5
+      },
+      "danger / danger-doux": {
+        "rapport": 5.05,
+        "seuil": 4.5
+      },
+      "sur-danger / danger": {
+        "rapport": 7.3,
+        "seuil": 4.5
+      },
+      "anneau focus principal (texte) / fond": {
+        "rapport": 15.05,
+        "seuil": 3
+      },
+      "syntaxe kw / surface": {
+        "rapport": 8.18,
+        "seuil": 4.5
+      },
+      "syntaxe num / surface": {
+        "rapport": 8.97,
+        "seuil": 4.5
+      },
+      "syntaxe str / surface": {
+        "rapport": 9.61,
+        "seuil": 4.5
+      },
+      "syntaxe date / surface": {
+        "rapport": 8.7,
+        "seuil": 4.5
+      }
+    }
+  },
+  "typo": {
+    "police-interface": "Atkinson Hyperlegible Next",
+    "police-code": "Atkinson Hyperlegible Mono",
+    "titre-accueil": {
+      "taille": 28,
+      "interligne": 36,
+      "graisse": 700
+    },
+    "titre-ecran": {
+      "taille": 20,
+      "interligne": 28,
+      "graisse": 600
+    },
+    "titre-panneau": {
+      "taille": 16,
+      "interligne": 24,
+      "graisse": 600
+    },
+    "bouton-accueil": {
+      "taille": 16,
+      "interligne": 24,
+      "graisse": 600
+    },
+    "corps": {
+      "taille": 14,
+      "interligne": 20,
+      "graisse": 400
+    },
+    "corps-fort": {
+      "taille": 14,
+      "interligne": 20,
+      "graisse": 600
+    },
+    "cellule-liste": {
+      "taille": 14,
+      "interligne": 20,
+      "graisse": 400,
+      "tnum": true
+    },
+    "etiquette": {
+      "taille": 12,
+      "interligne": 16,
+      "graisse": 600
+    },
+    "legende": {
+      "taille": 12,
+      "interligne": 16,
+      "graisse": 400
+    },
+    "code": {
+      "taille": 14,
+      "interligne": 22,
+      "graisse": 400,
+      "graisse-construction": 600
+    },
+    "console": {
+      "taille": 13,
+      "interligne": 20,
+      "graisse": 400
+    },
+    "unite": "px"
+  },
+  "espaces": {
+    "espace-1": 4,
+    "espace-2": 8,
+    "espace-3": 12,
+    "espace-4": 16,
+    "espace-5": 24,
+    "espace-6": 32,
+    "cote-a-cote": 16,
+    "l-un-sous-l-autre": 12,
+    "marge-ecran": 24
+  },
+  "rayons": {
+    "rayon-petit": 6,
+    "rayon-controle": 8,
+    "rayon-panneau": 12,
+    "rayon-ligne": 0
+  },
+  "traits": {
+    "trait": 1,
+    "trait-focus": 2
+  },
+  "dimensions": {
+    "hauteur-controle": 32,
+    "hauteur-ligne": 32,
+    "hauteur-bouton-accueil": 44,
+    "hauteur-onglet": 40,
+    "hauteur-barre-outils": 52,
+    "hauteur-barre-etat": 26,
+    "icone": 16,
+    "icone-palette": 14,
+    "icone-message": 20,
+    "icone-trait": 2,
+    "logo-accueil": 64,
+    "logo-fenetre": 16
+  },
+  "note": "Palette fermée de cinq accents (bleue, verte, turquoise, violette, grise), décidée le 26 septembre 2026 : rouge réservé au danger ; jaune, rose et orange écartés, trop proches du danger ou illisibles."
+}
