@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.40, révisée le 25 septembre 2026.
+Version 1.41, révisée le 25 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -162,7 +162,7 @@ Horizon post-v1, sans date :
 | v2.0 | L'interface par le navigateur (`docs/v2.md`) : `grym servir`, tout programme v1 affiché sans modification ; formulaires typés, liens avec suggestions, téléversement, images | livrée le 24 septembre 2026 |
 | A1 | L'atelier (`docs/atelier.md`) : fenêtre Qt, projet, éditeur avec coloration par le lexeur et erreurs en direct, « Lancer » dans un processus à part | fait le 24 septembre 2026 |
 | A2 | Fichiers utilisés (grammaire, § 21), puis éditeur de données : schéma des entités, propriétés, réécriture chirurgicale, aperçu des migrations | fait le 25 septembre 2026 |
-| A3 | Les écrans dans le langage (`docs/ecrans.md`) : fenêtres, listes, fiches, boutons, événements | en cours : A3-a à A3-c faits (écran, liste, boutons, zones de saisie, événements, fiche, écrans empilés) ; reste A3-d |
+| A3 | Les écrans dans le langage (`docs/ecrans.md`) : fenêtres, listes, fiches, boutons, événements | fait le 25 septembre 2026 |
 | A4 | Éditeur d'écrans : liste et fiche générées par entité, agencement à la souris | à venir |
 
 Critères de sortie de la v1.0, tous remplis :
@@ -250,3 +250,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.38 | 2026-09-24 | Nouvel art. 14 : pérennité ; le manuel du mainteneur (`docs/mainteneur.md`), révisé à chaque changement d'architecture |
 | 1.39 | 2026-09-25 | Art. 12 : A2 fait (fichiers utilisés, schéma des données, modification à la souris, aperçu des migrations) |
 | 1.40 | 2026-09-25 | Art. 7 : exception des écrans, une transaction par événement ; art. 12 : A3 conçu |
+| 1.41 | 2026-09-25 | Art. 12 : A3 fait (écrans, listes, boutons, zones de saisie, événements, fiche, écrans empilés, colonnes, disposition) |

@@ -660,12 +660,25 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
     pile->addWidget(t);
     setWindowTitle(titre);
     QHBoxLayout *rangee = nullptr;   // des boutons qui se suivent : une ligne, en bas à droite (§ 3.3)
+    QVector<QBoxLayout *> blocs = {pile};   // « côte à côte », « l'un sous l'autre » : des boîtes emboîtées (§ 22.1)
     for (int k = 0; k < sortes.size(); k++) {
         if (sortes[k] != ELEMENT_BOUTON) rangee = nullptr;
+        if (sortes[k] == ELEMENT_COTE_A_COTE || sortes[k] == ELEMENT_L_UN_SOUS_L_AUTRE) {
+            QBoxLayout *b = sortes[k] == ELEMENT_COTE_A_COTE ? static_cast<QBoxLayout *>(new QHBoxLayout)
+                                                             : static_cast<QBoxLayout *>(new QVBoxLayout);
+            blocs.last()->addLayout(b, 1);
+            blocs.push_back(b);
+            continue;
+        }
+        if (sortes[k] == ELEMENT_FIN_DE_BLOC) {
+            if (blocs.size() > 1) blocs.pop_back();
+            continue;
+        }
+        QBoxLayout *ici = blocs.last();
         if (sortes[k] == ELEMENT_TEXTE) {
             auto *l = new QLabel(textes[k]);
             l->setWordWrap(true);
-            pile->addWidget(l);
+            ici->addWidget(l);
         } else if (sortes[k] == ELEMENT_ZONE) {
             /* une zone : les contrôles des formulaires ; la validation (Entrée, ou la quitter) est un événement */
             const QString type = k < travail.types_zones.size() ? travail.types_zones[k] : QString("texte");
@@ -699,10 +712,11 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
             zones[k] = w;
             auto *rang = new QFormLayout;
             rang->addRow(textes[k], w);
-            pile->addLayout(rang);
+            ici->addLayout(rang);
         } else if (sortes[k] == ELEMENT_LISTE) {
             auto *tab = new QTableWidget(0, colonnes[k].size());
             tab->setHorizontalHeaderLabels(colonnes[k]);
+            tab->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);   // les titres entiers
             tab->horizontalHeader()->setStretchLastSection(true);
             tab->verticalHeader()->hide();
             tab->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -725,12 +739,12 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                 envoyer_evenement(EVENEMENT_CHOIX, k, i ? i->data(Qt::UserRole).toInt() : ligne);
             });
             tables[k] = tab;
-            pile->addWidget(tab, 1);
+            ici->addWidget(tab, 1);
         } else {
             if (!rangee) {
                 rangee = new QHBoxLayout;
                 rangee->addStretch(1);
-                pile->addLayout(rangee);
+                ici->addLayout(rangee);
             }
             auto *b = new QPushButton(textes[k]);
             connect(b, &QPushButton::clicked, this, [this, k] { envoyer_evenement(EVENEMENT_CLIC, k, 0); });

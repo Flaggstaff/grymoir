@@ -832,9 +832,20 @@ static void phrase(Compilation *c, const Noeud *ph) {
         if (e->texte2) chaine_ajouter(&d, e->texte2);
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
+            if (el->type == N_DISPOSITION) {   /* « côte à côte » : H, « l'un sous l'autre » : V, fin du bloc : F */
+                chaine_ajouter(&d, el->forme == 1 ? "\x1f" "H" : el->forme == 2 ? "\x1f" "V" : "\x1f" "F");
+                continue;
+            }
             chaine_ajouter(&d, el->type == N_CHERCHER ? "\x1f" "L" : el->type == N_BOUTON ? "\x1f" "B"
                              : el->type == N_NOM ? "\x1f" "Z" : "\x1f" "T");
             chaine_ajouter(&d, el->texte);
+            if (el->type == N_CHERCHER && el->texte3) {   /* colonnes choisies : « ␛ écrit ␝ a ␜ b ␞ … » */
+                chaine_ajouter(&d, "\x1b");
+                char *cols = grym_dupliquer(el->texte3);
+                for (char *q = cols; *q; q++) if (*q == '\x1f') *q = '\x1c';
+                chaine_ajouter(&d, cols);
+                free(cols);
+            }
             if (el->type == N_NOM) {   /* « Zpays ␞ texte ␞ f » : le type, et « f » si facultative */
                 chaine_ajouter(&d, "\x1e");
                 chaine_ajouter(&d, el->texte2);
@@ -879,7 +890,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         size_t nb_apres = 0;
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
-            if (el->type == N_TEXTE_ECRAN) continue;
+            if (el->type == N_TEXTE_ECRAN || el->type == N_DISPOSITION) continue;
             const Noeud *q = trouver_quand(c->programme->phrases, c->programme->nb, e->texte,
                                            el->type == N_BOUTON ? 1 : el->type == N_NOM ? 3 : 2, el->texte);
             if (!q) continue;   /* une liste sans « Quand on choisit » : le choix ne fait rien */

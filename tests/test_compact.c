@@ -219,7 +219,14 @@ int main(void) {
                  "_quand _clique « Supprimer » _dans de_recherche\n    _si _écran.compositeur_choisi _présent _alors\n"
                  "        _supprimer _écran.compositeur_choisi\n    _fin\n_fin\n"
                  "_quand _ferme de_recherche\n    _afficher « fermé »\n_fin\n_ouvrir de_recherche\n", NULL);
-    ERR("_écran d'accueil\n    _un pays (texte) _parfois\n    _bouton « OK »\n_fin\n", 2, 22, "_départ");
+    ERR("_écran d'accueil\n    _un pays (texte) _parfois\n    _bouton « OK »\n_fin\n", 2, 22, "_départ");    ALLER_RETOUR("_classe _un compositeur _conservé\n    _un nom (texte) _unique\n    _une date_de_naissance (date) _facultatif\n_fin\n"
+                 "_classe _une œuvre _conservé\n    _un titre (texte) _unique\n    _un compositeur (compositeur)\n_fin\n"
+                 "_écran des_œuvres « Catalogue »\n    _côte_à_côte\n        _liste compositeur _conservé _par nom\n"
+                 "        _l'un_sous_l'autre\n"
+                 "            _liste œuvre _conservé _par titre _avec titre ; compositeur.date_de_naissance\n"
+                 "            _texte « Double-clic : la fiche »\n        _fin\n    _fin\n    _bouton « Fermer »\n_fin\n"
+                 "_quand _clique « Fermer » _dans des_œuvres\n    _fermer\n_fin\n_ouvrir des_œuvres\n", NULL);
+
     ERR("_écran\n    _bouton « OK »\n_fin\n", 1, 1, "_écran des_compositeurs");
     ERR("_écran d'accueil\n    _image\n_fin\n", 2, 5, "Élément d'écran attendu");
     ERR("_écran d'accueil\n    _bouton « OK »\n_fin\n_quand _tape « OK » _dans d'accueil\n    _fermer\n_fin\n", 4, 1,

@@ -39,13 +39,15 @@ typedef enum {
     N_COLLAGE,       /* « a suivi de b » (§ 4.4) : enfants[0], enfants[1] ; texte collé, sans espace */
     N_ELISION,       /* « de x », « que x » dans un assemblage (§ 4.4) : op 'd' ou 'q' ; enfants[0] */
     N_ECRAN,         /* « l'écran », dans un événement ou une liste d'écran : l'écran en cours (§ 22.2) ; texte : sa classe */
+    N_DISPOSITION,   /* élément d'écran : forme 1 « côte à côte : », 2 « l'un sous l'autre : », 0 fin du bloc (§ 22.1) */
     N_BOUTON,        /* élément d'écran : « un bouton « Nouveau » » : texte : libellé (§ 22.1) */
     N_TEXTE_ECRAN,   /* élément d'écran : « le texte « Bienvenue » » : texte (§ 22.1) */
     N_CHAMP_DONT,    /* champ de l'objet examiné, dans une condition « dont » : texte : champ (§ 16.4) */
     N_CHERCHER,      /* objets conservés : texte : entité ; forme : 0 liste (boucle), 1 un seul, 2 nombre ;
                         enfants[0] : condition « dont » (facultative) ; texte2 : champ du tri ; entier : 1 si décroissant ;
                         op 'I' : relation inverse, l'objet en dernier enfant (§ 16.10) ; op 'M' : les éléments du
-                        champ multiple texte3 de cet objet (§ 16.13) */
+                        champ multiple texte3 de cet objet (§ 16.13) ; liste d'écran (§ 22.1) : texte3, les colonnes
+                        choisies (« avec … »), séparées par U+001E, chacune « texte écrit U+001D champ U+001F champ… » */
     N_CHAMP,         /* « le solde du client » : texte : champ ; enfants[0] : objet ; article : devant le champ */
     N_NOUVEAU,       /* « un nouveau client » : texte : classe ; enfants : N_INIT ; forme 1 : bloc d'initialisation */
     N_INIT,          /* « Le nom vaut … » dans le bloc d'un nouvel objet : texte : champ ; enfants[0] : valeur */

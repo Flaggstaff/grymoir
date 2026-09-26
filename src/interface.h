@@ -15,7 +15,8 @@
 /* Une ligne de la fiche d'un objet (grammaire, § 20) : un champ et sa valeur, écrite comme Afficher l'écrirait.
  * Une image porte aussi ses octets, pour qu'une interface riche la montre. */
 /* Un élément d'écran, tel que l'interface le montre (grammaire, § 22.1). */
-typedef enum { ELEMENT_LISTE, ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE } SorteElement;
+typedef enum { ELEMENT_LISTE, ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE,
+               ELEMENT_COTE_A_COTE, ELEMENT_L_UN_SOUS_L_AUTRE, ELEMENT_FIN_DE_BLOC } SorteElement;   /* blocs : § 22.1 */
 typedef struct {
     SorteElement sorte;
     const char *texte;              /* libellé du bouton, texte fixe ; pour une liste, l'entité */

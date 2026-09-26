@@ -494,6 +494,11 @@ static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, cons
     chaine_ajouter(&s->page.journal, "[ouvrir ");
     chaine_ajouter(&s->page.journal, titre);
     for (size_t k = 0; k < n; k++) {
+        if (el[k].sorte >= ELEMENT_COTE_A_COTE) {   /* les blocs de disposition */
+            chaine_ajouter(&s->page.journal, el[k].sorte == ELEMENT_COTE_A_COTE ? " ; côte à côte {"
+                                             : el[k].sorte == ELEMENT_L_UN_SOUS_L_AUTRE ? " ; l'un sous l'autre {" : " ; }");
+            continue;
+        }
         chaine_ajouter(&s->page.journal, el[k].sorte == ELEMENT_LISTE ? " ; liste " : el[k].sorte == ELEMENT_BOUTON ? " ; bouton "
                                          : el[k].sorte == ELEMENT_ZONE ? " ; zone " : " ; texte ");
         chaine_ajouter(&s->page.journal, el[k].texte);
@@ -811,6 +816,36 @@ static void essais_ecrans(void) {
     }
     PROG("Un point a : un x.\nLe p vaut un nouveau point.\nOuvrir la fiche de p.\n",
          "ERREUR 0:0 Ce programme ouvre des écrans : lancez-le dans une fenêtre, avec grym-atelier.");
+    /* A3-d : colonnes choisies (le champ d'un lien compris), blocs de disposition, titre donné */
+    {
+        const char *src =
+            "Un compositeur, conservé, a : un nom (texte), unique, une date de naissance (date), facultative.\n"
+            "Une œuvre, conservée, a : un titre (texte), unique, un compositeur (compositeur), une année (nombre entier), facultative.\n"
+            "Pour remplir :\n    Le c vaut un nouveau compositeur :\n        Le nom vaut « Bach ».\n"
+            "        La date de naissance vaut 31.03.1685.\n    Conserver c.\n"
+            "    Le o vaut une nouvelle œuvre :\n        Le titre vaut « Messe ».\n        Le compositeur vaut c.\n"
+            "        L'année vaut 1749.\n    Conserver o.\n"
+            "Remplir.\n"
+            "L'écran des œuvres, « Catalogue », montre :\n    côte à côte :\n"
+            "        la liste des compositeurs conservés, par nom,\n        l'un sous l'autre :\n"
+            "            la liste des œuvres conservées, par titre, avec le titre, la date de naissance du compositeur et l'année,\n"
+            "            le texte « Double-clic : la fiche »,\n    un bouton « Fermer ».\n"
+            "Quand on choisit une œuvre dans l'écran des œuvres :\n    Afficher titre de l'œuvre.\n"
+            "Quand on clique sur « Fermer » dans l'écran des œuvres :\n    Fermer l'écran.\n"
+            "Ouvrir l'écran des œuvres.\n";
+        const char *ev[] = { "choix 9", "clic Fermer" };   /* une ligne qui n'existe pas : rien, l'écran reste ouvert */
+        const char *rep[] = { "" };
+        ECRANS(src, ev, rep,
+               "[ouvrir Catalogue ; côte à côte { ; liste compositeur (Nom, Date de naissance) ; l'un sous l'autre { ; "
+               "liste œuvre (Titre, Date de naissance du compositeur, Année) ; texte Double-clic : la fiche ; } ; } ; "
+               "bouton Fermer]\n"
+               "[lignes Bach|31.03.1685]\n[lignes Messe|31.03.1685|1'749]\n"
+               "[lignes Bach|31.03.1685]\n[lignes Messe|31.03.1685|1'749]\n"
+               "[lignes Bach|31.03.1685]\n[lignes Messe|31.03.1685|1'749]\n[fermer]\n");
+    }
+    PROG("Une œuvre, conservée, a : un titre (texte), unique.\n"
+         "L'écran des œuvres montre :\n    la liste des œuvres conservées, avec le prix,\n    un bouton « OK ».\n",
+         "~Colonne « le prix » : un champ de « œuvre »");
     /* Les erreurs d'analyse */
     PROG("L'écran d'accueil montre :\n    un bouton « OK ».\nAfficher 1.\n",
          "ERREUR 2:5 Le bouton « OK » de l'écran « d'accueil » n'a pas de « Quand on clique sur « OK » dans l'écran d'accueil : ».");

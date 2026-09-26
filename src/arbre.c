@@ -141,6 +141,10 @@ static void decrire(const Noeud *n, Chaine *c) {
     case N_ECRAN:
         chaine_ajouter(c, "(écran-en-cours)");
         return;
+    case N_DISPOSITION:
+        chaine_ajouter(c, n->forme == 1 ? "(côte-à-côte" : n->forme == 2 ? "(l'un-sous-l'autre" : "(fin-bloc)");
+        if (n->forme) chaine_ajouter(c, ")");
+        return;
     case N_BOUTON:
         chaine_ajouter(c, "(bouton « ");
         chaine_ajouter(c, n->texte);

@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE, O_CLASSE, O_INIT, O_ESSAI, O_ECRAN } Ouverture;
+typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE, O_CLASSE, O_INIT, O_ESSAI, O_ECRAN, O_BLOC } Ouverture;
 
 typedef struct {
     Ouverture type;
@@ -530,7 +530,32 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         r->np--;
         return;
     }
-    if (haut && haut->type == O_ECRAN) {
+    if (t->type == J_MOT_CLE && !strcmp(t->valeur, "fin") && haut && haut->type == O_BLOC && f == d + 1) {
+        r->np--;   /* la fin d'un bloc : l'indentation suffit en forme littéraire */
+        return;
+    }
+    const int l_un = est_cle(t, "l'") && f == d + 2 && r->e[d + 1].type == J_CROCHETS
+                     && strcmp(r->e[d + 1].valeur, "un sous l'autre") == 0;   /* « _l'un_sous_l'autre » : « _l' » puis un nom */
+    if (haut && (haut->type == O_ECRAN || haut->type == O_BLOC)
+        && ((est_cle(t, "côte_à_côte") && f == d + 1) || l_un)) {
+        /* _côte_à_côte → côte à côte : ; _l'un_sous_l'autre → l'un sous l'autre : (§ 22.1) */
+        if (est_cle(t, "côte_à_côte")) {
+            mot(r, "côte", t);
+            mot(r, "à", t);
+            mot(r, "côte", t);
+        } else {
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "un", t);
+            mot(r, "sous", t);
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "autre", t);
+        }
+        emettre(r, J_DEUX_POINTS, NULL, t, 1);
+        fixer_retrait(r, premier, prof);
+        ouvrir(r, O_BLOC, prof, t);
+        return;
+    }
+    if (haut && (haut->type == O_ECRAN || haut->type == O_BLOC)) {
         if ((est_cle(t, "bouton") || est_cle(t, "texte")) && f == d + 2 && r->e[d + 1].type == J_TEXTE) {
             mot(r, est_cle(t, "bouton") ? "un" : "le", t);
             mot(r, est_cle(t, "bouton") ? "bouton" : "texte", t);
@@ -538,7 +563,10 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         } else if (est_cle(t, "liste") && d + 2 < f && r->e[d + 1].type == J_CROCHETS
                    && (est_cle(&r->e[d + 2], "conservé") || est_cle(&r->e[d + 2], "conservée")
                        || est_cle(&r->e[d + 2], "supprimé") || est_cle(&r->e[d + 2], "supprimée"))) {
-            /* _liste compositeur _conservé [_dont …] [_par nom [_décroissant]] */
+            /* _liste compositeur _conservé [_dont …] [_par nom [_décroissant]] [_avec titre ; compositeur.nom] */
+            size_t avec = chercher(r, d + 3, f, "avec");
+            size_t fin_liste = f;
+            f = avec;
             size_t par = chercher(r, d + 3, f, "par");
             mot(r, "la", t);
             mot(r, "liste", t);
@@ -564,6 +592,24 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 copier(r, &r->e[par + 1]);
                 if (par + 2 < f) mot(r, "décroissant", &r->e[par + 2]);
             }
+            if (avec < fin_liste) {   /* « _avec a ; b.c » → « , avec a, c de b » ; « et » devant la dernière */
+                emettre(r, J_VIRGULE, NULL, &r->e[avec], 1);
+                mot(r, "avec", &r->e[avec]);
+                size_t nb = 1;
+                for (size_t k = avec + 1; k < fin_liste; k++) nb += r->e[k].type == J_POINT_VIRGULE;
+                size_t debut = avec + 1, i = 0;
+                for (size_t k = avec + 1; k <= fin_liste; k++) {
+                    if (k < fin_liste && r->e[k].type != J_POINT_VIRGULE) continue;
+                    if (i) {
+                        if (i + 1 == nb) mot(r, "et", &r->e[k - 1]);
+                        else emettre(r, J_VIRGULE, NULL, &r->e[k - 1], 1);
+                    }
+                    expression(r, debut, k);   /* compositeur.nom → nom de compositeur */
+                    debut = k + 1;
+                    i++;
+                }
+            }
+            f = fin_liste;
         } else if ((est_cle(t, "un") || est_cle(t, "une")) && d + 4 < f + 1 && r->e[d + 1].type == J_CROCHETS
                    && r->e[d + 2].type == J_PAR_OUV && r->e[d + 3].type == J_CROCHETS && r->e[d + 4].type == J_PAR_FERM) {
             /* _un pays (texte) [_départ « Suisse »] [_facultatif] → un pays (texte), « Suisse » au départ, facultatif */
@@ -596,7 +642,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             }
         } else {
             echouer(r, t, grym_dupliquer("Élément d'écran attendu : « _liste compositeur _conservé », "
-                                         "« _bouton « OK » », « _texte « … » » ou « _un pays (texte) »."));
+                                         "« _bouton « OK » », « _texte « … » », « _un pays (texte) » ou « _côte_à_côte »."));
             return;
         }
         emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);

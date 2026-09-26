@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.36 de la spécification, révisée le 25 septembre 2026.
+Version 1.37 de la spécification, révisée le 25 septembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -361,3 +361,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.34 | 2026-09-25 | Écrans (grammaire, § 22) : instructions 57 à 62 ; « Ouvrir » se compile en boucle d'événements (ÉCRAN_ATTENDRE, ESSAYER, APPELER des événements), chaque attente valide ce qui précède ; interface : ecran_ouvrir, ecran_lignes, ecran_attendre, ecran_erreur, ecran_fermer ; format version 26 |
 | 1.35 | 2026-09-25 | Écrans, A3-b : `ÉCRAN_OBJET` ; un écran est un objet de la classe « écran X » (ses zones, la ligne choisie de chaque liste), racine du ramasse-miettes ; l'attente envoie les valeurs des zones (ecran_valeurs), l'événement rapporte la ligne choisie de chaque liste et le texte d'une zone validée, lu selon son type ; une zone refusée ne déclenche rien |
 | 1.36 | 2026-09-25 | Écrans, A3-c : les écrans s'empilent (chacun garde celui qu'il recouvre ; ÉCRAN_FERMER rend la main à celui du dessous ; tous sont racines du ramasse-miettes) ; `FICHE_ÉCRAN` |
+| 1.37 | 2026-09-25 | Écrans, A3-d : la description d'un écran porte les blocs (H côte à côte, V l'un sous l'autre, F fin) et les colonnes choisies d'une liste (U+001B, puis écrit U+001D chemin, champs séparés par U+001C) ; l'interface reçoit les blocs comme éléments ; un choix qui ne désigne plus rien ne déclenche aucun événement |

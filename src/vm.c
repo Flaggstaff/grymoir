@@ -342,6 +342,7 @@ typedef struct EcranVM {
     char ***choix;         /* zone liée à une entité : les clés de ses objets */
     size_t *nb_choix;
     struct EcranVM *dessous;   /* l'écran qu'il recouvre (écrans empilés, § 22.3), ou NULL */
+    char ***chemins;       /* liste aux colonnes choisies : le chemin de chaque colonne (« compositeur␜naissance »), sinon NULL */
 } EcranVM;
 
 static void ecran_detruire(EcranVM *e);
@@ -1829,10 +1830,15 @@ static void ecran_detruire(EcranVM *e) {
         free(e->champs[k]);
         valeur_liberer(&e->listes[k]);
         free(e->types[k]);
+        if (e->chemins[k]) {
+            for (size_t c = 0; c < e->nb_colonnes[k]; c++) free(e->chemins[k][c]);
+            free(e->chemins[k]);
+        }
         for (size_t c = 0; c < e->nb_choix[k]; c++) free(e->choix[k][c]);
         free(e->choix[k]);
     }
     free(e->types);
+    free(e->chemins);
     free(e->choix);
     free(e->nb_choix);
     free(e->champ);
@@ -1885,6 +1891,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     e->types = grym_allouer(t * sizeof *e->types);
     e->choix = grym_allouer(t * sizeof *e->choix);
     e->nb_choix = grym_allouer(t * sizeof *e->nb_choix);
+    e->chemins = grym_allouer(t * sizeof *e->chemins);
     char *nom_classe = grym_formater("écran %s", parts[0]);
     const ClasseVM *ce = classe_vm(m, nom_classe);
     free(nom_classe);
@@ -1892,8 +1899,19 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         const char *x = parts[k + 2];
         e->champ[k] = -1;
         e->types[k] = NULL;
+        e->chemins[k] = NULL;
         e->choix[k] = NULL;
         e->nb_choix[k] = 0;
+        if (x[0] == 'H' || x[0] == 'V' || x[0] == 'F') {   /* un bloc de disposition (§ 22.1) */
+            e->textes[k] = grym_dupliquer("");
+            e->elements[k].sorte = x[0] == 'H' ? ELEMENT_COTE_A_COTE : x[0] == 'V' ? ELEMENT_L_UN_SOUS_L_AUTRE : ELEMENT_FIN_DE_BLOC;
+            e->elements[k].texte = e->textes[k];
+            e->listes[k] = vi_absent(NULL);
+            e->colonnes[k] = NULL;
+            e->nb_colonnes[k] = 0;
+            e->champs[k] = NULL;
+            continue;
+        }
         if (x[0] == 'Z') {   /* « Zpays ␞ texte ␞ f » : une zone de saisie */
             const char *s1 = strchr(x, '\x1e'), *s2 = s1 ? strchr(s1 + 1, '\x1e') : NULL;
             char *nomz = grym_formater("%.*s", (int)(s1 ? s1 - x - 1 : (long)strlen(x + 1)), x + 1);
@@ -1929,7 +1947,8 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->champs[k] = NULL;
             continue;
         }
-        e->textes[k] = grym_dupliquer(x + 1);
+        const char *colonnes_choisies = strchr(x, '\x1b');
+        e->textes[k] = colonnes_choisies ? grym_formater("%.*s", (int)(colonnes_choisies - x - 1), x + 1) : grym_dupliquer(x + 1);
         e->colonnes[k] = NULL;
         e->nb_colonnes[k] = 0;
         e->champs[k] = NULL;
@@ -1940,12 +1959,43 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->elements[k].sorte = x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON : ELEMENT_TEXTE;
         if (x[0] != 'L') continue;
         /* Colonnes par défaut : les champs simples, dans l'ordre ; ni fichiers, ni images, ni « plusieurs » (§ 22.1) */
-        const ClasseVM *c = classe_vm(m, x + 1);
-        if (!c) { *erreur = grym_formater("Entité « %s » inconnue.", x + 1); break; }
+        const ClasseVM *c = classe_vm(m, e->textes[k]);
+        if (!c) { *erreur = grym_formater("Entité « %s » inconnue.", e->textes[k]); break; }
         if (ce) {   /* le champ « … choisi » de la classe de l'écran */
             char *choisi = grym_formater("%s %s", c->nom, c->feminin ? "choisie" : "choisi");
             e->champ[k] = index_champ(ce, choisi);
             free(choisi);
+        }
+        if (colonnes_choisies) {   /* « avec le titre et la naissance du compositeur » : les colonnes écrites (§ 22.1) */
+            size_t nb = 1;
+            for (const char *q = colonnes_choisies + 1; *q; q++) nb += *q == '\x1e';
+            e->colonnes[k] = grym_allouer(nb * sizeof(char *));
+            e->chemins[k] = grym_allouer(nb * sizeof(char *));
+            e->champs[k] = grym_allouer(nb * sizeof(size_t));
+            const char *q = colonnes_choisies + 1;
+            for (size_t col = 0; col < nb; col++) {
+                const char *fin = strchr(q, '\x1e');
+                if (!fin) fin = q + strlen(q);
+                const char *sep = memchr(q, '\x1d', (size_t)(fin - q));
+                char *ecrit = grym_formater("%.*s", (int)((sep ? sep : fin) - q), q);
+                const char *sans = ecrit;   /* le titre : l'écrit sans son article */
+                if (!strncmp(sans, "le ", 3) || !strncmp(sans, "la ", 3)) sans += 3;
+                else if (!strncmp(sans, "l'", 2)) sans += 2;
+                e->colonnes[k][col] = capitale(sans);
+                e->chemins[k][col] = sep ? grym_formater("%.*s", (int)(fin - sep - 1), sep + 1) : grym_dupliquer("");
+                e->champs[k][col] = 0;
+                free(ecrit);
+                q = *fin ? fin + 1 : fin;
+            }
+            e->nb_colonnes[k] = nb;
+            e->elements[k].colonnes = (const char *const *)e->colonnes[k];
+            e->elements[k].nb_colonnes = nb;
+            if (ce) {
+                char *choisi = grym_formater("%s %s", c->nom, c->feminin ? "choisie" : "choisi");
+                e->champ[k] = index_champ(ce, choisi);
+                free(choisi);
+            }
+            continue;
         }
         e->colonnes[k] = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof(char *));
         e->champs[k] = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof(size_t));
@@ -1975,11 +2025,27 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
         Objet *o = machine_objet_en_base(m, l->liste->ids[r], l->liste->classes[r], &erreur);
         if (!o || (o->id && !charger(m, o, &erreur))) break;
         for (size_t c = 0; c < nc; c++) {
-            size_t q = e->champs[k][c];
+            Objet *x = o;
+            long q = e->chemins[k] ? -1 : (long)e->champs[k][c];
+            if (e->chemins[k]) {   /* suivre le chemin : « compositeur␜naissance » (§ 22.1) */
+                const char *p = e->chemins[k][c];
+                for (;;) {
+                    const char *fin = strchr(p, '\x1c');
+                    char *champ = grym_formater("%.*s", (int)(fin ? fin - p : (long)strlen(p)), p);
+                    q = x ? index_champ(x->classe, champ) : -1;
+                    free(champ);
+                    if (!fin || q < 0) break;
+                    if (!x->definis[q] || x->champs[q].type != V_OBJET) { x = NULL; break; }   /* lien absent : vide */
+                    x = x->champs[q].objet;
+                    if (x->id && !charger(m, x, &erreur)) { x = NULL; break; }
+                    p = fin + 1;
+                }
+            }
             char *t;
-            if (q >= o->classe->nb_champs || !o->definis[q] || o->champs[q].type == V_ABSENT) t = grym_dupliquer("");
-            else if (o->champs[q].type == V_OBJET) t = nom_objet(m, o->champs[q].objet);
-            else t = texte_valeur(m, &o->champs[q]);
+            if (!x || q < 0 || (size_t)q >= x->classe->nb_champs || !x->definis[q] || x->champs[q].type == V_ABSENT)
+                t = grym_dupliquer("");
+            else if (x->champs[q].type == V_OBJET) t = nom_objet(m, x->champs[q].objet);
+            else t = texte_valeur(m, &x->champs[q]);
             cellules[faites++] = t;
         }
     }
@@ -3034,6 +3100,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 const Liste *l = m->ecran->listes[ev.element].liste;
                 Objet *o = machine_objet_en_base(m, l->ids[ev.ligne], l->classes[ev.ligne], &probleme);
                 if (o) { valeur_liberer(&objet); objet = vi_objet(o); code_ev = (long)ev.element + 1; }
+            } else if (!probleme && code_ev == 0 && ev.sorte != EVENEMENT_FERMETURE) {
+                code_ev = -1;   /* un événement qui ne désigne rien (ligne disparue entre-temps) : rien ne s'exécute */
             }
             if (probleme) { valeur_liberer(&objet); ok = echouer(diag, b, debut, probleme); break; }
             char num[24];

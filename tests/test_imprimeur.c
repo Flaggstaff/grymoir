@@ -150,6 +150,17 @@ int main(void) {
                             "Quand on clique sur « Aide » dans l'écran des compositeurs :\n    Ouvrir l'écran d'aide.\n"
                             "Ouvrir l'écran des compositeurs.\n";
         FIXE(fiche);
+        /* A3-d : blocs et colonnes choisies */
+        const char *blocs = "Un compositeur, conservé, a :\n    un nom (texte), unique,\n    une date de naissance (date), facultative.\n"
+                            "Une œuvre, conservée, a :\n    un titre (texte), unique,\n    un compositeur (compositeur).\n"
+                            "L'écran des œuvres, « Catalogue », montre :\n    côte à côte :\n"
+                            "        la liste des compositeurs conservés, par nom,\n        l'un sous l'autre :\n"
+                            "            la liste des œuvres conservées, par titre, avec le titre et la date de naissance du compositeur,\n"
+                            "            le texte « Double-clic : la fiche »,\n    un bouton « Fermer ».\n"
+                            "Quand on clique sur « Fermer » dans l'écran des œuvres :\n    Fermer l'écran.\n"
+                            "Ouvrir l'écran des œuvres.\n";
+        FIXE(blocs);
+
         COMP("Un point a : un x.\nLe p vaut un nouveau point.\nOuvrir la fiche de p.\n",
              "_classe _un point\n    _un x\n_fin\n_le p << _nouveau point\n_ouvrir _fiche p\n");
 

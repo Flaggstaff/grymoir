@@ -768,9 +768,23 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             if (n->texte2) { aj(im, ", "); ecrire_texte(im, n->texte2); aj(im, ","); }
             aj(im, " montre :\n");
         }
+        size_t dernier = 0;   /* le dernier élément véritable finit la phrase par un point */
+        for (size_t k = 0; k < n->nb_enfants; k++) if (n->enfants[k]->type != N_DISPOSITION) dernier = k;
+        int profondeur = 0;
         for (size_t k = 0; k < n->nb_enfants; k++) {
             const Noeud *el = n->enfants[k];
-            retrait(im, niveau + 1);
+            if (el->type == N_DISPOSITION) {   /* « côte à côte : », « l'un sous l'autre : » ; fin : « _fin » en compact */
+                if (el->forme == 0) {
+                    profondeur--;
+                    if (c) { retrait(im, niveau + 1 + profondeur); aj(im, "_fin\n"); }
+                    continue;
+                }
+                retrait(im, niveau + 1 + profondeur);
+                aj(im, el->forme == 1 ? (c ? "_côte_à_côte\n" : "côte à côte :\n") : (c ? "_l'un_sous_l'autre\n" : "l'un sous l'autre :\n"));
+                profondeur++;
+                continue;
+            }
+            retrait(im, niveau + 1 + profondeur);
             if (el->type == N_BOUTON) {
                 aj(im, c ? "_bouton " : "un bouton ");
                 ecrire_texte(im, el->texte);
@@ -796,6 +810,26 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 ecrire_nom(im, el->texte, 0);
                 aj(im, el->negation ? " _supprimé" : " _conservé");
                 expression(im, el);   /* « _dont … » et « _par … » */
+                if (el->texte3) {   /* « _avec titre ; compositeur.naissance » : les chemins, séparés par « ; » */
+                    aj(im, " _avec ");
+                    for (const char *q = el->texte3; *q;) {
+                        const char *fin = strchr(q, '\x1e');
+                        if (!fin) fin = q + strlen(q);
+                        const char *chemin = memchr(q, '\x1d', (size_t)(fin - q));
+                        chemin = chemin ? chemin + 1 : q;
+                        if (q != el->texte3) aj(im, " ; ");
+                        for (const char *p = chemin; p < fin;) {
+                            const char *f2 = memchr(p, '\x1f', (size_t)(fin - p));
+                            if (!f2) f2 = fin;
+                            char *seg = grym_formater("%.*s", (int)(f2 - p), p);
+                            if (p != chemin) aj(im, ".");
+                            ecrire_nom(im, seg, 0);
+                            free(seg);
+                            p = f2 < fin ? f2 + 1 : fin;
+                        }
+                        q = *fin ? fin + 1 : fin;
+                    }
+                }
             } else {
                 int fem = genre_de_nom(im, el->texte) == G_FEMININ;
                 const char *pl = NULL;
@@ -807,8 +841,23 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 free(x);
                 aj(im, el->negation ? (fem ? " supprimées" : " supprimés") : fem ? " conservées" : " conservés");
                 expression(im, el);   /* « dont … » et « , par … » */
+                if (el->texte3) {   /* « , avec le titre, le compositeur et l'année » : tels qu'écrits */
+                    aj(im, ", avec ");
+                    size_t nb = 1, i = 0;
+                    for (const char *q = el->texte3; *q; q++) nb += *q == '\x1e';
+                    for (const char *q = el->texte3; *q; i++) {
+                        const char *fin = strchr(q, '\x1e');
+                        if (!fin) fin = q + strlen(q);
+                        const char *sep = memchr(q, '\x1d', (size_t)(fin - q));
+                        if (i) aj(im, i + 1 == nb ? " et " : ", ");
+                        char *ecrit = grym_formater("%.*s", (int)((sep ? sep : fin) - q), q);
+                        aj(im, ecrit);
+                        free(ecrit);
+                        q = *fin ? fin + 1 : fin;
+                    }
+                }
             }
-            aj(im, c ? "\n" : k + 1 < n->nb_enfants ? ",\n" : ".\n");
+            aj(im, c ? "\n" : k < dernier ? ",\n" : ".\n");
         }
         fin_compacte(im, niveau);
         return;

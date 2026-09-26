@@ -4406,6 +4406,44 @@ static void classe_ajouter_zone(Classe *c, const char *nom, Genre g, const char 
     c->nb = n;
 }
 
+/* Une colonne choisie, jetons d à f : « la naissance du compositeur » ; le chemin se lit de droite à gauche, la
+ * dernière partie étant un champ de l'entité c, chaque partie précédente un champ de l'objet que la suivante
+ * désigne. Les séparateurs : « de », « du », « d' », suivis d'un article éventuel. Rend « a␟b… » (dans l'ordre
+ * de lecture depuis l'objet de la liste), ou NULL. La plus longue partie de droite l'emporte (§ 2.2). */
+static int jeton_de(const Jeton *j) { return est_mot(j, "de") || est_mot(j, "du") || (j->type == J_ELISION && strcmp(j->valeur, "d") == 0); }
+
+static char *chemin_colonne(Analyse *a, size_t d, size_t f, const Classe *c) {
+    if (d < f && article_de(&a->j[d]) != ART_AUCUN) d++;   /* l'article du début */
+    if (d >= f) return NULL;
+    /* sans séparateur : un champ de c */
+    for (size_t s = d; s <= f; s++) {
+        size_t droite = s;   /* début de la partie de droite */
+        if (s < f) {
+            if (!jeton_de(&a->j[s]) || s == d) continue;
+            droite = s + 1;
+            if (!est_mot(&a->j[s], "du") && droite < f && (est_mot(&a->j[droite], "la") || (a->j[droite].type == J_ELISION && strcmp(a->j[droite].valeur, "l") == 0)))
+                droite++;   /* « de la », « de l' » */
+        } else {
+            droite = d;
+        }
+        if (droite >= f) continue;
+        char *champ = a->j[droite].type == J_CROCHETS && droite + 1 == f ? grym_dupliquer(a->j[droite].valeur) : cle(a, droite, f);
+        Genre g;
+        const char *type = champ ? type_du_champ(a->portee, c, champ) : NULL;
+        if (!champ || !classe_champ(a->portee, c, champ, &g, NULL)) { free(champ); continue; }
+        if (s == f) return champ;   /* tout est un seul champ de c */
+        const Classe *lie = type ? classe_de(a->portee, type) : NULL;
+        if (!lie || !lie->conserve) { free(champ); continue; }
+        char *reste = chemin_colonne(a, d, s, lie);
+        if (!reste) { free(champ); continue; }
+        char *r = grym_formater("%s\x1f%s", champ, reste);
+        free(champ);
+        free(reste);
+        return r;
+    }
+    return NULL;
+}
+
 /* Le nom d'un écran, des jetons d à f exclus : « des compositeurs », « d'accueil ». */
 static char *nom_ecran(Analyse *a, size_t d, size_t f) {
     Chaine c = {0};
@@ -4488,9 +4526,31 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     const size_t ic = a->portee->nb_classes - 1;
     a->portee->classes[ic].ligne = t->ligne;
     a->ecran = a->portee->classes[ic].nom;
+    int blocs[16], nb_blocs = 0;   /* colonnes des blocs « côte à côte » et « l'un sous l'autre » ouverts (§ 22.1) */
     for (;;) {
         const Jeton *u = cour(a);
+        while (nb_blocs && u->retrait <= blocs[nb_blocs - 1]) {   /* un élément moins indenté ferme le bloc */
+            noeud_ajouter(n, noeud_creer(N_DISPOSITION, u->ligne, u->colonne, u->debut));
+            nb_blocs--;
+        }
         Noeud *el = NULL;
+        const int cote = est_mot(u, "côte") && est_mot(voir(a, 1), "à") && est_mot(voir(a, 2), "côte")
+                         && voir(a, 3)->type == J_DEUX_POINTS;
+        const int sous = u->type == J_ELISION && est_mot(voir(a, 1), "un") && est_mot(voir(a, 2), "sous")
+                         && voir(a, 3)->type == J_ELISION && est_mot(voir(a, 4), "autre") && voir(a, 5)->type == J_DEUX_POINTS;
+        if (cote || sous) {
+            if (nb_blocs == 16) { erreur(a, u, grym_dupliquer("Trop de blocs emboîtés : 16 au plus.")); break; }
+            Noeud *b = noeud_creer(N_DISPOSITION, u->ligne, u->colonne, u->debut);
+            b->forme = cote ? 1 : 2;
+            noeud_ajouter(n, b);
+            blocs[nb_blocs++] = u->retrait;
+            a->i += cote ? 4 : 6;
+            if (cour(a)->retrait <= u->retrait || cour(a)->type == J_FIN) {
+                erreur(a, cour(a), grym_dupliquer("Un bloc « côte à côte : » contient des éléments, plus indentés."));
+                break;
+            }
+            continue;
+        }
         if (est_mot(u, "la") && est_mot(voir(a, 1), "liste") && est_mot(voir(a, 2), "des")) {
             size_t apres;
             Classe *c = entite_conservee(a, a->i + 3, 1, &apres);
@@ -4527,6 +4587,46 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 a->i = k;
                 if (est_mot(cour(a), "décroissant")) { el->entier = 1; avancer(a); }
                 else if (est_mot(cour(a), "croissant")) avancer(a);
+                el->fin = fin_jeton(&a->j[a->i - 1]);
+            }
+            if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec")) {
+                /* « , avec le titre, le compositeur et la naissance du compositeur » : les colonnes (§ 22.1) */
+                a->i += 2;
+                Chaine cols = {0};
+                for (int premiere = 1;; premiere = 0) {
+                    size_t d = a->i, k = d;
+                    while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_POINT && a->j[k].type != J_FIN
+                           && !est_mot(&a->j[k], "et")) k++;
+                    char *chemin = chemin_colonne(a, d, k, c);
+                    if (!chemin) {
+                        char *x = k > d ? nom_ecran(a, d, k) : grym_dupliquer("");
+                        erreur(a, &a->j[d], grym_formater("Colonne « %s » : un champ de « %s », ou le champ d'un objet qu'il "
+                                                         "désigne (« la naissance du compositeur »).", x, c->nom));
+                        free(x);
+                        break;
+                    }
+                    char *ecrit = nom_ecran(a, d, k);
+                    if (!premiere) chaine_ajouter(&cols, "\x1e");
+                    chaine_ajouter(&cols, ecrit);
+                    chaine_ajouter(&cols, "\x1d");
+                    chaine_ajouter(&cols, chemin);
+                    free(ecrit);
+                    free(chemin);
+                    a->i = k;
+                    if (est_mot(cour(a), "et")) { avancer(a); continue; }
+                    /* « , le compositeur » continue les colonnes ; « , un bouton … » ou « , la liste … » passe à l'élément suivant */
+                    if (cour(a)->type == J_VIRGULE && !est_mot(voir(a, 1), "un") && !est_mot(voir(a, 1), "une")
+                        && !est_mot(voir(a, 1), "côte") && voir(a, 1)->type != J_FIN
+                        && !(est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "liste"))
+                        && !(est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "texte") && voir(a, 3)->type == J_TEXTE)
+                        && !(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "un") && est_mot(voir(a, 3), "sous"))) {
+                        avancer(a);
+                        continue;
+                    }
+                    break;
+                }
+                if (a->echec) { free(chaine_rendre(&cols)); noeud_liberer(el); break; }
+                el->texte3 = chaine_rendre(&cols);
                 el->fin = fin_jeton(&a->j[a->i - 1]);
             }
             ajouter_nom(&e.entites, &e.nb_entites, c->nom);
@@ -4617,7 +4717,14 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             break;
         }
         noeud_ajouter(n, el);
-        if (cour(a)->type == J_POINT) { avancer(a); break; }
+        if (cour(a)->type == J_POINT) {
+            avancer(a);
+            while (nb_blocs) {   /* le point ferme les blocs encore ouverts */
+                noeud_ajouter(n, noeud_creer(N_DISPOSITION, u->ligne, u->colonne, u->debut));
+                nb_blocs--;
+            }
+            break;
+        }
         if (cour(a)->type != J_VIRGULE) {
             erreur(a, cour(a), grym_dupliquer("« , » ou « . » attendu après un élément d'écran."));
             break;
