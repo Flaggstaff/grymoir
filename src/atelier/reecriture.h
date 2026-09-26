@@ -58,6 +58,12 @@ QString ecran_supprimer(const QString &dossier, const QString &ecran, int index,
 // Un bouton renommé l'est aussi dans son événement ; une zone renommée, dans son « Quand on change ».
 QString ecran_modifier(const QString &dossier, const QString &ecran, int index, const ElementNouveau &e, Geste *geste);
 
+// A4-d : déplacer l'élément `source` près de l'élément `cible` : 0 au-dessus, 1 en dessous, 2 à gauche, 3 à droite.
+// À gauche ou à droite dans une colonne, les deux passent `côte à côte` (bloc créé) ; au-dessus ou en dessous dans
+// une rangée, `l'un sous l'autre`. Un bloc réduit à un seul élément disparaît.
+enum CoteDepot { DEPOT_AVANT = 0, DEPOT_APRES = 1, DEPOT_GAUCHE = 2, DEPOT_DROITE = 3 };
+QString ecran_deplacer(const QString &dossier, const QString &ecran, int source, int cible, int cote, Geste *geste);
+
 // Remet chaque fichier touché dans son état d'avant ; message d'erreur, vide si tout est revenu.
 QString annuler_geste(const Geste &geste);
 

@@ -53,6 +53,10 @@ public:
     const QVector<EcranLu> &ecrans() const { return lus; }
     QString proprietes() const;             // le texte du panneau des propriétés (pour les essais)
     QWidget *controle(int k) const { return k >= 0 && k < vue.controles.size() ? vue.controles[k] : nullptr; }
+    // A4-d : où tombe un élément lâché au point p d'un contrôle de cette taille (CoteDepot) : le quart gauche ou
+    // droit met à côté, la moitié haute au-dessus, la moitié basse en dessous.
+    static int cote_de_depot(const QSize &taille, const QPointF &p);
+    void deposer(int source, int cible, int cote);   // le geste de déplacement
 
 signals:
     void ouvrir(const QString &fichier, int ligne);   // « Voir l'événement », « Voir la déclaration »
@@ -70,6 +74,11 @@ private:
     void ajouter(int sorte);
     QString dossier;
     QWidget *edition = nullptr;
+    int glisse = -1;               // l'élément qu'on commence à glisser, et d'où
+    QPoint depart;
+    int depot_cible = -1, depot_cote = 0;
+    class QFrame *repere = nullptr;   // le trait qui montre où l'élément atterrira
+    int element_sous(QObject *o) const;
     QVector<EcranLu> lus;
     int courant = -1, element = -1;
     VueEcran vue;

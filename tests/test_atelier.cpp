@@ -9,6 +9,8 @@
 #include "lien.h"
 #include "onglet_ecrans.h"
 #include <QMouseEvent>
+#include <QMimeData>
+#include <QDropEvent>
 #include <QTreeWidget>
 #include <QTableWidget>
 
@@ -844,6 +846,89 @@ int main(int argc, char **argv) {
         r.open(QIODevice::ReadOnly);
         const QString t = QString::fromUtf8(r.readAll());
         VERIFIER(t.contains("un bouton « Terminer »") && t.contains("Quand on clique sur « Terminer » dans l'écran d'accueil"));
+    }
+
+    // A4-d : déplacer (ordre, côte à côte créé, l'un sous l'autre dans une rangée, bloc réduit à un élément retiré)
+    {
+        QTemporaryDir dossier;
+        auto lire = [&]() {
+            QFile f(dossier.filePath("p.grym"));
+            f.open(QIODevice::ReadOnly);
+            return QString::fromUtf8(f.readAll());
+        };
+        {
+            QFile f(dossier.filePath("p.grym"));
+            f.open(QIODevice::WriteOnly);
+            f.write("L'écran d'accueil montre :\n    le texte « A »,\n    le texte « B »,\n    le texte « C »,\n    un bouton « OK ».\n"
+                    "Quand on clique sur « OK » dans l'écran d'accueil :\n    Fermer l'écran.\n");
+        }
+        const QString d = dossier.path(), e = "d'accueil";
+        Geste g;
+        auto declaration = [&]() { const QString t = lire(); return t.left(t.indexOf("Quand on")); };
+        VERIFIER(ecran_deplacer(d, e, 2, 0, DEPOT_AVANT, &g).isEmpty());   // C au-dessus de A
+        VERIFIER(declaration() == "L'écran d'accueil montre :\n    le texte « C »,\n    le texte « A »,\n    le texte « B »,\n"
+                                  "    un bouton « OK ».\n");
+        VERIFIER(ecran_deplacer(d, e, 2, 0, DEPOT_DROITE, &g).isEmpty());   // B à droite de C : un bloc côte à côte
+        VERIFIER(declaration() == "L'écran d'accueil montre :\n    côte à côte :\n        le texte « C »,\n        le texte « B »,\n"
+                                  "    le texte « A »,\n    un bouton « OK ».\n");
+        VERIFIER(ecran_deplacer(d, e, 4, 1, DEPOT_GAUCHE, &g).isEmpty());   // A à gauche de C, dans la même rangée
+        VERIFIER(declaration() == "L'écran d'accueil montre :\n    côte à côte :\n        le texte « A »,\n        le texte « C »,\n"
+                                  "        le texte « B »,\n    un bouton « OK ».\n");
+        VERIFIER(ecran_deplacer(d, e, 5, 2, DEPOT_APRES, &g).isEmpty());   // OK sous C : l'un sous l'autre, dans la rangée
+        VERIFIER(declaration() == "L'écran d'accueil montre :\n    côte à côte :\n        le texte « A »,\n        l'un sous l'autre :\n"
+                                  "            le texte « C »,\n            un bouton « OK »,\n        le texte « B ».\n");
+        VERIFIER(analyser_source(lire(), false, dossier.filePath("p.grym")).message.isEmpty());
+        // sortir B de la rangée, sous le bouton : la rangée réduite à C disparaît
+        {
+            QFile f(dossier.filePath("p.grym"));
+            f.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            f.write("L'écran d'accueil montre :\n    côte à côte :\n        le texte « C »,\n        le texte « B »,\n"
+                    "    le texte « A »,\n    un bouton « OK ».\n"
+                    "Quand on clique sur « OK » dans l'écran d'accueil :\n    Fermer l'écran.\n");
+        }
+        VERIFIER(ecran_deplacer(d, e, 2, 5, DEPOT_APRES, &g).isEmpty());
+        VERIFIER(declaration() == "L'écran d'accueil montre :\n    le texte « C »,\n    le texte « A »,\n    un bouton « OK »,\n"
+                                  "    le texte « B ».\n");
+        VERIFIER(ecran_deplacer(d, e, 0, 0, DEPOT_AVANT, &g) == "Rien à déplacer.");
+    }
+
+    // A4-d dans l'onglet : la zone de dépôt, et un dépôt qui devient le geste de déplacement
+    {
+        VERIFIER(OngletEcrans::cote_de_depot(QSize(200, 40), QPointF(10, 20)) == DEPOT_GAUCHE);
+        VERIFIER(OngletEcrans::cote_de_depot(QSize(200, 40), QPointF(190, 20)) == DEPOT_DROITE);
+        VERIFIER(OngletEcrans::cote_de_depot(QSize(200, 40), QPointF(100, 10)) == DEPOT_AVANT);
+        VERIFIER(OngletEcrans::cote_de_depot(QSize(200, 40), QPointF(100, 30)) == DEPOT_APRES);
+        QTemporaryDir dossier;
+        QFile f(dossier.filePath("p.grym"));
+        f.open(QIODevice::WriteOnly);
+        f.write("L'écran d'accueil montre :\n    le texte « A »,\n    le texte « B »,\n    un bouton « OK ».\n"
+                "Quand on clique sur « OK » dans l'écran d'accueil :\n    Fermer l'écran.\n");
+        f.close();
+        OngletEcrans o;
+        o.resize(900, 600);
+        o.show();
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        Geste g;
+        QString resultat = "pas de geste";
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        QWidget *a = o.controle(0);
+        auto *mime = new QMimeData;
+        mime->setData("application/x-grymoir-element", "1");   // B, lâché sur le quart droit de A
+        const QPoint ici(a->width() - 2, a->height() / 2);
+        QDragEnterEvent entree(ici, Qt::MoveAction, mime, Qt::LeftButton, Qt::NoModifier);   // Qt n'accepte un dépôt
+        QApplication::sendEvent(a, &entree);                                                    // qu'après l'entrée
+        QDragMoveEvent survol(ici, Qt::MoveAction, mime, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(a, &survol);
+        QDropEvent depot(QPointF(ici), Qt::MoveAction, mime, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(a, &depot);
+        if (!resultat.isEmpty()) std::printf("dépôt : %s\n", qPrintable(resultat));
+        VERIFIER(resultat.isEmpty());
+        QFile r(dossier.filePath("p.grym"));
+        r.open(QIODevice::ReadOnly);
+        VERIFIER(QString::fromUtf8(r.readAll()).startsWith("L'écran d'accueil montre :\n    côte à côte :\n        le texte « A »,\n"
+                                                           "        le texte « B »,\n    un bouton « OK ».\n"));
+        delete mime;
     }
 
     std::printf("%d/%d tests réussis\n", total - echecs, total);

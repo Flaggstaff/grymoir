@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.41, révisée le 25 septembre 2026.
+Version 1.42, révisée le 26 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -163,7 +163,7 @@ Horizon post-v1, sans date :
 | A1 | L'atelier (`docs/atelier.md`) : fenêtre Qt, projet, éditeur avec coloration par le lexeur et erreurs en direct, « Lancer » dans un processus à part | fait le 24 septembre 2026 |
 | A2 | Fichiers utilisés (grammaire, § 21), puis éditeur de données : schéma des entités, propriétés, réécriture chirurgicale, aperçu des migrations | fait le 25 septembre 2026 |
 | A3 | Les écrans dans le langage (`docs/ecrans.md`) : fenêtres, listes, fiches, boutons, événements | fait le 25 septembre 2026 |
-| A4 | Éditeur d'écrans : liste et fiche générées par entité, agencement à la souris | en cours : A4-a à A4-c faits (onglet « Écrans », aperçu, écrans générés, propriétés modifiables) ; reste A4-d |
+| A4 | Éditeur d'écrans : liste et fiche générées par entité, agencement à la souris | fait le 26 septembre 2026 |
 
 Critères de sortie de la v1.0, tous remplis :
 
@@ -251,3 +251,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.39 | 2026-09-25 | Art. 12 : A2 fait (fichiers utilisés, schéma des données, modification à la souris, aperçu des migrations) |
 | 1.40 | 2026-09-25 | Art. 7 : exception des écrans, une transaction par événement ; art. 12 : A3 conçu |
 | 1.41 | 2026-09-25 | Art. 12 : A3 fait (écrans, listes, boutons, zones de saisie, événements, fiche, écrans empilés, colonnes, disposition) |
+| 1.42 | 2026-09-26 | Art. 12 : A4 fait (onglet « Écrans », écrans générés, propriétés modifiables, glisser-déposer) ; le plan de l'atelier (A1 à A4) est achevé |

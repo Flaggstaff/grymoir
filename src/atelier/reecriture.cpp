@@ -737,3 +737,99 @@ QString ecran_modifier(const QString &dossier, const QString &ecran, int index, 
     geste->description = QString("Modifier un élément de l'écran %1").arg(ecran);
     return ch.conclure(geste);
 }
+
+// ---------------------------------------------------------------------------------------------
+// A4-d : déplacer un élément (docs/atelier.md, § 5 bis)
+// ---------------------------------------------------------------------------------------------
+
+namespace {
+
+// La sorte du bloc qui contient directement l'élément i : 0 l'écran (une colonne), 1 côte à côte, 2 l'un sous l'autre.
+int bloc_de(Noeud *n, size_t i) {
+    QVector<int> pile;
+    for (size_t q = 0; q < i && q < n->nb_enfants; q++) {
+        const Noeud *x = n->enfants[q];
+        if (x->type != N_DISPOSITION) continue;
+        if (x->forme) pile << x->forme;
+        else if (!pile.isEmpty()) pile.pop_back();
+    }
+    return pile.isEmpty() ? 0 : pile.last();
+}
+
+void inserer(Noeud *n, size_t i, Noeud *x) {
+    noeud_ajouter(n, x);   // agrandit le tableau ; puis on décale
+    for (size_t q = n->nb_enfants - 1; q > i; q--) n->enfants[q] = n->enfants[q - 1];
+    n->enfants[i] = x;
+}
+
+Noeud *retirer_enfant(Noeud *n, size_t i) {
+    Noeud *x = n->enfants[i];
+    for (size_t q = i; q + 1 < n->nb_enfants; q++) n->enfants[q] = n->enfants[q + 1];
+    n->nb_enfants--;
+    return x;
+}
+
+Noeud *marque(int forme) {
+    Noeud *m = noeud_creer(N_DISPOSITION, 0, 0, 0);
+    m->forme = forme;
+    return m;
+}
+
+// Un bloc qui ne contient plus qu'un élément (ou aucun) ne sert à rien : il disparaît, son élément reste.
+void nettoyer_blocs(Noeud *n) {
+    for (bool change = true; change;) {
+        change = false;
+        for (size_t i = 0; i < n->nb_enfants && !change; i++) {
+            if (n->enfants[i]->type != N_DISPOSITION || !n->enfants[i]->forme) continue;
+            int prof = 0, directs = 0;
+            size_t fin = i;
+            for (size_t q = i + 1; q < n->nb_enfants; q++) {
+                const Noeud *x = n->enfants[q];
+                if (x->type == N_DISPOSITION && !x->forme) {
+                    if (prof == 0) { fin = q; break; }
+                    prof--;
+                    continue;
+                }
+                if (prof == 0) directs++;
+                if (x->type == N_DISPOSITION) prof++;
+            }
+            if (fin > i && directs <= 1) {
+                noeud_liberer(retirer_enfant(n, fin));
+                noeud_liberer(retirer_enfant(n, i));
+                change = true;
+            }
+        }
+    }
+}
+
+}  // namespace
+
+QString ecran_deplacer(const QString &dossier, const QString &ecran, int source, int cible, int cote, Geste *geste) {
+    Chantier ch(dossier);
+    Trouve t = trouver_ecran(ch, ecran);
+    if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
+    Noeud *n = t.phrase;
+    const int nb = (int)n->nb_enfants;
+    if (source < 0 || source >= nb || cible < 0 || cible >= nb || source == cible) return "Rien à déplacer.";
+    if (n->enfants[source]->type == N_DISPOSITION || n->enfants[cible]->type == N_DISPOSITION)
+        return "Un bloc ne se déplace pas : déplacez ses éléments.";
+    Noeud *x = retirer_enfant(n, (size_t)source);
+    size_t c = (size_t)(cible > source ? cible - 1 : cible);   // la cible, après le retrait de la source
+    const int bloc = bloc_de(n, c);
+    const bool horizontal = cote == DEPOT_GAUCHE || cote == DEPOT_DROITE;
+    const bool avant = cote == DEPOT_AVANT || cote == DEPOT_GAUCHE;
+    if ((horizontal && bloc == 1) || (!horizontal && bloc != 1)) {
+        // dans le sens du bloc qui contient la cible : une simple place avant ou après elle
+        inserer(n, avant ? c : c + 1, x);
+    } else {
+        // à travers : la cible et l'élément déplacé forment un bloc, côte à côte ou l'un sous l'autre
+        const int forme = horizontal ? 1 : 2;
+        inserer(n, c + 1, marque(0));
+        inserer(n, avant ? c : c + 1, x);
+        inserer(n, c, marque(forme));
+    }
+    nettoyer_blocs(n);
+    reimprimer(ch, t);
+    geste->description = QString("Déplacer un élément de l'écran %1").arg(ecran);
+    return ch.conclure(geste);
+}

@@ -10,7 +10,14 @@
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QShortcut>
+#include <QApplication>
+#include <QDrag>
+#include <QDragMoveEvent>
+#include <QDropEvent>
 #include <QEvent>
+#include <QFrame>
+#include <QMimeData>
+#include <QMouseEvent>
 #include <QFile>
 #include <QFileInfo>
 #include <QHBoxLayout>
@@ -302,8 +309,12 @@ void OngletEcrans::dessiner() {
     for (int k = 0; k < vue.controles.size(); k++) {
         QWidget *w = vue.controles[k];
         if (!w) continue;
-        w->installEventFilter(this);   // un clic choisit l'élément, sans rien déclencher
-        for (QWidget *enfant : w->findChildren<QWidget *>()) enfant->installEventFilter(this);
+        w->installEventFilter(this);   // un clic choisit l'élément, sans rien déclencher ; glisser le déplace (A4-d)
+        w->setAcceptDrops(true);
+        for (QWidget *enfant : w->findChildren<QWidget *>()) {
+            enfant->installEventFilter(this);
+            enfant->setAcceptDrops(true);
+        }
         if (auto *t = vue.tables[k]) {   // la structure, pas les données : deux lignes grisées d'exemple
             t->setRowCount(2);
             for (int r = 0; r < 2; r++)
@@ -315,22 +326,95 @@ void OngletEcrans::dessiner() {
         }
     }
     vue.titre->installEventFilter(this);
+    repere = new QFrame(vue.vue);
+    repere->setStyleSheet("background: #1f5fa8;");
+    repere->hide();
     centre->setWidget(vue.vue);
     choisir_element(element < e.elements.size() ? element : -1);
 }
 
+int OngletEcrans::element_sous(QObject *o) const {
+    int trouve = -1;
+    for (int k = 0; k < vue.controles.size(); k++) {
+        QWidget *w = vue.controles[k];
+        if (w && (o == w || w->isAncestorOf(qobject_cast<QWidget *>(o)))) trouve = k;
+    }
+    return trouve;
+}
+
+int OngletEcrans::cote_de_depot(const QSize &t, const QPointF &p) {
+    if (p.x() < t.width() * 0.25) return DEPOT_GAUCHE;
+    if (p.x() > t.width() * 0.75) return DEPOT_DROITE;
+    return p.y() < t.height() / 2.0 ? DEPOT_AVANT : DEPOT_APRES;
+}
+
+void OngletEcrans::deposer(int source, int cible, int cote) {
+    if (courant < 0 || source < 0 || cible < 0 || source == cible) return;
+    const QString ecran = lus[courant].nom;
+    element = -1;
+    emit geste([=](Geste *g) { return ecran_deplacer(dossier, ecran, source, cible, cote, g); });
+}
+
 bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
+    // A4-d : glisser un élément de l'aperçu ; un trait montre où il atterrira
+    if (ev->type() == QEvent::MouseMove) {
+        auto *m = static_cast<QMouseEvent *>(ev);
+        if (glisse >= 0 && (m->buttons() & Qt::LeftButton)
+            && (m->globalPosition().toPoint() - depart).manhattanLength() >= QApplication::startDragDistance()) {
+            auto *d = new QDrag(this);
+            auto *mime = new QMimeData;
+            mime->setData("application/x-grymoir-element", QByteArray::number(glisse));
+            d->setMimeData(mime);
+            if (QWidget *w = vue.controles.value(glisse)) d->setPixmap(w->grab().scaledToWidth(qMin(240, w->width())));
+            glisse = -1;
+            d->exec(Qt::MoveAction);
+            if (repere) repere->hide();
+        }
+        return true;
+    }
+    if (ev->type() == QEvent::DragEnter || ev->type() == QEvent::DragMove) {
+        auto *d = static_cast<QDropEvent *>(ev);
+        const int k = element_sous(o);
+        QWidget *w = vue.controles.value(k);
+        if (!d->mimeData()->hasFormat("application/x-grymoir-element") || !w) { ev->ignore(); return true; }
+        const QPointF p = w->mapFrom(qobject_cast<QWidget *>(o), d->position().toPoint());
+        depot_cible = k;
+        depot_cote = cote_de_depot(w->size(), p);
+        const QRect r(w->mapTo(vue.vue, QPoint(0, 0)), w->size());
+        repere->setGeometry(depot_cote == DEPOT_GAUCHE ? QRect(r.left() - 2, r.top(), 4, r.height())
+                            : depot_cote == DEPOT_DROITE ? QRect(r.right() - 1, r.top(), 4, r.height())
+                            : depot_cote == DEPOT_AVANT ? QRect(r.left(), r.top() - 2, r.width(), 4)
+                                                        : QRect(r.left(), r.bottom() - 1, r.width(), 4));
+        repere->show();
+        repere->raise();
+        d->acceptProposedAction();
+        return true;
+    }
+    if (ev->type() == QEvent::DragLeave) {
+        if (repere) repere->hide();
+        return true;
+    }
+    if (ev->type() == QEvent::Drop) {
+        auto *d = static_cast<QDropEvent *>(ev);
+        if (repere) repere->hide();
+        const int k = element_sous(o);
+        if (!d->mimeData()->hasFormat("application/x-grymoir-element") || k < 0) return true;
+        QWidget *w = vue.controles.value(k);
+        const int cote = cote_de_depot(w->size(), w->mapFrom(qobject_cast<QWidget *>(o), d->position().toPoint()));
+        d->acceptProposedAction();
+        deposer(d->mimeData()->data("application/x-grymoir-element").toInt(), k, cote);
+        return true;
+    }
     if (ev->type() != QEvent::MouseButtonPress && ev->type() != QEvent::MouseButtonDblClick
         && ev->type() != QEvent::MouseButtonRelease && ev->type() != QEvent::KeyPress)
         return QWidget::eventFilter(o, ev);
     if (ev->type() == QEvent::MouseButtonPress) {
-        int trouve = -1;
-        for (int k = 0; k < vue.controles.size(); k++) {
-            QWidget *w = vue.controles[k];
-            if (w && (o == w || w->isAncestorOf(qobject_cast<QWidget *>(o)))) trouve = k;
-        }
+        const int trouve = element_sous(o);
+        glisse = trouve;   // peut-être le début d'un glisser
+        depart = static_cast<QMouseEvent *>(ev)->globalPosition().toPoint();
         choisir_element(trouve);
     }
+    if (ev->type() == QEvent::MouseButtonRelease) glisse = -1;
     return true;   // l'aperçu ne s'utilise pas : ni clic, ni saisie, ni double-clic
 }
 
