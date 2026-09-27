@@ -346,6 +346,11 @@ int main(void) {
     COMP("Les nombres s'affichent sans séparateur.\nAfficher « ab » sur 4 à droite, sans passer à la ligne.",
          "_style _sans_séparateur\n_afficher « ab » _sur 4 _droite _sans_ligne\n");
 
+    /* --- Texte vide : « », une seule espace, quelle que soit l'écriture d'origine --- */
+    FIXE("Afficher « ».\nLe t vaut « ».\n");
+    COMP("Afficher \"\".", "_afficher « »\n");
+    COMP("Le t vaut «  ».", "_le t << « »\n");
+
     /* --- Apparence des écrans (§ 22.5) : couleur seule, logo seul, les deux --- */
     FIXE("Les écrans ont la couleur verte et le logo « exemples/pixel.png ».\n");
     FIXE("Les écrans ont le logo « exemples/pixel.png ».\n");

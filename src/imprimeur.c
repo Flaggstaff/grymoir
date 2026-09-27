@@ -127,9 +127,11 @@ static void ecrire_nom(Impression *im, const char *nom, int crochets) {
     }
 }
 
-/* Texte : « » si le contenu s'y prête (ces guillemets rognent les espaces), sinon " " ou “ ”. */
+/* Texte : « » si le contenu s'y prête (ces guillemets rognent les espaces), sinon " " ou “ ”.
+ * Un texte vide s'écrit « » : une seule espace, que les guillemets rognent. */
 static void ecrire_texte(Impression *im, const char *t) {
     size_t l = strlen(t);
+    if (l == 0) { aj(im, "« »"); return; }
     int bords = l && (t[0] == ' ' || t[l - 1] == ' ');
     if (!bords && !strstr(t, "»")) { aj(im, "« "); aj(im, t); aj(im, " »"); }
     else if (!strchr(t, '"'))       { aj(im, "\""); aj(im, t); aj(im, "\""); }

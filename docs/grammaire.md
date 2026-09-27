@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.45 de la spécification, révisée le 26 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.46 de la spécification, révisée le 26 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -699,7 +699,7 @@ Limite de la v0.2 : les erreurs de structure propres à la forme compacte (`_fin
 `grym formater fichier.grym` réécrit un programme dans la forme littéraire canonique.
 
 - Le programme est conservé : même arbre, mêmes noms, mêmes valeurs, mêmes remarques, mêmes choix d'écriture (articles, crochets, tournures en mots ou en symboles, contractions, formes courtes ou en bloc).
-- La présentation est normalisée : une phrase par ligne, indentation de quatre espaces, majuscule en début de phrase, espaces simples, nombres au style suisse (`12,50` ; un nombre groupé l'est par l'apostrophe, `1 000` devient `1'000`, et un nombre écrit sans séparateur le reste, `1747`), textes entre `« »` (ou `" "` si le texte commence ou finit par une espace, ce que `« »` rognerait), une seule ligne vide là où la source en avait une ou plusieurs.
+- La présentation est normalisée : une phrase par ligne, indentation de quatre espaces, majuscule en début de phrase, espaces simples, nombres au style suisse (`12,50` ; un nombre groupé l'est par l'apostrophe, `1 000` devient `1'000`, et un nombre écrit sans séparateur le reste, `1747`), textes entre `« »` (ou `" "` si le texte commence ou finit par une espace, ce que `« »` rognerait ; un texte vide s'écrit `« »`, avec une seule espace), une seule ligne vide là où la source en avait une ou plusieurs.
 - La forme canonique est un point fixe : la formater ne change plus rien.
 
 Garanties de la traduction (charte, art. 4) :
@@ -1490,3 +1490,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.43 | 2026-09-25 | § 22 : A3-d implémenté (colonnes choisies, blocs de disposition) ; A3 fait |
 | 1.44 | 2026-09-26 | § 22.5 : apparence des écrans (`Les écrans ont la couleur … et le logo « … ».`) |
 | 1.45 | 2026-09-26 | § 22.5 : suites attendues des phrases en `Les` (apparence des écrans, style des nombres) |
+| 1.46 | 2026-09-26 | § 12 : un texte vide s'écrit `« »` dans la forme canonique (et non plus `«  »`, deux espaces) |

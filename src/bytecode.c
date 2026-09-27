@@ -925,7 +925,7 @@ char *bloc_desassembler(const Bloc *b) {
         ip += t;
         int ligne, colonne;
         bloc_position(b, debut, &ligne, &colonne);
-        char marge[32];
+        char marge[48];   /* « %4d  %04lu  » : un int et un unsigned long complets tiennent (−Wformat-truncation) */
         if (ligne != ligne_prec && ligne > 0) {
             snprintf(marge, sizeof marge, "%4d  %04lu  ", ligne, (unsigned long)debut);
             ligne_prec = ligne;
