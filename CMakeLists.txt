@@ -39,7 +39,7 @@ add_executable(grym-atelier MACOSX_BUNDLE WIN32
     src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp)
 target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg)
 # La grammaire, embarquée : l'aide de l'atelier est toujours celle de sa version (docs/atelier.md, § 6.5).
-qt_add_resources(grym-atelier "documentation" PREFIX "/documentation" BASE docs FILES docs/grammaire.md)
+qt_add_resources(grym-atelier "documentation" PREFIX "/documentation" BASE docs FILES docs/grammaire.md docs/guide.md)
 # Le thème (docs/atelier.md, § 5 ter) : jetons et modèle de feuille, polices (OFL 1.1), icônes (ISC et MIT), et leurs licences.
 set(GRYM_THEME_FICHIERS src/atelier/theme/grymoir-jetons.json src/atelier/theme/grymoir.qss.modele)
 set(GRYM_POLICES
@@ -67,7 +67,7 @@ endif()
 enable_testing()
 add_executable(test_atelier tests/test_atelier.cpp src/atelier/coloration.cpp src/atelier/editeur.cpp
     src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp)
-qt_add_resources(test_atelier "documentation_essais" PREFIX "/documentation" BASE docs FILES docs/grammaire.md)
+qt_add_resources(test_atelier "documentation_essais" PREFIX "/documentation" BASE docs FILES docs/grammaire.md docs/guide.md)
 target_include_directories(test_atelier PRIVATE src/atelier)
 target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg)
 grym_ressources_theme(test_atelier)

@@ -48,6 +48,8 @@ Pour aller plus loin : `exemples/partotheque.grym`, une bibliothèque de partiti
 
 ## Compiler
 
+Pour apprendre le langage : le guide « Premiers pas » (`docs/guide.md`, ou Aide > Premiers pas dans l'atelier).
+
 L'atelier, en une commande (construit tout, puis lance ; sous macOS, Qt 6 par Homebrew : `brew install qt`) :
 
     ./atelier

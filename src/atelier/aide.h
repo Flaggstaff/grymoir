@@ -14,7 +14,9 @@ class QLabel;
 class Aide : public QMainWindow {
     Q_OBJECT
 public:
-    explicit Aide(QWidget *parent = nullptr);
+    // La grammaire, par défaut ; ou un autre document embarqué (« :/documentation/guide.md », « Premiers pas »).
+    explicit Aide(QWidget *parent = nullptr, const QString &ressource = ":/documentation/grammaire.md",
+                  const QString &titre = "Le langage GrymoiR");
     // Chercher `texte` à partir du curseur, en reprenant au début ; faux s'il n'apparaît nulle part.
     bool chercher(const QString &texte, bool arriere = false);
     // Aller au titre qui commence par `debut` (« 21. », « 16.4 ») ; faux s'il n'existe pas.

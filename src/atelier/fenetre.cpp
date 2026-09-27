@@ -17,7 +17,9 @@
 #include <QDirIterator>
 #include <QFileSystemModel>
 #include <QHash>
+#include <QDir>
 #include <QInputDialog>
+#include <QLineEdit>
 #include <QHeaderView>
 #include <QListWidget>
 #include <QMenuBar>
@@ -263,7 +265,9 @@ Fenetre::Fenetre() {
     setCentralWidget(centre);
 
     QMenu *menu = menuBar()->addMenu("Fichier");
-    QAction *a = menu->addAction("Ouvrir un projet…", this, &Fenetre::choisir_projet);
+    QAction *a = menu->addAction("Nouveau fichier…", this, &Fenetre::nouveau_fichier);
+    a->setShortcut(QKeySequence::New);
+    a = menu->addAction("Ouvrir un projet…", this, &Fenetre::choisir_projet);
     a->setShortcut(QKeySequence::Open);
     a = menu->addAction("Enregistrer", this, [this] { enregistrer(); });
     a->setShortcut(QKeySequence::Save);
@@ -295,6 +299,14 @@ Fenetre::Fenetre() {
         aide->activateWindow();
     });
     langage->setShortcut(QKeySequence::HelpContents);   // F1 ; Cmd+? sous macOS
+    // Le guide pour débuter : une application complète, chapitre par chapitre (docs/guide.md)
+    menu_aide->addAction("Premiers pas", this, [this] {
+        if (!guide) guide = new Aide(this, ":/documentation/guide.md", "Premiers pas avec GrymoiR");
+        guide->setWindowFlag(Qt::Window);
+        guide->show();
+        guide->raise();
+        guide->activateWindow();
+    });
     // Les polices et les icônes du thème voyagent avec leur licence (OFL 1.1 ; ISC et MIT) : elles se lisent ici.
     menu_aide->addAction("Licences des polices et des icônes", this, [this] {
         auto *d = new QTextBrowser;
@@ -333,6 +345,21 @@ void Fenetre::ouvrir(const QString &chemin) {
     } else {
         statusBar()->showMessage(QString("« %1 » introuvable.").arg(chemin), 5000);
     }
+}
+
+void Fenetre::nouveau_fichier() {
+    if (projet.isEmpty()) {
+        QMessageBox::information(this, "Atelier", "Ouvrez d'abord un projet : un dossier, où le fichier sera créé.");
+        return;
+    }
+    bool ok = false;
+    const QString nom = QInputDialog::getText(this, "Nouveau fichier", "Nom du fichier (sans extension : .grym) :",
+                                              QLineEdit::Normal, QString(), &ok);
+    if (!ok) return;
+    QString erreur;
+    const QString chemin = creer_fichier(projet, nom, &erreur);
+    if (chemin.isEmpty()) { QMessageBox::warning(this, "Atelier", erreur); return; }
+    ouvrir_fichier(chemin);
 }
 
 void Fenetre::choisir_projet() {

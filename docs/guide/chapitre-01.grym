@@ -1,0 +1,9 @@
+Remarque : Premiers pas, chapitre 1 : afficher, nommer, modifier.
+
+Afficher « Bienvenue chez les Amis du Tilleul. ».
+
+L'effectif vaut 12.
+Afficher « Membres : » puis l'effectif.
+
+L'effectif devient l'effectif + 3.
+Afficher « Après l'assemblée : » puis l'effectif.

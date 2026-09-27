@@ -1,7 +1,9 @@
 // GrymoiR : l'atelier, le fichier projet.grymatelier.
 #include "projet.h"
 
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QSaveFile>
 #include <QStringList>
 
@@ -43,4 +45,17 @@ bool FichierProjet::ecrire() const {
     if (dossier.isEmpty()) return false;
     QSaveFile f(chemin(dossier));
     return f.open(QIODevice::WriteOnly) && f.write(texte().toUtf8()) >= 0 && f.commit();
+}
+
+QString creer_fichier(const QString &dossier, const QString &nom, QString *erreur) {
+    QString n = nom.trimmed();
+    if (n.isEmpty()) { *erreur = "Donnez un nom au fichier."; return QString(); }
+    if (n.contains('/') || n.contains('\\')) { *erreur = "Un nom de fichier, sans dossier : « association »."; return QString(); }
+    if (!n.endsWith(".grym", Qt::CaseInsensitive) && !n.endsWith(".grymc", Qt::CaseInsensitive)) n += ".grym";
+    const QString chemin = QDir(dossier).filePath(n);
+    if (QFileInfo::exists(chemin)) { *erreur = QString("« %1 » existe déjà : il n'est jamais écrasé.").arg(n); return QString(); }
+    QFile f(chemin);
+    if (!f.open(QIODevice::NewOnly | QIODevice::WriteOnly)) { *erreur = QString("« %1 » ne peut pas être créé.").arg(n); return QString(); }
+    f.close();
+    return chemin;
 }

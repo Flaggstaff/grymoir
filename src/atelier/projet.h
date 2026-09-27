@@ -20,4 +20,8 @@ struct FichierProjet {
     QString texte() const;
 };
 
+// Crée le fichier `nom` (« association », « association.grym », « outils.grymc ») dans `dossier`, vide.
+// Sans extension, « .grym ». Jamais d'écrasement. Rend son chemin, ou vide avec *erreur rempli.
+QString creer_fichier(const QString &dossier, const QString &nom, QString *erreur);
+
 #endif

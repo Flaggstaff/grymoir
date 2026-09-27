@@ -39,6 +39,7 @@ private:
     void choisir_projet();
     void ouvrir_projet(const QString &dossier);
     void ouvrir_fichier(const QString &chemin);
+    void nouveau_fichier();   // Fichier > Nouveau fichier… : un fichier vide dans le projet, ouvert aussitôt
     bool enregistrer();
     bool quitter_fichier();   // faux : l'utilisateur renonce
     void mettre_a_jour_titre();
@@ -55,6 +56,7 @@ private:
     QProcess *execution = nullptr;         // le programme lancé, dans son propre processus
     QAction *action_lancer, *action_arreter;
     Aide *aide = nullptr;                  // la grammaire, ouverte au premier F1 (§ 6.5)
+    Aide *guide = nullptr;                 // « Premiers pas » (docs/guide.md)
     QString erreur_execution;              // la dernière erreur d'exécution, en clair
     QString erreur_fichier;                // le fichier de cette erreur (le programme, ou un fichier utilisé)
     int erreur_ligne = 0, erreur_colonne = 0;

@@ -1,0 +1,21 @@
+Remarque : Premiers pas, chapitre 3 : répéter, nommer un calcul, écrire une action.
+
+Remarque : un calcul reçoit des valeurs et en rend une ; il ne voit rien d'autre.
+La cotisation d'un âge :
+    Si âge < 18, rendre 40,00.
+    Si âge ≥ 65, rendre 60,00.
+    Rendre 80,00.
+
+Remarque : une action fait quelque chose ; ici, elle affiche.
+Pour présenter le barème :
+    Afficher « Barème des cotisations ».
+    Pour chaque âge de 16 à 19 :
+        Afficher âge puis « ans : » puis la cotisation d'âge.
+    Afficher 65 puis « ans : » puis la cotisation de 65.
+
+Présenter le barème.
+
+Le total vaut 0.
+Pour chaque âge de 16 à 20 :
+    Le total devient le total + la cotisation d'âge.
+Afficher « Cinq membres de 16 à 20 ans paient » puis le total puis « francs. ».

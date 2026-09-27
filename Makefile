@@ -18,7 +18,7 @@ endif
 
 ENTETES   = src/chemins.h src/interface.h src/base.h src/vm_interne.h src/date.h src/compact.h src/imprimeur.h src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
 
-all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur
+all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide
 
 $(SQLITE_O): vendor/sqlite/sqlite3.c vendor/sqlite/sqlite3.h
 	$(CC) $(SQLITE_FLAGS) -c -o $@ vendor/sqlite/sqlite3.c
@@ -59,7 +59,10 @@ test_lsp: tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR) $(ENTETES) src/lsp.
 test_serveur: tests/test_serveur.c src/serveur.c $(EXECUTION) $(ENTETES) src/serveur.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_serveur.c src/serveur.c $(EXECUTION) $(RESEAU)
 
-test: grym test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur
+test_guide: tests/test_guide.c docs/guide.md $(EXECUTION) $(ENTETES)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_guide.c $(EXECUTION)
+
+test: grym test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide
 	./test_lexeur
 	./test_analyseur
 	./test_machine
@@ -68,9 +71,10 @@ test: grym test_lexeur test_analyseur test_machine test_imprimeur test_compact t
 	./test_base
 	./test_lsp
 	./test_serveur
+	./test_guide
 
 clean:
-	rm -f grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur *.exe
+	rm -f grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide *.exe
 
 # Recompiler SQLite prend une trentaine de secondes : « make clean » le garde, « make distclean » non.
 distclean: clean

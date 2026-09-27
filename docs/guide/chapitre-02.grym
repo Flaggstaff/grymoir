@@ -1,0 +1,16 @@
+Remarque : Premiers pas, chapitre 2 : calculer et décider.
+
+Afficher 0,1 + 0,2.
+Afficher 100 ÷ 3.
+
+Le tarif adulte vaut 80.
+Le rabais junior vaut 0,50.
+L'âge vaut 16.
+
+La cotisation vaut le tarif adulte.
+Si l'âge est inférieur à 18 :
+    La cotisation devient le tarif adulte × le rabais junior.
+Afficher « À » puis l'âge puis « ans, la cotisation est de » puis la cotisation puis « francs. ».
+
+Si la cotisation est supérieure à 50, afficher « Cotisation pleine. ».
+Sinon, afficher « Cotisation réduite. ».

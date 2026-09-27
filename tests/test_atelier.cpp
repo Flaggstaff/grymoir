@@ -253,6 +253,21 @@ int main(int argc, char **argv) {
         VERIFIER(aide.aller_au_titre("10.5") && aide.texte()->textCursor().block().text().startsWith("10.5 Selon"));
     }
 
+    // Nouveau fichier : « .grym » ajouté, jamais d'écrasement, pas de dossier dans le nom ; le guide embarqué
+    {
+        QTemporaryDir d;
+        QString erreur;
+        const QString c = creer_fichier(d.path(), "association", &erreur);
+        VERIFIER(c == QDir(d.path()).filePath("association.grym") && QFileInfo(c).isFile() && QFileInfo(c).size() == 0);
+        VERIFIER(creer_fichier(d.path(), "association.grym", &erreur).isEmpty() && erreur.contains("jamais écrasé"));
+        VERIFIER(creer_fichier(d.path(), "outils.grymc", &erreur) == QDir(d.path()).filePath("outils.grymc"));
+        VERIFIER(creer_fichier(d.path(), "a/b", &erreur).isEmpty() && creer_fichier(d.path(), "  ", &erreur).isEmpty());
+        Aide guide(nullptr, ":/documentation/guide.md", "Premiers pas avec GrymoiR");
+        VERIFIER(guide.windowTitle() == "Premiers pas avec GrymoiR");
+        VERIFIER(guide.aller_au_titre("1. Premiers pas") && guide.aller_au_titre("3. Répéter"));
+        VERIFIER(guide.table()->topLevelItemCount() >= 3);
+    }
+
     // Analyse : la première erreur, avec sa position ; rien quand tout va bien
     Diagnostic_atelier d = analyser_source("Le total vaut 1.\nLe totl devient 2.\n", false);
     VERIFIER(d.ligne == 2);

@@ -11,6 +11,7 @@ test_compact
 test_serveur
 test_base
 test_lsp
+test_guide
 *.exe
 *.o
 *.obj

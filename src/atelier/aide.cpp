@@ -16,13 +16,13 @@
 #include <QTreeWidget>
 #include <QVBoxLayout>
 
-Aide::Aide(QWidget *parent) : QMainWindow(parent) {
-    setWindowTitle("Le langage GrymoiR");
+Aide::Aide(QWidget *parent, const QString &ressource, const QString &titre) : QMainWindow(parent) {
+    setWindowTitle(titre);
     lecteur = new QTextBrowser;
     lecteur->setOpenExternalLinks(true);
-    QFile f(":/documentation/grammaire.md");   // embarquée par CMake (qt_add_resources)
+    QFile f(ressource);   // embarquée par CMake (qt_add_resources)
     if (f.open(QIODevice::ReadOnly)) lecteur->setMarkdown(QString::fromUtf8(f.readAll()));
-    else lecteur->setPlainText("La grammaire n'a pas été embarquée dans cet exécutable.");
+    else lecteur->setPlainText(QString("« %1 » n'a pas été embarqué dans cet exécutable.").arg(titre));
 
     // La table des matières se lit dans le document rendu : ses titres de niveaux 2 et 3.
     sommaire = new QTreeWidget;
@@ -41,7 +41,7 @@ Aide::Aide(QWidget *parent) : QMainWindow(parent) {
     });
 
     recherche = new QLineEdit;
-    recherche->setPlaceholderText("Chercher dans la grammaire (Entrée : suivant, Maj+Entrée : précédent)");
+    recherche->setPlaceholderText("Chercher (Entrée : suivant, Maj+Entrée : précédent)");
     recherche->setClearButtonEnabled(true);
     etat = new QLabel;
     connect(recherche, &QLineEdit::returnPressed, this, [this] { chercher(recherche->text()); });
