@@ -24,6 +24,7 @@
 #include <QMessageBox>
 #include <QProcess>
 #include <QRegularExpression>
+#include <QTextBlock>
 #include <QTextBrowser>
 #include <QTimer>
 #include <QToolBar>
@@ -283,6 +284,12 @@ Fenetre::Fenetre() {
     QAction *langage = menu_aide->addAction("Le langage GrymoiR", this, [this] {
         if (!aide) aide = new Aide(this);
         aide->setWindowFlag(Qt::Window);
+        // Aide en contexte : le curseur dans le code, sur un mot du langage, ouvre sa section (« Selon » → § 10.5).
+        if (editeur->hasFocus()) {
+            const QTextCursor c = editeur->textCursor();
+            const QString section = section_au_curseur(c.block().text(), c.positionInBlock());
+            if (!section.isEmpty()) aide->aller_au_titre(section);
+        }
         aide->show();
         aide->raise();
         aide->activateWindow();

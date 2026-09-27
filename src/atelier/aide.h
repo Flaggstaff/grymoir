@@ -4,6 +4,7 @@
 #define GRYM_ATELIER_AIDE_H
 
 #include <QMainWindow>
+#include <QStringList>
 
 class QTextBrowser;
 class QTreeWidget;
@@ -28,5 +29,12 @@ private:
     QLineEdit *recherche;
     QLabel *etat;
 };
+
+// Aide en contexte (docs/atelier.md, § 6.5) : la section de la grammaire qui décrit le mot au curseur, dans
+// une ligne de code, forme littéraire ou compacte (« Selon », « _selon » → « 10.5 ») ; les mots voisins
+// départagent (« Pour chaque », « Tant que », « Les écrans ont »). Vide si le mot n'est pas du langage.
+QString section_au_curseur(const QString &ligne, int colonne);
+// Les sections que la table désigne, pour vérifier qu'elles existent encore dans la grammaire embarquée.
+QStringList sections_de_l_aide_en_contexte();
 
 #endif

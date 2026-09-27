@@ -230,6 +230,29 @@ int main(int argc, char **argv) {
         delete v3.vue;
     }
 
+    // Aide en contexte : le mot au curseur désigne sa section ; chaque section de la table existe dans la grammaire
+    {
+        VERIFIER(section_au_curseur("Selon le mois :", 2) == "10.5");
+        VERIFIER(section_au_curseur("    _selon mois", 7) == "10.5");                   // forme compacte
+        VERIFIER(section_au_curseur("Pour chaque mois de 1 à 12 :", 1) == "10.3");      // « Pour » suivi de « chaque »
+        VERIFIER(section_au_curseur("Pour relancer un client :", 1) == "9.2");          // une action
+        VERIFIER(section_au_curseur("Tant que x > 0 :", 6) == "10.1");                  // « que » après « tant »
+        VERIFIER(section_au_curseur("_tant_que x > 0", 3) == "10.1");
+        VERIFIER(section_au_curseur("Les écrans ont la couleur verte.", 1) == "22.5");
+        VERIFIER(section_au_curseur("Les nombres s'affichent à la suisse.", 1) == "4.1");
+        VERIFIER(section_au_curseur("Ouvrir l'écran d'accueil.", 10) == "22.3");
+        VERIFIER(section_au_curseur("Afficher aujourd'hui.", 11) == "14.3");
+        VERIFIER(section_au_curseur("Le total vaut 3.", 10) == "2.1");
+        VERIFIER(section_au_curseur("Le total vaut 3.", 4).isEmpty());                  // un nom du programme
+        VERIFIER(section_au_curseur("", 0).isEmpty());
+        Aide aide;
+        for (const QString &s : sections_de_l_aide_en_contexte()) {
+            if (!aide.aller_au_titre(s)) std::printf("section introuvable : %s\n", qPrintable(s));
+            VERIFIER(aide.aller_au_titre(s));
+        }
+        VERIFIER(aide.aller_au_titre("10.5") && aide.texte()->textCursor().block().text().startsWith("10.5 Selon"));
+    }
+
     // Analyse : la première erreur, avec sa position ; rien quand tout va bien
     Diagnostic_atelier d = analyser_source("Le total vaut 1.\nLe totl devient 2.\n", false);
     VERIFIER(d.ligne == 2);
