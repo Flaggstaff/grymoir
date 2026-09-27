@@ -526,6 +526,17 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
         emettre(c, I_STYLE, ph->entier, ph->ligne, ph->colonne);
         return;
+    case P_APPARENCE:   /* « Les écrans ont la couleur verte et le logo « … ». » (§ 22.5) : le logo lu, ou absent */
+        if (ph->texte) {
+            long k = bloc_constante(c->b, C_TEXTE, ph->texte);
+            if (k < 0) { trop_grand(c, ph); return; }
+            emettre(c, I_CONSTANTE, k, ph->ligne, ph->colonne);
+            emettre(c, I_LIRE_FICHIER, 0, ph->ligne, ph->colonne);
+        } else {
+            emettre(c, I_ABSENT, 0, ph->ligne, ph->colonne);
+        }
+        emettre(c, I_APPARENCE, ph->entier + 1, ph->ligne, ph->colonne);
+        return;
     case P_AFFICHAGE:
         if (ph->nb_enfants > 0xFFFF) { trop_grand(c, ph); return; }
         for (size_t e = 0; e < ph->nb_enfants; e++) expression(c, ph->enfants[e]);

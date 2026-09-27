@@ -1,6 +1,8 @@
 // GrymoiR : l'atelier, l'onglet « Écrans ».
 #include "onglet_ecrans.h"
 #include "theme.h"
+
+#include <QPixmap>
 #include "schema.h"
 
 #include <QCheckBox>
@@ -168,7 +170,24 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                 r << e;
             }
         };
+        int couleur = -1;
+        QString logo, accueil;
+        for (size_t k = 0; k < p.nb; k++) {   // l'apparence, et le premier écran ouvert au premier niveau (§ 22.5)
+            const Noeud *n = p.phrases[k];
+            if (n->type == P_APPARENCE) {
+                couleur = n->entier;
+                if (n->texte) logo = QFileInfo(chemin).dir().absoluteFilePath(QString::fromUtf8(n->texte));
+            } else if (n->type == P_OUVRIR && n->forme == 0 && accueil.isEmpty() && n->texte) {
+                accueil = QString::fromUtf8(n->texte);
+            }
+        }
+        const int avant = r.size();
         lire(p.phrases, p.nb, chemin, true);
+        for (int k = avant; k < r.size(); k++) {
+            r[k].couleur = couleur;
+            r[k].logo = logo;
+            r[k].accueil = r[k].nom == accueil;
+        }
         programme_liberer(&p);
     }
     for (auto &e : r)   // l'événement de chaque élément
@@ -306,7 +325,14 @@ void OngletEcrans::dessiner() {
         el[k].colonnes = e.elements[k].colonnes;
         el[k].type = e.elements[k].type;
     }
-    vue = dessiner_ecran(e.titre, el);   // le même dessin que l'exécution
+    // L'apparence du programme (§ 22.5) : son accent sur l'aperçu seul, pas sur l'atelier ; son logo, grand
+    // sur l'écran d'accueil, petit sur les autres, comme à l'exécution.
+    const Theme &th = Theme::courant();
+    const QPixmap logo = e.logo.isEmpty() ? QPixmap() : QPixmap(e.logo);
+    vue = dessiner_ecran(e.titre, el, logo, th.mesure(e.accueil ? "logo-accueil" : "logo-titre"));   // le même dessin que l'exécution
+    const QStringList accents = th.accents();
+    if (e.couleur >= 0 && e.couleur < accents.size() && accents[e.couleur] != th.accent())
+        vue.vue->setStyleSheet(th.feuille(th.mode(), accents[e.couleur]));
     for (int k = 0; k < vue.controles.size(); k++) {
         QWidget *w = vue.controles[k];
         if (!w) continue;

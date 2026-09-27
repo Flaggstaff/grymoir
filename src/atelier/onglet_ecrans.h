@@ -31,6 +31,11 @@ struct EcranLu {
     QString nom, titre, fichier;   // nom : « des compositeurs » ; fichier : chemin absolu de la déclaration
     int ligne = 0;
     QVector<ElementLu> elements;
+    // L'apparence du programme qui le déclare (grammaire, § 22.5) : rang de la couleur (−1 : bleue par défaut),
+    // chemin absolu du logo (vide sans logo) ; accueil : l'écran que ce programme ouvre lui-même au premier niveau.
+    int couleur = -1;
+    QString logo;
+    bool accueil = false;
 };
 
 // Les écrans déclarés dans les fichiers .grym et .grymc du dossier, fichiers utilisés compris, chacun une fois.

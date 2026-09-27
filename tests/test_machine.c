@@ -185,7 +185,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -629,10 +629,19 @@ static void scene_fermer(void *contexte, Chaine *sortie) {
 }
 
 /* Exécute src avec des écrans pilotés par script ; rend le journal suivi de la sortie finale. */
+static void scene_apparence(void *contexte, int couleur, const unsigned char *logo, size_t taille, const char *format) {
+    Scene *s = contexte;
+    (void)logo;
+    char *l = grym_formater("[apparence %d%s%s %lu]\n", couleur, format ? " " : "", format ? format : "", (unsigned long)taille);
+    chaine_ajouter(&s->page.journal, l);
+    free(l);
+}
+
 static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, const char *const *rep, size_t nrep) {
     Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0, {0}, {0}, 0 };
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
-                    scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs };
+                    scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
+                    scene_apparence };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -706,6 +715,27 @@ static void essais_ecrans(void) {
         char *r = avec_ecrans(compositeurs, ev, 2, rep, 3);
         total++;
         if (!strstr(r, "Interrompu (Ctrl+C).")) signaler(__LINE__, compositeurs, "…Interrompu…", r);
+        free(r);
+    }
+    /* L'apparence (§ 22.5) : la couleur et le logo passent à l'interface avant le premier écran ; sans logo, NULL */
+    {
+        const char *src = "Les écrans ont la couleur violette et le logo « exemples/pixel.png ».\n"
+                          "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Fermer » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                          "Ouvrir l'écran d'accueil.\n";
+        const char *ev[] = { "clic Fermer" };
+        const char *rep[] = { "" };
+        char *r = avec_ecrans(src, ev, 1, rep, 1);
+        total++;
+        if (strncmp(r, "[apparence 3 PNG ", 17) != 0 || !strstr(r, "]\n[ouvrir")) signaler(__LINE__, src, "[apparence 3 PNG …]\n[ouvrir …", r);
+        free(r);
+        const char *src2 = "Les écrans ont la couleur grise.\n"
+                           "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"
+                           "Quand on clique sur « Fermer » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                           "Ouvrir l'écran d'accueil.\n";
+        r = avec_ecrans(src2, ev, 1, rep, 1);
+        total++;
+        if (strncmp(r, "[apparence 4 0]\n[ouvrir", 23) != 0) signaler(__LINE__, src2, "[apparence 4 0]\n[ouvrir …", r);
         free(r);
     }
     /* Le titre donné ; un nom en « d' » */
@@ -2240,6 +2270,17 @@ int main(void) {
     PROG("Les nombres s'affichent à la suisse.\nLes nombres s'affichent à la française.", "~une seule fois");
     PROG("Pour f :\n    Les nombres s'affichent à la suisse.", "~au premier niveau du programme");
     PROG("Les nombres s'affichent à la belge.", "~Style attendu");
+    /* Apparence des écrans (§ 22.5) : sans écran, en console, rien ne se voit ; les règles de la phrase */
+    PROG("Les écrans ont la couleur verte.\nAfficher 1.", "1");
+    PROG("Les écrans ont la couleur vert.", "~Accord : « verte »");
+    PROG("Les écrans ont la couleur rouge.", "~Couleur attendue : bleue, verte, turquoise, violette ou grise.");
+    PROG("Les écrans ont le logo « n'existe-pas.png ».", "~introuvable ou illisible");
+    PROG("Les écrans ont le logo « README.md ».", "~n'est pas une image");
+    PROG("Les écrans ont le logo « exemples/pixel.png » et la couleur verte.", "~la couleur avant le logo");
+    PROG("Les écrans ont la couleur verte.\nLes écrans ont la couleur grise.", "~une seule fois");
+    PROG("Pour f :\n    Les écrans ont la couleur grise.", "~au premier niveau du programme");
+    PROG("L'écran d'accueil montre :\n    un bouton « B ».\nOuvrir l'écran d'accueil.\nLes écrans ont la couleur grise.",
+         "~avant le premier « Ouvrir »");
     PROG("Afficher 1 à droite.", "~« à gauche » et « à droite » suivent une largeur");
 
     /* --- Effacer l'écran (§ 4.3) : hors d'un terminal, la phrase n'écrit rien --- */

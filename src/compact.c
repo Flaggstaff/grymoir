@@ -1086,6 +1086,23 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             if (strcmp(st, "sans_séparateur") == 0) { mot(r, "sans", t); mot(r, "séparateur", t); }
             else { mot(r, "à", t); mot(r, "la", t); mot(r, st, &r->e[d + 1]); }
             point(r, f);
+        } else if (!strcmp(c, "écrans")) {   /* _écrans _couleur _verte _logo « … » → Les écrans ont … (§ 22.5) */
+            size_t k = d + 1;
+            const Jeton *coul = NULL, *logo = NULL;
+            if (k + 1 < f && est_cle(&r->e[k], "couleur") && r->e[k + 1].type == J_MOT_CLE) { coul = &r->e[k + 1]; k += 2; }
+            if (k + 1 < f && est_cle(&r->e[k], "logo") && r->e[k + 1].type == J_TEXTE) { logo = &r->e[k + 1]; k += 2; }
+            if (k != f || (!coul && !logo)) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _écrans _couleur _verte _logo « logo.png » », "
+                                             "l'un des deux réglages au moins, la couleur d'abord."));
+                return;
+            }
+            mot(r, "les", t);
+            mot(r, "écrans", t);
+            mot(r, "ont", t);
+            if (coul) { mot(r, "la", coul); mot(r, "couleur", coul); mot(r, coul->valeur, coul); }
+            if (coul && logo) mot(r, "et", logo);
+            if (logo) { mot(r, "le", logo); mot(r, "logo", logo); emettre(r, J_TEXTE, logo->valeur, logo, 0); }
+            point(r, f);
         } else if (!strcmp(c, "afficher")) {
             mot(r, "afficher", t);
             size_t sans = f;

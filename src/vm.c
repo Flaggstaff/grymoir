@@ -3141,6 +3141,32 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
+        case I_APPARENCE: {
+            /* « Les écrans ont la couleur verte et le logo « … ». » (grammaire, § 22.5) : l'interface l'applique ;
+             * sans écrans (console, navigateur), rien. Le logo est relu ici : il a pu changer depuis l'analyse. */
+            Valeur vl = depiler(&pile);
+            const int couleur = (int)op - 1;
+            if (couleur < -1 || couleur > 4) {
+                valeur_liberer(&vl);
+                ok = echouer(diag, b, debut, grym_formater("Couleur inconnue : %d.", couleur));
+                break;
+            }
+            if (vl.type == V_FICHIER && !vl.fichier->format) {
+                char *probleme = grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF ou WebP).", vl.fichier->nom);
+                valeur_liberer(&vl);
+                ok = echouer(diag, b, debut, probleme);
+                break;
+            }
+            if (m->iface.ecran_apparence) {
+                if (vl.type == V_FICHIER)
+                    m->iface.ecran_apparence(m->iface.contexte, couleur, vl.fichier->octets, vl.fichier->taille,
+                                             vl.fichier->format);
+                else
+                    m->iface.ecran_apparence(m->iface.contexte, couleur, NULL, 0, NULL);
+            }
+            valeur_liberer(&vl);
+            break;
+        }
         case I_FERMER_ECRAN:
             m->fermer_ecran = 1;
             break;

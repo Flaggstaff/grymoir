@@ -3,6 +3,7 @@
 #include "theme.h"
 #include "vue_ecran.h"
 
+#include <QApplication>
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QComboBox>
@@ -124,6 +125,11 @@ static void iface_ecran_lignes(void *contexte, size_t element, const char *const
     QStringList c;   // nb_lignes × nb_colonnes cellules, ligne par ligne
     for (size_t k = 0; cellules && k < nb_lignes * t->colonnes_de(element); k++) c << QString::fromUtf8(cellules[k]);
     emit t->ecran_lignes((int)element, c, (int)nb_lignes);
+}
+
+static void iface_ecran_apparence(void *contexte, int couleur, const unsigned char *logo, size_t taille, const char *) {
+    auto *t = static_cast<Travail *>(contexte);
+    emit t->apparence(couleur, logo ? QByteArray(reinterpret_cast<const char *>(logo), (qsizetype)taille) : QByteArray());
 }
 
 static Issue iface_ecran_attendre(void *contexte, Chaine *sortie, Evenement *e) {
@@ -287,7 +293,7 @@ void Travail::run() {
     Machine *m = machine_creer();
     Interface i = {this, iface_disponible, iface_formulaire, iface_effacer, 1, iface_image, iface_fiche,
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
-                   iface_ecran_valeurs};
+                   iface_ecran_valeurs, iface_ecran_apparence};
     machine_interface(m, &i);
     situer(m, chemin);
     Chaine sortie = {};
@@ -393,6 +399,18 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
     });
     connect(&travail, &Travail::question, this, &Execution::poser);
     connect(&travail, &Travail::ecran_ouvert, this, &Execution::montrer_ecran);
+    connect(&travail, &Travail::apparence, this, [this](int couleur, const QByteArray &octets) {
+        // L'accent dans la palette de cinq (§ 22.5 ; même ordre que « _ordre » des jetons), pour ce processus seul :
+        // l'atelier qui a lancé le programme garde le sien.
+        Theme &t = Theme::courant();
+        const QStringList accents = t.accents();
+        if (couleur >= 0 && couleur < accents.size()) t.appliquer(t.mode(), accents[couleur]);
+        logo = QPixmap();
+        if (!octets.isEmpty() && logo.loadFromData(octets)) {
+            setWindowIcon(logo);
+            QApplication::setWindowIcon(logo);
+        }
+    });
     connect(&travail, &Travail::ecran_lignes, this, [this](int element, const QStringList &cellules, int nb_lignes) {
         if (element < 0 || element >= tables.size() || !tables[element]) return;
         QTableWidget *t = tables[element];
@@ -660,7 +678,9 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].type = k < travail.types_zones.size() ? travail.types_zones[k] : QString();
         elements[k].choix = k < travail.choix_zones.size() ? travail.choix_zones[k] : QStringList();
     }
-    VueEcran v = dessiner_ecran(titre, elements);   // le même dessin que l'aperçu de l'atelier (src/atelier/vue_ecran.cpp)
+    // Le logo : grand sur l'écran que le programme ouvre lui-même (aucun écran dessous), petit sur les autres.
+    const int taille = Theme::courant().mesure(recouverts.isEmpty() ? "logo-accueil" : "logo-titre");
+    VueEcran v = dessiner_ecran(titre, elements, logo, taille);   // le même dessin que l'aperçu (src/atelier/vue_ecran.cpp)
     vue_ecran = v.vue;
     erreur_ecran = v.erreur;
     tables = v.tables;

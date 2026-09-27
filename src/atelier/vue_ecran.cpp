@@ -8,6 +8,7 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPixmap>
 #include <QPushButton>
 #include <QTableWidget>
 
@@ -16,6 +17,11 @@ extern "C" {
 }
 
 VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &elements) {
+    return dessiner_ecran(titre, elements, QPixmap(), 0);
+}
+
+VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &elements, const QPixmap &logo,
+                        int taille_logo) {
     VueEcran r;
     const int n = elements.size();
     r.controles = QVector<QWidget *>(n, nullptr);
@@ -31,7 +37,20 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     r.titre = new QLabel(titre);
     r.titre->setTextFormat(Qt::PlainText);
     r.titre->setProperty("niveau", "ecran");   // la taille et la graisse viennent de la feuille du thème
-    pile->addWidget(r.titre);
+    if (logo.isNull() || taille_logo <= 0) {
+        pile->addWidget(r.titre);
+    } else {   // le logo à gauche du titre, sa hauteur fixée, ses proportions gardées (§ 22.5)
+        auto *entete = new QHBoxLayout;
+        entete->setSpacing(t.mesure("espace-4"));
+        r.logo = new QLabel;
+        const qreal densite = r.vue->devicePixelRatioF();
+        QPixmap p = logo.scaledToHeight(qRound(taille_logo * densite), Qt::SmoothTransformation);
+        p.setDevicePixelRatio(densite);
+        r.logo->setPixmap(p);
+        entete->addWidget(r.logo);
+        entete->addWidget(r.titre, 1);
+        pile->addLayout(entete);
+    }
     QHBoxLayout *rangee = nullptr;   // des boutons qui se suivent : une ligne, en bas à droite (§ 3.3)
     QVector<QBoxLayout *> blocs = {pile};   // « côte à côte », « l'un sous l'autre » : des boîtes emboîtées (§ 22.1)
     for (int k = 0; k < n; k++) {

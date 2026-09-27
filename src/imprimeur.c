@@ -950,6 +950,20 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                                                                                 : (c ? "_sans_séparateur" : "sans séparateur"));
         aj(im, c ? "\n" : ".\n");
         return;
+    case P_APPARENCE: {   /* « Les écrans ont la couleur verte et le logo « … ». » ; « _écrans _couleur _verte _logo « … » » */
+        static const char *const C[] = { "bleue", "verte", "turquoise", "violette", "grise" };
+        aj(im, c ? "_écrans" : "Les écrans ont");
+        if (n->entier >= 0 && n->entier < 5) {
+            aj(im, c ? " _couleur _" : " la couleur ");
+            aj(im, C[n->entier]);
+        }
+        if (n->texte) {
+            aj(im, c ? " _logo " : n->entier >= 0 ? " et le logo " : " le logo ");
+            ecrire_texte(im, n->texte);
+        }
+        aj(im, c ? "\n" : ".\n");
+        return;
+    }
     case P_AFFICHAGE:
         aj(im, c ? "_afficher " : "Afficher ");
         for (size_t k = 0; k < n->nb_enfants; k++) {

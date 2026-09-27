@@ -159,7 +159,10 @@ Tranche T2, faite le 26 septembre 2026 : les écrans des applications, dans `vue
 - Une liste n'a plus de grille : ses lignes se séparent par un trait, ses titres s'alignent à gauche.
 - Le titre de l'écran est un texte simple, mis en forme par la feuille ; le message d'un événement raté s'affiche juste dessous.
 
-Tranche suivante : T3, la phrase `Les écrans ont …` (grammaire, analyse, forme compacte, aperçu, exécution).
+Tranche T3, faite le 26 septembre 2026 : la phrase `Les écrans ont la couleur … et le logo « … ».` (grammaire, § 22.5).
+- À l'exécution, la fenêtre du programme prend l'accent choisi (le processus du programme seul : l'atelier qui l'a lancé garde le sien), et le logo : 64 px sur un écran sans écran dessous, 24 px sur un écran ouvert par-dessus (jeton `logo-titre`), en icône de la fenêtre.
+- Dans l'aperçu de l'onglet Écrans, chaque écran reçoit l'apparence du programme qui le déclare : son logo, à la taille qu'il aura (l'écran d'accueil est celui que ce programme ouvre lui-même au premier niveau), et la feuille de son accent, posée sur l'aperçu seul.
+- Le thème est fini : T1 à T3.
 
 ## 6. Questions ouvertes
 
@@ -218,3 +221,4 @@ Tranche suivante : T3, la phrase `Les écrans ont …` (grammaire, analyse, form
 | 0.21 | 2026-09-26 | § 6.3 : autocomplétion de l'éditeur faite (suites du cœur, à la frappe et par Ctrl+Espace) |
 | 0.22 | 2026-09-26 | § 6.3 : guillemets à la frappe ; frappe lue sur le document (méthode de saisie de macOS) |
 | 0.23 | 2026-09-26 | § 5 ter : tranche T2 faite (mesures des jetons dans le dessin des écrans) |
+| 0.24 | 2026-09-26 | § 5 ter : tranche T3 faite (apparence des écrans, à l'exécution et dans l'aperçu) ; le thème est fini |

@@ -28,6 +28,9 @@
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QImage>
+#include <QFileInfo>
+#include <QPixmap>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -212,8 +215,19 @@ int main(int argc, char **argv) {
         el2[0].type = "vrai ou faux";
         VueEcran v2 = dessiner_ecran("Réglages", el2);
         VERIFIER(v2.controles[0]->layout()->count() == 1 && qobject_cast<QCheckBox *>(v2.zones[0])->text() == "Actif");
+        // un logo : à gauche du titre, à la hauteur demandée, ses proportions gardées
+        QPixmap logo(10, 20);
+        logo.fill(Qt::red);
+        VueEcran v3 = dessiner_ecran("Accueil", el2, logo, 64);
+        VERIFIER(v3.logo && qRound(v3.logo->pixmap().height() / v3.logo->pixmap().devicePixelRatio()) == 64);
+        VERIFIER(qRound(v3.logo->pixmap().width() / v3.logo->pixmap().devicePixelRatio()) == 32);
+        auto *entete = qobject_cast<QHBoxLayout *>(v3.vue->layout()->itemAt(0)->layout());
+        VERIFIER(entete && entete->itemAt(0)->widget() == v3.logo && entete->itemAt(1)->widget() == v3.titre);
+        VERIFIER(v3.vue->layout()->itemAt(1)->widget() == v3.erreur);
+        VERIFIER(!v.logo);
         delete v.vue;
         delete v2.vue;
+        delete v3.vue;
     }
 
     // Analyse : la première erreur, avec sa position ; rien quand tout va bien
@@ -750,6 +764,74 @@ int main(int argc, char **argv) {
         bouton("Fermer")->click();
         VERIFIER(attendre([&] { return e.findChild<QTextBrowser *>()->toPlainText().contains("après") && !table(); }));
         e.close();
+    }
+
+    // T3 : l'apparence (grammaire, § 22.5) à l'exécution : l'accent du programme, le logo grand sur l'écran du
+    // dessous, petit sur celui qui s'ouvre par-dessus, et en icône de la fenêtre
+    {
+        QTemporaryDir dossier;
+        QImage image(20, 40, QImage::Format_ARGB32);
+        image.fill(Qt::darkGreen);
+        image.save(dossier.filePath("logo.png"));
+        const QString prog = dossier.filePath("ap.grym");
+        QFile f(prog);
+        f.open(QIODevice::WriteOnly);
+        f.write("Les écrans ont la couleur verte et le logo « logo.png ».\n"
+                "L'écran d'accueil montre :\n    un bouton « Suite »,\n    un bouton « Fermer ».\n"
+                "L'écran de suite montre :\n    un bouton « Retour ».\n"
+                "Quand on clique sur « Suite » dans l'écran d'accueil :\n    Ouvrir l'écran de suite.\n"
+                "Quand on clique sur « Fermer » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                "Quand on clique sur « Retour » dans l'écran de suite :\n    Fermer l'écran.\n"
+                "Ouvrir l'écran d'accueil.\n");
+        f.close();
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        QElapsedTimer montre;
+        montre.start();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            while (montre.elapsed() < 10000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto bouton = [&](const QString &t) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == t && b->isVisible()) return b;
+            return nullptr;
+        };
+        auto hauteur_logo = [&]() {   // le logo visible, en pixels logiques
+            for (QLabel *l : e.findChildren<QLabel *>())
+                if (l->isVisible() && !l->pixmap().isNull()) return qRound(l->pixmap().height() / l->pixmap().devicePixelRatio());
+            return 0;
+        };
+        VERIFIER(attendre([&] { return bouton("Suite") && bouton("Suite")->isEnabled(); }));
+        VERIFIER(Theme::courant().accent() == "verte");
+        VERIFIER(hauteur_logo() == 64 && !e.windowIcon().isNull());
+        bouton("Suite")->click();
+        VERIFIER(attendre([&] { return bouton("Retour") && bouton("Retour")->isEnabled(); }));
+        VERIFIER(hauteur_logo() == 24);
+        bouton("Retour")->click();
+        VERIFIER(attendre([&] { return bouton("Fermer") && bouton("Fermer")->isEnabled(); }));
+        bouton("Fermer")->click();
+        attendre([&] { return !bouton("Fermer"); });
+        e.close();
+        Theme::courant().appliquer(Theme::Clair, "bleue");   // l'accent revient pour les essais suivants
+
+        // l'aperçu lit la même apparence : couleur, logo, écran d'accueil
+        const QVector<EcranLu> lus = lire_ecrans(dossier.path());
+        VERIFIER(lus.size() == 2);
+        for (const EcranLu &x : lus) {
+            VERIFIER(x.couleur == 1 && x.logo == QFileInfo(dossier.filePath("logo.png")).absoluteFilePath());
+            VERIFIER(x.accueil == (x.nom == "d'accueil"));
+        }
+        OngletEcrans o;
+        o.montrer(dossier.path());
+        o.choisir_ecran("d'accueil");
+        QLabel *l = nullptr;
+        for (QLabel *x : o.findChildren<QLabel *>()) if (!x->pixmap().isNull()) l = x;
+        VERIFIER(l && qRound(l->pixmap().height() / l->pixmap().devicePixelRatio()) == 64);
+        bool accent_de_l_apercu = false;   // l'aperçu seul prend la feuille verte ; l'atelier garde le bleu
+        const QString verte = Theme::courant().feuille(Theme::courant().mode(), "verte");
+        for (QWidget *w : o.findChildren<QWidget *>()) if (w->styleSheet() == verte) accent_de_l_apercu = true;
+        VERIFIER(accent_de_l_apercu && Theme::courant().accent() == "bleue");
     }
 
     // A3-b dans la fenêtre : une zone, sa valeur de départ, sa validation, la liste qui suit, la ligne choisie

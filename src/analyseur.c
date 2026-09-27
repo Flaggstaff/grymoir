@@ -441,6 +441,8 @@ typedef struct {
     Portee *portee;    /* copie de travail, validée seulement en cas de succès */
     int interactif;
     int style_declare;   /* « Les nombres s'affichent … » : une seule fois (§ 4.1) */
+    int apparence_declaree;   /* « Les écrans ont … » : une seule fois (§ 22.5) */
+    int ouvrir_vu;            /* un « Ouvrir » déjà lu : l'apparence se déclare avant (§ 22.5) */
     int affichage_vu;
     int profondeur;
     Article article_force;   /* article contenu dans « au » ou « du » (grammaire, § 5.2) */
@@ -4310,6 +4312,103 @@ static Noeud *style_des_nombres(Analyse *a, const Jeton *t) {
     return n;
 }
 
+/* Les cinq couleurs d'accent (§ 22.5), au féminin (« la couleur verte »), puis leur masculin, pour l'accord. */
+static const char *const COULEURS[] = { "bleue", "verte", "turquoise", "violette", "grise" };
+static const char *const COULEURS_MASCULIN[] = { "bleu", "vert", NULL, "violet", "gris" };
+
+/* Une image que l'atelier sait montrer : PNG, JPEG, GIF ou WebP, reconnue à sa signature (§ 15.1). */
+static int fichier_image(const char *chemin) {
+    FILE *f = fopen(chemin, "rb");
+    if (!f) return -1;
+    unsigned char o[12] = { 0 };
+    size_t n = fread(o, 1, sizeof o, f);
+    fclose(f);
+    if (n >= 8 && !memcmp(o, "\x89PNG\r\n\x1a\n", 8)) return 1;
+    if (n >= 3 && o[0] == 0xFF && o[1] == 0xD8 && o[2] == 0xFF) return 1;
+    if (n >= 6 && (!memcmp(o, "GIF87a", 6) || !memcmp(o, "GIF89a", 6))) return 1;
+    if (n >= 12 && !memcmp(o, "RIFF", 4) && !memcmp(o + 8, "WEBP", 4)) return 1;
+    return 0;
+}
+
+static char *dossier_de(const char *chemin);
+
+/* « Les écrans ont la couleur verte et le logo « logo.png ». » (§ 22.5) : une fois, au premier niveau,
+ * avant le premier « Ouvrir ». L'un des deux réglages au moins, la couleur d'abord. */
+static Noeud *apparence(Analyse *a, const Jeton *t) {
+    a->i += 3;   /* les écrans ont */
+    int couleur = -1;
+    char *logo = NULL;
+    const Jeton *tlogo = NULL;
+    if (est_mot(cour(a), "la") && est_mot(voir(a, 1), "couleur")) {
+        const Jeton *tc = voir(a, 2);
+        for (int k = 0; k < 5; k++) {
+            if (est_mot(tc, COULEURS[k])) couleur = k;
+            else if (COULEURS_MASCULIN[k] && est_mot(tc, COULEURS_MASCULIN[k]))
+                return erreur(a, tc, grym_formater("Accord : « %s » (la couleur).", COULEURS[k]));
+        }
+        if (couleur < 0)
+            return erreur(a, tc, grym_dupliquer("Couleur attendue : bleue, verte, turquoise, violette ou grise."));
+        a->i += 3;
+        if (est_mot(cour(a), "et")) {
+            if (!(est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "logo")))
+                return erreur(a, voir(a, 1), grym_dupliquer("« le logo « … » » attendu après « et »."));
+            avancer(a);
+        }
+    }
+    if (est_mot(cour(a), "le") && est_mot(voir(a, 1), "logo")) {
+        tlogo = voir(a, 2);
+        if (tlogo->type != J_TEXTE)
+            return erreur(a, tlogo, grym_dupliquer("Le logo s'écrit entre guillemets : « le logo « logo.png » »."));
+        logo = grym_dupliquer(tlogo->valeur);
+        a->i += 3;
+        if (couleur < 0 && est_mot(cour(a), "et") && est_mot(voir(a, 2), "couleur")) {
+            free(logo);
+            return erreur(a, cour(a), grym_dupliquer("Écrivez la couleur avant le logo : "
+                                                     "« Les écrans ont la couleur verte et le logo « … ». »"));
+        }
+    }
+    if (couleur < 0 && !logo)
+        return erreur(a, cour(a), grym_dupliquer("Écrivez « Les écrans ont la couleur verte. », "
+                                                 "« Les écrans ont le logo « logo.png ». », ou les deux reliés par « et »."));
+    if (!fin_phrase(a, 0)) { free(logo); return NULL; }
+    if (a->formule || a->niveau) {
+        free(logo);
+        return erreur(a, t, grym_dupliquer("L'apparence des écrans se déclare au premier niveau du programme."));
+    }
+    if (a->apparence_declaree) {
+        free(logo);
+        return erreur(a, t, grym_dupliquer("L'apparence des écrans se déclare une seule fois."));
+    }
+    if (a->ouvrir_vu) {
+        free(logo);
+        return erreur(a, t, grym_dupliquer("L'apparence des écrans se déclare avant le premier « Ouvrir »."));
+    }
+    if (logo) {   /* le logo existe et c'est une image, dès l'analyse : l'aperçu de l'atelier le montre */
+        if (!*logo) { free(logo); return erreur(a, tlogo, grym_dupliquer("Nom de fichier vide.")); }
+        char *dossier = dossier_de(a->portee->fichier);
+        char *chemin = logo[0] == '/' ? grym_dupliquer(logo) : grym_formater("%s%s", dossier, logo);
+        const int image = fichier_image(chemin);
+        free(dossier);
+        free(chemin);
+        if (image < 0) {
+            Noeud *e = erreur(a, tlogo, grym_formater("Fichier « %s » introuvable ou illisible.", logo));
+            free(logo);
+            return e;
+        }
+        if (image == 0) {
+            Noeud *e = erreur(a, tlogo, grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF ou WebP).", logo));
+            free(logo);
+            return e;
+        }
+    }
+    a->apparence_declaree = 1;
+    Noeud *n = noeud_creer(P_APPARENCE, t->ligne, t->colonne, t->debut);
+    n->entier = couleur;
+    n->texte = logo;
+    n->fin = fin_jeton(&a->j[a->i - 1]);
+    return n;
+}
+
 /* « Les genres de o gagnent baroque. », « … perdent fugue. » (§ 16.13) */
 static Noeud *gagner_perdre(Analyse *a, const Jeton *t) {
     if (a->formule == 1)
@@ -4917,6 +5016,7 @@ static Noeud *quand(Analyse *a, int colonne) {
 
 /* « Ouvrir l'écran X. » (§ 22.3) */
 static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
+    a->ouvrir_vu = 1;
     if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'ouvre pas d'écran : ouvrez-le dans une action."));
     if (a->essais) return erreur(a, t, grym_dupliquer("Un écran ne s'ouvre pas dans « Essayer » : chaque événement a déjà "
                                                        "sa propre reprise."));
@@ -5195,6 +5295,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
         return n;
     }
     if (est_mot(t, "les") && est_mot(voir(a, 1), "nombres")) return style_des_nombres(a, t);
+    if (est_mot(t, "les") && est_mot(voir(a, 1), "écrans") && est_mot(voir(a, 2), "ont")) return apparence(a, t);
     if (est_mot(t, "les")) return gagner_perdre(a, t);
     if (est_mot(t, "effacer") && voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "écran")) {
         /* « Effacer l'écran. » (§ 4.3) */
@@ -5509,6 +5610,8 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.interactif = interactif;
     a.style_declare = 0;
     a.affichage_vu = 0;
+    a.apparence_declaree = 0;
+    a.ouvrir_vu = 0;
     a.profondeur = 0;
     a.diag = diag;
     a.echec = 0;

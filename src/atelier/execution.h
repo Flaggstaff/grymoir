@@ -6,6 +6,7 @@
 #define GRYM_ATELIER_EXECUTION_H
 
 #include <QMainWindow>
+#include <QPixmap>
 #include <QSemaphore>
 #include <QThread>
 #include <QVector>
@@ -62,6 +63,7 @@ signals:
     void ecran_erreur(const QString &message);
     void ecran_valeurs(const QStringList &valeurs);   // une par élément ; vide pour un élément qui n'est pas une zone
     void ecran_ferme();
+    void apparence(int couleur, const QByteArray &logo);   // « Les écrans ont … » (grammaire, § 22.5)
     void reponses(const QString &echo);   // les réponses acceptées, recopiées dans le fil comme en console
     void fin(bool ok, const QString &erreur, const QString &annulation);
 
@@ -123,6 +125,7 @@ private:
     struct EcranMontre { QWidget *vue; QLabel *erreur; QVector<class QTableWidget *> tables; QVector<QPushButton *> boutons;
                          QVector<QWidget *> zones; QString titre; };
     QVector<EcranMontre> recouverts;
+    QPixmap logo;   // « … et le logo « … ». » (§ 22.5) : grand sur l'écran du dessous, petit sur les autres
     QLabel *erreur_ecran = nullptr;
     QVector<class QTableWidget *> tables;
     QVector<QPushButton *> boutons_ecran;

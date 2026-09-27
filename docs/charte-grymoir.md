@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.42, révisée le 26 septembre 2026.
+Version 1.43, révisée le 26 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -252,3 +252,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.40 | 2026-09-25 | Art. 7 : exception des écrans, une transaction par événement ; art. 12 : A3 conçu |
 | 1.41 | 2026-09-25 | Art. 12 : A3 fait (écrans, listes, boutons, zones de saisie, événements, fiche, écrans empilés, colonnes, disposition) |
 | 1.42 | 2026-09-26 | Art. 12 : A4 fait (onglet « Écrans », écrans générés, propriétés modifiables, glisser-déposer) ; le plan de l'atelier (A1 à A4) est achevé |
+| 1.43 | 2026-09-26 | Apparence : un seul thème fixé par GrymoiR (polices, espacements, couleurs neutres, clair ou sombre selon le système) ; un programme n'en règle que l'accent, dans une palette fermée de cinq couleurs, et le logo (grammaire, § 22.5 ; `docs/ecrans.md`, § 5) |

@@ -346,6 +346,13 @@ int main(void) {
     COMP("Les nombres s'affichent sans séparateur.\nAfficher « ab » sur 4 à droite, sans passer à la ligne.",
          "_style _sans_séparateur\n_afficher « ab » _sur 4 _droite _sans_ligne\n");
 
+    /* --- Apparence des écrans (§ 22.5) : couleur seule, logo seul, les deux --- */
+    FIXE("Les écrans ont la couleur verte et le logo « exemples/pixel.png ».\n");
+    FIXE("Les écrans ont le logo « exemples/pixel.png ».\n");
+    COMP("Les écrans ont la couleur turquoise.", "_écrans _couleur _turquoise\n");
+    COMP("Les écrans ont la couleur grise et le logo « exemples/pixel.png ».",
+         "_écrans _couleur _grise _logo « exemples/pixel.png »\n");
+
     FIXE("Effacer l'écran.\nAfficher « a ».\n");
     COMP("Effacer l'écran.", "_effacer\n");
     FIXE("L'année vaut 1.\nLe nom vaut « a ».\nAfficher « ( » suivi de année suivi de « ) » puis de nom puis que nom.\n");

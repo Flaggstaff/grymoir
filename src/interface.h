@@ -109,6 +109,9 @@ typedef struct {
     void (*ecran_fermer)(void *contexte, Chaine *sortie);
     /* Avant chaque attente : le texte de chaque zone de saisie (NULL pour un autre élément), à montrer. */
     void (*ecran_valeurs)(void *contexte, const char *const *valeurs, size_t n);
+    /* « Les écrans ont la couleur verte et le logo « … ». » (§ 22.5) : couleur, rang dans la palette (0 bleue,
+     * 1 verte, 2 turquoise, 3 violette, 4 grise) ou −1 ; logo : ses octets (image), ou NULL. NULL : sans effet. */
+    void (*ecran_apparence)(void *contexte, int couleur, const unsigned char *logo, size_t taille, const char *format);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

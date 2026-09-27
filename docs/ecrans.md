@@ -144,7 +144,7 @@ GrymoiR fixe l'apparence des écrans : polices, tailles, espacements, formes et 
 
 Raisons : le public de GrymoiR, le développeur seul, ne veut pas jouer au graphiste ; chaque réglage ajouté en appelle un autre, et la liste fermée protège le langage de la dérive vers une feuille de style en français. Elle pourra s'élargir plus tard sans casser de programme ; la réduire en casserait. Un fichier de thème à part est exclu : l'apparence fait partie du programme (`docs/atelier.md`, § 2).
 
-### 5.2 La phrase *(à implémenter, tranche T3)*
+### 5.2 La phrase *(implémentée le 26 septembre 2026 : grammaire, § 22.5)*
 
 ```
 Les écrans ont la couleur verte et le logo « logo.png ».
@@ -155,7 +155,8 @@ Les écrans ont la couleur verte et le logo « logo.png ».
 - `la couleur verte` s'accorde, contrôlé comme les autres accords.
 - Le logo est un chemin écrit tel quel, jamais une expression : l'aperçu de l'atelier, qui n'exécute pas le programme, peut ainsi l'afficher. Un fichier absent, ou qui n'est pas une image, est refusé à l'analyse (grammaire, § 15.2).
 - Forme compacte, esquisse : `_écrans _couleur verte _logo « logo.png »`.
-- Où s'affiche le logo relève du thème, pas du langage.
+- Où s'affiche le logo relève du thème, pas du langage. Décidé le 26 septembre 2026 : grand (64 px) à gauche du titre d'un écran que le programme ouvre lui-même, sans écran dessous ; petit (24 px) sur un écran ouvert par-dessus ; en icône de la fenêtre. Le langage ne connaît ni le nom de l'application ni un écran d'accueil désigné : le bandeau de la maquette (logo et nom de l'application en haut de chaque écran) aurait demandé une phrase de plus.
+- Correction : la version 0.13 affirmait qu'aucune phrase ne commençait par `Les`. C'était faux (`Les nombres s'affichent …`, § 4.1 ; `Les genres de o gagnent …`, § 16.13). La phrase reste sans ambiguïté : `Les écrans ont` se distingue des deux autres dès son deuxième ou troisième mot.
 
 ### 5.3 La palette
 
@@ -184,3 +185,4 @@ Cinq couleurs d'accent : `bleue` (par défaut, sans phrase écrite), `verte`, `t
 | 0.11 | 2026-09-25 | § 4 : A3-c fait ; § 3.4 : l'exemple de case à cocher corrigé, c'est le type `(vrai ou faux)` qui la donne, pas le mot « case » |
 | 0.12 | 2026-09-25 | § 4 : A3-d fait ; A3 fait |
 | 0.13 | 2026-09-26 | Nouveau § 5 : l'apparence (un seul thème, la phrase `Les écrans ont …`, la palette de cinq accents) |
+| 0.14 | 2026-09-26 | § 5.2 : phrase implémentée (T3) ; place du logo ; correction sur les phrases en `Les` |

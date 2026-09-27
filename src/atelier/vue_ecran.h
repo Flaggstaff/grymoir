@@ -9,6 +9,7 @@
 
 class QWidget;
 class QLabel;
+class QPixmap;
 class QTableWidget;
 class QPushButton;
 
@@ -25,6 +26,7 @@ struct ElementVue {
 struct VueEcran {
     QWidget *vue = nullptr;
     QLabel *titre = nullptr;
+    QLabel *logo = nullptr;                  // à gauche du titre, s'il y a un logo (grammaire, § 22.5)
     QLabel *erreur = nullptr;                // caché ; l'exécution y écrit un événement raté
     QVector<QWidget *> controles;            // un par élément : QLabel, QTableWidget, QPushButton, ou la zone
     QVector<QTableWidget *> tables;          // un par élément, nullptr sauf pour une liste
@@ -33,7 +35,10 @@ struct VueEcran {
 };
 
 // Dessine l'écran : blocs emboîtés, boutons qui se suivent sur une ligne en bas à droite, listes qui prennent
-// la hauteur libre, zones avec les contrôles des formulaires. Ne branche aucun événement.
+// la hauteur libre, zones avec les contrôles des formulaires. Ne branche aucun événement. Un logo non nul
+// s'affiche à gauche du titre, à `taille_logo` pixels de haut.
+VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &elements, const QPixmap &logo,
+                        int taille_logo);
 VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &elements);
 
 #endif

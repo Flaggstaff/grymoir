@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.43 de la spécification, révisée le 25 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.44 de la spécification, révisée le 26 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1420,6 +1420,23 @@ Ouvrir l'écran des compositeurs.
 - `quand`, `ouvrir` et `fermer` sont des mots de construction (§ 10.7) : ils ne commencent plus le nom d'une action.
 - Forme compacte : `docs/ecrans.md`, § 3.7 (`_écran des_compositeurs` … `_fin`, `_quand _clique « Nouveau » _dans des_compositeurs`, `_ouvrir`, `_fermer`, `_écran.pays`).
 
+### 22.5 Apparence *(T3 : implémenté le 26 septembre 2026)*
+
+```
+Les écrans ont la couleur verte et le logo « logo.png ».
+Les écrans ont la couleur grise.
+Les écrans ont le logo « images/logo.png ».
+```
+
+- GrymoiR fixe l'apparence des écrans (polices, tailles, espacements, formes) ; le programme n'en règle que deux choses, une couleur d'accent et un logo (`docs/ecrans.md`, § 5). Le clair ou le sombre suit le système.
+- Couleurs : `bleue` (par défaut, sans phrase), `verte`, `turquoise`, `violette`, `grise`. `la couleur` est féminin : « Accord : « verte » (la couleur). » Toute autre couleur : « Couleur attendue : bleue, verte, turquoise, violette ou grise. »
+- L'un des deux réglages au moins ; la couleur d'abord, le logo ensuite, reliés par `et`.
+- Le logo est un chemin écrit tel quel, relatif au dossier du programme. Il doit exister et être une image (PNG, JPEG, GIF, WebP) dès l'analyse, pour que l'aperçu de l'atelier le montre sans exécuter le programme : « Fichier « logo.png » introuvable ou illisible. », « « notes.txt » n'est pas une image (PNG, JPEG, GIF ou WebP). ». Il est relu à l'exécution.
+- Une seule fois, au premier niveau, avant le premier `Ouvrir` ; sinon, erreur d'analyse. Comme `Les nombres s'affichent …` (§ 4.1), la phrase vaut pour tout le programme.
+- Le logo s'affiche à gauche du titre : grand (64 pixels) sur un écran que le programme ouvre lui-même, sans écran dessous ; petit (24 pixels) sur un écran ouvert par-dessus. Il sert aussi d'icône à la fenêtre.
+- Hors des écrans (`grym lancer`, `grym servir`), la phrase est sans effet : un programme qui ne fait qu'afficher tourne normalement.
+- Forme compacte : `_écrans _couleur _verte _logo « logo.png »`, `_écrans _couleur _grise`, `_écrans _logo « logo.png »`.
+
 ---
 
 ## Journal des révisions
@@ -1470,3 +1487,4 @@ Ouvrir l'écran des compositeurs.
 | 1.41 | 2026-09-25 | § 22 : A3-b implémenté (zones de saisie, « de l'écran », ligne choisie, changement, ouverture, fermeture) |
 | 1.42 | 2026-09-25 | § 22 : A3-c implémenté (fiche déduite, écrans empilés) |
 | 1.43 | 2026-09-25 | § 22 : A3-d implémenté (colonnes choisies, blocs de disposition) ; A3 fait |
+| 1.44 | 2026-09-26 | § 22.5 : apparence des écrans (`Les écrans ont la couleur … et le logo « … ».`) |
