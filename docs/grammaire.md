@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.44 de la spécification, révisée le 26 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.45 de la spécification, révisée le 26 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1436,6 +1436,7 @@ Les écrans ont le logo « images/logo.png ».
 - Le logo s'affiche à gauche du titre : grand (64 pixels) sur un écran que le programme ouvre lui-même, sans écran dessous ; petit (24 pixels) sur un écran ouvert par-dessus. Il sert aussi d'icône à la fenêtre.
 - Hors des écrans (`grym lancer`, `grym servir`), la phrase est sans effet : un programme qui ne fait qu'afficher tourne normalement.
 - Forme compacte : `_écrans _couleur _verte _logo « logo.png »`, `_écrans _couleur _grise`, `_écrans _logo « logo.png »`.
+- Aide à la saisie (§ 8) : en début de phrase, `Les écrans ont` et `Les nombres s'affichent` sont proposés ; puis `la couleur` ou `le logo`, les cinq couleurs, `et le logo`, un texte. Après `Les nombres s'affichent` : `à la suisse`, `à la française`, `sans séparateur`.
 
 ---
 
@@ -1488,3 +1489,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.42 | 2026-09-25 | § 22 : A3-c implémenté (fiche déduite, écrans empilés) |
 | 1.43 | 2026-09-25 | § 22 : A3-d implémenté (colonnes choisies, blocs de disposition) ; A3 fait |
 | 1.44 | 2026-09-26 | § 22.5 : apparence des écrans (`Les écrans ont la couleur … et le logo « … ».`) |
+| 1.45 | 2026-09-26 | § 22.5 : suites attendues des phrases en `Les` (apparence des écrans, style des nombres) |

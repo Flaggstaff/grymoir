@@ -4279,6 +4279,9 @@ static int mot_de_construction(const Jeton *t) {
     return 0;
 }
 
+/* Aide à la saisie : une suite possible à la position courante (grammaire, § 8). */
+static void attendre_ici(Analyse *a, const char *suite) { attendre_mot(a, a->i, suite, strlen(suite)); }
+
 /* « Les nombres s'affichent à la française. » (§ 4.1) : une fois, au premier niveau, avant tout affichage. */
 static Noeud *style_des_nombres(Analyse *a, const Jeton *t) {
     static const char *const STYLES[] = { "suisse", "française", "séparateur" };
@@ -4286,6 +4289,9 @@ static Noeud *style_des_nombres(Analyse *a, const Jeton *t) {
         return erreur(a, t, grym_dupliquer("Écrivez « Les nombres s'affichent à la suisse. », « à la française. » "
                                            "ou « sans séparateur. »."));
     a->i += 4;   /* les nombres s'affichent */
+    attendre_ici(a, "à la suisse");
+    attendre_ici(a, "à la française");
+    attendre_ici(a, "sans séparateur");
     int style = -1;
     if (est_mot(cour(a), "à") && est_mot(voir(a, 1), "la")) {
         if (est_mot(voir(a, 2), STYLES[0])) style = 0;
@@ -4339,7 +4345,12 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
     int couleur = -1;
     char *logo = NULL;
     const Jeton *tlogo = NULL;
+    attendre_ici(a, "la couleur");
+    attendre_ici(a, "le logo");
     if (est_mot(cour(a), "la") && est_mot(voir(a, 1), "couleur")) {
+        a->i += 2;
+        for (int k = 0; k < 5; k++) attendre_ici(a, COULEURS[k]);
+        a->i -= 2;
         const Jeton *tc = voir(a, 2);
         for (int k = 0; k < 5; k++) {
             if (est_mot(tc, COULEURS[k])) couleur = k;
@@ -4349,13 +4360,21 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
         if (couleur < 0)
             return erreur(a, tc, grym_dupliquer("Couleur attendue : bleue, verte, turquoise, violette ou grise."));
         a->i += 3;
+        attendre_ici(a, "et le logo");
+        attendre(a, A_POINT);
         if (est_mot(cour(a), "et")) {
+            a->i++;
+            attendre_ici(a, "le logo");
+            a->i--;
             if (!(est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "logo")))
                 return erreur(a, voir(a, 1), grym_dupliquer("« le logo « … » » attendu après « et »."));
             avancer(a);
         }
     }
     if (est_mot(cour(a), "le") && est_mot(voir(a, 1), "logo")) {
+        a->i += 2;
+        attendre(a, A_TEXTE);
+        a->i -= 2;
         tlogo = voir(a, 2);
         if (tlogo->type != J_TEXTE)
             return erreur(a, tlogo, grym_dupliquer("Le logo s'écrit entre guillemets : « le logo « logo.png » »."));
@@ -5294,6 +5313,14 @@ static Noeud *phrase(Analyse *a, int colonne) {
         n->fin = v->fin;
         return n;
     }
+    if (est_mot(t, "les")) {   /* aide à la saisie : les deux réglages qui commencent par « Les » (§ 4.1, § 22.5) */
+        a->i++;
+        attendre_ici(a, "écrans ont");
+        attendre_ici(a, "nombres s'affichent");
+        a->i++;
+        if (est_mot(&a->j[a->i - 1], "écrans")) attendre_ici(a, "ont");
+        a->i -= 2;
+    }
     if (est_mot(t, "les") && est_mot(voir(a, 1), "nombres")) return style_des_nombres(a, t);
     if (est_mot(t, "les") && est_mot(voir(a, 1), "écrans") && est_mot(voir(a, 2), "ont")) return apparence(a, t);
     if (est_mot(t, "les")) return gagner_perdre(a, t);
@@ -5836,6 +5863,8 @@ Suggestions suites_valides_fichier(const char *source, size_t taille, const char
             proposer(&r, "Pour", pre, lp, 0);
             proposer(&r, "Quand on", pre, lp, 0);          /* écrans (§ 22) */
             proposer(&r, "Ouvrir l'écran", pre, lp, 0);
+            proposer(&r, "Les écrans ont", pre, lp, 0);          /* apparence (§ 22.5) */
+            proposer(&r, "Les nombres s'affichent", pre, lp, 0); /* style des nombres (§ 4.1) */
             proposer(&r, "Remarque :", pre, lp, 0);
             if (tete_de_fichier(source, d)) proposer(&r, "Utiliser", pre, lp, 0);   /* en tête seulement (§ 21) */
             for (size_t k = 0; k < c.nb_noms; k++)
