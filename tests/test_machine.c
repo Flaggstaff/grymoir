@@ -2270,6 +2270,18 @@ int main(void) {
     PROG("Les nombres s'affichent à la suisse.\nLes nombres s'affichent à la française.", "~une seule fois");
     PROG("Pour f :\n    Les nombres s'affichent à la suisse.", "~au premier niveau du programme");
     PROG("Les nombres s'affichent à la belge.", "~Style attendu");
+    /* Refuser (§ 18.1) : le message, écrit comme Afficher l'écrirait ; Essayer le rattrape ; tout est annulé */
+    PROG("Refuser « Non. ».", "~Non.");
+    PROG("Le d vaut 1234,5.\nRefuser « Débits : » puis d puis « , crédits : » puis 0.", "~Débits : 1'234,5 , crédits : 0");
+    PROG("Essayer :\n    Refuser « Écriture déséquilibrée. ».\nEn cas d'échec :\n    Afficher « Refusé : » puis le motif de l'échec.",
+         "Refusé : Écriture déséquilibrée.");
+    PROG("Le x vaut 1.\nEssayer :\n    Le x devient 2.\n    Refuser « Non. ».\nEn cas d'échec, afficher x.", "1");
+    PROG("Le carré d'un nombre :\n    Si nombre < 0, refuser « Négatif. ».\n    Rendre nombre × nombre.\nAfficher le carré de −2.",
+         "~Négatif.");
+    PROG("Une chose absente a : un nom, facultatif.\nRefuser 1.", "~1");
+    PROG("Pour refuser :\n    Afficher 1.", "~commence une construction du langage");
+    PROG("Refuser.", "~Expression incomplète");
+
     /* Apparence des écrans (§ 22.5) : sans écran, en console, rien ne se voit ; les règles de la phrase */
     PROG("Les écrans ont la couleur verte.\nAfficher 1.", "1");
     PROG("Les écrans ont la couleur vert.", "~Accord : « verte »");

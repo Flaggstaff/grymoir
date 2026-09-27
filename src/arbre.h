@@ -110,9 +110,11 @@ typedef enum {
                         dans Programme.fichiers, 0 s'il était déjà lu ; enfants : ses déclarations */
     P_GAGNER,        /* « Les genres de o gagnent baroque. » : texte : champ multiple ; enfants[0] : objet ;
                         enfants[1] : valeur ; forme 1 : « perdent » (§ 16.13) */
-    P_APPARENCE      /* « Les écrans ont la couleur verte et le logo « logo.png ». » (§ 22.5) : entier : couleur, rang
+    P_APPARENCE,     /* « Les écrans ont la couleur verte et le logo « logo.png ». » (§ 22.5) : entier : couleur, rang
                         dans la palette (0 bleue, 1 verte, 2 turquoise, 3 violette, 4 grise), −1 si non écrite ;
                         texte : chemin du logo tel qu'écrit, ou NULL */
+    P_REFUSER        /* « Refuser « Débits : » puis d. » (§ 18.1) : enfants : les éléments du message, comme
+                        « Afficher » (reliés par « puis », séparés par une espace) */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE } Article;

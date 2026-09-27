@@ -126,7 +126,7 @@ static const QHash<QString, QString> &table_des_mots() {
         {"présent", "16.9"}, {"présente", "16.9"}, {"supprimé", "16.12"}, {"supprimée", "16.12"}, {"rétablir", "16.12"},
         {"définitivement", "16.12"}, {"disparaît", "16.12"}, {"disparaît_avec", "16.12"},
         {"plusieurs", "16.13"}, {"gagnent", "16.13"}, {"perdent", "16.13"}, {"gagne", "16.13"}, {"perd", "16.13"},
-        {"parmi", "16.13"}, {"réponse", "17. "}, {"essayer", "18. "}, {"échec", "18. "}, {"saisi", "19. "},
+        {"parmi", "16.13"}, {"réponse", "17. "}, {"essayer", "18. "}, {"refuser", "18.1"}, {"échec", "18. "}, {"saisi", "19. "},
         {"saisie", "19. "}, {"saisir", "19. "}, {"fiche", "20.1"}, {"utiliser", "21.1"},
         {"écran", "22.1"}, {"montre", "22.1"}, {"bouton", "22.1"}, {"liste", "22.1"}, {"zone", "22.1"}, {"côte", "22.1"},
         {"quand", "22.2"}, {"clique", "22.2"}, {"choisit", "22.2"}, {"change", "22.2"}, {"choisi", "22.2"},

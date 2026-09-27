@@ -952,6 +952,14 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                                                                                 : (c ? "_sans_séparateur" : "sans séparateur"));
         aj(im, c ? "\n" : ".\n");
         return;
+    case P_REFUSER:   /* « Refuser « … ». » ; « _refuser « … » » (§ 18.1) */
+        aj(im, c ? "_refuser " : "Refuser ");
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            if (k) aj(im, c ? " ; " : " puis ");
+            expression(im, n->enfants[k]);
+        }
+        aj(im, c ? "\n" : ".\n");
+        return;
     case P_APPARENCE: {   /* « Les écrans ont la couleur verte et le logo « … ». » ; « _écrans _couleur _verte _logo « … » » */
         static const char *const C[] = { "bleue", "verte", "turquoise", "violette", "grise" };
         aj(im, c ? "_écrans" : "Les écrans ont");

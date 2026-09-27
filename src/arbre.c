@@ -195,6 +195,11 @@ static void decrire(const Noeud *n, Chaine *c) {
     case P_STYLE:
         chaine_ajouter(c, n->entier == 0 ? "(style suisse)" : n->entier == 1 ? "(style française)" : "(style sans)");
         return;
+    case P_REFUSER:   /* (refuser « … ») (§ 18.1) */
+        chaine_ajouter(c, "(refuser");
+        for (size_t i = 0; i < n->nb_enfants; i++) { chaine_ajouter(c, " "); decrire(n->enfants[i], c); }
+        chaine_ajouter(c, ")");
+        return;
     case P_APPARENCE: {   /* (apparence verte « logo.png ») */
         static const char *const C[] = { "bleue", "verte", "turquoise", "violette", "grise" };
         chaine_ajouter(c, "(apparence");

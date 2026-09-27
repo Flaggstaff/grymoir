@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.43, révisée le 26 septembre 2026.
+Version 1.44, révisée le 27 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -175,6 +175,7 @@ Critères de sortie de la v1.0, tous remplis :
 
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
+- intégrité : une contrainte d'entité, vérifiée par le langage à chaque conservation et à chaque modification (« une écriture est valable si ses débits égalent ses crédits »), qui protège même d'un oubli dans le code ; elle demande des sommes sur des objets liés. En attendant, `Refuser` dans l'action qui crée les objets (grammaire, § 18.1) ;
 - objets (grammaire, § 13.8) : appel de la version parente depuis une méthode, listes d'objets ; racine commune `objet` de toutes les classes, puis nombres, textes et dates comme objets (art. 6, « Tout est objet ») ;
 - relations : test d'appartenance en mémoire (`Si baroque est parmi les genres de o`), gagner plusieurs objets en une phrase, champs multiples de textes ou de nombres ; lien facultatif qui devient absent quand son objet est effacé ;
 - corbeille (grammaire, § 16.12) : la vider des objets supprimés depuis longtemps ;
@@ -253,3 +254,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.41 | 2026-09-25 | Art. 12 : A3 fait (écrans, listes, boutons, zones de saisie, événements, fiche, écrans empilés, colonnes, disposition) |
 | 1.42 | 2026-09-26 | Art. 12 : A4 fait (onglet « Écrans », écrans générés, propriétés modifiables, glisser-déposer) ; le plan de l'atelier (A1 à A4) est achevé |
 | 1.43 | 2026-09-26 | Apparence : un seul thème fixé par GrymoiR (polices, espacements, couleurs neutres, clair ou sombre selon le système) ; un programme n'en règle que l'accent, dans une palette fermée de cinq couleurs, et le logo (grammaire, § 22.5 ; `docs/ecrans.md`, § 5) |
+| 1.44 | 2026-09-27 | Art. 12 : `Refuser` est fait (grammaire, § 18.1) ; report : contrainte d'entité vérifiée par le langage |

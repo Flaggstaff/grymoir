@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.46 de la spécification, révisée le 26 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.47 de la spécification, révisée le 27 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1265,6 +1265,23 @@ En cas d'échec :
 - Limite connue : un `Essayer` répété dans une longue boucle sans question garde au journal une entrée par tour et par nom modifié, jusqu'à la fin de l'exécution.
 - En forme compacte : `_essayer` … `_échec` … `_fin`, et `_motif`.
 
+### 18.1 Refuser *(implémenté le 27 septembre 2026)*
+
+```
+Pour comptabiliser une écriture :
+    …
+    Si le total des débits ≠ le total des crédits,
+        refuser « Écriture déséquilibrée : débits » puis le total des débits puis « et crédits » puis le total des crédits.
+    …
+```
+
+- `Refuser` suivi d'un ou plusieurs éléments reliés par `puis` arrête l'exécution par une erreur dont le message est ces éléments, écrits comme `Afficher` les écrirait (§ 4 ; nombres au style du programme, § 4.1) et séparés par une espace. Une valeur absente est l'erreur habituelle (§ 16.9).
+- C'est une erreur comme une autre : elle s'affiche à la position de la phrase, annule tout ce que l'exécution, l'événement (§ 22.3) ou le bloc essayé a fait, objets conservés compris, et `Essayer` la rattrape : son message devient `le motif de l'échec`.
+- Usage : protéger une règle que la base doit respecter (une écriture équilibrée, un stock positif) dans l'action qui crée ou modifie les objets concernés. La transaction garantit que rien n'est écrit si la règle est violée ; la garantie ne vaut que si les objets ne se créent que par cette action (une contrainte vérifiée par le langage lui-même, à chaque conservation, est reportée : charte, art. 12).
+- Permis partout, calculs compris : échouer ne rend pas un calcul impur.
+- `refuser` est un mot de construction (§ 10.7) : il ne commence pas le nom d'une action.
+- En forme compacte : `_refuser « Écriture déséquilibrée : » ; d`.
+
 ## 19. Formulaire *(v1.0)*
 
 ```
@@ -1491,3 +1508,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.44 | 2026-09-26 | § 22.5 : apparence des écrans (`Les écrans ont la couleur … et le logo « … ».`) |
 | 1.45 | 2026-09-26 | § 22.5 : suites attendues des phrases en `Les` (apparence des écrans, style des nombres) |
 | 1.46 | 2026-09-26 | § 12 : un texte vide s'écrit `« »` dans la forme canonique (et non plus `«  »`, deux espaces) |
+| 1.47 | 2026-09-27 | § 18.1 : `Refuser « … » puis x.`, une erreur voulue, rattrapable, annulée par la transaction |

@@ -346,6 +346,11 @@ int main(void) {
     COMP("Les nombres s'affichent sans séparateur.\nAfficher « ab » sur 4 à droite, sans passer à la ligne.",
          "_style _sans_séparateur\n_afficher « ab » _sur 4 _droite _sans_ligne\n");
 
+    /* --- Refuser (§ 18.1) : un élément, plusieurs reliés par « puis », en forme courte --- */
+    FIXE("Refuser « Non. ».\n");
+    FIXE("Le d vaut 3.\nSi d > 2, refuser « Trop : » puis d puis « sur 2 ».\n");
+    COMP("Refuser « Débits : » puis 120 puis « crédits : » puis 100.", "_refuser « Débits : » ; 120 ; « crédits : » ; 100\n");
+
     /* --- Texte vide : « », une seule espace, quelle que soit l'écriture d'origine --- */
     FIXE("Afficher « ».\nLe t vaut « ».\n");
     COMP("Afficher \"\".", "_afficher « »\n");

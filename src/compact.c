@@ -1086,6 +1086,22 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             if (strcmp(st, "sans_séparateur") == 0) { mot(r, "sans", t); mot(r, "séparateur", t); }
             else { mot(r, "à", t); mot(r, "la", t); mot(r, st, &r->e[d + 1]); }
             point(r, f);
+        } else if (!strcmp(c, "refuser")) {   /* _refuser « … » → Refuser « … ». (§ 18.1) */
+            if (d + 1 >= f) { echouer(r, t, grym_dupliquer("« _refuser » attend un message : « _refuser « … » ».")); return; }
+            mot(r, "refuser", t);
+            size_t debut = d + 1;   /* les éléments, séparés par « ; » hors parenthèses, comme pour _afficher */
+            int p = 0;
+            for (size_t k = d + 1; k <= f; k++) {
+                if (k < f) {
+                    if (r->e[k].type == J_PAR_OUV) p++;
+                    else if (r->e[k].type == J_PAR_FERM) p--;
+                    if (!(p == 0 && r->e[k].type == J_POINT_VIRGULE)) continue;
+                }
+                if (debut > d + 1) mot(r, "puis", &r->e[debut - 1]);
+                expression(r, debut, k);
+                debut = k + 1;
+            }
+            point(r, f);
         } else if (!strcmp(c, "écrans")) {   /* _écrans _couleur _verte _logo « … » → Les écrans ont … (§ 22.5) */
             size_t k = d + 1;
             const Jeton *coul = NULL, *logo = NULL;

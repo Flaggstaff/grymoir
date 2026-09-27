@@ -3141,6 +3141,32 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
+        case I_REFUSER: {
+            /* « Refuser « … » puis x. » (grammaire, § 18.1) : une erreur voulue, dont le message s'écrit comme
+             * « Afficher » l'écrirait ; Essayer la rattrape, la transaction annule */
+            size_t n = (size_t)op;
+            Valeur *v = grym_allouer((n ? n : 1) * sizeof *v);
+            for (size_t k = n; k-- > 0;) v[k] = depiler(&pile);
+            char *probleme = NULL;
+            Chaine msg = { 0 };
+            for (size_t k = 0; k < n && !probleme; k++) {
+                if (v[k].type == V_ABSENT) { probleme = message_absent(&v[k]); break; }
+                char *t = texte_valeur(m, &v[k]);
+                if (k) chaine_ajouter(&msg, " ");
+                chaine_ajouter(&msg, t);
+                free(t);
+            }
+            for (size_t k = 0; k < n; k++) valeur_liberer(&v[k]);
+            free(v);
+            if (!probleme) {
+                char *t = chaine_rendre(&msg);
+                probleme = t ? t : grym_dupliquer("");
+            } else {
+                free(chaine_rendre(&msg));
+            }
+            ok = echouer(diag, b, debut, probleme);
+            break;
+        }
         case I_APPARENCE: {
             /* « Les écrans ont la couleur verte et le logo « … ». » (grammaire, § 22.5) : l'interface l'applique ;
              * sans écrans (console, navigateur), rien. Le logo est relu ici : il a pu changer depuis l'analyse. */
