@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.42 de la spécification, révisée le 28 septembre 2026.
+Version 1.43 de la spécification, révisée le 28 septembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -219,6 +219,7 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 
 - `src/base.c` parle à SQLite ; la machine l'ouvre au premier besoin, quand une classe enregistrée est une entité, sur le fichier donné par `machine_base` (celui du programme : `factures.grymd`), ou en mémoire.
 - Schéma : une table `"e <entité>"` par entité, avec ses champs propres et ceux de ses aptitudes, en colonnes `"c <champ>"` (plus `"n <champ>"`, le nom d'origine, pour un fichier ou une image). Sa colonne `id` désigne la ligne de la classe parente, ou de `grym_objet` pour une entité sans parent, avec `ON DELETE CASCADE`. Un objet conservé a donc une ligne dans chaque table de sa lignée.
+- Chaque colonne de lien a son index, `"l <entité>.<champ>"` : relations inverses, sommes et règles (grammaire, § 16.10, § 16.14) y trouvent leurs objets sans parcourir la table ; une base plus ancienne le reçoit à la préparation de l'entité.
 - Types SQL : texte, nombre (forme canonique, exacte), date (ISO 8601) en `TEXT` ; nombre entier en `INTEGER` ; vrai ou faux en `INTEGER` 0 ou 1 ; fichier et image en `BLOB` ; lien en `INTEGER` qui référence la table de l'entité liée. Tous `NOT NULL` ; `, unique` en `UNIQUE`.
 - `grym_objet` distribue les identifiants (`AUTOINCREMENT` : jamais réattribués) et note la classe réelle ; `grym_schema` garde la définition de chaque entité.
 - Format de la base (charte, art. 13) : `PRAGMA user_version`, lu à l'ouverture avant toute écriture. `BASE_FORMAT` (`src/base.h`) vaut 1. Plus grand : la base est refusée, intacte. 0 (base neuve, ou d'avant ce numéro) : elle reçoit ses colonnes manquantes, puis le format courant. Tout changement de la forme des tables communes (`grym_objet`, `grym_schema`) augmente `BASE_FORMAT` et ajoute sa migration.
@@ -374,3 +375,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.40 | 2026-09-28 | Recherche : modes 6 et 7, la somme d'un champ (grammaire, § 16.4) |
 | 1.41 | 2026-09-28 | Condition de recherche : un champ à travers des liens, `[lien␜…␜champ]` (grammaire, § 16.4) |
 | 1.42 | 2026-09-28 | Règles (grammaire, § 16.14) : calculs au nom réservé, appelés avant chaque validation ; instruction 67 `BASE_MODIFIÉE` ; format version 29 |
+| 1.43 | 2026-09-28 | Base : un index par colonne de lien |

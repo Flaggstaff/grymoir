@@ -762,6 +762,31 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
     return ok;
 }
 
+/* Un index par colonne de lien : « les lignes de l'écriture », une somme, une relation inverse ou une règle
+ * (grammaire, § 16.10, § 16.14) y trouvent leurs objets sans parcourir la table. Sans lui, une règle sur une
+ * base de 5'000 écritures coûtait 2,4 s par transaction (mesure du 28 septembre 2026). Aucune donnée ne change ;
+ * une base plus ancienne reçoit ses index au premier lancement. */
+static int indexer_liens(Base *b, const ClasseVM *c, char **erreur) {
+    int ok = 1;
+    for (size_t k = 0; ok && k < c->nb_champs; k++) {
+        if (c->proprietaires[k] != c || multiple(c, k) || !c->types[k] || !est_lien(c->types[k])) continue;
+        Chaine sql = {0};
+        char *nom = grym_formater("%s.%s", c->nom, c->champs[k]);
+        chaine_ajouter(&sql, "CREATE INDEX IF NOT EXISTS ");
+        ajouter_nom(&sql, "l ", nom);
+        chaine_ajouter(&sql, " ON ");
+        ajouter_nom(&sql, "e ", c->nom);
+        chaine_ajouter(&sql, " (");
+        ajouter_nom(&sql, "c ", c->champs[k]);
+        chaine_ajouter(&sql, ");");
+        free(nom);
+        char *texte = chaine_rendre(&sql);
+        ok = executer(b, texte, erreur);
+        free(texte);
+    }
+    return ok;
+}
+
 int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
     if (!c->conserve) return 1;
     char *def = definition(c);
@@ -775,7 +800,7 @@ int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
         int ok = strcmp(ancienne, def) == 0 || migrer(b, c, ancienne, def, erreur);
         free(ancienne);
         free(def);
-        return ok;
+        return ok && indexer_liens(b, c, erreur);
     }
     sqlite3_finalize(st);
 
@@ -826,6 +851,7 @@ int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
     free(texte);
     for (size_t k = 0; ok && k < c->nb_champs; k++)
         if (c->proprietaires[k] == c && multiple(c, k)) ok = creer_liaison(b, c->nom, c->champs[k], c->types[k], erreur);
+    if (ok) ok = indexer_liens(b, c, erreur);
     if (ok) {
         sqlite3_prepare_v2(b->db, "INSERT INTO grym_schema (entite, definition) VALUES (?, ?)", -1, &st, NULL);
         sqlite3_bind_text(st, 1, c->nom, -1, SQLITE_TRANSIENT);

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.52 de la spécification, révisée le 28 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.53 de la spécification, révisée le 28 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1243,7 +1243,7 @@ Chaque ligne conservée vérifie :
 - Le message suit `sinon`, écrit comme celui de `Refuser` (§ 18.1) : des éléments reliés par `puis`.
 - **Quand** : à la fin de chaque transaction, juste avant qu'elle soit validée ; pendant la transaction, les objets peuvent passer par des états intermédiaires faux (une écriture dont la seconde ligne manque encore). Concrètement : à la fin du programme, avant une question (§ 17), un formulaire (§ 19), une fiche ou un `Ouvrir` (§ 22.3), et à la fin de chaque événement d'écran. Un `Essayer` ne la déclenche pas : la règle attend la transaction, pas l'essai.
 - **Si elle est violée** : la transaction échoue avec le message, comme par `Refuser`, et rien n'est écrit. Dans un événement, seul l'événement est annulé, et l'écran reste ouvert avec le message (§ 22.3).
-- Une transaction qui n'a rien écrit dans la base ne revérifie aucune règle. Sinon, chaque règle parcourt tous les objets qu'elle concerne : toujours juste, plus lent sur une grosse base ; le ciblage des seuls objets touchés viendra plus tard.
+- Une transaction qui n'a rien écrit dans la base ne revérifie aucune règle. Sinon, chaque règle parcourt tous les objets qu'elle concerne : toujours juste. Mesure du 28 septembre 2026, la règle d'équilibre ci-dessus, écritures à deux lignes : une transaction coûte 0,02 s sur 1'000 écritures, 0,09 s sur 5'000, 0,34 s sur 20'000, grâce à l'index de chaque colonne de lien (sans lui : 2,4 s sur 5'000). Ne revérifier que les objets touchés est reporté (charte, art. 12).
 - Une règle ajoutée à une base qui la viole déjà ne dit rien avant la première transaction qui écrit : elle échoue alors, et le message désigne l'objet fautif.
 - En forme compacte, une ligne : `_chaque écriture _conservé _dont comptabilisation _présent _vérifie _somme_de débit _de ligne _de écriture = … _sinon « L'écriture » ; écriture.pièce ; « n'est pas équilibrée. »`.
 
@@ -1539,3 +1539,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.50 | 2026-09-28 | § 16.4 : dans `dont`, un champ lu à travers un ou plusieurs liens (`la comptabilisation de l'écriture`) |
 | 1.51 | 2026-09-28 | § 9.4 et § 16.4 : un calcul lit la base, jamais il n'y écrit ; l'état de la base fait partie de son entrée |
 | 1.52 | 2026-09-28 | § 16.14 : règles, `Chaque … conservé [dont …] vérifie : condition, sinon « … ».`, vérifiées à la fin de chaque transaction |
+| 1.53 | 2026-09-28 | § 16.14 : coût mesuré des règles |

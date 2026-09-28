@@ -120,6 +120,22 @@ static void sql_direct(const char *chemin, const char *sql) {
     sqlite3_close(db);
 }
 
+/* Nombre d'index de ce nom dans la base : 1 s'il existe. */
+static long index_existe(const char *chemin, const char *nom) {
+    sqlite3 *db = NULL;
+    long n = -1;
+    if (sqlite3_open_v2(chemin, &db, SQLITE_OPEN_READONLY, NULL) == SQLITE_OK) {
+        sqlite3_stmt *st = NULL;
+        if (sqlite3_prepare_v2(db, "SELECT count(*) FROM sqlite_master WHERE type = 'index' AND name = ?", -1, &st, NULL) == SQLITE_OK) {
+            sqlite3_bind_text(st, 1, nom, -1, SQLITE_TRANSIENT);
+            if (sqlite3_step(st) == SQLITE_ROW) n = (long)sqlite3_column_int64(st, 0);
+        }
+        sqlite3_finalize(st);
+    }
+    sqlite3_close(db);
+    return n;
+}
+
 /* Lance src sur la base chemin ; rend la sortie (à libérer). */
 static char *lancer_sur(const char *chemin, const char *src) {
     Portee *p = portee_creer();
@@ -2727,6 +2743,24 @@ int main(void) {
     PROG("Un point a : un x.\nLe p vaut un nouveau point.\nPour f :\n    Saisir à nouveau p.\nF.", "~Seul un objet d'une entité se saisit.");
     PROG(FC "Le carré d'un n :\n    Saisir à nouveau b.\n    Rendre n.", "~Un calcul ne pose pas de question");
     PROG("Pour saisir un x :\n    Afficher 1.", "~« saisir » commence une construction du langage");
+
+    /* --- Un index par colonne de lien (§ 16.10, § 16.14) : base neuve, et base d'avant les index --- */
+    {
+        const char *B = "_essai_index.grymd";
+        const char *prog = "Une écriture, conservée, a : une pièce (texte).\nUne ligne, conservée, a : une écriture (écriture).\n"
+                           "Afficher le nombre de lignes conservées.";
+        remove(B);
+        char *r = lancer_sur(B, prog);
+        total++;
+        if (strcmp(r, "0") != 0 || index_existe(B, "l ligne.écriture") != 1) signaler(__LINE__, "index, base neuve", "0, index", r);
+        free(r);
+        sql_direct(B, "DROP INDEX \"l ligne.écriture\";");   /* une base créée avant les index */
+        r = lancer_sur(B, prog);
+        total++;
+        if (strcmp(r, "0") != 0 || index_existe(B, "l ligne.écriture") != 1) signaler(__LINE__, "index, base ancienne", "0, index", r);
+        free(r);
+        remove(B);
+    }
 
     /* --- Format des bases (charte, art. 13) --- */
     {
