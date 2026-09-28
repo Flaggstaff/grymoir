@@ -57,10 +57,6 @@ Pour chaque membre conservé :
             Le montant vaut le tarif de la catégorie du membre.
         Conserver la cotisation.
 
-Le payeur vaut le membre conservé dont le numéro est 1.
-Pour chaque cotisation du payeur dont l'année = exercice et la date de paiement est absente :
-    La date de paiement de la cotisation devient 20.02.2026.
-
 Un compte, conservé, a :
     un numéro (nombre entier), unique,
     un intitulé (texte).

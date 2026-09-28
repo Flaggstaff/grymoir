@@ -441,6 +441,325 @@ Comptes de produits : 2
 
 Programme complet : `docs/guide/chapitre-06.grym`.
 
+## 7. Les écritures composées
+
+### Repartir d'une base vide
+
+Au chapitre 5, on a marqué la cotisation d'Anne payée en changeant directement sa date de paiement. La comptabilité, elle, n'a rien reçu : aucune écriture ne dit que 80 francs sont entrés en caisse. À partir d'ici, un paiement passera toujours par une écriture. Pour que tes comptes partent justes, **efface `association.grymd`** (le fichier de données, à côté de ton programme) : au prochain lancement, les gardes recréeront membres, catégories, cotisations et comptes, sans ce paiement fantôme.
+
+### Une écriture et ses lignes
+
+En partie double, chaque mouvement se lit deux fois : ce qui entre quelque part sort d'ailleurs. Une écriture regroupe des lignes ; chaque ligne porte un compte et un montant au débit ou au crédit, et le total des débits doit égaler le total des crédits.
+
+```grymoir
+Une écriture, conservée, a :
+    une date (date),
+    une pièce (texte), unique,
+    un libellé (texte),
+    une comptabilisation (date), facultative.
+
+Une ligne, conservée, a :
+    une écriture (écriture), et disparaît avec elle,
+    un compte (compte),
+    un débit (nombre),
+    un crédit (nombre).
+```
+
+Une écriture en cours de saisie est forcément déséquilibrée tant que sa dernière ligne manque. On distingue donc deux états : tant que sa date de comptabilisation est absente, l'écriture est un **brouillon**, on y ajoute des lignes librement et elle ne compte nulle part ; une fois comptabilisée, elle entre dans les comptes et ne change plus.
+
+### Imputer, comptabiliser
+
+```grymoir
+Pour imputer une écriture et une référence et un débit et un crédit :
+    Si la comptabilisation de l'écriture est présente :
+        Refuser « L'écriture » puis la pièce de l'écriture puis « est comptabilisée : elle ne change plus. ».
+    La nouvelle vaut une nouvelle ligne :
+        L'écriture vaut écriture.
+        Le compte vaut le compte conservé dont le numéro est référence.
+        Le débit vaut débit.
+        Le crédit vaut crédit.
+    Conserver la nouvelle.
+```
+
+Le paramètre s'appelle `référence`, pas `numéro` : dans `dont le numéro est numéro`, les deux `numéro` désigneraient le champ du compte examiné, et GrymoiR te le dirait, comme au chapitre 5.
+
+```grymoir
+Pour comptabiliser une écriture et une date :
+    Le total des débits vaut 0.
+    Le total des crédits vaut 0.
+    Pour chaque ligne de l'écriture :
+        Le total des débits devient le total des débits + le débit de la ligne.
+        Le total des crédits devient le total des crédits + le crédit de la ligne.
+    Si le total des débits ≠ le total des crédits :
+        Refuser « Écriture » puis la pièce de l'écriture puis « déséquilibrée : débits » puis le total des débits puis « et crédits » puis le total des crédits.
+    La comptabilisation de l'écriture devient date.
+```
+
+`Refuser` arrête tout, avec ce message : l'erreur annule ce que l'action, et le programme qui l'a appelée, ont écrit. Une écriture déséquilibrée ne peut donc jamais être comptabilisée. Grammaire, § 18.1. Pourquoi `le total des débits`, et pas `les débits` ? Une phrase qui commence par `Les` est réservée aux champs multiples (§ 16.13) : un nom se crée au singulier.
+
+### Une vraie écriture composée
+
+La fortune de l'association, au 1er janvier, est répartie entre la caisse et la banque : une écriture à trois lignes.
+
+```grymoir
+    L'ouverture vaut une nouvelle écriture :
+        La date vaut 01.01.2026.
+        La pièce vaut « P-001 ».
+        Le libellé vaut « Fortune au 1er janvier ».
+    Conserver l'ouverture.
+    Imputer l'ouverture et 1000 et 300,00 et 0,00.
+    Imputer l'ouverture et 1020 et 2200,00 et 0,00.
+    Imputer l'ouverture et 2800 et 0,00 et 2500,00.
+    Comptabiliser l'ouverture et 01.01.2026.
+```
+
+Le traiteur de la fête de printemps, 450 francs, est payé 200 francs en espèces et 250 par banque : une charge au débit, deux sorties au crédit. Tout est dans le programme complet.
+
+### Ce que la base refuse
+
+Une écriture boiteuse, dans un `Essayer`, pour voir ce qui se passe :
+
+```grymoir
+Essayer :
+    La boiteuse vaut une nouvelle écriture :
+        La date vaut 20.04.2026.
+        La pièce vaut « P-003 ».
+        Le libellé vaut « Loyer d'avril ».
+    Conserver la boiteuse.
+    Imputer la boiteuse et 4500 et 300,00 et 0,00.
+    Imputer la boiteuse et 1020 et 0,00 et 30,00.
+    Comptabiliser la boiteuse et 20.04.2026.
+En cas d'échec :
+    Afficher « Refusé : » puis le motif de l'échec.
+Afficher « Écritures : » puis le nombre d'écritures conservées.
+```
+
+```sortie
+Refusé : Écriture P-003 déséquilibrée : débits 300,00 et crédits 30,00
+Écritures : 2
+```
+
+Regarde le compte : `2`. L'écriture P-003 avait pourtant été conservée, avec ses deux lignes, avant le refus. Le refus a tout annulé, comme si l'essai n'avait jamais eu lieu : c'est la transaction (charte, art. 7), et c'est elle qui protège ta comptabilité.
+
+Et une écriture comptabilisée ne change plus :
+
+```sortie
+Refusé : L'écriture P-002 est comptabilisée : elle ne change plus.
+```
+
+Une limite, pour être honnête : cette protection tient parce que les lignes ne se créent que par `Imputer`. Un programme qui écrirait `Le débit de la ligne devient 1000.` ailleurs la contournerait. Une règle vérifiée par le langage lui-même, à chaque conservation, est prévue (charte, art. 12) ; en attendant, la discipline, c'est toi.
+
+### Le journal
+
+```grymoir
+Afficher « Journal ».
+Pour chaque écriture conservée dont la comptabilisation est présente, par date :
+    Afficher la date de l'écriture puis la pièce de l'écriture puis le libellé de l'écriture.
+    Pour chaque ligne de l'écriture :
+        Afficher numéro du compte de la ligne sur 10 à droite puis débit de la ligne sur 10 à droite puis crédit de la ligne sur 10 à droite.
+```
+
+```sortie
+Journal
+01.01.2026 P-001 Fortune au 1er janvier
+      1000     300,00       0,00
+      1020   2'200,00       0,00
+      2800       0,00   2'500,00
+12.04.2026 P-002 Fête de printemps : traiteur
+      4000     450,00       0,00
+      1000       0,00     200,00
+      1020       0,00     250,00
+```
+
+Programme complet : `docs/guide/chapitre-07.grym`.
+
+## 8. Encaisser une cotisation
+
+Encaisser une cotisation, c'est trois choses à la fois : passer l'écriture (la caisse ou la banque au débit, le compte des cotisations au crédit), la comptabiliser, et noter la date de paiement. Tout ou rien :
+
+```grymoir
+Pour encaisser une cotisation et une référence et une date :
+    Si la date de paiement de la cotisation est présente :
+        Refuser « La cotisation de » puis le nom du membre de la cotisation puis « est déjà payée. ».
+    L'encaissement vaut une nouvelle écriture :
+        La date vaut date.
+        La pièce vaut « C- » suivi de l'année de la cotisation suivi de « - » suivi du numéro du membre de la cotisation.
+        Le libellé vaut « Cotisation » suivi de " " suivi du nom du membre de la cotisation.
+    Conserver l'encaissement.
+    Imputer l'encaissement et référence et le montant de la cotisation et 0,00.
+    Imputer l'encaissement et 3000 et 0,00 et le montant de la cotisation.
+    Comptabiliser l'encaissement et date.
+    La date de paiement de la cotisation devient date.
+```
+
+`suivi de` colle des textes et des nombres en un seul texte : `C-2026-1`. Contrairement à `puis`, il n'ajoute pas d'espace ; et les guillemets `« »` rognent les espaces qu'ils contiennent. Pour une espace, on écrit donc `" "`, entre guillemets droits, qui la gardent. Grammaire, § 1.5 et § 4.4.
+
+Une action peut en appeler une autre : `Encaisser` utilise `Imputer` et `Comptabiliser`. Si l'une d'elles refuse, tout l'encaissement est annulé, date de paiement comprise.
+
+```grymoir
+Le payeur vaut le membre conservé dont le numéro est 1.
+Pour chaque cotisation du payeur dont l'année = exercice et la date de paiement est absente :
+    Encaisser la cotisation et 1000 et 20.02.2026.
+```
+
+Encaisser deux fois la même cotisation est refusé :
+
+```sortie
+Refusé : La cotisation de Rochat est déjà payée.
+C-2026-1 20.02.2026 Cotisation Rochat
+C-2026-2 03.03.2026 Cotisation Bapst
+Impayées : 1
+```
+
+Programme complet : `docs/guide/chapitre-08.grym`.
+
+## 9. Soldes et balance
+
+### Encore quelques mouvements
+
+Pour les écritures à deux comptes, une petite action suffit :
+
+```grymoir
+Noter « P-003 » et 20.04.2026 et « Loyer d'avril » et 4500 et 1020 et 300,00.
+Noter « P-004 » et 05.05.2026 et « Don de la boulangerie » et 1020 et 3200 et 150,00.
+Noter « P-005 » et 30.06.2026 et « Frais de tenue de compte » et 4800 et 1020 et 12,00.
+```
+
+L'action `Noter` crée l'écriture, impute ses deux lignes et la comptabilise, mais seulement si la pièce n'existe pas encore : relancer le programme ne double rien.
+
+### Le solde d'un compte
+
+Le solde se calcule à partir des lignes comptabilisées du compte. C'est un calcul, au sens courant ; mais en GrymoiR, un calcul ne lit pas la base : son résultat changerait d'un lancement à l'autre (§ 16.4). On écrit donc une action, qui range ses résultats dans des noms du programme :
+
+```grymoir
+Le mouvement débiteur vaut 0,00.
+Le mouvement créditeur vaut 0,00.
+Le solde vaut 0,00.
+
+Pour totaliser un compte :
+    Le mouvement débiteur devient 0,00.
+    Le mouvement créditeur devient 0,00.
+    Pour chaque ligne du compte :
+        Si la comptabilisation de l'écriture de la ligne est présente :
+            Le mouvement débiteur devient le mouvement débiteur + le débit de la ligne.
+            Le mouvement créditeur devient le mouvement créditeur + le crédit de la ligne.
+    Selon la nature du numéro du compte :
+        Cas « actif » ou « charge » :
+            Le solde devient le mouvement débiteur − le mouvement créditeur.
+        Autrement :
+            Le solde devient le mouvement créditeur − le mouvement débiteur.
+```
+
+C'est l'accumulation dans une boucle du chapitre 3. Le solde d'un actif ou d'une charge se lit au débit, celui d'un passif ou d'un produit au crédit : `Selon` et la nature calculée au chapitre 6 font le tri.
+
+### La balance
+
+```grymoir
+Pour chaque compte conservé, par numéro :
+    Totaliser le compte.
+    Si le mouvement débiteur + le mouvement créditeur > 0 :
+        Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le mouvement débiteur sur 10 à droite puis le mouvement créditeur sur 10 à droite puis le solde sur 10 à droite.
+        Le total débit devient le total débit + le mouvement débiteur.
+        Le total crédit devient le total crédit + le mouvement créditeur.
+```
+
+```sortie
+Balance au 30.06.2026
+Compte                                 Débit     Crédit      Solde
+1000 Caisse                           380,00     200,00     180,00
+1020 Banque                         2'430,00     562,00   1'868,00
+2800 Fortune de l'association           0,00   2'500,00   2'500,00
+3000 Cotisations                        0,00     160,00     160,00
+3200 Dons                               0,00     150,00     150,00
+4000 Frais des manifestations         450,00       0,00     450,00
+4500 Loyer du local                   300,00       0,00     300,00
+4800 Frais bancaires                   12,00       0,00      12,00
+Totaux                              3'572,00   3'572,00
+La balance est équilibrée.
+```
+
+Les totaux sont égaux, et ils le seront toujours : chaque écriture comptabilisée est équilibrée, donc leur somme aussi. Une balance qui ne tombe pas juste révélerait une ligne entrée par un autre chemin qu'`Imputer`.
+
+L'en-tête s'écrit `« Compte » sur 33` : `puis` ajoute une espace entre deux éléments, et le numéro (4), l'espace et l'intitulé (28) occupent 33 caractères.
+
+Programme complet : `docs/guide/chapitre-09.grym`.
+
+## 10. Clôturer l'exercice
+
+### Le compte de résultat
+
+Une action présente les comptes d'une nature et laisse leur somme dans `le cumul` :
+
+```grymoir
+Pour présenter une rubrique :
+    Le cumul devient 0,00.
+    Pour chaque compte conservé, par numéro :
+        Si la nature du numéro du compte = rubrique :
+            Totaliser le compte.
+            Si le solde ≠ 0 :
+                Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le solde sur 10 à droite.
+                Le cumul devient le cumul + le solde.
+```
+
+Le paramètre s'appelle `rubrique` : `nature` est déjà le nom d'un calcul, et un nom de formule ne sert qu'à une chose.
+
+```grymoir
+Présenter « produit ».
+Le total des produits vaut le cumul.
+Afficher « Charges ».
+Présenter « charge ».
+Le total des charges vaut le cumul.
+Le résultat vaut le total des produits − le total des charges.
+Si le résultat ≥ 0, afficher « Bénéfice » sur 33 puis le résultat sur 10 à droite.
+Sinon, afficher « Perte » sur 33 puis −le résultat sur 10 à droite.
+```
+
+```sortie
+Compte de résultat au 30.06.2026
+Produits
+3000 Cotisations                      160,00
+3200 Dons                             150,00
+Charges
+4000 Frais des manifestations         450,00
+4500 Loyer du local                   300,00
+4800 Frais bancaires                   12,00
+Perte                                 452,00
+```
+
+La fête a coûté plus que les cotisations et le don n'ont rapporté : l'exercice perd 452 francs.
+
+### Le bilan
+
+```grymoir
+Afficher « Bilan au 30.06.2026 ».
+Afficher « Actifs ».
+Présenter « actif ».
+L'actif vaut le cumul.
+Afficher « Passifs ».
+Présenter « passif ».
+Afficher « Résultat de l'exercice » sur 33 puis le résultat sur 10 à droite.
+Le passif vaut le cumul + le résultat.
+```
+
+```sortie
+Bilan au 30.06.2026
+Actifs
+1000 Caisse                           180,00
+1020 Banque                         1'868,00
+Passifs
+2800 Fortune de l'association       2'500,00
+Résultat de l'exercice               −452,00
+Actif                               2'048,00
+Passif et résultat                  2'048,00
+Le bilan est équilibré.
+```
+
+Ce que l'association possède (2'048 francs en caisse et en banque) égale sa fortune du début d'année, diminuée de la perte. Si ce n'était pas le cas, une écriture serait fausse quelque part : c'est tout l'intérêt de la partie double.
+
+En général, l'assemblée générale approuve ensuite les comptes, et une dernière écriture reporte le résultat sur la fortune. Tu as maintenant tout ce qu'il faut pour l'écrire.
+
+Programme complet : `docs/guide/chapitre-10.grym`.
+
 ---
 
-Les chapitres 7 à 12 (les écritures, les soldes, la clôture, les écrans) sont en cours d'écriture.
+Les chapitres 11 et 12 (les écrans, puis les finitions) sont en cours d'écriture.
