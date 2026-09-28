@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.47, révisée le 28 septembre 2026.
+Version 1.48, révisée le 28 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -258,3 +258,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.45 | 2026-09-27 | Affichage des nombres : un entier de quatre chiffres ou moins ne se groupe pas (grammaire, § 4.1), comme une année ou un numéro en français |
 | 1.46 | 2026-09-28 | Art. 12 : la somme d'un champ sur la base est faite (grammaire, § 16.4) : premier pas vers la contrainte d'entité reportée |
 | 1.47 | 2026-09-28 | Art. 12 : les conditions `dont` à travers les liens sont faites (grammaire, § 16.4) |
+| 1.48 | 2026-09-28 | Un calcul lit la base, sans jamais y écrire (grammaire, § 9.4) : le solde d'un compte devient un calcul |

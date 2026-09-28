@@ -2313,7 +2313,13 @@ int main(void) {
     PROG(PUPITRES "Afficher la somme des prix des pupitres conservés dont l'instrument = « contrebasse ».", "0");
     PROG(PUPITRES "Si la somme des prix des pupitres conservés > 1000, afficher « cher ».", "cher");
     PROG(PUPITRES "Afficher la somme des instruments des pupitres conservés.", "~« instrument » est un champ texte : seul un nombre s'additionne.");
-    PROG(PUPITRES "Le total d'un n vaut la somme des prix des pupitres conservés.", "~Un calcul ne lit pas la base");
+    /* un calcul lit la base (§ 9.4) : recherche, somme, nombre, boucle ; jamais il n'y écrit */
+    PROG(PUPITRES "Le total d'un n vaut la somme des prix des pupitres conservés + n.\nAfficher le total de 1.", "1'236,00");
+    PROG(PUPITRES "Le prix total d'une partition vaut la somme des prix des pupitres de partition.\nAfficher le prix total de p.", "1'235,00");
+    PROG(PUPITRES "Le compte d'un n :\n    Le r vaut 0.\n    Pour chaque pupitre conservé dont le nombre de parties > n, le r devient r + 1.\n    Rendre r.\n"
+                  "Afficher le compte de 5.", "2");
+    PROG(PUPITRES "Le premier d'un n vaut la partition conservée dont la cote est « A-1 ».\nAfficher cote du premier de 0.", "A-1");
+    PROG(PUPITRES "Le f d'un x :\n    Supprimer x.\n    Rendre 1.", "~Un calcul ne");
     PROG(PUPITRES "La somme des prix vaut 3.\nAfficher la somme des prix.", "3");   /* un nom ordinaire reste un nom */
 #undef PUPITRES
 

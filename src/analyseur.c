@@ -1639,10 +1639,7 @@ static Classe *multiple_de(Analyse *a, size_t k, int pluriel, size_t *de, const 
  * objet non NULL pour une relation inverse (§ 16.10), rangé en dernier enfant, op = 'I'. */
 static Noeud *chercher(Analyse *a, const Jeton *t, const Classe *e, int mode, size_t apres, Noeud *objet) {
     int corbeille = !objet && a->corbeille;
-    if (a->formule == 1) {
-        noeud_liberer(objet);
-        return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
-    }
+    /* un calcul peut lire la base, jamais y écrire (§ 9.4, décidé le 28 septembre 2026) */
     if (!objet) a->i = apres;
     a->article_force = ART_AUCUN;
     Noeud *cond;
@@ -1701,10 +1698,6 @@ static Noeud *somme(Analyse *a, const Jeton *t) {
     if (e) {
         n = chercher(a, t, e, 2, apres, NULL);
     } else if ((e = entite_de(a, f + 1, 1, &de)) != NULL) {
-        if (a->formule == 1) {
-            free(champ);
-            return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
-        }
         Noeud *objet = objet_de(a, e, de);
         if (objet) n = chercher(a, t, e, 2, 0, objet);
     } else {
@@ -1852,8 +1845,6 @@ static Noeud *base(Analyse *a) {
             size_t de2;
             Classe *ent = entite_de(a, a->i + 3, 1, &de2);
             if (!ent || (ent == e && de2 == de)) {
-                if (a->formule == 1)
-                    return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
                 char *garde = grym_dupliquer(champ);
                 Noeud *objet = objet_de(a, NULL, de);
                 if (!objet) { free(garde); return NULL; }
@@ -1865,8 +1856,6 @@ static Noeud *base(Analyse *a) {
         if (a->echec) return NULL;
         if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2))
             && (e = entite_de(a, a->i + 3, 1, &de)) != NULL) {   /* « le nombre d'œuvres de bach » (§ 16.10) */
-            if (a->formule == 1)
-                return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
             Noeud *objet = objet_de(a, e, de);
             if (!objet) return NULL;
             return chercher(a, t, e, 2, 0, objet);
@@ -3465,8 +3454,6 @@ static Noeud *repeter(Analyse *a, int colonne) {
 static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, const Classe *e, size_t apres, size_t de,
                                    const char *multiple, const char *singulier) {
     int corbeille = !de && a->corbeille;
-    if (a->formule == 1)
-        return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
     const Jeton *tnom = cour(a);
     char *nom = grym_dupliquer(multiple ? singulier : e->nom);
     if (visible(a, nom) && multiple) {
