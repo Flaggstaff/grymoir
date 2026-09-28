@@ -280,7 +280,8 @@ static void essais_utiliser(void) {
         "_u_c.grym", "_u_x.grym", "_u_y.grym", "_u_d.grym", "_u_self.grym", "_u_absent.grym", "_u_ext.grym",
         "_u_deux.grym", "_u_deux.grymc", "_u_e.grym", "_u_dup.grym", "_u_div.grym", "_u_h.grym",
         "_u_haut.grym", "_u_gauche.grym", "_u_droite.grym", "_u_bas.grym", "_u_compact.grymc", "_u_k.grym",
-        "tests/_u_commun.grym", "tests/_u_fiches.grym", "_u_sous.grym", "_u_prog.grymc", "_u_texte.grym"
+        "tests/_u_commun.grym", "tests/_u_fiches.grym", "_u_sous.grym", "_u_prog.grymc", "_u_texte.grym",
+        "_u_gdon.grym", "_u_gprog.grym"
     };
     ecrire_source("_u_donnees.grym", "Remarque : les données.\nUn compositeur, conservé, a :\n    un nom (texte), unique.\n"
                                      "Le carré d'un nombre vaut nombre × nombre.\n");
@@ -288,6 +289,29 @@ static void essais_utiliser(void) {
     ecrire_source("_u_prog.grym", "Remarque : le programme.\nUtiliser « _u_donnees ».\nAfficher le carré de 7.\n"
                                   "Le c vaut un nouveau compositeur :\n    Le nom vaut « Bach ».\nAfficher nom du c.\n");
     FICHIER("_u_prog.grym", "49\nBach");
+    /* formater un fichier qui en utilise un autre garde les genres qui y sont déclarés (§ 12, § 21) */
+    {
+        ecrire_source("_u_gdon.grym", "Une facture, conservée, a :\n    une échéance (date), facultative.\n"
+                                      "La remise d'un montant vaut montant ÷ 10.\n");
+        const char *src = "Utiliser « _u_gdon ».\n\nLa f vaut une nouvelle facture.\n"
+                          "Si l'échéance de la f est absente, afficher la remise de 50.\n";
+        ecrire_source("_u_gprog.grym", src);
+        Portee *pt = portee_creer();
+        portee_fichier(pt, "_u_gprog.grym");
+        Programme pg;
+        Diagnostic dg;
+        total++;
+        if (!analyser(src, strlen(src), pt, 0, &pg, &dg)) {
+            signaler(__LINE__, src, "(analyse)", dg.message);
+            diagnostic_liberer(&dg);
+        } else {
+            char *canon = imprimer_litteraire(&pg);
+            if (strcmp(canon, src) != 0) signaler(__LINE__, src, src, canon);
+            free(canon);
+            programme_liberer(&pg);
+        }
+        portee_detruire(pt);
+    }
     /* en tête du fichier seulement */
     ecrire_source("_u_tard.grym", "Afficher 1.\nUtiliser « _u_donnees ».\n");
     FICHIER("_u_tard.grym", "ERREUR 2:1 « Utiliser » se place en tête du fichier, avant toute autre phrase.");

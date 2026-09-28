@@ -1359,10 +1359,17 @@ static void bloc(Impression *im, const Noeud *b, int niveau) {
     im->nb = sauve;
 }
 
+static void apprendre(Impression *im, Noeud *const *phrases, size_t nb, const Noeud *sauf);
+
 static char *imprimer(const Programme *p, int compact) {
     Impression im;
     memset(&im, 0, sizeof im);
     im.compact = compact;
+    /* Les fichiers utilisés (§ 21) : leurs déclarations ne s'impriment pas, mais leurs genres et leurs aptitudes
+     * valent ici (« une nouvelle catégorie », « est présente ») ; sinon, formater un fichier les écrirait au masculin. */
+    for (size_t k = 0; k < p->nb; k++)
+        if (p->phrases[k]->type == P_UTILISER) apprendre(&im, p->phrases[k]->enfants, p->phrases[k]->nb_enfants, NULL);
+    if (im.c.d) { im.c.n = 0; im.c.d[0] = '\0'; }
     for (size_t k = 0; k < p->nb; k++) {
         if (k > 0 && p->phrases[k]->ligne > p->phrases[k - 1]->ligne_fin + 1) aj(&im, "\n");
         phrase(&im, p->phrases[k], 0);
@@ -1382,7 +1389,7 @@ static void apprendre(Impression *im, Noeud *const *phrases, size_t nb, const No
         const Noeud *ph = phrases[k];
         if (ph == sauf) continue;
         if (ph->type == P_UTILISER) apprendre(im, ph->enfants, ph->nb_enfants, sauf);
-        else if (ph->type == P_CLASSE || ph->type == P_APTITUDE) phrase(im, ph, 0);
+        else if (ph->type == P_CLASSE || ph->type == P_APTITUDE || ph->type == P_CALCUL) phrase(im, ph, 0);
     }
 }
 
