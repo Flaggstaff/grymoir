@@ -184,6 +184,263 @@ Retiens cette forme : c'est ainsi qu'on fera les soldes des comptes au chapitre 
 
 Programme complet : `docs/guide/chapitre-03.grym`.
 
+## 4. Les membres
+
+### Une entité
+
+Jusqu'ici, tout disparaissait à la fin du programme. Une association veut garder ses membres d'un lancement à l'autre : on déclare une entité, une classe dont les objets se conservent.
+
+```grymoir
+Un membre, conservé, a :
+    un numéro (nombre entier), unique,
+    un nom (texte),
+    un prénom (texte),
+    une date d'entrée (date).
+```
+
+`, conservé,` fait du membre une entité. Chaque champ déclare son type entre parenthèses : `(texte)`, `(nombre)`, `(nombre entier)`, `(date)`, `(vrai ou faux)`… GrymoiR vérifie qu'aucune valeur du mauvais type n'entre jamais dans la base. `, unique` interdit que deux membres aient le même numéro. Grammaire, § 16.1 et § 16.2.
+
+Tu n'écris jamais de SQL : GrymoiR range les membres dans un fichier à côté de ton programme, `association.grymd`, qu'il crée au premier besoin. Grammaire, § 16.5.
+
+### Créer et conserver
+
+```grymoir
+Pour inscrire un numéro et un nom et un prénom et une entrée :
+    Le nouveau vaut un nouveau membre :
+        Le numéro vaut numéro.
+        Le nom vaut nom.
+        Le prénom vaut prénom.
+        La date d'entrée vaut entrée.
+    Conserver le nouveau.
+```
+
+`un nouveau membre :` crée un objet et remplit ses champs dans le bloc qui suit. Tant qu'il n'est pas conservé, il ne vit qu'en mémoire ; `Conserver` le range dans la base. Une date s'écrit `jour.mois.année`, l'année sur quatre chiffres : `15.03.2019`.
+
+Si tu lances le programme deux fois, tu ne veux pas deux fois les mêmes membres. D'où cette garde :
+
+```grymoir
+Si le nombre de membres conservés est nul :
+    Inscrire 1 et « Rochat » et « Anne » et 15.03.2019.
+    Inscrire 2 et « Bapst » et « Louis » et 02.09.2021.
+    Inscrire 3 et « Dupasquier » et « Élodie » et 10.01.2024.
+```
+
+`le nombre de membres conservés` compte ; le pluriel se déduit tout seul. Sans la garde, le second lancement échouerait d'ailleurs : le numéro 1 existe déjà, et `unique` l'interdit. Rien ne serait écrit : un lancement qui échoue n'écrit rien du tout, ni dans la base ni ailleurs (charte, art. 7).
+
+### Retrouver
+
+```grymoir
+Afficher « Membres : » puis le nombre de membres conservés.
+Pour chaque membre conservé, par nom :
+    Afficher le numéro du membre puis le prénom du membre puis le nom du membre.
+```
+
+```sortie
+Membres : 3
+2 Louis Bapst
+3 Élodie Dupasquier
+1 Anne Rochat
+```
+
+`Pour chaque membre conservé` parcourt la base ; dans le bloc, `le membre` désigne celui du tour. `, par nom` trie, comme un dictionnaire, sans tenir compte des accents ni des majuscules. Un champ se lit comme en français : `le prénom du membre`.
+
+Pour un seul membre, `dont` pose une condition :
+
+```grymoir
+Le trésorier vaut le membre conservé dont le numéro est 2.
+Afficher « Trésorier : » puis le prénom du trésorier puis le nom du trésorier.
+```
+
+```sortie
+Trésorier : Louis Bapst
+```
+
+`le membre conservé dont …` exige un et un seul résultat ; aucun, ou plusieurs, est une erreur qui dit combien. Les conditions `dont` se combinent avec le tri :
+
+```grymoir
+Pour chaque membre conservé dont la date d'entrée < 01.01.2022, par date d'entrée :
+    Afficher le nom du membre puis « est membre depuis le » puis la date d'entrée du membre.
+```
+
+```sortie
+Rochat est membre depuis le 15.03.2019
+Bapst est membre depuis le 02.09.2021
+```
+
+Grammaire, § 16.3 et § 16.4.
+
+Programme complet : `docs/guide/chapitre-04.grym`.
+
+## 5. Catégories et cotisations
+
+### Une entité liée à une autre
+
+Chaque membre appartient à une catégorie, qui fixe son tarif :
+
+```grymoir
+Une catégorie, conservée, a :
+    un nom (texte), unique,
+    un tarif (nombre).
+```
+
+Le membre reçoit un lien vers sa catégorie : un champ dont le type est le nom d'une entité.
+
+```grymoir
+    une date d'entrée (date),
+    une catégorie (catégorie), facultative.
+```
+
+### Changer une entité qui a déjà des objets
+
+Ta base contient déjà trois membres, sans catégorie. GrymoiR modifie la base tout seul au lancement suivant (une migration), mais il ne détruit ni n'invente jamais une donnée en silence. Un lien obligatoire tout neuf n'aurait pas de valeur pour les trois membres existants : il serait refusé. Déclaré `, facultative`, il est accepté, et les membres existants le reçoivent absent. Grammaire, § 16.7.
+
+Un champ absent se teste avec `est absent` ou `est présent`. On donne leur catégorie aux membres qui n'en ont pas :
+
+```grymoir
+Pour chaque membre conservé dont la catégorie est absente :
+    La catégorie du membre devient la catégorie conservée dont le nom est « Actif ».
+```
+
+Modifier le champ d'un objet conservé modifie la base aussitôt : pas besoin de le conserver à nouveau. Grammaire, § 16.9.
+
+### Les cotisations
+
+```grymoir
+Une cotisation, conservée, a :
+    un membre (membre), et disparaît avec lui,
+    une année (nombre entier),
+    un montant (nombre),
+    une date de paiement (date), facultative.
+```
+
+`, et disparaît avec lui` : si un membre est supprimé, ses cotisations le suivent (dans la corbeille, puis, s'il est supprimé définitivement, hors de la base). Grammaire, § 16.12.
+
+Une cotisation par membre et par exercice, créée une seule fois :
+
+```grymoir
+L'exercice vaut 2026.
+Pour chaque membre conservé :
+    Si le nombre de cotisations du membre dont l'année = exercice est nul :
+        La cotisation vaut une nouvelle cotisation :
+            Le membre vaut membre.
+            L'année vaut exercice.
+            Le montant vaut le tarif de la catégorie du membre.
+        Conserver la cotisation.
+```
+
+`les cotisations du membre` : les cotisations dont le lien désigne ce membre. Rien n'est à déclarer, GrymoiR déduit l'inverse du lien. Grammaire, § 16.10. Les compléments s'enchaînent de droite à gauche : `le tarif de la catégorie du membre`.
+
+Pourquoi `exercice` et pas `année` ? Essaie `L'année vaut 2026.` : GrymoiR refuse, parce que dans une condition `dont`, `année` désigne le champ de la cotisation examinée, pas ta variable. Son message te demande de renommer la variable ; c'est le bon réflexe.
+
+### Encaisser, lister les impayés
+
+```grymoir
+Le payeur vaut le membre conservé dont le numéro est 1.
+Pour chaque cotisation du payeur dont l'année = exercice et la date de paiement est absente :
+    La date de paiement de la cotisation devient 20.02.2026.
+```
+
+```grymoir
+Afficher « Cotisations » puis exercice puis « impayées : ».
+Pour chaque cotisation conservée dont l'année = exercice et la date de paiement est absente, par montant :
+    Afficher le prénom du membre de la cotisation puis le nom du membre de la cotisation puis le montant de la cotisation.
+Afficher « Cotisations payées : » puis le nombre de cotisations conservées dont la date de paiement est présente.
+```
+
+```sortie
+Cotisations 2026 impayées :
+Élodie Dupasquier 40,00
+Louis Bapst 80,00
+Cotisations payées : 1
+```
+
+Une année s'affiche `2026`, sans séparateur : un entier de quatre chiffres ne se groupe pas, comme en français, où l'on écrit « en 2026 » et non « en 2 026 ». Un montant, lui, se groupe : `1'234,50`. Grammaire, § 4.1.
+
+Au chapitre 8, encaisser une cotisation passera aussi l'écriture comptable ; il nous faut d'abord des comptes.
+
+Programme complet : `docs/guide/chapitre-05.grym`.
+
+## 6. Le plan comptable
+
+### Un fichier qui grandit
+
+À partir d'ici, ton fichier `association.grym` garde tout ce qui fait l'application : les entités, les actions, les gardes qui créent les données de départ. Les affichages d'essai des chapitres précédents peuvent partir ; chaque chapitre ajoute les siens. C'est exactement le contenu de `docs/guide/chapitre-06.grym`.
+
+### Les comptes
+
+Une comptabilité en partie double range chaque mouvement dans des comptes. Un compte a un numéro et un intitulé :
+
+```grymoir
+Un compte, conservé, a :
+    un numéro (nombre entier), unique,
+    un intitulé (texte).
+```
+
+```grymoir
+Si le nombre de comptes conservés est nul :
+    Créer 1000 et « Caisse ».
+    Créer 1020 et « Banque ».
+    Créer 2000 et « Créanciers ».
+    Créer 2800 et « Fortune de l'association ».
+    Créer 3000 et « Cotisations ».
+    Créer 3200 et « Dons ».
+    Créer 4000 et « Frais des manifestations ».
+    Créer 4500 et « Loyer du local ».
+    Créer 4800 et « Frais bancaires ».
+```
+
+L'action `Créer` ressemble à `Inscrire` du chapitre 4 ; elle est dans le programme complet.
+
+### La nature d'un compte
+
+Chaque compte a une nature : un actif (ce que l'association possède), un passif (ce qu'elle doit, et sa fortune), un produit (ce qu'elle gagne), une charge (ce qu'elle dépense). Dans notre plan, le premier chiffre du numéro la donne. On pourrait l'écrire dans un champ ; mais un champ qui répète ce que le numéro dit déjà finit un jour par le contredire. On la calcule :
+
+```grymoir
+La nature d'un numéro :
+    Selon numéro :
+        Cas de 1000 à 1999, rendre « actif ».
+        Cas de 2000 à 2999, rendre « passif ».
+        Cas de 3000 à 3999, rendre « produit ».
+    Rendre « charge ».
+```
+
+`Selon` compare une valeur à des cas, dans l'ordre, et n'exécute que le premier qui convient. Un cas est une valeur, un intervalle (`de 1000 à 1999`, bornes comprises) ou une comparaison (`Cas supérieur à 5000`). Ici, chaque cas rend son résultat et termine le calcul ; si aucun ne convient, on arrive au `Rendre` final. Grammaire, § 10.5.
+
+### En colonnes
+
+```grymoir
+Afficher « Plan comptable des Amis du Tilleul ».
+Pour chaque compte conservé, par numéro :
+    Afficher le numéro du compte puis l'intitulé du compte sur 28 puis la nature du numéro du compte.
+```
+
+```sortie
+Plan comptable des Amis du Tilleul
+1000 Caisse                       actif
+1020 Banque                       actif
+2000 Créanciers                   passif
+2800 Fortune de l'association     passif
+3000 Cotisations                  produit
+3200 Dons                         produit
+4000 Frais des manifestations     charge
+4500 Loyer du local               charge
+4800 Frais bancaires              charge
+```
+
+`sur 28` réserve 28 caractères à l'intitulé, pour que la colonne suivante s'aligne ; `à droite` alignerait des montants. Grammaire, § 4.2. Les numéros s'affichent `1020`, sans séparateur, comme on les écrit.
+
+Une condition `dont` peut porter sur un intervalle :
+
+```grymoir
+Afficher « Comptes de produits : » puis le nombre de comptes conservés dont le numéro ≥ 3000 et le numéro < 4000.
+```
+
+```sortie
+Comptes de produits : 2
+```
+
+Programme complet : `docs/guide/chapitre-06.grym`.
+
 ---
 
-Les chapitres 4 à 12 (les membres, les cotisations, le plan comptable, les écritures, les soldes, la clôture, les écrans) sont en cours d'écriture.
+Les chapitres 7 à 12 (les écritures, les soldes, la clôture, les écrans) sont en cours d'écriture.

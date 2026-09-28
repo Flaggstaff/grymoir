@@ -1,0 +1,67 @@
+Remarque : Premiers pas, chapitre 5 : catégories et cotisations.
+
+Une catégorie, conservée, a :
+    un nom (texte), unique,
+    un tarif (nombre).
+
+Un membre, conservé, a :
+    un numéro (nombre entier), unique,
+    un nom (texte),
+    un prénom (texte),
+    une date d'entrée (date),
+    une catégorie (catégorie), facultative.
+
+Une cotisation, conservée, a :
+    un membre (membre), et disparaît avec lui,
+    une année (nombre entier),
+    un montant (nombre),
+    une date de paiement (date), facultative.
+
+Pour inscrire un numéro et un nom et un prénom et une entrée :
+    Le nouveau vaut un nouveau membre :
+        Le numéro vaut numéro.
+        Le nom vaut nom.
+        Le prénom vaut prénom.
+        La date d'entrée vaut entrée.
+    Conserver le nouveau.
+
+Pour définir un intitulé et un tarif :
+    La nouvelle vaut une nouvelle catégorie :
+        Le nom vaut intitulé.
+        Le tarif vaut tarif.
+    Conserver la nouvelle.
+
+Si le nombre de catégories conservées est nul :
+    Définir « Actif » et 80,00.
+    Définir « Junior » et 40,00.
+    Définir « Soutien » et 50,00.
+
+Si le nombre de membres conservés est nul :
+    Inscrire 1 et « Rochat » et « Anne » et 15.03.2019.
+    Inscrire 2 et « Bapst » et « Louis » et 02.09.2021.
+    Inscrire 3 et « Dupasquier » et « Élodie » et 10.01.2024.
+
+Remarque : les membres inscrits avant ce chapitre n'ont pas de catégorie : on la leur donne.
+Pour chaque membre conservé dont la catégorie est absente :
+    La catégorie du membre devient la catégorie conservée dont le nom est « Actif ».
+La junior vaut le membre conservé dont le numéro est 3.
+La catégorie de la junior devient la catégorie conservée dont le nom est « Junior ».
+
+Remarque : une cotisation par membre pour l'année, créée une seule fois.
+L'exercice vaut 2026.
+Pour chaque membre conservé :
+    Si le nombre de cotisations du membre dont l'année = exercice est nul :
+        La cotisation vaut une nouvelle cotisation :
+            Le membre vaut membre.
+            L'année vaut exercice.
+            Le montant vaut le tarif de la catégorie du membre.
+        Conserver la cotisation.
+
+Le payeur vaut le membre conservé dont le numéro est 1.
+Pour chaque cotisation du payeur dont l'année = exercice et la date de paiement est absente :
+    La date de paiement de la cotisation devient 20.02.2026.
+
+Afficher « Cotisations » puis exercice puis « impayées : ».
+Pour chaque cotisation conservée dont l'année = exercice et la date de paiement est absente, par montant :
+    Afficher le prénom du membre de la cotisation puis le nom du membre de la cotisation puis le montant de la cotisation.
+Afficher « Cotisations payées : » puis le nombre de cotisations conservées dont la date de paiement est présente.

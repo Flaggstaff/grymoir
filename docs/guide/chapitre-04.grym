@@ -1,0 +1,30 @@
+Remarque : Premiers pas, chapitre 4 : les membres.
+
+Un membre, conservé, a :
+    un numéro (nombre entier), unique,
+    un nom (texte),
+    un prénom (texte),
+    une date d'entrée (date).
+
+Pour inscrire un numéro et un nom et un prénom et une entrée :
+    Le nouveau vaut un nouveau membre :
+        Le numéro vaut numéro.
+        Le nom vaut nom.
+        Le prénom vaut prénom.
+        La date d'entrée vaut entrée.
+    Conserver le nouveau.
+
+Si le nombre de membres conservés est nul :
+    Inscrire 1 et « Rochat » et « Anne » et 15.03.2019.
+    Inscrire 2 et « Bapst » et « Louis » et 02.09.2021.
+    Inscrire 3 et « Dupasquier » et « Élodie » et 10.01.2024.
+
+Afficher « Membres : » puis le nombre de membres conservés.
+Pour chaque membre conservé, par nom :
+    Afficher le numéro du membre puis le prénom du membre puis le nom du membre.
+
+Le trésorier vaut le membre conservé dont le numéro est 2.
+Afficher « Trésorier : » puis le prénom du trésorier puis le nom du trésorier.
+
+Pour chaque membre conservé dont la date d'entrée < 01.01.2022, par date d'entrée :
+    Afficher le nom du membre puis « est membre depuis le » puis la date d'entrée du membre.
