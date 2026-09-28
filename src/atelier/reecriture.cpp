@@ -136,7 +136,7 @@ public:
         if (travaux.isEmpty()) return "Rien à changer.";
         for (auto i = travaux.begin(); i != travaux.end(); ++i) {
             FichierAnalyse *f = fichier(i.key());
-            if (!f->nfc()) return QString("« %1 » contient des lettres décomposées : ouvrez-le et enregistrez-le d'abord.")
+            if (!f->nfc()) return QString("« %1 » contient des lettres décomposées : ouvre-le et enregistre-le d'abord.")
                                   .arg(QFileInfo(f->chemin).fileName());
         }
         geste->avant.clear();
@@ -221,7 +221,7 @@ Noeud *nouveau_champ(const ChampVoulu &c, QString *erreur = nullptr) {
 }
 
 QString nom_valide(const QString &nom) {
-    if (nom.trimmed().isEmpty()) return "Donnez un nom.";
+    if (nom.trimmed().isEmpty()) return "Donne un nom.";
     if (nom.contains(QRegularExpression("[.,:;«»\"()\\[\\]]")))
         return QString("« %1 » : un nom ne contient ni ponctuation ni parenthèses.").arg(nom);
     return QString();
@@ -278,7 +278,7 @@ QString ajouter_entite(const QString &dossier, const QString &fichier, const QSt
     Chantier ch(dossier);
     FichierAnalyse *f = ch.fichier(fichier);
     if (!f) return QString("« %1 » n'est pas dans le projet.").arg(fichier);
-    if (!f->ok) return QString("« %1 » contient une erreur : corrigez-la d'abord.").arg(QFileInfo(fichier).fileName());
+    if (!f->ok) return QString("« %1 » contient une erreur : corrige-la d'abord.").arg(QFileInfo(fichier).fileName());
     // Après la dernière déclaration d'entité ou de classe ; à défaut, après les remarques et « Utiliser » de tête.
     int apres = -1;
     for (size_t k = 0; k < f->p.nb; k++) {
@@ -387,7 +387,7 @@ QString supprimer_champ(const QString &dossier, const QString &entite, const QSt
     size_t restants = 0;
     for (size_t j = 0; j < t.phrase->nb_enfants; j++) restants += t.phrase->enfants[j]->type == N_NOM;
     if (restants <= 1 && !(t.phrase->forme & 4))
-        return QString("« %1 » est le dernier champ de « %2 » : une entité garde au moins un champ. Supprimez plutôt l'entité.")
+        return QString("« %1 » est le dernier champ de « %2 » : une entité garde au moins un champ. Supprime plutôt l'entité.")
             .arg(nom, entite);
     noeud_liberer(t.phrase->enfants[t.enfant]);
     for (size_t j = t.enfant; j + 1 < t.phrase->nb_enfants; j++) t.phrase->enfants[j] = t.phrase->enfants[j + 1];
@@ -442,8 +442,8 @@ QString generer_ecran(const QString &dossier, const QString &cible, const QStrin
     Chantier ch(dossier);
     FichierAnalyse *f = ch.fichier(cible);
     if (!f) return QString("« %1 » n'est pas dans le projet.").arg(cible);
-    if (!f->ok) return QString("« %1 » contient une erreur : corrigez-la d'abord.").arg(QFileInfo(cible).fileName());
-    if (f->compacte) return QString("Les écrans générés s'écrivent en forme littéraire : choisissez un fichier .grym.");
+    if (!f->ok) return QString("« %1 » contient une erreur : corrige-la d'abord.").arg(QFileInfo(cible).fileName());
+    if (f->compacte) return QString("Les écrans générés s'écrivent en forme littéraire : choisis un fichier .grym.");
     EntiteSchema e;
     for (const auto &x : lire_schema(dossier)) if (x.nom == entite) e = x;
     if (e.nom.isEmpty()) return QString("L'entité « %1 » est introuvable.").arg(entite);
@@ -503,10 +503,10 @@ QString nouvel_ecran(const QString &dossier, const QString &cible, const QString
     Chantier ch(dossier);
     FichierAnalyse *f = ch.fichier(cible);
     if (!f) return QString("« %1 » n'est pas dans le projet.").arg(cible);
-    if (!f->ok) return QString("« %1 » contient une erreur : corrigez-la d'abord.").arg(QFileInfo(cible).fileName());
-    if (f->compacte) return QString("Les écrans générés s'écrivent en forme littéraire : choisissez un fichier .grym.");
+    if (!f->ok) return QString("« %1 » contient une erreur : corrige-la d'abord.").arg(QFileInfo(cible).fileName());
+    if (f->compacte) return QString("Les écrans générés s'écrivent en forme littéraire : choisis un fichier .grym.");
     const QString n = nom.simplified();
-    if (n.isEmpty()) return "Donnez un nom : « de recherche », « des factures », « d'accueil ».";
+    if (n.isEmpty()) return "Donne un nom : « de recherche », « des factures », « d'accueil ».";
     QString t = QString("L'écran %1 montre :\n    un bouton « Fermer ».\n").arg(n) + evenement_fermer(n);
     const int pos = position_des_ecrans(*f);
     ch.remplacer(*f, pos, pos, (pos ? "\n" : "") + t.left(t.size() - (pos ? 1 : 0)) + (pos ? "" : "\n"));
@@ -597,7 +597,7 @@ QString colonnes_ecrites(const QString &entite, const QString &dossier, const QS
 Noeud *nouvel_element(const ElementNouveau &e, const QString &dossier, QString *erreur) {
     Noeud *n = nullptr;
     const QByteArray t = e.texte.trimmed().toUtf8();
-    if (e.texte.trimmed().isEmpty()) { *erreur = "Donnez un libellé, un texte ou un nom."; return nullptr; }
+    if (e.texte.trimmed().isEmpty()) { *erreur = "Donne un libellé, un texte ou un nom."; return nullptr; }
     if (e.sorte == ELEMENT_BOUTON || e.sorte == ELEMENT_TEXTE) {
         if (e.texte.contains(QChar(0x00BB)) || e.texte.contains(QChar(0x00AB))) { *erreur = "Pas de guillemets « » dans un libellé."; return nullptr; }
         n = noeud_creer(e.sorte == ELEMENT_BOUTON ? N_BOUTON : N_TEXTE_ECRAN, 0, 0, 0);
@@ -812,7 +812,7 @@ QString ecran_deplacer(const QString &dossier, const QString &ecran, int source,
     const int nb = (int)n->nb_enfants;
     if (source < 0 || source >= nb || cible < 0 || cible >= nb || source == cible) return "Rien à déplacer.";
     if (n->enfants[source]->type == N_DISPOSITION || n->enfants[cible]->type == N_DISPOSITION)
-        return "Un bloc ne se déplace pas : déplacez ses éléments.";
+        return "Un bloc ne se déplace pas : déplace ses éléments.";
     Noeud *x = retirer_enfant(n, (size_t)source);
     size_t c = (size_t)(cible > source ? cible - 1 : cible);   // la cible, après le retrait de la source
     const int bloc = bloc_de(n, c);

@@ -936,7 +936,7 @@ int main(int argc, char **argv) {
                 "    Le c vaut un nouveau compositeur :\n        Le nom vaut « Liszt ».\n    Conserver c.\n"
                 "    Le d vaut un nouveau compositeur :\n        Le nom vaut « Bach ».\n        La naissance vaut 31.03.1685.\n"
                 "    Conserver d.\n"
-                "L'écran des compositeurs montre :\n    le texte « Choisissez. »,\n"
+                "L'écran des compositeurs montre :\n    le texte « Choisis. »,\n"
                 "    la liste des compositeurs conservés, par nom,\n    un bouton « Échouer »,\n    un bouton « Fermer ».\n"
                 "Quand on choisit un compositeur dans l'écran des compositeurs :\n    Afficher « choisi » puis nom du compositeur.\n"
                 "Quand on clique sur « Échouer » dans l'écran des compositeurs :\n    Afficher 1 ÷ 0.\n"

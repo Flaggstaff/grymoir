@@ -49,7 +49,7 @@ bool FichierProjet::ecrire() const {
 
 QString creer_fichier(const QString &dossier, const QString &nom, QString *erreur) {
     QString n = nom.trimmed();
-    if (n.isEmpty()) { *erreur = "Donnez un nom au fichier."; return QString(); }
+    if (n.isEmpty()) { *erreur = "Donne un nom au fichier."; return QString(); }
     if (n.contains('/') || n.contains('\\')) { *erreur = "Un nom de fichier, sans dossier : « association »."; return QString(); }
     if (!n.endsWith(".grym", Qt::CaseInsensitive) && !n.endsWith(".grymc", Qt::CaseInsensitive)) n += ".grym";
     const QString chemin = QDir(dossier).filePath(n);

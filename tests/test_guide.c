@@ -116,7 +116,7 @@ static char *fichiers_utilises(const char *dossier, const char *texte, Chaine *r
         } else {
             char *canon = imprimer_litteraire(&pr);
             if (strcmp(canon, src) != 0)
-                probleme = grym_formater("%s n'est pas en forme canonique : lancez « grym formater » dessus.", chemin);
+                probleme = grym_formater("%s n'est pas en forme canonique : lance « grym formater » dessus.", chemin);
             free(canon);
             programme_liberer(&pr);
         }
@@ -148,7 +148,7 @@ static char *executer(const char *chemin, const char *source, size_t taille, cha
     char *canon = imprimer_litteraire(&p);
     char *probleme = NULL;
     if (strcmp(canon, source) != 0)
-        probleme = grym_formater("%s n'est pas en forme canonique : lancez « grym formater » dessus.", chemin);
+        probleme = grym_formater("%s n'est pas en forme canonique : lance « grym formater » dessus.", chemin);
     free(canon);
     Module *b = probleme ? NULL : compiler(&p, &d);
     if (!probleme && !b) {
@@ -187,7 +187,7 @@ int main(void) {
     size_t taille;
     char *guide = lire("docs/guide.md", &taille);
     if (!guide) {
-        printf("ÉCHEC : docs/guide.md introuvable (lancez depuis la racine du dépôt).\n");
+        printf("ÉCHEC : docs/guide.md introuvable (lance depuis la racine du dépôt).\n");
         return 1;
     }
     /* Le guide, chapitre par chapitre : « ## N. » ouvre le chapitre N. */

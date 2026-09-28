@@ -645,7 +645,7 @@ static void page_finale(Serveur *s, const char *erreur, const char *annulation) 
             chaine_ajouter(&c, "</p>\n");
         }
     }
-    chaine_ajouter(&c, "<p><strong>Application terminée.</strong> Vous pouvez fermer cet onglet.</p>\n</main></body></html>\n");
+    chaine_ajouter(&c, "<p><strong>Application terminée.</strong> Tu peux fermer cet onglet.</p>\n</main></body></html>\n");
     repondre(s, "200 OK", "text/html; charset=utf-8", c.d, NULL);
     free(c.d);
 }
@@ -676,11 +676,11 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
             free(c);
         } else {
             noter_refus(s, "jeton faux dans l'adresse", NULL);
-            page_simple(s, "403 Forbidden", "Accès refusé : ouvrez l'adresse affichée dans le terminal.");
+            page_simple(s, "403 Forbidden", "Accès refusé : ouvre l'adresse affichée dans le terminal.");
         }
     } else if (!authentifie(s, &r)) {
         noter_refus(s, r.cookie ? "cookie sans le bon jeton" : "aucun cookie", r.cible);
-        page_simple(s, "403 Forbidden", "Accès refusé : ouvrez l'adresse affichée dans le terminal.");
+        page_simple(s, "403 Forbidden", "Accès refusé : ouvre l'adresse affichée dans le terminal.");
     } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/style.css") == 0) {
         repondre(s, "200 OK", "text/css; charset=utf-8", STYLE, NULL);
     } else if (strcmp(r.methode, "GET") == 0 && strncmp(r.cible, "/image/", 7) == 0) {
@@ -729,7 +729,7 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
                         free(q->saisi[k]);
                         q->saisi[k] = grym_dupliquer(pv && !pv->fichier && !pv->mal ? pv->valeur : "");
                         if (pv && pv->mal) {   /* octet nul ou UTF-8 invalide : jamais transmis à la machine */
-                            q->refus[k] = grym_dupliquer("Texte illisible : réécrivez-le.");
+                            q->refus[k] = grym_dupliquer("Texte illisible : réécris-le.");
                             tout = 0;
                             continue;
                         }
@@ -1087,7 +1087,7 @@ Serveur *serveur_ouvrir(int port, const char *titre, char **erreur) {
     a.sin_port = htons((unsigned short)port);
     if (bind(p, (struct sockaddr *)&a, sizeof a) != 0 || listen(p, 16) != 0) {
         fermer_prise(p);
-        *erreur = port ? grym_formater("Le port %d est déjà pris : choisissez-en un autre avec --port.", port)
+        *erreur = port ? grym_formater("Le port %d est déjà pris : choisis-en un autre avec --port.", port)
                        : grym_dupliquer("Impossible d'écouter sur 127.0.0.1.");
         return NULL;
     }

@@ -414,7 +414,7 @@ static Jeton lire_nombre(Lexeur *lx, size_t debut, int ligne, int col) {
             if (separateur_vu || g1 > 2 || g2 > 2 || g3 != 4 || colle) {
                 while (lx->pos < fin) avancer(lx);
                 char *texte = extrait(lx, debut, lx->pos);
-                char *m = formater("Date mal formée « %s » : écrivez jour.mois.année, "
+                char *m = formater("Date mal formée « %s » : écris jour.mois.année, "
                                    "l'année sur quatre chiffres (21.09.2026).", texte);
                 free(texte);
                 return echec(lx, debut, ligne, col, m);
@@ -441,8 +441,8 @@ static Jeton lire_nombre(Lexeur *lx, size_t debut, int ligne, int col) {
         for (char *p = correction; *p; p++) if (*p == '.') *p = ',';
         int court = strlen(texte) <= 5;   /* « 21.09 » : peut-être une date sans année */
         char *m = formater("« %s » : en GrymoiR, la virgule sert de séparateur décimal. "
-                           "Écrivez « %s »%s", texte, correction,
-                           court ? ", ou, pour une date, ajoutez l'année : 21.09.2026." : ".");
+                           "Écris « %s »%s", texte, correction,
+                           court ? ", ou, pour une date, ajoute l'année : 21.09.2026." : ".");
         free(texte);
         free(correction);
         return echec(lx, debut, ligne, col, m);
@@ -454,7 +454,7 @@ static Jeton lire_nombre(Lexeur *lx, size_t debut, int ligne, int col) {
         while (reste(lx, 0) && (est_lettre(voir(lx, 0)) || est_chiffre(voir(lx, 0)))) avancer(lx);
         char *texte = extrait(lx, debut, lx->pos);
         char *m = formater("« %s » : un nombre ne peut pas être collé à un mot. "
-                           "Séparez-les par une espace.", texte);
+                           "Sépare-les par une espace.", texte);
         free(texte);
         return echec(lx, debut, ligne, col, m);
     }
@@ -596,7 +596,7 @@ Jeton lexeur_suivant(Lexeur *lx) {
             /* L'indentation délimite les blocs (§ 5) : pas de tabulation en début de ligne. */
             if (voir(lx, 0) == '\t' && lx->debut_ligne && !ligne_blanche(lx))
                 return echec(lx, lx->pos, lx->ligne, lx->colonne, formater(
-                    "Tabulation en début de ligne : indentez avec des espaces."));
+                    "Tabulation en début de ligne : indente avec des espaces."));
             avancer(lx);
         }
 
@@ -618,11 +618,11 @@ Jeton lexeur_suivant(Lexeur *lx) {
         if (c == ';') return simple(lx, J_POINT_VIRGULE, debut, ligne, col);
         if (c == '[' || c == ']')
             return echec(lx, debut, ligne, col, formater(
-                "Pas de crochets en forme compacte : écrivez le nom avec des soulignés (frais_de_port)."));
+                "Pas de crochets en forme compacte : écris le nom avec des soulignés (frais_de_port)."));
         if (c == '#') {
             if (!en_debut_ligne)
                 return echec(lx, debut, ligne, col, formater(
-                    "Une remarque commence une ligne : passez à la ligne avant « # »."));
+                    "Une remarque commence une ligne : passe à la ligne avant « # »."));
             avancer(lx);
             while (reste(lx, 0) && voir(lx, 0) != '\n' && est_blanc(voir(lx, 0))) avancer(lx);
             size_t d = lx->pos, f = lx->pos;
@@ -676,13 +676,13 @@ Jeton lexeur_suivant(Lexeur *lx) {
             "Guillemet fermant ” sans guillemet ouvrant “."));
     case 0x201E:
         return echec(lx, debut, ligne, col, formater(
-            "Guillemet „ non reconnu : utilisez « », “ ” ou \" \"."));
+            "Guillemet „ non reconnu : utilise « », “ ” ou \" \"."));
     case 0xBB:
         return echec(lx, debut, ligne, col, formater(
             "Guillemet fermant » sans guillemet ouvrant."));
     case 0x2014:
         return echec(lx, debut, ligne, col, formater(
-            "Tiret cadratin non reconnu : pour soustraire, utilisez -, − ou –."));
+            "Tiret cadratin non reconnu : pour soustraire, utilise -, − ou –."));
     case '\'': case 0x2019:
         return echec(lx, debut, ligne, col, formater(
             "Apostrophe inattendue : l'élision suit une lettre (l'addition), "

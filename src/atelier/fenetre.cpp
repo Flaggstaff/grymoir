@@ -209,12 +209,12 @@ Fenetre::Fenetre() {
         if (projet.isEmpty()) return;
         QStringList noms;
         for (const auto &e : lire_schema(projet)) noms << e.nom;
-        if (noms.isEmpty()) { statusBar()->showMessage("Aucune entité conservée : déclarez-en une d'abord.", 5000); return; }
+        if (noms.isEmpty()) { statusBar()->showMessage("Aucune entité conservée : déclares-en une d'abord.", 5000); return; }
         bool ok = false;
         const QString entite = QInputDialog::getItem(this, "Écran pour une entité", "Entité :", noms, 0, false, &ok);
         if (!ok) return;
         const QString cible = cible_des_ecrans();
-        if (cible.isEmpty()) { statusBar()->showMessage("Ouvrez d'abord un fichier du projet.", 5000); return; }
+        if (cible.isEmpty()) { statusBar()->showMessage("Ouvre d'abord un fichier du projet.", 5000); return; }
         appliquer([=](Geste *g) { return generer_ecran(projet, cible, entite, g); }, entite_choisie);
         if (gestes.isEmpty() || !gestes.last().description.contains(entite)) return;   // refusé : le message est affiché
         // le programme principal ouvre-t-il l'écran d'accueil ? sinon, l'atelier propose de l'écrire (§ 5 bis)
@@ -349,7 +349,7 @@ void Fenetre::ouvrir(const QString &chemin) {
 
 void Fenetre::nouveau_fichier() {
     if (projet.isEmpty()) {
-        QMessageBox::information(this, "Atelier", "Ouvrez d'abord un projet : un dossier, où le fichier sera créé.");
+        QMessageBox::information(this, "Atelier", "Ouvre d'abord un projet : un dossier, où le fichier sera créé.");
         return;
     }
     bool ok = false;
@@ -481,7 +481,7 @@ void Fenetre::lancer() {
     const auto &d = editeur->diagnostic();
     if (!d.message.isEmpty()) {   // inutile de lancer : l'erreur est déjà connue
         if (d.ligne > 0) editeur->aller_a(d.ligne, d.colonne);
-        statusBar()->showMessage("Corrigez d'abord l'erreur signalée.", 4000);
+        statusBar()->showMessage("Corrige d'abord l'erreur signalée.", 4000);
         return;
     }
     const QString cible = programme_a_lancer();   // un fichier de déclarations lance le programme principal (§ 21)
@@ -605,7 +605,7 @@ void Fenetre::rafraichir_schema() {
         projet_fichier.ecrire();
     }
     QString t = entites.isEmpty() ? QString("Aucune entité conservée dans ce projet.")
-                                  : QString("%1 entité%2. Glissez les boîtes pour les ranger ; double-clic : la déclaration.")
+                                  : QString("%1 entité%2. Glisse les boîtes pour les ranger ; double-clic : la déclaration.")
                                         .arg(entites.size()).arg(entites.size() > 1 ? "s" : "");
     if (!problemes.isEmpty())
         t += "\nNon lus, car ils contiennent une erreur : " + problemes.join(", ") + ".";
@@ -675,7 +675,7 @@ void Fenetre::nouvelle_entite() {
     if (cible.isEmpty() && !projet_fichier.programme_principal.isEmpty()) cible = QDir(projet).absoluteFilePath(projet_fichier.programme_principal);
     if (cible.isEmpty()) cible = QFileInfo(fichier).absoluteFilePath();
     if (cible.isEmpty()) {
-        schema_etat->setText("Ouvrez d'abord un fichier du projet : c'est là que l'entité sera déclarée.");
+        schema_etat->setText("Ouvre d'abord un fichier du projet : c'est là que l'entité sera déclarée.");
         return;
     }
     const bool feminin = genre.startsWith("féminin");

@@ -258,7 +258,7 @@ int main(void) {
     CONTIENT(sc.reponses[0], "autofocus");
     CONTIENT(sc.reponses[2], "« douze » n&#39;est pas un nombre.");
     CONTIENT(sc.reponses[2], "value=\"douze\"");
-    NE_CONTIENT_PAS(sc.reponses[2], "Tapez « . »");   /* une convention de la console */
+    NE_CONTIENT_PAS(sc.reponses[2], "Tape « . »");   /* une convention de la console */
     CONTIENT(sc.reponses[4], "Bienvenue\n13");
     liberer(&sc);
 

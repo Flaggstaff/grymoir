@@ -12,10 +12,10 @@ function expliquer(chemin, e) {
     const introuvable = (e && (e.code === 'ENOENT' || /ENOENT/.test(String(e.message))))
         || (chemin.includes('/') && !fs.existsSync(chemin));
     if (introuvable)
-        return `GrymoiR : l'outil grym est introuvable à « ${chemin} ». Construisez-le avec « make » à la racine du ` +
-               'dépôt, vérifiez le réglage « grymoir.chemin », puis rechargez la fenêtre (commande « Reload Window »).';
+        return `GrymoiR : l'outil grym est introuvable à « ${chemin} ». Construis-le avec « make » à la racine du ` +
+               'dépôt, vérifie le réglage « grymoir.chemin », puis recharge la fenêtre (commande « Reload Window »).';
     return `GrymoiR : impossible de lancer « ${chemin} lsp » (${e && e.message ? e.message : e}). ` +
-           'Vérifiez le réglage « grymoir.chemin », puis rechargez la fenêtre.';
+           'Vérifie le réglage « grymoir.chemin », puis recharge la fenêtre.';
 }
 
 function activate(context) {
@@ -37,7 +37,7 @@ function activate(context) {
     context.subscriptions.push({ dispose: () => client && client.stop() });
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration((ev) => {
         if (ev.affectsConfiguration('grymoir.chemin'))
-            vscode.window.showInformationMessage('GrymoiR : rechargez la fenêtre (commande « Reload Window ») pour utiliser le nouveau chemin de grym.');
+            vscode.window.showInformationMessage('GrymoiR : recharge la fenêtre (commande « Reload Window ») pour utiliser le nouveau chemin de grym.');
     }));
 }
 

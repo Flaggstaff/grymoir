@@ -24,7 +24,7 @@ echo "Construction et essais…"
 if ! ./atelier --construire || ! make -s test || ! ctest --test-dir construction --output-on-failure; then
     git reset -q --hard "$avant"
     echo "Échec de la construction ou d'un essai : le patch est retiré, rien n'est publié." >&2
-    echo "Envoyez-moi ce qui s'est affiché ci-dessus." >&2
+    echo "Envoie-moi ce qui s'est affiché ci-dessus." >&2
     exit 1
 fi
 

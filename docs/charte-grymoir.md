@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.50, révisée le 28 septembre 2026.
+Version 1.51, révisée le 28 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -117,9 +117,9 @@ La grammaire exacte de la forme littéraire reste à spécifier. Ces exemples mo
 
 ## 8. Erreurs
 
-- Messages en français, localisés par fichier, ligne et colonne.
+- Messages en français, localisés par fichier, ligne et colonne, au tutoiement, comme le guide « Premiers pas ».
 - Le message s'exprime dans la forme du fichier concerné.
-- Correction proposée quand c'est possible (« `soldee` inconnu, vouliez-vous `solde` ? »).
+- Correction proposée quand c'est possible (« `soldee` inconnu, voulais-tu `solde` ? »).
 - Une phrase littéraire hors grammaire produit une erreur qui propose la tournure valide la plus proche.
 - Aucune erreur avalée en silence : un `Essayer` exige son bloc `En cas d'échec`, qui reçoit le motif de l'erreur.
 
@@ -261,3 +261,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.48 | 2026-09-28 | Un calcul lit la base, sans jamais y écrire (grammaire, § 9.4) : le solde d'un compte devient un calcul |
 | 1.49 | 2026-09-28 | Art. 12 : la contrainte d'entité est faite, sous forme de règles vérifiées à la fin de chaque transaction (grammaire, § 16.14) ; report : le ciblage des objets touchés |
 | 1.50 | 2026-09-28 | Art. 12 : coût des règles mesuré ; le ciblage attend un besoin réel |
+| 1.51 | 2026-09-28 | Art. 8 : les messages tutoient, comme le guide (« voulais-tu `solde` ? ») |

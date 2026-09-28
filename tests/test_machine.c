@@ -357,7 +357,7 @@ static void essais_utiliser(void) {
     ecrire_source("_u_absent.grym", "Utiliser « _u_rien ».\n");
     FICHIER("_u_absent.grym", "ERREUR 1:10 « _u_rien » introuvable : ni « _u_rien.grym » ni « _u_rien.grymc ».");
     ecrire_source("_u_ext.grym", "Utiliser « _u_donnees.grym ».\n");
-    FICHIER("_u_ext.grym", "~Écrivez le fichier sans extension : « Utiliser « _u_donnees ». »");
+    FICHIER("_u_ext.grym", "~Écris le fichier sans extension : « Utiliser « _u_donnees ». »");
     ecrire_source("_u_deux.grymc", "# vide\n");
     ecrire_source("_u_texte.grym", "Utiliser « _u_deux ».\n");
     ecrire_source("_u_deux.grym", "Remarque : vide.\n");
@@ -491,7 +491,7 @@ static void essais_migration(void) {
         { v2, "« compositeur » : champ « pays » ajouté ; 2 compositeurs reçoivent « Suisse ».\n"
               "« compositeur » : champ « naissance » ajouté ; 2 compositeurs le reçoivent absent.\n", __LINE__ },
         { v1, "La base est à jour : rien ne changera.\n", __LINE__ },   /* l'essai précédent n'a rien écrit */
-        { v3, "ERREUR « âge » est nouveau, et 2 compositeurs sont déjà conservés : donnez-lui une valeur de départ, "
+        { v3, "ERREUR « âge » est nouveau, et 2 compositeurs sont déjà conservés : donne-lui une valeur de départ, "
               "après son type : « (nombre), … au départ ».", __LINE__ },
         { "Un point a : un x.\n", "Aucune entité conservée : aucune base.\n", __LINE__ },
     };
@@ -912,7 +912,7 @@ static void essais_ecrans(void) {
                "Requiem");
     }
     PROG("Un point a : un x.\nLe p vaut un nouveau point.\nOuvrir la fiche de p.\n",
-         "ERREUR 0:0 Ce programme ouvre des écrans : lancez-le dans une fenêtre, avec grym-atelier.");
+         "ERREUR 0:0 Ce programme ouvre des écrans : lance-le dans une fenêtre, avec grym-atelier.");
     /* A3-d : colonnes choisies (le champ d'un lien compris), blocs de disposition, titre donné */
     {
         const char *src =
@@ -960,7 +960,7 @@ static void essais_ecrans(void) {
     PROG("Pour ouvrir un x :\n    Afficher x.\n", "~« ouvrir » commence une construction du langage");
     /* en console : refusé avant toute exécution, rien n'est affiché */
     PROG("Afficher 1.\nL'écran d'accueil montre :\n    le texte « a ».\nOuvrir l'écran d'accueil.\n",
-         "ERREUR 0:0 Ce programme ouvre des écrans : lancez-le dans une fenêtre, avec grym-atelier.");
+         "ERREUR 0:0 Ce programme ouvre des écrans : lance-le dans une fenêtre, avec grym-atelier.");
 }
 
 int main(void) {
@@ -1388,14 +1388,14 @@ int main(void) {
          "Anna Anna");
     PROG("Une personne a : un nom.\nLa p vaut une nouvelle personne.\nConserver p.",
          "ERREUR 3:1 « personne » n'est pas une entité : ses objets ne se conservent pas. "
-         "Déclarez « Une personne, conservée, a : ».");
+         "Déclare « Une personne, conservée, a : ».");
     PROG("Conserver 3.", "ERREUR 1:1 Seul un objet se conserve : la valeur est un nombre.");
     PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\nConserver a.",
          "ERREUR 4:1 Le champ « parrain » n'a pas de valeur : un client incomplet ne se conserve pas.");
     PROG(CLIENT "Le b vaut un nouveau client :\n    Le nom vaut « Bo ».\n    La licence vaut « B ».\n"
          "Le parrain du b devient b.\nLe a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
          "    Le parrain vaut b.\nConserver a.",
-         "ERREUR 10:1 Le champ « parrain » désigne un client qui n'est pas conservé : conservez-le d'abord.");
+         "ERREUR 10:1 Le champ « parrain » désigne un client qui n'est pas conservé : conserve-le d'abord.");
     PROG(CLIENT "Le a vaut un nouveau client :\n    Le nom vaut « Ana ».\n    La licence vaut « A ».\n"
          "Le parrain du a devient a.\nConserver a.\nConserver a.",
          "ERREUR 7:1 Un client déjà conservé ne se conserve pas deux fois.");
@@ -1511,9 +1511,9 @@ int main(void) {
          "Afficher arrangeur de p puis édition de p puis arrangeur de p est absent puis tirage de p est présent.",
          "absent absent vrai faux");
     PROG(FAC "La p vaut une nouvelle partition :\n    Le titre vaut « A ».\nAfficher tirage de p + 1.",
-         "ERREUR 5:22 Le champ « tirage » est absent : vérifiez-le d'abord avec « est présent ».");
+         "ERREUR 5:22 Le champ « tirage » est absent : vérifie-le d'abord avec « est présent ».");
     PROG(FAC "La p vaut une nouvelle partition :\n    Le titre vaut « A ».\nAfficher nom de l'arrangeur de p.",
-         "ERREUR 5:10 Le champ « arrangeur » est absent : vérifiez-le d'abord avec « est présent ».");
+         "ERREUR 5:10 Le champ « arrangeur » est absent : vérifie-le d'abord avec « est présent ».");
     PROG(FAC "La p vaut une nouvelle partition :\n    Le titre vaut « A ».\nAfficher édition de p = 01.01.2026.",
          "~Le champ « édition » est absent");
     PROG(FAC "Le c vaut un nouveau compositeur.\nLe nom du c devient absent.",
@@ -1600,15 +1600,15 @@ int main(void) {
          "1 1 1 1 Offrande\nOffrande\n2 2");
     PROG(SD "La n vaut une nouvelle note :\n    La partition vaut s.\n    Le texte vaut « x ».\nConserver n.\n"
          "Supprimer s.\nAfficher texte de n puis titre de la partition de n.\nSupprimer n.\nSupprimer s définitivement.",
-         "~Cette partition est encore désignée par le champ « partition » d'une note supprimée : supprimez-la "
+         "~Cette partition est encore désignée par le champ « partition » d'une note supprimée : supprime-la "
          "définitivement d'abord.");
     PROG(SD "Supprimer s.\nLa m vaut une nouvelle note :\n    La partition vaut s.\n    Le texte vaut « y ».\nConserver m.",
-         "~Le champ « partition » désignerait une partition supprimée : rétablissez-la d'abord.");
+         "~Le champ « partition » désignerait une partition supprimée : rétablis-la d'abord.");
     PROG(SD "Supprimer s.\nLa q vaut une nouvelle partition :\n    Le titre vaut « Z ».\n    La cote vaut « A-2 ».\nConserver q.",
-         "~« cote » est unique : « A-2 » appartient à une partition supprimée. Rétablissez-la, ou supprimez-la définitivement.");
+         "~« cote » est unique : « A-2 » appartient à une partition supprimée. Rétablis-la, ou supprime-la définitivement.");
     PROG(SD "Rétablir s.", "~Cette partition n'est pas supprimée.");
     PROG(SD "Supprimer s.\nLe pu vaut le pupitre supprimé dont l'instrument est « violon ».\nRétablir pu.",
-         "~Ce pupitre a disparu avec un autre objet : rétablissez celui-là, et il reviendra avec lui.");
+         "~Ce pupitre a disparu avec un autre objet : rétablis celui-là, et il reviendra avec lui.");
     PROG(SD "Supprimer s.\nSupprimer o définitivement.\nAfficher le nombre de partitions supprimées puis "
          "le nombre de pupitres conservés puis le nombre de pupitres supprimés.\nConserver o.\n"
          "Afficher le nombre de partitions conservées puis titre de o.",
@@ -1685,7 +1685,7 @@ int main(void) {
             { "Un client, conservé, a : un nom (texte), unique, un âge (nombre entier).\n"
               "Le c vaut un nouveau client :\n    Le nom vaut « Ana ».\n    L'âge vaut 30.\nConserver c.\n", "" },
             { "Un client, conservé, a : un nom (texte), unique, un âge (nombre entier), un pays (texte).\n",
-              "~« pays » est nouveau, et 1 client est déjà conservé : donnez-lui une valeur de départ" },
+              "~« pays » est nouveau, et 1 client est déjà conservé : donne-lui une valeur de départ" },
             { "Un client, conservé, a : un nom (texte), unique, un âge (nombre entier), un pays (texte), « Suisse » au départ, "
               "un actif (vrai ou faux), vrai au départ.\nPour chaque client conservé, afficher pays du client puis actif du client.\n",
               "Suisse vrai" },
@@ -2112,10 +2112,10 @@ int main(void) {
          "Callas\n1");
     PROG(MUL "Pour chaque œuvre de sacré, afficher titre de l'œuvre.",
          "~Plusieurs champs relient une œuvre à un genre : « genres » et « travaux ». "
-         "Précisez avec « dont … est parmi les genres » ou « dont … est parmi les travaux ».");
+         "Précise avec « dont … est parmi les genres » ou « dont … est parmi les travaux ».");
     PROG(MUL "Afficher le nombre d'œuvres de callas.",
          "~Plusieurs champs relient une œuvre à une personne : « compositeur » et « interprètes ». "
-         "Précisez avec « dont … est le compositeur » ou « dont … est parmi les interprètes ».");
+         "Précise avec « dont … est le compositeur » ou « dont … est parmi les interprètes ».");
     PROG(MUL "Afficher le nombre de travaux de o.\nPour chaque travail de o, afficher 1.", "0");
     PROG(MUL "Pour chaque œuvre conservée dont sacré est parmi les genres, afficher titre de l'œuvre.", "Messe");
     PROG(MUL "Les travaux de o gagnent sacré.\nPour chaque travail de o, afficher nom du travail.\n"
@@ -2129,13 +2129,13 @@ int main(void) {
     PROG(MUL "Supprimer sacré.\nAfficher le nombre de genres de o.\nRétablir sacré.\nAfficher le nombre de genres de o.",
          "1\n2");
     PROG(MUL "Supprimer sacré.\nLes genres de o gagnent sacré.",
-         "~Le champ « genres » gagnerait un genre supprimé : rétablissez-le d'abord.");
+         "~Le champ « genres » gagnerait un genre supprimé : rétablis-le d'abord.");
     /* effacer : une œuvre emporte ses liaisons ; un genre encore gagné ne s'efface pas */
     PROG(MUL "Supprimer baroque définitivement.",
          "~Ce genre est encore désigné par le champ « genres » d'une œuvre.");
     PROG(MUL "Supprimer o définitivement.\nSupprimer baroque définitivement.\nAfficher le nombre de genres conservés.", "1");
     PROG(MUL "Le g vaut un nouveau genre :\n    Le nom vaut « x ».\nLes genres de o gagnent g.",
-         "~Le champ « genres » gagnerait un genre qui n'est pas conservé : conservez-le d'abord.");
+         "~Le champ « genres » gagnerait un genre qui n'est pas conservé : conserve-le d'abord.");
     PROG(MUL "La n vaut une nouvelle œuvre :\n    Le titre vaut « N ».\n    Le compositeur vaut bach.\n"
          "Les genres de n gagnent baroque.",
          "~Une œuvre qui n'est pas conservée ne gagne rien : ses « genres » vivent dans la base.");
@@ -2257,15 +2257,15 @@ int main(void) {
     SAISIE("La q vaut « Qui ? ».\nAfficher la réponse à (q).", "Qui ? Ana", "Ana");
     /* relance : la réponse fautive est annoncée, la question se repose */
     SAISIE("L'âge vaut la réponse en nombre entier à « Âge ? ».\nAfficher âge.",
-           "Âge ? « x » n'est pas un nombre. Tapez « . » seul pour annuler.\nÂge ? « 2,5 » n'est pas un nombre entier.\nÂge ? 7", "x", "2,5", "7");
+           "Âge ? « x » n'est pas un nombre. Tape « . » seul pour annuler.\nÂge ? « 2,5 » n'est pas un nombre entier.\nÂge ? 7", "x", "2,5", "7");
     SAISIE("Le d vaut la réponse en date à « Jour ? ».\nAfficher d.",
-           "Jour ? « 21.9.26 » n'est pas une date : écrivez jour.mois.année (21.09.2026). Tapez « . » seul pour annuler.\nJour ? 21.09.2026",
+           "Jour ? « 21.9.26 » n'est pas une date : écris jour.mois.année (21.09.2026). Tape « . » seul pour annuler.\nJour ? 21.09.2026",
            "21.9.26", "21.09.2026");
     SAISIE("L'an vaut la réponse en année à « An ? ».\nAfficher an.",
-           "An ? « 12000 » n'est pas une année : de 1 à 9999. Tapez « . » seul pour annuler.\nAn ? 1900", "12000", "1900");
+           "An ? « 12000 » n'est pas une année : de 1 à 9999. Tape « . » seul pour annuler.\nAn ? 1900", "12000", "1900");
     SAISIE("Le x vaut la réponse en vrai ou faux à « ? ».\nAfficher x.",
-           "? Répondez par oui ou non. Tapez « . » seul pour annuler.\n? vrai", "peut-être", "vrai");
-    SAISIE("Le x vaut la réponse en nombre à « ? ».\nAfficher x.", "? Une réponse est attendue. Tapez « . » seul pour annuler.\n? 3", "", "3");
+           "? Réponds par oui ou non. Tape « . » seul pour annuler.\n? vrai", "peut-être", "vrai");
+    SAISIE("Le x vaut la réponse en nombre à « ? ».\nAfficher x.", "? Une réponse est attendue. Tape « . » seul pour annuler.\n? 3", "", "3");
     SAISIE("Le x vaut la réponse à « ? ».\nAfficher « [ » puis x puis « ] ».", "? [  ]", "");
     /* fin de l'entrée, pureté, boucle interactive */
     {   /* fin de l'entrée : aucune réponse à lire */
@@ -2275,7 +2275,7 @@ int main(void) {
     }
     PROG("Le x vaut la réponse à « Nom ? ».\nAfficher x.", "~Aucune entrée : la question ne peut pas être posée ici.");
     PROG("Le double d'un x vaut la réponse en nombre à « ? ».\nAfficher le double de 1.",
-         "~Un calcul ne pose pas de question : demandez dans une action.");
+         "~Un calcul ne pose pas de question : demande dans une action.");
     SAISIE_INTER("Le x vaut la réponse à « ? ».", "~La question se pose dans un programme lancé, pas dans la boucle interactive.");
     {   /* une question valide ce qui la précède ; l'erreur suivante n'annule que depuis là */
         remove("_essai_q.grymd");
@@ -2444,7 +2444,7 @@ int main(void) {
     /* --- Effacer l'écran (§ 4.3) : hors d'un terminal, la phrase n'écrit rien --- */
     PROG("Afficher « a ».\nEffacer l'écran.\nAfficher « b ».", "a\nb");
     PROG("Le double d'un x :\n    Effacer l'écran.\n    Rendre x.", "~Un calcul n'affiche rien");
-    PROG("Effacer.", "~Écrivez « Effacer l'écran. ».");
+    PROG("Effacer.", "~Écris « Effacer l'écran. ».");
     PROG("Effacer l'écran et le reste.", "~« et » inattendu, attendu : un point final.");
 
     /* --- Essayer, En cas d'échec (§ 18) --- */
@@ -2589,14 +2589,14 @@ int main(void) {
            "Toccata", "A-1", "Bach", "", "", "", "1705", "oui");
     /* relances : vide obligatoire, lien introuvable, type, puis valeurs */
     SAISIE(FC FP "Le p vaut une nouvelle partition saisie.\n" FA,
-           "Titre ? Une réponse est attendue. Tapez « . » seul pour annuler.\nTitre ? Cote ? Compositeur ? Aucun compositeur conservé n'a « Brahms » pour nom.\n"
-           "Compositeur ? Arrangeur ? Édition ? « 1.2.3 » n'est pas une date : écrivez jour.mois.année (21.09.2026).\n"
+           "Titre ? Une réponse est attendue. Tape « . » seul pour annuler.\nTitre ? Cote ? Compositeur ? Aucun compositeur conservé n'a « Brahms » pour nom.\n"
+           "Compositeur ? Arrangeur ? Édition ? « 1.2.3 » n'est pas une date : écris jour.mois.année (21.09.2026).\n"
            "Édition ? Prix [20] ? Création ? Actif ? T C Bach un compositeur 01.02.1900 12,5 1720 faux",
            "", "T", "C", "Brahms", "Bach", "Bach", "1.2.3", "01.02.1900", "12,5", "1720", "non");
     /* unique : refusé dès la réponse, même pour un objet de la corbeille */
     SAISIE(FC FP "Le a vaut une nouvelle partition saisie.\nConserver a.\nSupprimer a.\n"
            "Le p vaut une nouvelle partition saisie.\nAfficher cote de p.",
-           "~Cote ? « A-1 » est déjà pris. Tapez « . » seul pour annuler.\nCote ? Compositeur ",
+           "~Cote ? « A-1 » est déjà pris. Tape « . » seul pour annuler.\nCote ? Compositeur ",
            "x", "A-1", "Bach", "", "", "", "1", "oui", "y", "A-1", "B-2", "Bach", "", "", "", "1", "oui");
     /* les champs du bloc ne sont pas demandés */
     SAISIE(FC FP "Le p vaut une nouvelle partition saisie :\n    Le titre vaut « Messe ».\n    Le compositeur vaut b.\n"
@@ -2612,7 +2612,7 @@ int main(void) {
         creer_fichier("_essai_form.txt", "abc", 3);
         SAISIE("Un document, conservé, a : un contenu (fichier), une vignette (image), facultative.\n"
                "Le d vaut un nouveau document saisi.\nAfficher taille du contenu du d.",
-               "Contenu ? Fichier « _absent.txt » introuvable ou illisible. Tapez « . » seul pour annuler.\nContenu ? Vignette ? "
+               "Contenu ? Fichier « _absent.txt » introuvable ou illisible. Tape « . » seul pour annuler.\nContenu ? Vignette ? "
                "« _essai_form.txt » n'est pas une image (PNG, JPEG, GIF ou WebP).\nVignette ? 3",
                "_absent.txt", "_essai_form.txt", "_essai_form.txt", "");
         remove("_essai_form.txt");
@@ -2635,7 +2635,7 @@ int main(void) {
     SAISIE(FC FP "Le p vaut une nouvelle partition saisie :\n    Le titre vaut « T ».\n    La cote vaut « C ».\n"
            "Une pièce, conservée, a : une cote (texte), unique, une partition (partition).\n"
            "Conserver p.\nLe q vaut une nouvelle pièce saisie.",
-           "~Partition ? Aucune partition conservée n'a « Z » pour cote. Tapez « . » seul pour annuler.\nPartition ? ",
+           "~Partition ? Aucune partition conservée n'a « Z » pour cote. Tape « . » seul pour annuler.\nPartition ? ",
            "Bach", "", "", "", "1", "oui", "K", "Z", "C");
     PROG("Un genre, conservé, a : un nom (texte), unique.\nPour f :\n    Le nom vaut « x ».\n"
          "    Afficher le nombre de genres conservés dont le nom est nom.\nF.",
@@ -2673,7 +2673,7 @@ int main(void) {
     /* « . » seul annule une question ou un formulaire ; un essai le rattrape (§ 17) */
     SAISIE("Le x vaut la réponse à « ? ».\nAfficher x.", "~Saisie annulée.", " . ");
     SAISIE(ESS("    Le x vaut la réponse en nombre à « ? ».\n    Afficher x.\n", "    Afficher le motif de l'échec.\n")
-           "Afficher « suite ».", "? « a » n'est pas un nombre. Tapez « . » seul pour annuler.\n? Saisie annulée.\nsuite",
+           "Afficher « suite ».", "? « a » n'est pas un nombre. Tape « . » seul pour annuler.\n? Saisie annulée.\nsuite",
            "a", ".");
     SAISIE(FC ESS("    Le c vaut un nouveau compositeur saisi.\n    Conserver c.\n", "    Afficher le motif de l'échec.\n")
            "Le d vaut un nouveau compositeur saisi.\nConserver d.\nAfficher le nombre de compositeurs conservés.",
@@ -2698,7 +2698,7 @@ int main(void) {
     PROG("Afficher « x » suivi de « y » sur 3 suivi de « z ».", "xy  z");
     PROG("Les nombres s'affichent sans séparateur.\nAfficher « n° » suivi de 1234.", "n°1234");
     PROG("Un point a : un b, facultatif.\nLe x vaut un nouveau point.\nAfficher « ( » suivi de b du x.",
-         "~Le champ « b » est absent : vérifiez-le d'abord avec « est présent ».");
+         "~Le champ « b » est absent : vérifie-le d'abord avec « est présent ».");
     PROG("Le carré d'un n vaut n × n.\nAfficher « = » suivi du carré de 3.", "=9");
     PROG("Si « a » suivi de « b », afficher 1.", "~Condition attendue après « Si »");
     PROG("Afficher « a » suivi « b ».", "~« suivi » attend « de »");
@@ -2724,7 +2724,7 @@ int main(void) {
     SAISIE(FM "Saisir à nouveau p.\n" FMA,
            "Cote [P-1] ? Titre [Offrande] ? Compositeur [Bach] ? Arrangeur [Webern] (- pour vider) ? Édition ? "
            "P-1 Offrande Bach un compositeur absent", "", "", "", "", "");
-    SAISIE(FM "Saisir à nouveau p.", "~Cote [P-1] ? « P-2 » est déjà pris. Tapez « . » seul pour annuler.\nCote [P-1] ? ",
+    SAISIE(FM "Saisir à nouveau p.", "~Cote [P-1] ? « P-2 » est déjà pris. Tape « . » seul pour annuler.\nCote [P-1] ? ",
            "P-2", "P-3", "", "", "", "");
     /* tout ou rien : une annulation au milieu ne change aucun champ */
     SAISIE(FM ESS("    Saisir à nouveau p.\n", "    Afficher le motif de l'échec.\n") FMA,
@@ -2757,7 +2757,7 @@ int main(void) {
         portee_detruire(p);
         remove("_essai_resaisir.grymd");
     }
-    SAISIE(FM "Supprimer p.\nSaisir à nouveau p.", "~est dans la corbeille : rétablissez-le d'abord.", "");
+    SAISIE(FM "Supprimer p.\nSaisir à nouveau p.", "~est dans la corbeille : rétablis-le d'abord.", "");
     /* un objet pas encore conservé : les champs sans valeur se demandent comme à la création */
     SAISIE(FM "La n vaut une nouvelle partition :\n    La cote vaut « N ».\nSaisir à nouveau n.\nAfficher titre de n.",
            "Cote [N] ? Titre ? Compositeur ? Arrangeur ? Édition ? T", "", "T", "Bach", "", "");
@@ -2833,7 +2833,7 @@ int main(void) {
         char *r = avec_page(FC FP "Le p vaut une nouvelle partition saisie.\nConserver p.\n" FA, R1, 9, NULL);
         const char *att = "Toccata A-1 Bach absent 01.02.1900 20 1705 vrai\n"
                           "page Titre Cote Compositeur Arrangeur Édition "
-                          "!« x » n'est pas une date : écrivez jour.mois.année (21.09.2026). "
+                          "!« x » n'est pas une date : écris jour.mois.année (21.09.2026). "
                           "Prix=20 Création Actif Édition";
         total++;
         if (strcmp(r, att) != 0) signaler(__LINE__, "formulaire en page", att, r);

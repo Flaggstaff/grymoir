@@ -175,22 +175,22 @@ int main(void) {
 
     /* --- Erreurs de référence (§ 6) --- */
     VE("Le total vaut 3.\nLe total vaut 4.", 2, 4,
-       "« total » existe déjà (ligne 1). Pour le modifier, écrivez : Le total devient …");
+       "« total » existe déjà (ligne 1). Pour le modifier, écris : Le total devient …");
     VE("Le total devient 4.", 1, 4,
-       "« total » n'existe pas. Pour le créer, écrivez : Le total vaut …");
-    VE("Le total vaut 3.\nLe totl devient 4.", 2, 4, "« totl » inconnu, vouliez-vous « total » ?");
-    VE("Le total vaut 3.\nLe x vaut totl + 1.", 2, 11, "« totl » inconnu, vouliez-vous « total » ?");
-    VE("Le solde vaut 3.\nAfficher le soldee.", 2, 13, "vouliez-vous « solde » ?");
+       "« total » n'existe pas. Pour le créer, écris : Le total vaut …");
+    VE("Le total vaut 3.\nLe totl devient 4.", 2, 4, "« totl » inconnu, voulais-tu « total » ?");
+    VE("Le total vaut 3.\nLe x vaut totl + 1.", 2, 11, "« totl » inconnu, voulais-tu « total » ?");
+    VE("Le solde vaut 3.\nAfficher le soldee.", 2, 13, "voulais-tu « solde » ?");
     VE("Le total vaut 3.\nLa total devient 4.", 2, 1, "« total » est masculin (déclaré ligne 1).");
     VE("L'addition vaut 3.\nLa addition devient 4.\nLe x vaut le addition.", 3, 11,
        "« addition » est féminin (déclaré ligne 2).");
     VE("Le x vaut 3", 1, 12, "Point final manquant (ligne 1).");
     VE("Le x vaut 3\nLe y vaut 4.", 1, 12, "Point final manquant (ligne 1).");
-    VE("Le x vaut 1 / 0.\nLe x vaut 3.5.", 2, 11, "Écrivez « 3,5 »");
+    VE("Le x vaut 1 / 0.\nLe x vaut 3.5.", 2, 11, "Écris « 3,5 »");
 
     /* --- Autres erreurs --- */
     VE("Le prix unitaire vaut 1.\nLe x vaut prix unitair × 2.", 2, 11,
-       "« prix unitair » inconnu, vouliez-vous « prix unitaire » ?");
+       "« prix unitair » inconnu, voulais-tu « prix unitaire » ?");
     VE("Le x vaut y.", 1, 11, "« y » inconnu.");
     VE("Le total vaut total + 1.", 1, 15, "« total » inconnu");
     VE("3 + 4.", 1, 1, "une phrase commence par Le, La, L', Afficher, Si, Pour ou le nom d'une action");
@@ -279,14 +279,14 @@ int main(void) {
       "(créer [frais et port] 3)\n(afficher (× [frais et port] 2))");
     V("Le total vaut 1.\nAfficher [total] puis le [total].", "(créer [total] 1)\n(afficher [total] [total])");
     VE("Le frais et port vaut 3.", 1, 10,
-       "« et » est un mot réservé : pour l'utiliser dans un nom, écrivez [frais et port].");
-    VE("Le [a et b] vaut 1.\nLe [a et b] vaut 2.", 2, 4, "Pour le modifier, écrivez : Le [a et b] devient …");
+       "« et » est un mot réservé : pour l'utiliser dans un nom, écris [frais et port].");
+    VE("Le [a et b] vaut 1.\nLe [a et b] vaut 2.", 2, 4, "Pour le modifier, écris : Le [a et b] devient …");
     VE("Le [a et b] 3 vaut 2.", 1, 13, "un nom entre crochets s'écrit seul");
     VE("Afficher [inconnu].", 1, 10, "« [inconnu] » inconnu.");
 
     /* --- Erreurs de conditions --- */
     VE("La quantité vaut 3.\nAfficher la quantité est positif.", 2, 26,
-       "« quantité » est féminin (déclaré ligne 1) : écrivez « positive ».");
+       "« quantité » est féminin (déclaré ligne 1) : écris « positive ».");
     VE("L'addition vaut 3.\nAfficher l'addition est positive.\nLe x vaut le addition.", 3, 11,
        "« addition » est féminin (déclaré ligne 2).");
     VE("Le x vaut 1.\nAfficher x est inférieur à le x.", 2, 26, "« à le » s'écrit « au ».");
@@ -411,7 +411,7 @@ int main(void) {
     V("Un client a : un solde.\nLe carré d'un n vaut n × n.\nLe c vaut un nouveau client.\nAfficher le carré du solde du c.",
       "(classe [client] [solde])\n(calcul [carré] ([n]) (× [n] [n]))\n(créer [c] (nouveau [client]))\n"
       "(afficher (appel [carré] (champ [solde] [c])))");
-    VE("Un client a : un nom.\nLe c vaut une nouvelle client.", 2, 11, "« client » est masculin : écrivez « un nouveau client ».");
+    VE("Un client a : un nom.\nLe c vaut une nouvelle client.", 2, 11, "« client » est masculin : écris « un nouveau client ».");
     VE("Le c vaut un nouveau fournisseur.", 1, 22, "Classe « fournisseur » inconnue.");
     VE("Un client a : un nom.\nUn client a : un solde.", 2, 4, "La classe « client » existe déjà.");
     VE("Un client a : un nom, un nom.", 1, 26, "Champ « nom » déjà nommé.");
@@ -436,7 +436,7 @@ int main(void) {
     V("Un objet a : un nom.\nUn outil est un objet.\nUn marteau est un outil.\nUn marteau a : un poids.",
       "(classe [objet] [nom])\n(classe [outil] (est [objet]))\n(classe [marteau] (est [outil]) [poids])");
     VE("Un membre est une personne.", 1, 19, "Classe « personne » inconnue");
-    VE("Une personne a : un nom.\nUn membre est un personne.", 2, 15, "« personne » est féminin : écrivez « une personne ».");
+    VE("Une personne a : un nom.\nUn membre est un personne.", 2, 15, "« personne » est féminin : écris « une personne ».");
     VE("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : un nom.", 3, 18,
        "« nom » est déjà un champ hérité de « personne ».");
     VE("Une personne a : un nom.\nUn membre est une personne.\nLe x vaut 1.\nUn membre a : une licence.", 4, 4,
@@ -479,7 +479,7 @@ int main(void) {
     VE(APT "Un membre est une personne horodatée et numérotée.\n"
        "Pour décrire une chose horodatée :\n    Afficher 1.\nPour décrire une chose numérotée :\n    Afficher 2.", 4, 1,
        "« décrire » est défini par les aptitudes « horodatée » et « numérotée » de « membre » : "
-       "définissez sa version pour « membre » afin de trancher.");
+       "définis sa version pour « membre » afin de trancher.");
     V(APT "Un membre est une personne horodatée et numérotée.\n"
       "Pour décrire une chose horodatée :\n    Afficher 1.\nPour décrire une chose numérotée :\n    Afficher 2.\n"
       "Pour décrire un membre :\n    Afficher 3.",
@@ -494,7 +494,7 @@ int main(void) {
     V("Pour chaque j du 01.01.2026 au 03.01.2026, afficher j.",
       "(pour-chaque [j] (date 2026-01-01) (date 2026-01-03) (bloc (afficher [j])))");
     VE("Le délai d'une date vaut aujourd'hui − date.", 1, 26,
-       "Un calcul ne dépend pas du jour : passez la date en paramètre.");
+       "Un calcul ne dépend pas du jour : passe la date en paramètre.");
     VE("Le jour vaut 30.02.2026.", 1, 14, "Le 30 février 2026 n'existe pas.");
 
     /* --- Fichiers (§ 15) --- */
@@ -535,7 +535,7 @@ int main(void) {
     VE("Une personne a : un nom.\nUn membre, conservé, est une personne.", 2, 30,
        "« personne » n'est pas une entité : une entité hérite d'une entité.");
     VE("Un client, conservé, a : un nom (texte).\nUn membre est un client.", 2, 18,
-       "« client » est une entité : écrivez « Un membre, conservé, est un client. ».");
+       "« client » est une entité : écris « Un membre, conservé, est un client. ».");
     VE("Une chose datée a : une date.\nUn client, conservé, est une chose datée.", 2, 36,
        "L'aptitude « datée » a un champ sans type (« date ») : une entité ne l'adopte pas.");
     VE("Un client, conservé, a : un solde (nombre).\nLe c vaut un nouveau client :\n    Le solde vaut « abc ».", 3, 19,
@@ -593,7 +593,7 @@ int main(void) {
     VE(CL "Afficher le nombre de clients conservés dont le solde est « a ».", 2, 59, "Le champ « solde » attend un nombre, pas un texte.");
     VE(CL "Afficher le nombre de clients conservés dont le solde = le nom.", 2, 46, "Une condition « dont » compare un champ du client");
     /* un calcul lit la base (décidé le 28 septembre 2026, § 9.4) ; il n'y écrit pas (plus haut : « ne conserve pas ») */
-    VE(CL "Le client vaut 1.\nPour chaque client conservé, afficher 1.", 3, 13, "« client » existe déjà : renommez-le");
+    VE(CL "Le client vaut 1.\nPour chaque client conservé, afficher 1.", 3, 13, "« client » existe déjà : renomme-le");
     VE(CL "Pour chaque client conservé, par âge, afficher 1.", 2, 34, "« âge » n'est pas un champ du client.");
     VE(CL "Pour chaque client conservé, par parrain, afficher 1.", 2, 34, "Tri attendu sur un champ");
 
@@ -733,7 +733,7 @@ int main(void) {
     VE("Un client, conservé, a : un nom (texte).\nLe c vaut un nouveau client :\n"
        "    Le nom vaut la réponse en nombre à « Nom ? ».", 3, 17, "Le champ « nom » attend un texte, pas un nombre.");
     VE("Le double d'un x vaut la réponse en nombre à « ? ».", 1, 23,
-       "Un calcul ne pose pas de question : demandez dans une action.");
+       "Un calcul ne pose pas de question : demande dans une action.");
 
     V("Effacer l'écran.", "(effacer-écran)");
     VE("Pour effacer un x :\n    Afficher 1.", 1, 6, "« effacer » commence une construction du langage");

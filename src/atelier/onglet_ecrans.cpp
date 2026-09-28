@@ -298,7 +298,7 @@ void OngletEcrans::montrer(const QString &d) {
     liste->blockSignals(false);
     element = lus.value(courant).nom == avant ? element_avant : -1;
     QString t = lus.isEmpty() ? QString("Aucun écran dans ce projet.")
-                              : QString("%1 écran%2. Cliquez un élément de l'aperçu pour voir ses propriétés.")
+                              : QString("%1 écran%2. Clique un élément de l'aperçu pour voir ses propriétés.")
                                     .arg(lus.size()).arg(lus.size() > 1 ? "s" : "");
     if (!problemes.isEmpty()) t += "\nNon lus, car ils contiennent une erreur : " + problemes.join(", ") + ".";
     etat->setText(t);

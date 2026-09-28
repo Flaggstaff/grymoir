@@ -118,7 +118,7 @@ Mêmes règles que la grammaire, § 11 : mots-clés à souligné, noms à soulig
 
 ### 3.8 Hors de l'atelier *(validé le 25 septembre 2026)*
 
-- Un programme qui ouvre des écrans est refusé par `grym lancer` et `grym servir`, avant toute exécution : « Ce programme ouvre des écrans : lancez-le dans une fenêtre, avec grym-atelier. » Un programme sans écran tourne partout, comme avant.
+- Un programme qui ouvre des écrans est refusé par `grym lancer` et `grym servir`, avant toute exécution : « Ce programme ouvre des écrans : lance-le dans une fenêtre, avec grym-atelier. » Un programme sans écran tourne partout, comme avant.
 - L'interface de la machine (`src/interface.h`) reçoit les appels des écrans ; les essais les pilotent par script (cliquer, choisir, saisir), sans Qt, pour l'intégration continue.
 - Pour distribuer une application : `grym-atelier --lancer` d'abord ; un exécutable dédié, sans l'atelier, plus tard.
 - Un repli en texte reste possible si un vrai besoin se présente.

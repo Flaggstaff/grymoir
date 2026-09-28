@@ -47,7 +47,7 @@ static Issue console_formulaire(void *contexte, Chaine *sortie, Champ *champs, s
             chaine_ajouter(sortie, message ? message : "");
             free(message);
             if (!c->annonce) {
-                chaine_ajouter(sortie, " Tapez « . » seul pour annuler.");
+                chaine_ajouter(sortie, " Tape « . » seul pour annuler.");
                 c->annonce = 1;
             }
             chaine_ajouter(sortie, "\n");

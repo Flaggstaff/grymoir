@@ -148,7 +148,7 @@ int main(void) {
     V("1,2,3", "ERREUR");
     V("3kg", "ERREUR");
     VM("1'00", "milliers mal placé");
-    VM("Le total vaut 3.5.", "Écrivez « 3,5 »");
+    VM("Le total vaut 3.5.", "Écris « 3,5 »");
     VM("1,2,3", "qu'une virgule");
     VM("3kg", "collé à un mot");
 
@@ -249,9 +249,9 @@ int main(void) {
     VM("21.9.26", "Date mal formée « 21.9.26 »");
     VM("021.09.2026", "Date mal formée");
     VM("21.09.20266", "Date mal formée");
-    VM("21.09", "ajoutez l'année : 21.09.2026");
-    VM("3.5", "Écrivez « 3,5 », ou, pour une date");
-    VM("1234.5", "Écrivez « 1234,5 ».");
+    VM("21.09", "ajoute l'année : 21.09.2026");
+    VM("3.5", "Écris « 3,5 », ou, pour une date");
+    VM("1234.5", "Écris « 1234,5 ».");
     VP("Le x vaut 21.09.2026.", 3, 1, 11);
     VP("Le x vaut 21.09.2026.", 4, 1, 21);
 

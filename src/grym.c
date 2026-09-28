@@ -243,7 +243,7 @@ static void ouvrir_navigateur(const char *adresse) {
 #else
     char *commande = grym_formater("xdg-open '%s' >/dev/null 2>&1 &", adresse);
 #endif
-    if (system(commande) != 0) fprintf(stderr, "Ouvrez vous-même l'adresse ci-dessus dans un navigateur.\n");
+    if (system(commande) != 0) fprintf(stderr, "Ouvre toi-même l'adresse ci-dessus dans un navigateur.\n");
     free(commande);
 }
 
@@ -363,7 +363,7 @@ static int traduire(const char *chemin) {
     FILE *existe = fopen(cible, "rb");
     if (existe) {
         fclose(existe);
-        fprintf(stderr, "« %s » existe déjà : supprimez-le ou renommez-le avant de traduire.\n", cible);
+        fprintf(stderr, "« %s » existe déjà : supprime-le ou renomme-le avant de traduire.\n", cible);
         free(cible);
         free(t);
         return EXIT_FAILURE;
@@ -410,7 +410,7 @@ static int termine_par_deux_points(const char *l) {
  * qui a déjà enregistré les noms de la saisie, est restaurée à part. */
 static int boucle(const char *base) {
     int tty = terminal();
-    if (tty) printf("GrymoiR %s, boucle interactive. Tapez « quitter » pour sortir.\n", VERSION);
+    if (tty) printf("GrymoiR %s, boucle interactive. Tape « quitter » pour sortir.\n", VERSION);
     Portee *portee = portee_creer();
     Machine *m = machine_creer();
     machine_base(m, base);   /* NULL : base en mémoire, perdue à la sortie (§ 16.5) */

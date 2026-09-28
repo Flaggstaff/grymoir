@@ -320,7 +320,7 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 - **Validation** : l'interface appelle la machine pour chaque réponse. La machine rend « acceptée », « refusée » avec le motif, ou « arrêt ». La console valide champ par champ et relance aussitôt ; une page validera après l'envoi, et redemandera seulement les champs refusés.
 - **Issue** : tout répondu, annulé par l'utilisateur, plus rien à lire, ou arrêt demandé par la validation. Annuler se tape `.` en console et sera un bouton dans une page ; vider un champ se tape `-` en console et sera une case à cocher. Ces conventions appartiennent à l'interface, pas à la machine.
 - **Discipline des questions** (grammaire, § 17) : avant le formulaire, la machine valide ce qui précède et rend le verrou ; chaque validation qui consulte la base (liens, unicité) reprend le verrou puis le rend ; après le formulaire, le verrou reprend, avec les points de reprise des essais (§ 6).
-- **Annonce** : « Tapez « . » seul pour annuler. », à la première relance, est une affaire de console.
+- **Annonce** : « Tape « . » seul pour annuler. », à la première relance, est une affaire de console.
 - **Issue « interrompu »** : un Ctrl+C pendant l'attente arrête l'exécution, que nul essai ne rattrape (§ 6).
 - **Interface riche** (docs/v2.md, § 10) : la machine décrit aussi si un champ est facultatif et, pour un lien, les clés des objets conservés en suggestions. L'interface peut rendre les octets d'un fichier au lieu d'un chemin tapé, et afficher une image à sa place dans le fil ; sinon, la machine écrit sa description.
 - Deux implémentations : la console (`src/console.c`) et le navigateur (`src/serveur.c`, docs/v2.md, § 9 et § 10).

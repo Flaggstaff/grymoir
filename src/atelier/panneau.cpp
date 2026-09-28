@@ -31,7 +31,7 @@ QWidget *centree(QCheckBox *c) {   // une case à cocher, centrée dans sa cellu
 }  // namespace
 
 PanneauEntite::PanneauEntite(QWidget *parent) : QWidget(parent) {
-    titre = new QLabel("Choisissez une entité dans le schéma.");
+    titre = new QLabel("Choisis une entité dans le schéma.");
     titre->setWordWrap(true);
     nom = new QLineEdit;
     bouton_renommer = new QPushButton("Renommer");
@@ -144,7 +144,7 @@ void PanneauEntite::montrer(const EntiteSchema *e, const QStringList &types) {
                        static_cast<QWidget *>(bouton_retirer)})
         w->setEnabled(e != nullptr);
     if (!e) {
-        titre->setText("Choisissez une entité dans le schéma.");
+        titre->setText("Choisis une entité dans le schéma.");
         return;
     }
     titre->setText(QString("<b>%1</b>%2").arg(e->nom.toHtmlEscaped(),

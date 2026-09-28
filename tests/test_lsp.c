@@ -117,7 +117,7 @@ int main(void) {
         V(code == 0, "« exit » après « shutdown » : code 0", r);
         V(strstr(r, "\"documentFormattingProvider\":true") != NULL, "capacités annoncées", r);
         V(strstr(r, "{\"range\":{\"start\":{\"line\":1,\"character\":21},\"end\":{\"line\":1,\"character\":27}},"
-                    "\"severity\":1,\"source\":\"grym\",\"message\":\"« totale » inconnu, vouliez-vous « total » ?\"}") != NULL,
+                    "\"severity\":1,\"source\":\"grym\",\"message\":\"« totale » inconnu, voulais-tu « total » ?\"}") != NULL,
           "diagnostic, colonne en unités UTF-16 (l'émoji en compte deux)", r);
         V(strstr(r, "\"id\":2,\"result\":[{\"label\":\"total\"}]") != NULL, "suites : « total »", r);
         V(strstr(r, "\"id\":3,\"result\":[{\"range\":{\"start\":{\"line\":0,\"character\":0},\"end\":{\"line\":2,\"character\":0}},"

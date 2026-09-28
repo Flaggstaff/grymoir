@@ -70,7 +70,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": false,
-      "description": "GrymoiR lance l'outil grym indiqué dans le réglage « grymoir.chemin » : VS Code ne le permet que dans un dossier auquel vous faites confiance. Faites confiance au dossier (bandeau « Restricted Mode », puis « Trust ») pour activer les erreurs en direct, l'autocomplétion et la mise en forme. La coloration fonctionne dans tous les cas."
+      "description": "GrymoiR lance l'outil grym indiqué dans le réglage « grymoir.chemin » : VS Code ne le permet que dans un dossier auquel tu fais confiance. Fais confiance au dossier (bandeau « Restricted Mode », puis « Trust ») pour activer les erreurs en direct, l'autocomplétion et la mise en forme. La coloration fonctionne dans tous les cas."
     }
   }
 }

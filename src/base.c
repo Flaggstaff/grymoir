@@ -170,7 +170,7 @@ Base *base_ouvrir(const char *chemin, char **erreur) {
     }
     if (format > BASE_FORMAT) {
         *erreur = grym_formater("La base « %s » a le format %ld, plus récent que celui de ce grym (%d) : "
-                                "ouvrez-la avec une version plus récente de grym. Elle n'a pas été modifiée.",
+                                "ouvre-la avec une version plus récente de grym. Elle n'a pas été modifiée.",
                                 b->chemin, format, BASE_FORMAT);
         base_fermer(b);
         return NULL;
@@ -523,7 +523,7 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
             /* champ multiple retiré : sa table de liaison part si elle est vide (§ 16.13) */
             long liaisons = compter_liaisons(b, c->nom, a.noms[k]);
             if (liaisons > 0) {
-                *erreur = grym_formater("« %s » a disparu de « %s » : %ld liaison%s serai%s perdue%s. Remettez ce champ.",
+                *erreur = grym_formater("« %s » a disparu de « %s » : %ld liaison%s serai%s perdue%s. Remets ce champ.",
                                         a.noms[k], c->nom, liaisons, liaisons > 1 ? "s" : "", liaisons > 1 ? "ent" : "t",
                                         liaisons > 1 ? "s" : "");
                 ok = 0;
@@ -534,7 +534,7 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
                 ok = executer_chaine(b, &sql, erreur);
             }
         } else if (chercher_champ(&n, a.noms[k]) < 0 && lignes > 0) {
-            *erreur = grym_formater("« %s » a disparu de « %s » : %ld valeur%s conservée%s serai%s perdue%s. Remettez ce "
+            *erreur = grym_formater("« %s » a disparu de « %s » : %ld valeur%s conservée%s serai%s perdue%s. Remets ce "
                                     "champ ; un renommage se déclare comme un retrait suivi d'un ajout, et n'est pas "
                                     "encore pris en charge.", a.noms[k], c->nom, lignes, lignes > 1 ? "s" : "",
                                     lignes > 1 ? "s" : "", lignes > 1 ? "ent" : "t", lignes > 1 ? "s" : "");
@@ -659,7 +659,7 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
             *erreur = lien || est_fichier(t)
                 ? grym_formater("« %s » est nouveau, et %s : un %s n'a pas de valeur de départ, il ne s'ajoute qu'à une "
                                 "entité sans objet conservé.", n.noms[k], deja, lien ? "lien" : "fichier")
-                : grym_formater("« %s » est nouveau, et %s : donnez-lui une valeur de départ, après son type : "
+                : grym_formater("« %s » est nouveau, et %s : donne-lui une valeur de départ, après son type : "
                                 "« (%s), … au départ ».", n.noms[k], deja, t);
             ok = 0;
             break;
@@ -921,14 +921,14 @@ static int lier(Base *b, sqlite3_stmt *st, int i, const char *type, const char *
     } else {
         if (!v->objet->id) {
             char *qui = un(v->objet->classe);
-            *erreur = grym_formater("Le champ « %s » désigne %s qui n'est pas conservé%s : conservez-%s d'abord.", champ,
+            *erreur = grym_formater("Le champ « %s » désigne %s qui n'est pas conservé%s : conserve-%s d'abord.", champ,
                                     qui, v->objet->classe->feminin ? "e" : "", v->objet->classe->feminin ? "la" : "le");
             free(qui);
             return 0;
         }
         if (base_est_supprime(b, v->objet->id)) {   /* règle 3 : pas de nouveau lien vers la corbeille (§ 16.12) */
             const ClasseVM *c = v->objet->classe;
-            *erreur = grym_formater("Le champ « %s » désignerait %s %s supprimé%s : rétablissez-%s d'abord.", champ,
+            *erreur = grym_formater("Le champ « %s » désignerait %s %s supprimé%s : rétablis-%s d'abord.", champ,
                                     c->feminin ? "une" : "un", c->nom, c->feminin ? "e" : "", c->feminin ? "la" : "le");
             return 0;
         }
@@ -975,7 +975,7 @@ static char *message_contrainte(Base *b, const Objet *o) {
             free(texte);
         }
         char *r = dans_corbeille
-            ? grym_formater("« %s » est unique : %s appartient à %s %s supprimé%s. Rétablissez-%s, ou supprimez-%s "
+            ? grym_formater("« %s » est unique : %s appartient à %s %s supprimé%s. Rétablis-%s, ou supprime-%s "
                             "définitivement.", p + 3, valeur ? valeur : "cette valeur", c->feminin ? "une" : "un", c->nom,
                             c->feminin ? "e" : "", c->feminin ? "la" : "le", c->feminin ? "la" : "le")
             : grym_formater("« %s » est unique : %s %s conservé%s a déjà %s.", p + 3,
@@ -1093,14 +1093,14 @@ int base_gagner(Base *b, const Objet *o, size_t k, const Valeur *v, int perdre, 
     if (!x->id) {
         if (perdre) return 1;   /* un objet jamais conservé n'est dans aucun ensemble */
         char *qui = un(x->classe);
-        *erreur = grym_formater("Le champ « %s » gagnerait %s qui n'est pas conservé%s : conservez-%s d'abord.", c->champs[k],
+        *erreur = grym_formater("Le champ « %s » gagnerait %s qui n'est pas conservé%s : conserve-%s d'abord.", c->champs[k],
                                 qui, x->classe->feminin ? "e" : "", x->classe->feminin ? "la" : "le");
         free(qui);
         return 0;
     }
     if (!perdre && base_est_supprime(b, x->id)) {   /* pas de nouveau lien vers la corbeille (§ 16.12) */
         const ClasseVM *xc = x->classe;
-        *erreur = grym_formater("Le champ « %s » gagnerait %s %s supprimé%s : rétablissez-%s d'abord.", c->champs[k],
+        *erreur = grym_formater("Le champ « %s » gagnerait %s %s supprimé%s : rétablis-%s d'abord.", c->champs[k],
                                 xc->feminin ? "une" : "un", xc->nom, xc->feminin ? "e" : "", xc->feminin ? "la" : "le");
         return 0;
     }
@@ -1275,10 +1275,10 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
                 char *qui = dehors > 1 ? pluriel(x) : un(x);
                 /* s'ils sont tous dans la corbeille, le dire : on ne les voit plus */
                 const char *suite = en_corbeille == dehors
-                    ? (dehors > 1 ? (x->feminin ? " supprimées : supprimez-les définitivement d'abord"
-                                                : " supprimés : supprimez-les définitivement d'abord")
-                                  : (x->feminin ? " supprimée : supprimez-la définitivement d'abord"
-                                                : " supprimé : supprimez-le définitivement d'abord"))
+                    ? (dehors > 1 ? (x->feminin ? " supprimées : supprime-les définitivement d'abord"
+                                                : " supprimés : supprime-les définitivement d'abord")
+                                  : (x->feminin ? " supprimée : supprime-la définitivement d'abord"
+                                                : " supprimé : supprime-le définitivement d'abord"))
                     : "";
                 *erreur = dehors > 1
                     ? grym_formater("%s %s est encore désigné%s par le champ « %s » de %ld %s%s.", ce(c), c->nom,
@@ -1326,7 +1326,7 @@ int base_retablir(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_c
         return 0;
     }
     if (avec != o->id) {
-        *erreur = grym_formater("%s %s a disparu avec un autre objet : rétablissez celui-là, et %s reviendra avec lui.",
+        *erreur = grym_formater("%s %s a disparu avec un autre objet : rétablis celui-là, et %s reviendra avec lui.",
                                 ce(oc), oc->nom, oc->feminin ? "elle" : "il");
         return 0;
     }
@@ -1336,7 +1336,7 @@ int base_retablir(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_c
         const Objet *cible = o->champs[k].objet;
         if (cible->id && base_est_supprime(b, cible->id)) {
             const ClasseVM *c = cible->classe;
-            *erreur = grym_formater("%s %s disparaît avec %s %s qui est supprimé%s : rétablissez-%s d'abord.", ce(oc),
+            *erreur = grym_formater("%s %s disparaît avec %s %s qui est supprimé%s : rétablis-%s d'abord.", ce(oc),
                                     oc->nom, c->feminin ? "une" : "un", c->nom, c->feminin ? "e" : "",
                                     c->feminin ? "la" : "le");
             return 0;
@@ -1631,7 +1631,7 @@ static int lire_condition(Recherche *r) {
         const Valeur *v = &r->params[i - 1];
         if (v->type == V_ABSENT) {
             free(nomme);
-            r->erreur = v->texte ? grym_formater("Le champ « %s » est absent : vérifiez-le d'abord avec « est présent ».", v->texte)
+            r->erreur = v->texte ? grym_formater("Le champ « %s » est absent : vérifie-le d'abord avec « est présent ».", v->texte)
                                  : grym_dupliquer("La valeur est absente.");
             return 0;
         }
@@ -1698,7 +1698,7 @@ static int lire_condition(Recherche *r) {
                     chaine_ajouter(&noms, " »");
                 }
                 char *n = chaine_rendre(&noms);
-                r->erreur = grym_formater("Plusieurs champs %s %s peuvent désigner %s : %s. Précisez avec "
+                r->erreur = grym_formater("Plusieurs champs %s %s peuvent désigner %s : %s. Précise avec "
                                           "« dont … est le … », par exemple « dont … est le %s ».",
                                           r->e->feminin ? "d'une" : "d'un", r->e->nom, qui, n, r->e->champs[ks[0]]);
                 free(n);
@@ -1720,7 +1720,7 @@ static int lire_condition(Recherche *r) {
                 }
                 char *n = chaine_rendre(&noms), *pr = chaine_rendre(&precis);
                 char *e1 = un(r->e);
-                r->erreur = grym_formater("Plusieurs champs relient %s à %s : %s. Précisez avec %s.", e1, qui, n, pr);
+                r->erreur = grym_formater("Plusieurs champs relient %s à %s : %s. Précise avec %s.", e1, qui, n, pr);
                 free(e1);
                 free(n);
                 free(pr);

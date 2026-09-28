@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.54 de la spécification, révisée le 28 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.55 de la spécification, révisée le 28 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -23,7 +23,7 @@ Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4)
 - Séparateur de milliers accepté en entrée : apostrophe suisse (`1'000`) et espace insécable (U+00A0, U+202F : `1 000`). Grouper ou non est un choix d'écriture, conservé dans l'arbre (§ 12) : `1747` reste `1747`.
 - L'apostrophe de milliers suit toujours un chiffre ; l'apostrophe d'élision suit toujours une lettre. Aucune ambiguïté.
 - Les séparateurs de milliers ne sont admis que dans la partie entière, par groupes de trois chiffres (`1'000`, `12'345`) ; `1'00` est une erreur.
-- Le point décimal à l'anglaise est une erreur avec correction : `3.5` produit « Écrivez « 3,5 » ».
+- Le point décimal à l'anglaise est une erreur avec correction : `3.5` produit « Écris « 3,5 » ».
 - Un nombre collé à un mot (`3kg`) et une seconde virgule décimale (`1,2,3`) sont des erreurs.
 
 ### 1.3 Apostrophes
@@ -65,7 +65,7 @@ Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4)
 | supérieur ou égal | `≥` | `>=` |
 
 - `[` … `]` délimite un nom écrit entre crochets (§ 2.2). Le contenu tient sur une ligne et ne contient que des mots et des élisions ; la casse et les espaces multiples ne comptent pas.
-- L'indentation délimite les blocs (§ 5.4). Une tabulation en début de ligne est une erreur : « Tabulation en début de ligne : indentez avec des espaces. » Une ligne vide peut contenir des tabulations.
+- L'indentation délimite les blocs (§ 5.4). Une tabulation en début de ligne est une erreur : « Tabulation en début de ligne : indente avec des espaces. » Une ligne vide peut contenir des tabulations.
 
 ### 1.7 Commentaire
 
@@ -396,9 +396,9 @@ Limites de cette notation :
 
 | Situation | Message |
 |-----------|---------|
-| Nom inconnu proche d'un nom connu | « `totl` inconnu, vouliez-vous `total` ? » |
-| `vaut` sur un nom existant | « `total` existe déjà (ligne 3). Pour le modifier, écrivez : Le total devient … » |
-| `devient` sur un nom inconnu | « `total` n'existe pas. Pour le créer, écrivez : Le total vaut … » |
+| Nom inconnu proche d'un nom connu | « `totl` inconnu, voulais-tu `total` ? » |
+| `vaut` sur un nom existant | « `total` existe déjà (ligne 3). Pour le modifier, écris : Le total devient … » |
+| `devient` sur un nom inconnu | « `total` n'existe pas. Pour le créer, écris : Le total vaut … » |
 | Genre contradictoire | « `total` est masculin (déclaré ligne 3) » |
 | Division par zéro | « Division par zéro. » (position de l'opérateur `÷`) |
 | Résultat démesuré | « Nombre trop grand : un résultat est limité à 1000 chiffres. » |
@@ -406,20 +406,20 @@ Limites de cette notation :
 | Phrase sans point final hors boucle interactive | « Point final manquant (ligne 5) » |
 | Jeton inattendu | « « 2 » inattendu, attendu : un opérateur ou un point final. » |
 | Article sans nom | « Nom attendu après « le ». » |
-| Remarque mal placée | « Une remarque doit commencer une ligne : passez à la ligne avant « Remarque : ». » |
+| Remarque mal placée | « Une remarque doit commencer une ligne : passe à la ligne avant « Remarque : ». » |
 | Parenthèse non refermée | « Parenthèse fermante manquante : la parenthèse ouverte ligne 2, colonne 11 n'est pas refermée. » |
-| Mot réservé dans un nom | « « et » est un mot réservé : pour l'utiliser dans un nom, écrivez [frais de port et emballage]. » |
-| Accord | « « quantité » est féminin (déclaré ligne 1) : écrivez « positive ». » |
+| Mot réservé dans un nom | « « et » est un mot réservé : pour l'utiliser dans un nom, écris [frais de port et emballage]. » |
+| Accord | « « quantité » est féminin (déclaré ligne 1) : écris « positive ». » |
 | Contraction | « « à le » s'écrit « au ». » |
-| Mélange de `et` et `ou` | « « et » et « ou » mélangés sans parenthèses : écrivez « (A et B) ou C » ou « A et (B ou C) » selon le sens voulu. » |
+| Mélange de `et` et `ou` | « « et » et « ou » mélangés sans parenthèses : écris « (A et B) ou C » ou « A et (B ou C) » selon le sens voulu. » |
 | Condition arithmétique | « Condition attendue après « Si » : une comparaison, par exemple « Si le total est supérieur à 100 ». Un calcul seul n'est ni vrai ni faux. » |
 | Condition non booléenne (exécution) | « Condition ni vraie ni fausse : la valeur est un nombre. » |
 | Indentation | « Indentation inattendue : seul un bloc ouvert par « : » s'indente. » |
 | `Sinon` mal placé | « « Sinon » doit être aligné sur son « Si ». » |
-| Variable lue dans un calcul | « « taux » n'est pas visible dans un calcul : un calcul ne voit que ses paramètres. Passez la valeur en paramètre. » |
+| Variable lue dans un calcul | « « taux » n'est pas visible dans un calcul : un calcul ne voit que ses paramètres. Passe la valeur en paramètre. » |
 | Nombre d'arguments | « « carré » attend 1 paramètre, 2 donnés. » |
 | Calcul sans `Rendre` final | « Le calcul « valeur » doit se terminer par « Rendre … ». » |
-| Affichage dans un calcul | « Un calcul n'affiche rien : il rend une valeur. Pour afficher, écrivez une action. » |
+| Affichage dans un calcul | « Un calcul n'affiche rien : il rend une valeur. Pour afficher, écris une action. » |
 | Compteur modifié | « « mois » est le compteur de la boucle : il avance tout seul et ne se modifie pas. » |
 | Nombre de tours (exécution) | « Nombre de tours invalide : un entier positif ou nul est attendu, pas 2,5. » |
 | Pas nul (exécution) | « Pas nul : la boucle ne finirait jamais. » |
@@ -430,22 +430,22 @@ Limites de cette notation :
 | Calcul sur une année (exécution) | « On n'additionne pas deux années. » |
 | Entité nommée comme un type | « « année » est un type : une entité ne peut pas porter ce nom. » |
 | Date impossible | « Le 31 février 2026 n'existe pas. » |
-| Date mal écrite | « Date mal formée « 21.9.26 » : écrivez jour.mois.année, l'année sur quatre chiffres (21.09.2026). » |
+| Date mal écrite | « Date mal formée « 21.9.26 » : écris jour.mois.année, l'année sur quatre chiffres (21.09.2026). » |
 | Deux dates additionnées (exécution) | « On n'additionne pas deux dates. » |
 | Décalage non entier (exécution) | « Une date se décale d'un nombre entier de jours. » |
 | Hors du calendrier (exécution) | « Date hors du calendrier : du 01.01.0001 au 31.12.9999. » |
-| `aujourd'hui` dans un calcul | « Un calcul ne dépend pas du jour : passez la date en paramètre. » |
+| `aujourd'hui` dans un calcul | « Un calcul ne dépend pas du jour : passe la date en paramètre. » |
 | Fichier absent (exécution) | « Fichier « photos/ana.jpg » introuvable ou illisible. » |
 | Écrasement (exécution) | « « copie.jpg » existe déjà : il n'est jamais écrasé. » |
-| Fichier lu dans un calcul | « Un calcul ne lit pas le disque : lisez le fichier dans une action. » |
+| Fichier lu dans un calcul | « Un calcul ne lit pas le disque : lis le fichier dans une action. » |
 | Champ d'entité sans type | « Type attendu entre parenthèses : « un nom (texte) ». » |
 | Type d'une valeur (analyse ou exécution) | « Le champ « solde » attend un nombre, pas un texte. » |
 | Lien vers une classe ordinaire | « « personne » n'est pas une entité : un lien pointe vers une entité conservée. » |
 | Objet incomplet (exécution) | « Le champ « nom » n'a pas de valeur : un client incomplet ne se conserve pas. » |
-| Lien vers un objet non conservé | « Le champ « parrain » désigne un client qui n'est pas conservé : conservez-le d'abord. » |
+| Lien vers un objet non conservé | « Le champ « parrain » désigne un client qui n'est pas conservé : conserve-le d'abord. » |
 | Unicité | « « licence » est unique : un autre client conservé a déjà « A-1 ». » |
 | Suppression refusée | « Ce client est encore désigné par le champ « parrain » de 2 clients. » |
-| Champ nouveau sans valeur de départ | « « pays » est nouveau, et 12 clients sont déjà conservés : donnez-lui une valeur de départ, après son type : « (texte), … au départ ». » |
+| Champ nouveau sans valeur de départ | « « pays » est nouveau, et 12 clients sont déjà conservés : donne-lui une valeur de départ, après son type : « (texte), … au départ ». » |
 | Champ retiré | « « pays » a disparu de « client » : 12 valeurs conservées seraient perdues. … » |
 | Recherche sans résultat unique | « 3 clients conservés répondent à cette condition : « le client conservé dont … » en attend un seul. » |
 | Condition « dont » mal formée | « Une condition « dont » compare un champ du client à une valeur : « dont le solde est négatif ». » |
@@ -454,17 +454,17 @@ Limites de cette notation :
 | Version en double | « « saluer » existe déjà pour « personne ». » |
 | Aucune version (exécution) | « Aucune version de « saluer » pour une ville. » |
 | Accord d'une aptitude | « Accord : « personne horodatée ». » |
-| Conflit d'aptitudes | « « décrire » est défini par les aptitudes « horodatée » et « numérotée » de « membre » : définissez sa version pour « membre » afin de trancher. » |
-| Accord de « nouveau » | « « client » est masculin : écrivez « un nouveau client ». » |
+| Conflit d'aptitudes | « « décrire » est défini par les aptitudes « horodatée » et « numérotée » de « membre » : définis sa version pour « membre » afin de trancher. » |
+| Accord de « nouveau » | « « client » est masculin : écris « un nouveau client ». » |
 | Champ modifié avec `vaut` | « Un champ se modifie avec « devient » : « Le solde du client devient … ». » |
 | Champ absent (exécution) | « Un client n'a pas de champ « montant ». » |
 | Champ vide (exécution) | « Le champ « solde » n'a pas de valeur. » |
 | Pas un objet (exécution) | « « nom » : la valeur n'est pas un objet, c'est un nombre. » |
 | Champ multiple lu comme une valeur | « « genres » est un champ multiple, pas une valeur : il se lit avec « Pour chaque genre de … » ou « le nombre de genres de … », et change avec « Les genres de … gagnent … ». » |
 | Champ multiple facultatif, unique, avec valeur de départ | « « genres » est multiple : il n'est pas facultatif, un ensemble vide lui suffit. » |
-| Objet non conservé qui gagne (exécution) | « Une œuvre qui n'est pas conservée ne gagne rien : ses « genres » vivent dans la base. Conservez-la d'abord. » |
-| Élément de la corbeille (exécution) | « Le champ « genres » gagnerait un genre supprimé : rétablissez-le d'abord. » |
-| Ambiguïté d'une relation (exécution) | « Plusieurs champs relient une œuvre à une personne : « compositeur » et « interprètes ». Précisez avec « dont … est le compositeur » ou « dont … est parmi les interprètes ». » |
+| Objet non conservé qui gagne (exécution) | « Une œuvre qui n'est pas conservée ne gagne rien : ses « genres » vivent dans la base. Conserve-la d'abord. » |
+| Élément de la corbeille (exécution) | « Le champ « genres » gagnerait un genre supprimé : rétablis-le d'abord. » |
+| Ambiguïté d'une relation (exécution) | « Plusieurs champs relient une œuvre à une personne : « compositeur » et « interprètes ». Précise avec « dont … est le compositeur » ou « dont … est parmi les interprètes ». » |
 | `Essayer` sans son bloc d'échec | « « Essayer » attend son « En cas d'échec », aligné sur lui : une erreur ne passe jamais sous silence. » |
 | Motif hors du bloc d'échec | « « le motif de l'échec » ne s'emploie que dans un bloc « En cas d'échec ». » |
 | Récursion sans fin (exécution) | « Trop d'appels imbriqués : plus de 1000. Une formule s'appelle-t-elle sans fin ? » |
@@ -855,7 +855,7 @@ La date d'inscription du membre devient 21.09.2026.
 ### 14.3 `aujourd'hui`
 
 - `aujourd'hui` vaut la date du jour, selon l'horloge locale, lue une fois au début de l'exécution : une exécution qui franchit minuit garde la même date du début à la fin.
-- Un calcul ne peut pas l'utiliser (§ 9.4, pureté) : « Un calcul ne dépend pas du jour : passez la date en paramètre. »
+- Un calcul ne peut pas l'utiliser (§ 9.4, pureté) : « Un calcul ne dépend pas du jour : passe la date en paramètre. »
 - En forme compacte : `_aujourd'hui`.
 
 ### 14.4 Affichage et stockage
@@ -889,7 +889,7 @@ Si l'année de la date de sortie > 1700, …
 | année + année | erreur : « On n'additionne pas deux années. » |
 | ×, ÷, ^, opposé | erreur : « On ne multiplie pas une année. »… |
 
-- Une année se compare à une année ou à un nombre, par valeur : `année de o > 1700`, `1747 = année de o`. Elle ne se compare pas à une date : « Une année ne se compare pas à une date : comparez l'année de la date, « l'année de d ». »
+- Une année se compare à une année ou à un nombre, par valeur : `année de o > 1700`, `1747 = année de o`. Elle ne se compare pas à une date : « Une année ne se compare pas à une date : compare l'année de la date, « l'année de d ». »
 - `l'année de d` est permis dans un calcul : il ne dépend que de son paramètre. `l'année d'aujourd'hui` reste réservé aux actions (§ 14.3).
 - Boucles : le compteur est une année dès que le début en est une (`Pour chaque an de l'année de d à 2026`). `Selon` : `Cas de 1700 à 1750` compare par valeur.
 - En base : `INTEGER`. Une condition `dont` compare le champ à une année ou à un nombre ; le tri est numérique.
@@ -997,7 +997,7 @@ Supprimer le client.
 - Modifier un champ d'un objet conservé modifie la base aussitôt, dans la transaction de l'exécution (§ 16.6). Pas de second `Conserver`.
 - `Supprimer le client.` le met dans la corbeille ; `Supprimer le client définitivement.` l'efface de la base (§ 16.12).
 - Conserver, modifier et supprimer sont des effets de bord : réservés aux actions. `conserver` et `supprimer` ne commencent pas le nom d'une action.
-- Un lien d'un objet conservé désigne un objet conservé : « Le champ « parrain » désigne un client qui n'est pas conservé : conservez-le d'abord. » Un objet peut se désigner lui-même (`Le parrain du a devient a.`, puis `Conserver a.`). Deux objets neufs qui se désignent l'un l'autre ne se conservent pas encore : il faudrait un champ facultatif (§ 13.8).
+- Un lien d'un objet conservé désigne un objet conservé : « Le champ « parrain » désigne un client qui n'est pas conservé : conserve-le d'abord. » Un objet peut se désigner lui-même (`Le parrain du a devient a.`, puis `Conserver a.`). Deux objets neufs qui se désignent l'un l'autre ne se conservent pas encore : il faudrait un champ facultatif (§ 13.8).
 - `, unique` est vérifié à la conservation et à chaque modification : « « licence » est unique : un autre client conservé a déjà « A-1 ». »
 - Un objet supprimé puis conservé à nouveau reçoit un nouvel identifiant : un identifiant n'est jamais réattribué.
 - Une saisie ratée rend aussi à un objet son état : conservé ou non.
@@ -1028,7 +1028,7 @@ Afficher le nombre de clients conservés dont le statut actif est vrai.
 - Les nombres se comparent et se trient en décimal exact : `100,000000000000000001 > 9`, `0,10 = 0,1`. Les textes se trient comme dans un dictionnaire, sans tenir compte des accents ni de la casse (Ana, Bob, Élodie, émile, Zoé) ; leur égalité reste exacte.
 - Une entité retrouvée inclut les objets des entités qui en héritent : `Pour chaque client conservé` parcourt aussi les membres, qui restent des membres.
 - La liste d'une boucle est figée à son début : un objet conservé pendant la boucle n'y entre pas. `Sortir de la boucle` et `Passer au tour suivant` s'y emploient.
-- Le nom de l'objet du tour est celui de l'entité ; s'il existe déjà, erreur : « « client » existe déjà : renommez-le, car « Pour chaque client conservé » donne ce nom à l'objet de chaque tour. »
+- Le nom de l'objet du tour est celui de l'entité ; s'il existe déjà, erreur : « « client » existe déjà : renomme-le, car « Pour chaque client conservé » donne ce nom à l'objet de chaque tour. »
 - `par nom` trie selon un champ de texte, de nombre, de date ou vrai ou faux ; à valeurs égales, dans l'ordre de conservation.
 - Un objet retrouvé n'est lu qu'au premier accès à ses champs ; ses liens, à leur tour, au premier accès aux leurs.
 
@@ -1039,7 +1039,7 @@ Afficher le nombre de clients conservés dont le statut actif est vrai.
 - `factures.grymc` et `factures.grymb` utilisent aussi `factures.grymd`.
 - Tant que les migrations (§ 16.7) ne sont pas là, une entité dont la définition a changé depuis la dernière exécution est refusée : « La base « factures.grymd » connaît « client » avec une autre définition… » La base n'est pas touchée.
 - Aucune base n'est ouverte si le programme ne déclare aucune entité.
-- Chaque base porte un numéro de format (charte, art. 13). Une base d'un format plus récent que celui de `grym` est refusée avant toute écriture : « La base « factures.grymd » a le format 2, plus récent que celui de ce grym (1) : ouvrez-la avec une version plus récente de grym. Elle n'a pas été modifiée. »
+- Chaque base porte un numéro de format (charte, art. 13). Une base d'un format plus récent que celui de `grym` est refusée avant toute écriture : « La base « factures.grymd » a le format 2, plus récent que celui de ce grym (1) : ouvre-la avec une version plus récente de grym. Elle n'a pas été modifiée. »
 
 ### 16.6 Transaction
 
@@ -1114,7 +1114,7 @@ Pour chaque partition conservée dont l'édition est absente :
 - `, facultatif` (accordé au champ : `une édition (date), facultative`) permet au champ de rester sans valeur. Il suit le type, avec `, unique` et la valeur de départ ; il vaut pour les champs d'entité, d'aptitude et de classe ordinaire.
 - `absent` (`absente`) est la valeur d'un champ facultatif qui n'en a pas. Un champ facultatif d'un objet neuf est absent ; un champ facultatif se vide par `devient absent`. Le mot s'accorde avec le champ qu'il remplit : « Accord : « absente ». »
 - `est absent`, `est présent` (et `n'est pas absent`…) testent un champ, dans une condition ordinaire comme dans une condition `dont`, pour tout type de champ, fichiers compris.
-- Une valeur absente ne se laisse pas utiliser par mégarde : un calcul, une comparaison, le champ d'un lien absent ou l'appel d'une méthode sur elle donnent « Le champ « édition » est absent : vérifiez-le d'abord avec « est présent ». » Elle s'affiche `absent`, se range dans un nom, et se copie dans un autre champ facultatif.
+- Une valeur absente ne se laisse pas utiliser par mégarde : un calcul, une comparaison, le champ d'un lien absent ou l'appel d'une méthode sur elle donnent « Le champ « édition » est absent : vérifie-le d'abord avec « est présent ». » Elle s'affiche `absent`, se range dans un nom, et se copie dans un autre champ facultatif.
 - Un champ obligatoire refuse `absent` : « Le champ « nom » n'est pas facultatif : il ne devient pas absent. »
 - En base, un champ absent est `NULL`. Une condition `dont` autre que `est absent` ne retient jamais un objet dont le champ est absent (`dont l'édition < 01.01.2020` écarte les éditions absentes). Un tri place les absents en dernier, dans les deux sens.
 - Deux objets neufs se désignent l'un l'autre en passant par un champ facultatif : conserver le premier avec le lien absent, puis le second, puis remplir le lien du premier.
@@ -1138,7 +1138,7 @@ Pour chaque chanson conservée dont brel est l'auteur :
 
 - `les œuvres de bach` désigne les œuvres conservées dont un lien désigne `bach`. L'inverse se déduit du lien : rien n'est à déclarer. Deux tournures : `Pour chaque œuvre de bach [dont …] [, par …] :` et `le nombre d'œuvres de bach [dont …]`. `conservée` n'y figure pas : un lien ne relie que des objets conservés.
 - L'objet suit `de` : un nom, `du compositeur`, `de l'arrangeur de p`… Il doit être un objet ; absent, c'est l'erreur habituelle (§ 16.9).
-- Le lien est choisi à l'exécution, selon la classe réelle de l'objet (un lien `(personne)` désigne aussi un membre, qui est une personne). S'il n'y en a aucun : « Aucun champ d'une œuvre ne peut désigner une œuvre : « les œuvres de … » ne désigne rien. » S'il y en a plusieurs : « Plusieurs champs d'une chanson peuvent désigner une personne : « compositeur » et « auteur ». Précisez avec « dont … est le … », par exemple « dont … est le compositeur ». »
+- Le lien est choisi à l'exécution, selon la classe réelle de l'objet (un lien `(personne)` désigne aussi un membre, qui est une personne). S'il n'y en a aucun : « Aucun champ d'une œuvre ne peut désigner une œuvre : « les œuvres de … » ne désigne rien. » S'il y en a plusieurs : « Plusieurs champs d'une chanson peuvent désigner une personne : « compositeur » et « auteur ». Précise avec « dont … est le … », par exemple « dont … est le compositeur ». »
 - Une entité sans aucun lien est refusée dès l'analyse : « Un « instrument » n'a aucun lien vers un autre objet : « les instruments de … » ne désigne rien. »
 - La relation renversée, dans une condition `dont`, dit quel lien : `dont brel est l'auteur` vaut `dont l'auteur est brel`, écrit dans l'ordre naturel. Elle a sa négation : `dont rauber n'est pas l'auteur`, qui, comme toute condition, écarte les auteurs absents (§ 16.9).
 - `Pour chaque i de 1 à 9` garde son sens de compteur : si un `à` suit `de` avant `dont`, `,` ou `:`, c'est un compteur, même si `i` est le nom d'une entité.
@@ -1166,10 +1166,10 @@ Afficher le nombre de partitions supprimées.
 
 - `Supprimer x.` met l'objet dans la corbeille. Il garde ses valeurs, en base comme en mémoire, et la base note la date. La suppression simple ne casse aucun lien : elle est permise même si des liens désignent l'objet.
 - Un objet de la corbeille disparaît de toutes les recherches (`conservés`, `le nombre de…`, `les œuvres de bach`). `supprimé` à la place de `conservé` cherche dans la corbeille : `Pour chaque client supprimé`, `le client supprimé dont …`, `le nombre de clients supprimés`.
-- Les liens existants restent lisibles : la facture d'un client supprimé affiche toujours son client. Un nouveau lien vers un objet de la corbeille est refusé : « Le champ « client » désignerait un client supprimé : rétablissez-le d'abord. »
-- Un objet de la corbeille garde ses valeurs uniques : « « cote » est unique : « A-2 » appartient à une partition supprimée. Rétablissez-la, ou supprimez-la définitivement. »
+- Les liens existants restent lisibles : la facture d'un client supprimé affiche toujours son client. Un nouveau lien vers un objet de la corbeille est refusé : « Le champ « client » désignerait un client supprimé : rétablis-le d'abord. »
+- Un objet de la corbeille garde ses valeurs uniques : « « cote » est unique : « A-2 » appartient à une partition supprimée. Rétablis-la, ou supprime-la définitivement. »
 - `Rétablir x.` le fait revenir. Supprimer deux fois est une erreur ; rétablir un objet qui n'est pas dans la corbeille aussi.
-- `, et disparaît avec elle` (`avec lui`, accordé avec l'entité désignée) sur un lien : l'objet suit celui qu'il désigne. Il va dans la corbeille avec lui, revient avec lui, est effacé avec lui ; de proche en proche. Il ne se rétablit pas seul : « Ce pupitre a disparu avec un autre objet : rétablissez celui-là, et il reviendra avec lui. » Un objet mis dans la corbeille pour lui-même, puis dont le lien désigne un objet supprimé, ne revient pas avant lui.
+- `, et disparaît avec elle` (`avec lui`, accordé avec l'entité désignée) sur un lien : l'objet suit celui qu'il désigne. Il va dans la corbeille avec lui, revient avec lui, est effacé avec lui ; de proche en proche. Il ne se rétablit pas seul : « Ce pupitre a disparu avec un autre objet : rétablis celui-là, et il reviendra avec lui. » Un objet mis dans la corbeille pour lui-même, puis dont le lien désigne un objet supprimé, ne revient pas avant lui.
 - `Supprimer x définitivement.` efface l'objet et ceux qui disparaissent avec lui, qu'ils soient dans la corbeille ou non. Tout autre lien qui les désigne l'empêche : « Cette partition est encore désignée par le champ « partition » d'une note. » ; si ces objets sont eux-mêmes dans la corbeille, le message le dit et propose de les supprimer définitivement d'abord. En mémoire, les objets effacés restent, mais ne sont plus conservés.
 - `définitivement` est un mot réservé (§ 2).
 - En base : `grym_objet` reçoit `supprime` (la date) et `supprime_avec` (l'objet dont la suppression a entraîné celle-ci). Une base plus ancienne reçoit ces colonnes à l'ouverture ; ses objets restent conservés. La mention `, et disparaît avec elle` ne vit que dans la définition sauvegardée : l'ajouter ou la retirer ne demande aucune migration.
@@ -1261,11 +1261,11 @@ Si la réponse en vrai ou faux à « Encore ? », …
 - Le type s'intercale : `en nombre`, `en nombre entier`, `en date`, `en année`, `en vrai ou faux`. Sans mention, la réponse est un texte.
 - La question s'affiche telle quelle, suivie d'une espace, sans saut de ligne : le curseur attend sur la même ligne.
 - Lecture : les nombres suivent le § 1.2 (virgule décimale, séparateurs de milliers), les dates le § 14.1, les années le § 14.5 ; `vrai ou faux` accepte `oui`, `non`, `vrai`, `faux`, sans tenir compte de la casse. Les espaces de début et de fin tombent.
-- Relance : une réponse qui ne convient pas est annoncée, puis la question se repose. « « x » n'est pas un nombre. », « « 21.9.26 » n'est pas une date : écrivez jour.mois.année (21.09.2026). », « Répondez par oui ou non. » Une ligne vide convient à un texte, et relance pour les autres types. Le programme ne s'arrête pas parce que l'utilisateur a tapé de travers.
-- **Annuler** : une ligne faite d'un point seul (espaces permises autour) fait échouer la question : « Saisie annulée. ». Un `Essayer` englobant la rattrape comme toute erreur (§ 18) ; sinon, le programme s'arrête. La première relance d'un programme l'annonce : « … Tapez « . » seul pour annuler. ». Un texte fait d'un point seul ne peut donc pas être répondu ; `..` reste une réponse ordinaire.
+- Relance : une réponse qui ne convient pas est annoncée, puis la question se repose. « « x » n'est pas un nombre. », « « 21.9.26 » n'est pas une date : écris jour.mois.année (21.09.2026). », « Réponds par oui ou non. » Une ligne vide convient à un texte, et relance pour les autres types. Le programme ne s'arrête pas parce que l'utilisateur a tapé de travers.
+- **Annuler** : une ligne faite d'un point seul (espaces permises autour) fait échouer la question : « Saisie annulée. ». Un `Essayer` englobant la rattrape comme toute erreur (§ 18) ; sinon, le programme s'arrête. La première relance d'un programme l'annonce : « … Tape « . » seul pour annuler. ». Un texte fait d'un point seul ne peut donc pas être répondu ; `..` reste une réponse ordinaire.
 - Fin de l'entrée (Ctrl+D) : erreur d'exécution, « Plus rien à lire : la réponse à « Âge ? » manque. » Ctrl+C interrompt comme partout ailleurs.
 - **Une question valide ce qui la précède** : les fichiers en attente (§ 15.2) sont écrits, puis la base est validée, puis le journal se vide. Une erreur survenue plus tard n'annule que depuis la dernière question, et le dit (§ 3.3). Le verrou de la base est rendu pendant l'attente, et repris avec la réponse : un autre programme peut donc écrire entre deux questions, et les objets déjà lus gardent en mémoire les valeurs de leur lecture.
-- Effet de bord, donc réservé aux actions : « Un calcul ne pose pas de question : demandez dans une action. » Et interdit dans la boucle interactive, qui lit déjà sur la même entrée.
+- Effet de bord, donc réservé aux actions : « Un calcul ne pose pas de question : demande dans une action. » Et interdit dans la boucle interactive, qui lit déjà sur la même entrée.
 - En forme compacte : `_réponse « Nom ? »`, `_réponse (nombre_entier) « Âge ? »`, `_réponse (date) (q)`.
 
 
@@ -1327,7 +1327,7 @@ Le p vaut une nouvelle partition saisie :
 - Chaque question valide ce qui la précède (§ 17) ; dans un `Essayer` (§ 18), l'échec n'annule que depuis la dernière.
 - Un point seul annule le formulaire entier (§ 17) : l'objet n'est pas rendu.
 - **Modifier** : `Saisir à nouveau p.` pose les mêmes questions sur un objet existant, chaque valeur actuelle entre crochets : « Titre [L'Offrande musicale] ? ». Un lien montre sa clé, un fichier son nom d'origine. Une ligne vide garde la valeur ; un tiret seul `-` vide un champ facultatif, et le libellé l'annonce : « Arrangeur [Anton Webern] (- pour vider) ? ». Un champ sans valeur se demande comme à la création.
-- **Tout ou rien** : les réponses s'accumulent, et les champs ne s'écrivent qu'après la dernière, puis la base suit (§ 16.3). Annuler au milieu (`.`) ne change aucun champ. Garder sa propre valeur unique n'est pas un doublon. Un objet de la corbeille se refuse : « … est dans la corbeille : rétablissez-le d'abord. ».
+- **Tout ou rien** : les réponses s'accumulent, et les champs ne s'écrivent qu'après la dernière, puis la base suit (§ 16.3). Annuler au milieu (`.`) ne change aucun champ. Garder sa propre valeur unique n'est pas un doublon. Un objet de la corbeille se refuse : « … est dans la corbeille : rétablis-le d'abord. ».
 - `Saisir à nouveau` est une phrase, réservée aux actions et au programme ; `saisir` ne commence pas le nom d'une action.
 - Reporté : choisir les champs demandés ou leur libellé, l'autocomplétion des réponses.
 - En forme compacte : `_nouveau contact _saisi`, `_nouveau partition _saisi _avec`, `_saisir p`.
@@ -1370,7 +1370,7 @@ Pour recruter :
 - `Utiliser « chemin ».` rend visibles, dans tout le fichier, les déclarations du fichier désigné.
 - Elle se place en tête du fichier : après les remarques éventuelles, avant toute autre phrase. Plus bas : « « Utiliser » se place en tête du fichier, avant toute autre phrase. » Les dépendances d'un fichier se lisent ainsi dans ses premières lignes.
 - Le chemin s'écrit entre guillemets, sans extension : `« données »` trouve `données.grym` ou `données.grymc`. Écrire l'extension est une erreur, qui propose la tournure sans elle ; `grym traduire` n'a jamais à réécrire une phrase `Utiliser`.
-- Si les deux fichiers existent, le choix serait arbitraire : « « données » désigne à la fois « données.grym » et « données.grymc » : gardez-en un seul. »
+- Si les deux fichiers existent, le choix serait arbitraire : « « données » désigne à la fois « données.grym » et « données.grymc » : gardes-en un seul. »
 - `utiliser` devient un mot de construction (§ 10.7) : il ne commence plus le nom d'une action.
 
 ### 21.2 Un fichier de déclarations
@@ -1541,3 +1541,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.52 | 2026-09-28 | § 16.14 : règles, `Chaque … conservé [dont …] vérifie : condition, sinon « … ».`, vérifiées à la fin de chaque transaction |
 | 1.53 | 2026-09-28 | § 16.14 : coût mesuré des règles |
 | 1.54 | 2026-09-28 | § 22 (A3-c) : la fiche montre les champs « plusieurs », un bouton par élément |
+| 1.55 | 2026-09-28 | Messages au tutoiement, comme le guide (charte, art. 8) : « écris … », « voulais-tu … ? » |

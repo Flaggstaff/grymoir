@@ -42,7 +42,7 @@ Darwin)
         while pgrep -f "$programme" >/dev/null 2>&1; do
             attente=$((attente + 1))
             if [ "$attente" -gt 60 ]; then
-                echo "L'atelier ne s'est pas fermé (fermeture annulée ?). Fermez-le, puis relancez ./atelier." >&2
+                echo "L'atelier ne s'est pas fermé (fermeture annulée ?). Ferme-le, puis relance ./atelier." >&2
                 exit 1
             fi
             sleep 1

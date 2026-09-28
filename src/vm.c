@@ -891,7 +891,7 @@ static int lire_reponse(const char *type, const char *ligne, Valeur *v, char **p
         int non = strcmp(t, "non") == 0 || strcmp(t, "faux") == 0;
         free(t);
         if (!oui && !non) {
-            *probleme = grym_dupliquer("Répondez par oui ou non.");
+            *probleme = grym_dupliquer("Réponds par oui ou non.");
             return 0;
         }
         *v = vi_booleen(oui);
@@ -913,7 +913,7 @@ static int lire_reponse(const char *type, const char *ligne, Valeur *v, char **p
     char *valeur = bon ? grym_dupliquer(j.valeur) : NULL;
     if (lx) { jeton_liberer(&j); jeton_liberer(&f); lexeur_detruire(lx); }
     if (!bon) {
-        *probleme = grym_formater(date ? "« %s » n'est pas une date : écrivez jour.mois.année (21.09.2026)."
+        *probleme = grym_formater(date ? "« %s » n'est pas une date : écris jour.mois.année (21.09.2026)."
                                        : "« %s » n'est pas un nombre.", t);
         free(t);
         free(valeur);
@@ -1082,8 +1082,8 @@ Valeur vi_absent(const char *champ) {
 
 /* « Le champ « date » est absent. » : une valeur absente ne se laisse pas utiliser par mégarde (§ 16.9). */
 static char *message_absent(const Valeur *v) {
-    return v->texte ? grym_formater("Le champ « %s » est absent : vérifiez-le d'abord avec « est présent ».", v->texte)
-                    : grym_dupliquer("La valeur est absente : vérifiez-la d'abord avec « est présent ».");
+    return v->texte ? grym_formater("Le champ « %s » est absent : vérifie-le d'abord avec « est présent ».", v->texte)
+                    : grym_dupliquer("La valeur est absente : vérifie-la d'abord avec « est présent ».");
 }
 
 Valeur vi_objet(Objet *o) {
@@ -1625,7 +1625,7 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
         if (o->id && !charger(m, o, &erreur)) return erreur;
         if (o->id && m->base && base_est_supprime(m->base, o->id)) {
             char *qui = article_classe(cl);
-            char *r = grym_formater("Cet objet (%s) est dans la corbeille : rétablissez-le d'abord.", qui);
+            char *r = grym_formater("Cet objet (%s) est dans la corbeille : rétablis-le d'abord.", qui);
             free(qui);
             return r;
         }
@@ -1652,7 +1652,7 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
                 if (ci.facultatif) { valeur_liberer(&ci.depart); continue; }
                 valeur_liberer(&ci.depart);
                 probleme = grym_formater("Le champ « %s » ne se demande pas : « %s » n'a aucun champ texte unique qui "
-                                         "désigne un objet. Donnez-lui sa valeur dans le bloc du nouvel objet.", champ, type);
+                                         "désigne un objet. Donne-lui sa valeur dans le bloc du nouvel objet.", champ, type);
                 break;
             }
         }
@@ -2234,7 +2234,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         return 0;
     }
     if (!m->iface.ecran_ouvrir && (module_contient(module, I_ECRAN_OUVRIR) || module_contient(module, I_FICHE_ECRAN))) {
-        diag->message = grym_dupliquer("Ce programme ouvre des écrans : lancez-le dans une fenêtre, avec grym-atelier.");
+        diag->message = grym_dupliquer("Ce programme ouvre des écrans : lance-le dans une fenêtre, avec grym-atelier.");
         return 0;
     }
 
@@ -2768,7 +2768,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 valeur_liberer(&va);
                 valeur_liberer(&vb);
                 ok = echouer(diag, b, debut, grym_dupliquer("Une année ne se compare pas à une date : "
-                                                            "comparez l'année de la date, « l'année de d »."));
+                                                            "compare l'année de la date, « l'année de d »."));
                 break;
             }
             /* une année se compare à une année ou à un nombre, par valeur (§ 14.5) */
@@ -2958,7 +2958,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 probleme = grym_formater("Seul un objet se %s : la valeur est %s.", verbe, nom_type(v.type));
             else if (!v.objet->classe->conserve)
                 probleme = grym_formater("« %s » n'est pas une entité : ses objets ne se %s pas. "
-                                         "Déclarez « %s %s, %s, a : ».", v.objet->classe->nom,
+                                         "Déclare « %s %s, %s, a : ».", v.objet->classe->nom,
                                          code == I_CONSERVER ? "conservent" : code == I_RETABLIR ? "rétablissent" : "suppriment",
                                          v.objet->classe->feminin ? "Une" : "Un", v.objet->classe->nom,
                                          v.objet->classe->feminin ? "conservée" : "conservé");
@@ -3301,7 +3301,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 char *qui = article_classe(c);
                 qui[0] = (char)(qui[0] - 32);
                 probleme = grym_formater("%s qui n'est pas conservé%s ne %s rien : ses « %s » vivent dans la base. "
-                                         "Conservez-%s d'abord.", qui, c->feminin ? "e" : "",
+                                         "Conserve-%s d'abord.", qui, c->feminin ? "e" : "",
                                          code == I_GAGNER ? "gagne" : "perd", champ, c->feminin ? "la" : "le");
                 free(qui);
             } else if (v.type == V_ABSENT) {

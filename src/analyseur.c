@@ -822,7 +822,7 @@ static char *decrire_attendus(unsigned m, char **mots, size_t nb_mots);
 static void *erreur_inattendu(Analyse *a, const Jeton *t) {
     if (t->type == J_REMARQUE)
         return erreur(a, t, grym_dupliquer(
-            "Une remarque ne peut pas couper une phrase : terminez la phrase avant « Remarque : »."));
+            "Une remarque ne peut pas couper une phrase : termine la phrase avant « Remarque : »."));
     char *x = t->type == J_TEXTE ? grym_formater("Texte « %s »", t->valeur)
                                  : grym_formater("« %s »", "");
     if (t->type != J_TEXTE) {
@@ -946,7 +946,7 @@ static const char *suggerer(Analyse *a, const char *nom) {
 
 static void *erreur_inconnu(Analyse *a, const Jeton *t, const char *nom) {
     const char *s = suggerer(a, nom);
-    if (s) return erreur(a, t, grym_formater("« %s » inconnu, vouliez-vous « %s » ?", nom, s));
+    if (s) return erreur(a, t, grym_formater("« %s » inconnu, voulais-tu « %s » ?", nom, s));
     return erreur(a, t, grym_formater("« %s » inconnu.", nom));
 }
 
@@ -1021,7 +1021,7 @@ static Noeud *appel_calcul(Analyse *a, Symbole *s, const Jeton *premier) {
         } else if (nb == 0) {
             noeud_liberer(n);
             return erreur(a, t, grym_formater(
-                "« %s » est un calcul : donnez-lui sa valeur, par exemple « le %s de 7 ».", s->nom, s->nom));
+                "« %s » est un calcul : donne-lui sa valeur, par exemple « le %s de 7 ».", s->nom, s->nom));
         } else {
             break;
         }
@@ -1278,7 +1278,7 @@ static Noeud *nom_expression(Analyse *a) {
         if (!s) {
             char *x = texte_jeton(&a->j[d]);
             const char *sug = suggerer(a, a->j[d].valeur);
-            if (sug) erreur(a, &a->j[d], grym_formater("« %s » inconnu, vouliez-vous « %s » ?", x, sug));
+            if (sug) erreur(a, &a->j[d], grym_formater("« %s » inconnu, voulais-tu « %s » ?", x, sug));
             else     erreur(a, &a->j[d], grym_formater("« %s » inconnu.", x));
             free(x);
             return NULL;
@@ -1317,7 +1317,7 @@ static Noeud *nom_expression(Analyse *a) {
                     if (dehors) {
                         erreur(a, &a->j[d], grym_formater(
                             "« %s » n'est pas visible dans un calcul : un calcul ne voit que ses paramètres. "
-                            "Passez la valeur en paramètre.", c));
+                            "Passe la valeur en paramètre.", c));
                     }
                     free(c);
                 }
@@ -1507,7 +1507,7 @@ static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
         const char *x = n->enfants[1]->texte;
         erreur_a(a, n->enfants[1]->ligne, n->enfants[1]->colonne, grym_formater(
             "« %s » est aussi un champ %s%s : dans une condition « dont », il désigne le champ de l'objet "
-            "examiné, pas la variable « %s ». Renommez la variable.", x,
+            "examiné, pas la variable « %s ». Renomme la variable.", x,
             voyelle_initiale(e->nom) ? "de l'" : e->genre == GENRE_FEMININ ? "de la " : "du ", e->nom, x));
         return 0;
     }
@@ -1616,7 +1616,7 @@ static Classe *multiple_de(Analyse *a, size_t k, int pluriel, size_t *de, const 
         if (trouve) {
             if (!type) {
                 erreur(a, &a->j[k], grym_formater("« %s » ne contient pas le même type d'objets dans toutes les classes : "
-                                                  "renommez l'un des champs.", pl));
+                                                  "renomme l'un des champs.", pl));
                 free(nom);
                 return NULL;
             }
@@ -1768,7 +1768,7 @@ static Noeud *nouveau(Analyse *a) {
                                                && est_mot(tn, "nouveau") && voyelle_initiale(c->nom));
         free(ecrit);
         if (!ok)
-            return erreur(a, tun, grym_formater("« %s » est %s : écrivez « %s %s ».", c->nom,
+            return erreur(a, tun, grym_formater("« %s » est %s : écris « %s %s ».", c->nom,
                                                c->genre == GENRE_FEMININ ? "féminin" : "masculin", juste, c->nom));
     }
     Noeud *n = noeud_creer(N_NOUVEAU, tun->ligne, tun->colonne, tun->debut);
@@ -1789,7 +1789,7 @@ static Noeud *nouveau(Analyse *a) {
         }
         if (a->formule == 1) {
             noeud_liberer(n);
-            return erreur(a, ts, grym_dupliquer("Un calcul ne pose pas de question : demandez dans une action."));
+            return erreur(a, ts, grym_dupliquer("Un calcul ne pose pas de question : demande dans une action."));
         }
         if (a->interactif) {
             noeud_liberer(n);
@@ -1927,7 +1927,7 @@ static Noeud *base(Analyse *a) {
             if ((est_mot(voir(a, (int)q), "à") || est_mot(voir(a, (int)q), "au"))
                 && (voir(a, (int)q + 1)->type == J_TEXTE || voir(a, (int)q + 1)->type == J_PAR_OUV)) {
                 if (a->formule == 1)
-                    return erreur(a, t, grym_dupliquer("Un calcul ne pose pas de question : demandez dans une action."));
+                    return erreur(a, t, grym_dupliquer("Un calcul ne pose pas de question : demande dans une action."));
                 if (a->interactif)
                     return erreur(a, t, grym_dupliquer("La question se pose dans un programme lancé, "
                                                        "pas dans la boucle interactive."));
@@ -1948,7 +1948,7 @@ static Noeud *base(Analyse *a) {
     if (f0 < 2 && est_mot(voir(a, (int)f0), "fichier")
         && (voir(a, (int)f0 + 1)->type == J_TEXTE || voir(a, (int)f0 + 1)->type == J_PAR_OUV)) {
         if (a->formule == 1)
-            return erreur(a, t, grym_dupliquer("Un calcul ne lit pas le disque : lisez le fichier dans une action."));
+            return erreur(a, t, grym_dupliquer("Un calcul ne lit pas le disque : lis le fichier dans une action."));
         a->article_force = ART_AUCUN;
         for (size_t q = 0; q <= f0; q++) avancer(a);
         Noeud *chemin = base(a);
@@ -1960,7 +1960,7 @@ static Noeud *base(Analyse *a) {
     }
     if (t->type == J_ELISION && strcmp(t->valeur, "aujourd") == 0 && est_mot(voir(a, 1), "hui")) {
         if (a->formule == 1)
-            return erreur(a, t, grym_dupliquer("Un calcul ne dépend pas du jour : passez la date en paramètre."));
+            return erreur(a, t, grym_dupliquer("Un calcul ne dépend pas du jour : passe la date en paramètre."));
         Noeud *n = noeud_creer(N_AUJOURDHUI, t->ligne, t->colonne, t->debut);
         avancer(a);
         n->fin = fin_jeton(cour(a));
@@ -2255,7 +2255,7 @@ static int accorder(Analyse *a, Symbole *s, Genre g, const Jeton *t, const char 
         return 1;
     }
     if (s->genre != g) {
-        erreur(a, t, grym_formater("« %s » est %s (déclaré ligne %d) : écrivez « %s ».", s->nom,
+        erreur(a, t, grym_formater("« %s » est %s (déclaré ligne %d) : écris « %s ».", s->nom,
                                    s->genre == GENRE_MASCULIN ? "masculin" : "féminin",
                                    s->ligne_genre, forme_juste));
         return 0;
@@ -2404,7 +2404,7 @@ static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test
             }
             if (ge != g && !te->synthetique) {
                 noeud_liberer(sujet);
-                return erreur(a, te, grym_formater("Accord : écrivez « %s ou %s ».",
+                return erreur(a, te, grym_formater("Accord : écris « %s ou %s ».",
                                                    g == GENRE_FEMININ ? r->f : r->m,
                                                    g == GENRE_FEMININ ? "égale" : "égal"));
             }
@@ -2549,7 +2549,7 @@ static Noeud *valeur(Analyse *a) {
         if (mode && op != mode) {
             noeud_liberer(g);
             return erreur(a, t, grym_dupliquer(
-                "« et » et « ou » mélangés sans parenthèses : écrivez « (A et B) ou C » "
+                "« et » et « ou » mélangés sans parenthèses : écris « (A et B) ou C » "
                 "ou « A et (B ou C) » selon le sens voulu."));
         }
         mode = op;
@@ -2644,7 +2644,7 @@ static Noeud *affichage(Analyse *a) {
             noeud_liberer(n);
             return erreur(a, e, grym_dupliquer(a->i > 0 && est_mot(&a->j[a->i - 1], "puis")
                 ? "Élément manquant après « puis »."
-                : "Rien à afficher : ajoutez un texte ou une expression après « Afficher »."));
+                : "Rien à afficher : ajoute un texte ou une expression après « Afficher »."));
         }
         Noeud *el;
         if (est_mot(e, "de") || est_mot(e, "que")) {   /* « puis de nom du c » : élision (§ 4.4) */
@@ -2671,7 +2671,7 @@ static Noeud *affichage(Analyse *a) {
         for (size_t k = 0; k < 5; k++) {
             if (!est_mot(cour(a), suite[k])) {
                 noeud_liberer(n);
-                return erreur(a, cour(a), grym_dupliquer("Après « sans », écrivez « sans passer à la ligne »."));
+                return erreur(a, cour(a), grym_dupliquer("Après « sans », écris « sans passer à la ligne »."));
             }
             avancer(a);
         }
@@ -2724,7 +2724,7 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
                 char *nomx = cle(a, d, f);
                 char *x = texte_jeton(t);
                 char *m = grym_formater(
-                    "« %s » est un mot réservé : pour l'utiliser dans un nom, écrivez [%s].", x, nomx);
+                    "« %s » est un mot réservé : pour l'utiliser dans un nom, écris [%s].", x, nomx);
                 free(x);
                 free(nomx);
                 return erreur(a, t, m);
@@ -2814,7 +2814,7 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
     if (creation && s) {
         char *ecrit = ecrire_avec_article(art, ecrit_nom);
         erreur(a, &a->j[d], grym_formater(
-            "« %s » existe déjà (ligne %d). Pour le modifier, écrivez : %s devient …",
+            "« %s » existe déjà (ligne %d). Pour le modifier, écris : %s devient …",
             nom, s->ligne_decl, ecrit));
         free(ecrit);
         free(ecrit_nom);
@@ -2825,11 +2825,11 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
         if (!s) {
             const char *sug = suggerer(a, nom);
             if (sug) {
-                erreur(a, &a->j[d], grym_formater("« %s » inconnu, vouliez-vous « %s » ?", nom, sug));
+                erreur(a, &a->j[d], grym_formater("« %s » inconnu, voulais-tu « %s » ?", nom, sug));
             } else {
                 char *ecrit = ecrire_avec_article(art, ecrit_nom);
                 erreur(a, &a->j[d], grym_formater(
-                    "« %s » n'existe pas. Pour le créer, écrivez : %s vaut …", nom, ecrit));
+                    "« %s » n'existe pas. Pour le créer, écris : %s vaut …", nom, ecrit));
                 free(ecrit);
             }
             free(ecrit_nom);
@@ -2895,7 +2895,7 @@ static Noeud *phrase_courte(Analyse *a, int colonne) {
     if (est_mot(t, "si") || est_mot(t, "sinon") || t->type == J_REMARQUE) {
         char *x = texte_jeton(t);
         char *m = grym_formater("« %s » inattendu : la forme courte n'accepte qu'une phrase simple "
-                                "(Le, La, L', Afficher). Pour davantage, ouvrez un bloc avec « : ».", x);
+                                "(Le, La, L', Afficher). Pour davantage, ouvre un bloc avec « : ».", x);
         free(x);
         return erreur(a, t, m);
     }
@@ -2924,7 +2924,7 @@ static Noeud *branche(Analyse *a, int colonne, const char *mot, int *forme_bloc)
     Jeton *suivant = cour(a);
     if (suivant->type == J_FIN || suivant->ligne == t->ligne || suivant->retrait <= colonne
         || est_mot(suivant, "sinon")) {
-        char *m = grym_formater("Bloc vide : après « : », écrivez les phrases du bloc sur les lignes "
+        char *m = grym_formater("Bloc vide : après « : », écris les phrases du bloc sur les lignes "
                                 "suivantes, plus indentées que « %s ».",
                                 mot);
         return erreur(a, suivant->type == J_FIN || suivant->ligne == t->ligne ? t : suivant, m);
@@ -2992,7 +2992,7 @@ static Noeud *essayer(Analyse *a, int colonne) {
     Jeton *t = cour(a);
     avancer(a);
     if (cour(a)->type != J_DEUX_POINTS)
-        return erreur(a, cour(a), grym_dupliquer("« Essayer » ouvre un bloc : écrivez « Essayer : », puis les "
+        return erreur(a, cour(a), grym_dupliquer("« Essayer » ouvre un bloc : écris « Essayer : », puis les "
                                                  "phrases à essayer sur les lignes suivantes, indentées."));
     int forme = 0;
     a->essais++;
@@ -3064,7 +3064,7 @@ static Noeud *parametres(Analyse *a, size_t d, size_t f, int avec_de) {
         }
         if (article_de(&a->j[debut]) != ART_AUCUN) {
             noeud_liberer(liste);
-            return erreur(a, &a->j[debut], grym_dupliquer("Un paramètre ne commence pas par un article : écrivez « un nombre »."));
+            return erreur(a, &a->j[debut], grym_dupliquer("Un paramètre ne commence pas par un article : écris « un nombre »."));
         }
         char *nom = a->j[debut].type == J_CROCHETS ? grym_dupliquer(a->j[debut].valeur) : cle(a, debut, k);
         char *aptitude = NULL;
@@ -3096,7 +3096,7 @@ static Noeud *parametres(Analyse *a, size_t d, size_t f, int avec_de) {
     if (k < f) {
         noeud_liberer(liste);
         char *x = texte_jeton(&a->j[k]);
-        char *m = grym_formater("« %s » inattendu dans la liste des paramètres : écrivez %s.", x,
+        char *m = grym_formater("« %s » inattendu dans la liste des paramètres : écris %s.", x,
                                 avec_de ? "« d'un nombre et d'une remise »" : "« un client et une remise »");
         free(x);
         return erreur(a, &a->j[k], m);
@@ -3182,7 +3182,7 @@ static Noeud *corps_en_bloc(Analyse *a, const Jeton *deux_points, int colonne) {
     Jeton *suivant = cour(a);
     if (suivant->type == J_FIN || suivant->ligne == deux_points->ligne || suivant->retrait <= colonne)
         return erreur(a, suivant->type == J_FIN || suivant->ligne == deux_points->ligne ? deux_points : suivant,
-                      grym_dupliquer("Bloc vide : après « : », écrivez les phrases de la formule sur les "
+                      grym_dupliquer("Bloc vide : après « : », écris les phrases de la formule sur les "
                                      "lignes suivantes, indentées."));
     return bloc(a, suivant->retrait, 0);
 }
@@ -3457,13 +3457,13 @@ static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, cons
     const Jeton *tnom = cour(a);
     char *nom = grym_dupliquer(multiple ? singulier : e->nom);
     if (visible(a, nom) && multiple) {
-        erreur(a, tnom, grym_formater("« %s » existe déjà : renommez-le, car « Pour chaque %s de … » donne ce nom "
+        erreur(a, tnom, grym_formater("« %s » existe déjà : renomme-le, car « Pour chaque %s de … » donne ce nom "
                                       "à l'objet de chaque tour.", nom, nom));
         free(nom);
         return NULL;
     }
     if (visible(a, nom)) {
-        erreur(a, tnom, grym_formater("« %s » existe déjà : renommez-le, car « Pour chaque %s %s » donne ce nom "
+        erreur(a, tnom, grym_formater("« %s » existe déjà : renomme-le, car « Pour chaque %s %s » donne ce nom "
                                       "à l'objet de chaque tour.", nom, nom,
                                       e->genre == GENRE_FEMININ ? "conservée" : "conservé"));
         free(nom);
@@ -3583,7 +3583,7 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
             "Le compteur se nomme sans article : « Pour chaque mois de 1 à 12 : »."));
     char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
     if (visible(a, nom)) {
-        erreur(a, &a->j[d], grym_formater("« %s » existe déjà : choisissez un autre nom de compteur.", nom));
+        erreur(a, &a->j[d], grym_formater("« %s » existe déjà : choisis un autre nom de compteur.", nom));
         free(nom);
         return NULL;
     }
@@ -3728,7 +3728,7 @@ static Noeud *selon(Analyse *a, int colonne) {
     if (premier->type == J_FIN || premier->ligne == dp->ligne || premier->retrait <= colonne) {
         noeud_liberer(s);
         return erreur(a, premier->type == J_FIN || premier->ligne == dp->ligne ? dp : premier,
-                      grym_dupliquer("« Selon » sans cas : écrivez les « Cas … » sur les lignes suivantes, indentés."));
+                      grym_dupliquer("« Selon » sans cas : écris les « Cas … » sur les lignes suivantes, indentés."));
     }
     int c = premier->retrait;
     Noeud *n = noeud_creer(P_SELON, t->ligne, t->colonne, t->debut);
@@ -4199,7 +4199,7 @@ static Noeud *heritage(Analyse *a, const Jeton *tun, Genre g, char *nom, size_t 
         f = d + 1;
         if (!tp->synthetique && gp != GENRE_FEMININ) {
             free(nom);
-            return erreur(a, tp, grym_dupliquer("« chose » est féminin : écrivez « une chose »."));
+            return erreur(a, tp, grym_dupliquer("« chose » est féminin : écris « une chose »."));
         }
     } else if (a->j[d].type == J_CROCHETS) {
         parent = classe_de(a->portee, a->j[d].valeur);
@@ -4229,7 +4229,7 @@ static Noeud *heritage(Analyse *a, const Jeton *tun, Genre g, char *nom, size_t 
     }
     if (parent && parent->conserve != conserve) {
         erreur(a, &a->j[d], parent->conserve
-            ? grym_formater("« %s » est une entité : écrivez « %s %s, %s, est %s %s. ».", parent->nom,
+            ? grym_formater("« %s » est une entité : écris « %s %s, %s, est %s %s. ».", parent->nom,
                             g == GENRE_FEMININ ? "Une" : "Un", nom, g == GENRE_FEMININ ? "conservée" : "conservé",
                             parent->genre == GENRE_FEMININ ? "une" : "un", parent->nom)
             : grym_formater("« %s » n'est pas une entité : une entité hérite d'une entité.", parent->nom));
@@ -4237,7 +4237,7 @@ static Noeud *heritage(Analyse *a, const Jeton *tun, Genre g, char *nom, size_t 
         return NULL;
     }
     if (parent && !tp->synthetique && gp != parent->genre) {
-        erreur(a, tp, grym_formater("« %s » est %s : écrivez « %s %s ».", parent->nom,
+        erreur(a, tp, grym_formater("« %s » est %s : écris « %s %s ».", parent->nom,
                                     parent->genre == GENRE_FEMININ ? "féminin" : "masculin",
                                     parent->genre == GENRE_FEMININ ? "une" : "un", parent->nom));
         free(nom);
@@ -4408,7 +4408,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
     Jeton *premier = cour(a);
     if (premier->type == J_FIN || premier->ligne == dp->ligne || premier->retrait <= tphrase->retrait) {
         erreur(a, premier->type == J_FIN || premier->ligne == dp->ligne ? dp : premier, grym_dupliquer(
-            "Bloc vide : après « : », initialisez les champs sur les lignes suivantes, indentées."));
+            "Bloc vide : après « : », initialise les champs sur les lignes suivantes, indentées."));
         return 0;
     }
     Classe *cl = classe_de(a->portee, nv->texte);
@@ -4482,7 +4482,7 @@ static void attendre_ici(Analyse *a, const char *suite) { attendre_mot(a, a->i, 
 static Noeud *style_des_nombres(Analyse *a, const Jeton *t) {
     static const char *const STYLES[] = { "suisse", "française", "séparateur" };
     if (!est_mot(voir(a, 3), "affichent") || voir(a, 2)->type != J_ELISION)
-        return erreur(a, t, grym_dupliquer("Écrivez « Les nombres s'affichent à la suisse. », « à la française. » "
+        return erreur(a, t, grym_dupliquer("Écris « Les nombres s'affichent à la suisse. », « à la française. » "
                                            "ou « sans séparateur. »."));
     a->i += 4;   /* les nombres s'affichent */
     attendre_ici(a, "à la suisse");
@@ -4685,12 +4685,12 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
         a->i += 3;
         if (couleur < 0 && est_mot(cour(a), "et") && est_mot(voir(a, 2), "couleur")) {
             free(logo);
-            return erreur(a, cour(a), grym_dupliquer("Écrivez la couleur avant le logo : "
+            return erreur(a, cour(a), grym_dupliquer("Écris la couleur avant le logo : "
                                                      "« Les écrans ont la couleur verte et le logo « … ». »"));
         }
     }
     if (couleur < 0 && !logo)
-        return erreur(a, cour(a), grym_dupliquer("Écrivez « Les écrans ont la couleur verte. », "
+        return erreur(a, cour(a), grym_dupliquer("Écris « Les écrans ont la couleur verte. », "
                                                  "« Les écrans ont le logo « logo.png ». », ou les deux reliés par « et »."));
     if (!fin_phrase(a, 0)) { free(logo); return NULL; }
     if (a->formule || a->niveau) {
@@ -5183,7 +5183,7 @@ static EcranConnu *ecran_nomme(Analyse *a, size_t k, size_t *f, char **nom) {
         return NULL;
     }
     EcranConnu *e = ecran_connu(a->portee, *nom);
-    if (!e) erreur(a, &a->j[k + 2], grym_formater("Écran « %s » inconnu : déclarez-le avant, avec « L'écran %s montre : ».",
+    if (!e) erreur(a, &a->j[k + 2], grym_formater("Écran « %s » inconnu : déclare-le avant, avec « L'écran %s montre : ».",
                                                   *nom, *nom));
     return e;
 }
@@ -5339,7 +5339,7 @@ static Noeud *quand(Analyse *a, int colonne) {
 /* « Ouvrir l'écran X. » (§ 22.3) */
 static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
     a->ouvrir_vu = 1;
-    if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'ouvre pas d'écran : ouvrez-le dans une action."));
+    if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'ouvre pas d'écran : ouvre-le dans une action."));
     if (a->essais) return erreur(a, t, grym_dupliquer("Un écran ne s'ouvre pas dans « Essayer » : chaque événement a déjà "
                                                        "sa propre reprise."));
     /* « Ouvrir la fiche de c. », « Ouvrir la fiche du compositeur. » : l'écran déduit de l'entité (§ 22.3) */
@@ -5454,7 +5454,7 @@ static Noeud *utiliser(Analyse *a, const Jeton *t) {
     if (l == 0) return erreur(a, tc, grym_dupliquer("Nom de fichier vide."));
     if ((l > 5 && strcmp(ecrit + l - 5, ".grym") == 0) || (l > 6 && strcmp(ecrit + l - 6, ".grymc") == 0)) {
         size_t c = strcmp(ecrit + l - 5, ".grym") == 0 ? l - 5 : l - 6;
-        return erreur(a, tc, grym_formater("Écrivez le fichier sans extension : « Utiliser « %.*s ». » trouve lui-même "
+        return erreur(a, tc, grym_formater("Écris le fichier sans extension : « Utiliser « %.*s ». » trouve lui-même "
                                            "la forme littéraire ou compacte.", (int)c, ecrit));
     }
     Noeud *n = noeud_creer(P_UTILISER, t->ligne, t->colonne, t->debut);
@@ -5470,7 +5470,7 @@ static Noeud *utiliser(Analyse *a, const Jeton *t) {
     int il = chemin_existe(litteral), ic = chemin_existe(compacte);
     char *chemin = NULL;
     if (il && ic) {
-        erreur(a, tc, grym_formater("« %s » désigne à la fois « %s » et « %s » : gardez-en un seul.", ecrit, litteral, compacte));
+        erreur(a, tc, grym_formater("« %s » désigne à la fois « %s » et « %s » : gardes-en un seul.", ecrit, litteral, compacte));
     } else if (!il && !ic) {
         erreur(a, tc, grym_formater("« %s » introuvable : ni « %s » ni « %s ».", ecrit, litteral, compacte));
     } else {
@@ -5595,7 +5595,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "afficher")) {
         if (a->formule == 1)
             return erreur(a, t, grym_dupliquer("Un calcul n'affiche rien : il rend une valeur. "
-                                               "Pour afficher, écrivez une action."));
+                                               "Pour afficher, écris une action."));
         return affichage(a);
     }
     if (est_mot(t, "conserver") || est_mot(t, "supprimer") || est_mot(t, "rétablir")) {
@@ -5631,7 +5631,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
         /* « Effacer l'écran. » (§ 4.3) */
         if (a->formule == 1)
             return erreur(a, t, grym_dupliquer("Un calcul n'affiche rien : il rend une valeur. "
-                                               "Pour effacer l'écran, écrivez une action."));
+                                               "Pour effacer l'écran, écris une action."));
         a->i += 3;
         Noeud *n = noeud_creer(P_EFFACER, t->ligne, t->colonne, t->debut);
         if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
@@ -5639,11 +5639,11 @@ static Noeud *phrase(Analyse *a, int colonne) {
         return n;
     }
     if (est_mot(t, "effacer"))
-        return erreur(a, t, grym_dupliquer("Écrivez « Effacer l'écran. »."));
+        return erreur(a, t, grym_dupliquer("Écris « Effacer l'écran. »."));
     if (est_mot(t, "enregistrer")) {
         /* « Enregistrer … dans « chemin ». » (§ 15.2) */
         if (a->formule == 1)
-            return erreur(a, t, grym_dupliquer("Un calcul n'écrit pas sur le disque : enregistrez dans une action."));
+            return erreur(a, t, grym_dupliquer("Un calcul n'écrit pas sur le disque : enregistre dans une action."));
         avancer(a);
         Noeud *v = expression_avant(a, "dans", NULL);
         if (!v) return NULL;
@@ -5680,7 +5680,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "saisir")) {   /* « Saisir à nouveau p. » (§ 19) */
         static const char *const A_NOUVEAU[] = { "saisir", "à", "nouveau" };
         if (!mots_fixes(a, A_NOUVEAU, 3)) return NULL;
-        if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul ne pose pas de question : demandez dans une action."));
+        if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul ne pose pas de question : demande dans une action."));
         if (a->interactif)
             return erreur(a, t, grym_dupliquer("La question se pose dans un programme lancé, pas dans la boucle interactive."));
         Noeud *x = expression(a);
@@ -5706,7 +5706,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "rendre")) {
         if (a->formule != 1)
             return erreur(a, t, grym_dupliquer(a->formule == 2
-                ? "Une action ne rend rien : pour rendre une valeur, écrivez un calcul."
+                ? "Une action ne rend rien : pour rendre une valeur, écris un calcul."
                 : "« Rendre » ne s'emploie que dans un calcul."));
         avancer(a);
         Noeud *v = valeur(a);
@@ -5721,7 +5721,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
         return erreur(a, t, grym_dupliquer("« Sinon » sans « Si » correspondant."));
     if (est_mot(t, "remarque") && voir(a, 1)->type == J_DEUX_POINTS)
         return erreur(a, t, grym_dupliquer(
-            "Une remarque doit commencer une ligne : passez à la ligne avant « Remarque : »."));
+            "Une remarque doit commencer une ligne : passe à la ligne avant « Remarque : »."));
 
     Article art = article_de(t);
     if (art != ART_AUCUN) {
@@ -5867,7 +5867,7 @@ static void verifier_conflits(Analyse *a) {
                     tranche = p->s[s3].classe && strcmp(p->s[s3].nom, v->nom) == 0 && strcmp(p->s[s3].classe, c->nom) == 0;
                 if (!tranche) {
                     erreur_a(a, c->ligne, 1, grym_formater(
-                        "« %s » est défini par les aptitudes « %s » et « %s » de « %s » : définissez sa version "
+                        "« %s » est défini par les aptitudes « %s » et « %s » de « %s » : définis sa version "
                         "pour « %s » afin de trancher.", v->nom, v->classe, w->classe, c->nom, c->nom));
                     break;
                 }
