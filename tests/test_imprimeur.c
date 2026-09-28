@@ -346,6 +346,11 @@ int main(void) {
     COMP("Les nombres s'affichent sans séparateur.\nAfficher « ab » sur 4 à droite, sans passer à la ligne.",
          "_style _sans_séparateur\n_afficher « ab » _sur 4 _droite _sans_ligne\n");
 
+    /* --- Une remarque au premier niveau après un Selon reste au premier niveau, avec sa ligne vide --- */
+    FIXE("Pour f un x :\n    Selon x :\n        Cas 1 :\n            Afficher 1.\n        Autrement :\n            Afficher 2.\n"
+         "\nRemarque : au premier niveau.\nF 1.\n");
+    FIXE("Selon 1 :\n    Cas 1, afficher 1.\n    Remarque : entre deux cas.\n    Autrement, afficher 2.\n");
+
     /* --- Refuser (§ 18.1) : un élément, plusieurs reliés par « puis », en forme courte --- */
     FIXE("Refuser « Non. ».\n");
     FIXE("Le d vaut 3.\nSi d > 2, refuser « Trop : » puis d puis « sur 2 ».\n");

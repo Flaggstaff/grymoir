@@ -3550,6 +3550,13 @@ static Noeud *selon(Analyse *a, int colonne) {
         Jeton *u = cour(a);
         if (u->type == J_FIN) break;
         if (u->type == J_REMARQUE) {
+            /* moins indentée que les cas, et suivie d'une phrase moins indentée aussi : elle appartient au bloc
+             * englobant, comme pour un bloc ordinaire ; le Selon s'arrête avant elle */
+            if (premier_de_ligne(a, a->i) && u->retrait < c) {
+                size_t k = a->i;
+                while (a->j[k].type == J_REMARQUE) k++;
+                if (a->j[k].type == J_FIN || (premier_de_ligne(a, k) && a->j[k].retrait < c)) break;
+            }
             noeud_ajouter(n, feuille(P_REMARQUE, u));
             avancer(a);
             continue;
