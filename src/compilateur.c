@@ -140,6 +140,10 @@ static void condition_dont(Compilation *c, const Noeud *n, Chaine *d, int *param
     if (n->negation) chaine_ajouter(d, "(n");
     char op[4] = { '(', n->op, '[', 0 };
     chaine_ajouter(d, op);
+    if (n->enfants[0]->texte2) {   /* à travers des liens : « [écriture␜comptabilisation] » (§ 16.4) */
+        chaine_ajouter(d, n->enfants[0]->texte2);
+        chaine_ajouter(d, "\x1c");
+    }
     chaine_ajouter(d, n->enfants[0]->texte);
     chaine_ajouter(d, "]");
     if (n->nb_enfants == 2) {

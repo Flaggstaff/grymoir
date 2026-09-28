@@ -418,14 +418,33 @@ static void expression(Impression *im, const Noeud *n) {
     case N_ABSENT:
         aj(im, im->compact ? "_absent" : n->forme == 2 ? "absente" : "absent");
         return;
-    case N_CHAMP_DONT:
-        if (!im->compact) {   /* l'article s'écrit toujours : « dont le solde … » */
-            Article art = n->article;
-            if (art == ART_AUCUN) art = voyelle(n->texte) ? ART_L : genre_de_nom(im, n->texte) == G_FEMININ ? ART_LA : ART_LE;
-            aj(im, art == ART_LA ? "la " : art == ART_L ? "l'" : "le ");
+    case N_CHAMP_DONT: {
+        /* un chemin (§ 16.4) : texte2, les liens de l'entité examinée vers le champ, séparés par U+001C */
+        char *liens[8];
+        size_t nl = 0;
+        char *copie = n->texte2 ? grym_dupliquer(n->texte2) : NULL;
+        for (char *s1 = copie, *s2; s1 && nl < 8; s1 = s2) {
+            s2 = strchr(s1, '\x1c');
+            if (s2) *s2++ = '\0';
+            liens[nl++] = s1;
         }
+        if (im->compact) {   /* « membre.catégorie.nom » */
+            for (size_t k = 0; k < nl; k++) { ecrire_nom(im, liens[k], 0); aj(im, "."); }
+            ecrire_nom(im, n->texte, 0);
+            free(copie);
+            return;
+        }
+        Article art = n->article;   /* l'article s'écrit toujours : « dont le solde … » */
+        if (art == ART_AUCUN) art = voyelle(n->texte) ? ART_L : genre_de_nom(im, n->texte) == G_FEMININ ? ART_LA : ART_LE;
+        aj(im, art == ART_LA ? "la " : art == ART_L ? "l'" : "le ");
         ecrire_nom(im, n->texte, 0);
+        for (size_t k = nl; k-- > 0;) {   /* « de l'écriture », « de la catégorie du membre » */
+            aj(im, voyelle(liens[k]) ? " de l'" : genre_de_nom(im, liens[k]) == G_FEMININ ? " de la " : " du ");
+            ecrire_nom(im, liens[k], 0);
+        }
+        free(copie);
         return;
+    }
     case N_ECRAN:   /* « l'écran » ; « _écran » (§ 22.2) */
         aj(im, im->compact ? "_écran" : "l'écran");
         return;

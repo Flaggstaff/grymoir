@@ -1060,6 +1060,85 @@ static int complement_de(const Analyse *a, size_t k) {
     return est_mot(t, "de") || est_mot(t, "du") || (t->type == J_ELISION && strcmp(t->valeur, "d") == 0);
 }
 
+/* Chemin à travers les liens, dans une condition « dont » (§ 16.4) : « la comptabilisation de l'écriture »,
+ * « le nom de la catégorie du membre ». Les segments se séparent par « de », « du », « d' », et l'article qui suit ;
+ * le dernier est un lien de l'entité examinée, chacun des autres un champ de l'entité que désigne le suivant.
+ * Rend le nombre de segments (au moins 2) et remplit seg[] du premier (le champ lu) au dernier ; *fin reçoit
+ * la position après le chemin. 0 si ce n'est pas un chemin. */
+enum { SEGMENTS_MAX = 8 };
+
+static const Classe *classe_liee(Portee *p, const Classe *c, const char *lien) {
+    const char *t = type_du_champ(p, c, lien);
+    const Classe *x = t ? classe_de(p, t) : NULL;
+    return x && x->conserve ? x : NULL;
+}
+
+static int chemin_valide(Portee *p, const Classe *e, char **seg, size_t n) {
+    const Classe *c = e;
+    for (size_t k = n; k-- > 1;) {   /* du lien de l'entité examinée vers le champ lu */
+        c = classe_liee(p, c, seg[k]);
+        if (!c) return 0;
+    }
+    return classe_champ(p, c, seg[0], NULL, NULL);
+}
+
+static size_t chemin_de(Analyse *a, const Classe *e, size_t pos, char **seg, size_t n, size_t *fin) {
+    if (n == SEGMENTS_MAX || pos >= a->n) return 0;
+    size_t f = pos;
+    if (a->j[pos].type == J_CROCHETS) f = pos + 1;
+    else while (f < a->n && mot_de_nom(a, f)) f++;
+    for (size_t k = f; k > pos; k--) {
+        seg[n] = a->j[pos].type == J_CROCHETS ? grym_dupliquer(a->j[pos].valeur) : cle(a, pos, k);
+        /* la suite : « de » (puis « la », « l' »), « du », « d' » ; sinon le chemin s'arrête ici */
+        if (k < a->n && complement_de(a, k)) {
+            size_t q = k + 1;
+            if (est_mot(&a->j[k], "de") && q < a->n && (est_mot(&a->j[q], "la") || (a->j[q].type == J_ELISION && strcmp(a->j[q].valeur, "l") == 0)))
+                q++;
+            size_t r = chemin_de(a, e, q, seg, n + 1, fin);
+            if (r) return r;
+        }
+        if (n >= 1 && chemin_valide(a->portee, e, seg, n + 1)) { *fin = k; return n + 1; }
+        free(seg[n]);
+        seg[n] = NULL;
+        if (a->j[pos].type == J_CROCHETS) break;
+    }
+    return 0;
+}
+
+/* Un chemin qui ne mène nulle part : l'étape qui n'est pas un lien, ou le champ qui manque au bout. Seulement si
+ * le dernier nom est un champ de l'entité examinée (le lecteur voulait bien un chemin). NULL sinon. */
+static char *chemin_mal_forme(Analyse *a, const Classe *e, size_t d) {
+    char *seg[SEGMENTS_MAX];
+    size_t n = 0, k = d;
+    while (n < SEGMENTS_MAX && k < a->n) {   /* découpe simple, aux « de », « du », « d' » */
+        size_t f = k;
+        while (f < a->n && mot_de_nom(a, f) && !complement_de(a, f)) f++;
+        if (f == k) break;
+        seg[n++] = cle(a, k, f);
+        if (f >= a->n || !complement_de(a, f)) break;
+        k = f + 1;
+        if (est_mot(&a->j[f], "de") && k < a->n && (est_mot(&a->j[k], "la") || (a->j[k].type == J_ELISION && strcmp(a->j[k].valeur, "l") == 0)))
+            k++;
+    }
+    char *m = NULL;
+    if (n >= 2 && classe_champ(a->portee, e, seg[n - 1], NULL, NULL)) {
+        const Classe *c = e;
+        for (size_t i = n; i-- > 1 && !m;) {
+            const char *t = type_du_champ(a->portee, c, seg[i]);
+            if (!classe_champ(a->portee, c, seg[i], NULL, NULL))
+                m = grym_formater("« %s » n'est pas un champ %s%s.", seg[i], voyelle_initiale(c->nom) ? "de l'" : c->genre == GENRE_FEMININ ? "de la " : "du ", c->nom);
+            else if (!t || !classe_liee(a->portee, c, seg[i]))
+                m = grym_formater("« %s » n'est pas un lien vers une entité : « %s » ne se lit pas à travers lui.", seg[i], seg[i - 1]);
+            else
+                c = classe_liee(a->portee, c, seg[i]);
+        }
+        if (!m && !classe_champ(a->portee, c, seg[0], NULL, NULL))
+            m = grym_formater("« %s » n'est pas un champ %s%s.", seg[0], voyelle_initiale(c->nom) ? "de l'" : c->genre == GENRE_FEMININ ? "de la " : "du ", c->nom);
+    }
+    for (size_t i = 0; i < n; i++) free(seg[i]);
+    return m;
+}
+
 /* « le solde du client » : champ, puis l'objet après « de » / « du » (grammaire, § 13.3). */
 static Noeud *acces_champ(Analyse *a, char *champ, Genre g, const Jeton *tart, Article art,
                           const Jeton *premier, size_t k) {
@@ -1127,6 +1206,33 @@ static Noeud *nom_expression(Analyse *a) {
     if (a->dont) {
         /* Dans « dont », un champ de l'entité examinée désigne celui de chaque objet (§ 16.4). */
         const Classe *e = classe_de(a->portee, a->dont);
+        /* « la comptabilisation de l'écriture » : un champ lu à travers un ou plusieurs liens */
+        char *seg[SEGMENTS_MAX] = { 0 };
+        size_t fin_chemin = 0, ns = e ? chemin_de(a, e, d, seg, 0, &fin_chemin) : 0;
+        if (ns >= 2) {
+            Genre g = GENRE_LIBRE;
+            const Classe *c = e;
+            for (size_t k = ns; k-- > 1;) c = classe_liee(a->portee, c, seg[k]);
+            classe_champ(a->portee, c, seg[0], &g, NULL);
+            if (tart && !tart->synthetique && (art == ART_LE || art == ART_LA) && genre_de(art) != g) {
+                erreur(a, tart, grym_formater("« %s » est un champ %s.", seg[0], g == GENRE_MASCULIN ? "masculin" : "féminin"));
+                for (size_t k = 0; k < ns; k++) free(seg[k]);
+                return NULL;
+            }
+            Chaine chemin = { 0 };
+            for (size_t k = ns; k-- > 1;) {   /* du lien de l'entité examinée vers le champ, séparés par U+001C */
+                chaine_ajouter(&chemin, seg[k]);
+                if (k > 1) chaine_ajouter(&chemin, "\x1c");
+                free(seg[k]);
+            }
+            Noeud *n = noeud_creer(N_CHAMP_DONT, premier_jeton->ligne, premier_jeton->colonne, premier_jeton->debut);
+            n->texte = seg[0];
+            n->texte2 = chaine_rendre(&chemin);
+            n->article = art == ART_IMPLICITE ? ART_AUCUN : art;
+            a->i = fin_chemin;
+            n->fin = fin_jeton(&a->j[fin_chemin - 1]);
+            return n;
+        }
         size_t f = d;
         if (a->j[d].type == J_CROCHETS) f = d + 1;
         else while (f < a->n && mot_de_nom(a, f)) f++;
@@ -1136,6 +1242,10 @@ static Noeud *nom_expression(Analyse *a) {
             const int de_l_ecran = k + 2 < a->n && est_mot(&a->j[k], "de") && a->j[k + 1].type == J_ELISION
                                 && est_mot(&a->j[k + 2], "écran");   /* « le pays de l'écran » : la zone (§ 22.1) */
             if (!de_l_ecran && classe_champ(a->portee, e, c, &g, NULL)) {
+                if (k < a->n && complement_de(a, k) && tart) {   /* « le débit de l'écriture » : un chemin qui ne mène nulle part */
+                    char *m = chemin_mal_forme(a, e, d);
+                    if (m) { free(c); return erreur(a, premier_jeton, m); }
+                }
                 if (tart && !tart->synthetique && (art == ART_LE || art == ART_LA) && genre_de(art) != g) {
                     erreur(a, tart, grym_formater("« %s » est un champ %s.", c, g == GENRE_MASCULIN ? "masculin" : "féminin"));
                     free(c);
@@ -1150,6 +1260,10 @@ static Noeud *nom_expression(Analyse *a) {
             }
             free(c);
             if (a->j[d].type == J_CROCHETS) break;
+        }
+        if (e && tart) {
+            char *m = chemin_mal_forme(a, e, d);
+            if (m) return erreur(a, premier_jeton, m);
         }
     }
     if (a->j[d].type == J_CROCHETS && complement_de(a, d + 1)) {
@@ -1353,7 +1467,17 @@ static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
             return verifier_type(a, champ->texte, t, n->enfants[1]);
         }
         if (champ->type == N_CHAMP_DONT && (n->nb_enfants == 1 || !contient_champ_dont(n->enfants[1]))) {
-            const char *t = type_du_champ(a->portee, e, champ->texte);
+            const Classe *ec = e;   /* un chemin (« de l'écriture ») : l'entité au bout des liens */
+            if (champ->texte2) {
+                char *copie = grym_dupliquer(champ->texte2);
+                for (char *s1 = copie, *s2; ec && s1; s1 = s2) {
+                    s2 = strchr(s1, '\x1c');
+                    if (s2) *s2++ = '\0';
+                    ec = classe_liee(a->portee, ec, s1);
+                }
+                free(copie);
+            }
+            const char *t = ec ? type_du_champ(a->portee, ec, champ->texte) : NULL;
             char op = n->op;
             const char *refus = NULL;
             if (op == 'A' || op == 'R')

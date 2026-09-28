@@ -1507,6 +1507,63 @@ static void colonne(Recherche *r, size_t k) {
     ajouter_nom(&r->sql, "c ", r->e->champs[k]);
 }
 
+/* Le champ d'une condition, en SQL : sa colonne ; ou, à travers des liens (« écriture␜comptabilisation »,
+ * grammaire, § 16.4), une sous-requête par lien, qui suit l'identifiant de proche en proche. Rend l'expression
+ * (à libérer), le type et le nom du champ au bout, et *k son rang dans l'entité examinée (−1 pour un chemin) ;
+ * NULL si le chemin ne mène pas à un champ. */
+static char *expression_champ(Recherche *r, const char *chemin, const char **type, const char **nom, long *k) {
+    Chaine c = { 0 };
+    *k = -1;
+    if (!strchr(chemin, '\x1c')) {
+        for (size_t q = 0; q < r->e->nb_champs && *k < 0; q++) if (strcmp(r->e->champs[q], chemin) == 0) *k = (long)q;
+        if (*k < 0 || !r->e->types[*k]) return NULL;
+        char t[16];
+        snprintf(t, sizeof t, "t%d.", alias_du_champ(r, (size_t)*k));
+        chaine_ajouter(&c, t);
+        ajouter_nom(&c, "c ", r->e->champs[*k]);
+        *type = r->e->types[*k];
+        *nom = r->e->champs[*k];
+        return chaine_rendre(&c);
+    }
+    char *copie = grym_dupliquer(chemin);
+    const ClasseVM *cl = r->e;
+    char *expr = NULL;
+    int premier = 1;
+    for (char *s1 = copie, *s2; s1; s1 = s2, premier = 0) {
+        s2 = strchr(s1, '\x1c');
+        if (s2) *s2++ = '\0';
+        long q = -1;
+        for (size_t i = 0; cl && i < cl->nb_champs && q < 0; i++) if (strcmp(cl->champs[i], s1) == 0) q = (long)i;
+        if (q < 0 || !cl->types[q] || multiple(cl, (size_t)q)) { free(expr); free(copie); return NULL; }
+        Chaine e = { 0 };
+        if (premier) {
+            char t[16];
+            snprintf(t, sizeof t, "t%d.", alias_du_champ(r, (size_t)q));
+            chaine_ajouter(&e, t);
+            ajouter_nom(&e, "c ", cl->champs[q]);
+        } else {   /* le champ de l'objet que désigne l'étape précédente : sa table, sa ligne */
+            chaine_ajouter(&e, "(SELECT ");
+            ajouter_nom(&e, "c ", cl->champs[q]);
+            chaine_ajouter(&e, " FROM ");
+            ajouter_nom(&e, "e ", cl->proprietaires[q]->nom);
+            chaine_ajouter(&e, " WHERE id = ");
+            chaine_ajouter(&e, expr);
+            chaine_ajouter(&e, ")");
+        }
+        free(expr);
+        expr = chaine_rendre(&e);
+        if (s2) {   /* une étape intermédiaire : un lien vers une entité */
+            cl = machine_classe(r->m, cl->types[q]);
+            if (!cl || !cl->conserve) { free(expr); free(copie); return NULL; }
+        } else {
+            *type = cl->types[q];
+            *nom = cl->champs[q];
+        }
+    }
+    free(copie);
+    return expr;
+}
+
 static int lire_condition(Recherche *r) {
     if (*r->p != '(') { r->erreur = grym_dupliquer("condition illisible"); return 0; }
     char op = r->p[1];
@@ -1669,12 +1726,14 @@ static int lire_condition(Recherche *r) {
         if (!fin) { r->erreur = grym_dupliquer("champ mal fermé"); return 0; }
         char *champ = grym_formater("%.*s", (int)(fin - r->p - 1), r->p + 1);
         r->p = fin + 1;
-        long k = -1;
-        for (size_t q = 0; q < r->e->nb_champs && k < 0; q++) if (strcmp(r->e->champs[q], champ) == 0) k = (long)q;
+        long k;
+        const char *t = NULL, *nom_champ = NULL;
+        char *expr = expression_champ(r, champ, &t, &nom_champ, &k);
         free(champ);
-        if (k < 0 || !r->e->types[k]) { r->erreur = grym_dupliquer("champ inconnu"); return 0; }
-        const char *t = r->e->types[k];
-        if (op == 'p' || multiple(r->e, (size_t)k)) {
+        if (!expr) { r->erreur = grym_dupliquer("champ inconnu"); return 0; }
+        if (op == 'p' || (k >= 0 && multiple(r->e, (size_t)k))) {
+            free(expr);
+            if (k < 0) { r->erreur = grym_dupliquer("« parmi » ne s'emploie pas à travers un lien."); return 0; }
             /* « dont baroque est parmi les genres » (§ 16.13) : seule tournure d'un champ multiple */
             if (op != 'p' || !multiple(r->e, (size_t)k) || *r->p != '?') {
                 r->erreur = grym_formater("« %s » : « parmi » s'emploie avec un champ multiple, et lui seul.", r->e->champs[k]);
@@ -1702,21 +1761,21 @@ static int lire_condition(Recherche *r) {
         chaine_ajouter(&r->sql, "(");
         if (op == 'P' || op == 'N' || op == '0') {
             const char *o2 = op == 'P' ? " > " : op == 'N' ? " < " : " = ";
-            if (entier) { colonne(r, (size_t)k); chaine_ajouter(&r->sql, o2); chaine_ajouter(&r->sql, "0"); }
-            else { colonne(r, (size_t)k); chaine_ajouter(&r->sql, o2); chaine_ajouter(&r->sql, "'0' COLLATE GRYM_NOMBRE"); }
+            if (entier) { chaine_ajouter(&r->sql, expr); chaine_ajouter(&r->sql, o2); chaine_ajouter(&r->sql, "0"); }
+            else { chaine_ajouter(&r->sql, expr); chaine_ajouter(&r->sql, o2); chaine_ajouter(&r->sql, "'0' COLLATE GRYM_NOMBRE"); }
         } else if (op == 'A' || op == 'R') {
-            colonne(r, (size_t)k);
+            chaine_ajouter(&r->sql, expr);
             chaine_ajouter(&r->sql, op == 'A' ? " IS NULL" : " IS NOT NULL");
         } else if (op == 'V' || op == 'F') {
-            colonne(r, (size_t)k);
+            chaine_ajouter(&r->sql, expr);
             chaine_ajouter(&r->sql, op == 'V' ? " = 1" : " = 0");
         } else {
-            if (*r->p != '?' || !sqlop) { r->erreur = grym_dupliquer("paramètre attendu"); return 0; }
+            if (*r->p != '?' || !sqlop) { free(expr); r->erreur = grym_dupliquer("paramètre attendu"); return 0; }
             size_t i = (size_t)strtoul(r->p + 1, (char **)&fin, 10);
             r->p = fin;
-            if (i < 1 || i > r->nb_params || r->nb_liens == 64) { r->erreur = grym_dupliquer("paramètre invalide"); return 0; }
-            if (entier) { chaine_ajouter(&r->sql, "CAST("); colonne(r, (size_t)k); chaine_ajouter(&r->sql, " AS TEXT)"); }
-            else colonne(r, (size_t)k);
+            if (i < 1 || i > r->nb_params || r->nb_liens == 64) { free(expr); r->erreur = grym_dupliquer("paramètre invalide"); return 0; }
+            if (entier) { chaine_ajouter(&r->sql, "CAST("); chaine_ajouter(&r->sql, expr); chaine_ajouter(&r->sql, " AS TEXT)"); }
+            else chaine_ajouter(&r->sql, expr);
             chaine_ajouter(&r->sql, sqlop);
             char tampon[24];
             snprintf(tampon, sizeof tampon, "?%lu", (unsigned long)(r->nb_liens + 1));
@@ -1725,10 +1784,11 @@ static int lire_condition(Recherche *r) {
             else if (strcmp(t, "texte") == 0 && op != '=' && op != '!') chaine_ajouter(&r->sql, " COLLATE GRYM_TEXTE");
             r->liens[r->nb_liens] = i - 1;
             r->types[r->nb_liens] = t;
-            r->champs[r->nb_liens] = r->e->champs[k];
+            r->champs[r->nb_liens] = nom_champ;
             r->nb_liens++;
         }
         chaine_ajouter(&r->sql, ")");
+        free(expr);
     }
     if (*r->p != ')') { r->erreur = grym_dupliquer("parenthèse attendue"); return 0; }
     r->p++;

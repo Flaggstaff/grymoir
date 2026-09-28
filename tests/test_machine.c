@@ -2317,6 +2317,23 @@ int main(void) {
     PROG(PUPITRES "La somme des prix vaut 3.\nAfficher la somme des prix.", "3");   /* un nom ordinaire reste un nom */
 #undef PUPITRES
 
+#define ADHESIONS "Une catégorie, conservée, a :\n    un nom (texte), unique.\n" \
+    "Un membre, conservé, a :\n    un nom (texte),\n    une catégorie (catégorie), facultative.\n" \
+    "Une cotisation, conservée, a :\n    un membre (membre),\n    un montant (nombre).\n" \
+    "La j vaut une nouvelle catégorie :\n    Le nom vaut « Junior ».\nConserver la j.\n" \
+    "L'm1 vaut un nouveau membre :\n    Le nom vaut « Élodie ».\n    La catégorie vaut j.\nConserver l'm1.\n" \
+    "L'm2 vaut un nouveau membre :\n    Le nom vaut « Sans ».\nConserver l'm2.\n" \
+    "Pour chaque membre conservé :\n    La c vaut une nouvelle cotisation :\n        Le membre vaut membre.\n        Le montant vaut 40,00.\n    Conserver la c.\n"
+    /* Un champ lu à travers un lien, dans une condition dont (§ 16.4) : un lien absent rend la condition fausse */
+    PROG(ADHESIONS "Pour chaque cotisation conservée dont le nom de la catégorie du membre est « Junior », afficher nom du membre de la cotisation.", "Élodie");
+    PROG(ADHESIONS "Afficher le nombre de cotisations conservées dont le nom de la catégorie du membre ≠ « Junior ».", "0");
+    PROG(ADHESIONS "Afficher le nombre de cotisations conservées dont la catégorie du membre est absente.", "1");
+    PROG(ADHESIONS "Afficher la somme des montants des cotisations conservées dont le nom du membre = « Élodie ».", "40,00");
+    PROG(ADHESIONS "Afficher le nombre de cotisations conservées dont la couleur du membre est « x ».", "~« couleur » n'est pas un champ du membre.");
+    PROG(ADHESIONS "Afficher le nombre de cotisations conservées dont le nom du montant est « x ».", "~« montant » n'est pas un lien vers une entité");
+    PROG(ADHESIONS "Afficher le nombre de cotisations conservées dont la nom de la catégorie du membre = « x ».", "~« nom » est un champ masculin.");
+#undef ADHESIONS
+
     /* Refuser (§ 18.1) : le message, écrit comme Afficher l'écrirait ; Essayer le rattrape ; tout est annulé */
     PROG("Refuser « Non. ».", "~Non.");
     PROG("Le d vaut 1234,5.\nRefuser « Débits : » puis d puis « , crédits : » puis 0.", "~Débits : 1'234,5 , crédits : 0");

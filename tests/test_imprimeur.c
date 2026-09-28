@@ -360,6 +360,16 @@ int main(void) {
     COMP("Un pupitre, conservé, a :\n    un prix (nombre).\nSi le nombre de pupitres conservés est nul, afficher 1.",
          "_classe _un pupitre _conservé\n    _un prix (nombre)\n_fin\n_si _nombre_de pupitre _conservé _nul _alors\n    _afficher 1\n_fin\n");
 
+    /* --- Un chemin à travers les liens, dans dont (§ 16.4) : littéraire et compacte --- */
+    FIXE("Une écriture, conservée, a :\n    une comptabilisation (date), facultative.\nUne ligne, conservée, a :\n"
+         "    une écriture (écriture),\n    un débit (nombre).\n"
+         "Afficher la somme des débits des lignes conservées dont la comptabilisation de l'écriture est présente.\n");
+    COMP("Une écriture, conservée, a :\n    une comptabilisation (date), facultative.\nUne ligne, conservée, a :\n"
+         "    une écriture (écriture).\nAfficher le nombre de lignes conservées dont la comptabilisation de l'écriture est absente.",
+         "_classe _une écriture _conservé\n    _une comptabilisation (date) _facultatif\n_fin\n"
+         "_classe _une ligne _conservé\n    _une écriture (écriture)\n_fin\n"
+         "_afficher _nombre_de ligne _conservé _dont écriture.comptabilisation _absent\n");
+
     /* --- Refuser (§ 18.1) : un élément, plusieurs reliés par « puis », en forme courte --- */
     FIXE("Refuser « Non. ».\n");
     FIXE("Le d vaut 3.\nSi d > 2, refuser « Trop : » puis d puis « sur 2 ».\n");
