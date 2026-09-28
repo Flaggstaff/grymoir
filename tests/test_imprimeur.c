@@ -351,6 +351,15 @@ int main(void) {
          "\nRemarque : au premier niveau.\nF 1.\n");
     FIXE("Selon 1 :\n    Cas 1, afficher 1.\n    Remarque : entre deux cas.\n    Autrement, afficher 2.\n");
 
+    /* --- La somme (§ 16.4) ; un suffixe après « conservés » se relit en forme compacte --- */
+    FIXE("Un pupitre, conservé, a :\n    un prix (nombre),\n    un nombre de parties (nombre entier).\n"
+         "Afficher la somme des prix des pupitres conservés dont le prix > 0.\n"
+         "Afficher la somme des nombres de parties des pupitres conservés.\n");
+    COMP("Un pupitre, conservé, a :\n    un prix (nombre).\nAfficher la somme des prix des pupitres conservés.",
+         "_classe _un pupitre _conservé\n    _un prix (nombre)\n_fin\n_afficher _somme_de prix _de pupitre _conservé\n");
+    COMP("Un pupitre, conservé, a :\n    un prix (nombre).\nSi le nombre de pupitres conservés est nul, afficher 1.",
+         "_classe _un pupitre _conservé\n    _un prix (nombre)\n_fin\n_si _nombre_de pupitre _conservé _nul _alors\n    _afficher 1\n_fin\n");
+
     /* --- Refuser (§ 18.1) : un élément, plusieurs reliés par « puis », en forme courte --- */
     FIXE("Refuser « Non. ».\n");
     FIXE("Le d vaut 3.\nSi d > 2, refuser « Trop : » puis d puis « sur 2 ».\n");

@@ -435,7 +435,35 @@ static void expression(Impression *im, const Noeud *n) {
         /* « de bach » (§ 16.10), « les interprètes de o » (§ 16.13) : l'objet en dernier enfant */
         int inverse = n->op == 'I' || n->op == 'M';
         const Noeud *objet = inverse ? n->enfants[n->nb_enfants - 1] : NULL;
-        if (n->forme == 2 && n->op == 'M') {   /* « le nombre d'interprètes de o » */
+        if (n->forme == 3) {   /* « la somme des montants des cotisations conservées », « … des lignes du compte » */
+            if (im->compact) {
+                aj(im, "_somme_de ");
+                ecrire_nom(im, n->texte2, 0);
+                aj(im, " _de ");
+                ecrire_nom(im, n->texte, 0);
+                if (inverse) { aj(im, " _de "); expression(im, objet); }
+                else aj(im, n->negation ? " _supprimé" : " _conservé");
+            } else {
+                const char *esp = strchr(n->texte2, ' ');
+                const size_t l = esp ? (size_t)(esp - n->texte2) : strlen(n->texte2);
+                const char der = l ? n->texte2[l - 1] : 0;
+                char *pc = (der == 's' || der == 'x' || der == 'z') ? grym_dupliquer(n->texte2)
+                                                                   : grym_formater("%.*ss%s", (int)l, n->texte2, esp ? esp : "");
+                aj(im, "la somme des ");
+                aj(im, pc);
+                free(pc);
+                const char *pl = NULL;
+                for (size_t k = 0; k < im->nb_pluriels && !pl; k++)
+                    if (strcmp(im->pluriels[k].feminin, n->texte) == 0) pl = im->pluriels[k].masculin;
+                char *p = pl ? grym_dupliquer(pl) : grym_formater("%ss", n->texte);
+                aj(im, " des ");
+                aj(im, p);
+                free(p);
+                if (inverse) { aj(im, " "); preposition(im, "de", objet); }
+                else if (n->negation) aj(im, fem ? " supprimées" : " supprimés");
+                else aj(im, fem ? " conservées" : " conservés");
+            }
+        } else if (n->forme == 2 && n->op == 'M') {   /* « le nombre d'interprètes de o » */
             if (im->compact) {
                 const char *sg = NULL;
                 for (size_t k = 0; k < im->nb_singuliers && !sg; k++)
@@ -489,7 +517,7 @@ static void expression(Impression *im, const Noeud *n) {
             aj(im, im->compact ? " _dont " : " dont ");
             expression(im, n->enfants[0]);
         }
-        if (n->texte2) {
+        if (n->texte2 && n->forme != 3) {   /* forme 3 : texte2 est le champ additionné, pas un tri */
             aj(im, im->compact ? " _par " : ", par ");
             ecrire_nom(im, n->texte2, 0);
             if (n->entier) aj(im, im->compact ? " _décroissant" : " décroissant");

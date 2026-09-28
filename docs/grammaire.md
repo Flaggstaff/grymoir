@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.48 de la spécification, révisée le 27 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.49 de la spécification, révisée le 28 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1018,6 +1018,7 @@ Afficher le nombre de clients conservés dont le statut actif est vrai.
 - `, par nom` trie ; `, par solde décroissant` trie à l'envers. Sans tri : dans l'ordre de conservation.
 - `le client conservé dont …` exige exactement un objet. Aucun, ou plusieurs : erreur, avec leur nombre.
 - `le nombre de clients conservés [dont …]` compte, au pluriel (§ 16.1).
+- `la somme des soldes des clients conservés [dont …]` additionne un champ `(nombre)` ou `(nombre entier)` ; `la somme des débits des lignes du compte` passe par une relation inverse (§ 16.10). Le champ se met au pluriel par un s au premier mot (`débit` → `débits`, `nombre de parties` → `nombres de parties`) ; un premier mot en s, x ou z ne change pas. L'addition est exacte, en décimal, jamais en virgule flottante ; les champs absents ne comptent pas, les objets de la corbeille non plus ; une somme sur rien vaut 0. Un autre type : « « instrument » est un champ texte : seul un nombre s'additionne. » Comme toute recherche, elle n'entre pas dans un calcul. En forme compacte : `_somme_de solde _de client _conservé`, `_somme_de débit _de ligne _de compte`. Aucun mot n'est réservé : `La somme des prix vaut 3.` crée toujours un nom, tant que `prix` n'est le champ d'aucune entité suivie de « des ».
 - Un même objet conservé, retrouvé deux fois dans une exécution, est le même objet en mémoire : `=` compare toujours l'identité (§ 13.4).
 - Un calcul ne lit pas la base : son résultat changerait d'une exécution à l'autre, pour la même raison qu'il n'emploie pas `aujourd'hui` (§ 9.4). Règle prudente, qu'on pourra assouplir ; l'inverse serait impossible sans casser des programmes.
 - Dans une condition `dont`, un champ de l'entité désigne celui de chaque objet examiné. Chaque comparaison met un champ face à une valeur calculée par le programme (une variable, une constante, un calcul) ; deux champs ne se comparent pas entre eux. `0 < solde` vaut `solde > 0`.
@@ -1511,3 +1512,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.46 | 2026-09-26 | § 12 : un texte vide s'écrit `« »` dans la forme canonique (et non plus `«  »`, deux espaces) |
 | 1.47 | 2026-09-27 | § 18.1 : `Refuser « … » puis x.`, une erreur voulue, rattrapable, annulée par la transaction |
 | 1.48 | 2026-09-27 | § 4.1 : un entier de quatre chiffres ou moins s'affiche sans séparateur (`2026`, `1020`) ; avec des décimales ou à partir de cinq chiffres, groupé |
+| 1.49 | 2026-09-28 | § 16.4 : `la somme des … des … [dont …]`, additionne un champ nombre, en décimal exact |

@@ -2,6 +2,7 @@
  * Spécification : docs/grammaire.md (révision 1.37), § 16 ; docs/vm.md (révision 1.32), § 8.
  */
 #include "base.h"
+#include "decimal.h"
 #include "date.h"
 #include "texte.h"
 
@@ -1792,8 +1793,9 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
     if (!s4) { *erreur = grym_dupliquer("Recherche mal décrite."); return 0; }
     char *entite = grym_formater("%.*s", (int)(s1 - d), d);
     int mode = s1[1] - '0';
-    int corbeille = mode >= 3;   /* « supprimés » (§ 16.12) : modes 3, 4, 5 */
-    if (corbeille) mode -= 3;
+    int corbeille = (mode >= 3 && mode <= 5) || mode == 7;   /* « supprimés » (§ 16.12) : modes 3, 4, 5 et 7 */
+    if (mode >= 3 && mode <= 5) mode -= 3;
+    else if (mode == 7) mode = 6;   /* 6 : la somme du champ écrit à la place du tri (§ 16.4) */
     char *tri = grym_formater("%.*s", (int)(s3 - s2 - 1), s2 + 1);
     int decroissant = s3[1] == '1';
     Recherche r;
@@ -1814,7 +1816,22 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
     const ClasseVM *e = r.e;
 
     /* SELECT … FROM la table de l'entité, jointe à celles de sa lignée */
-    chaine_ajouter(&r.sql, mode == 0 ? "SELECT g.id, g.classe" : "SELECT count(*)");
+    long k_somme = -1;   /* mode 6 : le champ additionné */
+    if (mode == 6) {
+        for (size_t q = 0; q < r.e->nb_champs && k_somme < 0; q++) if (strcmp(r.e->champs[q], tri) == 0) k_somme = (long)q;
+        if (k_somme < 0 || !r.e->types[k_somme]
+            || (strcmp(r.e->types[k_somme], "nombre") != 0 && strcmp(r.e->types[k_somme], "nombre entier") != 0)) {
+            *erreur = grym_formater("« %s » n'est pas un champ nombre de « %s ».", tri, r.e->nom);
+            free(tri);
+            return 0;
+        }
+    }
+    if (mode == 6) {
+        chaine_ajouter(&r.sql, "SELECT ");
+        colonne(&r, (size_t)k_somme);
+    } else {
+        chaine_ajouter(&r.sql, mode == 0 ? "SELECT g.id, g.classe" : "SELECT count(*)");
+    }
     chaine_ajouter(&r.sql, " FROM ");
     for (size_t i = r.n; i > 0; i--) {
         char t[64];
@@ -1899,6 +1916,31 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
             return 0;
         }
         *resultat = vi_liste(ids, classes, n);
+        return 1;
+    }
+    if (mode == 6) {   /* la somme, en décimal exact : jamais l'arithmétique flottante de SQLite ; les absents ne comptent pas */
+        Decimal total = dec_zero();
+        int rc;
+        StatutDecimal statut = DEC_OK;
+        while (statut == DEC_OK && (rc = sqlite3_step(st)) == SQLITE_ROW) {
+            if (sqlite3_column_type(st, 0) == SQLITE_NULL) continue;
+            Decimal x = dec_depuis_canonique((const char *)sqlite3_column_text(st, 0));
+            Decimal s;   /* dec_addition l'écrit entièrement : rien à préparer, rien à perdre */
+            statut = dec_addition(&total, &x, &s);
+            dec_liberer(&x);
+            dec_liberer(&total);
+            total = s;
+        }
+        sqlite3_finalize(st);
+        if (statut != DEC_OK) {
+            dec_liberer(&total);
+            *erreur = grym_dupliquer("Nombre trop grand : un résultat est limité à 1000 chiffres.");
+            return 0;
+        }
+        char *c = dec_canonique(&total);
+        dec_liberer(&total);
+        *resultat = vi_nombre_canonique(c);
+        free(c);
         return 1;
     }
     long compte = sqlite3_step(st) == SQLITE_ROW ? (long)sqlite3_column_int64(st, 0) : 0;

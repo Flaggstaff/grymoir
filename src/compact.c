@@ -88,7 +88,9 @@ static void expression(Reecriture *r, size_t d, size_t f);
 /* Jeton qui termine une valeur : un suffixe « _positif » s'y rapporte. */
 static int finit_valeur(const Jeton *t) {
     return t->type == J_CROCHETS || t->type == J_NOMBRE || t->type == J_TEXTE || t->type == J_PAR_FERM
-        || (t->type == J_MOT && (strcmp(t->valeur, "vrai") == 0 || strcmp(t->valeur, "faux") == 0 || strcmp(t->valeur, "écran") == 0));
+        || (t->type == J_MOT && (strcmp(t->valeur, "vrai") == 0 || strcmp(t->valeur, "faux") == 0 || strcmp(t->valeur, "écran") == 0))
+        /* « _nombre_de client _conservé _nul » : réécrit, « … clients conservés », que le suffixe suit (§ 16.4) */
+        || (t->type == J_MOT && (strcmp(t->valeur, "conservés") == 0 || strcmp(t->valeur, "supprimés") == 0));
 }
 
 static const char *adjectif(const Jeton *t) {
@@ -205,6 +207,22 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             copier(r, &r->e[k + 1]);
             mot(r, est_cle(&r->e[k + 2], "supprimé") ? "supprimé" : "conservé", &r->e[k + 2]);
             k += 2;
+            continue;
+        }
+        if (est_cle(t, "somme_de") && k + 4 < f && r->e[k + 1].type == J_CROCHETS && est_cle(&r->e[k + 2], "de")
+            && r->e[k + 3].type == J_CROCHETS
+            && (est_cle(&r->e[k + 4], "de") || est_cle(&r->e[k + 4], "conservé") || est_cle(&r->e[k + 4], "conservée")
+                || est_cle(&r->e[k + 4], "supprimé"))) {
+            /* _somme_de montant _de cotisation _conservé → la somme des montant des cotisation conservés (§ 16.4) */
+            mot(r, "la", t);
+            mot(r, "somme", t);
+            mot(r, "des", t);
+            copier(r, &r->e[k + 1]);
+            mot(r, "des", &r->e[k + 2]);
+            copier(r, &r->e[k + 3]);
+            if (est_cle(&r->e[k + 4], "de")) mot(r, "de", &r->e[k + 4]);
+            else mot(r, est_cle(&r->e[k + 4], "supprimé") ? "supprimés" : "conservés", &r->e[k + 4]);
+            k += 4;
             continue;
         }
         if (est_cle(t, "nombre_de") && k + 2 < f && r->e[k + 1].type == J_CROCHETS && est_cle(&r->e[k + 2], "de")) {

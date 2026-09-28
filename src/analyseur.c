@@ -1533,6 +1533,80 @@ static Noeud *chercher(Analyse *a, const Jeton *t, const Classe *e, int mode, si
     return n;
 }
 
+/* Le pluriel d'un nom de champ : un s au premier mot (« débit » → « débits », « nombre de parties » → « nombres de
+ * parties ») ; un mot qui finit par s, x ou z ne change pas. */
+static char *pluriel_de_champ(const char *champ) {
+    const char *esp = strchr(champ, ' ');
+    size_t l = esp ? (size_t)(esp - champ) : strlen(champ);
+    const char dernier = l ? champ[l - 1] : 0;
+    if (dernier == 's' || dernier == 'x' || dernier == 'z') return grym_dupliquer(champ);
+    return grym_formater("%.*ss%s", (int)l, champ, esp ? esp : "");
+}
+
+/* « la somme des montants des cotisations conservées dont … », « la somme des débits des lignes du compte »
+ * (§ 16.4, § 16.10) : un champ nombre, additionné en décimal exact ; une somme sur rien vaut 0. */
+static Noeud *somme(Analyse *a, const Jeton *t) {
+    const size_t d = a->i + 3;   /* après « la somme des » */
+    /* le champ, au pluriel : le plus long nom qui convient, suivi de « des » ; en forme compacte, au singulier */
+    char *champ = NULL;
+    size_t f = 0;
+    if (d < a->n && a->j[d].type == J_CROCHETS && a->j[d].synthetique && d + 1 < a->n && est_mot(&a->j[d + 1], "des")) {
+        champ = grym_dupliquer(a->j[d].valeur);
+        f = d + 1;
+    } else {
+        size_t k = d;
+        while (k < a->n && mot_de_nom(a, k)) k++;
+        for (size_t q = k; q > d && !champ; q--) {
+            if (q >= a->n || !est_mot(&a->j[q], "des")) continue;
+            char *nom = cle(a, d, q);
+            for (size_t i = 0; i < a->portee->nb_classes && !champ; i++) {
+                const Classe *c = &a->portee->classes[i];
+                for (size_t j = 0; j < c->nb && !champ; j++) {
+                    char *pl = pluriel_de_champ(c->champs[j]);
+                    if (strcmp(pl, nom) == 0) { champ = grym_dupliquer(c->champs[j]); f = q; }
+                    free(pl);
+                }
+            }
+            free(nom);
+        }
+    }
+    if (!champ) return NULL;   /* pas une somme : « la somme » est peut-être un nom du programme */
+    size_t apres, de;
+    Classe *e = entite_conservee(a, f + 1, 1, &apres);
+    Noeud *n = NULL;
+    if (e) {
+        n = chercher(a, t, e, 2, apres, NULL);
+    } else if ((e = entite_de(a, f + 1, 1, &de)) != NULL) {
+        if (a->formule == 1) {
+            free(champ);
+            return erreur(a, t, grym_dupliquer("Un calcul ne lit pas la base : cherchez dans une action."));
+        }
+        Noeud *objet = objet_de(a, e, de);
+        if (objet) n = chercher(a, t, e, 2, 0, objet);
+    } else {
+        free(champ);
+        return erreur(a, &a->j[f + 1 < a->n ? f + 1 : f], grym_dupliquer(
+            "Après « la somme des … des », les objets à additionner : « des cotisations conservées », « des lignes du compte »."));
+    }
+    if (!n) { free(champ); return NULL; }
+    const char *type = type_du_champ(a->portee, e, champ);
+    if (!type) {
+        Noeud *x = erreur(a, t, grym_formater("Un%s %s n'a pas de champ « %s ».", e->genre == GENRE_FEMININ ? "e" : "", e->nom, champ));
+        free(champ);
+        noeud_liberer(n);
+        return x;
+    }
+    if (strcmp(type, "nombre") != 0 && strcmp(type, "nombre entier") != 0) {
+        Noeud *x = erreur(a, t, grym_formater("« %s » est un champ %s : seul un nombre s'additionne.", champ, type));
+        free(champ);
+        noeud_liberer(n);
+        return x;
+    }
+    n->forme = 3;
+    n->texte2 = champ;
+    return n;
+}
+
 static int est_nouveau(const Jeton *t) {
     return est_mot(t, "nouveau") || est_mot(t, "nouvel") || est_mot(t, "nouvelle");
 }
@@ -1674,6 +1748,10 @@ static Noeud *base(Analyse *a) {
             return chercher(a, t, e, 2, 0, objet);
         }
 
+    }
+    if (est_mot(t, "la") && est_mot(voir(a, 1), "somme") && est_mot(voir(a, 2), "des")) {   /* § 16.4 */
+        Noeud *n = somme(a, t);
+        if (n || a->echec) return n;
     }
     if (t->type == J_DATE) {
         Noeud *n = feuille(N_DATE, t);

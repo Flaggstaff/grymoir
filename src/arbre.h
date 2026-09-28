@@ -43,7 +43,8 @@ typedef enum {
     N_BOUTON,        /* élément d'écran : « un bouton « Nouveau » » : texte : libellé (§ 22.1) */
     N_TEXTE_ECRAN,   /* élément d'écran : « le texte « Bienvenue » » : texte (§ 22.1) */
     N_CHAMP_DONT,    /* champ de l'objet examiné, dans une condition « dont » : texte : champ (§ 16.4) */
-    N_CHERCHER,      /* objets conservés : texte : entité ; forme : 0 liste (boucle), 1 un seul, 2 nombre ;
+    N_CHERCHER,      /* objets conservés : texte : entité ; forme : 0 liste (boucle), 1 un seul, 2 nombre, 3 somme
+                        du champ texte2 (§ 16.4) ;
                         enfants[0] : condition « dont » (facultative) ; texte2 : champ du tri ; entier : 1 si décroissant ;
                         op 'I' : relation inverse, l'objet en dernier enfant (§ 16.10) ; op 'M' : les éléments du
                         champ multiple texte3 de cet objet (§ 16.13) ; liste d'écran (§ 22.1) : texte3, les colonnes

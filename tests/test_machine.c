@@ -2296,6 +2296,27 @@ int main(void) {
     PROG("Les nombres s'affichent à la suisse.\nLes nombres s'affichent à la française.", "~une seule fois");
     PROG("Pour f :\n    Les nombres s'affichent à la suisse.", "~au premier niveau du programme");
     PROG("Les nombres s'affichent à la belge.", "~Style attendu");
+    /* La somme (§ 16.4) : décimal exact, dont, lien inverse, pluriel au premier mot, 0 sur rien ; les refus */
+#define PUPITRES "Une partition, conservée, a :\n    une cote (texte), unique.\n" \
+         "Un pupitre, conservé, a :\n    une partition (partition),\n    un instrument (texte),\n" \
+         "    un nombre de parties (nombre entier),\n    un prix (nombre), facultatif.\n" \
+         "Pour placer une partition et un instrument et un nombre et un prix :\n    Le n vaut un nouveau pupitre :\n" \
+         "        La partition vaut partition.\n        L'instrument vaut instrument.\n        Le nombre de parties vaut nombre.\n" \
+         "        Le prix vaut prix.\n    Conserver le n.\n" \
+         "La p vaut une nouvelle partition :\n    La cote vaut « A-1 ».\nConserver la p.\n" \
+         "Placer la p et « violon » et 12 et 0,10.\nPlacer la p et « alto » et 6 et 0,20.\n" \
+         "Placer la p et « violoncelle » et 5 et 1234,70.\n"
+    PROG(PUPITRES "Afficher la somme des nombres de parties des pupitres conservés.", "23");
+    PROG(PUPITRES "Afficher la somme des prix des pupitres conservés.", "1'235,00");
+    PROG(PUPITRES "Afficher la somme des nombres de parties des pupitres de la p.", "23");
+    PROG(PUPITRES "Afficher la somme des nombres de parties des pupitres conservés dont l'instrument ≠ « alto ».", "17");
+    PROG(PUPITRES "Afficher la somme des prix des pupitres conservés dont l'instrument = « contrebasse ».", "0");
+    PROG(PUPITRES "Si la somme des prix des pupitres conservés > 1000, afficher « cher ».", "cher");
+    PROG(PUPITRES "Afficher la somme des instruments des pupitres conservés.", "~« instrument » est un champ texte : seul un nombre s'additionne.");
+    PROG(PUPITRES "Le total d'un n vaut la somme des prix des pupitres conservés.", "~Un calcul ne lit pas la base");
+    PROG(PUPITRES "La somme des prix vaut 3.\nAfficher la somme des prix.", "3");   /* un nom ordinaire reste un nom */
+#undef PUPITRES
+
     /* Refuser (§ 18.1) : le message, écrit comme Afficher l'écrirait ; Essayer le rattrape ; tout est annulé */
     PROG("Refuser « Non. ».", "~Non.");
     PROG("Le d vaut 1234,5.\nRefuser « Débits : » puis d puis « , crédits : » puis 0.", "~Débits : 1'234,5 , crédits : 0");

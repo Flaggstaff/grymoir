@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.45, révisée le 27 septembre 2026.
+Version 1.46, révisée le 28 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -256,3 +256,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.43 | 2026-09-26 | Apparence : un seul thème fixé par GrymoiR (polices, espacements, couleurs neutres, clair ou sombre selon le système) ; un programme n'en règle que l'accent, dans une palette fermée de cinq couleurs, et le logo (grammaire, § 22.5 ; `docs/ecrans.md`, § 5) |
 | 1.44 | 2026-09-27 | Art. 12 : `Refuser` est fait (grammaire, § 18.1) ; report : contrainte d'entité vérifiée par le langage |
 | 1.45 | 2026-09-27 | Affichage des nombres : un entier de quatre chiffres ou moins ne se groupe pas (grammaire, § 4.1), comme une année ou un numéro en français |
+| 1.46 | 2026-09-28 | Art. 12 : la somme d'un champ sur la base est faite (grammaire, § 16.4) : premier pas vers la contrainte d'entité reportée |
