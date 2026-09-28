@@ -9,6 +9,7 @@
 #include "projet.h"
 
 #include <QApplication>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QMessageBox>
@@ -16,6 +17,7 @@
 #include <QStandardPaths>
 #include <csignal>
 #include <cstdio>
+#include <cstring>
 
 extern "C" {
 #include "vm.h"
@@ -32,15 +34,15 @@ static void sur_arret(int signal_recu) {
     std::signal(signal_recu, sur_arret);
 }
 
-int main(int argc, char **argv) {
-    QApplication app(argc, argv);
-    QApplication::setOrganizationName("GrymoiR");
-    QApplication::setApplicationName("Atelier");
-    const QStringList args = QApplication::arguments();
+// Les commandes sans fenêtre (--fabriquer, --preparer) : pour les scripts et l'intégration continue, qui n'ont pas
+// d'écran ; QCoreApplication, et non QApplication, qui exigerait un affichage.
+static int sans_fenetre(int argc, char **argv) {
+    QCoreApplication app(argc, argv);
+    const QStringList args = QCoreApplication::arguments();
     // grym-atelier --fabriquer projet destination : le menu Programme > Fabriquer l'application…, sans fenêtre,
     // pour les scripts et l'intégration continue (docs/atelier.md, § 8). Le programme principal vient de
     // projet.grymatelier.
-    if (args.size() == 4 && args.at(1) == "--fabriquer") {
+    if (args.at(1) == "--fabriquer") {
         FichierProjet f;
         f.lire(QFileInfo(args.at(2)).absoluteFilePath());
         if (f.programme_principal.isEmpty()) {
@@ -54,6 +56,32 @@ int main(int argc, char **argv) {
         if (!remarque.isEmpty()) std::fprintf(stderr, "%s\n", qPrintable(remarque));
         return 0;
     }
+    // grym-atelier --preparer projet dossier : seulement le dossier « Programme » d'une application, pour les
+    // scripts qui l'empaquettent eux-mêmes (AppImage, Windows : outils/fabriquer-ci).
+    if (args.at(1) == "--preparer") {
+        FichierProjet f;
+        f.lire(QFileInfo(args.at(2)).absoluteFilePath());
+        if (f.programme_principal.isEmpty()) {
+            std::fprintf(stderr, "Programme principal inconnu : choisis-le dans l'atelier (projet.grymatelier).\n");
+            return 1;
+        }
+        QString erreur;
+        if (!preparer_programme(f.dossier, f.programme_principal, QFileInfo(f.dossier).fileName(), args.at(3), &erreur)) {
+            std::fprintf(stderr, "%s\n", qPrintable(erreur));
+            return 1;
+        }
+        return 0;
+    }
+    return 2;
+}
+
+int main(int argc, char **argv) {
+    if (argc == 4 && (std::strcmp(argv[1], "--fabriquer") == 0 || std::strcmp(argv[1], "--preparer") == 0))
+        return sans_fenetre(argc, argv);
+    QApplication app(argc, argv);
+    QApplication::setOrganizationName("GrymoiR");
+    QApplication::setApplicationName("Atelier");
+    const QStringList args = QApplication::arguments();
     // Une application fabriquée par l'atelier (docs/atelier.md, § 8) : son programme s'ouvre directement, sans
     // éditeur, sous son nom ; sa base vit dans le dossier de données que le système donne à l'application.
     QString nom, principal;

@@ -25,3 +25,5 @@ construction/
 # Installateur macOS (./paquet-mac)
 paquet/
 GrymoiR.dmg
+# Applications fabriquées (outils/fabriquer-ci)
+sortie/

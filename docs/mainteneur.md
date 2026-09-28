@@ -50,6 +50,8 @@ Le guide « Premiers pas » (`docs/guide.md`) est vérifié comme le code : `tes
 
 Pour installer GrymoiR sur un Mac comme un logiciel ordinaire : `./paquet-mac` fabrique `GrymoiR.dmg` (atelier, bibliothèques Qt par `macdeployqt`, outil `grym`, exemple « Amis du Tilleul »). Au premier lancement sans projet retenu, l'atelier recopie l'exemple dans `Documents/GrymoiR` (jamais d'écrasement) et l'ouvre ; à tout moment, Fichier > Ouvrir l'exemple « Amis du Tilleul » fait de même, même si un projet est déjà retenu ; ses données se créent au premier « Lancer ». Signature ad hoc seulement : l'application tourne sur le Mac qui l'a construite ; la distribuer sans avertissement de macOS demande une signature et une notarisation Apple.
 
+Les applications des projets de `projets/` : GitHub les fabrique pour les trois systèmes (Actions > applications) ; à la main, sur un des trois systèmes : `outils/fabriquer-ci "projets/Amis du Tilleul" sortie`. « Amis du Tilleul » y est une copie du chapitre 12 du guide (`docs/guide/chapitre-12`) : changer l'un demande de changer l'autre.
+
 `./appliquer` ne publie rien si le patch ne s'applique pas, ni si la construction ou un essai échoue : le patch est alors retiré, et le dépôt reste tel qu'il était. Sous macOS, `./atelier` ferme d'abord l'atelier ouvert (qui demande d'enregistrer ce qui ne l'est pas) : sans cela, `open` remettrait l'ancienne version au premier plan au lieu de lancer la nouvelle.
 
 Le détail, pour qui veut faire à la main :
@@ -269,3 +271,4 @@ Le reste du vocabulaire (mots de construction, synonymes) est encore dans le cod
 | 1.2 | 2026-09-27 | § 2 : le guide et `test_guide` |
 | 1.3 | 2026-09-28 | § 2 : chapitres en plusieurs fichiers ; programmes à écrans du guide vérifiés par `test_atelier` |
 | 1.4 | 2026-09-28 | § 2 : `./paquet-mac`, l'installateur macOS |
+| 1.5 | 2026-09-28 | § 2 : `projets/`, `outils/fabriquer-ci`, les applications fabriquées par GitHub |

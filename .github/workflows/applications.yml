@@ -1,0 +1,69 @@
+# Les applications des projets (dossier projets/), fabriquées pour les trois systèmes (docs/atelier.md, § 8, voie C).
+# Chaque projet donne : Nom.dmg (macOS), Nom-x86_64.AppImage (Linux), Nom-windows.zip (Windows). Les paquets se
+# téléchargent depuis la page de l'exécution (Actions > applications > « Artifacts »).
+# Déclenchement : à la main (Actions > applications > Run workflow), ou quand un projet ou la fabrication change.
+name: applications
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'projets/**'
+      - 'outils/fabriquer-ci'
+      - '.github/workflows/applications.yml'
+
+jobs:
+  unix:
+    name: ${{ matrix.systeme }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, systeme: macos }
+          # Ubuntu 24.04 : le premier dont le Qt (6.4) suffit ; l'AppImage tourne sur les distributions de 2024 et après.
+          - { os: ubuntu-24.04, systeme: linux }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Qt 6 (macOS)
+        if: runner.os == 'macOS'
+        run: brew install qt
+      - name: Qt 6 (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev qt6-base-dev-tools qt6-svg-dev cmake
+      - name: Fabrication des applications
+        run: |
+          for p in projets/*/; do
+            outils/fabriquer-ci "$p" sortie
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: applications-${{ matrix.systeme }}
+          path: sortie/
+          if-no-files-found: error
+
+  windows:
+    name: windows
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            make zip mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-svg mingw-w64-ucrt-x86_64-qt6-tools
+      - name: Fabrication des applications
+        run: |
+          for p in projets/*/; do
+            outils/fabriquer-ci "$p" sortie
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: applications-windows
+          path: sortie/
+          if-no-files-found: error

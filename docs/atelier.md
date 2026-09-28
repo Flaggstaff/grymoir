@@ -203,7 +203,16 @@ Programme > Fabriquer l'application… fait du projet une application autonome, 
 - macOS : copie de GrymoiR.app (`ditto`), sans ses exemples, avec le programme ; nom et identifiant réécrits dans `Info.plist` (`plutil`) ; signature ad hoc (`codesign`) ; disque (`hdiutil`). Depuis un atelier qui n'a pas été installé par `GrymoiR.dmg`, l'application dépend du Qt du Mac, et l'atelier le dit.
 - Linux : le lanceur, un script au nom de l'application, le programme ; l'archive suppose Qt 6 sur la machine qui la reçoit.
 - Jamais d'écrasement : un paquet du même nom arrête la fabrication.
-- Limites : pas de signature Apple ni de notarisation (avertissement de macOS sur un autre Mac) ; pas d'icône propre ; `Enregistrer … dans` écrit à côté du programme, dans l'application, qui n'est pas modifiable : à éviter dans une application fabriquée. Windows et la fabrication pour les trois systèmes par GitHub (voie C) viendront ensuite.
+- Limites : pas de signature Apple ni de notarisation (avertissement de macOS sur un autre Mac) ; pas d'icône propre sous macOS ; `Enregistrer … dans` écrit à côté du programme, dans l'application, qui n'est pas modifiable : à éviter dans une application fabriquée.
+
+**Voie C, les trois systèmes par GitHub (commencée le 28 septembre 2026).** Les projets vivent pour l'instant dans le dépôt de GrymoiR, dossier `projets/` (un dépôt par projet viendra plus tard). Le flux `.github/workflows/applications.yml` lance `outils/fabriquer-ci` sur macOS, Linux et Windows, pour chaque projet, et publie les paquets (Actions > applications > Artifacts) :
+
+- macOS : `./paquet-mac`, puis `--fabriquer` depuis l'atelier ainsi installé : `Nom.dmg` ;
+- Linux : `--preparer`, puis linuxdeploy et son greffon Qt : `Nom-x86_64.AppImage`, un seul fichier qui embarque Qt ; construit sur Ubuntu 24.04, il tourne sur les distributions de 2024 et après ; icône : la première image PNG du projet, sinon celle de GrymoiR (`outils/icone-application.png`) ;
+- Windows : `--preparer`, windeployqt, puis les bibliothèques de MSYS2 suivies jusqu'à la dernière : `Nom-windows.zip`, un dossier avec `Nom.exe` ; sans signature, Windows affiche son avertissement au premier lancement.
+- `--fabriquer` et `--preparer` tournent sans écran (`QCoreApplication`).
+
+Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée dans un dossier personnel vierge, crée sa base avec les données du guide. La partie macOS de la voie C et toute la partie Windows n'ont tourné que sur GitHub, pas ici.
 
 ## Journal des révisions
 

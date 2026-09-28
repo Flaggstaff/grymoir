@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# GrymoiR : fabriquer l'application d'un projet pour le système où tourne ce script (docs/atelier.md, § 8, voie C).
+#   outils/fabriquer-ci "projets/Amis du Tilleul" sortie
+# macOS : « Nom.dmg » ; Linux : « Nom-x86_64.AppImage », un seul fichier qui embarque Qt ; Windows (MSYS2, UCRT64) :
+# « Nom-windows.zip », un dossier avec « Nom.exe » et toutes ses bibliothèques. C'est ce que lance l'intégration
+# continue (.github/workflows/applications.yml) ; le script marche aussi à la main, sur chacun des trois systèmes.
+set -euo pipefail
+[ $# -eq 2 ] || { echo "Usage : outils/fabriquer-ci dossier-du-projet dossier-de-sortie" >&2; exit 1; }
+projet="$(cd "$1" && pwd)"
+mkdir -p "$2"
+sortie="$(cd "$2" && pwd)"
+depot="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$depot"
+nom="$(basename "$projet")"
+ident="$(printf '%s' "$nom" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
+[ -n "$ident" ] || ident="application"
+# l'icône : la première image PNG du projet (son logo), sinon celle de GrymoiR
+icone="$(ls "$projet"/*.png 2>/dev/null | head -n 1 || true)"
+[ -n "$icone" ] || icone="$depot/outils/icone-application.png"
+
+case "$(uname -s)" in
+Darwin)
+    # ./paquet-mac construit, fait tourner les essais et embarque Qt dans paquet/GrymoiR.app ; l'atelier ainsi
+    # installé fabrique le .dmg (ditto, plutil, codesign, hdiutil : fabrication.cpp).
+    ./paquet-mac
+    paquet/GrymoiR.app/Contents/MacOS/grym-atelier --fabriquer "$projet" "$sortie"
+    ;;
+Linux)
+    make -s grym
+    cmake -B construction -DCMAKE_BUILD_TYPE=Release > /dev/null
+    cmake --build construction --parallel "$(nproc)"
+    travail="$(mktemp -d)"
+    appdir="$travail/AppDir"
+    mkdir -p "$appdir/usr/bin" "$appdir/usr/share/applications" "$appdir/usr/share/icons/hicolor/256x256/apps"
+    cp construction/grym-atelier "$appdir/usr/bin/"
+    construction/grym-atelier --preparer "$projet" "$appdir/usr/bin/Programme"
+    printf '[Desktop Entry]\nType=Application\nName=%s\nExec=grym-atelier\nIcon=%s\nCategories=Office;\n' \
+        "$nom" "$ident" > "$appdir/usr/share/applications/$ident.desktop"
+    cp "$icone" "$appdir/usr/share/icons/hicolor/256x256/apps/$ident.png"
+    # linuxdeploy et son greffon Qt (https://github.com/linuxdeploy) : téléchargés une fois
+    outils="${GRYMOIR_OUTILS:-$HOME/.cache/grymoir-outils}"
+    mkdir -p "$outils"
+    for o in linuxdeploy/linuxdeploy/linuxdeploy-x86_64.AppImage linuxdeploy/linuxdeploy-plugin-qt/linuxdeploy-plugin-qt-x86_64.AppImage; do
+        f="$outils/$(basename "$o")"
+        [ -x "$f" ] || { curl -sSfL -o "$f" "https://github.com/${o%/*}/releases/download/continuous/$(basename "$o")"; chmod +x "$f"; }
+    done
+    export PATH="$outils:$PATH" APPIMAGE_EXTRACT_AND_RUN=1
+    export QMAKE="${QMAKE:-$(command -v qmake6 || echo /usr/lib/qt6/bin/qmake6)}"
+    export OUTPUT="$sortie/$nom-x86_64.AppImage"
+    [ ! -e "$OUTPUT" ] || { echo "« $OUTPUT » existe déjà : il n'est jamais écrasé." >&2; exit 1; }
+    (cd "$travail" && linuxdeploy-x86_64.AppImage --appdir "$appdir" --plugin qt --output appimage \
+        -e "$appdir/usr/bin/grym-atelier" -d "$appdir/usr/share/applications/$ident.desktop" \
+        -i "$appdir/usr/share/icons/hicolor/256x256/apps/$ident.png" > "$travail/journal.txt" 2>&1) \
+        || { tail -n 40 "$travail/journal.txt" >&2; exit 1; }
+    rm -rf "$travail"
+    echo "$OUTPUT"
+    ;;
+MINGW*|MSYS*)
+    make -s grym CC=gcc
+    cmake -B construction -G Ninja -DCMAKE_BUILD_TYPE=Release > /dev/null
+    cmake --build construction
+    travail="$(mktemp -d)"
+    dossier="$travail/$nom"
+    mkdir -p "$dossier"
+    cp construction/grym-atelier.exe "$dossier/$nom.exe"
+    "$dossier/$nom.exe" --preparer "$projet" "$dossier/Programme"
+    deploy="$(command -v windeployqt6 || command -v windeployqt)"
+    "$deploy" --release --no-translations "$dossier/$nom.exe"
+    # Le Qt de MSYS2 dépend d'autres bibliothèques de /ucrt64/bin (ICU, zstd, freetype…), que windeployqt ne
+    # recopie pas : on suit les dépendances jusqu'à ce qu'il n'en manque plus aucune.
+    for tour in 1 2 3 4 5; do
+        manquantes="$(find "$dossier" -name '*.exe' -o -name '*.dll' | while read -r f; do ldd "$f"; done \
+            | awk '$3 ~ /^\/ucrt64\/bin\// {print $3}' | sort -u \
+            | while read -r d; do [ -e "$dossier/$(basename "$d")" ] || echo "$d"; done)"
+        [ -n "$manquantes" ] || break
+        echo "$manquantes" | while read -r d; do cp "$d" "$dossier/"; done
+    done
+    paquet="$sortie/$nom-windows.zip"
+    [ ! -e "$paquet" ] || { echo "« $paquet » existe déjà : il n'est jamais écrasé." >&2; exit 1; }
+    (cd "$travail" && zip -qr "$paquet" "$nom")
+    rm -rf "$travail"
+    echo "$paquet"
+    ;;
+*)
+    echo "Système non pris en charge : $(uname -s)" >&2
+    exit 1
+    ;;
+esac
