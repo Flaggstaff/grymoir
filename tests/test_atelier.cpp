@@ -438,6 +438,27 @@ int main(int argc, char **argv) {
         e.close();
     }
 
+    // Premier lancement d'une installation : l'exemple recopié, jamais écrasé
+    {
+        QTemporaryDir d;
+        const QString source = d.filePath("Exemples/Amis du Tilleul");
+        QDir().mkpath(source);
+        QFile a(source + "/association.grym");
+        a.open(QIODevice::WriteOnly);
+        a.write("Afficher 1.\n");
+        a.close();
+        QString erreur;
+        const QString copie = installer_exemple(source, d.filePath("Documents/GrymoiR"), &erreur);
+        VERIFIER(copie == d.filePath("Documents/GrymoiR/Amis du Tilleul") && QFile::exists(copie + "/association.grym"));
+        QFile b(copie + "/association.grymd");   // les données du lecteur
+        b.open(QIODevice::WriteOnly);
+        b.write("x");
+        b.close();
+        VERIFIER(installer_exemple(source, d.filePath("Documents/GrymoiR"), &erreur) == copie);
+        VERIFIER(QFile::exists(copie + "/association.grymd"));   // rien d'écrasé
+        VERIFIER(installer_exemple(d.filePath("rien"), d.filePath("Documents"), &erreur).isEmpty() && erreur.contains("introuvable"));
+    }
+
     // Analyse : la première erreur, avec sa position ; rien quand tout va bien
     Diagnostic_atelier d = analyser_source("Le total vaut 1.\nLe totl devient 2.\n", false);
     VERIFIER(d.ligne == 2);

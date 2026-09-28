@@ -48,6 +48,8 @@ Au quotidien, deux scripts suffisent, depuis le dossier du dépôt :
 
 Le guide « Premiers pas » (`docs/guide.md`) est vérifié comme le code : `test_guide` exécute le programme de chaque chapitre (`docs/guide/chapitre-NN.grym`), exige qu'il soit en forme canonique, que chaque bloc ```` ```grymoir ```` du chapitre en soit un extrait et que chaque bloc ```` ```sortie ```` apparaisse dans ce qu'il affiche, dans l'ordre. Un chapitre en plusieurs fichiers vit dans un dossier (`docs/guide/chapitre-12/association.grym` et les fichiers qu'il utilise) ; ses extraits peuvent venir de n'importe lequel. `test_guide` ne fait que compiler un programme à écrans, que la console n'ouvre pas : les chapitres 11 et 12 s'exécutent vraiment dans `test_atelier`, qui clique à la place du lecteur. Un changement du langage qui casse un exemple du guide casse donc les essais : corrigez le programme du chapitre, puis le texte.
 
+Pour installer GrymoiR sur un Mac comme un logiciel ordinaire : `./paquet-mac` fabrique `GrymoiR.dmg` (atelier, bibliothèques Qt par `macdeployqt`, outil `grym`, exemple « Amis du Tilleul »). Au premier lancement, l'atelier recopie l'exemple dans `Documents/GrymoiR` (jamais d'écrasement) et l'ouvre ; ses données se créent au premier « Lancer ». Signature ad hoc seulement : l'application tourne sur le Mac qui l'a construite ; la distribuer sans avertissement de macOS demande une signature et une notarisation Apple.
+
 `./appliquer` ne publie rien si le patch ne s'applique pas, ni si la construction ou un essai échoue : le patch est alors retiré, et le dépôt reste tel qu'il était. Sous macOS, `./atelier` ferme d'abord l'atelier ouvert (qui demande d'enregistrer ce qui ne l'est pas) : sans cela, `open` remettrait l'ancienne version au premier plan au lieu de lancer la nouvelle.
 
 Le détail, pour qui veut faire à la main :
@@ -266,3 +268,4 @@ Le reste du vocabulaire (mots de construction, synonymes) est encore dans le cod
 | 1.1 | 2026-09-26 | § 2 : `./atelier` et `./appliquer` |
 | 1.2 | 2026-09-27 | § 2 : le guide et `test_guide` |
 | 1.3 | 2026-09-28 | § 2 : chapitres en plusieurs fichiers ; programmes à écrans du guide vérifiés par `test_atelier` |
+| 1.4 | 2026-09-28 | § 2 : `./paquet-mac`, l'installateur macOS |

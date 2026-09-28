@@ -59,3 +59,28 @@ QString creer_fichier(const QString &dossier, const QString &nom, QString *erreu
     f.close();
     return chemin;
 }
+
+static bool copier_dossier(const QString &de, const QString &vers) {
+    if (!QDir().mkpath(vers)) return false;
+    const QDir d(de);
+    for (const QFileInfo &i : d.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot)) {
+        const QString cible = QDir(vers).filePath(i.fileName());
+        if (i.isDir() ? !copier_dossier(i.filePath(), cible) : !QFile::copy(i.filePath(), cible)) return false;
+    }
+    return true;
+}
+
+QString installer_exemple(const QString &source, const QString &parent, QString *erreur) {
+    const QFileInfo s(source);
+    if (!s.isDir()) { *erreur = QString("« %1 » introuvable.").arg(source); return QString(); }
+    const QString copie = QDir(parent).filePath(s.fileName());
+    if (QFileInfo(copie).exists()) return copie;   // déjà installé : les données du lecteur restent
+    const QString provisoire = copie + ".installation";
+    QDir(provisoire).removeRecursively();
+    if (!copier_dossier(source, provisoire) || !QDir().rename(provisoire, copie)) {
+        QDir(provisoire).removeRecursively();
+        *erreur = QString("« %1 » ne peut pas être recopié dans « %2 ».").arg(s.fileName(), parent);
+        return QString();
+    }
+    return copie;
+}

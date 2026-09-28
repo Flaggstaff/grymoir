@@ -48,6 +48,8 @@ Pour aller plus loin : `exemples/partotheque.grym`, une bibliothèque de partiti
 
 ## Compiler
 
+Sur un Mac, pour installer GrymoiR comme un logiciel ordinaire, avec l'application d'exemple d'une association : `./paquet-mac`, puis ouvrir `GrymoiR.dmg`.
+
 Pour apprendre le langage : le guide « Premiers pas » (`docs/guide.md`, ou Aide > Premiers pas dans l'atelier).
 
 L'atelier, en une commande (construit tout, puis lance ; sous macOS, Qt 6 par Homebrew : `brew install qt`) :

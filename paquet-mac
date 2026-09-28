@@ -1,0 +1,53 @@
+#!/bin/sh
+# GrymoiR : fabriquer GrymoiR.dmg, l'installateur pour macOS. À lancer sur un Mac, depuis le dépôt :
+#   ./paquet-mac
+# Le disque contient GrymoiR.app, à glisser dans Applications : l'atelier, avec ses bibliothèques Qt, l'outil grym
+# (GrymoiR.app/Contents/MacOS/grym), et l'exemple « Amis du Tilleul » (docs/guide/chapitre-12), que l'atelier
+# recopie dans Documents/GrymoiR au premier lancement. Les données de l'association se créent au premier « Lancer ».
+# Signature « ad hoc » seulement : l'application tourne sur ce Mac ; pour la distribuer sans avertissement de
+# macOS, il faudrait la signer et la faire notariser par Apple (compte développeur payant).
+set -e
+[ "$(uname)" = "Darwin" ] || { echo "./paquet-mac se lance sur un Mac." >&2; exit 1; }
+command -v brew >/dev/null 2>&1 || { echo "Homebrew est nécessaire (https://brew.sh), puis : brew install qt" >&2; exit 1; }
+depot="$(cd "$(dirname "$0")" && pwd)"
+cd "$depot"
+qt="$(brew --prefix qt)"
+[ -x "$qt/bin/macdeployqt" ] || { echo "macdeployqt introuvable dans $qt/bin : brew install qt" >&2; exit 1; }
+
+echo "1. Construction (cœur, atelier) et essais…"
+./atelier --construire
+make -s test > /dev/null
+ctest --test-dir construction --output-on-failure > /dev/null
+
+echo "2. L'application : outil grym et exemple embarqués…"
+paquet="$depot/paquet"
+rm -rf "$paquet"
+mkdir -p "$paquet"
+app="$paquet/GrymoiR.app"
+cp -R construction/grym-atelier.app "$app"
+cp grym "$app/Contents/MacOS/grym"
+exemple="$app/Contents/Resources/Exemples/Amis du Tilleul"
+mkdir -p "$exemple"
+cp docs/guide/chapitre-12/*.grym docs/guide/chapitre-12/*.png "$exemple/"
+printf "Remarque : disposition de l'atelier ; sans effet sur le programme.\nprogramme principal : association.grym\n" \
+    > "$exemple/projet.grymatelier"
+
+echo "3. Bibliothèques Qt embarquées (macdeployqt)…"
+"$qt/bin/macdeployqt" "$app" -always-overwrite
+# macdeployqt réécrit les chemins des bibliothèques : la signature ad hoc est à refaire, sans quoi macOS (Apple
+# Silicon) refuse de lancer l'application.
+codesign --force --deep --sign - "$app"
+codesign --verify --deep "$app"
+
+echo "4. Le disque GrymoiR.dmg…"
+disque="$paquet/disque"
+mkdir -p "$disque"
+cp -R "$app" "$disque/"
+ln -s /Applications "$disque/Applications"
+rm -f "$depot/GrymoiR.dmg"
+hdiutil create -volname "GrymoiR" -srcfolder "$disque" -ov -format UDZO "$depot/GrymoiR.dmg" > /dev/null
+rm -rf "$disque"
+
+echo "Prêt : $depot/GrymoiR.dmg"
+echo "Ouvre-le, glisse GrymoiR dans Applications, puis lance GrymoiR : il ouvre « Amis du Tilleul »."
+echo "L'outil en ligne de commande : /Applications/GrymoiR.app/Contents/MacOS/grym"

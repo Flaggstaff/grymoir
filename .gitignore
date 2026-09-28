@@ -22,3 +22,6 @@ exemples/copie.png
 editeurs/vscode/node_modules/
 editeurs/vscode/*.vsix
 construction/
+# Installateur macOS (./paquet-mac)
+paquet/
+GrymoiR.dmg

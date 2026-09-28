@@ -5,8 +5,13 @@
 #include "fenetre.h"
 #include "theme.h"
 
+#include "projet.h"
+
 #include <QApplication>
+#include <QDir>
+#include <QMessageBox>
 #include <QSettings>
+#include <QStandardPaths>
 #include <csignal>
 
 extern "C" {
@@ -41,7 +46,19 @@ int main(int argc, char **argv) {
     Fenetre f;
     if (args.size() > 1) f.ouvrir(args.at(1));
     else {
-        const QString d = QSettings().value("dernier projet").toString();
+        QString d = QSettings().value("dernier projet").toString();
+        if (d.isEmpty()) {
+            // Premier lancement d'une application installée (GrymoiR.app) : l'exemple qu'elle embarque
+            // (Contents/Resources/Exemples) est recopié dans Documents/GrymoiR, puis ouvert. Rien n'est écrasé.
+            const QDir exemples(QApplication::applicationDirPath() + "/../Resources/Exemples");
+            const QStringList noms = exemples.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+            if (!noms.isEmpty()) {
+                const QString documents = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+                QString erreur;
+                d = installer_exemple(exemples.filePath(noms.first()), QDir(documents).filePath("GrymoiR"), &erreur);
+                if (d.isEmpty()) QMessageBox::warning(nullptr, "Atelier", erreur);
+            }
+        }
         if (!d.isEmpty()) f.ouvrir(d);
     }
     f.show();

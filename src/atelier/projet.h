@@ -24,4 +24,9 @@ struct FichierProjet {
 // Sans extension, « .grym ». Jamais d'écrasement. Rend son chemin, ou vide avec *erreur rempli.
 QString creer_fichier(const QString &dossier, const QString &nom, QString *erreur);
 
+// Premier lancement d'une installation (paquet macOS, docs/mainteneur.md) : recopie le dossier d'exemple `source`
+// dans `parent`, sous le même nom, puis rend le chemin de la copie. Une copie déjà là n'est jamais écrasée : on la
+// rend telle quelle, avec ses données. Vide, avec *erreur, si la copie échoue.
+QString installer_exemple(const QString &source, const QString &parent, QString *erreur);
+
 #endif
