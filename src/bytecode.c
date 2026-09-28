@@ -191,6 +191,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_FICHE_ECRAN:    return "FICHE_ÉCRAN";
     case I_APPARENCE:      return "APPARENCE";
     case I_REFUSER:        return "REFUSER";
+    case I_BASE_MODIFIEE:  return "BASE_MODIFIÉE";
     }
     return "INCONNUE";
 }
@@ -326,7 +327,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                 break;
             case I_RENDRE: besoin = 1; break;
             case I_EXIGER_ENTIER_NATUREL: besoin = 1; break;
-            case I_NOUVEAU: case I_AUJOURDHUI: effet = 1; break;
+            case I_NOUVEAU: case I_AUJOURDHUI: case I_BASE_MODIFIEE: effet = 1; break;
             case I_LIRE_FICHIER: besoin = 1; break;
             case I_ENREGISTRER: besoin = 2; effet = -2; break;
             case I_CONSERVER: case I_SUPPRIMER: case I_SUPPRIMER_DEFINITIVEMENT: case I_RETABLIR:
@@ -433,7 +434,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 28  /* versions 1 à 27 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 29  /* versions 1 à 28 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
@@ -441,7 +442,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                               sans mise en forme (17), sans effacement de l'écran (18),
                               sans essai (19), sans formulaire (20),
                               sans assemblage de textes (21), sans modification par formulaire (22),
-                              sans fiche (23), sans fichier source des blocs (24), sans apparence des écrans (26), sans refus (27) */
+                              sans fiche (23), sans fichier source des blocs (24), sans apparence des écrans (26), sans refus (27), sans règles (28) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 

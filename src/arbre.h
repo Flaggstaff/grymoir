@@ -114,8 +114,11 @@ typedef enum {
     P_APPARENCE,     /* « Les écrans ont la couleur verte et le logo « logo.png ». » (§ 22.5) : entier : couleur, rang
                         dans la palette (0 bleue, 1 verte, 2 turquoise, 3 violette, 4 grise), −1 si non écrite ;
                         texte : chemin du logo tel qu'écrit, ou NULL */
-    P_REFUSER        /* « Refuser « Débits : » puis d. » (§ 18.1) : enfants : les éléments du message, comme
+    P_REFUSER,       /* « Refuser « Débits : » puis d. » (§ 18.1) : enfants : les éléments du message, comme
                         « Afficher » (reliés par « puis », séparés par une espace) */
+    P_REGLE          /* « Chaque écriture conservée dont … vérifie : condition, sinon « … ». » (§ 16.14) : texte : entité ;
+                        enfants[0] : P_CALCUL sans paramètre, qui parcourt les objets (P_POUR_CONSERVE) et refuse
+                        au premier qui viole la condition (P_SI, dont la branche sinon est un P_REFUSER) */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE } Article;

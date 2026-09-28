@@ -753,10 +753,10 @@ int main(void) {
 
     /* --- Aide à la saisie (§ 8) --- */
     /* « Utiliser » en tête du fichier seulement (§ 21) : après une autre phrase, il n'est plus proposé */
-    VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Refuser | Saisir à nouveau | Pour | Quand on | Ouvrir l'écran | Les écrans ont | Les nombres s'affichent | Remarque : | Utiliser");
-    VS("Remarque : x.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Refuser | Saisir à nouveau | Pour | Quand on | Ouvrir l'écran | Les écrans ont | Les nombres s'affichent | Remarque : | Utiliser");
+    VS("", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Refuser | Chaque | Saisir à nouveau | Pour | Quand on | Ouvrir l'écran | Les écrans ont | Les nombres s'affichent | Remarque : | Utiliser");
+    VS("Remarque : x.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Refuser | Chaque | Saisir à nouveau | Pour | Quand on | Ouvrir l'écran | Les écrans ont | Les nombres s'affichent | Remarque : | Utiliser");
     VS("Ut", "Utiliser");
-    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Refuser | Saisir à nouveau | Pour | Quand on | Ouvrir l'écran | Les écrans ont | Les nombres s'affichent | Remarque :");
+    VS("Le x vaut 1.\n", "Le | La | L' | Afficher | Si | Tant que | Répéter | Pour chaque | Selon | Essayer | Refuser | Chaque | Saisir à nouveau | Pour | Quand on | Ouvrir l'écran | Les écrans ont | Les nombres s'affichent | Remarque :");
     VS("Af", "Afficher");
     VS("l", "Le | La | L' | Les écrans ont | Les nombres s'affichent");
     /* Les réglages en « Les » : style des nombres (§ 4.1) et apparence des écrans (§ 22.5) */

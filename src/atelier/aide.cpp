@@ -139,7 +139,7 @@ static const QHash<QString, QString> &table_des_mots() {
 QStringList sections_de_l_aide_en_contexte() {
     QStringList r;
     for (const QString &v : table_des_mots()) if (!r.contains(v)) r << v;
-    r << "4.1" << "10.1" << "10.3" << "16.13" << "22.3" << "22.5";   // celles que les mots voisins choisissent
+    r << "4.1" << "10.1" << "10.3" << "16.13" << "16.14" << "22.3" << "22.5";   // celles que les mots voisins choisissent
     return r;
 }
 
@@ -167,6 +167,7 @@ QString section_au_curseur(const QString &ligne, int colonne) {
     // Les mots voisins départagent.
     if (m == "tant_que" || (m == "que" && avant == "tant")) return "10.1";
     if (m == "pour_chaque" || (m == "pour" && apres == "chaque")) return "10.3";
+    if (m == "vérifie" || (m == "chaque" && avant != "pour")) return "16.14";   /* « Chaque écriture conservée vérifie : » */
     if (m == "sinon_si") return "5.4";
     if (m == "les" || m == "nombres" || m == "affichent" || m == "style") {
         const QString suite = m == "les" ? apres : m;

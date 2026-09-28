@@ -1104,6 +1104,44 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             if (strcmp(st, "sans_séparateur") == 0) { mot(r, "sans", t); mot(r, "séparateur", t); }
             else { mot(r, "à", t); mot(r, "la", t); mot(r, st, &r->e[d + 1]); }
             point(r, f);
+        } else if (!strcmp(c, "chaque") && d + 2 < f && r->e[d + 1].type == J_CROCHETS
+                   && (est_cle(&r->e[d + 2], "conservé") || est_cle(&r->e[d + 2], "conservée"))) {
+            /* _chaque écriture _conservé [_dont …] _vérifie condition _sinon « … » ; x (§ 16.14) */
+            size_t v = chercher(r, d + 3, f, "vérifie"), s = chercher(r, v, f, "sinon");
+            if (v >= f || s >= f || s == v + 1 || s + 1 >= f) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _chaque écriture _conservé [_dont …] _vérifie condition "
+                                             "_sinon « message » »."));
+                return;
+            }
+            mot(r, "chaque", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, "conservé", &r->e[d + 2]);
+            if (d + 3 < v) {
+                if (!est_cle(&r->e[d + 3], "dont")) {
+                    echouer(r, &r->e[d + 3], grym_dupliquer("« _dont » ou « _vérifie » attendu après « _conservé »."));
+                    return;
+                }
+                mot(r, "dont", &r->e[d + 3]);
+                expression(r, d + 4, v);
+            }
+            mot(r, "vérifie", &r->e[v]);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[v], 1);
+            expression(r, v + 1, s);
+            emettre(r, J_VIRGULE, NULL, &r->e[s], 1);
+            mot(r, "sinon", &r->e[s]);
+            size_t debut = s + 1;   /* les éléments du message, séparés par « ; » hors parenthèses */
+            int p = 0;
+            for (size_t k = s + 1; k <= f; k++) {
+                if (k < f) {
+                    if (r->e[k].type == J_PAR_OUV) p++;
+                    else if (r->e[k].type == J_PAR_FERM) p--;
+                    if (!(p == 0 && r->e[k].type == J_POINT_VIRGULE)) continue;
+                }
+                if (debut > s + 1) mot(r, "puis", &r->e[debut - 1]);
+                expression(r, debut, k);
+                debut = k + 1;
+            }
+            point(r, f);
         } else if (!strcmp(c, "refuser")) {   /* _refuser « … » → Refuser « … ». (§ 18.1) */
             if (d + 1 >= f) { echouer(r, t, grym_dupliquer("« _refuser » attend un message : « _refuser « … » ».")); return; }
             mot(r, "refuser", t);

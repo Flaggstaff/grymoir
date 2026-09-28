@@ -4534,6 +4534,113 @@ static int fichier_image(const char *chemin) {
 
 static char *dossier_de(const char *chemin);
 
+/* « Chaque écriture conservée dont la comptabilisation est présente vérifie :
+ *       la somme des débits … = la somme des crédits …,
+ *       sinon « L'écriture » puis la pièce de l'écriture puis « n'est pas équilibrée. ». » (§ 16.14)
+ * Une règle devient un calcul sans paramètre : il parcourt les objets concernés et refuse au premier qui viole la
+ * condition. Calcul, elle lit la base et n'écrit rien. La machine l'appelle avant chaque validation. */
+static Noeud *regle(Analyse *a, int colonne) {
+    (void)colonne;
+    Jeton *t = cour(a);
+    if (!premier_niveau(a, t)) return NULL;
+    size_t apres;
+    a->corbeille = 0;
+    Classe *e = entite_conservee(a, a->i + 1, 0, &apres);
+    if (!e || a->corbeille)
+        return erreur(a, voir(a, 1), grym_dupliquer("Après « Chaque », une entité conservée : « Chaque écriture conservée vérifie : »."));
+    Noeud *params = noeud_creer(N_BLOC, t->ligne, t->colonne, t->debut);
+    Contexte ctx = entrer_formule(a, 1, params);
+    a->i = apres;
+    Noeud *filtre = NULL, *cond = NULL, *refus = NULL;
+    int ok = clause_dont(a, e, &filtre);
+    if (ok && !est_mot(cour(a), "vérifie")) {
+        attendre_mot(a, a->i, "vérifie", 7);
+        erreur(a, cour(a), grym_dupliquer("« vérifie : » attendu : « Chaque écriture conservée vérifie : »."));
+        ok = 0;
+    }
+    if (ok) avancer(a);
+    if (ok && cour(a)->type != J_DEUX_POINTS) {
+        erreur(a, cour(a), grym_dupliquer("« : » attendu après « vérifie »."));
+        ok = 0;
+    }
+    if (ok) avancer(a);
+    /* l'objet examiné porte le nom de l'entité, comme dans « Pour chaque écriture conservée » */
+    portee_declarer(a->portee, e->nom, e->genre, t->ligne);
+    Symbole *objet = &a->portee->s[a->portee->n - 1];
+    objet->lecture_seule = 1;
+    const int case_objet = objet->local = a->nb_locaux++;
+    const int case_liste = a->nb_locaux++;
+    a->nb_locaux++;   /* rang dans la liste */
+    if (ok) cond = valeur(a);
+    if (cond && !(cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "sinon"))) {
+        erreur(a, cour(a), grym_dupliquer("« , sinon « message ». » attendu après la condition d'une règle."));
+        noeud_liberer(cond);
+        cond = NULL;
+    }
+    if (cond) {
+        avancer(a);
+        avancer(a);   /* , sinon */
+        refus = noeud_creer(P_REFUSER, t->ligne, t->colonne, t->debut);
+        for (;;) {   /* le message, comme celui de « Refuser » (§ 18.1) */
+            attendre(a, A_TEXTE);
+            Noeud *v = valeur(a);
+            if (!v) { noeud_liberer(refus); refus = NULL; break; }
+            noeud_ajouter(refus, v);
+            refus->fin = v->fin;
+            attendre(a, A_PUIS);
+            if (!est_mot(cour(a), "puis")) break;
+            avancer(a);
+        }
+        if (refus && !fin_phrase(a, 0)) { noeud_liberer(refus); refus = NULL; }
+    }
+    const int locaux = a->nb_locaux;
+    sortir_formule(a, ctx);
+    if (!refus) {
+        noeud_liberer(params);
+        noeud_liberer(filtre);
+        noeud_liberer(cond);
+        return NULL;
+    }
+    /* Si condition : (rien) ; sinon : refuser */
+    Noeud *si = noeud_creer(P_SI, cond->ligne, cond->colonne, cond->debut);
+    noeud_ajouter(si, cond);
+    noeud_ajouter(si, noeud_creer(N_BLOC, cond->ligne, cond->colonne, cond->debut));
+    Noeud *sinon = noeud_creer(N_BLOC, refus->ligne, refus->colonne, refus->debut);
+    noeud_ajouter(sinon, refus);
+    noeud_ajouter(si, sinon);
+    Noeud *corps_boucle = noeud_creer(N_BLOC, si->ligne, si->colonne, si->debut);
+    noeud_ajouter(corps_boucle, si);
+    Noeud *cherche = noeud_creer(N_CHERCHER, t->ligne, t->colonne, t->debut);
+    cherche->texte = grym_dupliquer(e->nom);
+    if (filtre) noeud_ajouter(cherche, filtre);
+    Noeud *boucle = noeud_creer(P_POUR_CONSERVE, t->ligne, t->colonne, t->debut);
+    boucle->texte = grym_dupliquer(e->nom);
+    boucle->local = case_objet;
+    boucle->entier = case_liste;
+    boucle->forme = 1;
+    noeud_ajouter(boucle, cherche);
+    noeud_ajouter(boucle, corps_boucle);
+    Noeud *vrai = noeud_creer(N_BOOLEEN, t->ligne, t->colonne, t->debut);
+    vrai->texte = grym_dupliquer("vrai");
+    Noeud *rendre = noeud_creer(P_RENDRE, t->ligne, t->colonne, t->debut);
+    noeud_ajouter(rendre, vrai);
+    Noeud *corps = noeud_creer(N_BLOC, t->ligne, t->colonne, t->debut);
+    noeud_ajouter(corps, boucle);
+    noeud_ajouter(corps, rendre);
+    Noeud *calcul = noeud_creer(P_CALCUL, t->ligne, t->colonne, t->debut);
+    calcul->texte = grym_dupliquer("\x01règle");   /* le compilateur lui donne son nom définitif */
+    calcul->forme = 1;
+    calcul->entier = locaux;
+    noeud_ajouter(calcul, params);
+    noeud_ajouter(calcul, corps);
+    Noeud *n = noeud_creer(P_REGLE, t->ligne, t->colonne, t->debut);
+    n->texte = grym_dupliquer(e->nom);
+    noeud_ajouter(n, calcul);
+    n->fin = refus->fin;
+    calcul->fin = boucle->fin = n->fin;
+    return n;
+}
+
 /* « Les écrans ont la couleur verte et le logo « logo.png ». » (§ 22.5) : une fois, au premier niveau,
  * avant le premier « Ouvrir ». L'un des deux réglages au moins, la couleur d'abord. */
 static Noeud *apparence(Analyse *a, const Jeton *t) {
@@ -5316,7 +5423,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
 /* Les phrases permises dans un fichier utilisé : des déclarations, rien qui s'exécute. */
 static int phrase_de_declaration(const Noeud *n) {
     return n->type == P_REMARQUE || n->type == P_CLASSE || n->type == P_APTITUDE || n->type == P_CALCUL
-        || n->type == P_ACTION || n->type == P_UTILISER;
+        || n->type == P_ACTION || n->type == P_UTILISER || n->type == P_REGLE;
 }
 
 /* Dossier d'un chemin, barre finale comprise (« exemples/ »), ou chaîne vide. */
@@ -5553,6 +5660,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
     }
     if (est_mot(t, "si")) return si(a, colonne, 0);
     if (est_mot(t, "essayer")) return essayer(a, colonne);
+    if (est_mot(t, "chaque")) return regle(a, colonne);   /* § 16.14 */
     if (est_mot(t, "refuser")) {   /* « Refuser « … ». » (§ 18.1) : l'exécution échoue avec ce message */
         avancer(a);
         Noeud *n = noeud_creer(P_REFUSER, t->ligne, t->colonne, t->debut);
@@ -6072,6 +6180,7 @@ Suggestions suites_valides_fichier(const char *source, size_t taille, const char
             proposer(&r, "Selon", pre, lp, 0);
             proposer(&r, "Essayer", pre, lp, 0);
             proposer(&r, "Refuser", pre, lp, 0);
+            proposer(&r, "Chaque", pre, lp, 0);   /* une règle (§ 16.14) */
             proposer(&r, "Saisir à nouveau", pre, lp, 0);
             proposer(&r, "Pour", pre, lp, 0);
             proposer(&r, "Quand on", pre, lp, 0);          /* écrans (§ 22) */

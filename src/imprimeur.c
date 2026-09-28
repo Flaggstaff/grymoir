@@ -999,6 +999,31 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                                                                                 : (c ? "_sans_séparateur" : "sans séparateur"));
         aj(im, c ? "\n" : ".\n");
         return;
+    case P_REGLE: {   /* « Chaque écriture conservée dont … vérifie : cond, sinon … . » ; une ligne en compacte (§ 16.14) */
+        const Noeud *boucle = n->enfants[0]->enfants[1]->enfants[0];
+        const Noeud *cherche = boucle->enfants[0];
+        const Noeud *si = boucle->enfants[1]->enfants[0];
+        const Noeud *refus = si->enfants[2]->enfants[0];
+        const int fem = genre_de_nom(im, n->texte) == G_FEMININ;
+        aj(im, c ? "_chaque " : "Chaque ");
+        ecrire_nom(im, n->texte, 0);
+        aj(im, c ? " _conservé" : fem ? " conservée" : " conservé");
+        if (cherche->nb_enfants) {
+            aj(im, c ? " _dont " : " dont ");
+            expression(im, cherche->enfants[0]);
+        }
+        aj(im, c ? " _vérifie " : " vérifie :\n");
+        if (!c) retrait(im, niveau + 1);
+        expression(im, si->enfants[0]);
+        aj(im, c ? " _sinon " : ",\n");
+        if (!c) { retrait(im, niveau + 1); aj(im, "sinon "); }
+        for (size_t k = 0; k < refus->nb_enfants; k++) {
+            if (k) aj(im, c ? " ; " : " puis ");
+            expression(im, refus->enfants[k]);
+        }
+        aj(im, c ? "\n" : ".\n");
+        return;
+    }
     case P_REFUSER:   /* « Refuser « … ». » ; « _refuser « … » » (§ 18.1) */
         aj(im, c ? "_refuser " : "Refuser ");
         for (size_t k = 0; k < n->nb_enfants; k++) {

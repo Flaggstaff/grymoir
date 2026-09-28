@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.51 de la spécification, révisée le 28 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.52 de la spécification, révisée le 28 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1225,6 +1225,28 @@ Pour chaque œuvre conservée dont callas est parmi les interprètes :
 | `dont rauber n'est pas parmi les interprètes` | `_dont _non (interprètes _contient rauber)` |
 
 
+### 16.14 Règles *(implémenté le 28 septembre 2026)*
+
+```
+Chaque écriture conservée dont la comptabilisation est présente vérifie :
+    la somme des débits des lignes de l'écriture = la somme des crédits des lignes de l'écriture,
+    sinon « L'écriture » puis la pièce de l'écriture puis « n'est pas équilibrée. ».
+
+Chaque ligne conservée vérifie :
+    le débit de la ligne = 0 ou le crédit de la ligne = 0,
+    sinon « Une ligne est au débit ou au crédit, pas aux deux. ».
+```
+
+- Une règle dit ce que chaque objet conservé d'une entité doit vérifier ; `dont` restreint les objets concernés (§ 16.4). Elle se déclare au premier niveau, dans le programme ou dans un fichier utilisé (§ 21), où elle vaut pour tout le projet.
+- La condition parle de l'objet par le nom de l'entité : `le débit de la ligne`, `la somme des débits des lignes de l'écriture`. Un champ seul, sans l'objet, n'est pas reconnu. La condition peut employer sommes, nombres, chemins et calculs.
+- Une règle est un calcul (§ 9.4) : elle lit la base, n'écrit rien, n'affiche rien, ne voit pas les variables du programme.
+- Le message suit `sinon`, écrit comme celui de `Refuser` (§ 18.1) : des éléments reliés par `puis`.
+- **Quand** : à la fin de chaque transaction, juste avant qu'elle soit validée ; pendant la transaction, les objets peuvent passer par des états intermédiaires faux (une écriture dont la seconde ligne manque encore). Concrètement : à la fin du programme, avant une question (§ 17), un formulaire (§ 19), une fiche ou un `Ouvrir` (§ 22.3), et à la fin de chaque événement d'écran. Un `Essayer` ne la déclenche pas : la règle attend la transaction, pas l'essai.
+- **Si elle est violée** : la transaction échoue avec le message, comme par `Refuser`, et rien n'est écrit. Dans un événement, seul l'événement est annulé, et l'écran reste ouvert avec le message (§ 22.3).
+- Une transaction qui n'a rien écrit dans la base ne revérifie aucune règle. Sinon, chaque règle parcourt tous les objets qu'elle concerne : toujours juste, plus lent sur une grosse base ; le ciblage des seuls objets touchés viendra plus tard.
+- Une règle ajoutée à une base qui la viole déjà ne dit rien avant la première transaction qui écrit : elle échoue alors, et le message désigne l'objet fautif.
+- En forme compacte, une ligne : `_chaque écriture _conservé _dont comptabilisation _présent _vérifie _somme_de débit _de ligne _de écriture = … _sinon « L'écriture » ; écriture.pièce ; « n'est pas équilibrée. »`.
+
 ## 17. Questions à l'utilisateur *(v1.0)*
 
 ```
@@ -1516,3 +1538,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.49 | 2026-09-28 | § 16.4 : `la somme des … des … [dont …]`, additionne un champ nombre, en décimal exact |
 | 1.50 | 2026-09-28 | § 16.4 : dans `dont`, un champ lu à travers un ou plusieurs liens (`la comptabilisation de l'écriture`) |
 | 1.51 | 2026-09-28 | § 9.4 et § 16.4 : un calcul lit la base, jamais il n'y écrit ; l'état de la base fait partie de son entrée |
+| 1.52 | 2026-09-28 | § 16.14 : règles, `Chaque … conservé [dont …] vérifie : condition, sinon « … ».`, vérifiées à la fin de chaque transaction |

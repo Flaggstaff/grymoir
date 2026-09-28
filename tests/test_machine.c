@@ -281,7 +281,7 @@ static void essais_utiliser(void) {
         "_u_deux.grym", "_u_deux.grymc", "_u_e.grym", "_u_dup.grym", "_u_div.grym", "_u_h.grym",
         "_u_haut.grym", "_u_gauche.grym", "_u_droite.grym", "_u_bas.grym", "_u_compact.grymc", "_u_k.grym",
         "tests/_u_commun.grym", "tests/_u_fiches.grym", "_u_sous.grym", "_u_prog.grymc", "_u_texte.grym",
-        "_u_gdon.grym", "_u_gprog.grym"
+        "_u_gdon.grym", "_u_gprog.grym", "_u_regle.grym", "_u_regle_prog.grym", "_u_regle_prog.grymd"
     };
     ecrire_source("_u_donnees.grym", "Remarque : les données.\nUn compositeur, conservé, a :\n    un nom (texte), unique.\n"
                                      "Le carré d'un nombre vaut nombre × nombre.\n");
@@ -289,6 +289,12 @@ static void essais_utiliser(void) {
     ecrire_source("_u_prog.grym", "Remarque : le programme.\nUtiliser « _u_donnees ».\nAfficher le carré de 7.\n"
                                   "Le c vaut un nouveau compositeur :\n    Le nom vaut « Bach ».\nAfficher nom du c.\n");
     FICHIER("_u_prog.grym", "49\nBach");
+    /* une règle déclarée dans un fichier utilisé vaut dans le programme qui l'utilise (§ 16.14, § 21) */
+    ecrire_source("_u_regle.grym", "Un stock, conservé, a :\n    une quantité (nombre).\n"
+                                   "Chaque stock conservé vérifie :\n    la quantité du stock ≥ 0,\n    sinon « Stock négatif. ».\n");
+    ecrire_source("_u_regle_prog.grym", "Utiliser « _u_regle ».\nLe s vaut un nouveau stock :\n    La quantité vaut −1.\n"
+                                        "Conserver le s.\n");
+    FICHIER("_u_regle_prog.grym", "~Stock négatif.");
     /* formater un fichier qui en utilise un autre garde les genres qui y sont déclarés (§ 12, § 21) */
     {
         ecrire_source("_u_gdon.grym", "Une facture, conservée, a :\n    une échéance (date), facultative.\n"
@@ -2339,6 +2345,39 @@ int main(void) {
     PROG(ADHESIONS "Afficher le nombre de cotisations conservées dont le nom du montant est « x ».", "~« montant » n'est pas un lien vers une entité");
     PROG(ADHESIONS "Afficher le nombre de cotisations conservées dont la nom de la catégorie du membre = « x ».", "~« nom » est un champ masculin.");
 #undef ADHESIONS
+
+#define COMPTA "Une écriture, conservée, a :\n    une pièce (texte), unique,\n    une comptabilisation (date), facultative.\n" \
+    "Une ligne, conservée, a :\n    une écriture (écriture),\n    un débit (nombre),\n    un crédit (nombre).\n" \
+    "Chaque écriture conservée dont la comptabilisation est présente vérifie :\n" \
+    "    la somme des débits des lignes de l'écriture = la somme des crédits des lignes de l'écriture,\n" \
+    "    sinon « L'écriture » puis la pièce de l'écriture puis « n'est pas équilibrée. ».\n" \
+    "Pour noter une pièce et un débit et un crédit et une date :\n" \
+    "    L'e vaut une nouvelle écriture :\n        La pièce vaut pièce.\n    Conserver l'e.\n" \
+    "    La l vaut une nouvelle ligne :\n        L'écriture vaut e.\n        Le débit vaut débit.\n        Le crédit vaut 0.\n    Conserver la l.\n" \
+    "    La m vaut une nouvelle ligne :\n        L'écriture vaut e.\n        Le débit vaut 0.\n        Le crédit vaut crédit.\n    Conserver la m.\n" \
+    "    La comptabilisation de l'e devient date.\n"
+    /* Contrainte d'entité (§ 16.14) : vérifiée à la fin de la transaction, sur les objets que le filtre retient */
+    PROG(COMPTA "Noter « P-1 » et 300 et 300 et 01.01.2026.\nAfficher « ok ».", "ok");
+    PROG(COMPTA "Noter « P-1 » et 300 et 30 et 01.01.2026.\nAfficher « ok ».", "~L'écriture P-1 n'est pas équilibrée.");
+    PROG(COMPTA "L'e vaut une nouvelle écriture :\n    La pièce vaut « B-1 ».\nConserver l'e.\n"
+                "La l vaut une nouvelle ligne :\n    L'écriture vaut e.\n    Le débit vaut 5.\n    Le crédit vaut 0.\nConserver la l.\n"
+                "Afficher « brouillon ».", "brouillon");   /* sans comptabilisation, le filtre l'écarte */
+    /* un Essayer ne contourne pas la règle : elle attend la fin de la transaction, pas celle de l'essai */
+    PROG(COMPTA "Essayer :\n    Noter « P-1 » et 300 et 30 et 01.01.2026.\nEn cas d'échec, afficher « rattrapé ».\nAfficher « suite ».",
+         "~n'est pas équilibrée.");
+    /* deux règles ; la seconde, sans filtre */
+    PROG(COMPTA "Chaque ligne conservée vérifie :\n    le débit de la ligne = 0 ou le crédit de la ligne = 0,\n    sinon « Une ligne est au débit ou au crédit. ».\n"
+                "L'e vaut une nouvelle écriture :\n    La pièce vaut « B-1 ».\nConserver l'e.\n"
+                "La l vaut une nouvelle ligne :\n    L'écriture vaut e.\n    Le débit vaut 5.\n    Le crédit vaut 5.\nConserver la l.",
+         "~Une ligne est au débit ou au crédit.");
+    /* une règle est un calcul : elle ne voit pas les variables du programme, n'écrit rien */
+    PROG("Le seuil vaut 3.\nUne écriture, conservée, a :\n    une pièce (texte).\n"
+         "Chaque écriture conservée vérifie :\n    seuil > 0,\n    sinon « non ».", "~n'est pas visible dans un calcul");
+    PROG("Une écriture, conservée, a :\n    une pièce (texte).\nChaque écriture conservée vérifie :\n    vrai.",
+         "~« , sinon « message ». » attendu après la condition d'une règle.");
+    PROG("Un point a : un x.\nChaque point conservé vérifie :\n    vrai,\n    sinon « non ».", "~une entité conservée");
+    PROG("Si vrai :\n    Chaque écriture conservée vérifie :\n        vrai,\n        sinon « non ».", "~premier niveau");
+#undef COMPTA
 
     /* Refuser (§ 18.1) : le message, écrit comme Afficher l'écrirait ; Essayer le rattrape ; tout est annulé */
     PROG("Refuser « Non. ».", "~Non.");

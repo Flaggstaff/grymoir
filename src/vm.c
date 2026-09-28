@@ -3275,6 +3275,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, r);
             break;
         }
+        case I_BASE_MODIFIEE:   /* les règles ne se revérifient que si la transaction a écrit (§ 16.14) */
+            empiler(&pile, valeur_booleen(base_modifiee(m->base)));
+            break;
         case I_AUJOURDHUI:
             empiler(&pile, valeur_date(aujourdhui));   /* lue une fois, au début de l'exécution (§ 14.3) */
             break;

@@ -237,6 +237,7 @@ int main(int argc, char **argv) {
         VERIFIER(section_au_curseur("    _selon mois", 7) == "10.5");                   // forme compacte
         VERIFIER(section_au_curseur("Pour chaque mois de 1 à 12 :", 1) == "10.3");      // « Pour » suivi de « chaque »
         VERIFIER(section_au_curseur("Pour relancer un client :", 1) == "9.2");          // une action
+        VERIFIER(section_au_curseur("Chaque stock conservé vérifie :", 2) == "16.14");  // une règle
         VERIFIER(section_au_curseur("Tant que x > 0 :", 6) == "10.1");                  // « que » après « tant »
         VERIFIER(section_au_curseur("_tant_que x > 0", 3) == "10.1");
         VERIFIER(section_au_curseur("Les écrans ont la couleur verte.", 1) == "22.5");
@@ -385,6 +386,56 @@ int main(int argc, char **argv) {
         attendre([&] { return !bouton("Balance"); });
         e.close();
         Theme::courant().appliquer(Theme::Clair, "bleue");
+    }
+
+    // Contrainte d'entité (grammaire, § 16.14) dans un événement : seul l'événement est annulé, l'écran le dit
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("stock.grym");
+        QFile f(prog);
+        f.open(QIODevice::WriteOnly);
+        f.write("Un stock, conservé, a :\n    un nom (texte), unique,\n    une quantité (nombre).\n"
+                "Chaque stock conservé vérifie :\n    la quantité du stock ≥ 0,\n    sinon « Stock négatif : » puis le nom du stock.\n"
+                "Si le nombre de stocks conservés est nul :\n    Le s vaut un nouveau stock :\n        Le nom vaut « vis ».\n"
+                "        La quantité vaut 1.\n    Conserver le s.\n"
+                "L'écran de gestion montre :\n    la liste des stocks conservés,\n    un bouton « Retirer deux »,\n"
+                "    un bouton « Ajouter »,\n    un bouton « Fermer ».\n"
+                "Quand on clique sur « Retirer deux » dans l'écran de gestion :\n"
+                "    Le s vaut le stock conservé dont le nom est « vis ».\n    La quantité du s devient la quantité du s − 2.\n"
+                "Quand on clique sur « Ajouter » dans l'écran de gestion :\n"
+                "    Le s vaut le stock conservé dont le nom est « vis ».\n    La quantité du s devient la quantité du s + 5.\n"
+                "Quand on clique sur « Fermer » dans l'écran de gestion :\n    Fermer l'écran.\n"
+                "Ouvrir l'écran de gestion.\n"
+                "Afficher « Final : » puis la quantité du stock conservé dont le nom est « vis ».\n");
+        f.close();
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto bouton = [&](const QString &t) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == t && b->isVisible()) return b;
+            return nullptr;
+        };
+        auto pret = [&](const QString &t) { return attendre([&] { return bouton(t) && bouton(t)->isEnabled(); }); };
+        auto message = [&]() {
+            for (QLabel *l : e.findChildren<QLabel *>()) if (l->isVisible() && l->text().contains("Stock négatif")) return l->text();
+            return QString();
+        };
+        VERIFIER(pret("Retirer deux"));
+        bouton("Retirer deux")->click();   // 1 − 2 : la règle refuse, l'événement est annulé, l'écran reste
+        VERIFIER(attendre([&] { return message().contains("Stock négatif : vis"); }) && pret("Ajouter"));
+        bouton("Ajouter")->click();        // 1 + 5 = 6 : passe
+        VERIFIER(pret("Retirer deux"));
+        bouton("Retirer deux")->click();   // 6 − 2 = 4 : passe
+        VERIFIER(pret("Fermer"));
+        bouton("Fermer")->click();
+        VERIFIER(attendre([&] { return e.findChild<QTextBrowser *>()->toPlainText().contains("Final : 4"); }));
+        e.close();
     }
 
     // Analyse : la première erreur, avec sa position ; rien quand tout va bien

@@ -17,6 +17,7 @@ struct Base {
     sqlite3 *db;
     char *chemin;     /* tel qu'affiché dans les messages */
     int transaction;
+    int changements;  /* sqlite3_total_changes au début de la transaction : « la base a-t-elle changé ? » (§ 16.14) */
     Chaine *rapport;  /* ce que les migrations font, une ligne par changement (A2-c), ou NULL */
 };
 
@@ -223,7 +224,12 @@ int base_commencer(Base *b, char **erreur) {
         return 0;
     }
     b->transaction = 1;
+    b->changements = sqlite3_total_changes(b->db);
     return 1;
+}
+
+int base_modifiee(Base *b) {
+    return b && b->transaction && sqlite3_total_changes(b->db) != b->changements;
 }
 
 int base_valider(Base *b, char **erreur) {

@@ -370,6 +370,12 @@ int main(void) {
          "_classe _une ligne _conservé\n    _une écriture (écriture)\n_fin\n"
          "_afficher _nombre_de ligne _conservé _dont écriture.comptabilisation _absent\n");
 
+    /* --- Contrainte d'entité (§ 16.14) : trois lignes en littéraire, une en compacte --- */
+    FIXE("Un stock, conservé, a :\n    une quantité (nombre),\n    un nom (texte).\n"
+         "Chaque stock conservé dont le nom ≠ « x » vérifie :\n    la quantité du stock ≥ 0,\n    sinon « Stock » puis le nom du stock puis « négatif. ».\n");
+    COMP("Un stock, conservé, a :\n    une quantité (nombre).\nChaque stock conservé vérifie :\n    la quantité du stock ≥ 0,\n    sinon « Négatif. ».",
+         "_classe _un stock _conservé\n    _une quantité (nombre)\n_fin\n_chaque stock _conservé _vérifie stock.quantité ≥ 0 _sinon « Négatif. »\n");
+
     /* --- Refuser (§ 18.1) : un élément, plusieurs reliés par « puis », en forme courte --- */
     FIXE("Refuser « Non. ».\n");
     FIXE("Le d vaut 3.\nSi d > 2, refuser « Trop : » puis d puis « sur 2 ».\n");

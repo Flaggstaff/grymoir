@@ -200,6 +200,13 @@ static void decrire(const Noeud *n, Chaine *c) {
         for (size_t i = 0; i < n->nb_enfants; i++) { chaine_ajouter(c, " "); decrire(n->enfants[i], c); }
         chaine_ajouter(c, ")");
         return;
+    case P_REGLE:   /* (règle [écriture] (calcul …)) (§ 16.14) */
+        chaine_ajouter(c, "(règle [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "] ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
     case P_APPARENCE: {   /* (apparence verte « logo.png ») */
         static const char *const C[] = { "bleue", "verte", "turquoise", "violette", "grise" };
         chaine_ajouter(c, "(apparence");

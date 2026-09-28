@@ -25,7 +25,45 @@ typedef struct {
     int essais;        /* blocs « Essayer » ouverts autour de la phrase en cours (§ 18) */
     const Programme *programme;
     const char *fichier;   /* fichier utilisé dont on compile les déclarations (§ 21), NULL pour le principal */
+    const Noeud **regles;  /* les règles du projet, fichiers utilisés compris (§ 16.14), dans l'ordre de lecture */
+    size_t nb_regles;
 } Compilation;
+
+static void emettre(Compilation *c, CodeInstruction code, long op, int ligne, int colonne);
+
+/* Le nom réservé du calcul de la k-ième règle : le \x01 initial ne s'écrit dans aucune source. */
+static char *nom_regle(size_t k) { return grym_formater("\x01règle %lu", (unsigned long)k); }
+
+/* Avant chaque validation (§ 16.14) : si la transaction a écrit, chaque règle parcourt ses objets et refuse au
+ * premier qui la viole ; le refus est une erreur comme une autre, qu'un événement rattrape. */
+static void verifier_regles(Compilation *c, int ligne, int colonne) {
+    if (!c->nb_regles) return;
+    emettre(c, I_BASE_MODIFIEE, 0, ligne, colonne);
+    size_t vers_fin = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, ligne, colonne);
+    for (size_t k = 0; k < c->nb_regles; k++) {
+        char *nom = nom_regle(k);
+        long i = bloc_nom(c->b, nom);
+        free(nom);
+        if (i < 0) { c->echec = 1; return; }
+        bloc_emettre_appel(c->b, (uint16_t)i, 0, 1, ligne, colonne);
+        size_t s = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, ligne, colonne);   /* rend vrai : on jette la valeur */
+        bloc_corriger_saut(c->b, s, c->b->taille_code);
+    }
+    bloc_corriger_saut(c->b, vers_fin, c->b->taille_code);
+}
+
+static void recenser_regles(Compilation *c, Noeud *const *ph, size_t nb) {
+    for (size_t k = 0; k < nb; k++) {
+        if (ph[k]->type == P_UTILISER) recenser_regles(c, ph[k]->enfants, ph[k]->nb_enfants);
+        else if (ph[k]->type == P_REGLE) {
+            const Noeud **t = grym_allouer((c->nb_regles + 1) * sizeof *t);
+            if (c->nb_regles) memcpy(t, c->regles, c->nb_regles * sizeof *t);
+            free(c->regles);
+            c->regles = t;
+            c->regles[c->nb_regles++] = ph[k];
+        }
+    }
+}
 
 static void trop_grand(Compilation *c, const Noeud *n) {
     if (c->echec) return;
@@ -235,6 +273,7 @@ static void expression(Compilation *c, const Noeud *n) {
             long k2 = bloc_constante(c->b, C_TEXTE, t);
             free(t);
             if (k2 < 0) { trop_grand(c, n); return; }
+            verifier_regles(c, n->ligne, n->colonne);   /* un formulaire valide ce qui précède */
             emettre(c, I_SAISIR, k2, n->ligne, n->colonne);
         }
         return;
@@ -278,6 +317,7 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[0]);
         long t = bloc_nom(c->b, n->texte2);
         if (t < 0) { trop_grand(c, n); return; }
+        verifier_regles(c, n->ligne, n->colonne);   /* une question valide ce qui précède */
         emettre(c, I_DEMANDER, t, n->ligne, n->colonne);
         return;
     }
@@ -459,6 +499,7 @@ static void evenement_seul(Compilation *c, const Noeud *ph, const Noeud *q) {
     long nom = bloc_nom(c->b, q->texte);
     if (nom < 0) { trop_grand(c, ph); return; }
     bloc_emettre_appel(c->b, (uint16_t)nom, 0, 0, ph->ligne, ph->colonne);
+    verifier_regles(c, ph->ligne, ph->colonne);   /* dans l'essai : une règle violée n'annule que l'événement */
     emettre(c, I_FIN_ESSAI, 0, ph->ligne, ph->colonne);
     size_t vers_fin = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
     bloc_corriger_saut(c->b, vers_rate, c->b->taille_code);
@@ -839,6 +880,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_OUVRIR: {
         if (ph->forme == 1) {   /* « Ouvrir la fiche de c. » (§ 22.3) */
             expression(c, ph->enfants[0]);
+            verifier_regles(c, ph->ligne, ph->colonne);
             emettre(c, I_FICHE_ECRAN, 0, ph->ligne, ph->colonne);
             return;
         }
@@ -879,6 +921,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         free(desc);
         if (kd < 0) { trop_grand(c, ph); return; }
         const int ev = ph->local, objet = ph->local + 1;
+        verifier_regles(c, ph->ligne, ph->colonne);   /* « Ouvrir » valide ce qui précède */
         emettre(c, I_ECRAN_OUVRIR, kd, ph->ligne, ph->colonne);
         for (size_t k = 0; k < e->nb_enfants; k++) {   /* les valeurs de départ des zones */
             const Noeud *el = e->enfants[k];
@@ -931,6 +974,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         }
         for (size_t k = 0; k < nb_apres; k++) bloc_corriger_saut(c->b, vers_apres[k], c->b->taille_code);
         free(vers_apres);
+        verifier_regles(c, ph->ligne, ph->colonne);   /* dans l'essai : une règle violée n'annule que l'événement */
         emettre(c, I_FIN_ESSAI, 0, ph->ligne, ph->colonne);
         size_t retour = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
         bloc_corriger_saut(c->b, retour, tour);
@@ -943,6 +987,15 @@ static void phrase(Compilation *c, const Noeud *ph) {
         const Noeud *qf = trouver_quand(c->programme->phrases, c->programme->nb, e->texte, 5, "fermeture");
         if (qf) evenement_seul(c, ph, qf);
         emettre(c, I_ECRAN_FERMER, 0, ph->ligne, ph->colonne);
+        return;
+    }
+    case P_REGLE: {   /* son calcul, sous le nom réservé qui correspond à son rang (§ 16.14) */
+        size_t k = 0;
+        while (k < c->nb_regles && c->regles[k] != ph) k++;
+        Noeud *calcul = ph->enfants[0];
+        free(calcul->texte);
+        calcul->texte = nom_regle(k);
+        phrase(c, calcul);
         return;
     }
     case P_UTILISER: {
@@ -961,7 +1014,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
 
 Module *compiler(const Programme *p, Diagnostic *diag) {
     Module *m = module_creer();
-    Compilation c = { bloc_creer(), m, diag, 0, NULL, 0, 0, p, NULL };
+    Compilation c = { bloc_creer(), m, diag, 0, NULL, 0, 0, p, NULL, NULL, 0 };
+    recenser_regles(&c, p->phrases, p->nb);
     c.b->nb_locaux = p->nb_locaux;
     module_ajouter(m, c.b);
     diag->message = NULL;
@@ -969,12 +1023,15 @@ Module *compiler(const Programme *p, Diagnostic *diag) {
     diag->fichier = NULL;
     diag->origine_ligne = diag->origine_colonne = 0;
     phrases(&c, p->phrases, p->nb);
+    int ligne = p->nb ? p->phrases[p->nb - 1]->ligne : 0;
+    c.b = m->blocs[0];
+    verifier_regles(&c, ligne, 0);   /* la fin du programme valide tout (§ 16.14) */
     free(c.boucles);
+    free(c.regles);
     if (c.echec) {
         module_detruire(m);
         return NULL;
     }
-    int ligne = p->nb ? p->phrases[p->nb - 1]->ligne : 0;
     bloc_emettre(m->blocs[0], I_RETOUR, 0, ligne, 0);
     return m;
 }

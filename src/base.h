@@ -23,6 +23,8 @@ void base_fermer(Base *b);
 /* Transaction d'une exécution (§ 16.6). */
 int base_commencer(Base *b, char **erreur);
 int base_valider(Base *b, char **erreur);
+/* Vrai si la transaction en cours a écrit dans la base : les règles (grammaire, § 16.14) ne se revérifient que là. */
+int base_modifiee(Base *b);
 void base_annuler(Base *b);
 
 /* Points de reprise des blocs « Essayer » (grammaire, § 18), numérotés à partir de 1 dans l'ordre
