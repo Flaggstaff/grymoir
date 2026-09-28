@@ -848,6 +848,27 @@ static void essais_ecrans(void) {
          "Quand on clique sur « OK » dans l'écran de recherche :\n    Fermer l'écran.\n"
          "Afficher le pays de l'écran.\n", "~« l'écran » ne se lit que dans un événement");
     PROG("L'écran de recherche montre :\n    une photo (image).\n", "~zone de fichier ou d'image viendra plus tard");
+    /* La fiche montre les champs « plusieurs » (§ 16.13, § 22.3) : un bouton par élément, vers sa fiche ; vide : « aucun » */
+    {
+        const char *src3 =
+            "Un genre, conservé, a : un nom (texte), unique.\n"
+            "Une œuvre, conservée, a : un titre (texte), unique, des genres (genre), des solistes (genre).\n"
+            "Pour classer un nom :\n    Le g vaut un nouveau genre :\n        Le nom vaut nom.\n    Conserver g.\n"
+            "Classer « baroque ».\nClasser « sacré ».\n"
+            "L'o vaut une nouvelle œuvre :\n    Le titre vaut « Messe ».\nConserver o.\n"
+            "Les genres de o gagnent le genre conservé dont le nom est « baroque ».\n"
+            "Les genres de o gagnent le genre conservé dont le nom est « sacré ».\n"
+            "Ouvrir la fiche de o.\nAfficher « fin ».\n";
+        const char *ev[] = { "clic sacré", "clic Fermer", "clic Fermer" };
+        const char *rep[] = { "" };
+        char *r = avec_ecrans(src3, ev, 3, rep, 1);
+        const char *att = "[ouvrir Messe ; texte Titre : Messe ; texte Genres : ; côte à côte { ; bouton baroque ; bouton sacré ; } ; "
+                          "texte Solistes : aucun ; bouton Modifier ; bouton Fermer]\n"
+                          "[ouvrir sacré ; texte Nom : sacré ; bouton Modifier ; bouton Fermer]\n[fermer]\n[fermer]\nfin";
+        total++;
+        if (strcmp(r, att) != 0) signaler(__LINE__, src3, att, r);
+        free(r);
+    }
     /* A3-c : la fiche déduite (champs, lien vers la fiche du lien, Modifier) et les écrans empilés */
     {
         const char *src2 =

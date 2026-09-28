@@ -2082,13 +2082,63 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
             char *erreur = NULL;
             if (o->id && !charger(m, o, &erreur)) { resultat = erreur; textes = NULL; el = NULL; liens = NULL; break; }
             const ClasseVM *c = o->classe;
-            size_t cap = c->nb_champs + 3;
+            /* les champs « plusieurs » (§ 16.13) : leurs éléments, lus d'abord, pour dimensionner la fiche */
+            Valeur *plusieurs = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof *plusieurs);
+            for (size_t q = 0; q < c->nb_champs; q++) plusieurs[q] = vi_absent(NULL);   /* toutes, avant tout échec */
+            size_t en_plus = 0;
+            for (size_t q = 0; q < c->nb_champs && !erreur; q++) {
+                if (!(c->uniques[q] & 8) || !o->id || !m->base) continue;
+                char *d = grym_formater("%s\x1f" "0\x1f\x1f" "0\x1f(M?1[%s])", c->types[q], c->champs[q]);
+                Valeur soi = vi_objet(o), liste;
+                if (base_chercher(m->base, m, d, &soi, 1, &liste, &erreur)) {   /* la recherche écrit une valeur neuve */
+                    valeur_liberer(&plusieurs[q]);
+                    plusieurs[q] = liste;
+                    if (liste.type == V_LISTE) en_plus += liste.liste->n + 2;
+                }
+                valeur_liberer(&soi);   /* le décimal de la valeur ; l'objet reste au ramasse-miettes */
+                free(d);
+            }
+            if (erreur) {
+                for (size_t q = 0; q < c->nb_champs; q++) valeur_liberer(&plusieurs[q]);
+                free(plusieurs);
+                resultat = erreur; textes = NULL; el = NULL; liens = NULL;
+                break;
+            }
+            size_t cap = c->nb_champs + 3 + en_plus;
             el = grym_allouer(cap * sizeof *el);
             textes = grym_allouer(cap * sizeof *textes);
             liens = grym_allouer(cap * sizeof *liens);
             memset(el, 0, cap * sizeof *el);
             for (size_t q = 0; q < c->nb_champs; q++) {
-                if (c->uniques[q] & 8) continue;   /* un champ « plusieurs » : pas encore dans la fiche */
+                if (c->uniques[q] & 8) {   /* « plusieurs » : le libellé, puis un bouton par élément, vers sa fiche */
+                    char *libelle = capitale(c->champs[q]);
+                    const Liste *l = plusieurs[q].type == V_LISTE ? plusieurs[q].liste : NULL;
+                    liens[n] = NULL;
+                    el[n].sorte = ELEMENT_TEXTE;
+                    textes[n] = l && l->n ? grym_formater("%s :", libelle) : grym_formater("%s : aucun", libelle);
+                    el[n].texte = textes[n];
+                    n++;
+                    free(libelle);
+                    if (!l || !l->n) continue;
+                    liens[n] = NULL;
+                    textes[n] = NULL;
+                    el[n++].sorte = ELEMENT_COTE_A_COTE;
+                    for (size_t i = 0; i < l->n; i++) {
+                        char *err = NULL;
+                        Objet *x = machine_objet_en_base(m, l->ids[i], l->classes[i], &err);
+                        free(err);
+                        if (!x) continue;
+                        textes[n] = nom_objet(m, x);
+                        el[n].sorte = ELEMENT_BOUTON;
+                        el[n].texte = textes[n];
+                        liens[n] = x;
+                        n++;
+                    }
+                    liens[n] = NULL;
+                    textes[n] = NULL;
+                    el[n++].sorte = ELEMENT_FIN_DE_BLOC;
+                    continue;
+                }
                 char *libelle = capitale(c->champs[q]);
                 const Valeur *v = &o->champs[q];
                 liens[n] = NULL;
@@ -2108,6 +2158,8 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
                 el[n].texte = textes[n];
                 n++;
             }
+            for (size_t q = 0; q < c->nb_champs; q++) valeur_liberer(&plusieurs[q]);
+            free(plusieurs);
             modifier = n;
             fermer = n + 1;
             textes[n] = grym_dupliquer("Modifier");
