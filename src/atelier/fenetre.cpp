@@ -1,6 +1,7 @@
 // GrymoiR : l'atelier, fenêtre principale.
 #include "fenetre.h"
 #include "editeur.h"
+#include "fabrication.h"
 #include "aide.h"
 #include "schema.h"
 #include "panneau.h"
@@ -298,6 +299,26 @@ Fenetre::Fenetre() {
     action_arreter->setEnabled(false);
     programme->addSeparator();
     programme->addAction("Choisir le programme principal…", this, &Fenetre::choisir_principal);
+    programme->addSeparator();
+    // Une application autonome, pour ce système (docs/atelier.md, § 8) : « Nom.dmg » sous macOS, une archive sous Linux
+    programme->addAction("Fabriquer l'application…", this, [this] {
+        if (projet.isEmpty()) { QMessageBox::information(this, "Atelier", "Ouvre d'abord un projet."); return; }
+        if (!enregistrer()) return;
+        const QString a_lancer = programme_a_lancer();   // le même programme que « Lancer »
+        if (a_lancer.isEmpty()) { QMessageBox::information(this, "Atelier", "Choisis d'abord le programme principal."); return; }
+        const QString principal = QDir(projet).relativeFilePath(a_lancer);
+        const QString bureau = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
+        const QString destination = QFileDialog::getExistingDirectory(this, "Où ranger l'application ?", bureau);
+        if (destination.isEmpty()) return;
+        statusBar()->showMessage("Fabrication de l'application…");
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        QString erreur, remarque;
+        const QString paquet = fabriquer_application(projet, principal, destination, &erreur, &remarque);
+        QApplication::restoreOverrideCursor();
+        statusBar()->clearMessage();
+        if (paquet.isEmpty()) QMessageBox::warning(this, "Atelier", erreur);
+        else QMessageBox::information(this, "Atelier", QString("Application fabriquée :\n%1%2").arg(paquet, remarque.isEmpty() ? QString() : "\n\n" + remarque));
+    });
     QMenu *menu_aide = menuBar()->addMenu("Aide");
     QAction *langage = menu_aide->addAction("Le langage GrymoiR", this, [this] {
         if (!aide) aide = new Aide(this);

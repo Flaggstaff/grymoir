@@ -249,10 +249,10 @@ Issue Travail::formulaire(Chaine *sortie, Champ *c, size_t nb, size_t *arret, Va
 }
 
 // Dossier du programme et base à côté de lui, comme grym lancer (grammaire, § 15.2, § 16.5).
-static void situer(Machine *m, const QString &chemin) {
+static void situer(Machine *m, const QString &chemin, const QString &base_imposee) {
     const QFileInfo i(chemin);
     machine_dossier(m, i.absolutePath().toUtf8().constData());
-    const QString base = i.absolutePath() + "/" + i.completeBaseName() + ".grymd";
+    const QString base = !base_imposee.isEmpty() ? base_imposee : i.absolutePath() + "/" + i.completeBaseName() + ".grymd";
     machine_base(m, base.toUtf8().constData());
 }
 
@@ -295,7 +295,7 @@ void Travail::run() {
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
                    iface_ecran_valeurs, iface_ecran_apparence};
     machine_interface(m, &i);
-    situer(m, chemin);
+    situer(m, chemin, base_imposee);
     Chaine sortie = {};
     grym_interruption = 0;
     const int ok = machine_executer(m, module, &sortie, &d);

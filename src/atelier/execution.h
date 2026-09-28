@@ -36,6 +36,9 @@ class Travail : public QThread {
 public:
     explicit Travail(const QString &chemin);
     void run() override;
+    // Une application fabriquée par l'atelier : sa base dans le dossier de données du système, pas à côté du
+    // programme (docs/atelier.md, § 8). Vide : à côté du programme, comme grym lancer.
+    QString base_imposee;
 
     // Rempli par la fenêtre avant de libérer `reponse` : 0 envoyé, 1 annulé, 2 interrompu.
     int issue = 0;
@@ -90,6 +93,7 @@ class Execution : public QMainWindow {
     Q_OBJECT
 public:
     explicit Execution(const QString &chemin);
+    void placer_base(const QString &chemin) { travail.base_imposee = chemin; }   // avant demarrer()
     ~Execution() override;
     void demarrer();
 

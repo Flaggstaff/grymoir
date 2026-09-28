@@ -5,6 +5,7 @@
 #include "editeur.h"
 #include "execution.h"
 #include "aide.h"
+#include "fabrication.h"
 #include "projet.h"
 #include "schema.h"
 #include "reecriture.h"
@@ -457,6 +458,31 @@ int main(int argc, char **argv) {
         VERIFIER(installer_exemple(source, d.filePath("Documents/GrymoiR"), &erreur) == copie);
         VERIFIER(QFile::exists(copie + "/association.grymd"));   // rien d'écrasé
         VERIFIER(installer_exemple(d.filePath("rien"), d.filePath("Documents"), &erreur).isEmpty() && erreur.contains("introuvable"));
+    }
+
+    // Fabriquer une application : le programme recopié sans les données ni les fichiers de l'atelier
+    {
+        QTemporaryDir d;
+        const QString p = d.filePath("Amis du Tilleul");
+        QDir().mkpath(p + "/images");
+        for (const char *n : {"association.grym", "données.grym", "association.grymd", "association.grymb",
+                              "projet.grymatelier", ".cache", "images/logo.png"}) {
+            QFile f(p + "/" + QString::fromUtf8(n));
+            f.open(QIODevice::WriteOnly);
+            f.write("x");
+        }
+        QString erreur;
+        const QString vers = d.filePath("app/Programme");
+        VERIFIER(preparer_programme(p, "association.grym", "Amis du Tilleul", vers, &erreur));
+        VERIFIER(QFile::exists(vers + "/association.grym") && QFile::exists(vers + "/données.grym")
+                 && QFile::exists(vers + "/images/logo.png"));
+        VERIFIER(!QFile::exists(vers + "/association.grymd") && !QFile::exists(vers + "/association.grymb")
+                 && !QFile::exists(vers + "/projet.grymatelier") && !QFile::exists(vers + "/.cache"));
+        QFile a(vers + "/application.txt");
+        VERIFIER(a.open(QIODevice::ReadOnly));
+        const QString texte = QString::fromUtf8(a.readAll());
+        VERIFIER(texte.contains("nom : Amis du Tilleul\n") && texte.contains("programme : association.grym\n"));
+        VERIFIER(!preparer_programme(p, "absent.grym", "X", d.filePath("autre"), &erreur) && erreur.contains("introuvable"));
     }
 
     // Analyse : la première erreur, avec sa position ; rien quand tout va bien

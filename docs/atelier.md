@@ -194,6 +194,17 @@ Tranche T3, faite le 26 septembre 2026 : la phrase `Les écrans ont la couleur �
 
 ---
 
+## 8. Fabriquer une application *(voie A, faite le 28 septembre 2026)*
+
+Programme > Fabriquer l'application… fait du projet une application autonome, pour le système où tourne l'atelier : `Nom.dmg` sous macOS, `Nom-linux.tar.gz` sous Linux. Le nom est celui du dossier du projet. La même chose sans fenêtre, pour les scripts et l'intégration continue : `grym-atelier --fabriquer projet destination` (programme principal lu dans `projet.grymatelier`).
+
+- Une application, c'est le lanceur (l'atelier lui-même) et un dossier `Programme` : les fichiers du projet, sans ses données (`.grymd`), son bytecode (`.grymb`), `projet.grymatelier` ni fichiers cachés, et `application.txt` (nom, programme principal). Au démarrage, l'exécutable qui trouve ce dossier (`Contents/Resources/Programme` sous macOS, `Programme` à côté de lui ailleurs) ouvre le programme directement, sans éditeur, sous le nom de l'application.
+- Sa base vit dans le dossier de données que le système donne à l'application (`~/Library/Application Support/Nom` sous macOS, `~/.local/share/Nom` sous Linux) : l'application elle-même n'est pas modifiable, et les données survivent à une réinstallation. Les données de départ du programme s'y créent au premier lancement.
+- macOS : copie de GrymoiR.app (`ditto`), sans ses exemples, avec le programme ; nom et identifiant réécrits dans `Info.plist` (`plutil`) ; signature ad hoc (`codesign`) ; disque (`hdiutil`). Depuis un atelier qui n'a pas été installé par `GrymoiR.dmg`, l'application dépend du Qt du Mac, et l'atelier le dit.
+- Linux : le lanceur, un script au nom de l'application, le programme ; l'archive suppose Qt 6 sur la machine qui la reçoit.
+- Jamais d'écrasement : un paquet du même nom arrête la fabrication.
+- Limites : pas de signature Apple ni de notarisation (avertissement de macOS sur un autre Mac) ; pas d'icône propre ; `Enregistrer … dans` écrit à côté du programme, dans l'application, qui n'est pas modifiable : à éviter dans une application fabriquée. Windows et la fabrication pour les trois systèmes par GitHub (voie C) viendront ensuite.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -225,3 +236,4 @@ Tranche T3, faite le 26 septembre 2026 : la phrase `Les écrans ont la couleur �
 | 0.25 | 2026-09-26 | § 6.5 : aide en contexte faite (F1 sur un mot du langage ouvre sa section) |
 | 0.26 | 2026-09-27 | § 6.5 : guide « Premiers pas » commencé (chapitres 1 à 3), vérifié par `test_guide` ; Fichier > Nouveau fichier… |
 | 0.27 | 2026-09-28 | § 6.5 : guide « Premiers pas » fini (douze chapitres) ; les programmes à écrans du guide (chapitres 11 et 12) sont vérifiés par les essais de l'atelier |
+| 0.28 | 2026-09-28 | § 8 : fabriquer une application (voie A : macOS, Linux ; `--fabriquer`) |

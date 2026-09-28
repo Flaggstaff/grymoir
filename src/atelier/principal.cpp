@@ -2,6 +2,7 @@
 //   grym-atelier [projet ou fichier]      l'atelier
 //   grym-atelier --lancer fichier.grym    exécute un programme dans sa propre fenêtre (bouton « Lancer »)
 #include "execution.h"
+#include "fabrication.h"
 #include "fenetre.h"
 #include "theme.h"
 
@@ -9,10 +10,12 @@
 
 #include <QApplication>
 #include <QDir>
+#include <QFileInfo>
 #include <QMessageBox>
 #include <QSettings>
 #include <QStandardPaths>
 #include <csignal>
+#include <cstdio>
 
 extern "C" {
 #include "vm.h"
@@ -33,8 +36,43 @@ int main(int argc, char **argv) {
     QApplication app(argc, argv);
     QApplication::setOrganizationName("GrymoiR");
     QApplication::setApplicationName("Atelier");
-    Theme::courant().installer(app);   // l'atelier et les programmes qu'il lance : même thème
     const QStringList args = QApplication::arguments();
+    // grym-atelier --fabriquer projet destination : le menu Programme > Fabriquer l'application…, sans fenêtre,
+    // pour les scripts et l'intégration continue (docs/atelier.md, § 8). Le programme principal vient de
+    // projet.grymatelier.
+    if (args.size() == 4 && args.at(1) == "--fabriquer") {
+        FichierProjet f;
+        f.lire(QFileInfo(args.at(2)).absoluteFilePath());
+        if (f.programme_principal.isEmpty()) {
+            std::fprintf(stderr, "Programme principal inconnu : choisis-le dans l'atelier (projet.grymatelier).\n");
+            return 1;
+        }
+        QString erreur, remarque;
+        const QString paquet = fabriquer_application(f.dossier, f.programme_principal, args.at(3), &erreur, &remarque);
+        if (paquet.isEmpty()) { std::fprintf(stderr, "%s\n", qPrintable(erreur)); return 1; }
+        std::printf("%s\n", qPrintable(paquet));
+        if (!remarque.isEmpty()) std::fprintf(stderr, "%s\n", qPrintable(remarque));
+        return 0;
+    }
+    // Une application fabriquée par l'atelier (docs/atelier.md, § 8) : son programme s'ouvre directement, sans
+    // éditeur, sous son nom ; sa base vit dans le dossier de données que le système donne à l'application.
+    QString nom, principal;
+    const QString programme = args.size() == 1 ? programme_d_application(&nom, &principal) : QString();
+    if (!programme.isEmpty()) {
+        QApplication::setOrganizationName(QString());
+        QApplication::setApplicationName(nom);
+        Theme::courant().installer(app);
+        const QString donnees = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        QDir().mkpath(donnees);
+        const QString chemin = QDir(programme).filePath(principal);
+        Execution e(chemin);
+        e.setWindowTitle(nom);
+        e.placer_base(QDir(donnees).filePath(QFileInfo(principal).completeBaseName() + ".grymd"));
+        e.show();
+        e.demarrer();
+        return app.exec() == 0 ? 0 : 1;
+    }
+    Theme::courant().installer(app);   // l'atelier et les programmes qu'il lance : même thème
     if (args.size() == 3 && args.at(1) == "--lancer") {
         std::signal(SIGINT, sur_arret);
         std::signal(SIGTERM, sur_arret);
