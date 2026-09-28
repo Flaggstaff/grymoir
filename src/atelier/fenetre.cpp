@@ -9,6 +9,7 @@
 #include "theme.h"
 
 #include <QAction>
+#include <QApplication>
 #include <QCloseEvent>
 #include <QCoreApplication>
 #include <QFile>
@@ -33,6 +34,7 @@
 #include <QSaveFile>
 #include <QSettings>
 #include <QSplitter>
+#include <QStandardPaths>
 #include <QLabel>
 #include <QTabWidget>
 #include <QVBoxLayout>
@@ -269,6 +271,18 @@ Fenetre::Fenetre() {
     a->setShortcut(QKeySequence::New);
     a = menu->addAction("Ouvrir un projet…", this, &Fenetre::choisir_projet);
     a->setShortcut(QKeySequence::Open);
+    // Les exemples qu'embarque l'application installée (GrymoiR.app/Contents/Resources/Exemples) : chacun s'installe
+    // dans Documents/GrymoiR s'il y manque, jamais par-dessus une copie existante, puis s'ouvre.
+    const QDir exemples(QApplication::applicationDirPath() + "/../Resources/Exemples");
+    for (const QString &nom : exemples.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
+        menu->addAction(QString("Ouvrir l'exemple « %1 »").arg(nom), this, [this, exemples, nom] {
+            const QString documents = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+            QString erreur;
+            const QString d = installer_exemple(exemples.filePath(nom), QDir(documents).filePath("GrymoiR"), &erreur);
+            if (d.isEmpty()) QMessageBox::warning(this, "Atelier", erreur);
+            else ouvrir(d);
+        });
+    }
     a = menu->addAction("Enregistrer", this, [this] { enregistrer(); });
     a->setShortcut(QKeySequence::Save);
     menu->addSeparator();
