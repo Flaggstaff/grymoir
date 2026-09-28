@@ -771,7 +771,7 @@ static int accorder_absent(Analyse *a, Noeud *v, Genre g) {
 /* « 2.5 » → « 2,5 », pour les messages */
 static char *dec_formater_canonique(const char *canonique) {
     Decimal d = dec_depuis_canonique(canonique);
-    char *r = dec_formater(&d);
+    char *r = dec_afficher(&d);
     dec_liberer(&d);
     return r;
 }

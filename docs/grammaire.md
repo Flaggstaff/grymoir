@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.47 de la spécification, révisée le 27 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.48 de la spécification, révisée le 27 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -184,7 +184,8 @@ Afficher « Total à payer : » puis le total.
 
 ### 4.1 Style des nombres affichés
 
-- Défaut : style suisse, apostrophe pour les milliers et virgule décimale (`1'234,50`). Un nombre négatif porte le signe `−` (U+2212) : `−1'000`.
+- Défaut : style suisse, apostrophe pour les milliers et virgule décimale (`1'234,50`). Un nombre négatif porte le signe `−` (U+2212) : `−12'000`.
+- Un nombre entier de quatre chiffres ou moins ne se groupe pas : `2026`, `1020`, `−1500`. En français, un nombre qui numérote (une année, un numéro de compte ou de page) ne se sépare jamais, et le séparateur reste facultatif pour une quantité de quatre chiffres (Académie française, « Nombres », Questions de langue ; OQLF, Vitrine linguistique, « Espacements dans les nombres ») ; le langage ne sachant pas distinguer un numéro d'une quantité, il ne groupe aucun des deux. Avec des décimales, ou à partir de cinq chiffres, les milliers se groupent : `1'234,50`, `12'000`.
 - Une phrase change le style pour tout le programme : `Les nombres s'affichent à la française.` (espace insécable U+202F, `1 234,50`), `à la suisse.`, ou `sans séparateur.` (`1234,50`).
 - Elle se déclare au premier niveau, hors de toute formule et de tout bloc, une seule fois, avant le premier affichage. Sinon, erreur d'analyse.
 - Le style ne concerne que l'affichage : la source (§ 12), la base (§ 16.1) et les comparaisons gardent la forme canonique. Une année s'affiche sans séparateur quel que soit le style (§ 14.5), une date garde sa forme (§ 14.4).
@@ -1509,3 +1510,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.45 | 2026-09-26 | § 22.5 : suites attendues des phrases en `Les` (apparence des écrans, style des nombres) |
 | 1.46 | 2026-09-26 | § 12 : un texte vide s'écrit `« »` dans la forme canonique (et non plus `«  »`, deux espaces) |
 | 1.47 | 2026-09-27 | § 18.1 : `Refuser « … » puis x.`, une erreur voulue, rattrapable, annulée par la transaction |
+| 1.48 | 2026-09-27 | § 4.1 : un entier de quatre chiffres ou moins s'affiche sans séparateur (`2026`, `1020`) ; avec des décimales ou à partir de cinq chiffres, groupé |

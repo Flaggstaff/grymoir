@@ -523,6 +523,18 @@ char *dec_formater(const Decimal *a) {
     return chaine_rendre(&c);
 }
 
+char *dec_afficher(const Decimal *a) {
+    char *f = dec_formater(a);
+    if (strchr(f, ',')) return f;   /* des décimales : un montant, groupé */
+    size_t chiffres = 0;
+    for (const char *p = f; *p; p++) if (*p >= '0' && *p <= '9') chiffres++;
+    if (chiffres > 4) return f;
+    char *w = f;   /* au plus quatre chiffres entiers : sans apostrophe */
+    for (const char *r = f; *r; r++) if (*r != '\'') *w++ = *r;
+    *w = '\0';
+    return f;
+}
+
 char *dec_canonique(const Decimal *a) {
     char *f = dec_formater(a);
     char *r = grym_allouer(strlen(f) + 1);

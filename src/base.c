@@ -917,7 +917,7 @@ static char *message_contrainte(Base *b, const Objet *o) {
             if (strcmp(c->champs[k], p + 3) != 0 || !o->definis[k]) continue;
             const Valeur *v = &o->champs[k];
             valeur = v->type == V_TEXTE ? grym_formater("« %s »", v->texte)
-                   : v->type == V_NOMBRE ? dec_formater(&v->nombre)
+                   : v->type == V_NOMBRE ? dec_afficher(&v->nombre)
                    : v->type == V_DATE ? date_suisse(v->jours) : grym_dupliquer("cette valeur");
         }
         /* règle 4 : la valeur est peut-être gardée par un objet de la corbeille (§ 16.12) */

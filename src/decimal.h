@@ -47,6 +47,10 @@ StatutDecimal dec_puissance(const Decimal *a, const Decimal *b, Decimal *r);
 
 /* Style suisse (§ 4.1) : 1'234,50 ; négatif avec le signe − (U+2212). */
 char *dec_formater(const Decimal *a);
+/* Le nombre tel qu'on le montre (grammaire, § 4.1) : comme dec_formater, mais un entier de quatre chiffres
+ * ou moins ne se groupe pas (2026, 1020, −1500), comme une année ou un numéro ; avec des décimales, ou à partir
+ * de cinq chiffres, les milliers se groupent (1'234,50, 12'000). */
+char *dec_afficher(const Decimal *a);
 /* Forme canonique « -1234.50 » : celle du lexeur, du bytecode et de la base (§ 16.1). */
 char *dec_canonique(const Decimal *a);
 

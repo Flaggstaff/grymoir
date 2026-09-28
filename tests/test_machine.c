@@ -869,9 +869,9 @@ static void essais_ecrans(void) {
                "[ouvrir Catalogue ; côte à côte { ; liste compositeur (Nom, Date de naissance) ; l'un sous l'autre { ; "
                "liste œuvre (Titre, Date de naissance du compositeur, Année) ; texte Double-clic : la fiche ; } ; } ; "
                "bouton Fermer]\n"
-               "[lignes Bach|31.03.1685]\n[lignes Messe|31.03.1685|1'749]\n"
-               "[lignes Bach|31.03.1685]\n[lignes Messe|31.03.1685|1'749]\n"
-               "[lignes Bach|31.03.1685]\n[lignes Messe|31.03.1685|1'749]\n[fermer]\n");
+               "[lignes Bach|31.03.1685]\n[lignes Messe|31.03.1685|1749]\n"
+               "[lignes Bach|31.03.1685]\n[lignes Messe|31.03.1685|1749]\n"
+               "[lignes Bach|31.03.1685]\n[lignes Messe|31.03.1685|1749]\n[fermer]\n");
     }
     PROG("Une œuvre, conservée, a : un titre (texte), unique.\n"
          "L'écran des œuvres montre :\n    la liste des œuvres conservées, avec le prix,\n    un bouton « OK ».\n",
@@ -910,8 +910,10 @@ int main(void) {
     CALC("1 − 3", "−2");
     CALC("−0", "0");
     CALC("1'234'567,891", "1'234'567,891");
-    CALC("−1'000", "−1'000");
-    CALC("999 + 1", "1'000");
+    CALC("−1'000", "−1000");   /* un entier de quatre chiffres ne se groupe pas (§ 4.1) */
+    CALC("999 + 1", "1000");
+    CALC("9999 + 1", "10'000");   /* à partir de cinq chiffres, il se groupe */
+    CALC("1000,00", "1'000,00");   /* un montant, avec décimales, aussi */
     CALC("123456", "123'456");
     CALC("0,001", "0,001");
     CALC("99999999999999999999 + 1", "100'000'000'000'000'000'000");
@@ -934,7 +936,7 @@ int main(void) {
     CALC("1 ÷ (2 − 2)", "ERREUR 1:3 Division par zéro.");
 
     /* --- Puissance (§ 3.1) --- */
-    CALC("2 ^ 10", "1'024");
+    CALC("2 ^ 10", "1024");
     CALC("2 ^ −1", "0,5");
     CALC("2 ^ −2", "0,25");
     CALC("3 ^ −1", "0,3333333333333333333333333333");
@@ -1055,7 +1057,7 @@ int main(void) {
     PROG("Pour chaque i de 1 à 3 :\n    Pour chaque j de 1 à 3 :\n        Si j > i, sortir de la boucle.\n"
          "        Afficher i × 10 + j.", "11\n21\n22\n31\n32\n33");
     PROG("La somme d'un n :\n    Le total vaut 0.\n    Pour chaque i de 1 à n, le total devient total + i.\n"
-         "    Rendre total.\nAfficher la somme de 100.", "5'050");
+         "    Rendre total.\nAfficher la somme de 100.", "5050");
     PROG("Le x vaut 7.\nSelon x :\n    Cas 1 ou 2 :\n        Afficher « un ou deux ».\n    Cas de 3 à 9 :\n"
          "        Afficher « chiffre ».\n    Autrement :\n        Afficher « autre ».", "chiffre");
     PROG("Le x vaut 10.\nSelon x :\n    Cas négatif, afficher « négatif ».\n    Cas supérieur ou égal à 10, afficher « grand ».\n"
@@ -2128,7 +2130,7 @@ int main(void) {
     PROG(AN "Pour chaque œuvre conservée dont la composition < 1700, par composition décroissant, afficher titre de l'œuvre.\n"
          "Afficher le nombre d'œuvres conservées dont la composition ≥ 12.", "B\nC\n3");
     PROG(AN "Pour chaque an de composition de a à 1749, afficher an.\nPour chaque an de 1749 à composition de a par pas de −2, "
-         "afficher an.", "1747\n1748\n1749\n1'749\n1'747");
+         "afficher an.", "1747\n1748\n1749\n1749\n1747");
     PROG(AN "Selon composition de a :\n    Cas de 1700 à 1750, afficher « baroque ».\n    Autrement, afficher « autre ».", "baroque");
     PROG("Le premier d'un d vaut l'année de d.\nAfficher le premier de 01.01.2000.", "2000");
     PROG(AN "Afficher composition de a + composition de a.", "~On n'additionne pas deux années.");
@@ -2143,7 +2145,7 @@ int main(void) {
     PROG(AN "Le x vaut 0.\nLa composition de a devient x.", "~attend une année (de 1 à 9999), pas 0.");
     PROG("Afficher le mois de 01.01.2000.", "~« mois de » inconnu");
     PROG("Le d vaut 01.01.2000.\nAfficher taille de d.", "~Une date n'a pas de champ « taille » : seulement « année ».");
-    PROG("Un p a : une taille.\nLa q vaut un nouveau p :\n    La taille vaut 3.\nAfficher 1747 puis taille de q.", "1'747 3");
+    PROG("Un p a : une taille.\nLa q vaut un nouveau p :\n    La taille vaut 3.\nAfficher 1747 puis taille de q.", "1747 3");
     {   /* migrations : nombre entier ↔ année */
         remove("_essai_an.grymd");
         const char *etapes[][2] = {
@@ -2156,7 +2158,7 @@ int main(void) {
             { "Un livre, conservé, a : un titre (texte), un an (année), une sortie (année), 2000 au départ.\n"
               "Le l vaut le livre conservé dont le titre est « X ».\nAfficher an du l + 1 puis sortie du l.\n", "1991 2000" },
             { "Un livre, conservé, a : un titre (texte), un an (nombre entier), une sortie (année).\n"
-              "Le l vaut le livre conservé dont le titre est « X ».\nAfficher an du l + 1.\n", "1'991" },
+              "Le l vaut le livre conservé dont le titre est « X ».\nAfficher an du l + 1.\n", "1991" },
         };
         for (int i = 0; i < 5; i++) {
             total++;
@@ -2263,7 +2265,7 @@ int main(void) {
     PROG("Afficher 1234567,25.", "1'234'567,25");
     PROG("Les nombres s'affichent sans séparateur.\nAfficher 1234567,25.", "1234567,25");
     PROG("Les nombres s'affichent à la suisse.\nAfficher 1234567,25.", "1'234'567,25");
-    PROG("Les nombres s'affichent à la française.\nAfficher 1234567,25 puis −1000.", "1\u202f234\u202f567,25 −1\u202f000");
+    PROG("Les nombres s'affichent à la française.\nAfficher 1234567,25 puis −1000.", "1\u202f234\u202f567,25 −1000");
     PROG("Les nombres s'affichent à la française.\nLe d vaut 01.02.1990.\nAfficher l'année de d puis d.",
          "1990 01.02.1990");   /* une année et une date gardent leur forme */
     PROG("Afficher 1.\nLes nombres s'affichent à la suisse.", "~se déclare avant le premier affichage");
@@ -2541,7 +2543,7 @@ int main(void) {
            "Afficher le nombre de compositeurs conservés.", "? non\n2", ".");
 
     /* --- Assembler des textes : « suivi de », élision de « de » et « que » (§ 4.4) --- */
-    PROG("L'an vaut 1747.\nAfficher « ( » suivi de an suivi de « ) ».", "(1'747)");
+    PROG("L'an vaut 1747.\nAfficher « ( » suivi de an suivi de « ) ».", "(1747)");
     PROG("Le v vaut vrai.\nAfficher « a » suivi de 1,50 suivi de 21.09.2026 suivi de v.", "a1,5021.09.2026vrai");
     PROG("Le nom vaut « Anton ».\nAfficher 3 puis « œuvres » puis de nom.", "3 œuvres d'Anton");
     PROG("Afficher de « Bach » puis de « Élodie » puis de « œil » puis de « Yves » puis de « Hélène » puis de « 1 ».",

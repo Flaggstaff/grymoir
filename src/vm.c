@@ -826,7 +826,7 @@ static char *ecrire_sur_le_disque(Machine *m) {
 
 static char *decrire_valeur_pour_type(const Valeur *v) {
     if (v->type == V_NOMBRE) {
-        char *n = dec_formater(&v->nombre);
+        char *n = dec_afficher(&v->nombre);
         char *r = grym_formater("%s", n);
         free(n);
         return r;
@@ -842,7 +842,7 @@ static char *article_classe(const ClasseVM *c);
 /* Un nombre au style demandé (§ 4.1) : l'apostrophe des milliers devient une espace insécable
  * (française, U+202F) ou disparaît (sans séparateur). */
 static char *nombre_au_style(const Decimal *d, int style) {
-    char *s = dec_formater(d);
+    char *s = dec_afficher(d);
     if (!style) return s;
     Chaine c = {0};
     for (const char *p = s; *p; p++) {
@@ -1184,7 +1184,7 @@ static char *verifier_type_champ(const Machine *m, const char *champ, const char
         long a;
         ok = v->type == V_ANNEE || (v->type == V_NOMBRE && dec_en_long_borne(&v->nombre, 1, 9999, &a));
         if (!ok && v->type == V_NOMBRE) {
-            char *n = dec_formater(&v->nombre);
+            char *n = dec_afficher(&v->nombre);
             char *r = grym_formater("Le champ « %s » attend une année (de 1 à 9999), pas %s.", champ, n);
             free(n);
             return r;
@@ -2780,7 +2780,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_EXIGER_ENTIER_NATUREL: {
             Valeur *x = &pile.v[pile.n - 1];
             if (x->type != V_NOMBRE || x->nombre.negatif || !dec_est_entier(&x->nombre)) {
-                char *v = x->type == V_NOMBRE ? dec_formater(&x->nombre) : grym_dupliquer(nom_type(x->type));
+                char *v = x->type == V_NOMBRE ? dec_afficher(&x->nombre) : grym_dupliquer(nom_type(x->type));
                 ok = echouer(diag, b, debut, grym_formater(
                     "Nombre de tours invalide : un entier positif ou nul est attendu, pas %s.", v));
                 free(v);
