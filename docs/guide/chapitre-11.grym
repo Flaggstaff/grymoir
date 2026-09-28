@@ -1,4 +1,4 @@
-Remarque : Premiers pas, chapitre 10 : clôturer.
+Remarque : Premiers pas, chapitre 11 : les écrans.
 
 Une catégorie, conservée, a :
     un nom (texte), unique,
@@ -208,25 +208,123 @@ Pour présenter une rubrique :
                 Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le solde sur 10 à droite.
                 Le cumul devient le cumul + le solde.
 
-Afficher « Compte de résultat au 30.06.2026 ».
-Afficher « Produits ».
-Présenter « produit ».
-Le total des produits vaut le cumul.
-Afficher « Charges ».
-Présenter « charge ».
-Le total des charges vaut le cumul.
-Le résultat vaut le total des produits − le total des charges.
-Si le résultat ≥ 0, afficher « Bénéfice » sur 33 puis le résultat sur 10 à droite.
-Sinon, afficher « Perte » sur 33 puis −le résultat sur 10 à droite.
+Remarque : les rapports des chapitres 9 et 10 deviennent des actions, qu'un bouton appelle.
+Pour imprimer la balance :
+    Afficher « Balance au 30.06.2026 ».
+    Afficher « Compte » sur 33 puis « Débit » sur 10 à droite puis « Crédit » sur 10 à droite puis « Solde » sur 10 à droite.
+    Le total débit vaut 0,00.
+    Le total crédit vaut 0,00.
+    Pour chaque compte conservé, par numéro :
+        Totaliser le compte.
+        Si le mouvement débiteur + le mouvement créditeur > 0 :
+            Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le mouvement débiteur sur 10 à droite puis le mouvement créditeur sur 10 à droite puis le solde sur 10 à droite.
+            Le total débit devient le total débit + le mouvement débiteur.
+            Le total crédit devient le total crédit + le mouvement créditeur.
+    Afficher « Totaux » sur 33 puis le total débit sur 10 à droite puis le total crédit sur 10 à droite.
+    Si le total débit = le total crédit, afficher « La balance est équilibrée. ».
 
-Afficher « Bilan au 30.06.2026 ».
-Afficher « Actifs ».
-Présenter « actif ».
-L'actif vaut le cumul.
-Afficher « Passifs ».
-Présenter « passif ».
-Afficher « Résultat de l'exercice » sur 33 puis le résultat sur 10 à droite.
-Le passif vaut le cumul + le résultat.
-Afficher « Actif » sur 33 puis l'actif sur 10 à droite.
-Afficher « Passif et résultat » sur 33 puis le passif sur 10 à droite.
-Si l'actif = le passif, afficher « Le bilan est équilibré. ».
+Pour imprimer les comptes annuels :
+    Afficher « Compte de résultat au 30.06.2026 ».
+    Afficher « Produits ».
+    Présenter « produit ».
+    Le total des produits vaut le cumul.
+    Afficher « Charges ».
+    Présenter « charge ».
+    Le total des charges vaut le cumul.
+    Le résultat vaut le total des produits − le total des charges.
+    Si le résultat ≥ 0, afficher « Bénéfice » sur 33 puis le résultat sur 10 à droite.
+    Sinon, afficher « Perte » sur 33 puis −le résultat sur 10 à droite.
+
+    Afficher « Bilan au 30.06.2026 ».
+    Afficher « Actifs ».
+    Présenter « actif ».
+    L'actif vaut le cumul.
+    Afficher « Passifs ».
+    Présenter « passif ».
+    Afficher « Résultat de l'exercice » sur 33 puis le résultat sur 10 à droite.
+    Le passif vaut le cumul + le résultat.
+    Afficher « Actif » sur 33 puis l'actif sur 10 à droite.
+    Afficher « Passif et résultat » sur 33 puis le passif sur 10 à droite.
+    Si l'actif = le passif, afficher « Le bilan est équilibré. ».
+
+L'écran d'accueil, « Amis du Tilleul », montre :
+    un bouton « Membres »,
+    un bouton « Cotisations impayées »,
+    un bouton « Noter une écriture »,
+    côte à côte :
+        un bouton « Balance »,
+        un bouton « Comptes annuels »,
+    un bouton « Fermer ».
+
+L'écran des membres montre :
+    la liste des membres conservés, par nom, avec le numéro, le prénom, le nom et le nom de la catégorie,
+    un bouton « Nouveau membre »,
+    un bouton « Fermer ».
+
+L'écran des impayés, « Cotisations impayées », montre :
+    la liste des cotisations conservées dont la date de paiement est absente, par montant, avec l'année, le prénom du membre, le nom du membre et le montant,
+    côte à côte :
+        un bouton « Encaisser en caisse »,
+        un bouton « Encaisser par banque »,
+    un bouton « Fermer ».
+
+L'écran de saisie, « Noter une écriture », montre :
+    une pièce (texte),
+    une date (date),
+    un libellé (texte),
+    un débité (compte),
+    un crédité (compte),
+    un montant (nombre),
+    côte à côte :
+        un bouton « Noter »,
+        un bouton « Fermer ».
+
+Quand on clique sur « Membres » dans l'écran d'accueil :
+    Ouvrir l'écran des membres.
+
+Quand on clique sur « Cotisations impayées » dans l'écran d'accueil :
+    Ouvrir l'écran des impayés.
+
+Quand on clique sur « Noter une écriture » dans l'écran d'accueil :
+    Ouvrir l'écran de saisie.
+
+Quand on clique sur « Balance » dans l'écran d'accueil :
+    Imprimer la balance.
+
+Quand on clique sur « Comptes annuels » dans l'écran d'accueil :
+    Imprimer les comptes annuels.
+
+Quand on clique sur « Fermer » dans l'écran d'accueil :
+    Fermer l'écran.
+
+Quand on choisit un membre dans l'écran des membres :
+    Ouvrir la fiche du membre.
+
+Quand on clique sur « Nouveau membre » dans l'écran des membres :
+    Le nouveau vaut un nouveau membre saisi.
+    Conserver le nouveau.
+
+Quand on clique sur « Fermer » dans l'écran des membres :
+    Fermer l'écran.
+
+Quand on clique sur « Encaisser en caisse » dans l'écran des impayés :
+    Si la cotisation choisie de l'écran est absente, refuser « Choisis d'abord une cotisation dans la liste. ».
+    Encaisser la cotisation choisie de l'écran et 1000 et aujourd'hui.
+
+Quand on clique sur « Encaisser par banque » dans l'écran des impayés :
+    Si la cotisation choisie de l'écran est absente, refuser « Choisis d'abord une cotisation dans la liste. ».
+    Encaisser la cotisation choisie de l'écran et 1020 et aujourd'hui.
+
+Quand on clique sur « Fermer » dans l'écran des impayés :
+    Fermer l'écran.
+
+Quand on clique sur « Noter » dans l'écran de saisie :
+    Si le nombre d'écritures conservées dont la pièce est la pièce de l'écran n'est pas nul :
+        Refuser « La pièce » puis la pièce de l'écran puis « existe déjà. ».
+    Noter la pièce de l'écran et la date de l'écran et le libellé de l'écran et le numéro du débité de l'écran et le numéro du crédité de l'écran et le montant de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran de saisie :
+    Fermer l'écran.
+
+Ouvrir l'écran d'accueil.

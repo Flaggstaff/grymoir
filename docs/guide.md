@@ -373,8 +373,10 @@ Une comptabilité en partie double range chaque mouvement dans des comptes. Un c
 ```grymoir
 Un compte, conservé, a :
     un numéro (nombre entier), unique,
-    un intitulé (texte).
+    un intitulé (texte), unique.
 ```
+
+L'intitulé est unique lui aussi : deux comptes ne portent jamais le même nom, et, au chapitre 11, c'est par son intitulé qu'un écran te laissera choisir un compte dans un menu.
 
 ```grymoir
 Si le nombre de comptes conservés est nul :
@@ -760,6 +762,155 @@ En général, l'assemblée générale approuve ensuite les comptes, et une derni
 
 Programme complet : `docs/guide/chapitre-10.grym`.
 
----
+## 11. Les écrans
 
-Les chapitres 11 et 12 (les écrans, puis les finitions) sont en cours d'écriture.
+Jusqu'ici, l'application parlait par `Afficher`. Une association veut des fenêtres, des listes, des boutons. En GrymoiR, un écran se déclare comme une entité, et chaque bouton a son événement.
+
+Un programme qui ouvre des écrans se lance dans l'atelier : Programme > Lancer. En console, `grym lancer` le refuse.
+
+### Les rapports deviennent des actions
+
+La balance du chapitre 9 et les comptes annuels du chapitre 10 ne s'affichent plus au démarrage : ils deviennent deux actions, `Imprimer la balance` et `Imprimer les comptes annuels`, qu'un bouton appellera. Leur texte arrive dans le panneau d'exécution de l'atelier.
+
+### L'accueil
+
+```grymoir
+L'écran d'accueil, « Amis du Tilleul », montre :
+    un bouton « Membres »,
+    un bouton « Cotisations impayées »,
+    un bouton « Noter une écriture »,
+    côte à côte :
+        un bouton « Balance »,
+        un bouton « Comptes annuels »,
+    un bouton « Fermer ».
+```
+
+`côte à côte :` place ses éléments sur une ligne ; sans lui, ils s'empilent. Le titre entre guillemets est celui de la fenêtre. Chaque bouton a son événement :
+
+```grymoir
+Quand on clique sur « Membres » dans l'écran d'accueil :
+    Ouvrir l'écran des membres.
+```
+
+```grymoir
+Quand on clique sur « Balance » dans l'écran d'accueil :
+    Imprimer la balance.
+```
+
+`Ouvrir` montre un écran par-dessus le précédent et attend qu'il se ferme. La dernière phrase du programme ouvre l'accueil :
+
+```grymoir
+Ouvrir l'écran d'accueil.
+```
+
+Tout ce qui précède s'exécute, puis est enregistré dans la base, avant que l'écran s'ouvre ; ensuite, chaque événement forme sa propre transaction : un événement qui échoue n'écrit rien, et l'écran reste ouvert avec le message. Grammaire, § 22.
+
+### Une liste, une fiche
+
+```grymoir
+L'écran des membres montre :
+    la liste des membres conservés, par nom, avec le numéro, le prénom, le nom et le nom de la catégorie,
+    un bouton « Nouveau membre »,
+    un bouton « Fermer ».
+```
+
+Une liste reprend la recherche du chapitre 4 ; `avec` choisit ses colonnes, et `le nom de la catégorie` va chercher la valeur à travers le lien. Choisir une ligne (double-clic ou Entrée) est un événement :
+
+```grymoir
+Quand on choisit un membre dans l'écran des membres :
+    Ouvrir la fiche du membre.
+```
+
+La fiche se déduit de l'entité : un texte par champ, un bouton par lien, « Modifier » et « Fermer ». Et un nouveau membre se saisit dans un formulaire, lui aussi déduit de l'entité :
+
+```grymoir
+Quand on clique sur « Nouveau membre » dans l'écran des membres :
+    Le nouveau vaut un nouveau membre saisi.
+    Conserver le nouveau.
+```
+
+### Encaisser d'un clic
+
+```grymoir
+L'écran des impayés, « Cotisations impayées », montre :
+    la liste des cotisations conservées dont la date de paiement est absente, par montant, avec l'année, le prénom du membre, le nom du membre et le montant,
+    côte à côte :
+        un bouton « Encaisser en caisse »,
+        un bouton « Encaisser par banque »,
+    un bouton « Fermer ».
+```
+
+```grymoir
+Quand on clique sur « Encaisser en caisse » dans l'écran des impayés :
+    Si la cotisation choisie de l'écran est absente, refuser « Choisis d'abord une cotisation dans la liste. ».
+    Encaisser la cotisation choisie de l'écran et 1000 et aujourd'hui.
+```
+
+`la cotisation choisie de l'écran` est la ligne sélectionnée, ou `absent` si aucune ne l'est ; `aujourd'hui`, la date du jour. Après l'événement, la liste se relit : la cotisation encaissée en disparaît. Si tu cliques sans choisir, le refus s'affiche dans l'écran, et rien n'est écrit.
+
+### Saisir une écriture
+
+```grymoir
+L'écran de saisie, « Noter une écriture », montre :
+    une pièce (texte),
+    une date (date),
+    un libellé (texte),
+    un débité (compte),
+    un crédité (compte),
+    un montant (nombre),
+    côte à côte :
+        un bouton « Noter »,
+        un bouton « Fermer ».
+```
+
+Une zone de saisie se déclare comme un champ, avec son type. Une zone dont le type est une entité, comme `un débité (compte)`, devient un menu de ses objets, désignés par leur champ texte unique : l'intitulé du compte (chapitre 6). Une valeur tapée est vérifiée selon son type avant tout événement : « abc » dans le montant est refusé par l'écran.
+
+```grymoir
+Quand on clique sur « Noter » dans l'écran de saisie :
+    Si le nombre d'écritures conservées dont la pièce est la pièce de l'écran n'est pas nul :
+        Refuser « La pièce » puis la pièce de l'écran puis « existe déjà. ».
+    Noter la pièce de l'écran et la date de l'écran et le libellé de l'écran et le numéro du débité de l'écran et le numéro du crédité de l'écran et le montant de l'écran.
+    Fermer l'écran.
+```
+
+`la pièce de l'écran` lit une zone : un écran est un objet, et ses zones sont ses champs.
+
+Programme complet : `docs/guide/chapitre-11.grym`. Les essais de l'atelier le lancent et cliquent à ta place : membres, encaissement, saisie d'une écriture, balance et comptes annuels.
+
+## 12. Finitions
+
+### Un fichier par sujet
+
+Ton `association.grym` dépasse maintenant trois cents lignes. On le partage en trois fichiers, dans le même dossier :
+
+- `données.grym` : les six entités et le calcul de la nature ;
+- `opérations.grym` : les actions qui inscrivent, imputent, comptabilisent, encaissent, notent ;
+- `association.grym` : le programme, qui les utilise.
+
+```grymoir
+Remarque : Premiers pas, chapitre 12 : les opérations ; elles ne passent que par leurs paramètres.
+Utiliser « données ».
+```
+
+```grymoir
+Remarque : Premiers pas, chapitre 12 : l'application des Amis du Tilleul.
+Utiliser « opérations ».
+```
+
+`Utiliser « données ».`, en tête du fichier, rend visibles ses déclarations ; elles se transmettent, et `association.grym` voit aussi les entités, à travers `opérations.grym`. Un fichier utilisé ne contient que des déclarations : entités, calculs, actions. Les données de départ, les rapports et les écrans restent dans le programme. Grammaire, § 21.
+
+Pourquoi `Totaliser` et les rapports restent-ils dans le programme ? Une action d'un fichier utilisé ne voit pas les variables du programme principal ; or `Totaliser` range ses résultats dans `le solde` et `le cumul`, qui en sont. Seules les actions qui ne passent que par leurs paramètres déménagent. C'est une limite du langage, que ce guide ne cache pas : une action ne rend pas de valeur, et un calcul ne lit pas la base ; il manque encore un moyen propre de calculer un solde à partir de la base.
+
+### Couleur et logo
+
+```grymoir
+Les écrans ont la couleur verte et le logo « tilleul.png ».
+```
+
+Une phrase, au début du programme, avant le premier `Ouvrir` : les écrans prennent l'accent vert, et le logo s'affiche à côté du titre, en grand sur l'accueil, en petit sur les écrans ouverts par-dessus. Cinq couleurs existent : bleue (sans phrase), verte, turquoise, violette, grise. Le logo est une image (PNG, JPEG, GIF ou WebP) à côté du programme ; GrymoiR vérifie qu'il existe dès la lecture du programme. Grammaire, § 22.5.
+
+Programme complet : le dossier `docs/guide/chapitre-12/`.
+
+### Et maintenant
+
+Tu as construit une application complète : des données qui durent, des règles que la base ne peut pas violer, des écrans. La grammaire (Aide > Le langage GrymoiR) décrit tout ce que ce guide n'a fait qu'effleurer : la corbeille et le rétablissement d'objets supprimés (§ 16.12), les champs « plusieurs » (§ 16.13), les classes, l'héritage et les aptitudes (§ 13), les fichiers et images (§ 15), la reprise après erreur (§ 18). F1 sur un mot du code t'y conduit directement.

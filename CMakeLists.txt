@@ -71,5 +71,7 @@ qt_add_resources(test_atelier "documentation_essais" PREFIX "/documentation" BAS
 target_include_directories(test_atelier PRIVATE src/atelier)
 target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg)
 grym_ressources_theme(test_atelier)
+# Le guide (docs/guide) : ses programmes à écrans se vérifient ici, dans une vraie fenêtre d'exécution.
+target_compile_definitions(test_atelier PRIVATE GRYM_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
 add_test(NAME atelier COMMAND test_atelier)
 set_tests_properties(atelier PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

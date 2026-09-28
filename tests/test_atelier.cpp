@@ -39,6 +39,7 @@
 #include <QTextBrowser>
 #include <QTextDocument>
 #include <QTextLayout>
+#include <algorithm>
 #include <csignal>
 #include <cstdio>
 #include <functional>
@@ -266,6 +267,124 @@ int main(int argc, char **argv) {
         VERIFIER(guide.windowTitle() == "Premiers pas avec GrymoiR");
         VERIFIER(guide.aller_au_titre("1. Premiers pas") && guide.aller_au_titre("3. Répéter"));
         VERIFIER(guide.table()->topLevelItemCount() >= 3);
+    }
+
+    // Le guide, chapitre 11 : l'application de l'association, avec ses écrans, pilotée comme le ferait le lecteur
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("association.grym");
+        VERIFIER(QFile::copy(QString(GRYM_SOURCE) + "/docs/guide/chapitre-11.grym", prog));
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto bouton = [&](const QString &t) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == t && b->isVisible()) return b;
+            return nullptr;
+        };
+        auto pret = [&](const QString &t) { return attendre([&] { return bouton(t) && bouton(t)->isEnabled(); }); };
+        auto table = [&]() -> QTableWidget * {
+            for (QTableWidget *x : e.findChildren<QTableWidget *>()) if (x->isVisible()) return x;
+            return nullptr;
+        };
+        auto sortie = [&]() { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        VERIFIER(pret("Membres"));
+        // les membres, avec la catégorie lue à travers le lien
+        bouton("Membres")->click();
+        VERIFIER(pret("Nouveau membre") && attendre([&] { return table() && table()->rowCount() == 3; }));
+        VERIFIER(table()->item(0, 2)->text() == "Bapst" && table()->item(0, 3)->text() == "Actif");
+        bouton("Fermer")->click();
+        // la cotisation impayée d'Élodie, encaissée d'un clic ; la liste se vide
+        VERIFIER(pret("Cotisations impayées"));
+        bouton("Cotisations impayées")->click();
+        VERIFIER(pret("Encaisser en caisse") && attendre([&] { return table() && table()->rowCount() == 1; }));
+        VERIFIER(table()->item(0, 2)->text() == "Dupasquier");
+        bouton("Encaisser en caisse")->click();   // sans ligne choisie : refusé, l'écran le dit
+        VERIFIER(attendre([&] {
+            for (QLabel *l : e.findChildren<QLabel *>()) if (l->isVisible() && l->text().contains("Choisis d'abord")) return true;
+            return false;
+        }));
+        table()->selectRow(0);
+        bouton("Encaisser en caisse")->click();
+        VERIFIER(attendre([&] { return table()->rowCount() == 0 && bouton("Fermer") && bouton("Fermer")->isEnabled(); }));
+        bouton("Fermer")->click();
+        // la balance et les comptes annuels, imprimés dans le panneau ; toujours équilibrés
+        VERIFIER(pret("Balance"));
+        bouton("Balance")->click();
+        VERIFIER(attendre([&] { return sortie().contains("La balance est équilibrée."); }));
+        VERIFIER(sortie().contains("Totaux                              3'612,00   3'612,00"));
+        bouton("Comptes annuels")->click();
+        VERIFIER(attendre([&] { return sortie().contains("Le bilan est équilibré."); }));
+        VERIFIER(sortie().contains("Perte                                 412,00"));
+        // noter le loyer de juillet par l'écran de saisie : zones de texte, date, nombre, et deux menus de comptes
+        bouton("Noter une écriture")->click();
+        VERIFIER(pret("Noter"));
+        QList<QWidget *> zones;   // dans l'ordre de l'écran : pièce, date, libellé, débité, crédité, montant
+        for (QWidget *w : e.findChildren<QWidget *>())
+            if (w->isVisible() && (qobject_cast<QLineEdit *>(w) || qobject_cast<QComboBox *>(w))) zones << w;
+        std::sort(zones.begin(), zones.end(), [](QWidget *a, QWidget *b) {
+            return a->mapToGlobal(QPoint(0, 0)).y() < b->mapToGlobal(QPoint(0, 0)).y();
+        });
+        VERIFIER(zones.size() == 6);
+        const QStringList valeurs = {"P-006", "15.07.2026", "Loyer de juillet", "Loyer du local", "Banque", "300,00"};
+        for (int k = 0; k < zones.size() && k < valeurs.size(); k++) {
+            if (auto *l = qobject_cast<QLineEdit *>(zones[k])) {
+                l->setText(valeurs[k]);
+                l->setModified(true);
+                emit l->editingFinished();
+            } else if (auto *m = qobject_cast<QComboBox *>(zones[k])) {
+                VERIFIER(m->findText(valeurs[k]) > 0);   // le menu des comptes, par leur intitulé (champ texte unique, § 19)
+                m->setCurrentIndex(m->findText(valeurs[k]));
+                emit m->activated(m->currentIndex());
+            }
+            VERIFIER(pret("Noter"));
+        }
+        bouton("Noter")->click();
+        if (!pret("Balance")) { e.close(); VERIFIER(false); return 1; }
+        bouton("Balance")->click();
+        VERIFIER(attendre([&] { return sortie().contains("Totaux                              3'912,00   3'912,00"); }));
+        bouton("Fermer")->click();
+        VERIFIER(attendre([&] { return !bouton("Membres"); }));
+        e.close();
+    }
+
+    // Le guide, chapitre 12 : l'application en trois fichiers, verte, avec son logo
+    {
+        QTemporaryDir dossier;
+        for (const char *f : {"association.grym", "données.grym", "opérations.grym", "tilleul.png"})
+            VERIFIER(QFile::copy(QString(GRYM_SOURCE) + "/docs/guide/chapitre-12/" + QString::fromUtf8(f),
+                                 dossier.filePath(QString::fromUtf8(f))));
+        Execution e(dossier.filePath("association.grym"));
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto bouton = [&](const QString &t) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == t && b->isVisible()) return b;
+            return nullptr;
+        };
+        VERIFIER(attendre([&] { return bouton("Balance") && bouton("Balance")->isEnabled(); }));
+        VERIFIER(Theme::courant().accent() == "verte" && !e.windowIcon().isNull());
+        int logo = 0;
+        for (QLabel *l : e.findChildren<QLabel *>())
+            if (l->isVisible() && !l->pixmap().isNull()) logo = qRound(l->pixmap().height() / l->pixmap().devicePixelRatio());
+        VERIFIER(logo == 64);
+        bouton("Balance")->click();
+        VERIFIER(attendre([&] { return e.findChild<QTextBrowser *>()->toPlainText().contains("La balance est équilibrée."); }));
+        VERIFIER(e.findChild<QTextBrowser *>()->toPlainText().contains("Totaux                              3'572,00   3'572,00"));
+        bouton("Fermer")->click();
+        attendre([&] { return !bouton("Balance"); });
+        e.close();
+        Theme::courant().appliquer(Theme::Clair, "bleue");
     }
 
     // Analyse : la première erreur, avec sa position ; rien quand tout va bien

@@ -1,0 +1,66 @@
+Remarque : Premiers pas, chapitre 12 : les opérations ; elles ne passent que par leurs paramètres.
+Utiliser « données ».
+
+Pour inscrire un numéro et un nom et un prénom et une entrée :
+    Le nouveau vaut un nouveau membre :
+        Le numéro vaut numéro.
+        Le nom vaut nom.
+        Le prénom vaut prénom.
+        La date d'entrée vaut entrée.
+    Conserver le nouveau.
+
+Pour définir un intitulé et un tarif :
+    La nouvelle vaut une nouvelle catégorie :
+        Le nom vaut intitulé.
+        Le tarif vaut tarif.
+    Conserver la nouvelle.
+
+Pour créer un numéro et un intitulé :
+    Le nouveau vaut un nouveau compte :
+        Le numéro vaut numéro.
+        L'intitulé vaut intitulé.
+    Conserver le nouveau.
+
+Pour imputer une écriture et une référence et un débit et un crédit :
+    Si la comptabilisation de l'écriture est présente :
+        Refuser « L'écriture » puis la pièce de l'écriture puis « est comptabilisée : elle ne change plus. ».
+    La nouvelle vaut une nouvelle ligne :
+        L'écriture vaut écriture.
+        Le compte vaut le compte conservé dont le numéro est référence.
+        Le débit vaut débit.
+        Le crédit vaut crédit.
+    Conserver la nouvelle.
+
+Pour comptabiliser une écriture et une date :
+    Le total des débits vaut 0.
+    Le total des crédits vaut 0.
+    Pour chaque ligne de l'écriture :
+        Le total des débits devient le total des débits + le débit de la ligne.
+        Le total des crédits devient le total des crédits + le crédit de la ligne.
+    Si le total des débits ≠ le total des crédits :
+        Refuser « Écriture » puis la pièce de l'écriture puis « déséquilibrée : débits » puis le total des débits puis « et crédits » puis le total des crédits.
+    La comptabilisation de l'écriture devient date.
+
+Pour encaisser une cotisation et une référence et une date :
+    Si la date de paiement de la cotisation est présente :
+        Refuser « La cotisation de » puis le nom du membre de la cotisation puis « est déjà payée. ».
+    L'encaissement vaut une nouvelle écriture :
+        La date vaut date.
+        La pièce vaut « C- » suivi de l'année de la cotisation suivi de « - » suivi du numéro du membre de la cotisation.
+        Le libellé vaut « Cotisation » suivi de " " suivi du nom du membre de la cotisation.
+    Conserver l'encaissement.
+    Imputer l'encaissement et référence et le montant de la cotisation et 0,00.
+    Imputer l'encaissement et 3000 et 0,00 et le montant de la cotisation.
+    Comptabiliser l'encaissement et date.
+    La date de paiement de la cotisation devient date.
+
+Pour noter un code et un jour et une explication et un débité et un crédité et un montant :
+    Si le nombre d'écritures conservées dont la pièce est code est nul :
+        La simple vaut une nouvelle écriture :
+            La date vaut jour.
+            La pièce vaut code.
+            Le libellé vaut explication.
+        Conserver la simple.
+        Imputer la simple et débité et montant et 0,00.
+        Imputer la simple et crédité et 0,00 et montant.
+        Comptabiliser la simple et jour.

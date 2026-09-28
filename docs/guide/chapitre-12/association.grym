@@ -1,0 +1,224 @@
+Remarque : Premiers pas, chapitre 12 : l'application des Amis du Tilleul.
+Utiliser « opérations ».
+
+Les écrans ont la couleur verte et le logo « tilleul.png ».
+
+Si le nombre de catégories conservées est nul :
+    Définir « Actif » et 80,00.
+    Définir « Junior » et 40,00.
+    Définir « Soutien » et 50,00.
+
+Si le nombre de membres conservés est nul :
+    Inscrire 1 et « Rochat » et « Anne » et 15.03.2019.
+    Inscrire 2 et « Bapst » et « Louis » et 02.09.2021.
+    Inscrire 3 et « Dupasquier » et « Élodie » et 10.01.2024.
+
+Remarque : les membres inscrits avant ce chapitre n'ont pas de catégorie : on la leur donne.
+Pour chaque membre conservé dont la catégorie est absente :
+    La catégorie du membre devient la catégorie conservée dont le nom est « Actif ».
+La junior vaut le membre conservé dont le numéro est 3.
+La catégorie de la junior devient la catégorie conservée dont le nom est « Junior ».
+
+Remarque : une cotisation par membre pour l'année, créée une seule fois.
+L'exercice vaut 2026.
+Pour chaque membre conservé :
+    Si le nombre de cotisations du membre dont l'année = exercice est nul :
+        La cotisation vaut une nouvelle cotisation :
+            Le membre vaut membre.
+            L'année vaut exercice.
+            Le montant vaut le tarif de la catégorie du membre.
+        Conserver la cotisation.
+
+Si le nombre de comptes conservés est nul :
+    Créer 1000 et « Caisse ».
+    Créer 1020 et « Banque ».
+    Créer 2000 et « Créanciers ».
+    Créer 2800 et « Fortune de l'association ».
+    Créer 3000 et « Cotisations ».
+    Créer 3200 et « Dons ».
+    Créer 4000 et « Frais des manifestations ».
+    Créer 4500 et « Loyer du local ».
+    Créer 4800 et « Frais bancaires ».
+
+Si le nombre d'écritures conservées est nul :
+    L'ouverture vaut une nouvelle écriture :
+        La date vaut 01.01.2026.
+        La pièce vaut « P-001 ».
+        Le libellé vaut « Fortune au 1er janvier ».
+    Conserver l'ouverture.
+    Imputer l'ouverture et 1000 et 300,00 et 0,00.
+    Imputer l'ouverture et 1020 et 2200,00 et 0,00.
+    Imputer l'ouverture et 2800 et 0,00 et 2500,00.
+    Comptabiliser l'ouverture et 01.01.2026.
+
+Si le nombre d'écritures conservées dont la pièce est « P-002 » est nul :
+    La fête vaut une nouvelle écriture :
+        La date vaut 12.04.2026.
+        La pièce vaut « P-002 ».
+        Le libellé vaut « Fête de printemps : traiteur ».
+    Conserver la fête.
+    Imputer la fête et 4000 et 450,00 et 0,00.
+    Imputer la fête et 1000 et 0,00 et 200,00.
+    Imputer la fête et 1020 et 0,00 et 250,00.
+    Comptabiliser la fête et 14.04.2026.
+
+Le payeur vaut le membre conservé dont le numéro est 1.
+Pour chaque cotisation du payeur dont l'année = exercice et la date de paiement est absente :
+    Encaisser la cotisation et 1000 et 20.02.2026.
+Le trésorier vaut le membre conservé dont le numéro est 2.
+Pour chaque cotisation du trésorier dont l'année = exercice et la date de paiement est absente :
+    Encaisser la cotisation et 1020 et 03.03.2026.
+
+Noter « P-003 » et 20.04.2026 et « Loyer d'avril » et 4500 et 1020 et 300,00.
+Noter « P-004 » et 05.05.2026 et « Don de la boulangerie » et 1020 et 3200 et 150,00.
+Noter « P-005 » et 30.06.2026 et « Frais de tenue de compte » et 4800 et 1020 et 12,00.
+
+Remarque : un calcul ne lit pas la base : le solde se calcule dans une action, qui range ses totaux ici.
+Le mouvement débiteur vaut 0,00.
+Le mouvement créditeur vaut 0,00.
+Le solde vaut 0,00.
+
+Pour totaliser un compte :
+    Le mouvement débiteur devient 0,00.
+    Le mouvement créditeur devient 0,00.
+    Pour chaque ligne du compte :
+        Si la comptabilisation de l'écriture de la ligne est présente :
+            Le mouvement débiteur devient le mouvement débiteur + le débit de la ligne.
+            Le mouvement créditeur devient le mouvement créditeur + le crédit de la ligne.
+    Selon la nature du numéro du compte :
+        Cas « actif » ou « charge » :
+            Le solde devient le mouvement débiteur − le mouvement créditeur.
+        Autrement :
+            Le solde devient le mouvement créditeur − le mouvement débiteur.
+
+Remarque : les comptes d'une nature, avec leur solde ; leur somme reste dans « le cumul ».
+Le cumul vaut 0,00.
+Pour présenter une rubrique :
+    Le cumul devient 0,00.
+    Pour chaque compte conservé, par numéro :
+        Si la nature du numéro du compte = rubrique :
+            Totaliser le compte.
+            Si le solde ≠ 0 :
+                Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le solde sur 10 à droite.
+                Le cumul devient le cumul + le solde.
+
+Remarque : les rapports des chapitres 9 et 10 deviennent des actions, qu'un bouton appelle.
+Pour imprimer la balance :
+    Afficher « Balance au 30.06.2026 ».
+    Afficher « Compte » sur 33 puis « Débit » sur 10 à droite puis « Crédit » sur 10 à droite puis « Solde » sur 10 à droite.
+    Le total débit vaut 0,00.
+    Le total crédit vaut 0,00.
+    Pour chaque compte conservé, par numéro :
+        Totaliser le compte.
+        Si le mouvement débiteur + le mouvement créditeur > 0 :
+            Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le mouvement débiteur sur 10 à droite puis le mouvement créditeur sur 10 à droite puis le solde sur 10 à droite.
+            Le total débit devient le total débit + le mouvement débiteur.
+            Le total crédit devient le total crédit + le mouvement créditeur.
+    Afficher « Totaux » sur 33 puis le total débit sur 10 à droite puis le total crédit sur 10 à droite.
+    Si le total débit = le total crédit, afficher « La balance est équilibrée. ».
+
+Pour imprimer les comptes annuels :
+    Afficher « Compte de résultat au 30.06.2026 ».
+    Afficher « Produits ».
+    Présenter « produit ».
+    Le total des produits vaut le cumul.
+    Afficher « Charges ».
+    Présenter « charge ».
+    Le total des charges vaut le cumul.
+    Le résultat vaut le total des produits − le total des charges.
+    Si le résultat ≥ 0, afficher « Bénéfice » sur 33 puis le résultat sur 10 à droite.
+    Sinon, afficher « Perte » sur 33 puis −le résultat sur 10 à droite.
+
+    Afficher « Bilan au 30.06.2026 ».
+    Afficher « Actifs ».
+    Présenter « actif ».
+    L'actif vaut le cumul.
+    Afficher « Passifs ».
+    Présenter « passif ».
+    Afficher « Résultat de l'exercice » sur 33 puis le résultat sur 10 à droite.
+    Le passif vaut le cumul + le résultat.
+    Afficher « Actif » sur 33 puis l'actif sur 10 à droite.
+    Afficher « Passif et résultat » sur 33 puis le passif sur 10 à droite.
+    Si l'actif = le passif, afficher « Le bilan est équilibré. ».
+
+L'écran d'accueil, « Amis du Tilleul », montre :
+    un bouton « Membres »,
+    un bouton « Cotisations impayées »,
+    un bouton « Noter une écriture »,
+    côte à côte :
+        un bouton « Balance »,
+        un bouton « Comptes annuels »,
+    un bouton « Fermer ».
+
+L'écran des membres montre :
+    la liste des membres conservés, par nom, avec le numéro, le prénom, le nom et le nom de la catégorie,
+    un bouton « Nouveau membre »,
+    un bouton « Fermer ».
+
+L'écran des impayés, « Cotisations impayées », montre :
+    la liste des cotisations conservées dont la date de paiement est absente, par montant, avec l'année, le prénom du membre, le nom du membre et le montant,
+    côte à côte :
+        un bouton « Encaisser en caisse »,
+        un bouton « Encaisser par banque »,
+    un bouton « Fermer ».
+
+L'écran de saisie, « Noter une écriture », montre :
+    une pièce (texte),
+    une date (date),
+    un libellé (texte),
+    un débité (compte),
+    un crédité (compte),
+    un montant (nombre),
+    côte à côte :
+        un bouton « Noter »,
+        un bouton « Fermer ».
+
+Quand on clique sur « Membres » dans l'écran d'accueil :
+    Ouvrir l'écran des membres.
+
+Quand on clique sur « Cotisations impayées » dans l'écran d'accueil :
+    Ouvrir l'écran des impayés.
+
+Quand on clique sur « Noter une écriture » dans l'écran d'accueil :
+    Ouvrir l'écran de saisie.
+
+Quand on clique sur « Balance » dans l'écran d'accueil :
+    Imprimer la balance.
+
+Quand on clique sur « Comptes annuels » dans l'écran d'accueil :
+    Imprimer les comptes annuels.
+
+Quand on clique sur « Fermer » dans l'écran d'accueil :
+    Fermer l'écran.
+
+Quand on choisit un membre dans l'écran des membres :
+    Ouvrir la fiche du membre.
+
+Quand on clique sur « Nouveau membre » dans l'écran des membres :
+    Le nouveau vaut un nouveau membre saisi.
+    Conserver le nouveau.
+
+Quand on clique sur « Fermer » dans l'écran des membres :
+    Fermer l'écran.
+
+Quand on clique sur « Encaisser en caisse » dans l'écran des impayés :
+    Si la cotisation choisie de l'écran est absente, refuser « Choisis d'abord une cotisation dans la liste. ».
+    Encaisser la cotisation choisie de l'écran et 1000 et aujourd'hui.
+
+Quand on clique sur « Encaisser par banque » dans l'écran des impayés :
+    Si la cotisation choisie de l'écran est absente, refuser « Choisis d'abord une cotisation dans la liste. ».
+    Encaisser la cotisation choisie de l'écran et 1020 et aujourd'hui.
+
+Quand on clique sur « Fermer » dans l'écran des impayés :
+    Fermer l'écran.
+
+Quand on clique sur « Noter » dans l'écran de saisie :
+    Si le nombre d'écritures conservées dont la pièce est la pièce de l'écran n'est pas nul :
+        Refuser « La pièce » puis la pièce de l'écran puis « existe déjà. ».
+    Noter la pièce de l'écran et la date de l'écran et le libellé de l'écran et le numéro du débité de l'écran et le numéro du crédité de l'écran et le montant de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran de saisie :
+    Fermer l'écran.
+
+Ouvrir l'écran d'accueil.

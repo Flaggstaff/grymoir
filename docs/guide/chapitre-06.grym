@@ -59,7 +59,7 @@ Pour chaque membre conservé :
 
 Un compte, conservé, a :
     un numéro (nombre entier), unique,
-    un intitulé (texte).
+    un intitulé (texte), unique.
 
 Remarque : la nature d'un compte se lit sur le premier chiffre de son numéro.
 La nature d'un numéro :

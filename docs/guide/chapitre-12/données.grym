@@ -1,0 +1,42 @@
+Remarque : Premiers pas, chapitre 12 : les données de l'association.
+
+Une catégorie, conservée, a :
+    un nom (texte), unique,
+    un tarif (nombre).
+
+Un membre, conservé, a :
+    un numéro (nombre entier), unique,
+    un nom (texte),
+    un prénom (texte),
+    une date d'entrée (date),
+    une catégorie (catégorie), facultative.
+
+Une cotisation, conservée, a :
+    un membre (membre), et disparaît avec lui,
+    une année (nombre entier),
+    un montant (nombre),
+    une date de paiement (date), facultative.
+
+Un compte, conservé, a :
+    un numéro (nombre entier), unique,
+    un intitulé (texte), unique.
+
+Une écriture, conservée, a :
+    une date (date),
+    une pièce (texte), unique,
+    un libellé (texte),
+    une comptabilisation (date), facultative.
+
+Une ligne, conservée, a :
+    une écriture (écriture), et disparaît avec elle,
+    un compte (compte),
+    un débit (nombre),
+    un crédit (nombre).
+
+Remarque : la nature d'un compte se lit sur le premier chiffre de son numéro.
+La nature d'un numéro :
+    Selon numéro :
+        Cas de 1000 à 1999, rendre « actif ».
+        Cas de 2000 à 2999, rendre « passif ».
+        Cas de 3000 à 3999, rendre « produit ».
+    Rendre « charge ».
