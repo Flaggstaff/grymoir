@@ -1,4 +1,4 @@
-Remarque : Premiers pas, chapitre 12 : les opérations ; elles ne passent que par leurs paramètres.
+Remarque : Premiers pas, chapitre 12 : les opérations et les rapports.
 Utiliser « données ».
 
 Pour inscrire un numéro et un nom et un prénom et une entrée :
@@ -64,3 +64,43 @@ Pour noter un code et un jour et une explication et un débité et un crédité 
         Imputer la simple et débité et montant et 0,00.
         Imputer la simple et crédité et 0,00 et montant.
         Comptabiliser la simple et jour.
+
+Pour présenter une rubrique :
+    Pour chaque compte conservé, par numéro :
+        Si la nature du numéro du compte = rubrique et le solde du compte ≠ 0 :
+            Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le solde du compte sur 10 à droite.
+
+Pour imprimer la balance :
+    Afficher « Balance au 30.06.2026 ».
+    Afficher « Compte » sur 33 puis « Débit » sur 10 à droite puis « Crédit » sur 10 à droite puis « Solde » sur 10 à droite.
+    Le total débit vaut 0,00.
+    Le total crédit vaut 0,00.
+    Pour chaque compte conservé, par numéro :
+        Si le nombre de lignes du compte n'est pas nul :
+            Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le mouvement débiteur du compte sur 10 à droite puis le mouvement créditeur du compte sur 10 à droite puis le solde du compte sur 10 à droite.
+            Le total débit devient le total débit + le mouvement débiteur du compte.
+            Le total crédit devient le total crédit + le mouvement créditeur du compte.
+    Afficher « Totaux » sur 33 puis le total débit sur 10 à droite puis le total crédit sur 10 à droite.
+    Si le total débit = le total crédit, afficher « La balance est équilibrée. ».
+
+Pour imprimer les comptes annuels :
+    Afficher « Compte de résultat au 30.06.2026 ».
+    Afficher « Produits ».
+    Présenter « produit ».
+    Afficher « Charges ».
+    Présenter « charge ».
+    Le résultat vaut le cumul de « produit » − le cumul de « charge ».
+    Si le résultat ≥ 0, afficher « Bénéfice » sur 33 puis le résultat sur 10 à droite.
+    Sinon, afficher « Perte » sur 33 puis −le résultat sur 10 à droite.
+
+    Afficher « Bilan au 30.06.2026 ».
+    Afficher « Actifs ».
+    Présenter « actif ».
+    Afficher « Passifs ».
+    Présenter « passif ».
+    Afficher « Résultat de l'exercice » sur 33 puis le résultat sur 10 à droite.
+    L'actif vaut le cumul de « actif ».
+    Le passif vaut le cumul de « passif » + le résultat.
+    Afficher « Actif » sur 33 puis l'actif sur 10 à droite.
+    Afficher « Passif et résultat » sur 33 puis le passif sur 10 à droite.
+    Si l'actif = le passif, afficher « Le bilan est équilibré. ».

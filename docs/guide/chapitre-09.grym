@@ -179,33 +179,23 @@ Noter « P-003 » et 20.04.2026 et « Loyer d'avril » et 4500 et 1020 et 300,00
 Noter « P-004 » et 05.05.2026 et « Don de la boulangerie » et 1020 et 3200 et 150,00.
 Noter « P-005 » et 30.06.2026 et « Frais de tenue de compte » et 4800 et 1020 et 12,00.
 
-Remarque : un calcul ne lit pas la base : le solde se calcule dans une action, qui range ses totaux ici.
-Le mouvement débiteur vaut 0,00.
-Le mouvement créditeur vaut 0,00.
-Le solde vaut 0,00.
+Remarque : le solde d'un compte se calcule sur la base ; seules les lignes des écritures comptabilisées comptent.
+Le mouvement débiteur d'un compte vaut la somme des débits des lignes du compte dont la comptabilisation de l'écriture est présente.
+Le mouvement créditeur d'un compte vaut la somme des crédits des lignes du compte dont la comptabilisation de l'écriture est présente.
 
-Pour totaliser un compte :
-    Le mouvement débiteur devient 0,00.
-    Le mouvement créditeur devient 0,00.
-    Pour chaque ligne du compte :
-        Si la comptabilisation de l'écriture de la ligne est présente :
-            Le mouvement débiteur devient le mouvement débiteur + le débit de la ligne.
-            Le mouvement créditeur devient le mouvement créditeur + le crédit de la ligne.
+Le solde d'un compte :
     Selon la nature du numéro du compte :
-        Cas « actif » ou « charge » :
-            Le solde devient le mouvement débiteur − le mouvement créditeur.
-        Autrement :
-            Le solde devient le mouvement créditeur − le mouvement débiteur.
+        Cas « actif » ou « charge », rendre le mouvement débiteur du compte − le mouvement créditeur du compte.
+    Rendre le mouvement créditeur du compte − le mouvement débiteur du compte.
 
 Afficher « Balance au 30.06.2026 ».
 Afficher « Compte » sur 33 puis « Débit » sur 10 à droite puis « Crédit » sur 10 à droite puis « Solde » sur 10 à droite.
 Le total débit vaut 0,00.
 Le total crédit vaut 0,00.
 Pour chaque compte conservé, par numéro :
-    Totaliser le compte.
-    Si le mouvement débiteur + le mouvement créditeur > 0 :
-        Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le mouvement débiteur sur 10 à droite puis le mouvement créditeur sur 10 à droite puis le solde sur 10 à droite.
-        Le total débit devient le total débit + le mouvement débiteur.
-        Le total crédit devient le total crédit + le mouvement créditeur.
+    Si le nombre de lignes du compte n'est pas nul :
+        Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le mouvement débiteur du compte sur 10 à droite puis le mouvement créditeur du compte sur 10 à droite puis le solde du compte sur 10 à droite.
+        Le total débit devient le total débit + le mouvement débiteur du compte.
+        Le total crédit devient le total crédit + le mouvement créditeur du compte.
 Afficher « Totaux » sur 33 puis le total débit sur 10 à droite puis le total crédit sur 10 à droite.
 Si le total débit = le total crédit, afficher « La balance est équilibrée. ».

@@ -1,4 +1,4 @@
-Remarque : Premiers pas, chapitre 12 : les données de l'association.
+Remarque : Premiers pas, chapitre 12 : les données de l'association et ce qu'on en calcule.
 
 Une catégorie, conservée, a :
     un nom (texte), unique,
@@ -40,3 +40,19 @@ La nature d'un numéro :
         Cas de 2000 à 2999, rendre « passif ».
         Cas de 3000 à 3999, rendre « produit ».
     Rendre « charge ».
+
+Remarque : le solde d'un compte se calcule sur la base ; seules les lignes des écritures comptabilisées comptent.
+Le mouvement débiteur d'un compte vaut la somme des débits des lignes du compte dont la comptabilisation de l'écriture est présente.
+Le mouvement créditeur d'un compte vaut la somme des crédits des lignes du compte dont la comptabilisation de l'écriture est présente.
+
+Le solde d'un compte :
+    Selon la nature du numéro du compte :
+        Cas « actif » ou « charge », rendre le mouvement débiteur du compte − le mouvement créditeur du compte.
+    Rendre le mouvement créditeur du compte − le mouvement débiteur du compte.
+
+Remarque : le cumul des soldes d'une nature de comptes.
+Le cumul d'une rubrique :
+    Le total vaut 0,00.
+    Pour chaque compte conservé :
+        Si la nature du numéro du compte = rubrique, le total devient le total + le solde du compte.
+    Rendre le total.

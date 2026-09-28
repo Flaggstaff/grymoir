@@ -180,7 +180,7 @@ Afficher « Cinq membres de 16 à 20 ans paient » puis le total puis « francs.
 Cinq membres de 16 à 20 ans paient 320,00 francs.
 ```
 
-Retiens cette forme : c'est ainsi qu'on fera les soldes des comptes au chapitre 9. D'autres boucles existent : `Tant que`, `Répéter 3 fois`. Grammaire, § 10.
+Retiens cette forme : c'est ainsi qu'on additionnera les soldes des comptes au chapitre 10. D'autres boucles existent : `Tant que`, `Répéter 3 fois`. Grammaire, § 10.
 
 Programme complet : `docs/guide/chapitre-03.grym`.
 
@@ -631,39 +631,31 @@ L'action `Noter` crée l'écriture, impute ses deux lignes et la comptabilise, m
 
 ### Le solde d'un compte
 
-Le solde se calcule à partir des lignes comptabilisées du compte. C'est un calcul, au sens courant ; mais en GrymoiR, un calcul ne lit pas la base : son résultat changerait d'un lancement à l'autre (§ 16.4). On écrit donc une action, qui range ses résultats dans des noms du programme :
+Le solde d'un compte se lit sur les lignes du compte, en ne gardant que celles des écritures comptabilisées : un brouillon ne compte pas. Deux outils du langage suffisent. `la somme des débits des lignes du compte` additionne un champ sur les objets de la base qu'un lien relie au compte ; `dont la comptabilisation de l'écriture est présente` pose une condition à travers le lien de la ligne vers son écriture. Grammaire, § 16.4 et § 16.10.
 
 ```grymoir
-Le mouvement débiteur vaut 0,00.
-Le mouvement créditeur vaut 0,00.
-Le solde vaut 0,00.
+Le mouvement débiteur d'un compte vaut la somme des débits des lignes du compte dont la comptabilisation de l'écriture est présente.
+Le mouvement créditeur d'un compte vaut la somme des crédits des lignes du compte dont la comptabilisation de l'écriture est présente.
 
-Pour totaliser un compte :
-    Le mouvement débiteur devient 0,00.
-    Le mouvement créditeur devient 0,00.
-    Pour chaque ligne du compte :
-        Si la comptabilisation de l'écriture de la ligne est présente :
-            Le mouvement débiteur devient le mouvement débiteur + le débit de la ligne.
-            Le mouvement créditeur devient le mouvement créditeur + le crédit de la ligne.
+Le solde d'un compte :
     Selon la nature du numéro du compte :
-        Cas « actif » ou « charge » :
-            Le solde devient le mouvement débiteur − le mouvement créditeur.
-        Autrement :
-            Le solde devient le mouvement créditeur − le mouvement débiteur.
+        Cas « actif » ou « charge », rendre le mouvement débiteur du compte − le mouvement créditeur du compte.
+    Rendre le mouvement créditeur du compte − le mouvement débiteur du compte.
 ```
 
-C'est l'accumulation dans une boucle du chapitre 3. Le solde d'un actif ou d'une charge se lit au débit, celui d'un passif ou d'un produit au crédit : `Selon` et la nature calculée au chapitre 6 font le tri.
+Ce sont des calculs, comme au chapitre 3. Un calcul peut lire la base, jamais y écrire : son résultat dépend des arguments, et de ce qui est conservé au moment où tu l'appelles. Le solde d'un actif ou d'une charge se lit au débit, celui d'un passif ou d'un produit au crédit : `Selon` et la nature calculée au chapitre 6 font le tri. La somme se fait en décimal exact, et une somme sur rien vaut 0 : un compte sans mouvement a un solde nul. Grammaire, § 9.4.
 
 ### La balance
 
 ```grymoir
 Pour chaque compte conservé, par numéro :
-    Totaliser le compte.
-    Si le mouvement débiteur + le mouvement créditeur > 0 :
-        Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le mouvement débiteur sur 10 à droite puis le mouvement créditeur sur 10 à droite puis le solde sur 10 à droite.
-        Le total débit devient le total débit + le mouvement débiteur.
-        Le total crédit devient le total crédit + le mouvement créditeur.
+    Si le nombre de lignes du compte n'est pas nul :
+        Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le mouvement débiteur du compte sur 10 à droite puis le mouvement créditeur du compte sur 10 à droite puis le solde du compte sur 10 à droite.
+        Le total débit devient le total débit + le mouvement débiteur du compte.
+        Le total crédit devient le total crédit + le mouvement créditeur du compte.
 ```
+
+Un compte sans aucune ligne n'apparaît pas dans la balance : `le nombre de lignes du compte` compte les lignes que son lien relie au compte.
 
 ```sortie
 Balance au 30.06.2026
@@ -690,28 +682,29 @@ Programme complet : `docs/guide/chapitre-09.grym`.
 
 ### Le compte de résultat
 
-Une action présente les comptes d'une nature et laisse leur somme dans `le cumul` :
+Le total d'une nature de comptes, les produits par exemple, est lui aussi un calcul : il parcourt les comptes conservés et additionne leurs soldes.
+
+```grymoir
+Le cumul d'une rubrique :
+    Le total vaut 0,00.
+    Pour chaque compte conservé :
+        Si la nature du numéro du compte = rubrique, le total devient le total + le solde du compte.
+    Rendre le total.
+```
+
+Le paramètre s'appelle `rubrique` : `nature` est déjà le nom d'un calcul, et un nom de formule ne sert qu'à une chose. Une action affiche les comptes d'une rubrique :
 
 ```grymoir
 Pour présenter une rubrique :
-    Le cumul devient 0,00.
     Pour chaque compte conservé, par numéro :
-        Si la nature du numéro du compte = rubrique :
-            Totaliser le compte.
-            Si le solde ≠ 0 :
-                Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le solde sur 10 à droite.
-                Le cumul devient le cumul + le solde.
+        Si la nature du numéro du compte = rubrique et le solde du compte ≠ 0 :
+            Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le solde du compte sur 10 à droite.
 ```
 
-Le paramètre s'appelle `rubrique` : `nature` est déjà le nom d'un calcul, et un nom de formule ne sert qu'à une chose.
-
 ```grymoir
-Présenter « produit ».
-Le total des produits vaut le cumul.
 Afficher « Charges ».
 Présenter « charge ».
-Le total des charges vaut le cumul.
-Le résultat vaut le total des produits − le total des charges.
+Le résultat vaut le cumul de « produit » − le cumul de « charge ».
 Si le résultat ≥ 0, afficher « Bénéfice » sur 33 puis le résultat sur 10 à droite.
 Sinon, afficher « Perte » sur 33 puis −le résultat sur 10 à droite.
 ```
@@ -736,11 +729,11 @@ La fête a coûté plus que les cotisations et le don n'ont rapporté : l'exerci
 Afficher « Bilan au 30.06.2026 ».
 Afficher « Actifs ».
 Présenter « actif ».
-L'actif vaut le cumul.
 Afficher « Passifs ».
 Présenter « passif ».
 Afficher « Résultat de l'exercice » sur 33 puis le résultat sur 10 à droite.
-Le passif vaut le cumul + le résultat.
+L'actif vaut le cumul de « actif ».
+Le passif vaut le cumul de « passif » + le résultat.
 ```
 
 ```sortie
@@ -883,12 +876,12 @@ Programme complet : `docs/guide/chapitre-11.grym`. Les essais de l'atelier le la
 
 Ton `association.grym` dépasse maintenant trois cents lignes. On le partage en trois fichiers, dans le même dossier :
 
-- `données.grym` : les six entités et le calcul de la nature ;
-- `opérations.grym` : les actions qui inscrivent, imputent, comptabilisent, encaissent, notent ;
-- `association.grym` : le programme, qui les utilise.
+- `données.grym` : les six entités et les calculs qui en découlent (la nature, les mouvements, le solde, le cumul) ;
+- `opérations.grym` : les actions qui inscrivent, imputent, comptabilisent, encaissent, notent, et les rapports ;
+- `association.grym` : le programme, qui les utilise : les données de départ et les écrans.
 
 ```grymoir
-Remarque : Premiers pas, chapitre 12 : les opérations ; elles ne passent que par leurs paramètres.
+Remarque : Premiers pas, chapitre 12 : les opérations et les rapports.
 Utiliser « données ».
 ```
 
@@ -897,9 +890,9 @@ Remarque : Premiers pas, chapitre 12 : l'application des Amis du Tilleul.
 Utiliser « opérations ».
 ```
 
-`Utiliser « données ».`, en tête du fichier, rend visibles ses déclarations ; elles se transmettent, et `association.grym` voit aussi les entités, à travers `opérations.grym`. Un fichier utilisé ne contient que des déclarations : entités, calculs, actions. Les données de départ, les rapports et les écrans restent dans le programme. Grammaire, § 21.
+`Utiliser « données ».`, en tête du fichier, rend visibles ses déclarations ; elles se transmettent, et `association.grym` voit aussi les entités, à travers `opérations.grym`. Un fichier utilisé ne contient que des déclarations : entités, calculs, actions. Les données de départ et les écrans restent dans le programme. Grammaire, § 21.
 
-Pourquoi `Totaliser` et les rapports restent-ils dans le programme ? Une action d'un fichier utilisé ne voit pas les variables du programme principal ; or `Totaliser` range ses résultats dans `le solde` et `le cumul`, qui en sont. Seules les actions qui ne passent que par leurs paramètres déménagent. C'est une limite du langage, que ce guide ne cache pas : une action ne rend pas de valeur, et un calcul ne lit pas la base ; il manque encore un moyen propre de calculer un solde à partir de la base.
+Une action d'un fichier utilisé ne voit pas les variables du programme principal : elle ne passe que par ses paramètres. Les rapports y trouvent leur place parce que le solde et le cumul sont des calculs, qui lisent la base eux-mêmes ; aucun n'a besoin d'une variable du programme.
 
 ### Couleur et logo
 

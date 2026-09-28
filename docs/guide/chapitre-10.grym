@@ -179,54 +179,44 @@ Noter « P-003 » et 20.04.2026 et « Loyer d'avril » et 4500 et 1020 et 300,00
 Noter « P-004 » et 05.05.2026 et « Don de la boulangerie » et 1020 et 3200 et 150,00.
 Noter « P-005 » et 30.06.2026 et « Frais de tenue de compte » et 4800 et 1020 et 12,00.
 
-Remarque : un calcul ne lit pas la base : le solde se calcule dans une action, qui range ses totaux ici.
-Le mouvement débiteur vaut 0,00.
-Le mouvement créditeur vaut 0,00.
-Le solde vaut 0,00.
+Remarque : le solde d'un compte se calcule sur la base ; seules les lignes des écritures comptabilisées comptent.
+Le mouvement débiteur d'un compte vaut la somme des débits des lignes du compte dont la comptabilisation de l'écriture est présente.
+Le mouvement créditeur d'un compte vaut la somme des crédits des lignes du compte dont la comptabilisation de l'écriture est présente.
 
-Pour totaliser un compte :
-    Le mouvement débiteur devient 0,00.
-    Le mouvement créditeur devient 0,00.
-    Pour chaque ligne du compte :
-        Si la comptabilisation de l'écriture de la ligne est présente :
-            Le mouvement débiteur devient le mouvement débiteur + le débit de la ligne.
-            Le mouvement créditeur devient le mouvement créditeur + le crédit de la ligne.
+Le solde d'un compte :
     Selon la nature du numéro du compte :
-        Cas « actif » ou « charge » :
-            Le solde devient le mouvement débiteur − le mouvement créditeur.
-        Autrement :
-            Le solde devient le mouvement créditeur − le mouvement débiteur.
+        Cas « actif » ou « charge », rendre le mouvement débiteur du compte − le mouvement créditeur du compte.
+    Rendre le mouvement créditeur du compte − le mouvement débiteur du compte.
 
-Remarque : les comptes d'une nature, avec leur solde ; leur somme reste dans « le cumul ».
-Le cumul vaut 0,00.
+Remarque : le cumul des soldes d'une nature de comptes : un calcul, lui aussi.
+Le cumul d'une rubrique :
+    Le total vaut 0,00.
+    Pour chaque compte conservé :
+        Si la nature du numéro du compte = rubrique, le total devient le total + le solde du compte.
+    Rendre le total.
+
 Pour présenter une rubrique :
-    Le cumul devient 0,00.
     Pour chaque compte conservé, par numéro :
-        Si la nature du numéro du compte = rubrique :
-            Totaliser le compte.
-            Si le solde ≠ 0 :
-                Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le solde sur 10 à droite.
-                Le cumul devient le cumul + le solde.
+        Si la nature du numéro du compte = rubrique et le solde du compte ≠ 0 :
+            Afficher le numéro du compte puis l'intitulé du compte sur 28 puis le solde du compte sur 10 à droite.
 
 Afficher « Compte de résultat au 30.06.2026 ».
 Afficher « Produits ».
 Présenter « produit ».
-Le total des produits vaut le cumul.
 Afficher « Charges ».
 Présenter « charge ».
-Le total des charges vaut le cumul.
-Le résultat vaut le total des produits − le total des charges.
+Le résultat vaut le cumul de « produit » − le cumul de « charge ».
 Si le résultat ≥ 0, afficher « Bénéfice » sur 33 puis le résultat sur 10 à droite.
 Sinon, afficher « Perte » sur 33 puis −le résultat sur 10 à droite.
 
 Afficher « Bilan au 30.06.2026 ».
 Afficher « Actifs ».
 Présenter « actif ».
-L'actif vaut le cumul.
 Afficher « Passifs ».
 Présenter « passif ».
 Afficher « Résultat de l'exercice » sur 33 puis le résultat sur 10 à droite.
-Le passif vaut le cumul + le résultat.
+L'actif vaut le cumul de « actif ».
+Le passif vaut le cumul de « passif » + le résultat.
 Afficher « Actif » sur 33 puis l'actif sur 10 à droite.
 Afficher « Passif et résultat » sur 33 puis le passif sur 10 à droite.
 Si l'actif = le passif, afficher « Le bilan est équilibré. ».
