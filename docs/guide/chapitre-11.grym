@@ -98,6 +98,11 @@ Une ligne, conservée, a :
     un débit (nombre),
     un crédit (nombre).
 
+Remarque : quel que soit le chemin, une écriture comptabilisée reste équilibrée.
+Chaque écriture conservée dont la comptabilisation est présente vérifie :
+    la somme des débits des lignes de l'écriture = la somme des crédits des lignes de l'écriture,
+    sinon « L'écriture » puis la pièce de l'écriture puis « n'est pas équilibrée. ».
+
 Remarque : une ligne s'ajoute à une écriture brouillon, jamais à une écriture comptabilisée.
 Pour imputer une écriture et une référence et un débit et un crédit :
     Si la comptabilisation de l'écriture est présente :

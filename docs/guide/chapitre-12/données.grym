@@ -33,6 +33,11 @@ Une ligne, conservée, a :
     un débit (nombre),
     un crédit (nombre).
 
+Remarque : quel que soit le chemin, une écriture comptabilisée reste équilibrée.
+Chaque écriture conservée dont la comptabilisation est présente vérifie :
+    la somme des débits des lignes de l'écriture = la somme des crédits des lignes de l'écriture,
+    sinon « L'écriture » puis la pièce de l'écriture puis « n'est pas équilibrée. ».
+
 Remarque : la nature d'un compte se lit sur le premier chiffre de son numéro.
 La nature d'un numéro :
     Selon numéro :

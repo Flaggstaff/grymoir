@@ -549,7 +549,21 @@ Et une écriture comptabilisée ne change plus :
 Refusé : L'écriture P-002 est comptabilisée : elle ne change plus.
 ```
 
-Une limite, pour être honnête : cette protection tient parce que les lignes ne se créent que par `Imputer`. Un programme qui écrirait `Le débit de la ligne devient 1000.` ailleurs la contournerait. Une règle vérifiée par le langage lui-même, à chaque conservation, est prévue (charte, art. 12) ; en attendant, la discipline, c'est toi.
+### Une règle, quel que soit le chemin
+
+Le `Refuser` de `Comptabiliser` ne protège que ce qui passe par `Comptabiliser`. Qu'un jour un écran « Corriger une ligne » écrive `Le débit de la ligne devient 1000,00.`, et l'écriture P-001, comptabilisée, deviendrait fausse sans que rien ne s'y oppose. Une règle ferme ce trou, une fois pour toutes :
+
+```grymoir
+Chaque écriture conservée dont la comptabilisation est présente vérifie :
+    la somme des débits des lignes de l'écriture = la somme des crédits des lignes de l'écriture,
+    sinon « L'écriture » puis la pièce de l'écriture puis « n'est pas équilibrée. ».
+```
+
+GrymoiR la vérifie à la fin de chaque transaction, juste avant d'écrire dans la base : à la fin du programme, avant une question, avant d'ouvrir un écran, à la fin de chaque événement. Pendant la transaction, une écriture peut être déséquilibrée (sa seconde ligne manque encore) ; au moment de valider, elle ne peut plus l'être. Si la règle est violée, la transaction échoue avec son message, et rien n'est écrit. La correction fautive donnerait donc « L'écriture P-001 n'est pas équilibrée. », et le débit resterait à 300,00. Grammaire, § 16.14.
+
+La condition parle de l'écriture par son nom (`la pièce de l'écriture`), comme le corps d'une boucle `Pour chaque`. Une règle est un calcul : elle lit la base, n'écrit rien.
+
+Pourquoi garder le `Refuser` de `Comptabiliser` ? Il répond tout de suite, et un `Essayer` peut le rattraper, comme dans l'exemple de l'écriture boiteuse. La règle, elle, attend la fin de la transaction : c'est le filet de sécurité, pas le premier contrôle.
 
 ### Le journal
 
