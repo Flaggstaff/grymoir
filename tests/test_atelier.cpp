@@ -307,7 +307,7 @@ int main(int argc, char **argv) {
         VERIFIER(pret("Cotisations impayées"));
         bouton("Cotisations impayées")->click();
         VERIFIER(pret("Encaisser en caisse") && attendre([&] { return table() && table()->rowCount() == 1; }));
-        VERIFIER(table()->item(0, 2)->text() == "Dupasquier");
+        VERIFIER(table()->item(0, 2)->text() == "Dupasquier" && table()->item(0, 0)->text() == "28.02.2026");
         bouton("Encaisser en caisse")->click();   // sans ligne choisie : refusé, l'écran le dit
         VERIFIER(attendre([&] {
             for (QLabel *l : e.findChildren<QLabel *>()) if (l->isVisible() && l->text().contains("Choisis d'abord")) return true;

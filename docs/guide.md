@@ -310,6 +310,7 @@ Une cotisation, conservée, a :
     un membre (membre), et disparaît avec lui,
     une année (nombre entier),
     un montant (nombre),
+    une échéance (date),
     une date de paiement (date), facultative.
 ```
 
@@ -319,14 +320,20 @@ Une cotisation par membre et par exercice, créée une seule fois :
 
 ```grymoir
 L'exercice vaut 2026.
+L'appel vaut 31.01.2026.
 Pour chaque membre conservé :
     Si le nombre de cotisations du membre dont l'année = exercice est nul :
         La cotisation vaut une nouvelle cotisation :
             Le membre vaut membre.
             L'année vaut exercice.
             Le montant vaut le tarif de la catégorie du membre.
+            L'échéance vaut appel + 1 mois.
         Conserver la cotisation.
 ```
+
+L'appel part le 31 janvier, payable à un mois. Février n'a pas de 31 : GrymoiR ramène l'échéance au dernier jour du mois, le 28.02.2026. C'est la règle des factures et des contrats. `appel + 30` ajouterait 30 jours ; on écrit aussi `+ 2 semaines`, `+ 1 an`, `− 3 mois`. Grammaire, § 14.2.
+
+L'échéance est rangée dans chaque cotisation, comme sur une facture : si le comité accorde deux mois l'an prochain, les cotisations de 2026 gardent la leur.
 
 `les cotisations du membre` : les cotisations dont le lien désigne ce membre. Rien n'est à déclarer, GrymoiR déduit l'inverse du lien. Grammaire, § 16.10. Les compléments s'enchaînent de droite à gauche : `le tarif de la catégorie du membre`.
 
@@ -355,6 +362,39 @@ Cotisations payées : 1
 ```
 
 Une année s'affiche `2026`, sans séparateur : un entier de quatre chiffres ne se groupe pas, comme en français, où l'on écrit « en 2026 » et non « en 2 026 ». Un montant, lui, se groupe : `1'234,50`. Grammaire, § 4.1.
+
+### Échéances et retards
+
+À la mi-avril, le trésorier cherche les retards : les cotisations impayées dont l'échéance est passée.
+
+```grymoir
+La date de relance vaut 15.04.2026.
+Afficher « En retard le » puis date de relance puis « : ».
+Pour chaque cotisation conservée dont la date de paiement est absente et l'échéance < date de relance, par échéance :
+    Afficher le prénom du membre de la cotisation puis le nom du membre de la cotisation puis « : échue le » puis l'échéance de la cotisation.
+Afficher « Rappel à envoyer d'ici le » puis date de relance + 2 semaines.
+```
+
+Dans un vrai programme, tu écrirais `aujourd'hui` à la place du 15.04.2026 ; le guide fixe la date pour que ta sortie ressemble à celle-ci, quel que soit le jour où tu le lis.
+
+Une date décalée se compare comme une autre. Les membres fidèles, entrés depuis cinq ans au moins :
+
+```grymoir
+Afficher « Membres depuis 5 ans au moins : ».
+Pour chaque membre conservé dont la date d'entrée ≤ date de relance − 5 ans, par nom :
+    Afficher le prénom du membre puis le nom du membre puis « : membre depuis le » puis la date d'entrée du membre.
+```
+
+```sortie
+En retard le 15.04.2026 :
+Louis Bapst : échue le 28.02.2026
+Élodie Dupasquier : échue le 28.02.2026
+Rappel à envoyer d'ici le 29.04.2026
+Membres depuis 5 ans au moins :
+Anne Rochat : membre depuis le 15.03.2019
+```
+
+`3 mois` seul ne veut rien dire : `Le délai vaut 3 mois.` est refusé. Une durée s'ajoute à une date ou s'en retire ; un délai variable se range comme un nombre, `appel + (délai) mois`.
 
 Au chapitre 8, encaisser une cotisation passera aussi l'écriture comptable ; il nous faut d'abord des comptes.
 
@@ -840,7 +880,7 @@ Quand on clique sur « Nouveau membre » dans l'écran des membres :
 
 ```grymoir
 L'écran des impayés, « Cotisations impayées », montre :
-    la liste des cotisations conservées dont la date de paiement est absente, par montant, avec l'année, le prénom du membre, le nom du membre et le montant,
+    la liste des cotisations conservées dont la date de paiement est absente, par échéance, avec l'échéance, le prénom du membre, le nom du membre et le montant,
     côte à côte :
         un bouton « Encaisser en caisse »,
         un bouton « Encaisser par banque »,
@@ -852,6 +892,8 @@ Quand on clique sur « Encaisser en caisse » dans l'écran des impayés :
     Si la cotisation choisie de l'écran est absente, refuser « Choisis d'abord une cotisation dans la liste. ».
     Encaisser la cotisation choisie de l'écran et 1000 et aujourd'hui.
 ```
+
+Les plus anciennes échéances viennent en tête. Pour ne garder que les retards, la condition se prolonge : `dont la date de paiement est absente et l'échéance < aujourd'hui`.
 
 `la cotisation choisie de l'écran` est la ligne sélectionnée, ou `absent` si aucune ne l'est ; `aujourd'hui`, la date du jour. Après l'événement, la liste se relit : la cotisation encaissée en disparaît. Si tu cliques sans choisir, le refus s'affiche dans l'écran, et rien n'est écrit.
 

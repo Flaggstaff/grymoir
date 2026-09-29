@@ -15,6 +15,7 @@ Une cotisation, conservée, a :
     un membre (membre), et disparaît avec lui,
     une année (nombre entier),
     un montant (nombre),
+    une échéance (date),
     une date de paiement (date), facultative.
 
 Pour inscrire un numéro et un nom et un prénom et une entrée :
@@ -47,14 +48,16 @@ Pour chaque membre conservé dont la catégorie est absente :
 La junior vaut le membre conservé dont le numéro est 3.
 La catégorie de la junior devient la catégorie conservée dont le nom est « Junior ».
 
-Remarque : une cotisation par membre pour l'année, créée une seule fois.
+Remarque : une cotisation par membre pour l'année, créée une seule fois, payable à un mois de l'appel.
 L'exercice vaut 2026.
+L'appel vaut 31.01.2026.
 Pour chaque membre conservé :
     Si le nombre de cotisations du membre dont l'année = exercice est nul :
         La cotisation vaut une nouvelle cotisation :
             Le membre vaut membre.
             L'année vaut exercice.
             Le montant vaut le tarif de la catégorie du membre.
+            L'échéance vaut appel + 1 mois.
         Conserver la cotisation.
 
 Le payeur vaut le membre conservé dont le numéro est 1.
@@ -65,3 +68,14 @@ Afficher « Cotisations » puis exercice puis « impayées : ».
 Pour chaque cotisation conservée dont l'année = exercice et la date de paiement est absente, par montant :
     Afficher le prénom du membre de la cotisation puis le nom du membre de la cotisation puis le montant de la cotisation.
 Afficher « Cotisations payées : » puis le nombre de cotisations conservées dont la date de paiement est présente.
+
+Remarque : les retards, à la date de la relance.
+La date de relance vaut 15.04.2026.
+Afficher « En retard le » puis date de relance puis « : ».
+Pour chaque cotisation conservée dont la date de paiement est absente et l'échéance < date de relance, par échéance :
+    Afficher le prénom du membre de la cotisation puis le nom du membre de la cotisation puis « : échue le » puis l'échéance de la cotisation.
+Afficher « Rappel à envoyer d'ici le » puis date de relance + 2 semaines.
+
+Afficher « Membres depuis 5 ans au moins : ».
+Pour chaque membre conservé dont la date d'entrée ≤ date de relance − 5 ans, par nom :
+    Afficher le prénom du membre puis le nom du membre puis « : membre depuis le » puis la date d'entrée du membre.

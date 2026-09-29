@@ -15,6 +15,7 @@ Une cotisation, conservée, a :
     un membre (membre), et disparaît avec lui,
     une année (nombre entier),
     un montant (nombre),
+    une échéance (date),
     une date de paiement (date), facultative.
 
 Pour inscrire un numéro et un nom et un prénom et une entrée :
@@ -47,14 +48,16 @@ Pour chaque membre conservé dont la catégorie est absente :
 La junior vaut le membre conservé dont le numéro est 3.
 La catégorie de la junior devient la catégorie conservée dont le nom est « Junior ».
 
-Remarque : une cotisation par membre pour l'année, créée une seule fois.
+Remarque : une cotisation par membre pour l'année, créée une seule fois, payable à un mois de l'appel.
 L'exercice vaut 2026.
+L'appel vaut 31.01.2026.
 Pour chaque membre conservé :
     Si le nombre de cotisations du membre dont l'année = exercice est nul :
         La cotisation vaut une nouvelle cotisation :
             Le membre vaut membre.
             L'année vaut exercice.
             Le montant vaut le tarif de la catégorie du membre.
+            L'échéance vaut appel + 1 mois.
         Conserver la cotisation.
 
 Un compte, conservé, a :
@@ -256,7 +259,7 @@ L'écran des membres montre :
     un bouton « Fermer ».
 
 L'écran des impayés, « Cotisations impayées », montre :
-    la liste des cotisations conservées dont la date de paiement est absente, par montant, avec l'année, le prénom du membre, le nom du membre et le montant,
+    la liste des cotisations conservées dont la date de paiement est absente, par échéance, avec l'échéance, le prénom du membre, le nom du membre et le montant,
     côte à côte :
         un bouton « Encaisser en caisse »,
         un bouton « Encaisser par banque »,
