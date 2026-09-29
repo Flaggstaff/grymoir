@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+# GrymoiR : refaire les icônes de l'atelier depuis leur source, outils/icone/grymoir-atelier.svg.
+#   pip install cairosvg pillow
+#   outils/icone/fabriquer
+# Produit, à côté de la source : GrymoiR.icns (macOS, de 16 à 1024 pixels) et grymoir-atelier.png (256 pixels :
+# la fenêtre de l'atelier sous Linux et Windows). Les deux sont versionnés : construire l'atelier ne demande ni
+# cairosvg ni Pillow.
+import io, os, struct
+import cairosvg
+from PIL import Image
+
+ici = os.path.dirname(os.path.abspath(__file__))
+source = os.path.join(ici, "grymoir-atelier.svg")
+image = Image.open(io.BytesIO(cairosvg.svg2png(url=source, output_width=1024, output_height=1024)))
+
+# Le format .icns : « icns », sa longueur, puis une entrée par taille (type, longueur, image PNG). Les mêmes types,
+# dans le même ordre, que l'atelier écrit pour une application fabriquée (src/atelier/fabrication.cpp).
+TYPES = [("icp4", 16), ("icp5", 32), ("ic11", 32), ("ic12", 64), ("ic07", 128), ("ic13", 256), ("ic08", 256),
+         ("ic14", 512), ("ic09", 512), ("ic10", 1024)]
+entrees = b""
+for t, cote in TYPES:
+    tampon = io.BytesIO()
+    image.resize((cote, cote), Image.LANCZOS).save(tampon, "PNG", optimize=True)
+    entrees += t.encode() + struct.pack(">I", 8 + len(tampon.getvalue())) + tampon.getvalue()
+with open(os.path.join(ici, "GrymoiR.icns"), "wb") as f:
+    f.write(b"icns" + struct.pack(">I", 8 + len(entrees)) + entrees)
+image.resize((256, 256), Image.LANCZOS).save(os.path.join(ici, "grymoir-atelier.png"), optimize=True)
+print("GrymoiR.icns et grymoir-atelier.png refaits.")

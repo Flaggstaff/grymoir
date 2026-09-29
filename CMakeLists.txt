@@ -54,11 +54,21 @@ function(grym_ressources_theme cible)
     qt_add_resources(${cible} "${cible}_polices" PREFIX "/polices" BASE vendor/atkinson FILES ${GRYM_POLICES})
     qt_add_resources(${cible} "${cible}_icones" PREFIX "/icones" BASE vendor/lucide FILES ${GRYM_ICONES})
     qt_add_resources(${cible} "${cible}_licences" PREFIX "/licences" BASE vendor FILES ${GRYM_LICENCES})
+    # Les icônes : celle de l'atelier (fenêtre, sous Linux et Windows) et celle, par défaut, des applications
+    # fabriquées dont le projet n'a pas d'image PNG.
+    qt_add_resources(${cible} "${cible}_icones_application" PREFIX "/application" BASE outils
+        FILES outils/icone/grymoir-atelier.png outils/icone-application.png)
 endfunction()
 grym_ressources_theme(grym-atelier)
+# L'icône de GrymoiR.app (Contents/Resources/GrymoiR.icns) ; sa source : outils/icone/grymoir-atelier.svg.
+if(APPLE)
+    target_sources(grym-atelier PRIVATE outils/icone/GrymoiR.icns)
+    set_source_files_properties(outils/icone/GrymoiR.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+endif()
 set_target_properties(grym-atelier PROPERTIES
     MACOSX_BUNDLE_BUNDLE_NAME "GrymoiR"
-    MACOSX_BUNDLE_GUI_IDENTIFIER "ch.grymoir.atelier")
+    MACOSX_BUNDLE_GUI_IDENTIFIER "ch.grymoir.atelier"
+    MACOSX_BUNDLE_ICON_FILE "GrymoiR.icns")
 if(NOT MSVC)
     target_compile_options(grym-atelier PRIVATE -Wall -Wextra -pedantic)
 endif()

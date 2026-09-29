@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- GrymoiR : icône de l'atelier. Grille des icônes de macOS : fond de 824 × 824 au centre d'un carré de 1024. -->
+  <defs>
+    <linearGradient id="fond" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B7BEA"/>
+      <stop offset="1" stop-color="#16418F"/>
+    </linearGradient>
+    <linearGradient id="page" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E4EAF6"/>
+    </linearGradient>
+    <filter id="ombre" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.30"/>
+    </filter>
+    <filter id="ombre-livre" x="-10%" y="-10%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="12" flood-color="#0B2A66" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#fond)" filter="url(#ombre)"/>
+  <g filter="url(#ombre-livre)">
+    <!-- couverture -->
+    <path d="M232 418 Q372 392 512 432 Q652 392 792 418 L792 740 Q652 716 512 752 Q372 716 232 740 Z" fill="#0F326F"/>
+    <!-- tranche des pages -->
+    <path d="M250 398 Q381 374 512 414 Q643 374 774 398 L774 714 Q643 692 512 730 Q381 692 250 714 Z" fill="#C9D5EC"/>
+    <!-- pages -->
+    <path d="M262 384 Q392 356 506 400 L506 704 Q392 664 262 690 Z" fill="url(#page)"/>
+    <path d="M762 384 Q632 356 518 400 L518 704 Q632 664 762 690 Z" fill="url(#page)"/>
+  </g>
+  <!-- page de gauche : la forme littéraire, en phrases ; page de droite : la forme compacte, en lignes indentées -->
+  <g stroke="#1F5AC7" stroke-width="16" stroke-linecap="round" fill="none" opacity="0.85">
+    <path d="M302 452 Q384 436 464 460"/>
+    <path d="M302 510 Q384 494 464 518"/>
+    <path d="M302 568 Q384 552 464 576"/>
+    <path d="M302 626 Q350 616 396 626"/>
+    <path d="M562 458 H690"/>
+    <path d="M606 514 H720"/>
+    <path d="M606 570 H676"/>
+    <path d="M562 626 H630"/>
+  </g>
+  <!-- étincelle -->
+  <path d="M512 196 Q524 262 590 274 Q524 286 512 352 Q500 286 434 274 Q500 262 512 196 Z" fill="#FFFFFF"/>
+  <path d="M640 238 Q645 262 668 266 Q645 270 640 294 Q635 270 612 266 Q635 262 640 238 Z" fill="#FFFFFF" opacity="0.8"/>
+</svg>

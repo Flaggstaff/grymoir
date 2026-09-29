@@ -48,6 +48,8 @@ Au quotidien, deux scripts suffisent, depuis le dossier du dépôt :
 
 Le guide « Premiers pas » (`docs/guide.md`) est vérifié comme le code : `test_guide` exécute le programme de chaque chapitre (`docs/guide/chapitre-NN.grym`), exige qu'il soit en forme canonique, que chaque bloc ```` ```grymoir ```` du chapitre en soit un extrait et que chaque bloc ```` ```sortie ```` apparaisse dans ce qu'il affiche, dans l'ordre. Un chapitre en plusieurs fichiers vit dans un dossier (`docs/guide/chapitre-12/association.grym` et les fichiers qu'il utilise) ; ses extraits peuvent venir de n'importe lequel. `test_guide` ne fait que compiler un programme à écrans, que la console n'ouvre pas : les chapitres 11 et 12 s'exécutent vraiment dans `test_atelier`, qui clique à la place du lecteur. Un changement du langage qui casse un exemple du guide casse donc les essais : corrigez le programme du chapitre, puis le texte.
 
+L'icône de l'atelier : sa source est `outils/icone/grymoir-atelier.svg` ; après l'avoir modifiée, `outils/icone/fabriquer` (Python, avec `pip install cairosvg pillow`) refait `GrymoiR.icns` (macOS) et `grymoir-atelier.png` (fenêtre, sous Linux et Windows), tous deux versionnés.
+
 Pour installer GrymoiR sur un Mac comme un logiciel ordinaire : `./paquet-mac` fabrique `GrymoiR.dmg` (atelier, bibliothèques Qt par `macdeployqt`, outil `grym`, exemple « Amis du Tilleul »). Au premier lancement sans projet retenu, l'atelier recopie l'exemple dans `Documents/GrymoiR` (jamais d'écrasement) et l'ouvre ; à tout moment, Fichier > Ouvrir l'exemple « Amis du Tilleul » fait de même, même si un projet est déjà retenu ; ses données se créent au premier « Lancer ». Signature ad hoc seulement : l'application tourne sur le Mac qui l'a construite ; la distribuer sans avertissement de macOS demande une signature et une notarisation Apple.
 
 Les applications des projets de `projets/` : GitHub les fabrique pour les trois systèmes (Actions > applications) ; à la main, sur un des trois systèmes : `outils/fabriquer-ci "projets/Amis du Tilleul" sortie`. « Amis du Tilleul » y est une copie du chapitre 12 du guide (`docs/guide/chapitre-12`) : changer l'un demande de changer l'autre.
@@ -272,3 +274,4 @@ Le reste du vocabulaire (mots de construction, synonymes) est encore dans le cod
 | 1.3 | 2026-09-28 | § 2 : chapitres en plusieurs fichiers ; programmes à écrans du guide vérifiés par `test_atelier` |
 | 1.4 | 2026-09-28 | § 2 : `./paquet-mac`, l'installateur macOS |
 | 1.5 | 2026-09-28 | § 2 : `projets/`, `outils/fabriquer-ci`, les applications fabriquées par GitHub |
+| 1.6 | 2026-09-29 | § 2 : l'icône de l'atelier et `outils/icone/fabriquer` |

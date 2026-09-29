@@ -30,6 +30,7 @@
 #include <QElapsedTimer>
 #include <QFile>
 #include <QImage>
+#include <QMap>
 #include <QFileInfo>
 #include <QPixmap>
 #include <QLabel>
@@ -483,6 +484,54 @@ int main(int argc, char **argv) {
         const QString texte = QString::fromUtf8(a.readAll());
         VERIFIER(texte.contains("nom : Amis du Tilleul\n") && texte.contains("programme : association.grym\n"));
         VERIFIER(!preparer_programme(p, "absent.grym", "X", d.filePath("autre"), &erreur) && erreur.contains("introuvable"));
+    }
+
+    // Icônes : celle de l'atelier est embarquée ; une application prend la première image PNG de son projet,
+    // sinon celle de GrymoiR ; le .icns a ses dix tailles, chacune une image PNG, dans la grille de macOS
+    {
+        VERIFIER(QImage(":/application/icone/grymoir-atelier.png").size() == QSize(256, 256));
+        QTemporaryDir d;
+        VERIFIER(icone_du_projet(d.path()).size() == QSize(256, 256));                  // icône par défaut
+        QImage logo(100, 50, QImage::Format_ARGB32);                                     // un logo plus large que haut
+        logo.fill(QColor("#1B7340"));
+        VERIFIER(logo.save(d.filePath("b-logo.png")));
+        QFile faux(d.filePath("a-faux.png"));                                            // illisible : ignoré
+        faux.open(QIODevice::WriteOnly);
+        faux.write("pas une image");
+        faux.close();
+        const QImage choisie = icone_du_projet(d.path());
+        VERIFIER(choisie.size() == QSize(100, 50));
+        const QString icns = d.filePath("x.icns");
+        VERIFIER(ecrire_icns(choisie, icns));
+        QFile f(icns);
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        const QByteArray o = f.readAll();
+        auto u32 = [&](int i) {
+            return (quint32(quint8(o[i])) << 24) | (quint32(quint8(o[i + 1])) << 16) | (quint32(quint8(o[i + 2])) << 8)
+                   | quint32(quint8(o[i + 3]));
+        };
+        VERIFIER(o.left(4) == "icns" && u32(4) == quint32(o.size()));
+        QStringList vus;
+        int i = 8;
+        bool tailles = true;
+        while (i + 8 <= o.size()) {
+            const quint32 n = u32(i + 4);
+            const QImage e = QImage::fromData(o.mid(i + 8, int(n) - 8), "PNG");
+            const QString type = QString::fromLatin1(o.mid(i, 4));
+            const int attendu = QMap<QString, int>{{"icp4", 16}, {"icp5", 32}, {"ic11", 32}, {"ic12", 64},
+                {"ic07", 128}, {"ic13", 256}, {"ic08", 256}, {"ic14", 512}, {"ic09", 512}, {"ic10", 1024}}.value(type);
+            if (e.width() != attendu || e.height() != attendu) tailles = false;
+            if (type == "ic10") {
+                // 824 pixels de large, centré : marges transparentes, couleur du logo au centre
+                VERIFIER(qAlpha(e.pixel(99, 512)) == 0 && qAlpha(e.pixel(925, 512)) == 0);
+                VERIFIER(qAlpha(e.pixel(512, 300)) == 0 && e.pixelColor(512, 512) == QColor("#1B7340"));
+            }
+            vus << type;
+            i += int(n);
+        }
+        VERIFIER(i == o.size() && tailles);
+        VERIFIER(vus.join(' ') == "icp4 icp5 ic11 ic12 ic07 ic13 ic08 ic14 ic09 ic10");
+        VERIFIER(!ecrire_icns(QImage(), d.filePath("vide.icns")));
     }
 
     // Analyse : la première erreur, avec sa position ; rien quand tout va bien

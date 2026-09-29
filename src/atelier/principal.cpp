@@ -12,6 +12,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <QIcon>
 #include <QMessageBox>
 #include <QSettings>
 #include <QStandardPaths>
@@ -101,6 +102,8 @@ int main(int argc, char **argv) {
         return app.exec() == 0 ? 0 : 1;
     }
     Theme::courant().installer(app);   // l'atelier et les programmes qu'il lance : même thème
+    // L'icône de l'atelier, pour la fenêtre et la barre des tâches (Linux, Windows) ; macOS prend celle du paquet.
+    QApplication::setWindowIcon(QIcon(":/application/icone/grymoir-atelier.png"));
     if (args.size() == 3 && args.at(1) == "--lancer") {
         std::signal(SIGINT, sur_arret);
         std::signal(SIGTERM, sur_arret);

@@ -200,10 +200,10 @@ Programme > Fabriquer l'application… fait du projet une application autonome, 
 
 - Une application, c'est le lanceur (l'atelier lui-même) et un dossier `Programme` : les fichiers du projet, sans ses données (`.grymd`), son bytecode (`.grymb`), `projet.grymatelier` ni fichiers cachés, et `application.txt` (nom, programme principal). Au démarrage, l'exécutable qui trouve ce dossier (`Contents/Resources/Programme` sous macOS, `Programme` à côté de lui ailleurs) ouvre le programme directement, sans éditeur, sous le nom de l'application.
 - Sa base vit dans le dossier de données que le système donne à l'application (`~/Library/Application Support/Nom` sous macOS, `~/.local/share/Nom` sous Linux) : l'application elle-même n'est pas modifiable, et les données survivent à une réinstallation. Les données de départ du programme s'y créent au premier lancement.
-- macOS : copie de GrymoiR.app (`ditto`), sans ses exemples, avec le programme ; nom et identifiant réécrits dans `Info.plist` (`plutil`) ; signature ad hoc (`codesign`) ; disque (`hdiutil`). Depuis un atelier qui n'a pas été installé par `GrymoiR.dmg`, l'application dépend du Qt du Mac, et l'atelier le dit.
+- macOS : copie de GrymoiR.app (`ditto`), sans ses exemples, avec le programme ; nom et identifiant réécrits dans `Info.plist` (`plutil`) ; icône : la première image PNG du projet, par ordre alphabétique, sinon celle de GrymoiR (`outils/icone-application.png`), écrite en `.icns` par l'atelier lui-même, dans la grille de macOS (824 pixels sur 1024) ; signature ad hoc (`codesign`) ; disque (`hdiutil`). Depuis un atelier qui n'a pas été installé par `GrymoiR.dmg`, l'application dépend du Qt du Mac, et l'atelier le dit.
 - Linux : le lanceur, un script au nom de l'application, le programme ; l'archive suppose Qt 6 sur la machine qui la reçoit.
 - Jamais d'écrasement : un paquet du même nom arrête la fabrication.
-- Limites : pas de signature Apple ni de notarisation (avertissement de macOS sur un autre Mac) ; pas d'icône propre sous macOS ; `Enregistrer … dans` écrit à côté du programme, dans l'application, qui n'est pas modifiable : à éviter dans une application fabriquée.
+- Limites : pas de signature Apple ni de notarisation (avertissement de macOS sur un autre Mac) ; pas d'icône propre sous Windows ; `Enregistrer … dans` écrit à côté du programme, dans l'application, qui n'est pas modifiable : à éviter dans une application fabriquée.
 
 **Voie C, les trois systèmes par GitHub (commencée le 28 septembre 2026).** Les projets vivent pour l'instant dans le dépôt de GrymoiR, dossier `projets/` (un dépôt par projet viendra plus tard). Le flux `.github/workflows/applications.yml` lance `outils/fabriquer-ci` sur macOS, Linux et Windows, pour chaque projet, et publie les paquets (Actions > applications > Artifacts) :
 
@@ -246,3 +246,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.26 | 2026-09-27 | § 6.5 : guide « Premiers pas » commencé (chapitres 1 à 3), vérifié par `test_guide` ; Fichier > Nouveau fichier… |
 | 0.27 | 2026-09-28 | § 6.5 : guide « Premiers pas » fini (douze chapitres) ; les programmes à écrans du guide (chapitres 11 et 12) sont vérifiés par les essais de l'atelier |
 | 0.28 | 2026-09-28 | § 8 : fabriquer une application (voie A : macOS, Linux ; `--fabriquer`) |
+| 0.29 | 2026-09-29 | Icône de l'atelier (un grimoire ouvert : forme littéraire à gauche, compacte à droite ; source `outils/icone/grymoir-atelier.svg`) ; § 8 : une application fabriquée pour macOS prend l'icône de son projet |

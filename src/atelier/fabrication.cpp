@@ -1,10 +1,12 @@
 // GrymoiR : l'atelier fabrique une application autonome (voir fabrication.h).
 #include "fabrication.h"
 
+#include <QBuffer>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QPainter>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QTemporaryDir>
@@ -60,6 +62,47 @@ bool preparer_programme(const QString &projet, const QString &principal, const Q
     return true;
 }
 
+QImage icone_du_projet(const QString &projet) {
+    for (const QFileInfo &i : QDir(projet).entryInfoList({"*.png", "*.PNG"}, QDir::Files, QDir::Name)) {
+        QImage image(i.filePath());
+        if (!image.isNull()) return image;
+    }
+    return QImage(":/application/icone-application.png");
+}
+
+bool ecrire_icns(const QImage &image, const QString &chemin) {
+    if (image.isNull()) return false;
+    // La grille de macOS : l'image tient dans un carré de 824 pixels, au centre d'un carré de 1024.
+    QImage grille(1024, 1024, QImage::Format_ARGB32_Premultiplied);
+    grille.fill(Qt::transparent);
+    {
+        const QImage dedans = image.scaled(824, 824, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        QPainter p(&grille);
+        p.drawImage((1024 - dedans.width()) / 2, (1024 - dedans.height()) / 2, dedans);
+    }
+    const std::pair<const char *, int> types[] = {{"icp4", 16}, {"icp5", 32}, {"ic11", 32}, {"ic12", 64},
+                                                  {"ic07", 128}, {"ic13", 256}, {"ic08", 256}, {"ic14", 512},
+                                                  {"ic09", 512}, {"ic10", 1024}};
+    auto longueur = [](quint32 n) {   // entier de quatre octets, poids fort d'abord
+        QByteArray o(4, '\0');
+        for (int i = 0; i < 4; i++) o[i] = char((n >> (24 - 8 * i)) & 0xFF);
+        return o;
+    };
+    QByteArray entrees;
+    for (const auto &[type, cote] : types) {
+        QByteArray png;
+        QBuffer tampon(&png);
+        tampon.open(QIODevice::WriteOnly);
+        const QImage taille = cote == 1024 ? grille : grille.scaled(cote, cote, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        if (!taille.save(&tampon, "PNG")) return false;
+        entrees += QByteArray(type) + longueur(quint32(8 + png.size())) + png;
+    }
+    QFile f(chemin);
+    if (!f.open(QIODevice::WriteOnly)) return false;
+    const QByteArray tout = QByteArray("icns") + longueur(quint32(8 + entrees.size())) + entrees;
+    return f.write(tout) == tout.size();
+}
+
 // Un outil du système, attendu jusqu'au bout ; faux, avec son message, s'il échoue.
 static bool outil(const QString &programme, const QStringList &arguments, QString *erreur) {
     QProcess p;
@@ -88,6 +131,12 @@ QString fabriquer_application(const QString &projet, const QString &principal, c
     if (!outil("ditto", {source, app}, erreur)) return QString();   // ditto garde liens et attributs du paquet
     QDir(app + "/Contents/Resources/Exemples").removeRecursively();
     if (!preparer_programme(projet, principal, nom, app + "/Contents/Resources/Programme", erreur)) return QString();
+    // L'icône du paquet : celle de l'application, à la place de celle de l'atelier (même nom de fichier,
+    // CFBundleIconFile ne change pas).
+    if (!ecrire_icns(icone_du_projet(projet), app + "/Contents/Resources/GrymoiR.icns")) {
+        *erreur = "L'icône de l'application ne peut pas être écrite.";
+        return QString();
+    }
     const QString plist = app + "/Contents/Info.plist";
     QString ident = nom.toLower();
     ident.replace(QRegularExpression("[^a-z0-9]+"), "-");
