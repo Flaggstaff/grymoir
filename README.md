@@ -75,7 +75,7 @@ Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
     ./grym lancer exemples/partotheque.grym  # bibliothèque de partitions : formulaires, Essayer, corbeille
     ./grym servir exemples/partotheque.grym  # la même, dans le navigateur (serveur local, 127.0.0.1)
 
-`grym servir` ouvre le navigateur sur une adresse locale protégée par un jeton, et le programme y tourne sans une ligne à changer : chaque formulaire devient une page, les liens proposent les objets existants, les fichiers se téléversent, les images s'affichent. Le Terminal reste occupé tant que l'application tourne ; Ctrl+C l'arrête. Options : `--port N`, `--sans-navigateur`. Le protocole et ses règles de sécurité : `docs/v2.md`, § 5, § 9 et § 10.
+`grym servir` ouvre le navigateur sur une adresse locale protégée par un jeton, et le programme y tourne sans une ligne à changer : chaque formulaire devient une page, les liens proposent les objets existants, les fichiers se téléversent, les images s'affichent. Un programme à écrans (`docs/ecrans.md`) s'y montre aussi, avec sa couleur et son logo (`docs/web.md`). Le Terminal reste occupé tant que l'application tourne ; Ctrl+C l'arrête. Options : `--port N`, `--sans-navigateur`. Le protocole et ses règles de sécurité : `docs/v2.md`, § 5, § 9 et § 10.
     ./grym --base essai.grymd                # boucle interactive sur une base conservée
     ./grym-lexeur exemples/facture.grym      # jetons
     ./grym-arbre exemples/facture.grym    # arbre syntaxique

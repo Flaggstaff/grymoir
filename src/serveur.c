@@ -1,5 +1,5 @@
-/* GrymoiR : l'interface par le navigateur, servie en local (v2.0-a).
- * Spécification : docs/v2.md (révision 0.7), § 4, § 5 et § 9 ; docs/vm.md, § 13.
+/* GrymoiR : l'interface par le navigateur, servie en local (v2.0-a), avec les écrans (W1).
+ * Spécification : docs/v2.md (révision 0.7), § 4, § 5 et § 9 ; docs/vm.md, § 13 ; docs/web.md, § 2, § 3 et § 5.
  */
 #ifndef _WIN32
 #define _POSIX_C_SOURCE 200809L
@@ -61,6 +61,18 @@ typedef struct {
     void *vcontexte;
 } Question;
 
+/* Un écran ouvert, tel que le navigateur le montre (docs/web.md, § 3) : une copie de ce que la machine décrit. */
+typedef struct {
+    char *titre;
+    size_t n;
+    ElementEcran *el;       /* chaînes et tableaux copiés, libérés avec l'écran */
+    char ***cellules;       /* liste : nb_lignes × nb_colonnes cellules */
+    size_t *nb_lignes;
+    long *choisie;          /* liste : la ligne choisie en dernier, ou −1 (« le … choisi de l'écran ») */
+    char **valeurs;         /* zone : son texte, tel que la machine le donne avant chaque attente */
+    char *erreur;           /* message à montrer sous le titre, jusqu'au prochain événement */
+} EcranWeb;
+
 struct Serveur {
     int port;
     char jeton[33];
@@ -80,6 +92,18 @@ struct Serveur {
     long prochaine_image;
     int fin_proche;       /* page finale servie : on ne sert plus que sa feuille et ses images, puis on s'en va */
     char *avis;           /* message à montrer une fois (réponse à une question close) */
+    /* Écrans (docs/web.md, § 3 et § 5) */
+    EcranWeb **ecrans;    /* la pile : le dernier est celui du dessus */
+    size_t nb_ecrans, cap_ecrans;
+    int attente_ecran;    /* la machine attend un événement */
+    Evenement *file;      /* événements tirés d'un seul envoi, rendus un par un à la machine */
+    size_t nb_file, tete_file;
+    char *ev_texte;       /* ce que désigne le dernier événement rendu, gardé jusqu'au suivant */
+    long *ev_choisies;
+    int accent;           /* rang dans la palette (0 : bleue) */
+    unsigned char *logo;
+    size_t taille_logo;
+    const char *type_logo;
 };
 
 /* ---------------------------------------------------------------- */
@@ -378,22 +402,107 @@ static int authentifie(const Serveur *s, const Requete *r) {
 /* Réponses                                                         */
 /* ---------------------------------------------------------------- */
 
-static const char STYLE[] =
-    "body{margin:0;background:#f7f7f5;color:#1d1d1b;font:16px/1.5 system-ui,sans-serif}"
-    "main{max-width:52rem;margin:2rem auto;padding:0 1rem}"
-    "pre.sortie{font:15px/1.4 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;margin:0 0 1.5rem}"
-    "form{background:#fff;border:1px solid #d6d6d0;border-radius:6px;padding:1rem 1.25rem}"
-    "p.champ{margin:.5rem 0}label{display:inline-block;min-width:12rem}"
-    "input[type=text]{font:inherit;padding:.25rem .4rem;width:18rem;border:1px solid #b9b9b2;border-radius:4px}"
-    "input[readonly]{background:#eeeeea;color:#555}"
-    ".refus{display:block;color:#a31d1d;margin-left:12rem}.avis{color:#8a5a00}.erreur{color:#a31d1d}"
-    "button{font:inherit;padding:.3rem .9rem;margin-right:.5rem}"
-    "select{font:inherit;padding:.2rem .3rem}.actuel,.recu{color:#555;margin-left:.5rem}"
-    "pre.sortie img{display:block;max-width:100%;max-height:24rem;margin:.4rem 0;border-radius:4px}"
-    "table.fiche{border-collapse:collapse;margin:.5rem 0 1rem;background:#fff;border:1px solid #d6d6d0}"
-    "table.fiche caption{text-align:left;font-weight:600;padding:.3rem 0}"
-    "table.fiche th{text-align:left;font-weight:500;color:#555;padding:.3rem 1.2rem .3rem .7rem;vertical-align:top}"
-    "table.fiche td{padding:.3rem .7rem}table.fiche img{max-width:16rem;max-height:12rem;border-radius:4px}";
+/* Jetons de couleur du thème, repris de src/atelier/theme/grymoir-jetons.json (docs/web.md, § 2.2).
+ * test_serveur vérifie qu'ils n'en divergent pas. */
+static const char *const NOMS_BASE[] = { "fond", "surface", "surface-alt", "bordure", "separateur", "texte", "texte-2", "texte-desactive", "fond-desactive", "danger", "sur-danger", "danger-doux", "survol" };
+static const char *const BASE_CLAIR[] = { "#F5EFE6", "#FFFCF7", "#EEE5D8", "#86776A", "#E0D5C6", "#2B221B", "#675A4D", "#B2A698", "#EFE8DE", "#B42328", "#FFFFFF", "#F9EBE6", "#F6F0E8" };
+static const char *const BASE_SOMBRE[] = { "#1B1613", "#241E1A", "#2F2822", "#8E8174", "#40372F", "#F2EAE0", "#C3B6A7", "#6B6158", "#2A231E", "#FF7F75", "#1B1613", "#472E29", "#2A231E" };
+static const char *const NOMS_ACCENT[] = { "accent", "accent-survol", "accent-enfonce", "sur-accent", "accent-doux" };
+static const char *const PALETTE[] = { "bleue", "verte", "turquoise", "violette", "grise" };
+static const char *const ACCENTS[5][2][5] = {
+    { { "#1F5AC7", "#1B4DAB", "#16418F", "#FFFFFF", "#D7DFEE" }, { "#86AEFF", "#9CBDFF", "#B2CBFF", "#1B1613", "#383B48" } },   /* bleue */
+    { { "#1B7340", "#176337", "#13532E", "#FFFFFF", "#D6E3D6" }, { "#66C991", "#82D3A5", "#9DDCB9", "#1B1613", "#314032" } },   /* verte */
+    { { "#0B6B79", "#095C68", "#084D57", "#FFFFFF", "#D3E2E0" }, { "#56C3CF", "#74CED8", "#93D9E0", "#1B1613", "#2E3F3E" } },   /* turquoise */
+    { { "#6743BF", "#593AA4", "#4A308A", "#FFFFFF", "#E4DBED" }, { "#B9A5FF", "#C6B5FF", "#D2C5FF", "#1B1613", "#423948" } },   /* violette */
+    { { "#645A50", "#564D45", "#48413A", "#FFFFFF", "#E3DFD9" }, { "#BCB1A5", "#C8BFB5", "#D4CDC5", "#1B1613", "#423B36" } },   /* grise */
+};
+
+const char *serveur_jeton(int sombre, int accent, const char *nom) {
+    for (size_t k = 0; k < sizeof NOMS_BASE / sizeof *NOMS_BASE; k++)
+        if (strcmp(NOMS_BASE[k], nom) == 0) return sombre ? BASE_SOMBRE[k] : BASE_CLAIR[k];
+    for (size_t k = 0; accent >= 0 && accent < 5 && k < sizeof NOMS_ACCENT / sizeof *NOMS_ACCENT; k++)
+        if (strcmp(NOMS_ACCENT[k], nom) == 0) return ACCENTS[accent][sombre ? 1 : 0][k];
+    return NULL;
+}
+
+const char *serveur_palette(int accent) { return accent >= 0 && accent < 5 ? PALETTE[accent] : NULL; }
+
+/* Les variables d'un mode : « --fond:#F5EFE6; » pour chaque jeton. */
+static void variables(Chaine *c, int sombre, int accent) {
+    chaine_ajouter(c, ":root{");
+    for (size_t k = 0; k < sizeof NOMS_BASE / sizeof *NOMS_BASE; k++) {
+        char *v = grym_formater("--%s:%s;", NOMS_BASE[k], sombre ? BASE_SOMBRE[k] : BASE_CLAIR[k]);
+        chaine_ajouter(c, v);
+        free(v);
+    }
+    for (size_t k = 0; k < sizeof NOMS_ACCENT / sizeof *NOMS_ACCENT; k++) {
+        char *v = grym_formater("--%s:%s;", NOMS_ACCENT[k], ACCENTS[accent][sombre ? 1 : 0][k]);
+        chaine_ajouter(c, v);
+        free(v);
+    }
+    chaine_ajouter(c, sombre ? "color-scheme:dark}" : "color-scheme:light}");
+}
+
+/* La feuille de style : les jetons du thème, clair ou sombre selon le système du visiteur (docs/web.md, § 2.2).
+ * Mesures reprises des jetons : corps 14/20, titre d'écran 20/28, étiquette 12/16, contrôles de 32, rayons 8 et 12. */
+static char *feuille_de_style(const Serveur *s) {
+    Chaine c = {0};
+    int a = s->accent >= 0 && s->accent < 5 ? s->accent : 0;
+    variables(&c, 0, a);
+    chaine_ajouter(&c, "@media (prefers-color-scheme:dark){");
+    variables(&c, 1, a);
+    chaine_ajouter(&c, "}");
+    chaine_ajouter(&c,
+    "body{margin:0;background:var(--fond);color:var(--texte);"
+    "font:14px/20px \"Atkinson Hyperlegible Next\",system-ui,sans-serif}"
+    "main{max-width:64rem;margin:0 auto;padding:24px}"
+    "pre.sortie{font:13px/20px \"Atkinson Hyperlegible Mono\",ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;margin:0 0 24px}"
+    "form.question{background:var(--surface);border:1px solid var(--separateur);border-radius:12px;padding:16px 24px}"
+    "p.champ{margin:8px 0}p.champ>label:first-child{display:inline-block;min-width:12rem}"
+    "input[type=text],select{font:inherit;color:var(--texte);background:var(--surface);min-height:32px;box-sizing:border-box;"
+    "padding:4px 8px;border:1px solid var(--bordure);border-radius:8px}"
+    "input[type=text]{width:18rem;max-width:100%}"
+    "input[readonly]{background:var(--fond-desactive);color:var(--texte-2)}"
+    "input:focus,select:focus,button:focus{outline:2px solid var(--accent);outline-offset:1px}"
+    ".refus{display:block;color:var(--danger);margin-left:12rem}.avis{color:var(--texte-2)}.erreur{color:var(--danger)}"
+    "button{font:inherit;font-weight:600;min-height:32px;padding:4px 16px;margin-right:8px;color:var(--texte);"
+    "background:var(--surface);border:1px solid var(--bordure);border-radius:8px;cursor:pointer}"
+    "button:hover{background:var(--survol)}"
+    ".actuel,.recu{color:var(--texte-2);margin-left:8px}"
+    "pre.sortie img{display:block;max-width:100%;max-height:24rem;margin:4px 0;border-radius:6px}"
+    "table.fiche{border-collapse:collapse;margin:8px 0 16px;background:var(--surface);border:1px solid var(--separateur)}"
+    "table.fiche caption{text-align:left;font-weight:600;padding:4px 0}"
+    "table.fiche th{text-align:left;font-weight:600;color:var(--texte-2);padding:4px 16px 4px 12px;vertical-align:top}"
+    "table.fiche td{padding:4px 12px}table.fiche img{max-width:16rem;max-height:12rem;border-radius:6px}"
+    /* écrans (docs/web.md, § 3) */
+    ".fil{color:var(--texte-2);font-size:12px;line-height:16px;margin:0 0 8px}"
+    "form.ecran{background:var(--surface);border:1px solid var(--separateur);border-radius:12px;padding:24px;"
+    "display:flex;flex-direction:column;gap:12px}"
+    ".entete{display:flex;align-items:center;gap:16px}"
+    ".entete h1{flex:1;margin:0;font-size:20px;line-height:28px;font-weight:600}"
+    ".entete img{height:24px;width:auto}.accueil .entete img{height:64px}"
+    ".entete button{margin:0}"
+    ".message{margin:0;padding:8px 12px;border:1px solid var(--danger);border-radius:8px;"
+    "background:var(--danger-doux);color:var(--danger)}"
+    ".cote{display:flex;flex-wrap:wrap;gap:16px}.cote>*{flex:1 1 16rem;min-width:0}"
+    ".sous{display:flex;flex-direction:column;gap:12px}"
+    ".boutons{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.boutons button{margin:0}"
+    ".texte{margin:0}"
+    ".zone label{display:block;font-size:12px;line-height:16px;font-weight:600;color:var(--texte-2);margin-bottom:4px}"
+    ".zone label.case{display:flex;align-items:center;gap:8px;font-size:14px;line-height:20px;font-weight:400;color:var(--texte)}"
+    ".liste{overflow-x:auto}"
+    "table.liste{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}"
+    "table.liste th{text-align:left;font-size:12px;line-height:16px;font-weight:600;color:var(--texte-2);"
+    "padding:8px 12px;border-bottom:1px solid var(--bordure)}"
+    "table.liste td{padding:6px 12px;border-bottom:1px solid var(--separateur)}"
+    "table.liste tr.choisie td{background:var(--accent-doux)}"
+    "table.liste td.vide{color:var(--texte-2)}"
+    "button.ligne{all:unset;cursor:pointer;color:var(--accent);text-decoration:underline;text-underline-offset:3px}"
+    "button.ligne:focus{outline:2px solid var(--accent);outline-offset:2px}"
+    ".invisible{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}"
+    "h2.journal{font-size:12px;line-height:16px;font-weight:600;color:var(--texte-2);margin:24px 0 8px}");
+    return chaine_rendre(&c);
+}
 
 static void repondre_octets(Serveur *s, const char *statut, const char *type, const unsigned char *corps,
                             size_t taille, const char *en_plus) {
@@ -432,7 +541,8 @@ static void rediriger(Serveur *s, const char *en_plus) {
 }
 
 static void debut_page(const Serveur *s, Chaine *c) {
-    chaine_ajouter(c, "<!DOCTYPE html>\n<html lang=\"fr\"><head><meta charset=\"utf-8\"><title>");
+    chaine_ajouter(c, "<!DOCTYPE html>\n<html lang=\"fr\"><head><meta charset=\"utf-8\">"
+                      "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>");
     echapper(c, s->titre);
     chaine_ajouter(c, "</title><link rel=\"stylesheet\" href=\"/style.css\"></head><body><main>\n");
     if (s->affichage.n || s->nb_images) {
@@ -513,8 +623,8 @@ static void page_question(Serveur *s, const Question *q) {
     char *num = grym_formater("%ld", s->numero);
     /* autocomplete="off" : chaque page nomme ses champs c0, c1…, et le navigateur proposerait sous « Choix ? »
      * tout ce qu'on a tapé un jour dans un premier champ, noms de compositeurs compris (docs/v2.md, § 10) */
-    chaine_ajouter(&c, multipart ? "<form method=\"post\" action=\"/reponse\" autocomplete=\"off\" enctype=\"multipart/form-data\">"
-                                 : "<form method=\"post\" action=\"/reponse\" autocomplete=\"off\">");
+    chaine_ajouter(&c, multipart ? "<form class=\"question\" method=\"post\" action=\"/reponse\" autocomplete=\"off\" enctype=\"multipart/form-data\">"
+                                 : "<form class=\"question\" method=\"post\" action=\"/reponse\" autocomplete=\"off\">");
     chaine_ajouter(&c, "<input type=\"hidden\" name=\"q\" value=\"");
     chaine_ajouter(&c, num);
     chaine_ajouter(&c, "\">\n");
@@ -650,11 +760,271 @@ static void page_finale(Serveur *s, const char *erreur, const char *annulation) 
     free(c.d);
 }
 
+
+/* ---------------------------------------------------------------- */
+/* Écrans (docs/web.md, § 3 et § 5)                                 */
+/* ---------------------------------------------------------------- */
+
+static EcranWeb *ecran_dessus(const Serveur *s) { return s->nb_ecrans ? s->ecrans[s->nb_ecrans - 1] : NULL; }
+
+static int est_case(const ElementEcran *e) { return e->type && strcmp(e->type, "vrai ou faux") == 0; }
+
+/* Une zone de saisie : son libellé au-dessus, son contrôle ; une case à cocher porte son libellé. */
+static void zone(Chaine *c, const EcranWeb *e, size_t k) {
+    const ElementEcran *el = &e->el[k];
+    const char *v = e->valeurs[k] ? e->valeurs[k] : "";
+    char *id = grym_formater("z%lu", (unsigned long)k);
+    chaine_ajouter(c, "<div class=\"zone\">");
+    if (est_case(el)) {   /* la présence de « …p » dit qu'on a vu la case : décochée, elle n'envoie rien */
+        chaine_ajouter(c, "<input type=\"hidden\" name=\"");
+        chaine_ajouter(c, id);
+        chaine_ajouter(c, "p\" value=\"1\"><label class=\"case\"><input type=\"checkbox\" name=\"");
+        chaine_ajouter(c, id);
+        chaine_ajouter(c, strcmp(v, "oui") == 0 ? "\" value=\"oui\" checked> " : "\" value=\"oui\"> ");
+        echapper(c, el->texte);
+        chaine_ajouter(c, "</label>");
+    } else {
+        chaine_ajouter(c, "<label for=\"");
+        chaine_ajouter(c, id);
+        chaine_ajouter(c, "\">");
+        echapper(c, el->texte);
+        chaine_ajouter(c, "</label>");
+        if (el->nb_choix) {   /* une zone liée à une entité : le menu de ses clés, ligne vide en tête */
+            chaine_ajouter(c, "<select id=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "\" name=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "\">");
+            int trouvee = !*v;
+            for (size_t j = 0; j < el->nb_choix && !trouvee; j++) trouvee = strcmp(el->choix[j], v) == 0;
+            option(c, "", "", !*v);
+            if (!trouvee) option(c, v, v, 1);   /* la valeur actuelle hors du menu n'est jamais perdue en silence */
+            for (size_t j = 0; j < el->nb_choix; j++) option(c, el->choix[j], el->choix[j], strcmp(el->choix[j], v) == 0);
+            chaine_ajouter(c, "</select>");
+        } else {
+            chaine_ajouter(c, "<input type=\"text\" id=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "\" name=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "\" value=\"");
+            echapper(c, v);
+            chaine_ajouter(c, "\"");
+            /* la virgule suisse n'est pas un nombre pour un champ numérique : texte, vérifié par la machine */
+            if (el->type && strcmp(el->type, "nombre") == 0) chaine_ajouter(c, " inputmode=\"decimal\"");
+            else if (el->type && strcmp(el->type, "nombre entier") == 0) chaine_ajouter(c, " inputmode=\"numeric\"");
+            chaine_ajouter(c, ">");
+        }
+    }
+    chaine_ajouter(c, "</div>");
+    free(id);
+}
+
+/* Une liste : un tableau ; la première cellule de chaque ligne la choisit (« Quand on choisit … »). */
+static void liste(Chaine *c, const EcranWeb *e, size_t k) {
+    const ElementEcran *el = &e->el[k];
+    const size_t nc = el->nb_colonnes;
+    chaine_ajouter(c, "<div class=\"liste\"><table class=\"liste\"><thead><tr>");
+    for (size_t q = 0; q < nc; q++) {
+        chaine_ajouter(c, "<th>");
+        echapper(c, el->colonnes[q]);
+        chaine_ajouter(c, "</th>");
+    }
+    if (!nc) chaine_ajouter(c, "<th></th>");
+    chaine_ajouter(c, "</tr></thead><tbody>");
+    for (size_t r = 0; r < e->nb_lignes[k]; r++) {
+        chaine_ajouter(c, e->choisie[k] == (long)r ? "<tr class=\"choisie\">" : "<tr>");
+        for (size_t q = 0; q < (nc ? nc : 1); q++) {
+            const char *t = nc ? e->cellules[k][r * nc + q] : "";
+            chaine_ajouter(c, "<td>");
+            if (q == 0) {
+                char *v = grym_formater("<button class=\"ligne\" name=\"choix\" value=\"%lu.%lu\">",
+                                        (unsigned long)k, (unsigned long)r);
+                chaine_ajouter(c, v);
+                free(v);
+                if (*t) echapper(c, t);
+                else chaine_ajouter(c, "(choisir)");   /* une première cellule vide doit rester cliquable */
+                chaine_ajouter(c, "</button>");
+            } else {
+                echapper(c, t);
+            }
+            chaine_ajouter(c, "</td>");
+        }
+        chaine_ajouter(c, "</tr>");
+    }
+    if (!e->nb_lignes[k]) {
+        char *v = grym_formater("<tr><td class=\"vide\" colspan=\"%lu\">Aucune ligne.</td></tr>", (unsigned long)(nc ? nc : 1));
+        chaine_ajouter(c, v);
+        free(v);
+    }
+    chaine_ajouter(c, "</tbody></table></div>");
+}
+
+/* La page de l'écran du dessus : un seul formulaire, qui envoie ses zones avec chaque événement. */
+static void page_ecran(Serveur *s) {
+    const EcranWeb *e = ecran_dessus(s);
+    Chaine c = {0};
+    chaine_ajouter(&c, "<!DOCTYPE html>\n<html lang=\"fr\"><head><meta charset=\"utf-8\">"
+                       "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>");
+    echapper(&c, e->titre);
+    chaine_ajouter(&c, "</title><link rel=\"stylesheet\" href=\"/style.css\"></head><body");
+    chaine_ajouter(&c, s->nb_ecrans == 1 ? " class=\"accueil\"><main>\n" : "><main>\n");
+    if (s->avis) {
+        chaine_ajouter(&c, "<p class=\"avis\">");
+        echapper(&c, s->avis);
+        chaine_ajouter(&c, "</p>\n");
+        free(s->avis);
+        s->avis = NULL;
+    }
+    if (s->nb_ecrans > 1) {   /* le fil : les écrans ouverts dessous, du premier au plus proche */
+        chaine_ajouter(&c, "<p class=\"fil\">");
+        for (size_t k = 0; k + 1 < s->nb_ecrans; k++) {
+            if (k) chaine_ajouter(&c, " › ");
+            echapper(&c, s->ecrans[k]->titre);
+        }
+        chaine_ajouter(&c, "</p>\n");
+    }
+    char *num = grym_formater("%ld", s->numero);
+    chaine_ajouter(&c, "<form class=\"ecran\" method=\"post\" action=\"/evenement\" autocomplete=\"off\">"
+                       "<input type=\"hidden\" name=\"q\" value=\"");
+    chaine_ajouter(&c, num);
+    free(num);
+    /* Entrée dans une zone envoie le premier bouton du formulaire : celui-ci, qui ne fait que valider les zones */
+    chaine_ajouter(&c, "\"><button class=\"invisible\" name=\"valider\" value=\"1\" tabindex=\"-1\" aria-hidden=\"true\">"
+                       "Valider</button>\n<div class=\"entete\">");
+    if (s->logo) chaine_ajouter(&c, "<img src=\"/logo\" alt=\"\">");
+    chaine_ajouter(&c, "<h1>");
+    echapper(&c, e->titre);
+    chaine_ajouter(&c, "</h1><button name=\"fermer\" value=\"1\" title=\"Fermer l'écran\" aria-label=\"Fermer l'écran\">×</button></div>\n");
+    if (e->erreur) {
+        chaine_ajouter(&c, "<p class=\"message\" role=\"alert\">");
+        echapper(&c, e->erreur);
+        chaine_ajouter(&c, "</p>\n");
+    }
+    int boutons = 0;   /* des boutons qui se suivent : une rangée, à droite (comme dans l'atelier) */
+    for (size_t k = 0; k < e->n; k++) {
+        const ElementEcran *el = &e->el[k];
+        if (el->sorte != ELEMENT_BOUTON && boutons) { chaine_ajouter(&c, "</div>\n"); boutons = 0; }
+        switch (el->sorte) {
+        case ELEMENT_COTE_A_COTE: chaine_ajouter(&c, "<div class=\"cote\">\n"); break;
+        case ELEMENT_L_UN_SOUS_L_AUTRE: chaine_ajouter(&c, "<div class=\"sous\">\n"); break;
+        case ELEMENT_FIN_DE_BLOC: chaine_ajouter(&c, "</div>\n"); break;
+        case ELEMENT_TEXTE:
+            chaine_ajouter(&c, "<p class=\"texte\">");
+            echapper(&c, el->texte);
+            chaine_ajouter(&c, "</p>\n");
+            break;
+        case ELEMENT_ZONE: zone(&c, e, k); chaine_ajouter(&c, "\n"); break;
+        case ELEMENT_LISTE: liste(&c, e, k); chaine_ajouter(&c, "\n"); break;
+        case ELEMENT_BOUTON: {
+            if (!boutons) { chaine_ajouter(&c, "<div class=\"boutons\">"); boutons = 1; }
+            char *v = grym_formater("<button name=\"clic\" value=\"%lu\">", (unsigned long)k);
+            chaine_ajouter(&c, v);
+            free(v);
+            echapper(&c, el->texte);
+            chaine_ajouter(&c, "</button>");
+            break;
+        }
+        }
+    }
+    if (boutons) chaine_ajouter(&c, "</div>\n");
+    chaine_ajouter(&c, "</form>\n");
+    if (s->affichage.n) {   /* ce que le programme a affiché : sous l'écran, comme la console de l'atelier */
+        chaine_ajouter(&c, "<h2 class=\"journal\">Affichage</h2><pre class=\"sortie\">");
+        echapper(&c, s->affichage.d);
+        chaine_ajouter(&c, "</pre>\n");
+    }
+    chaine_ajouter(&c, "</main></body></html>\n");
+    repondre(s, "200 OK", "text/html; charset=utf-8", c.d, NULL);
+    free(c.d);
+}
+
+static void file_ajouter(Serveur *s, Evenement ev) {
+    Evenement *t = grym_allouer((s->nb_file + 1) * sizeof *t);
+    if (s->nb_file) memcpy(t, s->file, s->nb_file * sizeof *t);
+    t[s->nb_file++] = ev;
+    free(s->file);
+    s->file = t;
+}
+
+/* Vide la file : les événements qui restent visaient un écran qui a changé (ouvert, fermé, erreur). */
+static void file_vider(Serveur *s) {
+    for (size_t k = s->tete_file; k < s->nb_file; k++) {
+        free((char *)s->file[k].texte);
+        free((long *)s->file[k].choisies);
+    }
+    free(s->file);
+    s->file = NULL;
+    s->nb_file = s->tete_file = 0;
+}
+
+static long *choisies(const EcranWeb *e) {
+    long *c = grym_allouer((e->n ? e->n : 1) * sizeof *c);
+    memcpy(c, e->choisie, e->n * sizeof *c);
+    return c;
+}
+
+/* Un envoi de l'écran : d'abord chaque zone modifiée (un changement chacune, dans l'ordre de l'écran), puis le
+ * bouton, la ligne choisie ou la fermeture. Rend 1 si la machine a quelque chose à faire. */
+static int evenements_de(Serveur *s, Envoi *env) {
+    EcranWeb *e = ecran_dessus(s);
+    for (size_t k = 0; k < e->n; k++) {
+        if (e->el[k].sorte != ELEMENT_ZONE) continue;
+        char nom[24];
+        snprintf(nom, sizeof nom, "z%lu", (unsigned long)k);
+        Partie *pv = envoi_partie(env, nom);
+        const char *nouveau;
+        if (est_case(&e->el[k])) {
+            snprintf(nom, sizeof nom, "z%lup", (unsigned long)k);
+            if (!envoi_partie(env, nom)) continue;   /* case absente de l'envoi : rien à dire */
+            nouveau = pv && !pv->fichier && strcmp(pv->valeur, "oui") == 0 ? "oui" : "non";
+        } else {
+            if (!pv || pv->fichier) continue;
+            if (pv->mal) {   /* octet nul ou UTF-8 invalide : jamais transmis à la machine */
+                free(e->erreur);
+                e->erreur = grym_formater("Texte illisible dans « %s » : réécris-le.", e->el[k].texte);
+                file_vider(s);
+                return 0;
+            }
+            nouveau = pv->valeur;
+        }
+        if (strcmp(nouveau, e->valeurs[k] ? e->valeurs[k] : "") == 0) continue;
+        Evenement ev = { EVENEMENT_CHANGEMENT, k, 0, grym_dupliquer(nouveau), choisies(e), e->n };
+        file_ajouter(s, ev);
+    }
+    Partie *pc = envoi_partie(env, "clic"), *px = envoi_partie(env, "choix"), *pf = envoi_partie(env, "fermer");
+    char *fin = NULL;
+    if (pf && !pf->fichier) {
+        Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, choisies(e), e->n };
+        file_ajouter(s, ev);
+    } else if (pc && !pc->fichier) {
+        unsigned long k = strtoul(pc->valeur, &fin, 10);
+        if (fin != pc->valeur && !*fin && k < e->n && e->el[k].sorte == ELEMENT_BOUTON) {
+            Evenement ev = { EVENEMENT_CLIC, (size_t)k, 0, NULL, choisies(e), e->n };
+            file_ajouter(s, ev);
+        }
+    } else if (px && !px->fichier) {   /* « k.r » : la ligne r de la liste k */
+        unsigned long k = strtoul(px->valeur, &fin, 10), r = 0;
+        int bon = fin != px->valeur && *fin == '.';
+        if (bon) {
+            const char *d = fin + 1;
+            r = strtoul(d, &fin, 10);
+            bon = fin != d && !*fin && k < e->n && e->el[k].sorte == ELEMENT_LISTE && r < e->nb_lignes[k];
+        }
+        if (bon) {
+            e->choisie[k] = (long)r;   /* la ligne choisie le reste : « le … choisi de l'écran » */
+            Evenement ev = { EVENEMENT_CHOIX, (size_t)k, (size_t)r, NULL, choisies(e), e->n };
+            file_ajouter(s, ev);
+        }
+    }
+    if (s->nb_file) { free(e->erreur); e->erreur = NULL; }   /* le message d'erreur tient jusqu'au prochain événement */
+    return s->nb_file > s->tete_file;
+}
+
 /* ---------------------------------------------------------------- */
 /* Traitement d'une requête                                         */
 /* ---------------------------------------------------------------- */
 
-typedef enum { SUITE, FINI_REPONDU, FINI_ANNULE, FINI_ARRET, PAGE_FINALE_SERVIE } Suite;
+typedef enum { SUITE, FINI_REPONDU, FINI_ANNULE, FINI_ARRET, PAGE_FINALE_SERVIE, FINI_EVENEMENT } Suite;
 
 /* Traite une requête. q : la question en cours, ou NULL (fin du programme). */
 static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
@@ -682,7 +1052,9 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
         noter_refus(s, r.cookie ? "cookie sans le bon jeton" : "aucun cookie", r.cible);
         page_simple(s, "403 Forbidden", "Accès refusé : ouvre l'adresse affichée dans le terminal.");
     } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/style.css") == 0) {
-        repondre(s, "200 OK", "text/css; charset=utf-8", STYLE, NULL);
+        char *f = feuille_de_style(s);
+        repondre(s, "200 OK", "text/css; charset=utf-8", f, NULL);
+        free(f);
     } else if (strcmp(r.methode, "GET") == 0 && strncmp(r.cible, "/image/", 7) == 0) {
         char *e = NULL;
         long id = strtol(r.cible + 7, &e, 10);
@@ -693,7 +1065,35 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
         else page_simple(s, "404 Not Found", "Image inconnue.");
     } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/") == 0) {
         if (q) page_question(s, q);
+        else if (s->attente_ecran && ecran_dessus(s)) page_ecran(s);
         else { page_finale(s, erreur, annulation); suite = PAGE_FINALE_SERVIE; }
+    } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/logo") == 0 && s->logo) {
+        repondre_octets(s, "200 OK", s->type_logo, s->logo, s->taille_logo, NULL);
+    } else if (strcmp(r.methode, "POST") == 0 && strcmp(r.cible, "/evenement") == 0) {
+        /* même règle que les réponses : un envoi vient de la page de l'application, et d'elle seule */
+        if (!r.origine || strcmp(r.origine, s->origine) != 0) {
+            noter_refus(s, r.origine ? "origine inattendue" : "aucune origine", r.origine);
+            page_simple(s, "403 Forbidden", "Accès refusé.");
+        } else {
+            Envoi e;
+            if (!lire_envoi(&r, &e)) {
+                page_simple(s, "400 Bad Request", "Envoi mal formé.");
+            } else {
+                Partie *pq = envoi_partie(&e, "q");
+                char attendu[24];
+                snprintf(attendu, sizeof attendu, "%ld", s->numero);
+                if (!s->attente_ecran || !ecran_dessus(s) || !pq || pq->fichier || strcmp(pq->valeur, attendu) != 0) {
+                    free(s->avis);   /* un écran d'hier, ou un autre onglet : l'événement ne vise plus rien */
+                    s->avis = grym_dupliquer("Cet écran a changé depuis : voici son état actuel.");
+                    rediriger(s, NULL);
+                } else {
+                    int agir = evenements_de(s, &e);
+                    rediriger(s, NULL);
+                    if (agir) suite = FINI_EVENEMENT;
+                }
+                envoi_liberer(&e);
+            }
+        }
     } else if (strcmp(r.methode, "POST") == 0 && strcmp(r.cible, "/reponse") == 0) {
         /* § 5, règle 3 : un envoi vient de la page de l'application, et d'elle seule */
         if (!r.origine || strcmp(r.origine, s->origine) != 0) {
@@ -912,9 +1312,178 @@ static void serveur_afficher_fiche(void *contexte, Chaine *sortie, const char *t
     seg->description = grym_dupliquer(titre);
 }
 
+
+/* --- Écrans (grammaire, § 22 ; docs/web.md, § 3 et § 5) --- */
+
+static void ecran_liberer(EcranWeb *e) {
+    if (!e) return;
+    for (size_t k = 0; k < e->n; k++) {
+        ElementEcran *el = &e->el[k];
+        free((char *)el->texte);
+        free((char *)el->type);
+        for (size_t q = 0; q < el->nb_colonnes; q++) free((char *)el->colonnes[q]);
+        free((char **)el->colonnes);
+        for (size_t q = 0; q < el->nb_choix; q++) free((char *)el->choix[q]);
+        free((char **)el->choix);
+        for (size_t q = 0; e->cellules[k] && q < e->nb_lignes[k] * el->nb_colonnes; q++) free(e->cellules[k][q]);
+        free(e->cellules[k]);
+        free(e->valeurs[k]);
+    }
+    free(e->el);
+    free(e->cellules);
+    free(e->nb_lignes);
+    free(e->choisie);
+    free(e->valeurs);
+    free(e->titre);
+    free(e->erreur);
+    free(e);
+}
+
+static const char *const *copier_textes(const char *const *t, size_t n) {
+    if (!n) return NULL;
+    char **r = grym_allouer(n * sizeof *r);
+    for (size_t k = 0; k < n; k++) r[k] = grym_dupliquer(t[k] ? t[k] : "");
+    return (const char *const *)r;
+}
+
+static void serveur_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre, const ElementEcran *el, size_t n) {
+    Serveur *s = contexte;
+    absorber(s, sortie);
+    file_vider(s);   /* un écran s'ouvre par-dessus : ce qui visait l'ancien ne s'exécute pas */
+    EcranWeb *e = grym_allouer(sizeof *e);
+    memset(e, 0, sizeof *e);
+    e->titre = grym_dupliquer(titre ? titre : "");
+    e->n = n;
+    size_t m = n ? n : 1;
+    e->el = grym_allouer(m * sizeof *e->el);
+    e->cellules = grym_allouer(m * sizeof *e->cellules);
+    e->nb_lignes = grym_allouer(m * sizeof *e->nb_lignes);
+    e->choisie = grym_allouer(m * sizeof *e->choisie);
+    e->valeurs = grym_allouer(m * sizeof *e->valeurs);
+    for (size_t k = 0; k < n; k++) {
+        e->el[k] = el[k];
+        e->el[k].texte = el[k].texte ? grym_dupliquer(el[k].texte) : NULL;
+        e->el[k].type = el[k].type ? grym_dupliquer(el[k].type) : NULL;
+        e->el[k].colonnes = copier_textes(el[k].colonnes, el[k].nb_colonnes);
+        e->el[k].choix = copier_textes(el[k].choix, el[k].nb_choix);
+        e->cellules[k] = NULL;
+        e->nb_lignes[k] = 0;
+        e->choisie[k] = -1;
+        e->valeurs[k] = NULL;
+    }
+    if (s->nb_ecrans == s->cap_ecrans) {
+        s->cap_ecrans = s->cap_ecrans ? s->cap_ecrans * 2 : 4;
+        EcranWeb **t = grym_allouer(s->cap_ecrans * sizeof *t);
+        if (s->nb_ecrans) memcpy(t, s->ecrans, s->nb_ecrans * sizeof *t);
+        free(s->ecrans);
+        s->ecrans = t;
+    }
+    s->ecrans[s->nb_ecrans++] = e;
+}
+
+static void serveur_ecran_lignes(void *contexte, size_t element, const char *const *cellules, size_t nb_lignes) {
+    Serveur *s = contexte;
+    EcranWeb *e = ecran_dessus(s);
+    if (!e || element >= e->n) return;
+    const size_t nc = e->el[element].nb_colonnes;
+    char **avant = e->cellules[element];
+    const size_t nb_avant = e->nb_lignes[element];
+    const long ancienne = e->choisie[element];
+    e->cellules[element] = grym_allouer((nb_lignes * nc > 0 ? nb_lignes * nc : 1) * sizeof(char *));
+    for (size_t q = 0; q < nb_lignes * nc; q++) e->cellules[element][q] = grym_dupliquer(cellules && cellules[q] ? cellules[q] : "");
+    e->nb_lignes[element] = nb_lignes;
+    /* La ligne choisie suit son contenu, pas son rang : une ligne ajoutée au-dessus ne déplace pas le choix.
+     * Si elle a disparu, plus rien n'est choisi. */
+    e->choisie[element] = -1;
+    for (size_t r = 0; avant && nc && ancienne >= 0 && (size_t)ancienne < nb_avant && r < nb_lignes; r++) {
+        size_t q = 0;
+        while (q < nc && strcmp(avant[(size_t)ancienne * nc + q], e->cellules[element][r * nc + q]) == 0) q++;
+        if (q == nc) { e->choisie[element] = (long)r; break; }
+    }
+    for (size_t q = 0; avant && q < nb_avant * nc; q++) free(avant[q]);
+    free(avant);
+}
+
+static void serveur_ecran_valeurs(void *contexte, const char *const *valeurs, size_t n) {
+    Serveur *s = contexte;
+    EcranWeb *e = ecran_dessus(s);
+    for (size_t k = 0; e && k < n && k < e->n; k++) {
+        free(e->valeurs[k]);
+        e->valeurs[k] = valeurs[k] ? grym_dupliquer(valeurs[k]) : NULL;
+    }
+}
+
+static void serveur_ecran_erreur(void *contexte, Chaine *sortie, const char *message) {
+    Serveur *s = contexte;
+    absorber(s, sortie);
+    file_vider(s);   /* un changement refusé : le bouton envoyé avec lui ne s'exécute pas (l'atelier fait de même) */
+    EcranWeb *e = ecran_dessus(s);
+    if (!e) return;
+    free(e->erreur);
+    e->erreur = grym_dupliquer(message ? message : "");
+}
+
+static void serveur_ecran_fermer(void *contexte, Chaine *sortie) {
+    Serveur *s = contexte;
+    absorber(s, sortie);
+    file_vider(s);
+    if (s->nb_ecrans) ecran_liberer(s->ecrans[--s->nb_ecrans]);   /* celui du dessous reprend (§ 22.3) */
+}
+
+static Issue serveur_ecran_attendre(void *contexte, Chaine *sortie, Evenement *ev) {
+    Serveur *s = contexte;
+    absorber(s, sortie);
+    free(s->ev_texte);
+    free(s->ev_choisies);
+    s->ev_texte = NULL;
+    s->ev_choisies = NULL;
+    Issue issue = ISSUE_REPONDU;
+    if (s->tete_file == s->nb_file) {   /* rien en attente : on écoute le navigateur */
+        file_vider(s);
+        s->numero++;
+        s->attente_ecran = 1;
+        for (;;) {
+            size_t taille = 0;
+            int interrompu = 0;
+            char *d = s->t.recevoir(s->t.contexte, &taille, &interrompu);
+            if (interrompu || !d) { issue = ISSUE_INTERROMPU; break; }
+            Suite suite = traiter(s, d, taille, NULL, NULL, NULL);
+            free(d);
+            if (suite == FINI_EVENEMENT) break;
+        }
+        s->attente_ecran = 0;
+    }
+    if (issue != ISSUE_REPONDU) { file_vider(s); return issue; }
+    *ev = s->file[s->tete_file++];
+    s->ev_texte = (char *)ev->texte;      /* gardés jusqu'à l'attente suivante : la machine les lit entre-temps */
+    s->ev_choisies = (long *)ev->choisies;
+    if (s->tete_file == s->nb_file) {
+        free(s->file);
+        s->file = NULL;
+        s->nb_file = s->tete_file = 0;
+    }
+    return ISSUE_REPONDU;
+}
+
+/* « Les écrans ont la couleur verte et le logo « logo.png ». » (grammaire, § 22.5) */
+static void serveur_ecran_apparence(void *contexte, int couleur, const unsigned char *logo, size_t taille, const char *format) {
+    Serveur *s = contexte;
+    s->accent = couleur >= 0 && couleur < 5 ? couleur : 0;
+    free(s->logo);
+    s->logo = NULL;
+    s->taille_logo = 0;
+    if (logo && format) {
+        s->logo = grym_allouer(taille ? taille : 1);
+        if (taille) memcpy(s->logo, logo, taille);
+        s->taille_logo = taille;
+        s->type_logo = type_image(format);
+    }
+}
+
 Interface serveur_interface(Serveur *s) {
     Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer, 1, serveur_afficher_image,
-                    serveur_afficher_fiche, NULL, NULL, NULL, NULL, NULL, NULL, NULL };   /* pas d'écrans (§ 22.3) */
+                    serveur_afficher_fiche, serveur_ecran_ouvrir, serveur_ecran_lignes, serveur_ecran_attendre,
+                    serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence };
     return i;
 }
 
@@ -959,6 +1528,12 @@ void serveur_fermer(Serveur *s) {
 #endif
     retirer_images(s, (size_t)-1);
     free(s->images);
+    while (s->nb_ecrans) ecran_liberer(s->ecrans[--s->nb_ecrans]);
+    free(s->ecrans);
+    file_vider(s);
+    free(s->ev_texte);
+    free(s->ev_choisies);
+    free(s->logo);
     free(s->titre);
     free(s->affichage.d);
     free(s->avis);

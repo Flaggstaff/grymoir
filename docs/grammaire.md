@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.56 de la spécification, révisée le 29 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.57 de la spécification, révisée le 29 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1482,7 +1482,7 @@ Ouvrir l'écran des compositeurs.
 
 - `Ouvrir l'écran X.` montre l'écran et attend jusqu'à `Fermer l'écran.` ; `Ouvrir la fiche de c.` ouvre l'écran déduit de l'entité de `c`. Dans un événement, l'écran s'ouvre par-dessus ; à sa fermeture, l'événement reprend.
 - `Ouvrir` valide d'abord ce qui précède ; chaque événement est ensuite sa propre transaction ; après la fermeture, la suite forme une nouvelle transaction (charte, art. 7).
-- `grym lancer` et `grym servir` refusent un programme qui ouvre des écrans, avant toute exécution.
+- `grym lancer` refuse un programme qui ouvre des écrans, avant toute exécution : la console n'en montre pas. `grym servir` les montre dans le navigateur (`docs/web.md`, § 3 et § 5).
 
 ### 22.4 Mots et forme compacte
 
@@ -1503,7 +1503,7 @@ Les écrans ont le logo « images/logo.png ».
 - Le logo est un chemin écrit tel quel, relatif au dossier du programme. Il doit exister et être une image (PNG, JPEG, GIF, WebP) dès l'analyse, pour que l'aperçu de l'atelier le montre sans exécuter le programme : « Fichier « logo.png » introuvable ou illisible. », « « notes.txt » n'est pas une image (PNG, JPEG, GIF ou WebP). ». Il est relu à l'exécution.
 - Une seule fois, au premier niveau, avant le premier `Ouvrir` ; sinon, erreur d'analyse. Comme `Les nombres s'affichent …` (§ 4.1), la phrase vaut pour tout le programme.
 - Le logo s'affiche à gauche du titre : grand (64 pixels) sur un écran que le programme ouvre lui-même, sans écran dessous ; petit (24 pixels) sur un écran ouvert par-dessus. Il sert aussi d'icône à la fenêtre.
-- Hors des écrans (`grym lancer`, `grym servir`), la phrase est sans effet : un programme qui ne fait qu'afficher tourne normalement.
+- Sans écran (`grym lancer`, ou un programme qui n'en ouvre aucun), la phrase est sans effet : un programme qui ne fait qu'afficher tourne normalement. `grym servir` applique la couleur et le logo à ses écrans.
 - Forme compacte : `_écrans _couleur _verte _logo « logo.png »`, `_écrans _couleur _grise`, `_écrans _logo « logo.png »`.
 - Aide à la saisie (§ 8) : en début de phrase, `Les écrans ont` et `Les nombres s'affichent` sont proposés ; puis `la couleur` ou `le logo`, les cinq couleurs, `et le logo`, un texte. Après `Les nombres s'affichent` : `à la suisse`, `à la française`, `sans séparateur`.
 
@@ -1570,3 +1570,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.54 | 2026-09-28 | § 22 (A3-c) : la fiche montre les champs « plusieurs », un bouton par élément |
 | 1.55 | 2026-09-28 | Messages au tutoiement, comme le guide (charte, art. 8) : « écris … », « voulais-tu … ? » |
 | 1.56 | 2026-09-29 | § 14.2 : mois, années et semaines (`d + 3 mois`), ramenés au dernier jour du mois ; unités dans les boucles, sans dérive ; vérifiés contre `dateutil` |
+| 1.57 | 2026-09-29 | § 22.3 et § 22.5 : `grym servir` montre les écrans dans le navigateur, avec la couleur et le logo (`docs/web.md`, W1) ; seul `grym lancer` les refuse |

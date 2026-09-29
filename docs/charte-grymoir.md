@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.52, révisée le 29 septembre 2026.
+Version 1.53, révisée le 29 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -164,6 +164,10 @@ Horizon post-v1, sans date :
 | A2 | Fichiers utilisés (grammaire, § 21), puis éditeur de données : schéma des entités, propriétés, réécriture chirurgicale, aperçu des migrations | fait le 25 septembre 2026 |
 | A3 | Les écrans dans le langage (`docs/ecrans.md`) : fenêtres, listes, fiches, boutons, événements | fait le 25 septembre 2026 |
 | A4 | Éditeur d'écrans : liste et fiche générées par entité, agencement à la souris | fait le 26 septembre 2026 |
+| W1 | Le web (`docs/web.md`) : les écrans rendus en HTML, avec le thème ; `grym servir` montre les programmes à écrans | fait le 29 septembre 2026 |
+| W2 | `grym publier` : un site de pages fixes tiré de la base, adresses stables, sortie déterministe, refus des écrans impubliables | à venir |
+| W3 | Conception, sans code : une machine par visiteur, comptes et droits dans la grammaire | à venir |
+| W4 | `grym` en public : sessions, sécurité, guide de déploiement | à venir |
 
 Critères de sortie de la v1.0, tous remplis :
 
@@ -263,3 +267,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.50 | 2026-09-28 | Art. 12 : coût des règles mesuré ; le ciblage attend un besoin réel |
 | 1.51 | 2026-09-28 | Art. 8 : les messages tutoient, comme le guide (« voulais-tu `solde` ? ») |
 | 1.52 | 2026-09-29 | Art. 12 : l'ajout de mois et d'années aux dates est fait, ramené au dernier jour du mois (grammaire, § 14.2) ; report : l'écart en mois ou en années |
+| 1.53 | 2026-09-29 | Art. 12 : jalons du web W1 à W4 (`docs/web.md`) ; W1 fait. Les art. 1, 7 et 11 changeront avec W3 et W4 |

@@ -1,5 +1,5 @@
 /* GrymoiR : l'interface par le navigateur, servie en local (v2.0-a).
- * Spécification : docs/v2.md (révision 0.7), § 4, § 5 et § 9 ; docs/vm.md, § 13.
+ * Spécification : docs/v2.md (révision 0.7), § 4, § 5 et § 9 ; docs/vm.md, § 13 ; docs/web.md, § 3 et § 5.
  *
  * Le serveur n'écoute que pendant une question, et à la fin du programme pour servir la page finale.
  * Tout le traitement HTTP passe par un transport : des prises réseau pour `grym servir`, une liste de
@@ -40,5 +40,10 @@ Interface serveur_interface(Serveur *s);
 /* Fin du programme : ce qui reste à afficher, puis l'erreur éventuelle et ce qui a été annulé (NULL si
  * tout s'est bien passé). Sert la page finale une fois, puis rend la main. */
 void serveur_terminer(Serveur *s, Chaine *sortie, const char *erreur, const char *annulation);
+
+/* Thème (docs/web.md, § 2.2) : la couleur d'un jeton (« fond », « accent »…) en mode clair ou sombre, pour un
+ * rang de la palette ; NULL si le jeton est inconnu. Le nom d'une couleur de la palette (« bleue »), ou NULL. */
+const char *serveur_jeton(int sombre, int accent, const char *nom);
+const char *serveur_palette(int accent);
 
 #endif

@@ -118,7 +118,7 @@ Mêmes règles que la grammaire, § 11 : mots-clés à souligné, noms à soulig
 
 ### 3.8 Hors de l'atelier *(validé le 25 septembre 2026)*
 
-- Un programme qui ouvre des écrans est refusé par `grym lancer` et `grym servir`, avant toute exécution : « Ce programme ouvre des écrans : lance-le dans une fenêtre, avec grym-atelier. » Un programme sans écran tourne partout, comme avant.
+- Un programme qui ouvre des écrans est refusé par `grym lancer`, avant toute exécution : « Ce programme ouvre des écrans : lance-le dans une fenêtre, avec grym-atelier. » Depuis W1 (`docs/web.md`), `grym servir` les montre dans le navigateur. Un programme sans écran tourne partout, comme avant.
 - L'interface de la machine (`src/interface.h`) reçoit les appels des écrans ; les essais les pilotent par script (cliquer, choisir, saisir), sans Qt, pour l'intégration continue.
 - Pour distribuer une application : `grym-atelier --lancer` d'abord ; un exécutable dédié, sans l'atelier, plus tard.
 - Un repli en texte reste possible si un vrai besoin se présente.
@@ -186,3 +186,4 @@ Cinq couleurs d'accent : `bleue` (par défaut, sans phrase écrite), `verte`, `t
 | 0.12 | 2026-09-25 | § 4 : A3-d fait ; A3 fait |
 | 0.13 | 2026-09-26 | Nouveau § 5 : l'apparence (un seul thème, la phrase `Les écrans ont …`, la palette de cinq accents) |
 | 0.14 | 2026-09-26 | § 5.2 : phrase implémentée (T3) ; place du logo ; correction sur les phrases en `Les` |
+| 0.15 | 2026-09-29 | § 3.8 : `grym servir` montre les écrans dans le navigateur (`docs/web.md`, W1) ; seul `grym lancer` les refuse |

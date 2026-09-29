@@ -5,6 +5,7 @@
  * sans réseau. Les règles de sécurité ont chacune leur attaque. */
 #include "analyseur.h"
 #include "compilateur.h"
+#include "json.h"
 #include "serveur.h"
 #include "texte.h"
 #include "vm.h"
@@ -190,6 +191,68 @@ static void exemple(int ligne, const char *nom, Script *sc, const char *const *f
     free(chemin);
 }
 
+
+static char *evenement(const char *corps) {
+    return grym_formater("POST /evenement HTTP/1.1\r\n" HOTE COOKIE ORIGINE
+                         "Content-Type: application/x-www-form-urlencoded\r\nContent-Length: %lu\r\n\r\n%s",
+                         (unsigned long)strlen(corps), corps);
+}
+
+/* Les jetons de couleur du serveur sont ceux du thème de l'atelier (docs/web.md, § 2.2). */
+static void verifier_jetons(void) {
+    char *texte = lire_tout("src/atelier/theme/grymoir-jetons.json");
+    total++;
+    if (!texte) { echecs++; printf("ÉCHEC : src/atelier/theme/grymoir-jetons.json introuvable\n"); return; }
+    char *erreur = NULL;
+    Json *j = json_lire(texte, strlen(texte), &erreur);
+    free(texte);
+    if (!j) { echecs++; printf("ÉCHEC : jetons illisibles : %s\n", erreur); free(erreur); return; }
+    const char *const modes[] = { "clair", "sombre" };
+    for (int m = 0; m < 2; m++) {
+        char *chemin = grym_formater("couleurs.%s", modes[m]);
+        const Json *c = json_chemin(j, chemin);
+        free(chemin);
+        for (size_t k = 0; c && k < c->nb; k++) {
+            const char *attendu = json_texte(c->elements[k]), *vu = serveur_jeton(m, 0, c->cles[k]);
+            total++;
+            if (!vu || !attendu || strcmp(vu, attendu) != 0) {
+                echecs++;
+                printf("ÉCHEC : jeton %s (%s) : %s dans le serveur, %s dans le thème\n", c->cles[k], modes[m],
+                       vu ? vu : "absent", attendu ? attendu : "?");
+            }
+        }
+        for (int a = 0; a < 5; a++) {
+            chemin = grym_formater("accents.%s.%s", serveur_palette(a), modes[m]);
+            const Json *acc = json_chemin(j, chemin);
+            free(chemin);
+            total++;
+            if (!acc) { echecs++; printf("ÉCHEC : accent %s absent du thème\n", serveur_palette(a)); continue; }
+            for (size_t k = 0; k < acc->nb; k++) {
+                const char *attendu = json_texte(acc->elements[k]);
+                if (!attendu) continue;   /* « contrastes » : un objet, pas une couleur */
+                const char *vu = serveur_jeton(m, a, acc->cles[k]);
+                total++;
+                if (!vu || strcmp(vu, attendu) != 0) {
+                    echecs++;
+                    printf("ÉCHEC : jeton %s de %s (%s) : %s dans le serveur, %s dans le thème\n", acc->cles[k],
+                           serveur_palette(a), modes[m], vu ? vu : "absent", attendu);
+                }
+            }
+        }
+    }
+    /* l'ordre de la palette est celui du thème : le rang que donne la machine désigne la même couleur */
+    const Json *ordre = json_chemin(j, "accents._ordre");
+    for (int a = 0; ordre && a < 5 && (size_t)a < ordre->nb; a++) {
+        total++;
+        if (strcmp(json_texte(ordre->elements[a]), serveur_palette(a)) != 0) {
+            echecs++;
+            printf("ÉCHEC : palette, rang %d : %s dans le serveur, %s dans le thème\n", a, serveur_palette(a),
+                   json_texte(ordre->elements[a]));
+        }
+    }
+    json_liberer(j);
+}
+
 #define CONTIENT(r, f)     verifier(__LINE__, #r, r, f, 1)
 #define NE_CONTIENT_PAS(r, f) verifier(__LINE__, #r, r, f, 0)
 #define REQUETES(...) do { char *liste[] = { __VA_ARGS__ }; sc.n = sizeof liste / sizeof *liste; \
@@ -350,7 +413,7 @@ int main(void) {
                              "<option value=\"élodie\">élodie</option><option value=\"Zoé\">Zoé</option></select>");
     NE_CONTIENT_PAS(sc.reponses[0], "<datalist");
     /* la mémoire de saisie du navigateur, rangée par nom de champ (c0, c1…), mélangerait toutes les questions */
-    CONTIENT(sc.reponses[0], "<form method=\"post\" action=\"/reponse\" autocomplete=\"off\">");
+    CONTIENT(sc.reponses[0], "<form class=\"question\" method=\"post\" action=\"/reponse\" autocomplete=\"off\">");
     NE_CONTIENT_PAS(sc.reponses[0], "Oublié");
     CONTIENT(sc.reponses[0], "name=\"c3\" value=\"\" inputmode=\"decimal\"");
     CONTIENT(sc.reponses[0], "<select id=\"c4\" name=\"c4\"><option value=\"\" selected></option><option value=\"oui\">oui</option>");
@@ -454,6 +517,160 @@ int main(void) {
     CONTIENT(sc.reponses[1], "Content-Type: image/png");
     liberer(&sc);
     remove("_essai_fiche.png");
+
+
+    /* --- W1 : les écrans dans le navigateur (docs/web.md, § 3 et § 5) --- */
+    verifier_jetons();
+    {
+        const char *src =
+            "Un compositeur, conservé, a : un nom (texte), unique, une naissance (date), facultative.\n"
+            "Pour remplir un nom :\n    Le c vaut un nouveau compositeur :\n        Le nom vaut nom.\n    Conserver c.\n"
+            "Remplir « Liszt ».\nRemplir « <script>alert(1)</script> ».\n"
+            "L'écran des compositeurs montre :\n    le texte « Nos compositeurs »,\n"
+            "    la liste des compositeurs conservés, par nom,\n    un bouton « Nouveau »,\n    un bouton « Échouer »,\n"
+            "    un bouton « Fermer ».\n"
+            "Quand on choisit un compositeur dans l'écran des compositeurs :\n    Ouvrir la fiche du compositeur.\n"
+            "Quand on clique sur « Nouveau » dans l'écran des compositeurs :\n    Le c vaut un nouveau compositeur saisi.\n"
+            "    Conserver c.\n"
+            "Quand on clique sur « Échouer » dans l'écran des compositeurs :\n    Le e vaut un nouveau compositeur :\n"
+            "        Le nom vaut « Fantôme ».\n    Conserver e.\n    Afficher 1 ÷ 0.\n"
+            "Quand on clique sur « Fermer » dans l'écran des compositeurs :\n    Fermer l'écran.\n"
+            "Ouvrir l'écran des compositeurs.\n"
+            "Afficher le nombre de compositeurs conservés.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"),                                          /* 0 : l'écran, attente 1 */
+                 evenement("q=1&choix=1.1"),                        /* 1 : Liszt → sa fiche par-dessus, attente 2 */
+                 get("/"),                                          /* 2 : la fiche */
+                 evenement("q=2&clic=3"),                           /* 3 : « Fermer » de la fiche, attente 3 */
+                 get("/"),                                          /* 4 */
+                 evenement("q=3&clic=2"),                           /* 5 : « Nouveau » : une question, n° 4 */
+                 get("/"),                                          /* 6 : la question */
+                 post("q=4&c0=Chopin&c1=&action=envoyer"),          /* 7 : attente 5 */
+                 get("/"),                                          /* 8 */
+                 evenement("q=5&clic=3"),                           /* 9 : « Échouer », attente 6 */
+                 get("/"),                                          /* 10 */
+                 evenement("q=1&clic=4"),                           /* 11 : un écran d'hier */
+                 get("/"),                                          /* 12 */
+                 grym_dupliquer("POST /evenement HTTP/1.1\r\n" HOTE COOKIE "Origin: http://evil.example\r\n"
+                                "Content-Length: 10\r\n\r\nq=6&clic=4"),   /* 13 : autre origine */
+                 evenement("q=6&fermer=1"),                         /* 14 : la croix : l'écran se ferme */
+                 get("/"));                                         /* 15 : la page finale */
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<h1>Compositeurs</h1>");
+        CONTIENT(sc.reponses[0], "<p class=\"texte\">Nos compositeurs</p>");
+        CONTIENT(sc.reponses[0], "<form class=\"ecran\" method=\"post\" action=\"/evenement\" autocomplete=\"off\">"
+                                 "<input type=\"hidden\" name=\"q\" value=\"1\">");
+        CONTIENT(sc.reponses[0], "<th>Nom</th><th>Naissance</th>");
+        /* par nom : « <script>… » avant « Liszt » ; échappé, jamais du HTML (docs/web.md, § 2.1) */
+        CONTIENT(sc.reponses[0], "<button class=\"ligne\" name=\"choix\" value=\"1.0\">&lt;script&gt;alert(1)&lt;/script&gt;</button>");
+        CONTIENT(sc.reponses[0], "<button class=\"ligne\" name=\"choix\" value=\"1.1\">Liszt</button>");
+        NE_CONTIENT_PAS(sc.reponses[0], "<script>");
+        CONTIENT(sc.reponses[0], "<div class=\"boutons\"><button name=\"clic\" value=\"2\">Nouveau</button>"
+                                 "<button name=\"clic\" value=\"3\">Échouer</button><button name=\"clic\" value=\"4\">Fermer</button></div>");
+        CONTIENT(sc.reponses[0], "<body class=\"accueil\">");
+        CONTIENT(sc.reponses[1], "303 See Other");
+        /* la fiche, par-dessus : le fil rappelle l'écran du dessous */
+        CONTIENT(sc.reponses[2], "<p class=\"fil\">Compositeurs</p>");
+        CONTIENT(sc.reponses[2], "<h1>Liszt</h1>");
+        CONTIENT(sc.reponses[2], "<p class=\"texte\">Nom : Liszt</p>");
+        CONTIENT(sc.reponses[2], "<button name=\"clic\" value=\"3\">Fermer</button>");
+        NE_CONTIENT_PAS(sc.reponses[2], "class=\"accueil\"");
+        /* retour à l'écran : la ligne choisie le reste */
+        CONTIENT(sc.reponses[4], "<tr class=\"choisie\"><td><button class=\"ligne\" name=\"choix\" value=\"1.1\">Liszt");
+        NE_CONTIENT_PAS(sc.reponses[4], "class=\"fil\"");
+        CONTIENT(sc.reponses[6], "<form class=\"question\"");
+        CONTIENT(sc.reponses[8], "value=\"1.1\">Chopin</button>");
+        /* Chopin s'insère au-dessus de Liszt : le choix suit Liszt, pas son ancien rang */
+        CONTIENT(sc.reponses[8], "<tr class=\"choisie\"><td><button class=\"ligne\" name=\"choix\" value=\"1.2\">Liszt");
+        /* l'événement raté : le message sous le titre, rien de conservé, l'écran reste ouvert */
+        CONTIENT(sc.reponses[10], "<p class=\"message\" role=\"alert\">Division par zéro.</p>");
+        NE_CONTIENT_PAS(sc.reponses[10], "Fantôme");
+        CONTIENT(sc.reponses[11], "303 See Other");
+        CONTIENT(sc.reponses[12], "<p class=\"avis\">Cet écran a changé depuis : voici son état actuel.</p>");
+        CONTIENT(sc.reponses[13], "403 Forbidden");
+        CONTIENT(sc.reponses[15], "Application terminée.");
+        CONTIENT(sc.reponses[15], "3\n");
+        NE_CONTIENT_PAS(sc.reponses[15], "class=\"erreur\"");
+        liberer(&sc);
+    }
+    {   /* Zones : un envoi porte chaque zone modifiée, puis le bouton ; un changement refusé retient le bouton */
+        const char *src =
+            "Un compositeur, conservé, a : un nom (texte), unique, un pays (texte).\n"
+            "Pour remplir un nom et un pays :\n    Le c vaut un nouveau compositeur :\n        Le nom vaut nom.\n"
+            "        Le pays vaut pays.\n    Conserver c.\n"
+            "Remplir « Bach » et « Allemagne ».\nRemplir « Chopin » et « Pologne ».\nRemplir « Schumann » et « Allemagne ».\n"
+            "L'écran de recherche montre :\n    un pays (texte), « Suisse » au départ,\n    un âge (nombre), facultatif,\n"
+            "    la liste des compositeurs conservés dont le pays est le pays de l'écran, par nom,\n"
+            "    un bouton « Supprimer »,\n    un bouton « Fermer ».\n"
+            "Quand on ouvre l'écran de recherche :\n    Le pays de l'écran devient « Allemagne ».\n"
+            "Quand on change le pays dans l'écran de recherche :\n    Afficher « pays » puis le pays de l'écran.\n"
+            "Quand on clique sur « Supprimer » dans l'écran de recherche :\n"
+            "    Si le compositeur choisi de l'écran est présent, supprimer le compositeur choisi de l'écran.\n"
+            "Quand on clique sur « Fermer » dans l'écran de recherche :\n    Fermer l'écran.\n"
+            "Quand on ferme l'écran de recherche :\n    Afficher « fermé » puis l'âge de l'écran.\n"
+            "Ouvrir l'écran de recherche.\nAfficher le nombre de compositeurs conservés.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"),                                                    /* 0 */
+                 evenement("q=1&z0=Pologne&z1=&valider=1"),                   /* 1 : Entrée dans une zone */
+                 get("/"),                                                    /* 2 */
+                 evenement("q=2&z0=Pologne&z1=&choix=2.0"),                   /* 3 : Chopin choisi */
+                 evenement("q=3&z0=Pologne&z1=abc&clic=3"),                   /* 4 : refusé : pas de suppression */
+                 get("/"),                                                    /* 5 */
+                 evenement("q=4&z0=Pologne&z1=12%2C5&clic=3"),                /* 6 : l'âge, puis la suppression */
+                 get("/"),                                                    /* 7 */
+                 evenement("q=5&z0=Pologne&z1=12%2C5&valider=1"),             /* 8 : rien n'a changé : rien ne part */
+                 evenement("q=5&z0=Pologne&z1=12%2C5&clic=4"),                /* 9 : Fermer */
+                 get("/"));                                                   /* 10 */
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<label for=\"z0\">Pays</label><input type=\"text\" id=\"z0\" name=\"z0\" value=\"Allemagne\">");
+        CONTIENT(sc.reponses[0], "name=\"z1\" value=\"\" inputmode=\"decimal\">");
+        CONTIENT(sc.reponses[0], "value=\"2.1\">Schumann</button>");
+        CONTIENT(sc.reponses[0], "<button class=\"invisible\" name=\"valider\"");
+        CONTIENT(sc.reponses[2], "value=\"2.0\">Chopin</button>");
+        CONTIENT(sc.reponses[2], "<pre class=\"sortie\">pays Pologne\n</pre>");
+        CONTIENT(sc.reponses[5], "<p class=\"message\" role=\"alert\">« abc » n&#39;est pas un nombre.</p>");
+        CONTIENT(sc.reponses[5], "value=\"2.0\">Chopin</button>");   /* toujours là : le clic n'est pas parti */
+        CONTIENT(sc.reponses[7], "<td class=\"vide\" colspan=\"2\">Aucune ligne.</td>");
+        CONTIENT(sc.reponses[7], "name=\"z1\" value=\"12,5\"");
+        NE_CONTIENT_PAS(sc.reponses[7], "class=\"message\"");
+        CONTIENT(sc.reponses[10], "fermé 12,5\n2\n");
+        liberer(&sc);
+    }
+    {   /* Une case à cocher : décochée, elle n'envoie rien ; « …p » dit qu'elle était là */
+        const char *src =
+            "L'écran d'essai montre :\n    un actif (vrai ou faux),\n    un bouton « OK ».\n"
+            "Quand on change l'actif dans l'écran d'essai :\n    Afficher « actif » puis l'actif de l'écran.\n"
+            "Quand on clique sur « OK » dans l'écran d'essai :\n    Fermer l'écran.\n"
+            "Ouvrir l'écran d'essai.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0p=1&z0=oui&valider=1"), get("/"), evenement("q=2&z0p=1&clic=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<input type=\"hidden\" name=\"z0p\" value=\"1\"><label class=\"case\">"
+                                 "<input type=\"checkbox\" name=\"z0\" value=\"oui\"> Actif</label>");
+        CONTIENT(sc.reponses[2], "value=\"oui\" checked> Actif");
+        CONTIENT(sc.reponses[4], "actif vrai\nactif faux\n");
+        liberer(&sc);
+    }
+    {   /* Le thème : la couleur choisie dans la feuille, clair et sombre ; le logo servi à /logo */
+        const char *src = "Les écrans ont la couleur verte et le logo « exemples/pixel.png ».\n"
+                          "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Fermer » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                          "Ouvrir l'écran d'accueil.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), get("/style.css"), get("/logo"), evenement("q=1&clic=0"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<img src=\"/logo\" alt=\"\"><h1>Accueil</h1>");
+        char *clair = grym_formater("--accent:%s;", serveur_jeton(0, 1, "accent"));
+        char *sombre = grym_formater("--accent:%s;", serveur_jeton(1, 1, "accent"));
+        CONTIENT(sc.reponses[1], clair);
+        CONTIENT(sc.reponses[1], sombre);
+        CONTIENT(sc.reponses[1], "@media (prefers-color-scheme:dark)");
+        free(clair);
+        free(sombre);
+        CONTIENT(sc.reponses[2], "Content-Type: image/png");
+        CONTIENT(sc.reponses[4], "Application terminée.");
+        liberer(&sc);
+    }
 
     /* --- v2.0 : chaque exemple du dépôt tourne dans le navigateur --- */
     {

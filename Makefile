@@ -56,8 +56,8 @@ test_base: tests/test_base.c $(SQLITE_O)
 test_lsp: tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR) $(ENTETES) src/lsp.h src/json.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR)
 
-test_serveur: tests/test_serveur.c src/serveur.c $(EXECUTION) $(ENTETES) src/serveur.h
-	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_serveur.c src/serveur.c $(EXECUTION) $(RESEAU)
+test_serveur: tests/test_serveur.c src/serveur.c src/json.c $(EXECUTION) $(ENTETES) src/serveur.h src/json.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_serveur.c src/serveur.c src/json.c $(EXECUTION) $(RESEAU)
 
 test_guide: tests/test_guide.c docs/guide.md $(EXECUTION) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_guide.c $(EXECUTION)
