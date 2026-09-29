@@ -94,3 +94,15 @@ long date_aujourdhui(void) {
     struct tm *l = localtime(&t);
     return date_jours(l->tm_year + 1900, l->tm_mon + 1, l->tm_mday);
 }
+
+int date_ajouter_mois(long jours, long mois, long *resultat) {
+    int a, m, j;
+    date_civile(jours, &a, &m, &j);
+    if (mois > 120000 || mois < -120000) return 0;             /* au-delà de 10'000 ans : hors du calendrier */
+    long total = (long)a * 12 + (m - 1) + mois;                /* mois écoulés depuis l'an 0 */
+    if (total < 12 || total >= 10000L * 12) return 0;           /* années 1 à 9999 */
+    int na = (int)(total / 12), nm = (int)(total % 12) + 1;
+    int dernier = jours_du_mois(na, nm);
+    *resultat = date_jours(na, nm, j > dernier ? dernier : j);
+    return 1;
+}

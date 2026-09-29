@@ -75,10 +75,12 @@ typedef enum {
     I_APPARENCE,        /* opérande : couleur + 1 (0 : non écrite) ; dépile le logo (fichier) ou absent (§ 22.5) */
     I_REFUSER,          /* opérande : n ; dépile n valeurs, les écrit comme AFFICHER, séparées par une espace ;
                            l'exécution échoue avec ce message (§ 18.1) */
-    I_BASE_MODIFIEE     /* empile vrai si la transaction en cours a écrit dans la base : avant de revérifier les règles (§ 16.14) */
+    I_BASE_MODIFIEE,    /* empile vrai si la transaction en cours a écrit dans la base : avant de revérifier les règles (§ 16.14) */
+    I_DECALER           /* opérande : 0 jours, 1 semaines, 2 mois, 3 années ; dépile n, puis une date (ou une année) ;
+                           empile la date n unités plus tard, ramenée au dernier jour du mois (§ 14.2) */
 } CodeInstruction;
 
-#define I_DERNIER I_BASE_MODIFIEE
+#define I_DERNIER I_DECALER
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

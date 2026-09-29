@@ -119,6 +119,8 @@ static const QHash<QString, QString> &table_des_mots() {
         {"sortir", "10.4"}, {"passer", "10.4"}, {"selon", "10.5"}, {"cas", "10.5"}, {"autrement", "10.5"},
         {"classe", "13.1"}, {"nouveau", "13.2"}, {"nouvel", "13.2"}, {"nouvelle", "13.2"}, {"chose", "13.7"},
         {"aptitude", "13.7"}, {"adopte", "13.7"}, {"aujourd", "14.3"},
+        {"jour", "14.2"}, {"jours", "14.2"}, {"semaine", "14.2"}, {"semaines", "14.2"}, {"mois", "14.2"},
+        {"an", "14.2"}, {"ans", "14.2"}, {"années", "14.2"},
         {"fichier", "15.2"}, {"enregistrer", "15.2"}, {"dans", "15.2"},
         {"conservé", "16.1"}, {"conservée", "16.1"}, {"conservés", "16.1"}, {"conservées", "16.1"}, {"unique", "16.1"},
         {"conserver", "16.3"}, {"supprimer", "16.3"}, {"dont", "16.4"}, {"somme", "16.4"}, {"somme_de", "16.4"}, {"décroissant", "16.4"}, {"nombre_de", "16.4"},

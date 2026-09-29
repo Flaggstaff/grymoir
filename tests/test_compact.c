@@ -161,6 +161,10 @@ int main(void) {
 
     EXEC("_la f << 21.09.2026\n_afficher f + 30 ; _aujourd'hui = _aujourd'hui ; 01.01.2027 − f\n",
          "21.10.2026 vrai 102\n");
+    ALLER_RETOUR("_le jour << 31.01.2026 + 1 _mois − 2 _ans\n_afficher jour + 3 _semaines ; jour − 1 _jour\n",
+                 "Le jour vaut 31.01.2026 + 1 mois − 2 ans.\nAfficher jour + 3 semaines puis jour − 1 jour.\n");
+    ALLER_RETOUR("_pour_chaque e _de 31.01.2026 _à 31.12.2026 _pas 1 _mois\n    _afficher e\n_fin\n", NULL);
+    EXEC("_afficher 31.01.2026 + 1 _mois ; 29.02.2028 + 1 _année\n", "28.02.2026 28.02.2029\n");
     ALLER_RETOUR("_le jour << 01.03.2026\n_si _aujourd'hui > jour _alors\n    _afficher jour − 01.01.2026\n_fin\n",
                  "Le jour vaut 01.03.2026.\nSi aujourd'hui > jour :\n    Afficher jour − 01.01.2026.\n");
 

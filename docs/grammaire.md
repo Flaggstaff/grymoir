@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.55 de la spécification, révisée le 28 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.56 de la spécification, révisée le 29 septembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -365,7 +365,8 @@ relation     = ( "égal" | "égale" ) à expression
 de           = "de" | "d'" | "du" ;
 expression   = morceau { "suivi" ( "de" | "d'" | "du" ) morceau } ;   (* § 4.4 *)
 morceau      = [ "de" | "que" ] somme [ "sur" somme [ "à" ( "gauche" | "droite" ) ] ] ;
-somme        = terme { ( "+" | "−" ) terme } ;
+somme        = terme { ( "+" | "−" ) terme [ unité ] } ;             (* unité : § 14.2 *)
+unité        = "jour" | "jours" | "semaine" | "semaines" | "mois" | "an" | "ans" | "année" | "années" ;
 terme        = unaire { ( "×" | "÷" ) unaire } ;
 unaire       = "−" unaire | puissance ;
 puissance    = base [ "^" unaire ] ;
@@ -432,7 +433,10 @@ Limites de cette notation :
 | Date impossible | « Le 31 février 2026 n'existe pas. » |
 | Date mal écrite | « Date mal formée « 21.9.26 » : écris jour.mois.année, l'année sur quatre chiffres (21.09.2026). » |
 | Deux dates additionnées (exécution) | « On n'additionne pas deux dates. » |
-| Décalage non entier (exécution) | « Une date se décale d'un nombre entier de jours. » |
+| Décalage non entier (exécution) | « Une date se décale d'un nombre entier de jours. » (de semaines, de mois, d'années) |
+| Durée seule | « Une durée ne se range pas seule : elle s'ajoute à une date ou s'en retire, « d + 3 mois », « d − 1 an ». » |
+| Accord d'une unité | « Accord : « 2 ans ». » |
+| Durée sur autre chose qu'une date (exécution) | « Des mois s'ajoutent à une date, pas à un nombre. » ; « Une année se décale d'années, pas de mois. » |
 | Hors du calendrier (exécution) | « Date hors du calendrier : du 01.01.0001 au 31.12.9999. » |
 | `aujourd'hui` dans un calcul | « Un calcul ne dépend pas du jour : passe la date en paramètre. » |
 | Fichier absent (exécution) | « Fichier « photos/ana.jpg » introuvable ou illisible. » |
@@ -844,9 +848,31 @@ La date d'inscription du membre devient 21.09.2026.
 | date + nombre entier | date, tant de jours plus tard |
 | date − nombre entier | date, tant de jours plus tôt |
 | date − date | nombre de jours, négatif si la seconde est plus tardive |
+| date ± n `jours`, `semaines`, `mois`, `ans` | date, tant de jours, de semaines, de mois ou d'années plus tard ou plus tôt |
+| année ± n `ans` | année (§ 14.5) |
 | `=`, `≠`, `<`, `≤`, `>`, `≥` entre deux dates | ordre chronologique |
 
-- Ajouter des mois ou des années est reporté : « le 31 janvier plus un mois » n'a pas de réponse évidente.
+#### Mois, années, semaines
+
+```
+L'échéance vaut la date d'adhésion + 1 an.
+Le rappel vaut échéance − 2 semaines.
+La fin d'essai vaut aujourd'hui + 3 mois.
+Pour chaque échéance du 31.01.2026 au 31.12.2026 par pas de 1 mois :
+    Afficher échéance.                             →  31.01.2026, 28.02.2026, 31.03.2026, 30.04.2026…
+```
+
+- **Dernier jour du mois.** Un jour qui n'existe pas dans le mois d'arrivée est ramené au dernier jour de ce mois : le 31.01.2026 + 1 mois donne le 28.02.2026 ; le 29.02.2028 + 1 an donne le 28.02.2029. C'est la règle des échéances et des contrats. Elle ne se renverse pas : 31.01.2026 + 1 mois − 1 mois donne le 28.01.2026.
+- Unités : `jour`, `semaine`, `mois`, `an` ou `année`. Une semaine vaut 7 jours, un an 12 mois. `d + 30` et `d + 30 jours` disent la même chose.
+- L'unité suit l'opérande de droite d'un `+` ou d'un `−` et porte sur tout ce terme : `d + 2 × n mois` ajoute 2 × n mois ; une somme se met entre parenthèses, `d + (n + 1) mois`. Les opérations s'appliquent de gauche à droite : `d + 1 mois + 10 jours` ajoute d'abord le mois.
+- `3 mois` n'est pas une valeur : « Une durée ne se range pas seule : elle s'ajoute à une date ou s'en retire, « d + 3 mois », « d − 1 an ». » Une durée variable se range comme un nombre : `d + (périodicité de la cotisation) mois`.
+- Accord avec un nombre écrit : `0 jour`, `1 an`, `2 ans`, « Accord : « 2 ans ». » `mois` ne change pas. Avec une valeur calculée, les deux formes sont admises.
+- Le nombre doit être entier : `d + 1,5 mois` est une erreur, « Une date se décale d'un nombre entier de mois. », jamais un arrondi. `3,00 mois` est admis.
+- Une unité termine le nom qui la précède, comme `à` ou `fois` : `d + n mois` lit le nom `n`. Un nom déclaré qui contient l'unité l'emporte (plus longue correspondance, § 2.2).
+- Une année (§ 14.5) se décale d'années : `l'année de d + 10 ans`. « Une année se décale d'années, pas de mois. »
+- Boucles : `par pas de 1 mois`, `de 2 semaines`, `de −3 mois` (à rebours). Le compteur vaut le départ plus k pas, recalculé depuis le départ à chaque tour : 31.01, 28.02, puis 31.03, et non 28.03. Un tableur qui décale la cellule précédente dérive, lui, au 28 de chaque mois.
+- Reporté : l'écart entre deux dates en mois ou en années (une ancienneté), qui pose son propre problème d'arrondi.
+- Vérification (29 septembre 2026) : 5'251 opérations (tirées au hasard, plus toutes les fins de mois et tous les 29 février de 1900, 2000, 2024, 2026 et 2100) donnent les mêmes résultats que `relativedelta` de la bibliothèque Python `dateutil`, qui applique la même règle ; 26 résultats hors du calendrier sont refusés.
 - Toute autre opération est une erreur à l'exécution : « On n'additionne pas deux dates. »
 - `jours + date` vaut `date + jours`. Le décalage accepte `3,00`, pas `2,5`.
 - Les boucles et `Selon` acceptent les dates : `Pour chaque jour du 01.01.2026 au 31.01.2026` avance d'un jour, `par pas de 7` d'une semaine ; `Cas de 01.07.2026 à 31.08.2026` teste un intervalle.
@@ -1096,6 +1122,7 @@ La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1
 | `la taille de la photo` | `photo.taille` ; `(_fichier « a.jpg »).taille` |
 | `Enregistrer la photo dans « copie.jpg ».` | `_enregistrer photo _dans « copie.jpg »` |
 | `21.09.2026`, `aujourd'hui` | `21.09.2026`, `_aujourd'hui` |
+| `d + 3 mois`, `d − 1 an`, `par pas de 2 semaines` | `d + 3 _mois`, `d − 1 _an`, `_pas 2 _semaines` |
 
 ### 16.9 Champs facultatifs et valeur absente
 
@@ -1542,3 +1569,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.53 | 2026-09-28 | § 16.14 : coût mesuré des règles |
 | 1.54 | 2026-09-28 | § 22 (A3-c) : la fiche montre les champs « plusieurs », un bouton par élément |
 | 1.55 | 2026-09-28 | Messages au tutoiement, comme le guide (charte, art. 8) : « écris … », « voulais-tu … ? » |
+| 1.56 | 2026-09-29 | § 14.2 : mois, années et semaines (`d + 3 mois`), ramenés au dernier jour du mois ; unités dans les boucles, sans dérive ; vérifiés contre `dateutil` |

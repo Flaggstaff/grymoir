@@ -3327,6 +3327,46 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, r);
             break;
         }
+        case I_DECALER: {
+            /* date ± jours, semaines, mois, années ; année ± années (§ 14.2) */
+            static const char *const UNITE[] = { "jours", "semaines", "mois", "années" };
+            Valeur vn = depiler(&pile), vd = depiler(&pile);
+            char *probleme = NULL;
+            Valeur r = valeur_nombre(dec_zero());
+            long n = 0;
+            if (vd.type == V_ABSENT || vn.type == V_ABSENT)
+                probleme = message_absent(vd.type == V_ABSENT ? &vd : &vn);
+            else if (vd.type != V_DATE && !(vd.type == V_ANNEE && op == 3))
+                probleme = vd.type == V_ANNEE
+                    ? grym_formater("Une année se décale d'années, pas de %s.", UNITE[op])
+                    : grym_formater("Des %s s'ajoutent à une date, pas à %s.", UNITE[op], nom_type(vd.type));
+            else if (vn.type != V_NOMBRE || !dec_est_entier(&vn.nombre))
+                probleme = grym_formater("%s se décale d'un nombre entier de %s.",
+                                         vd.type == V_ANNEE ? "Une année" : "Une date", UNITE[op]);
+            else if (!dec_en_long_borne(&vn.nombre, -9999999L, 9999999L, &n))
+                probleme = grym_dupliquer(vd.type == V_ANNEE ? "Année hors du calendrier : de 1 à 9999."
+                                                             : "Date hors du calendrier : du 01.01.0001 au 31.12.9999.");
+            else if (vd.type == V_ANNEE) {
+                long a = vd.jours + n;
+                if (a < 1 || a > 9999) probleme = grym_dupliquer("Année hors du calendrier : de 1 à 9999.");
+                else { valeur_liberer(&r); r = valeur_annee(a); }
+            } else {
+                long j = 0;
+                int dedans = op <= 1 ? (j = vd.jours + (op ? 7 * n : n), j >= DATE_MIN && j <= DATE_MAX)
+                                     : date_ajouter_mois(vd.jours, op == 3 ? 12 * n : n, &j);
+                if (!dedans) probleme = grym_dupliquer("Date hors du calendrier : du 01.01.0001 au 31.12.9999.");
+                else { valeur_liberer(&r); r = valeur_date(j); }
+            }
+            valeur_liberer(&vn);
+            valeur_liberer(&vd);
+            if (probleme) {
+                valeur_liberer(&r);
+                ok = echouer(diag, b, debut, probleme);
+                break;
+            }
+            empiler(&pile, r);
+            break;
+        }
         case I_BASE_MODIFIEE:   /* les règles ne se revérifient que si la transaction a écrit (§ 16.14) */
             empiler(&pile, valeur_booleen(base_modifiee(m->base)));
             break;

@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.51, révisée le 28 septembre 2026.
+Version 1.52, révisée le 29 septembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -181,7 +181,7 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 - corbeille (grammaire, § 16.12) : la vider des objets supprimés depuis longtemps ;
 - saisie par l'utilisateur de l'application : autocomplétion des valeurs déjà saisies, y compris celles des objets de la corbeille (avec l'interface des applications) ;
 - base (grammaire, § 16.7) : commande de `grym` qui retire ou renomme un champ, lève les limites des migrations imposées par SQLite, et reconstruit une table ;
-- dates (grammaire, § 14) : ajout de mois et d'années, heure et fuseaux horaires ;
+- dates (grammaire, § 14) : écart entre deux dates en mois ou en années, heure et fuseaux horaires ;
 - langage : modifier le champ d'une recherche sans passer par un nom (`L'âge du client conservé dont … devient …`) ;
 - aide à la saisie (`docs/lsp.md`, § 8) : survol d'un nom, aller à la définition, renommer, rechercher les usages, plusieurs erreurs à la fois, suites en forme compacte, Neovim ;
 - installation pour l'utilisateur final : `grym` embarqué dans l'extension (un paquet par système, construit par GitHub Actions), aucun réglage, fonctionnement en mode restreint, bouton « Lancer », publication sur la place de marché de VS Code et sur Open VSX (licence et comptes d'éditeur requis).
@@ -262,3 +262,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.49 | 2026-09-28 | Art. 12 : la contrainte d'entité est faite, sous forme de règles vérifiées à la fin de chaque transaction (grammaire, § 16.14) ; report : le ciblage des objets touchés |
 | 1.50 | 2026-09-28 | Art. 12 : coût des règles mesuré ; le ciblage attend un besoin réel |
 | 1.51 | 2026-09-28 | Art. 8 : les messages tutoient, comme le guide (« voulais-tu `solde` ? ») |
+| 1.52 | 2026-09-29 | Art. 12 : l'ajout de mois et d'années aux dates est fait, ramené au dernier jour du mois (grammaire, § 14.2) ; report : l'écart en mois ou en années |

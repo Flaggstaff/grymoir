@@ -86,6 +86,7 @@ static void constante(Compilation *c, TypeConstante type, const char *texte, con
 }
 
 static void expression(Compilation *c, const Noeud *n);
+static uint16_t unite_duree(const Noeud *d);
 static void appel(Compilation *c, const Noeud *n, int rend);
 
 /* Condition : après son code, la pile porte vrai ou faux. SAUTER_SI_FAUX vérifie
@@ -350,6 +351,13 @@ static void expression(Compilation *c, const Noeud *n) {
         return;
     case N_OPERATION: {
         expression(c, n->enfants[0]);
+        if (n->enfants[1]->type == N_DUREE) {   /* « d + 3 mois », « d − 1 an » (§ 14.2) */
+            const Noeud *d = n->enfants[1];
+            expression(c, d->enfants[0]);
+            if (n->op == '-') emettre(c, I_NEGATION, 0, n->op_ligne, n->op_colonne);
+            emettre(c, I_DECALER, unite_duree(d), n->op_ligne, n->op_colonne);
+            return;
+        }
         expression(c, n->enfants[1]);
         CodeInstruction code =
             n->op == '+' ? I_ADDITION :
@@ -362,6 +370,11 @@ static void expression(Compilation *c, const Noeud *n) {
     default:
         return;
     }
+}
+
+/* L'opérande de DÉCALER : 0 jours, 1 semaines, 2 mois, 3 années. */
+static uint16_t unite_duree(const Noeud *d) {
+    return d->op == 'j' ? 0 : d->op == 's' ? 1 : d->op == 'm' ? 2 : 3;
 }
 
 static void ajouter_saut(size_t **liste, size_t *nb, size_t pos) {
@@ -665,6 +678,70 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_POUR_CHAQUE: {
         int i = ph->local, f = ph->entier, p = ph->entier + 1, l = ph->ligne, col = ph->colonne;
         const Noeud *corps = ph->enfants[ph->nb_enfants - 1];
+        if ((ph->forme & 1) && ph->enfants[2]->type == N_DUREE) {
+            /* « par pas de 1 mois » (§ 14.2) : le compteur vaut départ + k unités, recalculé à chaque tour depuis le
+             * départ ; sinon le 28 février d'un départ au 31 janvier se répéterait tous les mois suivants.
+             *   départ ← début ; fin ← fin ; pas ← nombre ; compteur ← départ + pas unités (vérifie la date et le pas) ;
+             *   pas = 0 ? ÉCHOUER ; compteur ← départ + 0 unité ; k ← 0 ;
+             *   T: (pas > 0 ? compteur ≤ fin : compteur ≥ fin) sinon S ; corps ;
+             *   P: k ← k + pas ; compteur ← départ + k unités ; SAUTER T ; S: */
+            const Noeud *duree = ph->enfants[2];
+            int s = ph->entier + 2, k = ph->entier + 3;
+            uint16_t u = unite_duree(duree);
+            expression(c, ph->enfants[0]);
+            emettre(c, I_ECRIRE_LOCAL, s, l, col);
+            expression(c, ph->enfants[1]);
+            emettre(c, I_ECRIRE_LOCAL, f, l, col);
+            expression(c, duree->enfants[0]);
+            emettre(c, I_ECRIRE_LOCAL, p, l, col);
+            emettre(c, I_LIRE_LOCAL, s, l, col);
+            emettre(c, I_LIRE_LOCAL, p, l, col);
+            emettre(c, I_DECALER, u, duree->op_ligne, duree->op_colonne);
+            emettre(c, I_ECRIRE_LOCAL, i, l, col);
+            emettre(c, I_LIRE_LOCAL, p, l, col);
+            constante(c, C_NOMBRE, "0", ph, l, col);
+            emettre(c, I_EGAL, 0, l, col);
+            size_t non_nul = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+            echouer_si(c, "Pas nul : la boucle ne finirait jamais.", ph);
+            bloc_corriger_saut(c->b, non_nul, c->b->taille_code);
+            emettre(c, I_LIRE_LOCAL, s, l, col);
+            constante(c, C_NOMBRE, "0", ph, l, col);
+            emettre(c, I_DECALER, u, duree->op_ligne, duree->op_colonne);
+            emettre(c, I_ECRIRE_LOCAL, i, l, col);
+            constante(c, C_NOMBRE, "0", ph, l, col);
+            emettre(c, I_ECRIRE_LOCAL, k, l, col);
+            size_t test = c->b->taille_code;
+            emettre(c, I_LIRE_LOCAL, p, l, col);
+            constante(c, C_NOMBRE, "0", ph, l, col);
+            emettre(c, I_SUPERIEUR, 0, l, col);
+            size_t descendant = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+            emettre(c, I_LIRE_LOCAL, i, l, col);
+            emettre(c, I_LIRE_LOCAL, f, l, col);
+            emettre(c, I_INFERIEUR_OU_EGAL, 0, l, col);
+            size_t verdict = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+            bloc_corriger_saut(c->b, descendant, c->b->taille_code);
+            emettre(c, I_LIRE_LOCAL, i, l, col);
+            emettre(c, I_LIRE_LOCAL, f, l, col);
+            emettre(c, I_SUPERIEUR_OU_EGAL, 0, l, col);
+            bloc_corriger_saut(c->b, verdict, c->b->taille_code);
+            size_t sortie = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+            entrer_boucle(c, 0, 0);
+            phrase(c, corps);
+            cible_suivant(c, c->b->taille_code);
+            emettre(c, I_LIRE_LOCAL, k, l, col);
+            emettre(c, I_LIRE_LOCAL, p, l, col);
+            emettre(c, I_ADDITION, 0, l, col);
+            emettre(c, I_ECRIRE_LOCAL, k, l, col);
+            emettre(c, I_LIRE_LOCAL, s, l, col);
+            emettre(c, I_LIRE_LOCAL, k, l, col);
+            emettre(c, I_DECALER, u, duree->op_ligne, duree->op_colonne);
+            emettre(c, I_ECRIRE_LOCAL, i, l, col);
+            size_t retour = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+            bloc_corriger_saut(c->b, retour, test);
+            bloc_corriger_saut(c->b, sortie, c->b->taille_code);
+            sortir_boucle(c);
+            return;
+        }
         expression(c, ph->enfants[0]);
         emettre(c, I_ECRIRE_LOCAL, i, l, col);
         expression(c, ph->enfants[1]);

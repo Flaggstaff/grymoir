@@ -458,6 +458,7 @@ typedef struct {
     int essais;              /* blocs « Essayer » englobants (§ 18) */
     const char *ecran;       /* la classe de l'écran que « l'écran » désigne ici (§ 22.2), ou NULL */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
+    int duree_permise;       /* « par pas de 1 mois » : une durée peut suivre la valeur lue (§ 14.2) */
     int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
     const char *arrets[3];   /* mots qui peuvent suivre un nom dans le contexte courant (« à », « fois »…) */
     int nb_arrets;
@@ -616,6 +617,8 @@ static Article article_de(const Jeton *t) {
 
 /* Le jeton d'index k peut-il faire partie d'un nom écrit sans crochets ?
  * « n' » suivi de « est » ouvre une négation, pas un nom. */
+static int unite_de(const Jeton *t);
+
 static int mot_de_nom(const Analyse *a, size_t k) {
     const Jeton *t = &a->j[k];
     if (t->type == J_MOT) return !est_reserve(t);
@@ -1305,6 +1308,7 @@ static Noeud *nom_expression(Analyse *a) {
         }
         int arret = 0;
         for (int q = 0; q < a->nb_arrets && fin < f; q++) if (est_mot(&a->j[fin], a->arrets[q])) arret = 1;
+        if (fin < f && unite_de(&a->j[fin]) >= 0) arret = 1;   /* « d + n mois » (§ 14.2) */
         if (!s || (fin < f && s->sorte != S_CALCUL && !arret)) {
             char *tout = cle(a, d, f);
             if (!s && a->formule == 1) {
@@ -2077,12 +2081,61 @@ static Noeud *terme(Analyse *a) {
     return g;
 }
 
-/* expression = terme { ( "+" | "−" ) terme } */
+/* Les unités d'une durée (§ 14.2) : « d + 3 mois ». nombre : 0 singulier, 1 pluriel, 2 invariable ; le singulier
+ * précède son pluriel. */
+static const struct { const char *mot; char unite; int nombre; } UNITES[] = {
+    { "jour", 'j', 0 }, { "jours", 'j', 1 }, { "semaine", 's', 0 }, { "semaines", 's', 1 }, { "mois", 'm', 2 },
+    { "an", 'a', 0 }, { "ans", 'a', 1 }, { "année", 'a', 0 }, { "années", 'a', 1 } };
+#define NB_UNITES (sizeof UNITES / sizeof *UNITES)
+
+static int unite_de(const Jeton *t) {
+    for (size_t k = 0; k < NB_UNITES; k++) if (est_mot(t, UNITES[k].mot)) return (int)k;
+    return -1;
+}
+
+/* « 3 mois » après le terme q, s'il est suivi d'une unité ; sinon q tel quel. L'unité s'accorde avec un nombre
+ * écrit : « 1 an », « 2 ans », « 0 jour » ; « mois » ne change pas. */
+static Noeud *duree(Analyse *a, Noeud *q) {
+    for (size_t k = 0; k < NB_UNITES; k++) attendre_mot(a, a->i, UNITES[k].mot, strlen(UNITES[k].mot));
+    int k = unite_de(cour(a));
+    if (k < 0) return q;
+    Jeton *t = cour(a);
+    if (q->type == N_NOMBRE && UNITES[k].nombre != 2) {
+        long entier = strtol(q->texte, NULL, 10);   /* forme canonique : chiffres, point décimal */
+        int singulier = entier < 2;
+        if (singulier != (UNITES[k].nombre == 0)) {
+            Decimal d = dec_depuis_canonique(q->texte);
+            char *x = dec_afficher(&d);
+            dec_liberer(&d);
+            char *m = grym_formater("Accord : « %s %s ».", x, UNITES[singulier ? k - 1 : k + 1].mot);
+            free(x);
+            noeud_liberer(q);
+            return erreur(a, t, m);
+        }
+    }
+    avancer(a);
+    Noeud *n = noeud_creer(N_DUREE, q->ligne, q->colonne, q->debut);
+    n->op = UNITES[k].unite;
+    n->texte = grym_dupliquer(UNITES[k].mot);
+    n->op_ligne = t->ligne;
+    n->op_colonne = t->colonne;
+    noeud_ajouter(n, q);
+    n->fin = fin_jeton(t);
+    return n;
+}
+
+/* expression = terme { ( "+" | "−" ) terme [ unité ] } */
 static Noeud *cadrer(Analyse *a, Noeud *g);
 
 /* Expression sans la largeur finale : « sur » ne se cadre pas lui-même. */
 static Noeud *expression_simple(Analyse *a) {
     Noeud *g = terme(a);
+    if (g && !a->duree_permise && unite_de(cour(a)) >= 0) {
+        char *m = grym_dupliquer("Une durée ne se range pas seule : elle s'ajoute à une date ou s'en retire, "
+                                 "« d + 3 mois », « d − 1 an ».");
+        noeud_liberer(g);
+        return erreur(a, cour(a), m);
+    }
     while (g) {
         attendre(a, A_OP_ADD);
         if (cour(a)->type != J_PLUS && cour(a)->type != J_MOINS) break;
@@ -2090,6 +2143,7 @@ static Noeud *expression_simple(Analyse *a) {
         Jeton *top = cour(a);
         avancer(a);
         Noeud *d = terme(a);
+        if (d) d = duree(a, d);
         if (!d) { noeud_liberer(g); return NULL; }
         g = operation(op, top, g, d);
     }
@@ -3617,7 +3671,13 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
             if (mots_fixes(a, PAS, 2)) {
                 attendre_mot(a, a->i, "de", 2);
                 if (!de_ou_d(cour(a))) erreur_inattendu(a, cour(a));
-                else { avancer(a); pas = expression(a); }
+                else {
+                    avancer(a);
+                    a->duree_permise = 1;       /* « par pas de 1 mois » (§ 14.2) */
+                    pas = expression(a);
+                    a->duree_permise = 0;
+                    if (pas) pas = duree(a, pas);
+                }
             }
             if (!pas) { noeud_liberer(fin); fin = NULL; }
         }
@@ -3631,6 +3691,7 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
     int case_compteur = compteur->local = a->nb_locaux++;
     int case_fin = a->nb_locaux++;
     a->nb_locaux++;   /* case du pas */
+    if (pas && pas->type == N_DUREE) a->nb_locaux += 2;   /* date de départ, et nombre d'unités écoulées (§ 14.2) */
     int forme = 0;
     a->boucle++;
     Noeud *corps = branche(a, colonne, "Pour chaque", &forme);
@@ -5976,6 +6037,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.sortes_fin = NULL;
     a.nb_noms_fin = 0;
     a.boucle = 0;
+    a.duree_permise = 0;
     a.motif = -1;
     a.nb_arrets = 0;
     a.a_completer = NULL;

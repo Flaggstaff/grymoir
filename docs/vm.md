@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.43 de la spécification, révisée le 28 septembre 2026.
+Version 1.44 de la spécification, révisée le 29 septembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -110,6 +110,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 65 | `APPARENCE` | couleur + 1 (0 : non écrite) | dépile le logo (un fichier, qui doit être une image) ou la valeur absente ; transmet la couleur (0 bleue à 4 grise, ou −1) et le logo à l'interface, qui les applique aux écrans (grammaire, § 22.5) ; sans écrans, sans effet |
 | 66 | `REFUSER` | nombre d'éléments n | dépile n valeurs, les écrit comme `AFFICHER` (séparées par une espace) et échoue avec ce message : une erreur comme une autre, que `ESSAYER` rattrape (grammaire, § 18.1) |
 | 67 | `BASE_MODIFIÉE` | aucun | empile vrai si la transaction en cours a écrit dans la base (`sqlite3_total_changes` depuis son début) : les règles ne se revérifient que dans ce cas (grammaire, § 16.14) |
+| 68 | `DÉCALER` | unité : 0 jours, 1 semaines, 2 mois, 3 années | dépile n, puis une date ; empile la date n unités plus tard (n négatif : plus tôt), ramenée au dernier jour du mois d'arrivée ; une année ne se décale que d'années (grammaire, § 14.2) |
 
 ### 3.1 Boucles et Selon
 
@@ -123,6 +124,10 @@ Pour chaque i de a à b       a → i ; b → fin ; pas (écrit, ou ±1 selon a 
   par pas de p : corps.      pas = 0 ? ÉCHOUER « Pas nul… » ;
                              T: (pas > 0 ? i ≤ fin : i ≥ fin) sinon S ; corps ;
                              P: i ← i + pas ; SAUTER T ; S:
+Pour chaque i de a à b       a → départ ; b → fin ; n → pas ; départ + pas unités → i (vérifie) ;
+  par pas de n mois : corps. pas = 0 ? ÉCHOUER ; départ + 0 → i ; 0 → k ;
+                             T: (pas > 0 ? i ≤ fin : i ≥ fin) sinon S ; corps ;
+                             P: k ← k + pas ; i ← DÉCALER(départ, k) ; SAUTER T ; S:
 ```
 
 `Sortir de la boucle` saute à `S`, `Passer au tour suivant` à `T` (ou à `P` pour `Pour chaque`). Un `Selon` range son sujet dans une case locale, puis teste chaque cas dans l'ordre et saute à la fin après le premier corps exécuté.
@@ -255,7 +260,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 29
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 30
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -282,7 +287,7 @@ classes       nombre : u32, puis pour chacune :
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
-- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40 ; la version 15, le bit 2 et les instructions 41 et 42 ; la version 16, le bit 3 et les instructions 43 et 44 ; la version 17, l'instruction 45 ; la version 18, les instructions 46 à 48 ; la version 19, l'instruction 49 ; la version 20, les instructions 50 et 51 ; la version 21, l'instruction 52 ; la version 22, les instructions 53 et 54 ; la version 23, l'instruction 55 ; la version 24, l'instruction 56 ; la version 25, le fichier source de chaque bloc ; la version 26, les instructions 57 à 64 ; la version 27, l'instruction 65 ; la version 28, l'instruction 66 ; la version 29, l'instruction 67. Les fichiers des versions 1 à 28 restent lisibles ; leur `SUPPRIMER` met désormais dans la corbeille.
+- La version 2 ajoute les instructions 12 à 20 et les constantes booléennes ; la version 3, les modules à plusieurs blocs et les instructions 21 à 26 ; la version 4, les classes et les instructions 27 à 30 ; la version 5, la classe parente ; la version 6, la classe des méthodes ; la version 7, les aptitudes (déclarées parmi les classes, avec leur bit) et les aptitudes adoptées ; la version 8, les constantes date et l'instruction 31 ; la version 9, les instructions 32 et 33 ; la version 10, les entités (bit 2), le pluriel, le type et l'unicité des champs ; la version 11, les instructions 34 et 35 ; la version 12, les constantes de recherche et les instructions 36 à 38 ; la version 13, les valeurs de départ ; la version 14, les champs facultatifs (bit 1) et les instructions 39 et 40 ; la version 15, le bit 2 et les instructions 41 et 42 ; la version 16, le bit 3 et les instructions 43 et 44 ; la version 17, l'instruction 45 ; la version 18, les instructions 46 à 48 ; la version 19, l'instruction 49 ; la version 20, les instructions 50 et 51 ; la version 21, l'instruction 52 ; la version 22, les instructions 53 et 54 ; la version 23, l'instruction 55 ; la version 24, l'instruction 56 ; la version 25, le fichier source de chaque bloc ; la version 26, les instructions 57 à 64 ; la version 27, l'instruction 65 ; la version 28, l'instruction 66 ; la version 29, l'instruction 67 ; la version 30, l'instruction 68. Les fichiers des versions 1 à 29 restent lisibles ; leur `SUPPRIMER` met désormais dans la corbeille.
 - Une classe déjà connue de la machine est redéclarée par un nouveau module : la nouvelle déclaration sert aux objets créés ensuite, les objets existants gardent la leur.
 
 
@@ -376,3 +381,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.41 | 2026-09-28 | Condition de recherche : un champ à travers des liens, `[lien␜…␜champ]` (grammaire, § 16.4) |
 | 1.42 | 2026-09-28 | Règles (grammaire, § 16.14) : calculs au nom réservé, appelés avant chaque validation ; instruction 67 `BASE_MODIFIÉE` ; format version 29 |
 | 1.43 | 2026-09-28 | Base : un index par colonne de lien |
+| 1.44 | 2026-09-29 | Instruction 68 `DÉCALER` (mois, années, semaines, jours ; grammaire, § 14.2) ; boucle « par pas de n mois » recalculée depuis le départ ; format version 30 |

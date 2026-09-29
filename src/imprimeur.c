@@ -415,6 +415,11 @@ static void expression(Impression *im, const Noeud *n) {
     case N_AUJOURDHUI:
         aj(im, im->compact ? "_aujourd'hui" : "aujourd'hui");
         return;
+    case N_DUREE:   /* « 3 mois », « 3 _mois » (§ 14.2) */
+        expression(im, n->enfants[0]);
+        aj(im, im->compact ? " _" : " ");
+        aj(im, n->texte);
+        return;
     case N_ABSENT:
         aj(im, im->compact ? "_absent" : n->forme == 2 ? "absente" : "absent");
         return;

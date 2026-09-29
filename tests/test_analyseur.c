@@ -489,6 +489,18 @@ int main(void) {
 
     /* --- Dates (§ 14) --- */
     V("Le jour vaut 21.09.2026 + 30.", "(créer [jour] (+ (date 2026-09-21) 30))");
+    /* Durées (§ 14.2) : l'unité suit le terme de droite d'un « + » ou d'un « − » */
+    V("Le jour vaut 21.09.2026 + 3 mois − 1 an.",
+      "(créer [jour] (− (+ (date 2026-09-21) (durée 3 mois)) (durée 1 an)))");
+    V("Le n vaut 2.\nLe jour vaut 21.09.2026 + 2 × n semaines.",
+      "(créer [n] 2)\n(créer [jour] (+ (date 2026-09-21) (durée (× 2 [n]) semaines)))");
+    V("Pour chaque e du 31.01.2026 au 31.12.2026 par pas de 1 mois, afficher e.",
+      "(pour-chaque [e] (date 2026-01-31) (date 2026-12-31) (durée 1 mois) (bloc (afficher [e])))");
+    VE("Le jour vaut 21.09.2026 + 2 an.", 1, 29, "Accord : « 2 ans ».");
+    VE("Le jour vaut 21.09.2026 + 1 années.", 1, 29, "Accord : « 1 année ».");
+    VE("Le jour vaut 21.09.2026 + 12'000 jour.", 1, 34, "Accord : « 12'000 jours ».");
+    VE("Le délai vaut 3 mois.", 1, 17, "Une durée ne se range pas seule");
+    VE("Le délai vaut 3 mois + 21.09.2026.", 1, 17, "Une durée ne se range pas seule");
     V("Si aujourd'hui > 01.01.2026, afficher aujourd'hui.",
       "(si (> aujourd'hui (date 2026-01-01)) (bloc (afficher aujourd'hui)))");
     V("Pour chaque j du 01.01.2026 au 03.01.2026, afficher j.",
@@ -779,7 +791,8 @@ int main(void) {
     VS("Le prix vaut 1.\nLe prix unitaire vaut 2.\nLe x vaut prix ",
        "unitaire | sur | suivi de | + | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | .");
     VS("Le prix vaut 1.\nLe prix unitaire vaut 2.\nLe x vaut prix u", "unitaire");
-    VS("Le x vaut (1 + 2", "sur | suivi de | + | − | × | ÷ | ^ | )");
+    VS("Le x vaut (1 + 2", "jour | jours | semaine | semaines | mois | an | ans | année | années | sur | suivi de | + | − | × | ÷ | ^ | )");
+    VS("Le d vaut 01.01.2026.\nLe x vaut d + 3 se", "semaine | semaines");
     VS("Le x vaut 1.\nAfficher ", "x | (nombre) | ( | − | vrai | faux | « … »");
     VS("Le x vaut 1.\nAfficher x ", "sur | suivi de | , sans passer à la ligne | + | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | puis | .");
     VS("Le x vaut 1.\nAfficher x p", "puis");

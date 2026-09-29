@@ -268,6 +268,12 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k = e - 1;
             continue;
         }
+        {                                            /* d + 3 _mois → d + 3 mois (§ 14.2) */
+            static const char *const U[] = { "jour", "jours", "semaine", "semaines", "mois", "an", "ans", "année", "années" };
+            int unite = 0;
+            for (size_t u = 0; u < sizeof U / sizeof *U; u++) if (est_cle(t, U[u])) unite = 1;
+            if (unite) { mot(r, t->valeur, t); continue; }
+        }
         if (est_cle(t, "sur")) {                    /* nom _sur 20 _droite → nom sur 20 à droite (§ 4.2) */
             mot(r, "sur", t);
             continue;

@@ -246,6 +246,7 @@ int main(int argc, char **argv) {
         VERIFIER(section_au_curseur("Les nombres s'affichent à la suisse.", 1) == "4.1");
         VERIFIER(section_au_curseur("Ouvrir l'écran d'accueil.", 10) == "22.3");
         VERIFIER(section_au_curseur("Afficher aujourd'hui.", 11) == "14.3");
+        VERIFIER(section_au_curseur("Afficher d + 3 mois.", 16) == "14.2");
         VERIFIER(section_au_curseur("Le total vaut 3.", 10) == "2.1");
         VERIFIER(section_au_curseur("Le total vaut 3.", 4).isEmpty());                  // un nom du programme
         VERIFIER(section_au_curseur("", 0).isEmpty());

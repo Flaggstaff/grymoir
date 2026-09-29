@@ -1253,6 +1253,36 @@ int main(void) {
     PROG("Le jour vaut 14.07.2026.\nSelon jour :\n    Cas de 01.07.2026 à 31.08.2026, afficher « été ».\n"
          "    Autrement, afficher « autre ».", "été");
     PROG("Afficher aujourd'hui = aujourd'hui puis aujourd'hui > 01.01.2026.", "vrai vrai");
+    /* Mois, années, semaines, jours (§ 14.2) : ramenés au dernier jour du mois */
+    PROG("La d vaut 31.01.2026.\nAfficher d + 1 mois puis d + 1 mois − 1 mois puis d + 13 mois puis d + −1 mois.",
+         "28.02.2026 28.01.2026 28.02.2027 31.12.2025");
+    PROG("Afficher 31.01.2024 + 1 mois puis 29.02.2028 + 1 an puis 29.02.2028 − 4 ans puis 15.03.2026 + 2 années.",
+         "29.02.2024 28.02.2029 29.02.2024 15.03.2028");
+    PROG("Afficher 31.01.2026 + 2 semaines puis 31.01.2026 − 10 jours puis 31.01.2026 + 0 jour puis 31.01.2026 + 3,00 mois.",
+         "14.02.2026 21.01.2026 31.01.2026 30.04.2026");
+    PROG("Le n vaut 3.\nAfficher 31.01.2026 + n mois puis 31.01.2026 + 2 × n mois puis 31.01.2026 + (n + 1) mois.",
+         "30.04.2026 31.07.2026 31.05.2026");
+    PROG("Afficher l'année de 21.09.2026 + 10 ans puis l'année de 21.09.2026 − 1 an.", "2036 2025");
+    PROG("Pour chaque e du 31.01.2026 au 31.05.2026 par pas de 1 mois, afficher e.",
+         "31.01.2026\n28.02.2026\n31.03.2026\n30.04.2026\n31.05.2026");
+    PROG("Pour chaque e du 31.12.2026 au 31.01.2026 par pas de −3 mois, afficher e.",
+         "31.12.2026\n30.09.2026\n30.06.2026\n31.03.2026");
+    PROG("Pour chaque e du 29.02.2024 au 01.03.2028 par pas de 2 ans, afficher e.", "29.02.2024\n28.02.2026\n29.02.2028");
+    PROG("Pour chaque e du 01.01.2026 au 20.01.2026 par pas de 1 semaine, afficher e.",
+         "01.01.2026\n08.01.2026\n15.01.2026");
+    PROG("Pour chaque e du 01.01.2026 au 01.03.2026 par pas de 1 mois :\n    Si e > 01.01.2026, passer au tour suivant.\n"
+         "    Afficher e.", "01.01.2026");
+    PROG("Pour chaque e du 01.01.2026 au 01.03.2026 par pas de 0 mois, afficher e.",
+         "ERREUR 1:1 Pas nul : la boucle ne finirait jamais.");
+    PROG("Pour chaque e de 1 à 5 par pas de 1 mois, afficher e.", "ERREUR 1:37 Des mois s'ajoutent à une date, pas à un nombre.");
+    PROG("Afficher 3 + 2 mois.", "ERREUR 1:12 Des mois s'ajoutent à une date, pas à un nombre.");
+    PROG("Afficher 31.01.2026 + 1,5 mois.", "ERREUR 1:21 Une date se décale d'un nombre entier de mois.");
+    PROG("Afficher 31.01.2026 + « a » semaines.", "ERREUR 1:21 Une date se décale d'un nombre entier de semaines.");
+    PROG("Afficher 31.12.9999 + 1 mois.", "ERREUR 1:21 Date hors du calendrier : du 01.01.0001 au 31.12.9999.");
+    PROG("Afficher 01.01.0001 − 1 an.", "ERREUR 1:21 Date hors du calendrier : du 01.01.0001 au 31.12.9999.");
+    PROG("Afficher 31.01.2026 + 99999999 mois.", "ERREUR 1:21 Date hors du calendrier : du 01.01.0001 au 31.12.9999.");
+    PROG("Afficher l'année de 21.09.2026 + 1 mois.", "ERREUR 1:32 Une année se décale d'années, pas de mois.");
+    PROG("Afficher l'année de 21.09.2026 + 9000 ans.", "ERREUR 1:32 Année hors du calendrier : de 1 à 9999.");
     PROG("Afficher 21.09.2026 + 21.09.2026.", "ERREUR 1:21 On n'additionne pas deux dates.");
     PROG("Afficher 21.09.2026 + 0,5.", "ERREUR 1:21 Une date se décale d'un nombre entier de jours.");
     PROG("Afficher 31.12.9999 + 1.", "ERREUR 1:21 Date hors du calendrier : du 01.01.0001 au 31.12.9999.");

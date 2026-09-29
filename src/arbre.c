@@ -315,6 +315,13 @@ static void decrire(const Noeud *n, Chaine *c) {
     case N_AUJOURDHUI:
         chaine_ajouter(c, "aujourd'hui");
         return;
+    case N_DUREE:
+        chaine_ajouter(c, "(durée ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, ")");
+        return;
     case N_ABSENT:
         chaine_ajouter(c, "absent");
         return;

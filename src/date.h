@@ -20,6 +20,10 @@ int date_lire_iso(const char *texte, long *jours);
 char *date_iso(long jours);       /* « 2026-09-21 », à libérer */
 char *date_suisse(long jours);    /* « 21.09.2026 », à libérer */
 
+/* `jours` plus `mois` mois (négatif : plus tôt), ramené au dernier jour du mois s'il le dépasse : le 31.01 + 1 mois
+ * donne le 28.02 ou le 29.02 (§ 14.2). 0 si le résultat sort du calendrier. */
+int date_ajouter_mois(long jours, long mois, long *resultat);
+
 /* Date du jour selon l'horloge locale. */
 long date_aujourdhui(void);
 
