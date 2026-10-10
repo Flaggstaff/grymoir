@@ -230,6 +230,7 @@ Programme > Fabriquer l'application… fait du projet une application autonome, 
 - macOS : `./paquet-mac`, puis `--fabriquer` depuis l'atelier ainsi installé : `Nom.dmg` ;
 - Linux : `--preparer`, puis linuxdeploy et son greffon Qt : `Nom-x86_64.AppImage`, un seul fichier qui embarque Qt ; construit sur Ubuntu 24.04, il tourne sur les distributions de 2024 et après ; icône : la première image PNG du projet, sinon celle de GrymoiR (`outils/icone-application.png`) ;
 - Windows : `--preparer`, windeployqt, puis les bibliothèques de MSYS2 suivies jusqu'à la dernière : `Nom-windows.zip`, un dossier avec `Nom.exe` ; sans signature, Windows affiche son avertissement au premier lancement.
+- L'atelier lui-même a son installateur Windows depuis le 10 octobre 2026 : `./paquet-windows`, `GrymoiR-installation.exe` (`docs/mainteneur.md`, § 2). Ses exécutables portent désormais l'icône de GrymoiR et un manifeste UTF-8, qui vaut aussi pour les applications fabriquées : un chemin accentué s'y ouvre. « Programme > Fabriquer l'application… » ne fabrique pas encore depuis Windows ; pour Windows, la voie reste GitHub.
 - `--fabriquer` et `--preparer` tournent sans écran (`QCoreApplication`).
 
 Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée dans un dossier personnel vierge, crée sa base avec les données du guide. La partie macOS de la voie C et toute la partie Windows n'ont tourné que sur GitHub, pas ici.
@@ -268,3 +269,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.28 | 2026-09-28 | § 8 : fabriquer une application (voie A : macOS, Linux ; `--fabriquer`) |
 | 0.29 | 2026-09-29 | Icône de l'atelier (un grimoire ouvert : forme littéraire à gauche, compacte à droite ; source `outils/icone/grymoir-atelier.svg`) ; § 8 : une application fabriquée pour macOS prend l'icône de son projet |
 | 0.30 | 2026-10-10 | A5 fait (§ 5 quater) : nouveau projet, projets récents, renommer (Utiliser, base, programme principal suivent), corbeille, fermer le projet ; gestes vidés au changement de projet ; ce que l'application « Gestion de projet » a révélé |
+| 0.31 | 2026-10-10 | § 8 : l'installateur Windows de l'atelier ; icône et manifeste UTF-8 des exécutables Windows |

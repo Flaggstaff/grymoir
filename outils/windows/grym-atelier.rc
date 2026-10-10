@@ -1,0 +1,3 @@
+// GrymoiR : ressources de grym-atelier.exe : l'icône (celle de outils/icone/grymoir-atelier.png) et le manifeste.
+IDI_ICON1 ICON "GrymoiR.ico"
+1 24 "grymoir.manifest"

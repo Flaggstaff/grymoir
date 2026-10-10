@@ -14,6 +14,9 @@ SQLITE_O     = vendor/sqlite/sqlite3.o
 # Windows : prises réseau et générateur aléatoire du système (grym servir, docs/v2.md)
 ifeq ($(OS),Windows_NT)
 RESEAU = -lws2_32 -lbcrypt
+# le manifeste de grym.exe : les chemins accentués s'ouvrent (outils/windows/grymoir.manifest)
+RESSOURCES = outils/windows/grym-ressources.o
+WINDRES ?= windres
 endif
 
 ENTETES   = src/chemins.h src/interface.h src/base.h src/vm_interne.h src/date.h src/compact.h src/imprimeur.h src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
@@ -23,8 +26,11 @@ all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_mac
 $(SQLITE_O): vendor/sqlite/sqlite3.c vendor/sqlite/sqlite3.h
 	$(CC) $(SQLITE_FLAGS) -c -o $@ vendor/sqlite/sqlite3.c
 
-grym: src/grym.c src/lsp.c src/json.c src/serveur.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h src/serveur.h
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/json.c src/serveur.c $(EXECUTION) $(RESEAU)
+grym: src/grym.c src/lsp.c src/json.c src/serveur.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h src/serveur.h $(RESSOURCES)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/json.c src/serveur.c $(EXECUTION) $(RESEAU) $(RESSOURCES)
+
+outils/windows/grym-ressources.o: outils/windows/grym.rc outils/windows/grymoir.manifest
+	$(WINDRES) -I outils/windows -i outils/windows/grym.rc -o $@
 
 grym-lexeur: src/grym-lexeur.c $(LEXEUR) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym-lexeur.c $(LEXEUR)
@@ -74,7 +80,7 @@ test: grym test_lexeur test_analyseur test_machine test_imprimeur test_compact t
 	./test_guide
 
 clean:
-	rm -f grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide *.exe
+	rm -f grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide *.exe outils/windows/grym-ressources.o
 
 # Recompiler SQLite prend une trentaine de secondes : « make clean » le garde, « make distclean » non.
 distclean: clean

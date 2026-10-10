@@ -38,6 +38,11 @@ add_executable(grym-atelier MACOSX_BUNDLE WIN32
     src/atelier/principal.cpp src/atelier/fenetre.cpp src/atelier/editeur.cpp src/atelier/coloration.cpp
     src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp)
 target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg)
+# Windows : l'icône de l'exécutable et le manifeste qui fait lire les chemins en UTF-8 (outils/windows).
+if(WIN32)
+    enable_language(RC)
+    target_sources(grym-atelier PRIVATE outils/windows/grym-atelier.rc)
+endif()
 # La grammaire, embarquée : l'aide de l'atelier est toujours celle de sa version (docs/atelier.md, § 6.5).
 qt_add_resources(grym-atelier "documentation" PREFIX "/documentation" BASE docs FILES docs/grammaire.md docs/guide.md)
 # Le thème (docs/atelier.md, § 5 ter) : jetons et modèle de feuille, polices (OFL 1.1), icônes (ISC et MIT), et leurs licences.

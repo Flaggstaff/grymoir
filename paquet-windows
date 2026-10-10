@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# GrymoiR : fabriquer GrymoiR-installation.exe, l'installateur pour Windows. Se lance dans MSYS2 (UCRT64), depuis
+# le dépôt ; c'est ce que fait l'intégration continue (.github/workflows/installateur-windows.yml) :
+#   ./paquet-windows
+# Il faut Qt 6 de MSYS2 (mingw-w64-ucrt-x86_64-qt6-base, -qt6-svg, -qt6-tools), cmake, ninja, et Inno Setup 6
+# (https://jrsoftware.org/isinfo.php) ; ISCC=chemin/ISCC.exe si le script ne le trouve pas.
+# L'installateur pose, pour l'utilisateur seul et sans droits d'administrateur, dans %LOCALAPPDATA%\Programs\GrymoiR :
+#   bin\grym-atelier.exe, l'atelier, avec ses bibliothèques Qt et MSYS2 ; bin\grym.exe, l'outil en ligne de commande ;
+#   Resources\Exemples\ : « Amis du Tilleul » (docs/guide/chapitre-12) et « Gestion de projet » (projets/), que
+#   l'atelier recopie dans Documents\GrymoiR (le premier au premier lancement, les autres par Fichier > Ouvrir
+#   l'exemple). Pas de signature : Windows affiche son avertissement au premier lancement de l'installateur.
+set -euo pipefail
+case "$(uname -s)" in MINGW*|MSYS*) ;; *) echo "./paquet-windows se lance dans MSYS2 (UCRT64), sous Windows." >&2; exit 1 ;; esac
+depot="$(cd "$(dirname "$0")" && pwd)"
+cd "$depot"
+iscc="${ISCC:-$(ls /c/Program\ Files*/Inno\ Setup*/ISCC.exe 2>/dev/null | head -n 1 || true)}"
+[ -n "$iscc" ] && [ -x "$iscc" ] || { echo "Inno Setup introuvable : installe-le (choco install innosetup), ou donne ISCC=…/ISCC.exe" >&2; exit 1; }
+
+echo "1. Construction (cœur, atelier) et essais…"
+make -s grym CC=gcc
+cmake -B construction -G Ninja -DCMAKE_BUILD_TYPE=Release > /dev/null
+cmake --build construction
+make -s test CC=gcc > /dev/null
+QT_QPA_PLATFORM=offscreen ctest --test-dir construction --output-on-failure > /dev/null
+
+echo "2. Le dossier à installer…"
+paquet="$depot/paquet"
+dossier="$paquet/windows/GrymoiR"
+rm -rf "$paquet/windows"
+mkdir -p "$dossier/bin" "$dossier/Resources/Exemples"
+cp construction/grym-atelier.exe grym.exe "$dossier/bin/"
+# Les exemples : à côté de bin, là où l'atelier les cherche (applicationDirPath()/../Resources/Exemples)
+tilleul="$dossier/Resources/Exemples/Amis du Tilleul"
+mkdir -p "$tilleul"
+cp docs/guide/chapitre-12/*.grym docs/guide/chapitre-12/*.png "$tilleul/"
+printf "Remarque : disposition de l'atelier ; sans effet sur le programme.\nprogramme principal : association.grym\n" \
+    > "$tilleul/projet.grymatelier"
+gestion="$dossier/Resources/Exemples/Gestion de projet"
+mkdir -p "$gestion"
+cp "projets/Gestion de projet/"*.grym "projets/Gestion de projet/projet.grymatelier" "$gestion/"
+
+echo "3. Bibliothèques Qt et MSYS2…"
+deploy="$(command -v windeployqt6 || command -v windeployqt)"
+"$deploy" --release --no-translations "$dossier/bin/grym-atelier.exe" > /dev/null
+# Le Qt de MSYS2 dépend d'autres bibliothèques de /ucrt64/bin (ICU, zstd, freetype…), que windeployqt ne recopie
+# pas : on suit les dépendances jusqu'à ce qu'il n'en manque plus aucune (comme outils/fabriquer-ci).
+for tour in 1 2 3 4 5 6; do
+    manquantes="$(find "$dossier/bin" -name '*.exe' -o -name '*.dll' | while read -r f; do ldd "$f"; done \
+        | awk '$3 ~ /^\/ucrt64\/bin\// {print $3}' | sort -u \
+        | while read -r d; do [ -e "$dossier/bin/$(basename "$d")" ] || echo "$d"; done)"
+    [ -n "$manquantes" ] || break
+    echo "$manquantes" | while read -r d; do cp "$d" "$dossier/bin/"; done
+done
+
+echo "4. Vérifications…"
+# Le manifeste est là : sans lui, un chemin accentué (C:\Users\Noé) ne s'ouvre pas.
+for e in grym.exe grym-atelier.exe; do
+    grep -aq "activeCodePage" "$dossier/bin/$e" || { echo "$e n'a pas son manifeste UTF-8." >&2; exit 1; }
+done
+# Et il marche : un programme, un fichier utilisé et une base, dans un dossier accentué.
+essai="$(mktemp -d)/Essai à Noé"
+mkdir -p "$essai"
+printf 'Une personne, conservée, a : un nom (texte), unique.\n' > "$essai/données.grym"
+printf 'Utiliser « données ».\nLa p vaut une nouvelle personne :\n    Le nom vaut « Élodie ».\nConserver la p.\nAfficher le nombre de personnes conservées.\n' \
+    > "$essai/programme.grym"
+resultat="$(PATH="$dossier/bin" "$dossier/bin/grym.exe" lancer "$essai/programme.grym" | tr -d '\r')"
+[ "$resultat" = "1" ] && [ -f "$essai/programme.grymd" ] \
+    || { echo "Chemin accentué : attendu « 1 » et une base, obtenu « $resultat »." >&2; exit 1; }
+rm -rf "$(dirname "$essai")"
+
+echo "5. L'installateur (Inno Setup)…"
+version="$(date +%Y.%m.%d)-$(git rev-parse --short HEAD)"
+rm -f "$paquet/GrymoiR-installation.exe"
+MSYS2_ARG_CONV_EXCL='*' "$iscc" /Qp "/DSource=$(cygpath -w "$dossier")" "/DVersion=$version" \
+    "/DSortie=$(cygpath -w "$paquet")" "$(cygpath -w "$depot/outils/windows/GrymoiR.iss")"
+[ -f "$paquet/GrymoiR-installation.exe" ] || { echo "Inno Setup n'a pas produit l'installateur." >&2; exit 1; }
+echo "Prêt : $paquet/GrymoiR-installation.exe (GrymoiR $version)"
