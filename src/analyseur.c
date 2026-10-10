@@ -4581,7 +4581,7 @@ static const char *const COULEURS_MASCULIN[] = { "bleu", "vert", NULL, "violet",
 
 /* Une image que l'atelier sait montrer : PNG, JPEG, GIF ou WebP, reconnue à sa signature (§ 15.1). */
 static int fichier_image(const char *chemin) {
-    FILE *f = fopen(chemin, "rb");
+    FILE *f = grym_fopen(chemin, "rb");
     if (!f) return -1;
     unsigned char o[12] = { 0 };
     size_t n = fread(o, 1, sizeof o, f);

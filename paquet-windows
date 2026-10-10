@@ -20,8 +20,11 @@ echo "1. Construction (cœur, atelier) et essais…"
 make -s grym CC=gcc
 cmake -B construction -G Ninja -DCMAKE_BUILD_TYPE=Release > /dev/null
 cmake --build construction
-make -s test CC=gcc > /dev/null
-QT_QPA_PLATFORM=offscreen ctest --test-dir construction --output-on-failure > /dev/null
+# La sortie des essais n'apparaît qu'en cas d'échec, entière : c'est là qu'on cherche lequel a raté.
+journal="$(mktemp)"
+make -s test CC=gcc > "$journal" 2>&1 || { grep -B2 -A6 "ÉCHEC" "$journal" >&2 || tail -n 60 "$journal" >&2; exit 1; }
+QT_QPA_PLATFORM=offscreen ctest --test-dir construction --output-on-failure > "$journal" 2>&1 || { tail -n 80 "$journal" >&2; exit 1; }
+rm -f "$journal"
 
 echo "2. Le dossier à installer…"
 paquet="$depot/paquet"

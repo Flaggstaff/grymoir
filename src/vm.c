@@ -1,6 +1,7 @@
 /* GrymoiR : machine virtuelle à pile, v0.2
  * Spécification : docs/vm.md (révision 1.32).
  */
+#include "chemins.h"
 #include "vm.h"
 #include "vm_interne.h"
 #include "base.h"
@@ -732,7 +733,7 @@ static char *chemin_effectif(const Machine *m, const char *ecrit) {
 static Fichier *lire_fichier(const Machine *m, const char *ecrit, char **erreur) {
     if (!*ecrit) { *erreur = grym_dupliquer("Chemin de fichier vide."); return NULL; }
     char *chemin = chemin_effectif(m, ecrit);
-    FILE *f = fopen(chemin, "rb");
+    FILE *f = grym_fopen(chemin, "rb");
     free(chemin);
     if (!f) { *erreur = grym_formater("Fichier « %s » introuvable ou illisible.", ecrit); return NULL; }
     Fichier *x = grym_allouer(sizeof *x);
@@ -805,22 +806,22 @@ static char *ecrire_sur_le_disque(Machine *m) {
     char *erreur = NULL;
     for (k = 0; k < m->nb_a_ecrire && !erreur; k++) {
         const Ecriture_disque *e = &m->a_ecrire[k];
-        FILE *existe = fopen(e->chemin, "rb");
+        FILE *existe = grym_fopen(e->chemin, "rb");
         if (existe) {
             fclose(existe);
             erreur = grym_formater("« %s » existe déjà : il n'est jamais écrasé.", e->ecrit);
             break;
         }
-        FILE *f = fopen(e->chemin, "wb");
+        FILE *f = grym_fopen(e->chemin, "wb");
         int ok = f && fwrite(e->fichier->octets, 1, e->fichier->taille, f) == e->fichier->taille;
         if (f && fclose(f) != 0) ok = 0;
         if (!ok) {
-            if (f) remove(e->chemin);
+            if (f) grym_supprimer(e->chemin);
             erreur = grym_formater("Écriture de « %s » impossible.", e->ecrit);
             break;
         }
     }
-    if (erreur) while (k > 0) remove(m->a_ecrire[--k].chemin);
+    if (erreur) while (k > 0) grym_supprimer(m->a_ecrire[--k].chemin);
     return erreur;
 }
 
@@ -2344,7 +2345,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         Chaine *r = m->essai_migration;
         m->essai_migration = NULL;
         if (!entites) { chaine_ajouter(r, "Aucune entité conservée : aucune base.\n"); return 1; }
-        FILE *existe = m->chemin_base ? fopen(m->chemin_base, "rb") : NULL;
+        FILE *existe = m->chemin_base ? grym_fopen(m->chemin_base, "rb") : NULL;
         if (m->chemin_base && !existe) {   /* ne pas créer la base pour un essai */
             size_t n = 0;
             for (size_t i = m->nb_classes - module->nb_classes; i < m->nb_classes; i++) n += m->classes[i]->conserve;
@@ -2878,7 +2879,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             else if (!*c.texte) probleme = grym_dupliquer("Chemin de fichier vide.");
             char *chemin = probleme ? NULL : chemin_effectif(m, c.texte);
             if (chemin) {
-                FILE *existe = fopen(chemin, "rb");
+                FILE *existe = grym_fopen(chemin, "rb");
                 if (existe) {
                     fclose(existe);
                     probleme = grym_formater("« %s » existe déjà : il n'est jamais écrasé.", c.texte);
@@ -3628,7 +3629,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             diag->ligne = diag->colonne = 0;
             free(diag->fichier);
             diag->fichier = NULL;
-            for (size_t k = 0; k < ecrits; k++) remove(m->a_ecrire[k].chemin);
+            for (size_t k = 0; k < ecrits; k++) grym_supprimer(m->a_ecrire[k].chemin);
         } else if (!ok) {
             base_annuler(m->base);
         }

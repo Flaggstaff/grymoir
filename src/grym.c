@@ -11,6 +11,7 @@
 #define _POSIX_C_SOURCE 200809L   /* fileno, isatty */
 #endif
 
+#include "chemins.h"
 #include "analyseur.h"
 #include "bytecode.h"
 #include "compilateur.h"
@@ -121,7 +122,7 @@ static int est_compact(const char *chemin) {
 }
 
 static Module *charger(const char *chemin) {
-    FILE *f = fopen(chemin, "rb");
+    FILE *f = grym_fopen(chemin, "rb");
     if (!f) {
         fprintf(stderr, "Impossible d'ouvrir « %s ».\n", chemin);
         return NULL;
@@ -300,7 +301,7 @@ static int compiler_fichier(const char *chemin) {
                 : grym_formater("%s.grymb", chemin);
     size_t taille = 0;
     unsigned char *octets = module_serialiser(b, &taille);
-    FILE *f = fopen(cible, "wb");
+    FILE *f = grym_fopen(cible, "wb");
     int ok = f && fwrite(octets, 1, taille, f) == taille;
     if (f && fclose(f) != 0) ok = 0;
     if (ok) printf("%s : %lu octets\n", cible, (unsigned long)taille);
@@ -313,7 +314,7 @@ static int compiler_fichier(const char *chemin) {
 
 /* Analyse un fichier source littéraire ; NULL et un message en cas d'erreur. */
 static int analyser_fichier(const char *chemin, Programme *p) {
-    FILE *f = fopen(chemin, "rb");
+    FILE *f = grym_fopen(chemin, "rb");
     if (!f) {
         fprintf(stderr, "Impossible d'ouvrir « %s ».\n", chemin);
         return 0;
@@ -360,7 +361,7 @@ static int traduire(const char *chemin) {
     if (compact) cible = grym_formater("%.*s", (int)(l - 1), chemin);                 /* .grymc → .grym */
     else if (l > 5 && strcmp(chemin + l - 5, ".grym") == 0) cible = grym_formater("%sc", chemin);
     else cible = grym_formater("%s.grymc", chemin);
-    FILE *existe = fopen(cible, "rb");
+    FILE *existe = grym_fopen(cible, "rb");
     if (existe) {
         fclose(existe);
         fprintf(stderr, "« %s » existe déjà : supprime-le ou renomme-le avant de traduire.\n", cible);
@@ -368,7 +369,7 @@ static int traduire(const char *chemin) {
         free(t);
         return EXIT_FAILURE;
     }
-    FILE *f = fopen(cible, "wb");
+    FILE *f = grym_fopen(cible, "wb");
     int ok = f && fputs(t, f) >= 0;
     if (f && fclose(f) != 0) ok = 0;
     if (ok) printf("%s\n", cible);

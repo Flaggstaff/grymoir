@@ -2,7 +2,9 @@ CC     ?= cc
 CFLAGS ?= -std=c99 -Wall -Wextra -pedantic -O2
 CPPFLAGS += -Ivendor/sqlite
 
-LEXEUR    = src/lexeur.c src/date.c src/texte.c
+# Sous Windows, chaque exécutable porte le manifeste UTF-8 (outils/windows) : les essais ouvrent leurs fichiers
+# dans les mêmes conditions que grym.exe, noms accentués compris (« données.grym »).
+LEXEUR    = src/lexeur.c src/date.c src/texte.c $(RESSOURCES)
 ANALYSEUR = src/chemins.c src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c $(LEXEUR)
 EXECUTION = src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c $(ANALYSEUR) $(SQLITE_O)
 # SQLite embarqué (vendor/sqlite, voir PROVENANCE.md) : compilé une fois, sans les avertissements
@@ -14,7 +16,7 @@ SQLITE_O     = vendor/sqlite/sqlite3.o
 # Windows : prises réseau et générateur aléatoire du système (grym servir, docs/v2.md)
 ifeq ($(OS),Windows_NT)
 RESEAU = -lws2_32 -lbcrypt
-# le manifeste de grym.exe : les chemins accentués s'ouvrent (outils/windows/grymoir.manifest)
+# le manifeste des exécutables : les chemins accentués s'ouvrent (outils/windows/grymoir.manifest)
 RESSOURCES = outils/windows/grym-ressources.o
 WINDRES ?= windres
 endif
@@ -26,8 +28,8 @@ all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_mac
 $(SQLITE_O): vendor/sqlite/sqlite3.c vendor/sqlite/sqlite3.h
 	$(CC) $(SQLITE_FLAGS) -c -o $@ vendor/sqlite/sqlite3.c
 
-grym: src/grym.c src/lsp.c src/json.c src/serveur.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h src/serveur.h $(RESSOURCES)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/json.c src/serveur.c $(EXECUTION) $(RESEAU) $(RESSOURCES)
+grym: src/grym.c src/lsp.c src/json.c src/serveur.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h src/serveur.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/json.c src/serveur.c $(EXECUTION) $(RESEAU)
 
 outils/windows/grym-ressources.o: outils/windows/grym.rc outils/windows/grymoir.manifest
 	$(WINDRES) -I outils/windows -i outils/windows/grym.rc -o $@
