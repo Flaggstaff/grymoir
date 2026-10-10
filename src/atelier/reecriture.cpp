@@ -1,6 +1,7 @@
 // GrymoiR : l'atelier, réécriture chirurgicale.
 #include "reecriture.h"
 #include "editeur.h"
+#include "projet.h"
 #include "schema.h"
 
 extern "C" {
@@ -24,6 +25,8 @@ extern "C" {
 #include "imprimeur.h"
 #include "texte.h"
 }
+
+static bool deplacer(const QString &a, const QString &b);
 
 namespace {
 
@@ -265,6 +268,10 @@ Trouve trouver_porteur(Chantier &ch, const QString &entite) {
 
 QString annuler_geste(const Geste &geste) {
     QString erreur;
+    for (int k = geste.renommes.size() - 1; k >= 0; k--) {   // les noms d'abord : les contenus se rétablissent ensuite
+        const auto &r = geste.renommes[k];
+        if (!deplacer(r.second, r.first)) erreur = QString("« %1 » n'a pas pu reprendre son nom.").arg(r.first);
+    }
     for (auto i = geste.avant.constBegin(); i != geste.avant.constEnd(); ++i) {
         QSaveFile s(i.key());
         if (!s.open(QIODevice::WriteOnly) || s.write(i.value()) < 0 || !s.commit())
@@ -832,4 +839,200 @@ QString ecran_deplacer(const QString &dossier, const QString &ecran, int source,
     reimprimer(ch, t);
     geste->description = QString("Déplacer un élément de l'écran %1").arg(ecran);
     return ch.conclure(geste);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// A5 : renommer et supprimer un fichier du projet (docs/atelier.md, § 5 quater)
+// ---------------------------------------------------------------------------------------------------------------
+
+// `Utiliser « … ».` et `_utiliser « … »`, en tête de ligne : la phrase ne vit qu'en tête du fichier (§ 21.1), et une
+// remarque commence par « Remarque ». Un fichier qui ne s'analyse plus garde ses phrases `Utiliser` lisibles ainsi.
+static const QRegularExpression &forme_utiliser() {
+    static const QRegularExpression r("^([ \\t]*(?:Utiliser|_utiliser)[ \\t]+«\\s*)([^»\\n]*?)(\\s*»)",
+                                      QRegularExpression::MultilineOption | QRegularExpression::UseUnicodePropertiesOption);
+    return r;
+}
+
+// Le fichier sans son extension, en chemin absolu nettoyé : ce que désigne `Utiliser « … »` (§ 21.3).
+static QString souche(const QString &chemin) {
+    const QFileInfo i(chemin);
+    return QDir::cleanPath(i.absolutePath() + "/" + i.completeBaseName());
+}
+
+static QStringList fichiers_du_projet(const QString &dossier) {
+    QStringList r;
+    QDirIterator it(dossier, {"*.grym", "*.grymc"}, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) r << QFileInfo(it.next()).absoluteFilePath();
+    r.sort();
+    return r;
+}
+
+static QString lire_texte(const QString &chemin, bool *ok = nullptr) {
+    QFile f(chemin);
+    const bool lu = f.open(QIODevice::ReadOnly);
+    if (ok) *ok = lu;
+    return lu ? QString::fromUtf8(f.readAll()) : QString();
+}
+
+QStringList utilisateurs_de(const QString &dossier, const QString &fichier) {
+    const QString cible = souche(fichier);
+    QStringList r;
+    for (const QString &c : fichiers_du_projet(dossier)) {
+        if (c == QFileInfo(fichier).absoluteFilePath()) continue;
+        auto it = forme_utiliser().globalMatch(lire_texte(c));
+        while (it.hasNext()) {
+            const auto m = it.next();
+            if (QDir::cleanPath(QFileInfo(c).absolutePath() + "/" + m.captured(2).trimmed()) == cible) { r << c; break; }
+        }
+    }
+    return r;
+}
+
+// Renomme a en b ; un nom qui ne diffère que par la casse passe par un nom provisoire (macOS, Windows).
+static bool deplacer(const QString &a, const QString &b) {
+    if (QFileInfo(a).absoluteFilePath().compare(QFileInfo(b).absoluteFilePath(), Qt::CaseInsensitive) == 0 && a != b) {
+        const QString t = a + ".renommage";
+        return QFile::rename(a, t) && QFile::rename(t, b);
+    }
+    return QFile::rename(a, b);
+}
+
+static bool meme_fichier(const QString &a, const QString &b) {
+    const QString ca = QFileInfo(a).canonicalFilePath(), cb = QFileInfo(b).canonicalFilePath();
+    return !ca.isEmpty() && ca == cb;
+}
+
+QString renommer_fichier(const QString &dossier, const QString &fichier, const QString &nouveau, Geste *geste,
+                         QString *nouveau_chemin) {
+    const QFileInfo ancien(fichier);
+    if (!ancien.isFile()) return QString("« %1 » introuvable.").arg(fichier);
+    const QString ext = "." + ancien.suffix();   // « .grym » ou « .grymc » : la forme du fichier
+    if (ext != ".grym" && ext != ".grymc") return "Seul un fichier .grym ou .grymc se renomme ici.";
+    QString n = nouveau.trimmed();
+    if (n.endsWith(".grym", Qt::CaseInsensitive) || n.endsWith(".grymc", Qt::CaseInsensitive)) {
+        const QString e = n.mid(n.lastIndexOf('.'));
+        if (e.compare(ext, Qt::CaseInsensitive) != 0)
+            return QString("L'extension ne change pas : elle dit la forme du fichier. Pour passer à l'autre forme : grym traduire.");
+        n.chop(e.size());
+    }
+    if (n.isEmpty()) return "Donne un nom au fichier.";
+    if (n.contains('/') || n.contains('\\')) return "Un nom de fichier, sans dossier : « données ».";
+    if (n.startsWith('.')) return "Un nom qui commence par un point serait caché.";
+    if (n.contains(QChar(0x00AB)) || n.contains(QChar(0x00BB)) || n.contains('"'))
+        return "Pas de guillemets dans un nom de fichier : « Utiliser » ne saurait plus l'écrire.";
+    const QDir ici = ancien.absoluteDir();
+    const QString arrivee = ici.filePath(n + ext);
+    if (arrivee == ancien.absoluteFilePath()) return "Rien à changer.";
+    // ni l'une ni l'autre forme ne doit exister sous le nouveau nom : « données » désignerait les deux (§ 21.1)
+    for (const QString &e : {QString(".grym"), QString(".grymc")}) {
+        const QString autre = ici.filePath(n + e);
+        if (QFileInfo::exists(autre) && !meme_fichier(autre, fichier))
+            return QString("« %1 » existe déjà : il n'est jamais écrasé.").arg(n + e);
+    }
+    // la base et ce qui l'accompagne : un programme les emporte (grammaire, § 16.5)
+    const QStringList compagnons = {".grymd", ".grymd-journal", ".grymd-wal", ".grymd-shm", ".grymb"};
+    QVector<QPair<QString, QString>> a_deplacer = {{ancien.absoluteFilePath(), arrivee}};
+    for (const QString &e : compagnons) {
+        const QString de = ici.filePath(ancien.completeBaseName() + e), vers = ici.filePath(n + e);
+        if (!QFileInfo::exists(de)) continue;
+        if (QFileInfo::exists(vers) && !meme_fichier(vers, de))
+            return QString("« %1 » existe déjà : la base de « %2 » ne peut pas prendre ce nom, et une base n'est jamais écrasée.")
+                .arg(n + e, ancien.fileName());
+        a_deplacer.push_back({de, vers});
+    }
+
+    // les phrases Utiliser qui désignent le fichier, réécrites en mémoire d'abord
+    const QString cible = souche(fichier);
+    QMap<QString, QString> textes;
+    QMap<QString, bool> sains;
+    for (const QString &c : fichiers_du_projet(dossier)) {
+        bool ok = false;
+        const QString t = lire_texte(c, &ok);
+        if (!ok) continue;
+        sains.insert(c, analyser_source(t, c.endsWith(".grymc"), c).message.isEmpty());
+        QString r = t;
+        auto it = forme_utiliser().globalMatch(t);
+        QVector<QRegularExpressionMatch> trouves;
+        while (it.hasNext()) trouves << it.next();
+        for (int k = trouves.size() - 1; k >= 0; k--) {   // de la fin vers le début : les positions restent justes
+            const auto &m = trouves[k];
+            const QString ecrit = m.captured(2).trimmed();
+            if (QDir::cleanPath(QFileInfo(c).absolutePath() + "/" + ecrit) != cible) continue;
+            const int barre = ecrit.lastIndexOf('/');
+            r.replace(m.capturedStart(2), m.capturedLength(2), (barre < 0 ? QString() : ecrit.left(barre + 1)) + n);
+        }
+        if (r != t) textes.insert(c, r);
+    }
+    // le programme principal, dans projet.grymatelier
+    FichierProjet fp;
+    fp.lire(dossier);
+    const bool principal = !fp.programme_principal.isEmpty()
+        && QDir(dossier).absoluteFilePath(fp.programme_principal) == ancien.absoluteFilePath();
+
+    geste->avant.clear();
+    geste->renommes.clear();
+    geste->description = QString("Renommer « %1 » en « %2 »").arg(ancien.fileName(), n + ext);
+    for (const auto &d : a_deplacer) {
+        if (!deplacer(d.first, d.second)) {
+            annuler_geste(*geste);
+            return QString("« %1 » n'a pas pu être renommé.").arg(QFileInfo(d.first).fileName());
+        }
+        geste->renommes.push_back(d);
+    }
+    for (auto i = textes.constBegin(); i != textes.constEnd(); ++i) {
+        const QString c = i.key() == ancien.absoluteFilePath() ? arrivee : i.key();
+        geste->avant.insert(c, lire_texte(c).toUtf8());
+        QSaveFile s(c);
+        if (!s.open(QIODevice::WriteOnly) || s.write(i.value().toUtf8()) < 0 || !s.commit()) {
+            annuler_geste(*geste);
+            return QString("« %1 » n'a pas pu être écrit.").arg(QDir(dossier).relativeFilePath(c));
+        }
+    }
+    if (principal) {
+        QFile f(FichierProjet::chemin(dossier));
+        geste->avant.insert(FichierProjet::chemin(dossier), f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray());
+        fp.programme_principal = QDir(dossier).relativeFilePath(arrivee);
+        if (!fp.ecrire()) {
+            annuler_geste(*geste);
+            return "projet.grymatelier n'a pas pu être écrit.";
+        }
+    }
+    // Le projet après le geste : un fichier qui s'analysait doit s'analyser encore.
+    for (auto i = sains.constBegin(); i != sains.constEnd(); ++i) {
+        if (!i.value()) continue;
+        const QString c = i.key() == ancien.absoluteFilePath() ? arrivee : i.key();
+        const Diagnostic_atelier d = analyser_source(lire_texte(c), c.endsWith(".grymc"), c);
+        if (d.message.isEmpty()) continue;
+        annuler_geste(*geste);
+        return QString("Renommage annulé : il casserait « %1 », ligne %2 : %3")
+            .arg(QDir(dossier).relativeFilePath(c)).arg(d.ligne).arg(d.message);
+    }
+    if (nouveau_chemin) *nouveau_chemin = arrivee;
+    return QString();
+}
+
+QString supprimer_fichier(const QString &dossier, const QString &fichier, QString *avis) {
+    const QFileInfo i(fichier);
+    if (!i.isFile()) return QString("« %1 » introuvable.").arg(fichier);
+    const QStringList par = utilisateurs_de(dossier, fichier);
+    if (!par.isEmpty()) {
+        QStringList noms;
+        for (const QString &c : par) noms << "« " + QDir(dossier).relativeFilePath(c) + " »";
+        return QString("« %1 » est utilisé par %2 : retire d'abord la phrase « Utiliser ».")
+            .arg(i.fileName(), noms.join(", "));
+    }
+    QString chemin = i.absoluteFilePath();
+    if (!QFile::moveToTrash(chemin)) return QString("« %1 » n'a pas pu être mis à la corbeille.").arg(i.fileName());
+    FichierProjet fp;
+    fp.lire(dossier);
+    if (!fp.programme_principal.isEmpty() && QDir(dossier).absoluteFilePath(fp.programme_principal) == i.absoluteFilePath()) {
+        fp.programme_principal.clear();
+        fp.ecrire();
+    }
+    const QString base = i.absoluteDir().filePath(i.completeBaseName() + ".grymd");
+    if (avis) *avis = QFileInfo::exists(base)
+        ? QString("« %1 » est à la corbeille. Sa base, « %2 », reste dans le dossier : les données ne se jettent pas avec le code.")
+              .arg(i.fileName(), QFileInfo(base).fileName())
+        : QString("« %1 » est à la corbeille.").arg(i.fileName());
+    return QString();
 }

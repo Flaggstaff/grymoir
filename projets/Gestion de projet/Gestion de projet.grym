@@ -1,0 +1,148 @@
+Remarque : Gestion de projet, le programme principal.
+Utiliser « actions ».
+
+Les écrans ont la couleur violette.
+
+Remarque : les trois états d'une tâche, créés une seule fois ; le rang les range dans les menus.
+Si le nombre d'états conservés est nul :
+    Créer « À faire » et 1.
+    Créer « En cours » et 2.
+    Créer « Terminée » et 3.
+
+Remarque : un exemple pour commencer, daté depuis aujourd'hui pour qu'il ait toujours une tâche en retard.
+Remarque : il ne revient pas si on le supprime, tant qu'une personne existe.
+Si le nombre de personnes conservées est nul :
+    Engager « Anne Rochat ».
+    Engager « Louis Bapst ».
+    Lancer « Site de l'association » et aujourd'hui − 1 mois et aujourd'hui + 2 mois.
+    Le site vaut le projet conservé dont le nom est « Site de l'association ».
+    L'anne vaut la personne conservée dont le nom est « Anne Rochat ».
+    Le louis vaut la personne conservée dont le nom est « Louis Bapst ».
+    Confier « Choisir l'hébergeur » et le site et l'anne et aujourd'hui − 3 semaines.
+    Confier « Écrire les textes » et le site et le louis et aujourd'hui − 5 jours.
+    Confier « Mettre en ligne » et le site et l'anne et aujourd'hui + 1 mois.
+    L'hébergeur vaut la tâche conservée dont le titre est « Choisir l'hébergeur ».
+    Terminer l'hébergeur et aujourd'hui − 22 jours.
+
+Remarque : le bilan s'affiche dans le panneau d'exécution de l'atelier, ou sous l'écran dans le navigateur.
+Pour faire le bilan :
+    Afficher « Bilan au » puis aujourd'hui.
+    Pour chaque projet conservé, par début :
+        Afficher le nom du projet puis « : » puis le nombre de terminées du projet puis « tâche(s) terminée(s) sur » puis le nombre de tâches du projet suivi de « , fin prévue le » puis la fin prévue du projet suivi de « . ».
+        Pour chaque tâche du projet dont l'échéance < aujourd'hui et le nom de l'état ≠ « Terminée », par échéance :
+            Afficher «   en retard : » puis le titre de la tâche puis « ( » suivi de aujourd'hui − l'échéance de la tâche puis « jour(s)) ».
+
+L'écran d'accueil, « Gestion de projet », montre :
+    un bouton « Projets »,
+    un bouton « Tâches »,
+    un bouton « En retard »,
+    un bouton « Personnes »,
+    côte à côte :
+        un bouton « Bilan »,
+        un bouton « Fermer ».
+
+L'écran des projets montre :
+    la liste des projets conservés, par début, avec le nom, le début, la fin prévue et le nom du responsable,
+    un bouton « Nouveau projet »,
+    un bouton « Fermer ».
+
+L'écran des tâches, « Tâches d'un projet », montre :
+    un projet (projet), facultatif,
+    la liste des tâches conservées dont le projet est le projet de l'écran, par échéance, avec le titre, le nom du responsable, le nom de l'état et l'échéance,
+    côte à côte :
+        un bouton « Nouvelle tâche »,
+        un bouton « Commencer »,
+        un bouton « Terminer »,
+        un bouton « Rouvrir »,
+    un bouton « Fermer ».
+
+L'écran des retards, « Tâches en retard », montre :
+    la liste des tâches conservées dont l'échéance < aujourd'hui et le nom de l'état ≠ « Terminée », par échéance, avec l'échéance, le titre, le nom du projet et le nom du responsable,
+    un bouton « Fermer ».
+
+L'écran des personnes montre :
+    une personne (personne), facultative,
+    la liste des tâches conservées dont le responsable est la personne de l'écran et le nom de l'état ≠ « Terminée », par échéance, avec l'échéance, le titre, le nom du projet et le nom de l'état,
+    un bouton « Nouvelle personne »,
+    un bouton « Fermer ».
+
+Remarque : la liste des tâches suit le projet de l'écran : le premier projet, à l'ouverture.
+Quand on ouvre l'écran des tâches :
+    Pour chaque projet conservé, par début :
+        Si le projet de l'écran est absent, le projet de l'écran devient le projet.
+
+Remarque : de même, la première personne, à l'ouverture.
+Quand on ouvre l'écran des personnes :
+    Pour chaque personne conservée, par nom :
+        Si la personne de l'écran est absente, la personne de l'écran devient la personne.
+
+Quand on clique sur « Projets » dans l'écran d'accueil :
+    Ouvrir l'écran des projets.
+
+Quand on clique sur « Tâches » dans l'écran d'accueil :
+    Ouvrir l'écran des tâches.
+
+Quand on clique sur « En retard » dans l'écran d'accueil :
+    Ouvrir l'écran des retards.
+
+Quand on clique sur « Personnes » dans l'écran d'accueil :
+    Ouvrir l'écran des personnes.
+
+Quand on clique sur « Bilan » dans l'écran d'accueil :
+    Faire le bilan.
+
+Quand on clique sur « Fermer » dans l'écran d'accueil :
+    Fermer l'écran.
+
+Quand on choisit un projet dans l'écran des projets :
+    Ouvrir la fiche du projet.
+
+Quand on clique sur « Nouveau projet » dans l'écran des projets :
+    Le nouveau vaut un nouveau projet saisi.
+    Conserver le nouveau.
+
+Quand on clique sur « Fermer » dans l'écran des projets :
+    Fermer l'écran.
+
+Quand on choisit une tâche dans l'écran des tâches :
+    Ouvrir la fiche de la tâche.
+
+Quand on clique sur « Nouvelle tâche » dans l'écran des tâches :
+    Si le projet de l'écran est absent, refuser « Choisis d'abord un projet. ».
+    La nouvelle vaut une nouvelle tâche saisie :
+        Le projet vaut le projet de l'écran.
+        L'état vaut l'état conservé dont le nom est « À faire ».
+    Conserver la nouvelle.
+
+Quand on clique sur « Commencer » dans l'écran des tâches :
+    Si la tâche choisie de l'écran est absente, refuser « Choisis d'abord une tâche dans la liste. ».
+    Commencer la tâche choisie de l'écran.
+
+Quand on clique sur « Terminer » dans l'écran des tâches :
+    Si la tâche choisie de l'écran est absente, refuser « Choisis d'abord une tâche dans la liste. ».
+    Terminer la tâche choisie de l'écran et aujourd'hui.
+
+Quand on clique sur « Rouvrir » dans l'écran des tâches :
+    Si la tâche choisie de l'écran est absente, refuser « Choisis d'abord une tâche dans la liste. ».
+    Rouvrir la tâche choisie de l'écran.
+
+Quand on clique sur « Fermer » dans l'écran des tâches :
+    Fermer l'écran.
+
+Quand on choisit une tâche dans l'écran des retards :
+    Ouvrir la fiche de la tâche.
+
+Quand on clique sur « Fermer » dans l'écran des retards :
+    Fermer l'écran.
+
+Quand on choisit une tâche dans l'écran des personnes :
+    Ouvrir la fiche de la tâche.
+
+Quand on clique sur « Nouvelle personne » dans l'écran des personnes :
+    La nouvelle vaut une nouvelle personne saisie.
+    Conserver la nouvelle.
+
+Quand on clique sur « Fermer » dans l'écran des personnes :
+    Fermer l'écran.
+
+Ouvrir l'écran d'accueil.

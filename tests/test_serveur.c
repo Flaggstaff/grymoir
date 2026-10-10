@@ -253,6 +253,54 @@ static void verifier_jetons(void) {
     json_liberer(j);
 }
 
+
+/* Un projet du dépôt, servi comme grym servir le fait : les « Utiliser » partent de son dossier ; sa base est
+ * une base d'essai, effacée avant et après (docs/atelier.md, § 5 quater). */
+static void servir_projet(const char *chemin, const char *base, Script *sc) {
+    remove(base);
+    char *src = lire_tout(chemin);
+    total++;
+    if (!src) { echecs++; printf("ÉCHEC : %s introuvable\n", chemin); return; }
+    Transport t = { sc, recevoir, envoyer };
+    Serveur *s = serveur_creer(PORT, JETON, "projet", t);
+    Portee *portee = portee_creer();
+    portee_fichier(portee, chemin);
+    Machine *m = machine_creer();
+    Interface i = serveur_interface(s);
+    machine_interface(m, &i);
+    const char *barre = strrchr(chemin, '/');
+    char *dossier = grym_formater("%.*s", (int)(barre - chemin), chemin);
+    machine_dossier(m, dossier);
+    machine_base(m, base);
+    Programme p;
+    Diagnostic d;
+    Chaine sortie = {0};
+    char *erreur = NULL;
+    if (!analyser(src, strlen(src), portee, 0, &p, &d)) {
+        erreur = grym_formater("ANALYSE %s", d.message);
+        diagnostic_liberer(&d);
+    } else {
+        Module *b = compiler(&p, &d);
+        if (!b || !machine_executer(m, b, &sortie, &d)) {
+            erreur = grym_formater("Erreur, ligne %d : %s", d.ligne, d.message);
+            diagnostic_liberer(&d);
+        }
+        module_detruire(b);
+        programme_liberer(&p);
+    }
+    char *annule = erreur ? machine_annulation(m, 0) : NULL;
+    serveur_terminer(s, &sortie, erreur, annule);
+    free(annule);
+    free(erreur);
+    free(sortie.d);
+    free(dossier);
+    free(src);
+    machine_detruire(m);
+    portee_detruire(portee);
+    serveur_fermer(s);
+    remove(base);
+}
+
 #define CONTIENT(r, f)     verifier(__LINE__, #r, r, f, 1)
 #define NE_CONTIENT_PAS(r, f) verifier(__LINE__, #r, r, f, 0)
 #define REQUETES(...) do { char *liste[] = { __VA_ARGS__ }; sc.n = sizeof liste / sizeof *liste; \
@@ -306,6 +354,9 @@ int main(void) {
     CONTIENT(sc.reponses[12], "13");
     /* chaque réponse porte la politique de contenu stricte */
     for (size_t k = 0; k < sc.nr; k++) CONTIENT(sc.reponses[k], "Content-Security-Policy: default-src 'none'");
+    /* un script ne vient que de la page elle-même : jamais en ligne, jamais d'ailleurs */
+    for (size_t k = 0; k < sc.nr; k++) CONTIENT(sc.reponses[k], "script-src 'self';");
+    for (size_t k = 0; k < sc.nr; k++) NE_CONTIENT_PAS(sc.reponses[k], "unsafe-inline");
     for (size_t k = 0; k < sc.nr; k++) CONTIENT(sc.reponses[k], "X-Content-Type-Options: nosniff");
     /* same-origin, jamais no-referrer : sinon un navigateur envoie « Origin: null » avec chaque formulaire */
     for (size_t k = 0; k < sc.nr; k++) CONTIENT(sc.reponses[k], "Referrer-Policy: same-origin\r\n");
@@ -568,6 +619,7 @@ int main(void) {
         CONTIENT(sc.reponses[0], "<div class=\"boutons\"><button name=\"clic\" value=\"2\">Nouveau</button>"
                                  "<button name=\"clic\" value=\"3\">Échouer</button><button name=\"clic\" value=\"4\">Fermer</button></div>");
         CONTIENT(sc.reponses[0], "<body class=\"accueil\">");
+        NE_CONTIENT_PAS(sc.reponses[0], "<noscript>");   /* aucune zone : rien à valider */
         CONTIENT(sc.reponses[1], "303 See Other");
         /* la fiche, par-dessus : le fil rappelle l'écran du dessous */
         CONTIENT(sc.reponses[2], "<p class=\"fil\">Compositeurs</p>");
@@ -576,12 +628,14 @@ int main(void) {
         CONTIENT(sc.reponses[2], "<button name=\"clic\" value=\"3\">Fermer</button>");
         NE_CONTIENT_PAS(sc.reponses[2], "class=\"accueil\"");
         /* retour à l'écran : la ligne choisie le reste */
-        CONTIENT(sc.reponses[4], "<tr class=\"choisie\"><td><button class=\"ligne\" name=\"choix\" value=\"1.1\">Liszt");
+        CONTIENT(sc.reponses[4], "<tr class=\"choisie\"><td class=\"selection\"><input type=\"radio\" name=\"s1\" value=\"1\" "
+                                 "aria-label=\"Sélectionner la ligne 2\" checked></td><td><button class=\"ligne\" name=\"choix\" value=\"1.1\">Liszt");
         NE_CONTIENT_PAS(sc.reponses[4], "class=\"fil\"");
         CONTIENT(sc.reponses[6], "<form class=\"question\"");
         CONTIENT(sc.reponses[8], "value=\"1.1\">Chopin</button>");
         /* Chopin s'insère au-dessus de Liszt : le choix suit Liszt, pas son ancien rang */
-        CONTIENT(sc.reponses[8], "<tr class=\"choisie\"><td><button class=\"ligne\" name=\"choix\" value=\"1.2\">Liszt");
+        CONTIENT(sc.reponses[8], "<tr class=\"choisie\"><td class=\"selection\"><input type=\"radio\" name=\"s1\" value=\"2\" "
+                                 "aria-label=\"Sélectionner la ligne 3\" checked></td><td><button class=\"ligne\" name=\"choix\" value=\"1.2\">Liszt");
         /* l'événement raté : le message sous le titre, rien de conservé, l'écran reste ouvert */
         CONTIENT(sc.reponses[10], "<p class=\"message\" role=\"alert\">Division par zéro.</p>");
         NE_CONTIENT_PAS(sc.reponses[10], "Fantôme");
@@ -626,11 +680,14 @@ int main(void) {
         CONTIENT(sc.reponses[0], "name=\"z1\" value=\"\" inputmode=\"decimal\">");
         CONTIENT(sc.reponses[0], "value=\"2.1\">Schumann</button>");
         CONTIENT(sc.reponses[0], "<button class=\"invisible\" name=\"valider\"");
+        /* un menu changé valide les zones par le script ; sans script, par un bouton visible */
+        CONTIENT(sc.reponses[0], "<script src=\"/grym.js\" defer></script>");
+        CONTIENT(sc.reponses[0], "<noscript><div class=\"boutons\"><button name=\"valider\" value=\"1\">Valider les zones</button>");
         CONTIENT(sc.reponses[2], "value=\"2.0\">Chopin</button>");
         CONTIENT(sc.reponses[2], "<pre class=\"sortie\">pays Pologne\n</pre>");
         CONTIENT(sc.reponses[5], "<p class=\"message\" role=\"alert\">« abc » n&#39;est pas un nombre.</p>");
         CONTIENT(sc.reponses[5], "value=\"2.0\">Chopin</button>");   /* toujours là : le clic n'est pas parti */
-        CONTIENT(sc.reponses[7], "<td class=\"vide\" colspan=\"2\">Aucune ligne.</td>");
+        CONTIENT(sc.reponses[7], "<td class=\"vide\" colspan=\"3\">Aucune ligne.</td>");
         CONTIENT(sc.reponses[7], "name=\"z1\" value=\"12,5\"");
         NE_CONTIENT_PAS(sc.reponses[7], "class=\"message\"");
         CONTIENT(sc.reponses[10], "fermé 12,5\n2\n");
@@ -657,7 +714,7 @@ int main(void) {
                           "Quand on clique sur « Fermer » dans l'écran d'accueil :\n    Fermer l'écran.\n"
                           "Ouvrir l'écran d'accueil.\n";
         memset(&sc, 0, sizeof sc);
-        REQUETES(get("/"), get("/style.css"), get("/logo"), evenement("q=1&clic=0"), get("/"));
+        REQUETES(get("/"), get("/style.css"), get("/logo"), get("/grym.js"), evenement("q=1&clic=0"), get("/"));
         servir(src, &sc);
         CONTIENT(sc.reponses[0], "<img src=\"/logo\" alt=\"\"><h1>Accueil</h1>");
         char *clair = grym_formater("--accent:%s;", serveur_jeton(0, 1, "accent"));
@@ -668,7 +725,47 @@ int main(void) {
         free(clair);
         free(sombre);
         CONTIENT(sc.reponses[2], "Content-Type: image/png");
-        CONTIENT(sc.reponses[4], "Application terminée.");
+        CONTIENT(sc.reponses[3], "Content-Type: text/javascript");
+        CONTIENT(sc.reponses[3], "button[name=valider]");
+        CONTIENT(sc.reponses[5], "Application terminée.");
+        liberer(&sc);
+    }
+
+
+    {   /* L'application « Gestion de projet » (projets/), de bout en bout dans le navigateur */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=5"),                                       /* 0 : Bilan */
+                 get("/"),                                                      /* 1 */
+                 evenement("q=2&clic=1"),                                       /* 2 : Tâches */
+                 get("/"),                                                      /* 3 */
+                 evenement("q=3&z0=Site+de+l%27association&s1=1&clic=5"),       /* 4 : « Écrire les textes », Terminer */
+                 get("/"),                                                      /* 5 */
+                 evenement("q=4&z0=Site+de+l%27association&clic=4"),            /* 6 : Commencer, sans ligne */
+                 get("/"),                                                      /* 7 */
+                 evenement("q=5&fermer=1"),                                     /* 8 : retour à l'accueil */
+                 evenement("q=6&clic=2"),                                       /* 9 : En retard */
+                 get("/"),                                                      /* 10 */
+                 evenement("q=7&clic=1"),                                       /* 11 : Fermer */
+                 evenement("q=8&clic=5"),                                       /* 12 : Bilan */
+                 evenement("q=9&clic=6"),                                       /* 13 : Fermer l'accueil */
+                 get("/"));                                                     /* 14 */
+        servir_projet("projets/Gestion de projet/Gestion de projet.grym", "_essai_gestion.grymd", &sc);
+        CONTIENT(sc.reponses[1], "Site de l&#39;association : 1 tâche(s) terminée(s) sur 3, fin prévue le ");
+        CONTIENT(sc.reponses[1], "en retard : Écrire les textes (5 jour(s))");
+        /* le projet pré-choisi à l'ouverture ; la liste le suit */
+        CONTIENT(sc.reponses[3], "<option value=\"Site de l&#39;association\" selected>");
+        CONTIENT(sc.reponses[3], "value=\"1.1\">Écrire les textes</button>");
+        NE_CONTIENT_PAS(sc.reponses[3], "class=\"message\"");
+        /* sélectionnée par le bouton radio, terminée par le bouton, sans ouvrir sa fiche */
+        CONTIENT(sc.reponses[5], "Écrire les textes</button></td><td>Louis Bapst</td><td>Terminée</td>");
+        CONTIENT(sc.reponses[5], "<h1>Tâches d&#39;un projet</h1>");
+        /* la ligne terminée a changé de contenu : plus rien n'est sélectionné, et « Commencer » le refuse */
+        CONTIENT(sc.reponses[7], "<p class=\"message\" role=\"alert\">Choisis d&#39;abord une tâche dans la liste.</p>");
+        NE_CONTIENT_PAS(sc.reponses[7], " checked>");
+        CONTIENT(sc.reponses[10], "<td class=\"vide\" colspan=\"5\">Aucune ligne.</td>");
+        CONTIENT(sc.reponses[14], "2 tâche(s) terminée(s) sur 3");
+        NE_CONTIENT_PAS(sc.reponses[14], "class=\"erreur\"");
+        CONTIENT(sc.reponses[14], "Application terminée.");
         liberer(&sc);
     }
 

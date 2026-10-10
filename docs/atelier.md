@@ -59,6 +59,7 @@ L'atelier modifie **la seule phrase concernée**, à sa position dans la source,
 | A2 | Inclusion d'un fichier dans un autre (grammaire, conçue d'abord) ; éditeur de données : schéma des entités (une boîte par entité, une flèche par lien), panneau de propriétés (champs, types, unique, facultatif, valeur de départ, cascade), réécriture chirurgicale (§ 3), aperçu de ce que la migration fera à la base avant de l'appliquer (§ 16.7), et refus expliqué quand elle détruirait des données |
 | A3 | Les écrans dans le langage : fenêtres, listes, fiches, boutons, modèle par événements. Conception phrase par phrase dans la grammaire, avant tout code |
 | A4 | Éditeur d'écrans : génération d'une liste et d'une fiche par entité, en GrymoiR modifiable ; agencement à la souris |
+| A5 | Les projets et leurs fichiers : nouveau projet, projets récents, renommer et mettre à la corbeille un fichier, fermer le projet (§ 5 quater) |
 
 État de A1 (24 septembre 2026) : fait. La fenêtre, l'ouverture d'un projet (un dossier, ou le dernier ouvert), la liste de ses fichiers `.grym` et `.grymc`, l'éditeur (numéros de ligne, coloration par le lexeur, première erreur de l'analyseur soulignée en direct, sa ligne en rouge dans la marge, son message au survol et dans le panneau du bas, un clic y mène), l'enregistrement sûr (écrit à côté, puis remplace).
 
@@ -164,6 +165,25 @@ Tranche T3, faite le 26 septembre 2026 : la phrase `Les écrans ont la couleur �
 - Dans l'aperçu de l'onglet Écrans, chaque écran reçoit l'apparence du programme qui le déclare : son logo, à la taille qu'il aura (l'écran d'accueil est celui que ce programme ouvre lui-même au premier niveau), et la feuille de son accent, posée sur l'aperçu seul.
 - Le thème est fini : T1 à T3.
 
+## 5 quater. A5 : les projets et leurs fichiers *(fait le 10 octobre 2026)*
+
+Jusqu'ici, un projet se créait dans le Finder, puis s'ouvrait ; un fichier renommé à la main cassait en silence les phrases `Utiliser` qui le désignaient, et la base d'un programme renommé semblait perdue.
+
+- **Fichier > Nouveau projet…** (Maj+Cmd+N) : un nom, puis un emplacement (`Documents/GrymoiR` proposé). L'atelier crée le dossier, un programme `Nom.grym` réduit à une remarque, et `projet.grymatelier` qui le désigne comme programme principal ; puis il ouvre le programme. Jamais par-dessus un dossier existant ; un nom sans `/`, sans point en tête, sans guillemets (`src/atelier/projet.cpp`, `creer_projet`).
+- **Projets récents** : les huit derniers, du plus récent au plus ancien. La liste vit dans les réglages du poste, pas dans le projet : c'est le partage du § 6.1, ce qui décrit le projet va dans `projet.grymatelier`, ce qui décrit le poste reste sur le poste. Un projet disparu le dit au clic et quitte la liste.
+- **Renommer un fichier** (menu Fichier, ou clic droit dans la liste du projet) : l'extension reste, car elle dit la forme (`grym traduire` change de forme). Chaque phrase `Utiliser` qui désigne le fichier suit, en résolvant le chemin depuis le dossier du fichier qui l'écrit (grammaire, § 21.3), forme compacte comprise. Un programme emporte sa base (`.grymd`, ses journaux `-journal`, `-wal`, `-shm`) et son bytecode (`.grymb`) : la base porte le nom du programme (grammaire, § 16.5), et un programme renommé sans elle repartirait d'une base vide. Le programme principal suit dans `projet.grymatelier`. Refus : un nom pris sous l'une ou l'autre forme (« données » désignerait les deux, § 21.1), une base déjà prise sous le nouveau nom (une base n'est jamais écrasée). Le projet est réanalysé : un fichier qui s'analysait et ne s'analyse plus fait tout défaire. C'est un geste : « Annuler le dernier geste » rend les noms, puis les contenus, octet pour octet.
+- **Mettre le fichier à la corbeille** : la corbeille du système, jamais une suppression définitive. Refusé si un autre fichier l'utilise, en les nommant. La base d'un programme reste dans le dossier : les données ne se jettent pas avec le code. Le programme principal s'efface de `projet.grymatelier` s'il le désignait.
+- **Fermer le projet** : la fenêtre reste vide, et l'atelier redémarre vide.
+- Corrigé en passant : les gestes de l'éditeur de données se vident à l'ouverture d'un autre projet. Avant, « Annuler le dernier geste » réécrivait en silence les fichiers du projet précédent.
+- Essais : `test_atelier`, création, récents, renommage (sous-dossier, forme compacte, base et journal, programme principal, refus, annulation) et corbeille. Les menus eux-mêmes n'ont pas été cliqués par un essai.
+
+Premier projet créé ainsi : `projets/Gestion de projet`, une application de gestion de projet écrite en GrymoiR (personnes, projets, tâches et leurs états, deux règles, cinq écrans, un bilan). Elle a révélé :
+
+- deux défauts du navigateur, corrigés (`docs/web.md`, § 3.1) : un menu changé n'agissait qu'au prochain bouton ; sélectionner une ligne revenait à la choisir ;
+- une zone sans valeur de départ ni `facultatif` ne se lit pas, pas même pour demander `est absente` : « Le champ « projet » n'a pas de valeur. ». L'application déclare ses zones `facultatif`. Le message devrait le suggérer : à reprendre dans la grammaire (§ 22) ;
+- l'absence d'arrondi : un avancement en pour cent afficherait 28 décimales. Le bilan compte donc les tâches terminées ;
+- l'absence de dessin : pas de diagramme de Gantt sans un nouvel élément d'écran, à concevoir.
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -247,3 +267,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.27 | 2026-09-28 | § 6.5 : guide « Premiers pas » fini (douze chapitres) ; les programmes à écrans du guide (chapitres 11 et 12) sont vérifiés par les essais de l'atelier |
 | 0.28 | 2026-09-28 | § 8 : fabriquer une application (voie A : macOS, Linux ; `--fabriquer`) |
 | 0.29 | 2026-09-29 | Icône de l'atelier (un grimoire ouvert : forme littéraire à gauche, compacte à droite ; source `outils/icone/grymoir-atelier.svg`) ; § 8 : une application fabriquée pour macOS prend l'icône de son projet |
+| 0.30 | 2026-10-10 | A5 fait (§ 5 quater) : nouveau projet, projets récents, renommer (Utiliser, base, programme principal suivent), corbeille, fermer le projet ; gestes vidés au changement de projet ; ce que l'application « Gestion de projet » a révélé |

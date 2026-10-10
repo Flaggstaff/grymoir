@@ -24,6 +24,7 @@
 #include <QLineEdit>
 #include <QHeaderView>
 #include <QListWidget>
+#include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QProcess>
@@ -93,6 +94,16 @@ Fenetre::Fenetre() {
     arbre->setModel(modele);
     for (int k = 1; k < 4; k++) arbre->hideColumn(k);
     arbre->header()->hide();
+    arbre->setContextMenuPolicy(Qt::CustomContextMenu);   // A5 : renommer, mettre à la corbeille
+    connect(arbre, &QTreeView::customContextMenuRequested, this, [this](const QPoint &p) {
+        const QModelIndex i = arbre->indexAt(p);
+        if (!i.isValid() || !modele->fileInfo(i).isFile()) return;
+        arbre->setCurrentIndex(i);
+        QMenu m(this);
+        m.addAction("Renommer…", this, &Fenetre::renommer_fichier_choisi);
+        m.addAction("Mettre à la corbeille…", this, &Fenetre::supprimer_fichier_choisi);
+        m.exec(arbre->viewport()->mapToGlobal(p));
+    });
     connect(arbre, &QTreeView::activated, this, [this](const QModelIndex &i) {
         if (!modele->isDir(i)) ouvrir_fichier(modele->filePath(i));
     });
@@ -268,10 +279,15 @@ Fenetre::Fenetre() {
     setCentralWidget(centre);
 
     QMenu *menu = menuBar()->addMenu("Fichier");
-    QAction *a = menu->addAction("Nouveau fichier…", this, &Fenetre::nouveau_fichier);
+    QAction *a = menu->addAction("Nouveau projet…", this, &Fenetre::nouveau_projet);
+    a->setShortcut(QKeySequence("Ctrl+Shift+N"));
+    a = menu->addAction("Nouveau fichier…", this, &Fenetre::nouveau_fichier);
     a->setShortcut(QKeySequence::New);
     a = menu->addAction("Ouvrir un projet…", this, &Fenetre::choisir_projet);
     a->setShortcut(QKeySequence::Open);
+    QMenu *recents = menu->addMenu("Projets récents");   // relue à chaque ouverture du menu
+    connect(recents, &QMenu::aboutToShow, this, [this, recents] { remplir_recents(recents); });
+    remplir_recents(recents);
     // Les exemples qu'embarque l'application installée (GrymoiR.app/Contents/Resources/Exemples) : chacun s'installe
     // dans Documents/GrymoiR s'il y manque, jamais par-dessus une copie existante, puis s'ouvre.
     const QDir exemples(QApplication::applicationDirPath() + "/../Resources/Exemples");
@@ -284,8 +300,13 @@ Fenetre::Fenetre() {
             else ouvrir(d);
         });
     }
+    menu->addSeparator();
+    menu->addAction("Renommer le fichier…", this, &Fenetre::renommer_fichier_choisi);
+    menu->addAction("Mettre le fichier à la corbeille…", this, &Fenetre::supprimer_fichier_choisi);
+    menu->addSeparator();
     a = menu->addAction("Enregistrer", this, [this] { enregistrer(); });
     a->setShortcut(QKeySequence::Save);
+    menu->addAction("Fermer le projet", this, &Fenetre::fermer_projet);
     menu->addSeparator();
     a = menu->addAction("Quitter", this, &QWidget::close);
     a->setShortcut(QKeySequence::Quit);
@@ -406,14 +427,20 @@ void Fenetre::choisir_projet() {
 
 void Fenetre::ouvrir_projet(const QString &dossier) {
     if (!quitter_fichier()) return;
+    // les gestes d'un autre projet ne s'annulent pas d'ici : ils réécriraient ses fichiers en silence
+    gestes.clear();
+    action_annuler_geste->setEnabled(false);
+    action_annuler_geste->setToolTip(QString());
     projet = dossier;
     fichier.clear();
     editeur->charger(QString(), false);
     editeur->setEnabled(false);
     erreurs->clear();
     arbre->setRootIndex(modele->setRootPath(dossier));
+    arbre->show();
     QSettings reglages;
     reglages.setValue("dernier projet", dossier);
+    reglages.setValue("projets récents", recents_avec(reglages.value("projets récents").toStringList(), dossier));
     projet_fichier.lire(dossier);
     // le programme principal quittait autrefois les réglages de la machine : il déménage dans le projet
     const QString ancien = reglages.value("programme principal/" + QFileInfo(dossier).absoluteFilePath()).toString();
@@ -722,6 +749,13 @@ void Fenetre::annuler_dernier_geste() {
     if (!fichier.isEmpty() && editeur->document()->isModified() && !enregistrer()) return;
     const Geste g = gestes.takeLast();
     const QString erreur = annuler_geste(g);
+    for (const auto &r : g.renommes) {   // un fichier renommé, ouvert dans l'éditeur, reprend son ancien nom
+        if (QFileInfo(fichier).absoluteFilePath() != r.second) continue;
+        fichier = r.first;
+        QFile f(fichier);
+        if (f.open(QIODevice::ReadOnly)) editeur->charger(QString::fromUtf8(f.readAll()), fichier.endsWith(".grymc"), fichier);
+    }
+    if (!g.renommes.isEmpty()) { projet_fichier.lire(projet); mettre_a_jour_titre(); }
     action_annuler_geste->setEnabled(!gestes.isEmpty());
     action_annuler_geste->setToolTip(gestes.isEmpty() ? QString() : "Annuler : " + gestes.last().description);
     apres_geste(g.avant.keys(), entite_choisie);
@@ -733,4 +767,128 @@ void Fenetre::montrer_choisie() {
     for (const auto &e : entites_lues)
         if (e.nom == entite_choisie) choisie = &e;
     panneau->montrer(choisie, types_lus);
+}
+
+// --- A5 : les projets et leurs fichiers (docs/atelier.md, § 5 quater) ---
+
+void Fenetre::remplir_recents(QMenu *menu) {
+    menu->clear();
+    const QStringList l = QSettings().value("projets récents").toStringList();
+    for (const QString &d : l) {
+        QAction *a = menu->addAction(QFileInfo(d).fileName(), this, [this, d] {
+            if (QFileInfo(d).isDir()) { ouvrir_projet(d); return; }
+            QSettings r;   // disparu ou déplacé : on le dit, et il quitte la liste
+            QStringList reste = r.value("projets récents").toStringList();
+            reste.removeAll(d);
+            r.setValue("projets récents", reste);
+            QMessageBox::information(this, "Atelier", QString("« %1 » n'existe plus à cet endroit : il quitte la liste.").arg(d));
+        });
+        a->setToolTip(d);
+        a->setStatusTip(d);
+    }
+    if (l.isEmpty()) menu->addAction("(aucun)")->setEnabled(false);
+}
+
+void Fenetre::nouveau_projet() {
+    bool ok = false;
+    const QString nom = QInputDialog::getText(this, "Nouveau projet", "Nom du projet :", QLineEdit::Normal, QString(), &ok);
+    if (!ok) return;
+    const QString documents = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    const QString parent = QFileDialog::getExistingDirectory(this, "Où créer le projet ?", QDir(documents).filePath("GrymoiR"));
+    if (parent.isEmpty()) return;
+    QString erreur;
+    const QString d = creer_projet(parent, nom, &erreur);
+    if (d.isEmpty()) { QMessageBox::warning(this, "Atelier", erreur); return; }
+    ouvrir_projet(d);
+    if (projet == d && !projet_fichier.programme_principal.isEmpty()) ouvrir_fichier(QDir(d).filePath(projet_fichier.programme_principal));
+}
+
+void Fenetre::fermer_projet() {
+    if (projet.isEmpty() || !quitter_fichier()) return;
+    gestes.clear();
+    action_annuler_geste->setEnabled(false);
+    projet.clear();
+    fichier.clear();
+    projet_fichier = FichierProjet();
+    editeur->charger(QString(), false);
+    editeur->setEnabled(false);
+    erreurs->clear();
+    arbre->setRootIndex(modele->setRootPath(QString()));
+    arbre->setRootIndex(QModelIndex());
+    arbre->hide();
+    QSettings().remove("dernier projet");   // au prochain démarrage, l'atelier s'ouvre vide
+    rafraichir_schema();
+    mettre_a_jour_titre();
+}
+
+QString Fenetre::fichier_vise() const {
+    const QModelIndex i = arbre->currentIndex();
+    if (i.isValid() && arbre->isVisible()) {
+        const QString c = modele->filePath(i);
+        if (QFileInfo(c).isFile() && (c.endsWith(".grym") || c.endsWith(".grymc"))) return c;
+    }
+    return fichier;
+}
+
+void Fenetre::renommer_fichier_choisi() {
+    const QString cible = fichier_vise();
+    if (projet.isEmpty() || cible.isEmpty()) {
+        statusBar()->showMessage("Choisis d'abord un fichier dans la liste du projet.", 5000);
+        return;
+    }
+    if (!fichier.isEmpty() && editeur->document()->isModified() && !enregistrer()) return;   // le code d'abord sur le disque
+    const QFileInfo i(cible);
+    bool ok = false;
+    const QString nom = QInputDialog::getText(this, "Renommer le fichier",
+                                              QString("Nouveau nom de « %1 » (l'extension reste) :").arg(i.fileName()),
+                                              QLineEdit::Normal, i.completeBaseName(), &ok);
+    if (!ok) return;
+    Geste g;
+    QString arrivee;
+    const QString erreur = ::renommer_fichier(projet, cible, nom, &g, &arrivee);
+    if (!erreur.isEmpty()) {
+        if (erreur != "Rien à changer.") QMessageBox::warning(this, "Atelier", erreur);
+        return;
+    }
+    if (QFileInfo(fichier).absoluteFilePath() == i.absoluteFilePath()) {   // le fichier ouvert suit son nouveau nom
+        fichier = arrivee;
+        QFile f(fichier);
+        if (f.open(QIODevice::ReadOnly)) editeur->charger(QString::fromUtf8(f.readAll()), fichier.endsWith(".grymc"), fichier);
+    }
+    projet_fichier.lire(projet);
+    gestes.push_back(g);
+    action_annuler_geste->setEnabled(true);
+    action_annuler_geste->setToolTip("Annuler : " + g.description);
+    apres_geste(g.avant.keys(), entite_choisie);
+    mettre_a_jour_titre();
+    const int suivis = g.avant.size() - (g.avant.contains(FichierProjet::chemin(projet)) ? 1 : 0);
+    statusBar()->showMessage(g.description + (suivis ? QString(" : fait, %1 phrase(s) « Utiliser » suivent.").arg(suivis)
+                                                      : QString(" : fait.")), 6000);
+}
+
+void Fenetre::supprimer_fichier_choisi() {
+    const QString cible = fichier_vise();
+    if (projet.isEmpty() || cible.isEmpty()) {
+        statusBar()->showMessage("Choisis d'abord un fichier dans la liste du projet.", 5000);
+        return;
+    }
+    const QFileInfo i(cible);
+    if (QMessageBox::question(this, "Atelier", QString("Mettre « %1 » à la corbeille ?").arg(i.fileName()))
+        != QMessageBox::Yes) return;
+    if (QFileInfo(fichier).absoluteFilePath() == i.absoluteFilePath()) {   // ouvert : ce qui n'est pas enregistré se perdrait
+        if (!quitter_fichier()) return;
+    }
+    QString avis;
+    const QString erreur = ::supprimer_fichier(projet, cible, &avis);
+    if (!erreur.isEmpty()) { QMessageBox::warning(this, "Atelier", erreur); return; }
+    if (QFileInfo(fichier).absoluteFilePath() == i.absoluteFilePath()) {
+        fichier.clear();
+        editeur->charger(QString(), false);
+        editeur->setEnabled(false);
+        erreurs->clear();
+    }
+    projet_fichier.lire(projet);
+    rafraichir_schema();
+    mettre_a_jour_titre();
+    statusBar()->showMessage(avis, 8000);
 }

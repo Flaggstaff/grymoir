@@ -36,6 +36,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTextBlock>
 #include <QTextBrowser>
@@ -1529,6 +1530,113 @@ int main(int argc, char **argv) {
         VERIFIER(QString::fromUtf8(r.readAll()).startsWith("L'écran d'accueil montre :\n    côte à côte :\n        le texte « A »,\n"
                                                            "        le texte « B »,\n    un bouton « OK ».\n"));
         delete mime;
+    }
+
+
+    // --- A5 : les projets et leurs fichiers (docs/atelier.md, § 5 quater) ---
+    {   // Nouveau projet : dossier, programme, programme principal ; jamais par-dessus un dossier existant
+        QTemporaryDir d;
+        QString erreur;
+        const QString p = creer_projet(d.filePath("Documents/GrymoiR"), "Gestion de projet", &erreur);
+        VERIFIER(p == QDir(d.filePath("Documents/GrymoiR")).filePath("Gestion de projet"));
+        QFile f(QDir(p).filePath("Gestion de projet.grym"));
+        VERIFIER(f.open(QIODevice::ReadOnly) && f.readAll() == "Remarque : Gestion de projet, le programme principal.\n");
+        FichierProjet fp;
+        fp.lire(p);
+        VERIFIER(fp.programme_principal == "Gestion de projet.grym");
+        VERIFIER(analyser_source(QString("Remarque : Gestion de projet, le programme principal.\n"), false).message.isEmpty());
+        VERIFIER(creer_projet(d.filePath("Documents/GrymoiR"), "Gestion de projet", &erreur).isEmpty()
+                 && erreur.contains("jamais par-dessus"));
+        VERIFIER(creer_projet(d.path(), "a/b", &erreur).isEmpty() && creer_projet(d.path(), "  ", &erreur).isEmpty());
+        VERIFIER(creer_projet(d.path(), ".cache", &erreur).isEmpty() && creer_projet(d.path(), "« x »", &erreur).isEmpty());
+    }
+    {   // Projets récents : en tête, sans doublon, huit au plus
+        QStringList l;
+        for (int k = 0; k < 10; k++) l = recents_avec(l, QString("/p/%1").arg(k));
+        VERIFIER(l.size() == 8 && l.first() == "/p/9" && l.last() == "/p/2");
+        l = recents_avec(l, "/p/5");
+        VERIFIER(l.size() == 8 && l.first() == "/p/5" && l.count("/p/5") == 1 && l.at(1) == "/p/9");
+    }
+    {   // Renommer : les « Utiliser » suivent (sous-dossier, forme compacte), la base suit le programme, tout s'annule
+        QTemporaryDir dossier;
+        auto ecrire = [&](const QString &nom, const QByteArray &texte) {
+            QDir().mkpath(QFileInfo(dossier.filePath(nom)).absolutePath());
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::WriteOnly);
+            f.write(texte);
+        };
+        auto lire = [&](const QString &nom) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::ReadOnly);
+            return QString::fromUtf8(f.readAll());
+        };
+        auto existe = [&](const QString &nom) { return QFileInfo::exists(dossier.filePath(nom)); };
+        ecrire("donnees.grym", "Un membre, conservé, a : un nom (texte), unique.\n");
+        const QString prog = "Remarque : l'association.\nUtiliser « donnees ».\nUtiliser « ecrans/fiches ».\n"
+                             "Afficher le nombre de membres conservés.\n";
+        ecrire("assoc.grym", prog.toUtf8());
+        ecrire("ecrans/fiches.grym", "Utiliser « ../donnees ».\nLe double d'un n vaut n × 2.\n");
+        ecrire("outils.grymc", "_utiliser « donnees »\n");
+        ecrire("assoc.grymd", "BASE");
+        ecrire("assoc.grymd-journal", "JOURNAL");
+        ecrire("projet.grymatelier", "programme principal : assoc.grym\n");
+        VERIFIER(utilisateurs_de(dossier.path(), dossier.filePath("donnees.grym")).size() == 3);
+        VERIFIER(utilisateurs_de(dossier.path(), dossier.filePath("assoc.grym")).isEmpty());
+
+        Geste g;
+        QString arrivee;
+        VERIFIER(renommer_fichier(dossier.path(), dossier.filePath("donnees.grym"), "membres", &g, &arrivee).isEmpty());
+        VERIFIER(arrivee == QDir(dossier.path()).filePath("membres.grym") && existe("membres.grym") && !existe("donnees.grym"));
+        VERIFIER(lire("assoc.grym") == "Remarque : l'association.\nUtiliser « membres ».\nUtiliser « ecrans/fiches ».\n"
+                                       "Afficher le nombre de membres conservés.\n");
+        VERIFIER(lire("ecrans/fiches.grym").startsWith("Utiliser « ../membres ».\n"));
+        VERIFIER(lire("outils.grymc") == "_utiliser « membres »\n");
+        VERIFIER(g.avant.size() == 3 && g.renommes.size() == 1);
+        // annuler : le nom revient d'abord, puis chaque fichier, octet pour octet
+        VERIFIER(annuler_geste(g).isEmpty());
+        VERIFIER(existe("donnees.grym") && !existe("membres.grym") && lire("assoc.grym") == prog);
+        VERIFIER(lire("ecrans/fiches.grym").startsWith("Utiliser « ../donnees ».\n") && lire("outils.grymc") == "_utiliser « donnees »\n");
+
+        // le programme emporte sa base, son journal, et reste le programme principal
+        VERIFIER(renommer_fichier(dossier.path(), dossier.filePath("assoc.grym"), "association.grym", &g, &arrivee).isEmpty());
+        VERIFIER(existe("association.grym") && existe("association.grymd") && existe("association.grymd-journal"));
+        VERIFIER(!existe("assoc.grymd") && !existe("assoc.grymd-journal") && lire("association.grymd") == "BASE");
+        FichierProjet fp;
+        fp.lire(dossier.path());
+        VERIFIER(fp.programme_principal == "association.grym");
+        VERIFIER(annuler_geste(g).isEmpty());
+        fp.lire(dossier.path());
+        VERIFIER(existe("assoc.grymd") && existe("assoc.grymd-journal") && fp.programme_principal == "assoc.grym");
+
+        // refus : nom pris (l'une ou l'autre forme), base prise, extension changée, dossier, rien à changer
+        VERIFIER(renommer_fichier(dossier.path(), dossier.filePath("donnees.grym"), "outils", &g, &arrivee).contains("jamais écrasé"));
+        ecrire("autre.grymd", "AUTRE");
+        VERIFIER(renommer_fichier(dossier.path(), dossier.filePath("assoc.grym"), "autre", &g, &arrivee).contains("une base n'est jamais écrasée"));
+        VERIFIER(lire("autre.grymd") == "AUTRE" && existe("assoc.grym"));
+        VERIFIER(renommer_fichier(dossier.path(), dossier.filePath("donnees.grym"), "x.grymc", &g, &arrivee).contains("grym traduire"));
+        VERIFIER(renommer_fichier(dossier.path(), dossier.filePath("donnees.grym"), "a/b", &g, &arrivee).contains("sans dossier"));
+        VERIFIER(renommer_fichier(dossier.path(), dossier.filePath("donnees.grym"), "donnees", &g, &arrivee) == "Rien à changer.");
+
+        // un nom qui casserait l'analyse est défait : ici, un fichier cassé ailleurs reste cassé, sans bloquer
+        ecrire("casse.grym", "Afficher (.\n");
+        VERIFIER(renommer_fichier(dossier.path(), dossier.filePath("donnees.grym"), "membres", &g, &arrivee).isEmpty());
+        VERIFIER(annuler_geste(g).isEmpty() && existe("donnees.grym"));
+
+        // corbeille : refusée si un autre fichier l'utilise, en le nommant ; le programme principal s'efface
+        QString avis;
+        const QString refus = supprimer_fichier(dossier.path(), dossier.filePath("donnees.grym"), &avis);
+        VERIFIER(refus.contains("est utilisé par") && refus.contains("« assoc.grym »") && refus.contains("« ecrans/fiches.grym »"));
+        VERIFIER(existe("donnees.grym"));
+        // Sans ~/.local/share, Qt 6.4 a rangé la corbeille dans le dossier courant (files/, info/), constaté le
+        // 10 octobre 2026 dans un conteneur Linux : on le crée d'abord.
+        QDir().mkpath(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation));
+        const bool corbeille = QFile::moveToTrash(dossier.filePath("casse.grym"));
+        if (corbeille) {   // une corbeille existe sur ce système
+            VERIFIER(supprimer_fichier(dossier.path(), dossier.filePath("assoc.grym"), &avis).isEmpty());
+            VERIFIER(!existe("assoc.grym") && existe("assoc.grymd") && avis.contains("reste dans le dossier"));
+            fp.lire(dossier.path());
+            VERIFIER(fp.programme_principal.isEmpty());
+        }
     }
 
     std::printf("%d/%d tests réussis\n", total - echecs, total);

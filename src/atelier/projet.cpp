@@ -84,3 +84,37 @@ QString installer_exemple(const QString &source, const QString &parent, QString 
     }
     return copie;
 }
+
+QString creer_projet(const QString &parent, const QString &nom, QString *erreur) {
+    const QString n = nom.trimmed();
+    if (n.isEmpty()) { *erreur = "Donne un nom au projet."; return QString(); }
+    if (n.contains('/') || n.contains('\\')) { *erreur = "Un nom de projet, sans dossier : « Gestion de projet »."; return QString(); }
+    if (n.startsWith('.')) { *erreur = "Un nom qui commence par un point serait caché."; return QString(); }
+    if (n.contains(QChar(0x00AB)) || n.contains(QChar(0x00BB)) || n.contains('"')) {
+        *erreur = "Pas de guillemets dans un nom de projet.";
+        return QString();
+    }
+    const QString d = QDir(parent).filePath(n);
+    if (QFileInfo::exists(d)) { *erreur = QString("« %1 » existe déjà : un projet ne se crée jamais par-dessus un autre.").arg(n); return QString(); }
+    if (!QDir().mkpath(parent) || !QDir(parent).mkdir(n)) { *erreur = QString("« %1 » ne peut pas être créé dans « %2 ».").arg(n, parent); return QString(); }
+    const QString programme = QDir(d).filePath(n + ".grym");
+    QFile f(programme);
+    FichierProjet fp;
+    fp.dossier = d;
+    fp.programme_principal = n + ".grym";
+    if (!f.open(QIODevice::NewOnly | QIODevice::WriteOnly)
+        || f.write(QString("Remarque : %1, le programme principal.\n").arg(n).toUtf8()) < 0 || (f.close(), !fp.ecrire())) {
+        QDir(d).removeRecursively();
+        *erreur = QString("« %1 » ne peut pas être écrit.").arg(programme);
+        return QString();
+    }
+    return d;
+}
+
+QStringList recents_avec(QStringList recents, const QString &dossier, int max) {
+    const QString d = QFileInfo(dossier).absoluteFilePath();
+    recents.removeAll(d);
+    recents.prepend(d);
+    while (recents.size() > max) recents.removeLast();
+    return recents;
+}

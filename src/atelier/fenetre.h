@@ -24,6 +24,7 @@ class PanneauEntite;
 class OngletEcrans;
 class QTabWidget;
 class QLabel;
+class QMenu;
 
 class Fenetre : public QMainWindow {
     Q_OBJECT
@@ -40,6 +41,13 @@ private:
     void ouvrir_projet(const QString &dossier);
     void ouvrir_fichier(const QString &chemin);
     void nouveau_fichier();   // Fichier > Nouveau fichier… : un fichier vide dans le projet, ouvert aussitôt
+    // A5 (docs/atelier.md, § 5 quater) : les projets et leurs fichiers
+    void nouveau_projet();
+    void fermer_projet();
+    void renommer_fichier_choisi();
+    void supprimer_fichier_choisi();
+    QString fichier_vise() const;          // le fichier choisi dans la liste, sinon celui de l'éditeur
+    void remplir_recents(QMenu *menu);
     bool enregistrer();
     bool quitter_fichier();   // faux : l'utilisateur renonce
     void mettre_a_jour_titre();

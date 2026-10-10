@@ -6,12 +6,16 @@
 #define GRYM_ATELIER_REECRITURE_H
 
 #include <QMap>
+#include <QPair>
 #include <QString>
+#include <QStringList>
+#include <QVector>
 
 // Ce qu'un geste a changé : le contenu d'avant de chaque fichier touché (vide : le fichier n'existait pas).
 struct Geste {
     QMap<QString, QByteArray> avant;
     QString description;   // « Ajouter le champ « prix » à « œuvre » »
+    QVector<QPair<QString, QString>> renommes;   // A5 : (ancien chemin, nouveau), dans l'ordre où ils ont eu lieu
 };
 
 struct ChampVoulu {
@@ -65,6 +69,21 @@ enum CoteDepot { DEPOT_AVANT = 0, DEPOT_APRES = 1, DEPOT_GAUCHE = 2, DEPOT_DROIT
 QString ecran_deplacer(const QString &dossier, const QString &ecran, int source, int cible, int cote, Geste *geste);
 
 // Remet chaque fichier touché dans son état d'avant ; message d'erreur, vide si tout est revenu.
+// Un fichier renommé reprend d'abord son ancien nom.
 QString annuler_geste(const Geste &geste);
+
+// A5 (docs/atelier.md, § 5 quater) : les fichiers du projet.
+// Les fichiers du projet dont une phrase `Utiliser` désigne `fichier` (grammaire, § 21.3), en chemins absolus.
+QStringList utilisateurs_de(const QString &dossier, const QString &fichier);
+// Renomme `fichier` en `nouveau` (un nom, sans dossier ; l'extension ne change pas). Chaque `Utiliser` qui le
+// désigne suit ; un programme emporte sa base (`.grymd`, ses journaux) et son bytecode ; le programme principal
+// de `projet.grymatelier` suit. Le projet est réanalysé : un fichier qui s'analysait doit s'analyser encore,
+// sinon tout est défait. *nouveau_chemin reçoit le chemin d'arrivée.
+QString renommer_fichier(const QString &dossier, const QString &fichier, const QString &nouveau, Geste *geste,
+                         QString *nouveau_chemin);
+// Met `fichier` à la corbeille du système. Refusé si un autre fichier l'utilise. La base d'un programme reste
+// dans le dossier ; le programme principal de `projet.grymatelier` s'efface s'il le désignait. *avis : ce qu'il
+// faut savoir après coup (la base gardée).
+QString supprimer_fichier(const QString &dossier, const QString &fichier, QString *avis);
 
 #endif

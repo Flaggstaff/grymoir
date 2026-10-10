@@ -1,7 +1,7 @@
 # GrymoiR : le web
 
 Conception décidée le 29 septembre 2026. W1 implémenté le 29 septembre 2026.
-Référence : charte 1.53, art. 1, 4, 7, 11 et 12 ; grammaire 1.57, § 16 et § 22 ; `docs/ecrans.md` ; `docs/v2.md` ; `docs/atelier.md`.
+Référence : charte 1.54, art. 1, 4, 7, 11 et 12 ; grammaire 1.57, § 16 et § 22 ; `docs/ecrans.md` ; `docs/v2.md` ; `docs/atelier.md`.
 Toute décision prise sur ce document passe dans la charte et la grammaire par une révision numérotée.
 
 ---
@@ -61,6 +61,8 @@ Décision reprise de `docs/v2.md`, § 7 : chaque page fonctionne avec des liens 
 - **Thème** : les couleurs viennent de `src/atelier/theme/grymoir-jetons.json`, recopiées dans `src/serveur.c` ; `test_serveur` échoue si les deux divergent. Le logo est grand sur l'écran du fond, petit sur un écran ouvert par-dessus, comme dans l'atelier.
 - **Limite connue** : les polices Atkinson ne sont pas encore embarquées dans `grym`. La page les emploie si elles sont installées sur la machine, sinon la police du système. Les embarquer ajoute environ 130 Ko à `grym` ; à trancher avec W2, qui devra de toute façon les copier dans le site publié.
 - **Ce que le programme affiche** (`Afficher`) apparaît sous l'écran, comme la console de l'atelier.
+- **Sélectionner n'est pas choisir** *(ajouté avec A5)*. Chaque ligne porte un bouton radio : la sélection, `le … choisi de l'écran`, part avec chaque événement. La première cellule reste le choix, `Quand on choisit …`. C'est la différence entre le simple clic et le double-clic de l'atelier. La sélection suit le contenu de la ligne : une tâche qui passe à « Terminée » change de contenu, et n'est plus sélectionnée.
+- **Un menu ou une case qui change valide les zones aussitôt** *(ajouté avec A5)*, comme dans l'atelier. C'est le seul script de la page (`/grym.js`, autorisé par `script-src 'self'`, jamais écrit dans la page) ; un clic sur une ligne la sélectionne aussi. Un champ de texte attend Entrée : le valider en le quittant perdrait le clic qui l'a fait quitter. Sans script, un bouton « Valider les zones » apparaît sur un écran qui a des zones, et les boutons radio se cochent à la main (§ 2.3).
 
 ## 4. Publier *(sortie 1)*
 
@@ -211,3 +213,4 @@ Restent ouverts : masquer un champ d'une fiche publiée ; le plafond de machines
 | 0.1 | 2026-09-29 | Proposition initiale : une description, trois sorties (publier, servir en local, servir en public), rendu HTML des écrans, adresses stables, refus des écrans impubliables, problèmes du public, jalons W1 à W4, questions ouvertes |
 | 0.2 | 2026-09-29 | Questions 1 à 6 tranchées : `Le site montre …`, entités publiques par leurs listes (§ 4.2), republication par remplacement d'un dossier marqué (§ 4.3), `aujourd'hui` figé, une machine par visiteur (§ 6.1), transactions alignées sur les écrans |
 | 0.3 | 2026-09-29 | W1 fait : § 3.1, ce que l'implémentation a fixé (un formulaire par écran, ordre des événements, Entrée, choix qui suit la ligne, case à cocher, écran d'hier, croix, thème vérifié contre les jetons) ; polices pas encore embarquées |
+| 0.4 | 2026-10-10 | § 3.1 : sélection par bouton radio, distincte du choix ; validation immédiate d'un menu ou d'une case par `/grym.js`, bouton « Valider les zones » sans script. Révélés par l'application « Gestion de projet » |

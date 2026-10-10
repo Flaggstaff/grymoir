@@ -6,6 +6,7 @@
 #include <QMap>
 #include <QPointF>
 #include <QString>
+#include <QStringList>
 
 struct FichierProjet {
     QString dossier;                  // racine du projet
@@ -28,5 +29,14 @@ QString creer_fichier(const QString &dossier, const QString &nom, QString *erreu
 // dans `parent`, sous le même nom, puis rend le chemin de la copie. Une copie déjà là n'est jamais écrasée : on la
 // rend telle quelle, avec ses données. Vide, avec *erreur, si la copie échoue.
 QString installer_exemple(const QString &source, const QString &parent, QString *erreur);
+
+// A5 (docs/atelier.md, § 5 quater). Crée le projet `nom` dans `parent` : le dossier, un programme « nom.grym »
+// réduit à une remarque, et projet.grymatelier qui le désigne comme programme principal. Jamais par-dessus un
+// dossier existant. Rend le chemin du dossier, ou vide avec *erreur rempli.
+QString creer_projet(const QString &parent, const QString &nom, QString *erreur);
+
+// Les projets récents, du plus récent au plus ancien, au plus `max` : `dossier` passe en tête, sans doublon.
+// La liste vit dans les réglages du poste, pas dans le projet.
+QStringList recents_avec(QStringList recents, const QString &dossier, int max = 8);
 
 #endif

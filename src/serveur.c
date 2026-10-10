@@ -497,6 +497,7 @@ static char *feuille_de_style(const Serveur *s) {
     "table.liste td{padding:6px 12px;border-bottom:1px solid var(--separateur)}"
     "table.liste tr.choisie td{background:var(--accent-doux)}"
     "table.liste td.vide{color:var(--texte-2)}"
+    "table.liste .selection{width:1%;padding-right:0}table.liste input[type=radio]{accent-color:var(--accent);margin:0}"
     "button.ligne{all:unset;cursor:pointer;color:var(--accent);text-decoration:underline;text-underline-offset:3px}"
     "button.ligne:focus{outline:2px solid var(--accent);outline-offset:2px}"
     ".invisible{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}"
@@ -511,7 +512,7 @@ static void repondre_octets(Serveur *s, const char *statut, const char *type, co
         "HTTP/1.1 %s\r\n"
         "Content-Type: %s\r\n"
         "Content-Length: %lu\r\n"
-        "Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; form-action 'self'; "
+        "Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; script-src 'self'; form-action 'self'; "
         "frame-ancestors 'none'; base-uri 'none'\r\n"
         "X-Content-Type-Options: nosniff\r\n"
         "Referrer-Policy: same-origin\r\n"   /* no-referrer ferait envoyer « Origin: null » aux formulaires */
@@ -765,6 +766,17 @@ static void page_finale(Serveur *s, const char *erreur, const char *annulation) 
 /* Écrans (docs/web.md, § 3 et § 5)                                 */
 /* ---------------------------------------------------------------- */
 
+/* Le seul script de la page, un confort (docs/web.md, § 2.3) : un menu ou une case qui change valide les zones
+ * aussitôt, comme dans l'atelier. Un champ de texte attend Entrée : valider en le quittant perdrait le clic qui
+ * l'a fait quitter. Un clic ailleurs sur une ligne la sélectionne. Sans script, le bouton « Valider les zones » et
+ * les boutons radio font la même chose. */
+static const char SCRIPT[] =
+    "document.addEventListener('change',function(e){var t=e.target,f=t.form;"
+    "if(!f||!f.classList.contains('ecran'))return;"
+    "if(t.tagName==='SELECT'||t.type==='checkbox'){var b=f.querySelector('button[name=valider]');if(b)b.click();}});"
+    "document.addEventListener('click',function(e){var l=e.target.closest&&e.target.closest('table.liste tbody tr');"
+    "if(!l||e.target.closest('button,input'))return;var r=l.querySelector('input[type=radio]');if(r)r.checked=true;});";
+
 static EcranWeb *ecran_dessus(const Serveur *s) { return s->nb_ecrans ? s->ecrans[s->nb_ecrans - 1] : NULL; }
 
 static int est_case(const ElementEcran *e) { return e->type && strcmp(e->type, "vrai ou faux") == 0; }
@@ -819,11 +831,13 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
     free(id);
 }
 
-/* Une liste : un tableau ; la première cellule de chaque ligne la choisit (« Quand on choisit … »). */
+/* Une liste : un tableau. Comme dans l'atelier, sélectionner une ligne et la choisir sont deux gestes : le bouton
+ * radio la sélectionne (« le … choisi de l'écran », envoyé avec chaque événement), la première cellule la choisit
+ * (« Quand on choisit … »). */
 static void liste(Chaine *c, const EcranWeb *e, size_t k) {
     const ElementEcran *el = &e->el[k];
     const size_t nc = el->nb_colonnes;
-    chaine_ajouter(c, "<div class=\"liste\"><table class=\"liste\"><thead><tr>");
+    chaine_ajouter(c, "<div class=\"liste\"><table class=\"liste\"><thead><tr><th class=\"selection\"></th>");
     for (size_t q = 0; q < nc; q++) {
         chaine_ajouter(c, "<th>");
         echapper(c, el->colonnes[q]);
@@ -833,6 +847,11 @@ static void liste(Chaine *c, const EcranWeb *e, size_t k) {
     chaine_ajouter(c, "</tr></thead><tbody>");
     for (size_t r = 0; r < e->nb_lignes[k]; r++) {
         chaine_ajouter(c, e->choisie[k] == (long)r ? "<tr class=\"choisie\">" : "<tr>");
+        char *radio = grym_formater("<td class=\"selection\"><input type=\"radio\" name=\"s%lu\" value=\"%lu\" "
+                                    "aria-label=\"Sélectionner la ligne %lu\"%s></td>", (unsigned long)k, (unsigned long)r,
+                                    (unsigned long)r + 1, e->choisie[k] == (long)r ? " checked" : "");
+        chaine_ajouter(c, radio);
+        free(radio);
         for (size_t q = 0; q < (nc ? nc : 1); q++) {
             const char *t = nc ? e->cellules[k][r * nc + q] : "";
             chaine_ajouter(c, "<td>");
@@ -852,7 +871,7 @@ static void liste(Chaine *c, const EcranWeb *e, size_t k) {
         chaine_ajouter(c, "</tr>");
     }
     if (!e->nb_lignes[k]) {
-        char *v = grym_formater("<tr><td class=\"vide\" colspan=\"%lu\">Aucune ligne.</td></tr>", (unsigned long)(nc ? nc : 1));
+        char *v = grym_formater("<tr><td class=\"vide\" colspan=\"%lu\">Aucune ligne.</td></tr>", (unsigned long)(nc ? nc : 1) + 1);
         chaine_ajouter(c, v);
         free(v);
     }
@@ -866,7 +885,7 @@ static void page_ecran(Serveur *s) {
     chaine_ajouter(&c, "<!DOCTYPE html>\n<html lang=\"fr\"><head><meta charset=\"utf-8\">"
                        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>");
     echapper(&c, e->titre);
-    chaine_ajouter(&c, "</title><link rel=\"stylesheet\" href=\"/style.css\"></head><body");
+    chaine_ajouter(&c, "</title><link rel=\"stylesheet\" href=\"/style.css\"><script src=\"/grym.js\" defer></script></head><body");
     chaine_ajouter(&c, s->nb_ecrans == 1 ? " class=\"accueil\"><main>\n" : "><main>\n");
     if (s->avis) {
         chaine_ajouter(&c, "<p class=\"avis\">");
@@ -927,6 +946,10 @@ static void page_ecran(Serveur *s) {
         }
     }
     if (boutons) chaine_ajouter(&c, "</div>\n");
+    int zones = 0;
+    for (size_t k = 0; k < e->n; k++) zones |= e->el[k].sorte == ELEMENT_ZONE;
+    if (zones)   /* sans script, un menu changé attend ce bouton (docs/web.md, § 3.1) */
+        chaine_ajouter(&c, "<noscript><div class=\"boutons\"><button name=\"valider\" value=\"1\">Valider les zones</button></div></noscript>\n");
     chaine_ajouter(&c, "</form>\n");
     if (s->affichage.n) {   /* ce que le programme a affiché : sous l'écran, comme la console de l'atelier */
         chaine_ajouter(&c, "<h2 class=\"journal\">Affichage</h2><pre class=\"sortie\">");
@@ -967,6 +990,16 @@ static long *choisies(const EcranWeb *e) {
  * bouton, la ligne choisie ou la fermeture. Rend 1 si la machine a quelque chose à faire. */
 static int evenements_de(Serveur *s, Envoi *env) {
     EcranWeb *e = ecran_dessus(s);
+    for (size_t k = 0; k < e->n; k++) {   /* la ligne sélectionnée de chaque liste, d'abord */
+        if (e->el[k].sorte != ELEMENT_LISTE) continue;
+        char nom[24];
+        snprintf(nom, sizeof nom, "s%lu", (unsigned long)k);
+        Partie *ps = envoi_partie(env, nom);
+        if (!ps || ps->fichier) continue;
+        char *fin = NULL;
+        unsigned long r = strtoul(ps->valeur, &fin, 10);
+        if (fin != ps->valeur && !*fin && r < e->nb_lignes[k]) e->choisie[k] = (long)r;
+    }
     for (size_t k = 0; k < e->n; k++) {
         if (e->el[k].sorte != ELEMENT_ZONE) continue;
         char nom[24];
@@ -1067,6 +1100,8 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
         if (q) page_question(s, q);
         else if (s->attente_ecran && ecran_dessus(s)) page_ecran(s);
         else { page_finale(s, erreur, annulation); suite = PAGE_FINALE_SERVIE; }
+    } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/grym.js") == 0) {
+        repondre(s, "200 OK", "text/javascript; charset=utf-8", SCRIPT, NULL);
     } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/logo") == 0 && s->logo) {
         repondre_octets(s, "200 OK", s->type_logo, s->logo, s->taille_logo, NULL);
     } else if (strcmp(r.methode, "POST") == 0 && strcmp(r.cible, "/evenement") == 0) {

@@ -1,0 +1,36 @@
+Remarque : Gestion de projet : les données, les règles et ce qu'on en calcule.
+
+Une personne, conservée, a :
+    un nom (texte), unique,
+    un courriel (texte), facultatif.
+
+Un état, conservé, a :
+    un nom (texte), unique,
+    un rang (nombre entier), unique.
+
+Un projet, conservé, a :
+    un nom (texte), unique,
+    un début (date),
+    une fin prévue (date),
+    un responsable (personne), facultatif.
+
+Une tâche, conservée, a :
+    un titre (texte),
+    un projet (projet), et disparaît avec lui,
+    un responsable (personne), facultatif,
+    un état (état),
+    une échéance (date),
+    une date de fin (date), facultative.
+
+Remarque : un projet ne finit pas avant d'avoir commencé.
+Chaque projet conservé vérifie :
+    la fin prévue du projet ≥ le début du projet,
+    sinon « Le projet » puis le nom du projet puis « finit avant de commencer. ».
+
+Remarque : une tâche terminée dit quand.
+Chaque tâche conservée dont le nom de l'état est « Terminée » vérifie :
+    la date de fin de la tâche est présente,
+    sinon « La tâche » puis le titre de la tâche puis « est terminée sans date de fin. ».
+
+Remarque : l'avancement d'un projet se compte en tâches terminées.
+Le nombre de terminées d'un projet vaut le nombre de tâches du projet dont le nom de l'état est « Terminée ».

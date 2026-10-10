@@ -1,0 +1,41 @@
+Remarque : Gestion de projet : ce qu'on fait des tâches.
+Utiliser « données ».
+
+Pour créer un nom et un rang :
+    L'e vaut un nouvel état :
+        Le nom vaut nom.
+        Le rang vaut rang.
+    Conserver l'e.
+
+Pour engager un nom :
+    La p vaut une nouvelle personne :
+        Le nom vaut nom.
+    Conserver la p.
+
+Pour lancer un nom et un début et une fin :
+    Le p vaut un nouveau projet :
+        Le nom vaut nom.
+        Le début vaut début.
+        La fin prévue vaut fin.
+    Conserver le p.
+
+Pour confier un titre et un projet et une personne et une échéance :
+    La t vaut une nouvelle tâche :
+        Le titre vaut titre.
+        Le projet vaut projet.
+        Le responsable vaut personne.
+        L'état vaut l'état conservé dont le nom est « À faire ».
+        L'échéance vaut échéance.
+    Conserver la t.
+
+Pour commencer une tâche :
+    Si le nom de l'état de la tâche = « Terminée », refuser « Cette tâche est déjà terminée. ».
+    L'état de la tâche devient l'état conservé dont le nom est « En cours ».
+
+Pour terminer une tâche et un jour :
+    L'état de la tâche devient l'état conservé dont le nom est « Terminée ».
+    La date de fin de la tâche devient jour.
+
+Pour rouvrir une tâche :
+    L'état de la tâche devient l'état conservé dont le nom est « En cours ».
+    La date de fin de la tâche devient absente.
