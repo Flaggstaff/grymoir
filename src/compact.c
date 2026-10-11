@@ -188,8 +188,8 @@ static void expression(Reecriture *r, size_t d, size_t f) {
         }
         if (est_cle(t, "écran") && k + 2 < f && r->e[k + 1].type == J_POINT && r->e[k + 2].type == J_CROCHETS) {
             /* _écran.pays → pays de l'écran (§ 22.2) */
-            size_t q = k + 1, nb = 0;
-            while (q + 1 < f && r->e[q].type == J_POINT && r->e[q + 1].type == J_CROCHETS) { q += 2; nb++; }
+            size_t q = k + 1;
+            while (q + 1 < f && r->e[q].type == J_POINT && r->e[q + 1].type == J_CROCHETS) q += 2;
             for (size_t i = q; i > k + 1; i -= 2) {
                 copier(r, &r->e[i - 1]);
                 mot(r, "de", &r->e[i - 2]);
