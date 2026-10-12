@@ -3342,6 +3342,30 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, r);
             break;
         }
+        case I_RESTE: {   /* « le reste de 17 par 5 » (§ 3.5) */
+            Valeur vb = depiler(&pile), va = depiler(&pile);
+            char *probleme = NULL;
+            Decimal r = dec_zero();
+            if (va.type == V_ABSENT || vb.type == V_ABSENT)
+                probleme = message_absent(va.type == V_ABSENT ? &va : &vb);
+            else if (va.type != V_NOMBRE || vb.type != V_NOMBRE)
+                probleme = grym_formater("Le reste se calcule entre deux nombres, pas avec %s.",
+                                         nom_type(va.type != V_NOMBRE ? va.type : vb.type));
+            else {
+                dec_liberer(&r);
+                StatutDecimal st = dec_reste(&va.nombre, &vb.nombre, &r);
+                if (st != DEC_OK) probleme = message_statut(st);
+            }
+            valeur_liberer(&va);
+            valeur_liberer(&vb);
+            if (probleme) {
+                dec_liberer(&r);
+                ok = echouer(diag, b, debut, probleme);
+                break;
+            }
+            empiler(&pile, valeur_nombre(r));
+            break;
+        }
         case I_ARRONDIR: {   /* « l'arrondi de x à 0,05 » (§ 3.4) */
             Valeur vp = depiler(&pile), vx = depiler(&pile);
             char *probleme = NULL;
@@ -3596,13 +3620,25 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 *vo = r;
                 break;
             }
-            if (vo->type == V_TEXTE) {   /* « la longueur du nom » : le seul champ d'un texte (§ 4.5) */
-                if (code != I_LIRE_CHAMP || strcmp(champ, "longueur") != 0) {
-                    ok = echouer(diag, b, debut, code != I_LIRE_CHAMP
-                        ? grym_formater("Un texte ne se modifie pas : « %s ».", champ)
-                        : grym_formater("Un texte n'a pas de champ « %s » : seulement « longueur ».", champ));
-                    break;
+            if (vo->type == V_NOMBRE && code == I_LIRE_CHAMP
+                && (strcmp(champ, "valeur absolue") == 0 || strcmp(champ, "partie entière") == 0)) {
+                /* « la valeur absolue de x », « la partie entière de x » (§ 3.5) ; un autre champ : le message des objets */
+                int absolue = strcmp(champ, "valeur absolue") == 0;
+                Decimal r;
+                if (absolue) {
+                    r = dec_copier(&vo->nombre);
+                    r.negatif = 0;
+                } else {
+                    Decimal un = dec_depuis_canonique("1");
+                    dec_arrondir(&vo->nombre, &un, DEC_VERS_ZERO, &r);
+                    dec_liberer(&un);
                 }
+                valeur_liberer(vo);
+                *vo = valeur_nombre(r);
+                break;
+            }
+            if (vo->type == V_TEXTE && code == I_LIRE_CHAMP && strcmp(champ, "longueur") == 0) {
+                /* « la longueur du nom » (§ 4.5) ; un autre champ : le message des objets */
                 Valeur r = valeur_nombre(dec_depuis_long((long)longueur_utf8(vo->texte ? vo->texte : "")));
                 valeur_liberer(vo);
                 *vo = r;

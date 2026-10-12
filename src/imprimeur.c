@@ -472,6 +472,28 @@ static void expression(Impression *im, const Noeud *n) {
         }
         return;
     }
+    case N_RESTE:   /* « le reste de 17 par 5 » ; « _reste(17 ; 5) » (§ 3.5) */
+        if (im->compact) {
+            aj(im, "_reste(");
+            for (size_t k = 0; k < 2; k++) {
+                if (k) aj(im, " ; ");
+                const Noeud *x = n->enfants[k];
+                expression(im, x->type == N_GROUPE ? x->enfants[0] : x);
+            }
+            aj(im, ")");
+            return;
+        }
+        aj(im, "le reste ");
+        de_expression(im, n->enfants[0]);
+        if (argument_simple(n->enfants[1])) {
+            aj(im, " par ");
+            expression(im, n->enfants[1]);
+        } else {
+            aj(im, " par (");
+            expression(im, n->enfants[1]);
+            aj(im, ")");
+        }
+        return;
     case N_ARRONDI: {   /* « l'arrondi de x à 0,05 vers le bas » ; « _arrondi_bas(x ; 0,05) » (§ 3.4) */
         const char *mode = n->op == 'b' ? "vers le bas" : n->op == 'h' ? "vers le haut" : n->op == 'e' ? "au pair" : NULL;
         if (im->compact) {

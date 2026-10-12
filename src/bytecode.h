@@ -82,11 +82,12 @@ typedef enum {
                            la valeur ; empile la valeur arrondie au multiple du pas (§ 3.4) */
     I_CONTIENT,         /* opérande : 0 contient, 1 commence par, 2 finit par ; dépile la partie, puis le texte ;
                            empile vrai ou faux, sans tenir compte des accents ni de la casse (§ 4.5) */
-    I_CONVERTIR         /* opérande : 0 majuscules, 1 minuscules, 2 nombre entier, 3 nombre, 4 date, 5 année,
+    I_CONVERTIR,        /* opérande : 0 majuscules, 1 minuscules, 2 nombre entier, 3 nombre, 4 date, 5 année,
                            6 vrai ou faux ; remplace le texte au sommet par sa conversion (§ 4.5) */
+    I_RESTE             /* dépile le diviseur, puis le dividende ; empile le reste, du signe du dividende (§ 3.5) */
 } CodeInstruction;
 
-#define I_DERNIER I_CONVERTIR
+#define I_DERNIER I_RESTE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

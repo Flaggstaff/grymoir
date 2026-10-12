@@ -342,6 +342,11 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_LIRE_CHAMP, ch, n->op_ligne, n->op_colonne);
         return;
     }
+    case N_RESTE:   /* le dividende, le diviseur, puis RESTE (§ 3.5) */
+        expression(c, n->enfants[0]);
+        expression(c, n->enfants[1]);
+        emettre(c, I_RESTE, 0, n->ligne, n->colonne);
+        return;
     case N_CONVERSION:   /* la valeur, puis CONVERTIR vers la cible (§ 4.5) */
         expression(c, n->enfants[0]);
         emettre(c, I_CONVERTIR, (long)n->entier, n->op_ligne, n->op_colonne);

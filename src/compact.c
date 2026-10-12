@@ -332,6 +332,34 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "à", t);
             continue;
         }
+        if (est_cle(t, "reste") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
+            /* _reste(17 ; 5) → le reste de (17) par (5), parenthèses synthétiques (§ 3.5) */
+            size_t fin = fermante(r, k + 1, f);
+            if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+            size_t pv = 0;
+            int p = 0, nb = 0;
+            for (size_t q = k + 2; q < fin; q++) {
+                if (r->e[q].type == J_PAR_OUV) p++;
+                else if (r->e[q].type == J_PAR_FERM) p--;
+                else if (p == 0 && r->e[q].type == J_POINT_VIRGULE) { pv = q; nb++; }
+            }
+            if (nb != 1 || pv == k + 2 || pv + 1 == fin) {
+                echouer(r, t, grym_dupliquer("« _reste » prend deux arguments, le dividende et le diviseur : _reste(17 ; 5)."));
+                return;
+            }
+            mot(r, "le", t);
+            mot(r, "reste", t);
+            mot(r, "de", t);
+            emettre(r, J_PAR_OUV, NULL, &r->e[k + 2], 1);
+            expression(r, k + 2, pv);
+            emettre(r, J_PAR_FERM, NULL, &r->e[pv], 1);
+            mot(r, "par", &r->e[pv]);
+            emettre(r, J_PAR_OUV, NULL, &r->e[pv + 1], 1);
+            expression(r, pv + 1, fin);
+            emettre(r, J_PAR_FERM, NULL, &r->e[fin], 1);
+            k = fin;
+            continue;
+        }
         if ((est_cle(t, "arrondi") || est_cle(t, "arrondi_bas") || est_cle(t, "arrondi_haut") || est_cle(t, "arrondi_pair"))
             && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
             /* _arrondi_bas(x ; 0,05) → l'arrondi de (x) à (0,05) vers le bas, parenthèses synthétiques (§ 3.4) */

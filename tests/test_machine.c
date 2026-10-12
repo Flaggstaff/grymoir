@@ -1282,6 +1282,18 @@ int main(void) {
     PROG("Afficher l'arrondi de 3 à −1.", "ERREUR 1:10 Un arrondi se fait à un pas positif (0,05, 1, 10…), pas à −1.");
     PROG("Afficher l'arrondi de « a » à 1.", "ERREUR 1:10 On n'arrondit qu'un nombre, pas un texte.");
     PROG("Afficher l'arrondi de 2 à « a ».", "ERREUR 1:10 Le pas d'un arrondi est un nombre, pas un texte.");
+    /* Reste, partie entière, valeur absolue (§ 3.5) */
+    PROG("Afficher le reste de 17 par 5 puis le reste de −7 par 3 puis le reste de 7 par −3 puis le reste de 7,5 par 2.",
+         "2 −1 1 1,5");
+    PROG("Le n vaut 10.\nAfficher le reste du n par 3 puis le reste de n × 2 + 1 par 4 puis le reste de 17 par 5 + 1.", "1 1 3");
+    PROG("Afficher la valeur absolue de −3,50 puis la partie entière de −2,7 puis la partie entière de 2,7 puis "
+         "la partie entière de (10 ÷ 4).", "3,50 −2 2 2");
+    PROG("Le n vaut 10.\nAfficher la valeur absolue de n − 20 puis la valeur absolue de (n − 20).", "−10 10");
+    PROG("Le reste vaut 4.\nAfficher le reste puis le reste + 1.", "4 5");
+    PROG("La valeur absolue d'un nombre vaut 7.\nAfficher la valeur absolue de −1.", "7");
+    PROG("Afficher le reste de 3 par 0.", "ERREUR 1:10 Division par zéro.");
+    PROG("Afficher le reste de « a » par 2.", "ERREUR 1:10 Le reste se calcule entre deux nombres, pas avec un texte.");
+    PROG("Afficher le reste de 3.", "ERREUR 1:23 Le reste se calcule par un diviseur : « le reste de 17 par 5 ».");
     /* Textes (§ 4.5) : longueur, majuscules, conversions, contient */
     PROG("Le nom vaut « Élodie Müller ».\nAfficher la longueur du nom puis nom en majuscules puis nom en minuscules.",
          "13 ÉLODIE MÜLLER élodie müller");

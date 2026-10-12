@@ -171,6 +171,10 @@ int main(void) {
                  "Afficher l'arrondi de r à 1 vers le haut puis l'arrondi de r à 1 au pair.\n");
     EXEC("_afficher _arrondi(2,5 ; 1) ; _arrondi_pair(2,5 ; 1) ; _arrondi((1 + 1) × 3 ; 4)\n", "3 2 8\n");
     ERR("_afficher _arrondi(2,5)\n", 1, 11, "« _arrondi » prend deux arguments, la valeur et le pas : _arrondi(x ; 0,05).");
+    ALLER_RETOUR("_le n << 10\n_afficher _reste(n × 2 ; 3) ; (n − 20).valeur_absolue ; (−2,7).partie_entière\n",
+                 "Le n vaut 10.\nAfficher le reste de n × 2 par 3 puis valeur absolue de (n − 20) puis partie entière de (−2,7).\n");
+    EXEC("_afficher _reste(−7 ; 3) ; _reste((1 + 9) ; 4)\n", "−1 2\n");
+    ERR("_afficher _reste(7)\n", 1, 11, "« _reste » prend deux arguments, le dividende et le diviseur : _reste(17 ; 5).");
     /* Textes (§ 4.5) */
     ALLER_RETOUR("_le n << « Élodie »\n_afficher n.longueur ; n _en_majuscules ; « 3 » _en_nombre_entier + 1\n"
                  "_si n _inclut « lo » _et _non (n _commence « x ») _alors\n    _afficher n _finit « ie »\n_fin\n",

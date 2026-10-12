@@ -393,7 +393,11 @@ static int multiple_connu(Portee *p, const char *nom, int singulier, const char 
 /* Champs de toute valeur fichier (§ 15.3) : ils ne réservent pas leur nom. */
 static int champ_integre(const char *nom, Genre *g) {
     if (strcmp(nom, "taille") == 0 || strcmp(nom, "année") == 0     /* année : d'une date */
-        || strcmp(nom, "longueur") == 0) { if (g) *g = GENRE_FEMININ; return 1; }   /* longueur : d'un texte (§ 4.5) */
+        || strcmp(nom, "longueur") == 0                               /* longueur : d'un texte (§ 4.5) */
+        || strcmp(nom, "valeur absolue") == 0 || strcmp(nom, "partie entière") == 0) {   /* d'un nombre (§ 3.5) */
+        if (g) *g = GENRE_FEMININ;
+        return 1;
+    }
     if (strcmp(nom, "format") == 0 || strcmp(nom, "nom de fichier") == 0) { if (g) *g = GENRE_MASCULIN; return 1; }
     return 0;
 }
@@ -1219,7 +1223,7 @@ static Noeud *acces_champ(Analyse *a, char *champ, Genre g, const Jeton *tart, A
         free(champ);
         return NULL;
     }
-    Noeud *objet = base(a);
+    Noeud *objet = cour(a)->type == J_MOINS ? unaire(a) : base(a);   /* « la valeur absolue de −3 » (§ 3.5) */
     a->article_force = ART_AUCUN;
     if (!objet) { free(champ); return NULL; }
     Noeud *n = noeud_creer(N_CHAMP, premier->ligne, premier->colonne, premier->debut);
@@ -2087,6 +2091,47 @@ static Noeud *base(Analyse *a) {
             }
             return n;
         }
+    }
+    if (est_mot(t, "le") && est_mot(voir(a, 1), "reste") && (de_ou_d(voir(a, 2)) || est_mot(voir(a, 2), "du"))
+        && !visible(a, "reste") && !champ_connu(a->portee, "reste", NULL)) {
+        /* « le reste de 17 par 5 » (§ 3.5) : ne réserve rien, un nom ou un champ « reste » déclaré l'emporte */
+        Noeud *n = noeud_creer(N_RESTE, t->ligne, t->colonne, t->debut);
+        a->article_force = ART_AUCUN;
+        a->i += 2;
+        Jeton *td = cour(a);
+        avancer(a);
+        if (est_mot(td, "du")) {
+            a->article_force = ART_LE;
+            a->jeton_force = td;
+        } else if (est_mot(cour(a), "le")) {
+            noeud_liberer(n);
+            return erreur(a, td, grym_dupliquer("« de le » s'écrit « du »."));
+        }
+        const char *garde[3];
+        int nb_garde = a->nb_arrets;
+        memcpy(garde, a->arrets, sizeof garde);
+        arrets(a, "par", NULL);
+        Noeud *x = expression(a);
+        a->article_force = ART_AUCUN;
+        if (x) {
+            noeud_ajouter(n, x);
+            attendre_mot(a, a->i, "par", 3);
+            if (!est_mot(cour(a), "par")) {
+                a->nb_arrets = nb_garde;
+                memcpy(a->arrets, garde, sizeof garde);
+                noeud_liberer(n);
+                return erreur(a, cour(a), grym_dupliquer("Le reste se calcule par un diviseur : « le reste de 17 par 5 »."));
+            }
+            avancer(a);
+            x = unaire(a);
+            a->article_force = ART_AUCUN;
+        }
+        a->nb_arrets = nb_garde;
+        memcpy(a->arrets, garde, sizeof garde);
+        if (!x) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, x);
+        n->fin = x->fin;
+        return n;
     }
     if (t->type == J_DATE) {
         Noeud *n = feuille(N_DATE, t);

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.61 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.62 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -188,6 +188,22 @@ Afficher l'arrondi de 2,5 à 1 puis l'arrondi de 2,5 à 1 au pair.   →  3 2
 - **Aucun mot réservé.** Un nom, un calcul ou un champ `arrondi` déclaré l'emporte : `L'arrondi d'un nombre vaut …` reste un calcul ordinaire (charte, art. 13.2). `vers`, `bas`, `haut`, `pair` ne comptent qu'après le pas.
 - Vérification (12 octobre 2026) : 3 000 arrondis tirés au hasard, dans les quatre sens et sur dix pas (de `0,001` à `100`, dont `0,07` et `3`), donnent les mêmes résultats, décimales comprises, que `quantize` du module `decimal` de Python (`ROUND_HALF_UP`, `ROUND_FLOOR`, `ROUND_CEILING`, `ROUND_HALF_EVEN`).
 - En forme compacte : `_arrondi(x ; 0,05)`, `_arrondi_bas(x ; 0,05)`, `_arrondi_haut(x ; 1)`, `_arrondi_pair(x ; 1)`.
+
+### 3.5 Reste, partie entière, valeur absolue
+
+```
+Si le reste de n par 2 est nul, afficher « pair ».
+Afficher la partie entière de 7,8 puis la valeur absolue de −3,50.     →  7 3,50
+```
+
+- `le reste de a par b` est ce qui reste de la division entière : `le reste de 17 par 5` vaut 2. **Il prend le signe du dividende** : `le reste de −7 par 3` vaut −1, `le reste de 7 par −3` vaut 1, comme le module `decimal` de Python (§ 3.2) et l'opérateur `%` de Java ; Python, sur ses entiers, suit au contraire le diviseur (`-7 % 3` vaut 2). Avec des décimales, exact : `le reste de 7,5 par 2` vaut 1,5. Par zéro : « Division par zéro. »
+- Le dividende s'étend jusqu'à `par` : `le reste de n × 2 + 1 par 4`. Le diviseur se lie comme un argument de calcul (§ 9.1) : `le reste de 17 par 5 + 1` vaut 3 ; un diviseur calculé se parenthèse.
+- `la partie entière de x` garde les chiffres avant la virgule : `la partie entière de −2,7` vaut −2, pas −3. C'est le sens courant (charte, principe 2), celui de `int()` en Python et de la conversion en `int` de Java ; les mathématiques françaises, elles, notent E(−2,7) = −3, comme la fonction `ENT` des tableurs en français (citée de mémoire). Ainsi `a = b × la partie entière de (a ÷ b) + le reste de a par b`.
+- `la valeur absolue de x` enlève le signe : `la valeur absolue de −3,50` vaut 3,50.
+- Ces deux-là se lisent comme le champ d'un nombre (§ 13.3) et se lient comme lui : `la valeur absolue de n − 20` soustrait 20 après ; `la valeur absolue de (n − 20)`, avant. Un nombre négatif s'écrit directement : `de −2,7`.
+- Aucun mot réservé : un nom, un calcul ou un champ `reste`, `valeur absolue`, `partie entière` déclaré l'emporte (`Le reste vaut total − payé.` reste un nom).
+- Vérification (12 octobre 2026) : 3 000 cas tirés au hasard, comparés au module `decimal` de Python (`%`, `to_integral_value(ROUND_DOWN)`, `abs`) : aucune différence.
+- En forme compacte : `_reste(17 ; 5)`, `x.valeur_absolue`, `x.partie_entière`.
 
 ---
 
@@ -711,6 +727,7 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `la moyenne des soldes des clients conservés`, `le plus grand solde des …` | `_moyenne_de solde _de client _conservé`, `_plus_grand_de …`, `_plus_petit_de …` |
 | `le client conservé au plus grand solde` | `_le client _conservé _au_plus_grand solde` |
 | `un état (« à faire », « en cours » ou « fini »)` | `_un état (« à faire » ; « en cours » ; « fini »)` |
+| `le reste de 17 par 5`, `la valeur absolue de x`, `la partie entière de x` | `_reste(17 ; 5)`, `x.valeur_absolue`, `x.partie_entière` |
 | `Rendre x.` | `_rendre x` |
 | `Tant que c :` | `_tant_que c` … `_fin` |
 | `Répéter 3 fois :` | `_répéter 3 _fois` … `_fin` |
@@ -1638,3 +1655,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.59 | 2026-10-12 | Nouveau § 4.5 : `la longueur de t`, `en majuscules`, `en minuscules`, conversions `en nombre`, `en date`… ; `contient`, `commence par`, `finit par`, sans accents ni casse, aussi dans `dont` ; aucun mot réservé |
 | 1.60 | 2026-10-12 | § 16.4 : `la moyenne des`, `le plus grand … des`, `le plus petit … des` (erreur sur rien, jamais 0) ; `le client conservé au plus grand solde`, l'objet au champ extrême. Impression : « de le » se contracte devant une recherche (`du membre conservé`), qui sortait en « de le » |
 | 1.61 | 2026-10-12 | Nouveau § 16.15 : valeurs permises d'un champ texte, `un état (« à faire », « en cours » ou « fini »)` ; vérifiées à l'analyse et à l'exécution, menu à la saisie, retrait refusé tant qu'un objet porte la valeur |
+| 1.62 | 2026-10-12 | Nouveau § 3.5 : `le reste de a par b` (signe du dividende), `la partie entière de x` (vers zéro), `la valeur absolue de x` ; vérifiés contre `decimal` ; aucun mot réservé |

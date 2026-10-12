@@ -196,6 +196,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_ARRONDIR:       return "ARRONDIR";
     case I_CONTIENT:       return "CONTIENT";
     case I_CONVERTIR:      return "CONVERTIR";
+    case I_RESTE:          return "RESTE";
     }
     return "INCONNUE";
 }
@@ -355,7 +356,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_ELEMENT: besoin = 2; effet = -1; break;
             case I_INITIALISER_CHAMP: besoin = 2; effet = -1; break;
             case I_LIRE_CHAMP: case I_SAISIR: case I_ELIDER: besoin = 1; break;
-            case I_COLLER: case I_DECALER: case I_ARRONDIR: case I_CONTIENT: besoin = 2; effet = -1; break;
+            case I_COLLER: case I_DECALER: case I_ARRONDIR: case I_CONTIENT: case I_RESTE: besoin = 2; effet = -1; break;
             case I_CONVERTIR: besoin = 1; break;
             case I_RESAISIR: case I_FICHE: besoin = 1; effet = -1; break;
             case I_ECRAN_LISTE: case I_ECRAN_ERREUR: case I_FICHE_ECRAN: case I_APPARENCE: besoin = 1; effet = -1; break;
@@ -442,7 +443,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 34  /* versions 1 à 33 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 35  /* versions 1 à 34 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
@@ -451,7 +452,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                               sans essai (19), sans formulaire (20),
                               sans assemblage de textes (21), sans modification par formulaire (22),
                               sans fiche (23), sans fichier source des blocs (24), sans apparence des écrans (26), sans refus (27), sans règles (28),
-                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33) */
+                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 

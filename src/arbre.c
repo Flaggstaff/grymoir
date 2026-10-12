@@ -330,6 +330,13 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, n->texte2);
         chaine_ajouter(c, ")");
         return;
+    case N_RESTE:
+        chaine_ajouter(c, "(reste ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_ARRONDI:
         chaine_ajouter(c, n->op == 'b' ? "(arrondi-bas " : n->op == 'h' ? "(arrondi-haut " : n->op == 'e' ? "(arrondi-pair " : "(arrondi ");
         decrire(n->enfants[0], c);

@@ -86,6 +86,7 @@ int main(void) {
     FIXE("La valeur absolue d'un nombre :\n    Si nombre est négatif, rendre −nombre.\n    Rendre nombre.\n"
          "Pour saluer une personne :\n    Afficher « Bonjour » puis personne.\nSaluer 3.");
     FIXE("Le prix vaut 3.\nAfficher l'arrondi du prix × 2 à 0,05 vers le bas puis l'arrondi de 2 à (1 + 1) au pair.\n");
+    FIXE("Le prix vaut 3.\nAfficher le reste du prix × 2 par (1 + 3) puis la valeur absolue de −2 puis la partie entière du prix.\n");
     LITT("Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.", "Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.\n");
     COMP("Le pas vaut 1.\nAfficher l'arrondi de 2,5 au pas vers le haut.", "_le pas << 1\n_afficher _arrondi_haut(2,5 ; pas)\n");
     FIXE("Le nom vaut « a ».\nSi le nom ne contient pas « b » et nom finit par « a », afficher nom en majuscules.\n");

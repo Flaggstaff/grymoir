@@ -36,6 +36,7 @@ typedef enum {
     N_CONVERSION,    /* « le nom en majuscules », « le code en nombre » (§ 4.5) : enfants[0] la valeur ; texte2 : la cible
                         (« majuscules », « minuscules », « nombre entier », « nombre », « date », « année »,
                         « vrai ou faux ») ; entier : son rang, opérande de CONVERTIR */
+    N_RESTE,         /* « le reste de 17 par 5 » (§ 3.5) : enfants[0] le dividende, enfants[1] le diviseur */
     N_ARRONDI,       /* « l'arrondi de x à 0,05 vers le bas » (§ 3.4) : enfants[0] la valeur, enfants[1] le pas ;
                         op : 'p' au plus proche, 'b' vers le bas, 'h' vers le haut, 'e' au pair ;
                         forme 1 : article « l' » écrit */
