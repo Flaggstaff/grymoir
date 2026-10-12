@@ -332,6 +332,33 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "à", t);
             continue;
         }
+        if (est_cle(t, "colonne") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
+            /* _colonne(« Nom » ; ligne) → la colonne (« Nom ») de (ligne) (§ 15.5) */
+            size_t fin = fermante(r, k + 1, f);
+            if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+            size_t pv = 0;
+            int p = 0, nb = 0;
+            for (size_t q = k + 2; q < fin; q++) {
+                if (r->e[q].type == J_PAR_OUV) p++;
+                else if (r->e[q].type == J_PAR_FERM) p--;
+                else if (p == 0 && r->e[q].type == J_POINT_VIRGULE) { pv = q; nb++; }
+            }
+            if (nb != 1 || pv == k + 2 || pv + 1 == fin) {
+                echouer(r, t, grym_dupliquer("« _colonne » prend deux arguments, le titre et la ligne : _colonne(« Nom » ; ligne)."));
+                return;
+            }
+            mot(r, "la", t);
+            mot(r, "colonne", t);
+            emettre(r, J_PAR_OUV, NULL, &r->e[k + 2], 1);
+            expression(r, k + 2, pv);
+            emettre(r, J_PAR_FERM, NULL, &r->e[pv], 1);
+            mot(r, "de", &r->e[pv]);
+            emettre(r, J_PAR_OUV, NULL, &r->e[pv + 1], 1);
+            expression(r, pv + 1, fin);
+            emettre(r, J_PAR_FERM, NULL, &r->e[fin], 1);
+            k = fin;
+            continue;
+        }
         if (est_cle(t, "reste") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
             /* _reste(17 ; 5) → le reste de (17) par (5), parenthèses synthétiques (§ 3.5) */
             size_t fin = fermante(r, k + 1, f);
@@ -1366,6 +1393,16 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "répéter", t);
             expression(r, d + 1, fois);
             mot(r, "fois", &r->e[fois]);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            ouvrir(r, O_BOUCLE, prof, t);
+        } else if (!strcmp(c, "pour_chaque") && d + 3 < f && r->e[d + 1].type == J_CROCHETS && est_cle(&r->e[d + 2], "tableau")) {
+            /* _pour_chaque ligne _tableau « f.csv » → Pour chaque ligne du tableau « f.csv » : (§ 15.5) */
+            mot(r, "pour", t);
+            mot(r, "chaque", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, "du", &r->e[d + 2]);
+            mot(r, "tableau", &r->e[d + 2]);
+            expression(r, d + 3, f);
             emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
             ouvrir(r, O_BOUCLE, prof, t);
         } else if (!strcmp(c, "pour_chaque") && d + 2 < f && r->e[d + 1].type == J_CROCHETS

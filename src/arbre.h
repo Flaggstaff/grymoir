@@ -36,6 +36,7 @@ typedef enum {
     N_CONVERSION,    /* « le nom en majuscules », « le code en nombre » (§ 4.5) : enfants[0] la valeur ; texte2 : la cible
                         (« majuscules », « minuscules », « nombre entier », « nombre », « date », « année »,
                         « vrai ou faux ») ; entier : son rang, opérande de CONVERTIR */
+    N_COLONNE,       /* « la colonne « Nom » de la ligne » (§ 15.5) : enfants[0] le titre, enfants[1] la ligne */
     N_RESTE,         /* « le reste de 17 par 5 » (§ 3.5) : enfants[0] le dividende, enfants[1] le diviseur */
     N_ARRONDI,       /* « l'arrondi de x à 0,05 vers le bas » (§ 3.4) : enfants[0] la valeur, enfants[1] le pas ;
                         op : 'p' au plus proche, 'b' vers le bas, 'h' vers le haut, 'e' au pair ;
@@ -129,6 +130,8 @@ typedef enum {
     P_EXPORTER,      /* « Exporter les membres conservés …, avec le nom et la cotisation, dans « m.csv ». » (§ 15.4) :
                         enfants[0] : N_CHERCHER (liste ; texte3 : colonnes, comme une liste d'écran, ou NULL : tous les
                         champs) ; enfants[1] : le chemin */
+    P_POUR_TABLEAU,  /* « Pour chaque ligne du tableau « f.csv » : » (§ 15.5) : texte : nom de la ligne ; local : sa case ;
+                        entier : case du tableau (entier + 1 : rang) ; enfants[0] : chemin ; enfants[1] : corps */
     P_REGLE          /* « Chaque écriture conservée dont … vérifie : condition, sinon « … ». » (§ 16.14) : texte : entité ;
                         enfants[0] : P_CALCUL sans paramètre, qui parcourt les objets (P_POUR_CONSERVE) et refuse
                         au premier qui viole la condition (P_SI, dont la branche sinon est un P_REFUSER) */

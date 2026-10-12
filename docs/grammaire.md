@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.63 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.64 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -729,6 +729,7 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `un état (« à faire », « en cours » ou « fini »)` | `_un état (« à faire » ; « en cours » ; « fini »)` |
 | `le reste de 17 par 5`, `la valeur absolue de x`, `la partie entière de x` | `_reste(17 ; 5)`, `x.valeur_absolue`, `x.partie_entière` |
 | `Exporter les membres conservés, par nom, avec le nom et la cotisation, dans « m.csv ».` | `_exporter membre _conservé _par nom _avec nom ; cotisation _dans « m.csv »` |
+| `Pour chaque ligne du tableau « f.csv » :`, `la colonne « Nom » de la ligne` | `_pour_chaque ligne _tableau « f.csv »`, `_colonne(« Nom » ; ligne)` |
 | `Rendre x.` | `_rendre x` |
 | `Tant que c :` | `_tant_que c` … `_fin` |
 | `Répéter 3 fois :` | `_répéter 3 _fois` … `_fin` |
@@ -1037,8 +1038,27 @@ Exporter les œuvres conservées dont la cotisation est positive dans « œuvres
 - Le point-virgule et la virgule décimale sont ce qu'attend un tableur réglé en français ou en suisse romand. Ce réglage dépend de l'ordinateur : non vérifié sur toutes les versions d'Excel, de Numbers et de LibreOffice.
 - Aucun mot réservé : `Exporter` n'est une phrase que suivi de `les` et d'une entité conservée. `Pour exporter les clients :` reste une action, appelée par `Exporter les clients.`
 - Un calcul n'exporte pas (§ 9.4) : « Un calcul n'écrit pas sur le disque : exporte dans une action. »
-- Lire un tableau (`Pour chaque ligne de « import.csv »`) : à venir.
+- Lire un tableau : § 15.5.
 - En forme compacte : `_exporter membre _conservé [_dont …] [_par nom [_décroissant]] [_avec nom ; compositeur.nom] _dans « m.csv »`.
+
+### 15.5 Lire un tableau
+
+```
+Pour chaque ligne du tableau « import.csv » :
+    Le m vaut un nouveau membre :
+        Le nom vaut la colonne « Nom » de la ligne.
+        La cotisation vaut la colonne « Cotisation » de la ligne en nombre.
+    Conserver m.
+```
+
+- `Pour chaque ligne du tableau « f.csv » :` lit le fichier une fois, au début, et parcourt ses lignes dans l'ordre. Le nom de la ligne est libre (`Pour chaque l du tableau …`), sans article, en lecture seule, comme un compteur ; `Sortir de la boucle.` et `Passer au tour suivant.` s'y emploient.
+- La première ligne du fichier porte les titres. Les lignes vides sont ignorées. Une ligne qui n'a pas autant de cellules que de titres arrête la lecture : « « import.csv », ligne 3 : 2 cellules pour 3 colonnes. » ; de même un guillemet jamais refermé.
+- `la colonne « Nom » de la ligne` est un texte : la cellule telle qu'écrite. Le titre se reconnaît sans tenir compte des accents ni de la casse, comme `contient` (§ 4.5). Une cellule vide est **absente** (§ 16.9) : un champ facultatif la reçoit, un champ obligatoire la refuse. Une colonne inconnue : « Aucune colonne « Pays » dans ce tableau : Nom, Cotisation, Ville. »
+- Les conversions du § 4.5 lisent la cellule : `… en nombre`, `… en date`, `… en vrai ou faux`.
+- Le format est celui d'un tableur ou d'un export (§ 15.4) : UTF-8, marque d'ordre ignorée ; séparateur deviné sur la ligne des titres, le plus fréquent de `;`, `,` et la tabulation, hors guillemets ; guillemets selon la RFC 4180 (citée de mémoire) ; lignes CR LF ou LF.
+- `Afficher ligne.` montre ses cellules, séparées par « ; ».
+- Un calcul ne lit pas de tableau (§ 9.4). Aucun mot réservé : `colonne` et `tableau` ne comptent qu'ainsi placés ; un nom, un calcul ou un champ `colonne` déclaré l'emporte.
+- En forme compacte : `_pour_chaque ligne _tableau « f.csv »`, `_colonne(« Nom » ; ligne)`.
 
 ## 16. Entités *(v0.3)*
 
@@ -1675,3 +1695,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.61 | 2026-10-12 | Nouveau § 16.15 : valeurs permises d'un champ texte, `un état (« à faire », « en cours » ou « fini »)` ; vérifiées à l'analyse et à l'exécution, menu à la saisie, retrait refusé tant qu'un objet porte la valeur |
 | 1.62 | 2026-10-12 | Nouveau § 3.5 : `le reste de a par b` (signe du dividende), `la partie entière de x` (vers zéro), `la valeur absolue de x` ; vérifiés contre `decimal` ; aucun mot réservé |
 | 1.63 | 2026-10-12 | Nouveau § 15.4 : `Exporter les … conservés [dont …] [, par …] [, avec …] dans « f.csv ».`, un tableau CSV (UTF-8, `;`, virgule décimale), écrit comme `Enregistrer` ; aucun mot réservé |
+| 1.64 | 2026-10-12 | Nouveau § 15.5 : `Pour chaque ligne du tableau « f.csv » :`, `la colonne « Nom » de la ligne` (cellule vide : absente) ; séparateur deviné, RFC 4180 ; aucun mot réservé |

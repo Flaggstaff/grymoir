@@ -1585,6 +1585,34 @@ int main(void) {
     }
     PROG(RC "Exporter les clients conservés, avec le nom et le prix dans « _exp.csv ».", "~Colonne « le prix »");
     PROG("Pour exporter les clients :\n    Afficher 1.\nExporter les clients.", "1");
+    /* Lire un tableau (§ 15.5) */
+    {
+        FILE *f = fopen("_imp.csv", "wb");
+        if (f) {
+            fputs("\xEF\xBB\xBFNom;Cotisation;Ville\r\n\"M\xC3\xBCller; \xC3\x89lodie\";1234,50;Bulle\r\nBob;-3;\r\n\r\n", f);
+            fclose(f);
+        }
+        f = fopen("_imp2.csv", "wb");
+        if (f) { fputs("a,b\n1,2,3\n", f); fclose(f); }
+        f = fopen("_imp3.csv", "wb");
+        if (f) { fputs("x\ty\n\"1\"\"\"\t\"2\n", f); fclose(f); }
+    }
+    PROG("Un membre, conservé, a : un nom (texte), unique, une cotisation (nombre), une ville (texte), facultative.\n"
+         "Pour chaque ligne du tableau « _imp.csv » :\n    Le m vaut un nouveau membre :\n"
+         "        Le nom vaut la colonne « Nom » de la ligne.\n"
+         "        La cotisation vaut la colonne « cotisation » de la ligne en nombre.\n"
+         "    La ville du m devient la colonne « Ville » de la ligne.\n    Conserver m.\n    Afficher ligne.\n"
+         "Pour chaque membre conservé, par nom, afficher nom du membre puis cotisation du membre puis ville du membre.",
+         "Müller; Élodie ; 1234,50 ; Bulle\nBob ; -3 ; \nBob −3 absent\nMüller; Élodie 1'234,50 Bulle");
+    PROG("Pour chaque l du tableau « _imp.csv », afficher la colonne « Pays » de l.",
+         "ERREUR 1:49 Aucune colonne « Pays » dans ce tableau : Nom, Cotisation, Ville.");
+    PROG("Pour chaque l du tableau « _imp2.csv », afficher l.", "ERREUR 1:1 « _imp2.csv », ligne 2 : 3 cellules pour 2 colonnes.");
+    PROG("Pour chaque l du tableau « _imp3.csv », afficher l.", "ERREUR 1:1 « _imp3.csv » : un guillemet n'est pas refermé.");
+    PROG("Le t vaut « a ».\nAfficher la colonne « x » de t.", "~« la colonne » se lit dans une ligne de tableau, pas dans un texte.");
+    PROG("Le n de la ligne d'un texte vaut 1.\nLa colonne d'un x vaut 2.\nAfficher la colonne de 3.", "2");
+    remove("_imp.csv");
+    remove("_imp2.csv");
+    remove("_imp3.csv");
     /* Valeurs permises (§ 16.15) */
     PROG("Une tâche, conservée, a : un titre (texte), un état (« à faire », « en cours » ou « fini »).\n" "Le t vaut une nouvelle tâche :\n    Le titre vaut « a ».\n    L'état vaut « à faire ».\n"
          "L'état du t devient « en cours ».\nConserver t.\nAfficher état de t puis le nombre de tâches conservées dont "

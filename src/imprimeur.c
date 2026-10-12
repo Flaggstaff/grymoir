@@ -472,6 +472,20 @@ static void expression(Impression *im, const Noeud *n) {
         }
         return;
     }
+    case N_COLONNE:   /* « la colonne « Nom » de la ligne » ; « _colonne(« Nom » ; ligne) » (§ 15.5) */
+        if (im->compact) {
+            aj(im, "_colonne(");
+            expression(im, n->enfants[0]);
+            aj(im, " ; ");
+            expression(im, n->enfants[1]);
+            aj(im, ")");
+            return;
+        }
+        aj(im, "la colonne ");
+        expression(im, n->enfants[0]);
+        aj(im, " ");
+        preposition(im, "de", n->enfants[1]);
+        return;
     case N_RESTE:   /* « le reste de 17 par 5 » ; « _reste(17 ; 5) » (§ 3.5) */
         if (im->compact) {
             aj(im, "_reste(");
@@ -1306,6 +1320,19 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         }
         expression(im, n->enfants[0]);   /* « de … », « dont … » et « , par … » */
         retenir(im, n->texte, fem ? G_FEMININ : G_MASCULIN);
+        const Noeud *corps = n->enfants[1];
+        branche(im, corps, corps->ligne == n->ligne, niveau);
+        fin_compacte(im, niveau);
+        im->nb = sauve;
+        return;
+    }
+    case P_POUR_TABLEAU: {   /* « Pour chaque ligne du tableau « f.csv » : » ; « _pour_chaque ligne _tableau « f.csv » » */
+        size_t sauve = im->nb;
+        aj(im, c ? "_pour_chaque " : "Pour chaque ");
+        ecrire_nom(im, n->texte, 0);
+        aj(im, c ? " _tableau " : " du tableau ");
+        expression(im, n->enfants[0]);
+        retenir(im, n->texte, G_FEMININ);
         const Noeud *corps = n->enfants[1];
         branche(im, corps, corps->ligne == n->ligne, niveau);
         fin_compacte(im, niveau);

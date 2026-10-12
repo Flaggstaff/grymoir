@@ -331,6 +331,22 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, n->texte2);
         chaine_ajouter(c, ")");
         return;
+    case N_COLONNE:
+        chaine_ajouter(c, "(colonne ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
+    case P_POUR_TABLEAU:
+        chaine_ajouter(c, "(pour-chaque-ligne [");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, "] ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_RESTE:
         chaine_ajouter(c, "(reste ");
         decrire(n->enfants[0], c);

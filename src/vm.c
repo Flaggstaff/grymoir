@@ -23,14 +23,14 @@
 static const char *nom_type(TypeValeur t) {
     return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen"
          : t == V_DATE ? "une date" : t == V_ANNEE ? "une année" : t == V_FICHIER ? "un fichier" : t == V_LISTE ? "une liste"
-         : t == V_ABSENT ? "absente" : "un objet";
+         : t == V_ABSENT ? "absente" : t == V_LIGNE ? "une ligne de tableau" : "un objet";
 }
 
 static Valeur valeur_copier(const Valeur *v) {
     Valeur r;
     r.type = v->type;
     r.nombre = v->type == V_NOMBRE ? dec_copier(&v->nombre) : dec_zero();
-    r.texte = (v->type == V_TEXTE || v->type == V_ABSENT) && v->texte ? grym_dupliquer(v->texte) : NULL;
+    r.texte = (v->type == V_TEXTE || v->type == V_ABSENT || v->type == V_LIGNE) && v->texte ? grym_dupliquer(v->texte) : NULL;
     r.vrai = v->vrai;
     r.objet = v->objet;
     r.jours = v->jours;
@@ -867,6 +867,19 @@ static char *texte_valeur(const Machine *m, const Valeur *v) {
     case V_ANNEE:   return grym_formater("%ld", v->jours);   /* « 1747 », jamais « 1'747 » (§ 14.5) */
     case V_DATE:    return date_suisse(v->jours);
     case V_OBJET:   return article_classe(v->objet->classe);
+    case V_LIGNE: {   /* ses cellules, séparées par « ; » (§ 15.5) */
+        const char *p = v->texte ? strchr(v->texte, '\x1e') : NULL;
+        char *t = grym_dupliquer(p ? p + 1 : "");
+        Chaine c = {0};
+        char un[2] = { 0, 0 };
+        for (const char *q = t; *q; q++) {
+            if (*q == '\x1f') chaine_ajouter(&c, " ; ");
+            else if (*q == '\x1e') chaine_ajouter(&c, " / ");
+            else { un[0] = *q; chaine_ajouter(&c, un); }
+        }
+        free(t);
+        return chaine_rendre(&c);
+    }
     default:        return nombre_au_style(&v->nombre, m->style);
     }
 }
@@ -2228,6 +2241,90 @@ static char *tableau_csv(Machine *m, const char *descripteur, const Valeur *l, F
     return NULL;
 }
 
+/* Un tableau CSV lu (§ 15.5) : « titres ␞ cellules ␞ … », cellules séparées par ␟. Marque d'ordre ignorée ;
+ * séparateur deviné sur la ligne des titres (« ; », « , » ou tabulation, le plus fréquent hors guillemets) ;
+ * guillemets RFC 4180 ; lignes vides ignorées. NULL et *probleme si le fichier n'est pas un tableau. */
+static char *lire_csv(const Fichier *f, char **probleme) {
+    const char *s = (const char *)f->octets, *fin = s + f->taille;
+    if (f->taille >= 3 && memcmp(s, "\xEF\xBB\xBF", 3) == 0) s += 3;
+    for (const char *p = s; p < fin; p++)
+        if (*p == '\0') { *probleme = grym_formater("« %s » n'est pas un tableau : il contient des données binaires.", f->nom); return NULL; }
+    char sep = ';';
+    {
+        size_t nb[3] = { 0, 0, 0 };
+        int g = 0;
+        for (const char *p = s; p < fin && (g || (*p != '\n' && *p != '\r')); p++) {
+            if (*p == '"') g = !g;
+            else if (!g) nb[0] += *p == ';', nb[1] += *p == ',', nb[2] += *p == '\t';
+        }
+        sep = nb[1] > nb[0] && nb[1] >= nb[2] ? ',' : nb[2] > nb[0] && nb[2] > nb[1] ? '\t' : ';';
+    }
+    Chaine c = {0};
+    Chaine ligne = {0};
+    int vide = 1, premiere = 1;
+    size_t colonnes = 0, cellules = 0, numero = 1;
+    char un[2] = { 0, 0 };
+    const char *p = s;
+    while (p <= fin) {
+        int fin_ligne = p == fin || *p == '\n' || *p == '\r';
+        if (fin_ligne) {
+            if (!vide) {
+                cellules++;
+                if (premiere) colonnes = cellules;
+                else if (cellules != colonnes) {
+                    free(chaine_rendre(&c));
+                    free(chaine_rendre(&ligne));
+                    *probleme = grym_formater("« %s », ligne %lu : %lu cellule%s pour %lu colonne%s.", f->nom,
+                                              (unsigned long)numero, (unsigned long)cellules, cellules > 1 ? "s" : "",
+                                              (unsigned long)colonnes, colonnes > 1 ? "s" : "");
+                    return NULL;
+                }
+                char *l = chaine_rendre(&ligne);
+                if (!premiere) chaine_ajouter(&c, "\x1e");
+                chaine_ajouter(&c, l);
+                free(l);
+                premiere = 0;
+            } else free(chaine_rendre(&ligne));
+            ligne.d = NULL; ligne.n = ligne.cap = 0;
+            vide = 1;
+            cellules = 0;
+            if (p < fin && *p == '\r' && p + 1 < fin && p[1] == '\n') p++;
+            if (p < fin && (*p == '\n' || *p == '\r')) numero++;
+            p++;
+            continue;
+        }
+        vide = 0;
+        if (*p == '"') {   /* cellule entre guillemets : « "" » vaut un guillemet */
+            p++;
+            while (p < fin && !(*p == '"' && (p + 1 >= fin || p[1] != '"'))) {
+                if (*p == '"') p++;
+                if (*p == '\n') numero++;
+                un[0] = (*p == '\x1e' || *p == '\x1f') ? ' ' : *p;
+                chaine_ajouter(&ligne, un);
+                p++;
+            }
+            if (p >= fin) {
+                free(chaine_rendre(&c));
+                free(chaine_rendre(&ligne));
+                *probleme = grym_formater("« %s » : un guillemet n'est pas refermé.", f->nom);
+                return NULL;
+            }
+            p++;
+            continue;
+        }
+        if (*p == sep) { chaine_ajouter(&ligne, "\x1f"); cellules++; p++; continue; }
+        un[0] = (*p == '\x1e' || *p == '\x1f') ? ' ' : *p;
+        chaine_ajouter(&ligne, un);
+        p++;
+    }
+    if (premiere) {
+        free(chaine_rendre(&c));
+        *probleme = grym_formater("« %s » est vide : un tableau commence par la ligne des titres.", f->nom);
+        return NULL;
+    }
+    return chaine_rendre(&c);
+}
+
 static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
     char *erreur = NULL;
     const size_t nc = e->nb_colonnes[k], nl = l->liste->n;
@@ -3157,12 +3254,34 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_TAILLE_LISTE: {
             Valeur l = depiler(&pile);
             char t[32];
-            snprintf(t, sizeof t, "%lu", (unsigned long)(l.type == V_LISTE ? l.liste->n : 0));
+            size_t nb = l.type == V_LISTE ? l.liste->n : 0;
+            if (l.type == V_LIGNE && l.texte) for (const char *p = l.texte; *p; p++) nb += *p == '\x1e';   /* ses lignes */
+            snprintf(t, sizeof t, "%lu", (unsigned long)nb);
             valeur_liberer(&l);
             empiler(&pile, valeur_nombre(dec_depuis_canonique(t)));
             break;
         }
         case I_ELEMENT: {
+            if (pile.v[pile.n - 2].type == V_LIGNE) {   /* la ligne r d'un tableau : ses titres, puis ses cellules (§ 15.5) */
+                Valeur rang = depiler(&pile), l = depiler(&pile);
+                long k = -1;
+                if (rang.type == V_NOMBRE) dec_en_jours(&rang.nombre, &k);
+                const char *p = l.texte ? strchr(l.texte, '\x1e') : NULL;
+                for (long q = 0; p && q < k; q++) p = strchr(p + 1, '\x1e');
+                const char *fin = p ? strchr(p + 1, '\x1e') : NULL;
+                Valeur r = vi_texte("");
+                if (p && l.texte) {
+                    free(r.texte);
+                    r.texte = grym_formater("%.*s%.*s", (int)(strchr(l.texte, '\x1e') - l.texte), l.texte,
+                                            (int)(fin ? fin - p : (long)strlen(p)), p);
+                    r.type = V_LIGNE;
+                }
+                valeur_liberer(&rang);
+                valeur_liberer(&l);
+                if (r.type != V_LIGNE) { valeur_liberer(&r); ok = echouer(diag, b, debut, grym_dupliquer("Rang hors du tableau.")); break; }
+                empiler(&pile, r);
+                break;
+            }
             Valeur rang = depiler(&pile), l = depiler(&pile);
             long k = -1;
             if (l.type == V_LISTE && rang.type == V_NOMBRE && dec_en_jours(&rang.nombre, &k)) {}
@@ -3503,6 +3622,70 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             empiler(&pile, valeur_nombre(r));
+            break;
+        }
+        case I_TABLEAU: {   /* « Pour chaque ligne du tableau « f.csv » » : le fichier lu devient un tableau (§ 15.5) */
+            Valeur f = depiler(&pile);
+            char *probleme = NULL;
+            Valeur r = vi_texte("");
+            if (f.type != V_FICHIER) probleme = grym_formater("Un tableau se lit dans un fichier, pas dans %s.", nom_type(f.type));
+            else {
+                free(r.texte);
+                r.texte = lire_csv(f.fichier, &probleme);
+                r.type = V_LIGNE;
+            }
+            valeur_liberer(&f);
+            if (probleme) { valeur_liberer(&r); ok = echouer(diag, b, debut, probleme); break; }
+            empiler(&pile, r);
+            break;
+        }
+        case I_COLONNE: {   /* « la colonne « Nom » de la ligne » (§ 15.5) */
+            Valeur titre = depiler(&pile), l = depiler(&pile);
+            char *probleme = NULL;
+            Valeur r = vi_absent(NULL);
+            if (l.type == V_ABSENT) probleme = message_absent(&l);
+            else if (l.type != V_LIGNE) probleme = grym_formater("« la colonne » se lit dans une ligne de tableau, pas dans %s.",
+                                                                 nom_type(l.type));
+            else if (titre.type != V_TEXTE) probleme = grym_formater("Le titre d'une colonne est un texte, pas %s.",
+                                                                     nom_type(titre.type));
+            else {
+                const char *sep = strchr(l.texte, '\x1e');
+                if (!sep || strchr(sep + 1, '\x1e'))
+                    probleme = grym_dupliquer("« la colonne » se lit dans une seule ligne : « Pour chaque ligne du tableau … ».");
+                else {
+                    char *cherche = texte_plier(titre.texte);
+                    long k = -1, q = 0;
+                    Chaine titres = {0};
+                    for (const char *p = l.texte; p < sep && k < 0; q++) {
+                        const char *f2 = memchr(p, '\x1f', (size_t)(sep - p));
+                        if (!f2) f2 = sep;
+                        char *t = grym_formater("%.*s", (int)(f2 - p), p);
+                        char *pl = texte_plier(t);
+                        if (strcmp(pl, cherche) == 0) k = q;
+                        if (q) chaine_ajouter(&titres, ", ");
+                        chaine_ajouter(&titres, t);
+                        free(pl);
+                        free(t);
+                        p = f2 + 1;
+                    }
+                    free(cherche);
+                    char *liste = chaine_rendre(&titres);
+                    if (k < 0) probleme = grym_formater("Aucune colonne « %s » dans ce tableau : %s.", titre.texte, liste);
+                    else {
+                        const char *p = sep + 1;
+                        for (long z = 0; z < k && p; z++) { p = strchr(p, '\x1f'); if (p) p++; }
+                        const char *f2 = p ? strchr(p, '\x1f') : NULL;
+                        size_t n = p ? (f2 ? (size_t)(f2 - p) : strlen(p)) : 0;
+                        if (n) { valeur_liberer(&r); r = vi_texte(""); free(r.texte); r.texte = grym_formater("%.*s", (int)n, p); }
+                        else { valeur_liberer(&r); r = vi_absent(titre.texte); }
+                    }
+                    free(liste);
+                }
+            }
+            valeur_liberer(&titre);
+            valeur_liberer(&l);
+            if (probleme) { valeur_liberer(&r); ok = echouer(diag, b, debut, probleme); break; }
+            empiler(&pile, r);
             break;
         }
         case I_ARRONDIR: {   /* « l'arrondi de x à 0,05 » (§ 3.4) */

@@ -2092,6 +2092,31 @@ static Noeud *base(Analyse *a) {
             return n;
         }
     }
+    if (est_mot(t, "la") && est_mot(voir(a, 1), "colonne") && (voir(a, 2)->type == J_TEXTE || voir(a, 2)->type == J_PAR_OUV)
+        && !visible(a, "colonne") && !champ_connu(a->portee, "colonne", NULL)) {
+        /* « la colonne « Nom » de la ligne » (§ 15.5) */
+        a->i += 2;
+        a->article_force = ART_AUCUN;
+        Noeud *titre = base(a);
+        if (!titre) return NULL;
+        attendre_mot(a, a->i, "de", 2);
+        Jeton *td = cour(a);
+        if (est_mot(td, "du")) { a->article_force = ART_LE; a->jeton_force = td; }
+        else if (!de_ou_d(td)) {
+            noeud_liberer(titre);
+            return erreur(a, td, grym_dupliquer("« la colonne « Nom » de la ligne » : la ligne attendue après « de »."));
+        }
+        avancer(a);
+        if (est_mot(cour(a), "le")) { noeud_liberer(titre); return erreur(a, td, grym_dupliquer("« de le » s'écrit « du »."));}
+        Noeud *ligne = base(a);
+        a->article_force = ART_AUCUN;
+        if (!ligne) { noeud_liberer(titre); return NULL; }
+        Noeud *n = noeud_creer(N_COLONNE, t->ligne, t->colonne, t->debut);
+        noeud_ajouter(n, titre);
+        noeud_ajouter(n, ligne);
+        n->fin = ligne->fin;
+        return n;
+    }
     if (est_mot(t, "le") && est_mot(voir(a, 1), "reste") && (de_ou_d(voir(a, 2)) || est_mot(voir(a, 2), "du"))
         && !visible(a, "reste") && !champ_connu(a->portee, "reste", NULL)) {
         /* « le reste de 17 par 5 » (§ 3.5) : ne réserve rien, un nom ou un champ « reste » déclaré l'emporte */
@@ -3976,6 +4001,42 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
     size_t d = a->i, k = d;
     if (a->j[k].type == J_CROCHETS) k++;
     else while (mot_de_nom(a, k) && !de_ou_d(&a->j[k]) && !est_mot(&a->j[k], "du")) k++;
+    if (k > d && est_mot(&a->j[k], "du") && est_mot(&a->j[k + 1], "tableau") && article_de(&a->j[d]) == ART_AUCUN) {
+        /* « Pour chaque ligne du tableau « import.csv » : » (§ 15.5) */
+        if (a->formule == 1)
+            return erreur(a, t, grym_dupliquer("Un calcul ne lit pas le disque : lis le tableau dans une action."));
+        char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+        if (visible(a, nom)) {
+            erreur(a, &a->j[d], grym_formater("« %s » existe déjà : choisis un autre nom de ligne.", nom));
+            free(nom);
+            return NULL;
+        }
+        a->i = k + 2;
+        Noeud *chemin = valeur(a);
+        if (!chemin) { free(nom); return NULL; }
+        size_t sauve = a->portee->n;
+        portee_declarer(a->portee, nom, GENRE_FEMININ, t->ligne);
+        Symbole *s = &a->portee->s[a->portee->n - 1];
+        s->lecture_seule = 1;
+        int case_ligne = s->local = a->nb_locaux++;
+        int case_tableau = a->nb_locaux++;
+        a->nb_locaux++;   /* rang */
+        int forme = 0;
+        a->boucle++;
+        Noeud *corps = branche(a, colonne, "Pour chaque", &forme);
+        a->boucle--;
+        portee_tronquer(a->portee, sauve);
+        if (!corps) { noeud_liberer(chemin); free(nom); return NULL; }
+        Noeud *n = noeud_creer(P_POUR_TABLEAU, t->ligne, t->colonne, t->debut);
+        n->texte = nom;
+        n->local = case_ligne;
+        n->entier = case_tableau;
+        n->forme = forme;
+        noeud_ajouter(n, chemin);
+        noeud_ajouter(n, corps);
+        n->fin = corps->fin;
+        return n;
+    }
     if (k == d)
         return erreur(a, cour(a), grym_dupliquer(
             "Nom du compteur attendu : « Pour chaque mois de 1 à 12 : »."));

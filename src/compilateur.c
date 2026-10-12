@@ -342,6 +342,11 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_LIRE_CHAMP, ch, n->op_ligne, n->op_colonne);
         return;
     }
+    case N_COLONNE:   /* la ligne, le titre, puis COLONNE (§ 15.5) */
+        expression(c, n->enfants[1]);
+        expression(c, n->enfants[0]);
+        emettre(c, I_COLONNE, 0, n->ligne, n->colonne);
+        return;
     case N_RESTE:   /* le dividende, le diviseur, puis RESTE (§ 3.5) */
         expression(c, n->enfants[0]);
         expression(c, n->enfants[1]);
@@ -877,6 +882,37 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_INFERIEUR, 0, l, col);
         size_t sortie = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
         emettre(c, I_LIRE_LOCAL, liste, l, col);
+        emettre(c, I_LIRE_LOCAL, rang, l, col);
+        emettre(c, I_ELEMENT, 0, l, col);
+        emettre(c, I_ECRIRE_LOCAL, v, l, col);
+        entrer_boucle(c, 0, 0);
+        phrase(c, ph->enfants[1]);
+        cible_suivant(c, c->b->taille_code);
+        emettre(c, I_LIRE_LOCAL, rang, l, col);
+        constante(c, C_NOMBRE, "1", ph, l, col);
+        emettre(c, I_ADDITION, 0, l, col);
+        emettre(c, I_ECRIRE_LOCAL, rang, l, col);
+        size_t retour = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+        bloc_corriger_saut(c->b, retour, test);
+        bloc_corriger_saut(c->b, sortie, c->b->taille_code);
+        sortir_boucle(c);
+        return;
+    }
+    case P_POUR_TABLEAU: {   /* le tableau lu une fois, au début, puis parcouru par rang (§ 15.5) */
+        int v = ph->local, tableau = ph->entier, rang = ph->entier + 1, l = ph->ligne, col = ph->colonne;
+        expression(c, ph->enfants[0]);
+        emettre(c, I_LIRE_FICHIER, 0, l, col);
+        emettre(c, I_TABLEAU, 0, l, col);
+        emettre(c, I_ECRIRE_LOCAL, tableau, l, col);
+        constante(c, C_NOMBRE, "0", ph, l, col);
+        emettre(c, I_ECRIRE_LOCAL, rang, l, col);
+        size_t test = c->b->taille_code;
+        emettre(c, I_LIRE_LOCAL, rang, l, col);
+        emettre(c, I_LIRE_LOCAL, tableau, l, col);
+        emettre(c, I_TAILLE_LISTE, 0, l, col);
+        emettre(c, I_INFERIEUR, 0, l, col);
+        size_t sortie = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+        emettre(c, I_LIRE_LOCAL, tableau, l, col);
         emettre(c, I_LIRE_LOCAL, rang, l, col);
         emettre(c, I_ELEMENT, 0, l, col);
         emettre(c, I_ECRIRE_LOCAL, v, l, col);
