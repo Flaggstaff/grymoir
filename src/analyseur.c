@@ -1663,11 +1663,56 @@ static Noeud *chercher(Analyse *a, const Jeton *t, const Classe *e, int mode, si
     /* un calcul peut lire la base, jamais y écrire (§ 9.4, décidé le 28 septembre 2026) */
     if (!objet) a->i = apres;
     a->article_force = ART_AUCUN;
+    /* « le client conservé au plus grand solde », « à la plus petite cotisation » (§ 16.4) : le premier selon ce champ */
+    char *extreme = NULL;
+    int decroissant = 0;
+    if (mode == 1 && !objet) {
+        size_t k = a->i;
+        int au = est_mot(&a->j[k], "au"), ala = est_mot(&a->j[k], "à") && k + 1 < a->n && est_mot(&a->j[k + 1], "la");
+        size_t p = au ? k + 1 : ala ? k + 2 : 0;
+        if (p && p + 2 < a->n && est_mot(&a->j[p], "plus")) {
+            const Jeton *adj = &a->j[p + 1];
+            int grand = est_mot(adj, "grand") || est_mot(adj, "grande"), petit = est_mot(adj, "petit") || est_mot(adj, "petite");
+            if (grand || petit) {
+                size_t d = p + 2, f = d;
+                if (a->j[d].type == J_CROCHETS) f = d + 1;
+                else while (f < a->n && mot_de_nom(a, f) && !est_mot(&a->j[f], "dont")) f++;
+                for (size_t q = f; q > d && !extreme; q--) {
+                    char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, q);
+                    if (type_du_champ(a->portee, e, nom)) { extreme = nom; f = q; }
+                    else free(nom);
+                }
+                if (!extreme)
+                    return erreur(a, &a->j[d < a->n ? d : p], grym_formater(
+                        "Après « %s plus %s », un champ %s%s : « au plus grand solde ».", au ? "au" : "à la",
+                        adj->valeur, voyelle_initiale(e->nom) ? "de l'" : e->genre == GENRE_FEMININ ? "de la " : "du ", e->nom));
+                const char *type = type_du_champ(a->portee, e, extreme);
+                if (strcmp(type, "nombre") != 0 && strcmp(type, "nombre entier") != 0 && strcmp(type, "date") != 0
+                    && strcmp(type, "année") != 0) {
+                    Noeud *x = erreur(a, adj, grym_formater("« %s » est un champ %s : « au plus grand » s'applique à un "
+                                                            "nombre, une date ou une année.", extreme, type));
+                    free(extreme);
+                    return x;
+                }
+                Genre g = GENRE_LIBRE;
+                champ_connu(a->portee, extreme, &g);
+                if (!adj->synthetique && (g == GENRE_FEMININ) != (ala != 0)) {
+                    Noeud *x = erreur(a, &a->j[k], grym_formater("Accord : « %s plus %s %s ».", g == GENRE_FEMININ ? "à la" : "au",
+                        grand ? (g == GENRE_FEMININ ? "grande" : "grand") : (g == GENRE_FEMININ ? "petite" : "petit"), extreme));
+                    free(extreme);
+                    return x;
+                }
+                decroissant = grand;
+                a->i = f;
+            }
+        }
+    }
     Noeud *cond;
-    if (!clause_dont(a, e, &cond)) { noeud_liberer(objet); return NULL; }
+    if (!clause_dont(a, e, &cond)) { noeud_liberer(objet); free(extreme); return NULL; }
     Noeud *n = noeud_creer(N_CHERCHER, t->ligne, t->colonne, t->debut);
     n->texte = grym_dupliquer(e->nom);
     n->forme = mode;
+    if (extreme) { n->forme = 7; n->texte2 = extreme; n->entier = decroissant; }
     n->negation = corbeille;   /* dans la corbeille (§ 16.12) */
     if (cond) noeud_ajouter(n, cond);
     if (objet) { n->op = 'I'; noeud_ajouter(n, objet); }
@@ -1687,9 +1732,13 @@ static char *pluriel_de_champ(const char *champ) {
 
 /* « la somme des montants des cotisations conservées dont … », « la somme des débits des lignes du compte »
  * (§ 16.4, § 16.10) : un champ nombre, additionné en décimal exact ; une somme sur rien vaut 0. */
-static Noeud *somme(Analyse *a, const Jeton *t) {
-    const size_t d = a->i + 3;   /* après « la somme des » */
-    /* le champ, au pluriel : le plus long nom qui convient, suivi de « des » ; en forme compacte, au singulier */
+/* Agrégats d'une recherche (§ 16.4) : forme 3 somme, 4 moyenne, 5 plus grand, 6 plus petit. d : l'index du champ,
+ * au pluriel pour la somme et la moyenne (« la moyenne des soldes »), au singulier pour les deux autres (« le plus
+ * grand solde ») ; en forme compacte, toujours au singulier. */
+static const char *const NOMS_AGREGATS[] = { "la somme des", "la moyenne des", "le plus grand", "le plus petit" };
+
+static Noeud *agregat(Analyse *a, const Jeton *t, int forme, size_t d) {
+    int pluriel = forme <= 4;
     char *champ = NULL;
     size_t f = 0;
     if (d < a->n && a->j[d].type == J_CROCHETS && a->j[d].synthetique && d + 1 < a->n && est_mot(&a->j[d + 1], "des")) {
@@ -1704,7 +1753,7 @@ static Noeud *somme(Analyse *a, const Jeton *t) {
             for (size_t i = 0; i < a->portee->nb_classes && !champ; i++) {
                 const Classe *c = &a->portee->classes[i];
                 for (size_t j = 0; j < c->nb && !champ; j++) {
-                    char *pl = pluriel_de_champ(c->champs[j]);
+                    char *pl = pluriel ? pluriel_de_champ(c->champs[j]) : grym_dupliquer(c->champs[j]);
                     if (strcmp(pl, nom) == 0) { champ = grym_dupliquer(c->champs[j]); f = q; }
                     free(pl);
                 }
@@ -1712,7 +1761,19 @@ static Noeud *somme(Analyse *a, const Jeton *t) {
             free(nom);
         }
     }
-    if (!champ) return NULL;   /* pas une somme : « la somme » est peut-être un nom du programme */
+    if (!champ) return NULL;   /* pas un agrégat : « la somme » est peut-être un nom du programme */
+    if (forme >= 5 && !t->synthetique) {   /* « la plus grande cotisation » : l'accord suit le champ */
+        Genre g = GENRE_LIBRE;
+        champ_connu(a->portee, champ, &g);
+        int fem = est_mot(t, "la");
+        if ((g == GENRE_FEMININ) != fem) {
+            Noeud *x = erreur(a, t, grym_formater("Accord : « %s %s %s ».", g == GENRE_FEMININ ? "la plus" : "le plus",
+                                                 forme == 5 ? (g == GENRE_FEMININ ? "grande" : "grand")
+                                                            : (g == GENRE_FEMININ ? "petite" : "petit"), champ));
+            free(champ);
+            return x;
+        }
+    }
     size_t apres, de;
     Classe *e = entite_conservee(a, f + 1, 1, &apres);
     Noeud *n = NULL;
@@ -1723,8 +1784,10 @@ static Noeud *somme(Analyse *a, const Jeton *t) {
         if (objet) n = chercher(a, t, e, 2, 0, objet);
     } else {
         free(champ);
-        return erreur(a, &a->j[f + 1 < a->n ? f + 1 : f], grym_dupliquer(
-            "Après « la somme des … des », les objets à additionner : « des cotisations conservées », « des lignes du compte »."));
+        return erreur(a, &a->j[f + 1 < a->n ? f + 1 : f], forme == 3 ? grym_dupliquer(
+            "Après « la somme des … des », les objets à additionner : « des cotisations conservées », « des lignes du compte ».")
+            : grym_formater("Après « %s … des », les objets parcourus : « des cotisations conservées », « des lignes du compte ».",
+                            NOMS_AGREGATS[forme - 3]));
     }
     if (!n) { free(champ); return NULL; }
     const char *type = type_du_champ(a->portee, e, champ);
@@ -1735,12 +1798,14 @@ static Noeud *somme(Analyse *a, const Jeton *t) {
         return x;
     }
     if (strcmp(type, "nombre") != 0 && strcmp(type, "nombre entier") != 0) {
-        Noeud *x = erreur(a, t, grym_formater("« %s » est un champ %s : seul un nombre s'additionne.", champ, type));
+        Noeud *x = erreur(a, t, forme == 3 ? grym_formater("« %s » est un champ %s : seul un nombre s'additionne.", champ, type)
+                                           : grym_formater("« %s » est un champ %s : « %s » s'applique à un nombre.",
+                                                           champ, type, NOMS_AGREGATS[forme - 3]));
         free(champ);
         noeud_liberer(n);
         return x;
     }
-    n->forme = 3;
+    n->forme = forme;
     n->texte2 = champ;
     return n;
 }
@@ -1884,8 +1949,20 @@ static Noeud *base(Analyse *a) {
 
     }
     if (est_mot(t, "la") && est_mot(voir(a, 1), "somme") && est_mot(voir(a, 2), "des")) {   /* § 16.4 */
-        Noeud *n = somme(a, t);
+        Noeud *n = agregat(a, t, 3, a->i + 3);
         if (n || a->echec) return n;
+    }
+    if (est_mot(t, "la") && est_mot(voir(a, 1), "moyenne") && est_mot(voir(a, 2), "des")) {   /* § 16.4 */
+        Noeud *n = agregat(a, t, 4, a->i + 3);
+        if (n || a->echec) return n;
+    }
+    if ((est_mot(t, "le") || est_mot(t, "la")) && est_mot(voir(a, 1), "plus")) {   /* « le plus grand solde des … » */
+        const Jeton *adj = voir(a, 2);
+        int forme = est_mot(adj, "grand") || est_mot(adj, "grande") ? 5 : est_mot(adj, "petit") || est_mot(adj, "petite") ? 6 : 0;
+        if (forme) {
+            Noeud *n = agregat(a, t, forme, a->i + 3);
+            if (n || a->echec) return n;
+        }
     }
     {
         /* « l'arrondi de x à 0,05 [vers le bas | vers le haut | au pair] » (§ 3.4). Ne réserve rien : un nom, un calcul

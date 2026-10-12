@@ -205,9 +205,12 @@ static void chercher(Compilation *c, const Noeud *n) {
     Chaine d = {0};
     chaine_ajouter(&d, n->texte);
     char t[8];
-    /* modes 0 à 2 ; 3 à 5 : les mêmes, dans la corbeille (§ 16.12) ; 6 : somme du champ texte2, 7 : dans la corbeille */
-    const int mode = n->forme == 3 ? (n->negation ? 7 : 6) : n->forme + (n->negation ? 3 : 0);
-    snprintf(t, sizeof t, "\x1f%d\x1f", mode);
+    /* modes 0 à 2 ; 3 à 5 : les mêmes, dans la corbeille (§ 16.12) ; 6 : somme du champ texte2, 7 : dans la corbeille ;
+     * 8, 9 : moyenne ; a, b : plus grand ; c, d : plus petit ; e, f : l'objet au plus grand (ou petit) champ texte2 */
+    static const char AGREGATS[] = "68ace";
+    const char mode = n->forme >= 3 ? (char)(AGREGATS[n->forme - 3] + (n->negation ? 1 : 0))
+                                    : (char)('0' + n->forme + (n->negation ? 3 : 0));
+    snprintf(t, sizeof t, "\x1f%c\x1f", mode);
     chaine_ajouter(&d, t);
     if (n->texte2) chaine_ajouter(&d, n->texte2);
     chaine_ajouter(&d, n->entier ? "\x1f" "1\x1f" : "\x1f" "0\x1f");

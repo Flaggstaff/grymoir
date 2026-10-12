@@ -233,9 +233,17 @@ static void preposition(Impression *im, const char *prep, const Noeud *x) {
     tmp.c.n = tmp.c.cap = 0;
     expression(&tmp, x);
     char *t = chaine_rendre(&tmp.c);
-    if (!a && voyelle(t)) aj(im, "d'");
-    else { aj(im, prep); aj(im, " "); }
-    aj(im, t);
+    if (!im->compact && strncmp(t, "le ", 3) == 0) {          /* « du membre conservé », « du nombre de … » */
+        aj(im, a ? "au " : "du ");
+        aj(im, t + 3);
+    } else if (!im->compact && strncmp(t, "les ", 4) == 0) {  /* « des œuvres de bach » */
+        aj(im, a ? "aux " : "des ");
+        aj(im, t + 4);
+    } else {
+        if (!a && voyelle(t)) aj(im, "d'");
+        else { aj(im, prep); aj(im, " "); }
+        aj(im, t);
+    }
     free(t);
 }
 
@@ -528,9 +536,11 @@ static void expression(Impression *im, const Noeud *n) {
         /* « de bach » (§ 16.10), « les interprètes de o » (§ 16.13) : l'objet en dernier enfant */
         int inverse = n->op == 'I' || n->op == 'M';
         const Noeud *objet = inverse ? n->enfants[n->nb_enfants - 1] : NULL;
-        if (n->forme == 3) {   /* « la somme des montants des cotisations conservées », « … des lignes du compte » */
+        if (n->forme >= 3 && n->forme <= 6) {   /* « la somme des montants des cotisations conservées », « … des lignes du
+                                                   compte » ; « la moyenne des soldes », « le plus grand solde » (§ 16.4) */
+            static const char *const C[] = { "_somme_de ", "_moyenne_de ", "_plus_grand_de ", "_plus_petit_de " };
             if (im->compact) {
-                aj(im, "_somme_de ");
+                aj(im, C[n->forme - 3]);
                 ecrire_nom(im, n->texte2, 0);
                 aj(im, " _de ");
                 ecrire_nom(im, n->texte, 0);
@@ -540,9 +550,14 @@ static void expression(Impression *im, const Noeud *n) {
                 const char *esp = strchr(n->texte2, ' ');
                 const size_t l = esp ? (size_t)(esp - n->texte2) : strlen(n->texte2);
                 const char der = l ? n->texte2[l - 1] : 0;
-                char *pc = (der == 's' || der == 'x' || der == 'z') ? grym_dupliquer(n->texte2)
-                                                                   : grym_formater("%.*ss%s", (int)l, n->texte2, esp ? esp : "");
-                aj(im, "la somme des ");
+                char *pc = n->forme >= 5 || der == 's' || der == 'x' || der == 'z'
+                         ? grym_dupliquer(n->texte2) : grym_formater("%.*ss%s", (int)l, n->texte2, esp ? esp : "");
+                if (n->forme >= 5) {
+                    int f2 = genre_de_nom(im, n->texte2) == G_FEMININ;
+                    aj(im, n->forme == 5 ? (f2 ? "la plus grande " : "le plus grand ") : (f2 ? "la plus petite " : "le plus petit "));
+                } else {
+                    aj(im, n->forme == 3 ? "la somme des " : "la moyenne des ");
+                }
                 aj(im, pc);
                 free(pc);
                 const char *pl = NULL;
@@ -592,15 +607,22 @@ static void expression(Impression *im, const Noeud *n) {
                 else aj(im, fem ? " conservées" : " conservés");
             }
         } else {               /* « le client conservé » ; la boucle écrit elle-même son début */
-            if (n->forme == 1) {
+            if (n->forme == 1 || n->forme == 7) {
                 const char *art = voyelle(n->texte) ? "l'" : fem ? "la " : "le ";
                 if (im->compact) aj(im, "_");
                 aj(im, art);
                 ecrire_nom(im, n->texte, 0);
-            }
-            if (n->forme == 1)
                 aj(im, im->compact ? (n->negation ? " _supprimé" : " _conservé")
                        : n->negation ? (fem ? " supprimée" : " supprimé") : fem ? " conservée" : " conservé");
+            }
+            if (n->forme == 7) {   /* « au plus grand solde », « à la plus petite cotisation » (§ 16.4) */
+                if (im->compact) aj(im, n->entier ? " _au_plus_grand " : " _au_plus_petit ");
+                else {
+                    int f2 = genre_de_nom(im, n->texte2) == G_FEMININ;
+                    aj(im, n->entier ? (f2 ? " à la plus grande " : " au plus grand ") : (f2 ? " à la plus petite " : " au plus petit "));
+                }
+                ecrire_nom(im, n->texte2, 0);
+            }
             if (n->forme == 0 && inverse) {   /* début de « Pour chaque œuvre de bach » */
                 if (im->compact) { aj(im, " _de "); expression(im, objet); }
                 else { aj(im, " "); preposition(im, "de", objet); }
@@ -610,7 +632,7 @@ static void expression(Impression *im, const Noeud *n) {
             aj(im, im->compact ? " _dont " : " dont ");
             expression(im, n->enfants[0]);
         }
-        if (n->texte2 && n->forme != 3) {   /* forme 3 : texte2 est le champ additionné, pas un tri */
+        if (n->texte2 && n->forme < 3) {   /* formes 3 à 7 : texte2 est le champ de l'agrégat, pas un tri */
             aj(im, im->compact ? " _par " : ", par ");
             ecrire_nom(im, n->texte2, 0);
             if (n->entier) aj(im, im->compact ? " _décroissant" : " décroissant");

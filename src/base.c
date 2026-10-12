@@ -1912,11 +1912,49 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
     const char *s3 = s2 ? strchr(s2 + 1, '\x1f') : NULL;
     const char *s4 = s3 ? strchr(s3 + 1, '\x1f') : NULL;
     if (!s4) { *erreur = grym_dupliquer("Recherche mal décrite."); return 0; }
+    /* modes 0 à 9, puis a à f (compilateur.c, chercher) ; e, f : l'objet au plus grand champ, une liste triée réduite à
+     * son premier élément, parmi les objets où ce champ est présent */
+    char cm = s1[1];
+    if (cm == 'e' || cm == 'f') {
+        const char *s2e = strchr(s1 + 1, '\x1f');
+        const char *s3e = s2e ? strchr(s2e + 1, '\x1f') : NULL;
+        const char *s4e = s3e ? strchr(s3e + 1, '\x1f') : NULL;
+        if (!s4e) { *erreur = grym_dupliquer("Recherche mal décrite."); return 0; }
+        char *champ = grym_formater("%.*s", (int)(s3e - s2e - 1), s2e + 1);
+        char *d0 = s4e[1] ? grym_formater("%.*s%c%.*s(e(R[%s])%s)", (int)(s1 - d + 1), d, cm == 'f' ? '3' : '0',
+                                           (int)(s4e - s1 - 1), s1 + 2, champ, s4e + 1)
+                          : grym_formater("%.*s%c%.*s(R[%s])", (int)(s1 - d + 1), d, cm == 'f' ? '3' : '0',
+                                           (int)(s4e - s1 - 1), s1 + 2, champ);
+        Valeur liste;
+        int bon = base_chercher(b, m, d0, params, nb_params, &liste, erreur);
+        free(d0);
+        if (!bon) { free(champ); return 0; }
+        if (!liste.liste->n) {
+            char *ent = grym_formater("%.*s", (int)(s1 - d), d);
+            const ClasseVM *ce = machine_classe(m, ent);
+            int fem = ce && ce->feminin;
+            *erreur = grym_formater("Aucun%s %s %s%s%s n'a de « %s ».", fem ? "e" : "", ent, cm == 'f' ? "supprimé" : "conservé",
+                                    fem ? "e" : "", s4e[1] ? " répondant à la condition" : "", champ);
+            free(ent);
+            free(champ);
+            vi_liberer(&liste);
+            return 0;
+        }
+        free(champ);
+        Objet *o = machine_objet_en_base(m, liste.liste->ids[0], liste.liste->classes[0], erreur);
+        vi_liberer(&liste);
+        if (!o) return 0;
+        *resultat = vi_objet(o);
+        return 1;
+    }
     char *entite = grym_formater("%.*s", (int)(s1 - d), d);
-    int mode = s1[1] - '0';
-    int corbeille = (mode >= 3 && mode <= 5) || mode == 7;   /* « supprimés » (§ 16.12) : modes 3, 4, 5 et 7 */
+    int mode = cm >= 'a' ? 10 + cm - 'a' : cm - '0';
+    int corbeille = (mode >= 3 && mode <= 5) || (mode >= 7 && mode % 2 == 1);   /* « supprimés » (§ 16.12) */
     if (mode >= 3 && mode <= 5) mode -= 3;
-    else if (mode == 7) mode = 6;   /* 6 : la somme du champ écrit à la place du tri (§ 16.4) */
+    /* 6 : un agrégat du champ écrit à la place du tri (§ 16.4) : la somme, la moyenne (8), le plus grand (10),
+     * le plus petit (12) */
+    char agregat = mode >= 6 ? "ssmmggpp"[mode - 6] : 0;
+    if (agregat) mode = 6;
     char *tri = grym_formater("%.*s", (int)(s3 - s2 - 1), s2 + 1);
     int decroissant = s3[1] == '1';
     Recherche r;
@@ -2039,24 +2077,57 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
         *resultat = vi_liste(ids, classes, n);
         return 1;
     }
-    if (mode == 6) {   /* la somme, en décimal exact : jamais l'arithmétique flottante de SQLite ; les absents ne comptent pas */
-        Decimal total = dec_zero();
+    if (mode == 6) {   /* l'agrégat, en décimal exact : jamais l'arithmétique flottante de SQLite ; les absents ne comptent pas */
+        Decimal total = dec_zero(), extreme = dec_zero();
+        long nb = 0;
         int rc;
         StatutDecimal statut = DEC_OK;
         while (statut == DEC_OK && (rc = sqlite3_step(st)) == SQLITE_ROW) {
             if (sqlite3_column_type(st, 0) == SQLITE_NULL) continue;
             Decimal x = dec_depuis_canonique((const char *)sqlite3_column_text(st, 0));
+            if (agregat == 'g' || agregat == 'p') {
+                int c = nb ? dec_comparer(&x, &extreme) : 0;
+                if (!nb || (agregat == 'g' ? c > 0 : c < 0)) { dec_liberer(&extreme); extreme = x; }
+                else dec_liberer(&x);
+                nb++;
+                continue;
+            }
             Decimal s;   /* dec_addition l'écrit entièrement : rien à préparer, rien à perdre */
             statut = dec_addition(&total, &x, &s);
             dec_liberer(&x);
             dec_liberer(&total);
             total = s;
+            nb++;
         }
         sqlite3_finalize(st);
         if (statut != DEC_OK) {
             dec_liberer(&total);
+            dec_liberer(&extreme);
             *erreur = grym_dupliquer("Nombre trop grand : un résultat est limité à 1000 chiffres.");
             return 0;
+        }
+        if (agregat != 's' && !nb) {   /* une moyenne, un plus grand sur rien : pas de valeur, jamais 0 en silence */
+            dec_liberer(&total);
+            dec_liberer(&extreme);
+            *erreur = grym_formater("Aucun%s %s %s%s n'a de « %s » : pas de %s.", e->feminin ? "e" : "", e->nom,
+                                    corbeille ? "supprimé" : "conservé", e->feminin ? "e" : "", e->champs[k_somme],
+                                    agregat == 'm' ? "moyenne" : agregat == 'g' ? "plus grand" : "plus petit");
+            return 0;
+        }
+        if (agregat == 'g' || agregat == 'p') { dec_liberer(&total); total = extreme; }
+        else {
+            dec_liberer(&extreme);
+            if (agregat == 'm') {
+                Decimal n = dec_zero(), q;
+                char tn[32];
+                snprintf(tn, sizeof tn, "%ld", nb);
+                dec_liberer(&n);
+                n = dec_depuis_canonique(tn);
+                dec_division(&total, &n, &q);
+                dec_liberer(&n);
+                dec_liberer(&total);
+                total = q;
+            }
         }
         char *c = dec_canonique(&total);
         dec_liberer(&total);

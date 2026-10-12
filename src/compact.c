@@ -209,14 +209,22 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k += 2;
             continue;
         }
-        if (est_cle(t, "somme_de") && k + 4 < f && r->e[k + 1].type == J_CROCHETS && est_cle(&r->e[k + 2], "de")
+        if ((est_cle(t, "somme_de") || est_cle(t, "moyenne_de") || est_cle(t, "plus_grand_de") || est_cle(t, "plus_petit_de"))
+            && k + 4 < f && r->e[k + 1].type == J_CROCHETS && est_cle(&r->e[k + 2], "de")
             && r->e[k + 3].type == J_CROCHETS
             && (est_cle(&r->e[k + 4], "de") || est_cle(&r->e[k + 4], "conservé") || est_cle(&r->e[k + 4], "conservée")
                 || est_cle(&r->e[k + 4], "supprimé"))) {
-            /* _somme_de montant _de cotisation _conservé → la somme des montant des cotisation conservés (§ 16.4) */
-            mot(r, "la", t);
-            mot(r, "somme", t);
-            mot(r, "des", t);
+            /* _somme_de montant _de cotisation _conservé → la somme des montant des cotisation conservés (§ 16.4) ;
+             * _moyenne_de, _plus_grand_de, _plus_petit_de : la moyenne des, le plus grand, le plus petit */
+            if (est_cle(t, "somme_de") || est_cle(t, "moyenne_de")) {
+                mot(r, "la", t);
+                mot(r, est_cle(t, "somme_de") ? "somme" : "moyenne", t);
+                mot(r, "des", t);
+            } else {
+                mot(r, "le", t);
+                mot(r, "plus", t);
+                mot(r, est_cle(t, "plus_grand_de") ? "grand" : "petit", t);
+            }
             copier(r, &r->e[k + 1]);
             mot(r, "des", &r->e[k + 2]);
             copier(r, &r->e[k + 3]);
@@ -244,6 +252,12 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             copier(r, &r->e[k + 1]);
             mot(r, est_cle(&r->e[k + 2], "supprimé") ? "supprimés" : "conservés", &r->e[k + 2]);
             k += 2;
+            continue;
+        }
+        if (est_cle(t, "au_plus_grand") || est_cle(t, "au_plus_petit")) {   /* _au_plus_grand solde → au plus grand solde */
+            mot(r, "au", t);
+            mot(r, "plus", t);
+            mot(r, est_cle(t, "au_plus_grand") ? "grand" : "petit", t);
             continue;
         }
         if (est_cle(t, "dont")) {

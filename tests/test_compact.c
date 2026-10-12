@@ -178,6 +178,9 @@ int main(void) {
                  "Si n contient « lo » et n ne commence pas par « x » :\n    Afficher n finit par « ie ».\n");
     EXEC("_afficher « éa » _en_majuscules ; « ab » _inclut « B » ; _non (« ab » _finit « b »)\n", "ÉA vrai faux\n");
     ERR("_afficher « a » _en_rouge\n", 1, 17, "« _en_rouge » inconnu");
+    ALLER_RETOUR("_classe _un membre _conservé\n    _un nom (texte)\n    _une cotisation (nombre)\n_fin\n"
+                 "_afficher _moyenne_de cotisation _de membre _conservé ; _plus_petit_de cotisation _de membre _conservé\n"
+                 "_afficher (_le membre _conservé _au_plus_grand cotisation _dont nom = « a »).nom\n", NULL);
     ALLER_RETOUR("_le jour << 01.03.2026\n_si _aujourd'hui > jour _alors\n    _afficher jour − 01.01.2026\n_fin\n",
                  "Le jour vaut 01.03.2026.\nSi aujourd'hui > jour :\n    Afficher jour − 01.01.2026.\n");
 

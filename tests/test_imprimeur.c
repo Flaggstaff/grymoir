@@ -91,6 +91,8 @@ int main(void) {
     FIXE("Le nom vaut « a ».\nSi le nom ne contient pas « b » et nom finit par « a », afficher nom en majuscules.\n");
     FIXE("Afficher (« a » suivi de « b ») en minuscules puis « 3 » en nombre + 1.\n");
     COMP("Le nom vaut « a ».\nAfficher nom ne commence pas par « b ».", "_le nom << « a »\n_afficher _non (nom _commence « b »)\n");
+    FIXE("Un membre, conservé, a : un nom (texte), une cotisation (nombre).\nAfficher la moyenne des cotisations des membres conservés puis la plus grande cotisation des membres conservés.\n"
+         "Afficher nom du membre conservé à la plus petite cotisation dont le nom est « a ».\n");
     FIXE("Le x vaut 0.\nTant que vrai :\n    Le x devient x + 1.\n    Si x = 3, sortir de la boucle.\n"
          "Répéter 2 fois, passer au tour suivant.");
 

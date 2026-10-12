@@ -1536,6 +1536,19 @@ int main(void) {
     PROG(RC "Pour chaque client conservé dont le nom contient « E », par nom, afficher nom du client.", "Élodie\némile\nZoé");
     PROG(RC "Afficher le nombre de clients conservés dont le nom commence par « é » puis le nombre de clients conservés "
          "dont le nom ne finit pas par « E ».", "2 2");
+    /* Moyenne, plus grand, plus petit, objet au champ extrême (§ 16.4) */
+    PROG(RC "Afficher la moyenne des rangs des clients conservés puis le plus grand solde des clients conservés "
+         "puis le plus petit rang des clients conservés.", "7,2 100,000000000000000001 1");
+    PROG(RC "Afficher la moyenne des soldes des clients conservés dont l'actif est vrai.", "23,62500000000000000025");
+    PROG(RC "Afficher nom du client conservé au plus grand solde puis nom du client conservé au plus petit rang dont "
+         "l'actif est faux.", "Élodie Ana");
+    PROG(RC "Afficher la moyenne des soldes des clients conservés dont le rang est supérieur à 100.",
+         "~Aucun client conservé n'a de « solde » : pas de moyenne.");
+    PROG(RC "Afficher nom du client conservé au plus grand solde dont le rang est supérieur à 100.",
+         "~Aucun client conservé répondant à la condition n'a de « solde ».");
+    PROG(RC "Afficher la plus grand solde des clients conservés.", "~Accord : « le plus grand solde ».");
+    PROG(RC "Afficher la moyenne des noms des clients conservés.",
+         "~« nom » est un champ texte : « la moyenne des » s'applique à un nombre.");
     PROG(RC "Pour chaque client conservé dont le solde contient « 1 », afficher 1.",
          "~contient, commence par et finit par s'appliquent à un texte");
     PROG(RC "Pour chaque client conservé, par solde décroissant, afficher solde du client.",

@@ -388,12 +388,14 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, "])");
         return;
     case N_CHERCHER:
-        if (n->forme == 3) {   /* (somme [prix] des [pupitre] …) (§ 16.4) */
-            chaine_ajouter(c, n->negation ? "(somme-supprimés [" : "(somme-conservés [");
+        if (n->forme >= 3 && n->forme <= 6) {   /* (somme-conservés [prix] des [pupitre] …), moyenne, plus-grand… (§ 16.4) */
+            static const char *const A[] = { "(somme", "(moyenne", "(plus-grand", "(plus-petit" };
+            chaine_ajouter(c, A[n->forme - 3]);
+            chaine_ajouter(c, n->negation ? "-supprimés [" : "-conservés [");
             chaine_ajouter(c, n->texte2);
             chaine_ajouter(c, "] des ");
         }
-        chaine_ajouter(c, n->forme == 3 ? "[" : n->forme == 1 ? (n->negation ? "(le-supprimé [" : "(le-conservé [")
+        chaine_ajouter(c, n->forme >= 3 && n->forme <= 6 ? "[" : n->forme == 1 || n->forme == 7 ? (n->negation ? "(le-supprimé [" : "(le-conservé [")
                           : n->forme == 2 ? (n->negation ? "(nombre-supprimés [" : "(nombre-conservés [")
                           : n->negation ? "(supprimés [" : "(conservés [");
         chaine_ajouter(c, n->texte);
@@ -415,7 +417,11 @@ static void decrire(const Noeud *n, Chaine *c) {
             decrire(n->enfants[0], c);
             chaine_ajouter(c, ")");
         }
-        if (n->texte2 && n->forme != 3) {
+        if (n->forme == 7) {   /* « au plus grand solde » */
+            chaine_ajouter(c, n->entier ? " (au-plus-grand [" : " (au-plus-petit [");
+            chaine_ajouter(c, n->texte2);
+            chaine_ajouter(c, "])");
+        } else if (n->texte2 && (n->forme < 3 || n->forme > 6)) {
             chaine_ajouter(c, " (par [");
             chaine_ajouter(c, n->texte2);
             chaine_ajouter(c, n->entier ? "] décroissant)" : "])");
