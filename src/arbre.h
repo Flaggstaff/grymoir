@@ -41,6 +41,8 @@ typedef enum {
     N_AJOUT,         /* « les élus gagnent m » : enfants[0] l'ensemble, enfants[1] la valeur ; op 'g' gagner, 'p' perdre */
     N_TAILLE,        /* « le nombre de couleurs » : enfants[0] l'ensemble */
     N_JOINDRE,       /* « les couleurs jointes par « , » » : enfants[0] l'ensemble, enfants[1] le séparateur ; forme 1 : joints */
+    N_HEURE,         /* « 14:30 » (§ 14.7) : texte « 14:30 » ; entier : les minutes depuis minuit */
+    N_MAINTENANT,    /* « maintenant » : l'heure, lue une fois au début de l'exécution (§ 14.7) */
     N_ECART,         /* « le nombre de mois entre d1 et d2 » (§ 14.6) : enfants[0] d1, enfants[1] d2 ;
                         op : 'j' jours, 's' semaines, 'm' mois, 'a' années ; texte : l'unité écrite */
     N_HASARD,        /* « un nombre au hasard de 1 à 6 » : enfants[0], enfants[1] les bornes ; « un élément au hasard

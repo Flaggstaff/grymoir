@@ -474,6 +474,12 @@ static void expression(Impression *im, const Noeud *n) {
         free(t);
         return;
     }
+    case N_HEURE:
+        aj(im, n->texte[0] == '0' ? n->texte + 1 : n->texte);   /* « 8:05 » comme écrit d'habitude ; « 0:30 » */
+        return;
+    case N_MAINTENANT:
+        aj(im, im->compact ? "_maintenant" : "maintenant");
+        return;
     case N_AUJOURDHUI:
         aj(im, im->compact ? "_aujourd'hui" : "aujourd'hui");
         return;
@@ -500,14 +506,15 @@ static void expression(Impression *im, const Noeud *n) {
     }
     case N_ECART:   /* « le nombre de mois entre d1 et d2 » ; « _écart_mois(d1 ; d2) » (§ 14.6) */
         if (im->compact) {
-            aj(im, n->op == 'j' ? "_écart_jours(" : n->op == 's' ? "_écart_semaines(" : n->op == 'm' ? "_écart_mois(" : "_écart_années(");
+            aj(im, n->op == 'j' ? "_écart_jours(" : n->op == 's' ? "_écart_semaines(" : n->op == 'm' ? "_écart_mois("
+                   : n->op == 'n' ? "_écart_minutes(" : n->op == 'h' ? "_écart_heures(" : "_écart_années(");
             expression(im, n->enfants[0]);
             aj(im, " ; ");
             expression(im, n->enfants[1]);
             aj(im, ")");
             return;
         }
-        aj(im, voyelle(n->texte) ? "le nombre d'" : "le nombre de ");
+        aj(im, voyelle(n->texte) || n->op == 'h' ? "le nombre d'" : "le nombre de ");
         aj(im, n->texte);
         aj(im, " entre ");
         expression(im, n->enfants[0]);

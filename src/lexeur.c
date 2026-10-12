@@ -254,7 +254,7 @@ const char *type_jeton_nom(TypeJeton t) {
         "FIN", "MOT", "ÉLISION", "NOMBRE", "TEXTE", "PLUS", "MOINS", "FOIS",
         "DIVISE", "PUISSANCE", "PAR_OUV", "PAR_FERM", "POINT", "VIRGULE",
         "DEUX_POINTS", "REMARQUE", "ÉGAL", "DIFFÉRENT", "INFÉRIEUR", "SUPÉRIEUR",
-        "INFÉRIEUR_OU_ÉGAL", "SUPÉRIEUR_OU_ÉGAL", "CROCHETS", "DATE", "ARTICLE_IMPLICITE", "MOT_CLÉ",
+        "INFÉRIEUR_OU_ÉGAL", "SUPÉRIEUR_OU_ÉGAL", "CROCHETS", "DATE", "HEURE", "ARTICLE_IMPLICITE", "MOT_CLÉ",
         "AFFECTE", "POINT_VIRGULE", "ERREUR"
     };
     return (t >= J_FIN && t <= J_ERREUR) ? NOMS[t] : "?";
@@ -382,6 +382,20 @@ static Jeton lire_nombre(Lexeur *lx, size_t debut, int ligne, int col) {
         return echec(lx, debut, ligne, col, m);
     }
 
+    /* Heure « 14:30 » (§ 14.7) : une ou deux chiffres, deux-points collé, deux chiffres. */
+    if (voir(lx, 0) == ':' && reste(lx, 2) && est_chiffre(voir(lx, 1)) && est_chiffre(voir(lx, 2))
+        && !(reste(lx, 3) && est_chiffre(voir(lx, 3))) && t.d && strlen(t.d) <= 2 && !strchr(t.d, '.')) {
+        int h = atoi(t.d), mi = (voir(lx, 1) - '0') * 10 + (voir(lx, 2) - '0');
+        free(t.d);
+        avancer(lx); avancer(lx); avancer(lx);
+        if (h > 23 || mi > 59) {
+            char *texte = extrait(lx, debut, lx->pos);
+            char *m = formater("L'heure « %s » n'existe pas : de 0:00 à 23:59.", texte);
+            free(texte);
+            return echec(lx, debut, ligne, col, m);
+        }
+        return faire(lx, J_HEURE, debut, ligne, col, formater("%02d:%02d", h, mi));
+    }
     /* Partie décimale : virgule suivie d'un chiffre collé. */
     if (voir(lx, 0) == ',' && reste(lx, 1) && est_chiffre(voir(lx, 1))) {
         avancer(lx);

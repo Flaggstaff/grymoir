@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.68 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.69 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -764,6 +764,7 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `Les couleurs valent « a » et « b ».`, `Les invités gagnent m.` | `_les couleurs << « a » ; « b »`, `_les invités _gagnent m` |
 | `Exemple : le carré de 7 vaut 49.` | `_exemple carré(7) << 49` |
 | `le nombre de mois entre d1 et d2`, `un nombre au hasard de 1 à 6` | `_écart_mois(d1 ; d2)`, `_hasard(1 ; 6)` |
+| `19:30 + 15 minutes`, `maintenant`, `le nombre de minutes entre h1 et h2` | `19:30 + 15 _minutes`, `_maintenant`, `_écart_minutes(h1 ; h2)` |
 | `Rendre x.` | `_rendre x` |
 | `Tant que c :` | `_tant_que c` … `_fin` |
 | `Répéter 3 fois :` | `_répéter 3 _fois` … `_fin` |
@@ -1073,6 +1074,26 @@ Afficher le nombre de mois entre 31.01.2026 et 28.02.2026.     →  1
 - La seconde date se lie comme un argument (§ 9.1) : `entre d et (d + 3)`.
 - Deux dates seulement : « Un écart se mesure entre deux dates, pas avec un nombre. » L'écart en jours reste aussi `d2 − d1` (§ 14.2).
 - Aucun mot réservé. En forme compacte : `_écart_jours(d1 ; d2)`, `_écart_semaines`, `_écart_mois`, `_écart_années`.
+
+### 14.7 Heures
+
+```
+Une réunion, conservée, a : un titre (texte), un début (heure).
+Le début vaut 19:30.
+Afficher le début + 15 minutes.                         →  19:45
+Afficher le nombre de minutes entre 8:05 et 19:30.      →  685
+Si maintenant > 12:00, afficher « Bon après-midi ».
+```
+
+- Une heure s'écrit `heures:minutes`, sans espace : `14:30`, `8:05`, de `0:00` à `23:59`. Sinon : « L'heure « 24:00 » n'existe pas : de 0:00 à 23:59. » C'est l'heure locale, sans fuseau ni secondes : un horaire, un rendez-vous, un planning. Une date et une heure restent deux valeurs distinctes : décision du 12 octobre 2026.
+- `Afficher` l'écrit sur deux chiffres, comme un horaire : `08:05`. La forme canonique du programme garde `8:05`.
+- `maintenant` est l'heure, lue une fois au début de l'exécution, comme `aujourd'hui` (§ 14.3) ; interdit dans un calcul et un exemple (§ 9.4, § 9.6). Un nom `maintenant` déclaré l'emporte.
+- `h + 15 minutes`, `h − 2 heures` : l'heure tourne comme une horloge, `23:50 + 15 minutes` donne `00:05`. Une heure ne se décale que de minutes ou d'heures ; un nombre seul est refusé (« ADDITION impossible avec une heure »), comme les jours ne s'ajoutent qu'à une date.
+- `h2 − h1` donne des minutes, négatives si h2 précède : `14:30 − 8:05` vaut 385. `le nombre de minutes entre h1 et h2`, `le nombre d'heures entre h1 et h2` comptent les unités entières (§ 14.6).
+- Les heures se comparent (`<`, `≥`…) et se trient. Un champ `(heure)` d'entité se range en texte `14:30`, triable ; dans `dont`, `le début est supérieur à 12:00`.
+- `t en heure` lit un texte (§ 4.5) ; `la réponse en heure à « Début ? »` aussi (§ 17) : « « 25:00 » n'est pas une heure : écris heures:minutes (14:30). »
+- Les unités `minute`, `minutes`, `heure`, `heures` après un nombre, comme `jours` ou `mois`, ne réservent rien ailleurs.
+- En forme compacte : `8:05 + 15 _minutes`, `_maintenant`, `_écart_minutes(h1 ; h2)`, `_écart_heures(h1 ; h2)`, `t _en_heure`.
 
 ## 15. Fichiers et images *(v0.3)*
 
@@ -1786,3 +1807,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.66 | 2026-10-12 | Nouveau § 13.9 : ensembles (`Les couleurs valent …`, `gagnent`, `perdent`, `parmi`, `Pour chaque … parmi les …`, `le nombre de`, `jointes par`), sans doublon, copiés à l'affectation ; § 4.4 : joindre ; aucun mot réservé |
 | 1.67 | 2026-10-12 | Nouveau § 9.6 : `Exemple : … vaut ….`, ignorés par `grym lancer`, vérifiés par `grym exemples` (déclarations seulement, base vide en mémoire) ; aucun mot réservé |
 | 1.68 | 2026-10-12 | Nouveaux § 3.6 (hasard : `un nombre au hasard de 1 à 6`, `un élément au hasard parmi les …`, actions seulement, `GRYM_HASARD`) et § 14.6 (`le nombre de mois entre d1 et d2`, unités entières, règle de `d + n mois`) ; aucun mot réservé |
+| 1.69 | 2026-10-12 | Nouveau § 14.7 : heures (`14:30`, type `(heure)`, `maintenant`, `+ 15 minutes` qui tourne comme une horloge, `h2 − h1` en minutes, écarts en minutes et en heures) ; heure locale, sans fuseau |

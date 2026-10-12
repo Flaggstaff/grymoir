@@ -32,6 +32,7 @@ typedef enum {
     J_SUP_EGAL,     /* ≥  >= */
     J_CROCHETS,     /* nom entre crochets ; valeur : clé du nom, « frais de port et d'emballage » */
     J_DATE,         /* « 21.09.2026 » ; valeur : forme ISO « 2026-09-21 » (grammaire, § 14) */
+    J_HEURE,        /* « 14:30 » ; valeur : « 14:30 », heures et minutes sur deux chiffres (grammaire, § 14.7) */
     J_ARTICLE_IMPLICITE, /* forme compacte : phrase de modification sans article (« total << 1 ») */
     J_MOT_CLE,      /* forme compacte : « _si » ; valeur : « si » */
     J_AFFECTE,      /* forme compacte : << */

@@ -1342,6 +1342,23 @@ int main(void) {
          "Les faces valent « pile » et « face ».\nAfficher un élément au hasard parmi les faces est parmi les faces.",
          "vrai 6\nvrai");
     PROG("Le dé d'un n vaut un nombre au hasard de 1 à n.", "~Un calcul ne dépend pas du hasard");
+    /* Heures (§ 14.7) */
+    PROG("Une réunion, conservée, a : un titre (texte), un début (heure), une fin (heure), facultative.\n"
+         "La r vaut une nouvelle réunion :\n    Le titre vaut « Comité ».\n    Le début vaut 19:30.\nConserver r.\n"
+         "La s vaut une nouvelle réunion :\n    Le titre vaut « Tir ».\n    Le début vaut 8:05.\nConserver s.\n"
+         "Pour chaque réunion conservée, par début, afficher début de la réunion puis titre de la réunion.\n"
+         "Afficher le nombre de réunions conservées dont le début est supérieur à 12:00.",
+         "08:05 Tir\n19:30 Comité\n1");
+    PROG("Afficher 23:50 + 15 minutes puis 8:05 − 2 heures puis 14:30 − 8:05 puis le nombre d'heures entre 8:05 et 19:30.\n"
+         "Afficher 8:05 < 19:30 puis 12:00 = 12:00 puis « 7:45 » en heure + 1 heure puis le nombre de minutes entre 19:30 et 8:05.",
+         "00:05 06:05 385 11\nvrai vrai 08:45 −685");
+    PROG("Le t vaut maintenant.\nAfficher t ≥ 0:00 et t ≤ 23:59.", "vrai");
+    PROG("Afficher 24:00.", "~L'heure « 24:00 » n'existe pas : de 0:00 à 23:59.");
+    PROG("Afficher 8:05 + 1.", "~ADDITION impossible avec une heure");
+    PROG("Afficher 8:05 + 1 jour.", "~Une heure se décale de minutes ou d'heures, pas de jours.");
+    PROG("Afficher 01.01.2026 + 3 minutes.", "~Des minutes s'ajoutent à une heure, pas à une date.");
+    PROG("Afficher « 25:00 » en heure.", "~« 25:00 » n'est pas une heure : écris heures:minutes (14:30).");
+    PROG("L'arrivée d'une h vaut maintenant.", "~Un calcul ne dépend pas de l'heure");
     PROG("Afficher un nombre au hasard de 1 à 2,5.", "~Un nombre au hasard se tire entre deux nombres entiers");
     PROG("Les vides valent un ensemble vide.\nAfficher un élément au hasard parmi les vides.",
          "ERREUR 2:10 Un élément au hasard ne se tire pas d'un ensemble vide.");

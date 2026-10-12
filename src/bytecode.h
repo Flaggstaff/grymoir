@@ -98,11 +98,13 @@ typedef enum {
     I_EXEMPLE_RATE,     /* opérande : la même ; dépile le motif d'une erreur ; écrit ✗ et le motif */
     I_ECART,            /* opérande : 0 jours, 1 semaines, 2 mois, 3 années ; dépile d2, puis d1 ; empile le nombre d'unités
                            entières de d1 à d2, négatif si d2 est avant (§ 14.6) */
-    I_HASARD            /* opérande : 0 dépile la borne haute, puis la basse, empile un entier entre les deux, bornes
+    I_HASARD,           /* opérande : 0 dépile la borne haute, puis la basse, empile un entier entre les deux, bornes
                            comprises ; 1 dépile un ensemble, empile l'un de ses éléments (§ 3.6) */
+    I_HEURE,            /* opérande : minutes depuis minuit ; empile cette heure (§ 14.7) */
+    I_MAINTENANT        /* empile l'heure, lue une fois au début de l'exécution */
 } CodeInstruction;
 
-#define I_DERNIER I_HASARD
+#define I_DERNIER I_MAINTENANT
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

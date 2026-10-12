@@ -309,6 +309,12 @@ static void expression(Compilation *c, const Noeud *n) {
     case N_AUJOURDHUI:
         emettre(c, I_AUJOURDHUI, 0, n->ligne, n->colonne);
         return;
+    case N_HEURE:   /* « 14:30 » : HEURE avec les minutes (§ 14.7) */
+        emettre(c, I_HEURE, n->entier, n->ligne, n->colonne);
+        return;
+    case N_MAINTENANT:
+        emettre(c, I_MAINTENANT, 0, n->ligne, n->colonne);
+        return;
     case N_ABSENT:
         emettre(c, I_ABSENT, 0, n->ligne, n->colonne);
         return;
@@ -357,7 +363,8 @@ static void expression(Compilation *c, const Noeud *n) {
     case N_ECART:   /* d1, d2, puis ÉCART avec l'unité (§ 14.6) */
         expression(c, n->enfants[0]);
         expression(c, n->enfants[1]);
-        emettre(c, I_ECART, n->op == 'j' ? 0 : n->op == 's' ? 1 : n->op == 'm' ? 2 : 3, n->ligne, n->colonne);
+        emettre(c, I_ECART, n->op == 'j' ? 0 : n->op == 's' ? 1 : n->op == 'm' ? 2 : n->op == 'n' ? 4 : n->op == 'h' ? 5 : 3,
+                n->ligne, n->colonne);
         return;
     case N_HASARD:   /* les bornes, ou l'ensemble, puis HASARD (§ 3.6) */
         for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
@@ -442,7 +449,7 @@ static void expression(Compilation *c, const Noeud *n) {
 
 /* L'opérande de DÉCALER : 0 jours, 1 semaines, 2 mois, 3 années. */
 static uint16_t unite_duree(const Noeud *d) {
-    return d->op == 'j' ? 0 : d->op == 's' ? 1 : d->op == 'm' ? 2 : 3;
+    return d->op == 'j' ? 0 : d->op == 's' ? 1 : d->op == 'm' ? 2 : d->op == 'n' ? 4 : d->op == 'h' ? 5 : 3;
 }
 
 static void ajouter_saut(size_t **liste, size_t *nb, size_t pos) {

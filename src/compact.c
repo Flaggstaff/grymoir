@@ -308,7 +308,8 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             continue;
         }
         {                                            /* d + 3 _mois → d + 3 mois (§ 14.2) */
-            static const char *const U[] = { "jour", "jours", "semaine", "semaines", "mois", "an", "ans", "année", "années" };
+            static const char *const U[] = { "jour", "jours", "semaine", "semaines", "mois", "an", "ans", "année", "années",
+                                             "minute", "minutes", "heure", "heures" };
             int unite = 0;
             for (size_t u = 0; u < sizeof U / sizeof *U; u++) if (est_cle(t, U[u])) unite = 1;
             if (unite) { mot(r, t->valeur, t); continue; }
@@ -385,6 +386,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             continue;
         }
         if ((est_cle(t, "écart_jours") || est_cle(t, "écart_semaines") || est_cle(t, "écart_mois") || est_cle(t, "écart_années")
+             || est_cle(t, "écart_minutes") || est_cle(t, "écart_heures")
              || est_cle(t, "hasard") || est_cle(t, "hasard_parmi")) && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
             /* _écart_mois(d1 ; d2) → le nombre de mois entre (d1) et (d2) (§ 14.6) ; _hasard(1 ; 6) → un nombre au hasard
              * de (1) à (6) ; _hasard_parmi(faces) → un élément au hasard parmi les faces (§ 3.6) */
@@ -413,7 +415,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             else {
                 const char *u = t->valeur + strlen("écart_");
                 mot(r, "le", t); mot(r, "nombre", t);
-                if (!strcmp(u, "années")) emettre(r, J_ELISION, "d", t, 1); else mot(r, "de", t);
+                if (!strcmp(u, "années") || !strcmp(u, "heures")) emettre(r, J_ELISION, "d", t, 1); else mot(r, "de", t);
                 mot(r, u, t);
                 mot(r, "entre", t);
             }
@@ -496,7 +498,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
         if (t->type == J_MOT_CLE && strncmp(t->valeur, "en_", 3) == 0) {
             /* nom _en_majuscules → nom en majuscules ; code _en_nombre_entier → code en nombre entier (§ 4.5) */
             static const char *const C[] = { "majuscules", "minuscules", "nombre_entier", "nombre", "date", "année",
-                                             "vrai_ou_faux" };
+                                             "vrai_ou_faux", "heure" };
             size_t q = 0;
             while (q < sizeof C / sizeof *C && strcmp(t->valeur + 3, C[q]) != 0) q++;
             if (q == sizeof C / sizeof *C) {
@@ -523,6 +525,10 @@ static void expression(Reecriture *r, size_t d, size_t f) {
         if (est_cle(t, "fichier")) {                /* _fichier « a.jpg » → le fichier « a.jpg » */
             mot(r, "le", t);
             mot(r, "fichier", t);
+            continue;
+        }
+        if (est_cle(t, "maintenant")) {              /* _maintenant → maintenant (§ 14.7) */
+            mot(r, "maintenant", t);
             continue;
         }
         if (est_cle(t, "aujourd'hui")) {            /* _aujourd'hui → aujourd'hui */

@@ -805,7 +805,7 @@ int main(void) {
     VS("Le prix vaut 1.\nLe prix unitaire vaut 2.\nLe x vaut prix ",
        "unitaire | sur | suivi de | + | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | .");
     VS("Le prix vaut 1.\nLe prix unitaire vaut 2.\nLe x vaut prix u", "unitaire");
-    VS("Le x vaut (1 + 2", "jour | jours | semaine | semaines | mois | an | ans | année | années | sur | suivi de | + | − | × | ÷ | ^ | )");
+    VS("Le x vaut (1 + 2", "jour | jours | semaine | semaines | mois | an | ans | année | années | minute | minutes | heure | heures | sur | suivi de | + | − | × | ÷ | ^ | )");
     VS("Le d vaut 01.01.2026.\nLe x vaut d + 3 se", "semaine | semaines");
     VS("Le x vaut 1.\nAfficher ", "x | (nombre) | ( | − | vrai | faux | « … »");
     VS("Le x vaut 1.\nAfficher x ", "sur | suivi de | , sans passer à la ligne | + | − | × | ÷ | ^ | est | n'est pas | = | ≠ | < | > | ≤ | ≥ | et | ou | puis | .");

@@ -209,6 +209,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_EXEMPLE_RATE:   return "EXEMPLE_RATÉ";
     case I_ECART:          return "ÉCART";
     case I_HASARD:         return "HASARD";
+    case I_HEURE:          return "HEURE";
+    case I_MAINTENANT:     return "MAINTENANT";
     }
     return "INCONNUE";
 }
@@ -222,7 +224,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_CHERCHER || code == I_SAISIR || code == I_ELIDER || code == I_ECRAN_OUVRIR || code == I_ECRAN_LISTE
         || code == I_APPARENCE || code == I_REFUSER || code == I_DECALER || code == I_ARRONDIR
         || code == I_CONTIENT || code == I_CONVERTIR || code == I_EXPORTER || code == I_ENSEMBLE || code == I_AJOUTER
-        || code == I_EXEMPLE || code == I_EXEMPLE_RATE || code == I_ECART || code == I_HASARD;
+        || code == I_EXEMPLE || code == I_EXEMPLE_RATE || code == I_ECART || code == I_HASARD || code == I_HEURE;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -279,7 +281,9 @@ int bloc_verifier(const Bloc *b, char **erreur) {
         }
         unsigned op = instruction_a_operande((CodeInstruction)c)
                     ? (unsigned)b->code[d + 1] | ((unsigned)b->code[d + 2] << 8) : 0;
-        if ((c == I_EXPORTER || c == I_EXEMPLE || c == I_EXEMPLE_RATE) && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
+        if (c == I_HEURE && op >= 1440)
+            ok = refuser(erreur, grym_formater("HEURE : %u minutes, au-delà de 23:59 (octet %lu).", op, (unsigned long)d));
+        else if ((c == I_EXPORTER || c == I_EXEMPLE || c == I_EXEMPLE_RATE) && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
             ok = refuser(erreur, grym_formater("EXPORTER : constante %u absente ou pas un texte (octet %lu).", op,
                                                (unsigned long)d));
         else if (c == I_ECRAN_OUVRIR && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
@@ -293,7 +297,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
         else if ((c == I_LIRE || c == I_ECRIRE || c == I_NOUVEAU || c == I_INITIALISER_CHAMP
                   || c == I_LIRE_CHAMP || c == I_ECRIRE_CHAMP || c == I_GAGNER || c == I_PERDRE || c == I_DEMANDER) && op >= b->nb_noms)
             ok = refuser(erreur, grym_formater("nom %u inexistant (octet %lu).", op, (unsigned long)d));
-        else if (c == I_DECALER && op > 3)
+        else if ((c == I_DECALER || c == I_ECART) && op > 5)
             ok = refuser(erreur, grym_formater("DÉCALER : unité %u inconnue (octet %lu).", op, (unsigned long)d));
         else if (c == I_AFFICHER && op == 0)
             ok = refuser(erreur, grym_formater("AFFICHER sans élément (octet %lu).", (unsigned long)d));
@@ -351,7 +355,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                 break;
             case I_RENDRE: besoin = 1; break;
             case I_EXIGER_ENTIER_NATUREL: besoin = 1; break;
-            case I_NOUVEAU: case I_AUJOURDHUI: case I_BASE_MODIFIEE: effet = 1; break;
+            case I_NOUVEAU: case I_AUJOURDHUI: case I_BASE_MODIFIEE: case I_HEURE: case I_MAINTENANT: effet = 1; break;
             case I_LIRE_FICHIER: besoin = 1; break;
             case I_ENREGISTRER: besoin = 2; effet = -2; break;
             case I_CONSERVER: case I_SUPPRIMER: case I_SUPPRIMER_DEFINITIVEMENT: case I_RETABLIR:
@@ -467,7 +471,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 41  /* versions 1 à 40 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 42  /* versions 1 à 41 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
@@ -476,7 +480,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                               sans essai (19), sans formulaire (20),
                               sans assemblage de textes (21), sans modification par formulaire (22),
                               sans fiche (23), sans fichier source des blocs (24), sans apparence des écrans (26), sans refus (27), sans règles (28),
-                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34), sans export (35), sans tableau lu (36), sans « comme » (37), sans ensembles (38), sans exemples (39), sans écart ni hasard (40) */
+                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34), sans export (35), sans tableau lu (36), sans « comme » (37), sans ensembles (38), sans exemples (39), sans écart ni hasard (40), sans heure (41) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 

@@ -175,6 +175,7 @@ int main(void) {
                  "Le n vaut 10.\nAfficher le reste de n × 2 par 3 puis valeur absolue de (n − 20) puis partie entière de (−2,7).\n");
     EXEC("_afficher _reste(−7 ; 3) ; _reste((1 + 9) ; 4)\n", "−1 2\n");
     ERR("_afficher _reste(7)\n", 1, 11, "« _reste » prend deux arguments, le dividende et le diviseur : _reste(17 ; 5).");
+    ALLER_RETOUR("_le h << 8:05 + 15 _minutes\n_afficher _écart_heures(h ; 19:30) ; _maintenant ; « 7:45 » _en_heure\n", NULL);
     ALLER_RETOUR("_afficher _écart_mois(31.01.2026 ; 28.02.2026) ; _écart_années(21.09.1990 ; _aujourd'hui)\n"
                  "_le n << _hasard(1 ; 6)\n_les faces << « a » ; « b »\n_afficher _hasard_parmi(faces)\n", NULL);
     ALLER_RETOUR("_calcul _le carré(_un nombre) << nombre × nombre\n_exemple carré(7) << 49\n",

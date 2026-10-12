@@ -53,7 +53,7 @@ static int est_fichier(const char *type) {
 
 static int est_lien(const char *type) {
     static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image",
-                                        "année" };
+                                        "année", "heure" };
     for (size_t k = 0; k < sizeof BASE / sizeof *BASE; k++) if (strcmp(type, BASE[k]) == 0) return 0;
     return 1;
 }
@@ -462,7 +462,8 @@ static void ajouter_litteral(Chaine *sql, const char *type, const char *depart) 
     } else if (strcmp(type, "vrai ou faux") == 0) {
         chaine_ajouter(sql, depart && strcmp(depart, "vrai") == 0 ? "1" : "0");
     } else {
-        const char *v = depart ? depart : strcmp(type, "nombre") == 0 ? "0" : strcmp(type, "date") == 0 ? "0001-01-01" : "";
+        const char *v = depart ? depart : strcmp(type, "nombre") == 0 ? "0" : strcmp(type, "date") == 0 ? "0001-01-01"
+                      : strcmp(type, "heure") == 0 ? "00:00" : "";
         chaine_ajouter(sql, "'");
         for (const char *p = v; *p; p++) chaine_ajouter(sql, *p == '\'' ? "''" : (char[2]){ *p, 0 });
         chaine_ajouter(sql, "'");
@@ -652,7 +653,7 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
         const char *depart = q >= 0 ? c->departs[q] : NULL;
         const char *t = n.types[k];
         int lien = !(strcmp(t, "texte") == 0 || strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0
-                     || strcmp(t, "année") == 0
+                     || strcmp(t, "année") == 0 || strcmp(t, "heure") == 0
                      || strcmp(t, "vrai ou faux") == 0 || strcmp(t, "date") == 0 || est_fichier(t));
         int facultatif = (n.uniques[k] & 2) != 0;
         if (lignes > 0 && !depart && !facultatif) {
@@ -960,6 +961,10 @@ static int lier(Base *b, sqlite3_stmt *st, int i, const char *type, const char *
         sqlite3_bind_int(st, i, v->vrai ? 1 : 0);
     } else if (strcmp(type, "année") == 0) {
         sqlite3_bind_int64(st, i, (sqlite3_int64)v->jours);
+    } else if (strcmp(type, "heure") == 0) {
+        char t[32];
+        snprintf(t, sizeof t, "%02ld:%02ld", v->jours / 60, v->jours % 60);
+        sqlite3_bind_text(st, i, t, -1, SQLITE_TRANSIENT);
     } else if (strcmp(type, "date") == 0) {
         char *t = date_iso(v->jours);
         sqlite3_bind_text(st, i, t, -1, SQLITE_TRANSIENT);
@@ -1544,7 +1549,11 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
                 v = vi_nombre_canonique(tampon);
             } else if (strcmp(t, "vrai ou faux") == 0) v = vi_booleen(sqlite3_column_int(st, col));
             else if (strcmp(t, "année") == 0) v = vi_annee((long)sqlite3_column_int64(st, col));
-            else if (strcmp(t, "date") == 0) {
+            else if (strcmp(t, "heure") == 0) {   /* « 14:30 » : texte, triable (§ 14.7) */
+                long mi = 0;
+                heure_lire((const char *)sqlite3_column_text(st, col), &mi);
+                v = vi_heure(mi);
+            } else if (strcmp(t, "date") == 0) {
                 long jours = 0;
                 date_lire_iso((const char *)sqlite3_column_text(st, col), &jours);
                 v = vi_date(jours);
@@ -1940,6 +1949,14 @@ static int lier_parametre(Recherche *r, sqlite3_stmt *st, int i, const char *typ
     } else if (strcmp(type, "vrai ou faux") == 0) {
         if (v->type == V_BOOLEEN) { sqlite3_bind_int(st, i, v->vrai); return 1; }
         attendu = "vrai ou faux";
+    } else if (strcmp(type, "heure") == 0) {
+        if (v->type == V_HEURE) {
+            char t[32];
+            snprintf(t, sizeof t, "%02ld:%02ld", v->jours / 60, v->jours % 60);
+            sqlite3_bind_text(st, i, t, -1, SQLITE_TRANSIENT);
+            return 1;
+        }
+        attendu = "une heure";
     } else if (strcmp(type, "date") == 0) {
         if (v->type == V_DATE) {
             char *t = date_iso(v->jours);

@@ -24,7 +24,7 @@
 
 static const char *nom_type(TypeValeur t) {
     return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen"
-         : t == V_DATE ? "une date" : t == V_ANNEE ? "une année" : t == V_FICHIER ? "un fichier" : t == V_LISTE ? "une liste"
+         : t == V_DATE ? "une date" : t == V_HEURE ? "une heure" : t == V_ANNEE ? "une année" : t == V_FICHIER ? "un fichier" : t == V_LISTE ? "une liste"
          : t == V_ABSENT ? "absente" : t == V_LIGNE ? "une ligne de tableau" : t == V_ENSEMBLE ? "un ensemble" : "un objet";
 }
 
@@ -88,6 +88,13 @@ static Valeur valeur_date(long jours) {
     Valeur v = valeur_nombre(dec_zero());
     v.type = V_DATE;
     v.jours = jours;
+    return v;
+}
+
+static Valeur valeur_heure(long minutes) {   /* § 14.7 */
+    Valeur v = valeur_nombre(dec_zero());
+    v.type = V_HEURE;
+    v.jours = minutes;
     return v;
 }
 
@@ -910,6 +917,7 @@ static char *texte_valeur(const Machine *m, const Valeur *v) {
     case V_FICHIER: return decrire_fichier(v->fichier);
     case V_ANNEE:   return grym_formater("%ld", v->jours);   /* « 1747 », jamais « 1'747 » (§ 14.5) */
     case V_DATE:    return date_suisse(v->jours);
+    case V_HEURE:   return grym_formater("%02ld:%02ld", v->jours / 60, v->jours % 60);   /* « 08:05 » (§ 14.7) */
     case V_OBJET:   return article_classe(v->objet->classe);
     case V_ENSEMBLE: {   /* ses éléments, séparés par « , » (§ 13.9) */
         Chaine c = {0};
@@ -966,6 +974,14 @@ static int lire_reponse(const char *type, const char *ligne, Valeur *v, char **p
         }
         *v = vi_booleen(oui);
         return 1;
+    }
+    if (strcmp(type, "heure") == 0) {   /* « 14:30 », « 8:05 » (§ 14.7) */
+        long mi = 0;
+        int bon = heure_lire(t, &mi);
+        if (!bon) *probleme = grym_formater("« %s » n'est pas une heure : écris heures:minutes (14:30).", t);
+        else *v = valeur_heure(mi);
+        free(t);
+        return bon;
     }
     /* nombres et dates : les règles du lexeur (§ 1.2, § 14.1) */
     char *erreur = NULL;
@@ -1128,6 +1144,16 @@ Valeur vi_booleen(int vrai) {
 
 Valeur vi_date(long jours) { return valeur_date(jours); }
 Valeur vi_annee(long annee) { return valeur_annee(annee); }
+Valeur vi_heure(long minutes) { return valeur_heure(minutes); }
+
+int heure_lire(const char *t, long *minutes) {
+    int h = 0, m = 0, n = 0;
+    if (!t || sscanf(t, "%d:%2d%n", &h, &m, &n) != 2 || t[n] || h < 0 || h > 23 || m < 0 || m > 59) return 0;
+    const char *d = strchr(t, ':');
+    if (!d || strlen(d + 1) != 2 || d - t < 1 || d - t > 2) return 0;
+    *minutes = h * 60L + m;
+    return 1;
+}
 
 Valeur vi_fichier(const void *octets, size_t taille, const char *nom) {
     Fichier *f = grym_allouer(sizeof *f);
@@ -1302,6 +1328,7 @@ static char *verifier_type_champ(const Machine *m, const char *champ, const char
     else if (strcmp(type, "nombre entier") == 0) ok = v->type == V_NOMBRE && dec_est_entier(&v->nombre);
     else if (strcmp(type, "vrai ou faux") == 0) ok = v->type == V_BOOLEEN;
     else if (strcmp(type, "date") == 0) ok = v->type == V_DATE;
+    else if (strcmp(type, "heure") == 0) ok = v->type == V_HEURE;
     else if (strcmp(type, "année") == 0) {   /* une année, ou un nombre entier de 1 à 9999 (§ 14.5) */
         long a;
         ok = v->type == V_ANNEE || (v->type == V_NOMBRE && dec_en_long_borne(&v->nombre, 1, 9999, &a));
@@ -1324,7 +1351,7 @@ static char *verifier_type_champ(const Machine *m, const char *champ, const char
     const ClasseVM *e = classe_vm(m, type);
     char *attendu = strcmp(type, "vrai ou faux") == 0 ? grym_dupliquer("vrai ou faux")
                   : strcmp(type, "date") == 0 || strcmp(type, "image") == 0 || strcmp(type, "année") == 0
-                    ? grym_formater("une %s", type)
+                    || strcmp(type, "heure") == 0 ? grym_formater("une %s", type)
                   : e ? grym_formater("%s %s", e->feminin ? "une" : "un", type)
                   : grym_formater("un %s", type);
     char *vu = decrire_valeur_pour_type(v);
@@ -1455,6 +1482,7 @@ static Valeur valeur_de_depart(const char *type, const char *canonique) {
     if (strcmp(type, "vrai ou faux") == 0) return vi_booleen(strcmp(canonique, "vrai") == 0);
     if (strcmp(type, "date") == 0 && date_lire_iso(canonique, &j)) return vi_date(j);
     if (strcmp(type, "année") == 0) return vi_annee(atol(canonique));
+    if (strcmp(type, "heure") == 0 && heure_lire(canonique, &j)) return valeur_heure(j);
     return vi_texte(canonique);
 }
 
@@ -1791,7 +1819,7 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
         if ((cl->uniques[k] & 8) || initialise(deja, champ) || !type) continue;
         ChampMachine ci = { k, NULL, NULL, 0, (cl->uniques[k] & 2) != 0, (cl->uniques[k] & 1) != 0, NULL, 0, vi_absent(champ) };
         ci.fichier = strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0;
-        static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "année" };
+        static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure" };
         int de_base = ci.fichier;
         for (size_t q = 0; q < sizeof BASE / sizeof *BASE; q++) de_base |= strcmp(type, BASE[q]) == 0;
         if (!de_base) {
@@ -2415,7 +2443,7 @@ static int valeurs_identiques(const Valeur *a, const Valeur *b) {
     case V_NOMBRE: return dec_comparer(&a->nombre, &b->nombre) == 0;
     case V_TEXTE: return strcmp(a->texte ? a->texte : "", b->texte ? b->texte : "") == 0;
     case V_BOOLEEN: return a->vrai == b->vrai;
-    case V_DATE: case V_ANNEE: return a->jours == b->jours;
+    case V_DATE: case V_ANNEE: case V_HEURE: return a->jours == b->jours;
     case V_OBJET: return a->objet == b->objet;
     case V_FICHIER: return a->fichier == b->fichier;
     case V_ENSEMBLE: {
@@ -2762,7 +2790,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         /* Un type désigne un type de base ou une entité connue (ou la classe elle-même). */
         static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image",
-                                            "année" };
+                                            "année", "heure" };
         for (size_t q = 0; q < n && !probleme; q++) {
             if (!types[q]) continue;
             int ok_type = strcmp(types[q], cm->nom) == 0 && cm->conserve;
@@ -2900,6 +2928,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
 
     m->epoque++;
     long aujourdhui = date_aujourdhui();
+    long maintenant;
+    {
+        time_t t = time(NULL);
+        struct tm *l = localtime(&t);
+        maintenant = l ? l->tm_hour * 60L + l->tm_min : 0;
+    }
     const Bloc *principal = module->blocs[0];
     size_t *liaison_principale = lier(m, principal);
     Cadre *cadres = grym_allouer(8 * sizeof *cadres);
@@ -3039,6 +3073,21 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     break;
                 }
                 empiler(&pile, r);
+                break;
+            }
+            if ((va.type == V_HEURE || vb.type == V_HEURE) && code == I_SOUSTRACTION && va.type == V_HEURE && vb.type == V_HEURE) {
+                /* h2 − h1 : des minutes, négatives si h2 précède (§ 14.7) */
+                Valeur r = valeur_nombre(dec_depuis_long(va.jours - vb.jours));
+                valeur_liberer(&va);
+                valeur_liberer(&vb);
+                empiler(&pile, r);
+                break;
+            }
+            if (va.type == V_HEURE || vb.type == V_HEURE) {
+                char *mp = grym_formater("%s impossible avec une heure : écris « h + 15 minutes », « h2 − h1 ».", instruction_nom(code));
+                valeur_liberer(&va);
+                valeur_liberer(&vb);
+                ok = echouer(diag, b, debut, mp);
                 break;
             }
             if ((va.type == V_DATE || vb.type == V_DATE) && (code == I_ADDITION || code == I_SOUSTRACTION)) {
@@ -3270,14 +3319,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 dec_liberer(&vb.nombre);
                 vb.nombre = dec_depuis_long(vb.jours);
             }
-            if (va.type != vb.type || (!egalite && va.type != V_NOMBRE && va.type != V_DATE)) {
+            if (va.type != vb.type || (!egalite && va.type != V_NOMBRE && va.type != V_DATE && va.type != V_HEURE)) {
                 ok = echouer(diag, b, debut, va.type != vb.type
                     ? grym_formater("Comparaison impossible entre %s et %s.",
                                     nom_type(va.type), nom_type(vb.type))
                     : grym_formater("Seuls deux nombres ou deux dates se comparent par ordre : la valeur est %s.",
                                     nom_type(va.type)));
-            } else if (va.type == V_NOMBRE || va.type == V_DATE) {
-                int c = va.type == V_DATE ? (va.jours > vb.jours) - (va.jours < vb.jours)
+            } else if (va.type == V_NOMBRE || va.type == V_DATE || va.type == V_HEURE) {
+                int c = va.type != V_NOMBRE ? (va.jours > vb.jours) - (va.jours < vb.jours)
                                           : dec_comparer(&va.nombre, &vb.nombre);
                 resultat = code == I_EGAL ? c == 0 : code == I_DIFFERENT ? c != 0
                          : code == I_INFERIEUR ? c < 0 : code == I_SUPERIEUR ? c > 0
@@ -3735,13 +3784,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         case I_CONVERTIR: {   /* « le nom en majuscules », « le code en nombre » (§ 4.5) */
             static const char *const CIBLES[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
-                                                  "vrai ou faux" };
+                                                  "vrai ou faux", "heure" };
             static const char *const NOMS[] = { "", "", "un nombre entier", "un nombre", "une date", "une année",
-                                                "vrai ou faux" };
+                                                "vrai ou faux", "une heure" };
             Valeur vx = depiler(&pile);
             char *probleme = NULL;
             Valeur r = valeur_nombre(dec_zero());
-            if (op > 6) op = 0;
+            if (op > 7) op = 0;
             if (vx.type == V_ABSENT)
                 probleme = message_absent(&vx);
             else if (vx.type != V_TEXTE)
@@ -3799,6 +3848,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             char *mp = NULL;
             long r = 0;
             if (v1.type == V_ABSENT || v2.type == V_ABSENT) mp = message_absent(v1.type == V_ABSENT ? &v1 : &v2);
+            else if (op >= 4) {   /* minutes, heures entre deux heures (§ 14.7) */
+                if (v1.type != V_HEURE || v2.type != V_HEURE)
+                    mp = grym_formater("Des %s se comptent entre deux heures, pas avec %s.", op == 4 ? "minutes" : "heures",
+                                       nom_type(v1.type != V_HEURE ? v1.type : v2.type));
+                else r = op == 4 ? v2.jours - v1.jours : (v2.jours - v1.jours) / 60;
+            }
             else if (v1.type != V_DATE || v2.type != V_DATE)
                 mp = grym_formater("Un écart se mesure entre deux dates, pas avec %s.", nom_type(v1.type != V_DATE ? v1.type : v2.type));
             else if (op <= 1) {
@@ -4203,7 +4258,30 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         case I_DECALER: {
             /* date ± jours, semaines, mois, années ; année ± années (§ 14.2) */
-            static const char *const UNITE[] = { "jours", "semaines", "mois", "années" };
+            static const char *const UNITE[] = { "jours", "semaines", "mois", "années", "minutes", "heures" };
+            if (op > 5) op = 0;
+            if (op >= 4 || pile.v[pile.n - 2].type == V_HEURE) {   /* « h + 15 minutes » : l'heure tourne comme une horloge (§ 14.7) */
+                Valeur vn = depiler(&pile), vh = depiler(&pile);
+                char *mp = NULL;
+                long n = 0;
+                if (vh.type == V_ABSENT || vn.type == V_ABSENT) mp = message_absent(vh.type == V_ABSENT ? &vh : &vn);
+                else if (vh.type != V_HEURE)
+                    mp = grym_formater("Des %s s'ajoutent à une heure, pas à %s.", UNITE[op], nom_type(vh.type));
+                else if (op < 4)
+                    mp = grym_formater("Une heure se décale de minutes ou d'heures, pas de %s.", UNITE[op]);
+                else if (vn.type != V_NOMBRE || !dec_en_long_borne(&vn.nombre, -1000000000L, 1000000000L, &n))
+                    mp = grym_formater("Une heure se décale d'un nombre entier de %s.", UNITE[op]);
+                long r = 0;
+                if (!mp) {
+                    long d = op == 5 ? (n % 24) * 60 : n % 1440;
+                    r = ((vh.jours + d) % 1440 + 1440) % 1440;
+                }
+                valeur_liberer(&vn);
+                valeur_liberer(&vh);
+                if (mp) { ok = echouer(diag, b, debut, mp); break; }
+                empiler(&pile, valeur_heure(r));
+                break;
+            }
             Valeur vn = depiler(&pile), vd = depiler(&pile);
             char *probleme = NULL;
             Valeur r = valeur_nombre(dec_zero());
@@ -4243,6 +4321,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         case I_BASE_MODIFIEE:   /* les règles ne se revérifient que si la transaction a écrit (§ 16.14) */
             empiler(&pile, valeur_booleen(base_modifiee(m->base)));
+            break;
+        case I_HEURE:
+            empiler(&pile, valeur_heure((long)op));
+            break;
+        case I_MAINTENANT:
+            empiler(&pile, valeur_heure(maintenant));   /* lue une fois, au début de l'exécution (§ 14.7) */
             break;
         case I_AUJOURDHUI:
             empiler(&pile, valeur_date(aujourdhui));   /* lue une fois, au début de l'exécution (§ 14.3) */

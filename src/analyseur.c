@@ -710,7 +710,7 @@ static void *erreur_a(Analyse *a, int ligne, int colonne, char *message) {
 }
 
 static const char *const TYPES[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image",
-                                     "année" };
+                                     "année", "heure" };
 
 /* ---------------------------------------------------------------- */
 /* Typage strict des entités, à l'analyse (§ 16.2)                  */
@@ -751,6 +751,7 @@ static const char *type_statique(const Noeud *n) {
     case N_TEXTE: return "texte";
     case N_BOOLEEN: case N_COMPARAISON: case N_LOGIQUE: return "vrai ou faux";
     case N_DATE: case N_AUJOURDHUI: return "date";
+    case N_HEURE: case N_MAINTENANT: return "heure";
     case N_FICHIER: return "fichier";
     case N_CADRE: return "texte";
     case N_COLLAGE: case N_ELISION: return "texte";
@@ -770,7 +771,8 @@ static int type_de_base(const char *t) {
 
 static char *nommer_type(Portee *p, const char *t) {
     if (strcmp(t, "vrai ou faux") == 0) return grym_dupliquer("vrai ou faux");
-    if (strcmp(t, "date") == 0 || strcmp(t, "image") == 0 || strcmp(t, "année") == 0) return grym_formater("une %s", t);
+    if (strcmp(t, "date") == 0 || strcmp(t, "image") == 0 || strcmp(t, "année") == 0 || strcmp(t, "heure") == 0)
+        return grym_formater("une %s", t);
     if (type_de_base(t)) return grym_formater("un %s", t);
     const Classe *c = classe_de(p, t);
     return grym_formater("%s %s", c && c->genre == GENRE_FEMININ ? "une" : "un", t);
@@ -1389,7 +1391,7 @@ static Noeud *nom_expression(Analyse *a) {
         if (fin + 1 < a->n && est_mot(&a->j[fin], "comme")
             && (est_mot(&a->j[fin + 1], "un") || est_mot(&a->j[fin + 1], "une"))) arret = 1;   /* § 13.8 */
         if (fin + 1 < f && est_mot(&a->j[fin], "en")) {        /* « nom en majuscules » (§ 4.5) */
-            static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai" };
+            static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai", "heure" };
             for (size_t q = 0; q < sizeof C / sizeof *C; q++) if (est_mot(&a->j[fin + 1], C[q])) arret = 1;
         }
         if (!s || (fin < f && s->sorte != S_CALCUL && !arret)) {
@@ -1760,7 +1762,7 @@ static Noeud *chercher(Analyse *a, const Jeton *t, const Classe *e, int mode, si
                         adj->valeur, voyelle_initiale(e->nom) ? "de l'" : e->genre == GENRE_FEMININ ? "de la " : "du ", e->nom));
                 const char *type = type_du_champ(a->portee, e, extreme);
                 if (strcmp(type, "nombre") != 0 && strcmp(type, "nombre entier") != 0 && strcmp(type, "date") != 0
-                    && strcmp(type, "année") != 0) {
+                    && strcmp(type, "année") != 0 && strcmp(type, "heure") != 0) {
                     Noeud *x = erreur(a, adj, grym_formater("« %s » est un champ %s : « au plus grand » s'applique à un "
                                                             "nombre, une date ou une année.", extreme, type));
                     free(extreme);
@@ -2120,14 +2122,15 @@ static Noeud *base(Analyse *a) {
     {
         /* « le nombre de mois entre d1 et d2 », « d'années », « de jours », « de semaines » (§ 14.6) */
         static const struct { const char *mot; char u; } U[] = { { "jours", 'j' }, { "semaines", 's' }, { "mois", 'm' },
-                                                                 { "années", 'a' }, { "ans", 'a' } };
+                                                                 { "années", 'a' }, { "ans", 'a' }, { "minutes", 'n' },
+                                                                 { "heures", 'h' } };
         int u = -1;
         if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2)) && est_mot(voir(a, 4), "entre"))
             for (size_t q = 0; q < sizeof U / sizeof *U; q++) if (est_mot(voir(a, 3), U[q].mot)) u = (int)q;
         if (u >= 0) {
-            if (voyelle_initiale(U[u].mot) != (voir(a, 2)->type == J_ELISION))
-                return erreur(a, voir(a, 2), grym_formater("« le nombre %s%s entre … »", voyelle_initiale(U[u].mot) ? "d'" : "de ",
-                                                           U[u].mot));
+            int elide = voyelle_initiale(U[u].mot) || U[u].u == 'h';   /* « d'heures » : h muet */
+            if (elide != (voir(a, 2)->type == J_ELISION))
+                return erreur(a, voir(a, 2), grym_formater("« le nombre %s%s entre … »", elide ? "d'" : "de ", U[u].mot));
             Noeud *n = noeud_creer(N_ECART, t->ligne, t->colonne, t->debut);
             n->op = U[u].u;
             n->texte = grym_dupliquer(U[u].mot);
@@ -2266,6 +2269,19 @@ static Noeud *base(Analyse *a) {
         avancer(a);
         return n;
     }
+    if (t->type == J_HEURE) {   /* « 14:30 » (§ 14.7) */
+        Noeud *n = feuille(N_HEURE, t);
+        n->entier = atoi(t->valeur) * 60 + atoi(t->valeur + 3);
+        avancer(a);
+        return n;
+    }
+    if (est_mot(t, "maintenant") && !visible(a, "maintenant")) {   /* § 14.7 */
+        if (a->formule == 1)
+            return erreur(a, t, grym_dupliquer("Un calcul ne dépend pas de l'heure : passe l'heure en paramètre."));
+        Noeud *n = feuille(N_MAINTENANT, t);
+        avancer(a);
+        return n;
+    }
     if (est_mot(t, "absent") || est_mot(t, "absente")) {   /* § 16.9 */
         Noeud *n = noeud_creer(N_ABSENT, t->ligne, t->colonne, t->debut);
         n->forme = est_mot(t, "absente") ? 2 : 1;
@@ -2301,7 +2317,7 @@ static Noeud *base(Analyse *a) {
             size_t q = r0 + 1;
             const char *type = "texte";
             if (est_mot(voir(a, (int)q), "en")) {
-                static const char *const T[] = { "nombre entier", "vrai ou faux", "nombre", "date", "année", "texte" };
+                static const char *const T[] = { "nombre entier", "vrai ou faux", "nombre", "date", "année", "heure", "texte" };
                 size_t mots = 0;
                 for (size_t k = 0; k < sizeof T / sizeof *T && !mots; k++) {
                     size_t nb = 1;
@@ -2424,7 +2440,7 @@ static Noeud *base(Analyse *a) {
 /* « le nom en majuscules », « le code en nombre » (§ 4.5) : après une valeur, se lie comme elle. Les cibles, la plus
  * longue d'abord ; l'index sert d'opérande à l'instruction CONVERTIR. */
 static const char *const CONVERSIONS[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
-                                           "vrai ou faux" };
+                                           "vrai ou faux", "heure" };
 #define NB_CONVERSIONS (sizeof CONVERSIONS / sizeof *CONVERSIONS)
 
 static Noeud *conversion(Analyse *a, Noeud *g) {
@@ -2525,7 +2541,8 @@ static Noeud *terme(Analyse *a) {
  * précède son pluriel. */
 static const struct { const char *mot; char unite; int nombre; } UNITES[] = {
     { "jour", 'j', 0 }, { "jours", 'j', 1 }, { "semaine", 's', 0 }, { "semaines", 's', 1 }, { "mois", 'm', 2 },
-    { "an", 'a', 0 }, { "ans", 'a', 1 }, { "année", 'a', 0 }, { "années", 'a', 1 } };
+    { "an", 'a', 0 }, { "ans", 'a', 1 }, { "année", 'a', 0 }, { "années", 'a', 1 },
+    { "minute", 'n', 0 }, { "minutes", 'n', 1 }, { "heure", 'h', 0 }, { "heures", 'h', 1 } };   /* § 14.7 */
 #define NB_UNITES (sizeof UNITES / sizeof *UNITES)
 
 static int unite_de(const Jeton *t) {

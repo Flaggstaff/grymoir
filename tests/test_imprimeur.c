@@ -87,6 +87,7 @@ int main(void) {
          "Pour saluer une personne :\n    Afficher « Bonjour » puis personne.\nSaluer 3.");
     FIXE("Le prix vaut 3.\nAfficher l'arrondi du prix × 2 à 0,05 vers le bas puis l'arrondi de 2 à (1 + 1) au pair.\n");
     FIXE("Le prix vaut 3.\nAfficher le reste du prix × 2 par (1 + 3) puis la valeur absolue de −2 puis la partie entière du prix.\n");
+    FIXE("Une réunion, conservée, a :\n    un début (heure).\nLe h vaut 8:05 + 2 heures.\nAfficher le nombre d'heures entre h et 19:30 puis maintenant.\n");
     FIXE("Afficher le nombre d'années entre 21.09.1990 et aujourd'hui puis le nombre de jours entre 01.01.2026 et (01.01.2026 + 3).\n"
          "Le n vaut un nombre au hasard de 1 à 6.\n");
     FIXE("Le carré d'un nombre vaut nombre × nombre.\nExemple : le carré de 7 vaut 49.\nExemple : « a » en majuscules vaut « A ».\n");
