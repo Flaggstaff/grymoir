@@ -14,6 +14,8 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <time.h>
 
 /* ---------------------------------------------------------------- */
 /* Valeurs (docs/vm.md, § 2)                                        */
@@ -207,6 +209,7 @@ struct Machine {
     Ecriture_disque *a_ecrire;
     size_t nb_a_ecrire;
     size_t exemples, exemples_rates;   /* grym exemples (grammaire, § 9.6) */
+    uint64_t hasard;                    /* état du tirage au hasard (§ 3.6) ; 0 : pas encore semé */
     Case *cases;
     size_t nb_cases, cap_cases;
     Ecriture *journal;
@@ -227,6 +230,28 @@ struct Machine {
 volatile sig_atomic_t grym_interruption = 0;
 
 #define APPELS_MAX 1000   /* profondeur d'appels : au-delà, « Trop d'appels imbriqués » */
+
+/* Tirage au hasard (grammaire, § 3.6) : xorshift64*, semé au premier tirage par l'horloge, ou par la variable
+ * d'environnement GRYM_HASARD (un nombre) pour rejouer une exécution. Pas pour la cryptographie. */
+static uint64_t hasard_suivant(Machine *m) {
+    if (!m->hasard) {
+        const char *g = getenv("GRYM_HASARD");
+        uint64_t s = g && *g ? (uint64_t)strtoull(g, NULL, 10) : ((uint64_t)time(NULL) << 20) ^ (uint64_t)clock() ^ (uint64_t)(uintptr_t)m;
+        s ^= 0x9E3779B97F4A7C15ULL;
+        m->hasard = s ? s : 1;
+    }
+    m->hasard ^= m->hasard >> 12;
+    m->hasard ^= m->hasard << 25;
+    m->hasard ^= m->hasard >> 27;
+    return m->hasard * 0x2545F4914F6CDD1DULL;
+}
+
+/* Un entier de 0 à n − 1, sans biais (rejet). */
+static uint64_t hasard_jusqua(Machine *m, uint64_t n) {
+    uint64_t limite = UINT64_MAX - UINT64_MAX % n, x;
+    do x = hasard_suivant(m); while (x >= limite);
+    return x % n;
+}
 
 size_t machine_exemples(const Machine *m, size_t *rates) {
     if (rates) *rates = m->exemples_rates;
@@ -3767,6 +3792,59 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             empiler(&pile, valeur_nombre(r));
+            break;
+        }
+        case I_ECART: {   /* « le nombre de mois entre d1 et d2 » (§ 14.6) */
+            Valeur v2 = depiler(&pile), v1 = depiler(&pile);
+            char *mp = NULL;
+            long r = 0;
+            if (v1.type == V_ABSENT || v2.type == V_ABSENT) mp = message_absent(v1.type == V_ABSENT ? &v1 : &v2);
+            else if (v1.type != V_DATE || v2.type != V_DATE)
+                mp = grym_formater("Un écart se mesure entre deux dates, pas avec %s.", nom_type(v1.type != V_DATE ? v1.type : v2.type));
+            else if (op <= 1) {
+                long j = v2.jours - v1.jours;
+                r = op == 0 ? j : j / 7;   /* semaines entières, vers zéro */
+            } else {
+                /* mois entiers : le plus grand n tel que d1 + n mois ne dépasse pas d2 (ou, vers le passé, l'inverse) */
+                int a1, m1, j1, a2, m2, j2;
+                date_civile(v1.jours, &a1, &m1, &j1);
+                date_civile(v2.jours, &a2, &m2, &j2);
+                long n = (long)(a2 - a1) * 12 + (m2 - m1), d = 0;
+                if (n > 0 && date_ajouter_mois(v1.jours, n, &d) && d > v2.jours) n--;
+                else if (n < 0 && date_ajouter_mois(v1.jours, n, &d) && d < v2.jours) n++;
+                r = op == 2 ? n : n / 12;
+            }
+            valeur_liberer(&v1);
+            valeur_liberer(&v2);
+            if (mp) { ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, valeur_nombre(dec_depuis_long(r)));
+            break;
+        }
+        case I_HASARD: {   /* « un nombre au hasard de 1 à 6 », « un élément au hasard parmi les invités » (§ 3.6) */
+            if (op) {
+                Valeur e = depiler(&pile);
+                char *mp = NULL;
+                if (e.type != V_ENSEMBLE) mp = grym_formater("Un élément au hasard se tire d'un ensemble, pas de %s.", nom_type(e.type));
+                else if (!e.liste->n) mp = grym_dupliquer("Un élément au hasard ne se tire pas d'un ensemble vide.");
+                Valeur r = mp ? vi_absent(NULL) : valeur_copier(&e.liste->valeurs[hasard_jusqua(m, e.liste->n)]);
+                valeur_liberer(&e);
+                if (mp) { valeur_liberer(&r); ok = echouer(diag, b, debut, mp); break; }
+                empiler(&pile, r);
+                break;
+            }
+            Valeur vh = depiler(&pile), vb = depiler(&pile);
+            char *mp = NULL;
+            long bas = 0, haut = 0;
+            if (vb.type == V_ABSENT || vh.type == V_ABSENT) mp = message_absent(vb.type == V_ABSENT ? &vb : &vh);
+            else if (vb.type != V_NOMBRE || vh.type != V_NOMBRE || !dec_en_long_borne(&vb.nombre, -1000000000L, 1000000000L, &bas)
+                     || !dec_en_long_borne(&vh.nombre, -1000000000L, 1000000000L, &haut))
+                mp = grym_dupliquer("Un nombre au hasard se tire entre deux nombres entiers (au plus un milliard).");
+            valeur_liberer(&vb);
+            valeur_liberer(&vh);
+            if (mp) { ok = echouer(diag, b, debut, mp); break; }
+            if (bas > haut) { long x = bas; bas = haut; haut = x; }
+            long r = bas + (long)hasard_jusqua(m, (uint64_t)(haut - bas) + 1);
+            empiler(&pile, valeur_nombre(dec_depuis_long(r)));
             break;
         }
         case I_EXEMPLE: {   /* « Exemple : le carré de 7 vaut 49. » (§ 9.6) */

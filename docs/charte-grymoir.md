@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.56, révisée le 12 octobre 2026.
+Version 1.57, révisée le 12 octobre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -186,7 +186,7 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 - corbeille (grammaire, § 16.12) : la vider des objets supprimés depuis longtemps ;
 - saisie par l'utilisateur de l'application : autocomplétion des valeurs déjà saisies, y compris celles des objets de la corbeille (avec l'interface des applications) ;
 - base (grammaire, § 16.7) : commande de `grym` qui retire ou renomme un champ, lève les limites des migrations imposées par SQLite, et reconstruit une table ;
-- dates (grammaire, § 14) : écart entre deux dates en mois ou en années, heure et fuseaux horaires ;
+- dates (grammaire, § 14) : heure et fuseaux horaires ;
 - langage : modifier le champ d'une recherche sans passer par un nom (`L'âge du client conservé dont … devient …`) ;
 - aide à la saisie (`docs/lsp.md`, § 8) : survol d'un nom, aller à la définition, renommer, rechercher les usages, plusieurs erreurs à la fois, suites en forme compacte, Neovim ;
 - installation pour l'utilisateur final : `grym` embarqué dans l'extension (un paquet par système, construit par GitHub Actions), aucun réglage, fonctionnement en mode restreint, bouton « Lancer », publication sur la place de marché de VS Code et sur Open VSX (licence et comptes d'éditeur requis).
@@ -272,3 +272,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.54 | 2026-10-10 | Art. 12 : A5 fait (les projets dans l'atelier) ; l'application « Gestion de projet » rejoint `projets/` |
 | 1.55 | 2026-10-12 | Art. 12 : l'appel de la version parente est fait (grammaire 1.65, § 13.8) ; restent les listes d'objets |
 | 1.56 | 2026-10-12 | Art. 12 : les ensembles sont faits (grammaire 1.66, § 13.9) ; les listes ordonnées attendent un besoin réel |
+| 1.57 | 2026-10-12 | Art. 12 : l'écart entre deux dates est fait (grammaire 1.68, § 14.6) ; reste l'heure |

@@ -384,6 +384,49 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k = fin;
             continue;
         }
+        if ((est_cle(t, "écart_jours") || est_cle(t, "écart_semaines") || est_cle(t, "écart_mois") || est_cle(t, "écart_années")
+             || est_cle(t, "hasard") || est_cle(t, "hasard_parmi")) && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
+            /* _écart_mois(d1 ; d2) → le nombre de mois entre (d1) et (d2) (§ 14.6) ; _hasard(1 ; 6) → un nombre au hasard
+             * de (1) à (6) ; _hasard_parmi(faces) → un élément au hasard parmi les faces (§ 3.6) */
+            size_t fin = fermante(r, k + 1, f);
+            if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+            int parmi = est_cle(t, "hasard_parmi");
+            size_t pv = 0;
+            int p = 0, nb = 0;
+            for (size_t q = k + 2; q < fin; q++) {
+                if (r->e[q].type == J_PAR_OUV) p++;
+                else if (r->e[q].type == J_PAR_FERM) p--;
+                else if (p == 0 && r->e[q].type == J_POINT_VIRGULE) { pv = q; nb++; }
+            }
+            if (parmi ? (nb != 0 || fin != k + 3 || r->e[k + 2].type != J_CROCHETS) : (nb != 1 || pv == k + 2 || pv + 1 == fin)) {
+                echouer(r, t, grym_formater(parmi ? "« _%s » prend un ensemble : _hasard_parmi(faces)."
+                                                  : "« _%s » prend deux arguments séparés par « ; ».", t->valeur));
+                return;
+            }
+            if (parmi) {
+                mot(r, "un", t); mot(r, "élément", t); mot(r, "au", t); mot(r, "hasard", t); mot(r, "parmi", t); mot(r, "les", t);
+                copier(r, &r->e[k + 2]);
+                k = fin;
+                continue;
+            }
+            if (est_cle(t, "hasard")) { mot(r, "un", t); mot(r, "nombre", t); mot(r, "au", t); mot(r, "hasard", t); mot(r, "de", t); }
+            else {
+                const char *u = t->valeur + strlen("écart_");
+                mot(r, "le", t); mot(r, "nombre", t);
+                if (!strcmp(u, "années")) emettre(r, J_ELISION, "d", t, 1); else mot(r, "de", t);
+                mot(r, u, t);
+                mot(r, "entre", t);
+            }
+            emettre(r, J_PAR_OUV, NULL, &r->e[k + 2], 1);
+            expression(r, k + 2, pv);
+            emettre(r, J_PAR_FERM, NULL, &r->e[pv], 1);
+            mot(r, est_cle(t, "hasard") ? "à" : "et", &r->e[pv]);
+            emettre(r, J_PAR_OUV, NULL, &r->e[pv + 1], 1);
+            expression(r, pv + 1, fin);
+            emettre(r, J_PAR_FERM, NULL, &r->e[fin], 1);
+            k = fin;
+            continue;
+        }
         if (est_cle(t, "reste") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
             /* _reste(17 ; 5) → le reste de (17) par (5), parenthèses synthétiques (§ 3.5) */
             size_t fin = fermante(r, k + 1, f);

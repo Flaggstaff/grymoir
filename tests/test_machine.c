@@ -1328,6 +1328,23 @@ int main(void) {
     PROG("Le x vaut 3.\nExemple : x vaut 3.", "~« x » n'est pas visible dans un calcul");
     PROG("Le carré d'un nombre :\n    Exemple : 1 vaut 1.\n    Rendre nombre.", "~Un exemple se place au premier niveau");
     PROG("Exemple : 1 + 1.", "~Un exemple dit ce que vaut une expression");
+    /* Écart entre deux dates (§ 14.6), hasard (§ 3.6) */
+    PROG("Afficher le nombre de mois entre 31.01.2026 et 28.02.2026 puis le nombre de mois entre 31.01.2026 et 27.02.2026.\n"
+         "Afficher le nombre d'années entre 21.09.1990 et 20.09.2026 puis le nombre d'ans entre 21.09.1990 et 21.09.2026.\n"
+         "Afficher le nombre de jours entre 01.01.2026 et 01.03.2026 puis le nombre de semaines entre 01.01.2026 et 01.03.2026.\n"
+         "Afficher le nombre de mois entre 15.03.2026 et 14.01.2026 puis le nombre d'années entre 21.09.2026 et 21.09.1990.\n"
+         "Afficher le nombre d'années entre 29.02.2024 et 28.02.2025 puis le nombre de jours entre 01.01.2026 et 01.01.2026 + 3.",
+         "1 0\n35 36\n59 8\n−2 −36\n1 3");
+    PROG("Afficher le nombre de mois entre 3 et 01.01.2026.", "ERREUR 1:10 Un écart se mesure entre deux dates, pas avec un nombre.");
+    PROG("Afficher le nombre d'mois entre 01.01.2026 et 01.02.2026.", "~« le nombre de mois entre … »");
+    PROG("Les vus valent un ensemble vide.\nLe juste vaut vrai.\nRépéter 600 fois :\n    Le n vaut un nombre au hasard de 6 à 1.\n"
+         "    Si n < 1 ou n > 6, le juste devient faux.\n    Les vus gagnent n.\nAfficher juste puis le nombre de vus.\n"
+         "Les faces valent « pile » et « face ».\nAfficher un élément au hasard parmi les faces est parmi les faces.",
+         "vrai 6\nvrai");
+    PROG("Le dé d'un n vaut un nombre au hasard de 1 à n.", "~Un calcul ne dépend pas du hasard");
+    PROG("Afficher un nombre au hasard de 1 à 2,5.", "~Un nombre au hasard se tire entre deux nombres entiers");
+    PROG("Les vides valent un ensemble vide.\nAfficher un élément au hasard parmi les vides.",
+         "ERREUR 2:10 Un élément au hasard ne se tire pas d'un ensemble vide.");
     PROG("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : une licence.\nUn cadet est un membre.\nUne ville a : un nom.\n" "Pour saluer une personne :\n    Afficher 1.\nLe p vaut une nouvelle personne :\n    Le nom vaut « a ».\n"
          "Saluer p comme un personne.", "ERREUR 10:16 Accord : « comme une personne ».");
     /* Reste, partie entière, valeur absolue (§ 3.5) */

@@ -1480,6 +1480,7 @@ static Noeud *base(Analyse *a);
 static int de_ou_d(const Jeton *t);
 static void arrets(Analyse *a, const char *m1, const char *m2);
 static Symbole *ensemble_en(Analyse *a, size_t k, size_t *fin);
+static Noeud *expression_avant(Analyse *a, const char *m1, const char *m2);
 static Noeud *nom_ensemble(Analyse *a);
 
 static int contient_champ_dont(const Noeud *n) {
@@ -2115,6 +2116,84 @@ static Noeud *base(Analyse *a) {
             n->fin = x->fin;
             return n;
         }
+    }
+    {
+        /* « le nombre de mois entre d1 et d2 », « d'années », « de jours », « de semaines » (§ 14.6) */
+        static const struct { const char *mot; char u; } U[] = { { "jours", 'j' }, { "semaines", 's' }, { "mois", 'm' },
+                                                                 { "années", 'a' }, { "ans", 'a' } };
+        int u = -1;
+        if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2)) && est_mot(voir(a, 4), "entre"))
+            for (size_t q = 0; q < sizeof U / sizeof *U; q++) if (est_mot(voir(a, 3), U[q].mot)) u = (int)q;
+        if (u >= 0) {
+            if (voyelle_initiale(U[u].mot) != (voir(a, 2)->type == J_ELISION))
+                return erreur(a, voir(a, 2), grym_formater("« le nombre %s%s entre … »", voyelle_initiale(U[u].mot) ? "d'" : "de ",
+                                                           U[u].mot));
+            Noeud *n = noeud_creer(N_ECART, t->ligne, t->colonne, t->debut);
+            n->op = U[u].u;
+            n->texte = grym_dupliquer(U[u].mot);
+            a->i += 5;
+            const char *garde[3];
+            int nb_garde = a->nb_arrets;
+            memcpy(garde, a->arrets, sizeof garde);
+            arrets(a, "et", NULL);
+            Noeud *d1 = expression(a);
+            a->nb_arrets = nb_garde;
+            memcpy(a->arrets, garde, sizeof garde);
+            if (!d1) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, d1);
+            attendre_mot(a, a->i, "et", 2);
+            if (!est_mot(cour(a), "et")) {
+                noeud_liberer(n);
+                return erreur(a, cour(a), grym_formater("« le nombre de %s entre une date et une autre » : « et » attendu.", U[u].mot));
+            }
+            avancer(a);
+            Noeud *d2 = unaire(a);
+            if (!d2) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, d2);
+            n->fin = d2->fin;
+            return n;
+        }
+    }
+    if ((est_mot(t, "un") || est_mot(t, "une")) && est_mot(voir(a, 2), "au") && est_mot(voir(a, 3), "hasard")
+        && (est_mot(voir(a, 1), "nombre") || est_mot(voir(a, 1), "élément"))) {
+        /* « un nombre au hasard de 1 à 6 », « un élément au hasard parmi les invités » (§ 3.6) */
+        if (a->formule == 1)
+            return erreur(a, t, grym_dupliquer("Un calcul ne dépend pas du hasard : tire au hasard dans une action."));
+        int parmi = est_mot(voir(a, 1), "élément");
+        Noeud *n = noeud_creer(N_HASARD, t->ligne, t->colonne, t->debut);
+        n->forme = parmi;
+        a->i += 4;
+        if (parmi) {
+            size_t fe;
+            if (!est_mot(cour(a), "parmi") || !est_mot(voir(a, 1), "les") || !ensemble_en(a, a->i + 2, &fe)) {
+                noeud_liberer(n);
+                return erreur(a, cour(a), grym_dupliquer("« un élément au hasard parmi les invités » : un ensemble attendu (§ 13.9)."));
+            }
+            avancer(a);
+            Noeud *e = nom_ensemble(a);
+            if (!e) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, e);
+            n->fin = e->fin;
+            return n;
+        }
+        if (!de_ou_d(cour(a))) {
+            noeud_liberer(n);
+            return erreur(a, cour(a), grym_dupliquer("« un nombre au hasard de 1 à 6 » : les deux bornes attendues."));
+        }
+        avancer(a);
+        Noeud *d1 = expression_avant(a, "à", NULL);
+        if (!d1) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, d1);
+        if (!est_mot(cour(a), "à")) {
+            noeud_liberer(n);
+            return erreur(a, cour(a), grym_dupliquer("« un nombre au hasard de 1 à 6 » : « à » attendu."));
+        }
+        avancer(a);
+        Noeud *d2 = unaire(a);
+        if (!d2) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, d2);
+        n->fin = d2->fin;
+        return n;
     }
     if (est_mot(t, "la") && est_mot(voir(a, 1), "colonne") && (voir(a, 2)->type == J_TEXTE || voir(a, 2)->type == J_PAR_OUV)
         && !visible(a, "colonne") && !champ_connu(a->portee, "colonne", NULL)) {

@@ -95,10 +95,14 @@ typedef enum {
     I_TAILLE_ENSEMBLE,  /* remplace l'ensemble au sommet par son nombre d'éléments */
     I_JOINDRE,          /* dépile le séparateur, puis l'ensemble ; empile ses éléments en texte, séparés */
     I_EXEMPLE,          /* opérande : constante texte, l'exemple écrit ; dépile l'attendu, puis l'obtenu ; écrit ✓ ou ✗ (§ 9.6) */
-    I_EXEMPLE_RATE      /* opérande : la même ; dépile le motif d'une erreur ; écrit ✗ et le motif */
+    I_EXEMPLE_RATE,     /* opérande : la même ; dépile le motif d'une erreur ; écrit ✗ et le motif */
+    I_ECART,            /* opérande : 0 jours, 1 semaines, 2 mois, 3 années ; dépile d2, puis d1 ; empile le nombre d'unités
+                           entières de d1 à d2, négatif si d2 est avant (§ 14.6) */
+    I_HASARD            /* opérande : 0 dépile la borne haute, puis la basse, empile un entier entre les deux, bornes
+                           comprises ; 1 dépile un ensemble, empile l'un de ses éléments (§ 3.6) */
 } CodeInstruction;
 
-#define I_DERNIER I_EXEMPLE_RATE
+#define I_DERNIER I_HASARD
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

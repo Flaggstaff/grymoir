@@ -378,6 +378,20 @@ static void decrire(const Noeud *n, Chaine *c) {
         decrire(n->enfants[1], c);
         chaine_ajouter(c, ")");
         return;
+    case N_ECART:
+        chaine_ajouter(c, "(écart-");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
+    case N_HASARD:
+        chaine_ajouter(c, n->forme ? "(hasard-parmi " : "(hasard ");
+        for (size_t k = 0; k < n->nb_enfants; k++) { if (k) chaine_ajouter(c, " "); decrire(n->enfants[k], c); }
+        chaine_ajouter(c, ")");
+        return;
     case N_RESTE:
         chaine_ajouter(c, "(reste ");
         decrire(n->enfants[0], c);

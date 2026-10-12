@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.67 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.68 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -204,6 +204,20 @@ Afficher la partie entière de 7,8 puis la valeur absolue de −3,50.     →  7
 - Aucun mot réservé : un nom, un calcul ou un champ `reste`, `valeur absolue`, `partie entière` déclaré l'emporte (`Le reste vaut total − payé.` reste un nom).
 - Vérification (12 octobre 2026) : 3 000 cas tirés au hasard, comparés au module `decimal` de Python (`%`, `to_integral_value(ROUND_DOWN)`, `abs`) : aucune différence.
 - En forme compacte : `_reste(17 ; 5)`, `x.valeur_absolue`, `x.partie_entière`.
+
+### 3.6 Hasard
+
+```
+Le dé vaut un nombre au hasard de 1 à 6.
+Le gagnant vaut un élément au hasard parmi les inscrits.
+```
+
+- `un nombre au hasard de a à b` : un nombre entier, bornes comprises, dans un ordre quelconque, chacun avec la même chance. Les bornes sont des nombres entiers (au plus un milliard en valeur absolue).
+- `un élément au hasard parmi les inscrits` : l'un des éléments d'un ensemble (§ 13.9), chacun avec la même chance ; un ensemble vide est une erreur.
+- Seulement dans une action ou le programme : « Un calcul ne dépend pas du hasard : tire au hasard dans une action. » Un calcul rend toujours la même valeur pour les mêmes arguments (§ 9.4), et un exemple (§ 9.6) ne peut donc pas tirer au hasard.
+- Le tirage est semé par l'horloge. Pour rejouer exactement une exécution, la variable d'environnement `GRYM_HASARD` fixe la graine : `GRYM_HASARD=42 grym lancer loto.grym`. Le générateur (xorshift64*, Sebastiano Vigna, 2014, cité de mémoire) convient à un tirage au sort d'association, pas à la cryptographie.
+- Aucun mot réservé : `un nombre au hasard` et `un élément au hasard` ne valent qu'ainsi écrits.
+- En forme compacte : `_hasard(1 ; 6)`, `_hasard_parmi(inscrits)`.
 
 ---
 
@@ -749,6 +763,7 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `Saluer m comme une personne.` | `saluer(m) _comme personne` |
 | `Les couleurs valent « a » et « b ».`, `Les invités gagnent m.` | `_les couleurs << « a » ; « b »`, `_les invités _gagnent m` |
 | `Exemple : le carré de 7 vaut 49.` | `_exemple carré(7) << 49` |
+| `le nombre de mois entre d1 et d2`, `un nombre au hasard de 1 à 6` | `_écart_mois(d1 ; d2)`, `_hasard(1 ; 6)` |
 | `Rendre x.` | `_rendre x` |
 | `Tant que c :` | `_tant_que c` … `_fin` |
 | `Répéter 3 fois :` | `_répéter 3 _fois` … `_fin` |
@@ -1043,6 +1058,21 @@ Si l'année de la date de sortie > 1700, …
 - Migrations (§ 16.7) : `(nombre entier)` devient `(année)` si toutes les valeurs conservées sont entre 1 et 9999, sinon refus avec leur nombre ; `(année)` redevient `(nombre entier)` sans perte.
 - `année` est un nom de type : une entité ne peut pas le porter, pas plus que `texte` ou `date`.
 - En forme compacte : `(année)`, `d.année`.
+
+### 14.6 Écart entre deux dates
+
+```
+L'âge vaut le nombre d'années entre la naissance du membre et aujourd'hui.
+Afficher le nombre de mois entre 31.01.2026 et 28.02.2026.     →  1
+```
+
+- `le nombre de jours`, `de semaines`, `de mois`, `d'années` (ou `d'ans`) `entre d1 et d2` compte les unités **entières** de d1 à d2 : l'âge, l'ancienneté, la durée d'un abonnement.
+- Mois et années suivent la règle de `d + 3 mois` (§ 14.2) : c'est le plus grand n tel que `d1 + n mois` ne dépasse pas d2. Du 31.01 au 28.02, 1 mois ; au 27.02, 0. Du 29.02.2024 au 28.02.2025, 1 an : l'anniversaire d'un 29 février tombe le 28 les années ordinaires.
+- Semaines : les jours divisés par 7, sans les jours restants.
+- Si d2 précède d1, l'écart est négatif : `le nombre d'années entre 21.09.2026 et 21.09.1990` vaut −36.
+- La seconde date se lie comme un argument (§ 9.1) : `entre d et (d + 3)`.
+- Deux dates seulement : « Un écart se mesure entre deux dates, pas avec un nombre. » L'écart en jours reste aussi `d2 − d1` (§ 14.2).
+- Aucun mot réservé. En forme compacte : `_écart_jours(d1 ; d2)`, `_écart_semaines`, `_écart_mois`, `_écart_années`.
 
 ## 15. Fichiers et images *(v0.3)*
 
@@ -1755,3 +1785,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.65 | 2026-10-12 | § 13.8 : `comme une personne` après l'appel d'une méthode, la version d'une classe ancêtre (le `super` de Java) ; aucun mot réservé |
 | 1.66 | 2026-10-12 | Nouveau § 13.9 : ensembles (`Les couleurs valent …`, `gagnent`, `perdent`, `parmi`, `Pour chaque … parmi les …`, `le nombre de`, `jointes par`), sans doublon, copiés à l'affectation ; § 4.4 : joindre ; aucun mot réservé |
 | 1.67 | 2026-10-12 | Nouveau § 9.6 : `Exemple : … vaut ….`, ignorés par `grym lancer`, vérifiés par `grym exemples` (déclarations seulement, base vide en mémoire) ; aucun mot réservé |
+| 1.68 | 2026-10-12 | Nouveaux § 3.6 (hasard : `un nombre au hasard de 1 à 6`, `un élément au hasard parmi les …`, actions seulement, `GRYM_HASARD`) et § 14.6 (`le nombre de mois entre d1 et d2`, unités entières, règle de `d + n mois`) ; aucun mot réservé |

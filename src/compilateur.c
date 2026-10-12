@@ -354,6 +354,15 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_LIRE_CHAMP, ch, n->op_ligne, n->op_colonne);
         return;
     }
+    case N_ECART:   /* d1, d2, puis ÉCART avec l'unité (§ 14.6) */
+        expression(c, n->enfants[0]);
+        expression(c, n->enfants[1]);
+        emettre(c, I_ECART, n->op == 'j' ? 0 : n->op == 's' ? 1 : n->op == 'm' ? 2 : 3, n->ligne, n->colonne);
+        return;
+    case N_HASARD:   /* les bornes, ou l'ensemble, puis HASARD (§ 3.6) */
+        for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
+        emettre(c, I_HASARD, n->forme, n->ligne, n->colonne);
+        return;
     case N_ENSEMBLE:   /* les éléments, puis ENSEMBLE n (§ 13.9) */
         if (n->nb_enfants > 65535) { trop_grand(c, n); return; }
         for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
