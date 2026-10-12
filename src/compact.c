@@ -260,6 +260,13 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, est_cle(t, "au_plus_grand") ? "grand" : "petit", t);
             continue;
         }
+        if (est_cle(t, "comme") && k + 1 < f && r->e[k + 1].type == J_CROCHETS) {   /* _comme personne → comme un personne */
+            mot(r, "comme", t);
+            mot(r, "un", t);   /* synthétique : l'accord n'est pas vérifié */
+            copier(r, &r->e[k + 1]);
+            k++;
+            continue;
+        }
         if (est_cle(t, "dont")) {
             mot(r, "dont", t);
             continue;
@@ -1664,6 +1671,14 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     } else if (t->type == J_CROCHETS && d + 1 < f && r->e[d + 1].type == J_PAR_OUV && fermante(r, d + 1, f) == f - 1) {
         copier(r, t);                                 /* relancer(client) → Relancer client. */
         arguments(r, d + 2, f - 1, 0, t);
+        point(r, f);
+    } else if (t->type == J_CROCHETS && d + 1 < f && r->e[d + 1].type == J_PAR_OUV && f >= 3 && fermante(r, d + 1, f) == f - 3
+               && est_cle(&r->e[f - 2], "comme") && r->e[f - 1].type == J_CROCHETS) {
+        copier(r, t);                                 /* saluer(m) _comme personne → Saluer m comme un personne. (§ 13.8) */
+        arguments(r, d + 2, f - 3, 0, t);
+        mot(r, "comme", &r->e[f - 2]);
+        mot(r, "un", &r->e[f - 2]);
+        copier(r, &r->e[f - 1]);
         point(r, f);
     } else {
         expression(r, d, f);

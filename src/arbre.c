@@ -564,6 +564,7 @@ static void decrire(const Noeud *n, Chaine *c) {
             chaine_ajouter(c, " ");
             decrire(n->enfants[k], c);
         }
+        if (n->texte2) { chaine_ajouter(c, " (comme ["); chaine_ajouter(c, n->texte2); chaine_ajouter(c, "])"); }
         chaine_ajouter(c, ")");
         return;
     case P_CALCUL:

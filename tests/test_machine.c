@@ -1282,6 +1282,24 @@ int main(void) {
     PROG("Afficher l'arrondi de 3 à −1.", "ERREUR 1:10 Un arrondi se fait à un pas positif (0,05, 1, 10…), pas à −1.");
     PROG("Afficher l'arrondi de « a » à 1.", "ERREUR 1:10 On n'arrondit qu'un nombre, pas un texte.");
     PROG("Afficher l'arrondi de 2 à « a ».", "ERREUR 1:10 Le pas d'un arrondi est un nombre, pas un texte.");
+    /* Appeler une autre version (§ 13.8) */
+    PROG("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : une licence.\nUn cadet est un membre.\nUne ville a : un nom.\n" "Pour saluer une personne :\n    Afficher « Bonjour » puis nom de la personne.\n"
+         "Pour saluer un membre :\n    Saluer le membre comme une personne.\n    Afficher « Licence : » puis licence du membre.\n"
+         "Le titre d'une personne vaut « M. » suivi de nom de la personne.\n"
+         "Le titre d'un membre vaut « membre » suivi du titre du membre comme une personne.\n"
+         "Le c vaut un nouveau cadet :\n    Le nom vaut « Noé ».\n    La licence vaut « A-1 ».\n"
+         "Saluer c.\nAfficher le titre de c puis le titre de c comme une personne.\nSaluer c comme une personne.",
+         "Bonjour Noé\nLicence : A-1\nmembreM.Noé M.Noé\nBonjour Noé");
+    PROG("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : une licence.\nUn cadet est un membre.\nUne ville a : un nom.\n" "Pour saluer une personne :\n    Afficher 1.\nLe v vaut une nouvelle ville :\n    Le nom vaut « Bulle ».\n"
+         "Saluer v comme une personne.", "ERREUR 10:1 « saluer » comme une personne : une ville n'en est pas une.");
+    PROG("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : une licence.\nUn cadet est un membre.\nUne ville a : un nom.\n" "Pour saluer une personne :\n    Afficher 1.\nLe p vaut une nouvelle personne :\n    Le nom vaut « a ».\n"
+         "Saluer p comme un membre.", "ERREUR 10:1 « saluer » comme un membre : une personne n'en est pas un.");
+    PROG("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : une licence.\nUn cadet est un membre.\nUne ville a : un nom.\n" "Pour saluer un membre :\n    Afficher 1.\nLe c vaut un nouveau cadet :\n    Le nom vaut « a ».\n"
+         "    La licence vaut « b ».\nSaluer c comme une personne.", "ERREUR 11:1 Aucune version de « saluer » pour une personne.");
+    PROG("Pour saluer :\n    Afficher 1.\nUne personne a : un nom.\nSaluer comme une personne.",
+         "ERREUR 4:8 « saluer » n'est pas une méthode : « comme une personne » ne choisit aucune version (§ 13.6).");
+    PROG("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : une licence.\nUn cadet est un membre.\nUne ville a : un nom.\n" "Pour saluer une personne :\n    Afficher 1.\nLe p vaut une nouvelle personne :\n    Le nom vaut « a ».\n"
+         "Saluer p comme un personne.", "ERREUR 10:16 Accord : « comme une personne ».");
     /* Reste, partie entière, valeur absolue (§ 3.5) */
     PROG("Afficher le reste de 17 par 5 puis le reste de −7 par 3 puis le reste de 7 par −3 puis le reste de 7,5 par 2.",
          "2 −1 1 1,5");

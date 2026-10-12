@@ -260,6 +260,14 @@ static void de_expression(Impression *im, const Noeud *x) {
     preposition(im, "de", x);
 }
 
+/* « comme une personne » (§ 13.8) ; « _comme personne ». */
+static void comme(Impression *im, const Noeud *n) {
+    if (!n->texte2) return;
+    if (im->compact) aj(im, " _comme ");
+    else aj(im, genre_de_nom(im, n->texte2) == G_FEMININ ? " comme une " : " comme un ");
+    ecrire_nom(im, n->texte2, 0);
+}
+
 static void nom_avec_article(Impression *im, const Noeud *n) {
     if (!im->compact) {
         if (n->article == ART_LE) aj(im, "le ");
@@ -423,6 +431,7 @@ static void expression(Impression *im, const Noeud *n) {
                 expression(im, x->type == N_GROUPE ? x->enfants[0] : x);
             }
             aj(im, ")");
+            comme(im, n);
             return;
         }
         nom_avec_article(im, n);
@@ -437,6 +446,7 @@ static void expression(Impression *im, const Noeud *n) {
                 aj(im, ")");
             }
         }
+        comme(im, n);
         return;
     case N_SUJET:
         return;
@@ -1278,7 +1288,9 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 if (k) aj(im, " ; ");
                 expression(im, n->enfants[k]);
             }
-            aj(im, ")\n");
+            aj(im, ")");
+            comme(im, n);
+            aj(im, "\n");
         } else {
             char *nom = grym_dupliquer(n->texte);
             initiale(nom, 1);
@@ -1292,6 +1304,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 expression(im, x);
                 if (paren) aj(im, ")");
             }
+            comme(im, n);
             aj(im, ".\n");
         }
         return;

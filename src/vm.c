@@ -1284,8 +1284,21 @@ static char *article_classe(const ClasseVM *c) {
 
 /* Version appelée (grammaire, § 13.6) : la formule sans classe si elle existe ; sinon, la version
  * dont la classe est la plus proche de celle du premier argument, en remontant sa lignée. */
+static Formule *choisir_version_depuis(Machine *m, const char *nom, const Valeur *premier, const char *depuis,
+                                       char **pourquoi);
+
 static Formule *choisir_version(Machine *m, const char *nom, const Valeur *premier, char **pourquoi) {
-    Formule *f = formule_de(m, nom, NULL);
+    const char *sep = strchr(nom, '\x1e');   /* « saluer␞personne » : « Saluer m comme une personne. » (§ 13.8) */
+    if (!sep) return choisir_version_depuis(m, nom, premier, NULL, pourquoi);
+    char *base = grym_formater("%.*s", (int)(sep - nom), nom);
+    Formule *f = choisir_version_depuis(m, base, premier, sep + 1, pourquoi);
+    free(base);
+    return f;
+}
+
+static Formule *choisir_version_depuis(Machine *m, const char *nom, const Valeur *premier, const char *depuis,
+                                       char **pourquoi) {
+    Formule *f = depuis ? NULL : formule_de(m, nom, NULL);
     if (f) return f;
     int versions = 0;
     for (size_t i = 0; i < m->nb_formules; i++) if (strcmp(m->formules[i].nom, nom) == 0) versions++;
@@ -1303,7 +1316,21 @@ static Formule *choisir_version(Machine *m, const char *nom, const Valeur *premi
                                   premier ? nom_type(premier->type) : "absent");
         return NULL;
     }
-    for (const ClasseVM *c = premier->objet->classe; c; c = c->parent) {
+    const ClasseVM *depart = premier->objet->classe;
+    if (depuis) {   /* l'objet doit être de cette classe ; la recherche part d'elle, plus de sa classe réelle */
+        const ClasseVM *c = depart;
+        while (c && strcmp(c->nom, depuis) != 0) c = c->parent;
+        if (!c) {
+            char *qui = article_classe(depart);
+            const ClasseVM *cd = classe_vm(m, depuis);
+            *pourquoi = grym_formater("« %s » comme %s %s : %s n'en est pas un%s.", nom, cd && cd->feminin ? "une" : "un",
+                                      depuis, qui, cd && cd->feminin ? "e" : "");
+            free(qui);
+            return NULL;
+        }
+        depart = c;
+    }
+    for (const ClasseVM *c = depart; c; c = c->parent) {
         f = formule_de(m, nom, c->nom);
         if (f) return f;
         /* sinon, une version d'aptitude : deux aptitudes à égalité, c'est un conflit (charte, art. 6) */
@@ -1322,7 +1349,7 @@ static Formule *choisir_version(Machine *m, const char *nom, const Valeur *premi
         }
         if (trouvee) return trouvee;
     }
-    char *qui = article_classe(premier->objet->classe);
+    char *qui = article_classe(depart);
     *pourquoi = grym_formater("Aucune version de « %s » pour %s.", nom, qui);
     free(qui);
     return NULL;

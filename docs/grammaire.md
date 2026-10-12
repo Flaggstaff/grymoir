@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.64 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.65 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -730,6 +730,7 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `le reste de 17 par 5`, `la valeur absolue de x`, `la partie entière de x` | `_reste(17 ; 5)`, `x.valeur_absolue`, `x.partie_entière` |
 | `Exporter les membres conservés, par nom, avec le nom et la cotisation, dans « m.csv ».` | `_exporter membre _conservé _par nom _avec nom ; cotisation _dans « m.csv »` |
 | `Pour chaque ligne du tableau « f.csv » :`, `la colonne « Nom » de la ligne` | `_pour_chaque ligne _tableau « f.csv »`, `_colonne(« Nom » ; ligne)` |
+| `Saluer m comme une personne.` | `saluer(m) _comme personne` |
 | `Rendre x.` | `_rendre x` |
 | `Tant que c :` | `_tant_que c` … `_fin` |
 | `Répéter 3 fois :` | `_répéter 3 _fois` … `_fin` |
@@ -889,9 +890,24 @@ Pour dater une chose horodatée :
 - Conflit (charte, art. 6) : si deux aptitudes d'une classe définissent la même formule, la classe doit définir sa propre version, sinon l'analyse échoue. Aucune résolution implicite.
 - En forme compacte : `_aptitude horodatée`, `_aptitude active (actif)` ; `_classe _un membre _est _une personne _adopte horodatée ; active` ; `_une chose_horodatée` pour le paramètre.
 
-### 13.8 À venir
+### 13.8 Appeler une autre version
 
-Appeler la version de la classe parente depuis une méthode, les listes d'objets et un vrai affichage des objets demandent chacun leur propre conception. L'absence de valeur est faite (§ 16.9).
+```
+Pour saluer un membre :
+    Saluer le membre comme une personne.
+    Afficher « Licence : » puis licence du membre.
+Le titre d'un membre vaut « membre » suivi du titre du membre comme une personne.
+```
+
+- `comme une personne`, après les arguments d'une méthode (§ 13.6), choisit la version de cette classe au lieu de celle de la classe réelle du premier argument : c'est le `super` de Java, en nommant la classe. Si `personne` n'a pas sa propre version, celle de sa parente la plus proche, comme d'habitude, en partant d'elle.
+- Le premier argument doit être de cette classe ou d'une classe qui en hérite : « « saluer » comme une personne : une ville n'en est pas une. »
+- Une classe seulement, pas une aptitude ; l'article s'accorde (`comme un membre`, `comme une personne`). Sur une formule qui n'est pas une méthode : « « saluer » n'est pas une méthode : « comme une personne » ne choisit aucune version (§ 13.6). »
+- La classe nommée peut être n'importe quel ancêtre, pas seulement la parente directe : `Saluer c comme un membre.` pour un cadet.
+- Pour un calcul, `comme` suit ses arguments : `le titre du membre comme une personne`.
+- Aucun mot réservé : `comme` ne compte que suivi de `un` ou `une`, après un appel.
+- En forme compacte : `saluer(m) _comme personne`, `titre(m) _comme personne`.
+
+Les listes d'objets et un vrai affichage des objets restent à concevoir. L'absence de valeur est faite (§ 16.9).
 
 ## 14. Dates *(v0.3)*
 
@@ -1696,3 +1712,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.62 | 2026-10-12 | Nouveau § 3.5 : `le reste de a par b` (signe du dividende), `la partie entière de x` (vers zéro), `la valeur absolue de x` ; vérifiés contre `decimal` ; aucun mot réservé |
 | 1.63 | 2026-10-12 | Nouveau § 15.4 : `Exporter les … conservés [dont …] [, par …] [, avec …] dans « f.csv ».`, un tableau CSV (UTF-8, `;`, virgule décimale), écrit comme `Enregistrer` ; aucun mot réservé |
 | 1.64 | 2026-10-12 | Nouveau § 15.5 : `Pour chaque ligne du tableau « f.csv » :`, `la colonne « Nom » de la ligne` (cellule vide : absente) ; séparateur deviné, RFC 4180 ; aucun mot réservé |
+| 1.65 | 2026-10-12 | § 13.8 : `comme une personne` après l'appel d'une méthode, la version d'une classe ancêtre (le `super` de Java) ; aucun mot réservé |

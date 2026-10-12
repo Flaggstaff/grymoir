@@ -87,6 +87,8 @@ int main(void) {
          "Pour saluer une personne :\n    Afficher « Bonjour » puis personne.\nSaluer 3.");
     FIXE("Le prix vaut 3.\nAfficher l'arrondi du prix × 2 à 0,05 vers le bas puis l'arrondi de 2 à (1 + 1) au pair.\n");
     FIXE("Le prix vaut 3.\nAfficher le reste du prix × 2 par (1 + 3) puis la valeur absolue de −2 puis la partie entière du prix.\n");
+    FIXE("Une personne a :\n    un nom.\nPour saluer une personne :\n    Afficher 1.\nLe p vaut une nouvelle personne :\n"
+         "    Le nom vaut « a ».\nSaluer p comme une personne.\n");
     FIXE("Un membre, conservé, a :\n    un nom (texte).\nExporter les membres conservés, par nom décroissant, avec le nom, dans « m.csv ».\n"
          "Exporter les membres conservés dont le nom est « a » dans « n.csv ».\n");
     LITT("Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.", "Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.\n");

@@ -1063,6 +1063,8 @@ static char *pluriel(int n, const char *mot) {
     return grym_formater("%d %s%s", n, mot, n > 1 ? "s" : "");
 }
 
+static int comme_classe(Analyse *a, const Symbole *s, Noeud *n);
+
 /* Appel d'un calcul : « le carré de 7 », « la moyenne de 4 et de 6 », « le carré du prix » (§ 9.1).
  * Un argument se lie plus fort que les opérateurs : « le carré de 3 + 1 » vaut 10. */
 static Noeud *appel_calcul(Analyse *a, Symbole *s, const Jeton *premier) {
@@ -1112,6 +1114,7 @@ static Noeud *appel_calcul(Analyse *a, Symbole *s, const Jeton *premier) {
         noeud_liberer(n);
         return NULL;
     }
+    if (!comme_classe(a, s, n)) { noeud_liberer(n); return NULL; }
     return n;
 }
 
@@ -1379,6 +1382,8 @@ static Noeud *nom_expression(Analyse *a) {
                                                      || a->j[v + 1].type == J_TEXTE))))
                 arret = 1;
         }
+        if (fin + 1 < a->n && est_mot(&a->j[fin], "comme")
+            && (est_mot(&a->j[fin + 1], "un") || est_mot(&a->j[fin + 1], "une"))) arret = 1;   /* § 13.8 */
         if (fin + 1 < f && est_mot(&a->j[fin], "en")) {        /* « nom en majuscules » (§ 4.5) */
             static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai" };
             for (size_t q = 0; q < sizeof C / sizeof *C; q++) if (est_mot(&a->j[fin + 1], C[q])) arret = 1;
@@ -3748,6 +3753,41 @@ static Noeud *definition_action(Analyse *a, int colonne) {
 }
 
 /* « Relancer le client. » : arguments séparés par « et » (§ 9.2). */
+/* « comme une personne » après un appel de méthode (§ 13.8) : la version de cette classe, ou de sa parente la plus
+ * proche, au lieu de celle de la classe réelle. 1 si rien n'est écrit ou si c'est lu (n->texte2 : la classe) ; 0 et une
+ * erreur sinon. */
+static int comme_classe(Analyse *a, const Symbole *s, Noeud *n) {
+    const Jeton *t = cour(a);
+    if (!est_mot(t, "comme") || !(est_mot(voir(a, 1), "un") || est_mot(voir(a, 1), "une"))) return 1;
+    const Jeton *art = voir(a, 1);
+    size_t d = a->i + 2, k = d;
+    if (a->j[k].type == J_CROCHETS) k++;
+    else while (mot_de_nom(a, k)) k++;
+    char *nom = k > d ? (a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k)) : NULL;
+    const Classe *c = nom ? classe_de(a->portee, nom) : NULL;
+    if (!c || c->aptitude) {
+        erreur(a, &a->j[d], nom ? grym_formater("« comme » nomme une classe : « comme une personne », pas « %s ».", nom)
+                                : grym_dupliquer("« comme » nomme une classe : « comme une personne »."));
+        free(nom);
+        return 0;
+    }
+    if (!s->classe) {
+        erreur(a, t, grym_formater("« %s » n'est pas une méthode : « comme %s %s » ne choisit aucune version (§ 13.6).",
+                                   s->nom, c->genre == GENRE_FEMININ ? "une" : "un", nom));
+        free(nom);
+        return 0;
+    }
+    if (!art->synthetique && (c->genre == GENRE_FEMININ) != est_mot(art, "une")) {
+        erreur(a, art, grym_formater("Accord : « comme %s %s ».", c->genre == GENRE_FEMININ ? "une" : "un", nom));
+        free(nom);
+        return 0;
+    }
+    n->texte2 = nom;
+    n->fin = fin_jeton(&a->j[k - 1]);
+    a->i = k;
+    return 1;
+}
+
 static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
     Jeton *t = cour(a);
     if (a->formule == 1)
@@ -3756,7 +3796,8 @@ static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
     Noeud *n = noeud_creer(P_APPEL, t->ligne, t->colonne, t->debut);
     n->texte = grym_dupliquer(s->nom);
     int nb = 0;
-    if (cour(a)->type != J_POINT && cour(a)->type != J_FIN) {
+    if (cour(a)->type != J_POINT && cour(a)->type != J_FIN
+        && !(est_mot(cour(a), "comme") && (est_mot(voir(a, 1), "un") || est_mot(voir(a, 1), "une")))) {
         for (;;) {
             Noeud *arg = comparaison(a);
             if (!arg) { noeud_liberer(n); return NULL; }
@@ -3774,6 +3815,7 @@ static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
         noeud_liberer(n);
         return NULL;
     }
+    if (!comme_classe(a, s, n)) { noeud_liberer(n); return NULL; }
     if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
     return n;
 }

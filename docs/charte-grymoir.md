@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.54, révisée le 10 octobre 2026.
+Version 1.55, révisée le 12 octobre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -181,7 +181,7 @@ Critères de sortie de la v1.0, tous remplis :
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
 - intégrité : les règles (grammaire, § 16.14) se revérifient sur tous les objets qu'elles concernent ; ne revérifier que les objets touchés, en prouvant que c'est exact, reste à faire. Mesuré le 28 septembre 2026, avec l'index des liens : 0,09 s par transaction sur 5'000 écritures, 0,34 s sur 20'000 ; à reprendre quand une application réelle en aura besoin ;
-- objets (grammaire, § 13.8) : appel de la version parente depuis une méthode, listes d'objets ; racine commune `objet` de toutes les classes, puis nombres, textes et dates comme objets (art. 6, « Tout est objet ») ;
+- objets (grammaire, § 13.8) : listes d'objets ; racine commune `objet` de toutes les classes, puis nombres, textes et dates comme objets (art. 6, « Tout est objet ») ;
 - relations : test d'appartenance en mémoire (`Si baroque est parmi les genres de o`), gagner plusieurs objets en une phrase, champs multiples de textes ou de nombres ; lien facultatif qui devient absent quand son objet est effacé ;
 - corbeille (grammaire, § 16.12) : la vider des objets supprimés depuis longtemps ;
 - saisie par l'utilisateur de l'application : autocomplétion des valeurs déjà saisies, y compris celles des objets de la corbeille (avec l'interface des applications) ;
@@ -270,3 +270,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.52 | 2026-09-29 | Art. 12 : l'ajout de mois et d'années aux dates est fait, ramené au dernier jour du mois (grammaire, § 14.2) ; report : l'écart en mois ou en années |
 | 1.53 | 2026-09-29 | Art. 12 : jalons du web W1 à W4 (`docs/web.md`) ; W1 fait. Les art. 1, 7 et 11 changeront avec W3 et W4 |
 | 1.54 | 2026-10-10 | Art. 12 : A5 fait (les projets dans l'atelier) ; l'application « Gestion de projet » rejoint `projets/` |
+| 1.55 | 2026-10-12 | Art. 12 : l'appel de la version parente est fait (grammaire 1.65, § 13.8) ; restent les listes d'objets |

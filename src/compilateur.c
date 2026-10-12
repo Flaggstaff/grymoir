@@ -160,7 +160,10 @@ static void comparaison(Compilation *c, const Noeud *n) {
 static void appel(Compilation *c, const Noeud *n, int rend) {
     if (n->nb_enfants > 255) { trop_grand(c, n); return; }
     for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
-    long nom = bloc_nom(c->b, n->texte);
+    /* « comme une personne » (§ 13.8) : « saluer␞personne », la version cherchée depuis cette classe */
+    char *x = n->texte2 ? grym_formater("%s\x1e%s", n->texte, n->texte2) : grym_dupliquer(n->texte);
+    long nom = bloc_nom(c->b, x);
+    free(x);
     if (nom < 0) { trop_grand(c, n); return; }
     bloc_emettre_appel(c->b, (uint16_t)nom, (uint8_t)n->nb_enfants, rend, n->ligne, n->colonne);
 }
