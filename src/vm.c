@@ -389,7 +389,9 @@ void machine_detruire(Machine *m) {
         for (size_t k = 0; k < m->classes[i]->nb_champs; k++) {
             free(m->classes[i]->types[k]);
             free(m->classes[i]->departs[k]);
+            free(m->classes[i]->valeurs[k]);
         }
+        free(m->classes[i]->valeurs);
         free(m->classes[i]->departs);
         free(m->classes[i]->types);
         free(m->classes[i]->uniques);
@@ -1171,10 +1173,60 @@ static long index_champ(const ClasseVM *c, const char *champ) {
 static char *decrire_valeur_pour_type(const Valeur *v);
 
 /* Typage strict (grammaire, § 16.2) : la valeur convient-elle au type du champ ? NULL si oui, sinon le message. */
-static char *verifier_type_champ(const Machine *m, const char *champ, const char *type, const Valeur *v, int facultatif) {
+/* « « à faire », « en cours » ou « fini » » : la liste des valeurs permises, pour les messages (§ 16.15). */
+static char *lister_valeurs(const char *valeurs) {
+    Chaine c = {0};
+    size_t nb = 1, k = 0;
+    for (const char *p = valeurs; *p; p++) nb += *p == '\x1e';
+    for (const char *p = valeurs; ; k++) {
+        const char *q = strchr(p, '\x1e');
+        if (k) chaine_ajouter(&c, k + 1 == nb ? " ou " : ", ");
+        char *x = q ? grym_formater("« %.*s »", (int)(q - p), p) : grym_formater("« %s »", p);
+        chaine_ajouter(&c, x);
+        free(x);
+        if (!q) break;
+        p = q + 1;
+    }
+    return chaine_rendre(&c);
+}
+
+/* Les valeurs permises, une par case (pour un menu) ; *n reçoit leur nombre. */
+static char **decouper_valeurs(const char *valeurs, size_t *n) {
+    size_t nb = 1;
+    for (const char *p = valeurs; *p; p++) nb += *p == '\x1e';
+    char **r = grym_allouer(nb * sizeof *r);
+    size_t k = 0;
+    for (const char *p = valeurs; p; k++) {
+        const char *q = strchr(p, '\x1e');
+        r[k] = q ? grym_formater("%.*s", (int)(q - p), p) : grym_dupliquer(p);
+        p = q ? q + 1 : NULL;
+    }
+    *n = nb;
+    return r;
+}
+
+static int valeur_permise(const char *valeurs, const char *t) {
+    size_t l = strlen(t);
+    for (const char *p = valeurs; p; ) {
+        const char *q = strchr(p, '\x1e');
+        size_t n = q ? (size_t)(q - p) : strlen(p);
+        if (n == l && strncmp(p, t, l) == 0) return 1;
+        p = q ? q + 1 : NULL;
+    }
+    return 0;
+}
+
+static char *verifier_type_champ(const Machine *m, const char *champ, const char *type, const Valeur *v, int facultatif,
+                                 const char *valeurs) {
     if (v->type == V_ABSENT)
         return facultatif ? NULL : grym_formater("Le champ « %s » n'est pas facultatif : il ne devient pas absent.", champ);
     if (!type) return NULL;
+    if (valeurs && v->type == V_TEXTE && !valeur_permise(valeurs, v->texte ? v->texte : "")) {
+        char *l = lister_valeurs(valeurs);
+        char *r = grym_formater("« %s » n'est pas une valeur permise de « %s » : %s.", v->texte ? v->texte : "", champ, l);
+        free(l);
+        return r;
+    }
     int ok = 0;
     if (strcmp(type, "texte") == 0) ok = v->type == V_TEXTE;
     else if (strcmp(type, "nombre") == 0) ok = v->type == V_NOMBRE;
@@ -1550,7 +1602,7 @@ static int lire_champ(Formulaire *f, size_t q, char **message) {
         pris = lire_reponse(type, t, &v, &relance);
     }
     free(ligne);
-    if (pris) relance = verifier_type_champ(m, champ, type, &v, ci->facultatif);
+    if (pris) relance = verifier_type_champ(m, champ, type, &v, ci->facultatif, cl->valeurs[k]);
     if (pris && !relance && ci->unique && m->base && ci->actuel) {
         char *x = valeur_montree(m, &v, ci->cle);   /* garder sa propre valeur n'est pas un doublon */
         int meme = x && strcmp(x, ci->actuel) == 0;
@@ -1667,6 +1719,17 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
         memset(&c, 0, sizeof c);
         c.libelle = capitale(champ);
         c.type = type;
+        if (cl->valeurs[k]) {   /* valeurs permises (§ 16.15) : un menu complet ; en console, la liste dans la question */
+            c.suggestions = (const char *const *)decouper_valeurs(cl->valeurs[k], &c.nb_suggestions);
+            c.suggestions_completes = 1;
+            if (!m->iface.riche) {
+                char *l = lister_valeurs(cl->valeurs[k]);
+                char *x = grym_formater("%s (%s)", c.libelle, l);
+                free(l);
+                free((char *)c.libelle);
+                c.libelle = x;
+            }
+        }
         c.videable = ci.actuel && ci.facultatif;
         c.facultatif = ci.facultatif;
         if (ci.lie && m->iface.riche && m->base) {   /* un lien : les clés existantes en suggestions (§ 10) */
@@ -1928,7 +1991,14 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].choix = NULL;
             e->elements[k].nb_choix = 0;
             const ClasseVM *lie = classe_vm(m, e->types[k]);
-            if (lie && lie->conserve && m->base) {   /* un menu des clés, comme les formulaires (docs/v2.md, § 10) */
+            if (ce && e->champ[k] >= 0 && ce->valeurs[e->champ[k]]) {   /* valeurs permises : leur menu (§ 16.15) */
+                size_t nv = 0;
+                char **vals = decouper_valeurs(ce->valeurs[e->champ[k]], &nv);
+                e->choix[k] = vals;
+                e->nb_choix[k] = nv;
+                e->elements[k].choix = (const char *const *)vals;
+                e->elements[k].nb_choix = nv;
+            } else if (lie && lie->conserve && m->base) {   /* un menu des clés, comme les formulaires (docs/v2.md, § 10) */
                 const char *cle = champ_cle(lie);
                 long kc = cle ? index_champ(lie, cle) : -1;
                 char **vals = NULL;
@@ -2260,9 +2330,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         char **champs = grym_allouer((total ? total : 1) * sizeof *champs);
         char **types = grym_allouer((total ? total : 1) * sizeof *types);
         char **departs = grym_allouer((total ? total : 1) * sizeof *departs);
+        char **valeurs = grym_allouer((total ? total : 1) * sizeof *valeurs);
+        char **types_libres = grym_allouer((total ? total : 1) * sizeof *types_libres);   /* « texte », découpé */
         unsigned char *uniques = grym_allouer(total ? total : 1);
         size_t n = 0;
+        for (size_t q = 0; q < total; q++) { valeurs[q] = NULL; types_libres[q] = NULL; }
         for (size_t q = 0; parent && q < parent->nb_champs; q++) {
+            valeurs[n] = parent->valeurs[q];
             types[n] = parent->types[q];
             departs[n] = parent->departs[q];
             uniques[n] = parent->uniques[q];
@@ -2271,12 +2345,21 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         for (size_t q = 0; q < cm->nb_aptitudes && !probleme; q++)
             for (size_t r = 0; r < aptitudes[q]->nb_champs; r++) {
                 types[n] = aptitudes[q]->types[r];
+                valeurs[n] = aptitudes[q]->valeurs[r];
                 departs[n] = aptitudes[q]->departs[r];
                 uniques[n] = aptitudes[q]->uniques[r] & 2;   /* une aptitude n'a pas de champ unique */
                 champs[n++] = aptitudes[q]->champs[r];
             }
         for (size_t q = 0; q < cm->nb_champs && !probleme; q++) {
             types[n] = cm->types ? cm->types[q] : NULL;
+            if (types[n] && strchr(types[n], '\x1e')) {   /* « texte␞à faire␞fini » : valeurs permises (§ 16.15) */
+                const char *s = strchr(types[n], '\x1e');
+                types_libres[n] = grym_formater("%.*s", (int)(s - types[n]), types[n]);
+                valeurs[n] = (char *)(s + 1);
+                types[n] = types_libres[n];
+                if (strcmp(types[n], "texte") != 0 || !s[1])
+                    probleme = grym_formater("« %s » : des valeurs permises sur un champ %s.", cm->champs[q], types[n]);
+            }
             departs[n] = cm->departs ? cm->departs[q] : NULL;
             uniques[n] = cm->uniques ? cm->uniques[q] : 0;
             champs[n++] = cm->champs[q];
@@ -2300,6 +2383,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             diag->message = grym_formater("Bytecode invalide : %s", probleme);
             free(probleme);
             free(champs);
+            for (size_t q = 0; q < total; q++) free(types_libres[q]);
+            free(types_libres);
+            free(valeurs);
             free(types);
             free(departs);
             free(uniques);
@@ -2319,13 +2405,18 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         c->champs = grym_allouer((n ? n : 1) * sizeof *c->champs);
         c->types = grym_allouer((n ? n : 1) * sizeof *c->types);
         c->departs = grym_allouer((n ? n : 1) * sizeof *c->departs);
+        c->valeurs = grym_allouer((n ? n : 1) * sizeof *c->valeurs);
         c->uniques = uniques;
         for (size_t q = 0; q < n; q++) {
             c->champs[q] = grym_dupliquer(champs[q]);
             c->types[q] = types[q] ? grym_dupliquer(types[q]) : NULL;
             c->departs[q] = departs[q] ? grym_dupliquer(departs[q]) : NULL;
+            c->valeurs[q] = valeurs[q] ? grym_dupliquer(valeurs[q]) : NULL;
         }
         free(champs);
+        for (size_t q = 0; q < total; q++) free(types_libres[q]);
+        free(types_libres);
+        free(valeurs);
         free(types);
         free(departs);
         /* Table qui porte chaque champ : celle de la classe parente pour un champ hérité, la sienne sinon. */
@@ -3133,7 +3224,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 }
                 if (lu && !refus) {
                     char *mauvais = verifier_type_champ(m, e->objet->classe->champs[e->champ[ev.element]], type, &v,
-                                                        e->elements[ev.element].facultatif);
+                                                        e->elements[ev.element].facultatif,
+                                                        e->objet->classe->valeurs[e->champ[ev.element]]);
                     if (mauvais) { refus = mauvais; valeur_liberer(&v); lu = 0; }
                 }
                 if (probleme) {}
@@ -3393,7 +3485,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 free(qui);
             } else if (v.type == V_ABSENT) {
                 probleme = message_absent(&v);
-            } else if ((probleme = verifier_type_champ(m, champ, ob.objet->classe->types[k], &v, 0)) == NULL) {
+            } else if ((probleme = verifier_type_champ(m, champ, ob.objet->classe->types[k], &v, 0, NULL)) == NULL) {
                 base_gagner(m->base, ob.objet, (size_t)k, &v, code == I_PERDRE, &probleme);
             }
             valeur_liberer(&v);
@@ -3556,7 +3648,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             if (code != I_LIRE_CHAMP) {
                 char *probleme = verifier_type_champ(m, champ, o->classe->types[k], &pile.v[pile.n - 1],
-                                                     (o->classe->uniques[k] & 2) != 0);
+                                                     (o->classe->uniques[k] & 2) != 0, o->classe->valeurs[k]);
                 if (probleme) { ok = echouer(diag, b, debut, probleme); break; }
             }
             if (code == I_LIRE_CHAMP) {

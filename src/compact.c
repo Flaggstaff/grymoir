@@ -905,10 +905,17 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         return;
     }
     if (haut && haut->type == O_CLASSE) {
-        /* _un nom [(type)] [_unique] */
+        /* _un nom [(type)] [_unique] ; _un état (« a » ; « b ») : valeurs permises (§ 16.15) */
         size_t q = d + 2;
         int type = q + 2 < f && r->e[q].type == J_PAR_OUV && r->e[q + 1].type == J_CROCHETS
                    && r->e[q + 2].type == J_PAR_FERM;
+        size_t valeurs = 0, fin_valeurs = 0;
+        if (!type && q + 1 < f && r->e[q].type == J_PAR_OUV && r->e[q + 1].type == J_TEXTE) {
+            fin_valeurs = fermante(r, q, f);
+            if (fin_valeurs == f) { echouer(r, &r->e[q], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+            valeurs = q;
+            q = fin_valeurs + 1;
+        }
         if (type) q += 3;
         int unique = q < f && est_cle(&r->e[q], "unique");
         if (unique) q++;
@@ -941,6 +948,14 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             emettre(r, J_PAR_OUV, NULL, &r->e[d + 2], 1);
             copier(r, &r->e[d + 3]);
             emettre(r, J_PAR_FERM, NULL, &r->e[d + 4], 1);
+        }
+        if (valeurs) {
+            emettre(r, J_PAR_OUV, NULL, &r->e[valeurs], 1);
+            for (size_t v = valeurs + 1; v < fin_valeurs; v++) {
+                if (r->e[v].type == J_POINT_VIRGULE) emettre(r, J_VIRGULE, NULL, &r->e[v], 1);
+                else copier(r, &r->e[v]);
+            }
+            emettre(r, J_PAR_FERM, NULL, &r->e[fin_valeurs], 1);
         }
         if (unique) {
             emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);

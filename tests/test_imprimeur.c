@@ -90,6 +90,9 @@ int main(void) {
     COMP("Le pas vaut 1.\nAfficher l'arrondi de 2,5 au pas vers le haut.", "_le pas << 1\n_afficher _arrondi_haut(2,5 ; pas)\n");
     FIXE("Le nom vaut « a ».\nSi le nom ne contient pas « b » et nom finit par « a », afficher nom en majuscules.\n");
     FIXE("Afficher (« a » suivi de « b ») en minuscules puis « 3 » en nombre + 1.\n");
+    FIXE("Une tâche, conservée, a :\n    un état (« à faire », « en cours » ou « fini »), « à faire » au départ.\n");
+    COMP("Une tâche, conservée, a : un état (« a » ou « b »).",
+         "_classe _une tâche _conservé\n    _un état (« a » ; « b »)\n_fin\n");
     COMP("Le nom vaut « a ».\nAfficher nom ne commence pas par « b ».", "_le nom << « a »\n_afficher _non (nom _commence « b »)\n");
     FIXE("Un membre, conservé, a : un nom (texte), une cotisation (nombre).\nAfficher la moyenne des cotisations des membres conservés puis la plus grande cotisation des membres conservés.\n"
          "Afficher nom du membre conservé à la plus petite cotisation dont le nom est « a ».\n");

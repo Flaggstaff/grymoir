@@ -787,8 +787,60 @@ static int indexer_liens(Base *b, const ClasseVM *c, char **erreur) {
     return ok;
 }
 
+static int base_preparer_table(Base *b, const ClasseVM *c, char **erreur);
+
+/* Valeurs permises (grammaire, § 16.15) : une liste qui perd une valeur encore portée par des objets conservés
+ * (ou dans la corbeille) est refusée ; rien n'est perdu ni changé en silence. */
+static int verifier_valeurs(Base *b, const ClasseVM *c, char **erreur) {
+    for (size_t k = 0; k < c->nb_champs; k++) {
+        if (!c->valeurs || !c->valeurs[k] || c->proprietaires[k] != c) continue;
+        Chaine sql = {0};
+        chaine_ajouter(&sql, "SELECT ");
+        ajouter_nom(&sql, "c ", c->champs[k]);
+        chaine_ajouter(&sql, ", count(*) FROM ");
+        ajouter_nom(&sql, "e ", c->nom);
+        chaine_ajouter(&sql, " WHERE ");
+        ajouter_nom(&sql, "c ", c->champs[k]);
+        chaine_ajouter(&sql, " IS NOT NULL GROUP BY 1 ORDER BY 1");
+        char *t = chaine_rendre(&sql);
+        sqlite3_stmt *st = NULL;
+        int ok = sqlite3_prepare_v2(b->db, t, -1, &st, NULL) == SQLITE_OK;
+        free(t);
+        while (ok && sqlite3_step(st) == SQLITE_ROW) {
+            const char *v = (const char *)sqlite3_column_text(st, 0);
+            long n = (long)sqlite3_column_int64(st, 1);
+            int permise = 0;
+            size_t l = strlen(v ? v : "");
+            for (const char *p = c->valeurs[k]; p && !permise; ) {
+                const char *q = strchr(p, '\x1e');
+                size_t m = q ? (size_t)(q - p) : strlen(p);
+                permise = m == l && strncmp(p, v ? v : "", l) == 0;
+                p = q ? q + 1 : NULL;
+            }
+            if (!permise) {
+                char *pl = c->pluriel ? grym_dupliquer(c->pluriel) : grym_formater("%ss", c->nom);
+                *erreur = grym_formater("« %s » ne permet plus « %s », que %ld %s conservé%s%s encore : remets « %s » "
+                                        "dans la liste, ou change d'abord ces objets.", c->champs[k], v ? v : "", n,
+                                        n > 1 ? pl : c->nom, c->feminin ? "e" : "", n > 1 ? "s portent" : " porte",
+                                        v ? v : "");
+                free(pl);
+                ok = 0;
+                sqlite3_finalize(st);
+                return 0;
+            }
+        }
+        sqlite3_finalize(st);
+    }
+    return 1;
+}
+
 int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
     if (!c->conserve) return 1;
+    if (!base_preparer_table(b, c, erreur)) return 0;
+    return verifier_valeurs(b, c, erreur);
+}
+
+static int base_preparer_table(Base *b, const ClasseVM *c, char **erreur) {
     char *def = definition(c);
     sqlite3_stmt *st = NULL;
     sqlite3_prepare_v2(b->db, "SELECT definition FROM grym_schema WHERE entite = ?", -1, &st, NULL);

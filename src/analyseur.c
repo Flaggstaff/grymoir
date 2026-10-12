@@ -55,6 +55,7 @@ typedef struct {
     char **types;      /* type de chaque champ, ou NULL (classe ordinaire) */
     int *uniques;      /* champ unique */
     int *facultatifs;  /* champ facultatif (§ 16.9) */
+    char **valeurs;    /* valeurs permises d'un champ texte, séparées par U+001E, ou NULL (§ 16.15) */
     size_t nb;
     /* champs multiples (§ 16.13), à part : ils ne se lisent pas comme des valeurs */
     char **multiples;  /* nom au pluriel : « interprètes » */
@@ -138,7 +139,10 @@ static void classe_champs_liberer(Classe *c) {
     for (size_t k = 0; k < c->nb; k++) {
         free(c->champs[k]);
         if (c->types) free(c->types[k]);
+        if (c->valeurs) free(c->valeurs[k]);
     }
+    free(c->valeurs);
+    c->valeurs = NULL;
     free(c->champs);
     free(c->genres);
     free(c->types);
@@ -262,6 +266,11 @@ static void portee_copier(Portee *dst, const Portee *src) {
             if (d->types) d->types[k] = c->types[k] ? grym_dupliquer(c->types[k]) : NULL;
             d->uniques[k] = c->uniques ? c->uniques[k] : 0;
             d->facultatifs[k] = c->facultatifs ? c->facultatifs[k] : 0;
+        }
+        d->valeurs = NULL;
+        if (c->valeurs) {
+            d->valeurs = grym_allouer((c->nb ? c->nb : 1) * sizeof *d->valeurs);
+            for (size_t k = 0; k < c->nb; k++) d->valeurs[k] = c->valeurs[k] ? grym_dupliquer(c->valeurs[k]) : NULL;
         }
         d->nb = c->nb;
         d->nb_multiples = c->nb_multiples;
@@ -461,6 +470,7 @@ typedef struct {
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
     int duree_permise;       /* « par pas de 1 mois » : une durée peut suivre la valeur lue (§ 14.2) */
     int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
+    char *valeurs_lues;      /* « (« à faire », « fini »)» : la liste lue par lire_type, séparée par U+001E (§ 16.15) */
     const char *arrets[3];   /* mots qui peuvent suivre un nom dans le contexte courant (« à », « fois »…) */
     int nb_arrets;
     char **noms_fin;         /* noms visibles au dernier passage à la fin de la source (§ 8) */
@@ -781,7 +791,53 @@ static char *dec_formater_canonique(const char *canonique) {
     return r;
 }
 
+/* Valeurs permises du champ (§ 16.15), si toutes les classes qui le déclarent s'accordent ; NULL sinon. */
+static const char *valeurs_du_champ(Portee *p, const char *champ) {
+    const char *r = NULL;
+    for (size_t i = 0; i < p->nb_classes; i++)
+        for (size_t k = 0; k < p->classes[i].nb; k++) {
+            if (strcmp(p->classes[i].champs[k], champ) != 0) continue;
+            const char *v = p->classes[i].valeurs ? p->classes[i].valeurs[k] : NULL;
+            if (!v || (r && strcmp(r, v) != 0)) return NULL;
+            r = v;
+        }
+    return r;
+}
+
 static int verifier_type(Analyse *a, const char *champ, const char *attendu, const Noeud *v) {
+    if (attendu && strcmp(attendu, "texte") == 0) {   /* « L'état vaut « fermé ». » : vu dès l'analyse (§ 16.15) */
+        const Noeud *x = v;
+        while (x->type == N_GROUPE) x = x->enfants[0];
+        const char *permises = x->type == N_TEXTE ? valeurs_du_champ(a->portee, champ) : NULL;
+        if (permises) {
+            int trouve = 0;
+            for (const char *p = permises; p && !trouve; ) {
+                const char *q = strchr(p, '\x1e');
+                size_t n = q ? (size_t)(q - p) : strlen(p);
+                trouve = strlen(x->texte) == n && strncmp(p, x->texte, n) == 0;
+                p = q ? q + 1 : NULL;
+            }
+            if (!trouve) {
+                Chaine c = {0};
+                size_t nb = 1, k = 0;
+                for (const char *p = permises; *p; p++) nb += *p == '\x1e';
+                for (const char *p = permises; ; k++) {
+                    const char *q = strchr(p, '\x1e');
+                    if (k) chaine_ajouter(&c, k + 1 == nb ? " ou " : ", ");
+                    char *y = q ? grym_formater("« %.*s »", (int)(q - p), p) : grym_formater("« %s »", p);
+                    chaine_ajouter(&c, y);
+                    free(y);
+                    if (!q) break;
+                    p = q + 1;
+                }
+                char *l = chaine_rendre(&c);
+                erreur_a(a, v->ligne, v->colonne, grym_formater("« %s » n'est pas une valeur permise de « %s » : %s.",
+                                                                 x->texte, champ, l));
+                free(l);
+                return 0;
+            }
+        }
+    }
     const char *vu = attendu ? type_statique(v) : NULL;
     if (!vu || strcmp(attendu, vu) == 0) return 1;
     if (strcmp(attendu, "nombre") == 0 && strcmp(vu, "nombre entier") == 0) return 1;
@@ -4115,6 +4171,52 @@ static Noeud *selon(Analyse *a, int colonne) {
 static char *lire_type(Analyse *a, const char *soi) {
     Jeton *ouv = cour(a);
     avancer(a);
+    free(a->valeurs_lues);
+    a->valeurs_lues = NULL;
+    if (cour(a)->type == J_TEXTE) {
+        /* valeurs permises (§ 16.15) : « (« à faire », « en cours » ou « fini ») » ; un champ texte, fermé */
+        Chaine c = {0};
+        size_t nb = 0;
+        for (;;) {
+            Jeton *v = cour(a);
+            if (v->type != J_TEXTE) {
+                free(chaine_rendre(&c));
+                erreur(a, v, grym_dupliquer("Valeur attendue : « (« à faire », « en cours » ou « fini ») »."));
+                return NULL;
+            }
+            if (!v->valeur || !*v->valeur) {
+                free(chaine_rendre(&c));
+                erreur(a, v, grym_dupliquer("Une valeur permise n'est pas vide."));
+                return NULL;
+            }
+            for (const char *p = c.d, *q; p && nb && !a->echec; p = q ? q + 1 : NULL) {
+                q = strchr(p, '\x1e');
+                size_t l = q ? (size_t)(q - p) : strlen(p);
+                if (strlen(v->valeur) == l && strncmp(p, v->valeur, l) == 0)
+                    erreur(a, v, grym_formater("« %s » est déjà dans la liste.", v->valeur));
+            }
+            if (a->echec) { free(chaine_rendre(&c)); return NULL; }
+            if (nb) chaine_ajouter(&c, "\x1e");
+            chaine_ajouter(&c, v->valeur);
+            nb++;
+            avancer(a);
+            if (cour(a)->type == J_VIRGULE || (cour(a)->type == J_POINT_VIRGULE && cour(a)->synthetique)) { avancer(a); continue; }
+            if (est_mot(cour(a), "ou")) {
+                avancer(a);
+                if (cour(a)->type == J_TEXTE) continue;
+            }
+            break;
+        }
+        if (nb < 2 || cour(a)->type != J_PAR_FERM) {
+            free(chaine_rendre(&c));
+            erreur(a, cour(a), grym_dupliquer(nb < 2 ? "Au moins deux valeurs permises : « (« oui », « non ») »."
+                                                     : "Valeurs permises : « (« à faire », « en cours » ou « fini ») »."));
+            return NULL;
+        }
+        avancer(a);
+        a->valeurs_lues = chaine_rendre(&c);
+        return grym_dupliquer("texte");
+    }
     size_t d = a->i, k = d;
     while (a->j[k].type == J_MOT || a->j[k].type == J_CROCHETS || a->j[k].type == J_ELISION) k++;
     if (k == d || a->j[k].type != J_PAR_FERM) {
@@ -4286,6 +4388,7 @@ static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const
             }
             c->texte2 = lire_type(a, soi);
             if (!c->texte2) return 0;
+            if (a->valeurs_lues) { c->texte3 = a->valeurs_lues; a->valeurs_lues = NULL; }   /* valeurs permises (§ 16.15) */
         } else if (mode == 1) {
             erreur(a, cour(a), grym_formater("Type attendu entre parenthèses : « un %s (texte) ».", champ));
             return 0;
@@ -4398,6 +4501,7 @@ static Classe *ajouter_classe(Portee *p, const char *nom, Genre g, const char *p
     c->types = NULL;
     c->uniques = NULL;
     c->facultatifs = NULL;
+    c->valeurs = NULL;
     c->nb = 0;
     c->multiples = c->singuliers = c->types_multiples = NULL;
     c->nb_multiples = 0;
@@ -4426,6 +4530,7 @@ static void classe_remplir(Classe *c, const Noeud *n) {
     c->types = grym_allouer((nb ? nb : 1) * sizeof *c->types);
     c->uniques = grym_allouer((nb ? nb : 1) * sizeof *c->uniques);
     c->facultatifs = grym_allouer((nb ? nb : 1) * sizeof *c->facultatifs);
+    c->valeurs = grym_allouer((nb ? nb : 1) * sizeof *c->valeurs);
     for (size_t q = 0; q < n->nb_enfants; q++) {
         const Noeud *ch = n->enfants[q];
         if (ch->type != N_NOM || ch->forme == 3) continue;
@@ -4434,6 +4539,7 @@ static void classe_remplir(Classe *c, const Noeud *n) {
         c->types[c->nb] = ch->texte2 ? grym_dupliquer(ch->texte2) : NULL;
         c->uniques[c->nb] = ch->op == 'U';
         c->facultatifs[c->nb] = ch->entier & 1;
+        c->valeurs[c->nb] = ch->texte3 ? grym_dupliquer(ch->texte3) : NULL;
         c->nb++;
     }
 }
@@ -5129,6 +5235,13 @@ static void classe_ajouter_zone(Classe *c, const char *nom, Genre g, const char 
     ge[c->nb] = g;
     un[c->nb] = 0;
     fa[c->nb] = facultatif;
+    if (c->valeurs) {   /* une zone d'écran n'a pas de valeurs permises */
+        char **va = grym_allouer(n * sizeof *va);
+        for (size_t k = 0; k < c->nb; k++) va[k] = c->valeurs[k];
+        va[c->nb] = NULL;
+        free(c->valeurs);
+        c->valeurs = va;
+    }
     free(c->champs); free(c->types); free(c->genres); free(c->uniques); free(c->facultatifs);
     c->champs = ch; c->types = ty; c->genres = ge; c->uniques = un; c->facultatifs = fa;
     c->nb = n;
@@ -6269,6 +6382,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.profondeur = 0;
     a.diag = diag;
     a.echec = 0;
+    a.valeurs_lues = NULL;
     a.att_pos = 0;
     a.att = 0;
     a.att_mots = NULL;
@@ -6337,6 +6451,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
         for (size_t k = 0; k < a.att_nb; k++) free(a.att_mots[k]);
         free(a.att_mots);
     }
+    free(a.valeurs_lues);
     liberer_noms_fin(&a);
     free(a.a_completer);
     liberer_jetons(j, n);

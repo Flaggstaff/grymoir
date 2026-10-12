@@ -1549,6 +1549,18 @@ int main(void) {
     PROG(RC "Afficher la plus grand solde des clients conservés.", "~Accord : « le plus grand solde ».");
     PROG(RC "Afficher la moyenne des noms des clients conservés.",
          "~« nom » est un champ texte : « la moyenne des » s'applique à un nombre.");
+    /* Valeurs permises (§ 16.15) */
+    PROG("Une tâche, conservée, a : un titre (texte), un état (« à faire », « en cours » ou « fini »).\n" "Le t vaut une nouvelle tâche :\n    Le titre vaut « a ».\n    L'état vaut « à faire ».\n"
+         "L'état du t devient « en cours ».\nConserver t.\nAfficher état de t puis le nombre de tâches conservées dont "
+         "l'état est « en cours ».", "en cours 1");
+    PROG("Une tâche, conservée, a : un titre (texte), un état (« à faire », « en cours » ou « fini »).\n" "Le e vaut « fermé ».\nLe t vaut une nouvelle tâche :\n    Le titre vaut « a ».\n    L'état vaut e.",
+         "~« fermé » n'est pas une valeur permise de « état » : « à faire », « en cours » ou « fini ».");
+    PROG("Une tâche, conservée, a : un titre (texte), un état (« à faire », « en cours » ou « fini »).\n" "Le t vaut une nouvelle tâche :\n    Le titre vaut « a ».\n    L'état vaut « fermé ».",
+         "ERREUR 4:17 « fermé » n'est pas une valeur permise de « état » : « à faire », « en cours » ou « fini ».");
+    PROG("Une tâche, conservée, a : un titre (texte), un état (« à faire », « en cours » ou « fini »).\n" "Afficher le nombre de tâches conservées dont l'état est « fermée ».",
+         "ERREUR 2:57 « fermée » n'est pas une valeur permise de « état » : « à faire », « en cours » ou « fini ».");
+    PROG("Une tâche, conservée, a : un état (« a »).", "~Au moins deux valeurs permises");
+    PROG("Une tâche, conservée, a : un état (« a », « b », « a »).", "~« a » est déjà dans la liste.");
     PROG(RC "Pour chaque client conservé dont le solde contient « 1 », afficher 1.",
          "~contient, commence par et finit par s'appliquent à un texte");
     PROG(RC "Pour chaque client conservé, par solde décroissant, afficher solde du client.",
@@ -2334,6 +2346,8 @@ int main(void) {
 #define SAISIE(src, att, ...) do { static const char *const L[] = { __VA_ARGS__ }; \
     verifier_saisie(__LINE__, src, L, sizeof L / sizeof *L, att); } while (0)
     SAISIE("Le nom vaut la réponse à « Nom ? ».\nAfficher « Bonjour » puis nom.", "Nom ? Bonjour Ana", "  Ana  ");
+    SAISIE("Une tâche, conservée, a : un titre (texte), un état (« à faire », « en cours » ou « fini »).\n" "Le t vaut une nouvelle tâche saisie.\nAfficher état de t.",
+           "~État (« à faire », « en cours » ou « fini ») ? en cours", "Courses", "fermé", "en cours");
     SAISIE("L'âge vaut la réponse en nombre entier à « Âge ? ».\nAfficher âge + 1.", "Âge ? 34", "33");
     SAISIE("Le x vaut la réponse en nombre à « x ? ».\nAfficher x × 2.", "x ? 2'469,00", "1'234,50");
     SAISIE("Le d vaut la réponse en date à « Né le ? ».\nAfficher d + 1.", "Né le ? 02.02.1990", "01.02.1990");

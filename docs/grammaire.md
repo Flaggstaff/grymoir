@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.60 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.61 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -710,6 +710,7 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `t contient p`, `t commence par p`, `t ne finit pas par p` | `t _inclut p`, `t _commence p`, `_non (t _finit p)` |
 | `la moyenne des soldes des clients conservés`, `le plus grand solde des …` | `_moyenne_de solde _de client _conservé`, `_plus_grand_de …`, `_plus_petit_de …` |
 | `le client conservé au plus grand solde` | `_le client _conservé _au_plus_grand solde` |
+| `un état (« à faire », « en cours » ou « fini »)` | `_un état (« à faire » ; « en cours » ; « fini »)` |
 | `Rendre x.` | `_rendre x` |
 | `Tant que c :` | `_tant_que c` … `_fin` |
 | `Répéter 3 fois :` | `_répéter 3 _fois` … `_fin` |
@@ -1321,6 +1322,21 @@ Chaque ligne conservée vérifie :
 - Une règle ajoutée à une base qui la viole déjà ne dit rien avant la première transaction qui écrit : elle échoue alors, et le message désigne l'objet fautif.
 - En forme compacte, une ligne : `_chaque écriture _conservé _dont comptabilisation _présent _vérifie _somme_de débit _de ligne _de écriture = … _sinon « L'écriture » ; écriture.pièce ; « n'est pas équilibrée. »`.
 
+### 16.15 Valeurs permises
+
+```
+Une tâche, conservée, a :
+    un titre (texte),
+    un état (« à faire », « en cours » ou « fini »), « à faire » au départ.
+```
+
+- À la place du type, une liste de textes entre parenthèses : le champ est un `(texte)` qui n'accepte que ces valeurs. Au moins deux, séparées par des virgules, la dernière par `ou` (ou une virgule) ; ni vide, ni en double : « « a » est déjà dans la liste. »
+- **Typage strict** (§ 16.2). Une écriture hors de la liste est refusée, avec la liste : « « fermé » n'est pas une valeur permise de « état » : « à faire », « en cours » ou « fini ». » Un texte écrit en clair se vérifie dès l'analyse (`L'état vaut « fermé ».`, `dont l'état est « fermée »`) ; une valeur calculée, à l'exécution. La comparaison est exacte : casse et accents comptent.
+- **Saisie.** En console, la question montre la liste : `État (« à faire », « en cours » ou « fini ») ?`, et une réponse hors liste se redemande. Dans le navigateur et l'atelier, un menu (docs/v2.md, § 10) ; dans un écran (§ 22), la zone d'un tel champ devient un menu.
+- **Migrations** (§ 16.7). Ajouter une valeur, en changer l'ordre : permis. Retirer une valeur que des objets portent encore, corbeille comprise : refusé, rien ne change : « « état » ne permet plus « fini », que 1 tâche conservée porte encore : remets « fini » dans la liste, ou change d'abord ces objets. » Passer de `(texte)` à une liste suit la même règle ; d'une liste à `(texte)`, toujours permis.
+- Une liste ne se déclare que sur un champ d'entité ou d'aptitude, comme tout type ; elle n'existe que pour le texte.
+- En forme compacte : `_un état (« à faire » ; « en cours » ; « fini »)`.
+
 ## 17. Questions à l'utilisateur *(v1.0)*
 
 ```
@@ -1621,3 +1637,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.58 | 2026-10-12 | Nouveau § 3.4 : arrondir à un pas (`l'arrondi de x à 0,05`), moitié loin de zéro par défaut, `vers le bas`, `vers le haut`, `au pair` ; exact, vérifié contre `decimal` ; aucun mot réservé. § 3.2 : renvoi |
 | 1.59 | 2026-10-12 | Nouveau § 4.5 : `la longueur de t`, `en majuscules`, `en minuscules`, conversions `en nombre`, `en date`… ; `contient`, `commence par`, `finit par`, sans accents ni casse, aussi dans `dont` ; aucun mot réservé |
 | 1.60 | 2026-10-12 | § 16.4 : `la moyenne des`, `le plus grand … des`, `le plus petit … des` (erreur sur rien, jamais 0) ; `le client conservé au plus grand solde`, l'objet au champ extrême. Impression : « de le » se contracte devant une recherche (`du membre conservé`), qui sortait en « de le » |
+| 1.61 | 2026-10-12 | Nouveau § 16.15 : valeurs permises d'un champ texte, `un état (« à faire », « en cours » ou « fini »)` ; vérifiées à l'analyse et à l'exécution, menu à la saisie, retrait refusé tant qu'un objet porte la valeur |

@@ -726,7 +726,20 @@ static void expression(Impression *im, const Noeud *n) {
 static void type_de_champ(Impression *im, const Noeud *ch) {
     if (!ch->texte2) return;
     aj(im, " (");
-    if (im->compact) ecrire_nom(im, ch->texte2, 0);
+    if (ch->texte3 && ch->forme != 3) {   /* valeurs permises (§ 16.15) : « (« a », « b » ou « c ») » ; « (« a » ; « b » ; « c ») » */
+        size_t nb = 1;
+        for (const char *p = ch->texte3; *p; p++) nb += *p == '\x1e';
+        size_t k = 0;
+        for (const char *p = ch->texte3; ; k++) {
+            const char *q = strchr(p, '\x1e');
+            char *v = q ? grym_formater("%.*s", (int)(q - p), p) : grym_dupliquer(p);
+            if (k) aj(im, im->compact ? " ; " : k + 1 == nb ? " ou " : ", ");
+            ecrire_texte(im, v);
+            free(v);
+            if (!q) break;
+            p = q + 1;
+        }
+    } else if (im->compact) ecrire_nom(im, ch->texte2, 0);
     else aj(im, ch->texte2);   /* « (vrai ou faux) » : un type, pas un nom, jamais entre crochets */
     aj(im, ")");
     if (ch->op == 'U') aj(im, im->compact ? " _unique" : ", unique");

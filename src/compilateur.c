@@ -840,7 +840,11 @@ static void phrase(Compilation *c, const Noeud *ph) {
             if (ch->type == N_TEXTE) classe_ajouter_aptitude(cm, ch->texte);
             else {
                 classe_ajouter_champ(cm, ch->texte);
-                classe_typer_dernier_champ(cm, ch->texte2, ch->op == 'U');
+                if (ch->texte3 && ch->forme != 3 && ch->texte2) {   /* valeurs permises : « texte␞à faire␞fini » (§ 16.15) */
+                    char *t = grym_formater("%s\x1e%s", ch->texte2, ch->texte3);
+                    classe_typer_dernier_champ(cm, t, ch->op == 'U');
+                    free(t);
+                } else classe_typer_dernier_champ(cm, ch->texte2, ch->op == 'U');
                 if (ch->entier & 1) classe_facultatif_dernier_champ(cm);
                 if (ch->entier & 2) classe_cascade_dernier_champ(cm);
                 if (ch->forme == 3) classe_multiple_dernier_champ(cm);   /* champ multiple (§ 16.13) */

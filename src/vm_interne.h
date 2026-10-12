@@ -53,6 +53,7 @@ typedef struct ClasseVM {
     char **champs;        /* champs hérités d'abord, puis champs propres */
     char **types;         /* type de chaque champ (grammaire, § 16.1), ou NULL */
     char **departs;       /* valeur de départ (§ 16.7), forme canonique, ou NULL */
+    char **valeurs;       /* valeurs permises d'un champ texte, séparées par U+001E (§ 16.15), ou NULL */
     const struct ClasseVM **proprietaires;   /* entité dont la table porte le champ (base.c) */
     unsigned char *uniques;   /* bit 1 : unique ; bit 2 : facultatif (§ 16.9) ; bit 4 : disparaît avec (§ 16.12) */
     size_t nb_champs;
