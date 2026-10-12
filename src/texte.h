@@ -17,4 +17,11 @@ char *grym_formater(const char *fmt, ...);
 size_t distance_edition(const char *a, const char *b);
 size_t longueur_utf8(const char *s);    /* en points de code */
 
+/* Textes pour l'utilisateur (grammaire, § 4.5) : lettres latines accentuées du français et des langues voisines. */
+char *texte_plier(const char *s);       /* sans accents ni casse : « Élodie » → « elodie » ; pour comparer */
+char *texte_majuscules(const char *s);  /* « élodie » → « ÉLODIE » */
+char *texte_minuscules(const char *s);  /* « ÉLODIE » → « élodie » */
+/* 'c' contient, 'd' commence par, 'f' finit par, sans tenir compte des accents ni de la casse. */
+int texte_contient(const char *texte, const char *partie, char sens);
+
 #endif

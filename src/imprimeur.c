@@ -278,6 +278,21 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
         }
         return;
     }
+    if (n->op == 'c' || n->op == 'd' || n->op == 'f') {   /* « contient », « commence par », « finit par » (§ 4.5) */
+        if (im->compact) {
+            if (n->negation) aj(im, "_non (");
+            expression(im, sujet);
+            aj(im, n->op == 'c' ? " _inclut " : n->op == 'd' ? " _commence " : " _finit ");
+            expression(im, droite);
+            if (n->negation) aj(im, ")");
+            return;
+        }
+        expression(im, sujet);
+        if (n->negation) aj(im, n->op == 'c' ? " ne contient pas " : n->op == 'd' ? " ne commence pas par " : " ne finit pas par ");
+        else aj(im, n->op == 'c' ? " contient " : n->op == 'd' ? " commence par " : " finit par ");
+        expression(im, droite);
+        return;
+    }
     int adjectif = strchr("PN0VFAR", n->op) != NULL;
     if (im->compact) {
         if (n->forme == 2) { expression(im, droite); return; }            /* cas : une valeur */
@@ -433,6 +448,22 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, im->compact ? " _" : " ");
         aj(im, n->texte);
         return;
+    case N_CONVERSION: {   /* « le nom en majuscules » ; « nom _en_majuscules » (§ 4.5) */
+        const Noeud *x = n->enfants[0];
+        int simple = x->type != N_OPERATION && x->type != N_NEGATION && x->type != N_COLLAGE && x->type != N_CADRE
+                     && x->type != N_COMPARAISON && x->type != N_LOGIQUE && x->type != N_ARRONDI;
+        if (!simple) aj(im, "(");
+        expression(im, x);
+        if (!simple) aj(im, ")");
+        if (im->compact) {
+            aj(im, " _en_");
+            ecrire_nom(im, n->texte2, 0);
+        } else {
+            aj(im, " en ");
+            aj(im, n->texte2);
+        }
+        return;
+    }
     case N_ARRONDI: {   /* « l'arrondi de x à 0,05 vers le bas » ; « _arrondi_bas(x ; 0,05) » (§ 3.4) */
         const char *mode = n->op == 'b' ? "vers le bas" : n->op == 'h' ? "vers le haut" : n->op == 'e' ? "au pair" : NULL;
         if (im->compact) {

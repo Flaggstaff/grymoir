@@ -1282,6 +1282,25 @@ int main(void) {
     PROG("Afficher l'arrondi de 3 à −1.", "ERREUR 1:10 Un arrondi se fait à un pas positif (0,05, 1, 10…), pas à −1.");
     PROG("Afficher l'arrondi de « a » à 1.", "ERREUR 1:10 On n'arrondit qu'un nombre, pas un texte.");
     PROG("Afficher l'arrondi de 2 à « a ».", "ERREUR 1:10 Le pas d'un arrondi est un nombre, pas un texte.");
+    /* Textes (§ 4.5) : longueur, majuscules, conversions, contient */
+    PROG("Le nom vaut « Élodie Müller ».\nAfficher la longueur du nom puis nom en majuscules puis nom en minuscules.",
+         "13 ÉLODIE MÜLLER élodie müller");
+    PROG("Afficher la longueur de « été » puis « œuvre » en majuscules puis la longueur de « ».", "3 ŒUVRE 0");
+    PROG("Le nom vaut « Élodie Müller ».\nSi le nom contient « MUL », afficher « a ».\n"
+         "Si le nom commence par « elo » et nom finit par « ER », afficher « b ».\n"
+         "Si le nom ne contient pas « x », afficher « c ».\nSi le nom ne commence pas par « m », afficher « d ».\n"
+         "Si le nom ne finit pas par « r », afficher « e ».", "a\nb\nc\nd");
+    PROG("Afficher « ŒUVRE » contient « œu » puis « abc » contient « » puis « ab » contient « abc ».", "vrai vrai faux");
+    PROG("Le code vaut « 1'234,50 ».\nAfficher code en nombre + 1 puis « −3 » en nombre entier puis « 21.09.2026 » en date + 1.",
+         "1'235,50 −3 22.09.2026");
+    PROG("Afficher « Oui » en vrai ou faux puis « 1747 » en année puis (« a » suivi de « b ») en majuscules.", "vrai 1747 AB");
+    PROG("Un mur a : une longueur.\nLe m vaut un nouveau mur :\n    La longueur vaut 4.\nAfficher la longueur du m.", "4");
+    PROG("La longueur d'un texte vaut 7.\nAfficher la longueur de « a ».", "7");
+    PROG("Afficher « abc » en nombre.", "ERREUR 1:18 « abc » n'est pas un nombre.");
+    PROG("Afficher « 2,5 » en nombre entier.", "ERREUR 1:18 « 2,5 » n'est pas un nombre entier.");
+    PROG("Afficher « » en date.", "ERREUR 1:14 Un texte vide n'est pas une date.");
+    PROG("Afficher 3 en majuscules.", "ERREUR 1:12 « en majuscules » s'applique à un texte, pas à un nombre.");
+    PROG("Si 3 contient « 3 », afficher 1.", "ERREUR 1:6 « contient » compare deux textes, pas un nombre.");
     PROG("Pour chaque e du 31.01.2026 au 31.05.2026 par pas de 1 mois, afficher e.",
          "31.01.2026\n28.02.2026\n31.03.2026\n30.04.2026\n31.05.2026");
     PROG("Pour chaque e du 31.12.2026 au 31.01.2026 par pas de −3 mois, afficher e.",
@@ -1514,6 +1533,11 @@ int main(void) {
            "Créer « Élodie » et 100,000000000000000001 et oui et 31.12.2025 et 20.\n"
     PROG(RC "Pour chaque client conservé, par nom, afficher nom du client.", "Ana\nBob\nÉlodie\némile\nZoé");
     PROG(RC "Pour chaque client conservé, afficher nom du client.", "Zoé\némile\nAna\nBob\nÉlodie");
+    PROG(RC "Pour chaque client conservé dont le nom contient « E », par nom, afficher nom du client.", "Élodie\némile\nZoé");
+    PROG(RC "Afficher le nombre de clients conservés dont le nom commence par « é » puis le nombre de clients conservés "
+         "dont le nom ne finit pas par « E ».", "2 2");
+    PROG(RC "Pour chaque client conservé dont le solde contient « 1 », afficher 1.",
+         "~contient, commence par et finit par s'appliquent à un texte");
     PROG(RC "Pour chaque client conservé, par solde décroissant, afficher solde du client.",
          "100,000000000000000001\n10\n9\n−3\n−12,50");
     PROG(RC "Pour chaque client conservé dont le solde est négatif et l'actif est vrai, par solde décroissant, "

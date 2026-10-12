@@ -356,6 +356,33 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k = fin;
             continue;
         }
+        if (t->type == J_MOT_CLE && strncmp(t->valeur, "en_", 3) == 0) {
+            /* nom _en_majuscules → nom en majuscules ; code _en_nombre_entier → code en nombre entier (§ 4.5) */
+            static const char *const C[] = { "majuscules", "minuscules", "nombre_entier", "nombre", "date", "année",
+                                             "vrai_ou_faux" };
+            size_t q = 0;
+            while (q < sizeof C / sizeof *C && strcmp(t->valeur + 3, C[q]) != 0) q++;
+            if (q == sizeof C / sizeof *C) {
+                echouer(r, t, grym_formater("« _%s » inconnu : _en_majuscules, _en_minuscules, _en_nombre, "
+                                            "_en_nombre_entier, _en_date, _en_année ou _en_vrai_ou_faux.", t->valeur));
+                return;
+            }
+            mot(r, "en", t);
+            for (const char *p = C[q]; *p; ) {
+                const char *e = strchr(p, '_');
+                char *w = e ? grym_formater("%.*s", (int)(e - p), p) : grym_dupliquer(p);
+                mot(r, w, t);
+                free(w);
+                p = e ? e + 1 : p + strlen(p);
+            }
+            continue;
+        }
+        if (est_cle(t, "inclut") || est_cle(t, "commence") || est_cle(t, "finit")) {
+            /* x _inclut y → x contient y ; _commence, _finit → commence par, finit par (§ 4.5) */
+            mot(r, est_cle(t, "inclut") ? "contient" : t->valeur, t);
+            if (!est_cle(t, "inclut")) mot(r, "par", t);
+            continue;
+        }
         if (est_cle(t, "fichier")) {                /* _fichier « a.jpg » → le fichier « a.jpg » */
             mot(r, "le", t);
             mot(r, "fichier", t);
@@ -414,6 +441,26 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                     if (r->e[q].type == J_PAR_OUV) p++;
                     else if (r->e[q].type == J_PAR_FERM) p--;
                     else if (p == 0 && (est_comparateur(&r->e[q]) || adjectif(&r->e[q]))) { op = q; break; }
+                }
+                if (!op) {   /* _non (nom _inclut « x ») → nom ne contient pas « x » (§ 4.5) */
+                    size_t v = 0;
+                    p = 0;
+                    for (size_t q = k + 2; q < fin && !v; q++) {
+                        if (r->e[q].type == J_PAR_OUV) p++;
+                        else if (r->e[q].type == J_PAR_FERM) p--;
+                        else if (p == 0 && (est_cle(&r->e[q], "inclut") || est_cle(&r->e[q], "commence")
+                                            || est_cle(&r->e[q], "finit"))) v = q;
+                    }
+                    if (v) {
+                        expression(r, k + 2, v);
+                        mot(r, "ne", &r->e[v]);
+                        mot(r, est_cle(&r->e[v], "inclut") ? "contient" : r->e[v].valeur, &r->e[v]);
+                        mot(r, "pas", &r->e[v]);
+                        if (!est_cle(&r->e[v], "inclut")) mot(r, "par", &r->e[v]);
+                        expression(r, v + 1, fin);
+                        k = fin;
+                        continue;
+                    }
                 }
                 if (!op && k + 3 < fin && r->e[k + 2].type == J_CROCHETS && est_cle(&r->e[k + 3], "contient")) {
                     /* _non (genres _contient baroque) → baroque n'est pas parmi les genres (§ 16.13) */

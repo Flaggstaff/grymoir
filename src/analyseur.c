@@ -383,7 +383,8 @@ static int multiple_connu(Portee *p, const char *nom, int singulier, const char 
 
 /* Champs de toute valeur fichier (§ 15.3) : ils ne réservent pas leur nom. */
 static int champ_integre(const char *nom, Genre *g) {
-    if (strcmp(nom, "taille") == 0 || strcmp(nom, "année") == 0) { if (g) *g = GENRE_FEMININ; return 1; }   /* année : d'une date */
+    if (strcmp(nom, "taille") == 0 || strcmp(nom, "année") == 0     /* année : d'une date */
+        || strcmp(nom, "longueur") == 0) { if (g) *g = GENRE_FEMININ; return 1; }   /* longueur : d'un texte (§ 4.5) */
     if (strcmp(nom, "format") == 0 || strcmp(nom, "nom de fichier") == 0) { if (g) *g = GENRE_MASCULIN; return 1; }
     return 0;
 }
@@ -739,6 +740,7 @@ static const char *type_statique(const Noeud *n) {
     case N_COLLAGE: case N_ELISION: return "texte";
     case N_REPONSE: return n->texte2;
     case N_MOTIF: return "texte";
+    case N_CONVERSION: return n->entier <= 1 ? "texte" : n->texte2;
     case N_NOUVEAU: return n->texte;
     case N_GROUPE: case N_NEGATION: return type_statique(n->enfants[0]);
     default: return NULL;
@@ -1309,6 +1311,18 @@ static Noeud *nom_expression(Analyse *a) {
         int arret = 0;
         for (int q = 0; q < a->nb_arrets && fin < f; q++) if (est_mot(&a->j[fin], a->arrets[q])) arret = 1;
         if (fin < f && unite_de(&a->j[fin]) >= 0) arret = 1;   /* « d + n mois » (§ 14.2) */
+        if (fin < f) {                                          /* « nom contient … », « ne commence pas par » (§ 4.5) */
+            size_t v = est_mot(&a->j[fin], "ne") ? fin + 1 : fin;
+            if (v < a->n && (est_mot(&a->j[v], "contient")
+                             || ((est_mot(&a->j[v], "commence") || est_mot(&a->j[v], "finit"))
+                                 && v + 1 < a->n && (est_mot(&a->j[v + 1], "par") || est_mot(&a->j[v + 1], "pas")
+                                                     || a->j[v + 1].type == J_TEXTE))))
+                arret = 1;
+        }
+        if (fin + 1 < f && est_mot(&a->j[fin], "en")) {        /* « nom en majuscules » (§ 4.5) */
+            static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai" };
+            for (size_t q = 0; q < sizeof C / sizeof *C; q++) if (est_mot(&a->j[fin + 1], C[q])) arret = 1;
+        }
         if (!s || (fin < f && s->sorte != S_CALCUL && !arret)) {
             char *tout = cle(a, d, f);
             if (!s && a->formule == 1) {
@@ -1489,6 +1503,8 @@ static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
                 refus = NULL;   /* « est absent », « est présent » : tout champ */
             else if (!t || strcmp(t, "fichier") == 0 || strcmp(t, "image") == 0)
                 refus = "un fichier ne se compare pas";
+            else if ((op == 'c' || op == 'd' || op == 'f') && strcmp(t, "texte") != 0)
+                refus = "contient, commence par et finit par s'appliquent à un texte";
             else if ((op == 'P' || op == 'N' || op == '0') && strcmp(t, "nombre") != 0 && strcmp(t, "nombre entier") != 0)
                 refus = "positif, négatif et nul s'appliquent à un nombre";
             else if ((op == 'V' || op == 'F') && strcmp(t, "vrai ou faux") != 0)
@@ -2099,9 +2115,46 @@ static Noeud *base(Analyse *a) {
     }
 }
 
+/* « le nom en majuscules », « le code en nombre » (§ 4.5) : après une valeur, se lie comme elle. Les cibles, la plus
+ * longue d'abord ; l'index sert d'opérande à l'instruction CONVERTIR. */
+static const char *const CONVERSIONS[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
+                                           "vrai ou faux" };
+#define NB_CONVERSIONS (sizeof CONVERSIONS / sizeof *CONVERSIONS)
+
+static Noeud *conversion(Analyse *a, Noeud *g) {
+    while (g && est_mot(cour(a), "en")) {
+        size_t trouve = NB_CONVERSIONS, mots = 0;
+        for (size_t k = 0; k < NB_CONVERSIONS && trouve == NB_CONVERSIONS; k++) {
+            size_t nb = 1, ok = 1;
+            const char *p = CONVERSIONS[k];
+            for (const char *q = p; *q; q++) nb += *q == ' ';
+            for (size_t w = 0; w < nb && ok; w++) {
+                const char *e = strchr(p, ' ');
+                size_t l = e ? (size_t)(e - p) : strlen(p);
+                const Jeton *j = voir(a, (int)(w + 1));
+                ok = j->type == J_MOT && j->valeur && strlen(j->valeur) == l && strncmp(j->valeur, p, l) == 0;
+                p = e ? e + 1 : p + l;
+            }
+            if (ok) { trouve = k; mots = nb; }
+        }
+        if (trouve == NB_CONVERSIONS) break;
+        Noeud *n = noeud_creer(N_CONVERSION, g->ligne, g->colonne, g->debut);
+        n->texte2 = grym_dupliquer(CONVERSIONS[trouve]);
+        n->entier = (int)trouve;
+        n->op_ligne = cour(a)->ligne;
+        n->op_colonne = cour(a)->colonne;
+        noeud_ajouter(n, g);
+        a->i += mots;
+        n->fin = fin_jeton(cour(a));
+        avancer(a);
+        g = n;
+    }
+    return g;
+}
+
 /* puissance = base [ "^" unaire ]  (associative à droite, § 3.1) */
 static Noeud *puissance(Analyse *a) {
-    Noeud *g = base(a);
+    Noeud *g = conversion(a, base(a));
     if (!g) return NULL;
     attendre(a, A_OP_PUISS);
     if (cour(a)->type != J_PUISSANCE) return g;
@@ -2592,6 +2645,50 @@ static Noeud *comparaison(Analyse *a) {
         n->fin = y->fin;
         return n;
     }
+    {
+        /* « le nom contient « mül » », « commence par », « finit par », « ne contient pas » (§ 4.5) */
+        size_t k = est_mot(t, "ne") ? 1 : 0;
+        const char *tx = type_statique(x);
+        if (tx && strcmp(tx, "texte") == 0) {   /* proposés après un texte seulement : ailleurs, ils encombreraient */
+            attendre_mot(a, a->i, "contient", strlen("contient"));
+            attendre_mot(a, a->i, "commence par", strlen("commence par"));
+            attendre_mot(a, a->i, "finit par", strlen("finit par"));
+        }
+        const Jeton *v = voir(a, (int)k);
+        char sens = est_mot(v, "contient") ? 'c' : est_mot(v, "commence") ? 'd' : est_mot(v, "finit") ? 'f' : 0;
+        if (sens) {
+            size_t q = k + 1;
+            if (k) {
+                attendre_mot(a, a->i + q, "pas", 3);
+                if (!est_mot(voir(a, (int)q), "pas")) {
+                    noeud_liberer(x);
+                    return erreur(a, voir(a, (int)q), grym_formater("« ne %s » doit être suivi de « pas ».", v->valeur));
+                }
+                q++;
+            }
+            if (sens != 'c') {
+                attendre_mot(a, a->i + q, "par", 3);
+                if (!est_mot(voir(a, (int)q), "par")) {
+                    noeud_liberer(x);
+                    return erreur(a, voir(a, (int)q), grym_formater("« %s » se suit de « par » : « %s par « A » ».",
+                                                                     v->valeur, v->valeur));
+                }
+                q++;
+            }
+            a->i += q;
+            Noeud *y = expression(a);
+            if (!y) { noeud_liberer(x); return NULL; }
+            Noeud *n = noeud_creer(N_COMPARAISON, x->ligne, x->colonne, x->debut);
+            n->op = sens;
+            n->negation = (int)k;
+            n->op_ligne = v->ligne;
+            n->op_colonne = v->colonne;
+            noeud_ajouter(n, x);
+            noeud_ajouter(n, y);
+            n->fin = y->fin;
+            return n;
+        }
+    }
     if (est_mot(t, "est")) {
         avancer(a);
         return relation(a, x, 0, t);
@@ -2622,6 +2719,7 @@ static int groupe_logique(Analyse *a) {
                  || t->type == J_DEUX_POINTS) return 0;
         else if (profondeur == 1 &&
                  (est_mot(t, "est") || est_mot(t, "et") || est_mot(t, "ou") || est_mot(t, "vrai")
+                  || est_mot(t, "contient") || est_mot(t, "commence") || est_mot(t, "finit")
                   || est_mot(t, "faux") || (t->type >= J_EGAL && t->type <= J_SUP_EGAL)
                   || (t->type == J_ELISION && strcmp(t->valeur, "n") == 0)))
             return 1;
@@ -2773,7 +2871,9 @@ static Noeud *affichage(Analyse *a) {
         if (est_mot(e, "de") || est_mot(e, "que")) {   /* « puis de nom du c » : élision (§ 4.4) */
             el = coller(a, morceau(a));
             if (!el) { noeud_liberer(n); return NULL; }
-        } else if (e->type == J_TEXTE) {
+        } else if (e->type == J_TEXTE && !est_mot(voir(a, 1), "en") && !est_mot(voir(a, 1), "contient")
+                   && !est_mot(voir(a, 1), "commence") && !est_mot(voir(a, 1), "finit")
+                   && !est_mot(voir(a, 1), "ne")) {   /* « « 3 » en nombre », « « a » contient … » : une expression */
             el = feuille(N_TEXTE, e);
             avancer(a);
             el = coller(a, cadrer(a, el));   /* « « x » sur 3 » (§ 4.2), « « ( » suivi de … » (§ 4.4) */

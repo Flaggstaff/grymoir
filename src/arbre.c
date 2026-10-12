@@ -239,7 +239,8 @@ static void decrire(const Noeud *n, Chaine *c) {
     case N_COMPARAISON: {
         static const struct { char op; const char *nom; } R[] = {
             {'=', "="}, {'!', "≠"}, {'<', "<"}, {'>', ">"}, {'l', "≤"}, {'g', "≥"},
-            {'P', "positif"}, {'N', "négatif"}, {'0', "nul"}, {'V', "vrai"}, {'F', "faux"}, {'A', "absent"}, {'R', "présent"}, {'p', "parmi"}
+            {'P', "positif"}, {'N', "négatif"}, {'0', "nul"}, {'V', "vrai"}, {'F', "faux"}, {'A', "absent"}, {'R', "présent"}, {'p', "parmi"},
+            {'c', "contient"}, {'d', "commence-par"}, {'f', "finit-par"}
         };
         const char *nom = "?";
         for (size_t k = 0; k < sizeof R / sizeof *R; k++) if (R[k].op == n->op) nom = R[k].nom;
@@ -320,6 +321,13 @@ static void decrire(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, " ");
         chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, ")");
+        return;
+    case N_CONVERSION:
+        chaine_ajouter(c, "(en ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        chaine_ajouter(c, n->texte2);
         chaine_ajouter(c, ")");
         return;
     case N_ARRONDI:

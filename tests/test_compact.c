@@ -171,6 +171,13 @@ int main(void) {
                  "Afficher l'arrondi de r à 1 vers le haut puis l'arrondi de r à 1 au pair.\n");
     EXEC("_afficher _arrondi(2,5 ; 1) ; _arrondi_pair(2,5 ; 1) ; _arrondi((1 + 1) × 3 ; 4)\n", "3 2 8\n");
     ERR("_afficher _arrondi(2,5)\n", 1, 11, "« _arrondi » prend deux arguments, la valeur et le pas : _arrondi(x ; 0,05).");
+    /* Textes (§ 4.5) */
+    ALLER_RETOUR("_le n << « Élodie »\n_afficher n.longueur ; n _en_majuscules ; « 3 » _en_nombre_entier + 1\n"
+                 "_si n _inclut « lo » _et _non (n _commence « x ») _alors\n    _afficher n _finit « ie »\n_fin\n",
+                 "Le n vaut « Élodie ».\nAfficher longueur de n puis n en majuscules puis « 3 » en nombre entier + 1.\n"
+                 "Si n contient « lo » et n ne commence pas par « x » :\n    Afficher n finit par « ie ».\n");
+    EXEC("_afficher « éa » _en_majuscules ; « ab » _inclut « B » ; _non (« ab » _finit « b »)\n", "ÉA vrai faux\n");
+    ERR("_afficher « a » _en_rouge\n", 1, 17, "« _en_rouge » inconnu");
     ALLER_RETOUR("_le jour << 01.03.2026\n_si _aujourd'hui > jour _alors\n    _afficher jour − 01.01.2026\n_fin\n",
                  "Le jour vaut 01.03.2026.\nSi aujourd'hui > jour :\n    Afficher jour − 01.01.2026.\n");
 

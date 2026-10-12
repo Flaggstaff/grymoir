@@ -1410,9 +1410,24 @@ static int collation_texte(void *ctx, int na, const void *a, int nb, const void 
     return c ? c : (na > nb) - (na < nb);
 }
 
+/* grym_contient(champ, partie, sens) : « dont le nom contient « mül » », « commence par », « finit par »
+ * (grammaire, § 4.5) ; NULL si le champ est absent, que la condition écarte. */
+static void fonction_contient(sqlite3_context *ctx, int n, sqlite3_value **v) {
+    (void)n;
+    if (sqlite3_value_type(v[0]) == SQLITE_NULL || sqlite3_value_type(v[1]) == SQLITE_NULL) {
+        sqlite3_result_null(ctx);
+        return;
+    }
+    const char *t = (const char *)sqlite3_value_text(v[0]), *p = (const char *)sqlite3_value_text(v[1]);
+    const char *sens = (const char *)sqlite3_value_text(v[2]);
+    sqlite3_result_int(ctx, texte_contient(t ? t : "", p ? p : "", sens ? sens[0] : 'c'));
+}
+
 int base_collations(sqlite3 *db) {
     return sqlite3_create_collation(db, "GRYM_NOMBRE", SQLITE_UTF8, NULL, collation_nombre) == SQLITE_OK
-        && sqlite3_create_collation(db, "GRYM_TEXTE", SQLITE_UTF8, NULL, collation_texte) == SQLITE_OK;
+        && sqlite3_create_collation(db, "GRYM_TEXTE", SQLITE_UTF8, NULL, collation_texte) == SQLITE_OK
+        && sqlite3_create_function(db, "grym_contient", 3, SQLITE_UTF8 | SQLITE_DETERMINISTIC, NULL,
+                                   fonction_contient, NULL, NULL) == SQLITE_OK;
 }
 
 /* ---------------------------------------------------------------- */
@@ -1791,7 +1806,21 @@ static int lire_condition(Recherche *r) {
         const char *sqlop = op == '=' ? " = " : op == '!' ? " <> " : op == '<' ? " < " : op == '>' ? " > "
                           : op == 'l' ? " <= " : op == 'g' ? " >= " : NULL;
         chaine_ajouter(&r->sql, "(");
-        if (op == 'P' || op == 'N' || op == '0') {
+        if (op == 'c' || op == 'd' || op == 'f') {   /* contient, commence par, finit par (§ 4.5) */
+            if (*r->p != '?') { free(expr); r->erreur = grym_dupliquer("paramètre attendu"); return 0; }
+            size_t i = (size_t)strtoul(r->p + 1, (char **)&fin, 10);
+            r->p = fin;
+            if (i < 1 || i > r->nb_params || r->nb_liens == 64) { free(expr); r->erreur = grym_dupliquer("paramètre invalide"); return 0; }
+            char tampon[48];
+            chaine_ajouter(&r->sql, "grym_contient(");
+            chaine_ajouter(&r->sql, expr);
+            snprintf(tampon, sizeof tampon, ", ?%lu, '%c') = 1", (unsigned long)(r->nb_liens + 1), op);
+            chaine_ajouter(&r->sql, tampon);
+            r->liens[r->nb_liens] = i - 1;
+            r->types[r->nb_liens] = t;
+            r->champs[r->nb_liens] = nom_champ;
+            r->nb_liens++;
+        } else if (op == 'P' || op == 'N' || op == '0') {
             const char *o2 = op == 'P' ? " > " : op == 'N' ? " < " : " = ";
             if (entier) { chaine_ajouter(&r->sql, expr); chaine_ajouter(&r->sql, o2); chaine_ajouter(&r->sql, "0"); }
             else { chaine_ajouter(&r->sql, expr); chaine_ajouter(&r->sql, o2); chaine_ajouter(&r->sql, "'0' COLLATE GRYM_NOMBRE"); }

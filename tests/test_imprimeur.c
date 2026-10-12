@@ -88,6 +88,9 @@ int main(void) {
     FIXE("Le prix vaut 3.\nAfficher l'arrondi du prix × 2 à 0,05 vers le bas puis l'arrondi de 2 à (1 + 1) au pair.\n");
     LITT("Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.", "Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.\n");
     COMP("Le pas vaut 1.\nAfficher l'arrondi de 2,5 au pas vers le haut.", "_le pas << 1\n_afficher _arrondi_haut(2,5 ; pas)\n");
+    FIXE("Le nom vaut « a ».\nSi le nom ne contient pas « b » et nom finit par « a », afficher nom en majuscules.\n");
+    FIXE("Afficher (« a » suivi de « b ») en minuscules puis « 3 » en nombre + 1.\n");
+    COMP("Le nom vaut « a ».\nAfficher nom ne commence pas par « b ».", "_le nom << « a »\n_afficher _non (nom _commence « b »)\n");
     FIXE("Le x vaut 0.\nTant que vrai :\n    Le x devient x + 1.\n    Si x = 3, sortir de la boucle.\n"
          "Répéter 2 fois, passer au tour suivant.");
 

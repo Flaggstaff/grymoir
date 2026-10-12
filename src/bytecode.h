@@ -78,11 +78,15 @@ typedef enum {
     I_BASE_MODIFIEE,    /* empile vrai si la transaction en cours a écrit dans la base : avant de revérifier les règles (§ 16.14) */
     I_DECALER,          /* opérande : 0 jours, 1 semaines, 2 mois, 3 années ; dépile n, puis une date (ou une année) ;
                            empile la date n unités plus tard, ramenée au dernier jour du mois (§ 14.2) */
-    I_ARRONDIR          /* opérande : 0 au plus proche, 1 vers le bas, 2 vers le haut, 3 au pair ; dépile le pas, puis
+    I_ARRONDIR,         /* opérande : 0 au plus proche, 1 vers le bas, 2 vers le haut, 3 au pair ; dépile le pas, puis
                            la valeur ; empile la valeur arrondie au multiple du pas (§ 3.4) */
+    I_CONTIENT,         /* opérande : 0 contient, 1 commence par, 2 finit par ; dépile la partie, puis le texte ;
+                           empile vrai ou faux, sans tenir compte des accents ni de la casse (§ 4.5) */
+    I_CONVERTIR         /* opérande : 0 majuscules, 1 minuscules, 2 nombre entier, 3 nombre, 4 date, 5 année,
+                           6 vrai ou faux ; remplace le texte au sommet par sa conversion (§ 4.5) */
 } CodeInstruction;
 
-#define I_DERNIER I_ARRONDIR
+#define I_DERNIER I_CONVERTIR
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

@@ -104,3 +104,69 @@ size_t distance_edition(const char *a, const char *b) {
     }
     return ligne[n];
 }
+
+/* ---------------------------------------------------------------- */
+/* Casse et accents (grammaire, § 4.5)                              */
+/* ---------------------------------------------------------------- */
+
+/* Minuscule, majuscule et lettre de base ; même partage que l'ordre du dictionnaire des recherches (base.c). */
+static const struct { const char *min, *maj; char base; } LETTRES[] = {
+    { "à", "À", 'a' }, { "â", "Â", 'a' }, { "ä", "Ä", 'a' }, { "á", "Á", 'a' }, { "ç", "Ç", 'c' },
+    { "é", "É", 'e' }, { "è", "È", 'e' }, { "ê", "Ê", 'e' }, { "ë", "Ë", 'e' }, { "î", "Î", 'i' },
+    { "ï", "Ï", 'i' }, { "í", "Í", 'i' }, { "ô", "Ô", 'o' }, { "ö", "Ö", 'o' }, { "ó", "Ó", 'o' },
+    { "ù", "Ù", 'u' }, { "û", "Û", 'u' }, { "ü", "Ü", 'u' }, { "ú", "Ú", 'u' }, { "ÿ", "Ÿ", 'y' },
+    { "ñ", "Ñ", 'n' }, { "œ", "Œ", 0 }, { "æ", "Æ", 0 }
+};
+#define NB_LETTRES (sizeof LETTRES / sizeof *LETTRES)
+
+/* sens : 0 minuscules, 1 majuscules, 2 plié */
+static char *transformer(const char *s, int sens) {
+    Chaine c = {0};
+    char un[2] = { 0, 0 };
+    for (const char *p = s; *p; ) {
+        size_t k;
+        for (k = 0; k < NB_LETTRES; k++) {
+            const char *autre = sens == 1 ? LETTRES[k].min : LETTRES[k].maj;   /* la forme à remplacer */
+            size_t lm = strlen(LETTRES[k].min), lM = strlen(LETTRES[k].maj);
+            if (sens == 2) {
+                const char *forme = strncmp(p, LETTRES[k].min, lm) == 0 ? LETTRES[k].min
+                                  : strncmp(p, LETTRES[k].maj, lM) == 0 ? LETTRES[k].maj : NULL;
+                if (!forme) continue;
+                if (LETTRES[k].base) { un[0] = LETTRES[k].base; chaine_ajouter(&c, un); }
+                else chaine_ajouter(&c, LETTRES[k].min);   /* œ, æ : sans lettre de base, minuscule */
+                p += strlen(forme);
+                break;
+            }
+            if (strncmp(p, autre, strlen(autre)) == 0) {
+                chaine_ajouter(&c, sens == 1 ? LETTRES[k].maj : LETTRES[k].min);
+                p += strlen(autre);
+                break;
+            }
+        }
+        if (k < NB_LETTRES) continue;
+        un[0] = *p;
+        if (sens != 1 && *p >= 'A' && *p <= 'Z') un[0] = (char)(*p + 32);
+        if (sens == 1 && *p >= 'a' && *p <= 'z') un[0] = (char)(*p - 32);
+        chaine_ajouter(&c, un);
+        p++;
+    }
+    return chaine_rendre(&c);
+}
+
+char *texte_plier(const char *s) { return transformer(s, 2); }
+char *texte_majuscules(const char *s) { return transformer(s, 1); }
+char *texte_minuscules(const char *s) { return transformer(s, 0); }
+
+int texte_contient(const char *texte, const char *partie, char sens) {
+    char *t = texte_plier(texte), *q = texte_plier(partie);
+    size_t lt = strlen(t), lq = strlen(q);
+    int r = 0;
+    if (lq <= lt) {
+        if (sens == 'd') r = memcmp(t, q, lq) == 0;
+        else if (sens == 'f') r = memcmp(t + lt - lq, q, lq) == 0;
+        else r = strstr(t, q) != NULL;
+    }
+    free(t);
+    free(q);
+    return r;
+}

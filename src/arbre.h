@@ -33,6 +33,9 @@ typedef enum {
     N_DUREE,         /* « 3 mois », seulement à droite d'un « + » ou d'un « − », ou comme pas d'une boucle (§ 14.2) :
                         enfants[0] : le nombre ; op : unité, 'j' jours, 's' semaines, 'm' mois, 'a' années ;
                         texte : le mot écrit (« jour », « ans », « années »…), gardé pour la traduction */
+    N_CONVERSION,    /* « le nom en majuscules », « le code en nombre » (§ 4.5) : enfants[0] la valeur ; texte2 : la cible
+                        (« majuscules », « minuscules », « nombre entier », « nombre », « date », « année »,
+                        « vrai ou faux ») ; entier : son rang, opérande de CONVERTIR */
     N_ARRONDI,       /* « l'arrondi de x à 0,05 vers le bas » (§ 3.4) : enfants[0] la valeur, enfants[1] le pas ;
                         op : 'p' au plus proche, 'b' vers le bas, 'h' vers le haut, 'e' au pair ;
                         forme 1 : article « l' » écrit */
@@ -135,7 +138,8 @@ typedef struct Noeud {
                              N_COMPARAISON : '=', '!' (≠), '<', '>', 'l' (≤), 'g' (≥),
                                              'P' (positif), 'N' (négatif), '0' (nul), 'V' (vrai), 'F' (faux),
                                              'A' (absent), 'R' (présent), 'p' (parmi, § 16.13 : enfants[0] le
-                                             champ multiple, enfants[1] la valeur cherchée) */
+                                             champ multiple, enfants[1] la valeur cherchée),
+                                             'c' (contient), 'd' (commence par), 'f' (finit par) (§ 4.5) */
     int negation;         /* N_COMPARAISON : « n'est pas » */
     int forme;            /* variante d'écriture, conservée pour la traduction sans perte */
     int crochets;         /* N_NOM, P_CREATION, P_MODIFICATION : nom écrit entre crochets */

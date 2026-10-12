@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.58 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.59 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -254,6 +254,26 @@ Afficher « plus ancien » puis que nom du compositeur.            →  plus anc
 - `suivi` devient un mot réservé (§ 2.2).
 - Reporté : joindre une liste (« baroque, canon »), qui attend les listes d'objets (§ 13.8).
 - En forme compacte : `a _suivi b`, `_de x`, `_que x`.
+
+### 4.5 Travailler un texte
+
+```
+Afficher la longueur du nom.                                  →  13 (« Élodie Müller »)
+Afficher le nom en majuscules.                                →  ÉLODIE MÜLLER
+Pour chaque membre conservé dont le nom contient « mül », par nom :
+Si le code commence par « CH », …
+Le prix vaut le texte saisi en nombre.
+```
+
+- `la longueur de t` compte les caractères d'un texte, pas ses octets : `la longueur de « été »` vaut 3. C'est le seul champ d'un texte, comme `année` pour une date (§ 14.5) ; il ne réserve rien : un champ ou un calcul `longueur` déclaré l'emporte.
+- `t en majuscules`, `t en minuscules` rendent un texte. Les lettres accentuées du français et des langues voisines changent avec les autres : `« Müller » en majuscules` donne `MÜLLER`, `« ŒUVRE » en minuscules` donne `œuvre`.
+- `t en nombre`, `en nombre entier`, `en date`, `en année`, `en vrai ou faux` lisent un texte comme une réponse de l'utilisateur (§ 17) : virgule décimale et séparateurs de milliers (§ 1.2), `jour.mois.année` (§ 14.1), `oui`, `non`, `vrai`, `faux`. Les espaces de début et de fin tombent. Un texte qui ne convient pas est une erreur à l'exécution, avec le message de la relance : « « abc » n'est pas un nombre. » ; un texte vide : « Un texte vide n'est pas un nombre. »
+- `en …` suit une valeur et se lie comme elle : `code en nombre + 1` ajoute 1 au nombre lu ; `« a » suivi de b en majuscules` ne met que `b` en majuscules ; `(« a » suivi de b) en majuscules`, les deux. Seul un texte se convertit : « « en majuscules » s'applique à un texte, pas à un nombre. »
+- **Contenir.** `t contient p`, `t commence par p`, `t finit par p`, et leurs négations `ne contient pas`, `ne commence pas par`, `ne finit pas par`, sont des conditions. Elles ne tiennent compte **ni des accents ni de la casse**, comme le tri des recherches (§ 16.4) : `« Élodie Müller » contient « MUL »` est vrai. Un texte contient le texte vide. L'égalité, elle, reste exacte (`=`). Deux textes sont attendus : « « contient » compare deux textes, pas un nombre. »
+- Dans une condition `dont` (§ 16.4), elles s'appliquent à un champ `(texte)` : `dont le nom contient « mül »`, `dont la ville ne commence pas par « b »`. Un champ absent n'est jamais retenu (§ 16.9). Un autre type : « « âge » : contient, commence par et finit par s'appliquent à un texte. »
+- Aucun mot réservé : `contient`, `commence`, `finit` et `en` ne comptent qu'après une valeur, et seulement suivis de ce qu'ils annoncent (`par`, `pas`, un texte, une cible de conversion). L'aide à la saisie (§ 8) propose `contient`, `commence par`, `finit par` après une valeur dont le type texte est connu à l'analyse.
+- Effacer ou remplacer une partie d'un texte, le découper, en extraire un morceau : reportés.
+- En forme compacte : `t.longueur`, `t _en_majuscules`, `t _en_minuscules`, `t _en_nombre`, `t _en_nombre_entier`, `t _en_date`, `t _en_année`, `t _en_vrai_ou_faux` ; `t _inclut p`, `t _commence p`, `t _finit p`, et `_non (t _inclut p)`. `_contient` reste réservé au champ multiple (§ 16.13).
 
 ## 5. Décider
 
@@ -686,6 +706,8 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `Pour relancer un client :` + bloc | `_action relancer(_un client)` + bloc + `_fin` |
 | `Relancer le client.`, `Saluer.` | `relancer(client)`, `saluer()` |
 | `l'arrondi de x à 0,05`, `… vers le bas`, `… vers le haut`, `… au pair` | `_arrondi(x ; 0,05)`, `_arrondi_bas(…)`, `_arrondi_haut(…)`, `_arrondi_pair(…)` |
+| `la longueur de t`, `t en majuscules`, `t en nombre` | `t.longueur`, `t _en_majuscules`, `t _en_nombre` |
+| `t contient p`, `t commence par p`, `t ne finit pas par p` | `t _inclut p`, `t _commence p`, `_non (t _finit p)` |
 | `Rendre x.` | `_rendre x` |
 | `Tant que c :` | `_tant_que c` … `_fin` |
 | `Répéter 3 fois :` | `_répéter 3 _fois` … `_fin` |
@@ -1593,3 +1615,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.56 | 2026-09-29 | § 14.2 : mois, années et semaines (`d + 3 mois`), ramenés au dernier jour du mois ; unités dans les boucles, sans dérive ; vérifiés contre `dateutil` |
 | 1.57 | 2026-09-29 | § 22.3 et § 22.5 : `grym servir` montre les écrans dans le navigateur, avec la couleur et le logo (`docs/web.md`, W1) ; seul `grym lancer` les refuse |
 | 1.58 | 2026-10-12 | Nouveau § 3.4 : arrondir à un pas (`l'arrondi de x à 0,05`), moitié loin de zéro par défaut, `vers le bas`, `vers le haut`, `au pair` ; exact, vérifié contre `decimal` ; aucun mot réservé. § 3.2 : renvoi |
+| 1.59 | 2026-10-12 | Nouveau § 4.5 : `la longueur de t`, `en majuscules`, `en minuscules`, conversions `en nombre`, `en date`… ; `contient`, `commence par`, `finit par`, sans accents ni casse, aussi dans `dont` ; aucun mot réservé |

@@ -3194,6 +3194,62 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
+        case I_CONTIENT: {   /* « le nom contient « mül » » (§ 4.5) */
+            static const char *const VERBES[] = { "contient", "commence par", "finit par" };
+            Valeur vp = depiler(&pile), vt = depiler(&pile);
+            char *probleme = NULL;
+            if (vt.type == V_ABSENT || vp.type == V_ABSENT)
+                probleme = message_absent(vt.type == V_ABSENT ? &vt : &vp);
+            else if (vt.type != V_TEXTE || vp.type != V_TEXTE)
+                probleme = grym_formater("« %s » compare deux textes, pas %s.", VERBES[op < 3 ? op : 0],
+                                         nom_type(vt.type != V_TEXTE ? vt.type : vp.type));
+            int r = probleme ? 0 : texte_contient(vt.texte ? vt.texte : "", vp.texte ? vp.texte : "", "cdf"[op < 3 ? op : 0]);
+            valeur_liberer(&vt);
+            valeur_liberer(&vp);
+            if (probleme) {
+                ok = echouer(diag, b, debut, probleme);
+                break;
+            }
+            empiler(&pile, vi_booleen(r));
+            break;
+        }
+        case I_CONVERTIR: {   /* « le nom en majuscules », « le code en nombre » (§ 4.5) */
+            static const char *const CIBLES[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
+                                                  "vrai ou faux" };
+            static const char *const NOMS[] = { "", "", "un nombre entier", "un nombre", "une date", "une année",
+                                                "vrai ou faux" };
+            Valeur vx = depiler(&pile);
+            char *probleme = NULL;
+            Valeur r = valeur_nombre(dec_zero());
+            if (op > 6) op = 0;
+            if (vx.type == V_ABSENT)
+                probleme = message_absent(&vx);
+            else if (vx.type != V_TEXTE)
+                probleme = grym_formater("« en %s » s'applique à un texte, pas à %s.", CIBLES[op], nom_type(vx.type));
+            else if (op <= 1) {
+                valeur_liberer(&r);
+                char *t = op == 0 ? texte_majuscules(vx.texte ? vx.texte : "") : texte_minuscules(vx.texte ? vx.texte : "");
+                r = vi_texte(t);
+                free(t);
+            } else {
+                const char *s = vx.texte ? vx.texte : "";
+                const char *p = s;
+                while (*p == ' ' || *p == '\t') p++;
+                if (!*p) probleme = grym_formater("Un texte vide n'est pas %s.", NOMS[op]);
+                else {
+                    valeur_liberer(&r);
+                    if (!lire_reponse(CIBLES[op], s, &r, &probleme)) r = valeur_nombre(dec_zero());
+                }
+            }
+            valeur_liberer(&vx);
+            if (probleme) {
+                valeur_liberer(&r);
+                ok = echouer(diag, b, debut, probleme);
+                break;
+            }
+            empiler(&pile, r);
+            break;
+        }
         case I_ARRONDIR: {   /* « l'arrondi de x à 0,05 » (§ 3.4) */
             Valeur vp = depiler(&pile), vx = depiler(&pile);
             char *probleme = NULL;
@@ -3444,6 +3500,18 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                         "Un fichier n'a pas de champ « %s » : taille, format ou nom de fichier.", champ));
                     break;
                 }
+                valeur_liberer(vo);
+                *vo = r;
+                break;
+            }
+            if (vo->type == V_TEXTE) {   /* « la longueur du nom » : le seul champ d'un texte (§ 4.5) */
+                if (code != I_LIRE_CHAMP || strcmp(champ, "longueur") != 0) {
+                    ok = echouer(diag, b, debut, code != I_LIRE_CHAMP
+                        ? grym_formater("Un texte ne se modifie pas : « %s ».", champ)
+                        : grym_formater("Un texte n'a pas de champ « %s » : seulement « longueur ».", champ));
+                    break;
+                }
+                Valeur r = valeur_nombre(dec_depuis_long((long)longueur_utf8(vo->texte ? vo->texte : "")));
                 valeur_liberer(vo);
                 *vo = r;
                 break;

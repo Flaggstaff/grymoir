@@ -505,6 +505,13 @@ int main(void) {
     V("Le r vaut l'arrondi de 2 à 1 au pair.", "(créer [r] (arrondi-pair 2 1))");
     VE("Le r vaut l'arrondi de 3.", 1, 25, "L'arrondi se fait à un pas : « l'arrondi de x à 0,05 », « l'arrondi de x à 1 ».");
     VE("Le prix vaut 3.\nLe r vaut l'arrondi de le prix à 1.", 2, 21, "« de le » s'écrit « du ».");
+    /* Textes (§ 4.5) */
+    V("Le n vaut « a ».\nLe r vaut n en majuscules suivi de « b ».", "(créer [n] «a»)\n(créer [r] (suivi (en [n] majuscules) «b»))");
+    V("Le n vaut « a ».\nLe r vaut n contient « b » et n ne commence pas par « c ».",
+      "(créer [n] «a»)\n(créer [r] (et (contient [n] «b») (non (commence-par [n] «c»))))");
+    V("Le r vaut « 3 » en nombre entier + la longueur de « ab ».", "(créer [r] (+ (en «3» nombre entier) (champ [longueur] «ab»)))");
+    VE("Le n vaut « a ».\nLe r vaut n commence « b ».", 2, 22, "« commence » se suit de « par » : « commence par « A » ».");
+    VE("Le n vaut « a ».\nLe r vaut n ne contient « b ».", 2, 25, "« ne contient » doit être suivi de « pas ».");
     VE("Le jour vaut 21.09.2026 + 12'000 jour.", 1, 34, "Accord : « 12'000 jours ».");
     VE("Le délai vaut 3 mois.", 1, 17, "Une durée ne se range pas seule");
     VE("Le délai vaut 3 mois + 21.09.2026.", 1, 17, "Une durée ne se range pas seule");

@@ -126,6 +126,12 @@ static void comparaison(Compilation *c, const Noeud *n) {
     int l = n->op_ligne, col = n->op_colonne;
     expression(c, n->enfants[0]);
     CodeInstruction code;
+    if (n->op == 'c' || n->op == 'd' || n->op == 'f') {   /* contient, commence par, finit par (§ 4.5) */
+        expression(c, n->enfants[1]);
+        emettre(c, I_CONTIENT, n->op == 'c' ? 0 : n->op == 'd' ? 1 : 2, l, col);
+        if (n->negation) emettre(c, I_NON, 0, l, col);
+        return;
+    }
     if (n->op == 'A' || n->op == 'R') {   /* est absent, est présent (§ 16.9) */
         emettre(c, I_EST_ABSENT, 0, l, col);
         if ((n->op == 'R') != (n->negation != 0)) emettre(c, I_NON, 0, l, col);
@@ -333,6 +339,10 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_LIRE_CHAMP, ch, n->op_ligne, n->op_colonne);
         return;
     }
+    case N_CONVERSION:   /* la valeur, puis CONVERTIR vers la cible (§ 4.5) */
+        expression(c, n->enfants[0]);
+        emettre(c, I_CONVERTIR, (long)n->entier, n->op_ligne, n->op_colonne);
+        return;
     case N_ARRONDI:   /* la valeur, le pas, puis ARRONDIR avec le sens (§ 3.4) */
         expression(c, n->enfants[0]);
         expression(c, n->enfants[1]);
