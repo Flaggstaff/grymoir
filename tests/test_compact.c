@@ -175,6 +175,8 @@ int main(void) {
                  "Le n vaut 10.\nAfficher le reste de n × 2 par 3 puis valeur absolue de (n − 20) puis partie entière de (−2,7).\n");
     EXEC("_afficher _reste(−7 ; 3) ; _reste((1 + 9) ; 4)\n", "−1 2\n");
     ERR("_afficher _reste(7)\n", 1, 11, "« _reste » prend deux arguments, le dividende et le diviseur : _reste(17 ; 5).");
+    ALLER_RETOUR("_classe _un membre _conservé\n    _un nom (texte)\n_fin\n"
+                 "_exporter membre _conservé _dont nom = « a » _par nom _avec nom _dans « m.csv »\n", NULL);
     /* Textes (§ 4.5) */
     ALLER_RETOUR("_le n << « Élodie »\n_afficher n.longueur ; n _en_majuscules ; « 3 » _en_nombre_entier + 1\n"
                  "_si n _inclut « lo » _et _non (n _commence « x ») _alors\n    _afficher n _finit « ie »\n_fin\n",

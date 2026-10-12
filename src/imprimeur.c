@@ -1513,6 +1513,59 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         if (n->type == P_SUPPRIMER && n->entier == 1) aj(im, c ? " _définitivement" : " définitivement");
         aj(im, c ? "\n" : ".\n");
         return;
+    case P_EXPORTER: {   /* « Exporter les œuvres conservées …, avec …, dans « m.csv ». » (§ 15.4) */
+        const Noeud *el = n->enfants[0];
+        int fem = genre_de_nom(im, el->texte) == G_FEMININ;
+        if (c) {
+            aj(im, "_exporter ");
+            ecrire_nom(im, el->texte, 0);
+            aj(im, el->negation ? " _supprimé" : " _conservé");
+        } else {
+            const char *pl = NULL;
+            for (size_t q = 0; q < im->nb_pluriels && !pl; q++)
+                if (strcmp(im->pluriels[q].feminin, el->texte) == 0) pl = im->pluriels[q].masculin;
+            char *x = pl ? grym_dupliquer(pl) : grym_formater("%ss", el->texte);
+            aj(im, "Exporter les ");
+            aj(im, x);
+            free(x);
+            aj(im, el->negation ? (fem ? " supprimées" : " supprimés") : fem ? " conservées" : " conservés");
+        }
+        expression(im, el);   /* « dont … » et « , par … » */
+        if (el->texte3) {
+            aj(im, c ? " _avec " : ", avec ");
+            size_t nb = 1, i = 0;
+            for (const char *q = el->texte3; *q; q++) nb += *q == '\x1e';
+            for (const char *q = el->texte3; *q; i++) {
+                const char *fin = strchr(q, '\x1e');
+                if (!fin) fin = q + strlen(q);
+                const char *sep = memchr(q, '\x1d', (size_t)(fin - q));
+                if (c) {   /* « titre ; compositeur.nom » */
+                    if (i) aj(im, " ; ");
+                    const char *chemin = sep ? sep + 1 : q;
+                    for (const char *p = chemin; p < fin;) {
+                        const char *f2 = memchr(p, '\x1f', (size_t)(fin - p));
+                        if (!f2) f2 = fin;
+                        char *seg = grym_formater("%.*s", (int)(f2 - p), p);
+                        if (p != chemin) aj(im, ".");
+                        ecrire_nom(im, seg, 0);
+                        free(seg);
+                        p = f2 < fin ? f2 + 1 : fin;
+                    }
+                } else {
+                    if (i) aj(im, i + 1 == nb ? " et " : ", ");
+                    char *ecrit = grym_formater("%.*s", (int)((sep ? sep : fin) - q), q);
+                    aj(im, ecrit);
+                    free(ecrit);
+                }
+                q = *fin ? fin + 1 : fin;
+            }
+            if (!c) aj(im, ",");
+        }
+        aj(im, c ? " _dans " : " dans ");
+        expression(im, n->enfants[1]);
+        aj(im, c ? "\n" : ".\n");
+        return;
+    }
     case P_ENREGISTRER:
         aj(im, c ? "_enregistrer " : "Enregistrer ");
         expression(im, n->enfants[0]);

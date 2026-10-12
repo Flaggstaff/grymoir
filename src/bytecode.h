@@ -84,10 +84,12 @@ typedef enum {
                            empile vrai ou faux, sans tenir compte des accents ni de la casse (§ 4.5) */
     I_CONVERTIR,        /* opérande : 0 majuscules, 1 minuscules, 2 nombre entier, 3 nombre, 4 date, 5 année,
                            6 vrai ou faux ; remplace le texte au sommet par sa conversion (§ 4.5) */
-    I_RESTE             /* dépile le diviseur, puis le dividende ; empile le reste, du signe du dividende (§ 3.5) */
+    I_RESTE,            /* dépile le diviseur, puis le dividende ; empile le reste, du signe du dividende (§ 3.5) */
+    I_EXPORTER          /* opérande : constante texte « entité ␛ colonnes » ; dépile le chemin, puis la liste ; prépare le
+                           tableau CSV, écrit avec les fichiers à la fin de l'exécution (§ 15.4) */
 } CodeInstruction;
 
-#define I_DERNIER I_RESTE
+#define I_DERNIER I_EXPORTER
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

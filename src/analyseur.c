@@ -6043,6 +6043,89 @@ static Noeud *utiliser(Analyse *a, const Jeton *t) {
     return n;
 }
 
+/* « Exporter les membres conservés [dont …] [, par nom [décroissant]] [, avec le nom, le prénom et la cotisation]
+ * dans « membres.csv ». » (§ 15.4) : un tableau, écrit à la fin de l'exécution réussie, jamais par-dessus un fichier. */
+static Noeud *exporter(Analyse *a, const Jeton *t) {
+    if (a->formule == 1)
+        return erreur(a, t, grym_dupliquer("Un calcul n'écrit pas sur le disque : exporte dans une action."));
+    avancer(a);
+    const Jeton *tl = cour(a);
+    size_t apres;
+    Classe *c = est_mot(tl, "les") ? entite_conservee(a, a->i + 1, 1, &apres) : NULL;
+    if (!c) {
+        if (!a->echec) erreur(a, tl, grym_dupliquer("Objets à exporter attendus : « Exporter les membres conservés dans "
+                                                    "« membres.csv ». »"));
+        return NULL;
+    }
+    Noeud *el = chercher(a, tl, c, 0, apres, NULL);
+    if (!el) return NULL;
+    if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "par")) {   /* « , par nom [décroissant] » */
+        a->i += 2;
+        size_t dd = a->i, k = dd;
+        if (a->j[k].type == J_CROCHETS) k++;
+        else while (mot_de_nom(a, k) && !est_mot(&a->j[k], "décroissant") && !est_mot(&a->j[k], "croissant")
+                    && !est_mot(&a->j[k], "dans")) k++;
+        if (k > dd && article_de(&a->j[dd]) != ART_AUCUN) dd++;
+        char *champ = k > dd ? (a->j[dd].type == J_CROCHETS ? grym_dupliquer(a->j[dd].valeur) : cle(a, dd, k)) : NULL;
+        const char *type = champ ? type_du_champ(a->portee, c, champ) : NULL;
+        if (!type || strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0 || !type_de_base(type)) {
+            free(champ);
+            noeud_liberer(el);
+            return erreur(a, &a->j[dd], grym_dupliquer("Tri attendu sur un champ de texte, de nombre, de date ou vrai ou "
+                                                       "faux : « , par nom »."));
+        }
+        el->texte2 = champ;
+        a->i = k;
+        if (est_mot(cour(a), "décroissant")) { el->entier = 1; avancer(a); }
+        else if (est_mot(cour(a), "croissant")) avancer(a);
+    }
+    if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec")) {   /* les colonnes, comme une liste d'écran (§ 22.1) */
+        a->i += 2;
+        Chaine cols = {0};
+        for (int premiere = 1;; premiere = 0) {
+            size_t d = a->i, k = d;
+            while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_POINT && a->j[k].type != J_FIN
+                   && !est_mot(&a->j[k], "et") && !est_mot(&a->j[k], "dans")) k++;
+            char *chemin = chemin_colonne(a, d, k, c);
+            if (!chemin) {
+                char *x = k > d ? nom_ecran(a, d, k) : grym_dupliquer("");
+                erreur(a, &a->j[d], grym_formater("Colonne « %s » : un champ de « %s », ou le champ d'un objet qu'il "
+                                                 "désigne (« la naissance du compositeur »).", x, c->nom));
+                free(x);
+                break;
+            }
+            char *ecrit = nom_ecran(a, d, k);
+            if (!premiere) chaine_ajouter(&cols, "\x1e");
+            chaine_ajouter(&cols, ecrit);
+            chaine_ajouter(&cols, "\x1d");
+            chaine_ajouter(&cols, chemin);
+            free(ecrit);
+            free(chemin);
+            a->i = k;
+            if (est_mot(cour(a), "et")) { avancer(a); continue; }
+            if (cour(a)->type == J_VIRGULE && !est_mot(voir(a, 1), "dans")) { avancer(a); continue; }
+            break;
+        }
+        if (a->echec) { free(chaine_rendre(&cols)); noeud_liberer(el); return NULL; }
+        el->texte3 = chaine_rendre(&cols);
+    }
+    if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "dans")) avancer(a);
+    attendre_mot(a, a->i, "dans", 4);
+    if (!est_mot(cour(a), "dans")) {
+        noeud_liberer(el);
+        return erreur(a, cour(a), grym_dupliquer("Fichier attendu : « … dans « membres.csv ». »"));
+    }
+    avancer(a);
+    Noeud *chemin = valeur(a);
+    if (!chemin) { noeud_liberer(el); return NULL; }
+    if (!fin_phrase(a, 0)) { noeud_liberer(el); noeud_liberer(chemin); return NULL; }
+    Noeud *n = noeud_creer(P_EXPORTER, t->ligne, t->colonne, t->debut);
+    noeud_ajouter(n, el);
+    noeud_ajouter(n, chemin);
+    n->fin = chemin->fin;
+    return n;
+}
+
 static Noeud *phrase(Analyse *a, int colonne) {
     Jeton *t = cour(a);
     attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0) | (a->boucle ? A_BOUCLE : 0));
@@ -6105,6 +6188,12 @@ static Noeud *phrase(Analyse *a, int colonne) {
     }
     if (est_mot(t, "effacer"))
         return erreur(a, t, grym_dupliquer("Écris « Effacer l'écran. »."));
+    if (est_mot(t, "exporter") && est_mot(voir(a, 1), "les")) {   /* sans réserver « exporter » : suivi d'une entité */
+        size_t apres;
+        int ok = entite_conservee(a, a->i + 2, 1, &apres) != NULL;
+        if (a->echec) return NULL;
+        if (ok) return exporter(a, t);
+    }
     if (est_mot(t, "enregistrer")) {
         /* « Enregistrer … dans « chemin ». » (§ 15.2) */
         if (a->formule == 1)

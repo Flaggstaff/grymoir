@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     Noeud *n = grym_allouer(sizeof *n);
@@ -393,6 +394,29 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, "(champ-dont [");
         chaine_ajouter(c, n->texte);
         chaine_ajouter(c, "])");
+        return;
+    case P_EXPORTER:
+        chaine_ajouter(c, "(exporter ");
+        decrire(n->enfants[0], c);
+        if (n->enfants[0]->texte3) {
+            chaine_ajouter(c, " (avec");
+            for (const char *q = n->enfants[0]->texte3; *q;) {
+                const char *fin = strchr(q, '\x1e');
+                if (!fin) fin = q + strlen(q);
+                const char *sep = memchr(q, '\x1d', (size_t)(fin - q));
+                chaine_ajouter(c, " [");
+                for (const char *p = sep ? sep + 1 : q; p < fin; p++) {
+                    char x[2] = { *p == '\x1f' ? '.' : *p, 0 };
+                    chaine_ajouter(c, x);
+                }
+                chaine_ajouter(c, "]");
+                q = *fin ? fin + 1 : fin;
+            }
+            chaine_ajouter(c, ")");
+        }
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
         return;
     case N_CHERCHER:
         if (n->forme >= 3 && n->forme <= 6) {   /* (somme-conservés [prix] des [pupitre] …), moyenne, plus-grand… (§ 16.4) */

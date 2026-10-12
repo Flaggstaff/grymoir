@@ -2087,6 +2087,147 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
 
 /* Les cellules d'une liste, ligne par ligne : chaque objet est lu, un lien montre la clé de l'objet désigné,
  * un champ absent reste vide (§ 22.1). */
+/* Un fichier à écrire à la fin de l'exécution réussie (§ 15.2) : jamais par-dessus un fichier existant, jamais deux
+ * fois le même chemin. NULL si accepté (le fichier passe à l'écriture), sinon le message. */
+static char *planifier_ecriture(Machine *m, const char *ecrit, Fichier *f) {
+    char *chemin = chemin_effectif(m, ecrit);
+    char *probleme = NULL;
+    FILE *existe = grym_fopen(chemin, "rb");
+    if (existe) {
+        fclose(existe);
+        probleme = grym_formater("« %s » existe déjà : il n'est jamais écrasé.", ecrit);
+    }
+    for (size_t k = 0; k < m->nb_a_ecrire && !probleme; k++)
+        if (strcmp(m->a_ecrire[k].chemin, chemin) == 0)
+            probleme = grym_formater("« %s » est déjà enregistré par cette exécution.", ecrit);
+    if (probleme) { free(chemin); return probleme; }
+    Ecriture_disque *t = grym_allouer((m->nb_a_ecrire + 1) * sizeof *t);
+    if (m->nb_a_ecrire) memcpy(t, m->a_ecrire, m->nb_a_ecrire * sizeof *t);
+    free(m->a_ecrire);
+    m->a_ecrire = t;
+    t[m->nb_a_ecrire].chemin = chemin;
+    t[m->nb_a_ecrire].ecrit = grym_dupliquer(ecrit);
+    t[m->nb_a_ecrire].fichier = f;
+    m->nb_a_ecrire++;
+    return NULL;
+}
+
+/* La valeur d'une cellule de tableau (§ 15.4) : un nombre en forme canonique à virgule, sans séparateur de milliers ;
+ * une date jour.mois.année ; vrai, faux ; un lien par sa clé ; absent : vide. */
+static char *cellule_csv(Machine *m, const Valeur *v) {
+    if (v->type == V_NOMBRE) {
+        char *x = dec_canonique(&v->nombre);
+        for (char *p = x; *p; p++) if (*p == '.') *p = ',';
+        return x;
+    }
+    if (v->type == V_BOOLEEN) return grym_dupliquer(v->vrai ? "vrai" : "faux");
+    if (v->type == V_OBJET) return nom_objet(m, v->objet);
+    if (v->type == V_FICHIER) return grym_dupliquer(v->fichier->nom ? v->fichier->nom : "");
+    return texte_valeur(m, v);
+}
+
+/* RFC 4180 : entre guillemets si la cellule contient le séparateur, un guillemet, un retour à la ligne ou une espace
+ * au bord ; le guillemet se double. */
+static void ajouter_cellule(Chaine *c, const char *t) {
+    size_t l = strlen(t);
+    int citer = l && (t[0] == ' ' || t[l - 1] == ' ');
+    for (const char *p = t; *p && !citer; p++) citer = *p == ';' || *p == '"' || *p == '\n' || *p == '\r';
+    if (!citer) { chaine_ajouter(c, t); return; }
+    chaine_ajouter(c, "\"");
+    char un[2] = { 0, 0 };
+    for (const char *p = t; *p; p++) {
+        if (*p == '"') chaine_ajouter(c, "\"");
+        un[0] = *p;
+        chaine_ajouter(c, un);
+    }
+    chaine_ajouter(c, "\"");
+}
+
+/* Le tableau d'un export (§ 15.4) : « entité ␛ écrit ␝ a ␟ b ␞ … » ; sans colonnes, tous les champs simples de
+ * l'entité. UTF-8 avec marque d'ordre (pour les tableurs), séparateur « ; », lignes CRLF. */
+static char *tableau_csv(Machine *m, const char *descripteur, const Valeur *l, Fichier *f) {
+    const char *esc = strchr(descripteur, '\x1b');
+    if (!esc) return grym_dupliquer("Export invalide.");
+    char *entite = grym_formater("%.*s", (int)(esc - descripteur), descripteur);
+    const ClasseVM *e = classe_vm(m, entite);
+    free(entite);
+    if (!e) return grym_dupliquer("Export invalide : entité inconnue.");
+    size_t nc = 0;
+    char **titres = NULL, **chemins = NULL;
+    if (esc[1]) {
+        for (const char *q = esc + 1; *q; ) {
+            const char *fin = strchr(q, '\x1e');
+            if (!fin) fin = q + strlen(q);
+            const char *sep = memchr(q, '\x1d', (size_t)(fin - q));
+            titres = realloc(titres, (nc + 1) * sizeof *titres);
+            chemins = realloc(chemins, (nc + 1) * sizeof *chemins);
+            const char *t = q, *tf = sep ? sep : fin;
+            /* le titre : tel qu'écrit, sans l'article du début (« le nom » → « Nom ») */
+            if ((size_t)(tf - t) > 3 && (strncmp(t, "le ", 3) == 0 || strncmp(t, "la ", 3) == 0)) t += 3;
+            else if ((size_t)(tf - t) > 4 && strncmp(t, "les ", 4) == 0) t += 4;
+            else if ((size_t)(tf - t) > 2 && strncmp(t, "l'", 2) == 0) t += 2;
+            char *brut = grym_formater("%.*s", (int)(tf - t), t);
+            titres[nc] = capitale(brut);
+            free(brut);
+            chemins[nc] = sep ? grym_formater("%.*s", (int)(fin - sep - 1), sep + 1) : grym_dupliquer("");
+            nc++;
+            q = *fin ? fin + 1 : fin;
+        }
+    } else {
+        for (size_t k = 0; k < e->nb_champs; k++) {
+            if ((e->uniques[k] & 8) || !e->types[k] || strcmp(e->types[k], "fichier") == 0 || strcmp(e->types[k], "image") == 0)
+                continue;
+            titres = realloc(titres, (nc + 1) * sizeof *titres);
+            chemins = realloc(chemins, (nc + 1) * sizeof *chemins);
+            titres[nc] = capitale(e->champs[k]);
+            chemins[nc] = grym_dupliquer(e->champs[k]);
+            nc++;
+        }
+    }
+    Chaine c = {0};
+    chaine_ajouter(&c, "\xEF\xBB\xBF");   /* marque d'ordre : les tableurs lisent alors l'UTF-8 */
+    for (size_t k = 0; k < nc; k++) {
+        if (k) chaine_ajouter(&c, ";");
+        ajouter_cellule(&c, titres[k]);
+    }
+    chaine_ajouter(&c, "\r\n");
+    char *erreur = NULL;
+    for (size_t r = 0; r < l->liste->n && !erreur; r++) {
+        Objet *o = machine_objet_en_base(m, l->liste->ids[r], l->liste->classes[r], &erreur);
+        if (!o || (o->id && !charger(m, o, &erreur))) break;
+        for (size_t k = 0; k < nc && !erreur; k++) {
+            Objet *x = o;
+            long q = -1;
+            for (const char *p = chemins[k];;) {   /* « compositeur␟naissance » : suivre les liens (§ 22.1) */
+                const char *fin = strchr(p, '\x1f');
+                char *champ = grym_formater("%.*s", (int)(fin ? fin - p : (long)strlen(p)), p);
+                q = x ? index_champ(x->classe, champ) : -1;
+                free(champ);
+                if (!fin || q < 0) break;
+                if (!x->definis[q] || x->champs[q].type != V_OBJET) { x = NULL; break; }
+                x = x->champs[q].objet;
+                if (x->id && !charger(m, x, &erreur)) { x = NULL; break; }
+                p = fin + 1;
+            }
+            if (k) chaine_ajouter(&c, ";");
+            if (x && q >= 0 && (size_t)q < x->classe->nb_champs && x->definis[q] && x->champs[q].type != V_ABSENT) {
+                char *t = cellule_csv(m, &x->champs[q]);
+                ajouter_cellule(&c, t);
+                free(t);
+            }
+        }
+        chaine_ajouter(&c, "\r\n");
+    }
+    for (size_t k = 0; k < nc; k++) { free(titres[k]); free(chemins[k]); }
+    free(titres);
+    free(chemins);
+    char *t = chaine_rendre(&c);
+    if (erreur) { free(t); return erreur; }
+    f->taille = strlen(t);
+    f->octets = (unsigned char *)t;
+    return NULL;
+}
+
 static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
     char *erreur = NULL;
     const size_t nc = e->nb_colonnes[k], nl = l->liste->n;
@@ -2968,35 +3109,33 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             else if (c.type != V_TEXTE) probleme = grym_formater("Le chemin d'un fichier est un texte, pas %s.",
                                                                   nom_type(c.type));
             else if (!*c.texte) probleme = grym_dupliquer("Chemin de fichier vide.");
-            char *chemin = probleme ? NULL : chemin_effectif(m, c.texte);
-            if (chemin) {
-                FILE *existe = grym_fopen(chemin, "rb");
-                if (existe) {
-                    fclose(existe);
-                    probleme = grym_formater("« %s » existe déjà : il n'est jamais écrasé.", c.texte);
-                }
-                for (size_t k = 0; k < m->nb_a_ecrire && !probleme; k++)
-                    if (strcmp(m->a_ecrire[k].chemin, chemin) == 0)
-                        probleme = grym_formater("« %s » est déjà enregistré par cette exécution.", c.texte);
-            }
-            if (probleme) {
-                free(chemin);
-                valeur_liberer(&c);
-                valeur_liberer(&v);
-                ok = echouer(diag, b, debut, probleme);
-                break;
-            }
-            Ecriture_disque *t = grym_allouer((m->nb_a_ecrire + 1) * sizeof *t);
-            if (m->nb_a_ecrire) memcpy(t, m->a_ecrire, m->nb_a_ecrire * sizeof *t);
-            free(m->a_ecrire);
-            m->a_ecrire = t;
-            t[m->nb_a_ecrire].chemin = chemin;
-            t[m->nb_a_ecrire].ecrit = grym_dupliquer(c.texte);
-            t[m->nb_a_ecrire].fichier = v.fichier;   /* la référence passe à l'écriture */
-            m->nb_a_ecrire++;
-            v.fichier = NULL;
+            if (!probleme) probleme = planifier_ecriture(m, c.texte, v.fichier);
+            if (!probleme) v.fichier = NULL;   /* la référence passe à l'écriture */
             valeur_liberer(&c);
             valeur_liberer(&v);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
+        case I_EXPORTER: {   /* « Exporter les membres conservés … dans « m.csv ». » (§ 15.4) */
+            Valeur c = depiler(&pile), l = depiler(&pile);
+            char *probleme = NULL;
+            if (c.type != V_TEXTE) probleme = grym_formater("Le chemin d'un fichier est un texte, pas %s.", nom_type(c.type));
+            else if (!*c.texte) probleme = grym_dupliquer("Chemin de fichier vide.");
+            else if (l.type != V_LISTE) probleme = grym_dupliquer("Export invalide.");
+            Fichier *f = NULL;
+            if (!probleme) {
+                f = grym_allouer(sizeof *f);
+                f->references = 1;
+                f->format = NULL;
+                const char *barre = strrchr(c.texte, '/');
+                f->nom = grym_dupliquer(barre ? barre + 1 : c.texte);
+                probleme = tableau_csv(m, b->constantes[op].texte, &l, f);
+                if (!probleme) probleme = planifier_ecriture(m, c.texte, f);
+                if (probleme) { free(f->octets); free(f->nom); free(f); }
+            }
+            valeur_liberer(&c);
+            valeur_liberer(&l);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
         case I_CHERCHER: {

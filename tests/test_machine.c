@@ -1561,6 +1561,30 @@ int main(void) {
     PROG(RC "Afficher la plus grand solde des clients conservés.", "~Accord : « le plus grand solde ».");
     PROG(RC "Afficher la moyenne des noms des clients conservés.",
          "~« nom » est un champ texte : « la moyenne des » s'applique à un nombre.");
+    /* Exporter (§ 15.4) : un tableau CSV, écrit à la fin de l'exécution */
+    remove("_exp.csv");
+    PROG(RC "Exporter les clients conservés dont le rang est inférieur à 3, par nom, avec le nom, le solde, l'actif "
+         "et le nom du parrain dans « _exp.csv ».", "");
+    {
+        FILE *f = fopen("_exp.csv", "rb");
+        char t[512] = {0};
+        size_t n = f ? fread(t, 1, sizeof t - 1, f) : 0;
+        if (f) fclose(f);
+        const char *att = "\xEF\xBB\xBF" "Nom;Solde;Actif;Nom du parrain\r\nBob;-3;vrai;Bob\r\némile;10;vrai;émile\r\n";
+        total++;
+        if (n != strlen(att) || memcmp(t, att, n) != 0) signaler(__LINE__, "export", att, t);
+    }
+    PROG(RC "Exporter les clients conservés dans « _exp.csv ».", "~« _exp.csv » existe déjà : il n'est jamais écrasé.");
+    remove("_exp.csv");
+    PROG(RC "Exporter les clients conservés dans « _exp.csv ».\nExporter les clients conservés dans « _exp.csv ».",
+         "~« _exp.csv » est déjà enregistré par cette exécution.");
+    {
+        FILE *f = fopen("_exp.csv", "rb");
+        total++;
+        if (f) { fclose(f); signaler(__LINE__, "export raté", "aucun fichier", "un fichier écrit"); }
+    }
+    PROG(RC "Exporter les clients conservés, avec le nom et le prix dans « _exp.csv ».", "~Colonne « le prix »");
+    PROG("Pour exporter les clients :\n    Afficher 1.\nExporter les clients.", "1");
     /* Valeurs permises (§ 16.15) */
     PROG("Une tâche, conservée, a : un titre (texte), un état (« à faire », « en cours » ou « fini »).\n" "Le t vaut une nouvelle tâche :\n    Le titre vaut « a ».\n    L'état vaut « à faire ».\n"
          "L'état du t devient « en cours ».\nConserver t.\nAfficher état de t puis le nombre de tâches conservées dont "

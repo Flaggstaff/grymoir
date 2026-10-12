@@ -126,6 +126,9 @@ typedef enum {
                         texte : chemin du logo tel qu'écrit, ou NULL */
     P_REFUSER,       /* « Refuser « Débits : » puis d. » (§ 18.1) : enfants : les éléments du message, comme
                         « Afficher » (reliés par « puis », séparés par une espace) */
+    P_EXPORTER,      /* « Exporter les membres conservés …, avec le nom et la cotisation, dans « m.csv ». » (§ 15.4) :
+                        enfants[0] : N_CHERCHER (liste ; texte3 : colonnes, comme une liste d'écran, ou NULL : tous les
+                        champs) ; enfants[1] : le chemin */
     P_REGLE          /* « Chaque écriture conservée dont … vérifie : condition, sinon « … ». » (§ 16.14) : texte : entité ;
                         enfants[0] : P_CALCUL sans paramètre, qui parcourt les objets (P_POUR_CONSERVE) et refuse
                         au premier qui viole la condition (P_SI, dont la branche sinon est un P_REFUSER) */

@@ -899,6 +899,17 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, ph->type == P_CONSERVER ? I_CONSERVER : ph->entier == 2 ? I_RETABLIR
                    : ph->entier == 1 ? I_SUPPRIMER_DEFINITIVEMENT : I_SUPPRIMER, 0, ph->ligne, ph->colonne);
         return;
+    case P_EXPORTER: {   /* la liste, le chemin, puis EXPORTER avec « entité ␛ colonnes » (§ 15.4) */
+        const Noeud *el = ph->enfants[0];
+        chercher(c, el);
+        expression(c, ph->enfants[1]);
+        char *d = grym_formater("%s\x1b%s", el->texte, el->texte3 ? el->texte3 : "");
+        long k = bloc_constante(c->b, C_TEXTE, d);
+        free(d);
+        if (k < 0) { trop_grand(c, ph); return; }
+        emettre(c, I_EXPORTER, k, ph->ligne, ph->colonne);
+        return;
+    }
     case P_ENREGISTRER:
         expression(c, ph->enfants[0]);
         expression(c, ph->enfants[1]);

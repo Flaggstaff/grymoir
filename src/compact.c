@@ -1481,6 +1481,57 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             expression(r, d + 1, definitif ? f - 1 : f);
             if (definitif) mot(r, "définitivement", &r->e[f - 1]);   /* _supprimer c _définitivement (§ 16.12) */
             point(r, f);
+        } else if (!strcmp(c, "exporter")) {
+            /* _exporter œuvre _conservé [_dont …] [_par titre [_décroissant]] [_avec titre ; compositeur.nom] _dans « m.csv »
+             * → Exporter les œuvre conservés …, avec titre, nom de compositeur, dans « m.csv ». (§ 15.4) */
+            size_t dans = chercher(r, d + 1, f, "dans");
+            if (d + 2 >= f || r->e[d + 1].type != J_CROCHETS || dans == f
+                || !(est_cle(&r->e[d + 2], "conservé") || est_cle(&r->e[d + 2], "conservée")
+                     || est_cle(&r->e[d + 2], "supprimé") || est_cle(&r->e[d + 2], "supprimée"))) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _exporter membre _conservé _dans « membres.csv » »."));
+                return;
+            }
+            size_t avec = chercher(r, d + 3, dans, "avec");
+            size_t par = chercher(r, d + 3, avec, "par");
+            mot(r, "exporter", t);
+            mot(r, "les", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, est_cle(&r->e[d + 2], "supprimé") || est_cle(&r->e[d + 2], "supprimée") ? "supprimés" : "conservés",
+                &r->e[d + 2]);
+            if (d + 3 < par) {
+                if (!est_cle(&r->e[d + 3], "dont")) {
+                    echouer(r, &r->e[d + 3], grym_dupliquer("« _dont », « _par », « _avec » ou « _dans » attendu."));
+                    return;
+                }
+                mot(r, "dont", &r->e[d + 3]);
+                expression(r, d + 4, par);
+            }
+            if (par < avec) {
+                if (par + 1 >= avec || r->e[par + 1].type != J_CROCHETS) {
+                    echouer(r, &r->e[par], grym_dupliquer("Champ du tri attendu : « _par nom »."));
+                    return;
+                }
+                emettre(r, J_VIRGULE, NULL, &r->e[par], 1);
+                mot(r, "par", &r->e[par]);
+                copier(r, &r->e[par + 1]);
+                if (par + 2 < avec) mot(r, "décroissant", &r->e[par + 2]);
+            }
+            if (avec < dans) {
+                emettre(r, J_VIRGULE, NULL, &r->e[avec], 1);
+                mot(r, "avec", &r->e[avec]);
+                size_t debut = avec + 1, i = 0;
+                for (size_t k = avec + 1; k <= dans; k++) {
+                    if (k < dans && r->e[k].type != J_POINT_VIRGULE) continue;
+                    if (i) emettre(r, J_VIRGULE, NULL, &r->e[k - 1], 1);
+                    expression(r, debut, k);
+                    debut = k + 1;
+                    i++;
+                }
+                emettre(r, J_VIRGULE, NULL, &r->e[dans], 1);
+            }
+            mot(r, "dans", &r->e[dans]);
+            expression(r, dans + 1, f);
+            point(r, f);
         } else if (!strcmp(c, "enregistrer")) {
             size_t dans = chercher(r, d + 1, f, "dans");
             if (dans == f || dans == d + 1) {

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.62 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.63 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -728,6 +728,7 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `le client conservé au plus grand solde` | `_le client _conservé _au_plus_grand solde` |
 | `un état (« à faire », « en cours » ou « fini »)` | `_un état (« à faire » ; « en cours » ; « fini »)` |
 | `le reste de 17 par 5`, `la valeur absolue de x`, `la partie entière de x` | `_reste(17 ; 5)`, `x.valeur_absolue`, `x.partie_entière` |
+| `Exporter les membres conservés, par nom, avec le nom et la cotisation, dans « m.csv ».` | `_exporter membre _conservé _par nom _avec nom ; cotisation _dans « m.csv »` |
 | `Rendre x.` | `_rendre x` |
 | `Tant que c :` | `_tant_que c` … `_fin` |
 | `Répéter 3 fois :` | `_répéter 3 _fois` … `_fin` |
@@ -1021,6 +1022,23 @@ Enregistrer la photo du membre dans « copie.jpg ».
 - Un fichier ne se modifie pas. Deux fichiers sont égaux s'ils ont le même contenu ; ils ne se comparent pas par ordre.
 - `Afficher la photo.` écrit `une image JPEG de 2,3 Mo`, ou `un fichier de 7 octets`. Unités : octets, Ko, Mo, Go, en puissances de 1000, une décimale au plus, arrondie au plus proche (1 050 octets : `1,1 Ko`).
 - Afficher l'image elle-même attend les interfaces graphiques (charte, art. 11).
+
+### 15.4 Exporter un tableau
+
+```
+Exporter les membres conservés, par nom, avec le nom, le prénom et la cotisation, dans « membres.csv ».
+Exporter les œuvres conservées dont la cotisation est positive dans « œuvres.csv ».
+```
+
+- Les objets d'une recherche (§ 16.4), avec `dont` et `, par …` comme une boucle, deviennent les lignes d'un tableau CSV, qu'un tableur ouvre directement.
+- `, avec …` choisit les colonnes, comme une liste d'écran (§ 22.1) : des champs de l'entité, ou le champ d'un objet qu'elle désigne (`le nom du compositeur`). Le titre de chaque colonne reprend ce qui est écrit, sans l'article et avec une majuscule : `Nom du compositeur`. Sans `avec`, tous les champs, sauf les fichiers, les images et les champs multiples.
+- **Le fichier** suit la règle d'`Enregistrer` (§ 15.2) : écrit à la fin d'une exécution réussie, jamais si elle échoue, jamais par-dessus un fichier existant (« « membres.csv » existe déjà : il n'est jamais écrasé. »), jamais deux fois le même chemin dans une exécution.
+- **Le format.** UTF-8 avec marque d'ordre (les tableurs reconnaissent alors les accents), séparateur `;`, lignes terminées par CR LF, cellules entre guillemets quand elles contiennent un `;`, un guillemet (doublé), un retour à la ligne ou une espace au bord (RFC 4180, citée de mémoire). Nombres en forme exacte, virgule décimale, sans séparateur de milliers (`1234,5`, `-3`) ; dates `jour.mois.année` ; `vrai`, `faux` ; un lien par sa clé (§ 22.1) ; un champ absent : une cellule vide.
+- Le point-virgule et la virgule décimale sont ce qu'attend un tableur réglé en français ou en suisse romand. Ce réglage dépend de l'ordinateur : non vérifié sur toutes les versions d'Excel, de Numbers et de LibreOffice.
+- Aucun mot réservé : `Exporter` n'est une phrase que suivi de `les` et d'une entité conservée. `Pour exporter les clients :` reste une action, appelée par `Exporter les clients.`
+- Un calcul n'exporte pas (§ 9.4) : « Un calcul n'écrit pas sur le disque : exporte dans une action. »
+- Lire un tableau (`Pour chaque ligne de « import.csv »`) : à venir.
+- En forme compacte : `_exporter membre _conservé [_dont …] [_par nom [_décroissant]] [_avec nom ; compositeur.nom] _dans « m.csv »`.
 
 ## 16. Entités *(v0.3)*
 
@@ -1656,3 +1674,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.60 | 2026-10-12 | § 16.4 : `la moyenne des`, `le plus grand … des`, `le plus petit … des` (erreur sur rien, jamais 0) ; `le client conservé au plus grand solde`, l'objet au champ extrême. Impression : « de le » se contracte devant une recherche (`du membre conservé`), qui sortait en « de le » |
 | 1.61 | 2026-10-12 | Nouveau § 16.15 : valeurs permises d'un champ texte, `un état (« à faire », « en cours » ou « fini »)` ; vérifiées à l'analyse et à l'exécution, menu à la saisie, retrait refusé tant qu'un objet porte la valeur |
 | 1.62 | 2026-10-12 | Nouveau § 3.5 : `le reste de a par b` (signe du dividende), `la partie entière de x` (vers zéro), `la valeur absolue de x` ; vérifiés contre `decimal` ; aucun mot réservé |
+| 1.63 | 2026-10-12 | Nouveau § 15.4 : `Exporter les … conservés [dont …] [, par …] [, avec …] dans « f.csv ».`, un tableau CSV (UTF-8, `;`, virgule décimale), écrit comme `Enregistrer` ; aucun mot réservé |
