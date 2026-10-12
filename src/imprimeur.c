@@ -222,6 +222,7 @@ static void preposition(Impression *im, const char *prep, const Noeud *x) {
         return;
     }
     if (x->type == N_NOM && x->article != ART_AUCUN) {
+        if (x->article == ART_LES) { aj(im, a ? "aux " : "des "); ecrire_nom(im, x->texte, x->crochets); return; }
         if (x->article == ART_LE) { aj(im, a ? "au " : "du "); ecrire_nom(im, x->texte, x->crochets); return; }
         aj(im, a ? "à " : "de ");
         aj(im, x->article == ART_LA ? "la " : "l'");
@@ -270,7 +271,8 @@ static void comme(Impression *im, const Noeud *n) {
 
 static void nom_avec_article(Impression *im, const Noeud *n) {
     if (!im->compact) {
-        if (n->article == ART_LE) aj(im, "le ");
+        if (n->article == ART_LES) aj(im, "les ");
+        else if (n->article == ART_LE) aj(im, "le ");
         else if (n->article == ART_LA) aj(im, "la ");
         else if (n->article == ART_L) aj(im, "l'");
     }
@@ -291,6 +293,20 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
             expression(im, droite);
             aj(im, n->negation ? " n'est pas parmi les " : " est parmi les ");
             ecrire_nom(im, sujet->texte, 0);
+        }
+        return;
+    }
+    if (n->op == 'm') {   /* « m est parmi les élus » ; « élus _contient m » (§ 13.9) */
+        if (im->compact) {
+            if (n->negation) aj(im, "_non (");
+            expression(im, droite);
+            aj(im, " _contient ");
+            expression(im, sujet);
+            if (n->negation) aj(im, ")");
+        } else {
+            expression(im, sujet);
+            aj(im, n->negation ? " n'est pas parmi " : " est parmi ");
+            expression(im, droite);
         }
         return;
     }
@@ -482,6 +498,19 @@ static void expression(Impression *im, const Noeud *n) {
         }
         return;
     }
+    case N_TAILLE:   /* « le nombre de couleurs » ; « _nombre_de couleurs » (§ 13.9) */
+        if (im->compact) { aj(im, "_nombre_de "); ecrire_nom(im, n->enfants[0]->texte, 0); return; }
+        aj(im, voyelle(n->enfants[0]->texte) ? "le nombre d'" : "le nombre de ");
+        ecrire_nom(im, n->enfants[0]->texte, 0);
+        return;
+    case N_JOINDRE:   /* « les couleurs jointes par « , » » ; « couleurs _jointes « , » » */
+        expression(im, n->enfants[0]);
+        aj(im, im->compact ? " _jointes " : n->forme ? " joints par " : " jointes par ");
+        expression(im, n->enfants[1]);
+        return;
+    case N_ENSEMBLE:   /* hors d'une création : ne s'écrit pas seul */
+        aj(im, "?");
+        return;
     case N_COLONNE:   /* « la colonne « Nom » de la ligne » ; « _colonne(« Nom » ; ligne) » (§ 15.5) */
         if (im->compact) {
             aj(im, "_colonne(");
@@ -937,6 +966,26 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         return;
     case P_CREATION:
     case P_MODIFICATION: {
+        if (n->article == ART_LES) {   /* ensembles (§ 13.9) */
+            const Noeud *v = n->enfants[0];
+            int ajout = v->type == N_AJOUT;
+            aj(im, c ? "_les " : "Les ");
+            ecrire_nom(im, n->texte, 0);
+            if (ajout) aj(im, c ? (v->op == 'g' ? " _gagnent " : " _perdent ") : (v->op == 'g' ? " gagnent " : " perdent "));
+            else if (n->type == P_CREATION) aj(im, c ? " << " : " valent ");
+            else aj(im, c ? " _deviennent " : " deviennent ");
+            if (ajout) expression(im, v->enfants[1]);
+            else if (v->type == N_ENSEMBLE && v->nb_enfants == 0) aj(im, c ? "_ensemble_vide" : "un ensemble vide");
+            else if (v->type == N_ENSEMBLE) {
+                for (size_t k = 0; k < v->nb_enfants; k++) {
+                    if (k) aj(im, c ? " ; " : k + 1 == v->nb_enfants ? " et " : ", ");
+                    expression(im, v->enfants[k]);
+                }
+            } else expression(im, v);
+            aj(im, c ? "\n" : ".\n");
+            if (n->type == P_CREATION) retenir(im, n->texte, G_LIBRE);
+            return;
+        }
         Genre g = n->type == P_CREATION ? genre_article(n->article) : genre_de_nom(im, n->texte);
         const Noeud *bloc_init = nouveau_en_bloc(n->enfants[0]);
         if (c) {
@@ -1343,7 +1392,8 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         size_t sauve = im->nb;
         aj(im, c ? "_pour_chaque " : "Pour chaque ");
         ecrire_nom(im, n->texte, 0);
-        aj(im, c ? " _tableau " : " du tableau ");
+        if (n->op == 'p') aj(im, c ? " _parmi " : " parmi ");   /* « parmi les couleurs » (§ 13.9) */
+        else aj(im, c ? " _tableau " : " du tableau ");
         expression(im, n->enfants[0]);
         retenir(im, n->texte, G_FEMININ);
         const Noeud *corps = n->enfants[1];

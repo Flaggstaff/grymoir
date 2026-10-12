@@ -175,6 +175,9 @@ int main(void) {
                  "Le n vaut 10.\nAfficher le reste de n × 2 par 3 puis valeur absolue de (n − 20) puis partie entière de (−2,7).\n");
     EXEC("_afficher _reste(−7 ; 3) ; _reste((1 + 9) ; 4)\n", "−1 2\n");
     ERR("_afficher _reste(7)\n", 1, 11, "« _reste » prend deux arguments, le dividende et le diviseur : _reste(17 ; 5).");
+    ALLER_RETOUR("_les couleurs << « a » ; « b »\n_les couleurs _gagnent « c »\n_les vides << _ensemble_vide\n"
+                 "_afficher _nombre_de couleurs ; couleurs _jointes « , »\n_pour_chaque c _parmi couleurs\n    _afficher c\n_fin\n"
+                 "_si couleurs _contient « a » _alors\n    _les vides _deviennent couleurs\n_fin\n", NULL);
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"
                  "_calcul _le titre(_une personne) << personne.nom\n_le p << _nouveau personne _avec\n    nom << « a »\n_fin\n"
                  "saluer(p) _comme personne\n_afficher titre(p) _comme personne\n", NULL);

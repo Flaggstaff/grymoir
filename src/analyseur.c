@@ -34,6 +34,7 @@ typedef struct {
     int nb_parametres; /* calculs et actions */
     int local;         /* case locale dans une formule, −1 pour un nom global */
     char *classe;      /* méthode : classe de son premier paramètre (§ 13.6), sinon NULL */
+    int ensemble;      /* variable qui contient un ensemble, nommée au pluriel avec « les » (§ 13.9) */
     int fichier;       /* fichier de la déclaration : 0 celui qu'on analyse, k le k-ième fichier utilisé (§ 21) */
 } Symbole;
 
@@ -430,6 +431,7 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->fichier = p->fichier_index;
     s->sorte = S_VARIABLE;
     s->lecture_seule = 0;
+    s->ensemble = 0;
     s->classe = NULL;
     s->nb_parametres = 0;
     s->local = -1;
@@ -1382,6 +1384,8 @@ static Noeud *nom_expression(Analyse *a) {
                                                      || a->j[v + 1].type == J_TEXTE))))
                 arret = 1;
         }
+        if (fin + 1 < a->n && (est_mot(&a->j[fin], "jointes") || est_mot(&a->j[fin], "joints"))
+            && est_mot(&a->j[fin + 1], "par")) arret = 1;   /* « les couleurs jointes par » (§ 13.9) */
         if (fin + 1 < a->n && est_mot(&a->j[fin], "comme")
             && (est_mot(&a->j[fin + 1], "un") || est_mot(&a->j[fin + 1], "une"))) arret = 1;   /* § 13.8 */
         if (fin + 1 < f && est_mot(&a->j[fin], "en")) {        /* « nom en majuscules » (§ 4.5) */
@@ -1475,6 +1479,8 @@ static Noeud *valeur(Analyse *a);
 static Noeud *base(Analyse *a);
 static int de_ou_d(const Jeton *t);
 static void arrets(Analyse *a, const char *m1, const char *m2);
+static Symbole *ensemble_en(Analyse *a, size_t k, size_t *fin);
+static Noeud *nom_ensemble(Analyse *a);
 
 static int contient_champ_dont(const Noeud *n) {
     if (n->type == N_CHAMP_DONT) return 1;
@@ -2097,6 +2103,19 @@ static Noeud *base(Analyse *a) {
             return n;
         }
     }
+    {
+        size_t fe;
+        if (est_mot(t, "les") && ensemble_en(a, a->i + 1, &fe)) return nom_ensemble(a);   /* « les couleurs » (§ 13.9) */
+        if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2)) && ensemble_en(a, a->i + 3, &fe)) {
+            Noeud *n = noeud_creer(N_TAILLE, t->ligne, t->colonne, t->debut);   /* « le nombre de couleurs » */
+            a->i += 3;
+            Noeud *x = nom_expression(a);
+            if (!x) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, x);
+            n->fin = x->fin;
+            return n;
+        }
+    }
     if (est_mot(t, "la") && est_mot(voir(a, 1), "colonne") && (voir(a, 2)->type == J_TEXTE || voir(a, 2)->type == J_PAR_OUV)
         && !visible(a, "colonne") && !champ_connu(a->portee, "colonne", NULL)) {
         /* « la colonne « Nom » de la ligne » (§ 15.5) */
@@ -2330,6 +2349,18 @@ static const char *const CONVERSIONS[] = { "majuscules", "minuscules", "nombre e
 #define NB_CONVERSIONS (sizeof CONVERSIONS / sizeof *CONVERSIONS)
 
 static Noeud *conversion(Analyse *a, Noeud *g) {
+    if (g && g->type == N_NOM && g->article == ART_LES && (est_mot(cour(a), "jointes") || est_mot(cour(a), "joints"))
+        && est_mot(voir(a, 1), "par")) {   /* « les couleurs jointes par « , » » (§ 13.9) */
+        Noeud *n = noeud_creer(N_JOINDRE, g->ligne, g->colonne, g->debut);
+        n->forme = est_mot(cour(a), "joints");
+        a->i += 2;
+        Noeud *sep = base(a);
+        if (!sep) { noeud_liberer(n); noeud_liberer(g); return NULL; }
+        noeud_ajouter(n, g);
+        noeud_ajouter(n, sep);
+        n->fin = sep->fin;
+        g = n;
+    }
     while (g && est_mot(cour(a), "en")) {
         size_t trouve = NB_CONVERSIONS, mots = 0;
         for (size_t k = 0; k < NB_CONVERSIONS && trouve == NB_CONVERSIONS; k++) {
@@ -2569,6 +2600,41 @@ static Noeud *cadrer(Analyse *a, Noeud *g) {
 /* Conditions (§ 5)                                                 */
 /* ---------------------------------------------------------------- */
 
+static Noeud *nom_expression(Analyse *a);
+/* Un ensemble visible nommé à partir de l'index k (§ 13.9) : « couleurs » dans « les couleurs » ; *fin : sa fin. */
+static Symbole *ensemble_en(Analyse *a, size_t k, size_t *fin) {
+    if (k >= a->n) return NULL;
+    if (a->j[k].type == J_CROCHETS) {
+        Symbole *s = visible(a, a->j[k].valeur);
+        if (s && s->ensemble) { *fin = k + 1; return s; }
+        return NULL;
+    }
+    size_t f = k;
+    while (f < a->n && mot_de_nom(a, f)) f++;
+    for (size_t q = f; q > k; q--) {
+        char *c = cle(a, k, q);
+        Symbole *s = visible(a, c);
+        free(c);
+        if (s && s->ensemble) { *fin = q; return s; }
+    }
+    return NULL;
+}
+
+/* « les couleurs » : le nom d'un ensemble, avec son article (§ 13.9). */
+static Noeud *nom_ensemble(Analyse *a) {
+    const Jeton *t = cour(a);
+    avancer(a);   /* les */
+    Noeud *n = nom_expression(a);
+    if (!n) return NULL;
+    if (n->type == N_NOM) {
+        n->article = ART_LES;
+        n->ligne = t->ligne;
+        n->colonne = t->colonne;
+        n->debut = t->debut;
+    }
+    return n;
+}
+
 static Noeud *valeur(Analyse *a);
 
 /* Une expression purement arithmétique n'est jamais vraie ni fausse. */
@@ -2684,6 +2750,22 @@ static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test
         else if (est_mot(t, RELATIONS[k].f)) { r = &RELATIONS[k]; g = GENRE_FEMININ; }
     }
     if (a->dont) attendre_mot(a, a->i, "parmi les", 9);
+    size_t fe;
+    if (!r && est_mot(t, "parmi") && est_mot(voir(a, 1), "les") && ensemble_en(a, a->i + 2, &fe)) {
+        /* « m est parmi les élus » (§ 13.9) */
+        avancer(a);
+        Noeud *e = nom_ensemble(a);
+        if (!e) { noeud_liberer(sujet); return NULL; }
+        Noeud *n = noeud_creer(N_COMPARAISON, sujet->ligne, sujet->colonne, sujet->debut);
+        n->op = 'm';
+        n->negation = negation;
+        n->op_ligne = t->ligne;
+        n->op_colonne = t->colonne;
+        noeud_ajouter(n, sujet);
+        noeud_ajouter(n, e);
+        n->fin = e->fin;
+        return n;
+    }
     if (!r && est_mot(t, "parmi")) {
         /* « dont baroque est parmi les genres » (§ 16.13) */
         const Classe *e = a->dont ? classe_de(a->portee, a->dont) : NULL;
@@ -4043,6 +4125,46 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
     size_t d = a->i, k = d;
     if (a->j[k].type == J_CROCHETS) k++;
     else while (mot_de_nom(a, k) && !de_ou_d(&a->j[k]) && !est_mot(&a->j[k], "du")) k++;
+    {
+        size_t k2 = d, fe;
+        if (a->j[k2].type == J_CROCHETS) k2++;
+        else while (mot_de_nom(a, k2) && !est_mot(&a->j[k2], "parmi")) k2++;
+        if (k2 > d && est_mot(&a->j[k2], "parmi") && est_mot(&a->j[k2 + 1], "les") && ensemble_en(a, k2 + 2, &fe)
+            && article_de(&a->j[d]) == ART_AUCUN) {
+            /* « Pour chaque couleur parmi les couleurs : » (§ 13.9) : l'ensemble figé au début, parcouru dans l'ordre */
+            char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k2);
+            if (visible(a, nom)) {
+                erreur(a, &a->j[d], grym_formater("« %s » existe déjà : choisis un autre nom.", nom));
+                free(nom);
+                return NULL;
+            }
+            a->i = k2 + 1;
+            Noeud *source = nom_ensemble(a);
+            if (!source) { free(nom); return NULL; }
+            size_t sauve = a->portee->n;
+            portee_declarer(a->portee, nom, GENRE_LIBRE, t->ligne);
+            Symbole *s = &a->portee->s[a->portee->n - 1];
+            s->lecture_seule = 1;
+            int case_el = s->local = a->nb_locaux++;
+            int case_ens = a->nb_locaux++;
+            a->nb_locaux++;   /* rang */
+            int forme = 0;
+            a->boucle++;
+            Noeud *corps = branche(a, colonne, "Pour chaque", &forme);
+            a->boucle--;
+            portee_tronquer(a->portee, sauve);
+            if (!corps) { noeud_liberer(source); free(nom); return NULL; }
+            Noeud *n = noeud_creer(P_POUR_TABLEAU, t->ligne, t->colonne, t->debut);
+            n->op = 'p';
+            n->texte = nom;
+            n->local = case_el;
+            n->entier = case_ens;
+            noeud_ajouter(n, source);
+            noeud_ajouter(n, corps);
+            n->fin = corps->fin;
+            return n;
+        }
+    }
     if (k > d && est_mot(&a->j[k], "du") && est_mot(&a->j[k + 1], "tableau") && article_de(&a->j[d]) == ART_AUCUN) {
         /* « Pour chaque ligne du tableau « import.csv » : » (§ 15.5) */
         if (a->formule == 1)
@@ -6229,6 +6351,93 @@ static Noeud *exporter(Analyse *a, const Jeton *t) {
     return n;
 }
 
+/* Phrases d'un ensemble (§ 13.9) : « Les couleurs valent « rouge » et « vert ». », « Les élus valent un ensemble
+ * vide. », « Les élus deviennent les inscrits. », « Les élus gagnent m. », « Les élus perdent m. ». NULL sans erreur
+ * si la phrase n'en est pas une (un champ multiple, § 16.13). */
+static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
+    size_t d = a->i + 1, v = d;
+    if (v < a->n && a->j[v].type == J_CROCHETS) v++;
+    else while (v < a->n && mot_de_nom(a, v) && !est_mot(&a->j[v], "valent") && !est_mot(&a->j[v], "deviennent")
+                && !est_mot(&a->j[v], "gagnent") && !est_mot(&a->j[v], "perdent")) v++;
+    if (v == d || v >= a->n) return NULL;
+    const Jeton *verbe = &a->j[v];
+    int creer = est_mot(verbe, "valent"), changer = est_mot(verbe, "deviennent");
+    int gagner = est_mot(verbe, "gagnent"), perdre = est_mot(verbe, "perdent");
+    if (!creer && !changer && !gagner && !perdre) return NULL;
+    char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, v);
+    Symbole *s = visible(a, nom);
+    if ((gagner || perdre) && !(s && s->ensemble)) { free(nom); return NULL; }   /* un champ multiple */
+    if (creer && s) {
+        Noeud *x = erreur(a, &a->j[d], grym_formater("« %s » existe déjà (ligne %d). Pour le modifier, écris : Les %s "
+                                                     "deviennent …", nom, s->ligne_decl, nom));
+        free(nom);
+        return x;
+    }
+    if (changer && !(s && s->ensemble)) {
+        Noeud *x = erreur(a, &a->j[d], s ? grym_formater("« %s » n'est pas un ensemble.", nom)
+                                         : grym_formater("« %s » n'existe pas. Pour le créer, écris : Les %s valent …", nom, nom));
+        free(nom);
+        return x;
+    }
+    if ((changer || gagner || perdre) && s->lecture_seule) {
+        free(nom);
+        return erreur(a, &a->j[d], grym_dupliquer("Un compteur de boucle ne se modifie pas."));
+    }
+    a->i = v + 1;
+    Noeud *valeur_n = NULL;
+    if (gagner || perdre) {
+        Noeud *x = valeur(a);
+        if (!x) { free(nom); return NULL; }
+        Noeud *ens = noeud_creer(N_NOM, t->ligne, t->colonne, t->debut);
+        ens->texte = grym_dupliquer(nom);
+        ens->local = s->local;
+        ens->article = ART_LES;
+        valeur_n = noeud_creer(N_AJOUT, t->ligne, t->colonne, t->debut);
+        valeur_n->op = gagner ? 'g' : 'p';
+        noeud_ajouter(valeur_n, ens);
+        noeud_ajouter(valeur_n, x);
+        valeur_n->fin = x->fin;
+    } else if (est_mot(cour(a), "un") && est_mot(voir(a, 1), "ensemble") && est_mot(voir(a, 2), "vide")) {
+        valeur_n = noeud_creer(N_ENSEMBLE, cour(a)->ligne, cour(a)->colonne, cour(a)->debut);
+        valeur_n->fin = fin_jeton(voir(a, 2));
+        a->i += 3;
+    } else {
+        /* des éléments, séparés par des virgules et un « et » ; un seul ensemble : sa copie */
+        valeur_n = noeud_creer(N_ENSEMBLE, cour(a)->ligne, cour(a)->colonne, cour(a)->debut);
+        for (;;) {
+            Noeud *x = expression(a);
+            if (!x) { noeud_liberer(valeur_n); free(nom); return NULL; }
+            noeud_ajouter(valeur_n, x);
+            valeur_n->fin = x->fin;
+            if (cour(a)->type == J_VIRGULE || est_mot(cour(a), "et")) { avancer(a); continue; }
+            break;
+        }
+        Symbole *seul = valeur_n->nb_enfants == 1 && valeur_n->enfants[0]->type == N_NOM ? visible(a, valeur_n->enfants[0]->texte) : NULL;
+        if (seul && seul->ensemble) {   /* « Les autres valent les couleurs. » : une copie */
+            valeur_n->enfants[0]->article = ART_LES;
+            Noeud *x = valeur_n->enfants[0];
+            valeur_n->nb_enfants = 0;
+            noeud_liberer(valeur_n);
+            valeur_n = x;
+        }
+    }
+    if (!fin_phrase(a, 0)) { noeud_liberer(valeur_n); free(nom); return NULL; }
+    int local = -1;
+    if (creer) {
+        portee_declarer(a->portee, nom, GENRE_LIBRE, t->ligne);
+        Symbole *ns = &a->portee->s[a->portee->n - 1];
+        ns->ensemble = 1;
+        if (a->formule) ns->local = local = a->nb_locaux++;
+    } else local = s->local;
+    Noeud *n = noeud_creer(creer ? P_CREATION : P_MODIFICATION, t->ligne, t->colonne, t->debut);
+    n->local = local;
+    n->texte = nom;
+    n->article = ART_LES;
+    noeud_ajouter(n, valeur_n);
+    n->fin = valeur_n->fin;
+    return n;
+}
+
 static Noeud *phrase(Analyse *a, int colonne) {
     Jeton *t = cour(a);
     attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0) | (a->boucle ? A_BOUCLE : 0));
@@ -6277,7 +6486,11 @@ static Noeud *phrase(Analyse *a, int colonne) {
     }
     if (est_mot(t, "les") && est_mot(voir(a, 1), "nombres")) return style_des_nombres(a, t);
     if (est_mot(t, "les") && est_mot(voir(a, 1), "écrans") && est_mot(voir(a, 2), "ont")) return apparence(a, t);
-    if (est_mot(t, "les")) return gagner_perdre(a, t);
+    if (est_mot(t, "les")) {
+        Noeud *n = phrase_ensemble(a, t);   /* § 13.9 */
+        if (n || a->echec) return n;
+        return gagner_perdre(a, t);
+    }
     if (est_mot(t, "effacer") && voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "écran")) {
         /* « Effacer l'écran. » (§ 4.3) */
         if (a->formule == 1)

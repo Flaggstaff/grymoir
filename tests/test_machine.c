@@ -1298,6 +1298,24 @@ int main(void) {
          "    La licence vaut « b ».\nSaluer c comme une personne.", "ERREUR 11:1 Aucune version de « saluer » pour une personne.");
     PROG("Pour saluer :\n    Afficher 1.\nUne personne a : un nom.\nSaluer comme une personne.",
          "ERREUR 4:8 « saluer » n'est pas une méthode : « comme une personne » ne choisit aucune version (§ 13.6).");
+    /* Ensembles (§ 13.9) */
+    PROG("Les couleurs valent « rouge », « vert » et « bleu ».\nLes couleurs gagnent « rouge ».\nLes couleurs gagnent « jaune ».\n"
+         "Les couleurs perdent « vert ».\nAfficher les couleurs puis le nombre de couleurs.\n"
+         "Afficher les couleurs jointes par « / ».\nSi « bleu » est parmi les couleurs, afficher « oui ».\n"
+         "Si « vert » n'est pas parmi les couleurs, afficher « plus de vert ».\n",
+         "rouge, bleu, jaune 3\nrouge/bleu/jaune\noui\nplus de vert");
+    PROG("Les couleurs valent « a » et « b ».\nLes autres valent les couleurs.\nLes autres gagnent « c ».\n"
+         "Afficher le nombre de couleurs puis le nombre d'autres.\nPour chaque couleur parmi les autres, afficher couleur.\n"
+         "Les vides valent un ensemble vide.\nAfficher le nombre de vides.\nLes vides deviennent 1, 2 et 2,0.\nAfficher les vides.",
+         "2 3\na\nb\nc\n0\n1, 2");
+    PROG("Une personne a : un nom.\nLes invités valent un ensemble vide.\nPour chaque n de 1 à 3 :\n"
+         "    Le p vaut une nouvelle personne :\n        Le nom vaut « P » suivi de n.\n    Les invités gagnent p.\n"
+         "    Les invités gagnent p.\nAfficher le nombre d'invités.\nPour chaque invité parmi les invités, afficher nom de invité.",
+         "3\nP1\nP2\nP3");
+    PROG("Le total d'un nombre vaut nombre.\nLa somme de l'ensemble d'un n vaut n + 1.\nLes x valent 1.\nLes x valent 2.",
+         "~« x » existe déjà");
+    PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
+    PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     PROG("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : une licence.\nUn cadet est un membre.\nUne ville a : un nom.\n" "Pour saluer une personne :\n    Afficher 1.\nLe p vaut une nouvelle personne :\n    Le nom vaut « a ».\n"
          "Saluer p comme un personne.", "ERREUR 10:16 Accord : « comme une personne ».");
     /* Reste, partie entière, valeur absolue (§ 3.5) */

@@ -267,6 +267,24 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k++;
             continue;
         }
+        if (est_cle(t, "nombre_de") && k + 1 < f && r->e[k + 1].type == J_CROCHETS
+            && !(k + 2 < f && (est_cle(&r->e[k + 2], "de") || est_cle(&r->e[k + 2], "conservé")
+                               || est_cle(&r->e[k + 2], "conservée") || est_cle(&r->e[k + 2], "supprimé")))) {
+            mot(r, "le", t);   /* _nombre_de couleurs → le nombre de couleurs (§ 13.9) */
+            mot(r, "nombre", t);
+            mot(r, "de", t);
+            copier(r, &r->e[k + 1]);
+            k++;
+            continue;
+        }
+        if (t->type == J_CROCHETS && k + 2 < f && est_cle(&r->e[k + 1], "jointes")) {
+            mot(r, "les", t);   /* couleurs _jointes « , » → les couleurs jointes par « , » */
+            copier(r, t);
+            mot(r, "jointes", &r->e[k + 1]);
+            mot(r, "par", &r->e[k + 1]);
+            k++;
+            continue;
+        }
         if (est_cle(t, "dont")) {
             mot(r, "dont", t);
             continue;
@@ -1402,6 +1420,16 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "fois", &r->e[fois]);
             emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
             ouvrir(r, O_BOUCLE, prof, t);
+        } else if (!strcmp(c, "pour_chaque") && d + 3 < f && r->e[d + 1].type == J_CROCHETS && est_cle(&r->e[d + 2], "parmi")) {
+            /* _pour_chaque couleur _parmi couleurs → Pour chaque couleur parmi les couleurs : (§ 13.9) */
+            mot(r, "pour", t);
+            mot(r, "chaque", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, "parmi", &r->e[d + 2]);
+            mot(r, "les", &r->e[d + 2]);
+            expression(r, d + 3, f);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            ouvrir(r, O_BOUCLE, prof, t);
         } else if (!strcmp(c, "pour_chaque") && d + 3 < f && r->e[d + 1].type == J_CROCHETS && est_cle(&r->e[d + 2], "tableau")) {
             /* _pour_chaque ligne _tableau « f.csv » → Pour chaque ligne du tableau « f.csv » : (§ 15.5) */
             mot(r, "pour", t);
@@ -1524,6 +1552,36 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, c, t);
             expression(r, d + 1, definitif ? f - 1 : f);
             if (definitif) mot(r, "définitivement", &r->e[f - 1]);   /* _supprimer c _définitivement (§ 16.12) */
+            point(r, f);
+        } else if (!strcmp(c, "les") && d + 2 < f && r->e[d + 1].type == J_CROCHETS
+                   && (r->e[d + 2].type == J_AFFECTE || est_cle(&r->e[d + 2], "deviennent") || est_cle(&r->e[d + 2], "gagnent")
+                       || est_cle(&r->e[d + 2], "perdent"))) {
+            /* _les couleurs << « a » ; « b » → Les couleurs valent « a » et « b ». (§ 13.9) */
+            mot(r, "les", t);
+            copier(r, &r->e[d + 1]);
+            const Jeton *v = &r->e[d + 2];
+            mot(r, v->type == J_AFFECTE ? "valent" : v->valeur, v);
+            if (d + 3 < f && est_cle(&r->e[d + 3], "ensemble_vide") && d + 4 == f) {
+                mot(r, "un", &r->e[d + 3]);
+                mot(r, "ensemble", &r->e[d + 3]);
+                mot(r, "vide", &r->e[d + 3]);
+            } else if (v->type == J_AFFECTE || est_cle(v, "deviennent")) {
+                size_t debut = d + 3;
+                int p = 0;
+                for (size_t q = d + 3; q <= f; q++) {
+                    if (q < f) {
+                        if (r->e[q].type == J_PAR_OUV) p++;
+                        else if (r->e[q].type == J_PAR_FERM) p--;
+                        if (!(p == 0 && r->e[q].type == J_POINT_VIRGULE)) continue;
+                    }
+                    if (debut > d + 3) emettre(r, J_VIRGULE, NULL, &r->e[debut - 1], 1);
+                    if (q == debut) { echouer(r, &r->e[q < f ? q : f - 1], grym_dupliquer("Élément vide entre « ; »."));  return; }
+                    expression(r, debut, q);
+                    debut = q + 1;
+                }
+            } else {
+                expression(r, d + 3, f);
+            }
             point(r, f);
         } else if (!strcmp(c, "exporter")) {
             /* _exporter œuvre _conservé [_dont …] [_par titre [_décroissant]] [_avec titre ; compositeur.nom] _dans « m.csv »

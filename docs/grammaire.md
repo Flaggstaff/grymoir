@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.65 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.66 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -268,7 +268,7 @@ Afficher « plus ancien » puis que nom du compositeur.            →  plus anc
 - `suivi de` lie moins fort que les opérations et que `sur` : `« x » suivi de a + 1`, `« x » suivi de nom sur 10`. Il ne rend jamais une condition : `Si « a » suivi de « b », …` est une erreur d'analyse.
 - **Élision.** En tête d'un élément d'`Afficher`, ou juste après `suivi de`, `de x` et `que x` écrivent `de`/`d'` et `que`/`qu'` selon la première lettre du texte de `x` : élision devant une voyelle, accentuée ou non, `œ`, `æ` ou `y`, jamais devant un `h`. Le h muet (« d'Hélène ») et le h aspiré (« de Haendel ») ne se distinguent pas par l'orthographe : deviner romprait le déterminisme (charte, art. 4). `de 1` s'écrit `de 1`.
 - `suivi` devient un mot réservé (§ 2.2).
-- Reporté : joindre une liste (« baroque, canon »), qui attend les listes d'objets (§ 13.8).
+- Joindre les éléments d'un ensemble : `les couleurs jointes par « , »` (§ 13.9).
 - En forme compacte : `a _suivi b`, `_de x`, `_que x`.
 
 ### 4.5 Travailler un texte
@@ -731,6 +731,7 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `Exporter les membres conservés, par nom, avec le nom et la cotisation, dans « m.csv ».` | `_exporter membre _conservé _par nom _avec nom ; cotisation _dans « m.csv »` |
 | `Pour chaque ligne du tableau « f.csv » :`, `la colonne « Nom » de la ligne` | `_pour_chaque ligne _tableau « f.csv »`, `_colonne(« Nom » ; ligne)` |
 | `Saluer m comme une personne.` | `saluer(m) _comme personne` |
+| `Les couleurs valent « a » et « b ».`, `Les invités gagnent m.` | `_les couleurs << « a » ; « b »`, `_les invités _gagnent m` |
 | `Rendre x.` | `_rendre x` |
 | `Tant que c :` | `_tant_que c` … `_fin` |
 | `Répéter 3 fois :` | `_répéter 3 _fois` … `_fin` |
@@ -907,7 +908,29 @@ Le titre d'un membre vaut « membre » suivi du titre du membre comme une person
 - Aucun mot réservé : `comme` ne compte que suivi de `un` ou `une`, après un appel.
 - En forme compacte : `saluer(m) _comme personne`, `titre(m) _comme personne`.
 
-Les listes d'objets et un vrai affichage des objets restent à concevoir. L'absence de valeur est faite (§ 16.9).
+### 13.9 Ensembles
+
+```
+Les couleurs valent « rouge », « vert » et « bleu ».
+Les invités valent un ensemble vide.
+Les invités gagnent m.
+Les invités perdent m.
+Si m est parmi les invités, …
+Pour chaque invité parmi les invités :
+Afficher le nombre d'invités puis les couleurs jointes par « , ».
+```
+
+- Un ensemble regroupe des valeurs, sans doublon, dans l'ordre où elles sont arrivées : textes, nombres, dates, objets, mélangés au besoin. Il se nomme au pluriel, avec `les`, et se crée avec `valent` : une liste d'éléments séparés par des virgules et un `et`, ou `un ensemble vide`.
+- Il reprend le vocabulaire du champ multiple (§ 16.13) : `gagnent`, `perdent`, `parmi`, `Pour chaque … parmi les …`, `le nombre de …`. Gagner une valeur déjà présente, ou perdre une valeur absente, ne change rien. Deux valeurs sont la même si elles sont égales comme pour `=` : `2` et `2,0` ne font qu'un ; deux objets, s'ils sont le même objet.
+- `Les autres valent les couleurs.` copie : changer l'un ne change pas l'autre. `Les invités deviennent …` remplace tout le contenu.
+- `Pour chaque invité parmi les invités :` parcourt l'ensemble tel qu'il était au début de la boucle, comme une recherche (§ 16.4) ; le nom de l'élément est en lecture seule.
+- `les couleurs jointes par « , »` (ou `joints`) est un texte : les éléments tels qu'`Afficher` les montre, un objet par sa clé (§ 22.1). `Afficher les couleurs.` les sépare par « , ».
+- Une valeur absente n'entre pas dans un ensemble : « … est absente ». Un ensemble ne se range pas dans un champ d'entité : le champ multiple (§ 16.13) existe pour cela.
+- Aucun mot réservé : `les` suivi d'un ensemble connu, `valent`, `deviennent`, `gagnent`, `perdent` ne valent qu'ainsi placés.
+- Les listes ordonnées avec doublons et positions (`le 3e élément de …`) ne sont pas faites : décision du 12 octobre 2026, l'ensemble d'abord, la liste si un programme réel la demande.
+- En forme compacte : `_les couleurs << « a » ; « b »`, `_les invités << _ensemble_vide`, `_les invités _gagnent m`, `_perdent`, `_deviennent`, `invités _contient m`, `_pour_chaque invité _parmi invités`, `_nombre_de invités`, `couleurs _jointes « , »`.
+
+Un vrai affichage des objets reste à concevoir. L'absence de valeur est faite (§ 16.9).
 
 ## 14. Dates *(v0.3)*
 
@@ -1713,3 +1736,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.63 | 2026-10-12 | Nouveau § 15.4 : `Exporter les … conservés [dont …] [, par …] [, avec …] dans « f.csv ».`, un tableau CSV (UTF-8, `;`, virgule décimale), écrit comme `Enregistrer` ; aucun mot réservé |
 | 1.64 | 2026-10-12 | Nouveau § 15.5 : `Pour chaque ligne du tableau « f.csv » :`, `la colonne « Nom » de la ligne` (cellule vide : absente) ; séparateur deviné, RFC 4180 ; aucun mot réservé |
 | 1.65 | 2026-10-12 | § 13.8 : `comme une personne` après l'appel d'une méthode, la version d'une classe ancêtre (le `super` de Java) ; aucun mot réservé |
+| 1.66 | 2026-10-12 | Nouveau § 13.9 : ensembles (`Les couleurs valent …`, `gagnent`, `perdent`, `parmi`, `Pour chaque … parmi les …`, `le nombre de`, `jointes par`), sans doublon, copiés à l'affectation ; § 4.4 : joindre ; aucun mot réservé |

@@ -88,10 +88,15 @@ typedef enum {
     I_EXPORTER,         /* opérande : constante texte « entité ␛ colonnes » ; dépile le chemin, puis la liste ; prépare le
                            tableau CSV, écrit avec les fichiers à la fin de l'exécution (§ 15.4) */
     I_TABLEAU,          /* remplace le fichier au sommet par le tableau qu'il contient (§ 15.5) */
-    I_COLONNE           /* dépile le titre, puis une ligne de tableau ; empile la cellule, ou absent si vide (§ 15.5) */
+    I_COLONNE,          /* dépile le titre, puis une ligne de tableau ; empile la cellule, ou absent si vide (§ 15.5) */
+    I_ENSEMBLE,         /* opérande : n ; dépile n valeurs, empile l'ensemble de ces valeurs, sans doublon (§ 13.9) */
+    I_AJOUTER,          /* opérande : 0 gagner, 1 perdre ; dépile la valeur, puis l'ensemble ; empile l'ensemble changé */
+    I_PARMI,            /* dépile l'ensemble, puis la valeur ; empile vrai si elle en fait partie */
+    I_TAILLE_ENSEMBLE,  /* remplace l'ensemble au sommet par son nombre d'éléments */
+    I_JOINDRE           /* dépile le séparateur, puis l'ensemble ; empile ses éléments en texte, séparés */
 } CodeInstruction;
 
-#define I_DERNIER I_COLONNE
+#define I_DERNIER I_JOINDRE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

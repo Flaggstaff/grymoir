@@ -23,7 +23,7 @@
 static const char *nom_type(TypeValeur t) {
     return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen"
          : t == V_DATE ? "une date" : t == V_ANNEE ? "une année" : t == V_FICHIER ? "un fichier" : t == V_LISTE ? "une liste"
-         : t == V_ABSENT ? "absente" : t == V_LIGNE ? "une ligne de tableau" : "un objet";
+         : t == V_ABSENT ? "absente" : t == V_LIGNE ? "une ligne de tableau" : t == V_ENSEMBLE ? "un ensemble" : "un objet";
 }
 
 static Valeur valeur_copier(const Valeur *v) {
@@ -41,6 +41,10 @@ static Valeur valeur_copier(const Valeur *v) {
     return r;
 }
 
+static void valeur_liberer(Valeur *v);
+
+static Valeur valeur_copier(const Valeur *v);
+
 static void valeur_liberer(Valeur *v) {
     dec_liberer(&v->nombre);
     free(v->texte);
@@ -52,9 +56,14 @@ static void valeur_liberer(Valeur *v) {
     }
     v->fichier = NULL;
     if (v->liste && --v->liste->references == 0) {
-        for (size_t k = 0; k < v->liste->n; k++) free(v->liste->classes[k]);
-        free(v->liste->classes);
-        free(v->liste->ids);
+        if (v->liste->valeurs) {   /* un ensemble : ses éléments (§ 13.9) */
+            for (size_t k = 0; k < v->liste->n; k++) valeur_liberer(&v->liste->valeurs[k]);
+            free(v->liste->valeurs);
+        } else {
+            for (size_t k = 0; k < v->liste->n; k++) free(v->liste->classes[k]);
+            free(v->liste->classes);
+            free(v->liste->ids);
+        }
         free(v->liste);
     }
     v->liste = NULL;
@@ -632,6 +641,10 @@ typedef struct {
 } Pile_objets;
 
 static void marquer(Pile_objets *p, const Valeur *v) {
+    if (v->type == V_ENSEMBLE && v->liste) {   /* les objets d'un ensemble restent vivants (§ 13.9) */
+        for (size_t k = 0; k < v->liste->n; k++) marquer(p, &v->liste->valeurs[k]);
+        return;
+    }
     if (v->type != V_OBJET || !v->objet || v->objet->marque) return;
     v->objet->marque = 1;
     if (p->n == p->cap) {
@@ -867,6 +880,16 @@ static char *texte_valeur(const Machine *m, const Valeur *v) {
     case V_ANNEE:   return grym_formater("%ld", v->jours);   /* « 1747 », jamais « 1'747 » (§ 14.5) */
     case V_DATE:    return date_suisse(v->jours);
     case V_OBJET:   return article_classe(v->objet->classe);
+    case V_ENSEMBLE: {   /* ses éléments, séparés par « , » (§ 13.9) */
+        Chaine c = {0};
+        for (size_t k = 0; v->liste && k < v->liste->n; k++) {
+            if (k) chaine_ajouter(&c, ", ");
+            char *t = texte_valeur(m, &v->liste->valeurs[k]);
+            chaine_ajouter(&c, t);
+            free(t);
+        }
+        return chaine_rendre(&c);
+    }
     case V_LIGNE: {   /* ses cellules, séparées par « ; » (§ 15.5) */
         const char *p = v->texte ? strchr(v->texte, '\x1e') : NULL;
         char *t = grym_dupliquer(p ? p + 1 : "");
@@ -1121,6 +1144,8 @@ Valeur vi_liste(long *ids, char **classes, size_t n) {
     l->ids = ids;
     l->classes = classes;
     l->n = n;
+    l->valeurs = NULL;
+    l->cap = 0;
     Valeur v = valeur_nombre(dec_zero());
     v.type = V_LISTE;
     v.liste = l;
@@ -2352,6 +2377,81 @@ static char *lire_csv(const Fichier *f, char **probleme) {
     return chaine_rendre(&c);
 }
 
+/* Ensembles (§ 13.9) : partagés et comptés ; une modification copie d'abord un ensemble partagé. */
+static int valeurs_identiques(const Valeur *a, const Valeur *b) {
+    if (a->type != b->type) return 0;
+    switch (a->type) {
+    case V_NOMBRE: return dec_comparer(&a->nombre, &b->nombre) == 0;
+    case V_TEXTE: return strcmp(a->texte ? a->texte : "", b->texte ? b->texte : "") == 0;
+    case V_BOOLEEN: return a->vrai == b->vrai;
+    case V_DATE: case V_ANNEE: return a->jours == b->jours;
+    case V_OBJET: return a->objet == b->objet;
+    case V_FICHIER: return a->fichier == b->fichier;
+    case V_ENSEMBLE: {
+        if (a->liste->n != b->liste->n) return 0;
+        for (size_t k = 0; k < a->liste->n; k++) {
+            int trouve = 0;
+            for (size_t q = 0; q < b->liste->n && !trouve; q++) trouve = valeurs_identiques(&a->liste->valeurs[k], &b->liste->valeurs[q]);
+            if (!trouve) return 0;
+        }
+        return 1;
+    }
+    default: return 0;
+    }
+}
+
+static Valeur ensemble_vide(void) {
+    Liste *l = grym_allouer(sizeof *l);
+    l->references = 1;
+    l->ids = NULL;
+    l->classes = NULL;
+    l->n = 0;
+    l->cap = 4;
+    l->valeurs = grym_allouer(l->cap * sizeof *l->valeurs);
+    Valeur v = valeur_nombre(dec_zero());
+    v.type = V_ENSEMBLE;
+    v.liste = l;
+    return v;
+}
+
+static long ensemble_rang(const Valeur *e, const Valeur *x) {
+    for (size_t k = 0; k < e->liste->n; k++) if (valeurs_identiques(&e->liste->valeurs[k], x)) return (long)k;
+    return -1;
+}
+
+/* Rend un ensemble que l'appelant peut modifier : le même s'il est seul à le tenir, sinon une copie. */
+static void ensemble_seul(Valeur *e) {
+    if (e->liste->references == 1) return;
+    Valeur c = ensemble_vide();
+    for (size_t k = 0; k < e->liste->n; k++) {
+        if (c.liste->n == c.liste->cap) {
+            c.liste->cap *= 2;
+            Valeur *t = grym_allouer(c.liste->cap * sizeof *t);
+            memcpy(t, c.liste->valeurs, c.liste->n * sizeof *t);
+            free(c.liste->valeurs);
+            c.liste->valeurs = t;
+        }
+        c.liste->valeurs[c.liste->n++] = valeur_copier(&e->liste->valeurs[k]);
+    }
+    valeur_liberer(e);
+    *e = c;
+}
+
+/* Ajoute x (dont il prend possession), sauf s'il y est déjà. */
+static void ensemble_gagner(Valeur *e, Valeur x) {
+    if (ensemble_rang(e, &x) >= 0) { valeur_liberer(&x); return; }
+    ensemble_seul(e);
+    Liste *l = e->liste;
+    if (l->n == l->cap) {
+        l->cap = l->cap ? l->cap * 2 : 4;
+        Valeur *t = grym_allouer(l->cap * sizeof *t);
+        if (l->n) memcpy(t, l->valeurs, l->n * sizeof *t);
+        free(l->valeurs);
+        l->valeurs = t;
+    }
+    l->valeurs[l->n++] = x;
+}
+
 static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
     char *erreur = NULL;
     const size_t nc = e->nb_colonnes[k], nl = l->liste->n;
@@ -3281,7 +3381,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_TAILLE_LISTE: {
             Valeur l = depiler(&pile);
             char t[32];
-            size_t nb = l.type == V_LISTE ? l.liste->n : 0;
+            size_t nb = l.type == V_LISTE || l.type == V_ENSEMBLE ? l.liste->n : 0;
             if (l.type == V_LIGNE && l.texte) for (const char *p = l.texte; *p; p++) nb += *p == '\x1e';   /* ses lignes */
             snprintf(t, sizeof t, "%lu", (unsigned long)nb);
             valeur_liberer(&l);
@@ -3289,6 +3389,18 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_ELEMENT: {
+            if (pile.v[pile.n - 2].type == V_ENSEMBLE) {   /* « Pour chaque couleur parmi les couleurs » (§ 13.9) */
+                Valeur rang = depiler(&pile), l = depiler(&pile);
+                long k = -1;
+                if (rang.type == V_NOMBRE) dec_en_jours(&rang.nombre, &k);
+                int dedans = k >= 0 && (size_t)k < l.liste->n;
+                Valeur r = dedans ? valeur_copier(&l.liste->valeurs[k]) : vi_absent(NULL);
+                valeur_liberer(&rang);
+                valeur_liberer(&l);
+                if (!dedans) { valeur_liberer(&r); ok = echouer(diag, b, debut, grym_dupliquer("Rang hors de l'ensemble.")); break; }
+                empiler(&pile, r);
+                break;
+            }
             if (pile.v[pile.n - 2].type == V_LIGNE) {   /* la ligne r d'un tableau : ses titres, puis ses cellules (§ 15.5) */
                 Valeur rang = depiler(&pile), l = depiler(&pile);
                 long k = -1;
@@ -3649,6 +3761,96 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             empiler(&pile, valeur_nombre(r));
+            break;
+        }
+        case I_ENSEMBLE: {   /* « « rouge », « vert » et « bleu » » (§ 13.9) : les doublons tombent, l'ordre reste */
+            Valeur e = ensemble_vide();
+            size_t n = op, base_pile = pile.n - n;
+            for (size_t k = 0; k < n; k++) {
+                Valeur x = pile.v[base_pile + k];
+                if (x.type == V_ABSENT) {
+                    char *mp = message_absent(&x);
+                    for (size_t q = k; q < n; q++) valeur_liberer(&pile.v[base_pile + q]);
+                    pile.n = base_pile;
+                    valeur_liberer(&e);
+                    ok = echouer(diag, b, debut, mp);
+                    break;
+                }
+                ensemble_gagner(&e, x);
+            }
+            if (!ok) break;
+            pile.n = base_pile;
+            empiler(&pile, e);
+            break;
+        }
+        case I_AJOUTER: {   /* « Les élus gagnent m. », « perdent » */
+            Valeur x = depiler(&pile), e = depiler(&pile);
+            if (e.type != V_ENSEMBLE || x.type == V_ABSENT) {
+                char *mp = x.type == V_ABSENT ? message_absent(&x) : grym_formater("Seul un ensemble gagne ou perd un élément, pas %s.", nom_type(e.type));
+                valeur_liberer(&x);
+                valeur_liberer(&e);
+                ok = echouer(diag, b, debut, mp);
+                break;
+            }
+            if (op == 0) ensemble_gagner(&e, x);
+            else {
+                long k = ensemble_rang(&e, &x);
+                valeur_liberer(&x);
+                if (k >= 0) {
+                    ensemble_seul(&e);
+                    valeur_liberer(&e.liste->valeurs[k]);
+                    memmove(&e.liste->valeurs[k], &e.liste->valeurs[k + 1], (e.liste->n - (size_t)k - 1) * sizeof *e.liste->valeurs);
+                    e.liste->n--;
+                }
+            }
+            empiler(&pile, e);
+            break;
+        }
+        case I_PARMI: {   /* « m est parmi les élus » */
+            Valeur e = depiler(&pile), x = depiler(&pile);
+            char *mp = NULL;
+            if (x.type == V_ABSENT) mp = message_absent(&x);
+            else if (e.type != V_ENSEMBLE) mp = grym_formater("« parmi » cherche dans un ensemble, pas dans %s.", nom_type(e.type));
+            int r = mp ? 0 : ensemble_rang(&e, &x) >= 0;
+            valeur_liberer(&x);
+            valeur_liberer(&e);
+            if (mp) { ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, vi_booleen(r));
+            break;
+        }
+        case I_TAILLE_ENSEMBLE: {   /* « le nombre de couleurs » */
+            Valeur e = depiler(&pile);
+            if (e.type != V_ENSEMBLE) {
+                char *mp = grym_formater("« le nombre de » compte un ensemble, pas %s.", nom_type(e.type));
+                valeur_liberer(&e);
+                ok = echouer(diag, b, debut, mp);
+                break;
+            }
+            Valeur r = valeur_nombre(dec_depuis_long((long)e.liste->n));
+            valeur_liberer(&e);
+            empiler(&pile, r);
+            break;
+        }
+        case I_JOINDRE: {   /* « les couleurs jointes par « , » » */
+            Valeur s = depiler(&pile), e = depiler(&pile);
+            char *mp = NULL;
+            if (e.type != V_ENSEMBLE) mp = grym_formater("Seul un ensemble se joint, pas %s.", nom_type(e.type));
+            else if (s.type != V_TEXTE) mp = grym_formater("Le séparateur est un texte, pas %s.", nom_type(s.type));
+            Chaine c = {0};
+            for (size_t k = 0; !mp && k < e.liste->n; k++) {
+                if (k) chaine_ajouter(&c, s.texte ? s.texte : "");
+                char *t = e.liste->valeurs[k].type == V_OBJET ? nom_objet(m, e.liste->valeurs[k].objet)
+                                                                : texte_valeur(m, &e.liste->valeurs[k]);
+                chaine_ajouter(&c, t);
+                free(t);
+            }
+            char *t = chaine_rendre(&c);
+            valeur_liberer(&s);
+            valeur_liberer(&e);
+            if (mp) { free(t); ok = echouer(diag, b, debut, mp); break; }
+            Valeur r = vi_texte(t);
+            free(t);
+            empiler(&pile, r);
             break;
         }
         case I_TABLEAU: {   /* « Pour chaque ligne du tableau « f.csv » » : le fichier lu devient un tableau (§ 15.5) */

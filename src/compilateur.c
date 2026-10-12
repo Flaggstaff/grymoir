@@ -126,6 +126,12 @@ static void comparaison(Compilation *c, const Noeud *n) {
     int l = n->op_ligne, col = n->op_colonne;
     expression(c, n->enfants[0]);
     CodeInstruction code;
+    if (n->op == 'm') {   /* « m est parmi les élus » (§ 13.9) : la valeur, l'ensemble, puis PARMI */
+        expression(c, n->enfants[1]);
+        emettre(c, I_PARMI, 0, l, col);
+        if (n->negation) emettre(c, I_NON, 0, l, col);
+        return;
+    }
     if (n->op == 'c' || n->op == 'd' || n->op == 'f') {   /* contient, commence par, finit par (§ 4.5) */
         expression(c, n->enfants[1]);
         emettre(c, I_CONTIENT, n->op == 'c' ? 0 : n->op == 'd' ? 1 : 2, l, col);
@@ -345,6 +351,25 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_LIRE_CHAMP, ch, n->op_ligne, n->op_colonne);
         return;
     }
+    case N_ENSEMBLE:   /* les éléments, puis ENSEMBLE n (§ 13.9) */
+        if (n->nb_enfants > 65535) { trop_grand(c, n); return; }
+        for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
+        emettre(c, I_ENSEMBLE, (long)n->nb_enfants, n->ligne, n->colonne);
+        return;
+    case N_AJOUT:
+        expression(c, n->enfants[0]);
+        expression(c, n->enfants[1]);
+        emettre(c, I_AJOUTER, n->op == 'p', n->ligne, n->colonne);
+        return;
+    case N_TAILLE:
+        expression(c, n->enfants[0]);
+        emettre(c, I_TAILLE_ENSEMBLE, 0, n->ligne, n->colonne);
+        return;
+    case N_JOINDRE:
+        expression(c, n->enfants[0]);
+        expression(c, n->enfants[1]);
+        emettre(c, I_JOINDRE, 0, n->ligne, n->colonne);
+        return;
     case N_COLONNE:   /* la ligne, le titre, puis COLONNE (§ 15.5) */
         expression(c, n->enfants[1]);
         expression(c, n->enfants[0]);
@@ -904,8 +929,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_POUR_TABLEAU: {   /* le tableau lu une fois, au début, puis parcouru par rang (§ 15.5) */
         int v = ph->local, tableau = ph->entier, rang = ph->entier + 1, l = ph->ligne, col = ph->colonne;
         expression(c, ph->enfants[0]);
-        emettre(c, I_LIRE_FICHIER, 0, l, col);
-        emettre(c, I_TABLEAU, 0, l, col);
+        if (ph->op != 'p') {   /* « parmi les couleurs » (§ 13.9) : l'ensemble lui-même, figé par sa copie */
+            emettre(c, I_LIRE_FICHIER, 0, l, col);
+            emettre(c, I_TABLEAU, 0, l, col);
+        }
         emettre(c, I_ECRIRE_LOCAL, tableau, l, col);
         constante(c, C_NOMBRE, "0", ph, l, col);
         emettre(c, I_ECRIRE_LOCAL, rang, l, col);
