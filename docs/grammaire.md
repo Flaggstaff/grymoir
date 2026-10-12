@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.57 de la spécification, révisée le 29 septembre 2026. Tout ce qui suit est implémenté.
+Version 1.58 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -132,7 +132,7 @@ La puissance passe avant la négation, comme en mathématiques : `−2 ^ 2` vaut
 - Tous les nombres sont décimaux exacts, dès la v0.1 (charte, principe 1). `1,1 + 2,2` donne `3,3`.
 - Addition, soustraction et multiplication sont exactes.
 - Une division dont le quotient est fini en décimal reste exacte, quelle que soit sa longueur : `1 ÷ 8` donne `0,125`.
-- Une division au quotient non fini (`1 ÷ 3`) est arrondie à 28 chiffres significatifs, au plus proche, avec arrondi au pair en cas d'égalité (arrondi bancaire). Un quotient non fini ne tombe jamais exactement sur une moitié : la règle d'égalité ne sert pas en v0.1, elle vaudra pour les arrondis à venir (arrondi monétaire).
+- Une division au quotient non fini (`1 ÷ 3`) est arrondie à 28 chiffres significatifs, au plus proche, avec arrondi au pair en cas d'égalité (arrondi bancaire). Un quotient non fini ne tombe jamais exactement sur une moitié : la règle d'égalité n'y sert pas. Arrondir un montant au centime ou aux cinq centimes est une autre opération (§ 3.4).
 - La multiplication reste exacte même après une division arrondie : `1 ÷ 7 × 7` donne `1,0000000000000000000000000003`.
 - Division par zéro : erreur, jamais de valeur spéciale (infini, NaN).
 - Référence : spécification General Decimal Arithmetic, Mike Cowlishaw (IBM), adoptée par le module `decimal` de Python, citée de mémoire. Le comportement de GrymoiR a été comparé à ce module sur 6'672 opérations tirées au hasard, sans différence (21 septembre 2026).
@@ -168,6 +168,26 @@ Les décimales écrites se conservent, comme en comptabilité.
 - Une saisie ratée n'a aucun effet : aucun nom créé, aucun genre fixé, aucune valeur modifiée, même par une phrase réussie de la même saisie. Cela vaut aussi pour les erreurs de calcul (division par zéro).
 - Ce qu'une exécution ratée a affiché avant l'erreur reste affiché : afficher n'est pas écrire. Après le message d'erreur, une phrase dit ce qui a été annulé, pour qu'aucun affichage ne laisse croire le contraire. Dans la boucle interactive : « Saisie annulée : aucun nom n'a changé », complété de « rien n'a été conservé dans la base » ou « aucun fichier n'a été écrit » s'il y a lieu. Avec `grym lancer`, sur la sortie d'erreur, seulement si une base ou des fichiers étaient en jeu : « Exécution annulée : rien n'a été conservé, ni dans la base ni sur le disque. » Après une question (§ 17) : « Exécution annulée : rien n'a été conservé depuis la dernière question. »
 - `quitter`, ou la fin de l'entrée (Ctrl+D, Ctrl+Z sous Windows), termine la boucle.
+
+### 3.4 Arrondir
+
+```
+Le montant vaut l'arrondi de brut × 1,081 à 0,05.          →  13,35 (si brut vaut 12,35)
+La part vaut l'arrondi de total ÷ 3 à 0,01 vers le bas.
+Afficher l'arrondi de 2,5 à 1 puis l'arrondi de 2,5 à 1 au pair.   →  3 2
+```
+
+- `l'arrondi de x à p` rend le multiple de `p` le plus proche de `x`. Le pas `p` est un nombre positif : `0,05`, `0,01`, `1`, `100`. Sinon, erreur à l'exécution : « Un arrondi se fait à un pas positif (0,05, 1, 10…), pas à 0. »
+- **Moitié.** Par défaut, une valeur à égale distance de deux multiples s'éloigne de zéro : `2,5` donne `3`, `−2,5` donne `−3`. C'est l'arrondi d'une caisse, et celui de la fonction `ARRONDI` des tableurs (citée de mémoire). Le module `decimal` de Python l'appelle `ROUND_HALF_UP` ; la fonction `round()` de Python arrondit au pair, ce qui surprend.
+- **Sens.** Après le pas : `vers le bas` (le multiple inférieur ou égal : `−2,1` donne `−3`), `vers le haut` (le multiple supérieur ou égal : `−2,1` donne `−2`), `au pair` (une moitié va au multiple pair : `2,5` donne `2`, `3,5` donne `4` ; l'arrondi bancaire).
+- **Exact.** Le calcul se fait sur les chiffres, sans division arrondie : `l'arrondi de 1 ÷ 3 à 0,01` donne `0,33`, `l'arrondi de 7,024 à 0,05` donne `7,00`.
+- **Décimales.** Le résultat porte les décimales du pas : `l'arrondi de 0,001 à 0,01` donne `0,00`, `l'arrondi de 1234 à 100` donne `1200`.
+- **Liaison.** La valeur s'étend jusqu'à `à` : `l'arrondi de brut × 1,081 à 0,05` arrondit le produit. Le pas se lie comme un argument de calcul (§ 9.1) : `l'arrondi de x à 0,05 + 1` ajoute 1 au résultat ; un pas calculé se parenthèse, `à (p × 2)`. `du`, `au` se contractent comme ailleurs : `l'arrondi du prix au pas`.
+- `l'arrondi de x à` sans pas : « L'arrondi se fait à un pas : « l'arrondi de x à 0,05 », « l'arrondi de x à 1 ». » Une valeur qui n'est pas un nombre : « On n'arrondit qu'un nombre, pas un texte. »
+- Un calcul l'emploie librement : arrondir ne dépend que de ses arguments (§ 9.4).
+- **Aucun mot réservé.** Un nom, un calcul ou un champ `arrondi` déclaré l'emporte : `L'arrondi d'un nombre vaut …` reste un calcul ordinaire (charte, art. 13.2). `vers`, `bas`, `haut`, `pair` ne comptent qu'après le pas.
+- Vérification (12 octobre 2026) : 3 000 arrondis tirés au hasard, dans les quatre sens et sur dix pas (de `0,001` à `100`, dont `0,07` et `3`), donnent les mêmes résultats, décimales comprises, que `quantize` du module `decimal` de Python (`ROUND_HALF_UP`, `ROUND_FLOOR`, `ROUND_CEILING`, `ROUND_HALF_EVEN`).
+- En forme compacte : `_arrondi(x ; 0,05)`, `_arrondi_bas(x ; 0,05)`, `_arrondi_haut(x ; 1)`, `_arrondi_pair(x ; 1)`.
 
 ---
 
@@ -665,6 +685,7 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `le carré de 7`, `la moyenne de 4 et de 6` | `carré(7)`, `moyenne(4 ; 6)` |
 | `Pour relancer un client :` + bloc | `_action relancer(_un client)` + bloc + `_fin` |
 | `Relancer le client.`, `Saluer.` | `relancer(client)`, `saluer()` |
+| `l'arrondi de x à 0,05`, `… vers le bas`, `… vers le haut`, `… au pair` | `_arrondi(x ; 0,05)`, `_arrondi_bas(…)`, `_arrondi_haut(…)`, `_arrondi_pair(…)` |
 | `Rendre x.` | `_rendre x` |
 | `Tant que c :` | `_tant_que c` … `_fin` |
 | `Répéter 3 fois :` | `_répéter 3 _fois` … `_fin` |
@@ -1571,3 +1592,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.55 | 2026-09-28 | Messages au tutoiement, comme le guide (charte, art. 8) : « écris … », « voulais-tu … ? » |
 | 1.56 | 2026-09-29 | § 14.2 : mois, années et semaines (`d + 3 mois`), ramenés au dernier jour du mois ; unités dans les boucles, sans dérive ; vérifiés contre `dateutil` |
 | 1.57 | 2026-09-29 | § 22.3 et § 22.5 : `grym servir` montre les écrans dans le navigateur, avec la couleur et le logo (`docs/web.md`, W1) ; seul `grym lancer` les refuse |
+| 1.58 | 2026-10-12 | Nouveau § 3.4 : arrondir à un pas (`l'arrondi de x à 0,05`), moitié loin de zéro par défaut, `vers le bas`, `vers le haut`, `au pair` ; exact, vérifié contre `decimal` ; aucun mot réservé. § 3.2 : renvoi |

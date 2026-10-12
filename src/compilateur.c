@@ -333,6 +333,11 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_LIRE_CHAMP, ch, n->op_ligne, n->op_colonne);
         return;
     }
+    case N_ARRONDI:   /* la valeur, le pas, puis ARRONDIR avec le sens (§ 3.4) */
+        expression(c, n->enfants[0]);
+        expression(c, n->enfants[1]);
+        emettre(c, I_ARRONDIR, n->op == 'b' ? 1 : n->op == 'h' ? 2 : n->op == 'e' ? 3 : 0, n->ligne, n->colonne);
+        return;
     case N_GROUPE:
         expression(c, n->enfants[0]);
         return;

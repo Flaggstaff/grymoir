@@ -45,6 +45,13 @@ StatutDecimal dec_multiplication(const Decimal *a, const Decimal *b, Decimal *r)
 StatutDecimal dec_division(const Decimal *a, const Decimal *b, Decimal *r);
 StatutDecimal dec_puissance(const Decimal *a, const Decimal *b, Decimal *r);
 
+/* Arrondi à un multiple de pas (pas > 0), exact : 12,3456 à 0,05 donne 12,35 (grammaire, § 3.4). Le résultat porte
+ * les décimales du pas. Une moitié s'éloigne de zéro (DEC_PROCHE), ou va au multiple pair (DEC_PAIR). */
+typedef enum { DEC_PROCHE, DEC_VERS_LE_BAS, DEC_VERS_LE_HAUT, DEC_PAIR, DEC_VERS_ZERO } ModeArrondi;
+StatutDecimal dec_arrondir(const Decimal *a, const Decimal *pas, ModeArrondi mode, Decimal *r);
+/* Reste de la division entière de a par b, du signe de a : −7 et 3 donnent −1 (§ 3.4). */
+StatutDecimal dec_reste(const Decimal *a, const Decimal *b, Decimal *r);
+
 /* Style suisse (§ 4.1) : 1'234,50 ; négatif avec le signe − (U+2212). */
 char *dec_formater(const Decimal *a);
 /* Le nombre tel qu'on le montre (grammaire, § 4.1) : comme dec_formater, mais un entier de quatre chiffres

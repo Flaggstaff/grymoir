@@ -165,6 +165,12 @@ int main(void) {
                  "Le jour vaut 31.01.2026 + 1 mois − 2 ans.\nAfficher jour + 3 semaines puis jour − 1 jour.\n");
     ALLER_RETOUR("_pour_chaque e _de 31.01.2026 _à 31.12.2026 _pas 1 _mois\n    _afficher e\n_fin\n", NULL);
     EXEC("_afficher 31.01.2026 + 1 _mois ; 29.02.2028 + 1 _année\n", "28.02.2026 28.02.2029\n");
+    /* Arrondi (§ 3.4) */
+    ALLER_RETOUR("_le r << _arrondi(2,5 × 3 ; 0,05) + _arrondi_bas(1 ; 1)\n_afficher _arrondi_haut(r ; 1) ; _arrondi_pair(r ; 1)\n",
+                 "Le r vaut l'arrondi de 2,5 × 3 à 0,05 + l'arrondi de 1 à 1 vers le bas.\n"
+                 "Afficher l'arrondi de r à 1 vers le haut puis l'arrondi de r à 1 au pair.\n");
+    EXEC("_afficher _arrondi(2,5 ; 1) ; _arrondi_pair(2,5 ; 1) ; _arrondi((1 + 1) × 3 ; 4)\n", "3 2 8\n");
+    ERR("_afficher _arrondi(2,5)\n", 1, 11, "« _arrondi » prend deux arguments, la valeur et le pas : _arrondi(x ; 0,05).");
     ALLER_RETOUR("_le jour << 01.03.2026\n_si _aujourd'hui > jour _alors\n    _afficher jour − 01.01.2026\n_fin\n",
                  "Le jour vaut 01.03.2026.\nSi aujourd'hui > jour :\n    Afficher jour − 01.01.2026.\n");
 

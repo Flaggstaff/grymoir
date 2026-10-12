@@ -398,6 +398,70 @@ StatutDecimal dec_division(const Decimal *a, const Decimal *b, Decimal *r) {
 }
 
 /* Valeur entière d'un exposant : 0 si entier, 1 sinon, 2 si trop grand. */
+/* a et b ramenés au même exposant e : deux naturels xa et xb tels que |a| = xa × 10^e, |b| = xb × 10^e. */
+static long aligner(const Decimal *a, const Decimal *b, Nat *xa, Nat *xb) {
+    long e = a->exp < b->exp ? a->exp : b->exp;
+    Nat ma = nat_de(a), mb = nat_de(b);
+    *xa = nat_decaler(&ma, (size_t)(a->exp - e));
+    *xb = nat_decaler(&mb, (size_t)(b->exp - e));
+    return e;
+}
+
+StatutDecimal dec_arrondir(const Decimal *a, const Decimal *pas, ModeArrondi mode, Decimal *r) {
+    if (!pas->n || pas->negatif) {
+        *r = dec_zero();
+        return DEC_DIVISION_PAR_ZERO;   /* l'appelant vérifie le pas avant : ce cas ne sert que de garde */
+    }
+    Nat xa, xp, q, reste;
+    aligner(a, pas, &xa, &xp);
+    nat_diviser(&xa, &xp, &q, &reste);
+    int monter = 0;   /* ajouter 1 au quotient, en valeur absolue */
+    if (reste.n) {
+        Nat deux = nat_petit(2);
+        Nat double_reste = nat_multiplier(&reste, &deux);
+        int c = nat_comparer(&double_reste, &xp);   /* moitié : c == 0 */
+        nat_liberer(&deux);
+        nat_liberer(&double_reste);
+        switch (mode) {
+        case DEC_PROCHE: monter = c >= 0; break;
+        case DEC_PAIR: monter = c > 0 || (c == 0 && q.n && (q.d[0] & 1)); break;
+        case DEC_VERS_LE_BAS: monter = a->negatif; break;
+        case DEC_VERS_LE_HAUT: monter = !a->negatif; break;
+        case DEC_VERS_ZERO: monter = 0; break;
+        }
+    }
+    if (monter) {
+        Nat un = nat_petit(1);
+        Nat s = nat_additionner(&q, &un);
+        nat_liberer(&un);
+        nat_liberer(&q);
+        q = s;
+    }
+    nat_liberer(&xa);
+    nat_liberer(&xp);
+    nat_liberer(&reste);
+    Nat mp = nat_de(pas);
+    Nat produit = nat_multiplier(&q, &mp);
+    nat_liberer(&q);
+    *r = dec_depuis_nat(produit, a->negatif, pas->exp);
+    return verifier_taille(r);
+}
+
+StatutDecimal dec_reste(const Decimal *a, const Decimal *b, Decimal *r) {
+    if (!b->n) {
+        *r = dec_zero();
+        return DEC_DIVISION_PAR_ZERO;
+    }
+    Nat xa, xb, q, reste;
+    long e = aligner(a, b, &xa, &xb);
+    nat_diviser(&xa, &xb, &q, &reste);
+    nat_liberer(&xa);
+    nat_liberer(&xb);
+    nat_liberer(&q);
+    *r = dec_depuis_nat(reste, a->negatif, e);
+    return verifier_taille(r);
+}
+
 static int exposant_entier(const Decimal *b, long *valeur) {
     *valeur = 0;
     if (!b->n) return 0;

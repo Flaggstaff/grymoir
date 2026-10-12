@@ -498,6 +498,13 @@ int main(void) {
       "(pour-chaque [e] (date 2026-01-31) (date 2026-12-31) (durée 1 mois) (bloc (afficher [e])))");
     VE("Le jour vaut 21.09.2026 + 2 an.", 1, 29, "Accord : « 2 ans ».");
     VE("Le jour vaut 21.09.2026 + 1 années.", 1, 29, "Accord : « 1 année ».");
+    /* Arrondi (§ 3.4) */
+    V("Le r vaut l'arrondi de 2 × 3 à 0,05.", "(créer [r] (arrondi (× 2 3) 0.05))");
+    V("Le r vaut l'arrondi de 2 à 1 vers le bas + 1.", "(créer [r] (+ (arrondi-bas 2 1) 1))");
+    V("Le r vaut l'arrondi de 2 à 1 vers le haut.", "(créer [r] (arrondi-haut 2 1))");
+    V("Le r vaut l'arrondi de 2 à 1 au pair.", "(créer [r] (arrondi-pair 2 1))");
+    VE("Le r vaut l'arrondi de 3.", 1, 25, "L'arrondi se fait à un pas : « l'arrondi de x à 0,05 », « l'arrondi de x à 1 ».");
+    VE("Le prix vaut 3.\nLe r vaut l'arrondi de le prix à 1.", 2, 21, "« de le » s'écrit « du ».");
     VE("Le jour vaut 21.09.2026 + 12'000 jour.", 1, 34, "Accord : « 12'000 jours ».");
     VE("Le délai vaut 3 mois.", 1, 17, "Une durée ne se range pas seule");
     VE("Le délai vaut 3 mois + 21.09.2026.", 1, 17, "Une durée ne se range pas seule");

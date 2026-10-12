@@ -1263,6 +1263,25 @@ int main(void) {
     PROG("Le n vaut 3.\nAfficher 31.01.2026 + n mois puis 31.01.2026 + 2 × n mois puis 31.01.2026 + (n + 1) mois.",
          "30.04.2026 31.07.2026 31.05.2026");
     PROG("Afficher l'année de 21.09.2026 + 10 ans puis l'année de 21.09.2026 − 1 an.", "2036 2025");
+    /* Arrondi (§ 3.4) : au plus proche, la moitié loin de zéro ; vers le bas, vers le haut, au pair */
+    PROG("Le brut vaut 12,35.\nAfficher l'arrondi de brut × 1,081 à 0,05.", "13,35");
+    PROG("Afficher l'arrondi de 2,5 à 1 puis l'arrondi de −2,5 à 1 puis l'arrondi de 2,49 à 1.", "3 −3 2");
+    PROG("Afficher l'arrondi de 2,5 à 1 au pair puis l'arrondi de 3,5 à 1 au pair puis l'arrondi de 2,25 à 0,1 au pair.",
+         "2 4 2,2");
+    PROG("Afficher l'arrondi de 2,1 à 1 vers le haut puis l'arrondi de −2,1 à 1 vers le haut.", "3 −2");
+    PROG("Afficher l'arrondi de 2,9 à 1 vers le bas puis l'arrondi de −2,1 à 1 vers le bas.", "2 −3");
+    PROG("Afficher l'arrondi de 1234,5678 à 0,01 puis l'arrondi de 1234 à 100 puis l'arrondi de 0,001 à 0,01.",
+         "1'234,57 1200 0,00");
+    PROG("Afficher l'arrondi de 1 ÷ 3 à 0,01 puis l'arrondi de 7,03 à 0,05 puis l'arrondi de 7,024 à 0,05.",
+         "0,33 7,05 7,00");
+    PROG("Le pas vaut 0,05.\nLe brut vaut 2,02.\nAfficher l'arrondi du brut au pas + 1.", "3,00");
+    PROG("Afficher l'arrondi de 0,4 à 1 = 0 puis l'arrondi de 10 ÷ 4 à 1 × 2.", "vrai 6");
+    PROG("L'arrondi d'un nombre vaut nombre + 1.\nAfficher l'arrondi de 3.", "4");
+    PROG("Un x a : un arrondi.\nLe o vaut un nouveau x :\n    L'arrondi vaut 4.\nAfficher l'arrondi de o.", "4");
+    PROG("Afficher l'arrondi de 3 à 0.", "ERREUR 1:10 Un arrondi se fait à un pas positif (0,05, 1, 10…), pas à 0.");
+    PROG("Afficher l'arrondi de 3 à −1.", "ERREUR 1:10 Un arrondi se fait à un pas positif (0,05, 1, 10…), pas à −1.");
+    PROG("Afficher l'arrondi de « a » à 1.", "ERREUR 1:10 On n'arrondit qu'un nombre, pas un texte.");
+    PROG("Afficher l'arrondi de 2 à « a ».", "ERREUR 1:10 Le pas d'un arrondi est un nombre, pas un texte.");
     PROG("Pour chaque e du 31.01.2026 au 31.05.2026 par pas de 1 mois, afficher e.",
          "31.01.2026\n28.02.2026\n31.03.2026\n30.04.2026\n31.05.2026");
     PROG("Pour chaque e du 31.12.2026 au 31.01.2026 par pas de −3 mois, afficher e.",

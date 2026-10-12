@@ -3194,6 +3194,36 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
+        case I_ARRONDIR: {   /* « l'arrondi de x à 0,05 » (§ 3.4) */
+            Valeur vp = depiler(&pile), vx = depiler(&pile);
+            char *probleme = NULL;
+            Decimal r = dec_zero();
+            if (vx.type == V_ABSENT || vp.type == V_ABSENT)
+                probleme = message_absent(vx.type == V_ABSENT ? &vx : &vp);
+            else if (vx.type != V_NOMBRE)
+                probleme = grym_formater("On n'arrondit qu'un nombre, pas %s.", nom_type(vx.type));
+            else if (vp.type != V_NOMBRE)
+                probleme = grym_formater("Le pas d'un arrondi est un nombre, pas %s.", nom_type(vp.type));
+            else if (!vp.nombre.n || vp.nombre.negatif) {
+                char *x = dec_afficher(&vp.nombre);
+                probleme = grym_formater("Un arrondi se fait à un pas positif (0,05, 1, 10…), pas à %s.", x);
+                free(x);
+            } else {
+                dec_liberer(&r);
+                ModeArrondi mode = op == 1 ? DEC_VERS_LE_BAS : op == 2 ? DEC_VERS_LE_HAUT : op == 3 ? DEC_PAIR : DEC_PROCHE;
+                StatutDecimal st = dec_arrondir(&vx.nombre, &vp.nombre, mode, &r);
+                if (st != DEC_OK) probleme = message_statut(st);
+            }
+            valeur_liberer(&vx);
+            valeur_liberer(&vp);
+            if (probleme) {
+                dec_liberer(&r);
+                ok = echouer(diag, b, debut, probleme);
+                break;
+            }
+            empiler(&pile, valeur_nombre(r));
+            break;
+        }
         case I_REFUSER: {
             /* « Refuser « … » puis x. » (grammaire, § 18.1) : une erreur voulue, dont le message s'écrit comme
              * « Afficher » l'écrirait ; Essayer la rattrape, la transaction annule */

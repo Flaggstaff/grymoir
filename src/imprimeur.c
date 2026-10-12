@@ -239,6 +239,19 @@ static void preposition(Impression *im, const char *prep, const Noeud *x) {
     free(t);
 }
 
+/* « de » suivi d'une expression entière, la préposition se contractant avec son premier terme : « du prix × 2 ». */
+static void de_expression(Impression *im, const Noeud *x) {
+    if (x->type == N_OPERATION && !im->compact) {
+        de_expression(im, x->enfants[0]);
+        aj(im, " ");
+        aj(im, symbole(x->op));
+        aj(im, " ");
+        expression(im, x->enfants[1]);
+        return;
+    }
+    preposition(im, "de", x);
+}
+
 static void nom_avec_article(Impression *im, const Noeud *n) {
     if (!im->compact) {
         if (n->article == ART_LE) aj(im, "le ");
@@ -420,6 +433,31 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, im->compact ? " _" : " ");
         aj(im, n->texte);
         return;
+    case N_ARRONDI: {   /* « l'arrondi de x à 0,05 vers le bas » ; « _arrondi_bas(x ; 0,05) » (§ 3.4) */
+        const char *mode = n->op == 'b' ? "vers le bas" : n->op == 'h' ? "vers le haut" : n->op == 'e' ? "au pair" : NULL;
+        if (im->compact) {
+            aj(im, n->op == 'b' ? "_arrondi_bas(" : n->op == 'h' ? "_arrondi_haut(" : n->op == 'e' ? "_arrondi_pair(" : "_arrondi(");
+            for (size_t k = 0; k < 2; k++) {
+                if (k) aj(im, " ; ");
+                const Noeud *x = n->enfants[k];
+                expression(im, x->type == N_GROUPE ? x->enfants[0] : x);
+            }
+            aj(im, ")");
+            return;
+        }
+        aj(im, n->forme ? "l'arrondi " : "arrondi ");
+        de_expression(im, n->enfants[0]);
+        aj(im, " ");
+        if (argument_simple(n->enfants[1])) {
+            preposition(im, "à", n->enfants[1]);
+        } else {
+            aj(im, "à (");
+            expression(im, n->enfants[1]);
+            aj(im, ")");
+        }
+        if (mode) { aj(im, " "); aj(im, mode); }
+        return;
+    }
     case N_ABSENT:
         aj(im, im->compact ? "_absent" : n->forme == 2 ? "absente" : "absent");
         return;

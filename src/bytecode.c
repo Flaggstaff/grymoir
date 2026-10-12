@@ -193,6 +193,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_REFUSER:        return "REFUSER";
     case I_BASE_MODIFIEE:  return "BASE_MODIFIÉE";
     case I_DECALER:        return "DÉCALER";
+    case I_ARRONDIR:       return "ARRONDIR";
     }
     return "INCONNUE";
 }
@@ -204,7 +205,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_GAGNER || code == I_PERDRE || code == I_DEMANDER
         || code == I_CADRER || code == I_AFFICHER_SANS_LIGNE || code == I_STYLE
         || code == I_CHERCHER || code == I_SAISIR || code == I_ELIDER || code == I_ECRAN_OUVRIR || code == I_ECRAN_LISTE
-        || code == I_APPARENCE || code == I_REFUSER || code == I_DECALER;
+        || code == I_APPARENCE || code == I_REFUSER || code == I_DECALER || code == I_ARRONDIR;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -351,7 +352,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_ELEMENT: besoin = 2; effet = -1; break;
             case I_INITIALISER_CHAMP: besoin = 2; effet = -1; break;
             case I_LIRE_CHAMP: case I_SAISIR: case I_ELIDER: besoin = 1; break;
-            case I_COLLER: case I_DECALER: besoin = 2; effet = -1; break;
+            case I_COLLER: case I_DECALER: case I_ARRONDIR: besoin = 2; effet = -1; break;
             case I_RESAISIR: case I_FICHE: besoin = 1; effet = -1; break;
             case I_ECRAN_LISTE: case I_ECRAN_ERREUR: case I_FICHE_ECRAN: case I_APPARENCE: besoin = 1; effet = -1; break;
             case I_REFUSER: besoin = (long)op; effet = -(long)op; break;
@@ -437,7 +438,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 30  /* versions 1 à 29 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 31  /* versions 1 à 30 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
@@ -446,7 +447,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                               sans essai (19), sans formulaire (20),
                               sans assemblage de textes (21), sans modification par formulaire (22),
                               sans fiche (23), sans fichier source des blocs (24), sans apparence des écrans (26), sans refus (27), sans règles (28),
-                              sans décalage en mois (29) */
+                              sans décalage en mois (29), sans arrondi (30) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 

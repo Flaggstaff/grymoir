@@ -318,6 +318,44 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "à", t);
             continue;
         }
+        if ((est_cle(t, "arrondi") || est_cle(t, "arrondi_bas") || est_cle(t, "arrondi_haut") || est_cle(t, "arrondi_pair"))
+            && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
+            /* _arrondi_bas(x ; 0,05) → l'arrondi de (x) à (0,05) vers le bas, parenthèses synthétiques (§ 3.4) */
+            size_t fin = fermante(r, k + 1, f);
+            if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+            size_t pv = 0;
+            int p = 0, nb = 0;
+            for (size_t q = k + 2; q < fin; q++) {
+                if (r->e[q].type == J_PAR_OUV) p++;
+                else if (r->e[q].type == J_PAR_FERM) p--;
+                else if (p == 0 && r->e[q].type == J_POINT_VIRGULE) { pv = q; nb++; }
+            }
+            if (nb != 1 || pv == k + 2 || pv + 1 == fin) {
+                echouer(r, t, grym_formater("« _%s » prend deux arguments, la valeur et le pas : _%s(x ; 0,05).",
+                                            t->valeur, t->valeur));
+                return;
+            }
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "arrondi", t);
+            mot(r, "de", t);
+            emettre(r, J_PAR_OUV, NULL, &r->e[k + 2], 1);
+            expression(r, k + 2, pv);
+            emettre(r, J_PAR_FERM, NULL, &r->e[pv], 1);
+            mot(r, "à", &r->e[pv]);
+            emettre(r, J_PAR_OUV, NULL, &r->e[pv + 1], 1);
+            expression(r, pv + 1, fin);
+            emettre(r, J_PAR_FERM, NULL, &r->e[fin], 1);
+            if (est_cle(t, "arrondi_bas") || est_cle(t, "arrondi_haut")) {
+                mot(r, "vers", t);
+                mot(r, "le", t);
+                mot(r, est_cle(t, "arrondi_bas") ? "bas" : "haut", t);
+            } else if (est_cle(t, "arrondi_pair")) {
+                mot(r, "au", t);
+                mot(r, "pair", t);
+            }
+            k = fin;
+            continue;
+        }
         if (est_cle(t, "fichier")) {                /* _fichier « a.jpg » → le fichier « a.jpg » */
             mot(r, "le", t);
             mot(r, "fichier", t);

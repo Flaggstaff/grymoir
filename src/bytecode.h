@@ -76,11 +76,13 @@ typedef enum {
     I_REFUSER,          /* opérande : n ; dépile n valeurs, les écrit comme AFFICHER, séparées par une espace ;
                            l'exécution échoue avec ce message (§ 18.1) */
     I_BASE_MODIFIEE,    /* empile vrai si la transaction en cours a écrit dans la base : avant de revérifier les règles (§ 16.14) */
-    I_DECALER           /* opérande : 0 jours, 1 semaines, 2 mois, 3 années ; dépile n, puis une date (ou une année) ;
+    I_DECALER,          /* opérande : 0 jours, 1 semaines, 2 mois, 3 années ; dépile n, puis une date (ou une année) ;
                            empile la date n unités plus tard, ramenée au dernier jour du mois (§ 14.2) */
+    I_ARRONDIR          /* opérande : 0 au plus proche, 1 vers le bas, 2 vers le haut, 3 au pair ; dépile le pas, puis
+                           la valeur ; empile la valeur arrondie au multiple du pas (§ 3.4) */
 } CodeInstruction;
 
-#define I_DERNIER I_DECALER
+#define I_DERNIER I_ARRONDIR
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

@@ -1395,6 +1395,7 @@ static int voyelle_initiale(const char *s) {
 static Noeud *valeur(Analyse *a);
 static Noeud *base(Analyse *a);
 static int de_ou_d(const Jeton *t);
+static void arrets(Analyse *a, const char *m1, const char *m2);
 
 static int contient_champ_dont(const Noeud *n) {
     if (n->type == N_CHAMP_DONT) return 1;
@@ -1869,6 +1870,74 @@ static Noeud *base(Analyse *a) {
     if (est_mot(t, "la") && est_mot(voir(a, 1), "somme") && est_mot(voir(a, 2), "des")) {   /* § 16.4 */
         Noeud *n = somme(a, t);
         if (n || a->echec) return n;
+    }
+    {
+        /* « l'arrondi de x à 0,05 [vers le bas | vers le haut | au pair] » (§ 3.4). Ne réserve rien : un nom, un calcul
+         * ou un champ « arrondi » déclaré l'emporte. */
+        size_t m0 = (t->type == J_ELISION && strcmp(t->valeur, "l") == 0) ? 1 : 0;
+        const Jeton *ta = voir(a, (int)m0), *tde = voir(a, (int)m0 + 1);
+        if (est_mot(ta, "arrondi") && (de_ou_d(tde) || est_mot(tde, "du")) && !visible(a, "arrondi")
+            && !champ_connu(a->portee, "arrondi", NULL)) {
+            Noeud *n = noeud_creer(N_ARRONDI, t->ligne, t->colonne, t->debut);
+            n->forme = (int)m0;
+            n->op = 'p';
+            a->article_force = ART_AUCUN;
+            for (size_t k = 0; k < m0 + 1; k++) avancer(a);
+            Jeton *td = cour(a);
+            avancer(a);
+            if (est_mot(td, "du")) {
+                a->article_force = ART_LE;
+                a->jeton_force = td;
+            } else if (est_mot(cour(a), "le")) {
+                noeud_liberer(n);
+                return erreur(a, td, grym_dupliquer("« de le » s'écrit « du »."));
+            }
+            const char *garde[3];
+            int nb_garde = a->nb_arrets;
+            memcpy(garde, a->arrets, sizeof garde);
+            arrets(a, "à", "au");
+            Noeud *x = expression(a);
+            a->nb_arrets = nb_garde;
+            memcpy(a->arrets, garde, sizeof garde);
+            a->article_force = ART_AUCUN;
+            if (!x) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, x);
+            attendre_mot(a, a->i, "à", strlen("à"));
+            Jeton *tp = cour(a);
+            if (est_mot(tp, "au")) {
+                avancer(a);
+                a->article_force = ART_LE;
+                a->jeton_force = tp;
+            } else if (est_mot(tp, "à")) {
+                avancer(a);
+            } else {
+                noeud_liberer(n);
+                return erreur(a, tp, grym_dupliquer("L'arrondi se fait à un pas : « l'arrondi de x à 0,05 », "
+                                                    "« l'arrondi de x à 1 »."));
+            }
+            arrets(a, "vers", "au");
+            Noeud *p = unaire(a);
+            a->nb_arrets = nb_garde;
+            memcpy(a->arrets, garde, sizeof garde);
+            a->article_force = ART_AUCUN;
+            if (!p) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, p);
+            n->fin = p->fin;
+            attendre_mot(a, a->i, "vers le bas", strlen("vers le bas"));
+            attendre_mot(a, a->i, "vers le haut", strlen("vers le haut"));
+            attendre_mot(a, a->i, "au pair", strlen("au pair"));
+            if (est_mot(cour(a), "vers") && est_mot(voir(a, 1), "le")
+                && (est_mot(voir(a, 2), "bas") || est_mot(voir(a, 2), "haut"))) {
+                n->op = est_mot(voir(a, 2), "bas") ? 'b' : 'h';
+                n->fin = fin_jeton(voir(a, 2));
+                a->i += 3;
+            } else if (est_mot(cour(a), "au") && est_mot(voir(a, 1), "pair")) {
+                n->op = 'e';
+                n->fin = fin_jeton(voir(a, 1));
+                a->i += 2;
+            }
+            return n;
+        }
     }
     if (t->type == J_DATE) {
         Noeud *n = feuille(N_DATE, t);

@@ -33,6 +33,9 @@ typedef enum {
     N_DUREE,         /* « 3 mois », seulement à droite d'un « + » ou d'un « − », ou comme pas d'une boucle (§ 14.2) :
                         enfants[0] : le nombre ; op : unité, 'j' jours, 's' semaines, 'm' mois, 'a' années ;
                         texte : le mot écrit (« jour », « ans », « années »…), gardé pour la traduction */
+    N_ARRONDI,       /* « l'arrondi de x à 0,05 vers le bas » (§ 3.4) : enfants[0] la valeur, enfants[1] le pas ;
+                        op : 'p' au plus proche, 'b' vers le bas, 'h' vers le haut, 'e' au pair ;
+                        forme 1 : article « l' » écrit */
     N_CADRE,         /* « le nom sur 20 à droite » (§ 4.2) : enfants[0] la valeur, enfants[1] la largeur ;
                         forme 0 : sens par défaut, 1 : à gauche, 2 : à droite */
     N_REPONSE,       /* « la réponse en nombre à « Âge ? » » (§ 17) : texte2 : type demandé ;
