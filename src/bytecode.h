@@ -93,10 +93,12 @@ typedef enum {
     I_AJOUTER,          /* opérande : 0 gagner, 1 perdre ; dépile la valeur, puis l'ensemble ; empile l'ensemble changé */
     I_PARMI,            /* dépile l'ensemble, puis la valeur ; empile vrai si elle en fait partie */
     I_TAILLE_ENSEMBLE,  /* remplace l'ensemble au sommet par son nombre d'éléments */
-    I_JOINDRE           /* dépile le séparateur, puis l'ensemble ; empile ses éléments en texte, séparés */
+    I_JOINDRE,          /* dépile le séparateur, puis l'ensemble ; empile ses éléments en texte, séparés */
+    I_EXEMPLE,          /* opérande : constante texte, l'exemple écrit ; dépile l'attendu, puis l'obtenu ; écrit ✓ ou ✗ (§ 9.6) */
+    I_EXEMPLE_RATE      /* opérande : la même ; dépile le motif d'une erreur ; écrit ✗ et le motif */
 } CodeInstruction;
 
-#define I_DERNIER I_JOINDRE
+#define I_DERNIER I_EXEMPLE_RATE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

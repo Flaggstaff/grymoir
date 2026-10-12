@@ -11,5 +11,7 @@
  * RETOUR), puis un bloc par formule. Renvoie NULL si le programme dépasse les
  * limites du format (65'536 constantes ou noms, 255 arguments). */
 Module *compiler(const Programme *p, Diagnostic *diag);
+/* Mode exemples (grym exemples, grammaire § 9.6) : le programme ne compile que ses déclarations et ses exemples. */
+void compilateur_mode_exemples(int actif);
 
 #endif

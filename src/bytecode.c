@@ -205,6 +205,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_PARMI:          return "PARMI";
     case I_TAILLE_ENSEMBLE: return "TAILLE_ENSEMBLE";
     case I_JOINDRE:        return "JOINDRE";
+    case I_EXEMPLE:        return "EXEMPLE";
+    case I_EXEMPLE_RATE:   return "EXEMPLE_RATÉ";
     }
     return "INCONNUE";
 }
@@ -217,7 +219,8 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_CADRER || code == I_AFFICHER_SANS_LIGNE || code == I_STYLE
         || code == I_CHERCHER || code == I_SAISIR || code == I_ELIDER || code == I_ECRAN_OUVRIR || code == I_ECRAN_LISTE
         || code == I_APPARENCE || code == I_REFUSER || code == I_DECALER || code == I_ARRONDIR
-        || code == I_CONTIENT || code == I_CONVERTIR || code == I_EXPORTER || code == I_ENSEMBLE || code == I_AJOUTER;
+        || code == I_CONTIENT || code == I_CONVERTIR || code == I_EXPORTER || code == I_ENSEMBLE || code == I_AJOUTER
+        || code == I_EXEMPLE || code == I_EXEMPLE_RATE;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -274,7 +277,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
         }
         unsigned op = instruction_a_operande((CodeInstruction)c)
                     ? (unsigned)b->code[d + 1] | ((unsigned)b->code[d + 2] << 8) : 0;
-        if (c == I_EXPORTER && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
+        if ((c == I_EXPORTER || c == I_EXEMPLE || c == I_EXEMPLE_RATE) && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
             ok = refuser(erreur, grym_formater("EXPORTER : constante %u absente ou pas un texte (octet %lu).", op,
                                                (unsigned long)d));
         else if (c == I_ECRAN_OUVRIR && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
@@ -370,6 +373,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_COLLER: case I_DECALER: case I_ARRONDIR: case I_CONTIENT: case I_RESTE: case I_COLONNE: case I_AJOUTER: case I_PARMI: case I_JOINDRE:
                 besoin = 2; effet = -1; break;
             case I_TAILLE_ENSEMBLE: besoin = 1; break;
+            case I_EXEMPLE: besoin = 2; effet = -2; break;
+            case I_EXEMPLE_RATE: besoin = 1; effet = -1; break;
             case I_ENSEMBLE: besoin = (long)op; effet = 1 - (long)op; break;
             case I_TABLEAU: besoin = 1; break;
             case I_CONVERTIR: besoin = 1; break;
@@ -458,7 +463,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 39  /* versions 1 à 38 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 40  /* versions 1 à 39 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
@@ -467,7 +472,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                               sans essai (19), sans formulaire (20),
                               sans assemblage de textes (21), sans modification par formulaire (22),
                               sans fiche (23), sans fichier source des blocs (24), sans apparence des écrans (26), sans refus (27), sans règles (28),
-                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34), sans export (35), sans tableau lu (36), sans « comme » (37), sans ensembles (38) */
+                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34), sans export (35), sans tableau lu (36), sans « comme » (37), sans ensembles (38), sans exemples (39) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 

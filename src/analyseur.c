@@ -6438,6 +6438,39 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
     return n;
 }
 
+/* « Exemple : le carré de 7 vaut 49. » (§ 9.6) : au premier niveau ; l'expression se lit comme dans un calcul
+ * (pure, sans les variables du programme), et ne s'évalue qu'avec « grym exemples ». */
+static Noeud *exemple(Analyse *a, const Jeton *t) {
+    if (a->formule || t->colonne != 1)
+        return erreur(a, t, grym_dupliquer("Un exemple se place au premier niveau du fichier, hors d'une formule."));
+    a->i += 2;
+    int formule = a->formule;
+    size_t barriere = a->barriere;
+    a->formule = 1;
+    a->barriere = a->portee->n;
+    arrets(a, "vaut", NULL);
+    Noeud *x = valeur(a);
+    arrets(a, NULL, NULL);
+    Noeud *y = NULL;
+    if (x) {
+        attendre_mot(a, a->i, "vaut", 4);
+        if (!est_mot(cour(a), "vaut")) {
+            erreur(a, cour(a), grym_dupliquer("Un exemple dit ce que vaut une expression : « Exemple : le carré de 7 vaut 49. »"));
+        } else {
+            avancer(a);
+            y = valeur(a);
+        }
+    }
+    a->formule = formule;
+    a->barriere = barriere;
+    if (!x || !y || !fin_phrase(a, 0)) { noeud_liberer(x); noeud_liberer(y); return NULL; }
+    Noeud *n = noeud_creer(P_EXEMPLE, t->ligne, t->colonne, t->debut);
+    noeud_ajouter(n, x);
+    noeud_ajouter(n, y);
+    n->fin = y->fin;
+    return n;
+}
+
 static Noeud *phrase(Analyse *a, int colonne) {
     Jeton *t = cour(a);
     attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0) | (a->boucle ? A_BOUCLE : 0));
@@ -6486,6 +6519,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
     }
     if (est_mot(t, "les") && est_mot(voir(a, 1), "nombres")) return style_des_nombres(a, t);
     if (est_mot(t, "les") && est_mot(voir(a, 1), "écrans") && est_mot(voir(a, 2), "ont")) return apparence(a, t);
+    if (est_mot(t, "exemple") && voir(a, 1)->type == J_DEUX_POINTS) return exemple(a, t);   /* § 9.6 */
     if (est_mot(t, "les")) {
         Noeud *n = phrase_ensemble(a, t);   /* § 13.9 */
         if (n || a->echec) return n;

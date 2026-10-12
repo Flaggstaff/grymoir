@@ -1583,6 +1583,19 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 expression(r, d + 3, f);
             }
             point(r, f);
+        } else if (!strcmp(c, "exemple")) {   /* _exemple carré(7) << 49 → Exemple : le carré de 7 vaut 49. (§ 9.6) */
+            size_t aff = d + 1;
+            while (aff < f && r->e[aff].type != J_AFFECTE) aff++;
+            if (aff == f || aff == d + 1 || aff + 1 == f) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _exemple carré(7) << 49 »."));
+                return;
+            }
+            mot(r, "exemple", t);
+            emettre(r, J_DEUX_POINTS, NULL, t, 1);
+            expression(r, d + 1, aff);
+            mot(r, "vaut", &r->e[aff]);
+            expression(r, aff + 1, f);
+            point(r, f);
         } else if (!strcmp(c, "exporter")) {
             /* _exporter œuvre _conservé [_dont …] [_par titre [_décroissant]] [_avec titre ; compositeur.nom] _dans « m.csv »
              * → Exporter les œuvre conservés …, avec titre, nom de compositeur, dans « m.csv ». (§ 15.4) */

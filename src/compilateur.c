@@ -1,5 +1,6 @@
 /* GrymoiR : compilateur de l'arbre vers le bytecode, v0.2 */
 #include "compilateur.h"
+#include "imprimeur.h"
 #include "texte.h"
 
 #include <stdio.h>
@@ -7,6 +8,8 @@
 #include <string.h>
 
 /* Boucle en cours : où va « Passer au tour suivant », quels sauts « Sortir » doit corriger. */
+static int mode_exemples = 0;   /* grym exemples (grammaire, § 9.6) */
+
 typedef struct {
     size_t suivant;          /* cible de « Passer », si elle est déjà connue */
     int suivant_connu;
@@ -636,6 +639,30 @@ static void phrase(Compilation *c, const Noeud *ph) {
         bloc_corriger_saut(c->b, vers_fin, c->b->taille_code);
         return;
     }
+    case P_EXEMPLE: {   /* § 9.6 : ESSAYER → raté ; obtenu ; attendu ; EXEMPLE ; FIN_ESSAI ; → fin ; raté : EXEMPLE_RATÉ */
+        if (!mode_exemples) return;   /* un exemple ne s'exécute qu'avec « grym exemples » */
+        char *t = imprimer_phrase(c->programme, ph, 0);
+        size_t l = strlen(t);
+        while (l && (t[l - 1] == '\n' || t[l - 1] == '.')) t[--l] = '\0';
+        const char *corps = strncmp(t, "Exemple : ", 10) == 0 ? t + 10 : t;
+        char *texte = grym_formater("ligne %d : %s", ph->ligne, corps);
+        free(t);
+        long k = bloc_constante(c->b, C_TEXTE, texte);
+        free(texte);
+        if (k < 0) { trop_grand(c, ph); return; }
+        size_t vers_rate = bloc_emettre_saut(c->b, I_ESSAYER, ph->ligne, ph->colonne);
+        c->essais++;
+        expression(c, ph->enfants[0]);
+        expression(c, ph->enfants[1]);
+        emettre(c, I_EXEMPLE, k, ph->ligne, ph->colonne);
+        c->essais--;
+        emettre(c, I_FIN_ESSAI, 0, ph->ligne, ph->colonne);
+        size_t vers_fin = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+        bloc_corriger_saut(c->b, vers_rate, c->b->taille_code);
+        emettre(c, I_EXEMPLE_RATE, k, ph->ligne, ph->colonne);
+        bloc_corriger_saut(c->b, vers_fin, c->b->taille_code);
+        return;
+    }
     case P_EFFACER:   /* « Effacer l'écran. » (§ 4.3) */
         emettre(c, I_EFFACER, 0, ph->ligne, ph->colonne);
         return;
@@ -1193,6 +1220,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
     }
 }
 
+void compilateur_mode_exemples(int actif) { mode_exemples = actif; }
+
 Module *compiler(const Programme *p, Diagnostic *diag) {
     Module *m = module_creer();
     Compilation c = { bloc_creer(), m, diag, 0, NULL, 0, 0, p, NULL, NULL, 0 };
@@ -1203,10 +1232,23 @@ Module *compiler(const Programme *p, Diagnostic *diag) {
     diag->ligne = diag->colonne = 0;
     diag->fichier = NULL;
     diag->origine_ligne = diag->origine_colonne = 0;
-    phrases(&c, p->phrases, p->nb);
+    if (mode_exemples) {   /* les déclarations et les exemples seulement : rien d'autre ne s'exécute (§ 9.6) */
+        Noeud **garde = grym_allouer((p->nb ? p->nb : 1) * sizeof *garde);
+        size_t n = 0;
+        for (size_t k = 0; k < p->nb; k++) {
+            TypeNoeud t = p->phrases[k]->type;
+            if (t == P_CLASSE || t == P_APTITUDE || t == P_CALCUL || t == P_ACTION || t == P_REGLE || t == P_UTILISER
+                || t == P_STYLE || t == P_EXEMPLE)
+                garde[n++] = p->phrases[k];
+        }
+        phrases(&c, garde, n);
+        free(garde);
+    } else {
+        phrases(&c, p->phrases, p->nb);
+    }
     int ligne = p->nb ? p->phrases[p->nb - 1]->ligne : 0;
     c.b = m->blocs[0];
-    verifier_regles(&c, ligne, 0);   /* la fin du programme valide tout (§ 16.14) */
+    if (!mode_exemples) verifier_regles(&c, ligne, 0);   /* la fin du programme valide tout (§ 16.14) */
     free(c.boucles);
     free(c.regles);
     if (c.echec) {

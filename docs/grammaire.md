@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.66 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.67 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -614,6 +614,22 @@ Relancer le client.
 
 ---
 
+### 9.6 Exemples
+
+```
+Le carré d'un nombre vaut nombre × nombre.
+Exemple : le carré de 7 vaut 49.
+Exemple : le carré de −1,5 vaut 2,25.
+```
+
+- `Exemple : expression vaut résultat.` dit ce qu'une formule doit rendre. C'est de la documentation qui se vérifie : elle montre au lecteur comment s'emploie la formule, et `grym exemples` la contrôle.
+- `grym lancer` ignore les exemples. `grym exemples fichier.grym` ne fait que les vérifier : il compile les déclarations (classes, formules, règles, fichiers utilisés) et les exemples, et n'exécute rien d'autre ; la base est vide, en mémoire, jamais celle du programme.
+- Chaque exemple s'affiche, juste ou faux, avec sa ligne : `✓ ligne 2 : le carré de 7 vaut 49`, `✗ ligne 3 : le carré de 2 vaut 5 ; obtenu : 4`, ou `✗ … ; erreur : …` si le calcul échoue. Puis le bilan : « 3 exemples, 2 justes. » La commande réussit si tous sont justes ; un script ou l'intégration continue peuvent s'en servir.
+- L'égalité est celle des ensembles (§ 13.9) : `2` vaut `2,0`, un texte se compare exactement, un objet par identité.
+- Un exemple se place au premier niveau du fichier. Son expression se lit comme dans un calcul (§ 9.4) : formules, constantes et base en lecture, jamais les variables du programme, ni `aujourd'hui`. Un exemple qui dépend du jour ne serait plus vrai demain.
+- Aucun mot réservé : `Exemple` ne commence une phrase que suivi de « : ».
+- En forme compacte : `_exemple carré(7) << 49`.
+
 ## 10. Répéter
 
 ### 10.1 Tant que
@@ -732,6 +748,7 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 | `Pour chaque ligne du tableau « f.csv » :`, `la colonne « Nom » de la ligne` | `_pour_chaque ligne _tableau « f.csv »`, `_colonne(« Nom » ; ligne)` |
 | `Saluer m comme une personne.` | `saluer(m) _comme personne` |
 | `Les couleurs valent « a » et « b ».`, `Les invités gagnent m.` | `_les couleurs << « a » ; « b »`, `_les invités _gagnent m` |
+| `Exemple : le carré de 7 vaut 49.` | `_exemple carré(7) << 49` |
 | `Rendre x.` | `_rendre x` |
 | `Tant que c :` | `_tant_que c` … `_fin` |
 | `Répéter 3 fois :` | `_répéter 3 _fois` … `_fin` |
@@ -1737,3 +1754,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.64 | 2026-10-12 | Nouveau § 15.5 : `Pour chaque ligne du tableau « f.csv » :`, `la colonne « Nom » de la ligne` (cellule vide : absente) ; séparateur deviné, RFC 4180 ; aucun mot réservé |
 | 1.65 | 2026-10-12 | § 13.8 : `comme une personne` après l'appel d'une méthode, la version d'une classe ancêtre (le `super` de Java) ; aucun mot réservé |
 | 1.66 | 2026-10-12 | Nouveau § 13.9 : ensembles (`Les couleurs valent …`, `gagnent`, `perdent`, `parmi`, `Pour chaque … parmi les …`, `le nombre de`, `jointes par`), sans doublon, copiés à l'affectation ; § 4.4 : joindre ; aucun mot réservé |
+| 1.67 | 2026-10-12 | Nouveau § 9.6 : `Exemple : … vaut ….`, ignorés par `grym lancer`, vérifiés par `grym exemples` (déclarations seulement, base vide en mémoire) ; aucun mot réservé |

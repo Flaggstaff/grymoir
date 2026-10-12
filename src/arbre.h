@@ -136,6 +136,7 @@ typedef enum {
                         champs) ; enfants[1] : le chemin */
     P_POUR_TABLEAU,  /* « Pour chaque ligne du tableau « f.csv » : » (§ 15.5) : texte : nom de la ligne ; local : sa case ;
                         entier : case du tableau (entier + 1 : rang) ; enfants[0] : chemin ; enfants[1] : corps */
+    P_EXEMPLE,       /* « Exemple : le carré de 7 vaut 49. » (§ 9.6) : enfants[0] l'expression, enfants[1] le résultat attendu */
     P_REGLE          /* « Chaque écriture conservée dont … vérifie : condition, sinon « … ». » (§ 16.14) : texte : entité ;
                         enfants[0] : P_CALCUL sans paramètre, qui parcourt les objets (P_POUR_CONSERVE) et refuse
                         au premier qui viole la condition (P_SI, dont la branche sinon est un P_REFUSER) */

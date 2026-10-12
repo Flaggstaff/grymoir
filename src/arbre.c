@@ -347,6 +347,13 @@ static void decrire(const Noeud *n, Chaine *c) {
         decrire(n->enfants[1], c);
         chaine_ajouter(c, ")");
         return;
+    case P_EXEMPLE:
+        chaine_ajouter(c, "(exemple ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_ENSEMBLE:
         chaine_ajouter(c, "(ensemble");
         for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }

@@ -208,6 +208,42 @@ static int lancer(const char *chemin) {
     return ok ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+/* grym exemples : vérifie les « Exemple : … vaut … » du programme, sans exécuter le reste (grammaire, § 9.6). La base
+ * est une base vide, en mémoire : un exemple ne dépend pas des données du jour. */
+static int exemples(const char *chemin) {
+    const char *point = strrchr(chemin, '.');
+    if (point && strcmp(point, ".grymb") == 0) {
+        fprintf(stderr, "%s : erreur : les exemples se lisent dans la source (.grym ou .grymc), pas dans le bytecode.\n", chemin);
+        return EXIT_FAILURE;
+    }
+    compilateur_mode_exemples(1);
+    Module *b = charger(chemin);
+    compilateur_mode_exemples(0);
+    if (!b) return EXIT_FAILURE;
+    Machine *m = machine_creer();
+    situer(m, chemin);
+    machine_base(m, ":memory:");
+    Chaine sortie = {0};
+    Diagnostic d;
+    int ok = machine_executer(m, b, &sortie, &d);
+    if (sortie.d) fputs(sortie.d, stdout);
+    free(sortie.d);
+    size_t rates = 0, n = machine_exemples(m, &rates);
+    if (!ok) {
+        fflush(stdout);
+        signaler(chemin, &d);
+        diagnostic_liberer(&d);
+    } else if (!n) {
+        printf("Aucun exemple dans « %s » : « Exemple : le carré de 7 vaut 49. »\n", chemin);
+    } else {
+        printf("%lu exemple%s, %lu juste%s%s.\n", (unsigned long)n, n > 1 ? "s" : "", (unsigned long)(n - rates),
+               n - rates > 1 ? "s" : "", rates ? "" : " : tout est juste");
+    }
+    machine_detruire(m);
+    module_detruire(b);
+    return ok && !rates ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
 /* grym migration : ce que le prochain lancement fera à la base, sans rien changer (docs/atelier.md, A2-c). */
 static int migration(const char *chemin) {
     Module *b = charger(chemin);
@@ -488,6 +524,7 @@ int main(int argc, char **argv) {
     if (argc == 3 && strcmp(argv[1], "--base") == 0) return boucle(argv[2]);
     if (argc == 2 && strcmp(argv[1], "lsp") == 0) return lsp_servir(stdin, stdout);   /* docs/lsp.md */
     if (argc == 3 && strcmp(argv[1], "lancer") == 0) return lancer(argv[2]);
+    if (argc == 3 && strcmp(argv[1], "exemples") == 0) return exemples(argv[2]);
     if (argc >= 3 && strcmp(argv[1], "servir") == 0) {   /* grym servir app.grym [--port N] [--sans-navigateur] */
         int port = 0, navigateur = 1, bon = 1;
         for (int k = 3; k < argc && bon; k++) {
@@ -517,6 +554,7 @@ int main(int argc, char **argv) {
             "      [--port N] [--sans-navigateur]\n"
             "  grym compiler fichier.grym          produit fichier.grymb\n"
             "  grym migration fichier.grym         ce que le prochain lancement fera à la base, sans rien changer\n"
+            "  grym exemples fichier.grym          vérifie les exemples du programme, sans exécuter le reste\n"
             "  grym desassembler fichier.grym(b)   affiche les instructions\n"
             "  grym --base fichier.grymd           boucle interactive sur une base conservée\n"
             "  grym lsp                            serveur d'aide à la saisie (protocole LSP)\n"

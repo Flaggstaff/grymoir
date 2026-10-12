@@ -21,6 +21,8 @@ typedef struct Machine Machine;
 
 Machine *machine_creer(void);
 void machine_detruire(Machine *m);
+/* grym exemples (grammaire, § 9.6) : exemples vérifiés ; *rates reçoit ceux qui sont faux ou en erreur. */
+size_t machine_exemples(const Machine *m, size_t *rates);
 
 /* Vérifie un module, enregistre ses formules (la machine en prend possession :
  * les entrées correspondantes du module passent à NULL ; une formule du même nom

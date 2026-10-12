@@ -87,6 +87,7 @@ int main(void) {
          "Pour saluer une personne :\n    Afficher « Bonjour » puis personne.\nSaluer 3.");
     FIXE("Le prix vaut 3.\nAfficher l'arrondi du prix × 2 à 0,05 vers le bas puis l'arrondi de 2 à (1 + 1) au pair.\n");
     FIXE("Le prix vaut 3.\nAfficher le reste du prix × 2 par (1 + 3) puis la valeur absolue de −2 puis la partie entière du prix.\n");
+    FIXE("Le carré d'un nombre vaut nombre × nombre.\nExemple : le carré de 7 vaut 49.\nExemple : « a » en majuscules vaut « A ».\n");
     FIXE("Les couleurs valent « a », « b » et « c ».\nLes couleurs perdent « b ».\nLes autres valent un ensemble vide.\n"
          "Les autres deviennent les couleurs.\nAfficher le nombre d'autres puis les couleurs jointes par « ; ».\n"
          "Pour chaque c parmi les couleurs, afficher c.\n");

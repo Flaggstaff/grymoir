@@ -1324,6 +1324,13 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         im->nb = apres_nom;
         return;
     }
+    case P_EXEMPLE:   /* « Exemple : le carré de 7 vaut 49. » ; « _exemple carré(7) << 49 » (§ 9.6) */
+        aj(im, c ? "_exemple " : "Exemple : ");
+        expression(im, n->enfants[0]);
+        aj(im, c ? " << " : " vaut ");
+        expression(im, n->enfants[1]);
+        aj(im, c ? "\n" : ".\n");
+        return;
     case P_RENDRE:
         aj(im, c ? "_rendre " : "Rendre ");
         expression(im, n->enfants[0]);

@@ -206,6 +206,7 @@ struct Machine {
     size_t carte_cap, carte_n;
     Ecriture_disque *a_ecrire;
     size_t nb_a_ecrire;
+    size_t exemples, exemples_rates;   /* grym exemples (grammaire, § 9.6) */
     Case *cases;
     size_t nb_cases, cap_cases;
     Ecriture *journal;
@@ -226,6 +227,11 @@ struct Machine {
 volatile sig_atomic_t grym_interruption = 0;
 
 #define APPELS_MAX 1000   /* profondeur d'appels : au-delà, « Trop d'appels imbriqués » */
+
+size_t machine_exemples(const Machine *m, size_t *rates) {
+    if (rates) *rates = m->exemples_rates;
+    return m->exemples;
+}
 
 Machine *machine_creer(void) {
     Machine *m = grym_allouer(sizeof *m);
@@ -3761,6 +3767,42 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             empiler(&pile, valeur_nombre(r));
+            break;
+        }
+        case I_EXEMPLE: {   /* « Exemple : le carré de 7 vaut 49. » (§ 9.6) */
+            Valeur attendu = depiler(&pile), obtenu = depiler(&pile);
+            int juste = valeurs_identiques(&obtenu, &attendu);
+            if (!juste && obtenu.type == V_ANNEE && attendu.type == V_NOMBRE) {   /* une année et son nombre */
+                long n = 0;
+                juste = dec_en_long_borne(&attendu.nombre, 1, 9999, &n) && n == obtenu.jours;
+            }
+            m->exemples++;
+            chaine_ajouter(sortie, juste ? "✓ " : "✗ ");
+            chaine_ajouter(sortie, b->constantes[op].texte);
+            if (!juste) {
+                m->exemples_rates++;
+                char *x = texte_valeur(m, &obtenu);
+                chaine_ajouter(sortie, " ; obtenu : ");
+                chaine_ajouter(sortie, obtenu.type == V_TEXTE ? "« " : "");
+                chaine_ajouter(sortie, x);
+                chaine_ajouter(sortie, obtenu.type == V_TEXTE ? " »" : "");
+                free(x);
+            }
+            chaine_ajouter(sortie, "\n");
+            valeur_liberer(&attendu);
+            valeur_liberer(&obtenu);
+            break;
+        }
+        case I_EXEMPLE_RATE: {
+            Valeur motif = depiler(&pile);
+            m->exemples++;
+            m->exemples_rates++;
+            chaine_ajouter(sortie, "✗ ");
+            chaine_ajouter(sortie, b->constantes[op].texte);
+            chaine_ajouter(sortie, " ; erreur : ");
+            chaine_ajouter(sortie, motif.type == V_TEXTE && motif.texte ? motif.texte : "");
+            chaine_ajouter(sortie, "\n");
+            valeur_liberer(&motif);
             break;
         }
         case I_ENSEMBLE: {   /* « « rouge », « vert » et « bleu » » (§ 13.9) : les doublons tombent, l'ordre reste */

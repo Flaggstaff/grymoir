@@ -1316,6 +1316,18 @@ int main(void) {
          "~« x » existe déjà");
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
+    /* Exemples (§ 9.6) : ignorés à l'exécution, vérifiés en mode exemples */
+    PROG("Le carré d'un nombre vaut nombre × nombre.\nExemple : le carré de 2 vaut 5.\nAfficher 1.", "1");
+    compilateur_mode_exemples(1);
+    PROG("Le carré d'un nombre vaut nombre × nombre.\nExemple : le carré de 7 vaut 49.\nExemple : le carré de 2 vaut 5.\n"
+         "Exemple : le carré de « a » vaut 1.\nExemple : « a » en majuscules vaut « A ».\nAfficher 1.\nLe x vaut 2.",
+         "✓ ligne 2 : le carré de 7 vaut 49\n✗ ligne 3 : le carré de 2 vaut 5 ; obtenu : 4\n"
+         "✗ ligne 4 : le carré de « a » vaut 1 ; erreur : MULTIPLICATION impossible : un des opérandes est un texte.\n"
+         "✓ ligne 5 : « a » en majuscules vaut « A »");
+    compilateur_mode_exemples(0);
+    PROG("Le x vaut 3.\nExemple : x vaut 3.", "~« x » n'est pas visible dans un calcul");
+    PROG("Le carré d'un nombre :\n    Exemple : 1 vaut 1.\n    Rendre nombre.", "~Un exemple se place au premier niveau");
+    PROG("Exemple : 1 + 1.", "~Un exemple dit ce que vaut une expression");
     PROG("Une personne a : un nom.\nUn membre est une personne.\nUn membre a : une licence.\nUn cadet est un membre.\nUne ville a : un nom.\n" "Pour saluer une personne :\n    Afficher 1.\nLe p vaut une nouvelle personne :\n    Le nom vaut « a ».\n"
          "Saluer p comme un personne.", "ERREUR 10:16 Accord : « comme une personne ».");
     /* Reste, partie entière, valeur absolue (§ 3.5) */
