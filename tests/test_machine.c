@@ -1552,6 +1552,8 @@ int main(void) {
     PROG("Une chose datée a : une date (date).\nUn document, conservé, est une chose datée.\nLe x vaut « lundi ».\n"
          "Le d vaut un nouveau document.\nLa date du d devient x.",
          "ERREUR 5:1 Le champ « date » attend une date, pas un texte.");
+    /* « suivi de » écrit un nombre comme « Afficher » : le séparateur de milliers fait partie du texte (§ 4) */
+    PROG("Afficher « P- » suivi de 49999 puis « P- » suivi de 2026.", "P-49'999 P-2026");
     PROG("Un client, conservé, a : un nom (texte).\nUne personne a : un nom.\nLe p vaut une nouvelle personne.\n"
          "Le nom du p devient 3.\nAfficher nom du p.", "3");
     {

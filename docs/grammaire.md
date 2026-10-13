@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.71 de la spécification, révisée le 13 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.72 de la spécification, révisée le 13 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -277,7 +277,7 @@ Afficher n puis « œuvre(s) » puis de nom du compositeur.         →  3 œuvr
 Afficher « plus ancien » puis que nom du compositeur.            →  plus ancien qu'Anton Webern
 ```
 
-- `a suivi de b` colle deux valeurs en un texte, sans espace. Le résultat se range, se compare, s'affiche, comme celui de `sur` (§ 4.2). `suivi du`, `suivi de la`, `suivi d'` suivent les contractions et élisions ordinaires (§ 5.2).
+- `a suivi de b` colle deux valeurs en un texte, sans espace. Un nombre s'y écrit comme `Afficher` l'écrit (§ 4.1) : `« P- » suivi de 49999` donne `P-49'999`, `« P- » suivi de 2026` donne `P-2026`. Le texte obtenu est celui qu'un lecteur voit, aussi dans une clé rangée en base ; le chercher demande la même écriture (`dont la pièce est « P-49'999 »`). Le résultat se range, se compare, s'affiche, comme celui de `sur` (§ 4.2). `suivi du`, `suivi de la`, `suivi d'` suivent les contractions et élisions ordinaires (§ 5.2).
 - Chaque valeur s'écrit comme `Afficher` l'écrirait : un nombre au style du programme (§ 4.1), une date au format suisse, une année sans séparateur, `vrai` ou `faux`. Une valeur absente est une erreur (§ 16.9).
 - `suivi de` lie moins fort que les opérations et que `sur` : `« x » suivi de a + 1`, `« x » suivi de nom sur 10`. Il ne rend jamais une condition : `Si « a » suivi de « b », …` est une erreur d'analyse.
 - **Élision.** En tête d'un élément d'`Afficher`, ou juste après `suivi de`, `de x` et `que x` écrivent `de`/`d'` et `que`/`qu'` selon la première lettre du texte de `x` : élision devant une voyelle, accentuée ou non, `œ`, `æ` ou `y`, jamais devant un `h`. Le h muet (« d'Hélène ») et le h aspiré (« de Haendel ») ne se distinguent pas par l'orthographe : deviner romprait le déterminisme (charte, art. 4). `de 1` s'écrit `de 1`.
@@ -1810,3 +1810,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.69 | 2026-10-12 | Nouveau § 14.7 : heures (`14:30`, type `(heure)`, `maintenant`, `+ 15 minutes` qui tourne comme une horloge, `h2 − h1` en minutes, écarts en minutes et en heures) ; heure locale, sans fuseau |
 | 1.70 | 2026-10-12 | § 1.4 : message dédié au trait d'union collé entre deux mots (`rendez-vous`), qui propose les deux mots ; la règle ne change pas |
 | 1.71 | 2026-10-13 | § 16.14 : une règle dont rien de ce qu'elle a lu n'a changé ne se revérifie pas ; mesures à 50'000 écritures |
+| 1.72 | 2026-10-13 | § 4 : `suivi de` écrit un nombre comme `Afficher`, séparateur de milliers compris (`P-49'999`) ; choix confirmé, essai ajouté |
