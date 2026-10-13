@@ -29,6 +29,7 @@ typedef struct {
     const Programme *programme;
     const char *fichier;   /* fichier utilisé dont on compile les déclarations (§ 21), NULL pour le principal */
     const Noeud **regles;  /* les règles du projet, fichiers utilisés compris (§ 16.14), dans l'ordre de lecture */
+    char **cles;           /* la clé de chaque règle : son arbre décrit, avant que son calcul ne soit renommé */
     size_t nb_regles;
 } Compilation;
 
@@ -38,7 +39,8 @@ static void emettre(Compilation *c, CodeInstruction code, long op, int ligne, in
 static char *nom_regle(size_t k) { return grym_formater("\x01règle %lu", (unsigned long)k); }
 
 /* Avant chaque validation (§ 16.14) : si la transaction a écrit, chaque règle parcourt ses objets et refuse au
- * premier qui la viole ; le refus est une erreur comme une autre, qu'un événement rattrape. */
+ * premier qui la viole ; le refus est une erreur comme une autre, qu'un événement rattrape. Une règle dont rien de
+ * ce qu'elle a lu la dernière fois n'a changé ne se revérifie pas (docs/vm.md, § 3.3) : RÈGLE_UTILE le dit. */
 static void verifier_regles(Compilation *c, int ligne, int colonne) {
     if (!c->nb_regles) return;
     emettre(c, I_BASE_MODIFIEE, 0, ligne, colonne);
@@ -47,10 +49,15 @@ static void verifier_regles(Compilation *c, int ligne, int colonne) {
         char *nom = nom_regle(k);
         long i = bloc_nom(c->b, nom);
         free(nom);
-        if (i < 0) { c->echec = 1; return; }
+        long cle = bloc_constante(c->b, C_TEXTE, c->cles[k]);
+        if (i < 0 || cle < 0) { c->echec = 1; return; }
+        emettre(c, I_REGLE_UTILE, cle, ligne, colonne);
+        size_t sauter = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, ligne, colonne);
         bloc_emettre_appel(c->b, (uint16_t)i, 0, 1, ligne, colonne);
         size_t s = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, ligne, colonne);   /* rend vrai : on jette la valeur */
         bloc_corriger_saut(c->b, s, c->b->taille_code);
+        emettre(c, I_REGLE_FAITE, cle, ligne, colonne);
+        bloc_corriger_saut(c->b, sauter, c->b->taille_code);
     }
     bloc_corriger_saut(c->b, vers_fin, c->b->taille_code);
 }
@@ -60,9 +67,14 @@ static void recenser_regles(Compilation *c, Noeud *const *ph, size_t nb) {
         if (ph[k]->type == P_UTILISER) recenser_regles(c, ph[k]->enfants, ph[k]->nb_enfants);
         else if (ph[k]->type == P_REGLE) {
             const Noeud **t = grym_allouer((c->nb_regles + 1) * sizeof *t);
+            char **cl = grym_allouer((c->nb_regles + 1) * sizeof *cl);
             if (c->nb_regles) memcpy(t, c->regles, c->nb_regles * sizeof *t);
+            if (c->nb_regles) memcpy(cl, c->cles, c->nb_regles * sizeof *cl);
             free(c->regles);
+            free(c->cles);
             c->regles = t;
+            c->cles = cl;
+            c->cles[c->nb_regles] = noeud_decrire(ph[k]);
             c->regles[c->nb_regles++] = ph[k];
         }
     }
@@ -1240,7 +1252,7 @@ void compilateur_mode_exemples(int actif) { mode_exemples = actif; }
 
 Module *compiler(const Programme *p, Diagnostic *diag) {
     Module *m = module_creer();
-    Compilation c = { bloc_creer(), m, diag, 0, NULL, 0, 0, p, NULL, NULL, 0 };
+    Compilation c = { bloc_creer(), m, diag, 0, NULL, 0, 0, p, NULL, NULL, NULL, 0 };
     recenser_regles(&c, p->phrases, p->nb);
     c.b->nb_locaux = p->nb_locaux;
     module_ajouter(m, c.b);
@@ -1267,6 +1279,8 @@ Module *compiler(const Programme *p, Diagnostic *diag) {
     if (!mode_exemples) verifier_regles(&c, ligne, 0);   /* la fin du programme valide tout (§ 16.14) */
     free(c.boucles);
     free(c.regles);
+    for (size_t k = 0; k < c.nb_regles; k++) free(c.cles[k]);
+    free(c.cles);
     if (c.echec) {
         module_detruire(m);
         return NULL;

@@ -25,6 +25,8 @@ int base_commencer(Base *b, char **erreur);
 int base_valider(Base *b, char **erreur);
 /* Vrai si la transaction en cours a écrit dans la base : les règles (grammaire, § 16.14) ne se revérifient que là. */
 int base_modifiee(Base *b);
+/* Vrai si, au début de la transaction en cours, un autre programme avait écrit dans la base depuis la précédente. */
+int base_changee_ailleurs(Base *b);
 void base_annuler(Base *b);
 
 /* Points de reprise des blocs « Essayer » (grammaire, § 18), numérotés à partir de 1 dans l'ordre
@@ -86,6 +88,14 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
 int base_retablir(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_classes, char **erreur);
 /* Lit les octets d'un fichier resté en base (f->base) ; 1 s'ils sont là. 0 et *erreur sinon. */
 int base_fichier_lire(Fichier *f, char **erreur);
+
+/* Règles ciblées (docs/vm.md, § 3.3). base_regle_utile : vrai si la règle de clé cle doit se revérifier (jamais
+ * vérifiée, ou une entité qu'elle a lue a été écrite depuis) ; la base note alors tout ce qu'elle lit, jusqu'à
+ * base_regle_faite, et ces lectures valent quand la transaction est validée. base_noter_lecture : un champ lu en
+ * mémoire, d'un objet conservé de la classe c. */
+int base_regle_utile(Base *b, const char *cle);
+void base_regle_faite(Base *b, const char *cle);
+void base_noter_lecture(Base *b, const ClasseVM *c);
 
 /* L'objet d'identifiant id est-il dans la corbeille ? */
 int base_est_supprime(Base *b, long id);

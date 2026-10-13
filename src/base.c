@@ -15,6 +15,21 @@
 
 #define REQUETES_GARDEES 512
 
+/* Noms d'entités : celles qu'une transaction a écrites, celles qu'une règle a lues (docs/vm.md, § 3.3). */
+typedef struct {
+    char **noms;
+    size_t n, cap;
+    int tout;   /* tout compte : suppression, migration, base changée par un autre programme */
+} Noms;
+
+/* Ce que la dernière vérification complète d'une règle a lu ; « attente » : lu dans la transaction en cours,
+ * qui ne vaut qu'une fois validée. */
+typedef struct {
+    char *cle;
+    Noms lues, attente;
+    int confirmee, en_attente;
+} LecturesRegle;
+
 struct Base {
     sqlite3 *db;
     char *chemin;     /* tel qu'affiché dans les messages */
@@ -28,7 +43,133 @@ struct Base {
     int a_convertir;  /* base d'avant le format 2 dont des fichiers sont encore dans les tables des entités */
     long convertis;   /* fichiers déménagés par la transaction en cours : le rapport des migrations les compte */
     int fichiers_prets;   /* grym_fichier existe, validée par une transaction */
+    Noms ecrites;         /* entités écrites par la transaction en cours, lignées comprises */
+    int lecture;          /* une règle s'évalue : ses lectures se notent dans « lues » */
+    Noms lues;
+    LecturesRegle *regles;
+    size_t nb_regles;
+    sqlite3_int64 version_connue;   /* PRAGMA data_version : un autre programme a-t-il écrit ? */
+    int changee_ailleurs;           /* oui, depuis notre transaction précédente */
 };
+
+static void noms_vider(Noms *n) {
+    for (size_t k = 0; k < n->n; k++) free(n->noms[k]);
+    n->n = 0;
+    n->tout = 0;
+}
+
+static void noms_liberer(Noms *n) {
+    noms_vider(n);
+    free(n->noms);
+    n->noms = NULL;
+    n->cap = 0;
+}
+
+static void noms_ajouter(Noms *n, const char *nom) {
+    for (size_t k = 0; k < n->n; k++) if (strcmp(n->noms[k], nom) == 0) return;
+    if (n->n == n->cap) {
+        n->cap = n->cap ? n->cap * 2 : 8;
+        char **t = grym_allouer(n->cap * sizeof *t);
+        if (n->n) memcpy(t, n->noms, n->n * sizeof *t);
+        free(n->noms);
+        n->noms = t;
+    }
+    n->noms[n->n++] = grym_dupliquer(nom);
+}
+
+/* Une entité et ses parents : chercher un parent trouve aussi ses descendants. */
+static void noms_lignee(Noms *n, const ClasseVM *c) {
+    for (; c; c = c->parent) noms_ajouter(n, c->nom);
+}
+
+static int noms_croisent(const Noms *a, const Noms *b) {
+    if (a->tout || b->tout) return 1;
+    for (size_t i = 0; i < a->n; i++)
+        for (size_t j = 0; j < b->n; j++)
+            if (strcmp(a->noms[i], b->noms[j]) == 0) return 1;
+    return 0;
+}
+
+static void ecrit(Base *b, const ClasseVM *c) {
+    if (b->transaction) noms_lignee(&b->ecrites, c);
+}
+
+static void ecrit_tout(Base *b) { b->ecrites.tout = 1; }
+
+void base_noter_lecture(Base *b, const ClasseVM *c) {
+    if (b && b->lecture) noms_lignee(&b->lues, c);
+}
+
+/* Les entités qu'une requête lit : ses tables « "e X" » et « "m X.champ" ». */
+static void noter_requete(Base *b, const char *sql) {
+    if (!b->lecture) return;
+    for (const char *p = sql; (p = strchr(p, '"')) != NULL;) {
+        const char *fin = strchr(p + 1, '"');
+        if (!fin) break;
+        if ((p[1] == 'e' || p[1] == 'm') && p[2] == ' ') {
+            const char *f = fin;
+            if (p[1] == 'm') {   /* « m entité.champ » : l'entité qui porte le champ */
+                const char *point = NULL;
+                for (const char *q = p + 3; q < fin; q++) if (*q == '.') { point = q; break; }
+                if (point) f = point;
+            }
+            char *nom = grym_formater("%.*s", (int)(f - p - 3), p + 3);
+            noms_ajouter(&b->lues, nom);
+            free(nom);
+        }
+        p = fin + 1;
+    }
+}
+
+static LecturesRegle *regle_trouver(Base *b, const char *cle, int creer) {
+    for (size_t k = 0; k < b->nb_regles; k++) if (strcmp(b->regles[k].cle, cle) == 0) return &b->regles[k];
+    if (!creer) return NULL;
+    LecturesRegle *t = grym_allouer((b->nb_regles + 1) * sizeof *t);
+    if (b->nb_regles) memcpy(t, b->regles, b->nb_regles * sizeof *t);
+    free(b->regles);
+    b->regles = t;
+    LecturesRegle *r = &b->regles[b->nb_regles++];
+    memset(r, 0, sizeof *r);
+    r->cle = grym_dupliquer(cle);
+    return r;
+}
+
+int base_regle_utile(Base *b, const char *cle) {
+    if (!b) return 1;
+    LecturesRegle *r = regle_trouver(b, cle, 0);
+    int utile = !r || !r->confirmee || noms_croisent(&r->lues, &b->ecrites);
+    b->lecture = utile;
+    noms_vider(&b->lues);
+    return utile;
+}
+
+void base_regle_faite(Base *b, const char *cle) {
+    if (!b) return;
+    b->lecture = 0;
+    LecturesRegle *r = regle_trouver(b, cle, 1);
+    noms_liberer(&r->attente);
+    r->attente = b->lues;   /* les lectures passent à la règle, sans copie */
+    memset(&b->lues, 0, sizeof b->lues);
+    r->en_attente = 1;
+}
+
+/* Validée : ce que les règles ont lu vaut désormais ; annulée (ou ramenée à un point de reprise), rien. */
+static void regles_valider(Base *b, int valide) {
+    b->lecture = 0;
+    for (size_t k = 0; k < b->nb_regles; k++) {
+        LecturesRegle *r = &b->regles[k];
+        if (!r->en_attente) continue;
+        if (valide) {
+            noms_liberer(&r->lues);
+            r->lues = r->attente;
+            memset(&r->attente, 0, sizeof r->attente);
+            r->confirmee = 1;
+        } else {
+            noms_liberer(&r->attente);
+        }
+        r->en_attente = 0;
+    }
+}
 
 void base_rapport(Base *b, Chaine *rapport) {
     b->rapport = rapport;
@@ -47,7 +188,10 @@ static unsigned long empreinte(const char *t) {
 }
 
 /* Prépare sql, ou ressert la requête déjà compilée ; à rendre par rendre(). Code de retour de SQLite. */
+static void noter_requete(Base *b, const char *sql);
+
 static int preparer(Base *b, const char *sql, sqlite3_stmt **st) {
+    noter_requete(b, sql);   /* une règle qui s'évalue : chaque requête dit ce qu'elle lit (docs/vm.md, § 3.3) */
     unsigned long h = empreinte(sql);
     for (size_t q = 0; q < REQUETES_GARDEES; q++) {
         size_t i = (h + q) % REQUETES_GARDEES;
@@ -506,6 +650,14 @@ void base_fermer(Base *b) {
     if (!b) return;
     if (b->transaction) base_annuler(b);
     oublier_requetes(b);
+    noms_liberer(&b->ecrites);
+    noms_liberer(&b->lues);
+    for (size_t k = 0; k < b->nb_regles; k++) {
+        free(b->regles[k].cle);
+        noms_liberer(&b->regles[k].lues);
+        noms_liberer(&b->regles[k].attente);
+    }
+    free(b->regles);
     sqlite3_close(b->db);
     free(b->chemin);
     free(b);
@@ -532,13 +684,30 @@ int base_commencer(Base *b, char **erreur) {
         return 0;
     }
     b->convertis = 0;
-    if (b->a_convertir && !convertir_fichiers(b, erreur)) {   /* format 1 → 2, avec la première transaction */
-        base_annuler(b);
-        return 0;
+    noms_vider(&b->ecrites);
+    {   /* un autre programme a écrit depuis notre dernière transaction : ce que les règles ont lu ne vaut plus */
+        sqlite3_stmt *st = NULL;
+        sqlite3_int64 v = -1;
+        if (preparer(b, "PRAGMA data_version;", &st) == SQLITE_OK && sqlite3_step(st) == SQLITE_ROW)
+            v = sqlite3_column_int64(st, 0);
+        rendre(b, st);
+        b->changee_ailleurs = v != b->version_connue;
+        if (b->changee_ailleurs)
+            for (size_t k = 0; k < b->nb_regles; k++) b->regles[k].confirmee = 0;
+        b->version_connue = v;
+    }
+    if (b->a_convertir) {   /* format 1 → 2, avec la première transaction */
+        ecrit_tout(b);
+        if (!convertir_fichiers(b, erreur)) {
+            base_annuler(b);
+            return 0;
+        }
     }
     b->changements = sqlite3_total_changes(b->db);
     return 1;
 }
+
+int base_changee_ailleurs(Base *b) { return b && b->changee_ailleurs; }
 
 int base_modifiee(Base *b) {
     return b && b->transaction && sqlite3_total_changes(b->db) != b->changements;
@@ -550,14 +719,17 @@ int base_valider(Base *b, char **erreur) {
     if (sqlite3_exec(b->db, "COMMIT;", NULL, NULL, NULL) == SQLITE_OK) {
         b->a_convertir = 0;
         b->fichiers_prets = 1;
+        regles_valider(b, 1);
         return 1;
     }
+    regles_valider(b, 0);
     *erreur = grym_formater("Base « %s » : validation impossible (%s).", b->chemin, sqlite3_errmsg(b->db));
     sqlite3_exec(b->db, "ROLLBACK;", NULL, NULL, NULL);
     return 0;
 }
 
 void base_annuler(Base *b) {
+    regles_valider(b, 0);
     if (!b->transaction) return;
     b->transaction = 0;
     sqlite3_exec(b->db, "ROLLBACK;", NULL, NULL, NULL);
@@ -662,6 +834,7 @@ int base_lacher(Base *b, size_t n, char **erreur) {
 }
 
 int base_revenir(Base *b, size_t n, char **erreur) {
+    regles_valider(b, 0);   /* ce qu'une règle a lu dans ce qui s'annule ne vaut plus */
     return point_sql(b, grym_formater("ROLLBACK TO grym_essai_%lu; RELEASE grym_essai_%lu;", (unsigned long)n,
                                       (unsigned long)n), erreur);
 }
@@ -1152,6 +1325,7 @@ static int verifier_valeurs(Base *b, const ClasseVM *c, char **erreur) {
 }
 
 int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
+    ecrit_tout(b);   /* une migration peut tout changer : les règles se revérifient toutes */
     if (!c->conserve) return 1;
     if (!base_preparer_table(b, c, erreur)) return 0;
     return verifier_valeurs(b, c, erreur);
@@ -1371,6 +1545,7 @@ static char *message_contrainte(Base *b, const Objet *o) {
 static int fichier_unique(Base *b, const Objet *o, size_t k, long id, char **erreur);
 
 int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
+    ecrit(b, o->classe);
     const ClasseVM *c = o->classe;
     for (size_t k = 0; k < c->nb_champs; k++)
         if (!o->definis[k] && !(c->uniques[k] & 2) && !multiple(c, k)) {
@@ -1474,6 +1649,7 @@ static int fichier_unique(Base *b, const Objet *o, size_t k, long id, char **err
 }
 
 int base_ecrire_champ(Base *b, const Objet *o, size_t k, char **erreur) {
+    ecrit(b, o->classe);
     const ClasseVM *c = o->classe;
     const ClasseVM *table = c->proprietaires[k];
     if (!table || !c->types[k] || multiple(c, k)) return 1;
@@ -1533,6 +1709,7 @@ int base_ecrire_champ(Base *b, const Objet *o, size_t k, char **erreur) {
 /* ---------------------------------------------------------------- */
 
 int base_gagner(Base *b, const Objet *o, size_t k, const Valeur *v, int perdre, char **erreur) {
+    ecrit(b, o->classe);
     const ClasseVM *c = o->classe;
     const Objet *x = v->objet;
     if (!x->id) {
@@ -1675,6 +1852,7 @@ static const char *ce(const ClasseVM *c) {
 
 int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *classes, size_t nb_classes,
                    int definitif, char **erreur) {
+    ecrit_tout(b);   /* ce qui disparaît avec l'objet peut être de toute entité */
     const ClasseVM *oc = o->classe;
     if (!definitif && base_est_supprime(b, o->id)) {
         *erreur = grym_formater("%s %s est déjà supprimé%s : « Supprimer … définitivement » l'efface de la base.",
@@ -1793,6 +1971,7 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
 }
 
 int base_retablir(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_classes, char **erreur) {
+    ecrit_tout(b);   /* ce qui revient avec l'objet peut être de toute entité */
     const ClasseVM *oc = o->classe;
     sqlite3_stmt *st = NULL;
     preparer(b, "SELECT supprime IS NOT NULL, supprime_avec FROM grym_objet WHERE id = ?", &st);

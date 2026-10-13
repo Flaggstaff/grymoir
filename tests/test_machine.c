@@ -133,6 +133,17 @@ static long sql_nombre(const char *chemin, const char *sql) {
     return v;
 }
 
+/* Réponses scriptées qui, à la question « casser ? », font écrire un autre programme dans la base (une autre
+ * connexion) : la ligne de montant 5 passe à -4, ce que la règle interdit. */
+typedef struct { Script sc; const char *base; } ScriptCasseur;
+
+static char *reponses_casseur(void *contexte, Chaine *sortie, const char *question) {
+    ScriptCasseur *c = contexte;
+    if (strcmp(question, "casser ?") == 0)
+        sql_direct(c->base, "UPDATE \"e ligne\" SET \"c montant\" = '-4' WHERE \"c montant\" = '5';");
+    return reponses(&c->sc, sortie, question);
+}
+
 /* Nombre d'index de ce nom dans la base : 1 s'il existe. */
 static long index_existe(const char *chemin, const char *nom) {
     sqlite3 *db = NULL;
@@ -3197,6 +3208,64 @@ int main(void) {
         remove("_essai_f1.png");
         remove("_essai_f2.txt");
         remove("_essai_f3.txt");
+    }
+
+
+    /* --- Règles ciblées (docs/vm.md, § 3.3) : une règle ne se revérifie que si une entité qu'elle a lue a changé --- */
+    {
+        const char *B = "_essai_regles.grymd";
+#define REGLES "Une ligne, conservée, a : un montant (nombre).\nUne note, conservée, a : un texte (texte).\n" \
+               "Chaque ligne conservée vérifie : le montant de la ligne ≥ 0, sinon « Montant négatif. ».\n"
+#define LIGNE(n, x) "La " n " vaut une nouvelle ligne :\n    Le montant vaut " x ".\nConserver " n ".\n"
+#define NOTE(n) "La " n " vaut une nouvelle note :\n    Le texte vaut « vu ».\nConserver " n ".\n"
+        static const char *const L[] = { "a", "b", "c", "d", "e" };
+        const char *sources[] = {
+            /* 1, 2, 3 : écrire une ligne, une note, une ligne, modifier la note : la règle ne revient que pour les lignes */
+            REGLES LIGNE("l", "5") "Le x vaut la réponse à « 1 ? ».\n" NOTE("n") "Le y vaut la réponse à « 2 ? ».\n"
+                   LIGNE("l2", "3") "Le z vaut la réponse à « 3 ? ».\nLe texte de n devient « revu ».\n"
+                   "Le w vaut la réponse à « 4 ? ».\nAfficher « fin ».",
+            /* une ligne fautive, après des transactions sautées, est toujours refusée */
+            REGLES LIGNE("l", "5") "Le x vaut la réponse à « 1 ? ».\n" NOTE("n") "Le y vaut la réponse à « 2 ? ».\n"
+                   LIGNE("l2", "-1"),
+            /* un autre programme casse la règle pendant la question : la transaction suivante, qui n'écrit qu'une
+             * note, la revérifie quand même */
+            REGLES LIGNE("l", "5") "Le x vaut la réponse à « 1 ? ».\n" NOTE("n") "Le y vaut la réponse à « casser ? ».\n"
+                   NOTE("n2"),
+            /* une écriture annulée par un essai compte quand même : la règle se vérifie une fois, puis plus */
+            REGLES "Pour ajouter :\n    " "La l vaut une nouvelle ligne :\n        Le montant vaut 5.\n    Conserver l.\n"
+                   "    Refuser « non ».\n"
+                   "Essayer :\n    Ajouter.\nEn cas d'échec :\n    Afficher le motif de l'échec.\n"
+                   NOTE("n") "Le x vaut la réponse à « 1 ? ».\n" NOTE("n2") "Afficher « fin ».",
+        };
+        const char *attendus[] = {
+            "1 ? 2 ? 3 ? 4 ? fin", "~Montant négatif.", "~Montant négatif.", "~non\n1 ? fin" };
+        const size_t verifiees[] = { 2, 2, 2, 1 };
+        for (size_t i = 0; i < sizeof sources / sizeof *sources; i++) {
+            remove(B);
+            total++;
+            Portee *p = portee_creer();
+            Machine *m = machine_creer();
+            ScriptCasseur sc = { { L, 5, 0 }, B };
+            machine_lecteur(m, reponses_casseur, &sc);
+            machine_base(m, B);
+            char *r = executer_source(p, m, sources[i], 0);
+            int ok = attendus[i][0] == '~' ? strstr(r, attendus[i] + 1) != NULL : strcmp(r, attendus[i]) == 0;
+            size_t n = machine_regles_verifiees(m);
+            if (!ok || n != verifiees[i]) {
+                char *o = grym_formater("%s (règle vérifiée %lu fois)", r, (unsigned long)n);
+                char *a = grym_formater("%s (règle vérifiée %lu fois)", attendus[i], (unsigned long)verifiees[i]);
+                signaler(__LINE__, sources[i], a, o);
+                free(o);
+                free(a);
+            }
+            free(r);
+            machine_detruire(m);
+            portee_detruire(p);
+        }
+        remove(B);
+#undef REGLES
+#undef LIGNE
+#undef NOTE
     }
 
     /* --- Interface d'entrée et de sortie (docs/vm.md, § 13) : une page au lieu de la console --- */

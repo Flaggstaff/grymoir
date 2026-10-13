@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.58, révisée le 12 octobre 2026.
+Version 1.59, révisée le 13 octobre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -180,7 +180,7 @@ Critères de sortie de la v1.0, tous remplis :
 
 Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 
-- intégrité : les règles (grammaire, § 16.14) se revérifient sur tous les objets qu'elles concernent ; ne revérifier que les objets touchés, en prouvant que c'est exact, reste à faire. Mesuré le 28 septembre 2026, avec l'index des liens : 0,09 s par transaction sur 5'000 écritures, 0,34 s sur 20'000 ; à reprendre quand une application réelle en aura besoin ;
+- intégrité : une règle ne se revérifie que si une entité qu'elle a lue a été écrite (grammaire, § 16.14, fait le 13 octobre 2026) ; quand elle se revérifie, c'est sur tous les objets qu'elle concerne. Ne revérifier que les objets touchés, en prouvant que c'est exact, reste à faire. Mesuré le 13 octobre 2026 : 0,5 s par écriture comptable ajoutée sur 50'000 ;
 - objets (grammaire, § 13.9) : listes ordonnées avec positions, après les ensembles (faits) ; racine commune `objet` de toutes les classes, puis nombres, textes et dates comme objets (art. 6, « Tout est objet ») ;
 - relations : test d'appartenance en mémoire (`Si baroque est parmi les genres de o`), gagner plusieurs objets en une phrase, champs multiples de textes ou de nombres ; lien facultatif qui devient absent quand son objet est effacé ;
 - corbeille (grammaire, § 16.12) : la vider des objets supprimés depuis longtemps ;
@@ -274,3 +274,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.56 | 2026-10-12 | Art. 12 : les ensembles sont faits (grammaire 1.66, § 13.9) ; les listes ordonnées attendent un besoin réel |
 | 1.57 | 2026-10-12 | Art. 12 : l'écart entre deux dates est fait (grammaire 1.68, § 14.6) ; reste l'heure |
 | 1.58 | 2026-10-12 | Art. 12 : l'heure seule est faite (grammaire 1.69, § 14.7) ; le moment complet avec fuseau attend un besoin réel |
+| 1.59 | 2026-10-13 | Art. 12 : règles ciblées par entité (grammaire 1.71, § 16.14) ; reste le ciblage par objet. Format 2 des bases, fichiers à part (docs/vm.md 1.57, § 8), permis par l'art. 13 |

@@ -101,10 +101,13 @@ typedef enum {
     I_HASARD,           /* opérande : 0 dépile la borne haute, puis la basse, empile un entier entre les deux, bornes
                            comprises ; 1 dépile un ensemble, empile l'un de ses éléments (§ 3.6) */
     I_HEURE,            /* opérande : minutes depuis minuit ; empile cette heure (§ 14.7) */
-    I_MAINTENANT        /* empile l'heure, lue une fois au début de l'exécution */
+    I_MAINTENANT,       /* empile l'heure, lue une fois au début de l'exécution */
+    I_REGLE_UTILE,      /* opérande : constante texte, la clé d'une règle ; empile vrai si la règle doit se revérifier,
+                           et la base note alors ce qu'elle lit (docs/vm.md, § 3.3) */
+    I_REGLE_FAITE       /* opérande : la même ; la règle a tenu : ses lectures valent à la validation */
 } CodeInstruction;
 
-#define I_DERNIER I_MAINTENANT
+#define I_DERNIER I_REGLE_FAITE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

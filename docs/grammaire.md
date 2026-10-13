@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.70 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.71 de la spécification, révisée le 13 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1480,7 +1480,7 @@ Chaque ligne conservée vérifie :
 - Le message suit `sinon`, écrit comme celui de `Refuser` (§ 18.1) : des éléments reliés par `puis`.
 - **Quand** : à la fin de chaque transaction, juste avant qu'elle soit validée ; pendant la transaction, les objets peuvent passer par des états intermédiaires faux (une écriture dont la seconde ligne manque encore). Concrètement : à la fin du programme, avant une question (§ 17), un formulaire (§ 19), une fiche ou un `Ouvrir` (§ 22.3), et à la fin de chaque événement d'écran. Un `Essayer` ne la déclenche pas : la règle attend la transaction, pas l'essai.
 - **Si elle est violée** : la transaction échoue avec le message, comme par `Refuser`, et rien n'est écrit. Dans un événement, seul l'événement est annulé, et l'écran reste ouvert avec le message (§ 22.3).
-- Une transaction qui n'a rien écrit dans la base ne revérifie aucune règle. Sinon, chaque règle parcourt tous les objets qu'elle concerne : toujours juste. Mesure du 28 septembre 2026, la règle d'équilibre ci-dessus, écritures à deux lignes : une transaction coûte 0,02 s sur 1'000 écritures, 0,09 s sur 5'000, 0,34 s sur 20'000, grâce à l'index de chaque colonne de lien (sans lui : 2,4 s sur 5'000). Ne revérifier que les objets touchés est reporté (charte, art. 12).
+- Une transaction qui n'a rien écrit dans la base ne revérifie aucune règle. Une règle dont aucune des entités qu'elle a lues à sa dernière vérification n'a été écrite depuis ne se revérifie pas non plus : son résultat ne peut pas avoir changé (docs/vm.md, § 3.3). Ajouter un compte ne revérifie donc pas l'équilibre des écritures ; ajouter une ligne, si. Sinon, chaque règle parcourt tous les objets qu'elle concerne : toujours juste. La première validation d'une exécution vérifie toutes les règles ; une écriture faite par un autre programme aussi. Mesure du 13 octobre 2026, 50'000 écritures, dans une même exécution : ajouter un compte coûte 0,001 s après la première validation, ajouter une écriture 0,5 s. Mesure du 28 septembre 2026, la règle d'équilibre ci-dessus, écritures à deux lignes : une transaction coûte 0,02 s sur 1'000 écritures, 0,09 s sur 5'000, 0,34 s sur 20'000, grâce à l'index de chaque colonne de lien (sans lui : 2,4 s sur 5'000). Ne revérifier que les objets touchés est reporté (charte, art. 12).
 - Une règle ajoutée à une base qui la viole déjà ne dit rien avant la première transaction qui écrit : elle échoue alors, et le message désigne l'objet fautif.
 - En forme compacte, une ligne : `_chaque écriture _conservé _dont comptabilisation _présent _vérifie _somme_de débit _de ligne _de écriture = … _sinon « L'écriture » ; écriture.pièce ; « n'est pas équilibrée. »`.
 
@@ -1809,3 +1809,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.68 | 2026-10-12 | Nouveaux § 3.6 (hasard : `un nombre au hasard de 1 à 6`, `un élément au hasard parmi les …`, actions seulement, `GRYM_HASARD`) et § 14.6 (`le nombre de mois entre d1 et d2`, unités entières, règle de `d + n mois`) ; aucun mot réservé |
 | 1.69 | 2026-10-12 | Nouveau § 14.7 : heures (`14:30`, type `(heure)`, `maintenant`, `+ 15 minutes` qui tourne comme une horloge, `h2 − h1` en minutes, écarts en minutes et en heures) ; heure locale, sans fuseau |
 | 1.70 | 2026-10-12 | § 1.4 : message dédié au trait d'union collé entre deux mots (`rendez-vous`), qui propose les deux mots ; la règle ne change pas |
+| 1.71 | 2026-10-13 | § 16.14 : une règle dont rien de ce qu'elle a lu n'a changé ne se revérifie pas ; mesures à 50'000 écritures |

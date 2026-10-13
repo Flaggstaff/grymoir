@@ -33,6 +33,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
 
 /* Objets encore vivants après le dernier ramassage (pour les tests). */
 size_t machine_objets_vivants(const Machine *m);
+/* Vérifications complètes de règles depuis la création de la machine ; une règle sautée ne compte pas (docs/vm.md, § 3.3). */
+size_t machine_regles_verifiees(const Machine *m);
 
 /* Dossier du programme : les chemins relatifs des fichiers (§ 15.2) partent de là. */
 void machine_dossier(Machine *m, const char *dossier);

@@ -201,6 +201,7 @@ struct Machine {
     char *dossier;          /* dossier du programme : base des chemins relatifs */
     char *chemin_base;      /* fichier de la base des entités, NULL : en mémoire (§ 16.5) */
     Chaine *essai_migration;   /* non NULL : préparer la base, dire ce qui changerait, tout annuler (A2-c) */
+    size_t regles_verifiees;   /* vérifications complètes de règles (docs/vm.md, § 3.3), pour les essais */
     struct EcranVM *ecran;     /* l'écran ouvert (§ 22), ou NULL */
     int fermer_ecran;          /* « Fermer l'écran. » a été demandé par l'événement en cours */
     Base *base;             /* ouverte au premier besoin */
@@ -1287,6 +1288,8 @@ static int charger(Machine *m, Objet *o, char **erreur) {
     return 1;
 }
 
+size_t machine_regles_verifiees(const Machine *m) { return m->regles_verifiees; }
+
 size_t machine_objets_vivants(const Machine *m) {
     return m->nb_objets;
 }
@@ -1505,6 +1508,16 @@ static char *ouvrir_attente(Machine *m, Chaine *sortie, Cadre *cadres) {
 static char *fermer_attente(Machine *m) {
     char *probleme = NULL;
     if (m->base && !base_commencer(m->base, &probleme)) return probleme;
+    if (base_changee_ailleurs(m->base) && !m->nb_essais) {
+        /* un autre programme (l'atelier, une autre fenêtre) a écrit pendant l'attente : les objets déjà lus se
+         * relisent au prochain accès, au lieu de montrer ce que la base ne contient plus (docs/vm.md, § 8) */
+        for (Objet *o = m->tas; o; o = o->suivant) {
+            if (o->id <= 0 || o->a_charger) continue;
+            for (size_t k = 0; k < o->classe->nb_champs; k++)
+                if (o->definis[k]) { valeur_liberer(&o->champs[k]); o->definis[k] = 0; }
+            o->a_charger = 1;
+        }
+    }
     for (size_t k = 0; m->base && k < m->nb_essais && !probleme; k++) base_point(m->base, k + 1, &probleme);
     return probleme;
 }
@@ -4385,6 +4398,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, r);
             break;
         }
+        case I_REGLE_UTILE:   /* une règle dont rien de ce qu'elle a lu n'a changé ne se revérifie pas (docs/vm.md, § 3.3) */
+        {
+            int utile = base_regle_utile(m->base, b->constantes[op].texte);
+            m->regles_verifiees += utile;
+            empiler(&pile, valeur_booleen(utile));
+            break;
+        }
+        case I_REGLE_FAITE:
+            base_regle_faite(m->base, b->constantes[op].texte);
+            break;
         case I_BASE_MODIFIEE:   /* les règles ne se revérifient que si la transaction a écrit (§ 16.14) */
             empiler(&pile, valeur_booleen(base_modifiee(m->base)));
             break;
@@ -4518,6 +4541,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     ok = echouer(diag, b, debut, grym_formater("Le champ « %s » n'a pas de valeur.", champ));
                     break;
                 }
+                if (o->id) base_noter_lecture(m->base, o->classe);   /* une règle qui s'évalue retient ce qu'elle lit */
                 Valeur v = valeur_copier(&o->champs[k]);
                 valeur_liberer(vo);
                 *vo = v;
