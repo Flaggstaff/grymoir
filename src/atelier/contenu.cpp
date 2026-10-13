@@ -109,6 +109,7 @@ QString lire_contenu(const QString &base, const QString &entite, const QVector<E
         return QString("La base ne connaît pas encore « %1 » : lance le programme pour qu'elle l'apprenne.").arg(entite);
     }
 
+    const bool fichiers_a_part = table_existe("grym_fichier");
     QStringList choix = {"o.id", "o.supprime"}, types = {"", ""};
     c->colonnes << "N°";
     QString depuis = sql_nom("e ", entite) + " t0 JOIN grym_objet o ON o.id = t0.id";
@@ -126,8 +127,14 @@ QString lire_contenu(const QString &base, const QString &entite, const QVector<E
             const ChampSchema ch = champs.value(nom);
             const QString x = alias + "." + sql_nom("c ", nom);
             if (ch.type == "fichier" || ch.type == "image" || reelles.contains("n " + nom)) {
-                choix << QString("CASE WHEN %1 IS NULL THEN NULL ELSE %2 || ' (' || length(%1) || ' octets)' END")
-                             .arg(x, alias + "." + sql_nom("n ", nom));
+                // format 2 (docs/vm.md, § 8) : la colonne garde le numéro d'une ligne de grym_fichier, qui sait la
+                // taille ; une base pas encore convertie garde les octets eux-mêmes
+                const QString taille = fichiers_a_part
+                    ? QString("CASE WHEN typeof(%1) = 'integer' THEN (SELECT taille FROM grym_fichier WHERE id = %1) "
+                              "ELSE length(%1) END").arg(x)
+                    : QString("length(%1)").arg(x);
+                choix << QString("CASE WHEN %1 IS NULL THEN NULL ELSE %2 || ' (' || %3 || ' octets)' END")
+                             .arg(x, alias + "." + sql_nom("n ", nom), taille);
                 types << "texte";
             } else if (ch.lien) {
                 QString porteur;

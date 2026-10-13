@@ -287,3 +287,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.30 | 2026-10-10 | A5 fait (§ 5 quater) : nouveau projet, projets récents, renommer (Utiliser, base, programme principal suivent), corbeille, fermer le projet ; gestes vidés au changement de projet ; ce que l'application « Gestion de projet » a révélé |
 | 0.31 | 2026-10-10 | § 8 : l'installateur Windows de l'atelier ; icône et manifeste UTF-8 des exécutables Windows |
 | 0.32 | 2026-10-13 | § 5 quinquies : valeurs permises et heure dans l'éditeur de données (deux pertes silencieuses corrigées) ; contenu de la base en lecture seule |
+| 0.33 | 2026-10-13 | § 5 quinquies : le contenu de la base lit la taille d'un fichier dans `grym_fichier` (format 2 des bases, docs/vm.md, § 8) |

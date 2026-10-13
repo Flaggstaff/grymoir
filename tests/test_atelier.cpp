@@ -1085,6 +1085,42 @@ int main(int argc, char **argv) {
         VERIFIER(lire_contenu(base_du_programme(prog), "inconnue", schema, false, &c).contains("n'est pas une entité"));
     }
 
+    // Contenu de la base, format 2 (docs/vm.md, § 8) : la taille d'un fichier se lit dans grym_fichier
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym"), doc = dossier.filePath("doc.txt");
+        {
+            QFile f(doc);
+            f.open(QIODevice::WriteOnly);
+            f.write("douze octets");
+        }
+        const QString source = "Une partition, conservée, a : un titre (texte), unique, un scan (fichier).\n"
+                               "La p vaut une nouvelle partition :\n    Le titre vaut « Toccata ».\n"
+                               "    Le scan vaut le fichier « " + doc + " ».\nConserver p.\n";
+        QFile f(prog);
+        f.open(QIODevice::WriteOnly);
+        f.write(source.toUtf8());
+        f.close();
+        const QByteArray src = source.toUtf8(), base = base_du_programme(prog).toUtf8();
+        Portee *po = portee_creer();
+        Programme pr = {};
+        Diagnostic d = {};
+        VERIFIER(analyser(src.constData(), (size_t)src.size(), po, 0, &pr, &d));
+        Module *mo = compiler(&pr, &d);
+        Machine *m = machine_creer();
+        machine_base(m, base.constData());
+        Chaine so = {};
+        VERIFIER(machine_executer(m, mo, &so, &d));
+        free(so.d);
+        machine_detruire(m);
+        module_detruire(mo);
+        programme_liberer(&pr);
+        portee_detruire(po);
+        Contenu c;
+        VERIFIER(lire_contenu(base_du_programme(prog), "partition", lire_schema(dossier.path()), false, &c).isEmpty());
+        VERIFIER(c.lignes.size() == 1 && c.lignes.value(0).value(2) == "doc.txt (12 octets)");
+    }
+
     // A2-c : l'aperçu de la migration ; il ne crée ni ne change la base
     {
         QTemporaryDir dossier;
