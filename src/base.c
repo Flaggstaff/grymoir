@@ -13,15 +13,72 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define REQUETES_GARDEES 512
+
 struct Base {
     sqlite3 *db;
     char *chemin;     /* tel qu'affiché dans les messages */
     int transaction;
     int changements;  /* sqlite3_total_changes au début de la transaction : « la base a-t-elle changé ? » (§ 16.14) */
     Chaine *rapport;  /* ce que les migrations font, une ligne par changement (A2-c), ou NULL */
+    /* Requêtes préparées gardées pour resservir (docs/vm.md, § 8.2) : une requête se compile une fois par base,
+     * pas à chaque objet lu. Une entrée en cours d'emploi n'est pas resservie : la même requête, demandée
+     * pendant ce temps, se prépare à part et se jette. */
+    struct { char *sql; sqlite3_stmt *st; int en_usage; } cache[REQUETES_GARDEES];
 };
 
 void base_rapport(Base *b, Chaine *rapport) { b->rapport = rapport; }
+
+static unsigned long empreinte(const char *t) {
+    unsigned long h = 5381;
+    for (; *t; t++) h = h * 33 + (unsigned char)*t;
+    return h;
+}
+
+/* Prépare sql, ou ressert la requête déjà compilée ; à rendre par rendre(). Code de retour de SQLite. */
+static int preparer(Base *b, const char *sql, sqlite3_stmt **st) {
+    unsigned long h = empreinte(sql);
+    for (size_t q = 0; q < REQUETES_GARDEES; q++) {
+        size_t i = (h + q) % REQUETES_GARDEES;
+        if (!b->cache[i].sql) {
+            int rc = sqlite3_prepare_v2(b->db, sql, -1, st, NULL);
+            if (rc != SQLITE_OK || !*st) return rc;
+            b->cache[i].sql = grym_dupliquer(sql);
+            b->cache[i].st = *st;
+            b->cache[i].en_usage = 1;
+            return rc;
+        }
+        if (strcmp(b->cache[i].sql, sql) == 0) {
+            if (b->cache[i].en_usage) break;
+            b->cache[i].en_usage = 1;
+            *st = b->cache[i].st;
+            return SQLITE_OK;
+        }
+    }
+    return sqlite3_prepare_v2(b->db, sql, -1, st, NULL);   /* cache plein, ou requête déjà en cours */
+}
+
+static void rendre(Base *b, sqlite3_stmt *st) {
+    if (!st) return;
+    for (size_t i = 0; i < REQUETES_GARDEES; i++)
+        if (b->cache[i].st == st) {
+            sqlite3_reset(st);
+            sqlite3_clear_bindings(st);
+            b->cache[i].en_usage = 0;
+            return;
+        }
+    sqlite3_finalize(st);
+}
+
+static void oublier_requetes(Base *b) {
+    for (size_t i = 0; i < REQUETES_GARDEES; i++) {
+        if (!b->cache[i].sql) continue;
+        sqlite3_finalize(b->cache[i].st);
+        free(b->cache[i].sql);
+        b->cache[i].sql = NULL;
+        b->cache[i].st = NULL;
+    }
+}
 
 /* ---------------------------------------------------------------- */
 /* Outils                                                           */
@@ -123,9 +180,9 @@ static long compter_liaisons(Base *b, const char *entite, const char *champ) {
     char *t = chaine_rendre(&sql);
     sqlite3_stmt *st = NULL;
     long n = 0;
-    if (sqlite3_prepare_v2(b->db, t, -1, &st, NULL) == SQLITE_OK && sqlite3_step(st) == SQLITE_ROW)
+    if (preparer(b, t, &st) == SQLITE_OK && sqlite3_step(st) == SQLITE_ROW)
         n = (long)sqlite3_column_int64(st, 0);
-    sqlite3_finalize(st);
+    rendre(b, st);
     free(t);
     return n;
 }
@@ -138,6 +195,7 @@ int base_collations(sqlite3 *db);
 
 Base *base_ouvrir(const char *chemin, char **erreur) {
     Base *b = grym_allouer(sizeof *b);
+    memset(b, 0, sizeof *b);
     b->db = NULL;
     b->transaction = 0;
     b->rapport = NULL;
@@ -159,14 +217,14 @@ Base *base_ouvrir(const char *chemin, char **erreur) {
     long format = 0;
     {
         sqlite3_stmt *sv = NULL;
-        if (sqlite3_prepare_v2(b->db, "PRAGMA user_version;", -1, &sv, NULL) != SQLITE_OK) {
+        if (preparer(b, "PRAGMA user_version;", &sv) != SQLITE_OK) {
             *erreur = grym_formater("Base « %s » : fichier illisible (%s).", b->chemin, sqlite3_errmsg(b->db));
-            sqlite3_finalize(sv);
+            rendre(b, sv);
             base_fermer(b);
             return NULL;
         }
         if (sqlite3_step(sv) == SQLITE_ROW) format = (long)sqlite3_column_int64(sv, 0);
-        sqlite3_finalize(sv);
+        rendre(b, sv);
     }
     if (format > BASE_FORMAT) {
         *erreur = grym_formater("La base « %s » a le format %ld, plus récent que celui de ce grym (%d) : "
@@ -186,9 +244,9 @@ Base *base_ouvrir(const char *chemin, char **erreur) {
     /* Base d'avant la corbeille (§ 16.12) : ses objets reçoivent les deux colonnes, vides. */
     sqlite3_stmt *st = NULL;
     int present = 0;
-    sqlite3_prepare_v2(b->db, "SELECT count(*) FROM pragma_table_info('grym_objet') WHERE name = 'supprime'", -1, &st, NULL);
+    preparer(b, "SELECT count(*) FROM pragma_table_info('grym_objet') WHERE name = 'supprime'", &st);
     if (sqlite3_step(st) == SQLITE_ROW) present = sqlite3_column_int(st, 0);
-    sqlite3_finalize(st);
+    rendre(b, st);
     if (!present && !executer(b, "ALTER TABLE grym_objet ADD COLUMN supprime TEXT;"
                                  "ALTER TABLE grym_objet ADD COLUMN supprime_avec INTEGER;", erreur)) {
         base_fermer(b);
@@ -206,6 +264,7 @@ Base *base_ouvrir(const char *chemin, char **erreur) {
 void base_fermer(Base *b) {
     if (!b) return;
     if (b->transaction) base_annuler(b);
+    oublier_requetes(b);
     sqlite3_close(b->db);
     free(b->chemin);
     free(b);
@@ -257,11 +316,11 @@ int base_membres(Base *b, const ClasseVM *c, size_t k, long id, long **ids, char
     ajouter_liaison(&sql, c->proprietaires[k]->nom, c->champs[k]);
     chaine_ajouter(&sql, " l JOIN grym_objet o ON o.id = l.b WHERE l.a = ?1 AND o.supprime IS NULL ORDER BY l.rowid");
     sqlite3_stmt *st = NULL;
-    int rc = sqlite3_prepare_v2(b->db, sql.d, -1, &st, NULL);
+    int rc = preparer(b, sql.d, &st);
     free(sql.d);
     if (rc != SQLITE_OK) {
         *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
-        sqlite3_finalize(st);
+        rendre(b, st);
         return 0;
     }
     sqlite3_bind_int64(st, 1, (sqlite3_int64)id);
@@ -281,7 +340,7 @@ int base_membres(Base *b, const ClasseVM *c, size_t k, long id, long **ids, char
         const unsigned char *t = sqlite3_column_text(st, 1);
         (*classes)[(*n)++] = grym_dupliquer(t ? (const char *)t : "");
     }
-    sqlite3_finalize(st);
+    rendre(b, st);
     if (rc != SQLITE_DONE) {
         *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
         return 0;
@@ -303,11 +362,11 @@ int base_valeurs(Base *b, const char *entite, const char *table, const char *cha
     chaine_ajouter(&sql, " p ON p.id = l.id JOIN grym_objet o ON o.id = l.id WHERE o.supprime IS NULL ORDER BY 1 "
                          "COLLATE GRYM_TEXTE LIMIT ?");
     sqlite3_stmt *st = NULL;
-    int rc = sqlite3_prepare_v2(b->db, sql.d, -1, &st, NULL);
+    int rc = preparer(b, sql.d, &st);
     free(sql.d);
     if (rc != SQLITE_OK) {
         *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
-        sqlite3_finalize(st);
+        rendre(b, st);
         return 0;
     }
     sqlite3_bind_int64(st, 1, (sqlite3_int64)max);
@@ -316,7 +375,7 @@ int base_valeurs(Base *b, const char *entite, const char *table, const char *cha
         const unsigned char *t = sqlite3_column_text(st, 0);
         (*valeurs)[(*n)++] = grym_dupliquer(t ? (const char *)t : "");
     }
-    sqlite3_finalize(st);
+    rendre(b, st);
     if (rc != SQLITE_DONE && rc != SQLITE_ROW) {
         for (size_t k = 0; k < *n; k++) free((*valeurs)[k]);
         free(*valeurs);
@@ -444,10 +503,10 @@ static long compter_lignes(Base *b, const ClasseVM *c) {
     ajouter_nom(&sql, "e ", c->nom);
     char *t = chaine_rendre(&sql);
     sqlite3_stmt *st = NULL;
-    sqlite3_prepare_v2(b->db, t, -1, &st, NULL);
+    preparer(b, t, &st);
     free(t);
     long n = sqlite3_step(st) == SQLITE_ROW ? (long)sqlite3_column_int64(st, 0) : 0;
-    sqlite3_finalize(st);
+    rendre(b, st);
     return n;
 }
 
@@ -590,9 +649,9 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
                 chaine_ajouter(&sql, " NOT BETWEEN 1 AND 9999");
                 char *t = chaine_rendre(&sql);
                 sqlite3_stmt *st = NULL;
-                if (sqlite3_prepare_v2(b->db, t, -1, &st, NULL) == SQLITE_OK && sqlite3_step(st) == SQLITE_ROW)
+                if (preparer(b, t, &st) == SQLITE_OK && sqlite3_step(st) == SQLITE_ROW)
                     hors = (long)sqlite3_column_int64(st, 0);
-                sqlite3_finalize(st);
+                rendre(b, st);
                 free(t);
             }
             if (hors) {
@@ -749,11 +808,11 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
     }
     if (ok) {
         sqlite3_stmt *st = NULL;
-        sqlite3_prepare_v2(b->db, "UPDATE grym_schema SET definition = ? WHERE entite = ?", -1, &st, NULL);
+        preparer(b, "UPDATE grym_schema SET definition = ? WHERE entite = ?", &st);
         sqlite3_bind_text(st, 1, nouvelle, -1, SQLITE_TRANSIENT);
         sqlite3_bind_text(st, 2, c->nom, -1, SQLITE_TRANSIENT);
         ok = sqlite3_step(st) == SQLITE_DONE;
-        sqlite3_finalize(st);
+        rendre(b, st);
         if (!ok) *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
     }
     free(pl);
@@ -805,7 +864,7 @@ static int verifier_valeurs(Base *b, const ClasseVM *c, char **erreur) {
         chaine_ajouter(&sql, " IS NOT NULL GROUP BY 1 ORDER BY 1");
         char *t = chaine_rendre(&sql);
         sqlite3_stmt *st = NULL;
-        int ok = sqlite3_prepare_v2(b->db, t, -1, &st, NULL) == SQLITE_OK;
+        int ok = preparer(b, t, &st) == SQLITE_OK;
         free(t);
         while (ok && sqlite3_step(st) == SQLITE_ROW) {
             const char *v = (const char *)sqlite3_column_text(st, 0);
@@ -826,11 +885,11 @@ static int verifier_valeurs(Base *b, const ClasseVM *c, char **erreur) {
                                         v ? v : "");
                 free(pl);
                 ok = 0;
-                sqlite3_finalize(st);
+                rendre(b, st);
                 return 0;
             }
         }
-        sqlite3_finalize(st);
+        rendre(b, st);
     }
     return 1;
 }
@@ -844,18 +903,18 @@ int base_preparer(Base *b, const ClasseVM *c, char **erreur) {
 static int base_preparer_table(Base *b, const ClasseVM *c, char **erreur) {
     char *def = definition(c);
     sqlite3_stmt *st = NULL;
-    sqlite3_prepare_v2(b->db, "SELECT definition FROM grym_schema WHERE entite = ?", -1, &st, NULL);
+    preparer(b, "SELECT definition FROM grym_schema WHERE entite = ?", &st);
     sqlite3_bind_text(st, 1, c->nom, -1, SQLITE_TRANSIENT);
     int rc = sqlite3_step(st);
     if (rc == SQLITE_ROW) {
         char *ancienne = grym_dupliquer((const char *)sqlite3_column_text(st, 0));
-        sqlite3_finalize(st);
+        rendre(b, st);
         int ok = strcmp(ancienne, def) == 0 || migrer(b, c, ancienne, def, erreur);
         free(ancienne);
         free(def);
         return ok && indexer_liens(b, c, erreur);
     }
-    sqlite3_finalize(st);
+    rendre(b, st);
 
     if (b->rapport) {
         char *l = grym_formater("« %s » : table créée.\n", c->nom);
@@ -906,12 +965,12 @@ static int base_preparer_table(Base *b, const ClasseVM *c, char **erreur) {
         if (c->proprietaires[k] == c && multiple(c, k)) ok = creer_liaison(b, c->nom, c->champs[k], c->types[k], erreur);
     if (ok) ok = indexer_liens(b, c, erreur);
     if (ok) {
-        sqlite3_prepare_v2(b->db, "INSERT INTO grym_schema (entite, definition) VALUES (?, ?)", -1, &st, NULL);
+        preparer(b, "INSERT INTO grym_schema (entite, definition) VALUES (?, ?)", &st);
         sqlite3_bind_text(st, 1, c->nom, -1, SQLITE_TRANSIENT);
         sqlite3_bind_text(st, 2, def, -1, SQLITE_TRANSIENT);
         ok = sqlite3_step(st) == SQLITE_DONE;
         if (!ok) *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
-        sqlite3_finalize(st);
+        rendre(b, st);
     }
     free(def);
     return ok;
@@ -925,10 +984,10 @@ static int base_preparer_table(Base *b, const ClasseVM *c, char **erreur) {
 /* soi, id_soi : l'objet en train d'être conservé, qui peut se désigner lui-même (« un parrain (client) »). */
 int base_est_supprime(Base *b, long id) {
     sqlite3_stmt *st = NULL;
-    sqlite3_prepare_v2(b->db, "SELECT supprime IS NOT NULL FROM grym_objet WHERE id = ?", -1, &st, NULL);
+    preparer(b, "SELECT supprime IS NOT NULL FROM grym_objet WHERE id = ?", &st);
     sqlite3_bind_int64(st, 1, (sqlite3_int64)id);
     int r = sqlite3_step(st) == SQLITE_ROW && sqlite3_column_int(st, 0);
-    sqlite3_finalize(st);
+    rendre(b, st);
     return r;
 }
 
@@ -1023,12 +1082,12 @@ static char *message_contrainte(Base *b, const Objet *o) {
             char *texte = chaine_rendre(&sql);
             sqlite3_stmt *st = NULL;
             char *ignore = NULL;
-            if (sqlite3_prepare_v2(b->db, texte, -1, &st, NULL) == SQLITE_OK
+            if (preparer(b, texte, &st) == SQLITE_OK
                 && lier(b, st, 1, c->types[k], c->champs[k], &o->champs[k], o, o->id, &ignore)
                 && sqlite3_step(st) == SQLITE_ROW)
                 dans_corbeille = sqlite3_column_int(st, 0) > 0;
             free(ignore);
-            sqlite3_finalize(st);
+            rendre(b, st);
             free(texte);
         }
         char *r = dans_corbeille
@@ -1061,10 +1120,10 @@ int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
             return 0;
         }
     sqlite3_stmt *st = NULL;
-    sqlite3_prepare_v2(b->db, "INSERT INTO grym_objet (classe) VALUES (?)", -1, &st, NULL);
+    preparer(b, "INSERT INTO grym_objet (classe) VALUES (?)", &st);
     sqlite3_bind_text(st, 1, c->nom, -1, SQLITE_TRANSIENT);
     int ok = sqlite3_step(st) == SQLITE_DONE;
-    sqlite3_finalize(st);
+    rendre(b, st);
     if (!ok) { *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db)); return 0; }
     long nouvel = (long)sqlite3_last_insert_rowid(b->db);
 
@@ -1093,7 +1152,7 @@ int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
         free(v);
         chaine_ajouter(&sql, ")");
         char *texte = chaine_rendre(&sql);
-        sqlite3_prepare_v2(b->db, texte, -1, &st, NULL);
+        preparer(b, texte, &st);
         free(texte);
         sqlite3_bind_int64(st, 1, (sqlite3_int64)nouvel);
         int i = 2;
@@ -1102,7 +1161,7 @@ int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
                 i = lier(b, st, i, c->types[k], c->champs[k], o->definis[k] ? &o->champs[k] : NULL, o, nouvel, erreur);
         ok = i && sqlite3_step(st) == SQLITE_DONE;
         if (i && !ok) *erreur = message_contrainte(b, o);
-        sqlite3_finalize(st);
+        rendre(b, st);
         if (!ok) return 0;   /* la transaction de l'exécution annulera les lignes déjà écrites */
     }
     *id = nouvel;
@@ -1127,7 +1186,7 @@ int base_ecrire_champ(Base *b, const Objet *o, size_t k, char **erreur) {
     chaine_ajouter(&sql, " WHERE id = ?");
     char *texte = chaine_rendre(&sql);
     sqlite3_stmt *st = NULL;
-    sqlite3_prepare_v2(b->db, texte, -1, &st, NULL);
+    preparer(b, texte, &st);
     free(texte);
     int i = lier(b, st, 1, c->types[k], c->champs[k], &o->champs[k], o, o->id, erreur);
     int ok = 0;
@@ -1136,7 +1195,7 @@ int base_ecrire_champ(Base *b, const Objet *o, size_t k, char **erreur) {
         ok = sqlite3_step(st) == SQLITE_DONE;
         if (!ok) *erreur = message_contrainte(b, o);
     }
-    sqlite3_finalize(st);
+    rendre(b, st);
     return ok;
 }
 
@@ -1167,7 +1226,7 @@ int base_gagner(Base *b, const Objet *o, size_t k, const Valeur *v, int perdre, 
     chaine_ajouter(&sql, perdre ? " WHERE a = ?1 AND b = ?2" : " (a, b) VALUES (?1, ?2)");
     char *texte = chaine_rendre(&sql);
     sqlite3_stmt *st = NULL;
-    int ok = sqlite3_prepare_v2(b->db, texte, -1, &st, NULL) == SQLITE_OK;
+    int ok = preparer(b, texte, &st) == SQLITE_OK;
     free(texte);
     if (ok) {
         sqlite3_bind_int64(st, 1, (sqlite3_int64)o->id);
@@ -1175,7 +1234,7 @@ int base_gagner(Base *b, const Objet *o, size_t k, const Valeur *v, int perdre, 
         ok = sqlite3_step(st) == SQLITE_DONE;
     }
     if (!ok) *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
-    sqlite3_finalize(st);
+    rendre(b, st);
     return ok;
 }
 
@@ -1251,12 +1310,12 @@ static void designants(Base *b, const ClasseVM *x, size_t k, long id, Ensemble *
     }
     char *texte = chaine_rendre(&sql);
     sqlite3_stmt *st = NULL;
-    sqlite3_prepare_v2(b->db, texte, -1, &st, NULL);
+    preparer(b, texte, &st);
     free(texte);
     sqlite3_bind_int64(st, 1, (sqlite3_int64)id);
     while (sqlite3_step(st) == SQLITE_ROW)
         ens_ajouter(sortie, (long)sqlite3_column_int64(st, 0), (const char *)sqlite3_column_text(st, 1));
-    sqlite3_finalize(st);
+    rendre(b, st);
 }
 
 /* L'objet et, de proche en proche, ceux qui « disparaissent avec » lui (bit 4). */
@@ -1300,7 +1359,7 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
         long jours = date_aujourdhui();
         char *date = date_iso(jours);
         sqlite3_stmt *st = NULL;
-        sqlite3_prepare_v2(b->db, "UPDATE grym_objet SET supprime = ?, supprime_avec = ? WHERE id = ?", -1, &st, NULL);
+        preparer(b, "UPDATE grym_objet SET supprime = ?, supprime_avec = ? WHERE id = ?", &st);
         for (size_t k = 0; k < e.n; k++) {
             sqlite3_bind_text(st, 1, date, -1, SQLITE_TRANSIENT);
             sqlite3_bind_int64(st, 2, (sqlite3_int64)o->id);
@@ -1308,7 +1367,7 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
             sqlite3_step(st);
             sqlite3_reset(st);
         }
-        sqlite3_finalize(st);
+        rendre(b, st);
         free(date);
         ens_liberer(&e);
         return 1;
@@ -1351,7 +1410,7 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
     /* les liens internes à l'ensemble se vérifient à la validation : l'ordre des effacements n'importe plus */
     int ok = executer(b, "PRAGMA defer_foreign_keys = ON;", erreur);
     sqlite3_stmt *st = NULL;
-    sqlite3_prepare_v2(b->db, "DELETE FROM grym_objet WHERE id = ?", -1, &st, NULL);
+    preparer(b, "DELETE FROM grym_objet WHERE id = ?", &st);
     for (size_t k = e.n; ok && k > 0; k--) {
         machine_objet_efface(m, e.ids[k - 1]);   /* avant l'effacement : ses valeurs sont lues s'il le faut */
         sqlite3_bind_int64(st, 1, (sqlite3_int64)e.ids[k - 1]);
@@ -1361,7 +1420,7 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
         }
         sqlite3_reset(st);
     }
-    sqlite3_finalize(st);
+    rendre(b, st);
     ens_liberer(&e);
     return ok;
 }
@@ -1369,7 +1428,7 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
 int base_retablir(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_classes, char **erreur) {
     const ClasseVM *oc = o->classe;
     sqlite3_stmt *st = NULL;
-    sqlite3_prepare_v2(b->db, "SELECT supprime IS NOT NULL, supprime_avec FROM grym_objet WHERE id = ?", -1, &st, NULL);
+    preparer(b, "SELECT supprime IS NOT NULL, supprime_avec FROM grym_objet WHERE id = ?", &st);
     sqlite3_bind_int64(st, 1, (sqlite3_int64)o->id);
     int supprime = 0;
     long avec = 0;
@@ -1377,7 +1436,7 @@ int base_retablir(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_c
         supprime = sqlite3_column_int(st, 0);
         avec = (long)sqlite3_column_int64(st, 1);
     }
-    sqlite3_finalize(st);
+    rendre(b, st);
     if (!supprime) {
         *erreur = grym_formater("%s %s n'est pas supprimé%s.", ce(oc), oc->nom, oc->feminin ? "e" : "");
         return 0;
@@ -1405,7 +1464,7 @@ int base_retablir(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_c
                        -1, &st, NULL);
     sqlite3_bind_int64(st, 1, (sqlite3_int64)o->id);
     int ok = sqlite3_step(st) == SQLITE_DONE;
-    sqlite3_finalize(st);
+    rendre(b, st);
     if (!ok) *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
     return ok;
 }
@@ -1493,10 +1552,10 @@ int base_collations(sqlite3 *db) {
 
 static char *classe_en_base(Base *b, long id) {
     sqlite3_stmt *st = NULL;
-    sqlite3_prepare_v2(b->db, "SELECT classe FROM grym_objet WHERE id = ?", -1, &st, NULL);
+    preparer(b, "SELECT classe FROM grym_objet WHERE id = ?", &st);
     sqlite3_bind_int64(st, 1, (sqlite3_int64)id);
     char *r = sqlite3_step(st) == SQLITE_ROW ? grym_dupliquer((const char *)sqlite3_column_text(st, 0)) : NULL;
-    sqlite3_finalize(st);
+    rendre(b, st);
     return r;
 }
 
@@ -1523,11 +1582,11 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
         chaine_ajouter(&sql, " WHERE id = ?");
         char *texte = chaine_rendre(&sql);
         sqlite3_stmt *st = NULL;
-        sqlite3_prepare_v2(b->db, texte, -1, &st, NULL);
+        preparer(b, texte, &st);
         free(texte);
         sqlite3_bind_int64(st, 1, (sqlite3_int64)o->id);
         if (sqlite3_step(st) != SQLITE_ROW) {
-            sqlite3_finalize(st);
+            rendre(b, st);
             char *qui = un(c);
             *erreur = grym_formater("%s a disparu de la base « %s ».", qui, b->chemin);
             free(qui);
@@ -1567,7 +1626,7 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
                 Objet *lie = classe ? machine_objet_en_base(m, id, classe, erreur) : NULL;
                 if (!classe && !*erreur) *erreur = grym_formater("Base « %s » : lien vers un objet absent.", b->chemin);
                 free(classe);
-                if (!lie) { sqlite3_finalize(st); return 0; }
+                if (!lie) { rendre(b, st); return 0; }
                 v = vi_objet(lie);
             }
             o->champs[k] = v;
@@ -1575,7 +1634,7 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
             col++;
         }
         (void)colonnes;
-        sqlite3_finalize(st);
+        rendre(b, st);
     }
     return 1;
 }
@@ -2102,7 +2161,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
     free(tri);
     char *texte = chaine_rendre(&r.sql);
     sqlite3_stmt *st = NULL;
-    if (ok && sqlite3_prepare_v2(b->db, texte, -1, &st, NULL) != SQLITE_OK) {
+    if (ok && preparer(b, texte, &st) != SQLITE_OK) {
         r.erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
         ok = 0;
     }
@@ -2110,7 +2169,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
     for (size_t i = 0; ok && i < r.nb_liens; i++)
         ok = lier_parametre(&r, st, (int)i + 1, r.types[i], r.champs[i], &params[r.liens[i]]);
     if (!ok) {
-        sqlite3_finalize(st);
+        rendre(b, st);
         *erreur = r.erreur ? r.erreur : grym_dupliquer("Recherche impossible.");
         return 0;
     }
@@ -2135,7 +2194,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
             classes[n] = grym_dupliquer((const char *)sqlite3_column_text(st, 1));
             n++;
         }
-        sqlite3_finalize(st);
+        rendre(b, st);
         if (rc != SQLITE_DONE) {
             for (size_t k = 0; k < n; k++) free(classes[k]);
             free(classes);
@@ -2168,7 +2227,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
             total = s;
             nb++;
         }
-        sqlite3_finalize(st);
+        rendre(b, st);
         if (statut != DEC_OK) {
             dec_liberer(&total);
             dec_liberer(&extreme);
@@ -2205,7 +2264,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
         return 1;
     }
     long compte = sqlite3_step(st) == SQLITE_ROW ? (long)sqlite3_column_int64(st, 0) : 0;
-    sqlite3_finalize(st);
+    rendre(b, st);
     if (mode == 2) {
         char tampon[32];
         snprintf(tampon, sizeof tampon, "%ld", compte);

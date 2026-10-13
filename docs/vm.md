@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.56 de la spécification, révisée le 12 octobre 2026.
+Version 1.57 de la spécification, révisée le 13 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -249,6 +249,7 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - Un objet porte son identifiant en base, 0 s'il n'est pas conservé. `CONSERVER` et `SUPPRIMER` le changent au journal, qui le restaure si l'exécution échoue.
 - `ÉCRIRE_CHAMP` sur un objet conservé écrit aussi la colonne en base.
 - Recherche : une constante de type 5 décrit la recherche, « entité ␟ mode ␟ champ du tri ␟ décroissant ␟ condition », avec le séparateur U+001F. Mode 0 : liste (boucle), 1 : un seul objet, 2 : nombre ; 3, 4 et 5 : les mêmes, dans la corbeille ; 6 : la somme du champ écrit à la place du champ du tri, 7 : la même, dans la corbeille (grammaire, § 16.4). La somme se fait en décimal exact, ligne par ligne, jamais par `SUM` de SQLite ; une colonne `NULL` ne compte pas. Toute recherche écarte (modes 0 à 2) ou ne retient (modes 3 à 5) que les objets dont `grym_objet.supprime` est rempli. La condition s'écrit en préfixe : `(I?k)` pour une relation inverse (le lien de l'entité qui peut désigner l'objet `?k`, choisi à l'exécution selon sa classe réelle ; aucun ou plusieurs : erreur), `(e A B)`, `(o A B)`, `(n A)`, `(op [champ] ?k)` (le champ peut être un chemin, `[écriture␜comptabilisation]`, U+001C entre les étapes : une sous-requête par lien) pour `=`, `!`, `<`, `>`, `l` (≤), `g` (≥), et `(P [champ])`, `N`, `0`, `V`, `F` pour les tournures ; `?k` désigne la k-ième valeur dépilée. La machine traduit en SQL, jointures de la lignée comprises.
+- Requêtes préparées : la base garde jusqu'à 512 requêtes compilées, retrouvées par leur texte ; chargement d'un objet, recherche, écriture d'un champ ne compilent leur SQL qu'une fois par base ouverte. Une requête déjà en cours d'emploi se prépare à part et se jette. Mesure du 13 octobre 2026, base de 50'000 écritures et 100'000 lignes : parcourir les lignes en lisant un champ passe de 1,16 s à 0,78 s.
 - Collations enregistrées auprès de SQLite : `GRYM_NOMBRE` compare deux nombres canoniques en décimal exact ; `GRYM_TEXTE` compare sans accents ni casse, puis octet par octet.
 - Liste : valeur interne, jamais visible du langage, figée au moment de la recherche (identifiants et classes).
 - Carte d'identité : identifiant en base → objet en mémoire. Un objet retrouvé est une coquille de sa classe réelle ; `LIRE_CHAMP`, `ÉCRIRE_CHAMP` et `SUPPRIMER` lisent d'abord ses champs. Ses liens deviennent des coquilles à leur tour. Le ramasse-miettes retire de la carte les objets qu'il libère.
@@ -412,3 +413,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.54 | 2026-10-12 | Instructions 81 `EXEMPLE` et 82 `EXEMPLE_RATÉ` (grammaire, § 9.6) ; format version 40 |
 | 1.55 | 2026-10-12 | Instructions 83 `ÉCART` et 84 `HASARD` (grammaire, § 14.6, § 3.6) ; format version 41 |
 | 1.56 | 2026-10-12 | Heures (grammaire, § 14.7) : valeur d'heure (minutes depuis minuit), instructions 85 `HEURE` et 86 `MAINTENANT`, unités 4 et 5 de `DÉCALER` et `ÉCART`, cible 7 de `CONVERTIR` ; champ `(heure)` rangé en texte `HH:MM` ; format version 42 |
+| 1.57 | 2026-10-13 | § 8 : requêtes préparées gardées par la base, compilées une fois par base ouverte |
