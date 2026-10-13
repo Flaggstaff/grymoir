@@ -1811,3 +1811,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.70 | 2026-10-12 | § 1.4 : message dédié au trait d'union collé entre deux mots (`rendez-vous`), qui propose les deux mots ; la règle ne change pas |
 | 1.71 | 2026-10-13 | § 16.14 : une règle dont rien de ce qu'elle a lu n'a changé ne se revérifie pas ; mesures à 50'000 écritures |
 | 1.72 | 2026-10-13 | § 4 : `suivi de` écrit un nombre comme `Afficher`, séparateur de milliers compris (`P-49'999`) ; choix confirmé, essai ajouté |
+| 1.73 | 2026-10-14 | Deux corrections, les règles ne changent pas : § 4.5, `t en vrai ou faux` reconnu après un nom ; § 15.5, l'imprimeur accorde au féminin ce qui suit une colonne (`la colonne « Année » de la ligne est présente`) |

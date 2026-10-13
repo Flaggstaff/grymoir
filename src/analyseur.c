@@ -1397,7 +1397,8 @@ static Noeud *nom_expression(Analyse *a) {
             && est_mot(&a->j[fin + 1], "par")) arret = 1;   /* « les couleurs jointes par » (§ 13.9) */
         if (fin + 1 < a->n && est_mot(&a->j[fin], "comme")
             && (est_mot(&a->j[fin + 1], "un") || est_mot(&a->j[fin + 1], "une"))) arret = 1;   /* § 13.8 */
-        if (fin + 1 < f && est_mot(&a->j[fin], "en")) {        /* « nom en majuscules » (§ 4.5) */
+        /* « vrai » clôt la suite des mots du nom : il se regarde au-delà de f (« t en vrai ou faux ») */
+        if (fin < f && fin + 1 < a->n && est_mot(&a->j[fin], "en")) {   /* « nom en majuscules » (§ 4.5) */
             static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai", "heure" };
             for (size_t q = 0; q < sizeof C / sizeof *C; q++) if (est_mot(&a->j[fin + 1], C[q])) arret = 1;
         }

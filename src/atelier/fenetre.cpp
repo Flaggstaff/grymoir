@@ -1,6 +1,7 @@
 // GrymoiR : l'atelier, fenêtre principale.
 #include "fenetre.h"
 #include "contenu.h"
+#include "importation.h"
 #include "editeur.h"
 #include "fabrication.h"
 #include "aide.h"
@@ -153,6 +154,81 @@ Fenetre::Fenetre() {
         f->setAttribute(Qt::WA_DeleteOnClose);
         f->show();
     })->setToolTip("Les objets conservés de l'entité choisie, en lecture seule");
+    // Sauvegarder, restaurer, importer (§ 5 sexies)
+    auto base_cible = [this](QString *programme) {
+        if (!fichier.isEmpty() && editeur->document()->isModified()) enregistrer();
+        *programme = programme_a_lancer();
+        return programme->isEmpty() ? QString() : base_du_programme(*programme);
+    };
+    auto occupe = [this] {
+        if (!execution) return false;
+        statusBar()->showMessage("Le programme tourne : arrête-le d'abord, la base est à lui.", 5000);
+        return true;
+    };
+    barre_donnees->addAction("Sauvegarder la base", this, [this, base_cible, occupe] {
+        QString programme;
+        const QString base = base_cible(&programme);
+        if (base.isEmpty() || occupe()) return;
+        QString copie;
+        const QString e = sauvegarder_base(base, QDir(projet).filePath("Sauvegardes"), &copie);
+        if (!e.isEmpty()) { QMessageBox::warning(this, "Sauvegarder la base", e); return; }
+        statusBar()->showMessage(QString("Base sauvegardée : %1").arg(QDir(projet).relativeFilePath(copie)), 6000);
+    })->setToolTip("Une copie datée de la base, dans le dossier « Sauvegardes » du projet");
+    barre_donnees->addAction("Restaurer une sauvegarde…", this, [this, base_cible, occupe] {
+        QString programme;
+        const QString base = base_cible(&programme);
+        if (base.isEmpty() || occupe()) return;
+        const QString dossier = QDir(projet).filePath("Sauvegardes");
+        const QString choix = QFileDialog::getOpenFileName(this, "Restaurer une sauvegarde",
+                                                           QFileInfo::exists(dossier) ? dossier : projet, "Bases GrymoiR (*.grymd)");
+        if (choix.isEmpty()) return;
+        if (QMessageBox::question(this, "Restaurer une sauvegarde",
+                                  QString("Remplacer la base de « %1 » par « %2 » ?\n\nLa base actuelle est d'abord "
+                                          "sauvegardée dans « Sauvegardes » : tu pourras revenir en arrière.")
+                                      .arg(QFileInfo(programme).fileName(), QFileInfo(choix).fileName()))
+            != QMessageBox::Yes)
+            return;
+        QString avant;
+        const QString e = restaurer_base(choix, base, dossier, &avant);
+        if (!e.isEmpty()) { QMessageBox::warning(this, "Restaurer une sauvegarde", e); return; }
+        bool refusee = false;   // la sauvegarde peut dater d'un autre schéma : la migration le dira avant de lancer
+        const QString migration = apercu_migration(programme, &refusee);
+        QMessageBox::information(this, "Restaurer une sauvegarde",
+                                 QString("Base restaurée.%1\n\nAu prochain lancement : %2")
+                                     .arg(avant.isEmpty() ? QString() : QString("\nL'ancienne est gardée : « %1 ».").arg(QFileInfo(avant).fileName()),
+                                          migration));
+    })->setToolTip("Remet une sauvegarde en service ; la base actuelle est sauvegardée d'abord");
+    barre_donnees->addAction("Importer un tableau CSV…", this, [this, base_cible] {
+        QString programme;
+        if (base_cible(&programme).isEmpty()) return;
+        const QString csv = QFileDialog::getOpenFileName(this, "Importer un tableau", projet, "Tableaux (*.csv *.txt)");
+        if (csv.isEmpty()) return;
+        // le programme lit le tableau depuis son dossier (§ 15.5) : un tableau d'ailleurs y est copié
+        const QDir dossier = QFileInfo(programme).absoluteDir();
+        QString cible = QFileInfo(csv).absoluteFilePath();
+        const bool dedans = !dossier.relativeFilePath(cible).startsWith("..");
+        if (!dedans) {
+            QString nom = QFileInfo(csv).fileName();
+            for (int n = 2; QFileInfo::exists(dossier.filePath(nom)); n++)
+                nom = QString("%1 (%2).%3").arg(QFileInfo(csv).completeBaseName()).arg(n).arg(QFileInfo(csv).suffix());
+            cible = dossier.filePath(nom);
+        }
+        DialogueImportation d(csv, dossier.relativeFilePath(cible), entite_choisie, lire_schema(projet), this);
+        if (d.exec() != QDialog::Accepted || d.code().isEmpty()) return;
+        if (!dedans && !QFile::copy(csv, cible)) {
+            QMessageBox::warning(this, "Importer un tableau", QString("« %1 » n'a pas pu être copié dans le projet.").arg(csv));
+            return;
+        }
+        const QString code = d.code();
+        const auto avant = gestes.size();
+        appliquer([=](Geste *g) { return ajouter_importation(projet, programme, code, g); }, entite_choisie);
+        if (gestes.size() == avant) {
+            if (!dedans) QFile::remove(cible);   // refusé : le message est affiché, la copie repart
+            return;
+        }
+        statusBar()->showMessage(QString("Importation écrite dans « %1 » : elle se fera au prochain lancement.")
+                                     .arg(QFileInfo(programme).fileName()), 8000);
+    })->setToolTip("Écrit dans le programme la boucle qui conserve les lignes d'un tableau");
     auto *cote_a_cote = new QSplitter;
     cote_a_cote->addWidget(schema);
     cote_a_cote->addWidget(panneau);

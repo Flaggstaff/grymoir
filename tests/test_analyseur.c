@@ -510,6 +510,8 @@ int main(void) {
     V("Le n vaut « a ».\nLe r vaut n contient « b » et n ne commence pas par « c ».",
       "(créer [n] «a»)\n(créer [r] (et (contient [n] «b») (non (commence-par [n] «c»))))");
     V("Le r vaut « 3 » en nombre entier + la longueur de « ab ».", "(créer [r] (+ (en «3» nombre entier) (champ [longueur] «ab»)))");
+    /* « en vrai ou faux » après un nom : « vrai » clôt les mots du nom, la conversion se voit quand même */
+    V("Le t vaut « oui ».\nLe r vaut t en vrai ou faux.", "(créer [t] «oui»)\n(créer [r] (en [t] vrai ou faux))");
     VE("Le n vaut « a ».\nLe r vaut n commence « b ».", 2, 22, "« commence » se suit de « par » : « commence par « A » ».");
     VE("Le n vaut « a ».\nLe r vaut n ne contient « b ».", 2, 25, "« ne contient » doit être suivi de « pas ».");
     VE("Le jour vaut 21.09.2026 + 12'000 jour.", 1, 34, "Accord : « 12'000 jours ».");

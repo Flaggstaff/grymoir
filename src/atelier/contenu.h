@@ -24,6 +24,14 @@ QString base_du_programme(const QString &programme);
 QString lire_contenu(const QString &base, const QString &entite, const QVector<EntiteSchema> &schema,
                      bool corbeille, Contenu *c);
 
+// Sauvegarde de la base (§ 5 sexies), par l'API de sauvegarde de SQLite : une copie cohérente, même base ouverte.
+// Dans `dossier` (créé au besoin), sous « nom date heure.grymd » ; *copie reçoit son chemin. Rend vide si tout va bien.
+QString sauvegarder_base(const QString &base, const QString &dossier, QString *copie);
+
+// Remet `sauvegarde` à la place de `base`, après avoir sauvegardé l'actuelle dans `dossier` (*copie_avant).
+// Refuse ce qui n'est pas une base GrymoiR. Rend vide si tout va bien.
+QString restaurer_base(const QString &sauvegarde, const QString &base, const QString &dossier, QString *copie_avant);
+
 class QCheckBox;
 class QLabel;
 class QLineEdit;

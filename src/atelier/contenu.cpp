@@ -2,6 +2,8 @@
 #include "contenu.h"
 
 #include <QCheckBox>
+#include <QDateTime>
+#include <QDir>
 #include <QDialogButtonBox>
 #include <QFileInfo>
 #include <QHeaderView>
@@ -268,4 +270,76 @@ void FenetreContenu::compter() {
                                           : QString("%1 sur %2 objets").arg(vus).arg(modele->rowCount());
     if (dans_la_corbeille && !corbeille->isChecked()) t += QString(", et %1 dans la corbeille").arg(dans_la_corbeille);
     etat->setText(erreur_lue.isEmpty() ? t + "." : t + ". " + erreur_lue);
+}
+
+namespace {
+
+// Copie `de` dans `vers` par l'API de sauvegarde de SQLite : jamais une copie de fichier à moitié écrite.
+QString copier_base(const QString &de, const QString &vers) {
+    sqlite3 *source = nullptr, *cible = nullptr;
+    QString erreur;
+    if (sqlite3_open_v2(QFileInfo(de).absoluteFilePath().toUtf8().constData(), &source, SQLITE_OPEN_READONLY, nullptr) != SQLITE_OK)
+        erreur = QString("« %1 » ne s'ouvre pas : %2.").arg(QFileInfo(de).fileName(), QString::fromUtf8(sqlite3_errmsg(source)));
+    else if (sqlite3_open_v2(QFileInfo(vers).absoluteFilePath().toUtf8().constData(), &cible,
+                             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr) != SQLITE_OK)
+        erreur = QString("« %1 » ne s'écrit pas : %2.").arg(QFileInfo(vers).fileName(), QString::fromUtf8(sqlite3_errmsg(cible)));
+    else {
+        sqlite3_busy_timeout(source, 2000);
+        sqlite3_busy_timeout(cible, 2000);
+        sqlite3_backup *b = sqlite3_backup_init(cible, "main", source, "main");
+        if (!b) erreur = "Copie impossible : " + QString::fromUtf8(sqlite3_errmsg(cible)) + ".";
+        else {
+            const int r = sqlite3_backup_step(b, -1);
+            sqlite3_backup_finish(b);
+            if (r != SQLITE_DONE)
+                erreur = r == SQLITE_BUSY || r == SQLITE_LOCKED ? QString("La base est occupée : arrête le programme, puis recommence.")
+                                                                : "Copie impossible : " + QString::fromUtf8(sqlite3_errstr(r)) + ".";
+        }
+    }
+    sqlite3_close(source);
+    sqlite3_close(cible);
+    return erreur;
+}
+
+bool est_base_grymoir(const QString &chemin) {
+    sqlite3 *db = nullptr;
+    bool r = false;
+    if (sqlite3_open_v2(QFileInfo(chemin).absoluteFilePath().toUtf8().constData(), &db, SQLITE_OPEN_READONLY, nullptr) == SQLITE_OK) {
+        sqlite3_stmt *st = nullptr;
+        if (sqlite3_prepare_v2(db, "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'grym_schema'", -1, &st,
+                               nullptr) == SQLITE_OK)
+            r = sqlite3_step(st) == SQLITE_ROW;
+        sqlite3_finalize(st);
+    }
+    sqlite3_close(db);
+    return r;
+}
+
+}  // namespace
+
+QString sauvegarder_base(const QString &base, const QString &dossier, QString *copie) {
+    if (!QFileInfo::exists(base))
+        return QString("Pas encore de base « %1 » : rien à sauvegarder.").arg(QFileInfo(base).fileName());
+    if (!QDir().mkpath(dossier)) return QString("Le dossier « %1 » ne se crée pas.").arg(dossier);
+    const QString racine = QDir(dossier).filePath(QFileInfo(base).completeBaseName() + " "
+                                                  + QDateTime::currentDateTime().toString("yyyy-MM-dd HH'h'mm"));
+    QString c = racine + ".grymd";
+    for (int n = 2; QFileInfo::exists(c); n++) c = QString("%1 (%2).grymd").arg(racine).arg(n);   // jamais d'écrasement
+    const QString erreur = copier_base(base, c);
+    if (!erreur.isEmpty()) { QFile::remove(c); return erreur; }
+    *copie = c;
+    return QString();
+}
+
+QString restaurer_base(const QString &sauvegarde, const QString &base, const QString &dossier, QString *copie_avant) {
+    copie_avant->clear();
+    if (QFileInfo(sauvegarde).absoluteFilePath() == QFileInfo(base).absoluteFilePath())
+        return "C'est la base en service : choisis une sauvegarde.";
+    if (!est_base_grymoir(sauvegarde))
+        return QString("« %1 » n'est pas une base GrymoiR.").arg(QFileInfo(sauvegarde).fileName());
+    if (QFileInfo::exists(base)) {   // la base actuelle d'abord : une restauration se défait en restaurant celle-ci
+        const QString e = sauvegarder_base(base, dossier, copie_avant);
+        if (!e.isEmpty()) return "La base actuelle n'a pas pu être sauvegardée, rien n'a changé : " + e;
+    }
+    return copier_base(sauvegarde, base);
 }

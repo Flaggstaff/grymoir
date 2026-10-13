@@ -557,6 +557,34 @@ QString ajouter_phrase_finale(const QString &dossier, const QString &fichier, co
     return ch.conclure(geste);
 }
 
+// Importer un tableau (§ 5 sexies) : le code, juste avant la première phrase de premier niveau qui montre quelque
+// chose (« Ouvrir », « Afficher », une fiche, « Effacer l'écran », « Exporter »), sinon à la fin : les données de
+// départ écrites plus haut existent déjà (un lien les trouve), et ce qui est montré voit les objets importés.
+QString ajouter_importation(const QString &dossier, const QString &fichier, const QString &code, Geste *geste) {
+    Chantier ch(dossier);
+    FichierAnalyse *f = ch.fichier(fichier);
+    if (!f) return QString("« %1 » n'est pas dans le projet.").arg(fichier);
+    if (fichier.endsWith(".grymc")) return "L'importation s'écrit dans un fichier en forme littéraire (.grym).";
+    if (!f->ok) return QString("« %1 » ne s'analyse pas : corrige-le d'abord.").arg(QFileInfo(fichier).fileName());
+    if (code.trimmed().isEmpty()) return "Rien à importer.";
+    QString bloc = code;
+    while (bloc.endsWith('\n')) bloc.chop(1);
+    for (size_t k = 0; k < f->p.nb; k++) {
+        const int t = f->p.phrases[k]->type;
+        if (t != P_OUVRIR && t != P_AFFICHAGE && t != P_FICHE && t != P_EFFACER && t != P_EXPORTER) continue;
+        const int debut = f->etendue(k).first;
+        ch.remplacer(*f, debut, debut, bloc + "\n\n");
+        geste->description = "Importer un tableau";
+        return ch.conclure(geste);
+    }
+    const QString t = f->texte;
+    int fin = t.size();
+    while (fin > 0 && t.at(fin - 1).isSpace()) fin--;
+    ch.remplacer(*f, fin, t.size(), (fin ? "\n\n" : "") + bloc + "\n");
+    geste->description = "Importer un tableau";
+    return ch.conclure(geste);
+}
+
 // ---------------------------------------------------------------------------------------------
 // A4-c : modifier un écran (docs/atelier.md, § 5 bis)
 // ---------------------------------------------------------------------------------------------

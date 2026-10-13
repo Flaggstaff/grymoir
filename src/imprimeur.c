@@ -367,7 +367,9 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
         aj(im, n->negation ? " n'est pas " : " est ");
     }
     Genre g = sujet->type == N_NOM || sujet->type == N_CHAMP_DONT || sujet->type == N_CHAMP
-            ? genre_de_nom(im, sujet->texte) : G_MASCULIN;
+            ? genre_de_nom(im, sujet->texte)
+            : sujet->type == N_COLONNE ? G_FEMININ   /* « la colonne « Année » de la ligne est présente » (§ 15.5) */
+                                       : G_MASCULIN;
     int k = relation(n->op);
     aj(im, g == G_FEMININ ? RELATIONS[k].f : RELATIONS[k].m);
     if (RELATIONS[k].complement) {

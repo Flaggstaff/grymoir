@@ -200,6 +200,36 @@ Corrigé, et ajouté :
 - Essais : `test_atelier`, lecture, écriture et refus des valeurs permises ; panneau qui rend la liste et l'heure telles quelles ; contenu d'une base remplie par la machine (valeurs, lien, compte d'un « plusieurs », corbeille, base absente, entité inconnue).
 - Trou relevé dans le langage, non corrigé ici : une heure n'est pas une valeur de départ (`un début (heure), 08:00 au départ` est refusé à l'analyse).
 
+## 5 sexies. Sauvegarder, restaurer, importer *(fait le 13 octobre 2026)*
+
+Trois gestes de l'onglet Données, sur la base du programme principal (grammaire, § 16.5). Aucun n'ajoute de phrase au langage.
+
+- **Sauvegarder la base** : une copie datée, `Sauvegardes/programme 2026-10-13 14h30.grymd`, dans le dossier du projet, jamais par-dessus une autre (` (2)`, ` (3)`). La copie passe par l'API de sauvegarde de SQLite : elle est cohérente même si la base est ouverte. Refusée pendant que le programme tourne. Les sauvegardes restent hors de Git (`*.grymd`) et hors des applications fabriquées (§ 8).
+- **Restaurer une sauvegarde…** : une base choisie remplace celle du programme, après confirmation. La base actuelle est d'abord sauvegardée : une restauration se défait en restaurant celle-ci. Refusé : un fichier qui n'est pas une base GrymoiR (sans table `grym_schema`), la base en service elle-même, un programme qui tourne. Après coup, l'atelier dit ce que le prochain lancement fera (§ A2-c) : une sauvegarde peut dater d'un autre schéma, et la migration se dit avant de lancer, pas au milieu.
+- **Importer un tableau CSV…** : l'atelier n'écrit que du GrymoiR (§ 2), donc il n'importe rien lui-même. Il écrit la boucle du § 15.5 dans le programme principal, gardée pour ne s'exécuter que tant que la base n'a aucun objet de l'entité :
+
+```
+Remarque : importé de « o.csv » par l'atelier, tant que la base n'a aucune œuvre.
+Si le nombre d'œuvres conservées = 0 :
+    Pour chaque rangée du tableau « o.csv » :
+        L'importé vaut une nouvelle œuvre :
+            Le titre vaut la colonne « Titre » de la rangée.
+            Le genre vaut la colonne « Genre » de la rangée.
+        Si la colonne « Compositeur » de la rangée est présente :
+            Le compositeur de l'importé devient le compositeur conservé dont le nom est la colonne « Compositeur » de la rangée.
+        Si la colonne « Année » de la rangée est présente :
+            L'année de l'importé devient la colonne « Année » de la rangée en année.
+        Conserver l'importé.
+```
+
+  - Le dialogue lit la ligne des titres (séparateur deviné comme GrymoiR le devine, marque d'ordre, guillemets), propose pour chaque champ la colonne de même nom, accents et casse ignorés, et montre le code avant de l'écrire.
+  - Champs proposés : ceux de la lignée, sans « plusieurs », fichiers ni images ; un lien seulement si l'entité désignée a une clé (son premier champ texte unique), retrouvée par `dont`. Un champ obligatoire sans colonne bloque l'écriture ; un champ facultatif s'écrit après le bloc, sous `est présente`, pour qu'une cellule vide le laisse absent (§ 16.9).
+  - Le code s'écrit avant la première phrase de premier niveau qui montre quelque chose (`Ouvrir`, `Afficher`, une fiche, `Effacer l'écran`, `Exporter`), sinon à la fin : les données de départ écrites plus haut existent déjà, et ce qui est montré voit les objets importés. C'est un geste ordinaire : il s'annule, et le code se déplace ou se modifie à la main.
+  - Un tableau hors du dossier du programme y est copié (jamais par-dessus un autre fichier) ; la copie repart si le geste est refusé.
+  - Tout ou rien : une ligne refusée (cellule illisible, doublon d'une clé, valeur non permise, règle) annule toute l'importation au lancement, avec le message du langage.
+- Deux défauts du langage trouvés en chemin, corrigés (grammaire 1.73) : `t en vrai ou faux` n'était pas reconnu après un nom (« « t en » inconnu ») ; l'imprimeur écrivait `la colonne … est présent`, au masculin.
+- Essais : `test_atelier`, titres d'un CSV, code produit, place dans le programme, deux lancements sans doublon, sauvegarde sans écrasement, restauration et retour en arrière, refus ; `test_analyseur` et `test_imprimeur` pour les deux défauts.
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -288,3 +318,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.31 | 2026-10-10 | § 8 : l'installateur Windows de l'atelier ; icône et manifeste UTF-8 des exécutables Windows |
 | 0.32 | 2026-10-13 | § 5 quinquies : valeurs permises et heure dans l'éditeur de données (deux pertes silencieuses corrigées) ; contenu de la base en lecture seule |
 | 0.33 | 2026-10-13 | § 5 quinquies : le contenu de la base lit la taille d'un fichier dans `grym_fichier` (format 2 des bases, docs/vm.md, § 8) |
+| 0.34 | 2026-10-14 | § 5 sexies : sauvegarder et restaurer la base, importer un tableau CSV (la boucle du § 15.5, écrite dans le programme) |

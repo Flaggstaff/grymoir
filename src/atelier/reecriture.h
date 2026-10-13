@@ -34,6 +34,10 @@ QString ajouter_champ(const QString &dossier, const QString &entite, const Champ
 QString modifier_champ(const QString &dossier, const QString &entite, const QString &ancien, const ChampVoulu &champ,
                        Geste *geste);
 QString supprimer_champ(const QString &dossier, const QString &entite, const QString &nom, Geste *geste);
+// Importer un tableau (docs/atelier.md, § 5 sexies) : `code` s'écrit dans `fichier`, avant la première phrase de
+// premier niveau qui montre quelque chose (« Ouvrir », « Afficher », fiche, « Effacer l'écran », « Exporter »),
+// sinon à la fin.
+QString ajouter_importation(const QString &dossier, const QString &fichier, const QString &code, Geste *geste);
 
 // A4-b : un écran pour une entité (liste, Nouveau, Supprimer, Fermer, et leurs événements), écrit dans `cible`
 // (docs/atelier.md, § 5 bis) ; l'écran d'accueil le reçoit comme bouton, et naît s'il n'existe pas.

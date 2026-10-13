@@ -12,6 +12,7 @@
 #include "lien.h"
 #include "onglet_ecrans.h"
 #include "contenu.h"
+#include "importation.h"
 #include "panneau.h"
 #include <QInputMethodEvent>
 #include <QKeyEvent>
@@ -1119,6 +1120,123 @@ int main(int argc, char **argv) {
         Contenu c;
         VERIFIER(lire_contenu(base_du_programme(prog), "partition", lire_schema(dossier.path()), false, &c).isEmpty());
         VERIFIER(c.lignes.size() == 1 && c.lignes.value(0).value(2) == "doc.txt (12 octets)");
+    }
+
+    // Importer un tableau, sauvegarder et restaurer la base (§ 5 sexies)
+    {
+        QTemporaryDir dossier;
+        auto ecrire = [&](const QString &nom, const QByteArray &octets) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            f.write(octets);
+        };
+        auto lire = [&](const QString &nom) {
+            QFile f(dossier.filePath(nom));
+            f.open(QIODevice::ReadOnly);
+            return QString::fromUtf8(f.readAll());
+        };
+        auto lancer = [&](const QString &nom) {   // le programme, dans la machine, avec sa base
+            const QByteArray src = lire(nom).toUtf8(), base = base_du_programme(dossier.filePath(nom)).toUtf8();
+            const QByteArray dir = dossier.path().toUtf8();
+            Portee *po = portee_creer();
+            Programme pr = {};
+            Diagnostic d = {};
+            QString r;
+            const QString ici = QDir::currentPath();
+            QDir::setCurrent(dossier.path());   // le tableau se lit depuis le dossier du programme
+            if (analyser(src.constData(), (size_t)src.size(), po, 0, &pr, &d)) {
+                Module *mo = compiler(&pr, &d);
+                Machine *m = machine_creer();
+                machine_base(m, base.constData());
+                Chaine so = {};
+                machine_executer(m, mo, &so, &d);
+                r = QString::fromUtf8(so.d ? so.d : "");
+                free(so.d);
+                machine_detruire(m);
+                module_detruire(mo);
+            }
+            if (d.message) r += QString("ERREUR %1").arg(QString::fromUtf8(d.message));
+            QDir::setCurrent(ici);
+            programme_liberer(&pr);
+            portee_detruire(po);
+            return r;
+        };
+        // les titres : séparateur deviné, marque d'ordre, guillemets
+        QString e;
+        ecrire("a.csv", "\xEF\xBB\xBFTitre;\"Ann\xC3\xA9""e; de \"\"cr\xC3\xA9""ation\"\"\";Genre\r\nx;1;y\r\n");
+        VERIFIER(titres_csv(dossier.filePath("a.csv"), &e) == QStringList({"Titre", "Année; de \"création\"", "Genre"}));
+        ecrire("b.csv", "Titre,Compositeur\tx\n");
+        VERIFIER(titres_csv(dossier.filePath("b.csv"), &e) == QStringList({"Titre", "Compositeur\tx"}));
+        ecrire("c.csv", "\n\n");
+        VERIFIER(titres_csv(dossier.filePath("c.csv"), &e).isEmpty() && e.startsWith("Le tableau est vide"));
+        VERIFIER(colonne_pour("année", {"Titre", "ANNEE"}) == "ANNEE" && colonne_pour("genre", {"Titre"}).isEmpty());
+
+        ecrire("o.csv", "Titre;Compositeur;Année;Genre\nMesse;Bach;1724;sacré\nRequiem;;;profane\n");
+        ecrire("p.grym", "Un compositeur, conservé, a :\n    un nom (texte), unique.\n"
+                         "Une œuvre, conservée, a :\n    un titre (texte), unique,\n    un compositeur (compositeur), facultatif,\n"
+                         "    une année (année), facultative,\n    un genre (« sacré » ou « profane »),\n    des interprètes (compositeur).\n"
+                         "Si le nombre de compositeurs conservés = 0 :\n    Le c vaut un nouveau compositeur :\n"
+                         "        Le nom vaut « Bach ».\n    Conserver c.\n"
+                         "Afficher le nombre d'œuvres conservées.\n");
+        const auto schema = lire_schema(dossier.path());
+        QStringList noms;
+        for (const auto &c : champs_importables("œuvre", schema)) noms << c.nom;
+        VERIFIER(noms == QStringList({"titre", "compositeur", "année", "genre"}));   // « plusieurs » écarté
+        QMap<QString, QString> col = {{"titre", "Titre"}, {"compositeur", "Compositeur"}, {"année", "Année"}};
+        VERIFIER(code_importation("œuvre", schema, "o.csv", col, &e).isEmpty() && e == "« genre » est obligatoire : choisis sa colonne.");
+        col["genre"] = "Genre";
+        e.clear();
+        const QString code = code_importation("œuvre", schema, "o.csv", col, &e);
+        VERIFIER(e.isEmpty());
+        VERIFIER(code == "Remarque : importé de « o.csv » par l'atelier, tant que la base n'a aucune œuvre.\n"
+                         "Si le nombre d'œuvres conservées = 0 :\n"
+                         "    Pour chaque rangée du tableau « o.csv » :\n"
+                         "        L'importé vaut une nouvelle œuvre :\n"
+                         "            Le titre vaut la colonne « Titre » de la rangée.\n"
+                         "            Le genre vaut la colonne « Genre » de la rangée.\n"
+                         "        Si la colonne « Compositeur » de la rangée est présente :\n"
+                         "            Le compositeur de l'importé devient le compositeur conservé dont le nom est la colonne « Compositeur » de la rangée.\n"
+                         "        Si la colonne « Année » de la rangée est présente :\n"
+                         "            L'année de l'importé devient la colonne « Année » de la rangée en année.\n"
+                         "        Conserver l'importé.\n");
+        Geste g;
+        VERIFIER(ajouter_importation(dossier.path(), dossier.filePath("p.grym"), code, &g).isEmpty());
+        VERIFIER(lire("p.grym").endsWith("    Conserver c.\n" + code + "\nAfficher le nombre d'œuvres conservées.\n"));
+        VERIFIER(lancer("p.grym") == "2\n");
+        VERIFIER(lancer("p.grym") == "2\n");   // la garde : pas de doublons au second lancement
+        Contenu ct;
+        VERIFIER(lire_contenu(base_du_programme(dossier.filePath("p.grym")), "œuvre", schema, false, &ct).isEmpty());
+        VERIFIER(ct.lignes.size() == 2 && ct.lignes[0].mid(1, 4) == QStringList({"Messe", "Bach", "1724", "sacré"}));
+        VERIFIER(ct.lignes[1].mid(1, 4) == QStringList({"Requiem", "", "", "profane"}));
+        annuler_geste(g);
+        // avec un écran : avant le premier « Ouvrir » de premier niveau (un projet à part)
+        QDir(dossier.path()).mkdir("ecran");
+        ecrire("ecran/e.grym", "Une œuvre, conservée, a : un titre (texte), unique.\n"
+                         "L'écran des œuvres montre :\n    la liste des œuvres conservées,\n    un bouton « Fermer ».\n"
+                         "Quand on clique sur « Fermer » dans l'écran des œuvres :\n    Fermer l'écran.\n"
+                         "Ouvrir l'écran des œuvres.\n");
+        const QString c2 = code_importation("œuvre", lire_schema(dossier.filePath("ecran")), "o.csv", {{"titre", "Titre"}}, &e);
+        VERIFIER(!c2.isEmpty() && ajouter_importation(dossier.filePath("ecran"), dossier.filePath("ecran/e.grym"), c2, &g).isEmpty());
+        VERIFIER(ajouter_importation(dossier.filePath("ecran"), dossier.filePath("ecran/e.grym"), "", &g) == "Rien à importer.");
+        VERIFIER(lire("ecran/e.grym").endsWith("    Fermer l'écran.\n" + c2 + "\nOuvrir l'écran des œuvres.\n"));
+
+        // sauvegarder, changer la base, restaurer
+        const QString base = base_du_programme(dossier.filePath("p.grym")), sauvegardes = dossier.filePath("Sauvegardes");
+        QString copie, avant;
+        VERIFIER(sauvegarder_base(base, sauvegardes, &copie).isEmpty() && QFileInfo::exists(copie));
+        VERIFIER(QFileInfo(copie).fileName().startsWith("p 2") && copie.endsWith(".grymd"));
+        QString copie2;
+        VERIFIER(sauvegarder_base(base, sauvegardes, &copie2).isEmpty() && copie2 != copie);   // jamais d'écrasement
+        ecrire("p.grym", lire("p.grym").replace("Afficher le nombre", "Le n vaut une nouvelle œuvre :\n    Le titre vaut « Messie ».\n"
+                                                                      "    Le genre vaut « sacré ».\nConserver n.\nAfficher le nombre").toUtf8());
+        VERIFIER(lancer("p.grym") == "3\n");
+        VERIFIER(restaurer_base(copie, base, sauvegardes, &avant).isEmpty() && QFileInfo::exists(avant));
+        VERIFIER(lire_contenu(base, "œuvre", schema, false, &ct).isEmpty() && ct.lignes.size() == 2);
+        VERIFIER(restaurer_base(avant, base, sauvegardes, &copie2).isEmpty());   // et retour en arrière
+        VERIFIER(lire_contenu(base, "œuvre", schema, false, &ct).isEmpty() && ct.lignes.size() == 3);
+        VERIFIER(restaurer_base(dossier.filePath("o.csv"), base, sauvegardes, &avant) == "« o.csv » n'est pas une base GrymoiR.");
+        VERIFIER(restaurer_base(base, base, sauvegardes, &avant).startsWith("C'est la base en service"));
+        VERIFIER(sauvegarder_base(dossier.filePath("rien.grymd"), sauvegardes, &copie).startsWith("Pas encore de base"));
     }
 
     // A2-c : l'aperçu de la migration ; il ne crée ni ne change la base
