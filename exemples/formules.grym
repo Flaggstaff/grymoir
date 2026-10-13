@@ -6,6 +6,9 @@ La valeur absolue d'un nombre :
 La factorielle d'un nombre :
     Si nombre ≤ 1, rendre 1.
     Rendre nombre × la factorielle de (nombre − 1).
+Exemple : le carré de 7 vaut 49.
+Exemple : la valeur absolue de −3 vaut 3.
+Exemple : la factorielle de 5 vaut 120.
 
 Le total vaut 0.
 Pour encaisser un montant :

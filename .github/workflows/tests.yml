@@ -26,6 +26,9 @@ jobs:
         run: |
           for f in exemples/*.grym; do ./grym formater "$f" > /dev/null; done
           git diff --exit-code exemples
+      - name: Exemples vérifiés (grammaire, § 9.6)
+        run: |
+          for f in $(grep -l "^Exemple :" exemples/*.grym projets/*/*.grym 2>/dev/null); do ./grym exemples "$f" || exit 1; done
 
   sanitizers:
     name: ubuntu (ASan et UBSan)

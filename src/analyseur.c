@@ -882,6 +882,13 @@ static int verifier_type(Analyse *a, const char *champ, const char *attendu, con
 
 
 static void *erreur(Analyse *a, const Jeton *t, char *message) {
+    if (t && t->type == J_MOINS && t > a->j && t + 1 < a->j + a->n && t[-1].type == J_MOT && t[1].type == J_MOT
+        && fin_jeton(&t[-1]) == t->debut && fin_jeton(t) == t[1].debut) {
+        /* « rendez-vous » : un trait d'union collé entre deux mots, là où il ne peut pas être une soustraction (§ 1.4) */
+        free(message);
+        message = grym_formater("« %s-%s » : un nom ne prend pas de trait d'union, « - » est une soustraction (§ 1.4). "
+                                "Écris « %s %s », en deux mots.", t[-1].valeur, t[1].valeur, t[-1].valeur, t[1].valeur);
+    }
     return erreur_a(a, t->ligne, t->colonne, message);
 }
 

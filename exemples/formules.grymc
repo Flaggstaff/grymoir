@@ -12,6 +12,9 @@ _calcul _la factorielle(_un nombre)
     _fin
     _rendre nombre × factorielle(nombre − 1)
 _fin
+_exemple carré(7) << 49
+_exemple valeur_absolue(−3) << 3
+_exemple factorielle(5) << 120
 
 _le total << 0
 _action encaisser(_un montant)

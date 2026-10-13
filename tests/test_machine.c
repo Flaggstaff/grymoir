@@ -1354,6 +1354,9 @@ int main(void) {
          "00:05 06:05 385 11\nvrai vrai 08:45 −685");
     PROG("Le t vaut maintenant.\nAfficher t ≥ 0:00 et t ≤ 23:59.", "vrai");
     PROG("Afficher 24:00.", "~L'heure « 24:00 » n'existe pas : de 0:00 à 23:59.");
+    PROG("Un rendez-vous a : un titre.", "ERREUR 1:10 « rendez-vous » : un nom ne prend pas de trait d'union, « - » est une "
+         "soustraction (§ 1.4). Écris « rendez vous », en deux mots.");
+    PROG("Le total vaut 3.\nLe remise vaut 1.\nAfficher total-remise puis total-1.", "2 2");
     PROG("Afficher 8:05 + 1.", "~ADDITION impossible avec une heure");
     PROG("Afficher 8:05 + 1 jour.", "~Une heure se décale de minutes ou d'heures, pas de jours.");
     PROG("Afficher 01.01.2026 + 3 minutes.", "~Des minutes s'ajoutent à une heure, pas à une date.");

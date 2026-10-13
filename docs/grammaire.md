@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.69 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.70 de la spécification, révisée le 12 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -44,7 +44,7 @@ Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4)
 
 - Le tiret demi-cadratin `–` est accepté comme moins : la correction automatique de Word le substitue à `-`.
 - Le tiret cadratin `—` est refusé, avec un message qui propose `-`, `−` ou `–`.
-- Le trait d'union `-` est toujours un opérateur. Les noms à trait d'union sont interdits : `prix-remise` reste une soustraction.
+- Le trait d'union `-` est toujours un opérateur. Les noms à trait d'union sont interdits : `prix-remise` reste une soustraction. Là où un trait d'union collé entre deux mots ne peut pas être une soustraction (`Un rendez-vous a :`), le message le dit et propose les deux mots : « « rendez-vous » : un nom ne prend pas de trait d'union, « - » est une soustraction (§ 1.4). Écris « rendez vous », en deux mots. » Un nom de plusieurs mots est permis (§ 2).
 
 ### 1.5 Texte
 
@@ -1808,3 +1808,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.67 | 2026-10-12 | Nouveau § 9.6 : `Exemple : … vaut ….`, ignorés par `grym lancer`, vérifiés par `grym exemples` (déclarations seulement, base vide en mémoire) ; aucun mot réservé |
 | 1.68 | 2026-10-12 | Nouveaux § 3.6 (hasard : `un nombre au hasard de 1 à 6`, `un élément au hasard parmi les …`, actions seulement, `GRYM_HASARD`) et § 14.6 (`le nombre de mois entre d1 et d2`, unités entières, règle de `d + n mois`) ; aucun mot réservé |
 | 1.69 | 2026-10-12 | Nouveau § 14.7 : heures (`14:30`, type `(heure)`, `maintenant`, `+ 15 minutes` qui tourne comme une horloge, `h2 − h1` en minutes, écarts en minutes et en heures) ; heure locale, sans fuseau |
+| 1.70 | 2026-10-12 | § 1.4 : message dédié au trait d'union collé entre deux mots (`rendez-vous`), qui propose les deux mots ; la règle ne change pas |
