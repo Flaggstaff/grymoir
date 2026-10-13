@@ -265,7 +265,7 @@ Un bloc qui échoue à la vérification ne s'exécute pas : « Fichier .grymb in
 - Tous les objets sont chaînés dans le tas de la machine. Le ramassage marque ce qui est atteignable depuis les racines, puis libère le reste.
 - Racines : les cases globales, la pile, les cases locales de chaque cadre, les anciennes valeurs du journal et les objets qu'il mentionne.
 - Le marquage suit les champs avec une pile explicite : une longue chaîne d'objets ne fait pas déborder la pile du C.
-- Un ramassage a lieu à la fin de chaque exécution, et pendant l'exécution quand le nombre d'objets créés depuis le dernier dépasse un seuil (10'000, ou le double des objets vivants).
+- Un ramassage a lieu à la fin de chaque exécution, et pendant l'exécution quand le nombre d'objets créés depuis le dernier dépasse un seuil (10'000, ou le double des objets vivants). Le seuil se vérifie avant `NOUVEAU`, avant l'ouverture d'un écran et avant chaque `ÉLÉMENT` : un parcours de la base, qui crée une coquille par objet retrouvé, ramasse en chemin. Mesure du 13 octobre 2026, 100'000 lignes parcourues en lisant un champ : 22 Mo au plus, au lieu de 105 Mo.
 - Les cycles sont libérés comme le reste.
 
 ## 10. Positions
@@ -413,4 +413,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.54 | 2026-10-12 | Instructions 81 `EXEMPLE` et 82 `EXEMPLE_RATÉ` (grammaire, § 9.6) ; format version 40 |
 | 1.55 | 2026-10-12 | Instructions 83 `ÉCART` et 84 `HASARD` (grammaire, § 14.6, § 3.6) ; format version 41 |
 | 1.56 | 2026-10-12 | Heures (grammaire, § 14.7) : valeur d'heure (minutes depuis minuit), instructions 85 `HEURE` et 86 `MAINTENANT`, unités 4 et 5 de `DÉCALER` et `ÉCART`, cible 7 de `CONVERTIR` ; champ `(heure)` rangé en texte `HH:MM` ; format version 42 |
-| 1.57 | 2026-10-13 | § 8 : requêtes préparées gardées par la base, compilées une fois par base ouverte |
+| 1.57 | 2026-10-13 | § 8 : requêtes préparées gardées par la base, compilées une fois par base ouverte ; § 9 : `ÉLÉMENT` déclenche aussi le ramassage |

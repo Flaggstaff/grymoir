@@ -3469,6 +3469,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_ELEMENT: {
+            /* un parcours de la base crée une coquille par objet : il ramasse aussi, sinon une boucle qui ne fait
+             * que lire garderait en mémoire tout ce qu'elle a lu jusqu'à la fin de l'exécution (docs/vm.md, § 9) */
+            if (m->depuis_ramassage >= m->seuil) ramasser(m, &pile, cadres, nb_cadres);
             if (pile.v[pile.n - 2].type == V_ENSEMBLE) {   /* « Pour chaque couleur parmi les couleurs » (§ 13.9) */
                 Valeur rang = depiler(&pile), l = depiler(&pile);
                 long k = -1;
