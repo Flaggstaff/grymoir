@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, fenêtre principale.
 #include "fenetre.h"
+#include "contenu.h"
 #include "editeur.h"
 #include "fabrication.h"
 #include "aide.h"
@@ -139,6 +140,19 @@ Fenetre::Fenetre() {
     barre_donnees->addAction("Nouvelle entité…", this, &Fenetre::nouvelle_entite);
     action_annuler_geste = barre_donnees->addAction("Annuler le dernier geste", this, &Fenetre::annuler_dernier_geste);
     action_annuler_geste->setEnabled(false);
+    // Le contenu de la base : les objets conservés de l'entité choisie, en lecture seule (§ 5 quinquies)
+    barre_donnees->addAction("Contenu de la base…", this, [this] {
+        if (entite_choisie.isEmpty()) {
+            statusBar()->showMessage("Choisis d'abord une entité dans le schéma.", 4000);
+            return;
+        }
+        if (!fichier.isEmpty() && editeur->document()->isModified()) enregistrer();
+        const QString cible = programme_a_lancer();   // la base porte le nom du programme (§ 16.5)
+        if (cible.isEmpty()) return;
+        auto *f = new FenetreContenu(base_du_programme(cible), entite_choisie, lire_schema(projet), this);
+        f->setAttribute(Qt::WA_DeleteOnClose);
+        f->show();
+    })->setToolTip("Les objets conservés de l'entité choisie, en lecture seule");
     auto *cote_a_cote = new QSplitter;
     cote_a_cote->addWidget(schema);
     cote_a_cote->addWidget(panneau);
@@ -176,6 +190,7 @@ Fenetre::Fenetre() {
                 ChampVoulu c;
                 c.nom = x.nom; c.type = x.type; c.feminin = x.feminin; c.unique = x.unique;
                 c.facultatif = x.facultatif; c.plusieurs = x.multiple; c.cascade = x.cascade; c.depart = x.depart;
+                c.valeurs = x.valeurs;
                 bool feminin = false;
                 for (const auto &v : entites_lues) if (v.nom == x.type) feminin = v.feminin;
                 if (!demander_lien(this, de, e.feminin, x.type, feminin, &c, true)) return;
@@ -657,7 +672,7 @@ void Fenetre::rafraichir_schema() {
     schema->choisir(garder);
     entite_choisie = garder;
     entites_lues = entites;
-    types_lus = QStringList({"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "fichier", "image"});
+    types_lus = QStringList({"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure", "fichier", "image"});
     for (const auto &e : entites) types_lus << e.nom;
     montrer_choisie();
     // une entité nouvelle vient de recevoir sa place : on la garde, pour qu'elle ne bouge plus

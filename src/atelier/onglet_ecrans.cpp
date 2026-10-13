@@ -533,7 +533,7 @@ void OngletEcrans::editer() {
         } else if (x.sorte == ELEMENT_ZONE) {
             auto *nom = new QLineEdit(x.texte);
             auto *type = new QComboBox;
-            type->addItems({"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année"});
+            type->addItems({"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure"});
             for (const auto &en : lire_schema(dossier)) type->addItem(en.nom);
             type->setCurrentIndex(qMax(0, type->findText(x.type)));
             auto *feminin = new QCheckBox("féminin (une …)");
@@ -624,7 +624,7 @@ void OngletEcrans::ajouter(int sorte) {
     else if (sorte == ELEMENT_ZONE) {
         n.texte = QInputDialog::getText(this, "Nouvelle zone", "Nom (« pays », « date de début ») :", QLineEdit::Normal, "", &ok);
         if (ok) {
-            QStringList types = {"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année"};
+            QStringList types = {"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure"};
             for (const auto &en : lire_schema(dossier)) types << en.nom;
             n.type = QInputDialog::getItem(this, "Nouvelle zone", "Type :", types, 0, false, &ok);
         }

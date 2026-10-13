@@ -202,7 +202,30 @@ Noeud *valeur_de_depart(const ChampVoulu &c, QString *erreur) {
 }
 
 // Nœud champ, tel que l'analyseur l'écrit (arbre.h, P_CLASSE) ; nullptr et *erreur si la valeur de départ est illisible.
+// Les valeurs permises d'un champ (§ 16.15) : vide si elles s'écrivent, sinon ce qui les empêche.
+QString valeurs_valides(const ChampVoulu &c) {
+    if (c.valeurs.isEmpty()) return QString();
+    if (c.type != "texte" || c.plusieurs) return "Des valeurs permises ne vont qu'à un champ (texte) simple.";
+    if (c.valeurs.size() < 2) return "Au moins deux valeurs permises : « oui ; non ».";
+    QStringList vues;
+    for (const QString &v : c.valeurs) {
+        if (v.isEmpty()) return "Une valeur permise n'est pas vide.";
+        if (v.contains(QChar(0x00AB)) || v.contains(QChar(0x00BB)) || v.contains('"'))
+            return QString("« %1 » : pas de guillemets dans une valeur permise.").arg(v);
+        if (vues.contains(v)) return QString("« %1 » est déjà dans la liste.").arg(v);
+        vues << v;
+    }
+    if (!c.depart.trimmed().isEmpty() && !c.valeurs.contains(c.depart.trimmed()))
+        return QString("« %1 » n'est pas une valeur permise de « %2 » : la valeur de départ doit en être une.")
+            .arg(c.depart.trimmed(), c.nom);
+    return QString();
+}
+
 Noeud *nouveau_champ(const ChampVoulu &c, QString *erreur = nullptr) {
+    if (const QString e = valeurs_valides(c); !e.isEmpty()) {
+        if (erreur) *erreur = e;
+        return nullptr;
+    }
     Noeud *depart = nullptr;
     if (!c.depart.trimmed().isEmpty() && !c.plusieurs) {
         QString e;
@@ -219,6 +242,7 @@ Noeud *nouveau_champ(const ChampVoulu &c, QString *erreur = nullptr) {
     if (c.unique && !c.plusieurs) n->op = 'U';
     if (c.facultatif && !c.plusieurs) n->entier |= 1;
     if (c.cascade && !c.plusieurs) n->entier |= 2;
+    if (!c.valeurs.isEmpty()) n->texte3 = grym_dupliquer(c.valeurs.join(QChar(0x1e)).toUtf8().constData());
     if (depart) noeud_ajouter(n, depart);
     return n;
 }

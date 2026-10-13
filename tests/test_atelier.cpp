@@ -11,6 +11,8 @@
 #include "reecriture.h"
 #include "lien.h"
 #include "onglet_ecrans.h"
+#include "contenu.h"
+#include "panneau.h"
 #include <QInputMethodEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -979,6 +981,108 @@ int main(int argc, char **argv) {
         s.unique = false;
         s.plusieurs = true;
         VERIFIER(sorte_de_lien("œuvre", true, "genre", false, s) == "plusieurs œuvres pour plusieurs genres");
+    }
+
+    // Valeurs permises (§ 16.15) et heure (§ 14.7) dans l'éditeur de données : lues, écrites, jamais perdues
+    {
+        QTemporaryDir dossier;
+        auto ecrire = [&](const QString &texte) {
+            QFile f(dossier.filePath("d.grym"));
+            f.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            f.write(texte.toUtf8());
+        };
+        auto lire = [&] {
+            QFile f(dossier.filePath("d.grym"));
+            f.open(QIODevice::ReadOnly);
+            return QString::fromUtf8(f.readAll());
+        };
+        ecrire("Une tâche, conservée, a :\n    un titre (texte), unique,\n"
+               "    un état (« à faire », « en cours » ou « fini »), « à faire » au départ,\n"
+               "    un début (heure), facultatif.\n");
+        const auto lu = lire_schema(dossier.path()).value(0);
+        VERIFIER(lu.champs.value(1).valeurs == QStringList({"à faire", "en cours", "fini"}));
+        VERIFIER(lu.champs.value(2).type == "heure" && lu.champs.value(2).valeurs.isEmpty());
+        // le panneau montre les valeurs et l'heure, et les rend telles quelles : « Appliquer » ne retire rien
+        PanneauEntite p;
+        p.montrer(&lu, {"texte", "nombre", "date"});   // « heure » absent de la liste : le panneau l'ajoute
+        VERIFIER(p.champ_de_la_ligne(1).valeurs == QStringList({"à faire", "en cours", "fini"}));
+        VERIFIER(p.champ_de_la_ligne(2).type == "heure");
+        Geste g;
+        VERIFIER(modifier_champ(dossier.path(), "tâche", "état", p.champ_de_la_ligne(1), &g).isEmpty());
+        VERIFIER(lire().contains("    un état (« à faire », « en cours » ou « fini »), « à faire » au départ,\n"));
+        ChampVoulu etat = p.champ_de_la_ligne(1);
+        etat.valeurs << "abandonné";
+        VERIFIER(modifier_champ(dossier.path(), "tâche", "état", etat, &g).isEmpty());
+        VERIFIER(lire().contains("un état (« à faire », « en cours », « fini » ou « abandonné »)"));
+        ChampVoulu priorite;
+        priorite.nom = "priorité";
+        priorite.type = "texte";
+        priorite.feminin = true;
+        priorite.valeurs = {"basse", "haute"};
+        priorite.depart = "basse";
+        VERIFIER(ajouter_champ(dossier.path(), "tâche", priorite, &g).isEmpty());
+        VERIFIER(lire().contains("    une priorité (« basse » ou « haute »), « basse » au départ.\n"));
+        priorite.nom = "urgence";
+        priorite.valeurs = {"basse"};
+        VERIFIER(ajouter_champ(dossier.path(), "tâche", priorite, &g).startsWith("Au moins deux valeurs permises"));
+        priorite.valeurs = {"basse", "basse"};
+        VERIFIER(ajouter_champ(dossier.path(), "tâche", priorite, &g) == "« basse » est déjà dans la liste.");
+        priorite.valeurs = {"basse", "haute"};
+        priorite.depart = "moyenne";
+        VERIFIER(ajouter_champ(dossier.path(), "tâche", priorite, &g).contains("la valeur de départ doit en être une"));
+        priorite.depart.clear();
+        priorite.type = "nombre";
+        VERIFIER(ajouter_champ(dossier.path(), "tâche", priorite, &g).startsWith("Des valeurs permises ne vont qu'à"));
+    }
+
+    // Contenu de la base (§ 5 quinquies) : les objets, leurs valeurs écrites comme GrymoiR, liens, corbeille
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        Contenu c;
+        VERIFIER(lire_contenu(base_du_programme(prog), "compositeur", {}, false, &c).startsWith("Pas encore de base « p.grymd »"));
+        const QString source =
+            "Un genre, conservé, a : un nom (texte), unique.\n"
+            "Un compositeur, conservé, a :\n    un nom (texte), unique,\n    une naissance (date),\n"
+            "    un cachet (nombre), facultatif,\n    un vivant (vrai ou faux),\n    un état (« actif » ou « retiré »),\n"
+            "    des genres (genre),\n    un maître (compositeur), facultatif.\n"
+            "Le g vaut un nouveau genre :\n    Le nom vaut « baroque ».\nConserver g.\n"
+            "Le b vaut un nouveau compositeur :\n    Le nom vaut « Bach ».\n    La naissance vaut 31.03.1685.\n"
+            "    Le cachet vaut -12,50.\n    Le vivant vaut faux.\n    L'état vaut « retiré ».\nConserver b.\n"
+            "Les genres de b gagnent g.\n"
+            "Le w vaut un nouveau compositeur :\n    Le nom vaut « Wagner ».\n    La naissance vaut 22.05.1813.\n"
+            "    Le vivant vaut faux.\n    L'état vaut « actif ».\n    Le maître vaut b.\nConserver w.\n"
+            "Supprimer w.\n";
+        QFile f(prog);
+        f.open(QIODevice::WriteOnly);
+        f.write(source.toUtf8());
+        f.close();
+        const QByteArray src = source.toUtf8(), base = base_du_programme(prog).toUtf8();
+        Portee *po = portee_creer();
+        Programme pr = {};
+        Diagnostic d = {};
+        VERIFIER(analyser(src.constData(), (size_t)src.size(), po, 0, &pr, &d));
+        if (d.message) std::fprintf(stderr, "%s\n", d.message);
+        Module *mo = compiler(&pr, &d);
+        Machine *m = machine_creer();
+        machine_base(m, base.constData());
+        Chaine so = {};
+        machine_executer(m, mo, &so, &d);
+        if (d.message) std::fprintf(stderr, "%s\n", d.message);
+        free(so.d);
+        machine_detruire(m);
+        module_detruire(mo);
+        programme_liberer(&pr);
+        portee_detruire(po);
+        const auto schema = lire_schema(dossier.path());
+        VERIFIER(lire_contenu(base_du_programme(prog), "compositeur", schema, false, &c).isEmpty());
+        VERIFIER(c.colonnes == QStringList({"N°", "Nom", "Naissance", "Cachet", "Vivant", "État", "Maître", "Genres (nombre)"}));
+        VERIFIER(c.lignes.size() == 1 && c.dans_la_corbeille == 1);
+        VERIFIER(c.lignes.value(0).mid(1) == QStringList({"Bach", "31.03.1685", QString::fromUtf8("−12,50"), "faux", "retiré", "", "1"}));
+        VERIFIER(lire_contenu(base_du_programme(prog), "compositeur", schema, true, &c).isEmpty());
+        VERIFIER(c.lignes.size() == 2 && c.lignes.value(1).value(1) == "Wagner" && c.lignes.value(1).value(6) == "Bach");
+        VERIFIER(c.lignes.value(1).last() == "supprimé" && c.colonnes.last() == "Corbeille");
+        VERIFIER(lire_contenu(base_du_programme(prog), "inconnue", schema, false, &c).contains("n'est pas une entité"));
     }
 
     // A2-c : l'aperçu de la migration ; il ne crée ni ne change la base

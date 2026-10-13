@@ -11,6 +11,7 @@
 struct ChampSchema {
     QString nom, type;
     QString depart;   // valeur de départ, telle qu'on l'écrit (« Suisse », « 12,50 »), ou vide
+    QStringList valeurs;   // valeurs permises d'un champ texte (grammaire, § 16.15), ou vide
     bool unique = false, facultatif = false, multiple = false, cascade = false, lien = false, feminin = false;
 };
 

@@ -13,7 +13,7 @@
 #include <QVBoxLayout>
 
 namespace {
-enum Colonne { C_NOM, C_TYPE, C_FEMININ, C_UNIQUE, C_FACULTATIF, C_PLUSIEURS, C_CASCADE, C_DEPART, NB_COLONNES };
+enum Colonne { C_NOM, C_TYPE, C_VALEURS, C_FEMININ, C_UNIQUE, C_FACULTATIF, C_PLUSIEURS, C_CASCADE, C_DEPART, NB_COLONNES };
 
 QCheckBox *case_dans(QTableWidget *t, int ligne, int colonne) {
     QWidget *w = t->cellWidget(ligne, colonne);
@@ -38,9 +38,12 @@ PanneauEntite::PanneauEntite(QWidget *parent) : QWidget(parent) {
     bouton_supprimer = new QPushButton("Supprimer l'entité");
     bouton_supprimer->setProperty("role", "danger");
     champs = new QTableWidget(0, NB_COLONNES);
-    champs->setHorizontalHeaderLabels({"Champ", "Type", "Féminin", "Unique", "Facultatif", "Plusieurs",
+    champs->setHorizontalHeaderLabels({"Champ", "Type", "Valeurs permises", "Féminin", "Unique", "Facultatif", "Plusieurs",
                                        "Disparaît avec", "Au départ"});
     champs->horizontalHeaderItem(C_CASCADE)->setToolTip("Pour un lien : l'objet disparaît avec celui qu'il désigne (§ 16.12)");
+    champs->horizontalHeaderItem(C_VALEURS)->setToolTip(
+        "Pour un champ (texte) : les seules valeurs qu'il accepte, séparées par « ; », par exemple "
+        "« à faire ; en cours ; fini » (§ 16.15). La saisie devient un menu.");
     champs->horizontalHeaderItem(C_DEPART)->setToolTip("La valeur que reçoivent les objets déjà conservés quand le champ apparaît (§ 16.7)");
     champs->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     champs->horizontalHeader()->setSectionResizeMode(C_TYPE, QHeaderView::Stretch);
@@ -105,6 +108,8 @@ void PanneauEntite::ajouter_ligne(const ChampSchema &c, const QStringList &types
     auto *type = new QComboBox;
     type->addItems(types);
     type->setEditable(false);
+    // un type que la liste ne connaît pas s'y ajoute : « Appliquer » ne doit jamais le changer en silence
+    if (!neuve && !c.type.isEmpty() && type->findText(c.type) < 0) type->addItem(c.type);
     type->setCurrentIndex(qMax(0, type->findText(neuve ? QString("texte") : c.type)));
     champs->setCellWidget(k, C_TYPE, type);
     auto cocher = [&](int col, bool v) {
@@ -118,6 +123,7 @@ void PanneauEntite::ajouter_ligne(const ChampSchema &c, const QStringList &types
     cocher(C_PLUSIEURS, c.multiple);
     cocher(C_CASCADE, c.cascade);
     champs->setItem(k, C_DEPART, new QTableWidgetItem(c.depart));
+    champs->setItem(k, C_VALEURS, new QTableWidgetItem(c.valeurs.join(" ; ")));
 }
 
 ChampVoulu PanneauEntite::champ_de_la_ligne(int k) const {
@@ -130,6 +136,8 @@ ChampVoulu PanneauEntite::champ_de_la_ligne(int k) const {
     c.plusieurs = case_dans(champs, k, C_PLUSIEURS)->isChecked();
     c.cascade = case_dans(champs, k, C_CASCADE)->isChecked();
     if (auto *d = champs->item(k, C_DEPART)) c.depart = d->text().trimmed();
+    if (auto *v = champs->item(k, C_VALEURS))
+        for (const QString &x : v->text().split(';')) if (!x.trimmed().isEmpty()) c.valeurs << x.trimmed();
     return c;
 }
 

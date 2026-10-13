@@ -92,6 +92,8 @@ QVector<EntiteSchema> lire_schema(const QString &dossier, QStringList *problemes
                     s.cascade = ch->entier & 2;
                     s.multiple = ch->forme == 3;
                     s.feminin = ch->forme == 2;
+                    if (ch->texte3 && ch->forme != 3)   // valeurs permises (§ 16.15), séparées par U+001E
+                        s.valeurs = QString::fromUtf8(ch->texte3).split(QChar(0x1e));
                     if (ch->nb_enfants) {   // la valeur de départ, comme on l'écrit (§ 16.7)
                         const Noeud *v = ch->enfants[0];
                         const QString t = QString::fromUtf8(v->texte ? v->texte : "");

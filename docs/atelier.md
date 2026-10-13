@@ -184,6 +184,22 @@ Premier projet créé ainsi : `projets/Gestion de projet`, une application de ge
 - l'absence d'arrondi : un avancement en pour cent afficherait 28 décimales. Le bilan compte donc les tâches terminées ;
 - l'absence de dessin : pas de diagramme de Gantt sans un nouvel élément d'écran, à concevoir.
 
+## 5 quinquies. L'éditeur de données rattrape le langage *(fait le 13 octobre 2026)*
+
+Le langage avait gagné les valeurs permises (grammaire, § 16.15) et l'heure (§ 14.7) le 12 octobre 2026 ; l'éditeur de données ne les connaissait pas, et deux gestes perdaient des données sans le dire :
+
+- un champ à valeurs permises se lisait comme un `(texte)` simple ; « Appliquer » le réécrivait sans sa liste ;
+- un champ `(heure)` ne trouvait pas son type dans le menu, qui retombait sur `texte` ; « Appliquer » le retypait.
+
+Corrigé, et ajouté :
+
+- **Valeurs permises** : une colonne du panneau des champs, `à faire ; en cours ; fini`, lue dans l'arbre (le nœud du champ, `texte3`, valeurs séparées par U+001E) et écrite par l'imprimeur, en forme canonique : `un état (« à faire », « en cours » ou « fini »)`. Refusé avant d'écrire, avec le message du langage : une seule valeur, un doublon, une valeur vide ou entre guillemets, une liste sur autre chose qu'un champ `(texte)` simple, une valeur de départ hors de la liste.
+- **`heure`** dans les types des champs et des zones d'écran. Un type que le menu ne connaît pas s'y ajoute : « Appliquer » ne change jamais un type en silence.
+- **Contenu de la base** (onglet Données, « Contenu de la base… ») : les objets conservés de l'entité choisie, sous-entités comprises, comme `les … conservés`. Base du programme principal (§ 16.5), ouverte en lecture seule. Une colonne par champ réel de la table, aptitudes comprises ; valeurs écrites comme GrymoiR les écrit (`31.03.1685`, `−12,50`, `vrai`) ; un lien montre la clé de l'objet désigné (son premier champ texte unique, comme les menus), sinon `n° 12` ; un fichier, son nom et sa taille ; un champ « plusieurs », son nombre d'éléments. Filtre sur toutes les colonnes, tri par colonne, corbeille montrée à la demande (§ 16.12), relecture par un bouton (`src/atelier/contenu.cpp`).
+- **Lecture seule, par principe.** Créer, modifier ou supprimer un objet passe par le programme : une écriture de l'atelier dans la base contournerait les règles (§ 16.14), les valeurs permises et la transaction.
+- Essais : `test_atelier`, lecture, écriture et refus des valeurs permises ; panneau qui rend la liste et l'heure telles quelles ; contenu d'une base remplie par la machine (valeurs, lien, compte d'un « plusieurs », corbeille, base absente, entité inconnue).
+- Trou relevé dans le langage, non corrigé ici : une heure n'est pas une valeur de départ (`un début (heure), 08:00 au départ` est refusé à l'analyse).
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -270,3 +286,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.29 | 2026-09-29 | Icône de l'atelier (un grimoire ouvert : forme littéraire à gauche, compacte à droite ; source `outils/icone/grymoir-atelier.svg`) ; § 8 : une application fabriquée pour macOS prend l'icône de son projet |
 | 0.30 | 2026-10-10 | A5 fait (§ 5 quater) : nouveau projet, projets récents, renommer (Utiliser, base, programme principal suivent), corbeille, fermer le projet ; gestes vidés au changement de projet ; ce que l'application « Gestion de projet » a révélé |
 | 0.31 | 2026-10-10 | § 8 : l'installateur Windows de l'atelier ; icône et manifeste UTF-8 des exécutables Windows |
+| 0.32 | 2026-10-13 | § 5 quinquies : valeurs permises et heure dans l'éditeur de données (deux pertes silencieuses corrigées) ; contenu de la base en lecture seule |
