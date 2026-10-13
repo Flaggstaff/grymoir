@@ -28,10 +28,12 @@ struct Objet;
 /* Contenu d'un fichier (grammaire, § 15) : immuable, partagé entre les valeurs qui le désignent. */
 typedef struct Fichier {
     size_t references;
-    unsigned char *octets;
+    unsigned char *octets;   /* NULL tant qu'un fichier resté en base n'est pas lu : fichier_octets() */
     size_t taille;
     char *nom;            /* nom d'origine, sans dossier */
     const char *format;   /* « PNG », « JPEG », « GIF », « WebP » ou NULL */
+    struct Base *base;    /* fichier d'un objet retrouvé (docs/vm.md, § 8) : ses octets restent en base, */
+    long cle;             /* ligne de grym_fichier, jusqu'au premier besoin ; NULL et 0 sinon */
 } Fichier;
 
 typedef struct Valeur {
@@ -87,6 +89,8 @@ Valeur vi_heure(long minutes);
 /* « 14:30 » → 870 ; 0 si le texte n'est pas une heure. */
 int heure_lire(const char *texte, long *minutes);
 Valeur vi_fichier(const void *octets, size_t taille, const char *nom);
+/* Un fichier resté en base : taille et format connus, octets lus au premier besoin. debut : ses premiers octets. */
+Valeur vi_fichier_en_base(struct Base *b, long cle, size_t taille, const unsigned char *debut, size_t n, const char *nom);
 Valeur vi_objet(Objet *o);
 Valeur vi_absent(const char *champ);
 /* Objet conservé d'identifiant id : le même en mémoire tant qu'il y vit, sinon une coquille à charger. */

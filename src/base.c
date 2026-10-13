@@ -25,9 +25,20 @@ struct Base {
      * pas à chaque objet lu. Une entrée en cours d'emploi n'est pas resservie : la même requête, demandée
      * pendant ce temps, se prépare à part et se jette. */
     struct { char *sql; sqlite3_stmt *st; int en_usage; } cache[REQUETES_GARDEES];
+    int a_convertir;  /* base d'avant le format 2 dont des fichiers sont encore dans les tables des entités */
+    long convertis;   /* fichiers déménagés par la transaction en cours : le rapport des migrations les compte */
+    int fichiers_prets;   /* grym_fichier existe, validée par une transaction */
 };
 
-void base_rapport(Base *b, Chaine *rapport) { b->rapport = rapport; }
+void base_rapport(Base *b, Chaine *rapport) {
+    b->rapport = rapport;
+    if (rapport && b->convertis) {   /* le format 2, fait au début de la transaction (docs/vm.md, § 8) */
+        char *l = grym_formater("Les fichiers conservés (%ld) quittent les tables de leurs entités pour grym_fichier : "
+                                "la base passe au format 2.\n", b->convertis);
+        chaine_ajouter(rapport, l);
+        free(l);
+    }
+}
 
 static unsigned long empreinte(const char *t) {
     unsigned long h = 5381;
@@ -193,6 +204,231 @@ int base_collations(sqlite3 *db);
 /* Ouverture et transaction                                         */
 /* ---------------------------------------------------------------- */
 
+/* ---------------------------------------------------------------- */
+/* Fichiers en base (format 2)                                      */
+/* ---------------------------------------------------------------- */
+
+/* Les octets d'un fichier vivent dans grym_fichier, une ligne par valeur rangée : la table de l'entité n'en garde
+ * que le numéro, et le nom d'origine dans « n <champ> ». Lire un objet ne lit donc que la taille et les premiers
+ * octets (le format) ; les octets attendent le premier besoin. Une ligne appartient à un seul champ d'un seul
+ * objet : la remplacer ou effacer l'objet l'efface. */
+
+#define DEBUT_FICHIER 16   /* assez pour reconnaître PNG, JPEG, GIF et WebP */
+
+static sqlite3_int64 empreinte_octets(const unsigned char *o, size_t n) {   /* FNV-1a, 64 bits */
+    unsigned long long h = 14695981039346656037ULL;
+    for (size_t i = 0; i < n; i++) { h ^= o[i]; h *= 1099511628211ULL; }
+    return (sqlite3_int64)h;
+}
+
+/* Range les octets d'un fichier dans une ligne neuve de grym_fichier ; 0 et *erreur sinon. */
+static long ranger_fichier(Base *b, Fichier *f, char **erreur) {
+    sqlite3_stmt *st = NULL;
+    int ok;
+    if (f->base == b && f->cle && !f->octets) {   /* resté en base : copié sans passer par la mémoire */
+        ok = preparer(b, "INSERT INTO grym_fichier (taille, empreinte, debut, octets) "
+                         "SELECT taille, empreinte, debut, octets FROM grym_fichier WHERE id = ?", &st) == SQLITE_OK;
+        if (ok) {
+            sqlite3_bind_int64(st, 1, (sqlite3_int64)f->cle);
+            ok = sqlite3_step(st) == SQLITE_DONE && sqlite3_changes(b->db) == 1;
+        }
+    } else {
+        if (!f->octets && !base_fichier_lire(f, erreur)) return 0;
+        ok = preparer(b, "INSERT INTO grym_fichier (taille, empreinte, debut, octets) VALUES (?, ?, ?, ?)", &st)
+             == SQLITE_OK;
+        if (ok) {
+            sqlite3_bind_int64(st, 1, (sqlite3_int64)f->taille);
+            sqlite3_bind_int64(st, 2, empreinte_octets(f->octets, f->taille));
+            sqlite3_bind_blob(st, 3, f->octets, (int)(f->taille < DEBUT_FICHIER ? f->taille : DEBUT_FICHIER),
+                              SQLITE_TRANSIENT);
+            sqlite3_bind_blob64(st, 4, f->octets, (sqlite3_uint64)f->taille, SQLITE_TRANSIENT);
+            ok = sqlite3_step(st) == SQLITE_DONE;
+        }
+    }
+    rendre(b, st);
+    if (!ok) {
+        *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+        return 0;
+    }
+    return (long)sqlite3_last_insert_rowid(b->db);
+}
+
+int base_fichier_lire(Fichier *f, char **erreur) {
+    if (f->octets) return 1;
+    Base *b = f->base;
+    if (!b) { *erreur = grym_formater("Le fichier « %s » est illisible.", f->nom); return 0; }
+    sqlite3_stmt *st = NULL;
+    preparer(b, "SELECT octets FROM grym_fichier WHERE id = ?", &st);
+    sqlite3_bind_int64(st, 1, (sqlite3_int64)f->cle);
+    if (sqlite3_step(st) != SQLITE_ROW) {
+        rendre(b, st);
+        *erreur = grym_formater("Le fichier « %s » a disparu de la base « %s ».", f->nom, b->chemin);
+        return 0;
+    }
+    size_t n = (size_t)sqlite3_column_bytes(st, 0);
+    f->octets = grym_allouer(n ? n : 1);
+    if (n) memcpy(f->octets, sqlite3_column_blob(st, 0), n);
+    f->taille = n;
+    rendre(b, st);
+    return 1;
+}
+
+/* Efface la ligne de grym_fichier désignée par une colonne de fichier, si elle en désigne une. */
+static int effacer_fichier(Base *b, sqlite3_int64 cle) {
+    sqlite3_stmt *st = NULL;
+    preparer(b, "DELETE FROM grym_fichier WHERE id = ?", &st);
+    sqlite3_bind_int64(st, 1, cle);
+    int ok = sqlite3_step(st) == SQLITE_DONE;
+    rendre(b, st);
+    return ok;
+}
+
+/* Colonnes de fichier d'une base : « c X » accompagnée de « n X ». Rend leur nombre ; *tables et *champs (à
+ * libérer) les nomment. */
+static size_t colonnes_de_fichier(Base *b, char ***tables, char ***champs) {
+    size_t n = 0, cap = 8;
+    *tables = grym_allouer(cap * sizeof **tables);
+    *champs = grym_allouer(cap * sizeof **champs);
+    sqlite3_stmt *st = NULL;
+    preparer(b, "SELECT m.name, p.name FROM sqlite_master AS m, pragma_table_info(m.name) AS p "
+                "WHERE m.type = 'table' AND m.name LIKE 'e %' AND p.name LIKE 'n %' "
+                "AND EXISTS (SELECT 1 FROM pragma_table_info(m.name) AS q WHERE q.name = 'c ' || substr(p.name, 3))",
+             &st);
+    while (st && sqlite3_step(st) == SQLITE_ROW) {
+        if (n == cap) {
+            cap *= 2;
+            char **t2 = grym_allouer(cap * sizeof *t2), **c2 = grym_allouer(cap * sizeof *c2);
+            memcpy(t2, *tables, n * sizeof *t2);
+            memcpy(c2, *champs, n * sizeof *c2);
+            free(*tables);
+            free(*champs);
+            *tables = t2;
+            *champs = c2;
+        }
+        (*tables)[n] = grym_dupliquer((const char *)sqlite3_column_text(st, 0) + 2);
+        (*champs)[n] = grym_dupliquer((const char *)sqlite3_column_text(st, 1) + 2);
+        n++;
+    }
+    rendre(b, st);
+    return n;
+}
+
+static void liberer_noms(char **t, size_t n) {
+    for (size_t k = 0; k < n; k++) free(t[k]);
+    free(t);
+}
+
+/* Une base d'avant le format 2 a-t-elle des octets de fichier dans les tables de ses entités ? */
+static int fichiers_a_convertir(Base *b) {
+    char **tables, **champs;
+    size_t n = colonnes_de_fichier(b, &tables, &champs);
+    int r = 0;
+    for (size_t k = 0; k < n && !r; k++) {
+        Chaine sql = {0};
+        chaine_ajouter(&sql, "SELECT EXISTS (SELECT 1 FROM ");
+        ajouter_nom(&sql, "e ", tables[k]);
+        chaine_ajouter(&sql, " WHERE typeof(");
+        ajouter_nom(&sql, "c ", champs[k]);
+        chaine_ajouter(&sql, ") = 'blob')");
+        char *t = chaine_rendre(&sql);
+        sqlite3_stmt *st = NULL;
+        if (preparer(b, t, &st) == SQLITE_OK && sqlite3_step(st) == SQLITE_ROW) r = sqlite3_column_int(st, 0);
+        rendre(b, st);
+        free(t);
+    }
+    liberer_noms(tables, n);
+    liberer_noms(champs, n);
+    return r;
+}
+
+/* Format 1 → 2, dans la transaction : chaque fichier rangé dans la table de son entité déménage dans
+ * grym_fichier, une ligne par valeur ; la colonne garde le numéro. Puis le format 2 est écrit. */
+static int convertir_fichiers(Base *b, char **erreur) {
+    char **tables, **champs;
+    size_t n = colonnes_de_fichier(b, &tables, &champs);
+    int ok = 1;
+    for (size_t k = 0; ok && k < n; k++) {
+        /* d'abord les identifiants : on ne réécrit pas une table pendant qu'on la parcourt */
+        Chaine sql = {0};
+        chaine_ajouter(&sql, "SELECT id FROM ");
+        ajouter_nom(&sql, "e ", tables[k]);
+        chaine_ajouter(&sql, " WHERE typeof(");
+        ajouter_nom(&sql, "c ", champs[k]);
+        chaine_ajouter(&sql, ") = 'blob'");
+        char *t = chaine_rendre(&sql);
+        sqlite3_stmt *st = NULL;
+        size_t nb = 0, cap = 16;
+        sqlite3_int64 *ids = grym_allouer(cap * sizeof *ids);
+        ok = preparer(b, t, &st) == SQLITE_OK;
+        while (ok && sqlite3_step(st) == SQLITE_ROW) {
+            if (nb == cap) {
+                cap *= 2;
+                sqlite3_int64 *i2 = grym_allouer(cap * sizeof *i2);
+                memcpy(i2, ids, nb * sizeof *ids);
+                free(ids);
+                ids = i2;
+            }
+            ids[nb++] = sqlite3_column_int64(st, 0);
+        }
+        rendre(b, st);
+        free(t);
+        Chaine lire = {0}, ecrire = {0};
+        chaine_ajouter(&lire, "SELECT ");
+        ajouter_nom(&lire, "c ", champs[k]);
+        chaine_ajouter(&lire, " FROM ");
+        ajouter_nom(&lire, "e ", tables[k]);
+        chaine_ajouter(&lire, " WHERE id = ?");
+        chaine_ajouter(&ecrire, "UPDATE ");
+        ajouter_nom(&ecrire, "e ", tables[k]);
+        chaine_ajouter(&ecrire, " SET ");
+        ajouter_nom(&ecrire, "c ", champs[k]);
+        chaine_ajouter(&ecrire, " = ? WHERE id = ?");
+        char *tl = chaine_rendre(&lire), *te = chaine_rendre(&ecrire);
+        for (size_t q = 0; ok && q < nb; q++) {   /* un fichier à la fois : jamais toute la table en mémoire */
+            Fichier f = { 1, NULL, 0, NULL, NULL, NULL, 0 };
+            st = NULL;
+            ok = preparer(b, tl, &st) == SQLITE_OK;
+            if (ok) {
+                sqlite3_bind_int64(st, 1, ids[q]);
+                ok = sqlite3_step(st) == SQLITE_ROW;
+                if (ok) {
+                    f.taille = (size_t)sqlite3_column_bytes(st, 0);
+                    f.octets = grym_allouer(f.taille ? f.taille : 1);
+                    if (f.taille) memcpy(f.octets, sqlite3_column_blob(st, 0), f.taille);
+                }
+            }
+            rendre(b, st);
+            long cle = ok ? ranger_fichier(b, &f, erreur) : 0;
+            if (cle) b->convertis++;
+            free(f.octets);
+            ok = ok && cle;
+            if (!ok) break;
+            st = NULL;
+            ok = preparer(b, te, &st) == SQLITE_OK;
+            if (ok) {
+                sqlite3_bind_int64(st, 1, (sqlite3_int64)cle);
+                sqlite3_bind_int64(st, 2, ids[q]);
+                ok = sqlite3_step(st) == SQLITE_DONE;
+            }
+            rendre(b, st);
+        }
+        free(tl);
+        free(te);
+        free(ids);
+    }
+    liberer_noms(tables, n);
+    liberer_noms(champs, n);
+    if (ok) {
+        char *sql = grym_formater("PRAGMA user_version = %d;", BASE_FORMAT);
+        ok = executer(b, sql, erreur);
+        free(sql);
+    } else if (!*erreur) {
+        *erreur = grym_formater("Base « %s » : les fichiers n'ont pas pu passer au format %d (%s).", b->chemin,
+                                BASE_FORMAT, sqlite3_errmsg(b->db));
+    }
+    return ok;
+}
+
 Base *base_ouvrir(const char *chemin, char **erreur) {
     Base *b = grym_allouer(sizeof *b);
     memset(b, 0, sizeof *b);
@@ -253,10 +489,15 @@ Base *base_ouvrir(const char *chemin, char **erreur) {
         return NULL;
     }
     if (format < BASE_FORMAT) {   /* base neuve ou d'avant le numéro : elle reçoit le format courant */
-        char *sql = grym_formater("PRAGMA user_version = %d;", BASE_FORMAT);
-        int ok = executer(b, sql, erreur);
-        free(sql);
-        if (!ok) { base_fermer(b); return NULL; }
+        /* des fichiers encore rangés dans les tables des entités : ils déménagent dans la première transaction,
+         * qui écrit le format avec eux ; « grym migration », qui annule la sienne, ne change donc rien */
+        b->a_convertir = format < 2 && fichiers_a_convertir(b);
+        if (!b->a_convertir) {
+            char *sql = grym_formater("PRAGMA user_version = %d;", BASE_FORMAT);
+            int ok = executer(b, sql, erreur);
+            free(sql);
+            if (!ok) { base_fermer(b); return NULL; }
+        }
     }
     return b;
 }
@@ -283,6 +524,18 @@ int base_commencer(Base *b, char **erreur) {
         return 0;
     }
     b->transaction = 1;
+    /* créée dans une transaction : un essai de migration, qui annule la sienne, ne laisse rien derrière lui */
+    if (!b->fichiers_prets
+        && !executer(b, "CREATE TABLE IF NOT EXISTS grym_fichier (id INTEGER PRIMARY KEY, taille INTEGER NOT NULL, "
+                        "empreinte INTEGER NOT NULL, debut BLOB NOT NULL, octets BLOB NOT NULL);", erreur)) {
+        base_annuler(b);
+        return 0;
+    }
+    b->convertis = 0;
+    if (b->a_convertir && !convertir_fichiers(b, erreur)) {   /* format 1 → 2, avec la première transaction */
+        base_annuler(b);
+        return 0;
+    }
     b->changements = sqlite3_total_changes(b->db);
     return 1;
 }
@@ -294,7 +547,11 @@ int base_modifiee(Base *b) {
 int base_valider(Base *b, char **erreur) {
     if (!b->transaction) return 1;
     b->transaction = 0;
-    if (sqlite3_exec(b->db, "COMMIT;", NULL, NULL, NULL) == SQLITE_OK) return 1;
+    if (sqlite3_exec(b->db, "COMMIT;", NULL, NULL, NULL) == SQLITE_OK) {
+        b->a_convertir = 0;
+        b->fichiers_prets = 1;
+        return 1;
+    }
     *erreur = grym_formater("Base « %s » : validation impossible (%s).", b->chemin, sqlite3_errmsg(b->db));
     sqlite3_exec(b->db, "ROLLBACK;", NULL, NULL, NULL);
     return 0;
@@ -1028,8 +1285,10 @@ static int lier(Base *b, sqlite3_stmt *st, int i, const char *type, const char *
         char *t = date_iso(v->jours);
         sqlite3_bind_text(st, i, t, -1, SQLITE_TRANSIENT);
         free(t);
-    } else if (est_fichier(type)) {
-        sqlite3_bind_blob64(st, i, v->fichier->octets, (sqlite3_uint64)v->fichier->taille, SQLITE_TRANSIENT);
+    } else if (est_fichier(type)) {   /* les octets dans grym_fichier, le numéro dans la colonne (format 2) */
+        long cle = ranger_fichier(b, v->fichier, erreur);
+        if (!cle) return 0;
+        sqlite3_bind_int64(st, i, (sqlite3_int64)cle);
         sqlite3_bind_text(st, i + 1, v->fichier->nom, -1, SQLITE_TRANSIENT);
         return i + 2;
     } else if (v->objet == soi) {
@@ -1072,7 +1331,7 @@ static char *message_contrainte(Base *b, const Objet *o) {
         /* règle 4 : la valeur est peut-être gardée par un objet de la corbeille (§ 16.12) */
         int dans_corbeille = 0;
         for (size_t k = 0; k < c->nb_champs; k++) {
-            if (strcmp(c->champs[k], p + 3) != 0 || !o->definis[k]) continue;
+            if (strcmp(c->champs[k], p + 3) != 0 || !o->definis[k] || est_fichier(c->types[k])) continue;
             Chaine sql = {0};
             chaine_ajouter(&sql, "SELECT count(*) FROM ");
             ajouter_nom(&sql, "e ", c->proprietaires[k]->nom);
@@ -1108,6 +1367,8 @@ static char *message_contrainte(Base *b, const Objet *o) {
 /* ---------------------------------------------------------------- */
 /* Conserver, écrire, supprimer                                     */
 /* ---------------------------------------------------------------- */
+
+static int fichier_unique(Base *b, const Objet *o, size_t k, long id, char **erreur);
 
 int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
     const ClasseVM *c = o->classe;
@@ -1162,10 +1423,54 @@ int base_conserver(Base *b, const Objet *o, long *id, char **erreur) {
         ok = i && sqlite3_step(st) == SQLITE_DONE;
         if (i && !ok) *erreur = message_contrainte(b, o);
         rendre(b, st);
+        for (size_t k = 0; ok && k < c->nb_champs; k++)
+            if (c->proprietaires[k] == l[e] && !multiple(c, k) && est_fichier(c->types[k]))
+                ok = fichier_unique(b, o, k, nouvel, erreur);
         if (!ok) return 0;   /* la transaction de l'exécution annulera les lignes déjà écrites */
     }
     *id = nouvel;
     return 1;
+}
+
+/* Un fichier unique : sa colonne ne garde que des numéros, tous différents ; c'est le contenu qui doit l'être.
+ * Après l'écriture de l'objet id, un autre objet de la même table au fichier identique est refusé. */
+static int fichier_unique(Base *b, const Objet *o, size_t k, long id, char **erreur) {
+    const ClasseVM *c = o->classe;
+    if (!(c->uniques[k] & 1) || !o->definis[k] || o->champs[k].type != V_FICHIER) return 1;
+    Chaine sql = {0};
+    chaine_ajouter(&sql, "SELECT g.supprime IS NOT NULL FROM ");
+    ajouter_nom(&sql, "e ", c->proprietaires[k]->nom);
+    chaine_ajouter(&sql, " AS t JOIN grym_objet AS g ON g.id = t.id JOIN grym_fichier AS x ON x.id = t.");
+    ajouter_nom(&sql, "c ", c->champs[k]);
+    chaine_ajouter(&sql, " JOIN grym_fichier AS s ON s.id = (SELECT ");
+    ajouter_nom(&sql, "c ", c->champs[k]);
+    chaine_ajouter(&sql, " FROM ");
+    ajouter_nom(&sql, "e ", c->proprietaires[k]->nom);
+    chaine_ajouter(&sql, " WHERE id = ?1) WHERE t.id <> ?1 AND x.taille = s.taille AND x.empreinte = s.empreinte "
+                         "AND x.octets = s.octets LIMIT 1");
+    char *texte = chaine_rendre(&sql);
+    sqlite3_stmt *st = NULL;
+    int ok = preparer(b, texte, &st) == SQLITE_OK;
+    free(texte);
+    int pris = 0, corbeille = 0;
+    if (ok) {
+        sqlite3_bind_int64(st, 1, (sqlite3_int64)id);
+        int rc = sqlite3_step(st);
+        pris = rc == SQLITE_ROW;
+        if (pris) corbeille = sqlite3_column_int(st, 0);
+        ok = rc == SQLITE_ROW || rc == SQLITE_DONE;
+    }
+    if (!ok) *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+    rendre(b, st);
+    if (!ok) return 0;
+    if (!pris) return 1;
+    *erreur = corbeille
+        ? grym_formater("« %s » est unique : ce fichier appartient à %s %s supprimé%s. Rétablis-%s, ou supprime-%s "
+                        "définitivement.", c->champs[k], c->feminin ? "une" : "un", c->nom, c->feminin ? "e" : "",
+                        c->feminin ? "la" : "le", c->feminin ? "la" : "le")
+        : grym_formater("« %s » est unique : %s %s conservé%s a déjà ce fichier.", c->champs[k],
+                        c->feminin ? "une autre" : "un autre", c->nom, c->feminin ? "e" : "");
+    return 0;
 }
 
 int base_ecrire_champ(Base *b, const Objet *o, size_t k, char **erreur) {
@@ -1186,6 +1491,25 @@ int base_ecrire_champ(Base *b, const Objet *o, size_t k, char **erreur) {
     chaine_ajouter(&sql, " WHERE id = ?");
     char *texte = chaine_rendre(&sql);
     sqlite3_stmt *st = NULL;
+    /* un fichier remplacé : sa ligne de grym_fichier part avec lui (la machine a lu ses octets s'il sert encore) */
+    sqlite3_int64 ancien = 0;
+    if (est_fichier(c->types[k])) {
+        Chaine q = {0};
+        chaine_ajouter(&q, "SELECT ");
+        ajouter_nom(&q, "c ", c->champs[k]);
+        chaine_ajouter(&q, " FROM ");
+        ajouter_nom(&q, "e ", table->nom);
+        chaine_ajouter(&q, " WHERE id = ?");
+        char *tq = chaine_rendre(&q);
+        if (preparer(b, tq, &st) == SQLITE_OK) {
+            sqlite3_bind_int64(st, 1, (sqlite3_int64)o->id);
+            if (sqlite3_step(st) == SQLITE_ROW && sqlite3_column_type(st, 0) == SQLITE_INTEGER)
+                ancien = sqlite3_column_int64(st, 0);
+        }
+        rendre(b, st);
+        free(tq);
+        st = NULL;
+    }
     preparer(b, texte, &st);
     free(texte);
     int i = lier(b, st, 1, c->types[k], c->champs[k], &o->champs[k], o, o->id, erreur);
@@ -1196,6 +1520,11 @@ int base_ecrire_champ(Base *b, const Objet *o, size_t k, char **erreur) {
         if (!ok) *erreur = message_contrainte(b, o);
     }
     rendre(b, st);
+    if (ok && est_fichier(c->types[k])) ok = fichier_unique(b, o, k, o->id, erreur);
+    if (ok && ancien && !effacer_fichier(b, ancien)) {
+        *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+        ok = 0;
+    }
     return ok;
 }
 
@@ -1407,6 +1736,38 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
             }
         }
     }
+    /* leurs fichiers : les lignes de grym_fichier partent avec eux */
+    size_t nf = 0, capf = 8;
+    sqlite3_int64 *fichiers = grym_allouer(capf * sizeof *fichiers);
+    for (size_t q = 0; q < e.n; q++) {
+        const ClasseVM *c = classe_nommee(classes, nb_classes, e.classes[q]);
+        for (size_t k = 0; c && k < c->nb_champs; k++) {
+            if (multiple(c, k) || !c->types[k] || !est_fichier(c->types[k])) continue;
+            Chaine sql = {0};
+            chaine_ajouter(&sql, "SELECT ");
+            ajouter_nom(&sql, "c ", c->champs[k]);
+            chaine_ajouter(&sql, " FROM ");
+            ajouter_nom(&sql, "e ", c->proprietaires[k]->nom);
+            chaine_ajouter(&sql, " WHERE id = ?");
+            char *t = chaine_rendre(&sql);
+            sqlite3_stmt *sf = NULL;
+            if (preparer(b, t, &sf) == SQLITE_OK) {
+                sqlite3_bind_int64(sf, 1, (sqlite3_int64)e.ids[q]);
+                if (sqlite3_step(sf) == SQLITE_ROW && sqlite3_column_type(sf, 0) == SQLITE_INTEGER) {
+                    if (nf == capf) {
+                        capf *= 2;
+                        sqlite3_int64 *f2 = grym_allouer(capf * sizeof *f2);
+                        memcpy(f2, fichiers, nf * sizeof *fichiers);
+                        free(fichiers);
+                        fichiers = f2;
+                    }
+                    fichiers[nf++] = sqlite3_column_int64(sf, 0);
+                }
+            }
+            rendre(b, sf);
+            free(t);
+        }
+    }
     /* les liens internes à l'ensemble se vérifient à la validation : l'ordre des effacements n'importe plus */
     int ok = executer(b, "PRAGMA defer_foreign_keys = ON;", erreur);
     sqlite3_stmt *st = NULL;
@@ -1421,6 +1782,12 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
         sqlite3_reset(st);
     }
     rendre(b, st);
+    for (size_t q = 0; ok && q < nf; q++)
+        if (!effacer_fichier(b, fichiers[q])) {
+            *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+            ok = 0;
+        }
+    free(fichiers);
     ens_liberer(&e);
     return ok;
 }
@@ -1571,9 +1938,14 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
             if (c->proprietaires[k] != l[e] || multiple(c, k)) continue;
             chaine_ajouter(&sql, ", ");
             ajouter_nom(&sql, "c ", c->champs[k]);
-            if (est_fichier(c->types[k])) {
+            if (est_fichier(c->types[k])) {   /* le nom, puis taille et premiers octets : jamais le contenu */
                 chaine_ajouter(&sql, ", ");
                 ajouter_nom(&sql, "n ", c->champs[k]);
+                chaine_ajouter(&sql, ", (SELECT taille FROM grym_fichier WHERE id = ");
+                ajouter_nom(&sql, "c ", c->champs[k]);
+                chaine_ajouter(&sql, "), (SELECT debut FROM grym_fichier WHERE id = ");
+                ajouter_nom(&sql, "c ", c->champs[k]);
+                chaine_ajouter(&sql, ")");
             }
             colonnes++;
         }
@@ -1599,7 +1971,7 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
             Valeur v;
             if (sqlite3_column_type(st, col) == SQLITE_NULL) {
                 v = vi_absent(c->champs[k]);
-                if (est_fichier(t)) col++;
+                if (est_fichier(t)) col += 3;
             } else if (strcmp(t, "texte") == 0) v = vi_texte((const char *)sqlite3_column_text(st, col));
             else if (strcmp(t, "nombre") == 0) v = vi_nombre_canonique((const char *)sqlite3_column_text(st, col));
             else if (strcmp(t, "nombre entier") == 0) {
@@ -1617,9 +1989,15 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
                 date_lire_iso((const char *)sqlite3_column_text(st, col), &jours);
                 v = vi_date(jours);
             } else if (est_fichier(t)) {
-                v = vi_fichier(sqlite3_column_blob(st, col), (size_t)sqlite3_column_bytes(st, col),
-                               (const char *)sqlite3_column_text(st, col + 1));
-                col++;
+                if (sqlite3_column_type(st, col) == SQLITE_INTEGER)   /* format 2 : les octets attendent */
+                    v = vi_fichier_en_base(b, (long)sqlite3_column_int64(st, col),
+                                           (size_t)sqlite3_column_int64(st, col + 2),
+                                           sqlite3_column_blob(st, col + 3), (size_t)sqlite3_column_bytes(st, col + 3),
+                                           (const char *)sqlite3_column_text(st, col + 1));
+                else   /* base pas encore convertie */
+                    v = vi_fichier(sqlite3_column_blob(st, col), (size_t)sqlite3_column_bytes(st, col),
+                                   (const char *)sqlite3_column_text(st, col + 1));
+                col += 3;
             } else {
                 long id = (long)sqlite3_column_int64(st, col);
                 char *classe = classe_en_base(b, id);

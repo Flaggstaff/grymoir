@@ -120,6 +120,19 @@ static void sql_direct(const char *chemin, const char *sql) {
     sqlite3_close(db);
 }
 
+/* Un nombre lu directement dans une base (la première colonne de la première ligne), -1 sinon. */
+static long sql_nombre(const char *chemin, const char *sql) {
+    sqlite3 *db = NULL;
+    sqlite3_stmt *st = NULL;
+    long v = -1;
+    if (sqlite3_open_v2(chemin, &db, SQLITE_OPEN_READONLY, NULL) == SQLITE_OK
+        && sqlite3_prepare_v2(db, sql, -1, &st, NULL) == SQLITE_OK && sqlite3_step(st) == SQLITE_ROW)
+        v = (long)sqlite3_column_int64(st, 0);
+    sqlite3_finalize(st);
+    sqlite3_close(db);
+    return v;
+}
+
 /* Nombre d'index de ce nom dans la base : 1 s'il existe. */
 static long index_existe(const char *chemin, const char *nom) {
     sqlite3 *db = NULL;
@@ -3042,7 +3055,7 @@ int main(void) {
         remove(B);
         r = lancer_sur(B, prog);
         total++;
-        if (strcmp(r, "1") != 0 || format_base(B) != 1) signaler(__LINE__, "base neuve", "1, format 1", r);
+        if (strcmp(r, "1") != 0 || format_base(B) != 2) signaler(__LINE__, "base neuve", "1, format 2", r);
         free(r);
         /* une base d'avant le numéro (et d'avant la corbeille) s'ouvre, reçoit ses colonnes et le format */
         remove(B);
@@ -3050,14 +3063,14 @@ int main(void) {
                       "CREATE TABLE grym_schema (entite TEXT PRIMARY KEY, definition TEXT NOT NULL);");
         r = lancer_sur(B, prog);
         total++;
-        if (strcmp(r, "1") != 0 || format_base(B) != 1) signaler(__LINE__, "base ancienne", "1, format 1", r);
+        if (strcmp(r, "1") != 0 || format_base(B) != 2) signaler(__LINE__, "base ancienne", "1, format 2", r);
         free(r);
         /* une base plus récente se refuse, sans être touchée */
         remove(B);
-        sql_direct(B, "PRAGMA user_version = 2;");
+        sql_direct(B, "PRAGMA user_version = 3;");
         r = lancer_sur(B, prog);
         total++;
-        if (!strstr(r, "a le format 2, plus récent que celui de ce grym (1)") || !strstr(r, "Elle n'a pas été modifiée."))
+        if (!strstr(r, "a le format 3, plus récent que celui de ce grym (2)") || !strstr(r, "Elle n'a pas été modifiée."))
             signaler(__LINE__, "base plus récente", "refus", r);
         free(r);
         {
@@ -3071,9 +3084,119 @@ int main(void) {
             sqlite3_finalize(st);
             sqlite3_close(db);
             total++;
-            if (tables != 0 || format_base(B) != 2) signaler(__LINE__, "base plus récente intacte", "0 table, format 2", "modifiée");
+            if (tables != 0 || format_base(B) != 3) signaler(__LINE__, "base plus récente intacte", "0 table, format 3", "modifiée");
         }
         remove(B);
+    }
+
+
+    /* --- Fichiers en base, format 2 (docs/vm.md, § 8) : octets dans grym_fichier, lus au premier besoin --- */
+    {
+        const char *B = "_essai_fichiers.grymd";
+        remove(B);
+        static const unsigned char PNG[] = { 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4 };
+        creer_fichier("_essai_f1.png", PNG, sizeof PNG);
+        creer_fichier("_essai_f2.txt", "deuxième", 9);
+        creer_fichier("_essai_f3.txt", "deuxième", 9);
+#define DOC "Un document, conservé, a : un titre (texte), unique, un contenu (fichier), une vignette (image), facultative.\n"
+#define ESSAI_F(src, attendu, quoi) do { char *r_ = lancer_sur(B, DOC src); total++; \
+            if (strcmp(r_, attendu) != 0) { signaler(__LINE__, quoi, attendu, r_); } free(r_); } while (0)
+        ESSAI_F("Le a vaut un nouveau document :\n    Le titre vaut « A ».\n    Le contenu vaut le fichier « _essai_f2.txt ».\n"
+                "    La vignette vaut le fichier « _essai_f1.png ».\nConserver a.\n"
+                "Le b vaut un nouveau document :\n    Le titre vaut « B ».\n    Le contenu vaut le fichier « _essai_f3.txt ».\n"
+                "Conserver b.\nAfficher 1.", "1", "conserver deux fichiers");
+        total++;
+        if (sql_nombre(B, "SELECT count(*) FROM grym_fichier") != 3
+            || sql_nombre(B, "SELECT count(*) FROM \"e document\" WHERE typeof(\"c contenu\") = 'integer'") != 2
+            || format_base(B) != 2)
+            signaler(__LINE__, "rangement à part", "3 lignes, 2 numéros, format 2", "autre");
+        /* relus : taille, format et nom sans les octets ; égalité par contenu, puis affichage */
+        ESSAI_F("Le a vaut le document conservé dont le titre est « A ».\n"
+                "Le b vaut le document conservé dont le titre est « B ».\n"
+                "Afficher taille du contenu du a puis format de la vignette du a puis nom de fichier du contenu du b.\n"
+                "Afficher contenu du a = contenu du b puis contenu du a = vignette du a puis contenu du a = le fichier « _essai_f3.txt ».\n"
+                "Afficher vignette du a.", "9 PNG _essai_f3.txt\nvrai faux vrai\nune image PNG de 12 octets", "relire");
+        /* copie d'un objet à l'autre, sans passer par la mémoire ; l'ancienne ligne part */
+        ESSAI_F("Le a vaut le document conservé dont le titre est « A ».\n"
+                "Le b vaut le document conservé dont le titre est « B ».\n"
+                "La vignette du b devient la vignette du a.\nAfficher vignette du b = vignette du a.", "vrai", "copier");
+        total++;
+        if (sql_nombre(B, "SELECT count(*) FROM grym_fichier") != 4) signaler(__LINE__, "copie", "4 lignes", "autre");
+        /* remplacé : l'ancien contenu, gardé dans une variable, se lit encore ; sa ligne est partie */
+        ESSAI_F("Le a vaut le document conservé dont le titre est « A ».\nLe vieux vaut le contenu du a.\n"
+                "Le contenu du a devient le fichier « _essai_f1.png ».\n"
+                "Afficher vieux = le fichier « _essai_f2.txt » puis taille du contenu du a.", "vrai 12", "remplacer");
+        total++;
+        if (sql_nombre(B, "SELECT count(*) FROM grym_fichier") != 4) signaler(__LINE__, "remplacement", "4 lignes", "autre");
+        /* une écriture d'un fichier vers le disque lit ses octets en base */
+        remove("_essai_sortie.png");
+        ESSAI_F("Le a vaut le document conservé dont le titre est « A ».\n"
+                "Enregistrer la vignette du a dans « _essai_sortie.png ».\nAfficher 1.", "1", "écrire sur le disque");
+        {
+            FILE *f = fopen("_essai_sortie.png", "rb");
+            unsigned char t[32];
+            size_t n = f ? fread(t, 1, sizeof t, f) : 0;
+            if (f) fclose(f);
+            total++;
+            if (n != sizeof PNG || memcmp(t, PNG, n) != 0) signaler(__LINE__, "écrit sur le disque", "12 octets PNG", "autre");
+            remove("_essai_sortie.png");
+        }
+        /* suppression : la corbeille garde tout ; la suppression définitive efface les fichiers */
+        ESSAI_F("Supprimer le document conservé dont le titre est « B ».\nAfficher 1.", "1", "corbeille");
+        total++;
+        if (sql_nombre(B, "SELECT count(*) FROM grym_fichier") != 4) signaler(__LINE__, "corbeille", "4 lignes", "autre");
+        ESSAI_F("Le b vaut le document supprimé dont le titre est « B ».\nLe c vaut contenu du b.\n"
+                "Supprimer b définitivement.\nAfficher taille du c.", "9", "suppression définitive");
+        total++;
+        if (sql_nombre(B, "SELECT count(*) FROM grym_fichier") != 2) signaler(__LINE__, "suppression définitive", "2 lignes", "autre");
+#undef ESSAI_F
+#undef DOC
+        remove(B);
+        /* unicité : par le contenu, puisque la colonne ne garde que des numéros */
+        char *r = lancer_sur(B, "Une pièce, conservée, a : un scan (fichier), unique.\n"
+                                "La p vaut une nouvelle pièce :\n    Le scan vaut le fichier « _essai_f2.txt ».\nConserver p.\n"
+                                "La q vaut une nouvelle pièce :\n    Le scan vaut le fichier « _essai_f3.txt ».\nConserver q.\n");
+        total++;
+        if (!strstr(r, "« scan » est unique : une autre pièce conservée a déjà ce fichier."))
+            signaler(__LINE__, "fichier unique", "refus", r);
+        free(r);
+        r = lancer_sur(B, "Une pièce, conservée, a : un scan (fichier), unique.\n"
+                          "La p vaut une nouvelle pièce :\n    Le scan vaut le fichier « _essai_f2.txt ».\nConserver p.\n"
+                          "La q vaut une nouvelle pièce :\n    Le scan vaut le fichier « _essai_f1.png ».\nConserver q.\n"
+                          "Le scan de la q devient le fichier « _essai_f3.txt ».\n");
+        total++;
+        if (!strstr(r, "« scan » est unique : une autre pièce conservée a déjà ce fichier."))
+            signaler(__LINE__, "fichier unique modifié", "refus", r);
+        free(r);
+        remove(B);
+        /* base d'avant le format 2 : fichiers dans la table ; l'essai de migration le dit sans rien changer,
+         * la première exécution les déménage */
+        const char *DOCS = "Un document, conservé, a : un titre (texte), un contenu (fichier).\n";
+        r = lancer_sur(B, "Un document, conservé, a : un titre (texte), un contenu (fichier).\n"
+                          "Le a vaut un nouveau document :\n    Le titre vaut « A ».\n    Le contenu vaut le fichier « _essai_f2.txt ».\n"
+                          "Conserver a.\n");
+        free(r);
+        sql_direct(B, "UPDATE \"e document\" SET \"c contenu\" = (SELECT octets FROM grym_fichier WHERE id = \"c contenu\");"
+                      "DROP TABLE grym_fichier; PRAGMA user_version = 1;");
+        r = essai_migration(B, DOCS);
+        total++;
+        if (!strstr(r, "Les fichiers conservés (1) quittent les tables de leurs entités pour grym_fichier")
+            || format_base(B) != 1 || sql_nombre(B, "SELECT count(*) FROM sqlite_master WHERE name = 'grym_fichier'") != 0)
+            signaler(__LINE__, "essai de migration, format 1", "rapport, base intacte", r);
+        free(r);
+        char *lire = grym_formater("%sLe a vaut le document conservé dont le titre est « A ».\n"
+                                   "Afficher contenu du a = le fichier « _essai_f2.txt ».", DOCS);
+        r = lancer_sur(B, lire);
+        total++;
+        if (strcmp(r, "vrai") != 0 || format_base(B) != 2
+            || sql_nombre(B, "SELECT count(*) FROM \"e document\" WHERE typeof(\"c contenu\") = 'integer'") != 1)
+            signaler(__LINE__, "conversion au format 2", "vrai, format 2", r);
+        free(r);
+        free(lire);
+        remove(B);
+        remove("_essai_f1.png");
+        remove("_essai_f2.txt");
+        remove("_essai_f3.txt");
     }
 
     /* --- Interface d'entrée et de sortie (docs/vm.md, § 13) : une page au lieu de la console --- */

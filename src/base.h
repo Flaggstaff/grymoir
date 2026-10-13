@@ -44,8 +44,9 @@ int base_membres(Base *b, const ClasseVM *c, size_t k, long id, long **ids, char
                  char **erreur);
 
 /* Format des bases (charte, art. 13), gravé dans PRAGMA user_version. Une base d'un format plus récent se
- * refuse avant toute écriture ; 0 : base d'avant ce numéro, lue comme le format 1. */
-#define BASE_FORMAT 1
+ * refuse avant toute écriture ; 0 : base d'avant ce numéro, lue comme le format 1. Format 2 : les octets des
+ * fichiers vivent dans grym_fichier, la table de l'entité n'en garde que le numéro (docs/vm.md, § 8). */
+#define BASE_FORMAT 2
 int base_lacher(Base *b, size_t n, char **erreur);
 int base_revenir(Base *b, size_t n, char **erreur);
 
@@ -83,6 +84,9 @@ int base_supprimer(Base *b, struct Machine *m, const Objet *o, ClasseVM *const *
                    int definitif, char **erreur);
 /* Rétablit un objet supprimé, et ceux qui ont disparu avec lui (grammaire, § 16.12). */
 int base_retablir(Base *b, const Objet *o, ClasseVM *const *classes, size_t nb_classes, char **erreur);
+/* Lit les octets d'un fichier resté en base (f->base) ; 1 s'ils sont là. 0 et *erreur sinon. */
+int base_fichier_lire(Fichier *f, char **erreur);
+
 /* L'objet d'identifiant id est-il dans la corbeille ? */
 int base_est_supprime(Base *b, long id);
 

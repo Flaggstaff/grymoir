@@ -500,6 +500,12 @@ static void ecrire(Machine *m, size_t c, Valeur v) {
 
 /* Écriture d'un champ, journalisée comme celle d'une case (première écriture seulement). */
 static void ecrire_champ(Machine *m, Objet *o, size_t k, Valeur v) {
+    if (o->definis[k] && o->champs[k].type == V_FICHIER && !o->champs[k].fichier->octets) {
+        /* un fichier resté en base que l'objet quitte : sa ligne va partir, une copie peut encore servir */
+        char *e = NULL;
+        base_fichier_lire(o->champs[k].fichier, &e);
+        free(e);
+    }
     if (o->epoques[k] == m->epoque) {
         if (o->definis[k]) valeur_liberer(&o->champs[k]);
         o->champs[k] = v;
@@ -790,6 +796,8 @@ static Fichier *lire_fichier(const Machine *m, const char *ecrit, char **erreur)
     free(chemin);
     if (!f) { *erreur = grym_formater("Fichier « %s » introuvable ou illisible.", ecrit); return NULL; }
     Fichier *x = grym_allouer(sizeof *x);
+    x->base = NULL;
+    x->cle = 0;
     size_t cap = 65536;
     x->octets = grym_allouer(cap);
     x->taille = 0;
@@ -1163,6 +1171,40 @@ Valeur vi_fichier(const void *octets, size_t taille, const char *nom) {
     f->nom = grym_dupliquer(nom);
     f->format = format_image(f->octets, taille);
     f->references = 1;
+    f->base = NULL;
+    f->cle = 0;
+    Valeur v = valeur_nombre(dec_zero());
+    v.type = V_FICHIER;
+    v.fichier = f;
+    return v;
+}
+
+/* Les octets d'un fichier, lus en base au premier besoin (docs/vm.md, § 8) ; NULL et *erreur s'ils manquent. */
+static const unsigned char *octets_du_fichier(const Fichier *f, char **erreur) {
+    if (!f->octets && !base_fichier_lire((Fichier *)f, erreur)) return NULL;
+    return f->octets;
+}
+
+/* Deux fichiers égaux : même contenu (§ 15) ; la même ligne de la base l'est sans rien lire. */
+static int fichiers_egaux(const Fichier *a, const Fichier *b) {
+    if (a == b) return 1;
+    if (a->taille != b->taille) return 0;
+    if (a->base && a->base == b->base && a->cle == b->cle) return 1;
+    char *e = NULL;
+    const unsigned char *x = octets_du_fichier(a, &e), *y = x ? octets_du_fichier(b, &e) : NULL;
+    free(e);
+    return x && y && memcmp(x, y, a->taille) == 0;
+}
+
+Valeur vi_fichier_en_base(struct Base *b, long cle, size_t taille, const unsigned char *debut, size_t n, const char *nom) {
+    Fichier *f = grym_allouer(sizeof *f);
+    f->octets = NULL;
+    f->taille = taille;
+    f->nom = grym_dupliquer(nom);
+    f->format = debut ? format_image(debut, n) : NULL;
+    f->references = 1;
+    f->base = b;
+    f->cle = cle;
     Valeur v = valeur_nombre(dec_zero());
     v.type = V_FICHIER;
     v.fichier = f;
@@ -1231,7 +1273,9 @@ void machine_objet_efface(Machine *m, long id) {
     Objet *o = carte_trouver(m, id);
     if (!o || o->id != id) return;
     char *e = NULL;
-    charger(m, o, &e);   /* ses valeurs restent en mémoire */
+    charger(m, o, &e);   /* ses valeurs restent en mémoire, octets des fichiers compris : leurs lignes partent */
+    for (size_t k = 0; !e && k < o->classe->nb_champs; k++)
+        if (o->definis[k] && o->champs[k].type == V_FICHIER) octets_du_fichier(o->champs[k].fichier, &e);
     free(e);
     ecrire_id(m, o, 0);
 }
@@ -1666,6 +1710,8 @@ static int lire_champ(Formulaire *f, size_t q, char **message) {
     Fichier *recu = NULL;   /* un fichier téléversé par l'interface (docs/v2.md, § 10), au lieu d'un chemin */
     if (f->champs[q].fichier_recu) {
         recu = grym_allouer(sizeof *recu);
+        recu->base = NULL;
+        recu->cle = 0;
         recu->octets = f->champs[q].octets;
         recu->taille = f->champs[q].taille;
         recu->nom = f->champs[q].nom_fichier ? f->champs[q].nom_fichier : grym_dupliquer("fichier");
@@ -1962,11 +2008,14 @@ static char *afficher_fiche(Machine *m, Objet *o, Chaine *sortie) {
             textes[k] = nom_objet(m, o->champs[k].objet);
         } else {
             textes[k] = texte_valeur(m, &o->champs[k]);
-            if (o->champs[k].type == V_FICHIER && o->champs[k].fichier->format) {
+            char *illisible = NULL;
+            if (o->champs[k].type == V_FICHIER && o->champs[k].fichier->format
+                && octets_du_fichier(o->champs[k].fichier, &illisible)) {
                 l[k].octets = o->champs[k].fichier->octets;
                 l[k].taille = o->champs[k].fichier->taille;
                 l[k].format = o->champs[k].fichier->format;
             }
+            free(illisible);
         }
         l[k].libelle = libelles[k];
         l[k].texte = textes[k];
@@ -2214,8 +2263,9 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
 /* Un fichier à écrire à la fin de l'exécution réussie (§ 15.2) : jamais par-dessus un fichier existant, jamais deux
  * fois le même chemin. NULL si accepté (le fichier passe à l'écriture), sinon le message. */
 static char *planifier_ecriture(Machine *m, const char *ecrit, Fichier *f) {
-    char *chemin = chemin_effectif(m, ecrit);
     char *probleme = NULL;
+    if (!octets_du_fichier(f, &probleme)) return probleme;   /* lu maintenant : la base peut changer d'ici la fin */
+    char *chemin = chemin_effectif(m, ecrit);
     FILE *existe = grym_fopen(chemin, "rb");
     if (existe) {
         fclose(existe);
@@ -3278,7 +3328,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 if (k) chaine_ajouter(sortie, " ");
                 const Valeur *v = &pile.v[base + k];
                 char *t = texte_valeur(m, v);
-                if (v->type == V_FICHIER && v->fichier->format && m->iface.afficher_image)   /* docs/v2.md, § 10 */
+                char *illisible = NULL;
+                if (v->type == V_FICHIER && v->fichier->format && m->iface.afficher_image
+                    && !octets_du_fichier(v->fichier, &illisible)) {
+                    chaine_ajouter(sortie, illisible);   /* une image disparue se dit, au lieu d'arrêter l'affichage */
+                    free(illisible);
+                } else if (v->type == V_FICHIER && v->fichier->format && m->iface.afficher_image)   /* docs/v2.md, § 10 */
                     m->iface.afficher_image(m->iface.contexte, sortie, v->fichier->octets, v->fichier->taille,
                                             v->fichier->format, t);
                 else
@@ -3334,8 +3389,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             } else {
                 int egaux = va.type == V_BOOLEEN ? va.vrai == vb.vrai
                           : va.type == V_OBJET  ? va.objet == vb.objet       /* identité */
-                          : va.type == V_FICHIER ? va.fichier->taille == vb.fichier->taille
-                                                   && memcmp(va.fichier->octets, vb.fichier->octets, va.fichier->taille) == 0
+                          : va.type == V_FICHIER ? fichiers_egaux(va.fichier, vb.fichier)
                           : strcmp(va.texte, vb.texte) == 0;
                 resultat = code == I_EGAL ? egaux : !egaux;
             }
@@ -3431,6 +3485,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 f = grym_allouer(sizeof *f);
                 f->references = 1;
                 f->format = NULL;
+                f->base = NULL;
+                f->cle = 0;
+                f->octets = NULL;
                 const char *barre = strrchr(c.texte, '/');
                 f->nom = grym_dupliquer(barre ? barre + 1 : c.texte);
                 probleme = tableau_csv(m, b->constantes[op].texte, &l, f);
@@ -4038,7 +4095,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (f.type != V_FICHIER) probleme = grym_formater("Un tableau se lit dans un fichier, pas dans %s.", nom_type(f.type));
             else {
                 free(r.texte);
-                r.texte = lire_csv(f.fichier, &probleme);
+                r.texte = octets_du_fichier(f.fichier, &probleme) ? lire_csv(f.fichier, &probleme) : NULL;
                 r.type = V_LIGNE;
             }
             valeur_liberer(&f);
@@ -4168,6 +4225,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             if (m->iface.ecran_apparence) {
+                char *illisible = NULL;
+                if (vl.type == V_FICHIER && !octets_du_fichier(vl.fichier, &illisible)) {
+                    valeur_liberer(&vl);
+                    ok = echouer(diag, b, debut, illisible);
+                    break;
+                }
                 if (vl.type == V_FICHIER)
                     m->iface.ecran_apparence(m->iface.contexte, couleur, vl.fichier->octets, vl.fichier->taille,
                                              vl.fichier->format);
