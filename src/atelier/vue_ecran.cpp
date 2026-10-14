@@ -96,14 +96,34 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         pile->addLayout(entete);
     }
     QHBoxLayout *rangee = nullptr;   // des boutons qui se suivent : une ligne, en bas à droite (§ 3.3)
-    QVector<QBoxLayout *> blocs = {pile};   // « côte à côte », « l'un sous l'autre » : des boîtes emboîtées (§ 22.1)
-    QWidget *toile = nullptr;               // le bloc en position libre ouvert (§ 22.9), qui ne contient pas de bloc
+    // Les conteneurs ouverts : une boîte (« côte à côte », « l'un sous l'autre », un groupe, l'écran) ou une toile
+    // (« en position libre : »). Un bloc posé sur une toile y est un widget placé, que sa fin remet à sa taille (§ 22.9).
+    struct Niveau { QBoxLayout *boite; QWidget *toile; QWidget *place; int largeur, hauteur; };
+    QVector<Niveau> niveaux = {{pile, nullptr, nullptr, 0, 0}};
+    // Pose w dans le conteneur ouvert : sur une toile, à la place de e ; dans une boîte, à la suite.
+    auto poser = [&](QWidget *w, const ElementVue &e, int etirement = 0) {
+        const Niveau &ici = niveaux.last();
+        if (!ici.toile) {
+            if (e.sorte == ELEMENT_LIBRE) ici.boite->addWidget(w, 0, Qt::AlignLeft | Qt::AlignTop);
+            else ici.boite->addWidget(w, etirement);
+            return;
+        }
+        w->setParent(ici.toile);
+        w->setProperty("place", true);
+        w->setGeometry(QRect(QPoint(e.gauche, e.haut), taille_placee(w, e.largeur, e.hauteur)));
+    };
+    auto ouvrir = [&](QWidget *w, QBoxLayout *b, QWidget *toile, const ElementVue &e) {
+        const bool sur_toile = niveaux.last().toile != nullptr;
+        if (w) poser(w, e, 1);
+        else niveaux.last().boite->addLayout(b, 1);
+        niveaux.push_back({b, toile, sur_toile ? w : nullptr, e.largeur, e.hauteur});
+    };
     for (int k = 0; k < n; k++) {
         const ElementVue &e = elements[k];
-        if (e.sorte != ELEMENT_BOUTON || toile) rangee = nullptr;
+        if (e.sorte != ELEMENT_BOUTON || niveaux.last().toile) rangee = nullptr;
         if (e.sorte == ELEMENT_LIBRE) {
-            toile = new Toile;
-            blocs.last()->addWidget(toile, 0, Qt::AlignLeft | Qt::AlignTop);
+            auto *toile = new Toile;
+            ouvrir(toile, nullptr, toile, e);
             r.controles[k] = toile;
             continue;
         }
@@ -111,32 +131,41 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             QBoxLayout *b = e.sorte == ELEMENT_COTE_A_COTE ? static_cast<QBoxLayout *>(new QHBoxLayout)
                                                            : static_cast<QBoxLayout *>(new QVBoxLayout);
             b->setSpacing(t.mesure(e.sorte == ELEMENT_COTE_A_COTE ? "cote-a-cote" : "l-un-sous-l-autre"));
-            blocs.last()->addLayout(b, 1);
-            blocs.push_back(b);
+            QWidget *w = nullptr;
+            if (niveaux.last().toile) {   // posé sur une toile : un widget qui porte la boîte
+                w = new QWidget;
+                w->setObjectName("bloc");
+                b->setContentsMargins(0, 0, 0, 0);
+                w->setLayout(b);
+                r.controles[k] = w;
+            }
+            ouvrir(w, b, nullptr, e);
             continue;
         }
         if (e.sorte == ELEMENT_GROUPE) {   // « le groupe « Adresse » : » : un cadre titré, ses éléments l'un sous l'autre (§ 22.7)
             auto *cadre = new QGroupBox(e.texte);
             auto *b = new QVBoxLayout(cadre);
             b->setSpacing(t.mesure("l-un-sous-l-autre"));
-            blocs.last()->addWidget(cadre);
-            blocs.push_back(b);
             r.controles[k] = cadre;
+            if (niveaux.last().toile) ouvrir(cadre, b, nullptr, e);
+            else { niveaux.last().boite->addWidget(cadre); niveaux.push_back({b, nullptr, nullptr, 0, 0}); }
             continue;
         }
         if (e.sorte == ELEMENT_FIN_DE_BLOC) {
-            if (toile) { toile->updateGeometry(); toile = nullptr; continue; }
-            if (blocs.size() > 1) blocs.pop_back();
+            if (niveaux.size() <= 1) continue;
+            const Niveau fin = niveaux.takeLast();
+            if (fin.toile) fin.toile->updateGeometry();
+            if (fin.place) {   // rempli : sa taille naturelle est connue maintenant
+                if (fin.boite) fin.boite->activate();
+                fin.place->resize(taille_placee(fin.place, fin.largeur, fin.hauteur));
+            }
+            if (niveaux.last().toile) niveaux.last().toile->updateGeometry();
             continue;
         }
-        QBoxLayout *ici = blocs.last();
-        // Dans un bloc en position libre, l'élément va sur la toile, à sa place ; ailleurs, dans la boîte du bloc.
-        auto poser = [&](QWidget *w, int etirement = 0) {
-            if (!toile) { ici->addWidget(w, etirement); return; }
-            w->setParent(toile);
-            w->setProperty("place", true);
-            w->setGeometry(QRect(QPoint(e.gauche, e.haut), taille_placee(w, e.largeur, e.hauteur)));
-        };
+        QBoxLayout *ici = niveaux.last().boite;
+        QWidget *const toile = niveaux.last().toile;
+        auto poser_ici = [&](QWidget *w, int etirement = 0) { poser(w, e, etirement); };
+#define poser poser_ici
         if (e.sorte == ELEMENT_IMAGE) {   // « l'image « plan.png » » (§ 22.8) : sa taille, sans dépasser 480 × 320
             auto *l = new QLabel;
             montrer_image(l, e.octets, e.texte, e.largeur, e.hauteur);   // sans le fichier : son nom
@@ -178,7 +207,8 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 auto *p = new QPlainTextEdit;
                 p->setTabChangesFocus(true);
                 p->setMinimumHeight(p->fontMetrics().lineSpacing() * 4 + 2 * p->frameWidth() + 8);
-                p->setMaximumHeight(p->fontMetrics().lineSpacing() * 8 + 2 * p->frameWidth() + 8);
+                if (e.hauteur <= 0)   // une hauteur dite (§ 22.9) se prend entière ; sinon, huit lignes au plus
+                    p->setMaximumHeight(p->fontMetrics().lineSpacing() * 8 + 2 * p->frameWidth() + 8);
                 w = p;
             } else w = new QLineEdit;
             if (e.lecture_seule) {   // « en lecture seule » : montrée, sélectionnable, jamais modifiée
@@ -248,6 +278,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             if (toile) poser(b); else rangee->addWidget(b);   // en position libre : chaque bouton à sa place (§ 22.9)
         }
     }
+#undef poser
     r.erreur = new QLabel;
     r.erreur->setProperty("message", "erreur");   // le cadre du message d'erreur, selon la feuille du thème
     r.erreur->setWordWrap(true);

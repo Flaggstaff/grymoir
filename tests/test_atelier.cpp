@@ -1950,8 +1950,19 @@ int main(int argc, char **argv) {
         n.texte = "Neuf";
         VERIFIER(ecran_ajouter(dossier.path(), "d'accueil", n, &g).isEmpty());
         VERIFIER(lire().contains("        le texte « Neuf », à 16 de la gauche et 64 du haut,\n    le texte « fin »."));
-        VERIFIER(ecran_grouper(dossier.path(), "d'accueil", 1, "G", &g) == "Un élément en position libre ne se met pas dans un groupe.");
         VERIFIER(ecran_deplacer(dossier.path(), "d'accueil", 1, 5, DEPOT_APRES, &g).startsWith("Dans un bloc en position libre"));
+        // grouper dans un bloc libre : le groupe prend la place de l'élément, qui s'y empile (1.81)
+        r = ecran_grouper(dossier.path(), "d'accueil", 1, "G", &g);
+        if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        VERIFIER(lire().contains("        le groupe « G », à 200 de la gauche et 8 du haut, haut de 48 :\n            un bouton « Bravo »,\n"
+                                 "        un bouton « A »,"));
+        // le groupe se place avec son contenu, et se trie comme une seule unité : sous A, il passe après A
+        VERIFIER(ecran_placer(dossier.path(), "d'accueil", 1, 16, 40, 240, 0, &g, &apres).isEmpty() && apres == 2);
+        VERIFIER(lire().contains("        un bouton « A », à 16 de la gauche et 16 du haut,\n"
+                                 "        le groupe « G », à 16 de la gauche et 40 du haut, large de 240 :\n            un bouton « Bravo »,\n"));
+        // retirer le groupe : son élément remonte dans le bloc libre, à la place du groupe
+        VERIFIER(ecran_supprimer(dossier.path(), "d'accueil", 2, &g).isEmpty());
+        VERIFIER(lire().contains("        un bouton « Bravo », à 16 de la gauche et 40 du haut,\n"));
         // retirer le bloc : ses éléments restent, sans place
         VERIFIER(ecran_supprimer(dossier.path(), "d'accueil", 0, &g).isEmpty());
         VERIFIER(!lire().contains("en position libre") && !lire().contains("de la gauche") && lire().contains("un bouton « Bravo »,"));
@@ -1969,6 +1980,33 @@ int main(int argc, char **argv) {
         VERIFIER(nouvel_ecran(dossier.path(), chemin, "de saisie", &g, true).isEmpty());
         VERIFIER(lire().contains("L'écran de saisie montre :\n    en position libre :\n"
                                  "        un bouton « Fermer », à 16 de la gauche et 16 du haut.\n"));
+    }
+    {   // un bloc placé sur la toile : un widget à sa place, à la taille de son contenu ou à la taille dite
+        QVector<ElementVue> el(6);
+        el[0].sorte = ELEMENT_LIBRE;
+        el[1].sorte = ELEMENT_GROUPE;
+        el[1].texte = "G";
+        el[1].place = true;
+        el[1].gauche = 40;
+        el[1].haut = 10;
+        el[1].largeur = 300;
+        el[2].sorte = ELEMENT_TEXTE;
+        el[2].texte = "dedans";
+        el[3].sorte = ELEMENT_FIN_DE_BLOC;
+        el[4].sorte = ELEMENT_ZONE;
+        el[4].texte = "Note";
+        el[4].type = "texte";
+        el[4].plusieurs_lignes = true;
+        el[4].place = true;
+        el[4].haut = 200;
+        el[4].hauteur = 400;   // plus que huit lignes : la hauteur dite se prend entière
+        el[5].sorte = ELEMENT_FIN_DE_BLOC;
+        VueEcran v = dessiner_ecran("Saisie", el);
+        VERIFIER(v.controles[1] && v.controles[1]->parentWidget() == v.controles[0]);
+        VERIFIER(v.controles[1]->pos() == QPoint(40, 10) && v.controles[1]->width() == 300 && v.controles[1]->height() > 20);
+        VERIFIER(v.controles[2] && v.controles[1]->isAncestorOf(v.controles[2]));
+        VERIFIER(v.controles[4]->height() == 400 && v.zones[4]->maximumHeight() > 300);
+        delete v.vue;
     }
     {   // la souris : glisser un élément montre la grille, aimante à 8 pixels, écrit la place au lâcher
         QTemporaryDir dossier;
@@ -2002,6 +2040,21 @@ int main(int argc, char **argv) {
             QFile r(dossier.filePath("p.grym"));
             VERIFIER(r.open(QIODevice::ReadOnly));
             VERIFIER(QString::fromUtf8(r.readAll()).contains("un bouton « A », à 56 de la gauche et 40 du haut."));
+            // le clavier, sur l'aperçu relu : la poignée dans le coin ; Maj + flèche, 8 pixels ; Alt + flèche, la taille
+            o.montrer(dossier.path());
+            o.choisir_element(1);
+            VERIFIER(o.poignee_visible() != nullptr);
+            VERIFIER(o.touche(Qt::Key_Right, Qt::ShiftModifier) && resultat.isEmpty());
+            VERIFIER(!o.touche(Qt::Key_A));   // une autre touche ne sert pas
+            o.montrer(dossier.path());
+            o.choisir_element(1);
+            const int h = o.controle(1) ? o.controle(1)->height() : 0;
+            VERIFIER(o.touche(Qt::Key_Down, Qt::AltModifier) && resultat.isEmpty());
+            QFile r2(dossier.filePath("p.grym"));
+            VERIFIER(r2.open(QIODevice::ReadOnly));
+            const QString t2 = QString::fromUtf8(r2.readAll());
+            VERIFIER(t2.contains(QString("un bouton « A », à 64 de la gauche et 40 du haut, haut de %1.").arg(h + 1)));
+            if (!t2.contains("à 64 de la gauche")) std::printf("%s\n", qPrintable(t2));
         }
         VERIFIER(OngletEcrans::aimanter(3) == 0 && OngletEcrans::aimanter(4) == 8 && OngletEcrans::aimanter(-5) == 0);
     }

@@ -777,6 +777,7 @@ Noeud *nouvel_element(const ElementNouveau &e, const QString &dossier, QString *
 namespace {
 int bloc_de(Noeud *n, size_t i);
 void inserer(Noeud *n, size_t i, Noeud *x);
+size_t fin_d_unite(Noeud *n, size_t i);
 }  // namespace
 
 QString ecran_titre(const QString &dossier, const QString &ecran, const QString &titre, Geste *geste) {
@@ -856,7 +857,24 @@ QString ecran_supprimer(const QString &dossier, const QString &ecran, int index,
             }
         }
         const size_t a = qMin((size_t)index, autre), b = qMax((size_t)index, autre);
-        for (size_t q = a; q < b; q++) n->enfants[q]->place_dite = 0;   // hors du bloc libre, plus de place (§ 22.9)
+        // Ses unités directes remontent d'un niveau (§ 22.9) : dans un bloc libre, elles prennent la place du bloc,
+        // l'une sous l'autre, si elles n'en avaient pas ; ailleurs, elles perdent leur place.
+        const bool parent_libre = bloc_de(n, a) == 4;
+        const int g0 = n->enfants[a]->place[0];
+        int h0 = n->enfants[a]->place[1];
+        for (size_t q = a + 1; q < b; q = fin_d_unite(n, q) + 1) {
+            Noeud *x = n->enfants[q];
+            if (!parent_libre) { x->place_dite = 0; continue; }
+            if (n->enfants[a]->forme == 4 && (x->place_dite & 1)) {   // un bloc libre retiré : les places restent, décalées
+                x->place[0] = qMin(4000, x->place[0] + g0);
+                x->place[1] = qMin(4000, x->place[1] + h0);
+                continue;
+            }
+            x->place[0] = g0;
+            x->place[1] = qMin(4000, h0);
+            x->place_dite = (x->place_dite & ~1) | 1;
+            h0 += 48;
+        }
         enlever(b);
         if (a != b) enlever(a);
     } else {
@@ -993,7 +1011,7 @@ QString ecran_deplacer(const QString &dossier, const QString &ecran, int source,
     if (source < 0 || source >= nb || cible < 0 || cible >= nb || source == cible) return "Rien à déplacer.";
     if (n->enfants[source]->type == N_DISPOSITION || n->enfants[cible]->type == N_DISPOSITION)
         return "Un bloc ne se déplace pas : déplace ses éléments.";
-    if (bloc_de(n, (size_t)source) == 4 || bloc_de(n, (size_t)cible) == 4)
+    if (bloc_de(n, (size_t)source) == 4 || bloc_de(n, (size_t)cible) == 4 || bloc_de(n, (size_t)cible + 1) == 4)
         return "Dans un bloc en position libre, chaque élément se place au pixel : glisse-le dans son bloc.";
     Noeud *x = retirer_enfant(n, (size_t)source);
     size_t c = (size_t)(cible > source ? cible - 1 : cible);   // la cible, après le retrait de la source
@@ -1027,9 +1045,14 @@ QString ecran_grouper(const QString &dossier, const QString &ecran, int index, c
     if (x.contains(QChar(0x00BB)) || x.contains(QChar(0x00AB))) return "Pas de guillemets « » dans un titre.";
     if (index < 0 || (size_t)index >= n->nb_enfants || n->enfants[index]->type == N_DISPOSITION)
         return "Choisis un élément, pas un bloc.";
-    if (bloc_de(n, (size_t)index) == 4) return "Un élément en position libre ne se met pas dans un groupe.";
     inserer(n, (size_t)index + 1, marque(0));
     inserer(n, (size_t)index, marque(3, x));
+    if (bloc_de(n, (size_t)index) == 4) {   // dans un bloc libre : le groupe prend la place et la taille de l'élément (§ 22.9)
+        Noeud *gr = n->enfants[index], *el = n->enfants[index + 1];
+        for (int q = 0; q < 4; q++) gr->place[q] = el->place[q];
+        gr->place_dite = el->place_dite;
+        el->place_dite = 0;
+    }
     reimprimer(ch, t);
     geste->description = QString("Grouper un élément de l'écran %1").arg(ecran);
     return ch.conclure(geste);
@@ -1041,18 +1064,52 @@ QString ecran_grouper(const QString &dossier, const QString &ecran, int index, c
 
 namespace {
 
-// Les éléments du bloc libre qui contient l'élément i, de haut en bas puis de gauche à droite ; rend le nouvel index
-// de l'élément qui était en i.
+// La fin du bloc qui s'ouvre en i (son N_DISPOSITION de forme 0), ou i pour un élément.
+size_t fin_d_unite(Noeud *n, size_t i) {
+    if (n->enfants[i]->type != N_DISPOSITION || !n->enfants[i]->forme) return i;
+    int prof = 0;
+    for (size_t q = i; q < n->nb_enfants; q++) {
+        if (n->enfants[q]->type != N_DISPOSITION) continue;
+        prof += n->enfants[q]->forme ? 1 : -1;
+        if (prof == 0) return q;
+    }
+    return n->nb_enfants - 1;
+}
+
+// L'ouverture du bloc qui contient directement i, ou n->nb_enfants s'il est au niveau de l'écran.
+size_t ouverture_de(Noeud *n, size_t i) {
+    QVector<size_t> pile;
+    for (size_t q = 0; q < i && q < n->nb_enfants; q++) {
+        const Noeud *x = n->enfants[q];
+        if (x->type != N_DISPOSITION) continue;
+        if (x->forme) pile << q;
+        else if (!pile.isEmpty()) pile.pop_back();
+    }
+    return pile.isEmpty() ? n->nb_enfants : pile.last();
+}
+
+// Les unités du bloc libre qui contient l'unité i (un élément, ou un bloc avec tout son contenu), de haut en bas puis de
+// gauche à droite ; rend le nouvel index de l'unité qui était en i.
 size_t trier_bloc_libre(Noeud *n, size_t i) {
-    size_t debut = i, fin = i;
-    while (debut > 0 && n->enfants[debut - 1]->type != N_DISPOSITION) debut--;
-    while (fin < n->nb_enfants && n->enfants[fin]->type != N_DISPOSITION) fin++;
+    const size_t ouv = ouverture_de(n, i);
+    if (ouv >= n->nb_enfants) return i;
+    const size_t fin = fin_d_unite(n, ouv);
+    QVector<QVector<Noeud *>> unites;
     Noeud *suivi = n->enfants[i];
-    std::stable_sort(n->enfants + debut, n->enfants + fin, [](const Noeud *a, const Noeud *b) {
-        return a->place[1] != b->place[1] ? a->place[1] < b->place[1] : a->place[0] < b->place[0];
+    for (size_t q = ouv + 1; q < fin;) {
+        const size_t f = fin_d_unite(n, q);
+        QVector<Noeud *> u;
+        for (size_t x = q; x <= f; x++) u << n->enfants[x];
+        unites << u;
+        q = f + 1;
+    }
+    std::stable_sort(unites.begin(), unites.end(), [](const QVector<Noeud *> &a, const QVector<Noeud *> &b) {
+        return a[0]->place[1] != b[0]->place[1] ? a[0]->place[1] < b[0]->place[1] : a[0]->place[0] < b[0]->place[0];
     });
-    for (size_t q = debut; q < fin; q++) if (n->enfants[q] == suivi) return q;
-    return i;
+    size_t q = ouv + 1, r = i;
+    for (const auto &u : unites)
+        for (Noeud *x : u) { if (x == suivi) r = q; n->enfants[q++] = x; }
+    return r;
 }
 
 }  // namespace
@@ -1063,9 +1120,9 @@ QString ecran_placer(const QString &dossier, const QString &ecran, int index, in
     Trouve t = trouver_ecran(ch, ecran);
     if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
     Noeud *n = t.phrase;
-    if (index < 0 || (size_t)index >= n->nb_enfants || n->enfants[index]->type == N_DISPOSITION
+    if (index < 0 || (size_t)index >= n->nb_enfants || (n->enfants[index]->type == N_DISPOSITION && !n->enfants[index]->forme)
         || bloc_de(n, (size_t)index) != 4)
-        return "Choisis un élément d'un bloc en position libre.";
+        return "Choisis un élément ou un bloc d'un bloc en position libre.";
     if (gauche < 0 || haut < 0 || gauche > 4000 || haut > 4000) return "La place va de 0 à 4000 pixels.";
     if ((largeur > 0 && (largeur < 8 || largeur > 4000)) || (hauteur > 0 && (hauteur < 8 || hauteur > 4000)))
         return "La taille va de 8 à 4000 pixels.";

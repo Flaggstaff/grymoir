@@ -74,6 +74,8 @@ public:
     void placer(int k, int gauche, int haut, int largeur, int hauteur);
     void liberer();                                  // « Mettre en position libre » : l'écran entier, tel qu'on le voit
     QWidget *grille_visible() const;                 // la grille d'alignement, si elle est montrée (essais)
+    QWidget *poignee_visible() const;                // la poignée de taille, si elle est montrée (essais)
+    bool touche(int t, Qt::KeyboardModifiers m = Qt::NoModifier) { return clavier(t, m); }   // pour les essais
 
 signals:
     void ouvrir(const QString &fichier, int ligne);   // « Voir l'événement », « Voir la déclaration »
@@ -100,6 +102,8 @@ private:
     bool libre_taille = false, libre_bouge = false;
     QRect libre_depart;
     QWidget *grille = nullptr;
+    class QFrame *poignee = nullptr;   // le coin de l'élément placé choisi : le saisir l'agrandit
+    bool clavier(int touche, Qt::KeyboardModifiers m);   // flèches : déplacer ; avec Alt : agrandir (§ 5 octies)
     int element_sous(QObject *o) const;
     QVector<EcranLu> lus;
     int courant = -1, element = -1;

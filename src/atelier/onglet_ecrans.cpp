@@ -23,6 +23,7 @@
 #include <QFrame>
 #include <QMimeData>
 #include <QMouseEvent>
+#include <QKeyEvent>
 #include <climits>
 #include <QSpinBox>
 #include <QPainter>
@@ -404,6 +405,8 @@ void OngletEcrans::dessiner() {
     }
     vue.titre->installEventFilter(this);
     grille = nullptr;
+    poignee = nullptr;   // l'ancienne est partie avec l'ancien aperçu
+    centre->installEventFilter(this);
     for (int k = 0; k < e.elements.size(); k++)   // le bloc en position libre : son contour, pour savoir où l'on pose
         if (e.elements[k].sorte == ELEMENT_LIBRE && vue.controles.value(k)) {
             QWidget *t = vue.controles[k];
@@ -461,6 +464,25 @@ protected:
 }  // namespace
 
 QWidget *OngletEcrans::grille_visible() const { return grille && grille->isVisible() ? grille : nullptr; }
+QWidget *OngletEcrans::poignee_visible() const { return poignee && !poignee->isHidden() ? poignee : nullptr; }
+
+// Les flèches déplacent l'élément placé choisi d'un pixel (Maj : de 8, sur la grille) ; avec Alt, elles changent sa
+// taille. Chaque appui est un geste, qui s'annule. Rend vrai si la touche a servi.
+bool OngletEcrans::clavier(int t, Qt::KeyboardModifiers m) {
+    if (courant < 0 || element < 0 || element >= lus[courant].elements.size() || !lus[courant].elements[element].place) return false;
+    if (t != Qt::Key_Left && t != Qt::Key_Right && t != Qt::Key_Up && t != Qt::Key_Down) return false;
+    const ElementLu &x = lus[courant].elements[element];
+    const int pas = (m & Qt::ShiftModifier) ? 8 : 1;
+    const int dx = t == Qt::Key_Left ? -pas : t == Qt::Key_Right ? pas : 0, dy = t == Qt::Key_Up ? -pas : t == Qt::Key_Down ? pas : 0;
+    QWidget *w = vue.controles.value(element);
+    if (m & Qt::AltModifier) {   // la taille : partie de la taille dite, ou de celle qu'on voit
+        const int l = qBound(8, (x.largeur ? x.largeur : (w ? w->width() : 80)) + dx, 4000);
+        const int h = qBound(8, (x.hauteur ? x.hauteur : (w ? w->height() : 24)) + dy, 4000);
+        placer(element, x.gauche, x.haut, dx ? l : -1, dy ? h : -1);
+    } else
+        placer(element, qBound(0, x.gauche + dx, 4000), qBound(0, x.haut + dy, 4000), -1, -1);
+    return true;
+}
 
 void OngletEcrans::placer(int k, int gauche, int haut, int largeur, int hauteur) {
     if (courant < 0 || k < 0 || k >= lus[courant].elements.size()) return;
@@ -492,6 +514,11 @@ void OngletEcrans::liberer() {
 }
 
 bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
+    if (ev->type() == QEvent::KeyPress) {   // les flèches sur un élément placé (§ 5 octies)
+        auto *k = static_cast<QKeyEvent *>(ev);
+        if (clavier(k->key(), k->modifiers())) return true;
+        if (o == centre) return QWidget::eventFilter(o, ev);
+    }
     // Position libre (§ 5 octies) : l'élément suit la souris, aimanté à la grille (Alt : au pixel) ; par son coin en
     // bas à droite, il s'agrandit. Rien n'est écrit avant de lâcher.
     if (libre_k >= 0 && (ev->type() == QEvent::MouseMove || ev->type() == QEvent::MouseButtonRelease)) {
@@ -588,6 +615,7 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
         glisse = trouve;   // peut-être le début d'un glisser
         depart = static_cast<QMouseEvent *>(ev)->globalPosition().toPoint();
         choisir_element(trouve);
+        centre->setFocus();   // les flèches vont à l'aperçu
         QWidget *w = vue.controles.value(trouve);
         if (w && courant >= 0 && lus[courant].elements.value(trouve).place) {   // un élément en position libre (§ 5 octies)
             glisse = -1;
@@ -605,6 +633,9 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
 void OngletEcrans::choisir_element(int k) {
     for (QWidget *w : vue.controles)
         if (w) w->setStyleSheet(QString());
+    if (poignee) { poignee->hide(); poignee->deleteLater(); poignee = nullptr; }
+    for (QWidget *w : vue.controles)   // le contour pointillé des blocs libres, que la ligne précédente a effacé
+        if (w && w->objectName() == "toile") w->setStyleSheet("#toile{border:1px dashed " + Theme::courant().hex("texte-2") + ";}");
     element = k;
     if (courant < 0 || courant >= lus.size()) {
         panneau->setHtml("<p>Aucun écran.</p>");
@@ -628,6 +659,15 @@ void OngletEcrans::choisir_element(int k) {
     }
     const ElementLu &x = e.elements[k];
     if (QWidget *w = vue.controles.value(k)) w->setStyleSheet("border: 2px solid " + Theme::courant().hex("accent") + ";");
+    if (QWidget *w = vue.controles.value(k); w && x.place && w->parentWidget()) {   // la poignée de taille, dans le coin
+        poignee = new QFrame(w->parentWidget());
+        poignee->setAttribute(Qt::WA_TransparentForMouseEvents);   // le geste reste celui de l'élément (son coin)
+        poignee->setStyleSheet("background: " + Theme::courant().hex("accent") + ";");
+        poignee->setGeometry(w->geometry().right() - 7, w->geometry().bottom() - 7, 8, 8);
+        poignee->setToolTip("Glisser le coin : la taille ; flèches : la place ; Alt + flèches : la taille");
+        poignee->show();
+        poignee->raise();
+    }
     static const char *const noms[] = {"Liste", "Bouton", "Texte", "Zone de saisie", "Côte à côte", "L'un sous l'autre",
                                        "Fin de bloc", "Groupe", "Image", "En position libre"};
     h = QString("<p><b>%1</b></p><table>").arg(noms[qBound(0, x.sorte, 9)]);
