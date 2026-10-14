@@ -1180,6 +1180,12 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                     ecrire_texte(im, el->texte);
                 } else if (el->forme == 4)   /* « en position libre : » ; « _position_libre » (§ 22.9) */
                     aj(im, c ? "_position_libre" : "en position libre");
+                else if (el->forme == 5)   /* « les onglets : » ; « _onglets » (§ 22.10) */
+                    aj(im, c ? "_onglets" : "les onglets");
+                else if (el->forme == 6) {   /* « l'onglet « Identité » : » ; « _onglet « Identité » » */
+                    aj(im, c ? "_onglet " : "l'onglet ");
+                    ecrire_texte(im, el->texte);
+                }
                 else
                     aj(im, el->forme == 1 ? (c ? "_côte_à_côte" : "côte à côte") : (c ? "_l'un_sous_l'autre" : "l'un sous l'autre"));
                 place_ecran(im, el, 0);

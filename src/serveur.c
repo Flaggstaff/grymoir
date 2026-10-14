@@ -74,6 +74,7 @@ typedef struct {
     unsigned char *etats;   /* élément : bit 1 inactif, bit 2 caché (§ 22.6) ; un élément caché n'est pas envoyé */
     unsigned long serie;    /* numéro d'ouverture : l'adresse d'une image change d'un écran à l'autre (§ 22.8) */
     unsigned long *versions;   /* image calculée : change avec ses octets, et l'adresse avec elle (§ 22.8) */
+    int *onglets;              /* les onglets k : le rang de l'onglet choisi, retenu d'un envoi à l'autre (§ 22.10) */
 } EcranWeb;
 
 struct Serveur {
@@ -511,6 +512,12 @@ static char *feuille_de_style(const Serveur *s) {
     "button.ligne:focus{outline:2px solid var(--accent);outline-offset:2px}"
     ".invisible{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}"
     "h2.journal{font-size:12px;line-height:16px;font-weight:600;color:var(--texte-2);margin:24px 0 8px}");
+    chaine_ajouter(&c,   /* en deux morceaux : un seul littéral dépasserait les 4095 caractères de C99 */
+    /* les onglets (§ 22.10) : avec le script, un panneau à la fois ; sans lui, tous, l'un sous l'autre */
+    ".onglets>.barre{display:flex;gap:4px;border-bottom:1px solid currentColor;margin-bottom:12px}"
+    ".onglets>.barre>button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:6px 12px}"
+    ".onglets>.barre>button.actif{border-bottom-color:currentColor;font-weight:600}"
+    ".js .onglets>.panneau:not(.actif){display:none}.onglets>.panneau{display:flex;flex-direction:column;gap:12px}");
     /* Écrans, deuxième vague (grammaire, § 22.6 à § 22.8) : à part, la chaîne précédente touche la limite du C */
     chaine_ajouter(&c,
     "fieldset.groupe{display:flex;flex-direction:column;gap:12px;margin:0;padding:12px 16px 16px;"
@@ -790,6 +797,13 @@ static void page_finale(Serveur *s, const char *erreur, const char *annulation) 
  * l'a fait quitter. Un clic ailleurs sur une ligne la sélectionne. Sans script, le bouton « Valider les zones » et
  * les boutons radio font la même chose. */
 static const char SCRIPT[] =
+    /* les onglets (§ 22.10) : un clic montre le panneau, et le champ caché retient le choix pour le prochain envoi */
+    "document.documentElement.classList.add('js');"
+    "document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.onglets>.barre>button');"
+    "if(!b)return;var o=b.closest('.onglets'),i=b.getAttribute('data-i');"
+    "o.querySelectorAll(':scope>.barre>button,:scope>.panneau').forEach(function(x){"
+    "x.classList.toggle('actif',x.getAttribute('data-i')===i);});"
+    "o.querySelector(':scope>input[type=hidden]').value=i;});"
     "document.addEventListener('change',function(e){var t=e.target,f=t.form;"
     "if(!f||!f.classList.contains('ecran'))return;"
     "if(t.tagName==='SELECT'||t.type==='checkbox'||(t.type==='radio'&&t.name.charAt(0)==='z'))"
@@ -988,7 +1002,24 @@ static void page_ecran(Serveur *s) {
         chaine_ajouter(&c, "</p>\n");
     }
     int boutons = 0;   /* des boutons qui se suivent : une rangée, à droite (comme dans l'atelier) */
-    int groupes[16], prof = 0;   /* les blocs ouverts : 1 pour un groupe (fieldset), 0 pour un div ; + 2 s'il est placé */
+    int groupes[16], prof = 0;   /* les blocs ouverts : 1 un groupe (fieldset), 4 un onglet (section), 0 un div ; + 2 placé */
+    /* les onglets (§ 22.10) : pour chaque onglet, ses onglets et son rang */
+    size_t *parent = grym_allouer((e->n ? e->n : 1) * sizeof *parent);
+    int *rang = grym_allouer((e->n ? e->n : 1) * sizeof *rang);
+    {
+        size_t pile[16], np = 0;
+        int compte[16] = {0};
+        for (size_t k = 0; k < e->n; k++) {
+            const SorteElement s2 = e->el[k].sorte;
+            parent[k] = 0;
+            rang[k] = 0;
+            if (s2 == ELEMENT_ONGLET && np) { parent[k] = pile[np - 1]; rang[k] = compte[np - 1]++; }
+            if (s2 == ELEMENT_COTE_A_COTE || s2 == ELEMENT_L_UN_SOUS_L_AUTRE || s2 == ELEMENT_GROUPE || s2 == ELEMENT_LIBRE
+                || s2 == ELEMENT_ONGLETS || s2 == ELEMENT_ONGLET) {
+                if (np < 16) { pile[np] = k; compte[np] = 0; np++; }
+            } else if (s2 == ELEMENT_FIN_DE_BLOC && np) np--;
+        }
+    }
     for (size_t k = 0; k < e->n; k++) {
         const ElementEcran *el = &e->el[k];
         if ((e->etats[k] & 2) && (el->sorte == ELEMENT_BOUTON || el->sorte == ELEMENT_TEXTE || el->sorte == ELEMENT_ZONE
@@ -1002,6 +1033,32 @@ static void page_ecran(Serveur *s) {
         }
         switch (el->sorte) {
         case ELEMENT_LIBRE: chaine_ajouter(&c, "<div class=\"libre\">\n"); if (prof < 16) groupes[prof++] = el->place ? 2 : 0; break;
+        case ELEMENT_ONGLETS: {   /* la barre des onglets, puis leurs panneaux (§ 22.10) */
+            char *v = grym_formater("<div class=\"onglets\"><input type=\"hidden\" name=\"o%lu\" value=\"%d\">"
+                                    "<div class=\"barre\" role=\"tablist\">", (unsigned long)k, e->onglets[k]);
+            chaine_ajouter(&c, v);
+            free(v);
+            for (size_t q = k + 1; q < e->n; q++)
+                if (e->el[q].sorte == ELEMENT_ONGLET && parent[q] == k) {
+                    v = grym_formater("<button type=\"button\" role=\"tab\" data-i=\"%d\"%s>", rang[q],
+                                      rang[q] == e->onglets[k] ? " class=\"actif\"" : "");
+                    chaine_ajouter(&c, v);
+                    free(v);
+                    echapper(&c, e->el[q].texte);
+                    chaine_ajouter(&c, "</button>");
+                }
+            chaine_ajouter(&c, "</div>\n");
+            if (prof < 16) groupes[prof++] = el->place ? 2 : 0;
+            break;
+        }
+        case ELEMENT_ONGLET: {
+            char *v = grym_formater("<section class=\"panneau%s\" role=\"tabpanel\" data-i=\"%d\">\n",
+                                    rang[k] == e->onglets[parent[k]] ? " actif" : "", rang[k]);
+            chaine_ajouter(&c, v);
+            free(v);
+            if (prof < 16) groupes[prof++] = 4;
+            break;
+        }
         case ELEMENT_COTE_A_COTE: chaine_ajouter(&c, "<div class=\"cote\">\n"); if (prof < 16) groupes[prof++] = el->place ? 2 : 0; break;
         case ELEMENT_L_UN_SOUS_L_AUTRE: chaine_ajouter(&c, "<div class=\"sous\">\n"); if (prof < 16) groupes[prof++] = el->place ? 2 : 0; break;
         case ELEMENT_GROUPE:   /* « le groupe « Adresse » : » (§ 22.7) */
@@ -1011,7 +1068,7 @@ static void page_ecran(Serveur *s) {
             if (prof < 16) groupes[prof++] = el->place ? 3 : 1;
             break;
         case ELEMENT_FIN_DE_BLOC:   /* la fin du bloc, puis celle de sa boîte s'il est placé (§ 22.9) */
-            chaine_ajouter(&c, prof && (groupes[prof - 1] & 1) ? "</fieldset>\n" : "</div>\n");
+            chaine_ajouter(&c, prof && (groupes[prof - 1] & 1) ? "</fieldset>\n" : prof && (groupes[prof - 1] & 4) ? "</section>\n" : "</div>\n");
             if (prof && (groupes[prof - 1] & 2)) chaine_ajouter(&c, "</div>\n");
             if (prof) prof--;
             break;
@@ -1044,9 +1101,11 @@ static void page_ecran(Serveur *s) {
         }
         }
         if (el->place && el->sorte != ELEMENT_LIBRE && el->sorte != ELEMENT_COTE_A_COTE && el->sorte != ELEMENT_L_UN_SOUS_L_AUTRE
-            && el->sorte != ELEMENT_GROUPE)
+            && el->sorte != ELEMENT_GROUPE && el->sorte != ELEMENT_ONGLETS)
             chaine_ajouter(&c, "</div>\n");   /* un bloc placé ferme sa boîte avec lui */
     }
+    free(parent);
+    free(rang);
     if (boutons) chaine_ajouter(&c, "</div>\n");
     int zones = 0;
     for (size_t k = 0; k < e->n; k++) zones |= e->el[k].sorte == ELEMENT_ZONE;
@@ -1170,6 +1229,17 @@ static int evenements_de(Serveur *s, Envoi *env) {
         Evenement ev = { EVENEMENT_CHANGEMENT, k, 0, grym_dupliquer(nouveau), choisies(e), e->n };
         file_ajouter(s, ev);
     }
+    for (size_t k = 0; k < e->n; k++)   /* l'onglet choisi de chaque « les onglets » (§ 22.10) : retenu, sans événement */
+        if (e->el[k].sorte == ELEMENT_ONGLETS) {
+            char nom[32];
+            snprintf(nom, sizeof nom, "o%lu", (unsigned long)k);
+            Partie *po = envoi_partie(env, nom);
+            char *f2 = NULL;
+            if (po && !po->fichier) {
+                const long i = strtol(po->valeur, &f2, 10);
+                if (f2 != po->valeur && !*f2 && i >= 0 && i < 64) e->onglets[k] = (int)i;
+            }
+        }
     Partie *pc = envoi_partie(env, "clic"), *px = envoi_partie(env, "choix"), *pf = envoi_partie(env, "fermer");
     char *fin = NULL;
     if (pf && !pf->fichier) {
@@ -1544,6 +1614,7 @@ static void ecran_liberer(EcranWeb *e) {
     free(e->valeurs);
     free(e->etats);
     free(e->versions);
+    free(e->onglets);
     free(e->titre);
     free(e->erreur);
     free(e);
@@ -1573,6 +1644,8 @@ static void serveur_ecran_ouvrir(void *contexte, Chaine *sortie, const char *tit
     e->valeurs = grym_allouer(m * sizeof *e->valeurs);
     e->etats = grym_allouer(m);
     memset(e->etats, 0, m);
+    e->onglets = grym_allouer(m * sizeof *e->onglets);
+    memset(e->onglets, 0, m * sizeof *e->onglets);
     e->versions = grym_allouer(m * sizeof *e->versions);
     memset(e->versions, 0, m * sizeof *e->versions);
     for (size_t k = 0; k < n; k++) {

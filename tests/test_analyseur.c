@@ -800,6 +800,17 @@ int main(void) {
     VE("L'écran x montre :\n    en position libre :\n        le texte « t ».", 3, 9, "Un élément en position libre dit sa place");
     VE("L'écran x montre :\n    en position libre :\n        côte à côte :\n            le texte « t », à 1 de la gauche et 1 du haut.",
        3, 9, "Un bloc en position libre dit sa place");
+    /* les onglets (§ 22.10) : seulement des onglets dedans, un onglet seulement là, titré ; placés comme un bloc */
+    V("L'écran x montre :\n    les onglets :\n        l'onglet « A » :\n            le texte « a »,\n"
+      "        l'onglet « B » :\n            le texte « b »,\n    le texte « t ».",
+      "(écran [x] (onglets) (onglet « A ») (texte « a ») (fin-bloc) (onglet « B ») (texte « b ») (fin-bloc) (fin-bloc) (texte « t »))");
+    VE("L'écran x montre :\n    les onglets :\n        le texte « a ».", 3, 9, "seulement des « l'onglet « … » : »");
+    VE("L'écran x montre :\n    l'onglet « A » :\n        le texte « a ».", 2, 5, "« l'onglet » se met dans « les onglets : »");
+    VE("L'écran x montre :\n    les onglets :\n        l'onglet « » :\n            le texte « a ».", 3, 18, "Un onglet porte un titre");
+    VE("L'écran x montre :\n    les onglets :\n    le texte « a ».", 3, 5, "contient des éléments, plus indentés");
+    V("L'écran x montre :\n    en position libre :\n        les onglets, à 0 de la gauche et 0 du haut, large de 400 :\n"
+      "            l'onglet « A » :\n                le texte « a »,\n    le texte « t ».",
+      "(écran [x] (position-libre) (onglets @0,0 l400) (onglet « A ») (texte « a ») (fin-bloc) (fin-bloc) (fin-bloc) (texte « t »))");
     /* un bloc placé dans un bloc libre garde sa règle à l'intérieur (1.81) */
     V("L'écran x montre :\n    en position libre :\n        le groupe « G », à 8 de la gauche et 0 du haut, large de 200 :\n"
       "            le texte « a »,\n            en position libre :\n                le texte « b », à 4 de la gauche et 4 du haut,\n"

@@ -800,6 +800,26 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Les onglets (§ 22.10) : la barre, les panneaux, le premier actif ; le choix voyage dans « o0 » et se retient
+         * d'un envoi à l'autre ; une zone d'un onglet caché garde sa valeur */
+        const char *src = "L'écran x montre :\n    les onglets :\n        l'onglet « Identité » :\n            un nom (texte), facultatif,\n"
+                          "        l'onglet « Notes » :\n            le texte « n »,\n    un bouton « Lire »,\n    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Lire » dans l'écran x :\n    Afficher le nom de l'écran.\n"
+                          "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&o0=1&z2=Ada&clic=8"), get("/"), evenement("q=2&clic=9"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<div class=\"onglets\"><input type=\"hidden\" name=\"o0\" value=\"0\"><div class=\"barre\" role=\"tablist\">"
+                                 "<button type=\"button\" role=\"tab\" data-i=\"0\" class=\"actif\">Identité</button>"
+                                 "<button type=\"button\" role=\"tab\" data-i=\"1\">Notes</button></div>");
+        CONTIENT(sc.reponses[0], "<section class=\"panneau actif\" role=\"tabpanel\" data-i=\"0\">");
+        CONTIENT(sc.reponses[2], "<input type=\"hidden\" name=\"o0\" value=\"1\">");
+        CONTIENT(sc.reponses[2], "<section class=\"panneau actif\" role=\"tabpanel\" data-i=\"1\">");
+        CONTIENT(sc.reponses[2], "Ada");
+        CONTIENT(sc.reponses[4], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* Un bloc placé dans un bloc libre (1.81) : sa boîte l'entoure et se ferme avec lui ; il remplit sa taille */
         const char *src = "L'écran x montre :\n    en position libre :\n"
                           "        le groupe « G », à 8 de la gauche et 0 du haut, large de 300 :\n            le texte « a »,\n"

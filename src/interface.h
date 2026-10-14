@@ -19,9 +19,11 @@ typedef enum { ELEMENT_LISTE, ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE,
                ELEMENT_COTE_A_COTE, ELEMENT_L_UN_SOUS_L_AUTRE, ELEMENT_FIN_DE_BLOC,
                ELEMENT_GROUPE,
                ELEMENT_IMAGE,
-               ELEMENT_LIBRE } SorteElement;   /* blocs : § 22.1 ; groupe titré (texte : le titre) : § 22.7 ;
+               ELEMENT_LIBRE,
+               ELEMENT_ONGLETS, ELEMENT_ONGLET } SorteElement;   /* blocs : § 22.1 ; groupe titré (texte : le titre) : § 22.7 ;
                                                   image (texte : son nom ; octets, taille, format) : § 22.8 ;
-                                                  bloc en position libre, fermé par ELEMENT_FIN_DE_BLOC : § 22.9 */
+                                                  bloc en position libre, fermé par ELEMENT_FIN_DE_BLOC : § 22.9 ;
+                                                  les onglets, un onglet (texte : son titre), fermés de même : § 22.10 */
 typedef struct {
     SorteElement sorte;
     const char *texte;              /* libellé du bouton, texte fixe ; pour une liste, l'entité */

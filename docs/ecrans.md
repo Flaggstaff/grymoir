@@ -188,7 +188,8 @@ L'éditeur d'écrans ne proposait que cinq éléments. La deuxième vague comble
 | B2 bis | image affichée, fixe : `l'image « plan.png »` (grammaire, § 22.8) | fait |
 | B2 ter | image calculée, `l'image du portrait du compositeur choisi de l'écran` (grammaire, § 22.8) | fait |
 | B2 quater | position libre au pixel, `en position libre :` (grammaire, § 22.9), grille d'alignement dans l'atelier | fait |
-| B3 | onglets, barre de menus, graphique | à concevoir |
+| B3 | onglets (grammaire, § 22.10) | fait |
+| B3 bis | barre de menus, graphique | à concevoir |
 
 ### 6.1 Les états se déclarent *(validé le 13 octobre 2026)*
 
@@ -226,3 +227,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.20 | 2026-10-14 | § 3.3 révisé : la position libre au pixel, dans un bloc `en position libre :` ; § 6 : B2 quater fait |
 | 0.21 | 2026-10-14 | § 6 : B2 ter fait (image calculée) |
 | 0.22 | 2026-10-14 | § 3.3 : dans un bloc libre, un bloc se place aussi, et garde sa règle à l'intérieur (grammaire 1.81) |
+| 0.23 | 2026-10-14 | § 6 : B3 coupé en deux ; les onglets faits, la barre de menus et le graphique en B3 bis |

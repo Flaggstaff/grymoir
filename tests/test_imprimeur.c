@@ -321,6 +321,12 @@ int main(void) {
          "            le texte « a »,\n    le texte « t ».",
          "_écran x\n    _position_libre\n        _groupe « G » _place 8 0 _largeur 200\n            _texte « a »\n        _fin\n"
          "    _fin\n    _texte « t »\n_fin\n");
+    COMP("L'écran x montre :\n    les onglets :\n        l'onglet « A » :\n            le texte « a »,\n"
+         "        l'onglet « B » :\n            le texte « b »,\n    le texte « t ».",
+         "_écran x\n    _onglets\n        _onglet « A »\n            _texte « a »\n        _fin\n        _onglet « B »\n"
+         "            _texte « b »\n        _fin\n    _fin\n    _texte « t »\n_fin\n");
+    FIXE("L'écran x montre :\n    en position libre :\n        les onglets, à 8 de la gauche et 0 du haut, large de 400 :\n"
+         "            l'onglet « A » :\n                le texte « a »,\n    le texte « t ».");
     FIXE("L'écran x montre :\n    en position libre :\n        côte à côte, à 0 de la gauche et 90 du haut, haut de 40 :\n"
          "            le texte « c »,\n            le texte « d »,\n    le texte « t ».");
     COMP("L'écran x montre :\n    l'image « exemples/pixel.png », visible si vrai,\n    le texte « t ».",

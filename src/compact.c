@@ -852,7 +852,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         return;
     }
     /* l'en-tête d'un bloc, puis sa place éventuelle (§ 22.9) : « _groupe « Adresse » _place 16 8 _largeur 320 » */
-    const size_t long_en_tete = (est_cle(t, "l'") || est_cle(t, "groupe")) ? 2 : 1;
+    const size_t long_en_tete = (est_cle(t, "l'") || est_cle(t, "groupe") || est_cle(t, "onglet")) ? 2 : 1;
     const size_t fin_en_tete = d + long_en_tete;
     const int place_bloc = f > fin_en_tete && fin_en_tete < f && est_etat(&r->e[fin_en_tete]);
     const size_t fb = place_bloc ? fin_en_tete : f;
@@ -860,12 +860,20 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                      && strcmp(r->e[d + 1].valeur, "un sous l'autre") == 0;   /* « _l'un_sous_l'autre » : « _l' » puis un nom */
     const int groupe = est_cle(t, "groupe") && fb == d + 2 && r->e[d + 1].type == J_TEXTE;   /* « _groupe « Adresse » » */
     if (haut && (haut->type == O_ECRAN || haut->type == O_BLOC)
-        && ((est_cle(t, "côte_à_côte") && fb == d + 1) || l_un || groupe || (est_cle(t, "position_libre") && fb == d + 1))) {
+        && ((est_cle(t, "côte_à_côte") && fb == d + 1) || l_un || groupe || (est_cle(t, "position_libre") && fb == d + 1)
+            || (est_cle(t, "onglets") && fb == d + 1) || (est_cle(t, "onglet") && fb == d + 2 && r->e[d + 1].type == J_TEXTE))) {
         /* _côte_à_côte → côte à côte : ; _l'un_sous_l'autre → l'un sous l'autre : (§ 22.1) ;
          * _groupe « Adresse » → le groupe « Adresse » : (§ 22.7) */
         if (groupe) {
             mot(r, "le", t);
             mot(r, "groupe", t);
+            copier(r, &r->e[d + 1]);
+        } else if (est_cle(t, "onglets")) {   /* _onglets → les onglets : (§ 22.10) */
+            mot(r, "les", t);
+            mot(r, "onglets", t);
+        } else if (est_cle(t, "onglet")) {   /* _onglet « Identité » → l'onglet « Identité » : */
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "onglet", t);
             copier(r, &r->e[d + 1]);
         } else if (est_cle(t, "position_libre")) {   /* _position_libre → en position libre : (§ 22.9) */
             mot(r, "en", t);

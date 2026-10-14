@@ -182,8 +182,9 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         return;
     case N_DISPOSITION:
         chaine_ajouter(c, n->forme == 1 ? "(côte-à-côte" : n->forme == 2 ? "(l'un-sous-l'autre"
-                          : n->forme == 3 ? "(groupe « " : n->forme == 4 ? "(position-libre" : "(fin-bloc)");
-        if (n->forme == 3) { chaine_ajouter(c, n->texte); chaine_ajouter(c, " »"); }
+                          : n->forme == 3 ? "(groupe « " : n->forme == 4 ? "(position-libre" : n->forme == 5 ? "(onglets"
+                          : n->forme == 6 ? "(onglet « " : "(fin-bloc)");
+        if (n->forme == 3 || n->forme == 6) { chaine_ajouter(c, n->texte); chaine_ajouter(c, " »"); }
         if (n->forme) chaine_ajouter(c, ")");
         return;
     case N_BOUTON:

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.81 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.82 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1828,6 +1828,25 @@ L'écran de saisie montre :
 - Aucun mot réservé : `à`, `gauche`, `haut`, `large` ne comptent qu'ainsi placés, après la virgule d'un élément.
 - Ce paragraphe révise `docs/ecrans.md`, § 3.3 (« jamais des pixels ») : la disposition décrite reste la règle hors du bloc.
 
+### 22.10 Onglets *(implémenté le 14 octobre 2026)*
+
+```
+L'écran du membre montre :
+    les onglets :
+        l'onglet « Identité » :
+            un nom (texte),
+            un prénom (texte),
+        l'onglet « Cotisations » :
+            la liste des cotisations conservées,
+    un bouton « Fermer ».
+```
+
+- `les onglets :` ouvre un bloc qui ne contient que des onglets, au moins un : « Dans « les onglets : », seulement des « l'onglet « … » : ». ». Un `l'onglet « … » :` ne se met que là : « « l'onglet » se met dans « les onglets : ». ». Un onglet porte un titre, non vide.
+- Un onglet empile ses éléments, comme un groupe (§ 22.7) ; il peut contenir tout bloc, `en position libre :` compris (§ 22.9).
+- `les onglets` est un bloc comme les autres : dans un bloc libre, il dit sa place et sa taille avant ses deux-points (`les onglets, à 16 de la gauche et 8 du haut, large de 480 :`). Un onglet, lui, n'a pas de place : il occupe le cadre de ses onglets.
+- Le premier onglet est montré à l'ouverture. Choisir un onglet ne déclenche aucun événement ; l'écran retient le choix tant qu'il reste ouvert. Tous les éléments de tous les onglets existent : une zone d'un onglet caché garde sa valeur, et un événement la lit.
+- Forme compacte : `_onglets` … `_fin` ; `_onglet « Identité »` … `_fin`.
+
 ---
 
 ## Journal des révisions
@@ -1916,3 +1935,4 @@ L'écran de saisie montre :
 | 1.79 | 2026-10-14 | § 22.8 : l'image calculée, `l'image de …`, relue avant chaque attente ; absente, elle ne montre rien |
 | 1.80 | 2026-10-14 | § 11.4 : la traduction de la forme compacte retrouve les articles par le genre (champs, variables, entités, colonnes choisies) ; le littéral écrit sans article reste tel quel |
 | 1.81 | 2026-10-14 | § 22.9 : un bloc se place et se dimensionne dans un bloc libre (`le groupe « Adresse », à 16 de la gauche et 8 du haut :`), et garde sa règle à l'intérieur ; une zone sur plusieurs lignes prend toute la hauteur dite |
+| 1.82 | 2026-10-14 | Nouveau § 22.10 : `les onglets :` et `l'onglet « … » :` |

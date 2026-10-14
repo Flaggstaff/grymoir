@@ -5919,14 +5919,24 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     a->portee->classes[ic].ligne = t->ligne;
     a->ecran = a->portee->classes[ic].nom;
     int blocs[16], nb_blocs = 0;   /* colonnes des blocs « côte à côte » et « l'un sous l'autre » ouverts (§ 22.1) */
-    int libres[16];                /* 1 pour un bloc « en position libre : » (§ 22.9) */
+    int formes[16];                /* la forme de chaque bloc ouvert : 4 en position libre (§ 22.9), 5 les onglets (§ 22.10) */
     for (;;) {
         const Jeton *u = cour(a);
         while (nb_blocs && u->retrait <= blocs[nb_blocs - 1]) {   /* un élément moins indenté ferme le bloc */
             noeud_ajouter(n, noeud_creer(N_DISPOSITION, u->ligne, u->colonne, u->debut));
             nb_blocs--;
         }
-        a->libre = nb_blocs && libres[nb_blocs - 1];
+        a->libre = nb_blocs && formes[nb_blocs - 1] == 4;
+        /* « les onglets : » ne contient que des onglets, et un onglet n'est que là (§ 22.10) */
+        const int onglet = u->type == J_ELISION && est_mot(voir(a, 1), "onglet") && voir(a, 2)->type == J_TEXTE
+                           && voir(a, 3)->type == J_DEUX_POINTS;
+        const int dans_onglets = nb_blocs && formes[nb_blocs - 1] == 5;
+        if (dans_onglets && !onglet) {
+            erreur(a, u, grym_dupliquer("Dans « les onglets : », seulement des « l'onglet « … » : »."));
+            break;
+        }
+        if (onglet && !dans_onglets) { erreur(a, u, grym_dupliquer("« l'onglet » se met dans « les onglets : ».")); break; }
+        if (onglet && !*voir(a, 2)->valeur) { erreur(a, voir(a, 2), grym_dupliquer("Un onglet porte un titre : « l'onglet « Identité » : ».")); break; }
         Noeud *el = NULL;
         /* les blocs (§ 22.1, § 22.7, § 22.9) ; dans un bloc libre, une place avant les deux-points (§ 22.9) */
 #define FIN_D_EN_TETE(x) ((x)->type == J_DEUX_POINTS || (x)->type == J_VIRGULE)
@@ -5940,13 +5950,14 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         /* « en position libre : » : chaque élément y dit sa place au pixel (§ 22.9) */
         const int libre = est_mot(u, "en") && est_mot(voir(a, 1), "position") && est_mot(voir(a, 2), "libre")
                           && FIN_D_EN_TETE(voir(a, 3));
+        const int onglets = est_mot(u, "les") && est_mot(voir(a, 1), "onglets") && FIN_D_EN_TETE(voir(a, 2));   /* § 22.10 */
 #undef FIN_D_EN_TETE
-        if (cote || sous || groupe || libre) {
+        if (cote || sous || groupe || libre || onglets || onglet) {
             if (nb_blocs == 16) { erreur(a, u, grym_dupliquer("Trop de blocs emboîtés : 16 au plus.")); break; }
             Noeud *b = noeud_creer(N_DISPOSITION, u->ligne, u->colonne, u->debut);
-            b->forme = cote ? 1 : sous ? 2 : groupe ? 3 : 4;
-            if (groupe) b->texte = grym_dupliquer(voir(a, 2)->valeur);
-            a->i += sous ? 5 : 3;
+            b->forme = cote ? 1 : sous ? 2 : groupe ? 3 : libre ? 4 : onglets ? 5 : 6;
+            if (groupe || onglet) b->texte = grym_dupliquer(voir(a, 2)->valeur);
+            a->i += sous ? 5 : onglets ? 2 : 3;
             {   /* sa place dans le bloc libre qui le contient : « , à 16 de la gauche et 8 du haut, large de 320 » */
                 int vus = 0, lu;
                 while ((lu = place_element(a, b, GENRE_MASCULIN, &vus)) > 0) {}
@@ -5967,12 +5978,12 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             }
             avancer(a);
             noeud_ajouter(n, b);
-            libres[nb_blocs] = libre;
+            formes[nb_blocs] = b->forme;
             blocs[nb_blocs++] = u->retrait;
             if (cour(a)->retrait <= u->retrait || cour(a)->type == J_FIN) {
                 erreur(a, cour(a), grym_formater("Un bloc « %s : » contient des éléments, plus indentés.",
                                                  cote ? "côte à côte" : sous ? "l'un sous l'autre" : groupe ? "le groupe « … »"
-                                                 : "en position libre"));
+                                                 : libre ? "en position libre" : onglets ? "les onglets" : "l'onglet « … »"));
                 break;
             }
             continue;
