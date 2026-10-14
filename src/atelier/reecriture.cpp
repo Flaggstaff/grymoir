@@ -657,10 +657,21 @@ QString colonnes_ecrites(const QString &entite, const QString &dossier, const QS
 // « actif si », « visible si » (§ 22.6) : la condition reste le texte que le développeur a écrit. L'arbre porte une
 // marque, que l'impression remplace par ce texte ; la réanalyse du projet (Chantier::conclure) le vérifie.
 const char *const MARQUE_ACTIF = "\x01" "actif" "\x01", *const MARQUE_VISIBLE = "\x01" "visible" "\x01";   // « \x01ac » serait un seul échappement
+const char *const MARQUE_SOURCE = "\x01" "source" "\x01";   // la valeur d'une image calculée (§ 22.8)
+
+// « de » devant la valeur d'une image calculée, contracté comme le langage le veut (grammaire, § 5.2) : « du portrait »,
+// « des », « d'une », « de la », « de l' ».
+QString de_valeur(const QString &v) {
+    for (const auto &[article, contracte] : {std::pair<const char *, const char *>{"le ", "du "}, {"les ", "des "},
+                                             {"un ", "d'un "}, {"une ", "d'une "}})
+        if (v.startsWith(QString::fromUtf8(article))) return QString::fromUtf8(contracte) + v.mid(QString::fromUtf8(article).size());
+    return "de " + v;
+}
 
 QString avec_conditions(QString imprime, const ElementNouveau &e) {
     imprime.replace(QString("« %1 »").arg(QString::fromUtf8(MARQUE_ACTIF)), e.actif_si.simplified());
     imprime.replace(QString("« %1 »").arg(QString::fromUtf8(MARQUE_VISIBLE)), e.visible_si.simplified());
+    imprime.replace(QString("de « %1 »").arg(QString::fromUtf8(MARQUE_SOURCE)), de_valeur(e.source.simplified()));
     return imprime;
 }
 
@@ -709,6 +720,22 @@ QString etats_voulus(Noeud *n, const ElementNouveau &e) {
 Noeud *nouvel_element(const ElementNouveau &e, const QString &dossier, QString *erreur) {
     Noeud *n = nullptr;
     const QByteArray t = e.texte.trimmed().toUtf8();
+    if (e.sorte == ELEMENT_IMAGE && !e.source.trimmed().isEmpty()) {   // « l'image de … » (§ 22.8)
+        const QString v = e.source.simplified();
+        if (v.endsWith('.') || v.endsWith(',')) { *erreur = "La valeur finit sans point ni virgule."; return nullptr; }
+        if (v.startsWith("de ") || v.startsWith("du ") || v.startsWith("d'")) { *erreur = "Écris la valeur sans « de » : « le portrait du compositeur choisi de l'écran »."; return nullptr; }
+        n = noeud_creer(N_IMAGE_ECRAN, 0, 0, 0);
+        n->forme = 1;
+        Noeud *si = noeud_creer(N_SI_ECRAN, 0, 0, 0);
+        si->forme = 3;
+        Noeud *m = noeud_creer(N_TEXTE, 0, 0, 0);
+        m->texte = grym_dupliquer(MARQUE_SOURCE);
+        noeud_ajouter(si, m);
+        noeud_ajouter(n, si);
+        const QString x = etats_voulus(n, e);
+        if (!x.isEmpty()) { *erreur = x; noeud_liberer(n); return nullptr; }
+        return n;
+    }
     if (e.texte.trimmed().isEmpty()) { *erreur = "Donne un libellé, un texte ou un nom."; return nullptr; }
     if (e.sorte == ELEMENT_BOUTON || e.sorte == ELEMENT_TEXTE || e.sorte == ELEMENT_IMAGE) {
         if (e.texte.contains(QChar(0x00BB)) || e.texte.contains(QChar(0x00AB))) { *erreur = "Pas de guillemets « » dans un libellé."; return nullptr; }

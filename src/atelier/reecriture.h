@@ -62,6 +62,8 @@ struct ElementNouveau {
     bool plusieurs_lignes = false, lecture_seule = false;   // zone (§ 22.6)
     QStringList valeurs;      // zone (texte) : valeurs permises (§ 22.7) ; groupe : rien
     QString actif_si, visible_si;   // bouton, zone (actif) ; bouton, texte, zone (visible) : la condition telle qu'écrite
+    QString source;           // image calculée : la valeur, sans « de » (« le portrait du compositeur choisi de l'écran ») ;
+                              // vide : l'image d'un fichier, `texte` (§ 22.8)
 };
 QString ecran_titre(const QString &dossier, const QString &ecran, const QString &titre, Geste *geste);
 // Ajoute à la fin ; un bouton reçoit son événement (« Remarque : à écrire. »).

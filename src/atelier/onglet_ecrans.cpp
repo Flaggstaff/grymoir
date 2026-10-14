@@ -144,6 +144,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                     for (size_t s2 = 0; ici && s2 < el->nb_enfants; s2++) {   // « actif si », « visible si » (§ 22.6)
                         const Noeud *si = el->enfants[s2];
                         if (si->type != N_SI_ECRAN) continue;
+                        if (si->forme == 3) { x.source = extrait(si->enfants[0]); continue; }   // image calculée (§ 22.8)
                         (si->forme == 1 ? x.actif_si : x.visible_si) = extrait(si->enfants[0]);
                     }
                     x.place = el->place_dite & 1;   // § 22.9
@@ -161,7 +162,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.texte = QString::fromUtf8(el->texte);
                     } else if (el->type == N_IMAGE_ECRAN) {   // « l'image « plan.png » » : le chemin écrit (§ 22.8)
                         x.sorte = ELEMENT_IMAGE;
-                        x.texte = QString::fromUtf8(el->texte);
+                        x.texte = el->texte ? QString::fromUtf8(el->texte) : QString();
                     } else if (el->type == N_TEXTE_ECRAN) {
                         x.sorte = ELEMENT_TEXTE;
                         x.texte = QString::fromUtf8(el->texte);
@@ -358,7 +359,9 @@ void OngletEcrans::dessiner() {
         el[k].colonnes = e.elements[k].colonnes;
         el[k].type = e.elements[k].type;
         el[k].plusieurs_lignes = e.elements[k].plusieurs_lignes;
-        if (e.elements[k].sorte == ELEMENT_IMAGE) {   // l'aperçu lit l'image, depuis le dossier du fichier qui déclare l'écran
+        if (e.elements[k].sorte == ELEMENT_IMAGE && !e.elements[k].source.isEmpty())   // calculée : sa source, faute de données
+            el[k].texte = QString::fromUtf8("Image : ") + e.elements[k].source;
+        else if (e.elements[k].sorte == ELEMENT_IMAGE) {   // l'aperçu lit l'image, depuis le dossier du fichier qui déclare l'écran
             const QString t = e.elements[k].texte;
             QFile f(QFileInfo(t).isAbsolute() ? t : QFileInfo(e.fichier).absoluteDir().filePath(t));
             if (f.open(QIODevice::ReadOnly)) el[k].octets = f.readAll();
@@ -695,6 +698,19 @@ void OngletEcrans::editer() {
                 n.texte = titre->text();
                 emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
+        } else if (x.sorte == ELEMENT_IMAGE && !x.source.isEmpty()) {   // « l'image de … » : la valeur, « visible si » (§ 22.8)
+            auto *source = new QLineEdit(x.source);
+            source->setToolTip("Une valeur image, sans « de » : « le portrait du compositeur choisi de l'écran ».");
+            auto *visible = condition_ecran(x.visible_si, "le compositeur choisi de l'écran est présent");
+            f->addRow("Image de", source);
+            f->addRow("Visible si", visible);
+            connect(appliquer, &QPushButton::clicked, this, [this, ecran, k, source, visible] {
+                ElementNouveau n;
+                n.sorte = ELEMENT_IMAGE;
+                n.source = source->text();
+                n.visible_si = visible->text();
+                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+            });
         } else if (x.sorte == ELEMENT_IMAGE) {   // « l'image « … » » : le fichier, « visible si » (§ 22.8)
             auto *chemin = new QLineEdit(x.texte);
             chemin->setToolTip("Relatif au dossier du programme ; PNG, JPEG, GIF ou WebP.");
@@ -870,6 +886,18 @@ void OngletEcrans::ajouter(int sorte) {
     ElementNouveau n;
     n.sorte = sorte;
     bool ok = false;
+    if (sorte == ELEMENT_IMAGE) {   // un fichier du projet, ou une valeur (§ 22.8)
+        const QStringList sortes = {"Un fichier du projet", "Une image calculée (la photo de la ligne choisie…)"};
+        const QString quoi = QInputDialog::getItem(this, "Nouvelle image", "L'image montre :", sortes, 0, false, &ok);
+        if (!ok) return;
+        if (quoi == sortes[1]) {
+            n.source = QInputDialog::getText(this, "Nouvelle image", "Image de (« le portrait du compositeur choisi de l'écran ») :",
+                                             QLineEdit::Normal, "", &ok);
+            if (!ok) return;
+            emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g); });
+            return;
+        }
+    }
     if (sorte == ELEMENT_IMAGE) {   // une image du projet, écrite relative au dossier du programme (§ 22.8)
         const QString f = QFileDialog::getOpenFileName(this, "Nouvelle image", dossier, "Images (*.png *.jpg *.jpeg *.gif *.webp)");
         ok = !f.isEmpty();

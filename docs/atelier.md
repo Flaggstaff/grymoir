@@ -254,6 +254,10 @@ Le langage place au pixel dans un bloc `en position libre :` (grammaire, § 22.9
 - La grille est un outil de l'atelier : elle n'existe pas dans le programme, qui ne garde que les nombres.
 - Pas encore : déplacer au clavier, guides d'alignement entre éléments, glisser un élément d'un autre bloc vers le bloc libre, aide à la saisie (grammaire, § 8) pour les nouvelles tournures.
 
+## 5 nonies. L'image calculée dans l'éditeur d'écrans *(fait le 14 octobre 2026)*
+
+Avec B2 ter (grammaire, § 22.8) : « Image » dans la palette demande ce que l'image montre, un fichier du projet ou une image calculée ; pour la seconde, on écrit la valeur sans « de » (`le portrait du compositeur choisi de l'écran`), et l'atelier contracte (`l'image du portrait …`, `de la photo …`, `d'une …`). Le panneau d'une image calculée donne « Image de » et « Visible si » ; la réanalyse du projet vérifie la valeur, comme une condition. L'aperçu ne connaît pas les données : il montre la source (« Image : le portrait du compositeur choisi de l'écran ») à la place de l'image. À l'exécution, l'image change à chaque tour de l'écran ; absente, la place reste vide.
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -347,3 +351,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.36 | 2026-10-14 | § 5 septies : valeurs permises des zones, boutons radio dans l'aperçu, « Mettre dans un groupe… », titre d'un groupe |
 | 0.37 | 2026-10-14 | § 5 septies : l'image dans la palette, le panneau et l'aperçu |
 | 0.38 | 2026-10-14 | § 5 octies : position libre (grammaire, § 22.9) : disposition choisie à la création, « Mettre en position libre », glisser avec grille de 8 pixels et aimantation (Alt : au pixel), coin pour la taille, panneau Gauche, Haut, Largeur, Hauteur |
+| 0.39 | 2026-10-14 | § 5 nonies : l'image calculée dans la palette, le panneau, l'aperçu et l'exécution |

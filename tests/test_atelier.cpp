@@ -1842,6 +1842,48 @@ int main(int argc, char **argv) {
         delete v.vue;
     }
 
+    // Image calculée (grammaire, § 22.8 ; docs/atelier.md, § 5 nonies) : ajoutée, contractée, modifiée, montrée par sa source
+    {
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Un compositeur, conservé, a :\n    un nom (texte),\n    un portrait (image), facultatif,\n    une photo (image), facultative.\n"
+                    "L'écran x montre :\n    la liste des compositeurs conservés,\n    le texte « t ».\n");
+        }
+        auto lire = [&]() {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly));
+            return QString::fromUtf8(f.readAll());
+        };
+        Geste g;
+        ElementNouveau n;
+        n.sorte = ELEMENT_IMAGE;
+        n.source = "le portrait du compositeur choisi de l'écran";
+        n.visible_si = "le compositeur choisi de l'écran est présent";
+        QString r = ecran_ajouter(dossier.path(), "x", n, &g);
+        if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        VERIFIER(lire().contains("    l'image du portrait du compositeur choisi de l'écran, visible si le compositeur choisi de l'écran est présent."));
+        n.source = "la photo du compositeur choisi de l'écran";
+        n.visible_si.clear();
+        VERIFIER(ecran_modifier(dossier.path(), "x", 2, n, &g).isEmpty());
+        VERIFIER(lire().contains("    l'image de la photo du compositeur choisi de l'écran."));
+        n.source = "du portrait";
+        VERIFIER(ecran_modifier(dossier.path(), "x", 2, n, &g).startsWith("Écris la valeur sans « de »"));
+        n.source = "le nom du compositeur choisi de l'écran";   // pas une image : l'analyse le dirait si le type se connaissait
+        OngletEcrans o;
+        o.show();
+        o.montrer(dossier.path());
+        VERIFIER(o.ecrans().size() == 1 && o.ecrans()[0].elements.size() == 3
+                 && o.ecrans()[0].elements[2].source == "la photo du compositeur choisi de l'écran");
+        auto *l = qobject_cast<QLabel *>(o.controle(2));
+        VERIFIER(l && l->text() == QString::fromUtf8("Image : la photo du compositeur choisi de l'écran"));
+        QLabel vide;
+        montrer_image(&vide, QByteArray(), QString());   // absente : rien
+        VERIFIER(vide.text().isEmpty() && vide.pixmap().isNull());
+    }
+
     // Position libre (grammaire, § 22.9 ; docs/atelier.md, § 5 octies) : le dessin, les gestes, la souris et la grille
     {
         QVector<ElementVue> el(4);   // bloc libre : un bouton à sa place naturelle, un texte de largeur dite ; puis la fin

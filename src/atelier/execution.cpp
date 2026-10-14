@@ -171,6 +171,11 @@ static void iface_ecran_valeurs(void *contexte, const char *const *v, size_t n) 
     emit static_cast<Travail *>(contexte)->ecran_valeurs(l);
 }
 
+static void iface_ecran_image(void *contexte, size_t k, const unsigned char *octets, size_t taille, const char *) {   // § 22.8
+    emit static_cast<Travail *>(contexte)->ecran_image((int)k, octets ? QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille)
+                                                                    : QByteArray());
+}
+
 static void iface_ecran_etats(void *contexte, const unsigned char *etats, size_t n) {   // § 22.6
     QVector<int> l;
     for (size_t k = 0; k < n; k++) l << etats[k];
@@ -328,7 +333,7 @@ void Travail::run() {
     Machine *m = machine_creer();
     Interface i = {this, iface_disponible, iface_formulaire, iface_effacer, 1, iface_image, iface_fiche,
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
-                   iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats};
+                   iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image};
     machine_interface(m, &i);
     situer(m, chemin, base_imposee);
     Chaine sortie = {};
@@ -490,6 +495,13 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             QWidget *actif = k < zones.size() && zones[k] ? zones[k] : w;   // une zone : son contrôle, le libellé reste lisible
             if (!actif->property("lecture-seule").toBool()) actif->setEnabled(!(e[k] & 1));
         }
+    });
+    connect(&travail, &Travail::ecran_image, this, [this](int k, const QByteArray &o) {   // l'image calculée (§ 22.8)
+        auto *l = qobject_cast<QLabel *>(controles_ecran.value(k));
+        if (!l) return;
+        const QVector<int> p = k < travail.places.size() ? travail.places[k] : QVector<int>();
+        montrer_image(l, o, QString(), p.size() == 4 ? p[2] : 0, p.size() == 4 ? p[3] : 0);
+        if (p.size() == 4) l->resize(taille_placee(l, p[2], p[3]));   // en position libre : sa boîte suit l'image
     });
     connect(&travail, &Travail::ecran_attente, this, [this] {
         attente_ecran = true;

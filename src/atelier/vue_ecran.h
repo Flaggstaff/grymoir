@@ -46,6 +46,10 @@ struct VueEcran {
 // Une zone (texte) à valeurs permises, de deux à quatre : des boutons radio plutôt qu'un menu (§ 22.7).
 inline bool en_boutons_radio(const ElementVue &e) { return e.type == "texte" && e.choix.size() >= 2 && e.choix.size() <= 4; }
 
+// Montre une image dans un label : sa taille, réduite pour tenir dans 480 × 320 (§ 22.8), ou sa taille placée ;
+// sans octets lisibles, le texte de repli (le nom du fichier, ou rien pour une image calculée absente).
+void montrer_image(QLabel *l, const QByteArray &octets, const QString &repli, int largeur = 0, int hauteur = 0);
+
 // La taille d'un élément placé : la naturelle, sauf ce que le programme dit (§ 22.9).
 QSize taille_placee(QWidget *w, int largeur, int hauteur);
 

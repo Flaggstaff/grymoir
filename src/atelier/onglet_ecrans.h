@@ -21,6 +21,7 @@ struct ElementLu {
     bool plusieurs_lignes = false, lecture_seule = false;   // zone (§ 22.6)
     QStringList valeurs;     // zone : valeurs permises (§ 22.7)
     QString actif_si, visible_si;   // la condition telle qu'écrite dans le fichier, vide sinon (§ 22.6)
+    QString source;          // image calculée : la valeur telle qu'écrite, sans « de » (§ 22.8) ; vide sinon
     QString depart;          // zone : valeur de départ, telle qu'écrite
     QString tri;             // liste : champ du tri, « » sinon
     bool decroissant = false;

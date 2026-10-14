@@ -20,6 +20,24 @@ extern "C" {
 #include "interface.h"
 }
 
+void montrer_image(QLabel *l, const QByteArray &octets, const QString &repli, int largeur, int hauteur) {
+    QPixmap p;
+    if (octets.isEmpty() || !p.loadFromData(octets)) {
+        l->setPixmap(QPixmap());
+        l->setText(repli);
+        return;
+    }
+    const qreal densite = l->devicePixelRatioF();
+    const int lmax = largeur > 0 ? largeur : 480, hmax = hauteur > 0 ? hauteur : 320;
+    if (p.width() > lmax || p.height() > hmax)
+        p = p.scaled(qRound(lmax * densite), qRound(hmax * densite), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    else
+        p = p.scaled(qRound(p.width() * densite), qRound(p.height() * densite), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    p.setDevicePixelRatio(densite);
+    l->setText(QString());
+    l->setPixmap(p);
+}
+
 QSize taille_placee(QWidget *w, int largeur, int hauteur) {
     QSize t = w->sizeHint().expandedTo(w->minimumSizeHint());
     if (largeur > 0) t.setWidth(largeur);
@@ -121,18 +139,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         };
         if (e.sorte == ELEMENT_IMAGE) {   // « l'image « plan.png » » (§ 22.8) : sa taille, sans dépasser 480 × 320
             auto *l = new QLabel;
-            QPixmap p;
-            if (!e.octets.isEmpty() && p.loadFromData(e.octets)) {
-                const qreal densite = l->devicePixelRatioF();
-                if (p.width() > 480 || p.height() > 320)
-                    p = p.scaled(qRound(480 * densite), qRound(320 * densite), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-                else
-                    p = p.scaled(qRound(p.width() * densite), qRound(p.height() * densite), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-                p.setDevicePixelRatio(densite);
-                l->setPixmap(p);
-            } else {
-                l->setText(e.texte);   // l'aperçu sans le fichier : son nom
-            }
+            montrer_image(l, e.octets, e.texte, e.largeur, e.hauteur);   // sans le fichier : son nom
             l->setToolTip(e.texte);
             poser(l);
             r.controles[k] = l;
