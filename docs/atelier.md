@@ -236,6 +236,8 @@ Le panneau des propriétés suit la grammaire, § 22.6 : pour une zone, « sur p
 
 Avec B2 (grammaire, § 22.7) : le panneau d'une zone a une ligne « Valeurs permises » (`actif ; suspendu ; retiré`), vérifiée comme dans l'éditeur de données ; l'aperçu montre les boutons radio ou le menu que l'utilisateur verra. « Mettre dans un groupe… » entoure l'élément choisi d'un groupe titré ; le titre d'un groupe se change dans son panneau ; un groupe d'un seul élément reste (un bloc `côte à côte` d'un seul élément disparaît), un groupe vide part.
 
+Avec B2 bis (grammaire, § 22.8) : « Image » dans la palette d'ajout choisit un fichier du projet, écrit relatif à son dossier (une image hors du projet est refusée : elle ne partirait pas avec l'application) ; le panneau d'une image donne son fichier et « Visible si » ; l'aperçu la montre, ou son nom si le fichier manque.
+
 Corrigé en chemin : le panneau d'une zone ne lisait pas son genre ; « Appliquer » réécrivait au masculin une zone féminine (`une remarque` devenait `un remarque`).
 
 ## 6. Questions ouvertes
@@ -329,3 +331,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.34 | 2026-10-14 | § 5 sexies : sauvegarder et restaurer la base, importer un tableau CSV (la boucle du § 15.5, écrite dans le programme) |
 | 0.35 | 2026-10-14 | § 5 septies : états des éléments dans le panneau des écrans ; genre d'une zone gardé par « Appliquer » |
 | 0.36 | 2026-10-14 | § 5 septies : valeurs permises des zones, boutons radio dans l'aperçu, « Mettre dans un groupe… », titre d'un groupe |
+| 0.37 | 2026-10-14 | § 5 septies : l'image dans la palette, le panneau et l'aperçu |

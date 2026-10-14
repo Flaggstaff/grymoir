@@ -3,6 +3,7 @@
 #ifndef GRYM_ATELIER_VUE_ECRAN_H
 #define GRYM_ATELIER_VUE_ECRAN_H
 
+#include <QByteArray>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -22,6 +23,7 @@ struct ElementVue {
     QStringList choix;      // zone liée à une entité : les clés, pour un menu
     bool plusieurs_lignes = false;   // zone (texte) « sur plusieurs lignes » (§ 22.6)
     bool facultatif = false;         // zone : boutons radio, un choix « — » de plus pour l'absence (§ 22.7)
+    QByteArray octets;               // image (§ 22.8) : le fichier ; vide, l'image se montre par son nom
     bool lecture_seule = false;      // zone « en lecture seule »
 };
 

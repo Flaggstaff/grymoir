@@ -564,7 +564,7 @@ static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, cons
     chaine_ajouter(&s->page.journal, "[ouvrir ");
     chaine_ajouter(&s->page.journal, titre);
     for (size_t k = 0; k < n; k++) {
-        if (el[k].sorte >= ELEMENT_COTE_A_COTE) {   /* les blocs de disposition */
+        if (el[k].sorte >= ELEMENT_COTE_A_COTE && el[k].sorte <= ELEMENT_GROUPE) {   /* les blocs de disposition */
             chaine_ajouter(&s->page.journal, el[k].sorte == ELEMENT_COTE_A_COTE ? " ; côte à côte {"
                                              : el[k].sorte == ELEMENT_L_UN_SOUS_L_AUTRE ? " ; l'un sous l'autre {"
                                              : el[k].sorte == ELEMENT_GROUPE ? " ; groupe " : " ; }");
@@ -572,8 +572,13 @@ static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, cons
             continue;
         }
         chaine_ajouter(&s->page.journal, el[k].sorte == ELEMENT_LISTE ? " ; liste " : el[k].sorte == ELEMENT_BOUTON ? " ; bouton "
-                                         : el[k].sorte == ELEMENT_ZONE ? " ; zone " : " ; texte ");
+                                         : el[k].sorte == ELEMENT_ZONE ? " ; zone " : el[k].sorte == ELEMENT_IMAGE ? " ; image " : " ; texte ");
         chaine_ajouter(&s->page.journal, el[k].texte);
+        if (el[k].sorte == ELEMENT_IMAGE) {   /* § 22.8 : le format et la taille, lus à l'ouverture */
+            char *x = grym_formater(" (%s %lu)", el[k].format ? el[k].format : "?", (unsigned long)el[k].taille);
+            chaine_ajouter(&s->page.journal, x);
+            free(x);
+        }
         if (el[k].sorte == ELEMENT_ZONE) {
             chaine_ajouter(&s->page.journal, " (");
             chaine_ajouter(&s->page.journal, el[k].type);
@@ -807,6 +812,15 @@ static void essais_etats_ecran(void) {   /* § 22.6 */
            "[erreur Remplis « Nom » : cette zone est obligatoire.]\n[valeurs Nom=]\n"
            "[valeurs Nom=Ada]\n[états Nom ? caché]\n[valeurs Nom=Ada]\n[états Nom ? caché]\nAda\n"
            "[valeurs Nom=Ada]\n[états Nom ? caché]\n[fermer]\n");
+}
+
+/* l'image (§ 22.8) : lue à l'ouverture, depuis le dossier du programme ; disparue depuis l'analyse, l'écran ne s'ouvre pas */
+static void essai_image(void) {
+    const char *rep[] = { "" };
+    const char *src = "L'écran x montre :\n    l'image « exemples/pixel.png »,\n    un bouton « OK ».\n"
+                      "Quand on clique sur « OK » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+    const char *ev[] = { "clic OK" };
+    ECRANS(src, ev, rep, "[ouvrir X ; image exemples/pixel.png (PNG 69) ; bouton OK]\n[fermer]\n");
 }
 
 /* une case à cocher obligatoire jamais touchée vaut faux : c'est ce qu'elle montre (§ 22.6) */
@@ -3431,6 +3445,7 @@ int main(void) {
     essais_ecrans();
     essais_etats_ecran();
     essai_case_vide();
+    essai_image();
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

@@ -777,6 +777,11 @@ int main(void) {
        "« c » n'est pas une valeur permise de « état » : « a » ou « b ».");
     VE("L'écran x montre :\n    le groupe « » :\n        le texte « t ».", 2, 15, "Un groupe porte un titre");
     VE("L'écran x montre :\n    un état (« a » ou « b »), sur plusieurs lignes.", 2, 31, "Une zone à valeurs permises se choisit");
+    /* l'image (§ 22.8) : un fichier image, vérifié dès l'analyse */
+    V("L'écran x montre :\n    l'image « exemples/pixel.png », visible si vrai,\n    le texte « t ».",
+      "(écran [x] (image « exemples/pixel.png » (visible-si vrai)) (texte « t »))");
+    VE("L'écran x montre :\n    l'image « rien.png ».", 2, 13, "Fichier « rien.png » introuvable ou illisible.");
+    VE("L'écran x montre :\n    l'image « exemples/pixel.png », active si vrai.", 2, 37, "Une image ne se clique pas");
     VE("L'écran x montre :\n    un bouton « B », active si vrai.", 2, 22, "Accord : « actif si ».");
     VE("L'écran x montre :\n    un n (nombre), sur plusieurs lignes.", 2, 20, "Seule une zone (texte) s'écrit sur plusieurs lignes.");
     VE("L'écran x montre :\n    le texte « T », actif si vrai.", 2, 21, "Un texte fixe ne se clique pas : « visible si » seulement.");

@@ -1102,6 +1102,10 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 aj(im, c ? "_bouton " : "un bouton ");
                 ecrire_texte(im, el->texte);
                 etats_ecran(im, el, 0);
+            } else if (el->type == N_IMAGE_ECRAN) {   /* « l'image « plan.png » » ; « _image « plan.png » » (§ 22.8) */
+                aj(im, c ? "_image " : "l'image ");
+                ecrire_texte(im, el->texte);
+                etats_ecran(im, el, 1);
             } else if (el->type == N_TEXTE_ECRAN) {
                 aj(im, c ? "_texte " : "le texte ");
                 ecrire_texte(im, el->texte);

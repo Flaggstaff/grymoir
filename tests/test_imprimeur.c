@@ -296,6 +296,9 @@ int main(void) {
     COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
          "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
+    COMP("L'écran x montre :\n    l'image « exemples/pixel.png », visible si vrai,\n    le texte « t ».",
+         "_écran x\n    _image « exemples/pixel.png » _visible_si _vrai\n    _texte « t »\n_fin\n");
+    FIXE("L'écran x montre :\n    l'image « exemples/pixel.png », visible si vrai,\n    le texte « t ».");
     /* une condition cite une zone écrite plus bas : l'accord suit son genre */
     LITT("L'écran x montre :\n    le texte « T », visible si la remarque de l'écran est présente,\n    une remarque (texte), facultative.",
          "L'écran x montre :\n    le texte « T », visible si la remarque de l'écran est présente,\n    une remarque (texte), facultative.\n");

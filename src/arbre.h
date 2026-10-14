@@ -64,6 +64,7 @@ typedef enum {
                         (texte : le titre, § 22.7), 0 fin du bloc (§ 22.1) */
     N_BOUTON,        /* élément d'écran : « un bouton « Nouveau » » : texte : libellé (§ 22.1) */
     N_TEXTE_ECRAN,   /* élément d'écran : « le texte « Bienvenue » » : texte (§ 22.1) */
+    N_IMAGE_ECRAN,   /* élément d'écran : « l'image « plan.png » » : texte : le chemin, tel qu'écrit (§ 22.8) */
     N_SI_ECRAN,      /* état d'un élément d'écran, dernier de ses enfants : forme 1 « actif si », 2 « visible si » ;
                         enfants[0] : la condition (§ 22.6) */
     N_CHAMP_DONT,    /* champ de l'objet examiné, dans une condition « dont » : texte : champ (§ 16.4) */

@@ -1798,6 +1798,50 @@ int main(int argc, char **argv) {
         delete v.vue;
     }
 
+    // L'image (§ 22.8) : ajoutée, relue, dessinée depuis le dossier du programme
+    {
+        QTemporaryDir dossier;
+        QFile::copy(QDir::current().filePath("exemples/pixel.png"), dossier.filePath("plan.png"));
+        QFile f(dossier.filePath("p.grym"));
+        f.open(QIODevice::WriteOnly);
+        f.write("L'écran d'accueil montre :\n    un bouton « OK ».\nQuand on clique sur « OK » dans l'écran d'accueil :\n    Fermer l'écran.\n");
+        f.close();
+        const QString d = dossier.path(), e = "d'accueil";
+        Geste g;
+        ElementNouveau i;
+        i.sorte = ELEMENT_IMAGE;
+        i.texte = "plan.png";
+        i.visible_si = "vrai";
+        VERIFIER(ecran_ajouter(d, e, i, &g).isEmpty());
+        QFile r(dossier.filePath("p.grym"));
+        r.open(QIODevice::ReadOnly);
+        VERIFIER(QString::fromUtf8(r.readAll()).contains("    un bouton « OK »,\n    l'image « plan.png », visible si vrai.\n"));
+        r.close();
+        const auto lus = lire_ecrans(d);
+        VERIFIER(lus.size() == 1 && lus[0].elements.size() == 2 && lus[0].elements[1].sorte == ELEMENT_IMAGE
+                 && lus[0].elements[1].texte == "plan.png" && lus[0].elements[1].visible_si == "vrai");
+        i.texte = "absente.png";   // la réanalyse refuse : rien n'est écrit
+        VERIFIER(ecran_ajouter(d, e, i, &g).startsWith("Geste annulé"));
+        i.texte = "plan.png";
+        i.actif_si = "vrai";
+        VERIFIER(ecran_ajouter(d, e, i, &g) == "Seuls un bouton ou une zone sont actifs ou non.");
+        QVector<ElementVue> el(1);
+        el[0].sorte = ELEMENT_IMAGE;
+        el[0].texte = "plan.png";
+        QFile png(dossier.filePath("plan.png"));
+        png.open(QIODevice::ReadOnly);
+        el[0].octets = png.readAll();
+        VueEcran v = dessiner_ecran("Accueil", el);
+        auto *l = qobject_cast<QLabel *>(v.controles[0]);
+        VERIFIER(l && !l->pixmap().isNull());
+        delete v.vue;
+        el[0].octets.clear();   // sans le fichier, l'aperçu montre son nom
+        v = dessiner_ecran("Accueil", el);
+        l = qobject_cast<QLabel *>(v.controles[0]);
+        VERIFIER(l && l->text() == "plan.png");
+        delete v.vue;
+    }
+
     // A4-c dans l'onglet : choisir un bouton, changer son libellé, « Appliquer » : le geste renomme aussi l'événement
     {
         QTemporaryDir dossier;

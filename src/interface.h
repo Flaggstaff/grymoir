@@ -17,7 +17,9 @@
 /* Un élément d'écran, tel que l'interface le montre (grammaire, § 22.1). */
 typedef enum { ELEMENT_LISTE, ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE,
                ELEMENT_COTE_A_COTE, ELEMENT_L_UN_SOUS_L_AUTRE, ELEMENT_FIN_DE_BLOC,
-               ELEMENT_GROUPE } SorteElement;   /* blocs : § 22.1 ; groupe titré (texte : le titre) : § 22.7 */
+               ELEMENT_GROUPE,
+               ELEMENT_IMAGE } SorteElement;   /* blocs : § 22.1 ; groupe titré (texte : le titre) : § 22.7 ;
+                                                  image (texte : son nom ; octets, taille, format) : § 22.8 */
 typedef struct {
     SorteElement sorte;
     const char *texte;              /* libellé du bouton, texte fixe ; pour une liste, l'entité */
@@ -29,6 +31,9 @@ typedef struct {
     size_t nb_choix;
     int plusieurs_lignes;           /* zone (texte) « sur plusieurs lignes » : Entrée va à la ligne (§ 22.6) */
     int lecture_seule;              /* zone « en lecture seule » : montrée, jamais modifiée par l'utilisateur */
+    const unsigned char *octets;    /* image (§ 22.8) : son contenu, lu à l'ouverture de l'écran */
+    size_t taille;
+    const char *format;             /* PNG, JPEG, GIF ou WebP */
 } ElementEcran;
 
 typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT } SorteEvenement;

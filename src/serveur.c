@@ -72,9 +72,11 @@ typedef struct {
     char **valeurs;         /* zone : son texte, tel que la machine le donne avant chaque attente */
     char *erreur;           /* message à montrer sous le titre, jusqu'au prochain événement */
     unsigned char *etats;   /* élément : bit 1 inactif, bit 2 caché (§ 22.6) ; un élément caché n'est pas envoyé */
+    unsigned long serie;    /* numéro d'ouverture : l'adresse d'une image change d'un écran à l'autre (§ 22.8) */
 } EcranWeb;
 
 struct Serveur {
+    unsigned long ouvertures;   /* écrans ouverts depuis le début : la série de chacun */
     int port;
     char jeton[33];
     char cookie[24];      /* « grym_PORT » : les cookies ne sont pas isolés par port */
@@ -487,11 +489,6 @@ static char *feuille_de_style(const Serveur *s) {
     "background:var(--danger-doux);color:var(--danger)}"
     ".cote{display:flex;flex-wrap:wrap;gap:16px}.cote>*{flex:1 1 16rem;min-width:0}"
     ".sous{display:flex;flex-direction:column;gap:12px}"
-    "fieldset.groupe{display:flex;flex-direction:column;gap:12px;margin:0;padding:12px 16px 16px;"
-    "border:1px solid var(--separateur);border-radius:8px;min-width:0}"
-    "fieldset.groupe>legend{font-weight:600;color:var(--texte-2);padding:0 6px}"
-    ".radios{display:flex;flex-wrap:wrap;gap:6px 16px}.radios label{display:flex;gap:6px;align-items:center}"
-    ".requis{color:var(--texte-2)}"
     ".boutons{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.boutons button{margin:0}"
     ".texte{margin:0}"
     ".zone label{display:block;font-size:12px;line-height:16px;font-weight:600;color:var(--texte-2);margin-bottom:4px}"
@@ -508,6 +505,16 @@ static char *feuille_de_style(const Serveur *s) {
     "button.ligne:focus{outline:2px solid var(--accent);outline-offset:2px}"
     ".invisible{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}"
     "h2.journal{font-size:12px;line-height:16px;font-weight:600;color:var(--texte-2);margin:24px 0 8px}");
+    /* Écrans, deuxième vague (grammaire, § 22.6 à § 22.8) : à part, la chaîne précédente touche la limite du C */
+    chaine_ajouter(&c,
+    "fieldset.groupe{display:flex;flex-direction:column;gap:12px;margin:0;padding:12px 16px 16px;"
+    "border:1px solid var(--separateur);border-radius:8px;min-width:0}"
+    "fieldset.groupe>legend{font-weight:600;color:var(--texte-2);padding:0 6px}"
+    ".radios{display:flex;flex-wrap:wrap;gap:6px 16px}.radios label{display:flex;gap:6px;align-items:center}"
+    ".requis{color:var(--texte-2)}"
+    "textarea{font:inherit;color:var(--texte);background:var(--surface);width:100%;box-sizing:border-box;"
+    "padding:4px 8px;border:1px solid var(--bordure);border-radius:8px}textarea[readonly]{background:var(--fond-desactive)}"
+    "p.image{margin:0}p.image img{display:block;max-width:100%;max-height:24rem;border-radius:6px}");
     return chaine_rendre(&c);
 }
 
@@ -784,6 +791,7 @@ static const char SCRIPT[] =
     "document.addEventListener('click',function(e){var l=e.target.closest&&e.target.closest('table.liste tbody tr');"
     "if(!l||e.target.closest('button,input'))return;var r=l.querySelector('input[type=radio]');if(r)r.checked=true;});";
 
+static const char *type_image(const char *format);
 static EcranWeb *ecran_dessus(const Serveur *s) { return s->nb_ecrans ? s->ecrans[s->nb_ecrans - 1] : NULL; }
 
 static int est_case(const ElementEcran *e) { return e->type && strcmp(e->type, "vrai ou faux") == 0; }
@@ -969,7 +977,8 @@ static void page_ecran(Serveur *s) {
     int groupes[16], prof = 0;   /* les blocs ouverts : 1 pour un groupe (fieldset), 0 pour un div */
     for (size_t k = 0; k < e->n; k++) {
         const ElementEcran *el = &e->el[k];
-        if ((e->etats[k] & 2) && (el->sorte == ELEMENT_BOUTON || el->sorte == ELEMENT_TEXTE || el->sorte == ELEMENT_ZONE))
+        if ((e->etats[k] & 2) && (el->sorte == ELEMENT_BOUTON || el->sorte == ELEMENT_TEXTE || el->sorte == ELEMENT_ZONE
+                                    || el->sorte == ELEMENT_IMAGE))
             continue;   /* « visible si » faux : l'élément n'est pas dans la page (§ 22.6) */
         if (el->sorte != ELEMENT_BOUTON && boutons) { chaine_ajouter(&c, "</div>\n"); boutons = 0; }
         switch (el->sorte) {
@@ -992,6 +1001,12 @@ static void page_ecran(Serveur *s) {
             break;
         case ELEMENT_ZONE: zone(&c, e, k); chaine_ajouter(&c, "\n"); break;
         case ELEMENT_LISTE: liste(&c, e, k); chaine_ajouter(&c, "\n"); break;
+        case ELEMENT_IMAGE: {   /* « l'image « plan.png » » (§ 22.8) : servie à part, la politique de sécurité n'admet que 'self' */
+            char *v = grym_formater("<p class=\"image\"><img src=\"/ecran-image/%lu/%lu\" alt=\"\"></p>\n", e->serie, (unsigned long)k);
+            chaine_ajouter(&c, v);
+            free(v);
+            break;
+        }
         case ELEMENT_BOUTON: {
             if (!boutons) { chaine_ajouter(&c, "<div class=\"boutons\">"); boutons = 1; }
             char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s>", (unsigned long)k,
@@ -1163,6 +1178,17 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
         repondre(s, "200 OK", "text/javascript; charset=utf-8", SCRIPT, NULL);
     } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/logo") == 0 && s->logo) {
         repondre_octets(s, "200 OK", s->type_logo, s->logo, s->taille_logo, NULL);
+    } else if (strcmp(r.methode, "GET") == 0 && strncmp(r.cible, "/ecran-image/", 13) == 0 && ecran_dessus(s)) {
+        /* « /ecran-image/série/k » : l'image k de l'écran du dessus, s'il est bien celui de cette série (§ 22.8) */
+        const EcranWeb *e = ecran_dessus(s);
+        char *fin = NULL;
+        const unsigned long serie = strtoul(r.cible + 13, &fin, 10);
+        const unsigned long k = fin && *fin == '/' ? strtoul(fin + 1, &fin, 10) : (unsigned long)-1;
+        if (serie == e->serie && fin && !*fin && k < e->n && e->el[k].sorte == ELEMENT_IMAGE && e->el[k].octets
+            && !(e->etats[k] & 2))
+            repondre_octets(s, "200 OK", type_image(e->el[k].format), e->el[k].octets, e->el[k].taille, NULL);
+        else
+            page_simple(s, "404 Not Found", "Image introuvable.");
     } else if (strcmp(r.methode, "POST") == 0 && strcmp(r.cible, "/evenement") == 0) {
         /* même règle que les réponses : un envoi vient de la page de l'application, et d'elle seule */
         if (!r.origine || strcmp(r.origine, s->origine) != 0) {
@@ -1423,6 +1449,7 @@ static void ecran_liberer(EcranWeb *e) {
         free(e->cellules[k]);
         free(e->valeurs[k]);
     }
+    for (size_t k = 0; k < e->n; k++) free((unsigned char *)e->el[k].octets);
     free(e->el);
     free(e->cellules);
     free(e->nb_lignes);
@@ -1449,6 +1476,7 @@ static void serveur_ecran_ouvrir(void *contexte, Chaine *sortie, const char *tit
     memset(e, 0, sizeof *e);
     e->titre = grym_dupliquer(titre ? titre : "");
     e->n = n;
+    e->serie = ++s->ouvertures;
     size_t m = n ? n : 1;
     e->el = grym_allouer(m * sizeof *e->el);
     e->cellules = grym_allouer(m * sizeof *e->cellules);
@@ -1463,6 +1491,11 @@ static void serveur_ecran_ouvrir(void *contexte, Chaine *sortie, const char *tit
         e->el[k].type = el[k].type ? grym_dupliquer(el[k].type) : NULL;
         e->el[k].colonnes = copier_textes(el[k].colonnes, el[k].nb_colonnes);
         e->el[k].choix = copier_textes(el[k].choix, el[k].nb_choix);
+        if (el[k].octets) {   /* une image : copiée, la page la demande après que la machine a continué */
+            unsigned char *o = grym_allouer(el[k].taille ? el[k].taille : 1);
+            memcpy(o, el[k].octets, el[k].taille);
+            e->el[k].octets = o;
+        }
         e->cellules[k] = NULL;
         e->nb_lignes[k] = 0;
         e->choisie[k] = -1;

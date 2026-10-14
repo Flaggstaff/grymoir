@@ -70,7 +70,7 @@ Un écran est un objet : ses zones de saisie sont ses champs (charte, art. 6).
 - Bouton et liste : § 3.1 et § 3.2.
 - Dans un événement : `le pays de l'écran` se lit, `Le pays de l'écran devient « France ».` se modifie, comme le champ d'un objet. Une liste dont le `dont` cite une zone de saisie se relit dès que la zone change.
 - Une zone de saisie n'est jamais conservée : elle vit le temps de l'écran. `de l'écran` désigne l'écran de l'événement en cours ; ailleurs, c'est une erreur d'analyse.
-- Reportés : images, graphiques (§ 6). Les textes sur plusieurs lignes sont venus avec B1 (grammaire, § 22.6).
+- Reportés : graphiques (§ 6). Les images fixes sont venues avec B2 bis (grammaire, § 22.8). Les textes sur plusieurs lignes sont venus avec B1 (grammaire, § 22.6).
 
 ### 3.5 Les événements *(validé le 25 septembre 2026)*
 
@@ -176,7 +176,8 @@ L'éditeur d'écrans ne proposait que cinq éléments. La deuxième vague comble
 |---|---|---|
 | B1 | `sur plusieurs lignes`, `en lecture seule`, `actif si …`, `visible si …` (grammaire, § 22.6) | fait |
 | B2 | valeurs permises d'une zone et boutons radio (au plus quatre), groupe titré `le groupe « Adresse » :` (grammaire, § 22.7) | fait |
-| B2 bis | image affichée : fixe (`l'image « plan.png »`) ou d'une zone | à concevoir |
+| B2 bis | image affichée, fixe : `l'image « plan.png »` (grammaire, § 22.8) | fait |
+| B2 ter | image d'une zone ou de la ligne choisie d'une liste | à concevoir |
 | B3 | onglets, barre de menus, graphique | à concevoir |
 
 ### 6.1 Les états se déclarent *(validé le 13 octobre 2026)*
@@ -211,3 +212,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.16 | 2026-10-14 | § 6 : deuxième vague de contrôles ; B1 fait (états des éléments, grammaire § 22.6) ; § 3.4 : les textes sur plusieurs lignes ne sont plus reportés |
 | 0.17 | 2026-10-14 | § 6 : B2 fait (groupe titré, valeurs permises d'une zone, boutons radio) ; l'image affichée passe en B2 bis |
 | 0.18 | 2026-10-14 | § 6.1 : zone vide absente pour une condition ; obligation vérifiée dans l'événement ; case à faux ; astérisque |
+| 0.19 | 2026-10-14 | § 6 : B2 bis fait (image fixe) ; l'image d'une zone passe en B2 ter |

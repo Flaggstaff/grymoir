@@ -394,6 +394,7 @@ typedef struct EcranVM {
     char ***chemins;       /* liste aux colonnes choisies : le chemin de chaque colonne (« compositeur␜naissance »), sinon NULL */
     unsigned char *etats;  /* pour chaque élément : bit 1 inactif, bit 2 caché (§ 22.6) ; relus avant chaque attente */
     size_t cadre;          /* le cadre qui a ouvert l'écran : y lire une zone vide (listes, conditions) rend absent */
+    Valeur *images;        /* image (§ 22.8) : le fichier lu à l'ouverture, sinon absent */
 } EcranVM;
 
 static void ecran_detruire(EcranVM *e);
@@ -2076,6 +2077,7 @@ static char *afficher_fiche(Machine *m, Objet *o, Chaine *sortie) {
 static void ecran_detruire(EcranVM *e) {
     if (!e) return;
     for (size_t k = 0; k < e->n; k++) {
+        if (e->images) valeur_liberer(&e->images[k]);
         free(e->textes[k]);
         for (size_t c = 0; c < e->nb_colonnes[k]; c++) free(e->colonnes[k][c]);
         free(e->colonnes[k]);
@@ -2095,6 +2097,7 @@ static void ecran_detruire(EcranVM *e) {
     free(e->nb_choix);
     free(e->champ);
     free(e->etats);
+    free(e->images);
     free(e->titre);
     free(e->elements);
     free(e->textes);
@@ -2147,6 +2150,8 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     e->chemins = grym_allouer(t * sizeof *e->chemins);
     e->etats = grym_allouer(t);
     memset(e->etats, 0, t);
+    e->images = grym_allouer(t * sizeof *e->images);
+    for (size_t k = 0; k < t; k++) e->images[k] = vi_absent(NULL);
     char *nom_classe = grym_formater("écran %s", parts[0]);
     const ClasseVM *ce = classe_vm(m, nom_classe);
     free(nom_classe);
@@ -2221,7 +2226,18 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->elements[k].texte = e->textes[k];
         e->elements[k].colonnes = NULL;
         e->elements[k].nb_colonnes = 0;
-        e->elements[k].sorte = x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON : ELEMENT_TEXTE;
+        e->elements[k].sorte = x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON : x[0] == 'I' ? ELEMENT_IMAGE : ELEMENT_TEXTE;
+        if (x[0] == 'I') {   /* « l'image « plan.png » » (§ 22.8) : relue à chaque ouverture, elle a pu changer depuis l'analyse */
+            Fichier *f = lire_fichier(m, x + 1, erreur);
+            if (!f) break;
+            e->images[k].type = V_FICHIER;
+            e->images[k].fichier = f;
+            if (!f->format) { *erreur = grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF ou WebP).", x + 1); break; }
+            e->elements[k].octets = f->octets;
+            e->elements[k].taille = f->taille;
+            e->elements[k].format = f->format;
+            continue;
+        }
         if (x[0] != 'L') continue;
         /* Colonnes par défaut : les champs simples, dans l'ordre ; ni fichiers, ni images, ni « plusieurs » (§ 22.1) */
         const ClasseVM *c = classe_vm(m, e->textes[k]);

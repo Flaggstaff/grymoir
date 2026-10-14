@@ -10,6 +10,8 @@
 #include <QDirIterator>
 #include <QFormLayout>
 #include <QInputDialog>
+#include <QDir>
+#include <QFileDialog>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QShortcut>
@@ -149,6 +151,9 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                     } else if (el->type == N_BOUTON) {
                         x.sorte = ELEMENT_BOUTON;
                         x.texte = QString::fromUtf8(el->texte);
+                    } else if (el->type == N_IMAGE_ECRAN) {   // « l'image « plan.png » » : le chemin écrit (§ 22.8)
+                        x.sorte = ELEMENT_IMAGE;
+                        x.texte = QString::fromUtf8(el->texte);
                     } else if (el->type == N_TEXTE_ECRAN) {
                         x.sorte = ELEMENT_TEXTE;
                         x.texte = QString::fromUtf8(el->texte);
@@ -258,9 +263,9 @@ OngletEcrans::OngletEcrans(QWidget *parent) : QWidget(parent) {
     auto *pp = new QHBoxLayout(palette);
     pp->setContentsMargins(0, 0, 0, 0);
     pp->addWidget(new QLabel("Ajouter :"));
-    for (int sorte : {ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, ELEMENT_LISTE}) {
+    for (int sorte : {ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, ELEMENT_LISTE, ELEMENT_IMAGE}) {
         auto *b = new QPushButton(sorte == ELEMENT_BOUTON ? "Bouton" : sorte == ELEMENT_TEXTE ? "Texte"
-                                  : sorte == ELEMENT_ZONE ? "Zone" : "Liste");
+                                  : sorte == ELEMENT_ZONE ? "Zone" : sorte == ELEMENT_LISTE ? "Liste" : "Image");
         connect(b, &QPushButton::clicked, this, [this, sorte] { ajouter(sorte); });
         pp->addWidget(b);
     }
@@ -345,6 +350,11 @@ void OngletEcrans::dessiner() {
         el[k].colonnes = e.elements[k].colonnes;
         el[k].type = e.elements[k].type;
         el[k].plusieurs_lignes = e.elements[k].plusieurs_lignes;
+        if (e.elements[k].sorte == ELEMENT_IMAGE) {   // l'aperçu lit l'image, depuis le dossier du fichier qui déclare l'écran
+            const QString t = e.elements[k].texte;
+            QFile f(QFileInfo(t).isAbsolute() ? t : QFileInfo(e.fichier).absoluteDir().filePath(t));
+            if (f.open(QIODevice::ReadOnly)) el[k].octets = f.readAll();
+        }
         el[k].facultatif = e.elements[k].facultatif;
         if (!e.elements[k].valeurs.isEmpty()) el[k].choix = e.elements[k].valeurs;   // l'aperçu montre le menu ou les boutons
         el[k].lecture_seule = e.elements[k].lecture_seule;
@@ -553,6 +563,19 @@ void OngletEcrans::editer() {
                 n.texte = titre->text();
                 emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
+        } else if (x.sorte == ELEMENT_IMAGE) {   // « l'image « … » » : le fichier, « visible si » (§ 22.8)
+            auto *chemin = new QLineEdit(x.texte);
+            chemin->setToolTip("Relatif au dossier du programme ; PNG, JPEG, GIF ou WebP.");
+            auto *visible = condition_ecran(x.visible_si, "le compositeur choisi de l'écran est présent");
+            f->addRow("Fichier", chemin);
+            f->addRow("Visible si", visible);
+            connect(appliquer, &QPushButton::clicked, this, [this, ecran, k, chemin, visible] {
+                ElementNouveau n;
+                n.sorte = ELEMENT_IMAGE;
+                n.texte = chemin->text();
+                n.visible_si = visible->text();
+                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+            });
         } else if (x.sorte == ELEMENT_BOUTON || x.sorte == ELEMENT_TEXTE) {
             auto *texte = new QLineEdit(x.texte);
             f->addRow(x.sorte == ELEMENT_BOUTON ? "Libellé" : "Texte", texte);
@@ -651,7 +674,8 @@ void OngletEcrans::editer() {
             appliquer->hide();
             retirer->setText("Retirer le bloc (ses éléments restent)");
         }
-        if (x.sorte == ELEMENT_BOUTON || x.sorte == ELEMENT_TEXTE || x.sorte == ELEMENT_ZONE || x.sorte == ELEMENT_LISTE) {
+        if (x.sorte == ELEMENT_BOUTON || x.sorte == ELEMENT_TEXTE || x.sorte == ELEMENT_ZONE || x.sorte == ELEMENT_LISTE
+            || x.sorte == ELEMENT_IMAGE) {
             auto *grouper = new QPushButton("Mettre dans un groupe…");   // « le groupe « … » : » (§ 22.7)
             f->addRow("", grouper);
             connect(grouper, &QPushButton::clicked, this, [this, ecran, k] {
@@ -691,7 +715,15 @@ void OngletEcrans::ajouter(int sorte) {
     ElementNouveau n;
     n.sorte = sorte;
     bool ok = false;
-    if (sorte == ELEMENT_BOUTON) n.texte = QInputDialog::getText(this, "Nouveau bouton", "Libellé :", QLineEdit::Normal, "", &ok);
+    if (sorte == ELEMENT_IMAGE) {   // une image du projet, écrite relative au dossier du programme (§ 22.8)
+        const QString f = QFileDialog::getOpenFileName(this, "Nouvelle image", dossier, "Images (*.png *.jpg *.jpeg *.gif *.webp)");
+        ok = !f.isEmpty();
+        n.texte = QDir(dossier).relativeFilePath(f);
+        if (ok && n.texte.startsWith("..")) {
+            QMessageBox::warning(this, "Nouvelle image", "Choisis une image dans le dossier du projet : elle partira avec l'application.");
+            return;
+        }
+    } else if (sorte == ELEMENT_BOUTON) n.texte = QInputDialog::getText(this, "Nouveau bouton", "Libellé :", QLineEdit::Normal, "", &ok);
     else if (sorte == ELEMENT_TEXTE) n.texte = QInputDialog::getText(this, "Nouveau texte", "Texte :", QLineEdit::Normal, "", &ok);
     else if (sorte == ELEMENT_ZONE) {
         n.texte = QInputDialog::getText(this, "Nouvelle zone", "Nom (« pays », « date de début ») :", QLineEdit::Normal, "", &ok);

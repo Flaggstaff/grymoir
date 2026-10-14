@@ -1771,6 +1771,22 @@ L'écran de saisie montre :
 - De deux à quatre valeurs, l'interface montre des boutons radio, tous visibles ; une zone facultative en reçoit un de plus, « — », pour l'absence. Au-delà de quatre, un menu. Le choix est celui de l'interface, sans phrase : on décrit ce que la zone accepte, pas son dessin (§ 3.3 de `docs/ecrans.md`).
 - Forme compacte : `_groupe « Adresse »` … `_fin` ; `_un état (« actif » ; « suspendu » ; « retiré »)`.
 
+### 22.8 Images *(implémenté le 14 octobre 2026)*
+
+```
+L'écran d'accueil montre :
+    l'image « plan.png »,
+    l'image « images/alerte.png », visible si le retard de l'écran est présent,
+    un bouton « Fermer ».
+```
+
+- `l'image « … »` montre un fichier image (PNG, JPEG, GIF ou WebP), à sa taille, réduite s'il le faut pour tenir dans 480 × 320 pixels (la largeur de la page dans le navigateur). Le chemin est relatif au dossier du programme, comme le logo (§ 22.5).
+- Le fichier existe et c'est une image dès l'analyse, pour que l'aperçu de l'atelier le montre : « Fichier « rien.png » introuvable ou illisible. », « « notes.txt » n'est pas une image (PNG, JPEG, GIF ou WebP). ». Il est relu à chaque ouverture de l'écran ; disparu depuis, l'écran ne s'ouvre pas, avec le même message.
+- `visible si …` s'y applique (§ 22.6) ; une image ne se clique pas : « Une image ne se clique pas : « visible si » seulement. ».
+- Dans le navigateur, l'image est servie à part (`/ecran-image/…`), la politique de sécurité de la page n'admettant que ses propres adresses.
+- Forme compacte : `_image « plan.png »`.
+- À venir : l'image d'une zone ou de la ligne choisie d'une liste (`l'image de la photo du compositeur choisi de l'écran`), relue à chaque tour comme une condition.
+
 ---
 
 ## Journal des révisions
@@ -1854,3 +1870,4 @@ L'écran de saisie montre :
 | 1.74 | 2026-10-14 | Nouveau § 22.6 : états des éléments d'écran, `sur plusieurs lignes`, `en lecture seule`, `actif si …`, `visible si …` ; conditions lues en fin de déclaration |
 | 1.75 | 2026-10-14 | Nouveau § 22.7 : `le groupe « … » :` et valeurs permises d'une zone d'écran (boutons radio jusqu'à quatre valeurs) |
 | 1.76 | 2026-10-14 | § 22.6 : une zone vide est absente pour une condition ou un `dont` ; un événement qui lit une zone obligatoire vide s'arrête avec « Remplis « … » » ; case à cocher obligatoire à faux au départ ; astérisque des zones obligatoires |
+| 1.77 | 2026-10-14 | Nouveau § 22.8 : `l'image « … »` dans un écran, vérifiée dès l'analyse, lue à l'ouverture |

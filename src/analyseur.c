@@ -5741,7 +5741,8 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
         const int actif = est_mot(x, "actif") || est_mot(x, "active");
         if (!(actif || est_mot(x, "visible")) || !est_mot(voir(a, 2), "si")) return 0;
         if (actif && !zone && el->type != N_BOUTON)
-            return erreur(a, x, grym_dupliquer("Un texte fixe ne se clique pas : « visible si » seulement.") ), -1;
+            return erreur(a, x, grym_dupliquer(el->type == N_IMAGE_ECRAN ? "Une image ne se clique pas : « visible si » seulement."
+                                                                         : "Un texte fixe ne se clique pas : « visible si » seulement.") ), -1;
         if (actif && est_mot(x, g == GENRE_FEMININ ? "actif" : "active"))
             return erreur(a, x, grym_formater("Accord : « %s si ».", g == GENRE_FEMININ ? "active" : "actif") ), -1;
         if (vus & (actif ? 1 : 2))
@@ -5929,7 +5930,9 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                         && !est_mot(voir(a, 1), "côte") && voir(a, 1)->type != J_FIN
                         && !(est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "liste"))
                         && !(est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "texte") && voir(a, 3)->type == J_TEXTE)
-                        && !(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "un") && est_mot(voir(a, 3), "sous"))) {
+                        && !(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "un") && est_mot(voir(a, 3), "sous"))
+                        && !(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "image") && voir(a, 3)->type == J_TEXTE)
+                        && !(est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "groupe") && voir(a, 3)->type == J_TEXTE)) {
                         avancer(a);
                         continue;
                     }
@@ -6056,6 +6059,25 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             classe_ajouter_zone(&a->portee->classes[ic], el->texte, g, type, el->entier & 1, el->texte3);
             ajouter_nom(&e.zones, &e.nb_zones, el->texte);
             el->fin = fin_jeton(&a->j[a->i - 1]);
+        } else if (u->type == J_ELISION && est_mot(voir(a, 1), "image") && voir(a, 2)->type == J_TEXTE) {
+            /* « l'image « plan.png » » (§ 22.8) : un fichier image, vérifié dès l'analyse comme le logo (§ 22.5) */
+            const Jeton *tc = voir(a, 2);
+            const char *ecrit = tc->valeur;
+            if (!*ecrit) { erreur(a, tc, grym_dupliquer("Nom de fichier vide.")); break; }
+            char *dossier = dossier_de(a->portee->fichier);
+            char *chemin = ecrit[0] == '/' ? grym_dupliquer(ecrit) : grym_formater("%s%s", dossier, ecrit);
+            const int image = fichier_image(chemin);
+            free(dossier);
+            free(chemin);
+            if (image < 0) { erreur(a, tc, grym_formater("Fichier « %s » introuvable ou illisible.", ecrit)); break; }
+            if (image == 0) { erreur(a, tc, grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF ou WebP).", ecrit)); break; }
+            el = noeud_creer(N_IMAGE_ECRAN, u->ligne, u->colonne, u->debut);
+            el->texte = grym_dupliquer(ecrit);
+            a->i += 3;
+            int vus = 0, lu;
+            while ((lu = etat_element(a, el, GENRE_FEMININ, 0, &vus)) > 0) {}
+            if (lu < 0) { noeud_liberer(el); break; }
+            el->fin = fin_jeton(&a->j[a->i - 1]);
         } else if ((est_mot(u, "un") && est_mot(voir(a, 1), "bouton") && voir(a, 2)->type == J_TEXTE)
                    || (est_mot(u, "le") && est_mot(voir(a, 1), "texte") && voir(a, 2)->type == J_TEXTE)) {
             const int bouton = est_mot(voir(a, 1), "bouton");
@@ -6076,7 +6098,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             el->fin = fin_jeton(&a->j[a->i - 1]);
         } else {
             erreur(a, u, grym_dupliquer("Élément d'écran attendu : « la liste des … conservés », « un bouton « … » », "
-                                        "« le texte « … » » ou une zone de saisie, « un pays (texte) »."));
+                                        "« le texte « … » », « l'image « … » » ou une zone de saisie, « un pays (texte) »."));
             break;
         }
         noeud_ajouter(n, el);

@@ -1143,7 +1143,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 continue;
             }
             chaine_ajouter(&d, el->type == N_CHERCHER ? "\x1f" "L" : el->type == N_BOUTON ? "\x1f" "B"
-                             : el->type == N_NOM ? "\x1f" "Z" : "\x1f" "T");
+                             : el->type == N_NOM ? "\x1f" "Z" : el->type == N_IMAGE_ECRAN ? "\x1f" "I" : "\x1f" "T");
             chaine_ajouter(&d, el->texte);
             if (el->type == N_CHERCHER && el->texte3) {   /* colonnes choisies : « ␛ écrit ␝ a ␜ b ␞ … » */
                 chaine_ajouter(&d, "\x1b");

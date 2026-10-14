@@ -855,7 +855,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         return;
     }
     if (haut && (haut->type == O_ECRAN || haut->type == O_BLOC)) {
-        if ((est_cle(t, "bouton") || est_cle(t, "texte")) && f >= d + 2 && r->e[d + 1].type == J_TEXTE
+        if (est_cle(t, "image") && f >= d + 2 && r->e[d + 1].type == J_TEXTE && (f == d + 2 || est_etat(&r->e[d + 2]))) {
+            emettre(r, J_ELISION, "l", t, 1);   /* _image « plan.png » → l'image « plan.png » (§ 22.8) */
+            mot(r, "image", t);
+            copier(r, &r->e[d + 1]);
+            if (!etats_compacts(r, d + 2, f, 1, 0)) return;
+        } else if ((est_cle(t, "bouton") || est_cle(t, "texte")) && f >= d + 2 && r->e[d + 1].type == J_TEXTE
             && (f == d + 2 || est_etat(&r->e[d + 2]))) {
             mot(r, est_cle(t, "bouton") ? "un" : "le", t);
             mot(r, est_cle(t, "bouton") ? "bouton" : "texte", t);

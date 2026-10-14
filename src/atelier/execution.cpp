@@ -120,14 +120,16 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         colonnes << c;
     }
     if (!t->nb_colonnes.isEmpty() || !t->types_zones.isEmpty())   // un écran est déjà ouvert : il passe dessous
-        t->dessous.push_back({t->nb_colonnes, t->types_zones, t->facultatives, t->choix_zones, t->options_zones});
+        t->dessous.push_back({t->nb_colonnes, t->types_zones, t->facultatives, t->choix_zones, t->options_zones, t->images});
     t->nb_colonnes.clear();
     for (const auto &c : colonnes) t->nb_colonnes << c.size();
     t->types_zones.clear();
     t->facultatives.clear();
     t->choix_zones.clear();
     t->options_zones.clear();
+    t->images.clear();
     for (size_t k = 0; k < n; k++) {
+        t->images << (el[k].octets ? QByteArray(reinterpret_cast<const char *>(el[k].octets), (qsizetype)el[k].taille) : QByteArray());
         t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0));
         t->facultatives << el[k].facultatif;
@@ -183,12 +185,14 @@ static void iface_ecran_fermer(void *contexte, Chaine *sortie) {
         t->facultatives = d.facultatives;
         t->choix_zones = d.choix_zones;
         t->options_zones = d.options_zones;
+        t->images = d.images;
     } else {
         t->nb_colonnes.clear();
         t->types_zones.clear();
         t->facultatives.clear();
         t->choix_zones.clear();
         t->options_zones.clear();
+        t->images.clear();
     }
     emit t->ecran_ferme();
 }
@@ -727,6 +731,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].type = k < travail.types_zones.size() ? travail.types_zones[k] : QString();
         elements[k].choix = k < travail.choix_zones.size() ? travail.choix_zones[k] : QStringList();
         elements[k].facultatif = k < travail.facultatives.size() && travail.facultatives[k];
+        if (k < travail.images.size()) elements[k].octets = travail.images[k];
         const int o = k < travail.options_zones.size() ? travail.options_zones[k] : 0;
         elements[k].plusieurs_lignes = o & 1;
         elements[k].lecture_seule = o & 2;

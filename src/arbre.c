@@ -169,6 +169,13 @@ static void decrire(const Noeud *n, Chaine *c) {
         for (size_t q = 0; q < n->nb_enfants; q++) { chaine_ajouter(c, " "); decrire(n->enfants[q], c); }
         chaine_ajouter(c, ")");
         return;
+    case N_IMAGE_ECRAN:
+        chaine_ajouter(c, "(image « ");
+        chaine_ajouter(c, n->texte);
+        chaine_ajouter(c, " »");
+        for (size_t q = 0; q < n->nb_enfants; q++) { chaine_ajouter(c, " "); decrire(n->enfants[q], c); }
+        chaine_ajouter(c, ")");
+        return;
     case N_TEXTE_ECRAN:
         chaine_ajouter(c, "(texte « ");
         chaine_ajouter(c, n->texte);

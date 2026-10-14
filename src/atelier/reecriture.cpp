@@ -709,9 +709,9 @@ Noeud *nouvel_element(const ElementNouveau &e, const QString &dossier, QString *
     Noeud *n = nullptr;
     const QByteArray t = e.texte.trimmed().toUtf8();
     if (e.texte.trimmed().isEmpty()) { *erreur = "Donne un libellé, un texte ou un nom."; return nullptr; }
-    if (e.sorte == ELEMENT_BOUTON || e.sorte == ELEMENT_TEXTE) {
+    if (e.sorte == ELEMENT_BOUTON || e.sorte == ELEMENT_TEXTE || e.sorte == ELEMENT_IMAGE) {
         if (e.texte.contains(QChar(0x00BB)) || e.texte.contains(QChar(0x00AB))) { *erreur = "Pas de guillemets « » dans un libellé."; return nullptr; }
-        n = noeud_creer(e.sorte == ELEMENT_BOUTON ? N_BOUTON : N_TEXTE_ECRAN, 0, 0, 0);
+        n = noeud_creer(e.sorte == ELEMENT_BOUTON ? N_BOUTON : e.sorte == ELEMENT_IMAGE ? N_IMAGE_ECRAN : N_TEXTE_ECRAN, 0, 0, 0);
         n->texte = grym_dupliquer(t.constData());
     } else if (e.sorte == ELEMENT_ZONE) {
         if (QString e2 = nom_valide(e.texte); !e2.isEmpty()) { *erreur = e2; return nullptr; }

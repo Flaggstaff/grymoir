@@ -737,6 +737,20 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* L'image (§ 22.8) : servie à part, à l'adresse de sa série ; une autre série ou un autre élément : 404 */
+        const char *src = "L'écran x montre :\n    l'image « exemples/pixel.png »,\n    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), get("/ecran-image/1/0"), get("/ecran-image/2/0"), get("/ecran-image/1/1"), evenement("q=1&clic=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<p class=\"image\"><img src=\"/ecran-image/1/0\" alt=\"\"></p>");
+        CONTIENT(sc.reponses[1], "Content-Type: image/png");
+        CONTIENT(sc.reponses[2], "404 Not Found");
+        CONTIENT(sc.reponses[3], "404 Not Found");
+        CONTIENT(sc.reponses[5], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* Le thème : la couleur choisie dans la feuille, clair et sombre ; le logo servi à /logo */
         const char *src = "Les écrans ont la couleur verte et le logo « exemples/pixel.png ».\n"
                           "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"

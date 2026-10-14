@@ -82,7 +82,24 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             continue;
         }
         QBoxLayout *ici = blocs.last();
-        if (e.sorte == ELEMENT_TEXTE) {
+        if (e.sorte == ELEMENT_IMAGE) {   // « l'image « plan.png » » (§ 22.8) : sa taille, sans dépasser 480 × 320
+            auto *l = new QLabel;
+            QPixmap p;
+            if (!e.octets.isEmpty() && p.loadFromData(e.octets)) {
+                const qreal densite = l->devicePixelRatioF();
+                if (p.width() > 480 || p.height() > 320)
+                    p = p.scaled(qRound(480 * densite), qRound(320 * densite), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                else
+                    p = p.scaled(qRound(p.width() * densite), qRound(p.height() * densite), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+                p.setDevicePixelRatio(densite);
+                l->setPixmap(p);
+            } else {
+                l->setText(e.texte);   // l'aperçu sans le fichier : son nom
+            }
+            l->setToolTip(e.texte);
+            ici->addWidget(l);
+            r.controles[k] = l;
+        } else if (e.sorte == ELEMENT_TEXTE) {
             auto *l = new QLabel(e.texte);
             l->setWordWrap(true);
             ici->addWidget(l);
