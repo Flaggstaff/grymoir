@@ -18,6 +18,7 @@
 #include <QInputMethodEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QRegularExpression>
 #include <QMimeData>
 #include <QDropEvent>
 #include <QTreeWidget>
@@ -1968,12 +1969,13 @@ int main(int argc, char **argv) {
         VERIFIER(!lire().contains("en position libre") && !lire().contains("de la gauche") && lire().contains("un bouton « Bravo »,"));
         // tout l'écran en position libre, chaque élément à la place mesurée
         ecrire("L'écran d'accueil montre :\n    côte à côte :\n        le texte « a »,\n        le texte « b »,\n    le texte « c ».\n");
-        QVector<QRect> places = {QRect(), QRect(0, 0, 40, 24), QRect(48, 0, 40, 24), QRect(), QRect(0, 32, 88, 24)};
+        QVector<QRect> places = {QRect(0, 0, 88, 24), QRect(0, 0, 40, 24), QRect(48, 0, 40, 24), QRect(), QRect(0, 32, 88, 24)};
         r = ecran_liberer(dossier.path(), "d'accueil", places, &g);
         if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        // le bloc reste un bloc, placé d'un seul tenant, sa règle à l'intérieur (1.81)
         VERIFIER(lire().startsWith("L'écran d'accueil montre :\n    en position libre :\n"
-                                   "        le texte « a », à 0 de la gauche et 0 du haut, large de 40,\n"
-                                   "        le texte « b », à 48 de la gauche et 0 du haut, large de 40,\n"
+                                   "        côte à côte, à 0 de la gauche et 0 du haut, large de 88, haut de 24 :\n"
+                                   "            le texte « a »,\n            le texte « b »,\n"
                                    "        le texte « c », à 0 de la gauche et 32 du haut, large de 88.\n"));
         // un écran vide, libre dès la création
         ecrire("Afficher 1.\n");
@@ -2120,19 +2122,59 @@ int main(int argc, char **argv) {
             VERIFIER(r.open(QIODevice::ReadOnly));
             VERIFIER(QString::fromUtf8(r.readAll()).contains("une note (texte), à 16 de la gauche et 80 du haut, large de 232, haute de 80."));
         }
-        // le coin d'un élément d'un écran décrit : rien ne bouge, la barre d'état dit pourquoi
+        // un écran décrit : glisser un élément le passe en position libre, l'élément à sa nouvelle place ; un fantôme
+        // et la grille pendant le geste ; les autres gardent ce qu'on voit
         {
             QFile d(dossier.filePath("p.grym"));
             VERIFIER(d.open(QIODevice::WriteOnly | QIODevice::Truncate));
-            d.write("L'écran d'accueil montre :\n    un bouton « A ».\nQuand on clique sur « A » dans l'écran d'accueil :\n    Fermer l'écran.\n");
+            d.write("L'écran d'accueil montre :\n    le texte « t »,\n    un bouton « A ».\n"
+                    "Quand on clique sur « A » dans l'écran d'accueil :\n    Fermer l'écran.\n");
         }
         o.montrer(dossier.path());
         QApplication::processEvents();
-        if (QWidget *w = o.controle(0)) {
-            const QPoint coin = w->mapToGlobal(QPoint(w->width() - 3, w->height() - 3));
-            QMouseEvent appui(QEvent::MouseButtonPress, w->mapFromGlobal(coin), QPointF(coin), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        if (QWidget *w = o.controle(1)) {
+            const QPoint milieu = w->mapToGlobal(QPoint(w->width() / 2, w->height() / 2));
+            const QPointF local = w->mapFromGlobal(milieu);
+            QMouseEvent appui(QEvent::MouseButtonPress, local, QPointF(milieu), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
             QApplication::sendEvent(w, &appui);
-            VERIFIER(o.texte_etat().contains("n'est pas en position libre"));
+            QMouseEvent bouge(QEvent::MouseMove, local, QPointF(milieu + QPoint(200, 40)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &bouge);
+            VERIFIER(o.grille_visible() != nullptr);
+            QMouseEvent lache(QEvent::MouseButtonRelease, local, QPointF(milieu + QPoint(200, 40)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &lache);
+            if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
+            QFile r(dossier.filePath("p.grym"));
+            VERIFIER(r.open(QIODevice::ReadOnly));
+            const QString t = QString::fromUtf8(r.readAll());
+            VERIFIER(t.contains("    en position libre :\n        le texte « t », à 0 de la gauche et 0 du haut,"));
+            QRegularExpressionMatch m = QRegularExpression("un bouton « A », à (\\d+) de la gauche et (\\d+) du haut").match(t);
+            VERIFIER(m.hasMatch() && m.captured(1).toInt() >= 192 && m.captured(2).toInt() >= 40);
+            if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
+        }
+        // Maj + flèche sur un élément d'un écran décrit, la touche livrée à l'aperçu qui a pris le focus au clic
+        o.activateWindow();
+        QApplication::processEvents();
+        {
+            QFile d(dossier.filePath("p.grym"));
+            VERIFIER(d.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            d.write("L'écran d'accueil montre :\n    le texte « t »,\n    un bouton « A ».\n"
+                    "Quand on clique sur « A » dans l'écran d'accueil :\n    Fermer l'écran.\n");
+        }
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        if (QWidget *w = o.controle(1)) {
+            const QPoint milieu = w->mapToGlobal(QPoint(w->width() / 2, w->height() / 2));
+            QMouseEvent appui(QEvent::MouseButtonPress, w->mapFromGlobal(milieu), QPointF(milieu), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &appui);
+            QMouseEvent lache(QEvent::MouseButtonRelease, w->mapFromGlobal(milieu), QPointF(milieu), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &lache);
+            QWidget *f = QApplication::focusWidget();
+            VERIFIER(f != nullptr);
+            QKeyEvent fleche(QEvent::KeyPress, Qt::Key_Right, Qt::ShiftModifier);
+            if (f) QApplication::sendEvent(f, &fleche);
+            QFile r(dossier.filePath("p.grym"));
+            VERIFIER(r.open(QIODevice::ReadOnly));
+            VERIFIER(QString::fromUtf8(r.readAll()).contains("en position libre :"));
         }
     }
 

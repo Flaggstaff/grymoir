@@ -1147,25 +1147,22 @@ QString ecran_liberer(const QString &dossier, const QString &ecran, const QVecto
     if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
     Noeud *n = t.phrase;
     if ((size_t)places.size() != n->nb_enfants) return "L'aperçu ne correspond plus à l'écran : réessaie.";
-    for (size_t q = 0; q < n->nb_enfants; q++)
+    for (size_t q = 0; q < n->nb_enfants; q = fin_d_unite(n, q) + 1)
         if (n->enfants[q]->type == N_DISPOSITION && n->enfants[q]->forme == 4) return "Cet écran est déjà en position libre.";
-    QVector<Noeud *> gardes;
-    for (size_t q = 0; q < n->nb_enfants; q++) {
+    // Chaque unité du premier niveau (un élément, ou un bloc avec tout son contenu, qui garde sa règle) prend la place
+    // mesurée dans l'aperçu (§ 22.9) : largeur toujours, hauteur pour une liste et pour un bloc.
+    for (size_t q = 0; q < n->nb_enfants; q = fin_d_unite(n, q) + 1) {
         Noeud *x = n->enfants[q];
-        if (x->type == N_DISPOSITION) { noeud_liberer(x); continue; }
         const QRect r = places[(int)q];
         x->place[0] = qBound(0, r.x(), 4000);
         x->place[1] = qBound(0, r.y(), 4000);
         x->place[2] = qBound(8, r.width(), 4000);
         x->place[3] = qBound(8, r.height(), 4000);
-        x->place_dite = 1 | 2 | (x->type == N_CHERCHER ? 4 : 0);
-        gardes << x;
+        x->place_dite = 1 | 2 | (x->type == N_CHERCHER || x->type == N_DISPOSITION ? 4 : 0);
     }
-    n->nb_enfants = 0;
-    noeud_ajouter(n, marque(4));
-    for (Noeud *x : gardes) noeud_ajouter(n, x);
-    noeud_ajouter(n, marque(0));
-    if (!gardes.isEmpty()) trier_bloc_libre(n, 1);
+    inserer(n, n->nb_enfants, marque(0));
+    inserer(n, 0, marque(4));
+    if (n->nb_enfants > 2) trier_bloc_libre(n, 1);
     reimprimer(ch, t);
     geste->description = QString("Mettre l'écran %1 en position libre").arg(ecran);
     return ch.conclure(geste);

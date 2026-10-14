@@ -405,12 +405,13 @@ void OngletEcrans::dessiner() {
     }
     vue.titre->installEventFilter(this);
     for (int k = 0; k < vue.controles.size(); k++)   // le survol des éléments placés : le curseur change sur leurs bords
-        if (QWidget *w = vue.controles[k]; w && e.elements.value(k).place) {
+        if (QWidget *w = vue.controles[k]) {
             w->setMouseTracking(true);
             for (QWidget *x : w->findChildren<QWidget *>()) x->setMouseTracking(true);
         }
     grille = nullptr;
     poignee = nullptr;   // l'ancienne est partie avec l'ancien aperçu
+    fantome = nullptr;
     centre->installEventFilter(this);
     for (int k = 0; k < e.elements.size(); k++)   // le bloc en position libre : son contour, pour savoir où l'on pose
         if (e.elements[k].sorte == ELEMENT_LIBRE && vue.controles.value(k)) {
@@ -484,11 +485,19 @@ QWidget *OngletEcrans::poignee_visible() const { return poignee && !poignee->isH
 // Les flèches déplacent l'élément placé choisi d'un pixel (Maj : de 8, sur la grille) ; avec Alt, elles changent sa
 // taille. Chaque appui est un geste, qui s'annule. Rend vrai si la touche a servi.
 bool OngletEcrans::clavier(int t, Qt::KeyboardModifiers m) {
-    if (courant < 0 || element < 0 || element >= lus[courant].elements.size() || !lus[courant].elements[element].place) return false;
+    if (courant < 0 || element < 0 || element >= lus[courant].elements.size()) return false;
     if (t != Qt::Key_Left && t != Qt::Key_Right && t != Qt::Key_Up && t != Qt::Key_Down) return false;
     const ElementLu &x = lus[courant].elements[element];
     const int pas = (m & Qt::ShiftModifier) ? 8 : 1;
     const int dx = t == Qt::Key_Left ? -pas : t == Qt::Key_Right ? pas : 0, dy = t == Qt::Key_Up ? -pas : t == Qt::Key_Down ? pas : 0;
+    if (!x.place) {   // un écran décrit : le premier geste le passe en position libre (§ 5 octies)
+        QRect r = rect_vu(element);
+        if (r.isNull()) return false;
+        if (m & Qt::AltModifier) r.setSize(QSize(qMax(8, r.width() + dx), qMax(8, r.height() + dy)));
+        else r.translate(dx, dy);
+        liberer(element, r);
+        return true;
+    }
     QWidget *w = vue.controles.value(element);
     if (m & Qt::AltModifier) {   // la taille : partie de la taille dite, ou de celle qu'on voit
         const int l = qBound(8, (x.largeur ? x.largeur : (w ? w->width() : 80)) + dx, 4000);
@@ -510,20 +519,35 @@ void OngletEcrans::placer(int k, int gauche, int haut, int largeur, int hauteur)
     });
 }
 
-void OngletEcrans::liberer() {
+QRect OngletEcrans::rect_vu(int k) const {
+    if (courant < 0 || k < 0 || k >= lus[courant].elements.size()) return QRect();
+    const auto &els = lus[courant].elements;
+    if (els[k].sorte == ELEMENT_FIN_DE_BLOC) return QRect();
+    if (QWidget *w = vue.controles.value(k)) return QRect(w->mapTo(vue.vue, QPoint(0, 0)), w->size());
+    if (els[k].sorte < ELEMENT_COTE_A_COTE && els[k].sorte != ELEMENT_IMAGE) return QRect();
+    // un bloc sans widget (côte à côte, l'un sous l'autre, dans une boîte) : ce que ses éléments occupent
+    QRect r;
+    int prof = 0;
+    for (int q = k; q < els.size(); q++) {
+        const int s = els[q].sorte;
+        if (s == ELEMENT_COTE_A_COTE || s == ELEMENT_L_UN_SOUS_L_AUTRE || s == ELEMENT_GROUPE || s == ELEMENT_LIBRE) prof++;
+        else if (s == ELEMENT_FIN_DE_BLOC) { if (--prof == 0) break; }
+        else if (QWidget *w = vue.controles.value(q)) r |= QRect(w->mapTo(vue.vue, QPoint(0, 0)), w->size());
+    }
+    return r;
+}
+
+void OngletEcrans::liberer(int k, QRect nouveau) {
     if (courant < 0 || courant >= lus.size()) return;
     const QString ecran = lus[courant].nom;
     QVector<QRect> places(lus[courant].elements.size());
-    QPoint coin(INT_MAX, INT_MAX);
-    for (int k = 0; k < places.size(); k++) {   // ce qu'on voit, relatif au premier élément en haut à gauche
-        QWidget *w = vue.controles.value(k);
-        if (!w || lus[courant].elements[k].sorte >= ELEMENT_COTE_A_COTE) continue;
-        places[k] = QRect(w->mapTo(vue.vue, QPoint(0, 0)), w->size());
-        coin.setX(qMin(coin.x(), places[k].x()));
-        coin.setY(qMin(coin.y(), places[k].y()));
-    }
+    for (int q = 0; q < places.size(); q++) places[q] = rect_vu(q);
+    if (k >= 0 && k < places.size()) places[k] = nouveau;
+    QPoint coin(INT_MAX, INT_MAX);   // ce qu'on voit, relatif à l'élément le plus en haut à gauche
+    for (const QRect &r : places)
+        if (!r.isNull()) { coin.setX(qMin(coin.x(), r.x())); coin.setY(qMin(coin.y(), r.y())); }
     for (QRect &r : places)
-        if (!r.isNull()) r = QRect(aimanter(r.x() - coin.x()), aimanter(r.y() - coin.y()), aimanter(r.width()), aimanter(r.height()));
+        if (!r.isNull()) r = QRect(aimanter(r.x() - coin.x()), aimanter(r.y() - coin.y()), qMax(8, aimanter(r.width())), qMax(8, aimanter(r.height())));
     element = -1;
     emit geste([=](Geste *g) { return ecran_liberer(dossier, ecran, places, g); });
 }
@@ -539,7 +563,7 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
         const int k = element_sous(o);
         QWidget *w = vue.controles.value(k);
         if (auto *cible = qobject_cast<QWidget *>(o); cible && w) {
-            const int b = lus[courant].elements.value(k).place ? bord_sous(w, static_cast<QMouseEvent *>(ev)->globalPosition().toPoint()) : 0;
+            const int b = bord_sous(w, static_cast<QMouseEvent *>(ev)->globalPosition().toPoint());   // tout se place (§ 5 octies)
             if (b == 3) cible->setCursor(Qt::SizeFDiagCursor);
             else if (b == 1) cible->setCursor(Qt::SizeHorCursor);
             else if (b == 2) cible->setCursor(Qt::SizeVerCursor);
@@ -562,6 +586,23 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             if (libre_taille) r.setSize(QSize((libre_taille & 1) ? qMax(8, cale(r.width() + d.x())) : r.width(),
                                               (libre_taille & 2) ? qMax(8, cale(r.height() + d.y())) : r.height()));
             else r.moveTopLeft(QPoint(cale(r.x() + d.x()), cale(r.y() + d.y())));
+            if (libre_decrit) {   // le fantôme, la grille sur tout l'aperçu
+                if (!fantome) {
+                    fantome = new QFrame(vue.vue);
+                    fantome->setAttribute(Qt::WA_TransparentForMouseEvents);
+                    fantome->setStyleSheet("border: 2px dashed " + Theme::courant().hex("accent") + ";");
+                }
+                if (!grille || grille->parentWidget() != vue.vue) { delete grille; grille = new Grille(vue.vue); }
+                grille->setGeometry(vue.vue->rect());
+                grille->show();
+                fantome->setGeometry(r);
+                libre_fin = r;
+                fantome->show();
+                fantome->raise();
+                etat->setText(libre_taille ? QString("Taille : %1 × %2 pixels").arg(r.width()).arg(r.height())
+                                           : QString("Place : glisse où tu veux%1").arg(pixel ? "" : " (grille de 8 ; Alt : au pixel)"));
+                return true;
+            }
             w->setGeometry(r);
             QWidget *toile = w->parentWidget();
             if (!grille || grille->parentWidget() != toile) { delete grille; grille = new Grille(toile); }
@@ -579,7 +620,9 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             const int k = libre_k;
             libre_k = -1;
             if (grille) grille->hide();
+            if (fantome) { fantome->hide(); fantome->deleteLater(); fantome = nullptr; }
             if (!libre_bouge) return true;
+            if (libre_decrit) { liberer(k, libre_fin); return true; }
             const QRect r = w->geometry();
             if (libre_taille) placer(k, libre_depart.x(), libre_depart.y(), (libre_taille & 1) ? r.width() : -1,
                                      (libre_taille & 2) ? r.height() : -1);
@@ -650,12 +693,22 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             glisse = -1;
             libre_k = trouve;
             libre_bouge = false;
+            libre_decrit = false;
             libre_depart = w->geometry();
             libre_taille = bord_sous(w, depart);   // un bord ou le coin : la taille ; ailleurs : la place
             etat->setText(libre_taille ? "Glisse pour changer la taille (Alt : au pixel)." : "Glisse pour placer (Alt : au pixel).");
-        } else if (w && bord_sous(w, depart) == 3) {   // le coin d'un élément décrit : il ne s'agrandit pas, dire pourquoi
-            etat->setText("Cet élément n'est pas en position libre : sa taille suit la disposition. « Mettre en position libre », "
-                          "dans le panneau de l'écran, permet de le placer et de l'agrandir.");
+        } else if (w && !(static_cast<QMouseEvent *>(ev)->modifiers() & Qt::ControlModifier) && courant >= 0
+                   && lus[courant].elements.value(trouve).sorte != ELEMENT_LIBRE) {
+            // un écran décrit : tout se place quand même ; un fantôme suit la souris, le lâcher passe l'écran en position
+            // libre en gardant ce qu'on voit, cet élément à sa nouvelle place (§ 5 octies). Cmd (Ctrl) : remettre dans l'ordre.
+            glisse = -1;
+            libre_k = trouve;
+            libre_bouge = false;
+            libre_decrit = true;
+            libre_depart = rect_vu(trouve);
+            libre_taille = bord_sous(w, depart);
+            etat->setText(libre_taille ? "Glisse pour changer la taille : l'écran passera en position libre."
+                                       : "Glisse pour placer : l'écran passera en position libre (Cmd : remettre dans l'ordre).");
         }
     }
     if (ev->type() == QEvent::MouseButtonRelease) glisse = -1;
@@ -752,7 +805,7 @@ void OngletEcrans::editer() {
             auto *liberer_b = new QPushButton("Mettre en position libre");
             liberer_b->setToolTip("Chaque élément garde la place et la largeur qu'il a dans l'aperçu ; ensuite, il se glisse au pixel.");
             f->addRow("", liberer_b);
-            connect(liberer_b, &QPushButton::clicked, this, &OngletEcrans::liberer);
+            connect(liberer_b, &QPushButton::clicked, this, [this] { liberer(); });
         }
         connect(appliquer, &QPushButton::clicked, this, [this, ecran, titre] {
             const QString t = titre->text();

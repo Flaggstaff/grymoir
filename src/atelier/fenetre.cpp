@@ -341,11 +341,11 @@ Fenetre::Fenetre() {
                                                   QLineEdit::Normal, "de recherche", &ok);
         if (!ok) return;
         // La disposition dès la création : décrite (colonnes et blocs) ou libre, au pixel (grammaire, § 22.9)
-        const QStringList dispositions = {"Décrite : les éléments s'empilent, l'écran s'adapte",
-                                          "Libre : chaque élément placé au pixel, avec la grille"};
+        const QStringList dispositions = {"Libre : chaque élément placé au pixel, avec la grille",
+                                          "Décrite : les éléments s'empilent, l'écran s'adapte"};
         const QString d = QInputDialog::getItem(this, "Nouvel écran vide", "Disposition :", dispositions, 0, false, &ok);
         if (!ok) return;
-        const bool libre = d == dispositions[1];
+        const bool libre = d == dispositions[0];
         const QString cible = cible_des_ecrans();
         appliquer([=](Geste *g) { return nouvel_ecran(projet, cible, nom, g, libre); }, entite_choisie);
     });

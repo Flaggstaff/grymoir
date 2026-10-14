@@ -72,7 +72,10 @@ public:
     // place l'élément k (pour les essais comme pour la souris).
     static int aimanter(int v) { return qMax(0, (v + 4) / 8 * 8); }
     void placer(int k, int gauche, int haut, int largeur, int hauteur);
-    void liberer();                                  // « Mettre en position libre » : l'écran entier, tel qu'on le voit
+    // « Mettre en position libre » : l'écran entier, tel qu'on le voit ; avec k, l'élément k va à `nouveau` (coordonnées
+    // de l'aperçu) : c'est le premier geste sur un écran décrit, qui le passe en position libre et place l'élément.
+    void liberer(int k = -1, QRect nouveau = QRect());
+    QRect rect_vu(int k) const;                      // l'élément ou le bloc k dans l'aperçu ; vide pour une fin de bloc
     QWidget *grille_visible() const;                 // la grille d'alignement, si elle est montrée (essais)
     QWidget *poignee_visible() const;                // la poignée de taille, si elle est montrée (essais)
     QString texte_etat() const;                      // la barre d'état de l'onglet (essais)
@@ -102,6 +105,9 @@ private:
     int libre_k = -1;
     int libre_taille = 0;   // 0 : déplacer ; 1 : la largeur (bord droit) ; 2 : la hauteur (bord bas) ; 3 : les deux (coin)
     bool libre_bouge = false;
+    bool libre_decrit = false;            // l'élément saisi est dans un écran décrit : un fantôme le montre, le lâcher convertit
+    class QFrame *fantome = nullptr;
+    QRect libre_fin;                      // où le fantôme est, au lâcher
     static int bord_sous(QWidget *w, QPoint global);   // ce que saisit la souris en ce point de w (même codage)
     QRect libre_depart;
     QWidget *grille = nullptr;
