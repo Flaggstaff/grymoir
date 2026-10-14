@@ -530,7 +530,7 @@ QString generer_ecran(const QString &dossier, const QString &cible, const QStrin
     return ch.conclure(geste);
 }
 
-QString nouvel_ecran(const QString &dossier, const QString &cible, const QString &nom, Geste *geste) {
+QString nouvel_ecran(const QString &dossier, const QString &cible, const QString &nom, Geste *geste, bool libre) {
     Chantier ch(dossier);
     FichierAnalyse *f = ch.fichier(cible);
     if (!f) return QString("« %1 » n'est pas dans le projet.").arg(cible);
@@ -538,7 +538,8 @@ QString nouvel_ecran(const QString &dossier, const QString &cible, const QString
     if (f->compacte) return QString("Les écrans générés s'écrivent en forme littéraire : choisis un fichier .grym.");
     const QString n = nom.simplified();
     if (n.isEmpty()) return "Donne un nom : « de recherche », « des factures », « d'accueil ».";
-    QString t = QString("L'écran %1 montre :\n    un bouton « Fermer ».\n").arg(n) + evenement_fermer(n);
+    QString t = (libre ? QString("L'écran %1 montre :\n    en position libre :\n        un bouton « Fermer », à 16 de la gauche et 16 du haut.\n")
+                       : QString("L'écran %1 montre :\n    un bouton « Fermer ».\n")).arg(n) + evenement_fermer(n);
     const int pos = position_des_ecrans(*f);
     ch.remplacer(*f, pos, pos, (pos ? "\n" : "") + t.left(t.size() - (pos ? 1 : 0)) + (pos ? "" : "\n"));
     geste->description = QString("Nouvel écran « %1 »").arg(n);
@@ -746,6 +747,11 @@ Noeud *nouvel_element(const ElementNouveau &e, const QString &dossier, QString *
 
 }  // namespace
 
+namespace {
+int bloc_de(Noeud *n, size_t i);
+void inserer(Noeud *n, size_t i, Noeud *x);
+}  // namespace
+
 QString ecran_titre(const QString &dossier, const QString &ecran, const QString &titre, Geste *geste) {
     Chantier ch(dossier);
     Trouve t = trouver_ecran(ch, ecran);
@@ -765,7 +771,22 @@ QString ecran_ajouter(const QString &dossier, const QString &ecran, const Elemen
     QString erreur;
     Noeud *n = nouvel_element(e, dossier, &erreur);
     if (!n) return erreur;
-    noeud_ajouter(t.phrase, n);
+    // Un écran qui a un bloc en position libre reçoit l'élément dans le dernier, sous ce qui y est déjà (§ 22.9).
+    Noeud *p = t.phrase;
+    size_t fin_libre = 0;
+    bool libre = false;
+    for (size_t q = 0; q < p->nb_enfants; q++)
+        if (p->enfants[q]->type == N_DISPOSITION && p->enfants[q]->forme == 0 && bloc_de(p, q) == 4) { fin_libre = q; libre = true; }
+    if (libre) {
+        int bas = 0;
+        for (size_t q = 0; q < fin_libre; q++)
+            if (bloc_de(p, q) == 4 && (p->enfants[q]->place_dite & 1)) bas = qMax(bas, p->enfants[q]->place[1]);
+        n->place[0] = 16;
+        n->place[1] = qMin(4000, bas + 48);
+        n->place_dite = 1;
+        inserer(p, fin_libre, n);
+    } else
+        noeud_ajouter(t.phrase, n);
     reimprimer_avec(ch, t, e);
     if (e.sorte == ELEMENT_BOUTON) {   // un bouton sans événement serait refusé (§ 22.2)
         const int pos = apres_l_ecran(t, ecran);
@@ -808,6 +829,7 @@ QString ecran_supprimer(const QString &dossier, const QString &ecran, int index,
             }
         }
         const size_t a = qMin((size_t)index, autre), b = qMax((size_t)index, autre);
+        for (size_t q = a; q < b; q++) n->enfants[q]->place_dite = 0;   // hors du bloc libre, plus de place (§ 22.9)
         enlever(b);
         if (a != b) enlever(a);
     } else {
@@ -852,6 +874,8 @@ QString ecran_modifier(const QString &dossier, const QString &ecran, int index, 
         for (size_t q = 0; q < vieux->nb_enfants; q++) noeud_ajouter(neuf, vieux->enfants[q]);
         vieux->nb_enfants = 0;
     }
+    for (int q = 0; q < 4; q++) neuf->place[q] = vieux->place[q];   // la place reste (§ 22.9)
+    neuf->place_dite = vieux->place_dite;
     n->enfants[index] = neuf;
     noeud_liberer(vieux);
     reimprimer_avec(ch, t, x);
@@ -921,7 +945,8 @@ void nettoyer_blocs(Noeud *n) {
                 if (x->type == N_DISPOSITION) prof++;
             }
             // un groupe titré (§ 22.7) a un sens avec un seul élément ; il ne part que vide
-            if (fin > i && (n->enfants[i]->forme == 3 ? directs == 0 : directs <= 1)) {
+            // un bloc en position libre aussi : ses éléments ont une place qui ne vaut que là (§ 22.9)
+            if (fin > i && (n->enfants[i]->forme >= 3 ? directs == 0 : directs <= 1)) {
                 noeud_liberer(retirer_enfant(n, fin));
                 noeud_liberer(retirer_enfant(n, i));
                 change = true;
@@ -941,6 +966,8 @@ QString ecran_deplacer(const QString &dossier, const QString &ecran, int source,
     if (source < 0 || source >= nb || cible < 0 || cible >= nb || source == cible) return "Rien à déplacer.";
     if (n->enfants[source]->type == N_DISPOSITION || n->enfants[cible]->type == N_DISPOSITION)
         return "Un bloc ne se déplace pas : déplace ses éléments.";
+    if (bloc_de(n, (size_t)source) == 4 || bloc_de(n, (size_t)cible) == 4)
+        return "Dans un bloc en position libre, chaque élément se place au pixel : glisse-le dans son bloc.";
     Noeud *x = retirer_enfant(n, (size_t)source);
     size_t c = (size_t)(cible > source ? cible - 1 : cible);   // la cible, après le retrait de la source
     const int bloc = bloc_de(n, c);
@@ -973,10 +1000,90 @@ QString ecran_grouper(const QString &dossier, const QString &ecran, int index, c
     if (x.contains(QChar(0x00BB)) || x.contains(QChar(0x00AB))) return "Pas de guillemets « » dans un titre.";
     if (index < 0 || (size_t)index >= n->nb_enfants || n->enfants[index]->type == N_DISPOSITION)
         return "Choisis un élément, pas un bloc.";
+    if (bloc_de(n, (size_t)index) == 4) return "Un élément en position libre ne se met pas dans un groupe.";
     inserer(n, (size_t)index + 1, marque(0));
     inserer(n, (size_t)index, marque(3, x));
     reimprimer(ch, t);
     geste->description = QString("Grouper un élément de l'écran %1").arg(ecran);
+    return ch.conclure(geste);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Position libre (grammaire, § 22.9 ; docs/atelier.md, § 5 octies)
+// ---------------------------------------------------------------------------------------------------------------
+
+namespace {
+
+// Les éléments du bloc libre qui contient l'élément i, de haut en bas puis de gauche à droite ; rend le nouvel index
+// de l'élément qui était en i.
+size_t trier_bloc_libre(Noeud *n, size_t i) {
+    size_t debut = i, fin = i;
+    while (debut > 0 && n->enfants[debut - 1]->type != N_DISPOSITION) debut--;
+    while (fin < n->nb_enfants && n->enfants[fin]->type != N_DISPOSITION) fin++;
+    Noeud *suivi = n->enfants[i];
+    std::stable_sort(n->enfants + debut, n->enfants + fin, [](const Noeud *a, const Noeud *b) {
+        return a->place[1] != b->place[1] ? a->place[1] < b->place[1] : a->place[0] < b->place[0];
+    });
+    for (size_t q = debut; q < fin; q++) if (n->enfants[q] == suivi) return q;
+    return i;
+}
+
+}  // namespace
+
+QString ecran_placer(const QString &dossier, const QString &ecran, int index, int gauche, int haut, int largeur, int hauteur,
+                     Geste *geste, int *nouvel_index) {
+    Chantier ch(dossier);
+    Trouve t = trouver_ecran(ch, ecran);
+    if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
+    Noeud *n = t.phrase;
+    if (index < 0 || (size_t)index >= n->nb_enfants || n->enfants[index]->type == N_DISPOSITION
+        || bloc_de(n, (size_t)index) != 4)
+        return "Choisis un élément d'un bloc en position libre.";
+    if (gauche < 0 || haut < 0 || gauche > 4000 || haut > 4000) return "La place va de 0 à 4000 pixels.";
+    if ((largeur > 0 && (largeur < 8 || largeur > 4000)) || (hauteur > 0 && (hauteur < 8 || hauteur > 4000)))
+        return "La taille va de 8 à 4000 pixels.";
+    Noeud *el = n->enfants[index];
+    el->place[0] = gauche;
+    el->place[1] = haut;
+    el->place_dite |= 1;
+    if (largeur == 0) el->place_dite &= ~2;
+    else if (largeur > 0) { el->place[2] = largeur; el->place_dite |= 2; }
+    if (hauteur == 0) el->place_dite &= ~4;
+    else if (hauteur > 0) { el->place[3] = hauteur; el->place_dite |= 4; }
+    const size_t apres = trier_bloc_libre(n, (size_t)index);
+    if (nouvel_index) *nouvel_index = (int)apres;
+    reimprimer(ch, t);
+    geste->description = QString("Placer un élément de l'écran %1").arg(ecran);
+    return ch.conclure(geste);
+}
+
+QString ecran_liberer(const QString &dossier, const QString &ecran, const QVector<QRect> &places, Geste *geste) {
+    Chantier ch(dossier);
+    Trouve t = trouver_ecran(ch, ecran);
+    if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
+    Noeud *n = t.phrase;
+    if ((size_t)places.size() != n->nb_enfants) return "L'aperçu ne correspond plus à l'écran : réessaie.";
+    for (size_t q = 0; q < n->nb_enfants; q++)
+        if (n->enfants[q]->type == N_DISPOSITION && n->enfants[q]->forme == 4) return "Cet écran est déjà en position libre.";
+    QVector<Noeud *> gardes;
+    for (size_t q = 0; q < n->nb_enfants; q++) {
+        Noeud *x = n->enfants[q];
+        if (x->type == N_DISPOSITION) { noeud_liberer(x); continue; }
+        const QRect r = places[(int)q];
+        x->place[0] = qBound(0, r.x(), 4000);
+        x->place[1] = qBound(0, r.y(), 4000);
+        x->place[2] = qBound(8, r.width(), 4000);
+        x->place[3] = qBound(8, r.height(), 4000);
+        x->place_dite = 1 | 2 | (x->type == N_CHERCHER ? 4 : 0);
+        gardes << x;
+    }
+    n->nb_enfants = 0;
+    noeud_ajouter(n, marque(4));
+    for (Noeud *x : gardes) noeud_ajouter(n, x);
+    noeud_ajouter(n, marque(0));
+    if (!gardes.isEmpty()) trier_bloc_libre(n, 1);
+    reimprimer(ch, t);
+    geste->description = QString("Mettre l'écran %1 en position libre").arg(ecran);
     return ch.conclure(geste);
 }
 

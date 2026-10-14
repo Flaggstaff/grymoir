@@ -28,6 +28,8 @@ struct ElementLu {
     QString evenement_fichier;   // l'événement de l'élément (clic, choix, changement), s'il existe
     QString evenement_ecrit;     // son texte GrymoiR, pour la confirmation d'une suppression
     int evenement_ligne = 0;
+    bool place = false;          // élément d'un bloc en position libre (§ 22.9)
+    int gauche = 0, haut = 0, largeur = 0, hauteur = 0;   // largeur, hauteur : 0 si non dites
 };
 
 struct EcranLu {
@@ -65,6 +67,12 @@ public:
     // droit met à côté, la moitié haute au-dessus, la moitié basse en dessous.
     static int cote_de_depot(const QSize &taille, const QPointF &p);
     void deposer(int source, int cible, int cote);   // le geste de déplacement
+    // Position libre (docs/atelier.md, § 5 octies) : une valeur ramenée sur la grille de 8 pixels, et le geste qui
+    // place l'élément k (pour les essais comme pour la souris).
+    static int aimanter(int v) { return qMax(0, (v + 4) / 8 * 8); }
+    void placer(int k, int gauche, int haut, int largeur, int hauteur);
+    void liberer();                                  // « Mettre en position libre » : l'écran entier, tel qu'on le voit
+    QWidget *grille_visible() const;                 // la grille d'alignement, si elle est montrée (essais)
 
 signals:
     void ouvrir(const QString &fichier, int ligne);   // « Voir l'événement », « Voir la déclaration »
@@ -86,6 +94,11 @@ private:
     QPoint depart;
     int depot_cible = -1, depot_cote = 0;
     class QFrame *repere = nullptr;   // le trait qui montre où l'élément atterrira
+    // un élément en position libre qu'on déplace (ou qu'on agrandit par son coin), sa géométrie de départ
+    int libre_k = -1;
+    bool libre_taille = false, libre_bouge = false;
+    QRect libre_depart;
+    QWidget *grille = nullptr;
     int element_sous(QObject *o) const;
     QVector<EcranLu> lus;
     int courant = -1, element = -1;

@@ -240,6 +240,20 @@ Avec B2 bis (grammaire, § 22.8) : « Image » dans la palette d'ajout choisit u
 
 Corrigé en chemin : le panneau d'une zone ne lisait pas son genre ; « Appliquer » réécrivait au masculin une zone féminine (`une remarque` devenait `un remarque`).
 
+## 5 octies. La position libre dans l'éditeur d'écrans *(fait le 14 octobre 2026)*
+
+Le langage place au pixel dans un bloc `en position libre :` (grammaire, § 22.9) ; l'éditeur d'écrans le rend direct.
+
+- **À la création.** « Nouvel écran vide » demande la disposition : décrite (les éléments s'empilent, l'écran s'adapte) ou libre (le bouton « Fermer » déjà dans un bloc en position libre). « Mettre en position libre », dans le panneau de l'écran, convertit un écran existant : chaque élément garde la place et la largeur qu'il a dans l'aperçu (une liste garde aussi sa hauteur), ramenées sur la grille ; les blocs disparaissent.
+- **Glisser.** Dans un bloc libre, l'élément suit la souris, sans le glisser-déposer des autres blocs. La grille d'alignement apparaît sur le bloc le temps du geste : un trait tous les 8 pixels, appuyé tous les 32, à la couleur d'accent. L'élément s'y aimante ; Alt (Option sous macOS) le place au pixel près. La barre d'état donne la place en cours. Rien n'est écrit avant de lâcher ; le lâcher est un geste ordinaire, qui s'annule.
+- **Agrandir.** Saisi par son coin en bas à droite (10 pixels), l'élément change de taille, aimanté de même ; le lâcher écrit `large de` et `haut de`.
+- **Le panneau** d'un élément placé donne Gauche, Haut, Largeur et Hauteur (0 : la taille naturelle) et « Placer ».
+- **L'ordre.** Après chaque placement, l'atelier réécrit les éléments du bloc de haut en bas, puis de gauche à droite : l'ordre de lecture (Tab, lecteurs d'écran) suit ce qu'on voit.
+- **Ajouter.** Dans un écran qui a un bloc libre, la palette ajoute au dernier, à 16 de la gauche et 48 pixels sous l'élément le plus bas (la hauteur réelle des éléments n'est connue qu'au dessin).
+- **Refus.** Un élément en position libre ne se met pas dans un groupe et ne se glisse pas vers un autre bloc ; retirer le bloc garde ses éléments et efface leur place. Le contour pointillé montre le bloc dans l'aperçu.
+- La grille est un outil de l'atelier : elle n'existe pas dans le programme, qui ne garde que les nombres.
+- Pas encore : déplacer au clavier, guides d'alignement entre éléments, glisser un élément d'un autre bloc vers le bloc libre, aide à la saisie (grammaire, § 8) pour les nouvelles tournures.
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -332,3 +346,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.35 | 2026-10-14 | § 5 septies : états des éléments dans le panneau des écrans ; genre d'une zone gardé par « Appliquer » |
 | 0.36 | 2026-10-14 | § 5 septies : valeurs permises des zones, boutons radio dans l'aperçu, « Mettre dans un groupe… », titre d'un groupe |
 | 0.37 | 2026-10-14 | § 5 septies : l'image dans la palette, le panneau et l'aperçu |
+| 0.38 | 2026-10-14 | § 5 octies : position libre (grammaire, § 22.9) : disposition choisie à la création, « Mettre en position libre », glisser avec grille de 8 pixels et aimantation (Alt : au pixel), coin pour la taille, panneau Gauche, Haut, Largeur, Hauteur |

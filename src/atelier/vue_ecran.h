@@ -13,6 +13,7 @@ class QLabel;
 class QPixmap;
 class QTableWidget;
 class QPushButton;
+class QSize;
 
 // Un élément à dessiner ; `sorte` reprend SorteElement (src/interface.h).
 struct ElementVue {
@@ -25,6 +26,9 @@ struct ElementVue {
     bool facultatif = false;         // zone : boutons radio, un choix « — » de plus pour l'absence (§ 22.7)
     QByteArray octets;               // image (§ 22.8) : le fichier ; vide, l'image se montre par son nom
     bool lecture_seule = false;      // zone « en lecture seule »
+    bool place = false;              // élément d'un bloc en position libre (§ 22.9)
+    int gauche = 0, haut = 0;        // en pixels, depuis le coin du bloc
+    int largeur = 0, hauteur = 0;    // en pixels ; 0 : la taille naturelle
 };
 
 // Ce que le dessin a produit : pour chaque élément, le contrôle qui le montre (nullptr pour un bloc).
@@ -41,6 +45,9 @@ struct VueEcran {
 
 // Une zone (texte) à valeurs permises, de deux à quatre : des boutons radio plutôt qu'un menu (§ 22.7).
 inline bool en_boutons_radio(const ElementVue &e) { return e.type == "texte" && e.choix.size() >= 2 && e.choix.size() <= 4; }
+
+// La taille d'un élément placé : la naturelle, sauf ce que le programme dit (§ 22.9).
+QSize taille_placee(QWidget *w, int largeur, int hauteur);
 
 // Dessine l'écran : blocs emboîtés, boutons qui se suivent sur une ligne en bas à droite, listes qui prennent
 // la hauteur libre, zones avec les contrôles des formulaires. Ne branche aucun événement. Un logo non nul

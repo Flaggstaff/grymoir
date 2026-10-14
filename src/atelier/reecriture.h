@@ -7,6 +7,7 @@
 
 #include <QMap>
 #include <QPair>
+#include <QRect>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -42,8 +43,9 @@ QString ajouter_importation(const QString &dossier, const QString &fichier, cons
 // A4-b : un écran pour une entité (liste, Nouveau, Supprimer, Fermer, et leurs événements), écrit dans `cible`
 // (docs/atelier.md, § 5 bis) ; l'écran d'accueil le reçoit comme bouton, et naît s'il n'existe pas.
 QString generer_ecran(const QString &dossier, const QString &cible, const QString &entite, Geste *geste);
-// Un écran vide : « L'écran <nom> montre : un bouton « Fermer ». », avec son événement.
-QString nouvel_ecran(const QString &dossier, const QString &cible, const QString &nom, Geste *geste);
+// Un écran vide : « L'écran <nom> montre : un bouton « Fermer ». », avec son événement ; `libre` : le bouton dans un
+// bloc en position libre (grammaire, § 22.9), pour placer au pixel dès la création.
+QString nouvel_ecran(const QString &dossier, const QString &cible, const QString &nom, Geste *geste, bool libre = false);
 // Ajoute une phrase à la fin d'un fichier (« Ouvrir l'écran d'accueil. » dans le programme principal).
 QString ajouter_phrase_finale(const QString &dossier, const QString &fichier, const QString &phrase, Geste *geste);
 
@@ -77,6 +79,17 @@ QString ecran_modifier(const QString &dossier, const QString &ecran, int index, 
 // une rangée, `l'un sous l'autre`. Un bloc réduit à un seul élément disparaît.
 enum CoteDepot { DEPOT_AVANT = 0, DEPOT_APRES = 1, DEPOT_GAUCHE = 2, DEPOT_DROITE = 3 };
 QString ecran_deplacer(const QString &dossier, const QString &ecran, int source, int cible, int cote, Geste *geste);
+
+// Position libre (grammaire, § 22.9 ; docs/atelier.md, § 5 octies). Placer un élément de bloc libre : gauche et haut
+// en pixels ; largeur et hauteur : −1 garde ce qui est écrit, 0 retire (taille naturelle), sinon la fixe. Les éléments
+// du bloc se réordonnent de haut en bas, puis de gauche à droite : l'ordre de lecture suit la place.
+// *nouvel_index reçoit l'index de l'élément après ce tri.
+QString ecran_placer(const QString &dossier, const QString &ecran, int index, int gauche, int haut, int largeur, int hauteur,
+                     Geste *geste, int *nouvel_index = nullptr);
+// Met tout l'écran dans un bloc en position libre, chaque élément à la place mesurée dans l'aperçu (`places`, un
+// rectangle par élément, ignoré pour un bloc) ; les blocs disparaissent. Largeur écrite pour chaque élément, hauteur
+// pour une liste : ce que l'on voit reste ce que l'on a.
+QString ecran_liberer(const QString &dossier, const QString &ecran, const QVector<QRect> &places, Geste *geste);
 
 // Remet chaque fichier touché dans son état d'avant ; message d'erreur, vide si tout est revenu.
 // Un fichier renommé reprend d'abord son ancien nom.

@@ -20,6 +20,28 @@ extern "C" {
 #include "interface.h"
 }
 
+QSize taille_placee(QWidget *w, int largeur, int hauteur) {
+    QSize t = w->sizeHint().expandedTo(w->minimumSizeHint());
+    if (largeur > 0) t.setWidth(largeur);
+    if (hauteur > 0) t.setHeight(hauteur);
+    return t;
+}
+
+// « en position libre : » (§ 22.9) : une toile, dont chaque enfant a sa géométrie ; elle mesure ce qu'ils occupent.
+namespace {
+class Toile : public QWidget {
+public:
+    Toile() { setObjectName("toile"); }
+    QSize sizeHint() const override { return minimumSizeHint(); }
+    QSize minimumSizeHint() const override {
+        QRect r;
+        for (QObject *o : children())
+            if (auto *w = qobject_cast<QWidget *>(o); w && !w->isHidden() && w->property("place").toBool()) r |= w->geometry();
+        return QSize(r.right() + 1, r.bottom() + 1).expandedTo(QSize(1, 1));
+    }
+};
+}  // namespace
+
 VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &elements) {
     return dessiner_ecran(titre, elements, QPixmap(), 0);
 }
@@ -57,9 +79,16 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     }
     QHBoxLayout *rangee = nullptr;   // des boutons qui se suivent : une ligne, en bas à droite (§ 3.3)
     QVector<QBoxLayout *> blocs = {pile};   // « côte à côte », « l'un sous l'autre » : des boîtes emboîtées (§ 22.1)
+    QWidget *toile = nullptr;               // le bloc en position libre ouvert (§ 22.9), qui ne contient pas de bloc
     for (int k = 0; k < n; k++) {
         const ElementVue &e = elements[k];
-        if (e.sorte != ELEMENT_BOUTON) rangee = nullptr;
+        if (e.sorte != ELEMENT_BOUTON || toile) rangee = nullptr;
+        if (e.sorte == ELEMENT_LIBRE) {
+            toile = new Toile;
+            blocs.last()->addWidget(toile, 0, Qt::AlignLeft | Qt::AlignTop);
+            r.controles[k] = toile;
+            continue;
+        }
         if (e.sorte == ELEMENT_COTE_A_COTE || e.sorte == ELEMENT_L_UN_SOUS_L_AUTRE) {
             QBoxLayout *b = e.sorte == ELEMENT_COTE_A_COTE ? static_cast<QBoxLayout *>(new QHBoxLayout)
                                                            : static_cast<QBoxLayout *>(new QVBoxLayout);
@@ -78,10 +107,18 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             continue;
         }
         if (e.sorte == ELEMENT_FIN_DE_BLOC) {
+            if (toile) { toile->updateGeometry(); toile = nullptr; continue; }
             if (blocs.size() > 1) blocs.pop_back();
             continue;
         }
         QBoxLayout *ici = blocs.last();
+        // Dans un bloc en position libre, l'élément va sur la toile, à sa place ; ailleurs, dans la boîte du bloc.
+        auto poser = [&](QWidget *w, int etirement = 0) {
+            if (!toile) { ici->addWidget(w, etirement); return; }
+            w->setParent(toile);
+            w->setProperty("place", true);
+            w->setGeometry(QRect(QPoint(e.gauche, e.haut), taille_placee(w, e.largeur, e.hauteur)));
+        };
         if (e.sorte == ELEMENT_IMAGE) {   // « l'image « plan.png » » (§ 22.8) : sa taille, sans dépasser 480 × 320
             auto *l = new QLabel;
             QPixmap p;
@@ -97,12 +134,12 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 l->setText(e.texte);   // l'aperçu sans le fichier : son nom
             }
             l->setToolTip(e.texte);
-            ici->addWidget(l);
+            poser(l);
             r.controles[k] = l;
         } else if (e.sorte == ELEMENT_TEXTE) {
             auto *l = new QLabel(e.texte);
             l->setWordWrap(true);
-            ici->addWidget(l);
+            poser(l);
             r.controles[k] = l;
         } else if (e.sorte == ELEMENT_ZONE) {   // les contrôles des formulaires (docs/v2.md, § 10)
             QWidget *w;
@@ -158,7 +195,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 rang->addWidget(libelle);
             }
             rang->addWidget(w);
-            ici->addWidget(conteneur);
+            poser(conteneur);
             r.controles[k] = conteneur;
         } else if (e.sorte == ELEMENT_LISTE) {
             auto *tab = new QTableWidget(0, e.colonnes.size());
@@ -190,9 +227,9 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             });
             r.tables[k] = tab;
             r.controles[k] = tab;
-            ici->addWidget(tab, 1);
+            poser(tab, 1);
         } else {
-            if (!rangee) {
+            if (!rangee && !toile) {
                 rangee = new QHBoxLayout;
                 rangee->setSpacing(t.mesure("espace-2"));
                 rangee->addStretch(1);
@@ -201,7 +238,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             auto *b = new QPushButton(e.texte);
             r.boutons << b;
             r.controles[k] = b;
-            rangee->addWidget(b);
+            if (toile) poser(b); else rangee->addWidget(b);   // en position libre : chaque bouton à sa place (§ 22.9)
         }
     }
     r.erreur = new QLabel;

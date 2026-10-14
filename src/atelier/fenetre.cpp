@@ -340,8 +340,14 @@ Fenetre::Fenetre() {
         const QString nom = QInputDialog::getText(this, "Nouvel écran vide", "Nom, après « L'écran » (« de recherche », « des factures ») :",
                                                   QLineEdit::Normal, "de recherche", &ok);
         if (!ok) return;
+        // La disposition dès la création : décrite (colonnes et blocs) ou libre, au pixel (grammaire, § 22.9)
+        const QStringList dispositions = {"Décrite : les éléments s'empilent, l'écran s'adapte",
+                                          "Libre : chaque élément placé au pixel, avec la grille"};
+        const QString d = QInputDialog::getItem(this, "Nouvel écran vide", "Disposition :", dispositions, 0, false, &ok);
+        if (!ok) return;
+        const bool libre = d == dispositions[1];
         const QString cible = cible_des_ecrans();
-        appliquer([=](Geste *g) { return nouvel_ecran(projet, cible, nom, g); }, entite_choisie);
+        appliquer([=](Geste *g) { return nouvel_ecran(projet, cible, nom, g, libre); }, entite_choisie);
     });
     connect(onglet_ecrans, &OngletEcrans::geste, this, [this](const std::function<QString(Geste *)> &faire) {
         appliquer(faire, entite_choisie);   // A4-c : réanalysé, annulé s'il casse, défait par « Annuler le dernier geste »

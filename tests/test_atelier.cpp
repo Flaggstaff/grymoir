@@ -1842,6 +1842,128 @@ int main(int argc, char **argv) {
         delete v.vue;
     }
 
+    // Position libre (grammaire, § 22.9 ; docs/atelier.md, § 5 octies) : le dessin, les gestes, la souris et la grille
+    {
+        QVector<ElementVue> el(4);   // bloc libre : un bouton à sa place naturelle, un texte de largeur dite ; puis la fin
+        el[0].sorte = ELEMENT_LIBRE;
+        el[1].sorte = ELEMENT_BOUTON;
+        el[1].texte = "OK";
+        el[1].place = true;
+        el[1].gauche = 96;
+        el[1].haut = 16;
+        el[2].sorte = ELEMENT_TEXTE;
+        el[2].texte = "Nom";
+        el[2].place = true;
+        el[2].gauche = 8;
+        el[2].haut = 64;
+        el[2].largeur = 200;
+        el[2].hauteur = 40;
+        el[3].sorte = ELEMENT_FIN_DE_BLOC;
+        VueEcran v = dessiner_ecran("Saisie", el);
+        VERIFIER(v.controles[0] && v.controles[1] && v.controles[1]->parentWidget() == v.controles[0]);
+        VERIFIER(v.controles[1]->pos() == QPoint(96, 16));
+        VERIFIER(v.controles[2]->geometry() == QRect(8, 64, 200, 40));
+        VERIFIER(v.controles[0]->minimumSizeHint().width() >= 208 && v.controles[0]->minimumSizeHint().height() >= 104);
+        delete v.vue;
+    }
+    {
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        auto ecrire = [&](const char *t) {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            f.write(t);
+        };
+        auto lire = [&]() {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly));
+            return QString::fromUtf8(f.readAll());
+        };
+        const char *depart = "L'écran d'accueil montre :\n    en position libre :\n"
+                             "        un bouton « A », à 16 de la gauche et 16 du haut,\n"
+                             "        un bouton « B », à 16 de la gauche et 64 du haut, large de 120,\n"
+                             "    le texte « fin ».\n"
+                             "Quand on clique sur « A » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                             "Quand on clique sur « B » dans l'écran d'accueil :\n    Fermer l'écran.\n";
+        ecrire(depart);
+        Geste g;
+        int apres = -1;
+        // B monte au-dessus de A : l'ordre écrit suit la place ; sa largeur reste
+        QString r = ecran_placer(dossier.path(), "d'accueil", 2, 200, 8, -1, -1, &g, &apres);
+        if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        VERIFIER(r.isEmpty() && apres == 1);
+        VERIFIER(lire().contains("    en position libre :\n        un bouton « B », à 200 de la gauche et 8 du haut, large de 120,\n"
+                                 "        un bouton « A », à 16 de la gauche et 16 du haut,\n"));
+        r = ecran_placer(dossier.path(), "d'accueil", 1, 200, 8, 0, 48, &g);   // largeur retirée, hauteur dite
+        VERIFIER(r.isEmpty() && lire().contains("un bouton « B », à 200 de la gauche et 8 du haut, haut de 48,\n"));
+        VERIFIER(!ecran_placer(dossier.path(), "d'accueil", 4, 0, 0, -1, -1, &g).isEmpty());   // le texte hors du bloc
+        VERIFIER(ecran_placer(dossier.path(), "d'accueil", 1, 0, 0, 4, -1, &g) == "La taille va de 8 à 4000 pixels.");
+        // modifier garde la place ; ajouter va dans le bloc, sous le plus bas ; grouper et déplacer refusés
+        ElementNouveau n;
+        n.sorte = ELEMENT_BOUTON;
+        n.texte = "Bravo";
+        VERIFIER(ecran_modifier(dossier.path(), "d'accueil", 1, n, &g).isEmpty());
+        VERIFIER(lire().contains("un bouton « Bravo », à 200 de la gauche et 8 du haut, haut de 48,\n"));
+        n.sorte = ELEMENT_TEXTE;
+        n.texte = "Neuf";
+        VERIFIER(ecran_ajouter(dossier.path(), "d'accueil", n, &g).isEmpty());
+        VERIFIER(lire().contains("        le texte « Neuf », à 16 de la gauche et 64 du haut,\n    le texte « fin »."));
+        VERIFIER(ecran_grouper(dossier.path(), "d'accueil", 1, "G", &g) == "Un élément en position libre ne se met pas dans un groupe.");
+        VERIFIER(ecran_deplacer(dossier.path(), "d'accueil", 1, 5, DEPOT_APRES, &g).startsWith("Dans un bloc en position libre"));
+        // retirer le bloc : ses éléments restent, sans place
+        VERIFIER(ecran_supprimer(dossier.path(), "d'accueil", 0, &g).isEmpty());
+        VERIFIER(!lire().contains("en position libre") && !lire().contains("de la gauche") && lire().contains("un bouton « Bravo »,"));
+        // tout l'écran en position libre, chaque élément à la place mesurée
+        ecrire("L'écran d'accueil montre :\n    côte à côte :\n        le texte « a »,\n        le texte « b »,\n    le texte « c ».\n");
+        QVector<QRect> places = {QRect(), QRect(0, 0, 40, 24), QRect(48, 0, 40, 24), QRect(), QRect(0, 32, 88, 24)};
+        r = ecran_liberer(dossier.path(), "d'accueil", places, &g);
+        if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        VERIFIER(lire().startsWith("L'écran d'accueil montre :\n    en position libre :\n"
+                                   "        le texte « a », à 0 de la gauche et 0 du haut, large de 40,\n"
+                                   "        le texte « b », à 48 de la gauche et 0 du haut, large de 40,\n"
+                                   "        le texte « c », à 0 de la gauche et 32 du haut, large de 88.\n"));
+        // un écran vide, libre dès la création
+        ecrire("Afficher 1.\n");
+        VERIFIER(nouvel_ecran(dossier.path(), chemin, "de saisie", &g, true).isEmpty());
+        VERIFIER(lire().contains("L'écran de saisie montre :\n    en position libre :\n"
+                                 "        un bouton « Fermer », à 16 de la gauche et 16 du haut.\n"));
+    }
+    {   // la souris : glisser un élément montre la grille, aimante à 8 pixels, écrit la place au lâcher
+        QTemporaryDir dossier;
+        QFile f(dossier.filePath("p.grym"));
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write("L'écran d'accueil montre :\n    en position libre :\n        un bouton « A », à 16 de la gauche et 16 du haut.\n"
+                "Quand on clique sur « A » dans l'écran d'accueil :\n    Fermer l'écran.\n");
+        f.close();
+        OngletEcrans o;
+        o.resize(900, 600);
+        o.show();
+        o.montrer(dossier.path());
+        QString resultat = "pas de geste";
+        Geste g;
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        QWidget *b = o.controle(1);
+        VERIFIER(b != nullptr);
+        if (b) {
+            const QPointF dans(5, 5), global = b->mapToGlobal(QPoint(5, 5));
+            QMouseEvent appui(QEvent::MouseButtonPress, dans, global, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(b, &appui);
+            QMouseEvent bouge(QEvent::MouseMove, dans, global + QPointF(37, 21), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(b, &bouge);
+            VERIFIER(o.grille_visible() != nullptr);
+            VERIFIER(b->pos() == QPoint(56, 40));   // 16 + 37 → 53 → 56 ; 16 + 21 → 37 → 40
+            QMouseEvent lache(QEvent::MouseButtonRelease, dans, global + QPointF(37, 21), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(b, &lache);
+            VERIFIER(o.grille_visible() == nullptr);
+            if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
+            VERIFIER(resultat.isEmpty());
+            QFile r(dossier.filePath("p.grym"));
+            VERIFIER(r.open(QIODevice::ReadOnly));
+            VERIFIER(QString::fromUtf8(r.readAll()).contains("un bouton « A », à 56 de la gauche et 40 du haut."));
+        }
+        VERIFIER(OngletEcrans::aimanter(3) == 0 && OngletEcrans::aimanter(4) == 8 && OngletEcrans::aimanter(-5) == 0);
+    }
+
     // A4-c dans l'onglet : choisir un bouton, changer son libellé, « Appliquer » : le geste renomme aussi l'événement
     {
         QTemporaryDir dossier;

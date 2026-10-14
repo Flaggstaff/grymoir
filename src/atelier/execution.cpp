@@ -120,7 +120,7 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         colonnes << c;
     }
     if (!t->nb_colonnes.isEmpty() || !t->types_zones.isEmpty())   // un écran est déjà ouvert : il passe dessous
-        t->dessous.push_back({t->nb_colonnes, t->types_zones, t->facultatives, t->choix_zones, t->options_zones, t->images});
+        t->dessous.push_back({t->nb_colonnes, t->types_zones, t->facultatives, t->choix_zones, t->options_zones, t->images, t->places});
     t->nb_colonnes.clear();
     for (const auto &c : colonnes) t->nb_colonnes << c.size();
     t->types_zones.clear();
@@ -128,7 +128,9 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
     t->choix_zones.clear();
     t->options_zones.clear();
     t->images.clear();
+    t->places.clear();
     for (size_t k = 0; k < n; k++) {
+        t->places << (el[k].place ? QVector<int>{el[k].gauche, el[k].haut, el[k].largeur, el[k].hauteur} : QVector<int>());
         t->images << (el[k].octets ? QByteArray(reinterpret_cast<const char *>(el[k].octets), (qsizetype)el[k].taille) : QByteArray());
         t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0));
@@ -186,7 +188,9 @@ static void iface_ecran_fermer(void *contexte, Chaine *sortie) {
         t->choix_zones = d.choix_zones;
         t->options_zones = d.options_zones;
         t->images = d.images;
+        t->places = d.places;
     } else {
+        t->places.clear();
         t->nb_colonnes.clear();
         t->types_zones.clear();
         t->facultatives.clear();
@@ -735,6 +739,14 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         const int o = k < travail.options_zones.size() ? travail.options_zones[k] : 0;
         elements[k].plusieurs_lignes = o & 1;
         elements[k].lecture_seule = o & 2;
+        if (k < travail.places.size() && travail.places[k].size() == 4) {   // position libre (§ 22.9)
+            const QVector<int> &p = travail.places[k];
+            elements[k].place = true;
+            elements[k].gauche = p[0];
+            elements[k].haut = p[1];
+            elements[k].largeur = p[2];
+            elements[k].hauteur = p[3];
+        }
     }
     // Le logo : grand sur l'écran que le programme ouvre lui-même (aucun écran dessous), petit sur les autres.
     const int taille = Theme::courant().mesure(recouverts.isEmpty() ? "logo-accueil" : "logo-titre");
