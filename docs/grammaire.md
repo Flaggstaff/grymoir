@@ -1754,6 +1754,21 @@ L'écran de saisie montre :
 - Forme compacte : `_plusieurs_lignes`, `_lecture_seule`, `_actif_si …`, `_visible_si …` ; la condition va jusqu'au mot suivant de cette liste ou à la fin de la ligne.
 - Aucun mot réservé : `sur`, `lignes`, `lecture`, `seule`, `actif`, `visible` ne comptent qu'ainsi placés, après la virgule d'un élément.
 
+### 22.7 Groupes et valeurs permises *(implémenté le 14 octobre 2026)*
+
+```
+L'écran de saisie montre :
+    le groupe « Statut » :
+        un état (« actif », « suspendu » ou « retiré »), « actif » au départ,
+        une remarque (texte), facultative,
+    un bouton « OK ».
+```
+
+- `le groupe « Adresse » :` ouvre un bloc, comme `l'un sous l'autre :` (§ 22.1), que l'interface encadre et titre. Le titre est obligatoire : « Un groupe porte un titre : « le groupe « Adresse » : ». ». Un groupe contient au moins un élément, plus indenté ; les groupes s'emboîtent avec les autres blocs.
+- Une zone accepte des valeurs permises, comme un champ d'entité (§ 16.15) : `un état (« actif », « suspendu » ou « retiré »)`. La zone est de type texte ; la valeur de départ en est une (« « c » n'est pas une valeur permise de « état » : « a » ou « b ». ») ; `L'état de l'écran devient « z ».` est refusé dès l'analyse, et un choix hors liste venu de l'interface est refusé à l'exécution, l'écran restant ouvert avec le message. Une zone à valeurs permises ne s'écrit pas `sur plusieurs lignes`.
+- De deux à quatre valeurs, l'interface montre des boutons radio, tous visibles ; une zone facultative en reçoit un de plus, « — », pour l'absence. Au-delà de quatre, un menu. Le choix est celui de l'interface, sans phrase : on décrit ce que la zone accepte, pas son dessin (§ 3.3 de `docs/ecrans.md`).
+- Forme compacte : `_groupe « Adresse »` … `_fin` ; `_un état (« actif » ; « suspendu » ; « retiré »)`.
+
 ---
 
 ## Journal des révisions
@@ -1835,3 +1850,4 @@ L'écran de saisie montre :
 | 1.72 | 2026-10-13 | § 4 : `suivi de` écrit un nombre comme `Afficher`, séparateur de milliers compris (`P-49'999`) ; choix confirmé, essai ajouté |
 | 1.73 | 2026-10-14 | Deux corrections, les règles ne changent pas : § 4.5, `t en vrai ou faux` reconnu après un nom ; § 15.5, l'imprimeur accorde au féminin ce qui suit une colonne (`la colonne « Année » de la ligne est présente`) |
 | 1.74 | 2026-10-14 | Nouveau § 22.6 : états des éléments d'écran, `sur plusieurs lignes`, `en lecture seule`, `actif si …`, `visible si …` ; conditions lues en fin de déclaration |
+| 1.75 | 2026-10-14 | Nouveau § 22.7 : `le groupe « … » :` et valeurs permises d'une zone d'écran (boutons radio jusqu'à quatre valeurs) |

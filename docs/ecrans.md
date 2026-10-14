@@ -175,7 +175,8 @@ L'éditeur d'écrans ne proposait que cinq éléments. La deuxième vague comble
 | Tranche | Contenu | Statut |
 |---|---|---|
 | B1 | `sur plusieurs lignes`, `en lecture seule`, `actif si …`, `visible si …` (grammaire, § 22.6) | fait |
-| B2 | boutons radio pour une zone à valeurs permises (au plus quatre), groupe titré (`un groupe « Adresse » :`), image affichée | à concevoir |
+| B2 | valeurs permises d'une zone et boutons radio (au plus quatre), groupe titré `le groupe « Adresse » :` (grammaire, § 22.7) | fait |
+| B2 bis | image affichée : fixe (`l'image « plan.png »`) ou d'une zone | à concevoir |
 | B3 | onglets, barre de menus, graphique | à concevoir |
 
 ### 6.1 Les états se déclarent *(validé le 13 octobre 2026)*
@@ -208,3 +209,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.14 | 2026-09-26 | § 5.2 : phrase implémentée (T3) ; place du logo ; correction sur les phrases en `Les` |
 | 0.15 | 2026-09-29 | § 3.8 : `grym servir` montre les écrans dans le navigateur (`docs/web.md`, W1) ; seul `grym lancer` les refuse |
 | 0.16 | 2026-10-14 | § 6 : deuxième vague de contrôles ; B1 fait (états des éléments, grammaire § 22.6) ; § 3.4 : les textes sur plusieurs lignes ne sont plus reportés |
+| 0.17 | 2026-10-14 | § 6 : B2 fait (groupe titré, valeurs permises d'une zone, boutons radio) ; l'image affichée passe en B2 bis |

@@ -7,7 +7,10 @@
 #include <QComboBox>
 #include <QHeaderView>
 #include <QLabel>
+#include <QGroupBox>
 #include <QLineEdit>
+#include <QRadioButton>
+#include <QButtonGroup>
 #include <QPlainTextEdit>
 #include <QPixmap>
 #include <QPushButton>
@@ -65,6 +68,15 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             blocs.push_back(b);
             continue;
         }
+        if (e.sorte == ELEMENT_GROUPE) {   // « le groupe « Adresse » : » : un cadre titré, ses éléments l'un sous l'autre (§ 22.7)
+            auto *cadre = new QGroupBox(e.texte);
+            auto *b = new QVBoxLayout(cadre);
+            b->setSpacing(t.mesure("l-un-sous-l-autre"));
+            blocs.last()->addWidget(cadre);
+            blocs.push_back(b);
+            r.controles[k] = cadre;
+            continue;
+        }
         if (e.sorte == ELEMENT_FIN_DE_BLOC) {
             if (blocs.size() > 1) blocs.pop_back();
             continue;
@@ -78,7 +90,25 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         } else if (e.sorte == ELEMENT_ZONE) {   // les contrôles des formulaires (docs/v2.md, § 10)
             QWidget *w;
             if (e.type == "vrai ou faux") w = new QCheckBox(e.texte);   // la case porte son libellé : un clic dessus la coche
-            else if (!e.choix.isEmpty()) {
+            else if (en_boutons_radio(e)) {   // « (« actif », « suspendu » ou « retiré ») » : tous visibles d'un coup (§ 22.7)
+                w = new QWidget;
+                w->setProperty("radios", true);
+                auto *rang = new QHBoxLayout(w);
+                rang->setContentsMargins(0, 0, 0, 0);
+                rang->setSpacing(t.mesure("espace-4"));
+                auto *groupe = new QButtonGroup(w);
+                groupe->setExclusive(true);
+                QStringList valeurs = e.choix;
+                if (e.facultatif) valeurs.prepend(QString());   // « — » : la zone reste absente
+                for (const QString &v : valeurs) {
+                    auto *b = new QRadioButton(v.isEmpty() ? QString::fromUtf8("—") : v);
+                    b->setProperty("valeur", v);
+                    if (v.isEmpty()) b->setToolTip("Aucune valeur");
+                    groupe->addButton(b);
+                    rang->addWidget(b);
+                }
+                rang->addStretch(1);
+            } else if (!e.choix.isEmpty()) {
                 auto *m = new QComboBox;
                 m->addItem(QString());
                 m->addItems(e.choix);

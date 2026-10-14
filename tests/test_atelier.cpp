@@ -12,6 +12,7 @@
 #include "lien.h"
 #include "onglet_ecrans.h"
 #include "contenu.h"
+#include <QRadioButton>
 #include "importation.h"
 #include "panneau.h"
 #include <QInputMethodEvent>
@@ -1734,6 +1735,67 @@ int main(int argc, char **argv) {
         z.type = "nombre";
         z.plusieurs_lignes = true;
         VERIFIER(ecran_modifier(d, e, 0, z, &g) == "Seule une zone (texte) s'écrit sur plusieurs lignes.");
+    }
+
+    // Groupe titré, valeurs permises d'une zone, boutons radio (§ 22.7)
+    {
+        QTemporaryDir dossier;
+        auto ecrire = [&](const QString &texte) {
+            QFile f(dossier.filePath("p.grym"));
+            f.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            f.write(texte.toUtf8());
+        };
+        auto lire = [&] {
+            QFile f(dossier.filePath("p.grym"));
+            f.open(QIODevice::ReadOnly);
+            return QString::fromUtf8(f.readAll());
+        };
+        ecrire("L'écran de saisie montre :\n    un état (« actif », « suspendu » ou « retiré »), « actif » au départ,\n"
+               "    un bouton « OK ».\nQuand on clique sur « OK » dans l'écran de saisie :\n    Fermer l'écran.\n");
+        const QString d = dossier.path(), e = "de saisie";
+        Geste g;
+        auto lus = lire_ecrans(d);
+        VERIFIER(lus.size() == 1 && lus[0].elements[0].valeurs == QStringList({"actif", "suspendu", "retiré"}));
+        // « Appliquer » sur la zone garde ses valeurs ; le groupe l'entoure, son titre se change
+        ElementNouveau z;
+        z.sorte = ELEMENT_ZONE;
+        z.texte = "état";
+        z.type = "texte";
+        z.depart = "actif";
+        z.valeurs = lus[0].elements[0].valeurs;
+        VERIFIER(ecran_modifier(d, e, 0, z, &g).isEmpty());
+        VERIFIER(lire().contains("    un état (« actif », « suspendu » ou « retiré »), « actif » au départ,\n"));
+        z.valeurs << "actif";
+        VERIFIER(ecran_modifier(d, e, 0, z, &g) == "« actif » est déjà dans la liste.");
+        z.valeurs = QStringList({"oui", "non"});
+        VERIFIER(ecran_modifier(d, e, 0, z, &g).contains("la valeur de départ doit en être une"));
+        VERIFIER(ecran_grouper(d, e, 0, "Statut", &g).isEmpty());
+        VERIFIER(lire().startsWith("L'écran de saisie montre :\n    le groupe « Statut » :\n        un état (« actif », « suspendu » ou « retiré »), "
+                                   "« actif » au départ,\n    un bouton « OK ».\n"));
+        lus = lire_ecrans(d);
+        VERIFIER(lus[0].elements[0].sorte == ELEMENT_GROUPE && lus[0].elements[0].texte == "Statut");
+        ElementNouveau t;
+        t.sorte = ELEMENT_GROUPE;
+        t.texte = "Situation";
+        VERIFIER(ecran_modifier(d, e, 0, t, &g).isEmpty() && lire().contains("    le groupe « Situation » :\n"));
+        VERIFIER(ecran_grouper(d, e, 0, "Autre", &g) == "Choisis un élément, pas un bloc.");
+        // le dessin : trois boutons radio, un « — » de plus pour une zone facultative ; cinq valeurs : un menu
+        QVector<ElementVue> el(1);
+        el[0].sorte = ELEMENT_ZONE;
+        el[0].texte = "État";
+        el[0].type = "texte";
+        el[0].choix = QStringList({"actif", "suspendu", "retiré"});
+        VueEcran v = dessiner_ecran("Saisie", el);
+        VERIFIER(v.zones[0] && v.zones[0]->findChildren<QRadioButton *>().size() == 3);
+        delete v.vue;
+        el[0].facultatif = true;
+        v = dessiner_ecran("Saisie", el);
+        VERIFIER(v.zones[0]->findChildren<QRadioButton *>().size() == 4);
+        delete v.vue;
+        el[0].choix << "a" << "b";
+        v = dessiner_ecran("Saisie", el);
+        VERIFIER(qobject_cast<QComboBox *>(v.zones[0]) != nullptr);
+        delete v.vue;
     }
 
     // A4-c dans l'onglet : choisir un bouton, changer son libellé, « Appliquer » : le geste renomme aussi l'événement

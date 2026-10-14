@@ -487,6 +487,10 @@ static char *feuille_de_style(const Serveur *s) {
     "background:var(--danger-doux);color:var(--danger)}"
     ".cote{display:flex;flex-wrap:wrap;gap:16px}.cote>*{flex:1 1 16rem;min-width:0}"
     ".sous{display:flex;flex-direction:column;gap:12px}"
+    "fieldset.groupe{display:flex;flex-direction:column;gap:12px;margin:0;padding:12px 16px 16px;"
+    "border:1px solid var(--separateur);border-radius:8px;min-width:0}"
+    "fieldset.groupe>legend{font-weight:600;color:var(--texte-2);padding:0 6px}"
+    ".radios{display:flex;flex-wrap:wrap;gap:6px 16px}.radios label{display:flex;gap:6px;align-items:center}"
     ".boutons{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.boutons button{margin:0}"
     ".texte{margin:0}"
     ".zone label{display:block;font-size:12px;line-height:16px;font-weight:600;color:var(--texte-2);margin-bottom:4px}"
@@ -774,7 +778,8 @@ static void page_finale(Serveur *s, const char *erreur, const char *annulation) 
 static const char SCRIPT[] =
     "document.addEventListener('change',function(e){var t=e.target,f=t.form;"
     "if(!f||!f.classList.contains('ecran'))return;"
-    "if(t.tagName==='SELECT'||t.type==='checkbox'){var b=f.querySelector('button[name=valider]');if(b)b.click();}});"
+    "if(t.tagName==='SELECT'||t.type==='checkbox'||(t.type==='radio'&&t.name.charAt(0)==='z'))"
+    "{var b=f.querySelector('button[name=valider]');if(b)b.click();}});"
     "document.addEventListener('click',function(e){var l=e.target.closest&&e.target.closest('table.liste tbody tr');"
     "if(!l||e.target.closest('button,input'))return;var r=l.querySelector('input[type=radio]');if(r)r.checked=true;});";
 
@@ -789,7 +794,7 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
     char *id = grym_formater("z%lu", (unsigned long)k);
     /* inactive, ou en lecture seule pour un menu ou une case : désactivée, donc absente de l'envoi ;
      * un texte en lecture seule reste sélectionnable (§ 22.6) */
-    const int fige = (e->etats[k] & 1) || (el->lecture_seule && (est_case(el) || el->nb_choix));
+    const int fige = (e->etats[k] & 1) || (el->lecture_seule && (est_case(el) || el->nb_choix));   /* menus et radios aussi */
     const char *attr = fige ? " disabled" : el->lecture_seule ? " readonly" : "";
     chaine_ajouter(c, "<div class=\"zone\">");
     if (est_case(el)) {   /* la présence de « …p » dit qu'on a vu la case : décochée, elle n'envoie rien */
@@ -808,7 +813,23 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
         chaine_ajouter(c, "\">");
         echapper(c, el->texte);
         chaine_ajouter(c, "</label>");
-        if (el->nb_choix) {   /* une zone liée à une entité : le menu de ses clés, ligne vide en tête */
+        if (el->type && strcmp(el->type, "texte") == 0 && el->nb_choix >= 2 && el->nb_choix <= 4) {
+            /* valeurs permises, de deux à quatre : des boutons radio (§ 22.7) ; « — » pour l'absence si facultative */
+            chaine_ajouter(c, "<div class=\"radios\" role=\"radiogroup\">");
+            for (size_t j = el->facultatif ? 0 : 1; j <= el->nb_choix; j++) {
+                const char *val = j ? el->choix[j - 1] : "";
+                chaine_ajouter(c, "<label><input type=\"radio\" name=\"");
+                chaine_ajouter(c, id);
+                chaine_ajouter(c, "\" value=\"");
+                echapper(c, val);
+                chaine_ajouter(c, strcmp(val, v) == 0 && (j || !*v) ? "\" checked" : "\"");
+                chaine_ajouter(c, attr);
+                chaine_ajouter(c, "> ");
+                echapper(c, j ? val : "—");
+                chaine_ajouter(c, "</label>");
+            }
+            chaine_ajouter(c, "</div>");
+        } else if (el->nb_choix) {   /* une zone liée à une entité : le menu de ses clés, ligne vide en tête */
             chaine_ajouter(c, "<select id=\"");
             chaine_ajouter(c, id);
             chaine_ajouter(c, "\" name=\"");
@@ -940,15 +961,25 @@ static void page_ecran(Serveur *s) {
         chaine_ajouter(&c, "</p>\n");
     }
     int boutons = 0;   /* des boutons qui se suivent : une rangée, à droite (comme dans l'atelier) */
+    int groupes[16], prof = 0;   /* les blocs ouverts : 1 pour un groupe (fieldset), 0 pour un div */
     for (size_t k = 0; k < e->n; k++) {
         const ElementEcran *el = &e->el[k];
         if ((e->etats[k] & 2) && (el->sorte == ELEMENT_BOUTON || el->sorte == ELEMENT_TEXTE || el->sorte == ELEMENT_ZONE))
             continue;   /* « visible si » faux : l'élément n'est pas dans la page (§ 22.6) */
         if (el->sorte != ELEMENT_BOUTON && boutons) { chaine_ajouter(&c, "</div>\n"); boutons = 0; }
         switch (el->sorte) {
-        case ELEMENT_COTE_A_COTE: chaine_ajouter(&c, "<div class=\"cote\">\n"); break;
-        case ELEMENT_L_UN_SOUS_L_AUTRE: chaine_ajouter(&c, "<div class=\"sous\">\n"); break;
-        case ELEMENT_FIN_DE_BLOC: chaine_ajouter(&c, "</div>\n"); break;
+        case ELEMENT_COTE_A_COTE: chaine_ajouter(&c, "<div class=\"cote\">\n"); if (prof < 16) groupes[prof++] = 0; break;
+        case ELEMENT_L_UN_SOUS_L_AUTRE: chaine_ajouter(&c, "<div class=\"sous\">\n"); if (prof < 16) groupes[prof++] = 0; break;
+        case ELEMENT_GROUPE:   /* « le groupe « Adresse » : » (§ 22.7) */
+            chaine_ajouter(&c, "<fieldset class=\"groupe\"><legend>");
+            echapper(&c, el->texte);
+            chaine_ajouter(&c, "</legend>\n");
+            if (prof < 16) groupes[prof++] = 1;
+            break;
+        case ELEMENT_FIN_DE_BLOC:
+            chaine_ajouter(&c, prof && groupes[prof - 1] ? "</fieldset>\n" : "</div>\n");
+            if (prof) prof--;
+            break;
         case ELEMENT_TEXTE:
             chaine_ajouter(&c, "<p class=\"texte\">");
             echapper(&c, el->texte);

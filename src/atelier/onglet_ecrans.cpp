@@ -142,7 +142,9 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         (si->forme == 1 ? x.actif_si : x.visible_si) = extrait(si->enfants[0]);
                     }
                     if (el->type == N_DISPOSITION) {
-                        x.sorte = el->forme == 1 ? ELEMENT_COTE_A_COTE : el->forme == 2 ? ELEMENT_L_UN_SOUS_L_AUTRE : ELEMENT_FIN_DE_BLOC;
+                        x.sorte = el->forme == 1 ? ELEMENT_COTE_A_COTE : el->forme == 2 ? ELEMENT_L_UN_SOUS_L_AUTRE
+                                : el->forme == 3 ? ELEMENT_GROUPE : ELEMENT_FIN_DE_BLOC;
+                        if (el->forme == 3) x.texte = QString::fromUtf8(el->texte);   // le titre du groupe (§ 22.7)
                         x.ecrit.clear();
                     } else if (el->type == N_BOUTON) {
                         x.sorte = ELEMENT_BOUTON;
@@ -157,6 +159,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.facultatif = el->entier & 1;
                         x.feminin = el->forme == 2;
                         x.plusieurs_lignes = el->entier & 2;
+                        if (el->texte3) x.valeurs = QString::fromUtf8(el->texte3).split(QChar(0x1e));
                         x.lecture_seule = el->entier & 4;
                         if (el->nb_enfants && el->enfants[0]->type != N_SI_ECRAN) {
                             const Noeud *v = el->enfants[0];
@@ -342,6 +345,8 @@ void OngletEcrans::dessiner() {
         el[k].colonnes = e.elements[k].colonnes;
         el[k].type = e.elements[k].type;
         el[k].plusieurs_lignes = e.elements[k].plusieurs_lignes;
+        el[k].facultatif = e.elements[k].facultatif;
+        if (!e.elements[k].valeurs.isEmpty()) el[k].choix = e.elements[k].valeurs;   // l'aperçu montre le menu ou les boutons
         el[k].lecture_seule = e.elements[k].lecture_seule;
     }
     // L'apparence du programme (§ 22.5) : son accent sur l'aperçu seul, pas sur l'atelier ; son logo, grand
@@ -539,7 +544,16 @@ void OngletEcrans::editer() {
     } else {
         const ElementLu &x = e.elements[element];
         const int k = element;
-        if (x.sorte == ELEMENT_BOUTON || x.sorte == ELEMENT_TEXTE) {
+        if (x.sorte == ELEMENT_GROUPE) {   // « le groupe « Adresse » : » : son titre (§ 22.7)
+            auto *titre = new QLineEdit(x.texte);
+            f->addRow("Titre du groupe", titre);
+            connect(appliquer, &QPushButton::clicked, this, [this, ecran, k, titre] {
+                ElementNouveau n;
+                n.sorte = ELEMENT_GROUPE;
+                n.texte = titre->text();
+                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+            });
+        } else if (x.sorte == ELEMENT_BOUTON || x.sorte == ELEMENT_TEXTE) {
             auto *texte = new QLineEdit(x.texte);
             f->addRow(x.sorte == ELEMENT_BOUTON ? "Libellé" : "Texte", texte);
             QLineEdit *actif = nullptr;
@@ -569,6 +583,10 @@ void OngletEcrans::editer() {
             auto *facultative = new QCheckBox("facultative");
             facultative->setChecked(x.facultatif);
             auto *depart = new QLineEdit(x.depart);
+            auto *valeurs = new QLineEdit(x.valeurs.join(" ; "));
+            valeurs->setPlaceholderText("aucune ; ou « actif ; suspendu ; retiré » pour une zone (texte)");
+            valeurs->setToolTip("Les seules valeurs acceptées, séparées par « ; ». Jusqu'à quatre, l'écran montre des "
+                                "boutons radio ; au-delà, un menu (§ 22.7).");
             auto *lignes = new QCheckBox("sur plusieurs lignes (texte)");
             lignes->setChecked(x.plusieurs_lignes);
             auto *seule = new QCheckBox("en lecture seule");
@@ -580,6 +598,7 @@ void OngletEcrans::editer() {
             f->addRow("", feminin);
             f->addRow("", facultative);
             f->addRow("Au départ", depart);
+            f->addRow("Valeurs permises", valeurs);
             f->addRow("", lignes);
             f->addRow("", seule);
             f->addRow("Active si", actif);
@@ -593,6 +612,7 @@ void OngletEcrans::editer() {
                 n.facultatif = facultative->isChecked();
                 n.depart = depart->text();
                 n.plusieurs_lignes = lignes->isChecked();
+                for (const QString &v : valeurs->text().split(';')) if (!v.trimmed().isEmpty()) n.valeurs << v.trimmed();
                 n.lecture_seule = seule->isChecked();
                 n.actif_si = actif->text();
                 n.visible_si = visible->text();
@@ -630,6 +650,15 @@ void OngletEcrans::editer() {
         } else {   // un bloc : seulement le retirer
             appliquer->hide();
             retirer->setText("Retirer le bloc (ses éléments restent)");
+        }
+        if (x.sorte == ELEMENT_BOUTON || x.sorte == ELEMENT_TEXTE || x.sorte == ELEMENT_ZONE || x.sorte == ELEMENT_LISTE) {
+            auto *grouper = new QPushButton("Mettre dans un groupe…");   // « le groupe « … » : » (§ 22.7)
+            f->addRow("", grouper);
+            connect(grouper, &QPushButton::clicked, this, [this, ecran, k] {
+                bool ok = false;
+                const QString t = QInputDialog::getText(this, "Grouper", "Titre du groupe (« Adresse ») :", QLineEdit::Normal, "", &ok);
+                if (ok) emit geste([=](Geste *g) { return ecran_grouper(dossier, ecran, k, t, g); });
+            });
         }
     }
     pile->addWidget(cadre);

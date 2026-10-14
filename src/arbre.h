@@ -60,7 +60,8 @@ typedef enum {
     N_COLLAGE,       /* « a suivi de b » (§ 4.4) : enfants[0], enfants[1] ; texte collé, sans espace */
     N_ELISION,       /* « de x », « que x » dans un assemblage (§ 4.4) : op 'd' ou 'q' ; enfants[0] */
     N_ECRAN,         /* « l'écran », dans un événement ou une liste d'écran : l'écran en cours (§ 22.2) ; texte : sa classe */
-    N_DISPOSITION,   /* élément d'écran : forme 1 « côte à côte : », 2 « l'un sous l'autre : », 0 fin du bloc (§ 22.1) */
+    N_DISPOSITION,   /* élément d'écran : forme 1 « côte à côte : », 2 « l'un sous l'autre : », 3 « le groupe « T » : »
+                        (texte : le titre, § 22.7), 0 fin du bloc (§ 22.1) */
     N_BOUTON,        /* élément d'écran : « un bouton « Nouveau » » : texte : libellé (§ 22.1) */
     N_TEXTE_ECRAN,   /* élément d'écran : « le texte « Bienvenue » » : texte (§ 22.1) */
     N_SI_ECRAN,      /* état d'un élément d'écran, dernier de ses enfants : forme 1 « actif si », 2 « visible si » ;

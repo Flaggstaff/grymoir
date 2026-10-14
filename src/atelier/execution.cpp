@@ -17,6 +17,8 @@
 #include <QImage>
 #include <QLabel>
 #include <QLineEdit>
+#include <QAbstractButton>
+#include <QButtonGroup>
 #include <functional>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -457,7 +459,14 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             if (!z) continue;
             QSignalBlocker b(z);   // montrer la valeur n'est pas un changement
             if (auto *l = qobject_cast<QLineEdit *>(z)) l->setText(v[k]);
-            else if (auto *p = qobject_cast<QPlainTextEdit *>(z)) {
+            else if (z->property("radios").toBool()) {   // boutons radio (§ 22.7) : celui de la valeur, sinon aucun
+                auto *g = z->findChild<QButtonGroup *>();
+                if (g) {
+                    g->setExclusive(false);
+                    for (auto *b : g->buttons()) b->setChecked(b->property("valeur").toString() == v[k]);
+                    g->setExclusive(true);
+                }
+            } else if (auto *p = qobject_cast<QPlainTextEdit *>(z)) {
                 if (p->toPlainText() != v[k]) p->setPlainText(v[k]);
                 p->document()->setModified(false);
             }
@@ -717,6 +726,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].colonnes = colonnes[k];
         elements[k].type = k < travail.types_zones.size() ? travail.types_zones[k] : QString();
         elements[k].choix = k < travail.choix_zones.size() ? travail.choix_zones[k] : QStringList();
+        elements[k].facultatif = k < travail.facultatives.size() && travail.facultatives[k];
         const int o = k < travail.options_zones.size() ? travail.options_zones[k] : 0;
         elements[k].plusieurs_lignes = o & 1;
         elements[k].lecture_seule = o & 2;
@@ -749,6 +759,12 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                     texte_envoye = m->currentText().toUtf8();
                     envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
                 });
+            } else if (z->property("radios").toBool()) {   // un bouton radio choisi : la zone change (§ 22.7)
+                if (auto *g = z->findChild<QButtonGroup *>())
+                    connect(g, &QButtonGroup::buttonClicked, this, [this, k](QAbstractButton *b) {
+                        texte_envoye = b->property("valeur").toString().toUtf8();
+                        envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
+                    });
             } else if (auto *p = qobject_cast<QPlainTextEdit *>(z)) {   // plusieurs lignes : l'événement à la sortie (§ 22.6)
                 p->installEventFilter(new SortieDeZone(p, [this, k, p] {
                     if (!p->document()->isModified()) return;

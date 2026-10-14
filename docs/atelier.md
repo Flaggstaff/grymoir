@@ -234,6 +234,8 @@ Si le nombre d'œuvres conservées = 0 :
 
 Le panneau des propriétés suit la grammaire, § 22.6 : pour une zone, « sur plusieurs lignes », « en lecture seule », « Active si », « Visible si » ; pour un bouton, « Actif si », « Visible si » ; pour un texte fixe, « Visible si ». Une condition s'écrit en GrymoiR, telle qu'elle ira dans le fichier ; vide, l'élément est toujours actif ou visible. L'arbre porte une marque que l'impression remplace par ce texte, puis la réanalyse du projet le vérifie : une condition fausse annule le geste, avec le message du langage. L'aperçu montre la zone sur plusieurs lignes et la lecture seule, mais tous les éléments, quel que soit leur état, puisque l'état dépend de l'exécution.
 
+Avec B2 (grammaire, § 22.7) : le panneau d'une zone a une ligne « Valeurs permises » (`actif ; suspendu ; retiré`), vérifiée comme dans l'éditeur de données ; l'aperçu montre les boutons radio ou le menu que l'utilisateur verra. « Mettre dans un groupe… » entoure l'élément choisi d'un groupe titré ; le titre d'un groupe se change dans son panneau ; un groupe d'un seul élément reste (un bloc `côte à côte` d'un seul élément disparaît), un groupe vide part.
+
 Corrigé en chemin : le panneau d'une zone ne lisait pas son genre ; « Appliquer » réécrivait au masculin une zone féminine (`une remarque` devenait `un remarque`).
 
 ## 6. Questions ouvertes
@@ -326,3 +328,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.33 | 2026-10-13 | § 5 quinquies : le contenu de la base lit la taille d'un fichier dans `grym_fichier` (format 2 des bases, docs/vm.md, § 8) |
 | 0.34 | 2026-10-14 | § 5 sexies : sauvegarder et restaurer la base, importer un tableau CSV (la boucle du § 15.5, écrite dans le programme) |
 | 0.35 | 2026-10-14 | § 5 septies : états des éléments dans le panneau des écrans ; genre d'une zone gardé par « Appliquer » |
+| 0.36 | 2026-10-14 | § 5 septies : valeurs permises des zones, boutons radio dans l'aperçu, « Mettre dans un groupe… », titre d'un groupe |

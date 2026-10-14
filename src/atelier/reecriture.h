@@ -58,6 +58,7 @@ struct ElementNouveau {
     bool decroissant = false;
     QStringList colonnes;     // liste : champs à montrer ; vide : les colonnes par défaut
     bool plusieurs_lignes = false, lecture_seule = false;   // zone (§ 22.6)
+    QStringList valeurs;      // zone (texte) : valeurs permises (§ 22.7) ; groupe : rien
     QString actif_si, visible_si;   // bouton, zone (actif) ; bouton, texte, zone (visible) : la condition telle qu'écrite
 };
 QString ecran_titre(const QString &dossier, const QString &ecran, const QString &titre, Geste *geste);
@@ -66,6 +67,8 @@ QString ecran_ajouter(const QString &dossier, const QString &ecran, const Elemen
 // Un bouton part avec son événement, une liste avec son « Quand on choisit », une zone avec son « Quand on change » ;
 // un bloc disparaît, ses éléments restent.
 QString ecran_supprimer(const QString &dossier, const QString &ecran, int index, Geste *geste);
+// Entoure l'élément d'un groupe titré, « le groupe « Adresse » : » (grammaire, § 22.7).
+QString ecran_grouper(const QString &dossier, const QString &ecran, int index, const QString &titre, Geste *geste);
 // Un bouton renommé l'est aussi dans son événement ; une zone renommée, dans son « Quand on change ».
 QString ecran_modifier(const QString &dossier, const QString &ecran, int index, const ElementNouveau &e, Geste *geste);
 

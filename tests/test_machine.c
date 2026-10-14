@@ -566,7 +566,9 @@ static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, cons
     for (size_t k = 0; k < n; k++) {
         if (el[k].sorte >= ELEMENT_COTE_A_COTE) {   /* les blocs de disposition */
             chaine_ajouter(&s->page.journal, el[k].sorte == ELEMENT_COTE_A_COTE ? " ; côte à côte {"
-                                             : el[k].sorte == ELEMENT_L_UN_SOUS_L_AUTRE ? " ; l'un sous l'autre {" : " ; }");
+                                             : el[k].sorte == ELEMENT_L_UN_SOUS_L_AUTRE ? " ; l'un sous l'autre {"
+                                             : el[k].sorte == ELEMENT_GROUPE ? " ; groupe " : " ; }");
+            if (el[k].sorte == ELEMENT_GROUPE) { chaine_ajouter(&s->page.journal, el[k].texte); chaine_ajouter(&s->page.journal, " {"); }
             continue;
         }
         chaine_ajouter(&s->page.journal, el[k].sorte == ELEMENT_LISTE ? " ; liste " : el[k].sorte == ELEMENT_BOUTON ? " ; bouton "
@@ -782,6 +784,17 @@ static void essais_etats_ecran(void) {   /* § 22.6 */
            "[valeurs Nom=Ada Remarque= Total=3]\n"
            "[états Nom manquant caché]\n"
            "[fermer]\n");
+    /* groupe titré et zone à valeurs permises (§ 22.7) : la valeur hors liste est refusée, l'écran reste ouvert */
+    const char *src3 = "L'écran de saisie montre :\n    le groupe « Statut » :\n"
+                       "        un état (« actif », « suspendu » ou « retiré »), « actif » au départ,\n    un bouton « OK ».\n"
+                       "Quand on change l'état dans l'écran de saisie :\n    Afficher l'état de l'écran.\n"
+                       "Quand on clique sur « OK » dans l'écran de saisie :\n    Fermer l'écran.\nOuvrir l'écran de saisie.\n";
+    const char *ev3[] = { "change État=suspendu", "change État=perdu", "clic OK" };
+    ECRANS(src3, ev3, rep,
+           "[ouvrir Saisie ; groupe Statut { ; zone État (texte : actif|suspendu|retiré) ; } ; bouton OK]\n"
+           "[valeurs État=actif]\n[valeurs État=suspendu]\nsuspendu\n"
+           "[erreur « perdu » n'est pas une valeur permise de « état » : « actif », « suspendu » ou « retiré ».]\n"
+           "[valeurs État=suspendu]\n[valeurs État=suspendu]\n[fermer]\n");
     /* une condition qui lit une zone obligatoire encore vide arrête le programme, comme le « dont » d'une liste */
     const char *src2 = "L'écran x montre :\n    un nom (texte),\n    un bouton « OK », actif si le nom de l'écran est présent.\n"
                        "Quand on clique sur « OK » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";

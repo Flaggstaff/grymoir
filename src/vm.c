@@ -2156,9 +2156,10 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->chemins[k] = NULL;
         e->choix[k] = NULL;
         e->nb_choix[k] = 0;
-        if (x[0] == 'H' || x[0] == 'V' || x[0] == 'F') {   /* un bloc de disposition (§ 22.1) */
-            e->textes[k] = grym_dupliquer("");
-            e->elements[k].sorte = x[0] == 'H' ? ELEMENT_COTE_A_COTE : x[0] == 'V' ? ELEMENT_L_UN_SOUS_L_AUTRE : ELEMENT_FIN_DE_BLOC;
+        if (x[0] == 'H' || x[0] == 'V' || x[0] == 'F' || x[0] == 'G') {   /* un bloc de disposition (§ 22.1), un groupe (§ 22.7) */
+            e->textes[k] = grym_dupliquer(x[0] == 'G' ? x + 1 : "");
+            e->elements[k].sorte = x[0] == 'H' ? ELEMENT_COTE_A_COTE : x[0] == 'V' ? ELEMENT_L_UN_SOUS_L_AUTRE
+                                 : x[0] == 'G' ? ELEMENT_GROUPE : ELEMENT_FIN_DE_BLOC;
             e->elements[k].texte = e->textes[k];
             e->listes[k] = vi_absent(NULL);
             e->colonnes[k] = NULL;

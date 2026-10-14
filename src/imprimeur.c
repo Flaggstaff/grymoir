@@ -1088,7 +1088,12 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                     continue;
                 }
                 retrait(im, niveau + 1 + profondeur);
-                aj(im, el->forme == 1 ? (c ? "_côte_à_côte\n" : "côte à côte :\n") : (c ? "_l'un_sous_l'autre\n" : "l'un sous l'autre :\n"));
+                if (el->forme == 3) {   /* « le groupe « Adresse » : » ; « _groupe « Adresse » » (§ 22.7) */
+                    aj(im, c ? "_groupe " : "le groupe ");
+                    ecrire_texte(im, el->texte);
+                    aj(im, c ? "\n" : " :\n");
+                } else
+                    aj(im, el->forme == 1 ? (c ? "_côte_à_côte\n" : "côte à côte :\n") : (c ? "_l'un_sous_l'autre\n" : "l'un sous l'autre :\n"));
                 profondeur++;
                 continue;
             }
@@ -1107,7 +1112,20 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 aj(im, c ? (fz ? "_une " : "_un ") : (fz ? "une " : "un "));
                 ecrire_nom(im, el->texte, 0);
                 aj(im, " (");
-                if (c) ecrire_nom(im, el->texte2, 0); else aj(im, el->texte2);
+                if (el->texte3) {   /* valeurs permises (§ 22.7) : « (« a », « b » ou « c ») » ; « (« a » ; « b ») » */
+                    size_t nb = 1;
+                    for (const char *p = el->texte3; *p; p++) nb += *p == '\x1e';
+                    size_t q = 0;
+                    for (const char *p = el->texte3;; q++) {
+                        const char *f2 = strchr(p, '\x1e');
+                        char *v = f2 ? grym_formater("%.*s", (int)(f2 - p), p) : grym_dupliquer(p);
+                        if (q) aj(im, c ? " ; " : q + 1 == nb ? " ou " : ", ");
+                        ecrire_texte(im, v);
+                        free(v);
+                        if (!f2) break;
+                        p = f2 + 1;
+                    }
+                } else if (c) ecrire_nom(im, el->texte2, 0); else aj(im, el->texte2);
                 aj(im, ")");
                 if (el->nb_enfants && el->enfants[0]->type != N_SI_ECRAN) {
                     aj(im, c ? " _départ " : ", ");

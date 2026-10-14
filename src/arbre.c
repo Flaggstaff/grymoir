@@ -157,7 +157,9 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, "(écran-en-cours)");
         return;
     case N_DISPOSITION:
-        chaine_ajouter(c, n->forme == 1 ? "(côte-à-côte" : n->forme == 2 ? "(l'un-sous-l'autre" : "(fin-bloc)");
+        chaine_ajouter(c, n->forme == 1 ? "(côte-à-côte" : n->forme == 2 ? "(l'un-sous-l'autre"
+                          : n->forme == 3 ? "(groupe « " : "(fin-bloc)");
+        if (n->forme == 3) { chaine_ajouter(c, n->texte); chaine_ajouter(c, " »"); }
         if (n->forme) chaine_ajouter(c, ")");
         return;
     case N_BOUTON:

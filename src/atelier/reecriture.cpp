@@ -672,6 +672,18 @@ void reimprimer_avec(Chantier &ch, const Trouve &t, const ElementNouveau &e) {
 QString etats_voulus(Noeud *n, const ElementNouveau &e) {
     if (e.sorte == ELEMENT_ZONE) {
         if (e.plusieurs_lignes && e.type != "texte") return "Seule une zone (texte) s'écrit sur plusieurs lignes.";
+        if (!e.valeurs.isEmpty()) {   // valeurs permises (§ 22.7) : mêmes règles qu'un champ d'entité
+            ChampVoulu c;
+            c.nom = e.texte;
+            c.type = e.type;
+            c.valeurs = e.valeurs;
+            c.depart = e.depart.trimmed();
+            if (c.depart.startsWith(QChar(0x00AB)) && c.depart.endsWith(QChar(0x00BB))) c.depart = c.depart.mid(1, c.depart.size() - 2).trimmed();
+            const QString x = valeurs_valides(c);
+            if (!x.isEmpty()) return x;
+            if (e.plusieurs_lignes) return "Une zone à valeurs permises se choisit : pas sur plusieurs lignes.";
+            n->texte3 = grym_dupliquer(e.valeurs.join(QChar(0x1e)).toUtf8().constData());
+        }
         if (e.plusieurs_lignes) n->entier |= 2;
         if (e.lecture_seule) n->entier |= 4;
     }
@@ -817,6 +829,17 @@ QString ecran_modifier(const QString &dossier, const QString &ecran, int index, 
     Trouve t = trouver_ecran(ch, ecran);
     if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
     Noeud *n = t.phrase;
+    if (index >= 0 && (size_t)index < n->nb_enfants && n->enfants[index]->type == N_DISPOSITION
+        && n->enfants[index]->forme == 3 && e.sorte == ELEMENT_GROUPE) {   // le titre d'un groupe (§ 22.7)
+        const QString titre = e.texte.trimmed();
+        if (titre.isEmpty()) return "Un groupe porte un titre.";
+        if (titre.contains(QChar(0x00BB)) || titre.contains(QChar(0x00AB))) return "Pas de guillemets « » dans un titre.";
+        free(n->enfants[index]->texte);
+        n->enfants[index]->texte = grym_dupliquer(titre.toUtf8().constData());
+        reimprimer(ch, t);
+        geste->description = QString("Titre d'un groupe de l'écran %1").arg(ecran);
+        return ch.conclure(geste);
+    }
     if (index < 0 || (size_t)index >= n->nb_enfants || n->enfants[index]->type == N_DISPOSITION) return "Élément introuvable.";
     Noeud *vieux = n->enfants[index];
     const QString ancien = QString::fromUtf8(vieux->texte);
@@ -872,9 +895,10 @@ Noeud *retirer_enfant(Noeud *n, size_t i) {
     return x;
 }
 
-Noeud *marque(int forme) {
+Noeud *marque(int forme, const QString &titre = QString()) {
     Noeud *m = noeud_creer(N_DISPOSITION, 0, 0, 0);
     m->forme = forme;
+    if (forme == 3) m->texte = grym_dupliquer(titre.toUtf8().constData());
     return m;
 }
 
@@ -896,7 +920,8 @@ void nettoyer_blocs(Noeud *n) {
                 if (prof == 0) directs++;
                 if (x->type == N_DISPOSITION) prof++;
             }
-            if (fin > i && directs <= 1) {
+            // un groupe titré (§ 22.7) a un sens avec un seul élément ; il ne part que vide
+            if (fin > i && (n->enfants[i]->forme == 3 ? directs == 0 : directs <= 1)) {
                 noeud_liberer(retirer_enfant(n, fin));
                 noeud_liberer(retirer_enfant(n, i));
                 change = true;
@@ -934,6 +959,24 @@ QString ecran_deplacer(const QString &dossier, const QString &ecran, int source,
     nettoyer_blocs(n);
     reimprimer(ch, t);
     geste->description = QString("Déplacer un élément de l'écran %1").arg(ecran);
+    return ch.conclure(geste);
+}
+
+// Mettre un élément dans un groupe titré (§ 22.7) : « le groupe « Adresse » : » l'entoure, à sa place.
+QString ecran_grouper(const QString &dossier, const QString &ecran, int index, const QString &titre, Geste *geste) {
+    Chantier ch(dossier);
+    Trouve t = trouver_ecran(ch, ecran);
+    if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
+    Noeud *n = t.phrase;
+    const QString x = titre.trimmed();
+    if (x.isEmpty()) return "Un groupe porte un titre.";
+    if (x.contains(QChar(0x00BB)) || x.contains(QChar(0x00AB))) return "Pas de guillemets « » dans un titre.";
+    if (index < 0 || (size_t)index >= n->nb_enfants || n->enfants[index]->type == N_DISPOSITION)
+        return "Choisis un élément, pas un bloc.";
+    inserer(n, (size_t)index + 1, marque(0));
+    inserer(n, (size_t)index, marque(3, x));
+    reimprimer(ch, t);
+    geste->description = QString("Grouper un élément de l'écran %1").arg(ecran);
     return ch.conclure(geste);
 }
 

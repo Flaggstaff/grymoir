@@ -19,6 +19,7 @@ struct ElementLu {
     QString type;            // zone : type
     bool facultatif = false, feminin = false;
     bool plusieurs_lignes = false, lecture_seule = false;   // zone (§ 22.6)
+    QStringList valeurs;     // zone : valeurs permises (§ 22.7)
     QString actif_si, visible_si;   // la condition telle qu'écrite dans le fichier, vide sinon (§ 22.6)
     QString depart;          // zone : valeur de départ, telle qu'écrite
     QString tri;             // liste : champ du tri, « » sinon

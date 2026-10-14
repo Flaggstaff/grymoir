@@ -829,10 +829,16 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     }
     const int l_un = est_cle(t, "l'") && f == d + 2 && r->e[d + 1].type == J_CROCHETS
                      && strcmp(r->e[d + 1].valeur, "un sous l'autre") == 0;   /* « _l'un_sous_l'autre » : « _l' » puis un nom */
+    const int groupe = est_cle(t, "groupe") && f == d + 2 && r->e[d + 1].type == J_TEXTE;   /* « _groupe « Adresse » » */
     if (haut && (haut->type == O_ECRAN || haut->type == O_BLOC)
-        && ((est_cle(t, "côte_à_côte") && f == d + 1) || l_un)) {
-        /* _côte_à_côte → côte à côte : ; _l'un_sous_l'autre → l'un sous l'autre : (§ 22.1) */
-        if (est_cle(t, "côte_à_côte")) {
+        && ((est_cle(t, "côte_à_côte") && f == d + 1) || l_un || groupe)) {
+        /* _côte_à_côte → côte à côte : ; _l'un_sous_l'autre → l'un sous l'autre : (§ 22.1) ;
+         * _groupe « Adresse » → le groupe « Adresse » : (§ 22.7) */
+        if (groupe) {
+            mot(r, "le", t);
+            mot(r, "groupe", t);
+            copier(r, &r->e[d + 1]);
+        } else if (est_cle(t, "côte_à_côte")) {
             mot(r, "côte", t);
             mot(r, "à", t);
             mot(r, "côte", t);
@@ -906,14 +912,27 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             }
             f = fin_liste;
         } else if ((est_cle(t, "un") || est_cle(t, "une")) && d + 4 < f + 1 && r->e[d + 1].type == J_CROCHETS
-                   && r->e[d + 2].type == J_PAR_OUV && r->e[d + 3].type == J_CROCHETS && r->e[d + 4].type == J_PAR_FERM) {
-            /* _un pays (texte) [_départ « Suisse »] [_facultatif] → un pays (texte), « Suisse » au départ, facultatif */
+                   && r->e[d + 2].type == J_PAR_OUV
+                   && ((r->e[d + 3].type == J_CROCHETS && r->e[d + 4].type == J_PAR_FERM) || r->e[d + 3].type == J_TEXTE)) {
+            /* _un pays (texte) [_départ « Suisse »] [_facultatif] → un pays (texte), « Suisse » au départ, facultatif ;
+             * _un état (« actif » ; « retiré ») → un état (« actif », « retiré ») (§ 22.7) */
             mot(r, t->valeur, t);
             copier(r, &r->e[d + 1]);
             emettre(r, J_PAR_OUV, NULL, &r->e[d + 2], 1);
-            copier(r, &r->e[d + 3]);
-            emettre(r, J_PAR_FERM, NULL, &r->e[d + 4], 1);
             size_t k = d + 5;
+            if (r->e[d + 3].type == J_TEXTE) {
+                const size_t fv = fermante(r, d + 2, f);
+                if (fv == f) { echouer(r, &r->e[d + 2], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+                for (size_t v = d + 3; v < fv; v++) {
+                    if (r->e[v].type == J_POINT_VIRGULE) emettre(r, J_VIRGULE, NULL, &r->e[v], 1);
+                    else copier(r, &r->e[v]);
+                }
+                emettre(r, J_PAR_FERM, NULL, &r->e[fv], 1);
+                k = fv + 1;
+            } else {
+                copier(r, &r->e[d + 3]);
+                emettre(r, J_PAR_FERM, NULL, &r->e[d + 4], 1);
+            }
             while (k < f) {
                 if (est_cle(&r->e[k], "départ") && k + 1 < f) {
                     size_t v = k + 1, fv = v + 1;

@@ -21,6 +21,7 @@ struct ElementVue {
     QString type;           // zone : son type
     QStringList choix;      // zone liée à une entité : les clés, pour un menu
     bool plusieurs_lignes = false;   // zone (texte) « sur plusieurs lignes » (§ 22.6)
+    bool facultatif = false;         // zone : boutons radio, un choix « — » de plus pour l'absence (§ 22.7)
     bool lecture_seule = false;      // zone « en lecture seule »
 };
 
@@ -35,6 +36,9 @@ struct VueEcran {
     QVector<QWidget *> zones;                // un par élément, nullptr sauf pour une zone
     QVector<QPushButton *> boutons;          // les boutons, dans l'ordre
 };
+
+// Une zone (texte) à valeurs permises, de deux à quatre : des boutons radio plutôt qu'un menu (§ 22.7).
+inline bool en_boutons_radio(const ElementVue &e) { return e.type == "texte" && e.choix.size() >= 2 && e.choix.size() <= 4; }
 
 // Dessine l'écran : blocs emboîtés, boutons qui se suivent sur une ligne en bas à droite, listes qui prennent
 // la hauteur libre, zones avec les contrôles des formulaires. Ne branche aucun événement. Un logo non nul

@@ -770,6 +770,13 @@ int main(void) {
       "(écran [x] [note] (plusieurs-lignes) (lecture-seule) (actif-si vrai) (visible-si (< 1 2)) (texte « T » (visible-si faux)))");
     V("L'écran x montre :\n    le texte « T », visible si la note de l'écran est présente,\n    une note (texte), facultative.",
       "(écran [x] (texte « T » (visible-si (présent (champ [note] (écran-en-cours))))) [note])");   /* zone écrite plus bas */
+    /* groupe titré, zone à valeurs permises (§ 22.7) */
+    V("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a » ou « b »), « a » au départ,\n    le texte « t ».",
+      "(écran [x] (groupe « Statut ») [état] (fin-bloc) (texte « t »))");
+    VE("L'écran x montre :\n    un état (« a » ou « b »), « c » au départ.", 2, 31,
+       "« c » n'est pas une valeur permise de « état » : « a » ou « b ».");
+    VE("L'écran x montre :\n    le groupe « » :\n        le texte « t ».", 2, 15, "Un groupe porte un titre");
+    VE("L'écran x montre :\n    un état (« a » ou « b »), sur plusieurs lignes.", 2, 31, "Une zone à valeurs permises se choisit");
     VE("L'écran x montre :\n    un bouton « B », active si vrai.", 2, 22, "Accord : « actif si ».");
     VE("L'écran x montre :\n    un n (nombre), sur plusieurs lignes.", 2, 20, "Seule une zone (texte) s'écrit sur plusieurs lignes.");
     VE("L'écran x montre :\n    le texte « T », actif si vrai.", 2, 21, "Un texte fixe ne se clique pas : « visible si » seulement.");

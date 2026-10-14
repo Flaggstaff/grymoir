@@ -1095,6 +1095,11 @@ static void phrase(Compilation *c, const Noeud *ph) {
             const Noeud *el = ph->enfants[k];
             if (el->type == N_NOM) {
                 classe_ajouter_champ(cm, el->texte);
+                if (el->texte3) {   /* valeurs permises d'une zone : « texte␞actif␞retiré » (§ 22.7) */
+                    char *t = grym_formater("%s\x1e%s", el->texte2, el->texte3);
+                    classe_typer_dernier_champ(cm, t, 0);
+                    free(t);
+                } else
                 classe_typer_dernier_champ(cm, el->texte2, 0);
                 if (el->entier & 1) classe_facultatif_dernier_champ(cm);
             } else if (el->type == N_CHERCHER) {
@@ -1133,7 +1138,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
             if (el->type == N_DISPOSITION) {   /* « côte à côte » : H, « l'un sous l'autre » : V, fin du bloc : F */
-                chaine_ajouter(&d, el->forme == 1 ? "\x1f" "H" : el->forme == 2 ? "\x1f" "V" : "\x1f" "F");
+                chaine_ajouter(&d, el->forme == 1 ? "\x1f" "H" : el->forme == 2 ? "\x1f" "V" : el->forme == 3 ? "\x1f" "G" : "\x1f" "F");
+                if (el->forme == 3) chaine_ajouter(&d, el->texte);   /* « Gadresse » : le titre du groupe (§ 22.7) */
                 continue;
             }
             chaine_ajouter(&d, el->type == N_CHERCHER ? "\x1f" "L" : el->type == N_BOUTON ? "\x1f" "B"

@@ -292,6 +292,10 @@ int main(void) {
     COMP("L'écran x montre :\n    un total (nombre), 0 au départ, en lecture seule,\n    le texte « T », visible si vrai.",
          "_écran x\n    _un total (nombre) _départ 0 _lecture_seule\n    _texte « T » _visible_si _vrai\n_fin\n");
     FIXE("L'écran x montre :\n    une note (texte), sur plusieurs lignes, active si vrai,\n    le texte « T », visible si faux.");
+    /* groupe titré et valeurs permises d'une zone (§ 22.7), dans les deux formes */
+    COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
+         "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
+    FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
     /* une condition cite une zone écrite plus bas : l'accord suit son genre */
     LITT("L'écran x montre :\n    le texte « T », visible si la remarque de l'écran est présente,\n    une remarque (texte), facultative.",
          "L'écran x montre :\n    le texte « T », visible si la remarque de l'écran est présente,\n    une remarque (texte), facultative.\n");
