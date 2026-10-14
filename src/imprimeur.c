@@ -37,6 +37,7 @@ typedef struct {
     size_t nb_aptitudes;
     char **a_liberer;      /* formes masculines déduites */
     size_t nb_a_liberer;
+    int devine;            /* l'article du champ qu'on écrit a été deviné : son objet peut l'être aussi (« du c ») */
 } Impression;
 
 
@@ -108,6 +109,16 @@ static int voyelle(const char *s) {
     for (size_t k = 0; k < sizeof V / sizeof *V; k++)
         if (strncmp(s, V[k], strlen(V[k])) == 0) return 1;
     return 0;
+}
+
+/* L'article d'un champ en forme littéraire. La forme compacte n'en écrit pas (`_écran.compositeur_choisi.portrait`) :
+ * traduite, elle le retrouve par le genre du champ, retenu de sa déclaration (« le portrait », « la photo », « l'âge »).
+ * Genre inconnu : aucun article, comme écrit. */
+static Article article_du_champ(const Impression *im, const Noeud *n) {
+    if (n->article != ART_AUCUN || im->compact || !n->article_a_deviner) return n->article;
+    const Genre g = genre_de_nom(im, n->texte);
+    if (g == G_LIBRE) return ART_AUCUN;
+    return voyelle(n->texte) ? ART_L : g == G_FEMININ ? ART_LA : ART_LE;
 }
 
 static void ecrire_nom(Impression *im, const char *nom, int crochets) {
@@ -212,13 +223,25 @@ static void preposition(Impression *im, const char *prep, const Noeud *x) {
         expression(im, x->enfants[0]);
         return;
     }
-    if (x->type == N_CHAMP && x->article != ART_AUCUN && !im->compact) {
+    if (x->type == N_CHAMP && article_du_champ(im, x) != ART_AUCUN && !im->compact) {
         /* « du solde du client » : l'article du champ se contracte avec la préposition */
-        if (x->article == ART_LE) aj(im, a ? "au " : "du ");
-        else { aj(im, a ? "à " : "de "); aj(im, x->article == ART_LA ? "la " : "l'"); }
+        const Article art = article_du_champ(im, x);
+        if (art == ART_LE) aj(im, a ? "au " : "du ");
+        else { aj(im, a ? "à " : "de "); aj(im, art == ART_LA ? "la " : "l'"); }
         ecrire_nom(im, x->texte, 0);
         aj(im, " ");
+        const int avant = im->devine;
+        im->devine = x->article_a_deviner;
         preposition(im, "de", x->enfants[0]);
+        im->devine = avant;
+        return;
+    }
+    if (x->type == N_NOM && x->article == ART_AUCUN && x->article_a_deviner && !im->compact && im->devine
+        && genre_de_nom(im, x->texte) != G_LIBRE) {   /* « du c », « de l'œuvre » : `o.titre` traduit (forme compacte) */
+        if (voyelle(x->texte)) aj(im, a ? "à l'" : "de l'");
+        else if (genre_de_nom(im, x->texte) == G_FEMININ) aj(im, a ? "à la " : "de la ");
+        else aj(im, a ? "au " : "du ");
+        ecrire_nom(im, x->texte, x->crochets);
         return;
     }
     if (x->type == N_NOM && x->article != ART_AUCUN) {
@@ -810,12 +833,20 @@ static void expression(Impression *im, const Noeud *n) {
             ecrire_nom(im, n->texte, 0);
             return;
         }
-        if (n->article == ART_LE) aj(im, "le ");
-        else if (n->article == ART_LA) aj(im, "la ");
-        else if (n->article == ART_L) aj(im, "l'");
+        {
+            const Article art = article_du_champ(im, n);
+            if (art == ART_LE) aj(im, "le ");
+            else if (art == ART_LA) aj(im, "la ");
+            else if (art == ART_L) aj(im, "l'");
+        }
         ecrire_nom(im, n->texte, 0);
         aj(im, " ");
-        preposition(im, "de", n->enfants[0]);
+        {
+            const int avant = im->devine;
+            im->devine = article_du_champ(im, n) != ART_AUCUN && n->article_a_deviner;
+            preposition(im, "de", n->enfants[0]);
+            im->devine = avant;
+        }
         return;
     case N_NOUVEAU: {
         if (im->compact) {
@@ -1018,6 +1049,37 @@ static void place_ecran(Impression *im, const Noeud *el, int feminin) {
         aj(im, x);
         free(x);
     }
+}
+
+/* Une colonne choisie écrite sans article (venue de la forme compacte, « titre », « date de naissance de compositeur ») :
+ * refaite depuis son chemin (« compositeur ␟ date de naissance », de l'objet vers le champ) avec les genres retenus,
+ * « la date de naissance du compositeur ». NULL si elle a déjà son article, ou si un genre manque. */
+static char *colonne_avec_articles(Impression *im, const char *ecrit, const char *chemin, const char *fin) {
+    if (strncmp(ecrit, "le ", 3) == 0 || strncmp(ecrit, "la ", 3) == 0 || strncmp(ecrit, "l'", 2) == 0
+        || strncmp(ecrit, "les ", 4) == 0)
+        return NULL;
+    char *segs[16];
+    size_t ns = 0;
+    for (const char *p = chemin; p < fin && ns < 16;) {
+        const char *f2 = memchr(p, '\x1f', (size_t)(fin - p));
+        if (!f2) f2 = fin;
+        segs[ns++] = grym_formater("%.*s", (int)(f2 - p), p);
+        p = f2 < fin ? f2 + 1 : fin;
+    }
+    Chaine c = {0};
+    int ok = ns > 0;
+    for (size_t k = ns; ok && k-- > 0;) {   /* du champ montré vers l'objet de la liste */
+        const Genre g = genre_de_nom(im, segs[k]);
+        if (g == G_LIBRE) { ok = 0; break; }
+        const int v = voyelle(segs[k]);
+        if (k + 1 == ns) chaine_ajouter(&c, v ? "l'" : g == G_FEMININ ? "la " : "le ");
+        else chaine_ajouter(&c, v ? " de l'" : g == G_FEMININ ? " de la " : " du ");
+        chaine_ajouter(&c, segs[k]);
+    }
+    for (size_t k = 0; k < ns; k++) free(segs[k]);
+    char *r = chaine_rendre(&c);
+    if (!ok) { free(r); return NULL; }
+    return r;
 }
 
 static void etats_ecran(Impression *im, const Noeud *el, int feminin) {
@@ -1229,7 +1291,9 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                         const char *sep = memchr(q, '\x1d', (size_t)(fin - q));
                         if (i) aj(im, i + 1 == nb ? " et " : ", ");
                         char *ecrit = grym_formater("%.*s", (int)((sep ? sep : fin) - q), q);
-                        aj(im, ecrit);
+                        char *refait = sep ? colonne_avec_articles(im, ecrit, sep + 1, fin) : NULL;
+                        aj(im, refait ? refait : ecrit);
+                        free(refait);
                         free(ecrit);
                         q = *fin ? fin + 1 : fin;
                     }
@@ -1707,7 +1771,10 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             aj(im, article_ecrit(n->article, g, n->texte));
             ecrire_nom(im, n->texte, 0);
             aj(im, " ");
+            const int avant = im->devine;
+            im->devine = n->enfants[0]->article_a_deviner;   /* `f.montant << …` traduit : « Le montant de la f » */
             preposition(im, "de", n->enfants[0]);
+            im->devine = avant;
             aj(im, " devient ");
             expression(im, n->enfants[1]);
             aj(im, bloc_init ? " :\n" : ".\n");

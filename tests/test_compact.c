@@ -244,7 +244,7 @@ int main(void) {
                  "L'écran des compositeurs, « Nos compositeurs », montre :\n    le texte « Bonjour »,\n"
                  "    la liste des compositeurs conservés dont le nom ≠ « X », par nom décroissant,\n"
                  "    un bouton « Nouveau »,\n    un bouton « Fermer ».\n"
-                 "Quand on choisit un compositeur dans l'écran des compositeurs :\n    Afficher nom de compositeur.\n"
+                 "Quand on choisit un compositeur dans l'écran des compositeurs :\n    Afficher le nom du compositeur.\n"
                  "Quand on clique sur « Nouveau » dans l'écran des compositeurs :\n    Le c vaut un nouveau compositeur saisi.\n"
                  "    Conserver c.\n"
                  "Quand on clique sur « Fermer » dans l'écran des compositeurs :\n    Fermer l'écran.\n"
@@ -284,7 +284,7 @@ int main(void) {
     ALLER_RETOUR("_classe _une p _conservé\n    _une date (date) _facultatif\n_fin\n_la x << _nouveau p _avec\n"
                  "    date << _absent\n_fin\n_si x.date _présent _alors\n    _afficher 1\n_fin\n",
                  "Une p, conservée, a :\n    une date (date), facultative.\nLa x vaut une nouvelle p :\n    La date vaut absente.\n"
-                 "Si date de x est présente :\n    Afficher 1.\n");
+                 "Si la date de la x est présente :\n    Afficher 1.\n");
 
     /* une remarque qui suit un bloc « _sinon … _fin » reste hors du bloc (défaut corrigé) */
     ALLER_RETOUR("_le x << 1\n_si x > 0 _alors\n    _si x = 1 _alors\n        _afficher 1\n    _sinon\n        _afficher 2\n"
@@ -371,7 +371,19 @@ int main(void) {
     ALLER_RETOUR("_classe _une facture\n    _un montant\n_fin\n_la f << _nouveau facture _avec\n    montant << 3\n_fin\n"
                  "f.montant << f.montant × 2\n_afficher f.montant\n",
                  "Une facture a :\n    un montant.\nLa f vaut une nouvelle facture :\n    Le montant vaut 3.\n"
-                 "Le montant de f devient montant de f × 2.\nAfficher montant de f.\n");
+                 "Le montant de la f devient le montant de la f × 2.\nAfficher le montant de la f.\n");
+    /* Les articles que la forme compacte n'écrit pas, retrouvés par le genre des champs et des variables : une
+     * colonne, une condition, une image calculée ; un champ au genre inconnu reste sans article (« longueur de n ») */
+    ALLER_RETOUR("_classe _un compositeur _conservé\n    _un nom (texte)\n    _une date_de_naissance (date) _facultatif\n"
+                 "    _un portrait (image) _facultatif\n_fin\n"
+                 "_classe _une œuvre _conservé\n    _un titre (texte)\n    _un compositeur (compositeur)\n_fin\n"
+                 "_écran x\n    _liste œuvre _conservé _avec titre ; compositeur.date_de_naissance\n"
+                 "    _image_de _écran.œuvre_choisie.compositeur.portrait _visible_si _écran.œuvre_choisie _présent\n_fin\n",
+                 "Un compositeur, conservé, a :\n    un nom (texte),\n    une date de naissance (date), facultative,\n"
+                 "    un portrait (image), facultatif.\n"
+                 "Une œuvre, conservée, a :\n    un titre (texte),\n    un compositeur (compositeur).\n"
+                 "L'écran x montre :\n    la liste des œuvres conservées, avec le titre et la date de naissance du compositeur,\n"
+                 "    l'image du portrait du compositeur de l'œuvre choisie de l'écran, visible si l'œuvre choisie de l'écran est présente.\n");
     ERR("_classe _un client\n    _un nom\n", 1, 1, "« _fin » manquant");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_classe _un membre _est _une personne\n    _une licence\n_fin\n"
                  "_classe _un invité _est _une personne\n_fin\n",

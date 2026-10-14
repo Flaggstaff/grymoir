@@ -181,6 +181,8 @@ typedef struct Noeud {
     size_t debut, fin;    /* en points de code dans la source normalisée */
     int place[4];         /* élément d'un bloc en position libre (§ 22.9) : gauche, haut, largeur, hauteur, en pixels */
     int place_dite;       /* ce qui en est écrit : 1 la place, 2 la largeur, 4 la hauteur ; 0 hors d'un bloc libre */
+    int article_a_deviner;   /* N_CHAMP, N_NOM venus de la forme compacte (`c.nom`), qui n'écrit pas d'article :
+                                l'imprimeur littéral le retrouve par le genre (« le nom du c ») */
 } Noeud;
 
 Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut);

@@ -1244,6 +1244,10 @@ static Noeud *acces_champ(Analyse *a, char *champ, Genre g, const Jeton *tart, A
     Noeud *n = noeud_creer(N_CHAMP, premier->ligne, premier->colonne, premier->debut);
     n->texte = champ;
     n->article = art == ART_IMPLICITE ? ART_AUCUN : art;
+    if (t->synthetique) {   /* « de » écrit par la lecture de `c.nom` (forme compacte) : l'article est à deviner */
+        n->article_a_deviner = 1;
+        if (objet->type == N_NOM && objet->article == ART_AUCUN) objet->article_a_deviner = 1;
+    }
     n->op_ligne = premier->ligne;
     n->op_colonne = premier->colonne;
     noeud_ajouter(n, objet);

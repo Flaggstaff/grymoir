@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.79 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.80 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -796,6 +796,8 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 ### 11.4 Lecture
 
 La lecture réécrit chaque instruction compacte en la phrase littéraire équivalente, puis l'analyse comme telle. Les deux formes passent donc par les mêmes vérifications et produisent le même arbre. Les erreurs sont localisées dans le fichier compact (ligne et colonne).
+
+**Articles** *(14 octobre 2026)* : la forme compacte n'écrit pas d'article (`_écran.compositeur_choisi.portrait`, `_avec titre`). Traduite en littéraire, elle les retrouve par le genre déclaré du champ, de la variable ou de l'entité, avec contraction et élision : `l'image du portrait du compositeur choisi de l'écran`, `avec le titre et la date de naissance du compositeur`, `le montant de la f`. L'objet ne prend son article que si son champ a pris le sien : un champ au genre inconnu (`longueur`, propriété d'un texte) laisse `longueur de n` tel quel, plutôt qu'un mélange. Seul ce qui vient de la forme compacte est touché : une phrase littéraire écrite sans article (`nom du c`) le reste, même formatée. D'autres tournures ne reviennent pas encore à l'identique (`dont le nom est x` revient `dont le nom = x`, un `Si` court revient en bloc) : le sens est le même, la forme diffère.
 
 Limite de la v0.2 : les erreurs de structure propres à la forme compacte (`_fin` manquant, `_alors` attendu…) s'expriment en forme compacte ; les autres (nom inconnu, accord, pureté) empruntent encore le vocabulaire de la forme littéraire (charte, art. 8).
 
@@ -1910,3 +1912,4 @@ L'écran de saisie montre :
 | 1.77 | 2026-10-14 | Nouveau § 22.8 : `l'image « … »` dans un écran, vérifiée dès l'analyse, lue à l'ouverture |
 | 1.78 | 2026-10-14 | Nouveau § 22.9 : `en position libre :`, la place au pixel (`à 96 de la gauche et 16 du haut`) et la taille (`large de`, `haut de`) des éléments du bloc ; révise `docs/ecrans.md`, § 3.3 |
 | 1.79 | 2026-10-14 | § 22.8 : l'image calculée, `l'image de …`, relue avant chaque attente ; absente, elle ne montre rien |
+| 1.80 | 2026-10-14 | § 11.4 : la traduction de la forme compacte retrouve les articles par le genre (champs, variables, entités, colonnes choisies) ; le littéral écrit sans article reste tel quel |

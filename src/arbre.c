@@ -30,6 +30,7 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->fin = debut;
     n->place[0] = n->place[1] = n->place[2] = n->place[3] = 0;
     n->place_dite = 0;
+    n->article_a_deviner = 0;
     return n;
 }
 
