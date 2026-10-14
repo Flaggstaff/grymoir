@@ -252,7 +252,8 @@ Le langage place au pixel dans un bloc `en position libre :` (grammaire, § 22.9
 - **Ajouter.** Dans un écran qui a un bloc libre, la palette ajoute au dernier, à 16 de la gauche et 48 pixels sous l'élément le plus bas (la hauteur réelle des éléments n'est connue qu'au dessin).
 - **Tout se place** *(atelier 0.40)* : un groupe, un bloc `côte à côte` ou `l'un sous l'autre`, un bloc libre posé dans un bloc libre se glissent et s'agrandissent comme un élément, avec tout leur contenu. « Mettre dans un groupe… » marche aussi dans un bloc libre : le groupe prend la place et la taille de l'élément, qui s'y empile. Retirer un groupe placé remonte ses éléments à sa place, l'un sous l'autre (48 pixels d'écart) ; retirer un bloc libre placé garde les places de ses éléments, décalées de la sienne.
 - **Le clavier.** L'élément placé choisi se déplace aux flèches, d'un pixel, ou de 8 avec Maj ; Alt + flèches changent sa taille. Chaque appui est un geste, qui s'annule.
-- **La poignée.** Un carré à la couleur d'accent marque le coin de l'élément placé choisi : le saisir l'agrandit.
+- **La poignée.** Un carré à la couleur d'accent marque le coin de l'élément placé choisi : le saisir l'agrandit. La prise fait 12 pixels : le bord droit change la largeur, le bord bas la hauteur, le coin les deux ; au survol, le curseur l'annonce (↔, ↕, ⤡) *(0.41)*.
+- **Un élément décrit** (hors d'un bloc libre) ne s'agrandit pas : saisi par son coin, il ne bouge pas, et la barre d'état renvoie à « Mettre en position libre ».
 - **Le tri** se fait par unités : un bloc et tout son contenu bougent ensemble dans l'ordre écrit.
 - **Refus.** Un élément en position libre ne se glisse pas vers un autre bloc ; retirer le bloc libre de premier niveau garde ses éléments et efface leur place. Le contour pointillé montre le bloc dans l'aperçu.
 - La grille est un outil de l'atelier : elle n'existe pas dans le programme, qui ne garde que les nombres.
@@ -357,3 +358,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.38 | 2026-10-14 | § 5 octies : position libre (grammaire, § 22.9) : disposition choisie à la création, « Mettre en position libre », glisser avec grille de 8 pixels et aimantation (Alt : au pixel), coin pour la taille, panneau Gauche, Haut, Largeur, Hauteur |
 | 0.39 | 2026-10-14 | § 5 nonies : l'image calculée dans la palette, le panneau, l'aperçu et l'exécution |
 | 0.40 | 2026-10-14 | § 5 octies : les blocs se placent et s'agrandissent dans un bloc libre ; grouper dans un bloc libre ; flèches (Maj : 8 pixels ; Alt : taille) ; poignée visible ; tri par unités |
+| 0.41 | 2026-10-14 | § 5 octies : prise de 12 pixels, bord droit (largeur), bord bas (hauteur), coin (les deux) ; curseur au survol ; message sur le coin d'un élément décrit |

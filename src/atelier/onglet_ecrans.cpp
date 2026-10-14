@@ -404,6 +404,11 @@ void OngletEcrans::dessiner() {
         }
     }
     vue.titre->installEventFilter(this);
+    for (int k = 0; k < vue.controles.size(); k++)   // le survol des éléments placés : le curseur change sur leurs bords
+        if (QWidget *w = vue.controles[k]; w && e.elements.value(k).place) {
+            w->setMouseTracking(true);
+            for (QWidget *x : w->findChildren<QWidget *>()) x->setMouseTracking(true);
+        }
     grille = nullptr;
     poignee = nullptr;   // l'ancienne est partie avec l'ancien aperçu
     centre->installEventFilter(this);
@@ -464,6 +469,16 @@ protected:
 }  // namespace
 
 QWidget *OngletEcrans::grille_visible() const { return grille && grille->isVisible() ? grille : nullptr; }
+// Le bord droit, le bord bas, ou leur coin : 12 pixels de prise, assez pour un trackpad et pour le retrait du dessin
+// d'un bouton macOS dans son cadre.
+int OngletEcrans::bord_sous(QWidget *w, QPoint global) {
+    const QPoint p = w->mapFromGlobal(global);
+    if (p.x() < 0 || p.y() < 0 || p.x() > w->width() || p.y() > w->height()) return 0;
+    return (p.x() >= w->width() - 12 ? 1 : 0) | (p.y() >= w->height() - 12 ? 2 : 0);
+}
+
+QString OngletEcrans::texte_etat() const { return etat->text(); }
+
 QWidget *OngletEcrans::poignee_visible() const { return poignee && !poignee->isHidden() ? poignee : nullptr; }
 
 // Les flèches déplacent l'élément placé choisi d'un pixel (Maj : de 8, sur la grille) ; avec Alt, elles changent sa
@@ -519,6 +534,18 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
         if (clavier(k->key(), k->modifiers())) return true;
         if (o == centre) return QWidget::eventFilter(o, ev);
     }
+    // Au survol d'un élément placé, le curseur dit ce que la souris saisira : le bord droit, le bord bas, le coin.
+    if (ev->type() == QEvent::MouseMove && !(static_cast<QMouseEvent *>(ev)->buttons() & Qt::LeftButton) && courant >= 0) {
+        const int k = element_sous(o);
+        QWidget *w = vue.controles.value(k);
+        if (auto *cible = qobject_cast<QWidget *>(o); cible && w) {
+            const int b = lus[courant].elements.value(k).place ? bord_sous(w, static_cast<QMouseEvent *>(ev)->globalPosition().toPoint()) : 0;
+            if (b == 3) cible->setCursor(Qt::SizeFDiagCursor);
+            else if (b == 1) cible->setCursor(Qt::SizeHorCursor);
+            else if (b == 2) cible->setCursor(Qt::SizeVerCursor);
+            else cible->unsetCursor();
+        }
+    }
     // Position libre (§ 5 octies) : l'élément suit la souris, aimanté à la grille (Alt : au pixel) ; par son coin en
     // bas à droite, il s'agrandit. Rien n'est écrit avant de lâcher.
     if (libre_k >= 0 && (ev->type() == QEvent::MouseMove || ev->type() == QEvent::MouseButtonRelease)) {
@@ -532,7 +559,8 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             const bool pixel = m->modifiers() & Qt::AltModifier;
             auto cale = [pixel](int v) { return pixel ? qMax(0, v) : aimanter(v); };
             QRect r = libre_depart;
-            if (libre_taille) r.setSize(QSize(qMax(8, cale(r.width() + d.x())), qMax(8, cale(r.height() + d.y()))));
+            if (libre_taille) r.setSize(QSize((libre_taille & 1) ? qMax(8, cale(r.width() + d.x())) : r.width(),
+                                              (libre_taille & 2) ? qMax(8, cale(r.height() + d.y())) : r.height()));
             else r.moveTopLeft(QPoint(cale(r.x() + d.x()), cale(r.y() + d.y())));
             w->setGeometry(r);
             QWidget *toile = w->parentWidget();
@@ -553,7 +581,8 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             if (grille) grille->hide();
             if (!libre_bouge) return true;
             const QRect r = w->geometry();
-            if (libre_taille) placer(k, libre_depart.x(), libre_depart.y(), r.width(), r.height());
+            if (libre_taille) placer(k, libre_depart.x(), libre_depart.y(), (libre_taille & 1) ? r.width() : -1,
+                                     (libre_taille & 2) ? r.height() : -1);
             else placer(k, r.x(), r.y(), -1, -1);
             return true;
         }
@@ -622,8 +651,11 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             libre_k = trouve;
             libre_bouge = false;
             libre_depart = w->geometry();
-            const QPoint p = w->mapFromGlobal(depart);
-            libre_taille = p.x() >= w->width() - 10 && p.y() >= w->height() - 10;   // le coin : la taille
+            libre_taille = bord_sous(w, depart);   // un bord ou le coin : la taille ; ailleurs : la place
+            etat->setText(libre_taille ? "Glisse pour changer la taille (Alt : au pixel)." : "Glisse pour placer (Alt : au pixel).");
+        } else if (w && bord_sous(w, depart) == 3) {   // le coin d'un élément décrit : il ne s'agrandit pas, dire pourquoi
+            etat->setText("Cet élément n'est pas en position libre : sa taille suit la disposition. « Mettre en position libre », "
+                          "dans le panneau de l'écran, permet de le placer et de l'agrandir.");
         }
     }
     if (ev->type() == QEvent::MouseButtonRelease) glisse = -1;

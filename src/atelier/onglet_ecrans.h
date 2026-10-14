@@ -75,6 +75,7 @@ public:
     void liberer();                                  // « Mettre en position libre » : l'écran entier, tel qu'on le voit
     QWidget *grille_visible() const;                 // la grille d'alignement, si elle est montrée (essais)
     QWidget *poignee_visible() const;                // la poignée de taille, si elle est montrée (essais)
+    QString texte_etat() const;                      // la barre d'état de l'onglet (essais)
     bool touche(int t, Qt::KeyboardModifiers m = Qt::NoModifier) { return clavier(t, m); }   // pour les essais
 
 signals:
@@ -99,7 +100,9 @@ private:
     class QFrame *repere = nullptr;   // le trait qui montre où l'élément atterrira
     // un élément en position libre qu'on déplace (ou qu'on agrandit par son coin), sa géométrie de départ
     int libre_k = -1;
-    bool libre_taille = false, libre_bouge = false;
+    int libre_taille = 0;   // 0 : déplacer ; 1 : la largeur (bord droit) ; 2 : la hauteur (bord bas) ; 3 : les deux (coin)
+    bool libre_bouge = false;
+    static int bord_sous(QWidget *w, QPoint global);   // ce que saisit la souris en ce point de w (même codage)
     QRect libre_depart;
     QWidget *grille = nullptr;
     class QFrame *poignee = nullptr;   // le coin de l'élément placé choisi : le saisir l'agrandit

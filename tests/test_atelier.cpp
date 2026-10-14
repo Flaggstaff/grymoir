@@ -2058,6 +2058,83 @@ int main(int argc, char **argv) {
         }
         VERIFIER(OngletEcrans::aimanter(3) == 0 && OngletEcrans::aimanter(4) == 8 && OngletEcrans::aimanter(-5) == 0);
     }
+    {   // agrandir à la souris par le coin, l'événement livré au widget réellement sous la souris (un bouton, une zone)
+        QTemporaryDir dossier;
+        QFile f(dossier.filePath("p.grym"));
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write("L'écran d'accueil montre :\n    en position libre :\n        un bouton « A », à 16 de la gauche et 16 du haut,\n"
+                "        une note (texte), à 16 de la gauche et 80 du haut.\n"
+                "Quand on clique sur « A » dans l'écran d'accueil :\n    Fermer l'écran.\n");
+        f.close();
+        OngletEcrans o;
+        o.resize(900, 600);
+        o.show();
+        QString resultat = "pas de geste";
+        Geste g;
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        for (int k : {1, 2}) {
+            o.montrer(dossier.path());
+            QApplication::processEvents();
+            QWidget *w = o.controle(k);
+            VERIFIER(w != nullptr);
+            if (!w) continue;
+            const QSize avant = w->size();
+            const QPoint coin = w->mapToGlobal(QPoint(w->width() - 3, w->height() - 3));
+            QWidget *sous = QApplication::widgetAt(coin);
+            if (!sous) sous = w->childAt(w->width() - 3, w->height() - 3);
+            if (!sous) sous = w;
+            (void)avant;
+            const QPointF local = sous->mapFromGlobal(coin);
+            QMouseEvent appui(QEvent::MouseButtonPress, local, QPointF(coin), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(sous, &appui);
+            QMouseEvent bouge(QEvent::MouseMove, local, QPointF(coin + QPoint(40, 30)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(sous, &bouge);
+            QMouseEvent lache(QEvent::MouseButtonRelease, local, QPointF(coin + QPoint(40, 30)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(sous, &lache);
+            if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
+            QFile r(dossier.filePath("p.grym"));
+            VERIFIER(r.open(QIODevice::ReadOnly));
+            const QString t = QString::fromUtf8(r.readAll());
+            VERIFIER(t.contains(k == 1 ? "un bouton « A », à 16 de la gauche et 16 du haut, large de" : "une note (texte), à 16 de la gauche et 80 du haut, large de"));
+        }
+        // le bord droit seul : la largeur, pas la hauteur ; au survol, le curseur l'annonce
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        if (QWidget *w = o.controle(2)) {
+            const QPoint bord = w->mapToGlobal(QPoint(w->width() - 4, w->height() / 2 - 8));
+            QWidget *sous = w->childAt(w->mapFromGlobal(bord));
+            if (!sous) sous = w;
+            const QPointF local = sous->mapFromGlobal(bord);
+            QMouseEvent survol(QEvent::MouseMove, local, QPointF(bord), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(sous, &survol);
+            VERIFIER(sous->cursor().shape() == Qt::SizeHorCursor);
+            const int h = w->height();
+            QMouseEvent appui(QEvent::MouseButtonPress, local, QPointF(bord), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(sous, &appui);
+            QMouseEvent bouge(QEvent::MouseMove, local, QPointF(bord + QPoint(48, 40)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(sous, &bouge);
+            VERIFIER(w->height() == h);
+            QMouseEvent lache(QEvent::MouseButtonRelease, local, QPointF(bord + QPoint(48, 40)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(sous, &lache);
+            QFile r(dossier.filePath("p.grym"));
+            VERIFIER(r.open(QIODevice::ReadOnly));
+            VERIFIER(QString::fromUtf8(r.readAll()).contains("une note (texte), à 16 de la gauche et 80 du haut, large de 232, haute de 80."));
+        }
+        // le coin d'un élément d'un écran décrit : rien ne bouge, la barre d'état dit pourquoi
+        {
+            QFile d(dossier.filePath("p.grym"));
+            VERIFIER(d.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            d.write("L'écran d'accueil montre :\n    un bouton « A ».\nQuand on clique sur « A » dans l'écran d'accueil :\n    Fermer l'écran.\n");
+        }
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        if (QWidget *w = o.controle(0)) {
+            const QPoint coin = w->mapToGlobal(QPoint(w->width() - 3, w->height() - 3));
+            QMouseEvent appui(QEvent::MouseButtonPress, w->mapFromGlobal(coin), QPointF(coin), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &appui);
+            VERIFIER(o.texte_etat().contains("n'est pas en position libre"));
+        }
+    }
 
     // A4-c dans l'onglet : choisir un bouton, changer son libellé, « Appliquer » : le geste renomme aussi l'événement
     {
