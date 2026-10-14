@@ -296,6 +296,21 @@ int main(void) {
     COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
          "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
+    /* position libre (§ 22.9) : la place après les options, avant les conditions ; la liste après ses colonnes */
+    LITT("L'écran x montre :\n    en position libre :\n        une note (texte), visible si vrai, haute de 40, à 8 de la gauche et 4 du haut,"
+         " en lecture seule, large de 120,\n    le texte « t ».",
+         "L'écran x montre :\n    en position libre :\n        une note (texte), en lecture seule, à 8 de la gauche et 4 du haut,"
+         " large de 120, haute de 40, visible si vrai,\n    le texte « t ».\n");
+    COMP("Une p, conservée, a :\n    un nom (texte).\nL'écran x montre :\n    en position libre :\n"
+         "        la liste des ps conservées, par nom, à 0 de la gauche et 0 du haut, large de 300,\n"
+         "        un bouton « B », à 310 de la gauche et 0 du haut,\n    le texte « t ».\n"
+         "Quand on clique sur « B » dans l'écran x :\n    Fermer l'écran.",
+         "_classe _une p _conservé\n    _un nom (texte)\n_fin\n_écran x\n    _position_libre\n"
+         "        _liste p _conservé _par nom _place 0 0 _largeur 300\n        _bouton « B » _place 310 0\n    _fin\n"
+         "    _texte « t »\n_fin\n_quand _clique « B » _dans x\n    _fermer\n_fin\n");
+    FIXE("L'écran x montre :\n    en position libre :\n        l'image « exemples/pixel.png », à 0 de la gauche et 0 du haut, haute de 80,\n"
+         "        un bouton « B », à 0 de la gauche et 90 du haut, haut de 30,\n    le texte « t ».\n"
+         "Quand on clique sur « B » dans l'écran x :\n    Fermer l'écran.");
     COMP("L'écran x montre :\n    l'image « exemples/pixel.png », visible si vrai,\n    le texte « t ».",
          "_écran x\n    _image « exemples/pixel.png » _visible_si _vrai\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    l'image « exemples/pixel.png », visible si vrai,\n    le texte « t ».");

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.72 de la spécification, révisée le 13 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.78 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1693,7 +1693,7 @@ Ouvrir l'écran des compositeurs.
 ### 22.1 Déclaration
 
 - `L'écran des compositeurs montre :`, au premier niveau, suivi de ses éléments séparés par des virgules, le dernier suivi d'un point. Un titre différent du nom se donne entre guillemets : `L'écran des compositeurs, « Nos compositeurs », montre :` ; sinon le titre vient du nom (« Compositeurs », « Accueil »).
-- Éléments : `la liste des … conservés [dont …] [, par …] [, avec le …, le … et le …]` (recherche du § 16.4) ; `un bouton « … »` ; `le texte « … »` ; une zone de saisie déclarée comme un champ d'entité (`un pays (texte), « Suisse » au départ`, `, facultatif`) ; `côte à côte :` et `l'un sous l'autre :`, qui ouvrent un bloc indenté.
+- Éléments : `la liste des … conservés [dont …] [, par …] [, avec le …, le … et le …]` (recherche du § 16.4) ; `un bouton « … »` ; `le texte « … »` ; une zone de saisie déclarée comme un champ d'entité (`un pays (texte), « Suisse » au départ`, `, facultatif`) ; `côte à côte :` et `l'un sous l'autre :`, qui ouvrent un bloc indenté ; `le groupe « … » :` (§ 22.7) et `en position libre :` (§ 22.9), aussi.
 - Colonnes par défaut : les champs simples, dans l'ordre de la déclaration ; un lien montre la clé de l'objet désigné ; fichiers, images et champs « plusieurs » restent hors de la liste.
 - Un écran est un objet : ses zones de saisie sont ses champs, jamais conservés.
 
@@ -1787,6 +1787,30 @@ L'écran d'accueil montre :
 - Forme compacte : `_image « plan.png »`.
 - À venir : l'image d'une zone ou de la ligne choisie d'une liste (`l'image de la photo du compositeur choisi de l'écran`), relue à chaque tour comme une condition.
 
+### 22.9 Position libre *(implémenté le 14 octobre 2026)*
+
+```
+L'écran de saisie montre :
+    en position libre :
+        le texte « Nom », à 16 de la gauche et 22 du haut,
+        un nom (texte), à 96 de la gauche et 16 du haut, large de 240,
+        l'image « plan.png », à 360 de la gauche et 16 du haut, large de 120, haute de 80,
+        un bouton « Valider », à 96 de la gauche et 72 du haut,
+    un bouton « Fermer ».
+```
+
+- `en position libre :` ouvre un bloc, comme `côte à côte :` (§ 22.1), dans lequel chaque élément se place au pixel. Il se met où se met un bloc, et s'emboîte dans les autres ; il contient au moins un élément, et aucun bloc : « Un bloc en position libre ne contient que des éléments placés, pas de bloc. ».
+- Chaque élément du bloc dit sa place : `, à 96 de la gauche et 16 du haut`, en pixels depuis le coin en haut à gauche du bloc. Obligatoire dans le bloc (« Un élément en position libre dit sa place : « , à 16 de la gauche et 8 du haut ». »), refusée ailleurs (« « à … de la gauche » ne vaut que dans un bloc « en position libre : ». »).
+- La taille est facultative : `, large de 240`, `, haut de 80`. L'adjectif s'accorde avec l'élément : `haute` pour une image, une liste ou une zone féminine (« Accord : « haute de ». »). Sans taille, l'élément a sa taille naturelle, celle qu'il aurait hors du bloc. Refusée hors d'un bloc en position libre.
+- Des nombres entiers : de 0 à 4000 pour la place, de 8 à 4000 pour la taille (« La place va de 0 à 4000 pixels. », « La taille va de 8 à 4000 pixels. »). Le pixel est celui des interfaces, le même sur un écran ordinaire et sur un écran à haute densité.
+- Le bloc mesure ce que ses éléments occupent ; les éléments peuvent se chevaucher, et le dernier écrit passe dessus. Des boutons qui se suivent ne se rangent plus en ligne : chacun est à sa place.
+- L'ordre écrit reste l'ordre de lecture : celui de la touche Tab et des lecteurs d'écran. L'atelier écrit les éléments du bloc de haut en bas, puis de gauche à droite.
+- Dans le navigateur, une fenêtre plus étroite que le bloc empile ses éléments dans l'ordre écrit : c'est le seul écart avec les places écrites, pour qu'un téléphone reste utilisable (`docs/web.md`).
+- Ordre canonique (l'imprimeur le rétablit) : valeur de départ, `facultatif`, `sur plusieurs lignes`, `en lecture seule`, la place, `large de`, `haut de`, `actif si`, `visible si`. Une liste met sa place après `, par …` et `, avec …`.
+- Forme compacte : `_position_libre` … `_fin` ; `_place 96 16`, `_largeur 240`, `_hauteur 80` (l'accord se fait en forme littéraire).
+- Aucun mot réservé : `à`, `gauche`, `haut`, `large` ne comptent qu'ainsi placés, après la virgule d'un élément.
+- Ce paragraphe révise `docs/ecrans.md`, § 3.3 (« jamais des pixels ») : la disposition décrite reste la règle hors du bloc.
+
 ---
 
 ## Journal des révisions
@@ -1871,3 +1895,4 @@ L'écran d'accueil montre :
 | 1.75 | 2026-10-14 | Nouveau § 22.7 : `le groupe « … » :` et valeurs permises d'une zone d'écran (boutons radio jusqu'à quatre valeurs) |
 | 1.76 | 2026-10-14 | § 22.6 : une zone vide est absente pour une condition ou un `dont` ; un événement qui lit une zone obligatoire vide s'arrête avec « Remplis « … » » ; case à cocher obligatoire à faux au départ ; astérisque des zones obligatoires |
 | 1.77 | 2026-10-14 | Nouveau § 22.8 : `l'image « … »` dans un écran, vérifiée dès l'analyse, lue à l'ouverture |
+| 1.78 | 2026-10-14 | Nouveau § 22.9 : `en position libre :`, la place au pixel (`à 96 de la gauche et 16 du haut`) et la taille (`large de`, `haut de`) des éléments du bloc ; révise `docs/ecrans.md`, § 3.3 |

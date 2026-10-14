@@ -489,6 +489,11 @@ static char *feuille_de_style(const Serveur *s) {
     "background:var(--danger-doux);color:var(--danger)}"
     ".cote{display:flex;flex-wrap:wrap;gap:16px}.cote>*{flex:1 1 16rem;min-width:0}"
     ".sous{display:flex;flex-direction:column;gap:12px}"
+    /* « en position libre : » (§ 22.9) : chaque élément dans la même case, décalé par ses marges ; la case mesure
+     * ce que les éléments occupent. Les places viennent de /ecran-style/…, la politique n'admettant aucun style écrit
+     * dans la page. */
+    ".libre{display:grid;justify-items:start;align-items:start}.libre>.place{grid-area:1/1;margin:0;min-width:0}"
+    ".libre>.place>.zone,.libre>.place>p{margin:0}"
     ".boutons{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.boutons button{margin:0}"
     ".texte{margin:0}"
     ".zone label{display:block;font-size:12px;line-height:16px;font-weight:600;color:var(--texte-2);margin-bottom:4px}"
@@ -939,7 +944,15 @@ static void page_ecran(Serveur *s) {
     chaine_ajouter(&c, "<!DOCTYPE html>\n<html lang=\"fr\"><head><meta charset=\"utf-8\">"
                        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>");
     echapper(&c, e->titre);
-    chaine_ajouter(&c, "</title><link rel=\"stylesheet\" href=\"/style.css\"><script src=\"/grym.js\" defer></script></head><body");
+    chaine_ajouter(&c, "</title><link rel=\"stylesheet\" href=\"/style.css\">");
+    for (size_t k = 0; k < e->n; k++)
+        if (e->el[k].sorte == ELEMENT_LIBRE) {   /* les places du bloc en position libre (§ 22.9) */
+            char *l = grym_formater("<link rel=\"stylesheet\" href=\"/ecran-style/%lu\">", e->serie);
+            chaine_ajouter(&c, l);
+            free(l);
+            break;
+        }
+    chaine_ajouter(&c, "<script src=\"/grym.js\" defer></script></head><body");
     chaine_ajouter(&c, s->nb_ecrans == 1 ? " class=\"accueil\"><main>\n" : "><main>\n");
     if (s->avis) {
         chaine_ajouter(&c, "<p class=\"avis\">");
@@ -980,8 +993,14 @@ static void page_ecran(Serveur *s) {
         if ((e->etats[k] & 2) && (el->sorte == ELEMENT_BOUTON || el->sorte == ELEMENT_TEXTE || el->sorte == ELEMENT_ZONE
                                     || el->sorte == ELEMENT_IMAGE))
             continue;   /* « visible si » faux : l'élément n'est pas dans la page (§ 22.6) */
-        if (el->sorte != ELEMENT_BOUTON && boutons) { chaine_ajouter(&c, "</div>\n"); boutons = 0; }
+        if ((el->sorte != ELEMENT_BOUTON || el->place) && boutons) { chaine_ajouter(&c, "</div>\n"); boutons = 0; }
+        if (el->place) {   /* un élément en position libre : sa boîte, que /ecran-style/… place (§ 22.9) */
+            char *v = grym_formater("<div class=\"place\" id=\"p%lu\">", (unsigned long)k);
+            chaine_ajouter(&c, v);
+            free(v);
+        }
         switch (el->sorte) {
+        case ELEMENT_LIBRE: chaine_ajouter(&c, "<div class=\"libre\">\n"); if (prof < 16) groupes[prof++] = 0; break;
         case ELEMENT_COTE_A_COTE: chaine_ajouter(&c, "<div class=\"cote\">\n"); if (prof < 16) groupes[prof++] = 0; break;
         case ELEMENT_L_UN_SOUS_L_AUTRE: chaine_ajouter(&c, "<div class=\"sous\">\n"); if (prof < 16) groupes[prof++] = 0; break;
         case ELEMENT_GROUPE:   /* « le groupe « Adresse » : » (§ 22.7) */
@@ -1008,7 +1027,7 @@ static void page_ecran(Serveur *s) {
             break;
         }
         case ELEMENT_BOUTON: {
-            if (!boutons) { chaine_ajouter(&c, "<div class=\"boutons\">"); boutons = 1; }
+            if (!boutons && !el->place) { chaine_ajouter(&c, "<div class=\"boutons\">"); boutons = 1; }
             char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s>", (unsigned long)k,
                                     (e->etats[k] & 1) ? " disabled" : "");   /* « actif si » faux (§ 22.6) */
             chaine_ajouter(&c, v);
@@ -1018,6 +1037,7 @@ static void page_ecran(Serveur *s) {
             break;
         }
         }
+        if (el->place) chaine_ajouter(&c, "</div>\n");
     }
     if (boutons) chaine_ajouter(&c, "</div>\n");
     int zones = 0;
@@ -1033,6 +1053,44 @@ static void page_ecran(Serveur *s) {
     chaine_ajouter(&c, "</main></body></html>\n");
     repondre(s, "200 OK", "text/html; charset=utf-8", c.d, NULL);
     free(c.d);
+}
+
+/* Les places d'un écran (§ 22.9) : « #p3{margin:16px 0 0 96px;width:240px} », et, sous la largeur du plus large bloc
+ * libre, les éléments empilés dans l'ordre écrit : un téléphone reste utilisable. Une taille non dite garde la taille
+ * naturelle de l'élément ; une taille dite s'impose aussi au contrôle qu'il contient. */
+static char *feuille_des_places(const EcranWeb *e) {
+    Chaine c = {0};
+    int large = 0;
+    for (size_t k = 0; k < e->n; k++) {
+        const ElementEcran *el = &e->el[k];
+        if (!el->place) continue;
+        const int fin = el->gauche + (el->largeur ? el->largeur : 200);
+        if (fin > large) large = fin;
+        char *v = grym_formater("#p%lu{margin:%dpx 0 0 %dpx", (unsigned long)k, el->haut, el->gauche);
+        chaine_ajouter(&c, v);
+        free(v);
+        if (el->largeur) { v = grym_formater(";width:%dpx", el->largeur); chaine_ajouter(&c, v); free(v); }
+        if (el->hauteur) { v = grym_formater(";height:%dpx", el->hauteur); chaine_ajouter(&c, v); free(v); }
+        chaine_ajouter(&c, "}\n");
+        if (el->largeur) {
+            v = grym_formater("#p%lu input,#p%lu select,#p%lu textarea,#p%lu table,#p%lu img,#p%lu button{width:100%%;"
+                              "box-sizing:border-box;max-width:none}\n", (unsigned long)k, (unsigned long)k, (unsigned long)k,
+                              (unsigned long)k, (unsigned long)k, (unsigned long)k);
+            chaine_ajouter(&c, v);
+            free(v);
+        }
+        if (el->hauteur) {
+            v = grym_formater("#p%lu textarea,#p%lu table,#p%lu img,#p%lu button{height:100%%;box-sizing:border-box;"
+                              "object-fit:contain}\n", (unsigned long)k, (unsigned long)k, (unsigned long)k, (unsigned long)k);
+            chaine_ajouter(&c, v);
+            free(v);
+        }
+    }
+    char *v = grym_formater("@media (max-width:%dpx){.libre{display:flex;flex-direction:column;gap:12px}"
+                            ".libre>.place{margin:0!important;width:auto!important;height:auto!important}}\n", large + 64);
+    chaine_ajouter(&c, v);
+    free(v);
+    return chaine_rendre(&c);
 }
 
 static void file_ajouter(Serveur *s, Evenement ev) {
@@ -1189,6 +1247,17 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
             repondre_octets(s, "200 OK", type_image(e->el[k].format), e->el[k].octets, e->el[k].taille, NULL);
         else
             page_simple(s, "404 Not Found", "Image introuvable.");
+    } else if (strcmp(r.methode, "GET") == 0 && strncmp(r.cible, "/ecran-style/", 13) == 0 && ecran_dessus(s)) {
+        /* « /ecran-style/série » : les places des éléments en position libre de l'écran du dessus (§ 22.9) */
+        const EcranWeb *e = ecran_dessus(s);
+        char *fin = NULL;
+        const unsigned long serie = strtoul(r.cible + 13, &fin, 10);
+        if (serie == e->serie && fin && !*fin) {
+            char *css = feuille_des_places(e);
+            repondre(s, "200 OK", "text/css; charset=utf-8", css, NULL);
+            free(css);
+        } else
+            page_simple(s, "404 Not Found", "Feuille introuvable.");
     } else if (strcmp(r.methode, "POST") == 0 && strcmp(r.cible, "/evenement") == 0) {
         /* même règle que les réponses : un envoi vient de la page de l'application, et d'elle seule */
         if (!r.origine || strcmp(r.origine, s->origine) != 0) {

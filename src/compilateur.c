@@ -1138,12 +1138,20 @@ static void phrase(Compilation *c, const Noeud *ph) {
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
             if (el->type == N_DISPOSITION) {   /* « côte à côte » : H, « l'un sous l'autre » : V, fin du bloc : F */
-                chaine_ajouter(&d, el->forme == 1 ? "\x1f" "H" : el->forme == 2 ? "\x1f" "V" : el->forme == 3 ? "\x1f" "G" : "\x1f" "F");
+                chaine_ajouter(&d, el->forme == 1 ? "\x1f" "H" : el->forme == 2 ? "\x1f" "V" : el->forme == 3 ? "\x1f" "G"
+                                   : el->forme == 4 ? "\x1f" "P" : "\x1f" "F");   /* P : en position libre (§ 22.9) */
                 if (el->forme == 3) chaine_ajouter(&d, el->texte);   /* « Gadresse » : le titre du groupe (§ 22.7) */
                 continue;
             }
-            chaine_ajouter(&d, el->type == N_CHERCHER ? "\x1f" "L" : el->type == N_BOUTON ? "\x1f" "B"
-                             : el->type == N_NOM ? "\x1f" "Z" : el->type == N_IMAGE_ECRAN ? "\x1f" "I" : "\x1f" "T");
+            chaine_ajouter(&d, "\x1f");
+            if (el->place_dite) {   /* « ␝96,16,240,0␝ » devant l'élément : sa place et sa taille, 0 si non dite (§ 22.9) */
+                char *pl = grym_formater("\x1d%d,%d,%d,%d\x1d", el->place[0], el->place[1],
+                                         (el->place_dite & 2) ? el->place[2] : 0, (el->place_dite & 4) ? el->place[3] : 0);
+                chaine_ajouter(&d, pl);
+                free(pl);
+            }
+            chaine_ajouter(&d, el->type == N_CHERCHER ? "L" : el->type == N_BOUTON ? "B"
+                             : el->type == N_NOM ? "Z" : el->type == N_IMAGE_ECRAN ? "I" : "T");
             chaine_ajouter(&d, el->texte);
             if (el->type == N_CHERCHER && el->texte3) {   /* colonnes choisies : « ␛ écrit ␝ a ␜ b ␞ … » */
                 chaine_ajouter(&d, "\x1b");

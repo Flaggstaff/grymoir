@@ -564,6 +564,7 @@ static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, cons
     chaine_ajouter(&s->page.journal, "[ouvrir ");
     chaine_ajouter(&s->page.journal, titre);
     for (size_t k = 0; k < n; k++) {
+        if (el[k].sorte == ELEMENT_LIBRE) { chaine_ajouter(&s->page.journal, " ; libre {"); continue; }   /* § 22.9 */
         if (el[k].sorte >= ELEMENT_COTE_A_COTE && el[k].sorte <= ELEMENT_GROUPE) {   /* les blocs de disposition */
             chaine_ajouter(&s->page.journal, el[k].sorte == ELEMENT_COTE_A_COTE ? " ; côte à côte {"
                                              : el[k].sorte == ELEMENT_L_UN_SOUS_L_AUTRE ? " ; l'un sous l'autre {"
@@ -590,6 +591,11 @@ static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, cons
                 chaine_ajouter(&s->page.journal, el[k].choix[c]);
             }
             chaine_ajouter(&s->page.journal, ")");
+        }
+        if (el[k].place) {   /* § 22.9 : « @gauche,haut largeur×hauteur » */
+            char *x = grym_formater(" @%d,%d %dx%d", el[k].gauche, el[k].haut, el[k].largeur, el[k].hauteur);
+            chaine_ajouter(&s->page.journal, x);
+            free(x);
         }
         for (size_t c = 0; c < el[k].nb_colonnes; c++) {
             chaine_ajouter(&s->page.journal, c ? ", " : " (");
@@ -800,6 +806,15 @@ static void essais_etats_ecran(void) {   /* § 22.6 */
            "[valeurs État=actif]\n[valeurs État=suspendu]\nsuspendu\n"
            "[erreur « perdu » n'est pas une valeur permise de « état » : « actif », « suspendu » ou « retiré ».]\n"
            "[valeurs État=suspendu]\n[valeurs État=suspendu]\n[fermer]\n");
+    /* position libre (§ 22.9) : la machine passe la place et la taille de chaque élément du bloc */
+    const char *src4 = "L'écran de saisie montre :\n    en position libre :\n"
+                       "        un nom (texte), à 96 de la gauche et 16 du haut, large de 240,\n"
+                       "        un bouton « OK », à 96 de la gauche et 72 du haut, haut de 30,\n    le texte « fin ».\n"
+                       "Quand on clique sur « OK » dans l'écran de saisie :\n    Fermer l'écran.\nOuvrir l'écran de saisie.\n";
+    const char *ev4[] = { "clic OK" };
+    ECRANS(src4, ev4, rep,
+           "[ouvrir Saisie ; libre { ; zone Nom (texte) @96,16 240x0 ; bouton OK @96,72 0x30 ; } ; texte fin]\n"
+           "[valeurs Nom=]\n[valeurs Nom=]\n[fermer]\n");
     /* une zone obligatoire vide (§ 22.6) : absente pour une condition ; dans un événement, un message pour l'utilisateur,
        l'écran reste ouvert */
     const char *src2 = "L'écran x montre :\n    un nom (texte),\n    le texte « Nom ? », visible si le nom de l'écran est absent,\n"

@@ -751,6 +751,32 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* La position libre (§ 22.9) : chaque élément dans sa boîte, placée par /ecran-style/série ; pas de style dans
+         * la page ; les boutons du bloc ne se rangent pas en ligne ; une autre série : 404 */
+        const char *src = "L'écran x montre :\n    en position libre :\n"
+                          "        un nom (texte), facultatif, à 96 de la gauche et 16 du haut, large de 240,\n"
+                          "        un bouton « A », à 8 de la gauche et 72 du haut,\n"
+                          "        un bouton « Fermer », à 120 de la gauche et 72 du haut, haut de 40,\n    le texte « t ».\n"
+                          "Quand on clique sur « A » dans l'écran x :\n    Afficher 1.\n"
+                          "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), get("/ecran-style/1"), get("/ecran-style/2"), evenement("q=1&clic=3"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<link rel=\"stylesheet\" href=\"/ecran-style/1\">");
+        CONTIENT(sc.reponses[0], "<div class=\"libre\">");
+        CONTIENT(sc.reponses[0], "<div class=\"place\" id=\"p1\"><div class=\"zone\">");
+        CONTIENT(sc.reponses[0], "<div class=\"place\" id=\"p2\"><button name=\"clic\" value=\"2\">A</button></div>");
+        NE_CONTIENT_PAS(sc.reponses[0], "class=\"boutons\"><button name=\"clic\" value=\"2\"");
+        NE_CONTIENT_PAS(sc.reponses[0], "style=");
+        CONTIENT(sc.reponses[1], "Content-Type: text/css");
+        CONTIENT(sc.reponses[1], "#p1{margin:16px 0 0 96px;width:240px}");
+        CONTIENT(sc.reponses[1], "#p3{margin:72px 0 0 120px;height:40px}");
+        CONTIENT(sc.reponses[1], "@media (max-width:400px)");
+        CONTIENT(sc.reponses[2], "404 Not Found");
+        CONTIENT(sc.reponses[4], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* Le thème : la couleur choisie dans la feuille, clair et sombre ; le logo servi à /logo */
         const char *src = "Les écrans ont la couleur verte et le logo « exemples/pixel.png ».\n"
                           "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"

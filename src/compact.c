@@ -747,7 +747,7 @@ static void condition_de_cas(Reecriture *r, size_t d, size_t f) {
 
 static int est_etat(const Jeton *t) {
     return est_cle(t, "actif_si") || est_cle(t, "active_si") || est_cle(t, "visible_si") || est_cle(t, "plusieurs_lignes")
-        || est_cle(t, "lecture_seule");
+        || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur");
 }
 
 /* Les états d'un élément d'écran, de k à f (§ 22.6) : « _plusieurs_lignes », « _lecture_seule » (zones),
@@ -755,7 +755,29 @@ static int est_etat(const Jeton *t) {
 static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zone) {
     while (k < f) {
         const Jeton *x = &r->e[k];
-        if (zone && est_cle(x, "plusieurs_lignes")) {
+        if (est_cle(x, "place")) {   /* « _place 96 16 » → « , à 96 de la gauche et 16 du haut » (§ 22.9) */
+            if (k + 2 >= f + 0 || r->e[k + 1].type != J_NOMBRE || r->e[k + 2].type != J_NOMBRE) {
+                echouer(r, x, grym_dupliquer("Deux nombres attendus : « _place 96 16 »."));
+                return 0;
+            }
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "à", x);
+            copier(r, &r->e[k + 1]);
+            mot(r, "de", x); mot(r, "la", x); mot(r, "gauche", x); mot(r, "et", x);
+            copier(r, &r->e[k + 2]);
+            mot(r, "du", x); mot(r, "haut", x);
+            k += 3;
+        } else if (est_cle(x, "largeur") || est_cle(x, "hauteur")) {   /* « _largeur 240 » → « , large de 240 » */
+            if (k + 1 >= f || r->e[k + 1].type != J_NOMBRE) {
+                echouer(r, x, grym_formater("Nombre de pixels attendu : « _%s 80 ».", x->valeur));
+                return 0;
+            }
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, est_cle(x, "largeur") ? "large" : feminin ? "haute" : "haut", x);
+            mot(r, "de", x);
+            copier(r, &r->e[k + 1]);
+            k += 2;
+        } else if (zone && est_cle(x, "plusieurs_lignes")) {
             emettre(r, J_VIRGULE, NULL, x, 1);
             mot(r, "sur", x); mot(r, "plusieurs", x); mot(r, "lignes", x);
             k++;
@@ -777,8 +799,10 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             k = g;
         } else {
             echouer(r, x, grym_dupliquer(zone ? "« _départ », « _facultatif », « _plusieurs_lignes », « _lecture_seule », "
-                                                "« _actif_si » ou « _visible_si » attendu après une zone."
-                                              : "« _actif_si » ou « _visible_si » attendu après un bouton ou un texte."));
+                                                "« _place », « _largeur », « _hauteur », « _actif_si » ou « _visible_si » "
+                                                "attendu après une zone."
+                                              : "« _place », « _largeur », « _hauteur », « _actif_si » ou « _visible_si » "
+                                                "attendu après un élément."));
             return 0;
         }
     }
@@ -831,13 +855,17 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                      && strcmp(r->e[d + 1].valeur, "un sous l'autre") == 0;   /* « _l'un_sous_l'autre » : « _l' » puis un nom */
     const int groupe = est_cle(t, "groupe") && f == d + 2 && r->e[d + 1].type == J_TEXTE;   /* « _groupe « Adresse » » */
     if (haut && (haut->type == O_ECRAN || haut->type == O_BLOC)
-        && ((est_cle(t, "côte_à_côte") && f == d + 1) || l_un || groupe)) {
+        && ((est_cle(t, "côte_à_côte") && f == d + 1) || l_un || groupe || (est_cle(t, "position_libre") && f == d + 1))) {
         /* _côte_à_côte → côte à côte : ; _l'un_sous_l'autre → l'un sous l'autre : (§ 22.1) ;
          * _groupe « Adresse » → le groupe « Adresse » : (§ 22.7) */
         if (groupe) {
             mot(r, "le", t);
             mot(r, "groupe", t);
             copier(r, &r->e[d + 1]);
+        } else if (est_cle(t, "position_libre")) {   /* _position_libre → en position libre : (§ 22.9) */
+            mot(r, "en", t);
+            mot(r, "position", t);
+            mot(r, "libre", t);
         } else if (est_cle(t, "côte_à_côte")) {
             mot(r, "côte", t);
             mot(r, "à", t);
@@ -869,7 +897,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         } else if (est_cle(t, "liste") && d + 2 < f && r->e[d + 1].type == J_CROCHETS
                    && (est_cle(&r->e[d + 2], "conservé") || est_cle(&r->e[d + 2], "conservée")
                        || est_cle(&r->e[d + 2], "supprimé") || est_cle(&r->e[d + 2], "supprimée"))) {
-            /* _liste compositeur _conservé [_dont …] [_par nom [_décroissant]] [_avec titre ; compositeur.nom] */
+            /* _liste compositeur _conservé [_dont …] [_par nom [_décroissant]] [_avec titre ; compositeur.nom]
+             * [_place 96 16] [_largeur 240] [_hauteur 80] (§ 22.9) */
+            size_t fin_places = f;
+            for (size_t q = d + 3; q < f; q++)
+                if (est_cle(&r->e[q], "place") || est_cle(&r->e[q], "largeur") || est_cle(&r->e[q], "hauteur")) { f = q; break; }
+            const size_t places = f;
             size_t avec = chercher(r, d + 3, f, "avec");
             size_t fin_liste = f;
             f = avec;
@@ -915,7 +948,8 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                     i++;
                 }
             }
-            f = fin_liste;
+            if (!etats_compacts(r, places, fin_places, 1, 0)) return;
+            f = fin_places;
         } else if ((est_cle(t, "un") || est_cle(t, "une")) && d + 4 < f + 1 && r->e[d + 1].type == J_CROCHETS
                    && r->e[d + 2].type == J_PAR_OUV
                    && ((r->e[d + 3].type == J_CROCHETS && r->e[d + 4].type == J_PAR_FERM) || r->e[d + 3].type == J_TEXTE)) {

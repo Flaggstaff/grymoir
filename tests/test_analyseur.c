@@ -783,6 +783,27 @@ int main(void) {
     VE("L'écran x montre :\n    l'image « rien.png ».", 2, 13, "Fichier « rien.png » introuvable ou illisible.");
     VE("L'écran x montre :\n    l'image « exemples/pixel.png », active si vrai.", 2, 37, "Une image ne se clique pas");
     VE("L'écran x montre :\n    un bouton « B », active si vrai.", 2, 22, "Accord : « actif si ».");
+    /* la position libre (§ 22.9) : place obligatoire dans le bloc, refusée ailleurs ; taille accordée ; bornes */
+    V("L'écran x montre :\n    en position libre :\n        le texte « B », à 8 de la gauche et 4 du haut, large de 100,\n"
+      "        l'image « exemples/pixel.png », à 0 de la gauche et 40 du haut, haute de 20, visible si vrai,\n"
+      "        une note (texte), à 0 de la gauche et 80 du haut, haute de 30,\n    le texte « t ».",
+      "(écran [x] (position-libre) (texte « B » @8,4 l100) (image « exemples/pixel.png » (visible-si vrai) @0,40 h20) "
+      "[note] @0,80 h30 (fin-bloc) (texte « t »))");
+    VE("L'écran x montre :\n    un bouton « B », à 8 de la gauche et 4 du haut.", 2, 22, "ne vaut que dans un bloc « en position libre : »");
+    VE("L'écran x montre :\n    un bouton « B », large de 80.", 2, 22, "Une taille ne vaut que dans un bloc");
+    VE("L'écran x montre :\n    en position libre :\n        le texte « t ».", 3, 9, "Un élément en position libre dit sa place");
+    VE("L'écran x montre :\n    en position libre :\n        côte à côte :\n            le texte « t », à 1 de la gauche et 1 du haut.",
+       3, 9, "ne contient que des éléments placés");
+    VE("L'écran x montre :\n    en position libre :\n        l'image « exemples/pixel.png », à 1 de la gauche et 1 du haut, haut de 9.",
+       3, 72, "Accord : « haute de ».");
+    VE("L'écran x montre :\n    en position libre :\n        le texte « t », à 5000 de la gauche et 1 du haut.", 3, 27,
+       "La place va de 0 à 4000 pixels.");
+    VE("L'écran x montre :\n    en position libre :\n        le texte « t », à 1 de la gauche et 1 du haut, large de 2.", 3, 65,
+       "La taille va de 8 à 4000 pixels.");
+    VE("L'écran x montre :\n    en position libre :\n        le texte « t », à 1 de la gauche et 1 du haut, à 2 de la gauche et 2 du haut.",
+       3, 56, "est déjà dit pour cet élément");
+    VE("L'écran x montre :\n    en position libre :\n        le texte « t », à 1 de la droite.", 3, 25, "Place attendue");
+    VE("L'écran x montre :\n    en position libre :\n    le texte « t ».", 3, 5, "contient des éléments, plus indentés");
     VE("L'écran x montre :\n    un n (nombre), sur plusieurs lignes.", 2, 20, "Seule une zone (texte) s'écrit sur plusieurs lignes.");
     VE("L'écran x montre :\n    le texte « T », actif si vrai.", 2, 21, "Un texte fixe ne se clique pas : « visible si » seulement.");
     VE("L'écran x montre :\n    un bouton « B », visible si 3.", 2, 33, "« visible si » attend une condition");

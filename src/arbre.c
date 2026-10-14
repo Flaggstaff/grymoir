@@ -28,6 +28,8 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->op_colonne = colonne;
     n->debut = debut;
     n->fin = debut;
+    n->place[0] = n->place[1] = n->place[2] = n->place[3] = 0;
+    n->place_dite = 0;
     return n;
 }
 
@@ -62,7 +64,28 @@ static const char *symbole(char op) {
     }
 }
 
+static void decrire_noeud(const Noeud *n, Chaine *c);
+
+/* La place d'un élément en position libre (§ 22.9) : « (bouton « OK » @96,16 l240 h80) », avant la parenthèse. */
 static void decrire(const Noeud *n, Chaine *c) {
+    if (!n->place_dite) { decrire_noeud(n, c); return; }
+    Chaine x = {0};
+    decrire_noeud(n, &x);
+    char *d = chaine_rendre(&x);
+    const size_t l = strlen(d);
+    const int parenthese = l && d[l - 1] == ')';
+    if (parenthese) d[l - 1] = 0;
+    chaine_ajouter(c, d);
+    free(d);
+    char *p = grym_formater(" @%d,%d", n->place[0], n->place[1]);
+    chaine_ajouter(c, p);
+    free(p);
+    if (n->place_dite & 2) { p = grym_formater(" l%d", n->place[2]); chaine_ajouter(c, p); free(p); }
+    if (n->place_dite & 4) { p = grym_formater(" h%d", n->place[3]); chaine_ajouter(c, p); free(p); }
+    if (parenthese) chaine_ajouter(c, ")");
+}
+
+static void decrire_noeud(const Noeud *n, Chaine *c) {
     switch (n->type) {
     case N_NOMBRE:
         chaine_ajouter(c, n->texte);
@@ -158,7 +181,7 @@ static void decrire(const Noeud *n, Chaine *c) {
         return;
     case N_DISPOSITION:
         chaine_ajouter(c, n->forme == 1 ? "(côte-à-côte" : n->forme == 2 ? "(l'un-sous-l'autre"
-                          : n->forme == 3 ? "(groupe « " : "(fin-bloc)");
+                          : n->forme == 3 ? "(groupe « " : n->forme == 4 ? "(position-libre" : "(fin-bloc)");
         if (n->forme == 3) { chaine_ajouter(c, n->texte); chaine_ajouter(c, " »"); }
         if (n->forme) chaine_ajouter(c, ")");
         return;

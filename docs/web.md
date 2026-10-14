@@ -206,6 +206,10 @@ Restent ouverts : masquer un champ d'une fiche publiée ; le plafond de machines
 
 ---
 
+## Annexe : la position libre *(14 octobre 2026)*
+
+Un bloc `en position libre :` (grammaire, § 22.9) devient une grille d'une seule case : chaque élément y est une boîte `<div class="place" id="pK">`, décalée par ses marges, et la case mesure ce que les boîtes occupent, sans calcul de hauteur côté serveur. Les places ne s'écrivent pas dans la page : la politique de sécurité (`style-src 'self'`) refuse les styles écrits dans le HTML. Une feuille propre à l'écran, `/ecran-style/série`, les donne (`#p1{margin:16px 0 0 96px;width:240px}`), avec une règle `@media` : sous la largeur du bloc, plus 64 pixels de marge, les boîtes s'empilent dans l'ordre écrit. La largeur d'un élément sans taille dite y compte pour 200 pixels : c'est une estimation, l'interface ne connaissant pas la taille naturelle avant le dessin. Une série périmée rend 404, comme pour une image.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -214,3 +218,4 @@ Restent ouverts : masquer un champ d'une fiche publiée ; le plafond de machines
 | 0.2 | 2026-09-29 | Questions 1 à 6 tranchées : `Le site montre …`, entités publiques par leurs listes (§ 4.2), republication par remplacement d'un dossier marqué (§ 4.3), `aujourd'hui` figé, une machine par visiteur (§ 6.1), transactions alignées sur les écrans |
 | 0.3 | 2026-09-29 | W1 fait : § 3.1, ce que l'implémentation a fixé (un formulaire par écran, ordre des événements, Entrée, choix qui suit la ligne, case à cocher, écran d'hier, croix, thème vérifié contre les jetons) ; polices pas encore embarquées |
 | 0.4 | 2026-10-10 | § 3.1 : sélection par bouton radio, distincte du choix ; validation immédiate d'un menu ou d'une case par `/grym.js`, bouton « Valider les zones » sans script. Révélés par l'application « Gestion de projet » |
+| 0.5 | 2026-10-14 | § 3.1 : la position libre (grammaire, § 22.9) : chaque élément dans une boîte, placée par une feuille servie à `/ecran-style/série` (la politique de sécurité refuse les styles écrits dans la page) ; sous la largeur du bloc, les éléments s'empilent dans l'ordre écrit |

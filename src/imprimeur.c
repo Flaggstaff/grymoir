@@ -997,7 +997,31 @@ static void si(Impression *im, const Noeud *n, int niveau, int sinon_si) {
 
 
 /* « , actif si … », « , visible si … » : les états d'un élément d'écran, ses derniers enfants (§ 22.6). */
+/* La place et la taille d'un élément en position libre (§ 22.9) : « , à 96 de la gauche et 16 du haut, large de 240,
+ * haut de 80 » ; « _place 96 16 _largeur 240 _hauteur 80 ». */
+static void place_ecran(Impression *im, const Noeud *el, int feminin) {
+    char *x;
+    if (el->place_dite & 1) {
+        x = im->compact ? grym_formater(" _place %d %d", el->place[0], el->place[1])
+                        : grym_formater(", à %d de la gauche et %d du haut", el->place[0], el->place[1]);
+        aj(im, x);
+        free(x);
+    }
+    if (el->place_dite & 2) {
+        x = grym_formater(im->compact ? " _largeur %d" : ", large de %d", el->place[2]);
+        aj(im, x);
+        free(x);
+    }
+    if (el->place_dite & 4) {
+        x = im->compact ? grym_formater(" _hauteur %d", el->place[3])
+                        : grym_formater(", %s de %d", feminin ? "haute" : "haut", el->place[3]);
+        aj(im, x);
+        free(x);
+    }
+}
+
 static void etats_ecran(Impression *im, const Noeud *el, int feminin) {
+    place_ecran(im, el, feminin);
     for (size_t q = 0; q < 2 * el->nb_enfants; q++) {   /* « actif si » avant « visible si », quel que soit l'ordre écrit */
         const Noeud *x = el->enfants[q % el->nb_enfants];
         if (x->type != N_SI_ECRAN || x->forme != (q < el->nb_enfants ? 1 : 2)) continue;
@@ -1092,7 +1116,9 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                     aj(im, c ? "_groupe " : "le groupe ");
                     ecrire_texte(im, el->texte);
                     aj(im, c ? "\n" : " :\n");
-                } else
+                } else if (el->forme == 4)   /* « en position libre : » ; « _position_libre » (§ 22.9) */
+                    aj(im, c ? "_position_libre\n" : "en position libre :\n");
+                else
                     aj(im, el->forme == 1 ? (c ? "_côte_à_côte\n" : "côte à côte :\n") : (c ? "_l'un_sous_l'autre\n" : "l'un sous l'autre :\n"));
                 profondeur++;
                 continue;
@@ -1165,6 +1191,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                         q = *fin ? fin + 1 : fin;
                     }
                 }
+                place_ecran(im, el, 1);
             } else {
                 int fem = genre_de_nom(im, el->texte) == G_FEMININ;
                 /* « la partition choisie de l'écran » : ce champ implicite prend le genre de l'entité (§ 22.2) */
@@ -1201,6 +1228,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                         q = *fin ? fin + 1 : fin;
                     }
                 }
+                place_ecran(im, el, 1);   /* la place d'une liste vient après ses colonnes (§ 22.9) */
             }
             aj(im, c ? "\n" : k < dernier ? ",\n" : ".\n");
         }

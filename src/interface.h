@@ -18,8 +18,10 @@
 typedef enum { ELEMENT_LISTE, ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE,
                ELEMENT_COTE_A_COTE, ELEMENT_L_UN_SOUS_L_AUTRE, ELEMENT_FIN_DE_BLOC,
                ELEMENT_GROUPE,
-               ELEMENT_IMAGE } SorteElement;   /* blocs : § 22.1 ; groupe titré (texte : le titre) : § 22.7 ;
-                                                  image (texte : son nom ; octets, taille, format) : § 22.8 */
+               ELEMENT_IMAGE,
+               ELEMENT_LIBRE } SorteElement;   /* blocs : § 22.1 ; groupe titré (texte : le titre) : § 22.7 ;
+                                                  image (texte : son nom ; octets, taille, format) : § 22.8 ;
+                                                  bloc en position libre, fermé par ELEMENT_FIN_DE_BLOC : § 22.9 */
 typedef struct {
     SorteElement sorte;
     const char *texte;              /* libellé du bouton, texte fixe ; pour une liste, l'entité */
@@ -34,6 +36,9 @@ typedef struct {
     const unsigned char *octets;    /* image (§ 22.8) : son contenu, lu à l'ouverture de l'écran */
     size_t taille;
     const char *format;             /* PNG, JPEG, GIF ou WebP */
+    int place;                      /* élément d'un bloc en position libre (§ 22.9) : 1, et les quatre mesures */
+    int gauche, haut;               /* en pixels, depuis le coin en haut à gauche du bloc */
+    int largeur, hauteur;           /* en pixels ; 0 : la taille naturelle */
 } ElementEcran;
 
 typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT } SorteEvenement;

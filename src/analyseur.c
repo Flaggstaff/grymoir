@@ -473,6 +473,7 @@ typedef struct {
     int evenement;           /* dans le corps d'un « Quand on … » (§ 22.2) */
     int essais;              /* blocs « Essayer » englobants (§ 18) */
     const char *ecran;       /* la classe de l'écran que « l'écran » désigne ici (§ 22.2), ou NULL */
+    int libre;               /* l'élément d'écran en cours est dans un bloc « en position libre : » (§ 22.9) */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
     int duree_permise;       /* « par pas de 1 mois » : une durée peut suivre la valeur lue (§ 14.2) */
     int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
@@ -5713,17 +5714,74 @@ static void ajouter_nom(char ***t, size_t *n, const char *nom) {
 /* Un état d'un bouton, d'un texte ou d'une zone (§ 22.6) : « , sur plusieurs lignes », « , en lecture seule »
  * (zones), « , actif si … », « , visible si … ». La condition se relit avant chaque attente. Rend 1 si un état
  * est lu, 0 si la virgule annonce autre chose, −1 sur erreur. *vus : 1 actif, 2 visible, 4 lignes, 8 lecture seule. */
+/* Un nombre de pixels (§ 22.9) : entier, de `min` à 4000. Rend −1 avec l'erreur posée. */
+static int pixels(Analyse *a, const Jeton *t, int min) {
+    if (t->type != J_NOMBRE) return -1;
+    for (const char *p = t->valeur; *p; p++)
+        if (*p < '0' || *p > '9') return erreur(a, t, grym_dupliquer("Un nombre entier de pixels, sans virgule.")), -1;
+    const long v = strlen(t->valeur) > 5 ? 99999 : strtol(t->valeur, NULL, 10);
+    if (v < min || v > 4000)
+        return erreur(a, t, grym_dupliquer(min ? "La taille va de 8 à 4000 pixels." : "La place va de 0 à 4000 pixels.")), -1;
+    return (int)v;
+}
+
+/* La place et la taille d'un élément en position libre (§ 22.9), après sa virgule : « à 96 de la gauche et 16 du
+ * haut », « large de 240 », « haut de 80 » (« haute » pour un élément féminin). Rend 1 si lu, 0 sinon, −1 sur
+ * erreur. `vus` reçoit 16, 32, 64. */
+static int place_element(Analyse *a, Noeud *el, Genre g, int *vus) {
+    if (cour(a)->type != J_VIRGULE) return 0;
+    const Jeton *x = voir(a, 1);
+    const int a_gauche = est_mot(x, "à") && voir(a, 2)->type == J_NOMBRE;
+    const int large = est_mot(x, "large") && est_mot(voir(a, 2), "de");
+    const int haut = (est_mot(x, "haut") || est_mot(x, "haute")) && est_mot(voir(a, 2), "de");
+    if (!a_gauche && !large && !haut) return 0;
+    if (!a->libre) {
+        if (a_gauche) return erreur(a, x, grym_dupliquer("« à … de la gauche » ne vaut que dans un bloc « en position libre : ».")), -1;
+        return erreur(a, x, grym_dupliquer("Une taille ne vaut que dans un bloc « en position libre : ».")), -1;
+    }
+    const int bit = a_gauche ? 16 : large ? 32 : 64;
+    if (*vus & bit)
+        return erreur(a, x, grym_formater("« %s » est déjà dit pour cet élément.", a_gauche ? "à … de la gauche" : large ? "large de" : "haut de")), -1;
+    *vus |= bit;
+    if (a_gauche) {
+        if (!(est_mot(voir(a, 3), "de") && est_mot(voir(a, 4), "la") && est_mot(voir(a, 5), "gauche") && est_mot(voir(a, 6), "et")
+              && voir(a, 7)->type == J_NOMBRE && est_mot(voir(a, 8), "du") && est_mot(voir(a, 9), "haut")))
+            return erreur(a, x, grym_dupliquer("Place attendue : « à 96 de la gauche et 16 du haut ».")), -1;
+        const int gauche = pixels(a, voir(a, 2), 0);
+        if (gauche < 0) return -1;
+        const int dessus = pixels(a, voir(a, 7), 0);
+        if (dessus < 0) return -1;
+        el->place[0] = gauche;
+        el->place[1] = dessus;
+        el->place_dite |= 1;
+        a->i += 10;
+        return 1;
+    }
+    if (haut && !est_mot(x, g == GENRE_FEMININ ? "haute" : "haut"))
+        return erreur(a, x, grym_formater("Accord : « %s de ».", g == GENRE_FEMININ ? "haute" : "haut")), -1;
+    if (voir(a, 3)->type != J_NOMBRE)
+        return erreur(a, voir(a, 3), grym_formater("Nombre de pixels attendu : « %s de 80 ».", x->valeur)), -1;
+    const int v = pixels(a, voir(a, 3), 8);
+    if (v < 0) return -1;
+    el->place[large ? 2 : 3] = v;
+    el->place_dite |= large ? 2 : 4;
+    a->i += 4;
+    return 1;
+}
+
 static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
     int vus = *vus_;
     if (cour(a)->type != J_VIRGULE) return 0;
     {
+        const int pl = place_element(a, el, g, vus_);   /* la place et la taille (§ 22.9) */
+        if (pl) return pl;
         const Jeton *x = voir(a, 1);
         if (zone && est_mot(x, "sur") && est_mot(voir(a, 2), "plusieurs") && est_mot(voir(a, 3), "lignes")) {
             if (el->texte3)
                 return erreur(a, x, grym_dupliquer("Une zone à valeurs permises se choisit : pas sur plusieurs lignes.") ), -1;
             if (strcmp(el->texte2, "texte") != 0)
                 return erreur(a, x, grym_dupliquer("Seule une zone (texte) s'écrit sur plusieurs lignes.") ), -1;
-            if (vus & 4) return erreur(a, x, grym_dupliquer("« sur plusieurs lignes » est déjà dit.") ), -1;
+            if (*vus_ & 4) return erreur(a, x, grym_dupliquer("« sur plusieurs lignes » est déjà dit.") ), -1;
             vus |= 4;
             el->entier |= 2;
             a->i += 4;
@@ -5832,12 +5890,14 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     a->portee->classes[ic].ligne = t->ligne;
     a->ecran = a->portee->classes[ic].nom;
     int blocs[16], nb_blocs = 0;   /* colonnes des blocs « côte à côte » et « l'un sous l'autre » ouverts (§ 22.1) */
+    int libres[16];                /* 1 pour un bloc « en position libre : » (§ 22.9) */
     for (;;) {
         const Jeton *u = cour(a);
         while (nb_blocs && u->retrait <= blocs[nb_blocs - 1]) {   /* un élément moins indenté ferme le bloc */
             noeud_ajouter(n, noeud_creer(N_DISPOSITION, u->ligne, u->colonne, u->debut));
             nb_blocs--;
         }
+        a->libre = nb_blocs && libres[nb_blocs - 1];
         Noeud *el = NULL;
         const int cote = est_mot(u, "côte") && est_mot(voir(a, 1), "à") && est_mot(voir(a, 2), "côte")
                          && voir(a, 3)->type == J_DEUX_POINTS;
@@ -5847,17 +5907,23 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         const int groupe = est_mot(u, "le") && est_mot(voir(a, 1), "groupe") && voir(a, 2)->type == J_TEXTE
                            && voir(a, 3)->type == J_DEUX_POINTS;
         if (groupe && !*voir(a, 2)->valeur) { erreur(a, voir(a, 2), grym_dupliquer("Un groupe porte un titre : « le groupe « Adresse » : ».")); break; }
-        if (cote || sous || groupe) {
+        /* « en position libre : » : chaque élément y dit sa place au pixel (§ 22.9) */
+        const int libre = est_mot(u, "en") && est_mot(voir(a, 1), "position") && est_mot(voir(a, 2), "libre")
+                          && voir(a, 3)->type == J_DEUX_POINTS;
+        if (cote || sous || groupe || libre) {
             if (nb_blocs == 16) { erreur(a, u, grym_dupliquer("Trop de blocs emboîtés : 16 au plus.")); break; }
+            if (a->libre) { erreur(a, u, grym_dupliquer("Un bloc en position libre ne contient que des éléments placés, pas de bloc.")); break; }
             Noeud *b = noeud_creer(N_DISPOSITION, u->ligne, u->colonne, u->debut);
-            b->forme = cote ? 1 : sous ? 2 : 3;
+            b->forme = cote ? 1 : sous ? 2 : groupe ? 3 : 4;
             if (groupe) b->texte = grym_dupliquer(voir(a, 2)->valeur);
             noeud_ajouter(n, b);
+            libres[nb_blocs] = libre;
             blocs[nb_blocs++] = u->retrait;
-            a->i += cote || groupe ? 4 : 6;
+            a->i += cote || groupe || libre ? 4 : 6;
             if (cour(a)->retrait <= u->retrait || cour(a)->type == J_FIN) {
                 erreur(a, cour(a), grym_formater("Un bloc « %s : » contient des éléments, plus indentés.",
-                                                 cote ? "côte à côte" : sous ? "l'un sous l'autre" : "le groupe « … »"));
+                                                 cote ? "côte à côte" : sous ? "l'un sous l'autre" : groupe ? "le groupe « … »"
+                                                 : "en position libre"));
                 break;
             }
             continue;
@@ -5928,6 +5994,9 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                     /* « , le compositeur » continue les colonnes ; « , un bouton … » ou « , la liste … » passe à l'élément suivant */
                     if (cour(a)->type == J_VIRGULE && !est_mot(voir(a, 1), "un") && !est_mot(voir(a, 1), "une")
                         && !est_mot(voir(a, 1), "côte") && voir(a, 1)->type != J_FIN
+                        && !est_mot(voir(a, 1), "à") && !est_mot(voir(a, 1), "large") && !est_mot(voir(a, 1), "haut")
+                        && !est_mot(voir(a, 1), "haute")
+                        && !(est_mot(voir(a, 1), "en") && est_mot(voir(a, 2), "position"))
                         && !(est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "liste"))
                         && !(est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "texte") && voir(a, 3)->type == J_TEXTE)
                         && !(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "un") && est_mot(voir(a, 3), "sous"))
@@ -5941,6 +6010,11 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 if (a->echec) { free(chaine_rendre(&cols)); noeud_liberer(el); break; }
                 el->texte3 = chaine_rendre(&cols);
                 el->fin = fin_jeton(&a->j[a->i - 1]);
+            }
+            {   /* la place d'une liste en position libre (§ 22.9) */
+                int vus = 0, lu;
+                while ((lu = place_element(a, el, GENRE_FEMININ, &vus)) > 0) el->fin = fin_jeton(&a->j[a->i - 1]);
+                if (lu < 0) { noeud_liberer(el); break; }
             }
             ajouter_nom(&e.entites, &e.nb_entites, c->nom);
             char *choisi = grym_formater("%s %s", c->nom, c->genre == GENRE_FEMININ ? "choisie" : "choisi");
@@ -6101,6 +6175,11 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                                         "« le texte « … » », « l'image « … » » ou une zone de saisie, « un pays (texte) »."));
             break;
         }
+        if (a->libre && !(el->place_dite & 1)) {
+            noeud_liberer(el);
+            erreur(a, u, grym_dupliquer("Un élément en position libre dit sa place : « , à 16 de la gauche et 8 du haut »."));
+            break;
+        }
         noeud_ajouter(n, el);
         if (cour(a)->type == J_POINT) {
             avancer(a);
@@ -6116,6 +6195,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         }
         avancer(a);
     }
+    a->libre = 0;
     if (!a->echec) conditions_ecran(a, n);   /* « actif si », « visible si » : tout l'écran est connu (§ 22.6) */
     a->ecran = NULL;
     free(classe);
@@ -7166,6 +7246,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.evenement = 0;
     a.essais = 0;
     a.ecran = NULL;
+    a.libre = 0;
 
     /* Colonne de référence : celle de la première phrase (les remarques ne comptent pas). */
     int colonne = 1;

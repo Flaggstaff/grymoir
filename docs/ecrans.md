@@ -61,6 +61,14 @@ On décrit l'ordre et le voisinage, jamais des pixels : le texte reste lisible, 
 - Le titre de la fenêtre vient du nom de l'écran (« l'écran des compositeurs » : « Compositeurs » ; « l'écran d'accueil » : « Accueil »), ou se donne entre guillemets : `L'écran des compositeurs, « Nos compositeurs », montre :`.
 - Écartés : positions et tailles au pixel, marges réglées à la main, onglets (à concevoir plus tard).
 
+**Révisé le 14 octobre 2026 : la position libre.** Le développeur a choisi de pouvoir placer les éléments où il veut, au pixel, plutôt qu'une grille en cases, en connaissant le prix : un bloc posé au pixel ne s'adapte plus à la largeur de la fenêtre. Le bloc `en position libre :` (grammaire, § 22.9) l'admet ; hors de lui, tout ce qui précède reste la règle. Ce qu'on garde de la description :
+
+- La place s'écrit en phrase (`à 96 de la gauche et 16 du haut`), relative au bloc, jamais à la fenêtre : un bloc libre se met dans un écran décrit comme un autre bloc.
+- L'ordre écrit reste l'ordre de lecture (Tab, lecteurs d'écran) ; l'atelier l'écrit de haut en bas, puis de gauche à droite, pour que les deux ordres coïncident.
+- La taille reste facultative : sans elle, l'interface prend la taille naturelle de l'élément, celle du thème.
+- Le navigateur empile les éléments du bloc dans l'ordre écrit quand la fenêtre est plus étroite que le bloc.
+- La grille d'alignement est un outil de l'atelier, pas du langage : elle n'apparaît jamais dans le programme (`docs/atelier.md`, § 5 octies).
+
 ### 3.4 Les contrôles *(validé le 25 septembre 2026)*
 
 Un écran est un objet : ses zones de saisie sont ses champs (charte, art. 6).
@@ -170,7 +178,7 @@ Cinq couleurs d'accent : `bleue` (par défaut, sans phrase écrite), `verte`, `t
 
 ## 6. Deuxième vague de contrôles *(conçue le 14 octobre 2026)*
 
-L'éditeur d'écrans ne proposait que cinq éléments. La deuxième vague comble l'écart avec les environnements de gestion courants, sans revenir sur le § 3.3 : toujours aucun pixel. Ordre retenu, du plus demandé au plus coûteux.
+L'éditeur d'écrans ne proposait que cinq éléments. La deuxième vague comble l'écart avec les environnements de gestion courants, sans revenir sur le § 3.3 : toujours aucun pixel, sauf dans le bloc en position libre, ajouté après coup (§ 3.3, révision du 14 octobre 2026). Ordre retenu, du plus demandé au plus coûteux.
 
 | Tranche | Contenu | Statut |
 |---|---|---|
@@ -178,6 +186,7 @@ L'éditeur d'écrans ne proposait que cinq éléments. La deuxième vague comble
 | B2 | valeurs permises d'une zone et boutons radio (au plus quatre), groupe titré `le groupe « Adresse » :` (grammaire, § 22.7) | fait |
 | B2 bis | image affichée, fixe : `l'image « plan.png »` (grammaire, § 22.8) | fait |
 | B2 ter | image d'une zone ou de la ligne choisie d'une liste | à concevoir |
+| B2 quater | position libre au pixel, `en position libre :` (grammaire, § 22.9), grille d'alignement dans l'atelier | fait |
 | B3 | onglets, barre de menus, graphique | à concevoir |
 
 ### 6.1 Les états se déclarent *(validé le 13 octobre 2026)*
@@ -213,3 +222,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.17 | 2026-10-14 | § 6 : B2 fait (groupe titré, valeurs permises d'une zone, boutons radio) ; l'image affichée passe en B2 bis |
 | 0.18 | 2026-10-14 | § 6.1 : zone vide absente pour une condition ; obligation vérifiée dans l'événement ; case à faux ; astérisque |
 | 0.19 | 2026-10-14 | § 6 : B2 bis fait (image fixe) ; l'image d'une zone passe en B2 ter |
+| 0.20 | 2026-10-14 | § 3.3 révisé : la position libre au pixel, dans un bloc `en position libre :` ; § 6 : B2 quater fait |

@@ -61,7 +61,7 @@ typedef enum {
     N_ELISION,       /* « de x », « que x » dans un assemblage (§ 4.4) : op 'd' ou 'q' ; enfants[0] */
     N_ECRAN,         /* « l'écran », dans un événement ou une liste d'écran : l'écran en cours (§ 22.2) ; texte : sa classe */
     N_DISPOSITION,   /* élément d'écran : forme 1 « côte à côte : », 2 « l'un sous l'autre : », 3 « le groupe « T » : »
-                        (texte : le titre, § 22.7), 0 fin du bloc (§ 22.1) */
+                        (texte : le titre, § 22.7), 4 « en position libre : » (§ 22.9), 0 fin du bloc (§ 22.1) */
     N_BOUTON,        /* élément d'écran : « un bouton « Nouveau » » : texte : libellé (§ 22.1) */
     N_TEXTE_ECRAN,   /* élément d'écran : « le texte « Bienvenue » » : texte (§ 22.1) */
     N_IMAGE_ECRAN,   /* élément d'écran : « l'image « plan.png » » : texte : le chemin, tel qu'écrit (§ 22.8) */
@@ -179,6 +179,8 @@ typedef struct Noeud {
     int ligne, colonne;   /* position du premier jeton */
     int op_ligne, op_colonne; /* position de l'opérateur (N_OPERATION), pour les erreurs d'exécution */
     size_t debut, fin;    /* en points de code dans la source normalisée */
+    int place[4];         /* élément d'un bloc en position libre (§ 22.9) : gauche, haut, largeur, hauteur, en pixels */
+    int place_dite;       /* ce qui en est écrit : 1 la place, 2 la largeur, 4 la hauteur ; 0 hors d'un bloc libre */
 } Noeud;
 
 Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut);

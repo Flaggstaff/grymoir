@@ -269,6 +269,8 @@ int main(void) {
 
     ERR("_écran\n    _bouton « OK »\n_fin\n", 1, 1, "_écran des_compositeurs");
     ERR("_écran d'accueil\n    _image\n_fin\n", 2, 5, "Élément d'écran attendu");
+    ERR("_écran d'accueil\n    _position_libre\n        _bouton « OK » _place 3\n    _fin\n_fin\n", 3, 24, "_place 96 16");
+    ERR("_écran d'accueil\n    _position_libre\n        _bouton « OK » _place 3 4 _hauteur\n    _fin\n_fin\n", 3, 35, "_hauteur 80");
     ERR("_écran d'accueil\n    _bouton « OK »\n_fin\n_quand _tape « OK » _dans d'accueil\n    _fermer\n_fin\n", 4, 1,
         "_quand _clique");
 

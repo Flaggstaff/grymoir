@@ -2157,15 +2157,28 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     free(nom_classe);
     for (size_t k = 0; k < e->n; k++) {
         const char *x = parts[k + 2];
+        if (x[0] == '\x1d') {   /* « ␝96,16,240,0␝ » : la place d'un élément en position libre (§ 22.9) */
+            int g = 0, h = 0, l = 0, ht = 0;
+            if (sscanf(x + 1, "%d,%d,%d,%d", &g, &h, &l, &ht) == 4) {
+                e->elements[k].place = 1;
+                e->elements[k].gauche = g;
+                e->elements[k].haut = h;
+                e->elements[k].largeur = l;
+                e->elements[k].hauteur = ht;
+            }
+            const char *f2 = strchr(x + 1, '\x1d');
+            x = f2 ? f2 + 1 : x + strlen(x);
+        }
         e->champ[k] = -1;
         e->types[k] = NULL;
         e->chemins[k] = NULL;
         e->choix[k] = NULL;
         e->nb_choix[k] = 0;
-        if (x[0] == 'H' || x[0] == 'V' || x[0] == 'F' || x[0] == 'G') {   /* un bloc de disposition (§ 22.1), un groupe (§ 22.7) */
+        if (x[0] == 'H' || x[0] == 'V' || x[0] == 'F' || x[0] == 'G' || x[0] == 'P') {
+            /* un bloc de disposition (§ 22.1), un groupe (§ 22.7), un bloc en position libre (§ 22.9) */
             e->textes[k] = grym_dupliquer(x[0] == 'G' ? x + 1 : "");
             e->elements[k].sorte = x[0] == 'H' ? ELEMENT_COTE_A_COTE : x[0] == 'V' ? ELEMENT_L_UN_SOUS_L_AUTRE
-                                 : x[0] == 'G' ? ELEMENT_GROUPE : ELEMENT_FIN_DE_BLOC;
+                                 : x[0] == 'G' ? ELEMENT_GROUPE : x[0] == 'P' ? ELEMENT_LIBRE : ELEMENT_FIN_DE_BLOC;
             e->elements[k].texte = e->textes[k];
             e->listes[k] = vi_absent(NULL);
             e->colonnes[k] = NULL;
