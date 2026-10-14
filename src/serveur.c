@@ -491,6 +491,7 @@ static char *feuille_de_style(const Serveur *s) {
     "border:1px solid var(--separateur);border-radius:8px;min-width:0}"
     "fieldset.groupe>legend{font-weight:600;color:var(--texte-2);padding:0 6px}"
     ".radios{display:flex;flex-wrap:wrap;gap:6px 16px}.radios label{display:flex;gap:6px;align-items:center}"
+    ".requis{color:var(--texte-2)}"
     ".boutons{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.boutons button{margin:0}"
     ".texte{margin:0}"
     ".zone label{display:block;font-size:12px;line-height:16px;font-weight:600;color:var(--texte-2);margin-bottom:4px}"
@@ -795,7 +796,8 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
     /* inactive, ou en lecture seule pour un menu ou une case : désactivée, donc absente de l'envoi ;
      * un texte en lecture seule reste sélectionnable (§ 22.6) */
     const int fige = (e->etats[k] & 1) || (el->lecture_seule && (est_case(el) || el->nb_choix));   /* menus et radios aussi */
-    const char *attr = fige ? " disabled" : el->lecture_seule ? " readonly" : "";
+    const char *attr = fige ? " disabled" : el->lecture_seule ? " readonly"
+                     : !el->facultatif && !est_case(el) ? " aria-required=\"true\"" : "";
     chaine_ajouter(c, "<div class=\"zone\">");
     if (est_case(el)) {   /* la présence de « …p » dit qu'on a vu la case : décochée, elle n'envoie rien */
         chaine_ajouter(c, "<input type=\"hidden\" name=\"");
@@ -812,6 +814,9 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
         chaine_ajouter(c, id);
         chaine_ajouter(c, "\">");
         echapper(c, el->texte);
+        /* une zone à remplir avant d'agir : un astérisque, et l'attribut pour les lecteurs d'écran (§ 22.6) */
+        if (!el->facultatif && !el->lecture_seule)
+            chaine_ajouter(c, "<span class=\"requis\" title=\"Obligatoire\"> *</span>");
         chaine_ajouter(c, "</label>");
         if (el->type && strcmp(el->type, "texte") == 0 && el->nb_choix >= 2 && el->nb_choix <= 4) {
             /* valeurs permises, de deux à quatre : des boutons radio (§ 22.7) ; « — » pour l'absence si facultative */

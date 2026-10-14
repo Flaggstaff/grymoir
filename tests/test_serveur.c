@@ -676,7 +676,8 @@ int main(void) {
                  evenement("q=5&z0=Pologne&z1=12%2C5&clic=4"),                /* 9 : Fermer */
                  get("/"));                                                   /* 10 */
         servir(src, &sc);
-        CONTIENT(sc.reponses[0], "<label for=\"z0\">Pays</label><input type=\"text\" id=\"z0\" name=\"z0\" value=\"Allemagne\">");
+        CONTIENT(sc.reponses[0], "<label for=\"z0\">Pays<span class=\"requis\" title=\"Obligatoire\"> *</span></label>"
+                                 "<input type=\"text\" id=\"z0\" name=\"z0\" value=\"Allemagne\" aria-required=\"true\">");
         CONTIENT(sc.reponses[0], "name=\"z1\" value=\"\" inputmode=\"decimal\">");
         CONTIENT(sc.reponses[0], "value=\"2.1\">Schumann</button>");
         CONTIENT(sc.reponses[0], "<button class=\"invisible\" name=\"valider\"");
@@ -708,6 +709,34 @@ int main(void) {
         CONTIENT(sc.reponses[4], "actif vrai\nactif faux\n");
         liberer(&sc);
     }
+    {   /* États (§ 22.6), groupe et boutons radio (§ 22.7) : ce que la page montre, et ce qu'elle refuse d'envoyer */
+        const char *src = "L'écran de saisie montre :\n"
+                          "    le groupe « Statut » :\n"
+                          "        un état (« actif », « suspendu » ou « retiré »), « actif » au départ,\n"
+                          "    une remarque (texte), facultative, sur plusieurs lignes,\n"
+                          "    un total (nombre), 0 au départ, en lecture seule,\n"
+                          "    le texte « Caché », visible si faux,\n"
+                          "    un bouton « Valider », actif si la remarque de l'écran est présente,\n"
+                          "    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Valider » dans l'écran de saisie :\n    Afficher « validé ».\n"
+                          "Quand on clique sur « Fermer » dans l'écran de saisie :\n    Fermer l'écran.\n"
+                          "Ouvrir l'écran de saisie.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z1=&clic=6"), get("/"), evenement("q=2&clic=7"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<fieldset class=\"groupe\"><legend>Statut</legend>");
+        CONTIENT(sc.reponses[0], "</fieldset>");
+        CONTIENT(sc.reponses[0], "<input type=\"radio\" name=\"z1\" value=\"actif\" checked aria-required=\"true\"> actif</label>");
+        NE_CONTIENT_PAS(sc.reponses[0], "value=\"\">");   /* zone obligatoire : pas de « — » */
+        CONTIENT(sc.reponses[0], "<textarea rows=\"4\" id=\"z3\" name=\"z3\">");
+        CONTIENT(sc.reponses[0], "name=\"z4\" value=\"0\" inputmode=\"decimal\" readonly>");
+        NE_CONTIENT_PAS(sc.reponses[0], "Caché");
+        CONTIENT(sc.reponses[0], "<button name=\"clic\" value=\"6\" disabled>Valider</button>");
+        NE_CONTIENT_PAS(sc.reponses[2], "validé");   /* un clic forgé sur un bouton inactif ne compte pas */
+        CONTIENT(sc.reponses[4], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* Le thème : la couleur choisie dans la feuille, clair et sombre ; le logo servi à /logo */
         const char *src = "Les écrans ont la couleur verte et le logo « exemples/pixel.png ».\n"
                           "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"

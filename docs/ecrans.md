@@ -186,7 +186,7 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 - La condition se relit avant chaque attente, comme les listes (§ 3.4) ; l'interface reçoit l'état de chaque élément (`ecran_etats`).
 - Elle se lit à la fin de la déclaration : elle cite n'importe quelle zone ou liste de l'écran, même plus bas.
 - Un élément caché disparaît libellé compris ; dans le navigateur, il n'est pas dans la page.
-- Coût accepté : une condition qui échoue arrête le programme, comme un `dont` de liste ; lire une zone obligatoire encore vide en est un cas, d'où la zone `facultative` dans les exemples.
+- Une zone vide vaut absente pour une condition ou un `dont` ; l'obligation d'une zone se vérifie dans l'événement qui la lit, avec un message pour l'utilisateur (« Remplis « Nom » : cette zone est obligatoire. »), comme un formulaire HTML vérifie `required` à l'envoi *(validé le 14 octobre 2026)*. Une case à cocher obligatoire vaut faux à l'ouverture ; les autres zones obligatoires portent un astérisque.
 - Écarté pour l'instant : `visible si` sur une liste (la place d'une liste qui disparaît change toute la disposition), un état modifié par phrase dans un événement.
 
 ## Journal des révisions
@@ -210,3 +210,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.15 | 2026-09-29 | § 3.8 : `grym servir` montre les écrans dans le navigateur (`docs/web.md`, W1) ; seul `grym lancer` les refuse |
 | 0.16 | 2026-10-14 | § 6 : deuxième vague de contrôles ; B1 fait (états des éléments, grammaire § 22.6) ; § 3.4 : les textes sur plusieurs lignes ne sont plus reportés |
 | 0.17 | 2026-10-14 | § 6 : B2 fait (groupe titré, valeurs permises d'une zone, boutons radio) ; l'image affichée passe en B2 bis |
+| 0.18 | 2026-10-14 | § 6.1 : zone vide absente pour une condition ; obligation vérifiée dans l'événement ; case à faux ; astérisque |

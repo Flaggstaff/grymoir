@@ -393,6 +393,7 @@ typedef struct EcranVM {
     struct EcranVM *dessous;   /* l'écran qu'il recouvre (écrans empilés, § 22.3), ou NULL */
     char ***chemins;       /* liste aux colonnes choisies : le chemin de chaque colonne (« compositeur␜naissance »), sinon NULL */
     unsigned char *etats;  /* pour chaque élément : bit 1 inactif, bit 2 caché (§ 22.6) ; relus avant chaque attente */
+    size_t cadre;          /* le cadre qui a ouvert l'écran : y lire une zone vide (listes, conditions) rend absent */
 } EcranVM;
 
 static void ecran_detruire(EcranVM *e);
@@ -3690,6 +3691,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 if (m->depuis_ramassage >= m->seuil) ramasser(m, &pile, cadres, nb_cadres);
                 e->objet = ce ? creer_objet(m, ce, m->epoque) : NULL;
                 e->dessous = m->ecran;   /* par-dessus l'écran ouvert, s'il y en a un (§ 22.3) */
+                e->cadre = nb_cadres;
                 m->ecran = e;
                 m->fermer_ecran = 0;
                 m->iface.ecran_ouvrir(m->iface.contexte, sortie, e->titre, e->elements, e->n);
@@ -4568,6 +4570,20 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 if (!o->definis[k] && (o->classe->uniques[k] & 2)) {   /* facultatif : absent */
                     valeur_liberer(vo);
                     *vo = vi_absent(champ);
+                    break;
+                }
+                if (!o->definis[k] && m->ecran && o == m->ecran->objet) {
+                    /* Une zone vide (§ 22.6) : absente pour ce qui décrit l'écran (le « dont » d'une liste, « actif si »,
+                     * « visible si »), lu dans le cadre qui l'a ouvert ; dans un événement, une zone obligatoire
+                     * vide arrête l'événement, avec un message pour l'utilisateur. */
+                    if (nb_cadres == m->ecran->cadre) {
+                        valeur_liberer(vo);
+                        *vo = vi_absent(champ);
+                        break;
+                    }
+                    char *titre = capitale(champ);
+                    ok = echouer(diag, b, debut, grym_formater("Remplis « %s » : cette zone est obligatoire.", titre));
+                    free(titre);
                     break;
                 }
                 if (!o->definis[k]) {

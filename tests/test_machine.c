@@ -795,11 +795,27 @@ static void essais_etats_ecran(void) {   /* § 22.6 */
            "[valeurs État=actif]\n[valeurs État=suspendu]\nsuspendu\n"
            "[erreur « perdu » n'est pas une valeur permise de « état » : « actif », « suspendu » ou « retiré ».]\n"
            "[valeurs État=suspendu]\n[valeurs État=suspendu]\n[fermer]\n");
-    /* une condition qui lit une zone obligatoire encore vide arrête le programme, comme le « dont » d'une liste */
-    const char *src2 = "L'écran x montre :\n    un nom (texte),\n    un bouton « OK », actif si le nom de l'écran est présent.\n"
-                       "Quand on clique sur « OK » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
-    const char *ev2[] = { "clic OK" };
-    ECRANS(src2, ev2, rep, "[ouvrir X ; zone Nom (texte) ; bouton OK]\n[fermer]\nERREUR 3:32 Le champ « nom » n'a pas de valeur.");
+    /* une zone obligatoire vide (§ 22.6) : absente pour une condition ; dans un événement, un message pour l'utilisateur,
+       l'écran reste ouvert */
+    const char *src2 = "L'écran x montre :\n    un nom (texte),\n    le texte « Nom ? », visible si le nom de l'écran est absent,\n"
+                       "    un bouton « OK »,\n    un bouton « Fermer ».\n"
+                       "Quand on clique sur « OK » dans l'écran x :\n    Afficher le nom de l'écran.\n"
+                       "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+    const char *ev2[] = { "clic OK", "change Nom=Ada", "clic OK", "clic Fermer" };
+    ECRANS(src2, ev2, rep,
+           "[ouvrir X ; zone Nom (texte) ; texte Nom ? ; bouton OK ; bouton Fermer]\n[valeurs Nom=]\n"
+           "[erreur Remplis « Nom » : cette zone est obligatoire.]\n[valeurs Nom=]\n"
+           "[valeurs Nom=Ada]\n[états Nom ? caché]\n[valeurs Nom=Ada]\n[états Nom ? caché]\nAda\n"
+           "[valeurs Nom=Ada]\n[états Nom ? caché]\n[fermer]\n");
+}
+
+/* une case à cocher obligatoire jamais touchée vaut faux : c'est ce qu'elle montre (§ 22.6) */
+static void essai_case_vide(void) {
+    const char *rep[] = { "" };
+    const char *src = "L'écran x montre :\n    un accord (vrai ou faux),\n    un bouton « OK ».\n"
+                      "Quand on clique sur « OK » dans l'écran x :\n    Afficher l'accord de l'écran.\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+    const char *ev[] = { "clic OK" };
+    ECRANS(src, ev, rep, "[ouvrir X ; zone Accord (vrai ou faux) ; bouton OK]\n[valeurs Accord=non]\n[valeurs Accord=non]\nfaux\n[fermer]\n");
 }
 
 static void essais_ecrans(void) {
@@ -3414,6 +3430,7 @@ int main(void) {
     essais_migration();
     essais_ecrans();
     essais_etats_ecran();
+    essai_case_vide();
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

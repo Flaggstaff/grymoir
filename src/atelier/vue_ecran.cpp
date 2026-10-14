@@ -132,7 +132,10 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             rang->setContentsMargins(0, 0, 0, 0);
             rang->setSpacing(t.mesure("espace-1"));
             if (!qobject_cast<QCheckBox *>(w)) {
-                auto *libelle = new QLabel(e.texte);
+                // une zone à remplir avant d'agir porte un astérisque (§ 22.6) ; une case a toujours une valeur
+                const bool requise = !e.facultatif && !e.lecture_seule;
+                auto *libelle = new QLabel(requise ? e.texte + QString::fromUtf8(" *") : e.texte);
+                if (requise) libelle->setToolTip("Obligatoire");
                 libelle->setProperty("niveau", "etiquette");
                 libelle->setBuddy(w);
                 rang->addWidget(libelle);

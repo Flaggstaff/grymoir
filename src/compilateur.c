@@ -1169,9 +1169,13 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_ECRAN_OUVRIR, kd, ph->ligne, ph->colonne);
         for (size_t k = 0; k < e->nb_enfants; k++) {   /* les valeurs de départ des zones */
             const Noeud *el = e->enfants[k];
-            if (el->type != N_NOM || !el->nb_enfants || el->enfants[0]->type == N_SI_ECRAN) continue;
+            const int depart = el->type == N_NOM && el->nb_enfants && el->enfants[0]->type != N_SI_ECRAN;
+            /* une case à cocher obligatoire montre « non » : elle vaut faux tant qu'on ne l'a pas cochée (§ 22.6) */
+            const int case_vide = el->type == N_NOM && !depart && !(el->entier & 1) && strcmp(el->texte2, "vrai ou faux") == 0;
+            if (!depart && !case_vide) continue;
             emettre(c, I_ECRAN_OBJET, 0, ph->ligne, ph->colonne);
-            expression(c, el->enfants[0]);
+            if (depart) expression(c, el->enfants[0]);
+            else emettre(c, I_CONSTANTE, bloc_constante(c->b, C_BOOLEEN, "faux"), ph->ligne, ph->colonne);
             long nz = bloc_nom(c->b, el->texte);
             if (nz < 0) { trop_grand(c, ph); return; }
             emettre(c, I_ECRIRE_CHAMP, nz, ph->ligne, ph->colonne);

@@ -206,7 +206,7 @@ int main(int argc, char **argv) {
         auto *rang = qobject_cast<QVBoxLayout *>(v.controles[0]->layout());
         VERIFIER(rang && rang->count() == 2);
         auto *libelle = qobject_cast<QLabel *>(rang->itemAt(0)->widget());
-        VERIFIER(libelle && libelle->text() == "Pays" && libelle->property("niveau").toString() == "etiquette");
+        VERIFIER(libelle && libelle->text() == "Pays *" && libelle->property("niveau").toString() == "etiquette");
         VERIFIER(rang->itemAt(1)->widget() == v.zones[0] && libelle->buddy() == v.zones[0]);
         // le bloc côte à côte, ses écarts ; la liste, sa hauteur de ligne et ses titres à gauche
         QHBoxLayout *cote = nullptr;
