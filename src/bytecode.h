@@ -105,11 +105,13 @@ typedef enum {
     I_REGLE_UTILE,      /* opérande : constante texte, la clé d'une règle ; empile vrai si la règle doit se revérifier,
                            et la base note alors ce qu'elle lit (docs/vm.md, § 3.3) */
     I_REGLE_FAITE,      /* opérande : la même ; la règle a tenu : ses lectures valent à la validation */
-    I_ECRAN_ETAT        /* opérande : élément × 2 + 1 pour « visible si », + 0 pour « actif si » ; dépile la condition,
+    I_ECRAN_ETAT,       /* opérande : élément × 2 + 1 pour « visible si », + 0 pour « actif si » ; dépile la condition,
                            qui règle l'état de l'élément jusqu'à la prochaine attente (§ 22.6) */
+    I_ECRAN_IMAGE       /* opérande : élément × 2 + 1 : la source commence, un champ d'objet absent y vaut absent ;
+                           élément × 2 : dépile une image ou absent, que l'écran montre jusqu'à la prochaine attente (§ 22.8) */
 } CodeInstruction;
 
-#define I_DERNIER I_ECRAN_ETAT
+#define I_DERNIER I_ECRAN_IMAGE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

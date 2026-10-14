@@ -204,6 +204,7 @@ struct Machine {
     size_t regles_verifiees;   /* vérifications complètes de règles (docs/vm.md, § 3.3), pour les essais */
     struct EcranVM *ecran;     /* l'écran ouvert (§ 22), ou NULL */
     int fermer_ecran;          /* « Fermer l'écran. » a été demandé par l'événement en cours */
+    int absent_permis;         /* la source d'une image calculée (§ 22.8) : un champ d'un objet absent vaut absent */
     Base *base;             /* ouverte au premier besoin */
     int base_engagee;       /* dernière exécution : une base était en jeu (message d'annulation, § 3.3) */
     int fichiers_prevus;    /* dernière exécution : des fichiers devaient être écrits */
@@ -2239,7 +2240,9 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->elements[k].texte = e->textes[k];
         e->elements[k].colonnes = NULL;
         e->elements[k].nb_colonnes = 0;
-        e->elements[k].sorte = x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON : x[0] == 'I' ? ELEMENT_IMAGE : ELEMENT_TEXTE;
+        e->elements[k].sorte = x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON
+                             : x[0] == 'I' || x[0] == 'J' ? ELEMENT_IMAGE : ELEMENT_TEXTE;
+        if (x[0] == 'J') { e->elements[k].calculee = 1; continue; }   /* image calculée : ÉCRAN_IMAGE la donne (§ 22.8) */
         if (x[0] == 'I') {   /* « l'image « plan.png » » (§ 22.8) : relue à chaque ouverture, elle a pu changer depuis l'analyse */
             Fichier *f = lire_fichier(m, x + 1, erreur);
             if (!f) break;
@@ -3756,6 +3759,29 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
+        case I_ECRAN_IMAGE: {
+            /* « l'image du portrait du compositeur choisi de l'écran » (§ 22.8) : la valeur, relue à chaque tour */
+            if (op % 2) { m->absent_permis = 1; break; }   /* élément × 2 + 1 : la source commence ; un objet absent la rend absente */
+            m->absent_permis = 0;
+            Valeur v = depiler(&pile);
+            const size_t k = op / 2;
+            char *probleme = NULL;
+            if (!m->ecran || k >= m->ecran->n || !m->ecran->elements[k].calculee) probleme = grym_dupliquer("Image d'écran invalide.");
+            else if (v.type != V_ABSENT && (v.type != V_FICHIER || !v.fichier || !v.fichier->format))
+                probleme = grym_dupliquer("« l'image de » attend une image : « l'image de la photo du compositeur choisi de l'écran ».");
+            else {
+                EcranVM *e = m->ecran;
+                valeur_liberer(&e->images[k]);
+                e->images[k] = v;   /* l'écran la garde : ses octets vivent jusqu'au prochain tour */
+                v = vi_absent(NULL);
+                e->elements[k].octets = e->images[k].type == V_FICHIER ? e->images[k].fichier->octets : NULL;
+                e->elements[k].taille = e->images[k].type == V_FICHIER ? e->images[k].fichier->taille : 0;
+                e->elements[k].format = e->images[k].type == V_FICHIER ? e->images[k].fichier->format : NULL;
+            }
+            valeur_liberer(&v);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
         case I_ECRAN_ATTENDRE: {
             /* Attendre valide ce qui précède : chaque événement sera sa propre transaction (charte, art. 7). */
             char *probleme = ouvrir_attente(m, sortie, cadres);
@@ -3777,6 +3803,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 free(v);
             }
             if (!probleme && m->ecran && m->iface.ecran_etats) m->iface.ecran_etats(m->iface.contexte, m->ecran->etats, m->ecran->n);
+            for (size_t k = 0; !probleme && m->ecran && m->iface.ecran_image && k < m->ecran->n; k++)   /* § 22.8 */
+                if (m->ecran->elements[k].calculee)
+                    m->iface.ecran_image(m->iface.contexte, k, m->ecran->elements[k].octets, m->ecran->elements[k].taille,
+                                         m->ecran->elements[k].format);
             Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, NULL, 0 };
             Issue issue = ISSUE_REPONDU;
             if (!probleme && !m->fermer_ecran)
@@ -4565,6 +4595,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 *vo = valeur_annee(annee);
                 break;
             }
+            if (vo->type == V_ABSENT && m->absent_permis && code == I_LIRE_CHAMP) break;   /* reste absent (§ 22.8) */
             if (vo->type == V_ABSENT) { ok = echouer(diag, b, debut, message_absent(vo)); break; }
             if (vo->type != V_OBJET) {
                 ok = echouer(diag, b, debut, grym_formater(

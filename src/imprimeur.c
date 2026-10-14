@@ -1129,8 +1129,14 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 ecrire_texte(im, el->texte);
                 etats_ecran(im, el, 0);
             } else if (el->type == N_IMAGE_ECRAN) {   /* « l'image « plan.png » » ; « _image « plan.png » » (§ 22.8) */
-                aj(im, c ? "_image " : "l'image ");
-                ecrire_texte(im, el->texte);
+                if (el->texte) {
+                    aj(im, c ? "_image " : "l'image ");
+                    ecrire_texte(im, el->texte);
+                } else {   /* « l'image du portrait du compositeur choisi de l'écran » ; « _image_de … » (§ 22.8) */
+                    const Noeud *src = el->enfants[0]->enfants[0];
+                    if (c) { aj(im, "_image_de "); expression(im, src); }
+                    else { aj(im, "l'image "); de_expression(im, src); }
+                }
                 etats_ecran(im, el, 1);
             } else if (el->type == N_TEXTE_ECRAN) {
                 aj(im, c ? "_texte " : "le texte ");

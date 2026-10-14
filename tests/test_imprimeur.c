@@ -296,6 +296,12 @@ int main(void) {
     COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
          "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
+    /* image calculée (§ 22.8) : la contraction « du », la forme compacte */
+    FIXE("Un compositeur, conservé, a :\n    un nom (texte),\n    un portrait (image), facultatif.\n"
+         "L'écran x montre :\n    la liste des compositeurs conservés,\n"
+         "    l'image du portrait du compositeur choisi de l'écran, visible si le compositeur choisi de l'écran est présent.");
+    COMP("L'écran x montre :\n    l'image du fichier « exemples/pixel.png »,\n    le texte « t ».",
+         "_écran x\n    _image_de _fichier « exemples/pixel.png »\n    _texte « t »\n_fin\n");
     /* position libre (§ 22.9) : la place après les options, avant les conditions ; la liste après ses colonnes */
     LITT("L'écran x montre :\n    en position libre :\n        une note (texte), visible si vrai, haute de 40, à 8 de la gauche et 4 du haut,"
          " en lecture seule, large de 120,\n    le texte « t ».",

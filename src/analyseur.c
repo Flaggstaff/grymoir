@@ -5836,8 +5836,33 @@ static int conditions_ecran(Analyse *a, Noeud *ecran) {
         for (size_t q = 0; q < ecran->enfants[k]->nb_enfants; q++) {
             Noeud *si = ecran->enfants[k]->enfants[q];
             if (si->type != N_SI_ECRAN || si->nb_enfants) continue;
-            const char *mot = si->forme == 1 ? (si->negation ? "active" : "actif") : "visible";
             a->i = (size_t)si->entier;
+            if (si->forme == 3) {   /* la source d'une image calculée (§ 22.8) : « de », « du », « d' », puis une valeur */
+                Jeton *de = cour(a);
+                avancer(a);
+                if (est_mot(de, "du")) { a->article_force = ART_LE; a->jeton_force = de; }
+                else if (est_mot(de, "de") && est_mot(cour(a), "le")) {
+                    erreur(a, de, grym_dupliquer("« de le » s'écrit « du »."));
+                    return 0;
+                }
+                const Jeton *debut = cour(a);
+                Noeud *c = valeur(a);
+                a->article_force = ART_AUCUN;
+                if (!c) return 0;
+                const char *ts = type_statique(c);
+                if (a->i != (size_t)si->local || (ts && strcmp(ts, "image") != 0 && strcmp(ts, "fichier") != 0)) {
+                    noeud_liberer(c);
+                    erreur(a, a->i != (size_t)si->local ? cour(a) : debut,
+                           grym_dupliquer("« l'image de » attend une image : « l'image de la photo du compositeur choisi de l'écran »."));
+                    return 0;
+                }
+                noeud_ajouter(si, c);
+                si->fin = c->fin;
+                si->entier = 0;
+                si->local = 0;
+                continue;
+            }
+            const char *mot = si->forme == 1 ? (si->negation ? "active" : "actif") : "visible";
             const Jeton *debut = cour(a);
             Noeud *c = valeur(a);
             if (!c) return 0;
@@ -6000,7 +6025,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                         && !(est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "liste"))
                         && !(est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "texte") && voir(a, 3)->type == J_TEXTE)
                         && !(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "un") && est_mot(voir(a, 3), "sous"))
-                        && !(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "image") && voir(a, 3)->type == J_TEXTE)
+                        && !(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "image"))
                         && !(est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "groupe") && voir(a, 3)->type == J_TEXTE)) {
                         avancer(a);
                         continue;
@@ -6132,6 +6157,32 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             if (a->echec) { noeud_liberer(el); break; }
             classe_ajouter_zone(&a->portee->classes[ic], el->texte, g, type, el->entier & 1, el->texte3);
             ajouter_nom(&e.zones, &e.nb_zones, el->texte);
+            el->fin = fin_jeton(&a->j[a->i - 1]);
+        } else if (u->type == J_ELISION && est_mot(voir(a, 1), "image")
+                   && (est_mot(voir(a, 2), "de") || est_mot(voir(a, 2), "du") || (voir(a, 2)->type == J_ELISION
+                                                                                 && strcmp(voir(a, 2)->valeur, "d") == 0))) {
+            /* « l'image du portrait du compositeur choisi de l'écran » (§ 22.8) : une valeur, lue en fin de déclaration
+             * comme une condition (§ 22.6), relue avant chaque attente. On repère ici où elle s'arrête. */
+            el = noeud_creer(N_IMAGE_ECRAN, u->ligne, u->colonne, u->debut);
+            el->forme = 1;
+            a->i += 2;
+            size_t k = a->i + 1;
+            int prof = 0;
+            while (k < a->n && a->j[k].type != J_FIN && !(prof == 0 && (a->j[k].type == J_VIRGULE || a->j[k].type == J_POINT))) {
+                if (a->j[k].type == J_PAR_OUV) prof++;
+                else if (a->j[k].type == J_PAR_FERM && prof > 0) prof--;
+                k++;
+            }
+            if (k == a->i + 1) { noeud_liberer(el); erreur(a, cour(a), grym_dupliquer("Valeur attendue : « l'image de la photo du compositeur choisi de l'écran ».")); break; }
+            Noeud *source = noeud_creer(N_SI_ECRAN, cour(a)->ligne, cour(a)->colonne, cour(a)->debut);
+            source->forme = 3;
+            source->entier = (int)a->i;
+            source->local = (int)k;
+            noeud_ajouter(el, source);
+            a->i = k;
+            int vus = 0, lu;
+            while ((lu = etat_element(a, el, GENRE_FEMININ, 0, &vus)) > 0) {}
+            if (lu < 0) { noeud_liberer(el); break; }
             el->fin = fin_jeton(&a->j[a->i - 1]);
         } else if (u->type == J_ELISION && est_mot(voir(a, 1), "image") && voir(a, 2)->type == J_TEXTE) {
             /* « l'image « plan.png » » (§ 22.8) : un fichier image, vérifié dès l'analyse comme le logo (§ 22.5) */

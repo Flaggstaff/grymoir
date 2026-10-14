@@ -751,6 +751,29 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* L'image calculée (§ 22.8) : celle de la ligne choisie ; absente, rien ; son adresse porte une version qui change
+         * avec ses octets ; une version périmée : 404 */
+        const char *src = "Un compositeur, conservé, a :\n    un nom (texte), unique,\n    un portrait (image), facultatif.\n"
+                          "Le b vaut un nouveau compositeur :\n    Le nom vaut « Bach ».\n    Le portrait vaut le fichier « exemples/pixel.png ».\n"
+                          "Conserver b.\n"
+                          "Le c vaut un nouveau compositeur :\n    Le nom vaut « Chopin ».\nConserver c.\n"
+                          "L'écran x montre :\n    la liste des compositeurs conservés, par nom,\n"
+                          "    l'image du portrait du compositeur choisi de l'écran,\n    un bouton « Fermer ».\n"
+                          "Quand on choisit un compositeur dans l'écran x :\n    Afficher le nom du compositeur.\n"
+                          "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&choix=0.0"), get("/"), get("/ecran-image/1/1/1"), get("/ecran-image/1/1/0"),
+                 evenement("q=2&choix=0.1"), get("/"), evenement("q=3&clic=2"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<p class=\"image\"></p>");
+        CONTIENT(sc.reponses[2], "<img src=\"/ecran-image/1/1/1\" alt=\"\">");
+        CONTIENT(sc.reponses[3], "Content-Type: image/png");
+        CONTIENT(sc.reponses[4], "404 Not Found");
+        CONTIENT(sc.reponses[6], "<p class=\"image\"></p>");
+        CONTIENT(sc.reponses[8], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* La position libre (§ 22.9) : chaque élément dans sa boîte, placée par /ecran-style/série ; pas de style dans
          * la page ; les boutons du bloc ne se rangent pas en ligne ; une autre série : 404 */
         const char *src = "L'écran x montre :\n    en position libre :\n"

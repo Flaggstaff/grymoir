@@ -39,6 +39,7 @@ typedef struct {
     int place;                      /* élément d'un bloc en position libre (§ 22.9) : 1, et les quatre mesures */
     int gauche, haut;               /* en pixels, depuis le coin en haut à gauche du bloc */
     int largeur, hauteur;           /* en pixels ; 0 : la taille naturelle */
+    int calculee;                   /* image calculée (§ 22.8) : sans octets à l'ouverture ; ecran_image les donne */
 } ElementEcran;
 
 typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT } SorteEvenement;
@@ -129,6 +130,9 @@ typedef struct {
      * (« visible si » faux). NULL : l'interface montre tout, et la machine ignore quand même un geste sur un
      * élément inactif ou caché. */
     void (*ecran_etats)(void *contexte, const unsigned char *etats, size_t n);
+    /* Avant chaque attente, pour chaque image calculée (§ 22.8) : ses octets, ou NULL si elle est absente. NULL :
+     * l'interface ne les montre pas. */
+    void (*ecran_image)(void *contexte, size_t element, const unsigned char *octets, size_t taille, const char *format);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

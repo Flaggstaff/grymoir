@@ -883,7 +883,15 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         return;
     }
     if (haut && (haut->type == O_ECRAN || haut->type == O_BLOC)) {
-        if (est_cle(t, "image") && f >= d + 2 && r->e[d + 1].type == J_TEXTE && (f == d + 2 || est_etat(&r->e[d + 2]))) {
+        if (est_cle(t, "image_de") && f >= d + 2) {   /* _image_de x → l'image de x (§ 22.8) */
+            size_t g = d + 1;
+            while (g < f && !est_etat(&r->e[g])) g++;
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "image", t);
+            mot(r, "de", t);
+            expression(r, d + 1, g);
+            if (!etats_compacts(r, g, f, 1, 0)) return;
+        } else if (est_cle(t, "image") && f >= d + 2 && r->e[d + 1].type == J_TEXTE && (f == d + 2 || est_etat(&r->e[d + 2]))) {
             emettre(r, J_ELISION, "l", t, 1);   /* _image « plan.png » → l'image « plan.png » (§ 22.8) */
             mot(r, "image", t);
             copier(r, &r->e[d + 1]);

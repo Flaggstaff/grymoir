@@ -783,6 +783,12 @@ int main(void) {
     VE("L'écran x montre :\n    l'image « rien.png ».", 2, 13, "Fichier « rien.png » introuvable ou illisible.");
     VE("L'écran x montre :\n    l'image « exemples/pixel.png », active si vrai.", 2, 37, "Une image ne se clique pas");
     VE("L'écran x montre :\n    un bouton « B », active si vrai.", 2, 22, "Accord : « actif si ».");
+    /* l'image calculée (§ 22.8) : « de », « du », « d' » ; lue en fin de déclaration ; refus d'une valeur qui n'est pas une image */
+    V("L'écran x montre :\n    l'image du fichier « exemples/pixel.png », visible si vrai,\n    le texte « t ».",
+      "(écran [x] (image (image-de (fichier «exemples/pixel.png»)) (visible-si vrai)) (texte « t »))");
+    VE("L'écran x montre :\n    l'image de « a »,\n    le texte « t ».", 2, 16, "« l'image de » attend une image");
+    VE("L'écran x montre :\n    l'image de le nom,\n    le texte « t ».", 2, 13, "« de le » s'écrit « du ».");
+    VE("L'écran x montre :\n    l'image de,\n    le texte « t ».", 2, 13, "Valeur attendue");
     /* la position libre (§ 22.9) : place obligatoire dans le bloc, refusée ailleurs ; taille accordée ; bornes */
     V("L'écran x montre :\n    en position libre :\n        le texte « B », à 8 de la gauche et 4 du haut, large de 100,\n"
       "        l'image « exemples/pixel.png », à 0 de la gauche et 40 du haut, haute de 20, visible si vrai,\n"

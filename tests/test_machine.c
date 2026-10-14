@@ -225,7 +225,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -739,11 +739,20 @@ static void scene_etats(void *contexte, const unsigned char *etats, size_t n) {
     chaine_ajouter(&s->page.journal, "]\n");
 }
 
+/* Une image calculée (§ 22.8) : « [image k PNG 69] », ou « [image k absente] ». */
+static void scene_image(void *contexte, size_t k, const unsigned char *octets, size_t taille, const char *format) {
+    Scene *s = contexte;
+    char *x = octets ? grym_formater("[image %lu %s %lu]\n", (unsigned long)k, format ? format : "?", (unsigned long)taille)
+                     : grym_formater("[image %lu absente]\n", (unsigned long)k);
+    chaine_ajouter(&s->page.journal, x);
+    free(x);
+}
+
 static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, const char *const *rep, size_t nrep) {
     Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0, {0}, {0}, 0 };
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
-                    scene_apparence, scene_etats };
+                    scene_apparence, scene_etats, scene_image };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -806,6 +815,12 @@ static void essais_etats_ecran(void) {   /* § 22.6 */
            "[valeurs État=actif]\n[valeurs État=suspendu]\nsuspendu\n"
            "[erreur « perdu » n'est pas une valeur permise de « état » : « actif », « suspendu » ou « retiré ».]\n"
            "[valeurs État=suspendu]\n[valeurs État=suspendu]\n[fermer]\n");
+    /* image calculée (§ 22.8) : relue et passée à l'interface avant chaque attente ; une valeur qui n'est pas une
+     * image arrête le programme */
+    const char *src5 = "L'écran x montre :\n    l'image du fichier « exemples/pixel.png »,\n    un bouton « OK ».\n"
+                       "Quand on clique sur « OK » dans l'écran x :\n    Afficher 1.\nOuvrir l'écran x.\n";
+    const char *ev5[] = { "clic OK", "fermer" };
+    ECRANS(src5, ev5, rep, "[ouvrir X ; image  (? 0) ; bouton OK]\n[image 0 PNG 69]\n[image 0 PNG 69]\n1\n[fermer]\n");
     /* position libre (§ 22.9) : la machine passe la place et la taille de chaque élément du bloc */
     const char *src4 = "L'écran de saisie montre :\n    en position libre :\n"
                        "        un nom (texte), à 96 de la gauche et 16 du haut, large de 240,\n"

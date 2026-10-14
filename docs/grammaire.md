@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.78 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.79 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1785,7 +1785,20 @@ L'écran d'accueil montre :
 - `visible si …` s'y applique (§ 22.6) ; une image ne se clique pas : « Une image ne se clique pas : « visible si » seulement. ».
 - Dans le navigateur, l'image est servie à part (`/ecran-image/…`), la politique de sécurité de la page n'admettant que ses propres adresses.
 - Forme compacte : `_image « plan.png »`.
-- À venir : l'image d'une zone ou de la ligne choisie d'une liste (`l'image de la photo du compositeur choisi de l'écran`), relue à chaque tour comme une condition.
+- **Image calculée** *(implémenté le 14 octobre 2026)* : `l'image de …` montre une valeur au lieu d'un fichier écrit, le plus souvent le champ image de la ligne choisie d'une liste :
+
+  ```
+  L'écran des compositeurs montre :
+      la liste des compositeurs conservés, par nom,
+      l'image du portrait du compositeur choisi de l'écran, visible si le compositeur choisi de l'écran est présent,
+      un bouton « Fermer ».
+  ```
+
+  - `de` se contracte comme ailleurs (§ 5.2) : `l'image du portrait …`, `l'image de la photo …`, `l'image d'une …` ; « de le » est refusé.
+  - La valeur se lit à la fin de la déclaration, comme une condition (§ 22.6) : elle peut citer toute zone ou liste de l'écran, même écrite plus bas. La machine la relit avant chaque attente : choisir une autre ligne change l'image.
+  - Absente (aucune ligne choisie, champ vide), l'image ne montre rien, et sa place reste. Dans cette valeur seulement, le champ d'un objet absent vaut absent au lieu d'arrêter le programme : `le portrait du compositeur choisi de l'écran` ne demande pas `est présent`, puisque l'écran s'ouvre sans ligne choisie. C'est la règle du § 22.6 pour ce qui décrit l'écran (une zone vide y est absente), étendue à l'image. Une valeur dont le type se connaît à l'analyse et n'est pas une image est refusée : « « l'image de » attend une image : « l'image de la photo du compositeur choisi de l'écran ». ». Sinon, une valeur qui n'est pas une image (PNG, JPEG, GIF ou WebP) arrête le programme à l'exécution, avec le même message.
+  - Dans le navigateur, l'adresse de l'image porte un numéro de version, qui change avec ses octets : le navigateur ne montre pas l'ancienne.
+  - Forme compacte : `_image_de écran.compositeur_choisi.portrait`.
 
 ### 22.9 Position libre *(implémenté le 14 octobre 2026)*
 
@@ -1896,3 +1909,4 @@ L'écran de saisie montre :
 | 1.76 | 2026-10-14 | § 22.6 : une zone vide est absente pour une condition ou un `dont` ; un événement qui lit une zone obligatoire vide s'arrête avec « Remplis « … » » ; case à cocher obligatoire à faux au départ ; astérisque des zones obligatoires |
 | 1.77 | 2026-10-14 | Nouveau § 22.8 : `l'image « … »` dans un écran, vérifiée dès l'analyse, lue à l'ouverture |
 | 1.78 | 2026-10-14 | Nouveau § 22.9 : `en position libre :`, la place au pixel (`à 96 de la gauche et 16 du haut`) et la taille (`large de`, `haut de`) des éléments du bloc ; révise `docs/ecrans.md`, § 3.3 |
+| 1.79 | 2026-10-14 | § 22.8 : l'image calculée, `l'image de …`, relue avant chaque attente ; absente, elle ne montre rien |

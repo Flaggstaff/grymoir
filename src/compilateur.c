@@ -1151,8 +1151,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 free(pl);
             }
             chaine_ajouter(&d, el->type == N_CHERCHER ? "L" : el->type == N_BOUTON ? "B"
-                             : el->type == N_NOM ? "Z" : el->type == N_IMAGE_ECRAN ? "I" : "T");
-            chaine_ajouter(&d, el->texte);
+                             : el->type == N_NOM ? "Z" : el->type == N_IMAGE_ECRAN ? (el->texte ? "I" : "J") : "T");
+            if (el->texte) chaine_ajouter(&d, el->texte);   /* « J » : une image calculée, sans fichier écrit (§ 22.8) */
             if (el->type == N_CHERCHER && el->texte3) {   /* colonnes choisies : « ␛ écrit ␝ a ␜ b ␞ … » */
                 chaine_ajouter(&d, "\x1b");
                 char *cols = grym_dupliquer(el->texte3);
@@ -1201,8 +1201,12 @@ static void phrase(Compilation *c, const Noeud *ph) {
             for (size_t q = 0; q < e->enfants[k]->nb_enfants; q++) {
                 const Noeud *si = e->enfants[k]->enfants[q];
                 if (si->type != N_SI_ECRAN) continue;
+                /* l'image calculée (§ 22.8) : ÉCRAN_IMAGE k × 2 + 1 ouvre la source (un objet absent la rend absente),
+                 * k × 2 la montre */
+                if (si->forme == 3) emettre(c, I_ECRAN_IMAGE, (long)(k * 2 + 1), si->ligne, si->colonne);
                 expression(c, si->enfants[0]);
-                emettre(c, I_ECRAN_ETAT, (long)(k * 2 + (si->forme == 2)), si->ligne, si->colonne);
+                if (si->forme == 3) emettre(c, I_ECRAN_IMAGE, (long)(k * 2), si->ligne, si->colonne);
+                else emettre(c, I_ECRAN_ETAT, (long)(k * 2 + (si->forme == 2)), si->ligne, si->colonne);
             }
         emettre(c, I_ECRAN_ATTENDRE, 0, ph->ligne, ph->colonne);
         emettre(c, I_ECRIRE_LOCAL, ev, ph->ligne, ph->colonne);
@@ -1218,7 +1222,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         size_t nb_apres = 0;
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
-            if (el->type == N_TEXTE_ECRAN || el->type == N_DISPOSITION) continue;
+            if (el->type == N_TEXTE_ECRAN || el->type == N_DISPOSITION || el->type == N_IMAGE_ECRAN) continue;   /* sans événement */
             const Noeud *q = trouver_quand(c->programme->phrases, c->programme->nb, e->texte,
                                            el->type == N_BOUTON ? 1 : el->type == N_NOM ? 3 : 2, el->texte);
             if (!q) continue;   /* une liste sans « Quand on choisit » : le choix ne fait rien */

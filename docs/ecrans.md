@@ -185,7 +185,7 @@ L'éditeur d'écrans ne proposait que cinq éléments. La deuxième vague comble
 | B1 | `sur plusieurs lignes`, `en lecture seule`, `actif si …`, `visible si …` (grammaire, § 22.6) | fait |
 | B2 | valeurs permises d'une zone et boutons radio (au plus quatre), groupe titré `le groupe « Adresse » :` (grammaire, § 22.7) | fait |
 | B2 bis | image affichée, fixe : `l'image « plan.png »` (grammaire, § 22.8) | fait |
-| B2 ter | image d'une zone ou de la ligne choisie d'une liste | à concevoir |
+| B2 ter | image calculée, `l'image du portrait du compositeur choisi de l'écran` (grammaire, § 22.8) | fait |
 | B2 quater | position libre au pixel, `en position libre :` (grammaire, § 22.9), grille d'alignement dans l'atelier | fait |
 | B3 | onglets, barre de menus, graphique | à concevoir |
 
@@ -223,3 +223,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.18 | 2026-10-14 | § 6.1 : zone vide absente pour une condition ; obligation vérifiée dans l'événement ; case à faux ; astérisque |
 | 0.19 | 2026-10-14 | § 6 : B2 bis fait (image fixe) ; l'image d'une zone passe en B2 ter |
 | 0.20 | 2026-10-14 | § 3.3 révisé : la position libre au pixel, dans un bloc `en position libre :` ; § 6 : B2 quater fait |
+| 0.21 | 2026-10-14 | § 6 : B2 ter fait (image calculée) |

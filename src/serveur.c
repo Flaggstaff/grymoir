@@ -73,6 +73,7 @@ typedef struct {
     char *erreur;           /* message à montrer sous le titre, jusqu'au prochain événement */
     unsigned char *etats;   /* élément : bit 1 inactif, bit 2 caché (§ 22.6) ; un élément caché n'est pas envoyé */
     unsigned long serie;    /* numéro d'ouverture : l'adresse d'une image change d'un écran à l'autre (§ 22.8) */
+    unsigned long *versions;   /* image calculée : change avec ses octets, et l'adresse avec elle (§ 22.8) */
 } EcranWeb;
 
 struct Serveur {
@@ -1021,7 +1022,11 @@ static void page_ecran(Serveur *s) {
         case ELEMENT_ZONE: zone(&c, e, k); chaine_ajouter(&c, "\n"); break;
         case ELEMENT_LISTE: liste(&c, e, k); chaine_ajouter(&c, "\n"); break;
         case ELEMENT_IMAGE: {   /* « l'image « plan.png » » (§ 22.8) : servie à part, la politique de sécurité n'admet que 'self' */
-            char *v = grym_formater("<p class=\"image\"><img src=\"/ecran-image/%lu/%lu\" alt=\"\"></p>\n", e->serie, (unsigned long)k);
+            if (el->calculee && !el->octets) { chaine_ajouter(&c, "<p class=\"image\"></p>\n"); break; }   /* absente */
+            char *v = el->calculee   /* calculée : l'adresse porte sa version, le navigateur ne garde pas l'ancienne */
+                      ? grym_formater("<p class=\"image\"><img src=\"/ecran-image/%lu/%lu/%lu\" alt=\"\"></p>\n", e->serie,
+                                      (unsigned long)k, e->versions[k])
+                      : grym_formater("<p class=\"image\"><img src=\"/ecran-image/%lu/%lu\" alt=\"\"></p>\n", e->serie, (unsigned long)k);
             chaine_ajouter(&c, v);
             free(v);
             break;
@@ -1241,7 +1246,11 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
         const EcranWeb *e = ecran_dessus(s);
         char *fin = NULL;
         const unsigned long serie = strtoul(r.cible + 13, &fin, 10);
-        const unsigned long k = fin && *fin == '/' ? strtoul(fin + 1, &fin, 10) : (unsigned long)-1;
+        unsigned long k = fin && *fin == '/' ? strtoul(fin + 1, &fin, 10) : (unsigned long)-1;
+        if (k < e->n && e->el[k].calculee) {   /* « /série/k/version » : la version en cours seulement */
+            const unsigned long ver = fin && *fin == '/' ? strtoul(fin + 1, &fin, 10) : (unsigned long)-1;
+            if (ver != e->versions[k]) k = (unsigned long)-1;
+        }
         if (serie == e->serie && fin && !*fin && k < e->n && e->el[k].sorte == ELEMENT_IMAGE && e->el[k].octets
             && !(e->etats[k] & 2))
             repondre_octets(s, "200 OK", type_image(e->el[k].format), e->el[k].octets, e->el[k].taille, NULL);
@@ -1525,6 +1534,7 @@ static void ecran_liberer(EcranWeb *e) {
     free(e->choisie);
     free(e->valeurs);
     free(e->etats);
+    free(e->versions);
     free(e->titre);
     free(e->erreur);
     free(e);
@@ -1554,6 +1564,8 @@ static void serveur_ecran_ouvrir(void *contexte, Chaine *sortie, const char *tit
     e->valeurs = grym_allouer(m * sizeof *e->valeurs);
     e->etats = grym_allouer(m);
     memset(e->etats, 0, m);
+    e->versions = grym_allouer(m * sizeof *e->versions);
+    memset(e->versions, 0, m * sizeof *e->versions);
     for (size_t k = 0; k < n; k++) {
         e->el[k] = el[k];
         e->el[k].texte = el[k].texte ? grym_dupliquer(el[k].texte) : NULL;
@@ -1615,6 +1627,27 @@ static void serveur_ecran_valeurs(void *contexte, const char *const *valeurs, si
 static void serveur_ecran_etats(void *contexte, const unsigned char *etats, size_t n) {   /* § 22.6 */
     EcranWeb *e = ecran_dessus(contexte);
     for (size_t k = 0; e && k < n && k < e->n; k++) e->etats[k] = etats[k];
+}
+
+/* L'image calculée (§ 22.8) : copiée, la page la demande après que la machine a continué ; sa version change
+ * quand ses octets changent. */
+static void serveur_ecran_image(void *contexte, size_t k, const unsigned char *octets, size_t taille, const char *format) {
+    EcranWeb *e = ecran_dessus(contexte);
+    if (!e || k >= e->n) return;
+    ElementEcran *el = &e->el[k];
+    const int meme = (!octets && !el->octets) || (octets && el->octets && taille == el->taille && memcmp(octets, el->octets, taille) == 0);
+    if (meme) return;
+    free((unsigned char *)el->octets);
+    el->octets = NULL;
+    el->taille = 0;
+    el->format = format;   /* une constante de la machine (« PNG », « JPEG »…) */
+    if (octets) {
+        unsigned char *o = grym_allouer(taille ? taille : 1);
+        memcpy(o, octets, taille);
+        el->octets = o;
+        el->taille = taille;
+    }
+    e->versions[k]++;
 }
 
 static void serveur_ecran_erreur(void *contexte, Chaine *sortie, const char *message) {
@@ -1688,7 +1721,7 @@ Interface serveur_interface(Serveur *s) {
     Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer, 1, serveur_afficher_image,
                     serveur_afficher_fiche, serveur_ecran_ouvrir, serveur_ecran_lignes, serveur_ecran_attendre,
                     serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence,
-                    serveur_ecran_etats };
+                    serveur_ecran_etats, serveur_ecran_image };
     return i;
 }
 
