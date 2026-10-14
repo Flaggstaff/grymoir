@@ -455,7 +455,7 @@ Fenetre::Fenetre() {
         guide->activateWindow();
     });
     // Les polices et les icônes du thème voyagent avec leur licence (OFL 1.1 ; ISC et MIT) : elles se lisent ici.
-    menu_aide->addAction("Licences des polices et des icônes", this, [this] {
+    menu_aide->addAction("Licences des polices et des icônes", this, [] {
         auto *d = new QTextBrowser;
         d->setAttribute(Qt::WA_DeleteOnClose);
         d->setWindowFlag(Qt::Window);

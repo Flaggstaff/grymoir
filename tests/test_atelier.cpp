@@ -58,6 +58,17 @@ extern "C" {
 
 volatile std::sig_atomic_t grym_fermeture_demandee = 0;   // défini par principal.cpp dans l'atelier
 
+static int total = 0, echecs = 0;
+
+static void verifier(int ligne, bool ok, const char *quoi) {
+    total++;
+    if (!ok) {
+        echecs++;
+        std::printf("ÉCHEC (test ligne %d) : %s\n", ligne, quoi);
+    }
+}
+#define VERIFIER(c) verifier(__LINE__, (c), #c)
+
 // Exécute `source` dans la fenêtre d'exécution, sans écran. À chaque question, `repondre(numero, fenetre)`
 // remplit les champs ; il rend faux pour cliquer « Annuler », vrai pour « Envoyer ». Rend le fil affiché.
 static QString executer(const QString &source, const std::function<bool(int, QWidget &)> &repondre,
@@ -65,7 +76,7 @@ static QString executer(const QString &source, const std::function<bool(int, QWi
     QTemporaryDir dossier;
     const QString chemin = dossier.filePath("essai.grym");
     QFile f(chemin);
-    f.open(QIODevice::WriteOnly);
+    VERIFIER(f.open(QIODevice::WriteOnly));
     f.write(source.toUtf8());
     f.close();
     Execution e(chemin);
@@ -104,17 +115,6 @@ static QList<QLineEdit *> lignes(QWidget &w) {
         if (l->isEnabled() && !qobject_cast<QComboBox *>(l->parent())) r << l;
     return r;
 }
-
-static int total = 0, echecs = 0;
-
-static void verifier(int ligne, bool ok, const char *quoi) {
-    total++;
-    if (!ok) {
-        echecs++;
-        std::printf("ÉCHEC (test ligne %d) : %s\n", ligne, quoi);
-    }
-}
-#define VERIFIER(c) verifier(__LINE__, (c), #c)
 
 // La sorte de chaque caractère de `ligne` ; « . » pour aucune couleur, sinon la première lettre de la sorte.
 static QString dessin(const QString &ligne, bool compacte = false) {
@@ -401,7 +401,7 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         const QString prog = dossier.filePath("stock.grym");
         QFile f(prog);
-        f.open(QIODevice::WriteOnly);
+        VERIFIER(f.open(QIODevice::WriteOnly));
         f.write("Un stock, conservé, a :\n    un nom (texte), unique,\n    une quantité (nombre).\n"
                 "Chaque stock conservé vérifie :\n    la quantité du stock ≥ 0,\n    sinon « Stock négatif : » puis le nom du stock.\n"
                 "Si le nombre de stocks conservés est nul :\n    Le s vaut un nouveau stock :\n        Le nom vaut « vis ».\n"
@@ -452,14 +452,14 @@ int main(int argc, char **argv) {
         const QString source = d.filePath("Exemples/Amis du Tilleul");
         QDir().mkpath(source);
         QFile a(source + "/association.grym");
-        a.open(QIODevice::WriteOnly);
+        VERIFIER(a.open(QIODevice::WriteOnly));
         a.write("Afficher 1.\n");
         a.close();
         QString erreur;
         const QString copie = installer_exemple(source, d.filePath("Documents/GrymoiR"), &erreur);
         VERIFIER(copie == d.filePath("Documents/GrymoiR/Amis du Tilleul") && QFile::exists(copie + "/association.grym"));
         QFile b(copie + "/association.grymd");   // les données du lecteur
-        b.open(QIODevice::WriteOnly);
+        VERIFIER(b.open(QIODevice::WriteOnly));
         b.write("x");
         b.close();
         VERIFIER(installer_exemple(source, d.filePath("Documents/GrymoiR"), &erreur) == copie);
@@ -475,7 +475,7 @@ int main(int argc, char **argv) {
         for (const char *n : {"association.grym", "données.grym", "association.grymd", "association.grymb",
                               "projet.grymatelier", ".cache", "images/logo.png"}) {
             QFile f(p + "/" + QString::fromUtf8(n));
-            f.open(QIODevice::WriteOnly);
+            VERIFIER(f.open(QIODevice::WriteOnly));
             f.write("x");
         }
         QString erreur;
@@ -502,7 +502,7 @@ int main(int argc, char **argv) {
         logo.fill(QColor("#1B7340"));
         VERIFIER(logo.save(d.filePath("b-logo.png")));
         QFile faux(d.filePath("a-faux.png"));                                            // illisible : ignoré
-        faux.open(QIODevice::WriteOnly);
+        VERIFIER(faux.open(QIODevice::WriteOnly));
         faux.write("pas une image");
         faux.close();
         const QImage choisie = icone_du_projet(d.path());
@@ -731,7 +731,7 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         auto ecrire = [&](const QString &nom, const QString &texte) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::WriteOnly);
+            VERIFIER(f.open(QIODevice::WriteOnly));
             f.write(texte.toUtf8());
         };
         ecrire("donnees.grym", "Le carré d'un n vaut n × n.\n");
@@ -783,12 +783,12 @@ int main(int argc, char **argv) {
         p.positions.insert("compositeur", QPointF(40, 120));
         VERIFIER(p.ecrire());
         QFile f(FichierProjet::chemin(dossier.path()));
-        f.open(QIODevice::ReadOnly);
+        VERIFIER(f.open(QIODevice::ReadOnly));
         const QString t = QString::fromUtf8(f.readAll());
         f.close();
         VERIFIER(t == "Remarque : disposition de l'atelier ; sans effet sur le programme.\n"
                       "programme principal : prog.grym\ncompositeur : 40, 120\nœuvre : 320, 120\n");
-        f.open(QIODevice::Append);
+        VERIFIER(f.open(QIODevice::Append));
         f.write("n'importe quoi\n");
         f.close();
         FichierProjet q;
@@ -805,7 +805,7 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         auto ecrire = [&](const QString &nom, const QString &texte) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::WriteOnly);
+            VERIFIER(f.open(QIODevice::WriteOnly));
             f.write(texte.toUtf8());
         };
         ecrire("donnees.grym", "Un genre, conservé, a : un nom (texte), unique.\n"
@@ -848,12 +848,12 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         auto ecrire = [&](const QString &nom, const QString &texte) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::WriteOnly);
+            VERIFIER(f.open(QIODevice::WriteOnly));
             f.write(texte.toUtf8());
         };
         auto lire = [&](const QString &nom) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::ReadOnly);
+            VERIFIER(f.open(QIODevice::ReadOnly));
             return QString::fromUtf8(f.readAll());
         };
         const QString donnees = "Remarque :   à   garder   tel quel.\n"
@@ -919,12 +919,12 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         auto ecrire = [&](const QString &nom, const QString &texte) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::WriteOnly);
+            VERIFIER(f.open(QIODevice::WriteOnly));
             f.write(texte.toUtf8());
         };
         auto lire = [&](const QString &nom) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::ReadOnly);
+            VERIFIER(f.open(QIODevice::ReadOnly));
             return QString::fromUtf8(f.readAll());
         };
         ecrire("d.grym", "Une partition, conservée, a :\n    une cote (texte), unique.\n"
@@ -990,12 +990,12 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         auto ecrire = [&](const QString &texte) {
             QFile f(dossier.filePath("d.grym"));
-            f.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
             f.write(texte.toUtf8());
         };
         auto lire = [&] {
             QFile f(dossier.filePath("d.grym"));
-            f.open(QIODevice::ReadOnly);
+            VERIFIER(f.open(QIODevice::ReadOnly));
             return QString::fromUtf8(f.readAll());
         };
         ecrire("Une tâche, conservée, a :\n    un titre (texte), unique,\n"
@@ -1056,7 +1056,7 @@ int main(int argc, char **argv) {
             "    Le vivant vaut faux.\n    L'état vaut « actif ».\n    Le maître vaut b.\nConserver w.\n"
             "Supprimer w.\n";
         QFile f(prog);
-        f.open(QIODevice::WriteOnly);
+        VERIFIER(f.open(QIODevice::WriteOnly));
         f.write(source.toUtf8());
         f.close();
         const QByteArray src = source.toUtf8(), base = base_du_programme(prog).toUtf8();
@@ -1093,14 +1093,14 @@ int main(int argc, char **argv) {
         const QString prog = dossier.filePath("p.grym"), doc = dossier.filePath("doc.txt");
         {
             QFile f(doc);
-            f.open(QIODevice::WriteOnly);
+            VERIFIER(f.open(QIODevice::WriteOnly));
             f.write("douze octets");
         }
         const QString source = "Une partition, conservée, a : un titre (texte), unique, un scan (fichier).\n"
                                "La p vaut une nouvelle partition :\n    Le titre vaut « Toccata ».\n"
                                "    Le scan vaut le fichier « " + doc + " ».\nConserver p.\n";
         QFile f(prog);
-        f.open(QIODevice::WriteOnly);
+        VERIFIER(f.open(QIODevice::WriteOnly));
         f.write(source.toUtf8());
         f.close();
         const QByteArray src = source.toUtf8(), base = base_du_programme(prog).toUtf8();
@@ -1128,12 +1128,12 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         auto ecrire = [&](const QString &nom, const QByteArray &octets) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
             f.write(octets);
         };
         auto lire = [&](const QString &nom) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::ReadOnly);
+            VERIFIER(f.open(QIODevice::ReadOnly));
             return QString::fromUtf8(f.readAll());
         };
         auto lancer = [&](const QString &nom) {   // le programme, dans la machine, avec sa base
@@ -1246,7 +1246,7 @@ int main(int argc, char **argv) {
         const QString prog = dossier.filePath("p.grym");
         auto ecrire = [&](const QString &t) {
             QFile f(prog);
-            f.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
             f.write(t.toUtf8());
         };
         const QString v1 = "Un compositeur, conservé, a : un nom (texte), unique.\n"
@@ -1287,7 +1287,7 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         const QString prog = dossier.filePath("e.grym");
         QFile f(prog);
-        f.open(QIODevice::WriteOnly);
+        VERIFIER(f.open(QIODevice::WriteOnly));
         f.write("Un compositeur, conservé, a : un nom (texte), unique, une naissance (date), facultative.\n"
                 "Si le nombre de compositeurs conservés = 0 :\n"
                 "    Le c vaut un nouveau compositeur :\n        Le nom vaut « Liszt ».\n    Conserver c.\n"
@@ -1340,7 +1340,7 @@ int main(int argc, char **argv) {
         image.save(dossier.filePath("logo.png"));
         const QString prog = dossier.filePath("ap.grym");
         QFile f(prog);
-        f.open(QIODevice::WriteOnly);
+        VERIFIER(f.open(QIODevice::WriteOnly));
         f.write("Les écrans ont la couleur verte et le logo « logo.png ».\n"
                 "L'écran d'accueil montre :\n    un bouton « Suite »,\n    un bouton « Fermer ».\n"
                 "L'écran de suite montre :\n    un bouton « Retour ».\n"
@@ -1404,7 +1404,7 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         const QString prog = dossier.filePath("z.grym");
         QFile f(prog);
-        f.open(QIODevice::WriteOnly);
+        VERIFIER(f.open(QIODevice::WriteOnly));
         f.write("Un compositeur, conservé, a : un nom (texte), unique, un pays (texte).\n"
                 "Pour remplir un nom et un pays :\n    Le c vaut un nouveau compositeur :\n        Le nom vaut nom.\n"
                 "        Le pays vaut pays.\n    Conserver c.\n"
@@ -1457,7 +1457,7 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         const QString prog = dossier.filePath("f.grym");
         QFile f(prog);
-        f.open(QIODevice::WriteOnly);
+        VERIFIER(f.open(QIODevice::WriteOnly));
         f.write("Un compositeur, conservé, a : un nom (texte), unique.\n"
                 "Une œuvre, conservée, a : un titre (texte), unique, un compositeur (compositeur).\n"
                 "Si le nombre d'œuvres conservées = 0 :\n    Le c vaut un nouveau compositeur :\n        Le nom vaut « Bach ».\n"
@@ -1507,7 +1507,7 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         auto ecrire = [&](const QString &nom, const QString &texte) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::WriteOnly);
+            VERIFIER(f.open(QIODevice::WriteOnly));
             f.write(texte.toUtf8());
         };
         ecrire("donnees.grym", "Un compositeur, conservé, a : un nom (texte), unique, une photo (image), facultative.\n"
@@ -1567,12 +1567,12 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         auto ecrire = [&](const QString &nom, const QString &texte) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::WriteOnly);
+            VERIFIER(f.open(QIODevice::WriteOnly));
             f.write(texte.toUtf8());
         };
         auto lire = [&](const QString &nom) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::ReadOnly);
+            VERIFIER(f.open(QIODevice::ReadOnly));
             return QString::fromUtf8(f.readAll());
         };
         const QString debut = "Un compositeur, conservé, a : un nom (texte), unique.\n"
@@ -1617,12 +1617,12 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         auto ecrire = [&](const QString &nom, const QString &texte) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::WriteOnly);
+            VERIFIER(f.open(QIODevice::WriteOnly));
             f.write(texte.toUtf8());
         };
         auto lire = [&](const QString &nom) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::ReadOnly);
+            VERIFIER(f.open(QIODevice::ReadOnly));
             return QString::fromUtf8(f.readAll());
         };
         ecrire("p.grym", "Un compositeur, conservé, a : un nom (texte), unique, une date de naissance (date), facultative.\n"
@@ -1682,12 +1682,12 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         auto ecrire = [&](const QString &texte) {
             QFile f(dossier.filePath("p.grym"));
-            f.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
             f.write(texte.toUtf8());
         };
         auto lire = [&] {
             QFile f(dossier.filePath("p.grym"));
-            f.open(QIODevice::ReadOnly);
+            VERIFIER(f.open(QIODevice::ReadOnly));
             return QString::fromUtf8(f.readAll());
         };
         ecrire("L'écran de saisie montre :\n    une remarque (texte), facultative,\n    un bouton « OK ».\n"
@@ -1742,12 +1742,12 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         auto ecrire = [&](const QString &texte) {
             QFile f(dossier.filePath("p.grym"));
-            f.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
             f.write(texte.toUtf8());
         };
         auto lire = [&] {
             QFile f(dossier.filePath("p.grym"));
-            f.open(QIODevice::ReadOnly);
+            VERIFIER(f.open(QIODevice::ReadOnly));
             return QString::fromUtf8(f.readAll());
         };
         ecrire("L'écran de saisie montre :\n    un état (« actif », « suspendu » ou « retiré »), « actif » au départ,\n"
@@ -1801,9 +1801,9 @@ int main(int argc, char **argv) {
     // L'image (§ 22.8) : ajoutée, relue, dessinée depuis le dossier du programme
     {
         QTemporaryDir dossier;
-        QFile::copy(QDir::current().filePath("exemples/pixel.png"), dossier.filePath("plan.png"));
+        VERIFIER(QFile::copy(QString(GRYM_SOURCE) + "/exemples/pixel.png", dossier.filePath("plan.png")));
         QFile f(dossier.filePath("p.grym"));
-        f.open(QIODevice::WriteOnly);
+        VERIFIER(f.open(QIODevice::WriteOnly));
         f.write("L'écran d'accueil montre :\n    un bouton « OK ».\nQuand on clique sur « OK » dans l'écran d'accueil :\n    Fermer l'écran.\n");
         f.close();
         const QString d = dossier.path(), e = "d'accueil";
@@ -1814,7 +1814,7 @@ int main(int argc, char **argv) {
         i.visible_si = "vrai";
         VERIFIER(ecran_ajouter(d, e, i, &g).isEmpty());
         QFile r(dossier.filePath("p.grym"));
-        r.open(QIODevice::ReadOnly);
+        VERIFIER(r.open(QIODevice::ReadOnly));
         VERIFIER(QString::fromUtf8(r.readAll()).contains("    un bouton « OK »,\n    l'image « plan.png », visible si vrai.\n"));
         r.close();
         const auto lus = lire_ecrans(d);
@@ -1829,7 +1829,7 @@ int main(int argc, char **argv) {
         el[0].sorte = ELEMENT_IMAGE;
         el[0].texte = "plan.png";
         QFile png(dossier.filePath("plan.png"));
-        png.open(QIODevice::ReadOnly);
+        VERIFIER(png.open(QIODevice::ReadOnly));
         el[0].octets = png.readAll();
         VueEcran v = dessiner_ecran("Accueil", el);
         auto *l = qobject_cast<QLabel *>(v.controles[0]);
@@ -1846,7 +1846,7 @@ int main(int argc, char **argv) {
     {
         QTemporaryDir dossier;
         QFile f(dossier.filePath("p.grym"));
-        f.open(QIODevice::WriteOnly);
+        VERIFIER(f.open(QIODevice::WriteOnly));
         f.write("L'écran d'accueil montre :\n    le texte « Bonjour »,\n    un bouton « OK ».\n"
                 "Quand on clique sur « OK » dans l'écran d'accueil :\n    Fermer l'écran.\n");
         f.close();
@@ -1868,7 +1868,7 @@ int main(int argc, char **argv) {
         if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
         VERIFIER(resultat.isEmpty());
         QFile r(dossier.filePath("p.grym"));
-        r.open(QIODevice::ReadOnly);
+        VERIFIER(r.open(QIODevice::ReadOnly));
         const QString t = QString::fromUtf8(r.readAll());
         VERIFIER(t.contains("un bouton « Terminer »") && t.contains("Quand on clique sur « Terminer » dans l'écran d'accueil"));
     }
@@ -1878,12 +1878,12 @@ int main(int argc, char **argv) {
         QTemporaryDir dossier;
         auto lire = [&]() {
             QFile f(dossier.filePath("p.grym"));
-            f.open(QIODevice::ReadOnly);
+            VERIFIER(f.open(QIODevice::ReadOnly));
             return QString::fromUtf8(f.readAll());
         };
         {
             QFile f(dossier.filePath("p.grym"));
-            f.open(QIODevice::WriteOnly);
+            VERIFIER(f.open(QIODevice::WriteOnly));
             f.write("L'écran d'accueil montre :\n    le texte « A »,\n    le texte « B »,\n    le texte « C »,\n    un bouton « OK ».\n"
                     "Quand on clique sur « OK » dans l'écran d'accueil :\n    Fermer l'écran.\n");
         }
@@ -1906,7 +1906,7 @@ int main(int argc, char **argv) {
         // sortir B de la rangée, sous le bouton : la rangée réduite à C disparaît
         {
             QFile f(dossier.filePath("p.grym"));
-            f.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
             f.write("L'écran d'accueil montre :\n    côte à côte :\n        le texte « C »,\n        le texte « B »,\n"
                     "    le texte « A »,\n    un bouton « OK ».\n"
                     "Quand on clique sur « OK » dans l'écran d'accueil :\n    Fermer l'écran.\n");
@@ -1925,7 +1925,7 @@ int main(int argc, char **argv) {
         VERIFIER(OngletEcrans::cote_de_depot(QSize(200, 40), QPointF(100, 30)) == DEPOT_APRES);
         QTemporaryDir dossier;
         QFile f(dossier.filePath("p.grym"));
-        f.open(QIODevice::WriteOnly);
+        VERIFIER(f.open(QIODevice::WriteOnly));
         f.write("L'écran d'accueil montre :\n    le texte « A »,\n    le texte « B »,\n    un bouton « OK ».\n"
                 "Quand on clique sur « OK » dans l'écran d'accueil :\n    Fermer l'écran.\n");
         f.close();
@@ -1950,7 +1950,7 @@ int main(int argc, char **argv) {
         if (!resultat.isEmpty()) std::printf("dépôt : %s\n", qPrintable(resultat));
         VERIFIER(resultat.isEmpty());
         QFile r(dossier.filePath("p.grym"));
-        r.open(QIODevice::ReadOnly);
+        VERIFIER(r.open(QIODevice::ReadOnly));
         VERIFIER(QString::fromUtf8(r.readAll()).startsWith("L'écran d'accueil montre :\n    côte à côte :\n        le texte « A »,\n"
                                                            "        le texte « B »,\n    un bouton « OK ».\n"));
         delete mime;
@@ -1986,12 +1986,12 @@ int main(int argc, char **argv) {
         auto ecrire = [&](const QString &nom, const QByteArray &texte) {
             QDir().mkpath(QFileInfo(dossier.filePath(nom)).absolutePath());
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::WriteOnly);
+            VERIFIER(f.open(QIODevice::WriteOnly));
             f.write(texte);
         };
         auto lire = [&](const QString &nom) {
             QFile f(dossier.filePath(nom));
-            f.open(QIODevice::ReadOnly);
+            VERIFIER(f.open(QIODevice::ReadOnly));
             return QString::fromUtf8(f.readAll());
         };
         auto existe = [&](const QString &nom) { return QFileInfo::exists(dossier.filePath(nom)); };
