@@ -108,6 +108,13 @@ private:
     bool libre_decrit = false;            // l'élément saisi est dans un écran décrit : un fantôme le montre, le lâcher convertit
     class QFrame *fantome = nullptr;
     QRect libre_fin;                      // où le fantôme est, au lâcher
+    class QFrame *guide_v = nullptr, *guide_h = nullptr;   // les traits d'alignement sur un voisin (§ 5 octies)
+    // Colle r (position ou taille selon libre_taille) aux bords et centres des voisins à moins de 5 pixels, d'après
+    // brut (la position sans aimant) ; montre les traits dans `sur`. Rend vrai si un guide a servi.
+    bool aligner(QRect &r, const QRect &brut, const QVector<QRect> &voisins, QWidget *sur);
+public:
+    QWidget *guide_visible() const;               // un trait d'alignement montré (essais)
+private:
     static int bord_sous(QWidget *w, QPoint global);   // ce que saisit la souris en ce point de w (même codage)
     QRect libre_depart;
     QWidget *grille = nullptr;

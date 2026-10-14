@@ -251,13 +251,14 @@ Le langage place au pixel dans un bloc `en position libre :` (grammaire, § 22.9
 - **L'ordre.** Après chaque placement, l'atelier réécrit les éléments du bloc de haut en bas, puis de gauche à droite : l'ordre de lecture (Tab, lecteurs d'écran) suit ce qu'on voit.
 - **Ajouter.** Dans un écran qui a un bloc libre, la palette ajoute au dernier, à 16 de la gauche et 48 pixels sous l'élément le plus bas (la hauteur réelle des éléments n'est connue qu'au dessin).
 - **Tout se place** *(atelier 0.40)* : un groupe, un bloc `côte à côte` ou `l'un sous l'autre`, un bloc libre posé dans un bloc libre se glissent et s'agrandissent comme un élément, avec tout leur contenu. « Mettre dans un groupe… » marche aussi dans un bloc libre : le groupe prend la place et la taille de l'élément, qui s'y empile. Retirer un groupe placé remonte ses éléments à sa place, l'un sous l'autre (48 pixels d'écart) ; retirer un bloc libre placé garde les places de ses éléments, décalées de la sienne.
+- **Les guides** *(0.43)* : pendant un glisser ou un agrandissement, un bord ou le centre de l'élément qui passe à moins de 5 pixels d'un bord ou du centre d'un voisin s'y colle, plus fort que la grille, et un trait à la couleur d'accent le montre sur toute la hauteur ou la largeur du bloc. Les voisins sont les éléments du même bloc libre (sur un écran décrit, tous ceux de l'aperçu). Alt coupe la grille et les guides.
 - **Le clavier.** L'élément placé choisi se déplace aux flèches, d'un pixel, ou de 8 avec Maj ; Alt + flèches changent sa taille. Chaque appui est un geste, qui s'annule.
 - **La poignée.** Un carré à la couleur d'accent marque le coin de l'élément placé choisi : le saisir l'agrandit. La prise fait 12 pixels : le bord droit change la largeur, le bord bas la hauteur, le coin les deux ; au survol, le curseur l'annonce (↔, ↕, ⤡) *(0.41)*.
 - **Plus de mode** *(0.42)* : tout élément de tout écran se glisse, s'agrandit par ses bords et se déplace aux flèches. Sur un écran décrit, un fantôme pointillé suit la souris sur la grille ; au lâcher, l'atelier passe l'écran en position libre en gardant ce qu'on voit, l'élément à sa nouvelle place, en un seul geste qui s'annule. Les blocs existants restent des blocs, placés d'un seul tenant. Remettre dans l'ordre par glisser reste possible avec Cmd (Ctrl). « Nouvel écran vide » propose « Libre » d'abord.
 - **Le tri** se fait par unités : un bloc et tout son contenu bougent ensemble dans l'ordre écrit.
 - **Refus.** Un élément en position libre ne se glisse pas vers un autre bloc ; retirer le bloc libre de premier niveau garde ses éléments et efface leur place. Le contour pointillé montre le bloc dans l'aperçu.
 - La grille est un outil de l'atelier : elle n'existe pas dans le programme, qui ne garde que les nombres.
-- Pas encore : guides d'alignement entre éléments, glisser un élément d'un autre bloc vers le bloc libre, aide à la saisie (grammaire, § 8) pour les nouvelles tournures.
+- Pas encore : glisser un élément d'un autre bloc vers le bloc libre, aide à la saisie (grammaire, § 8) pour les nouvelles tournures.
 
 ## 5 nonies. L'image calculée dans l'éditeur d'écrans *(fait le 14 octobre 2026)*
 
@@ -360,3 +361,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.40 | 2026-10-14 | § 5 octies : les blocs se placent et s'agrandissent dans un bloc libre ; grouper dans un bloc libre ; flèches (Maj : 8 pixels ; Alt : taille) ; poignée visible ; tri par unités |
 | 0.41 | 2026-10-14 | § 5 octies : prise de 12 pixels, bord droit (largeur), bord bas (hauteur), coin (les deux) ; curseur au survol ; message sur le coin d'un élément décrit |
 | 0.42 | 2026-10-14 | § 5 octies : plus de mode ; glisser, agrandir ou flécher un élément d'un écran décrit le passe en position libre en gardant ce qu'on voit ; la conversion garde les blocs ; Cmd pour remettre dans l'ordre ; « Libre » proposé d'abord |
+| 0.43 | 2026-10-14 | § 5 octies : guides d'alignement sur les bords et centres des voisins, plus forts que la grille ; Alt les coupe |

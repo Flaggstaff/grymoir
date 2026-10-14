@@ -412,6 +412,7 @@ void OngletEcrans::dessiner() {
     grille = nullptr;
     poignee = nullptr;   // l'ancienne est partie avec l'ancien aperçu
     fantome = nullptr;
+    guide_v = guide_h = nullptr;   // partis avec l'ancien aperçu
     centre->installEventFilter(this);
     for (int k = 0; k < e.elements.size(); k++)   // le bloc en position libre : son contour, pour savoir où l'on pose
         if (e.elements[k].sorte == ELEMENT_LIBRE && vue.controles.value(k)) {
@@ -479,6 +480,55 @@ int OngletEcrans::bord_sous(QWidget *w, QPoint global) {
 }
 
 QString OngletEcrans::texte_etat() const { return etat->text(); }
+
+QWidget *OngletEcrans::guide_visible() const {
+    if (guide_v && !guide_v->isHidden()) return guide_v;
+    return guide_h && !guide_h->isHidden() ? guide_h : nullptr;
+}
+
+bool OngletEcrans::aligner(QRect &r, const QRect &brut, const QVector<QRect> &voisins, QWidget *sur) {
+    // les bords et le centre de l'élément, sans aimant ; ceux des voisins ; le plus proche à moins de 5 pixels gagne
+    auto meilleur = [](const QVector<int> &miens, const QVector<int> &leurs, int *ecart, int *trait) {
+        int mieux = 6;
+        for (int m : miens)
+            for (int l : leurs)
+                if (qAbs(l - m) < mieux) { mieux = qAbs(l - m); *ecart = l - m; *trait = l; }
+        return mieux < 6;
+    };
+    QVector<int> xs, ys;
+    for (const QRect &v : voisins) {
+        xs << v.left() << v.left() + v.width() << v.left() + v.width() / 2;
+        ys << v.top() << v.top() + v.height() << v.top() + v.height() / 2;
+    }
+    int ex = 0, tx = 0, ey = 0, ty = 0;
+    bool bx, by;
+    if (libre_taille) {   // agrandir : le bord qu'on tire
+        bx = (libre_taille & 1) && meilleur({brut.left() + brut.width()}, xs, &ex, &tx);
+        by = (libre_taille & 2) && meilleur({brut.top() + brut.height()}, ys, &ey, &ty);
+        if (bx) r.setWidth(qMax(8, brut.width() + ex));
+        if (by) r.setHeight(qMax(8, brut.height() + ey));
+    } else {
+        bx = meilleur({brut.left(), brut.left() + brut.width(), brut.left() + brut.width() / 2}, xs, &ex, &tx);
+        by = meilleur({brut.top(), brut.top() + brut.height(), brut.top() + brut.height() / 2}, ys, &ey, &ty);
+        if (bx) r.moveLeft(qMax(0, brut.left() + ex));
+        if (by) r.moveTop(qMax(0, brut.top() + ey));
+    }
+    auto trait = [&](QFrame *&f, bool montre, QRect g) {
+        if (f && f->parentWidget() != sur) { delete f; f = nullptr; }
+        if (!montre) { if (f) f->hide(); return; }
+        if (!f) {
+            f = new QFrame(sur);
+            f->setAttribute(Qt::WA_TransparentForMouseEvents);
+            f->setStyleSheet("background: " + Theme::courant().hex("accent") + ";");
+        }
+        f->setGeometry(g);
+        f->show();
+        f->raise();
+    };
+    trait(guide_v, bx, QRect(tx, 0, 1, sur->height()));
+    trait(guide_h, by, QRect(0, ty, sur->width(), 1));
+    return bx || by;
+}
 
 QWidget *OngletEcrans::poignee_visible() const { return poignee && !poignee->isHidden() ? poignee : nullptr; }
 
@@ -586,6 +636,21 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             if (libre_taille) r.setSize(QSize((libre_taille & 1) ? qMax(8, cale(r.width() + d.x())) : r.width(),
                                               (libre_taille & 2) ? qMax(8, cale(r.height() + d.y())) : r.height()));
             else r.moveTopLeft(QPoint(cale(r.x() + d.x()), cale(r.y() + d.y())));
+            {   // les guides : un bord ou un centre près de celui d'un voisin s'y colle, plus fort que la grille (§ 5 octies)
+                QRect brut = libre_depart;
+                if (libre_taille) brut.setSize(QSize(brut.width() + ((libre_taille & 1) ? d.x() : 0), brut.height() + ((libre_taille & 2) ? d.y() : 0)));
+                else brut.translate(d);
+                QVector<QRect> voisins;
+                QWidget *sur = libre_decrit ? vue.vue : w->parentWidget();
+                for (int q = 0; q < vue.controles.size(); q++) {
+                    QWidget *x = vue.controles[q];
+                    if (!x || q == libre_k || x == w || x->isAncestorOf(w) || w->isAncestorOf(x) || x->objectName() == "toile") continue;
+                    if (libre_decrit) voisins << QRect(x->mapTo(vue.vue, QPoint(0, 0)), x->size());
+                    else if (x->parentWidget() == sur) voisins << x->geometry();
+                }
+                if (!pixel) aligner(r, brut, voisins, sur);
+                else aligner(r, QRect(-9999, -9999, 1, 1), {}, sur);   // Alt : ni grille ni guides ; les traits s'effacent
+            }
             if (libre_decrit) {   // le fantôme, la grille sur tout l'aperçu
                 if (!fantome) {
                     fantome = new QFrame(vue.vue);
@@ -620,6 +685,8 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             const int k = libre_k;
             libre_k = -1;
             if (grille) grille->hide();
+            if (guide_v) guide_v->hide();
+            if (guide_h) guide_h->hide();
             if (fantome) { fantome->hide(); fantome->deleteLater(); fantome = nullptr; }
             if (!libre_bouge) return true;
             if (libre_decrit) { liberer(k, libre_fin); return true; }

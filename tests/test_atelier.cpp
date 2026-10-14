@@ -2060,6 +2060,57 @@ int main(int argc, char **argv) {
         }
         VERIFIER(OngletEcrans::aimanter(3) == 0 && OngletEcrans::aimanter(4) == 8 && OngletEcrans::aimanter(-5) == 0);
     }
+    {   // les guides : glissé près du bord gauche d'un voisin (20, hors de la grille de 8), le texte s'y colle, trait montré ;
+        // avec Alt, ni guide ni grille
+        QTemporaryDir dossier;
+        QFile f(dossier.filePath("p.grym"));
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write("L'écran d'accueil montre :\n    en position libre :\n        un bouton « A », à 20 de la gauche et 20 du haut,\n"
+                "        le texte « bien plus long que le bouton », à 200 de la gauche et 120 du haut.\n"
+                "Quand on clique sur « A » dans l'écran d'accueil :\n    Fermer l'écran.\n");
+        f.close();
+        OngletEcrans o;
+        o.resize(900, 600);
+        o.show();
+        QString resultat = "pas de geste";
+        Geste g;
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        auto glisser = [&](int k, QPoint de, Qt::KeyboardModifiers m, bool lacher, bool *guide) {
+            QWidget *w = o.controle(k);
+            if (!w) return;
+            const QPoint depart = w->mapToGlobal(QPoint(w->width() / 2, w->height() / 2));
+            const QPointF local = w->mapFromGlobal(depart);
+            QMouseEvent appui(QEvent::MouseButtonPress, local, QPointF(depart), Qt::LeftButton, Qt::LeftButton, m);
+            QApplication::sendEvent(w, &appui);
+            QMouseEvent loin(QEvent::MouseMove, local, QPointF(depart + QPoint(0, 60)), Qt::NoButton, Qt::LeftButton, m);
+            QApplication::sendEvent(w, &loin);   // au-delà du seuil d'un glisser, puis là où l'on veut
+            QMouseEvent bouge(QEvent::MouseMove, local, QPointF(depart + de), Qt::NoButton, Qt::LeftButton, m);
+            QApplication::sendEvent(w, &bouge);
+            if (guide) *guide = o.guide_visible() != nullptr;
+            if (!lacher) return;
+            QMouseEvent lache(QEvent::MouseButtonRelease, local, QPointF(depart + de), Qt::LeftButton, Qt::NoButton, m);
+            QApplication::sendEvent(w, &lache);
+        };
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        bool guide = false;
+        glisser(2, QPoint(23 - 200, 80), Qt::NoModifier, true, &guide);   // gauche 23 (grille : 24), haut 200
+        VERIFIER(guide);
+        VERIFIER(o.guide_visible() == nullptr);   // effacés au lâcher
+        QFile r(dossier.filePath("p.grym"));
+        VERIFIER(r.open(QIODevice::ReadOnly));
+        const QString t = QString::fromUtf8(r.readAll());
+        VERIFIER(t.contains("le texte « bien plus long que le bouton », à 20 de la gauche et 200 du haut."));
+        if (!t.contains("à 20 de la gauche et 200")) std::printf("%s\n", qPrintable(t));
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        guide = true;
+        glisser(2, QPoint(3, 0), Qt::AltModifier, true, &guide);   // Alt : 23 au pixel, pas de guide
+        VERIFIER(!guide);
+        QFile r2(dossier.filePath("p.grym"));
+        VERIFIER(r2.open(QIODevice::ReadOnly));
+        VERIFIER(QString::fromUtf8(r2.readAll()).contains("à 23 de la gauche et 200 du haut."));
+    }
     {   // agrandir à la souris par le coin, l'événement livré au widget réellement sous la souris (un bouton, une zone)
         QTemporaryDir dossier;
         QFile f(dossier.filePath("p.grym"));
