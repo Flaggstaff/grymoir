@@ -18,6 +18,8 @@
 #include <QInputMethodEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QTabBar>
+#include <QTabWidget>
 #include <QRegularExpression>
 #include <QMimeData>
 #include <QDropEvent>
@@ -1841,6 +1843,59 @@ int main(int argc, char **argv) {
         l = qobject_cast<QLabel *>(v.controles[0]);
         VERIFIER(l && l->text() == "plan.png");
         delete v.vue;
+    }
+
+    // Onglets (grammaire, § 22.10 ; docs/atelier.md, § 5 decies) : ajoutés, dessinés, renommés, placés, cliquables
+    {
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        auto ecrire = [&](const char *t) {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            f.write(t);
+        };
+        auto lire = [&]() {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly));
+            return QString::fromUtf8(f.readAll());
+        };
+        ecrire("L'écran x montre :\n    le texte « t ».\n");
+        Geste g;
+        QString r = ecran_ajouter_onglets(dossier.path(), "x", &g);
+        if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        VERIFIER(lire().contains("    les onglets :\n        l'onglet « Premier » :\n            le texte « Premier onglet »,\n"
+                                 "        l'onglet « Second » :\n            le texte « Second onglet »."));
+        ElementNouveau n;
+        n.sorte = ELEMENT_ONGLET;
+        n.texte = "Identité";
+        VERIFIER(ecran_modifier(dossier.path(), "x", 2, n, &g).isEmpty() && lire().contains("l'onglet « Identité » :"));
+        OngletEcrans o;
+        o.resize(900, 600);
+        o.show();
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        auto *tw = qobject_cast<QTabWidget *>(o.controle(1));
+        VERIFIER(tw && tw->count() == 2 && tw->tabText(0) == "Identité" && tw->currentIndex() == 0);
+        if (tw) {   // un clic sur le second onglet de l'aperçu le montre
+            QTabBar *barre = tw->tabBar();
+            const QPoint p = barre->tabRect(1).center();
+            QMouseEvent appui(QEvent::MouseButtonPress, QPointF(p), QPointF(barre->mapToGlobal(p)), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(barre, &appui);
+            QMouseEvent lache(QEvent::MouseButtonRelease, QPointF(p), QPointF(barre->mapToGlobal(p)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(barre, &lache);
+            VERIFIER(tw->currentIndex() == 1);
+        }
+        // dans un écran libre : les onglets se placent, sous ce qui y est
+        ecrire("L'écran x montre :\n    en position libre :\n        le texte « t », à 16 de la gauche et 16 du haut.\n");
+        VERIFIER(ecran_ajouter_onglets(dossier.path(), "x", &g).isEmpty());
+        VERIFIER(lire().contains("        les onglets, à 16 de la gauche et 64 du haut :\n            l'onglet « Premier » :\n"));
+        VERIFIER(ecran_placer(dossier.path(), "x", 2, 200, 16, 320, 160, &g).isEmpty());
+        VERIFIER(lire().contains("        les onglets, à 200 de la gauche et 16 du haut, large de 320, haut de 160 :\n"));
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        QWidget *pl = nullptr;
+        for (int k = 0; k < 12; k++) if (qobject_cast<QTabWidget *>(o.controle(k))) pl = o.controle(k);
+        VERIFIER(pl && pl->geometry() == QRect(200, 16, 320, 160));
     }
 
     // Image calculée (grammaire, § 22.8 ; docs/atelier.md, § 5 nonies) : ajoutée, contractée, modifiée, montrée par sa source

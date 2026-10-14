@@ -8,6 +8,7 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QGroupBox>
+#include <QTabWidget>
 #include <QLineEdit>
 #include <QRadioButton>
 #include <QButtonGroup>
@@ -98,7 +99,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     QHBoxLayout *rangee = nullptr;   // des boutons qui se suivent : une ligne, en bas à droite (§ 3.3)
     // Les conteneurs ouverts : une boîte (« côte à côte », « l'un sous l'autre », un groupe, l'écran) ou une toile
     // (« en position libre : »). Un bloc posé sur une toile y est un widget placé, que sa fin remet à sa taille (§ 22.9).
-    struct Niveau { QBoxLayout *boite; QWidget *toile; QWidget *place; int largeur, hauteur; };
+    struct Niveau { QBoxLayout *boite; QWidget *toile; QWidget *place; int largeur, hauteur; QTabWidget *onglets = nullptr; };
     QVector<Niveau> niveaux = {{pile, nullptr, nullptr, 0, 0}};
     // Pose w dans le conteneur ouvert : sur une toile, à la place de e ; dans une boîte, à la suite.
     auto poser = [&](QWidget *w, const ElementVue &e, int etirement = 0) {
@@ -142,6 +143,25 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             ouvrir(w, b, nullptr, e);
             continue;
         }
+        if (e.sorte == ELEMENT_ONGLETS) {   // « les onglets : » : un widget d'onglets, placé comme un bloc (§ 22.10)
+            auto *tw = new QTabWidget;
+            tw->setDocumentMode(true);
+            r.controles[k] = tw;
+            const bool sur_toile = niveaux.last().toile != nullptr;
+            poser(tw, e, 1);
+            niveaux.push_back({nullptr, nullptr, sur_toile ? tw : nullptr, e.largeur, e.hauteur, tw});
+            continue;
+        }
+        if (e.sorte == ELEMENT_ONGLET) {   // « l'onglet « Identité » : » : une page, ses éléments l'un sous l'autre
+            auto *page = new QWidget;
+            auto *b = new QVBoxLayout(page);
+            b->setSpacing(t.mesure("l-un-sous-l-autre"));
+            b->setAlignment(Qt::AlignTop);
+            if (QTabWidget *tw = niveaux.last().onglets) tw->addTab(page, e.texte);
+            r.controles[k] = page;
+            niveaux.push_back({b, nullptr, nullptr, 0, 0});
+            continue;
+        }
         if (e.sorte == ELEMENT_GROUPE) {   // « le groupe « Adresse » : » : un cadre titré, ses éléments l'un sous l'autre (§ 22.7)
             auto *cadre = new QGroupBox(e.texte);
             auto *b = new QVBoxLayout(cadre);
@@ -157,6 +177,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             if (fin.toile) fin.toile->updateGeometry();
             if (fin.place) {   // rempli : sa taille naturelle est connue maintenant
                 if (fin.boite) fin.boite->activate();
+                if (fin.onglets) fin.onglets->adjustSize();
                 fin.place->resize(taille_placee(fin.place, fin.largeur, fin.hauteur));
             }
             if (niveaux.last().toile) niveaux.last().toile->updateGeometry();

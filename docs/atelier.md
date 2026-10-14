@@ -264,6 +264,10 @@ Le langage place au pixel dans un bloc `en position libre :` (grammaire, § 22.9
 
 Avec B2 ter (grammaire, § 22.8) : « Image » dans la palette demande ce que l'image montre, un fichier du projet ou une image calculée ; pour la seconde, on écrit la valeur sans « de » (`le portrait du compositeur choisi de l'écran`), et l'atelier contracte (`l'image du portrait …`, `de la photo …`, `d'une …`). Le panneau d'une image calculée donne « Image de » et « Visible si » ; la réanalyse du projet vérifie la valeur, comme une condition. L'aperçu ne connaît pas les données : il montre la source (« Image : le portrait du compositeur choisi de l'écran ») à la place de l'image. À l'exécution, l'image change à chaque tour de l'écran ; absente, la place reste vide.
 
+## 5 decies. Les onglets dans l'éditeur d'écrans *(fait le 14 octobre 2026)*
+
+« Onglets » dans la palette ajoute `les onglets :` avec deux onglets, « Premier » et « Second », un texte dans chacun ; dans un écran libre, ils se placent sous ce qui y est, comme tout ajout. L'aperçu les dessine en vrais onglets : un clic sur un onglet le montre (c'est le seul clic que l'aperçu laisse passer) ; un clic dans sa page choisit l'élément. Le panneau d'un onglet donne son titre. Les onglets se placent, s'agrandissent et se déplacent comme tout bloc (§ 5 octies).
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -362,3 +366,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.41 | 2026-10-14 | § 5 octies : prise de 12 pixels, bord droit (largeur), bord bas (hauteur), coin (les deux) ; curseur au survol ; message sur le coin d'un élément décrit |
 | 0.42 | 2026-10-14 | § 5 octies : plus de mode ; glisser, agrandir ou flécher un élément d'un écran décrit le passe en position libre en gardant ce qu'on voit ; la conversion garde les blocs ; Cmd pour remettre dans l'ordre ; « Libre » proposé d'abord |
 | 0.43 | 2026-10-14 | § 5 octies : guides d'alignement sur les bords et centres des voisins, plus forts que la grille ; Alt les coupe |
+| 0.44 | 2026-10-14 | § 5 decies : les onglets dans la palette, l'aperçu (cliquables), le panneau (titre), placés comme un bloc |

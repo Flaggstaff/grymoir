@@ -23,6 +23,7 @@
 #include <QFrame>
 #include <QMimeData>
 #include <QMouseEvent>
+#include <QTabBar>
 #include <QKeyEvent>
 #include <climits>
 #include <QSpinBox>
@@ -155,8 +156,9 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                     x.hauteur = (el->place_dite & 4) ? el->place[3] : 0;
                     if (el->type == N_DISPOSITION) {
                         x.sorte = el->forme == 1 ? ELEMENT_COTE_A_COTE : el->forme == 2 ? ELEMENT_L_UN_SOUS_L_AUTRE
-                                : el->forme == 3 ? ELEMENT_GROUPE : el->forme == 4 ? ELEMENT_LIBRE : ELEMENT_FIN_DE_BLOC;
-                        if (el->forme == 3) x.texte = QString::fromUtf8(el->texte);   // le titre du groupe (§ 22.7)
+                                : el->forme == 3 ? ELEMENT_GROUPE : el->forme == 4 ? ELEMENT_LIBRE : el->forme == 5 ? ELEMENT_ONGLETS
+                                : el->forme == 6 ? ELEMENT_ONGLET : ELEMENT_FIN_DE_BLOC;
+                        if (el->forme == 3 || el->forme == 6) x.texte = QString::fromUtf8(el->texte);   // le titre (§ 22.7, § 22.10)
                         x.ecrit.clear();
                     } else if (el->type == N_BOUTON) {
                         x.sorte = ELEMENT_BOUTON;
@@ -273,10 +275,18 @@ OngletEcrans::OngletEcrans(QWidget *parent) : QWidget(parent) {
     auto *pp = new QHBoxLayout(palette);
     pp->setContentsMargins(0, 0, 0, 0);
     pp->addWidget(new QLabel("Ajouter :"));
-    for (int sorte : {ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, ELEMENT_LISTE, ELEMENT_IMAGE}) {
+    for (int sorte : {ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, ELEMENT_LISTE, ELEMENT_IMAGE, ELEMENT_ONGLETS}) {
         auto *b = new QPushButton(sorte == ELEMENT_BOUTON ? "Bouton" : sorte == ELEMENT_TEXTE ? "Texte"
-                                  : sorte == ELEMENT_ZONE ? "Zone" : sorte == ELEMENT_LISTE ? "Liste" : "Image");
-        connect(b, &QPushButton::clicked, this, [this, sorte] { ajouter(sorte); });
+                                  : sorte == ELEMENT_ZONE ? "Zone" : sorte == ELEMENT_LISTE ? "Liste" : sorte == ELEMENT_IMAGE ? "Image"
+                                  : "Onglets");
+        if (sorte == ELEMENT_ONGLETS)   // deux onglets à renommer, un texte dans chacun (§ 22.10)
+            connect(b, &QPushButton::clicked, this, [this] {
+                if (courant < 0 || courant >= lus.size()) return;
+                const QString ecran = lus[courant].nom;
+                emit geste([=](Geste *g) { return ecran_ajouter_onglets(dossier, ecran, g); });
+            });
+        else
+            connect(b, &QPushButton::clicked, this, [this, sorte] { ajouter(sorte); });
         pp->addWidget(b);
     }
     pp->addStretch(1);
@@ -580,7 +590,8 @@ QRect OngletEcrans::rect_vu(int k) const {
     int prof = 0;
     for (int q = k; q < els.size(); q++) {
         const int s = els[q].sorte;
-        if (s == ELEMENT_COTE_A_COTE || s == ELEMENT_L_UN_SOUS_L_AUTRE || s == ELEMENT_GROUPE || s == ELEMENT_LIBRE) prof++;
+        if (s == ELEMENT_COTE_A_COTE || s == ELEMENT_L_UN_SOUS_L_AUTRE || s == ELEMENT_GROUPE || s == ELEMENT_LIBRE
+            || s == ELEMENT_ONGLETS || s == ELEMENT_ONGLET) prof++;
         else if (s == ELEMENT_FIN_DE_BLOC) { if (--prof == 0) break; }
         else if (QWidget *w = vue.controles.value(q)) r |= QRect(w->mapTo(vue.vue, QPoint(0, 0)), w->size());
     }
@@ -749,6 +760,7 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
     if (ev->type() != QEvent::MouseButtonPress && ev->type() != QEvent::MouseButtonDblClick
         && ev->type() != QEvent::MouseButtonRelease && ev->type() != QEvent::KeyPress)
         return QWidget::eventFilter(o, ev);
+    if (ev->type() == QEvent::MouseButtonPress && qobject_cast<QTabBar *>(o)) return false;   // changer d'onglet dans l'aperçu
     if (ev->type() == QEvent::MouseButtonPress) {
         const int trouve = element_sous(o);
         glisse = trouve;   // peut-être le début d'un glisser
@@ -821,8 +833,8 @@ void OngletEcrans::choisir_element(int k) {
         poignee->raise();
     }
     static const char *const noms[] = {"Liste", "Bouton", "Texte", "Zone de saisie", "Côte à côte", "L'un sous l'autre",
-                                       "Fin de bloc", "Groupe", "Image", "En position libre"};
-    h = QString("<p><b>%1</b></p><table>").arg(noms[qBound(0, x.sorte, 9)]);
+                                       "Fin de bloc", "Groupe", "Image", "En position libre", "Onglets", "Onglet"};
+    h = QString("<p><b>%1</b></p><table>").arg(noms[qBound(0, x.sorte, 11)]);
     if (x.place) h += ligne("Place", QString("%1 de la gauche, %2 du haut").arg(x.gauche).arg(x.haut))
                     + ligne("Taille", QString("%1 × %2").arg(x.largeur ? QString::number(x.largeur) : QString("naturelle"),
                                                              x.hauteur ? QString::number(x.hauteur) : QString("naturelle")));
@@ -881,12 +893,13 @@ void OngletEcrans::editer() {
     } else {
         const ElementLu &x = e.elements[element];
         const int k = element;
-        if (x.sorte == ELEMENT_GROUPE) {   // « le groupe « Adresse » : » : son titre (§ 22.7)
+        if (x.sorte == ELEMENT_GROUPE || x.sorte == ELEMENT_ONGLET) {   // un groupe, un onglet : son titre (§ 22.7, § 22.10)
             auto *titre = new QLineEdit(x.texte);
-            f->addRow("Titre du groupe", titre);
-            connect(appliquer, &QPushButton::clicked, this, [this, ecran, k, titre] {
+            f->addRow(x.sorte == ELEMENT_GROUPE ? "Titre du groupe" : "Titre de l'onglet", titre);
+            const int sorte = x.sorte;
+            connect(appliquer, &QPushButton::clicked, this, [this, ecran, k, titre, sorte] {
                 ElementNouveau n;
-                n.sorte = ELEMENT_GROUPE;
+                n.sorte = sorte;
                 n.texte = titre->text();
                 emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });

@@ -897,7 +897,8 @@ QString ecran_modifier(const QString &dossier, const QString &ecran, int index, 
     if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
     Noeud *n = t.phrase;
     if (index >= 0 && (size_t)index < n->nb_enfants && n->enfants[index]->type == N_DISPOSITION
-        && n->enfants[index]->forme == 3 && e.sorte == ELEMENT_GROUPE) {   // le titre d'un groupe (§ 22.7)
+        && ((n->enfants[index]->forme == 3 && e.sorte == ELEMENT_GROUPE)
+            || (n->enfants[index]->forme == 6 && e.sorte == ELEMENT_ONGLET))) {   // le titre d'un groupe, d'un onglet (§ 22.7, § 22.10)
         const QString titre = e.texte.trimmed();
         if (titre.isEmpty()) return "Un groupe porte un titre.";
         if (titre.contains(QChar(0x00BB)) || titre.contains(QChar(0x00AB))) return "Pas de guillemets « » dans un titre.";
@@ -967,7 +968,7 @@ Noeud *retirer_enfant(Noeud *n, size_t i) {
 Noeud *marque(int forme, const QString &titre = QString()) {
     Noeud *m = noeud_creer(N_DISPOSITION, 0, 0, 0);
     m->forme = forme;
-    if (forme == 3) m->texte = grym_dupliquer(titre.toUtf8().constData());
+    if (forme == 3 || forme == 6) m->texte = grym_dupliquer(titre.toUtf8().constData());
     return m;
 }
 
@@ -1165,6 +1166,35 @@ QString ecran_liberer(const QString &dossier, const QString &ecran, const QVecto
     if (n->nb_enfants > 2) trier_bloc_libre(n, 1);
     reimprimer(ch, t);
     geste->description = QString("Mettre l'écran %1 en position libre").arg(ecran);
+    return ch.conclure(geste);
+}
+
+QString ecran_ajouter_onglets(const QString &dossier, const QString &ecran, Geste *geste) {
+    Chantier ch(dossier);
+    Trouve t = trouver_ecran(ch, ecran);
+    if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
+    Noeud *p = t.phrase;
+    auto texte = [](const char *x) {
+        Noeud *n = noeud_creer(N_TEXTE_ECRAN, 0, 0, 0);
+        n->texte = grym_dupliquer(x);
+        return n;
+    };
+    QVector<Noeud *> bloc = {marque(5), marque(6, "Premier"), texte("Premier onglet"), marque(0),
+                             marque(6, "Second"), texte("Second onglet"), marque(0), marque(0)};
+    size_t ou = p->nb_enfants;   // à la fin, ou dans le dernier bloc libre, sous ce qui y est (§ 22.9)
+    for (size_t q = 0; q < p->nb_enfants; q++)
+        if (p->enfants[q]->type == N_DISPOSITION && p->enfants[q]->forme == 0 && bloc_de(p, q) == 4) ou = q;
+    if (ou < p->nb_enfants) {
+        int bas = 0;
+        for (size_t q = 0; q < ou; q++)
+            if (bloc_de(p, q) == 4 && (p->enfants[q]->place_dite & 1)) bas = qMax(bas, p->enfants[q]->place[1]);
+        bloc[0]->place[0] = 16;
+        bloc[0]->place[1] = qMin(4000, bas + 48);
+        bloc[0]->place_dite = 1;
+    }
+    for (int q = 0; q < bloc.size(); q++) inserer(p, ou + (size_t)q, bloc[q]);
+    reimprimer(ch, t);
+    geste->description = QString("Ajouter des onglets à l'écran %1").arg(ecran);
     return ch.conclure(geste);
 }
 

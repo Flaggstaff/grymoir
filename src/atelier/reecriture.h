@@ -92,6 +92,9 @@ QString ecran_placer(const QString &dossier, const QString &ecran, int index, in
 // rectangle par élément, ignoré pour un bloc) ; les blocs disparaissent. Largeur écrite pour chaque élément, hauteur
 // pour une liste : ce que l'on voit reste ce que l'on a.
 QString ecran_liberer(const QString &dossier, const QString &ecran, const QVector<QRect> &places, Geste *geste);
+// Ajoute « les onglets : » à la fin de l'écran (dans son dernier bloc libre s'il en a un, sous ce qui y est), avec deux
+// onglets, « Premier » et « Second », un texte dans chacun (grammaire, § 22.10).
+QString ecran_ajouter_onglets(const QString &dossier, const QString &ecran, Geste *geste);
 
 // Remet chaque fichier touché dans son état d'avant ; message d'erreur, vide si tout est revenu.
 // Un fichier renommé reprend d'abord son ancien nom.
