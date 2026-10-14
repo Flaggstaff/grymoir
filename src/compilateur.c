@@ -1138,6 +1138,15 @@ static void phrase(Compilation *c, const Noeud *ph) {
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
             if (el->type == N_DISPOSITION) {   /* « côte à côte » : H, « l'un sous l'autre » : V, fin du bloc : F */
+                if (el->place_dite) {   /* un bloc placé dans un bloc libre : sa place devant sa lettre (§ 22.9) */
+                    char *pl = grym_formater("\x1f\x1d%d,%d,%d,%d\x1d", el->place[0], el->place[1],
+                                             (el->place_dite & 2) ? el->place[2] : 0, (el->place_dite & 4) ? el->place[3] : 0);
+                    chaine_ajouter(&d, pl);
+                    free(pl);
+                    chaine_ajouter(&d, el->forme == 1 ? "H" : el->forme == 2 ? "V" : el->forme == 3 ? "G" : "P");
+                    if (el->forme == 3) chaine_ajouter(&d, el->texte);
+                    continue;
+                }
                 chaine_ajouter(&d, el->forme == 1 ? "\x1f" "H" : el->forme == 2 ? "\x1f" "V" : el->forme == 3 ? "\x1f" "G"
                                    : el->forme == 4 ? "\x1f" "P" : "\x1f" "F");   /* P : en position libre (§ 22.9) */
                 if (el->forme == 3) chaine_ajouter(&d, el->texte);   /* « Gadresse » : le titre du groupe (§ 22.7) */

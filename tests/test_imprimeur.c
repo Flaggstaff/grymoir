@@ -317,6 +317,12 @@ int main(void) {
     FIXE("L'écran x montre :\n    en position libre :\n        l'image « exemples/pixel.png », à 0 de la gauche et 0 du haut, haute de 80,\n"
          "        un bouton « B », à 0 de la gauche et 90 du haut, haut de 30,\n    le texte « t ».\n"
          "Quand on clique sur « B » dans l'écran x :\n    Fermer l'écran.");
+    COMP("L'écran x montre :\n    en position libre :\n        le groupe « G », à 8 de la gauche et 0 du haut, large de 200 :\n"
+         "            le texte « a »,\n    le texte « t ».",
+         "_écran x\n    _position_libre\n        _groupe « G » _place 8 0 _largeur 200\n            _texte « a »\n        _fin\n"
+         "    _fin\n    _texte « t »\n_fin\n");
+    FIXE("L'écran x montre :\n    en position libre :\n        côte à côte, à 0 de la gauche et 90 du haut, haut de 40 :\n"
+         "            le texte « c »,\n            le texte « d »,\n    le texte « t ».");
     COMP("L'écran x montre :\n    l'image « exemples/pixel.png », visible si vrai,\n    le texte « t ».",
          "_écran x\n    _image « exemples/pixel.png » _visible_si _vrai\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    l'image « exemples/pixel.png », visible si vrai,\n    le texte « t ».");

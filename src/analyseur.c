@@ -5928,27 +5928,47 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         }
         a->libre = nb_blocs && libres[nb_blocs - 1];
         Noeud *el = NULL;
-        const int cote = est_mot(u, "côte") && est_mot(voir(a, 1), "à") && est_mot(voir(a, 2), "côte")
-                         && voir(a, 3)->type == J_DEUX_POINTS;
+        /* les blocs (§ 22.1, § 22.7, § 22.9) ; dans un bloc libre, une place avant les deux-points (§ 22.9) */
+#define FIN_D_EN_TETE(x) ((x)->type == J_DEUX_POINTS || (x)->type == J_VIRGULE)
+        const int cote = est_mot(u, "côte") && est_mot(voir(a, 1), "à") && est_mot(voir(a, 2), "côte") && FIN_D_EN_TETE(voir(a, 3));
         const int sous = u->type == J_ELISION && est_mot(voir(a, 1), "un") && est_mot(voir(a, 2), "sous")
-                         && voir(a, 3)->type == J_ELISION && est_mot(voir(a, 4), "autre") && voir(a, 5)->type == J_DEUX_POINTS;
+                         && voir(a, 3)->type == J_ELISION && est_mot(voir(a, 4), "autre") && FIN_D_EN_TETE(voir(a, 5));
         /* « le groupe « Adresse » : » : un bloc l'un sous l'autre, encadré et titré (§ 22.7) */
         const int groupe = est_mot(u, "le") && est_mot(voir(a, 1), "groupe") && voir(a, 2)->type == J_TEXTE
-                           && voir(a, 3)->type == J_DEUX_POINTS;
+                           && FIN_D_EN_TETE(voir(a, 3));
         if (groupe && !*voir(a, 2)->valeur) { erreur(a, voir(a, 2), grym_dupliquer("Un groupe porte un titre : « le groupe « Adresse » : ».")); break; }
         /* « en position libre : » : chaque élément y dit sa place au pixel (§ 22.9) */
         const int libre = est_mot(u, "en") && est_mot(voir(a, 1), "position") && est_mot(voir(a, 2), "libre")
-                          && voir(a, 3)->type == J_DEUX_POINTS;
+                          && FIN_D_EN_TETE(voir(a, 3));
+#undef FIN_D_EN_TETE
         if (cote || sous || groupe || libre) {
             if (nb_blocs == 16) { erreur(a, u, grym_dupliquer("Trop de blocs emboîtés : 16 au plus.")); break; }
-            if (a->libre) { erreur(a, u, grym_dupliquer("Un bloc en position libre ne contient que des éléments placés, pas de bloc.")); break; }
             Noeud *b = noeud_creer(N_DISPOSITION, u->ligne, u->colonne, u->debut);
             b->forme = cote ? 1 : sous ? 2 : groupe ? 3 : 4;
             if (groupe) b->texte = grym_dupliquer(voir(a, 2)->valeur);
+            a->i += sous ? 5 : 3;
+            {   /* sa place dans le bloc libre qui le contient : « , à 16 de la gauche et 8 du haut, large de 320 » */
+                int vus = 0, lu;
+                while ((lu = place_element(a, b, GENRE_MASCULIN, &vus)) > 0) {}
+                if (lu < 0) { noeud_liberer(b); break; }
+            }
+            if (cour(a)->type != J_DEUX_POINTS) {
+                erreur(a, cour(a), grym_dupliquer(cour(a)->type == J_VIRGULE ? "Dans un bloc, seule la place s'écrit avant « : » : "
+                                                  "« le groupe « Adresse », à 16 de la gauche et 8 du haut : »."
+                                                  : "« : » attendu après le nom du bloc."));
+                noeud_liberer(b);
+                break;
+            }
+            if (a->libre && !(b->place_dite & 1)) {
+                erreur(a, u, grym_dupliquer("Un bloc en position libre dit sa place : « le groupe « Adresse », à 16 de la gauche "
+                                            "et 8 du haut : »."));
+                noeud_liberer(b);
+                break;
+            }
+            avancer(a);
             noeud_ajouter(n, b);
             libres[nb_blocs] = libre;
             blocs[nb_blocs++] = u->retrait;
-            a->i += cote || groupe || libre ? 4 : 6;
             if (cour(a)->retrait <= u->retrait || cour(a)->type == J_FIN) {
                 erreur(a, cour(a), grym_formater("Un bloc « %s : » contient des éléments, plus indentés.",
                                                  cote ? "côte à côte" : sous ? "l'un sous l'autre" : groupe ? "le groupe « … »"

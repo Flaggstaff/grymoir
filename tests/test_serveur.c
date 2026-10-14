@@ -800,6 +800,22 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Un bloc placé dans un bloc libre (1.81) : sa boîte l'entoure et se ferme avec lui ; il remplit sa taille */
+        const char *src = "L'écran x montre :\n    en position libre :\n"
+                          "        le groupe « G », à 8 de la gauche et 0 du haut, large de 300 :\n            le texte « a »,\n"
+                          "        un bouton « Fermer », à 8 de la gauche et 120 du haut.\n"
+                          "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), get("/ecran-style/1"), evenement("q=1&clic=4"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<div class=\"place\" id=\"p1\"><fieldset class=\"groupe\"><legend>G</legend>\n"
+                                 "<p class=\"texte\">a</p>\n</fieldset>\n</div>\n<div class=\"place\" id=\"p4\">");
+        CONTIENT(sc.reponses[1], "#p1{margin:0px 0 0 8px;width:300px}");
+        CONTIENT(sc.reponses[1], "#p1>fieldset{box-sizing:border-box;width:100%;height:100%}");
+        CONTIENT(sc.reponses[3], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* Le thème : la couleur choisie dans la feuille, clair et sombre ; le logo servi à /logo */
         const char *src = "Les écrans ont la couleur verte et le logo « exemples/pixel.png ».\n"
                           "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.80 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.81 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1814,15 +1814,17 @@ L'écran de saisie montre :
     un bouton « Fermer ».
 ```
 
-- `en position libre :` ouvre un bloc, comme `côte à côte :` (§ 22.1), dans lequel chaque élément se place au pixel. Il se met où se met un bloc, et s'emboîte dans les autres ; il contient au moins un élément, et aucun bloc : « Un bloc en position libre ne contient que des éléments placés, pas de bloc. ».
+- `en position libre :` ouvre un bloc, comme `côte à côte :` (§ 22.1), dans lequel chaque élément se place au pixel. Il se met où se met un bloc, et s'emboîte dans les autres ; il contient au moins un élément.
+- Un bloc s'y place comme un élément *(1.81)* : sa place et sa taille s'écrivent entre son nom et ses deux-points, `le groupe « Adresse », à 16 de la gauche et 8 du haut, large de 320 :`, `côte à côte, à 0 de la gauche et 200 du haut :`, `en position libre, à 360 de la gauche et 0 du haut :`. À l'intérieur, le bloc garde sa règle : un groupe ou `l'un sous l'autre` empile ses éléments, `côte à côte` les range en ligne, un bloc libre les place au pixel, relativement à lui. Un groupe qui contient `en position libre :` place donc ses zones au pixel dans son cadre.
 - Chaque élément du bloc dit sa place : `, à 96 de la gauche et 16 du haut`, en pixels depuis le coin en haut à gauche du bloc. Obligatoire dans le bloc (« Un élément en position libre dit sa place : « , à 16 de la gauche et 8 du haut ». »), refusée ailleurs (« « à … de la gauche » ne vaut que dans un bloc « en position libre : ». »).
 - La taille est facultative : `, large de 240`, `, haut de 80`. L'adjectif s'accorde avec l'élément : `haute` pour une image, une liste ou une zone féminine (« Accord : « haute de ». »). Sans taille, l'élément a sa taille naturelle, celle qu'il aurait hors du bloc. Refusée hors d'un bloc en position libre.
 - Des nombres entiers : de 0 à 4000 pour la place, de 8 à 4000 pour la taille (« La place va de 0 à 4000 pixels. », « La taille va de 8 à 4000 pixels. »). Le pixel est celui des interfaces, le même sur un écran ordinaire et sur un écran à haute densité.
 - Le bloc mesure ce que ses éléments occupent ; les éléments peuvent se chevaucher, et le dernier écrit passe dessus. Des boutons qui se suivent ne se rangent plus en ligne : chacun est à sa place.
 - L'ordre écrit reste l'ordre de lecture : celui de la touche Tab et des lecteurs d'écran. L'atelier écrit les éléments du bloc de haut en bas, puis de gauche à droite.
 - Dans le navigateur, une fenêtre plus étroite que le bloc empile ses éléments dans l'ordre écrit : c'est le seul écart avec les places écrites, pour qu'un téléphone reste utilisable (`docs/web.md`).
-- Ordre canonique (l'imprimeur le rétablit) : valeur de départ, `facultatif`, `sur plusieurs lignes`, `en lecture seule`, la place, `large de`, `haut de`, `actif si`, `visible si`. Une liste met sa place après `, par …` et `, avec …`.
-- Forme compacte : `_position_libre` … `_fin` ; `_place 96 16`, `_largeur 240`, `_hauteur 80` (l'accord se fait en forme littéraire).
+- Ordre canonique (l'imprimeur le rétablit) : valeur de départ, `facultatif`, `sur plusieurs lignes`, `en lecture seule`, la place, `large de`, `haut de`, `actif si`, `visible si`. Une liste met sa place après `, par …` et `, avec …`. Un bloc la met avant ses deux-points.
+- Une zone `sur plusieurs lignes` dont la hauteur est dite la prend entière : elle n'est plus limitée à huit lignes.
+- Forme compacte : `_position_libre` … `_fin` ; `_place 96 16`, `_largeur 240`, `_hauteur 80` (l'accord se fait en forme littéraire) ; un bloc placé : `_groupe « Adresse » _place 16 8 _largeur 320`.
 - Aucun mot réservé : `à`, `gauche`, `haut`, `large` ne comptent qu'ainsi placés, après la virgule d'un élément.
 - Ce paragraphe révise `docs/ecrans.md`, § 3.3 (« jamais des pixels ») : la disposition décrite reste la règle hors du bloc.
 
@@ -1913,3 +1915,4 @@ L'écran de saisie montre :
 | 1.78 | 2026-10-14 | Nouveau § 22.9 : `en position libre :`, la place au pixel (`à 96 de la gauche et 16 du haut`) et la taille (`large de`, `haut de`) des éléments du bloc ; révise `docs/ecrans.md`, § 3.3 |
 | 1.79 | 2026-10-14 | § 22.8 : l'image calculée, `l'image de …`, relue avant chaque attente ; absente, elle ne montre rien |
 | 1.80 | 2026-10-14 | § 11.4 : la traduction de la forme compacte retrouve les articles par le genre (champs, variables, entités, colonnes choisies) ; le littéral écrit sans article reste tel quel |
+| 1.81 | 2026-10-14 | § 22.9 : un bloc se place et se dimensionne dans un bloc libre (`le groupe « Adresse », à 16 de la gauche et 8 du haut :`), et garde sa règle à l'intérieur ; une zone sur plusieurs lignes prend toute la hauteur dite |

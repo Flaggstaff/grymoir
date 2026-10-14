@@ -68,6 +68,7 @@ On décrit l'ordre et le voisinage, jamais des pixels : le texte reste lisible, 
 - La taille reste facultative : sans elle, l'interface prend la taille naturelle de l'élément, celle du thème.
 - Le navigateur empile les éléments du bloc dans l'ordre écrit quand la fenêtre est plus étroite que le bloc.
 - La grille d'alignement est un outil de l'atelier, pas du langage : elle n'apparaît jamais dans le programme (`docs/atelier.md`, § 5 octies).
+- Tout élément se place, blocs compris *(14 octobre 2026)* : un bloc posé dans un bloc libre a une place et une taille, et garde à l'intérieur sa règle (empilé, en ligne, ou libre à son tour). La description et le pixel se composent ainsi bloc par bloc, sans troisième règle.
 
 ### 3.4 Les contrôles *(validé le 25 septembre 2026)*
 
@@ -224,3 +225,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.19 | 2026-10-14 | § 6 : B2 bis fait (image fixe) ; l'image d'une zone passe en B2 ter |
 | 0.20 | 2026-10-14 | § 3.3 révisé : la position libre au pixel, dans un bloc `en position libre :` ; § 6 : B2 quater fait |
 | 0.21 | 2026-10-14 | § 6 : B2 ter fait (image calculée) |
+| 0.22 | 2026-10-14 | § 3.3 : dans un bloc libre, un bloc se place aussi, et garde sa règle à l'intérieur (grammaire 1.81) |

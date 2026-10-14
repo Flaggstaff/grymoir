@@ -799,7 +799,17 @@ int main(void) {
     VE("L'écran x montre :\n    un bouton « B », large de 80.", 2, 22, "Une taille ne vaut que dans un bloc");
     VE("L'écran x montre :\n    en position libre :\n        le texte « t ».", 3, 9, "Un élément en position libre dit sa place");
     VE("L'écran x montre :\n    en position libre :\n        côte à côte :\n            le texte « t », à 1 de la gauche et 1 du haut.",
-       3, 9, "ne contient que des éléments placés");
+       3, 9, "Un bloc en position libre dit sa place");
+    /* un bloc placé dans un bloc libre garde sa règle à l'intérieur (1.81) */
+    V("L'écran x montre :\n    en position libre :\n        le groupe « G », à 8 de la gauche et 0 du haut, large de 200 :\n"
+      "            le texte « a »,\n            en position libre :\n                le texte « b », à 4 de la gauche et 4 du haut,\n"
+      "        côte à côte, à 0 de la gauche et 90 du haut :\n            le texte « c »,\n            le texte « d ».",
+      "(écran [x] (position-libre) (groupe « G » @8,0 l200) (texte « a ») (position-libre) (texte « b » @4,4) (fin-bloc) (fin-bloc) "
+      "(côte-à-côte @0,90) (texte « c ») (texte « d ») (fin-bloc) (fin-bloc))");
+    VE("L'écran x montre :\n    le groupe « G », à 8 de la gauche et 0 du haut :\n        le texte « a ».", 2, 22,
+       "ne vaut que dans un bloc « en position libre : »");
+    VE("L'écran x montre :\n    en position libre :\n        côte à côte, à 0 de la gauche et 9 du haut, visible si vrai :\n"
+       "            le texte « a ».", 3, 51, "seule la place s'écrit avant « : »");
     VE("L'écran x montre :\n    en position libre :\n        l'image « exemples/pixel.png », à 1 de la gauche et 1 du haut, haut de 9.",
        3, 72, "Accord : « haute de ».");
     VE("L'écran x montre :\n    en position libre :\n        le texte « t », à 5000 de la gauche et 1 du haut.", 3, 27,

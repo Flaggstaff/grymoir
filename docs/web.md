@@ -220,3 +220,4 @@ Un bloc `en position libre :` (grammaire, § 22.9) devient une grille d'une seul
 | 0.4 | 2026-10-10 | § 3.1 : sélection par bouton radio, distincte du choix ; validation immédiate d'un menu ou d'une case par `/grym.js`, bouton « Valider les zones » sans script. Révélés par l'application « Gestion de projet » |
 | 0.5 | 2026-10-14 | § 3.1 : la position libre (grammaire, § 22.9) : chaque élément dans une boîte, placée par une feuille servie à `/ecran-style/série` (la politique de sécurité refuse les styles écrits dans la page) ; sous la largeur du bloc, les éléments s'empilent dans l'ordre écrit |
 | 0.6 | 2026-10-14 | § 3.1 : l'image calculée (grammaire, § 22.8) est servie à `/ecran-image/série/k/version` ; la version change avec ses octets, et une version périmée rend 404 ; absente, un paragraphe vide garde sa place |
+| 0.7 | 2026-10-14 | Annexe, position libre : un bloc placé est dans sa boîte, qui se ferme avec lui, et la remplit quand sa taille est dite |

@@ -988,7 +988,7 @@ static void page_ecran(Serveur *s) {
         chaine_ajouter(&c, "</p>\n");
     }
     int boutons = 0;   /* des boutons qui se suivent : une rangée, à droite (comme dans l'atelier) */
-    int groupes[16], prof = 0;   /* les blocs ouverts : 1 pour un groupe (fieldset), 0 pour un div */
+    int groupes[16], prof = 0;   /* les blocs ouverts : 1 pour un groupe (fieldset), 0 pour un div ; + 2 s'il est placé */
     for (size_t k = 0; k < e->n; k++) {
         const ElementEcran *el = &e->el[k];
         if ((e->etats[k] & 2) && (el->sorte == ELEMENT_BOUTON || el->sorte == ELEMENT_TEXTE || el->sorte == ELEMENT_ZONE
@@ -1001,17 +1001,18 @@ static void page_ecran(Serveur *s) {
             free(v);
         }
         switch (el->sorte) {
-        case ELEMENT_LIBRE: chaine_ajouter(&c, "<div class=\"libre\">\n"); if (prof < 16) groupes[prof++] = 0; break;
-        case ELEMENT_COTE_A_COTE: chaine_ajouter(&c, "<div class=\"cote\">\n"); if (prof < 16) groupes[prof++] = 0; break;
-        case ELEMENT_L_UN_SOUS_L_AUTRE: chaine_ajouter(&c, "<div class=\"sous\">\n"); if (prof < 16) groupes[prof++] = 0; break;
+        case ELEMENT_LIBRE: chaine_ajouter(&c, "<div class=\"libre\">\n"); if (prof < 16) groupes[prof++] = el->place ? 2 : 0; break;
+        case ELEMENT_COTE_A_COTE: chaine_ajouter(&c, "<div class=\"cote\">\n"); if (prof < 16) groupes[prof++] = el->place ? 2 : 0; break;
+        case ELEMENT_L_UN_SOUS_L_AUTRE: chaine_ajouter(&c, "<div class=\"sous\">\n"); if (prof < 16) groupes[prof++] = el->place ? 2 : 0; break;
         case ELEMENT_GROUPE:   /* « le groupe « Adresse » : » (§ 22.7) */
             chaine_ajouter(&c, "<fieldset class=\"groupe\"><legend>");
             echapper(&c, el->texte);
             chaine_ajouter(&c, "</legend>\n");
-            if (prof < 16) groupes[prof++] = 1;
+            if (prof < 16) groupes[prof++] = el->place ? 3 : 1;
             break;
-        case ELEMENT_FIN_DE_BLOC:
-            chaine_ajouter(&c, prof && groupes[prof - 1] ? "</fieldset>\n" : "</div>\n");
+        case ELEMENT_FIN_DE_BLOC:   /* la fin du bloc, puis celle de sa boîte s'il est placé (§ 22.9) */
+            chaine_ajouter(&c, prof && (groupes[prof - 1] & 1) ? "</fieldset>\n" : "</div>\n");
+            if (prof && (groupes[prof - 1] & 2)) chaine_ajouter(&c, "</div>\n");
             if (prof) prof--;
             break;
         case ELEMENT_TEXTE:
@@ -1042,7 +1043,9 @@ static void page_ecran(Serveur *s) {
             break;
         }
         }
-        if (el->place) chaine_ajouter(&c, "</div>\n");
+        if (el->place && el->sorte != ELEMENT_LIBRE && el->sorte != ELEMENT_COTE_A_COTE && el->sorte != ELEMENT_L_UN_SOUS_L_AUTRE
+            && el->sorte != ELEMENT_GROUPE)
+            chaine_ajouter(&c, "</div>\n");   /* un bloc placé ferme sa boîte avec lui */
     }
     if (boutons) chaine_ajouter(&c, "</div>\n");
     int zones = 0;
@@ -1081,6 +1084,12 @@ static char *feuille_des_places(const EcranWeb *e) {
             v = grym_formater("#p%lu input,#p%lu select,#p%lu textarea,#p%lu table,#p%lu img,#p%lu button{width:100%%;"
                               "box-sizing:border-box;max-width:none}\n", (unsigned long)k, (unsigned long)k, (unsigned long)k,
                               (unsigned long)k, (unsigned long)k, (unsigned long)k);
+            chaine_ajouter(&c, v);
+            free(v);
+        }
+        if (el->largeur || el->hauteur) {   /* un bloc placé : il remplit sa boîte */
+            v = grym_formater("#p%lu>.cote,#p%lu>.sous,#p%lu>.libre,#p%lu>fieldset{box-sizing:border-box;width:100%%;height:100%%}\n",
+                              (unsigned long)k, (unsigned long)k, (unsigned long)k, (unsigned long)k);
             chaine_ajouter(&c, v);
             free(v);
         }

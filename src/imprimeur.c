@@ -1174,14 +1174,16 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                     continue;
                 }
                 retrait(im, niveau + 1 + profondeur);
+                /* le nom du bloc, sa place s'il est dans un bloc libre (§ 22.9), puis « : » (en compact : rien) */
                 if (el->forme == 3) {   /* « le groupe « Adresse » : » ; « _groupe « Adresse » » (§ 22.7) */
                     aj(im, c ? "_groupe " : "le groupe ");
                     ecrire_texte(im, el->texte);
-                    aj(im, c ? "\n" : " :\n");
                 } else if (el->forme == 4)   /* « en position libre : » ; « _position_libre » (§ 22.9) */
-                    aj(im, c ? "_position_libre\n" : "en position libre :\n");
+                    aj(im, c ? "_position_libre" : "en position libre");
                 else
-                    aj(im, el->forme == 1 ? (c ? "_côte_à_côte\n" : "côte à côte :\n") : (c ? "_l'un_sous_l'autre\n" : "l'un sous l'autre :\n"));
+                    aj(im, el->forme == 1 ? (c ? "_côte_à_côte" : "côte à côte") : (c ? "_l'un_sous_l'autre" : "l'un sous l'autre"));
+                place_ecran(im, el, 0);
+                aj(im, c ? "\n" : " :\n");
                 profondeur++;
                 continue;
             }
