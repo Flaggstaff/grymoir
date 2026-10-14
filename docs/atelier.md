@@ -230,6 +230,12 @@ Si le nombre d'œuvres conservées = 0 :
 - Deux défauts du langage trouvés en chemin, corrigés (grammaire 1.73) : `t en vrai ou faux` n'était pas reconnu après un nom (« « t en » inconnu ») ; l'imprimeur écrivait `la colonne … est présent`, au masculin.
 - Essais : `test_atelier`, titres d'un CSV, code produit, place dans le programme, deux lancements sans doublon, sauvegarde sans écrasement, restauration et retour en arrière, refus ; `test_analyseur` et `test_imprimeur` pour les deux défauts.
 
+## 5 septies. Les états dans l'éditeur d'écrans *(fait le 14 octobre 2026)*
+
+Le panneau des propriétés suit la grammaire, § 22.6 : pour une zone, « sur plusieurs lignes », « en lecture seule », « Active si », « Visible si » ; pour un bouton, « Actif si », « Visible si » ; pour un texte fixe, « Visible si ». Une condition s'écrit en GrymoiR, telle qu'elle ira dans le fichier ; vide, l'élément est toujours actif ou visible. L'arbre porte une marque que l'impression remplace par ce texte, puis la réanalyse du projet le vérifie : une condition fausse annule le geste, avec le message du langage. L'aperçu montre la zone sur plusieurs lignes et la lecture seule, mais tous les éléments, quel que soit leur état, puisque l'état dépend de l'exécution.
+
+Corrigé en chemin : le panneau d'une zone ne lisait pas son genre ; « Appliquer » réécrivait au masculin une zone féminine (`une remarque` devenait `un remarque`).
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -319,3 +325,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.32 | 2026-10-13 | § 5 quinquies : valeurs permises et heure dans l'éditeur de données (deux pertes silencieuses corrigées) ; contenu de la base en lecture seule |
 | 0.33 | 2026-10-13 | § 5 quinquies : le contenu de la base lit la taille d'un fichier dans `grym_fichier` (format 2 des bases, docs/vm.md, § 8) |
 | 0.34 | 2026-10-14 | § 5 sexies : sauvegarder et restaurer la base, importer un tableau CSV (la boucle du § 15.5, écrite dans le programme) |
+| 0.35 | 2026-10-14 | § 5 septies : états des éléments dans le panneau des écrans ; genre d'une zone gardé par « Appliquer » |

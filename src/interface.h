@@ -26,6 +26,8 @@ typedef struct {
     int facultatif;
     const char *const *choix;       /* zone liée à une entité : les clés de ses objets, pour un menu */
     size_t nb_choix;
+    int plusieurs_lignes;           /* zone (texte) « sur plusieurs lignes » : Entrée va à la ligne (§ 22.6) */
+    int lecture_seule;              /* zone « en lecture seule » : montrée, jamais modifiée par l'utilisateur */
 } ElementEcran;
 
 typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT } SorteEvenement;
@@ -112,6 +114,10 @@ typedef struct {
     /* « Les écrans ont la couleur verte et le logo « … ». » (§ 22.5) : couleur, rang dans la palette (0 bleue,
      * 1 verte, 2 turquoise, 3 violette, 4 grise) ou −1 ; logo : ses octets (image), ou NULL. NULL : sans effet. */
     void (*ecran_apparence)(void *contexte, int couleur, const unsigned char *logo, size_t taille, const char *format);
+    /* Avant chaque attente : l'état de chaque élément (§ 22.6), bit 1 inactif (« actif si » faux), bit 2 caché
+     * (« visible si » faux). NULL : l'interface montre tout, et la machine ignore quand même un geste sur un
+     * élément inactif ou caché. */
+    void (*ecran_etats)(void *contexte, const unsigned char *etats, size_t n);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

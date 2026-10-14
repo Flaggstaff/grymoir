@@ -112,7 +112,21 @@ static void decrire(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, n->texte);
         chaine_ajouter(c, "]");
         if (n->texte2) { chaine_ajouter(c, " « "); chaine_ajouter(c, n->texte2); chaine_ajouter(c, " »"); }
-        for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            const Noeud *el = n->enfants[k];
+            chaine_ajouter(c, " ");
+            decrire(el, c);
+            if (el->type != N_NOM) continue;   /* zone : ses options et ses états (§ 22.6) */
+            if (el->entier & 2) chaine_ajouter(c, " (plusieurs-lignes)");
+            if (el->entier & 4) chaine_ajouter(c, " (lecture-seule)");
+            for (size_t q = 0; q < el->nb_enfants; q++)
+                if (el->enfants[q]->type == N_SI_ECRAN) { chaine_ajouter(c, " "); decrire(el->enfants[q], c); }
+        }
+        chaine_ajouter(c, ")");
+        return;
+    case N_SI_ECRAN:
+        chaine_ajouter(c, n->forme == 1 ? "(actif-si " : "(visible-si ");
+        decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
     case P_QUAND:   /* (quand clic « Nouveau » [des compositeurs] corps) */
@@ -149,12 +163,16 @@ static void decrire(const Noeud *n, Chaine *c) {
     case N_BOUTON:
         chaine_ajouter(c, "(bouton « ");
         chaine_ajouter(c, n->texte);
-        chaine_ajouter(c, " »)");
+        chaine_ajouter(c, " »");
+        for (size_t q = 0; q < n->nb_enfants; q++) { chaine_ajouter(c, " "); decrire(n->enfants[q], c); }
+        chaine_ajouter(c, ")");
         return;
     case N_TEXTE_ECRAN:
         chaine_ajouter(c, "(texte « ");
         chaine_ajouter(c, n->texte);
-        chaine_ajouter(c, " »)");
+        chaine_ajouter(c, " »");
+        for (size_t q = 0; q < n->nb_enfants; q++) { chaine_ajouter(c, " "); decrire(n->enfants[q], c); }
+        chaine_ajouter(c, ")");
         return;
     case P_UTILISER:   /* (utiliser « données ») : ses déclarations ne se décrivent pas ici (§ 21) */
         chaine_ajouter(c, "(utiliser « ");

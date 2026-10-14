@@ -744,6 +744,47 @@ static void condition_de_cas(Reecriture *r, size_t d, size_t f) {
 }
 
 /* Une instruction compacte, jetons d à f (exclus), à la profondeur donnée. */
+
+static int est_etat(const Jeton *t) {
+    return est_cle(t, "actif_si") || est_cle(t, "active_si") || est_cle(t, "visible_si") || est_cle(t, "plusieurs_lignes")
+        || est_cle(t, "lecture_seule");
+}
+
+/* Les états d'un élément d'écran, de k à f (§ 22.6) : « _plusieurs_lignes », « _lecture_seule » (zones),
+ * « _actif_si cond », « _visible_si cond ». Rend 0 si l'élément est mal écrit (l'erreur est posée). */
+static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zone) {
+    while (k < f) {
+        const Jeton *x = &r->e[k];
+        if (zone && est_cle(x, "plusieurs_lignes")) {
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "sur", x); mot(r, "plusieurs", x); mot(r, "lignes", x);
+            k++;
+        } else if (zone && est_cle(x, "lecture_seule")) {
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "en", x); mot(r, "lecture", x); mot(r, "seule", x);
+            k++;
+        } else if (est_cle(x, "actif_si") || est_cle(x, "active_si") || est_cle(x, "visible_si")) {
+            size_t g = k + 1;
+            while (g < f && !est_etat(&r->e[g])) g++;
+            if (g == k + 1) {
+                echouer(r, x, grym_dupliquer("Condition attendue après « _actif_si » ou « _visible_si »."));
+                return 0;
+            }
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, est_cle(x, "visible_si") ? "visible" : feminin ? "active" : "actif", x);
+            mot(r, "si", x);
+            expression(r, k + 1, g);
+            k = g;
+        } else {
+            echouer(r, x, grym_dupliquer(zone ? "« _départ », « _facultatif », « _plusieurs_lignes », « _lecture_seule », "
+                                                "« _actif_si » ou « _visible_si » attendu après une zone."
+                                              : "« _actif_si » ou « _visible_si » attendu après un bouton ou un texte."));
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static void instruction(Reecriture *r, size_t d, size_t f) {
     const Jeton *t = &r->e[d];
     size_t premier = r->ns;
@@ -808,10 +849,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         return;
     }
     if (haut && (haut->type == O_ECRAN || haut->type == O_BLOC)) {
-        if ((est_cle(t, "bouton") || est_cle(t, "texte")) && f == d + 2 && r->e[d + 1].type == J_TEXTE) {
+        if ((est_cle(t, "bouton") || est_cle(t, "texte")) && f >= d + 2 && r->e[d + 1].type == J_TEXTE
+            && (f == d + 2 || est_etat(&r->e[d + 2]))) {
             mot(r, est_cle(t, "bouton") ? "un" : "le", t);
             mot(r, est_cle(t, "bouton") ? "bouton" : "texte", t);
             copier(r, &r->e[d + 1]);
+            if (!etats_compacts(r, d + 2, f, 0, 0)) return;
         } else if (est_cle(t, "liste") && d + 2 < f && r->e[d + 1].type == J_CROCHETS
                    && (est_cle(&r->e[d + 2], "conservé") || est_cle(&r->e[d + 2], "conservée")
                        || est_cle(&r->e[d + 2], "supprimé") || est_cle(&r->e[d + 2], "supprimée"))) {
@@ -888,8 +931,8 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                     mot(r, est_cle(t, "une") ? "facultative" : "facultatif", &r->e[k]);
                     k++;
                 } else {
-                    echouer(r, &r->e[k], grym_dupliquer("« _départ » ou « _facultatif » attendu après une zone."));
-                    return;
+                    if (!etats_compacts(r, k, f, est_cle(t, "une"), 1)) return;
+                    k = f;
                 }
             }
         } else {

@@ -995,6 +995,18 @@ static void si(Impression *im, const Noeud *n, int niveau, int sinon_si) {
     if (!sinon_si) fin_compacte(im, niveau);
 }
 
+
+/* « , actif si … », « , visible si … » : les états d'un élément d'écran, ses derniers enfants (§ 22.6). */
+static void etats_ecran(Impression *im, const Noeud *el, int feminin) {
+    for (size_t q = 0; q < 2 * el->nb_enfants; q++) {   /* « actif si » avant « visible si », quel que soit l'ordre écrit */
+        const Noeud *x = el->enfants[q % el->nb_enfants];
+        if (x->type != N_SI_ECRAN || x->forme != (q < el->nb_enfants ? 1 : 2)) continue;
+        if (im->compact) aj(im, x->forme == 1 ? " _actif_si " : " _visible_si ");
+        else aj(im, x->forme == 1 ? (feminin ? ", active si " : ", actif si ") : ", visible si ");
+        expression(im, x->enfants[0]);
+    }
+}
+
 static void phrase(Impression *im, const Noeud *n, int niveau) {
     int c = im->compact;
     retrait(im, niveau);
@@ -1050,6 +1062,9 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         aj(im, c ? "_effacer\n" : "Effacer l'écran.\n");
         return;
     case P_ECRAN: {   /* « L'écran des compositeurs montre : … » ; « _écran des_compositeurs … _fin » (§ 22.1) */
+        for (size_t k = 0; k < n->nb_enfants; k++)   /* une condition peut citer une zone écrite plus bas (§ 22.6) */
+            if (n->enfants[k]->type == N_NOM)
+                retenir(im, n->enfants[k]->texte, n->enfants[k]->forme == 2 ? G_FEMININ : G_MASCULIN);
         if (c) {
             aj(im, "_écran ");
             ecrire_nom(im, n->texte, 0);
@@ -1081,9 +1096,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             if (el->type == N_BOUTON) {
                 aj(im, c ? "_bouton " : "un bouton ");
                 ecrire_texte(im, el->texte);
+                etats_ecran(im, el, 0);
             } else if (el->type == N_TEXTE_ECRAN) {
                 aj(im, c ? "_texte " : "le texte ");
                 ecrire_texte(im, el->texte);
+                etats_ecran(im, el, 0);
             } else if (el->type == N_NOM) {   /* zone : « un pays (texte), « Suisse » au départ, facultatif » */
                 int fz = el->forme == 2;
                 retenir(im, el->texte, fz ? G_FEMININ : G_MASCULIN);
@@ -1092,12 +1109,15 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 aj(im, " (");
                 if (c) ecrire_nom(im, el->texte2, 0); else aj(im, el->texte2);
                 aj(im, ")");
-                if (el->nb_enfants) {
+                if (el->nb_enfants && el->enfants[0]->type != N_SI_ECRAN) {
                     aj(im, c ? " _départ " : ", ");
                     expression(im, el->enfants[0]);
                     if (!c) aj(im, " au départ");
                 }
                 if (el->entier & 1) aj(im, c ? " _facultatif" : fz ? ", facultative" : ", facultatif");
+                if (el->entier & 2) aj(im, c ? " _plusieurs_lignes" : ", sur plusieurs lignes");
+                if (el->entier & 4) aj(im, c ? " _lecture_seule" : ", en lecture seule");
+                etats_ecran(im, el, fz);
             } else if (c) {
                 aj(im, "_liste ");
                 ecrire_nom(im, el->texte, 0);

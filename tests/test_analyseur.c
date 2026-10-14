@@ -764,6 +764,17 @@ int main(void) {
        "Un calcul ne pose pas de question : demande dans une action.");
 
     V("Effacer l'écran.", "(effacer-écran)");
+    /* États des éléments d'écran (§ 22.6) */
+    V("L'écran x montre :\n    une note (texte), facultative, sur plusieurs lignes, en lecture seule, active si vrai, "
+      "visible si 1 < 2,\n    le texte « T », visible si faux.",
+      "(écran [x] [note] (plusieurs-lignes) (lecture-seule) (actif-si vrai) (visible-si (< 1 2)) (texte « T » (visible-si faux)))");
+    V("L'écran x montre :\n    le texte « T », visible si la note de l'écran est présente,\n    une note (texte), facultative.",
+      "(écran [x] (texte « T » (visible-si (présent (champ [note] (écran-en-cours))))) [note])");   /* zone écrite plus bas */
+    VE("L'écran x montre :\n    un bouton « B », active si vrai.", 2, 22, "Accord : « actif si ».");
+    VE("L'écran x montre :\n    un n (nombre), sur plusieurs lignes.", 2, 20, "Seule une zone (texte) s'écrit sur plusieurs lignes.");
+    VE("L'écran x montre :\n    le texte « T », actif si vrai.", 2, 21, "Un texte fixe ne se clique pas : « visible si » seulement.");
+    VE("L'écran x montre :\n    un bouton « B », visible si 3.", 2, 33, "« visible si » attend une condition");
+    VE("L'écran x montre :\n    un bouton « B », actif si vrai, actif si faux.", 2, 37, "« actif si » est déjà dit pour cet élément.");
     VE("Pour effacer un x :\n    Afficher 1.", 1, 6, "« effacer » commence une construction du langage");
 
     V("Essayer :\n    Afficher 1.\nEn cas d'échec, afficher le motif de l'échec.",

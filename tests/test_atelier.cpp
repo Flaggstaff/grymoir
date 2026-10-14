@@ -1676,6 +1676,66 @@ int main(int argc, char **argv) {
         VERIFIER(lire("p.grym") == stable);
     }
 
+    // États des éléments d'écran (§ 22.6) : options et conditions écrites, relues, gardées quand on modifie autre chose
+    {
+        QTemporaryDir dossier;
+        auto ecrire = [&](const QString &texte) {
+            QFile f(dossier.filePath("p.grym"));
+            f.open(QIODevice::WriteOnly | QIODevice::Truncate);
+            f.write(texte.toUtf8());
+        };
+        auto lire = [&] {
+            QFile f(dossier.filePath("p.grym"));
+            f.open(QIODevice::ReadOnly);
+            return QString::fromUtf8(f.readAll());
+        };
+        ecrire("L'écran de saisie montre :\n    une remarque (texte), facultative,\n    un bouton « OK ».\n"
+               "Quand on clique sur « OK » dans l'écran de saisie :\n    Fermer l'écran.\n");
+        const QString d = dossier.path(), e = "de saisie";
+        Geste g;
+        ElementNouveau z;
+        z.sorte = ELEMENT_ZONE;
+        z.texte = "remarque";
+        z.type = "texte";
+        z.feminin = true;
+        z.facultatif = true;
+        z.plusieurs_lignes = true;
+        VERIFIER(ecran_modifier(d, e, 0, z, &g).isEmpty());
+        VERIFIER(lire().contains("    une remarque (texte), facultative, sur plusieurs lignes,\n"));
+        ElementNouveau b;
+        b.sorte = ELEMENT_BOUTON;
+        b.texte = "OK";
+        b.actif_si = "la remarque de l'écran est présente";
+        b.visible_si = "vrai";
+        VERIFIER(ecran_modifier(d, e, 1, b, &g).isEmpty());
+        VERIFIER(lire().contains("    un bouton « OK », actif si la remarque de l'écran est présente, visible si vrai.\n"));
+        auto lus = lire_ecrans(d);
+        VERIFIER(lus.size() == 1 && lus[0].elements[1].actif_si == "la remarque de l'écran est présente"
+                 && lus[0].elements[1].visible_si == "vrai");
+        VERIFIER(lus[0].elements[0].plusieurs_lignes && lus[0].elements[0].feminin && !lus[0].elements[0].lecture_seule);
+        // modifier la zone ne touche pas aux conditions du bouton ; la zone garde son genre
+        z.plusieurs_lignes = false;
+        z.lecture_seule = true;
+        z.visible_si = "la remarque de l'écran est absente";
+        VERIFIER(ecran_modifier(d, e, 0, z, &g).isEmpty());
+        VERIFIER(lire().contains("    une remarque (texte), facultative, en lecture seule, visible si la remarque de l'écran est absente,\n"
+                                 "    un bouton « OK », actif si la remarque de l'écran est présente, visible si vrai.\n"));
+        // refus : texte fixe actif, liste visible, condition mal écrite (la réanalyse annule tout)
+        const QString stable = lire();
+        ElementNouveau t;
+        t.sorte = ELEMENT_TEXTE;
+        t.texte = "Bonjour";
+        t.actif_si = "vrai";
+        VERIFIER(ecran_ajouter(d, e, t, &g) == "Seuls un bouton ou une zone sont actifs ou non.");
+        b.actif_si = "3";   // un nombre n'est pas une condition
+        VERIFIER(ecran_modifier(d, e, 1, b, &g).startsWith("Geste annulé"));
+        VERIFIER(lire() == stable);
+        z.lecture_seule = false;
+        z.type = "nombre";
+        z.plusieurs_lignes = true;
+        VERIFIER(ecran_modifier(d, e, 0, z, &g) == "Seule une zone (texte) s'écrit sur plusieurs lignes.");
+    }
+
     // A4-c dans l'onglet : choisir un bouton, changer son libellé, « Appliquer » : le geste renomme aussi l'événement
     {
         QTemporaryDir dossier;

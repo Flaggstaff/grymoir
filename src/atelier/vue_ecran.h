@@ -20,6 +20,8 @@ struct ElementVue {
     QStringList colonnes;   // liste : titres des colonnes
     QString type;           // zone : son type
     QStringList choix;      // zone liée à une entité : les clés, pour un menu
+    bool plusieurs_lignes = false;   // zone (texte) « sur plusieurs lignes » (§ 22.6)
+    bool lecture_seule = false;      // zone « en lecture seule »
 };
 
 // Ce que le dessin a produit : pour chaque élément, le contrôle qui le montre (nullptr pour un bloc).

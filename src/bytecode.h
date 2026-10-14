@@ -104,10 +104,12 @@ typedef enum {
     I_MAINTENANT,       /* empile l'heure, lue une fois au début de l'exécution */
     I_REGLE_UTILE,      /* opérande : constante texte, la clé d'une règle ; empile vrai si la règle doit se revérifier,
                            et la base note alors ce qu'elle lit (docs/vm.md, § 3.3) */
-    I_REGLE_FAITE       /* opérande : la même ; la règle a tenu : ses lectures valent à la validation */
+    I_REGLE_FAITE,      /* opérande : la même ; la règle a tenu : ses lectures valent à la validation */
+    I_ECRAN_ETAT        /* opérande : élément × 2 + 1 pour « visible si », + 0 pour « actif si » ; dépile la condition,
+                           qui règle l'état de l'élément jusqu'à la prochaine attente (§ 22.6) */
 } CodeInstruction;
 
-#define I_DERNIER I_REGLE_FAITE
+#define I_DERNIER I_ECRAN_ETAT
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

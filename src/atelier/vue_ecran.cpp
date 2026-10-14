@@ -8,6 +8,7 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPlainTextEdit>
 #include <QPixmap>
 #include <QPushButton>
 #include <QTableWidget>
@@ -82,7 +83,19 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 m->addItem(QString());
                 m->addItems(e.choix);
                 w = m;
+            } else if (e.plusieurs_lignes) {   // « sur plusieurs lignes » (§ 22.6) : Tab passe à la suite, Entrée va à la ligne
+                auto *p = new QPlainTextEdit;
+                p->setTabChangesFocus(true);
+                p->setMinimumHeight(p->fontMetrics().lineSpacing() * 4 + 2 * p->frameWidth() + 8);
+                p->setMaximumHeight(p->fontMetrics().lineSpacing() * 8 + 2 * p->frameWidth() + 8);
+                w = p;
             } else w = new QLineEdit;
+            if (e.lecture_seule) {   // « en lecture seule » : montrée, sélectionnable, jamais modifiée
+                if (auto *l = qobject_cast<QLineEdit *>(w)) l->setReadOnly(true);
+                else if (auto *p = qobject_cast<QPlainTextEdit *>(w)) p->setReadOnly(true);
+                else w->setEnabled(false);
+                w->setProperty("lecture-seule", true);
+            }
             r.zones[k] = w;
             auto *conteneur = new QWidget;   // le libellé et le contrôle, un seul élément à choisir dans l'aperçu
             auto *rang = new QVBoxLayout(conteneur);   // le libellé au-dessus du contrôle (maquette, § 5 et 8)

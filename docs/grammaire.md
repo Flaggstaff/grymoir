@@ -1732,6 +1732,28 @@ Les écrans ont le logo « images/logo.png ».
 - Forme compacte : `_écrans _couleur _verte _logo « logo.png »`, `_écrans _couleur _grise`, `_écrans _logo « logo.png »`.
 - Aide à la saisie (§ 8) : en début de phrase, `Les écrans ont` et `Les nombres s'affichent` sont proposés ; puis `la couleur` ou `le logo`, les cinq couleurs, `et le logo`, un texte. Après `Les nombres s'affichent` : `à la suisse`, `à la française`, `sans séparateur`.
 
+### 22.6 États des éléments *(implémenté le 14 octobre 2026)*
+
+```
+L'écran de saisie montre :
+    un nom (texte), facultatif,
+    une remarque (texte), facultative, sur plusieurs lignes,
+    un total (nombre), 0 au départ, en lecture seule,
+    le texte « Nom manquant », visible si le nom de l'écran est absent,
+    un bouton « Valider », actif si le nom de l'écran est présent,
+    un bouton « Fermer ».
+```
+
+- `sur plusieurs lignes` : une zone `(texte)` seulement ; Entrée y va à la ligne, et la zone se valide quand on la quitte (`Quand on change …`). Sur un autre type : « Seule une zone (texte) s'écrit sur plusieurs lignes. »
+- `en lecture seule` : la zone se montre, se sélectionne, ne se modifie que par le programme (`Le total de l'écran devient 3.`). Un changement venu de l'interface est ignoré par la machine, et `Quand on change` ne se déclenche pas.
+- `actif si …` : un bouton ou une zone ; faux, l'élément est grisé et un geste dessus ne compte pas. L'adjectif s'accorde avec la zone : `une remarque …, active si …` (« Accord : « active si ». »). Un texte fixe ne se clique pas : « visible si » seulement.
+- `visible si …` : un bouton, un texte fixe ou une zone ; faux, l'élément disparaît, libellé compris. Une liste reste toujours visible, pour l'instant.
+- La condition est une valeur vraie ou fausse (§ 5.3) : « « visible si » attend une condition : … ». Elle se lit à la fin de la déclaration et peut donc citer toute zone ou liste de l'écran, même écrite plus bas, par `de l'écran`. La machine la relit avant chaque attente, après la relecture des listes : après l'ouverture, après chaque événement, après chaque zone validée.
+- Une condition qui échoue à l'exécution arrête le programme, comme le `dont` d'une liste (§ 22.1). Lire une zone obligatoire encore vide est un tel échec (« Le champ « nom » n'a pas de valeur. ») : une zone qu'une condition teste avec `est présent` s'écrit `facultatif`.
+- Ordre canonique (l'imprimeur le rétablit) : valeur de départ, `facultatif`, `sur plusieurs lignes`, `en lecture seule`, `actif si`, `visible si`. Chaque état une fois : « « actif si » est déjà dit pour cet élément. »
+- Forme compacte : `_plusieurs_lignes`, `_lecture_seule`, `_actif_si …`, `_visible_si …` ; la condition va jusqu'au mot suivant de cette liste ou à la fin de la ligne.
+- Aucun mot réservé : `sur`, `lignes`, `lecture`, `seule`, `actif`, `visible` ne comptent qu'ainsi placés, après la virgule d'un élément.
+
 ---
 
 ## Journal des révisions
@@ -1812,3 +1834,4 @@ Les écrans ont le logo « images/logo.png ».
 | 1.71 | 2026-10-13 | § 16.14 : une règle dont rien de ce qu'elle a lu n'a changé ne se revérifie pas ; mesures à 50'000 écritures |
 | 1.72 | 2026-10-13 | § 4 : `suivi de` écrit un nombre comme `Afficher`, séparateur de milliers compris (`P-49'999`) ; choix confirmé, essai ajouté |
 | 1.73 | 2026-10-14 | Deux corrections, les règles ne changent pas : § 4.5, `t en vrai ou faux` reconnu après un nom ; § 15.5, l'imprimeur accorde au féminin ce qui suit une colonne (`la colonne « Année » de la ligne est présente`) |
+| 1.74 | 2026-10-14 | Nouveau § 22.6 : états des éléments d'écran, `sur plusieurs lignes`, `en lecture seule`, `actif si …`, `visible si …` ; conditions lues en fin de déclaration |

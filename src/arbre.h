@@ -63,6 +63,8 @@ typedef enum {
     N_DISPOSITION,   /* élément d'écran : forme 1 « côte à côte : », 2 « l'un sous l'autre : », 0 fin du bloc (§ 22.1) */
     N_BOUTON,        /* élément d'écran : « un bouton « Nouveau » » : texte : libellé (§ 22.1) */
     N_TEXTE_ECRAN,   /* élément d'écran : « le texte « Bienvenue » » : texte (§ 22.1) */
+    N_SI_ECRAN,      /* état d'un élément d'écran, dernier de ses enfants : forme 1 « actif si », 2 « visible si » ;
+                        enfants[0] : la condition (§ 22.6) */
     N_CHAMP_DONT,    /* champ de l'objet examiné, dans une condition « dont » : texte : champ (§ 16.4) */
     N_CHERCHER,      /* objets conservés : texte : entité ; forme : 0 liste (boucle), 1 un seul, 2 nombre, 3 somme
                         du champ texte2 (§ 16.4) ;
@@ -121,7 +123,9 @@ typedef enum {
                         2 sans séparateur */
     P_ECRAN,         /* « L'écran des compositeurs montre : … » (§ 22) : texte : nom (« des compositeurs ») ; texte2 : titre
                         donné, ou NULL ; enfants : N_CHERCHER (liste), N_BOUTON, N_TEXTE_ECRAN, N_NOM (zone de saisie :
-                        texte : nom, texte2 : type, forme : genre, entier 1 : facultatif, enfants[0] : départ), dans l'ordre */
+                        texte : nom, texte2 : type, forme : genre, entier 1 : facultatif, 2 : sur plusieurs lignes,
+                        4 : en lecture seule ; enfants[0] : départ), dans l'ordre ; un bouton, un texte ou une zone finit
+                        par ses N_SI_ECRAN (§ 22.6) */
     P_QUAND,         /* « Quand on clique sur « B » dans l'écran X : » (§ 22.2) : texte : nom interne de la formule ;
                         texte3 : écran ; forme : 1 clic, 2 choix, 3 changement, 4 ouverture, 5 fermeture ; entier : cases locales ; enfants[0] : paramètres
                         (N_BLOC), enfants[1] : corps, enfants[2] : N_TEXTE, le bouton (clic) ou l'entité (choix) */

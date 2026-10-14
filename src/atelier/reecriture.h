@@ -57,6 +57,8 @@ struct ElementNouveau {
     QString tri;              // liste : champ du tri ; vide : ordre de conservation
     bool decroissant = false;
     QStringList colonnes;     // liste : champs à montrer ; vide : les colonnes par défaut
+    bool plusieurs_lignes = false, lecture_seule = false;   // zone (§ 22.6)
+    QString actif_si, visible_si;   // bouton, zone (actif) ; bouton, texte, zone (visible) : la condition telle qu'écrite
 };
 QString ecran_titre(const QString &dossier, const QString &ecran, const QString &titre, Geste *geste);
 // Ajoute à la fin ; un bouton reçoit son événement (« Remarque : à écrire. »).

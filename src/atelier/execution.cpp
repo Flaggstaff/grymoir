@@ -17,6 +17,8 @@
 #include <QImage>
 #include <QLabel>
 #include <QLineEdit>
+#include <functional>
+#include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSplitter>
@@ -89,6 +91,19 @@ static void iface_fiche(void *contexte, Chaine *sortie, const char *titre, const
 
 // --- Écrans (grammaire, § 22) : la machine décrit, la fenêtre montre ---
 
+// Une zone sur plusieurs lignes valide quand on la quitte : Entrée y va à la ligne (§ 22.6).
+class SortieDeZone : public QObject {
+public:
+    SortieDeZone(QObject *parent, std::function<void()> f) : QObject(parent), quand(std::move(f)) {}
+protected:
+    bool eventFilter(QObject *, QEvent *e) override {
+        if (e->type() == QEvent::FocusOut) quand();
+        return false;
+    }
+private:
+    std::function<void()> quand;
+};
+
 static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre, const ElementEcran *el, size_t n) {
     auto *t = static_cast<Travail *>(contexte);
     t->vider_sortie(sortie);
@@ -103,14 +118,16 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         colonnes << c;
     }
     if (!t->nb_colonnes.isEmpty() || !t->types_zones.isEmpty())   // un écran est déjà ouvert : il passe dessous
-        t->dessous.push_back({t->nb_colonnes, t->types_zones, t->facultatives, t->choix_zones});
+        t->dessous.push_back({t->nb_colonnes, t->types_zones, t->facultatives, t->choix_zones, t->options_zones});
     t->nb_colonnes.clear();
     for (const auto &c : colonnes) t->nb_colonnes << c.size();
     t->types_zones.clear();
     t->facultatives.clear();
     t->choix_zones.clear();
+    t->options_zones.clear();
     for (size_t k = 0; k < n; k++) {
         t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
+        t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0));
         t->facultatives << el[k].facultatif;
         QStringList ch;
         for (size_t q = 0; q < el[k].nb_choix; q++) ch << QString::fromUtf8(el[k].choix[q]);
@@ -148,6 +165,12 @@ static void iface_ecran_valeurs(void *contexte, const char *const *v, size_t n) 
     emit static_cast<Travail *>(contexte)->ecran_valeurs(l);
 }
 
+static void iface_ecran_etats(void *contexte, const unsigned char *etats, size_t n) {   // § 22.6
+    QVector<int> l;
+    for (size_t k = 0; k < n; k++) l << etats[k];
+    emit static_cast<Travail *>(contexte)->ecran_etats(l);
+}
+
 static void iface_ecran_fermer(void *contexte, Chaine *sortie) {
     auto *t = static_cast<Travail *>(contexte);
     t->vider_sortie(sortie);
@@ -157,11 +180,13 @@ static void iface_ecran_fermer(void *contexte, Chaine *sortie) {
         t->types_zones = d.types_zones;
         t->facultatives = d.facultatives;
         t->choix_zones = d.choix_zones;
+        t->options_zones = d.options_zones;
     } else {
         t->nb_colonnes.clear();
         t->types_zones.clear();
         t->facultatives.clear();
         t->choix_zones.clear();
+        t->options_zones.clear();
     }
     emit t->ecran_ferme();
 }
@@ -293,7 +318,7 @@ void Travail::run() {
     Machine *m = machine_creer();
     Interface i = {this, iface_disponible, iface_formulaire, iface_effacer, 1, iface_image, iface_fiche,
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
-                   iface_ecran_valeurs, iface_ecran_apparence};
+                   iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats};
     machine_interface(m, &i);
     situer(m, chemin, base_imposee);
     Chaine sortie = {};
@@ -432,8 +457,21 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             if (!z) continue;
             QSignalBlocker b(z);   // montrer la valeur n'est pas un changement
             if (auto *l = qobject_cast<QLineEdit *>(z)) l->setText(v[k]);
+            else if (auto *p = qobject_cast<QPlainTextEdit *>(z)) {
+                if (p->toPlainText() != v[k]) p->setPlainText(v[k]);
+                p->document()->setModified(false);
+            }
             else if (auto *c = qobject_cast<QCheckBox *>(z)) c->setChecked(v[k] == "oui");
             else if (auto *m = qobject_cast<QComboBox *>(z)) m->setCurrentIndex(qMax(0, m->findText(v[k])));
+        }
+    });
+    connect(&travail, &Travail::ecran_etats, this, [this](const QVector<int> &e) {   // § 22.6
+        for (int k = 0; k < e.size() && k < controles_ecran.size(); k++) {
+            QWidget *w = controles_ecran[k];
+            if (!w) continue;
+            w->setVisible(!(e[k] & 2));
+            QWidget *actif = k < zones.size() && zones[k] ? zones[k] : w;   // une zone : son contrôle, le libellé reste lisible
+            if (!actif->property("lecture-seule").toBool()) actif->setEnabled(!(e[k] & 1));
         }
     });
     connect(&travail, &Travail::ecran_attente, this, [this] {
@@ -449,6 +487,7 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         tables.clear();
         boutons_ecran.clear();
         zones.clear();
+        controles_ecran.clear();
         erreur_ecran = nullptr;
         attente_ecran = false;
         if (!recouverts.isEmpty()) {   // l'écran du dessous revient (§ 22.3)
@@ -458,6 +497,7 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             tables = e.tables;
             boutons_ecran = e.boutons;
             zones = e.zones;
+            controles_ecran = e.controles;
             vue_ecran->show();
             vue_ecran->setEnabled(false);
             setWindowTitle(e.titre);
@@ -667,7 +707,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                               const QVector<QStringList> &colonnes) {
     if (vue_ecran) {   // l'écran ouvert passe dessous, masqué ; il reviendra à la fermeture de celui-ci
         vue_ecran->hide();
-        recouverts.push_back({vue_ecran, erreur_ecran, tables, boutons_ecran, zones, windowTitle()});
+        recouverts.push_back({vue_ecran, erreur_ecran, tables, boutons_ecran, zones, windowTitle(), controles_ecran});
         vue_ecran = nullptr;
     }
     QVector<ElementVue> elements(sortes.size());
@@ -677,6 +717,9 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].colonnes = colonnes[k];
         elements[k].type = k < travail.types_zones.size() ? travail.types_zones[k] : QString();
         elements[k].choix = k < travail.choix_zones.size() ? travail.choix_zones[k] : QStringList();
+        const int o = k < travail.options_zones.size() ? travail.options_zones[k] : 0;
+        elements[k].plusieurs_lignes = o & 1;
+        elements[k].lecture_seule = o & 2;
     }
     // Le logo : grand sur l'écran que le programme ouvre lui-même (aucun écran dessous), petit sur les autres.
     const int taille = Theme::courant().mesure(recouverts.isEmpty() ? "logo-accueil" : "logo-titre");
@@ -685,6 +728,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
     erreur_ecran = v.erreur;
     tables = v.tables;
     zones = v.zones;
+    controles_ecran = v.controles;
     boutons_ecran = v.boutons;
     setWindowTitle(titre);
     for (int k = 0; k < sortes.size(); k++) {   // les événements, branchés sur les contrôles dessinés
@@ -705,6 +749,13 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                     texte_envoye = m->currentText().toUtf8();
                     envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
                 });
+            } else if (auto *p = qobject_cast<QPlainTextEdit *>(z)) {   // plusieurs lignes : l'événement à la sortie (§ 22.6)
+                p->installEventFilter(new SortieDeZone(p, [this, k, p] {
+                    if (!p->document()->isModified()) return;
+                    p->document()->setModified(false);
+                    texte_envoye = p->toPlainText().toUtf8();
+                    envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
+                }));
             } else if (auto *l = qobject_cast<QLineEdit *>(z)) {
                 connect(l, &QLineEdit::editingFinished, this, [this, k, l] {
                     if (!l->isModified()) return;   // quittée sans changement : pas d'événement

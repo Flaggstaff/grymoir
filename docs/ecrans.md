@@ -70,7 +70,7 @@ Un écran est un objet : ses zones de saisie sont ses champs (charte, art. 6).
 - Bouton et liste : § 3.1 et § 3.2.
 - Dans un événement : `le pays de l'écran` se lit, `Le pays de l'écran devient « France ».` se modifie, comme le champ d'un objet. Une liste dont le `dont` cite une zone de saisie se relit dès que la zone change.
 - Une zone de saisie n'est jamais conservée : elle vit le temps de l'écran. `de l'écran` désigne l'écran de l'événement en cours ; ailleurs, c'est une erreur d'analyse.
-- Reportés : images, textes sur plusieurs lignes, graphiques.
+- Reportés : images, graphiques (§ 6). Les textes sur plusieurs lignes sont venus avec B1 (grammaire, § 22.6).
 
 ### 3.5 Les événements *(validé le 25 septembre 2026)*
 
@@ -168,6 +168,26 @@ Cinq couleurs d'accent : `bleue` (par défaut, sans phrase écrite), `verte`, `t
 - Rose et orange : écartés après calcul. Leur teinte s'écarte de 20 à 30 degrés seulement de celle du danger, à clarté presque égale ; dans la maquette, une zone active à l'accent orange se confondait avec une zone en erreur.
 - Chaque accent tient, en clair et en sombre, 4,5:1 pour le texte et 3:1 pour les contours (WCAG 2.1, critères 1.4.3 et 1.4.11). Les teintes et leurs rapports sont dans `src/atelier/theme/grymoir-jetons.json` ; un essai de l'atelier les recalcule.
 
+## 6. Deuxième vague de contrôles *(conçue le 14 octobre 2026)*
+
+L'éditeur d'écrans ne proposait que cinq éléments. La deuxième vague comble l'écart avec les environnements de gestion courants, sans revenir sur le § 3.3 : toujours aucun pixel. Ordre retenu, du plus demandé au plus coûteux.
+
+| Tranche | Contenu | Statut |
+|---|---|---|
+| B1 | `sur plusieurs lignes`, `en lecture seule`, `actif si …`, `visible si …` (grammaire, § 22.6) | fait |
+| B2 | boutons radio pour une zone à valeurs permises (au plus quatre), groupe titré (`un groupe « Adresse » :`), image affichée | à concevoir |
+| B3 | onglets, barre de menus, graphique | à concevoir |
+
+### 6.1 Les états se déclarent *(validé le 13 octobre 2026)*
+
+L'état actif ou visible d'un élément se déclare dans l'écran, par une condition, au lieu de se piloter dans les événements (`Le bouton … devient inactif.`). Raisons : l'aperçu de l'atelier lit l'écran sans exécuter, un état déclaré ne se désynchronise jamais d'un événement oublié, et la machine peut refuser un geste sur un élément inactif même si l'interface est trafiquée (le navigateur).
+
+- La condition se relit avant chaque attente, comme les listes (§ 3.4) ; l'interface reçoit l'état de chaque élément (`ecran_etats`).
+- Elle se lit à la fin de la déclaration : elle cite n'importe quelle zone ou liste de l'écran, même plus bas.
+- Un élément caché disparaît libellé compris ; dans le navigateur, il n'est pas dans la page.
+- Coût accepté : une condition qui échoue arrête le programme, comme un `dont` de liste ; lire une zone obligatoire encore vide en est un cas, d'où la zone `facultative` dans les exemples.
+- Écarté pour l'instant : `visible si` sur une liste (la place d'une liste qui disparaît change toute la disposition), un état modifié par phrase dans un événement.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -187,3 +207,4 @@ Cinq couleurs d'accent : `bleue` (par défaut, sans phrase écrite), `verte`, `t
 | 0.13 | 2026-09-26 | Nouveau § 5 : l'apparence (un seul thème, la phrase `Les écrans ont …`, la palette de cinq accents) |
 | 0.14 | 2026-09-26 | § 5.2 : phrase implémentée (T3) ; place du logo ; correction sur les phrases en `Les` |
 | 0.15 | 2026-09-29 | § 3.8 : `grym servir` montre les écrans dans le navigateur (`docs/web.md`, W1) ; seul `grym lancer` les refuse |
+| 0.16 | 2026-10-14 | § 6 : deuxième vague de contrôles ; B1 fait (états des éléments, grammaire § 22.6) ; § 3.4 : les textes sur plusieurs lignes ne sont plus reportés |

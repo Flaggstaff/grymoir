@@ -225,7 +225,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -576,6 +576,8 @@ static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, cons
             chaine_ajouter(&s->page.journal, " (");
             chaine_ajouter(&s->page.journal, el[k].type);
             if (el[k].facultatif) chaine_ajouter(&s->page.journal, ", facultatif");
+            if (el[k].plusieurs_lignes) chaine_ajouter(&s->page.journal, ", lignes");
+            if (el[k].lecture_seule) chaine_ajouter(&s->page.journal, ", lecture seule");
             for (size_t c = 0; c < el[k].nb_choix; c++) {
                 chaine_ajouter(&s->page.journal, c ? "|" : " : ");
                 chaine_ajouter(&s->page.journal, el[k].choix[c]);
@@ -707,11 +709,28 @@ static void scene_apparence(void *contexte, int couleur, const unsigned char *lo
     free(l);
 }
 
+/* « actif si », « visible si » (§ 22.6) : journalisés seulement quand un élément est inactif ou caché */
+static void scene_etats(void *contexte, const unsigned char *etats, size_t n) {
+    Scene *s = contexte;
+    int rien = 1;
+    for (size_t k = 0; k < n; k++) rien &= !etats[k];
+    if (rien) return;
+    chaine_ajouter(&s->page.journal, "[états");
+    for (size_t k = 0; k < n; k++) {
+        if (!etats[k]) continue;
+        char *x = grym_formater(" %s%s%s", s->elements && k < s->nb_elements ? s->elements[k].texte : "?",
+                                etats[k] & 1 ? " inactif" : "", etats[k] & 2 ? " caché" : "");
+        chaine_ajouter(&s->page.journal, x);
+        free(x);
+    }
+    chaine_ajouter(&s->page.journal, "]\n");
+}
+
 static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, const char *const *rep, size_t nrep) {
     Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0, {0}, {0}, 0 };
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
-                    scene_apparence };
+                    scene_apparence, scene_etats };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -732,6 +751,43 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
         if (strcmp(r_, att) != 0) signaler(__LINE__, src, att, r_); \
         free(r_); \
     } while (0)
+
+static void essais_etats_ecran(void) {   /* § 22.6 */
+    const char *src =
+        "L'écran de saisie montre :\n"
+        "    un nom (texte), facultatif,\n"
+        "    une remarque (texte), facultative, sur plusieurs lignes,\n"
+        "    un total (nombre), 0 au départ, en lecture seule,\n"
+        "    le texte « Nom manquant », visible si le nom de l'écran est absent,\n"
+        "    un bouton « Valider », actif si le nom de l'écran est présent,\n"
+        "    un bouton « Fermer ».\n"
+        "Quand on change le total dans l'écran de saisie :\n    Afficher « total changé ».\n"
+        "Quand on clique sur « Valider » dans l'écran de saisie :\n"
+        "    Le total de l'écran devient 3.\n    Afficher le nom de l'écran puis le total de l'écran.\n"
+        "Quand on clique sur « Fermer » dans l'écran de saisie :\n    Fermer l'écran.\n"
+        "Ouvrir l'écran de saisie.\n";
+    /* « Valider » inactif tant que le nom manque : le clic ne compte pas ; le total en lecture seule ne change pas */
+    const char *ev[] = { "clic Valider", "change Total=5", "change Nom=Ada", "clic Valider", "clic Fermer" };
+    const char *rep[] = { "" };
+    ECRANS(src, ev, rep,
+           "[ouvrir Saisie ; zone Nom (texte, facultatif) ; zone Remarque (texte, facultatif, lignes) ; zone Total (nombre, lecture seule) ; "
+           "texte Nom manquant ; bouton Valider ; bouton Fermer]\n"
+           "[valeurs Nom= Remarque= Total=0]\n"
+           "[états Valider inactif]\n"                 /* le clic sur « Valider » et le total en lecture seule : ignorés */
+           "[valeurs Nom=Ada Remarque= Total=0]\n"
+           "[états Nom manquant caché]\n"
+           "[valeurs Nom=Ada Remarque= Total=3]\n"
+           "[états Nom manquant caché]\n"
+           "Ada 3\n"
+           "[valeurs Nom=Ada Remarque= Total=3]\n"
+           "[états Nom manquant caché]\n"
+           "[fermer]\n");
+    /* une condition qui lit une zone obligatoire encore vide arrête le programme, comme le « dont » d'une liste */
+    const char *src2 = "L'écran x montre :\n    un nom (texte),\n    un bouton « OK », actif si le nom de l'écran est présent.\n"
+                       "Quand on clique sur « OK » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+    const char *ev2[] = { "clic OK" };
+    ECRANS(src2, ev2, rep, "[ouvrir X ; zone Nom (texte) ; bouton OK]\n[fermer]\nERREUR 3:32 Le champ « nom » n'a pas de valeur.");
+}
 
 static void essais_ecrans(void) {
     const char *compositeurs =
@@ -3344,6 +3400,7 @@ int main(void) {
     essais_utiliser();
     essais_migration();
     essais_ecrans();
+    essais_etats_ecran();
 
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;

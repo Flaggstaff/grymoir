@@ -71,6 +71,7 @@ typedef struct {
     long *choisie;          /* liste : la ligne choisie en dernier, ou −1 (« le … choisi de l'écran ») */
     char **valeurs;         /* zone : son texte, tel que la machine le donne avant chaque attente */
     char *erreur;           /* message à montrer sous le titre, jusqu'au prochain événement */
+    unsigned char *etats;   /* élément : bit 1 inactif, bit 2 caché (§ 22.6) ; un élément caché n'est pas envoyé */
 } EcranWeb;
 
 struct Serveur {
@@ -786,13 +787,19 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
     const ElementEcran *el = &e->el[k];
     const char *v = e->valeurs[k] ? e->valeurs[k] : "";
     char *id = grym_formater("z%lu", (unsigned long)k);
+    /* inactive, ou en lecture seule pour un menu ou une case : désactivée, donc absente de l'envoi ;
+     * un texte en lecture seule reste sélectionnable (§ 22.6) */
+    const int fige = (e->etats[k] & 1) || (el->lecture_seule && (est_case(el) || el->nb_choix));
+    const char *attr = fige ? " disabled" : el->lecture_seule ? " readonly" : "";
     chaine_ajouter(c, "<div class=\"zone\">");
     if (est_case(el)) {   /* la présence de « …p » dit qu'on a vu la case : décochée, elle n'envoie rien */
         chaine_ajouter(c, "<input type=\"hidden\" name=\"");
         chaine_ajouter(c, id);
         chaine_ajouter(c, "p\" value=\"1\"><label class=\"case\"><input type=\"checkbox\" name=\"");
         chaine_ajouter(c, id);
-        chaine_ajouter(c, strcmp(v, "oui") == 0 ? "\" value=\"oui\" checked> " : "\" value=\"oui\"> ");
+        chaine_ajouter(c, strcmp(v, "oui") == 0 ? "\" value=\"oui\" checked" : "\" value=\"oui\"");
+        chaine_ajouter(c, attr);
+        chaine_ajouter(c, "> ");
         echapper(c, el->texte);
         chaine_ajouter(c, "</label>");
     } else {
@@ -806,13 +813,25 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
             chaine_ajouter(c, id);
             chaine_ajouter(c, "\" name=\"");
             chaine_ajouter(c, id);
-            chaine_ajouter(c, "\">");
+            chaine_ajouter(c, "\"");
+            chaine_ajouter(c, attr);
+            chaine_ajouter(c, ">");
             int trouvee = !*v;
             for (size_t j = 0; j < el->nb_choix && !trouvee; j++) trouvee = strcmp(el->choix[j], v) == 0;
             option(c, "", "", !*v);
             if (!trouvee) option(c, v, v, 1);   /* la valeur actuelle hors du menu n'est jamais perdue en silence */
             for (size_t j = 0; j < el->nb_choix; j++) option(c, el->choix[j], el->choix[j], strcmp(el->choix[j], v) == 0);
             chaine_ajouter(c, "</select>");
+        } else if (el->plusieurs_lignes) {   /* « sur plusieurs lignes » : Entrée va à la ligne (§ 22.6) */
+            chaine_ajouter(c, "<textarea rows=\"4\" id=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "\" name=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "\"");
+            chaine_ajouter(c, attr);
+            chaine_ajouter(c, ">");
+            echapper(c, v);
+            chaine_ajouter(c, "</textarea>");
         } else {
             chaine_ajouter(c, "<input type=\"text\" id=\"");
             chaine_ajouter(c, id);
@@ -824,6 +843,7 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
             /* la virgule suisse n'est pas un nombre pour un champ numérique : texte, vérifié par la machine */
             if (el->type && strcmp(el->type, "nombre") == 0) chaine_ajouter(c, " inputmode=\"decimal\"");
             else if (el->type && strcmp(el->type, "nombre entier") == 0) chaine_ajouter(c, " inputmode=\"numeric\"");
+            chaine_ajouter(c, attr);
             chaine_ajouter(c, ">");
         }
     }
@@ -922,6 +942,8 @@ static void page_ecran(Serveur *s) {
     int boutons = 0;   /* des boutons qui se suivent : une rangée, à droite (comme dans l'atelier) */
     for (size_t k = 0; k < e->n; k++) {
         const ElementEcran *el = &e->el[k];
+        if ((e->etats[k] & 2) && (el->sorte == ELEMENT_BOUTON || el->sorte == ELEMENT_TEXTE || el->sorte == ELEMENT_ZONE))
+            continue;   /* « visible si » faux : l'élément n'est pas dans la page (§ 22.6) */
         if (el->sorte != ELEMENT_BOUTON && boutons) { chaine_ajouter(&c, "</div>\n"); boutons = 0; }
         switch (el->sorte) {
         case ELEMENT_COTE_A_COTE: chaine_ajouter(&c, "<div class=\"cote\">\n"); break;
@@ -936,7 +958,8 @@ static void page_ecran(Serveur *s) {
         case ELEMENT_LISTE: liste(&c, e, k); chaine_ajouter(&c, "\n"); break;
         case ELEMENT_BOUTON: {
             if (!boutons) { chaine_ajouter(&c, "<div class=\"boutons\">"); boutons = 1; }
-            char *v = grym_formater("<button name=\"clic\" value=\"%lu\">", (unsigned long)k);
+            char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s>", (unsigned long)k,
+                                    (e->etats[k] & 1) ? " disabled" : "");   /* « actif si » faux (§ 22.6) */
             chaine_ajouter(&c, v);
             free(v);
             echapper(&c, el->texte);
@@ -1001,7 +1024,7 @@ static int evenements_de(Serveur *s, Envoi *env) {
         if (fin != ps->valeur && !*fin && r < e->nb_lignes[k]) e->choisie[k] = (long)r;
     }
     for (size_t k = 0; k < e->n; k++) {
-        if (e->el[k].sorte != ELEMENT_ZONE) continue;
+        if (e->el[k].sorte != ELEMENT_ZONE || e->etats[k] || e->el[k].lecture_seule) continue;   /* § 22.6 */
         char nom[24];
         snprintf(nom, sizeof nom, "z%lu", (unsigned long)k);
         Partie *pv = envoi_partie(env, nom);
@@ -1031,7 +1054,7 @@ static int evenements_de(Serveur *s, Envoi *env) {
         file_ajouter(s, ev);
     } else if (pc && !pc->fichier) {
         unsigned long k = strtoul(pc->valeur, &fin, 10);
-        if (fin != pc->valeur && !*fin && k < e->n && e->el[k].sorte == ELEMENT_BOUTON) {
+        if (fin != pc->valeur && !*fin && k < e->n && e->el[k].sorte == ELEMENT_BOUTON && !e->etats[k]) {
             Evenement ev = { EVENEMENT_CLIC, (size_t)k, 0, NULL, choisies(e), e->n };
             file_ajouter(s, ev);
         }
@@ -1369,6 +1392,7 @@ static void ecran_liberer(EcranWeb *e) {
     free(e->nb_lignes);
     free(e->choisie);
     free(e->valeurs);
+    free(e->etats);
     free(e->titre);
     free(e->erreur);
     free(e);
@@ -1395,6 +1419,8 @@ static void serveur_ecran_ouvrir(void *contexte, Chaine *sortie, const char *tit
     e->nb_lignes = grym_allouer(m * sizeof *e->nb_lignes);
     e->choisie = grym_allouer(m * sizeof *e->choisie);
     e->valeurs = grym_allouer(m * sizeof *e->valeurs);
+    e->etats = grym_allouer(m);
+    memset(e->etats, 0, m);
     for (size_t k = 0; k < n; k++) {
         e->el[k] = el[k];
         e->el[k].texte = el[k].texte ? grym_dupliquer(el[k].texte) : NULL;
@@ -1446,6 +1472,11 @@ static void serveur_ecran_valeurs(void *contexte, const char *const *valeurs, si
         free(e->valeurs[k]);
         e->valeurs[k] = valeurs[k] ? grym_dupliquer(valeurs[k]) : NULL;
     }
+}
+
+static void serveur_ecran_etats(void *contexte, const unsigned char *etats, size_t n) {   /* § 22.6 */
+    EcranWeb *e = ecran_dessus(contexte);
+    for (size_t k = 0; e && k < n && k < e->n; k++) e->etats[k] = etats[k];
 }
 
 static void serveur_ecran_erreur(void *contexte, Chaine *sortie, const char *message) {
@@ -1518,7 +1549,8 @@ static void serveur_ecran_apparence(void *contexte, int couleur, const unsigned 
 Interface serveur_interface(Serveur *s) {
     Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer, 1, serveur_afficher_image,
                     serveur_afficher_fiche, serveur_ecran_ouvrir, serveur_ecran_lignes, serveur_ecran_attendre,
-                    serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence };
+                    serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence,
+                    serveur_ecran_etats };
     return i;
 }
 

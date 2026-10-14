@@ -57,6 +57,15 @@ QString titre_du_nom(const QString &nom) {
 
 }  // namespace
 
+// Un champ pour « actif si » ou « visible si » (§ 22.6) : la condition en GrymoiR, vide pour toujours.
+static QLineEdit *condition_ecran(const QString &ecrit, const QString &exemple) {
+    auto *l = new QLineEdit(ecrit);
+    l->setPlaceholderText("toujours ; ou une condition : " + exemple);
+    l->setToolTip("Une condition GrymoiR, relue après chaque événement ; elle cite les zones et les listes "
+                  "écrites avant l'élément, par « de l'écran ».");
+    return l;
+}
+
 QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
     QMap<QString, EntiteSchema> entites;   // pour les colonnes par défaut d'une liste
     for (const auto &e : lire_schema(dossier)) entites.insert(e.nom, e);
@@ -127,6 +136,11 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                     const Noeud *el = n->enfants[q];
                     ElementLu x;
                     if (ici) x.ecrit = extrait(el);   // un fichier utilisé se lit ailleurs, avec ses propres positions
+                    for (size_t s2 = 0; ici && s2 < el->nb_enfants; s2++) {   // « actif si », « visible si » (§ 22.6)
+                        const Noeud *si = el->enfants[s2];
+                        if (si->type != N_SI_ECRAN) continue;
+                        (si->forme == 1 ? x.actif_si : x.visible_si) = extrait(si->enfants[0]);
+                    }
                     if (el->type == N_DISPOSITION) {
                         x.sorte = el->forme == 1 ? ELEMENT_COTE_A_COTE : el->forme == 2 ? ELEMENT_L_UN_SOUS_L_AUTRE : ELEMENT_FIN_DE_BLOC;
                         x.ecrit.clear();
@@ -141,7 +155,10 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.texte = QString::fromUtf8(el->texte);
                         x.type = QString::fromUtf8(el->texte2);
                         x.facultatif = el->entier & 1;
-                        if (el->nb_enfants) {
+                        x.feminin = el->forme == 2;
+                        x.plusieurs_lignes = el->entier & 2;
+                        x.lecture_seule = el->entier & 4;
+                        if (el->nb_enfants && el->enfants[0]->type != N_SI_ECRAN) {
                             const Noeud *v = el->enfants[0];
                             x.depart = QString::fromUtf8(v->texte ? v->texte
                                                          : v->nb_enfants && v->enfants[0]->texte ? v->enfants[0]->texte : "");
@@ -324,6 +341,8 @@ void OngletEcrans::dessiner() {
         el[k].texte = e.elements[k].sorte == ELEMENT_ZONE ? capitale(e.elements[k].texte) : e.elements[k].texte;
         el[k].colonnes = e.elements[k].colonnes;
         el[k].type = e.elements[k].type;
+        el[k].plusieurs_lignes = e.elements[k].plusieurs_lignes;
+        el[k].lecture_seule = e.elements[k].lecture_seule;
     }
     // L'apparence du programme (§ 22.5) : son accent sur l'aperçu seul, pas sur l'atelier ; son logo, grand
     // sur l'écran d'accueil, petit sur les autres, comme à l'exécution.
@@ -523,11 +542,20 @@ void OngletEcrans::editer() {
         if (x.sorte == ELEMENT_BOUTON || x.sorte == ELEMENT_TEXTE) {
             auto *texte = new QLineEdit(x.texte);
             f->addRow(x.sorte == ELEMENT_BOUTON ? "Libellé" : "Texte", texte);
+            QLineEdit *actif = nullptr;
+            if (x.sorte == ELEMENT_BOUTON) {
+                actif = condition_ecran(x.actif_si, "le nom de l'écran est présent");
+                f->addRow("Actif si", actif);
+            }
+            auto *visible = condition_ecran(x.visible_si, "le compositeur choisi de l'écran est présent");
+            f->addRow("Visible si", visible);
             const int sorte = x.sorte;
-            connect(appliquer, &QPushButton::clicked, this, [this, ecran, k, texte, sorte] {
+            connect(appliquer, &QPushButton::clicked, this, [this, ecran, k, texte, sorte, actif, visible] {
                 ElementNouveau n;
                 n.sorte = sorte;
                 n.texte = texte->text();
+                if (actif) n.actif_si = actif->text();
+                n.visible_si = visible->text();
                 emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
         } else if (x.sorte == ELEMENT_ZONE) {
@@ -537,14 +565,25 @@ void OngletEcrans::editer() {
             for (const auto &en : lire_schema(dossier)) type->addItem(en.nom);
             type->setCurrentIndex(qMax(0, type->findText(x.type)));
             auto *feminin = new QCheckBox("féminin (une …)");
+            feminin->setChecked(x.feminin);   // sans quoi « Appliquer » rendait masculine une zone féminine
             auto *facultative = new QCheckBox("facultative");
             facultative->setChecked(x.facultatif);
             auto *depart = new QLineEdit(x.depart);
+            auto *lignes = new QCheckBox("sur plusieurs lignes (texte)");
+            lignes->setChecked(x.plusieurs_lignes);
+            auto *seule = new QCheckBox("en lecture seule");
+            seule->setChecked(x.lecture_seule);
+            auto *actif = condition_ecran(x.actif_si, "le compositeur choisi de l'écran est présent");
+            auto *visible = condition_ecran(x.visible_si, "le pays de l'écran est « Suisse »");
             f->addRow("Nom", nom);
             f->addRow("Type", type);
             f->addRow("", feminin);
             f->addRow("", facultative);
             f->addRow("Au départ", depart);
+            f->addRow("", lignes);
+            f->addRow("", seule);
+            f->addRow("Active si", actif);
+            f->addRow("Visible si", visible);
             connect(appliquer, &QPushButton::clicked, this, [=] {
                 ElementNouveau n;
                 n.sorte = ELEMENT_ZONE;
@@ -553,6 +592,10 @@ void OngletEcrans::editer() {
                 n.feminin = feminin->isChecked();
                 n.facultatif = facultative->isChecked();
                 n.depart = depart->text();
+                n.plusieurs_lignes = lignes->isChecked();
+                n.lecture_seule = seule->isChecked();
+                n.actif_si = actif->text();
+                n.visible_si = visible->text();
                 emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
         } else if (x.sorte == ELEMENT_LISTE) {

@@ -1150,6 +1150,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 chaine_ajouter(&d, "\x1e");
                 chaine_ajouter(&d, el->texte2);
                 chaine_ajouter(&d, (el->entier & 1) ? "\x1e" "f" : "\x1e" "-");
+                if (el->entier & 2) chaine_ajouter(&d, "m");   /* sur plusieurs lignes (§ 22.6) */
+                if (el->entier & 4) chaine_ajouter(&d, "s");   /* en lecture seule */
             }
         }
         char *desc = chaine_rendre(&d);
@@ -1161,7 +1163,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_ECRAN_OUVRIR, kd, ph->ligne, ph->colonne);
         for (size_t k = 0; k < e->nb_enfants; k++) {   /* les valeurs de départ des zones */
             const Noeud *el = e->enfants[k];
-            if (el->type != N_NOM || !el->nb_enfants) continue;
+            if (el->type != N_NOM || !el->nb_enfants || el->enfants[0]->type == N_SI_ECRAN) continue;
             emettre(c, I_ECRAN_OBJET, 0, ph->ligne, ph->colonne);
             expression(c, el->enfants[0]);
             long nz = bloc_nom(c->b, el->texte);
@@ -1177,6 +1179,13 @@ static void phrase(Compilation *c, const Noeud *ph) {
             expression(c, e->enfants[k]);
             emettre(c, I_ECRAN_LISTE, (long)k, ph->ligne, ph->colonne);
         }
+        for (size_t k = 0; k < e->nb_enfants; k++)   /* « actif si », « visible si » : relus à chaque tour (§ 22.6) */
+            for (size_t q = 0; q < e->enfants[k]->nb_enfants; q++) {
+                const Noeud *si = e->enfants[k]->enfants[q];
+                if (si->type != N_SI_ECRAN) continue;
+                expression(c, si->enfants[0]);
+                emettre(c, I_ECRAN_ETAT, (long)(k * 2 + (si->forme == 2)), si->ligne, si->colonne);
+            }
         emettre(c, I_ECRAN_ATTENDRE, 0, ph->ligne, ph->colonne);
         emettre(c, I_ECRIRE_LOCAL, ev, ph->ligne, ph->colonne);
         emettre(c, I_ECRIRE_LOCAL, objet, ph->ligne, ph->colonne);

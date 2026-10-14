@@ -284,6 +284,17 @@ int main(void) {
          "    La date vaut absente.\nSi la date de x est présente, afficher 1.",
          "Une p, conservée, a :\n    une date (date), facultative,\n    un nom (texte), unique, facultatif.\n"
          "La x vaut une nouvelle p :\n    La date vaut absente.\nSi la date de x est présente, afficher 1.\n");
+    /* états des éléments d'écran (§ 22.6) : ordre canonique, accord de « active », forme compacte */
+    LITT("L'écran x montre :\n    une note (texte), active si vrai, sur plusieurs lignes, facultative,\n"
+         "    un bouton « B », visible si faux, actif si vrai.\nQuand on clique sur « B » dans l'écran x :\n    Fermer l'écran.",
+         "L'écran x montre :\n    une note (texte), facultative, sur plusieurs lignes, active si vrai,\n"
+         "    un bouton « B », actif si vrai, visible si faux.\nQuand on clique sur « B » dans l'écran x :\n    Fermer l'écran.\n");
+    COMP("L'écran x montre :\n    un total (nombre), 0 au départ, en lecture seule,\n    le texte « T », visible si vrai.",
+         "_écran x\n    _un total (nombre) _départ 0 _lecture_seule\n    _texte « T » _visible_si _vrai\n_fin\n");
+    FIXE("L'écran x montre :\n    une note (texte), sur plusieurs lignes, active si vrai,\n    le texte « T », visible si faux.");
+    /* une condition cite une zone écrite plus bas : l'accord suit son genre */
+    LITT("L'écran x montre :\n    le texte « T », visible si la remarque de l'écran est présente,\n    une remarque (texte), facultative.",
+         "L'écran x montre :\n    le texte « T », visible si la remarque de l'écran est présente,\n    une remarque (texte), facultative.\n");
     /* une colonne de tableau est féminine : « est présente » (§ 15.5) */
     LITT("Pour chaque rangée du tableau « o.csv » :\n    Si la colonne « Année » de la rangée est présente, afficher 1.",
          "Pour chaque rangée du tableau « o.csv » :\n    Si la colonne « Année » de la rangée est présente, afficher 1.\n");

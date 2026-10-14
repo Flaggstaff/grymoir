@@ -392,6 +392,7 @@ typedef struct EcranVM {
     size_t *nb_choix;
     struct EcranVM *dessous;   /* l'écran qu'il recouvre (écrans empilés, § 22.3), ou NULL */
     char ***chemins;       /* liste aux colonnes choisies : le chemin de chaque colonne (« compositeur␜naissance »), sinon NULL */
+    unsigned char *etats;  /* pour chaque élément : bit 1 inactif, bit 2 caché (§ 22.6) ; relus avant chaque attente */
 } EcranVM;
 
 static void ecran_detruire(EcranVM *e);
@@ -2092,6 +2093,7 @@ static void ecran_detruire(EcranVM *e) {
     free(e->choix);
     free(e->nb_choix);
     free(e->champ);
+    free(e->etats);
     free(e->titre);
     free(e->elements);
     free(e->textes);
@@ -2142,6 +2144,8 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     e->choix = grym_allouer(t * sizeof *e->choix);
     e->nb_choix = grym_allouer(t * sizeof *e->nb_choix);
     e->chemins = grym_allouer(t * sizeof *e->chemins);
+    e->etats = grym_allouer(t);
+    memset(e->etats, 0, t);
     char *nom_classe = grym_formater("écran %s", parts[0]);
     const ClasseVM *ce = classe_vm(m, nom_classe);
     free(nom_classe);
@@ -2174,6 +2178,8 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].nb_colonnes = 0;
             e->elements[k].type = e->types[k];
             e->elements[k].facultatif = s2 && s2[1] == 'f';
+            e->elements[k].plusieurs_lignes = s2 && strchr(s2 + 1, 'm') != NULL;   /* « Zpays ␞ texte ␞ fms » (§ 22.6) */
+            e->elements[k].lecture_seule = s2 && strchr(s2 + 1, 's') != NULL;
             e->elements[k].choix = NULL;
             e->elements[k].nb_choix = 0;
             const ClasseVM *lie = classe_vm(m, e->types[k]);
@@ -3701,6 +3707,23 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
+        case I_ECRAN_ETAT: {
+            /* « actif si … », « visible si … » (§ 22.6) : la condition, relue à chaque tour de l'écran */
+            Valeur v = depiler(&pile);
+            const size_t k = op / 2;
+            char *probleme = NULL;
+            if (!m->ecran || k >= m->ecran->n) probleme = grym_dupliquer("État d'écran invalide.");
+            else if (v.type != V_BOOLEEN)
+                probleme = grym_formater("« %s si » : la condition n'est ni vraie ni fausse.", op % 2 ? "visible" : "actif");
+            else {
+                const unsigned char bit = op % 2 ? 2 : 1;
+                if (v.vrai) m->ecran->etats[k] &= (unsigned char)~bit;
+                else m->ecran->etats[k] |= bit;
+            }
+            valeur_liberer(&v);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
         case I_ECRAN_ATTENDRE: {
             /* Attendre valide ce qui précède : chaque événement sera sa propre transaction (charte, art. 7). */
             char *probleme = ouvrir_attente(m, sortie, cadres);
@@ -3721,9 +3744,18 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 for (size_t k = 0; k < e->n; k++) free(v[k]);
                 free(v);
             }
+            if (!probleme && m->ecran && m->iface.ecran_etats) m->iface.ecran_etats(m->iface.contexte, m->ecran->etats, m->ecran->n);
             Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, NULL, 0 };
             Issue issue = ISSUE_REPONDU;
-            if (!probleme && !m->fermer_ecran) issue = m->iface.ecran_attendre(m->iface.contexte, sortie, &ev);
+            if (!probleme && !m->fermer_ecran)
+                for (;;) {   /* un geste sur un élément inactif, caché ou en lecture seule ne compte pas (§ 22.6) */
+                    issue = m->iface.ecran_attendre(m->iface.contexte, sortie, &ev);
+                    if (issue != ISSUE_REPONDU || ev.sorte == EVENEMENT_FERMETURE || !m->ecran || ev.element >= m->ecran->n)
+                        break;
+                    const int refuse = m->ecran->etats[ev.element]
+                                    || (ev.sorte == EVENEMENT_CHANGEMENT && m->ecran->elements[ev.element].lecture_seule);
+                    if (!refuse) break;
+                }
             m->fermer_ecran = 0;
             char *reprise = probleme ? NULL : fermer_attente(m);
             if (!probleme) probleme = reprise;

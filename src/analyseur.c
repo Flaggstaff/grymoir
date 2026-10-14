@@ -5709,6 +5709,93 @@ static void ajouter_nom(char ***t, size_t *n, const char *nom) {
 }
 
 /* « L'écran des compositeurs montre : » suivi de ses éléments (§ 22.1). */
+
+/* Un état d'un bouton, d'un texte ou d'une zone (§ 22.6) : « , sur plusieurs lignes », « , en lecture seule »
+ * (zones), « , actif si … », « , visible si … ». La condition se relit avant chaque attente. Rend 1 si un état
+ * est lu, 0 si la virgule annonce autre chose, −1 sur erreur. *vus : 1 actif, 2 visible, 4 lignes, 8 lecture seule. */
+static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
+    int vus = *vus_;
+    if (cour(a)->type != J_VIRGULE) return 0;
+    {
+        const Jeton *x = voir(a, 1);
+        if (zone && est_mot(x, "sur") && est_mot(voir(a, 2), "plusieurs") && est_mot(voir(a, 3), "lignes")) {
+            if (strcmp(el->texte2, "texte") != 0)
+                return erreur(a, x, grym_dupliquer("Seule une zone (texte) s'écrit sur plusieurs lignes.") ), -1;
+            if (vus & 4) return erreur(a, x, grym_dupliquer("« sur plusieurs lignes » est déjà dit.") ), -1;
+            vus |= 4;
+            el->entier |= 2;
+            a->i += 4;
+            *vus_ = vus;
+            return 1;
+        }
+        if (zone && est_mot(x, "en") && est_mot(voir(a, 2), "lecture") && est_mot(voir(a, 3), "seule")) {
+            if (vus & 8) return erreur(a, x, grym_dupliquer("« en lecture seule » est déjà dit.") ), -1;
+            vus |= 8;
+            el->entier |= 4;
+            a->i += 4;
+            *vus_ = vus;
+            return 1;
+        }
+        const int actif = est_mot(x, "actif") || est_mot(x, "active");
+        if (!(actif || est_mot(x, "visible")) || !est_mot(voir(a, 2), "si")) return 0;
+        if (actif && !zone && el->type != N_BOUTON)
+            return erreur(a, x, grym_dupliquer("Un texte fixe ne se clique pas : « visible si » seulement.") ), -1;
+        if (actif && est_mot(x, g == GENRE_FEMININ ? "actif" : "active"))
+            return erreur(a, x, grym_formater("Accord : « %s si ».", g == GENRE_FEMININ ? "active" : "actif") ), -1;
+        if (vus & (actif ? 1 : 2))
+            return erreur(a, x, grym_formater("« %s si » est déjà dit pour cet élément.", x->valeur) ), -1;
+        vus |= actif ? 1 : 2;
+        a->i += 3;
+        /* La condition se lit à la fin de la déclaration, quand toutes les zones et les listes de l'écran sont
+         * connues : elle peut citer celles qui suivent. Ici, on repère seulement où elle s'arrête. */
+        size_t k = a->i;
+        int prof = 0;
+        while (k < a->n && a->j[k].type != J_FIN && !(prof == 0 && (a->j[k].type == J_VIRGULE || a->j[k].type == J_POINT))) {
+            if (a->j[k].type == J_PAR_OUV) prof++;
+            else if (a->j[k].type == J_PAR_FERM && prof > 0) prof--;
+            k++;
+        }
+        if (k == a->i) return erreur(a, cour(a), grym_formater("Condition attendue après « %s si ».", x->valeur)), -1;
+        Noeud *n = noeud_creer(N_SI_ECRAN, x->ligne, x->colonne, x->debut);
+        n->forme = actif ? 1 : 2;
+        n->entier = (int)a->i;          /* début de la condition, en jetons ; lu plus tard (conditions_ecran) */
+        n->local = (int)k;              /* sa fin */
+        n->negation = g == GENRE_FEMININ;
+        noeud_ajouter(el, n);
+        a->i = k;
+        *vus_ = vus;
+        return 1;
+    }
+}
+
+/* Les conditions d'un écran (§ 22.6), une fois tous ses éléments connus. Rend 0 sur erreur. */
+static int conditions_ecran(Analyse *a, Noeud *ecran) {
+    const size_t reprise = a->i;
+    for (size_t k = 0; k < ecran->nb_enfants; k++)
+        for (size_t q = 0; q < ecran->enfants[k]->nb_enfants; q++) {
+            Noeud *si = ecran->enfants[k]->enfants[q];
+            if (si->type != N_SI_ECRAN || si->nb_enfants) continue;
+            const char *mot = si->forme == 1 ? (si->negation ? "active" : "actif") : "visible";
+            a->i = (size_t)si->entier;
+            const Jeton *debut = cour(a);
+            Noeud *c = valeur(a);
+            if (!c) return 0;
+            if (!peut_etre_condition(c) || a->i != (size_t)si->local) {
+                noeud_liberer(c);
+                erreur(a, a->i != (size_t)si->local ? cour(a) : debut,
+                       grym_formater("« %s si » attend une condition : « %s si le nom de l'écran est présent ».", mot, mot));
+                return 0;
+            }
+            noeud_ajouter(si, c);
+            si->fin = c->fin;
+            si->entier = 0;
+            si->local = 0;
+            si->negation = 0;
+        }
+    a->i = reprise;
+    return 1;
+}
+
 static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     if (!premier_niveau(a, t)) return NULL;
     size_t d = a->i + 2, f;
@@ -5882,9 +5969,13 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             el->texte2 = type;
             el->forme = g == GENRE_FEMININ ? 2 : 1;
             a->i = q + 1;
+            int vus = 0;
             while (cour(a)->type == J_VIRGULE) {
                 const Jeton *x = voir(a, 1);
                 if (est_mot(x, "facultatif") || est_mot(x, "facultative")) { el->entier |= 1; a->i += 2; continue; }
+                const int lu = etat_element(a, el, g, 1, &vus);   /* « sur plusieurs lignes », « actif si … » (§ 22.6) */
+                if (lu < 0) break;
+                if (lu) continue;
                 int moins = x->type == J_MOINS;
                 const Jeton *v = moins ? voir(a, 2) : x;
                 size_t apres_v = a->i + (moins ? 3 : 2);
@@ -5905,6 +5996,11 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                     dv = ng;
                 }
                 noeud_ajouter(el, dv);
+                for (size_t z = el->nb_enfants - 1; z > 0; z--) {   /* la valeur de départ reste le premier enfant */
+                    Noeud *x = el->enfants[z];
+                    el->enfants[z] = el->enfants[z - 1];
+                    el->enfants[z - 1] = x;
+                }
                 a->i = apres_v + 2;
             }
             if (a->echec) { noeud_liberer(el); break; }
@@ -5925,6 +6021,9 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             el->texte = grym_dupliquer(libelle);
             if (bouton) ajouter_nom(&e.boutons, &e.nb_boutons, libelle);
             a->i += 3;
+            int vus = 0, lu;
+            while ((lu = etat_element(a, el, GENRE_MASCULIN, 0, &vus)) > 0) {}
+            if (lu < 0) { noeud_liberer(el); break; }
             el->fin = fin_jeton(&a->j[a->i - 1]);
         } else {
             erreur(a, u, grym_dupliquer("Élément d'écran attendu : « la liste des … conservés », « un bouton « … » », "
@@ -5946,6 +6045,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         }
         avancer(a);
     }
+    if (!a->echec) conditions_ecran(a, n);   /* « actif si », « visible si » : tout l'écran est connu (§ 22.6) */
     a->ecran = NULL;
     free(classe);
     if (a->echec) {

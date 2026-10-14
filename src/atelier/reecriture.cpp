@@ -653,6 +653,46 @@ QString colonnes_ecrites(const QString &entite, const QString &dossier, const QS
     return r.join(QChar(0x1e));
 }
 
+// « actif si », « visible si » (§ 22.6) : la condition reste le texte que le développeur a écrit. L'arbre porte une
+// marque, que l'impression remplace par ce texte ; la réanalyse du projet (Chantier::conclure) le vérifie.
+const char *const MARQUE_ACTIF = "\x01" "actif" "\x01", *const MARQUE_VISIBLE = "\x01" "visible" "\x01";   // « \x01ac » serait un seul échappement
+
+QString avec_conditions(QString imprime, const ElementNouveau &e) {
+    imprime.replace(QString("« %1 »").arg(QString::fromUtf8(MARQUE_ACTIF)), e.actif_si.simplified());
+    imprime.replace(QString("« %1 »").arg(QString::fromUtf8(MARQUE_VISIBLE)), e.visible_si.simplified());
+    return imprime;
+}
+
+void reimprimer_avec(Chantier &ch, const Trouve &t, const ElementNouveau &e) {
+    const auto x = t.f->etendue(t.k);
+    ch.remplacer(*t.f, x.first, x.second, avec_conditions(t.f->imprimer(t.phrase), e));
+}
+
+// Les états de l'élément : options d'une zone, conditions ; vide si tout va bien.
+QString etats_voulus(Noeud *n, const ElementNouveau &e) {
+    if (e.sorte == ELEMENT_ZONE) {
+        if (e.plusieurs_lignes && e.type != "texte") return "Seule une zone (texte) s'écrit sur plusieurs lignes.";
+        if (e.plusieurs_lignes) n->entier |= 2;
+        if (e.lecture_seule) n->entier |= 4;
+    }
+    const QString actif = e.actif_si.simplified(), visible = e.visible_si.simplified();
+    if (!actif.isEmpty() && e.sorte != ELEMENT_BOUTON && e.sorte != ELEMENT_ZONE)
+        return "Seuls un bouton ou une zone sont actifs ou non.";
+    if (!visible.isEmpty() && e.sorte == ELEMENT_LISTE) return "Une liste est toujours visible, pour l'instant.";
+    for (int k = 0; k < 2; k++) {
+        const QString &c = k ? visible : actif;
+        if (c.isEmpty()) continue;
+        if (c.endsWith('.') || c.endsWith(',')) return "La condition finit sans point ni virgule.";
+        Noeud *si = noeud_creer(N_SI_ECRAN, 0, 0, 0);
+        si->forme = k ? 2 : 1;
+        Noeud *m = noeud_creer(N_TEXTE, 0, 0, 0);
+        m->texte = grym_dupliquer(k ? MARQUE_VISIBLE : MARQUE_ACTIF);
+        noeud_ajouter(si, m);
+        noeud_ajouter(n, si);
+    }
+    return QString();
+}
+
 Noeud *nouvel_element(const ElementNouveau &e, const QString &dossier, QString *erreur) {
     Noeud *n = nullptr;
     const QByteArray t = e.texte.trimmed().toUtf8();
@@ -685,6 +725,10 @@ Noeud *nouvel_element(const ElementNouveau &e, const QString &dossier, QString *
     } else {
         *erreur = "Élément inconnu.";
     }
+    if (n) {
+        const QString x = etats_voulus(n, e);
+        if (!x.isEmpty()) { *erreur = x; noeud_liberer(n); return nullptr; }
+    }
     return n;
 }
 
@@ -710,7 +754,7 @@ QString ecran_ajouter(const QString &dossier, const QString &ecran, const Elemen
     Noeud *n = nouvel_element(e, dossier, &erreur);
     if (!n) return erreur;
     noeud_ajouter(t.phrase, n);
-    reimprimer(ch, t);
+    reimprimer_avec(ch, t, e);
     if (e.sorte == ELEMENT_BOUTON) {   // un bouton sans événement serait refusé (§ 22.2)
         const int pos = apres_l_ecran(t, ecran);
         ch.remplacer(*t.f, pos, pos, QString("\nQuand on clique sur « %1 » dans l'écran %2 :\n    Remarque : à écrire.")
@@ -787,7 +831,7 @@ QString ecran_modifier(const QString &dossier, const QString &ecran, int index, 
     }
     n->enfants[index] = neuf;
     noeud_liberer(vieux);
-    reimprimer(ch, t);
+    reimprimer_avec(ch, t, x);
     const QString nouveau_nom = x.texte.trimmed();
     if (nouveau_nom != ancien) {
         if (neuf->type == N_BOUTON) renommer_evenement(ch, ecran, 1, ancien, nouveau_nom);

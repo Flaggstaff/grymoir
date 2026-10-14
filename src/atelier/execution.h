@@ -65,6 +65,7 @@ signals:
     void ecran_attente();
     void ecran_erreur(const QString &message);
     void ecran_valeurs(const QStringList &valeurs);   // une par élément ; vide pour un élément qui n'est pas une zone
+    void ecran_etats(const QVector<int> &etats);      // un par élément : bit 1 inactif, bit 2 caché (§ 22.6)
     void ecran_ferme();
     void apparence(int couleur, const QByteArray &logo);   // « Les écrans ont … » (grammaire, § 22.5)
     void reponses(const QString &echo);   // les réponses acceptées, recopiées dans le fil comme en console
@@ -80,8 +81,10 @@ public:
     QStringList types_zones;                              // de chaque élément : le type d'une zone, sinon vide
     QVector<int> facultatives;
     QVector<QStringList> choix_zones;                     // zone liée : les clés, pour un menu
+    QVector<int> options_zones;                           // zone : bit 1 sur plusieurs lignes, bit 2 en lecture seule
     // les descriptions des écrans du dessous (écrans empilés, § 22.3), rendues à la fermeture de celui du dessus
-    struct Description { QVector<int> nb_colonnes; QStringList types_zones; QVector<int> facultatives; QVector<QStringList> choix_zones; };
+    struct Description { QVector<int> nb_colonnes; QStringList types_zones; QVector<int> facultatives; QVector<QStringList> choix_zones;
+                         QVector<int> options_zones; };
     QVector<Description> dessous;
     size_t colonnes_de(size_t element) const { return element < (size_t)nb_colonnes.size() ? (size_t)nb_colonnes[(int)element] : 0; }
 
@@ -120,6 +123,7 @@ private:
     void montrer_ecran(const QString &titre, const QVector<int> &sortes, const QStringList &textes,
                        const QVector<QStringList> &colonnes);
     QVector<QWidget *> zones;              // zone de saisie de chaque élément, ou nullptr
+    QVector<QWidget *> controles_ecran;    // ce qui montre chaque élément (libellé compris pour une zone), ou nullptr
     QString texte_zone(int k) const;
     QVector<long> lignes_choisies;         // envoyées avec chaque événement (§ 22.2)
     QByteArray texte_envoye;
@@ -127,7 +131,7 @@ private:
     QWidget *vue_ecran = nullptr;
     // les écrans du dessous, masqués tant qu'un écran les recouvre (§ 22.3)
     struct EcranMontre { QWidget *vue; QLabel *erreur; QVector<class QTableWidget *> tables; QVector<QPushButton *> boutons;
-                         QVector<QWidget *> zones; QString titre; };
+                         QVector<QWidget *> zones; QString titre; QVector<QWidget *> controles; };
     QVector<EcranMontre> recouverts;
     QPixmap logo;   // « … et le logo « … ». » (§ 22.5) : grand sur l'écran du dessous, petit sur les autres
     QLabel *erreur_ecran = nullptr;
