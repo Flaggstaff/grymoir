@@ -603,7 +603,23 @@ void OngletEcrans::liberer(int k, QRect nouveau) {
     const QString ecran = lus[courant].nom;
     QVector<QRect> places(lus[courant].elements.size());
     for (int q = 0; q < places.size(); q++) places[q] = rect_vu(q);
-    if (k >= 0 && k < places.size()) places[k] = nouveau;
+    if (k >= 0 && k < places.size()) {
+        // Seules les unités du premier niveau prennent une place : un élément dans un bloc (groupe, onglet…) fait suivre
+        // son geste au bloc du premier niveau qui le contient, du même déplacement et du même agrandissement.
+        int haut = k, prof = 0;
+        for (int q = 0; q < k; q++) {
+            const int s = lus[courant].elements[q].sorte;
+            if (s == ELEMENT_FIN_DE_BLOC) { if (prof) prof--; }
+            else if (s >= ELEMENT_COTE_A_COTE && s != ELEMENT_IMAGE) { if (prof++ == 0) haut = q; }
+        }
+        if (prof == 0) haut = k;
+        const QRect avant = rect_vu(k);
+        if (haut == k || avant.isNull()) places[k] = nouveau;
+        else {
+            const QRect b = places[haut];
+            places[haut] = QRect(b.topLeft() + (nouveau.topLeft() - avant.topLeft()), b.size() + (nouveau.size() - avant.size()));
+        }
+    }
     QPoint coin(INT_MAX, INT_MAX);   // ce qu'on voit, relatif à l'élément le plus en haut à gauche
     for (const QRect &r : places)
         if (!r.isNull()) { coin.setX(qMin(coin.x(), r.x())); coin.setY(qMin(coin.y(), r.y())); }

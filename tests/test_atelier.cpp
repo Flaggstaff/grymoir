@@ -2257,6 +2257,31 @@ int main(int argc, char **argv) {
             VERIFIER(m.hasMatch() && m.captured(1).toInt() >= 192 && m.captured(2).toInt() >= 40);
             if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
         }
+        // un élément dans un groupe d'un écran décrit : c'est le groupe qui suit le geste (seul le premier niveau a une place)
+        {
+            QFile d(dossier.filePath("p.grym"));
+            VERIFIER(d.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            d.write("L'écran d'accueil montre :\n    le texte « t »,\n    le groupe « G » :\n        le texte « dedans ».\n");
+        }
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        if (QWidget *w = o.controle(2)) {
+            const QPoint milieu = w->mapToGlobal(QPoint(w->width() / 2, w->height() / 2));
+            const QPointF local = w->mapFromGlobal(milieu);
+            QMouseEvent appui(QEvent::MouseButtonPress, local, QPointF(milieu), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &appui);
+            QMouseEvent bouge(QEvent::MouseMove, local, QPointF(milieu + QPoint(240, 0)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &bouge);
+            QMouseEvent lache(QEvent::MouseButtonRelease, local, QPointF(milieu + QPoint(240, 0)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &lache);
+            QFile r(dossier.filePath("p.grym"));
+            VERIFIER(r.open(QIODevice::ReadOnly));
+            const QString t = QString::fromUtf8(r.readAll());
+            QRegularExpressionMatch m = QRegularExpression("le groupe « G », à (\\d+) de la gauche").match(t);
+            VERIFIER(m.hasMatch() && m.captured(1).toInt() >= 232);
+            VERIFIER(t.contains("        le texte « dedans ».") || t.contains("            le texte « dedans »"));
+            if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
+        }
         // Maj + flèche sur un élément d'un écran décrit, la touche livrée à l'aperçu qui a pris le focus au clic
         o.activateWindow();
         QApplication::processEvents();

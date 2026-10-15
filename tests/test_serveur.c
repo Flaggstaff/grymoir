@@ -810,8 +810,8 @@ int main(void) {
         REQUETES(get("/"), evenement("q=1&o0=1&z2=Ada&clic=8"), get("/"), evenement("q=2&clic=9"), get("/"));
         servir(src, &sc);
         CONTIENT(sc.reponses[0], "<div class=\"onglets\"><input type=\"hidden\" name=\"o0\" value=\"0\"><div class=\"barre\" role=\"tablist\">"
-                                 "<button type=\"button\" role=\"tab\" data-i=\"0\" class=\"actif\">Identité</button>"
-                                 "<button type=\"button\" role=\"tab\" data-i=\"1\">Notes</button></div>");
+                                 "<button type=\"button\" role=\"tab\" data-i=\"0\" aria-selected=\"true\" class=\"actif\">Identité</button>"
+                                 "<button type=\"button\" role=\"tab\" data-i=\"1\" aria-selected=\"false\">Notes</button></div>");
         CONTIENT(sc.reponses[0], "<section class=\"panneau actif\" role=\"tabpanel\" data-i=\"0\">");
         CONTIENT(sc.reponses[2], "<input type=\"hidden\" name=\"o0\" value=\"1\">");
         CONTIENT(sc.reponses[2], "<section class=\"panneau actif\" role=\"tabpanel\" data-i=\"1\">");

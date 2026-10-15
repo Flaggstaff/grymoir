@@ -802,7 +802,7 @@ static const char SCRIPT[] =
     "document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.onglets>.barre>button');"
     "if(!b)return;var o=b.closest('.onglets'),i=b.getAttribute('data-i');"
     "o.querySelectorAll(':scope>.barre>button,:scope>.panneau').forEach(function(x){"
-    "x.classList.toggle('actif',x.getAttribute('data-i')===i);});"
+    "var a=x.getAttribute('data-i')===i;x.classList.toggle('actif',a);if(x.tagName==='BUTTON')x.setAttribute('aria-selected',a);});"
     "o.querySelector(':scope>input[type=hidden]').value=i;});"
     "document.addEventListener('change',function(e){var t=e.target,f=t.form;"
     "if(!f||!f.classList.contains('ecran'))return;"
@@ -1040,8 +1040,8 @@ static void page_ecran(Serveur *s) {
             free(v);
             for (size_t q = k + 1; q < e->n; q++)
                 if (e->el[q].sorte == ELEMENT_ONGLET && parent[q] == k) {
-                    v = grym_formater("<button type=\"button\" role=\"tab\" data-i=\"%d\"%s>", rang[q],
-                                      rang[q] == e->onglets[k] ? " class=\"actif\"" : "");
+                    v = grym_formater("<button type=\"button\" role=\"tab\" data-i=\"%d\" aria-selected=\"%s\"%s>", rang[q],
+                                      rang[q] == e->onglets[k] ? "true" : "false", rang[q] == e->onglets[k] ? " class=\"actif\"" : "");
                     chaine_ajouter(&c, v);
                     free(v);
                     echapper(&c, e->el[q].texte);
