@@ -190,7 +190,7 @@ L'éditeur d'écrans ne proposait que cinq éléments. La deuxième vague comble
 | B2 quater | position libre au pixel, `en position libre :` (grammaire, § 22.9), grille d'alignement dans l'atelier | fait |
 | B3 | onglets (grammaire, § 22.10) | fait |
 | B3 bis | graphique (grammaire, § 22.11) | fait |
-| B3 ter | barre de menus | à concevoir |
+| B3 ter | barre de menus (grammaire, § 22.12), un menu par écran | fait |
 
 ### 6.1 Les états se déclarent *(validé le 13 octobre 2026)*
 
@@ -230,3 +230,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.22 | 2026-10-14 | § 3.3 : dans un bloc libre, un bloc se place aussi, et garde sa règle à l'intérieur (grammaire 1.81) |
 | 0.23 | 2026-10-14 | § 6 : B3 coupé en deux ; les onglets faits, la barre de menus et le graphique en B3 bis |
 | 0.24 | 2026-10-15 | § 6 : B3 bis fait (graphique) ; la barre de menus passe en B3 ter |
+| 0.25 | 2026-10-15 | § 6 : B3 ter fait (menus, un par écran) ; B3 est complet |

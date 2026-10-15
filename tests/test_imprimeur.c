@@ -296,6 +296,13 @@ int main(void) {
     COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
          "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
+    /* menu (§ 22.12) : les deux formes */
+    FIXE("L'écran x montre :\n    le menu « Membres » :\n        un bouton « Nouveau membre »,\n        un bouton « Liste »,\n"
+         "    le texte « t ».\nQuand on clique sur « Nouveau membre » dans l'écran x :\n    Fermer l'écran.\n"
+         "Quand on clique sur « Liste » dans l'écran x :\n    Fermer l'écran.");
+    COMP("L'écran x montre :\n    le menu « M » :\n        un bouton « B »,\n    le texte « t ».\n"
+         "Quand on clique sur « B » dans l'écran x :\n    Fermer l'écran.",
+         "_écran x\n    _menu « M »\n        _bouton « B »\n    _fin\n    _texte « t »\n_fin\n_quand _clique « B » _dans x\n    _fermer\n_fin\n");
     /* graphique (§ 22.11) : les deux formes, la clé sans article, « du montant » recontracté */
     FIXE("Un état, conservé, a :\n    un nom (texte), unique.\nUne catégorie, conservée, a :\n    un nom (texte), unique.\n"
       "Un membre, conservé, a :\n    un nom (texte),\n    une catégorie (catégorie).\n"

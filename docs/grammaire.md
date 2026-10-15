@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.83 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.84 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1865,6 +1865,24 @@ L'écran de bord montre :
 - Forme compacte : `_graphique tâche _conservé [_dont …] _par état [_somme montant] [_secteurs]`.
 - Ordre canonique : `dont`, `par`, `avec la somme de`, `en secteurs`, puis la place.
 
+### 22.12 Menus *(implémenté le 15 octobre 2026)*
+
+```
+L'écran d'accueil montre :
+    le menu « Membres » :
+        un bouton « Nouveau membre »,
+        un bouton « Liste des membres »,
+    le menu « Comptes » :
+        un bouton « Noter une écriture »,
+    la liste des membres conservés, par nom.
+```
+
+- Un menu appartient à son écran, comme tout élément. Il s'écrit au premier niveau de l'écran (« Un menu s'écrit au premier niveau de l'écran, pas dans un bloc. ») et ne contient que des boutons (« Un menu ne contient que des boutons. »), au moins un.
+- Un élément de menu est un bouton : il a son événement (`Quand on clique sur « Nouveau membre » dans l'écran d'accueil :`), un libellé unique dans l'écran, `actif si` et `visible si`.
+- Où qu'il soit écrit, le menu se dessine en tête de l'écran : une barre de menus dans l'application, une barre de navigation dans le navigateur, sous le titre de l'écran, où chaque menu s'ouvre sans script.
+- Un menu fait partie du cadre de l'écran : il ne se place pas au pixel et ne s'agrandit pas (§ 22.9) ; ses boutons non plus.
+- Forme compacte : `_menu « Membres »` … `_fin`.
+
 ---
 
 ## Journal des révisions
@@ -1955,3 +1973,4 @@ L'écran de bord montre :
 | 1.81 | 2026-10-14 | § 22.9 : un bloc se place et se dimensionne dans un bloc libre (`le groupe « Adresse », à 16 de la gauche et 8 du haut :`), et garde sa règle à l'intérieur ; une zone sur plusieurs lignes prend toute la hauteur dite |
 | 1.82 | 2026-10-14 | Nouveau § 22.10 : `les onglets :` et `l'onglet « … » :` |
 | 1.83 | 2026-10-15 | Nouveau § 22.11 : `le graphique des … conservés, par …`, `avec la somme de …`, `en secteurs` |
+| 1.84 | 2026-10-15 | Nouveau § 22.12 : `le menu « … » :`, un bloc de boutons au premier niveau de l'écran, dessiné en tête |

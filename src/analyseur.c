@@ -474,6 +474,7 @@ typedef struct {
     int essais;              /* blocs « Essayer » englobants (§ 18) */
     const char *ecran;       /* la classe de l'écran que « l'écran » désigne ici (§ 22.2), ou NULL */
     int libre;               /* l'élément d'écran en cours est dans un bloc « en position libre : » (§ 22.9) */
+    int menu;                /* … dans un menu (§ 22.12) : des boutons seulement */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
     int duree_permise;       /* « par pas de 1 mois » : une durée peut suivre la valeur lue (§ 14.2) */
     int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
@@ -5927,6 +5928,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             nb_blocs--;
         }
         a->libre = nb_blocs && formes[nb_blocs - 1] == 4;
+        a->menu = nb_blocs && formes[nb_blocs - 1] == 7;
         /* « les onglets : » ne contient que des onglets, et un onglet n'est que là (§ 22.10) */
         const int onglet = u->type == J_ELISION && est_mot(voir(a, 1), "onglet") && voir(a, 2)->type == J_TEXTE
                            && voir(a, 3)->type == J_DEUX_POINTS;
@@ -5951,12 +5953,20 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         const int libre = est_mot(u, "en") && est_mot(voir(a, 1), "position") && est_mot(voir(a, 2), "libre")
                           && FIN_D_EN_TETE(voir(a, 3));
         const int onglets = est_mot(u, "les") && est_mot(voir(a, 1), "onglets") && FIN_D_EN_TETE(voir(a, 2));   /* § 22.10 */
+        /* « le menu « Membres » : » : des boutons, dessinés dans la barre de menus (§ 22.12) */
+        const int menu = est_mot(u, "le") && est_mot(voir(a, 1), "menu") && voir(a, 2)->type == J_TEXTE && FIN_D_EN_TETE(voir(a, 3));
 #undef FIN_D_EN_TETE
-        if (cote || sous || groupe || libre || onglets || onglet) {
+        if (menu && !*voir(a, 2)->valeur) { erreur(a, voir(a, 2), grym_dupliquer("Un menu porte un titre : « le menu « Membres » : ».")); break; }
+        if (menu && nb_blocs) { erreur(a, u, grym_dupliquer("Un menu s'écrit au premier niveau de l'écran, pas dans un bloc.")); break; }
+        if (a->menu && (cote || sous || groupe || libre || onglets || onglet || menu)) {
+            erreur(a, u, grym_dupliquer("Un menu ne contient que des boutons."));
+            break;
+        }
+        if (cote || sous || groupe || libre || onglets || onglet || menu) {
             if (nb_blocs == 16) { erreur(a, u, grym_dupliquer("Trop de blocs emboîtés : 16 au plus.")); break; }
             Noeud *b = noeud_creer(N_DISPOSITION, u->ligne, u->colonne, u->debut);
-            b->forme = cote ? 1 : sous ? 2 : groupe ? 3 : libre ? 4 : onglets ? 5 : 6;
-            if (groupe || onglet) b->texte = grym_dupliquer(voir(a, 2)->valeur);
+            b->forme = cote ? 1 : sous ? 2 : groupe ? 3 : libre ? 4 : onglets ? 5 : menu ? 7 : 6;
+            if (groupe || onglet || menu) b->texte = grym_dupliquer(voir(a, 2)->valeur);
             a->i += sous ? 5 : onglets ? 2 : 3;
             {   /* sa place dans le bloc libre qui le contient : « , à 16 de la gauche et 8 du haut, large de 320 » */
                 int vus = 0, lu;
@@ -5983,7 +5993,8 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             if (cour(a)->retrait <= u->retrait || cour(a)->type == J_FIN) {
                 erreur(a, cour(a), grym_formater("Un bloc « %s : » contient des éléments, plus indentés.",
                                                  cote ? "côte à côte" : sous ? "l'un sous l'autre" : groupe ? "le groupe « … »"
-                                                 : libre ? "en position libre" : onglets ? "les onglets" : "l'onglet « … »"));
+                                                 : libre ? "en position libre" : onglets ? "les onglets" : menu ? "le menu « … »"
+                                                 : "l'onglet « … »"));
                 break;
             }
             continue;
@@ -6332,6 +6343,11 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                                         "« le texte « … » », « l'image « … » » ou une zone de saisie, « un pays (texte) »."));
             break;
         }
+        if (a->menu && el->type != N_BOUTON) {   /* § 22.12 */
+            noeud_liberer(el);
+            erreur(a, u, grym_dupliquer("Un menu ne contient que des boutons."));
+            break;
+        }
         if (a->libre && !(el->place_dite & 1)) {
             noeud_liberer(el);
             erreur(a, u, grym_dupliquer("Un élément en position libre dit sa place : « , à 16 de la gauche et 8 du haut »."));
@@ -6353,6 +6369,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         avancer(a);
     }
     a->libre = 0;
+    a->menu = 0;
     if (!a->echec) conditions_ecran(a, n);   /* « actif si », « visible si » : tout l'écran est connu (§ 22.6) */
     a->ecran = NULL;
     free(classe);
@@ -7404,6 +7421,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.essais = 0;
     a.ecran = NULL;
     a.libre = 0;
+    a.menu = 0;
 
     /* Colonne de référence : celle de la première phrase (les remarques ne comptent pas). */
     int colonne = 1;

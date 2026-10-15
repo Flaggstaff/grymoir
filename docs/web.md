@@ -224,3 +224,4 @@ Un bloc `en position libre :` (grammaire, § 22.9) devient une grille d'une seul
 | 0.8 | 2026-10-14 | Les onglets (grammaire, § 22.10) : une barre de boutons et des panneaux ; le script montre un panneau à la fois, et un champ caché `oK` porte l'onglet choisi jusqu'au serveur, qui le retient ; sans script, tous les panneaux, l'un sous l'autre |
 | 0.9 | 2026-10-14 | Les onglets : `aria-selected` sur chaque onglet, tenu à jour par le script, pour les lecteurs d'écran |
 | 0.10 | 2026-10-15 | Le graphique (grammaire, § 22.11) : un SVG dans la page (attributs de présentation, aucun style écrit), barres ou secteurs, et un tableau masqué pour les lecteurs d'écran |
+| 0.11 | 2026-10-15 | Les menus (grammaire, § 22.12) : une barre de navigation sous le titre de l'écran, un `<details>` par menu, qui s'ouvre sans script |

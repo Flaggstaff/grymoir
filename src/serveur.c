@@ -496,9 +496,14 @@ static char *feuille_de_style(const Serveur *s) {
     /* « en position libre : » (§ 22.9) : chaque élément dans la même case, décalé par ses marges ; la case mesure
      * ce que les éléments occupent. Les places viennent de /ecran-style/…, la politique n'admettant aucun style écrit
      * dans la page. */
+    );
+    chaine_ajouter(&c,   /* les ajouts des écrans (§ 22.9 à § 22.12), à part : un littéral C99 tient en 4095 caractères */
     ".libre{display:grid;justify-items:start;align-items:start}.libre>.place{grid-area:1/1;margin:0;min-width:0}"
     ".graphique{max-width:100%;height:auto;font:inherit;fill:currentColor}"   /* § 22.11 ; le tableau, pour les lecteurs d'écran */
     ".lecteur{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}"
+    /* les menus (§ 22.12) : une barre en tête ; un menu ouvert pose ses boutons en colonne, par-dessus la page */
+    ".menus{display:flex;gap:4px;margin:0 0 12px}.menu{position:relative}.menu>summary{cursor:pointer;padding:4px 10px;list-style:none}"
+    ".menu[open]>.boutons{position:absolute;z-index:10;display:flex;flex-direction:column;align-items:stretch;background:inherit}"
     ".libre>.place>.zone,.libre>.place>p{margin:0}"
     ".boutons{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.boutons button{margin:0}"
     ".texte{margin:0}"
@@ -1024,7 +1029,23 @@ static void page_ecran(Serveur *s) {
             } else if (s2 == ELEMENT_FIN_DE_BLOC && np) np--;
         }
     }
+    /* Les menus d'abord, en tête de la page, où qu'ils soient écrits : une barre de navigation, chaque menu un
+     * <details> qui s'ouvre sans script ; puis le reste de l'écran (§ 22.12). */
+    unsigned char *en_menu = grym_allouer(e->n ? e->n : 1);
+    int menus = 0;
+    for (size_t k = 0, dedans = 0; k < e->n; k++) {
+        if (e->el[k].sorte == ELEMENT_MENU) { dedans = 1; menus = 1; }
+        en_menu[k] = (unsigned char)dedans;
+        if (dedans && e->el[k].sorte == ELEMENT_FIN_DE_BLOC) dedans = 0;
+    }
+    if (menus) chaine_ajouter(&c, "<nav class=\"menus\">\n");
+    for (int passe = 0; passe < 2; passe++)
     for (size_t k = 0; k < e->n; k++) {
+        if (passe == 1 && k == 0 && menus) {   /* les menus sont écrits : la barre se ferme */
+            if (boutons) { chaine_ajouter(&c, "</div>\n"); boutons = 0; }
+            chaine_ajouter(&c, "</nav>\n");
+        }
+        if (en_menu[k] != (passe == 0)) continue;
         const ElementEcran *el = &e->el[k];
         if ((e->etats[k] & 2) && (el->sorte == ELEMENT_BOUTON || el->sorte == ELEMENT_TEXTE || el->sorte == ELEMENT_ZONE
                                     || el->sorte == ELEMENT_IMAGE))
@@ -1071,8 +1092,15 @@ static void page_ecran(Serveur *s) {
             chaine_ajouter(&c, "</legend>\n");
             if (prof < 16) groupes[prof++] = el->place ? 3 : 1;
             break;
+        case ELEMENT_MENU:   /* « le menu « Membres » : » : un titre qui ouvre ses boutons (§ 22.12) */
+            chaine_ajouter(&c, "<details class=\"menu\"><summary>");
+            echapper(&c, el->texte);
+            chaine_ajouter(&c, "</summary>\n");
+            if (prof < 16) groupes[prof++] = 8;
+            break;
         case ELEMENT_FIN_DE_BLOC:   /* la fin du bloc, puis celle de sa boîte s'il est placé (§ 22.9) */
-            chaine_ajouter(&c, prof && (groupes[prof - 1] & 1) ? "</fieldset>\n" : prof && (groupes[prof - 1] & 4) ? "</section>\n" : "</div>\n");
+            chaine_ajouter(&c, prof && (groupes[prof - 1] & 8) ? "</details>\n" : prof && (groupes[prof - 1] & 1) ? "</fieldset>\n"
+                               : prof && (groupes[prof - 1] & 4) ? "</section>\n" : "</div>\n");
             if (prof && (groupes[prof - 1] & 2)) chaine_ajouter(&c, "</div>\n");
             if (prof) prof--;
             break;
@@ -1109,6 +1137,7 @@ static void page_ecran(Serveur *s) {
             && el->sorte != ELEMENT_GROUPE && el->sorte != ELEMENT_ONGLETS)
             chaine_ajouter(&c, "</div>\n");   /* un bloc placé ferme sa boîte avec lui */
     }
+    free(en_menu);
     free(parent);
     free(rang);
     if (boutons) chaine_ajouter(&c, "</div>\n");

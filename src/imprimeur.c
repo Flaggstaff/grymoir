@@ -1175,8 +1175,8 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 }
                 retrait(im, niveau + 1 + profondeur);
                 /* le nom du bloc, sa place s'il est dans un bloc libre (§ 22.9), puis « : » (en compact : rien) */
-                if (el->forme == 3) {   /* « le groupe « Adresse » : » ; « _groupe « Adresse » » (§ 22.7) */
-                    aj(im, c ? "_groupe " : "le groupe ");
+                if (el->forme == 3 || el->forme == 7) {   /* « le groupe « Adresse » : » (§ 22.7) ; « le menu « Membres » : » (§ 22.12) */
+                    aj(im, el->forme == 7 ? (c ? "_menu " : "le menu ") : (c ? "_groupe " : "le groupe "));
                     ecrire_texte(im, el->texte);
                 } else if (el->forme == 4)   /* « en position libre : » ; « _position_libre » (§ 22.9) */
                     aj(im, c ? "_position_libre" : "en position libre");

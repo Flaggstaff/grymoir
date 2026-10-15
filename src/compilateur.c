@@ -1149,8 +1149,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 }
                 chaine_ajouter(&d, el->forme == 1 ? "\x1f" "H" : el->forme == 2 ? "\x1f" "V" : el->forme == 3 ? "\x1f" "G"
                                    : el->forme == 4 ? "\x1f" "P" : el->forme == 5 ? "\x1f" "O" : el->forme == 6 ? "\x1f" "Q"
-                                   : "\x1f" "F");   /* P : en position libre (§ 22.9) ; O, Q : les onglets, un onglet (§ 22.10) */
-                if (el->forme == 3 || el->forme == 6) chaine_ajouter(&d, el->texte);   /* « Gadresse » : le titre (§ 22.7) */
+                                   : el->forme == 7 ? "\x1f" "M" : "\x1f" "F");   /* M : un menu (§ 22.12) */   /* P : en position libre (§ 22.9) ; O, Q : les onglets, un onglet (§ 22.10) */
+                if (el->forme == 3 || el->forme == 6 || el->forme == 7) chaine_ajouter(&d, el->texte);   /* « Gadresse » : le titre (§ 22.7) */
                 continue;
             }
             chaine_ajouter(&d, "\x1f");

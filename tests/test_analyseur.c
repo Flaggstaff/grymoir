@@ -783,6 +783,13 @@ int main(void) {
     VE("L'écran x montre :\n    l'image « rien.png ».", 2, 13, "Fichier « rien.png » introuvable ou illisible.");
     VE("L'écran x montre :\n    l'image « exemples/pixel.png », active si vrai.", 2, 37, "Une image ne se clique pas");
     VE("L'écran x montre :\n    un bouton « B », active si vrai.", 2, 22, "Accord : « actif si ».");
+    /* le menu (§ 22.12) : au premier niveau, des boutons seulement */
+    VE("L'écran x montre :\n    le groupe « G » :\n        le menu « M » :\n            un bouton « B ».", 3, 9,
+       "Un menu s'écrit au premier niveau de l'écran");
+    VE("L'écran x montre :\n    le menu « M » :\n        le texte « t ».", 3, 9, "Un menu ne contient que des boutons.");
+    VE("L'écran x montre :\n    le menu « M » :\n        côte à côte :\n            un bouton « B ».", 3, 9,
+       "Un menu ne contient que des boutons.");
+    VE("L'écran x montre :\n    le menu « » :\n        un bouton « B ».", 2, 13, "Un menu porte un titre");
     /* le graphique (§ 22.11) : une liste regroupée ; par, avec la somme de, en secteurs ; refus */
     VE("Une tâche, conservée, a :\n    un titre (texte).\nL'écran x montre :\n    le graphique des tâches conservées.", 4, 39,
        "Un graphique dit son regroupement");

@@ -751,6 +751,23 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Le menu (§ 22.12) : en tête de page même écrit en dernier, un <details> par menu ; ses boutons déclenchent leurs
+         * événements ; « actif si » s'y applique */
+        const char *src = "L'écran x montre :\n    le texte « t »,\n    le menu « Membres » :\n"
+                          "        un bouton « Bonjour »,\n        un bouton « Fermer », actif si vrai.\n"
+                          "Quand on clique sur « Bonjour » dans l'écran x :\n    Afficher « salut ».\n"
+                          "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=2"), get("/"), evenement("q=2&clic=3"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "</div>\n<nav class=\"menus\">\n<details class=\"menu\"><summary>Membres</summary>\n");   /* sous le titre */
+        CONTIENT(sc.reponses[0], "<button name=\"clic\" value=\"2\">Bonjour</button>");
+        CONTIENT(sc.reponses[0], "</details>\n</nav>\n<p class=\"texte\">t</p>");
+        CONTIENT(sc.reponses[2], "salut");
+        CONTIENT(sc.reponses[4], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* Le graphique (§ 22.11) : compté par état, dans l'ordre d'apparition, « — » pour un état vide ; additionné en
          * secteurs ; un tableau pour les lecteurs d'écran ; pas de style dans la page */
         const char *src = "Un état, conservé, a :\n    un nom (texte), unique.\n"

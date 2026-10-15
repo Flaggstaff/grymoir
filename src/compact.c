@@ -852,21 +852,22 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         return;
     }
     /* l'en-tête d'un bloc, puis sa place éventuelle (§ 22.9) : « _groupe « Adresse » _place 16 8 _largeur 320 » */
-    const size_t long_en_tete = (est_cle(t, "l'") || est_cle(t, "groupe") || est_cle(t, "onglet")) ? 2 : 1;
+    const size_t long_en_tete = (est_cle(t, "l'") || est_cle(t, "groupe") || est_cle(t, "onglet") || est_cle(t, "menu")) ? 2 : 1;
     const size_t fin_en_tete = d + long_en_tete;
     const int place_bloc = f > fin_en_tete && fin_en_tete < f && est_etat(&r->e[fin_en_tete]);
     const size_t fb = place_bloc ? fin_en_tete : f;
     const int l_un = est_cle(t, "l'") && fb == d + 2 && r->e[d + 1].type == J_CROCHETS
                      && strcmp(r->e[d + 1].valeur, "un sous l'autre") == 0;   /* « _l'un_sous_l'autre » : « _l' » puis un nom */
     const int groupe = est_cle(t, "groupe") && fb == d + 2 && r->e[d + 1].type == J_TEXTE;   /* « _groupe « Adresse » » */
+    const int menu = est_cle(t, "menu") && fb == d + 2 && r->e[d + 1].type == J_TEXTE;      /* « _menu « Membres » » (§ 22.12) */
     if (haut && (haut->type == O_ECRAN || haut->type == O_BLOC)
-        && ((est_cle(t, "côte_à_côte") && fb == d + 1) || l_un || groupe || (est_cle(t, "position_libre") && fb == d + 1)
+        && ((est_cle(t, "côte_à_côte") && fb == d + 1) || l_un || groupe || menu || (est_cle(t, "position_libre") && fb == d + 1)
             || (est_cle(t, "onglets") && fb == d + 1) || (est_cle(t, "onglet") && fb == d + 2 && r->e[d + 1].type == J_TEXTE))) {
         /* _côte_à_côte → côte à côte : ; _l'un_sous_l'autre → l'un sous l'autre : (§ 22.1) ;
          * _groupe « Adresse » → le groupe « Adresse » : (§ 22.7) */
-        if (groupe) {
+        if (groupe || menu) {
             mot(r, "le", t);
-            mot(r, "groupe", t);
+            mot(r, menu ? "menu" : "groupe", t);
             copier(r, &r->e[d + 1]);
         } else if (est_cle(t, "onglets")) {   /* _onglets → les onglets : (§ 22.10) */
             mot(r, "les", t);
