@@ -5719,6 +5719,45 @@ static void ajouter_nom(char ***t, size_t *n, const char *nom) {
 /* Un état d'un bouton, d'un texte ou d'une zone (§ 22.6) : « , sur plusieurs lignes », « , en lecture seule »
  * (zones), « , actif si … », « , visible si … ». La condition se relit avant chaque attente. Rend 1 si un état
  * est lu, 0 si la virgule annonce autre chose, −1 sur erreur. *vus : 1 actif, 2 visible, 4 lignes, 8 lecture seule. */
+/* Aide à la saisie dans un écran (§ 8, § 22) : les débuts d'un élément, selon le bloc ouvert (0 : l'écran lui-même ;
+ * 5 : les onglets, qui n'ont que des onglets ; 7 : un menu, qui n'a que des boutons ; le menu, au premier niveau seulement). */
+static void attendre_elements_ecran(Analyse *a, int forme_ouverte) {
+    static const char *const debuts[] = {"un bouton «", "le texte «", "un", "une", "la liste des", "le graphique des", "l'image «",
+                                         "l'image de", "côte à côte :", "l'un sous l'autre :", "le groupe «", "en position libre :",
+                                         "les onglets :", "le menu «", "l'onglet «"};
+    for (size_t k = 0; k < sizeof debuts / sizeof *debuts; k++) {
+        const char *d = debuts[k];
+        const int onglet = strcmp(d, "l'onglet «") == 0, menu = strcmp(d, "le menu «") == 0;
+        if (forme_ouverte == 5 ? !onglet : forme_ouverte == 7 ? strcmp(d, "un bouton «") != 0 : onglet) continue;
+        if (menu && forme_ouverte != 0) continue;   /* le menu, au premier niveau seulement (§ 22.12) */
+        attendre_ici(a, d);
+        /* le premier mot déjà écrit (« le », « l' », « un »…) : la suite de la tournure, à la position suivante */
+        const Jeton *t = cour(a);
+        const char *reste = NULL;
+        if (strncmp(d, "l'", 2) == 0) { if (t->type == J_ELISION && strcmp(t->valeur, "l") == 0) reste = d + 2; }
+        else {
+            const char *sp = strchr(d, ' ');
+            if (sp && t->type == J_MOT && strlen(t->valeur) == (size_t)(sp - d) && strncmp(t->valeur, d, (size_t)(sp - d)) == 0)
+                reste = sp + 1;
+        }
+        if (reste) attendre_mot(a, a->i + 1, reste, strlen(reste));
+    }
+}
+
+/* Après la virgule d'un élément : ses états, accordés au genre (§ 22.6). La place et la taille, dans un bloc libre, sont
+ * proposées par place_element. */
+static void attendre_etats_ecran(Analyse *a, const Noeud *el, Genre g, int zone) {
+    const size_t pos = a->i + 1;
+    const int fem = g == GENRE_FEMININ;
+    if (zone) {
+        attendre_mot(a, pos, fem ? "facultative" : "facultatif", strlen(fem ? "facultative" : "facultatif"));
+        attendre_mot(a, pos, "sur plusieurs lignes", strlen("sur plusieurs lignes"));
+        attendre_mot(a, pos, "en lecture seule", strlen("en lecture seule"));
+    }
+    if (zone || el->type == N_BOUTON) attendre_mot(a, pos, fem ? "active si" : "actif si", strlen(fem ? "active si" : "actif si"));
+    attendre_mot(a, pos, "visible si", strlen("visible si"));
+}
+
 /* Un nombre de pixels (§ 22.9) : entier, de `min` à 4000. Rend −1 avec l'erreur posée. */
 static int pixels(Analyse *a, const Jeton *t, int min) {
     if (t->type != J_NOMBRE) return -1;
@@ -5735,6 +5774,12 @@ static int pixels(Analyse *a, const Jeton *t, int min) {
  * erreur. `vus` reçoit 16, 32, 64. */
 static int place_element(Analyse *a, Noeud *el, Genre g, int *vus) {
     if (cour(a)->type != J_VIRGULE) return 0;
+    if (a->libre) {   /* aide à la saisie (§ 8) : la place et la taille, après la virgule */
+        const size_t pos = a->i + 1;
+        if (!(*vus & 16)) attendre_mot(a, pos, "à", strlen("à"));
+        if (!(*vus & 32)) attendre_mot(a, pos, "large de", strlen("large de"));
+        if (!(*vus & 64)) attendre_mot(a, pos, g == GENRE_FEMININ ? "haute de" : "haut de", strlen(g == GENRE_FEMININ ? "haute de" : "haut de"));
+    }
     const Jeton *x = voir(a, 1);
     const int a_gauche = est_mot(x, "à") && voir(a, 2)->type == J_NOMBRE;
     const int large = est_mot(x, "large") && est_mot(voir(a, 2), "de");
@@ -5777,6 +5822,7 @@ static int place_element(Analyse *a, Noeud *el, Genre g, int *vus) {
 static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
     int vus = *vus_;
     if (cour(a)->type != J_VIRGULE) return 0;
+    attendre_etats_ecran(a, el, g, zone);   /* aide à la saisie (§ 8) */
     {
         const int pl = place_element(a, el, g, vus_);   /* la place et la taille (§ 22.9) */
         if (pl) return pl;
@@ -5929,6 +5975,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         }
         a->libre = nb_blocs && formes[nb_blocs - 1] == 4;
         a->menu = nb_blocs && formes[nb_blocs - 1] == 7;
+        attendre_elements_ecran(a, nb_blocs ? formes[nb_blocs - 1] : 0);   /* aide à la saisie (§ 8) */
         /* « les onglets : » ne contient que des onglets, et un onglet n'est que là (§ 22.10) */
         const int onglet = u->type == J_ELISION && est_mot(voir(a, 1), "onglet") && voir(a, 2)->type == J_TEXTE
                            && voir(a, 3)->type == J_DEUX_POINTS;
@@ -5990,6 +6037,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             noeud_ajouter(n, b);
             formes[nb_blocs] = b->forme;
             blocs[nb_blocs++] = u->retrait;
+            attendre_elements_ecran(a, b->forme);   /* le premier élément du bloc (§ 8) */
             if (cour(a)->retrait <= u->retrait || cour(a)->type == J_FIN) {
                 erreur(a, cour(a), grym_formater("Un bloc « %s : » contient des éléments, plus indentés.",
                                                  cote ? "côte à côte" : sous ? "l'un sous l'autre" : groupe ? "le groupe « … »"

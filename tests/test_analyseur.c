@@ -872,6 +872,19 @@ int main(void) {
     VS("l", "Le | La | L' | Les écrans ont | Les nombres s'affichent");
     /* Les réglages en « Les » : style des nombres (§ 4.1) et apparence des écrans (§ 22.5) */
     VS("Les ", "écrans ont | nombres s'affichent");
+    /* dans un écran (§ 8, § 22) : les débuts d'un élément selon le bloc ouvert ; après la virgule, ses états accordés, sa place */
+    VS("L'écran x montre :\n    ", "un bouton « | le texte « | un | une | la liste des | le graphique des | l'image « | l'image de | "
+       "côte à côte : | l'un sous l'autre : | le groupe « | en position libre : | les onglets : | le menu «");
+    VS("L'écran x montre :\n    le menu « M » :\n        ", "un bouton «");
+    VS("L'écran x montre :\n    les onglets :\n        ", "l'onglet «");
+    VS("L'écran x montre :\n    l'", "image « | image de | un sous l'autre :");
+    VS("L'écran x montre :\n    le ", "texte « | graphique des | groupe « | menu «");
+    VS("L'écran x montre :\n    une note (texte), fac", "facultative");
+    VS("L'écran x montre :\n    un bouton « B », ", "actif si | visible si | un bouton « | le texte « | un | une | la liste des | "
+       "le graphique des | l'image « | l'image de | côte à côte : | l'un sous l'autre : | le groupe « | en position libre : | "
+       "les onglets : | le menu «");
+    VS("L'écran x montre :\n    en position libre :\n        le texte « t », à 1 de la gauche et 1 du haut, l", "large de | le texte « | "
+       "la liste des | le graphique des | l'image « | l'image de | l'un sous l'autre : | le groupe « | les onglets :");
     VS("Les écrans ", "ont");
     VS("Les écrans ont ", "la couleur | le logo");
     VS("Les écrans ont la couleur ", "bleue | verte | turquoise | violette | grise");

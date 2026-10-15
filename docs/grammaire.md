@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.84 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.85 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -556,6 +556,7 @@ Chaque message est précédé du fichier, de la ligne et de la colonne (charte, 
 - `Tant que`, `Répéter`, `Pour chaque`, `Selon` et `Essayer` en début de phrase ; dans une boucle, `Sortir de la boucle` et `Passer au tour suivant`.
 - Après le nom d'un calcul, `de` ou `du`. Dans un calcul, seuls ses paramètres, ses noms locaux et les formules sont proposés.
 - S'y ajoutent les mots qui prolongent un nom composé déclaré : après `prix`, `unitaire` si `prix unitaire` existe.
+- Dans un écran (§ 22) *(1.85)* : au début d'un élément, les tournures qui le commencent (`un bouton «`, `le texte «`, `la liste des`, `le graphique des`, `l'image «`, `l'image de`, les blocs), selon le bloc ouvert : dans un menu, `un bouton «` seulement ; dans `les onglets`, `l'onglet «` seulement ; `le menu «` au premier niveau seulement. Un premier mot déjà écrit (`le`, `l'`, `un`…) fait proposer la suite de chaque tournure. Après la virgule d'un élément, ses états, accordés à son genre (`facultative`, `active si`, `visible si`…), et, dans un bloc libre, ce qui reste de sa place et de sa taille (`à`, `large de`, `haut de`).
 - Premier usage : les messages d'erreur (« `« 2 » inattendu, attendu : un opérateur ou un point final.` »).
 - Second usage : l'aide à la saisie. Les suites sont calculées à la position du curseur ; si un mot est en cours de frappe, seules les suites qui le prolongent sont proposées, sans tenir compte de la casse.
 
@@ -1974,3 +1975,4 @@ L'écran d'accueil montre :
 | 1.82 | 2026-10-14 | Nouveau § 22.10 : `les onglets :` et `l'onglet « … » :` |
 | 1.83 | 2026-10-15 | Nouveau § 22.11 : `le graphique des … conservés, par …`, `avec la somme de …`, `en secteurs` |
 | 1.84 | 2026-10-15 | Nouveau § 22.12 : `le menu « … » :`, un bloc de boutons au premier niveau de l'écran, dessiné en tête |
+| 1.85 | 2026-10-15 | § 8 : l'aide à la saisie dans un écran, débuts d'élément selon le bloc ouvert, suites d'une tournure commencée, états accordés, place et taille |
