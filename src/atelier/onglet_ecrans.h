@@ -32,6 +32,7 @@ struct ElementLu {
     int evenement_ligne = 0;
     bool place = false;          // élément d'un bloc en position libre (§ 22.9)
     int graphique = 0;           // graphique (§ 22.11) : 1, + 2 en secteurs, + 4 une somme
+    QString graphe_cle, graphe_somme;   // telles qu'écrites, « écrit ␝ chemin » ; vide : pas de somme
     int gauche = 0, haut = 0, largeur = 0, hauteur = 0;   // largeur, hauteur : 0 si non dites
 };
 

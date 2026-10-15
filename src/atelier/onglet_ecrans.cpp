@@ -201,6 +201,11 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.tri = el->texte2 ? QString::fromUtf8(el->texte2) : QString();
                         x.decroissant = el->entier == 1;
                         x.colonnes_choisies = el->texte3 != nullptr;
+                        if (el->graphique && el->texte3) {   // la clé, puis la somme (§ 22.11)
+                            const QStringList parts = QString::fromUtf8(el->texte3).split(QChar(0x1e));
+                            x.graphe_cle = parts.value(0);
+                            x.graphe_somme = (el->graphique & 4) ? parts.value(1) : QString();
+                        }
                         if (el->texte3) {   // les colonnes choisies : « écrit ␝ chemin », séparées par ␞
                             for (const QString &col : QString::fromUtf8(el->texte3).split(QChar(0x1e))) {
                                 QString ecrit = col.section(QChar(0x1d), 0, 0);
@@ -1257,6 +1262,43 @@ void OngletEcrans::editer() {
                 n.lecture_seule = seule->isChecked();
                 n.actif_si = actif->text();
                 n.visible_si = visible->text();
+                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+            });
+        } else if (x.sorte == ELEMENT_GRAPHIQUE) {   // le regroupement, compter ou additionner, barres ou secteurs (§ 22.11)
+            EntiteSchema en;
+            for (const auto &y : lire_schema(dossier)) if (y.nom == x.texte) en = y;
+            auto sans_article = [](QString s) {
+                for (const char *a : {"le ", "la ", "l'"}) if (s.startsWith(QString::fromUtf8(a))) return s.mid(QString::fromUtf8(a).size());
+                return s;
+            };
+            auto *par = new QComboBox;    // donnée : « écrit ␝ chemin » tel qu'écrit, ou le nom du champ
+            auto *valeur = new QComboBox;
+            valeur->addItem("Le nombre d'objets", QString());
+            for (const auto &c : en.champs) {
+                if (c.multiple || c.type == "fichier" || c.type == "image") continue;
+                par->addItem(c.nom, c.nom);
+                if (c.type.startsWith("nombre")) valeur->addItem("La somme de « " + c.nom + " »", c.nom);
+            }
+            const QString cle = sans_article(x.graphe_cle.section(QChar(0x1d), 0, 0));
+            int i = par->findText(cle);
+            if (i < 0 && !cle.isEmpty()) { par->addItem(cle, x.graphe_cle); i = par->count() - 1; }   // un chemin : « catégorie du membre »
+            par->setCurrentIndex(qMax(0, i));
+            const QString somme = sans_article(x.graphe_somme.section(QChar(0x1d), 0, 0));
+            int j = somme.isEmpty() ? 0 : valeur->findData(somme);
+            if (j < 0) { valeur->addItem("La somme de « " + somme + " »", x.graphe_somme); j = valeur->count() - 1; }
+            valeur->setCurrentIndex(j);
+            auto *forme = new QComboBox;
+            forme->addItems({"Barres", "Secteurs"});
+            forme->setCurrentIndex((x.graphique & 2) ? 1 : 0);
+            f->addRow("Regroupé par", par);
+            f->addRow("Valeur", valeur);
+            f->addRow("Forme", forme);
+            connect(appliquer, &QPushButton::clicked, this, [=] {
+                ElementNouveau n;
+                n.sorte = ELEMENT_GRAPHIQUE;
+                n.cle = par->currentData().toString();
+                n.somme = valeur->currentData().toString();
+                n.secteurs = forme->currentIndex() == 1;
                 emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
         } else if (x.sorte == ELEMENT_LISTE) {

@@ -276,7 +276,7 @@ Avec B2 ter (grammaire, § 22.8) : « Image » dans la palette demande ce que l'
 
 ## 5 undecies. Le graphique dans l'éditeur d'écrans *(fait le 15 octobre 2026)*
 
-« Graphique » dans la palette demande l'entité, puis le champ qui regroupe ; il compte, en barres. L'aperçu, sans données, dessine un exemple grisé de trois barres ; à l'exécution, le graphique se remplit à chaque tour avec les groupes que la machine envoie. Les secteurs et la somme s'écrivent dans le code pour l'instant (`, avec la somme de la durée, en secteurs`). Les couleurs des secteurs viennent d'une suite de huit teintes, la même que dans le navigateur.
+« Graphique » dans la palette demande l'entité, puis le champ qui regroupe ; il compte, en barres. L'aperçu, sans données, dessine un exemple grisé de trois barres ; à l'exécution, le graphique se remplit à chaque tour avec les groupes que la machine envoie. Le panneau d'un graphique donne « Regroupé par » (les champs de l'entité ; un chemin écrit dans le code, comme « catégorie du membre », y figure tel quel), « Valeur » (le nombre d'objets, ou la somme d'un champ nombre) et « Forme » (barres ou secteurs) *(0.53)* ; « Appliquer » garde le `dont` et la place. Les couleurs des secteurs viennent d'une suite de huit teintes, la même que dans le navigateur.
 
 ## 5 duodecies. Les menus dans l'éditeur d'écrans *(fait le 15 octobre 2026)*
 
@@ -391,3 +391,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.50 | 2026-10-15 | § 5 octies : écran mixte, l'élément décrit entre dans le bloc libre au lieu de revenir ; grille et cadre transparents, grille sous les éléments |
 | 0.51 | 2026-10-15 | § 5 decies : le dernier élément d'un bloc de rangement en sort, le bloc vidé disparaît ; le refus reste pour un onglet |
 | 0.52 | 2026-10-15 | § 5 duodecies : les menus dans la palette, l'aperçu, le panneau et l'exécution ; un bouton ajouté dans un bloc a son événement ; le graphique n'est plus pris pour un bloc |
+| 0.53 | 2026-10-15 | § 5 undecies : le graphique dans le panneau, regroupé par, valeur (nombre ou somme), forme (barres ou secteurs) |

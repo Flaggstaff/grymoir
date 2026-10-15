@@ -2545,6 +2545,55 @@ int main(int argc, char **argv) {
         const QString t = QString::fromUtf8(f.readAll());
         VERIFIER(r.isEmpty() && t.contains("un bouton « Dedans »") && t.contains("Quand on clique sur « Dedans » dans l'écran x :"));
     }
+    {   // le graphique dans le panneau (§ 22.11) : regroupé par, valeur, forme ; le « dont », la clé à deux étapes et la place
+        // restent quand on change la forme et la valeur
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Une catégorie, conservée, a :\n    un nom (texte), unique.\n"
+                    "Un membre, conservé, a :\n    un nom (texte),\n    une catégorie (catégorie).\n"
+                    "Une cotisation, conservée, a :\n    un membre (membre),\n    un montant (nombre).\n"
+                    "L'écran x montre :\n    en position libre :\n"
+                    "        le graphique des cotisations conservées dont le montant est supérieur à 0, par catégorie du membre, "
+                    "à 8 de la gauche et 16 du haut, large de 400.\n");
+        }
+        auto lire = [&]() {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly));
+            return QString::fromUtf8(f.readAll());
+        };
+        OngletEcrans o;
+        o.resize(1000, 700);
+        o.show();
+        QString resultat = "pas de geste";
+        Geste g;
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        VERIFIER(o.ecrans().value(0).elements.value(1).graphe_cle.contains(QChar(0x1d)));
+        o.choisir_element(1);
+        QComboBox *par = nullptr, *valeur = nullptr, *forme = nullptr;
+        for (QComboBox *c : o.findChildren<QComboBox *>()) {
+            if (c->findText("Secteurs") >= 0) forme = c;
+            if (c->findText("Le nombre d'objets") >= 0) valeur = c;
+            if (c->currentText() == "catégorie du membre") par = c;
+        }
+        VERIFIER(par && valeur && forme);
+        QPushButton *appliquer = nullptr;
+        for (QPushButton *b : o.findChildren<QPushButton *>()) if (b->text() == "Appliquer" && !b->isHidden()) appliquer = b;
+        VERIFIER(appliquer != nullptr);
+        if (valeur && forme && appliquer) {
+            valeur->setCurrentIndex(valeur->findText("La somme de « montant »"));
+            forme->setCurrentIndex(1);
+            appliquer->click();
+        }
+        if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
+        VERIFIER(lire().contains("        le graphique des cotisations conservées dont le montant est supérieur à 0, par catégorie du membre, "
+                                 "avec la somme du montant, en secteurs, à 8 de la gauche et 16 du haut, large de 400."));
+        if (!lire().contains("en secteurs")) std::printf("%s\n", qPrintable(lire()));
+    }
     {   // le graphique (§ 22.11) : fabriqué par la palette, dessiné en exemple dans l'aperçu, rempli par les lignes
         QTemporaryDir dossier;
         const QString chemin = dossier.filePath("p.grym");

@@ -761,9 +761,11 @@ Noeud *nouvel_element(const ElementNouveau &e, const QString &dossier, QString *
         n = noeud_creer(N_CHERCHER, 0, 0, 0);
         n->texte = grym_dupliquer(t.constData());
         n->graphique = 1 | (e.secteurs ? 2 : 0) | (e.somme.trimmed().isEmpty() ? 0 : 4);
-        QString cols = e.cle.trimmed() + QChar(0x1d) + e.cle.trimmed();
-        if (!e.somme.trimmed().isEmpty())   // écrit sans article : l'imprimeur le retrouve par le genre (« de la durée »)
-            cols += QChar(0x1e) + e.somme.trimmed() + QChar(0x1d) + e.somme.trimmed();
+        // un champ, écrit sans article (l'imprimeur le retrouve par le genre, « de la durée ») ; ou, gardé du fichier, un
+        // chemin tel qu'écrit, « écrit ␝ chemin » (« catégorie du membre »)
+        auto colonne = [](const QString &c) { return c.contains(QChar(0x1d)) ? c : c.trimmed() + QChar(0x1d) + c.trimmed(); };
+        QString cols = colonne(e.cle);
+        if (!e.somme.trimmed().isEmpty()) cols += QChar(0x1e) + colonne(e.somme);
         n->texte3 = grym_dupliquer(cols.toUtf8().constData());
     } else if (e.sorte == ELEMENT_LISTE) {
         n = noeud_creer(N_CHERCHER, 0, 0, 0);
