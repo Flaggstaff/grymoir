@@ -194,7 +194,7 @@ int main(void) {
     ALLER_RETOUR("_le n << « Élodie »\n_afficher n.longueur ; n _en_majuscules ; « 3 » _en_nombre_entier + 1\n"
                  "_si n _inclut « lo » _et _non (n _commence « x ») _alors\n    _afficher n _finit « ie »\n_fin\n",
                  "Le n vaut « Élodie ».\nAfficher longueur de n puis le n en majuscules puis « 3 » en nombre entier + 1.\n"
-                 "Si le n contient « lo » et le n ne commence pas par « x » :\n    Afficher le n finit par « ie ».\n");
+                 "Si le n contient « lo » et le n ne commence pas par « x », afficher le n finit par « ie ».\n");
     EXEC("_afficher « éa » _en_majuscules ; « ab » _inclut « B » ; _non (« ab » _finit « b »)\n", "ÉA vrai faux\n");
     ERR("_afficher « a » _en_rouge\n", 1, 17, "« _en_rouge » inconnu");
     ALLER_RETOUR("_classe _une tâche _conservé\n    _un état (« à faire » ; « fini ») _départ « fini »\n_fin\n", NULL);
@@ -202,7 +202,7 @@ int main(void) {
                  "_afficher _moyenne_de cotisation _de membre _conservé ; _plus_petit_de cotisation _de membre _conservé\n"
                  "_afficher (_le membre _conservé _au_plus_grand cotisation _dont nom = « a »).nom\n", NULL);
     ALLER_RETOUR("_le jour << 01.03.2026\n_si _aujourd'hui > jour _alors\n    _afficher jour − 01.01.2026\n_fin\n",
-                 "Le jour vaut 01.03.2026.\nSi aujourd'hui > le jour :\n    Afficher le jour − 01.01.2026.\n");
+                 "Le jour vaut 01.03.2026.\nSi aujourd'hui > le jour, afficher le jour − 01.01.2026.\n");
 
     ALLER_RETOUR("_la photo << _fichier « a.jpg »\n_afficher (_fichier « b.png »).taille ; photo.format\n"
                  "_enregistrer photo _dans « c.jpg »\n",
@@ -284,12 +284,12 @@ int main(void) {
     ALLER_RETOUR("_classe _une p _conservé\n    _une date (date) _facultatif\n_fin\n_la x << _nouveau p _avec\n"
                  "    date << _absent\n_fin\n_si x.date _présent _alors\n    _afficher 1\n_fin\n",
                  "Une p, conservée, a :\n    une date (date), facultative.\nLa x vaut une nouvelle p :\n    La date vaut absente.\n"
-                 "Si la date de la x est présente :\n    Afficher 1.\n");
+                 "Si la date de la x est présente, afficher 1.\n");
 
     /* une remarque qui suit un bloc « _sinon … _fin » reste hors du bloc (défaut corrigé) */
     ALLER_RETOUR("_le x << 1\n_si x > 0 _alors\n    _si x = 1 _alors\n        _afficher 1\n    _sinon\n        _afficher 2\n"
                  "    _fin\n    # avant la boucle.\n    _afficher 3\n_fin\n",
-                 "Le x vaut 1.\nSi le x > 0 :\n    Si le x = 1 :\n        Afficher 1.\n    Sinon :\n        Afficher 2.\n"
+                 "Le x vaut 1.\nSi le x > 0 :\n    Si le x = 1, afficher 1.\n    Sinon, afficher 2.\n"
                  "    Remarque : avant la boucle.\n    Afficher 3.\n");
 
     ALLER_RETOUR("_classe _une partition _conservé\n    _un titre (texte)\n_fin\n_classe _un pupitre _conservé\n"
@@ -352,8 +352,7 @@ int main(void) {
                  "Remarque : exemple\nLe prix unitaire vaut 12,50.\nLa quantité vaut 3.\nL'addition vaut 0.\n"
                  "L'addition devient le prix unitaire × la quantité.\nAfficher « Total : » puis l'addition.\n");
     ALLER_RETOUR("_la quantité << 3\n_si quantité _positif _et _non (quantité > 10) _alors\n    _afficher « ok »\n_fin\n",
-                 "La quantité vaut 3.\nSi la quantité est positive et la quantité n'est pas supérieure à 10 :\n"
-                 "    Afficher « ok ».\n");
+                 "La quantité vaut 3.\nSi la quantité est positive et la quantité n'est pas supérieure à 10, afficher « ok ».\n");
     ALLER_RETOUR("_calcul _la valeur_absolue(_un nombre)\n    _si nombre _négatif _alors\n        _rendre −nombre\n"
                  "    _fin\n    _rendre nombre\n_fin\n_afficher valeur_absolue(−3)\n", NULL);
     ALLER_RETOUR("_le total << 0\n_action ajouter(_un montant ; _une remise)\n    total << total + montant − remise\n"

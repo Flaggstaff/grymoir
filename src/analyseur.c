@@ -7378,10 +7378,32 @@ typedef struct Capture {
 
 /* Après une lecture compacte (§ 11.4) : un nom écrit sans article l'a perdu en forme compacte, qui n'en écrit pas ;
  * l'imprimeur littéral le lui rend par le genre de sa déclaration (« l'effectif », « du membre »). */
+/* Une branche d'une seule phrase brève (« afficher », « rendre ») : elle s'écrit après la virgule (§ 11.4). */
+static int phrase_courte_possible(const Noeud *corps) {
+    if (!corps || corps->nb_enfants != 1) return 0;
+    const Noeud *p = corps->enfants[0];
+    for (size_t k = 0; k < p->nb_enfants; k++)   /* une phrase qui porte un bloc (Pour, Si, Tant que…) : non */
+        if (p->enfants[k] && p->enfants[k]->type == N_BLOC) return 0;
+    /* mesuré sur le guide : la forme courte y sert à « afficher » et à « rendre » ; une affectation, un appel, s'y
+     * écrivent en bloc. Toute phrase sans bloc serait permise, mais s'éloignerait de l'usage. */
+    return p->type == P_AFFICHAGE || p->type == P_RENDRE;
+}
+
 static void marquer_compact(Noeud *n) {
     if (!n) return;
     if (n->type == N_NOM && n->article == ART_AUCUN) n->article_a_deviner = 1;
     if (n->type == N_COMPARAISON && n->forme == 1) n->article_a_deviner = 1;   /* un symbole : les mots sont à retrouver */
+    /* « Si x, afficher … » : la forme compacte n'écrit le Si qu'en bloc ; une branche d'une seule phrase, qui n'ouvre
+     * pas de bloc, revient en forme courte (bits 1 et 4 : « écrit en bloc », pour l'alors et le sinon) ; « Cas de …,
+     * rendre … » aussi : un cas est court quand son corps est sur sa ligne */
+    if (n->type == N_CAS && n->nb_enfants && phrase_courte_possible(n->enfants[n->nb_enfants - 1]))
+        n->enfants[n->nb_enfants - 1]->ligne = n->ligne;
+    if (n->type == P_SI) {
+        if (n->nb_enfants > 1 && phrase_courte_possible(n->enfants[1])) n->forme &= ~1;
+        if (n->nb_enfants > 2 && phrase_courte_possible(n->enfants[2])
+            && !(n->enfants[2]->enfants[0]->type == P_SI && (n->enfants[2]->enfants[0]->forme & 2)))
+            n->forme &= ~4;
+    }
     for (size_t k = 0; k < n->nb_enfants; k++) marquer_compact(n->enfants[k]);
 }
 
