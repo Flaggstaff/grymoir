@@ -548,6 +548,25 @@ int OngletEcrans::onglet_sous(QPoint global, int sauf) const {
     return -1;
 }
 
+int OngletEcrans::page_sous(QPoint global, int k, QWidget **toile) const {
+    if (toile) *toile = nullptr;
+    if (courant < 0) return -1;
+    QWidget *glisse_w = vue.controles.value(k);
+    for (int q = 0; q < vue.controles.size(); q++) {
+        auto *tw = qobject_cast<QTabWidget *>(vue.controles[q]);
+        if (!tw || q == k || !tw->isVisible() || (glisse_w && glisse_w->isAncestorOf(tw))) continue;
+        QWidget *page = tw->currentWidget();
+        if (!page || !page->rect().contains(page->mapFromGlobal(global))) continue;
+        const int onglet = onglet_ouvert(q);
+        if (onglet < 0) continue;
+        for (int p = onglets_de(k); p >= 0; p = onglets_de(p))   // déjà dans cet onglet : un déplacement ordinaire
+            if (p == q && glisse_w && page->isAncestorOf(glisse_w)) return -1;
+        if (toile) *toile = page->findChild<QWidget *>("toile");
+        return onglet;
+    }
+    return -1;
+}
+
 int OngletEcrans::cible_ajout() const {
     if (courant < 0 || element < 0 || element >= lus[courant].elements.size()) return -1;
     const auto &els = lus[courant].elements;
@@ -759,6 +778,12 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
                     tw->setCurrentWidget(vue.controles.value(vise));
                 etat->setText("Lâche ici pour mettre l'élément dans cet onglet.");
             }
+            const bool vers_page = lus[courant].elements.value(libre_k).sorte != ELEMENT_ONGLETS
+                                   && page_sous(m->globalPosition().toPoint(), libre_k, nullptr) >= 0;
+            const struct Fin {   // à la sortie du geste : la barre d'état annonce l'onglet visé, par-dessus « Place : … »
+                QLabel *etat; bool vers_page;
+                ~Fin() { if (vers_page) etat->setText("Lâche ici : l'élément ira dans cet onglet, et seulement là."); }
+            } fin{etat, vers_page};
             const bool pixel = m->modifiers() & Qt::AltModifier;
             auto cale = [pixel](int v) { return pixel ? qMax(0, v) : aimanter(v); };
             QRect r = libre_depart;
@@ -824,6 +849,24 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
                 element = -1;
                 emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, vise, g); });
                 return true;
+            }
+            {   // lâché dans la page ouverte d'un onglet : il y est rangé, là où on l'a lâché, et n'est plus que sur cet onglet
+                QWidget *toile = nullptr;
+                const int vise = lus[courant].elements.value(k).sorte == ELEMENT_ONGLETS ? -1
+                                 : page_sous(m->globalPosition().toPoint(), k, &toile);
+                if (vise >= 0) {
+                    const QPoint coin = libre_decrit ? vue.vue->mapToGlobal(libre_fin.topLeft())
+                                                     : w->parentWidget()->mapToGlobal(w->geometry().topLeft());
+                    QPoint ou(-1, -1);
+                    if (toile) {
+                        const QPoint l = toile->mapFromGlobal(coin);
+                        ou = QPoint(aimanter(qMax(0, l.x())), aimanter(qMax(0, l.y())));
+                    }
+                    const QString ecran = lus[courant].nom;
+                    element = -1;
+                    emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, vise, g, ou); });
+                    return true;
+                }
             }
             if (libre_decrit) { liberer(k, libre_fin); return true; }
             const QRect r = w->geometry();

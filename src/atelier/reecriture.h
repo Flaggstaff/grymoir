@@ -7,6 +7,7 @@
 
 #include <QMap>
 #include <QPair>
+#include <QPoint>
 #include <QRect>
 #include <QString>
 #include <QStringList>
@@ -72,7 +73,8 @@ QString ecran_titre(const QString &dossier, const QString &ecran, const QString 
 QString ecran_ajouter(const QString &dossier, const QString &ecran, const ElementNouveau &e, Geste *geste, int dans = -1);
 // Range l'élément (ou le bloc) `source` à la fin du bloc `dans` : un autre onglet, un groupe… ; dans un bloc libre, il
 // prend une place sous ce qui y est (§ 5 decies).
-QString ecran_mettre_dans(const QString &dossier, const QString &ecran, int source, int dans, Geste *geste);
+// `ou` : la place où il a été lâché dans le bloc libre visé (sinon, sous ce qui y est).
+QString ecran_mettre_dans(const QString &dossier, const QString &ecran, int source, int dans, Geste *geste, QPoint ou = QPoint(-1, -1));
 // Un bouton part avec son événement, une liste avec son « Quand on choisit », une zone avec son « Quand on change » ;
 // un bloc disparaît, ses éléments restent.
 QString ecran_supprimer(const QString &dossier, const QString &ecran, int index, Geste *geste);

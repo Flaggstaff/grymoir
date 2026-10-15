@@ -86,6 +86,8 @@ public:
     int onglet_ouvert(int k) const;                  // l'index de l'onglet ouvert des onglets k, ou −1
     int onglets_de(int k) const;                     // les onglets qui contiennent k (ou dont k est un onglet), ou −1
     int onglet_sous(QPoint global, int sauf) const;  // l'onglet dont l'en-tête est sous la souris, hors du bloc sauf ; −1
+    // L'onglet dont la page ouverte est sous la souris, si k n'y est pas déjà ; *toile reçoit son bloc libre (ou nullptr).
+    int page_sous(QPoint global, int k, QWidget **toile) const;
     bool touche(int t, Qt::KeyboardModifiers m = Qt::NoModifier) { return clavier(t, m); }   // pour les essais
 
 signals:

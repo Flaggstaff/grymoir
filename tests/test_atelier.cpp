@@ -2232,6 +2232,67 @@ int main(int argc, char **argv) {
         VERIFIER(ecran_supprimer(dossier.path(), "x", premier, &g).isEmpty());
         VERIFIER(!lire().contains("onglet") && lire().contains("le texte « t »"));
     }
+    {   // un élément de l'écran, lâché dans la page ouverte d'un onglet : il y passe, là où on l'a lâché, et n'est plus que là
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    en position libre :\n        le texte « dehors », à 16 de la gauche et 16 du haut,\n"
+                    "        le texte « reste », à 300 de la gauche et 16 du haut.\n");
+        }
+        auto lire = [&]() {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly));
+            return QString::fromUtf8(f.readAll());
+        };
+        Geste g;
+        VERIFIER(ecran_ajouter_onglets(dossier.path(), "x", &g).isEmpty());
+        OngletEcrans o;
+        o.resize(1000, 800);
+        o.show();
+        QString resultat = "pas de geste";
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        QTabWidget *tw = nullptr;
+        for (int k = 0; k < 20; k++) if (auto *t = qobject_cast<QTabWidget *>(o.controle(k))) tw = t;
+        QLabel *dehors = nullptr;
+        for (int k = 0; k < 20; k++) if (auto *l = qobject_cast<QLabel *>(o.controle(k)); l && l->text() == "dehors") dehors = l;
+        VERIFIER(tw && dehors);
+        if (tw && dehors) {
+            const QPoint de(3, 3), a = dehors->mapToGlobal(de);
+            const QPoint dans = tw->currentWidget()->mapToGlobal(QPoint(200, 120));   // au milieu de la page « Premier »
+            QMouseEvent appui(QEvent::MouseButtonPress, QPointF(de), QPointF(a), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(dehors, &appui);
+            QMouseEvent loin(QEvent::MouseMove, QPointF(de), QPointF(a + QPoint(0, 30)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(dehors, &loin);
+            QMouseEvent bouge(QEvent::MouseMove, QPointF(de), QPointF(dans), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(dehors, &bouge);
+            VERIFIER(o.texte_etat().contains("seulement là"));
+            QMouseEvent lache(QEvent::MouseButtonRelease, QPointF(de), QPointF(dans), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(dehors, &lache);
+        }
+        if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
+        const QString t = lire();
+        QRegularExpressionMatch m = QRegularExpression("l'onglet « Premier » :\n                en position libre :\n"
+                                                       "                    le texte « Premier onglet », à 16 de la gauche et 16 du haut,\n"
+                                                       "                    le texte « dehors », à (\\d+) de la gauche et (\\d+) du haut").match(t);
+        VERIFIER(m.hasMatch() && qAbs(m.captured(1).toInt() - 200) <= 24 && qAbs(m.captured(2).toInt() - 120) <= 24);
+        VERIFIER(t.count("le texte « dehors »") == 1 && t.contains("        le texte « reste », à 300 de la gauche et 16 du haut,\n"));
+        if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
+        // il n'apparaît que sur cet onglet
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        tw = nullptr;
+        for (int k = 0; k < 20; k++) if (auto *x = qobject_cast<QTabWidget *>(o.controle(k))) tw = x;
+        int sur_premier = 0, sur_second = 0;
+        if (tw) {
+            for (QLabel *l : tw->widget(0)->findChildren<QLabel *>()) sur_premier += l->text() == "dehors";
+            for (QLabel *l : tw->widget(1)->findChildren<QLabel *>()) sur_second += l->text() == "dehors";
+        }
+        VERIFIER(sur_premier == 1 && sur_second == 0);
+    }
     {   // les guides : glissé près du bord gauche d'un voisin (20, hors de la grille de 8), le texte s'y colle, trait montré ;
         // avec Alt, ni guide ni grille
         QTemporaryDir dossier;

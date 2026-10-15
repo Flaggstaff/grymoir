@@ -8,6 +8,8 @@
 
 #include "projet.h"
 
+#include <QScreen>
+#include <QGuiApplication>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDir>
@@ -130,6 +132,8 @@ int main(int argc, char **argv) {
         }
         if (!d.isEmpty()) f.ouvrir(d);
     }
-    f.show();
+    // En fenêtre, la plus grande possible : l'écran disponible, sans le plein écran (zoom sous macOS)
+    if (QScreen *ecran = f.screen() ? f.screen() : QGuiApplication::primaryScreen()) f.setGeometry(ecran->availableGeometry());
+    f.showMaximized();
     return app.exec();
 }

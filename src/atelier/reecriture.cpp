@@ -800,7 +800,7 @@ void inserer(Noeud *n, size_t i, Noeud *x);
 
 // Met x à la fin du bloc qui s'ouvre en ouv. Un onglet ou un groupe qui contient un bloc libre le donne à ce bloc ; dans
 // un bloc libre, x prend une place sous l'élément le plus bas (§ 22.9).
-void mettre_dans(Noeud *p, size_t ouv, Noeud *x) {
+void mettre_dans(Noeud *p, size_t ouv, Noeud *x, QPoint ou = QPoint(-1, -1)) {
     size_t fin = fin_d_unite(p, ouv);
     if (p->enfants[ouv]->forme != 4)
         for (size_t q = ouv + 1; q < fin; q = fin_d_unite(p, q) + 1)
@@ -809,15 +809,15 @@ void mettre_dans(Noeud *p, size_t ouv, Noeud *x) {
         int bas = -32;
         for (size_t q = ouv + 1; q < fin; q = fin_d_unite(p, q) + 1)
             if (p->enfants[q]->place_dite & 1) bas = qMax(bas, p->enfants[q]->place[1]);
-        x->place[0] = 16;
-        x->place[1] = qMin(4000, bas + 48);
-        x->place_dite = 1;
+        x->place[0] = ou.x() >= 0 ? qMin(4000, ou.x()) : 16;   // où il a été lâché, sinon sous ce qui y est
+        x->place[1] = ou.y() >= 0 ? qMin(4000, ou.y()) : qMin(4000, bas + 48);
+        x->place_dite = (x->place_dite & 6) | 1;   // sa taille dite le suit
     }
     inserer(p, fin, x);
 }
 }  // namespace
 
-QString ecran_mettre_dans(const QString &dossier, const QString &ecran, int source, int dans, Geste *geste) {
+QString ecran_mettre_dans(const QString &dossier, const QString &ecran, int source, int dans, Geste *geste, QPoint ou) {
     Chantier ch(dossier);
     Trouve t = trouver_ecran(ch, ecran);
     if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
@@ -846,10 +846,11 @@ QString ecran_mettre_dans(const QString &dossier, const QString &ecran, int sour
     for (size_t q = (size_t)source; q + nb < p->nb_enfants; q++) p->enfants[q] = p->enfants[q + nb];
     p->nb_enfants -= nb;
     size_t d = (size_t)dans > fs ? (size_t)dans - nb : (size_t)dans;
-    unite[0]->place_dite = 0;   // sa place ne valait que dans l'ancien bloc ; le nouveau la redonne s'il est libre
-    mettre_dans(p, d, unite[0]);
-    const size_t ou = (size_t)(std::find(p->enfants, p->enfants + p->nb_enfants, unite[0]) - p->enfants);
-    for (size_t q = 1; q < nb; q++) inserer(p, ou + q, unite[(int)q]);
+    unite[0]->place_dite &= 6;   // sa place ne valait que dans l'ancien bloc ; le nouveau la redonne s'il est libre
+    mettre_dans(p, d, unite[0], ou);
+    if (!(unite[0]->place_dite & 1)) unite[0]->place_dite = 0;   // hors d'un bloc libre, ni place ni taille
+    const size_t rang = (size_t)(std::find(p->enfants, p->enfants + p->nb_enfants, unite[0]) - p->enfants);
+    for (size_t q = 1; q < nb; q++) inserer(p, rang + q, unite[(int)q]);
     reimprimer(ch, t);
     geste->description = QString("Déplacer un élément de l'écran %1").arg(ecran);
     return ch.conclure(geste);
