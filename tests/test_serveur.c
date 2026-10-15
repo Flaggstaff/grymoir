@@ -751,6 +751,18 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Une heure comme valeur de départ (§ 14.7) : la zone s'ouvre à 8 h ; l'événement la lit */
+        const char *src = "L'écran x montre :\n    un début (heure), 08:00 au départ,\n    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Afficher le début de l'écran.\n    Fermer l'écran.\n"
+                          "Ouvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0=08:00&clic=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<input type=\"text\" id=\"z0\" name=\"z0\" value=\"08:00\"");
+        CONTIENT(sc.reponses[2], "8:00");
+        liberer(&sc);
+    }
+
     {   /* Le menu (§ 22.12) : en tête de page même écrit en dernier, un <details> par menu ; ses boutons déclenchent leurs
          * événements ; « actif si » s'y applique */
         const char *src = "L'écran x montre :\n    le texte « t »,\n    le menu « Membres » :\n"

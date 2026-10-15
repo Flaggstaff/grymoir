@@ -783,6 +783,11 @@ int main(void) {
     VE("L'écran x montre :\n    l'image « rien.png ».", 2, 13, "Fichier « rien.png » introuvable ou illisible.");
     VE("L'écran x montre :\n    l'image « exemples/pixel.png », active si vrai.", 2, 37, "Une image ne se clique pas");
     VE("L'écran x montre :\n    un bouton « B », active si vrai.", 2, 22, "Accord : « actif si ».");
+    /* une heure comme valeur de départ, d'une zone d'écran et d'un champ (§ 14.7) */
+    V("L'écran x montre :\n    un début (heure), 08:00 au départ.", "(écran [x] [début])");
+    V("Une tâche, conservée, a :\n    un début (heure), 08:00 au départ.", "(entité [tâche] [début : heure départ (heure 08:00)])");
+    VE("L'écran x montre :\n    un début (texte), 08:00 au départ.", 2, 23, "Valeur de départ attendue pour une zone (texte).");
+    VE("Une tâche, conservée, a :\n    un début (heure), « x » au départ.", 2, 23, "attend une heure, pas un texte");
     /* le menu (§ 22.12) : au premier niveau, des boutons seulement */
     VE("L'écran x montre :\n    le groupe « G » :\n        le menu « M » :\n            un bouton « B ».", 3, 9,
        "Un menu s'écrit au premier niveau de l'écran");

@@ -4819,6 +4819,7 @@ static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const
             size_t q = a->i + 1;
             if (a->j[q].type == J_MOINS) q++;
             int litteral = a->j[q].type == J_TEXTE || a->j[q].type == J_NOMBRE || a->j[q].type == J_DATE
+                           || a->j[q].type == J_HEURE   /* « 08:00 au départ » (§ 14.7) */
                            || est_mot(&a->j[q], "vrai") || est_mot(&a->j[q], "faux");
             if (cour(a)->type == J_VIRGULE && litteral && est_mot(&a->j[q + 1], "au") && est_mot(&a->j[q + 2], "départ")
                 && !c->nb_enfants) {
@@ -6273,6 +6274,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                                  || (v->type == J_NOMBRE && (strcmp(type, "nombre") == 0 || strcmp(type, "nombre entier") == 0
                                                              || strcmp(type, "année") == 0))
                                  || (v->type == J_DATE && !moins && strcmp(type, "date") == 0)
+                                 || (v->type == J_HEURE && !moins && strcmp(type, "heure") == 0)   /* « 08:00 au départ » (§ 14.7) */
                                  || ((est_mot(v, "vrai") || est_mot(v, "faux")) && !moins && strcmp(type, "vrai ou faux") == 0);
                 if (!ok_type) { erreur(a, v, grym_formater("Valeur de départ attendue pour une zone (%s).", type)); break; }
                 if (v->type == J_TEXTE && el->texte3) {   /* une zone à valeurs permises part de l'une d'elles (§ 22.7) */
@@ -6304,8 +6306,9 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                     }
                 }
                 dv = noeud_creer(v->type == J_TEXTE ? N_TEXTE : v->type == J_NOMBRE ? N_NOMBRE : v->type == J_DATE ? N_DATE
-                                 : N_BOOLEEN, v->ligne, v->colonne, v->debut);
+                                 : v->type == J_HEURE ? N_HEURE : N_BOOLEEN, v->ligne, v->colonne, v->debut);
                 dv->texte = grym_dupliquer(v->valeur);
+                if (v->type == J_HEURE) dv->entier = atoi(v->valeur) * 60 + atoi(v->valeur + 3);   /* en minutes, comme une heure écrite */
                 if (moins) {
                     Noeud *ng = noeud_creer(N_NEGATION, x->ligne, x->colonne, x->debut);
                     noeud_ajouter(ng, dv);

@@ -188,7 +188,7 @@ Noeud *valeur_de_depart(const ChampVoulu &c, QString *erreur) {
     if (analyser(source.constData(), (size_t)source.size(), portee, 0, &p, &d) && p.nb == 1
         && p.phrases[0]->type == P_CREATION && p.phrases[0]->nb_enfants == 1) {
         const TypeNoeud t = p.phrases[0]->enfants[0]->type;
-        if (t == N_TEXTE || t == N_NOMBRE || t == N_DATE || t == N_BOOLEEN || t == N_NEGATION) {
+        if (t == N_TEXTE || t == N_NOMBRE || t == N_DATE || t == N_HEURE || t == N_BOOLEEN || t == N_NEGATION) {
             r = p.phrases[0]->enfants[0];
             p.phrases[0]->nb_enfants = 0;
         }

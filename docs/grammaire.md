@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.85 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.86 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1976,3 +1976,4 @@ L'écran d'accueil montre :
 | 1.83 | 2026-10-15 | Nouveau § 22.11 : `le graphique des … conservés, par …`, `avec la somme de …`, `en secteurs` |
 | 1.84 | 2026-10-15 | Nouveau § 22.12 : `le menu « … » :`, un bloc de boutons au premier niveau de l'écran, dessiné en tête |
 | 1.85 | 2026-10-15 | § 8 : l'aide à la saisie dans un écran, débuts d'élément selon le bloc ouvert, suites d'une tournure commencée, états accordés, place et taille |
+| 1.86 | 2026-10-15 | Une heure comme valeur de départ, d'une zone d'écran (§ 22.1) et d'un champ (§ 16.7) : « un début (heure), 08:00 au départ » |
