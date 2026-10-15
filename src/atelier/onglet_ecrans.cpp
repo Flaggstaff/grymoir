@@ -477,13 +477,14 @@ public:
     explicit Grille(QWidget *toile) : QWidget(toile) {
         setAttribute(Qt::WA_TransparentForMouseEvents);
         setObjectName("grille");
+        setStyleSheet("background: transparent;");   // le thème peint tout QWidget : sans cela, une plaque qui cache tout
     }
 protected:
     void paintEvent(QPaintEvent *) override {
         QPainter p(this);
         QColor fin = Theme::courant().couleur("accent"), fort = fin;
-        fin.setAlpha(40);
-        fort.setAlpha(90);
+        fin.setAlpha(28);   // discrète : les éléments déjà posés se voient au travers
+        fort.setAlpha(64);
         for (int x = 0; x < width(); x += 8) { p.setPen(x % 32 ? fin : fort); p.drawLine(x, 0, x, height()); }
         for (int y = 0; y < height(); y += 8) { p.setPen(y % 32 ? fin : fort); p.drawLine(0, y, width(), y); }
     }
@@ -646,6 +647,14 @@ bool OngletEcrans::clavier(int t, Qt::KeyboardModifiers m) {
     if (!x.place) {   // un écran décrit : le premier geste le passe en position libre (§ 5 octies)
         QRect r = rect_vu(element);
         if (r.isNull()) return false;
+        for (int q = 0; q < lus[courant].elements.size(); q++)   // un écran mixte : l'élément entre dans son bloc libre
+            if (lus[courant].elements[q].sorte == ELEMENT_LIBRE) {
+                const QString ecran = lus[courant].nom;
+                const int k = element;
+                element = -1;
+                emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, q, g); });
+                return true;
+            }
         if (m & Qt::AltModifier) r.setSize(QSize(qMax(8, r.width() + dx), qMax(8, r.height() + dy)));
         else r.translate(dx, dy);
         liberer(element, r);
@@ -811,11 +820,12 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
                 if (!fantome) {
                     fantome = new QFrame(vue.vue);
                     fantome->setAttribute(Qt::WA_TransparentForMouseEvents);
-                    fantome->setStyleSheet("border: 2px dashed " + Theme::courant().hex("accent") + ";");
+                    fantome->setStyleSheet("border: 2px dashed " + Theme::courant().hex("accent") + "; background: transparent;");
                 }
                 if (!grille || grille->parentWidget() != vue.vue) { delete grille; grille = new Grille(vue.vue); }
                 grille->setGeometry(vue.vue->rect());
                 grille->show();
+                grille->lower();   // sous les éléments, qui restent visibles
                 fantome->setGeometry(r);
                 libre_fin = r;
                 fantome->show();
@@ -870,7 +880,27 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
                     return true;
                 }
             }
-            if (libre_decrit) { liberer(k, libre_fin); return true; }
+            if (libre_decrit) {
+                // un écran qui a déjà un bloc libre : l'élément décrit y entre, là où on l'a lâché (le bloc libre sous la
+                // souris, sinon le premier) ; sans bloc libre, tout l'écran passe en position libre
+                int bloc = -1;
+                QWidget *toile = nullptr;
+                for (int q = 0; q < vue.controles.size(); q++) {
+                    QWidget *x = vue.controles[q];
+                    if (!x || x->objectName() != "toile" || lus[courant].elements.value(q).sorte != ELEMENT_LIBRE || x == w
+                        || (w && w->isAncestorOf(x)))
+                        continue;
+                    const bool sous = x->rect().contains(x->mapFromGlobal(m->globalPosition().toPoint()));
+                    if (bloc < 0 || sous) { bloc = q; toile = x; }   // le dernier sous la souris est le plus intérieur
+                }
+                if (bloc < 0) { liberer(k, libre_fin); return true; }
+                const QPoint l = toile->mapFromGlobal(vue.vue->mapToGlobal(libre_fin.topLeft()));
+                const QPoint ou(aimanter(qMax(0, l.x())), aimanter(qMax(0, l.y())));
+                const QString ecran = lus[courant].nom;
+                element = -1;
+                emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, bloc, g, ou); });
+                return true;
+            }
             const QRect r = w->geometry();
             if (libre_taille) placer(k, libre_depart.x(), libre_depart.y(), (libre_taille & 1) ? r.width() : -1,
                                      (libre_taille & 2) ? r.height() : -1);

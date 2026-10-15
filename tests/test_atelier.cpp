@@ -2293,6 +2293,56 @@ int main(int argc, char **argv) {
         }
         VERIFIER(sur_premier == 1 && sur_second == 0);
     }
+    {   // un écran mixte : un bloc libre, et des boutons restés en dehors, décrits ; glisser l'un d'eux le range dans le bloc libre,
+        // là où on l'a lâché (avant : la conversion de l'écran était refusée, « déjà en position libre », et le bouton revenait)
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    en position libre :\n        le texte « teste », à 0 de la gauche et 0 du haut,\n"
+                    "        le texte « autre », à 0 de la gauche et 300 du haut,\n"
+                    "    un bouton « Fermer ».\n"
+                    "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\n");
+        }
+        OngletEcrans o;
+        o.resize(1000, 800);
+        o.show();
+        QString resultat = "pas de geste";
+        Geste g;
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        QPushButton *b = nullptr;
+        QWidget *toile = nullptr;
+        for (int k = 0; k < 20; k++) {
+            if (auto *x = qobject_cast<QPushButton *>(o.controle(k)); x && x->text() == "Fermer") b = x;
+            if (o.controle(k) && o.controle(k)->objectName() == "toile") toile = o.controle(k);
+        }
+        VERIFIER(b && toile);
+        if (b && toile) {
+            const QPoint m(4, 4), a = b->mapToGlobal(m);
+            const QPoint vise = toile->mapToGlobal(QPoint(200, 100)) + QPoint(4, 4);   // le coin du bouton lâché à 200 × 100 du bloc
+            QMouseEvent appui(QEvent::MouseButtonPress, QPointF(m), QPointF(a), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(b, &appui);
+            QMouseEvent loin(QEvent::MouseMove, QPointF(m), QPointF(a + QPoint(0, 30)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(b, &loin);
+            QMouseEvent bouge(QEvent::MouseMove, QPointF(m), QPointF(vise), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(b, &bouge);
+            // la grille : visible, sans fond (le thème peint tout QWidget), et sous les éléments, qui se voient au travers
+            QWidget *gr = o.grille_visible();
+            VERIFIER(gr && gr->styleSheet().contains("transparent")
+                     && gr->parentWidget()->children().indexOf(gr) < gr->parentWidget()->children().indexOf(toile));
+            QMouseEvent lache(QEvent::MouseButtonRelease, QPointF(m), QPointF(vise), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(b, &lache);
+        }
+        QFile r(chemin);
+        VERIFIER(r.open(QIODevice::ReadOnly));
+        const QString t = QString::fromUtf8(r.readAll());
+        QRegularExpressionMatch m = QRegularExpression("        un bouton « Fermer », à (\\d+) de la gauche et (\\d+) du haut").match(t);
+        VERIFIER(resultat.isEmpty() && m.hasMatch() && qAbs(m.captured(1).toInt() - 200) <= 8 && qAbs(m.captured(2).toInt() - 100) <= 8);
+        if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
+    }
     {   // le graphique (§ 22.11) : fabriqué par la palette, dessiné en exemple dans l'aperçu, rempli par les lignes
         QTemporaryDir dossier;
         const QString chemin = dossier.filePath("p.grym");
