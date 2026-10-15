@@ -38,7 +38,8 @@ typedef struct {
     char **a_liberer;      /* formes masculines déduites */
     size_t nb_a_liberer;
     int devine;            /* l'article du champ qu'on écrit a été deviné : son objet peut l'être aussi (« du c ») */
-    int champ_nu;          /* on écrit l'objet d'un champ resté sans article : il reste nu aussi (« longueur de n ») */
+    int champ_nu;
+    int dans_dont;         /* on écrit la condition d'un « dont » : « = » devant une constante s'y écrit « est » */          /* on écrit l'objet d'un champ resté sans article : il reste nu aussi (« longueur de n ») */
     char **variables;      /* les variables créées avec un article (« L'effectif vaut 12. ») et leur genre (§ 11.4) */
     Genre *genres_var;
     size_t nb_var;
@@ -398,7 +399,18 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
         expression(im, droite);
         return;
     }
-    if (n->forme == 1 && !sans_sujet) {                                    /* écrit en symbole */
+    /* Venu de la forme compacte (§ 11.4) : « = » devant une constante s'écrit « est » (« dont le numéro est 2 ») ; devant
+     * une variable, et pour les autres comparaisons, le symbole reste, comme le guide les écrit (« Si âge < 18 »). */
+    const int t = droite ? droite->type : 0;
+    const int en_mots = n->forme == 1 && n->article_a_deviner && !im->compact && n->op == '=' && !sans_sujet && im->dans_dont
+                        && (t == N_NOMBRE || t == N_TEXTE || t == N_DATE || t == N_HEURE || t == N_BOOLEEN);
+    if (en_mots) {
+        expression(im, sujet);
+        aj(im, n->negation ? " n'est pas " : " est ");
+        expression(im, droite);
+        return;
+    }
+    if (n->forme == 1 && !sans_sujet && !en_mots) {                        /* écrit en symbole */
         expression(im, sujet);
         aj(im, " ");
         aj(im, symbole(n->op));
@@ -789,7 +801,10 @@ static void expression(Impression *im, const Noeud *n) {
         }
         if (n->nb_enfants > (size_t)inverse) {
             aj(im, im->compact ? " _dont " : " dont ");
+            const int avant = im->dans_dont;
+            im->dans_dont = 1;   /* « dont le numéro est 2 » : « est » n'y vaut que là (§ 11.4) */
             expression(im, n->enfants[0]);
+            im->dans_dont = avant;
         }
         if (n->texte2 && n->forme < 3) {   /* formes 3 à 7 : texte2 est le champ de l'agrégat, pas un tri */
             aj(im, im->compact ? " _par " : ", par ");
@@ -1482,7 +1497,10 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         aj(im, c ? " _conservé" : fem ? " conservée" : " conservé");
         if (cherche->nb_enfants) {
             aj(im, c ? " _dont " : " dont ");
+            const int avant = im->dans_dont;
+            im->dans_dont = 1;
             expression(im, cherche->enfants[0]);
+            im->dans_dont = avant;
         }
         aj(im, c ? " _vérifie " : " vérifie :\n");
         if (!c) retrait(im, niveau + 1);

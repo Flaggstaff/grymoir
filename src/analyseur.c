@@ -7381,6 +7381,7 @@ typedef struct Capture {
 static void marquer_compact(Noeud *n) {
     if (!n) return;
     if (n->type == N_NOM && n->article == ART_AUCUN) n->article_a_deviner = 1;
+    if (n->type == N_COMPARAISON && n->forme == 1) n->article_a_deviner = 1;   /* un symbole : les mots sont à retrouver */
     for (size_t k = 0; k < n->nb_enfants; k++) marquer_compact(n->enfants[k]);
 }
 

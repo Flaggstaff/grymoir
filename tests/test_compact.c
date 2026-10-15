@@ -279,7 +279,7 @@ int main(void) {
                  "_la f << _la facture _conservé _dont montant = 3\n_afficher _nombre_de facture _conservé\n",
                  "Une facture, conservée, a :\n    un montant (nombre).\n"
                  "Pour chaque facture conservée dont le montant n'est pas nul, par montant décroissant :\n    Afficher facture.\n"
-                 "La f vaut la facture conservée dont le montant = 3.\nAfficher le nombre de factures conservées.\n");
+                 "La f vaut la facture conservée dont le montant est 3.\nAfficher le nombre de factures conservées.\n");
 
     ALLER_RETOUR("_classe _une p _conservé\n    _une date (date) _facultatif\n_fin\n_la x << _nouveau p _avec\n"
                  "    date << _absent\n_fin\n_si x.date _présent _alors\n    _afficher 1\n_fin\n",
