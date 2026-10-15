@@ -778,6 +778,7 @@ namespace {
 int bloc_de(Noeud *n, size_t i);
 void inserer(Noeud *n, size_t i, Noeud *x);
 size_t fin_d_unite(Noeud *n, size_t i);
+size_t ouverture_de(Noeud *n, size_t i);
 }  // namespace
 
 QString ecran_titre(const QString &dossier, const QString &ecran, const QString &titre, Geste *geste) {
@@ -815,6 +816,44 @@ void mettre_dans(Noeud *p, size_t ouv, Noeud *x) {
     inserer(p, fin, x);
 }
 }  // namespace
+
+QString ecran_mettre_dans(const QString &dossier, const QString &ecran, int source, int dans, Geste *geste) {
+    Chantier ch(dossier);
+    Trouve t = trouver_ecran(ch, ecran);
+    if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
+    Noeud *p = t.phrase;
+    if (source < 0 || dans < 0 || (size_t)source >= p->nb_enfants || (size_t)dans >= p->nb_enfants
+        || (p->enfants[source]->type == N_DISPOSITION && (!p->enfants[source]->forme || p->enfants[source]->forme == 6))
+        || p->enfants[dans]->type != N_DISPOSITION || !p->enfants[dans]->forme || p->enfants[dans]->forme == 5)
+        return "Choisis un élément, et un onglet, un groupe ou un bloc où le mettre.";
+    const size_t fs = fin_d_unite(p, (size_t)source);
+    if ((size_t)dans >= (size_t)source && (size_t)dans <= fs) return "Un bloc ne se met pas dans lui-même.";
+    if (ouverture_de(p, (size_t)source) == (size_t)dans
+        || (p->enfants[dans]->forme == 6 && ouverture_de(p, ouverture_de(p, (size_t)source)) == (size_t)dans))
+        return "Il y est déjà.";
+    {   // le seul élément d'un bloc ne le quitte pas : le bloc (un onglet, sa page libre) resterait vide, ce qui ne se dit pas
+        const size_t anc = ouverture_de(p, (size_t)source);
+        if (anc < p->nb_enfants) {
+            int unites = 0;
+            for (size_t q = anc + 1; q < fin_d_unite(p, anc); q = fin_d_unite(p, q) + 1) unites++;
+            if (unites <= 1)
+                return "C'est le seul élément de son onglet ou de son bloc, qui resterait vide : ajoutes-y d'abord autre chose.";
+        }
+    }
+    QVector<Noeud *> unite;
+    for (size_t q = (size_t)source; q <= fs; q++) unite << p->enfants[q];
+    const size_t nb = (size_t)unite.size();
+    for (size_t q = (size_t)source; q + nb < p->nb_enfants; q++) p->enfants[q] = p->enfants[q + nb];
+    p->nb_enfants -= nb;
+    size_t d = (size_t)dans > fs ? (size_t)dans - nb : (size_t)dans;
+    unite[0]->place_dite = 0;   // sa place ne valait que dans l'ancien bloc ; le nouveau la redonne s'il est libre
+    mettre_dans(p, d, unite[0]);
+    const size_t ou = (size_t)(std::find(p->enfants, p->enfants + p->nb_enfants, unite[0]) - p->enfants);
+    for (size_t q = 1; q < nb; q++) inserer(p, ou + q, unite[(int)q]);
+    reimprimer(ch, t);
+    geste->description = QString("Déplacer un élément de l'écran %1").arg(ecran);
+    return ch.conclure(geste);
+}
 
 QString ecran_ajouter(const QString &dossier, const QString &ecran, const ElementNouveau &e, Geste *geste, int dans) {
     Chantier ch(dossier);
@@ -868,6 +907,26 @@ QString ecran_supprimer(const QString &dossier, const QString &ecran, int index,
         for (size_t q = i; q + 1 < n->nb_enfants; q++) n->enfants[q] = n->enfants[q + 1];
         n->nb_enfants--;
     };
+    // Les onglets, ou un onglet : ils partent avec leur contenu (un onglet sans les onglets, ou du contenu hors d'un onglet,
+    // n'aurait pas de sens) ; le dernier onglet emporte ses onglets (§ 22.10).
+    if (el->type == N_DISPOSITION && (el->forme == 5 || el->forme == 6)) {
+        size_t debut = (size_t)index;
+        if (el->forme == 6) {
+            const size_t parent = ouverture_de(n, debut);
+            int freres = 0;
+            if (parent < n->nb_enfants)
+                for (size_t q = parent + 1; q < fin_d_unite(n, parent); q = fin_d_unite(n, q) + 1) freres++;
+            if (freres <= 1 && parent < n->nb_enfants) debut = parent;
+        }
+        const size_t fin = fin_d_unite(n, debut);
+        size_t restants = 0;
+        for (size_t q = 0; q < n->nb_enfants; q++) restants += n->enfants[q]->type != N_DISPOSITION && (q < debut || q > fin);
+        if (!restants) return "C'est tout l'écran : un écran montre au moins un élément.";
+        for (size_t q = fin + 1; q-- > debut;) enlever(q);
+        reimprimer(ch, t);
+        geste->description = QString("Supprimer %1 de l'écran %2").arg(debut == (size_t)index && el->forme == 6 ? "un onglet" : "des onglets", ecran);
+        return ch.conclure(geste);
+    }
     size_t reels = 0;
     for (size_t q = 0; q < n->nb_enfants; q++) reels += n->enfants[q]->type != N_DISPOSITION;
     if (el->type != N_DISPOSITION && reels <= 1) return "C'est le dernier élément : un écran montre au moins un élément.";
@@ -1223,7 +1282,9 @@ QString ecran_ajouter_onglets(const QString &dossier, const QString &ecran, Gest
             if (bloc_de(p, q) == 4 && (p->enfants[q]->place_dite & 1)) bas = qMax(bas, p->enfants[q]->place[1]);
         bloc[0]->place[0] = 16;
         bloc[0]->place[1] = qMin(4000, bas + 48);
-        bloc[0]->place_dite = 1;
+        bloc[0]->place[2] = 480;   // de la place pour y poser des éléments (§ 5 decies)
+        bloc[0]->place[3] = 320;
+        bloc[0]->place_dite = 1 | 2 | 4;
     }
     for (int q = 0; q < bloc.size(); q++) inserer(p, ou + (size_t)q, bloc[q]);
     reimprimer(ch, t);

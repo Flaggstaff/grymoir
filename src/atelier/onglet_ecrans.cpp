@@ -515,6 +515,39 @@ int OngletEcrans::onglet_ouvert(int k) const {
     return -1;
 }
 
+int OngletEcrans::onglets_de(int k) const {
+    if (courant < 0 || k < 0 || k >= lus[courant].elements.size()) return -1;
+    const auto &els = lus[courant].elements;
+    QVector<int> pile;
+    for (int q = 0; q < k; q++) {
+        if (els[q].sorte == ELEMENT_FIN_DE_BLOC) { if (!pile.isEmpty()) pile.pop_back(); }
+        else if (els[q].sorte >= ELEMENT_COTE_A_COTE && els[q].sorte != ELEMENT_IMAGE) pile << q;
+    }
+    for (int i = pile.size(); i-- > 0;) if (els[pile[i]].sorte == ELEMENT_ONGLETS) return pile[i];
+    return -1;
+}
+
+int OngletEcrans::onglet_sous(QPoint global, int sauf) const {
+    if (courant < 0 || !vue.vue) return -1;
+    for (int k = 0; k < vue.controles.size(); k++) {
+        auto *tw = qobject_cast<QTabWidget *>(vue.controles[k]);
+        if (!tw || k == sauf || !tw->isVisible()) continue;
+        QTabBar *barre = tw->tabBar();
+        const int i = barre->tabAt(barre->mapFromGlobal(global));
+        if (i < 0 || !barre->rect().contains(barre->mapFromGlobal(global))) continue;
+        int rang = 0, prof = 0;   // l'onglet de rang i de ces onglets
+        for (int q = k + 1; q < lus[courant].elements.size(); q++) {
+            const int s = lus[courant].elements[q].sorte;
+            if (s == ELEMENT_FIN_DE_BLOC) { if (prof-- == 0) break; continue; }
+            if (s >= ELEMENT_COTE_A_COTE && s != ELEMENT_IMAGE) {
+                if (prof == 0 && s == ELEMENT_ONGLET && rang++ == i) return q;
+                prof++;
+            }
+        }
+    }
+    return -1;
+}
+
 int OngletEcrans::cible_ajout() const {
     if (courant < 0 || element < 0 || element >= lus[courant].elements.size()) return -1;
     const auto &els = lus[courant].elements;
@@ -670,7 +703,7 @@ void OngletEcrans::liberer(int k, QRect nouveau) {
 
 bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
     // La barre d'un widget d'onglets : ses clics ouvrent la page, comme dans un navigateur, et choisissent l'onglet (§ 5 decies)
-    if (auto *barre = qobject_cast<QTabBar *>(o)) {
+    if (auto *barre = qobject_cast<QTabBar *>(o); barre && libre_k < 0) {
         if (ev->type() == QEvent::MouseButtonPress && courant >= 0) {
             const int k = element_sous(o);   // les onglets dont c'est la barre
             const int i = barre->tabAt(static_cast<QMouseEvent *>(ev)->position().toPoint());
@@ -678,6 +711,15 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
                 barre->setCurrentIndex(i);
                 const int page = onglet_ouvert(k);
                 if (page >= 0) choisir_element(page);
+            }
+            // saisie par sa barre, comme une fenêtre par son titre : glisser déplace tout le bloc d'onglets
+            if (QWidget *tw = vue.controles.value(k)) {
+                depart = static_cast<QMouseEvent *>(ev)->globalPosition().toPoint();
+                libre_k = k;
+                libre_bouge = false;
+                libre_taille = 0;
+                libre_decrit = !lus[courant].elements.value(k).place;
+                libre_depart = libre_decrit ? rect_vu(k) : tw->geometry();
             }
             return true;
         }
@@ -711,6 +753,12 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
         if (ev->type() == QEvent::MouseMove && (m->buttons() & Qt::LeftButton)) {
             if (!libre_bouge && d.manhattanLength() < QApplication::startDragDistance()) return true;
             libre_bouge = true;
+            if (const int vise = onglet_sous(m->globalPosition().toPoint(), libre_k); vise >= 0) {   // survoler un onglet l'ouvre
+                const int ko = onglets_de(vise);
+                if (auto *tw = qobject_cast<QTabWidget *>(vue.controles.value(ko)))
+                    tw->setCurrentWidget(vue.controles.value(vise));
+                etat->setText("Lâche ici pour mettre l'élément dans cet onglet.");
+            }
             const bool pixel = m->modifiers() & Qt::AltModifier;
             auto cale = [pixel](int v) { return pixel ? qMax(0, v) : aimanter(v); };
             QRect r = libre_depart;
@@ -770,6 +818,13 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             if (guide_h) guide_h->hide();
             if (fantome) { fantome->hide(); fantome->deleteLater(); fantome = nullptr; }
             if (!libre_bouge) return true;
+            if (const int vise = onglet_sous(m->globalPosition().toPoint(), k);
+                vise >= 0 && lus[courant].elements.value(k).sorte != ELEMENT_ONGLETS) {   // lâché sur un onglet : rangé dedans
+                const QString ecran = lus[courant].nom;
+                element = -1;
+                emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, vise, g); });
+                return true;
+            }
             if (libre_decrit) { liberer(k, libre_fin); return true; }
             const QRect r = w->geometry();
             if (libre_taille) placer(k, libre_depart.x(), libre_depart.y(), (libre_taille & 1) ? r.width() : -1,
@@ -832,11 +887,16 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
         return QWidget::eventFilter(o, ev);
     if (ev->type() == QEvent::MouseButtonPress && qobject_cast<QTabBar *>(o)) return false;   // changer d'onglet dans l'aperçu
     if (ev->type() == QEvent::MouseButtonPress) {
-        const int trouve = element_sous(o);
+        int trouve = element_sous(o);
         glisse = trouve;   // peut-être le début d'un glisser
         depart = static_cast<QMouseEvent *>(ev)->globalPosition().toPoint();
         choisir_element(trouve);
         centre->setFocus();   // les flèches vont à l'aperçu
+        // le vide d'une page : la prise est le bloc d'onglets entier (déplacer, ou agrandir par ses bords)
+        if (courant >= 0 && lus[courant].elements.value(trouve).sorte == ELEMENT_ONGLET) {
+            const int ko = onglets_de(trouve);
+            if (ko >= 0) trouve = ko;
+        }
         QWidget *w = vue.controles.value(trouve);
         if (w && courant >= 0 && lus[courant].elements.value(trouve).place) {   // un élément en position libre (§ 5 octies)
             glisse = -1;
@@ -847,8 +907,7 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             libre_taille = bord_sous(w, depart);   // un bord ou le coin : la taille ; ailleurs : la place
             etat->setText(libre_taille ? "Glisse pour changer la taille (Alt : au pixel)." : "Glisse pour placer (Alt : au pixel).");
         } else if (w && !(static_cast<QMouseEvent *>(ev)->modifiers() & Qt::ControlModifier) && courant >= 0
-                   && lus[courant].elements.value(trouve).sorte != ELEMENT_LIBRE
-                   && lus[courant].elements.value(trouve).sorte != ELEMENT_ONGLET) {   // une page se choisit, ne se déplace pas
+                   && lus[courant].elements.value(trouve).sorte != ELEMENT_LIBRE) {
             // un écran décrit : tout se place quand même ; un fantôme suit la souris, le lâcher passe l'écran en position
             // libre en gardant ce qu'on voit, cet élément à sa nouvelle place (§ 5 octies). Cmd (Ctrl) : remettre dans l'ordre.
             glisse = -1;
@@ -964,6 +1023,39 @@ void OngletEcrans::editer() {
     } else {
         const ElementLu &x = e.elements[element];
         const int k = element;
+        if (x.sorte == ELEMENT_ONGLET) {   // tout le bloc d'onglets, d'un clic (§ 5 decies)
+            auto *tous = new QPushButton("Supprimer les onglets");
+            tous->setToolTip("Tous les onglets et leur contenu ; Cmd+Z les rend.");
+            f->addRow("", tous);
+            const int ko = onglets_de(k);
+            connect(tous, &QPushButton::clicked, this, [this, ecran, ko] {
+                element = -1;
+                emit geste([=](Geste *g) { return ecran_supprimer(dossier, ecran, ko, g); });
+            });
+        }
+        if (const int ko = onglets_de(k); ko >= 0 && x.sorte != ELEMENT_ONGLET && x.sorte != ELEMENT_FIN_DE_BLOC) {
+            // un élément d'un onglet : le ranger dans un autre onglet des mêmes onglets
+            auto *vers = new QComboBox;
+            int prof = 0;
+            for (int q = ko + 1; q < e.elements.size(); q++) {
+                const int s = e.elements[q].sorte;
+                if (s == ELEMENT_FIN_DE_BLOC) { if (prof-- == 0) break; continue; }
+                if (s >= ELEMENT_COTE_A_COTE && s != ELEMENT_IMAGE) {
+                    if (prof == 0 && s == ELEMENT_ONGLET) vers->addItem(e.elements[q].texte, q);
+                    prof++;
+                }
+            }
+            auto *ranger = new QPushButton("Mettre dans l'onglet");
+            auto *ligne = new QHBoxLayout;
+            ligne->addWidget(vers, 1);
+            ligne->addWidget(ranger);
+            f->addRow("Onglet", ligne);
+            connect(ranger, &QPushButton::clicked, this, [this, ecran, k, vers] {
+                const int vise = vers->currentData().toInt();
+                element = -1;
+                emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, vise, g); });
+            });
+        }
         if (x.sorte == ELEMENT_GROUPE || x.sorte == ELEMENT_ONGLET) {   // un groupe, un onglet : son titre (§ 22.7, § 22.10)
             auto *titre = new QLineEdit(x.texte);
             f->addRow(x.sorte == ELEMENT_GROUPE ? "Titre du groupe" : "Titre de l'onglet", titre);

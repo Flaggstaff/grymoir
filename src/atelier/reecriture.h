@@ -70,6 +70,9 @@ QString ecran_titre(const QString &dossier, const QString &ecran, const QString 
 // `dans` : l'index d'un bloc (groupe, onglet, bloc libre…) où le mettre, à la fin ; un onglet qui contient un bloc libre
 // le reçoit dans ce bloc, placé sous ce qui y est (§ 22.9, § 22.10). −1 : à la fin de l'écran, ou de son dernier bloc libre.
 QString ecran_ajouter(const QString &dossier, const QString &ecran, const ElementNouveau &e, Geste *geste, int dans = -1);
+// Range l'élément (ou le bloc) `source` à la fin du bloc `dans` : un autre onglet, un groupe… ; dans un bloc libre, il
+// prend une place sous ce qui y est (§ 5 decies).
+QString ecran_mettre_dans(const QString &dossier, const QString &ecran, int source, int dans, Geste *geste);
 // Un bouton part avec son événement, une liste avec son « Quand on choisit », une zone avec son « Quand on change » ;
 // un bloc disparaît, ses éléments restent.
 QString ecran_supprimer(const QString &dossier, const QString &ecran, int index, Geste *geste);

@@ -105,7 +105,11 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     auto poser = [&](QWidget *w, const ElementVue &e, int etirement = 0) {
         const Niveau &ici = niveaux.last();
         if (!ici.toile) {
-            if (e.sorte == ELEMENT_LIBRE) ici.boite->addWidget(w, 0, Qt::AlignLeft | Qt::AlignTop);
+            QWidget *hote = ici.boite->parentWidget();
+            if (e.sorte == ELEMENT_LIBRE && hote && hote->property("page").toBool()) {   // dans une page : il la remplit (§ 5 decies)
+                w->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+                ici.boite->addWidget(w, 1);
+            } else if (e.sorte == ELEMENT_LIBRE) ici.boite->addWidget(w, 0, Qt::AlignLeft | Qt::AlignTop);
             else ici.boite->addWidget(w, etirement);
             return;
         }
@@ -154,6 +158,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         }
         if (e.sorte == ELEMENT_ONGLET) {   // « l'onglet « Identité » : » : une page, ses éléments l'un sous l'autre
             auto *page = new QWidget;
+            page->setProperty("page", true);
             auto *b = new QVBoxLayout(page);
             b->setSpacing(t.mesure("l-un-sous-l-autre"));
             b->setAlignment(Qt::AlignTop);

@@ -84,6 +84,8 @@ public:
     // onglets, leur page ouverte. −1 : la fin de l'écran.
     int cible_ajout() const;
     int onglet_ouvert(int k) const;                  // l'index de l'onglet ouvert des onglets k, ou −1
+    int onglets_de(int k) const;                     // les onglets qui contiennent k (ou dont k est un onglet), ou −1
+    int onglet_sous(QPoint global, int sauf) const;  // l'onglet dont l'en-tête est sous la souris, hors du bloc sauf ; −1
     bool touche(int t, Qt::KeyboardModifiers m = Qt::NoModifier) { return clavier(t, m); }   // pour les essais
 
 signals:

@@ -1910,7 +1910,8 @@ int main(int argc, char **argv) {
         // dans un écran libre : les onglets se placent, sous ce qui y est
         ecrire("L'écran x montre :\n    en position libre :\n        le texte « t », à 16 de la gauche et 16 du haut.\n");
         VERIFIER(ecran_ajouter_onglets(dossier.path(), "x", &g).isEmpty());
-        VERIFIER(lire().contains("        les onglets, à 16 de la gauche et 64 du haut :\n            l'onglet « Premier » :\n"));
+        VERIFIER(lire().contains("        les onglets, à 16 de la gauche et 64 du haut, large de 480, haut de 320 :\n"
+                                 "            l'onglet « Premier » :\n"));
         VERIFIER(ecran_placer(dossier.path(), "x", 2, 200, 16, 320, 160, &g).isEmpty());
         VERIFIER(lire().contains("        les onglets, à 200 de la gauche et 16 du haut, large de 320, haut de 160 :\n"));
         o.montrer(dossier.path());
@@ -2136,6 +2137,100 @@ int main(int argc, char **argv) {
             if (!t2.contains("à 64 de la gauche")) std::printf("%s\n", qPrintable(t2));
         }
         VERIFIER(OngletEcrans::aimanter(3) == 0 && OngletEcrans::aimanter(4) == 8 && OngletEcrans::aimanter(-5) == 0);
+    }
+    {   // les onglets dans un écran libre, les quatre défauts de la capture du 15 octobre : les déplacer par leur barre ;
+        // de la place dans la page ; glisser un élément d'un onglet à l'autre ; les supprimer
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    en position libre :\n        le texte « t », à 16 de la gauche et 16 du haut.\n");
+        }
+        auto lire = [&]() {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly));
+            return QString::fromUtf8(f.readAll());
+        };
+        Geste g;
+        VERIFIER(ecran_ajouter_onglets(dossier.path(), "x", &g).isEmpty());
+        OngletEcrans o;
+        o.resize(1000, 800);
+        o.show();
+        QString resultat = "pas de geste";
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        auto onglets = [&]() -> QTabWidget * {
+            for (int k = 0; k < 20; k++) if (auto *t = qobject_cast<QTabWidget *>(o.controle(k))) return t;
+            return nullptr;
+        };
+        auto geste_souris = [&](QWidget *w, QPoint de, QPoint vers) {
+            const QPoint a = w->mapToGlobal(de), b = a + vers;
+            QMouseEvent appui(QEvent::MouseButtonPress, QPointF(de), QPointF(a), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &appui);
+            QMouseEvent loin(QEvent::MouseMove, QPointF(de), QPointF(a + QPoint(0, 30)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &loin);
+            QMouseEvent bouge(QEvent::MouseMove, QPointF(de), QPointF(b), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &bouge);
+            QMouseEvent lache(QEvent::MouseButtonRelease, QPointF(de), QPointF(b), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(w, &lache);
+        };
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        QTabWidget *tw = onglets();
+        VERIFIER(tw && tw->size() == QSize(480, 320));
+        // 2. de la place : le bloc libre de la page remplit la page
+        if (tw) VERIFIER(tw->currentWidget()->findChild<QWidget *>("toile") && tw->currentWidget()->findChild<QWidget *>("toile")->height() > 200);
+        // 1. saisis par leur barre, les onglets remontent (64 → 24)
+        if (tw) geste_souris(tw->tabBar(), tw->tabBar()->tabRect(0).center(), QPoint(0, -40));
+        if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
+        {   // remontés (de 64 à 24, ou au guide du texte voisin, à quelques pixels)
+            QRegularExpressionMatch m = QRegularExpression("les onglets, à 16 de la gauche et (\\d+) du haut, large de 480, haut de 320 :").match(lire());
+            VERIFIER(m.hasMatch() && m.captured(1).toInt() <= 30);
+        }
+        // le seul élément d'un onglet ne le quitte pas (l'onglet resterait vide) : on lui ajoute un voisin d'abord
+        {
+            o.montrer(dossier.path());
+            int seul = -1, second = -1;
+            for (int k = 0; k < o.ecrans()[0].elements.size(); k++) {
+                if (o.ecrans()[0].elements[k].texte == "Premier onglet") seul = k;
+                if (o.ecrans()[0].elements[k].sorte == ELEMENT_ONGLET && o.ecrans()[0].elements[k].texte == "Second") second = k;
+            }
+            VERIFIER(ecran_mettre_dans(dossier.path(), "x", seul, second, &g).startsWith("C'est le seul élément"));
+            int premier = -1;
+            for (int k = 0; k < o.ecrans()[0].elements.size(); k++)
+                if (o.ecrans()[0].elements[k].sorte == ELEMENT_ONGLET && o.ecrans()[0].elements[k].texte == "Premier") premier = k;
+            ElementNouveau v;
+            v.sorte = ELEMENT_TEXTE;
+            v.texte = "voisin";
+            VERIFIER(ecran_ajouter(dossier.path(), "x", v, &g, premier).isEmpty());
+        }
+        // 3. le texte du premier onglet, lâché sur l'en-tête du second, y est rangé, sous ce qui y est
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        tw = onglets();
+        QLabel *texte = nullptr;
+        if (tw) for (QLabel *l : tw->widget(0)->findChildren<QLabel *>()) if (l->text() == "Premier onglet") texte = l;
+        VERIFIER(texte != nullptr);
+        if (tw && texte) {
+            const QPoint cible = tw->tabBar()->mapToGlobal(tw->tabBar()->tabRect(1).center());
+            geste_souris(texte, QPoint(3, 3), cible - texte->mapToGlobal(QPoint(3, 3)));
+        }
+        if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
+        VERIFIER(lire().contains("            l'onglet « Second » :\n                en position libre :\n"
+                                 "                    le texte « Second onglet », à 16 de la gauche et 16 du haut,\n"
+                                 "                    le texte « Premier onglet », à 16 de la gauche et 64 du haut."));
+        // 4. supprimer un onglet emporte son contenu ; le dernier emporte les onglets
+        o.montrer(dossier.path());
+        int second = -1, premier = -1;
+        for (int k = 0; k < o.ecrans()[0].elements.size(); k++) {
+            if (o.ecrans()[0].elements[k].sorte == ELEMENT_ONGLET && o.ecrans()[0].elements[k].texte == "Second") second = k;
+            if (o.ecrans()[0].elements[k].sorte == ELEMENT_ONGLET && o.ecrans()[0].elements[k].texte == "Premier") premier = k;
+        }
+        VERIFIER(second > 0 && premier > 0);
+        VERIFIER(ecran_supprimer(dossier.path(), "x", second, &g).isEmpty());
+        VERIFIER(lire().contains("l'onglet « Premier »") && !lire().contains("Second") && !lire().contains("le texte « Premier onglet »"));
+        VERIFIER(ecran_supprimer(dossier.path(), "x", premier, &g).isEmpty());
+        VERIFIER(!lire().contains("onglet") && lire().contains("le texte « t »"));
     }
     {   // les guides : glissé près du bord gauche d'un voisin (20, hors de la grille de 8), le texte s'y colle, trait montré ;
         // avec Alt, ni guide ni grille
