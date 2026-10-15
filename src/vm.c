@@ -2234,7 +2234,9 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             continue;
         }
         const char *colonnes_choisies = strchr(x, '\x1b');
-        e->textes[k] = colonnes_choisies ? grym_formater("%.*s", (int)(colonnes_choisies - x - 1), x + 1) : grym_dupliquer(x + 1);
+        const int graphe = x[0] == 'R' ? 1 | (x[1] == 's' ? 2 : 0) | (x[2] == '+' ? 4 : 0) : 0;   /* « Rb+ » (§ 22.11) */
+        const char *nom_l = x + 1 + (graphe ? 2 : 0);
+        e->textes[k] = colonnes_choisies ? grym_formater("%.*s", (int)(colonnes_choisies - nom_l), nom_l) : grym_dupliquer(nom_l);
         e->colonnes[k] = NULL;
         e->nb_colonnes[k] = 0;
         e->champs[k] = NULL;
@@ -2242,7 +2244,8 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->elements[k].texte = e->textes[k];
         e->elements[k].colonnes = NULL;
         e->elements[k].nb_colonnes = 0;
-        e->elements[k].sorte = x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON
+        e->elements[k].graphique = graphe;
+        e->elements[k].sorte = graphe ? ELEMENT_GRAPHIQUE : x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON
                              : x[0] == 'I' || x[0] == 'J' ? ELEMENT_IMAGE : ELEMENT_TEXTE;
         if (x[0] == 'J') { e->elements[k].calculee = 1; continue; }   /* image calculée : ÉCRAN_IMAGE la donne (§ 22.8) */
         if (x[0] == 'I') {   /* « l'image « plan.png » » (§ 22.8) : relue à chaque ouverture, elle a pu changer depuis l'analyse */
@@ -2256,7 +2259,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].format = f->format;
             continue;
         }
-        if (x[0] != 'L') continue;
+        if (x[0] != 'L' && !graphe) continue;
         /* Colonnes par défaut : les champs simples, dans l'ordre ; ni fichiers, ni images, ni « plusieurs » (§ 22.1) */
         const ClasseVM *c = classe_vm(m, e->textes[k]);
         if (!c) { *erreur = grym_formater("Entité « %s » inconnue.", e->textes[k]); break; }
@@ -2287,8 +2290,15 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
                 q = *fin ? fin + 1 : fin;
             }
             e->nb_colonnes[k] = nb;
+            if (graphe && nb == 1) {   /* compté : une seconde colonne, « Nombre », pour l'interface (§ 22.11) */
+                char **deux = grym_allouer(2 * sizeof(char *));
+                deux[0] = e->colonnes[k][0];
+                deux[1] = (char *)"Nombre";   /* une constante : la libération s'arrête à nb_colonnes */
+                free(e->colonnes[k]);
+                e->colonnes[k] = deux;
+            }
             e->elements[k].colonnes = (const char *const *)e->colonnes[k];
-            e->elements[k].nb_colonnes = nb;
+            e->elements[k].nb_colonnes = graphe ? 2 : nb;
             if (ce) {
                 char *choisi = grym_formater("%s %s", c->nom, c->feminin ? "choisie" : "choisi");
                 e->champ[k] = index_champ(ce, choisi);
@@ -2620,6 +2630,9 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
     char *erreur = NULL;
     const size_t nc = e->nb_colonnes[k], nl = l->liste->n;
     char **cellules = grym_allouer((nc * nl > 0 ? nc * nl : 1) * sizeof *cellules);
+    const int graphe = e->elements[k].graphique;
+    Decimal *valeurs = graphe ? grym_allouer((nl ? nl : 1) * sizeof *valeurs) : NULL;   /* la valeur additionnée de chaque ligne */
+    for (size_t r = 0; graphe && r < nl; r++) valeurs[r] = dec_zero();
     size_t faites = 0;
     for (size_t r = 0; r < nl && !erreur; r++) {
         Objet *o = machine_objet_en_base(m, l->liste->ids[r], l->liste->classes[r], &erreur);
@@ -2642,6 +2655,11 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
                 }
             }
             char *t;
+            if ((graphe & 4) && c == 1 && x && q >= 0 && (size_t)q < x->classe->nb_champs && x->definis[q]) {
+                if (x->champs[q].type == V_NOMBRE) { dec_liberer(&valeurs[r]); valeurs[r] = dec_copier(&x->champs[q].nombre); }
+                else if (x->champs[q].type != V_ABSENT)
+                    erreur = grym_dupliquer("« avec la somme de » additionne un champ nombre (§ 22.11).");
+            }
             if (!x || q < 0 || (size_t)q >= x->classe->nb_champs || !x->definis[q] || x->champs[q].type == V_ABSENT)
                 t = grym_dupliquer("");
             else if (x->champs[q].type == V_OBJET) t = nom_objet(m, x->champs[q].objet);
@@ -2649,11 +2667,44 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
             cellules[faites++] = t;
         }
     }
-    if (!erreur) {
+    if (!erreur && graphe) {
+        /* un graphique : une ligne par valeur de la clé, dans l'ordre où elle apparaît ; « — » pour une clé vide ; le
+         * nombre de lignes, ou la somme de leurs valeurs (§ 22.11) */
+        char **cles = grym_allouer((nl ? nl : 1) * sizeof *cles);
+        Decimal *totaux = grym_allouer((nl ? nl : 1) * sizeof *totaux);
+        size_t ng = 0;
+        for (size_t r = 0; r < faites / (nc ? nc : 1); r++) {
+            const char *cle = *cellules[r * nc] ? cellules[r * nc] : "—";
+            size_t g = 0;
+            while (g < ng && strcmp(cles[g], cle) != 0) g++;
+            if (g == ng) { cles[ng] = grym_dupliquer(cle); totaux[ng] = dec_zero(); ng++; }
+            Decimal un = graphe & 4 ? dec_copier(&valeurs[r]) : dec_depuis_canonique("1"), s = dec_zero();
+            dec_addition(&totaux[g], &un, &s);
+            dec_liberer(&totaux[g]);
+            dec_liberer(&un);
+            totaux[g] = s;
+        }
+        char **lignes = grym_allouer((ng ? 2 * ng : 1) * sizeof *lignes);
+        for (size_t g = 0; g < ng; g++) {
+            Valeur v = valeur_nombre(totaux[g]);
+            lignes[2 * g] = cles[g];
+            lignes[2 * g + 1] = texte_valeur(m, &v);
+            valeur_liberer(&v);
+        }
+        m->iface.ecran_lignes(m->iface.contexte, k, (const char *const *)lignes, ng);
+        for (size_t g = 0; g < 2 * ng; g++) free(lignes[g]);
+        free(lignes);
+        free(cles);
+        free(totaux);
+        valeur_liberer(&e->listes[k]);
+        e->listes[k] = valeur_copier(l);
+    } else if (!erreur) {
         m->iface.ecran_lignes(m->iface.contexte, k, (const char *const *)cellules, nl);
         valeur_liberer(&e->listes[k]);
         e->listes[k] = valeur_copier(l);
     }
+    for (size_t r = 0; graphe && r < nl; r++) dec_liberer(&valeurs[r]);
+    free(valeurs);
     for (size_t x = 0; x < faites; x++) free(cellules[x]);
     free(cellules);
     return erreur;

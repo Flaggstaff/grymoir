@@ -20,7 +20,8 @@ typedef enum { ELEMENT_LISTE, ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE,
                ELEMENT_GROUPE,
                ELEMENT_IMAGE,
                ELEMENT_LIBRE,
-               ELEMENT_ONGLETS, ELEMENT_ONGLET } SorteElement;   /* blocs : § 22.1 ; groupe titré (texte : le titre) : § 22.7 ;
+               ELEMENT_ONGLETS, ELEMENT_ONGLET,
+               ELEMENT_GRAPHIQUE } SorteElement;   /* blocs : § 22.1 ; groupe titré (texte : le titre) : § 22.7 ;
                                                   image (texte : son nom ; octets, taille, format) : § 22.8 ;
                                                   bloc en position libre, fermé par ELEMENT_FIN_DE_BLOC : § 22.9 ;
                                                   les onglets, un onglet (texte : son titre), fermés de même : § 22.10 */
@@ -42,6 +43,7 @@ typedef struct {
     int gauche, haut;               /* en pixels, depuis le coin en haut à gauche du bloc */
     int largeur, hauteur;           /* en pixels ; 0 : la taille naturelle */
     int calculee;                   /* image calculée (§ 22.8) : sans octets à l'ouverture ; ecran_image les donne */
+    int graphique;                  /* graphique (§ 22.11) : 2 en secteurs, 4 une somme ; ses lignes : libellé, valeur */
 } ElementEcran;
 
 typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT } SorteEvenement;

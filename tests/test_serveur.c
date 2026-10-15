@@ -751,6 +751,33 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Le graphique (§ 22.11) : compté par état, dans l'ordre d'apparition, « — » pour un état vide ; additionné en
+         * secteurs ; un tableau pour les lecteurs d'écran ; pas de style dans la page */
+        const char *src = "Un état, conservé, a :\n    un nom (texte), unique.\n"
+                          "Une tâche, conservée, a :\n    un titre (texte),\n    un état (état), facultatif,\n    une durée (nombre).\n"
+                          "Le a vaut un nouvel état :\n    Le nom vaut « à faire ».\nConserver a.\n"
+                          "Le f vaut un nouvel état :\n    Le nom vaut « fait ».\nConserver f.\n"
+                          "Le t1 vaut une nouvelle tâche :\n    Le titre vaut « un ».\n    L'état vaut a.\n    La durée vaut 3.\nConserver t1.\n"
+                          "Le t2 vaut une nouvelle tâche :\n    Le titre vaut « deux ».\n    L'état vaut f.\n    La durée vaut 3.\nConserver t2.\n"
+                          "Le t3 vaut une nouvelle tâche :\n    Le titre vaut « trois ».\n    L'état vaut a.\n    La durée vaut 0.\nConserver t3.\n"
+                          "Le t4 vaut une nouvelle tâche :\n    Le titre vaut « quatre ».\n    La durée vaut 0.\nConserver t4.\n"
+                          "L'écran x montre :\n    le graphique des tâches conservées, par état,\n"
+                          "    le graphique des tâches conservées, par état, avec la somme de la durée, en secteurs,\n"
+                          "    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=2"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<table class=\"lecteur\"><tr><th>à faire</th><td>2</td></tr><tr><th>fait</th><td>1</td></tr>"
+                                 "<tr><th>—</th><td>1</td></tr></table>");
+        CONTIENT(sc.reponses[0], "<tr><th>à faire</th><td>3</td></tr><tr><th>fait</th><td>3</td></tr><tr><th>—</th><td>0</td></tr>");
+        CONTIENT(sc.reponses[0], "<path d=\"M100,100 L100.00,10.00 A90,90 0 0,1 100.00,190.00 Z\"");   /* la moitié : de midi à six heures */
+        CONTIENT(sc.reponses[0], "<rect x=\"140\" y=\"10\" width=\"260.0\" height=\"20\"");   /* la plus grande barre : toute la largeur */
+        NE_CONTIENT_PAS(sc.reponses[0], "style=");
+        CONTIENT(sc.reponses[2], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* L'image calculée (§ 22.8) : celle de la ligne choisie ; absente, rien ; son adresse porte une version qui change
          * avec ses octets ; une version périmée : 404 */
         const char *src = "Un compositeur, conservé, a :\n    un nom (texte), unique,\n    un portrait (image), facultatif.\n"

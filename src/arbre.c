@@ -31,6 +31,7 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->place[0] = n->place[1] = n->place[2] = n->place[3] = 0;
     n->place_dite = 0;
     n->article_a_deviner = 0;
+    n->graphique = 0;
     return n;
 }
 
@@ -69,7 +70,7 @@ static void decrire_noeud(const Noeud *n, Chaine *c);
 
 /* La place d'un élément en position libre (§ 22.9) : « (bouton « OK » @96,16 l240 h80) », avant la parenthèse. */
 static void decrire(const Noeud *n, Chaine *c) {
-    if (!n->place_dite) { decrire_noeud(n, c); return; }
+    if (!n->place_dite && !n->graphique) { decrire_noeud(n, c); return; }
     Chaine x = {0};
     decrire_noeud(n, &x);
     char *d = chaine_rendre(&x);
@@ -78,11 +79,25 @@ static void decrire(const Noeud *n, Chaine *c) {
     if (parenthese) d[l - 1] = 0;
     chaine_ajouter(c, d);
     free(d);
-    char *p = grym_formater(" @%d,%d", n->place[0], n->place[1]);
-    chaine_ajouter(c, p);
-    free(p);
+    char *p = NULL;
+    if (n->place_dite) { p = grym_formater(" @%d,%d", n->place[0], n->place[1]); chaine_ajouter(c, p); free(p); }
     if (n->place_dite & 2) { p = grym_formater(" l%d", n->place[2]); chaine_ajouter(c, p); free(p); }
     if (n->place_dite & 4) { p = grym_formater(" h%d", n->place[3]); chaine_ajouter(c, p); free(p); }
+    if (n->graphique) {   /* « graphique par état », « … somme montant », « … secteurs » (§ 22.11) */
+        chaine_ajouter(c, " graphique");
+        for (const char *q = n->texte3 ? n->texte3 : ""; *q;) {
+            const char *f = strchr(q, '\x1e');
+            if (!f) f = q + strlen(q);
+            const char *sep = memchr(q, '\x1d', (size_t)(f - q));
+            char *ch = sep ? grym_formater("%.*s", (int)(f - sep - 1), sep + 1) : grym_dupliquer("");
+            for (char *x = ch; *x; x++) if (*x == '\x1f') *x = '.';
+            chaine_ajouter(c, q == n->texte3 ? " par " : " somme ");
+            chaine_ajouter(c, ch);
+            free(ch);
+            q = *f ? f + 1 : f;
+        }
+        if (n->graphique & 2) chaine_ajouter(c, " secteurs");
+    }
     if (parenthese) chaine_ajouter(c, ")");
 }
 

@@ -79,7 +79,7 @@ Un écran est un objet : ses zones de saisie sont ses champs (charte, art. 6).
 - Bouton et liste : § 3.1 et § 3.2.
 - Dans un événement : `le pays de l'écran` se lit, `Le pays de l'écran devient « France ».` se modifie, comme le champ d'un objet. Une liste dont le `dont` cite une zone de saisie se relit dès que la zone change.
 - Une zone de saisie n'est jamais conservée : elle vit le temps de l'écran. `de l'écran` désigne l'écran de l'événement en cours ; ailleurs, c'est une erreur d'analyse.
-- Reportés : graphiques (§ 6). Les images fixes sont venues avec B2 bis (grammaire, § 22.8). Les textes sur plusieurs lignes sont venus avec B1 (grammaire, § 22.6).
+- Les graphiques sont venus avec B3 bis (grammaire, § 22.11). Les images fixes sont venues avec B2 bis (grammaire, § 22.8). Les textes sur plusieurs lignes sont venus avec B1 (grammaire, § 22.6).
 
 ### 3.5 Les événements *(validé le 25 septembre 2026)*
 
@@ -189,7 +189,8 @@ L'éditeur d'écrans ne proposait que cinq éléments. La deuxième vague comble
 | B2 ter | image calculée, `l'image du portrait du compositeur choisi de l'écran` (grammaire, § 22.8) | fait |
 | B2 quater | position libre au pixel, `en position libre :` (grammaire, § 22.9), grille d'alignement dans l'atelier | fait |
 | B3 | onglets (grammaire, § 22.10) | fait |
-| B3 bis | barre de menus, graphique | à concevoir |
+| B3 bis | graphique (grammaire, § 22.11) | fait |
+| B3 ter | barre de menus | à concevoir |
 
 ### 6.1 Les états se déclarent *(validé le 13 octobre 2026)*
 
@@ -228,3 +229,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.21 | 2026-10-14 | § 6 : B2 ter fait (image calculée) |
 | 0.22 | 2026-10-14 | § 3.3 : dans un bloc libre, un bloc se place aussi, et garde sa règle à l'intérieur (grammaire 1.81) |
 | 0.23 | 2026-10-14 | § 6 : B3 coupé en deux ; les onglets faits, la barre de menus et le graphique en B3 bis |
+| 0.24 | 2026-10-15 | § 6 : B3 bis fait (graphique) ; la barre de menus passe en B3 ter |

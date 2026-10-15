@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.82 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.83 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1847,6 +1847,24 @@ L'écran du membre montre :
 - Le premier onglet est montré à l'ouverture. Choisir un onglet ne déclenche aucun événement ; l'écran retient le choix tant qu'il reste ouvert. Tous les éléments de tous les onglets existent : une zone d'un onglet caché garde sa valeur, et un événement la lit.
 - Forme compacte : `_onglets` … `_fin` ; `_onglet « Identité »` … `_fin`.
 
+### 22.11 Graphiques *(implémenté le 15 octobre 2026)*
+
+```
+L'écran de bord montre :
+    le graphique des tâches conservées, par état,
+    le graphique des tâches conservées dont le projet est le projet choisi de l'écran, par responsable, en secteurs,
+    le graphique des cotisations conservées, par catégorie du membre, avec la somme du montant.
+```
+
+- Un graphique est une liste regroupée : même entête (`le graphique des … conservés`), même `dont` (§ 22.1), et des chemins de champs comme les colonnes d'une liste.
+- `par …` est obligatoire (« Un graphique dit son regroupement : « le graphique des tâches conservées, par état ». ») : une barre, ou un secteur, par valeur du chemin. Les groupes suivent l'ordre des objets dans la base, celui de leur création ; un chemin vide forme le groupe « — ». La clé s'écrit sans article, comme on dit « par état ».
+- Par défaut, on compte les objets de chaque groupe ; `avec la somme de …` additionne un champ nombre (`du` et `de la` se contractent comme ailleurs, § 5.2). Un champ additionné qui n'est pas un nombre arrête le programme.
+- En barres par défaut ; `en secteurs` dessine un disque et sa légende. `en barres` s'écrit aussi, et l'imprimeur l'omet.
+- Il se recalcule à chaque tour, comme une liste. Il ne se choisit pas : ni « Quand on choisit », ni « … choisi de l'écran ».
+- Il se place, s'agrandit, se met dans un onglet comme tout élément (§ 22.9, § 22.10).
+- Forme compacte : `_graphique tâche _conservé [_dont …] _par état [_somme montant] [_secteurs]`.
+- Ordre canonique : `dont`, `par`, `avec la somme de`, `en secteurs`, puis la place.
+
 ---
 
 ## Journal des révisions
@@ -1936,3 +1954,4 @@ L'écran du membre montre :
 | 1.80 | 2026-10-14 | § 11.4 : la traduction de la forme compacte retrouve les articles par le genre (champs, variables, entités, colonnes choisies) ; le littéral écrit sans article reste tel quel |
 | 1.81 | 2026-10-14 | § 22.9 : un bloc se place et se dimensionne dans un bloc libre (`le groupe « Adresse », à 16 de la gauche et 8 du haut :`), et garde sa règle à l'intérieur ; une zone sur plusieurs lignes prend toute la hauteur dite |
 | 1.82 | 2026-10-14 | Nouveau § 22.10 : `les onglets :` et `l'onglet « … » :` |
+| 1.83 | 2026-10-15 | Nouveau § 22.11 : `le graphique des … conservés, par …`, `avec la somme de …`, `en secteurs` |

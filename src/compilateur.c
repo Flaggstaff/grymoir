@@ -1102,7 +1102,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 } else
                 classe_typer_dernier_champ(cm, el->texte2, 0);
                 if (el->entier & 1) classe_facultatif_dernier_champ(cm);
-            } else if (el->type == N_CHERCHER) {
+            } else if (el->type == N_CHERCHER && !el->graphique) {   /* un graphique ne se choisit pas (§ 22.11) */
                 int fem = 0;   /* « le compositeur choisi », « la partition choisie » : le genre de l'entité */
                 for (size_t q = 0; q < c->module->nb_classes; q++)
                     if (strcmp(c->module->classes[q].nom, el->texte) == 0) fem = c->module->classes[q].feminin;
@@ -1160,6 +1160,9 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 chaine_ajouter(&d, pl);
                 free(pl);
             }
+            if (el->type == N_CHERCHER && el->graphique)   /* « Rb+ » : un graphique, en barres ou en secteurs, compté ou additionné (§ 22.11) */
+                chaine_ajouter(&d, (el->graphique & 2) ? ((el->graphique & 4) ? "Rs+" : "Rsn") : ((el->graphique & 4) ? "Rb+" : "Rbn"));
+            else
             chaine_ajouter(&d, el->type == N_CHERCHER ? "L" : el->type == N_BOUTON ? "B"
                              : el->type == N_NOM ? "Z" : el->type == N_IMAGE_ECRAN ? (el->texte ? "I" : "J") : "T");
             if (el->texte) chaine_ajouter(&d, el->texte);   /* « J » : une image calculée, sans fichier écrit (§ 22.8) */

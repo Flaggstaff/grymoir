@@ -1243,11 +1243,30 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 if (el->entier & 4) aj(im, c ? " _lecture_seule" : ", en lecture seule");
                 etats_ecran(im, el, fz);
             } else if (c) {
-                aj(im, "_liste ");
+                aj(im, el->graphique ? "_graphique " : "_liste ");
                 ecrire_nom(im, el->texte, 0);
                 aj(im, el->negation ? " _supprimé" : " _conservé");
                 expression(im, el);   /* « _dont … » et « _par … » */
-                if (el->texte3) {   /* « _avec titre ; compositeur.naissance » : les chemins, séparés par « ; » */
+                if (el->texte3 && el->graphique) {   /* « _par membre.catégorie _somme montant _secteurs » (§ 22.11) */
+                    for (const char *q = el->texte3; *q;) {
+                        const char *fin = strchr(q, '\x1e');
+                        if (!fin) fin = q + strlen(q);
+                        const char *chemin = memchr(q, '\x1d', (size_t)(fin - q));
+                        chemin = chemin ? chemin + 1 : q;
+                        aj(im, q == el->texte3 ? " _par " : " _somme ");
+                        for (const char *p = chemin; p < fin;) {
+                            const char *f2 = memchr(p, '\x1f', (size_t)(fin - p));
+                            if (!f2) f2 = fin;
+                            char *seg = grym_formater("%.*s", (int)(f2 - p), p);
+                            if (p != chemin) aj(im, ".");
+                            ecrire_nom(im, seg, 0);
+                            free(seg);
+                            p = f2 < fin ? f2 + 1 : fin;
+                        }
+                        q = *fin ? fin + 1 : fin;
+                    }
+                    if (el->graphique & 2) aj(im, " _secteurs");
+                } else if (el->texte3) {   /* « _avec titre ; compositeur.naissance » : les chemins, séparés par « ; » */
                     aj(im, " _avec ");
                     for (const char *q = el->texte3; *q;) {
                         const char *fin = strchr(q, '\x1e');
@@ -1284,12 +1303,37 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 for (size_t q = 0; q < im->nb_pluriels && !pl; q++)
                     if (strcmp(im->pluriels[q].feminin, el->texte) == 0) pl = im->pluriels[q].masculin;
                 char *x = pl ? grym_dupliquer(pl) : grym_formater("%ss", el->texte);
-                aj(im, "la liste des ");
+                aj(im, el->graphique ? "le graphique des " : "la liste des ");
                 aj(im, x);
                 free(x);
                 aj(im, el->negation ? (fem ? " supprimées" : " supprimés") : fem ? " conservées" : " conservés");
                 expression(im, el);   /* « dont … » et « , par … » */
-                if (el->texte3) {   /* « , avec le titre, le compositeur et l'année » : tels qu'écrits */
+                if (el->texte3 && el->graphique) {   /* « , par catégorie du membre, avec la somme du montant, en secteurs » */
+                    for (const char *q = el->texte3; *q;) {
+                        const char *fin = strchr(q, '\x1e');
+                        if (!fin) fin = q + strlen(q);
+                        const char *sep = memchr(q, '\x1d', (size_t)(fin - q));
+                        char *ecrit = grym_formater("%.*s", (int)((sep ? sep : fin) - q), q);
+                        char *refait = sep ? colonne_avec_articles(im, ecrit, sep + 1, fin) : NULL;
+                        const char *e2 = refait ? refait : ecrit;
+                        if (q == el->texte3) {   /* la clé s'écrit sans article, comme on dit « par état » */
+                            const char *sans = e2;
+                            if (!strncmp(sans, "le ", 3) || !strncmp(sans, "la ", 3)) sans += 3;
+                            else if (!strncmp(sans, "l'", 2)) sans += 2;
+                            aj(im, ", par ");
+                            aj(im, sans);
+                        } else {   /* « de » contracté avec l'article de la valeur : « du montant », « de la durée » */
+                            aj(im, ", avec la somme ");
+                            if (!strncmp(e2, "le ", 3)) { aj(im, "du "); aj(im, e2 + 3); }
+                            else if (!strncmp(e2, "les ", 4)) { aj(im, "des "); aj(im, e2 + 4); }
+                            else { aj(im, "de "); aj(im, e2); }
+                        }
+                        free(refait);
+                        free(ecrit);
+                        q = *fin ? fin + 1 : fin;
+                    }
+                    if (el->graphique & 2) aj(im, ", en secteurs");
+                } else if (el->texte3) {   /* « , avec le titre, le compositeur et l'année » : tels qu'écrits */
                     aj(im, ", avec ");
                     size_t nb = 1, i = 0;
                     for (const char *q = el->texte3; *q; q++) nb += *q == '\x1e';

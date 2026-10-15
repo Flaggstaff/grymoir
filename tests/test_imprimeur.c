@@ -296,6 +296,15 @@ int main(void) {
     COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
          "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
+    /* graphique (§ 22.11) : les deux formes, la clé sans article, « du montant » recontracté */
+    FIXE("Un état, conservé, a :\n    un nom (texte), unique.\nUne catégorie, conservée, a :\n    un nom (texte), unique.\n"
+      "Un membre, conservé, a :\n    un nom (texte),\n    une catégorie (catégorie).\n"
+      "Une cotisation, conservée, a :\n    un membre (membre),\n    un montant (nombre).\n"
+      "Une tâche, conservée, a :\n    un titre (texte),\n    un état (état), facultatif.\n"
+         "L'écran x montre :\n    le graphique des tâches conservées, par état,\n"
+         "    le graphique des cotisations conservées, par catégorie du membre, avec la somme du montant, en secteurs.");
+    COMP("Une tâche, conservée, a :\n    un titre (texte),\n    un état (texte).\nL'écran x montre :\n    le graphique des tâches conservées, par état.",
+         "_classe _une tâche _conservé\n    _un titre (texte)\n    _un état (texte)\n_fin\n_écran x\n    _graphique tâche _conservé _par état\n_fin\n");
     /* image calculée (§ 22.8) : la contraction « du », la forme compacte */
     FIXE("Un compositeur, conservé, a :\n    un nom (texte),\n    un portrait (image), facultatif.\n"
          "L'écran x montre :\n    la liste des compositeurs conservés,\n"

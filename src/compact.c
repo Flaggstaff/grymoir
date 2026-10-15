@@ -916,6 +916,52 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, est_cle(t, "bouton") ? "bouton" : "texte", t);
             copier(r, &r->e[d + 1]);
             if (!etats_compacts(r, d + 2, f, 0, 0)) return;
+        } else if (est_cle(t, "graphique") && d + 2 < f && r->e[d + 1].type == J_CROCHETS
+                   && (est_cle(&r->e[d + 2], "conservé") || est_cle(&r->e[d + 2], "conservée"))) {
+            /* _graphique tâche _conservé [_dont …] _par état [_somme montant] [_secteurs] [_place …] (§ 22.11) */
+            size_t fin_places = f;
+            for (size_t q = d + 3; q < f; q++)
+                if (est_cle(&r->e[q], "place") || est_cle(&r->e[q], "largeur") || est_cle(&r->e[q], "hauteur")) { f = q; break; }
+            const size_t places = f;
+            const size_t secteurs = chercher(r, d + 3, f, "secteurs");
+            const size_t somme = chercher(r, d + 3, secteurs, "somme");
+            const size_t par = chercher(r, d + 3, somme, "par");
+            mot(r, "le", t);
+            mot(r, "graphique", t);
+            mot(r, "des", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, "conservés", &r->e[d + 2]);
+            if (d + 3 < par) {
+                if (!est_cle(&r->e[d + 3], "dont")) {
+                    echouer(r, &r->e[d + 3], grym_dupliquer("« _dont » ou « _par » attendu après le graphique."));
+                    return;
+                }
+                mot(r, "dont", &r->e[d + 3]);
+                expression(r, d + 4, par);
+            }
+            if (par >= somme || par + 1 >= somme) {
+                echouer(r, par < f ? &r->e[par] : t, grym_dupliquer("Regroupement attendu : « _par état »."));
+                return;
+            }
+            emettre(r, J_VIRGULE, NULL, &r->e[par], 1);
+            mot(r, "par", &r->e[par]);
+            expression(r, par + 1, somme);
+            if (somme < secteurs) {
+                if (somme + 1 >= secteurs) { echouer(r, &r->e[somme], grym_dupliquer("Champ attendu : « _somme montant ».")); return; }
+                emettre(r, J_VIRGULE, NULL, &r->e[somme], 1);
+                mot(r, "avec", &r->e[somme]);
+                mot(r, "la", &r->e[somme]);
+                mot(r, "somme", &r->e[somme]);
+                mot(r, "de", &r->e[somme]);
+                expression(r, somme + 1, secteurs);
+            }
+            if (secteurs < f) {
+                emettre(r, J_VIRGULE, NULL, &r->e[secteurs], 1);
+                mot(r, "en", &r->e[secteurs]);
+                mot(r, "secteurs", &r->e[secteurs]);
+            }
+            if (!etats_compacts(r, places, fin_places, 1, 0)) return;
+            f = fin_places;
         } else if (est_cle(t, "liste") && d + 2 < f && r->e[d + 1].type == J_CROCHETS
                    && (est_cle(&r->e[d + 2], "conservé") || est_cle(&r->e[d + 2], "conservée")
                        || est_cle(&r->e[d + 2], "supprimé") || est_cle(&r->e[d + 2], "supprimée"))) {

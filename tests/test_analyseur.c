@@ -783,6 +783,11 @@ int main(void) {
     VE("L'écran x montre :\n    l'image « rien.png ».", 2, 13, "Fichier « rien.png » introuvable ou illisible.");
     VE("L'écran x montre :\n    l'image « exemples/pixel.png », active si vrai.", 2, 37, "Une image ne se clique pas");
     VE("L'écran x montre :\n    un bouton « B », active si vrai.", 2, 22, "Accord : « actif si ».");
+    /* le graphique (§ 22.11) : une liste regroupée ; par, avec la somme de, en secteurs ; refus */
+    VE("Une tâche, conservée, a :\n    un titre (texte).\nL'écran x montre :\n    le graphique des tâches conservées.", 4, 39,
+       "Un graphique dit son regroupement");
+    VE("Une tâche, conservée, a :\n    un titre (texte).\nL'écran x montre :\n    le graphique des tâches conservées, par couleur.",
+       4, 45, "Regroupement attendu");
     /* l'image calculée (§ 22.8) : « de », « du », « d' » ; lue en fin de déclaration ; refus d'une valeur qui n'est pas une image */
     V("L'écran x montre :\n    l'image du fichier « exemples/pixel.png », visible si vrai,\n    le texte « t ».",
       "(écran [x] (image (image-de (fichier «exemples/pixel.png»)) (visible-si vrai)) (texte « t »))");

@@ -5988,14 +5988,16 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             }
             continue;
         }
-        if (est_mot(u, "la") && est_mot(voir(a, 1), "liste") && est_mot(voir(a, 2), "des")) {
+        const int graph = est_mot(u, "le") && est_mot(voir(a, 1), "graphique") && est_mot(voir(a, 2), "des");   /* § 22.11 */
+        if ((est_mot(u, "la") && est_mot(voir(a, 1), "liste") && est_mot(voir(a, 2), "des")) || graph) {
             size_t apres;
             Classe *c = entite_conservee(a, a->i + 3, 1, &apres);
             if (!c) {
-                if (!a->echec) erreur(a, voir(a, 3), grym_dupliquer("Liste attendue : « la liste des compositeurs conservés »."));
+                if (!a->echec) erreur(a, voir(a, 3), grym_dupliquer(graph ? "Graphique attendu : « le graphique des tâches conservées, par état »."
+                                                                         : "Liste attendue : « la liste des compositeurs conservés »."));
                 break;
             }
-            for (size_t k = 0; k < e.nb_entites; k++)
+            for (size_t k = 0; k < e.nb_entites && !graph; k++)
                 if (strcmp(e.entites[k], c->nom) == 0) {
                     erreur(a, u, grym_formater("Deux listes de « %s » dans un même écran : « Quand on choisit » ne saurait "
                                                "laquelle. Une seule pour l'instant.", c->nom));
@@ -6004,7 +6006,74 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             if (a->echec) break;
             el = chercher(a, u, c, 0, apres, NULL);
             if (!el) break;
-            if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "par")) {   /* « , par nom [décroissant] » */
+            if (graph) {
+                /* « , par état », « , avec la somme du montant », « , en secteurs » (§ 22.11) : la clé et la valeur sont des
+                 * chemins, comme les colonnes d'une liste */
+                el->graphique = 1;
+                Chaine cols = {0};
+                int par_vu = 0, ok = 1;
+                for (;;) {
+                    if (cour(a)->type != J_VIRGULE) break;
+                    const Jeton *x = voir(a, 1);
+                    if (est_mot(x, "par") && !par_vu) {
+                        size_t d = a->i + 2, k = d;
+                        while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_POINT && a->j[k].type != J_FIN) k++;
+                        char *chemin = chemin_colonne(a, d, k, c);
+                        if (!chemin) {
+                            erreur(a, &a->j[d], grym_formater("Regroupement attendu : un champ de « %s », ou celui d'un objet "
+                                                             "qu'il désigne (« , par catégorie du membre »).", c->nom));
+                            ok = 0;
+                            break;
+                        }
+                        char *ecrit = nom_ecran(a, d, k);
+                        chaine_ajouter(&cols, ecrit);
+                        chaine_ajouter(&cols, "\x1d");
+                        chaine_ajouter(&cols, chemin);
+                        free(ecrit);
+                        free(chemin);
+                        par_vu = 1;
+                        a->i = k;
+                    } else if (est_mot(x, "avec") && est_mot(voir(a, 2), "la") && est_mot(voir(a, 3), "somme") && par_vu
+                               && !(el->graphique & 4)) {
+                        const Jeton *de = voir(a, 4);
+                        const int du = est_mot(de, "du");
+                        if (!du && !est_mot(de, "de") && !(de->type == J_ELISION && strcmp(de->valeur, "d") == 0)) {
+                            erreur(a, de, grym_dupliquer("« avec la somme du montant » attendu."));
+                            ok = 0;
+                            break;
+                        }
+                        size_t d = a->i + 5, k = d;
+                        while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_POINT && a->j[k].type != J_FIN) k++;
+                        char *chemin = chemin_colonne(a, d, k, c);
+                        if (!chemin) {
+                            erreur(a, &a->j[d], grym_formater("Champ attendu après « la somme de » : un champ nombre de « %s ».", c->nom));
+                            ok = 0;
+                            break;
+                        }
+                        char *ecrit = nom_ecran(a, d, k);
+                        chaine_ajouter(&cols, "\x1e");
+                        if (du) chaine_ajouter(&cols, "le ");   /* « du montant » : écrit « le montant », recontracté à l'impression */
+                        chaine_ajouter(&cols, ecrit);
+                        chaine_ajouter(&cols, "\x1d");
+                        chaine_ajouter(&cols, chemin);
+                        free(ecrit);
+                        free(chemin);
+                        el->graphique |= 4;
+                        a->i = k;
+                    } else if (est_mot(x, "en") && (est_mot(voir(a, 2), "secteurs") || est_mot(voir(a, 2), "barres"))) {
+                        if (est_mot(voir(a, 2), "secteurs")) el->graphique |= 2;
+                        a->i += 3;
+                    } else break;
+                }
+                if (ok && !par_vu) {
+                    erreur(a, cour(a), grym_dupliquer("Un graphique dit son regroupement : « le graphique des tâches conservées, par état »."));
+                    ok = 0;
+                }
+                if (!ok) { free(chaine_rendre(&cols)); noeud_liberer(el); break; }
+                el->texte3 = chaine_rendre(&cols);
+                el->fin = fin_jeton(&a->j[a->i - 1]);
+            }
+            if (!graph && cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "par")) {   /* « , par nom [décroissant] » */
                 avancer(a);
                 avancer(a);
                 size_t dd = a->i, k = dd;
@@ -6026,7 +6095,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 else if (est_mot(cour(a), "croissant")) avancer(a);
                 el->fin = fin_jeton(&a->j[a->i - 1]);
             }
-            if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec")) {
+            if (!graph && cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec")) {
                 /* « , avec le titre, le compositeur et la naissance du compositeur » : les colonnes (§ 22.1) */
                 a->i += 2;
                 Chaine cols = {0};
@@ -6076,10 +6145,12 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 while ((lu = place_element(a, el, GENRE_FEMININ, &vus)) > 0) el->fin = fin_jeton(&a->j[a->i - 1]);
                 if (lu < 0) { noeud_liberer(el); break; }
             }
-            ajouter_nom(&e.entites, &e.nb_entites, c->nom);
-            char *choisi = grym_formater("%s %s", c->nom, c->genre == GENRE_FEMININ ? "choisie" : "choisi");
-            classe_ajouter_zone(&a->portee->classes[ic], choisi, c->genre, c->nom, 1, NULL);   /* « le compositeur choisi de l'écran » */
-            free(choisi);
+            if (!graph) {   /* un graphique ne se choisit pas : ni « Quand on choisit », ni « … choisi » (§ 22.11) */
+                ajouter_nom(&e.entites, &e.nb_entites, c->nom);
+                char *choisi = grym_formater("%s %s", c->nom, c->genre == GENRE_FEMININ ? "choisie" : "choisi");
+                classe_ajouter_zone(&a->portee->classes[ic], choisi, c->genre, c->nom, 1, NULL);   /* « le compositeur choisi de l'écran » */
+                free(choisi);
+            }
         } else if ((est_mot(u, "un") || est_mot(u, "une")) && !est_mot(voir(a, 1), "bouton")) {
             /* zone de saisie : « un pays (texte), « Suisse » au départ, facultatif » (§ 22.1) */
             Genre g = est_mot(u, "une") ? GENRE_FEMININ : GENRE_MASCULIN;

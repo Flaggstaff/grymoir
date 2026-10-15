@@ -77,6 +77,8 @@ typedef struct {
     int *onglets;              /* les onglets k : le rang de l'onglet choisi, retenu d'un envoi à l'autre (§ 22.10) */
 } EcranWeb;
 
+static void graphique(Chaine *c, const EcranWeb *e, size_t k);   /* § 22.11 */
+
 struct Serveur {
     unsigned long ouvertures;   /* écrans ouverts depuis le début : la série de chacun */
     int port;
@@ -495,6 +497,8 @@ static char *feuille_de_style(const Serveur *s) {
      * ce que les éléments occupent. Les places viennent de /ecran-style/…, la politique n'admettant aucun style écrit
      * dans la page. */
     ".libre{display:grid;justify-items:start;align-items:start}.libre>.place{grid-area:1/1;margin:0;min-width:0}"
+    ".graphique{max-width:100%;height:auto;font:inherit;fill:currentColor}"   /* § 22.11 ; le tableau, pour les lecteurs d'écran */
+    ".lecteur{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}"
     ".libre>.place>.zone,.libre>.place>p{margin:0}"
     ".boutons{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.boutons button{margin:0}"
     ".texte{margin:0}"
@@ -1079,6 +1083,7 @@ static void page_ecran(Serveur *s) {
             break;
         case ELEMENT_ZONE: zone(&c, e, k); chaine_ajouter(&c, "\n"); break;
         case ELEMENT_LISTE: liste(&c, e, k); chaine_ajouter(&c, "\n"); break;
+        case ELEMENT_GRAPHIQUE: graphique(&c, e, k); break;
         case ELEMENT_IMAGE: {   /* « l'image « plan.png » » (§ 22.8) : servie à part, la politique de sécurité n'admet que 'self' */
             if (el->calculee && !el->octets) { chaine_ajouter(&c, "<p class=\"image\"></p>\n"); break; }   /* absente */
             char *v = el->calculee   /* calculée : l'adresse porte sa version, le navigateur ne garde pas l'ancienne */
@@ -1672,6 +1677,108 @@ static void serveur_ecran_ouvrir(void *contexte, Chaine *sortie, const char *tit
         s->ecrans = t;
     }
     s->ecrans[s->nb_ecrans++] = e;
+}
+
+/* Le point du cercle unité à la fraction t d'un tour, partant de midi, dans le sens des aiguilles : un vecteur tourné
+ * par 4096 petits pas (rotation complexe, sans sin ni cos : pas de bibliothèque mathématique à lier pour un camembert ;
+ * l'erreur reste sous le millième de pixel sur un rayon de 90). */
+static void point_du_tour(double t, double *x, double *y) {
+    const double d = 2 * 3.14159265358979323846 / 4096;   /* le pas, en radians */
+    const double cd = 1 - d * d / 2 + d * d * d * d / 24, sd = d - d * d * d / 6 + d * d * d * d * d / 120;
+    double cx = 0, cy = -1;   /* midi */
+    long pas = (long)(t * 4096 + 0.5);
+    for (long i = 0; i < pas; i++) {
+        const double nx = cx * cd - cy * sd, ny = cx * sd + cy * cd;
+        cx = nx;
+        cy = ny;
+    }
+    *x = cx;
+    *y = cy;
+}
+
+/* Un nombre affiché (« 1'234.5 », « 12,5 ») en double, pour la longueur d'une barre ou l'angle d'un secteur. */
+static double nombre_affiche(const char *t) {
+    char b[64];
+    size_t n = 0;
+    for (const char *p = t; *p && n + 1 < sizeof b; p++)
+        if ((*p >= '0' && *p <= '9') || *p == '-' || *p == '.') b[n++] = *p;
+        else if (*p == ',') b[n++] = '.';
+    b[n] = 0;
+    return n ? strtod(b, NULL) : 0;
+}
+
+/* Le graphique (§ 22.11) : un SVG dans la page, barres ou secteurs ; un tableau masqué pour les lecteurs d'écran. */
+static void graphique(Chaine *c, const EcranWeb *e, size_t k) {
+    static const char *const teintes[] = {"#2f6f8f", "#c0633a", "#5a8f3c", "#8f5aa8", "#c49a2c", "#3c8f86", "#a84a6a", "#6a6a6a"};
+    const size_t n = e->nb_lignes[k];
+    char **x = e->cellules[k];
+    if (!n) { chaine_ajouter(c, "<p class=\"graphique vide\">Aucune donnée.</p>\n"); return; }
+    double max = 0, total = 0;
+    for (size_t r = 0; r < n; r++) {
+        const double v = nombre_affiche(x[2 * r + 1]);
+        if (v > max) max = v;
+        if (v > 0) total += v;
+    }
+    char *v;
+    if (e->el[k].graphique & 2) {   /* en secteurs : un disque, une légende à droite */
+        v = grym_formater("<svg class=\"graphique\" role=\"img\" aria-label=\"Graphique\" viewBox=\"0 0 480 %lu\" width=\"480\">",
+                          (unsigned long)(n * 24 > 200 ? n * 24 + 10 : 210));
+        chaine_ajouter(c, v);
+        free(v);
+        double fait = 0;   /* la fraction du tour déjà dessinée */
+        for (size_t r = 0; r < n && total > 0; r++) {
+            const double part = nombre_affiche(x[2 * r + 1]) / total;
+            if (part <= 0) continue;
+            double x0, y0, x1, y1;
+            point_du_tour(fait, &x0, &y0);
+            point_du_tour(fait + part, &x1, &y1);
+            if (part >= 0.9999) v = grym_formater("<circle cx=\"100\" cy=\"100\" r=\"90\" fill=\"%s\"/>", teintes[r % 8]);
+            else
+                v = grym_formater("<path d=\"M100,100 L%.2f,%.2f A90,90 0 %d,1 %.2f,%.2f Z\" fill=\"%s\"/>", 100 + 90 * x0,
+                                  100 + 90 * y0, part > 0.5, 100 + 90 * x1, 100 + 90 * y1, teintes[r % 8]);
+            chaine_ajouter(c, v);
+            free(v);
+            fait += part;
+        }
+        for (size_t r = 0; r < n; r++) {
+            v = grym_formater("<rect x=\"220\" y=\"%lu\" width=\"14\" height=\"14\" fill=\"%s\"/><text x=\"242\" y=\"%lu\">",
+                              (unsigned long)(10 + r * 24), teintes[r % 8], (unsigned long)(22 + r * 24));
+            chaine_ajouter(c, v);
+            free(v);
+            echapper(c, x[2 * r]);
+            chaine_ajouter(c, " : ");
+            echapper(c, x[2 * r + 1]);
+            chaine_ajouter(c, "</text>");
+        }
+    } else {   /* en barres : le libellé à gauche, la barre, sa valeur au bout */
+        v = grym_formater("<svg class=\"graphique\" role=\"img\" aria-label=\"Graphique\" viewBox=\"0 0 480 %lu\" width=\"480\">",
+                          (unsigned long)(n * 30 + 10));
+        chaine_ajouter(c, v);
+        free(v);
+        for (size_t r = 0; r < n; r++) {
+            const double val = nombre_affiche(x[2 * r + 1]);
+            const double l = max > 0 && val > 0 ? 260.0 * val / max : 0;
+            v = grym_formater("<text x=\"130\" y=\"%lu\" text-anchor=\"end\">", (unsigned long)(25 + r * 30));
+            chaine_ajouter(c, v);
+            free(v);
+            echapper(c, x[2 * r]);
+            v = grym_formater("</text><rect x=\"140\" y=\"%lu\" width=\"%.1f\" height=\"20\" fill=\"%s\"/><text x=\"%.1f\" y=\"%lu\">",
+                              (unsigned long)(10 + r * 30), l, teintes[0], 146 + l, (unsigned long)(25 + r * 30));
+            chaine_ajouter(c, v);
+            free(v);
+            echapper(c, x[2 * r + 1]);
+            chaine_ajouter(c, "</text>");
+        }
+    }
+    chaine_ajouter(c, "</svg>\n<table class=\"lecteur\">");   /* ce que le dessin dit, pour qui ne le voit pas */
+    for (size_t r = 0; r < n; r++) {
+        chaine_ajouter(c, "<tr><th>");
+        echapper(c, x[2 * r]);
+        chaine_ajouter(c, "</th><td>");
+        echapper(c, x[2 * r + 1]);
+        chaine_ajouter(c, "</td></tr>");
+    }
+    chaine_ajouter(c, "</table>\n");
 }
 
 static void serveur_ecran_lignes(void *contexte, size_t element, const char *const *cellules, size_t nb_lignes) {
