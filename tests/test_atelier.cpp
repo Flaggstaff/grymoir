@@ -2343,6 +2343,51 @@ int main(int argc, char **argv) {
         VERIFIER(resultat.isEmpty() && m.hasMatch() && qAbs(m.captured(1).toInt() - 200) <= 8 && qAbs(m.captured(2).toInt() - 100) <= 8);
         if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
     }
+    {   // le dernier élément d'un bloc de rangement placé (côte à côte, l'un sous l'autre, groupe) en sort : le bloc vide disparaît ;
+        // le dernier élément d'un onglet, lui, reste (une page vide n'a pas de sens)
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    en position libre :\n        le texte « test », à 0 de la gauche et 0 du haut,\n"
+                    "        côte à côte, à 600 de la gauche et 40 du haut :\n            un bouton « Kopf ».\n"
+                    "Quand on clique sur « Kopf » dans l'écran x :\n    Fermer l'écran.\n");
+        }
+        OngletEcrans o;
+        o.resize(1200, 800);
+        o.show();
+        QString resultat = "pas de geste";
+        Geste g;
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        QPushButton *b = nullptr;
+        QWidget *toile = nullptr;
+        for (int k = 0; k < 20; k++) {
+            if (auto *x = qobject_cast<QPushButton *>(o.controle(k)); x && x->text() == "Kopf") b = x;
+            if (o.controle(k) && o.controle(k)->objectName() == "toile" && !toile) toile = o.controle(k);
+        }
+        VERIFIER(b && toile);
+        if (b && toile) {
+            const QPoint m(4, 4), a = b->mapToGlobal(m), vise = toile->mapToGlobal(QPoint(200, 160)) + QPoint(4, 4);
+            QMouseEvent appui(QEvent::MouseButtonPress, QPointF(m), QPointF(a), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(b, &appui);
+            QMouseEvent loin(QEvent::MouseMove, QPointF(m), QPointF(a + QPoint(0, 30)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(b, &loin);
+            QMouseEvent bouge(QEvent::MouseMove, QPointF(m), QPointF(vise), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(b, &bouge);
+            QMouseEvent lache(QEvent::MouseButtonRelease, QPointF(m), QPointF(vise), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(b, &lache);
+        }
+        if (!resultat.isEmpty()) std::printf("KOPF geste=[%s]\n", qPrintable(resultat));
+        QFile r(chemin);
+        VERIFIER(r.open(QIODevice::ReadOnly));
+        const QString t = QString::fromUtf8(r.readAll());
+        QRegularExpressionMatch m = QRegularExpression("        un bouton « Kopf », à (\\d+) de la gauche et (\\d+) du haut").match(t);
+        VERIFIER(resultat.isEmpty() && m.hasMatch() && !t.contains("côte à côte"));
+        if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
+    }
     {   // le graphique (§ 22.11) : fabriqué par la palette, dessiné en exemple dans l'aperçu, rempli par les lignes
         QTemporaryDir dossier;
         const QString chemin = dossier.filePath("p.grym");

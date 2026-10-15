@@ -840,13 +840,23 @@ QString ecran_mettre_dans(const QString &dossier, const QString &ecran, int sour
     if (ouverture_de(p, (size_t)source) == (size_t)dans
         || (p->enfants[dans]->forme == 6 && ouverture_de(p, ouverture_de(p, (size_t)source)) == (size_t)dans))
         return "Il y est déjà.";
-    {   // le seul élément d'un bloc ne le quitte pas : le bloc (un onglet, sa page libre) resterait vide, ce qui ne se dit pas
+    // Le seul élément d'un bloc qui le quitte : un bloc de rangement vidé (côte à côte, l'un sous l'autre, groupe, bloc
+    // libre placé) disparaît avec lui ; une page d'onglet (l'onglet, ou le bloc libre qui la remplit) reste, et le geste
+    // est refusé : un onglet vide ne se dit pas.
+    size_t vide = p->nb_enfants;   // le bloc à retirer après le déplacement, s'il y en a un
+    {
         const size_t anc = ouverture_de(p, (size_t)source);
         if (anc < p->nb_enfants) {
             int unites = 0;
             for (size_t q = anc + 1; q < fin_d_unite(p, anc); q = fin_d_unite(p, q) + 1) unites++;
-            if (unites <= 1)
-                return "C'est le seul élément de son onglet ou de son bloc, qui resterait vide : ajoutes-y d'abord autre chose.";
+            if (unites <= 1) {
+                const size_t parent = ouverture_de(p, anc);
+                const bool page = p->enfants[anc]->forme == 6
+                                  || (parent < p->nb_enfants && p->enfants[parent]->forme == 6);
+                if (page) return "C'est le seul élément de cet onglet, qui resterait vide : ajoutes-y d'abord autre chose.";
+                if ((size_t)dans == anc) return "Il y est déjà.";
+                vide = anc;
+            }
         }
     }
     QVector<Noeud *> unite;
@@ -855,11 +865,21 @@ QString ecran_mettre_dans(const QString &dossier, const QString &ecran, int sour
     for (size_t q = (size_t)source; q + nb < p->nb_enfants; q++) p->enfants[q] = p->enfants[q + nb];
     p->nb_enfants -= nb;
     size_t d = (size_t)dans > fs ? (size_t)dans - nb : (size_t)dans;
+    Noeud *bloc_vide = vide < p->nb_enfants ? p->enfants[vide] : nullptr;   // repéré par son nœud : les index bougent
     unite[0]->place_dite &= 6;   // sa place ne valait que dans l'ancien bloc ; le nouveau la redonne s'il est libre
     mettre_dans(p, d, unite[0], ou);
     if (!(unite[0]->place_dite & 1)) unite[0]->place_dite = 0;   // hors d'un bloc libre, ni place ni taille
     const size_t rang = (size_t)(std::find(p->enfants, p->enfants + p->nb_enfants, unite[0]) - p->enfants);
     for (size_t q = 1; q < nb; q++) inserer(p, rang + q, unite[(int)q]);
+    if (bloc_vide) {   // le bloc de rangement vidé : son ouverture et sa fin, désormais côte à côte, s'en vont
+        const size_t i = (size_t)(std::find(p->enfants, p->enfants + p->nb_enfants, bloc_vide) - p->enfants);
+        if (i + 1 < p->nb_enfants && p->enfants[i + 1]->type == N_DISPOSITION && !p->enfants[i + 1]->forme) {
+            noeud_liberer(p->enfants[i]);
+            noeud_liberer(p->enfants[i + 1]);
+            for (size_t q = i; q + 2 < p->nb_enfants; q++) p->enfants[q] = p->enfants[q + 2];
+            p->nb_enfants -= 2;
+        }
+    }
     reimprimer(ch, t);
     geste->description = QString("Déplacer un élément de l'écran %1").arg(ecran);
     return ch.conclure(geste);
