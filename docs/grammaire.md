@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.86 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.87 de la spécification, révisée le 14 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -798,7 +798,7 @@ La forme compacte (`.grymc`) écrit le même programme avec des mots-clés préf
 
 La lecture réécrit chaque instruction compacte en la phrase littéraire équivalente, puis l'analyse comme telle. Les deux formes passent donc par les mêmes vérifications et produisent le même arbre. Les erreurs sont localisées dans le fichier compact (ligne et colonne).
 
-**Articles** *(14 octobre 2026)* : la forme compacte n'écrit pas d'article (`_écran.compositeur_choisi.portrait`, `_avec titre`). Traduite en littéraire, elle les retrouve par le genre déclaré du champ, de la variable ou de l'entité, avec contraction et élision : `l'image du portrait du compositeur choisi de l'écran`, `avec le titre et la date de naissance du compositeur`, `le montant de la f`. L'objet ne prend son article que si son champ a pris le sien : un champ au genre inconnu (`longueur`, propriété d'un texte) laisse `longueur de n` tel quel, plutôt qu'un mélange. Seul ce qui vient de la forme compacte est touché : une phrase littéraire écrite sans article (`nom du c`) le reste, même formatée. D'autres tournures ne reviennent pas encore à l'identique (`dont le nom est x` revient `dont le nom = x`, un `Si` court revient en bloc) : le sens est le même, la forme diffère.
+**Articles** *(14 octobre 2026)* : la forme compacte n'écrit pas d'article (`_écran.compositeur_choisi.portrait`, `_avec titre`). Traduite en littéraire, elle les retrouve par le genre déclaré du champ, de la variable ou de l'entité, avec contraction et élision : `l'image du portrait du compositeur choisi de l'écran`, `avec le titre et la date de naissance du compositeur`, `le montant de la f`. L'objet ne prend son article que si son champ a pris le sien : un champ au genre inconnu (`longueur`, propriété d'un texte) laisse `longueur de n` tel quel, plutôt qu'un mélange. Seul ce qui vient de la forme compacte est touché : une phrase littéraire écrite sans article (`nom du c`) le reste, même formatée. Les variables aussi *(1.87)* : une variable créée avec un article (`L'effectif vaut 12.`) le retrouve partout où la forme compacte l'a perdu (`l'effectif + 3`, `la photo`, `du r`) ; un paramètre, ou une variable créée sans article, reste nu, même s'il porte le nom d'un champ. Deux exceptions gardent le nom nu : l'objet d'un champ resté sans article (`longueur de n`), et `puis de …`, `suivi de …`, qui ne contractent pas (`puis de nom`). D'autres tournures ne reviennent pas encore à l'identique (`dont le nom est x` revient `dont le nom = x`, un `Si` court revient en bloc) : le sens est le même, la forme diffère.
 
 Limite de la v0.2 : les erreurs de structure propres à la forme compacte (`_fin` manquant, `_alors` attendu…) s'expriment en forme compacte ; les autres (nom inconnu, accord, pureté) empruntent encore le vocabulaire de la forme littéraire (charte, art. 8).
 
@@ -1977,3 +1977,4 @@ L'écran d'accueil montre :
 | 1.84 | 2026-10-15 | Nouveau § 22.12 : `le menu « … » :`, un bloc de boutons au premier niveau de l'écran, dessiné en tête |
 | 1.85 | 2026-10-15 | § 8 : l'aide à la saisie dans un écran, débuts d'élément selon le bloc ouvert, suites d'une tournure commencée, états accordés, place et taille |
 | 1.86 | 2026-10-15 | Une heure comme valeur de départ, d'une zone d'écran (§ 22.1) et d'un champ (§ 16.7) : « un début (heure), 08:00 au départ » |
+| 1.87 | 2026-10-15 | § 11.4 : la traduction de la forme compacte rend aussi leur article aux variables créées avec un article ; un paramètre reste nu |

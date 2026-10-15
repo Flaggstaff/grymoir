@@ -38,7 +38,17 @@ typedef struct {
     char **a_liberer;      /* formes masculines déduites */
     size_t nb_a_liberer;
     int devine;            /* l'article du champ qu'on écrit a été deviné : son objet peut l'être aussi (« du c ») */
+    int champ_nu;          /* on écrit l'objet d'un champ resté sans article : il reste nu aussi (« longueur de n ») */
+    char **variables;      /* les variables créées avec un article (« L'effectif vaut 12. ») et leur genre (§ 11.4) */
+    Genre *genres_var;
+    size_t nb_var;
 } Impression;
+
+/* Le genre d'une variable créée avec un article, ou G_LIBRE : un paramètre, un nom écrit nu, reste nu. */
+static Genre genre_de_variable(const Impression *im, const char *nom) {
+    for (size_t k = im->nb_var; k-- > 0;) if (strcmp(im->variables[k], nom) == 0) return im->genres_var[k];
+    return G_LIBRE;
+}
 
 
 /* Initiale d'une phrase : capitale (majuscule 1) ou minuscule (0), lettres accentuées du latin et « œ » comprises
@@ -236,10 +246,13 @@ static void preposition(Impression *im, const char *prep, const Noeud *x) {
         im->devine = avant;
         return;
     }
-    if (x->type == N_NOM && x->article == ART_AUCUN && x->article_a_deviner && !im->compact && im->devine
-        && genre_de_nom(im, x->texte) != G_LIBRE) {   /* « du c », « de l'œuvre » : `o.titre` traduit (forme compacte) */
+    if (x->type == N_NOM && x->article == ART_AUCUN && x->article_a_deviner && !im->compact && !im->champ_nu
+        && (genre_de_variable(im, x->texte) != G_LIBRE || (im->devine && genre_de_nom(im, x->texte) != G_LIBRE))) {
+        /* « du c », « de l'œuvre » : `o.titre` traduit (forme compacte) ; une variable créée avec un article, ou l'objet
+         * d'un champ dont l'article a été retrouvé */
+        const Genre gv = genre_de_variable(im, x->texte) != G_LIBRE ? genre_de_variable(im, x->texte) : genre_de_nom(im, x->texte);
         if (voyelle(x->texte)) aj(im, a ? "à l'" : "de l'");
-        else if (genre_de_nom(im, x->texte) == G_FEMININ) aj(im, a ? "à la " : "de la ");
+        else if (gv == G_FEMININ) aj(im, a ? "à la " : "de la ");
         else aj(im, a ? "au " : "du ");
         ecrire_nom(im, x->texte, x->crochets);
         return;
@@ -293,6 +306,14 @@ static void comme(Impression *im, const Noeud *n) {
 }
 
 static void nom_avec_article(Impression *im, const Noeud *n) {
+    if (!im->compact && n->article == ART_AUCUN && n->article_a_deviner && !im->champ_nu) {   /* venu de la forme compacte (§ 11.4) */
+        if (strcmp(n->texte, "nouveau") == 0) aj(im, "le ");
+        else if (strcmp(n->texte, "nouvelle") == 0) aj(im, "la ");
+        else {
+            const Genre g = genre_de_variable(im, n->texte);
+            if (g != G_LIBRE) aj(im, voyelle(n->texte) ? "l'" : g == G_FEMININ ? "la " : "le ");
+        }
+    }
     if (!im->compact) {
         if (n->article == ART_LES) aj(im, "les ");
         else if (n->article == ART_LE) aj(im, "le ");
@@ -796,7 +817,12 @@ static void expression(Impression *im, const Noeud *n) {
         return;
     case N_ELISION:   /* « de x », « que x » ; « _de x », « _que x » (§ 4.4) */
         aj(im, n->op == 'q' ? (im->compact ? "_que " : "que ") : (im->compact ? "_de " : "de "));
-        expression(im, n->enfants[0]);
+        {   /* « puis de nom » : cette tournure ne contracte pas (« du nom » ne se relit pas) ; le nom y reste nu (§ 11.4) */
+            const int nu = im->champ_nu;
+            im->champ_nu = n->op != 'q';
+            expression(im, n->enfants[0]);
+            im->champ_nu = nu;
+        }
         return;
     case N_MOTIF:   /* « le motif de l'échec » ; « _motif » (§ 18) */
         aj(im, im->compact ? "_motif" : "le motif de l'échec");
@@ -842,10 +868,12 @@ static void expression(Impression *im, const Noeud *n) {
         ecrire_nom(im, n->texte, 0);
         aj(im, " ");
         {
-            const int avant = im->devine;
+            const int avant = im->devine, nu = im->champ_nu;
             im->devine = article_du_champ(im, n) != ART_AUCUN && n->article_a_deviner;
+            im->champ_nu = article_du_champ(im, n) == ART_AUCUN;   /* un champ nu garde son objet nu */
             preposition(im, "de", n->enfants[0]);
             im->devine = avant;
+            im->champ_nu = nu;
         }
         return;
     case N_NOUVEAU: {
@@ -1104,6 +1132,14 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         return;
     case P_CREATION:
     case P_MODIFICATION: {
+        if (n->type == P_CREATION && (n->article == ART_LE || n->article == ART_LA || n->article == ART_L)) {
+            /* « L'effectif vaut 12. » : une variable avec un article, que la forme compacte perd (§ 11.4) */
+            im->variables = realloc(im->variables, (im->nb_var + 1) * sizeof *im->variables);
+            im->genres_var = realloc(im->genres_var, (im->nb_var + 1) * sizeof *im->genres_var);
+            im->variables[im->nb_var] = n->texte;
+            im->genres_var[im->nb_var++] = n->article == ART_LA ? G_FEMININ : n->article == ART_LE ? G_MASCULIN
+                                          : genre_article(n->article) != G_LIBRE ? genre_article(n->article) : G_MASCULIN;
+        }
         if (n->article == ART_LES) {   /* ensembles (§ 13.9) */
             const Noeud *v = n->enfants[0];
             int ajout = v->type == N_AJOUT;
@@ -1963,6 +1999,8 @@ static char *imprimer(const Programme *p, int compact) {
         phrase(&im, p->phrases[k], 0);
     }
     free(im.genres);
+    free(im.variables);   /* les noms appartiennent à l'arbre */
+    free(im.genres_var);
     free(im.aptitudes);
     free(im.pluriels);
     free(im.singuliers);
@@ -1989,6 +2027,8 @@ char *imprimer_phrase(const Programme *contexte, const Noeud *n, int compact) {
     if (im.c.d) { im.c.n = 0; im.c.d[0] = '\0'; }
     phrase(&im, n, 0);
     free(im.genres);
+    free(im.variables);   /* les noms appartiennent à l'arbre */
+    free(im.genres_var);
     free(im.aptitudes);
     free(im.pluriels);
     free(im.singuliers);

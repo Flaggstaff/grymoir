@@ -7376,6 +7376,14 @@ typedef struct Capture {
     size_t nb_noms;
 } Capture;
 
+/* Après une lecture compacte (§ 11.4) : un nom écrit sans article l'a perdu en forme compacte, qui n'en écrit pas ;
+ * l'imprimeur littéral le lui rend par le genre de sa déclaration (« l'effectif », « du membre »). */
+static void marquer_compact(Noeud *n) {
+    if (!n) return;
+    if (n->type == N_NOM && n->article == ART_AUCUN) n->article_a_deviner = 1;
+    for (size_t k = 0; k < n->nb_enfants; k++) marquer_compact(n->enfants[k]);
+}
+
 static int analyser_interne(const char *source, size_t taille, Portee *portee, int interactif,
                             Programme *programme, Diagnostic *diag, Capture *capture, int compact) {
     programme->phrases = NULL;
@@ -7532,6 +7540,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     for (size_t k = 0; k < copie.nb_fichiers; k++) programme->fichiers[k] = grym_dupliquer(copie.fichiers[k]);
     portee_vider(portee);
     *portee = copie;
+    if (compact) for (size_t q = 0; q < programme->nb; q++) marquer_compact(programme->phrases[q]);   /* § 11.4 */
     return 1;
 }
 

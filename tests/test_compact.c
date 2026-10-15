@@ -162,17 +162,17 @@ int main(void) {
     EXEC("_la f << 21.09.2026\n_afficher f + 30 ; _aujourd'hui = _aujourd'hui ; 01.01.2027 − f\n",
          "21.10.2026 vrai 102\n");
     ALLER_RETOUR("_le jour << 31.01.2026 + 1 _mois − 2 _ans\n_afficher jour + 3 _semaines ; jour − 1 _jour\n",
-                 "Le jour vaut 31.01.2026 + 1 mois − 2 ans.\nAfficher jour + 3 semaines puis jour − 1 jour.\n");
+                 "Le jour vaut 31.01.2026 + 1 mois − 2 ans.\nAfficher le jour + 3 semaines puis le jour − 1 jour.\n");
     ALLER_RETOUR("_pour_chaque e _de 31.01.2026 _à 31.12.2026 _pas 1 _mois\n    _afficher e\n_fin\n", NULL);
     EXEC("_afficher 31.01.2026 + 1 _mois ; 29.02.2028 + 1 _année\n", "28.02.2026 28.02.2029\n");
     /* Arrondi (§ 3.4) */
     ALLER_RETOUR("_le r << _arrondi(2,5 × 3 ; 0,05) + _arrondi_bas(1 ; 1)\n_afficher _arrondi_haut(r ; 1) ; _arrondi_pair(r ; 1)\n",
                  "Le r vaut l'arrondi de 2,5 × 3 à 0,05 + l'arrondi de 1 à 1 vers le bas.\n"
-                 "Afficher l'arrondi de r à 1 vers le haut puis l'arrondi de r à 1 au pair.\n");
+                 "Afficher l'arrondi du r à 1 vers le haut puis l'arrondi du r à 1 au pair.\n");
     EXEC("_afficher _arrondi(2,5 ; 1) ; _arrondi_pair(2,5 ; 1) ; _arrondi((1 + 1) × 3 ; 4)\n", "3 2 8\n");
     ERR("_afficher _arrondi(2,5)\n", 1, 11, "« _arrondi » prend deux arguments, la valeur et le pas : _arrondi(x ; 0,05).");
     ALLER_RETOUR("_le n << 10\n_afficher _reste(n × 2 ; 3) ; (n − 20).valeur_absolue ; (−2,7).partie_entière\n",
-                 "Le n vaut 10.\nAfficher le reste de n × 2 par 3 puis valeur absolue de (n − 20) puis partie entière de (−2,7).\n");
+                 "Le n vaut 10.\nAfficher le reste du n × 2 par 3 puis valeur absolue de (n − 20) puis partie entière de (−2,7).\n");
     EXEC("_afficher _reste(−7 ; 3) ; _reste((1 + 9) ; 4)\n", "−1 2\n");
     ERR("_afficher _reste(7)\n", 1, 11, "« _reste » prend deux arguments, le dividende et le diviseur : _reste(17 ; 5).");
     ALLER_RETOUR("_le h << 8:05 + 15 _minutes\n_afficher _écart_heures(h ; 19:30) ; _maintenant ; « 7:45 » _en_heure\n", NULL);
@@ -193,8 +193,8 @@ int main(void) {
     /* Textes (§ 4.5) */
     ALLER_RETOUR("_le n << « Élodie »\n_afficher n.longueur ; n _en_majuscules ; « 3 » _en_nombre_entier + 1\n"
                  "_si n _inclut « lo » _et _non (n _commence « x ») _alors\n    _afficher n _finit « ie »\n_fin\n",
-                 "Le n vaut « Élodie ».\nAfficher longueur de n puis n en majuscules puis « 3 » en nombre entier + 1.\n"
-                 "Si n contient « lo » et n ne commence pas par « x » :\n    Afficher n finit par « ie ».\n");
+                 "Le n vaut « Élodie ».\nAfficher longueur de n puis le n en majuscules puis « 3 » en nombre entier + 1.\n"
+                 "Si le n contient « lo » et le n ne commence pas par « x » :\n    Afficher le n finit par « ie ».\n");
     EXEC("_afficher « éa » _en_majuscules ; « ab » _inclut « B » ; _non (« ab » _finit « b »)\n", "ÉA vrai faux\n");
     ERR("_afficher « a » _en_rouge\n", 1, 17, "« _en_rouge » inconnu");
     ALLER_RETOUR("_classe _une tâche _conservé\n    _un état (« à faire » ; « fini ») _départ « fini »\n_fin\n", NULL);
@@ -202,12 +202,12 @@ int main(void) {
                  "_afficher _moyenne_de cotisation _de membre _conservé ; _plus_petit_de cotisation _de membre _conservé\n"
                  "_afficher (_le membre _conservé _au_plus_grand cotisation _dont nom = « a »).nom\n", NULL);
     ALLER_RETOUR("_le jour << 01.03.2026\n_si _aujourd'hui > jour _alors\n    _afficher jour − 01.01.2026\n_fin\n",
-                 "Le jour vaut 01.03.2026.\nSi aujourd'hui > jour :\n    Afficher jour − 01.01.2026.\n");
+                 "Le jour vaut 01.03.2026.\nSi aujourd'hui > le jour :\n    Afficher le jour − 01.01.2026.\n");
 
     ALLER_RETOUR("_la photo << _fichier « a.jpg »\n_afficher (_fichier « b.png »).taille ; photo.format\n"
                  "_enregistrer photo _dans « c.jpg »\n",
                  "La photo vaut le fichier « a.jpg ».\nAfficher taille de (le fichier « b.png ») puis format de photo.\n"
-                 "Enregistrer photo dans « c.jpg ».\n");
+                 "Enregistrer la photo dans « c.jpg ».\n");
     ERR("_enregistrer photo\n", 1, 1, "Forme attendue : « _enregistrer photo _dans « copie.jpg » »");
 
     ALLER_RETOUR("_aptitude datée\n    _une date (date)\n_fin\n_classe _une facture (factures) _conservé\n"
@@ -246,7 +246,7 @@ int main(void) {
                  "    un bouton « Nouveau »,\n    un bouton « Fermer ».\n"
                  "Quand on choisit un compositeur dans l'écran des compositeurs :\n    Afficher le nom du compositeur.\n"
                  "Quand on clique sur « Nouveau » dans l'écran des compositeurs :\n    Le c vaut un nouveau compositeur saisi.\n"
-                 "    Conserver c.\n"
+                 "    Conserver le c.\n"
                  "Quand on clique sur « Fermer » dans l'écran des compositeurs :\n    Fermer l'écran.\n"
                  "Ouvrir l'écran des compositeurs.\n");
     ALLER_RETOUR("_écran d'accueil\n    _bouton « OK »\n_fin\n_quand _clique « OK » _dans d'accueil\n    _fermer\n_fin\n"
@@ -289,7 +289,7 @@ int main(void) {
     /* une remarque qui suit un bloc « _sinon … _fin » reste hors du bloc (défaut corrigé) */
     ALLER_RETOUR("_le x << 1\n_si x > 0 _alors\n    _si x = 1 _alors\n        _afficher 1\n    _sinon\n        _afficher 2\n"
                  "    _fin\n    # avant la boucle.\n    _afficher 3\n_fin\n",
-                 "Le x vaut 1.\nSi x > 0 :\n    Si x = 1 :\n        Afficher 1.\n    Sinon :\n        Afficher 2.\n"
+                 "Le x vaut 1.\nSi le x > 0 :\n    Si le x = 1 :\n        Afficher 1.\n    Sinon :\n        Afficher 2.\n"
                  "    Remarque : avant la boucle.\n    Afficher 3.\n");
 
     ALLER_RETOUR("_classe _une partition _conservé\n    _un titre (texte)\n_fin\n_classe _un pupitre _conservé\n"
@@ -308,7 +308,7 @@ int main(void) {
     ERR("_classe _une p _conservé\n    _des amis\n_fin\n", 2, 5, "Champ multiple attendu");
 
     /* le séparateur de milliers passe d'une forme à l'autre (§ 12) */
-    ALLER_RETOUR("_le x << 1747 + 1'000\n_afficher x\n", "Le x vaut 1747 + 1'000.\nAfficher x.\n");
+    ALLER_RETOUR("_le x << 1747 + 1'000\n_afficher x\n", "Le x vaut 1747 + 1'000.\nAfficher le x.\n");
 
     ALLER_RETOUR("_le nom << _réponse « Nom ? »\n_le x << _réponse (nombre) « Combien ? »\n"
                  "_le q << « ? »\n_le d << _réponse (date) (q)\n", NULL);
@@ -317,9 +317,9 @@ int main(void) {
 
     ALLER_RETOUR("_effacer\n_afficher « a »\n", "Effacer l'écran.\nAfficher « a ».\n");
     ALLER_RETOUR("_classe _un point\n    _un x\n_fin\n_le p << _nouveau point\n_fiche p\n",
-                 "Un point a :\n    un x.\nLe p vaut un nouveau point.\nAfficher la fiche de p.\n");
+                 "Un point a :\n    un x.\nLe p vaut un nouveau point.\nAfficher la fiche du p.\n");
     ALLER_RETOUR("_l'année << 1\n_le nom << « a »\n_afficher « ( » _suivi année _suivi « ) » ; _de nom ; _que nom\n",
-                 "L'année vaut 1.\nLe nom vaut « a ».\nAfficher « ( » suivi d'année suivi de « ) » puis de nom puis que nom.\n");
+                 "L'année vaut 1.\nLe nom vaut « a ».\nAfficher « ( » suivi de l'année suivi de « ) » puis de nom puis que le nom.\n");
     ALLER_RETOUR("_classe _une fiche _conservé\n    _un nom (texte)\n_fin\n_action f(_une fiche)\n    _saisir fiche\n_fin\n",
                  "Une fiche, conservée, a :\n    un nom (texte).\nPour f une fiche :\n    Saisir à nouveau fiche.\n");
     ALLER_RETOUR("_essayer\n    _afficher 1 ÷ 0\n_échec\n    _afficher « x » ; _motif\n_fin\n",
@@ -350,15 +350,15 @@ int main(void) {
     ALLER_RETOUR("# exemple\n_le prix_unitaire << 12,50\n_la quantité << 3\n_l'addition << 0\n"
                  "addition << prix_unitaire × quantité\n_afficher « Total : » ; addition\n",
                  "Remarque : exemple\nLe prix unitaire vaut 12,50.\nLa quantité vaut 3.\nL'addition vaut 0.\n"
-                 "L'addition devient prix unitaire × quantité.\nAfficher « Total : » puis addition.\n");
+                 "L'addition devient le prix unitaire × la quantité.\nAfficher « Total : » puis l'addition.\n");
     ALLER_RETOUR("_la quantité << 3\n_si quantité _positif _et _non (quantité > 10) _alors\n    _afficher « ok »\n_fin\n",
-                 "La quantité vaut 3.\nSi quantité est positive et quantité n'est pas supérieure à 10 :\n"
+                 "La quantité vaut 3.\nSi la quantité est positive et la quantité n'est pas supérieure à 10 :\n"
                  "    Afficher « ok ».\n");
     ALLER_RETOUR("_calcul _la valeur_absolue(_un nombre)\n    _si nombre _négatif _alors\n        _rendre −nombre\n"
                  "    _fin\n    _rendre nombre\n_fin\n_afficher valeur_absolue(−3)\n", NULL);
     ALLER_RETOUR("_le total << 0\n_action ajouter(_un montant ; _une remise)\n    total << total + montant − remise\n"
                  "_fin\n\najouter(5 ; 1)\n_action saluer()\n    _afficher 1\n_fin\nsaluer()\n",
-                 "Le total vaut 0.\nPour ajouter un montant et une remise :\n    Le total devient total + montant − remise.\n"
+                 "Le total vaut 0.\nPour ajouter un montant et une remise :\n    Le total devient le total + montant − remise.\n"
                  "\nAjouter 5 et 1.\nPour saluer :\n    Afficher 1.\nSaluer.\n");
     ALLER_RETOUR("_le x << 1\n_selon x\n    _cas 1 _ou _de 2 _à 3\n        _afficher 1\n    _cas ≥ 10 _ou _négatif\n"
                  "        _afficher 2\n    _autrement\n        _afficher 3\n_fin\n", NULL);
