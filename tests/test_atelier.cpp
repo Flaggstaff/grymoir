@@ -1863,8 +1863,11 @@ int main(int argc, char **argv) {
         Geste g;
         QString r = ecran_ajouter_onglets(dossier.path(), "x", &g);
         if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
-        VERIFIER(lire().contains("    les onglets :\n        l'onglet « Premier » :\n            le texte « Premier onglet »,\n"
-                                 "        l'onglet « Second » :\n            le texte « Second onglet »."));
+        // chaque onglet naît avec un bloc libre : ce qu'on y pose se place au pixel (§ 5 decies)
+        VERIFIER(lire().contains("    les onglets :\n        l'onglet « Premier » :\n            en position libre :\n"
+                                 "                le texte « Premier onglet », à 16 de la gauche et 16 du haut,\n"
+                                 "        l'onglet « Second » :\n            en position libre :\n"
+                                 "                le texte « Second onglet », à 16 de la gauche et 16 du haut."));
         ElementNouveau n;
         n.sorte = ELEMENT_ONGLET;
         n.texte = "Identité";
@@ -1884,6 +1887,25 @@ int main(int argc, char **argv) {
             QMouseEvent lache(QEvent::MouseButtonRelease, QPointF(p), QPointF(barre->mapToGlobal(p)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
             QApplication::sendEvent(barre, &lache);
             VERIFIER(tw->currentIndex() == 1);
+            // « Ajouter » vise la page ouverte : l'élément va dans son bloc libre, sous le texte déjà posé
+            const int dans = o.cible_ajout();
+            VERIFIER(dans >= 0 && o.ecrans()[0].elements.value(dans).sorte == ELEMENT_ONGLET
+                     && o.ecrans()[0].elements.value(dans).texte == "Second");
+            ElementNouveau b;
+            b.sorte = ELEMENT_TEXTE;
+            b.texte = "Valider";
+            r = ecran_ajouter(dossier.path(), "x", b, &g, dans);
+            if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+            VERIFIER(lire().contains("                le texte « Second onglet », à 16 de la gauche et 16 du haut,\n"
+                                     "                le texte « Valider », à 16 de la gauche et 64 du haut."));
+            // l'aperçu redessiné garde la page ouverte, et le bouton y est
+            o.montrer(dossier.path());
+            QApplication::processEvents();
+            auto *tw2 = qobject_cast<QTabWidget *>(o.controle(1));
+            VERIFIER(tw2 && tw2->currentIndex() == 1);
+            bool vu = false;
+            if (tw2) for (QLabel *x : tw2->currentWidget()->findChildren<QLabel *>()) vu |= x->text() == "Valider";
+            VERIFIER(vu);
         }
         // dans un écran libre : les onglets se placent, sous ce qui y est
         ecrire("L'écran x montre :\n    en position libre :\n        le texte « t », à 16 de la gauche et 16 du haut.\n");

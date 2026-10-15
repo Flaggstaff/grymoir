@@ -268,6 +268,8 @@ Avec B2 ter (grammaire, § 22.8) : « Image » dans la palette demande ce que l'
 
 « Onglets » dans la palette ajoute `les onglets :` avec deux onglets, « Premier » et « Second », un texte dans chacun ; dans un écran libre, ils se placent sous ce qui y est, comme tout ajout. L'aperçu les dessine en vrais onglets : un clic sur un onglet le montre (c'est le seul clic que l'aperçu laisse passer) ; un clic dans sa page choisit l'élément. Le panneau d'un onglet donne son titre. Les onglets se placent, s'agrandissent et se déplacent comme tout bloc (§ 5 octies).
 
+**Comme dans un navigateur** *(0.46)* : un clic sur un onglet de l'aperçu ouvre sa page et choisit l'onglet ; la page ouverte le reste quand l'aperçu se redessine après un geste. « Ajouter » pose dans le bloc de ce qui est choisi : la page ouverte quand on a cliqué un onglet, le groupe d'un élément choisi dans un groupe, etc. ; sans choix, à la fin de l'écran comme avant. Chaque onglet créé par la palette contient un bloc libre : ce qu'on y pose prend une place sous l'élément le plus bas, puis se glisse et s'agrandit au pixel. Un clic dans le vide d'une page la choisit sans la déplacer.
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -368,3 +370,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.43 | 2026-10-14 | § 5 octies : guides d'alignement sur les bords et centres des voisins, plus forts que la grille ; Alt les coupe |
 | 0.44 | 2026-10-14 | § 5 decies : les onglets dans la palette, l'aperçu (cliquables), le panneau (titre), placés comme un bloc |
 | 0.45 | 2026-10-14 | § 5 octies : sur un écran décrit, le geste sur un élément dans un bloc déplace le bloc du premier niveau (il ne faisait rien de visible) |
+| 0.46 | 2026-10-14 | § 5 decies : clic sur un onglet de l'aperçu, page ouverte gardée ; « Ajouter » dans le bloc choisi (la page ouverte) ; un bloc libre dans chaque onglet créé |

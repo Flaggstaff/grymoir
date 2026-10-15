@@ -67,7 +67,9 @@ struct ElementNouveau {
 };
 QString ecran_titre(const QString &dossier, const QString &ecran, const QString &titre, Geste *geste);
 // Ajoute à la fin ; un bouton reçoit son événement (« Remarque : à écrire. »).
-QString ecran_ajouter(const QString &dossier, const QString &ecran, const ElementNouveau &e, Geste *geste);
+// `dans` : l'index d'un bloc (groupe, onglet, bloc libre…) où le mettre, à la fin ; un onglet qui contient un bloc libre
+// le reçoit dans ce bloc, placé sous ce qui y est (§ 22.9, § 22.10). −1 : à la fin de l'écran, ou de son dernier bloc libre.
+QString ecran_ajouter(const QString &dossier, const QString &ecran, const ElementNouveau &e, Geste *geste, int dans = -1);
 // Un bouton part avec son événement, une liste avec son « Quand on choisit », une zone avec son « Quand on change » ;
 // un bloc disparaît, ses éléments restent.
 QString ecran_supprimer(const QString &dossier, const QString &ecran, int index, Geste *geste);

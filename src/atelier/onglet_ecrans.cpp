@@ -23,6 +23,8 @@
 #include <QFrame>
 #include <QMimeData>
 #include <QMouseEvent>
+#include <QHash>
+#include <QTabWidget>
 #include <QTabBar>
 #include <QKeyEvent>
 #include <climits>
@@ -420,6 +422,12 @@ void OngletEcrans::dessiner() {
             for (QWidget *x : w->findChildren<QWidget *>()) x->setMouseTracking(true);
         }
     grille = nullptr;
+    for (int k = 0; k < vue.controles.size(); k++)   // la page ouverte de chaque bloc d'onglets, gardée d'un aperçu à l'autre
+        if (auto *tw = qobject_cast<QTabWidget *>(vue.controles[k])) {
+            const QString cle = e.nom + "#" + QString::number(k);
+            tw->setCurrentIndex(pages_ouvertes.value(cle, 0));
+            connect(tw, &QTabWidget::currentChanged, this, [this, cle](int i) { pages_ouvertes[cle] = i; });
+        }
     poignee = nullptr;   // l'ancienne est partie avec l'ancien aperçu
     fantome = nullptr;
     guide_v = guide_h = nullptr;   // partis avec l'ancien aperçu
@@ -490,6 +498,37 @@ int OngletEcrans::bord_sous(QWidget *w, QPoint global) {
 }
 
 QString OngletEcrans::texte_etat() const { return etat->text(); }
+
+int OngletEcrans::onglet_ouvert(int k) const {
+    if (courant < 0 || k < 0 || k >= lus[courant].elements.size() || lus[courant].elements[k].sorte != ELEMENT_ONGLETS) return -1;
+    auto *tw = qobject_cast<QTabWidget *>(vue.controles.value(k));
+    const int voulu = tw ? tw->currentIndex() : 0;
+    int rang = 0, prof = 0;
+    for (int q = k + 1; q < lus[courant].elements.size(); q++) {
+        const int s = lus[courant].elements[q].sorte;
+        if (s == ELEMENT_FIN_DE_BLOC) { if (prof-- == 0) break; continue; }
+        if (s >= ELEMENT_COTE_A_COTE && s != ELEMENT_IMAGE) {
+            if (prof == 0 && s == ELEMENT_ONGLET && rang++ == voulu) return q;
+            prof++;
+        }
+    }
+    return -1;
+}
+
+int OngletEcrans::cible_ajout() const {
+    if (courant < 0 || element < 0 || element >= lus[courant].elements.size()) return -1;
+    const auto &els = lus[courant].elements;
+    auto conteneur = [](int s) { return s >= ELEMENT_COTE_A_COTE && s != ELEMENT_IMAGE && s != ELEMENT_FIN_DE_BLOC; };
+    if (els[element].sorte == ELEMENT_ONGLETS) return onglet_ouvert(element);
+    if (conteneur(els[element].sorte)) return element;
+    QVector<int> pile;   // le bloc le plus intérieur qui contient l'élément choisi
+    for (int q = 0; q < element; q++) {
+        if (els[q].sorte == ELEMENT_FIN_DE_BLOC) { if (!pile.isEmpty()) pile.pop_back(); }
+        else if (conteneur(els[q].sorte)) pile << q;
+    }
+    if (pile.isEmpty()) return -1;
+    return els[pile.last()].sorte == ELEMENT_ONGLETS ? onglet_ouvert(pile.last()) : pile.last();
+}
 
 QWidget *OngletEcrans::guide_visible() const {
     if (guide_v && !guide_v->isHidden()) return guide_v;
@@ -630,6 +669,21 @@ void OngletEcrans::liberer(int k, QRect nouveau) {
 }
 
 bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
+    // La barre d'un widget d'onglets : ses clics ouvrent la page, comme dans un navigateur, et choisissent l'onglet (§ 5 decies)
+    if (auto *barre = qobject_cast<QTabBar *>(o)) {
+        if (ev->type() == QEvent::MouseButtonPress && courant >= 0) {
+            const int k = element_sous(o);   // les onglets dont c'est la barre
+            const int i = barre->tabAt(static_cast<QMouseEvent *>(ev)->position().toPoint());
+            if (i >= 0 && k >= 0) {
+                barre->setCurrentIndex(i);
+                const int page = onglet_ouvert(k);
+                if (page >= 0) choisir_element(page);
+            }
+            return true;
+        }
+        return ev->type() == QEvent::MouseButtonRelease || ev->type() == QEvent::MouseButtonDblClick
+               || (ev->type() == QEvent::MouseMove && (static_cast<QMouseEvent *>(ev)->buttons() & Qt::LeftButton));
+    }
     if (ev->type() == QEvent::KeyPress) {   // les flèches sur un élément placé (§ 5 octies)
         auto *k = static_cast<QKeyEvent *>(ev);
         if (clavier(k->key(), k->modifiers())) return true;
@@ -793,7 +847,8 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             libre_taille = bord_sous(w, depart);   // un bord ou le coin : la taille ; ailleurs : la place
             etat->setText(libre_taille ? "Glisse pour changer la taille (Alt : au pixel)." : "Glisse pour placer (Alt : au pixel).");
         } else if (w && !(static_cast<QMouseEvent *>(ev)->modifiers() & Qt::ControlModifier) && courant >= 0
-                   && lus[courant].elements.value(trouve).sorte != ELEMENT_LIBRE) {
+                   && lus[courant].elements.value(trouve).sorte != ELEMENT_LIBRE
+                   && lus[courant].elements.value(trouve).sorte != ELEMENT_ONGLET) {   // une page se choisit, ne se déplace pas
             // un écran décrit : tout se place quand même ; un fantôme suit la souris, le lâcher passe l'écran en position
             // libre en gardant ce qu'on voit, cet élément à sa nouvelle place (§ 5 octies). Cmd (Ctrl) : remettre dans l'ordre.
             glisse = -1;
@@ -1104,6 +1159,7 @@ void OngletEcrans::supprimer() {
 void OngletEcrans::ajouter(int sorte) {
     if (courant < 0 || courant >= lus.size()) return;
     const QString ecran = lus[courant].nom;
+    const int dans = cible_ajout();   // la page ouverte, le groupe choisi… (§ 5 decies)
     ElementNouveau n;
     n.sorte = sorte;
     bool ok = false;
@@ -1115,7 +1171,7 @@ void OngletEcrans::ajouter(int sorte) {
             n.source = QInputDialog::getText(this, "Nouvelle image", "Image de (« le portrait du compositeur choisi de l'écran ») :",
                                              QLineEdit::Normal, "", &ok);
             if (!ok) return;
-            emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g); });
+            emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans); });
             return;
         }
     }
@@ -1143,7 +1199,7 @@ void OngletEcrans::ajouter(int sorte) {
         n.texte = QInputDialog::getItem(this, "Nouvelle liste", "Entité :", entites, 0, false, &ok);
     }
     if (!ok) return;
-    emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g); });
+    emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans); });
 }
 
 QString OngletEcrans::proprietes() const { return panneau->toPlainText(); }

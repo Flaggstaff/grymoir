@@ -8,6 +8,7 @@
 
 #include <functional>
 
+#include <QHash>
 #include <QWidget>
 
 // Un élément d'écran, tel que l'arbre le décrit.
@@ -79,6 +80,10 @@ public:
     QWidget *grille_visible() const;                 // la grille d'alignement, si elle est montrée (essais)
     QWidget *poignee_visible() const;                // la poignée de taille, si elle est montrée (essais)
     QString texte_etat() const;                      // la barre d'état de l'onglet (essais)
+    // Où « Ajouter » pose (§ 5 decies) : le bloc qui contient l'élément choisi, ou le bloc choisi lui-même ; pour des
+    // onglets, leur page ouverte. −1 : la fin de l'écran.
+    int cible_ajout() const;
+    int onglet_ouvert(int k) const;                  // l'index de l'onglet ouvert des onglets k, ou −1
     bool touche(int t, Qt::KeyboardModifiers m = Qt::NoModifier) { return clavier(t, m); }   // pour les essais
 
 signals:
@@ -108,6 +113,7 @@ private:
     bool libre_decrit = false;            // l'élément saisi est dans un écran décrit : un fantôme le montre, le lâcher convertit
     class QFrame *fantome = nullptr;
     QRect libre_fin;                      // où le fantôme est, au lâcher
+    QHash<QString, int> pages_ouvertes;   // « écran#k » → la page ouverte des onglets k, gardée d'un aperçu à l'autre
     class QFrame *guide_v = nullptr, *guide_h = nullptr;   // les traits d'alignement sur un voisin (§ 5 octies)
     // Colle r (position ou taille selon libre_taille) aux bords et centres des voisins à moins de 5 pixels, d'après
     // brut (la position sans aimant) ; montre les traits dans `sur`. Rend vrai si un guide a servi.

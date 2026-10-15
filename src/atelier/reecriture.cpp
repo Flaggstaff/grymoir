@@ -792,15 +792,46 @@ QString ecran_titre(const QString &dossier, const QString &ecran, const QString 
     return ch.conclure(geste);
 }
 
-QString ecran_ajouter(const QString &dossier, const QString &ecran, const ElementNouveau &e, Geste *geste) {
+namespace {
+size_t fin_d_unite(Noeud *n, size_t i);
+int bloc_de(Noeud *n, size_t i);
+void inserer(Noeud *n, size_t i, Noeud *x);
+
+// Met x à la fin du bloc qui s'ouvre en ouv. Un onglet ou un groupe qui contient un bloc libre le donne à ce bloc ; dans
+// un bloc libre, x prend une place sous l'élément le plus bas (§ 22.9).
+void mettre_dans(Noeud *p, size_t ouv, Noeud *x) {
+    size_t fin = fin_d_unite(p, ouv);
+    if (p->enfants[ouv]->forme != 4)
+        for (size_t q = ouv + 1; q < fin; q = fin_d_unite(p, q) + 1)
+            if (p->enfants[q]->type == N_DISPOSITION && p->enfants[q]->forme == 4) { ouv = q; fin = fin_d_unite(p, q); break; }
+    if (p->enfants[ouv]->forme == 4) {
+        int bas = -32;
+        for (size_t q = ouv + 1; q < fin; q = fin_d_unite(p, q) + 1)
+            if (p->enfants[q]->place_dite & 1) bas = qMax(bas, p->enfants[q]->place[1]);
+        x->place[0] = 16;
+        x->place[1] = qMin(4000, bas + 48);
+        x->place_dite = 1;
+    }
+    inserer(p, fin, x);
+}
+}  // namespace
+
+QString ecran_ajouter(const QString &dossier, const QString &ecran, const ElementNouveau &e, Geste *geste, int dans) {
     Chantier ch(dossier);
     Trouve t = trouver_ecran(ch, ecran);
     if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
     QString erreur;
     Noeud *n = nouvel_element(e, dossier, &erreur);
     if (!n) return erreur;
-    // Un écran qui a un bloc en position libre reçoit l'élément dans le dernier, sous ce qui y est déjà (§ 22.9).
     Noeud *p = t.phrase;
+    if (dans >= 0 && (size_t)dans < p->nb_enfants && p->enfants[dans]->type == N_DISPOSITION && p->enfants[dans]->forme
+        && p->enfants[dans]->forme != 5) {   // dans le bloc choisi : un onglet ouvert, un groupe, un bloc libre…
+        mettre_dans(p, (size_t)dans, n);
+        reimprimer_avec(ch, t, e);
+        geste->description = QString("Ajouter un élément à l'écran %1").arg(ecran);
+        return ch.conclure(geste);
+    }
+    // Un écran qui a un bloc en position libre reçoit l'élément dans le dernier, sous ce qui y est déjà (§ 22.9).
     size_t fin_libre = 0;
     bool libre = false;
     for (size_t q = 0; q < p->nb_enfants; q++)
@@ -1179,8 +1210,10 @@ QString ecran_ajouter_onglets(const QString &dossier, const QString &ecran, Gest
         n->texte = grym_dupliquer(x);
         return n;
     };
-    QVector<Noeud *> bloc = {marque(5), marque(6, "Premier"), texte("Premier onglet"), marque(0),
-                             marque(6, "Second"), texte("Second onglet"), marque(0), marque(0)};
+    // chaque onglet reçoit un bloc libre : ce qu'on y pose se place et s'agrandit au pixel, comme ailleurs (§ 5 decies)
+    auto place = [](Noeud *n) { n->place[0] = n->place[1] = 16; n->place_dite = 1; return n; };
+    QVector<Noeud *> bloc = {marque(5), marque(6, "Premier"), marque(4), place(texte("Premier onglet")), marque(0), marque(0),
+                             marque(6, "Second"), marque(4), place(texte("Second onglet")), marque(0), marque(0), marque(0)};
     size_t ou = p->nb_enfants;   // à la fin, ou dans le dernier bloc libre, sous ce qui y est (§ 22.9)
     for (size_t q = 0; q < p->nb_enfants; q++)
         if (p->enfants[q]->type == N_DISPOSITION && p->enfants[q]->forme == 0 && bloc_de(p, q) == 4) ou = q;
