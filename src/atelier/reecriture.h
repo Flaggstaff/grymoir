@@ -105,6 +105,8 @@ QString ecran_liberer(const QString &dossier, const QString &ecran, const QVecto
 // Ajoute « les onglets : » à la fin de l'écran (dans son dernier bloc libre s'il en a un, sous ce qui y est), avec deux
 // onglets, « Premier » et « Second », un texte dans chacun (grammaire, § 22.10).
 QString ecran_ajouter_onglets(const QString &dossier, const QString &ecran, Geste *geste);
+// Un menu en tête de l'écran (§ 22.12), « Menu », avec un élément « Nouvel élément » et son événement à écrire.
+QString ecran_ajouter_menu(const QString &dossier, const QString &ecran, Geste *geste);
 
 // Remet chaque fichier touché dans son état d'avant ; message d'erreur, vide si tout est revenu.
 // Un fichier renommé reprend d'abord son ancien nom.

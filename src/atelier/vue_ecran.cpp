@@ -1,5 +1,8 @@
 // GrymoiR : l'atelier, le dessin d'un écran.
 #include "vue_ecran.h"
+#include <QAction>
+#include <QMenu>
+#include <QMenuBar>
 
 #include <QLocale>
 
@@ -133,6 +136,22 @@ public:
 };
 }  // namespace
 
+// Un élément de menu (§ 22.12) : l'action suit l'état du bouton invisible qui porte son événement.
+namespace {
+class MiroirDAction : public QObject {
+public:
+    MiroirDAction(QAction *a, QObject *parent) : QObject(parent), action(a) {}
+    bool eventFilter(QObject *o, QEvent *ev) override {
+        auto *w = static_cast<QWidget *>(o);
+        if (ev->type() == QEvent::EnabledChange) action->setEnabled(w->isEnabled());
+        else if (ev->type() == QEvent::ShowToParent || ev->type() == QEvent::HideToParent) action->setVisible(!w->isHidden());
+        return false;
+    }
+private:
+    QAction *action;
+};
+}  // namespace
+
 VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &elements) {
     return dessiner_ecran(titre, elements, QPixmap(), 0);
 }
@@ -195,9 +214,34 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         else niveaux.last().boite->addLayout(b, 1);
         niveaux.push_back({b, toile, sur_toile ? w : nullptr, e.largeur, e.hauteur});
     };
+    QMenuBar *barre = nullptr;    // les menus de l'écran (§ 22.12), en tête, dans la vue et non dans la barre système
+    QMenu *menu_ouvert = nullptr;
     for (int k = 0; k < n; k++) {
         const ElementVue &e = elements[k];
         if (e.sorte != ELEMENT_BOUTON || niveaux.last().toile) rangee = nullptr;
+        if (e.sorte == ELEMENT_MENU) {   // « le menu « Membres » : » : un menu de la barre, en tête de l'écran (§ 22.12)
+            if (!barre) {
+                barre = new QMenuBar;
+                barre->setNativeMenuBar(false);   // l'écran vit dans la fenêtre de l'atelier : sa barre reste à lui
+                pile->insertWidget(0, barre);
+            }
+            menu_ouvert = barre->addMenu(e.texte);
+            continue;
+        }
+        if (e.sorte == ELEMENT_FIN_DE_BLOC && menu_ouvert) { menu_ouvert = nullptr; continue; }
+        if (e.sorte == ELEMENT_BOUTON && menu_ouvert) {
+            // un élément de menu : une action, et un bouton invisible qu'elle clique. Le bouton garde le câblage d'un
+            // bouton (son événement) et reçoit les états (actif si, visible si), que l'action reflète.
+            QAction *action = menu_ouvert->addAction(e.texte);
+            auto *b = new QPushButton(e.texte, barre);
+            b->setFixedSize(0, 0);
+            b->setProperty("element-de-menu", true);
+            QObject::connect(action, &QAction::triggered, b, &QPushButton::click);
+            b->installEventFilter(new MiroirDAction(action, b));
+            r.boutons << b;
+            r.controles[k] = b;
+            continue;
+        }
         if (e.sorte == ELEMENT_LIBRE) {
             auto *toile = new Toile;
             ouvrir(toile, nullptr, toile, e);

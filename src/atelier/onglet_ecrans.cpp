@@ -23,6 +23,7 @@
 #include <QFrame>
 #include <QMimeData>
 #include <QMouseEvent>
+#include <QMenuBar>
 #include <QHash>
 #include <QTabWidget>
 #include <QTabBar>
@@ -49,6 +50,13 @@
 extern "C" {
 #include "analyseur.h"
 #include "interface.h"
+
+// Un bloc, qui s'ouvre et se ferme par une fin de bloc : pas un élément. Le graphique et le menu, venus après les blocs
+// dans la numérotation, font qu'un test « sorte ≥ côte à côte » ne suffit plus.
+static bool est_bloc(int s) {
+    return s == ELEMENT_COTE_A_COTE || s == ELEMENT_L_UN_SOUS_L_AUTRE || s == ELEMENT_GROUPE || s == ELEMENT_LIBRE
+           || s == ELEMENT_ONGLETS || s == ELEMENT_ONGLET || s == ELEMENT_MENU;
+}
 }
 
 namespace {
@@ -159,8 +167,8 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                     if (el->type == N_DISPOSITION) {
                         x.sorte = el->forme == 1 ? ELEMENT_COTE_A_COTE : el->forme == 2 ? ELEMENT_L_UN_SOUS_L_AUTRE
                                 : el->forme == 3 ? ELEMENT_GROUPE : el->forme == 4 ? ELEMENT_LIBRE : el->forme == 5 ? ELEMENT_ONGLETS
-                                : el->forme == 6 ? ELEMENT_ONGLET : ELEMENT_FIN_DE_BLOC;
-                        if (el->forme == 3 || el->forme == 6) x.texte = QString::fromUtf8(el->texte);   // le titre (§ 22.7, § 22.10)
+                                : el->forme == 6 ? ELEMENT_ONGLET : el->forme == 7 ? ELEMENT_MENU : ELEMENT_FIN_DE_BLOC;
+                        if (el->forme == 3 || el->forme == 6 || el->forme == 7) x.texte = QString::fromUtf8(el->texte);   // le titre (§ 22.7, § 22.10, § 22.12)
                         x.ecrit.clear();
                     } else if (el->type == N_BOUTON) {
                         x.sorte = ELEMENT_BOUTON;
@@ -278,11 +286,17 @@ OngletEcrans::OngletEcrans(QWidget *parent) : QWidget(parent) {
     auto *pp = new QHBoxLayout(palette);
     pp->setContentsMargins(0, 0, 0, 0);
     pp->addWidget(new QLabel("Ajouter :"));
-    for (int sorte : {ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, ELEMENT_LISTE, ELEMENT_GRAPHIQUE, ELEMENT_IMAGE, ELEMENT_ONGLETS}) {
+    for (int sorte : {ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, ELEMENT_LISTE, ELEMENT_GRAPHIQUE, ELEMENT_IMAGE, ELEMENT_ONGLETS, ELEMENT_MENU}) {
         auto *b = new QPushButton(sorte == ELEMENT_BOUTON ? "Bouton" : sorte == ELEMENT_TEXTE ? "Texte"
                                   : sorte == ELEMENT_ZONE ? "Zone" : sorte == ELEMENT_LISTE ? "Liste" : sorte == ELEMENT_IMAGE ? "Image"
-                                  : sorte == ELEMENT_GRAPHIQUE ? "Graphique" : "Onglets");
-        if (sorte == ELEMENT_ONGLETS)   // deux onglets à renommer, un texte dans chacun (§ 22.10)
+                                  : sorte == ELEMENT_GRAPHIQUE ? "Graphique" : sorte == ELEMENT_MENU ? "Menu" : "Onglets");
+        if (sorte == ELEMENT_MENU)   // un menu en tête de l'écran, avec un élément et son événement (§ 22.12)
+            connect(b, &QPushButton::clicked, this, [this] {
+                if (courant < 0 || courant >= lus.size()) return;
+                const QString ecran = lus[courant].nom;
+                emit geste([=](Geste *g) { return ecran_ajouter_menu(dossier, ecran, g); });
+            });
+        else if (sorte == ELEMENT_ONGLETS)   // deux onglets à renommer, un texte dans chacun (§ 22.10)
             connect(b, &QPushButton::clicked, this, [this] {
                 if (courant < 0 || courant >= lus.size()) return;
                 const QString ecran = lus[courant].nom;
@@ -430,6 +444,10 @@ void OngletEcrans::dessiner() {
             tw->setCurrentIndex(pages_ouvertes.value(cle, 0));
             connect(tw, &QTabWidget::currentChanged, this, [this, cle](int i) { pages_ouvertes[cle] = i; });
         }
+    for (QMenuBar *barre : vue.vue->findChildren<QMenuBar *>()) barre->installEventFilter(this);   // § 22.12
+    for (int k = 0; k < vue.controles.size(); k++)   // un élément de menu, cliqué dans le menu ouvert de l'aperçu : choisi
+        if (auto *b = qobject_cast<QPushButton *>(vue.controles[k]); b && b->property("element-de-menu").toBool())
+            connect(b, &QPushButton::clicked, this, [this, k] { choisir_element(k); });
     poignee = nullptr;   // l'ancienne est partie avec l'ancien aperçu
     fantome = nullptr;
     guide_v = guide_h = nullptr;   // partis avec l'ancien aperçu
@@ -510,7 +528,7 @@ int OngletEcrans::onglet_ouvert(int k) const {
     for (int q = k + 1; q < lus[courant].elements.size(); q++) {
         const int s = lus[courant].elements[q].sorte;
         if (s == ELEMENT_FIN_DE_BLOC) { if (prof-- == 0) break; continue; }
-        if (s >= ELEMENT_COTE_A_COTE && s != ELEMENT_IMAGE) {
+        if (est_bloc(s)) {
             if (prof == 0 && s == ELEMENT_ONGLET && rang++ == voulu) return q;
             prof++;
         }
@@ -524,7 +542,7 @@ int OngletEcrans::onglets_de(int k) const {
     QVector<int> pile;
     for (int q = 0; q < k; q++) {
         if (els[q].sorte == ELEMENT_FIN_DE_BLOC) { if (!pile.isEmpty()) pile.pop_back(); }
-        else if (els[q].sorte >= ELEMENT_COTE_A_COTE && els[q].sorte != ELEMENT_IMAGE) pile << q;
+        else if (est_bloc(els[q].sorte)) pile << q;
     }
     for (int i = pile.size(); i-- > 0;) if (els[pile[i]].sorte == ELEMENT_ONGLETS) return pile[i];
     return -1;
@@ -542,7 +560,7 @@ int OngletEcrans::onglet_sous(QPoint global, int sauf) const {
         for (int q = k + 1; q < lus[courant].elements.size(); q++) {
             const int s = lus[courant].elements[q].sorte;
             if (s == ELEMENT_FIN_DE_BLOC) { if (prof-- == 0) break; continue; }
-            if (s >= ELEMENT_COTE_A_COTE && s != ELEMENT_IMAGE) {
+            if (est_bloc(s)) {
                 if (prof == 0 && s == ELEMENT_ONGLET && rang++ == i) return q;
                 prof++;
             }
@@ -573,7 +591,7 @@ int OngletEcrans::page_sous(QPoint global, int k, QWidget **toile) const {
 int OngletEcrans::cible_ajout() const {
     if (courant < 0 || element < 0 || element >= lus[courant].elements.size()) return -1;
     const auto &els = lus[courant].elements;
-    auto conteneur = [](int s) { return s >= ELEMENT_COTE_A_COTE && s != ELEMENT_IMAGE && s != ELEMENT_FIN_DE_BLOC; };
+    auto conteneur = [](int s) { return est_bloc(s); };
     if (els[element].sorte == ELEMENT_ONGLETS) return onglet_ouvert(element);
     if (conteneur(els[element].sorte)) return element;
     QVector<int> pile;   // le bloc le plus intérieur qui contient l'élément choisi
@@ -686,14 +704,14 @@ QRect OngletEcrans::rect_vu(int k) const {
     const auto &els = lus[courant].elements;
     if (els[k].sorte == ELEMENT_FIN_DE_BLOC) return QRect();
     if (QWidget *w = vue.controles.value(k)) return QRect(w->mapTo(vue.vue, QPoint(0, 0)), w->size());
-    if (els[k].sorte < ELEMENT_COTE_A_COTE && els[k].sorte != ELEMENT_IMAGE) return QRect();
+    if (!est_bloc(els[k].sorte)) return QRect();
     // un bloc sans widget (côte à côte, l'un sous l'autre, dans une boîte) : ce que ses éléments occupent
     QRect r;
     int prof = 0;
     for (int q = k; q < els.size(); q++) {
         const int s = els[q].sorte;
         if (s == ELEMENT_COTE_A_COTE || s == ELEMENT_L_UN_SOUS_L_AUTRE || s == ELEMENT_GROUPE || s == ELEMENT_LIBRE
-            || s == ELEMENT_ONGLETS || s == ELEMENT_ONGLET) prof++;
+            || s == ELEMENT_ONGLETS || s == ELEMENT_ONGLET || s == ELEMENT_MENU) prof++;
         else if (s == ELEMENT_FIN_DE_BLOC) { if (--prof == 0) break; }
         else if (QWidget *w = vue.controles.value(q)) r |= QRect(w->mapTo(vue.vue, QPoint(0, 0)), w->size());
     }
@@ -712,7 +730,7 @@ void OngletEcrans::liberer(int k, QRect nouveau) {
         for (int q = 0; q < k; q++) {
             const int s = lus[courant].elements[q].sorte;
             if (s == ELEMENT_FIN_DE_BLOC) { if (prof) prof--; }
-            else if (s >= ELEMENT_COTE_A_COTE && s != ELEMENT_IMAGE) { if (prof++ == 0) haut = q; }
+            else if (est_bloc(s)) { if (prof++ == 0) haut = q; }
         }
         if (prof == 0) haut = k;
         const QRect avant = rect_vu(k);
@@ -732,6 +750,15 @@ void OngletEcrans::liberer(int k, QRect nouveau) {
 }
 
 bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
+    // La barre de menus de l'aperçu (§ 22.12) : un clic choisit le menu et l'ouvre ; un élément du menu se choisit en
+    // le cliquant dans le menu ouvert (son bouton invisible est relié dans dessiner()).
+    if (auto *barre = qobject_cast<QMenuBar *>(o)) {
+        if (ev->type() == QEvent::MouseButtonPress && courant >= 0)
+            if (QAction *a = barre->actionAt(static_cast<QMouseEvent *>(ev)->position().toPoint()))
+                for (int k = 0; k < lus[courant].elements.size(); k++)
+                    if (lus[courant].elements[k].sorte == ELEMENT_MENU && lus[courant].elements[k].texte == a->text()) choisir_element(k);
+        return false;
+    }
     // La barre d'un widget d'onglets : ses clics ouvrent la page, comme dans un navigateur, et choisissent l'onglet (§ 5 decies)
     if (auto *barre = qobject_cast<QTabBar *>(o); barre && libre_k < 0) {
         if (ev->type() == QEvent::MouseButtonPress && courant >= 0) {
@@ -1038,8 +1065,8 @@ void OngletEcrans::choisir_element(int k) {
         poignee->raise();
     }
     static const char *const noms[] = {"Liste", "Bouton", "Texte", "Zone de saisie", "Côte à côte", "L'un sous l'autre",
-                                       "Fin de bloc", "Groupe", "Image", "En position libre", "Onglets", "Onglet", "Graphique"};
-    h = QString("<p><b>%1</b></p><table>").arg(noms[qBound(0, x.sorte, 12)]);
+                                       "Fin de bloc", "Groupe", "Image", "En position libre", "Onglets", "Onglet", "Graphique", "Menu"};
+    h = QString("<p><b>%1</b></p><table>").arg(noms[qBound(0, x.sorte, 13)]);
     if (x.place) h += ligne("Place", QString("%1 de la gauche, %2 du haut").arg(x.gauche).arg(x.haut))
                     + ligne("Taille", QString("%1 × %2").arg(x.largeur ? QString::number(x.largeur) : QString("naturelle"),
                                                              x.hauteur ? QString::number(x.hauteur) : QString("naturelle")));
@@ -1115,7 +1142,7 @@ void OngletEcrans::editer() {
             for (int q = ko + 1; q < e.elements.size(); q++) {
                 const int s = e.elements[q].sorte;
                 if (s == ELEMENT_FIN_DE_BLOC) { if (prof-- == 0) break; continue; }
-                if (s >= ELEMENT_COTE_A_COTE && s != ELEMENT_IMAGE) {
+                if (est_bloc(s)) {
                     if (prof == 0 && s == ELEMENT_ONGLET) vers->addItem(e.elements[q].texte, q);
                     prof++;
                 }
@@ -1131,7 +1158,7 @@ void OngletEcrans::editer() {
                 emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, vise, g); });
             });
         }
-        if (x.sorte == ELEMENT_GROUPE || x.sorte == ELEMENT_ONGLET) {   // un groupe, un onglet : son titre (§ 22.7, § 22.10)
+        if (x.sorte == ELEMENT_GROUPE || x.sorte == ELEMENT_ONGLET || x.sorte == ELEMENT_MENU) {   // son titre (§ 22.7, § 22.10, § 22.12)
             auto *titre = new QLineEdit(x.texte);
             f->addRow(x.sorte == ELEMENT_GROUPE ? "Titre du groupe" : "Titre de l'onglet", titre);
             const int sorte = x.sorte;

@@ -18,6 +18,9 @@
 #include <QInputMethodEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QAction>
+#include <QMenu>
+#include <QMenuBar>
 #include <QTabBar>
 #include <QTabWidget>
 #include <QRegularExpression>
@@ -2387,6 +2390,160 @@ int main(int argc, char **argv) {
         QRegularExpressionMatch m = QRegularExpression("        un bouton « Kopf », à (\\d+) de la gauche et (\\d+) du haut").match(t);
         VERIFIER(resultat.isEmpty() && m.hasMatch() && !t.contains("côte à côte"));
         if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
+    }
+    {   // le menu (§ 22.12) dans le dessin : une barre en tête ; l'action clique le bouton invisible, qui garde le câblage
+        // d'un bouton ; l'état du bouton (actif si, visible si) se reflète sur l'action
+        QVector<ElementVue> el(4);
+        el[0].sorte = ELEMENT_MENU;
+        el[0].texte = "Membres";
+        el[1].sorte = ELEMENT_BOUTON;
+        el[1].texte = "Nouveau";
+        el[2].sorte = ELEMENT_FIN_DE_BLOC;
+        el[3].sorte = ELEMENT_TEXTE;
+        el[3].texte = "t";
+        VueEcran v = dessiner_ecran("Accueil", el);
+        auto *barre = v.vue->findChild<QMenuBar *>();
+        VERIFIER(barre && barre->actions().size() == 1 && barre->actions()[0]->text() == "Membres" && !barre->isNativeMenuBar());
+        auto *b = qobject_cast<QPushButton *>(v.controles[1]);
+        QAction *action = barre && barre->actions().size() ? barre->actions()[0]->menu()->actions().value(0) : nullptr;
+        VERIFIER(b && action && action->text() == "Nouveau");
+        if (b && action) {
+            int clics = 0;
+            QObject::connect(b, &QPushButton::clicked, [&] { clics++; });
+            action->trigger();
+            VERIFIER(clics == 1);
+            b->setEnabled(false);
+            VERIFIER(!action->isEnabled());
+            b->setEnabled(true);
+            b->setVisible(false);
+            VERIFIER(!action->isVisible());
+        }
+        delete v.vue;
+    }
+    {   // le menu dans l'atelier : la palette l'ajoute avec son événement ; un clic sur son titre le choisit, et « Ajouter » y
+        // pose un bouton, avec son événement ; la conversion en position libre le laisse en tête, hors du bloc libre
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    le texte « t ».\n");
+        }
+        auto lire = [&]() {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly));
+            return QString::fromUtf8(f.readAll());
+        };
+        Geste g;
+        QString r = ecran_ajouter_menu(dossier.path(), "x", &g);
+        if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        VERIFIER(lire().contains("L'écran x montre :\n    le menu « Menu » :\n        un bouton « Nouvel élément »,\n    le texte « t ».")
+                 && lire().contains("Quand on clique sur « Nouvel élément » dans l'écran x :\n    Remarque : à écrire."));
+        OngletEcrans o;
+        o.resize(900, 600);
+        o.show();
+        QString resultat = "pas de geste";
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        QMenuBar *barre = nullptr;
+        for (int k = 0; k < 10 && !barre; k++) if (o.controle(k)) barre = o.controle(k)->window()->findChild<QMenuBar *>();
+        VERIFIER(barre != nullptr);
+        if (barre && !barre->actions().isEmpty()) {
+            const QPoint c = barre->actionGeometry(barre->actions()[0]).center();
+            QMouseEvent appui(QEvent::MouseButtonPress, QPointF(c), QPointF(barre->mapToGlobal(c)), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(barre, &appui);
+            QMouseEvent lache(QEvent::MouseButtonRelease, QPointF(c), QPointF(barre->mapToGlobal(c)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(barre, &lache);
+            if (QMenu *m = barre->actions()[0]->menu()) m->hide();
+        }
+        VERIFIER(o.cible_ajout() == 0);   // le menu choisi : « Ajouter » y pose
+        ElementNouveau n;
+        n.sorte = ELEMENT_BOUTON;
+        n.texte = "Liste";
+        r = ecran_ajouter(dossier.path(), "x", n, &g, o.cible_ajout());
+        if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        VERIFIER(lire().contains("        un bouton « Nouvel élément »,\n        un bouton « Liste »,\n    le texte « t ».")
+                 && lire().contains("Quand on clique sur « Liste » dans l'écran x :"));
+        // la conversion en position libre : le menu reste en tête, hors du bloc libre
+        QVector<QRect> places(5);   // le menu, ses deux boutons, sa fin, le texte
+        places[4] = QRect(0, 0, 40, 24);   // le texte, seule unité placée
+        r = ecran_liberer(dossier.path(), "x", places, &g);
+        if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        VERIFIER(lire().contains("    le menu « Menu » :\n        un bouton « Nouvel élément »,\n        un bouton « Liste »,\n"
+                                 "    en position libre :\n        le texte « t », à 0 de la gauche et 0 du haut, large de 40."));
+    }
+    {   // un écran décrit avec un graphique devant un texte : glisser le texte déplace le texte, pas le graphique (le graphique
+        // n'est pas un bloc ; compté comme tel, il passait pour le bloc du premier niveau qui contenait le texte)
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Un état, conservé, a :\n    un nom (texte), unique.\n"
+                    "L'écran x montre :\n    le graphique des états conservés, par nom,\n    le texte « bouge ».\n");
+        }
+        OngletEcrans o;
+        o.resize(900, 700);
+        o.show();
+        QString resultat = "pas de geste";
+        Geste g;
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        QLabel *l = nullptr;
+        for (int k = 0; k < 10; k++) if (auto *x = qobject_cast<QLabel *>(o.controle(k)); x && x->text() == "bouge") l = x;
+        VERIFIER(l != nullptr);
+        if (l) {
+            const QPoint m(3, 3), a = l->mapToGlobal(m);
+            QMouseEvent appui(QEvent::MouseButtonPress, QPointF(m), QPointF(a), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(l, &appui);
+            QMouseEvent loin(QEvent::MouseMove, QPointF(m), QPointF(a + QPoint(0, 30)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(l, &loin);
+            QMouseEvent bouge(QEvent::MouseMove, QPointF(m), QPointF(a + QPoint(300, 0)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(l, &bouge);
+            QMouseEvent lache(QEvent::MouseButtonRelease, QPointF(m), QPointF(a + QPoint(300, 0)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(l, &lache);
+        }
+        QFile f(chemin);
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        const QString t = QString::fromUtf8(f.readAll());
+        QRegularExpressionMatch m = QRegularExpression("le texte « bouge », à (\\d+) de la gauche").match(t);
+        QRegularExpressionMatch mg = QRegularExpression("le graphique des états conservés, par nom, à (\\d+) de la gauche").match(t);
+        VERIFIER(m.hasMatch() && mg.hasMatch() && m.captured(1).toInt() >= 280 && mg.captured(1).toInt() < 40);
+        if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
+    }
+    {   // un graphique devant des onglets ne fausse plus la page ouverte ni la cible d'« Ajouter » ; un bouton posé dans un
+        // onglet arrive avec son événement
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Un état, conservé, a :\n    un nom (texte), unique.\n"
+                    "L'écran x montre :\n    le graphique des états conservés, par nom,\n    le texte « t ».\n");
+        }
+        Geste g;
+        VERIFIER(ecran_ajouter_onglets(dossier.path(), "x", &g).isEmpty());
+        OngletEcrans o;
+        o.resize(900, 600);
+        o.show();
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        int ko = -1;
+        for (int k = 0; k < o.ecrans()[0].elements.size(); k++) if (o.ecrans()[0].elements[k].sorte == ELEMENT_ONGLETS) ko = k;
+        o.choisir_element(ko);
+        const int dans = o.cible_ajout();
+        VERIFIER(dans > ko && o.ecrans()[0].elements.value(dans).sorte == ELEMENT_ONGLET && o.ecrans()[0].elements.value(dans).texte == "Premier");
+        ElementNouveau n;
+        n.sorte = ELEMENT_BOUTON;
+        n.texte = "Dedans";
+        const QString r = ecran_ajouter(dossier.path(), "x", n, &g, dans);
+        if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        QFile f(chemin);
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        const QString t = QString::fromUtf8(f.readAll());
+        VERIFIER(r.isEmpty() && t.contains("un bouton « Dedans »") && t.contains("Quand on clique sur « Dedans » dans l'écran x :"));
     }
     {   // le graphique (§ 22.11) : fabriqué par la palette, dessiné en exemple dans l'aperçu, rempli par les lignes
         QTemporaryDir dossier;

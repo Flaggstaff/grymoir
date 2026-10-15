@@ -897,6 +897,11 @@ QString ecran_ajouter(const QString &dossier, const QString &ecran, const Elemen
         && p->enfants[dans]->forme != 5) {   // dans le bloc choisi : un onglet ouvert, un groupe, un bloc libre…
         mettre_dans(p, (size_t)dans, n);
         reimprimer_avec(ch, t, e);
+        if (e.sorte == ELEMENT_BOUTON) {   // un bouton sans événement serait refusé (§ 22.2), dans un bloc comme ailleurs
+            const int pos = apres_l_ecran(t, ecran);
+            ch.remplacer(*t.f, pos, pos, QString("\nQuand on clique sur « %1 » dans l'écran %2 :\n    Remarque : à écrire.")
+                                             .arg(e.texte.trimmed(), ecran));
+        }
         geste->description = QString("Ajouter un élément à l'écran %1").arg(ecran);
         return ch.conclure(geste);
     }
@@ -1018,7 +1023,8 @@ QString ecran_modifier(const QString &dossier, const QString &ecran, int index, 
     Noeud *n = t.phrase;
     if (index >= 0 && (size_t)index < n->nb_enfants && n->enfants[index]->type == N_DISPOSITION
         && ((n->enfants[index]->forme == 3 && e.sorte == ELEMENT_GROUPE)
-            || (n->enfants[index]->forme == 6 && e.sorte == ELEMENT_ONGLET))) {   // le titre d'un groupe, d'un onglet (§ 22.7, § 22.10)
+            || (n->enfants[index]->forme == 6 && e.sorte == ELEMENT_ONGLET)
+            || (n->enfants[index]->forme == 7 && e.sorte == ELEMENT_MENU))) {   // le titre d'un groupe, d'un onglet (§ 22.7, § 22.10)
         const QString titre = e.texte.trimmed();
         if (titre.isEmpty()) return "Un groupe porte un titre.";
         if (titre.contains(QChar(0x00BB)) || titre.contains(QChar(0x00AB))) return "Pas de guillemets « » dans un titre.";
@@ -1088,7 +1094,7 @@ Noeud *retirer_enfant(Noeud *n, size_t i) {
 Noeud *marque(int forme, const QString &titre = QString()) {
     Noeud *m = noeud_creer(N_DISPOSITION, 0, 0, 0);
     m->forme = forme;
-    if (forme == 3 || forme == 6) m->texte = grym_dupliquer(titre.toUtf8().constData());
+    if (forme == 3 || forme == 6 || forme == 7) m->texte = grym_dupliquer(titre.toUtf8().constData());
     return m;
 }
 
@@ -1274,6 +1280,7 @@ QString ecran_liberer(const QString &dossier, const QString &ecran, const QVecto
     // mesurée dans l'aperçu (§ 22.9) : largeur toujours, hauteur pour une liste et pour un bloc.
     for (size_t q = 0; q < n->nb_enfants; q = fin_d_unite(n, q) + 1) {
         Noeud *x = n->enfants[q];
+        if (x->type == N_DISPOSITION && x->forme == 7) continue;   // un menu fait partie du cadre (§ 22.12)
         const QRect r = places[(int)q];
         x->place[0] = qBound(0, r.x(), 4000);
         x->place[1] = qBound(0, r.y(), 4000);
@@ -1281,9 +1288,24 @@ QString ecran_liberer(const QString &dossier, const QString &ecran, const QVecto
         x->place[3] = qBound(8, r.height(), 4000);
         x->place_dite = 1 | 2 | (x->type == N_CHERCHER || x->type == N_DISPOSITION ? 4 : 0);
     }
+    {   // les menus restent hors du bloc libre : remontés en tête, dans leur ordre (§ 22.12)
+        QVector<Noeud *> menus, reste;
+        for (size_t q = 0; q < n->nb_enfants;) {
+            const size_t f = fin_d_unite(n, q);
+            const bool menu = n->enfants[q]->type == N_DISPOSITION && n->enfants[q]->forme == 7;
+            for (size_t x = q; x <= f; x++) (menu ? menus : reste) << n->enfants[x];
+            q = f + 1;
+        }
+        size_t q = 0;
+        for (Noeud *x : menus) n->enfants[q++] = x;
+        for (Noeud *x : reste) n->enfants[q++] = x;
+    }
+    size_t debut = 0;
+    while (debut < n->nb_enfants && n->enfants[debut]->type == N_DISPOSITION && n->enfants[debut]->forme == 7)
+        debut = fin_d_unite(n, debut) + 1;
     inserer(n, n->nb_enfants, marque(0));
-    inserer(n, 0, marque(4));
-    if (n->nb_enfants > 2) trier_bloc_libre(n, 1);
+    inserer(n, debut, marque(4));
+    if (n->nb_enfants > debut + 2) trier_bloc_libre(n, debut + 1);
     reimprimer(ch, t);
     geste->description = QString("Mettre l'écran %1 en position libre").arg(ecran);
     return ch.conclure(geste);
@@ -1319,6 +1341,34 @@ QString ecran_ajouter_onglets(const QString &dossier, const QString &ecran, Gest
     for (int q = 0; q < bloc.size(); q++) inserer(p, ou + (size_t)q, bloc[q]);
     reimprimer(ch, t);
     geste->description = QString("Ajouter des onglets à l'écran %1").arg(ecran);
+    return ch.conclure(geste);
+}
+
+QString ecran_ajouter_menu(const QString &dossier, const QString &ecran, Geste *geste) {
+    Chantier ch(dossier);
+    Trouve t = trouver_ecran(ch, ecran);
+    if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
+    Noeud *p = t.phrase;
+    QString libelle = "Nouvel élément";   // un libellé encore libre dans l'écran
+    for (int n = 2;; n++) {
+        bool pris = false;
+        for (size_t q = 0; q < p->nb_enfants; q++)
+            if (p->enfants[q]->type == N_BOUTON && QString::fromUtf8(p->enfants[q]->texte) == libelle) pris = true;
+        if (!pris) break;
+        libelle = QString("Nouvel élément %1").arg(n);
+    }
+    Noeud *b = noeud_creer(N_BOUTON, 0, 0, 0);
+    b->texte = grym_dupliquer(libelle.toUtf8().constData());
+    size_t ou = 0;   // après les menus déjà là : l'ordre de la barre est l'ordre écrit
+    for (size_t q = 0; q < p->nb_enfants; q = fin_d_unite(p, q) + 1)
+        if (p->enfants[q]->type == N_DISPOSITION && p->enfants[q]->forme == 7) ou = fin_d_unite(p, q) + 1;
+    inserer(p, ou, marque(7, "Menu"));
+    inserer(p, ou + 1, b);
+    inserer(p, ou + 2, marque(0));
+    reimprimer(ch, t);
+    const int pos = apres_l_ecran(t, ecran);
+    ch.remplacer(*t.f, pos, pos, QString("\nQuand on clique sur « %1 » dans l'écran %2 :\n    Remarque : à écrire.").arg(libelle, ecran));
+    geste->description = QString("Ajouter un menu à l'écran %1").arg(ecran);
     return ch.conclure(geste);
 }
 

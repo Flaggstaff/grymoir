@@ -278,6 +278,12 @@ Avec B2 ter (grammaire, § 22.8) : « Image » dans la palette demande ce que l'
 
 « Graphique » dans la palette demande l'entité, puis le champ qui regroupe ; il compte, en barres. L'aperçu, sans données, dessine un exemple grisé de trois barres ; à l'exécution, le graphique se remplit à chaque tour avec les groupes que la machine envoie. Les secteurs et la somme s'écrivent dans le code pour l'instant (`, avec la somme de la durée, en secteurs`). Les couleurs des secteurs viennent d'une suite de huit teintes, la même que dans le navigateur.
 
+## 5 duodecies. Les menus dans l'éditeur d'écrans *(fait le 15 octobre 2026)*
+
+« Menu » dans la palette ajoute un menu en tête de l'écran, après les menus déjà là, avec un élément « Nouvel élément » et son événement à écrire. L'aperçu montre la barre de menus en tête de l'écran, dans la vue et non dans la barre système (l'écran vit dans la fenêtre de l'atelier, dont la barre système est celle de l'atelier). Un clic sur le titre d'un menu le choisit et l'ouvre ; un clic sur un élément du menu ouvert le choisit ; « Ajouter » pose un bouton dans le menu choisi, avec son événement. Le panneau d'un menu donne son titre. À l'exécution, chaque élément est une action reliée à un bouton invisible, qui porte son événement et ses états (actif si, visible si) ; l'action les reflète. Un menu ne se place ni ne s'agrandit ; la conversion en position libre le laisse en tête, hors du bloc libre.
+
+Deux défauts corrigés en chemin. Un bouton posé par « Ajouter » dans un bloc choisi (une page d'onglet) arrivait sans son événement, et la réanalyse refusait le geste. Le graphique, numéroté après les blocs, passait pour un bloc ouvert dans les parcours de l'aperçu : sur un écran décrit, glisser un élément écrit après un graphique déplaçait le graphique ; une fonction `est_bloc` dit maintenant ce qu'est un bloc.
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -384,3 +390,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.49 | 2026-10-15 | § 5 undecies : le graphique dans la palette, l'aperçu (exemple grisé) et l'exécution |
 | 0.50 | 2026-10-15 | § 5 octies : écran mixte, l'élément décrit entre dans le bloc libre au lieu de revenir ; grille et cadre transparents, grille sous les éléments |
 | 0.51 | 2026-10-15 | § 5 decies : le dernier élément d'un bloc de rangement en sort, le bloc vidé disparaît ; le refus reste pour un onglet |
+| 0.52 | 2026-10-15 | § 5 duodecies : les menus dans la palette, l'aperçu, le panneau et l'exécution ; un bouton ajouté dans un bloc a son événement ; le graphique n'est plus pris pour un bloc |
