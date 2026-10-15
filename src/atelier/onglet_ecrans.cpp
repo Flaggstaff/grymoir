@@ -187,7 +187,8 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                             if (v->type == N_NEGATION) x.depart = "−" + x.depart;
                         }
                     } else if (el->type == N_CHERCHER) {
-                        x.sorte = ELEMENT_LISTE;
+                        x.sorte = el->graphique ? ELEMENT_GRAPHIQUE : ELEMENT_LISTE;   // § 22.11
+                        x.graphique = el->graphique;
                         x.texte = QString::fromUtf8(el->texte);
                         x.tri = el->texte2 ? QString::fromUtf8(el->texte2) : QString();
                         x.decroissant = el->entier == 1;
@@ -277,10 +278,10 @@ OngletEcrans::OngletEcrans(QWidget *parent) : QWidget(parent) {
     auto *pp = new QHBoxLayout(palette);
     pp->setContentsMargins(0, 0, 0, 0);
     pp->addWidget(new QLabel("Ajouter :"));
-    for (int sorte : {ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, ELEMENT_LISTE, ELEMENT_IMAGE, ELEMENT_ONGLETS}) {
+    for (int sorte : {ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, ELEMENT_LISTE, ELEMENT_GRAPHIQUE, ELEMENT_IMAGE, ELEMENT_ONGLETS}) {
         auto *b = new QPushButton(sorte == ELEMENT_BOUTON ? "Bouton" : sorte == ELEMENT_TEXTE ? "Texte"
                                   : sorte == ELEMENT_ZONE ? "Zone" : sorte == ELEMENT_LISTE ? "Liste" : sorte == ELEMENT_IMAGE ? "Image"
-                                  : "Onglets");
+                                  : sorte == ELEMENT_GRAPHIQUE ? "Graphique" : "Onglets");
         if (sorte == ELEMENT_ONGLETS)   // deux onglets à renommer, un texte dans chacun (§ 22.10)
             connect(b, &QPushButton::clicked, this, [this] {
                 if (courant < 0 || courant >= lus.size()) return;
@@ -383,6 +384,7 @@ void OngletEcrans::dessiner() {
         if (!e.elements[k].valeurs.isEmpty()) el[k].choix = e.elements[k].valeurs;   // l'aperçu montre le menu ou les boutons
         el[k].lecture_seule = e.elements[k].lecture_seule;
         el[k].place = e.elements[k].place;
+        el[k].graphique = e.elements[k].graphique;
         el[k].gauche = e.elements[k].gauche;
         el[k].haut = e.elements[k].haut;
         el[k].largeur = e.elements[k].largeur;
@@ -1006,8 +1008,8 @@ void OngletEcrans::choisir_element(int k) {
         poignee->raise();
     }
     static const char *const noms[] = {"Liste", "Bouton", "Texte", "Zone de saisie", "Côte à côte", "L'un sous l'autre",
-                                       "Fin de bloc", "Groupe", "Image", "En position libre", "Onglets", "Onglet"};
-    h = QString("<p><b>%1</b></p><table>").arg(noms[qBound(0, x.sorte, 11)]);
+                                       "Fin de bloc", "Groupe", "Image", "En position libre", "Onglets", "Onglet", "Graphique"};
+    h = QString("<p><b>%1</b></p><table>").arg(noms[qBound(0, x.sorte, 12)]);
     if (x.place) h += ligne("Place", QString("%1 de la gauche, %2 du haut").arg(x.gauche).arg(x.haut))
                     + ligne("Taille", QString("%1 × %2").arg(x.largeur ? QString::number(x.largeur) : QString("naturelle"),
                                                              x.hauteur ? QString::number(x.hauteur) : QString("naturelle")));
@@ -1327,6 +1329,20 @@ void OngletEcrans::ajouter(int sorte) {
             for (const auto &en : lire_schema(dossier)) types << en.nom;
             n.type = QInputDialog::getItem(this, "Nouvelle zone", "Type :", types, 0, false, &ok);
         }
+    } else if (sorte == ELEMENT_GRAPHIQUE) {   // l'entité, puis le champ qui regroupe (§ 22.11)
+        const auto schema = lire_schema(dossier);
+        QStringList entites;
+        for (const auto &en : schema) entites << en.nom;
+        if (entites.isEmpty()) { etat->setText("Un graphique compte des objets conservés : déclare d'abord une entité."); return; }
+        n.texte = QInputDialog::getItem(this, "Nouveau graphique", "Compter les objets de l'entité :", entites, 0, false, &ok);
+        if (!ok) return;
+        QStringList champs;
+        for (const auto &en : schema)
+            if (en.nom == n.texte)
+                for (const auto &c : en.champs)
+                    if (c.type != "fichier" && c.type != "image") champs << c.nom;
+        if (champs.isEmpty()) return;
+        n.cle = QInputDialog::getItem(this, "Nouveau graphique", "Regroupés par :", champs, 0, false, &ok);
     } else {
         QStringList entites;
         for (const auto &en : lire_schema(dossier)) entites << en.nom;

@@ -2293,6 +2293,51 @@ int main(int argc, char **argv) {
         }
         VERIFIER(sur_premier == 1 && sur_second == 0);
     }
+    {   // le graphique (§ 22.11) : fabriqué par la palette, dessiné en exemple dans l'aperçu, rempli par les lignes
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Un état, conservé, a :\n    un nom (texte), unique.\n"
+                    "Une tâche, conservée, a :\n    un titre (texte),\n    un état (état), facultatif,\n    une durée (nombre).\n"
+                    "L'écran x montre :\n    le texte « t ».\n");
+        }
+        auto lire = [&]() {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly));
+            return QString::fromUtf8(f.readAll());
+        };
+        Geste g;
+        ElementNouveau n;
+        n.sorte = ELEMENT_GRAPHIQUE;
+        n.texte = "tâche";
+        n.cle = "état";
+        QString r = ecran_ajouter(dossier.path(), "x", n, &g);
+        if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        VERIFIER(lire().contains("    le graphique des tâches conservées, par état."));
+        n.cle = "état";
+        n.somme = "durée";
+        n.secteurs = true;
+        VERIFIER(ecran_modifier(dossier.path(), "x", 1, n, &g).isEmpty());
+        VERIFIER(lire().contains("    le graphique des tâches conservées, par état, avec la somme de la durée, en secteurs."));
+        OngletEcrans o;
+        o.resize(900, 600);
+        o.show();
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        VERIFIER(o.ecrans().size() == 1 && o.ecrans()[0].elements.value(1).sorte == ELEMENT_GRAPHIQUE
+                 && (o.ecrans()[0].elements.value(1).graphique & 6) == 6);
+        auto *gr = dynamic_cast<Graphique *>(o.controle(1));
+        VERIFIER(gr && gr->libelles().size() == 3);   // l'exemple de l'aperçu
+        if (gr) {
+            gr->donner({"à faire", "fait"}, {nombre_affiche("1'234.5"), nombre_affiche("12,5")});
+            VERIFIER(gr->valeurs() == QVector<double>({1234.5, 12.5}));
+            QImage img(gr->size(), QImage::Format_ARGB32);
+            gr->render(&img);   // le dessin passe sans accroc
+            VERIFIER(!img.isNull());
+        }
+    }
     {   // les guides : glissé près du bord gauche d'un voisin (20, hors de la grille de 8), le texte s'y colle, trait montré ;
         // avec Alt, ni guide ni grille
         QTemporaryDir dossier;

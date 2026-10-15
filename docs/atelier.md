@@ -272,6 +272,10 @@ Avec B2 ter (grammaire, § 22.8) : « Image » dans la palette demande ce que l'
 
 **Prise, place, rangement, suppression** *(0.47)* : les onglets se saisissent par leur barre ou par le vide d'une page, comme une fenêtre par son titre, pour les déplacer, et s'agrandissent par leurs bords ; un simple clic sur un onglet change toujours de page. Créés dans un bloc libre, ils naissent à 480 × 320, et le bloc libre de chaque page remplit la page. En glissant un élément, survoler un onglet ouvre sa page ; lâcher sur l'en-tête de l'onglet y range l'élément, sous ce qui y est. Le panneau d'un élément d'un onglet propose « Mettre dans l'onglet ». Lâché **dans la page ouverte** d'un onglet, un élément de l'écran (ou d'un autre bloc) y passe, à l'endroit du lâcher, et n'est plus que sur cet onglet ; la barre d'état l'annonce pendant le geste *(0.48)*. Le seul élément d'un onglet ne le quitte pas (l'onglet resterait vide, ce que la grammaire refuse) : l'atelier le dit. Supprimer un onglet emporte son contenu ; le dernier emporte les onglets ; le panneau d'un onglet propose aussi « Supprimer les onglets ».
 
+## 5 undecies. Le graphique dans l'éditeur d'écrans *(fait le 15 octobre 2026)*
+
+« Graphique » dans la palette demande l'entité, puis le champ qui regroupe ; il compte, en barres. L'aperçu, sans données, dessine un exemple grisé de trois barres ; à l'exécution, le graphique se remplit à chaque tour avec les groupes que la machine envoie. Les secteurs et la somme s'écrivent dans le code pour l'instant (`, avec la somme de la durée, en secteurs`). Les couleurs des secteurs viennent d'une suite de huit teintes, la même que dans le navigateur.
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -375,3 +379,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.46 | 2026-10-14 | § 5 decies : clic sur un onglet de l'aperçu, page ouverte gardée ; « Ajouter » dans le bloc choisi (la page ouverte) ; un bloc libre dans chaque onglet créé |
 | 0.47 | 2026-10-15 | § 5 decies : onglets déplacés par leur barre, agrandis par leurs bords ; 480 × 320 à la création, page remplie par son bloc libre ; glisser d'un onglet à l'autre ; « Mettre dans l'onglet » ; supprimer un onglet ou tous |
 | 0.48 | 2026-10-15 | § 5 decies : un élément lâché dans la page d'un onglet y passe, à l'endroit du lâcher ; l'atelier s'ouvre en fenêtre agrandie à l'écran disponible |
+| 0.49 | 2026-10-15 | § 5 undecies : le graphique dans la palette, l'aperçu (exemple grisé) et l'exécution |

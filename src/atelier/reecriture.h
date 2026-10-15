@@ -63,6 +63,9 @@ struct ElementNouveau {
     bool plusieurs_lignes = false, lecture_seule = false;   // zone (§ 22.6)
     QStringList valeurs;      // zone (texte) : valeurs permises (§ 22.7) ; groupe : rien
     QString actif_si, visible_si;   // bouton, zone (actif) ; bouton, texte, zone (visible) : la condition telle qu'écrite
+    QString cle;              // graphique (§ 22.11) : le champ qui regroupe ; somme : le champ additionné, vide pour compter
+    QString somme;
+    bool secteurs = false;
     QString source;           // image calculée : la valeur, sans « de » (« le portrait du compositeur choisi de l'écran ») ;
                               // vide : l'image d'un fichier, `texte` (§ 22.8)
 };

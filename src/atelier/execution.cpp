@@ -120,7 +120,8 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         colonnes << c;
     }
     if (!t->nb_colonnes.isEmpty() || !t->types_zones.isEmpty())   // un écran est déjà ouvert : il passe dessous
-        t->dessous.push_back({t->nb_colonnes, t->types_zones, t->facultatives, t->choix_zones, t->options_zones, t->images, t->places});
+        t->dessous.push_back({t->nb_colonnes, t->types_zones, t->facultatives, t->choix_zones, t->options_zones, t->images, t->places,
+                          t->graphiques});
     t->nb_colonnes.clear();
     for (const auto &c : colonnes) t->nb_colonnes << c.size();
     t->types_zones.clear();
@@ -129,8 +130,10 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
     t->options_zones.clear();
     t->images.clear();
     t->places.clear();
+    t->graphiques.clear();
     for (size_t k = 0; k < n; k++) {
         t->places << (el[k].place ? QVector<int>{el[k].gauche, el[k].haut, el[k].largeur, el[k].hauteur} : QVector<int>());
+        t->graphiques << (el[k].sorte == ELEMENT_GRAPHIQUE ? el[k].graphique : 0);
         t->images << (el[k].octets ? QByteArray(reinterpret_cast<const char *>(el[k].octets), (qsizetype)el[k].taille) : QByteArray());
         t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0));
@@ -194,8 +197,10 @@ static void iface_ecran_fermer(void *contexte, Chaine *sortie) {
         t->options_zones = d.options_zones;
         t->images = d.images;
         t->places = d.places;
+        t->graphiques = d.graphiques;
     } else {
         t->places.clear();
+        t->graphiques.clear();
         t->nb_colonnes.clear();
         t->types_zones.clear();
         t->facultatives.clear();
@@ -452,6 +457,16 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         }
     });
     connect(&travail, &Travail::ecran_lignes, this, [this](int element, const QStringList &cellules, int nb_lignes) {
+        if (auto *gr = dynamic_cast<Graphique *>(controles_ecran.value(element))) {   // libellé, valeur ; une ligne par groupe (§ 22.11)
+            QStringList noms;
+            QVector<double> vals;
+            for (int r = 0; r < nb_lignes && 2 * r + 1 < cellules.size(); r++) {
+                noms << cellules[2 * r];
+                vals << nombre_affiche(cellules[2 * r + 1]);
+            }
+            gr->donner(noms, vals);
+            return;
+        }
         if (element < 0 || element >= tables.size() || !tables[element]) return;
         QTableWidget *t = tables[element];
         const int nc = t->columnCount();
@@ -751,6 +766,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         const int o = k < travail.options_zones.size() ? travail.options_zones[k] : 0;
         elements[k].plusieurs_lignes = o & 1;
         elements[k].lecture_seule = o & 2;
+        elements[k].graphique = travail.graphiques.value(k);   // § 22.11
         if (k < travail.places.size() && travail.places[k].size() == 4) {   // position libre (§ 22.9)
             const QVector<int> &p = travail.places[k];
             elements[k].place = true;

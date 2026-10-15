@@ -1,5 +1,9 @@
 // GrymoiR : l'atelier, le dessin d'un écran.
 #include "vue_ecran.h"
+
+#include <QLocale>
+
+#include <QPainter>
 #include "theme.h"
 
 #include <QBoxLayout>
@@ -37,6 +41,74 @@ void montrer_image(QLabel *l, const QByteArray &octets, const QString &repli, in
     p.setDevicePixelRatio(densite);
     l->setText(QString());
     l->setPixmap(p);
+}
+
+double nombre_affiche(const QString &t) {
+    QString b;
+    for (QChar c : t) {
+        if (c.isDigit() || c == '-' || c == '.') b += c;
+        else if (c == ',') b += '.';
+    }
+    return b.toDouble();
+}
+
+Graphique::Graphique(bool s, QWidget *parent) : QWidget(parent), secteurs(s) {
+    setObjectName("graphique");
+    setMinimumSize(160, 100);
+    noms = {QString::fromUtf8("…"), QString::fromUtf8("…"), QString::fromUtf8("…")};   // l'aperçu, sans données
+    vals = {3, 2, 1};
+}
+
+void Graphique::donner(const QStringList &l, const QVector<double> &v) {
+    exemple = false;
+    noms = l;
+    vals = v;
+    updateGeometry();
+    update();
+}
+
+QSize Graphique::sizeHint() const { return QSize(420, secteurs ? 220 : qMax(100, (int)noms.size() * 30 + 16)); }
+
+void Graphique::paintEvent(QPaintEvent *) {
+    static const char *const teintes[] = {"#2f6f8f", "#c0633a", "#5a8f3c", "#8f5aa8", "#c49a2c", "#3c8f86", "#a84a6a", "#6a6a6a"};
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+    if (exemple) p.setOpacity(0.35);   // l'aperçu : un exemple, pas des données
+    const QColor texte = palette().color(QPalette::WindowText);
+    if (noms.isEmpty()) { p.setPen(texte); p.drawText(rect(), Qt::AlignCenter, QString::fromUtf8("Aucune donnée.")); return; }
+    double max = 0, total = 0;
+    for (double v : vals) { max = qMax(max, v); if (v > 0) total += v; }
+    if (secteurs) {
+        const int d = qMin(height() - 16, width() / 2 - 16);
+        const QRectF disque(8, 8, d, d);
+        double fait = 0;
+        for (int i = 0; i < vals.size() && total > 0; i++) {
+            if (vals[i] <= 0) continue;
+            p.setBrush(QColor(teintes[i % 8]));
+            p.setPen(Qt::NoPen);
+            // Qt compte en seizièmes de degré, à partir de trois heures, dans le sens inverse : de midi, dans le sens horaire
+            p.drawPie(disque, qRound((90 - fait * 360) * 16), -qRound(vals[i] / total * 360 * 16));
+            fait += vals[i] / total;
+        }
+        for (int i = 0; i < noms.size(); i++) {
+            const int y = 8 + i * 24;
+            p.setBrush(QColor(teintes[i % 8]));
+            p.setPen(Qt::NoPen);
+            p.drawRect(d + 24, y, 14, 14);
+            p.setPen(texte);
+            p.drawText(d + 46, y + 12, noms[i] + " : " + QLocale().toString(vals.value(i)));
+        }
+        return;
+    }
+    const int gauche = qMin(140, width() / 3), large = width() - gauche - 64;
+    for (int i = 0; i < noms.size(); i++) {
+        const int y = 8 + i * 30;
+        p.setPen(texte);
+        p.drawText(QRect(0, y, gauche - 8, 20), Qt::AlignRight | Qt::AlignVCenter, noms[i]);
+        const double l = max > 0 && vals.value(i) > 0 ? large * vals[i] / max : 0;
+        p.fillRect(QRectF(gauche, y, l, 20), QColor(teintes[0]));
+        p.drawText(QRectF(gauche + l + 6, y, 60, 20), Qt::AlignLeft | Qt::AlignVCenter, QLocale().toString(vals.value(i)));
+    }
 }
 
 QSize taille_placee(QWidget *w, int largeur, int hauteur) {
@@ -260,6 +332,10 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             rang->addWidget(w);
             poser(conteneur);
             r.controles[k] = conteneur;
+        } else if (e.sorte == ELEMENT_GRAPHIQUE) {   // « le graphique des tâches conservées, par état » (§ 22.11)
+            auto *gr = new Graphique(e.graphique & 2);
+            r.controles[k] = gr;
+            poser(gr, 1);
         } else if (e.sorte == ELEMENT_LISTE) {
             auto *tab = new QTableWidget(0, e.colonnes.size());
             tab->setHorizontalHeaderLabels(e.colonnes);

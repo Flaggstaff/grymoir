@@ -3,6 +3,8 @@
 #ifndef GRYM_ATELIER_VUE_ECRAN_H
 #define GRYM_ATELIER_VUE_ECRAN_H
 
+#include <QWidget>
+#include <QPaintEvent>
 #include <QByteArray>
 #include <QString>
 #include <QStringList>
@@ -18,6 +20,7 @@ class QSize;
 // Un élément à dessiner ; `sorte` reprend SorteElement (src/interface.h).
 struct ElementVue {
     int sorte = 0;
+    int graphique = 0;      // graphique (§ 22.11) : 2 en secteurs, 4 une somme
     QString texte;          // libellé d'un bouton, texte fixe, nom affiché d'une zone ; pour une liste, l'entité
     QStringList colonnes;   // liste : titres des colonnes
     QString type;           // zone : son type
@@ -49,6 +52,25 @@ inline bool en_boutons_radio(const ElementVue &e) { return e.type == "texte" && 
 // Montre une image dans un label : sa taille, réduite pour tenir dans 480 × 320 (§ 22.8), ou sa taille placée ;
 // sans octets lisibles, le texte de repli (le nom du fichier, ou rien pour une image calculée absente).
 void montrer_image(QLabel *l, const QByteArray &octets, const QString &repli, int largeur = 0, int hauteur = 0);
+
+// Un graphique (§ 22.11) : des barres, ou des secteurs avec leur légende, à partir de libellés et de valeurs. Sans
+// données (l'aperçu de l'atelier), il montre un exemple grisé.
+class Graphique : public QWidget {
+public:
+    explicit Graphique(bool secteurs, QWidget *parent = nullptr);
+    void donner(const QStringList &libelles, const QVector<double> &valeurs);
+    QStringList libelles() const { return noms; }
+    QVector<double> valeurs() const { return vals; }
+    QSize sizeHint() const override;
+protected:
+    void paintEvent(QPaintEvent *) override;
+private:
+    bool secteurs;
+    bool exemple = true;
+    QStringList noms;
+    QVector<double> vals;
+};
+double nombre_affiche(const QString &t);   // « 1'234.5 », « 12,5 » → 1234.5, 12.5
 
 // La taille d'un élément placé : la naturelle, sauf ce que le programme dit (§ 22.9).
 QSize taille_placee(QWidget *w, int largeur, int hauteur);

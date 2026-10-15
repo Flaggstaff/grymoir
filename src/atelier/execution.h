@@ -85,9 +85,11 @@ public:
     QVector<int> options_zones;                           // zone : bit 1 sur plusieurs lignes, bit 2 en lecture seule
     QVector<QByteArray> images;                           // image (§ 22.8) : ses octets, sinon vide
     QVector<QVector<int>> places;                         // position libre (§ 22.9) : gauche, haut, largeur, hauteur ; vide sinon
+    QVector<int> graphiques;                              // graphique (§ 22.11) : 1, + 2 en secteurs, + 4 une somme ; 0 sinon
     // les descriptions des écrans du dessous (écrans empilés, § 22.3), rendues à la fermeture de celui du dessus
     struct Description { QVector<int> nb_colonnes; QStringList types_zones; QVector<int> facultatives; QVector<QStringList> choix_zones;
-                         QVector<int> options_zones; QVector<QByteArray> images; QVector<QVector<int>> places; };
+                         QVector<int> options_zones; QVector<QByteArray> images; QVector<QVector<int>> places;
+                         QVector<int> graphiques; };
     QVector<Description> dessous;
     size_t colonnes_de(size_t element) const { return element < (size_t)nb_colonnes.size() ? (size_t)nb_colonnes[(int)element] : 0; }
 
