@@ -70,6 +70,12 @@ static char *post_multi(const char *corps) {
                          (unsigned long)strlen(corps), corps);
 }
 
+static char *evenement_multi(const char *corps) {   /* un écran avec une zone de fichier : l'envoi est en multipart */
+    return grym_formater("POST /evenement HTTP/1.1\r\n" HOTE COOKIE ORIGINE
+                         "Content-Type: multipart/form-data; boundary=XyZ\r\nContent-Length: %lu\r\n\r\n%s",
+                         (unsigned long)strlen(corps), corps);
+}
+
 /* Encodage « application/x-www-form-urlencoded » d'une valeur. */
 static char *enc(const char *v) {
     Chaine c = {0};
@@ -748,6 +754,25 @@ int main(void) {
         CONTIENT(sc.reponses[2], "404 Not Found");
         CONTIENT(sc.reponses[3], "404 Not Found");
         CONTIENT(sc.reponses[5], "Application terminée.");
+        liberer(&sc);
+    }
+
+    {   /* Une zone d'image : un champ de fichier (images seules), l'envoi en multipart ; le fichier choisi devient la valeur de
+         * la zone, son nom s'affiche ; un fichier qui n'est pas une image est refusé, l'écran le dit */
+        const char *src = "L'écran x montre :\n    une photo (image), facultative,\n    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Afficher la photo de l'écran.\n    Fermer l'écran.\n"
+                          "Ouvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement_multi(PART("q", "1") PARTF("z0", "notes.txt", "pas une image") "--XyZ--\r\n"), get("/"),
+                 evenement_multi(PART("q", "2") PARTF("z0", "plan.png", PNG) "--XyZ--\r\n"), get("/"),
+                 evenement_multi(PART("q", "3") PARTF("z0", "", "") PART("clic", "1") "--XyZ--\r\n"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "enctype=\"multipart/form-data\"");
+        CONTIENT(sc.reponses[0], "<input type=\"file\" id=\"z0\" name=\"z0\" accept=\"image/png,image/jpeg,image/gif,image/webp\"");
+        CONTIENT(sc.reponses[2], "« notes.txt » n&#39;est pas une image (PNG, JPEG, GIF ou WebP).");
+        CONTIENT(sc.reponses[4], "<span class=\"fichier-actuel\">une image PNG de 13 octets</span>");   /* le fichier choisi, gardé */
+        CONTIENT(sc.reponses[6], "alt=\"une image PNG de 13 octets\"");   /* aucun nouveau choix : l'image reste */
+        CONTIENT(sc.reponses[6], "Application terminée.");
         liberer(&sc);
     }
 

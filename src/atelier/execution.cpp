@@ -487,6 +487,8 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             if (!z) continue;
             QSignalBlocker b(z);   // montrer la valeur n'est pas un changement
             if (auto *l = qobject_cast<QLineEdit *>(z)) l->setText(v[k]);
+            else if (auto *bf = qobject_cast<QPushButton *>(z); bf && bf->property("fichier").toBool())   // le fichier actuel
+                bf->setText(v[k].isEmpty() ? QString::fromUtf8("Choisir un fichier…") : v[k] + QString::fromUtf8(" (changer…)"));
             else if (z->property("radios").toBool()) {   // boutons radio (§ 22.7) : celui de la valeur, sinon aucun
                 auto *g = z->findChild<QButtonGroup *>();
                 if (g) {
@@ -794,7 +796,21 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                 envoyer_evenement(EVENEMENT_CHOIX, k, i ? i->data(Qt::UserRole).toInt() : ligne);
             });
         } else if (QWidget *z = v.zones[k]) {   // la validation d'une zone (Entrée, ou la quitter) est un événement
-            if (auto *c = qobject_cast<QCheckBox *>(z)) {
+            if (auto *bf = qobject_cast<QPushButton *>(z); bf && bf->property("fichier").toBool()) {
+                // une zone de fichier ou d'image : choisir un fichier ; ses octets et son nom font le changement
+                connect(bf, &QPushButton::clicked, this, [this, k, bf] {
+                    const QString f = QFileDialog::getOpenFileName(this, "Choisir un fichier", QString(),
+                                                                   bf->property("image").toBool()
+                                                                       ? "Images (*.png *.jpg *.jpeg *.gif *.webp)" : QString());
+                    if (f.isEmpty()) return;
+                    QFile fichier(f);
+                    if (!fichier.open(QIODevice::ReadOnly)) { etat->setText("Le fichier ne s'ouvre pas : " + f); return; }
+                    octets_envoyes = fichier.readAll();
+                    fichier_envoye = true;
+                    texte_envoye = QFileInfo(f).fileName().toUtf8();
+                    envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
+                });
+            } else if (auto *c = qobject_cast<QCheckBox *>(z)) {
                 connect(c, &QCheckBox::toggled, this, [this, k](bool x) {
                     texte_envoye = x ? "oui" : "non";
                     envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
@@ -845,9 +861,13 @@ void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) 
     for (int k = 0; k < tables.size(); k++)
         if (tables[k] && tables[k]->currentRow() >= 0 && tables[k]->item(tables[k]->currentRow(), 0))
             lignes_choisies[k] = tables[k]->item(tables[k]->currentRow(), 0)->data(Qt::UserRole).toInt();
+    const bool avec_fichier = sorte == EVENEMENT_CHANGEMENT && fichier_envoye;
     travail.evenement = {sorte, (size_t)element, (size_t)ligne,
                          sorte == EVENEMENT_CHANGEMENT ? texte_envoye.constData() : nullptr,
-                         lignes_choisies.constData(), (size_t)lignes_choisies.size()};
+                         lignes_choisies.constData(), (size_t)lignes_choisies.size(),
+                         avec_fichier ? reinterpret_cast<const unsigned char *>(octets_envoyes.constData()) : nullptr,
+                         avec_fichier ? (size_t)octets_envoyes.size() : 0};
+    fichier_envoye = false;   // les octets restent dans octets_envoyes jusqu'à l'événement suivant : la machine les lit
     travail.issue = 0;
     travail.reponse.release();
 }

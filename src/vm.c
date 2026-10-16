@@ -2825,7 +2825,7 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
             relire = 0;
         }
         char *probleme = ouvrir_attente(m, sortie, cadres);
-        Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, NULL, 0 };
+        Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, NULL, 0, NULL, 0 };
         Issue issue = ISSUE_REPONDU;
         if (!probleme) issue = m->iface.ecran_attendre(m->iface.contexte, sortie, &ev);
         char *reprise = probleme ? NULL : fermer_attente(m);
@@ -3860,7 +3860,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 if (m->ecran->elements[k].calculee)
                     m->iface.ecran_image(m->iface.contexte, k, m->ecran->elements[k].octets, m->ecran->elements[k].taille,
                                          m->ecran->elements[k].format);
-            Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, NULL, 0 };
+            Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, NULL, 0, NULL, 0 };
             Issue issue = ISSUE_REPONDU;
             if (!probleme && !m->fermer_ecran)
                 for (;;) {   /* un geste sur un élément inactif, caché ou en lecture seule ne compte pas (§ 22.6) */
@@ -3903,7 +3903,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 int lu = 0;
                 while (*t == ' ') t++;
                 if (!*t && e->elements[ev.element].facultatif) { v = vi_absent(NULL); lu = 1; }
-                else if (lie && lie->conserve) {
+                else if (strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0) {
+                    /* une zone de fichier ou d'image : le fichier choisi, ses octets et son nom ; une image se vérifie
+                     * ensuite, comme pour un champ (« … n'est pas une image ») */
+                    if (ev.octets) { v = vi_fichier(ev.octets, ev.taille, t); lu = 1; }
+                    else refus = grym_dupliquer("Choisis un fichier.");
+                } else if (lie && lie->conserve) {
                     Valeur cherche = vi_texte(t), l;
                     const char *cle = champ_cle(lie);
                     if (cle && chercher_valeur(m, lie->nom, 0, cle, &cherche, &l, &probleme)) {

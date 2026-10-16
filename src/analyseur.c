@@ -6249,11 +6249,6 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             } else
                 type = q == k + 2 && a->j[k + 1].type == J_CROCHETS ? grym_dupliquer(a->j[k + 1].valeur) : cle(a, k + 1, q);
             const Classe *lie = classe_de(a->portee, type);
-            if (strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0) {
-                erreur(a, &a->j[k + 1], grym_dupliquer("Une zone de fichier ou d'image viendra plus tard."));
-                free(nomz); free(type);
-                break;
-            }
             if (!type_de_base(type) && !(lie && lie->conserve)) {
                 erreur(a, &a->j[k + 1], grym_formater("« %s » n'est ni un type (texte, nombre, date, vrai ou faux…) ni une "
                                                       "entité.", type));

@@ -106,6 +106,7 @@ struct Serveur {
     Evenement *file;      /* événements tirés d'un seul envoi, rendus un par un à la machine */
     size_t nb_file, tete_file;
     char *ev_texte;       /* ce que désigne le dernier événement rendu, gardé jusqu'au suivant */
+    unsigned char *ev_octets;   /* le fichier du dernier événement (une zone de fichier), gardé de même */
     long *ev_choisies;
     int accent;           /* rang dans la palette (0 : bleue) */
     unsigned char *logo;
@@ -824,6 +825,9 @@ static const char *type_image(const char *format);
 static EcranWeb *ecran_dessus(const Serveur *s) { return s->nb_ecrans ? s->ecrans[s->nb_ecrans - 1] : NULL; }
 
 static int est_case(const ElementEcran *e) { return e->type && strcmp(e->type, "vrai ou faux") == 0; }
+static int est_zone_fichier(const ElementEcran *e) {   /* une zone de fichier ou d'image : un champ de choix de fichier */
+    return e->sorte == ELEMENT_ZONE && e->type && (strcmp(e->type, "fichier") == 0 || strcmp(e->type, "image") == 0);
+}
 
 /* Une zone de saisie : son libellé au-dessus, son contrôle ; une case à cocher porte son libellé. */
 static void zone(Chaine *c, const EcranWeb *e, size_t k) {
@@ -885,6 +889,19 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
             if (!trouvee) option(c, v, v, 1);   /* la valeur actuelle hors du menu n'est jamais perdue en silence */
             for (size_t j = 0; j < el->nb_choix; j++) option(c, el->choix[j], el->choix[j], strcmp(el->choix[j], v) == 0);
             chaine_ajouter(c, "</select>");
+        } else if (est_zone_fichier(el)) {   /* le fichier actuel, puis le choix d'un autre ; une image n'accepte que des images */
+            if (*v) {
+                chaine_ajouter(c, "<span class=\"fichier-actuel\">");
+                echapper(c, v);
+                chaine_ajouter(c, "</span>");
+            }
+            chaine_ajouter(c, "<input type=\"file\" id=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "\" name=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, strcmp(el->type, "image") == 0 ? "\" accept=\"image/png,image/jpeg,image/gif,image/webp\"" : "\"");
+            chaine_ajouter(c, attr);
+            chaine_ajouter(c, ">");
         } else if (el->plusieurs_lignes) {   /* « sur plusieurs lignes » : Entrée va à la ligne (§ 22.6) */
             chaine_ajouter(c, "<textarea rows=\"4\" id=\"");
             chaine_ajouter(c, id);
@@ -994,8 +1011,11 @@ static void page_ecran(Serveur *s) {
         chaine_ajouter(&c, "</p>\n");
     }
     char *num = grym_formater("%ld", s->numero);
-    chaine_ajouter(&c, "<form class=\"ecran\" method=\"post\" action=\"/evenement\" autocomplete=\"off\">"
-                       "<input type=\"hidden\" name=\"q\" value=\"");
+    int fichiers = 0;   /* une zone de fichier : l'envoi se fait en multipart, le seul qui porte un fichier */
+    for (size_t k = 0; k < e->n; k++) fichiers |= est_zone_fichier(&e->el[k]);
+    chaine_ajouter(&c, fichiers ? "<form class=\"ecran\" method=\"post\" action=\"/evenement\" autocomplete=\"off\" "
+                                  "enctype=\"multipart/form-data\">" : "<form class=\"ecran\" method=\"post\" action=\"/evenement\" autocomplete=\"off\">");
+    chaine_ajouter(&c, "<input type=\"hidden\" name=\"q\" value=\"");
     chaine_ajouter(&c, num);
     free(num);
     /* Entrée dans une zone envoie le premier bouton du formulaire : celui-ci, qui ne fait que valider les zones */
@@ -1213,6 +1233,7 @@ static void file_vider(Serveur *s) {
     for (size_t k = s->tete_file; k < s->nb_file; k++) {
         free((char *)s->file[k].texte);
         free((long *)s->file[k].choisies);
+        free((unsigned char *)s->file[k].octets);
     }
     free(s->file);
     s->file = NULL;
@@ -1249,6 +1270,14 @@ static int evenements_de(Serveur *s, Envoi *env) {
             snprintf(nom, sizeof nom, "z%lup", (unsigned long)k);
             if (!envoi_partie(env, nom)) continue;   /* case absente de l'envoi : rien à dire */
             nouveau = pv && !pv->fichier && strcmp(pv->valeur, "oui") == 0 ? "oui" : "non";
+        } else if (est_zone_fichier(&e->el[k])) {   /* un fichier choisi : son nom et ses octets ; aucun choisi : rien ne change */
+            if (!pv || !pv->fichier || !pv->choisi) continue;
+            unsigned char *o = grym_allouer(pv->taille ? pv->taille : 1);
+            memcpy(o, pv->valeur, pv->taille);
+            Evenement ev = { EVENEMENT_CHANGEMENT, k, 0, grym_dupliquer(pv->nom_fichier ? pv->nom_fichier : "fichier"), choisies(e), e->n,
+                             o, pv->taille };
+            file_ajouter(s, ev);
+            continue;
         } else {
             if (!pv || pv->fichier) continue;
             if (pv->mal) {   /* octet nul ou UTF-8 invalide : jamais transmis à la machine */
@@ -1260,7 +1289,7 @@ static int evenements_de(Serveur *s, Envoi *env) {
             nouveau = pv->valeur;
         }
         if (strcmp(nouveau, e->valeurs[k] ? e->valeurs[k] : "") == 0) continue;
-        Evenement ev = { EVENEMENT_CHANGEMENT, k, 0, grym_dupliquer(nouveau), choisies(e), e->n };
+        Evenement ev = { EVENEMENT_CHANGEMENT, k, 0, grym_dupliquer(nouveau), choisies(e), e->n, NULL, 0 };
         file_ajouter(s, ev);
     }
     for (size_t k = 0; k < e->n; k++)   /* l'onglet choisi de chaque « les onglets » (§ 22.10) : retenu, sans événement */
@@ -1277,12 +1306,12 @@ static int evenements_de(Serveur *s, Envoi *env) {
     Partie *pc = envoi_partie(env, "clic"), *px = envoi_partie(env, "choix"), *pf = envoi_partie(env, "fermer");
     char *fin = NULL;
     if (pf && !pf->fichier) {
-        Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, choisies(e), e->n };
+        Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, choisies(e), e->n, NULL, 0 };
         file_ajouter(s, ev);
     } else if (pc && !pc->fichier) {
         unsigned long k = strtoul(pc->valeur, &fin, 10);
         if (fin != pc->valeur && !*fin && k < e->n && e->el[k].sorte == ELEMENT_BOUTON && !e->etats[k]) {
-            Evenement ev = { EVENEMENT_CLIC, (size_t)k, 0, NULL, choisies(e), e->n };
+            Evenement ev = { EVENEMENT_CLIC, (size_t)k, 0, NULL, choisies(e), e->n, NULL, 0 };
             file_ajouter(s, ev);
         }
     } else if (px && !px->fichier) {   /* « k.r » : la ligne r de la liste k */
@@ -1295,7 +1324,7 @@ static int evenements_de(Serveur *s, Envoi *env) {
         }
         if (bon) {
             e->choisie[k] = (long)r;   /* la ligne choisie le reste : « le … choisi de l'écran » */
-            Evenement ev = { EVENEMENT_CHOIX, (size_t)k, (size_t)r, NULL, choisies(e), e->n };
+            Evenement ev = { EVENEMENT_CHOIX, (size_t)k, (size_t)r, NULL, choisies(e), e->n, NULL, 0 };
             file_ajouter(s, ev);
         }
     }
@@ -1889,6 +1918,8 @@ static Issue serveur_ecran_attendre(void *contexte, Chaine *sortie, Evenement *e
     Serveur *s = contexte;
     absorber(s, sortie);
     free(s->ev_texte);
+    free(s->ev_octets);
+    s->ev_octets = NULL;
     free(s->ev_choisies);
     s->ev_texte = NULL;
     s->ev_choisies = NULL;
@@ -1911,6 +1942,7 @@ static Issue serveur_ecran_attendre(void *contexte, Chaine *sortie, Evenement *e
     if (issue != ISSUE_REPONDU) { file_vider(s); return issue; }
     *ev = s->file[s->tete_file++];
     s->ev_texte = (char *)ev->texte;      /* gardés jusqu'à l'attente suivante : la machine les lit entre-temps */
+    s->ev_octets = (unsigned char *)ev->octets;
     s->ev_choisies = (long *)ev->choisies;
     if (s->tete_file == s->nb_file) {
         free(s->file);
@@ -1988,6 +2020,8 @@ void serveur_fermer(Serveur *s) {
     free(s->ecrans);
     file_vider(s);
     free(s->ev_texte);
+    free(s->ev_octets);
+    s->ev_octets = NULL;
     free(s->ev_choisies);
     free(s->logo);
     free(s->titre);

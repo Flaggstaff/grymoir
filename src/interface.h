@@ -55,6 +55,8 @@ typedef struct {
     const char *texte;          /* changement : le nouveau texte de la zone */
     const long *choisies;       /* pour chaque élément : la ligne sélectionnée d'une liste, ou −1 ; NULL : aucune */
     size_t nb_choisies;
+    const unsigned char *octets;   /* changement d'une zone de fichier ou d'image : le fichier choisi (texte : son nom) */
+    size_t taille;
 } Evenement;
 
 typedef struct {

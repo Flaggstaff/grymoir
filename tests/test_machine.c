@@ -1000,7 +1000,7 @@ static void essais_ecrans(void) {
     PROG("L'écran de recherche montre :\n    un pays (texte),\n    un bouton « OK ».\n"
          "Quand on clique sur « OK » dans l'écran de recherche :\n    Fermer l'écran.\n"
          "Afficher le pays de l'écran.\n", "~« l'écran » ne se lit que dans un événement");
-    PROG("L'écran de recherche montre :\n    une photo (image).\n", "~zone de fichier ou d'image viendra plus tard");
+    PROG("L'écran de recherche montre :\n    une photo (image).\n", "");   /* une zone d'image est acceptée */
     /* La fiche montre les champs « plusieurs » (§ 16.13, § 22.3) : un bouton par élément, vers sa fiche ; vide : « aucun » */
     {
         const char *src3 =

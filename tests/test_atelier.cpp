@@ -2658,6 +2658,21 @@ int main(int argc, char **argv) {
         VERIFIER(m.hasMatch() && qAbs(m.captured(1).toInt() - 100) <= 8 && qAbs(m.captured(2).toInt() - 80) <= 8);
         if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
     }
+    {   // une zone de fichier ou d'image : un bouton « Choisir un fichier… », qui sait s'il n'accepte que des images
+        QVector<ElementVue> el(2);
+        el[0].sorte = ELEMENT_ZONE;
+        el[0].texte = "Photo";
+        el[0].type = "image";
+        el[1].sorte = ELEMENT_ZONE;
+        el[1].texte = "Contrat";
+        el[1].type = "fichier";
+        VueEcran v = dessiner_ecran("Saisie", el);
+        auto *photo = qobject_cast<QPushButton *>(v.zones.value(0)), *contrat = qobject_cast<QPushButton *>(v.zones.value(1));
+        VERIFIER(photo && photo->property("fichier").toBool() && photo->property("image").toBool());
+        VERIFIER(contrat && contrat->property("fichier").toBool() && !contrat->property("image").toBool());
+        VERIFIER(photo && photo->text() == QString::fromUtf8("Choisir un fichier…"));
+        delete v.vue;
+    }
     {   // le graphique (§ 22.11) : fabriqué par la palette, dessiné en exemple dans l'aperçu, rempli par les lignes
         QTemporaryDir dossier;
         const QString chemin = dossier.filePath("p.grym");

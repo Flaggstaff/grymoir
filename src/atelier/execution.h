@@ -77,7 +77,7 @@ public:
     void vider_sortie(Chaine *sortie);
     Issue formulaire(Chaine *sortie, Champ *champs, size_t n, size_t *arret, Validation valider, void *vcontexte);
     Issue attendre_evenement(Chaine *sortie, Evenement *e);
-    Evenement evenement = {EVENEMENT_FERMETURE, 0, 0, nullptr, nullptr, 0};   // rempli par la fenêtre avant de libérer `reponse`
+    Evenement evenement = {EVENEMENT_FERMETURE, 0, 0, nullptr, nullptr, 0, nullptr, 0};   // rempli par la fenêtre avant de libérer `reponse`
     QVector<int> nb_colonnes;                             // de chaque élément de l'écran ouvert
     QStringList types_zones;                              // de chaque élément : le type d'une zone, sinon vide
     QVector<int> facultatives;
@@ -133,6 +133,8 @@ private:
     QVector<long> lignes_choisies;         // envoyées avec chaque événement (§ 22.2)
     QByteArray texte_envoye;
     void envoyer_evenement(SorteEvenement sorte, int element, int ligne);
+    QByteArray octets_envoyes;   // le fichier choisi dans une zone de fichier, gardé jusqu'à l'événement suivant
+    bool fichier_envoye = false;
     QWidget *vue_ecran = nullptr;
     // les écrans du dessous, masqués tant qu'un écran les recouvre (§ 22.3)
     struct EcranMontre { QWidget *vue; QLabel *erreur; QVector<class QTableWidget *> tables; QVector<QPushButton *> boutons;

@@ -322,6 +322,12 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         } else if (e.sorte == ELEMENT_ZONE) {   // les contrôles des formulaires (docs/v2.md, § 10)
             QWidget *w;
             if (e.type == "vrai ou faux") w = new QCheckBox(e.texte);   // la case porte son libellé : un clic dessus la coche
+            else if (e.type == "fichier" || e.type == "image") {   // une zone de fichier ou d'image : choisir un fichier
+                auto *b = new QPushButton(QString::fromUtf8("Choisir un fichier…"));
+                b->setProperty("fichier", true);
+                b->setProperty("image", e.type == "image");
+                w = b;
+            }
             else if (en_boutons_radio(e)) {   // « (« actif », « suspendu » ou « retiré ») » : tous visibles d'un coup (§ 22.7)
                 w = new QWidget;
                 w->setProperty("radios", true);
