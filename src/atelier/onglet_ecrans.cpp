@@ -690,9 +690,19 @@ QMenu *OngletEcrans::menu_du_titre() {
     return menu;
 }
 
-QMenu *OngletEcrans::menu_des_champs(QPoint global) {
+QMenu *OngletEcrans::menu_des_champs(QPoint global, int sur) {
     auto *menu = new QMenu(this);
     if (courant < 0 || courant >= lus.size()) return menu;
+    if (sur >= 0 && sur < lus[courant].elements.size()) {   // l'élément cliqué : le supprimer, d'abord
+        const ElementLu &x = lus[courant].elements[sur];
+        const QString nom = x.texte.isEmpty() ? QString("cet élément") : QString::fromUtf8("« %1 »").arg(x.texte);
+        menu->addSection(nom);
+        QAction *s = menu->addAction(QString("Supprimer %1").arg(nom));
+        connect(s, &QAction::triggered, this, [this, sur] {
+            choisir_element(sur);
+            supprimer();   // la même suppression que le panneau : un événement qui partirait avec est montré d'abord
+        });
+    }
     const QString ecran = lus[courant].nom;
     QWidget *toile = nullptr;
     int dans = bloc_libre_sous(global, nullptr, &toile);   // le bloc libre sous le clic, sinon le bloc choisi
@@ -908,7 +918,8 @@ void OngletEcrans::liberer(int k, QRect nouveau) {
 bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
     if (ev->type() == QEvent::ContextMenu && courant >= 0) {   // le clic droit : les champs disponibles, à ajouter ici
         const bool titre = o == vue.titre || (vue.logo && o == vue.logo);   // sur le titre : le renommer
-        QMenu *m = titre ? menu_du_titre() : menu_des_champs(static_cast<QContextMenuEvent *>(ev)->globalPos());
+        QMenu *m = titre ? menu_du_titre()
+                         : menu_des_champs(static_cast<QContextMenuEvent *>(ev)->globalPos(), o == vue.vue ? -1 : element_sous(o));
         m->exec(static_cast<QContextMenuEvent *>(ev)->globalPos());
         m->deleteLater();
         return true;

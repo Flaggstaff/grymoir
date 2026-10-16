@@ -287,7 +287,7 @@ Deux défauts corrigés en chemin. Un bouton posé par « Ajouter » dans un blo
 
 ## 5 terdecies. Le clic droit : les champs disponibles *(fait le 16 octobre 2026)*
 
-Un clic droit sur l'aperçu d'un écran ouvre un menu des entités du projet, et pour chacune ses champs, écrits comme on les déclare (« un titre (texte) », « des genres (genre) »). Choisir un champ ajoute la zone qui lui correspond : même nom, même type, même genre, mêmes valeurs permises ; un lien vers une entité devient le choix d'un objet, un champ multiple des choix multiples. Dans un écran en position libre, la zone se pose là où l'on a cliqué ; ailleurs, sous ce qui est déjà là. Le même menu propose d'abord les éléments de la palette (bouton, texte, zone, interrupteur, choix multiples, fichier, liste, graphique, image, onglets, menu), posés de même là où l'on a cliqué *(0.60)*. La palette gagne « Choix multiples » (l'entité, puis le nom au pluriel) et « Fichier » (un fichier ou une image) ; palette et clic droit tirent leur liste d'une seule source.
+Un clic droit sur l'aperçu d'un écran ouvre un menu des entités du projet, et pour chacune ses champs, écrits comme on les déclare (« un titre (texte) », « des genres (genre) »). Choisir un champ ajoute la zone qui lui correspond : même nom, même type, même genre, mêmes valeurs permises ; un lien vers une entité devient le choix d'un objet, un champ multiple des choix multiples. Dans un écran en position libre, la zone se pose là où l'on a cliqué ; ailleurs, sous ce qui est déjà là. Sur un élément, le menu propose d'abord de le supprimer, comme le panneau : un événement qui partirait avec lui est montré avant, et la suppression attend un oui. Le même menu propose d'abord les éléments de la palette (bouton, texte, zone, interrupteur, choix multiples, fichier, liste, graphique, image, onglets, menu), posés de même là où l'on a cliqué *(0.60)*. La palette gagne « Choix multiples » (l'entité, puis le nom au pluriel) et « Fichier » (un fichier ou une image) ; palette et clic droit tirent leur liste d'une seule source.
 
 ## 6. Questions ouvertes
 
@@ -411,3 +411,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.65 | 2026-10-16 | Les bornes d'une zone : « Au moins » et « Au plus » dans son panneau ; la frappe d'un texte s'arrête à sa longueur |
 | 0.66 | 2026-10-16 | Le masque : la case « masqué » dans le panneau d'une zone ; la frappe cachée, la valeur jamais réécrite à l'exécution |
 | 0.67 | 2026-10-16 | Courriel, téléphone, adresse web : le clavier qui convient dans une zone |
+| 0.68 | 2026-10-16 | § 5 terdecies : le clic droit sur un élément propose d'abord de le supprimer |

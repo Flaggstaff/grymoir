@@ -2877,6 +2877,39 @@ int main(int argc, char **argv) {
         VERIFIER(ind && ind->text() == "4 chiffres, sans espace");
         VERIFIER(o.ecrans().value(0).elements.value(0).indication == "4 chiffres, sans espace");
     }
+    {   // le clic droit sur un élément propose d'abord de le supprimer ; sur le fond de l'écran, non
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    le texte « garde »,\n    le texte « part ».\n");
+        }
+        OngletEcrans o;
+        o.resize(900, 600);
+        o.show();
+        QString resultat = "pas de geste";
+        Geste g;
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        QMenu *fond = o.menu_des_champs(QPoint(0, 0), -1);
+        bool propose = false;
+        for (QAction *x : fond->actions()) propose |= x->text().startsWith("Supprimer");
+        VERIFIER(!propose);
+        delete fond;
+        QMenu *m = o.menu_des_champs(QPoint(0, 0), 1);
+        QAction *sup = nullptr;
+        for (QAction *x : m->actions()) if (x->text() == QString::fromUtf8("Supprimer « part »")) sup = x;
+        VERIFIER(sup != nullptr);
+        if (sup) sup->trigger();
+        delete m;
+        if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
+        QFile f(chemin);
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        const QString t = QString::fromUtf8(f.readAll());
+        VERIFIER(t.contains("le texte « garde »") && !t.contains("« part »"));
+    }
     {   // le clic droit : les champs des entités ; chacun devient la zone qui lui correspond, là où l'on a cliqué
         QTemporaryDir dossier;
         const QString chemin = dossier.filePath("p.grym");
