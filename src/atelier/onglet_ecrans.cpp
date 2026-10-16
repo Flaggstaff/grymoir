@@ -59,6 +59,18 @@ extern "C" {
 // dans la numérotation, font qu'un test « sorte ≥ côte à côte » ne suffit plus.
 // « Interrupteur » dans la palette : une zone (vrai ou faux) en interrupteur, pas une sorte d'élément (§ 22.6)
 static const int INTERRUPTEUR_PALETTE = 100;
+static const int CHOIX_MULTIPLES_PALETTE = 101;   // « des genres (genre) » (§ 22.1)
+static const int FICHIER_PALETTE = 102;           // une zone de fichier ou d'image (§ 22.1)
+// Ce que la palette et le clic droit proposent, dans cet ordre.
+static const std::initializer_list<int> SORTES_PALETTE = {ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, INTERRUPTEUR_PALETTE,
+                                                          CHOIX_MULTIPLES_PALETTE, FICHIER_PALETTE, ELEMENT_LISTE,
+                                                          ELEMENT_GRAPHIQUE, ELEMENT_IMAGE, ELEMENT_ONGLETS, ELEMENT_MENU};
+static QString nom_palette(int sorte) {
+    return sorte == ELEMENT_BOUTON ? "Bouton" : sorte == ELEMENT_TEXTE ? "Texte" : sorte == ELEMENT_ZONE ? "Zone"
+         : sorte == INTERRUPTEUR_PALETTE ? "Interrupteur" : sorte == CHOIX_MULTIPLES_PALETTE ? "Choix multiples"
+         : sorte == FICHIER_PALETTE ? "Fichier" : sorte == ELEMENT_LISTE ? "Liste" : sorte == ELEMENT_GRAPHIQUE ? "Graphique"
+         : sorte == ELEMENT_IMAGE ? "Image" : sorte == ELEMENT_ONGLETS ? "Onglets" : "Menu";
+}
 
 static bool est_bloc(int s) {
     return s == ELEMENT_COTE_A_COTE || s == ELEMENT_L_UN_SOUS_L_AUTRE || s == ELEMENT_GROUPE || s == ELEMENT_LIBRE
@@ -300,26 +312,9 @@ OngletEcrans::OngletEcrans(QWidget *parent) : QWidget(parent) {
     auto *pp = new QHBoxLayout(palette);
     pp->setContentsMargins(0, 0, 0, 0);
     pp->addWidget(new QLabel("Ajouter :"));
-    for (int sorte : std::initializer_list<int>{ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, INTERRUPTEUR_PALETTE, ELEMENT_LISTE, ELEMENT_GRAPHIQUE, ELEMENT_IMAGE,
-                      ELEMENT_ONGLETS, ELEMENT_MENU}) {
-        auto *b = new QPushButton(sorte == ELEMENT_BOUTON ? "Bouton" : sorte == ELEMENT_TEXTE ? "Texte"
-                                  : sorte == ELEMENT_ZONE ? "Zone" : sorte == ELEMENT_LISTE ? "Liste" : sorte == ELEMENT_IMAGE ? "Image"
-                                  : sorte == ELEMENT_GRAPHIQUE ? "Graphique" : sorte == ELEMENT_MENU ? "Menu"
-                                  : sorte == INTERRUPTEUR_PALETTE ? "Interrupteur" : "Onglets");
-        if (sorte == ELEMENT_MENU)   // un menu en tête de l'écran, avec un élément et son événement (§ 22.12)
-            connect(b, &QPushButton::clicked, this, [this] {
-                if (courant < 0 || courant >= lus.size()) return;
-                const QString ecran = lus[courant].nom;
-                emit geste([=](Geste *g) { return ecran_ajouter_menu(dossier, ecran, g); });
-            });
-        else if (sorte == ELEMENT_ONGLETS)   // deux onglets à renommer, un texte dans chacun (§ 22.10)
-            connect(b, &QPushButton::clicked, this, [this] {
-                if (courant < 0 || courant >= lus.size()) return;
-                const QString ecran = lus[courant].nom;
-                emit geste([=](Geste *g) { return ecran_ajouter_onglets(dossier, ecran, g); });
-            });
-        else
-            connect(b, &QPushButton::clicked, this, [this, sorte] { ajouter(sorte); });
+    for (int sorte : SORTES_PALETTE) {   // la même liste que le clic droit
+        auto *b = new QPushButton(nom_palette(sorte));
+        connect(b, &QPushButton::clicked, this, [this, sorte] { ajouter(sorte); });
         pp->addWidget(b);
     }
     pp->addStretch(1);
@@ -672,6 +667,15 @@ QMenu *OngletEcrans::menu_des_champs(QPoint global) {
         ou = QPoint(aimanter(qMax(0, l.x())), aimanter(qMax(0, l.y())));
     } else
         dans = cible_ajout();
+    menu->addSection("Ajouter un élément");   // la palette, posée ici
+    for (int sorte : SORTES_PALETTE) {
+        QAction *a = menu->addAction(nom_palette(sorte));
+        connect(a, &QAction::triggered, this, [this, sorte, dans, ou] {
+            dans_clic = dans;
+            ou_clic = ou;
+            ajouter(sorte);
+        });
+    }
     menu->addSection("Ajouter un champ");
     const auto schema = lire_schema(dossier);
     if (schema.isEmpty()) menu->addAction("Aucune entité dans le projet")->setEnabled(false);
@@ -1566,17 +1570,58 @@ void OngletEcrans::supprimer() {
 void OngletEcrans::ajouter(int sorte) {
     if (courant < 0 || courant >= lus.size()) return;
     const QString ecran = lus[courant].nom;
-    const int dans = cible_ajout();   // la page ouverte, le groupe choisi… (§ 5 decies)
+    // le bloc et la place d'un clic droit (§ 5 terdecies) ; sinon la page ouverte, le groupe choisi… (§ 5 decies)
+    const int dans = dans_clic >= -1 ? dans_clic : cible_ajout();
+    const QPoint ou = dans_clic >= -1 ? ou_clic : QPoint(-1, -1);
+    dans_clic = -2;
+    if (sorte == ELEMENT_MENU) {   // un menu en tête de l'écran, avec un élément et son événement (§ 22.12)
+        emit geste([=](Geste *g) { return ecran_ajouter_menu(dossier, ecran, g); });
+        return;
+    }
+    if (sorte == ELEMENT_ONGLETS) {   // deux onglets à renommer, un texte dans chacun (§ 22.10)
+        emit geste([=](Geste *g) { return ecran_ajouter_onglets(dossier, ecran, g); });
+        return;
+    }
     ElementNouveau n;
     n.sorte = sorte;
     bool ok = false;
+    if (sorte == CHOIX_MULTIPLES_PALETTE) {   // « des genres (genre) » : l'entité, puis le nom au pluriel (§ 22.1)
+        QStringList entites;
+        const auto schema = lire_schema(dossier);
+        for (const auto &en : schema) entites << en.nom;
+        if (entites.isEmpty()) { etat->setText("Des choix multiples se font parmi les objets d'une entité : déclare-en une d'abord."); return; }
+        const QString en = QInputDialog::getItem(this, "Choix multiples", "Parmi les objets de l'entité :", entites, 0, false, &ok);
+        if (!ok) return;
+        QString pluriel = en + "s";
+        for (const auto &x : schema) if (x.nom == en && !x.pluriel.isEmpty()) pluriel = x.pluriel;
+        n.sorte = ELEMENT_ZONE;
+        n.type = en;
+        n.multiple = true;
+        n.texte = QInputDialog::getText(this, "Choix multiples", "Nom, au pluriel :", QLineEdit::Normal, pluriel, &ok);
+        if (!ok || n.texte.trimmed().isEmpty()) return;
+        emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
+        return;
+    }
+    if (sorte == FICHIER_PALETTE) {   // une zone de fichier ou d'image (§ 22.1)
+        const QStringList sortes = {"Un fichier (un contrat, un document…)", "Une image (une photo…)"};
+        const QString quoi = QInputDialog::getItem(this, "Nouvelle zone de fichier", "On y choisit :", sortes, 0, false, &ok);
+        if (!ok) return;
+        n.sorte = ELEMENT_ZONE;
+        n.type = quoi == sortes[1] ? "image" : "fichier";
+        n.feminin = n.type == "image";
+        n.texte = QInputDialog::getText(this, "Nouvelle zone de fichier", "Nom (« contrat », « photo ») :", QLineEdit::Normal,
+                                        n.type == "image" ? "photo" : "contrat", &ok);
+        if (!ok || n.texte.trimmed().isEmpty()) return;
+        emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
+        return;
+    }
     if (sorte == INTERRUPTEUR_PALETTE) {   // une zone (vrai ou faux), montrée en interrupteur (§ 22.6)
         n.sorte = ELEMENT_ZONE;
         n.type = "vrai ou faux";
         n.interrupteur = true;
         n.texte = QInputDialog::getText(this, "Nouvel interrupteur", "Nom (« actif », « payée ») :", QLineEdit::Normal, "", &ok);
         if (!ok || n.texte.trimmed().isEmpty()) return;
-        emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans); });
+        emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
         return;
     }
     if (sorte == ELEMENT_IMAGE) {   // un fichier du projet, ou une valeur (§ 22.8)
@@ -1587,7 +1632,7 @@ void OngletEcrans::ajouter(int sorte) {
             n.source = QInputDialog::getText(this, "Nouvelle image", "Image de (« le portrait du compositeur choisi de l'écran ») :",
                                              QLineEdit::Normal, "", &ok);
             if (!ok) return;
-            emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans); });
+            emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
             return;
         }
     }
@@ -1632,7 +1677,7 @@ void OngletEcrans::ajouter(int sorte) {
         n.texte = QInputDialog::getItem(this, "Nouvelle liste", "Entité :", entites, 0, false, &ok);
     }
     if (!ok) return;
-    emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans); });
+    emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
 }
 
 QString OngletEcrans::proprietes() const { return panneau->toPlainText(); }

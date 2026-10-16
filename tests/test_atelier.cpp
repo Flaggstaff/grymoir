@@ -2795,6 +2795,26 @@ int main(int argc, char **argv) {
             if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
             delete m;
         };
+        {   // la palette et le clic droit proposent les mêmes éléments, dans le même ordre, les plus récents compris
+            const QStringList attendus = {"Bouton", "Texte", "Zone", "Interrupteur", "Choix multiples", "Fichier", "Liste",
+                                          "Graphique", "Image", "Onglets", "Menu"};
+            QStringList palette;
+            for (QPushButton *b : o.findChildren<QPushButton *>()) if (attendus.contains(b->text())) palette << b->text();
+            VERIFIER(palette == attendus);
+            o.montrer(dossier.path());
+            QApplication::processEvents();
+            QMenu *mc = o.menu_des_champs(o.controle(0)->mapToGlobal(QPoint(10, 10)));
+            QStringList proposes;
+            QAction *onglets = nullptr;
+            for (QAction *x : mc->actions()) {
+                if (attendus.contains(x->text())) proposes << x->text();
+                if (x->text() == "Onglets") onglets = x;
+            }
+            VERIFIER(proposes == attendus);
+            if (onglets) onglets->trigger();   // sans boîte de dialogue : l'ajout se fait d'un coup
+            VERIFIER(lire().contains("les onglets"));
+            delete mc;
+        }
         choisir(QString::fromUtf8("œuvre"), "un titre (texte)");
         QRegularExpressionMatch m = QRegularExpression("        un titre \\(texte\\), à (\\d+) de la gauche et (\\d+) du haut").match(lire());
         VERIFIER(m.hasMatch() && qAbs(m.captured(1).toInt() - 200) <= 8 && qAbs(m.captured(2).toInt() - 96) <= 8);
