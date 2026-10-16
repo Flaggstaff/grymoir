@@ -11,6 +11,9 @@
 struct FichierProjet {
     QString dossier;                  // racine du projet
     QString programme_principal;      // relatif au dossier (« partotheque.grym »), ou vide
+    // L'identité de l'application fabriquée (docs/atelier.md, § 8) : vides, le nom du dossier, la version 1.0, sans
+    // éditeur. Clés à virgule (« application, version »), qu'aucun nom d'entité ne peut prendre.
+    QString nom_application, version, editeur;
     QMap<QString, QPointF> positions; // entité → position de sa boîte dans le schéma
 
     static QString chemin(const QString &dossier) { return dossier + "/projet.grymatelier"; }

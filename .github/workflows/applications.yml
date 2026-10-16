@@ -50,6 +50,10 @@ jobs:
         shell: msys2 {0}
     steps:
       - uses: actions/checkout@v4
+      # Inno Setup ne fait plus partie des images Windows de GitHub : on l'installe, pour l'installateur des applications.
+      - name: Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64

@@ -1,5 +1,7 @@
 // GrymoiR : l'atelier fabrique une application autonome (voir fabrication.h).
 #include "fabrication.h"
+#include "projet.h"
+#include <QDataStream>
 
 #include <QBuffer>
 #include <QCoreApplication>
@@ -57,9 +59,55 @@ bool preparer_programme(const QString &projet, const QString &principal, const Q
     if (!copier(projet, vers, erreur)) return false;
     QFile f(QDir(vers).filePath("application.txt"));
     if (!f.open(QIODevice::WriteOnly)) { *erreur = "application.txt ne peut pas être écrit."; return false; }
-    f.write(QString("Remarque : une application fabriquée par l'atelier de GrymoiR.\nnom : %1\nprogramme : %2\n")
-                .arg(nom, principal).toUtf8());
+    const Identite id = identite_du_projet(projet);
+    f.write(QString("Remarque : une application fabriquée par l'atelier de GrymoiR.\nnom : %1\nprogramme : %2\nversion : %3\n")
+                .arg(nom, principal, id.version).toUtf8());
+    if (!id.editeur.isEmpty()) f.write(QString::fromUtf8("éditeur : %1\n").arg(id.editeur).toUtf8());
     return true;
+}
+
+Identite identite_du_projet(const QString &projet) {
+    FichierProjet f;
+    f.lire(projet);
+    Identite id;
+    id.nom = f.nom_application.isEmpty() ? QFileInfo(projet).fileName() : f.nom_application;
+    id.version = f.version.isEmpty() ? QString("1.0") : f.version;
+    id.editeur = f.editeur;
+    // l'identifiant : le nom en minuscules, sans accents, les autres signes en tirets (« amis-du-tilleul »)
+    const QString d = id.nom.normalized(QString::NormalizationForm_D).toLower();
+    for (const QChar c : d) {
+        if (c.category() == QChar::Mark_NonSpacing) continue;
+        if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) id.ident += c;
+        else if (!id.ident.endsWith('-')) id.ident += '-';
+    }
+    while (id.ident.startsWith('-')) id.ident.remove(0, 1);
+    while (id.ident.endsWith('-')) id.ident.chop(1);
+    if (id.ident.isEmpty()) id.ident = "application";
+    return id;
+}
+
+QString identite_refusee(const QString &nom, const QString &version) {
+    if (nom.trimmed().isEmpty()) return "Donne un nom à l'application.";
+    if (nom.contains('/') || nom.contains('\\') || nom.contains(':')) return "Le nom de l'application ne contient ni / ni \\ ni :.";
+    if (!QRegularExpression("^[0-9]+(\\.[0-9]+){0,3}$").match(version.trimmed()).hasMatch())
+        return QString::fromUtf8("La version s'écrit en chiffres et points : « 1.0 », « 2.3.1 ».");
+    return QString();
+}
+
+bool ecrire_ico(const QImage &image, const QString &chemin) {
+    QByteArray png;
+    QBuffer b(&png);
+    b.open(QIODevice::WriteOnly);
+    if (!image.scaled(256, 256, Qt::KeepAspectRatio, Qt::SmoothTransformation).save(&b, "PNG")) return false;
+    QFile f(chemin);
+    if (!f.open(QIODevice::WriteOnly)) return false;
+    QDataStream s(&f);
+    s.setByteOrder(QDataStream::LittleEndian);
+    // ICONDIR : réservé, type 1 (icône), une image ; ICONDIRENTRY : 0 vaut 256 ; puis l'image en PNG
+    s << quint16(0) << quint16(1) << quint16(1);
+    s << quint8(0) << quint8(0) << quint8(0) << quint8(0) << quint16(1) << quint16(32) << quint32(png.size()) << quint32(6 + 16);
+    s.writeRawData(png.constData(), (int)png.size());
+    return f.error() == QFile::NoError;
 }
 
 QImage icone_du_projet(const QString &projet) {
@@ -118,7 +166,8 @@ static bool outil(const QString &programme, const QStringList &arguments, QStrin
 
 QString fabriquer_application(const QString &projet, const QString &principal, const QString &destination,
                               QString *erreur, QString *remarque) {
-    const QString nom = QFileInfo(projet).fileName();
+    const Identite id = identite_du_projet(projet);   // le nom affiché, la version, l'éditeur (projet.grymatelier)
+    const QString nom = id.nom;
     QTemporaryDir travail;
     if (!travail.isValid()) { *erreur = "Dossier de travail impossible à créer."; return QString(); }
 #ifdef Q_OS_MACOS
@@ -138,10 +187,11 @@ QString fabriquer_application(const QString &projet, const QString &principal, c
         return QString();
     }
     const QString plist = app + "/Contents/Info.plist";
-    QString ident = nom.toLower();
-    ident.replace(QRegularExpression("[^a-z0-9]+"), "-");
+    const QString droits = id.editeur.isEmpty() ? QString() : QString::fromUtf8("© %1").arg(id.editeur);
     for (const auto &[cle, valeur] : {std::pair<QString, QString>{"CFBundleName", nom}, {"CFBundleDisplayName", nom},
-                                      {"CFBundleIdentifier", "ch.grymoir.application." + ident}})
+                                      {"CFBundleIdentifier", "ch.grymoir.application." + id.ident},
+                                      {"CFBundleShortVersionString", id.version}, {"CFBundleVersion", id.version},
+                                      {"NSHumanReadableCopyright", droits}})
         if (!outil("plutil", {"-replace", cle, "-string", valeur, plist}, erreur)) return QString();
     if (!QFileInfo(app + "/Contents/Frameworks").isDir())
         *remarque = "L'atelier n'a pas été installé depuis GrymoiR.dmg : l'application dépend du Qt de ce Mac, "

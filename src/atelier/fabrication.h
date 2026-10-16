@@ -15,6 +15,16 @@ QString programme_d_application(QString *nom, QString *principal);
 
 // Recopie les fichiers du projet (sans données .grymd, bytecode .grymb, fichier d'atelier ni fichiers cachés)
 // dans `vers`, et y écrit application.txt. Faux, avec *erreur, si une copie échoue.
+// L'identité d'une application : son nom affiché (le dossier du projet par défaut), sa version (1.0 par défaut), son
+// éditeur (vide par défaut), et l'identifiant tiré du nom (« amis-du-tilleul »), lus dans projet.grymatelier.
+struct Identite { QString nom, version, editeur, ident; };
+Identite identite_du_projet(const QString &projet);
+// Ce qui ne va pas dans une identité saisie, ou vide : un nom, une version en chiffres et points (« 1.0 », « 2.3.1 »),
+// ce que le Mac exige (CFBundleVersion).
+QString identite_refusee(const QString &nom, const QString &version);
+// L'icône pour Windows : un fichier .ico qui embarque l'image en PNG, 256 pixels (Windows Vista et après).
+bool ecrire_ico(const QImage &image, const QString &chemin);
+
 bool preparer_programme(const QString &projet, const QString &principal, const QString &nom, const QString &vers,
                         QString *erreur);
 

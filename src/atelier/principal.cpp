@@ -69,8 +69,24 @@ static int sans_fenetre(int argc, char **argv) {
             return 1;
         }
         QString erreur;
-        if (!preparer_programme(f.dossier, f.programme_principal, QFileInfo(f.dossier).fileName(), args.at(3), &erreur)) {
+        if (!preparer_programme(f.dossier, f.programme_principal, identite_du_projet(f.dossier).nom, args.at(3), &erreur)) {
             std::fprintf(stderr, "%s\n", qPrintable(erreur));
+            return 1;
+        }
+        return 0;
+    }
+    // grym-atelier --identite projet : « nom=…, version=…, editeur=…, ident=… », une par ligne, pour les scripts
+    // (l'installateur Windows : outils/fabriquer-ci, docs/atelier.md, § 8).
+    if (args.at(1) == "--identite") {
+        const Identite id = identite_du_projet(QFileInfo(args.at(2)).absoluteFilePath());
+        std::printf("nom=%s\nversion=%s\nediteur=%s\nident=%s\n", id.nom.toUtf8().constData(), id.version.toUtf8().constData(),
+                    id.editeur.toUtf8().constData(), id.ident.toUtf8().constData());
+        return 0;
+    }
+    // grym-atelier --icone-ico projet fichier.ico : l'icône de l'application pour Windows, tirée du logo du projet.
+    if (args.at(1) == "--icone-ico") {
+        if (!ecrire_ico(icone_du_projet(QFileInfo(args.at(2)).absoluteFilePath()), args.at(3))) {
+            std::fprintf(stderr, "L'icône ne peut pas être écrite : %s\n", qPrintable(args.at(3)));
             return 1;
         }
         return 0;
@@ -79,7 +95,9 @@ static int sans_fenetre(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
-    if (argc == 4 && (std::strcmp(argv[1], "--fabriquer") == 0 || std::strcmp(argv[1], "--preparer") == 0))
+    if ((argc == 4 && (std::strcmp(argv[1], "--fabriquer") == 0 || std::strcmp(argv[1], "--preparer") == 0
+                       || std::strcmp(argv[1], "--icone-ico") == 0))
+        || (argc == 3 && std::strcmp(argv[1], "--identite") == 0))
         return sans_fenetre(argc, argv);
     QApplication app(argc, argv);
     QApplication::setOrganizationName("GrymoiR");

@@ -17,6 +17,10 @@
 #include <QCoreApplication>
 #include <QFile>
 #include <QFileDialog>
+#include <QPushButton>
+#include <QFormLayout>
+#include <QDialogButtonBox>
+#include <QDialog>
 #include <QFileInfo>
 #include <QDirIterator>
 #include <QFileSystemModel>
@@ -425,6 +429,7 @@ Fenetre::Fenetre() {
         const QString a_lancer = programme_a_lancer();   // le même programme que « Lancer »
         if (a_lancer.isEmpty()) { QMessageBox::information(this, "Atelier", "Choisis d'abord le programme principal."); return; }
         const QString principal = QDir(projet).relativeFilePath(a_lancer);
+        if (!demander_identite()) return;   // nom affiché, version, éditeur : gardés dans projet.grymatelier
         const QString bureau = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
         const QString destination = QFileDialog::getExistingDirectory(this, "Où ranger l'application ?", bureau);
         if (destination.isEmpty()) return;
@@ -686,6 +691,36 @@ QString Fenetre::programme_a_lancer() {
 }
 
 // Les programmes du projet ; un seul est retenu sans question, plusieurs font demander, une fois.
+// L'identité de l'application, avant de la fabriquer (docs/atelier.md, § 8) : le nom que verra le client, la version,
+// l'éditeur ; préremplie, gardée dans projet.grymatelier pour la fois suivante et pour la fabrication par GitHub.
+bool Fenetre::demander_identite() {
+    const Identite id = identite_du_projet(projet);
+    QDialog d(this);
+    d.setWindowTitle("Fabriquer l'application");
+    auto *f = new QFormLayout(&d);
+    auto *nom = new QLineEdit(id.nom), *version = new QLineEdit(id.version), *editeur = new QLineEdit(id.editeur);
+    editeur->setPlaceholderText("ton nom, ou celui de ton entreprise (facultatif)");
+    f->addRow("Nom de l'application", nom);
+    f->addRow("Version", version);
+    f->addRow(QString::fromUtf8("Éditeur"), editeur);
+    auto *boutons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    boutons->button(QDialogButtonBox::Ok)->setText("Continuer");
+    connect(boutons, &QDialogButtonBox::accepted, &d, &QDialog::accept);
+    connect(boutons, &QDialogButtonBox::rejected, &d, &QDialog::reject);
+    f->addRow(boutons);
+    for (;;) {
+        if (d.exec() != QDialog::Accepted) return false;
+        const QString erreur = identite_refusee(nom->text(), version->text());
+        if (erreur.isEmpty()) break;
+        QMessageBox::warning(this, "Fabriquer l'application", erreur);
+    }
+    projet_fichier.nom_application = nom->text().trimmed() == QFileInfo(projet).fileName() ? QString() : nom->text().trimmed();
+    projet_fichier.version = version->text().trimmed();
+    projet_fichier.editeur = editeur->text().trimmed();
+    if (!projet_fichier.ecrire()) statusBar()->showMessage("projet.grymatelier n'a pas pu être écrit.", 5000);
+    return true;
+}
+
 void Fenetre::choisir_principal() {
     if (projet.isEmpty()) return;
     QStringList programmes;

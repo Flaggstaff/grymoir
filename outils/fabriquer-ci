@@ -78,8 +78,27 @@ MINGW*|MSYS*)
     paquet="$sortie/$nom-windows.zip"
     [ ! -e "$paquet" ] || { echo "« $paquet » existe déjà : il n'est jamais écrasé." >&2; exit 1; }
     (cd "$travail" && zip -qr "$paquet" "$nom")
-    rm -rf "$travail"
     echo "$paquet"
+    # L'installateur pour le client final (Inno Setup) : l'identité du projet (nom affiché, version, éditeur), son
+    # icône tirée du logo ; le dossier est renommé au nom affiché, qui devient celui de l'exécutable.
+    iscc="${ISCC:-$(ls /c/Program\ Files*/Inno\ Setup*/ISCC.exe 2>/dev/null | head -n 1 || true)}"
+    if [ -n "$iscc" ] && [ -x "$iscc" ]; then
+        identite="$("$dossier/$nom.exe" --identite "$projet" | tr -d '\r')"
+        champ() { printf '%s\n' "$identite" | sed -n "s/^$1=//p"; }
+        affiche="$(champ nom)"
+        if [ "$affiche" != "$nom" ]; then mv "$dossier/$nom.exe" "$dossier/$affiche.exe"; fi
+        "$dossier/$affiche.exe" --icone-ico "$projet" "$travail/icone.ico"
+        installateur="$sortie/$affiche-installation.exe"
+        [ ! -e "$installateur" ] || { echo "« $installateur » existe déjà : il n'est jamais écrasé." >&2; exit 1; }
+        MSYS2_ARG_CONV_EXCL='*' "$iscc" /Qp "/DNom=$affiche" "/DVersion=$(champ version)" "/DEditeur=$(champ editeur)" \
+            "/DIdent=$(champ ident)" "/DIcone=$(cygpath -w "$travail/icone.ico")" "/DSource=$(cygpath -w "$dossier")" \
+            "/DSortie=$(cygpath -w "$sortie")" "$(cygpath -w "$depot/outils/windows/application.iss")"
+        [ -f "$installateur" ] || { echo "Inno Setup n'a pas produit l'installateur." >&2; exit 1; }
+        echo "$installateur"
+    else
+        echo "Inno Setup introuvable : seul le .zip est fabriqué (choco install innosetup, ou ISCC=…/ISCC.exe)." >&2
+    fi
+    rm -rf "$travail"
     ;;
 *)
     echo "Système non pris en charge : $(uname -s)" >&2

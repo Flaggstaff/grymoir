@@ -329,6 +329,56 @@ int main(int argc, char **argv) {
         while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
     }
 
+    // L'identité d'une application (docs/atelier.md, § 8) : gardée dans le projet, ses valeurs par défaut, son
+    // identifiant ; l'icône Windows ; application.txt la porte
+    {
+        QTemporaryDir dossier;
+        const QString projet = dossier.filePath(QString::fromUtf8("Élodie & Cie"));
+        VERIFIER(QDir().mkpath(projet));
+        {
+            QFile f(projet + "/a.grym");
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Afficher 1.\n");
+        }
+        Identite id = identite_du_projet(projet);   // rien de dit : le dossier, 1.0, sans éditeur
+        VERIFIER(id.nom == QString::fromUtf8("Élodie & Cie") && id.version == "1.0" && id.editeur.isEmpty() && id.ident == "elodie-cie");
+        FichierProjet fp;
+        fp.lire(projet);
+        fp.programme_principal = "a.grym";
+        fp.nom_application = QString::fromUtf8("Cotisations Élodie");
+        fp.version = "2.3.1";
+        fp.editeur = QString::fromUtf8("Alain Thiémard");
+        VERIFIER(fp.ecrire());
+        FichierProjet relu;
+        relu.lire(projet);
+        VERIFIER(relu.nom_application == QString::fromUtf8("Cotisations Élodie") && relu.version == "2.3.1"
+                 && relu.editeur == QString::fromUtf8("Alain Thiémard") && relu.programme_principal == "a.grym");
+        id = identite_du_projet(projet);
+        VERIFIER(id.nom == QString::fromUtf8("Cotisations Élodie") && id.ident == "cotisations-elodie");
+        VERIFIER(identite_refusee("A", "1.0").isEmpty() && identite_refusee("A", "2.3.1").isEmpty());
+        VERIFIER(!identite_refusee("", "1.0").isEmpty() && !identite_refusee("A", "v1").isEmpty()
+                 && !identite_refusee("A/B", "1.0").isEmpty() && !identite_refusee("A", "1.0.0.0.0").isEmpty());
+        // l'icône Windows : un en-tête ICO, puis une image PNG de 256 pixels
+        const QString ico = dossier.filePath("i.ico");
+        VERIFIER(ecrire_ico(icone_du_projet(projet), ico));
+        QFile fi(ico);
+        VERIFIER(fi.open(QIODevice::ReadOnly));
+        const QByteArray b = fi.readAll();
+        VERIFIER(b.size() > 22 && b[0] == 0 && b[1] == 0 && b[2] == 1 && b[3] == 0 && b[4] == 1);
+        QImage png;
+        VERIFIER(png.loadFromData(b.mid(22), "PNG") && png.width() == 256);
+        // application.txt : le nom, le programme, la version, l'éditeur
+        QString erreur;
+        const QString vers = dossier.filePath("Programme");
+        VERIFIER(preparer_programme(projet, "a.grym", id.nom, vers, &erreur));
+        QFile at(vers + "/application.txt");
+        VERIFIER(at.open(QIODevice::ReadOnly));
+        const QString t = QString::fromUtf8(at.readAll());
+        VERIFIER(t.contains(QString::fromUtf8("nom : Cotisations Élodie")) && t.contains("version : 2.3.1")
+                 && t.contains(QString::fromUtf8("éditeur : Alain Thiémard")));
+        VERIFIER(!QFileInfo::exists(vers + "/projet.grymatelier"));   // la disposition de l'atelier reste dans le projet
+    }
+
     // Le résumé des erreurs (§ 22.6), dans l'exécution : deux zones obligatoires vides, chacune son message sous son libellé
     {
         QTemporaryDir dossier;

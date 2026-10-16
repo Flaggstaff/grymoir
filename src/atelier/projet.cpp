@@ -10,6 +10,9 @@
 void FichierProjet::lire(const QString &d) {
     dossier = d;
     programme_principal.clear();
+    nom_application.clear();
+    version.clear();
+    editeur.clear();
     positions.clear();
     QFile f(chemin(d));
     if (!f.open(QIODevice::ReadOnly)) return;
@@ -24,6 +27,9 @@ void FichierProjet::lire(const QString &d) {
             programme_principal = valeur;
             continue;
         }
+        if (cle == "application, nom") { nom_application = valeur; continue; }
+        if (cle == "application, version") { version = valeur; continue; }
+        if (cle == QString::fromUtf8("application, éditeur")) { editeur = valeur; continue; }
         const QStringList xy = valeur.split(',');
         bool ok1 = false, ok2 = false;
         if (xy.size() == 2) {
@@ -36,6 +42,9 @@ void FichierProjet::lire(const QString &d) {
 QString FichierProjet::texte() const {
     QString t = "Remarque : disposition de l'atelier ; sans effet sur le programme.\n";
     if (!programme_principal.isEmpty()) t += "programme principal : " + programme_principal + "\n";
+    if (!nom_application.isEmpty()) t += "application, nom : " + nom_application + "\n";
+    if (!version.isEmpty()) t += "application, version : " + version + "\n";
+    if (!editeur.isEmpty()) t += QString::fromUtf8("application, éditeur : ") + editeur + "\n";
     for (auto i = positions.constBegin(); i != positions.constEnd(); ++i)   // QMap : trié par nom
         t += QString("%1 : %2, %3\n").arg(i.key()).arg(qRound(i.value().x())).arg(qRound(i.value().y()));
     return t;

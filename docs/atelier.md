@@ -330,6 +330,14 @@ Programme > Fabriquer l'application… fait du projet une application autonome, 
 - Jamais d'écrasement : un paquet du même nom arrête la fabrication.
 - Limites : pas de signature Apple ni de notarisation (avertissement de macOS sur un autre Mac) ; pas d'icône propre sous Windows ; `Enregistrer … dans` écrit à côté du programme, dans l'application, qui n'est pas modifiable : à éviter dans une application fabriquée.
 
+**E1, l'installation chez le client (faite le 16 octobre 2026).**
+
+- *L'identité* : « Fabriquer l'application… » demande d'abord le nom que verra le client, la version (chiffres et points : `1.0`, `2.3.1`, ce que le Mac exige) et l'éditeur (facultatif). Préremplis, ils se gardent dans `projet.grymatelier` (`application, nom`, `application, version`, `application, éditeur` : des clés à virgule, qu'aucun nom d'entité ne peut prendre) et servent aussi à la fabrication par GitHub. L'identifiant vient du nom, sans accents (« Cotisations Élodie » : `cotisations-elodie`).
+- *Mac* : le `.dmg` porte le nom affiché, la version (`CFBundleShortVersionString`, `CFBundleVersion`) et l'éditeur (`NSHumanReadableCopyright`).
+- *Windows* : en plus du `.zip`, `Nom-installation.exe` (Inno Setup, `outils/windows/application.iss`) : sans droits d'administrateur, dans `%LOCALAPPDATA%\Programs\Nom`, avec son raccourci du menu Démarrer (et du bureau sur demande), son icône tirée du logo du projet (`--icone-ico`, un `.ico` qui embarque un PNG de 256 pixels), sa désinstallation. Une nouvelle version remplace l'ancienne (même identifiant), et la désinstallation ne touche jamais aux données du client.
+- Commandes sans fenêtre pour les scripts : `--identite projet`, `--icone-ico projet fichier.ico`.
+- Non vérifié ici : l'installateur Windows et le `.dmg`, que seuls GitHub et un Mac peuvent fabriquer. La signature viendra avec E2 (comptes Apple et Windows, à décider).
+
 **Voie C, les trois systèmes par GitHub (commencée le 28 septembre 2026).** Les projets vivent pour l'instant dans le dépôt de GrymoiR, dossier `projets/` (un dépôt par projet viendra plus tard). Le flux `.github/workflows/applications.yml` lance `outils/fabriquer-ci` sur macOS, Linux et Windows, pour chaque projet, et publie les paquets (Actions > applications > Artifacts) :
 
 - macOS : `./paquet-mac`, puis `--fabriquer` depuis l'atelier ainsi installé : `Nom.dmg` ;
@@ -415,3 +423,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.69 | 2026-10-16 | L'unité : à côté du champ dans l'aperçu et à l'exécution ; « Unité » et « l'unité devant le champ » dans le panneau |
 | 0.70 | 2026-10-16 | À l'exécution, chaque zone en faute porte son message sous son libellé, jusqu'au geste suivant |
 | 0.71 | 2026-10-16 | Les étiquettes : la cellule d'une valeur colorée prend ses couleurs dans les listes à l'exécution |
+| 0.72 | 2026-10-16 | § 8, E1 : l'identité de l'application (nom, version, éditeur) ; l'installateur Windows des applications ; `--identite`, `--icone-ico` |
