@@ -414,3 +414,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.68 | 2026-10-16 | § 5 terdecies : le clic droit sur un élément propose d'abord de le supprimer |
 | 0.69 | 2026-10-16 | L'unité : à côté du champ dans l'aperçu et à l'exécution ; « Unité » et « l'unité devant le champ » dans le panneau |
 | 0.70 | 2026-10-16 | À l'exécution, chaque zone en faute porte son message sous son libellé, jusqu'au geste suivant |
+| 0.71 | 2026-10-16 | Les étiquettes : la cellule d'une valeur colorée prend ses couleurs dans les listes à l'exécution |

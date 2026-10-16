@@ -515,6 +515,15 @@ static char *feuille_de_style(const Serveur *s) {
     ".choix-multiples{display:flex;flex-wrap:wrap;gap:4px 16px}"   /* des choix multiples (§ 22.1) */
     ".zone .indication{margin:0 0 4px;font-size:.9em;opacity:.75}"   /* l'indication sous le libellé (§ 22.6) */
     ".avec-unite{display:inline-flex;align-items:center;gap:6px}.avec-unite .unite{opacity:.8}"   /* l'unité (§ 22.6) */
+    /* les zones en faute (§ 22.6) : le résumé en haut, le message sous la zone */
+    ".resume-erreurs{border-left:4px solid #b3261e;padding:4px 12px;margin:0 0 12px}.resume-erreurs ul{margin:4px 0;padding-left:18px}"
+    ".zone .erreur-zone{color:#b3261e;margin:0 0 4px;font-weight:600}.zone.en-faute input,.zone.en-faute select{border-color:#b3261e}"
+    /* les étiquettes (§ 16.15) : un fond pâle, un texte foncé ; chaque paire dépasse 6,5:1 de contraste (WCAG 2.1 AA : 4,5:1) */
+    ".etiquette{display:inline-block;padding:0 8px;border-radius:9px;font-size:.9em;font-weight:600}"
+    ".etiquette-b{background:#dbe8f7;color:#1d4f8c}.etiquette-v{background:#d7f0dd;color:#1e5b2e}"
+    ".etiquette-t{background:#d3efec;color:#0f5b55}.etiquette-p{background:#e9def5;color:#5b2a86}"
+    ".etiquette-g{background:#e6e6e6;color:#3d3d3d}.etiquette-r{background:#f9dcda;color:#8c1d18}"
+    ".etiquette-o{background:#fde6cc;color:#7a3d00}"
     ".entete h1.titre-petit{font-size:1.1em}.entete h1.titre-grand{font-size:2.2em}"   /* la taille du titre (§ 22.5) */
     ".interrupteur input{appearance:none;width:36px;height:20px;border-radius:10px;background:var(--bordure,#999);position:relative;"
     "cursor:pointer;vertical-align:middle;margin:0 8px 0 0}.interrupteur input::before{content:\"\";position:absolute;top:2px;left:2px;"
@@ -1065,6 +1074,17 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
 /* Une liste : un tableau. Comme dans l'atelier, sélectionner une ligne et la choisir sont deux gestes : le bouton
  * radio la sélectionne (« le … choisi de l'écran », envoyé avec chaque événement), la première cellule la choisit
  * (« Quand on choisit … »). */
+/* Une cellule de liste : « ␝v payée » est une étiquette verte (§ 16.15) ; le reste, un texte. */
+static void cellule(Chaine *c, const char *t) {
+    if (t[0] == '\x1d' && t[1]) {
+        char o[48];
+        snprintf(o, sizeof o, "<span class=\"etiquette etiquette-%c\">", t[1]);
+        chaine_ajouter(c, o);
+        echapper(c, t + 2);
+        chaine_ajouter(c, "</span>");
+    } else echapper(c, t);
+}
+
 static void liste(Chaine *c, const EcranWeb *e, size_t k) {
     const ElementEcran *el = &e->el[k];
     const size_t nc = el->nb_colonnes;
@@ -1091,11 +1111,11 @@ static void liste(Chaine *c, const EcranWeb *e, size_t k) {
                                         (unsigned long)k, (unsigned long)r);
                 chaine_ajouter(c, v);
                 free(v);
-                if (*t) echapper(c, t);
+                if (*t) cellule(c, t);
                 else chaine_ajouter(c, "(choisir)");   /* une première cellule vide doit rester cliquable */
                 chaine_ajouter(c, "</button>");
             } else {
-                echapper(c, t);
+                cellule(c, t);
             }
             chaine_ajouter(c, "</td>");
         }

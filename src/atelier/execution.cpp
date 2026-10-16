@@ -7,6 +7,7 @@
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QComboBox>
+#include <QHash>
 #include <QCompleter>
 #include <QFile>
 #include <QFileDialog>
@@ -490,7 +491,23 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         t->setRowCount(nb_lignes);
         for (int r = 0; r < nb_lignes; r++)
             for (int c = 0; c < nc && r * nc + c < cellules.size(); c++) {
-                auto *i = new QTableWidgetItem(cellules[r * nc + c]);
+                const QString x = cellules[r * nc + c];
+                auto *i = new QTableWidgetItem(x);
+                if (x.size() > 1 && x[0] == QChar(0x1d)) {   // une étiquette (§ 16.15) : les couleurs du navigateur
+                    static const QHash<QChar, QPair<QString, QString>> teintes = {
+                        {'b', {"#dbe8f7", "#1d4f8c"}}, {'v', {"#d7f0dd", "#1e5b2e"}}, {'t', {"#d3efec", "#0f5b55"}},
+                        {'p', {"#e9def5", "#5b2a86"}}, {'g', {"#e6e6e6", "#3d3d3d"}}, {'r', {"#f9dcda", "#8c1d18"}},
+                        {'o', {"#fde6cc", "#7a3d00"}}};
+                    const auto p = teintes.value(x[1]);
+                    i->setText(x.mid(2));
+                    if (!p.first.isEmpty()) {
+                        i->setBackground(QColor(p.first));
+                        i->setForeground(QColor(p.second));
+                        QFont f = i->font();
+                        f.setBold(true);
+                        i->setFont(f);
+                    }
+                }
                 i->setData(Qt::UserRole, r);   // le rang dans la liste de la machine, quel que soit le tri à l'écran
                 t->setItem(r, c, i);
             }

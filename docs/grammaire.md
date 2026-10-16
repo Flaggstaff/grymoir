@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.1 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.2 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1544,6 +1544,7 @@ En cas d'échec :
 - `Essayer` s'emploie partout, calculs compris : rattraper une erreur ne rend pas un calcul impur. `essayer` ne commence pas le nom d'une action.
 - Limite connue : un `Essayer` répété dans une longue boucle sans question garde au journal une entrée par tour et par nom modifié, jusqu'à la fin de l'exécution.
 - En forme compacte : `_essayer` … `_échec` … `_fin`, et `_motif`.
+- Une couleur d'étiquette par valeur *(2.2)* : `un état (« payée » en vert, « en retard » en rouge ou « annulée »)`. Couleurs : bleu, vert, turquoise, violet, gris, rouge, orange ; une valeur peut n'en avoir aucune. Dans une liste d'écran, la valeur colorée s'affiche en étiquette, un fond pâle et un texte foncé ; chaque paire dépasse 6,5:1 de contraste (le WCAG 2.1 demande 4,5:1 pour du texte normal). La couleur n'est qu'un affichage : la valeur reste le texte. Forme compacte : `« payée » _vert`.
 
 ### 18.1 Refuser *(implémenté le 27 septembre 2026)*
 
@@ -2018,3 +2019,4 @@ Un contact, conservé, a :
 | 1.99 | 2026-10-16 | Nouveau § 22.13 : les types `(courriel)`, `(téléphone)`, `(adresse web)`, des textes à la forme vérifiée, pour les champs comme pour les zones |
 | 2.0 | 2026-10-16 | § 22.6 : `, avec l'unité « … » [devant]`, affichée près du champ, ôtée si on la tape |
 | 2.1 | 2026-10-16 | § 22.6 : les zones en faute signalées toutes à la fois, un résumé en haut, un message sous chaque zone |
+| 2.2 | 2026-10-16 | § 16.15 : une couleur d'étiquette par valeur permise, `« payée » en vert`, montrée en étiquette dans les listes |

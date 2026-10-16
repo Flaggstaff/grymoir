@@ -1300,8 +1300,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         }
         if (valeurs) {
             emettre(r, J_PAR_OUV, NULL, &r->e[valeurs], 1);
+            static const char *const COULEURS[] = {"bleu", "vert", "turquoise", "violet", "gris", "rouge", "orange"};
             for (size_t v = valeurs + 1; v < fin_valeurs; v++) {
-                if (r->e[v].type == J_POINT_VIRGULE) emettre(r, J_VIRGULE, NULL, &r->e[v], 1);
+                int couleur = -1;   /* « « payée » _vert » → « « payée » en vert » (§ 16.15) */
+                for (int c = 0; c < 7 && couleur < 0; c++) if (est_cle(&r->e[v], COULEURS[c])) couleur = c;
+                if (couleur >= 0) { mot(r, "en", &r->e[v]); mot(r, COULEURS[couleur], &r->e[v]); }
+                else if (r->e[v].type == J_POINT_VIRGULE) emettre(r, J_VIRGULE, NULL, &r->e[v], 1);
                 else copier(r, &r->e[v]);
             }
             emettre(r, J_PAR_FERM, NULL, &r->e[fin_valeurs], 1);

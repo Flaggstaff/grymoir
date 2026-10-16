@@ -481,7 +481,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 56  /* versions 1 à 55 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 57  /* versions 1 à 56 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
@@ -490,7 +490,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                               sans essai (19), sans formulaire (20),
                               sans assemblage de textes (21), sans modification par formulaire (22),
                               sans fiche (23), sans fichier source des blocs (24), sans apparence des écrans (26), sans refus (27), sans règles (28),
-                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34), sans export (35), sans tableau lu (36), sans « comme » (37), sans ensembles (38), sans exemples (39), sans écart ni hasard (40), sans heure (41), sans règles ciblées (42), sans état des éléments d'écran (43), sans groupes ni valeurs permises dans les écrans (44), sans images d'écran (45), sans position libre (46), sans image calculée (47), sans bloc placé (48), sans onglets (49), sans graphiques (50), sans menus (51), sans taille de titre (52), sans indication (53), sans unité (54), sans ÉCRAN_EXIGER (55) */
+                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34), sans export (35), sans tableau lu (36), sans « comme » (37), sans ensembles (38), sans exemples (39), sans écart ni hasard (40), sans heure (41), sans règles ciblées (42), sans état des éléments d'écran (43), sans groupes ni valeurs permises dans les écrans (44), sans images d'écran (45), sans position libre (46), sans image calculée (47), sans bloc placé (48), sans onglets (49), sans graphiques (50), sans menus (51), sans taille de titre (52), sans indication (53), sans unité (54), sans ÉCRAN_EXIGER (55), sans étiquettes (56) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 

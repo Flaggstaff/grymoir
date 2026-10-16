@@ -941,6 +941,11 @@ static void type_de_champ(Impression *im, const Noeud *ch) {
             if (k) aj(im, im->compact ? " ; " : k + 1 == nb ? " ou " : ", ");
             ecrire_texte(im, v);
             free(v);
+            if (ch->couleurs && k < strlen(ch->couleurs) && ch->couleurs[k] != '-') {   /* « « payée » en vert » ; « _vert » */
+                static const char *const NOMS[] = {"bleu", "vert", "turquoise", "violet", "gris", "rouge", "orange"};
+                const char *l = strchr("bvtpgro", ch->couleurs[k]);
+                if (l) { aj(im, im->compact ? " _" : " en "); aj(im, NOMS[l - "bvtpgro"]); }
+            }
             if (!q) break;
             p = q + 1;
         }

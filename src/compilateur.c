@@ -953,7 +953,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
             else {
                 classe_ajouter_champ(cm, ch->texte);
                 if (ch->texte3 && ch->forme != 3 && ch->texte2) {   /* valeurs permises : « texte␞à faire␞fini » (§ 16.15) */
-                    char *t = grym_formater("%s\x1e%s", ch->texte2, ch->texte3);
+                    /* « texte␞payée␞en retard␝vr » : les couleurs des étiquettes, une lettre par valeur (§ 16.15) */
+                    char *t = grym_formater("%s\x1e%s%s%s", ch->texte2, ch->texte3, ch->couleurs ? "\x1d" : "", ch->couleurs ? ch->couleurs : "");
                     classe_typer_dernier_champ(cm, t, ch->op == 'U');
                     free(t);
                 } else classe_typer_dernier_champ(cm, ch->texte2, ch->op == 'U');

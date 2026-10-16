@@ -285,6 +285,50 @@ int main(int argc, char **argv) {
         VERIFIER(guide.table()->topLevelItemCount() >= 3);
     }
 
+    // Les étiquettes (§ 16.15), dans l'exécution : la cellule d'une valeur colorée prend ses couleurs, sans le marqueur
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Une cotisation, conservée, a :\n    un membre (texte),\n    un état (« payée » en vert, « en retard » en rouge ou « annulée »).\n"
+                          "Le a vaut une nouvelle cotisation :\n    Le membre vaut « Anne ».\n    L'état vaut « payée ».\nConserver a.\n"
+                          "Le b vaut une nouvelle cotisation :\n    Le membre vaut « Bruno ».\n    L'état vaut « en retard ».\nConserver b.\n"
+                          "Le c vaut une nouvelle cotisation :\n    Le membre vaut « Cléa ».\n    L'état vaut « annulée ».\nConserver c.\n"
+                          "L'écran x montre :\n    la liste des cotisations conservées, avec le membre et l'état,\n    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto table = [&]() -> QTableWidget * {
+            for (QTableWidget *x : e.findChildren<QTableWidget *>()) if (x->isVisible() && x->rowCount() == 3) return x;
+            return nullptr;
+        };
+        VERIFIER(attendre([&] { return table() != nullptr; }));
+        if (QTableWidget *t = table()) {
+            QTableWidgetItem *payee = nullptr, *annulee = nullptr;
+            for (int r = 0; r < 3; r++) {
+                if (t->item(r, 1) && t->item(r, 1)->text() == QString::fromUtf8("payée")) payee = t->item(r, 1);
+                if (t->item(r, 1) && t->item(r, 1)->text() == QString::fromUtf8("annulée")) annulee = t->item(r, 1);
+            }
+            VERIFIER(payee && payee->background().color() == QColor("#d7f0dd") && payee->foreground().color() == QColor("#1e5b2e"));
+            VERIFIER(annulee && annulee->background().style() == Qt::NoBrush);   // sans couleur : une cellule ordinaire
+        }
+        for (QPushButton *b : e.findChildren<QPushButton *>())   // l'application se ferme : la machine finit d'elle-même
+            if (b->text() == "Fermer" && b->isVisible() && b->isEnabled()) { b->click(); break; }
+        QElapsedTimer z;   // le temps que la machine finisse ; l'écran, lui, reste affiché
+        z.start();
+        while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+    }
+
     // Le résumé des erreurs (§ 22.6), dans l'exécution : deux zones obligatoires vides, chacune son message sous son libellé
     {
         QTemporaryDir dossier;

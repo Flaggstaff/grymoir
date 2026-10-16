@@ -760,6 +760,26 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Les étiquettes (§ 16.15) : une valeur permise colorée devient une étiquette dans une liste ; sans couleur, un texte.
+         * La feuille porte leurs règles, et celles du résumé des erreurs (oubliées une fois) */
+        const char *src = "Une cotisation, conservée, a :\n    un membre (texte),\n    un état (« payée » en vert, « en retard » en rouge ou « annulée »).\n"
+                          "Le a vaut une nouvelle cotisation :\n    Le membre vaut « Anne ».\n    L'état vaut « payée ».\nConserver a.\n"
+                          "Le b vaut une nouvelle cotisation :\n    Le membre vaut « Bruno ».\n    L'état vaut « en retard ».\nConserver b.\n"
+                          "Le c vaut une nouvelle cotisation :\n    Le membre vaut « Cléa ».\n    L'état vaut « annulée ».\nConserver c.\n"
+                          "L'écran x montre :\n    la liste des cotisations conservées, avec le membre et l'état,\n    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), get("/style.css"), evenement("q=1&clic=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<td><span class=\"etiquette etiquette-v\">payée</span></td>");
+        CONTIENT(sc.reponses[0], "<td><span class=\"etiquette etiquette-r\">en retard</span></td>");
+        CONTIENT(sc.reponses[0], "<td>annulée</td>");
+        CONTIENT(sc.reponses[1], ".etiquette-v{background:#d7f0dd;color:#1e5b2e}");
+        CONTIENT(sc.reponses[1], ".resume-erreurs{border-left:4px solid #b3261e;");
+        CONTIENT(sc.reponses[1], ".zone .erreur-zone{color:#b3261e;");
+        liberer(&sc);
+    }
+
     {   /* Le résumé des erreurs (§ 22.6) : un événement qui lit deux zones obligatoires vides les signale toutes deux d'un
          * coup, en haut et sous chacune ; « Fermer », qui n'en lit aucune, n'est pas bloqué */
         const char *src = "L'écran x montre :\n    un nom (texte),\n    une ville (texte),\n    une note (texte), facultative,\n"

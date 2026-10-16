@@ -300,6 +300,10 @@ int main(void) {
     FIXE("Un contact, conservé, a :\n    un courriel (courriel), unique,\n    un portable (téléphone),\n    un site (adresse web).\n"
          "L'écran x montre :\n    un courriel (courriel),\n    un site (adresse web).");
     COMP("L'écran x montre :\n    un site (adresse web),\n    le texte « t ».", "_écran x\n    _un site (adresse_web)\n    _texte « t »\n_fin\n");
+    /* les étiquettes (§ 16.15) : une couleur par valeur permise, certaines sans ; les deux formes */
+    FIXE("Une cotisation, conservée, a :\n    un état (« payée » en vert, « en retard » en rouge, « en attente » ou « annulée » en gris).");
+    COMP("Une cotisation, conservée, a :\n    un état (« payée » en vert ou « annulée »).",
+         "_classe _une cotisation _conservé\n    _un état (« payée » _vert ; « annulée »)\n_fin\n");
     /* l'unité (§ 22.6) : derrière par défaut, devant sur demande ; les deux formes */
     FIXE("L'écran x montre :\n    une remise (nombre), de 0 à 100, avec l'unité « % »,\n    un montant (nombre), avec l'unité « CHF » devant.");
     COMP("L'écran x montre :\n    un montant (nombre), avec l'unité « CHF » devant,\n    le texte « t ».",

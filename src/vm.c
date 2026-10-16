@@ -449,8 +449,10 @@ void machine_detruire(Machine *m) {
             free(m->classes[i]->types[k]);
             free(m->classes[i]->departs[k]);
             free(m->classes[i]->valeurs[k]);
+            if (m->classes[i]->couleurs) free(m->classes[i]->couleurs[k]);   /* une classe d'écran n'en a pas */
         }
         free(m->classes[i]->valeurs);
+        free(m->classes[i]->couleurs);
         free(m->classes[i]->departs);
         free(m->classes[i]->types);
         free(m->classes[i]->uniques);
@@ -2778,6 +2780,25 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
                 t = grym_dupliquer("");
             else if (x->champs[q].type == V_OBJET) t = nom_objet(m, x->champs[q].objet);
             else t = texte_valeur(m, &x->champs[q]);
+            if (!graphe && x && q >= 0 && x->classe->couleurs && x->classe->couleurs[q] && x->classe->valeurs[q] && *t) {
+                /* une valeur permise colorée : « ␝v payée », une étiquette verte dans l'interface (§ 16.15) */
+                size_t rang = 0;
+                for (const char *p = x->classe->valeurs[q]; p;) {
+                    const char *f = strchr(p, '\x1e');
+                    const size_t l = f ? (size_t)(f - p) : strlen(p);
+                    if (l == strlen(t) && strncmp(p, t, l) == 0) {
+                        const char lettre = rang < strlen(x->classe->couleurs[q]) ? x->classe->couleurs[q][rang] : '-';
+                        if (lettre != '-') {
+                            char *e2 = grym_formater("\x1d%c%s", lettre, t);
+                            free(t);
+                            t = e2;
+                        }
+                        break;
+                    }
+                    rang++;
+                    p = f ? f + 1 : NULL;
+                }
+            }
             cellules[faites++] = t;
         }
     }
@@ -3026,10 +3047,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         char **departs = grym_allouer((total ? total : 1) * sizeof *departs);
         char **valeurs = grym_allouer((total ? total : 1) * sizeof *valeurs);
         char **types_libres = grym_allouer((total ? total : 1) * sizeof *types_libres);   /* « texte », découpé */
+        char **valeurs_libres = grym_allouer((total ? total : 1) * sizeof *valeurs_libres);
+        char **couleurs = grym_allouer((total ? total : 1) * sizeof *couleurs);   /* leurs étiquettes (§ 16.15) */
         unsigned char *uniques = grym_allouer(total ? total : 1);
         size_t n = 0;
-        for (size_t q = 0; q < total; q++) { valeurs[q] = NULL; types_libres[q] = NULL; }
+        for (size_t q = 0; q < total; q++) { valeurs[q] = NULL; types_libres[q] = NULL; valeurs_libres[q] = NULL; couleurs[q] = NULL; }
         for (size_t q = 0; parent && q < parent->nb_champs; q++) {
+            couleurs[n] = parent->couleurs ? parent->couleurs[q] : NULL;
             valeurs[n] = parent->valeurs[q];
             types[n] = parent->types[q];
             departs[n] = parent->departs[q];
@@ -3040,6 +3064,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             for (size_t r = 0; r < aptitudes[q]->nb_champs; r++) {
                 types[n] = aptitudes[q]->types[r];
                 valeurs[n] = aptitudes[q]->valeurs[r];
+                couleurs[n] = aptitudes[q]->couleurs ? aptitudes[q]->couleurs[r] : NULL;
                 departs[n] = aptitudes[q]->departs[r];
                 uniques[n] = aptitudes[q]->uniques[r] & 2;   /* une aptitude n'a pas de champ unique */
                 champs[n++] = aptitudes[q]->champs[r];
@@ -3049,7 +3074,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (types[n] && strchr(types[n], '\x1e')) {   /* « texte␞à faire␞fini » : valeurs permises (§ 16.15) */
                 const char *s = strchr(types[n], '\x1e');
                 types_libres[n] = grym_formater("%.*s", (int)(s - types[n]), types[n]);
-                valeurs[n] = (char *)(s + 1);
+                const char *c2 = strchr(s + 1, '\x1d');   /* « ␝vr » : les couleurs, une lettre par valeur */
+                valeurs_libres[n] = grym_formater("%.*s", (int)(c2 ? c2 - s - 1 : (long)strlen(s + 1)), s + 1);
+                valeurs[n] = valeurs_libres[n];
+                couleurs[n] = c2 ? (char *)(c2 + 1) : NULL;
                 types[n] = types_libres[n];
                 if (strcmp(types[n], "texte") != 0 || !s[1])
                     probleme = grym_formater("« %s » : des valeurs permises sur un champ %s.", cm->champs[q], types[n]);
@@ -3078,8 +3106,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             diag->message = grym_formater("Bytecode invalide : %s", probleme);
             free(probleme);
             free(champs);
-            for (size_t q = 0; q < total; q++) free(types_libres[q]);
+            for (size_t q = 0; q < total; q++) { free(types_libres[q]); free(valeurs_libres[q]); }
             free(types_libres);
+            free(valeurs_libres);
+            free(couleurs);
             free(valeurs);
             free(types);
             free(departs);
@@ -3101,16 +3131,20 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         c->types = grym_allouer((n ? n : 1) * sizeof *c->types);
         c->departs = grym_allouer((n ? n : 1) * sizeof *c->departs);
         c->valeurs = grym_allouer((n ? n : 1) * sizeof *c->valeurs);
+        c->couleurs = grym_allouer((n ? n : 1) * sizeof *c->couleurs);
         c->uniques = uniques;
         for (size_t q = 0; q < n; q++) {
             c->champs[q] = grym_dupliquer(champs[q]);
             c->types[q] = types[q] ? grym_dupliquer(types[q]) : NULL;
             c->departs[q] = departs[q] ? grym_dupliquer(departs[q]) : NULL;
             c->valeurs[q] = valeurs[q] ? grym_dupliquer(valeurs[q]) : NULL;
+            c->couleurs[q] = couleurs[q] ? grym_dupliquer(couleurs[q]) : NULL;
         }
         free(champs);
-        for (size_t q = 0; q < total; q++) free(types_libres[q]);
+        for (size_t q = 0; q < total; q++) { free(types_libres[q]); free(valeurs_libres[q]); }
         free(types_libres);
+        free(valeurs_libres);
+        free(couleurs);
         free(valeurs);
         free(types);
         free(departs);

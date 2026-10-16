@@ -236,3 +236,4 @@ Un bloc `en position libre :` (grammaire, § 22.9) devient une grille d'une seul
 | 0.20 | 2026-10-16 | Courriel, téléphone, adresse web : `inputmode` et `autocomplete`, `type=tel` ; jamais `type=email` ni `type=url`, qui bloqueraient l'envoi de tout l'écran |
 | 0.21 | 2026-10-16 | L'unité : de part ou d'autre du champ, cachée aux lecteurs d'écran, qui l'entendent dans le nom du champ (« Montant, CHF ») |
 | 0.22 | 2026-10-16 | Les zones en faute : un résumé en haut, chaque faute un lien vers sa zone ; sous la zone, son message, que le champ désigne (`aria-describedby`) et qui le dit invalide (`aria-invalid`) |
+| 0.23 | 2026-10-16 | Les étiquettes dans les listes ; les règles de style du résumé des erreurs, qui manquaient au patch précédent |

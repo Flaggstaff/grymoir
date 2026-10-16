@@ -480,6 +480,7 @@ typedef struct {
     int duree_permise;       /* « par pas de 1 mois » : une durée peut suivre la valeur lue (§ 14.2) */
     int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
     char *valeurs_lues;      /* « (« à faire », « fini »)» : la liste lue par lire_type, séparée par U+001E (§ 16.15) */
+    char *couleurs_lues;     /* « « payée » en vert » : une lettre par valeur (b v t p g r o, - sans), ou NULL */
     const char *arrets[3];   /* mots qui peuvent suivre un nom dans le contexte courant (« à », « fois »…) */
     int nb_arrets;
     char **noms_fin;         /* noms visibles au dernier passage à la fin de la source (§ 8) */
@@ -4557,18 +4558,23 @@ static char *lire_type(Analyse *a, const char *soi) {
     avancer(a);
     free(a->valeurs_lues);
     a->valeurs_lues = NULL;
+    free(a->couleurs_lues);
+    a->couleurs_lues = NULL;
     if (cour(a)->type == J_TEXTE) {
         /* valeurs permises (§ 16.15) : « (« à faire », « en cours » ou « fini ») » ; un champ texte, fermé */
-        Chaine c = {0};
+        Chaine c = {0}, couleurs = {0};
         size_t nb = 0;
+        int colore = 0;
         for (;;) {
             Jeton *v = cour(a);
             if (v->type != J_TEXTE) {
+                free(chaine_rendre(&couleurs));
                 free(chaine_rendre(&c));
                 erreur(a, v, grym_dupliquer("Valeur attendue : « (« à faire », « en cours » ou « fini ») »."));
                 return NULL;
             }
             if (!v->valeur || !*v->valeur) {
+                free(chaine_rendre(&couleurs));
                 free(chaine_rendre(&c));
                 erreur(a, v, grym_dupliquer("Une valeur permise n'est pas vide."));
                 return NULL;
@@ -4579,11 +4585,21 @@ static char *lire_type(Analyse *a, const char *soi) {
                 if (strlen(v->valeur) == l && strncmp(p, v->valeur, l) == 0)
                     erreur(a, v, grym_formater("« %s » est déjà dans la liste.", v->valeur));
             }
-            if (a->echec) { free(chaine_rendre(&c)); return NULL; }
+            if (a->echec) { free(chaine_rendre(&c)); free(chaine_rendre(&couleurs)); return NULL; }
             if (nb) chaine_ajouter(&c, "\x1e");
             chaine_ajouter(&c, v->valeur);
             nb++;
             avancer(a);
+            {   /* « « payée » en vert » : la couleur de son étiquette (§ 16.15) */
+                static const char *const NOMS[] = {"bleu", "vert", "turquoise", "violet", "gris", "rouge", "orange"};
+                static const char LETTRES[] = "bvtpgro";
+                char l = '-';
+                if (est_mot(cour(a), "en"))
+                    for (int q = 0; q < 7; q++)
+                        if (est_mot(voir(a, 1), NOMS[q])) { l = LETTRES[q]; avancer(a); avancer(a); colore = 1; break; }
+                char lc[2] = {l, 0};
+                chaine_ajouter(&couleurs, lc);
+            }
             if (cour(a)->type == J_VIRGULE || (cour(a)->type == J_POINT_VIRGULE && cour(a)->synthetique)) { avancer(a); continue; }
             if (est_mot(cour(a), "ou")) {
                 avancer(a);
@@ -4592,6 +4608,7 @@ static char *lire_type(Analyse *a, const char *soi) {
             break;
         }
         if (nb < 2 || cour(a)->type != J_PAR_FERM) {
+            free(chaine_rendre(&couleurs));
             free(chaine_rendre(&c));
             erreur(a, cour(a), grym_dupliquer(nb < 2 ? "Au moins deux valeurs permises : « (« oui », « non ») »."
                                                      : "Valeurs permises : « (« à faire », « en cours » ou « fini ») »."));
@@ -4599,6 +4616,8 @@ static char *lire_type(Analyse *a, const char *soi) {
         }
         avancer(a);
         a->valeurs_lues = chaine_rendre(&c);
+        free(a->couleurs_lues);
+        a->couleurs_lues = colore ? chaine_rendre(&couleurs) : (free(chaine_rendre(&couleurs)), NULL);
         return grym_dupliquer("texte");
     }
     size_t d = a->i, k = d;
@@ -4773,6 +4792,7 @@ static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const
             c->texte2 = lire_type(a, soi);
             if (!c->texte2) return 0;
             if (a->valeurs_lues) { c->texte3 = a->valeurs_lues; a->valeurs_lues = NULL; }   /* valeurs permises (§ 16.15) */
+            if (a->couleurs_lues) { c->couleurs = a->couleurs_lues; a->couleurs_lues = NULL; }   /* leurs couleurs */
         } else if (mode == 1) {
             erreur(a, cour(a), grym_formater("Type attendu entre parenthèses : « un %s (texte) ».", champ));
             return 0;
@@ -7643,6 +7663,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.diag = diag;
     a.echec = 0;
     a.valeurs_lues = NULL;
+    a.couleurs_lues = NULL;
     a.att_pos = 0;
     a.att = 0;
     a.att_mots = NULL;
@@ -7714,6 +7735,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
         free(a.att_mots);
     }
     free(a.valeurs_lues);
+    free(a.couleurs_lues);
     liberer_noms_fin(&a);
     free(a.a_completer);
     liberer_jetons(j, n);
