@@ -6,7 +6,7 @@ CPPFLAGS += -Ivendor/sqlite
 # dans les mêmes conditions que grym.exe, noms accentués compris (« données.grym »).
 LEXEUR    = src/lexeur.c src/date.c src/texte.c $(RESSOURCES)
 ANALYSEUR = src/chemins.c src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c $(LEXEUR)
-EXECUTION = src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c $(ANALYSEUR) $(SQLITE_O)
+EXECUTION = src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c $(ANALYSEUR) $(SQLITE_O)
 # SQLite embarqué (vendor/sqlite, voir PROVENANCE.md) : compilé une fois, sans les avertissements
 # de GrymoiR (ce code n'est pas le nôtre), avec les réglages de la charte.
 SQLITE_FLAGS = -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DQS=0 \

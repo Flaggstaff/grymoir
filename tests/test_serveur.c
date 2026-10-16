@@ -760,6 +760,28 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* La fiche d'un membre (§ 16.1) : le mot de passe s'y montre « •••••• », jamais son empreinte */
+        const char *src = "Un membre, conservé, a :\n    un nom (texte),\n    un code (mot de passe).\n"
+                          "Le m vaut un nouveau membre :\n    Le nom vaut « Anne ».\n    Le code vaut « s3cret ».\nAfficher la fiche de m.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "••••••");
+        NE_CONTIENT_PAS(sc.reponses[0], "pbkdf2");
+        NE_CONTIENT_PAS(sc.reponses[0], "s3cret");
+        liberer(&sc);
+    }
+
+    {   /* Une zone (mot de passe) : masquée d'elle-même (§ 16.1) */
+        const char *src = "L'écran x montre :\n    un code (mot de passe),\n    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0=a&clic=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<input type=\"password\" id=\"z0\"");
+        liberer(&sc);
+    }
+
     {   /* Les étiquettes (§ 16.15) : une valeur permise colorée devient une étiquette dans une liste ; sans couleur, un texte.
          * La feuille porte leurs règles, et celles du résumé des erreurs (oubliées une fois) */
         const char *src = "Une cotisation, conservée, a :\n    un membre (texte),\n    un état (« payée » en vert, « en retard » en rouge ou « annulée »).\n"

@@ -300,6 +300,10 @@ int main(void) {
     FIXE("Un contact, conservé, a :\n    un courriel (courriel), unique,\n    un portable (téléphone),\n    un site (adresse web).\n"
          "L'écran x montre :\n    un courriel (courriel),\n    un site (adresse web).");
     COMP("L'écran x montre :\n    un site (adresse web),\n    le texte « t ».", "_écran x\n    _un site (adresse_web)\n    _texte « t »\n_fin\n");
+    /* les mots de passe (§ 16.1) : le type, « correspond au », les deux formes */
+    FIXE("Un membre, conservé, a :\n    un nom (texte), unique,\n    un code (mot de passe).\n"
+         "Pour chaque membre conservé :\n    Si « x » correspond au code du membre, afficher « ok ».");
+    COMP("Le c vaut « x ».\nSi « x » correspond à c, afficher 1.", "_le c << « x »\n_si « x » _correspond c _alors\n    _afficher 1\n_fin\n");
     /* les étiquettes (§ 16.15) : une couleur par valeur permise, certaines sans ; les deux formes */
     FIXE("Une cotisation, conservée, a :\n    un état (« payée » en vert, « en retard » en rouge, « en attente » ou « annulée » en gris).");
     COMP("Une cotisation, conservée, a :\n    un état (« payée » en vert ou « annulée »).",

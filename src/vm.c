@@ -9,6 +9,7 @@
 #include "date.h"
 #include "decimal.h"
 #include "types.h"
+#include "empreinte.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -1909,7 +1910,8 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
                 break;
             }
         }
-        ci.actuel = modifier && o->definis[k] ? valeur_montree(m, &o->champs[k], ci.cle) : NULL;
+        /* un mot de passe ne se propose pas en valeur actuelle : vide, il est gardé ; tapé, il est remplacé (§ 16.1) */
+        ci.actuel = modifier && o->definis[k] && !type_secret(o->classe->types[k]) ? valeur_montree(m, &o->champs[k], ci.cle) : NULL;
         ci.a_depart = !modifier && cl->departs[k] != NULL;
         if (ci.a_depart) {
             valeur_liberer(&ci.depart);
@@ -2036,6 +2038,8 @@ static char *afficher_fiche(Machine *m, Objet *o, Chaine *sortie) {
             textes[k] = grym_dupliquer("absent");
         } else if (o->champs[k].type == V_OBJET) {
             textes[k] = nom_objet(m, o->champs[k].objet);
+        } else if (type_secret(o->classe->types[k])) {
+            textes[k] = grym_dupliquer("••••••");   /* un mot de passe ne se montre pas (§ 16.1) */
         } else {
             textes[k] = texte_valeur(m, &o->champs[k]);
             char *illisible = NULL;
@@ -2253,7 +2257,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].interrupteur = s2 && memchr(s2 + 1, 'i', nopt) != NULL;   /* § 22.6 */
             e->elements[k].multiple = s2 && memchr(s2 + 1, 'p', nopt) != NULL;   /* « des genres (genre) » */
             e->elements[k].recherche = s2 && memchr(s2 + 1, 'r', nopt) != NULL;   /* « avec recherche » */
-            e->elements[k].masque = s2 && memchr(s2 + 1, 'c', nopt) != NULL;   /* « masqué » */
+            e->elements[k].masque = (s2 && memchr(s2 + 1, 'c', nopt) != NULL) || type_secret(e->types[k]);   /* « masqué », ou un mot de passe */
             e->elements[k].choix = NULL;
             e->elements[k].nb_choix = 0;
             const ClasseVM *lie = classe_vm(m, e->types[k]);
@@ -2779,6 +2783,7 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
             if (!x || q < 0 || (size_t)q >= x->classe->nb_champs || !x->definis[q] || x->champs[q].type == V_ABSENT)
                 t = grym_dupliquer("");
             else if (x->champs[q].type == V_OBJET) t = nom_objet(m, x->champs[q].objet);
+            else if (type_secret(x->classe->types[q])) t = grym_dupliquer("••••••");   /* § 16.1 */
             else t = texte_valeur(m, &x->champs[q]);
             if (!graphe && x && q >= 0 && x->classe->couleurs && x->classe->couleurs[q] && x->classe->valeurs[q] && *t) {
                 /* une valeur permise colorée : « ␝v payée », une étiquette verte dans l'interface (§ 16.15) */
@@ -4277,6 +4282,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
+        case I_CORRESPOND: {   /* « … correspond au code du membre » : le clair contre l'empreinte (§ 16.1) */
+            Valeur e = depiler(&pile), x = depiler(&pile);
+            const int vrai = e.type == V_TEXTE && x.type == V_TEXTE && empreinte_verifier(x.texte, e.texte);
+            valeur_liberer(&e);
+            valeur_liberer(&x);
+            empiler(&pile, valeur_booleen(vrai));
+            break;
+        }
         case I_CONTIENT: {   /* « le nom contient « mül » » (§ 4.5) */
             static const char *const VERBES[] = { "contient", "commence par", "finit par" };
             Valeur vp = depiler(&pile), vt = depiler(&pile);
@@ -4997,12 +5010,27 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     ok = echouer(diag, b, debut, grym_formater("Le champ « %s » n'a pas de valeur.", champ));
                     break;
                 }
+                if (type_secret(o->classe->types[k]) && strncmp(o->classe->nom, "écran ", strlen("écran ")) != 0
+                    && !(ip < b->taille_code && b->code[ip] == I_CORRESPOND)) {
+                    /* un mot de passe ne se lit pas, sauf pour être vérifié (§ 16.1) ; la zone d'un écran, elle, se lit */
+                    ok = echouer(diag, b, debut, grym_formater(
+                        "« %s » est un mot de passe : il ne se lit pas, il se vérifie (« Si … correspond au %s … »).", champ, champ));
+                    break;
+                }
                 if (o->id) base_noter_lecture(m->base, o->classe);   /* une règle qui s'évalue retient ce qu'elle lit */
                 Valeur v = valeur_copier(&o->champs[k]);
                 valeur_liberer(vo);
                 *vo = v;
             } else {
                 Valeur v = depiler(&pile);
+                if (v.type == V_TEXTE && type_secret(o->classe->types[k]) && strncmp(o->classe->nom, "écran ", strlen("écran ")) != 0) {
+                    /* un mot de passe se range en empreinte, jamais en clair (§ 16.1) ; la zone d'un écran garde le sien */
+                    char *e = empreinte_creer(v.texte);
+                    valeur_liberer(&v);
+                    if (!e) { ok = echouer(diag, b, debut, grym_dupliquer("La source aléatoire du système fait défaut : le mot de passe n'est pas rangé.")); break; }
+                    v = vi_texte(e);
+                    free(e);
+                }
                 if (v.type == V_NOMBRE && o->classe->types[k] && strcmp(o->classe->types[k], "année") == 0) {
                     long a = 1;   /* un nombre entier rangé dans un champ (année) devient une année (§ 14.5) */
                     dec_en_long_borne(&v.nombre, 1, 9999, &a);

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.2 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.3 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1911,6 +1911,26 @@ Un contact, conservé, a :
 - Dans une zone, l'interface propose le clavier qui convient.
 - Forme compacte : `(courriel)`, `(téléphone)`, `(adresse_web)`.
 
+### 22.14 Mots de passe *(implémenté le 16 octobre 2026)*
+
+`(mot de passe)` est un type, pour un champ d'entité comme pour une zone d'écran.
+
+```
+Un membre, conservé, a :
+    un nom (texte), unique,
+    un code (mot de passe).
+
+Quand on clique sur « Entrer » dans l'écran de connexion :
+    Pour chaque membre conservé dont le nom est le nom de l'écran :
+        Si le code de l'écran correspond au code du membre, ouvrir l'écran d'accueil.
+```
+
+- **Il s'écrit comme un texte** (`Le code de m vaut le code de l'écran.`) et se range en **empreinte**, jamais en clair : PBKDF2-HMAC-SHA256, 600 000 itérations, un sel aléatoire de 16 octets, selon la recommandation de l'OWASP (*Password Storage Cheat Sheet*), qui place Argon2id en tête et admet PBKDF2. L'empreinte s'écrit `pbkdf2-sha256$600000$sel$clé`, l'algorithme en tête, pour en changer un jour sans perdre les anciennes. Une empreinte prend environ 0,7 seconde : c'est voulu, c'est ce qui ralentit un attaquant.
+- **Il ne se lit pas** : « « code » est un mot de passe : il ne se lit pas, il se vérifie ». La fiche et les listes le montrent « •••••• » ; la saisie d'une fiche ne le propose pas en valeur actuelle.
+- **Il se vérifie** : `x correspond au code du membre` (`à`, `au`, `à la`), vrai si le texte x est le mot de passe. La comparaison prend le même temps que les clés se ressemblent ou non.
+- **Une zone `(mot de passe)`** est masquée d'elle-même ; elle garde son texte en mémoire le temps de l'événement, et ne le range nulle part : c'est en l'affectant à un champ d'entité qu'il devient une empreinte.
+- Forme compacte : `x _correspond membre.code`.
+
 ---
 
 ## Journal des révisions
@@ -2020,3 +2040,4 @@ Un contact, conservé, a :
 | 2.0 | 2026-10-16 | § 22.6 : `, avec l'unité « … » [devant]`, affichée près du champ, ôtée si on la tape |
 | 2.1 | 2026-10-16 | § 22.6 : les zones en faute signalées toutes à la fois, un résumé en haut, un message sous chaque zone |
 | 2.2 | 2026-10-16 | § 16.15 : une couleur d'étiquette par valeur permise, `« payée » en vert`, montrée en étiquette dans les listes |
+| 2.3 | 2026-10-16 | Nouveau § 22.14 : le type `(mot de passe)`, rangé en empreinte (PBKDF2-HMAC-SHA256), illisible, vérifié par `correspond à` |

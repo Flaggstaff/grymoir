@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.74 de la spécification, révisée le 14 octobre 2026.
+Version 1.75 de la spécification, révisée le 14 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -289,7 +289,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 57
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 58
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -441,3 +441,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.72 | 2026-10-16 | Écrans : l'unité d'une zone, `␚<CHF` ou `␚>%` ; les morceaux d'une description de zone (bornes, unité, indication) lus par une seule fonction ; l'unité tapée avec la valeur est ôtée ; format version 55 |
 | 1.73 | 2026-10-16 | Instruction `ÉCRAN_EXIGER` (constante : les zones qu'un événement lit), émise en tête de chaque événement ; appel facultatif `ecran_erreurs_zones` (un message par zone en faute), aussi pour une saisie refusée ; format version 56 |
 | 1.74 | 2026-10-16 | Les couleurs des valeurs permises, `␝vr` après les valeurs dans le type d'un champ, une lettre par valeur ; `couleurs` dans `ClasseVM` ; une cellule de liste « ␝ lettre texte » est une étiquette ; format version 57 |
+| 1.75 | 2026-10-16 | Instruction `CORRESPOND` ; un champ `(mot de passe)` se range en empreinte à l'écriture (`src/empreinte.c`) et ne se lit que juste avant `CORRESPOND` ; format version 58 |

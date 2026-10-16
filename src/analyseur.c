@@ -714,7 +714,7 @@ static void *erreur_a(Analyse *a, int ligne, int colonne, char *message) {
 }
 
 static const char *const TYPES[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image",
-                                     "année", "heure", "courriel", "téléphone", "adresse web" };   /* types.h */
+                                     "année", "heure", "courriel", "téléphone", "adresse web", "mot de passe" };   /* types.h */
 
 /* ---------------------------------------------------------------- */
 /* Typage strict des entités, à l'analyse (§ 16.2)                  */
@@ -3058,6 +3058,22 @@ static Noeud *comparaison(Analyse *a) {
             attendre_mot(a, a->i, "contient", strlen("contient"));
             attendre_mot(a, a->i, "commence par", strlen("commence par"));
             attendre_mot(a, a->i, "finit par", strlen("finit par"));
+            if (!k) attendre_mot(a, a->i, "correspond à", strlen("correspond à"));
+        }
+        if (!k && est_mot(t, "correspond")) {
+            /* « le code de l'écran correspond au code du membre » : un mot de passe vérifié contre son empreinte (§ 16.1) */
+            avancer(a);
+            if (!complement(a, 'a')) { noeud_liberer(x); return NULL; }
+            Noeud *y = expression(a);
+            if (!y) { noeud_liberer(x); return NULL; }
+            Noeud *n = noeud_creer(N_COMPARAISON, x->ligne, x->colonne, x->debut);
+            n->op = 'k';
+            n->op_ligne = t->ligne;
+            n->op_colonne = t->colonne;
+            noeud_ajouter(n, x);
+            noeud_ajouter(n, y);
+            n->fin = y->fin;
+            return n;
         }
         const Jeton *v = voir(a, (int)k);
         char sens = est_mot(v, "contient") ? 'c' : est_mot(v, "commence") ? 'd' : est_mot(v, "finit") ? 'f' : 0;

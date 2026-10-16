@@ -371,6 +371,13 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
         }
         return;
     }
+    if (n->op == 'k') {   /* « correspond au code du membre » ; « _correspond » (§ 16.1) */
+        expression(im, sujet);
+        if (im->compact) { aj(im, " _correspond "); expression(im, droite); return; }
+        aj(im, " correspond ");
+        preposition(im, "à", droite);
+        return;
+    }
     if (n->op == 'c' || n->op == 'd' || n->op == 'f') {   /* « contient », « commence par », « finit par » (§ 4.5) */
         if (im->compact) {
             if (n->negation) aj(im, "_non (");

@@ -3,6 +3,7 @@
 #include "bytecode.h"
 #include "compilateur.h"
 #include "vm.h"
+#include "empreinte.h"
 #include "date.h"
 #include "imprimeur.h"
 #include "sqlite3.h"
@@ -1001,6 +1002,49 @@ static void essais_ecrans(void) {
          "Quand on clique sur « OK » dans l'écran de recherche :\n    Fermer l'écran.\n"
          "Afficher le pays de l'écran.\n", "~« l'écran » ne se lit que dans un événement");
     PROG("L'écran de recherche montre :\n    une photo (image).\n", "");   /* une zone d'image est acceptée */
+    /* les mots de passe (§ 16.1) : SHA-256 et PBKDF2-HMAC-SHA256, contre les valeurs de Python (hashlib) */
+    {
+        static const char *const textes[] = {"", "abc", "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
+                                             "Le cœur a ses raisons que la raison ne connaît point, et ce texte dépasse soixante-quatre octets."};
+        static const char *const attendus[] = {"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1", "4bad8c467ed1b8023657a316d1874d1021d65566463784da58465725351fba99"};
+        for (int i = 0; i < 4; i++) {
+            unsigned char o[32];
+            char h[65];
+            sha256((const unsigned char *)textes[i], strlen(textes[i]), o);
+            for (int j = 0; j < 32; j++) snprintf(h + 2 * j, 3, "%02x", o[j]);
+            if (strcmp(h, attendus[i]) != 0) { echecs++; printf("ÉCHEC sha256 %d : %s\n", i, h); }
+            total++;
+        }
+        struct { const char *p, *s; unsigned long c; size_t n; const char *attendu; } k[] = {
+            {"password", "salt", 1, 32, "120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b"}, {"password", "salt", 2, 32, "ae4d0c95af6b46d32d0adff928f06dd02a303f8ef3c251dfd6e2d85a95474c43"},
+            {"password", "salt", 4096, 32, "c5e478d59288c841aa530db6845c4c8d962893a001ce4e11a4963873aa98134a"}, {"passwd", "salt", 1, 64, "55ac046e56e3089fec1691c22544b605f94185216dde0465e68b9d57c20dacbc49ca9cccf179b645991664b39d77ef317c71b845b1e30bd509112041d3a19783"},
+            {"élodie-2026", "sel-aléatoire", 1000, 40, "1a09b665eca2a23b0b145d763360630a21df65925980b3e6307eb3c162685c37303cd523109a1e46"},
+            {"un mot de passe vraiment très long, plus long que les soixante-quatre octets du bloc de HMAC", "s", 3, 32,
+             "417d07b8994f59f818365e26bb380b3e2b5c2c3df93961946012c79d126eed7c"}};
+        for (int i = 0; i < 6; i++) {
+            unsigned char o[64];
+            char h[129];
+            pbkdf2_sha256((const unsigned char *)k[i].p, strlen(k[i].p), (const unsigned char *)k[i].s, strlen(k[i].s), k[i].c, o, k[i].n);
+            for (size_t j = 0; j < k[i].n; j++) snprintf(h + 2 * j, 3, "%02x", o[j]);
+            if (strcmp(h, k[i].attendu) != 0) { echecs++; printf("ÉCHEC pbkdf2 %d : %s\n", i, h); }
+            total++;
+        }
+        char *e1 = empreinte_creer("s3cret"), *e2 = empreinte_creer("s3cret");
+        total += 4;
+        if (!e1 || strncmp(e1, "pbkdf2-sha256$600000$", 21) != 0) { echecs++; printf("ÉCHEC empreinte : forme\n"); }
+        if (!e1 || !e2 || strcmp(e1, e2) == 0) { echecs++; printf("ÉCHEC empreinte : le sel ne change pas\n"); }
+        if (!empreinte_verifier("s3cret", e1) || empreinte_verifier("s3creT", e1)) { echecs++; printf("ÉCHEC empreinte : vérification\n"); }
+        if (empreinte_verifier("s3cret", "pbkdf2-sha256$600000$zz$00")) { echecs++; printf("ÉCHEC empreinte : abîmée acceptée\n"); }
+        free(e1);
+        free(e2);
+    }
+    PROG("Un membre, conservé, a :\n    un nom (texte), unique,\n    un code (mot de passe).\n"
+         "Le m vaut un nouveau membre :\n    Le nom vaut « Anne ».\n    Le code vaut « s3cret ».\nConserver m.\n"
+         "Pour chaque membre conservé :\n    Si « s3cret » correspond au code du membre, afficher « bon ».\n"
+         "    Si « autre » correspond au code du membre, afficher « mauvais ».\n"
+         "Afficher « fin ».\n", "~bon\nfin");   /* le bon passe, le mauvais non */
+    PROG("Un membre, conservé, a :\n    un code (mot de passe).\nLe m vaut un nouveau membre :\n    Le code vaut « s3cret ».\n"
+         "Afficher le code de m.\n", "~« code » est un mot de passe : il ne se lit pas, il se vérifie");
     /* courriel, téléphone, adresse web (§ 16.1) : des textes rangés en base, cherchés comme tels ; leur forme vérifiée */
     PROG("Un contact, conservé, a :\n    un courriel (courriel), unique,\n    un portable (téléphone), facultatif,\n"
          "    un site (adresse web), facultatif.\n"

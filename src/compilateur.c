@@ -147,6 +147,11 @@ static void comparaison(Compilation *c, const Noeud *n) {
         if (n->negation) emettre(c, I_NON, 0, l, col);
         return;
     }
+    if (n->op == 'k') {   /* « le code de l'écran correspond au code du membre » : la clair, l'empreinte (§ 16.1) */
+        expression(c, n->enfants[1]);   /* lu juste avant CORRESPOND : la seule lecture permise d'un mot de passe */
+        emettre(c, I_CORRESPOND, 0, l, col);
+        return;
+    }
     if (n->op == 'c' || n->op == 'd' || n->op == 'f') {   /* contient, commence par, finit par (§ 4.5) */
         expression(c, n->enfants[1]);
         emettre(c, I_CONTIENT, n->op == 'c' ? 0 : n->op == 'd' ? 1 : 2, l, col);

@@ -516,6 +516,11 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             }
             continue;
         }
+        if (est_cle(t, "correspond")) {   /* x _correspond y → x correspond à y (§ 16.1) */
+            mot(r, "correspond", t);
+            mot(r, "à", t);
+            continue;
+        }
         if (est_cle(t, "inclut") || est_cle(t, "commence") || est_cle(t, "finit")) {
             /* x _inclut y → x contient y ; _commence, _finit → commence par, finit par (§ 4.5) */
             mot(r, est_cle(t, "inclut") ? "contient" : t->valeur, t);
