@@ -424,3 +424,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.70 | 2026-10-16 | À l'exécution, chaque zone en faute porte son message sous son libellé, jusqu'au geste suivant |
 | 0.71 | 2026-10-16 | Les étiquettes : la cellule d'une valeur colorée prend ses couleurs dans les listes à l'exécution |
 | 0.72 | 2026-10-16 | § 8, E1 : l'identité de l'application (nom, version, éditeur) ; l'installateur Windows des applications ; `--identite`, `--icone-ico` |
+| 0.73 | 2026-10-16 | Les rapports en PDF (`rapport.cpp`, A4, numéros de page) ; une application fabriquée écrit ses fichiers dans Documents/<Nom> |

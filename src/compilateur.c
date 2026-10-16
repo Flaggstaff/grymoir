@@ -1050,7 +1050,9 @@ static void phrase(Compilation *c, const Noeud *ph) {
         const Noeud *el = ph->enfants[0];
         chercher(c, el);
         expression(c, ph->enfants[1]);
-        char *d = grym_formater("%s\x1b%s", el->texte, el->texte3 ? el->texte3 : "");
+        /* « entité ␛ colonnes [␚ titre] [␙ totaux] » : le titre et les totaux d'un rapport (§ 15.6) */
+        char *d = grym_formater("%s\x1b%s%s%s%s%s", el->texte, el->texte3 ? el->texte3 : "", ph->texte ? "\x1a" : "",
+                                ph->texte ? ph->texte : "", ph->texte2 ? "\x19" : "", ph->texte2 ? ph->texte2 : "");
         long k = bloc_constante(c->b, C_TEXTE, d);
         free(d);
         if (k < 0) { trop_grand(c, ph); return; }

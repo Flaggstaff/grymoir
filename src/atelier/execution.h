@@ -39,6 +39,7 @@ public:
     // Une application fabriquée par l'atelier : sa base dans le dossier de données du système, pas à côté du
     // programme (docs/atelier.md, § 8). Vide : à côté du programme, comme grym lancer.
     QString base_imposee;
+    QString dossier_ecriture;   // une application fabriquée : ses fichiers s'écrivent dans Documents/<Nom> (§ 15.6)
 
     // Rempli par la fenêtre avant de libérer `reponse` : 0 envoyé, 1 annulé, 2 interrompu.
     int issue = 0;
@@ -107,6 +108,7 @@ class Execution : public QMainWindow {
 public:
     explicit Execution(const QString &chemin);
     void placer_base(const QString &chemin) { travail.base_imposee = chemin; }   // avant demarrer()
+    void placer_ecriture(const QString &dossier) { travail.dossier_ecriture = dossier; }   // avant demarrer()
     ~Execution() override;
     void demarrer();
 

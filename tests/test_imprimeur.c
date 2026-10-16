@@ -300,6 +300,15 @@ int main(void) {
     FIXE("Un contact, conservé, a :\n    un courriel (courriel), unique,\n    un portable (téléphone),\n    un site (adresse web).\n"
          "L'écran x montre :\n    un courriel (courriel),\n    un site (adresse web).");
     COMP("L'écran x montre :\n    un site (adresse web),\n    le texte « t ».", "_écran x\n    _un site (adresse_web)\n    _texte « t »\n_fin\n");
+    /* les rapports (§ 15.6) : titre, totaux ; les deux formes */
+    FIXE("Un membre, conservé, a :\n    un nom (texte),\n    une cotisation (nombre),\n    un don (nombre).\n"
+         "Exporter les membres conservés, par nom, avec le nom, la cotisation et le don, avec le titre « Cotisations », "
+         "avec le total de la cotisation et du don, dans « m.pdf ».");
+    COMP("Un membre, conservé, a :\n    un nom (texte),\n    une cotisation (nombre).\n"
+         "Exporter les membres conservés, avec le nom et la cotisation, avec le titre « C », avec le total de la cotisation, dans « m.pdf ».",
+         "_classe _un membre _conservé\n    _un nom (texte)\n    _une cotisation (nombre)\n_fin\n"
+         "_exporter membre _conservé _avec nom ; cotisation _titre « C » _total cotisation _dans « m.pdf »\n");
+    FIXE("Un membre, conservé, a :\n    une cotisation (nombre).\nExporter les membres conservés, avec le titre « Tous », dans « m.html ».");
     /* les dates (§ 14.8, § 14.6) : parties, toutes lettres, jours ouvrables ; les deux formes */
     FIXE("Le d vaut 16.10.2026.\nAfficher le jour de la semaine de d puis le mois de d.\nAfficher d en toutes lettres.\n"
          "Afficher le nombre de jours ouvrables entre d et (d + 10).");

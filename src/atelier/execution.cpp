@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, exécution d'un programme dans sa propre fenêtre.
 #include "execution.h"
+#include "rapport.h"
 #include "theme.h"
 #include "vue_ecran.h"
 
@@ -189,6 +190,24 @@ static void iface_ecran_image(void *contexte, size_t k, const unsigned char *oct
                                                                     : QByteArray());
 }
 
+// Un rapport en PDF (§ 15.6) : appelé dans le fil de la machine, dessiné dans celui de l'interface, qui attend.
+static unsigned char *iface_rendre_pdf(void *, const char *html, size_t *taille, char **erreur) {
+    QByteArray octets;
+    QString probleme;
+    const QString page = QString::fromUtf8(html);
+    auto faire = [&] { octets = pdf_depuis_html(page, &probleme); };
+    if (QThread::currentThread() == qApp->thread()) faire();
+    else QMetaObject::invokeMethod(qApp, faire, Qt::BlockingQueuedConnection);
+    if (octets.isEmpty()) {
+        *erreur = grym_dupliquer((probleme.isEmpty() ? QString("Le PDF n'a pas pu être fabriqué.") : probleme).toUtf8().constData());
+        return nullptr;
+    }
+    auto *o = static_cast<unsigned char *>(malloc((size_t)octets.size()));
+    memcpy(o, octets.constData(), (size_t)octets.size());
+    *taille = (size_t)octets.size();
+    return o;
+}
+
 static void iface_ecran_erreurs_zones(void *contexte, const size_t *els, const char *const *msgs, size_t n) {   // § 22.6
     QVector<int> e;
     QStringList m;
@@ -311,9 +330,10 @@ Issue Travail::formulaire(Chaine *sortie, Champ *c, size_t nb, size_t *arret, Va
 }
 
 // Dossier du programme et base à côté de lui, comme grym lancer (grammaire, § 15.2, § 16.5).
-static void situer(Machine *m, const QString &chemin, const QString &base_imposee) {
+static void situer(Machine *m, const QString &chemin, const QString &base_imposee, const QString &ecriture) {
     const QFileInfo i(chemin);
     machine_dossier(m, i.absolutePath().toUtf8().constData());
+    if (!ecriture.isEmpty()) machine_dossier_ecriture(m, ecriture.toUtf8().constData());
     const QString base = !base_imposee.isEmpty() ? base_imposee : i.absolutePath() + "/" + i.completeBaseName() + ".grymd";
     machine_base(m, base.toUtf8().constData());
 }
@@ -356,9 +376,9 @@ void Travail::run() {
     Interface i = {this, iface_disponible, iface_formulaire, iface_effacer, 1, iface_image, iface_fiche,
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
                    iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
-                   iface_ecran_taille_titre, iface_ecran_erreurs_zones};
+                   iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf};
     machine_interface(m, &i);
-    situer(m, chemin, base_imposee);
+    situer(m, chemin, base_imposee, dossier_ecriture);
     Chaine sortie = {};
     grym_interruption = 0;
     const int ok = machine_executer(m, module, &sortie, &d);

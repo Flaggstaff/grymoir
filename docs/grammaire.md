@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.4 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.5 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1166,6 +1166,20 @@ Exporter les œuvres conservées dont la cotisation est positive dans « œuvres
 - Lire un tableau : § 15.5.
 - En forme compacte : `_exporter membre _conservé [_dont …] [_par nom [_décroissant]] [_avec nom ; compositeur.nom] _dans « m.csv »`.
 
+### 15.6 Un rapport *(implémenté le 16 octobre 2026)*
+
+```
+Exporter les membres conservés, par nom, avec le nom, la catégorie et la cotisation,
+    avec le titre « Cotisations 2026 », avec le total de la cotisation, dans « cotisations.pdf ».
+```
+
+- **L'extension décide du format.** `.csv` : le tableau (§ 15.4). `.html` : une page prête à imprimer (A4, l'en-tête du tableau répété à chaque page, la date d'édition en pied), que la machine écrit elle-même, partout. `.pdf` : la même page mise en page par l'atelier ou par une application fabriquée, numérotée « page 1 / 3 » ; en console et dans le navigateur, « Un PDF se fabrique dans l'atelier ou dans une application fabriquée ; ici, exporte en « .html » et imprime la page depuis le navigateur. »
+- `, avec le titre « … »` : en tête du rapport ; un CSV n'en a pas.
+- `, avec le total de la cotisation [et du montant]` : une dernière ligne « Total », la somme des nombres de chaque colonne nommée ; aussi dans un CSV. Une colonne exportée seulement : « Le total porte sur une colonne exportée : ajoute « … » aux colonnes. »
+- Les nombres s'alignent à droite ; un mot de passe s'écrit « •••••• » (§ 22.14).
+- **Où s'écrit le fichier** : à côté du programme, comme `Enregistrer` (§ 15.2) ; dans une application fabriquée, qui n'est pas modifiable, dans le dossier `Documents/<Nom de l'application>` de l'utilisateur.
+- Forme compacte : `_exporter membre _conservé _avec nom ; cotisation _titre « C » _total cotisation _dans « m.pdf »`.
+
 ### 15.5 Lire un tableau
 
 ```
@@ -2058,3 +2072,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.2 | 2026-10-16 | § 16.15 : une couleur d'étiquette par valeur permise, `« payée » en vert`, montrée en étiquette dans les listes |
 | 2.3 | 2026-10-16 | Nouveau § 22.14 : le type `(mot de passe)`, rangé en empreinte (PBKDF2-HMAC-SHA256), illisible, vérifié par `correspond à` |
 | 2.4 | 2026-10-16 | § 14.8 : le mois, le jour, le jour de la semaine d'une date, `en toutes lettres` ; § 14.6 : les jours ouvrables ; § 22.11 : le graphique par mois, semaine ou année |
+| 2.5 | 2026-10-16 | Nouveau § 15.6 : un rapport, par l'extension (`.html`, `.pdf`), avec le titre et le total ; dans une application fabriquée, écrit dans Documents/<Nom> |

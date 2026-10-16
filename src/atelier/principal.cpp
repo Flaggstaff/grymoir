@@ -117,6 +117,10 @@ int main(int argc, char **argv) {
         Execution e(chemin);
         e.setWindowTitle(nom);
         e.placer_base(QDir(donnees).filePath(QFileInfo(principal).completeBaseName() + ".grymd"));
+        // ses rapports et ses fichiers : dans Documents/<Nom>, l'application elle-même n'étant pas modifiable (§ 15.6)
+        const QString documents = QDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)).filePath(nom);
+        QDir().mkpath(documents);
+        e.placer_ecriture(documents);
         e.show();
         e.demarrer();
         return app.exec() == 0 ? 0 : 1;

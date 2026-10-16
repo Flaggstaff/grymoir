@@ -2013,6 +2013,44 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             }
             if (!c) aj(im, ",");
         }
+        int virgule = el->texte3 != NULL;   /* les colonnes finissent déjà par une virgule */
+        if (n->texte) {   /* « , avec le titre « … » » ; « _titre « … » » (§ 15.6) */
+            aj(im, c ? " _titre " : virgule ? " avec le titre " : ", avec le titre ");
+            virgule = 1;
+            ecrire_texte(im, n->texte);
+            if (!c) aj(im, ",");
+        }
+        if (n->texte2) {   /* « , avec le total de la cotisation et du montant » ; « _total cotisation ; montant » */
+            aj(im, c ? " _total " : virgule ? " avec le total " : ", avec le total ");
+            size_t i = 0;
+            for (const char *q = n->texte2; *q; i++) {
+                const char *fin = strchr(q, '\x1e');
+                if (!fin) fin = q + strlen(q);
+                const char *sep = memchr(q, '\x1d', (size_t)(fin - q));
+                if (c) {
+                    if (i) aj(im, " ; ");
+                    const char *chemin = sep ? sep + 1 : q;
+                    for (const char *p = chemin; p < fin;) {
+                        const char *f2 = memchr(p, '\x1f', (size_t)(fin - p));
+                        if (!f2) f2 = fin;
+                        char *seg = grym_formater("%.*s", (int)(f2 - p), p);
+                        if (p != chemin) aj(im, ".");
+                        ecrire_nom(im, seg, 0);
+                        free(seg);
+                        p = f2 < fin ? f2 + 1 : fin;
+                    }
+                } else {
+                    if (i) aj(im, " et ");
+                    char *e2 = grym_formater("%.*s", (int)((sep ? sep : fin) - q), q);
+                    if (!strncmp(e2, "le ", 3)) { aj(im, "du "); aj(im, e2 + 3); }
+                    else if (!strncmp(e2, "les ", 4)) { aj(im, "des "); aj(im, e2 + 4); }
+                    else { aj(im, "de "); aj(im, e2); }
+                    free(e2);
+                }
+                q = *fin ? fin + 1 : fin;
+            }
+            if (!c) aj(im, ",");
+        }
         aj(im, c ? " _dans " : " dans ");
         expression(im, n->enfants[1]);
         aj(im, c ? "\n" : ".\n");

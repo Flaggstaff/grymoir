@@ -38,6 +38,8 @@ size_t machine_regles_verifiees(const Machine *m);
 
 /* Dossier du programme : les chemins relatifs des fichiers (§ 15.2) partent de là. */
 void machine_dossier(Machine *m, const char *dossier);
+/* Où s'écrivent les fichiers aux chemins relatifs (Enregistrer, Exporter), s'il diffère du dossier du programme. */
+void machine_dossier_ecriture(Machine *m, const char *dossier);
 
 /* Fichier de la base des entités (§ 16.5) ; NULL : base en mémoire. Ouverte au premier besoin. */
 void machine_base(Machine *m, const char *chemin);

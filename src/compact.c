@@ -1893,7 +1893,10 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 echouer(r, t, grym_dupliquer("Forme attendue : « _exporter membre _conservé _dans « membres.csv » »."));
                 return;
             }
-            size_t avec = chercher(r, d + 3, dans, "avec");
+            /* _titre « … », _total cotisation ; montant : un rapport (§ 15.6), après les colonnes */
+            const size_t titre = chercher(r, d + 3, dans, "titre"), total = chercher(r, d + 3, dans, "total");
+            const size_t fin_cols = titre < total ? titre : total;
+            size_t avec = chercher(r, d + 3, fin_cols, "avec");
             size_t par = chercher(r, d + 3, avec, "par");
             mot(r, "exporter", t);
             mot(r, "les", t);
@@ -1922,14 +1925,36 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 emettre(r, J_VIRGULE, NULL, &r->e[avec], 1);
                 mot(r, "avec", &r->e[avec]);
                 size_t debut = avec + 1, i = 0;
-                for (size_t k = avec + 1; k <= dans; k++) {
-                    if (k < dans && r->e[k].type != J_POINT_VIRGULE) continue;
+                const size_t bout = fin_cols < dans ? fin_cols : dans;
+                for (size_t k = avec + 1; k <= bout; k++) {
+                    if (k < bout && r->e[k].type != J_POINT_VIRGULE) continue;
                     if (i) emettre(r, J_VIRGULE, NULL, &r->e[k - 1], 1);
                     expression(r, debut, k);
                     debut = k + 1;
                     i++;
                 }
-                emettre(r, J_VIRGULE, NULL, &r->e[dans], 1);
+                emettre(r, J_VIRGULE, NULL, &r->e[bout], 1);
+            }
+            if (titre < dans) {
+                if (titre + 1 >= dans || r->e[titre + 1].type != J_TEXTE) { echouer(r, &r->e[titre], grym_dupliquer("Titre attendu : « _titre « … » ».")); return; }
+                if (avec >= fin_cols) emettre(r, J_VIRGULE, NULL, &r->e[titre], 1);
+                mot(r, "avec", &r->e[titre]); mot(r, "le", &r->e[titre]); mot(r, "titre", &r->e[titre]);
+                copier(r, &r->e[titre + 1]);
+                emettre(r, J_VIRGULE, NULL, &r->e[titre], 1);
+            }
+            if (total < dans) {
+                if (avec >= fin_cols && titre > total) emettre(r, J_VIRGULE, NULL, &r->e[total], 1);
+                mot(r, "avec", &r->e[total]); mot(r, "le", &r->e[total]); mot(r, "total", &r->e[total]);
+                const size_t bout_t = titre > total && titre < dans ? titre : dans;
+                size_t debut = total + 1;
+                for (size_t k = total + 1; k <= bout_t; k++) {
+                    if (k < bout_t && r->e[k].type != J_POINT_VIRGULE) continue;
+                    if (debut > total + 1) mot(r, "et", &r->e[k - 1]);
+                    mot(r, "de", &r->e[debut]);
+                    expression(r, debut, k);
+                    debut = k + 1;
+                }
+                emettre(r, J_VIRGULE, NULL, &r->e[bout_t < f ? bout_t : dans], 1);
             }
             mot(r, "dans", &r->e[dans]);
             expression(r, dans + 1, f);

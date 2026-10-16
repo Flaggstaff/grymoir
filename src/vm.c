@@ -203,6 +203,7 @@ typedef struct {
 
 struct Machine {
     char *dossier;          /* dossier du programme : base des chemins relatifs */
+    char *dossier_ecriture; /* où s'écrit un fichier au chemin relatif, s'il diffère (une application fabriquée) */
     char *chemin_base;      /* fichier de la base des entités, NULL : en mémoire (§ 16.5) */
     Chaine *essai_migration;   /* non NULL : préparer la base, dire ce qui changerait, tout annuler (A2-c) */
     size_t regles_verifiees;   /* vérifications complètes de règles (docs/vm.md, § 3.3), pour les essais */
@@ -379,6 +380,11 @@ void machine_dossier(Machine *m, const char *dossier) {
     m->dossier = dossier && *dossier ? grym_dupliquer(dossier) : NULL;
 }
 
+void machine_dossier_ecriture(Machine *m, const char *dossier) {
+    free(m->dossier_ecriture);
+    m->dossier_ecriture = dossier && *dossier ? grym_dupliquer(dossier) : NULL;
+}
+
 
 /* L'écran ouvert (grammaire, § 22). */
 typedef struct EcranVM {
@@ -420,6 +426,7 @@ void machine_detruire(Machine *m) {
     free(m->carte_objets);
     free(m->chemin_base);
     free(m->dossier);
+    free(m->dossier_ecriture);
     for (size_t i = 0; i < m->nb_cases; i++) {
         free(m->cases[i].nom);
         if (m->cases[i].definie) valeur_liberer(&m->cases[i].valeur);
@@ -801,6 +808,13 @@ static const char *format_image(const unsigned char *o, size_t n) {
 static char *chemin_effectif(const Machine *m, const char *ecrit) {
     if (ecrit[0] == '/' || !m->dossier) return grym_dupliquer(ecrit);
     return grym_formater("%s/%s", m->dossier, ecrit);
+}
+
+/* Où s'écrit un fichier : le dossier d'écriture s'il est fixé (une application fabriquée, dont le dossier du programme
+ * n'est pas modifiable), sinon à côté du programme (§ 15.2). */
+static char *chemin_ecriture(const Machine *m, const char *ecrit) {
+    if (ecrit[0] == '/' || !m->dossier_ecriture) return chemin_effectif(m, ecrit);
+    return grym_formater("%s/%s", m->dossier_ecriture, ecrit);
 }
 
 /* Lit un fichier du disque ; NULL et *erreur sinon. */
@@ -2388,7 +2402,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
 static char *planifier_ecriture(Machine *m, const char *ecrit, Fichier *f) {
     char *probleme = NULL;
     if (!octets_du_fichier(f, &probleme)) return probleme;   /* lu maintenant : la base peut changer d'ici la fin */
-    char *chemin = chemin_effectif(m, ecrit);
+    char *chemin = chemin_ecriture(m, ecrit);
     FILE *existe = grym_fopen(chemin, "rb");
     if (existe) {
         fclose(existe);
@@ -2442,6 +2456,27 @@ static void ajouter_cellule(Chaine *c, const char *t) {
 
 /* Le tableau d'un export (§ 15.4) : « entité ␛ écrit ␝ a ␟ b ␞ … » ; sans colonnes, tous les champs simples de
  * l'entité. UTF-8 avec marque d'ordre (pour les tableurs), séparateur « ; », lignes CRLF. */
+/* Le format d'un export, par l'extension du fichier (§ 15.4, § 15.6) : 0 CSV, 1 page HTML, 2 PDF. */
+static int format_export(const char *nom) {
+    const char *p = strrchr(nom, '.');
+    if (!p) return 0;
+    char x[8] = "";
+    for (int i = 0; i < 7 && p[i + 1]; i++) x[i] = (char)(p[i + 1] >= 'A' && p[i + 1] <= 'Z' ? p[i + 1] + 32 : p[i + 1]);
+    return !strcmp(x, "html") || !strcmp(x, "htm") ? 1 : !strcmp(x, "pdf") ? 2 : 0;
+}
+
+static void html_echapper(Chaine *c, const char *t) {
+    for (; *t; t++) {
+        if (*t == '&') chaine_ajouter(c, "&amp;");
+        else if (*t == '<') chaine_ajouter(c, "&lt;");
+        else if (*t == '>') chaine_ajouter(c, "&gt;");
+        else if (*t == '"') chaine_ajouter(c, "&quot;");
+        else { char u[2] = {*t, 0}; chaine_ajouter(c, u); }
+    }
+}
+
+/* Un export (§ 15.4) : un tableau CSV, ou un rapport (§ 15.6), page HTML prête à imprimer ou PDF fabriqué par
+ * l'interface. « entité ␛ colonnes [␚ titre] [␙ totaux] ». */
 static char *tableau_csv(Machine *m, const char *descripteur, const Valeur *l, Fichier *f) {
     const char *esc = strchr(descripteur, '\x1b');
     if (!esc) return grym_dupliquer("Export invalide.");
@@ -2449,10 +2484,16 @@ static char *tableau_csv(Machine *m, const char *descripteur, const Valeur *l, F
     const ClasseVM *e = classe_vm(m, entite);
     free(entite);
     if (!e) return grym_dupliquer("Export invalide : entité inconnue.");
+    const int format = format_export(f->nom);
+    const char *ptitre = strchr(esc, '\x1a'), *ptot = strchr(esc, '\x19');
+    const size_t lcols = strcspn(esc + 1, "\x1a\x19");
+    char *cols_desc = grym_formater("%.*s", (int)lcols, esc + 1);
+    char *titre_rapport = ptitre ? grym_formater("%.*s", (int)strcspn(ptitre + 1, "\x19"), ptitre + 1) : NULL;
+    char *totaux_desc = ptot ? grym_dupliquer(ptot + 1) : NULL;
     size_t nc = 0;
     char **titres = NULL, **chemins = NULL;
-    if (esc[1]) {
-        for (const char *q = esc + 1; *q; ) {
+    if (*cols_desc) {
+        for (const char *q = cols_desc; *q; ) {
             const char *fin = strchr(q, '\x1e');
             if (!fin) fin = q + strlen(q);
             const char *sep = memchr(q, '\x1d', (size_t)(fin - q));
@@ -2481,17 +2522,53 @@ static char *tableau_csv(Machine *m, const char *descripteur, const Valeur *l, F
             nc++;
         }
     }
-    Chaine c = {0};
-    chaine_ajouter(&c, "\xEF\xBB\xBF");   /* marque d'ordre : les tableurs lisent alors l'UTF-8 */
+    /* les colonnes totalisées (§ 15.6) : leur somme, sur une dernière ligne « Total » */
+    int *totalise = grym_allouer((nc ? nc : 1) * sizeof *totalise);
+    Decimal *sommes = grym_allouer((nc ? nc : 1) * sizeof *sommes);
+    int numerique_vu = 0;
     for (size_t k = 0; k < nc; k++) {
-        if (k) chaine_ajouter(&c, ";");
-        ajouter_cellule(&c, titres[k]);
+        totalise[k] = 0;
+        sommes[k] = dec_zero();
+        for (const char *q = totaux_desc; q && *q && !totalise[k];) {
+            const char *fin = strchr(q, '\x1e');
+            if (!fin) fin = q + strlen(q);
+            const char *sep = memchr(q, '\x1d', (size_t)(fin - q));
+            totalise[k] = sep && strlen(chemins[k]) == (size_t)(fin - sep - 1) && strncmp(sep + 1, chemins[k], strlen(chemins[k])) == 0;
+            q = *fin ? fin + 1 : fin;
+        }
     }
-    chaine_ajouter(&c, "\r\n");
+    Chaine c = {0};
+    if (format == 0) {
+        chaine_ajouter(&c, "\xEF\xBB\xBF");   /* marque d'ordre : les tableurs lisent alors l'UTF-8 */
+        for (size_t k = 0; k < nc; k++) {
+            if (k) chaine_ajouter(&c, ";");
+            ajouter_cellule(&c, titres[k]);
+        }
+        chaine_ajouter(&c, "\r\n");
+    } else {   /* une page A4 : l'en-tête du tableau se répète à chaque page, la date d'édition en pied */
+        chaine_ajouter(&c, "<!DOCTYPE html>\n<html lang=\"fr\"><head><meta charset=\"utf-8\"><title>");
+        html_echapper(&c, titre_rapport ? titre_rapport : f->nom);
+        chaine_ajouter(&c, "</title><style>@page{size:A4;margin:18mm 15mm}"
+                           "body{font-family:Helvetica,Arial,sans-serif;font-size:10pt;color:#111}"
+                           "h1{font-size:16pt;margin:0 0 12px}table{border-collapse:collapse;width:100%}"
+                           "thead{display:table-header-group}th{text-align:left;border-bottom:1.5pt solid #333;padding:4px 6px}"
+                           "td{border-bottom:0.5pt solid #bbb;padding:4px 6px}.n{text-align:right}"
+                           "tr.total td{border-top:1.5pt solid #333;border-bottom:none;font-weight:bold}"
+                           ".edite{margin-top:16px;font-size:8pt;color:#555}</style></head><body>\n");
+        if (titre_rapport) { chaine_ajouter(&c, "<h1>"); html_echapper(&c, titre_rapport); chaine_ajouter(&c, "</h1>\n"); }
+        chaine_ajouter(&c, "<table width=\"100%\" cellspacing=\"0\" cellpadding=\"4\"><thead><tr>");
+        for (size_t k = 0; k < nc; k++) {
+            chaine_ajouter(&c, totalise[k] ? "<th class=\"n\" align=\"right\">" : "<th align=\"left\">");
+            html_echapper(&c, titres[k]);
+            chaine_ajouter(&c, "</th>");
+        }
+        chaine_ajouter(&c, "</tr></thead><tbody>\n");
+    }
     char *erreur = NULL;
     for (size_t r = 0; r < l->liste->n && !erreur; r++) {
         Objet *o = machine_objet_en_base(m, l->liste->ids[r], l->liste->classes[r], &erreur);
         if (!o || (o->id && !charger(m, o, &erreur))) break;
+        if (format) chaine_ajouter(&c, "<tr>");
         for (size_t k = 0; k < nc && !erreur; k++) {
             Objet *x = o;
             long q = -1;
@@ -2506,20 +2583,90 @@ static char *tableau_csv(Machine *m, const char *descripteur, const Valeur *l, F
                 if (x->id && !charger(m, x, &erreur)) { x = NULL; break; }
                 p = fin + 1;
             }
-            if (k) chaine_ajouter(&c, ";");
-            if (x && q >= 0 && (size_t)q < x->classe->nb_champs && x->definis[q] && x->champs[q].type != V_ABSENT) {
-                char *t = cellule_csv(m, &x->champs[q]);
-                ajouter_cellule(&c, t);
-                free(t);
+            const int present = x && q >= 0 && (size_t)q < x->classe->nb_champs && x->definis[q] && x->champs[q].type != V_ABSENT;
+            const Valeur *v = present ? &x->champs[q] : NULL;
+            if (v && totalise[k] && v->type == V_NOMBRE) {
+                Decimal s2 = dec_zero();
+                dec_addition(&sommes[k], &v->nombre, &s2);
+                dec_liberer(&sommes[k]);
+                sommes[k] = s2;
+                numerique_vu = 1;
+            }
+            if (format == 0) {
+                if (k) chaine_ajouter(&c, ";");
+                if (v) {
+                    char *t = type_secret(x->classe->types[q]) ? grym_dupliquer("") : cellule_csv(m, v);
+                    ajouter_cellule(&c, t);
+                    free(t);
+                }
+            } else {
+                chaine_ajouter(&c, v && v->type == V_NOMBRE ? "<td class=\"n\" align=\"right\">" : "<td>");
+                if (v) {
+                    char *t = type_secret(x->classe->types[q]) ? grym_dupliquer("••••••")
+                            : v->type == V_OBJET ? nom_objet(m, v->objet) : texte_valeur(m, v);
+                    html_echapper(&c, t);
+                    free(t);
+                }
+                chaine_ajouter(&c, "</td>");
             }
         }
-        chaine_ajouter(&c, "\r\n");
+        chaine_ajouter(&c, format ? "</tr>\n" : "\r\n");
     }
-    for (size_t k = 0; k < nc; k++) { free(titres[k]); free(chemins[k]); }
+    (void)numerique_vu;
+    if (!erreur && totaux_desc) {   /* la ligne des totaux : « Total » dans la première colonne qui n'en est pas un */
+        int libelle = 0;
+        if (format) chaine_ajouter(&c, "<tr class=\"total\">");
+        for (size_t k = 0; k < nc; k++) {
+            char *t = NULL;
+            if (totalise[k]) {
+                Valeur vs = valeur_nombre(dec_copier(&sommes[k]));
+                t = format ? texte_valeur(m, &vs) : cellule_csv(m, &vs);
+                valeur_liberer(&vs);
+            } else if (!libelle) { t = grym_dupliquer("Total"); libelle = 1; }
+            if (format == 0) {
+                if (k) chaine_ajouter(&c, ";");
+                if (t) ajouter_cellule(&c, t);
+            } else {
+                chaine_ajouter(&c, totalise[k] ? "<td class=\"n\" align=\"right\"><b>" : "<td><b>");
+                if (t) html_echapper(&c, t);
+                chaine_ajouter(&c, "</b></td>");
+            }
+            free(t);
+        }
+        chaine_ajouter(&c, format ? "</tr>\n" : "\r\n");
+    }
+    if (format) {
+        char *jour = date_suisse(date_aujourdhui());
+        chaine_ajouter(&c, "</tbody></table>\n<p class=\"edite\">Édité le ");
+        chaine_ajouter(&c, jour);
+        chaine_ajouter(&c, "</p>\n</body></html>\n");
+        free(jour);
+    }
+    for (size_t k = 0; k < nc; k++) { free(titres[k]); free(chemins[k]); dec_liberer(&sommes[k]); }
     free(titres);
     free(chemins);
+    free(totalise);
+    free(sommes);
+    free(cols_desc);
+    free(titre_rapport);
+    free(totaux_desc);
     char *t = chaine_rendre(&c);
     if (erreur) { free(t); return erreur; }
+    if (format == 2) {   /* le PDF : la page, mise en page par l'interface (l'atelier, une application fabriquée) */
+        if (!m->iface.rendre_pdf) {
+            free(t);
+            return grym_formater("Un PDF se fabrique dans l'atelier ou dans une application fabriquée ; ici, exporte en "
+                                 "« .html » et imprime la page depuis le navigateur.");
+        }
+        size_t taille = 0;
+        char *probleme = NULL;
+        unsigned char *pdf = m->iface.rendre_pdf(m->iface.contexte, t, &taille, &probleme);
+        free(t);
+        if (!pdf) return probleme ? probleme : grym_dupliquer("Le PDF n'a pas pu être fabriqué.");
+        f->taille = taille;
+        f->octets = pdf;
+        return NULL;
+    }
     f->taille = strlen(t);
     f->octets = (unsigned char *)t;
     return NULL;

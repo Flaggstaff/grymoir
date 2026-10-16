@@ -226,7 +226,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -753,7 +753,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0, {0}, {0}, 0 };
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
-                    scene_apparence, scene_etats, scene_image, NULL, NULL };
+                    scene_apparence, scene_etats, scene_image, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -1871,6 +1871,41 @@ int main(void) {
         total++;
         if (n != strlen(att) || memcmp(t, att, n) != 0) signaler(__LINE__, "export", att, t);
     }
+    /* Un rapport (§ 15.6) : le total dans un CSV ; une page HTML, avec titre, nombres à droite, total, date d'édition */
+    remove("_tot.csv");
+    PROG(RC "Exporter les clients conservés dont le rang est inférieur à 3, par nom, avec le nom et le solde, "
+         "avec le total du solde, dans « _tot.csv ».", "");
+    {
+        FILE *f = fopen("_tot.csv", "rb");
+        char t[512] = {0};
+        size_t n = f ? fread(t, 1, sizeof t - 1, f) : 0;
+        if (f) fclose(f);
+        const char *att = "\xEF\xBB\xBF" "Nom;Solde\r\nBob;-3\r\némile;10\r\nTotal;7\r\n";
+        total++;
+        if (n != strlen(att) || memcmp(t, att, n) != 0) signaler(__LINE__, "export avec total", att, t);
+        remove("_tot.csv");
+    }
+    remove("_rap.html");
+    PROG(RC "Exporter les clients conservés dont le rang est inférieur à 3, par nom, avec le nom et le solde, "
+         "avec le titre « Clients & soldes », avec le total du solde, dans « _rap.html ».", "");
+    {
+        FILE *f = fopen("_rap.html", "rb");
+        char t[4096] = {0};
+        if (f) { size_t n = fread(t, 1, sizeof t - 1, f); t[n] = 0; fclose(f); }
+        const char *attendus[] = {"<h1>Clients &amp; soldes</h1>", "<th align=\"left\">Nom</th><th class=\"n\" align=\"right\">Solde</th>",
+                                  "<td>émile</td><td class=\"n\" align=\"right\">10</td>",
+                                  "<tr class=\"total\"><td><b>Total</b></td><td class=\"n\" align=\"right\"><b>7</b></td></tr>",
+                                  "<p class=\"edite\">Édité le ", "thead{display:table-header-group}"};
+        for (size_t i = 0; i < sizeof attendus / sizeof *attendus; i++) {
+            total++;
+            if (!strstr(t, attendus[i])) signaler(__LINE__, "rapport html", attendus[i], t);
+        }
+        remove("_rap.html");
+    }
+    PROG(RC "Exporter les clients conservés dans « _rap.pdf ».", "~Un PDF se fabrique dans l'atelier ou dans une application fabriquée");
+    PROG(RC "Exporter les clients conservés, avec le nom, avec le total du solde, dans « _x.csv ».",
+         "~Le total porte sur une colonne exportée : ajoute « solde » aux colonnes.");
+    PROG(RC "Exporter les clients conservés, avec le titre 3, dans « _x.csv ».", "~Titre attendu");
     PROG(RC "Exporter les clients conservés dans « _exp.csv ».", "~« _exp.csv » existe déjà : il n'est jamais écrasé.");
     remove("_exp.csv");
     PROG(RC "Exporter les clients conservés dans « _exp.csv ».\nExporter les clients conservés dans « _exp.csv ».",

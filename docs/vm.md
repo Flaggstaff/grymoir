@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.76 de la spécification, révisée le 14 octobre 2026.
+Version 1.77 de la spécification, révisée le 14 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -289,7 +289,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 59
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 60
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -443,3 +443,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.74 | 2026-10-16 | Les couleurs des valeurs permises, `␝vr` après les valeurs dans le type d'un champ, une lettre par valeur ; `couleurs` dans `ClasseVM` ; une cellule de liste « ␝ lettre texte » est une étiquette ; format version 57 |
 | 1.75 | 2026-10-16 | Instruction `CORRESPOND` ; un champ `(mot de passe)` se range en empreinte à l'écriture (`src/empreinte.c`) et ne se lit que juste avant `CORRESPOND` ; format version 58 |
 | 1.76 | 2026-10-16 | `ÉCART` 6 : jours ouvrables ; `CONVERTIR` 8 : en toutes lettres ; une date a les champs `mois`, `jour`, `jour de la semaine` ; graphique : la période dans la deuxième lettre (`b s` sans, `c t` mois, `d u` semaine, `e v` année) ; format version 59 |
+| 1.77 | 2026-10-16 | `EXPORTER` : « entité ␛ colonnes [␚ titre] [␙ totaux] », le format par l'extension ; appel facultatif `rendre_pdf` ; `machine_dossier_ecriture` ; format version 60 |

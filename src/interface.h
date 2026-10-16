@@ -162,6 +162,9 @@ typedef struct {
     /* Juste avant ecran_erreur, quand des zones sont en faute : pour chacune, son élément et son message ; le message
      * d'ecran_erreur les résume (§ 22.6). NULL : seul le résumé se voit. */
     void (*ecran_erreurs_zones)(void *contexte, const size_t *elements, const char *const *messages, size_t n);
+    /* Un rapport en PDF (§ 15.6) : la page HTML d'un export, mise en page ; les octets du PDF (malloc), ou NULL avec
+     * *erreur. NULL : l'interface ne sait pas en fabriquer (console, navigateur). */
+    unsigned char *(*rendre_pdf)(void *contexte, const char *html, size_t *taille, char **erreur);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

@@ -7,6 +7,7 @@
 #include "aide.h"
 #include "fabrication.h"
 #include "projet.h"
+#include "rapport.h"
 #include "schema.h"
 #include "reecriture.h"
 #include "lien.h"
@@ -283,6 +284,38 @@ int main(int argc, char **argv) {
         VERIFIER(guide.windowTitle() == "Premiers pas avec GrymoiR");
         VERIFIER(guide.aller_au_titre("1. Premiers pas") && guide.aller_au_titre("3. Répéter"));
         VERIFIER(guide.table()->topLevelItemCount() >= 3);
+    }
+
+    // Un rapport en PDF (§ 15.6) : la mise en page seule, sur plusieurs pages ; puis un export réel, dans une exécution
+    {
+        QString html = "<html><body><h1>Essai</h1><table><thead><tr><th>Nom</th><th>Montant</th></tr></thead><tbody>";
+        for (int i = 0; i < 150; i++) html += QString("<tr><td>Membre %1</td><td align=\"right\">%2</td></tr>").arg(i).arg(i * 10);
+        html += "</tbody></table></body></html>";
+        QString erreur;
+        const QByteArray pdf = pdf_depuis_html(html, &erreur);
+        VERIFIER(pdf.startsWith("%PDF-") && erreur.isEmpty());
+        VERIFIER(pdf.count("/Type /Page\n") + pdf.count("/Type /Page ") + pdf.count("/Type /Page\r") >= 2 || pdf.count("/Page") >= 3);
+    }
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Un membre, conservé, a :\n    un nom (texte),\n    une cotisation (nombre).\n"
+                    "Le a vaut un nouveau membre :\n    Le nom vaut « Anne ».\n    La cotisation vaut 50.\nConserver a.\n"
+                    "Exporter les membres conservés, avec le nom et la cotisation, avec le titre « Cotisations », "
+                    "avec le total de la cotisation, dans « rapport.pdf ».\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        const QString rapport = dossier.filePath("rapport.pdf");
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 15000 && !QFileInfo::exists(rapport)) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        QFile f(rapport);
+        VERIFIER(f.open(QIODevice::ReadOnly) && f.read(5) == "%PDF-");
     }
 
     // Les étiquettes (§ 16.15), dans l'exécution : la cellule d'une valeur colorée prend ses couleurs, sans le marqueur

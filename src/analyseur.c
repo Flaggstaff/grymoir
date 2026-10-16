@@ -7110,7 +7110,9 @@ static Noeud *exporter(Analyse *a, const Jeton *t) {
         if (est_mot(cour(a), "décroissant")) { el->entier = 1; avancer(a); }
         else if (est_mot(cour(a), "croissant")) avancer(a);
     }
-    if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec")) {   /* les colonnes, comme une liste d'écran (§ 22.1) */
+    if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec")
+        && !(est_mot(voir(a, 2), "le") && (est_mot(voir(a, 3), "titre") || est_mot(voir(a, 3), "total")))) {
+        /* les colonnes, comme une liste d'écran (§ 22.1) */
         a->i += 2;
         Chaine cols = {0};
         for (int premiere = 1;; premiere = 0) {
@@ -7134,23 +7136,83 @@ static Noeud *exporter(Analyse *a, const Jeton *t) {
             free(chemin);
             a->i = k;
             if (est_mot(cour(a), "et")) { avancer(a); continue; }
-            if (cour(a)->type == J_VIRGULE && !est_mot(voir(a, 1), "dans")) { avancer(a); continue; }
+            if (cour(a)->type == J_VIRGULE && !est_mot(voir(a, 1), "dans") && !est_mot(voir(a, 1), "avec")) { avancer(a); continue; }
             break;
         }
         if (a->echec) { free(chaine_rendre(&cols)); noeud_liberer(el); return NULL; }
         el->texte3 = chaine_rendre(&cols);
     }
+    /* un rapport (§ 15.6) : « , avec le titre « Cotisations 2026 » », « , avec le total de la cotisation [et du montant] » */
+    char *titre_rapport = NULL;
+    Chaine totaux = {0};
+    while (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec") && est_mot(voir(a, 2), "le")) {
+        if (est_mot(voir(a, 3), "titre") && !titre_rapport) {
+            if (voir(a, 4)->type != J_TEXTE || !voir(a, 4)->valeur || !*voir(a, 4)->valeur) {
+                erreur(a, voir(a, 4), grym_dupliquer("Titre attendu : « , avec le titre « Cotisations 2026 » »."));
+                break;
+            }
+            titre_rapport = grym_dupliquer(voir(a, 4)->valeur);
+            a->i += 5;
+        } else if (est_mot(voir(a, 3), "total") && !totaux.n) {
+            a->i += 4;
+            for (;;) {
+                const Jeton *de = cour(a);
+                const int du = est_mot(de, "du");
+                if (!du && !est_mot(de, "de") && !(de->type == J_ELISION && strcmp(de->valeur, "d") == 0)) {
+                    erreur(a, de, grym_dupliquer("« avec le total de la cotisation » attendu."));
+                    break;
+                }
+                size_t d = a->i + 1, k = d;
+                while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_POINT && a->j[k].type != J_FIN
+                       && !est_mot(&a->j[k], "et") && !est_mot(&a->j[k], "dans")) k++;
+                char *chemin = chemin_colonne(a, d, k, c);
+                int dans_colonnes = !el->texte3;
+                for (const char *q = el->texte3; chemin && q && *q && !dans_colonnes;) {   /* une colonne exportée */
+                    const char *fin = strchr(q, '\x1e');
+                    if (!fin) fin = q + strlen(q);
+                    const char *sep = memchr(q, '\x1d', (size_t)(fin - q));
+                    dans_colonnes = sep && strlen(chemin) == (size_t)(fin - sep - 1) && strncmp(sep + 1, chemin, strlen(chemin)) == 0;
+                    q = *fin ? fin + 1 : fin;
+                }
+                if (!chemin || !dans_colonnes) {
+                    char *x = k > d ? nom_ecran(a, d, k) : grym_dupliquer("");
+                    erreur(a, &a->j[d], grym_formater(chemin ? "Le total porte sur une colonne exportée : ajoute « %s » aux colonnes."
+                                                             : "Total attendu : un champ nombre de « %s ».", chemin ? x : c->nom));
+                    free(x);
+                    free(chemin);
+                    break;
+                }
+                char *ecrit = nom_ecran(a, d, k);
+                if (totaux.n) chaine_ajouter(&totaux, "\x1e");
+                if (du) chaine_ajouter(&totaux, "le ");   /* « du montant » : écrit « le montant », recontracté à l'impression */
+                chaine_ajouter(&totaux, ecrit);
+                chaine_ajouter(&totaux, "\x1d");
+                chaine_ajouter(&totaux, chemin);
+                free(ecrit);
+                free(chemin);
+                a->i = k;
+                if (est_mot(cour(a), "et")) { avancer(a); continue; }
+                break;
+            }
+        } else break;
+        if (a->echec) break;
+    }
+    if (a->echec) { free(titre_rapport); free(chaine_rendre(&totaux)); noeud_liberer(el); return NULL; }
     if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "dans")) avancer(a);
     attendre_mot(a, a->i, "dans", 4);
     if (!est_mot(cour(a), "dans")) {
+        free(titre_rapport);
+        free(chaine_rendre(&totaux));
         noeud_liberer(el);
         return erreur(a, cour(a), grym_dupliquer("Fichier attendu : « … dans « membres.csv ». »"));
     }
     avancer(a);
     Noeud *chemin = valeur(a);
-    if (!chemin) { noeud_liberer(el); return NULL; }
-    if (!fin_phrase(a, 0)) { noeud_liberer(el); noeud_liberer(chemin); return NULL; }
+    if (!chemin) { free(titre_rapport); free(chaine_rendre(&totaux)); noeud_liberer(el); return NULL; }
+    if (!fin_phrase(a, 0)) { free(titre_rapport); free(chaine_rendre(&totaux)); noeud_liberer(el); noeud_liberer(chemin); return NULL; }
     Noeud *n = noeud_creer(P_EXPORTER, t->ligne, t->colonne, t->debut);
+    n->texte = titre_rapport;
+    n->texte2 = totaux.n ? chaine_rendre(&totaux) : (free(chaine_rendre(&totaux)), NULL);
     noeud_ajouter(n, el);
     noeud_ajouter(n, chemin);
     n->fin = chemin->fin;
