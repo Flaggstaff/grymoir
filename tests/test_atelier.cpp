@@ -2794,6 +2794,36 @@ int main(int argc, char **argv) {
         QFile f(chemin);
         VERIFIER(f.open(QIODevice::ReadOnly) && QString::fromUtf8(f.readAll()).contains("L'écran de recherche, « Chercher un membre » en grand, montre :"));   // la taille reste
     }
+    {   // les bornes (§ 22.6) : la frappe d'un texte s'arrête à sa longueur ; le panneau les écrit
+        QVector<ElementVue> el(1);
+        el[0].sorte = ELEMENT_ZONE;
+        el[0].texte = "Code";
+        el[0].type = "texte";
+        el[0].longueur_max = 4;
+        VueEcran v = dessiner_ecran("Saisie", el);
+        auto *le = qobject_cast<QLineEdit *>(v.zones.value(0));
+        VERIFIER(le && le->maxLength() == 4);
+        delete v.vue;
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    une quantité (nombre),\n    le texte « t ».\n");
+        }
+        Geste g;
+        ElementNouveau n;
+        n.sorte = ELEMENT_ZONE;
+        n.texte = QString::fromUtf8("quantité");
+        n.type = "nombre";
+        n.feminin = true;
+        n.borne_min = QString::fromUtf8("−2,5");
+        n.borne_max = "99";
+        const QString r = ecran_modifier(dossier.path(), "x", 0, n, &g);
+        if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        QFile f(chemin);
+        VERIFIER(f.open(QIODevice::ReadOnly) && QString::fromUtf8(f.readAll()).contains(QString::fromUtf8("    une quantité (nombre), de −2,5 à 99,")));
+    }
     {   // la recherche (§ 22.6) : demandée, ou au-delà de vingt objets ; les objets qui contiennent la saisie sont proposés
         QVector<ElementVue> el(3);
         for (auto &e : el) { e.sorte = ELEMENT_ZONE; e.texte = "Membre"; e.type = "membre"; }

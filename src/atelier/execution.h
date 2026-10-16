@@ -88,6 +88,7 @@ public:
     QVector<int> graphiques;                              // graphique (§ 22.11) : 1, + 2 en secteurs, + 4 une somme ; 0 sinon
     int taille_titre = 0;                                 // la taille du titre de l'écran qui s'ouvre (§ 22.5)
     QStringList indications;                              // zone : son indication, vide sinon (§ 22.6)
+    QVector<int> longueurs;                               // zone de texte : « au plus N caractères », 0 sinon (§ 22.6)
     // les descriptions des écrans du dessous (écrans empilés, § 22.3), rendues à la fermeture de celui du dessus
     struct Description { QVector<int> nb_colonnes; QStringList types_zones; QVector<int> facultatives; QVector<QStringList> choix_zones;
                          QVector<int> options_zones; QVector<QByteArray> images; QVector<QVector<int>> places;

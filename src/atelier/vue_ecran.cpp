@@ -453,6 +453,9 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 libelle->setBuddy(w);
                 rang->addWidget(libelle);
             }
+            if (e.longueur_max > 0) {   // « au plus N caractères » (§ 22.6) : la frappe s'arrête là
+                if (auto *le = qobject_cast<QLineEdit *>(w)) le->setMaxLength(e.longueur_max);
+            }
             if (!e.indication.isEmpty()) {   // l'indication (§ 22.6) : plus petite, plus pâle, sous le libellé
                 auto *ind = new QLabel(e.indication);
                 ind->setObjectName("indication");

@@ -757,6 +757,20 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Les bornes (§ 22.6) : hors bornes, refusé avec la règle ; dedans, accepté ; un texte a sa longueur de frappe */
+        const char *src = "L'écran x montre :\n    une quantité (nombre), de 1 à 99,\n    un code (texte), au plus 4 caractères,\n"
+                          "    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Afficher « reçu : » puis la quantité de l'écran.\n"
+                          "    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0=150&z1=1700"), get("/"), evenement("q=2&z0=12&z1=1700&clic=2"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "name=\"z1\" value=\"\" aria-required=\"true\" maxlength=\"4\"");
+        CONTIENT(sc.reponses[2], "« Quantité » va de 1 à 99.");
+        CONTIENT(sc.reponses[4], "reçu : 12");
+        liberer(&sc);
+    }
+
     {   /* La recherche (§ 22.6) : demandée, un champ relié à ses propositions ; une saisie désigne l'objet. Puis automatique,
          * au-delà de vingt objets, sans rien écrire */
         const char *src = "Un membre, conservé, a :\n    un nom (texte), unique.\n"

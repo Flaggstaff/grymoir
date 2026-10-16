@@ -34,6 +34,7 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->graphique = 0;
     n->taille_titre = 0;
     n->indication = NULL;
+    n->borne_min = n->borne_max = NULL;
     return n;
 }
 
@@ -55,6 +56,8 @@ void noeud_liberer(Noeud *n) {
     free(n->texte2);
     free(n->texte3);
     free(n->indication);
+    free(n->borne_min);
+    free(n->borne_max);
     free(n);
 }
 

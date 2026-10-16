@@ -791,6 +791,12 @@ int main(void) {
     /* des choix multiples (§ 22.1) : parmi les objets d'une entité conservée ; lus par les tournures du § 16.13 */
     VE("L'écran x montre :\n    des couleurs (texte).", 2, 19, "Des choix multiples se font parmi les objets d'une entité conservée");
     VE("Un genre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    des genres.", 4, 15, "Type attendu entre parenthèses : « des genres (genre) ».");
+    /* les bornes (§ 22.6) : en caractères pour un texte, sans pour un nombre ; dans l'ordre ; une fois */
+    VE("L'écran x montre :\n    un code (texte), au plus 30.", 2, 22, "Une zone de texte se borne en caractères");
+    VE("L'écran x montre :\n    une quantité (nombre), de 1 à 99 caractères.", 2, 28, "Une zone de nombre se borne sans « caractères »");
+    VE("L'écran x montre :\n    une quantité (nombre), de 9 à 1.", 2, 28, "La première borne dépasse la seconde");
+    VE("L'écran x montre :\n    un jour (date), au moins 3.", 2, 21, "Seule une zone de texte ou de nombre a des bornes.");
+    VE("L'écran x montre :\n    un âge (nombre), au moins 16, au moins 18.", 2, 35, "Cette borne est déjà donnée.");
     /* la recherche (§ 22.6) : une zone qui désigne un objet conservé, et elle seule */
     VE("L'écran x montre :\n    un nom (texte), avec recherche.", 2, 21, "Seule une zone qui désigne un objet conservé se cherche");
     VE("Un membre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    un membre (membre), avec recherche, avec recherche.", 4, 41, "« avec recherche » est déjà dit.");

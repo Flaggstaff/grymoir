@@ -5855,6 +5855,49 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
             *vus_ = vus;
             return 1;
         }
+        /* « , de 1 à 99 », « , au moins 16 », « , au plus 200 caractères », « , de 4 caractères » (§ 22.6) */
+        const int de = est_mot(x, "de"), moins = est_mot(x, "au") && est_mot(voir(a, 2), "moins"),
+                  plus = est_mot(x, "au") && est_mot(voir(a, 2), "plus");
+        if (zone && (de || moins || plus) && el->texte2) {
+            const int texte = strcmp(el->texte2, "texte") == 0;
+            const int nombre = strcmp(el->texte2, "nombre") == 0 || strcmp(el->texte2, "nombre entier") == 0;
+            size_t q = a->i + (de ? 2 : 3);
+            char *lu[2] = {NULL, NULL};
+            int n = 0;
+            for (;;) {   /* un nombre, peut-être négatif ; puis « à » et un second pour « de … à … » */
+                int neg = a->j[q].type == J_MOINS;
+                if (neg) q++;
+                if (a->j[q].type != J_NOMBRE) break;
+                lu[n++] = grym_formater("%s%s", neg ? "-" : "", a->j[q].valeur);
+                q++;
+                if (!(de && n == 1 && est_mot(&a->j[q], "à"))) break;
+                q++;
+            }
+            const int caracteres = est_mot(&a->j[q], "caractères") || est_mot(&a->j[q], "caractère");
+            const char *pb = !n ? "Nombre attendu : « , de 1 à 99 », « , au moins 16 », « , au plus 30 caractères »."
+                           : !texte && !nombre ? "Seule une zone de texte ou de nombre a des bornes."
+                           : texte && !caracteres ? "Une zone de texte se borne en caractères : « , au plus 30 caractères »."
+                           : nombre && caracteres ? "Une zone de nombre se borne sans « caractères » : « , de 1 à 99 »."
+                           : de && n == 1 && !caracteres ? "« de … à … » attendu : « , de 1 à 99 »."
+                           : (de && el->borne_min) || (moins && el->borne_min) || (plus && el->borne_max) ? "Cette borne est déjà donnée."
+                           : NULL;
+            if (!pb && texte)
+                for (int i = 0; i < n; i++)
+                    if (lu[i][0] == '-' || strchr(lu[i], '.')) pb = "Un nombre de caractères est un entier positif.";
+            if (!pb && n == 2) {
+                Decimal d0 = dec_depuis_canonique(lu[0]), d1 = dec_depuis_canonique(lu[1]);
+                if (dec_comparer(&d0, &d1) > 0) pb = "La première borne dépasse la seconde : « , de 1 à 99 ».";
+                dec_liberer(&d0);
+                dec_liberer(&d1);
+            }
+            if (pb) { free(lu[0]); free(lu[1]); return erreur(a, x, grym_dupliquer(pb)), -1; }
+            if (de) { el->borne_min = lu[0]; el->borne_max = n == 2 ? lu[1] : grym_dupliquer(lu[0]); }
+            else if (moins) el->borne_min = lu[0];
+            else el->borne_max = lu[0];
+            if (!de) free(lu[1]);
+            a->i = q + (caracteres ? 1 : 0);
+            return 1;
+        }
         if (zone && est_mot(x, "avec") && est_mot(voir(a, 2), "recherche")) {   /* « , avec recherche » (§ 22.6) */
             const Classe *lie = classe_de(a->portee, el->texte2);
             if (!lie || !lie->conserve)

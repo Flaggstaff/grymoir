@@ -211,6 +211,14 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.lecture_seule = el->entier & 4;
                         x.interrupteur = el->entier & 8;
                         x.recherche = el->entier & 32;
+                        auto ecrite = [](const char *c) {   // « -2.5 » → « −2,5 »
+                            QString t = QString::fromUtf8(c ? c : "");
+                            t.replace('.', ',');
+                            if (t.startsWith('-')) t = QString::fromUtf8("−") + t.mid(1);
+                            return t;
+                        };
+                        x.borne_min = ecrite(el->borne_min);
+                        x.borne_max = ecrite(el->borne_max);
                         x.indication = el->indication ? QString::fromUtf8(el->indication) : QString();
                         if (el->nb_enfants && el->enfants[0]->type != N_SI_ECRAN) {
                             const Noeud *v = el->enfants[0];
@@ -417,6 +425,7 @@ void OngletEcrans::dessiner() {
         el[k].interrupteur = e.elements[k].interrupteur;
         el[k].indication = e.elements[k].indication;
         el[k].recherche = e.elements[k].recherche;
+        if (e.elements[k].type == "texte") el[k].longueur_max = e.elements[k].borne_max.toInt();
         el[k].gauche = e.elements[k].gauche;
         el[k].haut = e.elements[k].haut;
         el[k].largeur = e.elements[k].largeur;
@@ -1443,6 +1452,9 @@ void OngletEcrans::editer() {
             inter->setChecked(x.interrupteur);
             auto *cherche = new QCheckBox("avec recherche (un objet parmi beaucoup)");   // § 22.6
             cherche->setChecked(x.recherche);
+            auto *bmin = new QLineEdit(x.borne_min), *bmax = new QLineEdit(x.borne_max);   // les bornes (§ 22.6)
+            bmin->setPlaceholderText("aucune");
+            bmax->setPlaceholderText(x.type == "texte" ? "aucune (en caractères)" : "aucune");
             auto *indic = new QLineEdit(x.indication);   // « , avec l'indication « … » » (§ 22.6)
             indic->setPlaceholderText("une phrase sous le libellé (facultative)");
             auto *actif = condition_ecran(x.actif_si, "le compositeur choisi de l'écran est présent");
@@ -1458,6 +1470,8 @@ void OngletEcrans::editer() {
             f->addRow("", inter);
             f->addRow("", cherche);
             f->addRow("Indication", indic);
+            f->addRow("Au moins", bmin);
+            f->addRow("Au plus", bmax);
             f->addRow("Active si", actif);
             f->addRow("Visible si", visible);
             connect(appliquer, &QPushButton::clicked, this, [=] {
@@ -1474,6 +1488,8 @@ void OngletEcrans::editer() {
                 n.interrupteur = inter->isChecked();
                 n.recherche = cherche->isChecked();
                 n.indication = indic->text().trimmed();
+                n.borne_min = bmin->text().trimmed();
+                n.borne_max = bmax->text().trimmed();
                 n.multiple = x.multiple;   // une zone multiple le reste
                 n.actif_si = actif->text();
                 n.visible_si = visible->text();

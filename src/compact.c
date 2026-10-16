@@ -747,12 +747,15 @@ static void condition_de_cas(Reecriture *r, size_t d, size_t f) {
 
 static int est_etat(const Jeton *t) {
     return est_cle(t, "actif_si") || est_cle(t, "active_si") || est_cle(t, "visible_si") || est_cle(t, "plusieurs_lignes")
-        || est_cle(t, "interrupteur") || est_cle(t, "indication") || est_cle(t, "recherche")
+        || est_cle(t, "interrupteur") || est_cle(t, "indication") || est_cle(t, "recherche") || est_cle(t, "min") || est_cle(t, "max")
         || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur");
 }
 
 /* Les états d'un élément d'écran, de k à f (§ 22.6) : « _plusieurs_lignes », « _lecture_seule » (zones),
  * « _actif_si cond », « _visible_si cond ». Rend 0 si l'élément est mal écrit (l'erreur est posée). */
+/* La zone dont on lit les états est un texte : ses bornes se disent en caractères (§ 22.6). Posé par la zone. */
+static int zone_de_texte = 0;
+
 static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zone) {
     while (k < f) {
         const Jeton *x = &r->e[k];
@@ -790,6 +793,16 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             mot(r, "indication", x);
             copier(r, &r->e[k + 1]);
             k += 2;
+        } else if (zone && (est_cle(x, "min") || est_cle(x, "max")) && k + 1 < f) {
+            /* _min 1 → , au moins 1 ; _max 30 → , au plus 30 ; « caractères » pour un texte (§ 22.6) */
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "au", x);
+            mot(r, est_cle(x, "min") ? "moins" : "plus", x);
+            size_t q = k + 1;
+            if (r->e[q].type == J_MOINS && q + 1 < f) copier(r, &r->e[q++]);
+            copier(r, &r->e[q]);
+            if (zone_de_texte) mot(r, "caractères", x);
+            k = q + 1;
         } else if (zone && est_cle(x, "recherche")) {   /* _recherche → , avec recherche (§ 22.6) */
             emettre(r, J_VIRGULE, NULL, x, 1);
             mot(r, "avec", x);
@@ -1077,7 +1090,10 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                     mot(r, est_cle(t, "une") ? "facultative" : "facultatif", &r->e[k]);
                     k++;
                 } else {
+                    zone_de_texte = r->e[d + 3].type == J_TEXTE
+                                    || (r->e[d + 3].type == J_CROCHETS && strcmp(r->e[d + 3].valeur, "texte") == 0);
                     if (!etats_compacts(r, k, f, est_cle(t, "une"), 1)) return;
+                    zone_de_texte = 0;
                     k = f;
                 }
             }

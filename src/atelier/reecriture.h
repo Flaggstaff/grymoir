@@ -65,6 +65,7 @@ struct ElementNouveau {
     bool multiple = false;       // « des genres (genre) » (§ 22.1)
     QString indication;          // zone : « , avec l'indication « … » » (§ 22.6)
     bool recherche = false;      // zone d'un objet : « , avec recherche » (§ 22.6)
+    QString borne_min, borne_max;   // zone : ses bornes, écrites (« 1 », « −2,5 ») ; vides sans borne (§ 22.6)
     QStringList valeurs;      // zone (texte) : valeurs permises (§ 22.7) ; groupe : rien
     QString actif_si, visible_si;   // bouton, zone (actif) ; bouton, texte, zone (visible) : la condition telle qu'écrite
     QString cle;              // graphique (§ 22.11) : le champ qui regroupe ; somme : le champ additionné, vide pour compter

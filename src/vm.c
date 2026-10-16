@@ -391,6 +391,7 @@ typedef struct EcranVM {
     long *champ;           /* pour chaque élément : zone → son champ ; liste → le champ « … choisi » ; sinon −1 */
     char **types;          /* zone : son type ; possédés */
     char **indications;    /* zone : son indication, ou NULL ; possédées (§ 22.6) */
+    char **bornes;         /* zone : « min ␛ max », ou NULL ; possédées (§ 22.6) */
     char ***choix;         /* zone liée à une entité : les clés de ses objets */
     size_t *nb_choix;
     struct EcranVM *dessous;   /* l'écran qu'il recouvre (écrans empilés, § 22.3), ou NULL */
@@ -2088,6 +2089,7 @@ static void ecran_detruire(EcranVM *e) {
         valeur_liberer(&e->listes[k]);
         free(e->types[k]);
         free(e->indications[k]);
+        free(e->bornes[k]);
         if (e->chemins[k]) {
             for (size_t c = 0; c < e->nb_colonnes[k]; c++) free(e->chemins[k][c]);
             free(e->chemins[k]);
@@ -2097,6 +2099,7 @@ static void ecran_detruire(EcranVM *e) {
     }
     free(e->types);
     free(e->indications);
+    free(e->bornes);
     free(e->chemins);
     free(e->choix);
     free(e->nb_choix);
@@ -2156,6 +2159,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     e->champ = grym_allouer(t * sizeof *e->champ);
     e->types = grym_allouer(t * sizeof *e->types);
     e->indications = grym_allouer(t * sizeof *e->indications);
+    e->bornes = grym_allouer(t * sizeof *e->bornes);
     e->choix = grym_allouer(t * sizeof *e->choix);
     e->nb_choix = grym_allouer(t * sizeof *e->nb_choix);
     e->chemins = grym_allouer(t * sizeof *e->chemins);
@@ -2183,6 +2187,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->champ[k] = -1;
         e->types[k] = NULL;
         e->indications[k] = NULL;
+        e->bornes[k] = NULL;
         e->chemins[k] = NULL;
         e->choix[k] = NULL;
         e->nb_choix[k] = 0;
@@ -2212,10 +2217,21 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].nb_colonnes = 0;
             e->elements[k].type = e->types[k];
             /* « Zpays ␞ texte ␞ fms ␝ 4 chiffres » : les lettres des options, puis l'indication (§ 22.6) */
-            const char *ind = s2 ? strchr(s2, '\x1d') : NULL;
-            const size_t nopt = s2 ? (ind ? (size_t)(ind - s2 - 1) : strlen(s2 + 1)) : 0;
+            const char *ind = s2 ? strchr(s2, '\x1d') : NULL, *bor = s2 ? strchr(s2, '\x1c') : NULL;
+            if (bor && ind && bor > ind) bor = NULL;   /* « ␜ » dans l'indication n'est pas une borne */
+            const char *fin_opt = bor ? bor : ind;
+            const size_t nopt = s2 ? (fin_opt ? (size_t)(fin_opt - s2 - 1) : strlen(s2 + 1)) : 0;
             e->indications[k] = ind ? grym_dupliquer(ind + 1) : NULL;
             e->elements[k].indication = e->indications[k];
+            /* « ␜ 1 ␛ 99 » : les bornes ; e->bornes[k] les garde, coupées en deux (« 1 », « 99 ») */
+            e->bornes[k] = bor ? grym_formater("%.*s", (int)(ind ? ind - bor - 1 : (long)strlen(bor + 1)), bor + 1) : NULL;
+            e->elements[k].borne_min = e->elements[k].borne_max = NULL;
+            if (e->bornes[k]) {
+                char *sep = strchr(e->bornes[k], '\x1b');
+                if (sep) *sep = 0;
+                e->elements[k].borne_min = *e->bornes[k] ? e->bornes[k] : NULL;
+                e->elements[k].borne_max = sep && sep[1] ? sep + 1 : NULL;
+            }
             e->elements[k].facultatif = s2 && s2[1] == 'f';
             e->elements[k].plusieurs_lignes = s2 && memchr(s2 + 1, 'm', nopt) != NULL;
             e->elements[k].lecture_seule = s2 && memchr(s2 + 1, 's', nopt) != NULL;
@@ -2643,6 +2659,51 @@ static void ensemble_gagner(Valeur *e, Valeur x) {
         l->valeurs = t;
     }
     l->valeurs[l->n++] = x;
+}
+
+/* Une valeur hors des bornes d'une zone : le message qui dit la règle ; NULL si elle les respecte (§ 22.6). Un texte
+ * se mesure en caractères, un nombre se compare. */
+static char *ecrire_borne(const char *canon) {
+    const int neg = canon[0] == '-';
+    Decimal d = dec_depuis_canonique(neg ? canon + 1 : canon);
+    char *s = dec_formater(&d);
+    dec_liberer(&d);
+    if (!neg) return s;
+    char *t = grym_formater("−%s", s);
+    free(s);
+    return t;
+}
+
+static char *hors_bornes(const ElementEcran *el, const Valeur *v) {
+    if (!el->borne_min && !el->borne_max) return NULL;
+    int dessous = 0, dessus = 0;
+    if (v->type == V_TEXTE) {
+        size_t n = 0;
+        for (const unsigned char *p = (const unsigned char *)v->texte; *p; p++) n += (*p & 0xC0) != 0x80;
+        if (el->borne_min && n < (size_t)atol(el->borne_min)) dessous = 1;
+        if (el->borne_max && n > (size_t)atol(el->borne_max)) dessus = 1;
+    } else if (v->type == V_NOMBRE) {
+        for (int i = 0; i < 2; i++) {
+            const char *b = i ? el->borne_max : el->borne_min;
+            if (!b) continue;
+            Decimal d = b[0] == '-' ? dec_depuis_canonique(b + 1) : dec_depuis_canonique(b);
+            if (b[0] == '-') { Decimal z = dec_zero(), r = dec_zero(); dec_soustraction(&z, &d, &r); dec_liberer(&d); dec_liberer(&z); d = r; }
+            const int c = dec_comparer(&v->nombre, &d);
+            if (!i && c < 0) dessous = 1;
+            if (i && c > 0) dessus = 1;
+            dec_liberer(&d);
+        }
+    } else return NULL;
+    if (!dessous && !dessus) return NULL;
+    const int car = v->type == V_TEXTE;
+    char *a = el->borne_min ? ecrire_borne(el->borne_min) : NULL, *b = el->borne_max ? ecrire_borne(el->borne_max) : NULL, *r;
+    if (a && b && car && strcmp(a, b) == 0) r = grym_formater("« %s » a %s caractères.", el->texte, a);
+    else if (a && b) r = grym_formater(car ? "« %s » a de %s à %s caractères." : "« %s » va de %s à %s.", el->texte, a, b);
+    else if (a) r = grym_formater(car ? "« %s » a au moins %s caractères." : "« %s » vaut au moins %s.", el->texte, a);
+    else r = grym_formater(car ? "« %s » a au plus %s caractères." : "« %s » vaut au plus %s.", el->texte, b);
+    free(a);
+    free(b);
+    return r;
 }
 
 static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
@@ -4029,6 +4090,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                                                         e->objet->classe->valeurs[e->champ[ev.element]]);
                     if (mauvais) { refus = mauvais; valeur_liberer(&v); lu = 0; }
                 }
+                if (!probleme && lu && !refus && v.type != V_ABSENT)   /* les bornes de la zone (§ 22.6) */
+                    refus = hors_bornes(&e->elements[ev.element], &v);
+                if (refus && lu) { valeur_liberer(&v); lu = 0; }
                 if (probleme) {}
                 else if (!lu) {
                     if (m->iface.ecran_erreur) m->iface.ecran_erreur(m->iface.contexte, sortie, refus ? refus : "Valeur refusée.");

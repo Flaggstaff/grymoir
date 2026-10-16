@@ -306,6 +306,21 @@ static void comme(Impression *im, const Noeud *n) {
     ecrire_nom(im, n->texte2, 0);
 }
 
+/* Une borne de zone (§ 22.6), de sa forme canonique (« -2.5 ») à l'écrit (« −2,5 »). */
+static char *borne_ecrite(const char *canon) {
+    const int neg = canon[0] == '-';
+    Decimal d = dec_depuis_canonique(neg ? canon + 1 : canon);
+    char *s = dec_formater(&d);
+    dec_liberer(&d);
+    char *w = s;
+    for (const char *r = s; *r; r++) if (*r != '\'') *w++ = *r;
+    *w = '\0';
+    if (!neg) return s;
+    char *t = grym_formater("−%s", s);
+    free(s);
+    return t;
+}
+
 static void nom_avec_article(Impression *im, const Noeud *n) {
     if (!im->compact && n->article == ART_AUCUN && n->article_a_deviner && !im->champ_nu) {   /* venu de la forme compacte (§ 11.4) */
         if (strcmp(n->texte, "nouveau") == 0) aj(im, "le ");
@@ -1300,6 +1315,23 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 if (el->entier & 4) aj(im, c ? " _lecture_seule" : ", en lecture seule");
                 if (el->entier & 8) aj(im, c ? " _interrupteur" : ", en interrupteur");   /* § 22.6 */
                 if (el->entier & 32) aj(im, c ? " _recherche" : ", avec recherche");   /* § 22.6 */
+                if (el->borne_min || el->borne_max) {   /* « , de 1 à 99 », « , au plus 30 caractères » ; « _min 1 _max 99 » */
+                    const int car = el->texte2 && strcmp(el->texte2, "texte") == 0;
+                    char *a1 = el->borne_min ? borne_ecrite(el->borne_min) : NULL, *a2 = el->borne_max ? borne_ecrite(el->borne_max) : NULL;
+                    if (c) {
+                        if (a1) { aj(im, " _min "); aj(im, a1); }
+                        if (a2) { aj(im, " _max "); aj(im, a2); }
+                    } else if (a1 && a2 && strcmp(el->borne_min, el->borne_max) == 0 && car) {
+                        aj(im, ", de "); aj(im, a1); aj(im, " caractères");
+                    } else if (a1 && a2) {
+                        aj(im, ", de "); aj(im, a1); aj(im, " à "); aj(im, a2); if (car) aj(im, " caractères");
+                    } else {
+                        if (a1) { aj(im, ", au moins "); aj(im, a1); if (car) aj(im, " caractères"); }
+                        if (a2) { aj(im, ", au plus "); aj(im, a2); if (car) aj(im, " caractères"); }
+                    }
+                    free(a1);
+                    free(a2);
+                }
                 if (el->indication) {   /* « , avec l'indication « … » » ; « _indication « … » » */
                     aj(im, c ? " _indication " : ", avec l'indication ");
                     ecrire_texte(im, el->indication);

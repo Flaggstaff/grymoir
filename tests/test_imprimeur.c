@@ -296,6 +296,11 @@ int main(void) {
     COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
          "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
+    /* les bornes (§ 22.6) : les deux formes ; « de 4 caractères » pour deux bornes égales d'un texte */
+    FIXE("L'écran x montre :\n    une quantité (nombre), de 1 à 99,\n    une remise (nombre), au moins −3,5, au plus 50,\n"
+         "    un code (texte), de 4 caractères,\n    un nom (texte), de 2 à 30 caractères,\n    un mot (texte), au plus 200 caractères.");
+    COMP("L'écran x montre :\n    une quantité (nombre), de 1 à 99,\n    un code (texte), de 4 caractères.",
+         "_écran x\n    _une quantité (nombre) _min 1 _max 99\n    _un code (texte) _min 4 _max 4\n_fin\n");
     /* la recherche (§ 22.6) : les deux formes */
     FIXE("Un membre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    un membre (membre), avec recherche,\n    le texte « t ».");
     COMP("Un membre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    un membre (membre), avec recherche,\n    le texte « t ».",

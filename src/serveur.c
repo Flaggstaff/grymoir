@@ -859,8 +859,13 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
     const char *attr0 = fige ? " disabled" : el->lecture_seule ? " readonly"
                       : !el->facultatif && !est_case(el) ? " aria-required=\"true\"" : "";
     char attr_b[224];   /* l'indication (§ 22.6) : le champ la désigne, un lecteur d'écran la lit avec lui */
-    snprintf(attr_b, sizeof attr_b, "%s%s%s%s", attr0, el->indication ? " aria-describedby=\"" : "", el->indication ? id : "",
-             el->indication ? "i\"" : "");
+    /* la longueur d'un texte se borne à la frappe (maxlength) ; un minimum, ou les bornes d'un nombre, se vérifient par la
+     * machine, avec son message : posés dans la page, ils bloqueraient l'envoi de tout l'écran, « Fermer » compris */
+    char longueur[48] = "";
+    if (el->borne_max && el->type && strcmp(el->type, "texte") == 0 && !el->nb_choix)
+        snprintf(longueur, sizeof longueur, " maxlength=\"%ld\"", atol(el->borne_max));
+    snprintf(attr_b, sizeof attr_b, "%s%s%s%s%s", attr0, el->indication ? " aria-describedby=\"" : "", el->indication ? id : "",
+             el->indication ? "i\"" : "", longueur);
     const char *attr = attr_b;
     chaine_ajouter(c, "<div class=\"zone\">");
     if (est_case(el)) {   /* la présence de « …p » dit qu'on a vu la case : décochée, elle n'envoie rien */

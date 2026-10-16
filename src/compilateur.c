@@ -1184,6 +1184,12 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 if (el->entier & 8) chaine_ajouter(&d, "i");   /* en interrupteur */
                 if (el->entier & 16) chaine_ajouter(&d, "p");  /* des choix multiples */
                 if (el->entier & 32) chaine_ajouter(&d, "r");  /* avec recherche */
+                if (el->borne_min || el->borne_max) {   /* « ␜ 1 ␛ 99 » : les bornes, l'une ou l'autre vide (§ 22.6) */
+                    chaine_ajouter(&d, "\x1c");
+                    if (el->borne_min) chaine_ajouter(&d, el->borne_min);
+                    chaine_ajouter(&d, "\x1b");
+                    if (el->borne_max) chaine_ajouter(&d, el->borne_max);
+                }
                 if (el->indication) {   /* « ␝ 4 chiffres » : après les lettres des options, qu'elle ne doit pas brouiller */
                     chaine_ajouter(&d, "\x1d");
                     chaine_ajouter(&d, el->indication);
