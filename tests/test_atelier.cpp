@@ -2794,6 +2794,46 @@ int main(int argc, char **argv) {
         QFile f(chemin);
         VERIFIER(f.open(QIODevice::ReadOnly) && QString::fromUtf8(f.readAll()).contains("L'écran de recherche, « Chercher un membre » en grand, montre :"));   // la taille reste
     }
+    {   // l'unité (§ 22.6) : à côté du champ, du bon côté ; le panneau l'écrit
+        QVector<ElementVue> el(2);
+        el[0].sorte = el[1].sorte = ELEMENT_ZONE;
+        el[0].texte = "Montant";
+        el[0].type = el[1].type = "nombre";
+        el[0].unite = "CHF";
+        el[0].unite_devant = true;
+        el[1].texte = "Remise";
+        el[1].unite = "%";
+        VueEcran v = dessiner_ecran("Saisie", el);
+        auto unite_de = [&](int k) -> QLabel * {
+            QWidget *c = v.controles.value(k);
+            return c ? c->findChild<QLabel *>("unite") : nullptr;
+        };
+        QLabel *chf = unite_de(0), *pc = unite_de(1);
+        QWidget *z0 = v.zones.value(0), *z1 = v.zones.value(1);
+        v.vue->resize(500, 300);
+        v.vue->show();
+        QApplication::processEvents();
+        VERIFIER(chf && chf->text() == "CHF" && z0 && chf->geometry().left() < z0->geometry().left());   // devant
+        VERIFIER(pc && pc->text() == "%" && z1 && pc->geometry().left() > z1->geometry().left());      // derrière
+        delete v.vue;
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    un montant (nombre),\n    le texte « t ».\n");
+        }
+        Geste g;
+        ElementNouveau n;
+        n.sorte = ELEMENT_ZONE;
+        n.texte = "montant";
+        n.type = "nombre";
+        n.unite = "CHF";
+        n.unite_devant = true;
+        VERIFIER(ecran_modifier(dossier.path(), "x", 0, n, &g).isEmpty());
+        QFile f(chemin);
+        VERIFIER(f.open(QIODevice::ReadOnly) && QString::fromUtf8(f.readAll()).contains("    un montant (nombre), avec l'unité « CHF » devant,"));
+    }
     {   // le masque (§ 22.6) : la frappe cachée
         QVector<ElementVue> el(1);
         el[0].sorte = ELEMENT_ZONE;

@@ -747,7 +747,7 @@ static void condition_de_cas(Reecriture *r, size_t d, size_t f) {
 
 static int est_etat(const Jeton *t) {
     return est_cle(t, "actif_si") || est_cle(t, "active_si") || est_cle(t, "visible_si") || est_cle(t, "plusieurs_lignes")
-        || est_cle(t, "interrupteur") || est_cle(t, "indication") || est_cle(t, "recherche") || est_cle(t, "min") || est_cle(t, "max") || est_cle(t, "masqué")
+        || est_cle(t, "interrupteur") || est_cle(t, "indication") || est_cle(t, "recherche") || est_cle(t, "min") || est_cle(t, "max") || est_cle(t, "masqué") || est_cle(t, "unité")
         || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur");
 }
 
@@ -785,6 +785,15 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             emettre(r, J_VIRGULE, NULL, x, 1);
             mot(r, "sur", x); mot(r, "plusieurs", x); mot(r, "lignes", x);
             k++;
+        } else if (est_cle(x, "unité") && k + 1 < f && r->e[k + 1].type == J_TEXTE) {
+            /* _unité « CHF » [_devant] → , avec l'unité « CHF » [devant] (§ 22.6) */
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "avec", x);
+            emettre(r, J_ELISION, "l", x, 1);
+            mot(r, "unité", x);
+            copier(r, &r->e[k + 1]);
+            k += 2;
+            if (k < f && est_cle(&r->e[k], "devant")) { mot(r, "devant", &r->e[k]); k++; }
         } else if (est_cle(x, "indication") && k + 1 < f && r->e[k + 1].type == J_TEXTE) {
             /* _indication « … » → , avec l'indication « … » (§ 22.6) */
             emettre(r, J_VIRGULE, NULL, x, 1);

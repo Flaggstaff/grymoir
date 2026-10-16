@@ -507,6 +507,7 @@ static char *feuille_de_style(const Serveur *s) {
     /* l'interrupteur (§ 22.6) : un rail et un bouton ; sans cette règle, une case ordinaire */
     ".choix-multiples{display:flex;flex-wrap:wrap;gap:4px 16px}"   /* des choix multiples (§ 22.1) */
     ".zone .indication{margin:0 0 4px;font-size:.9em;opacity:.75}"   /* l'indication sous le libellé (§ 22.6) */
+    ".avec-unite{display:inline-flex;align-items:center;gap:6px}.avec-unite .unite{opacity:.8}"   /* l'unité (§ 22.6) */
     ".entete h1.titre-petit{font-size:1.1em}.entete h1.titre-grand{font-size:2.2em}"   /* la taille du titre (§ 22.5) */
     ".interrupteur input{appearance:none;width:36px;height:20px;border-radius:10px;background:var(--bordure,#999);position:relative;"
     "cursor:pointer;vertical-align:middle;margin:0 8px 0 0}.interrupteur input::before{content:\"\";position:absolute;top:2px;left:2px;"
@@ -997,6 +998,10 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
             /* « téléphone » : type=tel, qui ne vérifie rien ; courriel et adresse web gardent type=text (type=email ou url
              * bloqueraient l'envoi de tout l'écran), leur clavier vient d'inputmode ; la machine vérifie la forme */
             const int tel = el->type && strcmp(el->type, "téléphone") == 0;
+            if (el->unite) {   /* « avec l'unité « CHF » [devant] » : de part ou d'autre du champ, sans en faire partie (§ 22.6) */
+                chaine_ajouter(c, "<span class=\"avec-unite\">");
+                if (el->unite_devant) { chaine_ajouter(c, "<span class=\"unite\" aria-hidden=\"true\">"); echapper(c, el->unite); chaine_ajouter(c, "</span>"); }
+            }
             chaine_ajouter(c, el->masque ? "<input type=\"password\" id=\"" : tel ? "<input type=\"tel\" id=\"" : "<input type=\"text\" id=\"");
             chaine_ajouter(c, id);
             chaine_ajouter(c, "\" name=\"");
@@ -1011,8 +1016,19 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
             if (el->type && strcmp(el->type, "adresse web") == 0) chaine_ajouter(c, " inputmode=\"url\"");
             if (tel) chaine_ajouter(c, " autocomplete=\"tel\"");
             else if (el->type && strcmp(el->type, "nombre entier") == 0) chaine_ajouter(c, " inputmode=\"numeric\"");
+            if (el->unite) {   /* le lecteur d'écran l'entend avec le libellé : « Montant, CHF » */
+                chaine_ajouter(c, " aria-label=\"");
+                echapper(c, el->texte);
+                chaine_ajouter(c, ", ");
+                echapper(c, el->unite);
+                chaine_ajouter(c, "\"");
+            }
             chaine_ajouter(c, attr);
             chaine_ajouter(c, ">");
+            if (el->unite) {
+                if (!el->unite_devant) { chaine_ajouter(c, "<span class=\"unite\" aria-hidden=\"true\">"); echapper(c, el->unite); chaine_ajouter(c, "</span>"); }
+                chaine_ajouter(c, "</span>");
+            }
         }
     }
     chaine_ajouter(c, "</div>");

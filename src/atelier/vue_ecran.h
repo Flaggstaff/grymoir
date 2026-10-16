@@ -35,6 +35,8 @@ struct ElementVue {
     bool recherche = false;          // zone d'un objet « avec recherche » (§ 22.6)
     int longueur_max = 0;            // zone de texte « au plus N caractères » : la frappe s'arrête là (§ 22.6)
     bool masque = false;             // zone de texte « masqué » : un mot de passe (§ 22.6)
+    QString unite;                   // « , avec l'unité « CHF » » ; unite_devant : à gauche du champ (§ 22.6)
+    bool unite_devant = false;
     bool place = false;              // élément d'un bloc en position libre (§ 22.9)
     int gauche = 0, haut = 0;        // en pixels, depuis le coin du bloc
     int largeur = 0, hauteur = 0;    // en pixels ; 0 : la taille naturelle

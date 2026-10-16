@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.71 de la spécification, révisée le 14 octobre 2026.
+Version 1.72 de la spécification, révisée le 14 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -289,7 +289,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 54
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 55
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -438,3 +438,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.69 | 2026-10-16 | Écrans : l'indication d'une zone, après `␝` à la fin de sa description, hors des lettres des options ; `indication` dans `ElementEcran` ; format version 54 |
 | 1.70 | 2026-10-16 | Écrans : les bornes d'une zone, `␜ min ␛ max` entre les lettres des options et l'indication ; `borne_min`, `borne_max` dans `ElementEcran` ; la machine refuse une saisie hors bornes |
 | 1.71 | 2026-10-16 | Types : `courriel`, `téléphone`, `adresse web`, rangés et comparés comme des textes (`types.h`), leur forme vérifiée à l'affectation |
+| 1.72 | 2026-10-16 | Écrans : l'unité d'une zone, `␚<CHF` ou `␚>%` ; les morceaux d'une description de zone (bornes, unité, indication) lus par une seule fonction ; l'unité tapée avec la valeur est ôtée ; format version 55 |

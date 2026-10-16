@@ -37,6 +37,8 @@ struct ElementLu {
     QString indication;          // « , avec l'indication « … » » (§ 22.6)
     bool recherche = false;      // « , avec recherche » (§ 22.6)
     bool masque = false;         // « , masqué » (§ 22.6)
+    QString unite;               // « , avec l'unité « CHF » » (§ 22.6)
+    bool unite_devant = false;
     QString borne_min, borne_max;   // « de 1 à 99 », écrites (« 1 », « −2,5 ») ; vides sans borne (§ 22.6)
     QString graphe_cle, graphe_somme;   // telles qu'écrites, « écrit ␝ chemin » ; vide : pas de somme
     int gauche = 0, haut = 0, largeur = 0, hauteur = 0;   // largeur, hauteur : 0 si non dites

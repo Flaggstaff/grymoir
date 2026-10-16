@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <time.h>
 
+static char *morceau_de_zone(const char *s2, char sep);   /* plus bas, avec les bornes (§ 22.6) */
+
 /* ---------------------------------------------------------------- */
 /* Valeurs (docs/vm.md, § 2)                                        */
 /* ---------------------------------------------------------------- */
@@ -393,6 +395,7 @@ typedef struct EcranVM {
     char **types;          /* zone : son type ; possédés */
     char **indications;    /* zone : son indication, ou NULL ; possédées (§ 22.6) */
     char **bornes;         /* zone : « min ␛ max », ou NULL ; possédées (§ 22.6) */
+    char **unites;         /* zone : « <CHF » ou « >% », ou NULL ; possédées (§ 22.6) */
     char ***choix;         /* zone liée à une entité : les clés de ses objets */
     size_t *nb_choix;
     struct EcranVM *dessous;   /* l'écran qu'il recouvre (écrans empilés, § 22.3), ou NULL */
@@ -2095,6 +2098,7 @@ static void ecran_detruire(EcranVM *e) {
         free(e->types[k]);
         free(e->indications[k]);
         free(e->bornes[k]);
+        free(e->unites[k]);
         if (e->chemins[k]) {
             for (size_t c = 0; c < e->nb_colonnes[k]; c++) free(e->chemins[k][c]);
             free(e->chemins[k]);
@@ -2105,6 +2109,7 @@ static void ecran_detruire(EcranVM *e) {
     free(e->types);
     free(e->indications);
     free(e->bornes);
+    free(e->unites);
     free(e->chemins);
     free(e->choix);
     free(e->nb_choix);
@@ -2165,6 +2170,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     e->types = grym_allouer(t * sizeof *e->types);
     e->indications = grym_allouer(t * sizeof *e->indications);
     e->bornes = grym_allouer(t * sizeof *e->bornes);
+    e->unites = grym_allouer(t * sizeof *e->unites);
     e->choix = grym_allouer(t * sizeof *e->choix);
     e->nb_choix = grym_allouer(t * sizeof *e->nb_choix);
     e->chemins = grym_allouer(t * sizeof *e->chemins);
@@ -2193,6 +2199,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->types[k] = NULL;
         e->indications[k] = NULL;
         e->bornes[k] = NULL;
+        e->unites[k] = NULL;
         e->chemins[k] = NULL;
         e->choix[k] = NULL;
         e->nb_choix[k] = 0;
@@ -2222,14 +2229,15 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].nb_colonnes = 0;
             e->elements[k].type = e->types[k];
             /* « Zpays ␞ texte ␞ fms ␝ 4 chiffres » : les lettres des options, puis l'indication (§ 22.6) */
-            const char *ind = s2 ? strchr(s2, '\x1d') : NULL, *bor = s2 ? strchr(s2, '\x1c') : NULL;
-            if (bor && ind && bor > ind) bor = NULL;   /* « ␜ » dans l'indication n'est pas une borne */
-            const char *fin_opt = bor ? bor : ind;
-            const size_t nopt = s2 ? (fin_opt ? (size_t)(fin_opt - s2 - 1) : strlen(s2 + 1)) : 0;
-            e->indications[k] = ind ? grym_dupliquer(ind + 1) : NULL;
+            /* après les lettres des options, des morceaux, chacun derrière son séparateur : « ␜ 1 ␛ 99 » les bornes,
+             * « ␚ < CHF » l'unité, « ␝ 4 chiffres » l'indication (§ 22.6) */
+            const size_t nopt = s2 ? strcspn(s2 + 1, "\x1c\x1a\x1d") : 0;
+            e->indications[k] = morceau_de_zone(s2, '\x1d');
             e->elements[k].indication = e->indications[k];
-            /* « ␜ 1 ␛ 99 » : les bornes ; e->bornes[k] les garde, coupées en deux (« 1 », « 99 ») */
-            e->bornes[k] = bor ? grym_formater("%.*s", (int)(ind ? ind - bor - 1 : (long)strlen(bor + 1)), bor + 1) : NULL;
+            e->unites[k] = morceau_de_zone(s2, '\x1a');
+            e->elements[k].unite = e->unites[k] && e->unites[k][0] ? e->unites[k] + 1 : NULL;
+            e->elements[k].unite_devant = e->unites[k] && e->unites[k][0] == '<';
+            e->bornes[k] = morceau_de_zone(s2, '\x1c');   /* coupées en deux ci-dessous (« 1 », « 99 ») */
             e->elements[k].borne_min = e->elements[k].borne_max = NULL;
             if (e->bornes[k]) {
                 char *sep = strchr(e->bornes[k], '\x1b');
@@ -2665,6 +2673,26 @@ static void ensemble_gagner(Valeur *e, Valeur x) {
         l->valeurs = t;
     }
     l->valeurs[l->n++] = x;
+}
+
+/* Le morceau d'une description de zone qui suit le séparateur sep, jusqu'au séparateur suivant ; NULL s'il n'y est pas. */
+static char *morceau_de_zone(const char *s2, char sep) {
+    const char *p = s2 ? strchr(s2, sep) : NULL;
+    if (!p) return NULL;
+    p++;
+    return grym_formater("%.*s", (int)strcspn(p, "\x1c\x1a\x1d"), p);
+}
+
+/* La saisie d'une zone qui a une unité, l'unité ôtée si on l'a tapée (« 12 CHF », « CHF 12 ») ; à libérer. */
+static char *sans_unite(const char *t, const char *unite) {
+    size_t d = 0, f = strlen(t), u = unite ? strlen(unite) : 0;
+    while (d < f && t[d] == ' ') d++;
+    while (f > d && t[f - 1] == ' ') f--;
+    if (u && f - d >= u && strncmp(t + f - u, unite, u) == 0) f -= u;
+    else if (u && f - d >= u && strncmp(t + d, unite, u) == 0) d += u;
+    while (d < f && t[d] == ' ') d++;
+    while (f > d && t[f - 1] == ' ') f--;
+    return grym_formater("%.*s", (int)(f - d), t + d);
 }
 
 /* Une valeur hors des bornes d'une zone : le message qui dit la règle ; NULL si elle les respecte (§ 22.6). Un texte
@@ -4038,6 +4066,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 char *refus = NULL;
                 int lu = 0;
                 while (*t == ' ') t++;
+                /* une unité tapée avec la valeur (« 12 CHF ») est ôtée : la zone l'affiche déjà (§ 22.6) */
+                char *t_sans = e->elements[ev.element].unite ? sans_unite(t, e->elements[ev.element].unite) : NULL;
+                if (t_sans) t = t_sans;
                 if (e->elements[ev.element].multiple && lie && lie->conserve) {
                     /* des choix multiples : chaque clé cochée désigne un objet ; ensemble, la valeur de la zone (§ 22.1) */
                     const char *cle = champ_cle(lie);
@@ -4109,7 +4140,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     ecrire_champ(m, e->objet, (size_t)e->champ[ev.element], v);
                     code_ev = (long)ev.element + 1;
                 }
-            zone_lue:;
+            zone_lue:
+                free(t_sans);
             }
             if (!probleme && code_ev == 0 && ev.sorte == EVENEMENT_CLIC && ev.element < m->ecran->n) {
                 code_ev = (long)ev.element + 1;

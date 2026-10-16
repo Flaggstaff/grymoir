@@ -50,6 +50,8 @@ typedef struct {
     int graphique;                  /* graphique (§ 22.11) : 2 en secteurs, 4 une somme ; ses lignes : libellé, valeur */
     int interrupteur;               /* zone (vrai ou faux) « en interrupteur » : un interrupteur plutôt qu'une case (§ 22.6) */
     const char *indication;         /* zone : « , avec l'indication « … » », ou NULL (§ 22.6) */
+    const char *unite;              /* zone : « , avec l'unité « CHF » », ou NULL ; unite_devant : à gauche du champ */
+    int unite_devant;
     const char *borne_min, *borne_max;   /* zone : ses bornes en forme canonique (« 1 », « -2.5 »), en caractères pour un
                                             texte ; NULL sans borne (§ 22.6) */
     int masque;                     /* zone de texte « masqué » : la frappe cachée, un mot de passe (§ 22.6) */

@@ -234,3 +234,4 @@ Un bloc `en position libre :` (grammaire, § 22.9) devient une grille d'une seul
 | 0.18 | 2026-10-16 | Les bornes : `maxlength` pour un texte ; le reste vérifié par la machine (un `min` ou un `minlength` dans la page bloquerait l'envoi de tout l'écran, « Fermer » compris) |
 | 0.19 | 2026-10-16 | Le masque : un champ `type=password`, sa valeur jamais renvoyée dans la page ; envoyé vide, il ne change pas la zone |
 | 0.20 | 2026-10-16 | Courriel, téléphone, adresse web : `inputmode` et `autocomplete`, `type=tel` ; jamais `type=email` ni `type=url`, qui bloqueraient l'envoi de tout l'écran |
+| 0.21 | 2026-10-16 | L'unité : de part ou d'autre du champ, cachée aux lecteurs d'écran, qui l'entendent dans le nom du champ (« Montant, CHF ») |

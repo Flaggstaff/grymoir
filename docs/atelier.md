@@ -412,3 +412,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.66 | 2026-10-16 | Le masque : la case « masqué » dans le panneau d'une zone ; la frappe cachée, la valeur jamais réécrite à l'exécution |
 | 0.67 | 2026-10-16 | Courriel, téléphone, adresse web : le clavier qui convient dans une zone |
 | 0.68 | 2026-10-16 | § 5 terdecies : le clic droit sur un élément propose d'abord de le supprimer |
+| 0.69 | 2026-10-16 | L'unité : à côté du champ dans l'aperçu et à l'exécution ; « Unité » et « l'unité devant le champ » dans le panneau |

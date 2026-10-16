@@ -212,6 +212,8 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.interrupteur = el->entier & 8;
                         x.recherche = el->entier & 32;
                         x.masque = el->entier & 64;
+                        x.unite = el->unite ? QString::fromUtf8(el->unite) : QString();
+                        x.unite_devant = el->entier & 128;
                         auto ecrite = [](const char *c) {   // « -2.5 » → « −2,5 »
                             QString t = QString::fromUtf8(c ? c : "");
                             t.replace('.', ',');
@@ -427,6 +429,8 @@ void OngletEcrans::dessiner() {
         el[k].indication = e.elements[k].indication;
         el[k].recherche = e.elements[k].recherche;
         el[k].masque = e.elements[k].masque;
+        el[k].unite = e.elements[k].unite;
+        el[k].unite_devant = e.elements[k].unite_devant;
         if (e.elements[k].type == "texte") el[k].longueur_max = e.elements[k].borne_max.toInt();
         el[k].gauche = e.elements[k].gauche;
         el[k].haut = e.elements[k].haut;
@@ -1467,6 +1471,10 @@ void OngletEcrans::editer() {
             cherche->setChecked(x.recherche);
             auto *masq = new QCheckBox("masqué (un mot de passe)");   // § 22.6
             masq->setChecked(x.masque);
+            auto *unite = new QLineEdit(x.unite);   // « , avec l'unité « CHF » [devant] » (§ 22.6)
+            unite->setPlaceholderText("aucune (CHF, %, kg…)");
+            auto *devant = new QCheckBox("l'unité devant le champ");
+            devant->setChecked(x.unite_devant);
             auto *bmin = new QLineEdit(x.borne_min), *bmax = new QLineEdit(x.borne_max);   // les bornes (§ 22.6)
             bmin->setPlaceholderText("aucune");
             bmax->setPlaceholderText(x.type == "texte" ? "aucune (en caractères)" : "aucune");
@@ -1485,6 +1493,8 @@ void OngletEcrans::editer() {
             f->addRow("", inter);
             f->addRow("", cherche);
             f->addRow("", masq);
+            f->addRow(QString::fromUtf8("Unité"), unite);
+            f->addRow("", devant);
             f->addRow("Indication", indic);
             f->addRow("Au moins", bmin);
             f->addRow("Au plus", bmax);
@@ -1504,6 +1514,8 @@ void OngletEcrans::editer() {
                 n.interrupteur = inter->isChecked();
                 n.recherche = cherche->isChecked();
                 n.masque = masq->isChecked();
+                n.unite = unite->text().trimmed();
+                n.unite_devant = devant->isChecked();
                 n.indication = indic->text().trimmed();
                 n.borne_min = bmin->text().trimmed();
                 n.borne_max = bmax->text().trimmed();

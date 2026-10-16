@@ -300,6 +300,10 @@ int main(void) {
     FIXE("Un contact, conservé, a :\n    un courriel (courriel), unique,\n    un portable (téléphone),\n    un site (adresse web).\n"
          "L'écran x montre :\n    un courriel (courriel),\n    un site (adresse web).");
     COMP("L'écran x montre :\n    un site (adresse web),\n    le texte « t ».", "_écran x\n    _un site (adresse_web)\n    _texte « t »\n_fin\n");
+    /* l'unité (§ 22.6) : derrière par défaut, devant sur demande ; les deux formes */
+    FIXE("L'écran x montre :\n    une remise (nombre), de 0 à 100, avec l'unité « % »,\n    un montant (nombre), avec l'unité « CHF » devant.");
+    COMP("L'écran x montre :\n    un montant (nombre), avec l'unité « CHF » devant,\n    le texte « t ».",
+         "_écran x\n    _un montant (nombre) _unité « CHF » _devant\n    _texte « t »\n_fin\n");
     /* le masque (§ 22.6) : accordé au genre, les deux formes */
     FIXE("L'écran x montre :\n    un code (texte), masqué,\n    une clé (texte), au moins 8 caractères, masquée.");
     COMP("L'écran x montre :\n    une clé (texte), masquée,\n    le texte « t ».",

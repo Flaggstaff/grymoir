@@ -66,6 +66,8 @@ struct ElementNouveau {
     QString indication;          // zone : « , avec l'indication « … » » (§ 22.6)
     bool recherche = false;      // zone d'un objet : « , avec recherche » (§ 22.6)
     bool masque = false;         // zone de texte : « , masqué » (§ 22.6)
+    QString unite;               // zone : « , avec l'unité « CHF » », vide sans unité ; unite_devant : devant le champ
+    bool unite_devant = false;
     QString borne_min, borne_max;   // zone : ses bornes, écrites (« 1 », « −2,5 ») ; vides sans borne (§ 22.6)
     QStringList valeurs;      // zone (texte) : valeurs permises (§ 22.7) ; groupe : rien
     QString actif_si, visible_si;   // bouton, zone (actif) ; bouton, texte, zone (visible) : la condition telle qu'écrite

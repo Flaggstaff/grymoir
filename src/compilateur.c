@@ -1191,6 +1191,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
                     chaine_ajouter(&d, "\x1b");
                     if (el->borne_max) chaine_ajouter(&d, el->borne_max);
                 }
+                if (el->unite) {   /* « ␚ < CHF » : l'unité, « < » devant, « > » derrière (§ 22.6) */
+                    chaine_ajouter(&d, (el->entier & 128) ? "\x1a<" : "\x1a>");
+                    chaine_ajouter(&d, el->unite);
+                }
                 if (el->indication) {   /* « ␝ 4 chiffres » : après les lettres des options, qu'elle ne doit pas brouiller */
                     chaine_ajouter(&d, "\x1d");
                     chaine_ajouter(&d, el->indication);

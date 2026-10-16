@@ -481,6 +481,16 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 ind->setStyleSheet(QString("font-size: %1px;").arg(qRound(QFontInfo(f).pixelSize() * 0.9)));
                 rang->addWidget(ind);
             }
+            if (!e.unite.isEmpty()) {   // l'unité, d'un côté ou de l'autre du champ (§ 22.6)
+                auto *ligne = new QHBoxLayout;
+                ligne->setSpacing(t.mesure("espace-1"));
+                auto *u = new QLabel(e.unite);
+                u->setObjectName("unite");
+                if (e.unite_devant) ligne->addWidget(u);
+                ligne->addWidget(w, 1);
+                if (!e.unite_devant) ligne->addWidget(u);
+                rang->addLayout(ligne);
+            } else
             rang->addWidget(w);
             poser(conteneur);
             r.controles[k] = conteneur;

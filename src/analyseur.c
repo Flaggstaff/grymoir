@@ -5835,6 +5835,21 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
     if (el->type == N_NOM) {   /* « , avec l'indication « 4 chiffres » » : une phrase sous le libellé (§ 22.6) */
         const Jeton *x = voir(a, 1);
         if (!el->indication) attendre_mot(a, a->i + 1, "avec l'indication «", strlen("avec l'indication «"));
+        if (!el->unite && el->texte2 && (type_textuel(el->texte2) || strncmp(el->texte2, "nombre", 6) == 0))
+            attendre_mot(a, a->i + 1, "avec l'unité «", strlen("avec l'unité «"));
+        if (est_mot(x, "avec") && voir(a, 2)->type == J_ELISION && est_mot(voir(a, 3), "unité")) {
+            /* « , avec l'unité « CHF » [devant] » : affichée près du champ, ôtée si on la tape (§ 22.6) */
+            if (!el->texte2 || !(type_textuel(el->texte2) || strcmp(el->texte2, "nombre") == 0 || strcmp(el->texte2, "nombre entier") == 0)
+                || el->texte3)
+                return erreur(a, x, grym_dupliquer("Seule une zone de nombre ou de texte a une unité : « une remise (nombre), avec l'unité « % » ».")), -1;
+            if (el->unite) return erreur(a, x, grym_dupliquer("L'unité est déjà donnée.")), -1;
+            if (voir(a, 4)->type != J_TEXTE || !*voir(a, 4)->valeur)
+                return erreur(a, voir(a, 4), grym_dupliquer("Texte attendu : « , avec l'unité « CHF » ».")), -1;
+            el->unite = grym_dupliquer(voir(a, 4)->valeur);
+            a->i += 5;
+            if (est_mot(cour(a), "devant")) { el->entier |= 128; a->i++; }
+            return 1;
+        }
         if (est_mot(x, "avec") && voir(a, 2)->type == J_ELISION && est_mot(voir(a, 3), "indication")) {
             if (el->indication) return erreur(a, x, grym_dupliquer("L'indication est déjà donnée.")), -1;
             if (voir(a, 4)->type != J_TEXTE || !*voir(a, 4)->valeur)

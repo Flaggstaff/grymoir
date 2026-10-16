@@ -757,6 +757,21 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* L'unité (§ 22.6) : de part ou d'autre du champ ; tapée avec la valeur (« 12 CHF »), elle est ôtée */
+        const char *src = "L'écran x montre :\n    un montant (nombre), avec l'unité « CHF » devant,\n"
+                          "    une remise (nombre), facultative, avec l'unité « % »,\n    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Afficher « reçu : » puis le montant de l'écran + 1.\n"
+                          "    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0=12%20CHF&clic=2"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<span class=\"avec-unite\"><span class=\"unite\" aria-hidden=\"true\">CHF</span><input type=\"text\" id=\"z0\"");
+        CONTIENT(sc.reponses[0], "aria-label=\"Montant, CHF\"");
+        CONTIENT(sc.reponses[0], "><span class=\"unite\" aria-hidden=\"true\">%</span></span>");
+        CONTIENT(sc.reponses[2], "reçu : 13");
+        liberer(&sc);
+    }
+
     {   /* Courriel, téléphone (§ 16.1) : le bon clavier, sans bloquer l'envoi ; une forme fausse refusée, une juste acceptée */
         const char *src = "L'écran x montre :\n    un courriel (courriel),\n    un portable (téléphone), facultatif,\n    un bouton « OK ».\n"
                           "Quand on clique sur « OK » dans l'écran x :\n    Afficher « reçu : » puis le courriel de l'écran.\n"

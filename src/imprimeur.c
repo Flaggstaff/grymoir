@@ -1334,6 +1334,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                     free(a1);
                     free(a2);
                 }
+                if (el->unite) {   /* « , avec l'unité « CHF » devant » ; « _unité « CHF » _devant » */
+                    aj(im, c ? " _unité " : ", avec l'unité ");
+                    ecrire_texte(im, el->unite);
+                    if (el->entier & 128) aj(im, c ? " _devant" : " devant");
+                }
                 if (el->indication) {   /* « , avec l'indication « … » » ; « _indication « … » » */
                     aj(im, c ? " _indication " : ", avec l'indication ");
                     ecrire_texte(im, el->indication);
