@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.66 de la spécification, révisée le 14 octobre 2026.
+Version 1.67 de la spécification, révisée le 14 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -433,3 +433,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.64 | 2026-10-14 | Écrans (grammaire, § 22.10) : `ELEMENT_ONGLETS`, `ELEMENT_ONGLET` (texte : le titre) ; format version 50 |
 | 1.65 | 2026-10-15 | Écrans (grammaire, § 22.11) : `ELEMENT_GRAPHIQUE`, `graphique` dans `ElementEcran` ; la machine regroupe les lignes et envoie libellé et valeur par groupe ; format version 51 |
 | 1.66 | 2026-10-15 | Écrans (grammaire, § 22.12) : `ELEMENT_MENU` ; format version 52 |
+| 1.67 | 2026-10-16 | Écrans : `multiple` dans `ElementEcran` (lettre `p` des options d'une zone) ; une recherche « parmi » sur un objet en mémoire (un écran) lit la liste de son champ au lieu de la base ; l'événement et ecran_valeurs portent les clés cochées, séparées par U+001E |

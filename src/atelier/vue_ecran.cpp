@@ -356,7 +356,21 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             r.controles[k] = l;
         } else if (e.sorte == ELEMENT_ZONE) {   // les contrôles des formulaires (docs/v2.md, § 10)
             QWidget *w;
-            if (e.type == "vrai ou faux" && e.interrupteur) w = new Interrupteur(e.texte);   // § 22.6
+            if (e.multiple) {   // des choix multiples : une case par objet (§ 22.1) ; l'aperçu, sans données, en montre une
+                w = new QWidget;
+                w->setProperty("multiple", true);
+                auto *f = new QHBoxLayout(w);
+                f->setContentsMargins(0, 0, 0, 0);
+                f->setSpacing(t.mesure("espace-4"));
+                const QStringList choix = e.choix.isEmpty() ? QStringList{QString::fromUtf8("…")} : e.choix;
+                for (const QString &c : choix) {
+                    auto *b = new QCheckBox(c);
+                    b->setProperty("cle", c);
+                    f->addWidget(b);
+                }
+                f->addStretch(1);
+            }
+            else if (e.type == "vrai ou faux" && e.interrupteur) w = new Interrupteur(e.texte);   // § 22.6
             else if (e.type == "vrai ou faux") w = new QCheckBox(e.texte);   // la case porte son libellé : un clic dessus la coche
             else if (e.type == "fichier" || e.type == "image") {   // une zone de fichier ou d'image : choisir un fichier
                 auto *b = new QPushButton(QString::fromUtf8("Choisir un fichier…"));

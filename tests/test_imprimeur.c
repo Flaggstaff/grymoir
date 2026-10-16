@@ -296,6 +296,10 @@ int main(void) {
     COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
          "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
+    /* choix multiples (§ 22.1) : les deux formes */
+    FIXE("Un genre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    des genres (genre), visible si vrai,\n    le texte « t ».");
+    COMP("Un genre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    des genres (genre),\n    le texte « t ».",
+         "_classe _un genre _conservé\n    _un nom (texte) _unique\n_fin\n_écran x\n    _des genres (genre)\n    _texte « t »\n_fin\n");
     /* interrupteur (§ 22.6) : les deux formes */
     COMP("L'écran x montre :\n    un actif (vrai ou faux), en interrupteur,\n    le texte « t ».",
          "_écran x\n    _un actif (vrai_ou_faux) _interrupteur\n    _texte « t »\n_fin\n");

@@ -1266,7 +1266,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             } else if (el->type == N_NOM) {   /* zone : « un pays (texte), « Suisse » au départ, facultatif » */
                 int fz = el->forme == 2;
                 retenir(im, el->texte, fz ? G_FEMININ : G_MASCULIN);
-                aj(im, c ? (fz ? "_une " : "_un ") : (fz ? "une " : "un "));
+                aj(im, (el->entier & 16) ? (c ? "_des " : "des ") : c ? (fz ? "_une " : "_un ") : (fz ? "une " : "un "));
                 ecrire_nom(im, el->texte, 0);
                 aj(im, " (");
                 if (el->texte3) {   /* valeurs permises (§ 22.7) : « (« a », « b » ou « c ») » ; « (« a » ; « b ») » */

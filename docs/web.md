@@ -227,3 +227,4 @@ Un bloc `en position libre :` (grammaire, § 22.9) devient une grille d'une seul
 | 0.11 | 2026-10-15 | Les menus (grammaire, § 22.12) : une barre de navigation sous le titre de l'écran, un `<details>` par menu, qui s'ouvre sans script |
 | 0.12 | 2026-10-15 | Les zones de fichier et d'image : un champ `type=file` (images seules pour une image), l'envoi de l'écran en `multipart/form-data` ; le fichier actuel est rappelé à côté du champ |
 | 0.13 | 2026-10-15 | L'interrupteur : une case à cocher qui porte le rôle `switch`, dessinée en rail et bouton par la feuille de style ; sans style, une case ordinaire |
+| 0.14 | 2026-10-16 | Des choix multiples : une case par objet, cochées selon la valeur ; à l'envoi, toutes les cases cochées d'une zone |

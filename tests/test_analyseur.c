@@ -788,6 +788,9 @@ int main(void) {
     V("Une tâche, conservée, a :\n    un début (heure), 08:00 au départ.", "(entité [tâche] [début : heure départ (heure 08:00)])");
     VE("L'écran x montre :\n    un début (texte), 08:00 au départ.", 2, 23, "Valeur de départ attendue pour une zone (texte).");
     VE("Une tâche, conservée, a :\n    un début (heure), « x » au départ.", 2, 23, "attend une heure, pas un texte");
+    /* des choix multiples (§ 22.1) : parmi les objets d'une entité conservée ; lus par les tournures du § 16.13 */
+    VE("L'écran x montre :\n    des couleurs (texte).", 2, 19, "Des choix multiples se font parmi les objets d'une entité conservée");
+    VE("Un genre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    des genres.", 4, 15, "Type attendu entre parenthèses : « des genres (genre) ».");
     /* l'interrupteur (§ 22.6) : une présentation d'une zone (vrai ou faux), et d'elle seule */
     V("L'écran x montre :\n    un actif (vrai ou faux), en interrupteur.", "(écran [x] [actif])");
     VE("L'écran x montre :\n    un nom (texte), en interrupteur.", 2, 21, "Seule une zone (vrai ou faux) se montre en interrupteur.");

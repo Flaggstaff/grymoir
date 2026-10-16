@@ -181,6 +181,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.texte = QString::fromUtf8(el->texte);
                     } else if (el->type == N_NOM) {
                         x.sorte = ELEMENT_ZONE;
+                        x.multiple = el->entier & 16;   // des choix multiples (§ 22.1)
                         x.texte = QString::fromUtf8(el->texte);
                         x.type = QString::fromUtf8(el->texte2);
                         x.facultatif = el->entier & 1;
@@ -404,6 +405,7 @@ void OngletEcrans::dessiner() {
         el[k].lecture_seule = e.elements[k].lecture_seule;
         el[k].place = e.elements[k].place;
         el[k].graphique = e.elements[k].graphique;
+        el[k].multiple = e.elements[k].multiple;
         el[k].gauche = e.elements[k].gauche;
         el[k].haut = e.elements[k].haut;
         el[k].largeur = e.elements[k].largeur;

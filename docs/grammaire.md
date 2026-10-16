@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.92 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.93 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1699,6 +1699,7 @@ Ouvrir l'écran des compositeurs.
 - Éléments : `la liste des … conservés [dont …] [, par …] [, avec le …, le … et le …]` (recherche du § 16.4) ; `un bouton « … »` ; `le texte « … »` ; une zone de saisie déclarée comme un champ d'entité (`un pays (texte), « Suisse » au départ`, `, facultatif`) ; `côte à côte :` et `l'un sous l'autre :`, qui ouvrent un bloc indenté ; `le groupe « … » :` (§ 22.7) et `en position libre :` (§ 22.9), aussi.
 - Colonnes par défaut : les champs simples, dans l'ordre de la déclaration ; un lien montre la clé de l'objet désigné ; fichiers, images et champs « plusieurs » restent hors de la liste.
 - Une zone de fichier ou d'image *(1.91)* s'écrit comme le champ qu'elle remplit : `un contrat (fichier)`, `une photo (image), facultative`. On y choisit un fichier ; sa valeur est ce fichier, avec ses octets et son nom, prête à ranger dans un champ `(fichier)` ou `(image)`. Une zone d'image refuse un fichier qui n'est pas une image (« « notes.txt » n'est pas une image (PNG, JPEG, GIF ou WebP). »). Elle n'a pas de valeur de départ écrite.
+- Des choix multiples *(1.93)* s'écrivent comme le champ multiple d'une entité (§ 16.13) : `des genres (genre)`, une case par objet conservé de l'entité, désigné par sa clé. La zone se lit avec les tournures du champ multiple : `Pour chaque genre de l'écran`, `le nombre de genres de l'écran`. Elle ne se fait que parmi les objets d'une entité conservée (« Des choix multiples se font parmi les objets d'une entité conservée : « des genres (genre) » ; « couleur » n'en est pas une. »). Pour ranger les choix dans un objet : `Pour chaque genre de l'écran : Les genres de o gagnent genre.` Forme compacte : `_des genres (genre)`.
 - Un écran est un objet : ses zones de saisie sont ses champs, jamais conservés.
 
 ### 22.2 Événements
@@ -1985,3 +1986,4 @@ L'écran d'accueil montre :
 | 1.90 | 2026-10-15 | § 8 : l'aide à la saisie après une liste ou un graphique, et les champs après « par » ; en-tête daté du 15 octobre |
 | 1.91 | 2026-10-15 | § 22.1 : les zones de fichier et d'image, `un contrat (fichier)`, `une photo (image)` (elles étaient refusées, « viendra plus tard ») |
 | 1.92 | 2026-10-15 | § 22.6 : `, en interrupteur`, une zone (vrai ou faux) montrée en interrupteur |
+| 1.93 | 2026-10-16 | § 22.1 : des choix multiples, `des genres (genre)`, lus par les tournures du champ multiple (§ 16.13) sur l'écran, en mémoire |

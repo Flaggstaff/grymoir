@@ -1025,7 +1025,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             }
             if (!etats_compacts(r, places, fin_places, 1, 0)) return;
             f = fin_places;
-        } else if ((est_cle(t, "un") || est_cle(t, "une")) && d + 4 < f + 1 && r->e[d + 1].type == J_CROCHETS
+        } else if ((est_cle(t, "un") || est_cle(t, "une") || est_cle(t, "des")) && d + 4 < f + 1 && r->e[d + 1].type == J_CROCHETS
                    && r->e[d + 2].type == J_PAR_OUV
                    && ((r->e[d + 3].type == J_CROCHETS && r->e[d + 4].type == J_PAR_FERM) || r->e[d + 3].type == J_TEXTE)) {
             /* _un pays (texte) [_départ « Suisse »] [_facultatif] → un pays (texte), « Suisse » au départ, facultatif ;

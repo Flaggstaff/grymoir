@@ -2204,6 +2204,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].plusieurs_lignes = s2 && strchr(s2 + 1, 'm') != NULL;   /* « Zpays ␞ texte ␞ fms » (§ 22.6) */
             e->elements[k].lecture_seule = s2 && strchr(s2 + 1, 's') != NULL;
             e->elements[k].interrupteur = s2 && strchr(s2 + 1, 'i') != NULL;   /* § 22.6 */
+            e->elements[k].multiple = s2 && strchr(s2 + 1, 'p') != NULL;   /* « des genres (genre) » */
             e->elements[k].choix = NULL;
             e->elements[k].nb_choix = 0;
             const ClasseVM *lie = classe_vm(m, e->types[k]);
@@ -3609,6 +3610,39 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_CHERCHER: {
             /* recherche dans la base (§ 16.4) : les valeurs comparées sont au sommet de la pile */
             long np = requete_parametres(b->constantes[op].texte);
+            {   /* « Pour chaque genre de l'écran », « le nombre de genres de l'écran » : « parmi les genres » d'un objet en
+                 * mémoire, jamais conservé (un écran) ; sa liste est dans son champ, pas en base (§ 22.1) */
+                const char *rq = b->constantes[op].texte, *cond = strrchr(rq, '\x1f');   /* champs séparés par U+001F */
+                const Valeur *p1 = np == 1 ? &pile.v[pile.n - 1] : NULL;
+                char champ[256] = "";
+                if (cond) {   /* « (M…1[genres]) », seule condition : le champ entre crochets */
+                    const char *o = cond + 1;
+                    while (*o == ' ') o++;
+                    const char *g = o[0] == '(' && o[1] == 'M' ? strchr(o, '[') : NULL, *d = g ? strchr(g, ']') : NULL;
+                    if (g && d && d[1] == ')' && !d[2] && (size_t)(d - g - 1) < sizeof champ) {
+                        memcpy(champ, g + 1, (size_t)(d - g - 1));
+                        champ[d - g - 1] = 0;
+                    }
+                }
+                if (p1 && p1->type == V_OBJET && !p1->objet->id && *champ) {
+                    const char *mode = strchr(rq, '\x1f');
+                    const int compte = mode && atoi(mode + 1) == 2;
+                    const long q = index_champ(p1->objet->classe, champ);
+                    Valeur r;
+                    if (q >= 0 && p1->objet->definis[q] && p1->objet->champs[q].type == V_LISTE) r = valeur_copier(&p1->objet->champs[q]);
+                    else r = vi_liste(NULL, NULL, 0);
+                    if (compte) {
+                        char t[32];
+                        snprintf(t, sizeof t, "%lu", (unsigned long)r.liste->n);
+                        valeur_liberer(&r);
+                        r = valeur_nombre(dec_depuis_canonique(t));
+                    }
+                    Valeur x = depiler(&pile);
+                    valeur_liberer(&x);
+                    empiler(&pile, r);
+                    break;
+                }
+            }
             Valeur r;
             char *erreur = NULL;
             /* sans paramètre, la pile peut être vide : aucune adresse calculée sur un pointeur nul */
@@ -3849,6 +3883,21 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     const size_t q = (size_t)e->champ[k];
                     if (!o->definis[q] || o->champs[q].type == V_ABSENT) v[k] = grym_dupliquer("");
                     else if (o->champs[q].type == V_OBJET) v[k] = nom_objet(m, o->champs[q].objet);
+                    else if (o->champs[q].type == V_LISTE) {   /* des choix multiples : les clés cochées, U+001E entre elles */
+                        Chaine c = {0};
+                        const Liste *l = o->champs[q].liste;
+                        for (size_t r = 0; r < l->n; r++) {
+                            char *err = NULL;
+                            Objet *x = machine_objet_en_base(m, l->ids[r], l->classes[r], &err);
+                            free(err);
+                            if (!x) continue;
+                            char *nom = nom_objet(m, x);
+                            if (c.n) chaine_ajouter(&c, "\x1e");
+                            chaine_ajouter(&c, nom);
+                            free(nom);
+                        }
+                        v[k] = chaine_rendre(&c);
+                    }
                     else if (o->champs[q].type == V_BOOLEEN) v[k] = grym_dupliquer(o->champs[q].vrai ? "oui" : "non");
                     else v[k] = texte_valeur(m, &o->champs[q]);
                 }
@@ -3903,7 +3952,38 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 char *refus = NULL;
                 int lu = 0;
                 while (*t == ' ') t++;
-                if (!*t && e->elements[ev.element].facultatif) { v = vi_absent(NULL); lu = 1; }
+                if (e->elements[ev.element].multiple && lie && lie->conserve) {
+                    /* des choix multiples : chaque clé cochée désigne un objet ; ensemble, la valeur de la zone (§ 22.1) */
+                    const char *cle = champ_cle(lie);
+                    long *ids = grym_allouer(64 * sizeof *ids);
+                    char **cls = grym_allouer(64 * sizeof *cls);
+                    size_t n = 0, cap = 64;
+                    for (const char *p = t; *p && !probleme && !refus;) {
+                        const char *f = strchr(p, '\x1e');
+                        if (!f) f = p + strlen(p);
+                        char *une = grym_formater("%.*s", (int)(f - p), p);
+                        Valeur cherche = vi_texte(une), l;
+                        if (*une && cle && chercher_valeur(m, lie->nom, 0, cle, &cherche, &l, &probleme)) {
+                            if (l.type == V_LISTE && l.liste->n) {
+                                if (n == cap) { cap *= 2; ids = realloc(ids, cap * sizeof *ids); cls = realloc(cls, cap * sizeof *cls); }
+                                ids[n] = l.liste->ids[0];
+                                cls[n++] = grym_dupliquer(l.liste->classes[0]);
+                            } else refus = grym_formater("Aucun %s conservé n'a « %s » pour %s.", lie->nom, une, cle);
+                            valeur_liberer(&l);
+                        }
+                        valeur_liberer(&cherche);
+                        free(une);
+                        p = *f ? f + 1 : f;
+                    }
+                    if (refus || probleme) { for (size_t r = 0; r < n; r++) free(cls[r]); free(ids); free(cls); }
+                    else { v = vi_liste(ids, cls, n); lu = 1; }
+                    if (lu) {   /* pas de contrôle de type : une liste n'est pas une valeur de champ ordinaire */
+                        ecrire_champ(m, e->objet, (size_t)e->champ[ev.element], v);
+                        code_ev = (long)ev.element + 1;
+                        goto zone_lue;
+                    }
+                }
+                else if (!*t && e->elements[ev.element].facultatif) { v = vi_absent(NULL); lu = 1; }
                 else if (strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0) {
                     /* une zone de fichier ou d'image : le fichier choisi, ses octets et son nom ; une image se vérifie
                      * ensuite, comme pour un champ (« … n'est pas une image ») */
@@ -3940,6 +4020,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     ecrire_champ(m, e->objet, (size_t)e->champ[ev.element], v);
                     code_ev = (long)ev.element + 1;
                 }
+            zone_lue:;
             }
             if (!probleme && code_ev == 0 && ev.sorte == EVENEMENT_CLIC && ev.element < m->ecran->n) {
                 code_ev = (long)ev.element + 1;

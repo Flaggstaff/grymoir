@@ -1102,6 +1102,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 } else
                 classe_typer_dernier_champ(cm, el->texte2, 0);
                 if (el->entier & 1) classe_facultatif_dernier_champ(cm);
+                if (el->entier & 16) classe_multiple_dernier_champ(cm);   /* « des genres (genre) » (§ 22.1) */
             } else if (el->type == N_CHERCHER && !el->graphique) {   /* un graphique ne se choisit pas (§ 22.11) */
                 int fem = 0;   /* « le compositeur choisi », « la partition choisie » : le genre de l'entité */
                 for (size_t q = 0; q < c->module->nb_classes; q++)
@@ -1180,6 +1181,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 if (el->entier & 2) chaine_ajouter(&d, "m");   /* sur plusieurs lignes (§ 22.6) */
                 if (el->entier & 4) chaine_ajouter(&d, "s");   /* en lecture seule */
                 if (el->entier & 8) chaine_ajouter(&d, "i");   /* en interrupteur */
+                if (el->entier & 16) chaine_ajouter(&d, "p");  /* des choix multiples */
             }
         }
         char *desc = chaine_rendre(&d);

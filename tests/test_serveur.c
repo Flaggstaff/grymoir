@@ -757,6 +757,30 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Des choix multiples (§ 22.1) : une case par genre conservé ; cocher deux cases ; l'événement lit « Pour chaque genre
+         * de l'écran » et « le nombre de genres de l'écran », en mémoire (un écran n'est jamais conservé) */
+        const char *src = "Un genre, conservé, a :\n    un nom (texte), unique.\n"
+                          "Le a vaut un nouveau genre :\n    Le nom vaut « baroque ».\nConserver a.\n"
+                          "Le b vaut un nouveau genre :\n    Le nom vaut « sacré ».\nConserver b.\n"
+                          "Le c vaut un nouveau genre :\n    Le nom vaut « fugue ».\nConserver c.\n"
+                          "L'écran x montre :\n    des genres (genre),\n    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Pour chaque genre de l'écran :\n"
+                          "        Afficher « choisi : » puis le nom du genre.\n    Afficher le nombre de genres de l'écran.\n"
+                          "    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0p=1&z0=baroque&z0=fugue"), get("/"), evenement("q=2&z0p=1&z0=baroque&z0=fugue&clic=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<div class=\"choix-multiples\" role=\"group\"><label class=\"case\"><input type=\"checkbox\" name=\"z0\" value=\"baroque\">");
+        CONTIENT(sc.reponses[2], "value=\"baroque\" checked>");   /* la valeur revient cochée */
+        CONTIENT(sc.reponses[2], "value=\"sacré\">");
+        CONTIENT(sc.reponses[2], "value=\"fugue\" checked>");
+        CONTIENT(sc.reponses[4], "choisi : baroque");
+        CONTIENT(sc.reponses[4], "choisi : fugue");
+        NE_CONTIENT_PAS(sc.reponses[4], "choisi : sacré");
+        CONTIENT(sc.reponses[4], "2");
+        liberer(&sc);
+    }
+
     {   /* L'interrupteur (§ 22.6) : une case annoncée comme un interrupteur ; la bascule change la zone */
         const char *src = "L'écran x montre :\n    un actif (vrai ou faux), en interrupteur,\n    un bouton « OK ».\n"
                           "Quand on clique sur « OK » dans l'écran x :\n    Afficher l'actif de l'écran.\n    Fermer l'écran.\nOuvrir l'écran x.\n";

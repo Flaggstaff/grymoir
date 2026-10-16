@@ -502,6 +502,7 @@ static char *feuille_de_style(const Serveur *s) {
     ".libre{display:grid;justify-items:start;align-items:start}.libre>.place{grid-area:1/1;margin:0;min-width:0}"
     ".graphique{max-width:100%;height:auto;font:inherit;fill:currentColor}"
     /* l'interrupteur (§ 22.6) : un rail et un bouton ; sans cette règle, une case ordinaire */
+    ".choix-multiples{display:flex;flex-wrap:wrap;gap:4px 16px}"   /* des choix multiples (§ 22.1) */
     ".interrupteur input{appearance:none;width:36px;height:20px;border-radius:10px;background:var(--bordure,#999);position:relative;"
     "cursor:pointer;vertical-align:middle;margin:0 8px 0 0}.interrupteur input::before{content:\"\";position:absolute;top:2px;left:2px;"
     "width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}.interrupteur input:checked{background:var(--accent)}"
@@ -882,7 +883,7 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
                 chaine_ajouter(c, "</label>");
             }
             chaine_ajouter(c, "</div>");
-        } else if (el->nb_choix) {   /* une zone liée à une entité : le menu de ses clés, ligne vide en tête */
+        } else if (el->nb_choix && !el->multiple) {   /* une zone liée à une entité : le menu de ses clés, ligne vide en tête */
             chaine_ajouter(c, "<select id=\"");
             chaine_ajouter(c, id);
             chaine_ajouter(c, "\" name=\"");
@@ -896,6 +897,29 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
             if (!trouvee) option(c, v, v, 1);   /* la valeur actuelle hors du menu n'est jamais perdue en silence */
             for (size_t j = 0; j < el->nb_choix; j++) option(c, el->choix[j], el->choix[j], strcmp(el->choix[j], v) == 0);
             chaine_ajouter(c, "</select>");
+        } else if (el->multiple) {   /* des choix multiples : une case par objet, cochée si sa clé est dans la valeur (§ 22.1) */
+            chaine_ajouter(c, "<input type=\"hidden\" name=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "p\" value=\"1\"><div class=\"choix-multiples\" role=\"group\">");
+            for (size_t j = 0; j < el->nb_choix; j++) {
+                int coche = 0;
+                for (const char *p = v; *p && !coche;) {
+                    const char *f = strchr(p, '\x1e');
+                    if (!f) f = p + strlen(p);
+                    coche = (size_t)(f - p) == strlen(el->choix[j]) && strncmp(p, el->choix[j], (size_t)(f - p)) == 0;
+                    p = *f ? f + 1 : f;
+                }
+                chaine_ajouter(c, "<label class=\"case\"><input type=\"checkbox\" name=\"");
+                chaine_ajouter(c, id);
+                chaine_ajouter(c, "\" value=\"");
+                echapper(c, el->choix[j]);
+                chaine_ajouter(c, coche ? "\" checked" : "\"");
+                if (fige) chaine_ajouter(c, " disabled");
+                chaine_ajouter(c, ">");
+                echapper(c, el->choix[j]);
+                chaine_ajouter(c, "</label>");
+            }
+            chaine_ajouter(c, "</div>");
         } else if (est_zone_fichier(el)) {   /* le fichier actuel, puis le choix d'un autre ; une image n'accepte que des images */
             if (*v) {
                 chaine_ajouter(c, "<span class=\"fichier-actuel\">");
@@ -1277,6 +1301,21 @@ static int evenements_de(Serveur *s, Envoi *env) {
             snprintf(nom, sizeof nom, "z%lup", (unsigned long)k);
             if (!envoi_partie(env, nom)) continue;   /* case absente de l'envoi : rien à dire */
             nouveau = pv && !pv->fichier && strcmp(pv->valeur, "oui") == 0 ? "oui" : "non";
+        } else if (e->el[k].multiple) {   /* des choix multiples : toutes les cases cochées, U+001E entre leurs clés */
+            snprintf(nom, sizeof nom, "z%lup", (unsigned long)k);
+            if (!envoi_partie(env, nom)) continue;
+            snprintf(nom, sizeof nom, "z%lu", (unsigned long)k);
+            Chaine ch = {0};
+            for (size_t q = 0; q < env->n; q++)
+                if (!env->p[q].fichier && strcmp(env->p[q].nom, nom) == 0 && !env->p[q].mal) {
+                    if (ch.n) chaine_ajouter(&ch, "\x1e");
+                    chaine_ajouter(&ch, env->p[q].valeur);
+                }
+            char *coches = chaine_rendre(&ch);
+            if (strcmp(coches, e->valeurs[k] ? e->valeurs[k] : "") == 0) { free(coches); continue; }
+            Evenement ev = { EVENEMENT_CHANGEMENT, k, 0, coches, choisies(e), e->n, NULL, 0 };
+            file_ajouter(s, ev);
+            continue;
         } else if (est_zone_fichier(&e->el[k])) {   /* un fichier choisi : son nom et ses octets ; aucun choisi : rien ne change */
             if (!pv || !pv->fichier || !pv->choisi) continue;
             unsigned char *o = grym_allouer(pv->taille ? pv->taille : 1);

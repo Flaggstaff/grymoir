@@ -2658,6 +2658,22 @@ int main(int argc, char **argv) {
         VERIFIER(m.hasMatch() && qAbs(m.captured(1).toInt() - 100) <= 8 && qAbs(m.captured(2).toInt() - 80) <= 8);
         if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
     }
+    {   // des choix multiples (§ 22.1) : une case par choix, chacune porte sa clé ; l'aperçu sans données en montre une
+        QVector<ElementVue> el(2);
+        el[0].sorte = ELEMENT_ZONE;
+        el[0].texte = "Genres";
+        el[0].type = "genre";
+        el[0].multiple = true;
+        el[0].choix = {"baroque", "sacré", "fugue"};
+        el[1] = el[0];
+        el[1].choix.clear();
+        VueEcran v = dessiner_ecran("Saisie", el);
+        QWidget *z = v.zones.value(0);
+        VERIFIER(z && z->property("multiple").toBool() && z->findChildren<QCheckBox *>().size() == 3);
+        if (z) VERIFIER(z->findChildren<QCheckBox *>().value(1)->property("cle").toString() == QString::fromUtf8("sacré"));
+        VERIFIER(v.zones.value(1) && v.zones.value(1)->findChildren<QCheckBox *>().size() == 1);
+        delete v.vue;
+    }
     {   // l'interrupteur (§ 22.6) : une case à cocher (le câblage d'une case reste), dessinée en interrupteur
         QVector<ElementVue> el(1);
         el[0].sorte = ELEMENT_ZONE;

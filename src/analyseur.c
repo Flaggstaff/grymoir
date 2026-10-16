@@ -6231,6 +6231,47 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 classe_ajouter_zone(&a->portee->classes[ic], choisi, c->genre, c->nom, 1, NULL);   /* « le compositeur choisi de l'écran » */
                 free(choisi);
             }
+        } else if (est_mot(u, "des") && voir(a, 1)->type == J_MOT) {
+            /* « des genres (genre) » : des choix multiples parmi les objets conservés d'une entité, comme le champ multiple
+             * d'une entité (§ 16.13) ; il se lit par « Pour chaque genre de l'écran », « le nombre de genres de l'écran » */
+            size_t k = a->i + 1;
+            while (k < a->n && a->j[k].type != J_PAR_OUV && a->j[k].type != J_VIRGULE && a->j[k].type != J_POINT
+                   && a->j[k].type != J_FIN) k++;
+            if (a->j[k].type != J_PAR_OUV) {
+                erreur(a, &a->j[k], grym_dupliquer("Type attendu entre parenthèses : « des genres (genre) »."));
+                break;
+            }
+            size_t q = k + 1;
+            while (q < a->n && a->j[q].type != J_PAR_FERM && a->j[q].type != J_FIN) q++;
+            char *nomz = cle(a, a->i + 1, k);
+            char *type = q == k + 2 && a->j[k + 1].type == J_CROCHETS ? grym_dupliquer(a->j[k + 1].valeur) : cle(a, k + 1, q);
+            const Classe *lie = classe_de(a->portee, type);
+            if (!lie || !lie->conserve) {
+                erreur(a, &a->j[k + 1], grym_formater("Des choix multiples se font parmi les objets d'une entité conservée : "
+                                                      "« des genres (genre) » ; « %s » n'en est pas une.", type));
+                free(nomz); free(type);
+                break;
+            }
+            el = noeud_creer(N_NOM, u->ligne, u->colonne, u->debut);
+            el->texte = nomz;
+            el->texte2 = type;
+            el->entier = 16;   /* multiple */
+            a->i = q + 1;
+            int vus = 0, lu;
+            while ((lu = etat_element(a, el, GENRE_MASCULIN, 0, &vus)) > 0) {}
+            if (lu < 0) { noeud_liberer(el); break; }
+            el->fin = fin_jeton(&a->j[a->i - 1]);
+            {   /* inscrite parmi les champs multiples de la classe de l'écran : les tournures du § 16.13 la trouvent */
+                Classe *ce = &a->portee->classes[ic];
+                const size_t n = ce->nb_multiples + 1;
+                ce->multiples = realloc(ce->multiples, n * sizeof *ce->multiples);
+                ce->singuliers = realloc(ce->singuliers, n * sizeof *ce->singuliers);
+                ce->types_multiples = realloc(ce->types_multiples, n * sizeof *ce->types_multiples);
+                ce->multiples[ce->nb_multiples] = grym_dupliquer(nomz);
+                ce->singuliers[ce->nb_multiples] = singulier_regulier(nomz);
+                ce->types_multiples[ce->nb_multiples] = grym_dupliquer(type);
+                ce->nb_multiples++;
+            }
         } else if ((est_mot(u, "un") || est_mot(u, "une")) && !est_mot(voir(a, 1), "bouton")) {
             /* zone de saisie : « un pays (texte), « Suisse » au départ, facultatif » (§ 22.1) */
             Genre g = est_mot(u, "une") ? GENRE_FEMININ : GENRE_MASCULIN;

@@ -136,7 +136,8 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         t->graphiques << (el[k].sorte == ELEMENT_GRAPHIQUE ? el[k].graphique : 0);
         t->images << (el[k].octets ? QByteArray(reinterpret_cast<const char *>(el[k].octets), (qsizetype)el[k].taille) : QByteArray());
         t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
-        t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0));
+        t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0)
+                             | (el[k].multiple ? 8 : 0));
         t->facultatives << el[k].facultatif;
         QStringList ch;
         for (size_t q = 0; q < el[k].nb_choix; q++) ch << QString::fromUtf8(el[k].choix[q]);
@@ -486,7 +487,13 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             QWidget *z = zones[k];
             if (!z) continue;
             QSignalBlocker b(z);   // montrer la valeur n'est pas un changement
-            if (auto *l = qobject_cast<QLineEdit *>(z)) l->setText(v[k]);
+            if (z->property("multiple").toBool()) {   // les clés cochées, U+001E entre elles
+                const QStringList coches = v[k].split(QChar(0x1e), Qt::SkipEmptyParts);
+                for (QCheckBox *c : z->findChildren<QCheckBox *>()) {
+                    QSignalBlocker bc(c);
+                    c->setChecked(coches.contains(c->property("cle").toString()));
+                }
+            } else if (auto *l = qobject_cast<QLineEdit *>(z)) l->setText(v[k]);
             else if (auto *bf = qobject_cast<QPushButton *>(z); bf && bf->property("fichier").toBool())   // le fichier actuel
                 bf->setText(v[k].isEmpty() ? QString::fromUtf8("Choisir un fichier…") : v[k] + QString::fromUtf8(" (changer…)"));
             else if (z->property("radios").toBool()) {   // boutons radio (§ 22.7) : celui de la valeur, sinon aucun
@@ -769,6 +776,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].plusieurs_lignes = o & 1;
         elements[k].lecture_seule = o & 2;
         elements[k].interrupteur = o & 4;   // § 22.6
+        elements[k].multiple = o & 8;   // § 22.1
         elements[k].graphique = travail.graphiques.value(k);   // § 22.11
         if (k < travail.places.size() && travail.places[k].size() == 4) {   // position libre (§ 22.9)
             const QVector<int> &p = travail.places[k];
@@ -797,7 +805,15 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                 envoyer_evenement(EVENEMENT_CHOIX, k, i ? i->data(Qt::UserRole).toInt() : ligne);
             });
         } else if (QWidget *z = v.zones[k]) {   // la validation d'une zone (Entrée, ou la quitter) est un événement
-            if (auto *bf = qobject_cast<QPushButton *>(z); bf && bf->property("fichier").toBool()) {
+            if (z->property("multiple").toBool()) {   // des choix multiples : chaque case change la zone (§ 22.1)
+                for (QCheckBox *c : z->findChildren<QCheckBox *>())
+                    connect(c, &QCheckBox::toggled, this, [this, k, z] {
+                        QStringList coches;
+                        for (QCheckBox *x : z->findChildren<QCheckBox *>()) if (x->isChecked()) coches << x->property("cle").toString();
+                        texte_envoye = coches.join(QChar(0x1e)).toUtf8();
+                        envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
+                    });
+            } else if (auto *bf = qobject_cast<QPushButton *>(z); bf && bf->property("fichier").toBool()) {
                 // une zone de fichier ou d'image : choisir un fichier ; ses octets et son nom font le changement
                 connect(bf, &QPushButton::clicked, this, [this, k, bf] {
                     const QString f = QFileDialog::getOpenFileName(this, "Choisir un fichier", QString(),
