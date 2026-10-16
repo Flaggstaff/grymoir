@@ -46,6 +46,41 @@ void montrer_image(QLabel *l, const QByteArray &octets, const QString &repli, in
     l->setPixmap(p);
 }
 
+// « en interrupteur » (§ 22.6) : une case à cocher dessinée en interrupteur, un rail et un bouton ; le câblage d'une case
+// (toggled, setChecked) reste le même.
+namespace {
+class Interrupteur : public QCheckBox {
+public:
+    explicit Interrupteur(const QString &texte) : QCheckBox(texte) { setObjectName("interrupteur"); }
+    QSize sizeHint() const override {
+        const QSize t = fontMetrics().size(Qt::TextSingleLine, text());
+        return QSize(44 + 8 + t.width(), qMax(24, t.height() + 4));
+    }
+protected:
+    void paintEvent(QPaintEvent *) override {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+        const QRectF rail(1, (height() - 22) / 2.0, 42, 22);
+        const QColor accent = palette().color(QPalette::Highlight);
+        p.setPen(Qt::NoPen);
+        p.setBrush(isChecked() ? accent : palette().color(QPalette::Mid));
+        if (!isEnabled()) p.setOpacity(0.5);
+        p.drawRoundedRect(rail, 11, 11);
+        p.setBrush(Qt::white);
+        p.drawEllipse(QRectF(isChecked() ? rail.right() - 20 : rail.left() + 2, rail.top() + 2, 18, 18));
+        p.setOpacity(1);
+        p.setPen(palette().color(QPalette::WindowText));
+        p.drawText(QRect(52, 0, width() - 52, height()), Qt::AlignVCenter | Qt::AlignLeft, text());
+        if (hasFocus()) {
+            p.setPen(QPen(accent, 2));
+            p.setBrush(Qt::NoBrush);
+            p.drawRoundedRect(rail.adjusted(-2, -2, 2, 2), 13, 13);
+        }
+    }
+    bool hitButton(const QPoint &pos) const override { return rect().contains(pos); }
+};
+}  // namespace
+
 double nombre_affiche(const QString &t) {
     QString b;
     for (QChar c : t) {
@@ -321,7 +356,8 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             r.controles[k] = l;
         } else if (e.sorte == ELEMENT_ZONE) {   // les contrôles des formulaires (docs/v2.md, § 10)
             QWidget *w;
-            if (e.type == "vrai ou faux") w = new QCheckBox(e.texte);   // la case porte son libellé : un clic dessus la coche
+            if (e.type == "vrai ou faux" && e.interrupteur) w = new Interrupteur(e.texte);   // § 22.6
+            else if (e.type == "vrai ou faux") w = new QCheckBox(e.texte);   // la case porte son libellé : un clic dessus la coche
             else if (e.type == "fichier" || e.type == "image") {   // une zone de fichier ou d'image : choisir un fichier
                 auto *b = new QPushButton(QString::fromUtf8("Choisir un fichier…"));
                 b->setProperty("fichier", true);

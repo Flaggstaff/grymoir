@@ -45,6 +45,7 @@ typedef struct {
     int largeur, hauteur;           /* en pixels ; 0 : la taille naturelle */
     int calculee;                   /* image calculée (§ 22.8) : sans octets à l'ouverture ; ecran_image les donne */
     int graphique;                  /* graphique (§ 22.11) : 2 en secteurs, 4 une somme ; ses lignes : libellé, valeur */
+    int interrupteur;               /* zone (vrai ou faux) « en interrupteur » : un interrupteur plutôt qu'une case (§ 22.6) */
 } ElementEcran;
 
 typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT } SorteEvenement;

@@ -2658,6 +2658,25 @@ int main(int argc, char **argv) {
         VERIFIER(m.hasMatch() && qAbs(m.captured(1).toInt() - 100) <= 8 && qAbs(m.captured(2).toInt() - 80) <= 8);
         if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
     }
+    {   // l'interrupteur (§ 22.6) : une case à cocher (le câblage d'une case reste), dessinée en interrupteur
+        QVector<ElementVue> el(1);
+        el[0].sorte = ELEMENT_ZONE;
+        el[0].texte = "Actif";
+        el[0].type = "vrai ou faux";
+        el[0].interrupteur = true;
+        VueEcran v = dessiner_ecran("Saisie", el);
+        auto *c = qobject_cast<QCheckBox *>(v.zones.value(0));
+        VERIFIER(c && c->objectName() == "interrupteur" && !c->isChecked());
+        if (c) {
+            c->click();
+            VERIFIER(c->isChecked());
+            QImage img(c->sizeHint(), QImage::Format_ARGB32);
+            c->resize(c->sizeHint());
+            c->render(&img);
+            VERIFIER(!img.isNull() && c->sizeHint().width() > 44);
+        }
+        delete v.vue;
+    }
     {   // une zone de fichier ou d'image : un bouton « Choisir un fichier… », qui sait s'il n'accepte que des images
         QVector<ElementVue> el(2);
         el[0].sorte = ELEMENT_ZONE;

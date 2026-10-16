@@ -788,6 +788,10 @@ int main(void) {
     V("Une tâche, conservée, a :\n    un début (heure), 08:00 au départ.", "(entité [tâche] [début : heure départ (heure 08:00)])");
     VE("L'écran x montre :\n    un début (texte), 08:00 au départ.", 2, 23, "Valeur de départ attendue pour une zone (texte).");
     VE("Une tâche, conservée, a :\n    un début (heure), « x » au départ.", 2, 23, "attend une heure, pas un texte");
+    /* l'interrupteur (§ 22.6) : une présentation d'une zone (vrai ou faux), et d'elle seule */
+    V("L'écran x montre :\n    un actif (vrai ou faux), en interrupteur.", "(écran [x] [actif])");
+    VE("L'écran x montre :\n    un nom (texte), en interrupteur.", 2, 21, "Seule une zone (vrai ou faux) se montre en interrupteur.");
+    VE("L'écran x montre :\n    un actif (vrai ou faux), en interrupteur, en interrupteur.", 2, 47, "« en interrupteur » est déjà dit.");
     /* le menu (§ 22.12) : au premier niveau, des boutons seulement */
     VE("L'écran x montre :\n    le groupe « G » :\n        le menu « M » :\n            un bouton « B ».", 3, 9,
        "Un menu s'écrit au premier niveau de l'écran");

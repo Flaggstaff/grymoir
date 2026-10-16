@@ -757,6 +757,18 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* L'interrupteur (§ 22.6) : une case annoncée comme un interrupteur ; la bascule change la zone */
+        const char *src = "L'écran x montre :\n    un actif (vrai ou faux), en interrupteur,\n    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Afficher l'actif de l'écran.\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), get("/style.css"), evenement("q=1&z0p=1&z0=oui&clic=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<label class=\"case interrupteur\"><input type=\"checkbox\" role=\"switch\" name=\"z0\"");
+        CONTIENT(sc.reponses[1], ".interrupteur input:checked{background:var(--accent)}");
+        CONTIENT(sc.reponses[3], "vrai");
+        liberer(&sc);
+    }
+
     {   /* Une zone d'image : un champ de fichier (images seules), l'envoi en multipart ; le fichier choisi devient la valeur de
          * la zone, son nom s'affiche ; un fichier qui n'est pas une image est refusé, l'écran le dit */
         const char *src = "L'écran x montre :\n    une photo (image), facultative,\n    un bouton « OK ».\n"

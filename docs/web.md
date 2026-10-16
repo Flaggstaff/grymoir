@@ -226,3 +226,4 @@ Un bloc `en position libre :` (grammaire, § 22.9) devient une grille d'une seul
 | 0.10 | 2026-10-15 | Le graphique (grammaire, § 22.11) : un SVG dans la page (attributs de présentation, aucun style écrit), barres ou secteurs, et un tableau masqué pour les lecteurs d'écran |
 | 0.11 | 2026-10-15 | Les menus (grammaire, § 22.12) : une barre de navigation sous le titre de l'écran, un `<details>` par menu, qui s'ouvre sans script |
 | 0.12 | 2026-10-15 | Les zones de fichier et d'image : un champ `type=file` (images seules pour une image), l'envoi de l'écran en `multipart/form-data` ; le fichier actuel est rappelé à côté du champ |
+| 0.13 | 2026-10-15 | L'interrupteur : une case à cocher qui porte le rôle `switch`, dessinée en rail et bouton par la feuille de style ; sans style, une case ordinaire |

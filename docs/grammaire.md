@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.91 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.92 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1759,6 +1759,7 @@ L'écran de saisie montre :
 - Ordre canonique (l'imprimeur le rétablit) : valeur de départ, `facultatif`, `sur plusieurs lignes`, `en lecture seule`, `actif si`, `visible si`. Chaque état une fois : « « actif si » est déjà dit pour cet élément. »
 - Forme compacte : `_plusieurs_lignes`, `_lecture_seule`, `_actif_si …`, `_visible_si …` ; la condition va jusqu'au mot suivant de cette liste ou à la fin de la ligne.
 - Aucun mot réservé : `sur`, `lignes`, `lecture`, `seule`, `actif`, `visible` ne comptent qu'ainsi placés, après la virgule d'un élément.
+- `, en interrupteur` *(1.92)* : une zone `(vrai ou faux)` se montre en interrupteur plutôt qu'en case à cocher, `un actif (vrai ou faux), en interrupteur`. La valeur et les événements sont ceux d'une case ; seule la présentation change. Une autre zone le refuse : « Seule une zone (vrai ou faux) se montre en interrupteur. » Forme compacte : `_interrupteur`.
 
 ### 22.7 Groupes et valeurs permises *(implémenté le 14 octobre 2026)*
 
@@ -1983,3 +1984,4 @@ L'écran d'accueil montre :
 | 1.89 | 2026-10-15 | § 11.4 : à la traduction de la forme compacte, une branche d'une seule phrase « afficher » ou « rendre » revient en forme courte (`Si`, `Sinon`, `Cas`) |
 | 1.90 | 2026-10-15 | § 8 : l'aide à la saisie après une liste ou un graphique, et les champs après « par » ; en-tête daté du 15 octobre |
 | 1.91 | 2026-10-15 | § 22.1 : les zones de fichier et d'image, `un contrat (fichier)`, `une photo (image)` (elles étaient refusées, « viendra plus tard ») |
+| 1.92 | 2026-10-15 | § 22.6 : `, en interrupteur`, une zone (vrai ou faux) montrée en interrupteur |

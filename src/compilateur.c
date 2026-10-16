@@ -1179,6 +1179,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 chaine_ajouter(&d, (el->entier & 1) ? "\x1e" "f" : "\x1e" "-");
                 if (el->entier & 2) chaine_ajouter(&d, "m");   /* sur plusieurs lignes (§ 22.6) */
                 if (el->entier & 4) chaine_ajouter(&d, "s");   /* en lecture seule */
+                if (el->entier & 8) chaine_ajouter(&d, "i");   /* en interrupteur */
             }
         }
         char *desc = chaine_rendre(&d);

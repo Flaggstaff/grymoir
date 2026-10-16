@@ -395,3 +395,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.53 | 2026-10-15 | § 5 undecies : le graphique dans le panneau, regroupé par, valeur (nombre ou somme), forme (barres ou secteurs) |
 | 0.54 | 2026-10-15 | § 5 octies : un élément placé passe d'un bloc libre à un autre (page d'onglet, écran, groupe) ; un bloc libre dans un conteneur le remplit |
 | 0.55 | 2026-10-15 | Les zones de fichier et d'image : un bouton « Choisir un fichier… », le sélecteur de fichiers à l'exécution (images seules pour une image), le fichier choisi sur le bouton |
+| 0.56 | 2026-10-15 | L'interrupteur dans l'aperçu et l'exécution : une case à cocher dessinée en rail et bouton, à la couleur d'accent |

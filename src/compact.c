@@ -747,6 +747,7 @@ static void condition_de_cas(Reecriture *r, size_t d, size_t f) {
 
 static int est_etat(const Jeton *t) {
     return est_cle(t, "actif_si") || est_cle(t, "active_si") || est_cle(t, "visible_si") || est_cle(t, "plusieurs_lignes")
+        || est_cle(t, "interrupteur")
         || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur");
 }
 
@@ -780,6 +781,11 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
         } else if (zone && est_cle(x, "plusieurs_lignes")) {
             emettre(r, J_VIRGULE, NULL, x, 1);
             mot(r, "sur", x); mot(r, "plusieurs", x); mot(r, "lignes", x);
+            k++;
+        } else if (zone && est_cle(x, "interrupteur")) {   /* _interrupteur → , en interrupteur (§ 22.6) */
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "en", x);
+            mot(r, "interrupteur", x);
             k++;
         } else if (zone && est_cle(x, "lecture_seule")) {
             emettre(r, J_VIRGULE, NULL, x, 1);

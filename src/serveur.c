@@ -500,7 +500,12 @@ static char *feuille_de_style(const Serveur *s) {
     );
     chaine_ajouter(&c,   /* les ajouts des écrans (§ 22.9 à § 22.12), à part : un littéral C99 tient en 4095 caractères */
     ".libre{display:grid;justify-items:start;align-items:start}.libre>.place{grid-area:1/1;margin:0;min-width:0}"
-    ".graphique{max-width:100%;height:auto;font:inherit;fill:currentColor}"   /* § 22.11 ; le tableau, pour les lecteurs d'écran */
+    ".graphique{max-width:100%;height:auto;font:inherit;fill:currentColor}"
+    /* l'interrupteur (§ 22.6) : un rail et un bouton ; sans cette règle, une case ordinaire */
+    ".interrupteur input{appearance:none;width:36px;height:20px;border-radius:10px;background:var(--bordure,#999);position:relative;"
+    "cursor:pointer;vertical-align:middle;margin:0 8px 0 0}.interrupteur input::before{content:\"\";position:absolute;top:2px;left:2px;"
+    "width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}.interrupteur input:checked{background:var(--accent)}"
+    ".interrupteur input:checked::before{left:18px}"   /* § 22.11 ; le tableau, pour les lecteurs d'écran */
     ".lecteur{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}"
     /* les menus (§ 22.12) : une barre en tête ; un menu ouvert pose ses boutons en colonne, par-dessus la page */
     ".menus{display:flex;gap:4px;margin:0 0 12px}.menu{position:relative}.menu>summary{cursor:pointer;padding:4px 10px;list-style:none}"
@@ -843,7 +848,9 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
     if (est_case(el)) {   /* la présence de « …p » dit qu'on a vu la case : décochée, elle n'envoie rien */
         chaine_ajouter(c, "<input type=\"hidden\" name=\"");
         chaine_ajouter(c, id);
-        chaine_ajouter(c, "p\" value=\"1\"><label class=\"case\"><input type=\"checkbox\" name=\"");
+        /* « en interrupteur » (§ 22.6) : la même case, annoncée comme un interrupteur, dessinée comme tel */
+        chaine_ajouter(c, el->interrupteur ? "p\" value=\"1\"><label class=\"case interrupteur\"><input type=\"checkbox\" role=\"switch\" name=\""
+                                           : "p\" value=\"1\"><label class=\"case\"><input type=\"checkbox\" name=\"");
         chaine_ajouter(c, id);
         chaine_ajouter(c, strcmp(v, "oui") == 0 ? "\" value=\"oui\" checked" : "\" value=\"oui\"");
         chaine_ajouter(c, attr);

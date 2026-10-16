@@ -2203,6 +2203,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].facultatif = s2 && s2[1] == 'f';
             e->elements[k].plusieurs_lignes = s2 && strchr(s2 + 1, 'm') != NULL;   /* « Zpays ␞ texte ␞ fms » (§ 22.6) */
             e->elements[k].lecture_seule = s2 && strchr(s2 + 1, 's') != NULL;
+            e->elements[k].interrupteur = s2 && strchr(s2 + 1, 'i') != NULL;   /* § 22.6 */
             e->elements[k].choix = NULL;
             e->elements[k].nb_choix = 0;
             const ClasseVM *lie = classe_vm(m, e->types[k]);

@@ -296,6 +296,10 @@ int main(void) {
     COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
          "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
+    /* interrupteur (§ 22.6) : les deux formes */
+    COMP("L'écran x montre :\n    un actif (vrai ou faux), en interrupteur,\n    le texte « t ».",
+         "_écran x\n    _un actif (vrai_ou_faux) _interrupteur\n    _texte « t »\n_fin\n");
+    FIXE("L'écran x montre :\n    un actif (vrai ou faux), faux au départ, en interrupteur, visible si vrai,\n    le texte « t ».");
     /* menu (§ 22.12) : les deux formes */
     FIXE("L'écran x montre :\n    le menu « Membres » :\n        un bouton « Nouveau membre »,\n        un bouton « Liste »,\n"
          "    le texte « t ».\nQuand on clique sur « Nouveau membre » dans l'écran x :\n    Fermer l'écran.\n"

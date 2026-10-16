@@ -5754,6 +5754,7 @@ static void attendre_etats_ecran(Analyse *a, const Noeud *el, Genre g, int zone)
         attendre_mot(a, pos, fem ? "facultative" : "facultatif", strlen(fem ? "facultative" : "facultatif"));
         attendre_mot(a, pos, "sur plusieurs lignes", strlen("sur plusieurs lignes"));
         attendre_mot(a, pos, "en lecture seule", strlen("en lecture seule"));
+        if (el->texte2 && strcmp(el->texte2, "vrai ou faux") == 0) attendre_mot(a, pos, "en interrupteur", strlen("en interrupteur"));
     }
     if (zone || el->type == N_BOUTON) attendre_mot(a, pos, fem ? "active si" : "actif si", strlen(fem ? "active si" : "actif si"));
     attendre_mot(a, pos, "visible si", strlen("visible si"));
@@ -5838,6 +5839,14 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
             el->entier |= 2;
             a->i += 4;
             *vus_ = vus;
+            return 1;
+        }
+        if (zone && est_mot(x, "en") && est_mot(voir(a, 2), "interrupteur")) {   /* « , en interrupteur » (§ 22.6) */
+            if (strcmp(el->texte2, "vrai ou faux") != 0)
+                return erreur(a, x, grym_dupliquer("Seule une zone (vrai ou faux) se montre en interrupteur.")), -1;
+            if (el->entier & 8) return erreur(a, x, grym_dupliquer("« en interrupteur » est déjà dit.")), -1;
+            el->entier |= 8;
+            a->i += 3;
             return 1;
         }
         if (zone && est_mot(x, "en") && est_mot(voir(a, 2), "lecture") && est_mot(voir(a, 3), "seule")) {
