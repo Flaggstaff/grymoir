@@ -157,6 +157,9 @@ typedef struct {
     /* Juste avant ecran_ouvrir : la taille du titre, −1 « en petit », 0 celle du thème, 1 « en grand » (§ 22.5).
      * NULL : la taille du thème. */
     void (*ecran_taille_titre)(void *contexte, int taille);
+    /* Juste avant ecran_erreur, quand des zones sont en faute : pour chacune, son élément et son message ; le message
+     * d'ecran_erreur les résume (§ 22.6). NULL : seul le résumé se voit. */
+    void (*ecran_erreurs_zones)(void *contexte, const size_t *elements, const char *const *messages, size_t n);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

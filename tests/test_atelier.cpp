@@ -285,6 +285,43 @@ int main(int argc, char **argv) {
         VERIFIER(guide.table()->topLevelItemCount() >= 3);
     }
 
+    // Le résumé des erreurs (§ 22.6), dans l'exécution : deux zones obligatoires vides, chacune son message sous son libellé
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    un nom (texte),\n    une ville (texte),\n    un bouton « OK ».\n"
+                    "Quand on clique sur « OK » dans l'écran x :\n    Afficher le nom de l'écran puis la ville de l'écran.\n"
+                    "    Fermer l'écran.\nOuvrir l'écran x.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto ok = [&]() -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == "OK" && b->isVisible() && b->isEnabled()) return b;
+            return nullptr;
+        };
+        VERIFIER(attendre([&] { return ok() != nullptr; }));
+        if (ok()) ok()->click();
+        auto fautes = [&]() {
+            QStringList t;
+            for (QLabel *l : e.findChildren<QLabel *>("erreur-zone")) t << l->text();
+            return t;
+        };
+        VERIFIER(attendre([&] { return fautes().size() == 2; }));
+        VERIFIER(fautes().contains(QString::fromUtf8("Remplis « Nom » : cette zone est obligatoire."))
+                 && fautes().contains(QString::fromUtf8("Remplis « Ville » : cette zone est obligatoire.")));
+
+    }
+
     // Le guide, chapitre 11 : l'application de l'association, avec ses écrans, pilotée comme le ferait le lecteur
     {
         QTemporaryDir dossier;

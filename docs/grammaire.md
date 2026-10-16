@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.0 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.1 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1767,6 +1767,7 @@ L'écran de saisie montre :
 - Les bornes d'une zone *(1.97)*, comme les intervalles des boucles (§ 9) : `, de 1 à 99`, `, au moins 16`, `, au plus 50` pour un nombre ; les mêmes suivies de `caractères` pour un texte, et `, de 4 caractères` pour une longueur exacte. Bornes comprises. Une saisie hors bornes est refusée avec la règle (« « Quantité » va de 1 à 99. », « « Code » a 4 caractères. »). Une zone d'un autre type n'en a pas. Forme compacte : `_min 1 _max 99`.
 - `, masqué` *(1.98)*, accordé (`masquée`) : une zone de texte sur une ligne dont la frappe est cachée, un mot de passe, `un code d'accès (texte), masqué`. La valeur ne s'affiche jamais, même au retour de l'écran ; un champ masqué laissé vide ne change pas la zone. Ce n'est qu'une affaire d'affichage : conservée, la valeur l'est en clair, GrymoiR ne chiffre pas encore les mots de passe. Forme compacte : `_masqué`.
 - `, avec l'unité « … »` *(2.0)*, et `devant` pour la placer avant le champ : `une remise (nombre), avec l'unité « % »`, `un montant (nombre), avec l'unité « CHF » devant`. Elle s'affiche près du champ et n'entre pas dans la valeur ; tapée avec elle (« 12 CHF »), elle est ôtée. Une zone de nombre ou de texte seulement. Forme compacte : `_unité « CHF » _devant`.
+- Les zones en faute *(2.1)* : un événement vérifie d'emblée toutes les zones obligatoires qu'il lit, et s'arrête s'il en trouve de vides, en les signalant toutes à la fois (« Remplis les zones obligatoires : « Nom » et « Ville ». »). Un événement qui n'en lit aucune, comme « Fermer », n'est jamais bloqué. L'écran montre un résumé en haut (« Il y a 2 problèmes : », chaque faute un lien vers sa zone dans le navigateur) et, sous le libellé de chaque zone en faute, son propre message ; une saisie refusée à son changement (bornes, forme d'un courriel) s'y montre de même. Les messages tiennent jusqu'au geste suivant.
 
 ### 22.7 Groupes et valeurs permises *(implémenté le 14 octobre 2026)*
 
@@ -2016,3 +2017,4 @@ Un contact, conservé, a :
 | 1.98 | 2026-10-16 | § 22.6 : `, masqué`, une zone de texte à la frappe cachée (un mot de passe), sa valeur jamais réaffichée |
 | 1.99 | 2026-10-16 | Nouveau § 22.13 : les types `(courriel)`, `(téléphone)`, `(adresse web)`, des textes à la forme vérifiée, pour les champs comme pour les zones |
 | 2.0 | 2026-10-16 | § 22.6 : `, avec l'unité « … » [devant]`, affichée près du champ, ôtée si on la tape |
+| 2.1 | 2026-10-16 | § 22.6 : les zones en faute signalées toutes à la fois, un résumé en haut, un message sous chaque zone |

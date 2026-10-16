@@ -3961,6 +3961,53 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
+        case I_ECRAN_EXIGER: {
+            /* Les zones qu'un événement lit (§ 22.6) : toutes les obligatoires vides l'arrêtent d'un coup, chacune avec
+             * son message, plutôt qu'une à une à leur lecture. */
+            EcranVM *e = m->ecran;
+            if (!e || !e->objet) break;
+            const char *noms = b->constantes[op].texte;
+            size_t *els = grym_allouer((e->n ? e->n : 1) * sizeof *els), nb = 0;
+            char **msgs = grym_allouer((e->n ? e->n : 1) * sizeof *msgs);
+            for (const char *p = noms; *p && nb < e->n;) {
+                const char *f = strchr(p, '\x1e');
+                char *nom = grym_formater("%.*s", (int)(f ? f - p : (long)strlen(p)), p);
+                const long q = index_champ(e->objet->classe, nom);
+                if (q >= 0 && !(e->objet->classe->uniques[q] & 2) && !(e->objet->classe->uniques[q] & 8) && !e->objet->definis[q])
+                    for (size_t k = 0; k < e->n; k++)
+                        if (e->elements[k].sorte == ELEMENT_ZONE && e->champ[k] == q && !e->elements[k].lecture_seule) {
+                            els[nb] = k;
+                            msgs[nb++] = grym_formater("Remplis « %s » : cette zone est obligatoire.", e->textes[k]);
+                            break;
+                        }
+                free(nom);
+                p = f ? f + 1 : p + strlen(p);
+            }
+            if (nb) {
+                if (m->iface.ecran_erreurs_zones) m->iface.ecran_erreurs_zones(m->iface.contexte, els, (const char *const *)msgs, nb);
+                char *resume;
+                if (nb == 1) resume = grym_dupliquer(msgs[0]);
+                else {
+                    Chaine c = {0};
+                    chaine_ajouter(&c, "Remplis les zones obligatoires : ");
+                    for (size_t k = 0; k < nb; k++) {
+                        char *x = grym_formater("%s« %s »", k ? (k + 1 == nb ? " et " : ", ") : "", e->textes[els[k]]);
+                        chaine_ajouter(&c, x);
+                        free(x);
+                    }
+                    chaine_ajouter(&c, ".");
+                    resume = chaine_rendre(&c);
+                }
+                for (size_t k = 0; k < nb; k++) free(msgs[k]);
+                free(msgs);
+                free(els);
+                ok = echouer(diag, b, debut, resume);
+                break;
+            }
+            free(msgs);
+            free(els);
+            break;
+        }
         case I_ECRAN_IMAGE: {
             /* « l'image du portrait du compositeur choisi de l'écran » (§ 22.8) : la valeur, relue à chaque tour */
             if (op % 2) { m->absent_permis = 1; break; }   /* élément × 2 + 1 : la source commence ; un objet absent la rend absente */
@@ -4133,7 +4180,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 if (refus && lu) { valeur_liberer(&v); lu = 0; }
                 if (probleme) {}
                 else if (!lu) {
-                    if (m->iface.ecran_erreur) m->iface.ecran_erreur(m->iface.contexte, sortie, refus ? refus : "Valeur refusée.");
+                    const char *msg = refus ? refus : "Valeur refusée.";
+                    if (m->iface.ecran_erreurs_zones) {   /* la zone en faute porte aussi le message (§ 22.6) */
+                        const size_t el1 = ev.element;
+                        m->iface.ecran_erreurs_zones(m->iface.contexte, &el1, &msg, 1);
+                    }
+                    if (m->iface.ecran_erreur) m->iface.ecran_erreur(m->iface.contexte, sortie, msg);
                     free(refus);
                     code_ev = -1;   /* aucun événement ne s'exécute */
                 } else {

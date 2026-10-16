@@ -215,6 +215,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_REGLE_FAITE:    return "RÈGLE_FAITE";
     case I_ECRAN_ETAT:     return "ÉCRAN_ÉTAT";
     case I_ECRAN_IMAGE:    return "ÉCRAN_IMAGE";
+    case I_ECRAN_EXIGER:   return "ÉCRAN_EXIGER";
     }
     return "INCONNUE";
 }
@@ -229,7 +230,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_APPARENCE || code == I_REFUSER || code == I_DECALER || code == I_ARRONDIR
         || code == I_CONTIENT || code == I_CONVERTIR || code == I_EXPORTER || code == I_ENSEMBLE || code == I_AJOUTER
         || code == I_EXEMPLE || code == I_EXEMPLE_RATE || code == I_ECART || code == I_HASARD || code == I_HEURE
-        || code == I_REGLE_UTILE || code == I_REGLE_FAITE || code == I_ECRAN_ETAT || code == I_ECRAN_IMAGE;
+        || code == I_REGLE_UTILE || code == I_REGLE_FAITE || code == I_ECRAN_ETAT || code == I_ECRAN_IMAGE || code == I_ECRAN_EXIGER;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -292,7 +293,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                  && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
             ok = refuser(erreur, grym_formater("EXPORTER : constante %u absente ou pas un texte (octet %lu).", op,
                                                (unsigned long)d));
-        else if (c == I_ECRAN_OUVRIR && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
+        else if ((c == I_ECRAN_OUVRIR || c == I_ECRAN_EXIGER) && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
             ok = refuser(erreur, grym_formater("ÉCRAN_OUVRIR : constante %u absente ou pas un texte (octet %lu).", op,
                                                (unsigned long)d));
         else if ((c == I_CONSTANTE || c == I_CHERCHER) && op >= b->nb_constantes)
@@ -400,7 +401,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_REFUSER: besoin = (long)op; effet = -(long)op; break;
             case I_ECRAN_ATTENDRE: besoin = 0; effet = 2; break;
             case I_ECRAN_OBJET: besoin = 0; effet = 1; break;
-            case I_ECRAN_OUVRIR: case I_ECRAN_FERMER: case I_FERMER_ECRAN: besoin = 0; effet = 0; break;
+            case I_ECRAN_OUVRIR: case I_ECRAN_FERMER: case I_FERMER_ECRAN: case I_ECRAN_EXIGER: besoin = 0; effet = 0; break;
             case I_ECRIRE_CHAMP: case I_GAGNER: case I_PERDRE: case I_EXPORTER: besoin = 2; effet = -2; break;
             case I_DEMANDER: besoin = 1; effet = 0; break;   /* dépile la question, empile la réponse */
             case I_ECHOUER: break;
@@ -480,7 +481,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 55  /* versions 1 à 54 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 56  /* versions 1 à 55 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
@@ -489,7 +490,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                               sans essai (19), sans formulaire (20),
                               sans assemblage de textes (21), sans modification par formulaire (22),
                               sans fiche (23), sans fichier source des blocs (24), sans apparence des écrans (26), sans refus (27), sans règles (28),
-                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34), sans export (35), sans tableau lu (36), sans « comme » (37), sans ensembles (38), sans exemples (39), sans écart ni hasard (40), sans heure (41), sans règles ciblées (42), sans état des éléments d'écran (43), sans groupes ni valeurs permises dans les écrans (44), sans images d'écran (45), sans position libre (46), sans image calculée (47), sans bloc placé (48), sans onglets (49), sans graphiques (50), sans menus (51), sans taille de titre (52), sans indication (53), sans unité (54) */
+                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34), sans export (35), sans tableau lu (36), sans « comme » (37), sans ensembles (38), sans exemples (39), sans écart ni hasard (40), sans heure (41), sans règles ciblées (42), sans état des éléments d'écran (43), sans groupes ni valeurs permises dans les écrans (44), sans images d'écran (45), sans position libre (46), sans image calculée (47), sans bloc placé (48), sans onglets (49), sans graphiques (50), sans menus (51), sans taille de titre (52), sans indication (53), sans unité (54), sans ÉCRAN_EXIGER (55) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 

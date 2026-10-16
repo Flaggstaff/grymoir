@@ -188,6 +188,13 @@ static void iface_ecran_image(void *contexte, size_t k, const unsigned char *oct
                                                                     : QByteArray());
 }
 
+static void iface_ecran_erreurs_zones(void *contexte, const size_t *els, const char *const *msgs, size_t n) {   // § 22.6
+    QVector<int> e;
+    QStringList m;
+    for (size_t k = 0; k < n; k++) { e << (int)els[k]; m << QString::fromUtf8(msgs[k]); }
+    emit static_cast<Travail *>(contexte)->ecran_erreurs_zones(e, m);
+}
+
 static void iface_ecran_etats(void *contexte, const unsigned char *etats, size_t n) {   // § 22.6
     QVector<int> l;
     for (size_t k = 0; k < n; k++) l << etats[k];
@@ -348,7 +355,7 @@ void Travail::run() {
     Interface i = {this, iface_disponible, iface_formulaire, iface_effacer, 1, iface_image, iface_fiche,
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
                    iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
-                   iface_ecran_taille_titre};
+                   iface_ecran_taille_titre, iface_ecran_erreurs_zones};
     machine_interface(m, &i);
     situer(m, chemin, base_imposee);
     Chaine sortie = {};
@@ -530,6 +537,20 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             w->setVisible(!(e[k] & 2));
             QWidget *actif = k < zones.size() && zones[k] ? zones[k] : w;   // une zone : son contrôle, le libellé reste lisible
             if (!actif->property("lecture-seule").toBool()) actif->setEnabled(!(e[k] & 1));
+        }
+    });
+    connect(&travail, &Travail::ecran_erreurs_zones, this, [this](const QVector<int> &els, const QStringList &msgs) {
+        // les zones en faute (§ 22.6) : chacune son message sous son libellé, jusqu'au prochain geste
+        effacer_erreurs_zones();
+        for (int i = 0; i < els.size(); i++) {
+            QWidget *conteneur = controles_ecran.value(els[i]);
+            auto *rang = conteneur ? qobject_cast<QVBoxLayout *>(conteneur->layout()) : nullptr;
+            if (!rang) continue;
+            auto *l = new QLabel(msgs.value(i));
+            l->setObjectName("erreur-zone");
+            l->setWordWrap(true);
+            l->setStyleSheet("color: #b3261e; font-weight: 600;");
+            rang->insertWidget(qMin(1, rang->count()), l);   // sous le libellé
         }
     });
     connect(&travail, &Travail::ecran_image, this, [this](int k, const QByteArray &o) {   // l'image calculée (§ 22.8)
@@ -892,7 +913,13 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
     partage->setSizes({height() * 2 / 3, height() / 6, height() / 6});
 }
 
+void Execution::effacer_erreurs_zones() {
+    for (QWidget *c : controles_ecran)
+        if (c) for (QLabel *l : c->findChildren<QLabel *>("erreur-zone", Qt::FindDirectChildrenOnly)) l->deleteLater();
+}
+
 void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) {
+    effacer_erreurs_zones();   // les messages tiennent jusqu'au prochain geste (§ 22.6)
     if (!attente_ecran) return;
     attente_ecran = false;
     if (vue_ecran) vue_ecran->setEnabled(false);

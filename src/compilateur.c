@@ -631,6 +631,25 @@ static const Noeud *trouver_quand(Noeud *const *ph, size_t nb, const char *ecran
     return NULL;
 }
 
+/* Les zones de l'écran qu'un corps lit (« le nom de l'écran »), chacune une fois, séparées par U+001E (§ 22.6). */
+static void zones_lues(const Noeud *n, Chaine *c) {
+    if (!n) return;
+    if (n->type == N_CHAMP && n->texte && n->nb_enfants == 1 && n->enfants[0] && n->enfants[0]->type == N_ECRAN) {
+        int deja = 0;
+        for (const char *p = c->d ? c->d : ""; *p && !deja;) {
+            const char *f = strchr(p, '\x1e');
+            const size_t l = f ? (size_t)(f - p) : strlen(p);
+            deja = l == strlen(n->texte) && strncmp(p, n->texte, l) == 0;
+            p = f ? f + 1 : p + l;
+        }
+        if (!deja) {
+            if (c->n) chaine_ajouter(c, "\x1e");
+            chaine_ajouter(c, n->texte);
+        }
+    }
+    for (size_t k = 0; k < n->nb_enfants; k++) zones_lues(n->enfants[k], c);
+}
+
 static void phrase(Compilation *c, const Noeud *ph) {
     switch (ph->type) {
     case P_CREATION:
@@ -1055,6 +1074,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_CALCUL:
     case P_QUAND:   /* un événement d'écran se compile comme une action (grammaire, § 22.2) */
     case P_ACTION: {
+        Chaine exige = {0};   /* un événement : les zones de l'écran que son corps lit, vérifiées d'un coup en tête (§ 22.6) */
+        if (ph->type == P_QUAND) zones_lues(ph->enfants[1], &exige);
         /* Une formule se compile dans son propre bloc ; le programme n'en garde aucune trace. */
         Bloc *prec = c->b;
         Bloc *f = bloc_creer();
@@ -1073,6 +1094,12 @@ static void phrase(Compilation *c, const Noeud *ph) {
         c->nb_boucles = 0;
         c->essais = 0;
         const Noeud *corps = ph->enfants[1];
+        if (exige.n) {
+            char *z = chaine_rendre(&exige);
+            long kz = bloc_constante(c->b, C_TEXTE, z);
+            free(z);
+            emettre(c, I_ECRAN_EXIGER, kz, ph->ligne, ph->colonne);
+        } else free(chaine_rendre(&exige));
         if (ph->type == P_CALCUL && ph->forme == 0) {
             expression(c, corps);
             emettre(c, I_RENDRE, 0, corps->ligne, corps->colonne);

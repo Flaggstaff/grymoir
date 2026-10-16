@@ -77,7 +77,14 @@ typedef struct {
     unsigned long *versions;   /* image calculée : change avec ses octets, et l'adresse avec elle (§ 22.8) */
     int *onglets;              /* les onglets k : le rang de l'onglet choisi, retenu d'un envoi à l'autre (§ 22.10) */
     int taille_titre;          /* −1 en petit, 1 en grand, 0 celle du thème (§ 22.5) */
+    char **erreurs_zones;      /* n messages, NULL pour une zone sans faute ; jusqu'au prochain événement (§ 22.6) */
 } EcranWeb;
+
+static void erreurs_vider(EcranWeb *e) {
+    if (e->erreurs_zones) for (size_t k = 0; k < e->n; k++) free(e->erreurs_zones[k]);
+    free(e->erreurs_zones);
+    e->erreurs_zones = NULL;
+}
 
 static void graphique(Chaine *c, const EcranWeb *e, size_t k);   /* § 22.11 */
 
@@ -866,10 +873,16 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
     char longueur[48] = "";
     if (el->borne_max && type_textuel(el->type) && !el->nb_choix)
         snprintf(longueur, sizeof longueur, " maxlength=\"%ld\"", atol(el->borne_max));
-    snprintf(attr_b, sizeof attr_b, "%s%s%s%s%s", attr0, el->indication ? " aria-describedby=\"" : "", el->indication ? id : "",
-             el->indication ? "i\"" : "", longueur);
+    /* une zone en faute (§ 22.6) : son message sous le libellé, désigné par le champ, qui se dit invalide */
+    const char *faute = e->erreurs_zones ? e->erreurs_zones[k] : NULL;
+    char decrit[96] = "";
+    if (el->indication || faute)
+        snprintf(decrit, sizeof decrit, " aria-describedby=\"%s%s%s%s%s\"%s", faute ? id : "", faute ? "e" : "",
+                 faute && el->indication ? " " : "", el->indication ? id : "", el->indication ? "i" : "",
+                 faute ? " aria-invalid=\"true\"" : "");
+    snprintf(attr_b, sizeof attr_b, "%s%s%s", attr0, decrit, longueur);
     const char *attr = attr_b;
-    chaine_ajouter(c, "<div class=\"zone\">");
+    chaine_ajouter(c, faute ? "<div class=\"zone en-faute\">" : "<div class=\"zone\">");
     if (est_case(el)) {   /* la présence de « …p » dit qu'on a vu la case : décochée, elle n'envoie rien */
         chaine_ajouter(c, "<input type=\"hidden\" name=\"");
         chaine_ajouter(c, id);
@@ -883,6 +896,13 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
         echapper(c, el->texte);
         chaine_ajouter(c, "</label>");
         indication(c, el, id);
+        if (faute) {
+            chaine_ajouter(c, "<p class=\"erreur-zone\" id=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "e\">");
+            echapper(c, faute);
+            chaine_ajouter(c, "</p>");
+        }
     } else {
         chaine_ajouter(c, "<label for=\"");
         chaine_ajouter(c, id);
@@ -893,6 +913,13 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
             chaine_ajouter(c, "<span class=\"requis\" title=\"Obligatoire\"> *</span>");
         chaine_ajouter(c, "</label>");
         indication(c, el, id);
+        if (faute) {
+            chaine_ajouter(c, "<p class=\"erreur-zone\" id=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "e\">");
+            echapper(c, faute);
+            chaine_ajouter(c, "</p>");
+        }
         if (el->type && strcmp(el->type, "texte") == 0 && el->nb_choix >= 2 && el->nb_choix <= 4) {
             /* valeurs permises, de deux à quatre : des boutons radio (§ 22.7) ; « — » pour l'absence si facultative */
             chaine_ajouter(c, "<div class=\"radios\" role=\"radiogroup\">");
@@ -1129,7 +1156,24 @@ static void page_ecran(Serveur *s) {
     chaine_ajouter(&c, e->taille_titre > 0 ? "<h1 class=\"titre-grand\">" : e->taille_titre < 0 ? "<h1 class=\"titre-petit\">" : "<h1>");
     echapper(&c, e->titre);
     chaine_ajouter(&c, "</h1><button name=\"fermer\" value=\"1\" title=\"Fermer l'écran\" aria-label=\"Fermer l'écran\">×</button></div>\n");
-    if (e->erreur) {
+    if (e->erreur && e->erreurs_zones) {   /* le résumé : ce qui ne va pas, chaque faute un lien vers sa zone (§ 22.6) */
+        size_t fautes = 0;
+        for (size_t k = 0; k < e->n; k++) fautes += e->erreurs_zones[k] != NULL;
+        char *titre = fautes == 1 ? grym_dupliquer("Il y a un problème :") : grym_formater("Il y a %lu problèmes :", (unsigned long)fautes);
+        chaine_ajouter(&c, "<div class=\"resume-erreurs\" role=\"alert\"><p>");
+        chaine_ajouter(&c, titre);
+        free(titre);
+        chaine_ajouter(&c, "</p><ul>");
+        for (size_t k = 0; k < e->n; k++)
+            if (e->erreurs_zones[k]) {
+                char *a = grym_formater("<li><a href=\"#z%lu\">", (unsigned long)k);
+                chaine_ajouter(&c, a);
+                free(a);
+                echapper(&c, e->erreurs_zones[k]);
+                chaine_ajouter(&c, "</a></li>");
+            }
+        chaine_ajouter(&c, "</ul></div>\n");
+    } else if (e->erreur) {
         chaine_ajouter(&c, "<p class=\"message\" role=\"alert\">");
         echapper(&c, e->erreur);
         chaine_ajouter(&c, "</p>\n");
@@ -1448,7 +1492,7 @@ static int evenements_de(Serveur *s, Envoi *env) {
             file_ajouter(s, ev);
         }
     }
-    if (s->nb_file) { free(e->erreur); e->erreur = NULL; }   /* le message d'erreur tient jusqu'au prochain événement */
+    if (s->nb_file) { free(e->erreur); e->erreur = NULL; erreurs_vider(e); }   /* les messages tiennent jusqu'au prochain événement */
     return s->nb_file > s->tete_file;
 }
 
@@ -1800,6 +1844,7 @@ static void ecran_liberer(EcranWeb *e) {
     free(e->onglets);
     free(e->titre);
     free(e->erreur);
+    erreurs_vider(e);
     free(e);
 }
 
@@ -1811,6 +1856,15 @@ static const char *const *copier_textes(const char *const *t, size_t n) {
 }
 
 static void serveur_ecran_taille_titre(void *contexte, int taille) { ((Serveur *)contexte)->taille_titre = taille; }
+
+static void serveur_ecran_erreurs_zones(void *contexte, const size_t *els, const char *const *msgs, size_t n) {   /* § 22.6 */
+    EcranWeb *e = ecran_dessus((Serveur *)contexte);
+    if (!e) return;
+    erreurs_vider(e);
+    e->erreurs_zones = grym_allouer((e->n ? e->n : 1) * sizeof *e->erreurs_zones);
+    for (size_t k = 0; k < e->n; k++) e->erreurs_zones[k] = NULL;
+    for (size_t i = 0; i < n; i++) if (els[i] < e->n && !e->erreurs_zones[els[i]]) e->erreurs_zones[els[i]] = grym_dupliquer(msgs[i]);
+}
 
 static void serveur_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre, const ElementEcran *el, size_t n) {
     Serveur *s = contexte;
@@ -2095,7 +2149,7 @@ Interface serveur_interface(Serveur *s) {
     Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer, 1, serveur_afficher_image,
                     serveur_afficher_fiche, serveur_ecran_ouvrir, serveur_ecran_lignes, serveur_ecran_attendre,
                     serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence,
-                    serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre };
+                    serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre, serveur_ecran_erreurs_zones };
     return i;
 }
 

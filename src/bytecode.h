@@ -108,10 +108,12 @@ typedef enum {
     I_ECRAN_ETAT,       /* opérande : élément × 2 + 1 pour « visible si », + 0 pour « actif si » ; dépile la condition,
                            qui règle l'état de l'élément jusqu'à la prochaine attente (§ 22.6) */
     I_ECRAN_IMAGE       /* opérande : élément × 2 + 1 : la source commence, un champ d'objet absent y vaut absent ;
-                           élément × 2 : dépile une image ou absent, que l'écran montre jusqu'à la prochaine attente (§ 22.8) */
+                           élément × 2 : dépile une image ou absent, que l'écran montre jusqu'à la prochaine attente (§ 22.8) */,
+    I_ECRAN_EXIGER      /* opérande : constante texte, les zones qu'un événement lit, séparées par U+001E ; toutes les
+                           obligatoires vides arrêtent l'événement d'un coup, chacune avec son message (§ 22.6) */
 } CodeInstruction;
 
-#define I_DERNIER I_ECRAN_IMAGE
+#define I_DERNIER I_ECRAN_EXIGER
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

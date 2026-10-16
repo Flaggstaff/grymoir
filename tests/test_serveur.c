@@ -692,7 +692,10 @@ int main(void) {
         CONTIENT(sc.reponses[0], "<noscript><div class=\"boutons\"><button name=\"valider\" value=\"1\">Valider les zones</button>");
         CONTIENT(sc.reponses[2], "value=\"2.0\">Chopin</button>");
         CONTIENT(sc.reponses[2], "<pre class=\"sortie\">pays Pologne\n</pre>");
-        CONTIENT(sc.reponses[5], "<p class=\"message\" role=\"alert\">« abc » n&#39;est pas un nombre.</p>");
+        CONTIENT(sc.reponses[5], "<div class=\"resume-erreurs\" role=\"alert\"><p>Il y a un problème :</p>"
+                                 "<ul><li><a href=\"#z1\">« abc » n&#39;est pas un nombre.</a></li></ul></div>");
+        CONTIENT(sc.reponses[5], "<p class=\"erreur-zone\" id=\"z1e\">« abc » n&#39;est pas un nombre.</p>");
+        CONTIENT(sc.reponses[5], "aria-describedby=\"z1e\" aria-invalid=\"true\"");
         CONTIENT(sc.reponses[5], "value=\"2.0\">Chopin</button>");   /* toujours là : le clic n'est pas parti */
         CONTIENT(sc.reponses[7], "<td class=\"vide\" colspan=\"3\">Aucune ligne.</td>");
         CONTIENT(sc.reponses[7], "name=\"z1\" value=\"12,5\"");
@@ -754,6 +757,24 @@ int main(void) {
         CONTIENT(sc.reponses[2], "404 Not Found");
         CONTIENT(sc.reponses[3], "404 Not Found");
         CONTIENT(sc.reponses[5], "Application terminée.");
+        liberer(&sc);
+    }
+
+    {   /* Le résumé des erreurs (§ 22.6) : un événement qui lit deux zones obligatoires vides les signale toutes deux d'un
+         * coup, en haut et sous chacune ; « Fermer », qui n'en lit aucune, n'est pas bloqué */
+        const char *src = "L'écran x montre :\n    un nom (texte),\n    une ville (texte),\n    une note (texte), facultative,\n"
+                          "    un bouton « OK »,\n    un bouton « Fermer ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Afficher le nom de l'écran puis la ville de l'écran.\n"
+                          "    Afficher la note de l'écran.\n"
+                          "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=3"), get("/"), evenement("q=2&clic=4"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[2], "<p>Il y a 2 problèmes :</p><ul><li><a href=\"#z0\">Remplis « Nom » : cette zone est obligatoire.</a></li>"
+                                 "<li><a href=\"#z1\">Remplis « Ville » : cette zone est obligatoire.</a></li></ul>");
+        CONTIENT(sc.reponses[2], "<p class=\"erreur-zone\" id=\"z1e\">Remplis « Ville » : cette zone est obligatoire.</p>");
+        NE_CONTIENT_PAS(sc.reponses[2], "id=\"z2e\"");   /* la note, facultative, n'est pas en faute */
+        CONTIENT(sc.reponses[4], "Application terminée.");   /* Fermer, qui ne lit aucune zone, passe */
         liberer(&sc);
     }
 

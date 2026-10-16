@@ -67,6 +67,7 @@ signals:
     void ecran_valeurs(const QStringList &valeurs);   // une par élément ; vide pour un élément qui n'est pas une zone
     void ecran_etats(const QVector<int> &etats);      // un par élément : bit 1 inactif, bit 2 caché (§ 22.6)
     void ecran_image(int element, const QByteArray &octets);   // une image calculée, vide si absente (§ 22.8)
+    void ecran_erreurs_zones(const QVector<int> &elements, const QStringList &messages);   // les zones en faute (§ 22.6)
     void ecran_ferme();
     void apparence(int couleur, const QByteArray &logo);   // « Les écrans ont … » (grammaire, § 22.5)
     void reponses(const QString &echo);   // les réponses acceptées, recopiées dans le fil comme en console
@@ -137,6 +138,7 @@ private:
     QVector<long> lignes_choisies;         // envoyées avec chaque événement (§ 22.2)
     QByteArray texte_envoye;
     void envoyer_evenement(SorteEvenement sorte, int element, int ligne);
+    void effacer_erreurs_zones();
     QByteArray octets_envoyes;   // le fichier choisi dans une zone de fichier, gardé jusqu'à l'événement suivant
     bool fichier_envoye = false;
     QWidget *vue_ecran = nullptr;
