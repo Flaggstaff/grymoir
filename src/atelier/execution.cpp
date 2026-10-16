@@ -175,6 +175,8 @@ static void iface_ecran_valeurs(void *contexte, const char *const *v, size_t n) 
     emit static_cast<Travail *>(contexte)->ecran_valeurs(l);
 }
 
+static void iface_ecran_taille_titre(void *contexte, int taille) { static_cast<Travail *>(contexte)->taille_titre = taille; }   // § 22.5
+
 static void iface_ecran_image(void *contexte, size_t k, const unsigned char *octets, size_t taille, const char *) {   // § 22.8
     emit static_cast<Travail *>(contexte)->ecran_image((int)k, octets ? QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille)
                                                                     : QByteArray());
@@ -339,7 +341,8 @@ void Travail::run() {
     Machine *m = machine_creer();
     Interface i = {this, iface_disponible, iface_formulaire, iface_effacer, 1, iface_image, iface_fiche,
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
-                   iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image};
+                   iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
+                   iface_ecran_taille_titre};
     machine_interface(m, &i);
     situer(m, chemin, base_imposee);
     Chaine sortie = {};
@@ -790,6 +793,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
     // Le logo : grand sur l'écran que le programme ouvre lui-même (aucun écran dessous), petit sur les autres.
     const int taille = Theme::courant().mesure(recouverts.isEmpty() ? "logo-accueil" : "logo-titre");
     VueEcran v = dessiner_ecran(titre, elements, logo, taille);   // le même dessin que l'aperçu (src/atelier/vue_ecran.cpp)
+    taille_du_titre(v.titre, travail.taille_titre);
     vue_ecran = v.vue;
     erreur_ecran = v.erreur;
     tables = v.tables;

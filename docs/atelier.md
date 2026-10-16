@@ -405,3 +405,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.59 | 2026-10-16 | § 5 terdecies : le clic droit sur l'aperçu, les champs des entités, chacun ajouté comme sa zone, là où l'on a cliqué |
 | 0.60 | 2026-10-16 | § 5 terdecies : le clic droit propose aussi les éléments de la palette, posés au clic ; la palette gagne « Choix multiples » et « Fichier » |
 | 0.61 | 2026-10-16 | Le titre de l'écran garde sa hauteur naturelle (il prenait toute la hauteur libre de l'aperçu) ; un clic droit sur le titre, ou le logo, le renomme |
+| 0.62 | 2026-10-16 | Le clic droit sur le titre propose sa taille (en petit, normale, en grand) ; l'aperçu et l'exécution la montrent |

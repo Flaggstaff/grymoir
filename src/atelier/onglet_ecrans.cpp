@@ -166,6 +166,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                 EcranLu e;
                 e.nom = QString::fromUtf8(n->texte);
                 e.titre = n->texte2 ? QString::fromUtf8(n->texte2) : titre_du_nom(e.nom);
+                e.taille_titre = n->taille_titre;
                 e.fichier = fichier;
                 e.ligne = n->ligne;
                 for (size_t q = 0; q < n->nb_enfants; q++) {
@@ -422,6 +423,7 @@ void OngletEcrans::dessiner() {
     const Theme &th = Theme::courant();
     const QPixmap logo = e.logo.isEmpty() ? QPixmap() : QPixmap(e.logo);
     vue = dessiner_ecran(e.titre, el, logo, th.mesure(e.accueil ? "logo-accueil" : "logo-titre"));   // le même dessin que l'exécution
+    taille_du_titre(vue.titre, e.taille_titre);
     const QStringList accents = th.accents();
     if (e.couleur >= 0 && e.couleur < accents.size() && accents[e.couleur] != th.accent())
         vue.vue->setStyleSheet(th.feuille(th.mode(), accents[e.couleur]));
@@ -653,6 +655,16 @@ QMenu *OngletEcrans::menu_du_titre() {
     auto *menu = new QMenu(this);
     if (courant < 0 || courant >= lus.size()) return menu;
     const QString ecran = lus[courant].nom, actuel = vue.titre ? vue.titre->text() : QString();
+    const int taille = lus[courant].taille_titre;
+    for (int t : {-1, 0, 1}) {   // la taille du titre (§ 22.5)
+        QAction *x = menu->addAction(t < 0 ? "Titre en petit" : t > 0 ? "Titre en grand" : "Titre de taille normale");
+        x->setCheckable(true);
+        x->setChecked(t == taille);
+        connect(x, &QAction::triggered, this, [=] {
+            if (t != taille) emit geste([=](Geste *g) { return ecran_taille_titre(dossier, ecran, t, g); });
+        });
+    }
+    menu->addSeparator();
     QAction *a = menu->addAction(QString::fromUtf8("Renommer le titre…"));
     connect(a, &QAction::triggered, this, [=] {
         bool ok = false;

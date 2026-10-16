@@ -75,6 +75,7 @@ typedef struct {
     unsigned long serie;    /* numéro d'ouverture : l'adresse d'une image change d'un écran à l'autre (§ 22.8) */
     unsigned long *versions;   /* image calculée : change avec ses octets, et l'adresse avec elle (§ 22.8) */
     int *onglets;              /* les onglets k : le rang de l'onglet choisi, retenu d'un envoi à l'autre (§ 22.10) */
+    int taille_titre;          /* −1 en petit, 1 en grand, 0 celle du thème (§ 22.5) */
 } EcranWeb;
 
 static void graphique(Chaine *c, const EcranWeb *e, size_t k);   /* § 22.11 */
@@ -107,6 +108,7 @@ struct Serveur {
     size_t nb_file, tete_file;
     char *ev_texte;       /* ce que désigne le dernier événement rendu, gardé jusqu'au suivant */
     unsigned char *ev_octets;   /* le fichier du dernier événement (une zone de fichier), gardé de même */
+    int taille_titre;           /* la taille du titre de l'écran qui va s'ouvrir (§ 22.5) */
     long *ev_choisies;
     int accent;           /* rang dans la palette (0 : bleue) */
     unsigned char *logo;
@@ -503,6 +505,7 @@ static char *feuille_de_style(const Serveur *s) {
     ".graphique{max-width:100%;height:auto;font:inherit;fill:currentColor}"
     /* l'interrupteur (§ 22.6) : un rail et un bouton ; sans cette règle, une case ordinaire */
     ".choix-multiples{display:flex;flex-wrap:wrap;gap:4px 16px}"   /* des choix multiples (§ 22.1) */
+    ".entete h1.titre-petit{font-size:1.1em}.entete h1.titre-grand{font-size:2.2em}"   /* la taille du titre (§ 22.5) */
     ".interrupteur input{appearance:none;width:36px;height:20px;border-radius:10px;background:var(--bordure,#999);position:relative;"
     "cursor:pointer;vertical-align:middle;margin:0 8px 0 0}.interrupteur input::before{content:\"\";position:absolute;top:2px;left:2px;"
     "width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}.interrupteur input:checked{background:var(--accent)}"
@@ -1053,7 +1056,7 @@ static void page_ecran(Serveur *s) {
     chaine_ajouter(&c, "\"><button class=\"invisible\" name=\"valider\" value=\"1\" tabindex=\"-1\" aria-hidden=\"true\">"
                        "Valider</button>\n<div class=\"entete\">");
     if (s->logo) chaine_ajouter(&c, "<img src=\"/logo\" alt=\"\">");
-    chaine_ajouter(&c, "<h1>");
+    chaine_ajouter(&c, e->taille_titre > 0 ? "<h1 class=\"titre-grand\">" : e->taille_titre < 0 ? "<h1 class=\"titre-petit\">" : "<h1>");
     echapper(&c, e->titre);
     chaine_ajouter(&c, "</h1><button name=\"fermer\" value=\"1\" title=\"Fermer l'écran\" aria-label=\"Fermer l'écran\">×</button></div>\n");
     if (e->erreur) {
@@ -1736,12 +1739,16 @@ static const char *const *copier_textes(const char *const *t, size_t n) {
     return (const char *const *)r;
 }
 
+static void serveur_ecran_taille_titre(void *contexte, int taille) { ((Serveur *)contexte)->taille_titre = taille; }
+
 static void serveur_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre, const ElementEcran *el, size_t n) {
     Serveur *s = contexte;
     absorber(s, sortie);
     file_vider(s);   /* un écran s'ouvre par-dessus : ce qui visait l'ancien ne s'exécute pas */
     EcranWeb *e = grym_allouer(sizeof *e);
     memset(e, 0, sizeof *e);
+    e->taille_titre = s->taille_titre;   /* annoncée juste avant (§ 22.5) */
+    s->taille_titre = 0;
     e->titre = grym_dupliquer(titre ? titre : "");
     e->n = n;
     e->serie = ++s->ouvertures;
@@ -2017,7 +2024,7 @@ Interface serveur_interface(Serveur *s) {
     Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer, 1, serveur_afficher_image,
                     serveur_afficher_fiche, serveur_ecran_ouvrir, serveur_ecran_lignes, serveur_ecran_attendre,
                     serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence,
-                    serveur_ecran_etats, serveur_ecran_image };
+                    serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre };
     return i;
 }
 

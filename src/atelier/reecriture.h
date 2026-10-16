@@ -72,6 +72,8 @@ struct ElementNouveau {
                               // vide : l'image d'un fichier, `texte` (§ 22.8)
 };
 QString ecran_titre(const QString &dossier, const QString &ecran, const QString &titre, Geste *geste);
+// La taille du titre : −1 « en petit », 0 celle du thème, 1 « en grand » (grammaire, § 22.5).
+QString ecran_taille_titre(const QString &dossier, const QString &ecran, int taille, Geste *geste);
 // Ajoute à la fin ; un bouton reçoit son événement (« Remarque : à écrire. »).
 // `dans` : l'index d'un bloc (groupe, onglet, bloc libre…) où le mettre, à la fin ; un onglet qui contient un bloc libre
 // le reçoit dans ce bloc, placé sous ce qui y est (§ 22.9, § 22.10). −1 : à la fin de l'écran, ou de son dernier bloc libre.

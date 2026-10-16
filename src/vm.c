@@ -379,6 +379,7 @@ void machine_dossier(Machine *m, const char *dossier) {
 /* L'écran ouvert (grammaire, § 22). */
 typedef struct EcranVM {
     char *titre;
+    int taille_titre;   /* −1 en petit, 1 en grand, 0 celle du thème (§ 22.5) */
     size_t n;
     ElementEcran *elements;
     char **textes;         /* libellés, textes fixes, entités : possédés */
@@ -2134,6 +2135,11 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     }
     EcranVM *e = grym_allouer(sizeof *e);
     memset(e, 0, sizeof *e);
+    if (np > 1 && strchr(parts[1], '\x1d')) {   /* « Recherche␝g » : la taille du titre (§ 22.5) */
+        char *t = strchr(parts[1], '\x1d');
+        e->taille_titre = t[1] == 'g' ? 1 : t[1] == 'p' ? -1 : 0;
+        *t = 0;
+    }
     e->titre = np > 1 && parts[1][0] ? grym_dupliquer(parts[1]) : titre_d_ecran(parts[0]);
     e->n = np > 2 ? np - 2 : 0;
     size_t t = e->n ? e->n : 1;
@@ -3814,6 +3820,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 e->cadre = nb_cadres;
                 m->ecran = e;
                 m->fermer_ecran = 0;
+                if (m->iface.ecran_taille_titre) m->iface.ecran_taille_titre(m->iface.contexte, e->taille_titre);
                 m->iface.ecran_ouvrir(m->iface.contexte, sortie, e->titre, e->elements, e->n);
             }
             if (probleme) ok = echouer(diag, b, debut, probleme);

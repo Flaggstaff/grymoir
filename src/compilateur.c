@@ -1136,6 +1136,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         chaine_ajouter(&d, e->texte);
         chaine_ajouter(&d, "\x1f");
         if (e->texte2) chaine_ajouter(&d, e->texte2);
+        if (e->taille_titre) chaine_ajouter(&d, e->taille_titre > 0 ? "\x1dg" : "\x1dp");   /* la taille du titre (§ 22.5) */
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
             if (el->type == N_DISPOSITION) {   /* « côte à côte » : H, « l'un sous l'autre » : V, fin du bloc : F */

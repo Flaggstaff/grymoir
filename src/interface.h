@@ -143,6 +143,9 @@ typedef struct {
     /* Avant chaque attente, pour chaque image calculée (§ 22.8) : ses octets, ou NULL si elle est absente. NULL :
      * l'interface ne les montre pas. */
     void (*ecran_image)(void *contexte, size_t element, const unsigned char *octets, size_t taille, const char *format);
+    /* Juste avant ecran_ouvrir : la taille du titre, −1 « en petit », 0 celle du thème, 1 « en grand » (§ 22.5).
+     * NULL : la taille du thème. */
+    void (*ecran_taille_titre)(void *contexte, int taille);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

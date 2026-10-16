@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, le dessin d'un écran.
 #include "vue_ecran.h"
+#include <QFontInfo>
 #include <QAction>
 #include <QMenu>
 #include <QMenuBar>
@@ -80,6 +81,14 @@ protected:
     bool hitButton(const QPoint &pos) const override { return rect().contains(pos); }
 };
 }  // namespace
+
+void taille_du_titre(QLabel *titre, int taille) {
+    if (!titre) return;
+    titre->setStyleSheet(QString());
+    if (!taille) return;
+    const int px = QFontInfo(titre->font()).pixelSize();
+    titre->setStyleSheet(QString("font-size: %1px;").arg(qRound(px * (taille > 0 ? 1.6 : 0.75))));
+}
 
 double nombre_affiche(const QString &t) {
     QString b;

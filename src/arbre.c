@@ -32,6 +32,7 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->place_dite = 0;
     n->article_a_deviner = 0;
     n->graphique = 0;
+    n->taille_titre = 0;
     return n;
 }
 

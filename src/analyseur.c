@@ -5954,10 +5954,23 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         return r;
     }
     char *titre = NULL;
+    int taille_titre = 0;
     a->i = f;
-    if (cour(a)->type == J_VIRGULE && voir(a, 1)->type == J_TEXTE && voir(a, 2)->type == J_VIRGULE) {
-        titre = grym_dupliquer(voir(a, 1)->valeur);
-        a->i += 3;
+    /* « , « Recherche », », « , « Recherche » en grand, », « , en petit, » : le titre donné, sa taille (§ 22.1, § 22.5) */
+    if (cour(a)->type == J_VIRGULE) {
+        size_t q = a->i + 1;
+        const char *t2 = NULL;
+        if (a->j[q].type == J_TEXTE) t2 = a->j[q++].valeur;
+        int taille = 0;
+        if (est_mot(&a->j[q], "en") && (est_mot(&a->j[q + 1], "petit") || est_mot(&a->j[q + 1], "grand"))) {
+            taille = est_mot(&a->j[q + 1], "grand") ? 1 : -1;
+            q += 2;
+        }
+        if ((t2 || taille) && a->j[q].type == J_VIRGULE) {
+            if (t2) titre = grym_dupliquer(t2);
+            taille_titre = taille;
+            a->i = q + 1;
+        }
     }
     if (!est_mot(cour(a), "montre") || voir(a, 1)->type != J_DEUX_POINTS) {
         free(nom);
@@ -5968,6 +5981,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     Noeud *n = noeud_creer(P_ECRAN, t->ligne, t->colonne, t->debut);
     n->texte = nom;
     n->texte2 = titre;
+    n->taille_titre = taille_titre;
     EcranConnu e = { grym_dupliquer(nom), NULL, 0, NULL, 0, t->ligne, NULL, 0 };
     /* Un écran est un objet : sa classe porte ses zones de saisie et la ligne choisie de chaque liste (§ 22.1) */
     char *classe = grym_formater("écran %s", nom);

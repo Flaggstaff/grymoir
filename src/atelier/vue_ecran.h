@@ -72,7 +72,10 @@ private:
     QStringList noms;
     QVector<double> vals;
 };
-double nombre_affiche(const QString &t);   // « 1'234.5 », « 12,5 » → 1234.5, 12.5
+double nombre_affiche(const QString &t);
+// La taille du titre d'un écran (§ 22.5) : −1 en petit, 1 en grand, 0 celle du thème ; une règle propre au titre,
+// qui l'emporte sur la feuille du thème.
+void taille_du_titre(QLabel *titre, int taille);   // « 1'234.5 », « 12,5 » → 1234.5, 12.5
 
 // La taille d'un élément placé : la naturelle, sauf ce que le programme dit (§ 22.9).
 QSize taille_placee(QWidget *w, int largeur, int hauteur);

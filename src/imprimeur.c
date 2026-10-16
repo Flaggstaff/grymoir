@@ -1206,11 +1206,17 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             aj(im, "_écran ");
             ecrire_nom(im, n->texte, 0);
             if (n->texte2) { aj(im, " "); ecrire_texte(im, n->texte2); }
+            if (n->taille_titre) aj(im, n->taille_titre > 0 ? " _en_grand" : " _en_petit");   /* § 22.5 */
             aj(im, "\n");
         } else {
             aj(im, "L'écran ");
             aj(im, n->texte);
-            if (n->texte2) { aj(im, ", "); ecrire_texte(im, n->texte2); aj(im, ","); }
+            if (n->texte2 || n->taille_titre) {   /* « , « Recherche » en grand, » (§ 22.1, § 22.5) */
+                aj(im, ",");
+                if (n->texte2) { aj(im, " "); ecrire_texte(im, n->texte2); }
+                if (n->taille_titre) aj(im, n->taille_titre > 0 ? " en grand" : " en petit");
+                aj(im, ",");
+            }
             aj(im, " montre :\n");
         }
         size_t dernier = 0;   /* le dernier élément véritable finit la phrase par un point */

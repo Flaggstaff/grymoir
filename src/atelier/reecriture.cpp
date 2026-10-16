@@ -807,6 +807,16 @@ QString ecran_titre(const QString &dossier, const QString &ecran, const QString 
     return ch.conclure(geste);
 }
 
+QString ecran_taille_titre(const QString &dossier, const QString &ecran, int taille, Geste *geste) {
+    Chantier ch(dossier);
+    Trouve t = trouver_ecran(ch, ecran);
+    if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
+    t.phrase->taille_titre = taille < 0 ? -1 : taille > 0 ? 1 : 0;
+    reimprimer(ch, t);
+    geste->description = QString("Taille du titre de l'écran %1").arg(ecran);
+    return ch.conclure(geste);
+}
+
 namespace {
 size_t fin_d_unite(Noeud *n, size_t i);
 int bloc_de(Noeud *n, size_t i);

@@ -757,6 +757,17 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* La taille du titre (§ 22.5) : une classe sur le titre, sa règle dans la feuille */
+        const char *src = "L'écran x, « Recherche » en grand, montre :\n    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), get("/style.css"), evenement("q=1&clic=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<h1 class=\"titre-grand\">Recherche</h1>");
+        CONTIENT(sc.reponses[1], ".entete h1.titre-grand{font-size:2.2em}");
+        liberer(&sc);
+    }
+
     {   /* Des choix multiples (§ 22.1) : une case par genre conservé ; cocher deux cases ; l'événement lit « Pour chaque genre
          * de l'écran » et « le nombre de genres de l'écran », en mémoire (un écran n'est jamais conservé) */
         const char *src = "Un genre, conservé, a :\n    un nom (texte), unique.\n"

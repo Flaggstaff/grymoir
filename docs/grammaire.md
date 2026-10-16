@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.93 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.94 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1736,6 +1736,7 @@ Les écrans ont le logo « images/logo.png ».
 - Sans écran (`grym lancer`, ou un programme qui n'en ouvre aucun), la phrase est sans effet : un programme qui ne fait qu'afficher tourne normalement. `grym servir` applique la couleur et le logo à ses écrans.
 - Forme compacte : `_écrans _couleur _verte _logo « logo.png »`, `_écrans _couleur _grise`, `_écrans _logo « logo.png »`.
 - Aide à la saisie (§ 8) : en début de phrase, `Les écrans ont` et `Les nombres s'affichent` sont proposés ; puis `la couleur` ou `le logo`, les cinq couleurs, `et le logo`, un texte. Après `Les nombres s'affichent` : `à la suisse`, `à la française`, `sans séparateur`.
+- La taille du titre d'un écran *(1.94)* : `L'écran de recherche, « Recherche » en grand, montre :`, ou sans titre donné, `L'écran de recherche, en petit, montre :`. `en petit` et `en grand` viennent du thème et valent pour tous les écrans ; sans eux, la taille du thème. Forme compacte : `_écran de_recherche « Recherche » _en_grand`.
 
 ### 22.6 États des éléments *(implémenté le 14 octobre 2026)*
 
@@ -1987,3 +1988,4 @@ L'écran d'accueil montre :
 | 1.91 | 2026-10-15 | § 22.1 : les zones de fichier et d'image, `un contrat (fichier)`, `une photo (image)` (elles étaient refusées, « viendra plus tard ») |
 | 1.92 | 2026-10-15 | § 22.6 : `, en interrupteur`, une zone (vrai ou faux) montrée en interrupteur |
 | 1.93 | 2026-10-16 | § 22.1 : des choix multiples, `des genres (genre)`, lus par les tournures du champ multiple (§ 16.13) sur l'écran, en mémoire |
+| 1.94 | 2026-10-16 | § 22.5 : la taille du titre d'un écran, `« Recherche » en grand`, `en petit` |

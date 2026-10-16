@@ -41,6 +41,7 @@ struct ElementLu {
 struct EcranLu {
     QString nom, titre, fichier;   // nom : « des compositeurs » ; fichier : chemin absolu de la déclaration
     int ligne = 0;
+    int taille_titre = 0;          // −1 en petit, 1 en grand (§ 22.5)
     QVector<ElementLu> elements;
     // L'apparence du programme qui le déclare (grammaire, § 22.5) : rang de la couleur (−1 : bleue par défaut),
     // chemin absolu du logo (vide sans logo) ; accueil : l'écran que ce programme ouvre lui-même au premier niveau.

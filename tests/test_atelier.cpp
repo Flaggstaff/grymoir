@@ -2774,13 +2774,25 @@ int main(int argc, char **argv) {
         QLabel *titre = nullptr;
         for (QLabel *l : o.findChildren<QLabel *>()) if (l->text() == "Recherche" && l->property("niveau").toString() == "ecran") titre = l;
         VERIFIER(titre && titre->height() <= titre->sizeHint().height() + 2);
-        QMenu *m = o.menu_du_titre();
-        VERIFIER(m->actions().size() == 1 && m->actions()[0]->text() == QString::fromUtf8("Renommer le titre…"));
+        QMenu *m = o.menu_du_titre();   // les trois tailles, la normale cochée, puis « Renommer le titre… »
+        VERIFIER(m->actions().size() == 5 && m->actions()[1]->isChecked() && m->actions()[4]->text() == QString::fromUtf8("Renommer le titre…"));
         delete m;
+        const int normal = titre ? titre->sizeHint().height() : 0;
+        Geste gt;
+        VERIFIER(ecran_taille_titre(dossier.path(), "de recherche", 1, &gt).isEmpty());
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        titre = nullptr;
+        for (QLabel *l : o.findChildren<QLabel *>()) if (l->text() == "Recherche" && l->property("niveau").toString() == "ecran") titre = l;
+        VERIFIER(titre && titre->sizeHint().height() > normal);   // en grand : plus haut
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly) && QString::fromUtf8(f.readAll()).contains("L'écran de recherche, « Recherche » en grand, montre :"));
+        }
         Geste g;
         VERIFIER(ecran_titre(dossier.path(), "de recherche", "Chercher un membre", &g).isEmpty());
         QFile f(chemin);
-        VERIFIER(f.open(QIODevice::ReadOnly) && QString::fromUtf8(f.readAll()).contains("L'écran de recherche, « Chercher un membre », montre :"));
+        VERIFIER(f.open(QIODevice::ReadOnly) && QString::fromUtf8(f.readAll()).contains("L'écran de recherche, « Chercher un membre » en grand, montre :"));   // la taille reste
     }
     {   // le clic droit : les champs des entités ; chacun devient la zone qui lui correspond, là où l'on a cliqué
         QTemporaryDir dossier;

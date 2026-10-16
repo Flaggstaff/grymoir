@@ -296,6 +296,10 @@ int main(void) {
     COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
          "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
+    /* la taille du titre (§ 22.5) : avec et sans titre donné, les deux formes */
+    FIXE("L'écran de recherche, « Recherche » en grand, montre :\n    le texte « t ».");
+    FIXE("L'écran de recherche, en petit, montre :\n    le texte « t ».");
+    COMP("L'écran x, « Bonjour » en grand, montre :\n    le texte « t ».", "_écran x « Bonjour » _en_grand\n    _texte « t »\n_fin\n");
     /* choix multiples (§ 22.1) : les deux formes */
     FIXE("Un genre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    des genres (genre), visible si vrai,\n    le texte « t ».");
     COMP("Un genre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    des genres (genre),\n    le texte « t ».",

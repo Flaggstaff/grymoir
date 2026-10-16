@@ -1080,16 +1080,18 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     if (t->type == J_MOT_CLE && !strcmp(t->valeur, "écran") && !(d + 1 < f && r->e[d + 1].type == J_POINT)) {
         /* _écran des_compositeurs [« Titre »] → L'écran des compositeurs[, « Titre »,] montre : */
         size_t fin_nom = f;
-        const Jeton *titre = NULL;
-        if (f > d + 2 && r->e[f - 1].type == J_TEXTE) { titre = &r->e[f - 1]; fin_nom = f - 1; }
+        const Jeton *titre = NULL, *taille = NULL;
+        if (f > d + 2 && (est_cle(&r->e[f - 1], "en_grand") || est_cle(&r->e[f - 1], "en_petit"))) { taille = &r->e[f - 1]; fin_nom = f - 1; }
+        if (fin_nom > d + 2 && r->e[fin_nom - 1].type == J_TEXTE) { titre = &r->e[fin_nom - 1]; fin_nom--; }
         if (fin_nom <= d + 1) { echouer(r, t, grym_dupliquer("Forme attendue : « _écran des_compositeurs »."));  return; }
         emettre(r, J_ELISION, "l", t, 1);
         mot(r, "écran", t);
         for (size_t k = d + 1; k < fin_nom; k++) copier(r, &r->e[k]);
-        if (titre) {
-            emettre(r, J_VIRGULE, NULL, titre, 1);
-            copier(r, titre);
-            emettre(r, J_VIRGULE, NULL, titre, 1);
+        if (titre || taille) {   /* _écran x « Recherche » _en_grand → L'écran x, « Recherche » en grand, montre : */
+            emettre(r, J_VIRGULE, NULL, titre ? titre : taille, 1);
+            if (titre) copier(r, titre);
+            if (taille) { mot(r, "en", taille); mot(r, est_cle(taille, "en_grand") ? "grand" : "petit", taille); }
+            emettre(r, J_VIRGULE, NULL, titre ? titre : taille, 1);
         }
         mot(r, "montre", t);
         emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
