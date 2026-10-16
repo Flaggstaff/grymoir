@@ -791,6 +791,9 @@ int main(void) {
     /* des choix multiples (§ 22.1) : parmi les objets d'une entité conservée ; lus par les tournures du § 16.13 */
     VE("L'écran x montre :\n    des couleurs (texte).", 2, 19, "Des choix multiples se font parmi les objets d'une entité conservée");
     VE("Un genre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    des genres.", 4, 15, "Type attendu entre parenthèses : « des genres (genre) ».");
+    /* l'indication (§ 22.6) : une fois, un texte non vide */
+    VE("L'écran x montre :\n    un code (texte), avec l'indication « a », avec l'indication « b ».", 2, 47, "L'indication est déjà donnée.");
+    VE("L'écran x montre :\n    un code (texte), avec l'indication 4.", 2, 40, "Texte attendu : « , avec l'indication");
     /* l'interrupteur (§ 22.6) : une présentation d'une zone (vrai ou faux), et d'elle seule */
     V("L'écran x montre :\n    un actif (vrai ou faux), en interrupteur.", "(écran [x] [actif])");
     VE("L'écran x montre :\n    un nom (texte), en interrupteur.", 2, 21, "Seule une zone (vrai ou faux) se montre en interrupteur.");

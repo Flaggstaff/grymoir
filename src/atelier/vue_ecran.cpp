@@ -442,6 +442,21 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 libelle->setBuddy(w);
                 rang->addWidget(libelle);
             }
+            if (!e.indication.isEmpty()) {   // l'indication (§ 22.6) : plus petite, plus pâle, sous le libellé
+                auto *ind = new QLabel(e.indication);
+                ind->setObjectName("indication");
+                ind->setWordWrap(true);
+                QFont f = ind->font();
+                f.setPointSizeF(f.pointSizeF() * 0.9);
+                ind->setFont(f);
+                QPalette pal = ind->palette();
+                QColor c = pal.color(QPalette::WindowText);
+                c.setAlphaF(0.7);
+                pal.setColor(QPalette::WindowText, c);
+                ind->setPalette(pal);
+                ind->setStyleSheet(QString("font-size: %1px;").arg(qRound(QFontInfo(f).pixelSize() * 0.9)));
+                rang->addWidget(ind);
+            }
             rang->addWidget(w);
             poser(conteneur);
             r.controles[k] = conteneur;

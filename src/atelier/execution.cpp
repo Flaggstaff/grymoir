@@ -131,6 +131,7 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
     t->images.clear();
     t->places.clear();
     t->graphiques.clear();
+    t->indications.clear();
     for (size_t k = 0; k < n; k++) {
         t->places << (el[k].place ? QVector<int>{el[k].gauche, el[k].haut, el[k].largeur, el[k].hauteur} : QVector<int>());
         t->graphiques << (el[k].sorte == ELEMENT_GRAPHIQUE ? el[k].graphique : 0);
@@ -139,6 +140,7 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0)
                              | (el[k].multiple ? 8 : 0));
         t->facultatives << el[k].facultatif;
+        t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
         QStringList ch;
         for (size_t q = 0; q < el[k].nb_choix; q++) ch << QString::fromUtf8(el[k].choix[q]);
         t->choix_zones << ch;
@@ -774,6 +776,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].type = k < travail.types_zones.size() ? travail.types_zones[k] : QString();
         elements[k].choix = k < travail.choix_zones.size() ? travail.choix_zones[k] : QStringList();
         elements[k].facultatif = k < travail.facultatives.size() && travail.facultatives[k];
+        elements[k].indication = travail.indications.value(k);
         if (k < travail.images.size()) elements[k].octets = travail.images[k];
         const int o = k < travail.options_zones.size() ? travail.options_zones[k] : 0;
         elements[k].plusieurs_lignes = o & 1;

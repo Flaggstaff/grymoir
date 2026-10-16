@@ -175,6 +175,7 @@ typedef struct Noeud {
     char *texte;
     char *texte2;         /* P_CLASSE : classe parente ; N_NOM d'un champ d'entité : son type (§ 16.1) */
     char *texte3;         /* P_CLASSE : pluriel irrégulier déclaré (« chevaux ») */
+    char *indication;     /* zone d'écran : « , avec l'indication « … » », ou NULL (§ 22.6) */
     struct Noeud **enfants;
     size_t nb_enfants;
     int ligne, colonne;   /* position du premier jeton */

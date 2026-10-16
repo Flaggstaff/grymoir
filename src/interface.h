@@ -46,6 +46,7 @@ typedef struct {
     int calculee;                   /* image calculée (§ 22.8) : sans octets à l'ouverture ; ecran_image les donne */
     int graphique;                  /* graphique (§ 22.11) : 2 en secteurs, 4 une somme ; ses lignes : libellé, valeur */
     int interrupteur;               /* zone (vrai ou faux) « en interrupteur » : un interrupteur plutôt qu'une case (§ 22.6) */
+    const char *indication;         /* zone : « , avec l'indication « … » », ou NULL (§ 22.6) */
     int multiple;                   /* « des genres (genre) » : des choix multiples parmi `choix` ; sa valeur (ecran_valeurs)
                                        et son changement : les clés cochées, séparées par U+001E (§ 22.1) */
 } ElementEcran;

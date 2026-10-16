@@ -2794,6 +2794,33 @@ int main(int argc, char **argv) {
         QFile f(chemin);
         VERIFIER(f.open(QIODevice::ReadOnly) && QString::fromUtf8(f.readAll()).contains("L'écran de recherche, « Chercher un membre » en grand, montre :"));   // la taille reste
     }
+    {   // l'indication (§ 22.6) : le panneau l'écrit, l'aperçu la montre sous le libellé
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    un code (texte),\n    le texte « t ».\n");
+        }
+        Geste g;
+        ElementNouveau n;
+        n.sorte = ELEMENT_ZONE;
+        n.texte = "code";
+        n.type = "texte";
+        n.indication = "4 chiffres, sans espace";
+        VERIFIER(ecran_modifier(dossier.path(), "x", 0, n, &g).isEmpty());
+        QFile f(chemin);
+        VERIFIER(f.open(QIODevice::ReadOnly)
+                 && QString::fromUtf8(f.readAll()).contains("    un code (texte), avec l'indication « 4 chiffres, sans espace »,"));
+        OngletEcrans o;
+        o.resize(900, 600);
+        o.show();
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        QLabel *ind = o.findChild<QLabel *>("indication");
+        VERIFIER(ind && ind->text() == "4 chiffres, sans espace");
+        VERIFIER(o.ecrans().value(0).elements.value(0).indication == "4 chiffres, sans espace");
+    }
     {   // le clic droit : les champs des entités ; chacun devient la zone qui lui correspond, là où l'on a cliqué
         QTemporaryDir dossier;
         const QString chemin = dossier.filePath("p.grym");

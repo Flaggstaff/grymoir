@@ -701,6 +701,10 @@ QString etats_voulus(Noeud *n, const ElementNouveau &e) {
         if (e.interrupteur && e.type != "vrai ou faux") return "Seule une zone (vrai ou faux) se montre en interrupteur.";
         if (e.interrupteur) n->entier |= 8;
         if (e.multiple) n->entier |= 16;
+        if (!e.indication.trimmed().isEmpty()) {
+            if (e.indication.contains(QChar(0x00BB)) || e.indication.contains(QChar(0x00AB))) return "Pas de guillemets « » dans une indication.";
+            n->indication = grym_dupliquer(e.indication.trimmed().toUtf8().constData());
+        }
     }
     const QString actif = e.actif_si.simplified(), visible = e.visible_si.simplified();
     if (!actif.isEmpty() && e.sorte != ELEMENT_BOUTON && e.sorte != ELEMENT_ZONE)

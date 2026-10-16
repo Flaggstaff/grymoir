@@ -1183,6 +1183,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 if (el->entier & 4) chaine_ajouter(&d, "s");   /* en lecture seule */
                 if (el->entier & 8) chaine_ajouter(&d, "i");   /* en interrupteur */
                 if (el->entier & 16) chaine_ajouter(&d, "p");  /* des choix multiples */
+                if (el->indication) {   /* « ␝ 4 chiffres » : après les lettres des options, qu'elle ne doit pas brouiller */
+                    chaine_ajouter(&d, "\x1d");
+                    chaine_ajouter(&d, el->indication);
+                }
             }
         }
         char *desc = chaine_rendre(&d);

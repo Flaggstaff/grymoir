@@ -31,6 +31,7 @@ struct ElementVue {
     bool lecture_seule = false;      // zone « en lecture seule »
     bool interrupteur = false;       // zone (vrai ou faux) « en interrupteur » (§ 22.6)
     bool multiple = false;           // « des genres (genre) » : une case par choix (§ 22.1)
+    QString indication;              // « , avec l'indication « … » », sous le libellé (§ 22.6)
     bool place = false;              // élément d'un bloc en position libre (§ 22.9)
     int gauche = 0, haut = 0;        // en pixels, depuis le coin du bloc
     int largeur = 0, hauteur = 0;    // en pixels ; 0 : la taille naturelle

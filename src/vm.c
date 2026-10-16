@@ -390,6 +390,7 @@ typedef struct EcranVM {
     Objet *objet;          /* l'écran est un objet : ses zones et la ligne choisie de chaque liste (§ 22.1) */
     long *champ;           /* pour chaque élément : zone → son champ ; liste → le champ « … choisi » ; sinon −1 */
     char **types;          /* zone : son type ; possédés */
+    char **indications;    /* zone : son indication, ou NULL ; possédées (§ 22.6) */
     char ***choix;         /* zone liée à une entité : les clés de ses objets */
     size_t *nb_choix;
     struct EcranVM *dessous;   /* l'écran qu'il recouvre (écrans empilés, § 22.3), ou NULL */
@@ -2086,6 +2087,7 @@ static void ecran_detruire(EcranVM *e) {
         free(e->champs[k]);
         valeur_liberer(&e->listes[k]);
         free(e->types[k]);
+        free(e->indications[k]);
         if (e->chemins[k]) {
             for (size_t c = 0; c < e->nb_colonnes[k]; c++) free(e->chemins[k][c]);
             free(e->chemins[k]);
@@ -2094,6 +2096,7 @@ static void ecran_detruire(EcranVM *e) {
         free(e->choix[k]);
     }
     free(e->types);
+    free(e->indications);
     free(e->chemins);
     free(e->choix);
     free(e->nb_choix);
@@ -2152,6 +2155,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     e->listes = grym_allouer(t * sizeof *e->listes);
     e->champ = grym_allouer(t * sizeof *e->champ);
     e->types = grym_allouer(t * sizeof *e->types);
+    e->indications = grym_allouer(t * sizeof *e->indications);
     e->choix = grym_allouer(t * sizeof *e->choix);
     e->nb_choix = grym_allouer(t * sizeof *e->nb_choix);
     e->chemins = grym_allouer(t * sizeof *e->chemins);
@@ -2178,6 +2182,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         }
         e->champ[k] = -1;
         e->types[k] = NULL;
+        e->indications[k] = NULL;
         e->chemins[k] = NULL;
         e->choix[k] = NULL;
         e->nb_choix[k] = 0;
@@ -2206,11 +2211,16 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].colonnes = NULL;
             e->elements[k].nb_colonnes = 0;
             e->elements[k].type = e->types[k];
+            /* « Zpays ␞ texte ␞ fms ␝ 4 chiffres » : les lettres des options, puis l'indication (§ 22.6) */
+            const char *ind = s2 ? strchr(s2, '\x1d') : NULL;
+            const size_t nopt = s2 ? (ind ? (size_t)(ind - s2 - 1) : strlen(s2 + 1)) : 0;
+            e->indications[k] = ind ? grym_dupliquer(ind + 1) : NULL;
+            e->elements[k].indication = e->indications[k];
             e->elements[k].facultatif = s2 && s2[1] == 'f';
-            e->elements[k].plusieurs_lignes = s2 && strchr(s2 + 1, 'm') != NULL;   /* « Zpays ␞ texte ␞ fms » (§ 22.6) */
-            e->elements[k].lecture_seule = s2 && strchr(s2 + 1, 's') != NULL;
-            e->elements[k].interrupteur = s2 && strchr(s2 + 1, 'i') != NULL;   /* § 22.6 */
-            e->elements[k].multiple = s2 && strchr(s2 + 1, 'p') != NULL;   /* « des genres (genre) » */
+            e->elements[k].plusieurs_lignes = s2 && memchr(s2 + 1, 'm', nopt) != NULL;
+            e->elements[k].lecture_seule = s2 && memchr(s2 + 1, 's', nopt) != NULL;
+            e->elements[k].interrupteur = s2 && memchr(s2 + 1, 'i', nopt) != NULL;   /* § 22.6 */
+            e->elements[k].multiple = s2 && memchr(s2 + 1, 'p', nopt) != NULL;   /* « des genres (genre) » */
             e->elements[k].choix = NULL;
             e->elements[k].nb_choix = 0;
             const ClasseVM *lie = classe_vm(m, e->types[k]);

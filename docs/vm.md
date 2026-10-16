@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.68 de la spécification, révisée le 14 octobre 2026.
+Version 1.69 de la spécification, révisée le 14 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -289,7 +289,7 @@ Le bloc garde, pour chaque instruction, la ligne et la colonne de la source. Pou
 Entiers non signés, poids faible d'abord (petit-boutiste). `u16` : deux octets ; `u32` : quatre octets.
 
 ```
-en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 53
+en-tête       "GRYM" (4 octets ASCII), version du format : u16 = 54
 blocs         nombre : u32, puis pour chacun :
                 nom : longueur u32 et octets UTF-8 (vide pour le programme)
                 classe du premier paramètre : longueur u32 et octets UTF-8 (vide sauf pour une méthode)
@@ -435,3 +435,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.66 | 2026-10-15 | Écrans (grammaire, § 22.12) : `ELEMENT_MENU` ; format version 52 |
 | 1.67 | 2026-10-16 | Écrans : `multiple` dans `ElementEcran` (lettre `p` des options d'une zone) ; une recherche « parmi » sur un objet en mémoire (un écran) lit la liste de son champ au lieu de la base ; l'événement et ecran_valeurs portent les clés cochées, séparées par U+001E |
 | 1.68 | 2026-10-16 | Écrans : la taille du titre, `␝g` ou `␝p` après le titre dans la description, et l'appel facultatif `ecran_taille_titre` juste avant `ecran_ouvrir` ; format version 53 |
+| 1.69 | 2026-10-16 | Écrans : l'indication d'une zone, après `␝` à la fin de sa description, hors des lettres des options ; `indication` dans `ElementEcran` ; format version 54 |

@@ -757,6 +757,22 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* L'indication (§ 22.6) : sous le libellé, désignée par le champ ; ses lettres (« mpsi ») ne deviennent pas des options */
+        const char *src = "L'écran x montre :\n    un code (texte), avec l'indication « mpsi : 4 chiffres »,\n"
+                          "    un actif (vrai ou faux), avec l'indication « coché : visible »,\n    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0=1700&clic=2"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "</label><p class=\"indication\" id=\"z0i\">mpsi : 4 chiffres</p><input type=\"text\" id=\"z0\" name=\"z0\"");
+        CONTIENT(sc.reponses[0], "aria-describedby=\"z0i\"");
+        NE_CONTIENT_PAS(sc.reponses[0], "<textarea");                  /* le « m » n'a pas fait une zone sur plusieurs lignes */
+        NE_CONTIENT_PAS(sc.reponses[0], "z0\" value=\"\" readonly"); /* ni le « s » une lecture seule */
+        CONTIENT(sc.reponses[0], "<p class=\"indication\" id=\"z1i\">coché : visible</p>");
+        CONTIENT(sc.reponses[2], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* La taille du titre (§ 22.5) : une classe sur le titre, sa règle dans la feuille */
         const char *src = "L'écran x, « Recherche » en grand, montre :\n    un bouton « OK ».\n"
                           "Quand on clique sur « OK » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";

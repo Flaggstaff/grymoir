@@ -5825,6 +5825,18 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
     int vus = *vus_;
     if (cour(a)->type != J_VIRGULE) return 0;
     attendre_etats_ecran(a, el, g, zone);   /* aide à la saisie (§ 8) */
+    if (el->type == N_NOM) {   /* « , avec l'indication « 4 chiffres » » : une phrase sous le libellé (§ 22.6) */
+        const Jeton *x = voir(a, 1);
+        if (!el->indication) attendre_mot(a, a->i + 1, "avec l'indication «", strlen("avec l'indication «"));
+        if (est_mot(x, "avec") && voir(a, 2)->type == J_ELISION && est_mot(voir(a, 3), "indication")) {
+            if (el->indication) return erreur(a, x, grym_dupliquer("L'indication est déjà donnée.")), -1;
+            if (voir(a, 4)->type != J_TEXTE || !*voir(a, 4)->valeur)
+                return erreur(a, voir(a, 4), grym_dupliquer("Texte attendu : « , avec l'indication « 4 chiffres, sans espace » ».")), -1;
+            el->indication = grym_dupliquer(voir(a, 4)->valeur);
+            a->i += 5;
+            return 1;
+        }
+    }
     {
         const int pl = place_element(a, el, g, vus_);   /* la place et la taille (§ 22.9) */
         if (pl) return pl;

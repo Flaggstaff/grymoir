@@ -505,6 +505,7 @@ static char *feuille_de_style(const Serveur *s) {
     ".graphique{max-width:100%;height:auto;font:inherit;fill:currentColor}"
     /* l'interrupteur (§ 22.6) : un rail et un bouton ; sans cette règle, une case ordinaire */
     ".choix-multiples{display:flex;flex-wrap:wrap;gap:4px 16px}"   /* des choix multiples (§ 22.1) */
+    ".zone .indication{margin:0 0 4px;font-size:.9em;opacity:.75}"   /* l'indication sous le libellé (§ 22.6) */
     ".entete h1.titre-petit{font-size:1.1em}.entete h1.titre-grand{font-size:2.2em}"   /* la taille du titre (§ 22.5) */
     ".interrupteur input{appearance:none;width:36px;height:20px;border-radius:10px;background:var(--bordure,#999);position:relative;"
     "cursor:pointer;vertical-align:middle;margin:0 8px 0 0}.interrupteur input::before{content:\"\";position:absolute;top:2px;left:2px;"
@@ -834,6 +835,15 @@ static const char *type_image(const char *format);
 static EcranWeb *ecran_dessus(const Serveur *s) { return s->nb_ecrans ? s->ecrans[s->nb_ecrans - 1] : NULL; }
 
 static int est_case(const ElementEcran *e) { return e->type && strcmp(e->type, "vrai ou faux") == 0; }
+/* « , avec l'indication « … » » (§ 22.6) : sous le libellé, désignée par le champ (aria-describedby). */
+static void indication(Chaine *c, const ElementEcran *el, const char *id) {
+    if (!el->indication) return;
+    chaine_ajouter(c, "<p class=\"indication\" id=\"");
+    chaine_ajouter(c, id);
+    chaine_ajouter(c, "i\">");
+    echapper(c, el->indication);
+    chaine_ajouter(c, "</p>");
+}
 static int est_zone_fichier(const ElementEcran *e) {   /* une zone de fichier ou d'image : un champ de choix de fichier */
     return e->sorte == ELEMENT_ZONE && e->type && (strcmp(e->type, "fichier") == 0 || strcmp(e->type, "image") == 0);
 }
@@ -846,8 +856,12 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
     /* inactive, ou en lecture seule pour un menu ou une case : désactivée, donc absente de l'envoi ;
      * un texte en lecture seule reste sélectionnable (§ 22.6) */
     const int fige = (e->etats[k] & 1) || (el->lecture_seule && (est_case(el) || el->nb_choix));   /* menus et radios aussi */
-    const char *attr = fige ? " disabled" : el->lecture_seule ? " readonly"
-                     : !el->facultatif && !est_case(el) ? " aria-required=\"true\"" : "";
+    const char *attr0 = fige ? " disabled" : el->lecture_seule ? " readonly"
+                      : !el->facultatif && !est_case(el) ? " aria-required=\"true\"" : "";
+    char attr_b[224];   /* l'indication (§ 22.6) : le champ la désigne, un lecteur d'écran la lit avec lui */
+    snprintf(attr_b, sizeof attr_b, "%s%s%s%s", attr0, el->indication ? " aria-describedby=\"" : "", el->indication ? id : "",
+             el->indication ? "i\"" : "");
+    const char *attr = attr_b;
     chaine_ajouter(c, "<div class=\"zone\">");
     if (est_case(el)) {   /* la présence de « …p » dit qu'on a vu la case : décochée, elle n'envoie rien */
         chaine_ajouter(c, "<input type=\"hidden\" name=\"");
@@ -861,6 +875,7 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
         chaine_ajouter(c, "> ");
         echapper(c, el->texte);
         chaine_ajouter(c, "</label>");
+        indication(c, el, id);
     } else {
         chaine_ajouter(c, "<label for=\"");
         chaine_ajouter(c, id);
@@ -870,6 +885,7 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
         if (!el->facultatif && !el->lecture_seule)
             chaine_ajouter(c, "<span class=\"requis\" title=\"Obligatoire\"> *</span>");
         chaine_ajouter(c, "</label>");
+        indication(c, el, id);
         if (el->type && strcmp(el->type, "texte") == 0 && el->nb_choix >= 2 && el->nb_choix <= 4) {
             /* valeurs permises, de deux à quatre : des boutons radio (§ 22.7) ; « — » pour l'absence si facultative */
             chaine_ajouter(c, "<div class=\"radios\" role=\"radiogroup\">");
@@ -903,7 +919,9 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
         } else if (el->multiple) {   /* des choix multiples : une case par objet, cochée si sa clé est dans la valeur (§ 22.1) */
             chaine_ajouter(c, "<input type=\"hidden\" name=\"");
             chaine_ajouter(c, id);
-            chaine_ajouter(c, "p\" value=\"1\"><div class=\"choix-multiples\" role=\"group\">");
+            chaine_ajouter(c, "p\" value=\"1\"><div class=\"choix-multiples\" role=\"group\"");
+            if (el->indication) { chaine_ajouter(c, " aria-describedby=\""); chaine_ajouter(c, id); chaine_ajouter(c, "i\""); }
+            chaine_ajouter(c, ">");
             for (size_t j = 0; j < el->nb_choix; j++) {
                 int coche = 0;
                 for (const char *p = v; *p && !coche;) {
