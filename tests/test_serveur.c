@@ -757,6 +757,21 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Courriel, téléphone (§ 16.1) : le bon clavier, sans bloquer l'envoi ; une forme fausse refusée, une juste acceptée */
+        const char *src = "L'écran x montre :\n    un courriel (courriel),\n    un portable (téléphone), facultatif,\n    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Afficher « reçu : » puis le courriel de l'écran.\n"
+                          "    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0=anne"), get("/"), evenement("q=2&z0=anne%40tilleul.ch&clic=2"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<input type=\"text\" id=\"z0\" name=\"z0\" value=\"\" inputmode=\"email\" autocomplete=\"email\"");
+        CONTIENT(sc.reponses[0], "<input type=\"tel\" id=\"z1\"");
+        NE_CONTIENT_PAS(sc.reponses[0], "type=\"email\"");
+        CONTIENT(sc.reponses[2], "« anne » n&#39;est pas un courriel (nom@domaine.ch).");
+        CONTIENT(sc.reponses[4], "reçu : anne@tilleul.ch");
+        liberer(&sc);
+    }
+
     {   /* Le masque (§ 22.6) : un champ de mot de passe ; la valeur ne revient jamais dans la page ; vide, il n'efface rien */
         const char *src = "L'écran x montre :\n    un code (texte), masqué,\n    un bouton « OK ».\n"
                           "Quand on clique sur « OK » dans l'écran x :\n    Afficher « gardé : » puis le code de l'écran.\n"

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.98 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.99 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1892,6 +1892,22 @@ L'écran d'accueil montre :
 - Un menu fait partie du cadre de l'écran : il ne se place pas au pixel et ne s'agrandit pas (§ 22.9) ; ses boutons non plus.
 - Forme compacte : `_menu « Membres »` … `_fin`.
 
+### 22.13 Courriel, téléphone, adresse web *(implémenté le 16 octobre 2026)*
+
+`(courriel)`, `(téléphone)` et `(adresse web)` sont des types, partout où l'on écrit un type : un champ d'entité, une zone d'écran.
+
+```
+Un contact, conservé, a :
+    un courriel (courriel), unique,
+    un portable (téléphone), facultatif,
+    un site (adresse web), facultatif.
+```
+
+- La valeur est un texte : elle se range, se compare, se cherche (`dont le courriel contient « tilleul »`) et s'affiche comme un texte, et un texte s'y affecte. Un courriel unique peut servir de clé.
+- Sa forme se vérifie quand elle entre dans un champ ou une zone, simplement, pour attraper les fautes de frappe : un courriel a un seul `@`, quelque chose avant, un point après, pas d'espace (« « anne@ » n'est pas un courriel (nom@domaine.ch). ») ; un téléphone, des chiffres (au moins 6), des espaces, `+`, `(`, `)`, `-`, `.`, `/` ; une adresse web commence par `http://` ou `https://`. La norme des courriels (RFC 5322) admet bien plus : le projet ne prétend pas la suivre.
+- Dans une zone, l'interface propose le clavier qui convient.
+- Forme compacte : `(courriel)`, `(téléphone)`, `(adresse_web)`.
+
 ---
 
 ## Journal des révisions
@@ -1997,3 +2013,4 @@ L'écran d'accueil montre :
 | 1.96 | 2026-10-16 | § 22.6 : `, avec recherche`, une zone d'objet où l'on tape, d'elle-même au-delà de vingt objets |
 | 1.97 | 2026-10-16 | § 22.6 : les bornes d'une zone, `de 1 à 99`, `au moins`, `au plus`, en caractères pour un texte |
 | 1.98 | 2026-10-16 | § 22.6 : `, masqué`, une zone de texte à la frappe cachée (un mot de passe), sa valeur jamais réaffichée |
+| 1.99 | 2026-10-16 | Nouveau § 22.13 : les types `(courriel)`, `(téléphone)`, `(adresse web)`, des textes à la forme vérifiée, pour les champs comme pour les zones |

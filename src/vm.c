@@ -8,6 +8,7 @@
 #include "lexeur.h"
 #include "date.h"
 #include "decimal.h"
+#include "types.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -969,7 +970,7 @@ static int lire_reponse(const char *type, const char *ligne, Valeur *v, char **p
     size_t n = strlen(ligne);
     while (n && (ligne[n - 1] == ' ' || ligne[n - 1] == '\t')) n--;
     char *t = grym_formater("%.*s", (int)n, ligne);
-    if (strcmp(type, "texte") == 0) {
+    if (type_textuel(type)) {
         *v = vi_texte(t);
         free(t);
         return 1;
@@ -1377,7 +1378,11 @@ static char *verifier_type_champ(const Machine *m, const char *champ, const char
         return r;
     }
     int ok = 0;
-    if (strcmp(type, "texte") == 0) ok = v->type == V_TEXTE;
+    if (type_textuel(type)) {   /* un courriel, un téléphone, une adresse web : un texte, à la forme contrôlée */
+        ok = v->type == V_TEXTE;
+        const char *attendu = ok ? forme_refusee(type, v->texte) : NULL;
+        if (attendu) return grym_formater("« %s » n'est pas %s.", v->texte, attendu);
+    }
     else if (strcmp(type, "nombre") == 0) ok = v->type == V_NOMBRE;
     else if (strcmp(type, "nombre entier") == 0) ok = v->type == V_NOMBRE && dec_est_entier(&v->nombre);
     else if (strcmp(type, "vrai ou faux") == 0) ok = v->type == V_BOOLEEN;
@@ -1553,7 +1558,7 @@ static Valeur valeur_de_depart(const char *type, const char *canonique) {
 /* Champ texte unique qui désigne un objet de l'entité (le premier), ou NULL (§ 19). */
 static const char *champ_cle(const ClasseVM *c) {
     for (size_t k = 0; k < c->nb_champs; k++)
-        if (c->types[k] && strcmp(c->types[k], "texte") == 0 && (c->uniques[k] & 1)) return c->champs[k];
+        if (c->types[k] && type_textuel(c->types[k]) && (c->uniques[k] & 1)) return c->champs[k];
     return NULL;
 }
 
@@ -3032,6 +3037,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (!types[q]) continue;
             int ok_type = strcmp(types[q], cm->nom) == 0 && cm->conserve;
             for (size_t r = 0; r < sizeof BASE / sizeof *BASE; r++) ok_type |= strcmp(types[q], BASE[r]) == 0;
+            ok_type |= type_textuel(types[q]);   /* courriel, téléphone, adresse web (types.h) */
             const ClasseVM *e = classe_vm(m, types[q]);
             if (!ok_type && !(e && e->conserve))
                 probleme = grym_formater("« %s » : type « %s » inconnu.", champs[q], types[q]);

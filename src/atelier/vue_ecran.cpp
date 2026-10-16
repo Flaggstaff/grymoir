@@ -453,6 +453,11 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 libelle->setBuddy(w);
                 rang->addWidget(libelle);
             }
+            if (auto *le = qobject_cast<QLineEdit *>(w)) {   // courriel, téléphone, adresse web : le bon clavier (§ 16.1)
+                if (e.type == "courriel") le->setInputMethodHints(Qt::ImhEmailCharactersOnly);
+                else if (e.type == QString::fromUtf8("téléphone")) le->setInputMethodHints(Qt::ImhDialableCharactersOnly);
+                else if (e.type == "adresse web") le->setInputMethodHints(Qt::ImhUrlCharactersOnly);
+            }
             if (e.masque)   // « masqué » (§ 22.6) : la frappe cachée
                 if (auto *le = qobject_cast<QLineEdit *>(w)) {
                     le->setEchoMode(QLineEdit::Password);

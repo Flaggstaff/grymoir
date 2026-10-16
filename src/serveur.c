@@ -7,6 +7,7 @@
 
 #include "serveur.h"
 #include "vm.h"
+#include "types.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -862,7 +863,7 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
     /* la longueur d'un texte se borne à la frappe (maxlength) ; un minimum, ou les bornes d'un nombre, se vérifient par la
      * machine, avec son message : posés dans la page, ils bloqueraient l'envoi de tout l'écran, « Fermer » compris */
     char longueur[48] = "";
-    if (el->borne_max && el->type && strcmp(el->type, "texte") == 0 && !el->nb_choix)
+    if (el->borne_max && type_textuel(el->type) && !el->nb_choix)
         snprintf(longueur, sizeof longueur, " maxlength=\"%ld\"", atol(el->borne_max));
     snprintf(attr_b, sizeof attr_b, "%s%s%s%s%s", attr0, el->indication ? " aria-describedby=\"" : "", el->indication ? id : "",
              el->indication ? "i\"" : "", longueur);
@@ -993,7 +994,10 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
             chaine_ajouter(c, "</textarea>");
         } else {
             /* « masqué » : un champ de mot de passe, et sa valeur ne revient jamais dans la page (§ 22.6) */
-            chaine_ajouter(c, el->masque ? "<input type=\"password\" id=\"" : "<input type=\"text\" id=\"");
+            /* « téléphone » : type=tel, qui ne vérifie rien ; courriel et adresse web gardent type=text (type=email ou url
+             * bloqueraient l'envoi de tout l'écran), leur clavier vient d'inputmode ; la machine vérifie la forme */
+            const int tel = el->type && strcmp(el->type, "téléphone") == 0;
+            chaine_ajouter(c, el->masque ? "<input type=\"password\" id=\"" : tel ? "<input type=\"tel\" id=\"" : "<input type=\"text\" id=\"");
             chaine_ajouter(c, id);
             chaine_ajouter(c, "\" name=\"");
             chaine_ajouter(c, id);
@@ -1003,6 +1007,9 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
             if (el->masque && *v) chaine_ajouter(c, " placeholder=\"••••••\"");   /* déjà rempli : rien ne se voit */
             /* la virgule suisse n'est pas un nombre pour un champ numérique : texte, vérifié par la machine */
             if (el->type && strcmp(el->type, "nombre") == 0) chaine_ajouter(c, " inputmode=\"decimal\"");
+            if (el->type && strcmp(el->type, "courriel") == 0) chaine_ajouter(c, " inputmode=\"email\" autocomplete=\"email\"");
+            if (el->type && strcmp(el->type, "adresse web") == 0) chaine_ajouter(c, " inputmode=\"url\"");
+            if (tel) chaine_ajouter(c, " autocomplete=\"tel\"");
             else if (el->type && strcmp(el->type, "nombre entier") == 0) chaine_ajouter(c, " inputmode=\"numeric\"");
             chaine_ajouter(c, attr);
             chaine_ajouter(c, ">");

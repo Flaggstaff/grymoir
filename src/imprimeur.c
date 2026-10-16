@@ -5,6 +5,7 @@
 #include "date.h"
 #include "decimal.h"
 #include "texte.h"
+#include "types.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -1317,7 +1318,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 if (el->entier & 32) aj(im, c ? " _recherche" : ", avec recherche");   /* § 22.6 */
                 if (el->entier & 64) aj(im, c ? " _masqué" : fz ? ", masquée" : ", masqué");   /* § 22.6 */
                 if (el->borne_min || el->borne_max) {   /* « , de 1 à 99 », « , au plus 30 caractères » ; « _min 1 _max 99 » */
-                    const int car = el->texte2 && strcmp(el->texte2, "texte") == 0;
+                    const int car = type_textuel(el->texte2);
                     char *a1 = el->borne_min ? borne_ecrite(el->borne_min) : NULL, *a2 = el->borne_max ? borne_ecrite(el->borne_max) : NULL;
                     if (c) {
                         if (a1) { aj(im, " _min "); aj(im, a1); }

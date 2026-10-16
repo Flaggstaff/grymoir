@@ -8,6 +8,7 @@
 #include "compact.h"
 #include "lexeur.h"
 #include "texte.h"
+#include "types.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -712,7 +713,7 @@ static void *erreur_a(Analyse *a, int ligne, int colonne, char *message) {
 }
 
 static const char *const TYPES[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image",
-                                     "année", "heure" };
+                                     "année", "heure", "courriel", "téléphone", "adresse web" };   /* types.h */
 
 /* ---------------------------------------------------------------- */
 /* Typage strict des entités, à l'analyse (§ 16.2)                  */
@@ -852,6 +853,9 @@ static int verifier_type(Analyse *a, const char *champ, const char *attendu, con
     if (!vu || strcmp(attendu, vu) == 0) return 1;
     if (strcmp(attendu, "nombre") == 0 && strcmp(vu, "nombre entier") == 0) return 1;
     if (strcmp(attendu, "image") == 0 && strcmp(vu, "fichier") == 0) return 1;   /* vérifié à l'exécution */
+    /* un texte va dans un courriel, un téléphone, une adresse web, et inversement ; la forme se vérifie à l'exécution,
+     * quand la valeur entre dans un champ ou une zone : ici, ce peut être un morceau (« dont le courriel contient … ») */
+    if (type_textuel(attendu) && type_textuel(vu)) return 1;
     if (strcmp(attendu, "année") == 0 && (strcmp(vu, "nombre entier") == 0 || strcmp(vu, "nombre") == 0)) {
         /* un nombre entier devient une année dans un champ (année), s'il est dans le calendrier (§ 14.5) */
         const Noeud *x = v;
@@ -1591,7 +1595,7 @@ static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
                 refus = NULL;   /* « est absent », « est présent » : tout champ */
             else if (!t || strcmp(t, "fichier") == 0 || strcmp(t, "image") == 0)
                 refus = "un fichier ne se compare pas";
-            else if ((op == 'c' || op == 'd' || op == 'f') && strcmp(t, "texte") != 0)
+            else if ((op == 'c' || op == 'd' || op == 'f') && !type_textuel(t))
                 refus = "contient, commence par et finit par s'appliquent à un texte";
             else if ((op == 'P' || op == 'N' || op == '0') && strcmp(t, "nombre") != 0 && strcmp(t, "nombre entier") != 0)
                 refus = "positif, négatif et nul s'appliquent à un nombre";
@@ -3049,7 +3053,7 @@ static Noeud *comparaison(Analyse *a) {
         /* « le nom contient « mül » », « commence par », « finit par », « ne contient pas » (§ 4.5) */
         size_t k = est_mot(t, "ne") ? 1 : 0;
         const char *tx = type_statique(x);
-        if (tx && strcmp(tx, "texte") == 0) {   /* proposés après un texte seulement : ailleurs, ils encombreraient */
+        if (tx && type_textuel(tx)) {   /* proposés après un texte seulement : ailleurs, ils encombreraient */
             attendre_mot(a, a->i, "contient", strlen("contient"));
             attendre_mot(a, a->i, "commence par", strlen("commence par"));
             attendre_mot(a, a->i, "finit par", strlen("finit par"));
@@ -5860,7 +5864,7 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
         const int de = est_mot(x, "de"), moins = est_mot(x, "au") && est_mot(voir(a, 2), "moins"),
                   plus = est_mot(x, "au") && est_mot(voir(a, 2), "plus");
         if (zone && (de || moins || plus) && el->texte2) {
-            const int texte = strcmp(el->texte2, "texte") == 0;
+            const int texte = type_textuel(el->texte2);
             const int nombre = strcmp(el->texte2, "nombre") == 0 || strcmp(el->texte2, "nombre entier") == 0;
             size_t q = a->i + (de ? 2 : 3);
             char *lu[2] = {NULL, NULL};
@@ -6416,7 +6420,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 size_t apres_v = a->i + (moins ? 3 : 2);
                 if (!(a->j[apres_v].type == J_MOT && est_mot(&a->j[apres_v], "au") && est_mot(&a->j[apres_v + 1], "départ"))) break;
                 Noeud *dv = NULL;
-                const int ok_type = (v->type == J_TEXTE && strcmp(type, "texte") == 0)
+                const int ok_type = (v->type == J_TEXTE && type_textuel(type))
                                  || (v->type == J_NOMBRE && (strcmp(type, "nombre") == 0 || strcmp(type, "nombre entier") == 0
                                                              || strcmp(type, "année") == 0))
                                  || (v->type == J_DATE && !moins && strcmp(type, "date") == 0)

@@ -1001,6 +1001,19 @@ static void essais_ecrans(void) {
          "Quand on clique sur « OK » dans l'écran de recherche :\n    Fermer l'écran.\n"
          "Afficher le pays de l'écran.\n", "~« l'écran » ne se lit que dans un événement");
     PROG("L'écran de recherche montre :\n    une photo (image).\n", "");   /* une zone d'image est acceptée */
+    /* courriel, téléphone, adresse web (§ 16.1) : des textes rangés en base, cherchés comme tels ; leur forme vérifiée */
+    PROG("Un contact, conservé, a :\n    un courriel (courriel), unique,\n    un portable (téléphone), facultatif,\n"
+         "    un site (adresse web), facultatif.\n"
+         "Le c vaut un nouveau contact :\n    Le courriel vaut « anne@tilleul.ch ».\n    Le portable vaut « +41 26 912 34 56 ».\n"
+         "    Le site vaut « https://tilleul.ch ».\nConserver c.\n"
+         "Pour chaque contact conservé dont le courriel contient « tilleul » :\n"
+         "    Afficher le courriel du contact puis « / » puis le portable du contact.\n", "~anne@tilleul.ch / +41 26 912 34 56");
+    PROG("Un contact, conservé, a :\n    un courriel (courriel).\nLe c vaut un nouveau contact :\n"
+         "    Le courriel vaut « anne » suivi de « @ ».\nConserver c.\n", "~« anne@ » n'est pas un courriel (nom@domaine.ch).");
+    PROG("Un contact, conservé, a :\n    un portable (téléphone).\nLe c vaut un nouveau contact :\n"
+         "    Le portable vaut « 12 ».\nConserver c.\n", "~« 12 » n'est pas un numéro de téléphone");
+    PROG("Un contact, conservé, a :\n    un site (adresse web).\nLe c vaut un nouveau contact :\n"
+         "    Le site vaut « tilleul.ch ».\nConserver c.\n", "~« tilleul.ch » n'est pas une adresse web (https://exemple.ch).");
     /* La fiche montre les champs « plusieurs » (§ 16.13, § 22.3) : un bouton par élément, vers sa fiche ; vide : « aucun » */
     {
         const char *src3 =

@@ -7,6 +7,7 @@
 #include "texte.h"
 
 #include "sqlite3.h"
+#include "types.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -267,7 +268,7 @@ static int est_lien(const char *type) {
     static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image",
                                         "année", "heure" };
     for (size_t k = 0; k < sizeof BASE / sizeof *BASE; k++) if (strcmp(type, BASE[k]) == 0) return 0;
-    return 1;
+    return !type_textuel(type);   /* courriel, téléphone, adresse web : des textes, pas des liens (types.h) */
 }
 
 static int commence_par_voyelle(const char *s) {
@@ -1141,7 +1142,7 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
             if (c->proprietaires[j] == c && strcmp(c->champs[j], n.noms[k]) == 0) q = (long)j;
         const char *depart = q >= 0 ? c->departs[q] : NULL;
         const char *t = n.types[k];
-        int lien = !(strcmp(t, "texte") == 0 || strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0
+        int lien = !(type_textuel(t) || strcmp(t, "nombre") == 0 || strcmp(t, "nombre entier") == 0
                      || strcmp(t, "année") == 0 || strcmp(t, "heure") == 0
                      || strcmp(t, "vrai ou faux") == 0 || strcmp(t, "date") == 0 || est_fichier(t));
         int facultatif = (n.uniques[k] & 2) != 0;
@@ -1429,7 +1430,7 @@ static int lier(Base *b, sqlite3_stmt *st, int i, const char *type, const char *
         if (est_fichier(type)) { sqlite3_bind_null(st, i + 1); return i + 2; }
         return i + 1;
     }
-    if (strcmp(type, "texte") == 0) {
+    if (type_textuel(type)) {
         sqlite3_bind_text(st, i, v->texte, -1, SQLITE_TRANSIENT);
     } else if (strcmp(type, "nombre") == 0) {
         char *t = dec_canonique(&v->nombre);
@@ -2151,7 +2152,7 @@ int base_charger(Base *b, struct Machine *m, Objet *o, char **erreur) {
             if (sqlite3_column_type(st, col) == SQLITE_NULL) {
                 v = vi_absent(c->champs[k]);
                 if (est_fichier(t)) col += 3;
-            } else if (strcmp(t, "texte") == 0) v = vi_texte((const char *)sqlite3_column_text(st, col));
+            } else if (type_textuel(t)) v = vi_texte((const char *)sqlite3_column_text(st, col));
             else if (strcmp(t, "nombre") == 0) v = vi_nombre_canonique((const char *)sqlite3_column_text(st, col));
             else if (strcmp(t, "nombre entier") == 0) {
                 char tampon[32];
@@ -2519,7 +2520,7 @@ static int lire_condition(Recherche *r) {
             snprintf(tampon, sizeof tampon, "?%lu", (unsigned long)(r->nb_liens + 1));
             chaine_ajouter(&r->sql, tampon);
             if (nombre || entier) chaine_ajouter(&r->sql, " COLLATE GRYM_NOMBRE");
-            else if (strcmp(t, "texte") == 0 && op != '=' && op != '!') chaine_ajouter(&r->sql, " COLLATE GRYM_TEXTE");
+            else if (type_textuel(t) && op != '=' && op != '!') chaine_ajouter(&r->sql, " COLLATE GRYM_TEXTE");
             r->liens[r->nb_liens] = i - 1;
             r->types[r->nb_liens] = t;
             r->champs[r->nb_liens] = nom_champ;
@@ -2536,7 +2537,7 @@ static int lire_condition(Recherche *r) {
 /* Lie la valeur d'un paramètre, comparée au champ d'un type donné. */
 static int lier_parametre(Recherche *r, sqlite3_stmt *st, int i, const char *type, const char *champ, const Valeur *v) {
     const char *attendu = NULL;
-    if (strcmp(type, "texte") == 0) {
+    if (type_textuel(type)) {
         if (v->type == V_TEXTE) { sqlite3_bind_text(st, i, v->texte, -1, SQLITE_TRANSIENT); return 1; }
         attendu = "un texte";
     } else if (strcmp(type, "année") == 0) {
@@ -2707,7 +2708,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
             else {
                 colonne(&r, (size_t)k);
                 if (strcmp(e->types[k], "nombre") == 0) chaine_ajouter(&r.sql, " COLLATE GRYM_NOMBRE");
-                else if (strcmp(e->types[k], "texte") == 0) chaine_ajouter(&r.sql, " COLLATE GRYM_TEXTE");
+                else if (type_textuel(e->types[k])) chaine_ajouter(&r.sql, " COLLATE GRYM_TEXTE");
                 if (decroissant) chaine_ajouter(&r.sql, " DESC");
                 chaine_ajouter(&r.sql, " NULLS LAST");   /* les absents en dernier, dans les deux sens */
                 chaine_ajouter(&r.sql, ", ");

@@ -296,6 +296,10 @@ int main(void) {
     COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
          "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
+    /* courriel, téléphone, adresse web (§ 16.1) : dans une entité et un écran, les deux formes */
+    FIXE("Un contact, conservé, a :\n    un courriel (courriel), unique,\n    un portable (téléphone),\n    un site (adresse web).\n"
+         "L'écran x montre :\n    un courriel (courriel),\n    un site (adresse web).");
+    COMP("L'écran x montre :\n    un site (adresse web),\n    le texte « t ».", "_écran x\n    _un site (adresse_web)\n    _texte « t »\n_fin\n");
     /* le masque (§ 22.6) : accordé au genre, les deux formes */
     FIXE("L'écran x montre :\n    un code (texte), masqué,\n    une clé (texte), au moins 8 caractères, masquée.");
     COMP("L'écran x montre :\n    une clé (texte), masquée,\n    le texte « t ».",
