@@ -210,6 +210,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         if (el->texte3) x.valeurs = QString::fromUtf8(el->texte3).split(QChar(0x1e));
                         x.lecture_seule = el->entier & 4;
                         x.interrupteur = el->entier & 8;
+                        x.recherche = el->entier & 32;
                         x.indication = el->indication ? QString::fromUtf8(el->indication) : QString();
                         if (el->nb_enfants && el->enfants[0]->type != N_SI_ECRAN) {
                             const Noeud *v = el->enfants[0];
@@ -415,6 +416,7 @@ void OngletEcrans::dessiner() {
         el[k].multiple = e.elements[k].multiple;
         el[k].interrupteur = e.elements[k].interrupteur;
         el[k].indication = e.elements[k].indication;
+        el[k].recherche = e.elements[k].recherche;
         el[k].gauche = e.elements[k].gauche;
         el[k].haut = e.elements[k].haut;
         el[k].largeur = e.elements[k].largeur;
@@ -1439,6 +1441,8 @@ void OngletEcrans::editer() {
             seule->setChecked(x.lecture_seule);
             auto *inter = new QCheckBox("en interrupteur (vrai ou faux)");   // § 22.6
             inter->setChecked(x.interrupteur);
+            auto *cherche = new QCheckBox("avec recherche (un objet parmi beaucoup)");   // § 22.6
+            cherche->setChecked(x.recherche);
             auto *indic = new QLineEdit(x.indication);   // « , avec l'indication « … » » (§ 22.6)
             indic->setPlaceholderText("une phrase sous le libellé (facultative)");
             auto *actif = condition_ecran(x.actif_si, "le compositeur choisi de l'écran est présent");
@@ -1452,6 +1456,7 @@ void OngletEcrans::editer() {
             f->addRow("", lignes);
             f->addRow("", seule);
             f->addRow("", inter);
+            f->addRow("", cherche);
             f->addRow("Indication", indic);
             f->addRow("Active si", actif);
             f->addRow("Visible si", visible);
@@ -1467,6 +1472,7 @@ void OngletEcrans::editer() {
                 for (const QString &v : valeurs->text().split(';')) if (!v.trimmed().isEmpty()) n.valeurs << v.trimmed();
                 n.lecture_seule = seule->isChecked();
                 n.interrupteur = inter->isChecked();
+                n.recherche = cherche->isChecked();
                 n.indication = indic->text().trimmed();
                 n.multiple = x.multiple;   // une zone multiple le reste
                 n.actif_si = actif->text();

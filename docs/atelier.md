@@ -407,3 +407,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.61 | 2026-10-16 | Le titre de l'écran garde sa hauteur naturelle (il prenait toute la hauteur libre de l'aperçu) ; un clic droit sur le titre, ou le logo, le renomme |
 | 0.62 | 2026-10-16 | Le clic droit sur le titre propose sa taille (en petit, normale, en grand) ; l'aperçu et l'exécution la montrent |
 | 0.63 | 2026-10-16 | L'indication d'une zone : une ligne « Indication » dans son panneau ; sous le libellé dans l'aperçu et à l'exécution |
+| 0.64 | 2026-10-16 | La recherche : un menu modifiable qui propose les objets contenant la saisie ; la case « avec recherche » dans le panneau d'une zone |

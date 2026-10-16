@@ -1299,6 +1299,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 if (el->entier & 2) aj(im, c ? " _plusieurs_lignes" : ", sur plusieurs lignes");
                 if (el->entier & 4) aj(im, c ? " _lecture_seule" : ", en lecture seule");
                 if (el->entier & 8) aj(im, c ? " _interrupteur" : ", en interrupteur");   /* § 22.6 */
+                if (el->entier & 32) aj(im, c ? " _recherche" : ", avec recherche");   /* § 22.6 */
                 if (el->indication) {   /* « , avec l'indication « … » » ; « _indication « … » » */
                     aj(im, c ? " _indication " : ", avec l'indication ");
                     ecrire_texte(im, el->indication);

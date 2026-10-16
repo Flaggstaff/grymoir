@@ -138,7 +138,7 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         t->images << (el[k].octets ? QByteArray(reinterpret_cast<const char *>(el[k].octets), (qsizetype)el[k].taille) : QByteArray());
         t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0)
-                             | (el[k].multiple ? 8 : 0));
+                             | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0));
         t->facultatives << el[k].facultatif;
         t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
         QStringList ch;
@@ -783,6 +783,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].lecture_seule = o & 2;
         elements[k].interrupteur = o & 4;   // § 22.6
         elements[k].multiple = o & 8;   // § 22.1
+        elements[k].recherche = o & 16;   // § 22.6
         elements[k].graphique = travail.graphiques.value(k);   // § 22.11
         if (k < travail.places.size() && travail.places[k].size() == 4) {   // position libre (§ 22.9)
             const QVector<int> &p = travail.places[k];
@@ -844,6 +845,12 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                     texte_envoye = m->currentText().toUtf8();
                     envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
                 });
+                if (m->isEditable())   // une recherche (§ 22.6) : la saisie validée, ou une proposition choisie, change la zone
+                    connect(m->lineEdit(), &QLineEdit::editingFinished, this, [this, k, m] {
+                        if (m->currentText().toUtf8() == texte_envoye) return;
+                        texte_envoye = m->currentText().toUtf8();
+                        envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
+                    });
             } else if (z->property("radios").toBool()) {   // un bouton radio choisi : la zone change (§ 22.7)
                 if (auto *g = z->findChild<QButtonGroup *>())
                     connect(g, &QButtonGroup::buttonClicked, this, [this, k](QAbstractButton *b) {

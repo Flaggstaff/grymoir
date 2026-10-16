@@ -35,6 +35,7 @@ struct ElementLu {
     bool multiple = false;       // « des genres (genre) » (§ 22.1)
     bool interrupteur = false;   // « en interrupteur » (§ 22.6)
     QString indication;          // « , avec l'indication « … » » (§ 22.6)
+    bool recherche = false;      // « , avec recherche » (§ 22.6)
     QString graphe_cle, graphe_somme;   // telles qu'écrites, « écrit ␝ chemin » ; vide : pas de somme
     int gauche = 0, haut = 0, largeur = 0, hauteur = 0;   // largeur, hauteur : 0 si non dites
 };

@@ -296,6 +296,10 @@ int main(void) {
     COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
          "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
+    /* la recherche (§ 22.6) : les deux formes */
+    FIXE("Un membre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    un membre (membre), avec recherche,\n    le texte « t ».");
+    COMP("Un membre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    un membre (membre), avec recherche,\n    le texte « t ».",
+         "_classe _un membre _conservé\n    _un nom (texte) _unique\n_fin\n_écran x\n    _un membre (membre) _recherche\n    _texte « t »\n_fin\n");
     /* l'indication (§ 22.6) : les deux formes ; ses lettres ne se prennent pas pour des options */
     FIXE("L'écran x montre :\n    un code (texte), facultatif, avec l'indication « 4 chiffres, sans espace »,\n    le texte « t ».");
     COMP("L'écran x montre :\n    un code (texte), avec l'indication « mois »,\n    le texte « t ».",

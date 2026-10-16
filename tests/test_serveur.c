@@ -757,6 +757,40 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* La recherche (§ 22.6) : demandée, un champ relié à ses propositions ; une saisie désigne l'objet. Puis automatique,
+         * au-delà de vingt objets, sans rien écrire */
+        const char *src = "Un membre, conservé, a :\n    un nom (texte), unique.\n"
+                          "Le a vaut un nouveau membre :\n    Le nom vaut « Anne ».\nConserver a.\n"
+                          "Le b vaut un nouveau membre :\n    Le nom vaut « Bruno ».\nConserver b.\n"
+                          "L'écran x montre :\n    un membre (membre), avec recherche,\n    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Afficher « trouvé : » puis le nom du membre de l'écran.\n"
+                          "    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0=Bruno&clic=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<input type=\"text\" id=\"z0\" name=\"z0\" list=\"z0l\" value=\"\"");
+        CONTIENT(sc.reponses[0], "<datalist id=\"z0l\"><option value=\"Anne\"><option value=\"Bruno\"></datalist>");
+        CONTIENT(sc.reponses[2], "trouvé : Bruno");
+        liberer(&sc);
+        Chaine p = {0};
+        chaine_ajouter(&p, "Un membre, conservé, a :\n    un nom (texte), unique.\n");
+        for (int i = 1; i <= 21; i++) {
+            char l[160];
+            snprintf(l, sizeof l, "Le m%d vaut un nouveau membre :\n    Le nom vaut « M%02d ».\nConserver m%d.\n", i, i, i);
+            chaine_ajouter(&p, l);
+        }
+        chaine_ajouter(&p, "L'écran x montre :\n    un membre (membre),\n    un bouton « OK ».\n"
+                           "Quand on clique sur « OK » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n");
+        char *src2 = chaine_rendre(&p);
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=1"), get("/"));
+        servir(src2, &sc);
+        CONTIENT(sc.reponses[0], "list=\"z0l\"");   /* 21 objets : la recherche d'elle-même */
+        NE_CONTIENT_PAS(sc.reponses[0], "<select");
+        liberer(&sc);
+        free(src2);
+    }
+
     {   /* L'indication (§ 22.6) : sous le libellé, désignée par le champ ; ses lettres (« mpsi ») ne deviennent pas des options */
         const char *src = "L'écran x montre :\n    un code (texte), avec l'indication « mpsi : 4 chiffres »,\n"
                           "    un actif (vrai ou faux), avec l'indication « coché : visible »,\n    un bouton « OK ».\n"

@@ -26,6 +26,9 @@ typedef enum { ELEMENT_LISTE, ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE,
                                                   image (texte : son nom ; octets, taille, format) : § 22.8 ;
                                                   bloc en position libre, fermé par ELEMENT_FIN_DE_BLOC : § 22.9 ;
                                                   les onglets, un onglet (texte : son titre), fermés de même : § 22.10 */
+/* Au-delà de ce nombre d'objets, une zone qui en désigne un devient un champ de recherche, sans qu'on l'écrive (§ 22.6). */
+#define RECHERCHE_AU_DELA 20
+
 typedef struct {
     SorteElement sorte;
     const char *texte;              /* libellé du bouton, texte fixe ; pour une liste, l'entité */
@@ -47,6 +50,8 @@ typedef struct {
     int graphique;                  /* graphique (§ 22.11) : 2 en secteurs, 4 une somme ; ses lignes : libellé, valeur */
     int interrupteur;               /* zone (vrai ou faux) « en interrupteur » : un interrupteur plutôt qu'une case (§ 22.6) */
     const char *indication;         /* zone : « , avec l'indication « … » », ou NULL (§ 22.6) */
+    int recherche;                  /* zone d'un objet « avec recherche » : un champ où l'on tape, avec des propositions ;
+                                       les interfaces le font aussi d'elles-mêmes au-delà de RECHERCHE_AU_DELA objets */
     int multiple;                   /* « des genres (genre) » : des choix multiples parmi `choix` ; sa valeur (ecran_valeurs)
                                        et son changement : les clés cochées, séparées par U+001E (§ 22.1) */
 } ElementEcran;

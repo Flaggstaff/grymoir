@@ -2794,6 +2794,21 @@ int main(int argc, char **argv) {
         QFile f(chemin);
         VERIFIER(f.open(QIODevice::ReadOnly) && QString::fromUtf8(f.readAll()).contains("L'écran de recherche, « Chercher un membre » en grand, montre :"));   // la taille reste
     }
+    {   // la recherche (§ 22.6) : demandée, ou au-delà de vingt objets ; les objets qui contiennent la saisie sont proposés
+        QVector<ElementVue> el(3);
+        for (auto &e : el) { e.sorte = ELEMENT_ZONE; e.texte = "Membre"; e.type = "membre"; }
+        el[0].choix = {"Anne", "Bruno"};
+        el[0].recherche = true;
+        for (int i = 0; i < 25; i++) el[1].choix << QString("M%1").arg(i);
+        el[2].choix = {"Anne", "Bruno"};
+        VueEcran v = dessiner_ecran("Saisie", el);
+        auto *demandee = qobject_cast<QComboBox *>(v.zones.value(0)), *auto_ = qobject_cast<QComboBox *>(v.zones.value(1)),
+             *menu = qobject_cast<QComboBox *>(v.zones.value(2));
+        VERIFIER(demandee && demandee->isEditable() && demandee->completer()->filterMode() == Qt::MatchContains);
+        VERIFIER(auto_ && auto_->isEditable());
+        VERIFIER(menu && !menu->isEditable());   // deux objets, rien de demandé : le menu ordinaire
+        delete v.vue;
+    }
     {   // l'indication (§ 22.6) : le panneau l'écrit, l'aperçu la montre sous le libellé
         QTemporaryDir dossier;
         const QString chemin = dossier.filePath("p.grym");

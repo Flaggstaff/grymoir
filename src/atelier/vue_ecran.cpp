@@ -13,6 +13,7 @@
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCompleter>
 #include <QHeaderView>
 #include <QLabel>
 #include <QGroupBox>
@@ -409,10 +410,20 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                     rang->addWidget(b);
                 }
                 rang->addStretch(1);
-            } else if (!e.choix.isEmpty()) {
+            } else if (!e.choix.isEmpty() || e.recherche) {
                 auto *m = new QComboBox;
                 m->addItem(QString());
                 m->addItems(e.choix);
+                if (e.recherche || e.choix.size() > RECHERCHE_AU_DELA) {
+                    // « avec recherche », ou beaucoup d'objets : on tape, les objets qui contiennent la saisie sont proposés
+                    m->setEditable(true);
+                    m->setInsertPolicy(QComboBox::NoInsert);
+                    m->completer()->setFilterMode(Qt::MatchContains);
+                    m->completer()->setCompletionMode(QCompleter::PopupCompletion);
+                    m->completer()->setCaseSensitivity(Qt::CaseInsensitive);
+                    m->lineEdit()->setPlaceholderText(QString::fromUtf8("Tape pour chercher…"));
+                    m->setProperty("recherche", true);
+                }
                 w = m;
             } else if (e.plusieurs_lignes) {   // « sur plusieurs lignes » (§ 22.6) : Tab passe à la suite, Entrée va à la ligne
                 auto *p = new QPlainTextEdit;

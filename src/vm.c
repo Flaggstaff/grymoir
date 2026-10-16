@@ -2221,6 +2221,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].lecture_seule = s2 && memchr(s2 + 1, 's', nopt) != NULL;
             e->elements[k].interrupteur = s2 && memchr(s2 + 1, 'i', nopt) != NULL;   /* § 22.6 */
             e->elements[k].multiple = s2 && memchr(s2 + 1, 'p', nopt) != NULL;   /* « des genres (genre) » */
+            e->elements[k].recherche = s2 && memchr(s2 + 1, 'r', nopt) != NULL;   /* « avec recherche » */
             e->elements[k].choix = NULL;
             e->elements[k].nb_choix = 0;
             const ClasseVM *lie = classe_vm(m, e->types[k]);

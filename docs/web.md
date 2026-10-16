@@ -230,3 +230,4 @@ Un bloc `en position libre :` (grammaire, § 22.9) devient une grille d'une seul
 | 0.14 | 2026-10-16 | Des choix multiples : une case par objet, cochées selon la valeur ; à l'envoi, toutes les cases cochées d'une zone |
 | 0.15 | 2026-10-16 | La taille du titre : une classe `titre-petit` ou `titre-grand` sur le titre, leur règle dans la feuille |
 | 0.16 | 2026-10-16 | L'indication d'une zone : un paragraphe sous le libellé, que le champ désigne par `aria-describedby` |
+| 0.17 | 2026-10-16 | La recherche : un champ texte relié à ses propositions (`datalist`), demandée ou au-delà de vingt objets |

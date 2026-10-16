@@ -701,6 +701,7 @@ QString etats_voulus(Noeud *n, const ElementNouveau &e) {
         if (e.interrupteur && e.type != "vrai ou faux") return "Seule une zone (vrai ou faux) se montre en interrupteur.";
         if (e.interrupteur) n->entier |= 8;
         if (e.multiple) n->entier |= 16;
+        if (e.recherche) n->entier |= 32;   // la réanalyse refuse une zone qui ne désigne pas un objet
         if (!e.indication.trimmed().isEmpty()) {
             if (e.indication.contains(QChar(0x00BB)) || e.indication.contains(QChar(0x00AB))) return "Pas de guillemets « » dans une indication.";
             n->indication = grym_dupliquer(e.indication.trimmed().toUtf8().constData());

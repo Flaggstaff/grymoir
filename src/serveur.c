@@ -902,6 +902,28 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
                 chaine_ajouter(c, "</label>");
             }
             chaine_ajouter(c, "</div>");
+        } else if (el->nb_choix && !el->multiple && (el->recherche || el->nb_choix > RECHERCHE_AU_DELA)) {
+            /* « avec recherche », ou beaucoup d'objets : un champ où l'on tape, ses propositions filtrées par le
+             * navigateur ; une saisie qui ne désigne aucun objet est refusée par la machine (§ 22.6) */
+            chaine_ajouter(c, "<input type=\"text\" id=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "\" name=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "\" list=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "l\" value=\"");
+            echapper(c, v);
+            chaine_ajouter(c, "\"");
+            chaine_ajouter(c, attr);
+            chaine_ajouter(c, "><datalist id=\"");
+            chaine_ajouter(c, id);
+            chaine_ajouter(c, "l\">");
+            for (size_t j = 0; j < el->nb_choix; j++) {
+                chaine_ajouter(c, "<option value=\"");
+                echapper(c, el->choix[j]);
+                chaine_ajouter(c, "\">");
+            }
+            chaine_ajouter(c, "</datalist>");
         } else if (el->nb_choix && !el->multiple) {   /* une zone liée à une entité : le menu de ses clés, ligne vide en tête */
             chaine_ajouter(c, "<select id=\"");
             chaine_ajouter(c, id);
