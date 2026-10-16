@@ -525,6 +525,28 @@ int OngletEcrans::bord_sous(QWidget *w, QPoint global) {
 
 QString OngletEcrans::texte_etat() const { return etat->text(); }
 
+// Le bloc libre visible le plus intérieur sous la souris, hors de l'élément saisi et de ce qu'il contient ; −1 sinon.
+// Une page d'onglet cachée n'en est pas : son bloc libre est au même endroit, mais invisible.
+int OngletEcrans::bloc_libre_sous(QPoint global, QWidget *saisi, QWidget **toile) const {
+    int bloc = -1;
+    if (toile) *toile = nullptr;
+    for (int q = 0; courant >= 0 && q < vue.controles.size(); q++) {
+        QWidget *x = vue.controles[q];
+        if (!x || lus[courant].elements.value(q).sorte != ELEMENT_LIBRE || x == saisi || (saisi && saisi->isAncestorOf(x))
+            || !x->isVisible())
+            continue;
+        // la surface visible : le bloc, coupé par chacun de ses parents (un bloc qui grandit pendant le geste déborde de sa
+        // page d'onglet, mais la page le coupe)
+        bool dedans = true;
+        for (QWidget *p = x; p && dedans; p = p == vue.vue ? nullptr : p->parentWidget())
+            dedans = p->rect().contains(p->mapFromGlobal(global));
+        if (!dedans) continue;
+        bloc = q;   // le dernier trouvé est le plus intérieur : les blocs suivent l'ordre écrit
+        if (toile) *toile = x;
+    }
+    return bloc;
+}
+
 int OngletEcrans::onglet_ouvert(int k) const {
     if (courant < 0 || k < 0 || k >= lus[courant].elements.size() || lus[courant].elements[k].sorte != ELEMENT_ONGLETS) return -1;
     auto *tw = qobject_cast<QTabWidget *>(vue.controles.value(k));
@@ -915,16 +937,11 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             if (libre_decrit) {
                 // un écran qui a déjà un bloc libre : l'élément décrit y entre, là où on l'a lâché (le bloc libre sous la
                 // souris, sinon le premier) ; sans bloc libre, tout l'écran passe en position libre
-                int bloc = -1;
                 QWidget *toile = nullptr;
-                for (int q = 0; q < vue.controles.size(); q++) {
-                    QWidget *x = vue.controles[q];
-                    if (!x || x->objectName() != "toile" || lus[courant].elements.value(q).sorte != ELEMENT_LIBRE || x == w
-                        || (w && w->isAncestorOf(x)))
-                        continue;
-                    const bool sous = x->rect().contains(x->mapFromGlobal(m->globalPosition().toPoint()));
-                    if (bloc < 0 || sous) { bloc = q; toile = x; }   // le dernier sous la souris est le plus intérieur
-                }
+                int bloc = bloc_libre_sous(m->globalPosition().toPoint(), w, &toile);
+                if (bloc < 0)   // aucun sous la souris : le premier bloc libre de l'écran, s'il y en a un
+                    for (int q = 0; q < vue.controles.size() && bloc < 0; q++)
+                        if (lus[courant].elements.value(q).sorte == ELEMENT_LIBRE && vue.controles[q]) { bloc = q; toile = vue.controles[q]; }
                 if (bloc < 0) { liberer(k, libre_fin); return true; }
                 const QPoint l = toile->mapFromGlobal(vue.vue->mapToGlobal(libre_fin.topLeft()));
                 const QPoint ou(aimanter(qMax(0, l.x())), aimanter(qMax(0, l.y())));
@@ -934,6 +951,25 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
                 return true;
             }
             const QRect r = w->geometry();
+            if (!libre_taille) {   // lâché dans un autre bloc libre (l'écran, le bloc d'un groupe…) : il y passe, à cet endroit
+                QWidget *toile = nullptr;
+                int bloc = bloc_libre_sous(m->globalPosition().toPoint(), w, &toile);
+                if (bloc < 0 && centre->rect().contains(centre->mapFromGlobal(m->globalPosition().toPoint())))
+                    for (int q = 0; q < vue.controles.size() && bloc < 0; q++)   // ailleurs sur l'écran : son bloc libre de premier niveau
+                        if (lus[courant].elements.value(q).sorte == ELEMENT_LIBRE && vue.controles[q]
+                            && vue.controles[q]->objectName() == "toile" && !vue.controles[q]->property("place").toBool()) {
+                            bloc = q;
+                            toile = vue.controles[q];
+                        }
+                if (bloc >= 0 && toile != w->parentWidget()) {
+                    const QPoint l = toile->mapFromGlobal(w->parentWidget()->mapToGlobal(r.topLeft()));
+                    const QPoint ou(aimanter(qMax(0, l.x())), aimanter(qMax(0, l.y())));
+                    const QString ecran = lus[courant].nom;
+                    element = -1;
+                    emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, bloc, g, ou); });
+                    return true;
+                }
+            }
             if (libre_taille) placer(k, libre_depart.x(), libre_depart.y(), (libre_taille & 1) ? r.width() : -1,
                                      (libre_taille & 2) ? r.height() : -1);
             else placer(k, r.x(), r.y(), -1, -1);

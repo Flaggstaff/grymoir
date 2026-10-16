@@ -197,7 +197,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         const Niveau &ici = niveaux.last();
         if (!ici.toile) {
             QWidget *hote = ici.boite->parentWidget();
-            if (e.sorte == ELEMENT_LIBRE && hote && hote->property("page").toBool()) {   // dans une page : il la remplit (§ 5 decies)
+            if (e.sorte == ELEMENT_LIBRE && hote && ici.boite != pile) {   // dans un conteneur (page, groupe…) : il le remplit
                 w->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
                 ici.boite->addWidget(w, 1);
             } else if (e.sorte == ELEMENT_LIBRE) ici.boite->addWidget(w, 0, Qt::AlignLeft | Qt::AlignTop);

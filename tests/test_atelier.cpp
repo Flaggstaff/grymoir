@@ -2594,6 +2594,70 @@ int main(int argc, char **argv) {
                                  "avec la somme du montant, en secteurs, à 8 de la gauche et 16 du haut, large de 400."));
         if (!lire().contains("en secteurs")) std::printf("%s\n", qPrintable(lire()));
     }
+    {   // d'un bloc libre à un autre : un texte sort d'une page d'onglet vers l'écran ; un texte de l'écran entre dans le bloc
+        // libre d'un groupe ; chacun là où il est lâché
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    en position libre :\n"
+                    "        le texte « dehors », à 600 de la gauche et 0 du haut,\n"
+                    "        le groupe « G », à 600 de la gauche et 100 du haut, large de 300, haut de 200 :\n"
+                    "            en position libre :\n                le texte « fond », à 8 de la gauche et 8 du haut,\n"
+                    "        les onglets, à 0 de la gauche et 0 du haut, large de 400, haut de 300 :\n"
+                    "            l'onglet « Un » :\n                en position libre :\n"
+                    "                    le texte « reste », à 16 de la gauche et 16 du haut,\n"
+                    "                    le texte « sort », à 16 de la gauche et 64 du haut.\n");
+        }
+        auto lire = [&]() {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly));
+            return QString::fromUtf8(f.readAll());
+        };
+        OngletEcrans o;
+        o.resize(1200, 800);
+        o.show();
+        QString resultat = "pas de geste";
+        Geste g;
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        auto glisser = [&](const QString &texte, const QString &dans, QPoint vers) {   // « dans » : un texte du bloc visé
+            o.montrer(dossier.path());
+            QApplication::processEvents();
+            QLabel *l = nullptr;
+            QWidget *vers_toile = nullptr;
+            for (int k = 0; k < 30; k++) {
+                if (auto *x = qobject_cast<QLabel *>(o.controle(k)); x && x->text() == texte) l = x;
+                if (auto *x = qobject_cast<QLabel *>(o.controle(k)); x && x->text() == dans) vers_toile = x->parentWidget();
+            }
+            VERIFIER(l != nullptr);
+            if (!l || !vers_toile) return;
+            const QPoint m(3, 3), a = l->mapToGlobal(m), cible = vers_toile->mapToGlobal(vers) + m;
+            QMouseEvent appui(QEvent::MouseButtonPress, QPointF(m), QPointF(a), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(l, &appui);
+            QMouseEvent loin(QEvent::MouseMove, QPointF(m), QPointF(a + QPoint(0, 30)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(l, &loin);
+            QMouseEvent bouge(QEvent::MouseMove, QPointF(m), QPointF(cible), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(l, &bouge);
+            QMouseEvent lache(QEvent::MouseButtonRelease, QPointF(m), QPointF(cible), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(l, &lache);
+            if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
+        };
+        // 1. « sort » quitte la page de l'onglet pour l'écran, à 424 × 312 du bloc libre de l'écran (à droite des onglets,
+        // sous le groupe, dans la zone visible de l'aperçu)
+        glisser("sort", "dehors", QPoint(424, 312));
+        QString t = lire();
+        QRegularExpressionMatch m = QRegularExpression("\n        le texte « sort », à (\\d+) de la gauche et (\\d+) du haut").match(t);
+        VERIFIER(m.hasMatch() && qAbs(m.captured(1).toInt() - 424) <= 8 && qAbs(m.captured(2).toInt() - 312) <= 8);
+        VERIFIER(t.count("« sort »") == 1 && t.contains("le texte « reste »"));
+        // 2. « dehors » entre dans le bloc libre du groupe, à 100 × 80 de ce bloc
+        glisser("dehors", "fond", QPoint(100, 80));
+        t = lire();
+        m = QRegularExpression("en position libre :\n                le texte « fond », à 8 de la gauche et 8 du haut,\n"
+                               "                le texte « dehors », à (\\d+) de la gauche et (\\d+) du haut").match(t);
+        VERIFIER(m.hasMatch() && qAbs(m.captured(1).toInt() - 100) <= 8 && qAbs(m.captured(2).toInt() - 80) <= 8);
+        if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
+    }
     {   // le graphique (§ 22.11) : fabriqué par la palette, dessiné en exemple dans l'aperçu, rempli par les lignes
         QTemporaryDir dossier;
         const QString chemin = dossier.filePath("p.grym");
