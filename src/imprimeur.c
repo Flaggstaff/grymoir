@@ -588,7 +588,8 @@ static void expression(Impression *im, const Noeud *n) {
     case N_ECART:   /* « le nombre de mois entre d1 et d2 » ; « _écart_mois(d1 ; d2) » (§ 14.6) */
         if (im->compact) {
             aj(im, n->op == 'j' ? "_écart_jours(" : n->op == 's' ? "_écart_semaines(" : n->op == 'm' ? "_écart_mois("
-                   : n->op == 'n' ? "_écart_minutes(" : n->op == 'h' ? "_écart_heures(" : "_écart_années(");
+                   : n->op == 'n' ? "_écart_minutes(" : n->op == 'h' ? "_écart_heures(" : n->op == 'o' ? "_écart_ouvrables("
+                   : "_écart_années(");
             expression(im, n->enfants[0]);
             aj(im, " ; ");
             expression(im, n->enfants[1]);
@@ -1368,6 +1369,8 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                         const char *chemin = memchr(q, '\x1d', (size_t)(fin - q));
                         chemin = chemin ? chemin + 1 : q;
                         aj(im, q == el->texte3 ? " _par " : " _somme ");
+                        if (q == el->texte3 && (el->graphique & 56))   /* « _par _mois échéance » (§ 22.11) */
+                            aj(im, (el->graphique & 8) ? "_mois " : (el->graphique & 16) ? "_semaine " : "_année ");
                         for (const char *p = chemin; p < fin;) {
                             const char *f2 = memchr(p, '\x1f', (size_t)(fin - p));
                             if (!f2) f2 = fin;

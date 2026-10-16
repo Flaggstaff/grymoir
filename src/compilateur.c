@@ -380,7 +380,8 @@ static void expression(Compilation *c, const Noeud *n) {
     case N_ECART:   /* d1, d2, puis ÉCART avec l'unité (§ 14.6) */
         expression(c, n->enfants[0]);
         expression(c, n->enfants[1]);
-        emettre(c, I_ECART, n->op == 'j' ? 0 : n->op == 's' ? 1 : n->op == 'm' ? 2 : n->op == 'n' ? 4 : n->op == 'h' ? 5 : 3,
+        emettre(c, I_ECART, n->op == 'j' ? 0 : n->op == 's' ? 1 : n->op == 'm' ? 2 : n->op == 'n' ? 4 : n->op == 'h' ? 5
+                            : n->op == 'o' ? 6 : 3,
                 n->ligne, n->colonne);
         return;
     case N_HASARD:   /* les bornes, ou l'ensemble, puis HASARD (§ 3.6) */
@@ -1195,9 +1196,16 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 chaine_ajouter(&d, pl);
                 free(pl);
             }
-            if (el->type == N_CHERCHER && el->graphique)   /* « Rb+ » : un graphique, en barres ou en secteurs, compté ou additionné (§ 22.11) */
-                chaine_ajouter(&d, (el->graphique & 2) ? ((el->graphique & 4) ? "Rs+" : "Rsn") : ((el->graphique & 4) ? "Rb+" : "Rbn"));
-            else
+            if (el->type == N_CHERCHER && el->graphique) {   /* « Rb+ » : un graphique, en barres ou en secteurs, compté ou additionné (§ 22.11) */
+                /* « R », la forme et la période en une lettre (b s : sans ; c t : par mois ; d u : par semaine ; e v : par
+                 * année ; barres puis secteurs), « + » somme ou « n » nombre (§ 22.11) ; deux lettres seulement, pour
+                 * que l'ancienne lecture ne change pas */
+                const int pe = (el->graphique & 8) ? 1 : (el->graphique & 16) ? 2 : (el->graphique & 32) ? 3 : 0;
+                const char forme[2] = {"bcdestuv"[(el->graphique & 2 ? 4 : 0) + pe], 0};
+                chaine_ajouter(&d, "R");
+                chaine_ajouter(&d, forme);
+                chaine_ajouter(&d, (el->graphique & 4) ? "+" : "n");
+            } else
             chaine_ajouter(&d, el->type == N_CHERCHER ? "L" : el->type == N_BOUTON ? "B"
                              : el->type == N_NOM ? "Z" : el->type == N_IMAGE_ECRAN ? (el->texte ? "I" : "J") : "T");
             if (el->texte) chaine_ajouter(&d, el->texte);   /* « J » : une image calculée, sans fichier écrit (§ 22.8) */

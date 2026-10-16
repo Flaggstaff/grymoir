@@ -300,6 +300,15 @@ int main(void) {
     FIXE("Un contact, conservé, a :\n    un courriel (courriel), unique,\n    un portable (téléphone),\n    un site (adresse web).\n"
          "L'écran x montre :\n    un courriel (courriel),\n    un site (adresse web).");
     COMP("L'écran x montre :\n    un site (adresse web),\n    le texte « t ».", "_écran x\n    _un site (adresse_web)\n    _texte « t »\n_fin\n");
+    /* les dates (§ 14.8, § 14.6) : parties, toutes lettres, jours ouvrables ; les deux formes */
+    FIXE("Le d vaut 16.10.2026.\nAfficher le jour de la semaine de d puis le mois de d.\nAfficher d en toutes lettres.\n"
+         "Afficher le nombre de jours ouvrables entre d et (d + 10).");
+    COMP("Le d vaut 16.10.2026.\nAfficher le nombre de jours ouvrables entre d et d.\nAfficher d en toutes lettres.",
+         "_le d << 16.10.2026\n_afficher _écart_ouvrables(d ; d)\n_afficher d _en_toutes_lettres\n");
+    FIXE("Une tâche, conservée, a :\n    une échéance (date), facultative.\n"
+         "L'écran x montre :\n    le graphique des tâches conservées, par mois de l'échéance.");
+    COMP("Une tâche, conservée, a :\n    une échéance (date).\nL'écran x montre :\n    le graphique des tâches conservées, par semaine de l'échéance.",
+         "_classe _une tâche _conservé\n    _une échéance (date)\n_fin\n_écran x\n    _graphique tâche _conservé _par _semaine échéance\n_fin\n");
     /* les mots de passe (§ 16.1) : le type, « correspond au », les deux formes */
     FIXE("Un membre, conservé, a :\n    un nom (texte), unique,\n    un code (mot de passe).\n"
          "Pour chaque membre conservé :\n    Si « x » correspond au code du membre, afficher « ok ».");

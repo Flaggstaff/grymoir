@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.3 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.4 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1077,6 +1077,7 @@ Afficher le nombre de mois entre 31.01.2026 et 28.02.2026.     →  1
 - La seconde date se lie comme un argument (§ 9.1) : `entre d et (d + 3)`.
 - Deux dates seulement : « Un écart se mesure entre deux dates, pas avec un nombre. » L'écart en jours reste aussi `d2 − d1` (§ 14.2).
 - Aucun mot réservé. En forme compacte : `_écart_jours(d1 ; d2)`, `_écart_semaines`, `_écart_mois`, `_écart_années`.
+- `le nombre de jours ouvrables entre d1 et d2` *(2.4)* : les jours du lundi au vendredi, d1 exclu et d2 compris, comme `d2 − d1` ; négatif à rebours. Du lundi 12 au vendredi 16 octobre 2026 : 4. Les jours fériés ne sont **pas** retirés : ils changent d'un canton à l'autre. Forme compacte : `_écart_ouvrables(d1 ; d2)`.
 
 ### 14.7 Heures
 
@@ -1099,6 +1100,20 @@ Si maintenant > 12:00, afficher « Bon après-midi ».
 - En forme compacte : `8:05 + 15 _minutes`, `_maintenant`, `_écart_minutes(h1 ; h2)`, `_écart_heures(h1 ; h2)`, `t _en_heure`.
 
 ## 15. Fichiers et images *(v0.3)*
+
+
+### 14.8 Le mois, le jour, en toutes lettres *(2.4)*
+
+```
+Afficher le mois de l'échéance.                  →  10
+Afficher le jour de l'échéance.                  →  16
+Afficher le jour de la semaine de l'échéance.    →  vendredi
+Afficher l'échéance en toutes lettres.           →  vendredi 16 octobre 2026
+```
+
+- Comme `l'année de d` (§ 14.5) : `le mois de d` et `le jour de d` sont des nombres entiers ; `le jour de la semaine de d` est un texte, de « lundi » à « dimanche ».
+- `d en toutes lettres` est un texte : le jour de la semaine, le jour (« 1er » le premier du mois), le mois, l'année. Seulement d'une date : « « en toutes lettres » s'applique à une date ».
+- Forme compacte : `d.mois`, `d.jour`, `d.jour_de_la_semaine`, `d _en_toutes_lettres`.
 
 ### 15.1 Valeurs
 
@@ -1876,6 +1891,7 @@ L'écran de bord montre :
 - Il se place, s'agrandit, se met dans un onglet comme tout élément (§ 22.9, § 22.10).
 - Forme compacte : `_graphique tâche _conservé [_dont …] _par état [_somme montant] [_secteurs]`.
 - Ordre canonique : `dont`, `par`, `avec la somme de`, `en secteurs`, puis la place.
+- Par période *(2.4)* : `, par mois de l'échéance`, `par semaine de …` (semaine ISO 8601, celle de son jeudi), `par année de …`. Les barres suivent l'ordre du calendrier, pas celui de la base, et se lisent « octobre 2026 », « semaine 42, 2026 », « 2026 » ; les dates absentes viennent à la fin. Forme compacte : `_par _mois échéance`.
 
 ### 22.12 Menus *(implémenté le 15 octobre 2026)*
 
@@ -2041,3 +2057,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.1 | 2026-10-16 | § 22.6 : les zones en faute signalées toutes à la fois, un résumé en haut, un message sous chaque zone |
 | 2.2 | 2026-10-16 | § 16.15 : une couleur d'étiquette par valeur permise, `« payée » en vert`, montrée en étiquette dans les listes |
 | 2.3 | 2026-10-16 | Nouveau § 22.14 : le type `(mot de passe)`, rangé en empreinte (PBKDF2-HMAC-SHA256), illisible, vérifié par `correspond à` |
+| 2.4 | 2026-10-16 | § 14.8 : le mois, le jour, le jour de la semaine d'une date, `en toutes lettres` ; § 14.6 : les jours ouvrables ; § 22.11 : le graphique par mois, semaine ou année |

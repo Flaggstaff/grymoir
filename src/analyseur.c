@@ -401,6 +401,10 @@ static int champ_integre(const char *nom, Genre *g) {
         return 1;
     }
     if (strcmp(nom, "format") == 0 || strcmp(nom, "nom de fichier") == 0) { if (g) *g = GENRE_MASCULIN; return 1; }
+    if (strcmp(nom, "mois") == 0 || strcmp(nom, "jour") == 0 || strcmp(nom, "jour de la semaine") == 0) {   /* d'une date (§ 14.8) */
+        if (g) *g = GENRE_MASCULIN;
+        return 1;
+    }
     return 0;
 }
 
@@ -761,7 +765,7 @@ static const char *type_statique(const Noeud *n) {
     case N_COLLAGE: case N_ELISION: return "texte";
     case N_REPONSE: return n->texte2;
     case N_MOTIF: return "texte";
-    case N_CONVERSION: return n->entier <= 1 ? "texte" : n->texte2;
+    case N_CONVERSION: return n->entier <= 1 || n->entier == 8 ? "texte" : n->texte2;
     case N_NOUVEAU: return n->texte;
     case N_GROUPE: case N_NEGATION: return type_statique(n->enfants[0]);
     default: return NULL;
@@ -1228,6 +1232,13 @@ static char *chemin_mal_forme(Analyse *a, const Classe *e, size_t d) {
 /* « le solde du client » : champ, puis l'objet après « de » / « du » (grammaire, § 13.3). */
 static Noeud *acces_champ(Analyse *a, char *champ, Genre g, const Jeton *tart, Article art,
                           const Jeton *premier, size_t k) {
+    if (strcmp(champ, "jour") == 0 && k + 3 < a->n && est_mot(&a->j[k], "de") && est_mot(&a->j[k + 1], "la")
+        && est_mot(&a->j[k + 2], "semaine") && (est_mot(&a->j[k + 3], "de") || est_mot(&a->j[k + 3], "du"))) {
+        /* « le jour de la semaine de l'échéance » : un nom d'un tenant, pas « le jour de (la semaine de …) » (§ 14.8) */
+        free(champ);
+        champ = grym_dupliquer("jour de la semaine");
+        k += 3;
+    }
     if (tart && !tart->synthetique && (art == ART_LE || art == ART_LA) && g != GENRE_LIBRE && genre_de(art) != g) {
         erreur(a, tart, grym_formater("« %s » est un champ %s.", champ, g == GENRE_MASCULIN ? "masculin" : "féminin"));
         free(champ);
@@ -1410,7 +1421,7 @@ static Noeud *nom_expression(Analyse *a) {
             && (est_mot(&a->j[fin + 1], "un") || est_mot(&a->j[fin + 1], "une"))) arret = 1;   /* § 13.8 */
         /* « vrai » clôt la suite des mots du nom : il se regarde au-delà de f (« t en vrai ou faux ») */
         if (fin < f && fin + 1 < a->n && est_mot(&a->j[fin], "en")) {   /* « nom en majuscules » (§ 4.5) */
-            static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai", "heure" };
+            static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai", "heure", "toutes" };
             for (size_t q = 0; q < sizeof C / sizeof *C; q++) if (est_mot(&a->j[fin + 1], C[q])) arret = 1;
         }
         if (!s || (fin < f && s->sorte != S_CALCUL && !arret)) {
@@ -2144,16 +2155,18 @@ static Noeud *base(Analyse *a) {
                                                                  { "années", 'a' }, { "ans", 'a' }, { "minutes", 'n' },
                                                                  { "heures", 'h' } };
         int u = -1;
-        if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2)) && est_mot(voir(a, 4), "entre"))
+        /* « le nombre de jours ouvrables entre d1 et d2 » : du lundi au vendredi (§ 14.6) */
+        const int ouvrables = est_mot(voir(a, 3), "jours") && est_mot(voir(a, 4), "ouvrables");
+        if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2)) && est_mot(voir(a, 4 + ouvrables), "entre"))
             for (size_t q = 0; q < sizeof U / sizeof *U; q++) if (est_mot(voir(a, 3), U[q].mot)) u = (int)q;
         if (u >= 0) {
             int elide = voyelle_initiale(U[u].mot) || U[u].u == 'h';   /* « d'heures » : h muet */
             if (elide != (voir(a, 2)->type == J_ELISION))
                 return erreur(a, voir(a, 2), grym_formater("« le nombre %s%s entre … »", elide ? "d'" : "de ", U[u].mot));
             Noeud *n = noeud_creer(N_ECART, t->ligne, t->colonne, t->debut);
-            n->op = U[u].u;
-            n->texte = grym_dupliquer(U[u].mot);
-            a->i += 5;
+            n->op = ouvrables ? 'o' : U[u].u;
+            n->texte = grym_dupliquer(ouvrables ? "jours ouvrables" : U[u].mot);
+            a->i += 5 + ouvrables;
             const char *garde[3];
             int nb_garde = a->nb_arrets;
             memcpy(garde, a->arrets, sizeof garde);
@@ -2459,7 +2472,7 @@ static Noeud *base(Analyse *a) {
 /* « le nom en majuscules », « le code en nombre » (§ 4.5) : après une valeur, se lie comme elle. Les cibles, la plus
  * longue d'abord ; l'index sert d'opérande à l'instruction CONVERTIR. */
 static const char *const CONVERSIONS[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
-                                           "vrai ou faux", "heure" };
+                                           "vrai ou faux", "heure", "toutes lettres" };   /* la dernière : une date (§ 14.8) */
 #define NB_CONVERSIONS (sizeof CONVERSIONS / sizeof *CONVERSIONS)
 
 static Noeud *conversion(Analyse *a, Noeud *g) {
@@ -6243,7 +6256,19 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                     if (est_mot(x, "par") && !par_vu) {
                         size_t d = a->i + 2, k = d;
                         while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_POINT && a->j[k].type != J_FIN) k++;
-                        char *chemin = chemin_colonne(a, d, k, c);
+                        /* « , par mois de l'échéance », « par semaine de », « par année de » : une date, regroupée dans
+                         * l'ordre du calendrier (§ 22.11) ; « 8 » mois, « 16 » semaine, « 32 » année */
+                        size_t dc = d;
+                        const int periode = est_mot(&a->j[d], "mois") ? 8 : est_mot(&a->j[d], "semaine") ? 16
+                                          : est_mot(&a->j[d], "année") ? 32 : 0;
+                        if (periode && d + 2 < k && (est_mot(&a->j[d + 1], "de") || est_mot(&a->j[d + 1], "du")
+                                                     || (a->j[d + 1].type == J_ELISION && strcmp(a->j[d + 1].valeur, "d") == 0))) {
+                            dc = d + 2;
+                            if (est_mot(&a->j[dc], "la") || est_mot(&a->j[dc], "le")
+                                || (a->j[dc].type == J_ELISION && strcmp(a->j[dc].valeur, "l") == 0)) dc++;
+                            el->graphique |= periode;
+                        }
+                        char *chemin = chemin_colonne(a, dc, k, c);
                         if (!chemin) {
                             erreur(a, &a->j[d], grym_formater("Regroupement attendu : un champ de « %s », ou celui d'un objet "
                                                              "qu'il désigne (« , par catégorie du membre »).", c->nom));

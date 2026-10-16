@@ -386,7 +386,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             continue;
         }
         if ((est_cle(t, "écart_jours") || est_cle(t, "écart_semaines") || est_cle(t, "écart_mois") || est_cle(t, "écart_années")
-             || est_cle(t, "écart_minutes") || est_cle(t, "écart_heures")
+             || est_cle(t, "écart_minutes") || est_cle(t, "écart_heures") || est_cle(t, "écart_ouvrables")
              || est_cle(t, "hasard") || est_cle(t, "hasard_parmi")) && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
             /* _écart_mois(d1 ; d2) → le nombre de mois entre (d1) et (d2) (§ 14.6) ; _hasard(1 ; 6) → un nombre au hasard
              * de (1) à (6) ; _hasard_parmi(faces) → un élément au hasard parmi les faces (§ 3.6) */
@@ -416,7 +416,8 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                 const char *u = t->valeur + strlen("écart_");
                 mot(r, "le", t); mot(r, "nombre", t);
                 if (!strcmp(u, "années") || !strcmp(u, "heures")) emettre(r, J_ELISION, "d", t, 1); else mot(r, "de", t);
-                mot(r, u, t);
+                if (!strcmp(u, "ouvrables")) { mot(r, "jours", t); mot(r, "ouvrables", t); }   /* § 14.6 */
+                else mot(r, u, t);
                 mot(r, "entre", t);
             }
             emettre(r, J_PAR_OUV, NULL, &r->e[k + 2], 1);
@@ -498,7 +499,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
         if (t->type == J_MOT_CLE && strncmp(t->valeur, "en_", 3) == 0) {
             /* nom _en_majuscules → nom en majuscules ; code _en_nombre_entier → code en nombre entier (§ 4.5) */
             static const char *const C[] = { "majuscules", "minuscules", "nombre_entier", "nombre", "date", "année",
-                                             "vrai_ou_faux", "heure" };
+                                             "vrai_ou_faux", "heure", "toutes_lettres" };
             size_t q = 0;
             while (q < sizeof C / sizeof *C && strcmp(t->valeur + 3, C[q]) != 0) q++;
             if (q == sizeof C / sizeof *C) {
@@ -996,7 +997,15 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             }
             emettre(r, J_VIRGULE, NULL, &r->e[par], 1);
             mot(r, "par", &r->e[par]);
-            expression(r, par + 1, somme);
+            size_t debut_cle = par + 1;
+            if (debut_cle + 1 < somme && (est_cle(&r->e[debut_cle], "mois") || est_cle(&r->e[debut_cle], "semaine")
+                                          || est_cle(&r->e[debut_cle], "année"))) {
+                /* _par _mois échéance → par mois de échéance (§ 22.11) */
+                mot(r, r->e[debut_cle].valeur, &r->e[debut_cle]);
+                mot(r, "de", &r->e[debut_cle]);
+                debut_cle++;
+            }
+            expression(r, debut_cle, somme);
             if (somme < secteurs) {
                 if (somme + 1 >= secteurs) { echouer(r, &r->e[somme], grym_dupliquer("Champ attendu : « _somme montant ».")); return; }
                 emettre(r, J_VIRGULE, NULL, &r->e[somme], 1);

@@ -2289,7 +2289,10 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             continue;
         }
         const char *colonnes_choisies = strchr(x, '\x1b');
-        const int graphe = x[0] == 'R' ? 1 | (x[1] == 's' ? 2 : 0) | (x[2] == '+' ? 4 : 0) : 0;   /* « Rb+ » (§ 22.11) */
+        /* « Rb+ » : la forme et la période dans la deuxième lettre (§ 22.11) */
+        const char *pf = x[0] == 'R' ? strchr("bcdestuv", x[1]) : NULL;
+        const int rang_f = pf ? (int)(pf - "bcdestuv") : 0;
+        const int graphe = x[0] == 'R' ? 1 | (rang_f >= 4 ? 2 : 0) | (x[2] == '+' ? 4 : 0) | ((rang_f % 4) ? 4 << (rang_f % 4) : 0) : 0;
         const char *nom_l = x + 1 + (graphe ? 2 : 0);
         e->textes[k] = colonnes_choisies ? grym_formater("%.*s", (int)(colonnes_choisies - nom_l), nom_l) : grym_dupliquer(nom_l);
         e->colonnes[k] = NULL;
@@ -2681,6 +2684,13 @@ static void ensemble_gagner(Valeur *e, Valeur x) {
     l->valeurs[l->n++] = x;
 }
 
+/* Le jour de la semaine d'une date : 0 lundi … 6 dimanche ; le 1er janvier 2024 était un lundi (§ 14.8). */
+static const char *const JOURS_SEMAINE[] = { "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche" };
+static int jour_semaine(long jours) {
+    const long r = (jours - date_jours(2024, 1, 1)) % 7;
+    return (int)(r < 0 ? r + 7 : r);
+}
+
 /* Le morceau d'une description de zone qui suit le séparateur sep, jusqu'au séparateur suivant ; NULL s'il n'y est pas. */
 static char *morceau_de_zone(const char *s2, char sep) {
     const char *p = s2 ? strchr(s2, sep) : NULL;
@@ -2785,6 +2795,20 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
             else if (x->champs[q].type == V_OBJET) t = nom_objet(m, x->champs[q].objet);
             else if (type_secret(x->classe->types[q])) t = grym_dupliquer("••••••");   /* § 16.1 */
             else t = texte_valeur(m, &x->champs[q]);
+            if ((graphe & 56) && faites % nc == 0 && x && q >= 0 && x->definis[q] && x->champs[q].type == V_DATE) {
+                /* la clé d'un graphique par période : triable dans l'ordre du calendrier, lisible plus tard (§ 22.11) */
+                int an, mo, jo;
+                date_civile(x->champs[q].jours, &an, &mo, &jo);
+                free(t);
+                if (graphe & 8) t = grym_formater("%04d-%02d", an, mo);
+                else if (graphe & 32) t = grym_formater("%04d", an);
+                else {   /* semaine ISO 8601 : celle de son jeudi */
+                    const long jeudi = x->champs[q].jours - jour_semaine(x->champs[q].jours) + 3;
+                    int aj, mj, jj;
+                    date_civile(jeudi, &aj, &mj, &jj);
+                    t = grym_formater("%04d-%02ld", aj, (jeudi - date_jours(aj, 1, 1)) / 7 + 1);
+                }
+            }
             if (!graphe && x && q >= 0 && x->classe->couleurs && x->classe->couleurs[q] && x->classe->valeurs[q] && *t) {
                 /* une valeur permise colorée : « ␝v payée », une étiquette verte dans l'interface (§ 16.15) */
                 size_t rang = 0;
@@ -2823,6 +2847,25 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
             dec_liberer(&totaux[g]);
             dec_liberer(&un);
             totaux[g] = s;
+        }
+        if (graphe & 56) {   /* l'ordre du calendrier, les dates absentes à la fin ; puis « octobre 2026 » (§ 22.11) */
+            for (size_t i = 1; i < ng; i++)
+                for (size_t j = i; j > 0; j--) {
+                    const int a0 = strcmp(cles[j - 1], "—") == 0, b0 = strcmp(cles[j], "—") == 0;
+                    if (!(a0 && !b0) && (a0 || b0 || strcmp(cles[j - 1], cles[j]) <= 0)) break;
+                    char *tc = cles[j]; cles[j] = cles[j - 1]; cles[j - 1] = tc;
+                    Decimal td = totaux[j]; totaux[j] = totaux[j - 1]; totaux[j - 1] = td;
+                }
+            static const char *const MOIS[] = { "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août",
+                                                "septembre", "octobre", "novembre", "décembre" };
+            for (size_t g = 0; g < ng; g++) {
+                int an = 0, n = 0;
+                if (strcmp(cles[g], "—") == 0 || sscanf(cles[g], "%d-%d", &an, &n) < 1) continue;
+                char *lisible = (graphe & 8) && n >= 1 && n <= 12 ? grym_formater("%s %d", MOIS[n - 1], an)
+                              : (graphe & 16) ? grym_formater("semaine %d, %d", n, an) : grym_formater("%d", an);
+                free(cles[g]);
+                cles[g] = lisible;
+            }
         }
         char **lignes = grym_allouer((ng ? 2 * ng : 1) * sizeof *lignes);
         for (size_t g = 0; g < ng; g++) {
@@ -4311,9 +4354,29 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         case I_CONVERTIR: {   /* « le nom en majuscules », « le code en nombre » (§ 4.5) */
             static const char *const CIBLES[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
-                                                  "vrai ou faux", "heure" };
+                                                  "vrai ou faux", "heure", "toutes lettres" };
             static const char *const NOMS[] = { "", "", "un nombre entier", "un nombre", "une date", "une année",
-                                                "vrai ou faux", "une heure" };
+                                                "vrai ou faux", "une heure", "" };
+            if (op == 8) {   /* « l'échéance en toutes lettres » : « vendredi 16 octobre 2026 », « 1er » le premier (§ 14.8) */
+                Valeur vd = depiler(&pile);
+                if (vd.type != V_DATE) {
+                    char *mp = vd.type == V_ABSENT ? message_absent(&vd)
+                             : grym_formater("« en toutes lettres » s'applique à une date, pas à %s.", nom_type(vd.type));
+                    valeur_liberer(&vd);
+                    ok = echouer(diag, b, debut, mp);
+                    break;
+                }
+                static const char *const MOIS[] = { "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août",
+                                                    "septembre", "octobre", "novembre", "décembre" };
+                int a, mo, j;
+                date_civile(vd.jours, &a, &mo, &j);
+                char *t = j == 1 ? grym_formater("%s 1er %s %d", JOURS_SEMAINE[jour_semaine(vd.jours)], MOIS[mo - 1], a)
+                                 : grym_formater("%s %d %s %d", JOURS_SEMAINE[jour_semaine(vd.jours)], j, MOIS[mo - 1], a);
+                valeur_liberer(&vd);
+                empiler(&pile, vi_texte(t));
+                free(t);
+                break;
+            }
             Valeur vx = depiler(&pile);
             char *probleme = NULL;
             Valeur r = valeur_nombre(dec_zero());
@@ -4371,6 +4434,22 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_ECART: {   /* « le nombre de mois entre d1 et d2 » (§ 14.6) */
+            if (op == 6) {   /* jours ouvrables : du lundi au vendredi, d1 exclu, d2 compris ; négatif à rebours */
+                Valeur w2 = depiler(&pile), w1 = depiler(&pile);
+                if (w1.type != V_DATE || w2.type != V_DATE) {
+                    char *mp = w1.type == V_ABSENT || w2.type == V_ABSENT ? message_absent(w1.type == V_ABSENT ? &w1 : &w2)
+                             : grym_formater("Un écart se mesure entre deux dates, pas avec %s.", nom_type(w1.type != V_DATE ? w1.type : w2.type));
+                    valeur_liberer(&w1);
+                    valeur_liberer(&w2);
+                    ok = echouer(diag, b, debut, mp);
+                    break;
+                }
+                const long d1 = w1.jours < w2.jours ? w1.jours : w2.jours, d2 = w1.jours < w2.jours ? w2.jours : w1.jours;
+                long n = 0;
+                for (long d = d1 + 1; d <= d2; d++) n += jour_semaine(d) < 5;
+                empiler(&pile, valeur_nombre(dec_depuis_long(w1.jours <= w2.jours ? n : -n)));
+                break;
+            }
             Valeur v2 = depiler(&pile), v1 = depiler(&pile);
             char *mp = NULL;
             long r = 0;
@@ -4942,17 +5021,22 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 *vo = r;
                 break;
             }
-            if (vo->type == V_DATE) {   /* « l'année de d » : le seul champ d'une date (§ 14.5) */
-                if (code != I_LIRE_CHAMP || strcmp(champ, "année") != 0) {
+            if (vo->type == V_DATE) {   /* « l'année de d » (§ 14.5) ; « le mois », « le jour », « le jour de la semaine » (§ 14.8) */
+                const int an = strcmp(champ, "année") == 0, mo = strcmp(champ, "mois") == 0, jo = strcmp(champ, "jour") == 0,
+                          se = strcmp(champ, "jour de la semaine") == 0;
+                if (code != I_LIRE_CHAMP || !(an || mo || jo || se)) {
                     ok = echouer(diag, b, debut, code != I_LIRE_CHAMP
                         ? grym_formater("Une date ne se modifie pas : « %s ».", champ)
-                        : grym_formater("Une date n'a pas de champ « %s » : seulement « année ».", champ));
+                        : grym_formater("Une date n'a pas de champ « %s » : « année », « mois », « jour » ou « jour de la semaine ».", champ));
                     break;
                 }
                 int jour, mois, annee;
                 date_civile(vo->jours, &annee, &mois, &jour);
+                const long dd = vo->jours;
                 valeur_liberer(vo);
-                *vo = valeur_annee(annee);
+                if (an) *vo = valeur_annee(annee);
+                else if (mo || jo) *vo = valeur_nombre(dec_depuis_long(mo ? mois : jour));
+                else *vo = vi_texte(JOURS_SEMAINE[jour_semaine(dd)]);
                 break;
             }
             if (vo->type == V_ABSENT && m->absent_permis && code == I_LIRE_CHAMP) break;   /* reste absent (§ 22.8) */

@@ -2669,8 +2669,18 @@ int main(void) {
     PROG(AN "Afficher composition de a = « 1747 ».", "~Comparaison impossible entre une année et un texte.");
     PROG(AN "Le x vaut 2,5.\nLa composition de a devient x.", "~Le champ « composition » attend une année (de 1 à 9999), pas 2,5.");
     PROG(AN "Le x vaut 0.\nLa composition de a devient x.", "~attend une année (de 1 à 9999), pas 0.");
-    PROG("Afficher le mois de 01.01.2000.", "~« mois de » inconnu");
-    PROG("Le d vaut 01.01.2000.\nAfficher taille de d.", "~Une date n'a pas de champ « taille » : seulement « année ».");
+    PROG("Afficher le mois de 01.01.2000.", "1");   /* § 14.8 : le mois d'une date */
+    /* § 14.8 et § 14.6 : valeurs confirmées par le module datetime de Python */
+    PROG("Le a vaut 16.10.2026.\nAfficher le jour de la semaine de a puis le mois de a puis le jour de a.", "vendredi 10 16");
+    PROG("Afficher le jour de la semaine de 29.02.2024 puis le jour de la semaine de 01.01.1900 puis le jour de la semaine de 14.07.1789.",
+         "jeudi lundi mardi");
+    PROG("Afficher 16.10.2026 en toutes lettres.\nAfficher 01.08.2026 en toutes lettres.", "vendredi 16 octobre 2026\nsamedi 1er août 2026");
+    PROG("Afficher le nombre de jours ouvrables entre 12.10.2026 et 16.10.2026.\n"
+         "Afficher le nombre de jours ouvrables entre 16.10.2026 et 19.10.2026.\n"
+         "Afficher le nombre de jours ouvrables entre 01.01.2026 et 31.12.2026.\n"
+         "Afficher le nombre de jours ouvrables entre 19.10.2026 et 16.10.2026.", "4\n1\n260\n−1");
+    PROG("Afficher « x » en toutes lettres.", "~« en toutes lettres » s'applique à une date, pas à un texte.");
+    PROG("Le d vaut 01.01.2000.\nAfficher taille de d.", "~Une date n'a pas de champ « taille » : « année », « mois », « jour » ou « jour de la semaine ».");
     PROG("Un p a : une taille.\nLa q vaut un nouveau p :\n    La taille vaut 3.\nAfficher 1747 puis taille de q.", "1747 3");
     {   /* migrations : nombre entier ↔ année */
         remove("_essai_an.grymd");

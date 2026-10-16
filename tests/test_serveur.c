@@ -760,6 +760,26 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Le graphique par mois (§ 22.11) : les tâches créées dans le désordre, les mois dans l'ordre du calendrier,
+         * une échéance absente à la fin */
+        const char *src = "Une tâche, conservée, a :\n    un nom (texte),\n    une échéance (date), facultative.\n"
+                          "Le a vaut une nouvelle tâche :\n    Le nom vaut « a ».\n    L'échéance vaut 03.11.2026.\nConserver a.\n"
+                          "Le b vaut une nouvelle tâche :\n    Le nom vaut « b ».\nConserver b.\n"
+                          "Le c vaut une nouvelle tâche :\n    Le nom vaut « c ».\n    L'échéance vaut 20.09.2026.\nConserver c.\n"
+                          "Le d vaut une nouvelle tâche :\n    Le nom vaut « d ».\n    L'échéance vaut 28.11.2026.\nConserver d.\n"
+                          "L'écran x montre :\n    le graphique des tâches conservées, par mois de l'échéance,\n    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=1"), get("/"));
+        servir(src, &sc);
+        const char *sep = strstr(sc.reponses[0], "septembre 2026"), *nov = sep ? strstr(sep, "novembre 2026") : NULL;
+        CONTIENT(sc.reponses[0], "septembre 2026");
+        CONTIENT(sep ? sep : "", "novembre 2026");   /* après septembre */
+        CONTIENT(nov ? nov : "", "—");                /* l'échéance absente, à la fin */
+        NE_CONTIENT_PAS(sc.reponses[0], "2026-11");     /* la clé triable ne se montre pas */
+        liberer(&sc);
+    }
+
     {   /* La fiche d'un membre (§ 16.1) : le mot de passe s'y montre « •••••• », jamais son empreinte */
         const char *src = "Un membre, conservé, a :\n    un nom (texte),\n    un code (mot de passe).\n"
                           "Le m vaut un nouveau membre :\n    Le nom vaut « Anne ».\n    Le code vaut « s3cret ».\nAfficher la fiche de m.\n";
