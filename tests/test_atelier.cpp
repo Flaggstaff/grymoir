@@ -2758,6 +2758,52 @@ int main(int argc, char **argv) {
         VERIFIER(photo && photo->text() == QString::fromUtf8("Choisir un fichier…"));
         delete v.vue;
     }
+    {   // le clic droit : les champs des entités ; chacun devient la zone qui lui correspond, là où l'on a cliqué
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Un genre, conservé, a :\n    un nom (texte), unique.\n"
+                    "Une œuvre, conservée, a :\n    un titre (texte),\n    un genre principal (genre),\n    des genres (genre).\n"
+                    "L'écran x montre :\n    en position libre :\n        le texte « t », à 0 de la gauche et 0 du haut.\n");
+        }
+        auto lire = [&]() {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly));
+            return QString::fromUtf8(f.readAll());
+        };
+        OngletEcrans o;
+        o.resize(1000, 700);
+        o.show();
+        QString resultat = "pas de geste";
+        Geste g;
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        auto choisir = [&](const QString &entite, const QString &champ) {
+            o.montrer(dossier.path());
+            QApplication::processEvents();
+            QWidget *toile = o.controle(0);
+            VERIFIER(toile != nullptr);
+            if (!toile) return;
+            QMenu *m = o.menu_des_champs(toile->mapToGlobal(QPoint(200, 96)));
+            QAction *a = nullptr;
+            for (QAction *x : m->actions())
+                if (x->menu() && x->text() == entite)
+                    for (QAction *y : x->menu()->actions()) if (y->text() == champ) a = y;
+            VERIFIER(a != nullptr);
+            if (a) a->trigger();
+            if (!resultat.isEmpty()) std::printf("résultat : %s\n", qPrintable(resultat));
+            delete m;
+        };
+        choisir(QString::fromUtf8("œuvre"), "un titre (texte)");
+        QRegularExpressionMatch m = QRegularExpression("        un titre \\(texte\\), à (\\d+) de la gauche et (\\d+) du haut").match(lire());
+        VERIFIER(m.hasMatch() && qAbs(m.captured(1).toInt() - 200) <= 8 && qAbs(m.captured(2).toInt() - 96) <= 8);
+        choisir(QString::fromUtf8("œuvre"), "un genre principal (genre)");
+        VERIFIER(lire().contains("un genre principal (genre)"));
+        choisir(QString::fromUtf8("œuvre"), "des genres (genre)");
+        VERIFIER(lire().contains("des genres (genre)"));
+        if (!m.hasMatch()) std::printf("%s\n", qPrintable(lire()));
+    }
     {   // le graphique (§ 22.11) : fabriqué par la palette, dessiné en exemple dans l'aperçu, rempli par les lignes
         QTemporaryDir dossier;
         const QString chemin = dossier.filePath("p.grym");

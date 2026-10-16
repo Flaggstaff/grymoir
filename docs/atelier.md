@@ -285,6 +285,10 @@ Avec B2 ter (grammaire, § 22.8) : « Image » dans la palette demande ce que l'
 
 Deux défauts corrigés en chemin. Un bouton posé par « Ajouter » dans un bloc choisi (une page d'onglet) arrivait sans son événement, et la réanalyse refusait le geste. Le graphique, numéroté après les blocs, passait pour un bloc ouvert dans les parcours de l'aperçu : sur un écran décrit, glisser un élément écrit après un graphique déplaçait le graphique ; une fonction `est_bloc` dit maintenant ce qu'est un bloc.
 
+## 5 terdecies. Le clic droit : les champs disponibles *(fait le 16 octobre 2026)*
+
+Un clic droit sur l'aperçu d'un écran ouvre un menu des entités du projet, et pour chacune ses champs, écrits comme on les déclare (« un titre (texte) », « des genres (genre) »). Choisir un champ ajoute la zone qui lui correspond : même nom, même type, même genre, mêmes valeurs permises ; un lien vers une entité devient le choix d'un objet, un champ multiple des choix multiples. Dans un écran en position libre, la zone se pose là où l'on a cliqué ; ailleurs, sous ce qui est déjà là.
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -398,3 +402,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.56 | 2026-10-15 | L'interrupteur dans l'aperçu et l'exécution : une case à cocher dessinée en rail et bouton, à la couleur d'accent |
 | 0.57 | 2026-10-16 | Des choix multiples dans l'aperçu et l'exécution : une case par objet, chaque case change la zone |
 | 0.58 | 2026-10-16 | Palette : « Interrupteur » ; « Image » propose « une image de l'ordinateur (copiée dans le projet) » et ouvre le dossier des images ; une image glissée depuis le Finder s'ajoute à l'écran ; panneau d'une zone : « en interrupteur » ; une zone multiple garde sa marque |
+| 0.59 | 2026-10-16 | § 5 terdecies : le clic droit sur l'aperçu, les champs des entités, chacun ajouté comme sa zone, là où l'on a cliqué |

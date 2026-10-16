@@ -23,6 +23,8 @@
 #include <QFrame>
 #include <QMimeData>
 #include <QMouseEvent>
+#include <QContextMenuEvent>
+#include <QMenu>
 #include <QUrl>
 #include <QStandardPaths>
 #include <QMenuBar>
@@ -651,6 +653,51 @@ QString OngletEcrans::image_dans_le_projet(const QString &dossier, const QString
     return nom;
 }
 
+QMenu *OngletEcrans::menu_des_champs(QPoint global) {
+    auto *menu = new QMenu(this);
+    if (courant < 0 || courant >= lus.size()) return menu;
+    const QString ecran = lus[courant].nom;
+    QWidget *toile = nullptr;
+    int dans = bloc_libre_sous(global, nullptr, &toile);   // le bloc libre sous le clic, sinon le bloc choisi
+    if (dans < 0)   // ailleurs dans l'aperçu : le bloc libre de l'écran, à cet endroit (comme au glisser)
+        for (int q = 0; q < vue.controles.size() && dans < 0; q++)
+            if (lus[courant].elements.value(q).sorte == ELEMENT_LIBRE && vue.controles[q]
+                && vue.controles[q]->objectName() == "toile" && !vue.controles[q]->property("place").toBool()) {
+                dans = q;
+                toile = vue.controles[q];
+            }
+    QPoint ou(-1, -1);
+    if (dans >= 0 && toile) {
+        const QPoint l = toile->mapFromGlobal(global);
+        ou = QPoint(aimanter(qMax(0, l.x())), aimanter(qMax(0, l.y())));
+    } else
+        dans = cible_ajout();
+    menu->addSection("Ajouter un champ");
+    const auto schema = lire_schema(dossier);
+    if (schema.isEmpty()) menu->addAction("Aucune entité dans le projet")->setEnabled(false);
+    for (const auto &en : schema) {
+        QMenu *sous = menu->addMenu(en.nom);
+        for (const auto &c : en.champs) {
+            const QString vu = c.multiple ? QString("des %1 (%2)").arg(c.nom, c.type)
+                                          : QString("%1 %2 (%3)").arg(c.feminin ? "une" : "un", c.nom, c.type);
+            QAction *a = sous->addAction(vu);
+            connect(a, &QAction::triggered, this, [=] {
+                ElementNouveau n;   // la zone qui correspond au champ : son type, son genre, ses valeurs permises
+                n.sorte = ELEMENT_ZONE;
+                n.texte = c.nom;
+                n.type = c.type;
+                n.feminin = c.feminin;
+                n.valeurs = c.valeurs;
+                n.facultatif = c.facultatif;
+                n.multiple = c.multiple;
+                emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
+            });
+        }
+        if (en.champs.isEmpty()) sous->addAction("(aucun champ)")->setEnabled(false);
+    }
+    return menu;
+}
+
 int OngletEcrans::cible_ajout() const {
     if (courant < 0 || element < 0 || element >= lus[courant].elements.size()) return -1;
     const auto &els = lus[courant].elements;
@@ -813,6 +860,12 @@ void OngletEcrans::liberer(int k, QRect nouveau) {
 }
 
 bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
+    if (ev->type() == QEvent::ContextMenu && courant >= 0) {   // le clic droit : les champs disponibles, à ajouter ici
+        QMenu *m = menu_des_champs(static_cast<QContextMenuEvent *>(ev)->globalPos());
+        m->exec(static_cast<QContextMenuEvent *>(ev)->globalPos());
+        m->deleteLater();
+        return true;
+    }
     // La barre de menus de l'aperçu (§ 22.12) : un clic choisit le menu et l'ouvre ; un élément du menu se choisit en
     // le cliquant dans le menu ouvert (son bouton invisible est relié dans dessiner()).
     if (auto *barre = qobject_cast<QMenuBar *>(o)) {

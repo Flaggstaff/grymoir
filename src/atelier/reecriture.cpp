@@ -890,7 +890,7 @@ QString ecran_mettre_dans(const QString &dossier, const QString &ecran, int sour
     return ch.conclure(geste);
 }
 
-QString ecran_ajouter(const QString &dossier, const QString &ecran, const ElementNouveau &e, Geste *geste, int dans) {
+QString ecran_ajouter(const QString &dossier, const QString &ecran, const ElementNouveau &e, Geste *geste, int dans, QPoint ou) {
     Chantier ch(dossier);
     Trouve t = trouver_ecran(ch, ecran);
     if (!t.f) return QString("L'écran %1 est introuvable.").arg(ecran);
@@ -900,7 +900,7 @@ QString ecran_ajouter(const QString &dossier, const QString &ecran, const Elemen
     Noeud *p = t.phrase;
     if (dans >= 0 && (size_t)dans < p->nb_enfants && p->enfants[dans]->type == N_DISPOSITION && p->enfants[dans]->forme
         && p->enfants[dans]->forme != 5) {   // dans le bloc choisi : un onglet ouvert, un groupe, un bloc libre…
-        mettre_dans(p, (size_t)dans, n);
+        mettre_dans(p, (size_t)dans, n, ou);
         reimprimer_avec(ch, t, e);
         if (e.sorte == ELEMENT_BOUTON) {   // un bouton sans événement serait refusé (§ 22.2), dans un bloc comme ailleurs
             const int pos = apres_l_ecran(t, ecran);
