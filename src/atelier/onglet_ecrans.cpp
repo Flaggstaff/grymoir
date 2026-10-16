@@ -23,6 +23,8 @@
 #include <QFrame>
 #include <QMimeData>
 #include <QMouseEvent>
+#include <QUrl>
+#include <QStandardPaths>
 #include <QMenuBar>
 #include <QHash>
 #include <QTabWidget>
@@ -53,6 +55,9 @@ extern "C" {
 
 // Un bloc, qui s'ouvre et se ferme par une fin de bloc : pas un élément. Le graphique et le menu, venus après les blocs
 // dans la numérotation, font qu'un test « sorte ≥ côte à côte » ne suffit plus.
+// « Interrupteur » dans la palette : une zone (vrai ou faux) en interrupteur, pas une sorte d'élément (§ 22.6)
+static const int INTERRUPTEUR_PALETTE = 100;
+
 static bool est_bloc(int s) {
     return s == ELEMENT_COTE_A_COTE || s == ELEMENT_L_UN_SOUS_L_AUTRE || s == ELEMENT_GROUPE || s == ELEMENT_LIBRE
            || s == ELEMENT_ONGLETS || s == ELEMENT_ONGLET || s == ELEMENT_MENU;
@@ -189,6 +194,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.plusieurs_lignes = el->entier & 2;
                         if (el->texte3) x.valeurs = QString::fromUtf8(el->texte3).split(QChar(0x1e));
                         x.lecture_seule = el->entier & 4;
+                        x.interrupteur = el->entier & 8;
                         if (el->nb_enfants && el->enfants[0]->type != N_SI_ECRAN) {
                             const Noeud *v = el->enfants[0];
                             x.depart = QString::fromUtf8(v->texte ? v->texte
@@ -292,10 +298,12 @@ OngletEcrans::OngletEcrans(QWidget *parent) : QWidget(parent) {
     auto *pp = new QHBoxLayout(palette);
     pp->setContentsMargins(0, 0, 0, 0);
     pp->addWidget(new QLabel("Ajouter :"));
-    for (int sorte : {ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, ELEMENT_LISTE, ELEMENT_GRAPHIQUE, ELEMENT_IMAGE, ELEMENT_ONGLETS, ELEMENT_MENU}) {
+    for (int sorte : std::initializer_list<int>{ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, INTERRUPTEUR_PALETTE, ELEMENT_LISTE, ELEMENT_GRAPHIQUE, ELEMENT_IMAGE,
+                      ELEMENT_ONGLETS, ELEMENT_MENU}) {
         auto *b = new QPushButton(sorte == ELEMENT_BOUTON ? "Bouton" : sorte == ELEMENT_TEXTE ? "Texte"
                                   : sorte == ELEMENT_ZONE ? "Zone" : sorte == ELEMENT_LISTE ? "Liste" : sorte == ELEMENT_IMAGE ? "Image"
-                                  : sorte == ELEMENT_GRAPHIQUE ? "Graphique" : sorte == ELEMENT_MENU ? "Menu" : "Onglets");
+                                  : sorte == ELEMENT_GRAPHIQUE ? "Graphique" : sorte == ELEMENT_MENU ? "Menu"
+                                  : sorte == INTERRUPTEUR_PALETTE ? "Interrupteur" : "Onglets");
         if (sorte == ELEMENT_MENU)   // un menu en tête de l'écran, avec un élément et son événement (§ 22.12)
             connect(b, &QPushButton::clicked, this, [this] {
                 if (courant < 0 || courant >= lus.size()) return;
@@ -406,6 +414,7 @@ void OngletEcrans::dessiner() {
         el[k].place = e.elements[k].place;
         el[k].graphique = e.elements[k].graphique;
         el[k].multiple = e.elements[k].multiple;
+        el[k].interrupteur = e.elements[k].interrupteur;
         el[k].gauche = e.elements[k].gauche;
         el[k].haut = e.elements[k].haut;
         el[k].largeur = e.elements[k].largeur;
@@ -419,6 +428,8 @@ void OngletEcrans::dessiner() {
     const QStringList accents = th.accents();
     if (e.couleur >= 0 && e.couleur < accents.size() && accents[e.couleur] != th.accent())
         vue.vue->setStyleSheet(th.feuille(th.mode(), accents[e.couleur]));
+    vue.vue->setAcceptDrops(true);   // une image glissée depuis le Finder sur le fond de l'écran
+    vue.vue->installEventFilter(this);
     for (int k = 0; k < vue.controles.size(); k++) {
         QWidget *w = vue.controles[k];
         if (!w) continue;
@@ -615,6 +626,29 @@ int OngletEcrans::page_sous(QPoint global, int k, QWidget **toile) const {
         return onglet;
     }
     return -1;
+}
+
+QString OngletEcrans::image_dans_le_projet(const QString &dossier, const QString &fichier, QString *erreur) {
+    const QDir projet(dossier);
+    const QString relatif = projet.relativeFilePath(fichier);
+    if (!relatif.startsWith("..") && !QDir::isAbsolutePath(relatif)) return relatif;   // déjà dans le projet
+    QFile source(fichier);
+    if (!source.open(QIODevice::ReadOnly)) { *erreur = QString("« %1 » ne s'ouvre pas.").arg(fichier); return QString(); }
+    const QByteArray octets = source.readAll();
+    const QFileInfo info(fichier);
+    QString nom = info.fileName();
+    for (int n = 2;; n++) {   // un nom libre, ou le même fichier déjà copié
+        QFile deja(projet.filePath(nom));
+        if (!deja.exists()) break;
+        if (deja.open(QIODevice::ReadOnly) && deja.readAll() == octets) return nom;
+        nom = QString("%1-%2%3").arg(info.completeBaseName()).arg(n).arg(info.suffix().isEmpty() ? QString() : "." + info.suffix());
+    }
+    QFile copie(projet.filePath(nom));
+    if (!copie.open(QIODevice::WriteOnly) || copie.write(octets) != octets.size()) {
+        *erreur = QString("L'image n'a pas pu être copiée dans le projet (« %1 »).").arg(nom);
+        return QString();
+    }
+    return nom;
 }
 
 int OngletEcrans::cible_ajout() const {
@@ -994,6 +1028,34 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
         }
         return true;
     }
+    if ((ev->type() == QEvent::DragEnter || ev->type() == QEvent::DragMove || ev->type() == QEvent::Drop)
+        && !static_cast<QDropEvent *>(ev)->mimeData()->urls().isEmpty() && courant >= 0) {
+        // une image glissée depuis le Finder : copiée dans le projet, ajoutée à l'écran, dans le bloc sous la souris
+        auto *d = static_cast<QDropEvent *>(ev);
+        QStringList images;
+        for (const QUrl &u : d->mimeData()->urls()) {
+            const QString suffixe = QFileInfo(u.toLocalFile()).suffix().toLower();
+            if (u.isLocalFile() && QStringList({"png", "jpg", "jpeg", "gif", "webp"}).contains(suffixe)) images << u.toLocalFile();
+        }
+        if (images.isEmpty()) { ev->ignore(); return true; }
+        d->acceptProposedAction();
+        if (ev->type() != QEvent::Drop) return true;
+        QWidget *toile = nullptr;
+        const QPoint global = qobject_cast<QWidget *>(o)->mapToGlobal(d->position().toPoint());
+        int dans = bloc_libre_sous(global, nullptr, &toile);
+        if (dans < 0) dans = cible_ajout();
+        const QString ecran = lus[courant].nom;
+        for (const QString &f : images) {
+            QString erreur;
+            ElementNouveau n;
+            n.sorte = ELEMENT_IMAGE;
+            n.texte = image_dans_le_projet(dossier, f, &erreur);
+            if (n.texte.isEmpty()) { QMessageBox::warning(this, "Nouvelle image", erreur); continue; }
+            emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans); });
+        }
+        etat->setText(images.size() == 1 ? "Image ajoutée, copiée dans le projet." : "Images ajoutées, copiées dans le projet.");
+        return true;
+    }
     if (ev->type() == QEvent::DragEnter || ev->type() == QEvent::DragMove) {
         auto *d = static_cast<QDropEvent *>(ev);
         const int k = element_sous(o);
@@ -1228,7 +1290,20 @@ void OngletEcrans::editer() {
             auto *chemin = new QLineEdit(x.texte);
             chemin->setToolTip("Relatif au dossier du programme ; PNG, JPEG, GIF ou WebP.");
             auto *visible = condition_ecran(x.visible_si, "le compositeur choisi de l'écran est présent");
-            f->addRow("Fichier", chemin);
+            auto *choisir = new QPushButton(QString::fromUtf8("Choisir…"));   // une autre image, d'où que ce soit
+            choisir->setToolTip("Une image prise ailleurs que dans le projet y est copiée.");
+            connect(choisir, &QPushButton::clicked, this, [this, chemin] {
+                const QString fi = QFileDialog::getOpenFileName(this, "Image", dossier, "Images (*.png *.jpg *.jpeg *.gif *.webp)");
+                if (fi.isEmpty()) return;
+                QString erreur;
+                const QString r = image_dans_le_projet(dossier, fi, &erreur);
+                if (r.isEmpty()) { QMessageBox::warning(this, "Image", erreur); return; }
+                chemin->setText(r);
+            });
+            auto *ligne = new QHBoxLayout;
+            ligne->addWidget(chemin, 1);
+            ligne->addWidget(choisir);
+            f->addRow("Fichier", ligne);
             f->addRow("Visible si", visible);
             connect(appliquer, &QPushButton::clicked, this, [this, ecran, k, chemin, visible] {
                 ElementNouveau n;
@@ -1275,6 +1350,8 @@ void OngletEcrans::editer() {
             lignes->setChecked(x.plusieurs_lignes);
             auto *seule = new QCheckBox("en lecture seule");
             seule->setChecked(x.lecture_seule);
+            auto *inter = new QCheckBox("en interrupteur (vrai ou faux)");   // § 22.6
+            inter->setChecked(x.interrupteur);
             auto *actif = condition_ecran(x.actif_si, "le compositeur choisi de l'écran est présent");
             auto *visible = condition_ecran(x.visible_si, "le pays de l'écran est « Suisse »");
             f->addRow("Nom", nom);
@@ -1285,6 +1362,7 @@ void OngletEcrans::editer() {
             f->addRow("Valeurs permises", valeurs);
             f->addRow("", lignes);
             f->addRow("", seule);
+            f->addRow("", inter);
             f->addRow("Active si", actif);
             f->addRow("Visible si", visible);
             connect(appliquer, &QPushButton::clicked, this, [=] {
@@ -1298,6 +1376,8 @@ void OngletEcrans::editer() {
                 n.plusieurs_lignes = lignes->isChecked();
                 for (const QString &v : valeurs->text().split(';')) if (!v.trimmed().isEmpty()) n.valeurs << v.trimmed();
                 n.lecture_seule = seule->isChecked();
+                n.interrupteur = inter->isChecked();
+                n.multiple = x.multiple;   // une zone multiple le reste
                 n.actif_si = actif->text();
                 n.visible_si = visible->text();
                 emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
@@ -1437,8 +1517,17 @@ void OngletEcrans::ajouter(int sorte) {
     ElementNouveau n;
     n.sorte = sorte;
     bool ok = false;
+    if (sorte == INTERRUPTEUR_PALETTE) {   // une zone (vrai ou faux), montrée en interrupteur (§ 22.6)
+        n.sorte = ELEMENT_ZONE;
+        n.type = "vrai ou faux";
+        n.interrupteur = true;
+        n.texte = QInputDialog::getText(this, "Nouvel interrupteur", "Nom (« actif », « payée ») :", QLineEdit::Normal, "", &ok);
+        if (!ok || n.texte.trimmed().isEmpty()) return;
+        emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans); });
+        return;
+    }
     if (sorte == ELEMENT_IMAGE) {   // un fichier du projet, ou une valeur (§ 22.8)
-        const QStringList sortes = {"Un fichier du projet", "Une image calculée (la photo de la ligne choisie…)"};
+        const QStringList sortes = {"Une image de l'ordinateur (copiée dans le projet)", "Une image calculée (la photo de la ligne choisie…)"};
         const QString quoi = QInputDialog::getItem(this, "Nouvelle image", "L'image montre :", sortes, 0, false, &ok);
         if (!ok) return;
         if (quoi == sortes[1]) {
@@ -1450,19 +1539,22 @@ void OngletEcrans::ajouter(int sorte) {
         }
     }
     if (sorte == ELEMENT_IMAGE) {   // une image du projet, écrite relative au dossier du programme (§ 22.8)
-        const QString f = QFileDialog::getOpenFileName(this, "Nouvelle image", dossier, "Images (*.png *.jpg *.jpeg *.gif *.webp)");
+        // n'importe où sur l'ordinateur : une image d'ailleurs est copiée dans le projet, pour partir avec l'application
+        const QString images = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);   // tes images d'abord
+        const QString f = QFileDialog::getOpenFileName(this, "Nouvelle image", images.isEmpty() ? dossier : images,
+                                                       "Images (*.png *.jpg *.jpeg *.gif *.webp)");
         ok = !f.isEmpty();
-        n.texte = QDir(dossier).relativeFilePath(f);
-        if (ok && n.texte.startsWith("..")) {
-            QMessageBox::warning(this, "Nouvelle image", "Choisis une image dans le dossier du projet : elle partira avec l'application.");
-            return;
-        }
+        if (!ok) return;
+        QString erreur;
+        n.texte = image_dans_le_projet(dossier, f, &erreur);
+        if (n.texte.isEmpty()) { QMessageBox::warning(this, "Nouvelle image", erreur); return; }
+        if (QDir(dossier).relativeFilePath(f) != n.texte) etat->setText(QString("Image copiée dans le projet : « %1 ».").arg(n.texte));
     } else if (sorte == ELEMENT_BOUTON) n.texte = QInputDialog::getText(this, "Nouveau bouton", "Libellé :", QLineEdit::Normal, "", &ok);
     else if (sorte == ELEMENT_TEXTE) n.texte = QInputDialog::getText(this, "Nouveau texte", "Texte :", QLineEdit::Normal, "", &ok);
     else if (sorte == ELEMENT_ZONE) {
         n.texte = QInputDialog::getText(this, "Nouvelle zone", "Nom (« pays », « date de début ») :", QLineEdit::Normal, "", &ok);
         if (ok) {
-            QStringList types = {"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure"};
+            QStringList types = {"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure", "fichier", "image"};
             for (const auto &en : lire_schema(dossier)) types << en.nom;
             n.type = QInputDialog::getItem(this, "Nouvelle zone", "Type :", types, 0, false, &ok);
         }

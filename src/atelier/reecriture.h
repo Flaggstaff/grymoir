@@ -61,6 +61,8 @@ struct ElementNouveau {
     bool decroissant = false;
     QStringList colonnes;     // liste : champs à montrer ; vide : les colonnes par défaut
     bool plusieurs_lignes = false, lecture_seule = false;   // zone (§ 22.6)
+    bool interrupteur = false;   // zone (vrai ou faux) « en interrupteur » (§ 22.6)
+    bool multiple = false;       // « des genres (genre) » (§ 22.1)
     QStringList valeurs;      // zone (texte) : valeurs permises (§ 22.7) ; groupe : rien
     QString actif_si, visible_si;   // bouton, zone (actif) ; bouton, texte, zone (visible) : la condition telle qu'écrite
     QString cle;              // graphique (§ 22.11) : le champ qui regroupe ; somme : le champ additionné, vide pour compter

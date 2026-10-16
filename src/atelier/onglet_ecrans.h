@@ -33,6 +33,7 @@ struct ElementLu {
     bool place = false;          // élément d'un bloc en position libre (§ 22.9)
     int graphique = 0;           // graphique (§ 22.11) : 1, + 2 en secteurs, + 4 une somme
     bool multiple = false;       // « des genres (genre) » (§ 22.1)
+    bool interrupteur = false;   // « en interrupteur » (§ 22.6)
     QString graphe_cle, graphe_somme;   // telles qu'écrites, « écrit ␝ chemin » ; vide : pas de somme
     int gauche = 0, haut = 0, largeur = 0, hauteur = 0;   // largeur, hauteur : 0 si non dites
 };
@@ -86,6 +87,10 @@ public:
     // Où « Ajouter » pose (§ 5 decies) : le bloc qui contient l'élément choisi, ou le bloc choisi lui-même ; pour des
     // onglets, leur page ouverte. −1 : la fin de l'écran.
     int cible_ajout() const;
+    // Une image choisie n'importe où sur l'ordinateur, entrée dans le projet pour qu'elle parte avec l'application :
+    // déjà dans le projet, son chemin relatif ; ailleurs, copiée à la racine du projet, sous un nom libre (« plan-2.png »
+    // si « plan.png » est pris par un autre contenu). Rend le chemin relatif, ou vide et *erreur.
+    static QString image_dans_le_projet(const QString &dossier, const QString &fichier, QString *erreur);
     int onglet_ouvert(int k) const;                  // l'index de l'onglet ouvert des onglets k, ou −1
     int onglets_de(int k) const;                     // les onglets qui contiennent k (ou dont k est un onglet), ou −1
     int onglet_sous(QPoint global, int sauf) const;  // l'onglet dont l'en-tête est sous la souris, hors du bloc sauf ; −1

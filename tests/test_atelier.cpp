@@ -18,6 +18,7 @@
 #include <QInputMethodEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QUrl>
 #include <QAction>
 #include <QMenu>
 #include <QMenuBar>
@@ -2657,6 +2658,55 @@ int main(int argc, char **argv) {
                                "                le texte « dehors », à (\\d+) de la gauche et (\\d+) du haut").match(t);
         VERIFIER(m.hasMatch() && qAbs(m.captured(1).toInt() - 100) <= 8 && qAbs(m.captured(2).toInt() - 80) <= 8);
         if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
+    }
+    {   // l'interrupteur s'ajoute et se règle dans l'atelier ; une image glissée depuis le Finder entre dans l'écran, copiée
+        QTemporaryDir dossier, ailleurs;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Un genre, conservé, a :\n    un nom (texte), unique.\n"
+                    "L'écran x montre :\n    des genres (genre),\n    le texte « t ».\n");
+        }
+        auto lire = [&]() {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly));
+            return QString::fromUtf8(f.readAll());
+        };
+        Geste g;
+        ElementNouveau n;
+        n.sorte = ELEMENT_ZONE;
+        n.type = "vrai ou faux";
+        n.texte = "actif";
+        n.interrupteur = true;
+        QString r = ecran_ajouter(dossier.path(), "x", n, &g);
+        if (!r.isEmpty()) std::printf("résultat : %s\n", qPrintable(r));
+        VERIFIER(lire().contains("    un actif (vrai ou faux), en interrupteur."));
+        // le panneau réécrit une zone multiple sans perdre sa marque
+        ElementNouveau m;
+        m.sorte = ELEMENT_ZONE;
+        m.type = "genre";
+        m.texte = "genres";
+        m.multiple = true;
+        VERIFIER(ecran_modifier(dossier.path(), "x", 0, m, &g).isEmpty() && lire().contains("    des genres (genre),"));
+        // une image d'ailleurs, lâchée sur l'aperçu
+        const QString png = ailleurs.filePath("vacances.png");
+        {
+            QFile f(png);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            QFile source(QString(GRYM_SOURCE) + "/exemples/pixel.png");
+            VERIFIER(source.open(QIODevice::ReadOnly));
+            f.write(source.readAll());
+        }
+        // la copie dans le projet, puis l'ajout (le dépôt depuis le Finder passe par là ; un dépôt fabriqué dans l'essai
+        // arrive sans ses données, il ne s'éprouve pas ici)
+        QString erreur;
+        ElementNouveau im;
+        im.sorte = ELEMENT_IMAGE;
+        im.texte = OngletEcrans::image_dans_le_projet(dossier.path(), png, &erreur);
+        VERIFIER(im.texte == "vacances.png" && erreur.isEmpty());
+        VERIFIER(ecran_ajouter(dossier.path(), "x", im, &g).isEmpty());
+        VERIFIER(lire().contains("l'image « vacances.png »") && QFile::exists(dossier.filePath("vacances.png")));
     }
     {   // des choix multiples (§ 22.1) : une case par choix, chacune porte sa clé ; l'aperçu sans données en montre une
         QVector<ElementVue> el(2);

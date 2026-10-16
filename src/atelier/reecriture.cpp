@@ -698,6 +698,9 @@ QString etats_voulus(Noeud *n, const ElementNouveau &e) {
         }
         if (e.plusieurs_lignes) n->entier |= 2;
         if (e.lecture_seule) n->entier |= 4;
+        if (e.interrupteur && e.type != "vrai ou faux") return "Seule une zone (vrai ou faux) se montre en interrupteur.";
+        if (e.interrupteur) n->entier |= 8;
+        if (e.multiple) n->entier |= 16;
     }
     const QString actif = e.actif_si.simplified(), visible = e.visible_si.simplified();
     if (!actif.isEmpty() && e.sorte != ELEMENT_BOUTON && e.sorte != ELEMENT_ZONE)

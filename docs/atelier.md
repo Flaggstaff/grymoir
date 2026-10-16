@@ -397,3 +397,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.55 | 2026-10-15 | Les zones de fichier et d'image : un bouton « Choisir un fichier… », le sélecteur de fichiers à l'exécution (images seules pour une image), le fichier choisi sur le bouton |
 | 0.56 | 2026-10-15 | L'interrupteur dans l'aperçu et l'exécution : une case à cocher dessinée en rail et bouton, à la couleur d'accent |
 | 0.57 | 2026-10-16 | Des choix multiples dans l'aperçu et l'exécution : une case par objet, chaque case change la zone |
+| 0.58 | 2026-10-16 | Palette : « Interrupteur » ; « Image » propose « une image de l'ordinateur (copiée dans le projet) » et ouvre le dossier des images ; une image glissée depuis le Finder s'ajoute à l'écran ; panneau d'une zone : « en interrupteur » ; une zone multiple garde sa marque |
