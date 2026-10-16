@@ -90,6 +90,7 @@ public:
     // Le menu du clic droit sur l'aperçu, en ce point : les champs des entités du projet, chacun ajouté comme la zone
     // qui lui correspond, là où l'on a cliqué (docs/atelier.md, § 5 terdecies). Appartient à l'appelant.
     class QMenu *menu_des_champs(QPoint global);
+    class QMenu *menu_du_titre();   // le clic droit sur le titre de l'écran : le renommer
     int dans_clic = -2;          // le bloc d'un clic droit pour le prochain ajout ; −2 : aucun clic droit
     QPoint ou_clic;
     // Une image choisie n'importe où sur l'ordinateur, entrée dans le projet pour qu'elle parte avec l'application :

@@ -447,6 +447,7 @@ void OngletEcrans::dessiner() {
         }
     }
     vue.titre->installEventFilter(this);
+    if (vue.logo) vue.logo->installEventFilter(this);   // le clic droit sur le logo vaut celui sur le titre
     for (int k = 0; k < vue.controles.size(); k++)   // le survol des éléments placés : le curseur change sur leurs bords
         if (QWidget *w = vue.controles[k]) {
             w->setMouseTracking(true);
@@ -646,6 +647,20 @@ QString OngletEcrans::image_dans_le_projet(const QString &dossier, const QString
         return QString();
     }
     return nom;
+}
+
+QMenu *OngletEcrans::menu_du_titre() {
+    auto *menu = new QMenu(this);
+    if (courant < 0 || courant >= lus.size()) return menu;
+    const QString ecran = lus[courant].nom, actuel = vue.titre ? vue.titre->text() : QString();
+    QAction *a = menu->addAction(QString::fromUtf8("Renommer le titre…"));
+    connect(a, &QAction::triggered, this, [=] {
+        bool ok = false;
+        const QString t = QInputDialog::getText(this, "Titre de l'écran", "Titre :", QLineEdit::Normal, actuel, &ok);
+        if (!ok || t.trimmed().isEmpty() || t == actuel) return;
+        emit geste([=](Geste *g) { return ecran_titre(dossier, ecran, t.trimmed(), g); });
+    });
+    return menu;
 }
 
 QMenu *OngletEcrans::menu_des_champs(QPoint global) {
@@ -865,7 +880,8 @@ void OngletEcrans::liberer(int k, QRect nouveau) {
 
 bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
     if (ev->type() == QEvent::ContextMenu && courant >= 0) {   // le clic droit : les champs disponibles, à ajouter ici
-        QMenu *m = menu_des_champs(static_cast<QContextMenuEvent *>(ev)->globalPos());
+        const bool titre = o == vue.titre || (vue.logo && o == vue.logo);   // sur le titre : le renommer
+        QMenu *m = titre ? menu_du_titre() : menu_des_champs(static_cast<QContextMenuEvent *>(ev)->globalPos());
         m->exec(static_cast<QContextMenuEvent *>(ev)->globalPos());
         m->deleteLater();
         return true;

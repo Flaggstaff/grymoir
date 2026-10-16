@@ -208,6 +208,9 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     r.titre = new QLabel(titre);
     r.titre->setTextFormat(Qt::PlainText);
     r.titre->setProperty("niveau", "ecran");   // la taille et la graisse viennent de la feuille du thème
+    // sa hauteur naturelle, jamais plus : extensible, il prenait toute la hauteur libre de l'aperçu et s'y centrait
+    r.titre->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    r.titre->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     if (logo.isNull() || taille_logo <= 0) {
         pile->addWidget(r.titre);
     } else {   // le logo à gauche du titre, sa hauteur fixée, ses proportions gardées (§ 22.5)
@@ -218,6 +221,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         QPixmap p = logo.scaledToHeight(qRound(taille_logo * densite), Qt::SmoothTransformation);
         p.setDevicePixelRatio(densite);
         r.logo->setPixmap(p);
+        r.logo->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         entete->addWidget(r.logo);
         entete->addWidget(r.titre, 1);
         pile->addLayout(entete);

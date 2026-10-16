@@ -2758,6 +2758,30 @@ int main(int argc, char **argv) {
         VERIFIER(photo && photo->text() == QString::fromUtf8("Choisir un fichier…"));
         delete v.vue;
     }
+    {   // le titre garde sa hauteur naturelle dans un aperçu plus haut que son contenu ; le clic droit le renomme
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran de recherche, « Recherche », montre :\n    le texte « t ».\n");
+        }
+        OngletEcrans o;
+        o.resize(1000, 1400);   // bien plus haut que l'écran
+        o.show();
+        o.montrer(dossier.path());
+        QApplication::processEvents();
+        QLabel *titre = nullptr;
+        for (QLabel *l : o.findChildren<QLabel *>()) if (l->text() == "Recherche" && l->property("niveau").toString() == "ecran") titre = l;
+        VERIFIER(titre && titre->height() <= titre->sizeHint().height() + 2);
+        QMenu *m = o.menu_du_titre();
+        VERIFIER(m->actions().size() == 1 && m->actions()[0]->text() == QString::fromUtf8("Renommer le titre…"));
+        delete m;
+        Geste g;
+        VERIFIER(ecran_titre(dossier.path(), "de recherche", "Chercher un membre", &g).isEmpty());
+        QFile f(chemin);
+        VERIFIER(f.open(QIODevice::ReadOnly) && QString::fromUtf8(f.readAll()).contains("L'écran de recherche, « Chercher un membre », montre :"));
+    }
     {   // le clic droit : les champs des entités ; chacun devient la zone qui lui correspond, là où l'on a cliqué
         QTemporaryDir dossier;
         const QString chemin = dossier.filePath("p.grym");
