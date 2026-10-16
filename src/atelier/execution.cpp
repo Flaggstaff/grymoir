@@ -139,7 +139,7 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         t->images << (el[k].octets ? QByteArray(reinterpret_cast<const char *>(el[k].octets), (qsizetype)el[k].taille) : QByteArray());
         t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0)
-                             | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0));
+                             | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0) | (el[k].masque ? 32 : 0));
         t->facultatives << el[k].facultatif;
         t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
         t->longueurs << (el[k].borne_max && el[k].type && strcmp(el[k].type, "texte") == 0 ? (int)atol(el[k].borne_max) : 0);
@@ -500,7 +500,10 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
                     QSignalBlocker bc(c);
                     c->setChecked(coches.contains(c->property("cle").toString()));
                 }
-            } else if (auto *l = qobject_cast<QLineEdit *>(z)) l->setText(v[k]);
+            } else if (auto *l = qobject_cast<QLineEdit *>(z)) {
+                if (!l->property("masque").toBool() || l->text().isEmpty() == v[k].isEmpty()) l->setText(v[k]);
+                // masqué : la valeur de la machine ne s'y réécrit pas, sauf pour vider le champ quand elle l'est
+            }
             else if (auto *bf = qobject_cast<QPushButton *>(z); bf && bf->property("fichier").toBool())   // le fichier actuel
                 bf->setText(v[k].isEmpty() ? QString::fromUtf8("Choisir un fichier…") : v[k] + QString::fromUtf8(" (changer…)"));
             else if (z->property("radios").toBool()) {   // boutons radio (§ 22.7) : celui de la valeur, sinon aucun
@@ -787,6 +790,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].interrupteur = o & 4;   // § 22.6
         elements[k].multiple = o & 8;   // § 22.1
         elements[k].recherche = o & 16;   // § 22.6
+        elements[k].masque = o & 32;   // § 22.6
         elements[k].graphique = travail.graphiques.value(k);   // § 22.11
         if (k < travail.places.size() && travail.places[k].size() == 4) {   // position libre (§ 22.9)
             const QVector<int> &p = travail.places[k];

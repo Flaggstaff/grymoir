@@ -992,13 +992,15 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
             echapper(c, v);
             chaine_ajouter(c, "</textarea>");
         } else {
-            chaine_ajouter(c, "<input type=\"text\" id=\"");
+            /* « masqué » : un champ de mot de passe, et sa valeur ne revient jamais dans la page (§ 22.6) */
+            chaine_ajouter(c, el->masque ? "<input type=\"password\" id=\"" : "<input type=\"text\" id=\"");
             chaine_ajouter(c, id);
             chaine_ajouter(c, "\" name=\"");
             chaine_ajouter(c, id);
             chaine_ajouter(c, "\" value=\"");
-            echapper(c, v);
+            if (!el->masque) echapper(c, v);
             chaine_ajouter(c, "\"");
+            if (el->masque && *v) chaine_ajouter(c, " placeholder=\"••••••\"");   /* déjà rempli : rien ne se voit */
             /* la virgule suisse n'est pas un nombre pour un champ numérique : texte, vérifié par la machine */
             if (el->type && strcmp(el->type, "nombre") == 0) chaine_ajouter(c, " inputmode=\"decimal\"");
             else if (el->type && strcmp(el->type, "nombre entier") == 0) chaine_ajouter(c, " inputmode=\"numeric\"");
@@ -1381,6 +1383,7 @@ static int evenements_de(Serveur *s, Envoi *env) {
                 return 0;
             }
             nouveau = pv->valeur;
+            if (e->el[k].masque && !*nouveau) continue;   /* la page ne le renvoie pas : vide, il ne change rien */
         }
         if (strcmp(nouveau, e->valeurs[k] ? e->valeurs[k] : "") == 0) continue;
         Evenement ev = { EVENEMENT_CHANGEMENT, k, 0, grym_dupliquer(nouveau), choisies(e), e->n, NULL, 0 };

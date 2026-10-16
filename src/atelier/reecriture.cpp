@@ -702,6 +702,7 @@ QString etats_voulus(Noeud *n, const ElementNouveau &e) {
         if (e.interrupteur) n->entier |= 8;
         if (e.multiple) n->entier |= 16;
         if (e.recherche) n->entier |= 32;   // la réanalyse refuse une zone qui ne désigne pas un objet
+        if (e.masque) n->entier |= 64;      // et une zone masquée qui n'est pas un texte sur une ligne
         auto canonique = [](QString t) {   // « −2,5 » → « -2.5 » ; la réanalyse refuse ce qui n'est pas un nombre
             t.remove(' ').remove('\'').replace(',', '.').replace(QString::fromUtf8("−"), "-");
             return t;

@@ -5754,6 +5754,7 @@ static void attendre_etats_ecran(Analyse *a, const Noeud *el, Genre g, int zone)
         attendre_mot(a, pos, fem ? "facultative" : "facultatif", strlen(fem ? "facultative" : "facultatif"));
         attendre_mot(a, pos, "sur plusieurs lignes", strlen("sur plusieurs lignes"));
         attendre_mot(a, pos, "en lecture seule", strlen("en lecture seule"));
+        if (el->texte2 && strcmp(el->texte2, "texte") == 0) attendre_mot(a, pos, fem ? "masquée" : "masqué", strlen(fem ? "masquée" : "masqué"));
         if (el->texte2 && strcmp(el->texte2, "vrai ou faux") == 0) attendre_mot(a, pos, "en interrupteur", strlen("en interrupteur"));
         const Classe *lie = el->texte2 ? classe_de(a->portee, el->texte2) : NULL;
         if (lie && lie->conserve) attendre_mot(a, pos, "avec recherche", strlen("avec recherche"));
@@ -5896,6 +5897,14 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
             else el->borne_max = lu[0];
             if (!de) free(lu[1]);
             a->i = q + (caracteres ? 1 : 0);
+            return 1;
+        }
+        if (zone && (est_mot(x, "masqué") || est_mot(x, "masquée"))) {   /* « , masqué » : un mot de passe (§ 22.6) */
+            if (!el->texte2 || strcmp(el->texte2, "texte") != 0 || el->texte3 || (el->entier & 2))
+                return erreur(a, x, grym_dupliquer("Seule une zone de texte sur une ligne se masque : « un code (texte), masqué ».")), -1;
+            if (el->entier & 64) return erreur(a, x, grym_dupliquer("« masqué » est déjà dit.")), -1;
+            el->entier |= 64;
+            a->i += 2;
             return 1;
         }
         if (zone && est_mot(x, "avec") && est_mot(voir(a, 2), "recherche")) {   /* « , avec recherche » (§ 22.6) */

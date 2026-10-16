@@ -453,6 +453,11 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 libelle->setBuddy(w);
                 rang->addWidget(libelle);
             }
+            if (e.masque)   // « masqué » (§ 22.6) : la frappe cachée
+                if (auto *le = qobject_cast<QLineEdit *>(w)) {
+                    le->setEchoMode(QLineEdit::Password);
+                    le->setProperty("masque", true);
+                }
             if (e.longueur_max > 0) {   // « au plus N caractères » (§ 22.6) : la frappe s'arrête là
                 if (auto *le = qobject_cast<QLineEdit *>(w)) le->setMaxLength(e.longueur_max);
             }

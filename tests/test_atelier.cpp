@@ -2794,6 +2794,17 @@ int main(int argc, char **argv) {
         QFile f(chemin);
         VERIFIER(f.open(QIODevice::ReadOnly) && QString::fromUtf8(f.readAll()).contains("L'écran de recherche, « Chercher un membre » en grand, montre :"));   // la taille reste
     }
+    {   // le masque (§ 22.6) : la frappe cachée
+        QVector<ElementVue> el(1);
+        el[0].sorte = ELEMENT_ZONE;
+        el[0].texte = "Code";
+        el[0].type = "texte";
+        el[0].masque = true;
+        VueEcran v = dessiner_ecran("Saisie", el);
+        auto *le = qobject_cast<QLineEdit *>(v.zones.value(0));
+        VERIFIER(le && le->echoMode() == QLineEdit::Password);
+        delete v.vue;
+    }
     {   // les bornes (§ 22.6) : la frappe d'un texte s'arrête à sa longueur ; le panneau les écrit
         QVector<ElementVue> el(1);
         el[0].sorte = ELEMENT_ZONE;

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 1.97 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 1.98 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1765,6 +1765,7 @@ L'écran de saisie montre :
 - `, avec l'indication « … »` *(1.95)* : une phrase sous le libellé d'une zone, qui dit quoi y écrire, `un code postal (texte), avec l'indication « 4 chiffres, sans espace »`. Toute zone la prend, cases à cocher, interrupteurs et choix multiples compris ; une seule par zone (« L'indication est déjà donnée. »). Forme compacte : `_indication « … »`.
 - `, avec recherche` *(1.96)* : une zone qui désigne un objet conservé devient un champ où l'on tape, avec les objets qui contiennent la saisie pour propositions, `un membre (membre), avec recherche`. Au-delà de vingt objets, elle le devient d'elle-même, sans qu'on l'écrive ; vingt est un choix du projet, pas une norme. Une saisie qui ne désigne aucun objet est refusée. Une autre zone le refuse : « Seule une zone qui désigne un objet conservé se cherche ». Forme compacte : `_recherche`.
 - Les bornes d'une zone *(1.97)*, comme les intervalles des boucles (§ 9) : `, de 1 à 99`, `, au moins 16`, `, au plus 50` pour un nombre ; les mêmes suivies de `caractères` pour un texte, et `, de 4 caractères` pour une longueur exacte. Bornes comprises. Une saisie hors bornes est refusée avec la règle (« « Quantité » va de 1 à 99. », « « Code » a 4 caractères. »). Une zone d'un autre type n'en a pas. Forme compacte : `_min 1 _max 99`.
+- `, masqué` *(1.98)*, accordé (`masquée`) : une zone de texte sur une ligne dont la frappe est cachée, un mot de passe, `un code d'accès (texte), masqué`. La valeur ne s'affiche jamais, même au retour de l'écran ; un champ masqué laissé vide ne change pas la zone. Ce n'est qu'une affaire d'affichage : conservée, la valeur l'est en clair, GrymoiR ne chiffre pas encore les mots de passe. Forme compacte : `_masqué`.
 
 ### 22.7 Groupes et valeurs permises *(implémenté le 14 octobre 2026)*
 
@@ -1995,3 +1996,4 @@ L'écran d'accueil montre :
 | 1.95 | 2026-10-16 | § 22.6 : `, avec l'indication « … »`, une phrase sous le libellé d'une zone |
 | 1.96 | 2026-10-16 | § 22.6 : `, avec recherche`, une zone d'objet où l'on tape, d'elle-même au-delà de vingt objets |
 | 1.97 | 2026-10-16 | § 22.6 : les bornes d'une zone, `de 1 à 99`, `au moins`, `au plus`, en caractères pour un texte |
+| 1.98 | 2026-10-16 | § 22.6 : `, masqué`, une zone de texte à la frappe cachée (un mot de passe), sa valeur jamais réaffichée |

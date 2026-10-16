@@ -296,6 +296,10 @@ int main(void) {
     COMP("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».",
          "_écran x\n    _groupe « Statut »\n        _un état (« a » ; « b » ; « c ») _départ « a »\n    _fin\n    _texte « t »\n_fin\n");
     FIXE("L'écran x montre :\n    le groupe « Statut » :\n        un état (« a », « b » ou « c »), « a » au départ,\n    le texte « t ».");
+    /* le masque (§ 22.6) : accordé au genre, les deux formes */
+    FIXE("L'écran x montre :\n    un code (texte), masqué,\n    une clé (texte), au moins 8 caractères, masquée.");
+    COMP("L'écran x montre :\n    une clé (texte), masquée,\n    le texte « t ».",
+         "_écran x\n    _une clé (texte) _masqué\n    _texte « t »\n_fin\n");
     /* les bornes (§ 22.6) : les deux formes ; « de 4 caractères » pour deux bornes égales d'un texte */
     FIXE("L'écran x montre :\n    une quantité (nombre), de 1 à 99,\n    une remise (nombre), au moins −3,5, au plus 50,\n"
          "    un code (texte), de 4 caractères,\n    un nom (texte), de 2 à 30 caractères,\n    un mot (texte), au plus 200 caractères.");

@@ -791,6 +791,10 @@ int main(void) {
     /* des choix multiples (§ 22.1) : parmi les objets d'une entité conservée ; lus par les tournures du § 16.13 */
     VE("L'écran x montre :\n    des couleurs (texte).", 2, 19, "Des choix multiples se font parmi les objets d'une entité conservée");
     VE("Un genre, conservé, a :\n    un nom (texte), unique.\n" "L'écran x montre :\n    des genres.", 4, 15, "Type attendu entre parenthèses : « des genres (genre) ».");
+    /* le masque (§ 22.6) : une zone de texte sur une ligne */
+    VE("L'écran x montre :\n    un code (nombre), masqué.", 2, 23, "Seule une zone de texte sur une ligne se masque");
+    VE("L'écran x montre :\n    un code (texte), sur plusieurs lignes, masqué.", 2, 44, "Seule une zone de texte sur une ligne se masque");
+    VE("L'écran x montre :\n    un code (texte), masqué, masqué.", 2, 30, "« masqué » est déjà dit.");
     /* les bornes (§ 22.6) : en caractères pour un texte, sans pour un nombre ; dans l'ordre ; une fois */
     VE("L'écran x montre :\n    un code (texte), au plus 30.", 2, 22, "Une zone de texte se borne en caractères");
     VE("L'écran x montre :\n    une quantité (nombre), de 1 à 99 caractères.", 2, 28, "Une zone de nombre se borne sans « caractères »");

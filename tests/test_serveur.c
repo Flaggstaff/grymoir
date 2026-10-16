@@ -757,6 +757,20 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Le masque (§ 22.6) : un champ de mot de passe ; la valeur ne revient jamais dans la page ; vide, il n'efface rien */
+        const char *src = "L'écran x montre :\n    un code (texte), masqué,\n    un bouton « OK ».\n"
+                          "Quand on clique sur « OK » dans l'écran x :\n    Afficher « gardé : » puis le code de l'écran.\n"
+                          "    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0=s3cret"), get("/"), evenement("q=2&z0=&clic=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<input type=\"password\" id=\"z0\" name=\"z0\" value=\"\"");
+        NE_CONTIENT_PAS(sc.reponses[2], "s3cret");   /* jamais renvoyée dans la page */
+        CONTIENT(sc.reponses[2], "placeholder=\"••••••\"");
+        CONTIENT(sc.reponses[4], "gardé : s3cret");   /* le champ renvoyé vide ne l'a pas effacée */
+        liberer(&sc);
+    }
+
     {   /* Les bornes (§ 22.6) : hors bornes, refusé avec la règle ; dedans, accepté ; un texte a sa longueur de frappe */
         const char *src = "L'écran x montre :\n    une quantité (nombre), de 1 à 99,\n    un code (texte), au plus 4 caractères,\n"
                           "    un bouton « OK ».\n"

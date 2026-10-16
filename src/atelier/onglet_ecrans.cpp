@@ -211,6 +211,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.lecture_seule = el->entier & 4;
                         x.interrupteur = el->entier & 8;
                         x.recherche = el->entier & 32;
+                        x.masque = el->entier & 64;
                         auto ecrite = [](const char *c) {   // « -2.5 » → « −2,5 »
                             QString t = QString::fromUtf8(c ? c : "");
                             t.replace('.', ',');
@@ -425,6 +426,7 @@ void OngletEcrans::dessiner() {
         el[k].interrupteur = e.elements[k].interrupteur;
         el[k].indication = e.elements[k].indication;
         el[k].recherche = e.elements[k].recherche;
+        el[k].masque = e.elements[k].masque;
         if (e.elements[k].type == "texte") el[k].longueur_max = e.elements[k].borne_max.toInt();
         el[k].gauche = e.elements[k].gauche;
         el[k].haut = e.elements[k].haut;
@@ -1452,6 +1454,8 @@ void OngletEcrans::editer() {
             inter->setChecked(x.interrupteur);
             auto *cherche = new QCheckBox("avec recherche (un objet parmi beaucoup)");   // § 22.6
             cherche->setChecked(x.recherche);
+            auto *masq = new QCheckBox("masqué (un mot de passe)");   // § 22.6
+            masq->setChecked(x.masque);
             auto *bmin = new QLineEdit(x.borne_min), *bmax = new QLineEdit(x.borne_max);   // les bornes (§ 22.6)
             bmin->setPlaceholderText("aucune");
             bmax->setPlaceholderText(x.type == "texte" ? "aucune (en caractères)" : "aucune");
@@ -1469,6 +1473,7 @@ void OngletEcrans::editer() {
             f->addRow("", seule);
             f->addRow("", inter);
             f->addRow("", cherche);
+            f->addRow("", masq);
             f->addRow("Indication", indic);
             f->addRow("Au moins", bmin);
             f->addRow("Au plus", bmax);
@@ -1487,6 +1492,7 @@ void OngletEcrans::editer() {
                 n.lecture_seule = seule->isChecked();
                 n.interrupteur = inter->isChecked();
                 n.recherche = cherche->isChecked();
+                n.masque = masq->isChecked();
                 n.indication = indic->text().trimmed();
                 n.borne_min = bmin->text().trimmed();
                 n.borne_max = bmax->text().trimmed();

@@ -409,3 +409,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.63 | 2026-10-16 | L'indication d'une zone : une ligne « Indication » dans son panneau ; sous le libellé dans l'aperçu et à l'exécution |
 | 0.64 | 2026-10-16 | La recherche : un menu modifiable qui propose les objets contenant la saisie ; la case « avec recherche » dans le panneau d'une zone |
 | 0.65 | 2026-10-16 | Les bornes d'une zone : « Au moins » et « Au plus » dans son panneau ; la frappe d'un texte s'arrête à sa longueur |
+| 0.66 | 2026-10-16 | Le masque : la case « masqué » dans le panneau d'une zone ; la frappe cachée, la valeur jamais réécrite à l'exécution |
