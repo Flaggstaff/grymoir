@@ -877,6 +877,13 @@ int main(void) {
     VS("l", "Le | La | L' | Les écrans ont | Les nombres s'affichent");
     /* Les réglages en « Les » : style des nombres (§ 4.1) et apparence des écrans (§ 22.5) */
     VS("Les ", "écrans ont | nombres s'affichent");
+    /* après une liste ou un graphique : ce qui suit la virgule, et les champs de l'entité après « par » (§ 8) */
+    VS("Une tâche, conservée, a :\n    un titre (texte),\n    un état (texte).\nL'écran x montre :\n    le graphique des tâches conservées, ",
+       "par | avec la somme de | en secteurs");
+    VS("Une tâche, conservée, a :\n    un titre (texte),\n    un état (texte).\nL'écran x montre :\n    le graphique des tâches conservées, par ",
+       "titre | état");
+    VS("Une tâche, conservée, a :\n    un titre (texte),\n    un état (texte).\nL'écran x montre :\n    la liste des tâches conservées, par é",
+       "état");
     /* dans un écran (§ 8, § 22) : les débuts d'un élément selon le bloc ouvert ; après la virgule, ses états accordés, sa place */
     VS("L'écran x montre :\n    ", "un bouton « | le texte « | un | une | la liste des | le graphique des | l'image « | l'image de | "
        "côte à côte : | l'un sous l'autre : | le groupe « | en position libre : | les onglets : | le menu «");

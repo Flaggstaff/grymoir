@@ -6066,6 +6066,17 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             if (a->echec) break;
             el = chercher(a, u, c, 0, apres, NULL);
             if (!el) break;
+            if (cour(a)->type == J_VIRGULE) {   /* aide à la saisie (§ 8) : ce qui suit la virgule, et les champs après « par » */
+                const size_t pos = a->i + 1;
+                attendre_mot(a, pos, "par", 3);
+                if (graph) {
+                    attendre_mot(a, pos, "avec la somme de", strlen("avec la somme de"));
+                    attendre_mot(a, pos, "en secteurs", strlen("en secteurs"));
+                } else
+                    attendre_mot(a, pos, "avec", 4);
+                if (est_mot(voir(a, 1), "par"))
+                    for (size_t q = 0; q < c->nb; q++) attendre_mot(a, pos + 1, c->champs[q], strlen(c->champs[q]));
+            }
             if (graph) {
                 /* « , par état », « , avec la somme du montant », « , en secteurs » (§ 22.11) : la clé et la valeur sont des
                  * chemins, comme les colonnes d'une liste */
