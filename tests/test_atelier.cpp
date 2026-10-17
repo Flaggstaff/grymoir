@@ -8,6 +8,10 @@
 #include "fabrication.h"
 #include "projet.h"
 #include "rapport.h"
+#include <QTextEdit>
+#include <QPlainTextEdit>
+#include <cmath>
+#include "transcription.h"
 #include "schema.h"
 #include "reecriture.h"
 #include "lien.h"
@@ -350,6 +354,71 @@ int main(int argc, char **argv) {
         for (QPushButton *b2 : v.vue->findChildren<QPushButton *>()) choisir |= b2->property("fichier").toBool();
         VERIFIER(choisir);   // comme une zone de fichier : un bouton « Choisir un fichier… »
         delete v.vue;
+    }
+
+    // La transcription (§ 15.8) : le WAV lu sans greffon, le nettoyage, Whisper sur le modèle d'essai miniature, puis
+    // une vraie exécution où « une note (texte), transcrite du mémo » se remplit
+    {
+        auto wav = [](int frequence, int canaux, int bits, double secondes) {
+            QByteArray o;
+            const int n = (int)(frequence * secondes), octets = bits / 8;
+            auto u32 = [&](quint32 v) { for (int i = 0; i < 4; i++) o.append(char((v >> (8 * i)) & 0xFF)); };
+            auto u16 = [&](quint16 v) { o.append(char(v & 0xFF)); o.append(char(v >> 8)); };
+            o.append("RIFF"); u32(36 + n * canaux * octets); o.append("WAVEfmt "); u32(16); u16(1); u16((quint16)canaux);
+            u32((quint32)frequence); u32((quint32)(frequence * canaux * octets)); u16((quint16)(canaux * octets)); u16((quint16)bits);
+            o.append("data"); u32((quint32)(n * canaux * octets));
+            for (int i = 0; i < n; i++)
+                for (int c = 0; c < canaux; c++) {
+                    const double x = 0.3 * std::sin(2 * 3.14159265358979 * 440 * i / frequence);
+                    if (bits == 16) u16((quint16)(qint16)(x * 32767));
+                    else o.append(char((int)(128 + x * 127)));
+                }
+            return o;
+        };
+        std::vector<float> pcm;
+        VERIFIER(wav_en_16k(wav(44100, 2, 16, 1.0), &pcm) && pcm.size() >= 15990 && pcm.size() <= 16010);
+        float crete = 0;
+        for (float x : pcm) crete = std::max(crete, std::fabs(x));
+        VERIFIER(crete > 0.25f && crete < 0.35f);   // l'amplitude survit à la conversion
+        VERIFIER(wav_en_16k(wav(8000, 1, 8, 0.5), &pcm) && pcm.size() >= 7990 && pcm.size() <= 8010);
+        VERIFIER(!wav_en_16k(QByteArray("ID3 pas un wav du tout, bien sûr"), &pcm));
+        VERIFIER(nettoyer_transcription("Bonjour.\n[Propos inaudibles] [Propos inaudibles]\n[Sous-titres réalisés para la communauté d'Amara.org]\nFin.")
+                 == "Bonjour.\nFin.");
+        QString erreur;
+        transcrire_son(wav(16000, 1, 16, 2.0), MODELE_ESSAI, &erreur);
+        VERIFIER(erreur.isEmpty());   // le modèle d'essai se charge et tourne
+        QString sans;
+        VERIFIER(transcrire_son(wav(16000, 1, 16, 1.0), QString(), &sans).isEmpty() && sans.contains("introuvable"));
+        // une vraie exécution
+        qputenv("GRYMOIR_MODELE_TRANSCRIPTION", MODELE_ESSAI);
+        QTemporaryDir dossier;
+        {
+            QFile f(dossier.filePath("memo.wav"));
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write(wav(16000, 1, 16, 2.0));
+        }
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Une visite, conservée, a :\n    un mémo (son),\n    une note (texte), facultative, transcrite du mémo.\n"
+                    "Le v vaut une nouvelle visite :\n    Le mémo vaut le fichier « memo.wav ».\n"
+                    "Si la note de v est présente, afficher « transcrit ».\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto sortie = [&] {
+            QString t;
+            for (QPlainTextEdit *x : e.findChildren<QPlainTextEdit *>()) t += x->toPlainText();
+            for (QTextEdit *x : e.findChildren<QTextEdit *>()) t += x->toPlainText();
+            return t;
+        };
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 60000 && !sortie().contains("transcrit")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(sortie().contains("transcrit"));
+        qunsetenv("GRYMOIR_MODELE_TRANSCRIPTION");
     }
 
     // Les étiquettes (§ 16.15), dans l'exécution : la cellule d'une valeur colorée prend ses couleurs, sans le marqueur

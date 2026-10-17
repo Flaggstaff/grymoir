@@ -30,7 +30,7 @@ jobs:
         run: brew install qt
       - name: Qt 6 (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev qt6-base-dev-tools qt6-svg-dev cmake
+        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev qt6-base-dev-tools qt6-svg-dev qt6-multimedia-dev cmake
       - name: Fabrication des applications
         run: |
           for p in projets/*/; do
@@ -60,7 +60,7 @@ jobs:
           update: true
           install: >-
             make zip mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
-            mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-svg mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-svg mingw-w64-ucrt-x86_64-qt6-multimedia mingw-w64-ucrt-x86_64-qt6-tools
       - name: Fabrication des applications
         run: |
           for p in projets/*/; do

@@ -426,3 +426,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.72 | 2026-10-16 | § 8, E1 : l'identité de l'application (nom, version, éditeur) ; l'installateur Windows des applications ; `--identite`, `--icone-ico` |
 | 0.73 | 2026-10-16 | Les rapports en PDF (`rapport.cpp`, A4, numéros de page) ; une application fabriquée écrit ses fichiers dans Documents/<Nom> |
 | 0.74 | 2026-10-17 | Le son dans les menus : « Son » dans la palette et le clic droit, « Un son » parmi les zones de fichier ; le panneau d'une zone propose son, courriel, téléphone, adresse web et mot de passe |
+| 0.75 | 2026-10-17 | La transcription (grammaire § 15.8, étape 2) : whisper.cpp v1.9.5 intégré (`transcription.cpp`), le décodage des sons par Qt Multimedia, le modèle large-v3-turbo |

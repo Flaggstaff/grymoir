@@ -1,6 +1,7 @@
 // GrymoiR : l'atelier, exécution d'un programme dans sa propre fenêtre.
 #include "execution.h"
 #include "rapport.h"
+#include "transcription.h"
 #include "theme.h"
 #include "vue_ecran.h"
 
@@ -190,6 +191,18 @@ static void iface_ecran_image(void *contexte, size_t k, const unsigned char *oct
                                                                     : QByteArray());
 }
 
+// La transcription d'un son (§ 15.8) : dans le fil de la machine, la fenêtre reste libre pendant ce temps.
+static char *iface_transcrire(void *, const unsigned char *octets, size_t taille, char **erreur) {
+    QString probleme;
+    const QString texte = transcrire_son(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille),
+                                         modele_de_transcription(), &probleme);
+    if (!probleme.isEmpty()) {
+        *erreur = grym_dupliquer(probleme.toUtf8().constData());
+        return nullptr;
+    }
+    return grym_dupliquer(texte.toUtf8().constData());
+}
+
 // Un rapport en PDF (§ 15.6) : appelé dans le fil de la machine, dessiné dans celui de l'interface, qui attend.
 static unsigned char *iface_rendre_pdf(void *, const char *html, size_t *taille, char **erreur) {
     QByteArray octets;
@@ -377,7 +390,7 @@ void Travail::run() {
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
                    iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
                    iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf,
-                   nullptr};   // la transcription (§ 15.8) : Whisper, à brancher
+                   iface_transcrire};
     machine_interface(m, &i);
     situer(m, chemin, base_imposee, dossier_ecriture);
     Chaine sortie = {};

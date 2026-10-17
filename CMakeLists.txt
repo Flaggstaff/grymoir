@@ -12,7 +12,21 @@ set(CMAKE_AUTOMOC ON)
 
 # Qt 6.4 au moins : la version des distributions Linux courantes (Ubuntu 24.04, Debian 12).
 # Svg : les icônes du thème (vendor/lucide), rendues par QSvgRenderer.
-find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets Svg)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets Svg Multimedia)
+
+# La transcription des sons (grammaire, § 15.8) : whisper.cpp, épinglé à une version et à l'empreinte de son archive ;
+# seulement la bibliothèque, sans ses exemples. GGML_NATIVE à OFF : une application fabriquée tourne sur d'autres
+# machines que celle qui l'a construite.
+include(FetchContent)
+set(WHISPER_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(WHISPER_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(whisper
+    URL https://codeload.github.com/ggml-org/whisper.cpp/tar.gz/refs/tags/v1.9.5
+    URL_HASH SHA256=ff1a9053feb509ff9d7729703355541ae9690073a6b1c40eb692c962e0dc1720)
+FetchContent_MakeAvailable(whisper)
 
 # SQLite embarqué, avec les réglages du Makefile (vendor/sqlite, voir PROVENANCE.md).
 add_library(grym_sqlite STATIC vendor/sqlite/sqlite3.c)
@@ -36,8 +50,8 @@ endif()
 
 add_executable(grym-atelier MACOSX_BUNDLE WIN32
     src/atelier/principal.cpp src/atelier/fenetre.cpp src/atelier/editeur.cpp src/atelier/coloration.cpp
-    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp)
-target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg)
+    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp)
+target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia whisper)
 # Windows : l'icône de l'exécutable et le manifeste qui fait lire les chemins en UTF-8 (outils/windows).
 if(WIN32)
     enable_language(RC)
@@ -81,10 +95,12 @@ endif()
 # Essais de l'atelier, sans fenêtre (QT_QPA_PLATFORM=offscreen) : ctest --test-dir construction
 enable_testing()
 add_executable(test_atelier tests/test_atelier.cpp src/atelier/coloration.cpp src/atelier/editeur.cpp
-    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp)
+    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp)
 qt_add_resources(test_atelier "documentation_essais" PREFIX "/documentation" BASE docs FILES docs/grammaire.md docs/guide.md)
 target_include_directories(test_atelier PRIVATE src/atelier)
-target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg)
+target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia whisper)
+# le modèle d'essai miniature de whisper.cpp : il se charge et tourne comme un vrai, sans rien transcrire d'utile
+target_compile_definitions(test_atelier PRIVATE MODELE_ESSAI="${whisper_SOURCE_DIR}/models/for-tests-ggml-tiny.bin")
 grym_ressources_theme(test_atelier)
 # Le guide (docs/guide) : ses programmes à écrans se vérifient ici, dans une vraie fenêtre d'exécution.
 target_compile_definitions(test_atelier PRIVATE GRYM_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
