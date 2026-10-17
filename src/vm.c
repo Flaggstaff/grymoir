@@ -380,6 +380,10 @@ void machine_dossier(Machine *m, const char *dossier) {
     m->dossier = dossier && *dossier ? grym_dupliquer(dossier) : NULL;
 }
 
+void machine_transcripteur(Machine *m, char *(*transcrire)(void *, const unsigned char *, size_t, char **)) {
+    m->iface.transcrire = transcrire;   /* sur l'interface en place, son contexte compris (§ 15.8) */
+}
+
 void machine_dossier_ecriture(Machine *m, const char *dossier) {
     free(m->dossier_ecriture);
     m->dossier_ecriture = dossier && *dossier ? grym_dupliquer(dossier) : NULL;
@@ -458,9 +462,11 @@ void machine_detruire(Machine *m) {
             free(m->classes[i]->departs[k]);
             free(m->classes[i]->valeurs[k]);
             if (m->classes[i]->couleurs) free(m->classes[i]->couleurs[k]);   /* une classe d'écran n'en a pas */
+            if (m->classes[i]->transcrit_de) free(m->classes[i]->transcrit_de[k]);
         }
         free(m->classes[i]->valeurs);
         free(m->classes[i]->couleurs);
+        free(m->classes[i]->transcrit_de);
         free(m->classes[i]->departs);
         free(m->classes[i]->types);
         free(m->classes[i]->uniques);
@@ -550,6 +556,32 @@ static void ecrire_champ(Machine *m, Objet *o, size_t k, Valeur v) {
     if (e->etait_definie) e->ancienne = o->champs[k];
     o->champs[k] = v;
     o->definis[k] = 1;
+}
+
+static const unsigned char *octets_du_fichier(const Fichier *f, char **erreur);
+
+/* Un son vient d'être écrit dans le champ k : les champs « transcrite du … » qui le transcrivent reçoivent son texte,
+ * fabriqué par l'interface (§ 15.8). Sans transcripteur (console, navigateur), ou si la transcription échoue, ils
+ * restent tels quels. Rend l'index du champ transcrit, ou −1. */
+static long transcrire_si_besoin(Machine *m, Objet *o, size_t k) {
+    const ClasseVM *c = o->classe;
+    if (!c->transcrit_de || !o->definis[k] || o->champs[k].type != V_FICHIER || !m->iface.transcrire) return -1;
+    long fait = -1;
+    for (size_t q = 0; q < c->nb_champs; q++) {
+        if (!c->transcrit_de[q] || strcmp(c->transcrit_de[q], c->champs[k]) != 0) continue;
+        char *e = NULL;
+        const unsigned char *octets = octets_du_fichier(o->champs[k].fichier, &e);
+        free(e);
+        if (!octets) continue;
+        char *erreur = NULL;
+        char *texte = m->iface.transcrire(m->iface.contexte, octets, o->champs[k].fichier->taille, &erreur);
+        free(erreur);
+        if (!texte) continue;
+        ecrire_champ(m, o, q, vi_texte(texte));
+        free(texte);
+        fait = (long)q;
+    }
+    return fait;
 }
 
 /* Identifiant en base d'un objet, journalisé : une exécution ratée le rend tel qu'avant. */
@@ -3276,11 +3308,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         char **types_libres = grym_allouer((total ? total : 1) * sizeof *types_libres);   /* « texte », découpé */
         char **valeurs_libres = grym_allouer((total ? total : 1) * sizeof *valeurs_libres);
         char **couleurs = grym_allouer((total ? total : 1) * sizeof *couleurs);   /* leurs étiquettes (§ 16.15) */
+        char **transcrits = grym_allouer((total ? total : 1) * sizeof *transcrits);   /* « transcrite du mémo » (§ 15.8) */
         unsigned char *uniques = grym_allouer(total ? total : 1);
         size_t n = 0;
-        for (size_t q = 0; q < total; q++) { valeurs[q] = NULL; types_libres[q] = NULL; valeurs_libres[q] = NULL; couleurs[q] = NULL; }
+        for (size_t q = 0; q < total; q++) { valeurs[q] = NULL; types_libres[q] = NULL; valeurs_libres[q] = NULL; couleurs[q] = NULL; transcrits[q] = NULL; }
         for (size_t q = 0; parent && q < parent->nb_champs; q++) {
             couleurs[n] = parent->couleurs ? parent->couleurs[q] : NULL;
+            transcrits[n] = parent->transcrit_de ? parent->transcrit_de[q] : NULL;
             valeurs[n] = parent->valeurs[q];
             types[n] = parent->types[q];
             departs[n] = parent->departs[q];
@@ -3298,7 +3332,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
         for (size_t q = 0; q < cm->nb_champs && !probleme; q++) {
             types[n] = cm->types ? cm->types[q] : NULL;
-            if (types[n] && strchr(types[n], '\x1e')) {   /* « texte␞à faire␞fini » : valeurs permises (§ 16.15) */
+            if (types[n] && strchr(types[n], '\x1c')) {   /* « texte␜mémo » : transcrit d'un champ (son) (§ 15.8) */
+                const char *s = strchr(types[n], '\x1c');
+                types_libres[n] = grym_formater("%.*s", (int)(s - types[n]), types[n]);
+                transcrits[n] = (char *)(s + 1);
+                types[n] = types_libres[n];
+            } else if (types[n] && strchr(types[n], '\x1e')) {   /* « texte␞à faire␞fini » : valeurs permises (§ 16.15) */
                 const char *s = strchr(types[n], '\x1e');
                 types_libres[n] = grym_formater("%.*s", (int)(s - types[n]), types[n]);
                 const char *c2 = strchr(s + 1, '\x1d');   /* « ␝vr » : les couleurs, une lettre par valeur */
@@ -3337,6 +3376,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             free(types_libres);
             free(valeurs_libres);
             free(couleurs);
+            free(transcrits);
             free(valeurs);
             free(types);
             free(departs);
@@ -3359,6 +3399,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         c->departs = grym_allouer((n ? n : 1) * sizeof *c->departs);
         c->valeurs = grym_allouer((n ? n : 1) * sizeof *c->valeurs);
         c->couleurs = grym_allouer((n ? n : 1) * sizeof *c->couleurs);
+        c->transcrit_de = grym_allouer((n ? n : 1) * sizeof *c->transcrit_de);
         c->uniques = uniques;
         for (size_t q = 0; q < n; q++) {
             c->champs[q] = grym_dupliquer(champs[q]);
@@ -3366,12 +3407,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             c->departs[q] = departs[q] ? grym_dupliquer(departs[q]) : NULL;
             c->valeurs[q] = valeurs[q] ? grym_dupliquer(valeurs[q]) : NULL;
             c->couleurs[q] = couleurs[q] ? grym_dupliquer(couleurs[q]) : NULL;
+            c->transcrit_de[q] = transcrits[q] ? grym_dupliquer(transcrits[q]) : NULL;
         }
         free(champs);
         for (size_t q = 0; q < total; q++) { free(types_libres[q]); free(valeurs_libres[q]); }
         free(types_libres);
         free(valeurs_libres);
         free(couleurs);
+        free(transcrits);
         free(valeurs);
         free(types);
         free(departs);
@@ -5303,12 +5346,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     v = valeur_annee(a);
                 }
                 ecrire_champ(m, o, (size_t)k, v);
+                const long transcrit = transcrire_si_besoin(m, o, (size_t)k);   /* « transcrite du mémo » (§ 15.8) */
                 if (code == I_ECRIRE_CHAMP) {
                     Valeur ob = depiler(&pile);
                     valeur_liberer(&ob);
                     /* objet conservé : la base suit aussitôt, dans la transaction (§ 16.3) */
                     char *erreur = NULL;
-                    if (o->id && !base_ecrire_champ(m->base, o, (size_t)k, &erreur)) {
+                    if (o->id && (!base_ecrire_champ(m->base, o, (size_t)k, &erreur)
+                                  || (transcrit >= 0 && !base_ecrire_champ(m->base, o, (size_t)transcrit, &erreur)))) {
                         ok = echouer(diag, b, debut, erreur);
                         break;
                     }

@@ -4858,6 +4858,43 @@ static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const
                 for (int q = 0; q < 5; q++) avancer(a);
                 continue;
             }
+            if (cour(a)->type == J_VIRGULE && (est_mot(voir(a, 1), "transcrit") || est_mot(voir(a, 1), "transcrite"))
+                && !c->transcrit_de) {
+                /* « , transcrite du mémo » : le texte que la machine tire d'un champ (son) (§ 15.8) */
+                const Jeton *tt = voir(a, 1);
+                if (!tt->synthetique && est_mot(tt, "transcrite") != (gc == GENRE_FEMININ)) {
+                    erreur(a, tt, grym_formater("Accord : « %s ».", gc == GENRE_FEMININ ? "transcrite" : "transcrit"));
+                    return 0;
+                }
+                if (mode != 1 || !c->texte2 || strcmp(c->texte2, "texte") != 0 || c->texte3) {
+                    erreur(a, tt, grym_dupliquer("Seul un champ de texte d'une entité est transcrit : « une note (texte), transcrite du mémo »."));
+                    return 0;
+                }
+                size_t d = a->i + 2;   /* « du mémo », « de la note vocale », « de l'enregistrement » */
+                if (est_mot(&a->j[d], "du")) d++;
+                else if (est_mot(&a->j[d], "de") && (est_mot(&a->j[d + 1], "la") || (a->j[d + 1].type == J_ELISION && strcmp(a->j[d + 1].valeur, "l") == 0))) d += 2;
+                else if (a->j[d].type == J_ELISION && strcmp(a->j[d].valeur, "d") == 0) d++;
+                else {
+                    erreur(a, &a->j[d], grym_dupliquer("« transcrite du mémo » : le champ (son) attendu après « du »."));
+                    return 0;
+                }
+                size_t k = d;
+                while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_POINT && a->j[k].type != J_FIN
+                       && a->j[k].type != J_POINT_VIRGULE && !est_mot(&a->j[k], "et")) k++;
+                char *source = k > d ? (a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k)) : NULL;
+                const Noeud *src = NULL;
+                for (size_t q = 0; source && q < n->nb_enfants; q++)
+                    if (n->enfants[q]->texte && strcmp(n->enfants[q]->texte, source) == 0) src = n->enfants[q];
+                if (!src || !src->texte2 || strcmp(src->texte2, "son") != 0) {
+                    erreur(a, &a->j[d], source ? grym_formater("« %s » : un champ (son) de l'entité, déclaré avant celui-ci.", source)
+                                               : grym_dupliquer("Le champ (son) à transcrire est attendu."));
+                    free(source);
+                    return 0;
+                }
+                c->transcrit_de = source;
+                a->i = k;
+                continue;
+            }
             if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "unique") && c->op != 'U') {
                 if (mode != 1) {
                     erreur(a, voir(a, 1), grym_dupliquer("Seul un champ d'entité est unique."));

@@ -376,7 +376,8 @@ void Travail::run() {
     Interface i = {this, iface_disponible, iface_formulaire, iface_effacer, 1, iface_image, iface_fiche,
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
                    iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
-                   iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf};
+                   iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf,
+                   nullptr};   // la transcription (§ 15.8) : Whisper, à brancher
     machine_interface(m, &i);
     situer(m, chemin, base_imposee, dossier_ecriture);
     Chaine sortie = {};

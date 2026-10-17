@@ -962,6 +962,16 @@ static void type_de_champ(Impression *im, const Noeud *ch) {
     aj(im, ")");
     if (ch->op == 'U') aj(im, im->compact ? " _unique" : ", unique");
     if (ch->entier & 1) aj(im, im->compact ? " _facultatif" : ch->forme == 2 ? ", facultative" : ", facultatif");
+    if (ch->transcrit_de) {   /* « , transcrite du mémo » ; « _transcrit mémo » (§ 15.8) */
+        if (im->compact) { aj(im, " _transcrit "); ecrire_nom(im, ch->transcrit_de, 0); }
+        else {
+            aj(im, ch->forme == 2 ? ", transcrite " : ", transcrit ");
+            const int fem = genre_de_nom(im, ch->transcrit_de) == G_FEMININ;
+            const int voy = voyelle(ch->transcrit_de);
+            aj(im, voy ? "de l'" : fem ? "de la " : "du ");
+            aj(im, ch->transcrit_de);
+        }
+    }
     if (ch->entier & 2)
         aj(im, im->compact ? " _disparaît_avec"
                : genre_de_nom(im, ch->texte2) == G_FEMININ ? ", et disparaît avec elle" : ", et disparaît avec lui");

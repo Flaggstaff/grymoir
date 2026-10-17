@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.6 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.7 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1194,6 +1194,20 @@ Une visite, conservée, a :
 - Dans l'atelier et les applications fabriquées, une zone `(son)` accepte un fichier sonore ; l'écoute et l'enregistrement au micro demandent le module multimédia de Qt, pas encore intégré.
 - La transcription en texte (`transcrite du mémo`) est à l'étude : reconnaissance locale (Whisper), rien ne quitte l'ordinateur.
 
+### 15.8 Une transcription *(étape 1, le 17 octobre 2026)*
+
+```
+Une visite, conservée, a :
+    un mémo (son), facultatif,
+    une note (texte), facultative, transcrite du mémo.
+```
+
+- `, transcrite du mémo` (accordé : `transcrit` pour un champ masculin ; `du`, `de la`, `de l'`) : un champ de texte d'une entité reçoit le texte d'un champ `(son)` de la même entité, déclaré avant lui. Chaque fois que le son change, la machine le fait transcrire et range le texte dans le champ, conservé en base avec lui.
+- Le texte transcrit reste un texte ordinaire, **que l'utilisateur peut corriger**. Il est remplacé si le son change de nouveau.
+- La transcription est faite par l'interface. Sans transcripteur (la console, le navigateur aujourd'hui), le champ reste tel quel.
+- **Le transcripteur prévu** (étape 2) : Whisper, par whisper.cpp, sur l'ordinateur, sans rien envoyer ; le modèle large-v3-turbo, sans contexte entre les passages (`-mc 0`) et sans découpe du son, configuration retenue après essai sur une assemblée de 71 minutes (complète, sans boucle, environ 12 fois le temps réel sur un Mac à puce Apple). Tous les nombres seront mis en évidence pour relecture, les plus douteux d'abord (étape 3).
+- Forme compacte : `_une note (texte) _transcrit mémo`.
+
 ### 15.5 Lire un tableau
 
 ```
@@ -2088,3 +2102,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.4 | 2026-10-16 | § 14.8 : le mois, le jour, le jour de la semaine d'une date, `en toutes lettres` ; § 14.6 : les jours ouvrables ; § 22.11 : le graphique par mois, semaine ou année |
 | 2.5 | 2026-10-16 | Nouveau § 15.6 : un rapport, par l'extension (`.html`, `.pdf`), avec le titre et le total ; dans une application fabriquée, écrit dans Documents/<Nom> |
 | 2.6 | 2026-10-16 | Nouveau § 15.7 : le type `(son)`, reconnu à sa signature, écouté dans le navigateur |
+| 2.7 | 2026-10-17 | Nouveau § 15.8 : `, transcrite du mémo`, le texte d'un champ (son) rangé dans un champ de texte, par le transcripteur de l'interface |

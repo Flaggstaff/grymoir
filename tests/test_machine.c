@@ -59,6 +59,8 @@ static char *reponses(void *contexte, Chaine *sortie, const char *question) {
     return grym_dupliquer(sc->lignes[sc->i++]);
 }
 
+static char *faux_transcrire(void *contexte, const unsigned char *octets, size_t taille, char **erreur);
+
 static void verifier_saisie(int l, const char *src, const char *const *lignes, size_t n, const char *attendu) {
     total++;
     Portee *p = portee_creer();
@@ -84,6 +86,7 @@ static void verifier(int l, const char *src, const char *attendu, int interactif
     total++;
     Portee *p = portee_creer();
     Machine *m = machine_creer();
+    machine_transcripteur(m, faux_transcrire);   /* § 15.8 : un faux transcripteur, sans Whisper */
     char *r = executer_source(p, m, src, interactif);
     int ok = attendu[0] == '~' ? strstr(r, attendu + 1) != NULL : strcmp(r, attendu) == 0;
     if (!ok) signaler(l, src, attendu, r);
@@ -182,6 +185,13 @@ typedef struct {
     int effacements;
 } Page;
 
+/* Un faux transcripteur (§ 15.8) : il rend « transcription de N octets », pour vérifier que la machine l'appelle au
+ * bon moment et range son texte au bon endroit, sans Whisper. */
+static char *faux_transcrire(void *contexte, const unsigned char *octets, size_t taille, char **erreur) {
+    (void)contexte; (void)octets; (void)erreur;
+    return grym_formater("transcription de %lu octets", (unsigned long)taille);
+}
+
 static int page_disponible(void *contexte) { (void)contexte; return 1; }
 
 static Issue page_formulaire(void *contexte, Chaine *sortie, Champ *champs, size_t n, size_t *arret,
@@ -226,7 +236,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -753,7 +763,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0, {0}, {0}, 0 };
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
-                    scene_apparence, scene_etats, scene_image, NULL, NULL, NULL };
+                    scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -1771,6 +1781,13 @@ int main(void) {
         PROG("Une visite, conservée, a : un mémo (son).\nLe v vaut une nouvelle visite :\n"
              "    Le mémo vaut le fichier « _essai_img.png ».",
              "~« _essai_img.png » n'est pas un son");   /* une image n'est pas un son */
+        /* la transcription (§ 15.8) : le texte arrive dans la note, survit à la base, reste modifiable */
+        PROG("Une visite, conservée, a :\n    un lieu (texte),\n    un mémo (son),\n    une note (texte), facultative, transcrite du mémo.\n"
+             "Le v vaut une nouvelle visite :\n    Le lieu vaut « Bulle ».\n    Le mémo vaut le fichier « _essai_son.wav ».\n"
+             "Afficher la note de v.\nConserver v.\n"
+             "Pour chaque visite conservée :\n    Afficher la note de la visite.\n    La note de la visite devient « corrigée ».\n"
+             "Pour chaque visite conservée :\n    Afficher la note de la visite.",
+             "transcription de 16 octets\ntranscription de 16 octets\ncorrigée");
         remove("_essai_son.wav");
         remove("_essai_son.mp3");
         remove("_essai_son.ogg");

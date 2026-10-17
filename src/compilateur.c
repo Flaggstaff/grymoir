@@ -963,6 +963,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
                     char *t = grym_formater("%s\x1e%s%s%s", ch->texte2, ch->texte3, ch->couleurs ? "\x1d" : "", ch->couleurs ? ch->couleurs : "");
                     classe_typer_dernier_champ(cm, t, ch->op == 'U');
                     free(t);
+                } else if (ch->transcrit_de) {   /* « texte␜mémo » : le champ (son) qu'il transcrit (§ 15.8) */
+                    char *t = grym_formater("%s\x1c%s", ch->texte2, ch->transcrit_de);
+                    classe_typer_dernier_champ(cm, t, ch->op == 'U');
+                    free(t);
                 } else classe_typer_dernier_champ(cm, ch->texte2, ch->op == 'U');
                 if (ch->entier & 1) classe_facultatif_dernier_champ(cm);
                 if (ch->entier & 2) classe_cascade_dernier_champ(cm);

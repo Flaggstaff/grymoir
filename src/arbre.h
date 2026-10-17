@@ -176,6 +176,7 @@ typedef struct Noeud {
     char *texte2;         /* P_CLASSE : classe parente ; N_NOM d'un champ d'entité : son type (§ 16.1) */
     char *texte3;         /* P_CLASSE : pluriel irrégulier déclaré (« chevaux ») */
     char *indication;     /* zone d'écran : « , avec l'indication « … » », ou NULL (§ 22.6) */
+    char *transcrit_de;   /* champ texte « , transcrite du mémo » : le champ (son) qu'il transcrit (§ 15.8), ou NULL */
     char *couleurs;       /* champ à valeurs permises : une lettre par valeur, sa couleur d'étiquette (§ 16.15), ou NULL */
     char *unite;          /* zone d'écran : « , avec l'unité « CHF » [devant] » (entier & 128 : devant), ou NULL */
     char *borne_min, *borne_max;   /* zone d'écran : « de 1 à 99 », « au moins », « au plus », en forme canonique ; pour

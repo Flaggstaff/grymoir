@@ -40,6 +40,8 @@ size_t machine_regles_verifiees(const Machine *m);
 void machine_dossier(Machine *m, const char *dossier);
 /* Où s'écrivent les fichiers aux chemins relatifs (Enregistrer, Exporter), s'il diffère du dossier du programme. */
 void machine_dossier_ecriture(Machine *m, const char *dossier);
+/* Branche un transcripteur de sons sur l'interface en place (§ 15.8). */
+void machine_transcripteur(Machine *m, char *(*transcrire)(void *, const unsigned char *, size_t, char **));
 
 /* Fichier de la base des entités (§ 16.5) ; NULL : base en mémoire. Ouverte au premier besoin. */
 void machine_base(Machine *m, const char *chemin);

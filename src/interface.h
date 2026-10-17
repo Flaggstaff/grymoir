@@ -165,6 +165,9 @@ typedef struct {
     /* Un rapport en PDF (§ 15.6) : la page HTML d'un export, mise en page ; les octets du PDF (malloc), ou NULL avec
      * *erreur. NULL : l'interface ne sait pas en fabriquer (console, navigateur). */
     unsigned char *(*rendre_pdf)(void *contexte, const char *html, size_t *taille, char **erreur);
+    /* La transcription d'un son (§ 15.8) : son texte (malloc), ou NULL avec *erreur. NULL : l'interface ne sait pas
+     * transcrire (console, navigateur) ; le champ transcrit reste alors tel quel. */
+    char *(*transcrire)(void *contexte, const unsigned char *octets, size_t taille, char **erreur);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.
