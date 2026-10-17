@@ -61,14 +61,16 @@ extern "C" {
 static const int INTERRUPTEUR_PALETTE = 100;
 static const int CHOIX_MULTIPLES_PALETTE = 101;   // « des genres (genre) » (§ 22.1)
 static const int FICHIER_PALETTE = 102;           // une zone de fichier ou d'image (§ 22.1)
+static const int SON_PALETTE = 103;               // « un mémo (son) » (§ 15.7)
 // Ce que la palette et le clic droit proposent, dans cet ordre.
 static const std::initializer_list<int> SORTES_PALETTE = {ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE, INTERRUPTEUR_PALETTE,
-                                                          CHOIX_MULTIPLES_PALETTE, FICHIER_PALETTE, ELEMENT_LISTE,
+                                                          CHOIX_MULTIPLES_PALETTE, FICHIER_PALETTE, SON_PALETTE, ELEMENT_LISTE,
                                                           ELEMENT_GRAPHIQUE, ELEMENT_IMAGE, ELEMENT_ONGLETS, ELEMENT_MENU};
 static QString nom_palette(int sorte) {
     return sorte == ELEMENT_BOUTON ? "Bouton" : sorte == ELEMENT_TEXTE ? "Texte" : sorte == ELEMENT_ZONE ? "Zone"
          : sorte == INTERRUPTEUR_PALETTE ? "Interrupteur" : sorte == CHOIX_MULTIPLES_PALETTE ? "Choix multiples"
-         : sorte == FICHIER_PALETTE ? "Fichier" : sorte == ELEMENT_LISTE ? "Liste" : sorte == ELEMENT_GRAPHIQUE ? "Graphique"
+         : sorte == FICHIER_PALETTE ? "Fichier" : sorte == SON_PALETTE ? "Son" : sorte == ELEMENT_LISTE ? "Liste"
+         : sorte == ELEMENT_GRAPHIQUE ? "Graphique"
          : sorte == ELEMENT_IMAGE ? "Image" : sorte == ELEMENT_ONGLETS ? "Onglets" : "Menu";
 }
 
@@ -1687,15 +1689,19 @@ void OngletEcrans::ajouter(int sorte) {
         emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
         return;
     }
-    if (sorte == FICHIER_PALETTE) {   // une zone de fichier ou d'image (§ 22.1)
-        const QStringList sortes = {"Un fichier (un contrat, un document…)", "Une image (une photo…)"};
-        const QString quoi = QInputDialog::getItem(this, "Nouvelle zone de fichier", "On y choisit :", sortes, 0, false, &ok);
-        if (!ok) return;
+    if (sorte == FICHIER_PALETTE || sorte == SON_PALETTE) {   // une zone de fichier, d'image ou de son (§ 22.1, § 15.7)
+        const QStringList sortes = {"Un fichier (un contrat, un document…)", "Une image (une photo…)", "Un son (un mémo vocal…)"};
+        QString quoi = sortes[2];
+        if (sorte == FICHIER_PALETTE) {
+            quoi = QInputDialog::getItem(this, "Nouvelle zone de fichier", "On y choisit :", sortes, 0, false, &ok);
+            if (!ok) return;
+        }
         n.sorte = ELEMENT_ZONE;
-        n.type = quoi == sortes[1] ? "image" : "fichier";
+        n.type = quoi == sortes[1] ? "image" : quoi == sortes[2] ? "son" : "fichier";
         n.feminin = n.type == "image";
-        n.texte = QInputDialog::getText(this, "Nouvelle zone de fichier", "Nom (« contrat », « photo ») :", QLineEdit::Normal,
-                                        n.type == "image" ? "photo" : "contrat", &ok);
+        n.texte = QInputDialog::getText(this, sorte == SON_PALETTE ? "Nouvelle zone de son" : "Nouvelle zone de fichier",
+                                        "Nom (« contrat », « photo », « mémo ») :", QLineEdit::Normal,
+                                        n.type == "image" ? "photo" : n.type == "son" ? "mémo" : "contrat", &ok);
         if (!ok || n.texte.trimmed().isEmpty()) return;
         emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
         return;
@@ -1737,7 +1743,8 @@ void OngletEcrans::ajouter(int sorte) {
     else if (sorte == ELEMENT_ZONE) {
         n.texte = QInputDialog::getText(this, "Nouvelle zone", "Nom (« pays », « date de début ») :", QLineEdit::Normal, "", &ok);
         if (ok) {
-            QStringList types = {"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure", "fichier", "image"};
+            QStringList types = {"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure", "fichier", "image",
+                                 "son", "courriel", "téléphone", "adresse web", "mot de passe"};
             for (const auto &en : lire_schema(dossier)) types << en.nom;
             n.type = QInputDialog::getItem(this, "Nouvelle zone", "Type :", types, 0, false, &ok);
         }
@@ -1752,7 +1759,7 @@ void OngletEcrans::ajouter(int sorte) {
         for (const auto &en : schema)
             if (en.nom == n.texte)
                 for (const auto &c : en.champs)
-                    if (c.type != "fichier" && c.type != "image") champs << c.nom;
+                    if (c.type != "fichier" && c.type != "image" && c.type != "son" && c.type != "mot de passe") champs << c.nom;
         if (champs.isEmpty()) return;
         n.cle = QInputDialog::getItem(this, "Nouveau graphique", "Regroupés par :", champs, 0, false, &ok);
     } else {

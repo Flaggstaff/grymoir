@@ -386,7 +386,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             }
             else if (e.type == "vrai ou faux" && e.interrupteur) w = new Interrupteur(e.texte);   // § 22.6
             else if (e.type == "vrai ou faux") w = new QCheckBox(e.texte);   // la case porte son libellé : un clic dessus la coche
-            else if (e.type == "fichier" || e.type == "image") {   // une zone de fichier ou d'image : choisir un fichier
+            else if (e.type == "fichier" || e.type == "image" || e.type == "son") {   // une zone de fichier, d'image ou de son : choisir un fichier
                 auto *b = new QPushButton(QString::fromUtf8("Choisir un fichier…"));
                 b->setProperty("fichier", true);
                 b->setProperty("image", e.type == "image");

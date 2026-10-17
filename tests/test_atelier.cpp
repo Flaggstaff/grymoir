@@ -324,6 +324,34 @@ int main(int argc, char **argv) {
         VERIFIER(complet());
     }
 
+    // Une zone de son (§ 15.7), telle que la palette la crée : « un mémo (son) », et son aperçu choisit un fichier
+    {
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    le texte « t ».\n");
+        }
+        Geste g;
+        ElementNouveau n;
+        n.sorte = ELEMENT_ZONE;
+        n.type = "son";
+        n.texte = QString::fromUtf8("mémo");
+        VERIFIER(ecran_ajouter(dossier.path(), "x", n, &g, -1, QPoint()).isEmpty());
+        QFile f(chemin);
+        VERIFIER(f.open(QIODevice::ReadOnly) && QString::fromUtf8(f.readAll()).contains(QString::fromUtf8("un mémo (son)")));
+        QVector<ElementVue> el(1);
+        el[0].sorte = ELEMENT_ZONE;
+        el[0].texte = QString::fromUtf8("Mémo");
+        el[0].type = "son";
+        VueEcran v = dessiner_ecran("Saisie", el);
+        bool choisir = false;
+        for (QPushButton *b2 : v.vue->findChildren<QPushButton *>()) choisir |= b2->property("fichier").toBool();
+        VERIFIER(choisir);   // comme une zone de fichier : un bouton « Choisir un fichier… »
+        delete v.vue;
+    }
+
     // Les étiquettes (§ 16.15), dans l'exécution : la cellule d'une valeur colorée prend ses couleurs, sans le marqueur
     {
         QTemporaryDir dossier;
@@ -3158,7 +3186,7 @@ int main(int argc, char **argv) {
             delete m;
         };
         {   // la palette et le clic droit proposent les mêmes éléments, dans le même ordre, les plus récents compris
-            const QStringList attendus = {"Bouton", "Texte", "Zone", "Interrupteur", "Choix multiples", "Fichier", "Liste",
+            const QStringList attendus = {"Bouton", "Texte", "Zone", "Interrupteur", "Choix multiples", "Fichier", "Son", "Liste",
                                           "Graphique", "Image", "Onglets", "Menu"};
             QStringList palette;
             for (QPushButton *b : o.findChildren<QPushButton *>()) if (attendus.contains(b->text())) palette << b->text();
