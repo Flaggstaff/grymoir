@@ -311,11 +311,17 @@ int main(int argc, char **argv) {
         e.show();
         e.demarrer();
         const QString rapport = dossier.filePath("rapport.pdf");
+        // le fichier existe dès que son écriture commence : on attend un PDF complet, de « %PDF- » à « %%EOF »
+        auto complet = [&] {
+            QFile f(rapport);
+            if (!f.open(QIODevice::ReadOnly)) return false;
+            const QByteArray o = f.readAll();
+            return o.startsWith("%PDF-") && o.trimmed().endsWith("%%EOF");
+        };
         QElapsedTimer z;
         z.start();
-        while (z.elapsed() < 15000 && !QFileInfo::exists(rapport)) QApplication::processEvents(QEventLoop::AllEvents, 20);
-        QFile f(rapport);
-        VERIFIER(f.open(QIODevice::ReadOnly) && f.read(5) == "%PDF-");
+        while (z.elapsed() < 60000 && !complet()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(complet());
     }
 
     // Les étiquettes (§ 16.15), dans l'exécution : la cellule d'une valeur colorée prend ses couleurs, sans le marqueur
