@@ -717,7 +717,7 @@ static void *erreur_a(Analyse *a, int ligne, int colonne, char *message) {
     return NULL;
 }
 
-static const char *const TYPES[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image",
+static const char *const TYPES[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image", "son",
                                      "année", "heure", "courriel", "téléphone", "adresse web", "mot de passe" };   /* types.h */
 
 /* ---------------------------------------------------------------- */
@@ -857,7 +857,7 @@ static int verifier_type(Analyse *a, const char *champ, const char *attendu, con
     const char *vu = attendu ? type_statique(v) : NULL;
     if (!vu || strcmp(attendu, vu) == 0) return 1;
     if (strcmp(attendu, "nombre") == 0 && strcmp(vu, "nombre entier") == 0) return 1;
-    if (strcmp(attendu, "image") == 0 && strcmp(vu, "fichier") == 0) return 1;   /* vérifié à l'exécution */
+    if ((strcmp(attendu, "image") == 0 || strcmp(attendu, "son") == 0) && strcmp(vu, "fichier") == 0) return 1;   /* vérifié à l'exécution */
     /* un texte va dans un courriel, un téléphone, une adresse web, et inversement ; la forme se vérifie à l'exécution,
      * quand la valeur entre dans un champ ou une zone : ici, ce peut être un morceau (« dont le courriel contient … ») */
     if (type_textuel(attendu) && type_textuel(vu)) return 1;
@@ -1605,7 +1605,7 @@ static int verifier_dont(Analyse *a, const Classe *e, Noeud *n) {
             const char *refus = NULL;
             if (op == 'A' || op == 'R')
                 refus = NULL;   /* « est absent », « est présent » : tout champ */
-            else if (!t || strcmp(t, "fichier") == 0 || strcmp(t, "image") == 0)
+            else if (!t || type_fichier(t))
                 refus = "un fichier ne se compare pas";
             else if ((op == 'c' || op == 'd' || op == 'f') && !type_textuel(t))
                 refus = "contient, commence par et finit par s'appliquent à un texte";
@@ -4188,7 +4188,7 @@ static Noeud *pour_chaque_conserve(Analyse *a, int colonne, const Jeton *t, cons
         if (k > d && article_de(&a->j[d]) != ART_AUCUN) d++;   /* « par le nom » */
         char *champ = k > d ? (a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k)) : NULL;
         const char *type = champ ? type_du_champ(a->portee, e, champ) : NULL;
-        if (!champ || !type || strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0 || !type_de_base(type)) {
+        if (!champ || !type || type_fichier(type) || !type_de_base(type)) {
             erreur(a, &a->j[d], champ && !type
                 ? grym_formater("« %s » n'est pas un champ %s %s.", champ, e->genre == GENRE_FEMININ ? "de la" : "du", e->nom)
                 : grym_dupliquer("Tri attendu sur un champ de texte, de nombre, de date ou vrai ou faux : « , par nom »."));
@@ -4685,7 +4685,7 @@ static char *lire_type(Analyse *a, const char *soi) {
 static Noeud *unaire(Analyse *a);
 
 static int est_fichier_type(const char *t) {
-    return t && (strcmp(t, "fichier") == 0 || strcmp(t, "image") == 0);
+    return t && (type_fichier(t));
 }
 
 static char *lire_type(Analyse *a, const char *soi);
@@ -6332,7 +6332,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 if (k > dd && article_de(&a->j[dd]) != ART_AUCUN) dd++;
                 char *champ = k > dd ? (a->j[dd].type == J_CROCHETS ? grym_dupliquer(a->j[dd].valeur) : cle(a, dd, k)) : NULL;
                 const char *type = champ ? type_du_champ(a->portee, c, champ) : NULL;
-                if (!type || strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0 || !type_de_base(type)) {
+                if (!type || type_fichier(type) || !type_de_base(type)) {
                     erreur(a, &a->j[dd], grym_dupliquer("Tri attendu sur un champ de texte, de nombre, de date ou vrai ou "
                                                          "faux : « , par nom »."));
                     free(champ);
@@ -7099,7 +7099,7 @@ static Noeud *exporter(Analyse *a, const Jeton *t) {
         if (k > dd && article_de(&a->j[dd]) != ART_AUCUN) dd++;
         char *champ = k > dd ? (a->j[dd].type == J_CROCHETS ? grym_dupliquer(a->j[dd].valeur) : cle(a, dd, k)) : NULL;
         const char *type = champ ? type_du_champ(a->portee, c, champ) : NULL;
-        if (!type || strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0 || !type_de_base(type)) {
+        if (!type || type_fichier(type) || !type_de_base(type)) {
             free(champ);
             noeud_liberer(el);
             return erreur(a, &a->j[dd], grym_dupliquer("Tri attendu sur un champ de texte, de nombre, de date ou vrai ou "

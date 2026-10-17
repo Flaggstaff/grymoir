@@ -10,6 +10,11 @@ static inline int type_textuel(const char *t) {
                  || strcmp(t, "adresse web") == 0 || strcmp(t, "mot de passe") == 0);
 }
 
+/* Un fichier (§ 15.1) : « fichier », ou un fichier à la signature reconnue, « image » (§ 15.3) ou « son » (§ 15.7). */
+static inline int type_fichier(const char *t) {
+    return t && (strcmp(t, "fichier") == 0 || strcmp(t, "image") == 0 || strcmp(t, "son") == 0);
+}
+
 /* Un mot de passe (§ 16.1) : rangé en empreinte, jamais en clair ; il ne se lit pas, il se vérifie (« correspond à »). */
 static inline int type_secret(const char *t) {
     return t && strcmp(t, "mot de passe") == 0;

@@ -128,7 +128,7 @@ QString lire_contenu(const QString &base, const QString &entite, const QVector<E
             const QString nom = col.mid(2);
             const ChampSchema ch = champs.value(nom);
             const QString x = alias + "." + sql_nom("c ", nom);
-            if (ch.type == "fichier" || ch.type == "image" || reelles.contains("n " + nom)) {
+            if (ch.type == "fichier" || ch.type == "image" || ch.type == "son" || reelles.contains("n " + nom)) {
                 // format 2 (docs/vm.md, § 8) : la colonne garde le numéro d'une ligne de grym_fichier, qui sait la
                 // taille ; une base pas encore convertie garde les octets eux-mêmes
                 const QString taille = fichiers_a_part

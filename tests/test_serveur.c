@@ -760,6 +760,30 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Un son (§ 15.7) : un lecteur dans le fil et dans la fiche, servi avec son type ; une zone qui ouvre le micro */
+        FILE *w = fopen("_essai_memo.wav", "wb");
+        static const unsigned char WAV[] = { 'R', 'I', 'F', 'F', 36, 0, 0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ' };
+        if (w) { fwrite(WAV, 1, sizeof WAV, w); fclose(w); }
+        const char *src = "Une visite, conservée, a :\n    un lieu (texte),\n    un mémo (son).\n"
+                          "Le v vaut une nouvelle visite :\n    Le lieu vaut « Bulle ».\n    Le mémo vaut le fichier « _essai_memo.wav ».\n"
+                          "Afficher le mémo de v.\nAfficher la fiche de v.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), get("/image/1"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<audio controls preload=\"metadata\" src=\"/image/");
+        CONTIENT(sc.reponses[0], "</audio></td>");   /* dans la fiche aussi */
+        CONTIENT(sc.reponses[1], "audio/wav");
+        liberer(&sc);
+        remove("_essai_memo.wav");
+        const char *src2 = "L'écran x montre :\n    un mémo (son),\n    un bouton « OK ».\n"
+                           "Quand on clique sur « OK » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=1"), get("/"));
+        servir(src2, &sc);
+        CONTIENT(sc.reponses[0], "accept=\"audio/*\" capture");
+        liberer(&sc);
+    }
+
     {   /* Le graphique par mois (§ 22.11) : les tâches créées dans le désordre, les mois dans l'ordre du calendrier,
          * une échéance absente à la fin */
         const char *src = "Une tâche, conservée, a :\n    un nom (texte),\n    une échéance (date), facultative.\n"

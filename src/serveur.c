@@ -605,6 +605,8 @@ static void rediriger(Serveur *s, const char *en_plus) {
     free(h);
 }
 
+static char *balise_media(long id, const char *type, const char *description);
+
 static void debut_page(const Serveur *s, Chaine *c) {
     chaine_ajouter(c, "<!DOCTYPE html>\n<html lang=\"fr\"><head><meta charset=\"utf-8\">"
                       "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>");
@@ -622,11 +624,9 @@ static void debut_page(const Serveur *s, Chaine *c) {
             if (k < s->nb_images && s->images[k].html) {
                 chaine_ajouter(c, s->images[k].html);
             } else if (k < s->nb_images && !s->images[k].cachee) {
-                char *img = grym_formater("<img src=\"/image/%ld\" alt=\"", s->images[k].id);
+                char *img = balise_media(s->images[k].id, s->images[k].type, s->images[k].description);
                 chaine_ajouter(c, img);
                 free(img);
-                echapper(c, s->images[k].description);
-                chaine_ajouter(c, "\">");
             }
         }
         chaine_ajouter(c, "</pre>\n");
@@ -650,7 +650,7 @@ static void page_simple(Serveur *s, const char *statut, const char *message) {
 }
 
 static int est_fichier(const Champ *c) {
-    return c->type && (strcmp(c->type, "fichier") == 0 || strcmp(c->type, "image") == 0);
+    return c->type && (type_fichier(c->type));
 }
 
 static int est_oui_non(const Champ *c) {
@@ -716,6 +716,7 @@ static void page_question(Serveur *s, const Question *q) {
                 chaine_ajouter(&c, id);
                 chaine_ajouter(&c, "\"");
                 if (strcmp(ch->type, "image") == 0) chaine_ajouter(&c, " accept=\"image/png,image/jpeg,image/gif,image/webp\"");
+                if (strcmp(ch->type, "son") == 0) chaine_ajouter(&c, " accept=\"audio/*\"");   /* § 15.7 */
                 chaine_ajouter(&c, attente);
                 chaine_ajouter(&c, ">");
                 if (ch->valeur) {
@@ -863,7 +864,7 @@ static void indication(Chaine *c, const ElementEcran *el, const char *id) {
     chaine_ajouter(c, "</p>");
 }
 static int est_zone_fichier(const ElementEcran *e) {   /* une zone de fichier ou d'image : un champ de choix de fichier */
-    return e->sorte == ELEMENT_ZONE && e->type && (strcmp(e->type, "fichier") == 0 || strcmp(e->type, "image") == 0);
+    return e->sorte == ELEMENT_ZONE && e->type && (type_fichier(e->type));
 }
 
 /* Une zone de saisie : son libellé au-dessus, son contrôle ; une case à cocher porte son libellé. */
@@ -1016,7 +1017,8 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
             chaine_ajouter(c, id);
             chaine_ajouter(c, "\" name=\"");
             chaine_ajouter(c, id);
-            chaine_ajouter(c, strcmp(el->type, "image") == 0 ? "\" accept=\"image/png,image/jpeg,image/gif,image/webp\"" : "\"");
+            chaine_ajouter(c, strcmp(el->type, "image") == 0 ? "\" accept=\"image/png,image/jpeg,image/gif,image/webp\""
+                            : strcmp(el->type, "son") == 0 ? "\" accept=\"audio/*\" capture" : "\"");   /* le micro d'un téléphone */
             chaine_ajouter(c, attr);
             chaine_ajouter(c, ">");
         } else if (el->plusieurs_lignes) {   /* « sur plusieurs lignes » : Entrée va à la ligne (§ 22.6) */
@@ -1783,8 +1785,24 @@ static struct Image *nouveau_segment(Serveur *s) {
 }
 
 static const char *type_image(const char *format) {
+    static const char *const SONS[][2] = { {"WAV", "audio/wav"}, {"MP3", "audio/mpeg"}, {"AAC", "audio/aac"},
+                                           {"M4A", "audio/mp4"}, {"Ogg", "audio/ogg"}, {"WebM", "audio/webm"},
+                                           {"FLAC", "audio/flac"} };   /* un son se joue (§ 15.7) */
+    for (size_t k = 0; k < sizeof SONS / sizeof *SONS; k++) if (strcmp(format, SONS[k][0]) == 0) return SONS[k][1];
     return strcmp(format, "PNG") == 0 ? "image/png" : strcmp(format, "JPEG") == 0 ? "image/jpeg"
          : strcmp(format, "GIF") == 0 ? "image/gif" : "image/webp";
+}
+
+/* Une image dans le fil ou une fiche, ou un son : un lecteur, avec ses commandes (§ 15.7). */
+static char *balise_media(long id, const char *type, const char *description) {
+    Chaine c = {0};
+    char *d = grym_formater(strncmp(type, "audio/", 6) == 0 ? "<audio controls preload=\"metadata\" src=\"/image/%ld\" aria-label=\""
+                                                            : "<img src=\"/image/%ld\" alt=\"", id);
+    chaine_ajouter(&c, d);
+    free(d);
+    echapper(&c, description ? description : "");
+    chaine_ajouter(&c, strncmp(type, "audio/", 6) == 0 ? "\"></audio>" : "\">");
+    return chaine_rendre(&c);
 }
 
 /* « Afficher la photo. » : l'image prend place dans le fil (docs/v2.md, § 10). */
@@ -1820,11 +1838,9 @@ static void serveur_afficher_fiche(void *contexte, Chaine *sortie, const char *t
             im->taille = l[k].taille;
             im->type = type_image(l[k].format);
             im->description = grym_dupliquer(l[k].texte);
-            char *img = grym_formater("<img src=\"/image/%ld\" alt=\"", im->id);
+            char *img = balise_media(im->id, im->type, l[k].texte);
             chaine_ajouter(&h, img);
             free(img);
-            echapper(&h, l[k].texte);
-            chaine_ajouter(&h, "\">");
         } else {
             echapper(&h, l[k].texte);
         }

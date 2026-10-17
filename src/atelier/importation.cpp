@@ -101,7 +101,7 @@ QVector<ChampSchema> champs_importables(const QString &entite, const QVector<Ent
     QVector<ChampSchema> r;
     for (const EntiteSchema *e : lignee(entite, par_nom))
         for (const auto &c : e->champs) {
-            if (c.multiple || c.type == "fichier" || c.type == "image") continue;
+            if (c.multiple || c.type == "fichier" || c.type == "image" || c.type == "son") continue;
             if (c.lien && !cle_de(c.type, par_nom)) continue;
             r << c;
         }

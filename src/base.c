@@ -261,11 +261,11 @@ static int executer(Base *b, const char *sql, char **erreur) {
 }
 
 static int est_fichier(const char *type) {
-    return strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0;
+    return type_fichier(type);
 }
 
 static int est_lien(const char *type) {
-    static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image",
+    static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image", "son",
                                         "année", "heure" };
     for (size_t k = 0; k < sizeof BASE / sizeof *BASE; k++) if (strcmp(type, BASE[k]) == 0) return 0;
     return !type_textuel(type);   /* courriel, téléphone, adresse web : des textes, pas des liens (types.h) */

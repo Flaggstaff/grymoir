@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.5 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.6 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1180,6 +1180,20 @@ Exporter les membres conservés, par nom, avec le nom, la catégorie et la cotis
 - **Où s'écrit le fichier** : à côté du programme, comme `Enregistrer` (§ 15.2) ; dans une application fabriquée, qui n'est pas modifiable, dans le dossier `Documents/<Nom de l'application>` de l'utilisateur.
 - Forme compacte : `_exporter membre _conservé _avec nom ; cotisation _titre « C » _total cotisation _dans « m.pdf »`.
 
+### 15.7 Un son *(implémenté le 16 octobre 2026)*
+
+```
+Une visite, conservée, a :
+    un lieu (texte),
+    un mémo (son), facultatif.
+```
+
+- `(son)` est un fichier dont la signature est reconnue, comme `(image)` (§ 15.3) : WAV, MP3, AAC, M4A, Ogg, WebM, FLAC. Un autre fichier est refusé : « « contrat.pdf » n'est pas un son (WAV, MP3, M4A, Ogg, WebM ou FLAC). » `le format du mémo` donne le format reconnu.
+- M4A se reconnaît à son conteneur MP4, qui peut aussi porter une vidéo : on n'en écouterait que le son.
+- Dans le navigateur, `Afficher le mémo de v.` et la fiche montrent un lecteur, avec ses commandes. Une zone `(son)` accepte un fichier sonore ; sur un téléphone, elle propose aussi d'enregistrer au micro (attribut `capture`, selon le navigateur du téléphone).
+- Dans l'atelier et les applications fabriquées, une zone `(son)` accepte un fichier sonore ; l'écoute et l'enregistrement au micro demandent le module multimédia de Qt, pas encore intégré.
+- La transcription en texte (`transcrite du mémo`) est à l'étude : reconnaissance locale (Whisper), rien ne quitte l'ordinateur.
+
 ### 15.5 Lire un tableau
 
 ```
@@ -2073,3 +2087,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.3 | 2026-10-16 | Nouveau § 22.14 : le type `(mot de passe)`, rangé en empreinte (PBKDF2-HMAC-SHA256), illisible, vérifié par `correspond à` |
 | 2.4 | 2026-10-16 | § 14.8 : le mois, le jour, le jour de la semaine d'une date, `en toutes lettres` ; § 14.6 : les jours ouvrables ; § 22.11 : le graphique par mois, semaine ou année |
 | 2.5 | 2026-10-16 | Nouveau § 15.6 : un rapport, par l'extension (`.html`, `.pdf`), avec le titre et le total ; dans une application fabriquée, écrit dans Documents/<Nom> |
+| 2.6 | 2026-10-16 | Nouveau § 15.7 : le type `(son)`, reconnu à sa signature, écouté dans le navigateur |

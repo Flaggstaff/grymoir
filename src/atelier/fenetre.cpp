@@ -789,7 +789,8 @@ void Fenetre::rafraichir_schema() {
     schema->choisir(garder);
     entite_choisie = garder;
     entites_lues = entites;
-    types_lus = QStringList({"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure", "fichier", "image"});
+    types_lus = QStringList({"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure", "fichier", "image", "son",
+                             "courriel", "téléphone", "adresse web", "mot de passe"});
     for (const auto &e : entites) types_lus << e.nom;
     montrer_choisie();
     // une entité nouvelle vient de recevoir sa place : on la garde, pour qu'elle ne bouge plus

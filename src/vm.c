@@ -805,6 +805,29 @@ static const char *format_image(const unsigned char *o, size_t n) {
     return NULL;
 }
 
+/* Le format d'un son, à sa signature (§ 15.7) ; NULL si ce n'en est pas un. M4A : le conteneur MP4 (« ftyp »), qui
+ * peut aussi porter une vidéo, dont on ne garderait que le son à l'écoute. */
+static const char *format_son(const unsigned char *o, size_t n) {
+    if (n >= 12 && memcmp(o, "RIFF", 4) == 0 && memcmp(o + 8, "WAVE", 4) == 0) return "WAV";
+    if (n >= 3 && memcmp(o, "ID3", 3) == 0) return "MP3";
+    if (n >= 2 && o[0] == 0xFF && (o[1] & 0xF6) == 0xF2) return "MP3";   /* une trame MPEG audio, couche III */
+    if (n >= 2 && o[0] == 0xFF && (o[1] & 0xF6) == 0xF0) return "AAC";   /* ADTS */
+    if (n >= 12 && memcmp(o + 4, "ftyp", 4) == 0) return "M4A";
+    if (n >= 4 && memcmp(o, "OggS", 4) == 0) return "Ogg";
+    if (n >= 4 && o[0] == 0x1A && o[1] == 0x45 && o[2] == 0xDF && o[3] == 0xA3) return "WebM";
+    if (n >= 4 && memcmp(o, "fLaC", 4) == 0) return "FLAC";
+    return NULL;
+}
+
+static const unsigned char *octets_du_fichier(const Fichier *f, char **erreur);
+
+/* Ce qu'une interface sait montrer d'un fichier : le format d'une image, ou celui d'un son (§ 15.7), ou NULL. */
+static const char *format_montre(const Fichier *f, char **illisible) {
+    if (f->format) return f->format;
+    const unsigned char *o = octets_du_fichier(f, illisible);
+    return o ? format_son(o, f->taille) : NULL;
+}
+
 static char *chemin_effectif(const Machine *m, const char *ecrit) {
     if (ecrit[0] == '/' || !m->dossier) return grym_dupliquer(ecrit);
     return grym_formater("%s/%s", m->dossier, ecrit);
@@ -1423,6 +1446,15 @@ static char *verifier_type_champ(const Machine *m, const char *champ, const char
         if (v->type == V_FICHIER && !v->fichier->format)
             return grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF ou WebP).", v->fichier->nom);
         ok = v->type == V_FICHIER;
+    } else if (strcmp(type, "son") == 0) {   /* § 15.7 : la signature, lue dans les octets */
+        if (v->type == V_FICHIER) {
+            char *e = NULL;
+            const unsigned char *o = octets_du_fichier(v->fichier, &e);
+            if (!o) return e ? e : grym_formater("« %s » ne se lit pas.", v->fichier->nom);
+            if (!format_son(o, v->fichier->taille))
+                return grym_formater("« %s » n'est pas un son (WAV, MP3, M4A, Ogg, WebM ou FLAC).", v->fichier->nom);
+        }
+        ok = v->type == V_FICHIER;
     } else if (v->type == V_OBJET) {
         for (const ClasseVM *c = v->objet->classe; c && !ok; c = c->parent) ok = strcmp(c->nom, type) == 0;
     }
@@ -1909,7 +1941,7 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
         const char *champ = cl->champs[k], *type = cl->types[k];
         if ((cl->uniques[k] & 8) || initialise(deja, champ) || !type) continue;
         ChampMachine ci = { k, NULL, NULL, 0, (cl->uniques[k] & 2) != 0, (cl->uniques[k] & 1) != 0, NULL, 0, vi_absent(champ) };
-        ci.fichier = strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0;
+        ci.fichier = type_fichier(type);
         static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure" };
         int de_base = ci.fichier;
         for (size_t q = 0; q < sizeof BASE / sizeof *BASE; q++) de_base |= strcmp(type, BASE[q]) == 0;
@@ -2057,11 +2089,11 @@ static char *afficher_fiche(Machine *m, Objet *o, Chaine *sortie) {
         } else {
             textes[k] = texte_valeur(m, &o->champs[k]);
             char *illisible = NULL;
-            if (o->champs[k].type == V_FICHIER && o->champs[k].fichier->format
-                && octets_du_fichier(o->champs[k].fichier, &illisible)) {
+            const char *montre = o->champs[k].type == V_FICHIER ? format_montre(o->champs[k].fichier, &illisible) : NULL;
+            if (montre && octets_du_fichier(o->champs[k].fichier, &illisible)) {   /* une image, ou un son (§ 15.7) */
                 l[k].octets = o->champs[k].fichier->octets;
                 l[k].taille = o->champs[k].fichier->taille;
-                l[k].format = o->champs[k].fichier->format;
+                l[k].format = montre;
             }
             free(illisible);
         }
@@ -2382,7 +2414,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->champs[k] = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof(size_t));
         for (size_t q = 0; q < c->nb_champs; q++) {
             const char *ty = c->types[q];
-            if ((c->uniques[q] & 8) || (ty && (strcmp(ty, "fichier") == 0 || strcmp(ty, "image") == 0))) continue;
+            if ((c->uniques[q] & 8) || (ty && (type_fichier(ty)))) continue;
             e->champs[k][e->nb_colonnes[k]] = q;
             e->colonnes[k][e->nb_colonnes[k]++] = capitale(c->champs[q]);
         }
@@ -2513,7 +2545,7 @@ static char *tableau_csv(Machine *m, const char *descripteur, const Valeur *l, F
         }
     } else {
         for (size_t k = 0; k < e->nb_champs; k++) {
-            if ((e->uniques[k] & 8) || !e->types[k] || strcmp(e->types[k], "fichier") == 0 || strcmp(e->types[k], "image") == 0)
+            if ((e->uniques[k] & 8) || !e->types[k] || type_fichier(e->types[k]))
                 continue;
             titres = realloc(titres, (nc + 1) * sizeof *titres);
             chemins = realloc(chemins, (nc + 1) * sizeof *chemins);
@@ -3282,7 +3314,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             champs[n++] = cm->champs[q];
         }
         /* Un type désigne un type de base ou une entité connue (ou la classe elle-même). */
-        static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image",
+        static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image", "son",
                                             "année", "heure" };
         for (size_t q = 0; q < n && !probleme; q++) {
             if (!types[q]) continue;
@@ -3779,13 +3811,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 const Valeur *v = &pile.v[base + k];
                 char *t = texte_valeur(m, v);
                 char *illisible = NULL;
-                if (v->type == V_FICHIER && v->fichier->format && m->iface.afficher_image
-                    && !octets_du_fichier(v->fichier, &illisible)) {
+                const char *montre = v->type == V_FICHIER && m->iface.afficher_image ? format_montre(v->fichier, &illisible) : NULL;
+                if (v->type == V_FICHIER && m->iface.afficher_image && (illisible || (montre && !octets_du_fichier(v->fichier, &illisible)))) {
                     chaine_ajouter(sortie, illisible);   /* une image disparue se dit, au lieu d'arrêter l'affichage */
                     free(illisible);
-                } else if (v->type == V_FICHIER && v->fichier->format && m->iface.afficher_image)   /* docs/v2.md, § 10 */
-                    m->iface.afficher_image(m->iface.contexte, sortie, v->fichier->octets, v->fichier->taille,
-                                            v->fichier->format, t);
+                } else if (montre)   /* une image, ou un son à écouter (docs/v2.md, § 10 ; § 15.7) */
+                    m->iface.afficher_image(m->iface.contexte, sortie, v->fichier->octets, v->fichier->taille, montre, t);
                 else
                     chaine_ajouter(sortie, t);
                 free(t);
@@ -4377,7 +4408,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     }
                 }
                 else if (!*t && e->elements[ev.element].facultatif) { v = vi_absent(NULL); lu = 1; }
-                else if (strcmp(type, "fichier") == 0 || strcmp(type, "image") == 0) {
+                else if (type_fichier(type)) {
                     /* une zone de fichier ou d'image : le fichier choisi, ses octets et son nom ; une image se vérifie
                      * ensuite, comme pour un champ (« … n'est pas une image ») */
                     if (ev.octets) { v = vi_fichier(ev.octets, ev.taille, t); lu = 1; }
@@ -5134,7 +5165,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 } else if (strcmp(champ, "format") == 0 || strcmp(champ, "nom de fichier") == 0) {
                     r = valeur_nombre(dec_zero());
                     r.type = V_TEXTE;
-                    r.texte = grym_dupliquer(strcmp(champ, "format") == 0 ? (f->format ? f->format : "inconnu") : f->nom);
+                    char *il = NULL;   /* le format d'une image, ou d'un son (§ 15.7) */
+                    const char *fm = strcmp(champ, "format") == 0 ? format_montre(f, &il) : NULL;
+                    free(il);
+                    r.texte = grym_dupliquer(strcmp(champ, "format") == 0 ? (fm ? fm : "inconnu") : f->nom);
                 } else {
                     ok = echouer(diag, b, debut, grym_formater(
                         "Un fichier n'a pas de champ « %s » : taille, format ou nom de fichier.", champ));

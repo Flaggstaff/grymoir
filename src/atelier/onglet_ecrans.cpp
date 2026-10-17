@@ -250,7 +250,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                             }
                         } else {   // par défaut : les champs simples, sans fichiers, images ni « plusieurs »
                             for (const auto &ch : entites.value(x.texte).champs)
-                                if (!ch.multiple && ch.type != "fichier" && ch.type != "image") x.colonnes << capitale(ch.nom);
+                                if (!ch.multiple && ch.type != "fichier" && ch.type != "image" && ch.type != "son") x.colonnes << capitale(ch.nom);
                         }
                     }
                     e.elements << x;
@@ -1535,7 +1535,7 @@ void OngletEcrans::editer() {
             auto *valeur = new QComboBox;
             valeur->addItem("Le nombre d'objets", QString());
             for (const auto &c : en.champs) {
-                if (c.multiple || c.type == "fichier" || c.type == "image") continue;
+                if (c.multiple || c.type == "fichier" || c.type == "image" || c.type == "son") continue;
                 par->addItem(c.nom, c.nom);
                 if (c.type.startsWith("nombre")) valeur->addItem("La somme de « " + c.nom + " »", c.nom);
             }
@@ -1570,7 +1570,7 @@ void OngletEcrans::editer() {
             decroissant->setChecked(x.decroissant);
             auto *colonnes = new QListWidget;   // cochées : les colonnes choisies ; aucune : les colonnes par défaut
             for (const auto &c : en.champs) {
-                if (c.multiple || c.type == "fichier" || c.type == "image") continue;
+                if (c.multiple || c.type == "fichier" || c.type == "image" || c.type == "son") continue;
                 tri->addItem(c.nom);
                 auto *i = new QListWidgetItem(c.nom, colonnes);
                 const QString titre = c.nom.left(1).toUpper() + c.nom.mid(1);

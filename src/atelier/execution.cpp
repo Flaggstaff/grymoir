@@ -45,7 +45,7 @@ extern "C" {
 extern volatile std::sig_atomic_t grym_fermeture_demandee;   // principal.cpp ; tests/test_atelier.cpp
 
 static bool est_fichier(const Champ *c) {
-    return c->type && (std::strcmp(c->type, "fichier") == 0 || std::strcmp(c->type, "image") == 0);
+    return c->type && (std::strcmp(c->type, "fichier") == 0 || std::strcmp(c->type, "image") == 0 || std::strcmp(c->type, "son") == 0);
 }
 
 static bool est_oui_non(const Champ *c) { return c->type && std::strcmp(c->type, "vrai ou faux") == 0; }
@@ -711,10 +711,11 @@ void Execution::poser() {
                                    : ch->valeur ? QString("actuel : %1").arg(QString::fromUtf8(ch->valeur))
                                                 : QString("aucun"));
             choisir->setEnabled(!accepte);
-            const bool image = std::strcmp(ch->type, "image") == 0;
-            connect(choisir, &QPushButton::clicked, this, [this, k, nom, image] {
+            const bool image = std::strcmp(ch->type, "image") == 0, son = std::strcmp(ch->type, "son") == 0;
+            connect(choisir, &QPushButton::clicked, this, [this, k, nom, image, son] {
                 const QString c = QFileDialog::getOpenFileName(this, "Choisir un fichier", QString(),
-                                                               image ? "Images (*.png *.jpg *.jpeg *.gif *.webp)" : QString());
+                                                               image ? "Images (*.png *.jpg *.jpeg *.gif *.webp)"
+                                                               : son ? "Sons (*.wav *.mp3 *.m4a *.aac *.ogg *.oga *.opus *.webm *.flac)" : QString());
                 if (c.isEmpty()) return;
                 QFile f(c);
                 if (!f.open(QIODevice::ReadOnly)) return;

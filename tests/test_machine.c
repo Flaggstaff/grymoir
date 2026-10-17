@@ -1680,7 +1680,7 @@ int main(void) {
              "une image PNG de 12 octets 12 PNG _essai.png");
         PROG("Afficher format du fichier « _essai.jpg » puis format du fichier « _essai.gif » "
              "puis format du fichier « _essai.webp » puis format du fichier « _essai.wav ».",
-             "JPEG GIF WebP inconnu");
+             "JPEG GIF WebP WAV");   /* un WAV n'est pas une WebP, mais un son (§ 15.7) */
         PROG("Afficher le fichier « _essai.txt » puis le fichier « _essai1.bin ».",
              "un fichier de 7 octets un fichier de 1 octet");
         PROG("Afficher le fichier « _essai_999.bin ».\nAfficher le fichier « _essai_1000.bin ».\n"
@@ -1752,6 +1752,29 @@ int main(void) {
         PROG("Un client, conservé, a : une photo (image).\nLe c vaut un nouveau client :\n"
              "    La photo vaut le fichier « _essai_doc.pdf ».",
              "ERREUR 3:5 « _essai_doc.pdf » n'est pas une image (PNG, JPEG, GIF ou WebP).");
+        /* un son (§ 15.7) : reconnu à sa signature ; un autre fichier refusé */
+        static const unsigned char WAV[] = { 'R', 'I', 'F', 'F', 36, 0, 0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ' };
+        creer_fichier("_essai_son.wav", WAV, sizeof WAV);
+        creer_fichier("_essai_son.mp3", "ID3\x04\x00\x00\x00\x00\x00\x00", 10);
+        creer_fichier("_essai_son.ogg", "OggS\x00\x02\x00\x00", 8);
+        creer_fichier("_essai_son.flac", "fLaC\x00\x00\x00\x22", 8);
+        PROG("Une visite, conservée, a : un mémo (son).\n"
+             "Le a vaut une nouvelle visite :\n    Le mémo vaut le fichier « _essai_son.wav ».\n"
+             "Le b vaut une nouvelle visite :\n    Le mémo vaut le fichier « _essai_son.mp3 ».\n"
+             "Le c vaut une nouvelle visite :\n    Le mémo vaut le fichier « _essai_son.ogg ».\n"
+             "Le d vaut une nouvelle visite :\n    Le mémo vaut le fichier « _essai_son.flac ».\n"
+             "Afficher le format du mémo de a puis le format du mémo de b puis le format du mémo de c puis le format du mémo de d.",
+             "WAV MP3 Ogg FLAC");
+        PROG("Une visite, conservée, a : un mémo (son).\nLe v vaut une nouvelle visite :\n"
+             "    Le mémo vaut le fichier « _essai_doc.pdf ».",
+             "~« _essai_doc.pdf » n'est pas un son (WAV, MP3, M4A, Ogg, WebM ou FLAC).");
+        PROG("Une visite, conservée, a : un mémo (son).\nLe v vaut une nouvelle visite :\n"
+             "    Le mémo vaut le fichier « _essai_img.png ».",
+             "~« _essai_img.png » n'est pas un son");   /* une image n'est pas un son */
+        remove("_essai_son.wav");
+        remove("_essai_son.mp3");
+        remove("_essai_son.ogg");
+        remove("_essai_son.flac");
         remove("_essai_img.png");
         remove("_essai_doc.pdf");
     }
