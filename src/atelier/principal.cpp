@@ -83,6 +83,12 @@ static int sans_fenetre(int argc, char **argv) {
                     id.editeur.toUtf8().constData(), id.ident.toUtf8().constData());
         return 0;
     }
+    // grym-atelier --transcrit projet : « oui » si le programme transcrit des sons (§ 15.8), « non » sinon ; pour les
+    // scripts, qui n'ajoutent alors le modèle qu'aux applications qui s'en servent.
+    if (args.at(1) == "--transcrit") {
+        std::printf("%s\n", programme_transcrit(QFileInfo(args.at(2)).absoluteFilePath()) ? "oui" : "non");
+        return 0;
+    }
     // grym-atelier --icone-ico projet fichier.ico : l'icône de l'application pour Windows, tirée du logo du projet.
     if (args.at(1) == "--icone-ico") {
         if (!ecrire_ico(icone_du_projet(QFileInfo(args.at(2)).absoluteFilePath()), args.at(3))) {
@@ -97,7 +103,7 @@ static int sans_fenetre(int argc, char **argv) {
 int main(int argc, char **argv) {
     if ((argc == 4 && (std::strcmp(argv[1], "--fabriquer") == 0 || std::strcmp(argv[1], "--preparer") == 0
                        || std::strcmp(argv[1], "--icone-ico") == 0))
-        || (argc == 3 && std::strcmp(argv[1], "--identite") == 0))
+        || (argc == 3 && (std::strcmp(argv[1], "--identite") == 0 || std::strcmp(argv[1], "--transcrit") == 0)))
         return sans_fenetre(argc, argv);
     QApplication app(argc, argv);
     QApplication::setOrganizationName("GrymoiR");

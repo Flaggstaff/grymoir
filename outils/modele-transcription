@@ -1,0 +1,27 @@
+#!/bin/bash
+# GrymoiR : le modèle de transcription (grammaire, § 15.8), pour les paquets de l'atelier et des applications.
+# Donne le chemin de ggml-large-v3-turbo-q5_0.bin, téléchargé une fois depuis la source officielle de whisper.cpp
+# (huggingface.co/ggerganov/whisper.cpp), vérifié contre son empreinte SHA-1 publiée, puis gardé en cache
+# (${GRYMOIR_MODELES:-~/.cache/grymoir-modeles}). Sur un Mac, celui de l'essai de transcription sert s'il est là.
+set -euo pipefail
+nom="ggml-large-v3-turbo-q5_0.bin"
+empreinte="e050f7970618a659205450ad97eb95a18d69c9ee"
+sha1() { if command -v shasum >/dev/null 2>&1; then shasum -a 1 "$1" | cut -d' ' -f1; else sha1sum "$1" | cut -d' ' -f1; fi; }
+for deja in "${HOME}/Library/Application Support/GrymoiR/modeles/${nom}"; do
+    if [ -f "${deja}" ] && [ "$(sha1 "${deja}")" = "${empreinte}" ]; then echo "${deja}"; exit 0; fi
+done
+cache="${GRYMOIR_MODELES:-${HOME}/.cache/grymoir-modeles}"
+mkdir -p "${cache}"
+modele="${cache}/${nom}"
+if [ ! -f "${modele}" ] || [ "$(sha1 "${modele}")" != "${empreinte}" ]; then
+    echo "Téléchargement du modèle de transcription (547 Mio)…" >&2
+    curl -sSfL -o "${modele}.part" "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${nom}"
+    vu="$(sha1 "${modele}.part")"
+    if [ "${vu}" != "${empreinte}" ]; then
+        rm -f "${modele}.part"
+        echo "Le modèle téléchargé ne correspond pas à son empreinte publiée (${vu}) : il est refusé." >&2
+        exit 1
+    fi
+    mv "${modele}.part" "${modele}"
+fi
+echo "${modele}"

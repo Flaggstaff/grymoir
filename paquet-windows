@@ -41,6 +41,9 @@ printf "Remarque : disposition de l'atelier ; sans effet sur le programme.\nprog
 gestion="$dossier/Resources/Exemples/Gestion de projet"
 mkdir -p "$gestion"
 cp "projets/Gestion de projet/"*.grym "projets/Gestion de projet/projet.grymatelier" "$gestion/"
+# le modèle de transcription (grammaire, § 15.8), là où l'atelier le cherche (applicationDirPath()/../Resources/modeles)
+mkdir -p "$dossier/Resources/modeles"
+cp "$(outils/modele-transcription)" "$dossier/Resources/modeles/"
 
 echo "3. Bibliothèques Qt et MSYS2…"
 deploy="$(command -v windeployqt6 || command -v windeployqt)"

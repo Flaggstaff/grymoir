@@ -31,6 +31,10 @@ mkdir -p "$exemple"
 cp docs/guide/chapitre-12/*.grym docs/guide/chapitre-12/*.png "$exemple/"
 printf "Remarque : disposition de l'atelier ; sans effet sur le programme.\nprogramme principal : association.grym\n" \
     > "$exemple/projet.grymatelier"
+# le modèle de transcription (grammaire, § 15.8) : l'atelier transcrit hors ligne dès l'installation ; une application
+# fabriquée ne le garde que si son programme transcrit
+mkdir -p "$app/Contents/Resources/modeles"
+cp "$(outils/modele-transcription)" "$app/Contents/Resources/modeles/"
 
 echo "3. Bibliothèques Qt embarquées (macdeployqt)…"
 "$qt/bin/macdeployqt" "$app" -always-overwrite

@@ -1,6 +1,8 @@
 // GrymoiR : l'atelier fabrique une application autonome (voir fabrication.h).
 #include "fabrication.h"
 #include "projet.h"
+#include <QDirIterator>
+#include "transcription.h"
 #include <QDataStream>
 
 #include <QBuffer>
@@ -84,6 +86,16 @@ Identite identite_du_projet(const QString &projet) {
     while (id.ident.endsWith('-')) id.ident.chop(1);
     if (id.ident.isEmpty()) id.ident = "application";
     return id;
+}
+
+bool programme_transcrit(const QString &projet) {
+    static const QRegularExpression transcrit(R"((,\s*transcrite?\s+d|\b_transcrit\s))");
+    QDirIterator it(projet, {"*.grym", "*.grymc"}, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        QFile f(it.next());
+        if (f.open(QIODevice::ReadOnly) && transcrit.match(QString::fromUtf8(f.readAll())).hasMatch()) return true;
+    }
+    return false;
 }
 
 QString identite_refusee(const QString &nom, const QString &version) {
@@ -179,6 +191,21 @@ QString fabriquer_application(const QString &projet, const QString &principal, c
     QDir().mkpath(disque);
     if (!outil("ditto", {source, app}, erreur)) return QString();   // ditto garde liens et attributs du paquet
     QDir(app + "/Contents/Resources/Exemples").removeRecursively();
+    // le modèle de transcription (547 Mo) : seulement si le programme transcrit des sons (§ 15.8)
+    const QString modeles = app + "/Contents/Resources/modeles";
+    if (programme_transcrit(projet)) {
+        const QString dest = modeles + "/ggml-large-v3-turbo-q5_0.bin";
+        if (!QFileInfo::exists(dest)) {
+            const QString source = modele_de_transcription();
+            if (source.isEmpty()) {
+                *erreur = "Ce programme transcrit des sons, mais le modèle de transcription est introuvable "
+                          "(ggml-large-v3-turbo-q5_0.bin).";
+                return QString();
+            }
+            QDir().mkpath(modeles);
+            if (!QFile::copy(source, dest)) { *erreur = "Le modèle de transcription ne se copie pas dans l'application."; return QString(); }
+        }
+    } else QDir(modeles).removeRecursively();
     if (!preparer_programme(projet, principal, nom, app + "/Contents/Resources/Programme", erreur)) return QString();
     // L'icône du paquet : celle de l'application, à la place de celle de l'atelier (même nom de fichier,
     // CFBundleIconFile ne change pas).

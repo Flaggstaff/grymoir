@@ -25,6 +25,11 @@ jobs:
           - { os: ubuntu-24.04, systeme: linux }
     steps:
       - uses: actions/checkout@v4
+      # le modèle de transcription (547 Mio, grammaire § 15.8) : téléchargé une fois par outils/modele-transcription
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/grymoir-modeles
+          key: modele-large-v3-turbo-q5_0-e050f797
       - name: Qt 6 (macOS)
         if: runner.os == 'macOS'
         run: brew install qt
@@ -50,6 +55,11 @@ jobs:
         shell: msys2 {0}
     steps:
       - uses: actions/checkout@v4
+      # le modèle de transcription (547 Mio, grammaire § 15.8) : téléchargé une fois par outils/modele-transcription
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/grymoir-modeles
+          key: modele-large-v3-turbo-q5_0-e050f797
       # Inno Setup ne fait plus partie des images Windows de GitHub : on l'installe, pour l'installateur des applications.
       - name: Inno Setup
         shell: pwsh
