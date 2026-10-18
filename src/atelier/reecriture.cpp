@@ -703,6 +703,7 @@ QString etats_voulus(Noeud *n, const ElementNouveau &e) {
         if (e.multiple) n->entier |= 16;
         if (e.recherche) n->entier |= 32;   // la réanalyse refuse une zone qui ne désigne pas un objet
         if (e.masque) n->entier |= 64;      // et une zone masquée qui n'est pas un texte sur une ligne
+        if (!e.transcrit_de.isEmpty()) n->transcrit_de = grym_dupliquer(e.transcrit_de.toUtf8().constData());   // § 15.8
         if (!e.unite.trimmed().isEmpty()) {   // § 22.6
             if (e.unite.contains(QChar(0x00BB)) || e.unite.contains(QChar(0x00AB))) return "Pas de guillemets « » dans une unité.";
             n->unite = grym_dupliquer(e.unite.trimmed().toUtf8().constData());

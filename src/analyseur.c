@@ -5949,6 +5949,26 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
         const int pl = place_element(a, el, g, vus_);   /* la place et la taille (§ 22.9) */
         if (pl) return pl;
         const Jeton *x = voir(a, 1);
+        if (zone && (est_mot(x, "transcrit") || est_mot(x, "transcrite"))) {
+            /* « , transcrite du mémo » : la zone reçoit le texte d'une zone (son) de l'écran (§ 15.8) */
+            if (!el->texte2 || strcmp(el->texte2, "texte") != 0 || el->texte3)
+                return erreur(a, x, grym_dupliquer("Seule une zone (texte) est transcrite : « une transcription (texte), transcrite du mémo »."))
+                     , -1;
+            if (el->transcrit_de) return erreur(a, x, grym_dupliquer("« transcrite » est déjà dit.")), -1;
+            size_t d = a->i + 2;
+            if (est_mot(&a->j[d], "du")) d++;
+            else if (est_mot(&a->j[d], "de") && (est_mot(&a->j[d + 1], "la") || (a->j[d + 1].type == J_ELISION && strcmp(a->j[d + 1].valeur, "l") == 0))) d += 2;
+            else if (a->j[d].type == J_ELISION && strcmp(a->j[d].valeur, "d") == 0) d++;
+            else return erreur(a, &a->j[d], grym_dupliquer("« transcrite du mémo » : la zone (son) attendue après « du »."))
+                       , -1;
+            size_t k = d;
+            while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_POINT && a->j[k].type != J_FIN
+                   && a->j[k].type != J_POINT_VIRGULE && a->j[k].type != J_DEUX_POINTS && !est_mot(&a->j[k], "et")) k++;
+            if (k == d) return erreur(a, &a->j[d], grym_dupliquer("La zone (son) à transcrire est attendue.")), -1;
+            el->transcrit_de = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+            a->i = k;
+            return 1;
+        }
         if (zone && est_mot(x, "sur") && est_mot(voir(a, 2), "plusieurs") && est_mot(voir(a, 3), "lignes")) {
             if (el->texte3)
                 return erreur(a, x, grym_dupliquer("Une zone à valeurs permises se choisit : pas sur plusieurs lignes.") ), -1;
@@ -6691,6 +6711,19 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         ecran_liberer(&e);
         noeud_liberer(n);
         return NULL;
+    }
+    for (size_t k = 0; k < n->nb_enfants; k++) {   /* « transcrite du mémo » : une zone (son) déclarée avant (§ 15.8) */
+        const Noeud *z = n->enfants[k];
+        if (z->type != N_NOM || !z->transcrit_de) continue;
+        const Noeud *src = NULL;
+        for (size_t q = 0; q < k; q++)
+            if (n->enfants[q]->type == N_NOM && n->enfants[q]->texte && strcmp(n->enfants[q]->texte, z->transcrit_de) == 0) src = n->enfants[q];
+        if (!src || !src->texte2 || strcmp(src->texte2, "son") != 0) {
+            erreur_a(a, z->ligne, z->colonne, grym_formater("« %s » : une zone (son) de l'écran, déclarée avant celle-ci.", z->transcrit_de));
+            ecran_liberer(&e);
+            noeud_liberer(n);
+            return NULL;
+        }
     }
     n->fin = fin_jeton(&a->j[a->i - 1]);
     Portee *p = a->portee;

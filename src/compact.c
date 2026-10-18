@@ -753,7 +753,7 @@ static void condition_de_cas(Reecriture *r, size_t d, size_t f) {
 
 static int est_etat(const Jeton *t) {
     return est_cle(t, "actif_si") || est_cle(t, "active_si") || est_cle(t, "visible_si") || est_cle(t, "plusieurs_lignes")
-        || est_cle(t, "interrupteur") || est_cle(t, "indication") || est_cle(t, "recherche") || est_cle(t, "min") || est_cle(t, "max") || est_cle(t, "masqué") || est_cle(t, "unité")
+        || est_cle(t, "interrupteur") || est_cle(t, "indication") || est_cle(t, "recherche") || est_cle(t, "min") || est_cle(t, "max") || est_cle(t, "masqué") || est_cle(t, "unité") || est_cle(t, "transcrit")
         || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur");
 }
 
@@ -818,6 +818,13 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             copier(r, &r->e[q]);
             if (zone_de_texte) mot(r, "caractères", x);
             k = q + 1;
+        } else if (zone && est_cle(x, "transcrit") && k + 1 < f && r->e[k + 1].type == J_CROCHETS) {
+            /* _transcrit mémo → , transcrit de mémo (§ 15.8 ; synthétique : accord non vérifié) */
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, feminin ? "transcrite" : "transcrit", x);
+            emettre(r, J_ELISION, "d", x, 1);
+            copier(r, &r->e[k + 1]);
+            k += 2;
         } else if (zone && est_cle(x, "masqué")) {   /* _masqué → , masqué / masquée (§ 22.6) */
             emettre(r, J_VIRGULE, NULL, x, 1);
             mot(r, feminin ? "masquée" : "masqué", x);

@@ -472,6 +472,61 @@ int main(int argc, char **argv) {
         z.start();
         while (z.elapsed() < 60000 && !sortie().contains("transcrit")) QApplication::processEvents(QEventLoop::AllEvents, 20);
         VERIFIER(sortie().contains("transcrit"));
+        // dans un écran : cliquer charge un son, la zone de transcription se remplit (§ 15.8)
+        {
+            const QString prog2 = dossier.filePath("e.grym");
+            QFile f(prog2);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    un mémo (son), facultatif,\n"
+                    "    une transcription (texte), sur plusieurs lignes, facultative, transcrite du mémo,\n"
+                    "    un bouton « Charger ».\n"
+                    "Quand on clique sur « Charger » dans l'écran x :\n    Le mémo de l'écran devient le fichier « memo.wav ».\n"
+                    "    Si la transcription de l'écran est présente, afficher « zone transcrite ».\n    Fermer l'écran.\n"
+                    "Ouvrir l'écran x.\n");
+            f.close();
+            Execution e2(prog2);
+            e2.show();
+            e2.demarrer();
+            auto bouton = [&]() -> QPushButton * {
+                for (QPushButton *b : e2.findChildren<QPushButton *>()) if (b->text() == "Charger" && b->isVisible()) return b;
+                return nullptr;
+            };
+            QElapsedTimer z2;
+            z2.start();
+            while (z2.elapsed() < 15000 && !bouton()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            VERIFIER(bouton() != nullptr);
+            if (bouton()) bouton()->click();
+            auto sortie2 = [&] {
+                QString t;
+                for (QPlainTextEdit *x : e2.findChildren<QPlainTextEdit *>()) t += x->toPlainText();
+                for (QTextEdit *x : e2.findChildren<QTextEdit *>()) t += x->toPlainText();
+                return t;
+            };
+            while (z2.elapsed() < 60000 && !sortie2().contains("zone transcrite")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            VERIFIER(sortie2().contains("zone transcrite"));
+        }
+        // la zone de transcription, telle que la palette la pose sous un son
+        {
+            QTemporaryDir d3;
+            QFile f(d3.filePath("p.grym"));
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    un mémo (son).\n");
+            f.close();
+            Geste g;
+            ElementNouveau t;
+            t.sorte = ELEMENT_ZONE;
+            t.type = "texte";
+            t.feminin = true;
+            t.facultatif = true;
+            t.plusieurs_lignes = true;
+            t.transcrit_de = QString::fromUtf8("mémo");
+            t.texte = "transcription";
+            VERIFIER(ecran_ajouter(d3.path(), "x", t, &g, -1, QPoint()).isEmpty());
+            QFile l(d3.filePath("p.grym"));
+            VERIFIER(l.open(QIODevice::ReadOnly));
+            const QString lu = QString::fromUtf8(l.readAll());
+            VERIFIER(QString::fromUtf8(lu.toUtf8()).contains(QString::fromUtf8("une transcription (texte), facultative, sur plusieurs lignes, transcrite du mémo")));
+        }
         qunsetenv("GRYMOIR_MODELE_TRANSCRIPTION");
     }
 

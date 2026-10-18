@@ -1703,7 +1703,34 @@ void OngletEcrans::ajouter(int sorte) {
                                         "Nom (« contrat », « photo », « mémo ») :", QLineEdit::Normal,
                                         n.type == "image" ? "photo" : n.type == "son" ? "mémo" : "contrat", &ok);
         if (!ok || n.texte.trimmed().isEmpty()) return;
-        emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
+        if (n.type != "son") {
+            emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
+            return;
+        }
+        // un son : sa transcription juste dessous, sur plusieurs lignes, une zone à part pour que chacune garde sa taille
+        // (§ 15.8) ; les deux s'ajoutent d'un même geste, qu'une seule annulation défait
+        ElementNouveau t;
+        t.sorte = ELEMENT_ZONE;
+        t.type = "texte";
+        t.feminin = true;
+        t.facultatif = true;
+        t.plusieurs_lignes = true;
+        t.transcrit_de = n.texte.trimmed();
+        t.texte = "transcription";
+        for (const ElementLu &x : lus.value(courant).elements)
+            if (x.sorte == ELEMENT_ZONE && x.texte.compare(t.texte, Qt::CaseInsensitive) == 0) {
+                t.texte = QInputDialog::getText(this, "Nouvelle zone de son", "Nom de la zone de transcription :", QLineEdit::Normal,
+                                                "note", &ok);   // pas de « de » : il se confondrait avec un chemin
+                if (!ok || t.texte.trimmed().isEmpty()) return;
+                break;
+            }
+        const QPoint dessous = ou.isNull() ? ou : ou + QPoint(0, 56);
+        emit geste([=](Geste *g) {
+            const QString r = ecran_ajouter(dossier, ecran, n, g, dans, ou);
+            if (!r.isEmpty()) return r;
+            Geste second;   // le premier geste garde le programme d'avant les deux ajouts
+            return ecran_ajouter(dossier, ecran, t, &second, dans, dessous);
+        });
         return;
     }
     if (sorte == INTERRUPTEUR_PALETTE) {   // une zone (vrai ou faux), montrée en interrupteur (§ 22.6)

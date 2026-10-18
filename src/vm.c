@@ -4501,6 +4501,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     code_ev = -1;   /* aucun événement ne s'exécute */
                 } else {
                     ecrire_champ(m, e->objet, (size_t)e->champ[ev.element], v);
+                    transcrire_si_besoin(m, e->objet, (size_t)e->champ[ev.element]);   /* « transcrite du mémo » (§ 15.8) */
                     code_ev = (long)ev.element + 1;
                 }
             zone_lue:

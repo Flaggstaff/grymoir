@@ -1340,6 +1340,14 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 if (el->entier & 8) aj(im, c ? " _interrupteur" : ", en interrupteur");   /* § 22.6 */
                 if (el->entier & 32) aj(im, c ? " _recherche" : ", avec recherche");   /* § 22.6 */
                 if (el->entier & 64) aj(im, c ? " _masqué" : fz ? ", masquée" : ", masqué");   /* § 22.6 */
+                if (el->transcrit_de) {   /* « , transcrite du mémo » ; « _transcrit mémo » (§ 15.8) */
+                    if (c) { aj(im, " _transcrit "); ecrire_nom(im, el->transcrit_de, 0); }
+                    else {
+                        aj(im, fz ? ", transcrite " : ", transcrit ");
+                        aj(im, voyelle(el->transcrit_de) ? "de l'" : genre_de_nom(im, el->transcrit_de) == G_FEMININ ? "de la " : "du ");
+                        aj(im, el->transcrit_de);
+                    }
+                }
                 if (el->borne_min || el->borne_max) {   /* « , de 1 à 99 », « , au plus 30 caractères » ; « _min 1 _max 99 » */
                     const int car = type_textuel(el->texte2);
                     char *a1 = el->borne_min ? borne_ecrite(el->borne_min) : NULL, *a2 = el->borne_max ? borne_ecrite(el->borne_max) : NULL;

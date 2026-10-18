@@ -1139,6 +1139,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
                     char *t = grym_formater("%s\x1e%s", el->texte2, el->texte3);
                     classe_typer_dernier_champ(cm, t, 0);
                     free(t);
+                } else if (el->transcrit_de) {   /* « texte␜mémo » : transcrite d'une zone (son) (§ 15.8) */
+                    char *t = grym_formater("%s\x1c%s", el->texte2, el->transcrit_de);
+                    classe_typer_dernier_champ(cm, t, 0);
+                    free(t);
                 } else
                 classe_typer_dernier_champ(cm, el->texte2, 0);
                 if (el->entier & 1) classe_facultatif_dernier_champ(cm);

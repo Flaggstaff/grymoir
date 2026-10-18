@@ -794,6 +794,9 @@ int main(void) {
     /* l'unité (§ 22.6) : une zone de nombre ou de texte, une fois, un texte non vide */
     VE("L'écran x montre :\n    un jour (date), avec l'unité « j ».", 2, 21, "Seule une zone de nombre ou de texte a une unité");
     VE("L'écran x montre :\n    un prix (nombre), avec l'unité « CHF », avec l'unité « € ».", 2, 45, "L'unité est déjà donnée.");
+    /* la transcription d'une zone (§ 15.8) : une zone (texte), d'une zone (son) déclarée avant */
+    VE("L'écran x montre :\n    un lieu (texte),\n    une note (texte), transcrite du lieu.", 3, 5, "« lieu » : une zone (son) de l'écran");
+    VE("L'écran x montre :\n    un mémo (son),\n    un nombre (nombre), transcrit du mémo.", 3, 25, "Seule une zone (texte) est transcrite");
     /* la transcription (§ 15.8) : un champ de texte, d'un champ (son) déclaré avant, accordé */
     VE("Une visite, conservée, a :\n    un mémo (son),\n    une note (nombre), transcrite du mémo.", 3, 24, "Seul un champ de texte d'une entité est transcrit");
     VE("Une visite, conservée, a :\n    un lieu (texte),\n    une note (texte), transcrite du lieu.", 3, 37, "« lieu » : un champ (son) de l'entité");

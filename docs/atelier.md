@@ -429,3 +429,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.75 | 2026-10-17 | La transcription (grammaire § 15.8, étape 2) : whisper.cpp v1.9.5 intégré (`transcription.cpp`), le décodage des sons par Qt Multimedia, le modèle large-v3-turbo |
 | 0.76 | 2026-10-17 | Le modèle de transcription dans les paquets : toujours dans l'atelier, dans une application seulement si son programme transcrit (`--transcrit`, `outils/modele-transcription`, vérifié par son empreinte, en cache sur GitHub) |
 | 0.77 | 2026-10-17 | La relecture d'un texte transcrit (`relecture.cpp`) : nombres surlignés, mots douteux soulignés, un doute qui disparaît à la correction |
+| 0.78 | 2026-10-18 | « Son » dans la palette pose deux zones d'un même geste : le son, et dessous sa transcription (texte, sur plusieurs lignes, transcrite du son) |

@@ -300,6 +300,10 @@ int main(void) {
     FIXE("Un contact, conservé, a :\n    un courriel (courriel), unique,\n    un portable (téléphone),\n    un site (adresse web).\n"
          "L'écran x montre :\n    un courriel (courriel),\n    un site (adresse web).");
     COMP("L'écran x montre :\n    un site (adresse web),\n    le texte « t ».", "_écran x\n    _un site (adresse_web)\n    _texte « t »\n_fin\n");
+    /* la transcription d'une zone (§ 15.8) : les deux formes */
+    FIXE("L'écran x montre :\n    un mémo (son),\n    une transcription (texte), sur plusieurs lignes, facultative, transcrite du mémo.");
+    COMP("L'écran x montre :\n    un mémo (son),\n    une note (texte), transcrite du mémo.",
+         "_écran x\n    _un mémo (son)\n    _une note (texte) _transcrit mémo\n_fin\n");
     /* la transcription (§ 15.8) : accordée, contractée ; les deux formes */
     FIXE("Une visite, conservée, a :\n    un mémo (son),\n    une note (texte), transcrite du mémo,\n"
          "    un enregistrement (son),\n    un résumé (texte), facultatif, transcrit de l'enregistrement.");
