@@ -2413,7 +2413,31 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->elements[k].colonnes = NULL;
         e->elements[k].nb_colonnes = 0;
         e->elements[k].graphique = graphe;
-        e->elements[k].principal = options_bouton && strchr(options_bouton + 1, 'p') != NULL;
+        if (options_bouton) {   /* « ␞ pt ␝ description ␚ image » (2.14, 2.15) */
+            const size_t nopt = strcspn(options_bouton + 1, "\x1c\x1a\x1d");
+            e->elements[k].principal = memchr(options_bouton + 1, 'p', nopt) != NULL;
+            e->elements[k].tuile = memchr(options_bouton + 1, 't', nopt) != NULL;
+            e->indications[k] = morceau_de_zone(options_bouton, '\x1d');
+            e->elements[k].indication = e->indications[k];
+            char *image = morceau_de_zone(options_bouton, '\x1a');
+            if (image) {   /* relue à chaque ouverture, comme « l'image « … » » (§ 22.8) */
+                Fichier *f = lire_fichier(m, image, erreur);
+                free(image);
+                if (!f) break;
+                e->images[k].type = V_FICHIER;
+                e->images[k].fichier = f;
+                char *illisible = NULL;
+                if (octets_du_fichier(f, &illisible)) {
+                    const char *o = (const char *)f->octets;
+                    size_t d = 0;
+                    while (d < f->taille && (o[d] == ' ' || o[d] == '\n' || o[d] == '\r' || o[d] == '\t')) d++;
+                    e->elements[k].octets = f->octets;
+                    e->elements[k].taille = f->taille;
+                    e->elements[k].format = f->format ? f->format : "SVG";
+                }
+                free(illisible);
+            }
+        }
         e->elements[k].sorte = graphe ? ELEMENT_GRAPHIQUE : x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON
                              : x[0] == 'I' || x[0] == 'J' ? ELEMENT_IMAGE : ELEMENT_TEXTE;
         if (x[0] == 'J') { e->elements[k].calculee = 1; continue; }   /* image calculée : ÉCRAN_IMAGE la donne (§ 22.8) */

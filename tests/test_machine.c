@@ -1239,6 +1239,10 @@ static void essais_ecrans(void) {
     }
     PROG("Un soin a : un tarif de suivi.\nLe s vaut un nouveau soin :\n    Le tarif de suivi vaut 70.\n"
          "Afficher « suivi » suivi de « : » puis le tarif de suivi du s.\n", "suivi: 70");
+    /* 2.15 : une tuile ; sa description et son image ne vont que sur une tuile ; l'image existe */
+    PROG("L'écran x montre :\n    un bouton « B », avec la description « d ».\nOuvrir l'écran x.\n", "~Une description ou une image va sur une tuile");
+    PROG("L'écran x montre :\n    un bouton « B », en tuile, avec l'image « absente.png ».\nOuvrir l'écran x.\n", "~Fichier « absente.png » introuvable");
+    PROG("L'écran x montre :\n    un bouton « B », en tuile, en tuile.\nOuvrir l'écran x.\n", "~« en tuile » est déjà dit.");
     /* 2.14 : un bouton principal ; seul un bouton l'est */
     PROG("L'écran x montre :\n    le texte « t », principal.\nOuvrir l'écran x.\n", "~Seul un bouton est principal");
     PROG("L'écran x montre :\n    un bouton « B », principale.\nOuvrir l'écran x.\n", "~Accord : « principal » (le bouton).");

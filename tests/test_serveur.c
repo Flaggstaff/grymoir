@@ -1261,6 +1261,26 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* 2.14, 2.15 : le bouton principal et les tuiles, une grille, l'image servie comme celle d'un écran */
+        const char *src = "L'écran d'accueil montre :\n    un bouton « Nouvelle », principal,\n"
+                          "    un bouton « Clients », en tuile, avec la description « Fiches », avec l'image « exemples/pixel.png »,\n"
+                          "    un bouton « Soins », en tuile.\n"
+                          "Quand on clique sur « Nouvelle » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                          "Quand on clique sur « Clients » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                          "Quand on clique sur « Soins » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                          "Ouvrir l'écran d'accueil.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), get("/style.css"), evenement("q=1&clic=0"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<button name=\"clic\" value=\"0\" class=\"principal\">Nouvelle</button>");
+        CONTIENT(sc.reponses[0], "<div class=\"tuiles\"><button class=\"tuile\" name=\"clic\" value=\"1\"><span class=\"tete\">"
+                                 "<span class=\"titre\">Clients</span><img src=\"/ecran-image/");
+        CONTIENT(sc.reponses[0], "<span class=\"description\">Fiches</span></button><button class=\"tuile\" name=\"clic\" value=\"2\">");
+        CONTIENT(sc.reponses[1], ".tuiles{display:grid;");
+        CONTIENT(sc.reponses[3], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* L'application « Gestion de projet » (projets/), de bout en bout dans le navigateur */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=5"),                                       /* 0 : Bilan */
@@ -1304,22 +1324,22 @@ int main(void) {
         question_suivante = 2;
         /* le pays laissé vide prend sa valeur de départ, « Suisse » */
         char *formulaire = reponse("Anne Rochat|079 000 00 00||Route de Riaz|12a||1630|Bulle|||");
-        REQUETES(evenement("q=1&clic=0"),                                       /* 0 : Clients */
+        REQUETES(evenement("q=1&clic=1"),                                       /* 0 : Clients */
                  evenement("q=2&clic=2"),                                       /* 1 : Nouveau client */
                  get("/"),                                                      /* 2 : le formulaire déduit */
                  formulaire,                                                    /* 3 */
                  get("/"),                                                      /* 4 : la liste des clients */
                  evenement("q=4&fermer=1"),                                     /* 5 : retour à l'accueil */
-                 evenement("q=5&clic=1"),                                       /* 6 : Nouvelle séance */
+                 evenement("q=5&clic=0"),                                       /* 6 : Nouvelle séance */
                  /* 7 : client et soin choisis, prix laissé vide : il se calcule avant « Enregistrer » */
                  evenement("q=6&z0=Anne+Rochat&z1=EPI&z2=01.10.2026&z3=&z4=&z5=%C3%A0+payer&clic=7"),
-                 evenement("q=7&clic=1"),                                       /* 8 : Nouvelle séance */
+                 evenement("q=7&clic=0"),                                       /* 8 : Nouvelle séance */
                  evenement("q=8&z0=Anne+Rochat&z1=EPI&z2=08.10.2026&z3=14%3A30&z4=&z5=Twint&clic=7"),   /* 9 */
-                 evenement("q=9&clic=1"),                                       /* 10 : Nouvelle séance */
+                 evenement("q=9&clic=0"),                                       /* 10 : Nouvelle séance */
                  evenement("q=10&z0=&z1=EPI&z2=08.10.2026&z3=&z4=50&z5=Twint&clic=7"),   /* 11 : sans client */
                  get("/"),                                                      /* 12 */
                  evenement("q=11&fermer=1"),                                    /* 13 */
-                 evenement("q=12&clic=0"),                                      /* 14 : Clients */
+                 evenement("q=12&clic=1"),                                      /* 14 : Clients */
                  evenement("q=13&choix=0.0"),                                   /* 15 : la fiche d'Anne */
                  get("/"));                                                     /* 16 */
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet.grymd", &sc);

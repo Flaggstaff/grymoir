@@ -177,7 +177,7 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0)
                              | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0) | (el[k].masque ? 32 : 0)
-                             | (el[k].principal ? 64 : 0));
+                             | (el[k].principal ? 64 : 0) | (el[k].tuile ? 128 : 0));
         t->facultatives << el[k].facultatif;
         t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
         t->unites << (el[k].unite ? QString(el[k].unite_devant ? "<" : ">") + QString::fromUtf8(el[k].unite) : QString());
@@ -1008,6 +1008,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].lecture_seule = o & 2;
         elements[k].interrupteur = o & 4;   // § 22.6
         elements[k].principal = o & 64;     // 2.14
+        elements[k].tuile = o & 128;        // 2.15
         elements[k].multiple = o & 8;   // § 22.1
         elements[k].recherche = o & 16;   // § 22.6
         elements[k].masque = o & 32;   // § 22.6

@@ -106,6 +106,8 @@ int main(void) {
     FIXE("Une note, conservée, hors des fiches, a :\n    un texte (texte).\n");   /* § 22.3 */
     FIXE("L'écran x montre :\n    un bouton « Nouvelle séance », principal, actif si 1 = 1.\n"
          "Quand on clique sur « Nouvelle séance » dans l'écran x :\n    Fermer l'écran.\n");   /* 2.14 */
+    FIXE("L'écran x montre :\n    un bouton « Clients », en tuile, avec la description « Fiches », avec l'image « vendor/lucide/check.svg ».\n"
+         "Quand on clique sur « Clients » dans l'écran x :\n    Fermer l'écran.\n");   /* 2.15 */
     /* « suivi » après « de » est un mot de nom ; l'opérateur « suivi de » reste (§ 4.4) */
     FIXE("Un soin, conservé, a :\n    un tarif de suivi (nombre).\nLe s vaut un nouveau soin :\n    Le tarif de suivi vaut 70.\n"
          "Afficher le tarif de suivi du s suivi de « CHF ».\n");

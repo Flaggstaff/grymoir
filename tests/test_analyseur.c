@@ -925,7 +925,7 @@ int main(void) {
     VS("L'écran x montre :\n    l'", "image « | image de | un sous l'autre :");
     VS("L'écran x montre :\n    le ", "texte « | graphique des | groupe « | menu «");
     VS("L'écran x montre :\n    une note (texte), fac", "facultative");
-    VS("L'écran x montre :\n    un bouton « B », ", "principal | actif si | visible si | un bouton « | le texte « | un | une | la liste des | "
+    VS("L'écran x montre :\n    un bouton « B », ", "principal | actif si | visible si | en tuile | avec la description « | avec l'image « | un bouton « | le texte « | un | une | la liste des | "
        "le graphique des | l'image « | l'image de | côte à côte : | l'un sous l'autre : | le groupe « | en position libre : | "
        "les onglets : | le menu «");
     VS("L'écran x montre :\n    en position libre :\n        le texte « t », à 1 de la gauche et 1 du haut, l", "large de | le texte « | "

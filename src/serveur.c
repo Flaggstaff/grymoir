@@ -507,6 +507,13 @@ static char *feuille_de_style(const Serveur *s) {
     "button:hover{background:var(--survol)}"
     "button.principal{background:var(--accent);border-color:var(--accent);color:var(--sur-accent)}"
     "button.principal:hover{background:var(--accent-survol);border-color:var(--accent-survol)}"
+    ".tuiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}"
+    "button.tuile{margin:0;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;text-align:left;"
+    "min-height:120px;padding:20px 22px;border-radius:12px;border:0;background:var(--surface-alt)}"
+    "button.tuile:hover{background:var(--separateur)}"
+    "button.tuile .tete{display:flex;justify-content:space-between;align-items:center;gap:8px}"
+    "button.tuile .titre{font-size:20px;font-weight:600}button.tuile img{width:22px;height:auto}"
+    "button.tuile .description{font-weight:400;color:var(--texte-2)}"
     ".actuel,.recu{color:var(--texte-2);margin-left:8px}"
     "pre.sortie img{display:block;max-width:100%;max-height:24rem;margin:4px 0;border-radius:6px}"
     "table.fiche{border-collapse:collapse;margin:8px 0 16px;background:var(--surface);border:1px solid var(--separateur)}"
@@ -1263,6 +1270,7 @@ static void page_ecran(Serveur *s) {
         chaine_ajouter(&c, "</p>\n");
     }
     int boutons = 0;   /* des boutons qui se suivent : une rangée, à droite (comme dans l'atelier) */
+    int tuiles = 0;    /* des tuiles qui se suivent : une grille (2.15) */
     int groupes[16], prof = 0;   /* les blocs ouverts : 1 un groupe (fieldset), 4 un onglet (section), 0 un div ; + 2 placé */
     /* les onglets (§ 22.10) : pour chaque onglet, ses onglets et son rang */
     size_t *parent = grym_allouer((e->n ? e->n : 1) * sizeof *parent);
@@ -1302,7 +1310,8 @@ static void page_ecran(Serveur *s) {
         if ((e->etats[k] & 2) && (el->sorte == ELEMENT_BOUTON || el->sorte == ELEMENT_TEXTE || el->sorte == ELEMENT_ZONE
                                     || el->sorte == ELEMENT_IMAGE))
             continue;   /* « visible si » faux : l'élément n'est pas dans la page (§ 22.6) */
-        if ((el->sorte != ELEMENT_BOUTON || el->place) && boutons) { chaine_ajouter(&c, "</div>\n"); boutons = 0; }
+        if ((el->sorte != ELEMENT_BOUTON || el->place || el->tuile) && boutons) { chaine_ajouter(&c, "</div>\n"); boutons = 0; }
+        if ((el->sorte != ELEMENT_BOUTON || el->place || !el->tuile) && tuiles) { chaine_ajouter(&c, "</div>\n"); tuiles = 0; }
         if (el->place) {   /* un élément en position libre : sa boîte, que /ecran-style/… place (§ 22.9) */
             char *v = grym_formater("<div class=\"place\" id=\"p%lu\">", (unsigned long)k);
             chaine_ajouter(&c, v);
@@ -1389,6 +1398,28 @@ static void page_ecran(Serveur *s) {
             break;
         }
         case ELEMENT_BOUTON: {
+            if (el->tuile && !el->place) {   /* une tuile (2.15) : son titre, sa description, son image */
+                if (!tuiles) { chaine_ajouter(&c, "<div class=\"tuiles\">"); tuiles = 1; }
+                char *v = grym_formater("<button class=\"tuile%s\" name=\"clic\" value=\"%lu\"%s><span class=\"tete\"><span class=\"titre\">",
+                                        el->principal ? " principal" : "", (unsigned long)k, (e->etats[k] & 1) ? " disabled" : "");
+                chaine_ajouter(&c, v);
+                free(v);
+                echapper(&c, el->texte);
+                chaine_ajouter(&c, "</span>");
+                if (el->octets) {
+                    v = grym_formater("<img src=\"/ecran-image/%lu/%lu\" alt=\"\">", e->serie, (unsigned long)k);
+                    chaine_ajouter(&c, v);
+                    free(v);
+                }
+                chaine_ajouter(&c, "</span>");
+                if (el->indication && *el->indication) {
+                    chaine_ajouter(&c, "<span class=\"description\">");
+                    echapper(&c, el->indication);
+                    chaine_ajouter(&c, "</span>");
+                }
+                chaine_ajouter(&c, "</button>");
+                break;
+            }
             if (!boutons && !el->place) { chaine_ajouter(&c, "<div class=\"boutons\">"); boutons = 1; }
             char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s%s>", (unsigned long)k,
                                     el->principal ? " class=\"principal\"" : "",   /* 2.14 */
@@ -1408,6 +1439,7 @@ static void page_ecran(Serveur *s) {
     free(parent);
     free(rang);
     if (boutons) chaine_ajouter(&c, "</div>\n");
+    if (tuiles) chaine_ajouter(&c, "</div>\n");
     int zones = 0;
     for (size_t k = 0; k < e->n; k++) zones |= e->el[k].sorte == ELEMENT_ZONE;
     if (zones)   /* sans script, un menu changé attend ce bouton (docs/web.md, § 3.1) */

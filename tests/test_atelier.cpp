@@ -38,6 +38,7 @@
 #include <QDropEvent>
 #include <QTreeWidget>
 #include <QTableWidget>
+#include <QGridLayout>
 
 #include <QAbstractItemView>
 #include <QApplication>
@@ -159,6 +160,33 @@ int main(int argc, char **argv) {
         VueEcran v = dessiner_ecran("Séance", el);
         VERIFIER(v.boutons.size() == 2 && v.boutons[0]->property("role").toString() == "principal"
                  && !v.boutons[1]->property("role").isValid());
+        delete v.vue;
+    }
+    // Des tuiles (2.15) : une grille de quatre colonnes, chaque tuile son titre, sa description, son image
+    {
+        QVector<ElementVue> el(3);
+        for (int k = 0; k < 2; k++) {
+            el[k].sorte = ELEMENT_BOUTON;
+            el[k].tuile = true;
+            el[k].texte = k ? "Soins" : "Clients";
+        }
+        el[0].indication = "Fiches et historiques";
+        QFile coeur(QString(GRYM_SOURCE) + "/vendor/lucide/check.svg");
+        VERIFIER(coeur.open(QIODevice::ReadOnly));
+        el[0].octets = coeur.readAll();
+        el[2].sorte = ELEMENT_BOUTON;
+        el[2].texte = "Fermer";
+        VueEcran v = dessiner_ecran("Accueil", el);
+        VERIFIER(v.boutons.size() == 3 && v.boutons[0]->property("role").toString() == "tuile");
+        auto *g = v.boutons[0]->parentWidget() ? qobject_cast<QGridLayout *>(v.boutons[0]->parentWidget()->layout()) : nullptr;
+        VERIFIER(g && g->indexOf(v.boutons[1]) >= 0 && g->columnCount() == 4);
+        QStringList textes;
+        for (QLabel *l : v.boutons[0]->findChildren<QLabel *>()) if (!l->text().isEmpty()) textes << l->text();
+        VERIFIER(textes.contains("Clients") && textes.contains("Fiches et historiques"));
+        bool image = false;
+        for (QLabel *l : v.boutons[0]->findChildren<QLabel *>()) image |= !l->pixmap().isNull();
+        VERIFIER(image);
+        VERIFIER(g && g->indexOf(v.boutons[2]) < 0);   // un bouton ordinaire ne rejoint pas la grille
         delete v.vue;
     }
     // Les projets du dépôt : trouvés depuis le dossier de construction, rien autour d'une application installée

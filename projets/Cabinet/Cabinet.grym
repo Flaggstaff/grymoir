@@ -12,13 +12,13 @@ Si le nombre de soins conservés est nul :
     Proposer « Toucher Thérapeutique » et 100.
     Proposer « Soin à Distance » et 100.
 
-L'écran d'accueil, « Cabinet », montre :
-    un bouton « Clients »,
+Remarque : l'accueil de la maquette : l'action du jour, puis le cabinet en quatre tuiles ; le cœur sur les clients.
+L'écran d'accueil, « Bonjour Nicolas » en grand, montre :
     un bouton « Nouvelle séance », principal,
-    un bouton « Séances prévues »,
-    un bouton « À encaisser »,
-    un bouton « Soins »,
-    un bouton « Fermer ».
+    un bouton « Clients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png »,
+    un bouton « Séances prévues », en tuile, avec la description « Faite, annulée, absence »,
+    un bouton « À encaisser », en tuile, avec la description « Les séances à payer »,
+    un bouton « Soins », en tuile, avec la description « Tarifs et durées ».
 
 L'écran des clients montre :
     la liste des clients conservés, par nom, avec le nom, le téléphone et le courriel,
@@ -74,9 +74,6 @@ Quand on clique sur « À encaisser » dans l'écran d'accueil :
 
 Quand on clique sur « Soins » dans l'écran d'accueil :
     Ouvrir l'écran des soins.
-
-Quand on clique sur « Fermer » dans l'écran d'accueil :
-    Fermer l'écran.
 
 Remarque : la fiche du client montre ses séances, sa ligne « Total », et le bouton d'une nouvelle séance.
 Quand on choisit un client dans l'écran des clients :

@@ -6057,6 +6057,43 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
     int vus = *vus_;
     if (cour(a)->type != J_VIRGULE) return 0;
     attendre_etats_ecran(a, el, g, zone);   /* aide à la saisie (§ 8) */
+    if (el->type == N_BOUTON && voir(a, 0)->type == J_VIRGULE) {
+        /* une tuile (2.15) : « , en tuile », « , avec la description « … » », « , avec l'image « coeur.png » » */
+        const Jeton *x = voir(a, 1);
+        if (!(el->entier & 512)) attendre_mot(a, a->i + 1, "en tuile", strlen("en tuile"));
+        if (!el->indication) attendre_mot(a, a->i + 1, "avec la description «", strlen("avec la description «"));
+        if (!el->texte2) attendre_mot(a, a->i + 1, "avec l'image «", strlen("avec l'image «"));
+        if (est_mot(x, "en") && est_mot(voir(a, 2), "tuile")) {
+            if (el->entier & 512) return erreur(a, x, grym_dupliquer("« en tuile » est déjà dit.")), -1;
+            el->entier |= 512;
+            a->i += 3;
+            return 1;
+        }
+        if (est_mot(x, "avec") && est_mot(voir(a, 2), "la") && est_mot(voir(a, 3), "description")) {
+            if (el->indication) return erreur(a, x, grym_dupliquer("La description est déjà donnée.")), -1;
+            if (voir(a, 4)->type != J_TEXTE || !*voir(a, 4)->valeur)
+                return erreur(a, voir(a, 4), grym_dupliquer("Texte attendu : « , avec la description « Fiches et historiques » ».")), -1;
+            el->indication = grym_dupliquer(voir(a, 4)->valeur);
+            a->i += 5;
+            return 1;
+        }
+        if (est_mot(x, "avec") && voir(a, 2)->type == J_ELISION && est_mot(voir(a, 3), "image")) {
+            if (el->texte2) return erreur(a, x, grym_dupliquer("L'image est déjà donnée.")), -1;
+            const Jeton *ti = voir(a, 4);
+            if (ti->type != J_TEXTE || !*ti->valeur)
+                return erreur(a, ti, grym_dupliquer("Chemin attendu : « , avec l'image « images/coeur.png » ».")), -1;
+            char *dossier = dossier_de(a->portee->fichier);
+            char *chemin = ti->valeur[0] == '/' ? grym_dupliquer(ti->valeur) : grym_formater("%s%s", dossier, ti->valeur);
+            const int img = fichier_image(chemin) == 1 ? 1 : fichier_svg(chemin);
+            free(dossier);
+            free(chemin);
+            if (img < 0) return erreur(a, ti, grym_formater("Fichier « %s » introuvable ou illisible.", ti->valeur)), -1;
+            if (!img) return erreur(a, ti, grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF, WebP ou SVG).", ti->valeur)), -1;
+            el->texte2 = grym_dupliquer(ti->valeur);
+            a->i += 5;
+            return 1;
+        }
+    }
     if (el->type == N_NOM) {   /* « , avec l'indication « 4 chiffres » » : une phrase sous le libellé (§ 22.6) */
         const Jeton *x = voir(a, 1);
         if (!el->indication) attendre_mot(a, a->i + 1, "avec l'indication «", strlen("avec l'indication «"));
@@ -6819,6 +6856,12 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             int vus = 0, lu;
             while ((lu = etat_element(a, el, GENRE_MASCULIN, 0, &vus)) > 0) {}
             if (lu < 0) { noeud_liberer(el); break; }
+            if (bouton && (el->indication || el->texte2) && !(el->entier & 512)) {   /* 2.15 */
+                erreur(a, u, grym_dupliquer("Une description ou une image va sur une tuile : « un bouton « Clients », en tuile, "
+                                            "avec la description « … » »."));
+                noeud_liberer(el);
+                break;
+            }
             el->fin = fin_jeton(&a->j[a->i - 1]);
         } else {
             erreur(a, u, grym_dupliquer("Élément d'écran attendu : « la liste des … conservés », « un bouton « … » », "

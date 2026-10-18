@@ -13,6 +13,8 @@
 #include "theme.h"
 
 #include <QBoxLayout>
+#include <QSvgRenderer>
+#include <QGridLayout>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCompleter>
@@ -260,6 +262,8 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         pile->addLayout(entete);
     }
     QHBoxLayout *rangee = nullptr;   // des boutons qui se suivent : une ligne, en bas à droite (§ 3.3)
+    QGridLayout *grille = nullptr;   // des tuiles qui se suivent : une grille (2.15)
+    int tuiles_posees = 0;
     // Les conteneurs ouverts : une boîte (« côte à côte », « l'un sous l'autre », un groupe, l'écran) ou une toile
     // (« en position libre : »). Un bloc posé sur une toile y est un widget placé, que sa fin remet à sa taille (§ 22.9).
     struct Niveau { QBoxLayout *boite; QWidget *toile; QWidget *place; int largeur, hauteur; QTabWidget *onglets = nullptr; };
@@ -290,7 +294,8 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     QMenu *menu_ouvert = nullptr;
     for (int k = 0; k < n; k++) {
         const ElementVue &e = elements[k];
-        if (e.sorte != ELEMENT_BOUTON || niveaux.last().toile) rangee = nullptr;
+        if (e.sorte != ELEMENT_BOUTON || niveaux.last().toile || e.tuile) rangee = nullptr;
+        if (e.sorte != ELEMENT_BOUTON || !e.tuile) grille = nullptr;   // une grille de tuiles s'arrête au premier autre élément
         if (e.sorte == ELEMENT_MENU) {   // « le menu « Membres » : » : un menu de la barre, en tête de l'écran (§ 22.12)
             if (!barre) {
                 barre = new QMenuBar;
@@ -606,6 +611,64 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             r.tables[k] = tab;
             r.controles[k] = tab;
             poser(tab, 1);
+        } else if (e.tuile && !toile) {
+            // une tuile (2.15) : grande, son titre et son image en tête, sa description dessous ; des tuiles qui se
+            // suivent forment une grille de quatre colonnes
+            if (!grille) {
+                auto *g = new QWidget;
+                grille = new QGridLayout(g);
+                grille->setContentsMargins(0, 0, 0, 0);
+                grille->setSpacing(t.mesure("espace-4"));
+                for (int c = 0; c < 4; c++) grille->setColumnStretch(c, 1);
+                ici->addWidget(g);
+                tuiles_posees = 0;
+            }
+            auto *b = new QPushButton;
+            b->setProperty("role", e.principal ? "tuile-principale" : "tuile");
+            b->setAccessibleName(e.texte);
+            b->setMinimumHeight(120);
+            b->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+            auto *dedans = new QVBoxLayout(b);
+            dedans->setContentsMargins(20, 18, 20, 18);
+            auto *tete = new QHBoxLayout;
+            auto *titre_tuile = new QLabel(e.texte);
+            titre_tuile->setProperty("niveau", "tuile");
+            tete->addWidget(titre_tuile, 1);
+            if (!e.octets.isEmpty()) {
+                QPixmap p;
+                if (!p.loadFromData(e.octets)) {
+                    QSvgRenderer rendu(e.octets);
+                    if (rendu.isValid()) {
+                        QImage image(QSize(66, 66), QImage::Format_ARGB32_Premultiplied);
+                        image.fill(Qt::transparent);
+                        QPainter peintre(&image);
+                        rendu.render(&peintre);
+                        peintre.end();
+                        p = QPixmap::fromImage(image);
+                    }
+                }
+                if (!p.isNull()) {
+                    const qreal densite = b->devicePixelRatioF();
+                    QPixmap petit = p.scaledToWidth(qRound(22 * densite), Qt::SmoothTransformation);
+                    petit.setDevicePixelRatio(densite);
+                    auto *img = new QLabel;
+                    img->setPixmap(petit);
+                    tete->addWidget(img, 0, Qt::AlignTop);
+                }
+            }
+            dedans->addLayout(tete);
+            dedans->addStretch(1);
+            if (!e.indication.isEmpty()) {
+                auto *d = new QLabel(e.indication);
+                d->setProperty("niveau", "tuile-description");
+                d->setWordWrap(true);
+                dedans->addWidget(d);
+            }
+            for (QLabel *l : b->findChildren<QLabel *>()) l->setAttribute(Qt::WA_TransparentForMouseEvents);
+            r.boutons << b;
+            r.controles[k] = b;
+            grille->addWidget(b, tuiles_posees / 4, tuiles_posees % 4);
+            tuiles_posees++;
         } else {
             if (!rangee && !toile) {
                 rangee = new QHBoxLayout;

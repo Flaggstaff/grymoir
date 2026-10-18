@@ -55,6 +55,22 @@ QPushButton:disabled {
     color: @texte-desactive@;
 }
 
+QPushButton[role="tuile"], QPushButton[role="tuile-principale"] {
+    min-height: 120px;
+    border: none;
+    border-radius: 12px;
+    padding: 0;
+    background: @surface-alt@;
+    text-align: left;
+}
+QPushButton[role="tuile"]:hover { background: @separateur@; }
+QPushButton[role="tuile-principale"] { background: @accent@; }
+QPushButton[role="tuile-principale"]:hover { background: @accent-survol@; }
+QPushButton[role="tuile"]:focus, QPushButton[role="tuile-principale"]:focus { border: 2px solid @texte@; }
+QPushButton[role="tuile"] QLabel, QPushButton[role="tuile-principale"] QLabel { background: transparent; }
+QLabel[niveau="tuile"] { font-size: 20px; font-weight: 600; color: @texte@; }
+QLabel[niveau="tuile-description"] { font-size: 14px; color: @texte-2@; }
+QPushButton[role="tuile-principale"] QLabel { color: @sur-accent@; }
 QPushButton[role="principal"] {
     border: 2px solid @accent@;
     padding: 0 14px;

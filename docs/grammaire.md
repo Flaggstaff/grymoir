@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.14 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.15 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1830,6 +1830,7 @@ L'écran de saisie montre :
 
 - `sur plusieurs lignes` : une zone `(texte)` seulement ; Entrée y va à la ligne, et la zone se valide quand on la quitte (`Quand on change …`). Sur un autre type : « Seule une zone (texte) s'écrit sur plusieurs lignes. »
 - `en lecture seule` : la zone se montre, se sélectionne, ne se modifie que par le programme (`Le total de l'écran devient 3.`). Un changement venu de l'interface est ignoré par la machine, et `Quand on change` ne se déclenche pas.
+- `en tuile` *(2.15)* : un bouton en grand, comme un accueil d'application : son titre en tête, `avec la description « … »` dessous, `avec l'image « coeur.png »` en haut à droite (PNG, JPEG, GIF, WebP ou SVG, vérifiée dès l'analyse). Des tuiles qui se suivent forment une grille de quatre colonnes ; un autre élément l'arrête. Une description ou une image hors d'une tuile : « Une description ou une image va sur une tuile : … ». Une tuile principale prend la couleur d'accent. Ordre canonique : `principal`, `en tuile`, la description, l'image, puis `actif si`, `visible si`. Forme compacte : `_tuile`, `_description « … »`, `_image « … »`.
 - `principal` *(2.14)* : un bouton, celui de l'action attendue (« Nouvelle séance », « Enregistrer ») : il prend la couleur d'accent, le texte des boutons dessus (§ 22.5). Un par écran suffit ; GrymoiR n'en impose pas le nombre. Ailleurs : « Seul un bouton est principal : … » ; « principale » : « Accord : « principal » (le bouton). ». Il s'écrit le premier de ses états : `un bouton « Enregistrer », principal, actif si …`. Forme compacte : `_principal`.
 - `actif si …` : un bouton ou une zone ; faux, l'élément est grisé et un geste dessus ne compte pas. L'adjectif s'accorde avec la zone : `une remarque …, active si …` (« Accord : « active si ». »). Un texte fixe ne se clique pas : « visible si » seulement.
 - `visible si …` : un bouton, un texte fixe ou une zone ; faux, l'élément disparaît, libellé compris. Une liste reste toujours visible, pour l'instant.
@@ -2133,3 +2134,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.12 | 2026-10-18 | § 22.6 : un événement qui teste la présence d'une zone ne l'exige pas d'emblée ; § 4.4 : `suivi` après `de` est un mot de nom ; § 22.3 : la ligne « Total » marquée, ni sélectionnée ni choisie |
 | 2.13 | 2026-10-18 | § 22.5 : la couleur libre en hexadécimal, le fond (clair imposé), la police embarquée, le logo SVG ; les couleurs dérivées et les contrastes vérifiés à l'analyse (charte 1.60) |
 | 2.14 | 2026-10-18 | § 22.6 : `, principal`, le bouton de l'action attendue, à la couleur d'accent |
+| 2.15 | 2026-10-18 | § 22.6 : `, en tuile`, `, avec la description « … »`, `, avec l'image « … »` ; des tuiles qui se suivent forment une grille |

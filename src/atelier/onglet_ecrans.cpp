@@ -200,6 +200,9 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.sorte = ELEMENT_BOUTON;
                         x.texte = QString::fromUtf8(el->texte);
                         x.principal = (el->entier & 256) != 0;
+                        x.tuile = (el->entier & 512) != 0;
+                        if (el->indication) x.indication = QString::fromUtf8(el->indication);
+                        if (el->texte2) x.image_tuile = QString::fromUtf8(el->texte2);
                     } else if (el->type == N_IMAGE_ECRAN) {   // « l'image « plan.png » » : le chemin écrit (§ 22.8)
                         x.sorte = ELEMENT_IMAGE;
                         x.texte = el->texte ? QString::fromUtf8(el->texte) : QString();
@@ -422,6 +425,13 @@ void OngletEcrans::dessiner() {
     for (int k = 0; k < e.elements.size(); k++) {
         el[k].sorte = e.elements[k].sorte;
         el[k].principal = e.elements[k].principal;
+        el[k].tuile = e.elements[k].tuile;
+        if (e.elements[k].tuile) {   // la description, l'image lue depuis le dossier du fichier qui déclare l'écran (2.15)
+            el[k].indication = e.elements[k].indication;
+            const QString t = e.elements[k].image_tuile;
+            QFile f(QFileInfo(t).isAbsolute() ? t : QFileInfo(e.fichier).absoluteDir().filePath(t));
+            if (!t.isEmpty() && f.open(QIODevice::ReadOnly)) el[k].octets = f.readAll();
+        }
         el[k].texte = e.elements[k].sorte == ELEMENT_ZONE ? capitale(e.elements[k].texte) : e.elements[k].texte;
         el[k].colonnes = e.elements[k].colonnes;
         el[k].type = e.elements[k].type;
