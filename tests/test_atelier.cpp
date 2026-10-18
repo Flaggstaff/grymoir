@@ -638,6 +638,52 @@ int main(int argc, char **argv) {
         VERIFIER(th.accent() == "bleue" && th.hex("fond") == "#f5efe6");
     }
 
+    // Un écran occupe toute la fenêtre : le fil et la zone des questions se cachent, Ctrl+J les montre (docs/atelier.md,
+    // § 8) ; le contenu reste en haut, dans sa largeur de lecture, sans flotter au milieu
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    un bouton « Fermer ».\n"
+                    "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n");
+        }
+        Execution e(prog);
+        e.resize(1600, 900);
+        e.show();
+        e.demarrer();
+        QPushButton *fermer = nullptr;
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 15000 && !fermer) {
+            QApplication::processEvents(QEventLoop::AllEvents, 20);
+            for (QPushButton *b : e.findChildren<QPushButton *>())
+                if (b->text() == "Fermer" && b->isVisible() && b->isEnabled()) fermer = b;
+        }
+        VERIFIER(fermer != nullptr);
+        QTextBrowser *fil = e.findChild<QTextBrowser *>();
+        VERIFIER(fil && !fil->isVisible());
+        auto ctrl_j = [&e] {
+            for (QAction *a : e.actions()) if (a->shortcut() == QKeySequence("Ctrl+J")) a->trigger();
+        };
+        ctrl_j();
+        QApplication::processEvents();
+        VERIFIER(fil && fil->isVisible());
+        ctrl_j();
+        QApplication::processEvents();
+        VERIFIER(fil && !fil->isVisible());
+        if (fermer) {
+            const QPoint haut = fermer->mapTo(&e, QPoint(0, 0));
+            VERIFIER(haut.y() < 200);              // en haut, pas au milieu des 900 pixels
+            VERIFIER(haut.x() + fermer->width() < 1600 - (1600 - 1120) / 2 + 2);   // dans la largeur de lecture, centrée
+            fermer->click();
+        }
+        z.restart();
+        while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(fil && fil->isVisible());     // le programme fini : le fil revient, avec son dernier mot
+    }
+
     // La fiche (§ 22.3) : le tableau des séances et sa ligne de total, en gras, jamais sélectionnable, la dernière même
     // après un tri choisi d'un clic sur un titre ; un double-clic dessus ne mène nulle part
     {
@@ -3771,7 +3817,7 @@ int main(int argc, char **argv) {
             VERIFIER(t.contains("    en position libre :\n        le texte « t », à 0 de la gauche et 0 du haut,"));
             QRegularExpressionMatch m = QRegularExpression("un bouton « A », à (\\d+) de la gauche et (\\d+) du haut").match(t);
             VERIFIER(m.hasMatch() && m.captured(1).toInt() >= 192 && m.captured(2).toInt() >= 40);
-            if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
+            if (!m.hasMatch() || m.captured(1).toInt() < 232) std::printf("%s\n", qPrintable(t));
         }
         // un élément dans un groupe d'un écran décrit : c'est le groupe qui suit le geste (seul le premier niveau a une place)
         {
@@ -3796,7 +3842,7 @@ int main(int argc, char **argv) {
             QRegularExpressionMatch m = QRegularExpression("le groupe « G », à (\\d+) de la gauche").match(t);
             VERIFIER(m.hasMatch() && m.captured(1).toInt() >= 232);
             VERIFIER(t.contains("        le texte « dedans ».") || t.contains("            le texte « dedans »"));
-            if (!m.hasMatch()) std::printf("%s\n", qPrintable(t));
+            if (!m.hasMatch() || m.captured(1).toInt() < 232) std::printf("%s\n", qPrintable(t));
         }
         // Maj + flèche sur un élément d'un écran décrit, la touche livrée à l'aperçu qui a pris le focus au clic
         o.activateWindow();

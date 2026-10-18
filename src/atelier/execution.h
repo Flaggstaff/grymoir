@@ -127,6 +127,11 @@ private:
     void arreter();
     void terminer(bool ok, const QString &erreur, const QString &annulation);
     void ecrire(const QString &t, bool erreur = false);
+    // Ce qui se voit (docs/atelier.md, § 8) : un écran ouvert occupe toute la fenêtre ; le fil et la zone des questions
+    // n'apparaissent que pour une question, à la fin du programme, ou sur demande (Ctrl+J, « le fil d'exécution »).
+    void ranger();
+    bool console = false;
+    QWidget *bas = nullptr;
 
     Travail travail;
     QTextBrowser *fil;

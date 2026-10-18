@@ -782,6 +782,7 @@
     "trait-focus": 2
   },
   "dimensions": {
+    "largeur-contenu": 1120,
     "hauteur-controle": 32,
     "hauteur-ligne": 32,
     "hauteur-bouton-accueil": 44,

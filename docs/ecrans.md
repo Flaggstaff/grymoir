@@ -236,3 +236,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.26 | 2026-10-18 | § 3 : la fiche déduite montre un tableau par lien qui désigne l'objet ; `, hors des fiches,` l'en retire (grammaire 2.10) |
 | 0.27 | 2026-10-18 | § 3.2 : le tri d'une colonne par la valeur (nombres, dates, heures), les textes à la française |
 | 0.28 | 2026-10-18 | § 5.1 : l'apparence assouplie, couleur libre, fond, police et logo SVG (charte 1.60, grammaire 2.13) |
+| 0.29 | 2026-10-18 | À l'exécution, l'écran se lit comme une page : centré dans une largeur de 1120 px, en haut de la fenêtre quand rien ne s'étire ; le fil d'exécution se cache sous un écran (`docs/atelier.md` 0.84) |

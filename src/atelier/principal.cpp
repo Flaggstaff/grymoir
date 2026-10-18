@@ -9,6 +9,9 @@
 #include "projet.h"
 
 #include <QScreen>
+#include <memory>
+#include <QPushButton>
+#include <QTimer>
 #include <QGuiApplication>
 #include <QApplication>
 #include <QCoreApplication>
@@ -134,6 +137,47 @@ int main(int argc, char **argv) {
     Theme::courant().installer(app);   // l'atelier et les programmes qu'il lance : même thème
     // L'icône de l'atelier, pour la fenêtre et la barre des tâches (Linux, Windows) ; macOS prend celle du paquet.
     QApplication::setWindowIcon(QIcon(":/application/icone/grymoir-atelier.png"));
+    // Capture d'un programme à écrans, pour comparer à une maquette sans écran physique (QT_QPA_PLATFORM=offscreen) :
+    //   grym-atelier --capture sortie.png [--clics "Clients;Nouveau client"] [--taille 1280x860] programme.grym
+    // Les clics se font dans l'ordre, chacun sur le bouton visible qui porte ce libellé, quand l'écran attend.
+    if (args.size() >= 4 && args.at(1) == "--capture") {
+        QString sortie = args.at(2), programme = args.last();
+        QStringList clics;
+        QSize taille(1280, 860);
+        for (int k = 3; k + 1 < args.size(); k += 2) {
+            if (args.at(k) == "--clics") clics = args.at(k + 1).split(';', Qt::SkipEmptyParts);
+            else if (args.at(k) == "--taille") {
+                const QStringList t = args.at(k + 1).split('x');
+                if (t.size() == 2) taille = QSize(t[0].toInt(), t[1].toInt());
+            }
+        }
+        auto *e = new Execution(programme);
+        e->resize(taille);
+        e->show();
+        e->demarrer();
+        auto *minuterie = new QTimer(e);
+        auto attendu = std::make_shared<int>(0);   // les essais à vide avant le prochain geste
+        QObject::connect(minuterie, &QTimer::timeout, e, [e, sortie, clics, attendu, minuterie]() mutable {
+            if (++*attendu < 8) return;   // laisser l'écran se poser et se peindre
+            QPushButton *pret = nullptr;
+            for (QPushButton *b : e->findChildren<QPushButton *>())
+                if (b->isVisible() && b->isEnabled()) { pret = b; break; }
+            if (!pret) return;
+            if (!clics.isEmpty()) {
+                const QString l = clics.takeFirst();
+                for (QPushButton *b : e->findChildren<QPushButton *>())
+                    if (b->isVisible() && b->isEnabled() && b->text() == l) { b->click(); break; }
+                *attendu = 0;
+                return;
+            }
+            minuterie->stop();
+            e->grab().save(sortie);
+            std::printf("%s\n", qPrintable(sortie));
+            QCoreApplication::exit(0);
+        });
+        minuterie->start(150);
+        return app.exec();
+    }
     if (args.size() == 3 && args.at(1) == "--lancer") {
         std::signal(SIGINT, sur_arret);
         std::signal(SIGTERM, sur_arret);

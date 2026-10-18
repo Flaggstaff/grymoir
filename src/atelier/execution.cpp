@@ -28,6 +28,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSplitter>
+#include <QAction>
 #include <QTableWidget>
 #include <QSvgRenderer>
 #include <QPainter>
@@ -495,7 +496,7 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
     boutons->addWidget(bouton_arreter);
     boutons->addWidget(bouton_annuler);
     boutons->addWidget(bouton_envoyer);
-    auto *bas = new QWidget;
+    bas = new QWidget;
     auto *colonne = new QVBoxLayout(bas);
     colonne->addWidget(defilement, 1);
     colonne->addLayout(boutons);
@@ -507,6 +508,11 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
     partage->setStretchFactor(1, 1);
     setCentralWidget(partage);
     resize(820, 680);
+    // Ctrl+J : le fil d'exécution et la zone des questions, à la demande, sous un écran (comme la console d'un navigateur)
+    auto *voir_fil = new QAction(QString::fromUtf8("Fil d'exécution"), this);
+    voir_fil->setShortcut(QKeySequence("Ctrl+J"));
+    connect(voir_fil, &QAction::triggered, this, [this] { console = !console; ranger(); });
+    addAction(voir_fil);
 
     // Le fil de la machine émet ; ces signaux arrivent ici, dans l'ordre, par la file des événements.
     connect(&travail, &Travail::texte, this, [this](const QString &t) { ecrire(t); });
@@ -752,6 +758,7 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             vue_ecran->setEnabled(false);
             setWindowTitle(e.titre);
         }
+        ranger();
     });
     connect(&travail, &Travail::reponses, this, [this](const QString &echo) {
         QTextCursor c(fil->document());
@@ -936,6 +943,7 @@ void Execution::poser() {
                            total * 3 / 5);
     partage->setSizes({total - voulu, voulu});
     attente = true;
+    ranger();
     bouton_envoyer->setEnabled(true);
     bouton_annuler->setEnabled(true);
     etat->setText("En attente d'une réponse.");
@@ -954,6 +962,7 @@ void Execution::envoyer(int issue) {
         travail.saisies[k] = s;
     }
     attente = false;
+    ranger();
     bouton_envoyer->setEnabled(false);
     bouton_annuler->setEnabled(false);
     for (QWidget *w : controles) if (w) w->setEnabled(false);
@@ -1126,9 +1135,28 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
             connect(b, &QPushButton::clicked, this, [this, k] { envoyer_evenement(EVENEMENT_CLIC, k, 0); });
         }
     }
+    // L'écran garde une largeur de lecture (« largeur-contenu ») et se centre dans une fenêtre plus large, comme une page
+    auto *cadre = new QWidget;
+    auto *centre = new QHBoxLayout(cadre);
+    centre->setContentsMargins(0, 0, 0, 0);
+    vue_ecran->setMaximumWidth(Theme::courant().mesure("largeur-contenu"));
+    // rien qui s'étire (une liste, un groupe) : l'écran reste en haut, l'espace libre dessous, comme une page ; sinon
+    // Qt répartissait la hauteur entre les éléments et l'écran flottait au milieu de la fenêtre
+    bool etire = false;
+    if (auto *pile = qobject_cast<QBoxLayout *>(vue_ecran->layout()))
+        for (int k = 0; k < pile->count() && !etire; k++) etire = pile->stretch(k) > 0;
+    centre->addWidget(vue_ecran, 1, etire ? Qt::Alignment() : Qt::AlignTop);
+    vue_ecran = cadre;
     vue_ecran->setEnabled(false);   // actif seulement quand la machine attend un événement
     partage->insertWidget(0, vue_ecran);
     partage->setSizes({height() * 2 / 3, height() / 6, height() / 6});
+    ranger();
+}
+
+void Execution::ranger() {
+    const bool ecran = vue_ecran && !fini;
+    fil->setVisible(!ecran || console);
+    bas->setVisible(!ecran || console || attente);
 }
 
 void Execution::effacer_erreurs_zones() {
@@ -1162,6 +1190,7 @@ void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) 
 void Execution::terminer(bool ok, const QString &erreur, const QString &annulation) {
     fini = true;
     attente = false;
+    ranger();
     travail.saisies.clear();
     delete zone->layout();
     qDeleteAll(zone->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly));
