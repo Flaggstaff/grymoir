@@ -14,6 +14,8 @@
 #include "transcription.h"
 #include <QFontMetrics>
 #include "relecture.h"
+#include "son.h"
+#include <QTextBrowser>
 #include "schema.h"
 #include "reecriture.h"
 #include "lien.h"
@@ -46,6 +48,7 @@
 #include <QCompleter>
 #include <QDir>
 #include <QElapsedTimer>
+#include <QBuffer>
 #include <QFile>
 #include <QImage>
 #include <QMap>
@@ -3963,6 +3966,92 @@ int main(int argc, char **argv) {
         VERIFIER(faux && !faux->text().contains("<a") && !faux->openExternalLinks());
         VERIFIER(lien_html(QString::fromUtf8("é l@x.ch"), LIEN_COURRIEL).startsWith("<a href=\"mailto:%C3%A9%20l@x.ch\">"));
         delete v.vue;
+    }
+
+    {   // Les sons (§ 15.7) : reconnus à leur signature ; le lecteur ne s'active qu'avec un son ; l'enregistreur annonce
+        // le format qu'il écrirait ici (rien à vérifier sans micro : le conteneur n'en a pas)
+        QByteArray wav("RIFF\x24\0\0\0WAVEfmt ", 16);
+        wav += QByteArray(28, '\0');
+        VERIFIER(octets_de_son(wav) && octets_de_son(QByteArray("\0\0\0\x18" "ftypM4A ", 12)) && octets_de_son("OggS....")
+                 && octets_de_son("fLaC....") && !octets_de_son(QByteArray("\x89PNG\r\n\x1a\n", 8)) && !octets_de_son(""));
+        LecteurSon l;
+        VERIFIER(!l.bouton()->isEnabled() && !l.a_un_son());
+        l.donner(wav, "memo.wav");
+        VERIFIER(l.bouton()->isEnabled() && l.a_un_son() && l.nom_du_son() == "memo.wav");
+        l.donner(QByteArray(), QString());
+        VERIFIER(!l.bouton()->isEnabled());
+        const QString ext = EnregistreurSon::extension_choisie();
+        std::printf("enregistrement sur ce système : %s\n", ext.isEmpty() ? "aucun format" : qPrintable(ext));
+        VERIFIER(ext.isEmpty() || QStringList({"m4a", "ogg", "flac", "wav"}).contains(ext));
+
+        // la fiche déduite (§ 22.3) : un son devient un lecteur, une image une image, sous « Libellé : valeur »
+        QVector<ElementVue> el(2);
+        el[0].sorte = el[1].sorte = ELEMENT_TEXTE;
+        el[0].texte = QString::fromUtf8("Mémo : memo.wav");
+        el[0].valeur_depuis = 7;
+        el[0].octets = wav;
+        QImage img(4, 4, QImage::Format_RGB32);
+        img.fill(Qt::red);
+        QByteArray png;
+        QBuffer tampon(&png);
+        tampon.open(QIODevice::WriteOnly);
+        img.save(&tampon, "PNG");
+        el[1].texte = "Photo : p.png";
+        el[1].valeur_depuis = 8;
+        el[1].octets = png;
+        VueEcran v = dessiner_ecran("Visite", el);
+        auto *lf = v.controles[0] ? v.controles[0]->findChild<LecteurSon *>("lecteur-fiche") : nullptr;
+        VERIFIER(lf && lf->a_un_son() && lf->bouton()->isEnabled());
+        VERIFIER(v.controles[1] && !v.controles[1]->findChild<LecteurSon *>() && v.controles[1]->findChildren<QLabel *>().size() == 2);
+        delete v.vue;
+    }
+
+    {   // Une zone (son) dans la fenêtre d'exécution (§ 15.7) : « Écouter » et « Enregistrer » à côté du choix de fichier ;
+        // un enregistrement fait le changement de la zone, comme un fichier choisi ; le son affiché se joue depuis le fil
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    un mémo (son), facultatif,\n    un bouton « OK ».\n"
+                    "Quand on clique sur « OK » dans l'écran x :\n    Afficher le format du mémo de l'écran.\n"
+                    "    Afficher le mémo de l'écran.\n    Fermer l'écran.\nOuvrir l'écran x.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto ok = [&]() -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == "OK" && b->isVisible() && b->isEnabled()) return b;
+            return nullptr;
+        };
+        VERIFIER(attendre([&] { return ok() != nullptr; }));
+        auto *micro = e.findChild<EnregistreurSon *>();
+        LecteurSon *lecteur = nullptr;
+        for (LecteurSon *x : e.findChildren<LecteurSon *>()) if (x->isVisible()) lecteur = x;   // pas celui, caché, du fil
+        VERIFIER(micro && micro->isVisible() && lecteur && !lecteur->a_un_son());
+        if (micro && micro->enregistre && lecteur) {
+            QByteArray wav("RIFF\x24\0\0\0WAVEfmt ", 16);
+            wav += QByteArray(28, '\0');
+            micro->enregistre(wav, "enregistrement-2026-10-18-1432.wav");   // ce que rend la fin d'un enregistrement
+            VERIFIER(lecteur->a_un_son());
+            auto bouton_son = [&]() -> QPushButton * {   // la machine le décrit par sa taille : 44 octets
+                for (QPushButton *b : e.findChildren<QPushButton *>())
+                    if (b->text().startsWith(QString::fromUtf8("un fichier de 44 octets"))) return b;
+                return nullptr;
+            };
+            VERIFIER(attendre([&] { return bouton_son() != nullptr; }));   // la machine a reçu le son, et le montre
+            VERIFIER(lecteur->a_un_son());   // sa description à elle : le son reste écoutable
+            if (ok()) ok()->click();
+            auto *fil = e.findChild<QTextBrowser *>();
+            VERIFIER(fil && attendre([&] { return fil->toPlainText().contains(QString::fromUtf8("Écouter « ")); }));
+            VERIFIER(fil && fil->toPlainText().contains("WAV") && fil->toHtml().contains("son:0"));
+        }
     }
 
     std::printf("%d/%d tests réussis\n", total - echecs, total);

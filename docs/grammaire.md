@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.8 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.9 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1190,8 +1190,8 @@ Une visite, conservée, a :
 
 - `(son)` est un fichier dont la signature est reconnue, comme `(image)` (§ 15.3) : WAV, MP3, AAC, M4A, Ogg, WebM, FLAC. Un autre fichier est refusé : « « contrat.pdf » n'est pas un son (WAV, MP3, M4A, Ogg, WebM ou FLAC). » `le format du mémo` donne le format reconnu.
 - M4A se reconnaît à son conteneur MP4, qui peut aussi porter une vidéo : on n'en écouterait que le son.
-- Dans le navigateur, `Afficher le mémo de v.` et la fiche montrent un lecteur, avec ses commandes. Une zone `(son)` accepte un fichier sonore ; sur un téléphone, elle propose aussi d'enregistrer au micro (attribut `capture`, selon le navigateur du téléphone).
-- Dans l'atelier et les applications fabriquées, une zone `(son)` accepte un fichier sonore ; l'écoute et l'enregistrement au micro demandent le module multimédia de Qt, pas encore intégré.
+- Dans le navigateur, `Afficher le mémo de v.` et les fiches, affichée ou déduite *(2.9)*, montrent un lecteur, avec ses commandes. Une zone `(son)` accepte un fichier sonore ; sur un téléphone, elle propose aussi d'enregistrer au micro (attribut `capture`, selon le navigateur du téléphone).
+- Dans l'atelier et les applications fabriquées *(2.9)*, une zone `(son)` accepte un fichier sonore, l'écoute (« ▶ Écouter ») et l'enregistre au micro (« ● Enregistrer », un second clic arrête) ; l'enregistrement remplit la zone comme un fichier choisi, et la transcription suit (§ 15.8). Le format enregistré est le premier que le système sait écrire parmi M4A, Ogg, FLAC et WAV. `Afficher le mémo de v.` pose un lien « ▶ Écouter » dans le fil ; les fiches, un lecteur. Sous macOS, le système demande une fois l'accord pour le micro.
 - La transcription en texte (`transcrite du mémo`) est à l'étude : reconnaissance locale (Whisper), rien ne quitte l'ordinateur.
 
 ### 15.8 Une transcription *(étape 1, le 17 octobre 2026)*
@@ -2112,3 +2112,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.6 | 2026-10-16 | Nouveau § 15.7 : le type `(son)`, reconnu à sa signature, écouté dans le navigateur |
 | 2.7 | 2026-10-17 | Nouveau § 15.8 : `, transcrite du mémo`, le texte d'un champ (son) rangé dans un champ de texte, par le transcripteur de l'interface |
 | 2.8 | 2026-10-18 | § 16.15 et § 22.13 : dans les fiches, la valeur colorée en étiquette, le courriel en lien d'écriture, l'adresse web en lien ; rien ne change dans ce qu'on écrit. § 22.11 : la forme canonique garde la période (« par mois de l'échéance ») ; le formatage l'effaçait |
+| 2.9 | 2026-10-18 | § 15.7 : l'écoute et l'enregistrement au micro dans l'atelier et les applications fabriquées ; le lecteur dans la fiche déduite, partout |

@@ -3225,7 +3225,17 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
                     if (*t) {   /* la valeur en étiquette (§ 16.15), le courriel à écrire, l'adresse à ouvrir (§ 22.13) */
                         el[n].etiquette = lettre_etiquette(c, q, t);
                         el[n].lien = v->type == V_TEXTE ? lien_du_type(c->types[q]) : 0;
-                        if (el[n].etiquette || el[n].lien) el[n].valeur_depuis = strlen(libelle) + 3;
+                        if (o->definis[q] && v->type == V_FICHIER) {   /* une image, un son (§ 15.7) : ses octets, montrés */
+                            char *illisible = NULL;
+                            const char *montre = format_montre(v->fichier, &illisible);
+                            if (montre && octets_du_fichier(v->fichier, &illisible)) {
+                                el[n].octets = v->fichier->octets;
+                                el[n].taille = v->fichier->taille;
+                                el[n].format = montre;
+                            }
+                            free(illisible);
+                        }
+                        if (el[n].etiquette || el[n].lien || el[n].octets) el[n].valeur_depuis = strlen(libelle) + 3;
                     }
                     free(t);
                 }

@@ -238,3 +238,4 @@ Un bloc `en position libre :` (grammaire, § 22.9) devient une grille d'une seul
 | 0.22 | 2026-10-16 | Les zones en faute : un résumé en haut, chaque faute un lien vers sa zone ; sous la zone, son message, que le champ désigne (`aria-describedby`) et qui le dit invalide (`aria-invalid`) |
 | 0.23 | 2026-10-16 | Les étiquettes dans les listes ; les règles de style du résumé des erreurs, qui manquaient au patch précédent |
 | 0.24 | 2026-10-18 | Fiches : l'étiquette colorée, le courriel en `mailto:` (encodé, sauf les caractères sûrs d'une adresse), l'adresse web en lien `target=_blank`, `rel=noopener noreferrer`, seulement en http(s) |
+| 0.25 | 2026-10-18 | `media-src 'self'` dans la politique de sécurité : sans elle, `default-src 'none'` bloquait tout lecteur de son. Fiche déduite : un son devient un lecteur, une image une image, servis par `/ecran-image/` |

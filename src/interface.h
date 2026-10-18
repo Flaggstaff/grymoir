@@ -60,7 +60,8 @@ typedef struct {
     int multiple;                   /* « des genres (genre) » : des choix multiples parmi `choix` ; sa valeur (ecran_valeurs)
                                        et son changement : les clés cochées, séparées par U+001E (§ 22.1) */
     /* Texte d'une fiche déduite (« Libellé : valeur », § 22.3) : la valeur commence à texte + valeur_depuis (0 : texte
-       ordinaire). Une interface qui l'ignore montre le texte entier, ce qui reste juste. */
+       ordinaire). Une interface qui l'ignore montre le texte entier, ce qui reste juste. Une image ou un son de la fiche
+       (§ 15.7) porte en plus ses octets, sa taille et son format, comme ELEMENT_IMAGE ; la valeur est alors son nom. */
     size_t valeur_depuis;
     char etiquette;                 /* la valeur en étiquette, de cette couleur (b v t p g r o, § 16.15) ; 0 : non */
     int lien;                       /* la valeur en lien : LIEN_COURRIEL (écrire), LIEN_WEB (ouvrir) ; 0 : non */

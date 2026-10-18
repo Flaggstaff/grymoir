@@ -57,7 +57,9 @@ signals:
     void texte(const QString &t);
     void effacer();
     void image(const QByteArray &octets, const QString &description);
-    void fiche(const QString &html, const QList<QByteArray> &images);
+    void son(const QByteArray &octets, const QString &nom);   // « Afficher le mémo de v. » (§ 15.7)
+    // les images de la fiche, désignées « image:K » ; ses sons, « son:K » (§ 15.7) : nom, puis octets, deux par son
+    void fiche(const QString &html, const QList<QByteArray> &images, const QList<QByteArray> &sons);
     void question();
     // Écrans (grammaire, § 22) : chaque élément en (sorte, texte, colonnes)
     void ecran_ouvert(const QString &titre, const QVector<int> &sortes, const QStringList &textes,
@@ -156,6 +158,12 @@ private:
     bool attente_ecran = false;
     bool attente = false, fini = false, fermer_a_la_fin = false;
     int images = 0;
+    // Les sons du fil (§ 15.7) : « son:K » dans le texte, joués par un lecteur caché ; nom et octets
+    QVector<QPair<QString, QByteArray>> sons_du_fil;
+    class LecteurSon *lecteur_fil = nullptr;
+    int son_joue = -1;
+    void jouer_son_du_fil(int k);
+    int lien_son(const QString &nom, const QByteArray &octets);   // range le son, rend son rang
 };
 
 #endif

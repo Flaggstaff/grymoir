@@ -51,7 +51,7 @@ endif()
 
 add_executable(grym-atelier MACOSX_BUNDLE WIN32
     src/atelier/principal.cpp src/atelier/fenetre.cpp src/atelier/editeur.cpp src/atelier/coloration.cpp
-    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp src/atelier/relecture.cpp)
+    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp src/atelier/relecture.cpp src/atelier/son.cpp)
 target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia whisper)
 # Windows : l'icône de l'exécutable et le manifeste qui fait lire les chemins en UTF-8 (outils/windows).
 if(WIN32)
@@ -88,7 +88,9 @@ endif()
 set_target_properties(grym-atelier PROPERTIES
     MACOSX_BUNDLE_BUNDLE_NAME "GrymoiR"
     MACOSX_BUNDLE_GUI_IDENTIFIER "ch.grymoir.atelier"
-    MACOSX_BUNDLE_ICON_FILE "GrymoiR.icns")
+    MACOSX_BUNDLE_ICON_FILE "GrymoiR.icns"
+    # le modèle de CMake, plus NSMicrophoneUsageDescription : sans cette clé, macOS refuse le micro (§ 15.7)
+    MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/outils/Info.plist.in")
 if(NOT MSVC)
     target_compile_options(grym-atelier PRIVATE -Wall -Wextra -pedantic)
 endif()
@@ -96,7 +98,7 @@ endif()
 # Essais de l'atelier, sans fenêtre (QT_QPA_PLATFORM=offscreen) : ctest --test-dir construction
 enable_testing()
 add_executable(test_atelier tests/test_atelier.cpp src/atelier/coloration.cpp src/atelier/editeur.cpp
-    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp src/atelier/relecture.cpp)
+    src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp src/atelier/relecture.cpp src/atelier/son.cpp)
 qt_add_resources(test_atelier "documentation_essais" PREFIX "/documentation" BASE docs FILES docs/grammaire.md docs/guide.md)
 target_include_directories(test_atelier PRIVATE src/atelier)
 target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia whisper)

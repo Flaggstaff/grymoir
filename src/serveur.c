@@ -576,7 +576,8 @@ static void repondre_octets(Serveur *s, const char *statut, const char *type, co
         "HTTP/1.1 %s\r\n"
         "Content-Type: %s\r\n"
         "Content-Length: %lu\r\n"
-        "Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; script-src 'self'; form-action 'self'; "
+        "Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; script-src 'self'; "
+        "form-action 'self'; "
         "frame-ancestors 'none'; base-uri 'none'\r\n"
         "X-Content-Type-Options: nosniff\r\n"
         "Referrer-Policy: same-origin\r\n"   /* no-referrer ferait envoyer « Origin: null » aux formulaires */
@@ -1329,7 +1330,15 @@ static void page_ecran(Serveur *s) {
                 debut[el->valeur_depuis] = 0;
                 echapper(&c, debut);
                 free(debut);
-                valeur_de_fiche(&c, el->texte + el->valeur_depuis, el->etiquette, el->lien);
+                if (el->octets && el->format) {   /* une image ou un son de la fiche (§ 15.7) : servi à part, comme une image */
+                    const int son = strncmp(type_image(el->format), "audio/", 6) == 0;
+                    char *v = grym_formater(son ? "<audio controls preload=\"metadata\" src=\"/ecran-image/%lu/%lu\" aria-label=\""
+                                                : "<br><img src=\"/ecran-image/%lu/%lu\" alt=\"", e->serie, (unsigned long)k);
+                    chaine_ajouter(&c, v);
+                    free(v);
+                    echapper(&c, el->texte + el->valeur_depuis);
+                    chaine_ajouter(&c, son ? "\"></audio>" : "\">");
+                } else valeur_de_fiche(&c, el->texte + el->valeur_depuis, el->etiquette, el->lien);
             } else echapper(&c, el->texte);
             chaine_ajouter(&c, "</p>\n");
             break;
@@ -1613,7 +1622,8 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
             const unsigned long ver = fin && *fin == '/' ? strtoul(fin + 1, &fin, 10) : (unsigned long)-1;
             if (ver != e->versions[k]) k = (unsigned long)-1;
         }
-        if (serie == e->serie && fin && !*fin && k < e->n && e->el[k].sorte == ELEMENT_IMAGE && e->el[k].octets
+        if (serie == e->serie && fin && !*fin && k < e->n
+            && (e->el[k].sorte == ELEMENT_IMAGE || e->el[k].sorte == ELEMENT_TEXTE) && e->el[k].octets   /* fiche : § 15.7 */
             && !(e->etats[k] & 2))
             repondre_octets(s, "200 OK", type_image(e->el[k].format), e->el[k].octets, e->el[k].taille, NULL);
         else

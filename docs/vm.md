@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.80 de la spécification, révisée le 18 octobre 2026.
+Version 1.81 de la spécification, révisée le 18 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -447,3 +447,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.78 | 2026-10-16 | Type `son` (`types.h`, `type_fichier`) ; sa signature lue dans les octets à l'affectation ; `afficher_image` et la fiche reçoivent aussi le format d'un son ; format version 61 |
 | 1.79 | 2026-10-17 | Type d'un champ transcrit : `texte␜mémo` ; appel facultatif `transcrire`, appelé après l'écriture d'un son, le texte écrit et conservé avec lui ; `machine_transcripteur` ; format version 62 |
 | 1.80 | 2026-10-18 | Interface : `valeur_depuis`, `etiquette`, `lien` dans `ElementEcran` (les textes d'une fiche déduite), `etiquette` et `lien` dans `LigneFiche` ; `LIEN_COURRIEL`, `LIEN_WEB`. Rien ne change dans le bytecode : format version 62 |
+| 1.81 | 2026-10-18 | Interface : dans une fiche déduite, le texte d'une image ou d'un son porte ses `octets`, `taille`, `format` (comme `ELEMENT_IMAGE`) ; format version 62 inchangé |

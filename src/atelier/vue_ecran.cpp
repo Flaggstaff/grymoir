@@ -1,6 +1,7 @@
 // GrymoiR : l'atelier, le dessin d'un écran.
 #include "vue_ecran.h"
 #include "relecture.h"
+#include "son.h"
 #include <QFontInfo>
 #include <QAction>
 #include <QMenu>
@@ -17,6 +18,7 @@
 #include <QCompleter>
 #include <QHeaderView>
 #include <QLabel>
+#include <QImage>
 #include <QUrl>
 #include <QHash>
 #include <QGroupBox>
@@ -382,6 +384,27 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             l->setToolTip(e.texte);
             poser(l);
             r.controles[k] = l;
+        } else if (e.sorte == ELEMENT_TEXTE && e.valeur_depuis > 0 && e.valeur_depuis <= e.texte.size() && !e.octets.isEmpty()) {
+            // une image ou un son d'une fiche déduite (§ 15.7) : le libellé et le nom, puis l'image ou le lecteur
+            auto *boite = new QWidget;
+            auto *pile = new QVBoxLayout(boite);
+            pile->setContentsMargins(0, 0, 0, 0);
+            pile->setSpacing(t.mesure("espace-1"));
+            auto *l = new QLabel(e.texte);
+            l->setWordWrap(true);
+            pile->addWidget(l);
+            if (!octets_de_son(e.octets)) {   // une image ; une image illisible ici montre son nom
+                auto *i = new QLabel;
+                montrer_image(i, e.octets, e.texte.mid(e.valeur_depuis));
+                pile->addWidget(i);
+            } else {
+                auto *lecteur = new LecteurSon;
+                lecteur->setObjectName("lecteur-fiche");
+                lecteur->donner(e.octets, e.texte.mid(e.valeur_depuis));
+                pile->addWidget(lecteur);
+            }
+            poser(boite);
+            r.controles[k] = boite;
         } else if (e.sorte == ELEMENT_TEXTE && e.valeur_depuis > 0 && e.valeur_depuis <= e.texte.size()) {
             // une valeur de fiche (§ 22.3) : le libellé, puis la valeur en étiquette (§ 16.15) ou en lien (§ 22.13)
             const QString valeur = e.texte.mid(e.valeur_depuis);
@@ -430,6 +453,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 auto *b = new QPushButton(QString::fromUtf8("Choisir un fichier…"));
                 b->setProperty("fichier", true);
                 b->setProperty("image", e.type == "image");
+                b->setProperty("son", e.type == "son");   // l'exécution y ajoute « Écouter » et « Enregistrer » (§ 15.7)
                 w = b;
             }
             else if (en_boutons_radio(e)) {   // « (« actif », « suspendu » ou « retiré ») » : tous visibles d'un coup (§ 22.7)
@@ -531,6 +555,15 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 ligne->addWidget(w, 1);
                 if (!e.unite_devant) ligne->addWidget(u);
                 rang->addLayout(ligne);
+            } else if (w->property("son").toBool()) {   // un son : le choix de fichier, puis l'écoute et le micro à côté
+                auto *ligne = new QWidget;
+                ligne->setObjectName("ligne-son");
+                auto *h = new QHBoxLayout(ligne);
+                h->setContentsMargins(0, 0, 0, 0);
+                h->setSpacing(t.mesure("espace-2"));
+                h->addWidget(w);
+                h->addStretch(1);
+                rang->addWidget(ligne);
             } else
             rang->addWidget(w);
             poser(conteneur);

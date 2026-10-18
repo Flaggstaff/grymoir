@@ -773,6 +773,20 @@ int main(void) {
         CONTIENT(sc.reponses[0], "<audio controls preload=\"metadata\" src=\"/image/");
         CONTIENT(sc.reponses[0], "</audio></td>");   /* dans la fiche aussi */
         CONTIENT(sc.reponses[1], "audio/wav");
+        CONTIENT(sc.reponses[0], "media-src 'self'");   /* sans elle, default-src 'none' bloquait tout lecteur */
+        liberer(&sc);
+        /* la fiche déduite (§ 22.3) : le lecteur aussi, servi comme les images de l'écran ; la page d'avant s'en va */
+        const char *src3 = "Une visite, conservée, a :\n    un lieu (texte),\n    un mémo (son).\n"
+                           "Le v vaut une nouvelle visite :\n    Le lieu vaut « Bulle ».\n    Le mémo vaut le fichier « _essai_memo.wav ».\n"
+                           "Conserver v.\nOuvrir la fiche de v.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), get("/ecran-image/1/1"), get("/ecran-image/1/0"), evenement("q=1&clic=3"), get("/"));
+        servir(src3, &sc);
+        CONTIENT(sc.reponses[0], "<p class=\"texte\">Mémo : <audio controls preload=\"metadata\" src=\"/ecran-image/1/1\" "
+                                 "aria-label=\"un fichier de 16 octets\"></audio></p>");
+        CONTIENT(sc.reponses[0], "<p class=\"texte\">Lieu : Bulle</p>");
+        CONTIENT(sc.reponses[1], "audio/wav");
+        CONTIENT(sc.reponses[2], "404 Not Found");   /* un texte sans octets ne se sert pas */
         liberer(&sc);
         remove("_essai_memo.wav");
         const char *src2 = "L'écran x montre :\n    un mémo (son),\n    un bouton « OK ».\n"

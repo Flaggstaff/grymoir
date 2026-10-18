@@ -4,6 +4,7 @@
 #include "transcription.h"
 #include "theme.h"
 #include "vue_ecran.h"
+#include "son.h"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -52,6 +53,13 @@ static bool est_fichier(const Champ *c) {
 
 static bool est_oui_non(const Champ *c) { return c->type && std::strcmp(c->type, "vrai ou faux") == 0; }
 
+// Les formats de son que la machine reconnaît (§ 15.7, format_son de src/vm.c) ; les autres sont des images.
+static bool format_de_son(const char *f) {
+    if (!f) return false;
+    for (const char *s : {"WAV", "MP3", "AAC", "M4A", "Ogg", "WebM", "FLAC"}) if (std::strcmp(f, s) == 0) return true;
+    return false;
+}
+
 // --------------------------------------------------------------------------------------------
 // L'interface de la machine (src/interface.h), côté fil de la machine
 // --------------------------------------------------------------------------------------------
@@ -69,23 +77,28 @@ static void iface_effacer(void *contexte, Chaine *sortie) {
     emit t->effacer();
 }
 
-static void iface_image(void *contexte, Chaine *sortie, const unsigned char *octets, size_t taille, const char *,
+static void iface_image(void *contexte, Chaine *sortie, const unsigned char *octets, size_t taille, const char *format,
                         const char *description) {
     auto *t = static_cast<Travail *>(contexte);
     t->vider_sortie(sortie);
-    emit t->image(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille),
-                  QString::fromUtf8(description ? description : ""));
+    const QByteArray o(reinterpret_cast<const char *>(octets), (qsizetype)taille);
+    if (format_de_son(format)) emit t->son(o, QString::fromUtf8(description ? description : ""));   // § 15.7
+    else emit t->image(o, QString::fromUtf8(description ? description : ""));
 }
 
 static void iface_fiche(void *contexte, Chaine *sortie, const char *titre, const LigneFiche *lignes, size_t n) {
     auto *t = static_cast<Travail *>(contexte);
     t->vider_sortie(sortie);
     // Les images de la fiche voyagent à part : le HTML les désigne par « image:K », la fenêtre les range.
-    QList<QByteArray> images;
+    QList<QByteArray> images, sons;
     QString h = "<p><b>" + QString::fromUtf8(titre).toHtmlEscaped() + "</b></p><table cellspacing=\"0\" cellpadding=\"3\">";
     for (size_t k = 0; k < n; k++) {
         h += "<tr><td style=\"color:" + Theme::courant().hex("texte-2") + "\">" + QString::fromUtf8(lignes[k].libelle).toHtmlEscaped() + "</td><td>";
-        if (lignes[k].format && lignes[k].octets) {
+        if (lignes[k].format && lignes[k].octets && format_de_son(lignes[k].format)) {   // un son : un lien qui le joue
+            h += QString::fromUtf8("<a href=\"son-fiche:%1\">▶ Écouter</a> ").arg(sons.size() / 2);   // rang définitif : la fenêtre
+            sons.append(QByteArray(lignes[k].texte ? lignes[k].texte : ""));
+            sons.append(QByteArray(reinterpret_cast<const char *>(lignes[k].octets), (qsizetype)lignes[k].taille));
+        } else if (lignes[k].format && lignes[k].octets) {
             h += QString("<img src=\"image:%1\"><br>").arg(images.size());
             images.append(QByteArray(reinterpret_cast<const char *>(lignes[k].octets), (qsizetype)lignes[k].taille));
         }
@@ -100,7 +113,7 @@ static void iface_fiche(void *contexte, Chaine *sortie, const char *titre, const
         h += "</td></tr>";
     }
     h += "</table>";
-    emit t->fiche(h, images);
+    emit t->fiche(h, images, sons);
 }
 
 // --- Écrans (grammaire, § 22) : la machine décrit, la fenêtre montre ---
@@ -436,9 +449,13 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
     fil = new QTextBrowser;
     fil->setOpenLinks(false);
     // une fiche affichée (§ 22.13) : un courriel s'écrit, une adresse web s'ouvre, par le système ; rien d'autre
-    connect(fil, &QTextBrowser::anchorClicked, this, [](const QUrl &u) {
+    connect(fil, &QTextBrowser::anchorClicked, this, [this](const QUrl &u) {
         if (u.scheme() == "mailto" || u.scheme() == "http" || u.scheme() == "https") QDesktopServices::openUrl(u);
+        else if (u.scheme() == "son") jouer_son_du_fil(u.path().toInt());   // « son:3 » : un son du fil (§ 15.7)
     });
+    lecteur_fil = new LecteurSon(this);
+    lecteur_fil->hide();   // ses messages vont dans la barre d'état
+    lecteur_fil->signaler = [this](const QString &m) { etat->setText(m); };
     fil->setFont(Theme::courant().police_code(13));
 
     zone = new QWidget;
@@ -478,7 +495,22 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
 
     // Le fil de la machine émet ; ces signaux arrivent ici, dans l'ordre, par la file des événements.
     connect(&travail, &Travail::texte, this, [this](const QString &t) { ecrire(t); });
-    connect(&travail, &Travail::effacer, fil, &QTextBrowser::clear);
+    connect(&travail, &Travail::effacer, this, [this] {
+        fil->clear();
+        lecteur_fil->donner(QByteArray(), QString());   // les liens « son:K » disparaissent avec le texte
+        sons_du_fil.clear();
+        son_joue = -1;
+    });
+    connect(&travail, &Travail::son, this, [this](const QByteArray &octets, const QString &nom) {
+        const int k = lien_son(nom, octets);
+        QTextCursor c(fil->document());
+        c.movePosition(QTextCursor::End);
+        c.insertHtml(QString::fromUtf8("<a href=\"son:%1\">▶ Écouter « %2 »</a>").arg(k).arg(nom.toHtmlEscaped()));
+        c.insertBlock();
+        c.setCharFormat(QTextCharFormat());
+        fil->setTextCursor(c);
+        fil->ensureCursorVisible();
+    });
     connect(&travail, &Travail::image, this, [this](const QByteArray &octets, const QString &description) {
         const QImage img = QImage::fromData(octets);
         if (img.isNull()) {   // format que Qt ne lit pas ici (WebP sans son greffon) : la description
@@ -497,8 +529,12 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         fil->setTextCursor(c);
         fil->ensureCursorVisible();
     });
-    connect(&travail, &Travail::fiche, this, [this](const QString &html, const QList<QByteArray> &liste) {
+    connect(&travail, &Travail::fiche, this, [this](const QString &html, const QList<QByteArray> &liste,
+                                                   const QList<QByteArray> &sons) {
         QString h = html;
+        for (int k = 0; 2 * k + 1 < sons.size(); k++)   // les sons de la fiche : « son:K » devient leur rang dans le fil
+            h.replace(QString("\"son-fiche:%1\"").arg(k),
+                      QString("\"son:%1\"").arg(lien_son(QString::fromUtf8(sons[2 * k]), sons[2 * k + 1])));
         for (int k = 0; k < liste.size(); k++) {
             const QImage img = QImage::fromData(liste[k]);
             const QString nom = QString("image:%1").arg(images++);
@@ -580,8 +616,18 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
                 if (!l->property("masque").toBool() || l->text().isEmpty() == v[k].isEmpty()) l->setText(v[k]);
                 // masqué : la valeur de la machine ne s'y réécrit pas, sauf pour vider le champ quand elle l'est
             }
-            else if (auto *bf = qobject_cast<QPushButton *>(z); bf && bf->property("fichier").toBool())   // le fichier actuel
+            else if (auto *bf = qobject_cast<QPushButton *>(z); bf && bf->property("fichier").toBool()) {   // le fichier actuel
                 bf->setText(v[k].isEmpty() ? QString::fromUtf8("Choisir un fichier…") : v[k] + QString::fromUtf8(" (changer…)"));
+                // La machine décrit le son à sa façon (« un fichier de 44 octets ») : la première valeur après un envoi
+                // est celle du son envoyé ; une autre ensuite (vidé, ou venu d'un objet) n'est plus le son connu ici.
+                if (auto *lecteur = qobject_cast<LecteurSon *>(bf->property("lecteur").value<QObject *>())) {
+                    if (bf->property("son-envoye").toBool()) {
+                        bf->setProperty("son-envoye", false);
+                        bf->setProperty("valeur-son", v[k]);
+                    } else if (v[k].isEmpty() || v[k] != bf->property("valeur-son").toString())
+                        lecteur->donner(QByteArray(), QString());
+                }
+            }
             else if (z->property("radios").toBool()) {   // boutons radio (§ 22.7) : celui de la valeur, sinon aucun
                 auto *g = z->findChild<QButtonGroup *>();
                 if (g) {
@@ -604,6 +650,8 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             w->setVisible(!(e[k] & 2));
             QWidget *actif = k < zones.size() && zones[k] ? zones[k] : w;   // une zone : son contrôle, le libellé reste lisible
             if (!actif->property("lecture-seule").toBool()) actif->setEnabled(!(e[k] & 1));
+            if (auto *micro = qobject_cast<QWidget *>(actif->property("micro").value<QObject *>()))   // § 15.7
+                micro->setEnabled(actif->isEnabled());
         }
     });
     connect(&travail, &Travail::ecran_erreurs_zones, this, [this](const QVector<int> &els, const QStringList &msgs) {
@@ -742,7 +790,23 @@ void Execution::poser() {
                                                 : QString("aucun"));
             choisir->setEnabled(!accepte);
             const bool image = std::strcmp(ch->type, "image") == 0, son = std::strcmp(ch->type, "son") == 0;
-            connect(choisir, &QPushButton::clicked, this, [this, k, nom, image, son] {
+            LecteurSon *lecteur = nullptr;
+            EnregistreurSon *micro = nullptr;
+            if (son) {   // § 15.7 : écouter ce qui est choisi ou enregistré ; enregistrer au micro
+                lecteur = new LecteurSon;
+                micro = new EnregistreurSon;
+                lecteur->signaler = [this](const QString &m) { etat->setText(m); };
+                if (fichiers_choisis[k].fichier) lecteur->donner(fichiers_choisis[k].octets, fichiers_choisis[k].nom_fichier);
+                micro->setEnabled(!accepte);
+                micro->enregistre = [this, k, nom, lecteur](const QByteArray &octets, const QString &n) {
+                    fichiers_choisis[k].fichier = true;
+                    fichiers_choisis[k].octets = octets;
+                    fichiers_choisis[k].nom_fichier = n;
+                    nom->setText(n);
+                    lecteur->donner(octets, n);
+                };
+            }
+            connect(choisir, &QPushButton::clicked, this, [this, k, nom, image, son, lecteur] {
                 const QString c = QFileDialog::getOpenFileName(this, "Choisir un fichier", QString(),
                                                                image ? "Images (*.png *.jpg *.jpeg *.gif *.webp)"
                                                                : son ? "Sons (*.wav *.mp3 *.m4a *.aac *.ogg *.oga *.opus *.webm *.flac)" : QString());
@@ -753,8 +817,10 @@ void Execution::poser() {
                 fichiers_choisis[k].octets = f.readAll();
                 fichiers_choisis[k].nom_fichier = QFileInfo(c).fileName();
                 nom->setText(fichiers_choisis[k].nom_fichier);
+                if (lecteur) lecteur->donner(fichiers_choisis[k].octets, fichiers_choisis[k].nom_fichier);
             });
             h->addWidget(choisir);
+            if (lecteur) { h->addWidget(lecteur); h->addWidget(micro); }
             h->addWidget(nom, 1);
             w = ligne;
         } else if (est_oui_non(ch) || ch->suggestions_completes) {
@@ -929,16 +995,44 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                     });
             } else if (auto *bf = qobject_cast<QPushButton *>(z); bf && bf->property("fichier").toBool()) {
                 // une zone de fichier ou d'image : choisir un fichier ; ses octets et son nom font le changement
-                connect(bf, &QPushButton::clicked, this, [this, k, bf] {
+                LecteurSon *lecteur = nullptr;
+                if (bf->property("son").toBool()) {   // un son (§ 15.7) : l'écouter, ou l'enregistrer au micro
+                    auto *ligne = qobject_cast<QHBoxLayout *>(bf->parentWidget() ? bf->parentWidget()->layout() : nullptr);
+                    lecteur = new LecteurSon;
+                    auto *micro = new EnregistreurSon;
+                    if (ligne) {   // avant l'espace qui pousse à droite
+                        ligne->insertWidget(1, lecteur);
+                        ligne->insertWidget(2, micro);
+                    }
+                    lecteur->signaler = [this](const QString &m) { etat->setText(m); };
+                    micro->setVisible(!bf->property("lecture-seule").toBool() && bf->isEnabled());
+                    bf->setProperty("lecteur", QVariant::fromValue<QObject *>(lecteur));
+                    bf->setProperty("micro", QVariant::fromValue<QObject *>(micro));
+                    micro->enregistre = [this, k, lecteur, bf](const QByteArray &octets, const QString &nom) {
+                        lecteur->donner(octets, nom);
+                        bf->setProperty("son-envoye", true);
+                        octets_envoyes = octets;
+                        fichier_envoye = true;
+                        texte_envoye = nom.toUtf8();
+                        envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
+                    };
+                }
+                connect(bf, &QPushButton::clicked, this, [this, k, bf, lecteur] {
                     const QString f = QFileDialog::getOpenFileName(this, "Choisir un fichier", QString(),
                                                                    bf->property("image").toBool()
-                                                                       ? "Images (*.png *.jpg *.jpeg *.gif *.webp)" : QString());
+                                                                       ? "Images (*.png *.jpg *.jpeg *.gif *.webp)"
+                                                                   : lecteur ? "Sons (*.wav *.mp3 *.m4a *.aac *.ogg *.oga *.opus *.webm *.flac)"
+                                                                             : QString());
                     if (f.isEmpty()) return;
                     QFile fichier(f);
                     if (!fichier.open(QIODevice::ReadOnly)) { etat->setText("Le fichier ne s'ouvre pas : " + f); return; }
                     octets_envoyes = fichier.readAll();
                     fichier_envoye = true;
                     texte_envoye = QFileInfo(f).fileName().toUtf8();
+                    if (lecteur) {
+                        lecteur->donner(octets_envoyes, QFileInfo(f).fileName());
+                        bf->setProperty("son-envoye", true);
+                    }
                     envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
                 });
             } else if (auto *c = qobject_cast<QCheckBox *>(z)) {
@@ -1047,4 +1141,20 @@ void Execution::closeEvent(QCloseEvent *e) {
     }
     arreter();   // ailleurs, fermer pendant l'exécution l'arrête d'abord, proprement
     e->ignore();
+}
+
+// --- Les sons du fil (§ 15.7) ---
+
+int Execution::lien_son(const QString &nom, const QByteArray &octets) {
+    sons_du_fil.append({nom, octets});
+    return sons_du_fil.size() - 1;
+}
+
+void Execution::jouer_son_du_fil(int k) {
+    if (k < 0 || k >= sons_du_fil.size()) return;
+    if (k != son_joue) {   // un autre son : il remplace le précédent
+        lecteur_fil->donner(sons_du_fil[k].second, sons_du_fil[k].first);
+        son_joue = k;
+    }
+    lecteur_fil->basculer();   // le même : arrêter, ou reprendre au début
 }
