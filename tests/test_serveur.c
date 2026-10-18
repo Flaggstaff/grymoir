@@ -1302,7 +1302,8 @@ int main(void) {
            la fiche du client et son historique */
         memset(&sc, 0, sizeof sc);
         question_suivante = 2;
-        char *formulaire = reponse("Anne Rochat|079 000 00 00|||||");
+        /* le pays laissé vide prend sa valeur de départ, « Suisse » */
+        char *formulaire = reponse("Anne Rochat|079 000 00 00||Route de Riaz|12a||1630|Bulle|||");
         REQUETES(evenement("q=1&clic=0"),                                       /* 0 : Clients */
                  evenement("q=2&clic=2"),                                       /* 1 : Nouveau client */
                  get("/"),                                                      /* 2 : le formulaire déduit */
@@ -1325,15 +1326,20 @@ int main(void) {
         /* le formulaire déduit demande le téléphone et le courriel, des textes vérifiés (§ 22.13) */
         CONTIENT(sc.reponses[2], "<label for=\"c1\">Téléphone</label>");
         CONTIENT(sc.reponses[2], "<label for=\"c2\">Courriel</label>");
+        /* l'adresse postale structurée, comme la QR-facture l'exige (rue, numéro, numéro postal, localité, pays) */
+        CONTIENT(sc.reponses[2], "<label for=\"c6\">Numéro postal</label>");
+        CONTIENT(sc.reponses[16], "Route de Riaz");
+        CONTIENT(sc.reponses[16], "1630");
+        CONTIENT(sc.reponses[16], "Suisse");
         CONTIENT(sc.reponses[4], "Anne Rochat</button></td><td>079 000 00 00</td>");
         CONTIENT(sc.reponses[12], "Remplis « Client » : cette zone est obligatoire.");
         /* la fiche : la séance au tarif, puis celle au tarif réduit, la plus récente en tête ; le total */
-        CONTIENT(sc.reponses[16], "value=\"7.0\">EPI</button></td><td>08.10.2026</td><td>14:30</td><td>70</td>");
-        CONTIENT(sc.reponses[16], "value=\"7.1\">EPI</button></td><td>01.10.2026</td><td></td><td>130</td>");
+        CONTIENT(sc.reponses[16], "value=\"12.0\">EPI</button></td><td>08.10.2026</td><td>14:30</td><td>70</td>");
+        CONTIENT(sc.reponses[16], "value=\"12.1\">EPI</button></td><td>01.10.2026</td><td></td><td>130</td>");
         CONTIENT(sc.reponses[16], "<span class=\"etiquette etiquette-o\">à payer</span>");
         /* la ligne de total : ni sélection, ni bouton de choix (§ 22.3) */
         CONTIENT(sc.reponses[16], "<tr class=\"total\"><td class=\"selection\"></td><td>Total</td><td></td><td></td><td>200</td>");
-        NE_CONTIENT_PAS(sc.reponses[16], "value=\"7.2\"");
+        NE_CONTIENT_PAS(sc.reponses[16], "value=\"12.2\"");
         CONTIENT(sc.reponses[16], ">Nouvelle séance</button>");
         NE_CONTIENT_PAS(sc.reponses[16], "class=\"erreur\"");
         liberer(&sc);

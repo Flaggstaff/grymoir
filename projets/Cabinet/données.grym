@@ -8,11 +8,18 @@ Un soin, conservé, a :
     une durée (nombre entier), facultative.
 
 Remarque : le nom est la clé : « Anne Rochat » ; deux homonymes se distinguent par une initiale ou une ville.
+Remarque : l'adresse postale en champs séparés, comme la QR-facture l'exige depuis le 21 novembre 2025 (adresse structurée) :
+Remarque : rue, numéro de maison (« 10a »), numéro postal (NPA), localité, pays ; le complément porte une case postale ou un « c/o ».
 Un client, conservé, a :
     un nom (texte), unique,
     un téléphone (téléphone), facultatif,
     un courriel (courriel), facultatif,
-    une adresse (texte), facultative,
+    une rue (texte), facultative,
+    un numéro de maison (texte), facultatif,
+    un complément d'adresse (texte), facultatif,
+    un numéro postal (texte), facultatif,
+    une localité (texte), facultative,
+    un pays (texte), « Suisse » au départ,
     une date de naissance (date), facultative,
     une remarque (texte), facultative.
 
@@ -30,6 +37,11 @@ Une note, conservée, hors des fiches, a :
     un client (client),
     une date (date),
     un contenu (texte).
+
+Remarque : un numéro postal (NPA) suisse a quatre chiffres.
+Chaque client conservé dont le pays est « Suisse » et le numéro postal est présent vérifie :
+    la longueur du numéro postal du client = 4,
+    sinon « Le numéro postal » puis le numéro postal du client puis « n'a pas quatre chiffres. ».
 
 Chaque séance conservée vérifie :
     le prix de la séance ≥ 0,
