@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, le dessin d'un écran.
 #include "vue_ecran.h"
+#include "relecture.h"
 #include <QFontInfo>
 #include <QAction>
 #include <QMenu>
@@ -427,6 +428,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 w = m;
             } else if (e.plusieurs_lignes) {   // « sur plusieurs lignes » (§ 22.6) : Tab passe à la suite, Entrée va à la ligne
                 auto *p = new QPlainTextEdit;
+                installer_relecture(p);   // un texte transcrit : nombres et mots douteux surlignés (§ 15.8)
                 p->setTabChangesFocus(true);
                 p->setMinimumHeight(p->fontMetrics().lineSpacing() * 4 + 2 * p->frameWidth() + 8);
                 if (e.hauteur <= 0)   // une hauteur dite (§ 22.9) se prend entière ; sinon, huit lignes au plus

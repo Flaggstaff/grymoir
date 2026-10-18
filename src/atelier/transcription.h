@@ -20,5 +20,10 @@ bool decoder_en_16k(const QByteArray &octets, std::vector<float> *pcm, QString *
 // Les phrases inventées dans les silences, retirées (formules de génériques de sous-titres).
 QString nettoyer_transcription(const QString &texte);
 
+// La relecture (§ 15.8) : des caractères Unicode invisibles, rangés dans le texte même pour qu'ils le suivent partout
+// (base, écrans, copies). Un texte transcrit commence par MARQUE_TRANSCRIT (ses nombres sont surlignés) ; un mot dont
+// Whisper doute (probabilité sous 0,5) est entre DEBUT_DOUTE et FIN_DOUTE.
+inline constexpr char16_t MARQUE_TRANSCRIT = 0x2064, DEBUT_DOUTE = 0x2062, FIN_DOUTE = 0x2063;
+
 // Le texte d'un son, ou vide avec *erreur. Le modèle est chargé une fois, puis gardé.
 QString transcrire_son(const QByteArray &octets, const QString &modele, QString *erreur);

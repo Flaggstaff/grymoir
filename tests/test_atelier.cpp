@@ -12,6 +12,8 @@
 #include <QPlainTextEdit>
 #include <cmath>
 #include "transcription.h"
+#include <QFontMetrics>
+#include "relecture.h"
 #include "schema.h"
 #include "reecriture.h"
 #include "lien.h"
@@ -389,6 +391,46 @@ int main(int argc, char **argv) {
         VERIFIER(erreur.isEmpty());   // le modèle d'essai se charge et tourne
         QString sans;
         VERIFIER(transcrire_son(wav(16000, 1, 16, 1.0), QString(), &sans).isEmpty() && sans.contains("introuvable"));
+        // la relecture : des marques invisibles, des nombres et des doutes surlignés, un doute qui part à la correction
+        {
+            const QFontMetrics fm(QApplication::font());
+            VERIFIER(fm.horizontalAdvance(QString("ab")) == fm.horizontalAdvance(QString("a") + QChar(DEBUT_DOUTE) + QChar(FIN_DOUTE)
+                                                                             + QChar(MARQUE_TRANSCRIT) + QString("b")));
+            QPlainTextEdit z;
+            installer_relecture(&z);
+            const QString texte = QString(QChar(MARQUE_TRANSCRIT)) + "Pour 2 309 francs, nous vous " + QChar(DEBUT_DOUTE)
+                                  + "avirons" + QChar(FIN_DOUTE) + " un verre.";
+            z.setPlainText(texte);
+            z.resize(600, 200);
+            z.show();
+            QApplication::processEvents();
+            auto formats = [&] { return z.document()->firstBlock().layout()->formats(); };
+            auto couvert = [&](const QString &mot, bool souligne) {
+                const int i = (int)z.toPlainText().indexOf(mot);
+                for (const auto &r : formats())
+                    if (r.start <= i && r.start + r.length > i && r.format.background().style() != Qt::NoBrush
+                        && (!souligne || r.format.underlineStyle() == QTextCharFormat::WaveUnderline))
+                        return true;
+                return false;
+            };
+            VERIFIER(couvert("2 309", false));   // le nombre, surligné
+            VERIFIER(couvert("avirons", true));  // le mot douteux, souligné
+            VERIFIER(!couvert("verre", false));  // le reste, intact
+            QTextCursor c(z.document());          // on corrige le mot douteux : son doute s'en va
+            c.setPosition((int)z.toPlainText().indexOf("avirons") + 3);
+            c.insertText("X");
+            QApplication::processEvents();
+            VERIFIER(!z.toPlainText().contains(QChar(DEBUT_DOUTE)) && !z.toPlainText().contains(QChar(FIN_DOUTE)));
+            VERIFIER(z.toPlainText().contains("aviXrons") && couvert("2 309", false));
+            QPlainTextEdit ordinaire;              // un texte qui ne vient pas d'une transcription : rien n'est surligné
+            installer_relecture(&ordinaire);
+            ordinaire.setPlainText("Pour 2 309 francs.");
+            ordinaire.show();
+            QApplication::processEvents();
+            bool colore = false;
+            for (const auto &r : ordinaire.document()->firstBlock().layout()->formats()) colore |= r.format.background().style() != Qt::NoBrush;
+            VERIFIER(!colore);
+        }
         // le modèle n'entre que dans les applications qui transcrivent
         {
             QTemporaryDir p1, p2;

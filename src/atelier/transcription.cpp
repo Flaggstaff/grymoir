@@ -183,8 +183,36 @@ QString transcrire_son(const QByteArray &octets, const QString &modele, QString 
         *erreur = "La transcription a échoué.";
         return QString();
     }
-    QString texte;
+    // le texte, mot par mot, avec ses doutes : un mot commence par un morceau précédé d'une espace ; sa probabilité est
+    // celle de son morceau le moins sûr ; un passage entièrement inventé (« [Propos inaudibles] »…) est écarté
+    const whisper_token fin = whisper_token_eot(ctx);
+    QStringList passages;
     const int n = whisper_full_n_segments(ctx);
-    for (int i = 0; i < n; i++) texte += QString::fromUtf8(whisper_full_get_segment_text(ctx, i)) + "\n";
-    return nettoyer_transcription(texte);
+    for (int i = 0; i < n; i++) {
+        if (nettoyer_transcription(QString::fromUtf8(whisper_full_get_segment_text(ctx, i))).trimmed().isEmpty()) continue;
+        QString passage;
+        QByteArray mot;   // en octets : un caractère accentué peut tenir sur deux morceaux
+        float sur = 1;
+        auto finir = [&] {
+            if (mot.isEmpty()) return;
+            QString m = QString::fromUtf8(mot);
+            const qsizetype debut = m.startsWith(' ') ? 1 : 0;   // l'espace avant le mot reste hors du doute
+            if (sur < 0.5f && !m.trimmed().isEmpty())
+                m = m.left(debut) + QChar(DEBUT_DOUTE) + m.mid(debut) + QChar(FIN_DOUTE);
+            passage += m;
+            mot.clear();
+            sur = 1;
+        };
+        for (int j = 0; j < whisper_full_n_tokens(ctx, i); j++) {
+            const whisper_token_data d = whisper_full_get_token_data(ctx, i, j);
+            if (d.id >= fin) continue;   // les jetons spéciaux (fin, horodatage…)
+            const QByteArray t = whisper_full_get_token_text(ctx, i, j);
+            if (t.startsWith(' ')) finir();
+            mot += t;
+            sur = qMin(sur, d.p);
+        }
+        finir();
+        if (!passage.trimmed().isEmpty()) passages << passage.trimmed();
+    }
+    return passages.isEmpty() ? QString() : QString(QChar(MARQUE_TRANSCRIT)) + passages.join('\n');
 }

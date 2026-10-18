@@ -1912,6 +1912,21 @@ int main(void) {
         if (n != strlen(att) || memcmp(t, att, n) != 0) signaler(__LINE__, "export", att, t);
     }
     /* Un rapport (§ 15.6) : le total dans un CSV ; une page HTML, avec titre, nombres à droite, total, date d'édition */
+    /* les marques invisibles de relecture (§ 15.8) ne passent pas dans un tableur */
+    remove("_marques.csv");
+    PROG("Une note, conservée, a :\n    un texte (texte).\nLe n vaut une nouvelle note :\n"
+         "    Le texte vaut « \xe2\x81\xa4Pour \xe2\x81\xa2" "deux\xe2\x81\xa3 francs ».\nConserver n.\n"
+         "Exporter les notes conservées dans « _marques.csv ».", "");
+    {
+        FILE *f = fopen("_marques.csv", "rb");
+        char t[256] = {0};
+        size_t nl = f ? fread(t, 1, sizeof t - 1, f) : 0;
+        if (f) fclose(f);
+        const char *att = "\xEF\xBB\xBF" "Texte\r\nPour deux francs\r\n";
+        total++;
+        if (nl != strlen(att) || memcmp(t, att, nl) != 0) signaler(__LINE__, "marques retirées", att, t);
+        remove("_marques.csv");
+    }
     remove("_tot.csv");
     PROG(RC "Exporter les clients conservés dont le rang est inférieur à 3, par nom, avec le nom et le solde, "
          "avec le total du solde, dans « _tot.csv ».", "");

@@ -2498,7 +2498,15 @@ static char *cellule_csv(Machine *m, const Valeur *v) {
     if (v->type == V_BOOLEEN) return grym_dupliquer(v->vrai ? "vrai" : "faux");
     if (v->type == V_OBJET) return nom_objet(m, v->objet);
     if (v->type == V_FICHIER) return grym_dupliquer(v->fichier->nom ? v->fichier->nom : "");
-    return texte_valeur(m, v);
+    /* les marques invisibles de relecture d'un texte transcrit (U+2062 à U+2064, § 15.8) n'ont rien à faire dans un
+     * tableur : retirées */
+    char *t = texte_valeur(m, v), *w = t;
+    for (const char *r = t; *r;) {
+        if ((unsigned char)r[0] == 0xE2 && (unsigned char)r[1] == 0x81 && (unsigned char)r[2] >= 0xA2 && (unsigned char)r[2] <= 0xA4) r += 3;
+        else *w++ = *r++;
+    }
+    *w = 0;
+    return t;
 }
 
 /* RFC 4180 : entre guillemets si la cellule contient le séparateur, un guillemet, un retour à la ligne ou une espace
