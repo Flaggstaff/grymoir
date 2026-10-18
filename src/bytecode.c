@@ -401,7 +401,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_ECRAN_LISTE: case I_ECRAN_ERREUR: case I_FICHE_ECRAN: case I_ECRAN_ETAT:
                 besoin = 1; effet = -1; break;
             case I_APPARENCE:   /* le logo ; avec 0x100 (2.13), aussi la police, la couleur libre, le fond */
-                besoin = op & 0x100 ? 4 : 1; effet = -besoin; break;
+                besoin = (op & 0x100 ? 4 : 1) + (op & 0x200 ? 1 : 0); effet = -besoin; break;
             case I_REFUSER: besoin = (long)op; effet = -(long)op; break;
             case I_ECRAN_ATTENDRE: besoin = 0; effet = 2; break;
             case I_ECRAN_OBJET: besoin = 0; effet = 1; break;

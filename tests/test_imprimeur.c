@@ -575,6 +575,7 @@ int main(void) {
     FIXE("Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police "
          "« vendor/atkinson/AtkinsonHyperlegibleNext-Regular.ttf » et le logo « vendor/lucide/check.svg ».\n");
     FIXE("Les écrans ont la couleur verte et le fond « #E8E2D6 ».\n");
+    FIXE("Les écrans ont le logo « exemples/pixel.png » et la signature « vendor/lucide/check.svg ».\n");   /* 2.16 */
     COMP("Les écrans ont la couleur « #46433B », le fond « #E8E2D6 » et le logo « vendor/lucide/check.svg ».",
          "_écrans _couleur « #46433B » _fond « #E8E2D6 » _logo « vendor/lucide/check.svg »\n");
     COMP("Les écrans ont la couleur turquoise.", "_écrans _couleur _turquoise\n");

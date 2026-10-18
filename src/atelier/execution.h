@@ -76,6 +76,7 @@ signals:
     // le thème libre (2.13) : noms, valeurs claires, sombres (vides : celles du thème), le clair imposé, la police
     void theme(const QStringList &noms, const QStringList &clair, const QStringList &sombre, bool clair_impose,
                const QByteArray &police);
+    void signature(const QByteArray &octets);   // l'image du bandeau (2.16)
     void reponses(const QString &echo);   // les réponses acceptées, recopiées dans le fil comme en console
     void fin(bool ok, const QString &erreur, const QString &annulation);
 
@@ -160,6 +161,7 @@ private:
                          QVector<QWidget *> zones; QString titre; QVector<QWidget *> controles; };
     QVector<EcranMontre> recouverts;
     QPixmap logo;   // « … et le logo « … ». » (§ 22.5) : grand sur l'écran du dessous, petit sur les autres
+    QPixmap signature;   // « … et la signature « … ». » (2.16) : en bandeau sur chaque écran ; le logo devient l'icône seule
     QLabel *erreur_ecran = nullptr;
     QVector<class QTableWidget *> tables;
     QVector<QPushButton *> boutons_ecran;

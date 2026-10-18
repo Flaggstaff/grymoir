@@ -207,6 +207,7 @@ int main(void) {
     ALLER_RETOUR("_écrans _couleur « #46433B » _fond « #E8E2D6 » _police "
                  "« vendor/atkinson/AtkinsonHyperlegibleNext-Regular.ttf » _logo « vendor/lucide/check.svg »\n", NULL);
     ALLER_RETOUR("_écrans _couleur _verte _fond « #E8E2D6 »\n", NULL);
+    ALLER_RETOUR("_écrans _logo « exemples/pixel.png » _signature « vendor/lucide/check.svg »\n", NULL);   /* 2.16 */
     /* § 22.3 : une entité hors des fiches, déclarée ou héritière */
     ALLER_RETOUR("_classe _une note _conservé _hors_des_fiches\n    _un texte (texte)\n_fin\n", NULL);
     ALLER_RETOUR("_classe _une personne _conservé\n    _un nom (texte)\n_fin\n"

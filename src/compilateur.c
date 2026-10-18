@@ -772,16 +772,18 @@ static void phrase(Compilation *c, const Noeud *ph) {
         } else {
             emettre(c, I_ABSENT, 0, ph->ligne, ph->colonne);
         }
-        if (ph->texte2 || ph->texte3 || ph->nb_enfants) {   /* 2.13 : la police, la couleur libre, le fond, ou absents */
-            const char *suite[3] = { ph->nb_enfants ? ph->enfants[0]->texte : NULL, ph->texte2, ph->texte3 };
-            for (int r = 0; r < 3; r++) {
+        if (ph->texte2 || ph->texte3 || ph->nb_enfants) {   /* 2.13 : la police, la couleur libre, le fond, ou absents ;
+                                                                 2.16 : puis la signature, si elle est écrite (0x200) */
+            const char *signature = apparence_reglage(ph, 1);
+            const char *suite[4] = { apparence_reglage(ph, 0), ph->texte2, ph->texte3, signature };
+            for (int r = 0; r < (signature ? 4 : 3); r++) {
                 if (!suite[r]) { emettre(c, I_ABSENT, 0, ph->ligne, ph->colonne); continue; }
                 long k = bloc_constante(c->b, C_TEXTE, suite[r]);
                 if (k < 0) { trop_grand(c, ph); return; }
                 emettre(c, I_CONSTANTE, k, ph->ligne, ph->colonne);
-                if (r == 0) emettre(c, I_LIRE_FICHIER, 0, ph->ligne, ph->colonne);
+                if (r == 0 || r == 3) emettre(c, I_LIRE_FICHIER, 0, ph->ligne, ph->colonne);
             }
-            emettre(c, I_APPARENCE, (ph->entier + 1) | 0x100, ph->ligne, ph->colonne);
+            emettre(c, I_APPARENCE, (ph->entier + 1) | 0x100 | (signature ? 0x200 : 0), ph->ligne, ph->colonne);
             return;
         }
         emettre(c, I_APPARENCE, ph->entier + 1, ph->ligne, ph->colonne);

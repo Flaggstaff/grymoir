@@ -129,6 +129,9 @@ struct Serveur {
     int clair_impose;
     unsigned char *police;
     size_t taille_police;
+    unsigned char *signature;   /* l'image du bandeau (2.16), ou NULL */
+    size_t taille_signature;
+    const char *type_signature;
 };
 
 /* ---------------------------------------------------------------- */
@@ -507,6 +510,7 @@ static char *feuille_de_style(const Serveur *s) {
     "button:hover{background:var(--survol)}"
     "button.principal{background:var(--accent);border-color:var(--accent);color:var(--sur-accent)}"
     "button.principal:hover{background:var(--accent-survol);border-color:var(--accent-survol)}"
+    ".bandeau{padding:0 0 16px;margin:0 0 24px;border-bottom:1px solid var(--separateur)}.bandeau img{height:26px;width:auto;display:block}"
     ".tuiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}"
     "button.tuile{margin:0;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;text-align:left;"
     "min-height:120px;padding:20px 22px;border-radius:12px;border:0;background:var(--surface-alt)}"
@@ -1224,6 +1228,7 @@ static void page_ecran(Serveur *s) {
         free(s->avis);
         s->avis = NULL;
     }
+    if (s->signature) chaine_ajouter(&c, "<header class=\"bandeau\"><img src=\"/signature\" alt=\"\"></header>\n");   /* 2.16 */
     if (s->nb_ecrans > 1) {   /* le fil : les écrans ouverts dessous, du premier au plus proche */
         chaine_ajouter(&c, "<p class=\"fil\">");
         for (size_t k = 0; k + 1 < s->nb_ecrans; k++) {
@@ -1243,7 +1248,7 @@ static void page_ecran(Serveur *s) {
     /* Entrée dans une zone envoie le premier bouton du formulaire : celui-ci, qui ne fait que valider les zones */
     chaine_ajouter(&c, "\"><button class=\"invisible\" name=\"valider\" value=\"1\" tabindex=\"-1\" aria-hidden=\"true\">"
                        "Valider</button>\n<div class=\"entete\">");
-    if (s->logo) chaine_ajouter(&c, "<img src=\"/logo\" alt=\"\">");
+    if (s->logo && !s->signature) chaine_ajouter(&c, "<img src=\"/logo\" alt=\"\">");   /* une signature le remplace (2.16) */
     chaine_ajouter(&c, e->taille_titre > 0 ? "<h1 class=\"titre-grand\">" : e->taille_titre < 0 ? "<h1 class=\"titre-petit\">" : "<h1>");
     echapper(&c, e->titre);
     chaine_ajouter(&c, "</h1><button name=\"fermer\" value=\"1\" title=\"Fermer l'écran\" aria-label=\"Fermer l'écran\">×</button></div>\n");
@@ -1679,6 +1684,8 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
     } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/police") == 0 && s->police) {
         repondre_octets(s, "200 OK", s->taille_police >= 4 && !memcmp(s->police, "OTTO", 4) ? "font/otf" : "font/ttf",
                         s->police, s->taille_police, NULL);
+    } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/signature") == 0 && s->signature) {
+        repondre_octets(s, "200 OK", s->type_signature, s->signature, s->taille_signature, NULL);
     } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/logo") == 0 && s->logo) {
         repondre_octets(s, "200 OK", s->type_logo, s->logo, s->taille_logo, NULL);
     } else if (strcmp(r.methode, "GET") == 0 && strncmp(r.cible, "/ecran-image/", 13) == 0 && ecran_dessus(s)) {
@@ -2316,12 +2323,22 @@ static void serveur_ecran_theme(void *contexte, const char *const *noms, const c
     }
 }
 
+/* La signature (2.16) : l'image du bandeau, en tête de chaque écran */
+static void serveur_ecran_signature(void *contexte, const unsigned char *octets, size_t taille, const char *format) {
+    Serveur *s = contexte;
+    free(s->signature);
+    s->signature = grym_allouer(taille ? taille : 1);
+    if (taille) memcpy(s->signature, octets, taille);
+    s->taille_signature = taille;
+    s->type_signature = type_image(format);
+}
+
 Interface serveur_interface(Serveur *s) {
     Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer, 1, serveur_afficher_image,
                     serveur_afficher_fiche, serveur_ecran_ouvrir, serveur_ecran_lignes, serveur_ecran_attendre,
                     serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence,
                     serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre, serveur_ecran_erreurs_zones, NULL, NULL,
-                    serveur_ecran_theme };
+                    serveur_ecran_theme, serveur_ecran_signature };
     return i;
 }
 
@@ -2373,6 +2390,7 @@ void serveur_fermer(Serveur *s) {
     free(s->ev_octets);
     s->ev_octets = NULL;
     free(s->ev_choisies);
+    free(s->signature);
     free(s->police);
     free(s->logo);
     free(s->titre);

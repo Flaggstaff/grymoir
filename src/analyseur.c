@@ -5598,28 +5598,28 @@ static int fichier_svg(const char *chemin) {
  * moins un ; des virgules entre eux, « et » devant le dernier. */
 static Noeud *apparence(Analyse *a, const Jeton *t) {
     a->i += 3;   /* les écrans ont */
-    static const char *const ARTICLE[] = { "la", "le", "la", "le" };
-    static const char *const NOM[] = { "couleur", "fond", "police", "logo" };
+    static const char *const ARTICLE[] = { "la", "le", "la", "le", "la" };
+    static const char *const NOM[] = { "couleur", "fond", "police", "logo", "signature" };
     int couleur = -1, vu = -1, nb = 0, virgule = 0;
-    char *textes[4] = { NULL, NULL, NULL, NULL };   /* couleur libre, fond, police, logo */
-    const Jeton *jetons[4] = { NULL, NULL, NULL, NULL };
+    char *textes[5] = { NULL, NULL, NULL, NULL, NULL };   /* couleur libre, fond, police, logo, signature (2.16) */
+    const Jeton *jetons[5] = { NULL, NULL, NULL, NULL, NULL };
     int echec = 0;
     for (;;) {
-        for (int r = vu + 1; r < 4; r++) {
+        for (int r = vu + 1; r < 5; r++) {
             char *propose = grym_formater("%s %s", ARTICLE[r], NOM[r]);
             attendre_ici(a, propose);
             free(propose);
         }
         int r = -1;
-        for (int q = 0; q < 4; q++)
+        for (int q = 0; q < 5; q++)
             if (est_mot(cour(a), ARTICLE[q]) && est_mot(voir(a, 1), NOM[q])) r = q;
         if (r < 0) {
-            if (nb) echec = 1, erreur(a, cour(a), grym_dupliquer("Réglage attendu : « la couleur », « le fond », « la police » ou « le logo »."));
+            if (nb) echec = 1, erreur(a, cour(a), grym_dupliquer("Réglage attendu : « la couleur », « le fond », « la police », « le logo » ou « la signature »."));
             break;
         }
         if (r <= vu) {
             echec = 1, erreur(a, cour(a), grym_dupliquer("Les réglages s'écrivent dans cet ordre : la couleur, le fond, la police, "
-                                                       "le logo : « Les écrans ont la couleur verte et le logo « … ». »"));
+                                                       "le logo, la signature : « Les écrans ont la couleur verte et le logo « … ». »"));
             break;
         }
         a->i += 2;
@@ -5656,9 +5656,10 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
             const Jeton *tt = cour(a);
             attendre(a, A_TEXTE);
             if (tt->type != J_TEXTE) {
-                static const char *const EX[] = { "", "le fond « #E8E2D6 »", "la police « Outfit.ttf »", "le logo « logo.png »" };
+                static const char *const EX[] = { "", "le fond « #E8E2D6 »", "la police « Outfit.ttf »", "le logo « logo.png »",
+                                                  "la signature « signature.png »" };
                 echec = 1, erreur(a, tt, grym_formater("%s s'écrit entre guillemets : « %s ».",
-                                                    r == 1 ? "Le fond" : r == 2 ? "La police" : "Le logo", EX[r]));
+                                                    r == 1 ? "Le fond" : r == 2 ? "La police" : r == 3 ? "Le logo" : "La signature", EX[r]));
                 break;
             }
             textes[r] = grym_dupliquer(tt->valeur);
@@ -5668,12 +5669,12 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
         vu = r;
         nb++;
         if (cour(a)->type == J_VIRGULE) {
-            if (vu == 3) { echec = 1, erreur(a, cour(a), grym_dupliquer("Le logo est le dernier réglage.")); break; }
+            if (vu == 4) { echec = 1, erreur(a, cour(a), grym_dupliquer("La signature est le dernier réglage.")); break; }
             avancer(a);
             virgule = 1;
             continue;
         }
-        for (int k = vu + 1; k < 4; k++) {   /* « et le logo », « et la police »… : la suite possible */
+        for (int k = vu + 1; k < 5; k++) {   /* « et le logo », « et la police »… : la suite possible */
             char *propose = grym_formater("et %s %s", ARTICLE[k], NOM[k]);
             attendre_ici(a, propose);
             free(propose);
@@ -5683,15 +5684,15 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
             avancer(a);
             virgule = 0;
             int q = -1;
-            for (int k = 0; k < 4; k++)
+            for (int k = 0; k < 5; k++)
                 if (est_mot(cour(a), ARTICLE[k]) && est_mot(voir(a, 1), NOM[k])) q = k;
             if (q < 0) {
-                for (int k = vu + 1; k < 4; k++) {
+                for (int k = vu + 1; k < 5; k++) {
                     char *propose = grym_formater("%s %s", ARTICLE[k], NOM[k]);
                     attendre_ici(a, propose);
                     free(propose);
                 }
-                echec = 1, erreur(a, cour(a), grym_dupliquer("Réglage attendu après « et » : « le fond », « la police » ou « le logo »."));
+                echec = 1, erreur(a, cour(a), grym_dupliquer("Réglage attendu après « et » : « le fond », « la police », « le logo » ou « la signature »."));
                 break;
             }
             continue;
@@ -5721,7 +5722,7 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
         }
     }
     /* la police et le logo existent, dès l'analyse : l'aperçu de l'atelier les montre sans exécuter le programme */
-    for (int r = 2; r < 4 && !echec; r++) {
+    for (int r = 2; r < 5 && !echec; r++) {
         if (!textes[r]) continue;
         if (!*textes[r]) { echec = 1, erreur(a, jetons[r], grym_dupliquer("Nom de fichier vide.")); break; }
         char *dossier = dossier_de(a->portee->fichier);
@@ -5735,7 +5736,7 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
                                                  : grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF, WebP ou SVG).", textes[r]));
     }
     if (echec) {
-        for (int r = 0; r < 4; r++) free(textes[r]);
+        for (int r = 0; r < 5; r++) free(textes[r]);
         return NULL;
     }
     a->apparence_declaree = 1;
@@ -5747,6 +5748,12 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
     if (textes[2]) {          /* la police : un enfant, le seul */
         Noeud *x = noeud_creer(N_TEXTE, jetons[2]->ligne, jetons[2]->colonne, jetons[2]->debut);
         x->texte = textes[2];
+        noeud_ajouter(n, x);
+    }
+    if (textes[4]) {          /* la signature (2.16) : un enfant de forme 1 */
+        Noeud *x = noeud_creer(N_TEXTE, jetons[4]->ligne, jetons[4]->colonne, jetons[4]->debut);
+        x->texte = textes[4];
+        x->forme = 1;
         noeud_ajouter(n, x);
     }
     n->fin = fin_jeton(&a->j[a->i - 1]);

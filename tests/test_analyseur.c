@@ -931,12 +931,12 @@ int main(void) {
     VS("L'écran x montre :\n    en position libre :\n        le texte « t », à 1 de la gauche et 1 du haut, l", "large de | le texte « | "
        "la liste des | le graphique des | l'image « | l'image de | l'un sous l'autre : | le groupe « | les onglets :");
     VS("Les écrans ", "ont");
-    VS("Les écrans ont ", "la couleur | le fond | la police | le logo");
+    VS("Les écrans ont ", "la couleur | le fond | la police | le logo | la signature");
     VS("Les écrans ont la couleur ", "bleue | verte | turquoise | violette | grise | « … »");
     VS("Les écrans ont la couleur vi", "violette");
-    VS("Les écrans ont la couleur verte ", "et le fond | et la police | et le logo | .");
-    VS("Les écrans ont la couleur verte et ", "le fond | la police | le logo");
-    VS("Les écrans ont la couleur « #46433B », le fond « #E8E2D6 » ", "et la police | et le logo | .");
+    VS("Les écrans ont la couleur verte ", "et le fond | et la police | et le logo | et la signature | .");
+    VS("Les écrans ont la couleur verte et ", "le fond | la police | le logo | la signature");
+    VS("Les écrans ont la couleur « #46433B », le fond « #E8E2D6 » ", "et la police | et le logo | et la signature | .");
     VS("Les écrans ont le logo ", "« … »");
     VS("Les nombres s'affichent ", "à la suisse | à la française | sans séparateur");
     VS("Le total vaut 1.\nLe ", "total | (nouveau nom)");

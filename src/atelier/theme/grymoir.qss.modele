@@ -55,6 +55,7 @@ QPushButton:disabled {
     color: @texte-desactive@;
 }
 
+QFrame[role="filet"] { border: none; max-height: 1px; min-height: 1px; background: @separateur@; }
 QPushButton[role="tuile"], QPushButton[role="tuile-principale"] {
     min-height: 120px;
     border: none;

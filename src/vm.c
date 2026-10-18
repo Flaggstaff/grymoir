@@ -5291,11 +5291,23 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
              * sans écrans (console, navigateur), rien. Le logo est relu ici : il a pu changer depuis l'analyse.
              * Avec 0x100 (2.13) : la police, la couleur libre et le fond, dépilés d'abord (le fond au sommet). */
             const int etendue = (op & 0x100) != 0;
+            Valeur vsig = (op & 0x200) ? depiler(&pile) : vi_absent(NULL);   /* la signature (2.16), au sommet */
             Valeur vfond = etendue ? depiler(&pile) : vi_absent(NULL);
             Valeur vcoul = etendue ? depiler(&pile) : vi_absent(NULL);
             Valeur vpol = etendue ? depiler(&pile) : vi_absent(NULL);
             Valeur vl = depiler(&pile);
             const int couleur = (int)(op & 0xFF) - 1;
+            const char *format_signature = NULL;
+            if (vsig.type == V_FICHIER) {   /* une image, ou un SVG reconnu à son texte, comme le logo */
+                char *illisible = NULL;
+                if (octets_du_fichier(vsig.fichier, &illisible)) {
+                    format_signature = vsig.fichier->format;
+                    const char *o = (const char *)vsig.fichier->octets;
+                    for (size_t q = 0; !format_signature && q + 4 <= vsig.fichier->taille && q < 1024; q++)
+                        if (!memcmp(o + q, "<svg", 4)) format_signature = "SVG";
+                }
+                free(illisible);
+            }
             char *probleme = NULL;
             const char *format_logo = vl.type == V_FICHIER ? vl.fichier->format : NULL;
             if (couleur < -1 || couleur > 4) probleme = grym_formater("Couleur inconnue : %d.", couleur);
@@ -5348,6 +5360,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                                      vpol.type == V_FICHIER ? vpol.fichier->octets : NULL,
                                      vpol.type == V_FICHIER ? vpol.fichier->taille : 0);
             }
+            if (!probleme && vsig.type == V_FICHIER && !format_signature)
+                probleme = grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF, WebP ou SVG).", vsig.fichier->nom);
+            if (!probleme && format_signature && m->iface.ecran_signature)
+                m->iface.ecran_signature(m->iface.contexte, vsig.fichier->octets, vsig.fichier->taille, format_signature);
+            valeur_liberer(&vsig);
             valeur_liberer(&vl);
             valeur_liberer(&vpol);
             valeur_liberer(&vcoul);

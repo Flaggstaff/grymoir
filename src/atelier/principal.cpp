@@ -166,7 +166,7 @@ int main(int argc, char **argv) {
             if (!clics.isEmpty()) {
                 const QString l = clics.takeFirst();
                 for (QPushButton *b : e->findChildren<QPushButton *>())
-                    if (b->isVisible() && b->isEnabled() && b->text() == l) { b->click(); break; }
+                    if (b->isVisible() && b->isEnabled() && (b->text() == l || b->accessibleName() == l)) { b->click(); break; }   // une tuile : son nom accessible
                 *attendu = 0;
                 return;
             }

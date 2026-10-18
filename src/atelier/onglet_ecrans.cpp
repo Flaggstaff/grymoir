@@ -269,7 +269,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
             }
         };
         int couleur = -1;
-        QString logo, accueil, couleur_libre, fond, police;
+        QString logo, accueil, couleur_libre, fond, police, signature;
         for (size_t k = 0; k < p.nb; k++) {   // l'apparence, et le premier écran ouvert au premier niveau (§ 22.5)
             const Noeud *n = p.phrases[k];
             if (n->type == P_APPARENCE) {
@@ -277,7 +277,8 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                 if (n->texte) logo = QFileInfo(chemin).dir().absoluteFilePath(QString::fromUtf8(n->texte));
                 if (n->texte2) couleur_libre = QString::fromUtf8(n->texte2);
                 if (n->texte3) fond = QString::fromUtf8(n->texte3);
-                if (n->nb_enfants) police = QFileInfo(chemin).dir().absoluteFilePath(QString::fromUtf8(n->enfants[0]->texte));
+                if (apparence_reglage(n, 0)) police = QFileInfo(chemin).dir().absoluteFilePath(QString::fromUtf8(apparence_reglage(n, 0)));
+                if (apparence_reglage(n, 1)) signature = QFileInfo(chemin).dir().absoluteFilePath(QString::fromUtf8(apparence_reglage(n, 1)));
             } else if (n->type == P_OUVRIR && n->forme == 0 && accueil.isEmpty() && n->texte) {
                 accueil = QString::fromUtf8(n->texte);
             }
@@ -290,6 +291,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
             r[k].couleur_libre = couleur_libre;
             r[k].fond = fond;
             r[k].police = police;
+            r[k].signature = signature;
             r[k].accueil = r[k].nom == accueil;
         }
         programme_liberer(&p);

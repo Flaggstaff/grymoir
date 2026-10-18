@@ -725,6 +725,37 @@ int main(int argc, char **argv) {
         VERIFIER(fil && fil->isVisible());     // le programme fini : le fil revient, avec son dernier mot
     }
 
+    // La signature (2.16) : un bandeau en tête de l'écran, l'image et un filet ; plus de logo près du titre
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write(QString("Les écrans ont le logo « %1 » et la signature « %2 ».\nL'écran x montre :\n    un bouton « Fermer ».\n"
+                            "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n")
+                        .arg(QString(GRYM_SOURCE) + "/exemples/pixel.png", QString(GRYM_SOURCE) + "/vendor/lucide/check.svg").toUtf8());
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        QWidget *bandeau = nullptr;
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 15000 && !bandeau) {
+            QApplication::processEvents(QEventLoop::AllEvents, 20);
+            bandeau = e.findChild<QWidget *>("bandeau");
+        }
+        VERIFIER(bandeau != nullptr);
+        bool image = false;
+        if (bandeau) for (QLabel *l : bandeau->findChildren<QLabel *>()) image |= !l->pixmap().isNull();
+        VERIFIER(image);
+        for (QPushButton *b : e.findChildren<QPushButton *>())
+            if (b->text() == "Fermer" && b->isVisible() && b->isEnabled()) { b->click(); break; }
+        z.restart();
+        while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+    }
+
     // La fiche (§ 22.3) : le tableau des séances et sa ligne de total, en gras, jamais sélectionnable, la dernière même
     // après un tri choisi d'un clic sur un titre ; un double-clic dessus ne mène nulle part
     {

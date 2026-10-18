@@ -189,6 +189,9 @@ typedef struct {
      * NULL : l'interface garde son thème. */
     void (*ecran_theme)(void *contexte, const char *const *noms, const char *const *clair, const char *const *sombre,
                         size_t n, int clair_impose, const unsigned char *police, size_t taille_police);
+    /* « … et la signature « signature.png ». » (§ 22.5, 2.16), juste après ecran_theme : l'image d'en-tête de chaque
+     * écran, en bandeau ; le logo ne sert plus alors qu'à l'icône de la fenêtre. NULL : sans en-tête. */
+    void (*ecran_signature)(void *contexte, const unsigned char *octets, size_t taille, const char *format);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

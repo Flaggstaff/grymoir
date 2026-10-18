@@ -28,6 +28,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSplitter>
+#include <QFrame>
 #include <QTabWidget>
 #include <QAction>
 #include <QTableWidget>
@@ -213,6 +214,11 @@ static void iface_ecran_theme(void *contexte, const char *const *noms, const cha
     }
     emit t->theme(ln, lc, ls, clair_impose != 0,
                   police ? QByteArray(reinterpret_cast<const char *>(police), (qsizetype)taille_police) : QByteArray());
+}
+
+static void iface_ecran_signature(void *contexte, const unsigned char *octets, size_t taille, const char *) {
+    auto *t = static_cast<Travail *>(contexte);
+    emit t->signature(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille));
 }
 
 static Issue iface_ecran_attendre(void *contexte, Chaine *sortie, Evenement *e) {
@@ -437,7 +443,7 @@ void Travail::run() {
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
                    iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
                    iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf,
-                   iface_transcrire, iface_ecran_theme};
+                   iface_transcrire, iface_ecran_theme, iface_ecran_signature};
     machine_interface(m, &i);
     situer(m, chemin, base_imposee, dossier_ecriture);
     Chaine sortie = {};
@@ -599,6 +605,20 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             setWindowIcon(logo);
             QApplication::setWindowIcon(logo);
         }
+    });
+    connect(&travail, &Travail::signature, this, [this](const QByteArray &octets) {
+        // le bandeau (2.16) : une image, ou un SVG dessiné ici à la hauteur voulue, net
+        signature = QPixmap();
+        if (signature.loadFromData(octets)) return;
+        QSvgRenderer rendu(octets);
+        if (!rendu.isValid()) return;
+        const QSize t = rendu.defaultSize().isEmpty() ? QSize(800, 100) : rendu.defaultSize().scaled(QSize(4000, 156), Qt::KeepAspectRatio);
+        QImage image(t, QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        QPainter p(&image);
+        rendu.render(&p);
+        p.end();
+        signature = QPixmap::fromImage(image);
     });
     connect(&travail, &Travail::theme, this, [](const QStringList &noms, const QStringList &clair, const QStringList &sombre,
                                                 bool clair_impose, const QByteArray &police) {
@@ -1030,7 +1050,8 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
     }
     // Le logo : grand sur l'écran que le programme ouvre lui-même (aucun écran dessous), petit sur les autres.
     const int taille = Theme::courant().mesure(recouverts.isEmpty() ? "logo-accueil" : "logo-titre");
-    VueEcran v = dessiner_ecran(titre, elements, logo, taille);   // le même dessin que l'aperçu (src/atelier/vue_ecran.cpp)
+    // avec une signature (2.16), le logo ne se pose plus près du titre : il reste l'icône de la fenêtre
+    VueEcran v = dessiner_ecran(titre, elements, signature.isNull() ? logo : QPixmap(), taille);   // le même dessin que l'aperçu
     taille_du_titre(v.titre, travail.taille_titre);
     vue_ecran = v.vue;
     erreur_ecran = v.erreur;
@@ -1154,6 +1175,26 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                               return false;
                           }();
     if (auto *pile = qobject_cast<QBoxLayout *>(vue_ecran->layout()); pile && !etire) pile->addStretch(1);
+    if (!signature.isNull())
+        if (auto *pile = qobject_cast<QBoxLayout *>(vue_ecran->layout())) {   // le bandeau (2.16) : la signature, un filet dessous
+            auto *bandeau = new QWidget;
+            bandeau->setObjectName("bandeau");
+            auto *b = new QVBoxLayout(bandeau);
+            b->setContentsMargins(0, 0, 0, Theme::courant().mesure("espace-2"));
+            b->setSpacing(Theme::courant().mesure("espace-4"));
+            auto *image = new QLabel;
+            const qreal densite = devicePixelRatioF();
+            QPixmap p = signature.scaledToHeight(qRound(26 * densite), Qt::SmoothTransformation);
+            p.setDevicePixelRatio(densite);
+            image->setPixmap(p);
+            image->setAccessibleName(QString::fromUtf8("Signature"));
+            b->addWidget(image, 0, Qt::AlignLeft);
+            auto *filet = new QFrame;
+            filet->setFrameShape(QFrame::HLine);
+            filet->setProperty("role", "filet");
+            b->addWidget(filet);
+            pile->insertWidget(0, bandeau);
+        }
     centre->addWidget(vue_ecran, 1);
     vue_ecran = cadre;
     vue_ecran->setEnabled(false);   // actif seulement quand la machine attend un événement

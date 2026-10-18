@@ -1624,14 +1624,14 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         static const char *const C[] = { "bleue", "verte", "turquoise", "violette", "grise" };
         aj(im, c ? "_écrans" : "Les écrans ont");
         /* couleur, fond, police, logo (2.13) : des virgules entre eux, « et » devant le dernier */
-        const char *valeurs[4] = { n->texte2, n->texte3, n->nb_enfants ? n->enfants[0]->texte : NULL, n->texte };
+        const char *valeurs[5] = { n->texte2, n->texte3, apparence_reglage(n, 0), n->texte, apparence_reglage(n, 1) };
         const int nommee = n->entier >= 0 && n->entier < 5;
         int total = nommee || valeurs[0];
-        for (int r = 1; r < 4; r++) total += valeurs[r] != NULL;
-        static const char *const LIT[] = { "la couleur ", "le fond ", "la police ", "le logo " };
-        static const char *const CMP[] = { " _couleur ", " _fond ", " _police ", " _logo " };
+        for (int r = 1; r < 5; r++) total += valeurs[r] != NULL;
+        static const char *const LIT[] = { "la couleur ", "le fond ", "la police ", "le logo ", "la signature " };
+        static const char *const CMP[] = { " _couleur ", " _fond ", " _police ", " _logo ", " _signature " };
         int faits = 0;
-        for (int r = 0; r < 4; r++) {
+        for (int r = 0; r < 5; r++) {
             if (r == 0 ? !(nommee || valeurs[0]) : !valeurs[r]) continue;
             if (c) aj(im, CMP[r]);
             else {

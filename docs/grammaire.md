@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.15 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.16 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1802,11 +1802,12 @@ Les écrans ont le logo « images/logo.png ».
 Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf » et le logo « logo.svg ».
 ```
 
-- GrymoiR fixe les polices par défaut, les tailles, les espacements et les formes des écrans (`docs/ecrans.md`, § 5). Le programme règle quatre choses, chacune facultative, au moins une, dans cet ordre : la couleur d'accent, le fond, la police, le logo. Des virgules entre elles, `et` devant la dernière : « Le dernier réglage se relie par « et » … ». Un autre ordre : « Les réglages s'écrivent dans cet ordre : la couleur, le fond, la police, le logo … ».
+- GrymoiR fixe les polices par défaut, les tailles, les espacements et les formes des écrans (`docs/ecrans.md`, § 5). Le programme règle cinq choses, chacune facultative, au moins une, dans cet ordre : la couleur d'accent, le fond, la police, le logo, la signature. Des virgules entre elles, `et` devant la dernière : « Le dernier réglage se relie par « et » … ». Un autre ordre : « Les réglages s'écrivent dans cet ordre : la couleur, le fond, la police, le logo … ».
 - **La couleur** : nommée, `bleue` (par défaut, sans phrase), `verte`, `turquoise`, `violette`, `grise`, accordée (« Accord : « verte » (la couleur). ») ; ou libre *(2.13)*, entre guillemets, `#` et six chiffres hexadécimaux : `« #46433B »`. Mal écrite : « Couleur « 46433B » mal écrite : # et six chiffres hexadécimaux, « #46433B ». » Toute autre : « Couleur attendue : bleue, verte, turquoise, violette, grise, ou une couleur libre entre guillemets, « #46433B ». »
 - **Le fond** *(2.13)* : `le fond « #E8E2D6 »`, un fond clair. Avec lui, les écrans restent clairs quel que soit le réglage du système : une image de marque se dessine dans un seul mode. Sans lui, le clair ou le sombre suit le système.
 - **Les couleurs dérivées** *(2.13)* : d'une couleur libre et d'un fond, GrymoiR calcule les autres jetons du thème (`src/teinte.c`) : surfaces, séparateurs, survol et enfoncé des boutons, teinte douce, texte des boutons (blanc, ou sombre si le blanc ne se lit pas), et, sans fond, une variante éclaircie pour le mode sombre. Le même calcul sert l'analyse, l'atelier et le navigateur.
 - **Les contrastes** *(2.13)*, vérifiés dès l'analyse, au seuil du WCAG 2.1 : 4,5:1 pour la couleur sur le fond, le texte des boutons sur la couleur, le texte sur la teinte douce, le texte secondaire sur les surfaces ; 3:1 pour le bord des zones. Sous le seuil, refus, le rapport mesuré arrondi vers le bas : « La couleur « #E93A69 » sur le fond « #F5EFE6 » : contraste de 3,4:1, il faut au moins 4,5:1 (WCAG 2.1). » Une couleur qui ne se lit pas ne sert qu'aux images, jamais à l'accent.
+- **La signature** *(2.16)* : `et la signature « images/signature.png »`, le dernier réglage : une image (PNG, JPEG, GIF, WebP ou SVG) posée en bandeau en tête de chaque écran, sur 26 pixels de haut, un filet dessous, comme l'en-tête d'un site. Avec elle, le logo ne se pose plus près du titre : il reste l'icône de la fenêtre. `grym servir` la sert à `/signature`. Forme compacte : `_signature « … »`.
 - **La police** *(2.13)* : un fichier TrueType ou OpenType (`.ttf`, `.otf`), relatif au dossier du programme, reconnu à son contenu dès l'analyse : « « notes.txt » n'est pas une police (TrueType ou OpenType : .ttf, .otf). » Elle remplace celle du thème pour tout le texte des écrans ; le code de l'atelier garde la sienne. `grym servir` la sert à `/police`.
 - Le logo est un chemin écrit tel quel, relatif au dossier du programme. Il doit exister et être une image (PNG, JPEG, GIF, WebP, ou SVG *(2.13)*, reconnu à son texte `<svg`) dès l'analyse, pour que l'aperçu de l'atelier le montre sans exécuter le programme : « Fichier « logo.png » introuvable ou illisible. », « « notes.txt » n'est pas une image (PNG, JPEG, GIF, WebP ou SVG). »
 - Forme compacte : `_écrans _couleur _verte _logo « logo.png »`, `_écrans _couleur « #46433B » _fond « #E8E2D6 » _police « … » _logo « … »`, un réglage au moins, dans l'ordre.
@@ -2135,3 +2136,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.13 | 2026-10-18 | § 22.5 : la couleur libre en hexadécimal, le fond (clair imposé), la police embarquée, le logo SVG ; les couleurs dérivées et les contrastes vérifiés à l'analyse (charte 1.60) |
 | 2.14 | 2026-10-18 | § 22.6 : `, principal`, le bouton de l'action attendue, à la couleur d'accent |
 | 2.15 | 2026-10-18 | § 22.6 : `, en tuile`, `, avec la description « … »`, `, avec l'image « … »` ; des tuiles qui se suivent forment une grille |
+| 2.16 | 2026-10-18 | § 22.5 : `et la signature « … »`, une image en bandeau en tête de chaque écran ; le logo devient alors l'icône seule |

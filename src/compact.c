@@ -1696,14 +1696,14 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             point(r, f);
         } else if (!strcmp(c, "écrans")) {
             /* _écrans _couleur _verte|« #… » _fond « … » _police « … » _logo « … » → Les écrans ont … (§ 22.5) */
-            static const char *const CLE[] = { "couleur", "fond", "police", "logo" };
-            static const char *const ART[] = { "la", "le", "la", "le" };
-            const Jeton *val[4] = { NULL, NULL, NULL, NULL };
+            static const char *const CLE[] = { "couleur", "fond", "police", "logo", "signature" };
+            static const char *const ART[] = { "la", "le", "la", "le", "la" };
+            const Jeton *val[5] = { NULL, NULL, NULL, NULL, NULL };
             size_t k = d + 1;
             int dernier = -1, nb = 0, faux = 0;
             while (k + 1 < f && !faux) {
                 int q = -1;
-                for (int x = 0; x < 4; x++) if (est_cle(&r->e[k], CLE[x])) q = x;
+                for (int x = 0; x < 5; x++) if (est_cle(&r->e[k], CLE[x])) q = x;
                 const int bon = q > dernier && (r->e[k + 1].type == J_TEXTE || (q == 0 && r->e[k + 1].type == J_MOT_CLE));
                 if (!bon) { faux = 1; break; }
                 val[q] = &r->e[k + 1];
@@ -1720,7 +1720,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "écrans", t);
             mot(r, "ont", t);
             int faits = 0;
-            for (int q = 0; q < 4; q++) {
+            for (int q = 0; q < 5; q++) {
                 if (!val[q]) continue;
                 if (faits && faits + 1 == nb) mot(r, "et", val[q]);
                 else if (faits) emettre(r, J_VIRGULE, NULL, val[q], 1);

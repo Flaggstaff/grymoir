@@ -2,7 +2,7 @@ Remarque : Cabinet, le programme principal.
 Utiliser « actions ».
 
 Remarque : les couleurs, la police et le cœur du site de Nicolas Seydoux, à l'encre (le rose, trop vif en grand, reste sur la tuile des clients) ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
-Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf » et le logo « images/coeur-encre.png ».
+Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf », le logo « images/coeur-encre.png » et la signature « images/signature.png ».
 
 Remarque : les cinq soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
 Si le nombre de soins conservés est nul :

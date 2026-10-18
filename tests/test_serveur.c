@@ -1261,6 +1261,20 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* 2.16 : la signature en bandeau, servie à /signature ; le logo ne se pose plus près du titre */
+        const char *src = "Les écrans ont le logo « exemples/pixel.png » et la signature « vendor/lucide/check.svg ».\n"
+                          "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Fermer » dans l'écran d'accueil :\n    Fermer l'écran.\nOuvrir l'écran d'accueil.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), get("/signature"), evenement("q=1&clic=0"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<header class=\"bandeau\"><img src=\"/signature\" alt=\"\"></header>");
+        NE_CONTIENT_PAS(sc.reponses[0], "<img src=\"/logo\"");
+        CONTIENT(sc.reponses[1], "Content-Type: image/svg+xml");
+        CONTIENT(sc.reponses[3], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* 2.14, 2.15 : le bouton principal et les tuiles, une grille, l'image servie comme celle d'un écran */
         const char *src = "L'écran d'accueil montre :\n    un bouton « Nouvelle », principal,\n"
                           "    un bouton « Clients », en tuile, avec la description « Fiches », avec l'image « exemples/pixel.png »,\n"

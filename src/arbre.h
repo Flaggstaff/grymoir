@@ -203,4 +203,12 @@ void noeud_liberer(Noeud *n);
  * (créer [total] (× [prix] [quantité])) */
 char *noeud_decrire(const Noeud *n);
 
+/* P_APPARENCE (§ 22.5) : un réglage porté par un enfant N_TEXTE, la police (forme 0, 2.13) ou la signature (forme 1,
+ * 2.16) ; NULL s'il n'est pas écrit. */
+static inline const char *apparence_reglage(const Noeud *n, int forme) {
+    for (size_t k = 0; k < n->nb_enfants; k++)
+        if (n->enfants[k]->type == N_TEXTE && n->enfants[k]->forme == forme) return n->enfants[k]->texte;
+    return NULL;
+}
+
 #endif

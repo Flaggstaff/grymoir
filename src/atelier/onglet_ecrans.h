@@ -59,6 +59,7 @@ struct EcranLu {
     bool accueil = false;
     // le thème libre (2.13) : couleur et fond en « #RRGGBB » (vides : non écrits), chemin absolu de la police
     QString couleur_libre, fond, police;
+    QString signature;   // chemin absolu de la signature (2.16), vide sinon
 };
 
 // Les écrans déclarés dans les fichiers .grym et .grymc du dossier, fichiers utilisés compris, chacun une fois.

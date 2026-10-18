@@ -236,7 +236,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -749,6 +749,15 @@ static void scene_theme(void *contexte, const char *const *noms, const char *con
     free(x);
 }
 
+/* La signature (2.16) : son format et sa taille */
+static void scene_signature(void *contexte, const unsigned char *octets, size_t taille, const char *format) {
+    Scene *s = contexte;
+    (void)octets;
+    char *x = grym_formater("[signature %s %lu]\n", format, (unsigned long)taille);
+    chaine_ajouter(&s->page.journal, x);
+    free(x);
+}
+
 /* « actif si », « visible si » (§ 22.6) : journalisés seulement quand un élément est inactif ou caché */
 static void scene_etats(void *contexte, const unsigned char *etats, size_t n) {
     Scene *s = contexte;
@@ -779,7 +788,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0, {0}, {0}, 0 };
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
-                    scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme };
+                    scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme, scene_signature };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -977,6 +986,14 @@ static void essais_ecrans(void) {
                           "accent-enfonce=#35332D sur-accent=#FFFFFF accent-doux=#CEC9BD clair-imposé police ")
             || !strstr(r, "]\n[ouvrir"))
             signaler(__LINE__, src3, "[apparence -1 SVG …]\n[thème fond=#E8E2D6 … clair-imposé police …]\n[ouvrir …", r);
+        free(r);
+        /* 2.16 : la signature, après le thème */
+        const char *src5 = "Les écrans ont la couleur « #46433B », le logo « vendor/lucide/check.svg » et la signature « exemples/pixel.png ».\n"
+                           "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"
+                           "Quand on clique sur « Fermer » dans l'écran d'accueil :\n    Fermer l'écran.\nOuvrir l'écran d'accueil.\n";
+        r = avec_ecrans(src5, ev, 1, rep, 1);
+        total++;
+        if (!strstr(r, "police 0]\n[signature PNG ") || !strstr(r, "]\n[ouvrir")) signaler(__LINE__, src5, "[thème …]\n[signature PNG …]\n[ouvrir …", r);
         free(r);
         /* sans fond : le mode sombre reçoit la couleur éclaircie */
         const char *src4 = "Les écrans ont la couleur « #46433B ».\nL'écran d'accueil montre :\n    un bouton « Fermer ».\n"
@@ -3131,6 +3148,8 @@ int main(void) {
     PROG("Les écrans ont le fond « #E8E2D6 » et la couleur verte.", "~Les réglages s'écrivent dans cet ordre");
     PROG("Les écrans ont la couleur verte, le fond « #E8E2D6 ».", "~Le dernier réglage se relie par « et »");
     PROG("Les écrans ont la police « README.md ».", "~n'est pas une police (TrueType ou OpenType");
+    PROG("Les écrans ont le logo « exemples/pixel.png » et la signature « README.md ».", "~n'est pas une image (PNG, JPEG, GIF, WebP ou SVG)");
+    PROG("Les écrans ont la signature « exemples/pixel.png » et le logo « exemples/pixel.png ».", "~Les réglages s'écrivent dans cet ordre");
     PROG("Les écrans ont le logo « README.md ».", "~n'est pas une image (PNG, JPEG, GIF, WebP ou SVG)");
     PROG("Les écrans ont le logo « n'existe-pas.png ».", "~introuvable ou illisible");
     PROG("Les écrans ont le logo « exemples/pixel.png » et la couleur verte.", "~Les réglages s'écrivent dans cet ordre : la couleur, le fond, la police, le logo");
