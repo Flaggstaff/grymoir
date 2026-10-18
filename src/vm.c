@@ -3,6 +3,7 @@
  */
 #include "chemins.h"
 #include "vm.h"
+#include "teinte.h"
 #include "vm_interne.h"
 #include "base.h"
 #include "lexeur.h"
@@ -5260,34 +5261,71 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         case I_APPARENCE: {
             /* « Les écrans ont la couleur verte et le logo « … ». » (grammaire, § 22.5) : l'interface l'applique ;
-             * sans écrans (console, navigateur), rien. Le logo est relu ici : il a pu changer depuis l'analyse. */
+             * sans écrans (console, navigateur), rien. Le logo est relu ici : il a pu changer depuis l'analyse.
+             * Avec 0x100 (2.13) : la police, la couleur libre et le fond, dépilés d'abord (le fond au sommet). */
+            const int etendue = (op & 0x100) != 0;
+            Valeur vfond = etendue ? depiler(&pile) : vi_absent(NULL);
+            Valeur vcoul = etendue ? depiler(&pile) : vi_absent(NULL);
+            Valeur vpol = etendue ? depiler(&pile) : vi_absent(NULL);
             Valeur vl = depiler(&pile);
-            const int couleur = (int)op - 1;
-            if (couleur < -1 || couleur > 4) {
-                valeur_liberer(&vl);
-                ok = echouer(diag, b, debut, grym_formater("Couleur inconnue : %d.", couleur));
-                break;
-            }
-            if (vl.type == V_FICHIER && !vl.fichier->format) {
-                char *probleme = grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF ou WebP).", vl.fichier->nom);
-                valeur_liberer(&vl);
-                ok = echouer(diag, b, debut, probleme);
-                break;
-            }
-            if (m->iface.ecran_apparence) {
+            const int couleur = (int)(op & 0xFF) - 1;
+            char *probleme = NULL;
+            const char *format_logo = vl.type == V_FICHIER ? vl.fichier->format : NULL;
+            if (couleur < -1 || couleur > 4) probleme = grym_formater("Couleur inconnue : %d.", couleur);
+            if (!probleme && vl.type == V_FICHIER && !format_logo) {
+                /* une image SVG (2.13) : du texte qui commence par « <svg », ou une déclaration XML qui en contient */
                 char *illisible = NULL;
-                if (vl.type == V_FICHIER && !octets_du_fichier(vl.fichier, &illisible)) {
-                    valeur_liberer(&vl);
-                    ok = echouer(diag, b, debut, illisible);
-                    break;
+                if (etendue && octets_du_fichier(vl.fichier, &illisible)) {
+                    const char *o = (const char *)vl.fichier->octets;
+                    size_t n = vl.fichier->taille, d = 0;
+                    if (n >= 3 && (unsigned char)o[0] == 0xEF && (unsigned char)o[1] == 0xBB && (unsigned char)o[2] == 0xBF) d = 3;
+                    while (d < n && (o[d] == ' ' || o[d] == '\t' || o[d] == '\r' || o[d] == '\n')) d++;
+                    int svg = n - d >= 4 && !memcmp(o + d, "<svg", 4);
+                    for (size_t q = d; !svg && q + 4 <= n && q < d + 1024; q++) svg = !memcmp(o + q, "<svg", 4);
+                    if (svg) format_logo = "SVG";
                 }
-                if (vl.type == V_FICHIER)
-                    m->iface.ecran_apparence(m->iface.contexte, couleur, vl.fichier->octets, vl.fichier->taille,
-                                             vl.fichier->format);
+                free(illisible);
+                if (!format_logo)
+                    probleme = grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF, WebP%s).", vl.fichier->nom,
+                                             etendue ? " ou SVG" : "");
+            }
+            TeinteTheme th;
+            memset(&th, 0, sizeof th);
+            const char *cl = vcoul.type == V_TEXTE ? vcoul.texte : NULL, *fo = vfond.type == V_TEXTE ? vfond.texte : NULL;
+            if (!probleme && (cl || fo)) teinte_theme(cl, fo, &th, &probleme);
+            if (!probleme && vpol.type == V_FICHIER) {
+                char *illisible = NULL;
+                if (!octets_du_fichier(vpol.fichier, &illisible)) probleme = illisible;
+                else {
+                    const unsigned char *o = vpol.fichier->octets;
+                    if (vpol.fichier->taille < 4 || !(!memcmp(o, "\x00\x01\x00\x00", 4) || !memcmp(o, "OTTO", 4) || !memcmp(o, "true", 4)))
+                        probleme = grym_formater("« %s » n'est pas une police (TrueType ou OpenType : .ttf, .otf).", vpol.fichier->nom);
+                }
+            }
+            if (!probleme && m->iface.ecran_apparence) {
+                char *illisible = NULL;
+                if (vl.type == V_FICHIER && !octets_du_fichier(vl.fichier, &illisible)) probleme = illisible;
+                else if (vl.type == V_FICHIER)
+                    m->iface.ecran_apparence(m->iface.contexte, couleur, vl.fichier->octets, vl.fichier->taille, format_logo);
                 else
                     m->iface.ecran_apparence(m->iface.contexte, couleur, NULL, 0, NULL);
             }
+            if (!probleme && etendue && m->iface.ecran_theme) {
+                const char *noms[TEINTE_JETONS_MAX], *clairs[TEINTE_JETONS_MAX], *sombres[TEINTE_JETONS_MAX];
+                for (size_t k = 0; k < th.n; k++) {
+                    noms[k] = th.noms[k];
+                    clairs[k] = th.clair[k];
+                    sombres[k] = th.sombre[k][0] ? th.sombre[k] : NULL;
+                }
+                m->iface.ecran_theme(m->iface.contexte, noms, clairs, sombres, th.n, th.clair_impose,
+                                     vpol.type == V_FICHIER ? vpol.fichier->octets : NULL,
+                                     vpol.type == V_FICHIER ? vpol.fichier->taille : 0);
+            }
             valeur_liberer(&vl);
+            valeur_liberer(&vpol);
+            valeur_liberer(&vcoul);
+            valeur_liberer(&vfond);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
         case I_FERMER_ECRAN:

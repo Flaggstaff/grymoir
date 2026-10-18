@@ -1239,6 +1239,28 @@ int main(void) {
     }
 
 
+    {   /* Le thème libre (2.13) : les jetons dérivés dans la feuille, sans mode sombre (un fond est donné), la police
+           servie à /police et déclarée, le logo SVG servi en image/svg+xml, les polices permises par la CSP */
+        const char *src = "Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police "
+                          "« vendor/atkinson/AtkinsonHyperlegibleNext-Regular.ttf » et le logo « vendor/lucide/check.svg ».\n"
+                          "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Fermer » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                          "Ouvrir l'écran d'accueil.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), get("/style.css"), get("/logo"), get("/police"), evenement("q=1&clic=0"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[1], "--fond:#E8E2D6;");
+        CONTIENT(sc.reponses[1], "--accent:#46433B;");
+        CONTIENT(sc.reponses[1], "--accent-doux:#CEC9BD;");
+        NE_CONTIENT_PAS(sc.reponses[1], "prefers-color-scheme:dark");
+        CONTIENT(sc.reponses[1], "@font-face{font-family:\"Police de l'application\";src:url(/police)}");
+        CONTIENT(sc.reponses[2], "Content-Type: image/svg+xml");
+        CONTIENT(sc.reponses[3], "Content-Type: font/ttf");
+        CONTIENT(sc.reponses[3], "font-src 'self'");
+        CONTIENT(sc.reponses[5], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* L'application « Gestion de projet » (projets/), de bout en bout dans le navigateur */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=5"),                                       /* 0 : Bilan */

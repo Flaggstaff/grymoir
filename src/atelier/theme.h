@@ -7,6 +7,7 @@
 
 #include <QColor>
 #include <QFont>
+#include <QMap>
 #include <QObject>
 #include <QStringList>
 
@@ -43,6 +44,16 @@ public:
 
     // La feuille de style d'un mode et d'un accent, sans jeton restant (sinon : vide et message sur stderr).
     QString feuille(Mode mode, const QString &accent) const;
+    // La même, avec des jetons qui recouvrent ceux du thème et une famille de police (vide : celle du thème) :
+    // l'aperçu d'un programme au thème libre (§ 22.5, 2.13), sans toucher à l'atelier.
+    QString feuille(Mode mode, const QString &accent, const QMap<QString, QString> &jetons, const QString &famille) const;
+
+    // Le thème libre d'un programme (§ 22.5, 2.13), pour ce processus seul (la fenêtre d'exécution) : les jetons
+    // dérivés (src/teinte.c), en clair et en sombre (une valeur vide garde celle du thème) ; clair_impose : un fond
+    // est donné, le mode reste clair quel que soit le système ; la police, ses octets (TrueType ou OpenType) ou vide.
+    // Rend la famille de la police installée, ou vide.
+    QString personnaliser(const QMap<QString, QString> &clair, const QMap<QString, QString> &sombre, bool clair_impose,
+                          const QByteArray &police);
     // Polices du thème : l'interface et le code (taille en pixels, comme les jetons).
     QFont police_interface(int pixels = 14) const;
     QFont police_code(int pixels = 14) const;
@@ -60,6 +71,11 @@ private:
     Theme();
     QString valeur(Mode mode, const QString &accent, const QString &jeton) const;
     void preparer_icones();
+    void preparer_icones(Mode mode, const QString &accent);
+
+    QMap<QString, QString> perso_clair_, perso_sombre_;   // le thème libre (2.13) ; vides : celui de GrymoiR
+    bool clair_impose_ = false;
+    QString famille_;                                     // la police du programme, ou vide
 
     Mode mode_ = Clair;
     QString accent_ = "bleue";

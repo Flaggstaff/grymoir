@@ -56,6 +56,11 @@ QStringList Theme::accents() const {
 
 QString Theme::valeur(Mode mode, const QString &accent, const QString &jeton) const {
     if (jeton == "icones") return dossier_icones_ + "/" + (mode == Sombre ? "sombre-" : "clair-") + accent;
+    if (accent == "libre") {   // le thème libre (2.13) : ses jetons d'abord, puis ceux de l'accent bleu du thème
+        const QString v = (mode == Sombre ? perso_sombre_ : perso_clair_).value(jeton);
+        if (!v.isEmpty()) return v;
+        return valeur(mode, accents().value(0, "bleue"), jeton);
+    }
     const QJsonObject j = QJsonDocument::fromJson(jetons_).object();
     const QString m = mode == Sombre ? "sombre" : "clair";
     if (jeton.startsWith("syntaxe-")) return j.value("syntaxe").toObject().value(m).toObject().value(jeton.mid(8)).toString();
@@ -79,7 +84,25 @@ int Theme::mesure(const QString &jeton) const {
     return 0;
 }
 
+QString Theme::feuille(Mode mode, const QString &accent, const QMap<QString, QString> &jetons, const QString &famille) const {
+    static const QRegularExpression re("@([a-z0-9-]+)@");
+    QString r;
+    qsizetype fin = 0;
+    auto it = re.globalMatch(modele_);
+    while (it.hasNext()) {
+        const auto m = it.next();
+        const QString v = jetons.value(m.captured(1), valeur(mode, accent, m.captured(1)));
+        if (v.isEmpty()) return QString();
+        r += modele_.mid(fin, m.capturedStart() - fin) + v;
+        fin = m.capturedEnd();
+    }
+    r += modele_.mid(fin);
+    if (!famille.isEmpty()) r.replace("font-family: \"Atkinson Hyperlegible Next\";", "font-family: \"" + famille + "\";");
+    return r;
+}
+
 QString Theme::feuille(Mode mode, const QString &accent) const {
+    if (!famille_.isEmpty()) return feuille(mode, accent, {}, famille_);
     static const QRegularExpression re("@([a-z0-9-]+)@");
     QString r;
     qsizetype fin = 0;
@@ -98,7 +121,7 @@ QString Theme::feuille(Mode mode, const QString &accent) const {
 }
 
 QFont Theme::police_interface(int pixels) const {
-    QFont f("Atkinson Hyperlegible Next");
+    QFont f(famille_.isEmpty() ? QString("Atkinson Hyperlegible Next") : famille_);
     f.setPixelSize(pixels);
     return f;
 }
@@ -117,23 +140,26 @@ void Theme::preparer_icones() {
     if (!dossier.isValid()) return;
     dossier_icones_ = dossier.path();
     for (Mode mode : {Clair, Sombre})
-        for (const QString &accent : accents()) {
-            const QString d = valeur(mode, accent, "icones");
-            QDir().mkpath(d);
-            for (const Icone &i : ICONES) {
-                QFile f(QString(":/icones/%1.svg").arg(i.fichier));
-                if (!f.open(QIODevice::ReadOnly)) continue;
-                QByteArray svg = f.readAll();
-                svg.replace("currentColor", valeur(mode, accent, i.jeton).toUtf8());
-                QSvgRenderer rendu(svg);
-                QImage image(48, 48, QImage::Format_ARGB32_Premultiplied);
-                image.fill(Qt::transparent);
-                QPainter p(&image);
-                rendu.render(&p);
-                p.end();
-                image.save(d + "/" + i.nom + ".png");
-            }
-        }
+        for (const QString &accent : accents()) preparer_icones(mode, accent);
+}
+
+void Theme::preparer_icones(Mode mode, const QString &accent) {
+    if (dossier_icones_.isEmpty()) return;
+    const QString d = valeur(mode, accent, "icones");
+    QDir().mkpath(d);
+    for (const Icone &i : ICONES) {
+        QFile f(QString(":/icones/%1.svg").arg(i.fichier));
+        if (!f.open(QIODevice::ReadOnly)) continue;
+        QByteArray svg = f.readAll();
+        svg.replace("currentColor", valeur(mode, accent, i.jeton).toUtf8());
+        QSvgRenderer rendu(svg);
+        QImage image(48, 48, QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        QPainter p(&image);
+        rendu.render(&p);
+        p.end();
+        image.save(d + "/" + i.nom + ".png");
+    }
 }
 
 void Theme::installer(QApplication &app) {
@@ -156,9 +182,26 @@ void Theme::installer(QApplication &app) {
     appliquer(m, accent_);
 }
 
+QString Theme::personnaliser(const QMap<QString, QString> &clair, const QMap<QString, QString> &sombre, bool clair_impose,
+                             const QByteArray &police) {
+    perso_clair_ = clair;
+    perso_sombre_ = sombre;
+    clair_impose_ = clair_impose;
+    famille_.clear();
+    if (!police.isEmpty()) {
+        const int id = QFontDatabase::addApplicationFontFromData(police);
+        if (id >= 0 && !QFontDatabase::applicationFontFamilies(id).isEmpty()) famille_ = QFontDatabase::applicationFontFamilies(id).first();
+    }
+    for (Mode m : {Clair, Sombre}) preparer_icones(m, "libre");
+    if (auto *app = qobject_cast<QApplication *>(QCoreApplication::instance())) app->setFont(police_interface());
+    appliquer(clair_impose_ ? Clair : mode_, "libre");
+    return famille_;
+}
+
 void Theme::appliquer(Mode mode, const QString &accent) {
+    if (clair_impose_) mode = Clair;   // un fond donné (2.13) : les écrans restent clairs
     mode_ = mode;
-    if (accents().contains(accent)) accent_ = accent;
+    if (accents().contains(accent) || (accent == "libre" && (!perso_clair_.isEmpty() || !famille_.isEmpty()))) accent_ = accent;
     if (auto *app = qobject_cast<QApplication *>(QCoreApplication::instance())) {
         QPalette p;
         auto mettre = [&p](QPalette::ColorRole r, const QColor &c) { p.setColor(QPalette::All, r, c); };

@@ -48,12 +48,16 @@
 #include <QTableWidget>
 #include <QTextBrowser>
 #include <QVBoxLayout>
+#include <QImage>
+#include <QFontDatabase>
+#include <QSvgRenderer>
 
 #include <functional>
 
 extern "C" {
 #include "analyseur.h"
 #include "interface.h"
+#include "teinte.h"
 
 // Un bloc, qui s'ouvre et se ferme par une fin de bloc : pas un élément. Le graphique et le menu, venus après les blocs
 // dans la numérotation, font qu'un test « sorte ≥ côte à côte » ne suffit plus.
@@ -261,12 +265,15 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
             }
         };
         int couleur = -1;
-        QString logo, accueil;
+        QString logo, accueil, couleur_libre, fond, police;
         for (size_t k = 0; k < p.nb; k++) {   // l'apparence, et le premier écran ouvert au premier niveau (§ 22.5)
             const Noeud *n = p.phrases[k];
             if (n->type == P_APPARENCE) {
                 couleur = n->entier;
                 if (n->texte) logo = QFileInfo(chemin).dir().absoluteFilePath(QString::fromUtf8(n->texte));
+                if (n->texte2) couleur_libre = QString::fromUtf8(n->texte2);
+                if (n->texte3) fond = QString::fromUtf8(n->texte3);
+                if (n->nb_enfants) police = QFileInfo(chemin).dir().absoluteFilePath(QString::fromUtf8(n->enfants[0]->texte));
             } else if (n->type == P_OUVRIR && n->forme == 0 && accueil.isEmpty() && n->texte) {
                 accueil = QString::fromUtf8(n->texte);
             }
@@ -276,6 +283,9 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
         for (int k = avant; k < r.size(); k++) {
             r[k].couleur = couleur;
             r[k].logo = logo;
+            r[k].couleur_libre = couleur_libre;
+            r[k].fond = fond;
+            r[k].police = police;
             r[k].accueil = r[k].nom == accueil;
         }
         programme_liberer(&p);
@@ -442,11 +452,47 @@ void OngletEcrans::dessiner() {
     // L'apparence du programme (§ 22.5) : son accent sur l'aperçu seul, pas sur l'atelier ; son logo, grand
     // sur l'écran d'accueil, petit sur les autres, comme à l'exécution.
     const Theme &th = Theme::courant();
-    const QPixmap logo = e.logo.isEmpty() ? QPixmap() : QPixmap(e.logo);
+    QPixmap logo = e.logo.isEmpty() ? QPixmap() : QPixmap(e.logo);
+    if (!e.logo.isEmpty() && logo.isNull()) {   // un logo SVG (2.13), dessiné comme à l'exécution
+        QSvgRenderer rendu(e.logo);
+        if (rendu.isValid()) {
+            const QSize t = rendu.defaultSize().isEmpty() ? QSize(256, 256) : rendu.defaultSize().scaled(256, 256, Qt::KeepAspectRatio);
+            QImage image(t, QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            QPainter p(&image);
+            rendu.render(&p);
+            p.end();
+            logo = QPixmap::fromImage(image);
+        }
+    }
     vue = dessiner_ecran(e.titre, el, logo, th.mesure(e.accueil ? "logo-accueil" : "logo-titre"));   // le même dessin que l'exécution
     taille_du_titre(vue.titre, e.taille_titre);
     const QStringList accents = th.accents();
-    if (e.couleur >= 0 && e.couleur < accents.size() && accents[e.couleur] != th.accent())
+    if (!e.couleur_libre.isEmpty() || !e.fond.isEmpty() || !e.police.isEmpty()) {
+        // le thème libre (2.13) sur l'aperçu seul : les jetons dérivés comme à l'exécution (src/teinte.c), la police
+        TeinteTheme t;
+        char *probleme = nullptr;
+        const QByteArray c = e.couleur_libre.toUtf8(), f = e.fond.toUtf8();
+        QMap<QString, QString> jetons;
+        if (teinte_theme(c.isEmpty() ? nullptr : c.constData(), f.isEmpty() ? nullptr : f.constData(), &t, &probleme))
+            for (size_t k = 0; k < t.n; k++) {
+                const char *v = t.clair_impose || th.mode() == Theme::Clair ? t.clair[k] : t.sombre[k];
+                if (*v) jetons[QString::fromUtf8(t.noms[k])] = QString::fromUtf8(v);
+            }
+        free(probleme);
+        QString famille;
+        if (!e.police.isEmpty()) {
+            static QMap<QString, QString> familles;   // une police ajoutée une fois par chemin
+            if (!familles.contains(e.police)) {
+                const int id = QFontDatabase::addApplicationFont(e.police);
+                familles[e.police] = id >= 0 && !QFontDatabase::applicationFontFamilies(id).isEmpty()
+                                         ? QFontDatabase::applicationFontFamilies(id).first() : QString();
+            }
+            famille = familles.value(e.police);
+        }
+        const QString accent = e.couleur >= 0 && e.couleur < accents.size() ? accents[e.couleur] : th.accent();
+        vue.vue->setStyleSheet(th.feuille(t.clair_impose ? Theme::Clair : th.mode(), accent, jetons, famille));
+    } else if (e.couleur >= 0 && e.couleur < accents.size() && accents[e.couleur] != th.accent())
         vue.vue->setStyleSheet(th.feuille(th.mode(), accents[e.couleur]));
     vue.vue->setAcceptDrops(true);   // une image glissée depuis le Finder sur le fond de l'écran
     vue.vue->installEventFilter(this);

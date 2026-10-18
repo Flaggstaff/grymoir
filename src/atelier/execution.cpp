@@ -29,6 +29,8 @@
 #include <QScrollArea>
 #include <QSplitter>
 #include <QTableWidget>
+#include <QSvgRenderer>
+#include <QPainter>
 #include <QHeaderView>
 #include <QTextBrowser>
 #include <QDesktopServices>
@@ -195,6 +197,19 @@ static void iface_ecran_lignes(void *contexte, size_t element, const char *const
 static void iface_ecran_apparence(void *contexte, int couleur, const unsigned char *logo, size_t taille, const char *) {
     auto *t = static_cast<Travail *>(contexte);
     emit t->apparence(couleur, logo ? QByteArray(reinterpret_cast<const char *>(logo), (qsizetype)taille) : QByteArray());
+}
+
+static void iface_ecran_theme(void *contexte, const char *const *noms, const char *const *clair, const char *const *sombre,
+                              size_t n, int clair_impose, const unsigned char *police, size_t taille_police) {
+    auto *t = static_cast<Travail *>(contexte);
+    QStringList ln, lc, ls;
+    for (size_t k = 0; k < n; k++) {
+        ln << QString::fromUtf8(noms[k]);
+        lc << QString::fromUtf8(clair[k]);
+        ls << (sombre[k] ? QString::fromUtf8(sombre[k]) : QString());
+    }
+    emit t->theme(ln, lc, ls, clair_impose != 0,
+                  police ? QByteArray(reinterpret_cast<const char *>(police), (qsizetype)taille_police) : QByteArray());
 }
 
 static Issue iface_ecran_attendre(void *contexte, Chaine *sortie, Evenement *e) {
@@ -419,7 +434,7 @@ void Travail::run() {
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
                    iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
                    iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf,
-                   iface_transcrire};
+                   iface_transcrire, iface_ecran_theme};
     machine_interface(m, &i);
     situer(m, chemin, base_imposee, dossier_ecriture);
     Chaine sortie = {};
@@ -559,10 +574,33 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         const QStringList accents = t.accents();
         if (couleur >= 0 && couleur < accents.size()) t.appliquer(t.mode(), accents[couleur]);
         logo = QPixmap();
-        if (!octets.isEmpty() && logo.loadFromData(octets)) {
+        if (!octets.isEmpty() && !logo.loadFromData(octets)) {
+            // un logo SVG (2.13) : dessiné ici, net, sans dépendre d'un greffon de lecture d'images
+            QSvgRenderer rendu(octets);
+            if (rendu.isValid()) {
+                const QSize t = rendu.defaultSize().isEmpty() ? QSize(256, 256) : rendu.defaultSize().scaled(256, 256, Qt::KeepAspectRatio);
+                QImage image(t, QImage::Format_ARGB32_Premultiplied);
+                image.fill(Qt::transparent);
+                QPainter p(&image);
+                rendu.render(&p);
+                p.end();
+                logo = QPixmap::fromImage(image);
+            }
+        }
+        if (!logo.isNull()) {
             setWindowIcon(logo);
             QApplication::setWindowIcon(logo);
         }
+    });
+    connect(&travail, &Travail::theme, this, [](const QStringList &noms, const QStringList &clair, const QStringList &sombre,
+                                                bool clair_impose, const QByteArray &police) {
+        // le thème libre (§ 22.5, 2.13), pour ce processus seul : l'atelier qui a lancé le programme garde le sien
+        QMap<QString, QString> c, s;
+        for (int k = 0; k < noms.size(); k++) {
+            c[noms[k]] = clair.value(k);
+            if (!sombre.value(k).isEmpty()) s[noms[k]] = sombre.value(k);
+        }
+        Theme::courant().personnaliser(c, s, clair_impose, police);
     });
     connect(&travail, &Travail::ecran_lignes, this, [this](int element, const QStringList &cellules, int nb_lignes) {
         if (auto *gr = dynamic_cast<Graphique *>(controles_ecran.value(element))) {   // libellé, valeur ; une ligne par groupe (§ 22.11)

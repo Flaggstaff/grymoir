@@ -236,7 +236,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -733,6 +733,22 @@ static void scene_apparence(void *contexte, int couleur, const unsigned char *lo
     free(l);
 }
 
+/* Le thème libre (2.13) : chaque jeton, clair puis sombre ; « clair imposé » ; la taille de la police */
+static void scene_theme(void *contexte, const char *const *noms, const char *const *clair, const char *const *sombre,
+                        size_t n, int clair_impose, const unsigned char *police, size_t taille_police) {
+    Scene *s = contexte;
+    (void)police;
+    chaine_ajouter(&s->page.journal, "[thème");
+    for (size_t k = 0; k < n; k++) {
+        char *x = grym_formater(" %s=%s%s%s", noms[k], clair[k], sombre[k] ? "/" : "", sombre[k] ? sombre[k] : "");
+        chaine_ajouter(&s->page.journal, x);
+        free(x);
+    }
+    char *x = grym_formater("%s police %lu]\n", clair_impose ? " clair-imposé" : "", (unsigned long)taille_police);
+    chaine_ajouter(&s->page.journal, x);
+    free(x);
+}
+
 /* « actif si », « visible si » (§ 22.6) : journalisés seulement quand un élément est inactif ou caché */
 static void scene_etats(void *contexte, const unsigned char *etats, size_t n) {
     Scene *s = contexte;
@@ -763,7 +779,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0, {0}, {0}, 0 };
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
-                    scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL };
+                    scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -946,6 +962,30 @@ static void essais_ecrans(void) {
         r = avec_ecrans(src2, ev, 1, rep, 1);
         total++;
         if (strncmp(r, "[apparence 4 0]\n[ouvrir", 23) != 0) signaler(__LINE__, src2, "[apparence 4 0]\n[ouvrir …", r);
+        free(r);
+        /* 2.13 : le logo SVG, puis les jetons dérivés, le clair imposé par le fond, la taille de la police */
+        const char *src3 = "Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police "
+                           "« vendor/atkinson/AtkinsonHyperlegibleNext-Regular.ttf » et le logo « vendor/lucide/check.svg ».\n"
+                           "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"
+                           "Quand on clique sur « Fermer » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                           "Ouvrir l'écran d'accueil.\n";
+        r = avec_ecrans(src3, ev, 1, rep, 1);
+        total++;
+        if (strncmp(r, "[apparence -1 SVG ", 18) != 0
+            || !strstr(r, "[thème fond=#E8E2D6 surface=#F5F2ED surface-alt=#DDD6CB survol=#EFEBE2 separateur=#D1CBC0 "
+                          "fond-desactive=#E0DACF danger-doux=#E4D3C8 accent=#46433B accent-survol=#3E3B34 "
+                          "accent-enfonce=#35332D sur-accent=#FFFFFF accent-doux=#CEC9BD clair-imposé police ")
+            || !strstr(r, "]\n[ouvrir"))
+            signaler(__LINE__, src3, "[apparence -1 SVG …]\n[thème fond=#E8E2D6 … clair-imposé police …]\n[ouvrir …", r);
+        free(r);
+        /* sans fond : le mode sombre reçoit la couleur éclaircie */
+        const char *src4 = "Les écrans ont la couleur « #46433B ».\nL'écran d'accueil montre :\n    un bouton « Fermer ».\n"
+                           "Quand on clique sur « Fermer » dans l'écran d'accueil :\n    Fermer l'écran.\nOuvrir l'écran d'accueil.\n";
+        r = avec_ecrans(src4, ev, 1, rep, 1);
+        total++;
+        if (!strstr(r, "[thème accent=#46433B/#878580 accent-survol=#3E3B34/#999793 accent-enfonce=#35332D/#ABAAA6 "
+                       "sur-accent=#FFFFFF/#1B1613 accent-doux=#D9D3CB/#24201C police 0]"))
+            signaler(__LINE__, src4, "[thème accent=#46433B/#878580 …]", r);
         free(r);
     }
     /* Le titre donné ; un nom en « d' » */
@@ -3074,10 +3114,19 @@ int main(void) {
     /* Apparence des écrans (§ 22.5) : sans écran, en console, rien ne se voit ; les règles de la phrase */
     PROG("Les écrans ont la couleur verte.\nAfficher 1.", "1");
     PROG("Les écrans ont la couleur vert.", "~Accord : « verte »");
-    PROG("Les écrans ont la couleur rouge.", "~Couleur attendue : bleue, verte, turquoise, violette ou grise.");
+    PROG("Les écrans ont la couleur rouge.", "~Couleur attendue : bleue, verte, turquoise, violette, grise, ou une couleur libre");
+    /* 2.13 : couleur libre, fond, police, logo SVG ; les contrastes vérifiés dès l'analyse */
+    PROG("Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police "
+         "« vendor/atkinson/AtkinsonHyperlegibleNext-Regular.ttf » et le logo « vendor/lucide/check.svg ».\nAfficher 1.", "1");
+    PROG("Les écrans ont la couleur « #E93A69 ».", "~La couleur « #E93A69 » sur le fond « #F5EFE6 » : contraste de 3,4:1, il faut au moins 4,5:1");
+    PROG("Les écrans ont la couleur « #46433B » et le fond « #606060 ».", "~Le texte secondaire sur le fond « #606060 »");
+    PROG("Les écrans ont la couleur « 46433B ».", "~Couleur « 46433B » mal écrite");
+    PROG("Les écrans ont le fond « #E8E2D6 » et la couleur verte.", "~Les réglages s'écrivent dans cet ordre");
+    PROG("Les écrans ont la couleur verte, le fond « #E8E2D6 ».", "~Le dernier réglage se relie par « et »");
+    PROG("Les écrans ont la police « README.md ».", "~n'est pas une police (TrueType ou OpenType");
+    PROG("Les écrans ont le logo « README.md ».", "~n'est pas une image (PNG, JPEG, GIF, WebP ou SVG)");
     PROG("Les écrans ont le logo « n'existe-pas.png ».", "~introuvable ou illisible");
-    PROG("Les écrans ont le logo « README.md ».", "~n'est pas une image");
-    PROG("Les écrans ont le logo « exemples/pixel.png » et la couleur verte.", "~la couleur avant le logo");
+    PROG("Les écrans ont le logo « exemples/pixel.png » et la couleur verte.", "~Les réglages s'écrivent dans cet ordre : la couleur, le fond, la police, le logo");
     PROG("Les écrans ont la couleur verte.\nLes écrans ont la couleur grise.", "~une seule fois");
     PROG("Pour f :\n    Les écrans ont la couleur grise.", "~au premier niveau du programme");
     PROG("L'écran d'accueil montre :\n    un bouton « B ».\nOuvrir l'écran d'accueil.\nLes écrans ont la couleur grise.",

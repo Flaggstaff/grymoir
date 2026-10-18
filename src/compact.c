@@ -1670,22 +1670,42 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 debut = k + 1;
             }
             point(r, f);
-        } else if (!strcmp(c, "écrans")) {   /* _écrans _couleur _verte _logo « … » → Les écrans ont … (§ 22.5) */
+        } else if (!strcmp(c, "écrans")) {
+            /* _écrans _couleur _verte|« #… » _fond « … » _police « … » _logo « … » → Les écrans ont … (§ 22.5) */
+            static const char *const CLE[] = { "couleur", "fond", "police", "logo" };
+            static const char *const ART[] = { "la", "le", "la", "le" };
+            const Jeton *val[4] = { NULL, NULL, NULL, NULL };
             size_t k = d + 1;
-            const Jeton *coul = NULL, *logo = NULL;
-            if (k + 1 < f && est_cle(&r->e[k], "couleur") && r->e[k + 1].type == J_MOT_CLE) { coul = &r->e[k + 1]; k += 2; }
-            if (k + 1 < f && est_cle(&r->e[k], "logo") && r->e[k + 1].type == J_TEXTE) { logo = &r->e[k + 1]; k += 2; }
-            if (k != f || (!coul && !logo)) {
-                echouer(r, t, grym_dupliquer("Forme attendue : « _écrans _couleur _verte _logo « logo.png » », "
-                                             "l'un des deux réglages au moins, la couleur d'abord."));
+            int dernier = -1, nb = 0, faux = 0;
+            while (k + 1 < f && !faux) {
+                int q = -1;
+                for (int x = 0; x < 4; x++) if (est_cle(&r->e[k], CLE[x])) q = x;
+                const int bon = q > dernier && (r->e[k + 1].type == J_TEXTE || (q == 0 && r->e[k + 1].type == J_MOT_CLE));
+                if (!bon) { faux = 1; break; }
+                val[q] = &r->e[k + 1];
+                dernier = q;
+                nb++;
+                k += 2;
+            }
+            if (faux || k != f || !nb) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _écrans _couleur _verte _fond « #E8E2D6 » _police « … » "
+                                             "_logo « logo.png » », un réglage au moins, dans cet ordre."));
                 return;
             }
             mot(r, "les", t);
             mot(r, "écrans", t);
             mot(r, "ont", t);
-            if (coul) { mot(r, "la", coul); mot(r, "couleur", coul); mot(r, coul->valeur, coul); }
-            if (coul && logo) mot(r, "et", logo);
-            if (logo) { mot(r, "le", logo); mot(r, "logo", logo); emettre(r, J_TEXTE, logo->valeur, logo, 0); }
+            int faits = 0;
+            for (int q = 0; q < 4; q++) {
+                if (!val[q]) continue;
+                if (faits && faits + 1 == nb) mot(r, "et", val[q]);
+                else if (faits) emettre(r, J_VIRGULE, NULL, val[q], 1);
+                mot(r, ART[q], val[q]);
+                mot(r, CLE[q], val[q]);
+                if (val[q]->type == J_MOT_CLE) mot(r, val[q]->valeur, val[q]);
+                else emettre(r, J_TEXTE, val[q]->valeur, val[q], 0);
+                faits++;
+            }
             point(r, f);
         } else if (!strcmp(c, "afficher")) {
             mot(r, "afficher", t);

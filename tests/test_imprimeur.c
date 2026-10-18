@@ -567,6 +567,12 @@ int main(void) {
     /* --- Apparence des écrans (§ 22.5) : couleur seule, logo seul, les deux --- */
     FIXE("Les écrans ont la couleur verte et le logo « exemples/pixel.png ».\n");
     FIXE("Les écrans ont le logo « exemples/pixel.png ».\n");
+    /* 2.13 : des virgules entre les réglages, « et » devant le dernier ; la forme compacte, une clé par réglage */
+    FIXE("Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police "
+         "« vendor/atkinson/AtkinsonHyperlegibleNext-Regular.ttf » et le logo « vendor/lucide/check.svg ».\n");
+    FIXE("Les écrans ont la couleur verte et le fond « #E8E2D6 ».\n");
+    COMP("Les écrans ont la couleur « #46433B », le fond « #E8E2D6 » et le logo « vendor/lucide/check.svg ».",
+         "_écrans _couleur « #46433B » _fond « #E8E2D6 » _logo « vendor/lucide/check.svg »\n");
     COMP("Les écrans ont la couleur turquoise.", "_écrans _couleur _turquoise\n");
     COMP("Les écrans ont la couleur grise et le logo « exemples/pixel.png ».",
          "_écrans _couleur _grise _logo « exemples/pixel.png »\n");

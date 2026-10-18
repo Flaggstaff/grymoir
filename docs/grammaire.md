@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.12 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.13 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1793,23 +1793,27 @@ Ouvrir l'écran des compositeurs.
 - `quand`, `ouvrir` et `fermer` sont des mots de construction (§ 10.7) : ils ne commencent plus le nom d'une action.
 - Forme compacte : `docs/ecrans.md`, § 3.7 (`_écran des_compositeurs` … `_fin`, `_quand _clique « Nouveau » _dans des_compositeurs`, `_ouvrir`, `_fermer`, `_écran.pays`).
 
-### 22.5 Apparence *(T3 : implémenté le 26 septembre 2026)*
+### 22.5 Apparence *(T3 : implémenté le 26 septembre 2026 ; thème libre, 2.13 : le 18 octobre 2026)*
 
 ```
 Les écrans ont la couleur verte et le logo « logo.png ».
 Les écrans ont la couleur grise.
 Les écrans ont le logo « images/logo.png ».
+Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf » et le logo « logo.svg ».
 ```
 
-- GrymoiR fixe l'apparence des écrans (polices, tailles, espacements, formes) ; le programme n'en règle que deux choses, une couleur d'accent et un logo (`docs/ecrans.md`, § 5). Le clair ou le sombre suit le système.
-- Couleurs : `bleue` (par défaut, sans phrase), `verte`, `turquoise`, `violette`, `grise`. `la couleur` est féminin : « Accord : « verte » (la couleur). » Toute autre couleur : « Couleur attendue : bleue, verte, turquoise, violette ou grise. »
-- L'un des deux réglages au moins ; la couleur d'abord, le logo ensuite, reliés par `et`.
-- Le logo est un chemin écrit tel quel, relatif au dossier du programme. Il doit exister et être une image (PNG, JPEG, GIF, WebP) dès l'analyse, pour que l'aperçu de l'atelier le montre sans exécuter le programme : « Fichier « logo.png » introuvable ou illisible. », « « notes.txt » n'est pas une image (PNG, JPEG, GIF ou WebP). ». Il est relu à l'exécution.
+- GrymoiR fixe les polices par défaut, les tailles, les espacements et les formes des écrans (`docs/ecrans.md`, § 5). Le programme règle quatre choses, chacune facultative, au moins une, dans cet ordre : la couleur d'accent, le fond, la police, le logo. Des virgules entre elles, `et` devant la dernière : « Le dernier réglage se relie par « et » … ». Un autre ordre : « Les réglages s'écrivent dans cet ordre : la couleur, le fond, la police, le logo … ».
+- **La couleur** : nommée, `bleue` (par défaut, sans phrase), `verte`, `turquoise`, `violette`, `grise`, accordée (« Accord : « verte » (la couleur). ») ; ou libre *(2.13)*, entre guillemets, `#` et six chiffres hexadécimaux : `« #46433B »`. Mal écrite : « Couleur « 46433B » mal écrite : # et six chiffres hexadécimaux, « #46433B ». » Toute autre : « Couleur attendue : bleue, verte, turquoise, violette, grise, ou une couleur libre entre guillemets, « #46433B ». »
+- **Le fond** *(2.13)* : `le fond « #E8E2D6 »`, un fond clair. Avec lui, les écrans restent clairs quel que soit le réglage du système : une image de marque se dessine dans un seul mode. Sans lui, le clair ou le sombre suit le système.
+- **Les couleurs dérivées** *(2.13)* : d'une couleur libre et d'un fond, GrymoiR calcule les autres jetons du thème (`src/teinte.c`) : surfaces, séparateurs, survol et enfoncé des boutons, teinte douce, texte des boutons (blanc, ou sombre si le blanc ne se lit pas), et, sans fond, une variante éclaircie pour le mode sombre. Le même calcul sert l'analyse, l'atelier et le navigateur.
+- **Les contrastes** *(2.13)*, vérifiés dès l'analyse, au seuil du WCAG 2.1 : 4,5:1 pour la couleur sur le fond, le texte des boutons sur la couleur, le texte sur la teinte douce, le texte secondaire sur les surfaces ; 3:1 pour le bord des zones. Sous le seuil, refus, le rapport mesuré arrondi vers le bas : « La couleur « #E93A69 » sur le fond « #F5EFE6 » : contraste de 3,4:1, il faut au moins 4,5:1 (WCAG 2.1). » Une couleur qui ne se lit pas ne sert qu'aux images, jamais à l'accent.
+- **La police** *(2.13)* : un fichier TrueType ou OpenType (`.ttf`, `.otf`), relatif au dossier du programme, reconnu à son contenu dès l'analyse : « « notes.txt » n'est pas une police (TrueType ou OpenType : .ttf, .otf). » Elle remplace celle du thème pour tout le texte des écrans ; le code de l'atelier garde la sienne. `grym servir` la sert à `/police`.
+- Le logo est un chemin écrit tel quel, relatif au dossier du programme. Il doit exister et être une image (PNG, JPEG, GIF, WebP, ou SVG *(2.13)*, reconnu à son texte `<svg`) dès l'analyse, pour que l'aperçu de l'atelier le montre sans exécuter le programme : « Fichier « logo.png » introuvable ou illisible. », « « notes.txt » n'est pas une image (PNG, JPEG, GIF, WebP ou SVG). »
+- Forme compacte : `_écrans _couleur _verte _logo « logo.png »`, `_écrans _couleur « #46433B » _fond « #E8E2D6 » _police « … » _logo « … »`, un réglage au moins, dans l'ordre.
 - Une seule fois, au premier niveau, avant le premier `Ouvrir` ; sinon, erreur d'analyse. Comme `Les nombres s'affichent …` (§ 4.1), la phrase vaut pour tout le programme.
 - Le logo s'affiche à gauche du titre : grand (64 pixels) sur un écran que le programme ouvre lui-même, sans écran dessous ; petit (24 pixels) sur un écran ouvert par-dessus. Il sert aussi d'icône à la fenêtre.
 - Sans écran (`grym lancer`, ou un programme qui n'en ouvre aucun), la phrase est sans effet : un programme qui ne fait qu'afficher tourne normalement. `grym servir` applique la couleur et le logo à ses écrans.
-- Forme compacte : `_écrans _couleur _verte _logo « logo.png »`, `_écrans _couleur _grise`, `_écrans _logo « logo.png »`.
-- Aide à la saisie (§ 8) : en début de phrase, `Les écrans ont` et `Les nombres s'affichent` sont proposés ; puis `la couleur` ou `le logo`, les cinq couleurs, `et le logo`, un texte. Après `Les nombres s'affichent` : `à la suisse`, `à la française`, `sans séparateur`.
+- Aide à la saisie (§ 8) : en début de phrase, `Les écrans ont` et `Les nombres s'affichent` sont proposés ; puis `la couleur`, `le fond`, `la police` ou `le logo` (les réglages qui restent possibles, dans l'ordre), puis `et le fond`, `et la police`, `et le logo`, les cinq couleurs, `et le logo`, un texte. Après `Les nombres s'affichent` : `à la suisse`, `à la française`, `sans séparateur`.
 - La taille du titre d'un écran *(1.94)* : `L'écran de recherche, « Recherche » en grand, montre :`, ou sans titre donné, `L'écran de recherche, en petit, montre :`. `en petit` et `en grand` viennent du thème et valent pour tous les écrans ; sans eux, la taille du thème. Forme compacte : `_écran de_recherche « Recherche » _en_grand`.
 
 ### 22.6 États des éléments *(implémenté le 14 octobre 2026)*
@@ -2126,3 +2130,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.10 | 2026-10-18 | § 22.3 : les tableaux de la fiche déduite, un par lien qui désigne l'objet (tri, total, fiche au double-clic, « Nouvelle … ») ; § 16.1 : `, hors des fiches,` |
 | 2.11 | 2026-10-18 | § 19 : le formulaire demande le courriel, le téléphone et l'adresse web (il les prenait pour des liens, et sautait les facultatifs) |
 | 2.12 | 2026-10-18 | § 22.6 : un événement qui teste la présence d'une zone ne l'exige pas d'emblée ; § 4.4 : `suivi` après `de` est un mot de nom ; § 22.3 : la ligne « Total » marquée, ni sélectionnée ni choisie |
+| 2.13 | 2026-10-18 | § 22.5 : la couleur libre en hexadécimal, le fond (clair imposé), la police embarquée, le logo SVG ; les couleurs dérivées et les contrastes vérifiés à l'analyse (charte 1.60) |

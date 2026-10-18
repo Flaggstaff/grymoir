@@ -180,6 +180,12 @@ typedef struct {
     /* La transcription d'un son (§ 15.8) : son texte (malloc), ou NULL avec *erreur. NULL : l'interface ne sait pas
      * transcrire (console, navigateur) ; le champ transcrit reste alors tel quel. */
     char *(*transcrire)(void *contexte, const unsigned char *octets, size_t taille, char **erreur);
+    /* « Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « … » … » (§ 22.5, 2.13), juste après
+     * ecran_apparence : les jetons dérivés (teinte.h), chacun son nom, sa valeur en clair, en sombre (NULL : celle du
+     * thème) ; clair_impose : un fond est donné, les écrans restent clairs ; la police (TrueType ou OpenType), ou NULL.
+     * NULL : l'interface garde son thème. */
+    void (*ecran_theme)(void *contexte, const char *const *noms, const char *const *clair, const char *const *sombre,
+                        size_t n, int clair_impose, const unsigned char *police, size_t taille_police);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

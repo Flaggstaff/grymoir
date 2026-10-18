@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.59, révisée le 13 octobre 2026.
+Version 1.60, révisée le 18 octobre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -275,3 +275,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.57 | 2026-10-12 | Art. 12 : l'écart entre deux dates est fait (grammaire 1.68, § 14.6) ; reste l'heure |
 | 1.58 | 2026-10-12 | Art. 12 : l'heure seule est faite (grammaire 1.69, § 14.7) ; le moment complet avec fuseau attend un besoin réel |
 | 1.59 | 2026-10-13 | Art. 12 : règles ciblées par entité (grammaire 1.71, § 16.14) ; reste le ciblage par objet. Format 2 des bases, fichiers à part (docs/vm.md 1.57, § 8), permis par l'art. 13 |
+| 1.60 | 2026-10-18 | Apparence assouplie (révise 1.43) : une application peut porter l'image de marque de celui pour qui elle est faite. Couleur d'accent libre en hexadécimal, fond, police embarquée et logo SVG, en plus de la palette de cinq ; GrymoiR en dérive les autres couleurs et refuse dès l'analyse toute couleur illisible (WCAG 2.1, 4,5:1 pour le texte). Espacements, tailles et formes restent fixés par GrymoiR (grammaire 2.13, § 22.5 ; `docs/ecrans.md`, § 5) |

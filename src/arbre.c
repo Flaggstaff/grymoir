@@ -294,6 +294,9 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         static const char *const C[] = { "bleue", "verte", "turquoise", "violette", "grise" };
         chaine_ajouter(c, "(apparence");
         if (n->entier >= 0 && n->entier < 5) { chaine_ajouter(c, " "); chaine_ajouter(c, C[n->entier]); }
+        if (n->texte2) { chaine_ajouter(c, " couleur « "); chaine_ajouter(c, n->texte2); chaine_ajouter(c, " »"); }
+        if (n->texte3) { chaine_ajouter(c, " fond « "); chaine_ajouter(c, n->texte3); chaine_ajouter(c, " »"); }
+        if (n->nb_enfants) { chaine_ajouter(c, " police « "); chaine_ajouter(c, n->enfants[0]->texte); chaine_ajouter(c, " »"); }
         if (n->texte) { chaine_ajouter(c, " « "); chaine_ajouter(c, n->texte); chaine_ajouter(c, " »"); }
         chaine_ajouter(c, ")");
         return;

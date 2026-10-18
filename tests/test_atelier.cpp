@@ -603,6 +603,41 @@ int main(int argc, char **argv) {
         while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
     }
 
+    // Le thème libre (§ 22.5, 2.13) dans la fenêtre d'exécution : les jetons dérivés, le clair imposé par le fond, la
+    // police installée, le logo SVG en icône ; puis le thème de GrymoiR rétabli pour la suite des essais
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write(QString("Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « %1 » et le logo « %2 ».\n"
+                            "L'écran x montre :\n    un bouton « Fermer ».\n"
+                            "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n")
+                        .arg(QString(GRYM_SOURCE) + "/vendor/atkinson/AtkinsonHyperlegibleNext-Regular.ttf",
+                             QString(GRYM_SOURCE) + "/vendor/lucide/check.svg").toUtf8());
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 15000 && Theme::courant().accent() != "libre") QApplication::processEvents(QEventLoop::AllEvents, 20);
+        Theme &th = Theme::courant();
+        VERIFIER(th.accent() == "libre" && th.mode() == Theme::Clair);
+        VERIFIER(th.hex("fond") == "#e8e2d6" && th.hex("accent") == "#46433b" && th.hex("accent-doux") == "#cec9bd");
+        VERIFIER(th.hex("sur-accent") == "#ffffff");
+        VERIFIER(th.police_interface().family().contains("Atkinson"));
+        VERIFIER(!e.windowIcon().isNull());
+        for (QPushButton *b : e.findChildren<QPushButton *>())
+            if (b->text() == "Fermer" && b->isVisible() && b->isEnabled()) { b->click(); break; }
+        z.restart();
+        while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        th.personnaliser({}, {}, false, {});
+        th.appliquer(Theme::Clair, "bleue");
+        VERIFIER(th.accent() == "bleue" && th.hex("fond") == "#f5efe6");
+    }
+
     // La fiche (§ 22.3) : le tableau des séances et sa ligne de total, en gras, jamais sélectionnable, la dernière même
     // après un tri choisi d'un clic sur un titre ; un double-clic dessus ne mène nulle part
     {

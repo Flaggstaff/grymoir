@@ -151,7 +151,9 @@ La conception est complète : elle passe dans la grammaire (§ 22) et la charte 
 
 GrymoiR fixe l'apparence des écrans : polices, tailles, espacements, formes et couleurs neutres. Le développeur ne règle que deux choses, une couleur d'accent et un logo. Le clair ou le sombre suit le réglage du système, sans rien écrire (charte, principe 3).
 
-Raisons : le public de GrymoiR, le développeur seul, ne veut pas jouer au graphiste ; chaque réglage ajouté en appelle un autre, et la liste fermée protège le langage de la dérive vers une feuille de style en français. Elle pourra s'élargir plus tard sans casser de programme ; la réduire en casserait. Un fichier de thème à part est exclu : l'apparence fait partie du programme (`docs/atelier.md`, § 2).
+*Assoupli le 18 octobre 2026 (charte 1.60, grammaire 2.13)* : une application faite pour quelqu'un porte son image. La couleur d'accent peut être libre (`« #46433B »`), le fond aussi, une police s'embarque, le logo peut être un SVG. GrymoiR dérive le reste du thème de ces deux couleurs (`src/teinte.c`) et refuse à l'analyse toute couleur qui ne se lit pas, le rapport de contraste mesuré dans le message. Les espacements, les tailles et les formes restent les siens : c'est ce qui empêche une application de devenir un sapin de Noël.
+
+Raisons de la première version, toujours valables pour les espacements et les formes : le public de GrymoiR, le développeur seul, ne veut pas jouer au graphiste ; chaque réglage ajouté en appelle un autre, et la liste fermée protège le langage de la dérive vers une feuille de style en français. Elle pourra s'élargir plus tard sans casser de programme ; la réduire en casserait. Un fichier de thème à part est exclu : l'apparence fait partie du programme (`docs/atelier.md`, § 2).
 
 ### 5.2 La phrase *(implémentée le 26 septembre 2026 : grammaire, § 22.5)*
 
@@ -233,3 +235,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.25 | 2026-10-15 | § 6 : B3 ter fait (menus, un par écran) ; B3 est complet |
 | 0.26 | 2026-10-18 | § 3 : la fiche déduite montre un tableau par lien qui désigne l'objet ; `, hors des fiches,` l'en retire (grammaire 2.10) |
 | 0.27 | 2026-10-18 | § 3.2 : le tri d'une colonne par la valeur (nombres, dates, heures), les textes à la française |
+| 0.28 | 2026-10-18 | § 5.1 : l'apparence assouplie, couleur libre, fond, police et logo SVG (charte 1.60, grammaire 2.13) |

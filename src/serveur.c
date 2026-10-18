@@ -6,6 +6,7 @@
 #endif
 
 #include "serveur.h"
+#include "teinte.h"
 #include "vm.h"
 #include "types.h"
 
@@ -122,6 +123,12 @@ struct Serveur {
     unsigned char *logo;
     size_t taille_logo;
     const char *type_logo;
+    /* le thème libre (§ 22.5, 2.13) : les jetons dérivés (teinte.h), qui recouvrent ceux du thème ; la police */
+    size_t nb_theme;
+    char theme_noms[TEINTE_JETONS_MAX][24], theme_clair[TEINTE_JETONS_MAX][8], theme_sombre[TEINTE_JETONS_MAX][8];
+    int clair_impose;
+    unsigned char *police;
+    size_t taille_police;
 };
 
 /* ---------------------------------------------------------------- */
@@ -446,7 +453,7 @@ const char *serveur_jeton(int sombre, int accent, const char *nom) {
 const char *serveur_palette(int accent) { return accent >= 0 && accent < 5 ? PALETTE[accent] : NULL; }
 
 /* Les variables d'un mode : « --fond:#F5EFE6; » pour chaque jeton. */
-static void variables(Chaine *c, int sombre, int accent) {
+static void variables(Chaine *c, int sombre, int accent, const Serveur *s) {
     chaine_ajouter(c, ":root{");
     for (size_t k = 0; k < sizeof NOMS_BASE / sizeof *NOMS_BASE; k++) {
         char *v = grym_formater("--%s:%s;", NOMS_BASE[k], sombre ? BASE_SOMBRE[k] : BASE_CLAIR[k]);
@@ -458,6 +465,13 @@ static void variables(Chaine *c, int sombre, int accent) {
         chaine_ajouter(c, v);
         free(v);
     }
+    for (size_t k = 0; s && k < s->nb_theme; k++) {   /* le thème libre (2.13) : ses jetons recouvrent ceux du thème */
+        const char *x = sombre ? s->theme_sombre[k] : s->theme_clair[k];
+        if (!*x) continue;
+        char *v = grym_formater("--%s:%s;", s->theme_noms[k], x);
+        chaine_ajouter(c, v);
+        free(v);
+    }
     chaine_ajouter(c, sombre ? "color-scheme:dark}" : "color-scheme:light}");
 }
 
@@ -466,10 +480,15 @@ static void variables(Chaine *c, int sombre, int accent) {
 static char *feuille_de_style(const Serveur *s) {
     Chaine c = {0};
     int a = s->accent >= 0 && s->accent < 5 ? s->accent : 0;
-    variables(&c, 0, a);
-    chaine_ajouter(&c, "@media (prefers-color-scheme:dark){");
-    variables(&c, 1, a);
-    chaine_ajouter(&c, "}");
+    variables(&c, 0, a, s);
+    if (!s->clair_impose) {   /* un fond donné (2.13) : les écrans restent clairs */
+        chaine_ajouter(&c, "@media (prefers-color-scheme:dark){");
+        variables(&c, 1, a, s);
+        chaine_ajouter(&c, "}");
+    }
+    if (s->police)   /* la police de l'application (2.13), servie à /police, devant celle du thème */
+        chaine_ajouter(&c, "@font-face{font-family:\"Police de l'application\";src:url(/police)}"
+                           "body,button,input,select,textarea{font-family:\"Police de l'application\",\"Atkinson Hyperlegible Next\",system-ui,sans-serif}");
     chaine_ajouter(&c,
     "body{margin:0;background:var(--fond);color:var(--texte);"
     "font:14px/20px \"Atkinson Hyperlegible Next\",system-ui,sans-serif}"
@@ -577,7 +596,8 @@ static void repondre_octets(Serveur *s, const char *statut, const char *type, co
         "HTTP/1.1 %s\r\n"
         "Content-Type: %s\r\n"
         "Content-Length: %lu\r\n"
-        "Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; script-src 'self'; "
+        "Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; font-src 'self'; "
+        "script-src 'self'; "
         "form-action 'self'; "
         "frame-ancestors 'none'; base-uri 'none'\r\n"
         "X-Content-Type-Options: nosniff\r\n"
@@ -1621,6 +1641,9 @@ static Suite traiter(Serveur *s, const char *donnees, size_t n, Question *q,
         else { page_finale(s, erreur, annulation); suite = PAGE_FINALE_SERVIE; }
     } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/grym.js") == 0) {
         repondre(s, "200 OK", "text/javascript; charset=utf-8", SCRIPT, NULL);
+    } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/police") == 0 && s->police) {
+        repondre_octets(s, "200 OK", s->taille_police >= 4 && !memcmp(s->police, "OTTO", 4) ? "font/otf" : "font/ttf",
+                        s->police, s->taille_police, NULL);
     } else if (strcmp(r.methode, "GET") == 0 && strcmp(r.cible, "/logo") == 0 && s->logo) {
         repondre_octets(s, "200 OK", s->type_logo, s->logo, s->taille_logo, NULL);
     } else if (strcmp(r.methode, "GET") == 0 && strncmp(r.cible, "/ecran-image/", 13) == 0 && ecran_dessus(s)) {
@@ -1845,7 +1868,7 @@ static const char *type_image(const char *format) {
                                            {"FLAC", "audio/flac"} };   /* un son se joue (§ 15.7) */
     for (size_t k = 0; k < sizeof SONS / sizeof *SONS; k++) if (strcmp(format, SONS[k][0]) == 0) return SONS[k][1];
     return strcmp(format, "PNG") == 0 ? "image/png" : strcmp(format, "JPEG") == 0 ? "image/jpeg"
-         : strcmp(format, "GIF") == 0 ? "image/gif" : "image/webp";
+         : strcmp(format, "GIF") == 0 ? "image/gif" : strcmp(format, "SVG") == 0 ? "image/svg+xml" : "image/webp";
 }
 
 /* Une image dans le fil ou une fiche, ou un son : un lecteur, avec ses commandes (§ 15.7). */
@@ -2236,11 +2259,34 @@ static void serveur_ecran_apparence(void *contexte, int couleur, const unsigned 
     }
 }
 
+/* Le thème libre (§ 22.5, 2.13) : les jetons dérivés, et la police */
+static void serveur_ecran_theme(void *contexte, const char *const *noms, const char *const *clair, const char *const *sombre,
+                                size_t n, int clair_impose, const unsigned char *police, size_t taille_police) {
+    Serveur *s = contexte;
+    s->nb_theme = 0;
+    for (size_t k = 0; k < n && k < TEINTE_JETONS_MAX; k++) {
+        snprintf(s->theme_noms[k], sizeof s->theme_noms[k], "%s", noms[k]);
+        snprintf(s->theme_clair[k], sizeof s->theme_clair[k], "%s", clair[k] ? clair[k] : "");
+        snprintf(s->theme_sombre[k], sizeof s->theme_sombre[k], "%s", sombre[k] ? sombre[k] : "");
+        s->nb_theme++;
+    }
+    s->clair_impose = clair_impose;
+    free(s->police);
+    s->police = NULL;
+    s->taille_police = 0;
+    if (police && taille_police) {
+        s->police = grym_allouer(taille_police);
+        memcpy(s->police, police, taille_police);
+        s->taille_police = taille_police;
+    }
+}
+
 Interface serveur_interface(Serveur *s) {
     Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer, 1, serveur_afficher_image,
                     serveur_afficher_fiche, serveur_ecran_ouvrir, serveur_ecran_lignes, serveur_ecran_attendre,
                     serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence,
-                    serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre, serveur_ecran_erreurs_zones, NULL, NULL };
+                    serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre, serveur_ecran_erreurs_zones, NULL, NULL,
+                    serveur_ecran_theme };
     return i;
 }
 
@@ -2292,6 +2338,7 @@ void serveur_fermer(Serveur *s) {
     free(s->ev_octets);
     s->ev_octets = NULL;
     free(s->ev_choisies);
+    free(s->police);
     free(s->logo);
     free(s->titre);
     free(s->affichage.d);

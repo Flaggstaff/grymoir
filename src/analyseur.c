@@ -3,6 +3,7 @@
  * Descente récursive écrite à la main, une fonction par règle de l'EBNF (§ 6).
  */
 #include "analyseur.h"
+#include "teinte.h"
 #include "chemins.h"
 #include "decimal.h"
 #include "compact.h"
@@ -5564,92 +5565,190 @@ static Noeud *regle(Analyse *a, int colonne) {
     return n;
 }
 
-/* « Les écrans ont la couleur verte et le logo « logo.png ». » (§ 22.5) : une fois, au premier niveau,
- * avant le premier « Ouvrir ». L'un des deux réglages au moins, la couleur d'abord. */
+/* Un fichier de police : TrueType ou OpenType (§ 22.5). 1 oui, 0 non, -1 introuvable. */
+static int fichier_police(const char *chemin) {
+    FILE *f = grym_fopen(chemin, "rb");
+    if (!f) return -1;
+    unsigned char o[4] = { 0 };
+    size_t n = fread(o, 1, sizeof o, f);
+    fclose(f);
+    if (n < 4) return 0;
+    return !memcmp(o, "\x00\x01\x00\x00", 4) || !memcmp(o, "OTTO", 4) || !memcmp(o, "true", 4);
+}
+
+/* Une image SVG (§ 22.5, le logo) : le texte commence par « <svg », ou par une déclaration XML suivie de « <svg ».
+ * 1 oui, 0 non, -1 introuvable. */
+static int fichier_svg(const char *chemin) {
+    FILE *f = grym_fopen(chemin, "rb");
+    if (!f) return -1;
+    char o[1025];
+    size_t n = fread(o, 1, sizeof o - 1, f);
+    fclose(f);
+    o[n] = '\0';
+    const char *p = o;
+    if (n >= 3 && (unsigned char)p[0] == 0xEF && (unsigned char)p[1] == 0xBB && (unsigned char)p[2] == 0xBF) p += 3;
+    while (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n') p++;
+    if (!strncmp(p, "<svg", 4)) return 1;
+    return (!strncmp(p, "<?xml", 5) || !strncmp(p, "<!--", 4)) && strstr(p, "<svg") != NULL;
+}
+
+/* « Les écrans ont la couleur verte et le logo « logo.png ». » (§ 22.5) ; et, depuis 2.13, une couleur libre, un
+ * fond, une police : « Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « Outfit.ttf » et le
+ * logo « logo.svg ». » Une fois, au premier niveau, avant le premier « Ouvrir ». Les réglages dans cet ordre, au
+ * moins un ; des virgules entre eux, « et » devant le dernier. */
 static Noeud *apparence(Analyse *a, const Jeton *t) {
     a->i += 3;   /* les écrans ont */
-    int couleur = -1;
-    char *logo = NULL;
-    const Jeton *tlogo = NULL;
-    attendre_ici(a, "la couleur");
-    attendre_ici(a, "le logo");
-    if (est_mot(cour(a), "la") && est_mot(voir(a, 1), "couleur")) {
-        a->i += 2;
-        for (int k = 0; k < 5; k++) attendre_ici(a, COULEURS[k]);
-        a->i -= 2;
-        const Jeton *tc = voir(a, 2);
-        for (int k = 0; k < 5; k++) {
-            if (est_mot(tc, COULEURS[k])) couleur = k;
-            else if (COULEURS_MASCULIN[k] && est_mot(tc, COULEURS_MASCULIN[k]))
-                return erreur(a, tc, grym_formater("Accord : « %s » (la couleur).", COULEURS[k]));
+    static const char *const ARTICLE[] = { "la", "le", "la", "le" };
+    static const char *const NOM[] = { "couleur", "fond", "police", "logo" };
+    int couleur = -1, vu = -1, nb = 0, virgule = 0;
+    char *textes[4] = { NULL, NULL, NULL, NULL };   /* couleur libre, fond, police, logo */
+    const Jeton *jetons[4] = { NULL, NULL, NULL, NULL };
+    int echec = 0;
+    for (;;) {
+        for (int r = vu + 1; r < 4; r++) {
+            char *propose = grym_formater("%s %s", ARTICLE[r], NOM[r]);
+            attendre_ici(a, propose);
+            free(propose);
         }
-        if (couleur < 0)
-            return erreur(a, tc, grym_dupliquer("Couleur attendue : bleue, verte, turquoise, violette ou grise."));
-        a->i += 3;
-        attendre_ici(a, "et le logo");
-        attendre(a, A_POINT);
-        if (est_mot(cour(a), "et")) {
-            a->i++;
-            attendre_ici(a, "le logo");
-            a->i--;
-            if (!(est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "logo")))
-                return erreur(a, voir(a, 1), grym_dupliquer("« le logo « … » » attendu après « et »."));
+        int r = -1;
+        for (int q = 0; q < 4; q++)
+            if (est_mot(cour(a), ARTICLE[q]) && est_mot(voir(a, 1), NOM[q])) r = q;
+        if (r < 0) {
+            if (nb) echec = 1, erreur(a, cour(a), grym_dupliquer("Réglage attendu : « la couleur », « le fond », « la police » ou « le logo »."));
+            break;
+        }
+        if (r <= vu) {
+            echec = 1, erreur(a, cour(a), grym_dupliquer("Les réglages s'écrivent dans cet ordre : la couleur, le fond, la police, "
+                                                       "le logo : « Les écrans ont la couleur verte et le logo « … ». »"));
+            break;
+        }
+        a->i += 2;
+        if (r == 0) {
+            const Jeton *tc = cour(a);
+            for (int k = 0; k < 5; k++) attendre_ici(a, COULEURS[k]);
+            attendre(a, A_TEXTE);
+            if (tc->type == J_TEXTE) {
+                textes[0] = grym_dupliquer(tc->valeur);
+                jetons[0] = tc;
+                int rgb[3];
+                if (!teinte_lire(tc->valeur, rgb)) {
+                    echec = 1, erreur(a, tc, grym_formater("Couleur « %s » mal écrite : # et six chiffres hexadécimaux, "
+                                                        "« #46433B ».", tc->valeur));
+                    break;
+                }
+            } else {
+                for (int k = 0; k < 5; k++) {
+                    if (est_mot(tc, COULEURS[k])) couleur = k;
+                    else if (COULEURS_MASCULIN[k] && est_mot(tc, COULEURS_MASCULIN[k])) {
+                        echec = 1, erreur(a, tc, grym_formater("Accord : « %s » (la couleur).", COULEURS[k]));
+                        break;
+                    }
+                }
+                if (echec) break;
+                if (couleur < 0) {
+                    echec = 1, erreur(a, tc, grym_dupliquer("Couleur attendue : bleue, verte, turquoise, violette, grise, ou une "
+                                                         "couleur libre entre guillemets, « #46433B »."));
+                    break;
+                }
+            }
+            avancer(a);
+        } else {
+            const Jeton *tt = cour(a);
+            attendre(a, A_TEXTE);
+            if (tt->type != J_TEXTE) {
+                static const char *const EX[] = { "", "le fond « #E8E2D6 »", "la police « Outfit.ttf »", "le logo « logo.png »" };
+                echec = 1, erreur(a, tt, grym_formater("%s s'écrit entre guillemets : « %s ».",
+                                                    r == 1 ? "Le fond" : r == 2 ? "La police" : "Le logo", EX[r]));
+                break;
+            }
+            textes[r] = grym_dupliquer(tt->valeur);
+            jetons[r] = tt;
             avancer(a);
         }
+        vu = r;
+        nb++;
+        if (cour(a)->type == J_VIRGULE) {
+            if (vu == 3) { echec = 1, erreur(a, cour(a), grym_dupliquer("Le logo est le dernier réglage.")); break; }
+            avancer(a);
+            virgule = 1;
+            continue;
+        }
+        for (int k = vu + 1; k < 4; k++) {   /* « et le logo », « et la police »… : la suite possible */
+            char *propose = grym_formater("et %s %s", ARTICLE[k], NOM[k]);
+            attendre_ici(a, propose);
+            free(propose);
+        }
+        attendre(a, A_POINT);
+        if (est_mot(cour(a), "et")) {
+            avancer(a);
+            virgule = 0;
+            int q = -1;
+            for (int k = 0; k < 4; k++)
+                if (est_mot(cour(a), ARTICLE[k]) && est_mot(voir(a, 1), NOM[k])) q = k;
+            if (q < 0) {
+                for (int k = vu + 1; k < 4; k++) {
+                    char *propose = grym_formater("%s %s", ARTICLE[k], NOM[k]);
+                    attendre_ici(a, propose);
+                    free(propose);
+                }
+                echec = 1, erreur(a, cour(a), grym_dupliquer("Réglage attendu après « et » : « le fond », « la police » ou « le logo »."));
+                break;
+            }
+            continue;
+        }
+        if (virgule) echec = 1, erreur(a, cour(a), grym_dupliquer("Le dernier réglage se relie par « et » : « Les écrans ont "
+                                                                  "la couleur verte, le fond « … » et le logo « … ». »"));
+        break;
     }
-    if (est_mot(cour(a), "le") && est_mot(voir(a, 1), "logo")) {
-        a->i += 2;
-        attendre(a, A_TEXTE);
-        a->i -= 2;
-        tlogo = voir(a, 2);
-        if (tlogo->type != J_TEXTE)
-            return erreur(a, tlogo, grym_dupliquer("Le logo s'écrit entre guillemets : « le logo « logo.png » »."));
-        logo = grym_dupliquer(tlogo->valeur);
-        a->i += 3;
-        if (couleur < 0 && est_mot(cour(a), "et") && est_mot(voir(a, 2), "couleur")) {
-            free(logo);
-            return erreur(a, cour(a), grym_dupliquer("Écris la couleur avant le logo : "
-                                                     "« Les écrans ont la couleur verte et le logo « … ». »"));
+    if (!echec && !nb)
+        echec = 1, erreur(a, cour(a), grym_dupliquer("Écris « Les écrans ont la couleur verte. », « Les écrans ont le logo "
+                                                  "« logo.png ». », ou plusieurs réglages : la couleur, le fond, la police, le logo."));
+    if (!echec && !fin_phrase(a, 0)) echec = 1;
+    if (!echec && (a->formule || a->niveau))
+        echec = 1, erreur(a, t, grym_dupliquer("L'apparence des écrans se déclare au premier niveau du programme."));
+    if (!echec && a->apparence_declaree)
+        echec = 1, erreur(a, t, grym_dupliquer("L'apparence des écrans se déclare une seule fois."));
+    if (!echec && a->ouvrir_vu)
+        echec = 1, erreur(a, t, grym_dupliquer("L'apparence des écrans se déclare avant le premier « Ouvrir »."));
+    if (!echec && (textes[0] || textes[1])) {   /* les contrastes, dès l'analyse (teinte.c) */
+        TeinteTheme th;
+        char *probleme = NULL;
+        if (!teinte_theme(textes[0], textes[1], &th, &probleme)) {
+            /* le fond, s'il est en cause (texte secondaire, bord, fond mal écrit) ; sinon la couleur */
+            const int fond_en_cause = !strncmp(probleme, "Le texte secondaire", 19) || !strncmp(probleme, "Le bord", 7)
+                                      || !strncmp(probleme, "Fond", 4);
+            echec = 1, erreur(a, fond_en_cause || !jetons[0] ? jetons[1] : jetons[0], probleme);
         }
     }
-    if (couleur < 0 && !logo)
-        return erreur(a, cour(a), grym_dupliquer("Écris « Les écrans ont la couleur verte. », "
-                                                 "« Les écrans ont le logo « logo.png ». », ou les deux reliés par « et »."));
-    if (!fin_phrase(a, 0)) { free(logo); return NULL; }
-    if (a->formule || a->niveau) {
-        free(logo);
-        return erreur(a, t, grym_dupliquer("L'apparence des écrans se déclare au premier niveau du programme."));
-    }
-    if (a->apparence_declaree) {
-        free(logo);
-        return erreur(a, t, grym_dupliquer("L'apparence des écrans se déclare une seule fois."));
-    }
-    if (a->ouvrir_vu) {
-        free(logo);
-        return erreur(a, t, grym_dupliquer("L'apparence des écrans se déclare avant le premier « Ouvrir »."));
-    }
-    if (logo) {   /* le logo existe et c'est une image, dès l'analyse : l'aperçu de l'atelier le montre */
-        if (!*logo) { free(logo); return erreur(a, tlogo, grym_dupliquer("Nom de fichier vide.")); }
+    /* la police et le logo existent, dès l'analyse : l'aperçu de l'atelier les montre sans exécuter le programme */
+    for (int r = 2; r < 4 && !echec; r++) {
+        if (!textes[r]) continue;
+        if (!*textes[r]) { echec = 1, erreur(a, jetons[r], grym_dupliquer("Nom de fichier vide.")); break; }
         char *dossier = dossier_de(a->portee->fichier);
-        char *chemin = logo[0] == '/' ? grym_dupliquer(logo) : grym_formater("%s%s", dossier, logo);
-        const int image = fichier_image(chemin);
+        char *chemin = textes[r][0] == '/' ? grym_dupliquer(textes[r]) : grym_formater("%s%s", dossier, textes[r]);
+        const int bon = r == 2 ? fichier_police(chemin) : fichier_image(chemin) == 1 ? 1 : fichier_svg(chemin);
         free(dossier);
         free(chemin);
-        if (image < 0) {
-            Noeud *e = erreur(a, tlogo, grym_formater("Fichier « %s » introuvable ou illisible.", logo));
-            free(logo);
-            return e;
-        }
-        if (image == 0) {
-            Noeud *e = erreur(a, tlogo, grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF ou WebP).", logo));
-            free(logo);
-            return e;
-        }
+        if (bon < 0) echec = 1, erreur(a, jetons[r], grym_formater("Fichier « %s » introuvable ou illisible.", textes[r]));
+        else if (!bon)
+            echec = 1, erreur(a, jetons[r], r == 2 ? grym_formater("« %s » n'est pas une police (TrueType ou OpenType : .ttf, .otf).", textes[r])
+                                                 : grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF, WebP ou SVG).", textes[r]));
+    }
+    if (echec) {
+        for (int r = 0; r < 4; r++) free(textes[r]);
+        return NULL;
     }
     a->apparence_declaree = 1;
     Noeud *n = noeud_creer(P_APPARENCE, t->ligne, t->colonne, t->debut);
     n->entier = couleur;
-    n->texte = logo;
+    n->texte = textes[3];     /* le logo */
+    n->texte2 = textes[0];    /* la couleur libre */
+    n->texte3 = textes[1];    /* le fond */
+    if (textes[2]) {          /* la police : un enfant, le seul */
+        Noeud *x = noeud_creer(N_TEXTE, jetons[2]->ligne, jetons[2]->colonne, jetons[2]->debut);
+        x->texte = textes[2];
+        noeud_ajouter(n, x);
+    }
     n->fin = fin_jeton(&a->j[a->i - 1]);
     return n;
 }

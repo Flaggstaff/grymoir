@@ -198,6 +198,10 @@ int main(void) {
     EXEC("_afficher « éa » _en_majuscules ; « ab » _inclut « B » ; _non (« ab » _finit « b »)\n", "ÉA vrai faux\n");
     ERR("_afficher « a » _en_rouge\n", 1, 17, "« _en_rouge » inconnu");
     ALLER_RETOUR("_classe _une tâche _conservé\n    _un état (« à faire » ; « fini ») _départ « fini »\n_fin\n", NULL);
+    /* § 22.5 (2.13) : la couleur libre, le fond, la police, le logo SVG */
+    ALLER_RETOUR("_écrans _couleur « #46433B » _fond « #E8E2D6 » _police "
+                 "« vendor/atkinson/AtkinsonHyperlegibleNext-Regular.ttf » _logo « vendor/lucide/check.svg »\n", NULL);
+    ALLER_RETOUR("_écrans _couleur _verte _fond « #E8E2D6 »\n", NULL);
     /* § 22.3 : une entité hors des fiches, déclarée ou héritière */
     ALLER_RETOUR("_classe _une note _conservé _hors_des_fiches\n    _un texte (texte)\n_fin\n", NULL);
     ALLER_RETOUR("_classe _une personne _conservé\n    _un nom (texte)\n_fin\n"

@@ -73,6 +73,9 @@ signals:
     void ecran_erreurs_zones(const QVector<int> &elements, const QStringList &messages);   // les zones en faute (§ 22.6)
     void ecran_ferme();
     void apparence(int couleur, const QByteArray &logo);   // « Les écrans ont … » (grammaire, § 22.5)
+    // le thème libre (2.13) : noms, valeurs claires, sombres (vides : celles du thème), le clair imposé, la police
+    void theme(const QStringList &noms, const QStringList &clair, const QStringList &sombre, bool clair_impose,
+               const QByteArray &police);
     void reponses(const QString &echo);   // les réponses acceptées, recopiées dans le fil comme en console
     void fin(bool ok, const QString &erreur, const QString &annulation);
 
