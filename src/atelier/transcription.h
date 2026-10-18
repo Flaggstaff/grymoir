@@ -25,5 +25,9 @@ QString nettoyer_transcription(const QString &texte);
 // Whisper doute (probabilité sous 0,5) est entre DEBUT_DOUTE et FIN_DOUTE.
 inline constexpr char16_t MARQUE_TRANSCRIT = 0x2064, DEBUT_DOUTE = 0x2062, FIN_DOUTE = 0x2063;
 
+// Libère le modèle gardé en mémoire ; appelé de lui-même à la fermeture de l'application (sur Mac, Metal l'exige).
+void liberer_transcription();
+bool modele_charge();
+
 // Le texte d'un son, ou vide avec *erreur. Le modèle est chargé une fois, puis gardé.
 QString transcrire_son(const QByteArray &octets, const QString &modele, QString *erreur);

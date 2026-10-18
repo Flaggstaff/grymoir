@@ -389,6 +389,9 @@ int main(int argc, char **argv) {
         QString erreur;
         transcrire_son(wav(16000, 1, 16, 2.0), MODELE_ESSAI, &erreur);
         VERIFIER(erreur.isEmpty());   // le modèle d'essai se charge et tourne
+        VERIFIER(modele_charge());
+        liberer_transcription();       // ce que fait la fermeture de l'application : sur Mac, Metal l'exige
+        VERIFIER(!modele_charge());
         QString sans;
         VERIFIER(transcrire_son(wav(16000, 1, 16, 1.0), QString(), &sans).isEmpty() && sans.contains("introuvable"));
         // la relecture : des marques invisibles, des nombres et des doutes surlignés, un doute qui part à la correction

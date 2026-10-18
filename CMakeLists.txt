@@ -25,7 +25,8 @@ set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(whisper
     URL https://codeload.github.com/ggml-org/whisper.cpp/tar.gz/refs/tags/v1.9.5
-    URL_HASH SHA256=ff1a9053feb509ff9d7729703355541ae9690073a6b1c40eb692c962e0dc1720)
+    URL_HASH SHA256=ff1a9053feb509ff9d7729703355541ae9690073a6b1c40eb692c962e0dc1720
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)   # les fichiers extraits datés de l'extraction (politique CMP0135)
 FetchContent_MakeAvailable(whisper)
 
 # SQLite embarqué, avec les réglages du Makefile (vendor/sqlite, voir PROVENANCE.md).

@@ -150,6 +150,25 @@ QString nettoyer_transcription(const QString &texte) {
     return lignes.join('\n');
 }
 
+// Le modèle gardé entre deux transcriptions. Il doit être libéré avant la fin du programme : sur Mac, Metal (la puce
+// graphique, dont whisper.cpp se sert) vérifie en se fermant qu'aucune ressource n'est plus réservée, et arrête le
+// programme sinon. qAddPostRoutine le libère à la fermeture de l'application, avant cet inventaire.
+static QMutex verrou;
+static whisper_context *ctx = nullptr;
+static QString charge;
+
+void liberer_transcription() {
+    QMutexLocker garde(&verrou);
+    if (ctx) whisper_free(ctx);
+    ctx = nullptr;
+    charge.clear();
+}
+
+bool modele_charge() {
+    QMutexLocker garde(&verrou);
+    return ctx != nullptr;
+}
+
 QString transcrire_son(const QByteArray &octets, const QString &modele, QString *erreur) {
     if (modele.isEmpty()) {
         *erreur = "Le modèle de transcription est introuvable (ggml-large-v3-turbo-q5_0.bin).";
@@ -158,9 +177,6 @@ QString transcrire_son(const QByteArray &octets, const QString &modele, QString 
     std::vector<float> pcm;
     if (!wav_en_16k(octets, &pcm) && !decoder_en_16k(octets, &pcm, erreur)) return QString();
     // le modèle, chargé une fois (environ un gigaoctet en mémoire), gardé pour les transcriptions suivantes
-    static QMutex verrou;
-    static whisper_context *ctx = nullptr;
-    static QString charge;
     QMutexLocker garde(&verrou);
     if (!ctx || charge != modele) {
         whisper_log_set([](enum ggml_log_level, const char *, void *) {}, nullptr);   // pas de journal dans une application
@@ -168,6 +184,11 @@ QString transcrire_son(const QByteArray &octets, const QString &modele, QString 
         whisper_context_params cp = whisper_context_default_params();
         ctx = whisper_init_from_file_with_params(modele.toUtf8().constData(), cp);
         charge = ctx ? modele : QString();
+        static bool inscrit = false;   // une seule fois : libérer à la fermeture de l'application
+        if (ctx && !inscrit && QCoreApplication::instance()) {
+            qAddPostRoutine(liberer_transcription);
+            inscrit = true;
+        }
         if (!ctx) { *erreur = "Le modèle de transcription ne se charge pas : " + modele; return QString(); }
     }
     whisper_full_params p = whisper_full_default_params(WHISPER_SAMPLING_BEAM_SEARCH);
