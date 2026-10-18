@@ -1268,6 +1268,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
             chaine_ajouter(&d, el->type == N_CHERCHER ? "L" : el->type == N_BOUTON ? "B"
                              : el->type == N_NOM ? "Z" : el->type == N_IMAGE_ECRAN ? (el->texte ? "I" : "J") : "T");
             if (el->texte) chaine_ajouter(&d, el->texte);   /* « J » : une image calculée, sans fichier écrit (§ 22.8) */
+            if (el->type == N_BOUTON && (el->entier & 256)) chaine_ajouter(&d, "\x1e" "p");   /* « Bfermer ␞ p » : principal (2.14) */
             if (el->type == N_CHERCHER && el->texte3) {   /* colonnes choisies : « ␛ écrit ␝ a ␜ b ␞ … » */
                 chaine_ajouter(&d, "\x1b");
                 char *cols = grym_dupliquer(el->texte3);

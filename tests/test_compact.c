@@ -198,6 +198,8 @@ int main(void) {
     EXEC("_afficher « éa » _en_majuscules ; « ab » _inclut « B » ; _non (« ab » _finit « b »)\n", "ÉA vrai faux\n");
     ERR("_afficher « a » _en_rouge\n", 1, 17, "« _en_rouge » inconnu");
     ALLER_RETOUR("_classe _une tâche _conservé\n    _un état (« à faire » ; « fini ») _départ « fini »\n_fin\n", NULL);
+    /* 2.14 : un bouton principal */
+    ALLER_RETOUR("_écran x\n    _bouton « B » _principal\n_fin\n_quand _clique « B » _dans x\n    _fermer\n_fin\n", NULL);
     /* § 22.5 (2.13) : la couleur libre, le fond, la police, le logo SVG */
     ALLER_RETOUR("_écrans _couleur « #46433B » _fond « #E8E2D6 » _police "
                  "« vendor/atkinson/AtkinsonHyperlegibleNext-Regular.ttf » _logo « vendor/lucide/check.svg »\n", NULL);

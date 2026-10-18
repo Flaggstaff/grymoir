@@ -14,7 +14,7 @@ Si le nombre de soins conservés est nul :
 
 L'écran d'accueil, « Cabinet », montre :
     un bouton « Clients »,
-    un bouton « Nouvelle séance »,
+    un bouton « Nouvelle séance », principal,
     un bouton « Séances prévues »,
     un bouton « À encaisser »,
     un bouton « Soins »,
@@ -34,7 +34,7 @@ L'écran de séance, « Nouvelle séance », montre :
     un prix (nombre), avec l'unité « CHF »,
     un paiement (« à payer », « espèces », « Twint », « virement » ou « offert »), « à payer » au départ,
     côte à côte :
-        un bouton « Enregistrer »,
+        un bouton « Enregistrer », principal,
         un bouton « Fermer ».
 
 L'écran des prévues, « Séances prévues », montre :

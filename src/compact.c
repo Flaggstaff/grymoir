@@ -754,7 +754,8 @@ static void condition_de_cas(Reecriture *r, size_t d, size_t f) {
 static int est_etat(const Jeton *t) {
     return est_cle(t, "actif_si") || est_cle(t, "active_si") || est_cle(t, "visible_si") || est_cle(t, "plusieurs_lignes")
         || est_cle(t, "interrupteur") || est_cle(t, "indication") || est_cle(t, "recherche") || est_cle(t, "min") || est_cle(t, "max") || est_cle(t, "masqué") || est_cle(t, "unité") || est_cle(t, "transcrit")
-        || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur");
+        || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur")
+        || est_cle(t, "principal");
 }
 
 /* Les états d'un élément d'écran, de k à f (§ 22.6) : « _plusieurs_lignes », « _lecture_seule » (zones),
@@ -838,6 +839,10 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             emettre(r, J_VIRGULE, NULL, x, 1);
             mot(r, "en", x);
             mot(r, "interrupteur", x);
+            k++;
+        } else if (!zone && est_cle(x, "principal")) {   /* _principal → , principal (un bouton, 2.14) */
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "principal", x);
             k++;
         } else if (zone && est_cle(x, "lecture_seule")) {
             emettre(r, J_VIRGULE, NULL, x, 1);

@@ -65,6 +65,7 @@ typedef struct {
     size_t valeur_depuis;
     char etiquette;                 /* la valeur en étiquette, de cette couleur (b v t p g r o, § 16.15) ; 0 : non */
     int lien;                       /* la valeur en lien : LIEN_COURRIEL (écrire), LIEN_WEB (ouvrir) ; 0 : non */
+    int principal;                  /* un bouton « , principal » : l'action attendue, à la couleur d'accent (2.14) */
 } ElementEcran;
 
 #define LIEN_COURRIEL 1   /* « mailto: » + la valeur */

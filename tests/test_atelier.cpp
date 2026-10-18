@@ -148,6 +148,19 @@ int main(int argc, char **argv) {
     VERIFIER(dessin("Le total vaut 12,50.") == "mm.......mmmm.nnnnno");
     VERIFIER(dessin("Si x > 3, afficher « a ».") == "cc...o.no.mmmmmmmm.ttttto");
     VERIFIER(dessin("Remarque : bonjour") == "rrrrrrrrrrrrrrrrrr");
+    // Un bouton principal (2.14) : le rôle que la feuille du thème peint à la couleur d'accent
+    {
+        QVector<ElementVue> el(2);
+        el[0].sorte = ELEMENT_BOUTON;
+        el[0].texte = "Enregistrer";
+        el[0].principal = true;
+        el[1].sorte = ELEMENT_BOUTON;
+        el[1].texte = "Fermer";
+        VueEcran v = dessiner_ecran("Séance", el);
+        VERIFIER(v.boutons.size() == 2 && v.boutons[0]->property("role").toString() == "principal"
+                 && !v.boutons[1]->property("role").isValid());
+        delete v.vue;
+    }
     // Les projets du dépôt : trouvés depuis le dossier de construction, rien autour d'une application installée
     {
         bool trouve = false;

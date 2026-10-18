@@ -28,6 +28,7 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QSplitter>
+#include <QTabWidget>
 #include <QAction>
 #include <QTableWidget>
 #include <QSvgRenderer>
@@ -175,7 +176,8 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         t->images << (el[k].octets ? QByteArray(reinterpret_cast<const char *>(el[k].octets), (qsizetype)el[k].taille) : QByteArray());
         t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0)
-                             | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0) | (el[k].masque ? 32 : 0));
+                             | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0) | (el[k].masque ? 32 : 0)
+                             | (el[k].principal ? 64 : 0));
         t->facultatives << el[k].facultatif;
         t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
         t->unites << (el[k].unite ? QString(el[k].unite_devant ? "<" : ">") + QString::fromUtf8(el[k].unite) : QString());
@@ -1005,6 +1007,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].plusieurs_lignes = o & 1;
         elements[k].lecture_seule = o & 2;
         elements[k].interrupteur = o & 4;   // § 22.6
+        elements[k].principal = o & 64;     // 2.14
         elements[k].multiple = o & 8;   // § 22.1
         elements[k].recherche = o & 16;   // § 22.6
         elements[k].masque = o & 32;   // § 22.6
@@ -1140,12 +1143,17 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
     auto *centre = new QHBoxLayout(cadre);
     centre->setContentsMargins(0, 0, 0, 0);
     vue_ecran->setMaximumWidth(Theme::courant().mesure("largeur-contenu"));
-    // rien qui s'étire (une liste, un groupe) : l'écran reste en haut, l'espace libre dessous, comme une page ; sinon
-    // Qt répartissait la hauteur entre les éléments et l'écran flottait au milieu de la fenêtre
-    bool etire = false;
-    if (auto *pile = qobject_cast<QBoxLayout *>(vue_ecran->layout()))
-        for (int k = 0; k < pile->count() && !etire; k++) etire = pile->stretch(k) > 0;
-    centre->addWidget(vue_ecran, 1, etire ? Qt::Alignment() : Qt::AlignTop);
+    // rien qui ait besoin de hauteur (une liste, un graphique, un texte sur plusieurs lignes, des onglets) : l'écran
+    // reste en haut, l'espace libre dessous, comme une page ; sinon Qt répartissait la hauteur entre les éléments et
+    // l'écran flottait au milieu de la fenêtre. Les blocs « côte à côte » s'étirent toujours : on regarde leur contenu.
+    const bool etire = !vue_ecran->findChildren<QTableWidget *>().isEmpty() || !vue_ecran->findChildren<QPlainTextEdit *>().isEmpty()
+                       || !vue_ecran->findChildren<QTabWidget *>().isEmpty()
+                       || [this] {   // Graphique n'a pas de méta-objet à lui : findChildren les prendrait tous pour des graphiques
+                              for (QWidget *w : vue_ecran->findChildren<QWidget *>()) if (dynamic_cast<Graphique *>(w)) return true;
+                              return false;
+                          }();
+    if (auto *pile = qobject_cast<QBoxLayout *>(vue_ecran->layout()); pile && !etire) pile->addStretch(1);
+    centre->addWidget(vue_ecran, 1);
     vue_ecran = cadre;
     vue_ecran->setEnabled(false);   // actif seulement quand la machine attend un événement
     partage->insertWidget(0, vue_ecran);

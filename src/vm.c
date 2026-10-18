@@ -2397,6 +2397,8 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             continue;
         }
         const char *colonnes_choisies = strchr(x, '\x1b');
+        const char *options_bouton = x[0] == 'B' ? strchr(x, '\x1e') : NULL;   /* « Bfermer ␞ p » : principal (2.14) */
+        if (options_bouton) colonnes_choisies = options_bouton;
         /* « Rb+ » : la forme et la période dans la deuxième lettre (§ 22.11) */
         const char *pf = x[0] == 'R' ? strchr("bcdestuv", x[1]) : NULL;
         const int rang_f = pf ? (int)(pf - "bcdestuv") : 0;
@@ -2411,6 +2413,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->elements[k].colonnes = NULL;
         e->elements[k].nb_colonnes = 0;
         e->elements[k].graphique = graphe;
+        e->elements[k].principal = options_bouton && strchr(options_bouton + 1, 'p') != NULL;
         e->elements[k].sorte = graphe ? ELEMENT_GRAPHIQUE : x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON
                              : x[0] == 'I' || x[0] == 'J' ? ELEMENT_IMAGE : ELEMENT_TEXTE;
         if (x[0] == 'J') { e->elements[k].calculee = 1; continue; }   /* image calculée : ÉCRAN_IMAGE la donne (§ 22.8) */

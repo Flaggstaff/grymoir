@@ -5987,6 +5987,7 @@ static void attendre_etats_ecran(Analyse *a, const Noeud *el, Genre g, int zone)
         const Classe *lie = el->texte2 ? classe_de(a->portee, el->texte2) : NULL;
         if (lie && lie->conserve) attendre_mot(a, pos, "avec recherche", strlen("avec recherche"));
     }
+    if (el->type == N_BOUTON && !(el->entier & 256)) attendre_mot(a, pos, "principal", strlen("principal"));
     if (zone || el->type == N_BOUTON) attendre_mot(a, pos, fem ? "active si" : "actif si", strlen(fem ? "active si" : "actif si"));
     attendre_mot(a, pos, "visible si", strlen("visible si"));
 }
@@ -6194,6 +6195,15 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
             el->entier |= 4;
             a->i += 4;
             *vus_ = vus;
+            return 1;
+        }
+        if (est_mot(x, "principal") || est_mot(x, "principale")) {   /* « , principal » : le bouton de l'action attendue (§ 22.6, 2.14) */
+            if (el->type != N_BOUTON)
+                return erreur(a, x, grym_dupliquer("Seul un bouton est principal : « un bouton « Nouvelle séance », principal ».")), -1;
+            if (est_mot(x, "principale")) return erreur(a, x, grym_dupliquer("Accord : « principal » (le bouton).")), -1;
+            if (el->entier & 256) return erreur(a, x, grym_dupliquer("« principal » est déjà dit.")), -1;
+            el->entier |= 256;
+            a->i += 2;
             return 1;
         }
         const int actif = est_mot(x, "actif") || est_mot(x, "active");

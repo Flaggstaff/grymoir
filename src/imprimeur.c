@@ -1166,6 +1166,7 @@ static char *colonne_avec_articles(Impression *im, const char *ecrit, const char
 
 static void etats_ecran(Impression *im, const Noeud *el, int feminin) {
     place_ecran(im, el, feminin);
+    if (el->type == N_BOUTON && (el->entier & 256)) aj(im, im->compact ? " _principal" : ", principal");   /* 2.14 */
     for (size_t q = 0; q < 2 * el->nb_enfants; q++) {   /* « actif si » avant « visible si », quel que soit l'ordre écrit */
         const Noeud *x = el->enfants[q % el->nb_enfants];
         if (x->type != N_SI_ECRAN || x->forme != (q < el->nb_enfants ? 1 : 2)) continue;

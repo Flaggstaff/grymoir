@@ -614,6 +614,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 ici->addLayout(rangee);
             }
             auto *b = new QPushButton(e.texte);
+            if (e.principal) b->setProperty("role", "principal");   // la feuille du thème : fond d'accent (2.14)
             r.boutons << b;
             r.controles[k] = b;
             if (toile) poser(b); else rangee->addWidget(b);   // en position libre : chaque bouton à sa place (§ 22.9)

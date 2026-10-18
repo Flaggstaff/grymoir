@@ -199,6 +199,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                     } else if (el->type == N_BOUTON) {
                         x.sorte = ELEMENT_BOUTON;
                         x.texte = QString::fromUtf8(el->texte);
+                        x.principal = (el->entier & 256) != 0;
                     } else if (el->type == N_IMAGE_ECRAN) {   // « l'image « plan.png » » : le chemin écrit (§ 22.8)
                         x.sorte = ELEMENT_IMAGE;
                         x.texte = el->texte ? QString::fromUtf8(el->texte) : QString();
@@ -420,6 +421,7 @@ void OngletEcrans::dessiner() {
     QVector<ElementVue> el(e.elements.size());
     for (int k = 0; k < e.elements.size(); k++) {
         el[k].sorte = e.elements[k].sorte;
+        el[k].principal = e.elements[k].principal;
         el[k].texte = e.elements[k].sorte == ELEMENT_ZONE ? capitale(e.elements[k].texte) : e.elements[k].texte;
         el[k].colonnes = e.elements[k].colonnes;
         el[k].type = e.elements[k].type;

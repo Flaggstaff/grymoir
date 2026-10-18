@@ -505,6 +505,8 @@ static char *feuille_de_style(const Serveur *s) {
     "button{font:inherit;font-weight:600;min-height:32px;padding:4px 16px;margin-right:8px;color:var(--texte);"
     "background:var(--surface);border:1px solid var(--bordure);border-radius:8px;cursor:pointer}"
     "button:hover{background:var(--survol)}"
+    "button.principal{background:var(--accent);border-color:var(--accent);color:var(--sur-accent)}"
+    "button.principal:hover{background:var(--accent-survol);border-color:var(--accent-survol)}"
     ".actuel,.recu{color:var(--texte-2);margin-left:8px}"
     "pre.sortie img{display:block;max-width:100%;max-height:24rem;margin:4px 0;border-radius:6px}"
     "table.fiche{border-collapse:collapse;margin:8px 0 16px;background:var(--surface);border:1px solid var(--separateur)}"
@@ -1388,7 +1390,8 @@ static void page_ecran(Serveur *s) {
         }
         case ELEMENT_BOUTON: {
             if (!boutons && !el->place) { chaine_ajouter(&c, "<div class=\"boutons\">"); boutons = 1; }
-            char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s>", (unsigned long)k,
+            char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s%s>", (unsigned long)k,
+                                    el->principal ? " class=\"principal\"" : "",   /* 2.14 */
                                     (e->etats[k] & 1) ? " disabled" : "");   /* « actif si » faux (§ 22.6) */
             chaine_ajouter(&c, v);
             free(v);
