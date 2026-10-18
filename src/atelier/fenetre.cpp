@@ -640,13 +640,19 @@ void Fenetre::montrer_diagnostic() {
 }
 
 void Fenetre::lancer() {
-    if (fichier.isEmpty() || execution) return;
-    if (editeur->document()->isModified() && !enregistrer()) return;   // on lance ce qui est sur le disque
-    const auto &d = editeur->diagnostic();
-    if (!d.message.isEmpty()) {   // inutile de lancer : l'erreur est déjà connue
-        if (d.ligne > 0) editeur->aller_a(d.ligne, d.colonne);
-        statusBar()->showMessage("Corrige d'abord l'erreur signalée.", 4000);
+    if (execution) return;
+    if (projet.isEmpty() && fichier.isEmpty()) {   // l'atelier vide : rien à lancer, et il le dit
+        statusBar()->showMessage("Ouvre d'abord un projet.", 4000);
         return;
+    }
+    if (!fichier.isEmpty()) {   // au démarrage, le projet est rouvert sans fichier : on lance alors le programme principal
+        if (editeur->document()->isModified() && !enregistrer()) return;   // on lance ce qui est sur le disque
+        const auto &d = editeur->diagnostic();
+        if (!d.message.isEmpty()) {   // inutile de lancer : l'erreur est déjà connue
+            if (d.ligne > 0) editeur->aller_a(d.ligne, d.colonne);
+            statusBar()->showMessage("Corrige d'abord l'erreur signalée.", 4000);
+            return;
+        }
     }
     const QString cible = programme_a_lancer();   // un fichier de déclarations lance le programme principal (§ 21)
     if (cible.isEmpty()) return;
@@ -680,7 +686,7 @@ void Fenetre::lancer() {
 }
 
 QString Fenetre::programme_a_lancer() {
-    if (!editeur->declarations()) return QFileInfo(fichier).absoluteFilePath();
+    if (!fichier.isEmpty() && !editeur->declarations()) return QFileInfo(fichier).absoluteFilePath();
     auto retenu = [this] {
         return projet_fichier.programme_principal.isEmpty() ? QString()
                                                             : QDir(projet).absoluteFilePath(projet_fichier.programme_principal);

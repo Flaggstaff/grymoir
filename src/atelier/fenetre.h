@@ -68,7 +68,7 @@ private:
     QString erreur_execution;              // la dernière erreur d'exécution, en clair
     QString erreur_fichier;                // le fichier de cette erreur (le programme, ou un fichier utilisé)
     int erreur_ligne = 0, erreur_colonne = 0;
-    QString programme_a_lancer();          // le fichier courant s'il est un programme, sinon le programme principal
+    QString programme_a_lancer();          // le fichier courant s'il est un programme, sinon (déclarations, aucun fichier ouvert) le programme principal
     bool demander_identite();   // nom, version, éditeur de l'application à fabriquer (§ 8)
     void choisir_principal();
     void rafraichir_schema();              // relit les entités du projet et redessine le schéma (A2-a)
