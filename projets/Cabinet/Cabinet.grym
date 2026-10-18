@@ -1,0 +1,171 @@
+Remarque : Cabinet, le programme principal.
+Utiliser « actions ».
+
+Les écrans ont la couleur turquoise.
+
+Remarque : les cinq soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
+Si le nombre de soins conservés est nul :
+    Proposer avec réduction « EPI » et 130 et 70.
+    Proposer avec réduction « LEAA » et 130 et 100.
+    Proposer « Kriya Massage » et 100.
+    Proposer « Toucher Thérapeutique » et 100.
+    Proposer « Soin à Distance » et 100.
+
+L'écran d'accueil, « Cabinet », montre :
+    un bouton « Clients »,
+    un bouton « Nouvelle séance »,
+    un bouton « Séances prévues »,
+    un bouton « À encaisser »,
+    un bouton « Soins »,
+    un bouton « Fermer ».
+
+L'écran des clients montre :
+    la liste des clients conservés, par nom, avec le nom, le téléphone et le courriel,
+    côte à côte :
+        un bouton « Nouveau client »,
+        un bouton « Fermer ».
+
+Remarque : le client et le soin sont facultatifs pour l'écran : le prix se calcule dès qu'ils sont choisis, dans l'ordre qu'on veut ; « Enregistrer » les exige.
+L'écran de séance, « Nouvelle séance », montre :
+    un client (client), facultatif,
+    un soin (soin), facultatif,
+    une date (date),
+    une heure (heure), facultative,
+    un prix (nombre), avec l'unité « CHF »,
+    un paiement (« à payer », « espèces », « Twint », « virement » ou « offert »), « à payer » au départ,
+    côte à côte :
+        un bouton « Enregistrer »,
+        un bouton « Fermer ».
+
+L'écran des prévues, « Séances prévues », montre :
+    la liste des séances conservées dont le statut est « prévue », par date, avec la date, l'heure, le nom du client, le nom du soin et le prix,
+    côte à côte :
+        un bouton « Faite »,
+        un bouton « Annulée »,
+        un bouton « Absence »,
+        un bouton « Fermer ».
+
+L'écran des encaissements, « À encaisser », montre :
+    la liste des séances conservées dont le paiement est « à payer » et le statut ≠ « annulée » et le statut ≠ « prévue », par date, avec la date, le nom du client, le nom du soin, le prix et le statut,
+    côte à côte :
+        un bouton « Espèces »,
+        un bouton « Twint »,
+        un bouton « Virement »,
+        un bouton « Offert »,
+        un bouton « Fermer ».
+
+L'écran des soins montre :
+    la liste des soins conservés, par nom, avec le nom, le tarif, le tarif réduit et la durée,
+    côte à côte :
+        un bouton « Nouveau soin »,
+        un bouton « Fermer ».
+
+Quand on clique sur « Clients » dans l'écran d'accueil :
+    Ouvrir l'écran des clients.
+
+Quand on clique sur « Nouvelle séance » dans l'écran d'accueil :
+    Ouvrir l'écran de séance.
+
+Quand on clique sur « Séances prévues » dans l'écran d'accueil :
+    Ouvrir l'écran des prévues.
+
+Quand on clique sur « À encaisser » dans l'écran d'accueil :
+    Ouvrir l'écran des encaissements.
+
+Quand on clique sur « Soins » dans l'écran d'accueil :
+    Ouvrir l'écran des soins.
+
+Quand on clique sur « Fermer » dans l'écran d'accueil :
+    Fermer l'écran.
+
+Remarque : la fiche du client montre ses séances, sa ligne « Total », et le bouton d'une nouvelle séance.
+Quand on choisit un client dans l'écran des clients :
+    Ouvrir la fiche du client.
+
+Quand on clique sur « Nouveau client » dans l'écran des clients :
+    Le nouveau vaut un nouveau client saisi.
+    Conserver le nouveau.
+
+Quand on clique sur « Fermer » dans l'écran des clients :
+    Fermer l'écran.
+
+Quand on ouvre l'écran de séance :
+    La date de l'écran devient aujourd'hui.
+
+Remarque : le prix se propose dès que le client et le soin sont choisis ; on peut toujours le changer.
+Quand on change le client dans l'écran de séance :
+    Si le client de l'écran est présent et le soin de l'écran est présent, le prix de l'écran devient le prix conseillé du client de l'écran et du soin de l'écran.
+
+Quand on change le soin dans l'écran de séance :
+    Si le client de l'écran est présent et le soin de l'écran est présent, le prix de l'écran devient le prix conseillé du client de l'écran et du soin de l'écran.
+
+Remarque : une séance datée d'aujourd'hui ou d'avant est faite ; plus tard, elle est prévue.
+Quand on clique sur « Enregistrer » dans l'écran de séance :
+    Si le client de l'écran est absent, refuser « Choisis le client. ».
+    Si le soin de l'écran est absent, refuser « Choisis le soin. ».
+    La nouvelle vaut une nouvelle séance :
+        Le client vaut le client de l'écran.
+        Le soin vaut le soin de l'écran.
+        La date vaut la date de l'écran.
+        Le prix vaut le prix de l'écran.
+        Le paiement vaut le paiement de l'écran.
+        Le statut vaut « faite ».
+    Si l'heure de l'écran est présente, l'heure de la nouvelle devient l'heure de l'écran.
+    Si la date de la nouvelle > aujourd'hui, le statut de la nouvelle devient « prévue ».
+    Conserver la nouvelle.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran de séance :
+    Fermer l'écran.
+
+Quand on choisit une séance dans l'écran des prévues :
+    Ouvrir la fiche de la séance.
+
+Quand on clique sur « Faite » dans l'écran des prévues :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Clore la séance choisie de l'écran et « faite ».
+
+Quand on clique sur « Annulée » dans l'écran des prévues :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Clore la séance choisie de l'écran et « annulée ».
+
+Quand on clique sur « Absence » dans l'écran des prévues :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Clore la séance choisie de l'écran et « absence ».
+
+Quand on clique sur « Fermer » dans l'écran des prévues :
+    Fermer l'écran.
+
+Quand on choisit une séance dans l'écran des encaissements :
+    Ouvrir la fiche de la séance.
+
+Quand on clique sur « Espèces » dans l'écran des encaissements :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Encaisser la séance choisie de l'écran et « espèces ».
+
+Quand on clique sur « Twint » dans l'écran des encaissements :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Encaisser la séance choisie de l'écran et « Twint ».
+
+Quand on clique sur « Virement » dans l'écran des encaissements :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Encaisser la séance choisie de l'écran et « virement ».
+
+Quand on clique sur « Offert » dans l'écran des encaissements :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Encaisser la séance choisie de l'écran et « offert ».
+
+Quand on clique sur « Fermer » dans l'écran des encaissements :
+    Fermer l'écran.
+
+Quand on choisit un soin dans l'écran des soins :
+    Ouvrir la fiche du soin.
+
+Quand on clique sur « Nouveau soin » dans l'écran des soins :
+    Le nouveau vaut un nouveau soin saisi.
+    Conserver le nouveau.
+
+Quand on clique sur « Fermer » dans l'écran des soins :
+    Fermer l'écran.
+
+Ouvrir l'écran d'accueil.

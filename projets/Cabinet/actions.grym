@@ -1,0 +1,23 @@
+Remarque : Cabinet : ce qu'on fait des soins et des séances.
+Utiliser « données ».
+
+Pour proposer un nom et un tarif :
+    Le s vaut un nouveau soin :
+        Le nom vaut nom.
+        Le tarif vaut tarif.
+    Conserver le s.
+
+Remarque : un soin dont la séance de suivi coûte moins que la première.
+Pour proposer avec réduction un nom et un tarif et un réduit :
+    Le s vaut un nouveau soin :
+        Le nom vaut nom.
+        Le tarif vaut tarif.
+        Le tarif réduit vaut réduit.
+    Conserver le s.
+
+Pour encaisser une séance et un moyen :
+    Si le statut de la séance = « annulée », refuser « Une séance annulée ne s'encaisse pas. ».
+    Le paiement de la séance devient moyen.
+
+Pour clore une séance et un statut :
+    Le statut de la séance devient statut.

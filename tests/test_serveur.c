@@ -1276,6 +1276,46 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* L'application « Cabinet » (projets/) : un client saisi, deux séances, le tarif réduit dès la deuxième,
+           la fiche du client et son historique */
+        memset(&sc, 0, sizeof sc);
+        question_suivante = 2;
+        char *formulaire = reponse("Anne Rochat|079 000 00 00|||||");
+        REQUETES(evenement("q=1&clic=0"),                                       /* 0 : Clients */
+                 evenement("q=2&clic=2"),                                       /* 1 : Nouveau client */
+                 get("/"),                                                      /* 2 : le formulaire déduit */
+                 formulaire,                                                    /* 3 */
+                 get("/"),                                                      /* 4 : la liste des clients */
+                 evenement("q=4&fermer=1"),                                     /* 5 : retour à l'accueil */
+                 evenement("q=5&clic=1"),                                       /* 6 : Nouvelle séance */
+                 /* 7 : client et soin choisis, prix laissé vide : il se calcule avant « Enregistrer » */
+                 evenement("q=6&z0=Anne+Rochat&z1=EPI&z2=01.10.2026&z3=&z4=&z5=%C3%A0+payer&clic=7"),
+                 evenement("q=7&clic=1"),                                       /* 8 : Nouvelle séance */
+                 evenement("q=8&z0=Anne+Rochat&z1=EPI&z2=08.10.2026&z3=14%3A30&z4=&z5=Twint&clic=7"),   /* 9 */
+                 evenement("q=9&clic=1"),                                       /* 10 : Nouvelle séance */
+                 evenement("q=10&z0=&z1=EPI&z2=08.10.2026&z3=&z4=50&z5=Twint&clic=7"),   /* 11 : sans client */
+                 get("/"),                                                      /* 12 */
+                 evenement("q=11&fermer=1"),                                    /* 13 */
+                 evenement("q=12&clic=0"),                                      /* 14 : Clients */
+                 evenement("q=13&choix=0.0"),                                   /* 15 : la fiche d'Anne */
+                 get("/"));                                                     /* 16 */
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet.grymd", &sc);
+        /* le formulaire déduit demande le téléphone et le courriel, des textes vérifiés (§ 22.13) */
+        CONTIENT(sc.reponses[2], "<label for=\"c1\">Téléphone</label>");
+        CONTIENT(sc.reponses[2], "<label for=\"c2\">Courriel</label>");
+        CONTIENT(sc.reponses[4], "Anne Rochat</button></td><td>079 000 00 00</td>");
+        CONTIENT(sc.reponses[12], "Choisis le client.");
+        /* la fiche : la séance au tarif, puis celle au tarif réduit, la plus récente en tête ; le total */
+        CONTIENT(sc.reponses[16], "value=\"7.0\">EPI</button></td><td>08.10.2026</td><td>14:30</td><td>70</td>");
+        CONTIENT(sc.reponses[16], "value=\"7.1\">EPI</button></td><td>01.10.2026</td><td></td><td>130</td>");
+        CONTIENT(sc.reponses[16], "<span class=\"etiquette etiquette-o\">à payer</span>");
+        CONTIENT(sc.reponses[16], ">Total</button></td><td></td><td></td><td>200</td>");
+        CONTIENT(sc.reponses[16], ">Nouvelle séance</button>");
+        NE_CONTIENT_PAS(sc.reponses[16], "class=\"erreur\"");
+        liberer(&sc);
+        remove("_essai_cabinet.grymd");
+    }
+
     /* --- v2.0 : chaque exemple du dépôt tourne dans le navigateur --- */
     {
         static const char *const SANS_QUESTION[] = { "aptitudes.grym", "boucles.grym", "conserver.grym", "dates.grym",
