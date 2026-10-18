@@ -92,6 +92,7 @@ public:
     QStringList indications;                              // zone : son indication, vide sinon (§ 22.6)
     QVector<int> longueurs;                               // zone de texte : « au plus N caractères », 0 sinon (§ 22.6)
     QStringList unites;                                   // zone : « <CHF » devant, « >% » derrière, vide sinon (§ 22.6)
+    QVector<QVector<int>> valeurs_fiche;                  // texte de fiche (§ 22.3) : rang de la valeur, étiquette, lien ; vide sinon
     // les descriptions des écrans du dessous (écrans empilés, § 22.3), rendues à la fermeture de celui du dessus
     struct Description { QVector<int> nb_colonnes; QStringList types_zones; QVector<int> facultatives; QVector<QStringList> choix_zones;
                          QVector<int> options_zones; QVector<QByteArray> images; QVector<QVector<int>> places;

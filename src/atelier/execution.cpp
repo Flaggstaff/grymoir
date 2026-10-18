@@ -30,6 +30,7 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QTextBrowser>
+#include <QDesktopServices>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <csignal>
@@ -88,7 +89,15 @@ static void iface_fiche(void *contexte, Chaine *sortie, const char *titre, const
             h += QString("<img src=\"image:%1\"><br>").arg(images.size());
             images.append(QByteArray(reinterpret_cast<const char *>(lignes[k].octets), (qsizetype)lignes[k].taille));
         }
-        h += QString::fromUtf8(lignes[k].texte ? lignes[k].texte : "").toHtmlEscaped() + "</td></tr>";
+        const QString valeur = QString::fromUtf8(lignes[k].texte ? lignes[k].texte : "");
+        const auto p = teinte_etiquette(lignes[k].etiquette ? QChar(lignes[k].etiquette) : QChar());   // § 16.15
+        const QString lien = lien_html(valeur, lignes[k].lien);   // § 22.13
+        if (!p.first.isEmpty())
+            h += "<span style=\"background-color:" + p.first + ";color:" + p.second + ";font-weight:600\">&#8201;"
+                 + valeur.toHtmlEscaped() + "&#8201;</span>";
+        else if (!lien.isEmpty()) h += lien;
+        else h += valeur.toHtmlEscaped();
+        h += "</td></tr>";
     }
     h += "</table>";
     emit t->fiche(h, images);
@@ -137,7 +146,14 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
     t->indications.clear();
     t->longueurs.clear();
     t->unites.clear();
+    t->valeurs_fiche.clear();
     for (size_t k = 0; k < n; k++) {
+        // le rang de la valeur, en caractères Qt : la machine le donne en octets UTF-8
+        t->valeurs_fiche << (el[k].sorte == ELEMENT_TEXTE && el[k].valeur_depuis && el[k].texte
+                                 && el[k].valeur_depuis <= strlen(el[k].texte)
+                             ? QVector<int>{(int)QString::fromUtf8(el[k].texte, (qsizetype)el[k].valeur_depuis).size(),
+                                            (int)(unsigned char)el[k].etiquette, el[k].lien}
+                             : QVector<int>());
         t->places << (el[k].place ? QVector<int>{el[k].gauche, el[k].haut, el[k].largeur, el[k].hauteur} : QVector<int>());
         t->graphiques << (el[k].sorte == ELEMENT_GRAPHIQUE ? el[k].graphique : 0);
         t->images << (el[k].octets ? QByteArray(reinterpret_cast<const char *>(el[k].octets), (qsizetype)el[k].taille) : QByteArray());
@@ -419,6 +435,10 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
     setWindowTitle(QFileInfo(chemin).fileName() + " – exécution");
     fil = new QTextBrowser;
     fil->setOpenLinks(false);
+    // une fiche affichée (§ 22.13) : un courriel s'écrit, une adresse web s'ouvre, par le système ; rien d'autre
+    connect(fil, &QTextBrowser::anchorClicked, this, [](const QUrl &u) {
+        if (u.scheme() == "mailto" || u.scheme() == "http" || u.scheme() == "https") QDesktopServices::openUrl(u);
+    });
     fil->setFont(Theme::courant().police_code(13));
 
     zone = new QWidget;
@@ -528,11 +548,7 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
                 const QString x = cellules[r * nc + c];
                 auto *i = new QTableWidgetItem(x);
                 if (x.size() > 1 && x[0] == QChar(0x1d)) {   // une étiquette (§ 16.15) : les couleurs du navigateur
-                    static const QHash<QChar, QPair<QString, QString>> teintes = {
-                        {'b', {"#dbe8f7", "#1d4f8c"}}, {'v', {"#d7f0dd", "#1e5b2e"}}, {'t', {"#d3efec", "#0f5b55"}},
-                        {'p', {"#e9def5", "#5b2a86"}}, {'g', {"#e6e6e6", "#3d3d3d"}}, {'r', {"#f9dcda", "#8c1d18"}},
-                        {'o', {"#fde6cc", "#7a3d00"}}};
-                    const auto p = teintes.value(x[1]);
+                    const auto p = teinte_etiquette(x[1]);
                     i->setText(x.mid(2));
                     if (!p.first.isEmpty()) {
                         i->setBackground(QColor(p.first));
@@ -869,6 +885,12 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].recherche = o & 16;   // § 22.6
         elements[k].masque = o & 32;   // § 22.6
         elements[k].graphique = travail.graphiques.value(k);   // § 22.11
+        if (travail.valeurs_fiche.value(k).size() == 3) {   // une valeur de fiche (§ 22.3)
+            const QVector<int> &f = travail.valeurs_fiche[k];
+            elements[k].valeur_depuis = f[0];
+            elements[k].etiquette = f[1] ? QChar(f[1]) : QChar();
+            elements[k].lien = f[2];
+        }
         if (k < travail.places.size() && travail.places[k].size() == 4) {   // position libre (§ 22.9)
             const QVector<int> &p = travail.places[k];
             elements[k].place = true;

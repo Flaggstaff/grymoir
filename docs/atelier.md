@@ -431,3 +431,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.77 | 2026-10-17 | La relecture d'un texte transcrit (`relecture.cpp`) : nombres surlignés, mots douteux soulignés, un doute qui disparaît à la correction |
 | 0.78 | 2026-10-18 | « Son » dans la palette pose deux zones d'un même geste : le son, et dessous sa transcription (texte, sur plusieurs lignes, transcrite du son) |
 | 0.79 | 2026-10-18 | « Lancer » sans fichier ouvert (le projet rouvert au démarrage) lance le programme principal au lieu de ne rien faire ; de même « Fabriquer l'application » et l'onglet Données |
+| 0.80 | 2026-10-18 | Fenêtre d'exécution : dans les fiches, l'étiquette colorée, le courriel et l'adresse web en liens ouverts par le système (`QDesktopServices`) ; les couleurs d'étiquette en un seul endroit (`teinte_etiquette`) |

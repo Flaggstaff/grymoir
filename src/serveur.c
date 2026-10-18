@@ -1087,6 +1087,34 @@ static void cellule(Chaine *c, const char *t) {
     } else echapper(c, t);
 }
 
+/* La valeur d'une fiche (§ 22.3) : en étiquette (§ 16.15), ou en lien, un courriel à écrire, une adresse web à
+ * ouvrir (§ 22.13) ; sinon un texte. Le lien d'écriture encode tout sauf les caractères sûrs d'une adresse ; une
+ * adresse web n'est un lien que si elle commence par http:// ou https:// (la machine l'a déjà vérifié). */
+static void valeur_de_fiche(Chaine *c, const char *t, char etiquette, int lien) {
+    if (etiquette) {
+        char o[48];
+        snprintf(o, sizeof o, "<span class=\"etiquette etiquette-%c\">", etiquette);
+        chaine_ajouter(c, o);
+        echapper(c, t);
+        chaine_ajouter(c, "</span>");
+    } else if (lien == LIEN_COURRIEL && *t) {
+        chaine_ajouter(c, "<a href=\"mailto:");
+        for (const unsigned char *p = (const unsigned char *)t; *p; p++) {
+            if ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || strchr("-._~@+", *p)) { char u[2] = { (char)*p, 0 }; chaine_ajouter(c, u); }
+            else { char u[4]; snprintf(u, sizeof u, "%%%02X", *p); chaine_ajouter(c, u); }
+        }
+        chaine_ajouter(c, "\">");
+        echapper(c, t);
+        chaine_ajouter(c, "</a>");
+    } else if (lien == LIEN_WEB && (strncmp(t, "http://", 7) == 0 || strncmp(t, "https://", 8) == 0)) {
+        chaine_ajouter(c, "<a href=\"");
+        echapper(c, t);
+        chaine_ajouter(c, "\" target=\"_blank\" rel=\"noopener noreferrer\">");
+        echapper(c, t);
+        chaine_ajouter(c, "</a>");
+    } else echapper(c, t);
+}
+
 static void liste(Chaine *c, const EcranWeb *e, size_t k) {
     const ElementEcran *el = &e->el[k];
     const size_t nc = el->nb_colonnes;
@@ -1296,7 +1324,13 @@ static void page_ecran(Serveur *s) {
             break;
         case ELEMENT_TEXTE:
             chaine_ajouter(&c, "<p class=\"texte\">");
-            echapper(&c, el->texte);
+            if (el->valeur_depuis && el->valeur_depuis <= strlen(el->texte)) {   /* « État : payée » d'une fiche (§ 22.3) */
+                char *debut = grym_dupliquer(el->texte);
+                debut[el->valeur_depuis] = 0;
+                echapper(&c, debut);
+                free(debut);
+                valeur_de_fiche(&c, el->texte + el->valeur_depuis, el->etiquette, el->lien);
+            } else echapper(&c, el->texte);
             chaine_ajouter(&c, "</p>\n");
             break;
         case ELEMENT_ZONE: zone(&c, e, k); chaine_ajouter(&c, "\n"); break;
@@ -1842,7 +1876,7 @@ static void serveur_afficher_fiche(void *contexte, Chaine *sortie, const char *t
             chaine_ajouter(&h, img);
             free(img);
         } else {
-            echapper(&h, l[k].texte);
+            valeur_de_fiche(&h, l[k].texte ? l[k].texte : "", l[k].etiquette, l[k].lien);
         }
         chaine_ajouter(&h, "</td></tr>");
     }

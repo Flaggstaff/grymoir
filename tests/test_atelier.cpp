@@ -3870,6 +3870,36 @@ int main(int argc, char **argv) {
         }
     }
 
+    {   // Une fiche déduite (§ 22.3) : l'état en étiquette (§ 16.15), le courriel et le site en liens (§ 22.13)
+        QVector<ElementVue> el(4);
+        for (auto &e : el) e.sorte = ELEMENT_TEXTE;
+        el[0].texte = QString::fromUtf8("État : actif");
+        el[0].valeur_depuis = 7;
+        el[0].etiquette = 'v';
+        el[1].texte = "Courriel : anne+club@tilleul.ch";
+        el[1].valeur_depuis = 11;
+        el[1].lien = LIEN_COURRIEL;
+        el[2].texte = "Site : https://tilleul.ch/?a=1&b=2";
+        el[2].valeur_depuis = 7;
+        el[2].lien = LIEN_WEB;
+        el[3].texte = "Site : javascript:alert(1)";   // une adresse sans http(s) : jamais un lien
+        el[3].valeur_depuis = 7;
+        el[3].lien = LIEN_WEB;
+        VueEcran v = dessiner_ecran("Anne", el);
+        auto *etat = qobject_cast<QLabel *>(v.controles[0]);
+        auto *courriel = qobject_cast<QLabel *>(v.controles[1]);
+        auto *site = qobject_cast<QLabel *>(v.controles[2]);
+        auto *faux = qobject_cast<QLabel *>(v.controles[3]);
+        VERIFIER(etat && etat->text().startsWith(QString::fromUtf8("État : <span style=\"background-color:#d7f0dd;color:#1e5b2e")));
+        VERIFIER(!etat->openExternalLinks());
+        VERIFIER(courriel && courriel->text() == "Courriel : <a href=\"mailto:anne+club@tilleul.ch\">anne+club@tilleul.ch</a>");
+        VERIFIER(courriel->openExternalLinks());
+        VERIFIER(site && site->text() == "Site : <a href=\"https://tilleul.ch/?a=1&amp;b=2\">https://tilleul.ch/?a=1&amp;b=2</a>");
+        VERIFIER(faux && !faux->text().contains("<a") && !faux->openExternalLinks());
+        VERIFIER(lien_html(QString::fromUtf8("é l@x.ch"), LIEN_COURRIEL).startsWith("<a href=\"mailto:%C3%A9%20l@x.ch\">"));
+        delete v.vue;
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }

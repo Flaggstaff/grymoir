@@ -2081,6 +2081,31 @@ static char *nom_objet(Machine *m, Objet *x) {
 }
 
 /* « Afficher la fiche de p. » : chaque champ et sa valeur, un lien par sa clé, un multiple par ses objets. */
+/* La couleur d'étiquette d'une valeur permise (§ 16.15) : sa lettre, ou 0 si elle n'en a pas. */
+static char lettre_etiquette(const ClasseVM *cl, size_t q, const char *t) {
+    if (!cl->couleurs || !cl->couleurs[q] || !cl->valeurs || !cl->valeurs[q] || !t || !*t) return 0;
+    size_t rang = 0;
+    for (const char *p = cl->valeurs[q]; p;) {
+        const char *f = strchr(p, '\x1e');
+        const size_t l = f ? (size_t)(f - p) : strlen(p);
+        if (l == strlen(t) && strncmp(p, t, l) == 0) {
+            const char lettre = rang < strlen(cl->couleurs[q]) ? cl->couleurs[q][rang] : '-';
+            return lettre == '-' ? 0 : lettre;
+        }
+        rang++;
+        p = f ? f + 1 : NULL;
+    }
+    return 0;
+}
+
+/* Un courriel s'écrit, une adresse web s'ouvre (§ 22.13) : la sorte de lien qu'en fait une fiche. */
+static int lien_du_type(const char *type) {
+    if (!type) return 0;
+    if (strcmp(type, "courriel") == 0) return LIEN_COURRIEL;
+    if (strcmp(type, "adresse web") == 0) return LIEN_WEB;
+    return 0;
+}
+
 static char *afficher_fiche(Machine *m, Objet *o, Chaine *sortie) {
     char *erreur = NULL;
     if (o->id && !charger(m, o, &erreur)) return erreur;
@@ -2120,6 +2145,8 @@ static char *afficher_fiche(Machine *m, Objet *o, Chaine *sortie) {
             textes[k] = grym_dupliquer("••••••");   /* un mot de passe ne se montre pas (§ 16.1) */
         } else {
             textes[k] = texte_valeur(m, &o->champs[k]);
+            l[k].etiquette = lettre_etiquette(cl, k, textes[k]);   /* « payée » en vert (§ 16.15) */
+            l[k].lien = o->champs[k].type == V_TEXTE ? lien_du_type(cl->types[k]) : 0;
             char *illisible = NULL;
             const char *montre = o->champs[k].type == V_FICHIER ? format_montre(o->champs[k].fichier, &illisible) : NULL;
             if (montre && octets_du_fichier(o->champs[k].fichier, &illisible)) {   /* une image, ou un son (§ 15.7) */
@@ -3028,23 +3055,13 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
                     t = grym_formater("%04d-%02ld", aj, (jeudi - date_jours(aj, 1, 1)) / 7 + 1);
                 }
             }
-            if (!graphe && x && q >= 0 && x->classe->couleurs && x->classe->couleurs[q] && x->classe->valeurs[q] && *t) {
+            if (!graphe && x && q >= 0) {
                 /* une valeur permise colorée : « ␝v payée », une étiquette verte dans l'interface (§ 16.15) */
-                size_t rang = 0;
-                for (const char *p = x->classe->valeurs[q]; p;) {
-                    const char *f = strchr(p, '\x1e');
-                    const size_t l = f ? (size_t)(f - p) : strlen(p);
-                    if (l == strlen(t) && strncmp(p, t, l) == 0) {
-                        const char lettre = rang < strlen(x->classe->couleurs[q]) ? x->classe->couleurs[q][rang] : '-';
-                        if (lettre != '-') {
-                            char *e2 = grym_formater("\x1d%c%s", lettre, t);
-                            free(t);
-                            t = e2;
-                        }
-                        break;
-                    }
-                    rang++;
-                    p = f ? f + 1 : NULL;
+                const char lettre = lettre_etiquette(x->classe, (size_t)q, t);
+                if (lettre) {
+                    char *e2 = grym_formater("\x1d%c%s", lettre, t);
+                    free(t);
+                    t = e2;
                 }
             }
             cellules[faites++] = t;
@@ -3204,8 +3221,13 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
                 } else {
                     char *t = !o->definis[q] || v->type == V_ABSENT ? grym_dupliquer("") : texte_valeur(m, v);
                     textes[n] = grym_formater("%s : %s", libelle, t);
-                    free(t);
                     el[n].sorte = ELEMENT_TEXTE;
+                    if (*t) {   /* la valeur en étiquette (§ 16.15), le courriel à écrire, l'adresse à ouvrir (§ 22.13) */
+                        el[n].etiquette = lettre_etiquette(c, q, t);
+                        el[n].lien = v->type == V_TEXTE ? lien_du_type(c->types[q]) : 0;
+                        if (el[n].etiquette || el[n].lien) el[n].valeur_depuis = strlen(libelle) + 3;
+                    }
+                    free(t);
                 }
                 free(libelle);
                 el[n].texte = textes[n];

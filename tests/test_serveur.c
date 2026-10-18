@@ -846,6 +846,28 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Les fiches (§ 22.3, § 22.13, § 16.15) : l'état en étiquette, le courriel en lien d'écriture, le site en lien ;
+         * dans la fiche affichée comme dans la fiche déduite. Un téléphone et un texte restent des textes. */
+        const char *src = "Un contact, conservé, a :\n    un nom (texte),\n    un courriel (courriel),\n    un site (adresse web),\n"
+                          "    un portable (téléphone),\n    un état (« actif » en vert ou « parti »).\n"
+                          "Le a vaut un nouveau contact :\n    Le nom vaut « Anne ».\n    Le courriel vaut « anne+club@tilleul.ch ».\n"
+                          "    Le site vaut « https://tilleul.ch/?a=1&b=2 ».\n    Le portable vaut « 079 123 45 67 ».\n"
+                          "    L'état vaut « actif ».\nConserver a.\nAfficher la fiche de a.\nOuvrir la fiche de a.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=6"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[2], "<td><a href=\"mailto:anne+club@tilleul.ch\">anne+club@tilleul.ch</a></td>");
+        CONTIENT(sc.reponses[2], "<td><a href=\"https://tilleul.ch/?a=1&amp;b=2\" target=\"_blank\" rel=\"noopener noreferrer\">");
+        CONTIENT(sc.reponses[2], "<td><span class=\"etiquette etiquette-v\">actif</span></td>");
+        CONTIENT(sc.reponses[2], "<td>079 123 45 67</td>");
+        CONTIENT(sc.reponses[0], "<p class=\"texte\">Courriel : <a href=\"mailto:anne+club@tilleul.ch\">");
+        CONTIENT(sc.reponses[0], "<p class=\"texte\">Site : <a href=\"https://tilleul.ch/?a=1&amp;b=2\"");
+        CONTIENT(sc.reponses[0], "<p class=\"texte\">État : <span class=\"etiquette etiquette-v\">actif</span></p>");
+        CONTIENT(sc.reponses[0], "<p class=\"texte\">Portable : 079 123 45 67</p>");
+        CONTIENT(sc.reponses[0], "<p class=\"texte\">Nom : Anne</p>");
+        liberer(&sc);
+    }
+
     {   /* Le résumé des erreurs (§ 22.6) : un événement qui lit deux zones obligatoires vides les signale toutes deux d'un
          * coup, en haut et sous chacune ; « Fermer », qui n'en lit aucune, n'est pas bloqué */
         const char *src = "L'écran x montre :\n    un nom (texte),\n    une ville (texte),\n    une note (texte), facultative,\n"

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.7 de la spécification, révisée le 15 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.8 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1608,7 +1608,7 @@ En cas d'échec :
 - `Essayer` s'emploie partout, calculs compris : rattraper une erreur ne rend pas un calcul impur. `essayer` ne commence pas le nom d'une action.
 - Limite connue : un `Essayer` répété dans une longue boucle sans question garde au journal une entrée par tour et par nom modifié, jusqu'à la fin de l'exécution.
 - En forme compacte : `_essayer` … `_échec` … `_fin`, et `_motif`.
-- Une couleur d'étiquette par valeur *(2.2)* : `un état (« payée » en vert, « en retard » en rouge ou « annulée »)`. Couleurs : bleu, vert, turquoise, violet, gris, rouge, orange ; une valeur peut n'en avoir aucune. Dans une liste d'écran, la valeur colorée s'affiche en étiquette, un fond pâle et un texte foncé ; chaque paire dépasse 6,5:1 de contraste (le WCAG 2.1 demande 4,5:1 pour du texte normal). La couleur n'est qu'un affichage : la valeur reste le texte. Forme compacte : `« payée » _vert`.
+- Une couleur d'étiquette par valeur *(2.2)* : `un état (« payée » en vert, « en retard » en rouge ou « annulée »)`. Couleurs : bleu, vert, turquoise, violet, gris, rouge, orange ; une valeur peut n'en avoir aucune. Dans une liste d'écran et dans une fiche *(2.8)*, affichée (`Afficher la fiche de c.`) ou déduite (`Ouvrir la fiche de c.`), la valeur colorée s'affiche en étiquette, un fond pâle et un texte foncé ; chaque paire dépasse 6,5:1 de contraste (le WCAG 2.1 demande 4,5:1 pour du texte normal). La couleur n'est qu'un affichage : la valeur reste le texte. Forme compacte : `« payée » _vert`.
 
 ### 18.1 Refuser *(implémenté le 27 septembre 2026)*
 
@@ -1974,6 +1974,7 @@ Un contact, conservé, a :
 - La valeur est un texte : elle se range, se compare, se cherche (`dont le courriel contient « tilleul »`) et s'affiche comme un texte, et un texte s'y affecte. Un courriel unique peut servir de clé.
 - Sa forme se vérifie quand elle entre dans un champ ou une zone, simplement, pour attraper les fautes de frappe : un courriel a un seul `@`, quelque chose avant, un point après, pas d'espace (« « anne@ » n'est pas un courriel (nom@domaine.ch). ») ; un téléphone, des chiffres (au moins 6), des espaces, `+`, `(`, `)`, `-`, `.`, `/` ; une adresse web commence par `http://` ou `https://`. La norme des courriels (RFC 5322) admet bien plus : le projet ne prétend pas la suivre.
 - Dans une zone, l'interface propose le clavier qui convient.
+- Dans une fiche *(2.8)*, affichée ou déduite, un courriel est un lien d'écriture (`mailto:`, le logiciel de courriel du système), une adresse web un lien qui s'ouvre dans le navigateur, seulement si elle commence par `http://` ou `https://`. Un téléphone reste un texte. Dans une liste, ni l'un ni l'autre : un clic sur la ligne la choisit.
 - Forme compacte : `(courriel)`, `(téléphone)`, `(adresse_web)`.
 
 ### 22.14 Mots de passe *(implémenté le 16 octobre 2026)*
@@ -2110,3 +2111,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.5 | 2026-10-16 | Nouveau § 15.6 : un rapport, par l'extension (`.html`, `.pdf`), avec le titre et le total ; dans une application fabriquée, écrit dans Documents/<Nom> |
 | 2.6 | 2026-10-16 | Nouveau § 15.7 : le type `(son)`, reconnu à sa signature, écouté dans le navigateur |
 | 2.7 | 2026-10-17 | Nouveau § 15.8 : `, transcrite du mémo`, le texte d'un champ (son) rangé dans un champ de texte, par le transcripteur de l'interface |
+| 2.8 | 2026-10-18 | § 16.15 et § 22.13 : dans les fiches, la valeur colorée en étiquette, le courriel en lien d'écriture, l'adresse web en lien ; rien ne change dans ce qu'on écrit |

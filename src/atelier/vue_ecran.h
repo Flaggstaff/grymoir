@@ -40,6 +40,11 @@ struct ElementVue {
     bool place = false;              // élément d'un bloc en position libre (§ 22.9)
     int gauche = 0, haut = 0;        // en pixels, depuis le coin du bloc
     int largeur = 0, hauteur = 0;    // en pixels ; 0 : la taille naturelle
+    // texte d'une fiche déduite (§ 22.3) : la valeur commence à ce rang (0 : texte ordinaire), en étiquette de cette
+    // couleur (b v t p g r o, § 16.15), ou en lien : LIEN_COURRIEL, LIEN_WEB (§ 22.13, src/interface.h)
+    int valeur_depuis = 0;
+    QChar etiquette;
+    int lien = 0;
 };
 
 // Ce que le dessin a produit : pour chaque élément, le contrôle qui le montre (nullptr pour un bloc).
@@ -60,6 +65,13 @@ inline bool en_boutons_radio(const ElementVue &e) { return e.type == "texte" && 
 // Montre une image dans un label : sa taille, réduite pour tenir dans 480 × 320 (§ 22.8), ou sa taille placée ;
 // sans octets lisibles, le texte de repli (le nom du fichier, ou rien pour une image calculée absente).
 void montrer_image(QLabel *l, const QByteArray &octets, const QString &repli, int largeur = 0, int hauteur = 0);
+
+// Les couleurs d'une étiquette (§ 16.15), celles du navigateur : le fond, le texte ; vides pour une lettre inconnue.
+QPair<QString, QString> teinte_etiquette(QChar lettre);
+
+// Une valeur de fiche (§ 22.3, § 22.13) en HTML pour un QLabel ou un QTextBrowser : un lien d'écriture pour un
+// courriel, un lien pour une adresse web en http:// ou https:// ; sinon le texte, échappé. Vide si ni l'un ni l'autre.
+QString lien_html(const QString &valeur, int lien);
 
 // Un graphique (§ 22.11) : des barres, ou des secteurs avec leur légende, à partir de libellés et de valeurs. Sans
 // données (l'aperçu de l'atelier), il montre un exemple grisé.

@@ -17,6 +17,8 @@
 #include <QCompleter>
 #include <QHeaderView>
 #include <QLabel>
+#include <QUrl>
+#include <QHash>
 #include <QGroupBox>
 #include <QTabWidget>
 #include <QLineEdit>
@@ -29,6 +31,22 @@
 
 extern "C" {
 #include "interface.h"
+}
+
+QPair<QString, QString> teinte_etiquette(QChar lettre) {
+    static const QHash<QChar, QPair<QString, QString>> teintes = {
+        {'b', {"#dbe8f7", "#1d4f8c"}}, {'v', {"#d7f0dd", "#1e5b2e"}}, {'t', {"#d3efec", "#0f5b55"}},
+        {'p', {"#e9def5", "#5b2a86"}}, {'g', {"#e6e6e6", "#3d3d3d"}}, {'r', {"#f9dcda", "#8c1d18"}},
+        {'o', {"#fde6cc", "#7a3d00"}}};
+    return teintes.value(lettre);
+}
+
+QString lien_html(const QString &valeur, int lien) {
+    if (lien == LIEN_COURRIEL && !valeur.isEmpty())
+        return "<a href=\"mailto:" + QString::fromLatin1(QUrl::toPercentEncoding(valeur, "@+")) + "\">" + valeur.toHtmlEscaped() + "</a>";
+    if (lien == LIEN_WEB && (valeur.startsWith("http://") || valeur.startsWith("https://")))
+        return "<a href=\"" + valeur.toHtmlEscaped() + "\">" + valeur.toHtmlEscaped() + "</a>";
+    return QString();
 }
 
 void montrer_image(QLabel *l, const QByteArray &octets, const QString &repli, int largeur, int hauteur) {
@@ -362,6 +380,27 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             auto *l = new QLabel;
             montrer_image(l, e.octets, e.texte, e.largeur, e.hauteur);   // sans le fichier : son nom
             l->setToolTip(e.texte);
+            poser(l);
+            r.controles[k] = l;
+        } else if (e.sorte == ELEMENT_TEXTE && e.valeur_depuis > 0 && e.valeur_depuis <= e.texte.size()) {
+            // une valeur de fiche (§ 22.3) : le libellé, puis la valeur en étiquette (§ 16.15) ou en lien (§ 22.13)
+            const QString valeur = e.texte.mid(e.valeur_depuis);
+            auto *l = new QLabel;
+            l->setWordWrap(true);
+            l->setTextFormat(Qt::RichText);
+            QString h = e.texte.left(e.valeur_depuis).toHtmlEscaped();
+            const auto p = teinte_etiquette(e.etiquette);
+            const QString lien = lien_html(valeur, e.lien);
+            if (!p.first.isEmpty())   // le texte riche de QLabel n'arrondit pas : un fond pâle, entouré d'espaces fines
+                h += "<span style=\"background-color:" + p.first + ";color:" + p.second + ";font-weight:600\">&#8201;"
+                     + valeur.toHtmlEscaped() + "&#8201;</span>";
+            else if (!lien.isEmpty()) {
+                h += lien;
+                l->setOpenExternalLinks(true);   // le logiciel de courriel, le navigateur du système
+                l->setTextInteractionFlags(Qt::TextBrowserInteraction);
+                l->setToolTip(e.lien == LIEN_COURRIEL ? QString::fromUtf8("Écrire à ") + valeur : QString("Ouvrir ") + valeur);
+            } else h += valeur.toHtmlEscaped();
+            l->setText(h);
             poser(l);
             r.controles[k] = l;
         } else if (e.sorte == ELEMENT_TEXTE) {

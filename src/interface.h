@@ -59,7 +59,15 @@ typedef struct {
                                        les interfaces le font aussi d'elles-mêmes au-delà de RECHERCHE_AU_DELA objets */
     int multiple;                   /* « des genres (genre) » : des choix multiples parmi `choix` ; sa valeur (ecran_valeurs)
                                        et son changement : les clés cochées, séparées par U+001E (§ 22.1) */
+    /* Texte d'une fiche déduite (« Libellé : valeur », § 22.3) : la valeur commence à texte + valeur_depuis (0 : texte
+       ordinaire). Une interface qui l'ignore montre le texte entier, ce qui reste juste. */
+    size_t valeur_depuis;
+    char etiquette;                 /* la valeur en étiquette, de cette couleur (b v t p g r o, § 16.15) ; 0 : non */
+    int lien;                       /* la valeur en lien : LIEN_COURRIEL (écrire), LIEN_WEB (ouvrir) ; 0 : non */
 } ElementEcran;
+
+#define LIEN_COURRIEL 1   /* « mailto: » + la valeur */
+#define LIEN_WEB 2        /* la valeur elle-même, http:// ou https:// (§ 22.13) */
 
 typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT } SorteEvenement;
 typedef struct {
@@ -79,6 +87,8 @@ typedef struct {
     const unsigned char *octets;
     size_t taille;
     const char *format;    /* PNG, JPEG, GIF, WebP ; NULL si ce n'est pas une image */
+    char etiquette;        /* le texte en étiquette (§ 16.15), comme dans ElementEcran ; 0 : non */
+    int lien;              /* LIEN_COURRIEL, LIEN_WEB ; 0 : non */
 } LigneFiche;
 
 /* Un champ à remplir : décrit par la machine, rempli par l'interface. */
