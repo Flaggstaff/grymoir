@@ -49,7 +49,7 @@ Coût accepté : `quand`, `ouvrir` et `fermer` deviennent des mots de constructi
 
 - **Par défaut**, une colonne par champ simple de l'entité, dans l'ordre de la déclaration. Un lien montre la clé de l'objet désigné (son champ texte unique, comme les menus des formulaires). Fichiers, images et champs « plusieurs » restent hors de la liste. Le titre d'une colonne est le nom du champ avec une majuscule (« Naissance »).
 - **Au choix**, les champs nommés après `avec` : `la liste des œuvres conservées, par titre, avec le titre, le compositeur et l'année`. Le champ d'un lien s'écrit par le complément du nom (§ 13.3) : `avec le titre et la naissance du compositeur` ; la colonne s'appelle « Naissance du compositeur ».
-- Sans rien écrire : un clic sur le titre d'une colonne trie la liste à l'écran, sans changer le programme ; un champ absent s'affiche vide.
+- Sans rien écrire : un clic sur le titre d'une colonne trie la liste à l'écran, sans changer le programme ; un champ absent s'affiche vide. Le tri suit la valeur *(18 octobre 2026)* : 70 avant 130, `1'234,50` après `999,95`, les dates dans l'ordre du calendrier, les heures dans celui de l'horloge, les textes à la française (« élodie » avant « Fabien ») ; une case vide d'abord.
 - Écartés pour l'instant : colonnes calculées, largeur et alignement réglés à la main.
 
 ### 3.3 La disposition *(validé le 25 septembre 2026)*
@@ -232,3 +232,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.24 | 2026-10-15 | § 6 : B3 bis fait (graphique) ; la barre de menus passe en B3 ter |
 | 0.25 | 2026-10-15 | § 6 : B3 ter fait (menus, un par écran) ; B3 est complet |
 | 0.26 | 2026-10-18 | § 3 : la fiche déduite montre un tableau par lien qui désigne l'objet ; `, hors des fiches,` l'en retire (grammaire 2.10) |
+| 0.27 | 2026-10-18 | § 3.2 : le tri d'une colonne par la valeur (nombres, dates, heures), les textes à la française |

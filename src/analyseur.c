@@ -618,12 +618,17 @@ int nom_exige_crochets(const char *nom) {
 }
 
 static int nom_a_crochets(const char *nom) {
-    char mot[64];
+    char mot[64], avant[64] = "";
     size_t k = 0;
     for (const char *p = nom;; p++) {
         if (*p == ' ' || *p == '\'' || *p == '\0') {
             mot[k] = '\0';
-            if (est_mot_reserve(mot)) return 1;
+            /* « tarif de suivi » : « suivi » après « de », un mot de nom (voir mot_de_nom) */
+            const int suivi_nom = strcmp(mot, "suivi") == 0
+                                  && (strcmp(avant, "de") == 0 || strcmp(avant, "du") == 0 || strcmp(avant, "des") == 0
+                                      || strcmp(avant, "d") == 0);
+            if (!suivi_nom && est_mot_reserve(mot)) return 1;
+            memcpy(avant, mot, k + 1);
             if (*p == '\'' && k == 1 && mot[0] == 'n' && strncmp(p + 1, "est", 3) == 0
                 && (p[4] == ' ' || p[4] == '\0')) return 1;
             k = 0;
@@ -648,6 +653,12 @@ static int unite_de(const Jeton *t);
 
 static int mot_de_nom(const Analyse *a, size_t k) {
     const Jeton *t = &a->j[k];
+    /* « suivi » réservé pour « … suivi de … » (§ 4.4), mais nom après « de » : « le tarif de suivi », « la fiche de
+       suivi » ; aucune expression ne finit par « de », l'opérateur n'y est jamais possible */
+    if (t->type == J_MOT && est_mot(t, "suivi") && k > 0
+        && (est_mot(&a->j[k - 1], "de") || est_mot(&a->j[k - 1], "du") || est_mot(&a->j[k - 1], "des")
+            || (a->j[k - 1].type == J_ELISION && strcmp(a->j[k - 1].valeur, "d") == 0)))
+        return 1;
     if (t->type == J_MOT) return !est_reserve(t);
     if (t->type == J_ELISION)
         return !(strcmp(t->valeur, "n") == 0 && k + 1 < a->n && est_mot(&a->j[k + 1], "est"));

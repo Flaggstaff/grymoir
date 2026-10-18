@@ -401,6 +401,17 @@ Fenetre::Fenetre() {
             else ouvrir(d);
         });
     }
+    // Les projets du dépôt (projets/), quand l'atelier tourne depuis le dépôt (./atelier) : on les ouvre sur place.
+    {
+        bool depot_trouve = false;
+        const QStringList du_depot = projets_du_depot(QApplication::applicationDirPath(), &depot_trouve);
+        if (depot_trouve) {
+            QMenu *depot = menu->addMenu("Projets du dépôt");
+            for (const QString &chemin : du_depot)
+                depot->addAction(QFileInfo(chemin).fileName(), this, [this, chemin] { ouvrir(chemin); })->setStatusTip(chemin);
+            if (du_depot.isEmpty()) depot->addAction("(aucun)")->setEnabled(false);
+        }
+    }
     menu->addSeparator();
     menu->addAction("Renommer le fichier…", this, &Fenetre::renommer_fichier_choisi);
     menu->addAction("Mettre le fichier à la corbeille…", this, &Fenetre::supprimer_fichier_choisi);

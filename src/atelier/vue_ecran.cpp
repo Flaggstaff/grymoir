@@ -30,6 +30,8 @@
 #include <QPixmap>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QRegularExpression>
+#include <QCollator>
 
 extern "C" {
 #include "interface.h"
@@ -599,6 +601,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 tab->horizontalHeader()->setSortIndicatorShown(true);
                 tab->horizontalHeader()->setSortIndicator(c, o);
                 tab->sortItems(c, o);
+                epingler_total(tab);
             });
             r.tables[k] = tab;
             r.controles[k] = tab;
@@ -623,4 +626,50 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     r.erreur->hide();
     pile->insertWidget(1, r.erreur);   // sous le titre : l'utilisateur le voit avant de chercher ce qui a raté
     return r;
+}
+
+void epingler_total(QTableWidget *t) {
+    for (int r = 0; r < t->rowCount() - 1; r++) {
+        QTableWidgetItem *premier = t->item(r, 0);
+        if (!premier || !premier->data(ROLE_TOTAL).toBool()) continue;
+        QList<QTableWidgetItem *> cases;
+        for (int c = 0; c < t->columnCount(); c++) cases << t->takeItem(r, c);
+        const bool tri = t->isSortingEnabled();
+        t->setSortingEnabled(false);
+        t->removeRow(r);
+        const int fin = t->rowCount();
+        t->insertRow(fin);
+        for (int c = 0; c < cases.size(); c++) if (cases[c]) t->setItem(fin, c, cases[c]);
+        t->setSortingEnabled(tri);
+        return;
+    }
+}
+
+// La clé de tri d'un texte de cellule : 0 un nombre, 1 une date, 2 une heure (la valeur dans *v), -1 un texte.
+static int cle_de_tri(const QString &t, double *v) {
+    const QString x = t.trimmed();
+    if (x.isEmpty()) return -1;
+    static const QRegularExpression date("^(\\d{2})\\.(\\d{2})\\.(\\d{4})$"), heure("^(\\d{1,2}):(\\d{2})$"),
+        nombre("^[-\u2212]?\\d{1,3}(['\u2019]\\d{3})*(,\\d+)?$|^[-\u2212]?\\d+(,\\d+)?$");
+    QRegularExpressionMatch m = date.match(x);
+    if (m.hasMatch()) { *v = m.captured(3).toInt() * 10000.0 + m.captured(2).toInt() * 100 + m.captured(1).toInt(); return 1; }
+    m = heure.match(x);
+    if (m.hasMatch()) { *v = m.captured(1).toInt() * 60.0 + m.captured(2).toInt(); return 2; }
+    if (nombre.match(x).hasMatch()) {
+        QString b = x;
+        b.remove('\'').remove(QChar(0x2019)).replace(',', '.').replace(QChar(0x2212), '-');
+        *v = b.toDouble();
+        return 0;
+    }
+    return -1;
+}
+
+bool CelluleTriable::operator<(const QTableWidgetItem &autre) const {
+    double a = 0, b = 0;
+    const int ka = cle_de_tri(text(), &a), kb = cle_de_tri(autre.text(), &b);
+    if (ka >= 0 && ka == kb) return a < b;
+    if (ka != kb && (ka < 0 || kb < 0) && (text().trimmed().isEmpty() || autre.text().trimmed().isEmpty()))
+        return text().trimmed().isEmpty() && !autre.text().trimmed().isEmpty();   // une case vide d'abord
+    static const QCollator francais(QLocale(QLocale::French, QLocale::Switzerland));   // « élodie » avant « Fabien »
+    return francais.compare(text(), autre.text()) < 0;
 }

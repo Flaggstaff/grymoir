@@ -148,6 +148,29 @@ int main(int argc, char **argv) {
     VERIFIER(dessin("Le total vaut 12,50.") == "mm.......mmmm.nnnnno");
     VERIFIER(dessin("Si x > 3, afficher « a ».") == "cc...o.no.mmmmmmmm.ttttto");
     VERIFIER(dessin("Remarque : bonjour") == "rrrrrrrrrrrrrrrrrr");
+    // Les projets du dépôt : trouvés depuis le dossier de construction, rien autour d'une application installée
+    {
+        bool trouve = false;
+        const QStringList p = projets_du_depot(QString(GRYM_SOURCE) + "/construction", &trouve);
+        VERIFIER(trouve && p.size() >= 3);
+        bool cabinet = false;
+        for (const QString &x : p) cabinet |= x.endsWith("/projets/Cabinet");
+        VERIFIER(cabinet);
+        QTemporaryDir ailleurs;
+        VERIFIER(projets_du_depot(ailleurs.path(), &trouve).isEmpty() && !trouve);
+    }
+    // Le tri d'une cellule de liste (§ 22.1) : par la valeur, comme on la lit
+    {
+        auto avant = [](const char *a, const char *b) {
+            return CelluleTriable(QString::fromUtf8(a)) < CelluleTriable(QString::fromUtf8(b));
+        };
+        VERIFIER(avant("70", "130") && !avant("130", "70"));
+        VERIFIER(avant("999,95", "1'234,50") && avant("−3", "2"));
+        VERIFIER(avant("15.09.2025", "01.03.2026") && avant("9:30", "14:05"));
+        VERIFIER(avant("", "70") && avant("Anne", "Bruno") && avant("élodie", "Fabien"));
+    }
+    // « suivi » après « de » : un mot de nom, sans couleur ; « suivi de », l'opérateur (§ 4.4)
+    VERIFIER(dessin("Le x vaut le tarif de suivi du s suivi de « a ».") == "mm...mmmm.mm.......mm.......mm...mmmmm.mm.ttttto");
     VERIFIER(dessin("La date vaut 21.09.2026.") == "mm......mmmm.ddddddddddo");
     VERIFIER(dessin("Le [frais et port] vaut 1.") == "mm.NNNNNNNNNNNNNNN.mmmm.no");
     // points de code hors du plan de base : l'emoji compte pour deux unités UTF-16
@@ -576,6 +599,56 @@ int main(int argc, char **argv) {
         for (QPushButton *b : e.findChildren<QPushButton *>())   // l'application se ferme : la machine finit d'elle-même
             if (b->text() == "Fermer" && b->isVisible() && b->isEnabled()) { b->click(); break; }
         QElapsedTimer z;   // le temps que la machine finisse ; l'écran, lui, reste affiché
+        z.start();
+        while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+    }
+
+    // La fiche (§ 22.3) : le tableau des séances et sa ligne de total, en gras, jamais sélectionnable, la dernière même
+    // après un tri choisi d'un clic sur un titre ; un double-clic dessus ne mène nulle part
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Un client, conservé, a :\n    un nom (texte), unique.\n"
+                    "Une séance, conservée, a :\n    un client (client),\n    un prix (nombre).\n"
+                    "Le c vaut un nouveau client :\n    Le nom vaut « Anne ».\nConserver c.\n"
+                    "Le a vaut une nouvelle séance :\n    Le client vaut c.\n    Le prix vaut 130.\nConserver a.\n"
+                    "Le b vaut une nouvelle séance :\n    Le client vaut c.\n    Le prix vaut 70.\nConserver b.\n"
+                    "Ouvrir la fiche de c.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto table = [&]() -> QTableWidget * {
+            for (QTableWidget *x : e.findChildren<QTableWidget *>()) if (x->isVisible() && x->rowCount() == 3) return x;
+            return nullptr;
+        };
+        VERIFIER(attendre([&] { return table() != nullptr; }));
+        if (QTableWidget *t = table()) {
+            auto derniere = [&] { return t->item(2, 0) ? t->item(2, 0)->text() : QString(); };
+            VERIFIER(derniere() == "200" && t->item(2, 0)->font().bold());
+            VERIFIER(!(t->item(2, 0)->flags() & Qt::ItemIsSelectable));
+            for (int fois = 0; fois < 2; fois++) {   // croissant, puis décroissant : 70, 130, 200 puis 130, 70, 200
+                emit t->horizontalHeader()->sectionClicked(0);
+                QApplication::processEvents();
+                VERIFIER(derniere() == "200");
+                VERIFIER(t->item(fois ? 1 : 0, 0) && t->item(fois ? 1 : 0, 0)->text() == "70");
+            }
+            emit t->cellActivated(2, 0);   // la ligne de total : aucune fiche ne s'ouvre par-dessus
+            QApplication::processEvents(QEventLoop::AllEvents, 300);
+            VERIFIER(table() == t && t->isVisible());
+        }
+        for (QPushButton *b : e.findChildren<QPushButton *>())   // la fiche se ferme : la machine finit d'elle-même
+            if (b->text() == "Fermer" && b->isVisible() && b->isEnabled()) { b->click(); break; }
+        QElapsedTimer z;
         z.start();
         while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
     }

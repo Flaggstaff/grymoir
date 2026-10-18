@@ -149,7 +149,8 @@ typedef struct {
     void (*ecran_ouvrir)(void *contexte, Chaine *sortie, const char *titre, const ElementEcran *elements, size_t n);
     /* Les lignes d'une liste : nb_lignes × nb_colonnes cellules, ligne par ligne ; remplace les précédentes. */
     /* Une cellule « ␝ lettre texte » est une étiquette (§ 16.15) : la lettre dit sa couleur (b bleu, v vert, t turquoise,
-     * p violet, g gris, r rouge, o orange), le texte suit. */
+     * p violet, g gris, r rouge, o orange), le texte suit. Une ligne dont la première cellule commence par « ␜ » (U+001C)
+     * est une ligne de total (§ 22.3) : montrée en gras, la dernière quel que soit le tri, jamais choisie ni sélectionnée. */
     void (*ecran_lignes)(void *contexte, size_t element, const char *const *cellules, size_t nb_lignes);
     /* Attend un événement ; ISSUE_INTERROMPU si l'exécution doit s'arrêter. */
     Issue (*ecran_attendre)(void *contexte, Chaine *sortie, Evenement *e);

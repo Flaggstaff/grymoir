@@ -544,6 +544,7 @@ static char *feuille_de_style(const Serveur *s) {
     "padding:8px 12px;border-bottom:1px solid var(--bordure)}"
     "table.liste td{padding:6px 12px;border-bottom:1px solid var(--separateur)}"
     "table.liste tr.choisie td{background:var(--accent-doux)}"
+    "table.liste tr.total td{font-weight:700;border-top:2px solid currentColor}"
     "table.liste td.vide{color:var(--texte-2)}"
     "table.liste .selection{width:1%;padding-right:0}table.liste input[type=radio]{accent-color:var(--accent);margin:0}"
     "button.ligne{all:unset;cursor:pointer;color:var(--accent);text-decoration:underline;text-underline-offset:3px}"
@@ -1128,6 +1129,16 @@ static void liste(Chaine *c, const EcranWeb *e, size_t k) {
     if (!nc) chaine_ajouter(c, "<th></th>");
     chaine_ajouter(c, "</tr></thead><tbody>");
     for (size_t r = 0; r < e->nb_lignes[k]; r++) {
+        if (nc && e->cellules[k][r * nc][0] == '\x1c') {   /* une ligne de total (§ 22.3) : ni sélection, ni choix */
+            chaine_ajouter(c, "<tr class=\"total\"><td class=\"selection\"></td>");
+            for (size_t q = 0; q < nc; q++) {
+                chaine_ajouter(c, "<td>");
+                cellule(c, e->cellules[k][r * nc + q] + (q == 0));
+                chaine_ajouter(c, "</td>");
+            }
+            chaine_ajouter(c, "</tr>");
+            continue;
+        }
         chaine_ajouter(c, e->choisie[k] == (long)r ? "<tr class=\"choisie\">" : "<tr>");
         char *radio = grym_formater("<td class=\"selection\"><input type=\"radio\" name=\"s%lu\" value=\"%lu\" "
                                     "aria-label=\"Sélectionner la ligne %lu\"%s></td>", (unsigned long)k, (unsigned long)r,

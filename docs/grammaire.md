@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.11 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.12 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -281,7 +281,7 @@ Afficher « plus ancien » puis que nom du compositeur.            →  plus anc
 - Chaque valeur s'écrit comme `Afficher` l'écrirait : un nombre au style du programme (§ 4.1), une date au format suisse, une année sans séparateur, `vrai` ou `faux`. Une valeur absente est une erreur (§ 16.9).
 - `suivi de` lie moins fort que les opérations et que `sur` : `« x » suivi de a + 1`, `« x » suivi de nom sur 10`. Il ne rend jamais une condition : `Si « a » suivi de « b », …` est une erreur d'analyse.
 - **Élision.** En tête d'un élément d'`Afficher`, ou juste après `suivi de`, `de x` et `que x` écrivent `de`/`d'` et `que`/`qu'` selon la première lettre du texte de `x` : élision devant une voyelle, accentuée ou non, `œ`, `æ` ou `y`, jamais devant un `h`. Le h muet (« d'Hélène ») et le h aspiré (« de Haendel ») ne se distinguent pas par l'orthographe : deviner romprait le déterminisme (charte, art. 4). `de 1` s'écrit `de 1`.
-- `suivi` devient un mot réservé (§ 2.2).
+- `suivi` devient un mot réservé (§ 2.2), sauf après `de`, `du`, `des` ou `d'`, où il est un mot de nom *(2.12)* : `un tarif de suivi (nombre)`, `Afficher le tarif de suivi du soin suivi de « CHF ».` Aucune expression ne finit par `de` : l'opérateur n'y est jamais possible, et la lecture reste sans ambiguïté. Le formatage n'y met pas de crochets, la coloration de l'atelier ne le colore pas.
 - Joindre les éléments d'un ensemble : `les couleurs jointes par « , »` (§ 13.9).
 - En forme compacte : `a _suivi b`, `_de x`, `_que x`.
 
@@ -1782,7 +1782,7 @@ Ouvrir l'écran des compositeurs.
 - **Les tableaux d'une fiche** *(2.10)* : sous les champs de la fiche déduite, un tableau par lien d'une entité qui peut désigner l'objet (son entité, ou un ancêtre) : un titre au pluriel (« Séances »), la liste des objets qui le désignent, un bouton « Nouvelle séance » (« Nouveau client », « Nouvel achat »). Sans rien écrire, comme le reste de la fiche.
   - Colonnes : les champs de l'entité, sauf le lien lui-même, les champs multiples, les fichiers, images, sons et mots de passe. Tri : par la première date, la plus récente en tête ; sans date, par la clé.
   - Une ligne « Total » suit les objets quand une colonne est un `(nombre)` : la somme exacte de chacune. Un `(nombre entier)` n'est pas additionné : une année, un numéro n'ont pas de somme qui ait un sens.
-  - Un double-clic sur une ligne ouvre la fiche de l'objet par-dessus ; à son retour, les tableaux se relisent. La ligne « Total » ne mène nulle part. « Nouvelle séance » ouvre le formulaire de l'entité, le lien vers l'objet déjà rempli, puis conserve la séance.
+  - Un double-clic sur une ligne ouvre la fiche de l'objet par-dessus ; à son retour, les tableaux se relisent. La ligne « Total » *(2.12)* se montre en gras, ne se sélectionne pas, ne mène nulle part et reste la dernière quel que soit le tri choisi à l'écran ; l'interface la reconnaît à sa première cellule, qui commence par U+001C (`src/interface.h`). « Nouvelle séance » ouvre le formulaire de l'entité, le lien vers l'objet déjà rempli, puis conserve la séance.
   - Deux liens de la même entité vers l'objet font deux tableaux, nommés par le champ : « Parrainages (parrain) », « Parrainages (filleul) ». Un lien hérité n'en fait qu'un, celui de l'entité qui le déclare.
   - Une entité `, hors des fiches,` (§ 16.1) n'a pas de tableau : des notes confidentielles ne s'affichent pas dans la fiche d'un client qu'on ouvre devant lui. Elles restent dans la fiche de l'objet qui les porte, et dans tout écran qui les cherche.
   - Pas encore : le tableau d'un champ multiple (« les œuvres d'un genre »).
@@ -1830,6 +1830,7 @@ L'écran de saisie montre :
 - `visible si …` : un bouton, un texte fixe ou une zone ; faux, l'élément disparaît, libellé compris. Une liste reste toujours visible, pour l'instant.
 - La condition est une valeur vraie ou fausse (§ 5.3) : « « visible si » attend une condition : … ». Elle se lit à la fin de la déclaration et peut donc citer toute zone ou liste de l'écran, même écrite plus bas, par `de l'écran`. La machine la relit avant chaque attente, après la relecture des listes : après l'ouverture, après chaque événement, après chaque zone validée.
 - Une zone vide est absente pour ce qui décrit l'écran : une condition, le `dont` d'une liste. `actif si le nom de l'écran est présent` vaut faux tant que rien n'est tapé, que la zone soit obligatoire ou non. L'obligation se vérifie quand on agit : un événement qui lit une zone obligatoire vide s'arrête, sans rien écrire, et l'écran montre « Remplis « Nom » : cette zone est obligatoire. ». C'est la pratique des formulaires HTML (`required`, vérifié à l'envoi) et d'Access (`Required`, vérifié à l'enregistrement).
+- *(2.12)* Un événement qui teste lui-même la présence d'une zone (`Si le soin de l'écran est présent, …`, `est absent`) s'en charge : elle n'est pas exigée en tête de l'événement, et le test la lit vide sans s'arrêter. La lire vide ailleurs, sans test, arrête toujours l'événement avec « Remplis … ». Ainsi le prix d'une séance se propose dès que le client et le soin sont choisis, dans l'ordre qu'on veut, sans que ces zones perdent leur astérisque.
 - Une case à cocher obligatoire sans valeur de départ vaut faux à l'ouverture : elle montre « non », elle vaut non. Les interfaces marquent d'un astérisque les autres zones obligatoires.
 - Une condition qui échoue autrement à l'exécution arrête le programme, comme le `dont` d'une liste (§ 22.1).
 - Ordre canonique (l'imprimeur le rétablit) : valeur de départ, `facultatif`, `sur plusieurs lignes`, `en lecture seule`, `actif si`, `visible si`. Chaque état une fois : « « actif si » est déjà dit pour cet élément. »
@@ -2124,3 +2125,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.9 | 2026-10-18 | § 15.7 : l'écoute et l'enregistrement au micro dans l'atelier et les applications fabriquées ; le lecteur dans la fiche déduite, partout |
 | 2.10 | 2026-10-18 | § 22.3 : les tableaux de la fiche déduite, un par lien qui désigne l'objet (tri, total, fiche au double-clic, « Nouvelle … ») ; § 16.1 : `, hors des fiches,` |
 | 2.11 | 2026-10-18 | § 19 : le formulaire demande le courriel, le téléphone et l'adresse web (il les prenait pour des liens, et sautait les facultatifs) |
+| 2.12 | 2026-10-18 | § 22.6 : un événement qui teste la présence d'une zone ne l'exige pas d'emblée ; § 4.4 : `suivi` après `de` est un mot de nom ; § 22.3 : la ligne « Total » marquée, ni sélectionnée ni choisie |

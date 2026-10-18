@@ -1133,6 +1133,25 @@ static void essais_ecrans(void) {
                "[fermer]\n"
                "Requiem");
     }
+    /* § 22.6 : un événement qui teste lui-même la présence d'une zone obligatoire s'en charge : elle n'est pas exigée
+       d'emblée ; la lire vide sans test l'arrête toujours (« OK » sans ville) */
+    {
+        const char *src =
+            "L'écran de saisie montre :\n    un nom (texte),\n    une ville (texte),\n    un bouton « OK ».\n"
+            "Quand on change le nom dans l'écran de saisie :\n"
+            "    Si le nom de l'écran est présent et la ville de l'écran est présente, afficher le nom de l'écran puis la ville de l'écran.\n"
+            "    Afficher « nom changé ».\n"
+            "Quand on clique sur « OK » dans l'écran de saisie :\n    Afficher la ville de l'écran.\n    Fermer l'écran.\n"
+            "Ouvrir l'écran de saisie.\n";
+        const char *ev[] = { "change Nom=Anne", "clic OK", "change Ville=Bulle", "change Nom=Bea", "clic OK" };
+        const char *rep[] = { "" };
+        ECRANS(src, ev, rep,
+               "[ouvrir Saisie ; zone Nom (texte) ; zone Ville (texte) ; bouton OK]\n[valeurs Nom= Ville=]\n"
+               "[valeurs Nom=Anne Ville=]\nnom changé\n"
+               "[erreur Remplis « Ville » : cette zone est obligatoire.]\n[valeurs Nom=Anne Ville=]\n"
+               "[valeurs Nom=Anne Ville=Bulle]\n[valeurs Nom=Bea Ville=Bulle]\nBea Bulle\nnom changé\n"
+               "[valeurs Nom=Bea Ville=Bulle]\nBulle\n[fermer]\n");
+    }
     /* § 22.3 : les tableaux d'une fiche, un par lien qui désigne l'objet ; tri par date, la plus récente en tête ;
        total des colonnes (nombre) ; une ligne vers sa fiche, et retour ; la ligne « Total » ne mène nulle part ;
        « Nouvelle séance », le client déjà rempli ; « hors des fiches » ; deux liens : deux tableaux nommés */
@@ -1164,20 +1183,22 @@ static void essais_ecrans(void) {
                "bouton Nouvelle séance ; texte Parrainages (parrain) ; liste parrainage (Filleul, Année) ; "
                "bouton Nouveau parrainage (parrain) ; texte Parrainages (filleul) ; liste parrainage (Parrain, Année) ; "
                "bouton Nouveau parrainage (filleul) ; bouton Modifier ; bouton Fermer]\n"
-               "[lignes EPI|15.09.2026|70|\x1drdue / EPI|01.09.2026|130|\x1dvpayée / Total||200|]\n"
+               "[lignes EPI|15.09.2026|70|\x1drdue / EPI|01.09.2026|130|\x1dvpayée / \x1cTotal||200|]\n"
                "[lignes]\n[lignes]\n"
                "[ouvrir une séance ; bouton Client : Anne ; bouton Soin : EPI ; texte Date : 15.09.2026 ; "
                "texte Prix : 70 ; texte État : due ; bouton Modifier ; bouton Fermer]\n"
                "[fermer]\n"
-               "[lignes EPI|15.09.2026|70|\x1drdue / EPI|01.09.2026|130|\x1dvpayée / Total||200|]\n"
+               "[lignes EPI|15.09.2026|70|\x1drdue / EPI|01.09.2026|130|\x1dvpayée / \x1cTotal||200|]\n"
                "[lignes]\n[lignes]\n"
                "page Soin Date Prix État (« payée » ou « due »)"
                "[lignes EPI|20.09.2026|70|\x1dvpayée / EPI|15.09.2026|70|\x1drdue / EPI|01.09.2026|130|\x1dvpayée / "
-               "Total||270|]\n"
+               "\x1cTotal||270|]\n"
                "[lignes]\n[lignes]\n"
                "[fermer]\n"
                "3");
     }
+    PROG("Un soin a : un tarif de suivi.\nLe s vaut un nouveau soin :\n    Le tarif de suivi vaut 70.\n"
+         "Afficher « suivi » suivi de « : » puis le tarif de suivi du s.\n", "suivi: 70");
     PROG("Un point, hors des fiches, a : un x.\n",
          "ERREUR 1:11 Seule une entité se tient hors des fiches : « Une note, conservée, hors des fiches, a : ».");
     PROG("Une personne, conservée, a : un nom (texte).\nUne cliente, conservée, hors des fiches, est une personne.\n"

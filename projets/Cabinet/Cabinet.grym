@@ -5,8 +5,8 @@ Les écrans ont la couleur turquoise.
 
 Remarque : les cinq soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
 Si le nombre de soins conservés est nul :
-    Proposer avec réduction « EPI » et 130 et 70.
-    Proposer avec réduction « LEAA » et 130 et 100.
+    Proposer en deux prix « EPI » et 130 et 70.
+    Proposer en deux prix « LEAA » et 130 et 100.
     Proposer « Kriya Massage » et 100.
     Proposer « Toucher Thérapeutique » et 100.
     Proposer « Soin à Distance » et 100.
@@ -25,10 +25,9 @@ L'écran des clients montre :
         un bouton « Nouveau client »,
         un bouton « Fermer ».
 
-Remarque : le client et le soin sont facultatifs pour l'écran : le prix se calcule dès qu'ils sont choisis, dans l'ordre qu'on veut ; « Enregistrer » les exige.
 L'écran de séance, « Nouvelle séance », montre :
-    un client (client), facultatif,
-    un soin (soin), facultatif,
+    un client (client),
+    un soin (soin),
     une date (date),
     une heure (heure), facultative,
     un prix (nombre), avec l'unité « CHF »,
@@ -55,7 +54,7 @@ L'écran des encaissements, « À encaisser », montre :
         un bouton « Fermer ».
 
 L'écran des soins montre :
-    la liste des soins conservés, par nom, avec le nom, le tarif, le tarif réduit et la durée,
+    la liste des soins conservés, par nom, avec le nom, le tarif, le tarif de suivi et la durée,
     côte à côte :
         un bouton « Nouveau soin »,
         un bouton « Fermer ».
@@ -92,7 +91,8 @@ Quand on clique sur « Fermer » dans l'écran des clients :
 Quand on ouvre l'écran de séance :
     La date de l'écran devient aujourd'hui.
 
-Remarque : le prix se propose dès que le client et le soin sont choisis ; on peut toujours le changer.
+Remarque : le prix se propose dès que le client et le soin sont choisis, dans l'ordre qu'on veut ; on peut toujours le changer.
+Remarque : l'événement teste lui-même la présence des deux zones : elles ne l'arrêtent pas tant que l'autre est vide.
 Quand on change le client dans l'écran de séance :
     Si le client de l'écran est présent et le soin de l'écran est présent, le prix de l'écran devient le prix conseillé du client de l'écran et du soin de l'écran.
 
@@ -101,8 +101,6 @@ Quand on change le soin dans l'écran de séance :
 
 Remarque : une séance datée d'aujourd'hui ou d'avant est faite ; plus tard, elle est prévue.
 Quand on clique sur « Enregistrer » dans l'écran de séance :
-    Si le client de l'écran est absent, refuser « Choisis le client. ».
-    Si le soin de l'écran est absent, refuser « Choisis le soin. ».
     La nouvelle vaut une nouvelle séance :
         Le client vaut le client de l'écran.
         Le soin vaut le soin de l'écran.

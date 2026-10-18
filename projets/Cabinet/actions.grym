@@ -8,11 +8,11 @@ Pour proposer un nom et un tarif :
     Conserver le s.
 
 Remarque : un soin dont la séance de suivi coûte moins que la première.
-Pour proposer avec réduction un nom et un tarif et un réduit :
+Pour proposer en deux prix un nom et un premier prix et un prix de suivi :
     Le s vaut un nouveau soin :
         Le nom vaut nom.
-        Le tarif vaut tarif.
-        Le tarif réduit vaut réduit.
+        Le tarif vaut premier prix.
+        Le tarif de suivi vaut prix de suivi.
     Conserver le s.
 
 Pour encaisser une séance et un moyen :

@@ -3295,6 +3295,9 @@ static char *tableau_montrer(Machine *m, Objet *o, TableauFiche *t) {
                 valeur_liberer(&v);
             } else cellules[faites++] = grym_dupliquer(k == 0 ? "Total" : "");
         }
+        char *marquee = grym_formater("\x1c%s", cellules[faites - nc]);   /* « ␜ » : une ligne de total (interface.h) */
+        free(cellules[faites - nc]);
+        cellules[faites - nc] = marquee;
     }
     if (!erreur && m->iface.ecran_lignes)
         m->iface.ecran_lignes(m->iface.contexte, t->element, (const char *const *)cellules, faites / (nc ? nc : 1));
@@ -5584,7 +5587,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     /* Une zone vide (§ 22.6) : absente pour ce qui décrit l'écran (le « dont » d'une liste, « actif si »,
                      * « visible si »), lu dans le cadre qui l'a ouvert ; dans un événement, une zone obligatoire
                      * vide arrête l'événement, avec un message pour l'utilisateur. */
-                    if (nb_cadres == m->ecran->cadre) {
+                    if (nb_cadres == m->ecran->cadre || (ip < b->taille_code && b->code[ip] == I_EST_ABSENT)) {
+                        /* … et pour un test de présence, dans un événement aussi : « Si le soin de l'écran est présent » */
                         valeur_liberer(vo);
                         *vo = vi_absent(champ);
                         break;

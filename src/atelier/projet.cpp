@@ -127,3 +127,18 @@ QStringList recents_avec(QStringList recents, const QString &dossier, int max) {
     while (recents.size() > max) recents.removeLast();
     return recents;
 }
+
+QStringList projets_du_depot(const QString &depuis, bool *depot_trouve) {
+    QDir d(depuis);
+    *depot_trouve = false;
+    for (int n = 0; n < 6 && !*depot_trouve; n++) {
+        *depot_trouve = d.exists("projets") && d.exists("src/atelier");
+        if (!*depot_trouve && !d.cdUp()) break;
+    }
+    QStringList r;
+    if (!*depot_trouve) return r;
+    const QDir projets(d.filePath("projets"));
+    for (const QString &nom : projets.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
+        if (QFileInfo::exists(QDir(projets.filePath(nom)).filePath("projet.grymatelier"))) r << projets.filePath(nom);
+    return r;
+}

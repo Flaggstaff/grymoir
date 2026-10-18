@@ -1,10 +1,10 @@
 Remarque : Cabinet : les données d'un cabinet de thérapie, ses soins, ses clients, leurs séances.
 
-Remarque : un soin a son tarif ; s'il a un tarif réduit, les séances suivantes d'un même client le paient.
+Remarque : un soin a son tarif ; s'il a un tarif de suivi, les séances suivantes d'un même client le paient.
 Un soin, conservé, a :
     un nom (texte), unique,
     un tarif (nombre),
-    un tarif réduit (nombre), facultatif,
+    un tarif de suivi (nombre), facultatif,
     une durée (nombre entier), facultative.
 
 Remarque : le nom est la clé : « Anne Rochat » ; deux homonymes se distinguent par une initiale ou une ville.
@@ -35,9 +35,9 @@ Chaque séance conservée vérifie :
     le prix de la séance ≥ 0,
     sinon « Le prix d'une séance n'est jamais négatif. ».
 
-Remarque : la première séance d'un soin se paie au tarif ; dès la deuxième, au tarif réduit s'il y en a un.
+Remarque : la première séance d'un soin se paie au tarif ; dès la deuxième, au tarif de suivi s'il y en a un.
 Remarque : une séance annulée ou manquée ne compte pas comme une première séance.
 Le prix conseillé d'une personne et d'une prestation :
-    Si le tarif réduit de la prestation est absent, rendre le tarif de la prestation.
-    Si le nombre de séances conservées dont le client = personne et le soin = prestation et le statut ≠ « annulée » et le statut ≠ « absence » > 0, rendre le tarif réduit de la prestation.
+    Si le tarif de suivi de la prestation est absent, rendre le tarif de la prestation.
+    Si le nombre de séances conservées dont le client = personne et le soin = prestation et le statut ≠ « annulée » et le statut ≠ « absence » > 0, rendre le tarif de suivi de la prestation.
     Rendre le tarif de la prestation.

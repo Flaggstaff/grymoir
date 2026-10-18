@@ -104,6 +104,9 @@ int main(void) {
     FIXE("Afficher (« a » suivi de « b ») en minuscules puis « 3 » en nombre + 1.\n");
     FIXE("Une tâche, conservée, a :\n    un état (« à faire », « en cours » ou « fini »), « à faire » au départ.\n");
     FIXE("Une note, conservée, hors des fiches, a :\n    un texte (texte).\n");   /* § 22.3 */
+    /* « suivi » après « de » est un mot de nom ; l'opérateur « suivi de » reste (§ 4.4) */
+    FIXE("Un soin, conservé, a :\n    un tarif de suivi (nombre).\nLe s vaut un nouveau soin :\n    Le tarif de suivi vaut 70.\n"
+         "Afficher le tarif de suivi du s suivi de « CHF ».\n");
     COMP("Une tâche, conservée, a : un état (« a » ou « b »).",
          "_classe _une tâche _conservé\n    _un état (« a » ; « b »)\n_fin\n");
     COMP("Le nom vaut « a ».\nAfficher nom ne commence pas par « b ».", "_le nom << « a »\n_afficher _non (nom _commence « b »)\n");

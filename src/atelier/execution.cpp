@@ -579,10 +579,19 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         QTableWidget *t = tables[element];
         const int nc = t->columnCount();
         t->setRowCount(nb_lignes);
-        for (int r = 0; r < nb_lignes; r++)
+        for (int r = 0; r < nb_lignes; r++) {
+            const bool total = r * nc < cellules.size() && cellules[r * nc].startsWith(QChar(0x1c));   // § 22.3
             for (int c = 0; c < nc && r * nc + c < cellules.size(); c++) {
-                const QString x = cellules[r * nc + c];
-                auto *i = new QTableWidgetItem(x);
+                QString x = cellules[r * nc + c];
+                if (total && c == 0) x = x.mid(1);
+                auto *i = new CelluleTriable(x);   // 70 avant 130, les dates dans l'ordre du calendrier
+                if (total) {   // en gras, ni sélectionnable ni choisie
+                    QFont f = i->font();
+                    f.setBold(true);
+                    i->setFont(f);
+                    i->setFlags(Qt::ItemIsEnabled);
+                    i->setData(ROLE_TOTAL, true);
+                }
                 if (x.size() > 1 && x[0] == QChar(0x1d)) {   // une étiquette (§ 16.15) : les couleurs du navigateur
                     const auto p = teinte_etiquette(x[1]);
                     i->setText(x.mid(2));
@@ -597,9 +606,11 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
                 i->setData(Qt::UserRole, r);   // le rang dans la liste de la machine, quel que soit le tri à l'écran
                 t->setItem(r, c, i);
             }
+        }
         // l'ordre du programme d'abord ; un tri choisi à l'écran (clic sur un titre) se garde d'une relecture à l'autre
         const int col = t->property("tri").isValid() ? t->property("tri").toInt() : -1;
         if (col >= 0) t->sortItems(col, (Qt::SortOrder)t->property("ordre").toInt());
+        epingler_total(t);
     });
     connect(&travail, &Travail::ecran_valeurs, this, [this](const QStringList &v) {
         for (int k = 0; k < v.size() && k < zones.size(); k++) {
@@ -982,6 +993,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
             tab->setToolTip("Double-clic ou Entrée : choisir ; clic sur un titre : trier");
             connect(tab, &QTableWidget::cellActivated, this, [this, k, tab](int ligne, int) {
                 const QTableWidgetItem *i = tab->item(ligne, 0);
+                if (i && i->data(ROLE_TOTAL).toBool()) return;   // la ligne de total ne mène nulle part (§ 22.3)
                 envoyer_evenement(EVENEMENT_CHOIX, k, i ? i->data(Qt::UserRole).toInt() : ligne);
             });
         } else if (QWidget *z = v.zones[k]) {   // la validation d'une zone (Entrée, ou la quitter) est un événement

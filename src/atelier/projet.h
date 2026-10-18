@@ -42,4 +42,9 @@ QString creer_projet(const QString &parent, const QString &nom, QString *erreur)
 // La liste vit dans les réglages du poste, pas dans le projet.
 QStringList recents_avec(QStringList recents, const QString &dossier, int max = 8);
 
+// Les projets du dépôt (projets/, un dossier avec son projet.grymatelier), quand l'atelier tourne depuis le dépôt :
+// le dépôt se cherche en remontant depuis `depuis` (le dossier de l'exécutable), six niveaux au plus. *depot_trouve :
+// faux pour une application installée, qui n'a pas de dépôt autour d'elle.
+QStringList projets_du_depot(const QString &depuis, bool *depot_trouve);
+
 #endif

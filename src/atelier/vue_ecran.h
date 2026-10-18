@@ -105,4 +105,18 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                         int taille_logo);
 VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &elements);
 
+// Une ligne de total (§ 22.3, src/interface.h) : sa première cellule porte ce drapeau. Elle reste la dernière ligne quel
+// que soit le tri à l'écran ; ni choisie ni sélectionnée.
+constexpr int ROLE_TOTAL = 0x0101;   // Qt::UserRole + 1
+void epingler_total(QTableWidget *t);
+
+// Une cellule de liste qui se trie comme on la lit (§ 22.1) : les nombres par leur valeur (« 70 » avant « 130 »,
+// « 1'234,50 », « −3 »), les dates par le calendrier (jj.mm.aaaa), les heures par l'horloge, le reste selon la langue.
+#include <QTableWidgetItem>
+class CelluleTriable : public QTableWidgetItem {
+public:
+    explicit CelluleTriable(const QString &texte) : QTableWidgetItem(texte) {}
+    bool operator<(const QTableWidgetItem &autre) const override;
+};
+
 #endif

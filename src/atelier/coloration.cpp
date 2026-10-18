@@ -79,13 +79,17 @@ QVector<int> Coloration::sortes(const QString &ligne, bool compacte) {
         free(erreur);
         return r;
     }
+    bool apres_de = false;   // « tarif de suivi » : « suivi » après « de » est un mot de nom, pas « suivi de » (§ 4.4)
     for (;;) {
         Jeton j = lexeur_suivant(lx);
         if (j.type == J_FIN) {
             jeton_liberer(&j);
             break;
         }
-        const int sorte = sorte_jeton(j, compacte);
+        const QString mot = QString::fromUtf8(j.valeur ? j.valeur : "");
+        int sorte = sorte_jeton(j, compacte);
+        if (!compacte && j.type == J_MOT && apres_de && mot == "suivi") sorte = -1;
+        apres_de = (j.type == J_MOT && (mot == "de" || mot == "du" || mot == "des")) || (j.type == J_ELISION && mot == "d");
         const int n = debut_utf16.size() - 1;
         int a = (int)j.debut, b = (int)(j.debut + j.longueur);
         if (j.type == J_ERREUR) b = n;   // tout ce qui suit l'erreur reste marqué

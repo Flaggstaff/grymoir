@@ -637,23 +637,59 @@ static const Noeud *trouver_quand(Noeud *const *ph, size_t nb, const char *ecran
     return NULL;
 }
 
-/* Les zones de l'écran qu'un corps lit (« le nom de l'écran »), chacune une fois, séparées par U+001E (§ 22.6). */
-static void zones_lues(const Noeud *n, Chaine *c) {
+/* Les zones de l'écran qu'un corps lit (« le nom de l'écran »), chacune une fois, séparées par U+001E (§ 22.6).
+ * testees : 1 pour ne garder que celles dont il teste la présence (« le nom de l'écran est présent »). */
+static void zones_lues_ou_testees(const Noeud *n, Chaine *c, int testees) {
     if (!n) return;
-    if (n->type == N_CHAMP && n->texte && n->nb_enfants == 1 && n->enfants[0] && n->enfants[0]->type == N_ECRAN) {
+    const Noeud *z = NULL;   /* la zone lue ici */
+    if (!testees && n->type == N_CHAMP && n->texte && n->nb_enfants == 1 && n->enfants[0] && n->enfants[0]->type == N_ECRAN)
+        z = n;
+    if (testees && n->type == N_COMPARAISON && (n->op == 'A' || n->op == 'R') && n->nb_enfants >= 1 && n->enfants[0]
+        && n->enfants[0]->type == N_CHAMP && n->enfants[0]->texte && n->enfants[0]->nb_enfants == 1
+        && n->enfants[0]->enfants[0] && n->enfants[0]->enfants[0]->type == N_ECRAN)
+        z = n->enfants[0];
+    if (z) {
         int deja = 0;
         for (const char *p = c->d ? c->d : ""; *p && !deja;) {
             const char *f = strchr(p, '\x1e');
             const size_t l = f ? (size_t)(f - p) : strlen(p);
-            deja = l == strlen(n->texte) && strncmp(p, n->texte, l) == 0;
+            deja = l == strlen(z->texte) && strncmp(p, z->texte, l) == 0;
             p = f ? f + 1 : p + l;
         }
         if (!deja) {
             if (c->n) chaine_ajouter(c, "\x1e");
-            chaine_ajouter(c, n->texte);
+            chaine_ajouter(c, z->texte);
         }
     }
-    for (size_t k = 0; k < n->nb_enfants; k++) zones_lues(n->enfants[k], c);
+    for (size_t k = 0; k < n->nb_enfants; k++) zones_lues_ou_testees(n->enfants[k], c, testees);
+}
+
+/* Les zones qu'un événement exige d'emblée (§ 22.6) : celles qu'il lit, sauf celles dont il teste lui-même la présence ;
+ * celles-là, il s'en charge, et les lire vides plus loin l'arrête encore, au moment de la lecture. */
+static void zones_lues(const Noeud *n, Chaine *c) {
+    Chaine lues = {0}, testees = {0};
+    zones_lues_ou_testees(n, &lues, 0);
+    zones_lues_ou_testees(n, &testees, 1);
+    for (const char *p = lues.d ? lues.d : ""; *p;) {
+        const char *f = strchr(p, '\x1e');
+        const size_t l = f ? (size_t)(f - p) : strlen(p);
+        int teste = 0;
+        for (const char *q = testees.d ? testees.d : ""; *q && !teste;) {
+            const char *g = strchr(q, '\x1e');
+            const size_t m = g ? (size_t)(g - q) : strlen(q);
+            teste = m == l && strncmp(p, q, l) == 0;
+            q = g ? g + 1 : q + m;
+        }
+        if (!teste) {
+            if (c->n) chaine_ajouter(c, "\x1e");
+            char *zone = grym_formater("%.*s", (int)l, p);
+            chaine_ajouter(c, zone);
+            free(zone);
+        }
+        p = f ? f + 1 : p + l;
+    }
+    free(lues.d);
+    free(testees.d);
 }
 
 static void phrase(Compilation *c, const Noeud *ph) {
