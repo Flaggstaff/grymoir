@@ -3286,7 +3286,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         free(erreur);
         return 0;
     }
-    if (!m->iface.ecran_ouvrir && (module_contient(module, I_ECRAN_OUVRIR) || module_contient(module, I_FICHE_ECRAN))) {
+    /* un essai de migration n'exécute rien (A2-c) : qu'il y ait des écrans ne l'empêche pas */
+    if (!m->essai_migration && !m->iface.ecran_ouvrir
+        && (module_contient(module, I_ECRAN_OUVRIR) || module_contient(module, I_FICHE_ECRAN))) {
         diag->message = grym_dupliquer("Ce programme ouvre des écrans : lance-le dans une fenêtre, avec grym-atelier.");
         return 0;
     }

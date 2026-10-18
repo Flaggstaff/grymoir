@@ -577,6 +577,21 @@ int main(int argc, char **argv) {
         while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
     }
 
+    // L'essai de migration d'un programme à écrans (A2-c) : il n'exécute rien, les écrans ne l'empêchent pas
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        QFile f(prog);
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write("Un membre, conservé, a :\n    un nom (texte).\nL'écran x montre :\n    un bouton « OK ».\n"
+                "Quand on clique sur « OK » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n");
+        f.close();
+        bool refusee = true;
+        const QString r = apercu_migration(prog, &refusee);
+        VERIFIER(!refusee);
+        if (refusee) std::printf("refus : %s\n", qPrintable(r));
+    }
+
     // L'identité d'une application (docs/atelier.md, § 8) : gardée dans le projet, ses valeurs par défaut, son
     // identifiant ; l'icône Windows ; application.txt la porte
     {
