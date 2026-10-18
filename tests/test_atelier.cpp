@@ -2989,6 +2989,71 @@ int main(int argc, char **argv) {
                                  "avec la somme du montant, en secteurs, à 8 de la gauche et 16 du haut, large de 400."));
         if (!lire().contains("en secteurs")) std::printf("%s\n", qPrintable(lire()));
     }
+    {   // la période dans le panneau (§ 22.11) : lue du fichier, changée, retirée ; seule une date en a une
+        QTemporaryDir dossier;
+        const QString chemin = dossier.filePath("p.grym");
+        {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Une tâche, conservée, a :\n    un nom (texte),\n    une échéance (date),\n    un départ (date).\n"
+                    "L'écran x montre :\n    le graphique des tâches conservées, par mois de l'échéance.\n");
+        }
+        auto lire = [&]() {
+            QFile f(chemin);
+            VERIFIER(f.open(QIODevice::ReadOnly));
+            return QString::fromUtf8(f.readAll());
+        };
+        OngletEcrans o;
+        o.resize(1000, 700);
+        o.show();
+        QString resultat = "pas de geste";
+        Geste g;
+        QObject::connect(&o, &OngletEcrans::geste, [&](const std::function<QString(Geste *)> &faire) { resultat = faire(&g); });
+        auto panneau = [&](QComboBox **par, QComboBox **periode, QPushButton **appliquer) {
+            o.montrer(dossier.path());
+            QApplication::processEvents();
+            o.choisir_element(0);
+            *par = *periode = nullptr;
+            *appliquer = nullptr;
+            for (QComboBox *c : o.findChildren<QComboBox *>()) {
+                if (c->findText("Par mois") >= 0) *periode = c;
+                if (c->findText(QString::fromUtf8("échéance")) >= 0 && c->findText("nom") >= 0) *par = c;
+            }
+            for (QPushButton *b : o.findChildren<QPushButton *>()) if (b->text() == "Appliquer" && !b->isHidden()) *appliquer = b;
+            return *par && *periode && *appliquer;
+        };
+        QComboBox *par, *periode;
+        QPushButton *appliquer;
+        VERIFIER(panneau(&par, &periode, &appliquer));
+        if (par && periode && appliquer) {
+            VERIFIER(par->currentText() == QString::fromUtf8("échéance") && periode->currentText() == "Par mois" && periode->isEnabled());
+            periode->setCurrentIndex(periode->findText(QString::fromUtf8("Par année")));
+            appliquer->click();
+            VERIFIER(resultat.isEmpty() && lire().contains(QString::fromUtf8("le graphique des tâches conservées, par année de l'échéance.")));
+        }
+        VERIFIER(panneau(&par, &periode, &appliquer));
+        if (par && periode && appliquer) {
+            VERIFIER(periode->currentText() == QString::fromUtf8("Par année"));
+            par->setCurrentIndex(par->findText(QString::fromUtf8("départ")));
+            VERIFIER(periode->isEnabled());
+            periode->setCurrentIndex(periode->findText("Par semaine"));
+            appliquer->click();
+            VERIFIER(resultat.isEmpty() && lire().contains(QString::fromUtf8("le graphique des tâches conservées, par semaine du départ.")));
+        }
+        VERIFIER(panneau(&par, &periode, &appliquer));
+        if (par && periode && appliquer) {
+            par->setCurrentIndex(par->findText("nom"));   // un texte : pas de période
+            VERIFIER(!periode->isEnabled() && periode->currentIndex() == 0);
+            appliquer->click();
+            VERIFIER(resultat.isEmpty() && lire().contains(QString::fromUtf8("le graphique des tâches conservées, par nom.")));
+        }
+        VERIFIER(panneau(&par, &periode, &appliquer));
+        if (par && periode && appliquer) {
+            par->setCurrentIndex(par->findText(QString::fromUtf8("échéance")));
+            appliquer->click();   // « Chaque date » : une barre par date
+            VERIFIER(resultat.isEmpty() && lire().contains(QString::fromUtf8("le graphique des tâches conservées, par échéance.")));
+        }
+    }
     {   // d'un bloc libre à un autre : un texte sort d'une page d'onglet vers l'écran ; un texte de l'écran entre dans le bloc
         // libre d'un groupe ; chacun là où il est lâché
         QTemporaryDir dossier;

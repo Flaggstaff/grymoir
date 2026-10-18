@@ -2111,4 +2111,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.5 | 2026-10-16 | Nouveau § 15.6 : un rapport, par l'extension (`.html`, `.pdf`), avec le titre et le total ; dans une application fabriquée, écrit dans Documents/<Nom> |
 | 2.6 | 2026-10-16 | Nouveau § 15.7 : le type `(son)`, reconnu à sa signature, écouté dans le navigateur |
 | 2.7 | 2026-10-17 | Nouveau § 15.8 : `, transcrite du mémo`, le texte d'un champ (son) rangé dans un champ de texte, par le transcripteur de l'interface |
-| 2.8 | 2026-10-18 | § 16.15 et § 22.13 : dans les fiches, la valeur colorée en étiquette, le courriel en lien d'écriture, l'adresse web en lien ; rien ne change dans ce qu'on écrit |
+| 2.8 | 2026-10-18 | § 16.15 et § 22.13 : dans les fiches, la valeur colorée en étiquette, le courriel en lien d'écriture, l'adresse web en lien ; rien ne change dans ce qu'on écrit. § 22.11 : la forme canonique garde la période (« par mois de l'échéance ») ; le formatage l'effaçait |

@@ -75,6 +75,7 @@ struct ElementNouveau {
     QString cle;              // graphique (§ 22.11) : le champ qui regroupe ; somme : le champ additionné, vide pour compter
     QString somme;
     bool secteurs = false;
+    int periode = 0;          // graphique regroupé par une date : 8 par mois, 16 par semaine, 32 par année ; 0 par date
     QString source;           // image calculée : la valeur, sans « de » (« le portrait du compositeur choisi de l'écran ») ;
                               // vide : l'image d'un fichier, `texte` (§ 22.8)
 };

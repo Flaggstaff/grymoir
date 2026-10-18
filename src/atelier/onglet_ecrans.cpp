@@ -1536,15 +1536,36 @@ void OngletEcrans::editer() {
             auto *par = new QComboBox;    // donnée : « écrit ␝ chemin » tel qu'écrit, ou le nom du champ
             auto *valeur = new QComboBox;
             valeur->addItem("Le nombre d'objets", QString());
+            QSet<QString> dates;   // les champs date : eux seuls se regroupent par période
             for (const auto &c : en.champs) {
                 if (c.multiple || c.type == "fichier" || c.type == "image" || c.type == "son") continue;
                 par->addItem(c.nom, c.nom);
+                if (c.type == "date") dates << c.nom;
                 if (c.type.startsWith("nombre")) valeur->addItem("La somme de « " + c.nom + " »", c.nom);
             }
-            const QString cle = sans_article(x.graphe_cle.section(QChar(0x1d), 0, 0));
+            const int periode_lue = x.graphique & 56;   // « par mois de l'échéance » : 8, 16 semaine, 32 année
+            // la clé d'un graphique par période s'écrit « mois de l'échéance » : on retrouve le champ par son chemin
+            const QString chemin = x.graphe_cle.section(QChar(0x1d), 1);
+            const QString cle = periode_lue && !chemin.isEmpty() && !chemin.contains(QChar(0x1f))
+                                    ? chemin : sans_article(x.graphe_cle.section(QChar(0x1d), 0, 0));
             int i = par->findText(cle);
             if (i < 0 && !cle.isEmpty()) { par->addItem(cle, x.graphe_cle); i = par->count() - 1; }   // un chemin : « catégorie du membre »
             par->setCurrentIndex(qMax(0, i));
+            auto *periode = new QComboBox;
+            periode->addItem("Chaque date", 0);
+            periode->addItem("Par mois", 8);
+            periode->addItem("Par semaine", 16);
+            periode->addItem(QString::fromUtf8("Par année"), 32);
+            periode->setCurrentIndex(qMax(0, periode->findData(periode_lue)));
+            periode->setToolTip(QString::fromUtf8("Une barre par mois, par semaine (ISO 8601) ou par année, dans l'ordre du calendrier"));
+            // une date du schéma, ou un chemin gardé du fichier qui en avait déjà une
+            auto par_date = [=] { return dates.contains(par->currentData().toString())
+                                         || (par->currentData().toString() == x.graphe_cle && periode_lue); };
+            periode->setEnabled(par_date());
+            connect(par, &QComboBox::currentIndexChanged, periode, [=] {
+                periode->setEnabled(par_date());
+                if (!par_date()) periode->setCurrentIndex(0);
+            });
             const QString somme = sans_article(x.graphe_somme.section(QChar(0x1d), 0, 0));
             int j = somme.isEmpty() ? 0 : valeur->findData(somme);
             if (j < 0) { valeur->addItem("La somme de « " + somme + " »", x.graphe_somme); j = valeur->count() - 1; }
@@ -1553,6 +1574,7 @@ void OngletEcrans::editer() {
             forme->addItems({"Barres", "Secteurs"});
             forme->setCurrentIndex((x.graphique & 2) ? 1 : 0);
             f->addRow("Regroupé par", par);
+            f->addRow(QString::fromUtf8("Période"), periode);
             f->addRow("Valeur", valeur);
             f->addRow("Forme", forme);
             connect(appliquer, &QPushButton::clicked, this, [=] {
@@ -1561,6 +1583,7 @@ void OngletEcrans::editer() {
                 n.cle = par->currentData().toString();
                 n.somme = valeur->currentData().toString();
                 n.secteurs = forme->currentIndex() == 1;
+                n.periode = periode->isEnabled() ? periode->currentData().toInt() : 0;
                 emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
         } else if (x.sorte == ELEMENT_LISTE) {

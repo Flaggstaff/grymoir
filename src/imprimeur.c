@@ -1451,7 +1451,17 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                         char *ecrit = grym_formater("%.*s", (int)((sep ? sep : fin) - q), q);
                         char *refait = sep ? colonne_avec_articles(im, ecrit, sep + 1, fin) : NULL;
                         const char *e2 = refait ? refait : ecrit;
-                        if (q == el->texte3) {   /* la clé s'écrit sans article, comme on dit « par état » */
+                        const char *periode = (el->graphique & 8) ? "mois" : (el->graphique & 16) ? "semaine"
+                                            : (el->graphique & 32) ? "année" : NULL;
+                        if (q == el->texte3 && periode && (refait || (strncmp(e2, periode, strlen(periode))
+                                                                      || e2[strlen(periode)] != ' '))) {
+                            /* « , par mois de l'échéance » (§ 22.11) : la période, puis le champ avec son article
+                             * contracté, comme la somme ; oubliée ici, elle disparaissait au formatage */
+                            aj(im, ", par ");
+                            aj(im, periode);
+                            if (!strncmp(e2, "le ", 3)) { aj(im, " du "); aj(im, e2 + 3); }
+                            else { aj(im, " de "); aj(im, e2); }   /* « de l'échéance », « de la date de fin » */
+                        } else if (q == el->texte3) {   /* la clé s'écrit sans article, comme on dit « par état » */
                             const char *sans = e2;
                             if (!strncmp(sans, "le ", 3) || !strncmp(sans, "la ", 3)) sans += 3;
                             else if (!strncmp(sans, "l'", 2)) sans += 2;

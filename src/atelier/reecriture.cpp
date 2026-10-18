@@ -781,11 +781,25 @@ Noeud *nouvel_element(const ElementNouveau &e, const QString &dossier, QString *
         if (e.cle.trimmed().isEmpty()) { *erreur = "Un graphique dit son regroupement : un champ de l'entité."; return nullptr; }
         n = noeud_creer(N_CHERCHER, 0, 0, 0);
         n->texte = grym_dupliquer(t.constData());
-        n->graphique = 1 | (e.secteurs ? 2 : 0) | (e.somme.trimmed().isEmpty() ? 0 : 4);
+        n->graphique = 1 | (e.secteurs ? 2 : 0) | (e.somme.trimmed().isEmpty() ? 0 : 4)
+                     | (e.periode == 8 || e.periode == 16 || e.periode == 32 ? e.periode : 0);   // § 22.11, par période
         // un champ, écrit sans article (l'imprimeur le retrouve par le genre, « de la durée ») ; ou, gardé du fichier, un
         // chemin tel qu'écrit, « écrit ␝ chemin » (« catégorie du membre »)
         auto colonne = [](const QString &c) { return c.contains(QChar(0x1d)) ? c : c.trimmed() + QChar(0x1d) + c.trimmed(); };
-        QString cols = colonne(e.cle);
+        QString cle = e.cle;
+        {   // « mois de la date du membre » gardé du fichier : la période s'écrit d'après le choix, pas d'après l'ancien texte
+            QString ecrit = cle.section(QChar(0x1d), 0, 0);
+            static const QRegularExpression ancienne(QString::fromUtf8("^(mois|semaine|année) (de l'|de la |du |de |d')"));
+            if (cle.contains(QChar(0x1d)) && ancienne.match(ecrit).hasMatch()) {
+                const QString article = ancienne.match(ecrit).captured(2);
+                ecrit = ecrit.mid(ancienne.match(ecrit).capturedLength());
+                if (article == "de l'") ecrit = "l'" + ecrit;
+                else if (article == "de la ") ecrit = "la " + ecrit;
+                else if (article == "du ") ecrit = "le " + ecrit;
+                cle = ecrit + QChar(0x1d) + cle.section(QChar(0x1d), 1);
+            }
+        }
+        QString cols = colonne(cle);
         if (!e.somme.trimmed().isEmpty()) cols += QChar(0x1e) + colonne(e.somme);
         n->texte3 = grym_dupliquer(cols.toUtf8().constData());
     } else if (e.sorte == ELEMENT_LISTE) {

@@ -277,7 +277,7 @@ Avec B2 ter (grammaire, § 22.8) : « Image » dans la palette demande ce que l'
 
 ## 5 undecies. Le graphique dans l'éditeur d'écrans *(fait le 15 octobre 2026)*
 
-« Graphique » dans la palette demande l'entité, puis le champ qui regroupe ; il compte, en barres. L'aperçu, sans données, dessine un exemple grisé de trois barres ; à l'exécution, le graphique se remplit à chaque tour avec les groupes que la machine envoie. Le panneau d'un graphique donne « Regroupé par » (les champs de l'entité ; un chemin écrit dans le code, comme « catégorie du membre », y figure tel quel), « Valeur » (le nombre d'objets, ou la somme d'un champ nombre) et « Forme » (barres ou secteurs) *(0.53)* ; « Appliquer » garde le `dont` et la place. Les couleurs des secteurs viennent d'une suite de huit teintes, la même que dans le navigateur.
+« Graphique » dans la palette demande l'entité, puis le champ qui regroupe ; il compte, en barres. L'aperçu, sans données, dessine un exemple grisé de trois barres ; à l'exécution, le graphique se remplit à chaque tour avec les groupes que la machine envoie. Le panneau d'un graphique donne « Regroupé par » (les champs de l'entité ; un chemin écrit dans le code, comme « catégorie du membre », y figure tel quel), « Période » pour un champ date (chaque date, par mois, par semaine, par année, grammaire § 22.11 ; grisée pour un autre champ) *(0.81)*, « Valeur » (le nombre d'objets, ou la somme d'un champ nombre) et « Forme » (barres ou secteurs) *(0.53)* ; « Appliquer » garde le `dont` et la place. Les couleurs des secteurs viennent d'une suite de huit teintes, la même que dans le navigateur.
 
 ## 5 duodecies. Les menus dans l'éditeur d'écrans *(fait le 15 octobre 2026)*
 
@@ -432,3 +432,4 @@ Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée 
 | 0.78 | 2026-10-18 | « Son » dans la palette pose deux zones d'un même geste : le son, et dessous sa transcription (texte, sur plusieurs lignes, transcrite du son) |
 | 0.79 | 2026-10-18 | « Lancer » sans fichier ouvert (le projet rouvert au démarrage) lance le programme principal au lieu de ne rien faire ; de même « Fabriquer l'application » et l'onglet Données |
 | 0.80 | 2026-10-18 | Fenêtre d'exécution : dans les fiches, l'étiquette colorée, le courriel et l'adresse web en liens ouverts par le système (`QDesktopServices`) ; les couleurs d'étiquette en un seul endroit (`teinte_etiquette`) |
+| 0.81 | 2026-10-18 | § 5 undecies : « Période » dans le panneau d'un graphique regroupé par une date ; auparavant, « Appliquer » perdait la période écrite dans le code |

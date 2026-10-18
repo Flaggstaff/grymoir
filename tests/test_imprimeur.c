@@ -325,6 +325,15 @@ int main(void) {
          "_le d << 16.10.2026\n_afficher _écart_ouvrables(d ; d)\n_afficher d _en_toutes_lettres\n");
     FIXE("Une tâche, conservée, a :\n    une échéance (date), facultative.\n"
          "L'écran x montre :\n    le graphique des tâches conservées, par mois de l'échéance.");
+    /* la période se garde au formatage : un point fixe ne le voyait pas, elle disparaissait dès la première fois */
+    LITT("Une tâche, conservée, a :\n    une échéance (date),\n    un départ (date),\n    une date de fin (date).\n"
+         "L'écran x montre :\n    le graphique des tâches conservées, par mois de l'échéance,\n"
+         "    le graphique des tâches conservées, par semaine du départ, en secteurs,\n"
+         "    le graphique des tâches conservées, par année de la date de fin.",
+         "Une tâche, conservée, a :\n    une échéance (date),\n    un départ (date),\n    une date de fin (date).\n"
+         "L'écran x montre :\n    le graphique des tâches conservées, par mois de l'échéance,\n"
+         "    le graphique des tâches conservées, par semaine du départ, en secteurs,\n"
+         "    le graphique des tâches conservées, par année de la date de fin.\n");
     COMP("Une tâche, conservée, a :\n    une échéance (date).\nL'écran x montre :\n    le graphique des tâches conservées, par semaine de l'échéance.",
          "_classe _une tâche _conservé\n    _une échéance (date)\n_fin\n_écran x\n    _graphique tâche _conservé _par _semaine échéance\n_fin\n");
     /* les mots de passe (§ 16.1) : le type, « correspond au », les deux formes */
