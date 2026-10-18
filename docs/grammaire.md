@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.10 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.11 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1643,6 +1643,7 @@ Le p vaut une nouvelle partition saisie :
 - Libellé : le nom du champ, première lettre en capitale : « Date d'inscription ? ». Une valeur de départ (§ 16.7) s'affiche entre crochets et répond à une ligne vide : « Pays [Suisse] ? ».
 - Lecture selon le type, avec la relance du § 17. Une ligne vide laisse `absent` un champ facultatif ; pour un champ obligatoire sans valeur de départ, elle relance : « Une réponse est attendue. » (un nom vide n'a jamais voulu dire quelque chose).
 - Fichier ou image : la réponse est un chemin (§ 15.2) ; un fichier illisible ou qui n'est pas une image relance.
+- Courriel, téléphone, adresse web *(2.11)* : demandés comme des textes, leur forme vérifiée dès la réponse (§ 22.13), puis relance : « « anne@ » n'est pas un courriel (nom@domaine.ch). ». Avant la 2.11, le formulaire les prenait pour des liens : facultatifs, il les sautait sans rien dire ; obligatoires, il refusait l'entité. Un mot de passe (§ 16.1) n'est toujours pas demandé : facultatif, il reste absent ; obligatoire, il se donne dans le bloc du nouvel objet, où il est haché.
 - Lien : la réponse est la valeur du premier champ texte unique de l'entité liée, comparée exactement (§ 16.4) : « Compositeur ? Bach » retrouve le compositeur conservé dont le nom est « Bach ». Aucun : « Aucun compositeur conservé n'a « Brahms » pour nom. », puis relance. Une entité liée sans champ texte unique : un lien facultatif reste absent ; un lien obligatoire est une erreur d'exécution, qui demande de l'initialiser dans le bloc.
 - Unique : la valeur se vérifie dès la réponse, corbeille comprise : « « A-1 » est déjà pris. », puis relance. `Conserver` vérifie encore, car un autre programme peut écrire entre deux questions.
 - Chaque question valide ce qui la précède (§ 17) ; dans un `Essayer` (§ 18), l'échec n'annule que depuis la dernière.
@@ -2122,3 +2123,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.8 | 2026-10-18 | § 16.15 et § 22.13 : dans les fiches, la valeur colorée en étiquette, le courriel en lien d'écriture, l'adresse web en lien ; rien ne change dans ce qu'on écrit. § 22.11 : la forme canonique garde la période (« par mois de l'échéance ») ; le formatage l'effaçait |
 | 2.9 | 2026-10-18 | § 15.7 : l'écoute et l'enregistrement au micro dans l'atelier et les applications fabriquées ; le lecteur dans la fiche déduite, partout |
 | 2.10 | 2026-10-18 | § 22.3 : les tableaux de la fiche déduite, un par lien qui désigne l'objet (tri, total, fiche au double-clic, « Nouvelle … ») ; § 16.1 : `, hors des fiches,` |
+| 2.11 | 2026-10-18 | § 19 : le formulaire demande le courriel, le téléphone et l'adresse web (il les prenait pour des liens, et sautait les facultatifs) |

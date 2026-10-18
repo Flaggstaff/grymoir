@@ -1977,6 +1977,8 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
         static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure" };
         int de_base = ci.fichier;
         for (size_t q = 0; q < sizeof BASE / sizeof *BASE; q++) de_base |= strcmp(type, BASE[q]) == 0;
+        /* courriel, téléphone, adresse web : des textes ; un mot de passe ne passe pas par le formulaire, qui ne le hacherait pas */
+        de_base |= type_textuel(type) && !type_secret(type);
         if (!de_base) {
             ci.lie = classe_vm(m, type);
             ci.cle = ci.lie ? champ_cle(ci.lie) : NULL;

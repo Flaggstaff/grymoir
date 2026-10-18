@@ -2857,6 +2857,16 @@ int main(void) {
 #define SAISIE_INTER(src, att)  verifier(__LINE__, src, att, 1)
 #define SAISIE(src, att, ...) do { static const char *const L[] = { __VA_ARGS__ }; \
     verifier_saisie(__LINE__, src, L, sizeof L / sizeof *L, att); } while (0)
+    /* Le formulaire déduit demande aussi le courriel, le téléphone, l'adresse web : des textes vérifiés (§ 22.13) ;
+       un mot de passe facultatif n'y passe pas (il ne serait pas haché) */
+    SAISIE("Un contact, conservé, a :\n    un nom (texte), unique,\n    un courriel (courriel), facultatif,\n"
+           "    un portable (téléphone),\n    un site (adresse web), facultatif,\n    un code (mot de passe), facultatif.\n"
+           "Le c vaut un nouveau contact saisi.\nConserver c.\n"
+           "Afficher le nom du c puis le courriel du c puis le portable du c.\n",
+           "~n'est pas un courriel (nom@domaine.ch). Tape « . » seul pour annuler.\nCourriel ? Portable ? « 12 » n'est pas "
+           "un numéro de téléphone (+41 26 912 34 56).\nPortable ? Site ? Anne anne@tilleul.ch "
+           "079 123 45 67",
+           "Anne", "anne@", "anne@tilleul.ch", "12", "079 123 45 67", "");
     SAISIE("Le nom vaut la réponse à « Nom ? ».\nAfficher « Bonjour » puis nom.", "Nom ? Bonjour Ana", "  Ana  ");
     SAISIE("Une tâche, conservée, a : un titre (texte), un état (« à faire », « en cours » ou « fini »).\n" "Le t vaut une nouvelle tâche saisie.\nAfficher état de t.",
            "~État (« à faire », « en cours » ou « fini ») ? en cours", "Courses", "fermé", "en cours");
