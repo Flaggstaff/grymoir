@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.9 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.10 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1273,6 +1273,7 @@ Un client, conservé, a :
 - Une entité qui hérite se déclare `Un membre, conservé, est un client.` ; ses champs propres suivent dans la phrase suivante, `Un membre a :`, sans répéter `conservé`. `Un document, conservé, est une chose datée.` déclare une entité qui n'a que des aptitudes.
 - Une entité hérite d'une entité, jamais d'une classe ordinaire, et une classe ordinaire n'hérite pas d'une entité. Une aptitude adoptée par une entité doit typer ses champs.
 - Pluriel : `s` ajouté au nom ; un pluriel irrégulier se déclare entre parenthèses, comme le masculin d'une aptitude : `Un cheval (chevaux), conservé, a :` (charte, art. 4).
+- `, hors des fiches,` *(2.10)*, après `, conservé,` : l'entité ne paraît pas en tableau dans la fiche des objets qu'elle désigne (§ 22.3). `Une note, conservée, hors des fiches, a :`, `Une cliente, conservée, hors des fiches, est une personne.` Sur une classe ordinaire : « Seule une entité se tient hors des fiches : … ». Rien ne change en base : l'ajouter ou le retirer ne demande aucune migration. Forme compacte : `_classe _une note _conservé _hors_des_fiches`.
 
 ### 16.2 Typage strict
 
@@ -1777,6 +1778,13 @@ Ouvrir l'écran des compositeurs.
 
 - `Ouvrir l'écran X.` montre l'écran et attend jusqu'à `Fermer l'écran.` ; `Ouvrir la fiche de c.` ouvre l'écran déduit de l'entité de `c`. Dans un événement, l'écran s'ouvre par-dessus ; à sa fermeture, l'événement reprend.
 - `Ouvrir` valide d'abord ce qui précède ; chaque événement est ensuite sa propre transaction ; après la fermeture, la suite forme une nouvelle transaction (charte, art. 7).
+- **Les tableaux d'une fiche** *(2.10)* : sous les champs de la fiche déduite, un tableau par lien d'une entité qui peut désigner l'objet (son entité, ou un ancêtre) : un titre au pluriel (« Séances »), la liste des objets qui le désignent, un bouton « Nouvelle séance » (« Nouveau client », « Nouvel achat »). Sans rien écrire, comme le reste de la fiche.
+  - Colonnes : les champs de l'entité, sauf le lien lui-même, les champs multiples, les fichiers, images, sons et mots de passe. Tri : par la première date, la plus récente en tête ; sans date, par la clé.
+  - Une ligne « Total » suit les objets quand une colonne est un `(nombre)` : la somme exacte de chacune. Un `(nombre entier)` n'est pas additionné : une année, un numéro n'ont pas de somme qui ait un sens.
+  - Un double-clic sur une ligne ouvre la fiche de l'objet par-dessus ; à son retour, les tableaux se relisent. La ligne « Total » ne mène nulle part. « Nouvelle séance » ouvre le formulaire de l'entité, le lien vers l'objet déjà rempli, puis conserve la séance.
+  - Deux liens de la même entité vers l'objet font deux tableaux, nommés par le champ : « Parrainages (parrain) », « Parrainages (filleul) ». Un lien hérité n'en fait qu'un, celui de l'entité qui le déclare.
+  - Une entité `, hors des fiches,` (§ 16.1) n'a pas de tableau : des notes confidentielles ne s'affichent pas dans la fiche d'un client qu'on ouvre devant lui. Elles restent dans la fiche de l'objet qui les porte, et dans tout écran qui les cherche.
+  - Pas encore : le tableau d'un champ multiple (« les œuvres d'un genre »).
 - `grym lancer` refuse un programme qui ouvre des écrans, avant toute exécution : la console n'en montre pas. `grym servir` les montre dans le navigateur (`docs/web.md`, § 3 et § 5).
 
 ### 22.4 Mots et forme compacte
@@ -2113,3 +2121,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.7 | 2026-10-17 | Nouveau § 15.8 : `, transcrite du mémo`, le texte d'un champ (son) rangé dans un champ de texte, par le transcripteur de l'interface |
 | 2.8 | 2026-10-18 | § 16.15 et § 22.13 : dans les fiches, la valeur colorée en étiquette, le courriel en lien d'écriture, l'adresse web en lien ; rien ne change dans ce qu'on écrit. § 22.11 : la forme canonique garde la période (« par mois de l'échéance ») ; le formatage l'effaçait |
 | 2.9 | 2026-10-18 | § 15.7 : l'écoute et l'enregistrement au micro dans l'atelier et les applications fabriquées ; le lecteur dans la fiche déduite, partout |
+| 2.10 | 2026-10-18 | § 22.3 : les tableaux de la fiche déduite, un par lien qui désigne l'objet (tri, total, fiche au double-clic, « Nouvelle … ») ; § 16.1 : `, hors des fiches,` |

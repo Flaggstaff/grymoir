@@ -41,7 +41,7 @@ Ouvrir l'écran des compositeurs.
 2. **Les événements s'écrivent `Quand on …`.** Ce sont des actions (grammaire, § 9) : elles voient les variables du programme, conservent, affichent, posent des questions. Chaque événement forme une transaction (charte, art. 7) : un événement qui échoue n'écrit rien, et l'écran reste ouvert avec le message.
 3. **`Ouvrir l'écran des compositeurs.`** montre la fenêtre, puis le programme attend les événements jusqu'à `Fermer l'écran.` ; la phrase suivante s'exécute ensuite.
 
-La fiche d'un objet est l'écran déduit de son entité, comme le formulaire de `saisi` (§ 19) : `Ouvrir la fiche du compositeur.` n'exige aucune déclaration. On n'écrit un écran que pour autre chose que le défaut.
+La fiche d'un objet est l'écran déduit de son entité, comme le formulaire de `saisi` (§ 19) : `Ouvrir la fiche du compositeur.` n'exige aucune déclaration. On n'écrit un écran que pour autre chose que le défaut. Depuis le 18 octobre 2026, elle montre aussi l'historique de l'objet : un tableau par lien d'une entité qui le désigne (les séances d'un client), sauf pour une entité `, hors des fiches,` (grammaire 2.10, § 22.3).
 
 Coût accepté : `quand`, `ouvrir` et `fermer` deviennent des mots de construction (grammaire, § 10.7), inscrits au journal de la grammaire (charte, art. 13.2).
 
@@ -231,3 +231,4 @@ L'état actif ou visible d'un élément se déclare dans l'écran, par une condi
 | 0.23 | 2026-10-14 | § 6 : B3 coupé en deux ; les onglets faits, la barre de menus et le graphique en B3 bis |
 | 0.24 | 2026-10-15 | § 6 : B3 bis fait (graphique) ; la barre de menus passe en B3 ter |
 | 0.25 | 2026-10-15 | § 6 : B3 ter fait (menus, un par écran) ; B3 est complet |
+| 0.26 | 2026-10-18 | § 3 : la fiche déduite montre un tableau par lien qui désigne l'objet ; `, hors des fiches,` l'en retire (grammaire 2.10) |

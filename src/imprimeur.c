@@ -1862,11 +1862,13 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             else nb_champs++;
         }
         int conserve = (n->forme & 32) != 0;
+        int hors = conserve && (n->forme & 64) != 0;   /* « , hors des fiches, » (§ 22.3) */
         if (c) {
             aj(im, fem ? "_classe _une " : "_classe _un ");
             ecrire_nom(im, n->texte, 0);
             if (n->texte3) { aj(im, " ("); ecrire_nom(im, n->texte3, 0); aj(im, ")"); }
             if (conserve) aj(im, " _conservé");
+            if (hors) aj(im, " _hors_des_fiches");
             if (herite) {
                 aj(im, fem_base ? " _est _une " : " _est _un ");
                 ecrire_nom(im, n->texte2 ? n->texte2 : "chose", 0);
@@ -1885,6 +1887,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 ecrire_nom(im, n->texte, 0);
                 if (n->texte3) { aj(im, " ("); aj(im, n->texte3); aj(im, ")"); }
                 if (conserve) aj(im, fem ? ", conservée," : ", conservé,");
+                if (hors) aj(im, " hors des fiches,");
                 aj(im, fem_base ? " est une " : " est un ");
                 ecrire_nom(im, n->texte2 ? n->texte2 : "chose", 0);
                 size_t q = 0;
@@ -1903,6 +1906,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             ecrire_nom(im, n->texte, 0);
             if (!herite && n->texte3) { aj(im, " ("); aj(im, n->texte3); aj(im, ")"); }
             if (!herite && conserve) aj(im, fem ? ", conservée," : ", conservé,");
+            if (!herite && hors) aj(im, " hors des fiches,");
             aj(im, " a :\n");
         }
         size_t vus = 0;

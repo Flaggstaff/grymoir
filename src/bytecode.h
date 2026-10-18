@@ -192,6 +192,7 @@ typedef struct {
     char **aptitudes;     /* aptitudes adoptées */
     size_t nb_aptitudes;
     int conserve;         /* entité (grammaire, § 16) */
+    int hors_fiches;      /* « , hors des fiches, » : absente des fiches (grammaire, § 22.3) */
     char *pluriel;        /* pluriel irrégulier, ou NULL */
     char **champs;        /* champs propres */
     char **types;         /* type de chaque champ, ou NULL (classe ordinaire) */

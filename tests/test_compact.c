@@ -198,6 +198,10 @@ int main(void) {
     EXEC("_afficher « éa » _en_majuscules ; « ab » _inclut « B » ; _non (« ab » _finit « b »)\n", "ÉA vrai faux\n");
     ERR("_afficher « a » _en_rouge\n", 1, 17, "« _en_rouge » inconnu");
     ALLER_RETOUR("_classe _une tâche _conservé\n    _un état (« à faire » ; « fini ») _départ « fini »\n_fin\n", NULL);
+    /* § 22.3 : une entité hors des fiches, déclarée ou héritière */
+    ALLER_RETOUR("_classe _une note _conservé _hors_des_fiches\n    _un texte (texte)\n_fin\n", NULL);
+    ALLER_RETOUR("_classe _une personne _conservé\n    _un nom (texte)\n_fin\n"
+                 "_classe _une cliente _conservé _hors_des_fiches _est _une personne\n    _un code (texte)\n_fin\n", NULL);
     ALLER_RETOUR("_classe _un membre _conservé\n    _un nom (texte)\n    _une cotisation (nombre)\n_fin\n"
                  "_afficher _moyenne_de cotisation _de membre _conservé ; _plus_petit_de cotisation _de membre _conservé\n"
                  "_afficher (_le membre _conservé _au_plus_grand cotisation _dont nom = « a »).nom\n", NULL);

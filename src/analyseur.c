@@ -51,6 +51,7 @@ typedef struct {
     int fichier;       /* comme pour un symbole (§ 21) */
     char *parent;      /* classe dont elle hérite, ou NULL */
     int conserve;      /* entité (§ 16) */
+    int hors_fiches;   /* entité « , hors des fiches, » : absente des fiches des objets qu'elle désigne (§ 22.3) */
     char *pluriel;     /* entité : pluriel irrégulier déclaré, ou NULL */
     char **champs;     /* champs propres (les champs hérités restent dans la classe parente) */
     Genre *genres;     /* genre de chaque champ */
@@ -260,6 +261,7 @@ static void portee_copier(Portee *dst, const Portee *src) {
         for (size_t k = 0; k < c->nb_aptitudes; k++) d->aptitudes[k] = grym_dupliquer(c->aptitudes[k]);
         d->parent = c->parent ? grym_dupliquer(c->parent) : NULL;
         d->conserve = c->conserve;
+        d->hors_fiches = c->hors_fiches;
         d->pluriel = c->pluriel ? grym_dupliquer(c->pluriel) : NULL;
         d->types = c->types ? grym_allouer((c->nb ? c->nb : 1) * sizeof *d->types) : NULL;
         d->uniques = grym_allouer((c->nb ? c->nb : 1) * sizeof *d->uniques);
@@ -4966,6 +4968,7 @@ static Classe *ajouter_classe(Portee *p, const char *nom, Genre g, const char *p
     c->ligne = 0;
     c->fichier = p->fichier_index;
     c->conserve = 0;
+    c->hors_fiches = 0;
     c->pluriel = NULL;
     c->champs = NULL;
     c->genres = NULL;
@@ -5220,16 +5223,31 @@ static Noeud *definition_classe(Analyse *a) {
         tconserve = &a->j[k + 1];
         k += 3;
     }
+    /* « Une note, conservée, hors des fiches, a : » : l'entité ne paraît pas dans les fiches (§ 22.3) */
+    const Jeton *thors = NULL;
+    if (tconserve && est_mot(&a->j[k], "hors") && est_mot(&a->j[k + 1], "des") && est_mot(&a->j[k + 2], "fiches")
+        && a->j[k + 3].type == J_VIRGULE) {
+        thors = &a->j[k];
+        k += 4;
+    } else if (!tconserve && a->j[k].type == J_VIRGULE && est_mot(&a->j[k + 1], "hors") && est_mot(&a->j[k + 2], "des")
+               && est_mot(&a->j[k + 3], "fiches") && a->j[k + 4].type == J_VIRGULE) {
+        thors = &a->j[k + 1];   /* refusé plus bas, avec un message qui dit pourquoi */
+        k += 5;
+    }
     int herite = est_mot(&a->j[k], "est");
     if (!herite && (!est_mot(&a->j[k], "a") || a->j[k + 1].type != J_DEUX_POINTS)) {
         a->i = k;
         attendre_mot(a, k, "a :", 3);
         attendre_mot(a, k, "est", 3);
         if (!tconserve && a->j[k].type == J_VIRGULE) attendre_mot(a, k, ", conservé,", 3);
+        if (tconserve && !thors) attendre_mot(a, k, "hors des fiches,", 15);   /* § 22.3 */
         return erreur_inattendu(a, &a->j[k]);
     }
     if (article_de(&a->j[d]) != ART_AUCUN)
         return erreur(a, &a->j[d], grym_dupliquer("Un nom de classe ne commence pas par un article."));
+    if (thors && !tconserve)
+        return erreur(a, thors, grym_dupliquer("Seule une entité se tient hors des fiches : « Une note, conservée, hors des "
+                                               "fiches, a : »."));
     if (tpluriel && !tconserve)
         return erreur(a, tpluriel, grym_dupliquer("Seule une entité déclare son pluriel : « Un cheval (chevaux), conservé, a : »."));
     if (tconserve && !tconserve->synthetique && est_mot(tconserve, "conservée") != (g == GENRE_FEMININ))
@@ -5256,13 +5274,21 @@ static Noeud *definition_classe(Analyse *a) {
         free(nom);
         return NULL;
     }
-    if (complement && (tconserve || tpluriel)) {
-        erreur(a, tconserve ? tconserve : tpluriel, grym_formater(
+    if (complement && (tconserve || tpluriel || thors)) {
+        erreur(a, tconserve ? tconserve : tpluriel ? tpluriel : thors, grym_formater(
             "« %s » est déjà déclaré : ses champs suivent avec « %s %s a : ».", nom, g == GENRE_FEMININ ? "Une" : "Un", nom));
         free(nom);
         return NULL;
     }
-    if (herite) return heritage(a, tun, g, nom, k, tconserve != NULL, tpluriel ? tpluriel->valeur : NULL);
+    if (herite) {
+        Noeud *h = heritage(a, tun, g, nom, k, tconserve != NULL, tpluriel ? tpluriel->valeur : NULL);
+        if (h && thors) {
+            h->forme |= 64;
+            Classe *ch = classe_de(a->portee, h->texte);
+            if (ch) ch->hors_fiches = 1;
+        }
+        return h;
+    }
     if (complement && existante->genre != g && !tun->synthetique) {
         erreur(a, tun, grym_formater("« %s » est %s.", nom, existante->genre == GENRE_FEMININ ? "féminin" : "masculin"));
         free(nom);
@@ -5272,7 +5298,8 @@ static Noeud *definition_classe(Analyse *a) {
     Noeud *n = noeud_creer(P_CLASSE, tun->ligne, tun->colonne, tun->debut);
     n->texte = nom;
     int conserve = complement ? existante->conserve : tconserve != NULL;
-    n->forme = (g == GENRE_FEMININ ? 2 : 1) | (complement ? 4 : 0) | (conserve ? 32 : 0);
+    int hors = complement ? existante->hors_fiches : thors != NULL;
+    n->forme = (g == GENRE_FEMININ ? 2 : 1) | (complement ? 4 : 0) | (conserve ? 32 : 0) | (hors ? 64 : 0);
     if (tpluriel) n->texte3 = grym_dupliquer(tpluriel->valeur);
 
     if (!lire_champs(a, n, complement ? existante : NULL, conserve, nom)) { noeud_liberer(n); return NULL; }
@@ -5280,6 +5307,7 @@ static Noeud *definition_classe(Analyse *a) {
     Classe *c = complement ? existante : ajouter_classe(a->portee, n->texte, g, NULL);
     if (!complement) c->ligne = n->ligne;
     c->conserve = conserve;
+    c->hors_fiches = hors;
     if (tpluriel) c->pluriel = grym_dupliquer(tpluriel->valeur);
     classe_remplir(c, n);
     return n;

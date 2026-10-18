@@ -3129,8 +3129,196 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
     return erreur;
 }
 
+/* Les tableaux d'une fiche (grammaire, § 22.3) : pour chaque lien d'une entité qui peut désigner l'objet de la fiche,
+ * les objets qui le désignent, en liste, sous ses champs. Une entité « hors des fiches » n'en a pas. */
+typedef struct {
+    const ClasseVM *entite;
+    size_t lien;          /* le champ qui désigne l'objet de la fiche */
+    size_t element;       /* rang de la liste parmi les éléments de la fiche */
+    size_t bouton;        /* rang du bouton « Nouvelle … » */
+    size_t *champs;       /* les colonnes : des champs de l'entité */
+    char **titres;
+    size_t nb_colonnes;
+    size_t nb_objets;     /* lignes d'objets ; la ligne « Total », s'il y en a une, les suit */
+    Valeur objets;        /* les objets montrés, une liste ; absent avant la première lecture */
+    char *titre;          /* « Séances », « Séances (client) » */
+    char *nouveau;        /* « Nouvelle séance » */
+} TableauFiche;
+
+/* Vrai si un champ de ce type désigne un objet de la classe c (la sienne, ou celle d'un ancêtre). */
+static int lien_vers(const Machine *m, const char *type, const ClasseVM *c) {
+    const ClasseVM *cible = type ? classe_vm(m, type) : NULL;
+    for (; cible && c; c = c->parent)
+        if (c == cible) return 1;
+    return 0;
+}
+
+/* « séance » → « séances », « ligne de commande » → « lignes de commande » : le pluriel déclaré, sinon un s au premier
+ * mot, sauf s'il finit par s, x ou z (même règle que « la somme des débits », § 16.4). À libérer. */
+static char *pluriel_classe(const ClasseVM *c) {
+    if (c->pluriel) return grym_dupliquer(c->pluriel);
+    const size_t l = strcspn(c->nom, " ");
+    const char der = l ? c->nom[l - 1] : 0;
+    if (der == 's' || der == 'x' || der == 'z') return grym_dupliquer(c->nom);
+    return grym_formater("%.*ss%s", (int)l, c->nom, c->nom + l);
+}
+
+/* « Nouvelle séance », « Nouveau client », « Nouvel achat » : le libellé du bouton qui crée un objet. À libérer. */
+static char *libelle_nouveau(const ClasseVM *c) {
+    const unsigned char *u = (const unsigned char *)c->nom;
+    int voyelle = strchr("aeiouyh", u[0]) != NULL
+                  || (u[0] == 0xC3 && (u[1] == 0xA0 || u[1] == 0xA2 || (u[1] >= 0xA8 && u[1] <= 0xAA) || u[1] == 0xAE
+                                       || u[1] == 0xB4 || u[1] == 0xBB))   /* à â è é ê î ô û */
+                  || (u[0] == 0xC5 && u[1] == 0x93);                       /* œ */
+    return grym_formater("%s %s", c->feminin ? "Nouvelle" : voyelle ? "Nouvel" : "Nouveau", c->nom);
+}
+
+/* Les tableaux de la fiche de o : un par lien qui peut le désigner, dans l'ordre des déclarations. */
+static TableauFiche *tableaux_fiche(Machine *m, const Objet *o, size_t *nb) {
+    *nb = 0;
+    if (!o->id || !m->base) return NULL;
+    TableauFiche *t = NULL;
+    size_t cap = 0;
+    for (size_t i = 0; i < m->nb_classes; i++) {
+        const ClasseVM *c = m->classes[i];
+        if (!c->conserve || c->aptitude || c->hors_fiches || classe_vm(m, c->nom) != c) continue;
+        size_t herites = c->parent ? c->parent->nb_champs : 0;   /* un lien hérité : le tableau du parent les montre */
+        size_t liens = 0;
+        for (size_t q = herites; q < c->nb_champs; q++)
+            if (!(c->uniques[q] & 8) && lien_vers(m, c->types[q], o->classe)) liens++;
+        for (size_t q = herites; q < c->nb_champs; q++) {
+            if ((c->uniques[q] & 8) || !lien_vers(m, c->types[q], o->classe)) continue;
+            if (*nb == cap) {
+                cap = cap ? cap * 2 : 4;
+                TableauFiche *x = grym_allouer(cap * sizeof *x);
+                if (*nb) memcpy(x, t, *nb * sizeof *x);
+                free(t);
+                t = x;
+            }
+            TableauFiche *f = &t[(*nb)++];
+            memset(f, 0, sizeof *f);
+            f->entite = c;
+            f->lien = q;
+            f->objets = vi_absent(NULL);
+            f->champs = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof *f->champs);
+            f->titres = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof *f->titres);
+            for (size_t r = 0; r < c->nb_champs; r++) {
+                const char *ty = c->types[r];
+                if (r == q || (c->uniques[r] & 8) || !ty || type_fichier(ty) || type_secret(ty)) continue;
+                f->champs[f->nb_colonnes] = r;
+                f->titres[f->nb_colonnes++] = capitale(c->champs[r]);
+            }
+            char *pl = pluriel_classe(c), *grand = capitale(pl), *nv = libelle_nouveau(c);
+            f->titre = liens > 1 ? grym_formater("%s (%s)", grand, c->champs[q]) : grym_dupliquer(grand);
+            f->nouveau = liens > 1 ? grym_formater("%s (%s)", nv, c->champs[q]) : grym_dupliquer(nv);
+            free(pl);
+            free(grand);
+            free(nv);
+        }
+    }
+    return t;
+}
+
+static void tableaux_liberer(TableauFiche *t, size_t nb) {
+    for (size_t k = 0; k < nb; k++) {
+        for (size_t c = 0; c < t[k].nb_colonnes; c++) free(t[k].titres[c]);
+        free(t[k].titres);
+        free(t[k].champs);
+        free(t[k].titre);
+        free(t[k].nouveau);
+        valeur_liberer(&t[k].objets);
+    }
+    free(t);
+}
+
+/* Relit les objets d'un tableau et les montre : tri par la première date, la plus récente en tête, sinon par la clé ;
+ * une ligne « Total » additionne chaque colonne (nombre), s'il y en a une. NULL, ou l'erreur (à libérer). */
+static char *tableau_montrer(Machine *m, Objet *o, TableauFiche *t) {
+    const ClasseVM *c = t->entite;
+    const char *tri = NULL;
+    for (size_t k = 0; k < t->nb_colonnes && !tri; k++)
+        if (strcmp(c->types[t->champs[k]], "date") == 0) tri = c->champs[t->champs[k]];
+    const int decroissant = tri != NULL;
+    if (!tri) tri = champ_cle(c);
+    char *d = grym_formater("%s\x1f" "0\x1f%s\x1f%c\x1f(=[%s]?1)", c->nom, tri ? tri : "", decroissant ? '1' : '0',
+                            c->champs[t->lien]);
+    Valeur soi = vi_objet(o), liste;
+    char *erreur = NULL;
+    int ok = base_chercher(m->base, m, d, &soi, 1, &liste, &erreur);
+    valeur_liberer(&soi);
+    free(d);
+    if (!ok) return erreur;
+    valeur_liberer(&t->objets);
+    t->objets = liste;
+    const size_t nc = t->nb_colonnes, nl = liste.type == V_LISTE ? liste.liste->n : 0;
+    int total = 0;
+    for (size_t k = 0; k < nc; k++) total |= strcmp(c->types[t->champs[k]], "nombre") == 0;
+    total = total && nl > 0 && nc > 0;
+    Decimal *sommes = grym_allouer((nc ? nc : 1) * sizeof *sommes);
+    for (size_t k = 0; k < nc; k++) sommes[k] = dec_zero();
+    char **cellules = grym_allouer(((nl + 1) * nc ? (nl + 1) * nc : 1) * sizeof *cellules);
+    size_t faites = 0, montres = 0;
+    for (size_t r = 0; r < nl && !erreur; r++) {
+        Objet *x = machine_objet_en_base(m, liste.liste->ids[r], liste.liste->classes[r], &erreur);
+        if (!x || (x->id && !charger(m, x, &erreur))) break;
+        for (size_t k = 0; k < nc; k++) {
+            const size_t q = t->champs[k];
+            const Valeur *v = q < x->classe->nb_champs && x->definis[q] ? &x->champs[q] : NULL;
+            char *s;
+            if (!v || v->type == V_ABSENT) s = grym_dupliquer("");
+            else if (v->type == V_OBJET) s = nom_objet(m, v->objet);
+            else s = texte_valeur(m, v);
+            if (v && v->type == V_NOMBRE) {
+                Decimal somme = dec_zero();
+                dec_addition(&sommes[k], &v->nombre, &somme);
+                dec_liberer(&sommes[k]);
+                sommes[k] = somme;
+            }
+            const char lettre = v && v->type == V_TEXTE ? lettre_etiquette(x->classe, q, s) : 0;
+            if (lettre) {   /* une valeur permise colorée, comme dans une liste d'écran (§ 16.15) */
+                char *e2 = grym_formater("\x1d%c%s", lettre, s);
+                free(s);
+                s = e2;
+            }
+            cellules[faites++] = s;
+        }
+        montres++;
+    }
+    t->nb_objets = montres;
+    if (!erreur && total && montres) {
+        for (size_t k = 0; k < nc; k++) {
+            if (strcmp(c->types[t->champs[k]], "nombre") == 0) {
+                Valeur v = valeur_nombre(dec_copier(&sommes[k]));
+                cellules[faites++] = texte_valeur(m, &v);
+                valeur_liberer(&v);
+            } else cellules[faites++] = grym_dupliquer(k == 0 ? "Total" : "");
+        }
+    }
+    if (!erreur && m->iface.ecran_lignes)
+        m->iface.ecran_lignes(m->iface.contexte, t->element, (const char *const *)cellules, faites / (nc ? nc : 1));
+    for (size_t x = 0; x < faites; x++) free(cellules[x]);
+    free(cellules);
+    for (size_t k = 0; k < nc; k++) dec_liberer(&sommes[k]);
+    free(sommes);
+    return erreur;
+}
+
+/* « Nouvelle séance » depuis la fiche de o : le formulaire de l'entité, son lien vers o déjà rempli, puis l'objet
+ * conservé. NULL, ou ce qui l'a empêché (« Saisie annulée », une valeur refusée), à libérer. */
+static char *tableau_nouveau(Machine *m, Objet *o, const TableauFiche *t, Chaine *sortie, Cadre *cadres, int *fatal) {
+    Objet *x = creer_objet(m, t->entite, m->epoque);
+    x->champs[t->lien] = vi_objet(o);
+    x->definis[t->lien] = 1;
+    char *r = saisir(m, x, t->entite->champs[t->lien], sortie, cadres, fatal, 0);
+    if (r) return r;
+    long id = 0;
+    if (base_conserver(m->base, x, &id, &r)) ecrire_id(m, x, id);
+    return r;
+}
+
 /* La fiche d'un objet, en écran (grammaire, § 22.3) : ses champs, un bouton par lien vers la fiche de l'objet
- * désigné (empilée par-dessus), « Modifier » (le formulaire de « Saisir à nouveau »), « Fermer ».
+ * désigné (empilée par-dessus), un tableau par lien d'une entité qui le désigne (ses objets, « Nouvelle … »),
+ * « Modifier » (le formulaire de « Saisir à nouveau »), « Fermer ».
  * Chaque attente valide ce qui précède : chaque geste est une transaction, comme un événement. */
 static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, int *fatal, int profondeur) {
     if (profondeur > 50) return grym_dupliquer("Trop de fiches empilées : plus de 50.");
@@ -3139,7 +3327,8 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
     ElementEcran *el = NULL;
     char **textes = NULL;
     Objet **liens = NULL;
-    size_t n = 0, modifier = 0, fermer = 0;
+    TableauFiche *tableaux = NULL;
+    size_t n = 0, modifier = 0, fermer = 0, nb_tableaux = 0;
     int relire = 1, ouverte = 0;
     char *resultat = NULL;
     for (;;) {
@@ -3148,8 +3337,10 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
             free(textes);
             free(el);
             free(liens);
+            tableaux_liberer(tableaux, nb_tableaux);
             n = 0;
             char *erreur = NULL;
+            tableaux = tableaux_fiche(m, o, &nb_tableaux);
             if (o->id && !charger(m, o, &erreur)) { resultat = erreur; textes = NULL; el = NULL; liens = NULL; break; }
             const ClasseVM *c = o->classe;
             /* les champs « plusieurs » (§ 16.13) : leurs éléments, lus d'abord, pour dimensionner la fiche */
@@ -3174,7 +3365,7 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
                 resultat = erreur; textes = NULL; el = NULL; liens = NULL;
                 break;
             }
-            size_t cap = c->nb_champs + 3 + en_plus;
+            size_t cap = c->nb_champs + 3 + en_plus + 3 * nb_tableaux;
             el = grym_allouer(cap * sizeof *el);
             textes = grym_allouer(cap * sizeof *textes);
             liens = grym_allouer(cap * sizeof *liens);
@@ -3245,6 +3436,20 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
             }
             for (size_t q = 0; q < c->nb_champs; q++) valeur_liberer(&plusieurs[q]);
             free(plusieurs);
+            for (size_t k = 0; k < nb_tableaux; k++) {   /* « Séances », la liste, « Nouvelle séance » */
+                TableauFiche *t = &tableaux[k];
+                textes[n] = grym_dupliquer(t->titre);
+                el[n].sorte = ELEMENT_TEXTE; el[n].texte = textes[n]; liens[n] = NULL; n++;
+                t->element = n;
+                textes[n] = grym_dupliquer(t->entite->nom);
+                el[n].sorte = ELEMENT_LISTE; el[n].texte = textes[n]; liens[n] = NULL;
+                el[n].colonnes = (const char *const *)t->titres;
+                el[n].nb_colonnes = t->nb_colonnes;
+                n++;
+                t->bouton = n;
+                textes[n] = grym_dupliquer(t->nouveau);
+                el[n].sorte = ELEMENT_BOUTON; el[n].texte = textes[n]; liens[n] = NULL; n++;
+            }
             modifier = n;
             fermer = n + 1;
             textes[n] = grym_dupliquer("Modifier");
@@ -3257,6 +3462,8 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
             free(titre);
             ouverte = 1;
             relire = 0;
+            for (size_t k = 0; k < nb_tableaux && !erreur; k++) erreur = tableau_montrer(m, o, &tableaux[k]);
+            if (erreur) { resultat = erreur; break; }
         }
         char *probleme = ouvrir_attente(m, sortie, cadres);
         Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, NULL, 0, NULL, 0 };
@@ -3273,11 +3480,37 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
             break;
         }
         char *r = NULL;
-        if (ev.sorte == EVENEMENT_CLIC && ev.element < n && liens[ev.element])
+        int retableau = 0;   /* un geste qui a pu changer ce que montrent les tableaux */
+        if (ev.sorte == EVENEMENT_CLIC && ev.element < n && liens[ev.element]) {
             r = fiche_ecran(m, liens[ev.element], sortie, cadres, fatal, profondeur + 1);   /* la fiche du lien, par-dessus */
-        else if (ev.sorte == EVENEMENT_CLIC && ev.element == modifier) {
+            retableau = 1;
+        } else if (ev.sorte == EVENEMENT_CLIC && ev.element == modifier) {
             r = saisir(m, o, "", sortie, cadres, fatal, 1);
             relire = 1;
+        } else {
+            for (size_t k = 0; k < nb_tableaux; k++) {
+                TableauFiche *t = &tableaux[k];
+                if (ev.sorte == EVENEMENT_CLIC && ev.element == t->bouton) {
+                    r = tableau_nouveau(m, o, t, sortie, cadres, fatal);
+                    retableau = 1;
+                } else if (ev.sorte == EVENEMENT_CHOIX && ev.element == t->element && ev.ligne < t->nb_objets
+                           && t->objets.type == V_LISTE && ev.ligne < t->objets.liste->n) {
+                    /* la ligne « Total » ne mène nulle part ; un objet, à sa fiche, par-dessus */
+                    char *err = NULL;
+                    Objet *x = machine_objet_en_base(m, t->objets.liste->ids[ev.ligne], t->objets.liste->classes[ev.ligne], &err);
+                    if (x) r = fiche_ecran(m, x, sortie, cadres, fatal, profondeur + 1);
+                    else r = err;
+                    retableau = 1;
+                }
+            }
+        }
+        if (retableau && !relire && !*fatal && ouverte) {
+            /* ce qui a changé par-dessus (une séance modifiée, ajoutée) se voit au retour ; une erreur de lecture se dit */
+            for (size_t k = 0; k < nb_tableaux; k++) {
+                char *e2 = tableau_montrer(m, o, &tableaux[k]);
+                if (e2 && !r) r = e2;
+                else free(e2);
+            }
         }
         if (r && *fatal) { resultat = r; break; }
         if (r) {   /* « Saisie annulée », une valeur refusée : la fiche le dit, et reste ouverte */
@@ -3290,6 +3523,7 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
     free(textes);
     free(el);
     free(liens);
+    tableaux_liberer(tableaux, nb_tableaux);
     return resultat;
 }
 
@@ -3435,6 +3669,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         c->nb_aptitudes = cm->nb_aptitudes;
         c->nb_champs = n;
         c->conserve = cm->conserve;
+        c->hors_fiches = cm->hors_fiches;
         c->pluriel = cm->pluriel ? grym_dupliquer(cm->pluriel) : NULL;
         c->champs = grym_allouer((n ? n : 1) * sizeof *c->champs);
         c->types = grym_allouer((n ? n : 1) * sizeof *c->types);

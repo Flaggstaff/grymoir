@@ -65,6 +65,7 @@ typedef struct ClasseVM {
     unsigned char *uniques;   /* bit 1 : unique ; bit 2 : facultatif (§ 16.9) ; bit 4 : disparaît avec (§ 16.12) */
     size_t nb_champs;
     int conserve;         /* entité */
+    int hors_fiches;      /* « , hors des fiches, » : pas de tableau dans la fiche d'un objet qu'elle désigne (§ 22.3) */
     char *pluriel;
 } ClasseVM;
 

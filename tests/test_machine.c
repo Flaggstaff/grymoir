@@ -1117,7 +1117,9 @@ static void essais_ecrans(void) {
                "[ouvrir Œuvres ; liste œuvre (Titre, Compositeur) ; bouton Détails ; bouton Fermer]\n"
                "[lignes Messe|Bach]\n"
                "[ouvrir Messe ; texte Titre : Messe ; bouton Compositeur : Bach ; bouton Modifier ; bouton Fermer]\n"
-               "[ouvrir Bach ; texte Nom : Bach ; texte Naissance : 31.03.1685 ; bouton Modifier ; bouton Fermer]\n"
+               "[ouvrir Bach ; texte Nom : Bach ; texte Naissance : 31.03.1685 ; texte Œuvres ; liste œuvre (Titre) ; "
+               "bouton Nouvelle œuvre ; bouton Modifier ; bouton Fermer]\n"
+               "[lignes Messe]\n"
                "[fermer]\n"
                "page Titre=Messe Compositeur=Bach[fermer]\n"
                "[ouvrir Requiem ; texte Titre : Requiem ; bouton Compositeur : Bach ; bouton Modifier ; bouton Fermer]\n"
@@ -1131,6 +1133,55 @@ static void essais_ecrans(void) {
                "[fermer]\n"
                "Requiem");
     }
+    /* § 22.3 : les tableaux d'une fiche, un par lien qui désigne l'objet ; tri par date, la plus récente en tête ;
+       total des colonnes (nombre) ; une ligne vers sa fiche, et retour ; la ligne « Total » ne mène nulle part ;
+       « Nouvelle séance », le client déjà rempli ; « hors des fiches » ; deux liens : deux tableaux nommés */
+    {
+        const char *src =
+            "Un soin, conservé, a : un nom (texte), unique.\n"
+            "Un client, conservé, a : un nom (texte), unique.\n"
+            "Une séance, conservée, a : un client (client), un soin (soin), une date (date), un prix (nombre), "
+            "un état (« payée » en vert ou « due » en rouge).\n"
+            "Une note, conservée, hors des fiches, a : un client (client), un texte (texte).\n"
+            "Un parrainage, conservé, a : un parrain (client), un filleul (client), une année (nombre entier).\n"
+            "Pour remplir :\n"
+            "    Le s vaut un nouveau soin :\n        Le nom vaut « EPI ».\n    Conserver s.\n"
+            "    Le c vaut un nouveau client :\n        Le nom vaut « Anne ».\n    Conserver c.\n"
+            "    La a vaut une nouvelle séance :\n        Le client vaut c.\n        Le soin vaut s.\n"
+            "        La date vaut 01.09.2026.\n        Le prix vaut 130.\n        L'état vaut « payée ».\n    Conserver a.\n"
+            "    La b vaut une nouvelle séance :\n        Le client vaut c.\n        Le soin vaut s.\n"
+            "        La date vaut 15.09.2026.\n        Le prix vaut 70.\n        L'état vaut « due ».\n    Conserver b.\n"
+            "    La n vaut une nouvelle note :\n        Le client vaut c.\n        Le texte vaut « confidentiel ».\n"
+            "    Conserver n.\n"
+            "Remplir.\n"
+            "Le c vaut le client conservé dont le nom est « Anne ».\n"
+            "Ouvrir la fiche de c.\n"
+            "Afficher le nombre de séances conservées.\n";
+        const char *ev[] = { "choix 1", "clic Fermer", "choix 3", "clic Nouvelle séance", "clic Fermer" };
+        const char *rep[] = { "EPI", "20.09.2026", "70", "payée", "" };
+        ECRANS(src, ev, rep,
+               "[ouvrir Anne ; texte Nom : Anne ; texte Séances ; liste séance (Soin, Date, Prix, État) ; "
+               "bouton Nouvelle séance ; texte Parrainages (parrain) ; liste parrainage (Filleul, Année) ; "
+               "bouton Nouveau parrainage (parrain) ; texte Parrainages (filleul) ; liste parrainage (Parrain, Année) ; "
+               "bouton Nouveau parrainage (filleul) ; bouton Modifier ; bouton Fermer]\n"
+               "[lignes EPI|15.09.2026|70|\x1drdue / EPI|01.09.2026|130|\x1dvpayée / Total||200|]\n"
+               "[lignes]\n[lignes]\n"
+               "[ouvrir une séance ; bouton Client : Anne ; bouton Soin : EPI ; texte Date : 15.09.2026 ; "
+               "texte Prix : 70 ; texte État : due ; bouton Modifier ; bouton Fermer]\n"
+               "[fermer]\n"
+               "[lignes EPI|15.09.2026|70|\x1drdue / EPI|01.09.2026|130|\x1dvpayée / Total||200|]\n"
+               "[lignes]\n[lignes]\n"
+               "page Soin Date Prix État (« payée » ou « due »)"
+               "[lignes EPI|20.09.2026|70|\x1dvpayée / EPI|15.09.2026|70|\x1drdue / EPI|01.09.2026|130|\x1dvpayée / "
+               "Total||270|]\n"
+               "[lignes]\n[lignes]\n"
+               "[fermer]\n"
+               "3");
+    }
+    PROG("Un point, hors des fiches, a : un x.\n",
+         "ERREUR 1:11 Seule une entité se tient hors des fiches : « Une note, conservée, hors des fiches, a : ».");
+    PROG("Une personne, conservée, a : un nom (texte).\nUne cliente, conservée, hors des fiches, est une personne.\n"
+         "Une cliente a : un code (texte).\n", "");
     PROG("Un point a : un x.\nLe p vaut un nouveau point.\nOuvrir la fiche de p.\n",
          "ERREUR 0:0 Ce programme ouvre des écrans : lance-le dans une fenêtre, avec grym-atelier.");
     /* A3-d : colonnes choisies (le champ d'un lien compris), blocs de disposition, titre donné */

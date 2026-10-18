@@ -103,6 +103,7 @@ int main(void) {
     FIXE("Le nom vaut « a ».\nSi le nom ne contient pas « b » et nom finit par « a », afficher nom en majuscules.\n");
     FIXE("Afficher (« a » suivi de « b ») en minuscules puis « 3 » en nombre + 1.\n");
     FIXE("Une tâche, conservée, a :\n    un état (« à faire », « en cours » ou « fini »), « à faire » au départ.\n");
+    FIXE("Une note, conservée, hors des fiches, a :\n    un texte (texte).\n");   /* § 22.3 */
     COMP("Une tâche, conservée, a : un état (« a » ou « b »).",
          "_classe _une tâche _conservé\n    _un état (« a » ; « b »)\n_fin\n");
     COMP("Le nom vaut « a ».\nAfficher nom ne commence pas par « b ».", "_le nom << « a »\n_afficher _non (nom _commence « b »)\n");

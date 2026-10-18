@@ -1409,9 +1409,9 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         return;
     }
     if (t->type == J_MOT_CLE && !strcmp(t->valeur, "classe")) {
-        /* _classe _un cheval [(chevaux)] [_conservé] [_est _une personne [_adopte horodatée ; active]] */
+        /* _classe _un cheval [(chevaux)] [_conservé [_hors_des_fiches]] [_est _une personne [_adopte horodatée ; active]] */
         size_t p = d + 3;
-        const Jeton *pluriel = NULL, *conserve = NULL;
+        const Jeton *pluriel = NULL, *conserve = NULL, *hors = NULL;
         if (p + 2 < f && r->e[p].type == J_PAR_OUV && r->e[p + 1].type == J_CROCHETS
             && r->e[p + 2].type == J_PAR_FERM) {
             pluriel = &r->e[p + 1];
@@ -1420,8 +1420,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         if (p < f && (est_cle(&r->e[p], "conservé") || est_cle(&r->e[p], "conservée"))) {
             conserve = &r->e[p];
             p++;
+            if (p < f && est_cle(&r->e[p], "hors_des_fiches")) {   /* § 22.3 */
+                hors = &r->e[p];
+                p++;
+            }
         }
-        size_t decale = p - (d + 3);   /* jetons de pluriel et de « _conservé » avant « _est » */
+        size_t decale = p - (d + 3);   /* jetons de pluriel, de « _conservé » et « _hors_des_fiches » avant « _est » */
         size_t adopte = chercher(r, d + 1, f, "adopte");
         int herite = adopte == d + 6 + decale && est_cle(&r->e[p], "est")
                      && (est_cle(&r->e[p + 1], "un") || est_cle(&r->e[p + 1], "une")) && r->e[p + 2].type == J_CROCHETS;
@@ -1451,6 +1455,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             emettre(r, J_VIRGULE, NULL, conserve, 1);
             mot(r, conserve->valeur, conserve);   /* synthétique : l'accord n'est pas vérifié */
             emettre(r, J_VIRGULE, NULL, conserve, 1);
+        }
+        if (hors) {
+            mot(r, "hors", hors);
+            mot(r, "des", hors);
+            mot(r, "fiches", hors);
+            emettre(r, J_VIRGULE, NULL, hors, 1);
         }
         if (herite) {
             mot(r, "est", &r->e[p]);
