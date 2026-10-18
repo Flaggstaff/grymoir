@@ -1168,6 +1168,7 @@ static void etats_ecran(Impression *im, const Noeud *el, int feminin) {
     place_ecran(im, el, feminin);
     if (el->type == N_BOUTON && (el->entier & 256)) aj(im, im->compact ? " _principal" : ", principal");   /* 2.14 */
     if (el->type == N_BOUTON && (el->entier & 512)) aj(im, im->compact ? " _tuile" : ", en tuile");     /* 2.15 */
+    if (el->type == N_BOUTON && (el->entier & 1024)) aj(im, im->compact ? " _côté_titre" : ", à côté du titre");   /* 2.17 */
     if (el->type == N_BOUTON && el->indication) { aj(im, im->compact ? " _description " : ", avec la description "); ecrire_texte(im, el->indication); }
     if (el->type == N_BOUTON && el->texte2) { aj(im, im->compact ? " _image " : ", avec l'image "); ecrire_texte(im, el->texte2); }
     for (size_t q = 0; q < 2 * el->nb_enfants; q++) {   /* « actif si » avant « visible si », quel que soit l'ordre écrit */

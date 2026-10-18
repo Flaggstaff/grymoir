@@ -23,6 +23,7 @@ struct ElementVue {
     int graphique = 0;      // graphique (§ 22.11) : 2 en secteurs, 4 une somme
     bool principal = false; // un bouton « , principal » : à la couleur d'accent (2.14)
     bool tuile = false;     // un bouton « , en tuile » (2.15) : titre, description (indication), image (octets)
+    bool a_cote_du_titre = false;   // un bouton « , à côté du titre » (2.17)
     QString texte;          // libellé d'un bouton, texte fixe, nom affiché d'une zone ; pour une liste, l'entité
     QStringList colonnes;   // liste : titres des colonnes
     QString type;           // zone : son type

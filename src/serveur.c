@@ -556,7 +556,8 @@ static char *feuille_de_style(const Serveur *s) {
     ".etiquette-t{background:#d3efec;color:#0f5b55}.etiquette-p{background:#e9def5;color:#5b2a86}"
     ".etiquette-g{background:#e6e6e6;color:#3d3d3d}.etiquette-r{background:#f9dcda;color:#8c1d18}"
     ".etiquette-o{background:#fde6cc;color:#7a3d00}"
-    ".entete h1.titre-petit{font-size:1.1em}.entete h1.titre-grand{font-size:2.2em}"   /* la taille du titre (§ 22.5) */
+    ".entete h1.titre-petit{font-size:15px;line-height:20px}.entete h1.titre-grand{font-size:40px;line-height:46px;font-weight:700}"
+    ".entete>button[name=clic]{margin:0 0 0 8px}"   /* la taille du titre (§ 22.5) */
     ".interrupteur input{appearance:none;width:36px;height:20px;border-radius:10px;background:var(--bordure,#999);position:relative;"
     "cursor:pointer;vertical-align:middle;margin:0 8px 0 0}.interrupteur input::before{content:\"\";position:absolute;top:2px;left:2px;"
     "width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}.interrupteur input:checked{background:var(--accent)}"
@@ -1251,7 +1252,18 @@ static void page_ecran(Serveur *s) {
     if (s->logo && !s->signature) chaine_ajouter(&c, "<img src=\"/logo\" alt=\"\">");   /* une signature le remplace (2.16) */
     chaine_ajouter(&c, e->taille_titre > 0 ? "<h1 class=\"titre-grand\">" : e->taille_titre < 0 ? "<h1 class=\"titre-petit\">" : "<h1>");
     echapper(&c, e->titre);
-    chaine_ajouter(&c, "</h1><button name=\"fermer\" value=\"1\" title=\"Fermer l'écran\" aria-label=\"Fermer l'écran\">×</button></div>\n");
+    chaine_ajouter(&c, "</h1>");
+    for (size_t k = 0; k < e->n; k++) {   /* les boutons « à côté du titre » (2.17), sur la ligne du titre */
+        const ElementEcran *b = &e->el[k];
+        if (b->sorte != ELEMENT_BOUTON || !b->a_cote_du_titre || (e->etats[k] & 2)) continue;
+        char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s%s>", (unsigned long)k, b->principal ? " class=\"principal\"" : "",
+                                (e->etats[k] & 1) ? " disabled" : "");
+        chaine_ajouter(&c, v);
+        free(v);
+        echapper(&c, b->texte);
+        chaine_ajouter(&c, "</button>");
+    }
+    chaine_ajouter(&c, "<button name=\"fermer\" value=\"1\" title=\"Fermer l'écran\" aria-label=\"Fermer l'écran\">×</button></div>\n");
     if (e->erreur && e->erreurs_zones) {   /* le résumé : ce qui ne va pas, chaque faute un lien vers sa zone (§ 22.6) */
         size_t fautes = 0;
         for (size_t k = 0; k < e->n; k++) fautes += e->erreurs_zones[k] != NULL;
@@ -1315,6 +1327,7 @@ static void page_ecran(Serveur *s) {
         if ((e->etats[k] & 2) && (el->sorte == ELEMENT_BOUTON || el->sorte == ELEMENT_TEXTE || el->sorte == ELEMENT_ZONE
                                     || el->sorte == ELEMENT_IMAGE))
             continue;   /* « visible si » faux : l'élément n'est pas dans la page (§ 22.6) */
+        if (el->sorte == ELEMENT_BOUTON && el->a_cote_du_titre && !el->place) continue;   /* déjà dans l'en-tête (2.17) */
         if ((el->sorte != ELEMENT_BOUTON || el->place || el->tuile) && boutons) { chaine_ajouter(&c, "</div>\n"); boutons = 0; }
         if ((el->sorte != ELEMENT_BOUTON || el->place || !el->tuile) && tuiles) { chaine_ajouter(&c, "</div>\n"); tuiles = 0; }
         if (el->place) {   /* un élément en position libre : sa boîte, que /ecran-style/… place (§ 22.9) */

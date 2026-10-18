@@ -201,6 +201,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.texte = QString::fromUtf8(el->texte);
                         x.principal = (el->entier & 256) != 0;
                         x.tuile = (el->entier & 512) != 0;
+                        x.a_cote_du_titre = (el->entier & 1024) != 0;
                         if (el->indication) x.indication = QString::fromUtf8(el->indication);
                         if (el->texte2) x.image_tuile = QString::fromUtf8(el->texte2);
                     } else if (el->type == N_IMAGE_ECRAN) {   // « l'image « plan.png » » : le chemin écrit (§ 22.8)
@@ -428,6 +429,7 @@ void OngletEcrans::dessiner() {
         el[k].sorte = e.elements[k].sorte;
         el[k].principal = e.elements[k].principal;
         el[k].tuile = e.elements[k].tuile;
+        el[k].a_cote_du_titre = e.elements[k].a_cote_du_titre;
         if (e.elements[k].tuile) {   // la description, l'image lue depuis le dossier du fichier qui déclare l'écran (2.15)
             el[k].indication = e.elements[k].indication;
             const QString t = e.elements[k].image_tuile;

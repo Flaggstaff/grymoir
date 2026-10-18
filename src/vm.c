@@ -2417,6 +2417,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             const size_t nopt = strcspn(options_bouton + 1, "\x1c\x1a\x1d");
             e->elements[k].principal = memchr(options_bouton + 1, 'p', nopt) != NULL;
             e->elements[k].tuile = memchr(options_bouton + 1, 't', nopt) != NULL;
+            e->elements[k].a_cote_du_titre = memchr(options_bouton + 1, 'e', nopt) != NULL;   /* 2.17 */
             e->indications[k] = morceau_de_zone(options_bouton, '\x1d');
             e->elements[k].indication = e->indications[k];
             char *image = morceau_de_zone(options_bouton, '\x1a');

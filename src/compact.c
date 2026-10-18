@@ -755,7 +755,8 @@ static int est_etat(const Jeton *t) {
     return est_cle(t, "actif_si") || est_cle(t, "active_si") || est_cle(t, "visible_si") || est_cle(t, "plusieurs_lignes")
         || est_cle(t, "interrupteur") || est_cle(t, "indication") || est_cle(t, "recherche") || est_cle(t, "min") || est_cle(t, "max") || est_cle(t, "masqué") || est_cle(t, "unité") || est_cle(t, "transcrit")
         || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur")
-        || est_cle(t, "principal") || est_cle(t, "tuile") || est_cle(t, "description") || est_cle(t, "image");
+        || est_cle(t, "principal") || est_cle(t, "tuile") || est_cle(t, "description") || est_cle(t, "image")
+        || est_cle(t, "côté_titre");
 }
 
 /* Les états d'un élément d'écran, de k à f (§ 22.6) : « _plusieurs_lignes », « _lecture_seule » (zones),
@@ -839,6 +840,10 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             emettre(r, J_VIRGULE, NULL, x, 1);
             mot(r, "en", x);
             mot(r, "interrupteur", x);
+            k++;
+        } else if (!zone && est_cle(x, "côté_titre")) {   /* _côté_titre → , à côté du titre (un bouton, 2.17) */
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "à", x); mot(r, "côté", x); mot(r, "du", x); mot(r, "titre", x);
             k++;
         } else if (!zone && est_cle(x, "tuile")) {   /* _tuile → , en tuile (un bouton, 2.15) */
             emettre(r, J_VIRGULE, NULL, x, 1);

@@ -66,6 +66,7 @@ typedef struct {
     char etiquette;                 /* la valeur en étiquette, de cette couleur (b v t p g r o, § 16.15) ; 0 : non */
     int lien;                       /* la valeur en lien : LIEN_COURRIEL (écrire), LIEN_WEB (ouvrir) ; 0 : non */
     int principal;                  /* un bouton « , principal » : l'action attendue, à la couleur d'accent (2.14) */
+    int a_cote_du_titre;            /* un bouton « , à côté du titre » (2.17) : sur la ligne du titre, à droite */
     int tuile;                      /* un bouton « , en tuile » (2.15) : grand, son titre, sa description (indication) et
                                        son image (octets, taille, format) ; des tuiles qui se suivent forment une grille */
 } ElementEcran;

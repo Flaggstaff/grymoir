@@ -162,6 +162,22 @@ int main(int argc, char **argv) {
                  && !v.boutons[1]->property("role").isValid());
         delete v.vue;
     }
+    // Un bouton à côté du titre (2.17) : sur la ligne du titre, pas dans la rangée du bas
+    {
+        QVector<ElementVue> el(2);
+        el[0].sorte = ELEMENT_BOUTON;
+        el[0].texte = "Nouvelle séance";
+        el[0].a_cote_du_titre = true;
+        el[1].sorte = ELEMENT_BOUTON;
+        el[1].texte = "Fermer";
+        VueEcran v = dessiner_ecran("Bonjour", el);
+        auto *pile = qobject_cast<QVBoxLayout *>(v.vue->layout());
+        QHBoxLayout *ligne = nullptr;
+        for (int k = 0; pile && k < pile->count(); k++)
+            if (auto *h = qobject_cast<QHBoxLayout *>(pile->itemAt(k)->layout()); h && h->indexOf(v.titre) >= 0) ligne = h;
+        VERIFIER(ligne && ligne->indexOf(v.boutons[0]) >= 0 && ligne->indexOf(v.boutons[1]) < 0);
+        delete v.vue;
+    }
     // Des tuiles (2.15) : une grille de quatre colonnes, chaque tuile son titre, sa description, son image
     {
         QVector<ElementVue> el(3);

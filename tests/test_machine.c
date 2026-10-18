@@ -1260,6 +1260,8 @@ static void essais_ecrans(void) {
     PROG("L'écran x montre :\n    un bouton « B », avec la description « d ».\nOuvrir l'écran x.\n", "~Une description ou une image va sur une tuile");
     PROG("L'écran x montre :\n    un bouton « B », en tuile, avec l'image « absente.png ».\nOuvrir l'écran x.\n", "~Fichier « absente.png » introuvable");
     PROG("L'écran x montre :\n    un bouton « B », en tuile, en tuile.\nOuvrir l'écran x.\n", "~« en tuile » est déjà dit.");
+    /* 2.17 : à côté du titre ; pas une tuile */
+    PROG("L'écran x montre :\n    un bouton « B », en tuile, à côté du titre.\nOuvrir l'écran x.\n", "~Une tuile ne se met pas à côté du titre.");
     /* 2.14 : un bouton principal ; seul un bouton l'est */
     PROG("L'écran x montre :\n    le texte « t », principal.\nOuvrir l'écran x.\n", "~Seul un bouton est principal");
     PROG("L'écran x montre :\n    un bouton « B », principale.\nOuvrir l'écran x.\n", "~Accord : « principal » (le bouton).");

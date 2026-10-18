@@ -1015,7 +1015,7 @@ int main(void) {
         REQUETES(get("/"), get("/style.css"), evenement("q=1&clic=1"), get("/"));
         servir(src, &sc);
         CONTIENT(sc.reponses[0], "<h1 class=\"titre-grand\">Recherche</h1>");
-        CONTIENT(sc.reponses[1], ".entete h1.titre-grand{font-size:2.2em}");
+        CONTIENT(sc.reponses[1], ".entete h1.titre-grand{font-size:40px;line-height:46px;font-weight:700}");   /* 2.17 */
         liberer(&sc);
     }
 
@@ -1258,6 +1258,20 @@ int main(void) {
         CONTIENT(sc.reponses[3], "Content-Type: font/ttf");
         CONTIENT(sc.reponses[3], "font-src 'self'");
         CONTIENT(sc.reponses[5], "Application terminée.");
+        liberer(&sc);
+    }
+
+    {   /* 2.17 : un bouton à côté du titre, dans l'en-tête, avant la croix ; pas une seconde fois plus bas */
+        const char *src = "L'écran d'accueil, « Bonjour » en grand, montre :\n    un bouton « Nouvelle », principal, à côté du titre,\n"
+                          "    un bouton « Fermer ».\n"
+                          "Quand on clique sur « Nouvelle » dans l'écran d'accueil :\n    Fermer l'écran.\n"
+                          "Quand on clique sur « Fermer » dans l'écran d'accueil :\n    Fermer l'écran.\nOuvrir l'écran d'accueil.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=0"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<h1 class=\"titre-grand\">Bonjour</h1><button name=\"clic\" value=\"0\" class=\"principal\">Nouvelle</button><button name=\"fermer\"");
+        NE_CONTIENT_PAS(sc.reponses[0], "<div class=\"boutons\"><button name=\"clic\" value=\"0\"");
+        CONTIENT(sc.reponses[2], "Application terminée.");
         liberer(&sc);
     }
 

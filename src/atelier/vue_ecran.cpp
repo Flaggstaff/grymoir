@@ -113,7 +113,10 @@ void taille_du_titre(QLabel *titre, int taille) {
     titre->setStyleSheet(QString());
     if (!taille) return;
     const int px = QFontInfo(titre->font()).pixelSize();
-    titre->setStyleSheet(QString("font-size: %1px;").arg(qRound(px * (taille > 0 ? 1.6 : 0.75))));
+    // sur la taille du thème pour un titre d'écran (20 px), pas sur la police de l'application (14 px), que le libellé
+    // porte encore avant que la feuille ne s'applique : « en grand » faisait 22 px au lieu de 32 (2.17 : 40 px, gras)
+    (void)px;
+    titre->setStyleSheet(taille > 0 ? QString("font-size: 40px; font-weight: 700;") : QString("font-size: 15px;"));
 }
 
 double nombre_affiche(const QString &t) {
@@ -263,6 +266,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     }
     QHBoxLayout *rangee = nullptr;   // des boutons qui se suivent : une ligne, en bas à droite (§ 3.3)
     QGridLayout *grille = nullptr;   // des tuiles qui se suivent : une grille (2.15)
+    QHBoxLayout *ligne_titre = nullptr;   // la ligne du titre, quand un bouton s'y met (2.17)
     int tuiles_posees = 0;
     // Les conteneurs ouverts : une boîte (« côte à côte », « l'un sous l'autre », un groupe, l'écran) ou une toile
     // (« en position libre : »). Un bloc posé sur une toile y est un widget placé, que sa fin remet à sa taille (§ 22.9).
@@ -294,7 +298,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     QMenu *menu_ouvert = nullptr;
     for (int k = 0; k < n; k++) {
         const ElementVue &e = elements[k];
-        if (e.sorte != ELEMENT_BOUTON || niveaux.last().toile || e.tuile) rangee = nullptr;
+        if (e.sorte != ELEMENT_BOUTON || niveaux.last().toile || e.tuile || e.a_cote_du_titre) rangee = nullptr;
         if (e.sorte != ELEMENT_BOUTON || !e.tuile) grille = nullptr;   // une grille de tuiles s'arrête au premier autre élément
         if (e.sorte == ELEMENT_MENU) {   // « le menu « Membres » : » : un menu de la barre, en tête de l'écran (§ 22.12)
             if (!barre) {
@@ -670,16 +674,31 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             grille->addWidget(b, tuiles_posees / 4, tuiles_posees % 4);
             tuiles_posees++;
         } else {
+            auto *b = new QPushButton(e.texte);
+            if (e.principal) b->setProperty("role", "principal");   // la feuille du thème : fond d'accent (2.14)
+            r.boutons << b;
+            r.controles[k] = b;
+            if (e.a_cote_du_titre && !toile) {   // 2.17 : sur la ligne du titre, à droite
+                if (!ligne_titre) {
+                    for (int q = 0; q < pile->count() && !ligne_titre; q++) {
+                        if (pile->itemAt(q)->widget() == r.titre) {   // le titre seul : il passe dans une ligne à lui
+                            pile->removeWidget(r.titre);
+                            ligne_titre = new QHBoxLayout;
+                            ligne_titre->setSpacing(t.mesure("espace-2"));
+                            ligne_titre->addWidget(r.titre, 1);
+                            pile->insertLayout(q, ligne_titre);
+                        } else if (auto *h = qobject_cast<QHBoxLayout *>(pile->itemAt(q)->layout()); h && h->indexOf(r.titre) >= 0)
+                            ligne_titre = h;   // avec le logo : la ligne existe déjà
+                    }
+                }
+                if (ligne_titre) { ligne_titre->addWidget(b, 0, Qt::AlignVCenter); continue; }
+            }
             if (!rangee && !toile) {
                 rangee = new QHBoxLayout;
                 rangee->setSpacing(t.mesure("espace-2"));
                 rangee->addStretch(1);
                 ici->addLayout(rangee);
             }
-            auto *b = new QPushButton(e.texte);
-            if (e.principal) b->setProperty("role", "principal");   // la feuille du thème : fond d'accent (2.14)
-            r.boutons << b;
-            r.controles[k] = b;
             if (toile) poser(b); else rangee->addWidget(b);   // en position libre : chaque bouton à sa place (§ 22.9)
         }
     }

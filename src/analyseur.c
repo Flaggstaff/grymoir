@@ -6070,7 +6070,17 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
         if (!(el->entier & 512)) attendre_mot(a, a->i + 1, "en tuile", strlen("en tuile"));
         if (!el->indication) attendre_mot(a, a->i + 1, "avec la description «", strlen("avec la description «"));
         if (!el->texte2) attendre_mot(a, a->i + 1, "avec l'image «", strlen("avec l'image «"));
+        if (!(el->entier & 1024)) attendre_mot(a, a->i + 1, "à côté du titre", strlen("à côté du titre"));
+        if (est_mot(x, "à") && est_mot(voir(a, 2), "côté") && est_mot(voir(a, 3), "du") && est_mot(voir(a, 4), "titre")) {
+            /* « , à côté du titre » (2.17) : sur la ligne du titre, à droite, comme l'action d'une page */
+            if (el->entier & 1024) return erreur(a, x, grym_dupliquer("« à côté du titre » est déjà dit.")), -1;
+            if (el->entier & 512) return erreur(a, x, grym_dupliquer("Une tuile ne se met pas à côté du titre.")), -1;
+            el->entier |= 1024;
+            a->i += 5;
+            return 1;
+        }
         if (est_mot(x, "en") && est_mot(voir(a, 2), "tuile")) {
+            if (el->entier & 1024) return erreur(a, x, grym_dupliquer("Une tuile ne se met pas à côté du titre.")), -1;
             if (el->entier & 512) return erreur(a, x, grym_dupliquer("« en tuile » est déjà dit.")), -1;
             el->entier |= 512;
             a->i += 3;
