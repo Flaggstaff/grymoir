@@ -113,10 +113,12 @@ typedef enum {
                            élément × 2 : dépile une image ou absent, que l'écran montre jusqu'à la prochaine attente (§ 22.8) */,
     I_ECRAN_EXIGER      /* opérande : constante texte, les zones qu'un événement lit, séparées par U+001E ; toutes les
                            obligatoires vides arrêtent l'événement d'un coup, chacune avec son message (§ 22.6) */,
-    I_CORRESPOND        /* dépile une empreinte, puis un mot de passe en clair ; empile vrai s'ils correspondent (§ 16.1) */
+    I_CORRESPOND,       /* dépile une empreinte, puis un mot de passe en clair ; empile vrai s'ils correspondent (§ 16.1) */
+    I_SIGLES            /* opérande : constante texte, les sigles du programme en minuscules, séparés par une espace ;
+                           les libellés les écriront en capitales (grammaire, § 2.4) */
 } CodeInstruction;
 
-#define I_DERNIER I_CORRESPOND
+#define I_DERNIER I_SIGLES
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

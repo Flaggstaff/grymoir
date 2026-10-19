@@ -1619,9 +1619,10 @@ static char *fermer_attente(Machine *m) {
     return probleme;
 }
 
-/* « date d'inscription » → « Date d'inscription » : première lettre en capitale (ASCII, Latin-1, œ). */
+/* « date d'inscription » → « Date d'inscription » : première lettre en capitale (ASCII, Latin-1, œ) ;
+ * les sigles du programme en capitales (§ 2.4) : « numéro rcc » → « Numéro RCC ». */
 static char *capitale(const char *s) {
-    char *r = grym_dupliquer(s);
+    char *r = texte_avec_sigles(s);
     unsigned char *u = (unsigned char *)r;
     if (u[0] >= 'a' && u[0] <= 'z') u[0] = (unsigned char)(u[0] - 32);
     else if (u[0] == 0xC3 && u[1] >= 0xA0 && u[1] <= 0xBE && u[1] != 0xB7) u[1] = (unsigned char)(u[1] - 0x20);
@@ -4586,6 +4587,17 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
+        case I_SIGLES: {   /* les sigles du programme (§ 2.4), retenus pour les libellés */
+            const char *t = b->constantes[op].texte;
+            for (const char *p = t; *p; ) {
+                const char *f = strchr(p, ' ');
+                char *mot = grym_formater("%.*s", (int)(f ? f - p : (long)strlen(p)), p);
+                if (*mot) sigle_retenir(mot);
+                free(mot);
+                p = f ? f + 1 : p + strlen(p);
+            }
+            break;
+        }
         case I_ECRAN_EXIGER: {
             /* Les zones qu'un événement lit (§ 22.6) : toutes les obligatoires vides l'arrêtent d'un coup, chacune avec
              * son message, plutôt qu'une à une à leur lecture. */
@@ -4840,7 +4852,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_ECRAN_ERREUR: {
-            /* un événement raté : rien de ce qu'il a fait n'est écrit ; l'écran reste ouvert, avec le motif */
+            /* un événement raté : rien de ce qu'il a fait n'est écrit ; l'écran reste ouvert, avec le motif,
+             * même si l'événement avait demandé « Fermer l'écran. » avant d'échouer (une règle violée, § 16.14) */
+            m->fermer_ecran = 0;
             Valeur motif = depiler(&pile);
             char *t = texte_valeur(m, &motif);
             if (m->iface.ecran_erreur) m->iface.ecran_erreur(m->iface.contexte, sortie, t);

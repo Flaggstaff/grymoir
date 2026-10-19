@@ -133,7 +133,16 @@ static Article article_du_champ(const Impression *im, const Noeud *n) {
     return voyelle(n->texte) ? ART_L : g == G_FEMININ ? ART_LA : ART_LE;
 }
 
+static void ecrire_nom_tel(Impression *im, const char *nom, int crochets);
+
+/* Un nom s'écrit avec ses sigles en capitales (§ 2.4) : « numéro RCC ». */
 static void ecrire_nom(Impression *im, const char *nom, int crochets) {
+    char *s = texte_avec_sigles(nom);
+    ecrire_nom_tel(im, s, crochets);
+    free(s);
+}
+
+static void ecrire_nom_tel(Impression *im, const char *nom, int crochets) {
     if (im->compact) {
         for (const char *p = nom; *p; p++) {
             char t[2] = { *p == ' ' ? '_' : *p, 0 };

@@ -1365,6 +1365,48 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* un événement qui ferme son écran puis viole une règle : annulé, l'écran reste ouvert avec le motif */
+        const char *src = "Un cabinet, conservé, a :\n    un nom (texte), unique,\n    un numéro GLN (texte), facultatif.\n"
+            "Chaque cabinet conservé dont le numéro GLN est présent vérifie :\n    la longueur du numéro GLN du cabinet = 13,\n"
+            "    sinon « Le GLN est faux. ».\n"
+            "Si le nombre de cabinets conservés est nul :\n    Le n vaut un nouveau cabinet :\n        Le nom vaut « N ».\n    Conserver le n.\n"
+            "L'écran d'accueil montre :\n    un numéro GLN (texte), facultatif,\n    un bouton « Enregistrer ».\n"
+            "Quand on clique sur « Enregistrer » dans l'écran d'accueil :\n    Le c vaut le cabinet conservé.\n"
+            "    Le numéro GLN du c devient le numéro GLN de l'écran.\n    Fermer l'écran.\n"
+            "Ouvrir l'écran d'accueil.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&z0=123&clic=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[1], "<p class=\"message\" role=\"alert\">Le GLN est faux.</p>");
+        CONTIENT(sc.reponses[1], "<h1>Accueil</h1>");
+        liberer(&sc);
+    }
+
+    {   /* Cabinet (N2a) : le cabinet, un seul, créé au lancement ; son écran depuis celui des soins ; ses sigles ;
+           la règle du GLN vérifiée à « Enregistrer » */
+        memset(&sc, 0, sizeof sc);
+#define CAB_ZONES "z2=Nicolas+Seydoux&z3=Rue+X&z4=1&z5=&z6=1700&z7=Fribourg&z8=Suisse&z11=&z12=&z13=Z123456&z15=&z16="
+        REQUETES(evenement("q=1&clic=7"), get("/"), evenement("q=2&clic=3"), get("/"),
+                 evenement("q=3&" CAB_ZONES "&z14=760100000000&clic=20"), get("/"),
+                 evenement("q=4&" CAB_ZONES "&z14=7601000000000&clic=20"), get("/"),
+                 evenement("q=5&clic=3"), get("/"));
+#undef CAB_ZONES
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet3.grymd", &sc);
+        CONTIENT(sc.reponses[1], "<th>Code tarifaire</th>");
+        CONTIENT(sc.reponses[3], "<h1>Le cabinet</h1>");
+        CONTIENT(sc.reponses[3], "value=\"Nicolas Seydoux\"");
+        CONTIENT(sc.reponses[3], ">Numéro RCC</label>");   /* le sigle garde ses capitales (2.21) */
+        CONTIENT(sc.reponses[3], ">Numéro ASCA</label>");
+        CONTIENT(sc.reponses[5], "Le numéro GLN 760100000000 n&#39;a pas treize chiffres.");
+        CONTIENT(sc.reponses[5], "<h1>Le cabinet</h1>");   /* l'écran reste ouvert, rien n'est écrit */
+        CONTIENT(sc.reponses[7], "<h1>Soins</h1>");
+        CONTIENT(sc.reponses[9], "value=\"7601000000000\"");
+        CONTIENT(sc.reponses[9], "value=\"Fribourg\"");
+        NE_CONTIENT_PAS(sc.reponses[9], "class=\"erreur\"");
+        liberer(&sc);
+        remove("_essai_cabinet3.grymd");
+    }
+
     {   /* Cabinet : un nouveau patient depuis l'écran de séance, aussitôt choisi */
         memset(&sc, 0, sizeof sc);
         question_suivante = 2;
@@ -1391,11 +1433,11 @@ int main(void) {
                  evenement("q=4&fermer=1"),                                     /* 5 : retour à l'accueil */
                  evenement("q=5&clic=0"),                                       /* 6 : Nouvelle séance */
                  /* 7 : client et soin choisis, prix laissé vide : il se calcule avant « Enregistrer » */
-                 evenement("q=6&z2=Zo%C3%A9+Essai&z4=EPI&z5=01.10.2026&z6=&z7=%C3%A0+payer&z10=&clic=15"),
+                 evenement("q=6&z2=Zo%C3%A9+Essai&z4=EPI&z5=01.10.2026&z6=&z7=&z8=%C3%A0+payer&z11=&clic=16"),
                  evenement("q=7&clic=0"),                                       /* 8 : Nouvelle séance */
-                 evenement("q=8&z2=Zo%C3%A9+Essai&z4=EPI&z5=08.10.2026&z6=14%3A30&z7=Twint&z10=&clic=15"),   /* 9 */
+                 evenement("q=8&z2=Zo%C3%A9+Essai&z4=EPI&z5=08.10.2026&z6=14%3A30&z7=50&z8=Twint&z11=&clic=16"),   /* 9 */
                  evenement("q=9&clic=0"),                                       /* 10 : Nouvelle séance */
-                 evenement("q=10&z2=&z4=EPI&z5=08.10.2026&z6=&z7=Twint&z10=50&clic=15"),   /* 11 : sans client */
+                 evenement("q=10&z2=&z4=EPI&z5=08.10.2026&z6=&z7=&z8=Twint&z11=50&clic=16"),   /* 11 : sans client */
                  get("/"),                                                      /* 12 */
                  evenement("q=11&fermer=1"),                                    /* 13 */
                  evenement("q=12&clic=4"),                                      /* 14 : Clients */
@@ -1413,12 +1455,12 @@ int main(void) {
         CONTIENT(sc.reponses[16], "Suisse");
         CONTIENT(sc.reponses[4], "Zoé Essai</button></td><td>079 000 00 00</td>");   /* après les six clients d'essai (essais.grym) */
         CONTIENT(sc.reponses[12], "Remplis « Patient » : cette zone est obligatoire.");
-        /* la fiche : la séance au tarif, puis celle au tarif réduit, la plus récente en tête ; le total */
-        CONTIENT(sc.reponses[16], "value=\"12.0\">EPI</button></td><td>08.10.2026</td><td>14:30</td><td>70</td>");
-        CONTIENT(sc.reponses[16], "value=\"12.1\">EPI</button></td><td>01.10.2026</td><td></td><td>130</td>");
+        /* la fiche : la séance au tarif, puis celle au tarif réduit, la plus récente en tête, sa durée ; le total */
+        CONTIENT(sc.reponses[16], "value=\"12.0\">EPI</button></td><td>08.10.2026</td><td>14:30</td><td>50</td><td>70</td>");
+        CONTIENT(sc.reponses[16], "value=\"12.1\">EPI</button></td><td>01.10.2026</td><td></td><td></td><td>130</td>");
         CONTIENT(sc.reponses[16], "<span class=\"etiquette etiquette-o\">à payer</span>");
         /* la ligne de total : ni sélection, ni bouton de choix (§ 22.3) */
-        CONTIENT(sc.reponses[16], "<tr class=\"total\"><td class=\"selection\"></td><td>Total</td><td></td><td></td><td>200</td>");
+        CONTIENT(sc.reponses[16], "<tr class=\"total\"><td class=\"selection\"></td><td>Total</td><td></td><td></td><td></td><td>200</td>");
         NE_CONTIENT_PAS(sc.reponses[16], "value=\"12.2\"");
         CONTIENT(sc.reponses[16], ">Nouvelle séance</button>");
         NE_CONTIENT_PAS(sc.reponses[16], "class=\"erreur\"");

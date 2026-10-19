@@ -1,4 +1,7 @@
 // GrymoiR : l'atelier, l'onglet « Écrans ».
+extern "C" {
+#include "texte.h"
+}
 #include "onglet_ecrans.h"
 #include "theme.h"
 
@@ -86,7 +89,14 @@ static bool est_bloc(int s) {
 
 namespace {
 
-QString capitale(const QString &s) { return s.isEmpty() ? s : s.left(1).toUpper() + s.mid(1); }
+// Comme à l'exécution : les sigles du programme en capitales (grammaire, § 2.4), puis l'initiale.
+QString capitale(const QString &s) {
+    if (s.isEmpty()) return s;
+    char *t = texte_avec_sigles(s.toUtf8().constData());
+    const QString r = QString::fromUtf8(t);
+    free(t);
+    return r.left(1).toUpper() + r.mid(1);
+}
 
 // Le titre qu'un écran prend de son nom, comme à l'exécution : « des compositeurs » → « Compositeurs ».
 QString titre_du_nom(const QString &nom) {

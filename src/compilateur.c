@@ -1438,6 +1438,11 @@ Module *compiler(const Programme *p, Diagnostic *diag) {
     diag->ligne = diag->colonne = 0;
     diag->fichier = NULL;
     diag->origine_ligne = diag->origine_colonne = 0;
+    {   /* les sigles des noms (§ 2.4), avant toute phrase : les libellés les écriront en capitales */
+        char *s = texte_sigles();
+        if (*s) emettre(&c, I_SIGLES, bloc_constante(c.b, C_TEXTE, s), 0, 0);
+        free(s);
+    }
     if (mode_exemples) {   /* les déclarations et les exemples seulement : rien d'autre ne s'exécute (§ 9.6) */
         Noeud **garde = grym_allouer((p->nb ? p->nb : 1) * sizeof *garde);
         size_t n = 0;

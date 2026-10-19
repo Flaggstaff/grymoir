@@ -154,6 +154,8 @@ int main(void) {
     EXEC("_aptitude horodatée\n    _une date\n_fin\n_classe _un document _est _une chose _adopte horodatée\n_fin\n"
          "_action dater(_une chose_horodatée)\n    chose.date << 5\n_fin\n_le d << _nouveau document\ndater(d)\n"
          "_afficher d.date\n", "5\n");
+    /* Sigles (2.21, § 2.4) : « numéro_RCC » garde ses capitales dans les deux formes */
+    ALLER_RETOUR("_le numéro_RCC << 1\n_afficher numéro_RCC\n", "Le numéro RCC vaut 1.\nAfficher le numéro RCC.\n");
     ALLER_RETOUR("_aptitude active (actif)\n    _un état\n_fin\n_classe _une personne\n    _un nom\n_fin\n"
                  "_classe _un employé _est _une personne\n_fin\n_classe _un cadre _est _un employé _adopte active\n_fin\n",
                  "Une chose active (actif) a :\n    un état.\nUne personne a :\n    un nom.\n"

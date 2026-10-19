@@ -3,6 +3,7 @@
  */
 #include "lexeur.h"
 #include "date.h"
+#include "texte.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -211,6 +212,37 @@ static uint32_t minuscule(uint32_t c) {
     return c;
 }
 
+/* Sigles (grammaire, § 2.4) : on compte les capitales et les minuscules d'un mot pendant qu'on le lit. */
+static int est_minuscule_ecrite(uint32_t c) {
+    return (c >= 'a' && c <= 'z') || (c >= 0xDF && c <= 0xFF && c != 0xF7) || c == 0x153;
+}
+
+typedef struct { int capitales, minuscules; } Casse;
+
+static void compter_casse(Casse *k, uint32_t c) {
+    if (minuscule(c) != c) k->capitales++;
+    else if (est_minuscule_ecrite(c)) k->minuscules++;
+}
+
+/* Un mot écrit tout en capitales, deux au moins (« RCC », « ASCA »), est retenu comme sigle ; écrit autrement,
+ * il ne l'est plus, où que ce soit. */
+static void retenir_si_sigle(const Casse *k, const char *mot, size_t debut_mot) {
+    if (k->capitales >= 2 && k->minuscules == 0) sigle_retenir(mot + debut_mot);
+    else if (k->capitales + k->minuscules > 0) sigle_dementir(mot + debut_mot);
+}
+
+/* Le mot qui occupe t->d[debut .. t->n[ : un nom entre crochets, un nom de la forme compacte. */
+static void retenir_tranche(const Casse *k, const Tampon *t, size_t debut) {
+    if (k->capitales + k->minuscules == 0 || t->n <= debut) return;
+    char *mot = malloc(t->n - debut + 1);
+    if (!mot) return;
+    memcpy(mot, t->d + debut, t->n - debut);
+    mot[t->n - debut] = 0;
+    if (k->capitales >= 2 && k->minuscules == 0) sigle_retenir(mot);
+    else sigle_dementir(mot);
+    free(mot);
+}
+
 /* ---------------------------------------------------------------- */
 /* Lexeur                                                           */
 /* ---------------------------------------------------------------- */
@@ -317,11 +349,14 @@ static Jeton simple(Lexeur *lx, TypeJeton type, size_t debut, int ligne, int col
 
 static Jeton lire_mot(Lexeur *lx, size_t debut, int ligne, int col, int en_debut_ligne) {
     Tampon t = {0};
+    Casse casse = {0, 0};
     while (reste(lx, 0) && (est_lettre(voir(lx, 0)) || est_chiffre(voir(lx, 0)))) {
+        compter_casse(&casse, voir(lx, 0));
         tampon_cp(&t, minuscule(voir(lx, 0)));
         avancer(lx);
     }
     char *mot = tampon_rendre(&t);
+    retenir_si_sigle(&casse, mot, 0);
 
     /* Élision : l'apostrophe suit une lettre (§ 1.2). */
     if (reste(lx, 0) && est_apostrophe(voir(lx, 0))) {
@@ -528,10 +563,14 @@ static Jeton lire_crochets(Lexeur *lx, size_t debut, int ligne, int col) {
             return echec(lx, debut, ligne, col, m);
         }
         if (mots && !apres_elision) tampon_octet(&t, ' ');
+        Casse casse = {0, 0};
+        size_t debut_mot = t.n;
         while (reste(lx, 0) && (est_lettre(voir(lx, 0)) || est_chiffre(voir(lx, 0)))) {
+            compter_casse(&casse, voir(lx, 0));
             tampon_cp(&t, minuscule(voir(lx, 0)));
             avancer(lx);
         }
+        retenir_tranche(&casse, &t, debut_mot);
         apres_elision = reste(lx, 0) && est_apostrophe(voir(lx, 0));
         if (apres_elision) {
             tampon_octet(&t, '\'');
@@ -572,17 +611,26 @@ static Jeton lire_compact(Lexeur *lx, size_t debut, int ligne, int col) {
             : "Nom attendu."));
     }
     Tampon t = {0};
+    Casse casse = {0, 0};
+    size_t debut_mot = 0;
     for (;;) {
         uint32_t c = voir(lx, 0);
         if (est_lettre(c) || est_chiffre(c)) {
+            compter_casse(&casse, c);
             tampon_cp(&t, minuscule(c));
             avancer(lx);
-        } else if (c == '_' && reste(lx, 1) && est_lettre(voir(lx, 1))) {
+            continue;
+        }
+        if (!cle) retenir_tranche(&casse, &t, debut_mot);   /* « numéro_RCC » : un sigle (§ 2.4) */
+        casse.capitales = casse.minuscules = 0;
+        if (c == '_' && reste(lx, 1) && est_lettre(voir(lx, 1))) {
             tampon_octet(&t, (unsigned char)(cle ? '_' : ' '));
             avancer(lx);
+            debut_mot = t.n;
         } else if (est_apostrophe(c)) {
             tampon_octet(&t, '\'');
             avancer(lx);
+            debut_mot = t.n;
             if (cle && t.n == 8 && memcmp(t.d, "aujourd'", 8) == 0 && voir(lx, 0) == 'h'
                 && voir(lx, 1) == 'u' && voir(lx, 2) == 'i') {
                 for (int q = 0; q < 3; q++) { tampon_octet(&t, (unsigned char)voir(lx, 0)); avancer(lx); }

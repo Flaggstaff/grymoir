@@ -24,4 +24,12 @@ char *texte_minuscules(const char *s);  /* « ÉLODIE » → « élodie » */
 /* 'c' contient, 'd' commence par, 'f' finit par, sans tenir compte des accents ni de la casse. */
 int texte_contient(const char *texte, const char *partie, char sens);
 
+/* Sigles (grammaire, § 2.4) : un mot écrit tout en capitales, deux lettres au moins, et jamais autrement (« numéro RCC »).
+ * L'identité ne change pas, le registre retient le mot en minuscules ; l'affichage lui rend ses capitales. */
+void sigle_retenir(const char *mot);       /* un mot écrit tout en capitales, donné en minuscules ; le lexeur l'appelle */
+void sigle_dementir(const char *mot);      /* le même mot écrit autrement : ce n'est plus un sigle */
+char *texte_avec_sigles(const char *nom);  /* « numéro rcc » → « numéro RCC » */
+char *texte_sigles(void);                  /* les sigles retenus, en minuscules, séparés par une espace */
+void sigles_oublier(void);                 /* l'analyse d'un programme repart de zéro */
+
 #endif

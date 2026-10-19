@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.81 de la spécification, révisée le 18 octobre 2026.
+Version 1.82 de la spécification, révisée le 19 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -102,7 +102,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 57 | `ÉCRAN_OUVRIR` | constante texte : la description de l'écran | montre l'écran (grammaire, § 22) |
 | 58 | `ÉCRAN_LISTE` | élément | dépile une liste ; la montre dans l'écran ouvert, les colonnes par défaut |
 | 59 | `ÉCRAN_ATTENDRE` | aucun | valide ce qui précède, attend un événement ; empile l'objet choisi (ou absent), puis le code : 0 fermeture, k + 1 l'élément k |
-| 60 | `ÉCRAN_ERREUR` | aucun | dépile le motif d'un événement raté, le montre dans l'écran |
+| 60 | `ÉCRAN_ERREUR` | aucun | dépile le motif d'un événement raté, le montre dans l'écran, qui reste ouvert même si l'événement avait demandé sa fermeture |
 | 61 | `ÉCRAN_FERMER` | aucun | ferme l'écran ouvert |
 | 62 | `FERMER_ÉCRAN` | aucun | « Fermer l'écran. » : l'attente suivante rend la fermeture sans attendre |
 | 63 | `ÉCRAN_OBJET` | aucun | empile l'objet de l'écran ouvert : « le pays de l'écran » (grammaire, § 22.2) |
@@ -133,6 +133,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 88 | `RÈGLE_FAITE` | la même | la règle a tenu : ce qu'elle a lu vaudra quand la transaction sera validée |
 | 89 | `ÉCRAN_ÉTAT` | élément × 2, + 1 pour « visible si » | dépile la condition (vrai ou faux, sinon erreur) et règle l'état de l'élément de l'écran ouvert jusqu'à la prochaine attente : bit 1 inactif, bit 2 caché ; `ÉCRAN_ATTENDRE` passe les états à l'interface (`ecran_etats`) et ignore un geste sur un élément inactif, caché, ou un changement d'une zone en lecture seule (grammaire, § 22.6) |
 | 90 | `ÉCRAN_IMAGE` | élément × 2, + 1 pour ouvrir la source | `élément × 2 + 1` : la source d'une image calculée commence ; jusqu'à la suite, `LIRE_CHAMP` sur un objet absent laisse absent au lieu d'échouer. `élément × 2` : dépile une image (un fichier dont le format est reconnu) ou absent, sinon erreur ; l'écran la garde jusqu'à la prochaine attente, où `ÉCRAN_ATTENDRE` la passe à l'interface (`ecran_image`) (grammaire, § 22.8) |
+| 93 | `SIGLES` | constante texte : les sigles du programme, en minuscules, séparés par une espace | les retient pour les libellés : `capitale()` écrit ces mots en capitales (« Numéro RCC ») ; émise en tête du bloc principal, seulement si le programme a des sigles ; un bytecode relu sans sa source les retrouve ainsi (grammaire, § 2.4) |
 
 ### 3.1 Boucles et Selon
 
@@ -448,3 +449,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.79 | 2026-10-17 | Type d'un champ transcrit : `texte␜mémo` ; appel facultatif `transcrire`, appelé après l'écriture d'un son, le texte écrit et conservé avec lui ; `machine_transcripteur` ; format version 62 |
 | 1.80 | 2026-10-18 | Interface : `valeur_depuis`, `etiquette`, `lien` dans `ElementEcran` (les textes d'une fiche déduite), `etiquette` et `lien` dans `LigneFiche` ; `LIEN_COURRIEL`, `LIEN_WEB`. Rien ne change dans le bytecode : format version 62 |
 | 1.81 | 2026-10-18 | Interface : dans une fiche déduite, le texte d'une image ou d'un son porte ses `octets`, `taille`, `format` (comme `ELEMENT_IMAGE`) ; format version 62 inchangé |
+| 1.82 | 2026-10-19 | Instruction `SIGLES` (93), en tête du bloc principal quand le programme a des sigles (grammaire 2.21, § 2.4) ; `ÉCRAN_ERREUR` annule un « Fermer l'écran. » demandé par l'événement raté ; format version 63 |

@@ -99,6 +99,15 @@ int main(void) {
     FIXE("Un membre, conservé, a :\n    un nom (texte).\nExporter les membres conservés, par nom décroissant, avec le nom, dans « m.csv ».\n"
          "Exporter les membres conservés dont le nom est « a » dans « n.csv ».\n");
     LITT("Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.", "Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.\n");
+    /* Sigles (2.21, § 2.4) : un mot toujours écrit en capitales les garde ; écrit une fois autrement, il les perd. */
+    LITT("Un cabinet, conservé, a : un numéro RCC (texte).\nLe c vaut un nouveau cabinet :\n    Le numéro RCC vaut « A ».\n"
+         "Afficher le numéro RCC du c.",
+         "Un cabinet, conservé, a :\n    un numéro RCC (texte).\nLe c vaut un nouveau cabinet :\n    Le numéro RCC vaut « A ».\n"
+         "Afficher le numéro RCC du c.\n");
+    LITT("La TVA vaut 8,1.\nAfficher tva.", "La tva vaut 8,1.\nAfficher tva.\n");
+    LITT("Le Ab vaut 1.\nAfficher AB.", "Le ab vaut 1.\nAfficher ab.\n");
+    COMP("Le numéro RCC vaut 1.\nAfficher numéro RCC.", "_le numéro_RCC << 1\n_afficher numéro_RCC\n");
+    FIXE("Le [GLN du cabinet] vaut 1.\nAfficher [GLN du cabinet].");
     COMP("Le pas vaut 1.\nAfficher l'arrondi de 2,5 au pas vers le haut.", "_le pas << 1\n_afficher _arrondi_haut(2,5 ; pas)\n");
     FIXE("Le nom vaut « a ».\nSi le nom ne contient pas « b » et nom finit par « a », afficher nom en majuscules.\n");
     FIXE("Afficher (« a » suivi de « b ») en minuscules puis « 3 » en nombre + 1.\n");

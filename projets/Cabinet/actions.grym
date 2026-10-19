@@ -21,3 +21,10 @@ Pour encaisser une séance et un moyen :
 
 Pour clore une séance et un statut :
     Le statut de la séance devient statut.
+
+Remarque : le cabinet au nom de Nicolas ; l'adresse et les numéros se complètent dans sa fiche.
+Pour fonder le cabinet :
+    Le c vaut un nouveau cabinet :
+        Le nom vaut « Nicolas Seydoux ».
+        Le pays vaut « Suisse ».
+    Conserver le c.

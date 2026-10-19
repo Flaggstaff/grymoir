@@ -8019,6 +8019,9 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     diag->fichier = NULL;
     diag->origine_ligne = diag->origine_colonne = 0;
 
+    /* Les sigles (§ 2.4) sont ceux du programme qu'on analyse et de ses fichiers utilisés ; la boucle interactive
+     * garde ceux des saisies précédentes. */
+    if (!interactif && portee->fichier_index == 0) sigles_oublier();
     char *err = NULL;
     Lexeur *lx = compact ? lexeur_creer_compact(source, taille, &err) : lexeur_creer(source, taille, &err);
     if (!lx) {

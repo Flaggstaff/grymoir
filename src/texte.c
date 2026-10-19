@@ -170,3 +170,103 @@ int texte_contient(const char *texte, const char *partie, char sens) {
     free(q);
     return r;
 }
+
+/* ---------------------------------------------------------------- */
+/* Sigles (grammaire, § 2.4)                                        */
+/* ---------------------------------------------------------------- */
+
+/* Le registre de ce processus : chaque mot vu, en minuscules, avec la façon dont on l'a écrit. Un mot écrit au moins
+ * une fois tout en capitales, et jamais autrement, est un sigle : le libellé et la forme canonique lui rendent ses
+ * capitales. Les noms restent insensibles à la casse : le registre ne change que l'affichage. */
+typedef struct { char *mot; unsigned char vu; } MotVu;   /* vu : 1 en capitales, 2 autrement */
+static MotVu *mots;
+static size_t nb_mots, cap_mots;   /* table à adressage ouvert, cap_mots puissance de deux */
+
+static size_t hacher(const char *m) {
+    size_t h = 1469598103934665603u;
+    for (; *m; m++) h = (h ^ (unsigned char)*m) * 1099511628211u;
+    return h;
+}
+
+static MotVu *case_de(const char *mot) {
+    size_t i = hacher(mot) & (cap_mots - 1);
+    while (mots[i].mot && strcmp(mots[i].mot, mot) != 0) i = (i + 1) & (cap_mots - 1);
+    return &mots[i];
+}
+
+static void noter(const char *mot, unsigned char vu) {
+    if ((nb_mots + 1) * 2 > cap_mots) {
+        MotVu *ancien = mots;
+        size_t ancienne = cap_mots;
+        cap_mots = cap_mots ? cap_mots * 2 : 256;
+        mots = grym_allouer(cap_mots * sizeof *mots);
+        memset(mots, 0, cap_mots * sizeof *mots);
+        for (size_t k = 0; k < ancienne; k++) if (ancien[k].mot) *case_de(ancien[k].mot) = ancien[k];
+        free(ancien);
+    }
+    MotVu *c = case_de(mot);
+    if (!c->mot) { c->mot = grym_dupliquer(mot); nb_mots++; }
+    c->vu |= vu;
+}
+
+void sigle_retenir(const char *mot) { noter(mot, 1); }
+void sigle_dementir(const char *mot) { noter(mot, 2); }
+
+static int est_sigle(const char *mot) {
+    if (!cap_mots) return 0;
+    const MotVu *c = case_de(mot);
+    return c->mot && c->vu == 1;
+}
+
+void sigles_oublier(void) {
+    for (size_t k = 0; k < cap_mots; k++) free(mots[k].mot);
+    free(mots);
+    mots = NULL;
+    nb_mots = cap_mots = 0;
+}
+
+static int separe_les_mots(unsigned char c) { return c == ' ' || c == '\'' || c == '_' || c == '-'; }
+
+char *texte_avec_sigles(const char *nom) {
+    Chaine c = {0};
+    for (const char *p = nom; *p; ) {
+        if (separe_les_mots((unsigned char)*p)) {
+            char t[2] = { *p, 0 };
+            chaine_ajouter(&c, t);
+            p++;
+            continue;
+        }
+        size_t l = 0;
+        while (p[l] && !separe_les_mots((unsigned char)p[l])) l++;
+        char *mot = grym_allouer(l + 1);
+        memcpy(mot, p, l);
+        mot[l] = 0;
+        if (est_sigle(mot)) {
+            char *m = texte_majuscules(mot);
+            chaine_ajouter(&c, m);
+            free(m);
+        } else {
+            chaine_ajouter(&c, mot);
+        }
+        free(mot);
+        p += l;
+    }
+    return chaine_rendre(&c);
+}
+
+/* Les sigles, triés : le bytecode ne dépend pas de l'ordre de la table. */
+static int comparer_textes(const void *a, const void *b) { return strcmp(*(char *const *)a, *(char *const *)b); }
+
+char *texte_sigles(void) {
+    char **l = grym_allouer((nb_mots ? nb_mots : 1) * sizeof *l);
+    size_t n = 0;
+    for (size_t k = 0; k < cap_mots; k++) if (mots[k].mot && mots[k].vu == 1) l[n++] = mots[k].mot;
+    qsort(l, n, sizeof *l, comparer_textes);
+    Chaine c = {0};
+    for (size_t k = 0; k < n; k++) {
+        if (k) chaine_ajouter(&c, " ");
+        chaine_ajouter(&c, l[k]);
+    }
+    free(l);
+    return chaine_rendre(&c);
+}

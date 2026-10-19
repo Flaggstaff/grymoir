@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.20 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.21 de la spécification, révisée le 19 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -113,6 +113,21 @@ Correspondance prévue en forme compacte (v0.2) : `_soit total << 5` pour créer
 
 ---
 
+
+### 2.4 Sigles *(2.21)*
+
+```
+Un cabinet, conservé, a :
+    un nom (texte), unique,
+    un numéro RCC (texte), facultatif.
+```
+
+- Un **sigle** est un mot d'au moins deux capitales, sans minuscule, écrit ainsi **partout** dans le programme et ses fichiers utilisés : `RCC`, `GLN`, `ASCA`. Les noms restent insensibles à la casse (charte, art. 4) : `le numéro rcc du c` désigne le même champ que `le numéro RCC du c`.
+- Le sigle garde ses capitales là où un nom s'affiche : le libellé d'une zone, d'une fiche, d'un formulaire, le titre d'une colonne (« Numéro RCC »), dans le navigateur, l'atelier et l'application fabriquée.
+- La forme canonique les garde aussi (§ 12), dans les deux formes : `numéro RCC`, `_le numéro_RCC`. Écrire un sigle tout en capitales est un choix d'écriture, comme grouper les chiffres d'un nombre.
+- Écrit une seule fois autrement (`numéro Rcc`, `numéro rcc`), le mot n'est plus un sigle, nulle part : la forme canonique l'écrit alors en minuscules partout. Une capitale isolée (`A`) n'en fait pas un. `Le TOTAL vaut 1. Afficher total.` se formate donc en `Le total vaut 1. Afficher total.`
+- Le compilateur range les sigles dans le module (instruction `SIGLES`, docs/vm.md) : un bytecode relu sans sa source les retrouve.
+- Le message d'une erreur nomme encore le champ en minuscules (« « numéro rcc » … ») : seuls les libellés et la forme canonique changent.
 ## 3. Calculer
 
 ### 3.1 Priorités
@@ -1318,7 +1333,7 @@ Afficher le nombre de clients conservés dont le statut actif est vrai.
 - `Pour chaque client conservé` parcourt les objets conservés ; dans le corps, `le client` désigne l'objet du tour.
 - `dont` introduit une condition sur les champs de l'entité : comparaisons et tournures du § 5, reliées par `et` / `ou`. Le programme ne voit jamais de SQL.
 - `, par nom` trie ; `, par solde décroissant` trie à l'envers. Sans tri : dans l'ordre de conservation.
-- `le client conservé dont …` exige exactement un objet. Aucun, ou plusieurs : erreur, avec leur nombre.
+- `le client conservé dont …` exige exactement un objet. Aucun, ou plusieurs : erreur, avec leur nombre. Sans `dont` *(documenté en 2.21)*, `le cabinet conservé` désigne l'unique objet conservé de l'entité, avec la même exigence : c'est la façon d'atteindre une entité qui n'a qu'un objet (un cabinet, une association).
 - `le nombre de clients conservés [dont …]` compte, au pluriel (§ 16.1).
 - Dans une condition `dont`, un champ se lit aussi à travers un lien, de droite à gauche, sur autant d'étapes qu'il faut : `dont la comptabilisation de l'écriture est présente`, `dont le nom de la catégorie du membre est « Junior »`. Le dernier nom est un lien de l'entité examinée, chacun des autres un champ de l'entité que désigne le suivant. Un lien absent rend la condition fausse, comme un champ absent (§ 16.9), sauf `est absent`, qui la rend vraie : `dont la catégorie du membre est absente`. Une étape qui n'est pas un lien, ou un champ qui manque au bout, est une erreur d'analyse qui le dit : « « montant » n'est pas un lien vers une entité : « nom » ne se lit pas à travers lui. », « « couleur » n'est pas un champ du membre. » La base fait le travail, sans charger les objets. `parmi` (§ 16.13) ne s'emploie pas à travers un lien. En forme compacte : `_dont membre.catégorie.nom = « Junior »`.
 - `la somme des soldes des clients conservés [dont …]` additionne un champ `(nombre)` ou `(nombre entier)` ; `la somme des débits des lignes du compte` passe par une relation inverse (§ 16.10). Le champ se met au pluriel par un s au premier mot (`débit` → `débits`, `nombre de parties` → `nombres de parties`) ; un premier mot en s, x ou z ne change pas. L'addition est exacte, en décimal, jamais en virgule flottante ; les champs absents ne comptent pas, les objets de la corbeille non plus ; une somme sur rien vaut 0. Un autre type : « « instrument » est un champ texte : seul un nombre s'additionne. » Comme toute recherche, elle n'entre pas dans un calcul. En forme compacte : `_somme_de solde _de client _conservé`, `_somme_de débit _de ligne _de compte`. Aucun mot n'est réservé : `La somme des prix vaut 3.` crée toujours un nom, tant que `prix` n'est le champ d'aucune entité suivie de « des ».
@@ -1781,6 +1796,8 @@ Ouvrir l'écran des compositeurs.
 
 - `Ouvrir l'écran X.` montre l'écran et attend jusqu'à `Fermer l'écran.` ; `Ouvrir la fiche de c.` ouvre l'écran déduit de l'entité de `c`. Dans un événement, l'écran s'ouvre par-dessus ; à sa fermeture, l'événement reprend.
 - `Ouvrir` valide d'abord ce qui précède ; chaque événement est ensuite sa propre transaction ; après la fermeture, la suite forme une nouvelle transaction (charte, art. 7).
+- Un événement qui échoue n'écrit rien et laisse l'écran ouvert, avec le motif, **même s'il avait déjà demandé `Fermer l'écran.`** *(2.21)* : la règle violée par « Enregistrer, puis fermer » se lit sur l'écran qu'on voulait quitter. Avant le 19 octobre 2026, l'écran se fermait et le motif se perdait (l'écriture, elle, était bien annulée).
+- **Limite connue** *(19 octobre 2026)* : « Modifier », dans une fiche déduite, valide sa saisie sans revérifier les règles du § 16.14 ; une valeur qu'une règle refuse y passe (constaté sur la règle du GLN de projets/Cabinet). Le bouton « Nouvelle séance » des tableaux passe par la machine de la même façon : non vérifié. En attendant la correction, une entité protégée par une règle se modifie par un écran déclaré, dont l'événement « Enregistrer » vérifie les règles (projets/Cabinet : l'écran du cabinet).
 - **Les tableaux d'une fiche** *(2.10)* : sous les champs de la fiche déduite, un tableau par lien d'une entité qui peut désigner l'objet (son entité, ou un ancêtre) : un titre au pluriel (« Séances »), la liste des objets qui le désignent, un bouton « Nouvelle séance » (« Nouveau client », « Nouvel achat »). Sans rien écrire, comme le reste de la fiche.
   - Colonnes : les champs de l'entité, sauf le lien lui-même, les champs multiples, les fichiers, images, sons et mots de passe. Tri : par la première date, la plus récente en tête ; sans date, par la clé.
   - Une ligne « Total » suit les objets quand une colonne est un `(nombre)` : la somme exacte de chacune. Un `(nombre entier)` n'est pas additionné : une année, un numéro n'ont pas de somme qui ait un sens.
@@ -2145,3 +2162,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.18 | 2026-10-18 | § 22.7 : `le groupe « … », en couleur inversée :`, un panneau à l'encre de l'accent, son texte et ses zones en clair |
 | 2.19 | 2026-10-18 | § 22.1 : `, en cartes`, une liste dont chaque objet est une carte (la première colonne en grand, les étiquettes à droite, la deuxième colonne dessous, les autres jointes par « · ») ; un clic choisit la carte |
 | 2.20 | 2026-10-18 | § 22.1 : `le texte « … », en petites capitales`, un surtitre ou un titre de section |
+| 2.21 | 2026-10-19 | Nouveau § 2.4 : les sigles (`un numéro RCC`), insensibles à la casse comme tout nom, en capitales dans les libellés et la forme canonique, rangés dans le module (`SIGLES`) ; § 16.4 : `le cabinet conservé`, sans `dont` ; § 22.3 : un événement qui a demandé « Fermer l'écran. » puis échoue (une règle violée) laisse l'écran ouvert, avec le motif |

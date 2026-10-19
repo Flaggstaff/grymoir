@@ -1,11 +1,30 @@
 Remarque : Cabinet : les données d'un cabinet de thérapie, ses soins, ses patients, leurs séances.
 
+Remarque : le cabinet, un seul : ce qui figure en tête des quittances et des factures.
+Remarque : RCC (SASIS), GLN, RME et ASCA restent vides tant que Nicolas n'en a pas ; la facture du Tarif 590 exigera le RCC.
+Un cabinet, conservé, a :
+    un nom (texte), unique,
+    une rue (texte), facultative,
+    un numéro de maison (texte), facultatif,
+    un complément d'adresse (texte), facultatif,
+    un numéro postal (texte), facultatif,
+    une localité (texte), facultative,
+    un pays (texte), « Suisse » au départ,
+    un téléphone (téléphone), facultatif,
+    un courriel (courriel), facultatif,
+    un numéro RCC (texte), facultatif,
+    un numéro GLN (texte), facultatif,
+    un numéro RME (texte), facultatif,
+    un numéro ASCA (texte), facultatif.
+
 Remarque : un soin a son tarif ; s'il a un tarif de suivi, les séances suivantes d'un même patient le paient.
+Remarque : la durée en minutes ; le code tarifaire, celui de la méthode au Tarif 590, s'il est reconnu.
 Un soin, conservé, a :
     un nom (texte), unique,
     un tarif (nombre),
     un tarif de suivi (nombre), facultatif,
-    une durée (nombre entier), facultative.
+    une durée (nombre entier), facultative,
+    un code tarifaire (texte), facultatif.
 
 Remarque : le nom est la clé : « Anne Rochat » ; deux homonymes se distinguent par une initiale ou une ville.
 Remarque : l'adresse postale en champs séparés, comme la QR-facture l'exige depuis le 21 novembre 2025 (adresse structurée) :
@@ -28,6 +47,7 @@ Une séance, conservée, a :
     un soin (soin),
     une date (date),
     une heure (heure), facultative,
+    une durée (nombre entier), facultative,
     un prix (nombre),
     un statut (« prévue » en bleu, « faite » en vert, « annulée » en gris ou « absence » en rouge),
     un paiement (« à payer » en orange, « espèces » en vert, « Twint » en vert, « virement » en vert ou « offert » en gris).
@@ -42,6 +62,16 @@ Remarque : un numéro postal (NPA) suisse a quatre chiffres.
 Chaque patient conservé dont le pays est « Suisse » et le numéro postal est présent vérifie :
     la longueur du numéro postal du patient = 4,
     sinon « Le numéro postal » puis le numéro postal du patient puis « n'a pas quatre chiffres. ».
+
+Remarque : un seul cabinet ; le programme principal le crée, sa fiche le modifie.
+Chaque cabinet conservé vérifie :
+    le nombre de cabinets conservés = 1,
+    sinon « Il n'y a qu'un cabinet : modifie sa fiche. ».
+
+Remarque : un GLN (Global Location Number, GS1) a treize chiffres.
+Chaque cabinet conservé dont le numéro GLN est présent vérifie :
+    la longueur du numéro GLN du cabinet = 13,
+    sinon « Le numéro GLN » puis le numéro GLN du cabinet puis « n'a pas treize chiffres. ».
 
 Chaque séance conservée vérifie :
     le prix de la séance ≥ 0,

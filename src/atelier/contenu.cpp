@@ -1,4 +1,7 @@
 // GrymoiR : l'atelier, le contenu de la base (contenu.h).
+extern "C" {
+#include "texte.h"
+}
 #include "contenu.h"
 
 #include <QCheckBox>
@@ -28,7 +31,13 @@ QString sql_nom(const char *prefixe, const QString &nom) {
     return "\"" + QString::fromUtf8(prefixe) + QString(nom).replace("\"", "\"\"") + "\"";
 }
 
-QString titre_de(const QString &champ) { return champ.left(1).toUpper() + champ.mid(1); }
+// Le titre d'une colonne : les sigles en capitales (grammaire, § 2.4), puis l'initiale.
+QString titre_de(const QString &champ) {
+    char *t = texte_avec_sigles(champ.toUtf8().constData());
+    const QString r = QString::fromUtf8(t);
+    free(t);
+    return r.left(1).toUpper() + r.mid(1);
+}
 
 // La lignée d'une entité, de la racine à l'entité elle-même ; vide si elle n'est pas dans le schéma.
 QVector<const EntiteSchema *> lignee(const QString &entite, const QMap<QString, const EntiteSchema *> &par_nom) {

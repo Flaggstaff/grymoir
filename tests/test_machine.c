@@ -2618,6 +2618,38 @@ int main(void) {
         free(octets);
         module_detruire(b);
 
+        /* Sigles (2.21, § 2.4) : le module les emporte (SIGLES) ; relu dans un registre vide, la fiche les écrit */
+        {
+            const char *sg = "Un cabinet a : un numéro RCC, un nom.\n"
+                             "Le c vaut un nouveau cabinet :\n    Le numéro RCC vaut « A1 ».\n    Le nom vaut « N ».\n"
+                             "Afficher la fiche du c.\n";
+            total++;
+            Portee *ps = portee_creer();
+            Programme ps_prog;
+            analyser(sg, strlen(sg), ps, 0, &ps_prog, &d);
+            Module *ms = compiler(&ps_prog, &d);
+            programme_liberer(&ps_prog);
+            portee_detruire(ps);
+            char *dis = module_desassembler(ms);
+            if (!strstr(dis, "SIGLES")) signaler(__LINE__, sg, "SIGLES", dis);
+            free(dis);
+            size_t ts;
+            unsigned char *os = module_serialiser(ms, &ts);
+            module_detruire(ms);
+            sigles_oublier();
+            char *es = NULL;
+            Module *rs = module_lire(os, ts, &es);
+            Machine *mm = machine_creer();
+            Chaine ss = {0};
+            if (!rs || !machine_executer(mm, rs, &ss, &d)) signaler(__LINE__, "sigles relus", "fiche", es ? es : d.message);
+            else if (!strstr(ss.d, "Numéro RCC  A1")) signaler(__LINE__, "sigles relus", "Numéro RCC  A1", ss.d);
+            free(ss.d);
+            free(es);
+            free(os);
+            machine_detruire(mm);
+            module_detruire(rs);
+        }
+
         /* un fichier au format 1 (un seul bloc) reste lisible */
         total++;
         const unsigned char v1[] = { 'G','R','Y','M', 1,0, 0,0,0,0, 0,0,0,0, 1,0,0,0, I_RETOUR, 0,0,0,0 };

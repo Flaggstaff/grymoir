@@ -13,6 +13,9 @@ Si le nombre de soins conservés est nul :
     Proposer « Toucher Thérapeutique » et 100.
     Proposer « Soin à Distance » et 100.
 
+Remarque : le cabinet, créé une seule fois à son nom ; Nicolas complète sa fiche depuis l'écran des soins.
+Si le nombre de cabinets conservés est nul, fonder le cabinet.
+
 Remarque : les données d'essai (essais.grym), une seule fois ; à retirer à la livraison avec ce fichier.
 Si le nombre de patients conservés est nul, remplir les essais.
 
@@ -41,6 +44,7 @@ L'écran de séance, « Nouvelle séance » en grand, montre :
             un soin (soin),
             une date (date),
             une heure (heure), facultative,
+            une durée (nombre entier), facultative, avec l'unité « min »,
             un paiement (« à payer », « espèces », « Twint », « virement » ou « offert »), « à payer » au départ,
         le groupe « Prix proposé », en couleur inversée :
             un prix (nombre), avec l'unité « CHF »,
@@ -66,10 +70,33 @@ L'écran des encaissements, « À encaisser », montre :
         un bouton « Offert »,
         un bouton « Fermer ».
 
+Remarque : le cabinet s'édite dans son écran : « Enregistrer » est un événement, les règles du cabinet s'y vérifient.
+L'écran du cabinet, « Le cabinet », montre :
+    côte à côte :
+        l'un sous l'autre :
+            un nom (texte),
+            une rue (texte), facultative,
+            un numéro de maison (texte), facultatif,
+            un complément d'adresse (texte), facultatif,
+            un numéro postal (texte), facultatif,
+            une localité (texte), facultative,
+            un pays (texte),
+        l'un sous l'autre :
+            un téléphone (téléphone), facultatif,
+            un courriel (courriel), facultatif,
+            un numéro RCC (texte), facultatif, avec l'indication « Registre des codes-créanciers (SASIS) »,
+            un numéro GLN (texte), facultatif, avec l'indication « 13 chiffres »,
+            un numéro RME (texte), facultatif,
+            un numéro ASCA (texte), facultatif,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Fermer ».
+
 L'écran des soins montre :
-    la liste des soins conservés, par nom, avec le nom, le tarif, le tarif de suivi et la durée,
+    la liste des soins conservés, par nom, avec le nom, le tarif, le tarif de suivi, la durée et le code tarifaire,
     côte à côte :
         un bouton « Nouveau soin »,
+        un bouton « Le cabinet »,
         un bouton « Fermer ».
 
 Quand on clique sur « Patients » dans l'écran d'accueil :
@@ -106,7 +133,10 @@ Remarque : l'événement teste lui-même la présence des deux zones : elles ne 
 Quand on change le patient dans l'écran de séance :
     Si le patient de l'écran est présent et le soin de l'écran est présent, le prix de l'écran devient le prix conseillé du patient de l'écran et du soin de l'écran.
 
+Remarque : la durée du soin se propose aussi, modifiable : une séance peut durer plus ou moins.
 Quand on change le soin dans l'écran de séance :
+    Si le soin de l'écran est présent :
+        Si la durée du soin de l'écran est présente, la durée de l'écran devient la durée du soin de l'écran.
     Si le patient de l'écran est présent et le soin de l'écran est présent, le prix de l'écran devient le prix conseillé du patient de l'écran et du soin de l'écran.
 
 Remarque : une séance datée d'aujourd'hui ou d'avant est faite ; plus tard, elle est prévue.
@@ -119,6 +149,7 @@ Quand on clique sur « Enregistrer » dans l'écran de séance :
         Le paiement vaut le paiement de l'écran.
         Le statut vaut « faite ».
     Si l'heure de l'écran est présente, l'heure de la nouvelle devient l'heure de l'écran.
+    Si la durée de l'écran est présente, la durée de la nouvelle devient la durée de l'écran.
     Si la date de la nouvelle > aujourd'hui, le statut de la nouvelle devient « prévue ».
     Conserver la nouvelle.
     Fermer l'écran.
@@ -182,6 +213,45 @@ Quand on choisit un soin dans l'écran des soins :
 Quand on clique sur « Nouveau soin » dans l'écran des soins :
     Le nouveau vaut un nouveau soin saisi.
     Conserver le nouveau.
+
+Quand on clique sur « Le cabinet » dans l'écran des soins :
+    Ouvrir l'écran du cabinet.
+
+Quand on ouvre l'écran du cabinet :
+    Le c vaut le cabinet conservé.
+    Le nom de l'écran devient le nom du c.
+    La rue de l'écran devient la rue du c.
+    Le numéro de maison de l'écran devient le numéro de maison du c.
+    Le complément d'adresse de l'écran devient le complément d'adresse du c.
+    Le numéro postal de l'écran devient le numéro postal du c.
+    La localité de l'écran devient la localité du c.
+    Le pays de l'écran devient le pays du c.
+    Le téléphone de l'écran devient le téléphone du c.
+    Le courriel de l'écran devient le courriel du c.
+    Le numéro RCC de l'écran devient le numéro RCC du c.
+    Le numéro GLN de l'écran devient le numéro GLN du c.
+    Le numéro RME de l'écran devient le numéro RME du c.
+    Le numéro ASCA de l'écran devient le numéro ASCA du c.
+
+Quand on clique sur « Enregistrer » dans l'écran du cabinet :
+    Le c vaut le cabinet conservé.
+    Le nom du c devient le nom de l'écran.
+    La rue du c devient la rue de l'écran.
+    Le numéro de maison du c devient le numéro de maison de l'écran.
+    Le complément d'adresse du c devient le complément d'adresse de l'écran.
+    Le numéro postal du c devient le numéro postal de l'écran.
+    La localité du c devient la localité de l'écran.
+    Le pays du c devient le pays de l'écran.
+    Le téléphone du c devient le téléphone de l'écran.
+    Le courriel du c devient le courriel de l'écran.
+    Le numéro RCC du c devient le numéro RCC de l'écran.
+    Le numéro GLN du c devient le numéro GLN de l'écran.
+    Le numéro RME du c devient le numéro RME de l'écran.
+    Le numéro ASCA du c devient le numéro ASCA de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran du cabinet :
+    Fermer l'écran.
 
 Quand on clique sur « Fermer » dans l'écran des soins :
     Fermer l'écran.
