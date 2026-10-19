@@ -69,12 +69,16 @@ Une séance, conservée, a :
     un commentaire (texte), facultatif,
     une quittance (quittance), facultative.
 
-Remarque : les frais du cabinet, en recettes-dépenses (CO 957, al. 2) ; le justificatif, une photo ou un PDF, gardé dix ans.
+Remarque : les rubriques des frais (loyer, matériel…) : Nicolas les nomme, les renomme et en ajoute dans la configuration.
+Une rubrique, conservée, a :
+    un nom (texte), unique.
+
+Remarque : les frais du cabinet, en recettes-dépenses (CO 957, al. 2) ; le justificatif, un scan, une photo ou un PDF, gardé dix ans.
 Un frais (frais), conservé, a :
     une date (date),
     un libellé (texte),
     un montant (nombre),
-    une catégorie (« loyer », « matériel », « formation », « assurances », « cotisations », « déplacements » ou « autres »),
+    une rubrique (rubrique),
     un moyen (« espèces », « Twint », « virement » ou « carte »),
     un justificatif (fichier), facultatif.
 

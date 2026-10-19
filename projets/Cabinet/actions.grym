@@ -56,3 +56,9 @@ Le numéro de quittance d'une année et d'un rang :
     Si rang < 100, rendre « Q- » suivi d'année suivi de « -00 » suivi de rang.
     Si rang < 1000, rendre « Q- » suivi d'année suivi de « -0 » suivi de rang.
     Rendre « Q- » suivi d'année suivi de « - » suivi de rang.
+
+Remarque : une rubrique de frais de départ, à son nom.
+Pour classer un nom :
+    La r vaut une nouvelle rubrique :
+        Le nom vaut nom.
+    Conserver la r.

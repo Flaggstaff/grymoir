@@ -18,6 +18,7 @@ La séance ouverte vaut absent.
 Remarque : la quittance et le frais en cours ; le premier janvier de l'année, d'où partent les comptes et les numéros.
 La pièce en cours vaut absent.
 Le frais ouvert vaut absent.
+La rubrique ouverte vaut absent.
 Le début d'exercice vaut (« 01.01. » suivi de l'année d'aujourd'hui) en date.
 Le soin ouvert vaut absent.
 
@@ -29,7 +30,17 @@ Si le nombre de soins conservés est nul :
     Proposer « Toucher Thérapeutique » et 100.
     Proposer « Soin à Distance » et 100.
 
-Remarque : le cabinet, créé une seule fois à son nom ; Nicolas complète sa fiche depuis l'écran des soins.
+Remarque : les rubriques de frais de départ, créées une seule fois ; ensuite, la configuration les gère.
+Si le nombre de rubriques conservées est nul :
+    Classer « Loyer ».
+    Classer « Matériel ».
+    Classer « Formation ».
+    Classer « Assurances ».
+    Classer « Cotisations ».
+    Classer « Déplacements ».
+    Classer « Autres ».
+
+Remarque : le cabinet, créé une seule fois à son nom ; Nicolas complète sa fiche dans la configuration.
 Si le nombre de cabinets conservés est nul, fonder le cabinet.
 
 Remarque : les données d'essai (essais.grym), une seule fois ; à retirer à la livraison avec ce fichier.
@@ -44,7 +55,7 @@ L'écran d'accueil, « Bonjour Nicolas » en grand, montre :
     un bouton « Patients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png »,
     un bouton « Séances prévues », en tuile, avec la description « Faite, annulée, absence »,
     un bouton « Comptabilité », en tuile, avec la description « Encaisser, quittances, frais »,
-    un bouton « Soins », en tuile, avec la description « Tarifs et durées ».
+    un bouton « Configuration », en tuile, avec la description « Cabinet, soins, rubriques ».
 
 Remarque : les écrans posés au pixel tiennent dans 1072 points, la largeur utile du thème, mesurée sur un MacBook Pro 14 pouces (1512 × 982 et 1800 × 1169).
 Remarque : l'inscription d'un patient : les champs courts à gauche ; à côté, l'anamnèse, dictée (transcrite sur l'ordinateur) ou tapée.
@@ -101,7 +112,8 @@ L'écran de la séance, « Séance », montre :
         une durée (nombre entier), facultative, avec l'unité « min », à 352 de la gauche et 144 du haut, large de 168,
         un prix (nombre), avec l'unité « CHF », à 0 de la gauche et 216 du haut, large de 200,
         un statut (« prévue », « faite », « annulée » ou « absence »), à 0 de la gauche et 288 du haut, large de 520,
-        un paiement (« à payer », « espèces », « Twint », « virement » ou « offert »), à 0 de la gauche et 360 du haut, large de 260,
+        un paiement (« à payer », « espèces », « Twint » ou « virement »), à 0 de la gauche et 360 du haut, large de 260, actif si l'offerte de l'écran est fausse,
+        une offerte (vrai ou faux), à 276 de la gauche et 382 du haut,
         un commentaire dicté (son), facultatif, à 552 de la gauche et 0 du haut, large de 520,
         un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté, à 552 de la gauche et 72 du haut, large de 520, haut de 352,
     côte à côte :
@@ -142,7 +154,7 @@ L'écran des quittances, « Quittances », montre :
     la liste des quittances conservées, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et le moyen.
 
 L'écran des frais, « Frais », montre :
-    la liste des frais conservés, par date décroissant, avec la date, le libellé, la catégorie, le montant et le moyen,
+    la liste des frais conservés, par date décroissant, avec la date, le libellé, le nom de la rubrique, le montant et le moyen,
     côte à côte :
         un bouton « Nouveau frais », principal,
         un bouton « Fermer ».
@@ -152,9 +164,10 @@ L'écran du frais, « Frais », montre :
         une date (date), à 0 de la gauche et 0 du haut, large de 200,
         un montant (nombre), avec l'unité « CHF », à 216 de la gauche et 0 du haut, large de 200,
         un libellé (texte), à 0 de la gauche et 72 du haut, large de 520,
-        une catégorie (« loyer », « matériel », « formation », « assurances », « cotisations », « déplacements » ou « autres »), à 0 de la gauche et 144 du haut, large de 260,
-        un moyen (« espèces », « Twint », « virement » ou « carte »), à 276 de la gauche et 144 du haut, large de 244,
-        un justificatif (fichier), facultatif, à 552 de la gauche et 0 du haut, large de 520,
+        une rubrique (rubrique), à 0 de la gauche et 144 du haut, large de 520,
+        un moyen (« espèces », « Twint », « virement » ou « carte »), à 0 de la gauche et 216 du haut, large de 520,
+        un justificatif (fichier), facultatif, avec l'indication « Un scan, une photo ou un PDF », à 552 de la gauche et 0 du haut, large de 520,
+        un bouton « Voir le justificatif », à 552 de la gauche et 96 du haut, actif si le justificatif de l'écran est présent,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer ».
@@ -192,7 +205,8 @@ L'écran de séance, « Nouvelle séance » en grand, montre :
             une date (date),
             une heure (heure), facultative,
             une durée (nombre entier), facultative, avec l'unité « min »,
-            un paiement (« à payer », « espèces », « Twint », « virement » ou « offert »), « à payer » au départ,
+            une offerte (vrai ou faux),
+            un paiement (« à payer », « espèces », « Twint » ou « virement »), « à payer » au départ, actif si l'offerte de l'écran est fausse,
         le groupe « Prix proposé », en couleur inversée :
             un prix (nombre), avec l'unité « CHF »,
             le texte « Dès la deuxième séance d'un même soin, le tarif de suivi s'applique. Le prix reste modifiable. »,
@@ -241,11 +255,31 @@ L'écran du cabinet, « Le cabinet », montre :
         un bouton « Enregistrer », principal,
         un bouton « Fermer ».
 
-L'écran des soins montre :
+Remarque : la configuration : ce que Nicolas règle une fois, et retouche quand il veut.
+L'écran de configuration, « Configuration », montre :
+    un bouton « Le cabinet », en tuile, avec la description « Adresse, RCC, GLN, RME, ASCA »,
+    un bouton « Soins », en tuile, avec la description « Noms, tarifs et durées »,
+    un bouton « Rubriques de frais », en tuile, avec la description « Loyer, matériel… »,
+    un bouton « Fermer ».
+
+L'écran des soins, « Soins », montre :
     la liste des soins conservés, par nom, avec le nom, le tarif, le tarif de suivi, la durée et le code tarifaire,
     côte à côte :
         un bouton « Nouveau soin »,
-        un bouton « Le cabinet »,
+        un bouton « Fermer ».
+
+Remarque : renommer une rubrique renomme tous ses frais : ils la désignent, pas son nom.
+L'écran des rubriques, « Rubriques de frais », montre :
+    la liste des rubriques conservées, par nom, avec le nom,
+    côte à côte :
+        une nouvelle rubrique (texte), facultative,
+        un bouton « Ajouter », principal,
+    un bouton « Fermer ».
+
+L'écran de la rubrique, « Rubrique », montre :
+    un nom (texte),
+    côte à côte :
+        un bouton « Enregistrer », principal,
         un bouton « Fermer ».
 
 Quand on clique sur « Patients » dans l'écran d'accueil :
@@ -290,10 +324,11 @@ Quand on clique sur « Quittance » dans l'écran des quittances :
     L'exemplaire de la q devient le document de quittance.
     Ouvrir le document de quittance.
 
-Remarque : une quittance déjà remise se remontre à partir de ses données ; son exemplaire, le PDF remis, reste dans la base.
+Remarque : une quittance déjà remise se remontre telle qu'elle a été remise : son exemplaire gardé.
 Quand on choisit une quittance dans l'écran des quittances :
     La pièce en cours devient la quittance choisie de l'écran.
-    Ouvrir le document de quittance.
+    Si l'exemplaire de la pièce en cours est présent, ouvrir l'exemplaire de la pièce en cours.
+    Sinon, ouvrir le document de quittance.
 
 Quand on clique sur « Fermer » dans l'écran des quittances :
     Fermer l'écran.
@@ -316,7 +351,7 @@ Quand on ouvre l'écran du frais :
         La date de l'écran devient la date du frais ouvert.
         Le libellé de l'écran devient le libellé du frais ouvert.
         Le montant de l'écran devient le montant du frais ouvert.
-        La catégorie de l'écran devient la catégorie du frais ouvert.
+        La rubrique de l'écran devient la rubrique du frais ouvert.
         Le moyen de l'écran devient le moyen du frais ouvert.
         Le justificatif de l'écran devient le justificatif du frais ouvert.
 
@@ -326,23 +361,63 @@ Quand on clique sur « Enregistrer » dans l'écran du frais :
             La date vaut la date de l'écran.
             Le libellé vaut le libellé de l'écran.
             Le montant vaut le montant de l'écran.
-            La catégorie vaut la catégorie de l'écran.
+            La rubrique vaut la rubrique de l'écran.
             Le moyen vaut le moyen de l'écran.
         Conserver le f.
         Le frais ouvert devient le f.
     La date du frais ouvert devient la date de l'écran.
     Le libellé du frais ouvert devient le libellé de l'écran.
     Le montant du frais ouvert devient le montant de l'écran.
-    La catégorie du frais ouvert devient la catégorie de l'écran.
+    La rubrique du frais ouvert devient la rubrique de l'écran.
     Le moyen du frais ouvert devient le moyen de l'écran.
     Si le justificatif de l'écran est présent, le justificatif du frais ouvert devient le justificatif de l'écran.
     Fermer l'écran.
 
+Remarque : le justificatif choisi ou gardé, dans la visionneuse du système.
+Quand on clique sur « Voir le justificatif » dans l'écran du frais :
+    Ouvrir le justificatif de l'écran.
+
 Quand on clique sur « Fermer » dans l'écran du frais :
     Fermer l'écran.
 
-Quand on clique sur « Soins » dans l'écran d'accueil :
+Quand on clique sur « Configuration » dans l'écran d'accueil :
+    Ouvrir l'écran de configuration.
+
+Quand on clique sur « Le cabinet » dans l'écran de configuration :
+    Ouvrir l'écran du cabinet.
+
+Quand on clique sur « Soins » dans l'écran de configuration :
     Ouvrir l'écran des soins.
+
+Quand on clique sur « Rubriques de frais » dans l'écran de configuration :
+    Ouvrir l'écran des rubriques.
+
+Quand on clique sur « Fermer » dans l'écran de configuration :
+    Fermer l'écran.
+
+Quand on clique sur « Ajouter » dans l'écran des rubriques :
+    Si la nouvelle rubrique de l'écran est absente, refuser « Écris d'abord le nom de la rubrique. ».
+    La r vaut une nouvelle rubrique :
+        Le nom vaut la nouvelle rubrique de l'écran.
+    Conserver la r.
+    La nouvelle rubrique de l'écran devient absente.
+
+Quand on choisit une rubrique dans l'écran des rubriques :
+    La rubrique ouverte devient la rubrique choisie de l'écran.
+    Ouvrir l'écran de la rubrique.
+
+Quand on clique sur « Fermer » dans l'écran des rubriques :
+    Fermer l'écran.
+
+Quand on ouvre l'écran de la rubrique :
+    Le nom de l'écran devient le nom de la rubrique ouverte.
+
+Quand on clique sur « Enregistrer » dans l'écran de la rubrique :
+    Le nom de la rubrique ouverte devient le nom de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran de la rubrique :
+    Fermer l'écran.
 
 Remarque : la fiche du patient montre ses séances, sa ligne « Total », et le bouton d'une nouvelle séance.
 Quand on choisit un patient dans l'écran des patients :
@@ -425,6 +500,7 @@ Quand on clique sur « Enregistrer » dans l'écran de séance :
         Le prix vaut le prix de l'écran.
         Le paiement vaut le paiement de l'écran.
         Le statut vaut « faite ».
+    Si l'offerte de l'écran est vraie, le paiement de la nouvelle devient « offert ».
     Si l'heure de l'écran est présente, l'heure de la nouvelle devient l'heure de l'écran.
     Si la durée de l'écran est présente, la durée de la nouvelle devient la durée de l'écran.
     Le commentaire dicté de la nouvelle devient le commentaire dicté de l'écran.
@@ -546,7 +622,10 @@ Quand on ouvre l'écran de la séance :
     La durée de l'écran devient la durée du s.
     Le prix de l'écran devient le prix du s.
     Le statut de l'écran devient le statut du s.
-    Le paiement de l'écran devient le paiement du s.
+    Si le paiement du s = « offert » :
+        L'offerte de l'écran devient vrai.
+        Le paiement de l'écran devient « à payer ».
+    Sinon, le paiement de l'écran devient le paiement du s.
     Le commentaire dicté de l'écran devient le commentaire dicté du s.
     Le commentaire de l'écran devient le commentaire du s.
 
@@ -560,6 +639,7 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
     Le prix du s devient le prix de l'écran.
     Le statut du s devient le statut de l'écran.
     Le paiement du s devient le paiement de l'écran.
+    Si l'offerte de l'écran est vraie, le paiement du s devient « offert ».
     Le commentaire dicté du s devient le commentaire dicté de l'écran.
     Le commentaire du s devient le commentaire de l'écran.
     Fermer l'écran.
@@ -577,9 +657,6 @@ Quand on clique sur « Fermer » dans l'écran de la séance :
 Quand on clique sur « Nouveau soin » dans l'écran des soins :
     Le nouveau vaut un nouveau soin saisi.
     Conserver le nouveau.
-
-Quand on clique sur « Le cabinet » dans l'écran des soins :
-    Ouvrir l'écran du cabinet.
 
 Quand on ouvre l'écran du cabinet :
     Le c vaut le cabinet conservé.
