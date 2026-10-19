@@ -1068,9 +1068,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             /* _liste compositeur _conservé [_dont …] [_par nom [_décroissant]] [_avec titre ; compositeur.nom]
              * [_place 96 16] [_largeur 240] [_hauteur 80] (§ 22.9) */
             size_t fin_places = f;
+            size_t cartes = f;   /* « _cartes » (2.19) : après les colonnes, avant la place */
             for (size_t q = d + 3; q < f; q++)
                 if (est_cle(&r->e[q], "place") || est_cle(&r->e[q], "largeur") || est_cle(&r->e[q], "hauteur")) { f = q; break; }
+            for (size_t q = d + 3; q < f; q++) if (est_cle(&r->e[q], "cartes")) { cartes = q; break; }
             const size_t places = f;
+            if (cartes < f) f = cartes;
             size_t avec = chercher(r, d + 3, f, "avec");
             size_t fin_liste = f;
             f = avec;
@@ -1115,6 +1118,11 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                     debut = k + 1;
                     i++;
                 }
+            }
+            if (cartes < places) {   /* « _cartes » → « , en cartes » (2.19) */
+                emettre(r, J_VIRGULE, NULL, &r->e[cartes], 1);
+                mot(r, "en", &r->e[cartes]);
+                mot(r, "cartes", &r->e[cartes]);
             }
             if (!etats_compacts(r, places, fin_places, 1, 0)) return;
             f = fin_places;

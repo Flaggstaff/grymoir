@@ -24,6 +24,18 @@ Pour consigner une personne et une prestation et un écart et un prix et un stat
         Le paiement vaut paiement.
     Conserver la s.
 
+Remarque : une séance d'aujourd'hui, à son heure, pour les cartes de l'accueil.
+Pour prévoir une personne et une prestation et une heure et un prix et un statut :
+    La s vaut une nouvelle séance :
+        Le client vaut le client conservé dont le nom est personne.
+        Le soin vaut le soin conservé dont le nom est prestation.
+        La date vaut aujourd'hui.
+        L'heure vaut heure.
+        Le prix vaut prix.
+        Le statut vaut statut.
+        Le paiement vaut « à payer ».
+    Conserver la s.
+
 Pour remplir les essais :
     Inscrire « Anne Rochat » et « Route de Riaz » et « 12a » et « 1630 » et « Bulle » et « 079 000 00 01 ».
     Inscrire « Louis Bapst » et « Rue de Lausanne » et « 40 » et « 1700 » et « Fribourg » et « 079 000 00 02 ».
@@ -43,3 +55,6 @@ Pour remplir les essais :
     Consigner « Sophie Clément » et « Soin à Distance » et −4 et 100 et « faite » et « virement ».
     Consigner « Sophie Clément » et « EPI » et 5 et 130 et « prévue » et « à payer ».
     Consigner « Marc Dupraz » et « LEAA » et −15 et 130 et « faite » et « offert ».
+    Prévoir « Anne Rochat » et « EPI » et 9:00 et 70 et « faite ».
+    Prévoir « Louis Bapst » et « Kriya Massage » et 14:30 et 100 et « prévue ».
+    Prévoir « Marc Dupraz » et « LEAA » et 17:00 et 130 et « prévue ».

@@ -615,7 +615,20 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             });
             r.tables[k] = tab;
             r.controles[k] = tab;
-            poser(tab, 1);
+            if (e.cartes) {   // 2.19 : la table garde les lignes, cachée ; les cartes se dessinent à chaque relecture
+                auto *jeu = new QWidget;
+                jeu->setObjectName("cartes");
+                auto *g = new QGridLayout(jeu);
+                g->setContentsMargins(0, 0, 0, 0);
+                g->setSpacing(t.mesure("espace-4"));
+                for (int c = 0; c < 3; c++) g->setColumnStretch(c, 1);
+                tab->setParent(jeu);
+                tab->setFixedHeight(0);   // cachée, et sans hauteur si un « visible si » la remontre
+                tab->hide();
+                tab->setProperty("cartes", QVariant::fromValue<QObject *>(jeu));
+                poser(jeu);
+            } else
+                poser(tab, 1);
         } else if (e.tuile && !toile) {
             // une tuile (2.15) : grande, son titre et son image en tête, sa description dessous ; des tuiles qui se
             // suivent forment une grille de quatre colonnes

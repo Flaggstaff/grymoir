@@ -242,7 +242,7 @@ static void chercher(Compilation *c, const Noeud *n) {
     snprintf(t, sizeof t, "\x1f%c\x1f", mode);
     chaine_ajouter(&d, t);
     if (n->texte2) chaine_ajouter(&d, n->texte2);
-    chaine_ajouter(&d, n->entier ? "\x1f" "1\x1f" : "\x1f" "0\x1f");
+    chaine_ajouter(&d, (n->entier & 1) ? "\x1f" "1\x1f" : "\x1f" "0\x1f");
     int parametres = 0;
     /* « les œuvres de bach » (§ 16.10), « les interprètes de o » (§ 16.13) : l'objet en dernier enfant */
     int inverse = n->op == 'I' || n->op == 'M';
@@ -1287,6 +1287,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 chaine_ajouter(&d, cols);
                 free(cols);
             }
+            if (el->type == N_CHERCHER && !el->graphique && (el->entier & 2)) chaine_ajouter(&d, "\x15" "c");   /* en cartes (2.19) */
             if (el->type == N_NOM) {   /* « Zpays ␞ texte ␞ f » : le type, et « f » si facultative */
                 chaine_ajouter(&d, "\x1e");
                 chaine_ajouter(&d, el->texte2);

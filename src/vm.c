@@ -2296,6 +2296,9 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     const ClasseVM *ce = classe_vm(m, nom_classe);
     free(nom_classe);
     for (size_t k = 0; k < e->n; k++) {
+        char *nak = strchr(parts[k + 2], '\x15');   /* « … ␕ c » : une liste en cartes (2.19), lue puis retirée */
+        const int cartes = nak && nak[1] == 'c';
+        if (nak) *nak = '\0';
         const char *x = parts[k + 2];
         if (x[0] == '\x1d') {   /* « ␝96,16,240,0␝ » : la place d'un élément en position libre (§ 22.9) */
             int g = 0, h = 0, l = 0, ht = 0;
@@ -2443,6 +2446,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
                 free(illisible);
             }
         }
+        e->elements[k].cartes = cartes && x[0] == 'L';
         e->elements[k].sorte = graphe ? ELEMENT_GRAPHIQUE : x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON
                              : x[0] == 'I' || x[0] == 'J' ? ELEMENT_IMAGE : ELEMENT_TEXTE;
         if (x[0] == 'J') { e->elements[k].calculee = 1; continue; }   /* image calculée : ÉCRAN_IMAGE la donne (§ 22.8) */

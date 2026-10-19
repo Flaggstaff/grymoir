@@ -178,7 +178,7 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0)
                              | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0) | (el[k].masque ? 32 : 0)
-                             | (el[k].principal ? 64 : 0) | (el[k].tuile ? 128 : 0) | (el[k].a_cote_du_titre ? 256 : 0) | (el[k].inverse ? 512 : 0));
+                             | (el[k].principal ? 64 : 0) | (el[k].tuile ? 128 : 0) | (el[k].a_cote_du_titre ? 256 : 0) | (el[k].inverse ? 512 : 0) | (el[k].cartes ? 1024 : 0));
         t->facultatives << el[k].facultatif;
         t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
         t->unites << (el[k].unite ? QString(el[k].unite_devant ? "<" : ">") + QString::fromUtf8(el[k].unite) : QString());
@@ -677,6 +677,60 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         const int col = t->property("tri").isValid() ? t->property("tri").toInt() : -1;
         if (col >= 0) t->sortItems(col, (Qt::SortOrder)t->property("ordre").toInt());
         epingler_total(t);
+        if (auto *jeu = qobject_cast<QWidget *>(t->property("cartes").value<QObject *>())) {
+            // les cartes (2.19) : la première colonne en grand, les étiquettes à droite, la deuxième dessous, les autres
+            // jointes par « · » ; un clic choisit la ligne, comme un double-clic dans une liste
+            auto *g = qobject_cast<QGridLayout *>(jeu->layout());
+            for (QPushButton *b : jeu->findChildren<QPushButton *>(QString(), Qt::FindDirectChildrenOnly)) b->deleteLater();
+            for (QLabel *l : jeu->findChildren<QLabel *>(QString(), Qt::FindDirectChildrenOnly)) l->deleteLater();
+            int n = 0;
+            for (int r = 0; r < nb_lignes && g; r++) {
+                if (r * nc >= cellules.size() || cellules[r * nc].startsWith(QChar(0x1c))) continue;
+                auto *b = new QPushButton(jeu);
+                b->setProperty("role", "carte");
+                auto *dedans = new QVBoxLayout(b);
+                dedans->setContentsMargins(20, 16, 20, 16);
+                dedans->setSpacing(6);
+                auto *tete = new QHBoxLayout;
+                auto *grand = new QLabel(cellules[r * nc].startsWith(QChar(0x1d)) ? cellules[r * nc].mid(2) : cellules[r * nc]);
+                grand->setProperty("niveau", "carte-grand");
+                tete->addWidget(grand, 1);
+                QStringList detail;
+                QString nom;
+                for (int c = 1; c < nc && r * nc + c < cellules.size(); c++) {
+                    const QString x = cellules[r * nc + c];
+                    if (x.size() > 1 && x[0] == QChar(0x1d)) {   // une étiquette : sa couleur, comme dans une liste
+                        auto *e = new QLabel(x.mid(2));
+                        const auto p = teinte_etiquette(x[1]);
+                        if (!p.first.isEmpty())
+                            e->setStyleSheet(QString("background: %1; color: %2; font-weight: 600; font-size: 12px; "
+                                                     "padding: 3px 9px; border-radius: 9px;").arg(p.first, p.second));
+                        tete->addWidget(e, 0, Qt::AlignTop);
+                    } else if (!x.isEmpty()) {
+                        if (nom.isEmpty()) nom = x; else detail << x;
+                    }
+                }
+                dedans->addLayout(tete);
+                if (!nom.isEmpty()) { auto *l = new QLabel(nom); l->setProperty("niveau", "carte-nom"); dedans->addWidget(l); }
+                if (!detail.isEmpty()) { auto *l = new QLabel(detail.join(QString::fromUtf8(" · "))); l->setProperty("niveau", "carte-detail"); dedans->addWidget(l); }
+                for (QLabel *l : b->findChildren<QLabel *>()) l->setAttribute(Qt::WA_TransparentForMouseEvents);
+                b->setAccessibleName(grand->text() + " " + nom);
+                b->setMinimumHeight(dedans->sizeHint().height());
+                connect(b, &QPushButton::clicked, this, [this, element, r, t] {
+                    // la ligne choisie dans la table cachée : « la séance choisie de l'écran » se lit là
+                    for (int q = 0; q < t->rowCount(); q++)
+                        if (t->item(q, 0) && t->item(q, 0)->data(Qt::UserRole).toInt() == r) { t->setCurrentCell(q, 0); break; }
+                    envoyer_evenement(EVENEMENT_CHOIX, element, r);
+                });
+                g->addWidget(b, n / 3, n % 3);
+                n++;
+            }
+            if (!n && g) {
+                auto *vide = new QLabel(QString::fromUtf8("Rien pour l'instant."), jeu);
+                vide->setProperty("niveau", "carte-detail");
+                g->addWidget(vide, 0, 0, 1, 3);
+            }
+        }
     });
     connect(&travail, &Travail::ecran_valeurs, this, [this](const QStringList &v) {
         for (int k = 0; k < v.size() && k < zones.size(); k++) {
@@ -1031,6 +1085,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].tuile = o & 128;        // 2.15
         elements[k].a_cote_du_titre = o & 256;   // 2.17
         elements[k].inverse = o & 512;           // 2.18
+        elements[k].cartes = o & 1024;           // 2.19
         elements[k].multiple = o & 8;   // § 22.1
         elements[k].recherche = o & 16;   // § 22.6
         elements[k].masque = o & 32;   // § 22.6
@@ -1170,7 +1225,10 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
     // rien qui ait besoin de hauteur (une liste, un graphique, un texte sur plusieurs lignes, des onglets) : l'écran
     // reste en haut, l'espace libre dessous, comme une page ; sinon Qt répartissait la hauteur entre les éléments et
     // l'écran flottait au milieu de la fenêtre. Les blocs « côte à côte » s'étirent toujours : on regarde leur contenu.
-    const bool etire = !vue_ecran->findChildren<QTableWidget *>().isEmpty() || !vue_ecran->findChildren<QPlainTextEdit *>().isEmpty()
+    const bool etire = [this] {   // une table en cartes (2.19) ne s'étire pas : elle est cachée, ses cartes ont leur hauteur
+                           for (QTableWidget *t : vue_ecran->findChildren<QTableWidget *>()) if (!t->property("cartes").isValid()) return true;
+                           return false;
+                       }() || !vue_ecran->findChildren<QPlainTextEdit *>().isEmpty()
                        || !vue_ecran->findChildren<QTabWidget *>().isEmpty()
                        || [this] {   // Graphique n'a pas de méta-objet à lui : findChildren les prendrait tous pour des graphiques
                               for (QWidget *w : vue_ecran->findChildren<QWidget *>()) if (dynamic_cast<Graphique *>(w)) return true;

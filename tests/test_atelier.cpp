@@ -787,6 +787,41 @@ int main(int argc, char **argv) {
         while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
     }
 
+    // Une liste en cartes (2.19) : une carte par ligne, la première colonne en grand ; un clic choisit la ligne
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Une séance, conservée, a :\n    une heure (heure),\n    un nom (texte).\n"
+                    "La s vaut une nouvelle séance :\n    L'heure vaut 9:00.\n    Le nom vaut « Anne ».\nConserver la s.\n"
+                    "L'écran x montre :\n    la liste des séances conservées, par heure, avec l'heure et le nom, en cartes.\n"
+                    "Quand on choisit une séance dans l'écran x :\n    Afficher le nom de la séance choisie de l'écran.\n    Fermer l'écran.\n"
+                    "Ouvrir l'écran x.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        QPushButton *carte = nullptr;
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 15000 && !carte) {
+            QApplication::processEvents(QEventLoop::AllEvents, 20);
+            for (QPushButton *b : e.findChildren<QPushButton *>())
+                if (b->property("role").toString() == "carte" && b->isVisible() && b->isEnabled()) carte = b;
+        }
+        VERIFIER(carte != nullptr);
+        QStringList textes;
+        if (carte) for (QLabel *l : carte->findChildren<QLabel *>()) textes << l->text();
+        VERIFIER(textes.contains("09:00") && textes.contains("Anne"));
+        if (carte) carte->click();
+        z.restart();
+        QTextBrowser *fil = e.findChild<QTextBrowser *>();
+        while (z.elapsed() < 10000 && !(fil && fil->toPlainText().contains("Anne"))) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(fil && fil->toPlainText().contains("Anne"));
+    }
+
     // La fiche (§ 22.3) : le tableau des séances et sa ligne de total, en gras, jamais sélectionnable, la dernière même
     // après un tri choisi d'un clic sur un titre ; un double-clic dessus ne mène nulle part
     {

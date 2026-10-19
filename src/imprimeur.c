@@ -833,7 +833,7 @@ static void expression(Impression *im, const Noeud *n) {
         if (n->texte2 && n->forme < 3) {   /* formes 3 à 7 : texte2 est le champ de l'agrégat, pas un tri */
             aj(im, im->compact ? " _par " : ", par ");
             ecrire_nom(im, n->texte2, 0);
-            if (n->entier) aj(im, im->compact ? " _décroissant" : " décroissant");
+            if (n->entier & 1) aj(im, im->compact ? " _décroissant" : " décroissant");
         }
         return;
     }
@@ -1427,6 +1427,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                         q = *fin ? fin + 1 : fin;
                     }
                 }
+                if (!el->graphique && (el->entier & 2)) aj(im, " _cartes");   /* 2.19 */
                 place_ecran(im, el, 1);
             } else {
                 int fem = genre_de_nom(im, el->texte) == G_FEMININ;
@@ -1501,6 +1502,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                         q = *fin ? fin + 1 : fin;
                     }
                 }
+                if (!el->graphique && (el->entier & 2)) aj(im, ", en cartes");   /* 2.19 */
                 place_ecran(im, el, 1);   /* la place d'une liste vient après ses colonnes (§ 22.9) */
             }
             aj(im, c ? "\n" : k < dernier ? ",\n" : ".\n");

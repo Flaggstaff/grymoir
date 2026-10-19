@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.18 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.19 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1762,6 +1762,7 @@ Ouvrir l'écran des compositeurs.
 
 ### 22.1 Déclaration
 
+- `, en cartes` *(2.19)*, après les colonnes : chaque objet devient une carte, trois par rangée. La première colonne s'y écrit en grand (une heure, un nom), les colonnes à étiquette (§ 16.15) en haut à droite, la deuxième colonne dessous, les suivantes jointes par « · ». Un clic sur une carte vaut le choix d'une ligne : `Quand on choisit …` s'exécute. Sans objet : « Rien pour l'instant. ». Pour un tableau de bord, un planning du jour ; une liste longue reste un tableau. Forme compacte : `_cartes`.
 - `L'écran des compositeurs montre :`, au premier niveau, suivi de ses éléments séparés par des virgules, le dernier suivi d'un point. Un titre différent du nom se donne entre guillemets : `L'écran des compositeurs, « Nos compositeurs », montre :` ; sinon le titre vient du nom (« Compositeurs », « Accueil »).
 - Éléments : `la liste des … conservés [dont …] [, par …] [, avec le …, le … et le …]` (recherche du § 16.4) ; `un bouton « … »` ; `le texte « … »` ; une zone de saisie déclarée comme un champ d'entité (`un pays (texte), « Suisse » au départ`, `, facultatif`) ; `côte à côte :` et `l'un sous l'autre :`, qui ouvrent un bloc indenté ; `le groupe « … » :` (§ 22.7) et `en position libre :` (§ 22.9), aussi.
 - Colonnes par défaut : les champs simples, dans l'ordre de la déclaration ; un lien montre la clé de l'objet désigné ; fichiers, images et champs « plusieurs » restent hors de la liste.
@@ -2141,3 +2142,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.16 | 2026-10-18 | § 22.5 : `et la signature « … »`, une image en bandeau en tête de chaque écran ; le logo devient alors l'icône seule |
 | 2.17 | 2026-10-18 | § 22.6 : `, à côté du titre` ; § 22.5 : « en grand » vaut 40 px en gras (il valait 22 px, calculé sur la mauvaise police) |
 | 2.18 | 2026-10-18 | § 22.7 : `le groupe « … », en couleur inversée :`, un panneau à l'encre de l'accent, son texte et ses zones en clair |
+| 2.19 | 2026-10-18 | § 22.1 : `, en cartes`, une liste dont chaque objet est une carte (la première colonne en grand, les étiquettes à droite, la deuxième colonne dessous, les autres jointes par « · ») ; un clic choisit la carte |

@@ -489,9 +489,6 @@ static char *feuille_de_style(const Serveur *s) {
         variables(&c, 1, a, s);
         chaine_ajouter(&c, "}");
     }
-    if (s->police)   /* la police de l'application (2.13), servie à /police, devant celle du thème */
-        chaine_ajouter(&c, "@font-face{font-family:\"Police de l'application\";src:url(/police)}"
-                           "body,button,input,select,textarea{font-family:\"Police de l'application\",\"Atkinson Hyperlegible Next\",system-ui,sans-serif}");
     chaine_ajouter(&c,
     "body{margin:0;background:var(--fond);color:var(--texte);"
     "font:14px/20px \"Atkinson Hyperlegible Next\",system-ui,sans-serif}"
@@ -515,6 +512,14 @@ static char *feuille_de_style(const Serveur *s) {
     "fieldset.groupe.inverse label,fieldset.groupe.inverse .texte{color:var(--sur-accent)}"
     "fieldset.groupe.inverse input[type=text]{background:transparent;color:var(--sur-accent);border:0;border-bottom:1px solid var(--accent-doux);"
     "border-radius:0;font-size:40px;font-weight:700;min-height:56px}"
+    );
+    chaine_ajouter(&c,   /* en deux morceaux : une chaîne littérale de C99 tient en 4095 octets */
+    ".cartes{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}"
+    "button.carte{margin:0;display:flex;flex-direction:column;gap:8px;align-items:stretch;text-align:left;padding:20px 22px;"
+    "border-radius:12px;border:1px solid var(--separateur);background:var(--surface)}"
+    "button.carte .tete{display:flex;justify-content:space-between;align-items:baseline;gap:8px}"
+    "button.carte .grand{font-size:28px;font-weight:600}button.carte .nom{font-size:18px;font-weight:500}"
+    "button.carte .detail{font-weight:400;color:var(--texte-2)}.cartes p.vide{color:var(--texte-2)}"
     ".bandeau{padding:0 0 16px;margin:0 0 24px;border-bottom:1px solid var(--separateur)}.bandeau img{height:26px;width:auto;display:block}"
     ".tuiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}"
     "button.tuile{margin:0;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;text-align:left;"
@@ -605,6 +610,9 @@ static char *feuille_de_style(const Serveur *s) {
     "textarea{font:inherit;color:var(--texte);background:var(--surface);width:100%;box-sizing:border-box;"
     "padding:4px 8px;border:1px solid var(--bordure);border-radius:8px}textarea[readonly]{background:var(--fond-desactive)}"
     "p.image{margin:0}p.image img{display:block;max-width:100%;max-height:24rem;border-radius:6px}");
+    if (s->police)   /* la police de l'application (2.13), servie à /police : après la règle de body, qu'elle remplace */
+        chaine_ajouter(&c, "@font-face{font-family:\"Police de l'application\";src:url(/police)}"
+                           "body,button,input,select,textarea{font-family:\"Police de l'application\",\"Atkinson Hyperlegible Next\",system-ui,sans-serif}");
     return chaine_rendre(&c);
 }
 
@@ -1156,9 +1164,42 @@ static void valeur_de_fiche(Chaine *c, const char *t, char etiquette, int lien) 
     } else echapper(c, t);
 }
 
+/* Une liste en cartes (2.19) : chaque ligne un bouton de choix ; la première colonne en grand, les étiquettes en haut à
+ * droite, la deuxième colonne dessous, les autres jointes par « · ». La ligne de total n'en fait pas. */
+static void cartes(Chaine *c, const EcranWeb *e, size_t k) {
+    const ElementEcran *el = &e->el[k];
+    const size_t nc = el->nb_colonnes;
+    chaine_ajouter(c, "<div class=\"cartes\">");
+    if (!e->nb_lignes[k]) chaine_ajouter(c, "<p class=\"vide\">Rien pour l'instant.</p>");
+    for (size_t r = 0; r < e->nb_lignes[k] && nc; r++) {
+        char *const *ligne = &e->cellules[k][r * nc];
+        if (ligne[0][0] == '\x1c') continue;
+        char *v = grym_formater("<button class=\"carte\" name=\"choix\" value=\"%lu.%lu\"><span class=\"tete\"><span class=\"grand\">",
+                                (unsigned long)k, (unsigned long)r);
+        chaine_ajouter(c, v);
+        free(v);
+        cellule(c, ligne[0]);
+        chaine_ajouter(c, "</span><span class=\"etiquettes\">");
+        for (size_t q = 1; q < nc; q++) if (ligne[q][0] == '\x1d') cellule(c, ligne[q]);
+        chaine_ajouter(c, "</span></span>");
+        int nom = 0, detail = 0;
+        for (size_t q = 1; q < nc; q++) {
+            if (ligne[q][0] == '\x1d' || !ligne[q][0]) continue;
+            if (!nom) { chaine_ajouter(c, "<span class=\"nom\">"); cellule(c, ligne[q]); chaine_ajouter(c, "</span>"); nom = 1; continue; }
+            chaine_ajouter(c, detail ? " · " : "<span class=\"detail\">");
+            cellule(c, ligne[q]);
+            detail = 1;
+        }
+        if (detail) chaine_ajouter(c, "</span>");
+        chaine_ajouter(c, "</button>");
+    }
+    chaine_ajouter(c, "</div>\n");
+}
+
 static void liste(Chaine *c, const EcranWeb *e, size_t k) {
     const ElementEcran *el = &e->el[k];
     const size_t nc = el->nb_colonnes;
+    if (el->cartes) { cartes(c, e, k); return; }
     chaine_ajouter(c, "<div class=\"liste\"><table class=\"liste\"><thead><tr><th class=\"selection\"></th>");
     for (size_t q = 0; q < nc; q++) {
         chaine_ajouter(c, "<th>");

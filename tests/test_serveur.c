@@ -1261,6 +1261,23 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* 2.19 : une liste en cartes : un bouton de choix par ligne, la première colonne en grand, la deuxième en nom */
+        const char *src = "Une séance, conservée, a :\n    une heure (heure),\n    un nom (texte),\n    un soin (texte).\n"
+                          "Pour semer :\n    La s vaut une nouvelle séance :\n        L'heure vaut 9:00.\n        Le nom vaut « Anne ».\n"
+                          "        Le soin vaut « EPI ».\n    Conserver la s.\n"
+                          "Si le nombre de séances conservées est nul, semer.\n"
+                          "L'écran d'accueil montre :\n    la liste des séances conservées, par heure, avec l'heure, le nom et le soin, en cartes.\n"
+                          "Quand on choisit une séance dans l'écran d'accueil :\n    Fermer l'écran.\nOuvrir l'écran d'accueil.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&choix=0.0"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<div class=\"cartes\"><button class=\"carte\" name=\"choix\" value=\"0.0\"><span class=\"tete\">"
+                                 "<span class=\"grand\">09:00</span><span class=\"etiquettes\"></span></span><span class=\"nom\">Anne</span>"
+                                 "<span class=\"detail\">EPI</span></button></div>");
+        CONTIENT(sc.reponses[2], "Application terminée.");
+        liberer(&sc);
+    }
+
     {   /* 2.17 : un bouton à côté du titre, dans l'en-tête, avant la croix ; pas une seconde fois plus bas */
         const char *src = "L'écran d'accueil, « Bonjour » en grand, montre :\n    un bouton « Nouvelle », principal, à côté du titre,\n"
                           "    un bouton « Fermer ».\n"
@@ -1352,7 +1369,7 @@ int main(void) {
         question_suivante = 2;
         /* le pays laissé vide prend sa valeur de départ, « Suisse » */
         char *formulaire = reponse("Zoé Essai|079 000 00 00||Route de Riaz|12a||1630|Bulle|||");
-        REQUETES(evenement("q=1&clic=1"),                                       /* 0 : Clients */
+        REQUETES(evenement("q=1&clic=4"),                                       /* 0 : Clients */
                  evenement("q=2&clic=2"),                                       /* 1 : Nouveau client */
                  get("/"),                                                      /* 2 : le formulaire déduit */
                  formulaire,                                                    /* 3 */
@@ -1367,7 +1384,7 @@ int main(void) {
                  evenement("q=10&z2=&z3=EPI&z4=08.10.2026&z5=&z6=Twint&z9=50&clic=14"),   /* 11 : sans client */
                  get("/"),                                                      /* 12 */
                  evenement("q=11&fermer=1"),                                    /* 13 */
-                 evenement("q=12&clic=1"),                                      /* 14 : Clients */
+                 evenement("q=12&clic=4"),                                      /* 14 : Clients */
                  evenement("q=13&choix=0.6"),                                   /* 15 : la fiche d'Anne */
                  get("/"));                                                     /* 16 */
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet.grymd", &sc);

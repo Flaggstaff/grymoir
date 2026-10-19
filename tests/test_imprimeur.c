@@ -111,6 +111,8 @@ int main(void) {
     FIXE("L'écran x montre :\n    un bouton « Nouvelle », principal, à côté du titre.\n"
          "Quand on clique sur « Nouvelle » dans l'écran x :\n    Fermer l'écran.\n");   /* 2.17 */
     FIXE("L'écran x montre :\n    le groupe « Prix proposé », en couleur inversée :\n        le texte « 70 ».\n");   /* 2.18 */
+    FIXE("Une séance, conservée, a :\n    une heure (heure),\n    un prix (nombre).\nL'écran x montre :\n"
+         "    la liste des séances conservées, par heure décroissant, avec l'heure et le prix, en cartes.\n");   /* 2.19 */
     /* « suivi » après « de » est un mot de nom ; l'opérateur « suivi de » reste (§ 4.4) */
     FIXE("Un soin, conservé, a :\n    un tarif de suivi (nombre).\nLe s vaut un nouveau soin :\n    Le tarif de suivi vaut 70.\n"
          "Afficher le tarif de suivi du s suivi de « CHF ».\n");

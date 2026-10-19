@@ -6649,6 +6649,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                         && !est_mot(voir(a, 1), "à") && !est_mot(voir(a, 1), "large") && !est_mot(voir(a, 1), "haut")
                         && !est_mot(voir(a, 1), "haute")
                         && !(est_mot(voir(a, 1), "en") && est_mot(voir(a, 2), "position"))
+                        && !(est_mot(voir(a, 1), "en") && est_mot(voir(a, 2), "cartes"))
                         && !(est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "liste"))
                         && !(est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "texte") && voir(a, 3)->type == J_TEXTE)
                         && !(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "un") && est_mot(voir(a, 3), "sous"))
@@ -6661,6 +6662,14 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 }
                 if (a->echec) { free(chaine_rendre(&cols)); noeud_liberer(el); break; }
                 el->texte3 = chaine_rendre(&cols);
+                el->fin = fin_jeton(&a->j[a->i - 1]);
+            }
+            if (!graph && cour(a)->type == J_VIRGULE) attendre_mot(a, a->i + 1, "en cartes", strlen("en cartes"));
+            if (!graph && cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "en") && est_mot(voir(a, 2), "cartes")) {
+                /* « , en cartes » (2.19) : chaque objet une carte, la première colonne en grand, les étiquettes en haut à
+                   droite, la deuxième colonne dessous, les autres jointes par « · » ; un clic choisit la carte */
+                el->entier |= 2;
+                a->i += 3;
                 el->fin = fin_jeton(&a->j[a->i - 1]);
             }
             {   /* la place d'une liste en position libre (§ 22.9) */
