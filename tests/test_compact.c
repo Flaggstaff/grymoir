@@ -154,6 +154,10 @@ int main(void) {
     EXEC("_aptitude horodatée\n    _une date\n_fin\n_classe _un document _est _une chose _adopte horodatée\n_fin\n"
          "_action dater(_une chose_horodatée)\n    chose.date << 5\n_fin\n_le d << _nouveau document\ndater(d)\n"
          "_afficher d.date\n", "5\n");
+    /* Documents (2.25) */
+    ALLER_RETOUR("_document de_reçu « Reçu »\n    _texte « Cabinet »\n_fin\n_ouvrir _document de_reçu\n_le d << _document de_reçu\n",
+                 "Le document de reçu, « Reçu », montre :\n    le texte « Cabinet ».\nOuvrir le document de reçu.\n"
+                 "Le d vaut le document de reçu.\n");
     /* Texte calculé (2.24) */
     ALLER_RETOUR("_écran x\n    _une ville (texte) _facultatif\n    _texte_calculé « V : » _suivi _écran.ville _capitales\n_fin\n_ouvrir x\n",
                  "L'écran x montre :\n    une ville (texte), facultative,\n    le texte « V : » suivi de la ville de l'écran, en petites capitales.\n"

@@ -225,6 +225,10 @@ static void iface_ecran_theme(void *contexte, const char *const *noms, const cha
                   police ? QByteArray(reinterpret_cast<const char *>(police), (qsizetype)taille_police) : QByteArray());
 }
 
+static void iface_montrer_document(void *contexte, const unsigned char *pdf, size_t taille) {   // 2.25
+    emit static_cast<Travail *>(contexte)->document(QByteArray(reinterpret_cast<const char *>(pdf), (qsizetype)taille));
+}
+
 static void iface_ecran_texte(void *contexte, size_t k, const char *texte) {   // le texte calculé (2.24)
     emit static_cast<Travail *>(contexte)->ecran_texte((int)k, QString::fromUtf8(texte ? texte : ""));
 }
@@ -465,7 +469,8 @@ void Travail::run() {
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
                    iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
                    iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf,
-                   iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte};
+                   iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte,
+                   iface_montrer_document};
     machine_interface(m, &i);
     situer(m, chemin, base_imposee, dossier_ecriture);
     Chaine sortie = {};
@@ -603,6 +608,16 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
     });
     connect(&travail, &Travail::question, this, &Execution::poser);
     connect(&travail, &Travail::utilise_micro, this, &Execution::demander_micro);
+    connect(&travail, &Travail::document, this, [this](const QByteArray &pdf) {
+        // « Ouvrir le document … » (2.25) : le PDF dans la visionneuse du système (Aperçu sous macOS), d'où l'on
+        // imprime ; GRYMOIR_SANS_APERCU (les essais, les captures) le garde sans l'ouvrir
+        const QString chemin = documents.filePath(QString("document-%1.pdf").arg(++nb_documents));
+        QFile f(chemin);
+        if (!f.open(QIODevice::WriteOnly) || f.write(pdf) != pdf.size()) { etat->setText("Le document n'a pas pu être écrit."); return; }
+        f.close();
+        setProperty("dernier_document", chemin);
+        if (qEnvironmentVariableIsEmpty("GRYMOIR_SANS_APERCU")) QDesktopServices::openUrl(QUrl::fromLocalFile(chemin));
+    });
     connect(&travail, &Travail::ecran_ouvert, this, &Execution::montrer_ecran);
     connect(&travail, &Travail::apparence, this, [this](int couleur, const QByteArray &octets) {
         // L'accent dans la palette de cinq (§ 22.5 ; même ordre que « _ordre » des jetons), pour ce processus seul :

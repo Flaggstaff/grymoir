@@ -199,6 +199,9 @@ typedef struct {
     /* Avant chaque attente, pour chaque texte calculé (§ 22.1, 2.24) : sa valeur, écrite comme Afficher. NULL :
      * l'interface garde le texte de l'ouverture. */
     void (*ecran_texte)(void *contexte, size_t element, const char *texte);
+    /* « Ouvrir le document de quittance. » (2.25) : le PDF, à montrer dans un aperçu d'où l'on imprime. NULL : la
+     * machine refuse « Ouvrir le document » (console, navigateur). */
+    void (*montrer_document)(void *contexte, const unsigned char *pdf, size_t taille);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

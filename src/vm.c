@@ -418,6 +418,9 @@ typedef struct EcranVM {
     size_t cadre;          /* le cadre qui a ouvert l'écran : y lire une zone vide (listes, conditions) rend absent */
     Valeur *images;        /* image (§ 22.8) : le fichier lu à l'ouverture, sinon absent */
     unsigned char *calcules;   /* 1 : texte calculé (§ 22.1, 2.24), relu à chaque tour */
+    int document;          /* un document (2.25) : jamais montré par l'interface, lu une fois puis rendu en PDF */
+    char ***doc_cellules;  /* document : les cellules de chaque liste, ligne après ligne (possédées) */
+    size_t *doc_lignes;
 } EcranVM;
 
 static void ecran_detruire(EcranVM *e);
@@ -2208,6 +2211,152 @@ static char *afficher_fiche(Machine *m, Objet *o, Chaine *sortie) {
 
 
 
+static void html_echapper(Chaine *c, const char *t);
+
+/* Les octets en base64, pour une image dans la page (data:). */
+static void ajouter_base64(Chaine *c, const unsigned char *o, size_t n) {
+    static const char T[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    char q[5] = {0};
+    for (size_t i = 0; i < n; i += 3) {
+        const unsigned v = (unsigned)o[i] << 16 | (i + 1 < n ? (unsigned)o[i + 1] << 8 : 0) | (i + 2 < n ? o[i + 2] : 0);
+        q[0] = T[v >> 18 & 63];
+        q[1] = T[v >> 12 & 63];
+        q[2] = i + 1 < n ? T[v >> 6 & 63] : '=';
+        q[3] = i + 2 < n ? T[v & 63] : '=';
+        chaine_ajouter(c, q);
+    }
+}
+
+/* Les éléments de k jusqu'à la fin du bloc qui les contient ; rend l'indice qui suit. Un « côte à côte » est un tableau
+ * d'une ligne, une cellule par élément ou par bloc qu'il contient (2.25). */
+static size_t document_elements(const EcranVM *e, size_t k, Chaine *c, int cote);
+
+static size_t document_un(const EcranVM *e, size_t k, Chaine *c) {
+    const ElementEcran *el = &e->elements[k];
+    switch (el->sorte) {
+    case ELEMENT_TEXTE: {
+        const char *t = e->textes[k] ? e->textes[k] : (el->texte ? el->texte : "");
+        if (el->capitales) {
+            char *m = texte_majuscules(t);
+            chaine_ajouter(c, "<p class=\"capitales\">");
+            html_echapper(c, m);
+            free(m);
+        } else {
+            chaine_ajouter(c, "<p>");
+            for (const char *p = t; *p; p++) {   /* un retour à la ligne reste un retour à la ligne */
+                if (*p == '\n') { chaine_ajouter(c, "<br>"); continue; }
+                char u[2] = { *p, 0 };
+                html_echapper(c, u);
+            }
+        }
+        chaine_ajouter(c, "</p>\n");
+        return k + 1;
+    }
+    case ELEMENT_IMAGE:
+        if (el->octets && el->taille) {
+            char *a = el->largeur > 0 ? grym_formater(" width=\"%d\"", el->largeur) : grym_dupliquer("");
+            char *h = el->hauteur > 0 ? grym_formater(" height=\"%d\"", el->hauteur) : grym_dupliquer("");
+            const char *mime = el->format && strcmp(el->format, "JPEG") == 0 ? "image/jpeg" : el->format && strcmp(el->format, "GIF") == 0
+                             ? "image/gif" : el->format && strcmp(el->format, "WebP") == 0 ? "image/webp" : "image/png";
+            chaine_ajouter(c, "<p><img");
+            chaine_ajouter(c, a);
+            chaine_ajouter(c, h);
+            chaine_ajouter(c, " src=\"data:");
+            chaine_ajouter(c, mime);
+            chaine_ajouter(c, ";base64,");
+            ajouter_base64(c, el->octets, el->taille);
+            chaine_ajouter(c, "\"></p>\n");
+            free(a);
+            free(h);
+        }
+        return k + 1;
+    case ELEMENT_LISTE: {
+        const size_t nc = e->nb_colonnes[k], nl = e->doc_lignes ? e->doc_lignes[k] : 0;
+        chaine_ajouter(c, "<table class=\"liste\" width=\"100%\" cellspacing=\"0\" cellpadding=\"4\"><thead><tr>");
+        for (size_t q = 0; q < nc; q++) {
+            chaine_ajouter(c, "<th align=\"left\">");
+            html_echapper(c, e->colonnes[k][q]);
+            chaine_ajouter(c, "</th>");
+        }
+        chaine_ajouter(c, "</tr></thead><tbody>\n");
+        for (size_t r = 0; r < nl; r++) {
+            chaine_ajouter(c, "<tr>");
+            for (size_t q = 0; q < nc; q++) {
+                chaine_ajouter(c, "<td>");
+                html_echapper(c, e->doc_cellules[k][r * nc + q]);
+                chaine_ajouter(c, "</td>");
+            }
+            chaine_ajouter(c, "</tr>\n");
+        }
+        chaine_ajouter(c, "</tbody></table>\n");
+        return k + 1;
+    }
+    case ELEMENT_COTE_A_COTE:
+        chaine_ajouter(c, "<table class=\"cote\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\"><tr>");
+        k = document_elements(e, k + 1, c, 1);
+        chaine_ajouter(c, "</tr></table>\n");
+        return k;
+    case ELEMENT_L_UN_SOUS_L_AUTRE: case ELEMENT_LIBRE: case ELEMENT_ONGLETS: case ELEMENT_ONGLET:
+        chaine_ajouter(c, "<div>");
+        k = document_elements(e, k + 1, c, 0);
+        chaine_ajouter(c, "</div>\n");
+        return k;
+    case ELEMENT_GROUPE:
+        chaine_ajouter(c, "<div class=\"groupe\"><p class=\"capitales\">");
+        if (el->texte) { char *m = texte_majuscules(el->texte); html_echapper(c, m); free(m); }
+        chaine_ajouter(c, "</p>");
+        k = document_elements(e, k + 1, c, 0);
+        chaine_ajouter(c, "</div>\n");
+        return k;
+    default:   /* bouton, zone, graphique, menu : rien sur le papier */
+        if (el->sorte == ELEMENT_MENU) {
+            size_t p = 1;
+            for (k++; k < e->n && p; k++) {
+                const int s = e->elements[k].sorte;
+                if (s == ELEMENT_FIN_DE_BLOC) p--;
+                else if (s == ELEMENT_COTE_A_COTE || s == ELEMENT_L_UN_SOUS_L_AUTRE || s == ELEMENT_GROUPE || s == ELEMENT_LIBRE
+                         || s == ELEMENT_ONGLETS || s == ELEMENT_ONGLET || s == ELEMENT_MENU) p++;
+            }
+            return k;
+        }
+        return k + 1;
+    }
+}
+
+static size_t document_elements(const EcranVM *e, size_t k, Chaine *c, int cote) {
+    while (k < e->n && e->elements[k].sorte != ELEMENT_FIN_DE_BLOC) {
+        if (cote) chaine_ajouter(c, "<td valign=\"top\">");
+        k = document_un(e, k, c);
+        if (cote) chaine_ajouter(c, "</td>");
+    }
+    return k < e->n ? k + 1 : k;   /* la fin du bloc */
+}
+
+/* La page d'un document (2.25) : A4, le titre, puis les éléments dans l'ordre ; les listes en tableaux. */
+static char *document_html(const EcranVM *e) {
+    Chaine c = {0};
+    chaine_ajouter(&c, "<!DOCTYPE html>\n<html lang=\"fr\"><head><meta charset=\"utf-8\"><title>");
+    html_echapper(&c, e->titre ? e->titre : "Document");
+    chaine_ajouter(&c, "</title><style>@page{size:A4;margin:18mm 15mm}"
+                       "body{font-family:Helvetica,Arial,sans-serif;font-size:10pt;color:#111}"
+                       "h1{font-size:18pt;margin:0 0 12px}p{margin:0 0 6px}"
+                       "p.capitales{font-size:8pt;letter-spacing:1px;color:#555;margin-top:10px}"
+                       "table.liste{border-collapse:collapse;width:100%;margin:6px 0 10px}"
+                       "table.liste th{text-align:left;border-bottom:1.5pt solid #333;padding:4px 6px}"
+                       "table.liste td{border-bottom:0.5pt solid #bbb;padding:4px 6px}"
+                       "table.cote td{vertical-align:top;padding-right:12px}"
+                       "div.groupe{margin:8px 0}</style></head><body>\n");
+    if (e->titre && *e->titre) {   /* le titre, en style écrit sur la balise : QTextDocument ne lit pas toujours h1{…} */
+        chaine_ajouter(&c, "<p style=\"font-size:20pt;font-weight:bold;margin:4px 0 14px\">");
+        html_echapper(&c, e->titre);
+        chaine_ajouter(&c, "</p>\n");
+    }
+    size_t k = 0;
+    while (k < e->n) k = document_un(e, k, &c);
+    chaine_ajouter(&c, "</body></html>\n");
+    return chaine_rendre(&c);
+}
+
 static void ecran_detruire(EcranVM *e) {
     if (!e) return;
     for (size_t k = 0; k < e->n; k++) {
@@ -2239,6 +2388,12 @@ static void ecran_detruire(EcranVM *e) {
     free(e->etats);
     free(e->images);
     free(e->calcules);
+    for (size_t k = 0; e->doc_cellules && k < e->n; k++) {
+        for (size_t x = 0; e->doc_cellules[k] && x < e->doc_lignes[k] * e->nb_colonnes[k]; x++) free(e->doc_cellules[k][x]);
+        free(e->doc_cellules[k]);
+    }
+    free(e->doc_cellules);
+    free(e->doc_lignes);
     free(e->titre);
     free(e->elements);
     free(e->textes);
@@ -3170,6 +3325,15 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
         free(totaux);
         valeur_liberer(&e->listes[k]);
         e->listes[k] = valeur_copier(l);
+    } else if (!erreur && e->document) {   /* un document (2.25) : les cellules restent, pour la page */
+        for (size_t x = 0; e->doc_cellules[k] && x < e->doc_lignes[k] * nc; x++) free(e->doc_cellules[k][x]);
+        free(e->doc_cellules[k]);
+        e->doc_cellules[k] = grym_allouer((faites ? faites : 1) * sizeof **e->doc_cellules);
+        for (size_t x = 0; x < faites; x++) {   /* une étiquette colorée (« ␝v faite ») devient son texte */
+            const char *t = cellules[x];
+            e->doc_cellules[k][x] = grym_dupliquer(t[0] == '\x1d' && t[1] ? t + 2 : t);
+        }
+        e->doc_lignes[k] = nc ? faites / nc : 0;
     } else if (!erreur) {
         m->iface.ecran_lignes(m->iface.contexte, k, (const char *const *)cellules, nl);
         valeur_liberer(&e->listes[k]);
@@ -3652,7 +3816,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     /* un essai de migration n'exécute rien (A2-c) : qu'il y ait des écrans ne l'empêche pas */
     if (!m->essai_migration && !m->iface.ecran_ouvrir
         && (module_contient(module, I_ECRAN_OUVRIR) || module_contient(module, I_FICHE_ECRAN))) {
-        diag->message = grym_dupliquer("Ce programme ouvre des écrans : lance-le dans une fenêtre, avec grym-atelier.");
+        diag->message = grym_dupliquer("Ce programme ouvre des écrans ou des documents : lance-le dans une fenêtre, avec grym-atelier.");
         return 0;
     }
 
@@ -4627,9 +4791,17 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 e->dessous = m->ecran;   /* par-dessus l'écran ouvert, s'il y en a un (§ 22.3) */
                 e->cadre = nb_cadres;
                 m->ecran = e;
-                m->fermer_ecran = 0;
-                if (m->iface.ecran_taille_titre) m->iface.ecran_taille_titre(m->iface.contexte, e->taille_titre);
-                m->iface.ecran_ouvrir(m->iface.contexte, sortie, e->titre, e->elements, e->n);
+                /* un document (2.25) : son nom commence par « document » ; l'interface ne le voit jamais */
+                e->document = strncmp(b->constantes[op].texte, "document ", 9) == 0;
+                if (e->document) {
+                    e->doc_cellules = grym_allouer((e->n ? e->n : 1) * sizeof *e->doc_cellules);
+                    e->doc_lignes = grym_allouer((e->n ? e->n : 1) * sizeof *e->doc_lignes);
+                    for (size_t k = 0; k < e->n; k++) { e->doc_cellules[k] = NULL; e->doc_lignes[k] = 0; }
+                } else {
+                    m->fermer_ecran = 0;
+                    if (m->iface.ecran_taille_titre) m->iface.ecran_taille_titre(m->iface.contexte, e->taille_titre);
+                    m->iface.ecran_ouvrir(m->iface.contexte, sortie, e->titre, e->elements, e->n);
+                }
             }
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
@@ -4718,6 +4890,34 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             free(msgs);
             free(els);
+            break;
+        }
+        case I_DOCUMENT: {
+            /* « le document de quittance », « Ouvrir le document de quittance. » (2.25) : la page, puis le PDF */
+            EcranVM *e = m->ecran;
+            char *probleme = NULL;
+            if (!e || !e->document) probleme = grym_dupliquer("Document invalide.");
+            char *html = probleme ? NULL : document_html(e);
+            if (e && e->document) { m->ecran = e->dessous; ecran_detruire(e); }
+            unsigned char *pdf = NULL;
+            size_t taille = 0;
+            if (!probleme && !m->iface.rendre_pdf)
+                probleme = grym_dupliquer("Un document se fabrique dans l'atelier ou dans une application fabriquée.");
+            if (!probleme) {
+                pdf = m->iface.rendre_pdf(m->iface.contexte, html, &taille, &probleme);
+                if (!pdf && !probleme) probleme = grym_dupliquer("Le PDF du document n'a pas pu être fabriqué.");
+            }
+            free(html);
+            if (!probleme && op == 1) {
+                if (m->iface.montrer_document) m->iface.montrer_document(m->iface.contexte, pdf, taille);
+                else probleme = grym_dupliquer("Un document se montre dans l'atelier ou dans une application fabriquée.");
+                free(pdf);
+            } else if (!probleme) {
+                Valeur v = vi_fichier(pdf, taille, "document.pdf");
+                free(pdf);
+                empiler(&pile, v);
+            }
+            if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
         case I_ECRAN_TEXTE: {

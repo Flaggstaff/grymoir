@@ -533,6 +533,11 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "fichier", t);
             continue;
         }
+        if (est_cle(t, "document")) {                /* _document de_quittance → le document de quittance (2.25) */
+            mot(r, "le", t);
+            mot(r, "document", t);
+            continue;
+        }
         if (est_cle(t, "maintenant")) {              /* _maintenant → maintenant (§ 14.7) */
             mot(r, "maintenant", t);
             continue;
@@ -1193,15 +1198,17 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         fixer_retrait(r, premier, prof);
         return;
     }
-    if (t->type == J_MOT_CLE && !strcmp(t->valeur, "écran") && !(d + 1 < f && r->e[d + 1].type == J_POINT)) {
-        /* _écran des_compositeurs [« Titre »] → L'écran des compositeurs[, « Titre »,] montre : */
+    const int document = t->type == J_MOT_CLE && !strcmp(t->valeur, "document") && d + 1 < f && r->e[d + 1].type == J_CROCHETS;
+    if (document || (t->type == J_MOT_CLE && !strcmp(t->valeur, "écran") && !(d + 1 < f && r->e[d + 1].type == J_POINT))) {
+        /* _écran des_compositeurs [« Titre »] → L'écran des compositeurs[, « Titre »,] montre : ;
+         * _document de_quittance → Le document de quittance montre : (2.25) */
         size_t fin_nom = f;
         const Jeton *titre = NULL, *taille = NULL;
         if (f > d + 2 && (est_cle(&r->e[f - 1], "en_grand") || est_cle(&r->e[f - 1], "en_petit"))) { taille = &r->e[f - 1]; fin_nom = f - 1; }
         if (fin_nom > d + 2 && r->e[fin_nom - 1].type == J_TEXTE) { titre = &r->e[fin_nom - 1]; fin_nom--; }
         if (fin_nom <= d + 1) { echouer(r, t, grym_dupliquer("Forme attendue : « _écran des_compositeurs »."));  return; }
-        emettre(r, J_ELISION, "l", t, 1);
-        mot(r, "écran", t);
+        if (document) { mot(r, "le", t); mot(r, "document", t); }
+        else { emettre(r, J_ELISION, "l", t, 1); mot(r, "écran", t); }
         for (size_t k = d + 1; k < fin_nom; k++) copier(r, &r->e[k]);
         if (titre || taille) {   /* _écran x « Recherche » _en_grand → L'écran x, « Recherche » en grand, montre : */
             emettre(r, J_VIRGULE, NULL, titre ? titre : taille, 1);
@@ -1277,6 +1284,15 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     if (t->type == J_MOT_CLE && (!strcmp(t->valeur, "ouvrir") || !strcmp(t->valeur, "fermer"))) {
         /* _ouvrir des_compositeurs → Ouvrir l'écran des compositeurs. ; _fermer → Fermer l'écran. */
         int ouvre = !strcmp(t->valeur, "ouvrir");
+        if (ouvre && d + 2 < f && est_cle(&r->e[d + 1], "document")) {   /* _ouvrir _document x → Ouvrir le document x. (2.25) */
+            mot(r, "ouvrir", t);
+            mot(r, "le", &r->e[d + 1]);
+            mot(r, "document", &r->e[d + 1]);
+            for (size_t k = d + 2; k < f; k++) copier(r, &r->e[k]);
+            point(r, f);
+            fixer_retrait(r, premier, prof);
+            return;
+        }
         if (ouvre && d + 2 < f && est_cle(&r->e[d + 1], "fiche")) {   /* _ouvrir _fiche c → Ouvrir la fiche de c. */
             mot(r, "ouvrir", t);
             mot(r, "la", &r->e[d + 1]);

@@ -4560,6 +4560,33 @@ int main(int argc, char **argv) {
         e.close();
     }
 
+    // Un document (2.25) : un vrai PDF, enregistré, et l'aperçu demandé (sans l'ouvrir : GRYMOIR_SANS_APERCU)
+    {
+        qputenv("GRYMOIR_SANS_APERCU", "1");
+        QTemporaryDir d;
+        const QString prog = d.filePath("doc.grym");
+        QFile f(prog);
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write("La personne vaut « Anne ».\n"
+                "Le document de reçu, « Reçu », montre :\n    le texte \"Pour \" suivi de la personne,\n    le texte « Merci ».\n"
+                "Enregistrer le document de reçu dans « recu.pdf ».\nOuvrir le document de reçu.\nAfficher « fini ».\n");
+        f.close();
+        Execution e(prog);
+        e.placer_ecriture(d.path());
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 20000 && !fil().contains("fini")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        QApplication::processEvents(QEventLoop::AllEvents, 100);
+        QFile pdf(d.filePath("recu.pdf"));
+        VERIFIER(pdf.open(QIODevice::ReadOnly));
+        VERIFIER(pdf.read(5) == "%PDF-");
+        const QString montre = e.property("dernier_document").toString();
+        VERIFIER(!montre.isEmpty() && QFile::exists(montre));
+        e.close();
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }

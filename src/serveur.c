@@ -2421,7 +2421,7 @@ Interface serveur_interface(Serveur *s) {
                     serveur_afficher_fiche, serveur_ecran_ouvrir, serveur_ecran_lignes, serveur_ecran_attendre,
                     serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence,
                     serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre, serveur_ecran_erreurs_zones, NULL, NULL,
-                    serveur_ecran_theme, serveur_ecran_signature, serveur_ecran_texte };
+                    serveur_ecran_theme, serveur_ecran_signature, serveur_ecran_texte, NULL };
     return i;
 }
 

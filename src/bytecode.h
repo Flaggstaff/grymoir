@@ -116,11 +116,14 @@ typedef enum {
     I_CORRESPOND,       /* dépile une empreinte, puis un mot de passe en clair ; empile vrai s'ils correspondent (§ 16.1) */
     I_SIGLES,           /* opérande : constante texte, les sigles du programme en minuscules, séparés par une espace ;
                            les libellés les écriront en capitales (grammaire, § 2.4) */
-    I_ECRAN_TEXTE       /* opérande : élément ; dépile une valeur et la montre, écrite comme AFFICHER, à la place du
+    I_ECRAN_TEXTE,      /* opérande : élément ; dépile une valeur et la montre, écrite comme AFFICHER, à la place du
                            texte de cet élément jusqu'à la prochaine attente (le texte calculé, § 22.1) */
+    I_DOCUMENT          /* opérande : 0 le PDF, 1 l'aperçu ; l'écran ouvert est un document (2.25), lu une fois : sa
+                           page HTML, mise en page en PDF par l'interface ; l'écran se ferme. 0 empile le fichier PDF,
+                           1 le montre (montrer_document) */
 } CodeInstruction;
 
-#define I_DERNIER I_ECRAN_TEXTE
+#define I_DERNIER I_DOCUMENT
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

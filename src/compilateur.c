@@ -101,6 +101,7 @@ static void constante(Compilation *c, TypeConstante type, const char *texte, con
 }
 
 static void expression(Compilation *c, const Noeud *n);
+static void document(Compilation *c, const Noeud *n, int montrer);
 static uint16_t unite_duree(const Noeud *d);
 static void appel(Compilation *c, const Noeud *n, int rend);
 
@@ -337,6 +338,9 @@ static void expression(Compilation *c, const Noeud *n) {
         return;
     case N_CHERCHER:
         chercher(c, n);
+        return;
+    case N_DOCUMENT:   /* « le document de quittance » : son PDF, un fichier (2.25) */
+        document(c, n, 0);
         return;
     case N_ECRAN:   /* « l'écran » : l'objet de l'écran ouvert (§ 22.2) */
         emettre(c, I_ECRAN_OBJET, 0, n->ligne, n->colonne);
@@ -690,6 +694,141 @@ static void zones_lues(const Noeud *n, Chaine *c) {
     }
     free(lues.d);
     free(testees.d);
+}
+
+/* La description d'un écran (ou d'un document, 2.25), constante de ÉCRAN_OUVRIR ; -1 si le programme est trop grand. */
+static long description_ecran(Compilation *c, const Noeud *e, const Noeud *ph) {
+    (void)ph;
+    Chaine d = {0};
+    chaine_ajouter(&d, e->texte);
+    chaine_ajouter(&d, "\x1f");
+    if (e->texte2) chaine_ajouter(&d, e->texte2);
+    if (e->taille_titre) chaine_ajouter(&d, e->taille_titre > 0 ? "\x1dg" : "\x1dp");   /* la taille du titre (§ 22.5) */
+    for (size_t k = 0; k < e->nb_enfants; k++) {
+        const Noeud *el = e->enfants[k];
+        if (el->type == N_DISPOSITION) {   /* « côte à côte » : H, « l'un sous l'autre » : V, fin du bloc : F */
+            if (el->place_dite) {   /* un bloc placé dans un bloc libre : sa place devant sa lettre (§ 22.9) */
+                char *pl = grym_formater("\x1f\x1d%d,%d,%d,%d\x1d", el->place[0], el->place[1],
+                                         (el->place_dite & 2) ? el->place[2] : 0, (el->place_dite & 4) ? el->place[3] : 0);
+                chaine_ajouter(&d, pl);
+                free(pl);
+                chaine_ajouter(&d, el->forme == 1 ? "H" : el->forme == 2 ? "V" : el->forme == 3 ? "G" : el->forme == 5 ? "O" : "P");
+                if (el->forme == 3) chaine_ajouter(&d, el->texte);
+                if (el->forme == 3 && (el->entier & 1)) chaine_ajouter(&d, "\x1e" "i");   /* 2.18 */
+                continue;
+            }
+            chaine_ajouter(&d, el->forme == 1 ? "\x1f" "H" : el->forme == 2 ? "\x1f" "V" : el->forme == 3 ? "\x1f" "G"
+                               : el->forme == 4 ? "\x1f" "P" : el->forme == 5 ? "\x1f" "O" : el->forme == 6 ? "\x1f" "Q"
+                               : el->forme == 7 ? "\x1f" "M" : "\x1f" "F");   /* M : un menu (§ 22.12) */   /* P : en position libre (§ 22.9) ; O, Q : les onglets, un onglet (§ 22.10) */
+            if (el->forme == 3 || el->forme == 6 || el->forme == 7) chaine_ajouter(&d, el->texte);   /* « Gadresse » : le titre (§ 22.7) */
+            if (el->forme == 3 && (el->entier & 1)) chaine_ajouter(&d, "\x1e" "i");   /* « Gprix ␞ i » : en couleur inversée (2.18) */
+            continue;
+        }
+        chaine_ajouter(&d, "\x1f");
+        if (el->place_dite) {   /* « ␝96,16,240,0␝ » devant l'élément : sa place et sa taille, 0 si non dite (§ 22.9) */
+            char *pl = grym_formater("\x1d%d,%d,%d,%d\x1d", el->place[0], el->place[1],
+                                     (el->place_dite & 2) ? el->place[2] : 0, (el->place_dite & 4) ? el->place[3] : 0);
+            chaine_ajouter(&d, pl);
+            free(pl);
+        }
+        if (el->type == N_CHERCHER && el->graphique) {   /* « Rb+ » : un graphique, en barres ou en secteurs, compté ou additionné (§ 22.11) */
+            /* « R », la forme et la période en une lettre (b s : sans ; c t : par mois ; d u : par semaine ; e v : par
+             * année ; barres puis secteurs), « + » somme ou « n » nombre (§ 22.11) ; deux lettres seulement, pour
+             * que l'ancienne lecture ne change pas */
+            const int pe = (el->graphique & 8) ? 1 : (el->graphique & 16) ? 2 : (el->graphique & 32) ? 3 : 0;
+            const char forme[2] = {"bcdestuv"[(el->graphique & 2 ? 4 : 0) + pe], 0};
+            chaine_ajouter(&d, "R");
+            chaine_ajouter(&d, forme);
+            chaine_ajouter(&d, (el->graphique & 4) ? "+" : "n");
+        } else
+        chaine_ajouter(&d, el->type == N_CHERCHER ? "L" : el->type == N_BOUTON ? "B"
+                         : el->type == N_NOM ? "Z" : el->type == N_IMAGE_ECRAN ? (el->texte ? "I" : "J") : "T");
+        if (el->texte) chaine_ajouter(&d, el->texte);   /* « J » : une image calculée, sans fichier écrit (§ 22.8) */
+        if (el->type == N_TEXTE_ECRAN && (el->entier & 2048)) chaine_ajouter(&d, "\x1e" "s");   /* en petites capitales (2.20) */
+        if (el->type == N_BOUTON && (el->entier & (256 | 512 | 1024))) {   /* « Bclients ␞ pte ␝ description ␚ image » (2.14 à 2.17) */
+            chaine_ajouter(&d, "\x1e");
+            if (el->entier & 256) chaine_ajouter(&d, "p");
+            if (el->entier & 512) chaine_ajouter(&d, "t");
+            if (el->entier & 1024) chaine_ajouter(&d, "e");   /* à côté du titre, dans l'en-tête */
+            if (el->indication) { chaine_ajouter(&d, "\x1d"); chaine_ajouter(&d, el->indication); }
+            if (el->texte2) { chaine_ajouter(&d, "\x1a"); chaine_ajouter(&d, el->texte2); }
+        }
+        if (el->type == N_CHERCHER && el->texte3) {   /* colonnes choisies : « ␛ écrit ␝ a ␜ b ␞ … » */
+            chaine_ajouter(&d, "\x1b");
+            char *cols = grym_dupliquer(el->texte3);
+            for (char *q = cols; *q; q++) if (*q == '\x1f') *q = '\x1c';
+            chaine_ajouter(&d, cols);
+            free(cols);
+        }
+        if (el->type == N_CHERCHER && !el->graphique && (el->entier & 2)) chaine_ajouter(&d, "\x15" "c");   /* en cartes (2.19) */
+        if (el->type == N_NOM) {   /* « Zpays ␞ texte ␞ f » : le type, et « f » si facultative */
+            chaine_ajouter(&d, "\x1e");
+            chaine_ajouter(&d, el->texte2);
+            chaine_ajouter(&d, (el->entier & 1) ? "\x1e" "f" : "\x1e" "-");
+            if (el->entier & 2) chaine_ajouter(&d, "m");   /* sur plusieurs lignes (§ 22.6) */
+            if (el->entier & 4) chaine_ajouter(&d, "s");   /* en lecture seule */
+            if (el->entier & 8) chaine_ajouter(&d, "i");   /* en interrupteur */
+            if (el->entier & 16) chaine_ajouter(&d, "p");  /* des choix multiples */
+            if (el->entier & 32) chaine_ajouter(&d, "r");  /* avec recherche */
+            if (el->entier & 64) chaine_ajouter(&d, "c");  /* masqué */
+            if (el->borne_min || el->borne_max) {   /* « ␜ 1 ␛ 99 » : les bornes, l'une ou l'autre vide (§ 22.6) */
+                chaine_ajouter(&d, "\x1c");
+                if (el->borne_min) chaine_ajouter(&d, el->borne_min);
+                chaine_ajouter(&d, "\x1b");
+                if (el->borne_max) chaine_ajouter(&d, el->borne_max);
+            }
+            if (el->unite) {   /* « ␚ < CHF » : l'unité, « < » devant, « > » derrière (§ 22.6) */
+                chaine_ajouter(&d, (el->entier & 128) ? "\x1a<" : "\x1a>");
+                chaine_ajouter(&d, el->unite);
+            }
+            if (el->indication) {   /* « ␝ 4 chiffres » : après les lettres des options, qu'elle ne doit pas brouiller */
+                chaine_ajouter(&d, "\x1d");
+                chaine_ajouter(&d, el->indication);
+            }
+        }
+    }
+    char *desc = chaine_rendre(&d);
+    long kd = bloc_constante(c->b, C_TEXTE, desc);
+    free(desc);
+    return kd;
+}
+
+/* Ce qu'un écran relit avant chaque attente, et qu'un document lit une fois (2.25) : listes, états, images, textes. */
+static void relire_ecran(Compilation *c, const Noeud *e, const Noeud *ph) {
+    (void)ph;
+    for (size_t k = 0; k < e->nb_enfants; k++) {
+        if (e->enfants[k]->type != N_CHERCHER) continue;
+        expression(c, e->enfants[k]);
+        emettre(c, I_ECRAN_LISTE, (long)k, ph->ligne, ph->colonne);
+    }
+    for (size_t k = 0; k < e->nb_enfants; k++)   /* « actif si », « visible si » : relus à chaque tour (§ 22.6) */
+        for (size_t q = 0; q < e->enfants[k]->nb_enfants; q++) {
+            const Noeud *si = e->enfants[k]->enfants[q];
+            if (si->type != N_SI_ECRAN) continue;
+            /* l'image calculée (§ 22.8) : ÉCRAN_IMAGE k × 2 + 1 ouvre la source (un objet absent la rend absente),
+             * k × 2 la montre */
+            if (si->forme == 4) {   /* le texte calculé (2.24) : sa valeur, relue à chaque tour */
+                expression(c, si->enfants[0]);
+                emettre(c, I_ECRAN_TEXTE, (long)k, si->ligne, si->colonne);
+                continue;
+            }
+            if (si->forme == 3) emettre(c, I_ECRAN_IMAGE, (long)(k * 2 + 1), si->ligne, si->colonne);
+            expression(c, si->enfants[0]);
+            if (si->forme == 3) emettre(c, I_ECRAN_IMAGE, (long)(k * 2), si->ligne, si->colonne);
+            else emettre(c, I_ECRAN_ETAT, (long)(k * 2 + (si->forme == 2)), si->ligne, si->colonne);
+        }
+}
+
+/* Un document (2.25) : l'écran qu'il déclare, ouvert sans interface, lu une fois, puis rendu en PDF : empilé
+ * (montrer = 0), ou montré dans un aperçu d'où l'on imprime (montrer = 1). */
+static void document(Compilation *c, const Noeud *n, int montrer) {
+    const Noeud *e = trouver_ecran(c->programme->phrases, c->programme->nb, n->texte);
+    if (!e) { trop_grand(c, n); return; }
+    const long kd = description_ecran(c, e, n);
+    if (kd < 0) return;
+    emettre(c, I_ECRAN_OUVRIR, kd, n->ligne, n->colonne);
+    relire_ecran(c, e, n);
+    emettre(c, I_DOCUMENT, montrer, n->ligne, n->colonne);
 }
 
 static void phrase(Compilation *c, const Noeud *ph) {
@@ -1217,6 +1356,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_FERMER_ECRAN, 0, ph->ligne, ph->colonne);
         return;
     case P_OUVRIR: {
+        if (ph->forme == 2) {   /* « Ouvrir le document de quittance. » (2.25) : l'aperçu, d'où l'on imprime */
+            document(c, ph, 1);
+            return;
+        }
         if (ph->forme == 1) {   /* « Ouvrir la fiche de c. » (§ 22.3) */
             expression(c, ph->enfants[0]);
             verifier_regles(c, ph->ligne, ph->colonne);
@@ -1229,98 +1372,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
          * est une transaction, et un événement raté n'écrit rien (grammaire, § 22.3 ; charte, art. 7). */
         const Noeud *e = trouver_ecran(c->programme->phrases, c->programme->nb, ph->texte);
         if (!e) { trop_grand(c, ph); return; }
-        Chaine d = {0};
-        chaine_ajouter(&d, e->texte);
-        chaine_ajouter(&d, "\x1f");
-        if (e->texte2) chaine_ajouter(&d, e->texte2);
-        if (e->taille_titre) chaine_ajouter(&d, e->taille_titre > 0 ? "\x1dg" : "\x1dp");   /* la taille du titre (§ 22.5) */
-        for (size_t k = 0; k < e->nb_enfants; k++) {
-            const Noeud *el = e->enfants[k];
-            if (el->type == N_DISPOSITION) {   /* « côte à côte » : H, « l'un sous l'autre » : V, fin du bloc : F */
-                if (el->place_dite) {   /* un bloc placé dans un bloc libre : sa place devant sa lettre (§ 22.9) */
-                    char *pl = grym_formater("\x1f\x1d%d,%d,%d,%d\x1d", el->place[0], el->place[1],
-                                             (el->place_dite & 2) ? el->place[2] : 0, (el->place_dite & 4) ? el->place[3] : 0);
-                    chaine_ajouter(&d, pl);
-                    free(pl);
-                    chaine_ajouter(&d, el->forme == 1 ? "H" : el->forme == 2 ? "V" : el->forme == 3 ? "G" : el->forme == 5 ? "O" : "P");
-                    if (el->forme == 3) chaine_ajouter(&d, el->texte);
-                    if (el->forme == 3 && (el->entier & 1)) chaine_ajouter(&d, "\x1e" "i");   /* 2.18 */
-                    continue;
-                }
-                chaine_ajouter(&d, el->forme == 1 ? "\x1f" "H" : el->forme == 2 ? "\x1f" "V" : el->forme == 3 ? "\x1f" "G"
-                                   : el->forme == 4 ? "\x1f" "P" : el->forme == 5 ? "\x1f" "O" : el->forme == 6 ? "\x1f" "Q"
-                                   : el->forme == 7 ? "\x1f" "M" : "\x1f" "F");   /* M : un menu (§ 22.12) */   /* P : en position libre (§ 22.9) ; O, Q : les onglets, un onglet (§ 22.10) */
-                if (el->forme == 3 || el->forme == 6 || el->forme == 7) chaine_ajouter(&d, el->texte);   /* « Gadresse » : le titre (§ 22.7) */
-                if (el->forme == 3 && (el->entier & 1)) chaine_ajouter(&d, "\x1e" "i");   /* « Gprix ␞ i » : en couleur inversée (2.18) */
-                continue;
-            }
-            chaine_ajouter(&d, "\x1f");
-            if (el->place_dite) {   /* « ␝96,16,240,0␝ » devant l'élément : sa place et sa taille, 0 si non dite (§ 22.9) */
-                char *pl = grym_formater("\x1d%d,%d,%d,%d\x1d", el->place[0], el->place[1],
-                                         (el->place_dite & 2) ? el->place[2] : 0, (el->place_dite & 4) ? el->place[3] : 0);
-                chaine_ajouter(&d, pl);
-                free(pl);
-            }
-            if (el->type == N_CHERCHER && el->graphique) {   /* « Rb+ » : un graphique, en barres ou en secteurs, compté ou additionné (§ 22.11) */
-                /* « R », la forme et la période en une lettre (b s : sans ; c t : par mois ; d u : par semaine ; e v : par
-                 * année ; barres puis secteurs), « + » somme ou « n » nombre (§ 22.11) ; deux lettres seulement, pour
-                 * que l'ancienne lecture ne change pas */
-                const int pe = (el->graphique & 8) ? 1 : (el->graphique & 16) ? 2 : (el->graphique & 32) ? 3 : 0;
-                const char forme[2] = {"bcdestuv"[(el->graphique & 2 ? 4 : 0) + pe], 0};
-                chaine_ajouter(&d, "R");
-                chaine_ajouter(&d, forme);
-                chaine_ajouter(&d, (el->graphique & 4) ? "+" : "n");
-            } else
-            chaine_ajouter(&d, el->type == N_CHERCHER ? "L" : el->type == N_BOUTON ? "B"
-                             : el->type == N_NOM ? "Z" : el->type == N_IMAGE_ECRAN ? (el->texte ? "I" : "J") : "T");
-            if (el->texte) chaine_ajouter(&d, el->texte);   /* « J » : une image calculée, sans fichier écrit (§ 22.8) */
-            if (el->type == N_TEXTE_ECRAN && (el->entier & 2048)) chaine_ajouter(&d, "\x1e" "s");   /* en petites capitales (2.20) */
-            if (el->type == N_BOUTON && (el->entier & (256 | 512 | 1024))) {   /* « Bclients ␞ pte ␝ description ␚ image » (2.14 à 2.17) */
-                chaine_ajouter(&d, "\x1e");
-                if (el->entier & 256) chaine_ajouter(&d, "p");
-                if (el->entier & 512) chaine_ajouter(&d, "t");
-                if (el->entier & 1024) chaine_ajouter(&d, "e");   /* à côté du titre, dans l'en-tête */
-                if (el->indication) { chaine_ajouter(&d, "\x1d"); chaine_ajouter(&d, el->indication); }
-                if (el->texte2) { chaine_ajouter(&d, "\x1a"); chaine_ajouter(&d, el->texte2); }
-            }
-            if (el->type == N_CHERCHER && el->texte3) {   /* colonnes choisies : « ␛ écrit ␝ a ␜ b ␞ … » */
-                chaine_ajouter(&d, "\x1b");
-                char *cols = grym_dupliquer(el->texte3);
-                for (char *q = cols; *q; q++) if (*q == '\x1f') *q = '\x1c';
-                chaine_ajouter(&d, cols);
-                free(cols);
-            }
-            if (el->type == N_CHERCHER && !el->graphique && (el->entier & 2)) chaine_ajouter(&d, "\x15" "c");   /* en cartes (2.19) */
-            if (el->type == N_NOM) {   /* « Zpays ␞ texte ␞ f » : le type, et « f » si facultative */
-                chaine_ajouter(&d, "\x1e");
-                chaine_ajouter(&d, el->texte2);
-                chaine_ajouter(&d, (el->entier & 1) ? "\x1e" "f" : "\x1e" "-");
-                if (el->entier & 2) chaine_ajouter(&d, "m");   /* sur plusieurs lignes (§ 22.6) */
-                if (el->entier & 4) chaine_ajouter(&d, "s");   /* en lecture seule */
-                if (el->entier & 8) chaine_ajouter(&d, "i");   /* en interrupteur */
-                if (el->entier & 16) chaine_ajouter(&d, "p");  /* des choix multiples */
-                if (el->entier & 32) chaine_ajouter(&d, "r");  /* avec recherche */
-                if (el->entier & 64) chaine_ajouter(&d, "c");  /* masqué */
-                if (el->borne_min || el->borne_max) {   /* « ␜ 1 ␛ 99 » : les bornes, l'une ou l'autre vide (§ 22.6) */
-                    chaine_ajouter(&d, "\x1c");
-                    if (el->borne_min) chaine_ajouter(&d, el->borne_min);
-                    chaine_ajouter(&d, "\x1b");
-                    if (el->borne_max) chaine_ajouter(&d, el->borne_max);
-                }
-                if (el->unite) {   /* « ␚ < CHF » : l'unité, « < » devant, « > » derrière (§ 22.6) */
-                    chaine_ajouter(&d, (el->entier & 128) ? "\x1a<" : "\x1a>");
-                    chaine_ajouter(&d, el->unite);
-                }
-                if (el->indication) {   /* « ␝ 4 chiffres » : après les lettres des options, qu'elle ne doit pas brouiller */
-                    chaine_ajouter(&d, "\x1d");
-                    chaine_ajouter(&d, el->indication);
-                }
-            }
-        }
-        char *desc = chaine_rendre(&d);
-        long kd = bloc_constante(c->b, C_TEXTE, desc);
-        free(desc);
-        if (kd < 0) { trop_grand(c, ph); return; }
+        const long kd = description_ecran(c, e, ph);
+        if (kd < 0) return;
         const int ev = ph->local, objet = ph->local + 1;
         verifier_regles(c, ph->ligne, ph->colonne);   /* « Ouvrir » valide ce qui précède */
         emettre(c, I_ECRAN_OUVRIR, kd, ph->ligne, ph->colonne);
@@ -1341,27 +1394,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         const Noeud *qo = trouver_quand(c->programme->phrases, c->programme->nb, e->texte, 4, "ouverture");
         if (qo) evenement_seul(c, ph, qo);
         size_t tour = c->b->taille_code;
-        for (size_t k = 0; k < e->nb_enfants; k++) {
-            if (e->enfants[k]->type != N_CHERCHER) continue;
-            expression(c, e->enfants[k]);
-            emettre(c, I_ECRAN_LISTE, (long)k, ph->ligne, ph->colonne);
-        }
-        for (size_t k = 0; k < e->nb_enfants; k++)   /* « actif si », « visible si » : relus à chaque tour (§ 22.6) */
-            for (size_t q = 0; q < e->enfants[k]->nb_enfants; q++) {
-                const Noeud *si = e->enfants[k]->enfants[q];
-                if (si->type != N_SI_ECRAN) continue;
-                /* l'image calculée (§ 22.8) : ÉCRAN_IMAGE k × 2 + 1 ouvre la source (un objet absent la rend absente),
-                 * k × 2 la montre */
-                if (si->forme == 4) {   /* le texte calculé (2.24) : sa valeur, relue à chaque tour */
-                    expression(c, si->enfants[0]);
-                    emettre(c, I_ECRAN_TEXTE, (long)k, si->ligne, si->colonne);
-                    continue;
-                }
-                if (si->forme == 3) emettre(c, I_ECRAN_IMAGE, (long)(k * 2 + 1), si->ligne, si->colonne);
-                expression(c, si->enfants[0]);
-                if (si->forme == 3) emettre(c, I_ECRAN_IMAGE, (long)(k * 2), si->ligne, si->colonne);
-                else emettre(c, I_ECRAN_ETAT, (long)(k * 2 + (si->forme == 2)), si->ligne, si->colonne);
-            }
+        relire_ecran(c, e, ph);
         emettre(c, I_ECRAN_ATTENDRE, 0, ph->ligne, ph->colonne);
         emettre(c, I_ECRIRE_LOCAL, ev, ph->ligne, ph->colonne);
         emettre(c, I_ECRIRE_LOCAL, objet, ph->ligne, ph->colonne);

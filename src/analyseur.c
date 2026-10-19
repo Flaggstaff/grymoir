@@ -483,6 +483,7 @@ typedef struct {
     const char *ecran;       /* la classe de l'écran que « l'écran » désigne ici (§ 22.2), ou NULL */
     int libre;               /* l'élément d'écran en cours est dans un bloc « en position libre : » (§ 22.9) */
     int menu;                /* … dans un menu (§ 22.12) : des boutons seulement */
+    int document;            /* … dans un document (2.25) : une taille se dit partout (« l'image « logo.png », large de 40 ») */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
     int duree_permise;       /* « par pas de 1 mois » : une durée peut suivre la valeur lue (§ 14.2) */
     int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
@@ -774,7 +775,7 @@ static const char *type_statique(const Noeud *n) {
     case N_BOOLEEN: case N_COMPARAISON: case N_LOGIQUE: return "vrai ou faux";
     case N_DATE: case N_AUJOURDHUI: return "date";
     case N_HEURE: case N_MAINTENANT: return "heure";
-    case N_FICHIER: return "fichier";
+    case N_FICHIER: case N_DOCUMENT: return "fichier";
     case N_CADRE: return "texte";
     case N_COLLAGE: case N_ELISION: return "texte";
     case N_REPONSE: return n->texte2;
@@ -2007,8 +2008,23 @@ static Noeud *nouveau(Analyse *a) {
     return n;
 }
 
+static EcranConnu *document_nomme(Analyse *a, size_t d, size_t *f, char **nom);
+
 static Noeud *base(Analyse *a) {
     Jeton *t = cour(a);
+    if ((est_mot(t, "le") || a->article_force == ART_LE) && est_mot(voir(a, est_mot(t, "le") ? 1 : 0), "document")) {
+        /* « le document de quittance » (2.25) : un fichier, le PDF du document déclaré, calculé à cet instant */
+        const size_t d = a->i + (est_mot(t, "le") ? 2 : 1);
+        size_t f;
+        char *nd = NULL;
+        if (document_nomme(a, d, &f, &nd)) {
+            Noeud *n = noeud_creer(N_DOCUMENT, t->ligne, t->colonne, t->debut);
+            n->texte = nd;
+            a->i = f;
+            n->fin = fin_jeton(&a->j[a->i - 1]);
+            return n;
+        }
+    }
     if (t->type == J_ELISION && est_mot(voir(a, 1), "écran") && !est_mot(voir(a, 2), "montre")) {
         /* « le pays de l'écran » : l'écran de l'événement en cours, un objet (§ 22.2) */
         if (!a->ecran)
@@ -6140,7 +6156,7 @@ static int place_element(Analyse *a, Noeud *el, Genre g, int *vus) {
     const int large = est_mot(x, "large") && est_mot(voir(a, 2), "de");
     const int haut = (est_mot(x, "haut") || est_mot(x, "haute")) && est_mot(voir(a, 2), "de");
     if (!a_gauche && !large && !haut) return 0;
-    if (!a->libre) {
+    if (!a->libre && !(a->document && !a_gauche)) {
         if (a_gauche) return erreur(a, x, grym_dupliquer("« à … de la gauche » ne vaut que dans un bloc « en position libre : ».")), -1;
         return erreur(a, x, grym_dupliquer("Une taille ne vaut que dans un bloc « en position libre : ».")), -1;
     }
@@ -6492,6 +6508,12 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     size_t d = a->i + 2, f;
     char *nom = lire_nom_ecran(a, d, &f);
     if (!nom) return erreur(a, &a->j[d], grym_dupliquer("Nom d'écran attendu : « L'écran des compositeurs montre : »."));
+    const int document = est_mot(t, "le");   /* « Le document de quittance montre : » (2.25) : un écran pour le papier */
+    if (document) {
+        char *x = grym_formater("document %s", nom);
+        free(nom);
+        nom = x;
+    }
     if (ecran_connu(a->portee, nom)) {
         Noeud *r = erreur(a, &a->j[d], grym_formater("L'écran « %s » existe déjà.", nom));
         free(nom);
@@ -6525,6 +6547,8 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     Noeud *n = noeud_creer(P_ECRAN, t->ligne, t->colonne, t->debut);
     n->texte = nom;
     n->texte2 = titre;
+    n->op = document ? 'D' : 0;
+    a->document = document;
     n->taille_titre = taille_titre;
     EcranConnu e = { grym_dupliquer(nom), NULL, 0, NULL, 0, t->ligne, NULL, 0 };
     /* Un écran est un objet : sa classe porte ses zones de saisie et la ligne choisie de chaque liste (§ 22.1) */
@@ -7085,6 +7109,11 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             erreur(a, u, grym_dupliquer("Un élément en position libre dit sa place : « , à 16 de la gauche et 8 du haut »."));
             break;
         }
+        if (n->op == 'D' && (el->type == N_BOUTON || el->type == N_NOM)) {   /* 2.25 : le papier ne se clique pas */
+            noeud_liberer(el);
+            erreur(a, u, grym_dupliquer("Un document se lit sur papier : des textes, des images et des listes, ni bouton ni zone."));
+            break;
+        }
         noeud_ajouter(n, el);
         if (cour(a)->type == J_POINT) {
             avancer(a);
@@ -7101,6 +7130,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         avancer(a);
     }
     a->libre = 0;
+    a->document = 0;
     a->menu = 0;
     if (!a->echec) conditions_ecran(a, n);   /* « actif si », « visible si » : tout l'écran est connu (§ 22.6) */
     a->ecran = NULL;
@@ -7301,6 +7331,22 @@ static Noeud *quand(Analyse *a, int colonne) {
 }
 
 /* « Ouvrir l'écran X. » (§ 22.3) */
+/* « de quittance » à partir de d : le document déclaré au nom le plus long qui commence là (2.25) ; *f reçoit sa fin,
+ * *nom son nom rangé (« document de quittance »). NULL si aucun. */
+static EcranConnu *document_nomme(Analyse *a, size_t d, size_t *f, char **nom) {
+    EcranConnu *trouve = NULL;
+    for (size_t k = d + 1; k <= a->n && k <= d + 12; k++) {
+        if (a->j[k - 1].type == J_FIN || a->j[k - 1].type == J_POINT || a->j[k - 1].type == J_VIRGULE) break;
+        char *n = nom_ecran(a, d, k);
+        char *x = grym_formater("document %s", n);
+        free(n);
+        EcranConnu *e = ecran_connu(a->portee, x);
+        if (e) { trouve = e; *f = k; free(*nom); *nom = x; }
+        else free(x);
+    }
+    return trouve;
+}
+
 static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
     a->ouvrir_vu = 1;
     if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'ouvre pas d'écran : ouvre-le dans une action."));
@@ -7318,6 +7364,20 @@ static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
         Noeud *n = noeud_creer(P_OUVRIR, t->ligne, t->colonne, t->debut);
         n->forme = 1;
         noeud_ajouter(n, objet);
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
+    if (est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "document")) {
+        /* « Ouvrir le document de quittance. » (2.25) : l'aperçu du PDF, d'où l'on imprime */
+        size_t f2;
+        char *nd = NULL;
+        if (!document_nomme(a, a->i + 3, &f2, &nd))
+            return erreur(a, voir(a, 3), grym_dupliquer("Document inconnu : déclare-le avec « Le document de quittance montre : »."));
+        a->i = f2;
+        if (!fin_phrase(a, 0)) { free(nd); return NULL; }
+        Noeud *n = noeud_creer(P_OUVRIR, t->ligne, t->colonne, t->debut);
+        n->forme = 2;
+        n->texte = nd;
         n->fin = fin_jeton(&a->j[a->i - 1]);
         return n;
     }
@@ -7818,6 +7878,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
     }
     if (est_mot(t, "utiliser")) return utiliser(a, t);
     if (t->type == J_ELISION && est_mot(voir(a, 1), "écran") && ecran_suit(a)) return declaration_ecran(a, t);
+    if (est_mot(t, "le") && est_mot(voir(a, 1), "document") && ecran_suit(a)) return declaration_ecran(a, t);   /* 2.25 */
     if (est_mot(t, "quand")) return quand(a, colonne);
     if (est_mot(t, "ouvrir")) return ouvrir_ecran(a, t);
     if (est_mot(t, "fermer")) return fermer_ecran(a, t);
@@ -8264,6 +8325,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.ecran = NULL;
     a.libre = 0;
     a.menu = 0;
+    a.document = 0;
 
     /* Colonne de référence : celle de la première phrase (les remarques ne comptent pas). */
     int colonne = 1;

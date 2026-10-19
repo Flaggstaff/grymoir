@@ -1333,7 +1333,7 @@ static void essais_ecrans(void) {
     PROG("Une personne, conservée, a : un nom (texte).\nUne cliente, conservée, hors des fiches, est une personne.\n"
          "Une cliente a : un code (texte).\n", "");
     PROG("Un point a : un x.\nLe p vaut un nouveau point.\nOuvrir la fiche de p.\n",
-         "ERREUR 0:0 Ce programme ouvre des écrans : lance-le dans une fenêtre, avec grym-atelier.");
+         "ERREUR 0:0 Ce programme ouvre des écrans ou des documents : lance-le dans une fenêtre, avec grym-atelier.");
     /* A3-d : colonnes choisies (le champ d'un lien compris), blocs de disposition, titre donné */
     {
         const char *src =
@@ -1381,7 +1381,7 @@ static void essais_ecrans(void) {
     PROG("Pour ouvrir un x :\n    Afficher x.\n", "~« ouvrir » commence une construction du langage");
     /* en console : refusé avant toute exécution, rien n'est affiché */
     PROG("Afficher 1.\nL'écran d'accueil montre :\n    le texte « a ».\nOuvrir l'écran d'accueil.\n",
-         "ERREUR 0:0 Ce programme ouvre des écrans : lance-le dans une fenêtre, avec grym-atelier.");
+         "ERREUR 0:0 Ce programme ouvre des écrans ou des documents : lance-le dans une fenêtre, avec grym-atelier.");
 }
 
 int main(void) {
@@ -3882,6 +3882,10 @@ int main(void) {
     }
 
     essais_utiliser();
+    /* Documents (2.25) : refus de l'analyse */
+    PROG("Le document de reçu montre :\n    un bouton « OK ».", "~Un document se lit sur papier : des textes, des images et des listes, ni bouton ni zone.");
+    PROG("Ouvrir le document de rien.", "~Document inconnu");
+    PROG("Le document de reçu montre :\n    le texte « A », à 3 de la gauche et 4 du haut.", "~« à … de la gauche » ne vaut que dans un bloc");
     /* « tarif de suivi » sujet d'une modification : « suivi » après « de » est un mot de nom (19 octobre 2026) */
     PROG("Un soin a : un tarif de suivi.\nLe s vaut un nouveau soin :\n    Le tarif de suivi vaut 70.\n"
          "Le tarif de suivi du s devient 80.\nAfficher le tarif de suivi du s.", "80");

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.24 de la spécification, révisée le 19 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.25 de la spécification, révisée le 19 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2061,6 +2061,28 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 
 ---
 
+### 22.15 Documents *(2.25, implémenté le 19 octobre 2026)*
+
+```
+Le document de reçu, « Reçu », montre :
+    côte à côte :
+        l'image « images/coeur-encre.png », large de 40,
+        le texte "Pour " suivi du nom de la personne,
+    le texte « Visites », en petites capitales,
+    la liste des visites conservées dont le patient = la personne, avec la date et le prix.
+
+Ouvrir le document de reçu.
+Enregistrer le document de reçu dans « recu.pdf ».
+L'exemplaire de q devient le document de reçu.
+```
+
+- Un document se déclare comme un écran (§ 22.1), avec `Le document … montre :`, pour le papier : textes fixes ou calculés, images, listes, blocs `côte à côte`, `l'un sous l'autre`, groupes. Ni bouton ni zone : « Un document se lit sur papier : des textes, des images et des listes, ni bouton ni zone. ». Une taille d'image se dit partout (`, large de 40`), pas seulement en position libre.
+- `le document de reçu` est une valeur, un fichier PDF (A4), calculé à l'instant où on l'écrit : ses textes, ses listes et ses images se lisent alors, une fois. Il s'enregistre avec `Enregistrer … dans « … »` (§ 15.2), se range dans un champ `(fichier)` (l'exemplaire d'une pièce, gardé tel qu'il a été remis), s'affiche avec `Afficher`.
+- `Ouvrir le document de reçu.` le montre dans la visionneuse du système (Aperçu sous macOS), d'où l'on imprime.
+- La page : le titre, puis les éléments dans l'ordre ; un `côte à côte` est une rangée de colonnes ; une liste, un tableau dont l'en-tête se répète à chaque page ; « page 1 / 2 » en pied. La mise en page vient de l'atelier ou de l'application fabriquée, comme un rapport PDF (§ 15.6) ; en console et dans le navigateur : « Un document se fabrique dans l'atelier ou dans une application fabriquée. ».
+- Limites : pas de total sous une liste (un texte calculé le donne, `la somme des prix des séances conservées dont …`) ; la police du document est celle des rapports, pas encore celle des écrans.
+- Forme compacte : `_document de_reçu « Reçu »` … `_fin`, `_ouvrir _document de_reçu`, `_document de_reçu` (la valeur).
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -2190,3 +2212,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.22 | 2026-10-19 | § 22.3 : « Modifier » et « Nouvelle … » d'une fiche déduite vérifient les règles du § 16.14 ; refusée, la saisie s'annule et la fiche relue montre le motif (corrige un contournement présent depuis l'arrivée des règles, le 28 septembre 2026) |
 | 2.23 | 2026-10-19 | § 16.7 : `anciennement « … »`, le renommage d'un champ d'entité (simple, multiple, fichier) ou d'une entité, sans perte ; le refus d'un champ disparu propose la mention |
 | 2.24 | 2026-10-19 | § 22.1 : le texte calculé, `le texte` suivi d'une valeur, relu avant chaque attente (instruction `ÉCRAN_TEXTE`) ; compacte `_texte_calculé` |
+| 2.25 | 2026-10-19 | Nouveau § 22.15 : les documents, `Le document … montre :`, la valeur `le document de …` (un PDF), `Ouvrir le document … .` |

@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.85 de la spécification, révisée le 19 octobre 2026.
+Version 1.86 de la spécification, révisée le 19 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -135,6 +135,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 90 | `ÉCRAN_IMAGE` | élément × 2, + 1 pour ouvrir la source | `élément × 2 + 1` : la source d'une image calculée commence ; jusqu'à la suite, `LIRE_CHAMP` sur un objet absent laisse absent au lieu d'échouer. `élément × 2` : dépile une image (un fichier dont le format est reconnu) ou absent, sinon erreur ; l'écran la garde jusqu'à la prochaine attente, où `ÉCRAN_ATTENDRE` la passe à l'interface (`ecran_image`) (grammaire, § 22.8) |
 | 93 | `SIGLES` | constante texte : les sigles du programme, en minuscules, séparés par une espace | les retient pour les libellés : `capitale()` écrit ces mots en capitales (« Numéro RCC ») ; émise en tête du bloc principal, seulement si le programme a des sigles ; un bytecode relu sans sa source les retrouve ainsi (grammaire, § 2.4) |
 | 94 | `ÉCRAN_TEXTE` | élément | dépile une valeur, l'écrit comme `AFFICHER` et la donne pour texte à cet élément de l'écran ouvert ; avant chaque attente, `ÉCRAN_ATTENDRE` passe chaque texte calculé à l'interface (`ecran_texte`) (grammaire 2.24, § 22.1) |
+| 95 | `DOCUMENT` | 0 le PDF, 1 l'aperçu | l'écran ouvert est un document (son nom commence par « document ») : `ÉCRAN_OUVRIR` ne l'a pas montré, ses listes ont gardé leurs cellules ; sa page HTML A4 est mise en page par `rendre_pdf`, l'écran se ferme ; 0 empile le fichier PDF, 1 le passe à `montrer_document` (grammaire 2.25, § 22.15) |
 
 ### 3.1 Boucles et Selon
 
@@ -456,3 +457,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.83 | 2026-10-19 | Un programme qui a des règles porte une action de plus, `\x01règles` (`NOM_REGLES`, `src/bytecode.h`), sans paramètre : les vérifications de la fin d'un événement. La machine l'exécute dans l'exécution en cours (`imbrique`) quand une fiche déduite a écrit (« Modifier », « Nouvelle … ») : ni transaction, ni écrans, ni essais, ni journal, ni ramasse-miettes ne bougent ; refusée, la saisie s'annule (`base_annuler`, journal). Format version 63 inchangé : c'est une formule comme une autre |
 | 1.84 | 2026-10-19 | Une classe porte son nom d'avant (chaîne après le pluriel, vide sans renommage) et chaque champ le sien (chaîne après la valeur de départ) : grammaire 2.23, § 16.7. `base_renommer_entites` passe avant toute migration ; `migrer` renomme les champs d'abord. Format version 64 |
 | 1.85 | 2026-10-19 | Instruction `ÉCRAN_TEXTE` (94) ; interface : `ecran_texte`, en dernier champ ; format version 65 |
+| 1.86 | 2026-10-19 | Instruction `DOCUMENT` (95) ; interface : `montrer_document`, en dernier champ ; format version 66 |

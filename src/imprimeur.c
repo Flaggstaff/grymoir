@@ -731,6 +731,12 @@ static void expression(Impression *im, const Noeud *n) {
         free(copie);
         return;
     }
+    case N_DOCUMENT: {   /* « le document de quittance » ; « _document de_quittance » (2.25) */
+        const char *nd = strncmp(n->texte, "document ", 9) == 0 ? n->texte + 9 : n->texte;
+        if (im->compact) { aj(im, "_document "); ecrire_nom(im, nd, 0); }
+        else { aj(im, "le document "); aj(im, nd); }
+        return;
+    }
     case N_ECRAN:   /* « l'écran » ; « _écran » (§ 22.2) */
         aj(im, im->compact ? "_écran" : "l'écran");
         return;
@@ -1260,15 +1266,17 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         for (size_t k = 0; k < n->nb_enfants; k++)   /* une condition peut citer une zone écrite plus bas (§ 22.6) */
             if (n->enfants[k]->type == N_NOM)
                 retenir(im, n->enfants[k]->texte, n->enfants[k]->forme == 2 ? G_FEMININ : G_MASCULIN);
+        const int doc = n->op == 'D';   /* « Le document de quittance montre : » ; « _document de_quittance » (2.25) */
+        const char *nom_e = doc && strncmp(n->texte, "document ", 9) == 0 ? n->texte + 9 : n->texte;
         if (c) {
-            aj(im, "_écran ");
-            ecrire_nom(im, n->texte, 0);
+            aj(im, doc ? "_document " : "_écran ");
+            ecrire_nom(im, nom_e, 0);
             if (n->texte2) { aj(im, " "); ecrire_texte(im, n->texte2); }
             if (n->taille_titre) aj(im, n->taille_titre > 0 ? " _en_grand" : " _en_petit");   /* § 22.5 */
             aj(im, "\n");
         } else {
-            aj(im, "L'écran ");
-            aj(im, n->texte);
+            aj(im, doc ? "Le document " : "L'écran ");
+            aj(im, nom_e);
             if (n->texte2 || n->taille_titre) {   /* « , « Recherche » en grand, » (§ 22.1, § 22.5) */
                 aj(im, ",");
                 if (n->texte2) { aj(im, " "); ecrire_texte(im, n->texte2); }
@@ -1563,6 +1571,12 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         if (n->forme == 1) {   /* « Ouvrir la fiche de c. » ; « _ouvrir _fiche c » */
             if (c) { aj(im, "_ouvrir _fiche "); expression(im, n->enfants[0]); aj(im, "\n"); }
             else { aj(im, "Ouvrir la fiche "); preposition(im, "de", n->enfants[0]); aj(im, ".\n"); }
+            return;
+        }
+        if (n->forme == 2) {   /* « Ouvrir le document de quittance. » ; « _ouvrir _document de_quittance » (2.25) */
+            const char *nd = strncmp(n->texte, "document ", 9) == 0 ? n->texte + 9 : n->texte;
+            if (c) { aj(im, "_ouvrir _document "); ecrire_nom(im, nd, 0); aj(im, "\n"); }
+            else { aj(im, "Ouvrir le document "); aj(im, nd); aj(im, ".\n"); }
             return;
         }
         if (c) { aj(im, "_ouvrir "); ecrire_nom(im, n->texte, 0); aj(im, "\n"); }

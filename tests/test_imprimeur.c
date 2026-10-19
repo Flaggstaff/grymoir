@@ -99,6 +99,15 @@ int main(void) {
     FIXE("Un membre, conservé, a :\n    un nom (texte).\nExporter les membres conservés, par nom décroissant, avec le nom, dans « m.csv ».\n"
          "Exporter les membres conservés dont le nom est « a » dans « n.csv ».\n");
     LITT("Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.", "Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.\n");
+    /* Documents (2.25) : la déclaration, l'aperçu, la valeur */
+    LITT("Un patient, conservé, a :\n    un nom (texte), unique.\nLa personne vaut absent.\n"
+         "Le document de reçu, « Reçu », montre :\n    côte à côte :\n        l'image « exemples/pixel.png », large de 40,\n"
+         "        le texte \"Pour \" suivi du nom de la personne,\n    la liste des patients conservés, avec le nom.\n"
+         "Ouvrir le document de reçu.\nLe d vaut le document de reçu.\nEnregistrer d dans « r.pdf ».",
+         "Un patient, conservé, a :\n    un nom (texte), unique.\nLa personne vaut absent.\n"
+         "Le document de reçu, « Reçu », montre :\n    côte à côte :\n        l'image « exemples/pixel.png », large de 40,\n"
+         "        le texte \"Pour \" suivi du nom de la personne,\n    la liste des patients conservés, avec le nom.\n"
+         "Ouvrir le document de reçu.\nLe d vaut le document de reçu.\nEnregistrer d dans « r.pdf ».\n");
     /* Texte calculé (2.24) : « le texte » suivi d'une valeur ; « _texte_calculé » */
     LITT("L'écran x montre :\n    une ville (texte), facultative,\n    le texte \"Ville : \" suivi de la ville de l'écran, en petites capitales.\n"
          "Ouvrir l'écran x.",
