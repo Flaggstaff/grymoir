@@ -87,20 +87,18 @@ L'écran du patient, « Patient », montre :
 
 Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
 L'écran de la séance, « Séance », montre :
-    côte à côte :
-        l'un sous l'autre :
-            un patient (patient),
-            un bouton « Voir le patient »,
-            un soin (soin),
-            une date (date),
-            une heure (heure), facultative,
-            une durée (nombre entier), facultative, avec l'unité « min »,
-            un prix (nombre), avec l'unité « CHF »,
-            un statut (« prévue », « faite », « annulée » ou « absence »),
-            un paiement (« à payer », « espèces », « Twint », « virement » ou « offert »),
-        l'un sous l'autre :
-            un commentaire dicté (son), facultatif,
-            un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté,
+    en position libre :
+        un patient (patient), à 0 de la gauche et 0 du haut, large de 380,
+        un bouton « Voir le patient », à 396 de la gauche et 23 du haut,
+        un soin (soin), à 0 de la gauche et 72 du haut, large de 520,
+        une date (date), à 0 de la gauche et 144 du haut, large de 200,
+        une heure (heure), facultative, à 216 de la gauche et 144 du haut, large de 120,
+        une durée (nombre entier), facultative, avec l'unité « min », à 352 de la gauche et 144 du haut, large de 168,
+        un prix (nombre), avec l'unité « CHF », à 0 de la gauche et 216 du haut, large de 200,
+        un statut (« prévue », « faite », « annulée » ou « absence »), à 0 de la gauche et 288 du haut, large de 520,
+        un paiement (« à payer », « espèces », « Twint », « virement » ou « offert »), à 0 de la gauche et 360 du haut, large de 260,
+        un commentaire dicté (son), facultatif, à 552 de la gauche et 0 du haut, large de 520,
+        un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté, à 552 de la gauche et 72 du haut, large de 520, haut de 352,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer ».

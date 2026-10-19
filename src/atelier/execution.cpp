@@ -786,8 +786,10 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             w->setVisible(!(e[k] & 2));
             QWidget *actif = k < zones.size() && zones[k] ? zones[k] : w;   // une zone : son contrôle, le libellé reste lisible
             if (!actif->property("lecture-seule").toBool()) actif->setEnabled(!(e[k] & 1));
-            if (auto *micro = qobject_cast<QWidget *>(actif->property("micro").value<QObject *>()))   // § 15.7
-                micro->setEnabled(actif->isEnabled());
+            // § 15.7 : le micro suit l'état de sa zone, pas celui de l'écran entier ; isEnabled() regardait aussi l'écran,
+            // encore désactivé à ce moment (il ne l'est plus qu'en attente) : le micro restait grisé pour de bon
+            if (auto *micro = qobject_cast<QWidget *>(actif->property("micro").value<QObject *>()))
+                micro->setEnabled(!(e[k] & 1) && !actif->property("lecture-seule").toBool());
         }
     });
     connect(&travail, &Travail::ecran_erreurs_zones, this, [this](const QVector<int> &els, const QStringList &msgs) {

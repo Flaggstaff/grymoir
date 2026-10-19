@@ -156,8 +156,8 @@ QString EnregistreurSon::extension_choisie() { return format_d_enregistrement().
 EnregistreurSon::EnregistreurSon(QWidget *parent) : QWidget(parent) {
     auto *rang = new QHBoxLayout(this);
     rang->setContentsMargins(0, 0, 0, 0);
-    bouton_ = new QPushButton(QString::fromUtf8("● Enregistrer"));
-    bouton_->setToolTip(QString::fromUtf8("Enregistrer au micro ; un second clic arrête"));
+    bouton_ = new QPushButton(QString::fromUtf8("● Dicter"));
+    bouton_->setToolTip(QString::fromUtf8("Dicter au micro ; un second clic arrête"));
     message_ = new QLabel;
     message_->setProperty("niveau", "etiquette");
     rang->addWidget(bouton_);
@@ -243,7 +243,7 @@ void EnregistreurSon::commencer() {
 }
 
 void EnregistreurSon::fini() {
-    bouton_->setText(QString::fromUtf8("● Enregistrer"));
+    bouton_->setText(QString::fromUtf8("● Dicter"));
     if (!dossier) return;
     QString chemin = enregistreur->actualLocation().toLocalFile();
     if (chemin.isEmpty()) chemin = dossier->filePath("enregistrement." + extension);

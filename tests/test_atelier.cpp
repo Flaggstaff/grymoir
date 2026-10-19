@@ -4486,6 +4486,36 @@ int main(int argc, char **argv) {
         e.close();
     }
 
+    // Une zone (son) dans un écran : le bouton du micro, « ● Dicter », est actif quand l'écran attend ; il restait grisé
+    // (19 octobre 2026, la séance de Cabinet)
+    {
+        QTemporaryDir d;
+        const QString prog = d.filePath("m.grym");
+        QFile f(prog);
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write("L'écran x montre :\n    un mémo (son), facultatif,\n    un bouton « Fini ».\n"
+                "Quand on clique sur « Fini » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n");
+        f.close();
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto dicter = [&]() -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == QString::fromUtf8("● Dicter")) return b;
+            return nullptr;
+        };
+        auto attend = [&] {
+            for (QLabel *l : e.findChildren<QLabel *>()) if (l->text() == QString::fromUtf8("L'écran attend.")) return true;
+            return false;
+        };
+        while (z.elapsed() < 15000 && !(dicter() && attend())) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        QApplication::processEvents(QEventLoop::AllEvents, 50);
+        VERIFIER(dicter() != nullptr);
+        VERIFIER(dicter() && dicter()->isEnabled());
+        e.close();
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }

@@ -1453,9 +1453,9 @@ int main(void) {
            fiche déduite ; la page d'un soin (19 octobre 2026) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=4"), evenement("q=2&choix=0.0"), evenement("q=3&choix=16.0"), get("/"),
-                 evenement("q=4&clic=3"), get("/"), evenement("q=5&clic=20"),
-                 evenement("q=6&z2=Anne+Rochat&z4=EPI&z5=19.10.2026&z6=09%3A00&z7=60&z8=70&z9=faite&z10=Twint"
-                           "&z14=Nuque+d%C3%A9tendue&clic=18"),
+                 evenement("q=4&clic=2"), get("/"), evenement("q=5&clic=20"),
+                 evenement("q=6&z1=Anne+Rochat&z3=EPI&z4=19.10.2026&z5=09%3A00&z6=60&z7=70&z8=faite&z9=Twint"
+                           "&z11=Nuque+d%C3%A9tendue&clic=14"),
                  evenement("q=7&choix=16.0"), get("/"));
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet5.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>Séance</h1>");
@@ -1464,7 +1464,7 @@ int main(void) {
         CONTIENT(sc.reponses[5], "<h1>Patient</h1>");        /* « Voir le patient » : la page, pas la fiche déduite */
         CONTIENT(sc.reponses[5], "value=\"Anne Rochat\"");
         CONTIENT(sc.reponses[9], "Nuque détendue</textarea>");
-        CONTIENT(sc.reponses[9], "name=\"z7\" value=\"60\"");
+        CONTIENT(sc.reponses[9], "name=\"z6\" value=\"60\"");
         NE_CONTIENT_PAS(sc.reponses[9], "class=\"erreur\"");
         liberer(&sc);
         remove("_essai_cabinet5.grymd");
