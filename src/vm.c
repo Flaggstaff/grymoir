@@ -2321,6 +2321,10 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             /* un bloc de disposition (§ 22.1), un groupe (§ 22.7), un bloc en position libre (§ 22.9), les onglets et
              * un onglet (§ 22.10) */
             e->textes[k] = grym_dupliquer(x[0] == 'G' || x[0] == 'Q' || x[0] == 'M' ? x + 1 : "");
+            if (x[0] == 'G') {   /* « Gprix ␞ i » : en couleur inversée (2.18) */
+                char *o = strchr(e->textes[k], '\x1e');
+                if (o) { e->elements[k].inverse = strchr(o + 1, 'i') != NULL; *o = '\0'; }
+            }
             e->elements[k].sorte = x[0] == 'H' ? ELEMENT_COTE_A_COTE : x[0] == 'V' ? ELEMENT_L_UN_SOUS_L_AUTRE
                                  : x[0] == 'G' ? ELEMENT_GROUPE : x[0] == 'P' ? ELEMENT_LIBRE : x[0] == 'O' ? ELEMENT_ONGLETS
                                  : x[0] == 'Q' ? ELEMENT_ONGLET : x[0] == 'M' ? ELEMENT_MENU : ELEMENT_FIN_DE_BLOC;

@@ -510,6 +510,11 @@ static char *feuille_de_style(const Serveur *s) {
     "button:hover{background:var(--survol)}"
     "button.principal{background:var(--accent);border-color:var(--accent);color:var(--sur-accent)}"
     "button.principal:hover{background:var(--accent-survol);border-color:var(--accent-survol)}"
+    "fieldset.groupe.inverse{background:var(--accent);border-color:var(--accent);color:var(--sur-accent);border-radius:12px;padding:20px 24px}"
+    "fieldset.groupe.inverse>legend{color:var(--accent-doux);float:left;padding:0;margin-bottom:8px;font-size:12px;letter-spacing:.14em;text-transform:uppercase}"
+    "fieldset.groupe.inverse label,fieldset.groupe.inverse .texte{color:var(--sur-accent)}"
+    "fieldset.groupe.inverse input[type=text]{background:transparent;color:var(--sur-accent);border:0;border-bottom:1px solid var(--accent-doux);"
+    "border-radius:0;font-size:40px;font-weight:700;min-height:56px}"
     ".bandeau{padding:0 0 16px;margin:0 0 24px;border-bottom:1px solid var(--separateur)}.bandeau img{height:26px;width:auto;display:block}"
     ".tuiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}"
     "button.tuile{margin:0;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;text-align:left;"
@@ -1366,7 +1371,7 @@ static void page_ecran(Serveur *s) {
         case ELEMENT_COTE_A_COTE: chaine_ajouter(&c, "<div class=\"cote\">\n"); if (prof < 16) groupes[prof++] = el->place ? 2 : 0; break;
         case ELEMENT_L_UN_SOUS_L_AUTRE: chaine_ajouter(&c, "<div class=\"sous\">\n"); if (prof < 16) groupes[prof++] = el->place ? 2 : 0; break;
         case ELEMENT_GROUPE:   /* « le groupe « Adresse » : » (§ 22.7) */
-            chaine_ajouter(&c, "<fieldset class=\"groupe\"><legend>");
+            chaine_ajouter(&c, el->inverse ? "<fieldset class=\"groupe inverse\"><legend>" : "<fieldset class=\"groupe\"><legend>");   /* 2.18 */
             echapper(&c, el->texte);
             chaine_ajouter(&c, "</legend>\n");
             if (prof < 16) groupes[prof++] = el->place ? 3 : 1;

@@ -6442,9 +6442,23 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             b->forme = cote ? 1 : sous ? 2 : groupe ? 3 : libre ? 4 : onglets ? 5 : menu ? 7 : 6;
             if (groupe || onglet || menu) b->texte = grym_dupliquer(voir(a, 2)->valeur);
             a->i += sous ? 5 : onglets ? 2 : 3;
-            {   /* sa place dans le bloc libre qui le contient : « , à 16 de la gauche et 8 du haut, large de 320 » */
-                int vus = 0, lu;
-                while ((lu = place_element(a, b, GENRE_MASCULIN, &vus)) > 0) {}
+            {   /* sa place dans le bloc libre qui le contient : « , à 16 de la gauche et 8 du haut, large de 320 » ;
+                   pour un groupe, « , en couleur inversée » (2.18) : le fond à l'encre de l'accent, le texte clair */
+                int vus = 0, lu = 1;
+                while (lu > 0) {
+                    lu = place_element(a, b, GENRE_MASCULIN, &vus);
+                    if (lu == 0 && groupe && cour(a)->type == J_VIRGULE) {
+                        if (!(b->entier & 1)) attendre_mot(a, a->i + 1, "en couleur inversée", strlen("en couleur inversée"));
+                        if (est_mot(voir(a, 1), "en") && est_mot(voir(a, 2), "couleur")
+                            && (est_mot(voir(a, 3), "inversée") || est_mot(voir(a, 3), "inversé"))) {
+                            if (est_mot(voir(a, 3), "inversé")) { erreur(a, voir(a, 3), grym_dupliquer("Accord : « inversée » (la couleur).")); lu = -1; break; }
+                            if (b->entier & 1) { erreur(a, voir(a, 1), grym_dupliquer("« en couleur inversée » est déjà dit.")); lu = -1; break; }
+                            b->entier |= 1;
+                            a->i += 4;
+                            lu = 1;
+                        }
+                    }
+                }
                 if (lu < 0) { noeud_liberer(b); break; }
             }
             if (cour(a)->type != J_DEUX_POINTS) {

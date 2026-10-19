@@ -1,5 +1,6 @@
 Remarque : Cabinet, le programme principal.
 Utiliser « actions ».
+Utiliser « essais ».
 
 Remarque : les couleurs, la police et le cœur du site de Nicolas Seydoux, à l'encre (le rose, trop vif en grand, reste sur la tuile des clients) ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
 Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf », le logo « images/coeur-encre.png » et la signature « images/signature.png ».
@@ -11,6 +12,9 @@ Si le nombre de soins conservés est nul :
     Proposer « Kriya Massage » et 100.
     Proposer « Toucher Thérapeutique » et 100.
     Proposer « Soin à Distance » et 100.
+
+Remarque : les données d'essai (essais.grym), une seule fois ; à retirer à la livraison avec ce fichier.
+Si le nombre de clients conservés est nul, remplir les essais.
 
 Remarque : l'accueil de la maquette : l'action du jour, puis le cabinet en quatre tuiles ; le cœur sur les clients.
 L'écran d'accueil, « Bonjour Nicolas » en grand, montre :
@@ -26,13 +30,17 @@ L'écran des clients montre :
         un bouton « Nouveau client »,
         un bouton « Fermer ».
 
-L'écran de séance, « Nouvelle séance », montre :
-    un client (client),
-    un soin (soin),
-    une date (date),
-    une heure (heure), facultative,
-    un prix (nombre), avec l'unité « CHF »,
-    un paiement (« à payer », « espèces », « Twint », « virement » ou « offert »), « à payer » au départ,
+L'écran de séance, « Nouvelle séance » en grand, montre :
+    côte à côte :
+        l'un sous l'autre :
+            un client (client),
+            un soin (soin),
+            une date (date),
+            une heure (heure), facultative,
+            un paiement (« à payer », « espèces », « Twint », « virement » ou « offert »), « à payer » au départ,
+        le groupe « Prix proposé », en couleur inversée :
+            un prix (nombre), avec l'unité « CHF »,
+            le texte « Dès la deuxième séance d'un même soin, le tarif de suivi s'applique. Le prix reste modifiable. »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer ».

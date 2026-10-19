@@ -38,6 +38,7 @@
 #include <QDropEvent>
 #include <QTreeWidget>
 #include <QTableWidget>
+#include <QGroupBox>
 #include <QGridLayout>
 
 #include <QAbstractItemView>
@@ -176,6 +177,20 @@ int main(int argc, char **argv) {
         for (int k = 0; pile && k < pile->count(); k++)
             if (auto *h = qobject_cast<QHBoxLayout *>(pile->itemAt(k)->layout()); h && h->indexOf(v.titre) >= 0) ligne = h;
         VERIFIER(ligne && ligne->indexOf(v.boutons[0]) >= 0 && ligne->indexOf(v.boutons[1]) < 0);
+        delete v.vue;
+    }
+    // Un groupe en couleur inversée (2.18) : le rôle que la feuille peint à l'encre de l'accent
+    {
+        QVector<ElementVue> el(3);
+        el[0].sorte = ELEMENT_GROUPE;
+        el[0].texte = "Prix proposé";
+        el[0].inverse = true;
+        el[1].sorte = ELEMENT_TEXTE;
+        el[1].texte = "70";
+        el[2].sorte = ELEMENT_FIN_DE_BLOC;
+        VueEcran v = dessiner_ecran("Séance", el);
+        auto *g = qobject_cast<QGroupBox *>(v.controles.value(0));
+        VERIFIER(g && g->property("role").toString() == "inverse");
         delete v.vue;
     }
     // Des tuiles (2.15) : une grille de quatre colonnes, chaque tuile son titre, sa description, son image

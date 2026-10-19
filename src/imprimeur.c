@@ -1290,6 +1290,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 else
                     aj(im, el->forme == 1 ? (c ? "_côte_à_côte" : "côte à côte") : (c ? "_l'un_sous_l'autre" : "l'un sous l'autre"));
                 place_ecran(im, el, 0);
+                if (el->forme == 3 && (el->entier & 1)) aj(im, c ? " _inversé" : ", en couleur inversée");   /* 2.18 */
                 aj(im, c ? "\n" : " :\n");
                 profondeur++;
                 continue;

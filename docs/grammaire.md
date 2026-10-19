@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.17 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.18 de la spécification, révisée le 18 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1862,6 +1862,7 @@ L'écran de saisie montre :
     un bouton « OK ».
 ```
 
+- `, en couleur inversée` *(2.18)*, après le titre (et la place, s'il y en a une) : `le groupe « Prix proposé », en couleur inversée :`. Le panneau prend la couleur d'accent, son titre et ses textes celle du texte des boutons ; ses zones perdent leur cadre pour un trait dessous, en grands caractères. Pour la valeur que l'écran met en avant, comme un prix. Accord : « Accord : « inversée » (la couleur). ». Forme compacte : `_groupe « Prix » _inversé`.
 - `le groupe « Adresse » :` ouvre un bloc, comme `l'un sous l'autre :` (§ 22.1), que l'interface encadre et titre. Le titre est obligatoire : « Un groupe porte un titre : « le groupe « Adresse » : ». ». Un groupe contient au moins un élément, plus indenté ; les groupes s'emboîtent avec les autres blocs.
 - Une zone accepte des valeurs permises, comme un champ d'entité (§ 16.15) : `un état (« actif », « suspendu » ou « retiré »)`. La zone est de type texte ; la valeur de départ en est une (« « c » n'est pas une valeur permise de « état » : « a » ou « b ». ») ; `L'état de l'écran devient « z ».` est refusé dès l'analyse, et un choix hors liste venu de l'interface est refusé à l'exécution, l'écran restant ouvert avec le message. Une zone à valeurs permises ne s'écrit pas `sur plusieurs lignes`.
 - De deux à quatre valeurs, l'interface montre des boutons radio, tous visibles ; une zone facultative en reçoit un de plus, « — », pour l'absence. Au-delà de quatre, un menu. Le choix est celui de l'interface, sans phrase : on décrit ce que la zone accepte, pas son dessin (§ 3.3 de `docs/ecrans.md`).
@@ -2139,3 +2140,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.15 | 2026-10-18 | § 22.6 : `, en tuile`, `, avec la description « … »`, `, avec l'image « … »` ; des tuiles qui se suivent forment une grille |
 | 2.16 | 2026-10-18 | § 22.5 : `et la signature « … »`, une image en bandeau en tête de chaque écran ; le logo devient alors l'icône seule |
 | 2.17 | 2026-10-18 | § 22.6 : `, à côté du titre` ; § 22.5 : « en grand » vaut 40 px en gras (il valait 22 px, calculé sur la mauvaise police) |
+| 2.18 | 2026-10-18 | § 22.7 : `le groupe « … », en couleur inversée :`, un panneau à l'encre de l'accent, son texte et ses zones en clair |

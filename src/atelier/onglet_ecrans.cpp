@@ -195,6 +195,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                                 : el->forme == 3 ? ELEMENT_GROUPE : el->forme == 4 ? ELEMENT_LIBRE : el->forme == 5 ? ELEMENT_ONGLETS
                                 : el->forme == 6 ? ELEMENT_ONGLET : el->forme == 7 ? ELEMENT_MENU : ELEMENT_FIN_DE_BLOC;
                         if (el->forme == 3 || el->forme == 6 || el->forme == 7) x.texte = QString::fromUtf8(el->texte);   // le titre (§ 22.7, § 22.10, § 22.12)
+                        x.inverse = el->forme == 3 && (el->entier & 1);   // 2.18
                         x.ecrit.clear();
                     } else if (el->type == N_BOUTON) {
                         x.sorte = ELEMENT_BOUTON;
@@ -430,6 +431,7 @@ void OngletEcrans::dessiner() {
         el[k].principal = e.elements[k].principal;
         el[k].tuile = e.elements[k].tuile;
         el[k].a_cote_du_titre = e.elements[k].a_cote_du_titre;
+        el[k].inverse = e.elements[k].inverse;
         if (e.elements[k].tuile) {   // la description, l'image lue depuis le dossier du fichier qui déclare l'écran (2.15)
             el[k].indication = e.elements[k].indication;
             const QString t = e.elements[k].image_tuile;

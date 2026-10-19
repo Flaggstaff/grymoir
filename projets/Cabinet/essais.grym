@@ -1,0 +1,45 @@
+Remarque : Cabinet : des données d'essai, toutes inventées, pour voir l'application remplie.
+Remarque : à retirer à la livraison : ce fichier, et les deux lignes qui le citent dans Cabinet.grym.
+Utiliser « actions ».
+
+Pour inscrire un nom et une rue et un numéro et un numéro postal et une localité et un téléphone :
+    Le c vaut un nouveau client :
+        Le nom vaut nom.
+        La rue vaut rue.
+        Le numéro de maison vaut numéro.
+        Le numéro postal vaut numéro postal.
+        La localité vaut localité.
+        Le pays vaut « Suisse ».
+        Le téléphone vaut téléphone.
+    Conserver le c.
+
+Remarque : une séance à aujourd'hui + écart jours (négatif : passée) ; la date dit si elle est faite ou prévue.
+Pour consigner une personne et une prestation et un écart et un prix et un statut et un paiement :
+    La s vaut une nouvelle séance :
+        Le client vaut le client conservé dont le nom est personne.
+        Le soin vaut le soin conservé dont le nom est prestation.
+        La date vaut aujourd'hui + écart.
+        Le prix vaut prix.
+        Le statut vaut statut.
+        Le paiement vaut paiement.
+    Conserver la s.
+
+Pour remplir les essais :
+    Inscrire « Anne Rochat » et « Route de Riaz » et « 12a » et « 1630 » et « Bulle » et « 079 000 00 01 ».
+    Inscrire « Louis Bapst » et « Rue de Lausanne » et « 40 » et « 1700 » et « Fribourg » et « 079 000 00 02 ».
+    Inscrire « Claire Monney » et « Grand-Rue » et « 3 » et « 1680 » et « Romont » et « 079 000 00 03 ».
+    Inscrire « Julien Pasquier » et « Avenue de la Gare » et « 18 » et « 1618 » et « Châtel-St-Denis » et « 079 000 00 04 ».
+    Inscrire « Sophie Clément » et « Route de Bourguillon » et « 7 » et « 1723 » et « Marly » et « 079 000 00 05 ».
+    Inscrire « Marc Dupraz » et « Chemin des Crêts » et « 2 » et « 1632 » et « Riaz » et « 079 000 00 06 ».
+    Consigner « Anne Rochat » et « EPI » et −48 et 130 et « faite » et « espèces ».
+    Consigner « Anne Rochat » et « EPI » et −11 et 70 et « faite » et « Twint ».
+    Consigner « Anne Rochat » et « EPI » et −1 et 70 et « faite » et « à payer ».
+    Consigner « Louis Bapst » et « Kriya Massage » et −20 et 100 et « faite » et « Twint ».
+    Consigner « Louis Bapst » et « Kriya Massage » et 2 et 100 et « prévue » et « à payer ».
+    Consigner « Claire Monney » et « LEAA » et −6 et 130 et « absence » et « à payer ».
+    Consigner « Claire Monney » et « LEAA » et 3 et 130 et « prévue » et « à payer ».
+    Consigner « Julien Pasquier » et « Toucher Thérapeutique » et −30 et 100 et « faite » et « espèces ».
+    Consigner « Julien Pasquier » et « Toucher Thérapeutique » et −9 et 100 et « annulée » et « à payer ».
+    Consigner « Sophie Clément » et « Soin à Distance » et −4 et 100 et « faite » et « virement ».
+    Consigner « Sophie Clément » et « EPI » et 5 et 130 et « prévue » et « à payer ».
+    Consigner « Marc Dupraz » et « LEAA » et −15 et 130 et « faite » et « offert ».

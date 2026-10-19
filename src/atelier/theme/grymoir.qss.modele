@@ -55,6 +55,26 @@ QPushButton:disabled {
     color: @texte-desactive@;
 }
 
+QGroupBox[role="inverse"] {
+    background: @accent@;
+    border: none;
+    border-radius: 12px;
+    padding: 36px 24px 20px 24px;
+    color: @sur-accent@;
+}
+QGroupBox[role="inverse"]::title { color: @accent-doux@; subcontrol-position: top left; padding: 16px 0 0 24px; }
+QGroupBox[role="inverse"] QWidget { background: transparent; }
+QGroupBox[role="inverse"] QLabel { color: @sur-accent@; background: transparent; }
+QGroupBox[role="inverse"] QLineEdit {
+    background: transparent;
+    color: @sur-accent@;
+    border: none;
+    border-bottom: 1px solid @accent-doux@;
+    border-radius: 0;
+    font-size: 40px;
+    font-weight: 700;
+    min-height: 56px;
+}
 QFrame[role="filet"] { border: none; max-height: 1px; min-height: 1px; background: @separateur@; }
 QPushButton[role="tuile"], QPushButton[role="tuile-principale"] {
     min-height: 120px;

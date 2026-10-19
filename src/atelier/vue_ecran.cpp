@@ -366,6 +366,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         }
         if (e.sorte == ELEMENT_GROUPE) {   // « le groupe « Adresse » : » : un cadre titré, ses éléments l'un sous l'autre (§ 22.7)
             auto *cadre = new QGroupBox(e.texte);
+            if (e.inverse) cadre->setProperty("role", "inverse");   // 2.18 : fond d'accent, texte clair (feuille du thème)
             auto *b = new QVBoxLayout(cadre);
             b->setSpacing(t.mesure("l-un-sous-l-autre"));
             r.controles[k] = cadre;

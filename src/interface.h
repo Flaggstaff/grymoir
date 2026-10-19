@@ -67,6 +67,7 @@ typedef struct {
     int lien;                       /* la valeur en lien : LIEN_COURRIEL (écrire), LIEN_WEB (ouvrir) ; 0 : non */
     int principal;                  /* un bouton « , principal » : l'action attendue, à la couleur d'accent (2.14) */
     int a_cote_du_titre;            /* un bouton « , à côté du titre » (2.17) : sur la ligne du titre, à droite */
+    int inverse;                    /* un groupe « , en couleur inversée » (2.18) : fond d'accent, texte clair */
     int tuile;                      /* un bouton « , en tuile » (2.15) : grand, son titre, sa description (indication) et
                                        son image (octets, taille, format) ; des tuiles qui se suivent forment une grille */
 } ElementEcran;
