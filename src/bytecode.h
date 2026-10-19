@@ -114,11 +114,13 @@ typedef enum {
     I_ECRAN_EXIGER      /* opérande : constante texte, les zones qu'un événement lit, séparées par U+001E ; toutes les
                            obligatoires vides arrêtent l'événement d'un coup, chacune avec son message (§ 22.6) */,
     I_CORRESPOND,       /* dépile une empreinte, puis un mot de passe en clair ; empile vrai s'ils correspondent (§ 16.1) */
-    I_SIGLES            /* opérande : constante texte, les sigles du programme en minuscules, séparés par une espace ;
+    I_SIGLES,           /* opérande : constante texte, les sigles du programme en minuscules, séparés par une espace ;
                            les libellés les écriront en capitales (grammaire, § 2.4) */
+    I_ECRAN_TEXTE       /* opérande : élément ; dépile une valeur et la montre, écrite comme AFFICHER, à la place du
+                           texte de cet élément jusqu'à la prochaine attente (le texte calculé, § 22.1) */
 } CodeInstruction;
 
-#define I_DERNIER I_SIGLES
+#define I_DERNIER I_ECRAN_TEXTE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

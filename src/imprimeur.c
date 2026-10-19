@@ -1325,8 +1325,12 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 }
                 etats_ecran(im, el, 1);
             } else if (el->type == N_TEXTE_ECRAN) {
-                aj(im, c ? "_texte " : "le texte ");
-                ecrire_texte(im, el->texte);
+                const Noeud *calcul = NULL;   /* le texte calculé (2.24) : « le texte » suivi d'une valeur */
+                for (size_t q = 0; q < el->nb_enfants; q++)
+                    if (el->enfants[q]->type == N_SI_ECRAN && el->enfants[q]->forme == 4 && el->enfants[q]->nb_enfants)
+                        calcul = el->enfants[q]->enfants[0];
+                if (calcul) { aj(im, c ? "_texte_calculé " : "le texte "); expression(im, calcul); }
+                else { aj(im, c ? "_texte " : "le texte "); ecrire_texte(im, el->texte); }
                 etats_ecran(im, el, 0);
             } else if (el->type == N_NOM) {   /* zone : « un pays (texte), « Suisse » au départ, facultatif » */
                 int fz = el->forme == 2;

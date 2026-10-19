@@ -1449,6 +1449,26 @@ int main(void) {
         remove("_essai_cabinet3.grymd");
     }
 
+    {   /* Le texte calculé (2.24) : relu à chaque attente, après chaque événement */
+        const char *src = "L'écran x montre :\n    une ville (texte), facultative,\n"
+            "    le texte \"Ville : \" suivi de la ville de l'écran, en petites capitales,\n    un bouton « Fini ».\n"
+            "Quand on ouvre l'écran x :\n    La ville de l'écran devient « Bulle ».\n"
+            "Quand on clique sur « Fini » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0=Fribourg&clic=-1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<p class=\"texte capitales\">Ville : Bulle</p>");
+        CONTIENT(sc.reponses[2], "<p class=\"texte capitales\">Ville : Fribourg</p>");
+        liberer(&sc);
+        /* Cabinet : le surtitre daté de l'accueil */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet7.grymd", &sc);
+        CONTIENT(sc.reponses[0], "<p class=\"texte capitales\">Aujourd&#39;hui, ");
+        liberer(&sc);
+        remove("_essai_cabinet7.grymd");
+    }
+
     {   /* Cabinet : la page d'une séance (commentaire tapé, enregistré) ; son patient s'ouvre sur sa page, jamais sur la
            fiche déduite ; la page d'un soin (19 octobre 2026) */
         memset(&sc, 0, sizeof sc);

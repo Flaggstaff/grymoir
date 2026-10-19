@@ -99,6 +99,13 @@ int main(void) {
     FIXE("Un membre, conservé, a :\n    un nom (texte).\nExporter les membres conservés, par nom décroissant, avec le nom, dans « m.csv ».\n"
          "Exporter les membres conservés dont le nom est « a » dans « n.csv ».\n");
     LITT("Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.", "Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.\n");
+    /* Texte calculé (2.24) : « le texte » suivi d'une valeur ; « _texte_calculé » */
+    LITT("L'écran x montre :\n    une ville (texte), facultative,\n    le texte \"Ville : \" suivi de la ville de l'écran, en petites capitales.\n"
+         "Ouvrir l'écran x.",
+         "L'écran x montre :\n    une ville (texte), facultative,\n    le texte \"Ville : \" suivi de la ville de l'écran, en petites capitales.\n"
+         "Ouvrir l'écran x.\n");
+    COMP("L'écran x montre :\n    une ville (texte), facultative,\n    le texte la ville de l'écran.\nOuvrir l'écran x.",
+         "_écran x\n    _une ville (texte) _facultatif\n    _texte_calculé _écran.ville\n_fin\n_ouvrir x\n");
     /* Renommages (2.23, § 16.7) : « anciennement » en dernier ; le nom d'avant ramené à la forme d'un nom */
     LITT("Un patient, conservé, anciennement «  Client  », a : un patient (texte), anciennement « Nom », facultatif, "
          "des humeurs (patient), anciennement « genres ».",

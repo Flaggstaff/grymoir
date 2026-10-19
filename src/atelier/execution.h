@@ -70,6 +70,7 @@ signals:
     void ecran_valeurs(const QStringList &valeurs);   // une par élément ; vide pour un élément qui n'est pas une zone
     void ecran_etats(const QVector<int> &etats);      // un par élément : bit 1 inactif, bit 2 caché (§ 22.6)
     void ecran_image(int element, const QByteArray &octets);   // une image calculée, vide si absente (§ 22.8)
+    void ecran_texte(int element, const QString &texte);       // un texte calculé, relu avant chaque attente (2.24)
     void ecran_erreurs_zones(const QVector<int> &elements, const QStringList &messages);   // les zones en faute (§ 22.6)
     void ecran_ferme();
     void apparence(int couleur, const QByteArray &logo);   // « Les écrans ont … » (grammaire, § 22.5)

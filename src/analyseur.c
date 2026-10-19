@@ -6426,6 +6426,22 @@ static int conditions_ecran(Analyse *a, Noeud *ecran) {
             Noeud *si = ecran->enfants[k]->enfants[q];
             if (si->type != N_SI_ECRAN || si->nb_enfants) continue;
             a->i = (size_t)si->entier;
+            if (si->forme == 4) {   /* la valeur d'un texte calculé (2.24) : toute valeur, écrite comme Afficher */
+                const Jeton *debut = cour(a);
+                Noeud *c = valeur(a);
+                if (!c) return 0;
+                if (a->i != (size_t)si->local) {
+                    noeud_liberer(c);
+                    erreur(a, a->i < a->n ? cour(a) : debut,
+                           grym_dupliquer("« le texte » attend une valeur : « le texte « Reçu de » suivi du nom de l'écran »."));
+                    return 0;
+                }
+                noeud_ajouter(si, c);
+                si->fin = c->fin;
+                si->entier = 0;
+                si->local = 0;
+                continue;
+            }
             if (si->forme == 3) {   /* la source d'une image calculée (§ 22.8) : « de », « du », « d' », puis une valeur */
                 Jeton *de = cour(a);
                 avancer(a);
@@ -7002,6 +7018,32 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             a->i += 3;
             int vus = 0, lu;
             while ((lu = etat_element(a, el, GENRE_FEMININ, 0, &vus)) > 0) {}
+            if (lu < 0) { noeud_liberer(el); break; }
+            el->fin = fin_jeton(&a->j[a->i - 1]);
+        } else if (est_mot(u, "le") && est_mot(voir(a, 1), "texte")
+                   && !(voir(a, 2)->type == J_TEXTE && (voir(a, 3)->type == J_VIRGULE || voir(a, 3)->type == J_POINT
+                                                       || voir(a, 3)->type == J_FIN))
+                   && voir(a, 2)->type != J_VIRGULE && voir(a, 2)->type != J_POINT && voir(a, 2)->type != J_FIN) {
+            /* « le texte « Reçu de » suivi du nom du patient choisi de l'écran » (§ 22.1, 2.24) : un texte calculé,
+             * relu avant chaque attente. Sa valeur se lit en fin de déclaration, comme une condition (§ 22.6). */
+            el = noeud_creer(N_TEXTE_ECRAN, u->ligne, u->colonne, u->debut);
+            el->texte = grym_dupliquer("…");   /* ce que montre l'aperçu, avant la première relecture */
+            a->i += 2;
+            size_t k = a->i;
+            int prof = 0;
+            while (k < a->n && a->j[k].type != J_FIN && !(prof == 0 && (a->j[k].type == J_VIRGULE || a->j[k].type == J_POINT))) {
+                if (a->j[k].type == J_PAR_OUV) prof++;
+                else if (a->j[k].type == J_PAR_FERM && prof > 0) prof--;
+                k++;
+            }
+            Noeud *source = noeud_creer(N_SI_ECRAN, cour(a)->ligne, cour(a)->colonne, cour(a)->debut);
+            source->forme = 4;
+            source->entier = (int)a->i;
+            source->local = (int)k;
+            noeud_ajouter(el, source);
+            a->i = k;
+            int vus = 0, lu;
+            while ((lu = etat_element(a, el, GENRE_MASCULIN, 0, &vus)) > 0) {}
             if (lu < 0) { noeud_liberer(el); break; }
             el->fin = fin_jeton(&a->j[a->i - 1]);
         } else if ((est_mot(u, "un") && est_mot(voir(a, 1), "bouton") && voir(a, 2)->type == J_TEXTE)

@@ -33,7 +33,7 @@ Si le nombre de patients conservés est nul, remplir les essais.
 Remarque : l'accueil de la maquette : l'action du jour, puis le cabinet en quatre tuiles ; le cœur sur les patients.
 L'écran d'accueil, « Bonjour Nicolas » en grand, montre :
     un bouton « Nouvelle séance », principal, à côté du titre,
-    le texte « Aujourd'hui », en petites capitales,
+    le texte "Aujourd'hui, " suivi d'aujourd'hui en toutes lettres, en petites capitales,
     la liste des séances conservées dont la date = aujourd'hui, par heure, avec l'heure, le statut, le nom du patient, le nom du soin et le prix, en cartes,
     le texte « Le cabinet », en petites capitales,
     un bouton « Patients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png »,
@@ -78,7 +78,7 @@ L'écran du patient, « Patient », montre :
         une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
         un ajout (texte), facultatif, sur plusieurs lignes, transcrit de la dictée, à 552 de la gauche et 72 du haut, large de 520, haut de 112,
         une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 204 du haut, large de 520, haute de 208,
-    le texte « Séances », en petites capitales,
+    le texte "Séances de " suivi du nom de la personne ouverte, en petites capitales,
     la liste des séances conservées dont le patient = la personne ouverte, par date décroissant, avec la date, l'heure, le nom du soin, la durée, le prix, le statut et le paiement,
     côte à côte :
         un bouton « Enregistrer », principal,

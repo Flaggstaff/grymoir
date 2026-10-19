@@ -154,6 +154,10 @@ int main(void) {
     EXEC("_aptitude horodatée\n    _une date\n_fin\n_classe _un document _est _une chose _adopte horodatée\n_fin\n"
          "_action dater(_une chose_horodatée)\n    chose.date << 5\n_fin\n_le d << _nouveau document\ndater(d)\n"
          "_afficher d.date\n", "5\n");
+    /* Texte calculé (2.24) */
+    ALLER_RETOUR("_écran x\n    _une ville (texte) _facultatif\n    _texte_calculé « V : » _suivi _écran.ville _capitales\n_fin\n_ouvrir x\n",
+                 "L'écran x montre :\n    une ville (texte), facultative,\n    le texte « V : » suivi de la ville de l'écran, en petites capitales.\n"
+                 "Ouvrir l'écran x.\n");
     /* Renommages (2.23, § 16.7) */
     ALLER_RETOUR("_classe _un patient _conservé _anciennement « client »\n    _un nom (texte) _anciennement « titre »\n"
                  "    _des humeurs (patient) _anciennement « genres »\n_fin\n",

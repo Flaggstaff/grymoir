@@ -196,6 +196,9 @@ typedef struct {
     /* « … et la signature « signature.png ». » (§ 22.5, 2.16), juste après ecran_theme : l'image d'en-tête de chaque
      * écran, en bandeau ; le logo ne sert plus alors qu'à l'icône de la fenêtre. NULL : sans en-tête. */
     void (*ecran_signature)(void *contexte, const unsigned char *octets, size_t taille, const char *format);
+    /* Avant chaque attente, pour chaque texte calculé (§ 22.1, 2.24) : sa valeur, écrite comme Afficher. NULL :
+     * l'interface garde le texte de l'ouverture. */
+    void (*ecran_texte)(void *contexte, size_t element, const char *texte);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

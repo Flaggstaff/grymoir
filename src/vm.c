@@ -417,6 +417,7 @@ typedef struct EcranVM {
     unsigned char *etats;  /* pour chaque élément : bit 1 inactif, bit 2 caché (§ 22.6) ; relus avant chaque attente */
     size_t cadre;          /* le cadre qui a ouvert l'écran : y lire une zone vide (listes, conditions) rend absent */
     Valeur *images;        /* image (§ 22.8) : le fichier lu à l'ouverture, sinon absent */
+    unsigned char *calcules;   /* 1 : texte calculé (§ 22.1, 2.24), relu à chaque tour */
 } EcranVM;
 
 static void ecran_detruire(EcranVM *e);
@@ -2237,6 +2238,7 @@ static void ecran_detruire(EcranVM *e) {
     free(e->champ);
     free(e->etats);
     free(e->images);
+    free(e->calcules);
     free(e->titre);
     free(e->elements);
     free(e->textes);
@@ -2299,6 +2301,8 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     memset(e->etats, 0, t);
     e->images = grym_allouer(t * sizeof *e->images);
     for (size_t k = 0; k < t; k++) e->images[k] = vi_absent(NULL);
+    e->calcules = grym_allouer(t);
+    memset(e->calcules, 0, t);
     char *nom_classe = grym_formater("écran %s", parts[0]);
     const ClasseVM *ce = classe_vm(m, nom_classe);
     free(nom_classe);
@@ -4716,6 +4720,23 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             free(els);
             break;
         }
+        case I_ECRAN_TEXTE: {
+            /* « le texte « Reçu de » suivi du nom du patient de la quittance » (§ 22.1, 2.24) : relu à chaque tour */
+            Valeur v = depiler(&pile);
+            if (!m->ecran || op >= m->ecran->n) {
+                valeur_liberer(&v);
+                ok = echouer(diag, b, debut, grym_dupliquer("Texte d'écran invalide."));
+                break;
+            }
+            EcranVM *e = m->ecran;
+            char *t = texte_valeur(m, &v);
+            valeur_liberer(&v);
+            free(e->textes[op]);
+            e->textes[op] = t;
+            e->elements[op].texte = t;
+            e->calcules[op] = 1;
+            break;
+        }
         case I_ECRAN_IMAGE: {
             /* « l'image du portrait du compositeur choisi de l'écran » (§ 22.8) : la valeur, relue à chaque tour */
             if (op % 2) { m->absent_permis = 1; break; }   /* élément × 2 + 1 : la source commence ; un objet absent la rend absente */
@@ -4775,6 +4796,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 free(v);
             }
             if (!probleme && m->ecran && m->iface.ecran_etats) m->iface.ecran_etats(m->iface.contexte, m->ecran->etats, m->ecran->n);
+            for (size_t k = 0; !probleme && m->ecran && m->iface.ecran_texte && k < m->ecran->n; k++)   /* 2.24 */
+                if (m->ecran->calcules[k]) m->iface.ecran_texte(m->iface.contexte, k, m->ecran->textes[k]);
             for (size_t k = 0; !probleme && m->ecran && m->iface.ecran_image && k < m->ecran->n; k++)   /* § 22.8 */
                 if (m->ecran->elements[k].calculee)
                     m->iface.ecran_image(m->iface.contexte, k, m->ecran->elements[k].octets, m->ecran->elements[k].taille,

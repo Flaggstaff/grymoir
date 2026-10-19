@@ -225,6 +225,10 @@ static void iface_ecran_theme(void *contexte, const char *const *noms, const cha
                   police ? QByteArray(reinterpret_cast<const char *>(police), (qsizetype)taille_police) : QByteArray());
 }
 
+static void iface_ecran_texte(void *contexte, size_t k, const char *texte) {   // le texte calculé (2.24)
+    emit static_cast<Travail *>(contexte)->ecran_texte((int)k, QString::fromUtf8(texte ? texte : ""));
+}
+
 static void iface_ecran_signature(void *contexte, const unsigned char *octets, size_t taille, const char *) {
     auto *t = static_cast<Travail *>(contexte);
     emit t->signature(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille));
@@ -461,7 +465,7 @@ void Travail::run() {
                    iface_ecran_ouvrir, iface_ecran_lignes, iface_ecran_attendre, iface_ecran_erreur, iface_ecran_fermer,
                    iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
                    iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf,
-                   iface_transcrire, iface_ecran_theme, iface_ecran_signature};
+                   iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte};
     machine_interface(m, &i);
     situer(m, chemin, base_imposee, dossier_ecriture);
     Chaine sortie = {};
@@ -824,6 +828,9 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             l->setStyleSheet("color: #b3261e; font-weight: 600;");
             rang->insertWidget(qMin(1, rang->count()), l);   // sous le libellé
         }
+    });
+    connect(&travail, &Travail::ecran_texte, this, [this](int k, const QString &t) {   // le texte calculé (2.24)
+        if (auto *l = qobject_cast<QLabel *>(controles_ecran.value(k))) l->setText(t);
     });
     connect(&travail, &Travail::ecran_image, this, [this](int k, const QByteArray &o) {   // l'image calculée (§ 22.8)
         auto *l = qobject_cast<QLabel *>(controles_ecran.value(k));

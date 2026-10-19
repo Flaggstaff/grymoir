@@ -1352,6 +1352,11 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 if (si->type != N_SI_ECRAN) continue;
                 /* l'image calculée (§ 22.8) : ÉCRAN_IMAGE k × 2 + 1 ouvre la source (un objet absent la rend absente),
                  * k × 2 la montre */
+                if (si->forme == 4) {   /* le texte calculé (2.24) : sa valeur, relue à chaque tour */
+                    expression(c, si->enfants[0]);
+                    emettre(c, I_ECRAN_TEXTE, (long)k, si->ligne, si->colonne);
+                    continue;
+                }
                 if (si->forme == 3) emettre(c, I_ECRAN_IMAGE, (long)(k * 2 + 1), si->ligne, si->colonne);
                 expression(c, si->enfants[0]);
                 if (si->forme == 3) emettre(c, I_ECRAN_IMAGE, (long)(k * 2), si->ligne, si->colonne);

@@ -4536,6 +4536,30 @@ int main(int argc, char **argv) {
         e.close();
     }
 
+    // Le texte calculé (2.24) : l'atelier le montre, relu à chaque attente
+    {
+        QTemporaryDir d;
+        const QString prog = d.filePath("t.grym");
+        QFile f(prog);
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write("L'écran x montre :\n    une ville (texte), facultative,\n    le texte \"Ville : \" suivi de la ville de l'écran,\n"
+                "    un bouton « Fini ».\nQuand on ouvre l'écran x :\n    La ville de l'écran devient « Bulle ».\n"
+                "Quand on clique sur « Fini » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n");
+        f.close();
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto vu = [&] {
+            for (QLabel *l : e.findChildren<QLabel *>()) if (l->text() == QString::fromUtf8("Ville : Bulle")) return true;
+            return false;
+        };
+        while (z.elapsed() < 15000 && !vu()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(vu());
+        e.close();
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }

@@ -178,7 +178,7 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, ")");
         return;
     case N_SI_ECRAN:
-        chaine_ajouter(c, n->forme == 1 ? "(actif-si " : n->forme == 3 ? "(image-de " : "(visible-si ");
+        chaine_ajouter(c, n->forme == 1 ? "(actif-si " : n->forme == 3 ? "(image-de " : n->forme == 4 ? "(texte-de " : "(visible-si ");
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;

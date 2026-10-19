@@ -2408,12 +2408,20 @@ static void serveur_ecran_signature(void *contexte, const unsigned char *octets,
     s->type_signature = type_image(format);
 }
 
+/* Le texte calculé (§ 22.1, 2.24) : copié, la page le montre au prochain affichage. */
+static void serveur_ecran_texte(void *contexte, size_t k, const char *texte) {
+    EcranWeb *e = ecran_dessus(contexte);
+    if (!e || k >= e->n) return;
+    free((char *)e->el[k].texte);
+    e->el[k].texte = grym_dupliquer(texte ? texte : "");
+}
+
 Interface serveur_interface(Serveur *s) {
     Interface i = { s, serveur_disponible, serveur_formulaire, serveur_effacer, 1, serveur_afficher_image,
                     serveur_afficher_fiche, serveur_ecran_ouvrir, serveur_ecran_lignes, serveur_ecran_attendre,
                     serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence,
                     serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre, serveur_ecran_erreurs_zones, NULL, NULL,
-                    serveur_ecran_theme, serveur_ecran_signature };
+                    serveur_ecran_theme, serveur_ecran_signature, serveur_ecran_texte };
     return i;
 }
 
