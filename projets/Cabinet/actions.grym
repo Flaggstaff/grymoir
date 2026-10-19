@@ -28,3 +28,31 @@ Pour fonder le cabinet :
         Le nom vaut « Nicolas Seydoux ».
         Le pays vaut « Suisse ».
     Conserver le c.
+
+Remarque : les lignes d'adresse d'une quittance ; un champ absent laisse la ligne vide, rien ne casse.
+L'adresse d'un patient :
+    Si la rue du patient est absente, rendre « ».
+    Si le numéro de maison du patient est absent, rendre la rue du patient.
+    Rendre la rue du patient suivi de " " suivi du numéro de maison du patient.
+
+La ville d'un patient :
+    Si la localité du patient est absente, rendre « ».
+    Si le numéro postal du patient est absent, rendre la localité du patient.
+    Rendre le numéro postal du patient suivi de " " suivi de la localité du patient.
+
+L'adresse professionnelle d'un cabinet :
+    Si la rue du cabinet est absente, rendre « ».
+    Si le numéro de maison du cabinet est absent, rendre la rue du cabinet.
+    Rendre la rue du cabinet suivi de " " suivi du numéro de maison du cabinet.
+
+La ville professionnelle d'un cabinet :
+    Si la localité du cabinet est absente, rendre « ».
+    Si le numéro postal du cabinet est absent, rendre la localité du cabinet.
+    Rendre le numéro postal du cabinet suivi de " " suivi de la localité du cabinet.
+
+Remarque : « Q-2026-0007 » : l'année, puis le rang sur quatre chiffres.
+Le numéro de quittance d'une année et d'un rang :
+    Si rang < 10, rendre « Q- » suivi d'année suivi de « -000 » suivi de rang.
+    Si rang < 100, rendre « Q- » suivi d'année suivi de « -00 » suivi de rang.
+    Si rang < 1000, rendre « Q- » suivi d'année suivi de « -0 » suivi de rang.
+    Rendre « Q- » suivi d'année suivi de « - » suivi de rang.

@@ -14,6 +14,11 @@ La personne proposée vaut absent.
 
 Remarque : la séance et le soin dont la page est ouverte.
 La séance ouverte vaut absent.
+
+Remarque : la quittance et le frais en cours ; le premier janvier de l'année, d'où partent les comptes et les numéros.
+La pièce en cours vaut absent.
+Le frais ouvert vaut absent.
+Le début d'exercice vaut (« 01.01. » suivi de l'année d'aujourd'hui) en date.
 Le soin ouvert vaut absent.
 
 Remarque : les cinq soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
@@ -38,7 +43,7 @@ L'écran d'accueil, « Bonjour Nicolas » en grand, montre :
     le texte « Le cabinet », en petites capitales,
     un bouton « Patients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png »,
     un bouton « Séances prévues », en tuile, avec la description « Faite, annulée, absence »,
-    un bouton « À encaisser », en tuile, avec la description « Les séances à payer »,
+    un bouton « Comptabilité », en tuile, avec la description « Encaisser, quittances, frais »,
     un bouton « Soins », en tuile, avec la description « Tarifs et durées ».
 
 Remarque : les écrans posés au pixel tiennent dans 1072 points, la largeur utile du thème, mesurée sur un MacBook Pro 14 pouces (1512 × 982 et 1800 × 1169).
@@ -113,6 +118,64 @@ L'écran du soin, « Soin », montre :
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer ».
+
+Remarque : la comptabilité en recettes-dépenses de l'année : ce qui est encaissé, ce qui est dépensé, ce qui reste.
+L'écran de comptabilité, « Comptabilité », montre :
+    le texte "Année " suivi de l'année d'aujourd'hui, en petites capitales,
+    le texte "Recettes encaissées : CHF " suivi de la somme des prix des séances conservées dont la date ≥ le début d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert »,
+    le texte "Frais : CHF " suivi de la somme des montants des frais conservés dont la date ≥ le début d'exercice,
+    le texte "Résultat : CHF " suivi de (la somme des prix des séances conservées dont la date ≥ le début d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice),
+    le texte « Le cabinet », en petites capitales,
+    un bouton « À encaisser », en tuile, avec la description « Les séances à payer »,
+    un bouton « Quittances », en tuile, avec la description « Remettre et retrouver »,
+    un bouton « Frais », en tuile, avec la description « Dépenses et justificatifs »,
+    un bouton « Fermer ».
+
+Remarque : les séances payées attendent leur quittance ; les quittances remises se retrouvent dessous.
+L'écran des quittances, « Quittances », montre :
+    le texte « Payées, sans quittance », en petites capitales,
+    la liste des séances conservées dont la quittance est absente et le paiement ≠ « à payer » et le paiement ≠ « offert », par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
+    côte à côte :
+        un bouton « Quittance », principal,
+        un bouton « Fermer »,
+    le texte « Quittances remises », en petites capitales,
+    la liste des quittances conservées, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et le moyen.
+
+L'écran des frais, « Frais », montre :
+    la liste des frais conservés, par date décroissant, avec la date, le libellé, la catégorie, le montant et le moyen,
+    côte à côte :
+        un bouton « Nouveau frais », principal,
+        un bouton « Fermer ».
+
+L'écran du frais, « Frais », montre :
+    en position libre :
+        une date (date), à 0 de la gauche et 0 du haut, large de 200,
+        un montant (nombre), avec l'unité « CHF », à 216 de la gauche et 0 du haut, large de 200,
+        un libellé (texte), à 0 de la gauche et 72 du haut, large de 520,
+        une catégorie (« loyer », « matériel », « formation », « assurances », « cotisations », « déplacements » ou « autres »), à 0 de la gauche et 144 du haut, large de 260,
+        un moyen (« espèces », « Twint », « virement » ou « carte »), à 276 de la gauche et 144 du haut, large de 244,
+        un justificatif (fichier), facultatif, à 552 de la gauche et 0 du haut, large de 520,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Fermer ».
+
+Remarque : la quittance, sur papier : le cabinet, le patient, les séances, le montant reçu et son moyen.
+Le document de quittance, « Quittance », montre :
+    côte à côte :
+        l'un sous l'autre :
+            l'image « images/signature.png », large de 220,
+            le texte l'adresse professionnelle du cabinet conservé,
+            le texte la ville professionnelle du cabinet conservé,
+        l'un sous l'autre :
+            le texte « Reçu de », en petites capitales,
+            le texte le nom du patient de la pièce en cours,
+            le texte l'adresse du patient de la pièce en cours,
+            le texte la ville du patient de la pièce en cours,
+    le texte "N° " suivi du numéro de la pièce en cours suivi de ", le " suivi de la date de la pièce en cours en toutes lettres,
+    le texte « Séances », en petites capitales,
+    la liste des séances conservées dont la quittance = la pièce en cours, par date, avec la date, le nom du soin, la durée et le prix,
+    le texte "Montant reçu : CHF " suivi du montant de la pièce en cours suivi de ", en " suivi du moyen de la pièce en cours suivi de « . »,
+    le texte « Pour acquit, Nicolas Seydoux ».
 
 L'écran des patients montre :
     la liste des patients conservés, par nom, avec le nom, le téléphone et le courriel,
@@ -194,8 +257,89 @@ Quand on clique sur « Nouvelle séance » dans l'écran d'accueil :
 Quand on clique sur « Séances prévues » dans l'écran d'accueil :
     Ouvrir l'écran des prévues.
 
-Quand on clique sur « À encaisser » dans l'écran d'accueil :
+Quand on clique sur « Comptabilité » dans l'écran d'accueil :
+    Ouvrir l'écran de comptabilité.
+
+Quand on clique sur « À encaisser » dans l'écran de comptabilité :
     Ouvrir l'écran des encaissements.
+
+Quand on clique sur « Quittances » dans l'écran de comptabilité :
+    Ouvrir l'écran des quittances.
+
+Quand on clique sur « Frais » dans l'écran de comptabilité :
+    Ouvrir l'écran des frais.
+
+Quand on clique sur « Fermer » dans l'écran de comptabilité :
+    Fermer l'écran.
+
+Remarque : une quittance pour la séance payée choisie ; son exemplaire, le PDF, est gardé, puis montré pour l'imprimer.
+Quand on clique sur « Quittance » dans l'écran des quittances :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance payée dans la liste. ».
+    Le s vaut la séance choisie de l'écran.
+    Le rang vaut le nombre de quittances conservées dont la date ≥ le début d'exercice.
+    Le rang devient le rang + 1.
+    La q vaut une nouvelle quittance :
+        Le numéro vaut le numéro de quittance de l'année d'aujourd'hui et du rang.
+        La date vaut aujourd'hui.
+        Le patient vaut le patient du s.
+        Le montant vaut le prix du s.
+        Le moyen vaut le paiement du s.
+    Conserver la q.
+    La quittance du s devient la q.
+    La pièce en cours devient la q.
+    L'exemplaire de la q devient le document de quittance.
+    Ouvrir le document de quittance.
+
+Remarque : une quittance déjà remise se remontre à partir de ses données ; son exemplaire, le PDF remis, reste dans la base.
+Quand on choisit une quittance dans l'écran des quittances :
+    La pièce en cours devient la quittance choisie de l'écran.
+    Ouvrir le document de quittance.
+
+Quand on clique sur « Fermer » dans l'écran des quittances :
+    Fermer l'écran.
+
+Quand on clique sur « Nouveau frais » dans l'écran des frais :
+    Le frais ouvert devient absent.
+    Ouvrir l'écran du frais.
+
+Quand on choisit un frais dans l'écran des frais :
+    Le frais ouvert devient le frais choisi de l'écran.
+    Ouvrir l'écran du frais.
+
+Quand on clique sur « Fermer » dans l'écran des frais :
+    Fermer l'écran.
+
+Quand on ouvre l'écran du frais :
+    Si le frais ouvert est absent :
+        La date de l'écran devient aujourd'hui.
+    Sinon :
+        La date de l'écran devient la date du frais ouvert.
+        Le libellé de l'écran devient le libellé du frais ouvert.
+        Le montant de l'écran devient le montant du frais ouvert.
+        La catégorie de l'écran devient la catégorie du frais ouvert.
+        Le moyen de l'écran devient le moyen du frais ouvert.
+        Le justificatif de l'écran devient le justificatif du frais ouvert.
+
+Quand on clique sur « Enregistrer » dans l'écran du frais :
+    Si le frais ouvert est absent :
+        Le f vaut un nouveau frais :
+            La date vaut la date de l'écran.
+            Le libellé vaut le libellé de l'écran.
+            Le montant vaut le montant de l'écran.
+            La catégorie vaut la catégorie de l'écran.
+            Le moyen vaut le moyen de l'écran.
+        Conserver le f.
+        Le frais ouvert devient le f.
+    La date du frais ouvert devient la date de l'écran.
+    Le libellé du frais ouvert devient le libellé de l'écran.
+    Le montant du frais ouvert devient le montant de l'écran.
+    La catégorie du frais ouvert devient la catégorie de l'écran.
+    Le moyen du frais ouvert devient le moyen de l'écran.
+    Si le justificatif de l'écran est présent, le justificatif du frais ouvert devient le justificatif de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran du frais :
+    Fermer l'écran.
 
 Quand on clique sur « Soins » dans l'écran d'accueil :
     Ouvrir l'écran des soins.

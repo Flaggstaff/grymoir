@@ -1449,6 +1449,32 @@ int main(void) {
         remove("_essai_cabinet3.grymd");
     }
 
+    {   /* Cabinet : la comptabilité de l'année (recettes, frais, résultat) ; un frais saisi entre dans les comptes ; une
+           quittance, un document, ne se fabrique pas dans le navigateur (19 octobre 2026) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=6"), get("/"), evenement("q=2&clic=7"), evenement("q=3&clic=2"), get("/"),
+                 evenement("q=4&z1=12.10.2026&z2=80&z3=Huiles+de+massage&z4=mat%C3%A9riel&z5=carte&clic=9"), get("/"),
+                 evenement("q=5&clic=3"), get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet8.grymd", &sc);
+        CONTIENT(sc.reponses[0], "Comptabilité</span></span><span class=\"description\">Encaisser, quittances, frais</span>");
+        CONTIENT(sc.reponses[2], "<p class=\"texte\">Recettes encaissées : CHF 500</p>");
+        CONTIENT(sc.reponses[2], "<p class=\"texte\">Frais : CHF 0</p>");
+        CONTIENT(sc.reponses[5], "Libellé");
+        CONTIENT(sc.reponses[7], "<td>Huiles de massage</td>");
+        CONTIENT(sc.reponses[9], "<p class=\"texte\">Frais : CHF 80</p>");
+        CONTIENT(sc.reponses[9], "<p class=\"texte\">Résultat : CHF 420</p>");
+        liberer(&sc);
+        remove("_essai_cabinet8.grymd");
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=6"), evenement("q=2&clic=6"), get("/"), evenement("q=3&choix=1.0"),
+                 evenement("q=4&clic=3"), get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet9.grymd", &sc);
+        CONTIENT(sc.reponses[3], "<h1>Quittances</h1>");
+        CONTIENT(sc.reponses[6], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
+        liberer(&sc);
+        remove("_essai_cabinet9.grymd");
+    }
+
     {   /* Le texte calculé (2.24) : relu à chaque attente, après chaque événement */
         const char *src = "L'écran x montre :\n    une ville (texte), facultative,\n"
             "    le texte \"Ville : \" suivi de la ville de l'écran, en petites capitales,\n    un bouton « Fini ».\n"
