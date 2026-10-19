@@ -154,6 +154,8 @@ int main(void) {
     EXEC("_aptitude horodatée\n    _une date\n_fin\n_classe _un document _est _une chose _adopte horodatée\n_fin\n"
          "_action dater(_une chose_horodatée)\n    chose.date << 5\n_fin\n_le d << _nouveau document\ndater(d)\n"
          "_afficher d.date\n", "5\n");
+    /* « Ouvrir » un fichier (2.26) */
+    ALLER_RETOUR("_ouvrir_fichier _fichier « x.pdf »\n", "Ouvrir le fichier « x.pdf ».\n");
     /* Documents (2.25) */
     ALLER_RETOUR("_document de_reçu « Reçu »\n    _texte « Cabinet »\n_fin\n_ouvrir _document de_reçu\n_le d << _document de_reçu\n",
                  "Le document de reçu, « Reçu », montre :\n    le texte « Cabinet ».\nOuvrir le document de reçu.\n"

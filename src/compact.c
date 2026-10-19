@@ -1281,6 +1281,13 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         ouvrir(r, O_FORMULE, prof, t);
         return;
     }
+    if (est_cle(t, "ouvrir_fichier") && d + 1 < f) {   /* _ouvrir_fichier frais.justificatif → Ouvrir le justificatif du frais. (2.26) */
+        mot(r, "ouvrir", t);
+        expression(r, d + 1, f);
+        point(r, f);
+        fixer_retrait(r, premier, prof);
+        return;
+    }
     if (t->type == J_MOT_CLE && (!strcmp(t->valeur, "ouvrir") || !strcmp(t->valeur, "fermer"))) {
         /* _ouvrir des_compositeurs → Ouvrir l'écran des compositeurs. ; _fermer → Fermer l'écran. */
         int ouvre = !strcmp(t->valeur, "ouvrir");

@@ -7381,6 +7381,24 @@ static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
         n->fin = fin_jeton(&a->j[a->i - 1]);
         return n;
     }
+    if (!(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "écran"))) {
+        /* « Ouvrir le justificatif du frais. » (2.26) : un fichier, montré par le système (Aperçu, une visionneuse) */
+        a->i++;
+        Noeud *x = expression(a);
+        if (!x) return NULL;
+        const char *ty = type_statique(x);
+        if (ty && strcmp(ty, "fichier") != 0) {
+            noeud_liberer(x);
+            return erreur(a, t, grym_dupliquer("« Ouvrir » montre un fichier : « Ouvrir le justificatif du frais. », ou un écran : "
+                                               "« Ouvrir l'écran d'accueil. »."));
+        }
+        if (!fin_phrase(a, 0)) { noeud_liberer(x); return NULL; }
+        Noeud *n = noeud_creer(P_OUVRIR, t->ligne, t->colonne, t->debut);
+        n->forme = 3;
+        noeud_ajouter(n, x);
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
     size_t f;
     char *nom = NULL;
     EcranConnu *e = ecran_nomme(a, a->i + 1, &f, &nom);

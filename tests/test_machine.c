@@ -3882,6 +3882,11 @@ int main(void) {
     }
 
     essais_utiliser();
+    /* « Ouvrir » un fichier (2.26) : rien d'autre ; un fichier absent ; la console ne montre rien */
+    PROG("Ouvrir 3.", "~« Ouvrir » montre un fichier : « Ouvrir le justificatif du frais. »");
+    PROG("Le n vaut 3.\nOuvrir le n.", "~« Ouvrir » montre un fichier.");
+    PROG("Un dossier, conservé, a :\n    un scan (fichier), facultatif.\nLe d vaut un nouveau dossier.\nOuvrir le scan du d.",
+         "~Rien à ouvrir : ce fichier est absent.");
     /* Documents (2.25) : refus de l'analyse */
     PROG("Le document de reçu montre :\n    un bouton « OK ».", "~Un document se lit sur papier : des textes, des images et des listes, ni bouton ni zone.");
     PROG("Ouvrir le document de rien.", "~Document inconnu");

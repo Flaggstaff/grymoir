@@ -1356,6 +1356,11 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_FERMER_ECRAN, 0, ph->ligne, ph->colonne);
         return;
     case P_OUVRIR: {
+        if (ph->forme == 3) {   /* « Ouvrir le justificatif du frais. » (2.26) : le fichier, montré par le système */
+            expression(c, ph->enfants[0]);
+            emettre(c, I_DOCUMENT, 2, ph->ligne, ph->colonne);
+            return;
+        }
         if (ph->forme == 2) {   /* « Ouvrir le document de quittance. » (2.25) : l'aperçu, d'où l'on imprime */
             document(c, ph, 1);
             return;

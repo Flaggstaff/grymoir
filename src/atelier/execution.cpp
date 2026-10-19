@@ -225,8 +225,9 @@ static void iface_ecran_theme(void *contexte, const char *const *noms, const cha
                   police ? QByteArray(reinterpret_cast<const char *>(police), (qsizetype)taille_police) : QByteArray());
 }
 
-static void iface_montrer_document(void *contexte, const unsigned char *pdf, size_t taille) {   // 2.25
-    emit static_cast<Travail *>(contexte)->document(QByteArray(reinterpret_cast<const char *>(pdf), (qsizetype)taille));
+static void iface_montrer_document(void *contexte, const unsigned char *octets, size_t taille, const char *nom) {   // 2.25, 2.26
+    emit static_cast<Travail *>(contexte)->document(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille),
+                                                    QString::fromUtf8(nom ? nom : "document.pdf"));
 }
 
 static void iface_ecran_texte(void *contexte, size_t k, const char *texte) {   // le texte calculé (2.24)
@@ -608,10 +609,15 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
     });
     connect(&travail, &Travail::question, this, &Execution::poser);
     connect(&travail, &Travail::utilise_micro, this, &Execution::demander_micro);
-    connect(&travail, &Travail::document, this, [this](const QByteArray &pdf) {
+    connect(&travail, &Travail::document, this, [this](const QByteArray &pdf, const QString &nom) {
         // « Ouvrir le document … » (2.25) : le PDF dans la visionneuse du système (Aperçu sous macOS), d'où l'on
         // imprime ; GRYMOIR_SANS_APERCU (les essais, les captures) le garde sans l'ouvrir
-        const QString chemin = documents.filePath(QString("document-%1.pdf").arg(++nb_documents));
+        // chacun dans son dossier : son nom d'origine (« ticket.jpg »), et la visionneuse qui va avec son extension
+        const QString sous = documents.filePath(QString::number(++nb_documents));
+        QDir().mkpath(sous);
+        QString propre = QFileInfo(nom).fileName();
+        if (propre.isEmpty()) propre = "document.pdf";
+        const QString chemin = sous + "/" + propre;
         QFile f(chemin);
         if (!f.open(QIODevice::WriteOnly) || f.write(pdf) != pdf.size()) { etat->setText("Le document n'a pas pu être écrit."); return; }
         f.close();

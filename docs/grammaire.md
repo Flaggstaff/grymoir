@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.25 de la spécification, révisée le 19 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.26 de la spécification, révisée le 19 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2082,6 +2082,7 @@ L'exemplaire de q devient le document de reçu.
 - La page : le titre, puis les éléments dans l'ordre ; un `côte à côte` est une rangée de colonnes ; une liste, un tableau dont l'en-tête se répète à chaque page ; « page 1 / 2 » en pied. La mise en page vient de l'atelier ou de l'application fabriquée, comme un rapport PDF (§ 15.6) ; en console et dans le navigateur : « Un document se fabrique dans l'atelier ou dans une application fabriquée. ».
 - Limites : pas de total sous une liste (un texte calculé le donne, `la somme des prix des séances conservées dont …`) ; la police du document est celle des rapports, pas encore celle des écrans.
 - Forme compacte : `_document de_reçu « Reçu »` … `_fin`, `_ouvrir _document de_reçu`, `_document de_reçu` (la valeur).
+- **Ouvrir un fichier** *(2.26)* : `Ouvrir le justificatif du frais.`, `Ouvrir l'exemplaire de la quittance.` montre un fichier tel qu'il est rangé, sous son nom d'origine (« ticket.jpg »), dans la visionneuse du système. Autre chose qu'un fichier : « « Ouvrir » montre un fichier. » ; un fichier absent : « Rien à ouvrir : ce fichier est absent. ». En console et dans le navigateur : « Un fichier s'ouvre dans l'atelier ou dans une application fabriquée. ». Forme compacte : `_ouvrir_fichier frais.justificatif`.
 
 ## Journal des révisions
 
@@ -2213,3 +2214,4 @@ L'exemplaire de q devient le document de reçu.
 | 2.23 | 2026-10-19 | § 16.7 : `anciennement « … »`, le renommage d'un champ d'entité (simple, multiple, fichier) ou d'une entité, sans perte ; le refus d'un champ disparu propose la mention |
 | 2.24 | 2026-10-19 | § 22.1 : le texte calculé, `le texte` suivi d'une valeur, relu avant chaque attente (instruction `ÉCRAN_TEXTE`) ; compacte `_texte_calculé` |
 | 2.25 | 2026-10-19 | Nouveau § 22.15 : les documents, `Le document … montre :`, la valeur `le document de …` (un PDF), `Ouvrir le document … .` |
+| 2.26 | 2026-10-19 | § 22.15 : `Ouvrir` un fichier (`Ouvrir le justificatif du frais.`), montré par le système ; opérande 2 de `DOCUMENT` |

@@ -1573,6 +1573,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             else { aj(im, "Ouvrir la fiche "); preposition(im, "de", n->enfants[0]); aj(im, ".\n"); }
             return;
         }
+        if (n->forme == 3) {   /* « Ouvrir le justificatif du frais. » ; « _ouvrir_fichier frais.justificatif » (2.26) */
+            if (c) { aj(im, "_ouvrir_fichier "); expression(im, n->enfants[0]); aj(im, "\n"); }
+            else { aj(im, "Ouvrir "); expression(im, n->enfants[0]); aj(im, ".\n"); }
+            return;
+        }
         if (n->forme == 2) {   /* « Ouvrir le document de quittance. » ; « _ouvrir _document de_quittance » (2.25) */
             const char *nd = strncmp(n->texte, "document ", 9) == 0 ? n->texte + 9 : n->texte;
             if (c) { aj(im, "_ouvrir _document "); ecrire_nom(im, nd, 0); aj(im, "\n"); }

@@ -4893,6 +4893,21 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_DOCUMENT: {
+            if (op == 2) {   /* « Ouvrir le justificatif du frais. » (2.26) : le fichier tel qu'il est rangé */
+                Valeur v = depiler(&pile);
+                char *probleme = NULL;
+                if (v.type == V_ABSENT) probleme = grym_dupliquer("Rien à ouvrir : ce fichier est absent.");
+                else if (v.type != V_FICHIER) probleme = grym_dupliquer("« Ouvrir » montre un fichier.");
+                else if (!m->iface.montrer_document)
+                    probleme = grym_dupliquer("Un fichier s'ouvre dans l'atelier ou dans une application fabriquée.");
+                else {
+                    const unsigned char *o = octets_du_fichier(v.fichier, &probleme);
+                    if (o) m->iface.montrer_document(m->iface.contexte, o, v.fichier->taille, v.fichier->nom);
+                }
+                valeur_liberer(&v);
+                if (probleme) ok = echouer(diag, b, debut, probleme);
+                break;
+            }
             /* « le document de quittance », « Ouvrir le document de quittance. » (2.25) : la page, puis le PDF */
             EcranVM *e = m->ecran;
             char *probleme = NULL;
@@ -4909,7 +4924,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             free(html);
             if (!probleme && op == 1) {
-                if (m->iface.montrer_document) m->iface.montrer_document(m->iface.contexte, pdf, taille);
+                if (m->iface.montrer_document) m->iface.montrer_document(m->iface.contexte, pdf, taille, "document.pdf");
                 else probleme = grym_dupliquer("Un document se montre dans l'atelier ou dans une application fabriquée.");
                 free(pdf);
             } else if (!probleme) {

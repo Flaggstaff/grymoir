@@ -4584,6 +4584,26 @@ int main(int argc, char **argv) {
         VERIFIER(pdf.read(5) == "%PDF-");
         const QString montre = e.property("dernier_document").toString();
         VERIFIER(!montre.isEmpty() && QFile::exists(montre));
+    }
+    // « Ouvrir » un fichier (2.26) : montré sous son nom d'origine, pour la visionneuse qui va avec
+    {
+        QTemporaryDir d;
+        { QFile t(d.filePath("ticket.png")); VERIFIER(t.open(QIODevice::WriteOnly)); t.write("pas une vraie image"); }
+        const QString prog = d.filePath("o.grym");
+        QFile f(prog);
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write("Le t vaut le fichier « ticket.png ».\nOuvrir le t.\nAfficher « fini ».\n");
+        f.close();
+        Execution e(prog);
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 20000 && !fil().contains("fini")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        QApplication::processEvents(QEventLoop::AllEvents, 100);
+        const QString montre = e.property("dernier_document").toString();
+        VERIFIER(montre.endsWith("/ticket.png") && QFile::exists(montre));
+        e.close();
         e.close();
     }
 

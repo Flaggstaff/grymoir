@@ -99,6 +99,9 @@ int main(void) {
     FIXE("Un membre, conservé, a :\n    un nom (texte).\nExporter les membres conservés, par nom décroissant, avec le nom, dans « m.csv ».\n"
          "Exporter les membres conservés dont le nom est « a » dans « n.csv ».\n");
     LITT("Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.", "Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.\n");
+    /* « Ouvrir » un fichier (2.26) ; « _ouvrir_fichier » */
+    LITT("Un dossier, conservé, a :\n    un scan (fichier).\nLe d vaut un nouveau dossier.\nOuvrir le scan du d.",
+         "Un dossier, conservé, a :\n    un scan (fichier).\nLe d vaut un nouveau dossier.\nOuvrir le scan du d.\n");
     /* Documents (2.25) : la déclaration, l'aperçu, la valeur */
     LITT("Un patient, conservé, a :\n    un nom (texte), unique.\nLa personne vaut absent.\n"
          "Le document de reçu, « Reçu », montre :\n    côte à côte :\n        l'image « exemples/pixel.png », large de 40,\n"

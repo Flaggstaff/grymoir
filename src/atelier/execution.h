@@ -81,7 +81,7 @@ signals:
     void signature(const QByteArray &octets);   // l'image du bandeau (2.16)
     void reponses(const QString &echo);   // les réponses acceptées, recopiées dans le fil comme en console
     void utilise_micro();   // le programme a un champ ou une zone (son) : le micro se demande dès l'ouverture (§ 15.7)
-    void document(const QByteArray &pdf);   // « Ouvrir le document … » (2.25) : l'aperçu, d'où l'on imprime
+    void document(const QByteArray &octets, const QString &nom);   // « Ouvrir le document … », « Ouvrir x. » (2.25, 2.26)
     void fin(bool ok, const QString &erreur, const QString &annulation);
 
 public:

@@ -412,7 +412,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_CORRESPOND: besoin = 2; effet = -1; break;
             case I_ECRAN_OUVRIR: case I_ECRAN_FERMER: case I_FERMER_ECRAN: case I_ECRAN_EXIGER: case I_SIGLES: besoin = 0; effet = 0; break;
             case I_ECRAN_TEXTE: besoin = 1; effet = -1; break;
-            case I_DOCUMENT: besoin = 0; effet = op ? 0 : 1; break;
+            case I_DOCUMENT: besoin = op == 2 ? 1 : 0; effet = op == 2 ? -1 : op ? 0 : 1; break;
             case I_ECRIRE_CHAMP: case I_GAGNER: case I_PERDRE: case I_EXPORTER: besoin = 2; effet = -2; break;
             case I_DEMANDER: besoin = 1; effet = 0; break;   /* dépile la question, empile la réponse */
             case I_ECHOUER: break;
