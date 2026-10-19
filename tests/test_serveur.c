@@ -1449,6 +1449,23 @@ int main(void) {
         remove("_essai_cabinet3.grymd");
     }
 
+    {   /* Cabinet : la page d'un patient ; l'anamnèse s'y corrige, une nouvelle séance le reçoit d'office */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=4"), evenement("q=2&choix=0.0"), get("/"),
+                 evenement("q=3&z1=Anne+Rochat&z2=079+000+00+01&z3=&z4=&z5=Route+de+Riaz&z6=12a&z7=&z8=1630&z9=Bulle"
+                           "&z10=Suisse&z11=Migraines+depuis+2019&clic=16"),
+                 evenement("q=4&choix=0.0"), get("/"), evenement("q=5&clic=17"), get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet4.grymd", &sc);
+        CONTIENT(sc.reponses[2], "<h1>Patient</h1>");
+        CONTIENT(sc.reponses[2], "value=\"Anne Rochat\"");
+        CONTIENT(sc.reponses[5], "Migraines depuis 2019</textarea>");   /* relue de la base à la réouverture */
+        CONTIENT(sc.reponses[7], ">Nouvelle séance</h1>");
+        CONTIENT(sc.reponses[7], "<option value=\"Anne Rochat\" selected>Anne Rochat</option>");
+        NE_CONTIENT_PAS(sc.reponses[7], "class=\"erreur\"");
+        liberer(&sc);
+        remove("_essai_cabinet4.grymd");
+    }
+
     {   /* Cabinet : un nouveau patient depuis l'écran de séance, par l'écran d'inscription, aussitôt choisi ;
            l'anamnèse à côté des champs (19 octobre 2026) */
         memset(&sc, 0, sizeof sc);
@@ -1500,13 +1517,14 @@ int main(void) {
         CONTIENT(sc.reponses[16], "Suisse");
         CONTIENT(sc.reponses[4], "Zoé Essai</button></td><td>079 000 00 00</td>");   /* après les six clients d'essai (essais.grym) */
         CONTIENT(sc.reponses[12], "Remplis « Patient » : cette zone est obligatoire.");
-        /* la fiche : la séance au tarif, puis celle au tarif réduit, la plus récente en tête, sa durée ; le total */
-        CONTIENT(sc.reponses[16], "value=\"12.0\">EPI</button></td><td>08.10.2026</td><td>14:30</td><td>50</td><td>70</td>");
-        CONTIENT(sc.reponses[16], "value=\"12.1\">EPI</button></td><td>01.10.2026</td><td></td><td></td><td>130</td>");
+        /* la page du patient : ses données dans les zones, l'anamnèse à droite ; ses séances, la plus récente en tête,
+           la première au tarif, la suivante au tarif réduit, avec leur durée */
+        CONTIENT(sc.reponses[16], "value=\"Route de Riaz\"");
+        CONTIENT(sc.reponses[16], ">Anamnèse</label>");
+        CONTIENT(sc.reponses[16], "value=\"14.0\">08.10.2026</button></td><td>14:30</td><td>EPI</td><td>50</td><td>70</td>");
+        CONTIENT(sc.reponses[16], "value=\"14.1\">01.10.2026</button></td><td></td><td>EPI</td><td></td><td>130</td>");
         CONTIENT(sc.reponses[16], "<span class=\"etiquette etiquette-o\">à payer</span>");
-        /* la ligne de total : ni sélection, ni bouton de choix (§ 22.3) */
-        CONTIENT(sc.reponses[16], "<tr class=\"total\"><td class=\"selection\"></td><td>Total</td><td></td><td></td><td></td><td>200</td>");
-        NE_CONTIENT_PAS(sc.reponses[16], "value=\"12.2\"");
+        NE_CONTIENT_PAS(sc.reponses[16], "value=\"14.2\"");
         CONTIENT(sc.reponses[16], ">Nouvelle séance</button>");
         NE_CONTIENT_PAS(sc.reponses[16], "class=\"erreur\"");
         liberer(&sc);

@@ -5,6 +5,13 @@ Utiliser « essais ».
 Remarque : les couleurs, la police et le cœur du site de Nicolas Seydoux, à l'encre (le rose, trop vif en grand, reste sur la tuile des patients) ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
 Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf », le logo « images/coeur-encre.png » et la signature « images/signature.png ».
 
+Remarque : le dernier patient inscrit par l'écran d'inscription ; absent avant.
+L'inscrit vaut absent.
+
+Remarque : le patient dont la page est ouverte ; celui qu'une nouvelle séance reçoit d'office, absent sinon.
+La personne ouverte vaut absent.
+La personne proposée vaut absent.
+
 Remarque : les cinq soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
 Si le nombre de soins conservés est nul :
     Proposer en deux prix « EPI » et 130 et 70.
@@ -19,9 +26,6 @@ Si le nombre de cabinets conservés est nul, fonder le cabinet.
 Remarque : les données d'essai (essais.grym), une seule fois ; à retirer à la livraison avec ce fichier.
 Si le nombre de patients conservés est nul, remplir les essais.
 
-Remarque : le dernier patient inscrit par l'écran d'inscription ; absent avant.
-L'inscrit vaut absent.
-
 Remarque : l'accueil de la maquette : l'action du jour, puis le cabinet en quatre tuiles ; le cœur sur les patients.
 L'écran d'accueil, « Bonjour Nicolas » en grand, montre :
     un bouton « Nouvelle séance », principal, à côté du titre,
@@ -33,6 +37,7 @@ L'écran d'accueil, « Bonjour Nicolas » en grand, montre :
     un bouton « À encaisser », en tuile, avec la description « Les séances à payer »,
     un bouton « Soins », en tuile, avec la description « Tarifs et durées ».
 
+Remarque : les écrans posés au pixel tiennent dans 1072 points, la largeur utile du thème, mesurée sur un MacBook Pro 14 pouces (1512 × 982 et 1800 × 1169).
 Remarque : l'inscription d'un patient : les champs courts à gauche, l'anamnèse dans toute la place à côté.
 L'écran d'inscription, « Nouveau patient », montre :
     en position libre :
@@ -49,6 +54,27 @@ L'écran d'inscription, « Nouveau patient », montre :
         une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 0 du haut, large de 520, haute de 412,
     côte à côte :
         un bouton « Enregistrer », principal,
+        un bouton « Fermer ».
+
+Remarque : la page d'un patient, comme son inscription, puis ses séances ; on y corrige ses données directement.
+L'écran du patient, « Patient », montre :
+    en position libre :
+        un nom (texte), à 0 de la gauche et 0 du haut, large de 260,
+        un téléphone (téléphone), facultatif, à 0 de la gauche et 72 du haut, large de 260,
+        un courriel (courriel), facultatif, à 0 de la gauche et 144 du haut, large de 260,
+        une date de naissance (date), facultative, à 0 de la gauche et 216 du haut, large de 260,
+        une rue (texte), facultative, à 276 de la gauche et 0 du haut, large de 260,
+        un numéro de maison (texte), facultatif, à 276 de la gauche et 72 du haut, large de 110,
+        un complément d'adresse (texte), facultatif, à 276 de la gauche et 144 du haut, large de 260,
+        un numéro postal (texte), facultatif, à 276 de la gauche et 216 du haut, large de 110,
+        une localité (texte), facultative, à 276 de la gauche et 288 du haut, large de 260,
+        un pays (texte), « Suisse » au départ, à 276 de la gauche et 360 du haut, large de 260,
+        une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 0 du haut, large de 520, haute de 412,
+    le texte « Séances », en petites capitales,
+    la liste des séances conservées dont le patient = la personne ouverte, par date décroissant, avec la date, l'heure, le nom du soin, la durée, le prix, le statut et le paiement,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Nouvelle séance »,
         un bouton « Fermer ».
 
 L'écran des patients montre :
@@ -137,7 +163,49 @@ Quand on clique sur « Soins » dans l'écran d'accueil :
 
 Remarque : la fiche du patient montre ses séances, sa ligne « Total », et le bouton d'une nouvelle séance.
 Quand on choisit un patient dans l'écran des patients :
-    Ouvrir la fiche du patient.
+    La personne ouverte devient le patient choisi de l'écran.
+    Ouvrir l'écran du patient.
+
+Quand on ouvre l'écran du patient :
+    Le p vaut la personne ouverte.
+    Le nom de l'écran devient le nom du p.
+    Le téléphone de l'écran devient le téléphone du p.
+    Le courriel de l'écran devient le courriel du p.
+    La date de naissance de l'écran devient la date de naissance du p.
+    La rue de l'écran devient la rue du p.
+    Le numéro de maison de l'écran devient le numéro de maison du p.
+    Le complément d'adresse de l'écran devient le complément d'adresse du p.
+    Le numéro postal de l'écran devient le numéro postal du p.
+    La localité de l'écran devient la localité du p.
+    Le pays de l'écran devient le pays du p.
+    L'anamnèse de l'écran devient l'anamnèse du p.
+
+Quand on clique sur « Enregistrer » dans l'écran du patient :
+    Le p vaut la personne ouverte.
+    Le nom du p devient le nom de l'écran.
+    Le téléphone du p devient le téléphone de l'écran.
+    Le courriel du p devient le courriel de l'écran.
+    La date de naissance du p devient la date de naissance de l'écran.
+    La rue du p devient la rue de l'écran.
+    Le numéro de maison du p devient le numéro de maison de l'écran.
+    Le complément d'adresse du p devient le complément d'adresse de l'écran.
+    Le numéro postal du p devient le numéro postal de l'écran.
+    La localité du p devient la localité de l'écran.
+    Le pays du p devient le pays de l'écran.
+    L'anamnèse du p devient l'anamnèse de l'écran.
+    Fermer l'écran.
+
+Remarque : une séance ouverte depuis la page d'un patient le reçoit d'office.
+Quand on clique sur « Nouvelle séance » dans l'écran du patient :
+    La personne proposée devient la personne ouverte.
+    Ouvrir l'écran de séance.
+    La personne proposée devient absent.
+
+Quand on choisit une séance dans l'écran du patient :
+    Ouvrir la fiche de la séance.
+
+Quand on clique sur « Fermer » dans l'écran du patient :
+    Fermer l'écran.
 
 Quand on clique sur « Nouveau patient » dans l'écran des patients :
     Ouvrir l'écran d'inscription.
@@ -147,6 +215,7 @@ Quand on clique sur « Fermer » dans l'écran des patients :
 
 Quand on ouvre l'écran de séance :
     La date de l'écran devient aujourd'hui.
+    Si la personne proposée est présente, le patient de l'écran devient la personne proposée.
 
 Remarque : le prix se propose dès que le patient et le soin sont choisis, dans l'ordre qu'on veut ; on peut toujours le changer.
 Remarque : l'événement teste lui-même la présence des deux zones : elles ne l'arrêtent pas tant que l'autre est vide.
