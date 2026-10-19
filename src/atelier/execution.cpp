@@ -1022,9 +1022,24 @@ void Execution::poser() {
     for (int k = 0; k < n; k++) rangees += !travail.refus[k].isEmpty();
     const int voulu = qMin(bouton_envoyer->sizeHint().height() + 48 + rangees * (QLineEdit().sizeHint().height() + 10),
                            total * 3 / 5);
-    partage->setSizes({total - voulu, voulu});
     attente = true;
     ranger();
+    // sous un écran, le partage a trois volets (écran, fil, questions) : la question prend sa place en bas, le fil
+    // reste replié s'il l'était ; avec deux volets seulement, l'écran en recevait la taille et la question restait
+    // invisible (« Nouveau patient » depuis la séance ne montrait rien)
+    QList<int> tailles;
+    for (int k = 0; k < partage->count(); k++) tailles << 0;
+    const int dernier = partage->count() - 1;
+    const int fil_rang = partage->indexOf(fil);
+    const int haut = vue_ecran && !fini ? partage->indexOf(vue_ecran) : fil_rang;
+    tailles[dernier] = voulu;
+    if (fil_rang >= 0 && fil_rang != haut && fil->isVisible()) {
+        tailles[fil_rang] = (total - voulu) / 4;
+        tailles[haut] = total - voulu - tailles[fil_rang];
+    } else if (haut >= 0) {
+        tailles[haut] = total - voulu;
+    }
+    partage->setSizes(tailles);
     bouton_envoyer->setEnabled(true);
     bouton_annuler->setEnabled(true);
     etat->setText("En attente d'une réponse.");

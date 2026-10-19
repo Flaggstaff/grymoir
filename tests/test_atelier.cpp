@@ -4397,6 +4397,51 @@ int main(int argc, char **argv) {
         }
     }
 
+    // Un formulaire demandé depuis un écran (« Nouveau patient » dans la séance) : la question se voit sous l'écran,
+    // avec une hauteur réelle ; elle restait repliée à zéro (19 octobre 2026)
+    {
+        QTemporaryDir d;
+        const QString prog = d.filePath("q.grym");
+        QFile f(prog);
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write("Un client, conservé, a :\n    un nom (texte), unique,\n    une ville (texte), facultative.\n"
+                "L'écran x montre :\n    un bouton « Nouveau ».\n"
+                "Quand on clique sur « Nouveau » dans l'écran x :\n    Le n vaut un nouveau client saisi.\n"
+                "    Conserver le n.\n    Fermer l'écran.\n"
+                "Ouvrir l'écran x.\nAfficher le nombre de clients conservés.\n");
+        f.close();
+        Execution e(prog);
+        e.resize(1000, 800);
+        e.show();
+        e.demarrer();
+        auto trouver = [&](const char *texte) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == QString::fromUtf8(texte) && b->isVisible()) return b;
+            return nullptr;
+        };
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 15000 && !trouver("Nouveau")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(trouver("Nouveau") != nullptr);
+        QPushButton *envoyer = nullptr;
+        // le clic ne compte qu'une fois l'écran en attente : on le répète jusqu'à la question
+        while (z.elapsed() < 15000 && !((envoyer = trouver("Envoyer")) && envoyer->isEnabled())) {
+            if (trouver("Nouveau")) trouver("Nouveau")->click();
+            QApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        QApplication::processEvents(QEventLoop::AllEvents, 50);
+        VERIFIER(envoyer && envoyer->isEnabled());
+        // le champ « Nom » est visible, et pas écrasé à zéro pixel
+        QLineEdit *nom = nullptr;
+        for (QLineEdit *l : e.findChildren<QLineEdit *>()) if (l->isEnabled() && !qobject_cast<QComboBox *>(l->parent())) { nom = l; break; }
+        VERIFIER(nom && nom->isVisible() && nom->visibleRegion().boundingRect().height() > 10);
+        if (nom) nom->setText("Ana");
+        if (envoyer) envoyer->click();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 15000 && !fil().contains("Terminé") && !fil().contains("\n1")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(fil().contains("1"));
+        e.close();
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }
