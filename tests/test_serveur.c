@@ -1365,6 +1365,18 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* Cabinet : un nouveau patient depuis l'écran de séance, aussitôt choisi */
+        memset(&sc, 0, sizeof sc);
+        question_suivante = 2;
+        char *formulaire = reponse("Zoé Neuve|079 000 00 09||Rue du Pont|1||1630|Bulle|||");
+        REQUETES(evenement("q=1&clic=0"), evenement("q=2&clic=3"), get("/"), formulaire, get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet2.grymd", &sc);
+        CONTIENT(sc.reponses[2], "<label for=\"c0\">Nom</label>");
+        CONTIENT(sc.reponses[4], "<option value=\"Zoé Neuve\" selected>Zoé Neuve</option>");
+        liberer(&sc);
+        remove("_essai_cabinet2.grymd");
+    }
+
     {   /* L'application « Cabinet » (projets/) : un client saisi, deux séances, le tarif réduit dès la deuxième,
            la fiche du client et son historique */
         memset(&sc, 0, sizeof sc);
@@ -1379,11 +1391,11 @@ int main(void) {
                  evenement("q=4&fermer=1"),                                     /* 5 : retour à l'accueil */
                  evenement("q=5&clic=0"),                                       /* 6 : Nouvelle séance */
                  /* 7 : client et soin choisis, prix laissé vide : il se calcule avant « Enregistrer » */
-                 evenement("q=6&z2=Zo%C3%A9+Essai&z3=EPI&z4=01.10.2026&z5=&z6=%C3%A0+payer&z9=&clic=14"),
+                 evenement("q=6&z2=Zo%C3%A9+Essai&z4=EPI&z5=01.10.2026&z6=&z7=%C3%A0+payer&z10=&clic=15"),
                  evenement("q=7&clic=0"),                                       /* 8 : Nouvelle séance */
-                 evenement("q=8&z2=Zo%C3%A9+Essai&z3=EPI&z4=08.10.2026&z5=14%3A30&z6=Twint&z9=&clic=14"),   /* 9 */
+                 evenement("q=8&z2=Zo%C3%A9+Essai&z4=EPI&z5=08.10.2026&z6=14%3A30&z7=Twint&z10=&clic=15"),   /* 9 */
                  evenement("q=9&clic=0"),                                       /* 10 : Nouvelle séance */
-                 evenement("q=10&z2=&z3=EPI&z4=08.10.2026&z5=&z6=Twint&z9=50&clic=14"),   /* 11 : sans client */
+                 evenement("q=10&z2=&z4=EPI&z5=08.10.2026&z6=&z7=Twint&z10=50&clic=15"),   /* 11 : sans client */
                  get("/"),                                                      /* 12 */
                  evenement("q=11&fermer=1"),                                    /* 13 */
                  evenement("q=12&clic=4"),                                      /* 14 : Clients */
@@ -1400,7 +1412,7 @@ int main(void) {
         CONTIENT(sc.reponses[16], "1630");
         CONTIENT(sc.reponses[16], "Suisse");
         CONTIENT(sc.reponses[4], "Zoé Essai</button></td><td>079 000 00 00</td>");   /* après les six clients d'essai (essais.grym) */
-        CONTIENT(sc.reponses[12], "Remplis « Client » : cette zone est obligatoire.");
+        CONTIENT(sc.reponses[12], "Remplis « Patient » : cette zone est obligatoire.");
         /* la fiche : la séance au tarif, puis celle au tarif réduit, la plus récente en tête ; le total */
         CONTIENT(sc.reponses[16], "value=\"12.0\">EPI</button></td><td>08.10.2026</td><td>14:30</td><td>70</td>");
         CONTIENT(sc.reponses[16], "value=\"12.1\">EPI</button></td><td>01.10.2026</td><td></td><td>130</td>");

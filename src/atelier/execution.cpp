@@ -771,7 +771,12 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
                 p->document()->setModified(false);
             }
             else if (auto *c = qobject_cast<QCheckBox *>(z)) c->setChecked(v[k] == "oui");
-            else if (auto *m = qobject_cast<QComboBox *>(z)) m->setCurrentIndex(qMax(0, m->findText(v[k])));
+            else if (auto *m = qobject_cast<QComboBox *>(z)) {
+                // un objet créé pendant que l'écran est ouvert (« Nouveau patient ») n'est pas encore dans la liste : il
+                // s'y ajoute, au lieu de laisser la zone vide (le navigateur fait de même)
+                if (!v[k].isEmpty() && m->findText(v[k]) < 0) m->addItem(v[k]);
+                m->setCurrentIndex(qMax(0, m->findText(v[k])));
+            }
         }
     });
     connect(&travail, &Travail::ecran_etats, this, [this](const QVector<int> &e) {   // § 22.6

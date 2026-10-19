@@ -1,6 +1,6 @@
-Remarque : Cabinet : les données d'un cabinet de thérapie, ses soins, ses clients, leurs séances.
+Remarque : Cabinet : les données d'un cabinet de thérapie, ses soins, ses patients, leurs séances.
 
-Remarque : un soin a son tarif ; s'il a un tarif de suivi, les séances suivantes d'un même client le paient.
+Remarque : un soin a son tarif ; s'il a un tarif de suivi, les séances suivantes d'un même patient le paient.
 Un soin, conservé, a :
     un nom (texte), unique,
     un tarif (nombre),
@@ -10,7 +10,7 @@ Un soin, conservé, a :
 Remarque : le nom est la clé : « Anne Rochat » ; deux homonymes se distinguent par une initiale ou une ville.
 Remarque : l'adresse postale en champs séparés, comme la QR-facture l'exige depuis le 21 novembre 2025 (adresse structurée) :
 Remarque : rue, numéro de maison (« 10a »), numéro postal (NPA), localité, pays ; le complément porte une case postale ou un « c/o ».
-Un client, conservé, a :
+Un patient, conservé, a :
     un nom (texte), unique,
     un téléphone (téléphone), facultatif,
     un courriel (courriel), facultatif,
@@ -24,7 +24,7 @@ Un client, conservé, a :
     une remarque (texte), facultative.
 
 Une séance, conservée, a :
-    un client (client),
+    un patient (patient),
     un soin (soin),
     une date (date),
     une heure (heure), facultative,
@@ -32,16 +32,16 @@ Une séance, conservée, a :
     un statut (« prévue » en bleu, « faite » en vert, « annulée » en gris ou « absence » en rouge),
     un paiement (« à payer » en orange, « espèces » en vert, « Twint » en vert, « virement » en vert ou « offert » en gris).
 
-Remarque : ce que le client confie ne s'affiche jamais dans sa fiche, qu'on peut ouvrir devant lui.
+Remarque : ce que le patient confie ne s'affiche jamais dans sa fiche, qu'on peut ouvrir devant lui.
 Une note, conservée, hors des fiches, a :
-    un client (client),
+    un patient (patient),
     une date (date),
     un contenu (texte).
 
 Remarque : un numéro postal (NPA) suisse a quatre chiffres.
-Chaque client conservé dont le pays est « Suisse » et le numéro postal est présent vérifie :
-    la longueur du numéro postal du client = 4,
-    sinon « Le numéro postal » puis le numéro postal du client puis « n'a pas quatre chiffres. ».
+Chaque patient conservé dont le pays est « Suisse » et le numéro postal est présent vérifie :
+    la longueur du numéro postal du patient = 4,
+    sinon « Le numéro postal » puis le numéro postal du patient puis « n'a pas quatre chiffres. ».
 
 Chaque séance conservée vérifie :
     le prix de la séance ≥ 0,
@@ -51,5 +51,5 @@ Remarque : la première séance d'un soin se paie au tarif ; dès la deuxième, 
 Remarque : une séance annulée ou manquée ne compte pas comme une première séance.
 Le prix conseillé d'une personne et d'une prestation :
     Si le tarif de suivi de la prestation est absent, rendre le tarif de la prestation.
-    Si le nombre de séances conservées dont le client = personne et le soin = prestation et le statut ≠ « annulée » et le statut ≠ « absence » > 0, rendre le tarif de suivi de la prestation.
+    Si le nombre de séances conservées dont le patient = personne et le soin = prestation et le statut ≠ « annulée » et le statut ≠ « absence » > 0, rendre le tarif de suivi de la prestation.
     Rendre le tarif de la prestation.

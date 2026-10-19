@@ -3,7 +3,7 @@ Remarque : à retirer à la livraison : ce fichier, et les deux lignes qui le ci
 Utiliser « actions ».
 
 Pour inscrire un nom et une rue et un numéro et un numéro postal et une localité et un téléphone :
-    Le c vaut un nouveau client :
+    Le c vaut un nouveau patient :
         Le nom vaut nom.
         La rue vaut rue.
         Le numéro de maison vaut numéro.
@@ -16,7 +16,7 @@ Pour inscrire un nom et une rue et un numéro et un numéro postal et une locali
 Remarque : une séance à aujourd'hui + écart jours (négatif : passée) ; la date dit si elle est faite ou prévue.
 Pour consigner une personne et une prestation et un écart et un prix et un statut et un paiement :
     La s vaut une nouvelle séance :
-        Le client vaut le client conservé dont le nom est personne.
+        Le patient vaut le patient conservé dont le nom est personne.
         Le soin vaut le soin conservé dont le nom est prestation.
         La date vaut aujourd'hui + écart.
         Le prix vaut prix.
@@ -27,7 +27,7 @@ Pour consigner une personne et une prestation et un écart et un prix et un stat
 Remarque : une séance d'aujourd'hui, à son heure, pour les cartes de l'accueil.
 Pour prévoir une personne et une prestation et une heure et un prix et un statut :
     La s vaut une nouvelle séance :
-        Le client vaut le client conservé dont le nom est personne.
+        Le patient vaut le patient conservé dont le nom est personne.
         Le soin vaut le soin conservé dont le nom est prestation.
         La date vaut aujourd'hui.
         L'heure vaut heure.

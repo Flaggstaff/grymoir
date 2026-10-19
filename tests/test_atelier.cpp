@@ -833,6 +833,46 @@ int main(int argc, char **argv) {
         VERIFIER(fil && fil->toPlainText().contains("Anne"));
     }
 
+    // Un objet créé pendant que l'écran est ouvert devient la valeur d'une zone : la liste déroulante l'ajoute et le montre
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Un patient, conservé, a :\n    un nom (texte), unique.\n"
+                    "Pour inscrire un nom :\n    Le p vaut un nouveau patient :\n        Le nom vaut nom.\n    Conserver le p.\n"
+                    "Inscrire « Anne ».\nInscrire « Bea ».\nInscrire « Carl ».\nInscrire « Dora ».\nInscrire « Emil ».\nInscrire « Fred ».\n"
+                    "L'écran x montre :\n    un patient (patient), facultatif,\n    un bouton « Nouveau »,\n    un bouton « Fermer ».\n"
+                    "Quand on clique sur « Nouveau » dans l'écran x :\n    Le n vaut un nouveau patient :\n        Le nom vaut « Zoé ».\n"
+                    "    Conserver le n.\n    Le patient de l'écran devient le n.\n"
+                    "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto bouton = [&](const QString &t) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == t && b->isVisible() && b->isEnabled()) return b;
+            return nullptr;
+        };
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 15000 && !bouton("Nouveau")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        if (QPushButton *b = bouton("Nouveau")) b->click();
+        QComboBox *zone = nullptr;
+        z.restart();
+        while (z.elapsed() < 10000 && !(zone && zone->currentText() == QString::fromUtf8("Zoé"))) {
+            QApplication::processEvents(QEventLoop::AllEvents, 20);
+            zone = e.findChild<QComboBox *>();
+        }
+        VERIFIER(zone && zone->currentText() == QString::fromUtf8("Zoé"));
+        z.restart();
+        while (z.elapsed() < 5000 && !bouton("Fermer")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        if (QPushButton *b = bouton("Fermer")) b->click();
+        z.restart();
+        while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+    }
+
     // La fiche (§ 22.3) : le tableau des séances et sa ligne de total, en gras, jamais sélectionnable, la dernière même
     // après un tri choisi d'un clic sur un titre ; un double-clic dessus ne mène nulle part
     {
