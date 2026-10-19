@@ -1449,16 +1449,46 @@ int main(void) {
         remove("_essai_cabinet3.grymd");
     }
 
+    {   /* Cabinet : la page d'une séance (commentaire tapé, enregistré) ; son patient s'ouvre sur sa page, jamais sur la
+           fiche déduite ; la page d'un soin (19 octobre 2026) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=4"), evenement("q=2&choix=0.0"), evenement("q=3&choix=16.0"), get("/"),
+                 evenement("q=4&clic=3"), get("/"), evenement("q=5&clic=20"),
+                 evenement("q=6&z2=Anne+Rochat&z4=EPI&z5=19.10.2026&z6=09%3A00&z7=60&z8=70&z9=faite&z10=Twint"
+                           "&z14=Nuque+d%C3%A9tendue&clic=18"),
+                 evenement("q=7&choix=16.0"), get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet5.grymd", &sc);
+        CONTIENT(sc.reponses[3], "<h1>Séance</h1>");
+        CONTIENT(sc.reponses[3], ">Commentaire dicté</label>");
+        CONTIENT(sc.reponses[3], "<option value=\"Anne Rochat\" selected>Anne Rochat</option>");
+        CONTIENT(sc.reponses[5], "<h1>Patient</h1>");        /* « Voir le patient » : la page, pas la fiche déduite */
+        CONTIENT(sc.reponses[5], "value=\"Anne Rochat\"");
+        CONTIENT(sc.reponses[9], "Nuque détendue</textarea>");
+        CONTIENT(sc.reponses[9], "name=\"z7\" value=\"60\"");
+        NE_CONTIENT_PAS(sc.reponses[9], "class=\"erreur\"");
+        liberer(&sc);
+        remove("_essai_cabinet5.grymd");
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=7"), evenement("q=2&choix=0.0"), get("/"),
+                 evenement("q=3&z0=EPI&z1=130&z2=70&z3=60&z4=1003&clic=6"), get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet6.grymd", &sc);
+        CONTIENT(sc.reponses[2], "<h1>Soin</h1>");
+        CONTIENT(sc.reponses[4], "<td>1003</td>");   /* le code tarifaire, dans la liste des soins */
+        liberer(&sc);
+        remove("_essai_cabinet6.grymd");
+    }
+
     {   /* Cabinet : la page d'un patient ; l'anamnèse s'y corrige, une nouvelle séance le reçoit d'office */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=4"), evenement("q=2&choix=0.0"), get("/"),
                  evenement("q=3&z1=Anne+Rochat&z2=079+000+00+01&z3=&z4=&z5=Route+de+Riaz&z6=12a&z7=&z8=1630&z9=Bulle"
-                           "&z10=Suisse&z11=Migraines+depuis+2019&clic=16"),
-                 evenement("q=4&choix=0.0"), get("/"), evenement("q=5&clic=17"), get("/"));
+                           "&z10=Suisse&z12=Migraines+depuis+2019&clic=18"),
+                 evenement("q=4&choix=0.0"), get("/"), evenement("q=5&clic=19"), get("/"));
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet4.grymd", &sc);
         CONTIENT(sc.reponses[2], "<h1>Patient</h1>");
         CONTIENT(sc.reponses[2], "value=\"Anne Rochat\"");
-        CONTIENT(sc.reponses[5], "Migraines depuis 2019</textarea>");   /* relue de la base à la réouverture */
+        /* l'ajout, dicté ou tapé, rejoint l'anamnèse (vide jusque-là) à l'enregistrement ; relue à la réouverture */
+        CONTIENT(sc.reponses[5], "Migraines depuis 2019</textarea>");
         CONTIENT(sc.reponses[7], ">Nouvelle séance</h1>");
         CONTIENT(sc.reponses[7], "<option value=\"Anne Rochat\" selected>Anne Rochat</option>");
         NE_CONTIENT_PAS(sc.reponses[7], "class=\"erreur\"");
@@ -1471,7 +1501,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=0"), evenement("q=2&clic=3"), get("/"),
                  evenement("q=3&z1=Zo%C3%A9+Neuve&z2=079+000+00+09&z3=&z4=&z5=Rue+du+Pont&z6=1&z7=&z8=1630&z9=Bulle"
-                           "&z10=Suisse&z11=Douleurs+lombaires&clic=14"), get("/"));
+                           "&z10=Suisse&z12=Douleurs+lombaires&clic=15"), get("/"));
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet2.grymd", &sc);
         CONTIENT(sc.reponses[2], "<h1>Nouveau patient</h1>");
         CONTIENT(sc.reponses[2], ">Anamnèse</label>");
@@ -1486,7 +1516,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         /* l'écran d'inscription : le pays garde sa valeur de départ, « Suisse » */
         char *formulaire = evenement("q=3&z1=Zo%C3%A9+Essai&z2=079+000+00+00&z3=&z4=&z5=Route+de+Riaz&z6=12a&z7=&z8=1630"
-                                     "&z9=Bulle&z10=Suisse&z11=&clic=14");
+                                     "&z9=Bulle&z10=Suisse&z12=&clic=15");
         REQUETES(evenement("q=1&clic=4"),                                       /* 0 : Clients */
                  evenement("q=2&clic=2"),                                       /* 1 : Nouveau client */
                  get("/"),                                                      /* 2 : l'écran d'inscription */
@@ -1495,11 +1525,11 @@ int main(void) {
                  evenement("q=4&fermer=1"),                                     /* 5 : retour à l'accueil */
                  evenement("q=5&clic=0"),                                       /* 6 : Nouvelle séance */
                  /* 7 : client et soin choisis, prix laissé vide : il se calcule avant « Enregistrer » */
-                 evenement("q=6&z2=Zo%C3%A9+Essai&z4=EPI&z5=01.10.2026&z6=&z7=&z8=%C3%A0+payer&z11=&clic=16"),
+                 evenement("q=6&z2=Zo%C3%A9+Essai&z4=EPI&z5=01.10.2026&z6=&z7=&z8=%C3%A0+payer&z11=&clic=18"),
                  evenement("q=7&clic=0"),                                       /* 8 : Nouvelle séance */
-                 evenement("q=8&z2=Zo%C3%A9+Essai&z4=EPI&z5=2026-10-08&z6=14%3A30&z7=50&z8=Twint&z11=&clic=16"),   /* 9 */
+                 evenement("q=8&z2=Zo%C3%A9+Essai&z4=EPI&z5=2026-10-08&z6=14%3A30&z7=50&z8=Twint&z11=&clic=18"),   /* 9 */
                  evenement("q=9&clic=0"),                                       /* 10 : Nouvelle séance */
-                 evenement("q=10&z2=&z4=EPI&z5=08.10.2026&z6=&z7=&z8=Twint&z11=50&clic=16"),   /* 11 : sans client */
+                 evenement("q=10&z2=&z4=EPI&z5=08.10.2026&z6=&z7=&z8=Twint&z11=50&clic=18"),   /* 11 : sans client */
                  get("/"),                                                      /* 12 */
                  evenement("q=11&fermer=1"),                                    /* 13 */
                  evenement("q=12&clic=4"),                                      /* 14 : Clients */
@@ -1524,10 +1554,10 @@ int main(void) {
            la première au tarif, la suivante au tarif réduit, avec leur durée */
         CONTIENT(sc.reponses[16], "value=\"Route de Riaz\"");
         CONTIENT(sc.reponses[16], ">Anamnèse</label>");
-        CONTIENT(sc.reponses[16], "value=\"14.0\">08.10.2026</button></td><td>14:30</td><td>EPI</td><td>50</td><td>70</td>");
-        CONTIENT(sc.reponses[16], "value=\"14.1\">01.10.2026</button></td><td></td><td>EPI</td><td></td><td>130</td>");
+        CONTIENT(sc.reponses[16], "value=\"16.0\">08.10.2026</button></td><td>14:30</td><td>EPI</td><td>50</td><td>70</td>");
+        CONTIENT(sc.reponses[16], "value=\"16.1\">01.10.2026</button></td><td></td><td>EPI</td><td></td><td>130</td>");
         CONTIENT(sc.reponses[16], "<span class=\"etiquette etiquette-o\">à payer</span>");
-        NE_CONTIENT_PAS(sc.reponses[16], "value=\"14.2\"");
+        NE_CONTIENT_PAS(sc.reponses[16], "value=\"16.2\"");
         CONTIENT(sc.reponses[16], ">Nouvelle séance</button>");
         NE_CONTIENT_PAS(sc.reponses[16], "class=\"erreur\"");
         liberer(&sc);

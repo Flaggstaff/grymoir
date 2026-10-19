@@ -12,6 +12,10 @@ Remarque : le patient dont la page est ouverte ; celui qu'une nouvelle séance r
 La personne ouverte vaut absent.
 La personne proposée vaut absent.
 
+Remarque : la séance et le soin dont la page est ouverte.
+La séance ouverte vaut absent.
+Le soin ouvert vaut absent.
+
 Remarque : les cinq soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
 Si le nombre de soins conservés est nul :
     Proposer en deux prix « EPI » et 130 et 70.
@@ -38,7 +42,7 @@ L'écran d'accueil, « Bonjour Nicolas » en grand, montre :
     un bouton « Soins », en tuile, avec la description « Tarifs et durées ».
 
 Remarque : les écrans posés au pixel tiennent dans 1072 points, la largeur utile du thème, mesurée sur un MacBook Pro 14 pouces (1512 × 982 et 1800 × 1169).
-Remarque : l'inscription d'un patient : les champs courts à gauche, l'anamnèse dans toute la place à côté.
+Remarque : l'inscription d'un patient : les champs courts à gauche ; à côté, l'anamnèse, dictée (transcrite sur l'ordinateur) ou tapée.
 L'écran d'inscription, « Nouveau patient », montre :
     en position libre :
         un nom (texte), à 0 de la gauche et 0 du haut, large de 260,
@@ -51,12 +55,14 @@ L'écran d'inscription, « Nouveau patient », montre :
         un numéro postal (texte), facultatif, à 276 de la gauche et 216 du haut, large de 110,
         une localité (texte), facultative, à 276 de la gauche et 288 du haut, large de 260,
         un pays (texte), « Suisse » au départ, à 276 de la gauche et 360 du haut, large de 260,
-        une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 0 du haut, large de 520, haute de 412,
+        une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
+        une anamnèse (texte), facultative, sur plusieurs lignes, transcrite de la dictée, à 552 de la gauche et 72 du haut, large de 520, haute de 340,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer ».
 
 Remarque : la page d'un patient, comme son inscription, puis ses séances ; on y corrige ses données directement.
+Remarque : l'ajout, dicté ou tapé, s'ajoute à la fin de l'anamnèse, daté, à l'enregistrement : rien de ce qui est déjà écrit ne se perd.
 L'écran du patient, « Patient », montre :
     en position libre :
         un nom (texte), à 0 de la gauche et 0 du haut, large de 260,
@@ -69,12 +75,45 @@ L'écran du patient, « Patient », montre :
         un numéro postal (texte), facultatif, à 276 de la gauche et 216 du haut, large de 110,
         une localité (texte), facultative, à 276 de la gauche et 288 du haut, large de 260,
         un pays (texte), « Suisse » au départ, à 276 de la gauche et 360 du haut, large de 260,
-        une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 0 du haut, large de 520, haute de 412,
+        une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
+        un ajout (texte), facultatif, sur plusieurs lignes, transcrit de la dictée, à 552 de la gauche et 72 du haut, large de 520, haut de 112,
+        une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 204 du haut, large de 520, haute de 208,
     le texte « Séances », en petites capitales,
     la liste des séances conservées dont le patient = la personne ouverte, par date décroissant, avec la date, l'heure, le nom du soin, la durée, le prix, le statut et le paiement,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Nouvelle séance »,
+        un bouton « Fermer ».
+
+Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
+L'écran de la séance, « Séance », montre :
+    côte à côte :
+        l'un sous l'autre :
+            un patient (patient),
+            un bouton « Voir le patient »,
+            un soin (soin),
+            une date (date),
+            une heure (heure), facultative,
+            une durée (nombre entier), facultative, avec l'unité « min »,
+            un prix (nombre), avec l'unité « CHF »,
+            un statut (« prévue », « faite », « annulée » ou « absence »),
+            un paiement (« à payer », « espèces », « Twint », « virement » ou « offert »),
+        l'un sous l'autre :
+            un commentaire dicté (son), facultatif,
+            un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Fermer ».
+
+Remarque : un soin, ses tarifs et sa durée ; le code tarifaire est celui du Tarif 590.
+L'écran du soin, « Soin », montre :
+    un nom (texte),
+    un tarif (nombre), avec l'unité « CHF »,
+    un tarif de suivi (nombre), facultatif, avec l'unité « CHF »,
+    une durée (nombre entier), facultative, avec l'unité « min »,
+    un code tarifaire (texte), facultatif,
+    côte à côte :
+        un bouton « Enregistrer », principal,
         un bouton « Fermer ».
 
 L'écran des patients montre :
@@ -96,6 +135,8 @@ L'écran de séance, « Nouvelle séance » en grand, montre :
         le groupe « Prix proposé », en couleur inversée :
             un prix (nombre), avec l'unité « CHF »,
             le texte « Dès la deuxième séance d'un même soin, le tarif de suivi s'applique. Le prix reste modifiable. »,
+    un commentaire dicté (son), facultatif,
+    un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer ».
@@ -193,6 +234,10 @@ Quand on clique sur « Enregistrer » dans l'écran du patient :
     La localité du p devient la localité de l'écran.
     Le pays du p devient le pays de l'écran.
     L'anamnèse du p devient l'anamnèse de l'écran.
+    Si l'ajout de l'écran est présent :
+        Si l'anamnèse du p est présente, l'anamnèse du p devient l'anamnèse du p suivi de " [" suivi d'aujourd'hui suivi de « ] » suivi de " " suivi de l'ajout de l'écran.
+        Sinon, l'anamnèse du p devient l'ajout de l'écran.
+    Si la dictée de l'écran est présente, la dernière dictée du p devient la dictée de l'écran.
     Fermer l'écran.
 
 Remarque : une séance ouverte depuis la page d'un patient le reçoit d'office.
@@ -202,7 +247,8 @@ Quand on clique sur « Nouvelle séance » dans l'écran du patient :
     La personne proposée devient absent.
 
 Quand on choisit une séance dans l'écran du patient :
-    Ouvrir la fiche de la séance.
+    La séance ouverte devient la séance choisie de l'écran.
+    Ouvrir l'écran de la séance.
 
 Quand on clique sur « Fermer » dans l'écran du patient :
     Fermer l'écran.
@@ -239,6 +285,8 @@ Quand on clique sur « Enregistrer » dans l'écran de séance :
         Le statut vaut « faite ».
     Si l'heure de l'écran est présente, l'heure de la nouvelle devient l'heure de l'écran.
     Si la durée de l'écran est présente, la durée de la nouvelle devient la durée de l'écran.
+    Le commentaire dicté de la nouvelle devient le commentaire dicté de l'écran.
+    Le commentaire de la nouvelle devient le commentaire de l'écran.
     Si la date de la nouvelle > aujourd'hui, le statut de la nouvelle devient « prévue ».
     Conserver la nouvelle.
     Fermer l'écran.
@@ -265,6 +313,7 @@ Quand on clique sur « Enregistrer » dans l'écran d'inscription :
     Le numéro postal du p devient le numéro postal de l'écran.
     La localité du p devient la localité de l'écran.
     L'anamnèse du p devient l'anamnèse de l'écran.
+    La dernière dictée du p devient la dictée de l'écran.
     Conserver le p.
     L'inscrit devient le p.
     Fermer l'écran.
@@ -276,10 +325,12 @@ Quand on clique sur « Fermer » dans l'écran de séance :
     Fermer l'écran.
 
 Quand on choisit une séance dans l'écran d'accueil :
-    Ouvrir la fiche de la séance.
+    La séance ouverte devient la séance choisie de l'écran.
+    Ouvrir l'écran de la séance.
 
 Quand on choisit une séance dans l'écran des prévues :
-    Ouvrir la fiche de la séance.
+    La séance ouverte devient la séance choisie de l'écran.
+    Ouvrir l'écran de la séance.
 
 Quand on clique sur « Faite » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
@@ -297,7 +348,8 @@ Quand on clique sur « Fermer » dans l'écran des prévues :
     Fermer l'écran.
 
 Quand on choisit une séance dans l'écran des encaissements :
-    Ouvrir la fiche de la séance.
+    La séance ouverte devient la séance choisie de l'écran.
+    Ouvrir l'écran de la séance.
 
 Quand on clique sur « Espèces » dans l'écran des encaissements :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
@@ -319,7 +371,66 @@ Quand on clique sur « Fermer » dans l'écran des encaissements :
     Fermer l'écran.
 
 Quand on choisit un soin dans l'écran des soins :
-    Ouvrir la fiche du soin.
+    Le soin ouvert devient le soin choisi de l'écran.
+    Ouvrir l'écran du soin.
+
+Quand on ouvre l'écran du soin :
+    Le s vaut le soin ouvert.
+    Le nom de l'écran devient le nom du s.
+    Le tarif de l'écran devient le tarif du s.
+    Le tarif de suivi de l'écran devient le tarif de suivi du s.
+    La durée de l'écran devient la durée du s.
+    Le code tarifaire de l'écran devient le code tarifaire du s.
+
+Quand on clique sur « Enregistrer » dans l'écran du soin :
+    Le s vaut le soin ouvert.
+    Le nom du s devient le nom de l'écran.
+    Le tarif du s devient le tarif de l'écran.
+    Le tarif de suivi du s devient le tarif de suivi de l'écran.
+    La durée du s devient la durée de l'écran.
+    Le code tarifaire du s devient le code tarifaire de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran du soin :
+    Fermer l'écran.
+
+Remarque : la page d'une séance ; son patient s'ouvre sur sa page, jamais sur la fiche déduite.
+Quand on ouvre l'écran de la séance :
+    Le s vaut la séance ouverte.
+    Le patient de l'écran devient le patient du s.
+    Le soin de l'écran devient le soin du s.
+    La date de l'écran devient la date du s.
+    L'heure de l'écran devient l'heure du s.
+    La durée de l'écran devient la durée du s.
+    Le prix de l'écran devient le prix du s.
+    Le statut de l'écran devient le statut du s.
+    Le paiement de l'écran devient le paiement du s.
+    Le commentaire dicté de l'écran devient le commentaire dicté du s.
+    Le commentaire de l'écran devient le commentaire du s.
+
+Quand on clique sur « Enregistrer » dans l'écran de la séance :
+    Le s vaut la séance ouverte.
+    Le patient du s devient le patient de l'écran.
+    Le soin du s devient le soin de l'écran.
+    La date du s devient la date de l'écran.
+    L'heure du s devient l'heure de l'écran.
+    La durée du s devient la durée de l'écran.
+    Le prix du s devient le prix de l'écran.
+    Le statut du s devient le statut de l'écran.
+    Le paiement du s devient le paiement de l'écran.
+    Le commentaire dicté du s devient le commentaire dicté de l'écran.
+    Le commentaire du s devient le commentaire de l'écran.
+    Fermer l'écran.
+
+Remarque : la page du patient s'ouvre par-dessus ; à son retour, la page d'en dessous retrouve son patient.
+Quand on clique sur « Voir le patient » dans l'écran de la séance :
+    Le précédent vaut la personne ouverte.
+    La personne ouverte devient le patient de la séance ouverte.
+    Ouvrir l'écran du patient.
+    La personne ouverte devient le précédent.
+
+Quand on clique sur « Fermer » dans l'écran de la séance :
+    Fermer l'écran.
 
 Quand on clique sur « Nouveau soin » dans l'écran des soins :
     Le nouveau vaut un nouveau soin saisi.

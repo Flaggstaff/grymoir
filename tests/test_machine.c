@@ -3882,6 +3882,9 @@ int main(void) {
     }
 
     essais_utiliser();
+    /* « tarif de suivi » sujet d'une modification : « suivi » après « de » est un mot de nom (19 octobre 2026) */
+    PROG("Un soin a : un tarif de suivi.\nLe s vaut un nouveau soin :\n    Le tarif de suivi vaut 70.\n"
+         "Le tarif de suivi du s devient 80.\nAfficher le tarif de suivi du s.", "80");
     /* « anciennement » : les refus de l'analyse (§ 16.7, 2.23) */
     PROG("Un client, conservé, a : un nom (texte), anciennement « nom ».", "~« nom » est déjà le nom de ce champ.");
     PROG("Un client, conservé, a : un nom (texte), un titre (texte), anciennement « nom ».",

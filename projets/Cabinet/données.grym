@@ -41,7 +41,10 @@ Un patient, conservé, anciennement « client », a :
     une localité (texte), facultative,
     un pays (texte), « Suisse » au départ,
     une date de naissance (date), facultative,
-    une anamnèse (texte), facultative, anciennement « remarque ».
+    une anamnèse (texte), facultative, anciennement « remarque »,
+    une dernière dictée (son), facultative.
+
+Remarque : la séance garde le son de son commentaire, s'il a été dicté, et le texte, transcrit ou tapé.
 
 Une séance, conservée, a :
     un patient (patient), anciennement « client »,
@@ -51,7 +54,9 @@ Une séance, conservée, a :
     une durée (nombre entier), facultative,
     un prix (nombre),
     un statut (« prévue » en bleu, « faite » en vert, « annulée » en gris ou « absence » en rouge),
-    un paiement (« à payer » en orange, « espèces » en vert, « Twint » en vert, « virement » en vert ou « offert » en gris).
+    un paiement (« à payer » en orange, « espèces » en vert, « Twint » en vert, « virement » en vert ou « offert » en gris),
+    un commentaire dicté (son), facultatif,
+    un commentaire (texte), facultatif.
 
 Remarque : ce que le patient confie ne s'affiche jamais dans sa fiche, qu'on peut ouvrir devant lui.
 Une note, conservée, hors des fiches, a :

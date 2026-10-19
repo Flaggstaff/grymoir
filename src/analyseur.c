@@ -3391,7 +3391,8 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
     } else {
         for (size_t k = d; k < f; k++) {
             Jeton *t = &a->j[k];
-            if (est_reserve(t) || (t->type == J_ELISION && !mot_de_nom(a, k))) {
+            /* « Le tarif de suivi du s devient … » : « suivi » après « de » est un mot de nom, comme partout (mot_de_nom) */
+            if ((est_reserve(t) || t->type == J_ELISION) && !mot_de_nom(a, k)) {
                 char *nomx = cle(a, d, f);
                 char *x = texte_jeton(t);
                 char *m = grym_formater(
