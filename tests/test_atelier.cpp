@@ -4610,6 +4610,59 @@ int main(int argc, char **argv) {
         e.close();
     }
 
+    // Cabinet, « Nouvelle séance » : le soin choisi propose son prix, avec ou sans patient (19 octobre 2026)
+    {
+        QTemporaryDir d;
+        for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet").entryList(QDir::Files))
+            if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(GRYM_SOURCE "/projets/Cabinet/" + n, d.filePath(n));
+        for (const QString &sous : {QString("images"), QString("polices")}) {
+            QDir().mkpath(d.filePath(sous));
+            for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet/" + sous).entryList(QDir::Files))
+                QFile::copy(GRYM_SOURCE "/projets/Cabinet/" + sous + "/" + n, d.filePath(sous + "/" + n));
+        }
+        Execution e(d.filePath("Cabinet.grym"));
+        e.resize(1400, 1000);
+        e.show();
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto attend = [&] {
+            for (QLabel *l : e.findChildren<QLabel *>()) if (l->isVisible() && l->text() == QString::fromUtf8("L'écran attend.")) return true;
+            return false;
+        };
+        auto bouton = [&](const QString &t) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->isVisible() && b->text() == t) return b;
+            return nullptr;
+        };
+        auto patienter = [&](std::function<bool()> c) {
+            QElapsedTimer y;
+            y.start();
+            while (y.elapsed() < 20000 && !c()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            QApplication::processEvents(QEventLoop::AllEvents, 100);
+        };
+        patienter([&] { return bouton(QString::fromUtf8("Nouvelle séance")) && attend(); });
+        VERIFIER(bouton(QString::fromUtf8("Nouvelle séance")) != nullptr);
+        if (auto *b = bouton(QString::fromUtf8("Nouvelle séance"))) b->click();
+        auto libelle = [&](const QString &t) -> QWidget * {   // le contrôle d'une zone, par son libellé
+            for (QLabel *l : e.findChildren<QLabel *>())
+                if (l->isVisible() && (l->text() == t || l->text() == t + " *") && l->buddy()) return l->buddy();
+            return nullptr;
+        };
+        patienter([&] { return libelle("Soin") && attend(); });
+        auto *soin = qobject_cast<QComboBox *>(libelle("Soin"));
+        auto *prix = qobject_cast<QLineEdit *>(libelle("Prix"));
+        VERIFIER(soin && prix);
+        if (soin && prix) {
+            const int k = soin->findText("Kriya Massage");
+            VERIFIER(k >= 0);
+            soin->setCurrentIndex(k);
+            emit soin->activated(k);
+            patienter([&] { return prix->text() == "100"; });
+            VERIFIER(prix->text() == "100");   // sans patient : le tarif du soin
+        }
+        e.close();
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }

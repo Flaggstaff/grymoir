@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -1451,19 +1452,32 @@ int main(void) {
     }
 
     {   /* Cabinet : la comptabilité de l'année (recettes, frais, résultat) ; un frais saisi entre dans les comptes ; une
-           quittance, un document, ne se fabrique pas dans le navigateur (19 octobre 2026) */
+           quittance, un document, ne se fabrique pas dans le navigateur (19 octobre 2026). Le frais est daté du jour et
+           les recettes lues à l'écran : l'essai vaut à toute date, même en janvier, quand les séances d'essai tombent
+           dans l'année d'avant. */
+        char jour[11], ev_frais[200];
+        const time_t maintenant = time(NULL);
+        strftime(jour, sizeof jour, "%d.%m.%Y", localtime(&maintenant));
+        snprintf(ev_frais, sizeof ev_frais, "q=4&z1=%s&z2=80&z3=Huiles+de+massage&z4=Mat%%C3%%A9riel&z5=carte&clic=10", jour);
         memset(&sc, 0, sizeof sc);
         REQUETES(get("/"), evenement("q=1&clic=6"), get("/"), evenement("q=2&clic=7"), evenement("q=3&clic=2"), get("/"),
-                 evenement("q=4&z1=12.10.2026&z2=80&z3=Huiles+de+massage&z4=Mat%C3%A9riel&z5=carte&clic=10"), get("/"),
+                 evenement(ev_frais), get("/"),
                  evenement("q=5&clic=3"), get("/"));
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet8.grymd", &sc);
         CONTIENT(sc.reponses[0], "Comptabilité</span></span><span class=\"description\">Encaisser, quittances, frais</span>");
-        CONTIENT(sc.reponses[2], "<p class=\"texte\">Recettes encaissées : CHF 500</p>");
         CONTIENT(sc.reponses[2], "<p class=\"texte\">Frais : CHF 0</p>");
         CONTIENT(sc.reponses[5], "Libellé");
         CONTIENT(sc.reponses[7], "<td>Huiles de massage</td>");
         CONTIENT(sc.reponses[9], "<p class=\"texte\">Frais : CHF 80</p>");
-        CONTIENT(sc.reponses[9], "<p class=\"texte\">Résultat : CHF 420</p>");
+        {   /* le résultat : les recettes lues avant, moins les 80 du frais */
+            const char *r = sc.reponses[2] ? strstr(sc.reponses[2], "Recettes encaissées : CHF ") : NULL;
+            long recettes = -1;
+            if (r) sscanf(r + strlen("Recettes encaissées : CHF "), "%ld", &recettes);
+            CONTIENT(sc.reponses[2], "Recettes encaissées : CHF ");
+            char attendu[80];
+            snprintf(attendu, sizeof attendu, "<p class=\"texte\">Résultat : CHF %ld</p>", recettes - 80);
+            CONTIENT(sc.reponses[9], attendu);
+        }
         liberer(&sc);
         remove("_essai_cabinet8.grymd");
         memset(&sc, 0, sizeof sc);
@@ -1526,7 +1540,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=4"), evenement("q=2&choix=0.0"), evenement("q=3&choix=16.0"), get("/"),
                  evenement("q=4&clic=2"), get("/"), evenement("q=5&clic=20"),
-                 evenement("q=6&z1=Anne+Rochat&z3=EPI&z4=19.10.2026&z5=09%3A00&z6=60&z7=70&z8=faite&z9=Twint"
+                 evenement("q=6&z1=Anne+Rochat&z3=EPI&z5=09%3A00&z6=60&z7=70&z8=faite&z9=Twint"
                            "&z12=Nuque+d%C3%A9tendue&clic=15"),
                  evenement("q=7&choix=16.0"), get("/"));
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet5.grymd", &sc);

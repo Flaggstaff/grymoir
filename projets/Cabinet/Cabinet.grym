@@ -480,16 +480,20 @@ Quand on ouvre l'écran de séance :
     La date de l'écran devient aujourd'hui.
     Si la personne proposée est présente, le patient de l'écran devient la personne proposée.
 
-Remarque : le prix se propose dès que le patient et le soin sont choisis, dans l'ordre qu'on veut ; on peut toujours le changer.
+Remarque : le prix se propose dès que le soin est choisi, à son tarif ; le patient choisi, il devient le prix conseillé (le tarif de suivi dès la deuxième séance) ; dans l'ordre qu'on veut, toujours modifiable.
 Remarque : l'événement teste lui-même la présence des deux zones : elles ne l'arrêtent pas tant que l'autre est vide.
 Quand on change le patient dans l'écran de séance :
-    Si le patient de l'écran est présent et le soin de l'écran est présent, le prix de l'écran devient le prix conseillé du patient de l'écran et du soin de l'écran.
+    Si le soin de l'écran est présent :
+        Si le patient de l'écran est présent, le prix de l'écran devient le prix conseillé du patient de l'écran et du soin de l'écran.
+        Sinon, le prix de l'écran devient le tarif du soin de l'écran.
 
 Remarque : la durée du soin se propose aussi, modifiable : une séance peut durer plus ou moins.
 Quand on change le soin dans l'écran de séance :
     Si le soin de l'écran est présent :
         Si la durée du soin de l'écran est présente, la durée de l'écran devient la durée du soin de l'écran.
-    Si le patient de l'écran est présent et le soin de l'écran est présent, le prix de l'écran devient le prix conseillé du patient de l'écran et du soin de l'écran.
+    Si le soin de l'écran est présent :
+        Si le patient de l'écran est présent, le prix de l'écran devient le prix conseillé du patient de l'écran et du soin de l'écran.
+        Sinon, le prix de l'écran devient le tarif du soin de l'écran.
 
 Remarque : une séance datée d'aujourd'hui ou d'avant est faite ; plus tard, elle est prévue.
 Quand on clique sur « Enregistrer » dans l'écran de séance :

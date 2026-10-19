@@ -968,12 +968,14 @@ void Execution::demander_micro() {
 Execution::~Execution() {
     if (travail.isRunning()) {
         grym_interruption = 1;
-        if (attente || attente_ecran) {
-            attente = attente_ecran = false;
+        attente = attente_ecran = false;
+        // La machine peut être entre deux attentes : un écran fermé, celui d'en dessous pas encore annoncé (son signal
+        // ne passera plus, la boucle d'événements est finie). On lui redit « fermé » jusqu'à ce qu'elle s'arrête, sans
+        // jamais laisser plus d'un jeton d'avance ; avant, la fenêtre fermée sur deux écrans emboîtés attendait toujours.
+        do {
             travail.issue = 2;
-            travail.reponse.release();
-        }
-        travail.wait();
+            if (travail.reponse.available() == 0) travail.reponse.release();
+        } while (!travail.wait(50));
     }
 }
 
