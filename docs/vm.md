@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.82 de la spécification, révisée le 19 octobre 2026.
+Version 1.83 de la spécification, révisée le 19 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -450,3 +450,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.80 | 2026-10-18 | Interface : `valeur_depuis`, `etiquette`, `lien` dans `ElementEcran` (les textes d'une fiche déduite), `etiquette` et `lien` dans `LigneFiche` ; `LIEN_COURRIEL`, `LIEN_WEB`. Rien ne change dans le bytecode : format version 62 |
 | 1.81 | 2026-10-18 | Interface : dans une fiche déduite, le texte d'une image ou d'un son porte ses `octets`, `taille`, `format` (comme `ELEMENT_IMAGE`) ; format version 62 inchangé |
 | 1.82 | 2026-10-19 | Instruction `SIGLES` (93), en tête du bloc principal quand le programme a des sigles (grammaire 2.21, § 2.4) ; `ÉCRAN_ERREUR` annule un « Fermer l'écran. » demandé par l'événement raté ; format version 63 |
+| 1.83 | 2026-10-19 | Un programme qui a des règles porte une action de plus, `\x01règles` (`NOM_REGLES`, `src/bytecode.h`), sans paramètre : les vérifications de la fin d'un événement. La machine l'exécute dans l'exécution en cours (`imbrique`) quand une fiche déduite a écrit (« Modifier », « Nouvelle … ») : ni transaction, ni écrans, ni essais, ni journal, ni ramasse-miettes ne bougent ; refusée, la saisie s'annule (`base_annuler`, journal). Format version 63 inchangé : c'est une formule comme une autre |

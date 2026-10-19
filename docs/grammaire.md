@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.21 de la spécification, révisée le 19 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.22 de la spécification, révisée le 19 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1797,7 +1797,7 @@ Ouvrir l'écran des compositeurs.
 - `Ouvrir l'écran X.` montre l'écran et attend jusqu'à `Fermer l'écran.` ; `Ouvrir la fiche de c.` ouvre l'écran déduit de l'entité de `c`. Dans un événement, l'écran s'ouvre par-dessus ; à sa fermeture, l'événement reprend.
 - `Ouvrir` valide d'abord ce qui précède ; chaque événement est ensuite sa propre transaction ; après la fermeture, la suite forme une nouvelle transaction (charte, art. 7).
 - Un événement qui échoue n'écrit rien et laisse l'écran ouvert, avec le motif, **même s'il avait déjà demandé `Fermer l'écran.`** *(2.21)* : la règle violée par « Enregistrer, puis fermer » se lit sur l'écran qu'on voulait quitter. Avant le 19 octobre 2026, l'écran se fermait et le motif se perdait (l'écriture, elle, était bien annulée).
-- **Limite connue** *(19 octobre 2026)* : « Modifier », dans une fiche déduite, valide sa saisie sans revérifier les règles du § 16.14 ; une valeur qu'une règle refuse y passe (constaté sur la règle du GLN de projets/Cabinet). Le bouton « Nouvelle séance » des tableaux passe par la machine de la même façon : non vérifié. En attendant la correction, une entité protégée par une règle se modifie par un écran déclaré, dont l'événement « Enregistrer » vérifie les règles (projets/Cabinet : l'écran du cabinet).
+- **Les règles dans une fiche déduite** *(2.22)* : « Modifier » et « Nouvelle séance » (sous un tableau) vérifient les règles du § 16.14 avant de valider, comme la fin d'un événement. Refusée, la saisie s'annule tout entière, en base comme en mémoire ; la fiche relue montre le motif (« Le numéro GLN 123 n'a pas treize chiffres. »). Jusqu'à la 2.21, ces deux gestes validaient sans rien vérifier : une valeur qu'une règle refuse y passait. Le motif d'une saisie annulée (« . ») se montre aussi sur la fiche relue, où il se perdait.
 - **Les tableaux d'une fiche** *(2.10)* : sous les champs de la fiche déduite, un tableau par lien d'une entité qui peut désigner l'objet (son entité, ou un ancêtre) : un titre au pluriel (« Séances »), la liste des objets qui le désignent, un bouton « Nouvelle séance » (« Nouveau client », « Nouvel achat »). Sans rien écrire, comme le reste de la fiche.
   - Colonnes : les champs de l'entité, sauf le lien lui-même, les champs multiples, les fichiers, images, sons et mots de passe. Tri : par la première date, la plus récente en tête ; sans date, par la clé.
   - Une ligne « Total » suit les objets quand une colonne est un `(nombre)` : la somme exacte de chacune. Un `(nombre entier)` n'est pas additionné : une année, un numéro n'ont pas de somme qui ait un sens.
@@ -2163,3 +2163,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.19 | 2026-10-18 | § 22.1 : `, en cartes`, une liste dont chaque objet est une carte (la première colonne en grand, les étiquettes à droite, la deuxième colonne dessous, les autres jointes par « · ») ; un clic choisit la carte |
 | 2.20 | 2026-10-18 | § 22.1 : `le texte « … », en petites capitales`, un surtitre ou un titre de section |
 | 2.21 | 2026-10-19 | Nouveau § 2.4 : les sigles (`un numéro RCC`), insensibles à la casse comme tout nom, en capitales dans les libellés et la forme canonique, rangés dans le module (`SIGLES`) ; § 16.4 : `le cabinet conservé`, sans `dont` ; § 22.3 : un événement qui a demandé « Fermer l'écran. » puis échoue (une règle violée) laisse l'écran ouvert, avec le motif |
+| 2.22 | 2026-10-19 | § 22.3 : « Modifier » et « Nouvelle … » d'une fiche déduite vérifient les règles du § 16.14 ; refusée, la saisie s'annule et la fiche relue montre le motif (corrige un contournement présent depuis l'arrivée des règles, le 28 septembre 2026) |

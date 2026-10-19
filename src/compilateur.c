@@ -1460,6 +1460,19 @@ Module *compiler(const Programme *p, Diagnostic *diag) {
     int ligne = p->nb ? p->phrases[p->nb - 1]->ligne : 0;
     c.b = m->blocs[0];
     if (!mode_exemples) verifier_regles(&c, ligne, 0);   /* la fin du programme valide tout (§ 16.14) */
+    if (!mode_exemples && c.nb_regles && !c.echec) {
+        /* les mêmes vérifications, en action sous un nom réservé : la machine l'appelle là où elle valide elle-même
+         * une saisie, hors du code compilé (« Modifier » d'une fiche déduite, § 22.3 ; docs/vm.md, § 3.3) */
+        Bloc *r = bloc_creer();
+        r->nom = grym_dupliquer(NOM_REGLES);
+        r->sorte = B_ACTION;
+        module_ajouter(m, r);
+        Bloc *garde = c.b;
+        c.b = r;
+        verifier_regles(&c, ligne, 0);
+        emettre(&c, I_RETOUR, 0, ligne, 0);
+        c.b = garde;
+    }
     free(c.boucles);
     free(c.regles);
     for (size_t k = 0; k < c.nb_regles; k++) free(c.cles[k]);

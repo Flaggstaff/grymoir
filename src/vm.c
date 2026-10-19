@@ -210,6 +210,8 @@ struct Machine {
     size_t regles_verifiees;   /* vérifications complètes de règles (docs/vm.md, § 3.3), pour les essais */
     struct EcranVM *ecran;     /* l'écran ouvert (§ 22), ou NULL */
     int fermer_ecran;          /* « Fermer l'écran. » a été demandé par l'événement en cours */
+    int imbrique;              /* > 0 : une exécution dans l'exécution (les règles d'une fiche, § 16.14) ; elle ne
+                                  touche ni à la transaction, ni aux écrans, ni aux essais, ni au ramasse-miettes */
     int absent_permis;         /* la source d'une image calculée (§ 22.8) : un champ d'un objet absent vaut absent */
     Base *base;             /* ouverte au premier besoin */
     int base_engagee;       /* dernière exécution : une base était en jeu (message d'annulation, § 3.3) */
@@ -3366,6 +3368,27 @@ static char *tableau_nouveau(Machine *m, Objet *o, const TableauFiche *t, Chaine
  * désigné (empilée par-dessus), un tableau par lien d'une entité qui le désigne (ses objets, « Nouvelle … »),
  * « Modifier » (le formulaire de « Saisir à nouveau »), « Fermer ».
  * Chaque attente valide ce qui précède : chaque geste est une transaction, comme un événement. */
+/* Les règles du programme (§ 16.14), vérifiées par la machine elle-même, là où elle valide une saisie hors du code
+ * compilé : « Modifier » et « Nouvelle … » d'une fiche déduite. NULL si elles tiennent (ou s'il n'y en a pas),
+ * sinon le motif. L'action NOM_REGLES s'exécute dans l'exécution en cours, sans rien valider ni annuler. */
+static char *verifier_regles_machine(Machine *m, Chaine *sortie) {
+    if (!formule_de(m, NOM_REGLES, NULL)) return NULL;
+    Module *mod = module_creer();
+    Bloc *p = bloc_creer();
+    long k = bloc_nom(p, NOM_REGLES);
+    bloc_emettre_appel(p, (uint16_t)k, 0, 0, 0, 0);
+    bloc_emettre(p, I_RETOUR, 0, 0, 0);
+    module_ajouter(mod, p);
+    Diagnostic d = { NULL, 0, 0, NULL, 0, 0 };
+    m->imbrique++;
+    const int ok = machine_executer(m, mod, sortie, &d);
+    m->imbrique--;
+    module_detruire(mod);
+    free(d.fichier);
+    if (ok) { free(d.message); return NULL; }
+    return d.message ? d.message : grym_dupliquer("Une règle n'est pas vérifiée.");
+}
+
 static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, int *fatal, int profondeur) {
     if (profondeur > 50) return grym_dupliquer("Trop de fiches empilées : plus de 50.");
     /* Les éléments montrés restent valides tant que la fiche est ouverte (src/interface.h) : ils ne se
@@ -3376,7 +3399,7 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
     TableauFiche *tableaux = NULL;
     size_t n = 0, modifier = 0, fermer = 0, nb_tableaux = 0;
     int relire = 1, ouverte = 0;
-    char *resultat = NULL;
+    char *resultat = NULL, *a_dire = NULL;
     for (;;) {
         if (relire) {
             for (size_t k = 0; k < n; k++) free(textes[k]);
@@ -3511,6 +3534,11 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
             for (size_t k = 0; k < nb_tableaux && !erreur; k++) erreur = tableau_montrer(m, o, &tableaux[k]);
             if (erreur) { resultat = erreur; break; }
         }
+        if (a_dire) {   /* le motif d'une saisie refusée, sur la fiche relue */
+            if (m->iface.ecran_erreur) m->iface.ecran_erreur(m->iface.contexte, sortie, a_dire);
+            free(a_dire);
+            a_dire = NULL;
+        }
         char *probleme = ouvrir_attente(m, sortie, cadres);
         Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, NULL, 0, NULL, 0 };
         Issue issue = ISSUE_REPONDU;
@@ -3558,13 +3586,28 @@ static char *fiche_ecran(Machine *m, Objet *o, Chaine *sortie, Cadre *cadres, in
                 else free(e2);
             }
         }
+        if (!r && !*fatal && m->base && base_modifiee(m->base)) {
+            /* une saisie de la fiche a écrit : les règles se vérifient avant la validation, comme à la fin d'un
+             * événement ; refusée, la saisie s'annule tout entière, en base comme en mémoire, et la fiche le dit */
+            r = verifier_regles_machine(m, sortie);
+            if (r) {
+                char *e = NULL;
+                base_annuler(m->base);
+                annuler(m);
+                if (!base_commencer(m->base, &e)) { free(r); resultat = e; *fatal = 1; break; }
+                relire = 1;
+                retableau = 1;
+            }
+        }
         if (r && *fatal) { resultat = r; break; }
+        if (r && relire) { a_dire = r; continue; }   /* dit après la relecture, qui referait l'écran par-dessus */
         if (r) {   /* « Saisie annulée », une valeur refusée : la fiche le dit, et reste ouverte */
             if (m->iface.ecran_erreur) m->iface.ecran_erreur(m->iface.contexte, sortie, r);
             free(r);
         }
     }
     if (ouverte) m->iface.ecran_fermer(m->iface.contexte, sortie);
+    free(a_dire);
     for (size_t k = 0; k < n; k++) free(textes[k]);
     free(textes);
     free(el);
@@ -3780,9 +3823,19 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         if (!r->n) chaine_ajouter(r, "La base est à jour : rien ne changera.\n");
         return 1;
     }
-    m->base_engagee = entites;
-    m->fichiers_prevus = 0;
-    m->question_posee = 0;
+    const int imbrique = m->imbrique > 0;
+    const size_t nb_essais_dehors = m->nb_essais;
+    const size_t seuil_dehors = m->seuil;
+    if (imbrique) {
+        /* le ramasse-miettes ne voit que la pile de cette exécution : les objets de celle qui l'appelle
+         * (la fiche ouverte, sa pile) ne doivent pas être pris pour des déchets */
+        m->seuil = (size_t)-1;
+        entites = 0;
+    } else {
+        m->base_engagee = entites;
+        m->fichiers_prevus = 0;
+        m->question_posee = 0;
+    }
     if (entites) {
         char *erreur = NULL;
         if (!m->base) m->base = base_ouvrir(m->chemin_base, &erreur);
@@ -3823,6 +3876,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     }
 
     if (m->seuil == 0) m->seuil = SEUIL_RAMASSAGE;
+    if (imbrique) m->seuil = (size_t)-1;
 
     m->epoque++;
     long aujourdhui = date_aujourdhui();
@@ -5850,12 +5904,17 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         if (!ok) break;
     }
-    while (m->nb_essais) oublier_photo(&m->essais[--m->nb_essais]);   /* la transaction les emporte */
+    while (m->nb_essais > (imbrique ? nb_essais_dehors : 0)) oublier_photo(&m->essais[--m->nb_essais]);   /* la transaction les emporte */
 
     vider(&pile);
     for (size_t k = nb_cadres; k > 0; k--) liberer_cadre(&cadres[k - 1]);
     free(cadres);
     free(liaison_principale);
+    if (imbrique) {   /* rien d'autre : la transaction, les écrans, les fichiers et le journal sont à l'exécution qui appelle */
+        m->seuil = seuil_dehors;
+        free(remplaces);
+        return ok;
+    }
     while (m->ecran) {   /* une erreur a interrompu les écrans : ils se ferment, du dessus au dessous */
         EcranVM *d = m->ecran->dessous;
         if (m->iface.ecran_fermer) m->iface.ecran_fermer(m->iface.contexte, sortie);

@@ -125,6 +125,11 @@ long requete_parametres(const char *descripteur);
 
 typedef enum { B_PROGRAMME = 0, B_CALCUL = 1, B_ACTION = 2 } SorteBloc;
 
+/* L'action qui vérifie toutes les règles du programme (grammaire, § 16.14), sous un nom qu'aucun programme n'écrit :
+ * la machine l'appelle quand elle valide elle-même une saisie (« Modifier » d'une fiche déduite). */
+#define NOM_REGLES "\x01règles"
+
+
 /* date : « 2026-09-21 » ; recherche : descripteur « entité ␟ mode ␟ tri ␟ décroissant ␟ condition » */
 typedef enum { C_NOMBRE = 1, C_TEXTE = 2, C_BOOLEEN = 3, C_DATE = 4, C_RECHERCHE = 5 } TypeConstante;
 

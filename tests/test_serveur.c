@@ -1365,6 +1365,48 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* « Modifier » d'une fiche déduite vérifie les règles (§ 16.14, 2.22) : refusée, la saisie s'annule et la fiche
+           le dit ; acceptée, elle est conservée */
+        const char *src = "Un cabinet, conservé, a :\n    un nom (texte), unique,\n    un numéro GLN (texte), facultatif.\n"
+            "Chaque cabinet conservé dont le numéro GLN est présent vérifie :\n    la longueur du numéro GLN du cabinet = 13,\n"
+            "    sinon « Le GLN » puis le numéro GLN du cabinet puis « est faux. ».\n"
+            "Si le nombre de cabinets conservés est nul :\n    Le n vaut un nouveau cabinet :\n        Le nom vaut « N ».\n    Conserver le n.\n"
+            "Le c vaut le cabinet conservé.\nOuvrir la fiche du c.\nAfficher le numéro GLN du c.\n";
+        memset(&sc, 0, sizeof sc);
+        question_suivante = 1;
+        char *faux = reponse("N|123");
+        question_suivante = 3;
+        char *juste = reponse("N|1234567890123");
+        REQUETES(get("/"), evenement("q=1&clic=2"), faux, get("/"), evenement("q=3&clic=2"), juste, get("/"),
+                 evenement("q=5&fermer=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[3], "<p class=\"message\" role=\"alert\">Le GLN 123 est faux.</p>");
+        CONTIENT(sc.reponses[3], "<p class=\"texte\">Numéro GLN : </p>");   /* rien n'est resté de la saisie refusée */
+        CONTIENT(sc.reponses[6], "<p class=\"texte\">Numéro GLN : 1234567890123</p>");
+        NE_CONTIENT_PAS(sc.reponses[6], "role=\"alert\"");
+        CONTIENT(sc.reponses[8], "1234567890123\n");
+        CONTIENT(sc.reponses[8], "Application terminée.");
+        NE_CONTIENT_PAS(sc.reponses[8], "class=\"erreur\"");
+        liberer(&sc);
+    }
+
+    {   /* « Nouvelle … » sous le tableau d'une fiche : la règle de l'entité créée se vérifie aussi (2.22) */
+        const char *src = "Un client, conservé, a :\n    un nom (texte), unique.\n"
+            "Une séance, conservée, a :\n    un client (client),\n    un prix (nombre).\n"
+            "Chaque séance conservée vérifie :\n    le prix de la séance ≥ 0,\n    sinon « Le prix est négatif. ».\n"
+            "Si le nombre de clients conservés est nul :\n    Le n vaut un nouveau client :\n        Le nom vaut « Ana ».\n    Conserver le n.\n"
+            "Le c vaut le client conservé.\nOuvrir la fiche du c.\nAfficher le nombre de séances conservées.\n";
+        memset(&sc, 0, sizeof sc);
+        question_suivante = 1;
+        char *negatif = reponse("-5");
+        REQUETES(get("/"), evenement("q=1&clic=3"), get("/"), negatif, get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[2], "<label for=\"c0\">Prix</label>");
+        CONTIENT(sc.reponses[4], "<p class=\"message\" role=\"alert\">Le prix est négatif.</p>");
+        CONTIENT(sc.reponses[4], "<td class=\"vide\" colspan=\"2\">Aucune ligne.</td>");   /* la séance n'est pas restée */
+        liberer(&sc);
+    }
+
     {   /* un événement qui ferme son écran puis viole une règle : annulé, l'écran reste ouvert avec le motif */
         const char *src = "Un cabinet, conservé, a :\n    un nom (texte), unique,\n    un numéro GLN (texte), facultatif.\n"
             "Chaque cabinet conservé dont le numéro GLN est présent vérifie :\n    la longueur du numéro GLN du cabinet = 13,\n"
