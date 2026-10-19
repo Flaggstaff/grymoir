@@ -34,6 +34,13 @@
 #include <QTableWidget>
 #include <QRegularExpression>
 #include <QCollator>
+#include <QCalendarWidget>
+#include <QToolButton>
+#include <QDate>
+#include <QFile>
+#include <QFrame>
+#include <QTextCharFormat>
+#include <QVBoxLayout>
 
 extern "C" {
 #include "interface.h"
@@ -537,6 +544,8 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 libelle->setBuddy(w);
                 rang->addWidget(libelle);
             }
+            if (auto *le = qobject_cast<QLineEdit *>(w); le && e.type == "date" && !e.lecture_seule)
+                ajouter_calendrier(le);   // un calendrier au bout du champ (19 octobre 2026)
             if (auto *le = qobject_cast<QLineEdit *>(w)) {   // courriel, téléphone, adresse web : le bon clavier (§ 16.1)
                 if (e.type == "courriel") le->setInputMethodHints(Qt::ImhEmailCharactersOnly);
                 else if (e.type == QString::fromUtf8("téléphone")) le->setInputMethodHints(Qt::ImhDialableCharactersOnly);
@@ -776,4 +785,71 @@ bool CelluleTriable::operator<(const QTableWidgetItem &autre) const {
         return text().trimmed().isEmpty() && !autre.text().trimmed().isEmpty();   // une case vide d'abord
     static const QCollator francais(QLocale(QLocale::French, QLocale::Switzerland));   // « élodie » avant « Fabien »
     return francais.compare(text(), autre.text()) < 0;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Le calendrier d'une zone (date)
+// ---------------------------------------------------------------------------------------------------------------
+
+// Une icône Lucide (vendor/lucide), à la couleur du texte secondaire du thème courant, thème libre compris.
+static QIcon icone_lucide(const char *nom) {
+    QFile f(QString(":/icones/%1.svg").arg(QString::fromUtf8(nom)));
+    if (!f.open(QIODevice::ReadOnly)) return QIcon();
+    QByteArray svg = f.readAll();
+    svg.replace("currentColor", Theme::courant().hex("texte-2").toUtf8());
+    QSvgRenderer rendu(svg);
+    QImage image(48, 48, QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter p(&image);
+    rendu.render(&p);
+    p.end();
+    return QIcon(QPixmap::fromImage(image));
+}
+
+void ajouter_calendrier(QLineEdit *champ) {
+    QAction *ouvrir = champ->addAction(icone_lucide("calendar"), QLineEdit::TrailingPosition);
+    ouvrir->setToolTip(QString::fromUtf8("Choisir dans le calendrier"));
+    ouvrir->setObjectName("calendrier");
+    QObject::connect(ouvrir, &QAction::triggered, champ, [champ] {
+        if (!champ->isEnabled() || champ->isReadOnly()) return;
+        auto *cadre = new QFrame(champ, Qt::Popup);
+        cadre->setAttribute(Qt::WA_DeleteOnClose);
+        cadre->setFrameShape(QFrame::StyledPanel);
+        auto *pile = new QVBoxLayout(cadre);
+        pile->setContentsMargins(4, 4, 4, 4);
+        auto *cal = new QCalendarWidget;
+        cal->setObjectName("calendrier");
+        cal->setLocale(QLocale(QLocale::French, QLocale::Switzerland));
+        cal->setFirstDayOfWeek(Qt::Monday);
+        cal->setGridVisible(false);
+        cal->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
+        cal->setHorizontalHeaderFormat(QCalendarWidget::SingleLetterDayNames);   // L M M J V S D : jamais tronqués
+        cal->setMinimumWidth(300);
+        // les flèches du mois, aux chevrons du thème plutôt qu'aux icônes vertes du style Fusion
+        if (auto *b = cal->findChild<QToolButton *>("qt_calendar_prevmonth")) b->setIcon(icone_lucide("chevron-left"));
+        if (auto *b = cal->findChild<QToolButton *>("qt_calendar_nextmonth")) b->setIcon(icone_lucide("chevron-right"));
+        QPalette pal = cal->palette();   // le jour choisi à la couleur d'accent, son texte lisible dessus
+        pal.setColor(QPalette::Highlight, Theme::courant().couleur("accent"));
+        pal.setColor(QPalette::HighlightedText, Theme::courant().couleur("sur-accent"));
+        cal->setPalette(pal);
+        QTextCharFormat dimanche;   // le week-end comme les autres jours : pas de rouge, réservé aux erreurs
+        dimanche.setForeground(champ->palette().color(QPalette::Text));
+        cal->setWeekdayTextFormat(Qt::Saturday, dimanche);
+        cal->setWeekdayTextFormat(Qt::Sunday, dimanche);
+        const QDate deja = QDate::fromString(champ->text().trimmed(), "dd.MM.yyyy");
+        cal->setSelectedDate(deja.isValid() ? deja : QDate::currentDate());
+        pile->addWidget(cal);
+        QObject::connect(cal, &QCalendarWidget::clicked, cadre, [champ, cadre](const QDate &d) {
+            champ->setText(d.toString("dd.MM.yyyy"));
+            champ->setModified(true);
+            cadre->close();
+            champ->setFocus();
+            emit champ->editingFinished();   // la zone change, comme après une frappe (§ 22.2)
+        });
+        cadre->adjustSize();
+        QPoint ou = champ->mapToGlobal(QPoint(0, champ->height() + 2));
+        cadre->move(ou);
+        cadre->show();
+        cal->setFocus();
+    });
 }

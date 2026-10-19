@@ -115,6 +115,10 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
 // que soit le tri à l'écran ; ni choisie ni sélectionnée.
 constexpr int ROLE_TOTAL = 0x0101;   // Qt::UserRole + 1
 void epingler_total(QTableWidget *t);
+// Une zone (date) : une icône de calendrier au bout du champ ; le jour choisi s'écrit « 19.10.2026 », comme si on
+// l'avait tapé, et la zone change (§ 22.1). Le champ reste un champ de texte : on peut toujours taper, ou le vider.
+class QLineEdit;
+void ajouter_calendrier(QLineEdit *champ);
 
 // Une cellule de liste qui se trie comme on la lit (§ 22.1) : les nombres par leur valeur (« 70 » avant « 130 »,
 // « 1'234,50 », « −3 »), les dates par le calendrier (jj.mm.aaaa), les heures par l'horloge, le reste selon la langue.

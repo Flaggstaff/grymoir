@@ -987,6 +987,7 @@ void Execution::poser() {
                 ligne->setCompleter(completion);
             }
             connect(ligne, &QLineEdit::returnPressed, this, [this] { envoyer(0); });
+            if (ch->type && std::strcmp(ch->type, "date") == 0) ajouter_calendrier(ligne);   // comme dans un écran
             w = ligne;
         }
         w->setEnabled(!accepte);

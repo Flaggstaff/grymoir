@@ -1497,7 +1497,7 @@ int main(void) {
                  /* 7 : client et soin choisis, prix laissé vide : il se calcule avant « Enregistrer » */
                  evenement("q=6&z2=Zo%C3%A9+Essai&z4=EPI&z5=01.10.2026&z6=&z7=&z8=%C3%A0+payer&z11=&clic=16"),
                  evenement("q=7&clic=0"),                                       /* 8 : Nouvelle séance */
-                 evenement("q=8&z2=Zo%C3%A9+Essai&z4=EPI&z5=08.10.2026&z6=14%3A30&z7=50&z8=Twint&z11=&clic=16"),   /* 9 */
+                 evenement("q=8&z2=Zo%C3%A9+Essai&z4=EPI&z5=2026-10-08&z6=14%3A30&z7=50&z8=Twint&z11=&clic=16"),   /* 9 */
                  evenement("q=9&clic=0"),                                       /* 10 : Nouvelle séance */
                  evenement("q=10&z2=&z4=EPI&z5=08.10.2026&z6=&z7=&z8=Twint&z11=50&clic=16"),   /* 11 : sans client */
                  get("/"),                                                      /* 12 */
@@ -1517,6 +1517,9 @@ int main(void) {
         CONTIENT(sc.reponses[16], "Suisse");
         CONTIENT(sc.reponses[4], "Zoé Essai</button></td><td>079 000 00 00</td>");   /* après les six clients d'essai (essais.grym) */
         CONTIENT(sc.reponses[12], "Remplis « Patient » : cette zone est obligatoire.");
+        /* la date : le calendrier du navigateur, en « 2026-10-08 » ; la séance enregistrée avec ce format est au
+           08.10.2026 dans la page du patient (plus bas) */
+        CONTIENT(sc.reponses[12], "<input type=\"date\" id=\"z5\" name=\"z5\" value=\"2026-10-08\"");
         /* la page du patient : ses données dans les zones, l'anamnèse à droite ; ses séances, la plus récente en tête,
            la première au tarif, la suivante au tarif réduit, avec leur durée */
         CONTIENT(sc.reponses[16], "value=\"Route de Riaz\"");

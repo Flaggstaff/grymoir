@@ -12,6 +12,8 @@
 #include <memory>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QPainter>
+#include <QAction>
 #include <QTimer>
 #include <QGuiApplication>
 #include <QApplication>
@@ -146,7 +148,7 @@ int main(int argc, char **argv) {
     // L'icône de l'atelier, pour la fenêtre et la barre des tâches (Linux, Windows) ; macOS prend celle du paquet.
     QApplication::setWindowIcon(QIcon(":/application/icone/grymoir-atelier.png"));
     // Capture d'un programme à écrans, pour comparer à une maquette sans écran physique (QT_QPA_PLATFORM=offscreen) :
-    //   grym-atelier --capture sortie.png [--clics "Clients;Nouveau client;ligne:Anne Rochat"] [--taille 1280x860] programme.grym
+    //   grym-atelier --capture sortie.png [--clics "Clients;Nouveau client;ligne:Anne Rochat;calendrier"] [--taille 1280x860] programme.grym
     // Les clics se font dans l'ordre, chacun sur le bouton visible qui porte ce libellé, quand l'écran attend.
     if (args.size() >= 4 && args.at(1) == "--capture") {
         QString sortie = args.at(2), programme = args.last();
@@ -173,7 +175,9 @@ int main(int argc, char **argv) {
             if (!pret) return;
             if (!clics.isEmpty()) {
                 const QString l = clics.takeFirst();
-                if (l.startsWith(QString::fromUtf8("ligne:"))) {   // « ligne:Anne Rochat » : choisir la ligne qui porte ce texte
+                if (l == QString::fromUtf8("calendrier")) {   // ouvrir le calendrier de la première zone (date)
+                    for (QAction *a : e->findChildren<QAction *>("calendrier")) { a->trigger(); break; }
+                } else if (l.startsWith(QString::fromUtf8("ligne:"))) {   // « ligne:Anne Rochat » : choisir la ligne qui porte ce texte
                     const QString cherche = l.mid(6);
                     for (QTableWidget *t : e->findChildren<QTableWidget *>()) {
                         const QList<QTableWidgetItem *> vus = t->isVisible() ? t->findItems(cherche, Qt::MatchExactly) : QList<QTableWidgetItem *>();
@@ -189,7 +193,12 @@ int main(int argc, char **argv) {
                 return;
             }
             minuterie->stop();
-            e->grab().save(sortie);
+            QPixmap image = e->grab();
+            if (QWidget *surgi = QApplication::activePopupWidget()) {   // un calendrier ouvert : peint par-dessus, à sa place
+                QPainter p(&image);
+                p.drawPixmap(e->mapFromGlobal(surgi->mapToGlobal(QPoint(0, 0))), surgi->grab());
+            }
+            image.save(sortie);
             std::printf("%s\n", qPrintable(sortie));
             QCoreApplication::exit(0);
         });

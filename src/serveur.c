@@ -1091,12 +1091,20 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
                 chaine_ajouter(c, "<span class=\"avec-unite\">");
                 if (el->unite_devant) { chaine_ajouter(c, "<span class=\"unite\" aria-hidden=\"true\">"); echapper(c, el->unite); chaine_ajouter(c, "</span>"); }
             }
-            chaine_ajouter(c, el->masque ? "<input type=\"password\" id=\"" : tel ? "<input type=\"tel\" id=\"" : "<input type=\"text\" id=\"");
+            /* une date : le calendrier du navigateur (type=date), qui parle en « 2026-10-19 » ; la machine reçoit
+             * « 19.10.2026 » (zones_recues) */
+            const int date = el->type && strcmp(el->type, "date") == 0 && !el->masque;
+            char iso[11] = "";
+            if (date && strlen(v) == 10 && v[2] == '.' && v[5] == '.')
+                snprintf(iso, sizeof iso, "%.4s-%.2s-%.2s", v + 6, v + 3, v);
+            chaine_ajouter(c, el->masque ? "<input type=\"password\" id=\"" : tel ? "<input type=\"tel\" id=\""
+                              : date ? "<input type=\"date\" id=\"" : "<input type=\"text\" id=\"");
             chaine_ajouter(c, id);
             chaine_ajouter(c, "\" name=\"");
             chaine_ajouter(c, id);
             chaine_ajouter(c, "\" value=\"");
-            if (!el->masque) echapper(c, v);
+            if (date) echapper(c, *iso || !*v ? iso : v);
+            else if (!el->masque) echapper(c, v);
             chaine_ajouter(c, "\"");
             if (el->masque && *v) chaine_ajouter(c, " placeholder=\"••••••\"");   /* déjà rempli : rien ne se voit */
             /* la virgule suisse n'est pas un nombre pour un champ numérique : texte, vérifié par la machine */
@@ -1648,6 +1656,12 @@ static int evenements_de(Serveur *s, Envoi *env) {
             }
             nouveau = pv->valeur;
             if (e->el[k].masque && !*nouveau) continue;   /* la page ne le renvoie pas : vide, il ne change rien */
+            char suisse[11];   /* le calendrier du navigateur envoie « 2026-10-19 » : la machine lit « 19.10.2026 » (§ 14.1) */
+            if (e->el[k].type && strcmp(e->el[k].type, "date") == 0 && strlen(nouveau) == 10 && nouveau[4] == '-'
+                && nouveau[7] == '-') {
+                snprintf(suisse, sizeof suisse, "%.2s.%.2s.%.4s", nouveau + 8, nouveau + 5, nouveau);
+                nouveau = suisse;
+            }
         }
         if (strcmp(nouveau, e->valeurs[k] ? e->valeurs[k] : "") == 0) continue;
         Evenement ev = { EVENEMENT_CHANGEMENT, k, 0, grym_dupliquer(nouveau), choisies(e), e->n, NULL, 0 };

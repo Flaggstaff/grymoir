@@ -67,7 +67,7 @@ set(GRYM_POLICES
     vendor/atkinson/AtkinsonHyperlegibleNext-SemiBold.ttf vendor/atkinson/AtkinsonHyperlegibleNext-Bold.ttf
     vendor/atkinson/AtkinsonHyperlegibleMono-Regular.ttf vendor/atkinson/AtkinsonHyperlegibleMono-Italic.ttf
     vendor/atkinson/AtkinsonHyperlegibleMono-SemiBold.ttf)
-set(GRYM_ICONES vendor/lucide/chevron-down.svg vendor/lucide/check.svg)
+set(GRYM_ICONES vendor/lucide/chevron-down.svg vendor/lucide/check.svg vendor/lucide/calendar.svg vendor/lucide/chevron-left.svg vendor/lucide/chevron-right.svg)
 set(GRYM_LICENCES vendor/atkinson/OFL-Next.txt vendor/atkinson/OFL-Mono.txt vendor/lucide/LICENSE)
 function(grym_ressources_theme cible)
     qt_add_resources(${cible} "${cible}_theme" PREFIX "/theme" BASE src/atelier/theme FILES ${GRYM_THEME_FICHIERS})

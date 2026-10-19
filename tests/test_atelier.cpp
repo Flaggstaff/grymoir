@@ -43,6 +43,9 @@
 
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QCalendarWidget>
+#include <QAction>
+#include <QDate>
 #include <QBoxLayout>
 #include <QHeaderView>
 #include <QCheckBox>
@@ -4439,6 +4442,47 @@ int main(int argc, char **argv) {
         auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
         while (z.elapsed() < 15000 && !fil().contains("Terminé") && !fil().contains("\n1")) QApplication::processEvents(QEventLoop::AllEvents, 20);
         VERIFIER(fil().contains("1"));
+        e.close();
+    }
+
+    // Une zone (date) a son calendrier : le jour choisi s'écrit « 15.03.2027 » et la zone change (19 octobre 2026)
+    {
+        QTemporaryDir d;
+        const QString prog = d.filePath("c.grym");
+        QFile f(prog);
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write("L'écran x montre :\n    une échéance (date), facultative,\n    un bouton « Fini ».\n"
+                "Quand on change l'échéance dans l'écran x :\n    Afficher « choisi » puis l'échéance de l'écran.\n"
+                "Quand on clique sur « Fini » dans l'écran x :\n    Fermer l'écran.\n"
+                "Ouvrir l'écran x.\n");
+        f.close();
+        Execution e(prog);
+        e.resize(1000, 800);
+        e.show();
+        e.demarrer();
+        QAction *cal = nullptr;
+        QElapsedTimer z;
+        z.start();
+        auto attend = [&] {
+            for (QLabel *l : e.findChildren<QLabel *>()) if (l->text() == QString::fromUtf8("L'écran attend.")) return true;
+            return false;
+        };
+        while (z.elapsed() < 15000 && !(cal = e.findChild<QAction *>("calendrier"))) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        while (z.elapsed() < 15000 && !attend()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(cal != nullptr);
+        if (cal) cal->trigger();
+        QApplication::processEvents(QEventLoop::AllEvents, 50);
+        QCalendarWidget *grille = nullptr;
+        for (QWidget *w : QApplication::topLevelWidgets())
+            if (auto *c = w->findChild<QCalendarWidget *>("calendrier")) grille = c;
+        VERIFIER(grille != nullptr);
+        if (grille) {
+            VERIFIER(grille->firstDayOfWeek() == Qt::Monday);
+            emit grille->clicked(QDate(2027, 3, 15));
+        }
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 15000 && !fil().contains("choisi 15.03.2027")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(fil().contains("choisi 15.03.2027"));
         e.close();
     }
 
