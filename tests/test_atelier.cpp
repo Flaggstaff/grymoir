@@ -4516,6 +4516,26 @@ int main(int argc, char **argv) {
         e.close();
     }
 
+    // Le micro se demande à l'ouverture d'un programme qui a un son, et seulement alors (19 octobre 2026)
+    for (int avec = 0; avec < 2; avec++) {
+        QTemporaryDir d;
+        const QString prog = d.filePath("p.grym");
+        QFile f(prog);
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write(avec ? "Une visite, conservée, a :\n    un mémo (son), facultatif.\nAfficher « prêt ».\n"
+                     : "Une visite, conservée, a :\n    une note (texte), facultative.\nAfficher « prêt ».\n");
+        f.close();
+        Execution e(prog);
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 15000 && !fil().contains(QString::fromUtf8("prêt"))) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        QApplication::processEvents(QEventLoop::AllEvents, 50);
+        VERIFIER(e.property("micro_demande").toBool() == (avec == 1));
+        e.close();
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }

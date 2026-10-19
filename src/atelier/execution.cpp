@@ -4,6 +4,15 @@
 #include "transcription.h"
 #include "theme.h"
 #include "vue_ecran.h"
+#include <QUrl>
+// L'autorisation du micro (Qt 6.5 et suivants), comme dans son.cpp ; Qt 6.4 n'en a pas besoin.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+#  if QT_CONFIG(permissions)
+#    include <QPermission>
+#    define GRYM_AUTORISATION_MICRO 1
+#  endif
+#endif
+#include <QMessageBox>
 #include "son.h"
 
 #include <QApplication>
@@ -421,6 +430,15 @@ void Travail::run() {
                             : analyser(source.constData(), (size_t)source.size(), portee, 0, &p, &d);
     Module *module = lu ? compiler(&p, &d) : nullptr;
     programme_liberer(&p);
+    // un son quelque part (champ d'entité, zone d'écran) : la fenêtre demande le micro tout de suite, pas au premier clic
+    for (size_t k = 0; module && k < module->nb_classes; k++)
+        for (size_t q = 0; q < module->classes[k].nb_champs; q++)
+            if (module->classes[k].types && module->classes[k].types[q]
+                && std::strcmp(module->classes[k].types[q], "son") == 0) {
+                emit utilise_micro();
+                k = module->nb_classes;
+                break;
+            }
     portee_detruire(portee);
     auto signaler = [&](const Diagnostic &e) {
         // la même ligne que grym lancer : l'atelier la lit pour mener à l'erreur
@@ -580,6 +598,7 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         fil->ensureCursorVisible();
     });
     connect(&travail, &Travail::question, this, &Execution::poser);
+    connect(&travail, &Travail::utilise_micro, this, &Execution::demander_micro);
     connect(&travail, &Travail::ecran_ouvert, this, &Execution::montrer_ecran);
     connect(&travail, &Travail::apparence, this, [this](int couleur, const QByteArray &octets) {
         // L'accent dans la palette de cinq (§ 22.5 ; même ordre que « _ordre » des jetons), pour ce processus seul :
@@ -873,6 +892,40 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
 }
 
 void Execution::demarrer() { travail.start(); }
+
+// Le micro, à l'ouverture d'un programme qui en a besoin (§ 15.7). macOS ne demande qu'une fois : jamais décidé, la
+// question part tout de suite ; déjà refusé, on dit où le rendre, avec un bouton qui ouvre la bonne page des réglages.
+// Ailleurs (Linux, Windows, Qt 6.4), rien à demander.
+void Execution::demander_micro() {
+    setProperty("micro_demande", true);   // pour les essais : la demande est partie
+#ifdef GRYM_AUTORISATION_MICRO
+    QMicrophonePermission micro;
+    switch (qApp->checkPermission(micro)) {
+    case Qt::PermissionStatus::Undetermined:
+        qApp->requestPermission(micro, this, [this](const QPermission &p) {
+            if (p.status() == Qt::PermissionStatus::Denied) demander_micro();
+        });
+        return;
+    case Qt::PermissionStatus::Denied: {
+        if (micro_signale) return;   // une fois par lancement
+        micro_signale = true;
+        QMessageBox boite(QMessageBox::Information, QString::fromUtf8("Micro"),
+                          QString::fromUtf8("Ce programme sait enregistrer des dictées, mais le micro lui est refusé."),
+                          QMessageBox::NoButton, this);
+        boite.setInformativeText(QString::fromUtf8("Pour l'autoriser : Réglages Système, Confidentialité et sécurité, "
+                                                   "Microphone, puis cocher cette application. Elle se relance ensuite."));
+        QPushButton *ouvrir = boite.addButton(QString::fromUtf8("Ouvrir les réglages"), QMessageBox::AcceptRole);
+        boite.addButton(QString::fromUtf8("Plus tard"), QMessageBox::RejectRole);
+        boite.exec();
+        if (boite.clickedButton() == ouvrir)
+            QDesktopServices::openUrl(QUrl("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"));
+        return;
+    }
+    case Qt::PermissionStatus::Granted:
+        return;
+    }
+#endif
+}
 
 // Détruite pendant l'exécution (fin brutale du processus principal) : on arrête la machine, qui annule,
 // et on l'attend ; un fil détruit en marche emporterait tout sans annulation.

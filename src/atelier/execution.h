@@ -78,6 +78,7 @@ signals:
                const QByteArray &police);
     void signature(const QByteArray &octets);   // l'image du bandeau (2.16)
     void reponses(const QString &echo);   // les réponses acceptées, recopiées dans le fil comme en console
+    void utilise_micro();   // le programme a un champ ou une zone (son) : le micro se demande dès l'ouverture (§ 15.7)
     void fin(bool ok, const QString &erreur, const QString &annulation);
 
 public:
@@ -118,11 +119,13 @@ public:
     void placer_ecriture(const QString &dossier) { travail.dossier_ecriture = dossier; }   // avant demarrer()
     ~Execution() override;
     void demarrer();
+    void demander_micro();
 
 protected:
     void closeEvent(QCloseEvent *e) override;
 
 private:
+    bool micro_signale = false;   // le refus du micro dit une fois par lancement
     void poser();
     void envoyer(int issue);
     void arreter();
