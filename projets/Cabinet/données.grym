@@ -41,7 +41,7 @@ Un patient, conservé, anciennement « client », a :
     une localité (texte), facultative,
     un pays (texte), « Suisse » au départ,
     une date de naissance (date), facultative,
-    une remarque (texte), facultative.
+    une anamnèse (texte), facultative, anciennement « remarque ».
 
 Une séance, conservée, a :
     un patient (patient), anciennement « client »,

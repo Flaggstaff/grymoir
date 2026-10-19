@@ -1249,7 +1249,16 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
     const bool etire = [this] {   // une table en cartes (2.19) ne s'étire pas : elle est cachée, ses cartes ont leur hauteur
                            for (QTableWidget *t : vue_ecran->findChildren<QTableWidget *>()) if (!t->property("cartes").isValid()) return true;
                            return false;
-                       }() || !vue_ecran->findChildren<QPlainTextEdit *>().isEmpty()
+                       }() || [this] {   // un texte sur plusieurs lignes posé au pixel (§ 22.9) a sa hauteur : il ne s'étire pas
+                              for (QPlainTextEdit *t : vue_ecran->findChildren<QPlainTextEdit *>())
+                              {
+                                  bool place = false;   // la zone, ou le bloc qui la contient, est posée au pixel
+                                  for (QWidget *w = t; w && w != vue_ecran && !place; w = w->parentWidget())
+                                      place = w->property("place").toBool();
+                                  if (!place) return true;
+                              }
+                              return false;
+                          }()
                        || !vue_ecran->findChildren<QTabWidget *>().isEmpty()
                        || [this] {   // Graphique n'a pas de méta-objet à lui : findChildren les prendrait tous pour des graphiques
                               for (QWidget *w : vue_ecran->findChildren<QWidget *>()) if (dynamic_cast<Graphique *>(w)) return true;
@@ -1260,6 +1269,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         if (auto *pile = qobject_cast<QBoxLayout *>(vue_ecran->layout())) {   // le bandeau (2.16) : la signature, un filet dessous
             auto *bandeau = new QWidget;
             bandeau->setObjectName("bandeau");
+            bandeau->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);   // l'espace libre ne va jamais au bandeau
             auto *b = new QVBoxLayout(bandeau);
             b->setContentsMargins(0, 0, 0, Theme::courant().mesure("espace-2"));
             b->setSpacing(Theme::courant().mesure("espace-4"));

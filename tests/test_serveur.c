@@ -1449,14 +1449,17 @@ int main(void) {
         remove("_essai_cabinet3.grymd");
     }
 
-    {   /* Cabinet : un nouveau patient depuis l'écran de séance, aussitôt choisi */
+    {   /* Cabinet : un nouveau patient depuis l'écran de séance, par l'écran d'inscription, aussitôt choisi ;
+           l'anamnèse à côté des champs (19 octobre 2026) */
         memset(&sc, 0, sizeof sc);
-        question_suivante = 2;
-        char *formulaire = reponse("Zoé Neuve|079 000 00 09||Rue du Pont|1||1630|Bulle|||");
-        REQUETES(evenement("q=1&clic=0"), evenement("q=2&clic=3"), get("/"), formulaire, get("/"));
+        REQUETES(evenement("q=1&clic=0"), evenement("q=2&clic=3"), get("/"),
+                 evenement("q=3&z1=Zo%C3%A9+Neuve&z2=079+000+00+09&z3=&z4=&z5=Rue+du+Pont&z6=1&z7=&z8=1630&z9=Bulle"
+                           "&z10=Suisse&z11=Douleurs+lombaires&clic=14"), get("/"));
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet2.grymd", &sc);
-        CONTIENT(sc.reponses[2], "<label for=\"c0\">Nom</label>");
+        CONTIENT(sc.reponses[2], "<h1>Nouveau patient</h1>");
+        CONTIENT(sc.reponses[2], ">Anamnèse</label>");
         CONTIENT(sc.reponses[4], "<option value=\"Zoé Neuve\" selected>Zoé Neuve</option>");
+        CONTIENT(sc.reponses[4], ">Nouvelle séance</h1>");   /* on est revenu à la séance */
         liberer(&sc);
         remove("_essai_cabinet2.grymd");
     }
@@ -1464,12 +1467,12 @@ int main(void) {
     {   /* L'application « Cabinet » (projets/) : un client saisi, deux séances, le tarif réduit dès la deuxième,
            la fiche du client et son historique */
         memset(&sc, 0, sizeof sc);
-        question_suivante = 2;
-        /* le pays laissé vide prend sa valeur de départ, « Suisse » */
-        char *formulaire = reponse("Zoé Essai|079 000 00 00||Route de Riaz|12a||1630|Bulle|||");
+        /* l'écran d'inscription : le pays garde sa valeur de départ, « Suisse » */
+        char *formulaire = evenement("q=3&z1=Zo%C3%A9+Essai&z2=079+000+00+00&z3=&z4=&z5=Route+de+Riaz&z6=12a&z7=&z8=1630"
+                                     "&z9=Bulle&z10=Suisse&z11=&clic=14");
         REQUETES(evenement("q=1&clic=4"),                                       /* 0 : Clients */
                  evenement("q=2&clic=2"),                                       /* 1 : Nouveau client */
-                 get("/"),                                                      /* 2 : le formulaire déduit */
+                 get("/"),                                                      /* 2 : l'écran d'inscription */
                  formulaire,                                                    /* 3 */
                  get("/"),                                                      /* 4 : la liste des clients */
                  evenement("q=4&fermer=1"),                                     /* 5 : retour à l'accueil */
@@ -1486,11 +1489,11 @@ int main(void) {
                  evenement("q=13&choix=0.6"),                                   /* 15 : la fiche d'Anne */
                  get("/"));                                                     /* 16 */
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet.grymd", &sc);
-        /* le formulaire déduit demande le téléphone et le courriel, des textes vérifiés (§ 22.13) */
-        CONTIENT(sc.reponses[2], "<label for=\"c1\">Téléphone</label>");
-        CONTIENT(sc.reponses[2], "<label for=\"c2\">Courriel</label>");
+        /* l'inscription demande le téléphone et le courriel, des textes vérifiés (§ 22.13) */
+        CONTIENT(sc.reponses[2], ">Téléphone</label>");
+        CONTIENT(sc.reponses[2], ">Courriel</label>");
         /* l'adresse postale structurée, comme la QR-facture l'exige (rue, numéro, numéro postal, localité, pays) */
-        CONTIENT(sc.reponses[2], "<label for=\"c6\">Numéro postal</label>");
+        CONTIENT(sc.reponses[2], ">Numéro postal</label>");
         CONTIENT(sc.reponses[12], "<fieldset class=\"groupe inverse\"><legend>Prix proposé</legend>");   /* 2.18 */
         CONTIENT(sc.reponses[16], "Route de Riaz");
         CONTIENT(sc.reponses[16], "1630");

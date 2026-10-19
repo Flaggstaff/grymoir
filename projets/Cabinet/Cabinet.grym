@@ -19,6 +19,9 @@ Si le nombre de cabinets conservés est nul, fonder le cabinet.
 Remarque : les données d'essai (essais.grym), une seule fois ; à retirer à la livraison avec ce fichier.
 Si le nombre de patients conservés est nul, remplir les essais.
 
+Remarque : le dernier patient inscrit par l'écran d'inscription ; absent avant.
+L'inscrit vaut absent.
+
 Remarque : l'accueil de la maquette : l'action du jour, puis le cabinet en quatre tuiles ; le cœur sur les patients.
 L'écran d'accueil, « Bonjour Nicolas » en grand, montre :
     un bouton « Nouvelle séance », principal, à côté du titre,
@@ -29,6 +32,24 @@ L'écran d'accueil, « Bonjour Nicolas » en grand, montre :
     un bouton « Séances prévues », en tuile, avec la description « Faite, annulée, absence »,
     un bouton « À encaisser », en tuile, avec la description « Les séances à payer »,
     un bouton « Soins », en tuile, avec la description « Tarifs et durées ».
+
+Remarque : l'inscription d'un patient : les champs courts à gauche, l'anamnèse dans toute la place à côté.
+L'écran d'inscription, « Nouveau patient », montre :
+    en position libre :
+        un nom (texte), à 0 de la gauche et 0 du haut, large de 260,
+        un téléphone (téléphone), facultatif, à 0 de la gauche et 72 du haut, large de 260,
+        un courriel (courriel), facultatif, à 0 de la gauche et 144 du haut, large de 260,
+        une date de naissance (date), facultative, à 0 de la gauche et 216 du haut, large de 260,
+        une rue (texte), facultative, à 276 de la gauche et 0 du haut, large de 260,
+        un numéro de maison (texte), facultatif, à 276 de la gauche et 72 du haut, large de 110,
+        un complément d'adresse (texte), facultatif, à 276 de la gauche et 144 du haut, large de 260,
+        un numéro postal (texte), facultatif, à 276 de la gauche et 216 du haut, large de 110,
+        une localité (texte), facultative, à 276 de la gauche et 288 du haut, large de 260,
+        un pays (texte), « Suisse » au départ, à 276 de la gauche et 360 du haut, large de 260,
+        une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 0 du haut, large de 520, haute de 412,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Fermer ».
 
 L'écran des patients montre :
     la liste des patients conservés, par nom, avec le nom, le téléphone et le courriel,
@@ -119,8 +140,7 @@ Quand on choisit un patient dans l'écran des patients :
     Ouvrir la fiche du patient.
 
 Quand on clique sur « Nouveau patient » dans l'écran des patients :
-    Le nouveau vaut un nouveau patient saisi.
-    Conserver le nouveau.
+    Ouvrir l'écran d'inscription.
 
 Quand on clique sur « Fermer » dans l'écran des patients :
     Fermer l'écran.
@@ -156,10 +176,32 @@ Quand on clique sur « Enregistrer » dans l'écran de séance :
 
 Remarque : un patient qui vient pour la première fois s'inscrit sans quitter la séance ; il devient le patient choisi.
 Quand on clique sur « Nouveau patient » dans l'écran de séance :
-    Le nouveau vaut un nouveau patient saisi.
-    Conserver le nouveau.
-    Le patient de l'écran devient le nouveau.
-    Si le soin de l'écran est présent, le prix de l'écran devient le prix conseillé du nouveau et du soin de l'écran.
+    L'inscrit devient absent.
+    Ouvrir l'écran d'inscription.
+    Si l'inscrit est présent :
+        Le patient de l'écran devient l'inscrit.
+        Si le soin de l'écran est présent, le prix de l'écran devient le prix conseillé de l'inscrit et du soin de l'écran.
+
+Remarque : le patient inscrit est rangé dans « l'inscrit », que l'écran de séance reprend à la fermeture.
+Quand on clique sur « Enregistrer » dans l'écran d'inscription :
+    Le p vaut un nouveau patient :
+        Le nom vaut le nom de l'écran.
+        Le pays vaut le pays de l'écran.
+    Le téléphone du p devient le téléphone de l'écran.
+    Le courriel du p devient le courriel de l'écran.
+    La date de naissance du p devient la date de naissance de l'écran.
+    La rue du p devient la rue de l'écran.
+    Le numéro de maison du p devient le numéro de maison de l'écran.
+    Le complément d'adresse du p devient le complément d'adresse de l'écran.
+    Le numéro postal du p devient le numéro postal de l'écran.
+    La localité du p devient la localité de l'écran.
+    L'anamnèse du p devient l'anamnèse de l'écran.
+    Conserver le p.
+    L'inscrit devient le p.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran d'inscription :
+    Fermer l'écran.
 
 Quand on clique sur « Fermer » dans l'écran de séance :
     Fermer l'écran.
