@@ -1272,6 +1272,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
             chaine_ajouter(&d, el->type == N_CHERCHER ? "L" : el->type == N_BOUTON ? "B"
                              : el->type == N_NOM ? "Z" : el->type == N_IMAGE_ECRAN ? (el->texte ? "I" : "J") : "T");
             if (el->texte) chaine_ajouter(&d, el->texte);   /* « J » : une image calculée, sans fichier écrit (§ 22.8) */
+            if (el->type == N_TEXTE_ECRAN && (el->entier & 2048)) chaine_ajouter(&d, "\x1e" "s");   /* en petites capitales (2.20) */
             if (el->type == N_BOUTON && (el->entier & (256 | 512 | 1024))) {   /* « Bclients ␞ pte ␝ description ␚ image » (2.14 à 2.17) */
                 chaine_ajouter(&d, "\x1e");
                 if (el->entier & 256) chaine_ajouter(&d, "p");

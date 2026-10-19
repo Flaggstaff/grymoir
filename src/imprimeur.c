@@ -1166,6 +1166,7 @@ static char *colonne_avec_articles(Impression *im, const char *ecrit, const char
 
 static void etats_ecran(Impression *im, const Noeud *el, int feminin) {
     place_ecran(im, el, feminin);
+    if (el->type == N_TEXTE_ECRAN && (el->entier & 2048)) aj(im, im->compact ? " _capitales" : ", en petites capitales");   /* 2.20 */
     if (el->type == N_BOUTON && (el->entier & 256)) aj(im, im->compact ? " _principal" : ", principal");   /* 2.14 */
     if (el->type == N_BOUTON && (el->entier & 512)) aj(im, im->compact ? " _tuile" : ", en tuile");     /* 2.15 */
     if (el->type == N_BOUTON && (el->entier & 1024)) aj(im, im->compact ? " _côté_titre" : ", à côté du titre");   /* 2.17 */

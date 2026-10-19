@@ -23,6 +23,7 @@ struct ElementLu {
     bool principal = false;  // bouton « , principal » (2.14)
     bool a_cote_du_titre = false;   // bouton « , à côté du titre » (2.17)
     bool inverse = false;           // groupe « , en couleur inversée » (2.18)
+    bool capitales = false;         // texte « , en petites capitales » (2.20)
     bool tuile = false;      // bouton « , en tuile » (2.15) ; sa description dans indication, son image dans image_tuile
     QString image_tuile;
     QStringList valeurs;     // zone : valeurs permises (§ 22.7)

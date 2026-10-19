@@ -1266,12 +1266,14 @@ int main(void) {
                           "Pour semer :\n    La s vaut une nouvelle séance :\n        L'heure vaut 9:00.\n        Le nom vaut « Anne ».\n"
                           "        Le soin vaut « EPI ».\n    Conserver la s.\n"
                           "Si le nombre de séances conservées est nul, semer.\n"
-                          "L'écran d'accueil montre :\n    la liste des séances conservées, par heure, avec l'heure, le nom et le soin, en cartes.\n"
+                          "L'écran d'accueil montre :\n    le texte « Aujourd'hui », en petites capitales,\n"
+                          "    la liste des séances conservées, par heure, avec l'heure, le nom et le soin, en cartes.\n"
                           "Quand on choisit une séance dans l'écran d'accueil :\n    Fermer l'écran.\nOuvrir l'écran d'accueil.\n";
         memset(&sc, 0, sizeof sc);
-        REQUETES(get("/"), evenement("q=1&choix=0.0"), get("/"));
+        REQUETES(get("/"), evenement("q=1&choix=1.0"), get("/"));
         servir(src, &sc);
-        CONTIENT(sc.reponses[0], "<div class=\"cartes\"><button class=\"carte\" name=\"choix\" value=\"0.0\"><span class=\"tete\">"
+        CONTIENT(sc.reponses[0], "<p class=\"texte capitales\">Aujourd&#39;hui</p>");   /* 2.20 */
+        CONTIENT(sc.reponses[0], "<div class=\"cartes\"><button class=\"carte\" name=\"choix\" value=\"1.0\"><span class=\"tete\">"
                                  "<span class=\"grand\">09:00</span><span class=\"etiquettes\"></span></span><span class=\"nom\">Anne</span>"
                                  "<span class=\"detail\">EPI</span></button></div>");
         CONTIENT(sc.reponses[2], "Application terminée.");

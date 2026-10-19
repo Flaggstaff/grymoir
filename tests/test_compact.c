@@ -201,6 +201,7 @@ int main(void) {
     ALLER_RETOUR("_écran x\n    _bouton « B » _principal _côté_titre\n_fin\n_quand _clique « B » _dans x\n    _fermer\n_fin\n", NULL);   /* 2.17 */
     ALLER_RETOUR("_écran x\n    _groupe « Prix » _inversé\n        _texte « 70 »\n    _fin\n_fin\n", NULL);   /* 2.18 */
     ALLER_RETOUR("_classe _une séance _conservé\n    _une heure (heure)\n_fin\n_écran x\n    _liste séance _conservé _par heure _avec heure _cartes\n_fin\n", NULL);   /* 2.19 */
+    ALLER_RETOUR("_écran x\n    _texte « Aujourd'hui » _capitales\n_fin\n", NULL);   /* 2.20 */
     /* 2.15 : une tuile */
     ALLER_RETOUR("_écran x\n    _bouton « B » _tuile _description « d » _image « vendor/lucide/check.svg »\n_fin\n"
                  "_quand _clique « B » _dans x\n    _fermer\n_fin\n", NULL);

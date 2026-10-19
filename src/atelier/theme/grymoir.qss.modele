@@ -88,6 +88,7 @@ QPushButton[role="carte"] QLabel { background: transparent; }
 QLabel[niveau="carte-grand"] { font-size: 26px; font-weight: 600; color: @texte@; }
 QLabel[niveau="carte-nom"] { font-size: 17px; font-weight: 500; color: @texte@; }
 QLabel[niveau="carte-detail"] { font-size: 14px; color: @texte-2@; }
+QLabel[niveau="capitales"] { font-size: 12px; font-weight: 600; color: @texte-2@; padding-top: 8px; }
 QFrame[role="filet"] { border: none; max-height: 1px; min-height: 1px; background: @separateur@; }
 QPushButton[role="tuile"], QPushButton[role="tuile-principale"] {
     min-height: 120px;

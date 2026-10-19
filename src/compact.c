@@ -756,7 +756,7 @@ static int est_etat(const Jeton *t) {
         || est_cle(t, "interrupteur") || est_cle(t, "indication") || est_cle(t, "recherche") || est_cle(t, "min") || est_cle(t, "max") || est_cle(t, "masqué") || est_cle(t, "unité") || est_cle(t, "transcrit")
         || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur")
         || est_cle(t, "principal") || est_cle(t, "tuile") || est_cle(t, "description") || est_cle(t, "image")
-        || est_cle(t, "côté_titre") || est_cle(t, "inversé");
+        || est_cle(t, "côté_titre") || est_cle(t, "inversé") || est_cle(t, "capitales");
 }
 
 /* Les états d'un élément d'écran, de k à f (§ 22.6) : « _plusieurs_lignes », « _lecture_seule » (zones),
@@ -840,6 +840,10 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             emettre(r, J_VIRGULE, NULL, x, 1);
             mot(r, "en", x);
             mot(r, "interrupteur", x);
+            k++;
+        } else if (!zone && est_cle(x, "capitales")) {   /* _capitales → , en petites capitales (un texte, 2.20) */
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "en", x); mot(r, "petites", x); mot(r, "capitales", x);
             k++;
         } else if (!zone && est_cle(x, "inversé")) {   /* _inversé → , en couleur inversée (un groupe, 2.18) */
             emettre(r, J_VIRGULE, NULL, x, 1);

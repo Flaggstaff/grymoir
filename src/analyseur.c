@@ -6064,6 +6064,17 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
     int vus = *vus_;
     if (cour(a)->type != J_VIRGULE) return 0;
     attendre_etats_ecran(a, el, g, zone);   /* aide à la saisie (§ 8) */
+    if (el->type == N_TEXTE_ECRAN && voir(a, 0)->type == J_VIRGULE) {
+        /* « , en petites capitales » (2.20) : un surtitre, un titre de section, en capitales espacées */
+        const Jeton *x = voir(a, 1);
+        if (!(el->entier & 2048)) attendre_mot(a, a->i + 1, "en petites capitales", strlen("en petites capitales"));
+        if (est_mot(x, "en") && est_mot(voir(a, 2), "petites") && est_mot(voir(a, 3), "capitales")) {
+            if (el->entier & 2048) return erreur(a, x, grym_dupliquer("« en petites capitales » est déjà dit.")), -1;
+            el->entier |= 2048;
+            a->i += 4;
+            return 1;
+        }
+    }
     if (el->type == N_BOUTON && voir(a, 0)->type == J_VIRGULE) {
         /* une tuile (2.15) : « , en tuile », « , avec la description « … » », « , avec l'image « coeur.png » » */
         const Jeton *x = voir(a, 1);

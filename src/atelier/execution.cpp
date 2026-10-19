@@ -178,7 +178,7 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0)
                              | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0) | (el[k].masque ? 32 : 0)
-                             | (el[k].principal ? 64 : 0) | (el[k].tuile ? 128 : 0) | (el[k].a_cote_du_titre ? 256 : 0) | (el[k].inverse ? 512 : 0) | (el[k].cartes ? 1024 : 0));
+                             | (el[k].principal ? 64 : 0) | (el[k].tuile ? 128 : 0) | (el[k].a_cote_du_titre ? 256 : 0) | (el[k].inverse ? 512 : 0) | (el[k].cartes ? 1024 : 0) | (el[k].capitales ? 2048 : 0));
         t->facultatives << el[k].facultatif;
         t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
         t->unites << (el[k].unite ? QString(el[k].unite_devant ? "<" : ">") + QString::fromUtf8(el[k].unite) : QString());
@@ -1086,6 +1086,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].a_cote_du_titre = o & 256;   // 2.17
         elements[k].inverse = o & 512;           // 2.18
         elements[k].cartes = o & 1024;           // 2.19
+        elements[k].capitales = o & 2048;        // 2.20
         elements[k].multiple = o & 8;   // § 22.1
         elements[k].recherche = o & 16;   // § 22.6
         elements[k].masque = o & 32;   // § 22.6

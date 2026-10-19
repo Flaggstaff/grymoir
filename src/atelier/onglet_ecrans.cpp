@@ -210,6 +210,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.texte = el->texte ? QString::fromUtf8(el->texte) : QString();
                     } else if (el->type == N_TEXTE_ECRAN) {
                         x.sorte = ELEMENT_TEXTE;
+                        x.capitales = (el->entier & 2048) != 0;   // 2.20
                         x.texte = QString::fromUtf8(el->texte);
                     } else if (el->type == N_NOM) {
                         x.sorte = ELEMENT_ZONE;
@@ -432,6 +433,7 @@ void OngletEcrans::dessiner() {
         el[k].tuile = e.elements[k].tuile;
         el[k].a_cote_du_titre = e.elements[k].a_cote_du_titre;
         el[k].inverse = e.elements[k].inverse;
+        el[k].capitales = e.elements[k].capitales;
         if (e.elements[k].tuile) {   // la description, l'image lue depuis le dossier du fichier qui déclare l'écran (2.15)
             el[k].indication = e.elements[k].indication;
             const QString t = e.elements[k].image_tuile;
@@ -483,7 +485,40 @@ void OngletEcrans::dessiner() {
             logo = QPixmap::fromImage(image);
         }
     }
-    vue = dessiner_ecran(e.titre, el, logo, th.mesure(e.accueil ? "logo-accueil" : "logo-titre"));   // le même dessin que l'exécution
+    // avec une signature (2.16), le logo quitte le titre et la signature se pose en bandeau, comme à l'exécution
+    QPixmap signature;
+    if (!e.signature.isEmpty() && !signature.load(e.signature)) {
+        QSvgRenderer rendu(e.signature);
+        if (rendu.isValid()) {
+            const QSize t = rendu.defaultSize().isEmpty() ? QSize(800, 100) : rendu.defaultSize().scaled(QSize(4000, 156), Qt::KeepAspectRatio);
+            QImage image(t, QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            QPainter p(&image);
+            rendu.render(&p);
+            p.end();
+            signature = QPixmap::fromImage(image);
+        }
+    }
+    vue = dessiner_ecran(e.titre, el, signature.isNull() ? logo : QPixmap(), th.mesure(e.accueil ? "logo-accueil" : "logo-titre"));   // le même dessin que l'exécution
+    if (!signature.isNull())
+        if (auto *pile = qobject_cast<QBoxLayout *>(vue.vue->layout())) {
+            auto *bandeau = new QWidget;
+            bandeau->setObjectName("bandeau");
+            auto *b = new QVBoxLayout(bandeau);
+            b->setContentsMargins(0, 0, 0, th.mesure("espace-2"));
+            b->setSpacing(th.mesure("espace-4"));
+            auto *image = new QLabel;
+            const qreal densite = vue.vue->devicePixelRatioF();
+            QPixmap p = signature.scaledToHeight(qRound(26 * densite), Qt::SmoothTransformation);
+            p.setDevicePixelRatio(densite);
+            image->setPixmap(p);
+            b->addWidget(image, 0, Qt::AlignLeft);
+            auto *filet = new QFrame;
+            filet->setFrameShape(QFrame::HLine);
+            filet->setProperty("role", "filet");
+            b->addWidget(filet);
+            pile->insertWidget(0, bandeau);
+        }
     taille_du_titre(vue.titre, e.taille_titre);
     const QStringList accents = th.accents();
     if (!e.couleur_libre.isEmpty() || !e.fond.isEmpty() || !e.police.isEmpty()) {

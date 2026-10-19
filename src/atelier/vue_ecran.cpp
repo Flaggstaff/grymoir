@@ -441,6 +441,13 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         } else if (e.sorte == ELEMENT_TEXTE) {
             auto *l = new QLabel(e.texte);
             l->setWordWrap(true);
+            if (e.capitales) {   // 2.20 : capitales espacées, petites, en couleur secondaire (feuille du thème)
+                l->setProperty("niveau", "capitales");
+                QFont f = l->font();
+                f.setCapitalization(QFont::AllUppercase);
+                f.setLetterSpacing(QFont::PercentageSpacing, 116);
+                l->setFont(f);
+            }
             poser(l);
             r.controles[k] = l;
         } else if (e.sorte == ELEMENT_ZONE) {   // les contrôles des formulaires (docs/v2.md, § 10)

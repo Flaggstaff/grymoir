@@ -193,6 +193,17 @@ int main(int argc, char **argv) {
         VERIFIER(g && g->property("role").toString() == "inverse");
         delete v.vue;
     }
+    // Un texte en petites capitales (2.20)
+    {
+        QVector<ElementVue> el(1);
+        el[0].sorte = ELEMENT_TEXTE;
+        el[0].texte = "Aujourd'hui";
+        el[0].capitales = true;
+        VueEcran v = dessiner_ecran("Accueil", el);
+        auto *l = qobject_cast<QLabel *>(v.controles.value(0));
+        VERIFIER(l && l->property("niveau").toString() == "capitales" && l->font().capitalization() == QFont::AllUppercase);
+        delete v.vue;
+    }
     // Des tuiles (2.15) : une grille de quatre colonnes, chaque tuile son titre, sa description, son image
     {
         QVector<ElementVue> el(3);

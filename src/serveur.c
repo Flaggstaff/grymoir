@@ -514,6 +514,8 @@ static char *feuille_de_style(const Serveur *s) {
     "border-radius:0;font-size:40px;font-weight:700;min-height:56px}"
     );
     chaine_ajouter(&c,   /* en deux morceaux : une chaîne littérale de C99 tient en 4095 octets */
+    "p.texte.capitales{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;"
+    "color:var(--texte-2);margin:12px 0 0}"
     ".cartes{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}"
     "button.carte{margin:0;display:flex;flex-direction:column;gap:8px;align-items:stretch;text-align:left;padding:20px 22px;"
     "border-radius:12px;border:1px solid var(--separateur);background:var(--surface)}"
@@ -1430,7 +1432,7 @@ static void page_ecran(Serveur *s) {
             if (prof) prof--;
             break;
         case ELEMENT_TEXTE:
-            chaine_ajouter(&c, "<p class=\"texte\">");
+            chaine_ajouter(&c, el->capitales ? "<p class=\"texte capitales\">" : "<p class=\"texte\">");   /* 2.20 */
             if (el->valeur_depuis && el->valeur_depuis <= strlen(el->texte)) {   /* « État : payée » d'une fiche (§ 22.3) */
                 char *debut = grym_dupliquer(el->texte);
                 debut[el->valeur_depuis] = 0;

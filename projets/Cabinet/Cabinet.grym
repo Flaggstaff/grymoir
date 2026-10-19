@@ -19,9 +19,9 @@ Si le nombre de clients conservés est nul, remplir les essais.
 Remarque : l'accueil de la maquette : l'action du jour, puis le cabinet en quatre tuiles ; le cœur sur les clients.
 L'écran d'accueil, « Bonjour Nicolas » en grand, montre :
     un bouton « Nouvelle séance », principal, à côté du titre,
-    le texte « Aujourd'hui »,
+    le texte « Aujourd'hui », en petites capitales,
     la liste des séances conservées dont la date = aujourd'hui, par heure, avec l'heure, le statut, le nom du client, le nom du soin et le prix, en cartes,
-    le texte « Le cabinet »,
+    le texte « Le cabinet », en petites capitales,
     un bouton « Clients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png »,
     un bouton « Séances prévues », en tuile, avec la description « Faite, annulée, absence »,
     un bouton « À encaisser », en tuile, avec la description « Les séances à payer »,

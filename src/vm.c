@@ -2406,6 +2406,8 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         const char *colonnes_choisies = strchr(x, '\x1b');
         const char *options_bouton = x[0] == 'B' ? strchr(x, '\x1e') : NULL;   /* « Bfermer ␞ p » : principal (2.14) */
         if (options_bouton) colonnes_choisies = options_bouton;
+        const char *options_texte = x[0] == 'T' ? strchr(x, '\x1e') : NULL;   /* « Taujourd'hui ␞ s » (2.20) */
+        if (options_texte) colonnes_choisies = options_texte;
         /* « Rb+ » : la forme et la période dans la deuxième lettre (§ 22.11) */
         const char *pf = x[0] == 'R' ? strchr("bcdestuv", x[1]) : NULL;
         const int rang_f = pf ? (int)(pf - "bcdestuv") : 0;
@@ -2420,6 +2422,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->elements[k].colonnes = NULL;
         e->elements[k].nb_colonnes = 0;
         e->elements[k].graphique = graphe;
+        e->elements[k].capitales = options_texte && strchr(options_texte + 1, 's') != NULL;
         if (options_bouton) {   /* « ␞ pt ␝ description ␚ image » (2.14, 2.15) */
             const size_t nopt = strcspn(options_bouton + 1, "\x1c\x1a\x1d");
             e->elements[k].principal = memchr(options_bouton + 1, 'p', nopt) != NULL;
