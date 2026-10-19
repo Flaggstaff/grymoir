@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.83 de la spécification, révisée le 19 octobre 2026.
+Version 1.84 de la spécification, révisée le 19 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -309,11 +309,13 @@ classes       nombre : u32, puis pour chacune :
                 nom : longueur u32 et octets UTF-8, sorte : u8 (bit 0 féminin, bit 1 aptitude, bit 2 entité),
                 classe parente : longueur u32 et octets UTF-8 (vide sans héritage),
                 pluriel : longueur u32 et octets UTF-8 (vide sauf pluriel irrégulier),
+                nom d'avant : longueur u32 et octets UTF-8 (vide sans renommage ; version 64),
                 aptitudes adoptées : nombre u32, puis pour chacune : longueur u32 et octets UTF-8,
                 champs : nombre u32, puis pour chacun : nom (longueur u32 et octets UTF-8),
                   type (longueur u32 et octets UTF-8, vide sans type), drapeaux : u8 (bit 0 unique, bit 1 facultatif,
                   bit 2 disparaît avec l'objet désigné, bit 3 multiple),
-                  valeur de départ (longueur u32 et octets UTF-8, forme canonique, vide sans valeur)
+                  valeur de départ (longueur u32 et octets UTF-8, forme canonique, vide sans valeur),
+                  nom d'avant (longueur u32 et octets UTF-8, vide sans renommage ; version 64)
 ```
 
 - Un nombre s'écrit sous sa forme canonique : chiffres, point décimal, signe `-` éventuel (`12.50`, `-3`). Le texte évite tout format binaire propre à une machine et garde la valeur exacte. Un booléen s'écrit `vrai` ou `faux`, une date en ISO 8601 (`2026-09-21`).
@@ -451,3 +453,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.81 | 2026-10-18 | Interface : dans une fiche déduite, le texte d'une image ou d'un son porte ses `octets`, `taille`, `format` (comme `ELEMENT_IMAGE`) ; format version 62 inchangé |
 | 1.82 | 2026-10-19 | Instruction `SIGLES` (93), en tête du bloc principal quand le programme a des sigles (grammaire 2.21, § 2.4) ; `ÉCRAN_ERREUR` annule un « Fermer l'écran. » demandé par l'événement raté ; format version 63 |
 | 1.83 | 2026-10-19 | Un programme qui a des règles porte une action de plus, `\x01règles` (`NOM_REGLES`, `src/bytecode.h`), sans paramètre : les vérifications de la fin d'un événement. La machine l'exécute dans l'exécution en cours (`imbrique`) quand une fiche déduite a écrit (« Modifier », « Nouvelle … ») : ni transaction, ni écrans, ni essais, ni journal, ni ramasse-miettes ne bougent ; refusée, la saisie s'annule (`base_annuler`, journal). Format version 63 inchangé : c'est une formule comme une autre |
+| 1.84 | 2026-10-19 | Une classe porte son nom d'avant (chaîne après le pluriel, vide sans renommage) et chaque champ le sien (chaîne après la valeur de départ) : grammaire 2.23, § 16.7. `base_renommer_entites` passe avant toute migration ; `migrer` renomme les champs d'abord. Format version 64 |

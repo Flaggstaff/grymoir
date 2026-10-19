@@ -1004,6 +1004,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         cm->hors_fiches = ph->type == P_CLASSE && (ph->forme & 64);
         if (ph->type == P_CLASSE && ph->texte3) cm->pluriel = grym_dupliquer(ph->texte3);
         if (ph->type == P_CLASSE && ph->texte2) cm->parent = grym_dupliquer(ph->texte2);
+        if (ph->type == P_CLASSE && ph->ancien) cm->ancien = grym_dupliquer(ph->ancien);   /* § 16.7 */
         for (size_t q = 0; q < ph->nb_enfants; q++) {
             const Noeud *ch = ph->enfants[q];
             if (ch->type == N_TEXTE) classe_ajouter_aptitude(cm, ch->texte);
@@ -1022,6 +1023,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 if (ch->entier & 1) classe_facultatif_dernier_champ(cm);
                 if (ch->entier & 2) classe_cascade_dernier_champ(cm);
                 if (ch->forme == 3) classe_multiple_dernier_champ(cm);   /* champ multiple (§ 16.13) */
+                if (ch->ancien) classe_ancien_dernier_champ(cm, ch->ancien);   /* « , anciennement « client » » (§ 16.7) */
                 if (ch->nb_enfants) {   /* valeur de départ, sous forme canonique */
                     const Noeud *v = ch->enfants[0];
                     char *t = v->type == N_NEGATION ? grym_formater("-%s", v->enfants[0]->texte) : grym_dupliquer(v->texte);

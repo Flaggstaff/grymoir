@@ -536,6 +536,67 @@ static void essais_migration(void) {
         if (strcmp(x, suite[k].attendu) != 0) signaler(suite[k].ligne, suite[k].src, suite[k].attendu, x);
         free(x);
     }
+    /* Renommages (§ 16.7, 2.23) : « anciennement « client » » garde les valeurs, les liaisons et les liens */
+    {
+        const char *ren = "_essai_renommage.grymd";
+        remove(ren);
+        char *r0 = lancer_sur(ren,
+            "Un genre, conservé, a : un nom (texte), unique.\n"
+            "Un client, conservé, a : un nom (texte), unique, une photo (fichier), facultative, des genres (genre).\n"
+            "Une séance, conservée, a : un client (client), un prix (nombre).\n"
+            "Le g vaut un nouveau genre :\n    Le nom vaut « calme ».\nConserver g.\n"
+            "Le c vaut un nouveau client :\n    Le nom vaut « Ana ».\nConserver c.\nLes genres du c gagnent g.\n"
+            "Le s vaut une nouvelle séance :\n    Le client vaut c.\n    Le prix vaut 130.\nConserver s.\n");
+        free(r0);
+        const char *v2 =
+            "Un genre, conservé, a : un nom (texte), unique.\n"
+            "Un patient, conservé, anciennement « client », a : un nom (texte), unique, "
+            "un document (fichier), facultatif, anciennement « photo », des humeurs (genre), anciennement « genres ».\n"
+            "Une séance, conservée, a : un patient (patient), anciennement « client », un prix (nombre).\n";
+        total++;
+        char *x = essai_migration(ren, v2);
+        const char *attendu = "« client » devient « patient » : 1 objet gardé.\n"
+                              "« patient » : « photo » devient « document », 1 valeur gardée.\n"
+                              "« patient » : « genres » devient « humeurs », 1 liaison gardée.\n"
+                              "« séance » : « client » devient « patient », 1 valeur gardée.\n";
+        if (strcmp(x, attendu) != 0) signaler(__LINE__, v2, attendu, x);
+        free(x);
+        total++;   /* l'essai n'a rien changé : le même rapport, une seconde fois */
+        x = essai_migration(ren, v2);
+        if (strcmp(x, attendu) != 0) signaler(__LINE__, v2, attendu, x);
+        free(x);
+        char *lire = grym_formater("%sPour chaque séance conservée :\n"
+                                   "    Afficher le nom du patient de la séance puis le prix de la séance.\n"
+                                   "Afficher le nombre d'humeurs du patient conservé.\n"
+                                   "Afficher le nombre de patients conservés dont le nom est « Ana ».\n", v2);
+        for (int fois = 0; fois < 2; fois++) {   /* la seconde fois, il n'y a plus rien à renommer */
+            total++;
+            char *y = lancer_sur(ren, lire);
+            if (strcmp(y, "Ana 130\n1\n1") != 0) signaler(__LINE__, lire, "Ana 130\n1\n1", y);
+            free(y);
+        }
+        total++;   /* la base est à jour */
+        x = essai_migration(ren, v2);
+        if (strcmp(x, "La base est à jour : rien ne changera.\n") != 0) signaler(__LINE__, v2, "à jour", x);
+        free(x);
+        total++;   /* un nouvel objet se conserve sous le nouveau nom, et le lien suit */
+        char *nouveau = grym_formater("%sLe p vaut un nouveau patient :\n    Le nom vaut « Bea ».\nConserver p.\n"
+                                      "Le s vaut une nouvelle séance :\n    Le patient vaut p.\n    Le prix vaut 70.\n"
+                                      "Conserver s.\nAfficher la somme des prix des séances conservées.\n", v2);
+        char *y = lancer_sur(ren, nouveau);
+        if (strcmp(y, "200") != 0) signaler(__LINE__, nouveau, "200", y);
+        free(y);
+        free(nouveau);
+        free(lire);
+        total++;   /* l'ancien nom, oublié : le refus dit comment le déclarer */
+        x = essai_migration(ren, "Un genre, conservé, a : un nom (texte), unique.\n"
+            "Un patient, conservé, a : un nom (texte), unique, un dossier (fichier), facultatif, des humeurs (genre).\n"
+            "Une séance, conservée, a : un patient (patient), un prix (nombre).\n");
+        if (!strstr(x, "s'il a changé de nom, écris-le sur le nouveau : « , anciennement « document » »"))
+            signaler(__LINE__, "document oublié", "anciennement « document »", x);
+        free(x);
+        remove(ren);
+    }
     remove(base);
 }
 
@@ -3821,6 +3882,18 @@ int main(void) {
     }
 
     essais_utiliser();
+    /* « anciennement » : les refus de l'analyse (§ 16.7, 2.23) */
+    PROG("Un client, conservé, a : un nom (texte), anciennement « nom ».", "~« nom » est déjà le nom de ce champ.");
+    PROG("Un client, conservé, a : un nom (texte), un titre (texte), anciennement « nom ».",
+         "~« nom » est encore un champ de « client » : un renommage suppose que l'ancien nom a disparu.");
+    PROG("Un client, conservé, a : un nom (texte), anciennement « x », un titre (texte), anciennement « x ».",
+         "~Deux champs de « client » s'appelaient « x »");
+    PROG("Un client a : un nom, anciennement « x ».", "~Seul un champ d'entité se renomme");
+    PROG("Un client, conservé, a : un nom (texte), anciennement 3.", "~Le nom d'avant s'écrit entre guillemets");
+    PROG("Un client, conservé, a : un nom (texte).\nUn patient, conservé, anciennement « client », a : un nom (texte).",
+         "~« client » est encore déclarée : un renommage suppose que l'ancien nom a disparu du programme.");
+    PROG("Un patient, anciennement « client », a : un nom.", "~Seule une entité se renomme");
+    PROG("Un patient, conservé, anciennement « patient », a : un nom (texte).", "~« patient » est déjà le nom de cette entité.");
     essais_migration();
     essais_ecrans();
     essais_etats_ecran();

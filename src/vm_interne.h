@@ -67,6 +67,9 @@ typedef struct ClasseVM {
     int conserve;         /* entité */
     int hors_fiches;      /* « , hors des fiches, » : pas de tableau dans la fiche d'un objet qu'elle désigne (§ 22.3) */
     char *pluriel;
+    char **anciens;       /* champ propre « , anciennement « client » » : son nom d'avant (§ 16.7), ou NULL ; tableau NULL
+                             pour une classe qui n'en a aucun */
+    char *ancien;         /* entité « anciennement « client » » : son nom d'avant, ou NULL */
 } ClasseVM;
 
 /* Objet du tas : sa classe, ses champs, et de quoi le ramasser (docs/vm.md, § 9). */

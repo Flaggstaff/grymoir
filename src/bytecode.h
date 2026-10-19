@@ -208,6 +208,8 @@ typedef struct {
     unsigned char *uniques;   /* bit 1 : unique ; bit 2 : facultatif (§ 16.9) ; bit 4 : disparaît avec (§ 16.12) ;
                                  bit 8 : multiple (§ 16.13) */
     char **departs;       /* valeur de départ, forme canonique (« Suisse », « -3.5 », « 2026-09-21 », « vrai »), ou NULL */
+    char **anciens;       /* « , anciennement « client » » : le nom d'avant du champ, ou NULL (§ 16.7) */
+    char *ancien;         /* « Un patient, conservé, anciennement « client », a : » : le nom d'avant, ou NULL */
     size_t nb_champs;
 } ClasseModule;
 
@@ -227,6 +229,7 @@ void classe_ajouter_aptitude(ClasseModule *c, const char *aptitude);
 void classe_typer_dernier_champ(ClasseModule *c, const char *type, int unique);
 void classe_depart_dernier_champ(ClasseModule *c, const char *depart);
 void classe_facultatif_dernier_champ(ClasseModule *c);
+void classe_ancien_dernier_champ(ClasseModule *c, const char *ancien);
 void classe_cascade_dernier_champ(ClasseModule *c);
 void classe_multiple_dernier_champ(ClasseModule *c);
 void module_detruire(Module *m);          /* ignore les entrées mises à NULL */

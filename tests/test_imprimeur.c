@@ -99,6 +99,13 @@ int main(void) {
     FIXE("Un membre, conservé, a :\n    un nom (texte).\nExporter les membres conservés, par nom décroissant, avec le nom, dans « m.csv ».\n"
          "Exporter les membres conservés dont le nom est « a » dans « n.csv ».\n");
     LITT("Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.", "Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.\n");
+    /* Renommages (2.23, § 16.7) : « anciennement » en dernier ; le nom d'avant ramené à la forme d'un nom */
+    LITT("Un patient, conservé, anciennement «  Client  », a : un patient (texte), anciennement « Nom », facultatif, "
+         "des humeurs (patient), anciennement « genres ».",
+         "Un patient, conservé, anciennement « client », a :\n    un patient (texte), facultatif, anciennement « nom »,\n"
+         "    des humeurs (patient), anciennement « genres ».\n");
+    COMP("Un patient, conservé, anciennement « client », a : un nom (texte), unique, anciennement « titre ».",
+         "_classe _un patient _conservé _anciennement « client »\n    _un nom (texte) _unique _anciennement « titre »\n_fin\n");
     /* Sigles (2.21, § 2.4) : un mot toujours écrit en capitales les garde ; écrit une fois autrement, il les perd. */
     LITT("Un cabinet, conservé, a : un numéro RCC (texte).\nLe c vaut un nouveau cabinet :\n    Le numéro RCC vaut « A ».\n"
          "Afficher le numéro RCC du c.",

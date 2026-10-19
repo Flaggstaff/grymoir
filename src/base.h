@@ -58,6 +58,10 @@ void base_rapport(Base *b, Chaine *rapport);
 
 /* Crée la table d'une entité, ou vérifie que la base la connaît sous la même définition. */
 int base_preparer(Base *b, const ClasseVM *c, char **erreur);
+/* Les entités renommées (« Un patient, conservé, anciennement « client », a : », grammaire, § 16.7) : leur table,
+ * leurs liaisons, leurs index, leurs objets et les définitions qui les désignent prennent le nouveau nom. Avant
+ * base_preparer, pour toutes les classes : une entité peut en désigner une autre, déclarée plus loin. */
+int base_renommer_entites(Base *b, ClasseVM *const *classes, size_t nb, char **erreur);
 
 /* Range un objet complet ; *id reçoit son identifiant. */
 int base_conserver(Base *b, const Objet *o, long *id, char **erreur);

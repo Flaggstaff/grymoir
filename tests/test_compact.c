@@ -154,6 +154,11 @@ int main(void) {
     EXEC("_aptitude horodatée\n    _une date\n_fin\n_classe _un document _est _une chose _adopte horodatée\n_fin\n"
          "_action dater(_une chose_horodatée)\n    chose.date << 5\n_fin\n_le d << _nouveau document\ndater(d)\n"
          "_afficher d.date\n", "5\n");
+    /* Renommages (2.23, § 16.7) */
+    ALLER_RETOUR("_classe _un patient _conservé _anciennement « client »\n    _un nom (texte) _anciennement « titre »\n"
+                 "    _des humeurs (patient) _anciennement « genres »\n_fin\n",
+                 "Un patient, conservé, anciennement « client », a :\n    un nom (texte), anciennement « titre »,\n"
+                 "    des humeurs (patient), anciennement « genres ».\n");
     /* Sigles (2.21, § 2.4) : « numéro_RCC » garde ses capitales dans les deux formes */
     ALLER_RETOUR("_le numéro_RCC << 1\n_afficher numéro_RCC\n", "Le numéro RCC vaut 1.\nAfficher le numéro RCC.\n");
     ALLER_RETOUR("_aptitude active (actif)\n    _un état\n_fin\n_classe _une personne\n    _un nom\n_fin\n"

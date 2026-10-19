@@ -1298,6 +1298,11 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                         && r->e[q + 2].type == J_PAR_FERM && q + 3 < f && r->e[q + 3].type == J_PAR_OUV;
         if (singulier) q += 3;
         int type = q + 2 < f && r->e[q].type == J_PAR_OUV && r->e[q + 1].type == J_CROCHETS && r->e[q + 2].type == J_PAR_FERM;
+        size_t ancien = 0;   /* _anciennement « genres » (§ 16.7) */
+        if (type && q + 4 < f && est_cle(&r->e[q + 3], "anciennement") && r->e[q + 4].type == J_TEXTE) {
+            ancien = q + 4;
+            f -= 2;
+        }
         if (d + 1 >= f || r->e[d + 1].type != J_CROCHETS || !type || q + 3 != f) {
             echouer(r, t, grym_dupliquer("Champ multiple attendu : « _des genres (genre) », ou « _des travaux (travail) (tâche) »."));
             return;
@@ -1315,6 +1320,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         for (size_t v = d + 2; v < f; v++) {
             if (r->e[v].type == J_CROCHETS) copier(r, &r->e[v]);
             else emettre(r, r->e[v].type, NULL, &r->e[v], 1);
+        }
+        if (ancien) {
+            emettre(r, J_VIRGULE, NULL, &r->e[ancien - 1], 1);
+            mot(r, "anciennement", &r->e[ancien - 1]);
+            copier(r, &r->e[ancien]);
+            f += 2;
         }
         emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
         return;
@@ -1346,6 +1357,8 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             fin_depart = depart < f && r->e[depart].type == J_MOINS ? depart + 2 : depart + 1;
             q = fin_depart;
         }
+        size_t ancien = 0;   /* _anciennement « client » (§ 16.7) */
+        if (q + 1 < f && est_cle(&r->e[q], "anciennement") && r->e[q + 1].type == J_TEXTE) { ancien = q + 1; q += 2; }
         if (!(est_cle(t, "un") || est_cle(t, "une")) || d + 1 >= f || r->e[d + 1].type != J_CROCHETS || q != f) {
             echouer(r, t, grym_dupliquer("Champ attendu : « _un nom », « _un nom (texte) » ou « _une licence (texte) _unique »."));
             return;
@@ -1409,6 +1422,11 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "au", &r->e[fin_depart - 1]);
             mot(r, "départ", &r->e[fin_depart - 1]);
         }
+        if (ancien) {
+            emettre(r, J_VIRGULE, NULL, &r->e[ancien - 1], 1);
+            mot(r, "anciennement", &r->e[ancien - 1]);
+            copier(r, &r->e[ancien]);
+        }
         emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
         return;
     }
@@ -1456,7 +1474,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     if (t->type == J_MOT_CLE && !strcmp(t->valeur, "classe")) {
         /* _classe _un cheval [(chevaux)] [_conservé [_hors_des_fiches]] [_est _une personne [_adopte horodatée ; active]] */
         size_t p = d + 3;
-        const Jeton *pluriel = NULL, *conserve = NULL, *hors = NULL;
+        const Jeton *pluriel = NULL, *conserve = NULL, *hors = NULL, *ancien = NULL;
         if (p + 2 < f && r->e[p].type == J_PAR_OUV && r->e[p + 1].type == J_CROCHETS
             && r->e[p + 2].type == J_PAR_FERM) {
             pluriel = &r->e[p + 1];
@@ -1469,8 +1487,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 hors = &r->e[p];
                 p++;
             }
+            if (p + 1 < f && est_cle(&r->e[p], "anciennement") && r->e[p + 1].type == J_TEXTE) {   /* § 16.7 */
+                ancien = &r->e[p];
+                p += 2;
+            }
         }
-        size_t decale = p - (d + 3);   /* jetons de pluriel, de « _conservé » et « _hors_des_fiches » avant « _est » */
+        size_t decale = p - (d + 3);   /* jetons de pluriel, de « _conservé », « _hors_des_fiches », « _anciennement » */
         size_t adopte = chercher(r, d + 1, f, "adopte");
         int herite = adopte == d + 6 + decale && est_cle(&r->e[p], "est")
                      && (est_cle(&r->e[p + 1], "un") || est_cle(&r->e[p + 1], "une")) && r->e[p + 2].type == J_CROCHETS;
@@ -1506,6 +1528,11 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "des", hors);
             mot(r, "fiches", hors);
             emettre(r, J_VIRGULE, NULL, hors, 1);
+        }
+        if (ancien) {   /* _anciennement « client » → anciennement « client », */
+            mot(r, "anciennement", ancien);
+            copier(r, ancien + 1);
+            emettre(r, J_VIRGULE, NULL, ancien, 1);
         }
         if (herite) {
             mot(r, "est", &r->e[p]);

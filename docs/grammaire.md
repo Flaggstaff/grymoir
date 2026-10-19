@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.22 de la spécification, révisée le 19 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.23 de la spécification, révisée le 19 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1377,7 +1377,8 @@ La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1
 | nouvelle entité | table créée |
 | nouveau champ, table vide | colonne ajoutée |
 | nouveau champ, table non vide | refusé, sauf valeur de départ : `un pays (texte), « Suisse » au départ` |
-| champ retiré, renommé ou retypé | refusé, avec un message qui dit combien de valeurs seraient perdues |
+| champ retiré ou retypé | refusé, avec un message qui dit combien de valeurs seraient perdues |
+| champ ou entité renommé, avec `anciennement « … »` *(2.23)* | renommé : valeurs, liaisons, liens et objets gardés |
 | `(nombre entier)` devenu `(nombre)` | accepté : aucune perte |
 | `(nombre entier)` devenu `(année)`, et l'inverse | accepté si toutes les valeurs sont entre 1 et 9999 (§ 14.5) |
 
@@ -1389,7 +1390,28 @@ La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1
 - `, unique` s'ajoute à un champ existant si ses valeurs sont déjà toutes différentes. Il se retire seulement s'il a été ajouté par une migration.
 - `(nombre entier)` devient `(nombre)` si le champ n'est pas unique.
 - Changer la classe parente d'une entité est refusé.
-- Retirer un champ pour de bon, le renommer, ou lever les limites ci-dessus demandera une commande explicite de l'outil `grym`, à concevoir.
+- Retirer un champ pour de bon, ou lever les limites ci-dessus, demandera une commande explicite de l'outil `grym`, à concevoir.
+
+**Renommer** *(2.23)* :
+
+```
+Un patient, conservé, anciennement « client », a :
+    un nom (texte), unique,
+    un portrait (image), facultatif, anciennement « photo »,
+    des humeurs (genre), anciennement « genres ».
+Une séance, conservée, a :
+    un patient (patient), anciennement « client »,
+    un prix (nombre).
+```
+
+- `, anciennement « … »` dit le nom d'avant d'un champ d'entité, simple ou multiple, et `anciennement « … »,` après `conservé,` (et `hors des fiches,`) celui d'une entité. Sans la mention, un champ renommé est un champ retiré suivi d'un champ ajouté, et la migration le refuse dès qu'une valeur serait perdue ; le message propose alors la mention.
+- Au lancement, avant toute autre migration, une entité renommée change de table, avec ses tables de liaison et ses index ; ses objets gardent leur numéro, et les entités qui la désignent (liens, champs multiples, classe parente) la retrouvent sous son nouveau nom. Puis chaque champ renommé change de colonne (et, pour un fichier ou une image, la colonne de son nom), ou de table de liaison pour un champ multiple. Rien n'est copié : SQLite renomme (`ALTER TABLE … RENAME`).
+- L'aperçu des migrations l'annonce : « « client » devient « patient » : 6 objets gardés. », « « séance » : « client » devient « patient », 15 valeurs gardées. »
+- La mention reste dans le programme, sans effet une fois la base à jour : une base restée à l'ancien nom (une sauvegarde, la base d'un client qui n'a pas encore mis l'application à jour) se renomme à son tour au premier lancement. On peut la retirer quand plus aucune base ne porte l'ancien nom.
+- Le nom d'avant s'écrit entre guillemets, ramené à la forme d'un nom : `« Client »` s'écrit `« client »` en forme canonique, où la mention vient en dernier.
+- Refus de l'analyse : le nom d'avant est le nom actuel (« « nom » est déjà le nom de ce champ. ») ; il est encore un champ de l'entité (« … un renommage suppose que l'ancien nom a disparu. ») ; deux champs revendiquent le même ; l'ancienne entité est encore déclarée ; la mention sur une classe ordinaire ou une aptitude (« Seule une entité se renomme »).
+- Un champ hérité se renomme dans l'entité qui le déclare. Changer à la fois le nom et le type d'un champ reste refusé, comme un changement de type seul.
+- Forme compacte : `_classe _un patient _conservé _anciennement « client »`, `_un patient (patient) _anciennement « client »`, `_des humeurs (genre) _anciennement « genres »`.
 - Ces limites viennent de ce que SQLite modifie une table existante : il n'ajoute ni contrainte `UNIQUE` ni lien obligatoire à une colonne nouvelle, et ne retire pas une colonne unique ou liée.
 
 ### 16.8 Forme compacte
@@ -2164,3 +2186,4 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 | 2.20 | 2026-10-18 | § 22.1 : `le texte « … », en petites capitales`, un surtitre ou un titre de section |
 | 2.21 | 2026-10-19 | Nouveau § 2.4 : les sigles (`un numéro RCC`), insensibles à la casse comme tout nom, en capitales dans les libellés et la forme canonique, rangés dans le module (`SIGLES`) ; § 16.4 : `le cabinet conservé`, sans `dont` ; § 22.3 : un événement qui a demandé « Fermer l'écran. » puis échoue (une règle violée) laisse l'écran ouvert, avec le motif |
 | 2.22 | 2026-10-19 | § 22.3 : « Modifier » et « Nouvelle … » d'une fiche déduite vérifient les règles du § 16.14 ; refusée, la saisie s'annule et la fiche relue montre le motif (corrige un contournement présent depuis l'arrivée des règles, le 28 septembre 2026) |
+| 2.23 | 2026-10-19 | § 16.7 : `anciennement « … »`, le renommage d'un champ d'entité (simple, multiple, fichier) ou d'une entité, sans perte ; le refus d'un champ disparu propose la mention |

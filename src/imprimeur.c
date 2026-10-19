@@ -989,6 +989,10 @@ static void type_de_champ(Impression *im, const Noeud *ch) {
         expression(im, ch->enfants[0]);
         if (!im->compact) aj(im, " au départ");
     }
+    if (ch->ancien) {   /* « , anciennement « client » » ; « _anciennement « client » » (§ 16.7) */
+        aj(im, im->compact ? " _anciennement " : ", anciennement ");
+        ecrire_texte(im, ch->ancien);
+    }
 }
 
 /* Bloc qui initialise un nouvel objet, après la phrase qui le crée. */
@@ -1898,6 +1902,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             if (n->texte3) { aj(im, " ("); ecrire_nom(im, n->texte3, 0); aj(im, ")"); }
             if (conserve) aj(im, " _conservé");
             if (hors) aj(im, " _hors_des_fiches");
+            if (n->ancien) { aj(im, " _anciennement "); ecrire_texte(im, n->ancien); }
             if (herite) {
                 aj(im, fem_base ? " _est _une " : " _est _un ");
                 ecrire_nom(im, n->texte2 ? n->texte2 : "chose", 0);
@@ -1917,6 +1922,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 if (n->texte3) { aj(im, " ("); aj(im, n->texte3); aj(im, ")"); }
                 if (conserve) aj(im, fem ? ", conservée," : ", conservé,");
                 if (hors) aj(im, " hors des fiches,");
+                if (n->ancien) { aj(im, " anciennement "); ecrire_texte(im, n->ancien); aj(im, ","); }
                 aj(im, fem_base ? " est une " : " est un ");
                 ecrire_nom(im, n->texte2 ? n->texte2 : "chose", 0);
                 size_t q = 0;
@@ -1936,6 +1942,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             if (!herite && n->texte3) { aj(im, " ("); aj(im, n->texte3); aj(im, ")"); }
             if (!herite && conserve) aj(im, fem ? ", conservée," : ", conservé,");
             if (!herite && hors) aj(im, " hors des fiches,");
+            if (!herite && n->ancien) { aj(im, " anciennement "); ecrire_texte(im, n->ancien); aj(im, ","); }
             aj(im, " a :\n");
         }
         size_t vus = 0;

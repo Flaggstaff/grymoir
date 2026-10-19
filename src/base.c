@@ -996,6 +996,259 @@ static char *deja_conserves(const ClasseVM *c, long n) {
     return r;
 }
 
+/* ---------------------------------------------------------------- */
+/* Renommages (grammaire, § 16.7 : « anciennement « client » »)    */
+/* ---------------------------------------------------------------- */
+
+/* Les tables et index internes dont le nom commence par « prefixe » (« m client. », « u séance.client »), sans les
+ * guillemets : SQLite garde le nom tel qu'écrit entre guillemets. */
+static char **objets_sqlite(Base *b, const char *sorte, const char *prefixe, size_t *n) {
+    sqlite3_stmt *st = NULL;
+    preparer(b, "SELECT name FROM sqlite_master WHERE type = ? AND substr(name, 1, length(?2)) = ?2 ORDER BY name", &st);
+    sqlite3_bind_text(st, 1, sorte, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(st, 2, prefixe, -1, SQLITE_TRANSIENT);
+    char **r = NULL;
+    *n = 0;
+    while (sqlite3_step(st) == SQLITE_ROW) {
+        char **t = grym_allouer((*n + 1) * sizeof *t);
+        if (*n) memcpy(t, r, *n * sizeof *t);
+        free(r);
+        r = t;
+        r[(*n)++] = grym_dupliquer((const char *)sqlite3_column_text(st, 0));
+    }
+    rendre(b, st);
+    return r;
+}
+
+static char **agrandir_noms(char **t, size_t n) {
+    char **r = grym_allouer(n * sizeof *r);
+    if (n > 1) memcpy(r, t, (n - 1) * sizeof *r);
+    free(t);
+    return r;
+}
+
+/* « ALTER TABLE "x" RENAME TO "y" », les deux noms complets, sans guillemets. */
+static int renommer_table(Base *b, const char *ancien, const char *nouveau, char **erreur) {
+    Chaine sql = {0};
+    chaine_ajouter(&sql, "ALTER TABLE ");
+    ajouter_nom(&sql, "", ancien);
+    chaine_ajouter(&sql, " RENAME TO ");
+    ajouter_nom(&sql, "", nouveau);
+    return executer_chaine(b, &sql, erreur);
+}
+
+/* Les index nommés d'après « entité.champ » : l'index d'un lien (« l ») part, indexer_liens le refait sous son nouveau
+ * nom ; l'index d'unicité ajouté par une migration (« u ») est refait tout de suite, sur la colonne déjà renommée. */
+static int renommer_index(Base *b, const char *entite_avant, const char *champ_avant, const char *entite,
+                          const char *champ, char **erreur) {
+    int ok = 1;
+    static const char SORTES[] = "lui";   /* lien, unicité, liaison (« i », sur la colonne b de « m entité.champ ») */
+    for (int u = 0; ok && u < 3; u++) {
+        char *nom = champ_avant ? grym_formater("%c %s.%s", SORTES[u], entite_avant, champ_avant)
+                                : grym_formater("%c %s.", SORTES[u], entite_avant);
+        size_t n = 0;
+        char **index = objets_sqlite(b, "index", nom, &n);
+        free(nom);
+        for (size_t k = 0; ok && k < n; k++) {
+            const char *suite = strchr(index[k], '.') + 1;   /* le champ */
+            Chaine sql = {0};
+            chaine_ajouter(&sql, "DROP INDEX ");
+            ajouter_nom(&sql, "", index[k]);
+            ok = executer_chaine(b, &sql, erreur);
+            if (ok && u == 1) {
+                const char *colonne = champ ? champ : suite;
+                char *nouveau = grym_formater("%s.%s", entite, colonne);
+                Chaine c = {0};
+                chaine_ajouter(&c, "CREATE UNIQUE INDEX ");
+                ajouter_nom(&c, "u ", nouveau);
+                chaine_ajouter(&c, " ON ");
+                ajouter_nom(&c, "e ", entite);
+                chaine_ajouter(&c, " (");
+                ajouter_nom(&c, "c ", colonne);
+                chaine_ajouter(&c, ")");
+                free(nouveau);
+                ok = executer_chaine(b, &c, erreur);
+            } else if (ok && u == 2) {   /* la table de liaison est déjà renommée */
+                const char *colonne = champ ? champ : suite;
+                char *nouveau = grym_formater("%s.%s", entite, colonne);
+                Chaine c = {0};
+                chaine_ajouter(&c, "CREATE INDEX ");
+                ajouter_nom(&c, "i ", nouveau);
+                chaine_ajouter(&c, " ON ");
+                ajouter_liaison(&c, entite, colonne);
+                chaine_ajouter(&c, " (b)");
+                free(nouveau);
+                ok = executer_chaine(b, &c, erreur);
+            }
+        }
+        liberer_noms(index, n);
+    }
+    return ok;
+}
+
+/* Une définition où l'entité « avant » s'appelle désormais « apres » : parent, types des liens. */
+static char *definition_renommee(const char *d, const char *avant, const char *apres) {
+    Chaine r = {0};
+    const char *p = d;
+    for (int premier = 1; p; premier = 0) {
+        const char *fin = strchr(p, ';');
+        size_t l = fin ? (size_t)(fin - p) : strlen(p);
+        char *seg = grym_formater("%.*s", (int)l, p);
+        if (!premier) chaine_ajouter(&r, ";");
+        if (premier) {   /* « parent=X » */
+            if (strncmp(seg, "parent=", 7) == 0 && strcmp(seg + 7, avant) == 0) {
+                chaine_ajouter(&r, "parent=");
+                chaine_ajouter(&r, apres);
+            } else chaine_ajouter(&r, seg);
+        } else {         /* « nom:type[:drapeaux] » */
+            char *d1 = strchr(seg, ':');
+            char *d2 = d1 ? strchr(d1 + 1, ':') : NULL;
+            size_t lt = d1 ? (d2 ? (size_t)(d2 - d1 - 1) : strlen(d1 + 1)) : 0;
+            if (d1 && strlen(avant) == lt && strncmp(d1 + 1, avant, lt) == 0) {
+                char *x = grym_formater("%.*s:%s%s", (int)(d1 - seg), seg, apres, d2 ? d2 : "");
+                chaine_ajouter(&r, x);
+                free(x);
+            } else chaine_ajouter(&r, seg);
+        }
+        free(seg);
+        p = fin ? fin + 1 : NULL;
+    }
+    return chaine_rendre(&r);
+}
+
+static long compter(Base *b, const char *sql, const char *a) {
+    sqlite3_stmt *st = NULL;
+    preparer(b, sql, &st);
+    sqlite3_bind_text(st, 1, a, -1, SQLITE_TRANSIENT);
+    long n = sqlite3_step(st) == SQLITE_ROW ? (long)sqlite3_column_int64(st, 0) : 0;
+    rendre(b, st);
+    return n;
+}
+
+int base_renommer_entites(Base *b, ClasseVM *const *classes, size_t nb, char **erreur) {
+    for (size_t i = 0; i < nb; i++) {
+        const ClasseVM *c = classes[i];
+        if (!c->conserve || !c->ancien) continue;
+        if (compter(b, "SELECT count(*) FROM grym_schema WHERE entite = ?", c->nom)) continue;   /* déjà fait */
+        if (!compter(b, "SELECT count(*) FROM grym_schema WHERE entite = ?", c->ancien)) continue;   /* jamais conservée */
+        const char *avant = c->ancien, *apres = c->nom;
+        long objets = compter(b, "SELECT count(*) FROM grym_objet WHERE classe = ?", avant);
+        char *ta = grym_formater("e %s", avant), *tn = grym_formater("e %s", apres);
+        int ok = renommer_table(b, ta, tn, erreur);
+        free(ta);
+        free(tn);
+        /* ses tables de liaison, « m client.genres » */
+        char *pre = grym_formater("m %s.", avant);
+        size_t n = 0;
+        char **liaisons = objets_sqlite(b, "table", pre, &n);
+        for (size_t k = 0; ok && k < n; k++) {
+            char *nouveau = grym_formater("m %s.%s", apres, liaisons[k] + strlen(pre));
+            ok = renommer_table(b, liaisons[k], nouveau, erreur);
+            free(nouveau);
+        }
+        liberer_noms(liaisons, n);
+        free(pre);
+        if (ok) ok = renommer_index(b, avant, NULL, apres, NULL, erreur);
+        if (ok) {
+            sqlite3_stmt *st = NULL;
+            preparer(b, "UPDATE grym_schema SET entite = ?1 WHERE entite = ?2", &st);
+            sqlite3_bind_text(st, 1, apres, -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(st, 2, avant, -1, SQLITE_TRANSIENT);
+            ok = sqlite3_step(st) == SQLITE_DONE;
+            rendre(b, st);
+            preparer(b, "UPDATE grym_objet SET classe = ?1 WHERE classe = ?2", &st);
+            sqlite3_bind_text(st, 1, apres, -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(st, 2, avant, -1, SQLITE_TRANSIENT);
+            ok = ok && sqlite3_step(st) == SQLITE_DONE;
+            rendre(b, st);
+        }
+        if (ok) {   /* les définitions qui la désignent : parent, liens */
+            sqlite3_stmt *st = NULL;
+            preparer(b, "SELECT entite, definition FROM grym_schema", &st);
+            size_t nd = 0;
+            char **entites = NULL, **defs = NULL;
+            while (sqlite3_step(st) == SQLITE_ROW) {
+                entites = agrandir_noms(entites, nd + 1);
+                defs = agrandir_noms(defs, nd + 1);
+                entites[nd] = grym_dupliquer((const char *)sqlite3_column_text(st, 0));
+                defs[nd++] = grym_dupliquer((const char *)sqlite3_column_text(st, 1));
+            }
+            rendre(b, st);
+            for (size_t k = 0; ok && k < nd; k++) {
+                char *nouvelle = definition_renommee(defs[k], avant, apres);
+                if (strcmp(nouvelle, defs[k]) != 0) {
+                    preparer(b, "UPDATE grym_schema SET definition = ?1 WHERE entite = ?2", &st);
+                    sqlite3_bind_text(st, 1, nouvelle, -1, SQLITE_TRANSIENT);
+                    sqlite3_bind_text(st, 2, entites[k], -1, SQLITE_TRANSIENT);
+                    ok = sqlite3_step(st) == SQLITE_DONE;
+                    rendre(b, st);
+                }
+                free(nouvelle);
+            }
+            liberer_noms(entites, nd);
+            liberer_noms(defs, nd);
+        }
+        if (!ok) {
+            if (!*erreur) *erreur = grym_formater("« %s » ne se renomme pas en « %s ».", avant, apres);
+            return 0;
+        }
+        if (b->rapport) {
+            char *l = grym_formater("« %s » devient « %s » : %ld objet%s gardé%s.\n", avant, apres, objets,
+                                    objets > 1 ? "s" : "", objets > 1 ? "s" : "");
+            chaine_ajouter(b->rapport, l);
+            free(l);
+        }
+    }
+    return 1;
+}
+
+/* Un champ renommé (« , anciennement « client » ») : sa colonne, ou sa table de liaison, change de nom ; la définition
+ * lue suit, pour que la suite de la migration le reconnaisse. */
+static int renommer_champs(Base *b, const ClasseVM *c, Definition *a, const Definition *n, long lignes, char **erreur) {
+    for (size_t q = 0; c->anciens && q < c->nb_champs; q++) {
+        const char *avant = c->anciens[q], *apres = c->champs[q];
+        if (!avant || c->proprietaires[q] != c) continue;
+        long i = chercher_champ(a, avant);
+        if (i < 0 || chercher_champ(a, apres) >= 0 || chercher_champ(n, avant) >= 0) continue;
+        int ok;
+        if (a->uniques[i] & 8) {   /* champ multiple : sa table de liaison (§ 16.13), et son index */
+            char *ta = grym_formater("m %s.%s", c->nom, avant), *tn = grym_formater("m %s.%s", c->nom, apres);
+            ok = renommer_table(b, ta, tn, erreur) && renommer_index(b, c->nom, avant, c->nom, apres, erreur);
+            free(ta);
+            free(tn);
+        } else {
+            Chaine sql = {0};
+            chaine_ajouter(&sql, "ALTER TABLE ");
+            ajouter_nom(&sql, "e ", c->nom);
+            chaine_ajouter(&sql, " RENAME COLUMN ");
+            ajouter_nom(&sql, "c ", avant);
+            chaine_ajouter(&sql, " TO ");
+            ajouter_nom(&sql, "c ", apres);
+            if (est_fichier(a->types[i])) {   /* le nom du fichier, dans sa colonne « n » */
+                chaine_ajouter(&sql, "; ALTER TABLE ");
+                ajouter_nom(&sql, "e ", c->nom);
+                chaine_ajouter(&sql, " RENAME COLUMN ");
+                ajouter_nom(&sql, "n ", avant);
+                chaine_ajouter(&sql, " TO ");
+                ajouter_nom(&sql, "n ", apres);
+            }
+            ok = executer_chaine(b, &sql, erreur) && renommer_index(b, c->nom, avant, c->nom, apres, erreur);
+        }
+        if (!ok) return 0;
+        free(a->noms[i]);
+        a->noms[i] = grym_dupliquer(apres);
+        if (b->rapport) {
+            const int liaisons = (a->uniques[i] & 8) != 0;
+            const long nb = liaisons ? compter_liaisons(b, c->nom, apres) : lignes;
+            char *l = grym_formater("« %s » : « %s » devient « %s », %ld %s%s gardée%s.\n", c->nom, avant, apres, nb,
+                                    liaisons ? "liaison" : "valeur", nb > 1 ? "s" : "", nb > 1 ? "s" : "");
+            chaine_ajouter(b->rapport, l);
+            free(l);
+        }
+    }
+    return 1;
+}
+
 static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *nouvelle, char **erreur) {
     Definition a, n;
     lire_definition(ancienne, &a);
@@ -1004,7 +1257,8 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
     char *pl = c->pluriel ? grym_dupliquer(c->pluriel) : grym_formater("%ss", c->nom);
     int ok = 1;
     char *deja = deja_conserves(c, lignes);
-    if (strcmp(a.parent, n.parent) != 0) {
+    if (!renommer_champs(b, c, &a, &n, lignes, erreur)) ok = 0;   /* « , anciennement « client » » (§ 16.7) */
+    if (ok && strcmp(a.parent, n.parent) != 0) {
         *erreur = grym_formater("« %s » ne peut pas changer de classe parente : %s.", c->nom, deja);
         ok = 0;
     }
@@ -1026,9 +1280,9 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
             }
         } else if (chercher_champ(&n, a.noms[k]) < 0 && lignes > 0) {
             *erreur = grym_formater("« %s » a disparu de « %s » : %ld valeur%s conservée%s serai%s perdue%s. Remets ce "
-                                    "champ ; un renommage se déclare comme un retrait suivi d'un ajout, et n'est pas "
-                                    "encore pris en charge.", a.noms[k], c->nom, lignes, lignes > 1 ? "s" : "",
-                                    lignes > 1 ? "s" : "", lignes > 1 ? "ent" : "t", lignes > 1 ? "s" : "");
+                                    "champ ; s'il a changé de nom, écris-le sur le nouveau : « , anciennement « %s » ».", a.noms[k], c->nom,
+                                    lignes, lignes > 1 ? "s" : "", lignes > 1 ? "s" : "", lignes > 1 ? "ent" : "t",
+                                    lignes > 1 ? "s" : "", a.noms[k]);
             ok = 0;
         } else if (chercher_champ(&n, a.noms[k]) < 0) {
             Chaine sql = {0};   /* table vide : la colonne part sans rien emporter */

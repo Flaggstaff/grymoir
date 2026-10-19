@@ -4706,6 +4706,8 @@ static char *lire_type(Analyse *a, const char *soi);
 
 /* Suite d'un champ multiple, après son nom : « (travail) » facultatif, le singulier irrégulier, puis
  * « (tâche) », le type, une entité (§ 16.13). Aucune autre mention : l'ensemble part vide. */
+static char *lire_ancien_nom(Analyse *a, const Jeton *t);
+
 static int champ_multiple(Analyse *a, Noeud *c, const char *soi) {
     const char *champ = c->texte;
     if (cour(a)->type == J_PAR_OUV) {
@@ -4738,6 +4740,19 @@ static int champ_multiple(Analyse *a, Noeud *c, const char *soi) {
         erreur(a, &a->j[a->i - 2], grym_formater("« %s » est multiple : son type est une entité, pas « %s ».",
                                                   champ, c->texte2));
         return 0;
+    }
+    if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "anciennement")) {   /* § 16.7 : sa table de liaison suit */
+        char *ancien = lire_ancien_nom(a, voir(a, 2));
+        if (!ancien) return 0;
+        if (strcmp(ancien, champ) == 0) {
+            erreur(a, voir(a, 2), grym_formater("« %s » est déjà le nom de ce champ.", ancien));
+            free(ancien);
+            return 0;
+        }
+        c->ancien = ancien;
+        avancer(a);
+        avancer(a);
+        avancer(a);
     }
     if (cour(a)->type == J_VIRGULE) {
         const Jeton *x = voir(a, 1);
@@ -4909,6 +4924,26 @@ static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const
                 a->i = k;
                 continue;
             }
+            if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "anciennement") && !c->ancien) {
+                /* « , anciennement « client » » : le champ s'appelait ainsi ; la migration le renomme (§ 16.7) */
+                if (mode != 1) {
+                    erreur(a, voir(a, 1), grym_dupliquer("Seul un champ d'entité se renomme : « un patient (patient), "
+                                                         "anciennement « client » »."));
+                    return 0;
+                }
+                char *ancien = lire_ancien_nom(a, voir(a, 2));
+                if (!ancien) return 0;
+                if (strcmp(ancien, champ) == 0) {
+                    erreur(a, voir(a, 2), grym_formater("« %s » est déjà le nom de ce champ.", ancien));
+                    free(ancien);
+                    return 0;
+                }
+                c->ancien = ancien;
+                avancer(a);
+                avancer(a);
+                avancer(a);
+                continue;
+            }
             if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "unique") && c->op != 'U') {
                 if (mode != 1) {
                     erreur(a, voir(a, 1), grym_dupliquer("Seul un champ d'entité est unique."));
@@ -4961,6 +4996,34 @@ static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const
         return 0;
     }
     return 1;
+}
+
+/* « anciennement « client » » (§ 16.7) : le nom d'avant, écrit entre guillemets, ramené à la forme d'un nom
+ * (minuscules, espaces simples) ; NULL et une erreur si le texte n'en est pas un. */
+static char *lire_ancien_nom(Analyse *a, const Jeton *t) {
+    if (t->type != J_TEXTE || !t->valeur) {
+        erreur(a, t, grym_dupliquer("Le nom d'avant s'écrit entre guillemets : « , anciennement « client » »."));
+        return NULL;
+    }
+    char *m = texte_minuscules(t->valeur);
+    Chaine c = {0};
+    int espace = 0, lettres = 0;
+    for (const unsigned char *p = (const unsigned char *)m; *p; p++) {
+        if (*p == ' ' || *p == '\t') { espace = lettres > 0; continue; }
+        if (espace) chaine_ajouter(&c, " ");
+        espace = 0;
+        char u[2] = { (char)*p, 0 };
+        chaine_ajouter(&c, u);
+        lettres++;
+    }
+    free(m);
+    char *r = chaine_rendre(&c);
+    if (!*r) {
+        free(r);
+        erreur(a, t, grym_dupliquer("Le nom d'avant est vide : « , anciennement « client » »."));
+        return NULL;
+    }
+    return r;
 }
 
 /* Nouvelle classe dans la portée (conservée d'une saisie à l'autre). */
@@ -5246,6 +5309,16 @@ static Noeud *definition_classe(Analyse *a) {
         thors = &a->j[k + 1];   /* refusé plus bas, avec un message qui dit pourquoi */
         k += 5;
     }
+    /* « Un patient, conservé, anciennement « client », a : » : l'entité s'appelait ainsi (§ 16.7) */
+    const Jeton *tancien = NULL;
+    if (tconserve && est_mot(&a->j[k], "anciennement") && a->j[k + 2].type == J_VIRGULE) {
+        tancien = &a->j[k + 1];
+        k += 3;
+    } else if (!tconserve && a->j[k].type == J_VIRGULE && est_mot(&a->j[k + 1], "anciennement")
+               && a->j[k + 3].type == J_VIRGULE) {
+        tancien = &a->j[k + 2];   /* refusé plus bas */
+        k += 4;
+    }
     int herite = est_mot(&a->j[k], "est");
     if (!herite && (!est_mot(&a->j[k], "a") || a->j[k + 1].type != J_DEUX_POINTS)) {
         a->i = k;
@@ -5253,6 +5326,7 @@ static Noeud *definition_classe(Analyse *a) {
         attendre_mot(a, k, "est", 3);
         if (!tconserve && a->j[k].type == J_VIRGULE) attendre_mot(a, k, ", conservé,", 3);
         if (tconserve && !thors) attendre_mot(a, k, "hors des fiches,", 15);   /* § 22.3 */
+        if (tconserve && !tancien) attendre_mot(a, k, "anciennement", 12);   /* § 16.7 */
         return erreur_inattendu(a, &a->j[k]);
     }
     if (article_de(&a->j[d]) != ART_AUCUN)
@@ -5260,6 +5334,9 @@ static Noeud *definition_classe(Analyse *a) {
     if (thors && !tconserve)
         return erreur(a, thors, grym_dupliquer("Seule une entité se tient hors des fiches : « Une note, conservée, hors des "
                                                "fiches, a : »."));
+    if (tancien && !tconserve)
+        return erreur(a, tancien, grym_dupliquer("Seule une entité se renomme : « Un patient, conservé, anciennement "
+                                                 "« client », a : »."));
     if (tpluriel && !tconserve)
         return erreur(a, tpluriel, grym_dupliquer("Seule une entité déclare son pluriel : « Un cheval (chevaux), conservé, a : »."));
     if (tconserve && !tconserve->synthetique && est_mot(tconserve, "conservée") != (g == GENRE_FEMININ))
@@ -5286,7 +5363,21 @@ static Noeud *definition_classe(Analyse *a) {
         free(nom);
         return NULL;
     }
+    char *ancien = NULL;
+    if (tancien) {
+        ancien = lire_ancien_nom(a, tancien);
+        if (!ancien) { free(nom); return NULL; }
+        if (strcmp(ancien, nom) == 0 || classe_de(a->portee, ancien) || aptitude_de(a->portee, ancien, NULL)) {
+            erreur(a, tancien, strcmp(ancien, nom) == 0 ? grym_formater("« %s » est déjà le nom de cette entité.", ancien)
+                               : grym_formater("« %s » est encore déclarée : un renommage suppose que l'ancien nom a "
+                                               "disparu du programme.", ancien));
+            free(ancien);
+            free(nom);
+            return NULL;
+        }
+    }
     if (complement && (tconserve || tpluriel || thors)) {
+        free(ancien);
         erreur(a, tconserve ? tconserve : tpluriel ? tpluriel : thors, grym_formater(
             "« %s » est déjà déclaré : ses champs suivent avec « %s %s a : ».", nom, g == GENRE_FEMININ ? "Une" : "Un", nom));
         free(nom);
@@ -5294,6 +5385,8 @@ static Noeud *definition_classe(Analyse *a) {
     }
     if (herite) {
         Noeud *h = heritage(a, tun, g, nom, k, tconserve != NULL, tpluriel ? tpluriel->valeur : NULL);
+        if (h) h->ancien = ancien;
+        else free(ancien);
         if (h && thors) {
             h->forme |= 64;
             Classe *ch = classe_de(a->portee, h->texte);
@@ -5303,6 +5396,7 @@ static Noeud *definition_classe(Analyse *a) {
     }
     if (complement && existante->genre != g && !tun->synthetique) {
         erreur(a, tun, grym_formater("« %s » est %s.", nom, existante->genre == GENRE_FEMININ ? "féminin" : "masculin"));
+        free(ancien);
         free(nom);
         return NULL;
     }
@@ -5313,8 +5407,27 @@ static Noeud *definition_classe(Analyse *a) {
     int hors = complement ? existante->hors_fiches : thors != NULL;
     n->forme = (g == GENRE_FEMININ ? 2 : 1) | (complement ? 4 : 0) | (conserve ? 32 : 0) | (hors ? 64 : 0);
     if (tpluriel) n->texte3 = grym_dupliquer(tpluriel->valeur);
+    n->ancien = ancien;
 
     if (!lire_champs(a, n, complement ? existante : NULL, conserve, nom)) { noeud_liberer(n); return NULL; }
+    /* un nom d'avant ne désigne aucun champ d'aujourd'hui, ni deux champs à la fois (§ 16.7) */
+    for (size_t q = 0; q < n->nb_enfants; q++) {
+        const Noeud *x = n->enfants[q];
+        if (x->type != N_NOM || !x->ancien) continue;
+        for (size_t r = 0; r < n->nb_enfants; r++) {
+            const Noeud *y = n->enfants[r];
+            if (y->type != N_NOM || r == q) continue;
+            if ((y->texte && strcmp(y->texte, x->ancien) == 0) || (r < q && y->ancien && strcmp(y->ancien, x->ancien) == 0)) {
+                erreur_a(a, x->ligne, x->colonne, y->texte && strcmp(y->texte, x->ancien) == 0
+                    ? grym_formater("« %s » est encore un champ de « %s » : un renommage suppose que l'ancien nom a disparu.",
+                                    x->ancien, nom)
+                    : grym_formater("Deux champs de « %s » s'appelaient « %s » : un seul peut reprendre ses valeurs.",
+                                    nom, x->ancien));
+                noeud_liberer(n);
+                return NULL;
+            }
+        }
+    }
     /* La classe entre dans la portée ; un complément remplit la classe déclarée par « est ». */
     Classe *c = complement ? existante : ajouter_classe(a->portee, n->texte, g, NULL);
     if (!complement) c->ligne = n->ligne;

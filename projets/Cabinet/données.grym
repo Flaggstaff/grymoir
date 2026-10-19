@@ -29,7 +29,8 @@ Un soin, conservé, a :
 Remarque : le nom est la clé : « Anne Rochat » ; deux homonymes se distinguent par une initiale ou une ville.
 Remarque : l'adresse postale en champs séparés, comme la QR-facture l'exige depuis le 21 novembre 2025 (adresse structurée) :
 Remarque : rue, numéro de maison (« 10a »), numéro postal (NPA), localité, pays ; le complément porte une case postale ou un « c/o ».
-Un patient, conservé, a :
+Remarque : « client » jusqu'au 18 octobre 2026 ; la base de cette époque se renomme d'elle-même (grammaire, § 16.7).
+Un patient, conservé, anciennement « client », a :
     un nom (texte), unique,
     un téléphone (téléphone), facultatif,
     un courriel (courriel), facultatif,
@@ -43,7 +44,7 @@ Un patient, conservé, a :
     une remarque (texte), facultative.
 
 Une séance, conservée, a :
-    un patient (patient),
+    un patient (patient), anciennement « client »,
     un soin (soin),
     une date (date),
     une heure (heure), facultative,
@@ -54,7 +55,7 @@ Une séance, conservée, a :
 
 Remarque : ce que le patient confie ne s'affiche jamais dans sa fiche, qu'on peut ouvrir devant lui.
 Une note, conservée, hors des fiches, a :
-    un patient (patient),
+    un patient (patient), anciennement « client »,
     une date (date),
     un contenu (texte).
 

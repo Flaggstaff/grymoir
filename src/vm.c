@@ -474,6 +474,10 @@ void machine_detruire(Machine *m) {
         free(m->classes[i]->types);
         free(m->classes[i]->uniques);
         free(m->classes[i]->pluriel);
+        if (m->classes[i]->anciens)
+            for (size_t k = 0; k < m->classes[i]->nb_champs; k++) free(m->classes[i]->anciens[k]);
+        free(m->classes[i]->anciens);
+        free(m->classes[i]->ancien);
         free(m->classes[i]->champs);
         free(m->classes[i]->proprietaires);
         free(m->classes[i]->aptitudes);
@@ -3695,6 +3699,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 uniques[n] = aptitudes[q]->uniques[r] & 2;   /* une aptitude n'a pas de champ unique */
                 champs[n++] = aptitudes[q]->champs[r];
             }
+        const size_t debut_propres = n;   /* les champs propres, ceux qui peuvent avoir un nom d'avant (§ 16.7) */
         for (size_t q = 0; q < cm->nb_champs && !probleme; q++) {
             types[n] = cm->types ? cm->types[q] : NULL;
             if (types[n] && strchr(types[n], '\x1c')) {   /* « texte␜mémo » : transcrit d'un champ (son) (§ 15.8) */
@@ -3760,6 +3765,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         c->conserve = cm->conserve;
         c->hors_fiches = cm->hors_fiches;
         c->pluriel = cm->pluriel ? grym_dupliquer(cm->pluriel) : NULL;
+        c->ancien = cm->ancien ? grym_dupliquer(cm->ancien) : NULL;
+        c->anciens = NULL;
+        for (size_t q = 0; cm->anciens && q < cm->nb_champs; q++) {
+            if (!cm->anciens[q]) continue;
+            if (!c->anciens) {
+                c->anciens = grym_allouer((n ? n : 1) * sizeof *c->anciens);
+                for (size_t r = 0; r < n; r++) c->anciens[r] = NULL;
+            }
+            if (debut_propres + q < n) c->anciens[debut_propres + q] = grym_dupliquer(cm->anciens[q]);
+        }
         c->champs = grym_allouer((n ? n : 1) * sizeof *c->champs);
         c->types = grym_allouer((n ? n : 1) * sizeof *c->types);
         c->departs = grym_allouer((n ? n : 1) * sizeof *c->departs);
@@ -3816,6 +3831,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         if (!m->base) m->base = base_ouvrir(m->chemin_base, &erreur);
         int pret = m->base && base_commencer(m->base, &erreur);
         if (pret) base_rapport(m->base, r);
+        if (pret) pret = base_renommer_entites(m->base, m->classes, m->nb_classes, &erreur);   /* § 16.7 */
         for (size_t i = m->nb_classes - module->nb_classes; pret && i < m->nb_classes; i++)
             pret = base_preparer(m->base, m->classes[i], &erreur);
         if (m->base) { base_rapport(m->base, NULL); base_annuler(m->base); }
@@ -3840,6 +3856,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         char *erreur = NULL;
         if (!m->base) m->base = base_ouvrir(m->chemin_base, &erreur);
         int pret = m->base && base_commencer(m->base, &erreur);
+        if (pret) pret = base_renommer_entites(m->base, m->classes, m->nb_classes, &erreur);   /* § 16.7 */
         for (size_t i = m->nb_classes - module->nb_classes; pret && i < m->nb_classes; i++)
             pret = base_preparer(m->base, m->classes[i], &erreur);
         if (!pret) {

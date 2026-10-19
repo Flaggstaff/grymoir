@@ -488,7 +488,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 63  /* versions 1 à 62 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 64  /* versions 1 à 63 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
@@ -497,7 +497,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                               sans essai (19), sans formulaire (20),
                               sans assemblage de textes (21), sans modification par formulaire (22),
                               sans fiche (23), sans fichier source des blocs (24), sans apparence des écrans (26), sans refus (27), sans règles (28),
-                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34), sans export (35), sans tableau lu (36), sans « comme » (37), sans ensembles (38), sans exemples (39), sans écart ni hasard (40), sans heure (41), sans règles ciblées (42), sans état des éléments d'écran (43), sans groupes ni valeurs permises dans les écrans (44), sans images d'écran (45), sans position libre (46), sans image calculée (47), sans bloc placé (48), sans onglets (49), sans graphiques (50), sans menus (51), sans taille de titre (52), sans indication (53), sans unité (54), sans ÉCRAN_EXIGER (55), sans étiquettes (56), sans mots de passe (57), sans les nouvelles tournures de dates (58), sans rapports (59), sans sons (60), sans transcription (61), sans sigles (62) */
+                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34), sans export (35), sans tableau lu (36), sans « comme » (37), sans ensembles (38), sans exemples (39), sans écart ni hasard (40), sans heure (41), sans règles ciblées (42), sans état des éléments d'écran (43), sans groupes ni valeurs permises dans les écrans (44), sans images d'écran (45), sans position libre (46), sans image calculée (47), sans bloc placé (48), sans onglets (49), sans graphiques (50), sans menus (51), sans taille de titre (52), sans indication (53), sans unité (54), sans ÉCRAN_EXIGER (55), sans étiquettes (56), sans mots de passe (57), sans les nouvelles tournures de dates (58), sans rapports (59), sans sons (60), sans transcription (61), sans sigles (62), sans noms d'avant (63) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 
@@ -573,6 +573,7 @@ unsigned char *module_serialiser(const Module *m, size_t *taille) {
                     | (c->hors_fiches ? 8u : 0u));
         ecrire_chaine(&o, c->parent ? c->parent : "");
         ecrire_chaine(&o, c->pluriel ? c->pluriel : "");
+        ecrire_chaine(&o, c->ancien ? c->ancien : "");   /* format 64 (§ 16.7) */
         ecrire_u32(&o, (uint32_t)c->nb_aptitudes);
         for (size_t q = 0; q < c->nb_aptitudes; q++) ecrire_chaine(&o, c->aptitudes[q]);
         ecrire_u32(&o, (uint32_t)c->nb_champs);
@@ -581,6 +582,7 @@ unsigned char *module_serialiser(const Module *m, size_t *taille) {
             ecrire_chaine(&o, c->types && c->types[q] ? c->types[q] : "");
             ecrire_u8(&o, c->uniques ? c->uniques[q] : 0u);
             ecrire_chaine(&o, c->departs && c->departs[q] ? c->departs[q] : "");
+            ecrire_chaine(&o, c->anciens && c->anciens[q] ? c->anciens[q] : "");   /* format 64 */
         }
     }
     *taille = o.n;
@@ -752,11 +754,13 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
             uint32_t fem = lire_u(&l, 1);
             char *parent = version >= 5 ? lire_chaine(&l) : grym_dupliquer("");
             char *pluriel = version >= 10 ? lire_chaine(&l) : grym_dupliquer("");
+            char *ancien = version >= 64 ? lire_chaine(&l) : grym_dupliquer("");
             uint32_t nap = version >= 7 ? lire_u(&l, 4) : 0;
-            if (!nom || !*nom || !parent || !pluriel || l.echec || fem > 15 || nap > (taille - l.pos) / 4) {
+            if (!nom || !*nom || !parent || !pluriel || !ancien || l.echec || fem > 15 || nap > (taille - l.pos) / 4) {
                 free(nom);
                 free(parent);
                 free(pluriel);
+                free(ancien);
                 return echec_module(m, erreur, grym_formater("classe %u illisible.", (unsigned)k));
             }
             ClasseModule *c = module_ajouter_classe(m, nom, (int)(fem & 1));
@@ -767,6 +771,8 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
             else free(pluriel);
             if (*parent) c->parent = parent;
             else free(parent);
+            if (*ancien) c->ancien = ancien;
+            else free(ancien);
             free(nom);
             for (uint32_t q = 0; q < nap; q++) {
                 char *ap = lire_chaine(&l);
@@ -810,6 +816,13 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
                         if (*depart) classe_depart_dernier_champ(c, depart);
                         free(depart);
                     }
+                    if (version >= 64) {
+                        char *anc = lire_chaine(&l);
+                        if (!anc) return echec_module(m, erreur, grym_formater("nom d'avant illisible (classe %u).",
+                                                                               (unsigned)k));
+                        if (*anc) classe_ancien_dernier_champ(c, anc);
+                        free(anc);
+                    }
                 }
             }
         }
@@ -850,6 +863,8 @@ ClasseModule *module_ajouter_classe(Module *m, const char *nom, int feminin) {
     c->types = NULL;
     c->uniques = NULL;
     c->departs = NULL;
+    c->anciens = NULL;
+    c->ancien = NULL;
     c->aptitude = 0;
     c->aptitudes = NULL;
     c->nb_aptitudes = 0;
@@ -869,6 +884,8 @@ void classe_ajouter_champ(ClasseModule *c, const char *champ) {
     c->uniques = agrandir(c->uniques, c->nb_champs + 1, sizeof *c->uniques);
     c->departs = agrandir(c->departs, c->nb_champs + 1, sizeof *c->departs);
     c->departs[c->nb_champs] = NULL;
+    c->anciens = agrandir(c->anciens, c->nb_champs + 1, sizeof *c->anciens);
+    c->anciens[c->nb_champs] = NULL;
     c->types[c->nb_champs] = NULL;
     c->uniques[c->nb_champs] = 0;
     c->champs[c->nb_champs++] = grym_dupliquer(champ);
@@ -878,6 +895,12 @@ void classe_depart_dernier_champ(ClasseModule *c, const char *depart) {
     if (!c->nb_champs) return;
     free(c->departs[c->nb_champs - 1]);
     c->departs[c->nb_champs - 1] = depart ? grym_dupliquer(depart) : NULL;
+}
+
+void classe_ancien_dernier_champ(ClasseModule *c, const char *ancien) {
+    if (!c->nb_champs) return;
+    free(c->anciens[c->nb_champs - 1]);
+    c->anciens[c->nb_champs - 1] = ancien ? grym_dupliquer(ancien) : NULL;
 }
 
 void classe_cascade_dernier_champ(ClasseModule *c) {
@@ -910,8 +933,11 @@ void module_detruire(Module *m) {
         for (size_t q = 0; q < m->classes[k].nb_champs; q++) {
             free(m->classes[k].types[q]);
             free(m->classes[k].departs[q]);
+            free(m->classes[k].anciens[q]);
         }
         free(m->classes[k].departs);
+        free(m->classes[k].anciens);
+        free(m->classes[k].ancien);
         free(m->classes[k].types);
         free(m->classes[k].uniques);
         for (size_t q = 0; q < m->classes[k].nb_aptitudes; q++) free(m->classes[k].aptitudes[q]);
