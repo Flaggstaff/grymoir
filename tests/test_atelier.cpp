@@ -147,6 +147,9 @@ static QString dessin(const QString &ligne, bool compacte = false) {
 }
 
 int main(int argc, char **argv) {
+    // rien ne doit attendre un humain : ni la demande du micro à macOS, ni la visionneuse d'un document
+    qputenv("GRYMOIR_ESSAIS", "1");
+    qputenv("GRYMOIR_SANS_APERCU", "1");
     QApplication app(argc, argv);
 
     // Coloration : chaque mot selon le lexeur ; les noms restent sans couleur

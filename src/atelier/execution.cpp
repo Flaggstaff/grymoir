@@ -926,6 +926,9 @@ void Execution::demarrer() { travail.start(); }
 // Ailleurs (Linux, Windows, Qt 6.4), rien à demander.
 void Execution::demander_micro() {
     setProperty("micro_demande", true);   // pour les essais : la demande est partie
+    // les essais (GRYMOIR_ESSAIS) ne demandent rien à macOS : une boîte invisible (QT_QPA_PLATFORM=offscreen) les
+    // bloquait jusqu'à ce qu'on les interrompe
+    if (!qEnvironmentVariableIsEmpty("GRYMOIR_ESSAIS")) return;
 #ifdef GRYM_AUTORISATION_MICRO
     QMicrophonePermission micro;
     switch (qApp->checkPermission(micro)) {
@@ -937,16 +940,21 @@ void Execution::demander_micro() {
     case Qt::PermissionStatus::Denied: {
         if (micro_signale) return;   // une fois par lancement
         micro_signale = true;
-        QMessageBox boite(QMessageBox::Information, QString::fromUtf8("Micro"),
-                          QString::fromUtf8("Ce programme sait enregistrer des dictées, mais le micro lui est refusé."),
-                          QMessageBox::NoButton, this);
-        boite.setInformativeText(QString::fromUtf8("Pour l'autoriser : Réglages Système, Confidentialité et sécurité, "
-                                                   "Microphone, puis cocher cette application. Elle se relance ensuite."));
-        QPushButton *ouvrir = boite.addButton(QString::fromUtf8("Ouvrir les réglages"), QMessageBox::AcceptRole);
-        boite.addButton(QString::fromUtf8("Plus tard"), QMessageBox::RejectRole);
-        boite.exec();
-        if (boite.clickedButton() == ouvrir)
-            QDesktopServices::openUrl(QUrl("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"));
+        // une boîte qui n'arrête rien : le programme continue derrière elle
+        auto *boite = new QMessageBox(QMessageBox::Information, QString::fromUtf8("Micro"),
+                                      QString::fromUtf8("Ce programme sait enregistrer des dictées, mais le micro lui est refusé."),
+                                      QMessageBox::NoButton, this);
+        boite->setAttribute(Qt::WA_DeleteOnClose);
+        boite->setInformativeText(QString::fromUtf8("Pour l'autoriser : Réglages Système, Confidentialité et sécurité, "
+                                                    "Microphone, puis cocher cette application. Elle se relance ensuite."));
+        QPushButton *ouvrir = boite->addButton(QString::fromUtf8("Ouvrir les réglages"), QMessageBox::AcceptRole);
+        boite->addButton(QString::fromUtf8("Plus tard"), QMessageBox::RejectRole);
+        connect(boite, &QMessageBox::buttonClicked, this, [ouvrir](QAbstractButton *b) {
+            if (b == ouvrir)
+                QDesktopServices::openUrl(QUrl("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"));
+        });
+        boite->setModal(false);
+        boite->show();
         return;
     }
     case Qt::PermissionStatus::Granted:

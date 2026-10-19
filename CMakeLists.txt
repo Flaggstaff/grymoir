@@ -108,4 +108,5 @@ grym_ressources_theme(test_atelier)
 # Le guide (docs/guide) : ses programmes à écrans se vérifient ici, dans une vraie fenêtre d'exécution.
 target_compile_definitions(test_atelier PRIVATE GRYM_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}")
 add_test(NAME atelier COMMAND test_atelier)
-set_tests_properties(atelier PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+# un essai bloqué échoue au bout de dix minutes au lieu d'arrêter « ./appliquer » pour de bon
+set_tests_properties(atelier PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;GRYMOIR_ESSAIS=1;GRYMOIR_SANS_APERCU=1" TIMEOUT 600)
