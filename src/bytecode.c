@@ -220,6 +220,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_SIGLES:         return "SIGLES";
     case I_ECRAN_TEXTE:    return "ÉCRAN_TEXTE";
     case I_DOCUMENT:       return "DOCUMENT";
+    case I_CODE_QR:        return "CODE_QR";
     }
     return "INCONNUE";
 }
@@ -235,7 +236,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_CONTIENT || code == I_CONVERTIR || code == I_EXPORTER || code == I_ENSEMBLE || code == I_AJOUTER
         || code == I_EXEMPLE || code == I_EXEMPLE_RATE || code == I_ECART || code == I_HASARD || code == I_HEURE
         || code == I_REGLE_UTILE || code == I_REGLE_FAITE || code == I_ECRAN_ETAT || code == I_ECRAN_IMAGE || code == I_ECRAN_EXIGER
-        || code == I_SIGLES || code == I_ECRAN_TEXTE || code == I_DOCUMENT;
+        || code == I_SIGLES || code == I_ECRAN_TEXTE || code == I_DOCUMENT || code == I_CODE_QR;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -413,6 +414,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_ECRAN_OUVRIR: case I_ECRAN_FERMER: case I_FERMER_ECRAN: case I_ECRAN_EXIGER: case I_SIGLES: besoin = 0; effet = 0; break;
             case I_ECRAN_TEXTE: besoin = 1; effet = -1; break;
             case I_DOCUMENT: besoin = op == 2 ? 1 : 0; effet = op == 2 ? -1 : op ? 0 : 1; break;
+            case I_CODE_QR: besoin = 1; effet = 0; break;
             case I_ECRIRE_CHAMP: case I_GAGNER: case I_PERDRE: case I_EXPORTER: besoin = 2; effet = -2; break;
             case I_DEMANDER: besoin = 1; effet = 0; break;   /* dépile la question, empile la réponse */
             case I_ECHOUER: break;
@@ -492,7 +494,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 66  /* versions 1 à 65 restent lisibles : un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 67  /* versions 1 à 66 restent lisibles : un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
@@ -501,7 +503,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                               sans essai (19), sans formulaire (20),
                               sans assemblage de textes (21), sans modification par formulaire (22),
                               sans fiche (23), sans fichier source des blocs (24), sans apparence des écrans (26), sans refus (27), sans règles (28),
-                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34), sans export (35), sans tableau lu (36), sans « comme » (37), sans ensembles (38), sans exemples (39), sans écart ni hasard (40), sans heure (41), sans règles ciblées (42), sans état des éléments d'écran (43), sans groupes ni valeurs permises dans les écrans (44), sans images d'écran (45), sans position libre (46), sans image calculée (47), sans bloc placé (48), sans onglets (49), sans graphiques (50), sans menus (51), sans taille de titre (52), sans indication (53), sans unité (54), sans ÉCRAN_EXIGER (55), sans étiquettes (56), sans mots de passe (57), sans les nouvelles tournures de dates (58), sans rapports (59), sans sons (60), sans transcription (61), sans sigles (62), sans noms d'avant (63), sans texte calculé (64), sans documents (65) */
+                              sans décalage en mois (29), sans arrondi (30), sans textes (31), sans moyenne ni extrêmes (32), sans valeurs permises (33), sans reste (34), sans export (35), sans tableau lu (36), sans « comme » (37), sans ensembles (38), sans exemples (39), sans écart ni hasard (40), sans heure (41), sans règles ciblées (42), sans état des éléments d'écran (43), sans groupes ni valeurs permises dans les écrans (44), sans images d'écran (45), sans position libre (46), sans image calculée (47), sans bloc placé (48), sans onglets (49), sans graphiques (50), sans menus (51), sans taille de titre (52), sans indication (53), sans unité (54), sans ÉCRAN_EXIGER (55), sans étiquettes (56), sans mots de passe (57), sans les nouvelles tournures de dates (58), sans rapports (59), sans sons (60), sans transcription (61), sans sigles (62), sans noms d'avant (63), sans texte calculé (64), sans documents (65), sans code QR (66) */
 
 typedef struct { unsigned char *d; size_t n, cap; } Octets;
 

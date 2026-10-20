@@ -15,7 +15,8 @@ Un cabinet, conservé, a :
     un numéro RCC (texte), facultatif,
     un numéro GLN (texte), facultatif,
     un numéro RME (texte), facultatif,
-    un numéro ASCA (texte), facultatif.
+    un numéro ASCA (texte), facultatif,
+    un IBAN (texte), facultatif.
 
 Remarque : un soin a son tarif ; s'il a un tarif de suivi, les séances suivantes d'un même patient le paient.
 Remarque : la durée en minutes ; le code tarifaire, celui de la méthode au Tarif 590, s'il est reconnu.
@@ -98,6 +99,11 @@ Remarque : un seul cabinet ; le programme principal le crée, sa fiche le modifi
 Chaque cabinet conservé vérifie :
     le nombre de cabinets conservés = 1,
     sinon « Il n'y a qu'un cabinet : modifie sa fiche. ».
+
+Remarque : l'IBAN du compte où les patients paient, avec ou sans espaces ; suisse ou liechtensteinois, 21 caractères (SIX, QR-facture, § 4.2.2) ; un IBAN ordinaire : un QR-IBAN (IID 30000 à 31999) exige une référence QR, que Cabinet ne fait pas.
+Chaque cabinet conservé dont l'IBAN est présent vérifie :
+    la longueur de (l'IBAN du cabinet en format technique) = 21,
+    sinon « Un IBAN suisse compte 21 caractères : CH, puis 19 chiffres et lettres. ».
 
 Remarque : un GLN (Global Location Number, GS1) a treize chiffres.
 Chaque cabinet conservé dont le numéro GLN est présent vérifie :

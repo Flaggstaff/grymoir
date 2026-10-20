@@ -3,6 +3,7 @@
  */
 #include "chemins.h"
 #include "vm.h"
+#include "qr.h"
 #include "teinte.h"
 #include "vm_interne.h"
 #include "base.h"
@@ -4892,6 +4893,24 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             free(els);
             break;
         }
+        case I_CODE_QR: {   /* « le code QR suisse de t » (2.27) : le texte, écrit comme Afficher, en image PNG */
+            Valeur v = depiler(&pile);
+            char *probleme = NULL;
+            if (v.type == V_ABSENT) probleme = grym_dupliquer("Un code QR se fait d'un texte : celui-ci est absent.");
+            unsigned char *png = NULL;
+            size_t taille = 0;
+            if (!probleme) {
+                char *t = texte_valeur(m, &v);
+                png = qr_png(t, (int)op, &taille, &probleme);
+                free(t);
+            }
+            valeur_liberer(&v);
+            if (probleme) { ok = echouer(diag, b, debut, probleme); break; }
+            Valeur img = vi_fichier(png, taille, op ? "qr-facture.png" : "code-qr.png");
+            free(png);
+            empiler(&pile, img);
+            break;
+        }
         case I_DOCUMENT: {
             if (op == 2) {   /* « Ouvrir le justificatif du frais. » (2.26) : le fichier tel qu'il est rangé */
                 Valeur v = depiler(&pile);
@@ -5221,9 +5240,48 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         case I_CONVERTIR: {   /* « le nom en majuscules », « le code en nombre » (§ 4.5) */
             static const char *const CIBLES[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
-                                                  "vrai ou faux", "heure", "toutes lettres" };
+                                                  "vrai ou faux", "heure", "toutes lettres", "format technique" };
             static const char *const NOMS[] = { "", "", "un nombre entier", "un nombre", "une date", "une année",
-                                                "vrai ou faux", "une heure", "" };
+                                                "vrai ou faux", "une heure", "", "" };
+            if (op == 9) {
+                /* « le montant en format technique » (2.27) : l'écriture qu'attend une machine (code QR suisse, XML) ;
+                 * un nombre : « 1590.00 », sans séparateur de milliers, le point décimal, les décimales gardées ; une
+                 * date : « 2026-10-20 » ; un texte : sans ses espaces (« CH44 3199 … » devient « CH443199… ») */
+                Valeur vt = depiler(&pile);
+                if (vt.type == V_ABSENT) {
+                    char *mp = message_absent(&vt);
+                    valeur_liberer(&vt);
+                    ok = echouer(diag, b, debut, mp);
+                    break;
+                }
+                char *t = texte_valeur(m, &vt);
+                Chaine c = {0};
+                if (vt.type == V_DATE && strlen(t) == 10) {
+                    char iso[11];
+                    snprintf(iso, sizeof iso, "%.4s-%.2s-%.2s", t + 6, t + 3, t);
+                    chaine_ajouter(&c, iso);
+                } else {
+                    const int nombre = vt.type == V_NOMBRE;
+                    for (const char *p = t; *p; p++) {
+                        if (*p == ' ' && !nombre) continue;
+                        if (nombre && *p == '\'') continue;
+                        if (nombre && (unsigned char)p[0] == 0xE2 && (unsigned char)p[1] == 0x88 && (unsigned char)p[2] == 0x92) {
+                            chaine_ajouter(&c, "-");   /* le signe moins typographique */
+                            p += 2;
+                            continue;
+                        }
+                        if ((unsigned char)p[0] == 0xC2 && (unsigned char)p[1] == 0xA0 && !nombre) { p++; continue; }
+                        char u[2] = { nombre && *p == ',' ? '.' : *p, 0 };
+                        chaine_ajouter(&c, u);
+                    }
+                }
+                free(t);
+                valeur_liberer(&vt);
+                char *rendu = chaine_rendre(&c);
+                empiler(&pile, vi_texte(rendu ? rendu : ""));
+                free(rendu);
+                break;
+            }
             if (op == 8) {   /* « l'échéance en toutes lettres » : « vendredi 16 octobre 2026 », « 1er » le premier (§ 14.8) */
                 Valeur vd = depiler(&pile);
                 if (vd.type != V_DATE) {

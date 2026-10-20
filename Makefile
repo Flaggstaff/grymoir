@@ -6,7 +6,7 @@ CPPFLAGS += -Ivendor/sqlite
 # dans les mêmes conditions que grym.exe, noms accentués compris (« données.grym »).
 LEXEUR    = src/lexeur.c src/date.c src/texte.c src/teinte.c $(RESSOURCES)
 ANALYSEUR = src/chemins.c src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c $(LEXEUR)
-EXECUTION = src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c $(ANALYSEUR) $(SQLITE_O)
+EXECUTION = src/qr.c vendor/qrcodegen/qrcodegen.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c $(ANALYSEUR) $(SQLITE_O)
 # SQLite embarqué (vendor/sqlite, voir PROVENANCE.md) : compilé une fois, sans les avertissements
 # de GrymoiR (ce code n'est pas le nôtre), avec les réglages de la charte.
 SQLITE_FLAGS = -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DQS=0 \
@@ -21,7 +21,7 @@ RESSOURCES = outils/windows/grym-ressources.o
 WINDRES ?= windres
 endif
 
-ENTETES   = src/teinte.h src/chemins.h src/interface.h src/base.h src/vm_interne.h src/date.h src/compact.h src/imprimeur.h src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
+ENTETES   = src/qr.h src/teinte.h src/chemins.h src/interface.h src/base.h src/vm_interne.h src/date.h src/compact.h src/imprimeur.h src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
 
 all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide
 

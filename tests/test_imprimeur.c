@@ -99,6 +99,11 @@ int main(void) {
     FIXE("Un membre, conservé, a :\n    un nom (texte).\nExporter les membres conservés, par nom décroissant, avec le nom, dans « m.csv ».\n"
          "Exporter les membres conservés dont le nom est « a » dans « n.csv ».\n");
     LITT("Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.", "Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.\n");
+    /* Le code QR, le saut de ligne, le format technique (2.27) */
+    LITT("Le c vaut « SPC » suivi d'un saut de ligne suivi de 1590 en format technique.\nLe q vaut le code QR suisse du c.",
+         "Le c vaut « SPC » suivi d'un saut de ligne suivi de 1590 en format technique.\nLe q vaut le code QR suisse du c.\n");
+    COMP("Le c vaut « SPC » suivi d'un saut de ligne.\nLe q vaut le code QR du c.",
+         "_le c << « SPC » _suivi _saut_de_ligne\n_le q << _code_qr c\n");
     /* « Ouvrir » un fichier (2.26) ; « _ouvrir_fichier » */
     LITT("Un dossier, conservé, a :\n    un scan (fichier).\nLe d vaut un nouveau dossier.\nOuvrir le scan du d.",
          "Un dossier, conservé, a :\n    un scan (fichier).\nLe d vaut un nouveau dossier.\nOuvrir le scan du d.\n");

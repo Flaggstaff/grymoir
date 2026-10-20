@@ -118,12 +118,14 @@ typedef enum {
                            les libellés les écriront en capitales (grammaire, § 2.4) */
     I_ECRAN_TEXTE,      /* opérande : élément ; dépile une valeur et la montre, écrite comme AFFICHER, à la place du
                            texte de cet élément jusqu'à la prochaine attente (le texte calculé, § 22.1) */
-    I_DOCUMENT          /* opérande : 0 le PDF, 1 l'aperçu, 2 dépile un fichier et le montre (2.26) ; l'écran ouvert est un document (2.25), lu une fois : sa
+    I_DOCUMENT,         /* opérande : 0 le PDF, 1 l'aperçu, 2 dépile un fichier et le montre (2.26) ; l'écran ouvert est un document (2.25), lu une fois : sa
                            page HTML, mise en page en PDF par l'interface ; l'écran se ferme. 0 empile le fichier PDF,
                            1 le montre (montrer_document) */
+    I_CODE_QR           /* opérande : 1 le Swiss QR Code (croix, M, version 25 au plus), 0 un code QR ; dépile un
+                           texte, empile l'image PNG de son code QR (2.27) */
 } CodeInstruction;
 
-#define I_DERNIER I_DOCUMENT
+#define I_DERNIER I_CODE_QR
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

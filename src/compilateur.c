@@ -339,6 +339,10 @@ static void expression(Compilation *c, const Noeud *n) {
     case N_CHERCHER:
         chercher(c, n);
         return;
+    case N_CODE_QR:   /* « le code QR suisse de t » : le texte, puis son image PNG (2.27) */
+        expression(c, n->enfants[0]);
+        emettre(c, I_CODE_QR, n->forme, n->ligne, n->colonne);
+        return;
     case N_DOCUMENT:   /* « le document de quittance » : son PDF, un fichier (2.25) */
         document(c, n, 0);
         return;

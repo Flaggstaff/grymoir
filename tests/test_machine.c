@@ -3883,6 +3883,15 @@ int main(void) {
     }
 
     essais_utiliser();
+    /* Le code QR, le saut de ligne, le format technique (2.27) */
+    PROG("Le q vaut le code QR de « https://nicolas-seydoux.ch ».\nAfficher le format du q.", "PNG");
+    PROG("Le q vaut le code QR suisse de « SPC ».\nAfficher le format du q.", "PNG");
+    PROG("Le t vaut « a » suivi d'un saut de ligne suivi de « b ».\nAfficher la longueur du t.", "3");
+    PROG("Afficher 1590 en format technique.\nAfficher 260,00 en format technique.\nAfficher (0 − 12,30) en format technique.",
+         "1590\n260.00\n-12.30");
+    PROG("Afficher 20.10.2026 en format technique.\nAfficher « CH52 0483 5012 3456 7100 0 » en format technique.",
+         "2026-10-20\nCH5204835012345671000");
+    PROG("Le n vaut absent.\nAfficher le code QR de n.", "~Un code QR se fait d'un texte : celui-ci est absent.");
     /* « Ouvrir » un fichier (2.26) : rien d'autre ; un fichier absent ; la console ne montre rien */
     PROG("Ouvrir 3.", "~« Ouvrir » montre un fichier : « Ouvrir le justificatif du frais. »");
     PROG("Le n vaut 3.\nOuvrir le n.", "~« Ouvrir » montre un fichier.");

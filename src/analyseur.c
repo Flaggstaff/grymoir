@@ -1436,7 +1436,7 @@ static Noeud *nom_expression(Analyse *a) {
             && (est_mot(&a->j[fin + 1], "un") || est_mot(&a->j[fin + 1], "une"))) arret = 1;   /* § 13.8 */
         /* « vrai » clôt la suite des mots du nom : il se regarde au-delà de f (« t en vrai ou faux ») */
         if (fin < f && fin + 1 < a->n && est_mot(&a->j[fin], "en")) {   /* « nom en majuscules » (§ 4.5) */
-            static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai", "heure", "toutes" };
+            static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai", "heure", "toutes", "format" };
             for (size_t q = 0; q < sizeof C / sizeof *C; q++) if (est_mot(&a->j[fin + 1], C[q])) arret = 1;
         }
         if (!s || (fin < f && s->sorte != S_CALCUL && !arret)) {
@@ -2012,6 +2012,36 @@ static EcranConnu *document_nomme(Analyse *a, size_t d, size_t *f, char **nom);
 
 static Noeud *base(Analyse *a) {
     Jeton *t = cour(a);
+    {
+        /* « le code QR de t », « le code QR suisse de t », « l'image du code QR suisse de t » (2.27) : l'image PNG du
+         * code QR d'un texte */
+        const int m0 = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : -1;
+        if (m0 >= 0 && est_mot(voir(a, m0), "code") && est_mot(voir(a, m0 + 1), "qr")) {
+            const int s0 = est_mot(voir(a, m0 + 2), "suisse");
+            const Jeton *td = voir(a, m0 + 2 + s0);
+            if (de_ou_d(td) || est_mot(td, "du")) {
+                Noeud *n = noeud_creer(N_CODE_QR, t->ligne, t->colonne, t->debut);
+                n->forme = s0;
+                a->article_force = ART_AUCUN;
+                for (int k = 0; k < m0 + 3 + s0; k++) avancer(a);
+                if (est_mot(td, "du")) { a->article_force = ART_LE; a->jeton_force = td; }
+                Noeud *x = expression(a);
+                a->article_force = ART_AUCUN;
+                if (!x) { noeud_liberer(n); return NULL; }
+                noeud_ajouter(n, x);
+                n->fin = x->fin;
+                return n;
+            }
+        }
+    }
+    if (est_mot(t, "un") && est_mot(voir(a, 1), "saut") && est_mot(voir(a, 2), "de") && est_mot(voir(a, 3), "ligne")) {
+        /* « un saut de ligne » (2.27) : le texte d'un retour à la ligne, pour les lignes d'un code QR suisse */
+        Noeud *n = noeud_creer(N_TEXTE, t->ligne, t->colonne, t->debut);
+        n->texte = grym_dupliquer("\n");
+        a->i += 4;
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
     if ((est_mot(t, "le") || a->article_force == ART_LE) && est_mot(voir(a, est_mot(t, "le") ? 1 : 0), "document")) {
         /* « le document de quittance » (2.25) : un fichier, le PDF du document déclaré, calculé à cet instant */
         const size_t d = a->i + (est_mot(t, "le") ? 2 : 1);
@@ -2502,7 +2532,8 @@ static Noeud *base(Analyse *a) {
 /* « le nom en majuscules », « le code en nombre » (§ 4.5) : après une valeur, se lie comme elle. Les cibles, la plus
  * longue d'abord ; l'index sert d'opérande à l'instruction CONVERTIR. */
 static const char *const CONVERSIONS[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
-                                           "vrai ou faux", "heure", "toutes lettres" };   /* la dernière : une date (§ 14.8) */
+                                           "vrai ou faux", "heure", "toutes lettres",   /* une date (§ 14.8) */
+                                           "format technique" };   /* pour une machine : QR, XML (2.27) */
 #define NB_CONVERSIONS (sizeof CONVERSIONS / sizeof *CONVERSIONS)
 
 static Noeud *conversion(Analyse *a, Noeud *g) {

@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.87 de la spécification, révisée le 19 octobre 2026.
+Version 1.88 de la spécification, révisée le 20 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -136,6 +136,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 93 | `SIGLES` | constante texte : les sigles du programme, en minuscules, séparés par une espace | les retient pour les libellés : `capitale()` écrit ces mots en capitales (« Numéro RCC ») ; émise en tête du bloc principal, seulement si le programme a des sigles ; un bytecode relu sans sa source les retrouve ainsi (grammaire, § 2.4) |
 | 94 | `ÉCRAN_TEXTE` | élément | dépile une valeur, l'écrit comme `AFFICHER` et la donne pour texte à cet élément de l'écran ouvert ; avant chaque attente, `ÉCRAN_ATTENDRE` passe chaque texte calculé à l'interface (`ecran_texte`) (grammaire 2.24, § 22.1) |
 | 95 | `DOCUMENT` | 0 le PDF, 1 l'aperçu, 2 un fichier (2.26) : dépilé, passé à `montrer_document` avec son nom | l'écran ouvert est un document (son nom commence par « document ») : `ÉCRAN_OUVRIR` ne l'a pas montré, ses listes ont gardé leurs cellules ; sa page HTML A4 est mise en page par `rendre_pdf`, l'écran se ferme ; 0 empile le fichier PDF, 1 le passe à `montrer_document` (grammaire 2.25, § 22.15) |
+| 96 | `CODE_QR` | 1 suisse, 0 simple | dépile une valeur, l'écrit comme `AFFICHER` et empile l'image PNG de son code QR (`src/qr.c`, codage de vendor/qrcodegen) ; suisse : correction M, version 25 au plus, croix au centre (grammaire 2.27) |
 
 ### 3.1 Boucles et Selon
 
@@ -459,3 +460,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.85 | 2026-10-19 | Instruction `ÉCRAN_TEXTE` (94) ; interface : `ecran_texte`, en dernier champ ; format version 65 |
 | 1.86 | 2026-10-19 | Instruction `DOCUMENT` (95) ; interface : `montrer_document`, en dernier champ ; format version 66 |
 | 1.87 | 2026-10-19 | `DOCUMENT` 2 : montrer un fichier ; `montrer_document` reçoit le nom du fichier |
+| 1.88 | 2026-10-20 | Instruction `CODE_QR` (96) ; `CONVERTIR` 9 : le format technique ; format version 67 |

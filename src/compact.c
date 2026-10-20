@@ -499,7 +499,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
         if (t->type == J_MOT_CLE && strncmp(t->valeur, "en_", 3) == 0) {
             /* nom _en_majuscules → nom en majuscules ; code _en_nombre_entier → code en nombre entier (§ 4.5) */
             static const char *const C[] = { "majuscules", "minuscules", "nombre_entier", "nombre", "date", "année",
-                                             "vrai_ou_faux", "heure", "toutes_lettres" };
+                                             "vrai_ou_faux", "heure", "toutes_lettres", "format_technique" };
             size_t q = 0;
             while (q < sizeof C / sizeof *C && strcmp(t->valeur + 3, C[q]) != 0) q++;
             if (q == sizeof C / sizeof *C) {
@@ -531,6 +531,21 @@ static void expression(Reecriture *r, size_t d, size_t f) {
         if (est_cle(t, "fichier")) {                /* _fichier « a.jpg » → le fichier « a.jpg » */
             mot(r, "le", t);
             mot(r, "fichier", t);
+            continue;
+        }
+        if (est_cle(t, "saut_de_ligne")) {           /* _saut_de_ligne → un saut de ligne (2.27) */
+            mot(r, "un", t);
+            mot(r, "saut", t);
+            mot(r, "de", t);
+            mot(r, "ligne", t);
+            continue;
+        }
+        if (est_cle(t, "code_qr") || est_cle(t, "code_qr_suisse")) {   /* _code_qr_suisse t → le code QR suisse de t (2.27) */
+            mot(r, "le", t);
+            mot(r, "code", t);
+            mot(r, "qr", t);
+            if (est_cle(t, "code_qr_suisse")) mot(r, "suisse", t);
+            mot(r, "de", t);
             continue;
         }
         if (est_cle(t, "document")) {                /* _document de_quittance → le document de quittance (2.25) */

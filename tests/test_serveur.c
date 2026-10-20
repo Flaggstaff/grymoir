@@ -1430,9 +1430,9 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
 #define CAB_ZONES "z2=Nicolas+Seydoux&z3=Rue+X&z4=1&z5=&z6=1700&z7=Fribourg&z8=Suisse&z11=&z12=&z13=Z123456&z15=&z16="
         REQUETES(evenement("q=1&clic=7"), get("/"), evenement("q=2&clic=0"), get("/"),
-                 evenement("q=3&" CAB_ZONES "&z14=760100000000&clic=20"), get("/"),
-                 evenement("q=4&" CAB_ZONES "&z14=7601000000000&clic=20"), get("/"),
-                 evenement("q=5&clic=0"), get("/"), evenement("q=6&clic=21"), evenement("q=7&clic=1"), get("/"));
+                 evenement("q=3&" CAB_ZONES "&z14=760100000000&clic=21"), get("/"),
+                 evenement("q=4&" CAB_ZONES "&z14=7601000000000&clic=21"), get("/"),
+                 evenement("q=5&clic=0"), get("/"), evenement("q=6&clic=22"), evenement("q=7&clic=1"), get("/"));
 #undef CAB_ZONES
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet3.grymd", &sc);
         CONTIENT(sc.reponses[1], "<h1>Configuration</h1>");   /* le cabinet, les soins, les rubriques */
@@ -1528,6 +1528,19 @@ int main(void) {
         CONTIENT(sc.reponses[8], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
         liberer(&sc);
         remove("_essai_cabinet12.grymd");
+    }
+
+    {   /* Cabinet : l'IBAN des QR-factures, avec ou sans espaces ; vingt et un caractères (2.27) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=7"), evenement("q=2&clic=0"), get("/"),
+                 evenement("q=3&z17=CH52+0483+5012&clic=21"), get("/"),
+                 evenement("q=4&z17=CH52+0483+5012+3456+7100+0&clic=21"), get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet13.grymd", &sc);
+        CONTIENT(sc.reponses[2], "value=\"CH52 0483 5012 3456 7100 0\"");   /* celui des données d'essai */
+        CONTIENT(sc.reponses[4], "Un IBAN suisse compte 21 caractères : CH, puis 19 chiffres et lettres.");
+        CONTIENT(sc.reponses[6], "<h1>Configuration</h1>");   /* accepté, l'écran s'est fermé */
+        liberer(&sc);
+        remove("_essai_cabinet13.grymd");
     }
 
     {   /* Le texte calculé (2.24) : relu à chaque attente, après chaque événement */

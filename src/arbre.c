@@ -177,6 +177,11 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         }
         chaine_ajouter(c, ")");
         return;
+    case N_CODE_QR:   /* (code-qr t) ou (code-qr-suisse t) */
+        chaine_ajouter(c, n->forme ? "(code-qr-suisse " : "(code-qr ");
+        if (n->nb_enfants) decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_DOCUMENT:   /* (document « document de quittance ») */
         chaine_ajouter(c, "(document « ");
         chaine_ajouter(c, n->texte ? n->texte : "");

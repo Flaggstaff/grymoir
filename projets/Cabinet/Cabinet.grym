@@ -172,7 +172,15 @@ Le document de rappel, « Rappel », montre :
     la liste des séances conservées dont le patient = la personne du rappel et le paiement = « à payer » et le statut = « faite », par date, avec la date, le nom du soin, la durée et le prix,
     le texte "Total dû : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont le patient = la personne du rappel et le paiement = « à payer » et le statut = « faite » à 0,01,
     le texte « Merci de le régler dans les trente jours, en espèces, par Twint ou par virement. Si votre paiement a croisé ce rappel, ne tenez pas compte de ce courrier. »,
-    le texte « Avec mes salutations, Nicolas Seydoux ».
+    le texte « Avec mes salutations, Nicolas Seydoux »,
+    le texte le titre de paiement du cabinet conservé, en petites capitales,
+    côte à côte :
+        l'image du code QR suisse de la charge QR du cabinet conservé et de la personne du rappel et du dû de la personne du rappel, large de 174,
+        l'un sous l'autre :
+            le texte la ligne de compte du cabinet conservé,
+            le texte la ligne de titulaire du cabinet conservé,
+            le texte le montant de paiement du cabinet conservé et du dû de la personne du rappel,
+            le texte la ligne de payeur du cabinet conservé et de la personne du rappel.
 
 Remarque : le journal de l'année, pour la déclaration d'impôts : les recettes encaissées, les frais, le résultat.
 Le document de journal, « Journal des recettes et des frais », montre :
@@ -294,6 +302,7 @@ L'écran du cabinet, « Le cabinet », montre :
             un numéro GLN (texte), facultatif, avec l'indication « 13 chiffres »,
             un numéro RME (texte), facultatif,
             un numéro ASCA (texte), facultatif,
+            un IBAN (texte), facultatif, avec l'indication « Le compte des QR-factures, un IBAN (pas un QR-IBAN) : CH52 0483 5012 3456 7100 0 »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer ».
@@ -737,6 +746,7 @@ Quand on ouvre l'écran du cabinet :
     Le numéro GLN de l'écran devient le numéro GLN du c.
     Le numéro RME de l'écran devient le numéro RME du c.
     Le numéro ASCA de l'écran devient le numéro ASCA du c.
+    L'IBAN de l'écran devient l'IBAN du c.
 
 Quand on clique sur « Enregistrer » dans l'écran du cabinet :
     Le c vaut le cabinet conservé.
@@ -753,6 +763,7 @@ Quand on clique sur « Enregistrer » dans l'écran du cabinet :
     Le numéro GLN du c devient le numéro GLN de l'écran.
     Le numéro RME du c devient le numéro RME de l'écran.
     Le numéro ASCA du c devient le numéro ASCA de l'écran.
+    L'IBAN du c devient l'IBAN de l'écran.
     Fermer l'écran.
 
 Quand on clique sur « Fermer » dans l'écran du cabinet :

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.26 de la spécification, révisée le 19 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.27 de la spécification, révisée le 20 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2084,6 +2084,25 @@ L'exemplaire de q devient le document de reçu.
 - Forme compacte : `_document de_reçu « Reçu »` … `_fin`, `_ouvrir _document de_reçu`, `_document de_reçu` (la valeur).
 - **Ouvrir un fichier** *(2.26)* : `Ouvrir le justificatif du frais.`, `Ouvrir l'exemplaire de la quittance.` montre un fichier tel qu'il est rangé, sous son nom d'origine (« ticket.jpg »), dans la visionneuse du système. Autre chose qu'un fichier : « « Ouvrir » montre un fichier. » ; un fichier absent : « Rien à ouvrir : ce fichier est absent. ». En console et dans le navigateur : « Un fichier s'ouvre dans l'atelier ou dans une application fabriquée. ». Forme compacte : `_ouvrir_fichier frais.justificatif`.
 
+### 22.16 Code QR *(2.27, implémenté le 20 octobre 2026)*
+
+```
+Le q vaut le code QR de « https://nicolas-seydoux.ch ».
+Le c vaut « SPC » suivi d'un saut de ligne suivi de « 0200 ».
+Le paiement vaut le code QR suisse du c.
+Afficher 1590 en format technique.                         →  1590
+Afficher (l'arrondi de 260 à 0,01) en format technique.    →  260.00
+Afficher 20.10.2026 en format technique.                   →  2026-10-20
+Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH5204835012345671000
+```
+
+- `le code QR de t` est une image PNG en noir et blanc, le code QR (ISO 18004) du texte `t` écrit comme `Afficher` l'écrit, en UTF-8 ; correction d'erreur M ou mieux, une zone calme de quatre modules. Elle s'affiche, s'enregistre, se range dans un champ `(image)` et se montre dans un écran ou un document (`l'image du q`).
+- `le code QR suisse de t` est le Swiss QR Code des QR-factures, selon les *Swiss Implementation Guidelines for the QR-bill* de SIX (version 2.4 du 24.02.2026, § 6) : correction d'erreur M exactement, version 25 au plus (997 caractères), la croix suisse au centre, sans zone calme dans l'image (le document la laisse autour). Dans un document, `, large de 174` lui donne ses 46 mm ; il y est dessiné en traits, net à toute taille. Le texte, ses 31 lignes, est celui du tableau 8 de SIX : c'est au programme de l'écrire (Cabinet, `actions.grym`). La croix suit les proportions du drapeau suisse, pas le fichier officiel de SIX.
+- Trop long : « Un code QR suisse contient au plus 997 caractères (SIX, Implementation Guidelines, § 6.2). » ; absent : « Un code QR se fait d'un texte : celui-ci est absent. ».
+- `un saut de ligne` est le texte d'un retour à la ligne : il sépare les lignes d'un code QR suisse.
+- `x en format technique` écrit une valeur comme une machine l'attend (code QR, XML) : un nombre sans séparateur de milliers, avec le point décimal et ses décimales (`1590.00`) ; une date en `2026-10-20` ; un texte sans ses espaces. Il se lie à la valeur juste avant lui : `(l'arrondi de x à 0,01) en format technique`.
+- Forme compacte : `_code_qr t`, `_code_qr_suisse t`, `_saut_de_ligne`, `x _en_format_technique`.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -2215,3 +2234,4 @@ L'exemplaire de q devient le document de reçu.
 | 2.24 | 2026-10-19 | § 22.1 : le texte calculé, `le texte` suivi d'une valeur, relu avant chaque attente (instruction `ÉCRAN_TEXTE`) ; compacte `_texte_calculé` |
 | 2.25 | 2026-10-19 | Nouveau § 22.15 : les documents, `Le document … montre :`, la valeur `le document de …` (un PDF), `Ouvrir le document … .` |
 | 2.26 | 2026-10-19 | § 22.15 : `Ouvrir` un fichier (`Ouvrir le justificatif du frais.`), montré par le système ; opérande 2 de `DOCUMENT` |
+| 2.27 | 2026-10-20 | Nouveau § 22.16 : `le code QR de t`, `le code QR suisse de t` (SIX IG 2.4), `un saut de ligne`, `x en format technique` |

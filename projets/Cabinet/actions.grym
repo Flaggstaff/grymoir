@@ -62,3 +62,51 @@ Pour classer un nom :
     La r vaut une nouvelle rubrique :
         Le nom vaut nom.
     Conserver la r.
+
+Remarque : la QR-facture d'un rappel (SIX, Implementation Guidelines QR-bill 2.4, § 4.2.2) : les 31 lignes du Swiss QR Code,
+Remarque : adresses structurées (type S), sans créancier final, sans référence (NON), le message « Rappel » ; rien sans IBAN.
+Le dû d'une personne :
+    Rendre la somme des prix des séances conservées dont le patient = personne et le paiement = « à payer » et le statut = « faite ».
+
+La ligne QR d'une valeur :
+    Si valeur est absente, rendre « ».
+    Rendre valeur.
+
+La charge QR d'un cabinet et d'un patient et d'un montant :
+    Si l'IBAN du cabinet est absent, rendre « ».
+    Le saut vaut un saut de ligne.
+    Le d vaut « SPC » suivi du saut suivi de « 0200 » suivi du saut suivi de « 1 » suivi du saut.
+    Le d devient d suivi de l'IBAN du cabinet en format technique suivi du saut.
+    Le d devient d suivi de « S » suivi du saut suivi du nom du cabinet suivi du saut.
+    Le d devient d suivi de la ligne QR de la rue du cabinet suivi du saut suivi de la ligne QR du numéro de maison du cabinet suivi du saut.
+    Le d devient d suivi de la ligne QR du numéro postal du cabinet suivi du saut suivi de la ligne QR de la localité du cabinet suivi du saut.
+    Le d devient d suivi de « CH » suivi du saut.
+    Le d devient d suivi du saut suivi du saut suivi du saut suivi du saut suivi du saut suivi du saut suivi du saut.
+    Le d devient d suivi de (l'arrondi de montant à 0,01) en format technique suivi du saut suivi de « CHF » suivi du saut.
+    Le d devient d suivi de « S » suivi du saut suivi du nom du patient suivi du saut.
+    Le d devient d suivi de la ligne QR de la rue du patient suivi du saut suivi de la ligne QR du numéro de maison du patient suivi du saut.
+    Le d devient d suivi de la ligne QR du numéro postal du patient suivi du saut suivi de la ligne QR de la localité du patient suivi du saut.
+    Le d devient d suivi de « CH » suivi du saut.
+    Le d devient d suivi de « NON » suivi du saut suivi du saut suivi de « Rappel » suivi du saut suivi de « EPD ».
+    Rendre d.
+
+Remarque : les textes de la section paiement, vides sans IBAN.
+Le titre de paiement d'un cabinet :
+    Si l'IBAN du cabinet est absent, rendre « ».
+    Rendre « Section paiement ».
+
+La ligne de compte d'un cabinet :
+    Si l'IBAN du cabinet est absent, rendre « ».
+    Rendre "Compte / Payable à : " suivi de l'IBAN du cabinet.
+
+La ligne de titulaire d'un cabinet :
+    Si l'IBAN du cabinet est absent, rendre « ».
+    Rendre le nom du cabinet suivi de ", " suivi de la ville professionnelle du cabinet.
+
+Le montant de paiement d'un cabinet et d'un montant :
+    Si l'IBAN du cabinet est absent, rendre « ».
+    Rendre "Monnaie CHF, montant " suivi de (l'arrondi de montant à 0,01) en format technique.
+
+La ligne de payeur d'un cabinet et d'un patient :
+    Si l'IBAN du cabinet est absent, rendre « ».
+    Rendre "Payable par : " suivi du nom du patient suivi de ", " suivi de la ville du patient.

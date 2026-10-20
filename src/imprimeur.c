@@ -486,7 +486,13 @@ static void expression(Impression *im, const Noeud *n) {
         nom_avec_article(im, n);
         return;
     case N_TEXTE:
+        if (strcmp(n->texte, "\n") == 0) { aj(im, im->compact ? "_saut_de_ligne" : "un saut de ligne"); return; }   /* 2.27 */
         ecrire_texte(im, n->texte);
+        return;
+    case N_CODE_QR:   /* « le code QR suisse de t » ; « _code_qr_suisse t » (2.27) */
+        if (im->compact) { aj(im, n->forme ? "_code_qr_suisse " : "_code_qr "); expression(im, n->enfants[0]); return; }
+        aj(im, n->forme ? "le code QR suisse " : "le code QR ");
+        de_expression(im, n->enfants[0]);   /* « du contenu », « de « … » » */
         return;
     case N_BOOLEEN:
         aj(im, im->compact ? (strcmp(n->texte, "vrai") == 0 ? "_vrai" : "_faux") : n->texte);
