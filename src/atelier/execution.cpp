@@ -855,6 +855,12 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         }
     });
     connect(&travail, &Travail::ecran_texte, this, [this](int k, const QString &t) {   // le texte calculé (2.24)
+        if (k < 0) {   // le titre calculé (2.33) : le titre de l'écran montré, et celui de la fenêtre
+            if (vue_ecran)
+                if (auto *l = vue_ecran->findChild<QLabel *>("titre-ecran")) l->setText(t);
+            setWindowTitle(t);
+            return;
+        }
         if (auto *l = qobject_cast<QLabel *>(controles_ecran.value(k))) l->setText(t);
     });
     connect(&travail, &Travail::ecran_image, this, [this](int k, const QByteArray &o) {   // l'image calculée (§ 22.8)

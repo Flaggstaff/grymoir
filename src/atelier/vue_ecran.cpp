@@ -253,6 +253,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     pile->setContentsMargins(marge, marge, marge, marge);
     pile->setSpacing(t.mesure("l-un-sous-l-autre"));
     r.titre = new QLabel(titre);
+    r.titre->setObjectName("titre-ecran");   // un titre calculé (2.33) le retrouve par ce nom
     r.titre->setTextFormat(Qt::PlainText);
     r.titre->setProperty("niveau", "ecran");   // la taille et la graisse viennent de la feuille du thème
     // sa hauteur naturelle, jamais plus : extensible, il prenait toute la hauteur libre de l'aperçu et s'y centrait

@@ -398,6 +398,7 @@ void machine_dossier_ecriture(Machine *m, const char *dossier) {
 /* L'écran ouvert (grammaire, § 22). */
 typedef struct EcranVM {
     char *titre;
+    int titre_calcule;  /* 2.33 : le titre vient d'une expression, relue à chaque tour (ÉCRAN_TEXTE 0xFFFF) */
     int taille_titre;   /* −1 en petit, 1 en grand, 0 celle du thème (§ 22.5) */
     size_t n;
     ElementEcran *elements;
@@ -5103,6 +5104,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_ECRAN_TEXTE: {
             /* « le texte « Reçu de » suivi du nom du patient de la quittance » (§ 22.1, 2.24) : relu à chaque tour */
             Valeur v = depiler(&pile);
+            if (m->ecran && op == 0xFFFF) {   /* le titre calculé (2.33) */
+                char *t = texte_valeur(m, &v);
+                valeur_liberer(&v);
+                free(m->ecran->titre);
+                m->ecran->titre = t;
+                m->ecran->titre_calcule = 1;
+                break;
+            }
             if (!m->ecran || op >= m->ecran->n) {
                 valeur_liberer(&v);
                 ok = echouer(diag, b, debut, grym_dupliquer("Texte d'écran invalide."));
@@ -5183,6 +5192,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (!probleme && m->ecran && m->iface.ecran_etats) m->iface.ecran_etats(m->iface.contexte, m->ecran->etats, m->ecran->n);
             for (size_t k = 0; !probleme && m->ecran && m->iface.ecran_texte && k < m->ecran->n; k++)   /* 2.24 */
                 if (m->ecran->calcules[k]) m->iface.ecran_texte(m->iface.contexte, k, m->ecran->textes[k]);
+            if (!probleme && m->ecran && m->ecran->titre_calcule && m->iface.ecran_texte)   /* le titre calculé (2.33) */
+                m->iface.ecran_texte(m->iface.contexte, (size_t)-1, m->ecran->titre ? m->ecran->titre : "");
             for (size_t k = 0; !probleme && m->ecran && m->iface.ecran_image && k < m->ecran->n; k++)   /* § 22.8 */
                 if (m->ecran->elements[k].calculee)
                     m->iface.ecran_image(m->iface.contexte, k, m->ecran->elements[k].octets, m->ecran->elements[k].taille,
@@ -5899,6 +5910,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 free(illisible);
             }
             char *probleme = NULL;
+            if (vl.type == V_FICHIER && !vl.fichier->format) {   /* 2.33 : une image lue en base, ses octets pas encore lus */
+                char *illisible = NULL;
+                const unsigned char *o = octets_du_fichier(vl.fichier, &illisible);
+                if (o) vl.fichier->format = format_image(o, vl.fichier->taille);
+                free(illisible);
+            }
             const char *format_logo = vl.type == V_FICHIER ? vl.fichier->format : NULL;
             if (couleur < -1 || couleur > 4) probleme = grym_formater("Couleur inconnue : %d.", couleur);
             if (!probleme && vl.type == V_FICHIER && !format_logo) {

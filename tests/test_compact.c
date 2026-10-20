@@ -163,6 +163,10 @@ int main(void) {
     /* « Ouvrir » un fichier (2.26) */
     ALLER_RETOUR("_ouvrir_fichier _fichier « x.pdf »\n", "Ouvrir le fichier « x.pdf ».\n");
     /* Documents (2.25) */
+    ALLER_RETOUR("_classe _un r _conservé\n    _un logo (image) _facultatif\n_fin\n_écrans _couleur _verte _logo ((_le r _conservé).logo)\n"
+                 "_écran x _titre (« A » _suivi (_le r _conservé).logo) _en_grand\n    _texte « OK »\n_fin\n(_le r _conservé).logo << _absent\n",
+                 "Un r, conservé, a :\n    un logo (image), facultatif.\nLes écrans ont la couleur verte et le logo (le logo du r conservé).\n"
+                 "L'écran x, (« A » suivi du logo du r conservé) en grand, montre :\n    le texte « OK ».\nLe logo du r conservé devient absent.\n");   /* 2.33 */
     ALLER_RETOUR("_écran x\n    _un dossier (texte) _facultatif _choix_dossier\n_fin\n",
                  "L'écran x montre :\n    un dossier (texte), facultatif, avec le choix d'un dossier.\n");   /* 2.32 */
     ALLER_RETOUR("_sauvegarder _dans « c.coffre » _mot_de_passe « m »\n_restaurer _depuis « c.coffre » _mot_de_passe « m »\n",

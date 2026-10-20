@@ -239,6 +239,9 @@ static int argument_simple(const Noeud *n) {
 /* « à » ou « de » suivi d'une expression, avec contraction et élision (§ 5.2). */
 static void preposition(Impression *im, const char *prep, const Noeud *x) {
     int a = strcmp(prep, "à") == 0;
+    /* « du réglage conservé », pas « de (le réglage conservé) » : les parenthèses de la forme compacte
+     * (`(_le réglage _conservé).logo`) ne servent plus en forme littéraire autour d'un objet cherché (2.33) */
+    if (!im->compact && x->type == N_GROUPE && x->nb_enfants == 1 && x->enfants[0]->type == N_CHERCHER) x = x->enfants[0];
     if (x->type == N_FICHIER && !im->compact) {   /* « du fichier « a.jpg » » */
         aj(im, a ? "au fichier " : "du fichier ");
         expression(im, x->enfants[0]);
@@ -1280,14 +1283,16 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             aj(im, doc ? "_document " : "_écran ");
             ecrire_nom(im, nom_e, 0);
             if (n->texte2) { aj(im, " "); ecrire_texte(im, n->texte2); }
+            if (n->titre_calcule) { aj(im, " _titre "); expression(im, n->titre_calcule); }   /* 2.33 */
             if (n->taille_titre) aj(im, n->taille_titre > 0 ? " _en_grand" : " _en_petit");   /* § 22.5 */
             aj(im, "\n");
         } else {
             aj(im, doc ? "Le document " : "L'écran ");
             aj(im, nom_e);
-            if (n->texte2 || n->taille_titre) {   /* « , « Recherche » en grand, » (§ 22.1, § 22.5) */
+            if (n->texte2 || n->taille_titre || n->titre_calcule) {   /* « , « Recherche » en grand, » (§ 22.1, § 22.5) */
                 aj(im, ",");
                 if (n->texte2) { aj(im, " "); ecrire_texte(im, n->texte2); }
+                if (n->titre_calcule) { aj(im, " "); expression(im, n->titre_calcule); }   /* « (…) », un titre calculé (2.33) */
                 if (n->taille_titre) aj(im, n->taille_titre > 0 ? " en grand" : " en petit");
                 aj(im, ",");
             }
@@ -1678,20 +1683,22 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         aj(im, c ? "_écrans" : "Les écrans ont");
         /* couleur, fond, police, logo (2.13) : des virgules entre eux, « et » devant le dernier */
         const char *valeurs[5] = { n->texte2, n->texte3, apparence_reglage(n, 0), n->texte, apparence_reglage(n, 1) };
+        const Noeud *calcules[5] = { NULL, NULL, NULL, apparence_expression(n, 'L'), apparence_expression(n, 'S') };   /* 2.33 */
         const int nommee = n->entier >= 0 && n->entier < 5;
         int total = nommee || valeurs[0];
-        for (int r = 1; r < 5; r++) total += valeurs[r] != NULL;
+        for (int r = 1; r < 5; r++) total += valeurs[r] != NULL || calcules[r] != NULL;
         static const char *const LIT[] = { "la couleur ", "le fond ", "la police ", "le logo ", "la signature " };
         static const char *const CMP[] = { " _couleur ", " _fond ", " _police ", " _logo ", " _signature " };
         int faits = 0;
         for (int r = 0; r < 5; r++) {
-            if (r == 0 ? !(nommee || valeurs[0]) : !valeurs[r]) continue;
+            if (r == 0 ? !(nommee || valeurs[0]) : !valeurs[r] && !calcules[r]) continue;
             if (c) aj(im, CMP[r]);
             else {
                 aj(im, faits == 0 ? " " : faits + 1 == total ? " et " : ", ");
                 aj(im, LIT[r]);
             }
             if (r == 0 && nommee) { if (c) aj(im, "_"); aj(im, C[n->entier]); }
+            else if (calcules[r]) expression(im, calcules[r]);   /* « (le logo du cabinet conservé) » */
             else ecrire_texte(im, valeurs[r]);
             faits++;
         }

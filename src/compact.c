@@ -1239,16 +1239,21 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         size_t fin_nom = f;
         const Jeton *titre = NULL, *taille = NULL;
         if (f > d + 2 && (est_cle(&r->e[f - 1], "en_grand") || est_cle(&r->e[f - 1], "en_petit"))) { taille = &r->e[f - 1]; fin_nom = f - 1; }
-        if (fin_nom > d + 2 && r->e[fin_nom - 1].type == J_TEXTE) { titre = &r->e[fin_nom - 1]; fin_nom--; }
+        /* _écran d_accueil _titre (« Bonjour » _suivi …) _en_grand (2.33) : un titre calculé */
+        const size_t marque_titre = chercher(r, d + 1, fin_nom, "titre");
+        const size_t fin_calcul = fin_nom;
+        if (marque_titre < fin_nom) fin_nom = marque_titre;
+        if (fin_nom > d + 2 && r->e[fin_nom - 1].type == J_TEXTE && marque_titre == fin_calcul) { titre = &r->e[fin_nom - 1]; fin_nom--; }
         if (fin_nom <= d + 1) { echouer(r, t, grym_dupliquer("Forme attendue : « _écran des_compositeurs »."));  return; }
         if (document) { mot(r, "le", t); mot(r, "document", t); }
         else { emettre(r, J_ELISION, "l", t, 1); mot(r, "écran", t); }
         for (size_t k = d + 1; k < fin_nom; k++) copier(r, &r->e[k]);
-        if (titre || taille) {   /* _écran x « Recherche » _en_grand → L'écran x, « Recherche » en grand, montre : */
-            emettre(r, J_VIRGULE, NULL, titre ? titre : taille, 1);
+        if (titre || taille || marque_titre < fin_calcul) {   /* _écran x « Recherche » _en_grand → L'écran x, « Recherche » en grand, montre : */
+            emettre(r, J_VIRGULE, NULL, titre ? titre : taille ? taille : &r->e[marque_titre], 1);
             if (titre) copier(r, titre);
+            if (marque_titre < fin_calcul) expression(r, marque_titre + 1, fin_calcul);
             if (taille) { mot(r, "en", taille); mot(r, est_cle(taille, "en_grand") ? "grand" : "petit", taille); }
-            emettre(r, J_VIRGULE, NULL, titre ? titre : taille, 1);
+            emettre(r, J_VIRGULE, NULL, titre ? titre : taille ? taille : &r->e[marque_titre], 1);
         }
         mot(r, "montre", t);
         emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
@@ -1812,11 +1817,28 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             static const char *const CLE[] = { "couleur", "fond", "police", "logo", "signature" };
             static const char *const ART[] = { "la", "le", "la", "le", "la" };
             const Jeton *val[5] = { NULL, NULL, NULL, NULL, NULL };
+            size_t calc_debut[5] = { 0, 0, 0, 0, 0 }, calc_fin[5] = { 0, 0, 0, 0, 0 };   /* 2.33 : « _logo (…) » */
             size_t k = d + 1;
             int dernier = -1, nb = 0, faux = 0;
             while (k + 1 < f && !faux) {
                 int q = -1;
                 for (int x = 0; x < 5; x++) if (est_cle(&r->e[k], CLE[x])) q = x;
+                if (q > dernier && (q == 3 || q == 4) && r->e[k + 1].type == J_PAR_OUV) {
+                    int p = 0;
+                    size_t z = k + 1;
+                    for (; z < f; z++) {
+                        if (r->e[z].type == J_PAR_OUV) p++;
+                        else if (r->e[z].type == J_PAR_FERM && --p == 0) break;
+                    }
+                    if (z >= f) { faux = 1; break; }
+                    val[q] = &r->e[k + 1];
+                    calc_debut[q] = k + 1;
+                    calc_fin[q] = z + 1;
+                    dernier = q;
+                    nb++;
+                    k = z + 1;
+                    continue;
+                }
                 const int bon = q > dernier && (r->e[k + 1].type == J_TEXTE || (q == 0 && r->e[k + 1].type == J_MOT_CLE));
                 if (!bon) { faux = 1; break; }
                 val[q] = &r->e[k + 1];
@@ -1839,7 +1861,8 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 else if (faits) emettre(r, J_VIRGULE, NULL, val[q], 1);
                 mot(r, ART[q], val[q]);
                 mot(r, CLE[q], val[q]);
-                if (val[q]->type == J_MOT_CLE) mot(r, val[q]->valeur, val[q]);
+                if (calc_fin[q]) expression(r, calc_debut[q], calc_fin[q]);
+                else if (val[q]->type == J_MOT_CLE) mot(r, val[q]->valeur, val[q]);
                 else emettre(r, J_TEXTE, val[q]->valeur, val[q], 0);
                 faits++;
             }
@@ -2248,8 +2271,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     }
     size_t affecte = d;
     while (affecte < f && r->e[affecte].type != J_AFFECTE) affecte++;
-    if ((t->type == J_CROCHETS || (est_cle(t, "écran") && d + 1 < f && r->e[d + 1].type == J_POINT)) && affecte < f && affecte > d
-        && (affecte == d + 1 || r->e[d + 1].type == J_POINT)) {
+    /* (_le cabinet _conservé).logo << x : le champ d'un objet cherché, entre parenthèses (2.33 ; la ligne n'était pas relue) */
+    const size_t ferme_objet = t->type == J_PAR_OUV ? fermante(r, d, f) : f;
+    const int champ_cherche = t->type == J_PAR_OUV && affecte < f && ferme_objet + 2 < affecte
+                              && r->e[ferme_objet + 1].type == J_POINT;
+    if (((t->type == J_CROCHETS || (est_cle(t, "écran") && d + 1 < f && r->e[d + 1].type == J_POINT)) && affecte < f && affecte > d
+         && (affecte == d + 1 || r->e[d + 1].type == J_POINT)) || champ_cherche) {
         emettre(r, J_ARTICLE_IMPLICITE, NULL, t, 1);   /* total << … → Le total devient … */
         expression(r, d, affecte);                     /* client.solde → solde de client */
         mot(r, "devient", &r->e[affecte]);

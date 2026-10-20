@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.32 de la spécification, révisée le 20 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.33 de la spécification, révisée le 20 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1888,6 +1888,9 @@ Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « po
 - Aide à la saisie (§ 8) : en début de phrase, `Les écrans ont` et `Les nombres s'affichent` sont proposés ; puis `la couleur`, `le fond`, `la police` ou `le logo` (les réglages qui restent possibles, dans l'ordre), puis `et le fond`, `et la police`, `et le logo`, les cinq couleurs, `et le logo`, un texte. Après `Les nombres s'affichent` : `à la suisse`, `à la française`, `sans séparateur`.
 - La taille du titre d'un écran *(1.94 ; 2.17 : en grand, 40 px en gras, en petit, 15 px, mesurés sur le titre du thème et non plus sur la police de l'application, qui donnait 22 px)* : `L'écran de recherche, « Recherche » en grand, montre :`, ou sans titre donné, `L'écran de recherche, en petit, montre :`. `en petit` et `en grand` viennent du thème et valent pour tous les écrans ; sans eux, la taille du thème. Forme compacte : `_écran de_recherche « Recherche » _en_grand`.
 
+- **Calculés** *(2.33)* : `le logo (…)` et `la signature (…)` prennent une expression entre parenthèses, lue à l'exécution, à cette phrase : une image (un champ `(image)` d'une entité, par exemple) ou rien (absente, pas de logo). `Les écrans ont la couleur « #46433B », le logo (le logo du cabinet conservé) et la signature (la signature du cabinet conservé).` La phrase se place alors après ce qui crée l'objet, toujours avant le premier `Ouvrir` ; un changement de l'image se voit au lancement suivant. L'aperçu de l'atelier, qui n'exécute rien, ne montre pas une image calculée. Forme compacte : `_logo ((_le cabinet _conservé).logo)`.
+- **Le titre calculé** *(2.33)* : à la place du titre entre guillemets, une expression entre parenthèses, relue avant chaque attente comme le texte calculé (§ 22.1) : `L'écran d'accueil, (\"Bonjour \" suivi du prénom du cabinet conservé) en grand, montre :`. Il donne aussi son titre à la fenêtre. Forme compacte : `_écran d'accueil _titre (…) _en_grand`.
+
 ### 22.6 États des éléments *(implémenté le 14 octobre 2026)*
 
 ```
@@ -2273,3 +2276,4 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 | 2.30 | 2026-10-20 | § 15.6 bis : le coffre, `Sauvegarder la base dans … avec le mot de passe m.` (Argon2id, XChaCha20-Poly1305, Monocypher) ; `Restaurer la base depuis f [avec le mot de passe m].`, vérifiée, appliquée à la prochaine ouverture, l'ancienne base gardée ; `~/` et les dossiers qui manquent, pour toutes les écritures |
 | 2.31 | 2026-10-20 | Trois corrections : une parenthèse qui contient un `dont` est un calcul (`(le nombre de notes conservées dont la date ≥ d) + 1` était refusé, la comparaison du `dont` la faisant prendre pour un groupe logique) ; une action dont le nom finit par `d'un` (`Pour acquitter le solde d'un relevé :`) s'appelle avec `de`, `du`, `des` ou `d'`, et s'imprime ainsi (son nom se rangeait avec l'élision, et aucun appel ne le trouvait) ; § 22.14 : `est présent`, `est absent` sur un mot de passe |
 | 2.32 | 2026-10-20 | § 22.6 : `, avec le choix d'un dossier`, une zone (texte) que remplit le sélecteur de dossiers du système |
+| 2.33 | 2026-10-20 | § 22.5 : le logo et la signature calculés, `le logo (…)` ; le titre d'un écran calculé, `L'écran d'accueil, (…) en grand, montre :` ; forme compacte : `(_le cabinet _conservé).logo << x` se relit (la ligne était refusée), et « du cabinet conservé » remplace « de (le cabinet conservé) » à la traduction |

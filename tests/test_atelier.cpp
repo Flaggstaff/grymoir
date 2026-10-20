@@ -4701,6 +4701,14 @@ int main(int argc, char **argv) {
             while (pause.elapsed() < 1500) QApplication::processEvents(QEventLoop::AllEvents, 20);
         }
         patienter([&] { return bouton(QString::fromUtf8("Nouvelle séance")) && attend(); });
+        {   // le titre calculé (2.33) : « Bonjour » et le prénom de la configuration
+            QLabel *titre = e.findChild<QLabel *>("titre-ecran");
+            VERIFIER(titre && titre->text() == QString::fromUtf8("Bonjour Nicolas"));
+            // la signature calculée (2.33), lue dans la fiche du cabinet : le bandeau, et son image
+            QWidget *bandeau = e.findChild<QWidget *>("bandeau");
+            QLabel *image = bandeau ? bandeau->findChild<QLabel *>() : nullptr;
+            VERIFIER(image && !image->pixmap().isNull());
+        }
         {   // l'accueil défile dans une fenêtre trop basse pour lui : un ascenseur
             e.resize(1200, 360);
             QApplication::processEvents(QEventLoop::AllEvents, 200);

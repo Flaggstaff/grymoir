@@ -802,6 +802,10 @@ static long description_ecran(Compilation *c, const Noeud *e, const Noeud *ph) {
 /* Ce qu'un écran relit avant chaque attente, et qu'un document lit une fois (2.25) : listes, états, images, textes. */
 static void relire_ecran(Compilation *c, const Noeud *e, const Noeud *ph) {
     (void)ph;
+    if (e->titre_calcule) {   /* le titre calculé (2.33) : ÉCRAN_TEXTE 0xFFFF, relu à chaque tour comme un texte */
+        expression(c, e->titre_calcule);
+        emettre(c, I_ECRAN_TEXTE, 0xFFFF, e->ligne, e->colonne);
+    }
     for (size_t k = 0; k < e->nb_enfants; k++) {
         if (e->enfants[k]->type != N_CHERCHER) continue;
         expression(c, e->enfants[k]);
@@ -909,7 +913,9 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_REFUSER, (long)ph->nb_enfants, ph->ligne, ph->colonne);
         return;
     case P_APPARENCE:   /* « Les écrans ont la couleur verte et le logo « … ». » (§ 22.5) : le logo lu, ou absent */
-        if (ph->texte) {
+        if (apparence_expression(ph, 'L')) {   /* 2.33 : le logo calculé, une image ou absent */
+            expression(c, apparence_expression(ph, 'L'));
+        } else if (ph->texte) {
             long k = bloc_constante(c->b, C_TEXTE, ph->texte);
             if (k < 0) { trop_grand(c, ph); return; }
             emettre(c, I_CONSTANTE, k, ph->ligne, ph->colonne);
@@ -920,15 +926,18 @@ static void phrase(Compilation *c, const Noeud *ph) {
         if (ph->texte2 || ph->texte3 || ph->nb_enfants) {   /* 2.13 : la police, la couleur libre, le fond, ou absents ;
                                                                  2.16 : puis la signature, si elle est écrite (0x200) */
             const char *signature = apparence_reglage(ph, 1);
+            const Noeud *signature_calculee = apparence_expression(ph, 'S');   /* 2.33 */
             const char *suite[4] = { apparence_reglage(ph, 0), ph->texte2, ph->texte3, signature };
-            for (int r = 0; r < (signature ? 4 : 3); r++) {
+            const int avec_signature = signature || signature_calculee;
+            for (int r = 0; r < (avec_signature ? 4 : 3); r++) {
+                if (r == 3 && signature_calculee) { expression(c, signature_calculee); continue; }
                 if (!suite[r]) { emettre(c, I_ABSENT, 0, ph->ligne, ph->colonne); continue; }
                 long k = bloc_constante(c->b, C_TEXTE, suite[r]);
                 if (k < 0) { trop_grand(c, ph); return; }
                 emettre(c, I_CONSTANTE, k, ph->ligne, ph->colonne);
                 if (r == 0 || r == 3) emettre(c, I_LIRE_FICHIER, 0, ph->ligne, ph->colonne);
             }
-            emettre(c, I_APPARENCE, (ph->entier + 1) | 0x100 | (signature ? 0x200 : 0), ph->ligne, ph->colonne);
+            emettre(c, I_APPARENCE, (ph->entier + 1) | 0x100 | (avec_signature ? 0x200 : 0), ph->ligne, ph->colonne);
             return;
         }
         emettre(c, I_APPARENCE, ph->entier + 1, ph->ligne, ph->colonne);

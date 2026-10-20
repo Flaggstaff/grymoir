@@ -39,6 +39,7 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->transcrit_de = NULL;
     n->ancien = NULL;
     n->borne_min = n->borne_max = NULL;
+    n->titre_calcule = NULL;
     return n;
 }
 
@@ -66,6 +67,7 @@ void noeud_liberer(Noeud *n) {
     free(n->ancien);
     free(n->borne_min);
     free(n->borne_max);
+    noeud_liberer(n->titre_calcule);
     free(n);
 }
 

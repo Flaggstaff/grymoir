@@ -2411,6 +2411,11 @@ static void serveur_ecran_signature(void *contexte, const unsigned char *octets,
 /* Le texte calculé (§ 22.1, 2.24) : copié, la page le montre au prochain affichage. */
 static void serveur_ecran_texte(void *contexte, size_t k, const char *texte) {
     EcranWeb *e = ecran_dessus(contexte);
+    if (e && k == (size_t)-1) {   /* le titre calculé (2.33) */
+        free(e->titre);
+        e->titre = grym_dupliquer(texte ? texte : "");
+        return;
+    }
     if (!e || k >= e->n) return;
     free((char *)e->el[k].texte);
     e->el[k].texte = grym_dupliquer(texte ? texte : "");

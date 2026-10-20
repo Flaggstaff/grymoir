@@ -5791,6 +5791,7 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
     int couleur = -1, vu = -1, nb = 0, virgule = 0;
     char *textes[5] = { NULL, NULL, NULL, NULL, NULL };   /* couleur libre, fond, police, logo, signature (2.16) */
     const Jeton *jetons[5] = { NULL, NULL, NULL, NULL, NULL };
+    Noeud *calcules[5] = { NULL, NULL, NULL, NULL, NULL };   /* le logo, la signature, donnés par une expression (2.33) */
     int echec = 0;
     for (;;) {
         for (int r = vu + 1; r < 5; r++) {
@@ -5840,6 +5841,14 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
                 }
             }
             avancer(a);
+        } else if ((r == 3 || r == 4) && cour(a)->type == J_PAR_OUV) {
+            /* « le logo (le logo du cabinet conservé) » (2.33) : une image calculée à l'exécution, d'une entité par exemple ;
+             * absente, pas de logo ; l'aperçu de l'atelier, qui n'exécute rien, ne la montre pas */
+            Noeud *g = base(a);
+            if (!g) { echec = 1; break; }
+            g->op = r == 3 ? 'L' : 'S';
+            calcules[r] = g;
+            jetons[r] = NULL;
         } else {
             const Jeton *tt = cour(a);
             attendre(a, A_TEXTE);
@@ -5924,7 +5933,7 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
                                                  : grym_formater("« %s » n'est pas une image (PNG, JPEG, GIF, WebP ou SVG).", textes[r]));
     }
     if (echec) {
-        for (int r = 0; r < 5; r++) free(textes[r]);
+        for (int r = 0; r < 5; r++) { free(textes[r]); noeud_liberer(calcules[r]); }
         return NULL;
     }
     a->apparence_declaree = 1;
@@ -5944,6 +5953,8 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
         x->forme = 1;
         noeud_ajouter(n, x);
     }
+    if (calcules[3]) noeud_ajouter(n, calcules[3]);   /* 2.33 : N_GROUPE, op 'L' */
+    if (calcules[4]) noeud_ajouter(n, calcules[4]);   /* op 'S' */
     n->fin = fin_jeton(&a->j[a->i - 1]);
     return n;
 }
@@ -6590,33 +6601,49 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         return r;
     }
     char *titre = NULL;
+    Noeud *titre_calcule = NULL;
     int taille_titre = 0;
     a->i = f;
-    /* « , « Recherche », », « , « Recherche » en grand, », « , en petit, » : le titre donné, sa taille (§ 22.1, § 22.5) */
+    /* « , « Recherche », », « , « Recherche » en grand, », « , en petit, » : le titre donné, sa taille (§ 22.1, § 22.5) ;
+     * « , ("Bonjour " suivi du prénom du cabinet conservé) en grand, » : un titre calculé, relu à chaque attente (2.33) */
     if (cour(a)->type == J_VIRGULE) {
         size_t q = a->i + 1;
         const char *t2 = NULL;
         if (a->j[q].type == J_TEXTE) t2 = a->j[q++].valeur;
+        else if (a->j[q].type == J_PAR_OUV) {
+            const size_t garde = a->i;
+            a->i = q;
+            titre_calcule = base(a);
+            if (!titre_calcule) { free(nom); return NULL; }
+            q = a->i;
+            a->i = garde;
+        }
         int taille = 0;
         if (est_mot(&a->j[q], "en") && (est_mot(&a->j[q + 1], "petit") || est_mot(&a->j[q + 1], "grand"))) {
             taille = est_mot(&a->j[q + 1], "grand") ? 1 : -1;
             q += 2;
         }
-        if ((t2 || taille) && a->j[q].type == J_VIRGULE) {
+        if ((t2 || taille || titre_calcule) && a->j[q].type == J_VIRGULE) {
             if (t2) titre = grym_dupliquer(t2);
             taille_titre = taille;
             a->i = q + 1;
+        } else if (titre_calcule) {
+            noeud_liberer(titre_calcule);
+            free(nom);
+            return erreur(a, &a->j[q], grym_dupliquer("« , » attendu après le titre : « L'écran d'accueil, (\"Bonjour \" suivi du prénom) en grand, montre : »."));
         }
     }
     if (!est_mot(cour(a), "montre") || voir(a, 1)->type != J_DEUX_POINTS) {
         free(nom);
         free(titre);
+        noeud_liberer(titre_calcule);
         return erreur(a, cour(a), grym_dupliquer("« montre : » attendu : « L'écran des compositeurs montre : »."));
     }
     a->i += 2;
     Noeud *n = noeud_creer(P_ECRAN, t->ligne, t->colonne, t->debut);
     n->texte = nom;
     n->texte2 = titre;
+    n->titre_calcule = titre_calcule;
     n->op = document ? 'D' : 0;
     a->document = document;
     n->taille_titre = taille_titre;

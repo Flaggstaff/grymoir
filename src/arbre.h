@@ -201,6 +201,8 @@ typedef struct Noeud {
     int taille_titre;     /* P_ECRAN : −1 « en petit », 1 « en grand », 0 la taille du thème (§ 22.5) */
     int graphique;        /* N_CHERCHER d'un écran : 1 un graphique (§ 22.11), + 2 en secteurs, + 4 une somme (texte3 :
                              la clé, puis le champ additionné) */
+    struct Noeud *titre_calcule;   /* P_ECRAN : « , (\"Bonjour \" suivi du prénom …) en grand, » (2.33) : le titre, une
+                                      expression (N_GROUPE) relue avant chaque attente ; NULL pour un titre écrit */
     int article_a_deviner;   /* N_CHAMP, N_NOM venus de la forme compacte (`c.nom`), qui n'écrit pas d'article :
                                 l'imprimeur littéral le retrouve par le genre (« le nom du c ») */
 } Noeud;
@@ -218,6 +220,14 @@ char *noeud_decrire(const Noeud *n);
 static inline const char *apparence_reglage(const Noeud *n, int forme) {
     for (size_t k = 0; k < n->nb_enfants; k++)
         if (n->enfants[k]->type == N_TEXTE && n->enfants[k]->forme == forme) return n->enfants[k]->texte;
+    return NULL;
+}
+
+/* P_APPARENCE (2.33) : le logo ('L') ou la signature ('S') donnés par une expression entre parenthèses, « le logo (le
+ * logo du cabinet conservé) » : un enfant N_GROUPE dont op porte la lettre ; NULL s'il n'y en a pas. */
+static inline const struct Noeud *apparence_expression(const Noeud *n, char quoi) {
+    for (size_t k = 0; k < n->nb_enfants; k++)
+        if (n->enfants[k]->type == N_GROUPE && n->enfants[k]->op == quoi) return n->enfants[k];
     return NULL;
 }
 
