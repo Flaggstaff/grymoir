@@ -1343,7 +1343,10 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 for (size_t q = 0; q < el->nb_enfants; q++)
                     if (el->enfants[q]->type == N_SI_ECRAN && el->enfants[q]->forme == 4 && el->enfants[q]->nb_enfants)
                         calcul = el->enfants[q]->enfants[0];
-                if (calcul) { aj(im, c ? "_texte_calculé " : "le texte "); expression(im, calcul); }
+                if (calcul && (el->entier & 4096)) {   /* « la section paiement de … » ; « _section_paiement … » (2.28) */
+                    if (c) { aj(im, "_section_paiement "); expression(im, calcul); }
+                    else { aj(im, "la section paiement "); de_expression(im, calcul); }
+                } else if (calcul) { aj(im, c ? "_texte_calculé " : "le texte "); expression(im, calcul); }
                 else { aj(im, c ? "_texte " : "le texte "); ecrire_texte(im, el->texte); }
                 etats_ecran(im, el, 0);
             } else if (el->type == N_NOM) {   /* zone : « un pays (texte), « Suisse » au départ, facultatif » */

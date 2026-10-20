@@ -89,24 +89,3 @@ La charge QR d'un cabinet et d'un patient et d'un montant :
     Le d devient d suivi de « CH » suivi du saut.
     Le d devient d suivi de « NON » suivi du saut suivi du saut suivi de « Rappel » suivi du saut suivi de « EPD ».
     Rendre d.
-
-Remarque : les textes de la section paiement, vides sans IBAN.
-Le titre de paiement d'un cabinet :
-    Si l'IBAN du cabinet est absent, rendre « ».
-    Rendre « Section paiement ».
-
-La ligne de compte d'un cabinet :
-    Si l'IBAN du cabinet est absent, rendre « ».
-    Rendre "Compte / Payable à : " suivi de l'IBAN du cabinet.
-
-La ligne de titulaire d'un cabinet :
-    Si l'IBAN du cabinet est absent, rendre « ».
-    Rendre le nom du cabinet suivi de ", " suivi de la ville professionnelle du cabinet.
-
-Le montant de paiement d'un cabinet et d'un montant :
-    Si l'IBAN du cabinet est absent, rendre « ».
-    Rendre "Monnaie CHF, montant " suivi de (l'arrondi de montant à 0,01) en format technique.
-
-La ligne de payeur d'un cabinet et d'un patient :
-    Si l'IBAN du cabinet est absent, rendre « ».
-    Rendre "Payable par : " suivi du nom du patient suivi de ", " suivi de la ville du patient.

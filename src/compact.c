@@ -1026,6 +1026,16 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "image", t);
             copier(r, &r->e[d + 1]);
             if (!etats_compacts(r, d + 2, f, 1, 0)) return;
+        } else if (est_cle(t, "section_paiement") && f >= d + 2) {
+            /* _section_paiement charge → la section paiement de la charge (2.28) */
+            size_t fin = d + 1;
+            while (fin < f && !est_etat(&r->e[fin])) fin++;
+            mot(r, "la", t);
+            mot(r, "section", t);
+            mot(r, "paiement", t);
+            mot(r, "de", t);
+            expression(r, d + 1, fin);
+            if (!etats_compacts(r, fin, f, 0, 0)) return;
         } else if (est_cle(t, "texte_calculé") && f >= d + 2) {
             /* _texte_calculé « Ville : » _suivi écran.ville → le texte « Ville : » suivi de la ville de l'écran (2.24) */
             size_t fin = d + 1;

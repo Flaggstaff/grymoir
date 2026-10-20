@@ -4572,7 +4572,17 @@ int main(int argc, char **argv) {
         VERIFIER(f.open(QIODevice::WriteOnly));
         f.write("La personne vaut « Anne ».\n"
                 "Le document de reçu, « Reçu », montre :\n    le texte \"Pour \" suivi de la personne,\n    le texte « Merci ».\n"
-                "Enregistrer le document de reçu dans « recu.pdf ».\nOuvrir le document de reçu.\nAfficher « fini ».\n");
+                "Enregistrer le document de reçu dans « recu.pdf ».\nOuvrir le document de reçu.\n"
+                "Le s vaut un saut de ligne.\n"
+                "La charge vaut « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s "
+                "suivi de « CH5204835012345671000 » suivi du s suivi de « S » suivi du s suivi de « Cabinet » suivi du s "
+                "suivi du s suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s "
+                "suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s "
+                "suivi de « 50.00 » suivi du s suivi de « CHF » suivi du s "
+                "suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s "
+                "suivi de « NON » suivi du s suivi du s suivi du s suivi de « EPD ».\n"
+                "Le document de facture montre :\n    le texte « Facture »,\n    la section paiement de la charge.\n"
+                "Enregistrer le document de facture dans « facture.pdf ».\nAfficher « fini ».\n");
         f.close();
         Execution e(prog);
         e.placer_ecriture(d.path());
@@ -4585,6 +4595,8 @@ int main(int argc, char **argv) {
         QFile pdf(d.filePath("recu.pdf"));
         VERIFIER(pdf.open(QIODevice::ReadOnly));
         VERIFIER(pdf.read(5) == "%PDF-");
+        QFile facture(d.filePath("facture.pdf"));   // la section paiement d'une QR-facture (2.28) : la page se fait
+        VERIFIER(facture.open(QIODevice::ReadOnly) && facture.read(5) == "%PDF-" && facture.size() > 2000);
         const QString montre = e.property("dernier_document").toString();
         VERIFIER(!montre.isEmpty() && QFile::exists(montre));
     }

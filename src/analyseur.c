@@ -6475,7 +6475,9 @@ static int conditions_ecran(Analyse *a, Noeud *ecran) {
             a->i = (size_t)si->entier;
             if (si->forme == 4) {   /* la valeur d'un texte calculé (2.24) : toute valeur, écrite comme Afficher */
                 const Jeton *debut = cour(a);
+                if (si->op == 'u') { a->article_force = ART_LE; a->jeton_force = &a->j[si->entier - 1]; }   /* 2.28 */
                 Noeud *c = valeur(a);
+                a->article_force = ART_AUCUN;
                 if (!c) return 0;
                 if (a->i != (size_t)si->local) {
                     noeud_liberer(c);
@@ -7075,6 +7077,31 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             while ((lu = etat_element(a, el, GENRE_FEMININ, 0, &vus)) > 0) {}
             if (lu < 0) { noeud_liberer(el); break; }
             el->fin = fin_jeton(&a->j[a->i - 1]);
+        } else if (est_mot(u, "la") && est_mot(voir(a, 1), "section") && est_mot(voir(a, 2), "paiement")
+                   && (est_mot(voir(a, 3), "de") || est_mot(voir(a, 3), "du") || voir(a, 3)->type == J_ELISION)) {
+            /* « la section paiement de la charge QR » (2.28) : dans un document, la section paiement d'une QR-facture,
+             * en bas de la dernière page, avec son récépissé, d'après les lignes de son Swiss QR Code */
+            el = noeud_creer(N_TEXTE_ECRAN, u->ligne, u->colonne, u->debut);
+            el->texte = grym_dupliquer("…");
+            el->entier |= 4096;
+            a->i += 3;
+            const int du = est_mot(cour(a), "du");
+            avancer(a);
+            size_t k = a->i;
+            int prof = 0;
+            while (k < a->n && a->j[k].type != J_FIN && !(prof == 0 && (a->j[k].type == J_VIRGULE || a->j[k].type == J_POINT))) {
+                if (a->j[k].type == J_PAR_OUV) prof++;
+                else if (a->j[k].type == J_PAR_FERM && prof > 0) prof--;
+                k++;
+            }
+            Noeud *source = noeud_creer(N_SI_ECRAN, cour(a)->ligne, cour(a)->colonne, cour(a)->debut);
+            source->forme = 4;
+            source->entier = (int)a->i;
+            source->local = (int)k;
+            source->op = du ? 'u' : 0;   /* « du » : l'article « le » est dans la contraction */
+            noeud_ajouter(el, source);
+            a->i = k;
+            el->fin = fin_jeton(&a->j[a->i - 1]);
         } else if (est_mot(u, "le") && est_mot(voir(a, 1), "texte")
                    && !(voir(a, 2)->type == J_TEXTE && (voir(a, 3)->type == J_VIRGULE || voir(a, 3)->type == J_POINT
                                                        || voir(a, 3)->type == J_FIN))
@@ -7138,6 +7165,11 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
         if (a->libre && !(el->place_dite & 1)) {
             noeud_liberer(el);
             erreur(a, u, grym_dupliquer("Un élément en position libre dit sa place : « , à 16 de la gauche et 8 du haut »."));
+            break;
+        }
+        if (n->op != 'D' && el->type == N_TEXTE_ECRAN && (el->entier & 4096)) {   /* 2.28 */
+            noeud_liberer(el);
+            erreur(a, u, grym_dupliquer("La section paiement d'une QR-facture va dans un document, pas dans un écran."));
             break;
         }
         if (n->op == 'D' && (el->type == N_BOUTON || el->type == N_NOM)) {   /* 2.25 : le papier ne se clique pas */

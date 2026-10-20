@@ -154,6 +154,9 @@ int main(void) {
     EXEC("_aptitude horodatée\n    _une date\n_fin\n_classe _un document _est _une chose _adopte horodatée\n_fin\n"
          "_action dater(_une chose_horodatée)\n    chose.date << 5\n_fin\n_le d << _nouveau document\ndater(d)\n"
          "_afficher d.date\n", "5\n");
+    /* La section paiement (2.28) */
+    ALLER_RETOUR("_la charge << « SPC »\n_document de_rappel\n    _section_paiement charge\n_fin\n",
+                 "La charge vaut « SPC ».\nLe document de rappel montre :\n    la section paiement de la charge.\n");
     /* Le code QR, le saut de ligne, le format technique (2.27) */
     ALLER_RETOUR("_le c << « SPC » _suivi _saut_de_ligne\n_le q << _code_qr_suisse c\n_afficher 3 _en_format_technique\n",
                  "Le c vaut « SPC » suivi d'un saut de ligne.\nLe q vaut le code QR suisse du c.\nAfficher 3 en format technique.\n");

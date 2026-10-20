@@ -99,6 +99,11 @@ int main(void) {
     FIXE("Un membre, conservé, a :\n    un nom (texte).\nExporter les membres conservés, par nom décroissant, avec le nom, dans « m.csv ».\n"
          "Exporter les membres conservés dont le nom est « a » dans « n.csv ».\n");
     LITT("Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.", "Le pas vaut 1.\nAfficher arrondi de 2,5 au pas.\n");
+    /* La section paiement d'une QR-facture (2.28) ; « _section_paiement » */
+    LITT("La charge vaut « SPC ».\nLe document de rappel montre :\n    le texte « Rappel »,\n    la section paiement de la charge.",
+         "La charge vaut « SPC ».\nLe document de rappel montre :\n    le texte « Rappel »,\n    la section paiement de la charge.\n");
+    COMP("La charge vaut « SPC ».\nLe document de rappel montre :\n    la section paiement de la charge.",
+         "_la charge << « SPC »\n_document de_rappel\n    _section_paiement charge\n_fin\n");
     /* Le code QR, le saut de ligne, le format technique (2.27) */
     LITT("Le c vaut « SPC » suivi d'un saut de ligne suivi de 1590 en format technique.\nLe q vaut le code QR suisse du c.",
          "Le c vaut « SPC » suivi d'un saut de ligne suivi de 1590 en format technique.\nLe q vaut le code QR suisse du c.\n");

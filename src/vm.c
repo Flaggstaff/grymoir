@@ -2237,6 +2237,16 @@ static size_t document_un(const EcranVM *e, size_t k, Chaine *c) {
     switch (el->sorte) {
     case ELEMENT_TEXTE: {
         const char *t = e->textes[k] ? e->textes[k] : (el->texte ? el->texte : "");
+        if (el->capitales == 2) {
+            /* la section paiement (2.28) : les lignes du Swiss QR Code, que la mise en page dessine en bas de la
+             * dernière page ; rien sans elles (un cabinet sans IBAN) */
+            if (*t && strcmp(t, "…") != 0) {
+                chaine_ajouter(c, "<p class=\"grym-paiement\" title=\"");
+                ajouter_base64(c, (const unsigned char *)t, strlen(t));
+                chaine_ajouter(c, "\"></p>\n");
+            }
+            return k + 1;
+        }
         if (el->capitales) {
             char *m = texte_majuscules(t);
             chaine_ajouter(c, "<p class=\"capitales\">");
@@ -2590,6 +2600,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->elements[k].nb_colonnes = 0;
         e->elements[k].graphique = graphe;
         e->elements[k].capitales = options_texte && strchr(options_texte + 1, 's') != NULL;
+        if (options_texte && strchr(options_texte + 1, 'q')) e->elements[k].capitales = 2;   /* la section paiement (2.28) */
         if (options_bouton) {   /* « ␞ pt ␝ description ␚ image » (2.14, 2.15) */
             const size_t nopt = strcspn(options_bouton + 1, "\x1c\x1a\x1d");
             e->elements[k].principal = memchr(options_bouton + 1, 'p', nopt) != NULL;

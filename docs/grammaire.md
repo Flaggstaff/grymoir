@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.27 de la spécification, révisée le 20 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.28 de la spécification, révisée le 20 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2102,6 +2102,7 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 - `un saut de ligne` est le texte d'un retour à la ligne : il sépare les lignes d'un code QR suisse.
 - `x en format technique` écrit une valeur comme une machine l'attend (code QR, XML) : un nombre sans séparateur de milliers, avec le point décimal et ses décimales (`1590.00`) ; une date en `2026-10-20` ; un texte sans ses espaces. Il se lie à la valeur juste avant lui : `(l'arrondi de x à 0,01) en format technique`.
 - Forme compacte : `_code_qr t`, `_code_qr_suisse t`, `_saut_de_ligne`, `x _en_format_technique`.
+- **La section paiement** *(2.28)* : dans un document, `la section paiement de la charge` met au bas de la dernière page la section paiement d'une QR-facture et son récépissé, 210 × 105 mm, au bord de la page, d'après les 31 lignes du Swiss QR Code qu'est `la charge` : « Récépissé », « Section paiement », le code de 46 mm avec sa croix, « Compte / Payable à », « Référence », « Informations supplémentaires », « Payable par » (ou un cadre à remplir), « Monnaie », « Montant », « Point de dépôt », et les lignes de découpe avec « A détacher avant le versement ». Intitulés et tailles : *Swiss Implementation Guidelines for the QR-bill* de SIX, version 2.4, chapitres 3.4 à 3.7 et annexe C ; les cotes fines ne viennent pas du Style Guide de SIX. Si la dernière page n'a plus ses 105 mm de bas libres, la section prend une page à elle. Une charge vide (pas d'IBAN) : rien. Dans un écran : « La section paiement d'une QR-facture va dans un document, pas dans un écran. ». Forme compacte : `_section_paiement charge`.
 
 ## Journal des révisions
 
@@ -2235,3 +2236,4 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 | 2.25 | 2026-10-19 | Nouveau § 22.15 : les documents, `Le document … montre :`, la valeur `le document de …` (un PDF), `Ouvrir le document … .` |
 | 2.26 | 2026-10-19 | § 22.15 : `Ouvrir` un fichier (`Ouvrir le justificatif du frais.`), montré par le système ; opérande 2 de `DOCUMENT` |
 | 2.27 | 2026-10-20 | Nouveau § 22.16 : `le code QR de t`, `le code QR suisse de t` (SIX IG 2.4), `un saut de ligne`, `x en format technique` |
+| 2.28 | 2026-10-20 | § 22.16 : `la section paiement de …` dans un document : la section paiement et le récépissé d'une QR-facture, au bas de la dernière page |

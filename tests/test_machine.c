@@ -3883,6 +3883,9 @@ int main(void) {
     }
 
     essais_utiliser();
+    /* La section paiement : dans un document seulement (2.28) */
+    PROG("La charge vaut « SPC ».\nL'écran x montre :\n    la section paiement de la charge.",
+         "~La section paiement d'une QR-facture va dans un document, pas dans un écran.");
     /* Le code QR, le saut de ligne, le format technique (2.27) */
     PROG("Le q vaut le code QR de « https://nicolas-seydoux.ch ».\nAfficher le format du q.", "PNG");
     PROG("Le q vaut le code QR suisse de « SPC ».\nAfficher le format du q.", "PNG");
