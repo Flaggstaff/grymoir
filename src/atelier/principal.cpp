@@ -39,11 +39,6 @@ volatile std::sig_atomic_t grym_fermeture_demandee = 0;
 
 // En fenêtre, la plus grande possible : l'écran disponible, sans le plein écran exclusif (zoom sous macOS), comme
 // l'atelier ; c'est ainsi qu'on travaille dans une application de gestion.
-static void plein_ecran(QWidget &w) {
-    if (QScreen *ecran = w.screen() ? w.screen() : QGuiApplication::primaryScreen()) w.setGeometry(ecran->availableGeometry());
-    w.showMaximized();
-}
-
 static void sur_arret(int signal_recu) {
     grym_interruption = 1;
     grym_fermeture_demandee = 1;
@@ -140,7 +135,9 @@ int main(int argc, char **argv) {
         const QString documents = QDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)).filePath(nom);
         QDir().mkpath(documents);
         e.placer_ecriture(documents);
-        plein_ecran(e);   // une application de travail s'ouvre en grand, comme l'atelier
+        // la fenêtre prend la taille de l'accueil (sans vide autour), centrée ; un écran plus grand défile
+        e.ajuster_au_premier_ecran();
+        e.show();
         e.demarrer();
         return app.exec() == 0 ? 0 : 1;
     }
@@ -209,7 +206,8 @@ int main(int argc, char **argv) {
         std::signal(SIGINT, sur_arret);
         std::signal(SIGTERM, sur_arret);
         Execution e(args.at(2));
-        plein_ecran(e);
+        e.ajuster_au_premier_ecran();   // comme l'application fabriquée : ce qu'on essaie est ce que l'utilisateur verra
+        e.show();
         e.demarrer();
         return app.exec() == 0 ? 0 : 1;
     }

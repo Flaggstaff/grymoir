@@ -3,7 +3,9 @@ Remarque : Cabinet : les données d'un cabinet de thérapie, ses soins, ses pati
 Remarque : le cabinet, un seul : ce qui figure en tête des quittances et des factures.
 Remarque : RCC (SASIS), GLN, RME et ASCA restent vides tant que Nicolas n'en a pas ; la facture du Tarif 590 exigera le RCC.
 Remarque : facturer les absences : un choix de Nicolas, éteint au départ ; allumé, une absence se doit comme une séance faite.
-Remarque : la dernière sauvegarde : l'accueil le rappelle après sept jours.
+Remarque : la dernière sauvegarde : l'accueil le rappelle après sept jours ; le dossier de sauvegarde, de préférence synchronisé
+Remarque : (iCloud Drive), reçoit chaque jour une copie chiffrée ; vide, pas de sauvegarde automatique.
+Remarque : le code d'accès : le mot de passe de l'application, rangé en empreinte (PBKDF2), jamais en clair ; il chiffre aussi les sauvegardes.
 Un cabinet, conservé, a :
     un nom (texte), unique,
     une rue (texte), facultative,
@@ -20,7 +22,9 @@ Un cabinet, conservé, a :
     un numéro ASCA (texte), facultatif,
     un IBAN (texte), facultatif,
     une facturation des absences (vrai ou faux), faux au départ,
-    une dernière sauvegarde (date), facultative.
+    une dernière sauvegarde (date), facultative,
+    un code d'accès (mot de passe), facultatif,
+    un dossier de sauvegarde (texte), facultatif.
 
 Remarque : un soin a son tarif ; s'il a un tarif de suivi, les séances suivantes d'un même patient le paient.
 Remarque : la durée en minutes ; le code tarifaire, celui de la méthode au Tarif 590, s'il est reconnu.

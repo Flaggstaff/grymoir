@@ -24,6 +24,7 @@ Pour fonder le cabinet :
         Le nom vaut « Nicolas Seydoux ».
         Le pays vaut « Suisse ».
         La facturation des absences vaut faux.
+        Le dossier de sauvegarde vaut « ~/Library/Mobile Documents/com~apple~CloudDocs/Cabinet ».
     Conserver le c.
 
 Remarque : les lignes d'adresse d'une quittance ; un champ absent laisse la ligne vide, rien ne casse.
@@ -172,9 +173,15 @@ Pour encaisser une séance et un moyen :
     Sinon, l'encaissement de la séance devient aujourd'hui.
     Si la facture de la séance est présente, suivre la facture de la séance.
 
-Remarque : ce que l'accueil dit de la dernière sauvegarde ; au-delà de sept jours, il presse.
-L'alerte de sauvegarde d'un cabinet et d'un jour :
-    Si la dernière sauvegarde du cabinet est absente, rendre « Aucune sauvegarde encore : touche la tuile Sauvegarder. ».
+Remarque : un message facultatif, pour un texte d'écran : rien s'il est absent.
+L'annonce d'un message :
+    Si message est absent, rendre « ».
+    Rendre message.
+
+Remarque : ce que l'accueil dit de la dernière sauvegarde ; au-delà de sept jours, il presse ; une sauvegarde automatique ratée d'abord.
+L'alerte de sauvegarde d'un cabinet et d'un jour et d'un échec :
+    Si échec est présent, rendre "La sauvegarde automatique a échoué : " suivi de échec.
+    Si la dernière sauvegarde du cabinet est absente, rendre « Aucune sauvegarde encore : Configuration, puis Sauvegardes. ».
     L'écart vaut le nombre de jours entre la dernière sauvegarde du cabinet et jour.
     Si l'écart > 7, rendre "Dernière sauvegarde le " suivi de la dernière sauvegarde du cabinet suivi de « : il est temps d'en refaire une. ».
     Rendre "Dernière sauvegarde le " suivi de la dernière sauvegarde du cabinet suivi de « . ».

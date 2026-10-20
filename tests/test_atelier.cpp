@@ -43,6 +43,8 @@
 
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QScrollBar>
+#include <QScrollArea>
 #include <QCalendarWidget>
 #include <QAction>
 #include <QDate>
@@ -4652,7 +4654,26 @@ int main(int argc, char **argv) {
             while (y.elapsed() < 20000 && !c()) QApplication::processEvents(QEventLoop::AllEvents, 20);
             QApplication::processEvents(QEventLoop::AllEvents, 100);
         };
+        auto libelle0 = [&](const QString &t) -> QLineEdit * {   // une zone de texte, par son libellé
+            for (QLabel *l : e.findChildren<QLabel *>())
+                if (l->isVisible() && (l->text() == t || l->text() == t + " *") && l->buddy()) return qobject_cast<QLineEdit *>(l->buddy());
+            return nullptr;
+        };
+        // le premier lancement : choisir le mot de passe (20 octobre 2026)
+        patienter([&] { return bouton(QString::fromUtf8("Choisir")) && attend(); });
+        VERIFIER(bouton(QString::fromUtf8("Choisir")) != nullptr);
+        if (auto *m = libelle0(QString::fromUtf8("Mot de passe"))) m->setText("essai-essai");
+        if (auto *c = libelle0(QString::fromUtf8("Confirmation"))) c->setText("essai-essai");
+        if (auto *b = bouton(QString::fromUtf8("Choisir"))) b->click();
         patienter([&] { return bouton(QString::fromUtf8("Nouvelle séance")) && attend(); });
+        {   // l'accueil défile dans une fenêtre trop basse pour lui : un ascenseur
+            e.resize(1200, 360);
+            QApplication::processEvents(QEventLoop::AllEvents, 200);
+            QScrollArea *defile = e.findChild<QScrollArea *>("defilement-ecran");
+            VERIFIER(defile && defile->isVisible() && defile->verticalScrollBar()->maximum() > 0);
+            e.resize(1400, 1000);
+            QApplication::processEvents(QEventLoop::AllEvents, 100);
+        }
         VERIFIER(bouton(QString::fromUtf8("Nouvelle séance")) != nullptr);
         if (auto *b = bouton(QString::fromUtf8("Nouvelle séance"))) b->click();
         auto libelle = [&](const QString &t) -> QWidget * {   // le contrôle d'une zone, par son libellé
@@ -4709,7 +4730,7 @@ int main(int argc, char **argv) {
             "    Afficher « essai quittance » puis le montant de la quittance puis le moyen de la quittance.\n"
             "Afficher « essai liées » puis le nombre de séances conservées dont le patient = le marc et la quittance est présente.\n"
             "Afficher « fin des essais ».\n");
-        const int k = source.indexOf(QString::fromUtf8("Ouvrir l'écran d'accueil."));
+        const int k = source.indexOf(QString::fromUtf8("Remarque : d'abord le mot de passe"));   // avant la connexion
         VERIFIER(k > 0);
         source.insert(k, essai);
         VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -4804,9 +4825,14 @@ Pour chaque facture conservée dont le patient = l'anne :
 Afficher « essai H » puis le nombre de factures supprimées puis le nombre de séances conservées dont la facture est absente et le patient = l'anne et le statut = « faite » et le paiement = « à payer ».
 Afficher « essai F » puis le nombre de séances conservées dont l'encaissement est présent et le paiement = « à payer ».
 Sauvegarder la base dans « essai.grymd ».
+Le dossier de sauvegarde du cabinet conservé devient « sync/Cabinet ».
+La clé de session devient « essai-essai ».
+Archiver les données.
+Si l'échec de sauvegarde est absent, afficher « essai I sans échec ».
+Archiver les données.
 Afficher « fin des essais ».
 )GRYM");
-        const int k = source.indexOf(QString::fromUtf8("Ouvrir l'écran d'accueil."));
+        const int k = source.indexOf(QString::fromUtf8("Remarque : d'abord le mot de passe"));   // avant la connexion
         VERIFIER(k > 0);
         source.insert(k, essai);
         VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -4832,6 +4858,16 @@ Afficher « fin des essais ».
         VERIFIER(t.contains(QString::fromUtf8("-0005")) && t.contains(QString::fromUtf8("essai G F-")));   // F-…-0004 annulée, jamais reprise
         VERIFIER(t.contains(QString::fromUtf8("essai H 1 0")));
         VERIFIER(t.contains("fin des essais"));
+        VERIFIER(t.contains(QString::fromUtf8("essai I sans échec")));
+        {   // la sauvegarde automatique : une copie chiffrée du jour dans le dossier choisi, créé ; la seconde le même jour, rien
+            const QString du_jour = d.filePath("sync/Cabinet/Cabinet " + QDate::currentDate().toString("yyyy-MM-dd") + ".coffre");
+            QElapsedTimer y;
+            y.start();
+            while (y.elapsed() < 10000 && !QFile::exists(du_jour)) QApplication::processEvents(QEventLoop::AllEvents, 50);
+            QFile coffre(du_jour);
+            VERIFIER(coffre.open(QIODevice::ReadOnly) && coffre.read(12) == "GRYMCOFFRE1\n");
+            VERIFIER(QDir(d.filePath("sync/Cabinet")).entryList(QDir::Files).size() == 1);
+        }
         QFile copie(d.filePath("essai.grymd"));
         VERIFIER(copie.open(QIODevice::ReadOnly) && copie.read(15) == "SQLite format 3");
         if (!t.contains("fin des essais") || !t.contains("essai F")) std::printf("%s\n", t.right(1500).toUtf8().constData());

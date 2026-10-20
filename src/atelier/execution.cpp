@@ -36,6 +36,9 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QStyle>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QSplitter>
 #include <QFrame>
 #include <QTabWidget>
@@ -1381,7 +1384,28 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
             pile->insertWidget(0, bandeau);
         }
     centre->addWidget(vue_ecran, 1);
-    vue_ecran = cadre;
+    // plus haut ou plus large que la fenêtre, l'écran défile (un ascenseur) ; sinon, rien ne change à ce qu'on voit
+    auto *defile = new QScrollArea;
+    defile->setObjectName("defilement-ecran");
+    defile->setFrameShape(QFrame::NoFrame);
+    defile->setWidgetResizable(true);
+    defile->setWidget(cadre);
+    defile->viewport()->setAutoFillBackground(false);
+    cadre->setAutoFillBackground(false);
+    if (ajuster_fenetre && recouverts.isEmpty()) {
+        // un écran qui n'en recouvre aucun (la connexion, puis l'accueil) décide de la taille de la fenêtre : sa largeur
+        // et sa hauteur naturelles, plus les marges ; jamais plus que l'écran disponible ; les écrans qu'il ouvre
+        // gardent cette fenêtre, et défilent s'ils sont plus grands
+        if (QScreen *ecran = screen() ? screen() : QGuiApplication::primaryScreen()) {
+            const QRect dispo = ecran->availableGeometry();
+            const QSize voulu = cadre->sizeHint() + QSize(2 * Theme::courant().mesure("espace-6") + 24, 2 * Theme::courant().mesure("espace-6") + 24);
+            const int l = qMin(qMax(voulu.width(), Theme::courant().mesure("largeur-contenu") + 48), dispo.width());
+            const int h = qMin(qMax(voulu.height(), 480), dispo.height());
+            setWindowState(windowState() & ~(Qt::WindowMaximized | Qt::WindowFullScreen));
+            setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, QSize(l, h), dispo));
+        }
+    }
+    vue_ecran = defile;
     vue_ecran->setEnabled(false);   // actif seulement quand la machine attend un événement
     partage->insertWidget(0, vue_ecran);
     partage->setSizes({height() * 2 / 3, height() / 6, height() / 6});

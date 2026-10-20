@@ -120,6 +120,9 @@ public:
     explicit Execution(const QString &chemin);
     void placer_base(const QString &chemin) { travail.base_imposee = chemin; }   // avant demarrer()
     void placer_ecriture(const QString &dossier) { travail.dossier_ecriture = dossier; }   // avant demarrer()
+    // Une application fabriquée : la fenêtre prend la taille de chaque écran qui n'en recouvre aucun (la connexion, puis
+    // l'accueil), sans dépasser l'écran de l'ordinateur, et se centre ; plus grand, il défile. Avant demarrer().
+    void ajuster_au_premier_ecran() { ajuster_fenetre = true; }
     ~Execution() override;
     void demarrer();
     void demander_micro();
@@ -163,7 +166,8 @@ private:
     void effacer_erreurs_zones();
     QByteArray octets_envoyes;   // le fichier choisi dans une zone de fichier, gardé jusqu'à l'événement suivant
     bool fichier_envoye = false;
-    QWidget *vue_ecran = nullptr;
+    QWidget *vue_ecran = nullptr;   // l'écran montré : sa zone de défilement, qui contient le cadre centré
+    bool ajuster_fenetre = false;
     // les écrans du dessous, masqués tant qu'un écran les recouvre (§ 22.3)
     struct EcranMontre { QWidget *vue; QLabel *erreur; QVector<class QTableWidget *> tables; QVector<QPushButton *> boutons;
                          QVector<QWidget *> zones; QString titre; QVector<QWidget *> controles; };
