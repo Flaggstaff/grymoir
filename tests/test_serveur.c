@@ -1434,9 +1434,9 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
 #define CAB_ZONES "z2=Nicolas+Seydoux&z3=Rue+X&z4=1&z5=&z6=1700&z7=Fribourg&z8=Suisse&z11=&z12=&z13=Z123456&z15=&z16="
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=7"), get("/"), evenement("q=3&clic=0"), get("/"),
-                 evenement("q=4&" CAB_ZONES "&z14=760100000000&clic=24"), get("/"),
-                 evenement("q=5&" CAB_ZONES "&z14=7601000000000&clic=24"), get("/"),
-                 evenement("q=6&clic=0"), get("/"), evenement("q=7&clic=25"), evenement("q=8&clic=1"), get("/"));
+                 evenement("q=4&" CAB_ZONES "&z14=760100000000&clic=25"), get("/"),
+                 evenement("q=5&" CAB_ZONES "&z14=7601000000000&clic=25"), get("/"),
+                 evenement("q=6&clic=0"), get("/"), evenement("q=7&clic=26"), evenement("q=8&clic=1"), get("/"));
 #undef CAB_ZONES
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet3.grymd", &sc);
         CONTIENT(sc.reponses[2], "<h1>Configuration</h1>");   /* le cabinet, les soins, les rubriques */
@@ -1543,10 +1543,10 @@ int main(void) {
     {   /* Cabinet : l'IBAN des QR-factures, avec ou sans espaces ; vingt et un caractères (2.27) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=7"), evenement("q=3&clic=0"), get("/"),
-                 evenement("q=4&z17=CH52+0483+5012&clic=24"), get("/"),
-                 evenement("q=5&z17=CH44+3199+9123+0008+8901+2&clic=24"), get("/"),
-                 evenement("q=6&z17=CH53+0483+5012+3456+7100+0&clic=24"), get("/"),
-                 evenement("q=7&z17=CH52+0483+5012+3456+7100+0&clic=24"), get("/"));
+                 evenement("q=4&z17=CH52+0483+5012&clic=25"), get("/"),
+                 evenement("q=5&z17=CH44+3199+9123+0008+8901+2&clic=25"), get("/"),
+                 evenement("q=6&z17=CH53+0483+5012+3456+7100+0&clic=25"), get("/"),
+                 evenement("q=7&z17=CH52+0483+5012+3456+7100+0&clic=25"), get("/"));
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet13.grymd", &sc);
         CONTIENT(sc.reponses[3], "value=\"CH52 0483 5012 3456 7100 0\"");   /* celui des données d'essai */
         CONTIENT(sc.reponses[5], "Un IBAN suisse compte 21 caractères : CH, puis 19 chiffres et lettres.");

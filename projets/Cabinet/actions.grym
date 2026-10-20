@@ -27,6 +27,7 @@ Pour fonder le cabinet :
         Le dossier de sauvegarde vaut « ~/Library/Mobile Documents/com~apple~CloudDocs/Cabinet ».
     Le logo du c devient le fichier « images/coeur-encre.png ».
     La signature du c devient le fichier « images/signature.png ».
+    Le prénom du c devient « Nicolas ».
     Conserver le c.
 
 Remarque : les lignes d'adresse d'une quittance ; un champ absent laisse la ligne vide, rien ne casse.
@@ -180,6 +181,11 @@ Pour encaisser une séance et un moyen :
     Si moyen = « offert », l'encaissement de la séance devient absent.
     Sinon, l'encaissement de la séance devient aujourd'hui.
     Si la facture de la séance est présente, suivre la facture de la séance.
+
+Remarque : le titre de l'accueil : « Bonjour » et le prénom de la configuration, s'il y en a un.
+L'accueil d'un cabinet :
+    Si le prénom du cabinet est absent, rendre « Bonjour ».
+    Rendre "Bonjour " suivi du prénom du cabinet.
 
 Remarque : un message facultatif, pour un texte d'écran : rien s'il est absent.
 L'annonce d'un message :

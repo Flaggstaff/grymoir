@@ -5,7 +5,8 @@ Remarque : RCC (SASIS), GLN, RME et ASCA restent vides tant que Nicolas n'en a p
 Remarque : facturer les absences : un choix de Nicolas, éteint au départ ; allumé, une absence se doit comme une séance faite.
 Remarque : la dernière sauvegarde : l'accueil le rappelle après sept jours ; le dossier de sauvegarde, de préférence synchronisé
 Remarque : (iCloud Drive), reçoit chaque jour une copie chiffrée ; vide, pas de sauvegarde automatique.
-Remarque : le logo et la signature (le nom dessiné) du cabinet, en tête des pièces ; une autre installation les change ici.
+Remarque : le logo et la signature (le nom dessiné) du cabinet, en tête des écrans et des pièces ; le prénom de l'accueil
+Remarque : (« Bonjour Nicolas ») ; une autre installation les change ici, et les écrans les reprennent au lancement suivant.
 Remarque : le code d'accès : le mot de passe de l'application, rangé en empreinte (PBKDF2), jamais en clair ; il chiffre aussi les sauvegardes.
 Un cabinet, conservé, a :
     un nom (texte), unique,
@@ -27,7 +28,8 @@ Un cabinet, conservé, a :
     un code d'accès (mot de passe), facultatif,
     un dossier de sauvegarde (texte), facultatif,
     un logo (image), facultatif,
-    une signature (image), facultative.
+    une signature (image), facultative,
+    un prénom (texte), facultatif.
 
 Remarque : un soin a son tarif ; s'il a un tarif de suivi, les séances suivantes d'un même patient le paient.
 Remarque : la durée en minutes ; le code tarifaire, celui de la méthode au Tarif 590, s'il est reconnu.
