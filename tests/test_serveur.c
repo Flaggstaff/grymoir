@@ -1519,7 +1519,7 @@ int main(void) {
            documents : refusés dans le navigateur, sans rien dater (20 octobre 2026) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=6"), evenement("q=2&clic=8"), get("/"), evenement("q=3&choix=0.0"),
-                 evenement("q=4&clic=2"), get("/"), evenement("q=5&clic=3"), evenement("q=6&clic=9"), get("/"));
+                 evenement("q=4&clic=2"), get("/"), evenement("q=5&clic=3"), evenement("q=6&clic=10"), get("/"));
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet12.grymd", &sc);
         CONTIENT(sc.reponses[2], "<h1>Rappels</h1>");
         CONTIENT(sc.reponses[2], "<td>Marc Dupraz</td>");
@@ -1547,7 +1547,7 @@ int main(void) {
            séance offerte n'a ni facture ni quittance (20 octobre 2026) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=6"), evenement("q=2&clic=5"), get("/"), evenement("q=3&s0=0&clic=6"), get("/"),
-                 evenement("q=4&clic=7"), evenement("q=5&clic=10"), evenement("q=6&clic=4"), evenement("q=7&choix=0.0"),
+                 evenement("q=4&clic=7"), evenement("q=5&clic=11"), evenement("q=6&clic=4"), evenement("q=7&choix=0.0"),
                  evenement("q=8&choix=16.0"), get("/"));
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet14.grymd", &sc);
         CONTIENT(sc.reponses[2], "<h1>À encaisser</h1>");
@@ -1565,6 +1565,16 @@ int main(void) {
         CONTIENT(sc.reponses[5], "Une séance offerte n&#39;a ni facture ni quittance.");
         liberer(&sc);
         remove("_essai_cabinet15.grymd");
+    }
+
+    {   /* Cabinet : l'écran des factures (vide tant qu'aucune n'est faite dans l'atelier) (20 octobre 2026) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=6"), evenement("q=2&clic=9"), get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet16.grymd", &sc);
+        CONTIENT(sc.reponses[2], "<h1>Factures</h1>");
+        CONTIENT(sc.reponses[2], "<th>Réglée</th>");
+        liberer(&sc);
+        remove("_essai_cabinet16.grymd");
     }
 
     {   /* Le texte calculé (2.24) : relu à chaque attente, après chaque événement */

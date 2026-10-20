@@ -151,7 +151,13 @@ L'écran de comptabilité, « Comptabilité », montre :
     un bouton « Quittances », en tuile, avec la description « Remettre et retrouver »,
     un bouton « Frais », en tuile, avec la description « Dépenses et justificatifs »,
     un bouton « Rappels », en tuile, avec la description « Impayées depuis trente jours »,
+    un bouton « Factures », en tuile, avec la description « Envoyées, réglées ou non »,
     un bouton « Journal de l'année », en tuile, avec la description « Recettes et frais, à imprimer »,
+    un bouton « Fermer ».
+
+Remarque : les factures envoyées, les plus récentes d'abord ; une facture choisie se remontre telle qu'elle a été envoyée.
+L'écran des factures, « Factures », montre :
+    la liste des factures conservées, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et la réglée,
     un bouton « Fermer ».
 
 Remarque : les séances faites, à payer depuis trente jours ; « Rappel » imprime pour le patient choisi tout ce qu'il doit.
@@ -374,21 +380,26 @@ Pour quittancer une séance :
         L'exemplaire de la q devient le document de quittance.
         Ouvrir le document de quittance.
 
-Pour facturer une séance :
-    Si la facture de la séance est présente :
-        La créance en cours devient la facture de la séance.
+Remarque : une facture réunit toutes les séances à payer du patient qui n'en ont pas encore (faites ou manquées, pas prévues ni annulées).
+Pour facturer une prestation :
+    Si la facture de la prestation est présente :
+        La créance en cours devient la facture de la prestation.
         Si l'exemplaire de la créance en cours est présent, ouvrir l'exemplaire de la créance en cours.
         Sinon, ouvrir le document de facture.
     Sinon :
+        La personne facturée vaut le patient de la prestation.
         Le rang vaut le nombre de factures conservées dont la date ≥ le début d'exercice.
         Le rang devient le rang + 1.
         La f vaut une nouvelle facture :
             Le numéro vaut le numéro de pièce de « F- » et de l'année d'aujourd'hui et du rang.
             La date vaut aujourd'hui.
-            Le patient vaut le patient de la séance.
-            Le montant vaut le prix de la séance.
+            Le patient vaut la personne facturée.
+            Le montant vaut 0.
+            La réglée vaut faux.
         Conserver la f.
-        La facture de la séance devient la f.
+        Pour chaque séance conservée dont le patient = la personne facturée et le paiement = « à payer » et la facture est absente et le statut ≠ « annulée » et le statut ≠ « prévue » :
+            La facture de la séance devient la f.
+            Le montant de la f devient le montant de la f + le prix de la séance.
         La créance en cours devient la f.
         L'exemplaire de la f devient le document de facture.
         Ouvrir le document de facture.
@@ -419,6 +430,17 @@ Quand on clique sur « Quittances » dans l'écran de comptabilité :
 
 Quand on clique sur « Frais » dans l'écran de comptabilité :
     Ouvrir l'écran des frais.
+
+Quand on clique sur « Factures » dans l'écran de comptabilité :
+    Ouvrir l'écran des factures.
+
+Quand on choisit une facture dans l'écran des factures :
+    La créance en cours devient la facture choisie de l'écran.
+    Si l'exemplaire de la créance en cours est présent, ouvrir l'exemplaire de la créance en cours.
+    Sinon, ouvrir le document de facture.
+
+Quand on clique sur « Fermer » dans l'écran des factures :
+    Fermer l'écran.
 
 Quand on clique sur « Rappels » dans l'écran de comptabilité :
     Ouvrir l'écran des rappels.

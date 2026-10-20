@@ -45,12 +45,14 @@ Un patient, conservé, anciennement « client », a :
     une anamnèse (texte), facultative, anciennement « remarque »,
     une dernière dictée (son), facultative.
 
-Remarque : la facture d'une séance à payer, numérotée par année (« F-2026-0001 ») ; son exemplaire, le PDF envoyé, gardé tel quel.
+Remarque : la facture des séances à payer d'un patient, numérotée par année (« F-2026-0001 ») ; son exemplaire, le PDF envoyé, gardé tel quel ;
+Remarque : réglée quand toutes ses séances sont encaissées.
 Une facture, conservée, a :
     un numéro (texte), unique,
     une date (date),
     un patient (patient),
     un montant (nombre),
+    une réglée (vrai ou faux),
     un exemplaire (fichier), facultatif.
 
 Remarque : la quittance d'une ou plusieurs séances payées (CO 88) ; son exemplaire, le PDF remis, est gardé tel quel.

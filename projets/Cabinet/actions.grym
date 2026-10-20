@@ -15,9 +15,13 @@ Pour proposer en deux prix un nom et un premier prix et un prix de suivi :
         Le tarif de suivi vaut prix de suivi.
     Conserver le s.
 
+Remarque : une facture est réglée quand plus aucune de ses séances n'est à payer.
 Pour encaisser une séance et un moyen :
     Si le statut de la séance = « annulée », refuser « Une séance annulée ne s'encaisse pas. ».
     Le paiement de la séance devient moyen.
+    Si la facture de la séance est présente :
+        La f vaut la facture de la séance.
+        Si le nombre de séances conservées dont la facture = f et le paiement = « à payer » est nul, la réglée de la f devient vrai.
 
 Pour clore une séance et un statut :
     Le statut de la séance devient statut.
