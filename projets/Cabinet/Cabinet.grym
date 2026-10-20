@@ -20,6 +20,10 @@ La pièce en cours vaut absent.
 Le frais ouvert vaut absent.
 La rubrique ouverte vaut absent.
 Le début d'exercice vaut (« 01.01. » suivi de l'année d'aujourd'hui) en date.
+
+Remarque : une séance faite et pas payée depuis trente jours appelle un rappel ; la personne du rappel, celle dont on l'imprime.
+La limite des rappels vaut aujourd'hui − 30 jours.
+La personne du rappel vaut absent.
 Le soin ouvert vaut absent.
 
 Remarque : les cinq soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
@@ -134,14 +138,53 @@ L'écran du soin, « Soin », montre :
 Remarque : la comptabilité en recettes-dépenses de l'année : ce qui est encaissé, ce qui est dépensé, ce qui reste.
 L'écran de comptabilité, « Comptabilité », montre :
     le texte "Année " suivi de l'année d'aujourd'hui, en petites capitales,
-    le texte "Recettes encaissées : CHF " suivi de la somme des prix des séances conservées dont la date ≥ le début d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert »,
-    le texte "Frais : CHF " suivi de la somme des montants des frais conservés dont la date ≥ le début d'exercice,
-    le texte "Résultat : CHF " suivi de (la somme des prix des séances conservées dont la date ≥ le début d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice),
+    le texte "Recettes encaissées : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont la date ≥ le début d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » à 0,01,
+    le texte "Frais : CHF " suivi de l'arrondi de la somme des montants des frais conservés dont la date ≥ le début d'exercice à 0,01,
+    le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont la date ≥ le début d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice) à 0,01,
     le texte « Le cabinet », en petites capitales,
     un bouton « À encaisser », en tuile, avec la description « Les séances à payer »,
     un bouton « Quittances », en tuile, avec la description « Remettre et retrouver »,
     un bouton « Frais », en tuile, avec la description « Dépenses et justificatifs »,
+    un bouton « Rappels », en tuile, avec la description « Impayées depuis trente jours »,
+    un bouton « Journal de l'année », en tuile, avec la description « Recettes et frais, à imprimer »,
     un bouton « Fermer ».
+
+Remarque : les séances faites, à payer depuis trente jours ; « Rappel » imprime pour le patient choisi tout ce qu'il doit.
+L'écran des rappels, « Rappels », montre :
+    la liste des séances conservées dont le paiement = « à payer » et le statut = « faite » et la date ≤ la limite des rappels, par date, avec la date, le nom du patient, le nom du soin, le prix et le dernier rappel,
+    côte à côte :
+        un bouton « Rappel », principal,
+        un bouton « Fermer ».
+
+Remarque : le rappel, sur papier : toutes les séances faites et pas payées du patient, leur total, et comment payer.
+Le document de rappel, « Rappel », montre :
+    côte à côte :
+        l'un sous l'autre :
+            l'image « images/signature.png », large de 220,
+            le texte l'adresse professionnelle du cabinet conservé,
+            le texte la ville professionnelle du cabinet conservé,
+        l'un sous l'autre :
+            le texte le nom de la personne du rappel,
+            le texte l'adresse de la personne du rappel,
+            le texte la ville de la personne du rappel,
+    le texte "Le " suivi d'aujourd'hui en toutes lettres,
+    le texte « Sauf erreur de notre part, les séances suivantes restent à régler. »,
+    la liste des séances conservées dont le patient = la personne du rappel et le paiement = « à payer » et le statut = « faite », par date, avec la date, le nom du soin, la durée et le prix,
+    le texte "Total dû : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont le patient = la personne du rappel et le paiement = « à payer » et le statut = « faite » à 0,01,
+    le texte « Merci de le régler dans les trente jours, en espèces, par Twint ou par virement. Si votre paiement a croisé ce rappel, ne tenez pas compte de ce courrier. »,
+    le texte « Avec mes salutations, Nicolas Seydoux ».
+
+Remarque : le journal de l'année, pour la déclaration d'impôts : les recettes encaissées, les frais, le résultat.
+Le document de journal, « Journal des recettes et des frais », montre :
+    l'image « images/signature.png », large de 220,
+    le texte "Année " suivi de l'année d'aujourd'hui suivi de ", état au " suivi d'aujourd'hui,
+    le texte « Recettes », en petites capitales,
+    la liste des séances conservées dont la date ≥ le début d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert », par date, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
+    le texte "Total des recettes : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont la date ≥ le début d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » à 0,01,
+    le texte « Frais », en petites capitales,
+    la liste des frais conservés dont la date ≥ le début d'exercice, par date, avec la date, le libellé, le nom de la rubrique, le montant et le moyen,
+    le texte "Total des frais : CHF " suivi de l'arrondi de la somme des montants des frais conservés dont la date ≥ le début d'exercice à 0,01,
+    le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont la date ≥ le début d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice) à 0,01.
 
 Remarque : les séances payées attendent leur quittance ; les quittances remises se retrouvent dessous.
 L'écran des quittances, « Quittances », montre :
@@ -187,7 +230,7 @@ Le document de quittance, « Quittance », montre :
     le texte "N° " suivi du numéro de la pièce en cours suivi de ", le " suivi de la date de la pièce en cours en toutes lettres,
     le texte « Séances », en petites capitales,
     la liste des séances conservées dont la quittance = la pièce en cours, par date, avec la date, le nom du soin, la durée et le prix,
-    le texte "Montant reçu : CHF " suivi du montant de la pièce en cours suivi de ", en " suivi du moyen de la pièce en cours suivi de « . »,
+    le texte "Montant reçu : CHF " suivi de l'arrondi du montant de la pièce en cours à 0,01 suivi de ", en " suivi du moyen de la pièce en cours suivi de « . »,
     le texte « Pour acquit, Nicolas Seydoux ».
 
 L'écran des patients montre :
@@ -302,6 +345,23 @@ Quand on clique sur « Quittances » dans l'écran de comptabilité :
 
 Quand on clique sur « Frais » dans l'écran de comptabilité :
     Ouvrir l'écran des frais.
+
+Quand on clique sur « Rappels » dans l'écran de comptabilité :
+    Ouvrir l'écran des rappels.
+
+Quand on clique sur « Journal de l'année » dans l'écran de comptabilité :
+    Ouvrir le document de journal.
+
+Remarque : le rappel daté sur chaque séance qu'il réclame, pour savoir à qui on a déjà écrit, et quand.
+Quand on clique sur « Rappel » dans l'écran des rappels :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    La personne du rappel devient le patient de la séance choisie de l'écran.
+    Pour chaque séance conservée dont le patient = la personne du rappel et le paiement = « à payer » et le statut = « faite » :
+        Le dernier rappel de la séance devient aujourd'hui.
+    Ouvrir le document de rappel.
+
+Quand on clique sur « Fermer » dans l'écran des rappels :
+    Fermer l'écran.
 
 Quand on clique sur « Fermer » dans l'écran de comptabilité :
     Fermer l'écran.

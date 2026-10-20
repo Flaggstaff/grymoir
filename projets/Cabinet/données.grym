@@ -67,7 +67,8 @@ Une séance, conservée, a :
     un paiement (« à payer » en orange, « espèces » en vert, « Twint » en vert, « virement » en vert ou « offert » en gris),
     un commentaire dicté (son), facultatif,
     un commentaire (texte), facultatif,
-    une quittance (quittance), facultative.
+    une quittance (quittance), facultative,
+    un dernier rappel (date), facultatif.
 
 Remarque : les rubriques des frais (loyer, matériel…) : Nicolas les nomme, les renomme et en ajoute dans la configuration.
 Une rubrique, conservée, a :

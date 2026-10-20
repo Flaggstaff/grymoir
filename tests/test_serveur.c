@@ -1465,17 +1465,17 @@ int main(void) {
                  evenement("q=5&clic=3"), get("/"));
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet8.grymd", &sc);
         CONTIENT(sc.reponses[0], "Comptabilité</span></span><span class=\"description\">Encaisser, quittances, frais</span>");
-        CONTIENT(sc.reponses[2], "<p class=\"texte\">Frais : CHF 0</p>");
+        CONTIENT(sc.reponses[2], "<p class=\"texte\">Frais : CHF 0,00</p>");
         CONTIENT(sc.reponses[5], "Libellé");
         CONTIENT(sc.reponses[7], "<td>Huiles de massage</td>");
-        CONTIENT(sc.reponses[9], "<p class=\"texte\">Frais : CHF 80</p>");
+        CONTIENT(sc.reponses[9], "<p class=\"texte\">Frais : CHF 80,00</p>");
         {   /* le résultat : les recettes lues avant, moins les 80 du frais */
             const char *r = sc.reponses[2] ? strstr(sc.reponses[2], "Recettes encaissées : CHF ") : NULL;
             long recettes = -1;
             if (r) sscanf(r + strlen("Recettes encaissées : CHF "), "%ld", &recettes);
             CONTIENT(sc.reponses[2], "Recettes encaissées : CHF ");
             char attendu[80];
-            snprintf(attendu, sizeof attendu, "<p class=\"texte\">Résultat : CHF %ld</p>", recettes - 80);
+            snprintf(attendu, sizeof attendu, "<p class=\"texte\">Résultat : CHF %ld,00</p>", recettes - 80);   /* les prix d'essai sont ronds */
             CONTIENT(sc.reponses[9], attendu);
         }
         liberer(&sc);
@@ -1513,6 +1513,21 @@ int main(void) {
         NE_CONTIENT_PAS(sc.reponses[8], ">Supervision</button>");
         liberer(&sc);
         remove("_essai_cabinet11.grymd");
+    }
+
+    {   /* Cabinet : les rappels (séances faites, à payer depuis trente jours) ; le rappel et le journal sont des
+           documents : refusés dans le navigateur, sans rien dater (20 octobre 2026) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=6"), evenement("q=2&clic=8"), get("/"), evenement("q=3&choix=0.0"),
+                 evenement("q=4&clic=2"), get("/"), evenement("q=5&clic=3"), evenement("q=6&clic=9"), get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet12.grymd", &sc);
+        CONTIENT(sc.reponses[2], "<h1>Rappels</h1>");
+        CONTIENT(sc.reponses[2], "<td>Marc Dupraz</td>");
+        NE_CONTIENT_PAS(sc.reponses[2], "<td>Anne Rochat</td>");   /* sa séance à payer date d'hier */
+        CONTIENT(sc.reponses[5], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
+        CONTIENT(sc.reponses[8], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
+        liberer(&sc);
+        remove("_essai_cabinet12.grymd");
     }
 
     {   /* Le texte calculé (2.24) : relu à chaque attente, après chaque événement */
