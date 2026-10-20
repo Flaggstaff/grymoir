@@ -46,13 +46,13 @@ Un patient, conservé, anciennement « client », a :
     une dernière dictée (son), facultative.
 
 Remarque : la facture des séances à payer d'un patient, numérotée par année (« F-2026-0001 ») ; son exemplaire, le PDF envoyé, gardé tel quel ;
-Remarque : réglée quand toutes ses séances sont encaissées.
+Remarque : son état suit ses séances : à régler, en partie réglée (certaines encaissées), réglée (toutes) ; réglée, sa quittance se fait seule.
 Une facture, conservée, a :
     un numéro (texte), unique,
     une date (date),
     un patient (patient),
     un montant (nombre),
-    une réglée (vrai ou faux),
+    un état (« à régler », « en partie réglée » ou « réglée »),
     un exemplaire (fichier), facultatif.
 
 Remarque : la quittance d'une ou plusieurs séances payées (CO 88) ; son exemplaire, le PDF remis, est gardé tel quel.

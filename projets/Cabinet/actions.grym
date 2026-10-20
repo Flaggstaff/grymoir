@@ -15,14 +15,6 @@ Pour proposer en deux prix un nom et un premier prix et un prix de suivi :
         Le tarif de suivi vaut prix de suivi.
     Conserver le s.
 
-Remarque : une facture est réglée quand plus aucune de ses séances n'est à payer.
-Pour encaisser une séance et un moyen :
-    Si le statut de la séance = « annulée », refuser « Une séance annulée ne s'encaisse pas. ».
-    Le paiement de la séance devient moyen.
-    Si la facture de la séance est présente :
-        La f vaut la facture de la séance.
-        Si le nombre de séances conservées dont la facture = f et le paiement = « à payer » est nul, la réglée de la f devient vrai.
-
 Pour clore une séance et un statut :
     Le statut de la séance devient statut.
 
@@ -94,3 +86,30 @@ La charge QR d'un cabinet et d'un patient et d'un montant et d'un motif :
     Le d devient d suivi de « CH » suivi du saut.
     Le d devient d suivi de « NON » suivi du saut suivi du saut suivi de motif suivi du saut suivi de « EPD ».
     Rendre d.
+
+Pour solder un relevé et un moyen :
+    Le reste vaut le nombre de séances conservées dont la facture = relevé et le paiement = « à payer ».
+    Si le reste > 0 :
+        L'état du relevé devient « en partie réglée ».
+    Sinon, l'état du relevé devient « réglée ».
+    Le déjà vaut le nombre de séances conservées dont la facture = relevé et la quittance est présente.
+    Si le reste = 0 et le déjà = 0 et moyen ≠ « offert » :
+        Le début vaut (« 01.01. » suivi de l'année d'aujourd'hui) en date.
+        Le rang vaut le nombre de quittances conservées dont la date ≥ le début.
+        Le rang devient le rang + 1.
+        La q vaut une nouvelle quittance :
+            Le numéro vaut le numéro de pièce de « Q- » et de l'année d'aujourd'hui et du rang.
+            La date vaut aujourd'hui.
+            Le patient vaut le patient du relevé.
+            Le montant vaut la somme des prix des séances conservées dont la facture = relevé et le paiement ≠ « offert ».
+            Le moyen vaut moyen.
+        Conserver la q.
+        Pour chaque séance conservée dont la facture = relevé :
+            La quittance de la séance devient la q.
+
+Remarque : encaisser une séance facturée fait avancer sa facture ; la dernière encaissée la règle, et la quittance de toutes ses
+Remarque : séances se fait seule, une fois, numérotée, au moyen de ce dernier paiement ; son PDF se fait quand on l'ouvre.
+Pour encaisser une séance et un moyen :
+    Si le statut de la séance = « annulée », refuser « Une séance annulée ne s'encaisse pas. ».
+    Le paiement de la séance devient moyen.
+    Si la facture de la séance est présente, solder la facture de la séance et moyen.

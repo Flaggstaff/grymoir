@@ -151,13 +151,13 @@ L'écran de comptabilité, « Comptabilité », montre :
     un bouton « Quittances », en tuile, avec la description « Remettre et retrouver »,
     un bouton « Frais », en tuile, avec la description « Dépenses et justificatifs »,
     un bouton « Rappels », en tuile, avec la description « Impayées depuis trente jours »,
-    un bouton « Factures », en tuile, avec la description « Envoyées, réglées ou non »,
+    un bouton « Factures », en tuile, avec la description « Envoyées, et ce qui en est réglé »,
     un bouton « Journal de l'année », en tuile, avec la description « Recettes et frais, à imprimer »,
     un bouton « Fermer ».
 
 Remarque : les factures envoyées, les plus récentes d'abord ; une facture choisie se remontre telle qu'elle a été envoyée.
 L'écran des factures, « Factures », montre :
-    la liste des factures conservées, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et la réglée,
+    la liste des factures conservées, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et l'état,
     un bouton « Fermer ».
 
 Remarque : les séances faites, à payer depuis trente jours ; « Rappel » imprime pour le patient choisi tout ce qu'il doit.
@@ -363,8 +363,8 @@ Remarque : une pièce déjà faite se remontre telle qu'elle a été remise, son
 Pour quittancer une séance :
     Si la quittance de la séance est présente :
         La pièce en cours devient la quittance de la séance.
-        Si l'exemplaire de la pièce en cours est présent, ouvrir l'exemplaire de la pièce en cours.
-        Sinon, ouvrir le document de quittance.
+        Si l'exemplaire de la pièce en cours est absent, l'exemplaire de la pièce en cours devient le document de quittance.
+        Ouvrir l'exemplaire de la pièce en cours.
     Sinon :
         Le rang vaut le nombre de quittances conservées dont la date ≥ le début d'exercice.
         Le rang devient le rang + 1.
@@ -395,7 +395,7 @@ Pour facturer une prestation :
             La date vaut aujourd'hui.
             Le patient vaut la personne facturée.
             Le montant vaut 0.
-            La réglée vaut faux.
+            L'état vaut « à régler ».
         Conserver la f.
         Pour chaque séance conservée dont le patient = la personne facturée et le paiement = « à payer » et la facture est absente et le statut ≠ « annulée » et le statut ≠ « prévue » :
             La facture de la séance devient la f.
@@ -470,8 +470,8 @@ Quand on clique sur « Quittance » dans l'écran des quittances :
 Remarque : une quittance déjà remise se remontre telle qu'elle a été remise : son exemplaire gardé.
 Quand on choisit une quittance dans l'écran des quittances :
     La pièce en cours devient la quittance choisie de l'écran.
-    Si l'exemplaire de la pièce en cours est présent, ouvrir l'exemplaire de la pièce en cours.
-    Sinon, ouvrir le document de quittance.
+    Si l'exemplaire de la pièce en cours est absent, l'exemplaire de la pièce en cours devient le document de quittance.
+    Ouvrir l'exemplaire de la pièce en cours.
 
 Quand on clique sur « Fermer » dans l'écran des quittances :
     Fermer l'écran.
@@ -792,6 +792,7 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
     Le statut du s devient le statut de l'écran.
     Le paiement du s devient le paiement de l'écran.
     Si l'offerte de l'écran est vraie, le paiement du s devient « offert ».
+    Si la facture du s est présente et le paiement du s ≠ « à payer », solder la facture du s et le paiement du s.
     Le commentaire dicté du s devient le commentaire dicté de l'écran.
     Le commentaire du s devient le commentaire de l'écran.
     Fermer l'écran.
@@ -808,6 +809,7 @@ Quand on clique sur « Facture ou quittance » dans l'écran de la séance :
     Le statut du s devient le statut de l'écran.
     Le paiement du s devient le paiement de l'écran.
     Si l'offerte de l'écran est vraie, le paiement du s devient « offert ».
+    Si la facture du s est présente et le paiement du s ≠ « à payer », solder la facture du s et le paiement du s.
     Le commentaire dicté du s devient le commentaire dicté de l'écran.
     Le commentaire du s devient le commentaire de l'écran.
     Attester le s.

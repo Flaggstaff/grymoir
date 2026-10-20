@@ -1572,7 +1572,7 @@ int main(void) {
         REQUETES(evenement("q=1&clic=6"), evenement("q=2&clic=9"), get("/"));
         servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet16.grymd", &sc);
         CONTIENT(sc.reponses[2], "<h1>Factures</h1>");
-        CONTIENT(sc.reponses[2], "<th>Réglée</th>");
+        CONTIENT(sc.reponses[2], "<th>État</th>");
         liberer(&sc);
         remove("_essai_cabinet16.grymd");
     }

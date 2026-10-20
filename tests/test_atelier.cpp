@@ -4675,6 +4675,63 @@ int main(int argc, char **argv) {
         e.close();
     }
 
+    // Cabinet : la facture réunit les séances à payer du patient ; une séance encaissée la règle en partie, la dernière
+    // la règle, et la quittance de toutes ses séances se fait seule, une fois (20 octobre 2026)
+    {
+        QTemporaryDir d;
+        for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet").entryList(QDir::Files))
+            if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(GRYM_SOURCE "/projets/Cabinet/" + n, d.filePath(n));
+        for (const QString &sous : {QString("images"), QString("polices")}) {
+            QDir().mkpath(d.filePath(sous));
+            for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet/" + sous).entryList(QDir::Files))
+                QFile::copy(GRYM_SOURCE "/projets/Cabinet/" + sous + "/" + n, d.filePath(sous + "/" + n));
+        }
+        QFile f(d.filePath("Cabinet.grym"));
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        QString source = QString::fromUtf8(f.readAll());
+        f.close();
+        const QString essai = QString::fromUtf8(
+            "Le marc vaut le patient conservé dont le nom = « Marc Dupraz ».\n"
+            "Pour chaque séance conservée dont le patient = le marc et le paiement = « à payer » et le statut = « faite » :\n"
+            "    Si la facture de la séance est absente, facturer la séance.\n"
+            "Pour chaque facture conservée :\n"
+            "    Afficher « essai facture » puis le montant de la facture puis l'état de la facture.\n"
+            "Pour chaque séance conservée dont le patient = le marc et le paiement = « à payer » et le statut = « faite » :\n"
+            "    Encaisser la séance et « Twint ».\n"
+            "    Sortir de la boucle.\n"
+            "Pour chaque facture conservée :\n"
+            "    Afficher « essai partiel » puis l'état de la facture puis le nombre de quittances conservées.\n"
+            "Pour chaque séance conservée dont le patient = le marc et le paiement = « à payer » et le statut = « faite » :\n"
+            "    Encaisser la séance et « Twint ».\n"
+            "Pour chaque facture conservée :\n"
+            "    Afficher « essai réglée » puis l'état de la facture.\n"
+            "Pour chaque quittance conservée :\n"
+            "    Afficher « essai quittance » puis le montant de la quittance puis le moyen de la quittance.\n"
+            "Afficher « essai liées » puis le nombre de séances conservées dont le patient = le marc et la quittance est présente.\n"
+            "Afficher « fin des essais ».\n");
+        const int k = source.indexOf(QString::fromUtf8("Ouvrir l'écran d'accueil."));
+        VERIFIER(k > 0);
+        source.insert(k, essai);
+        VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(source.toUtf8());
+        f.close();
+        Execution e(d.filePath("Cabinet.grym"));
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 40000 && !fil().contains("fin des essais")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        const QString t = fil();
+        VERIFIER(t.contains(QString::fromUtf8("essai facture 260 à régler")));
+        VERIFIER(t.contains(QString::fromUtf8("essai partiel en partie réglée 0")));
+        VERIFIER(t.contains(QString::fromUtf8("essai réglée réglée")));
+        VERIFIER(t.contains(QString::fromUtf8("essai quittance 260 Twint")));
+        VERIFIER(t.count(QString::fromUtf8("essai quittance")) == 1);
+        VERIFIER(t.contains(QString::fromUtf8("essai liées 2")));
+        if (!t.contains("fin des essais")) std::printf("%s\n", t.right(800).toUtf8().constData());
+        e.close();
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }
