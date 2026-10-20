@@ -34,6 +34,7 @@ Remarque : la facture dont on fait le PDF.
 La créance en cours vaut absent.
 
 Le soin ouvert vaut absent.
+La note ouverte vaut absent.
 
 Remarque : les cinq soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
 Si le nombre de soins conservés est nul :
@@ -119,7 +120,8 @@ L'écran du patient, « Patient », montre :
         un bouton « Enregistrer », principal,
         un bouton « Nouvelle séance »,
         un bouton « Fermer »,
-        un bouton « Notes ».
+        un bouton « Notes »,
+        un bouton « Supprimer ».
 
 Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
 L'écran de la séance, « Séance », montre :
@@ -152,7 +154,8 @@ L'écran du soin, « Soin », montre :
     un code tarifaire (texte), facultatif,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer ».
+        un bouton « Fermer »,
+        un bouton « Supprimer ».
 
 Remarque : la comptabilité en recettes-dépenses d'une année, celle du jour au départ : ce qui est encaissé (à la date d'encaissement),
 Remarque : ce qui est dépensé, ce qui reste ; une autre année se choisit en haut, pour la déclaration d'impôts de l'année passée.
@@ -173,7 +176,8 @@ L'écran de comptabilité, « Comptabilité », montre :
 Remarque : les factures envoyées, les plus récentes d'abord ; une facture choisie se remontre telle qu'elle a été envoyée.
 L'écran des factures, « Factures », montre :
     la liste des factures conservées, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et l'état,
-    un bouton « Fermer ».
+    un bouton « Fermer »,
+    un bouton « Annuler la facture ».
 
 Remarque : les factures échues (trente jours) et pas réglées : « Rappel » imprime le rappel de la facture choisie ;
 Remarque : dessous, les séances dues depuis trente jours qui n'ont pas encore de facture : « Facturer » la fait.
@@ -248,7 +252,8 @@ L'écran des quittances, « Quittances », montre :
         un bouton « Quittance », principal,
         un bouton « Fermer »,
     le texte « Quittances remises », en petites capitales,
-    la liste des quittances conservées, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et le moyen.
+    la liste des quittances conservées, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et le moyen,
+    un bouton « Annuler la quittance ».
 
 L'écran des frais, « Frais », montre :
     la liste des frais conservés, par date décroissant, avec la date, le libellé, le nom de la rubrique, le montant et le moyen,
@@ -367,13 +372,38 @@ L'écran des notes, « Notes confidentielles », montre :
     une nouvelle note (texte), facultative, sur plusieurs lignes, transcrite de la dictée,
     côte à côte :
         un bouton « Ajouter », principal,
-        un bouton « Fermer ».
+        un bouton « Fermer »,
+        un bouton « Modifier »,
+        un bouton « Supprimer ».
+
+Remarque : la corbeille : ce qui a été supprimé, rétablissable ; un patient revient avec ses séances, ses notes et ses pièces.
+Remarque : les pièces annulées y restent, leur exemplaire se remontre ; elles ne se rétablissent pas : on refait la pièce.
+L'écran de la corbeille, « Corbeille », montre :
+    le texte « Patients », en petites capitales,
+    la liste des patients supprimés, par nom, avec le nom, le téléphone et la localité,
+    un bouton « Rétablir le patient »,
+    le texte « Séances », en petites capitales,
+    la liste des séances supprimées, par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
+    un bouton « Rétablir la séance »,
+    le texte « Frais », en petites capitales,
+    la liste des frais supprimés, par date décroissant, avec la date, le libellé et le montant,
+    un bouton « Rétablir le frais »,
+    le texte « Soins et rubriques », en petites capitales,
+    la liste des soins supprimés, par nom, avec le nom et le tarif,
+    un bouton « Rétablir le soin »,
+    la liste des rubriques supprimées, par nom, avec le nom,
+    un bouton « Rétablir la rubrique »,
+    le texte « Pièces annulées », en petites capitales,
+    la liste des factures supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
+    la liste des quittances supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
+    un bouton « Fermer ».
 
 Remarque : la configuration : ce que Nicolas règle une fois, et retouche quand il veut.
 L'écran de configuration, « Configuration », montre :
     un bouton « Le cabinet », en tuile, avec la description « Adresse, RCC, GLN, RME, ASCA »,
     un bouton « Soins », en tuile, avec la description « Noms, tarifs et durées »,
     un bouton « Rubriques de frais », en tuile, avec la description « Loyer, matériel… »,
+    un bouton « Corbeille », en tuile, avec la description « Rétablir ce qui a été supprimé »,
     un bouton « Fermer ».
 
 L'écran des soins, « Soins », montre :
@@ -394,7 +424,8 @@ L'écran de la rubrique, « Rubrique », montre :
     un nom (texte),
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer ».
+        un bouton « Fermer »,
+        un bouton « Supprimer ».
 
 Remarque : attester une séance : payée, sa quittance ; à payer, sa facture, avec la section paiement QR si le cabinet a un IBAN.
 Remarque : une pièce déjà faite se remontre telle qu'elle a été remise, son exemplaire gardé.
@@ -406,6 +437,7 @@ Pour quittancer une séance :
     Sinon :
         Le début vaut le premier janvier d'aujourd'hui.
         Le rang vaut le nombre de quittances conservées dont la date ≥ le début.
+        Le rang devient le rang + le nombre de quittances supprimées dont la date ≥ le début.
         Le rang devient le rang + 1.
         La q vaut une nouvelle quittance :
             Le numéro vaut le numéro de pièce de « Q- » et de l'année d'aujourd'hui et du rang.
@@ -429,6 +461,7 @@ Pour facturer une prestation :
         La personne facturée vaut le patient de la prestation.
         Le début vaut le premier janvier d'aujourd'hui.
         Le rang vaut le nombre de factures conservées dont la date ≥ le début.
+        Le rang devient le rang + le nombre de factures supprimées dont la date ≥ le début.
         Le rang devient le rang + 1.
         La f vaut une nouvelle facture :
             Le numéro vaut le numéro de pièce de « F- » et de l'année d'aujourd'hui et du rang.
@@ -501,6 +534,11 @@ Quand on choisit une facture dans l'écran des factures :
 Quand on clique sur « Fermer » dans l'écran des factures :
     Fermer l'écran.
 
+Remarque : une facture fausse s'annule : ses séances se corrigent, puis « Facture » en refait une, sous un nouveau numéro.
+Quand on clique sur « Annuler la facture » dans l'écran des factures :
+    Si la facture choisie de l'écran est absente, refuser « Choisis d'abord une facture dans la liste. ».
+    Annuler la facture choisie de l'écran.
+
 Quand on clique sur « Rappels » dans l'écran de comptabilité :
     La limite des rappels devient aujourd'hui − 30 jours.
     Ouvrir l'écran des rappels.
@@ -539,6 +577,10 @@ Quand on choisit une quittance dans l'écran des quittances :
 
 Quand on clique sur « Fermer » dans l'écran des quittances :
     Fermer l'écran.
+
+Quand on clique sur « Annuler la quittance » dans l'écran des quittances :
+    Si la quittance choisie de l'écran est absente, refuser « Choisis d'abord une quittance dans la liste du bas. ».
+    Défaire la quittance choisie de l'écran.
 
 Quand on clique sur « Nouveau frais » dans l'écran des frais :
     Le frais ouvert devient absent.
@@ -607,6 +649,41 @@ Quand on clique sur « Rubriques de frais » dans l'écran de configuration :
 Quand on clique sur « Fermer » dans l'écran de configuration :
     Fermer l'écran.
 
+Quand on clique sur « Corbeille » dans l'écran de configuration :
+    Ouvrir l'écran de la corbeille.
+
+Quand on clique sur « Rétablir le patient » dans l'écran de la corbeille :
+    Si le patient choisi de l'écran est absent, refuser « Choisis d'abord un patient dans la liste. ».
+    Rétablir le patient choisi de l'écran.
+
+Quand on clique sur « Rétablir la séance » dans l'écran de la corbeille :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Rétablir la séance choisie de l'écran.
+
+Quand on clique sur « Rétablir le frais » dans l'écran de la corbeille :
+    Si le frais choisi de l'écran est absent, refuser « Choisis d'abord un frais dans la liste. ».
+    Rétablir le frais choisi de l'écran.
+
+Quand on clique sur « Rétablir le soin » dans l'écran de la corbeille :
+    Si le soin choisi de l'écran est absent, refuser « Choisis d'abord un soin dans la liste. ».
+    Rétablir le soin choisi de l'écran.
+
+Quand on clique sur « Rétablir la rubrique » dans l'écran de la corbeille :
+    Si la rubrique choisie de l'écran est absente, refuser « Choisis d'abord une rubrique dans la liste. ».
+    Rétablir la rubrique choisie de l'écran.
+
+Remarque : une pièce annulée se remontre telle qu'elle a été remise ou envoyée.
+Quand on choisit une facture dans l'écran de la corbeille :
+    Si l'exemplaire de la facture choisie de l'écran est absent, refuser « Cette facture n'a pas d'exemplaire gardé. ».
+    Ouvrir l'exemplaire de la facture choisie de l'écran.
+
+Quand on choisit une quittance dans l'écran de la corbeille :
+    Si l'exemplaire de la quittance choisie de l'écran est absent, refuser « Cette quittance n'a pas d'exemplaire gardé. ».
+    Ouvrir l'exemplaire de la quittance choisie de l'écran.
+
+Quand on clique sur « Fermer » dans l'écran de la corbeille :
+    Fermer l'écran.
+
 Quand on clique sur « Ajouter » dans l'écran des rubriques :
     Si la nouvelle rubrique de l'écran est absente, refuser « Écris d'abord le nom de la rubrique. ».
     La r vaut une nouvelle rubrique :
@@ -629,6 +706,10 @@ Quand on clique sur « Enregistrer » dans l'écran de la rubrique :
     Fermer l'écran.
 
 Quand on clique sur « Fermer » dans l'écran de la rubrique :
+    Fermer l'écran.
+
+Quand on clique sur « Supprimer » dans l'écran de la rubrique :
+    Supprimer la rubrique ouverte.
     Fermer l'écran.
 
 Remarque : la fiche du patient montre ses séances, sa ligne « Total », et le bouton d'une nouvelle séance.
@@ -685,6 +766,11 @@ Quand on clique sur « Fermer » dans l'écran du patient :
 Quand on clique sur « Notes » dans l'écran du patient :
     Ouvrir l'écran des notes.
 
+Remarque : un patient supprimé emporte ses séances, ses notes et ses pièces dans la corbeille ; la Configuration les rétablit ensemble.
+Quand on clique sur « Supprimer » dans l'écran du patient :
+    Supprimer la personne ouverte.
+    Fermer l'écran.
+
 Remarque : une note s'ajoute, datée ; rien de ce qui est déjà noté ne se perd.
 Quand on clique sur « Ajouter » dans l'écran des notes :
     Si la nouvelle note de l'écran est absente, refuser « Écris ou dicte d'abord la note. ».
@@ -698,6 +784,23 @@ Quand on clique sur « Ajouter » dans l'écran des notes :
 
 Quand on clique sur « Fermer » dans l'écran des notes :
     Fermer l'écran.
+
+Remarque : une note choisie revient dans la zone ; « Modifier » y écrit le texte corrigé, « Supprimer » la met dans la corbeille.
+Quand on choisit une note dans l'écran des notes :
+    La note ouverte devient la note choisie de l'écran.
+    La nouvelle note de l'écran devient le contenu de la note ouverte.
+
+Quand on clique sur « Modifier » dans l'écran des notes :
+    Si la note ouverte est absente, refuser « Choisis d'abord une note dans la liste. ».
+    Si la nouvelle note de l'écran est absente, refuser « La note est vide : pour la retirer, touche Supprimer. ».
+    Le contenu de la note ouverte devient la nouvelle note de l'écran.
+    La note ouverte devient absente.
+    La nouvelle note de l'écran devient absente.
+
+Quand on clique sur « Supprimer » dans l'écran des notes :
+    Si la note choisie de l'écran est absente, refuser « Choisis d'abord une note dans la liste. ».
+    Supprimer la note choisie de l'écran.
+    La note ouverte devient absente.
 
 Quand on clique sur « Nouveau patient » dans l'écran des patients :
     Ouvrir l'écran d'inscription.
@@ -856,6 +959,11 @@ Quand on clique sur « Enregistrer » dans l'écran du soin :
 Quand on clique sur « Fermer » dans l'écran du soin :
     Fermer l'écran.
 
+Remarque : un soin ou une rubrique supprimé ne se propose plus ; les séances et les frais qui le désignent le gardent.
+Quand on clique sur « Supprimer » dans l'écran du soin :
+    Supprimer le soin ouvert.
+    Fermer l'écran.
+
 Remarque : la page d'une séance ; son patient s'ouvre sur sa page, jamais sur la fiche déduite.
 Quand on ouvre l'écran de la séance :
     Le s vaut la séance ouverte.
@@ -880,8 +988,9 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
     Si l'offerte de l'écran est vraie, le nouveau paiement devient « offert ».
     Si la facture du s est présente ou la quittance du s est présente :
         Si le patient de l'écran ≠ le patient du s ou le soin de l'écran ≠ le soin du s ou la date de l'écran ≠ la date du s ou le prix de l'écran ≠ le prix du s :
-            Refuser « Cette séance a sa facture ou sa quittance : son patient, son soin, sa date et son prix ne changent plus. ».
-    Si la quittance du s est présente et le nouveau paiement ≠ le paiement du s, refuser « Cette séance a sa quittance : son paiement ne change plus. ».
+            Si la quittance du s est présente, défaire la quittance du s.
+            Si la facture du s est présente, annuler la facture du s.
+    Si la quittance du s est présente et le nouveau paiement ≠ le paiement du s, défaire la quittance du s.
     Le patient du s devient le patient de l'écran.
     Le soin du s devient le soin de l'écran.
     La date du s devient la date de l'écran.
@@ -901,15 +1010,17 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
     Fermer l'écran.
 
 Remarque : la séance enregistrée telle qu'à l'écran, puis sa pièce : à payer, sa facture ; payée, sa quittance.
-Remarque : une séance qui a sa pièce ne change plus de patient, de soin, de date ni de prix ; sa quittance faite, plus de paiement.
+Remarque : tout se modifie ; une séance qui a sa pièce et change de patient, de soin, de date ou de prix (ou de paiement, pour une
+Remarque : quittance) la voit annulée : dans la corbeille, son exemplaire gardé ; « Facture ou quittance » en refait une juste.
 Quand on clique sur « Facture ou quittance » dans l'écran de la séance :
     Le s vaut la séance ouverte.
     Le nouveau paiement vaut le paiement de l'écran.
     Si l'offerte de l'écran est vraie, le nouveau paiement devient « offert ».
     Si la facture du s est présente ou la quittance du s est présente :
         Si le patient de l'écran ≠ le patient du s ou le soin de l'écran ≠ le soin du s ou la date de l'écran ≠ la date du s ou le prix de l'écran ≠ le prix du s :
-            Refuser « Cette séance a sa facture ou sa quittance : son patient, son soin, sa date et son prix ne changent plus. ».
-    Si la quittance du s est présente et le nouveau paiement ≠ le paiement du s, refuser « Cette séance a sa quittance : son paiement ne change plus. ».
+            Si la quittance du s est présente, défaire la quittance du s.
+            Si la facture du s est présente, annuler la facture du s.
+    Si la quittance du s est présente et le nouveau paiement ≠ le paiement du s, défaire la quittance du s.
     Le patient du s devient le patient de l'écran.
     Le soin du s devient le soin de l'écran.
     La date du s devient la date de l'écran.
@@ -938,10 +1049,11 @@ Quand on clique sur « Voir le patient » dans l'écran de la séance :
 Quand on clique sur « Fermer » dans l'écran de la séance :
     Fermer l'écran.
 
-Remarque : une séance saisie par erreur va dans la corbeille ; avec sa facture ou sa quittance, elle se garde dix ans (CO 958f).
+Remarque : une séance supprimée va dans la corbeille, d'où elle se rétablit ; sa facture ou sa quittance est d'abord annulée.
 Quand on clique sur « Supprimer » dans l'écran de la séance :
     Le s vaut la séance ouverte.
-    Si la facture du s est présente ou la quittance du s est présente, refuser « Cette séance a sa facture ou sa quittance : elle se garde dix ans. ».
+    Si la quittance du s est présente, défaire la quittance du s.
+    Si la facture du s est présente, annuler la facture du s.
     Supprimer le s.
     Fermer l'écran.
 

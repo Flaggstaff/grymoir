@@ -4734,7 +4734,8 @@ int main(int argc, char **argv) {
 
     // Cabinet (20 octobre 2026) : la dernière séance d'une facture offerte n'empêche pas la quittance des autres ; une
     // quittance faite à part n'empêche pas celle du solde ; une séance prévue, une absence non facturée refusées, puis
-    // facturée une fois le réglage allumé ; aucune séance à payer n'a de date d'encaissement ; la base sauvegardée
+    // facturée une fois le réglage allumé ; une facture annulée va dans la corbeille, son numéro jamais repris ; aucune
+    // séance à payer n'a de date d'encaissement ; la base sauvegardée
     {
         QTemporaryDir d;
         for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet").entryList(QDir::Files))
@@ -4791,6 +4792,16 @@ Pour chaque séance conservée dont le patient = la claire et le statut = « abs
     Attester la séance.
 Pour chaque facture conservée dont le patient = la claire :
     Afficher « essai E » puis le montant de la facture.
+L'anne vaut le patient conservé dont le nom = « Anne Rochat ».
+Pour chaque séance conservée dont le patient = l'anne et le paiement = « à payer » et le statut = « faite » :
+    Attester la séance.
+Pour chaque facture conservée dont le patient = l'anne :
+    Annuler la facture.
+Pour chaque séance conservée dont le patient = l'anne et le paiement = « à payer » et le statut = « faite » :
+    Attester la séance.
+Pour chaque facture conservée dont le patient = l'anne :
+    Afficher « essai G » puis le numéro de la facture.
+Afficher « essai H » puis le nombre de factures supprimées puis le nombre de séances conservées dont la facture est absente et le patient = l'anne et le statut = « faite » et le paiement = « à payer ».
 Afficher « essai F » puis le nombre de séances conservées dont l'encaissement est présent et le paiement = « à payer ».
 Sauvegarder la base dans « essai.grymd ».
 Afficher « fin des essais ».
@@ -4818,6 +4829,8 @@ Afficher « fin des essais ».
         VERIFIER(t.contains(QString::fromUtf8("essai D Le cabinet ne facture pas les absences")));
         VERIFIER(t.contains(QString::fromUtf8("essai E 130")));
         VERIFIER(t.contains(QString::fromUtf8("essai F 0")));
+        VERIFIER(t.contains(QString::fromUtf8("-0005")) && t.contains(QString::fromUtf8("essai G F-")));   // F-…-0004 annulée, jamais reprise
+        VERIFIER(t.contains(QString::fromUtf8("essai H 1 0")));
         VERIFIER(t.contains("fin des essais"));
         QFile copie(d.filePath("essai.grymd"));
         VERIFIER(copie.open(QIODevice::ReadOnly) && copie.read(15) == "SQLite format 3");

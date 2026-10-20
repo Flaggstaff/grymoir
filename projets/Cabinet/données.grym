@@ -49,13 +49,14 @@ Un patient, conservé, anciennement « client », a :
     une anamnèse (texte), facultative, anciennement « remarque »,
     une dernière dictée (son), facultative.
 
+Remarque : un patient supprimé emporte dans la corbeille ses séances, ses notes et ses pièces ; rétabli, il les ramène.
 Remarque : la facture des séances à payer d'un patient, numérotée par année (« F-2026-0001 ») ; son exemplaire, le PDF envoyé, gardé tel quel ;
 Remarque : son état suit ses séances : à régler, en partie réglée (certaines encaissées), réglée (toutes) ; réglée, sa quittance se fait seule.
 Remarque : échue trente jours après sa date ; le dernier rappel envoyé pour elle, daté.
 Une facture, conservée, a :
     un numéro (texte), unique,
     une date (date),
-    un patient (patient),
+    un patient (patient), et disparaît avec lui,
     un montant (nombre),
     un état (« à régler », « en partie réglée » ou « réglée »),
     un exemplaire (fichier), facultatif,
@@ -67,7 +68,7 @@ Remarque : « plusieurs » quand les séances d'une facture ont été payées de
 Une quittance, conservée, a :
     un numéro (texte), unique,
     une date (date),
-    un patient (patient),
+    un patient (patient), et disparaît avec lui,
     un montant (nombre),
     un moyen (« espèces », « Twint », « virement » ou « plusieurs »),
     un exemplaire (fichier), facultatif.
@@ -77,7 +78,7 @@ Remarque : l'encaissement : le jour où l'argent est arrivé ; les comptes en re
 Remarque : le dernier rappel d'une séance date d'avant les rappels par facture (20 octobre 2026) : gardé, plus écrit.
 
 Une séance, conservée, a :
-    un patient (patient), anciennement « client »,
+    un patient (patient), anciennement « client », et disparaît avec lui,
     un soin (soin),
     une date (date),
     une heure (heure), facultative,
@@ -107,7 +108,7 @@ Un frais (frais), conservé, a :
 
 Remarque : ce que le patient confie ne s'affiche jamais dans sa fiche, qu'on peut ouvrir devant lui ; ses notes s'ouvrent à part, par « Notes ».
 Une note, conservée, hors des fiches, a :
-    un patient (patient), anciennement « client »,
+    un patient (patient), anciennement « client », et disparaît avec lui,
     une date (date),
     un contenu (texte).
 

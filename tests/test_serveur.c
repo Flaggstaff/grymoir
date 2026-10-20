@@ -1606,6 +1606,26 @@ int main(void) {
         remove("_essai_cabinet17.grymd");
     }
 
+    {   /* Cabinet : tout se supprime et se rétablit : un patient supprimé va dans la corbeille avec ses séances ;
+           rétabli depuis la Configuration, il revient avec elles (20 octobre 2026) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=4"), evenement("q=2&choix=0.0"), get("/"), evenement("q=3&clic=22"), get("/"),
+                 evenement("q=4&fermer=1"), evenement("q=5&clic=7"), evenement("q=6&clic=3"), get("/"),
+                 evenement("q=7&s1=0&clic=2"), get("/"), evenement("q=8&clic=17"), evenement("q=9&fermer=1"),
+                 evenement("q=10&clic=4"), get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet18.grymd", &sc);
+        CONTIENT(sc.reponses[2], "value=\"Anne Rochat\"");
+        CONTIENT(sc.reponses[2], ">Supprimer</button>");
+        NE_CONTIENT_PAS(sc.reponses[4], ">Anne Rochat</button>");   /* plus dans la liste des patients */
+        CONTIENT(sc.reponses[8], "<h1>Corbeille</h1>");
+        CONTIENT(sc.reponses[8], ">Anne Rochat</button>");
+        CONTIENT(sc.reponses[8], "<td>Anne Rochat</td>");           /* ses séances, parties avec elle */
+        NE_CONTIENT_PAS(sc.reponses[10], "Anne Rochat");
+        CONTIENT(sc.reponses[14], ">Anne Rochat</button>");        /* rétablie, de retour parmi les patients */
+        liberer(&sc);
+        remove("_essai_cabinet18.grymd");
+    }
+
     {   /* Cabinet : l'écran des factures (vide tant qu'aucune n'est faite dans l'atelier) (20 octobre 2026) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=6"), evenement("q=2&clic=9"), get("/"));
