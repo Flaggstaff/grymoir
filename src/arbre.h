@@ -157,7 +157,10 @@ typedef enum {
                         enfant : le texte */
     N_DOCUMENT,      /* « le document de quittance » (2.25) : le PDF qu'un document déclaré donne ; texte : son nom, tel
                         que l'écran le range (« document de quittance ») */
-    P_SAUVEGARDER    /* « Sauvegarder la base dans « copie.grymd ». » (2.29) : enfants[0] : le chemin */
+    P_SAUVEGARDER,   /* « Sauvegarder la base dans « copie.grymd » [avec le mot de passe m]. » (2.29, 2.30) : enfants[0] :
+                        le chemin ; enfants[1] : le mot de passe, s'il y en a un (forme 1 : chiffrée, un coffre) */
+    P_RESTAURER      /* « Restaurer la base depuis f [avec le mot de passe m]. » (2.30) : enfants[0] : un chemin ou un
+                        fichier ; enfants[1] : le mot de passe (forme 1) */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */

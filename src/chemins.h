@@ -13,6 +13,15 @@ FILE *grym_fopen(const char *chemin, const char *mode);
 /* Supprime un fichier dont le chemin est en UTF-8, comme remove. */
 int grym_supprimer(const char *chemin);
 
+/* Renomme un fichier (chemins en UTF-8), comme rename ; 0 si fait. */
+int grym_renommer(const char *de, const char *vers);
+
+/* Crée les dossiers qui manquent avant le dernier « / » de chemin (comme mkdir -p) ; 0 si tout existe ensuite. */
+int grym_creer_dossiers(const char *chemin);
+
+/* « ~/ » en tête : le dossier de l'utilisateur (HOME, ou USERPROFILE sous Windows). Rend une copie, à libérer. */
+char *grym_chemin_utilisateur(const char *chemin);
+
 /* Chemin absolu et normalisé d'un fichier existant (liens symboliques résolus), ou NULL. À libérer. */
 char *chemin_absolu(const char *chemin);
 

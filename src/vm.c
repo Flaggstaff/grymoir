@@ -4,6 +4,7 @@
 #include "chemins.h"
 #include "vm.h"
 #include "qr.h"
+#include "coffre.h"
 #include "teinte.h"
 #include "vm_interne.h"
 #include "base.h"
@@ -872,15 +873,21 @@ static const char *format_montre(const Fichier *f, char **illisible) {
     return o ? format_son(o, f->taille) : NULL;
 }
 
+/* « ~/Documents/x » : le dossier de l'utilisateur (2.30) ; un chemin absolu reste tel quel ; sinon, à côté du programme. */
+static int chemin_absolu_ecrit(const char *ecrit) {
+    return ecrit[0] == '/' || ecrit[0] == '\\' || (ecrit[0] == '~' && (ecrit[1] == '/' || ecrit[1] == '\\'))
+        || (ecrit[0] && ecrit[1] == ':' && (ecrit[2] == '/' || ecrit[2] == '\\'));
+}
+
 static char *chemin_effectif(const Machine *m, const char *ecrit) {
-    if (ecrit[0] == '/' || !m->dossier) return grym_dupliquer(ecrit);
+    if (chemin_absolu_ecrit(ecrit) || !m->dossier) return grym_chemin_utilisateur(ecrit);
     return grym_formater("%s/%s", m->dossier, ecrit);
 }
 
 /* Où s'écrit un fichier : le dossier d'écriture s'il est fixé (une application fabriquée, dont le dossier du programme
  * n'est pas modifiable), sinon à côté du programme (§ 15.2). */
 static char *chemin_ecriture(const Machine *m, const char *ecrit) {
-    if (ecrit[0] == '/' || !m->dossier_ecriture) return chemin_effectif(m, ecrit);
+    if (chemin_absolu_ecrit(ecrit) || !m->dossier_ecriture) return chemin_effectif(m, ecrit);
     return grym_formater("%s/%s", m->dossier_ecriture, ecrit);
 }
 
@@ -969,6 +976,7 @@ static char *ecrire_sur_le_disque(Machine *m) {
             erreur = grym_formater("« %s » existe déjà : il n'est jamais écrasé.", e->ecrit);
             break;
         }
+        grym_creer_dossiers(e->chemin);   /* un dossier qui manque se crée (2.30) : un dossier synchronisé, une clé neuve */
         FILE *f = grym_fopen(e->chemin, "wb");
         int ok = f && fwrite(e->fichier->octets, 1, e->fichier->taille, f) == e->fichier->taille;
         if (f && fclose(f) != 0) ok = 0;
@@ -4572,9 +4580,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
-        case I_SAUVEGARDER: {   /* « Sauvegarder la base dans « Cabinet.grymd ». » (2.29) */
+        case I_SAUVEGARDER:
+        case I_SAUVEGARDER_COFFRE: {   /* « Sauvegarder la base dans « Cabinet.grymd » [avec le mot de passe m]. » (2.29, 2.30) */
+            Valeur mdp = vi_absent(NULL);
+            if (code == I_SAUVEGARDER_COFFRE) mdp = depiler(&pile);
             Valeur c = depiler(&pile);
             char *probleme = NULL;
+            if (code == I_SAUVEGARDER_COFFRE && (mdp.type != V_TEXTE || !mdp.texte || !*mdp.texte))
+                probleme = grym_dupliquer("Le mot de passe d'une sauvegarde est un texte, et pas vide.");
             if (c.type != V_TEXTE) probleme = grym_formater("Le chemin d'un fichier est un texte, pas %s.", nom_type(c.type));
             else if (!*c.texte) probleme = grym_dupliquer("Chemin de fichier vide.");
             else if (!m->base) probleme = grym_dupliquer("Ce programme n'a pas de base : il ne conserve aucune entité.");
@@ -4597,6 +4610,17 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     else libre = essai;
                 }
                 if (!libre) probleme = grym_formater("« %s » : plus de mille sauvegardes de ce nom.", c.texte);
+                else {
+                    /* le dossier se crée et s'essaie dès maintenant : une sauvegarde impossible (un dossier synchronisé
+                     * absent, un disque plein) se dit ici, où un « Essayer » la rattrape, pas à la fin de l'exécution */
+                    char *chemin = chemin_ecriture(m, libre), *essai = grym_formater("%s.essai", chemin);
+                    grym_creer_dossiers(chemin);
+                    FILE *t = grym_fopen(essai, "wb");
+                    if (t) { fclose(t); grym_supprimer(essai); }
+                    else probleme = grym_formater("Sauvegarde impossible dans « %s » : le dossier ne s'écrit pas.", libre);
+                    free(essai);
+                    free(chemin);
+                }
             }
             if (!probleme) {
                 f = grym_allouer(sizeof *f);
@@ -4605,6 +4629,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 f->base = NULL;
                 f->cle = 0;
                 f->octets = base_copie(m->base, &f->taille, &probleme);
+                if (!probleme && code == I_SAUVEGARDER_COFFRE) {   /* le coffre : rien ne s'ouvre sans le mot de passe */
+                    size_t n = 0;
+                    unsigned char *ferme = coffre_fermer(f->octets, f->taille, mdp.texte, &n, &probleme);
+                    memset(f->octets, 0, f->taille);
+                    free(f->octets);
+                    f->octets = ferme;
+                    f->taille = ferme ? n : 0;
+                }
                 const char *barre = strrchr(libre, '/');
                 f->nom = grym_dupliquer(barre ? barre + 1 : libre);
                 if (!probleme) probleme = planifier_ecriture(m, libre, f);
@@ -4612,6 +4644,65 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             free(libre);
             valeur_liberer(&c);
+            valeur_liberer(&mdp);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
+        case I_RESTAURER: {   /* « Restaurer la base depuis f [avec le mot de passe m]. » (2.30) */
+            Valeur mdp = vi_absent(NULL);
+            if (op) mdp = depiler(&pile);
+            Valeur src = depiler(&pile);
+            char *probleme = NULL;
+            const unsigned char *o = NULL;
+            size_t n = 0;
+            Fichier *lu = NULL;
+            if (!m->base) probleme = grym_dupliquer("Ce programme n'a pas de base : rien à restaurer.");
+            else if (src.type == V_TEXTE) {
+                lu = lire_fichier(m, src.texte ? src.texte : "", &probleme);
+                if (lu) o = octets_du_fichier(lu, &probleme), n = lu->taille;
+            } else if (src.type == V_FICHIER && src.fichier) {
+                o = octets_du_fichier(src.fichier, &probleme);
+                n = src.fichier->taille;
+            } else if (src.type == V_ABSENT) probleme = grym_dupliquer("Choisis d'abord la sauvegarde à restaurer.");
+            else probleme = grym_formater("On restaure depuis un chemin ou un fichier, pas %s.", nom_type(src.type));
+            unsigned char *clair = NULL;
+            size_t nc = 0;
+            if (!probleme && o) {
+                if (coffre_est(o, n)) {
+                    if (!op || mdp.type != V_TEXTE) probleme = grym_dupliquer("Cette sauvegarde est chiffrée : il faut son mot de passe.");
+                    else clair = coffre_ouvrir(o, n, mdp.texte, &nc, &probleme);
+                } else {
+                    clair = malloc(n ? n : 1);
+                    if (clair) { memcpy(clair, o, n); nc = n; }
+                    else probleme = grym_dupliquer("Mémoire insuffisante pour lire la sauvegarde.");
+                }
+            }
+            if (!probleme && clair && !base_verifier_copie(clair, nc, &probleme)) { /* probleme rempli */ }
+            if (!probleme && clair && !m->chemin_base) probleme = grym_dupliquer("Cette base vit en mémoire : rien à remplacer.");
+            if (!probleme && clair) {
+                /* à côté de la base, en attente : elle prend sa place à la prochaine ouverture, l'ancienne gardée */
+                char *absolu = chemin_absolu(m->chemin_base);
+                char *attente = grym_formater("%s.restaurer", absolu ? absolu : m->chemin_base);
+                free(absolu);
+                grym_supprimer(attente);   /* une restauration demandée plus tôt est remplacée */
+                Fichier *f = grym_allouer(sizeof *f);
+                f->references = 1;
+                f->format = NULL;
+                f->base = NULL;
+                f->cle = 0;
+                f->octets = clair;
+                f->taille = nc;
+                const char *barre = strrchr(attente, '/');
+                f->nom = grym_dupliquer(barre ? barre + 1 : attente);
+                clair = NULL;
+                probleme = planifier_ecriture(m, attente, f);
+                if (probleme) { free(f->octets); free(f->nom); free(f); }
+                free(attente);
+            }
+            if (clair) { memset(clair, 0, nc); free(clair); }
+            if (lu) { free(lu->octets); free(lu->nom); free(lu); }
+            valeur_liberer(&src);
+            valeur_liberer(&mdp);
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }

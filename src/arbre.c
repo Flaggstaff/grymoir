@@ -551,8 +551,10 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, ")");
         return;
     case P_SAUVEGARDER:
-        chaine_ajouter(c, "(sauvegarder ");
+    case P_RESTAURER:
+        chaine_ajouter(c, n->type == P_SAUVEGARDER ? "(sauvegarder " : "(restaurer ");
         decrire(n->enfants[0], c);
+        if (n->nb_enfants > 1) { chaine_ajouter(c, " "); decrire(n->enfants[1], c); }
         chaine_ajouter(c, ")");
         return;
     case P_ENREGISTRER:

@@ -123,7 +123,7 @@ void pbkdf2_sha256(const unsigned char *mdp, size_t nm, const unsigned char *sel
     free(premier);
 }
 
-static int aleatoire(unsigned char *o, size_t n) {
+int aleatoire_systeme(unsigned char *o, size_t n) {
 #ifdef _WIN32
     for (size_t i = 0; i < n; i += 4) {
         unsigned int r;
@@ -155,7 +155,7 @@ static int lire_hexa(const char *s, size_t n, unsigned char *o) {
 
 char *empreinte_creer(const char *mdp) {
     unsigned char sel[16], cle[32];
-    if (!aleatoire(sel, sizeof sel)) return NULL;
+    if (!aleatoire_systeme(sel, sizeof sel)) return NULL;
     pbkdf2_sha256((const unsigned char *)mdp, strlen(mdp), sel, sizeof sel, EMPREINTE_ITERATIONS, cle, sizeof cle);
     char s[33], c[65];
     hexa(sel, sizeof sel, s);

@@ -13,6 +13,9 @@ void sha256(const unsigned char *donnees, size_t n, unsigned char sortie[32]);
 void pbkdf2_sha256(const unsigned char *mdp, size_t nm, const unsigned char *sel, size_t ns, unsigned long iterations,
                    unsigned char *cle, size_t nc);
 
+/* n octets de la source aléatoire du système (/dev/urandom, rand_s sous Windows) ; 0 si elle fait défaut. */
+int aleatoire_systeme(unsigned char *o, size_t n);
+
 /* L'empreinte d'un mot de passe, avec un sel neuf ; NULL si la source aléatoire du système fait défaut. À libérer. */
 char *empreinte_creer(const char *mdp);
 /* Le mot de passe correspond-il à l'empreinte ? Une empreinte illisible ne correspond à rien. Comparaison en temps

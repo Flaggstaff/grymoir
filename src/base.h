@@ -105,6 +105,10 @@ void base_noter_lecture(Base *b, const ClasseVM *c);
  * par free ; NULL et *erreur sinon (grammaire, 2.29). */
 unsigned char *base_copie(Base *b, size_t *taille, char **erreur);
 
+/* Une copie de base (ses octets) est-elle une base GrymoiR intacte (en-tête, table grym_schema, intégrité) ? 1, sinon 0
+ * et *erreur (grammaire 2.30). */
+int base_verifier_copie(const unsigned char *o, size_t n, char **erreur);
+
 /* L'objet d'identifiant id est-il dans la corbeille ? */
 int base_est_supprime(Base *b, long id);
 

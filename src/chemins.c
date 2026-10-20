@@ -4,12 +4,17 @@
 #include "chemins.h"
 #include "texte.h"
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
 #include <windows.h>
 #include <wchar.h>
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
 #endif
 
 #ifdef _WIN32
@@ -45,11 +50,55 @@ int grym_supprimer(const char *chemin) {
     free(c);
     return r;
 }
+
+int grym_renommer(const char *de, const char *vers) {
+    wchar_t *a = large(de), *b = large(vers);
+    int r = a && b ? _wrename(a, b) : -1;
+    free(a);
+    free(b);
+    return r;
+}
+
+static int creer_dossier(const char *d) {
+    wchar_t *w = large(d);
+    int r = w ? _wmkdir(w) : -1;
+    free(w);
+    return r == 0 || errno == EEXIST ? 0 : -1;
+}
 #else
 FILE *grym_fopen(const char *chemin, const char *mode) { return fopen(chemin, mode); }
 
 int grym_supprimer(const char *chemin) { return remove(chemin); }
+
+int grym_renommer(const char *de, const char *vers) { return rename(de, vers); }
+
+static int creer_dossier(const char *d) { return mkdir(d, 0755) == 0 || errno == EEXIST ? 0 : -1; }
 #endif
+
+int grym_creer_dossiers(const char *chemin) {
+    char *c = grym_dupliquer(chemin);
+    int r = 0;
+    for (char *p = c + 1; *p && r == 0; p++) {
+        if (*p != '/' && *p != '\\') continue;
+        const char garde = *p;
+        *p = 0;
+        if (!(p == c + 2 && c[1] == ':')) r = creer_dossier(c);   /* « C: » n'est pas un dossier à créer */
+        *p = garde;
+    }
+    free(c);
+    return r;
+}
+
+char *grym_chemin_utilisateur(const char *chemin) {
+    if (!(chemin[0] == '~' && (chemin[1] == '/' || chemin[1] == '\\'))) return grym_dupliquer(chemin);
+#ifdef _WIN32
+    const char *maison = getenv("USERPROFILE");
+#else
+    const char *maison = getenv("HOME");
+#endif
+    if (!maison || !*maison) return grym_dupliquer(chemin);
+    return grym_formater("%s%s", maison, chemin + 1);
+}
 
 char *chemin_absolu(const char *chemin) {
 #ifdef _WIN32

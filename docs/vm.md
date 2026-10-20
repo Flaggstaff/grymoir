@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.89 de la spécification, révisée le 20 octobre 2026.
+Version 1.90 de la spécification, révisée le 20 octobre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -138,6 +138,8 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 95 | `DOCUMENT` | 0 le PDF, 1 l'aperçu, 2 un fichier (2.26) : dépilé, passé à `montrer_document` avec son nom | l'écran ouvert est un document (son nom commence par « document ») : `ÉCRAN_OUVRIR` ne l'a pas montré, ses listes ont gardé leurs cellules ; sa page HTML A4 est mise en page par `rendre_pdf`, l'écran se ferme ; 0 empile le fichier PDF, 1 le passe à `montrer_document` (grammaire 2.25, § 22.15) |
 | 96 | `CODE_QR` | 1 suisse, 0 simple | dépile une valeur, l'écrit comme `AFFICHER` et empile l'image PNG de son code QR (`src/qr.c`, codage de vendor/qrcodegen) ; suisse : correction M, version 25 au plus, croix au centre (grammaire 2.27) ; suisse, le texte doit d'abord passer `qr_suisse_verifier` (2.29) |
 | 97 | `SAUVEGARDER` | aucun | dépile un chemin ; copie la base telle que la transaction la voit (`base_copie`, `sqlite3_serialize`) et la planifie comme `ENREGISTRER`, sous un nom libre : « copie (2).grymd », « (3) »… ; sans base, erreur (grammaire 2.29, § 16.5) |
+| 98 | `SAUVEGARDER_COFFRE` | aucun | dépile un mot de passe, puis un chemin : comme `SAUVEGARDER`, la copie chiffrée par `coffre_fermer` (`src/coffre.c`, grammaire 2.30) |
+| 99 | `RESTAURER` | 1 avec un mot de passe, dépilé d'abord | dépile un chemin ou un fichier ; une copie chiffrée est ouverte par `coffre_ouvrir`, puis vérifiée par `base_verifier_copie` ; elle se planifie comme `ENREGISTRER` à `base.grymd.restaurer`, que `base_ouvrir` met à la place de la base, l'ancienne renommée (grammaire 2.30) |
 
 ### 3.1 Boucles et Selon
 
@@ -463,3 +465,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.87 | 2026-10-19 | `DOCUMENT` 2 : montrer un fichier ; `montrer_document` reçoit le nom du fichier |
 | 1.88 | 2026-10-20 | Instruction `CODE_QR` (96) ; `CONVERTIR` 9 : le format technique ; format version 67 |
 | 1.89 | 2026-10-20 | Instruction `SAUVEGARDER` (97) ; `CONVERTIR` 10 : en IBAN ; `ÉCRAN_TEXTE` vérifie la section paiement, `CODE_QR` 1 son texte (`qr_suisse_verifier`) ; format version 68 |
+| 1.90 | 2026-10-20 | Instructions `SAUVEGARDER_COFFRE` (98) et `RESTAURER` (99) ; `base_ouvrir` applique une restauration en attente ; format version 69 |

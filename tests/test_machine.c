@@ -2839,7 +2839,7 @@ int main(void) {
 
         /* code invalide : vérification avant exécution */
         struct { const char *nom; uint8_t code[16]; size_t n; const char *fragment; } codes[] = {
-            { "code inconnu",       { 99 }, 1, "inconnu" },
+            { "code inconnu",       { 200 }, 1, "inconnu" },
             { "pile vide",          { I_ADDITION, I_RETOUR }, 2, "pile insuffisante" },
             { "constante absente",  { I_CONSTANTE, 7, 0, I_RETOUR }, 4, "inexistante" },
             { "sans RETOUR",        { I_CONSTANTE, 0, 0, I_AFFICHER, 1, 0 }, 6, "RETOUR" },
@@ -3923,6 +3923,29 @@ int main(void) {
     }
     PROG("Le double d'un nombre :\n    Sauvegarder la base dans « x.grymd ».\n    Rendre nombre × 2.\nAfficher le double de 2.",
          "~Un calcul n'écrit pas sur le disque : sauvegarde la base dans une action.");
+    /* Le coffre et la restauration (2.30) : une sauvegarde chiffrée dans un dossier créé ; le mauvais mot de passe, pas de
+       mot de passe, un fichier qui n'est pas une base : refusés ; la bonne restauration attend la prochaine ouverture */
+    remove("_essai_coffre/copie.coffre");
+    remove("_essai_coffre");
+    PROG("Un livre, conservé, a :\n    un titre (texte).\nLe l vaut un nouveau livre :\n    Le titre vaut « Candide ».\n"
+         "Conserver le l.\nSauvegarder la base dans « _essai_coffre/copie.coffre » avec le mot de passe « tilleul ».\nAfficher 1.", "1");
+    {
+        FILE *a = fopen("_essai_coffre/copie.coffre", "rb");
+        char tete[12] = "";
+        if (a && fread(tete, 1, 12, a) != 12) tete[0] = 0;
+        total++;
+        if (!(a && memcmp(tete, "GRYMCOFFRE1\n", 12) == 0)) signaler(__LINE__, "Sauvegarder … avec le mot de passe", "un coffre", "rien");
+        if (a) fclose(a);
+    }
+    PROG("Un livre, conservé, a :\n    un titre (texte).\nRestaurer la base depuis « _essai_coffre/copie.coffre » avec le mot de passe « faux ».",
+         "~Mot de passe faux, ou sauvegarde abîmée : elle ne s'ouvre pas.");
+    PROG("Un livre, conservé, a :\n    un titre (texte).\nRestaurer la base depuis « _essai_coffre/copie.coffre ».",
+         "~Cette sauvegarde est chiffrée : il faut son mot de passe.");
+    PROG("Restaurer la base depuis « _essai_coffre/copie.coffre ».", "~Ce programme n'a pas de base : rien à restaurer.");
+    PROG("Le pas d'un nombre :\n    Restaurer la base depuis « x ».\n    Rendre nombre.\nAfficher le pas de 2.",
+         "~Un calcul ne restaure pas la base : restaure-la dans une action.");
+    remove("_essai_coffre/copie.coffre");
+    remove("_essai_coffre");
     /* « en IBAN » (2.29) : sans espaces, en capitales, vérifié ; trois refus */
     PROG("Afficher « ch52 0483 5012 3456 7100 0 » en IBAN.\nAfficher « GB82 WEST 1234 5698 7654 32 » en IBAN.",
          "CH5204835012345671000\nGB82WEST12345698765432");

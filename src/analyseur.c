@@ -8023,17 +8023,30 @@ static Noeud *phrase(Analyse *a, int colonne) {
         if (a->echec) return NULL;
         if (ok) return exporter(a, t);
     }
-    if (est_mot(t, "sauvegarder") && est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "base") && est_mot(voir(a, 3), "dans")) {
-        /* « Sauvegarder la base dans « chemin ». » (2.29) : sans réserver « sauvegarder », seulement suivi de « la base dans » */
+    if ((est_mot(t, "sauvegarder") && est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "base") && est_mot(voir(a, 3), "dans"))
+        || (est_mot(t, "restaurer") && est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "base") && est_mot(voir(a, 3), "depuis"))) {
+        /* « Sauvegarder la base dans « chemin » [avec le mot de passe m]. » (2.29, 2.30) ; « Restaurer la base depuis f
+         * [avec le mot de passe m]. » (2.30) : sans réserver ces verbes, seulement suivis de « la base dans / depuis » */
+        const int restaurer = est_mot(t, "restaurer");
         if (a->formule == 1)
-            return erreur(a, t, grym_dupliquer("Un calcul n'écrit pas sur le disque : sauvegarde la base dans une action."));
+            return erreur(a, t, grym_dupliquer(restaurer ? "Un calcul ne restaure pas la base : restaure-la dans une action."
+                                                         : "Un calcul n'écrit pas sur le disque : sauvegarde la base dans une action."));
         a->i += 4;
-        Noeud *chemin = valeur(a);
+        Noeud *chemin = expression_avant(a, "avec", NULL);
         if (!chemin) return NULL;
-        if (!fin_phrase(a, 0)) { noeud_liberer(chemin); return NULL; }
-        Noeud *n = noeud_creer(P_SAUVEGARDER, t->ligne, t->colonne, t->debut);
+        Noeud *mdp = NULL;
+        attendre_ici(a, "avec le mot de passe");
+        if (est_mot(cour(a), "avec")) {
+            static const char *const MDP[] = { "avec", "le", "mot", "de", "passe" };
+            if (!mots_fixes(a, MDP, 5)) { noeud_liberer(chemin); return NULL; }
+            mdp = valeur(a);
+            if (!mdp) { noeud_liberer(chemin); return NULL; }
+        }
+        if (!fin_phrase(a, 0)) { noeud_liberer(chemin); noeud_liberer(mdp); return NULL; }
+        Noeud *n = noeud_creer(restaurer ? P_RESTAURER : P_SAUVEGARDER, t->ligne, t->colonne, t->debut);
         noeud_ajouter(n, chemin);
         n->fin = chemin->fin;
+        if (mdp) { noeud_ajouter(n, mdp); n->fin = mdp->fin; n->forme = 1; }
         return n;
     }
     if (est_mot(t, "enregistrer")) {

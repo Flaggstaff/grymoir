@@ -2,6 +2,7 @@
  * Spécification : docs/grammaire.md (révision 1.37), § 16 ; docs/vm.md (révision 1.32), § 8.
  */
 #include "base.h"
+#include "chemins.h"
 #include "decimal.h"
 #include "date.h"
 #include "texte.h"
@@ -13,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define REQUETES_GARDEES 512
 
@@ -574,7 +576,81 @@ static int convertir_fichiers(Base *b, char **erreur) {
     return ok;
 }
 
+/* Une restauration en attente (grammaire 2.30) : « base.grymd.restaurer », écrit par « Restaurer la base … » à la fin
+ * d'une exécution réussie, prend la place de la base avant qu'elle s'ouvre. La base d'avant n'est jamais perdue :
+ * elle devient « base.grymd avant restauration AAAA-MM-JJ HHhMM.grymd » (puis « (2) »…), avec son journal WAL s'il en
+ * reste un, et le fichier partagé (-shm), qui ne décrit que l'ancienne, est retiré. */
+static int restaurer_en_attente(const char *chemin, char **erreur) {
+    char *attente = grym_formater("%s.restaurer", chemin);
+    FILE *f = grym_fopen(attente, "rb");
+    if (!f) { free(attente); return 1; }
+    fclose(f);
+    char date[32];
+    const time_t maintenant = time(NULL);
+    strftime(date, sizeof date, "%Y-%m-%d %Hh%M", localtime(&maintenant));
+    char *avant = NULL;
+    for (int rang = 1; rang < 1000 && !avant; rang++) {
+        char *essai = rang == 1 ? grym_formater("%s avant restauration %s.grymd", chemin, date)
+                                : grym_formater("%s avant restauration %s (%d).grymd", chemin, date, rang);
+        FILE *e = grym_fopen(essai, "rb");
+        if (e) { fclose(e); free(essai); } else avant = essai;
+    }
+    int ok = avant != NULL;
+    FILE *existe = grym_fopen(chemin, "rb");
+    if (existe) {
+        fclose(existe);
+        ok = ok && grym_renommer(chemin, avant) == 0;
+        if (ok) {
+            char *wal = grym_formater("%s-wal", chemin), *wal_avant = grym_formater("%s-wal", avant), *shm = grym_formater("%s-shm", chemin);
+            FILE *w = grym_fopen(wal, "rb");
+            if (w) { fclose(w); grym_renommer(wal, wal_avant); }
+            grym_supprimer(shm);
+            free(wal);
+            free(wal_avant);
+            free(shm);
+        }
+    }
+    if (ok) ok = grym_renommer(attente, chemin) == 0;
+    if (!ok) *erreur = grym_formater("Base « %s » : la restauration en attente n'a pas pu prendre sa place.", chemin);
+    free(avant);
+    free(attente);
+    return ok;
+}
+
+int base_verifier_copie(const unsigned char *o, size_t n, char **erreur) {
+    if (n < 100 || memcmp(o, "SQLite format 3", 16) != 0) {
+        *erreur = grym_dupliquer("Ce fichier n'est pas une base GrymoiR.");
+        return 0;
+    }
+    sqlite3 *db = NULL;
+    if (sqlite3_open_v2(":memory:", &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK) {
+        sqlite3_close(db);
+        *erreur = grym_dupliquer("Mémoire insuffisante pour lire la sauvegarde.");
+        return 0;
+    }
+    unsigned char *copie = sqlite3_malloc64(n);
+    int ok = copie != NULL;
+    if (ok) {
+        memcpy(copie, o, n);
+        ok = sqlite3_deserialize(db, "main", copie, (sqlite3_int64)n, (sqlite3_int64)n,
+                                 SQLITE_DESERIALIZE_FREEONCLOSE | SQLITE_DESERIALIZE_READONLY) == SQLITE_OK;
+    }
+    sqlite3_stmt *st = NULL;
+    if (ok) ok = sqlite3_prepare_v2(db, "SELECT count(*) FROM sqlite_master WHERE name = 'grym_schema';", -1, &st, NULL) == SQLITE_OK
+                 && sqlite3_step(st) == SQLITE_ROW && sqlite3_column_int(st, 0) == 1;
+    sqlite3_finalize(st);
+    if (ok) {   /* l'intégrité, page par page : une copie tronquée ou abîmée est refusée avant de remplacer quoi que ce soit */
+        ok = sqlite3_prepare_v2(db, "PRAGMA integrity_check;", -1, &st, NULL) == SQLITE_OK && sqlite3_step(st) == SQLITE_ROW
+             && strcmp((const char *)sqlite3_column_text(st, 0), "ok") == 0;
+        sqlite3_finalize(st);
+    }
+    sqlite3_close(db);
+    if (!ok) *erreur = grym_dupliquer("Ce fichier n'est pas une base GrymoiR intacte : rien n'est restauré.");
+    return ok;
+}
+
 Base *base_ouvrir(const char *chemin, char **erreur) {
+    if (chemin && !restaurer_en_attente(chemin, erreur)) return NULL;
     Base *b = grym_allouer(sizeof *b);
     memset(b, 0, sizeof *b);
     b->db = NULL;

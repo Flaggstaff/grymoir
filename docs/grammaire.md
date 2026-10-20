@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.29 de la spécification, révisée le 20 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.30 de la spécification, révisée le 20 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1208,6 +1208,20 @@ Sauvegarder la base dans (« Cabinet du » suivi d'aujourd'hui suivi de « .grym
 - Aucun mot réservé : `Sauvegarder` n'est cette phrase que suivi de `la base dans`.
 - Forme compacte : `_sauvegarder _dans « c.grymd »`.
 
+#### Le coffre *(2.30)*
+
+```
+Sauvegarder la base dans « ~/Sauvegardes/Cabinet.coffre » avec le mot de passe le code de l'écran.
+Restaurer la base depuis la sauvegarde de l'écran avec le mot de passe le code de l'écran.
+Restaurer la base depuis « Cabinet 20.10.2026.grymd ».
+```
+
+- **`avec le mot de passe m`** chiffre la copie : rien ne l'ouvre sans `m`. La clé vient du mot de passe par Argon2id (RFC 9106, 64 Mio, 3 passes, un sel aléatoire de 16 octets), le contenu est chiffré et authentifié par XChaCha20-Poly1305 (un nonce aléatoire de 24 octets), par Monocypher 4.0.2 (`vendor/monocypher`). Le fichier commence par `GRYMCOFFRE1` ; un octet changé, ou un en-tête retouché, et il ne s'ouvre plus. Le mot de passe n'est rangé nulle part : perdu, la copie est perdue.
+- **`Restaurer la base depuis f`** : `f` est un chemin ou un fichier (une zone `(fichier)` d'un écran). Une copie chiffrée demande son mot de passe ; elle est déchiffrée, puis vérifiée : une base GrymoiR (table `grym_schema`) intacte (`PRAGMA integrity_check`). Sinon, rien ne change : « Mot de passe faux, ou sauvegarde abîmée : elle ne s'ouvre pas. », « Cette sauvegarde est chiffrée : il faut son mot de passe. », « Ce fichier n'est pas une base GrymoiR. ».
+- **Quand elle a lieu.** La copie vérifiée s'écrit à côté de la base, `base.grymd.restaurer`, à la fin de l'exécution réussie, comme `Enregistrer` ; elle prend la place de la base **à la prochaine ouverture**, avant qu'aucun objet ne soit lu : un programme en cours garde en mémoire des objets de l'ancienne base, qui ne doivent pas se mêler à la nouvelle. La base d'avant n'est jamais perdue : elle devient `base.grymd avant restauration 2026-10-20 14h26.grymd`. Une seconde restauration demandée avant la réouverture remplace la première.
+- **Chemins** *(2.30, pour toutes les écritures)* : `~/` en tête désigne le dossier de l'utilisateur (`~/Library/Mobile Documents/com~apple~CloudDocs/Cabinet`, le dossier iCloud Drive sur un Mac) ; un dossier qui manque se crée, pour `Enregistrer`, `Exporter` et `Sauvegarder`. `Sauvegarder` crée et essaie son dossier dès la phrase : une sauvegarde impossible (un dossier synchronisé absent, un disque plein) se dit là, où `Essayer` la rattrape (« Sauvegarde impossible dans « … » : le dossier ne s'écrit pas. »).
+- Forme compacte : `_sauvegarder _dans « c.coffre » _mot_de_passe m`, `_restaurer _depuis f [_mot_de_passe m]`.
+
 ### 15.7 Un son *(implémenté le 16 octobre 2026)*
 
 ```
@@ -2253,3 +2267,4 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 | 2.27 | 2026-10-20 | Nouveau § 22.16 : `le code QR de t`, `le code QR suisse de t` (SIX IG 2.4), `un saut de ligne`, `x en format technique` |
 | 2.28 | 2026-10-20 | § 22.16 : `la section paiement de …` dans un document : la section paiement et le récépissé d'une QR-facture, au bas de la dernière page |
 | 2.29 | 2026-10-20 | Nouveau § 15.6 bis : `Sauvegarder la base dans « … ».` ; § 22.16 : `t en IBAN` (ISO 13616, mod 97) et la vérification des lignes d'un code QR suisse avant son image ou sa section paiement (SIX IG 2.4, § 4.2.2) |
+| 2.30 | 2026-10-20 | § 15.6 bis : le coffre, `Sauvegarder la base dans … avec le mot de passe m.` (Argon2id, XChaCha20-Poly1305, Monocypher) ; `Restaurer la base depuis f [avec le mot de passe m].`, vérifiée, appliquée à la prochaine ouverture, l'ancienne base gardée ; `~/` et les dossiers qui manquent, pour toutes les écritures |

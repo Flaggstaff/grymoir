@@ -123,11 +123,15 @@ typedef enum {
                            1 le montre (montrer_document) */
     I_CODE_QR,          /* opérande : 1 le Swiss QR Code (croix, M, version 25 au plus), 0 un code QR ; dépile un
                            texte, empile l'image PNG de son code QR (2.27) */
-    I_SAUVEGARDER       /* dépile un chemin ; une copie de la base, telle que l'exécution la voit, s'y écrira à la fin
+    I_SAUVEGARDER,      /* dépile un chemin ; une copie de la base, telle que l'exécution la voit, s'y écrira à la fin
                            de l'exécution réussie, jamais par-dessus un fichier : « (2) », « (3) »… (2.29) */
+    I_SAUVEGARDER_COFFRE, /* dépile un mot de passe, puis un chemin : comme SAUVEGARDER, la copie chiffrée (coffre.h, 2.30) */
+    I_RESTAURER         /* opérande : 1 avec un mot de passe (dépilé d'abord) ; dépile un chemin ou un fichier, une copie
+                           de base, chiffrée ou non ; vérifiée, elle s'écrit à côté de la base (« .restaurer ») à la fin de
+                           l'exécution réussie et la remplace à la prochaine ouverture (2.30) */
 } CodeInstruction;
 
-#define I_DERNIER I_SAUVEGARDER
+#define I_DERNIER I_RESTAURER
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

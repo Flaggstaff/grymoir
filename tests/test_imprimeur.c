@@ -105,6 +105,8 @@ int main(void) {
     COMP("La charge vaut « SPC ».\nLe document de rappel montre :\n    la section paiement de la charge.",
          "_la charge << « SPC »\n_document de_rappel\n    _section_paiement charge\n_fin\n");
     /* Le code QR, le saut de ligne, le format technique (2.27) */
+    LITT("Le m vaut « x ».\nLe f vaut « c.coffre ».\nSauvegarder la base dans « c.coffre » avec le mot de passe m.\nRestaurer la base depuis f avec le mot de passe m.\nRestaurer la base depuis « c.grymd ».",
+         "Le m vaut « x ».\nLe f vaut « c.coffre ».\nSauvegarder la base dans « c.coffre » avec le mot de passe m.\nRestaurer la base depuis f avec le mot de passe m.\nRestaurer la base depuis « c.grymd ».\n");   /* 2.30 */
     LITT("Sauvegarder la base dans « copie.grymd ».\nAfficher « ch52 0483 5012 3456 7100 0 » en IBAN.",
          "Sauvegarder la base dans « copie.grymd ».\nAfficher « ch52 0483 5012 3456 7100 0 » en IBAN.\n");   /* 2.29 */
     LITT("Le c vaut « SPC » suivi d'un saut de ligne suivi de 1590 en format technique.\nLe q vaut le code QR suisse du c.",

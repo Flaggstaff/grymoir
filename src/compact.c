@@ -2132,16 +2132,28 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "dans", &r->e[dans]);
             expression(r, dans + 1, f);
             point(r, f);
-        } else if (!strcmp(c, "sauvegarder")) {   /* _sauvegarder _dans « c.grymd » (2.29) */
-            if (f < d + 3 || !est_cle(&r->e[d + 1], "dans")) {
-                echouer(r, t, grym_dupliquer("Forme attendue : « _sauvegarder _dans « copie.grymd » »."));
+        } else if (!strcmp(c, "sauvegarder") || !strcmp(c, "restaurer")) {
+            /* _sauvegarder _dans « c.grymd » [_mot_de_passe m] (2.29, 2.30) ; _restaurer _depuis f [_mot_de_passe m] */
+            const int sauver = !strcmp(c, "sauvegarder");
+            if (f < d + 3 || !est_cle(&r->e[d + 1], sauver ? "dans" : "depuis")) {
+                echouer(r, t, grym_dupliquer(sauver ? "Forme attendue : « _sauvegarder _dans « copie.grymd » [_mot_de_passe m] »."
+                                                    : "Forme attendue : « _restaurer _depuis « copie.grymd » [_mot_de_passe m] »."));
                 return;
             }
-            mot(r, "sauvegarder", t);
+            size_t mdp = chercher(r, d + 2, f, "mot_de_passe");
+            mot(r, c, t);
             mot(r, "la", t);
             mot(r, "base", t);
-            mot(r, "dans", &r->e[d + 1]);
-            expression(r, d + 2, f);
+            mot(r, sauver ? "dans" : "depuis", &r->e[d + 1]);
+            expression(r, d + 2, mdp);
+            if (mdp < f) {
+                mot(r, "avec", &r->e[mdp]);
+                mot(r, "le", &r->e[mdp]);
+                mot(r, "mot", &r->e[mdp]);
+                mot(r, "de", &r->e[mdp]);
+                mot(r, "passe", &r->e[mdp]);
+                expression(r, mdp + 1, f);
+            }
             point(r, f);
         } else if (!strcmp(c, "enregistrer")) {
             size_t dans = chercher(r, d + 1, f, "dans");
