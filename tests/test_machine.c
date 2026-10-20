@@ -3946,6 +3946,21 @@ int main(void) {
          "~Un calcul ne restaure pas la base : restaure-la dans une action.");
     remove("_essai_coffre/copie.coffre");
     remove("_essai_coffre");
+    /* Deux défauts corrigés (2.31) : une parenthèse qui contient un « dont » est un calcul, pas un groupe logique ;
+       une action dont le nom finit par « d'un » s'appelle avec « de », « du », « des », « d' » */
+    PROG("Une note, conservée, a :\n    une date (date).\nLe n vaut une nouvelle note :\n    La date vaut 01.02.2026.\nConserver le n.\n"
+         "Le r vaut (le nombre de notes conservées dont la date ≥ 01.01.2026) + (le nombre de notes supprimées dont la date ≥ 01.01.2026) + 1.\n"
+         "Afficher le r.\nSi (le nombre de notes conservées dont la date ≥ 01.01.2026 et la date < 01.01.2027) = 1, afficher « un ».", "2\nun");
+    PROG("Pour acquitter le solde d'un relevé :\n    Afficher « solde » puis relevé.\nLe relevé vaut 3.\nL'anne vaut 5.\n"
+         "Les notes valent 1 et 2.\nAcquitter le solde du relevé.\nAcquitter le solde de 4.\nAcquitter le solde d'anne.\n"
+         "Acquitter le solde des notes.", "solde 3\nsolde 4\nsolde 5\nsolde 1, 2");
+    /* Un mot de passe : « est présent », « est absent » ne le lisent pas (2.31) ; le lire reste refusé */
+    PROG("Un membre, conservé, a :\n    un nom (texte),\n    un code (mot de passe), facultatif.\nLe m vaut un nouveau membre :\n"
+         "    Le nom vaut « A ».\nConserver le m.\nSi le code du m est absent, afficher « sans ».\nLe code du m devient « secret-1 ».\n"
+         "Si le code du m est présent, afficher « avec ».\nPour chaque membre conservé :\n    Si le code du membre est présent, afficher « relu ».",
+         "sans\navec\nrelu");
+    PROG("Un membre, conservé, a :\n    un code (mot de passe).\nLe m vaut un nouveau membre :\n    Le code vaut « secret-1 ».\nAfficher le code du m.",
+         "~« code » est un mot de passe : il ne se lit pas, il se vérifie");
     /* « en IBAN » (2.29) : sans espaces, en capitales, vérifié ; trois refus */
     PROG("Afficher « ch52 0483 5012 3456 7100 0 » en IBAN.\nAfficher « GB82 WEST 1234 5698 7654 32 » en IBAN.",
          "CH5204835012345671000\nGB82WEST12345698765432");

@@ -6274,8 +6274,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     break;
                 }
                 if (type_secret(o->classe->types[k]) && strncmp(o->classe->nom, "écran ", strlen("écran ")) != 0
-                    && !(ip < b->taille_code && b->code[ip] == I_CORRESPOND)) {
-                    /* un mot de passe ne se lit pas, sauf pour être vérifié (§ 16.1) ; la zone d'un écran, elle, se lit */
+                    && !(ip < b->taille_code && (b->code[ip] == I_CORRESPOND || b->code[ip] == I_EST_ABSENT))) {
+                    /* un mot de passe ne se lit pas, sauf pour être vérifié (§ 16.1), ou pour savoir s'il y en a un
+                     * (« est présent », « est absent ») : ce test ne dit rien de lui ; la zone d'un écran, elle, se lit */
                     ok = echouer(diag, b, debut, grym_formater(
                         "« %s » est un mot de passe : il ne se lit pas, il se vérifie (« Si … correspond au %s … »).", champ, champ));
                     break;

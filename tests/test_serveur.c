@@ -263,8 +263,12 @@ static void verifier_jetons(void) {
 
 /* Un projet du dépôt, servi comme grym servir le fait : les « Utiliser » partent de son dossier ; sa base est
  * une base d'essai, effacée avant et après (docs/atelier.md, § 5 quater). */
-static void servir_projet(const char *chemin, const char *base, Script *sc) {
-    remove(base);
+static void servir_projet_base(const char *chemin, const char *base, Script *sc, int garder);
+static void servir_projet(const char *chemin, const char *base, Script *sc) { servir_projet_base(chemin, base, sc, 0); }
+
+/* garder : 1, la base d'une exécution précédente sert (un second lancement) ; 2, la base reste après (20 octobre 2026). */
+static void servir_projet_base(const char *chemin, const char *base, Script *sc, int garder) {
+    if (!(garder & 1)) remove(base);
     char *src = lire_tout(chemin);
     total++;
     if (!src) { echecs++; printf("ÉCHEC : %s introuvable\n", chemin); return; }
@@ -305,7 +309,7 @@ static void servir_projet(const char *chemin, const char *base, Script *sc) {
     machine_detruire(m);
     portee_detruire(portee);
     serveur_fermer(s);
-    remove(base);
+    if (!(garder & 2)) remove(base);
 }
 
 #define CONTIENT(r, f)     verifier(__LINE__, #r, r, f, 1)
@@ -1642,12 +1646,22 @@ int main(void) {
         REQUETES(get("/"), evenement("q=1&z1=court&z2=court&clic=3"), get("/"),
                  evenement("q=2&z1=essai-essai&z2=essai-autre&clic=3"), get("/"),
                  evenement("q=3&z1=essai-essai&z2=essai-essai&clic=3"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet19.grymd", &sc);
+        servir_projet_base("projets/Cabinet/Cabinet.grym", "_essai_cabinet19.grymd", &sc, 2);
         CONTIENT(sc.reponses[0], "<h1>Choisir le mot de passe</h1>");
         NE_CONTIENT_PAS(sc.reponses[0], "Anne Rochat");
         CONTIENT(sc.reponses[2], "Au moins huit caractères : il protège des données de santé.");
         CONTIENT(sc.reponses[4], "Les deux saisies diffèrent.");
         CONTIENT(sc.reponses[6], "Bonjour Nicolas");
+        liberer(&sc);
+        /* rouvert : l'écran de connexion (le code d'accès existe : sa présence se teste sans le lire, 2.31) ; un mot de
+           passe faux refusé, le bon ouvre l'accueil */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z1=mauvais-mot&clic=2"), get("/"), evenement("q=2&z1=essai-essai&clic=2"), get("/"));
+        servir_projet_base("projets/Cabinet/Cabinet.grym", "_essai_cabinet19.grymd", &sc, 1);
+        CONTIENT(sc.reponses[0], "<h1>Cabinet</h1>");
+        CONTIENT(sc.reponses[0], "donne le mot de passe du cabinet");
+        CONTIENT(sc.reponses[2], "Mot de passe faux.");
+        CONTIENT(sc.reponses[4], "Bonjour Nicolas");
         liberer(&sc);
         remove("_essai_cabinet19.grymd");
     }

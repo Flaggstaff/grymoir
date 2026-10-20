@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.30 de la spécification, révisée le 20 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.31 de la spécification, révisée le 20 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -621,6 +621,7 @@ Relancer le client.
 - Une action s'écrit en bloc, après `Pour` et son nom (un ou plusieurs mots, à l'infinitif).
 - Appel : le nom de l'action commence la phrase, suivi des arguments séparés par `et`. Chaque argument est une comparaison ou une expression ; un `et` logique dans un argument demande des parenthèses.
 - Une action ne rend rien : `Rendre` y est une erreur.
+- *(2.31)* Un nom qui finit par `de` devant son premier paramètre s'écrit avec l'élision : `Pour acquitter le solde d'un relevé :`. L'appel contracte comme partout : `Acquitter le solde du relevé.`, `… de 4.`, `… d'Anne.`, `… des notes.`
 
 ### 9.3 Paramètres
 
@@ -2082,6 +2083,7 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
 
 - **Il s'écrit comme un texte** (`Le code de m vaut le code de l'écran.`) et se range en **empreinte**, jamais en clair : PBKDF2-HMAC-SHA256, 600 000 itérations, un sel aléatoire de 16 octets, selon la recommandation de l'OWASP (*Password Storage Cheat Sheet*), qui place Argon2id en tête et admet PBKDF2. L'empreinte s'écrit `pbkdf2-sha256$600000$sel$clé`, l'algorithme en tête, pour en changer un jour sans perdre les anciennes. Une empreinte prend environ 0,7 seconde : c'est voulu, c'est ce qui ralentit un attaquant.
 - **Il ne se lit pas** : « « code » est un mot de passe : il ne se lit pas, il se vérifie ». La fiche et les listes le montrent « •••••• » ; la saisie d'une fiche ne le propose pas en valeur actuelle.
+- **Sa présence se teste** *(2.31)* : `Si le code du membre est présent` ne lit pas le mot de passe, il dit seulement s'il y en a un (avant la 2.31, ce test était refusé comme une lecture).
 - **Il se vérifie** : `x correspond au code du membre` (`à`, `au`, `à la`), vrai si le texte x est le mot de passe. La comparaison prend le même temps que les clés se ressemblent ou non.
 - **Une zone `(mot de passe)`** est masquée d'elle-même ; elle garde son texte en mémoire le temps de l'événement, et ne le range nulle part : c'est en l'affectant à un champ d'entité qu'il devient une empreinte.
 - Forme compacte : `x _correspond membre.code`.
@@ -2268,3 +2270,4 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 | 2.28 | 2026-10-20 | § 22.16 : `la section paiement de …` dans un document : la section paiement et le récépissé d'une QR-facture, au bas de la dernière page |
 | 2.29 | 2026-10-20 | Nouveau § 15.6 bis : `Sauvegarder la base dans « … ».` ; § 22.16 : `t en IBAN` (ISO 13616, mod 97) et la vérification des lignes d'un code QR suisse avant son image ou sa section paiement (SIX IG 2.4, § 4.2.2) |
 | 2.30 | 2026-10-20 | § 15.6 bis : le coffre, `Sauvegarder la base dans … avec le mot de passe m.` (Argon2id, XChaCha20-Poly1305, Monocypher) ; `Restaurer la base depuis f [avec le mot de passe m].`, vérifiée, appliquée à la prochaine ouverture, l'ancienne base gardée ; `~/` et les dossiers qui manquent, pour toutes les écritures |
+| 2.31 | 2026-10-20 | Trois corrections : une parenthèse qui contient un `dont` est un calcul (`(le nombre de notes conservées dont la date ≥ d) + 1` était refusé, la comparaison du `dont` la faisant prendre pour un groupe logique) ; une action dont le nom finit par `d'un` (`Pour acquitter le solde d'un relevé :`) s'appelle avec `de`, `du`, `des` ou `d'`, et s'imprime ainsi (son nom se rangeait avec l'élision, et aucun appel ne le trouvait) ; § 22.14 : `est présent`, `est absent` sur un mot de passe |

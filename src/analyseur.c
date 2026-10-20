@@ -3204,13 +3204,16 @@ static Noeud *comparaison(Analyse *a) {
 }
 
 /* Une parenthèse ouvre-t-elle un groupe logique plutôt qu'un calcul ?
- * Oui si elle contient, à son premier niveau, une comparaison, « et » ou « ou ». */
+ * Oui si elle contient, à son premier niveau, une comparaison, « et » ou « ou ». Ce qui suit un « dont » appartient à
+ * sa condition, jusqu'à la parenthèse fermante : « (le nombre de notes conservées dont la date ≥ d) + 1 » est un
+ * calcul (avant le 20 octobre 2026, la comparaison du « dont » en faisait un groupe logique, et le « + » était refusé). */
 static int groupe_logique(Analyse *a) {
     int profondeur = 0;
     for (size_t k = a->i; k < a->n; k++) {
         const Jeton *t = &a->j[k];
         if (t->type == J_PAR_OUV) profondeur++;
         else if (t->type == J_PAR_FERM) { if (--profondeur == 0) return 0; }
+        else if (profondeur == 1 && est_mot(t, "dont")) return 0;
         else if (t->type == J_POINT || t->type == J_FIN || t->type == J_VIRGULE
                  || t->type == J_DEUX_POINTS) return 0;
         else if (profondeur == 1 &&
@@ -4012,6 +4015,14 @@ static Noeud *definition_action(Analyse *a, int colonne) {
         return erreur(a, &a->j[fin], grym_dupliquer(
             "« : » attendu : une action s'écrit en bloc (« Pour relancer un client : »)."));
     char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+    if (k > d + 1 && a->j[k - 1].type == J_ELISION && strcmp(a->j[k - 1].valeur, "d") == 0) {
+        /* « Pour acquitter le solde d'un relevé : » : l'élision devant « un » est un « de » ; le nom finit par « de », comme
+         * celui de « Pour régler le solde de un relevé : », et s'appelle « … de 4 », « … du relevé », « … d'Anne » */
+        char *debut = cle(a, d, k - 1);
+        free(nom);
+        nom = grym_formater("%s de", debut);
+        free(debut);
+    }
     Noeud *params = parametres(a, k, fin, 0);
     if (!params) { free(nom); return NULL; }
     int refus;
@@ -4109,7 +4120,9 @@ static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
     return n;
 }
 
-/* Action visible dont le nom commence la phrase (plus longue correspondance). */
+/* Action visible dont le nom commence la phrase (plus longue correspondance). Un nom qui finit par « de » s'appelle
+ * aussi avec « du », « des » ou « d' » : « Acquitter le solde du relevé. » pour « Pour acquitter le solde d'un relevé : ».
+ * La contraction rend son article à l'argument, comme « suivi du » (§ 4.4). */
 static Symbole *action_en_tete(Analyse *a, size_t *fin) {
     size_t f = a->i;
     while (f < a->n && mot_de_nom(a, f)) f++;
@@ -4118,6 +4131,19 @@ static Symbole *action_en_tete(Analyse *a, size_t *fin) {
         Symbole *s = visible(a, c);
         free(c);
         if (s && s->sorte == S_ACTION) { *fin = k; return s; }
+        const Jeton *x = &a->j[k - 1];
+        const int du = est_mot(x, "du"), des = est_mot(x, "des"), elision = x->type == J_ELISION && strcmp(x->valeur, "d") == 0;
+        if (k - 1 > a->i && (du || des || elision)) {
+            char *debut = cle(a, a->i, k - 1), *avec_de = grym_formater("%s de", debut);
+            Symbole *t = visible(a, avec_de);
+            free(debut);
+            free(avec_de);
+            if (t && t->sorte == S_ACTION) {
+                *fin = k;
+                if (du || des) { a->article_force = du ? ART_LE : ART_LES; a->jeton_force = (Jeton *)x; }
+                return t;
+            }
+        }
     }
     return NULL;
 }
@@ -8174,7 +8200,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
     Symbole *action = action_en_tete(a, &fin_action);
     if (t->type == J_CROCHETS) {
         Symbole *s = visible(a, t->valeur);
-        if (s && s->sorte == S_ACTION) { action = s; fin_action = a->i + 1; }
+        if (s && s->sorte == S_ACTION) { action = s; fin_action = a->i + 1; a->article_force = ART_AUCUN; }
     }
     if (action) return appel_action(a, action, fin_action);
 

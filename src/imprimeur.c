@@ -1099,7 +1099,7 @@ static void parametres(Impression *im, const Noeud *liste, int de) {
             aj(im, p->forme == 2 ? "_une " : "_un ");
         } else {
             aj(im, k ? " et " : " ");
-            if (de) aj(im, "d'");
+            if (de == 1 || (de == 2 && k == 0)) aj(im, "d'");   /* 2 : seul le premier suit le « de » du nom de l'action */
             aj(im, p->forme == 2 ? "une " : "un ");
         }
         ecrire_nom(im, p->texte, 0);
@@ -1763,8 +1763,16 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             fin_compacte(im, niveau);
         } else {
             aj(im, "Pour ");
-            ecrire_nom(im, n->texte, 0);
-            parametres(im, n->enfants[0], 0);
+            const size_t l = strlen(n->texte);
+            const int finit_de = l > 3 && strcmp(n->texte + l - 3, " de") == 0 && n->enfants[0]->nb_enfants > 0;
+            if (finit_de) {   /* « Pour acquitter le solde d'un relevé : », pas « … de un relevé » */
+                char *court = grym_formater("%.*s", (int)(l - 3), n->texte);
+                ecrire_nom(im, court, 0);
+                free(court);
+            } else {
+                ecrire_nom(im, n->texte, 0);
+            }
+            parametres(im, n->enfants[0], finit_de ? 2 : 0);
             aj(im, " :\n");
             bloc(im, n->enfants[1], niveau + 1);
         }
@@ -1795,11 +1803,19 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             comme(im, n);
             aj(im, "\n");
         } else {
-            char *nom = grym_dupliquer(n->texte);
+            const size_t l = strlen(n->texte);
+            const int finit_de = l > 3 && strcmp(n->texte + l - 3, " de") == 0 && n->nb_enfants > 0
+                                 && n->enfants[0]->type != N_LOGIQUE;
+            char *nom = finit_de ? grym_formater("%.*s", (int)(l - 3), n->texte) : grym_dupliquer(n->texte);
             initiale(nom, 1);
             aj(im, nom);
             free(nom);
             for (size_t k = 0; k < n->nb_enfants; k++) {
+                if (k == 0 && finit_de) {   /* « Acquitter le solde du relevé. » : le « de » se contracte (§ 5.2) */
+                    aj(im, " ");
+                    preposition(im, "de", n->enfants[0]);
+                    continue;
+                }
                 aj(im, k ? " et " : " ");
                 const Noeud *x = n->enfants[k];
                 int paren = x->type == N_LOGIQUE;
