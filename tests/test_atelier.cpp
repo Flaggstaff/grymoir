@@ -4662,9 +4662,24 @@ int main(int argc, char **argv) {
         // le premier lancement : choisir le mot de passe (20 octobre 2026)
         patienter([&] { return bouton(QString::fromUtf8("Choisir")) && attend(); });
         VERIFIER(bouton(QString::fromUtf8("Choisir")) != nullptr);
-        if (auto *m = libelle0(QString::fromUtf8("Mot de passe"))) m->setText("essai-essai");
-        if (auto *c = libelle0(QString::fromUtf8("Confirmation"))) c->setText("essai-essai");
+        for (const char *zone : {"Mot de passe", "Confirmation"}) {   // une zone remonte à la fin de la frappe (§ 22.2)
+            QLineEdit *z = libelle0(QString::fromUtf8(zone));
+            VERIFIER(z != nullptr);
+            if (!z) continue;
+            z->setText("essai-essai");
+            z->setModified(true);   // comme une frappe : setText seul ne marque pas la zone changée
+            emit z->editingFinished();
+            QElapsedTimer pause;   // l'événement part ; « L'écran attend. » revient quand la machine a fini
+            pause.start();
+            while (pause.elapsed() < 600) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            patienter([&] { return attend(); });
+        }
         if (auto *b = bouton(QString::fromUtf8("Choisir"))) b->click();
+        {
+            QElapsedTimer pause;   // l'empreinte du mot de passe prend près d'une seconde (PBKDF2, 600 000 tours)
+            pause.start();
+            while (pause.elapsed() < 1500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        }
         patienter([&] { return bouton(QString::fromUtf8("Nouvelle séance")) && attend(); });
         {   // l'accueil défile dans une fenêtre trop basse pour lui : un ascenseur
             e.resize(1200, 360);
