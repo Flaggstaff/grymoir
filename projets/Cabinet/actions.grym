@@ -126,9 +126,7 @@ Pour acquitter un relevé :
         Sinon :
             Si le paiement de la séance ≠ le moyen, le moyen devient « plusieurs ».
     Le début vaut le premier janvier d'aujourd'hui.
-    Le rang vaut le nombre de quittances conservées dont la date ≥ le début.
-    Le rang devient le rang + le nombre de quittances supprimées dont la date ≥ le début.
-    Le rang devient le rang + 1.
+    Le rang vaut (le nombre de quittances conservées dont la date ≥ le début) + (le nombre de quittances supprimées dont la date ≥ le début) + 1.
     La q vaut une nouvelle quittance :
         Le numéro vaut le numéro de pièce de « Q- » et de l'année d'aujourd'hui et du rang.
         La date vaut aujourd'hui.
