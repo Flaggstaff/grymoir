@@ -1543,6 +1543,30 @@ int main(void) {
         remove("_essai_cabinet13.grymd");
     }
 
+    {   /* Cabinet : « Facture » dans « À encaisser » ; un document, refusé dans le navigateur sans rien numéroter ; une
+           séance offerte n'a ni facture ni quittance (20 octobre 2026) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=6"), evenement("q=2&clic=5"), get("/"), evenement("q=3&s0=0&clic=6"), get("/"),
+                 evenement("q=4&clic=7"), evenement("q=5&clic=10"), evenement("q=6&clic=4"), evenement("q=7&choix=0.0"),
+                 evenement("q=8&choix=16.0"), get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet14.grymd", &sc);
+        CONTIENT(sc.reponses[2], "<h1>À encaisser</h1>");
+        CONTIENT(sc.reponses[2], ">Facture</button>");
+        CONTIENT(sc.reponses[4], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
+        CONTIENT(sc.reponses[10], ">Facture ou quittance</button>");
+        liberer(&sc);
+        remove("_essai_cabinet14.grymd");
+        memset(&sc, 0, sizeof sc);   /* la séance offerte de Marc Dupraz, il y a quinze jours (après celle, prévue, du jour) */
+        REQUETES(evenement("q=1&clic=4"), evenement("q=2&choix=0.4"), evenement("q=3&choix=16.1"), get("/"),
+                 evenement("q=4&clic=16"), get("/"));
+        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet15.grymd", &sc);
+        CONTIENT(sc.reponses[3], "value=\"Marc Dupraz\" selected");
+        CONTIENT(sc.reponses[3], "name=\"z10\" value=\"oui\" checked");
+        CONTIENT(sc.reponses[5], "Une séance offerte n&#39;a ni facture ni quittance.");
+        liberer(&sc);
+        remove("_essai_cabinet15.grymd");
+    }
+
     {   /* Le texte calculé (2.24) : relu à chaque attente, après chaque événement */
         const char *src = "L'écran x montre :\n    une ville (texte), facultative,\n"
             "    le texte \"Ville : \" suivi de la ville de l'écran, en petites capitales,\n    un bouton « Fini ».\n"

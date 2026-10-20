@@ -51,11 +51,12 @@ La ville professionnelle d'un cabinet :
     Rendre le numéro postal du cabinet suivi de " " suivi de la localité du cabinet.
 
 Remarque : « Q-2026-0007 » : l'année, puis le rang sur quatre chiffres.
-Le numéro de quittance d'une année et d'un rang :
-    Si rang < 10, rendre « Q- » suivi d'année suivi de « -000 » suivi de rang.
-    Si rang < 100, rendre « Q- » suivi d'année suivi de « -00 » suivi de rang.
-    Si rang < 1000, rendre « Q- » suivi d'année suivi de « -0 » suivi de rang.
-    Rendre « Q- » suivi d'année suivi de « - » suivi de rang.
+Remarque : « F- » pour une facture, « Q- » pour une quittance.
+Le numéro de pièce d'une lettre et d'une année et d'un rang :
+    Si rang < 10, rendre lettre suivi d'année suivi de « -000 » suivi de rang.
+    Si rang < 100, rendre lettre suivi d'année suivi de « -00 » suivi de rang.
+    Si rang < 1000, rendre lettre suivi d'année suivi de « -0 » suivi de rang.
+    Rendre lettre suivi d'année suivi de « - » suivi de rang.
 
 Remarque : une rubrique de frais de départ, à son nom.
 Pour classer un nom :
@@ -72,7 +73,7 @@ La ligne QR d'une valeur :
     Si valeur est absente, rendre « ».
     Rendre valeur.
 
-La charge QR d'un cabinet et d'un patient et d'un montant :
+La charge QR d'un cabinet et d'un patient et d'un montant et d'un motif :
     Si l'IBAN du cabinet est absent, rendre « ».
     Le saut vaut un saut de ligne.
     Le d vaut « SPC » suivi du saut suivi de « 0200 » suivi du saut suivi de « 1 » suivi du saut.
@@ -87,5 +88,5 @@ La charge QR d'un cabinet et d'un patient et d'un montant :
     Le d devient d suivi de la ligne QR de la rue du patient suivi du saut suivi de la ligne QR du numéro de maison du patient suivi du saut.
     Le d devient d suivi de la ligne QR du numéro postal du patient suivi du saut suivi de la ligne QR de la localité du patient suivi du saut.
     Le d devient d suivi de « CH » suivi du saut.
-    Le d devient d suivi de « NON » suivi du saut suivi du saut suivi de « Rappel » suivi du saut suivi de « EPD ».
+    Le d devient d suivi de « NON » suivi du saut suivi du saut suivi de motif suivi du saut suivi de « EPD ».
     Rendre d.

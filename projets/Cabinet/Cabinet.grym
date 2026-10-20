@@ -24,6 +24,10 @@ Le début d'exercice vaut (« 01.01. » suivi de l'année d'aujourd'hui) en date
 Remarque : une séance faite et pas payée depuis trente jours appelle un rappel ; la personne du rappel, celle dont on l'imprime.
 La limite des rappels vaut aujourd'hui − 30 jours.
 La personne du rappel vaut absent.
+
+Remarque : la facture dont on fait le PDF.
+La créance en cours vaut absent.
+
 Le soin ouvert vaut absent.
 
 Remarque : les cinq soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
@@ -116,12 +120,13 @@ L'écran de la séance, « Séance », montre :
         une durée (nombre entier), facultative, avec l'unité « min », à 352 de la gauche et 144 du haut, large de 168,
         un prix (nombre), avec l'unité « CHF », à 0 de la gauche et 216 du haut, large de 200,
         un statut (« prévue », « faite », « annulée » ou « absence »), à 0 de la gauche et 288 du haut, large de 520,
-        un paiement (« à payer », « espèces », « Twint » ou « virement »), à 0 de la gauche et 360 du haut, large de 260, actif si l'offerte de l'écran est fausse,
-        une offerte (vrai ou faux), à 276 de la gauche et 382 du haut,
+        un paiement (« à payer », « espèces », « Twint » ou « virement »), à 0 de la gauche et 360 du haut, large de 520, actif si l'offerte de l'écran est fausse,
+        une offerte (vrai ou faux), à 0 de la gauche et 420 du haut,
         un commentaire dicté (son), facultatif, à 552 de la gauche et 0 du haut, large de 520,
         un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté, à 552 de la gauche et 72 du haut, large de 520, haut de 352,
     côte à côte :
         un bouton « Enregistrer », principal,
+        un bouton « Facture ou quittance »,
         un bouton « Fermer ».
 
 Remarque : un soin, ses tarifs et sa durée ; le code tarifaire est celui du Tarif 590.
@@ -156,6 +161,25 @@ L'écran des rappels, « Rappels », montre :
         un bouton « Rappel », principal,
         un bouton « Fermer ».
 
+Remarque : la facture, sur papier : le cabinet, le patient, la séance, le montant dû, et la section paiement si le cabinet a un IBAN.
+Le document de facture, « Facture », montre :
+    côte à côte :
+        l'un sous l'autre :
+            l'image « images/signature.png », large de 220,
+            le texte l'adresse professionnelle du cabinet conservé,
+            le texte la ville professionnelle du cabinet conservé,
+        l'un sous l'autre :
+            le texte le nom du patient de la créance en cours,
+            le texte l'adresse du patient de la créance en cours,
+            le texte la ville du patient de la créance en cours,
+    le texte "N° " suivi du numéro de la créance en cours suivi de ", le " suivi de la date de la créance en cours en toutes lettres,
+    le texte « Séances », en petites capitales,
+    la liste des séances conservées dont la facture = la créance en cours, par date, avec la date, le nom du soin, la durée et le prix,
+    le texte "Montant dû : CHF " suivi de l'arrondi du montant de la créance en cours à 0,01,
+    le texte « Payable dans les trente jours, en espèces, par Twint ou par virement. »,
+    le texte « Avec mes salutations, Nicolas Seydoux »,
+    la section paiement de la charge QR du cabinet conservé et du patient de la créance en cours et du montant de la créance en cours et du numéro de la créance en cours.
+
 Remarque : le rappel, sur papier : toutes les séances faites et pas payées du patient, leur total, et comment payer.
 Le document de rappel, « Rappel », montre :
     côte à côte :
@@ -173,7 +197,7 @@ Le document de rappel, « Rappel », montre :
     le texte "Total dû : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont le patient = la personne du rappel et le paiement = « à payer » et le statut = « faite » à 0,01,
     le texte « Merci de le régler dans les trente jours, en espèces, par Twint ou par virement. Si votre paiement a croisé ce rappel, ne tenez pas compte de ce courrier. »,
     le texte « Avec mes salutations, Nicolas Seydoux »,
-    la section paiement de la charge QR du cabinet conservé et de la personne du rappel et du dû de la personne du rappel.
+    la section paiement de la charge QR du cabinet conservé et de la personne du rappel et de (le dû de la personne du rappel) et de « Rappel ».
 
 Remarque : le journal de l'année, pour la déclaration d'impôts : les recettes encaissées, les frais, le résultat.
 Le document de journal, « Journal des recettes et des frais », montre :
@@ -275,6 +299,7 @@ L'écran des encaissements, « À encaisser », montre :
         un bouton « Twint »,
         un bouton « Virement »,
         un bouton « Offert »,
+        un bouton « Facture »,
         un bouton « Fermer ».
 
 Remarque : le cabinet s'édite dans son écran : « Enregistrer » est un événement, les règles du cabinet s'y vérifient.
@@ -327,6 +352,53 @@ L'écran de la rubrique, « Rubrique », montre :
         un bouton « Enregistrer », principal,
         un bouton « Fermer ».
 
+Remarque : attester une séance : payée, sa quittance ; à payer, sa facture, avec la section paiement QR si le cabinet a un IBAN.
+Remarque : une pièce déjà faite se remontre telle qu'elle a été remise, son exemplaire gardé.
+Pour quittancer une séance :
+    Si la quittance de la séance est présente :
+        La pièce en cours devient la quittance de la séance.
+        Si l'exemplaire de la pièce en cours est présent, ouvrir l'exemplaire de la pièce en cours.
+        Sinon, ouvrir le document de quittance.
+    Sinon :
+        Le rang vaut le nombre de quittances conservées dont la date ≥ le début d'exercice.
+        Le rang devient le rang + 1.
+        La q vaut une nouvelle quittance :
+            Le numéro vaut le numéro de pièce de « Q- » et de l'année d'aujourd'hui et du rang.
+            La date vaut aujourd'hui.
+            Le patient vaut le patient de la séance.
+            Le montant vaut le prix de la séance.
+            Le moyen vaut le paiement de la séance.
+        Conserver la q.
+        La quittance de la séance devient la q.
+        La pièce en cours devient la q.
+        L'exemplaire de la q devient le document de quittance.
+        Ouvrir le document de quittance.
+
+Pour facturer une séance :
+    Si la facture de la séance est présente :
+        La créance en cours devient la facture de la séance.
+        Si l'exemplaire de la créance en cours est présent, ouvrir l'exemplaire de la créance en cours.
+        Sinon, ouvrir le document de facture.
+    Sinon :
+        Le rang vaut le nombre de factures conservées dont la date ≥ le début d'exercice.
+        Le rang devient le rang + 1.
+        La f vaut une nouvelle facture :
+            Le numéro vaut le numéro de pièce de « F- » et de l'année d'aujourd'hui et du rang.
+            La date vaut aujourd'hui.
+            Le patient vaut le patient de la séance.
+            Le montant vaut le prix de la séance.
+        Conserver la f.
+        La facture de la séance devient la f.
+        La créance en cours devient la f.
+        L'exemplaire de la f devient le document de facture.
+        Ouvrir le document de facture.
+
+Pour attester une séance :
+    Si le paiement de la séance = « offert », refuser « Une séance offerte n'a ni facture ni quittance. ».
+    Si le statut de la séance = « annulée », refuser « Une séance annulée n'a ni facture ni quittance. ».
+    Si le paiement de la séance = « à payer », facturer la séance.
+    Sinon, quittancer la séance.
+
 Quand on clique sur « Patients » dans l'écran d'accueil :
     Ouvrir l'écran des patients.
 
@@ -371,20 +443,7 @@ Quand on clique sur « Fermer » dans l'écran de comptabilité :
 Remarque : une quittance pour la séance payée choisie ; son exemplaire, le PDF, est gardé, puis montré pour l'imprimer.
 Quand on clique sur « Quittance » dans l'écran des quittances :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance payée dans la liste. ».
-    Le s vaut la séance choisie de l'écran.
-    Le rang vaut le nombre de quittances conservées dont la date ≥ le début d'exercice.
-    Le rang devient le rang + 1.
-    La q vaut une nouvelle quittance :
-        Le numéro vaut le numéro de quittance de l'année d'aujourd'hui et du rang.
-        La date vaut aujourd'hui.
-        Le patient vaut le patient du s.
-        Le montant vaut le prix du s.
-        Le moyen vaut le paiement du s.
-    Conserver la q.
-    La quittance du s devient la q.
-    La pièce en cours devient la q.
-    L'exemplaire de la q devient le document de quittance.
-    Ouvrir le document de quittance.
+    Attester la séance choisie de l'écran.
 
 Remarque : une quittance déjà remise se remontre telle qu'elle a été remise : son exemplaire gardé.
 Quand on choisit une quittance dans l'écran des quittances :
@@ -651,6 +710,11 @@ Quand on clique sur « Offert » dans l'écran des encaissements :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
     Encaisser la séance choisie de l'écran et « offert ».
 
+Remarque : la facture de la séance choisie, avec sa QR-facture ; une séance déjà facturée remontre sa facture.
+Quand on clique sur « Facture » dans l'écran des encaissements :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Attester la séance choisie de l'écran.
+
 Quand on clique sur « Fermer » dans l'écran des encaissements :
     Fermer l'écran.
 
@@ -709,6 +773,22 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
     Le commentaire dicté du s devient le commentaire dicté de l'écran.
     Le commentaire du s devient le commentaire de l'écran.
     Fermer l'écran.
+
+Remarque : la séance enregistrée telle qu'à l'écran, puis sa pièce : à payer, sa facture ; payée, sa quittance.
+Quand on clique sur « Facture ou quittance » dans l'écran de la séance :
+    Le s vaut la séance ouverte.
+    Le patient du s devient le patient de l'écran.
+    Le soin du s devient le soin de l'écran.
+    La date du s devient la date de l'écran.
+    L'heure du s devient l'heure de l'écran.
+    La durée du s devient la durée de l'écran.
+    Le prix du s devient le prix de l'écran.
+    Le statut du s devient le statut de l'écran.
+    Le paiement du s devient le paiement de l'écran.
+    Si l'offerte de l'écran est vraie, le paiement du s devient « offert ».
+    Le commentaire dicté du s devient le commentaire dicté de l'écran.
+    Le commentaire du s devient le commentaire de l'écran.
+    Attester le s.
 
 Remarque : la page du patient s'ouvre par-dessus ; à son retour, la page d'en dessous retrouve son patient.
 Quand on clique sur « Voir le patient » dans l'écran de la séance :
