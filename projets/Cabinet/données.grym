@@ -2,6 +2,8 @@ Remarque : Cabinet : les données d'un cabinet de thérapie, ses soins, ses pati
 
 Remarque : le cabinet, un seul : ce qui figure en tête des quittances et des factures.
 Remarque : RCC (SASIS), GLN, RME et ASCA restent vides tant que Nicolas n'en a pas ; la facture du Tarif 590 exigera le RCC.
+Remarque : facturer les absences : un choix de Nicolas, éteint au départ ; allumé, une absence se doit comme une séance faite.
+Remarque : la dernière sauvegarde : l'accueil le rappelle après sept jours.
 Un cabinet, conservé, a :
     un nom (texte), unique,
     une rue (texte), facultative,
@@ -16,7 +18,9 @@ Un cabinet, conservé, a :
     un numéro GLN (texte), facultatif,
     un numéro RME (texte), facultatif,
     un numéro ASCA (texte), facultatif,
-    un IBAN (texte), facultatif.
+    un IBAN (texte), facultatif,
+    une facturation des absences (vrai ou faux), faux au départ,
+    une dernière sauvegarde (date), facultative.
 
 Remarque : un soin a son tarif ; s'il a un tarif de suivi, les séances suivantes d'un même patient le paient.
 Remarque : la durée en minutes ; le code tarifaire, celui de la méthode au Tarif 590, s'il est reconnu.
@@ -47,25 +51,30 @@ Un patient, conservé, anciennement « client », a :
 
 Remarque : la facture des séances à payer d'un patient, numérotée par année (« F-2026-0001 ») ; son exemplaire, le PDF envoyé, gardé tel quel ;
 Remarque : son état suit ses séances : à régler, en partie réglée (certaines encaissées), réglée (toutes) ; réglée, sa quittance se fait seule.
+Remarque : échue trente jours après sa date ; le dernier rappel envoyé pour elle, daté.
 Une facture, conservée, a :
     un numéro (texte), unique,
     une date (date),
     un patient (patient),
     un montant (nombre),
     un état (« à régler », « en partie réglée » ou « réglée »),
-    un exemplaire (fichier), facultatif.
+    un exemplaire (fichier), facultatif,
+    un dernier rappel (date), facultatif.
 
 Remarque : la quittance d'une ou plusieurs séances payées (CO 88) ; son exemplaire, le PDF remis, est gardé tel quel.
 Remarque : numérotée par année, « Q-2026-0001 » ; jamais supprimée définitivement : la corbeille garde la suite sans trou.
+Remarque : « plusieurs » quand les séances d'une facture ont été payées de façons différentes ; chaque séance garde la sienne.
 Une quittance, conservée, a :
     un numéro (texte), unique,
     une date (date),
     un patient (patient),
     un montant (nombre),
-    un moyen (« espèces », « Twint » ou « virement »),
+    un moyen (« espèces », « Twint », « virement » ou « plusieurs »),
     un exemplaire (fichier), facultatif.
 
 Remarque : la séance garde le son de son commentaire, s'il a été dicté, et le texte, transcrit ou tapé.
+Remarque : l'encaissement : le jour où l'argent est arrivé ; les comptes en recettes-dépenses comptent à cette date, pas à celle de la séance.
+Remarque : le dernier rappel d'une séance date d'avant les rappels par facture (20 octobre 2026) : gardé, plus écrit.
 
 Une séance, conservée, a :
     un patient (patient), anciennement « client »,
@@ -80,7 +89,8 @@ Une séance, conservée, a :
     un commentaire (texte), facultatif,
     une quittance (quittance), facultative,
     une facture (facture), facultative,
-    un dernier rappel (date), facultatif.
+    un dernier rappel (date), facultatif,
+    un encaissement (date), facultatif.
 
 Remarque : les rubriques des frais (loyer, matériel…) : Nicolas les nomme, les renomme et en ajoute dans la configuration.
 Une rubrique, conservée, a :
@@ -95,7 +105,7 @@ Un frais (frais), conservé, a :
     un moyen (« espèces », « Twint », « virement » ou « carte »),
     un justificatif (fichier), facultatif.
 
-Remarque : ce que le patient confie ne s'affiche jamais dans sa fiche, qu'on peut ouvrir devant lui.
+Remarque : ce que le patient confie ne s'affiche jamais dans sa fiche, qu'on peut ouvrir devant lui ; ses notes s'ouvrent à part, par « Notes ».
 Une note, conservée, hors des fiches, a :
     un patient (patient), anciennement « client »,
     une date (date),
@@ -116,6 +126,43 @@ Chaque cabinet conservé dont l'IBAN est présent vérifie :
     la longueur de (l'IBAN du cabinet en format technique) = 21,
     sinon « Un IBAN suisse compte 21 caractères : CH, puis 19 chiffres et lettres. ».
 
+Remarque : une ligne de QR-facture : vide si la valeur est absente.
+La ligne QR d'une valeur :
+    Si valeur est absente, rendre « ».
+    Rendre valeur.
+
+Remarque : le pays en deux lettres (ISO 3166-1), comme la QR-facture l'écrit : les pays voisins par leur nom, sinon tel qu'écrit s'il a deux lettres ; vide sinon.
+Le code pays d'un pays :
+    Si pays est absent, rendre « ».
+    Le p vaut pays en minuscules.
+    Si le p = « suisse », rendre « CH ».
+    Si le p = « liechtenstein », rendre « LI ».
+    Si le p = « france », rendre « FR ».
+    Si le p = « allemagne », rendre « DE ».
+    Si le p = « italie », rendre « IT ».
+    Si le p = « autriche », rendre « AT ».
+    Si le p = « belgique », rendre « BE ».
+    Si le p = « luxembourg », rendre « LU ».
+    Si le p = « espagne », rendre « ES ».
+    Si le p = « portugal », rendre « PT ».
+    Si la longueur du p = 2, rendre pays en majuscules.
+    Rendre « ».
+
+Remarque : le créancier d'une QR-facture, le cabinet : sept lignes (SIX IG 2.4, § 4.2.2), adresse structurée (S), chacune suivie d'un saut.
+Le créancier QR d'un cabinet :
+    Le s vaut un saut de ligne.
+    Rendre « S » suivi du s suivi du nom du cabinet suivi du s suivi de la ligne QR de la rue du cabinet suivi du s suivi de la ligne QR du numéro de maison du cabinet suivi du s suivi de la ligne QR du numéro postal du cabinet suivi du s suivi de la ligne QR de la localité du cabinet suivi du s suivi du code pays du pays du cabinet suivi du s.
+
+Remarque : une QR-facture sans montant ni débiteur, pour essayer l'IBAN et l'adresse du cabinet.
+La charge de contrôle d'un cabinet :
+    Le s vaut un saut de ligne.
+    Rendre « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s suivi de l'IBAN du cabinet en IBAN suivi du s suivi du créancier QR du cabinet suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi de « CHF » suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi de « NON » suivi du s suivi du s suivi du s suivi de « EPD ».
+
+Remarque : l'IBAN essayé dans une QR-facture de contrôle : sa clé vérifiée, le QR-IBAN refusé, l'adresse du cabinet complète, chacun avec son motif (grammaire 2.29).
+Chaque cabinet conservé dont l'IBAN est présent vérifie :
+    la taille du code QR suisse de la charge de contrôle du cabinet > 0,
+    sinon « L'IBAN ne convient pas à une QR-facture. ».
+
 Remarque : un GLN (Global Location Number, GS1) a treize chiffres.
 Chaque cabinet conservé dont le numéro GLN est présent vérifie :
     la longueur du numéro GLN du cabinet = 13,
@@ -124,6 +171,16 @@ Chaque cabinet conservé dont le numéro GLN est présent vérifie :
 Chaque séance conservée vérifie :
     le prix de la séance ≥ 0,
     sinon « Le prix d'une séance n'est jamais négatif. ».
+
+Remarque : une séance encaissée a sa date d'encaissement ; à payer ou offerte, elle n'en a pas.
+Chaque séance conservée dont l'encaissement est présent vérifie :
+    le paiement de la séance ≠ « à payer » et le paiement de la séance ≠ « offert »,
+    sinon « Une séance à payer ou offerte n'a pas de date d'encaissement. ».
+
+Remarque : une quittance remise ne se défait pas : sa séance reste payée, ni à payer ni offerte.
+Chaque séance conservée dont la quittance est présente vérifie :
+    le paiement de la séance ≠ « à payer » et le paiement de la séance ≠ « offert »,
+    sinon « Cette séance a sa quittance : elle reste payée. ».
 
 Remarque : la première séance d'un soin se paie au tarif ; dès la deuxième, au tarif de suivi s'il y en a un.
 Remarque : une séance annulée ou manquée ne compte pas comme une première séance.

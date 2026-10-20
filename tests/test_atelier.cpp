@@ -4732,6 +4732,99 @@ int main(int argc, char **argv) {
         e.close();
     }
 
+    // Cabinet (20 octobre 2026) : la dernière séance d'une facture offerte n'empêche pas la quittance des autres ; une
+    // quittance faite à part n'empêche pas celle du solde ; une séance prévue, une absence non facturée refusées, puis
+    // facturée une fois le réglage allumé ; aucune séance à payer n'a de date d'encaissement ; la base sauvegardée
+    {
+        QTemporaryDir d;
+        for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet").entryList(QDir::Files))
+            if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(GRYM_SOURCE "/projets/Cabinet/" + n, d.filePath(n));
+        for (const QString &sous : {QString("images"), QString("polices")}) {
+            QDir().mkpath(d.filePath(sous));
+            for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet/" + sous).entryList(QDir::Files))
+                QFile::copy(GRYM_SOURCE "/projets/Cabinet/" + sous + "/" + n, d.filePath(sous + "/" + n));
+        }
+        QFile f(d.filePath("Cabinet.grym"));
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        QString source = QString::fromUtf8(f.readAll());
+        f.close();
+        const QString essai = QString::fromUtf8(R"GRYM(Le marc vaut le patient conservé dont le nom = « Marc Dupraz ».
+Pour chaque séance conservée dont le patient = le marc et le paiement = « à payer » et le statut = « faite » :
+    Si la facture de la séance est absente, attester la séance.
+Le premier vaut vrai.
+Pour chaque séance conservée dont le patient = le marc et le paiement = « à payer » et le statut = « faite » :
+    Si le premier, encaisser la séance et « Twint ».
+    Sinon, encaisser la séance et « offert ».
+    Le premier devient faux.
+Pour chaque quittance conservée dont le patient = le marc :
+    Afficher « essai A » puis le montant de la quittance puis le moyen de la quittance.
+Consigner « Julien Pasquier » et « Toucher Thérapeutique » et −40 et 100 et « faite » et « à payer ».
+Consigner « Julien Pasquier » et « Toucher Thérapeutique » et −35 et 100 et « faite » et « à payer ».
+Le julien vaut le patient conservé dont le nom = « Julien Pasquier ».
+Pour chaque séance conservée dont le patient = le julien et le paiement = « à payer » et le statut = « faite » :
+    Si la facture de la séance est absente, attester la séance.
+Le premier devient vrai.
+Pour chaque séance conservée dont le patient = le julien et le paiement = « à payer » et le statut = « faite » :
+    Si le premier :
+        Encaisser la séance et « espèces ».
+        Attester la séance.
+    Sinon, encaisser la séance et « Twint ».
+    Le premier devient faux.
+Pour chaque quittance conservée dont le patient = le julien, par numéro :
+    Afficher « essai B » puis le montant de la quittance puis le moyen de la quittance.
+Pour chaque facture conservée dont le patient = le julien :
+    Afficher « essai B état » puis l'état de la facture.
+Le louis vaut le patient conservé dont le nom = « Louis Bapst ».
+Pour chaque séance conservée dont le patient = le louis et le statut = « prévue » :
+    Essayer :
+        Attester la séance.
+    En cas d'échec :
+        Afficher « essai C » puis le motif de l'échec.
+La claire vaut le patient conservé dont le nom = « Claire Monney ».
+Pour chaque séance conservée dont le patient = la claire et le statut = « absence » :
+    Essayer :
+        Attester la séance.
+    En cas d'échec :
+        Afficher « essai D » puis le motif de l'échec.
+La facturation des absences du cabinet conservé devient vrai.
+Pour chaque séance conservée dont le patient = la claire et le statut = « absence » :
+    Attester la séance.
+Pour chaque facture conservée dont le patient = la claire :
+    Afficher « essai E » puis le montant de la facture.
+Afficher « essai F » puis le nombre de séances conservées dont l'encaissement est présent et le paiement = « à payer ».
+Sauvegarder la base dans « essai.grymd ».
+Afficher « fin des essais ».
+)GRYM");
+        const int k = source.indexOf(QString::fromUtf8("Ouvrir l'écran d'accueil."));
+        VERIFIER(k > 0);
+        source.insert(k, essai);
+        VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(source.toUtf8());
+        f.close();
+        Execution e(d.filePath("Cabinet.grym"));
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 60000 && !fil().contains("fin des essais") && !fil().contains(QString::fromUtf8("annulée"))) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        QApplication::processEvents(QEventLoop::AllEvents, 300);
+        const QString t = fil();
+        VERIFIER(t.contains(QString::fromUtf8("essai A 130 Twint")));
+        VERIFIER(t.count(QString::fromUtf8("essai A")) == 1);
+        VERIFIER(t.contains(QString::fromUtf8("essai B 100 espèces")));
+        VERIFIER(t.contains(QString::fromUtf8("essai B 100 Twint")));
+        VERIFIER(t.contains(QString::fromUtf8("essai B état réglée")));
+        VERIFIER(t.contains(QString::fromUtf8("essai C Une séance prévue se facture une fois faite")));
+        VERIFIER(t.contains(QString::fromUtf8("essai D Le cabinet ne facture pas les absences")));
+        VERIFIER(t.contains(QString::fromUtf8("essai E 130")));
+        VERIFIER(t.contains(QString::fromUtf8("essai F 0")));
+        VERIFIER(t.contains("fin des essais"));
+        QFile copie(d.filePath("essai.grymd"));
+        VERIFIER(copie.open(QIODevice::ReadOnly) && copie.read(15) == "SQLite format 3");
+        if (!t.contains("fin des essais") || !t.contains("essai F")) std::printf("%s\n", t.right(1500).toUtf8().constData());
+        e.close();
+    }
+
     std::printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? 1 : 0;
 }

@@ -18,11 +18,12 @@ Pour proposer en deux prix un nom et un premier prix et un prix de suivi :
 Pour clore une séance et un statut :
     Le statut de la séance devient statut.
 
-Remarque : le cabinet au nom de Nicolas ; l'adresse et les numéros se complètent dans sa fiche.
+Remarque : le cabinet au nom de Nicolas ; l'adresse et les numéros se complètent dans sa fiche ; les absences, pas facturées au départ.
 Pour fonder le cabinet :
     Le c vaut un nouveau cabinet :
         Le nom vaut « Nicolas Seydoux ».
         Le pays vaut « Suisse ».
+        La facturation des absences vaut faux.
     Conserver le c.
 
 Remarque : les lignes d'adresse d'une quittance ; un champ absent laisse la ligne vide, rien ne casse.
@@ -36,6 +37,11 @@ La ville d'un patient :
     Si le numéro postal du patient est absent, rendre la localité du patient.
     Rendre le numéro postal du patient suivi de " " suivi de la localité du patient.
 
+Remarque : la date de naissance sur une pièce : les assurances complémentaires la demandent.
+La naissance d'un patient :
+    Si la date de naissance du patient est absente, rendre « ».
+    Rendre "Date de naissance : " suivi de la date de naissance du patient.
+
 L'adresse professionnelle d'un cabinet :
     Si la rue du cabinet est absente, rendre « ».
     Si le numéro de maison du cabinet est absent, rendre la rue du cabinet.
@@ -46,6 +52,14 @@ La ville professionnelle d'un cabinet :
     Si le numéro postal du cabinet est absent, rendre la localité du cabinet.
     Rendre le numéro postal du cabinet suivi de " " suivi de la localité du cabinet.
 
+Remarque : les numéros du thérapeute sur une pièce, ceux qu'il a : une assurance complémentaire rembourse sur cette base.
+L'étiquette d'un sigle et d'une valeur :
+    Si valeur est absente, rendre « ».
+    Rendre sigle suivi de " " suivi de valeur suivi de "   ".
+
+La ligne des numéros d'un cabinet :
+    Rendre l'étiquette de « RCC » et du numéro RCC du cabinet suivi de l'étiquette de « GLN » et du numéro GLN du cabinet suivi de l'étiquette de « RME » et du numéro RME du cabinet suivi de l'étiquette de « ASCA » et du numéro ASCA du cabinet.
+
 Remarque : « Q-2026-0007 » : l'année, puis le rang sur quatre chiffres.
 Remarque : « F- » pour une facture, « Q- » pour une quittance.
 Le numéro de pièce d'une lettre et d'une année et d'un rang :
@@ -54,62 +68,100 @@ Le numéro de pièce d'une lettre et d'une année et d'un rang :
     Si rang < 1000, rendre lettre suivi d'année suivi de « -0 » suivi de rang.
     Rendre lettre suivi d'année suivi de « - » suivi de rang.
 
+Remarque : le premier janvier : d'où partent les numéros des pièces et les comptes d'une année.
+Le premier janvier d'une date vaut (« 01.01. » suivi de l'année de date) en date.
+Le premier jour d'un millésime vaut (« 01.01. » suivi de millésime) en date.
+
 Remarque : une rubrique de frais de départ, à son nom.
 Pour classer un nom :
     La r vaut une nouvelle rubrique :
         Le nom vaut nom.
     Conserver la r.
 
-Remarque : la QR-facture d'un rappel (SIX, Implementation Guidelines QR-bill 2.4, § 4.2.2) : les 31 lignes du Swiss QR Code,
-Remarque : adresses structurées (type S), sans créancier final, sans référence (NON), le message « Rappel » ; rien sans IBAN.
-Le dû d'une personne :
-    Rendre la somme des prix des séances conservées dont le patient = personne et le paiement = « à payer » et le statut = « faite ».
+Remarque : une absence se doit seulement si le cabinet facture les absences (sa configuration) : une séance due n'est ni prévue,
+Remarque : ni annulée, ni « l'exclu » du cabinet ; « annulée » quand il les facture (l'exclu ne retire alors rien de plus).
+L'exclu d'un cabinet :
+    Si la facturation des absences du cabinet est vraie, rendre « annulée ».
+    Rendre « absence ».
 
-La ligne QR d'une valeur :
-    Si valeur est absente, rendre « ».
-    Rendre valeur.
+Remarque : ce qui reste dû sur une facture : ses séances pas encore payées.
+Le dû d'une créance :
+    Rendre la somme des prix des séances conservées dont la facture = créance et le paiement = « à payer ».
 
+Remarque : la fin d'une phrase de quittance : le moyen, sauf « plusieurs », que la liste des séances détaille.
+La mention du moyen d'une pièce :
+    Si le moyen de la pièce = « plusieurs », rendre « . ».
+    Rendre ", en " suivi du moyen de la pièce suivi de « . ».
+
+Remarque : le débiteur d'une QR-facture, le patient : sept lignes, adresse structurée (S) ; une adresse sans numéro postal, localité
+Remarque : ou pays reconnu laisse les sept lignes vides : la section paiement montre alors un cadre « Payable par » à remplir (SIX IG 2.4).
+Le débiteur QR d'un patient :
+    Le s vaut un saut de ligne.
+    Si le numéro postal du patient est absent, rendre le s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s.
+    Si la localité du patient est absente, rendre le s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s.
+    Si le code pays du pays du patient = « », rendre le s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s.
+    Rendre « S » suivi du s suivi du nom du patient suivi du s suivi de la ligne QR de la rue du patient suivi du s suivi de la ligne QR du numéro de maison du patient suivi du s suivi du numéro postal du patient suivi du s suivi de la localité du patient suivi du s suivi du code pays du pays du patient suivi du s.
+
+Remarque : la QR-facture d'une facture ou d'un rappel (SIX, Implementation Guidelines QR-bill 2.4, § 4.2.2) : les 31 lignes du
+Remarque : Swiss QR Code, sans créancier final, sans référence (NON), le motif en message ; rien sans IBAN. GrymoiR vérifie les lignes.
 La charge QR d'un cabinet et d'un patient et d'un montant et d'un motif :
     Si l'IBAN du cabinet est absent, rendre « ».
-    Le saut vaut un saut de ligne.
-    Le d vaut « SPC » suivi du saut suivi de « 0200 » suivi du saut suivi de « 1 » suivi du saut.
-    Le d devient d suivi de l'IBAN du cabinet en format technique suivi du saut.
-    Le d devient d suivi de « S » suivi du saut suivi du nom du cabinet suivi du saut.
-    Le d devient d suivi de la ligne QR de la rue du cabinet suivi du saut suivi de la ligne QR du numéro de maison du cabinet suivi du saut.
-    Le d devient d suivi de la ligne QR du numéro postal du cabinet suivi du saut suivi de la ligne QR de la localité du cabinet suivi du saut.
-    Le d devient d suivi de « CH » suivi du saut.
-    Le d devient d suivi du saut suivi du saut suivi du saut suivi du saut suivi du saut suivi du saut suivi du saut.
-    Le d devient d suivi de (l'arrondi de montant à 0,01) en format technique suivi du saut suivi de « CHF » suivi du saut.
-    Le d devient d suivi de « S » suivi du saut suivi du nom du patient suivi du saut.
-    Le d devient d suivi de la ligne QR de la rue du patient suivi du saut suivi de la ligne QR du numéro de maison du patient suivi du saut.
-    Le d devient d suivi de la ligne QR du numéro postal du patient suivi du saut suivi de la ligne QR de la localité du patient suivi du saut.
-    Le d devient d suivi de « CH » suivi du saut.
-    Le d devient d suivi de « NON » suivi du saut suivi du saut suivi de motif suivi du saut suivi de « EPD ».
+    Le s vaut un saut de ligne.
+    Le d vaut « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s.
+    Le d devient d suivi de l'IBAN du cabinet en IBAN suivi du s suivi du créancier QR du cabinet.
+    Le d devient d suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s.
+    Le d devient d suivi de (l'arrondi de montant à 0,01) en format technique suivi du s suivi de « CHF » suivi du s.
+    Le d devient d suivi du débiteur QR du patient.
+    Le d devient d suivi de « NON » suivi du s suivi du s suivi de motif suivi du s suivi de « EPD ».
     Rendre d.
 
-Pour solder un relevé et un moyen :
-    Le reste vaut le nombre de séances conservées dont la facture = relevé et le paiement = « à payer ».
-    Si le reste > 0 :
-        L'état du relevé devient « en partie réglée ».
-    Sinon, l'état du relevé devient « réglée ».
-    Le déjà vaut le nombre de séances conservées dont la facture = relevé et la quittance est présente.
-    Si le reste = 0 et le déjà = 0 et moyen ≠ « offert » :
-        Le début vaut (« 01.01. » suivi de l'année d'aujourd'hui) en date.
-        Le rang vaut le nombre de quittances conservées dont la date ≥ le début.
-        Le rang devient le rang + 1.
-        La q vaut une nouvelle quittance :
-            Le numéro vaut le numéro de pièce de « Q- » et de l'année d'aujourd'hui et du rang.
-            La date vaut aujourd'hui.
-            Le patient vaut le patient du relevé.
-            Le montant vaut la somme des prix des séances conservées dont la facture = relevé et le paiement ≠ « offert ».
-            Le moyen vaut moyen.
-        Conserver la q.
-        Pour chaque séance conservée dont la facture = relevé :
-            La quittance de la séance devient la q.
+Remarque : la quittance des séances payées d'une facture qui n'en ont pas encore ; leur moyen, ou « plusieurs » s'ils diffèrent.
+Remarque : numérotée à la suite de l'année ; son PDF se fait quand on l'ouvre.
+Pour acquitter un relevé :
+    Le moyen vaut « ».
+    Pour chaque séance conservée dont la facture = relevé et la quittance est absente et le paiement ≠ « offert » :
+        Si le moyen = « » :
+            Le moyen devient le paiement de la séance.
+        Sinon :
+            Si le paiement de la séance ≠ le moyen, le moyen devient « plusieurs ».
+    Le début vaut le premier janvier d'aujourd'hui.
+    Le rang vaut le nombre de quittances conservées dont la date ≥ le début.
+    Le rang devient le rang + 1.
+    La q vaut une nouvelle quittance :
+        Le numéro vaut le numéro de pièce de « Q- » et de l'année d'aujourd'hui et du rang.
+        La date vaut aujourd'hui.
+        Le patient vaut le patient du relevé.
+        Le montant vaut la somme des prix des séances conservées dont la facture = relevé et la quittance est absente et le paiement ≠ « offert ».
+        Le moyen vaut moyen.
+    Conserver la q.
+    Pour chaque séance conservée dont la facture = relevé et la quittance est absente et le paiement ≠ « offert » :
+        La quittance de la séance devient la q.
 
-Remarque : encaisser une séance facturée fait avancer sa facture ; la dernière encaissée la règle, et la quittance de toutes ses
-Remarque : séances se fait seule, une fois, numérotée, au moyen de ce dernier paiement ; son PDF se fait quand on l'ouvre.
+Remarque : l'état d'une facture suit ses séances : réglée quand aucune n'est plus à payer, en partie réglée quand certaines sont
+Remarque : payées ou offertes, à régler sinon ; réglée, la quittance de ses séances payées qui n'en ont pas se fait seule, une fois.
+Pour suivre un relevé :
+    Le reste vaut le nombre de séances conservées dont la facture = relevé et le paiement = « à payer ».
+    Le réglé vaut le nombre de séances conservées dont la facture = relevé et le paiement ≠ « à payer ».
+    Si le reste = 0 :
+        L'état du relevé devient « réglée ».
+        Le restant vaut le nombre de séances conservées dont la facture = relevé et la quittance est absente et le paiement ≠ « offert ».
+        Si le restant > 0, acquitter le relevé.
+    Sinon :
+        Si le réglé > 0, l'état du relevé devient « en partie réglée ».
+        Sinon, l'état du relevé devient « à régler ».
+
+Remarque : encaisser une séance : son moyen, la date du jour ; facturée, sa facture suit ; la dernière encaissée la règle.
 Pour encaisser une séance et un moyen :
     Si le statut de la séance = « annulée », refuser « Une séance annulée ne s'encaisse pas. ».
+    Si la quittance de la séance est présente, refuser « Cette séance a déjà sa quittance : elle est payée. ».
     Le paiement de la séance devient moyen.
-    Si la facture de la séance est présente, solder la facture de la séance et moyen.
+    Si moyen = « offert », l'encaissement de la séance devient absent.
+    Sinon, l'encaissement de la séance devient aujourd'hui.
+    Si la facture de la séance est présente, suivre la facture de la séance.
+
+Remarque : ce que l'accueil dit de la dernière sauvegarde ; au-delà de sept jours, il presse.
+L'alerte de sauvegarde d'un cabinet et d'un jour :
+    Si la dernière sauvegarde du cabinet est absente, rendre « Aucune sauvegarde encore : touche la tuile Sauvegarder. ».
+    L'écart vaut le nombre de jours entre la dernière sauvegarde du cabinet et jour.
+    Si l'écart > 7, rendre "Dernière sauvegarde le " suivi de la dernière sauvegarde du cabinet suivi de « : il est temps d'en refaire une. ».
+    Rendre "Dernière sauvegarde le " suivi de la dernière sauvegarde du cabinet suivi de « . ».
