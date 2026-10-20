@@ -155,8 +155,9 @@ typedef enum {
                         au premier qui viole la condition (P_SI, dont la branche sinon est un P_REFUSER) */
     N_CODE_QR,       /* « le code QR de t », « le code QR suisse de t » (2.27) : une image PNG ; forme 1 : suisse ;
                         enfant : le texte */
-    N_DOCUMENT       /* « le document de quittance » (2.25) : le PDF qu'un document déclaré donne ; texte : son nom, tel
+    N_DOCUMENT,      /* « le document de quittance » (2.25) : le PDF qu'un document déclaré donne ; texte : son nom, tel
                         que l'écran le range (« document de quittance ») */
+    P_SAUVEGARDER    /* « Sauvegarder la base dans « copie.grymd ». » (2.29) : enfants[0] : le chemin */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */

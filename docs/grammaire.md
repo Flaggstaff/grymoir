@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.28 de la spécification, révisée le 20 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.29 de la spécification, révisée le 20 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1195,6 +1195,19 @@ Exporter les membres conservés, par nom, avec le nom, la catégorie et la cotis
 - **Où s'écrit le fichier** : à côté du programme, comme `Enregistrer` (§ 15.2) ; dans une application fabriquée, qui n'est pas modifiable, dans le dossier `Documents/<Nom de l'application>` de l'utilisateur.
 - Forme compacte : `_exporter membre _conservé _avec nom ; cotisation _titre « C » _total cotisation _dans « m.pdf »`.
 
+### 15.6 bis Sauvegarder la base *(2.29, implémenté le 20 octobre 2026)*
+
+```
+Sauvegarder la base dans « Sauvegarde Cabinet.grymd ».
+Sauvegarder la base dans (« Cabinet du » suivi d'aujourd'hui suivi de « .grymd »).
+```
+
+- Une copie complète de la base du programme, telle que l'exécution la voit à cette phrase (ce qu'elle a conservé avant compris), dans un fichier qu'un atelier restaure (docs/atelier.md, § 5 sexies) ou qu'un programme ouvre comme base.
+- Écrite comme `Enregistrer` (§ 15.2) : à la fin de l'exécution réussie, jamais si elle échoue ; à côté du programme, ou dans `Documents/<Nom de l'application>` d'une application fabriquée (§ 15.6). Jamais par-dessus un fichier : si le nom est pris, sur le disque ou par cette exécution, la copie s'appelle « Sauvegarde Cabinet (2).grymd », puis « (3) »…
+- Un programme sans entité conservée n'a pas de base : « Ce programme n'a pas de base : il ne conserve aucune entité. ». Un calcul ne sauvegarde pas (§ 9.4).
+- Aucun mot réservé : `Sauvegarder` n'est cette phrase que suivi de `la base dans`.
+- Forme compacte : `_sauvegarder _dans « c.grymd »`.
+
 ### 15.7 Un son *(implémenté le 16 octobre 2026)*
 
 ```
@@ -2102,6 +2115,8 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 - `un saut de ligne` est le texte d'un retour à la ligne : il sépare les lignes d'un code QR suisse.
 - `x en format technique` écrit une valeur comme une machine l'attend (code QR, XML) : un nombre sans séparateur de milliers, avec le point décimal et ses décimales (`1590.00`) ; une date en `2026-10-20` ; un texte sans ses espaces. Il se lie à la valeur juste avant lui : `(l'arrondi de x à 0,01) en format technique`.
 - Forme compacte : `_code_qr t`, `_code_qr_suisse t`, `_saut_de_ligne`, `x _en_format_technique`.
+- **Le texte vérifié** *(2.29)* : avant d'en faire une image ou une section paiement, la machine vérifie les lignes d'un code QR suisse (SIX IG 2.4, § 4.2.2) : au moins 31 lignes, « SPC » en tête et « EPD » à la 31ᵉ ; l'IBAN du créancier suisse ou liechtensteinois, 21 caractères sans espaces, sa clé de contrôle juste ; un QR-IBAN (IID de 30000 à 31999) seulement avec une référence QR (`QRR`), et une référence QR seulement avec lui ; la monnaie CHF ou EUR ; une adresse structurée (`S`) avec nom, numéro postal, localité et pays de deux lettres, une adresse combinée (`K`) avec nom et deuxième ligne ; le débiteur final entièrement vide ou complet. Chaque refus le dit : « QR-facture : « CH44 3199 … » est un QR-IBAN ; il exige une référence QR (QRR), pas « NON ». Donne l'IBAN ordinaire du compte. ». Une section paiement vide (pas d'IBAN) ne se vérifie pas.
+- **`t en IBAN`** *(2.29)* : le texte sans ses espaces (ordinaires ou insécables), en capitales, s'il est un IBAN (ISO 13616) : deux lettres de pays, deux chiffres de clé, de 15 à 34 lettres et chiffres en tout, la clé vérifiée modulo 97. Sinon, une erreur rattrapable qui dit pourquoi : « « CH53 0483 … » n'est pas un IBAN : sa clé de contrôle ne correspond pas (une faute de frappe ?). ». Le pays et la longueur propres à un pays (21 pour la Suisse) restent au programme : `la longueur de (l'IBAN du cabinet en IBAN) = 21`. Écrit `IBAN`, en capitales, par la forme canonique ; compacte : `t _en_IBAN`.
 - **La section paiement** *(2.28)* : dans un document, `la section paiement de la charge` met au bas de la dernière page la section paiement d'une QR-facture et son récépissé, 210 × 105 mm, au bord de la page, d'après les 31 lignes du Swiss QR Code qu'est `la charge` : « Récépissé », « Section paiement », le code de 46 mm avec sa croix, « Compte / Payable à », « Référence », « Informations supplémentaires », « Payable par » (ou un cadre à remplir), « Monnaie », « Montant », « Point de dépôt », et les lignes de découpe avec « A détacher avant le versement ». Intitulés et tailles : *Swiss Implementation Guidelines for the QR-bill* de SIX, version 2.4, chapitres 3.4 à 3.7 et annexe C ; les cotes fines ne viennent pas du Style Guide de SIX. Si la dernière page n'a plus ses 105 mm de bas libres, la section prend une page à elle. Une charge vide (pas d'IBAN) : rien. Dans un écran : « La section paiement d'une QR-facture va dans un document, pas dans un écran. ». Forme compacte : `_section_paiement charge`.
 
 ## Journal des révisions
@@ -2237,3 +2252,4 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 | 2.26 | 2026-10-19 | § 22.15 : `Ouvrir` un fichier (`Ouvrir le justificatif du frais.`), montré par le système ; opérande 2 de `DOCUMENT` |
 | 2.27 | 2026-10-20 | Nouveau § 22.16 : `le code QR de t`, `le code QR suisse de t` (SIX IG 2.4), `un saut de ligne`, `x en format technique` |
 | 2.28 | 2026-10-20 | § 22.16 : `la section paiement de …` dans un document : la section paiement et le récépissé d'une QR-facture, au bas de la dernière page |
+| 2.29 | 2026-10-20 | Nouveau § 15.6 bis : `Sauvegarder la base dans « … ».` ; § 22.16 : `t en IBAN` (ISO 13616, mod 97) et la vérification des lignes d'un code QR suisse avant son image ou sa section paiement (SIX IG 2.4, § 4.2.2) |

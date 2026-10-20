@@ -89,6 +89,82 @@ static unsigned char *png_gris(const unsigned char *pixels, int l, int h, size_t
     return t.o;
 }
 
+/* --- les lignes d'un Swiss QR Code (2.29) --- */
+
+static char *qr_adresse(char **l, int d, const char *qui) {
+    /* d : la ligne du type d'adresse ; puis nom, rue ou ligne 1, numéro ou ligne 2, NPA, localité, pays */
+    const char *tp = l[d];
+    if (!strcmp(tp, "S")) {
+        if (!*l[d + 1]) return grym_formater("QR-facture : le nom %s manque (SIX IG 2.4, § 4.2.2).", qui);
+        if (!*l[d + 4] || !*l[d + 5])
+            return grym_formater("QR-facture : l'adresse %s n'a pas de numéro postal ou de localité ; une adresse "
+                                 "structurée les exige (SIX IG 2.4, § 4.2.2).", qui);
+    } else if (!strcmp(tp, "K")) {
+        if (!*l[d + 1] || !*l[d + 3])
+            return grym_formater("QR-facture : l'adresse %s n'a pas de nom ou de deuxième ligne (NPA et localité).", qui);
+    } else {
+        return grym_formater("QR-facture : type d'adresse %s inconnu, « %s » (S ou K).", qui, tp);
+    }
+    if (strlen(l[d + 6]) != 2) return grym_formater("QR-facture : le pays %s s'écrit en deux lettres (CH).", qui);
+    return NULL;
+}
+
+char *qr_suisse_verifier(const char *texte) {
+    char *copie = grym_dupliquer(texte ? texte : "");
+    char *l[40];
+    int n = 0;
+    for (char *p = copie; n < 40; ) {
+        char *e = strchr(p, '\n');
+        if (e) { *e = 0; if (e > p && e[-1] == '\r') e[-1] = 0; }
+        l[n++] = p;
+        if (!e) break;
+        p = e + 1;
+    }
+    char *r = NULL;
+    if (n < 31 || strcmp(l[0], "SPC") != 0)
+        r = grym_formater("QR-facture : %d ligne%s au lieu de 31 au moins, la première « SPC » (SIX IG 2.4, § 4.2.2).",
+                          n, n > 1 ? "s" : "");
+    else if (strcmp(l[30], "EPD") != 0)
+        r = grym_dupliquer("QR-facture : la ligne 31 doit être « EPD » (fin des données de paiement).");
+    if (!r) {
+        const char *iban = l[3];
+        size_t li = strlen(iban);
+        int bon = li == 21 && (!strncmp(iban, "CH", 2) || !strncmp(iban, "LI", 2));
+        for (size_t k = 2; bon && k < li; k++)
+            bon = (iban[k] >= '0' && iban[k] <= '9') || (k >= 4 && iban[k] >= 'A' && iban[k] <= 'Z');
+        unsigned reste = 0;
+        for (size_t q = 0; bon && q < li; q++) {
+            const char ch = iban[(q + 4) % li];
+            reste = ch >= 'A' ? (reste * 100 + (unsigned)(ch - 'A' + 10)) % 97 : (reste * 10 + (unsigned)(ch - '0')) % 97;
+        }
+        if (!bon || reste != 1)
+            r = grym_formater("QR-facture : « %s » n'est pas un IBAN suisse ou liechtensteinois valable "
+                              "(21 caractères, sans espaces, clé de contrôle juste).", iban);
+        else {
+            const long iid = strtol((char[6]){ iban[4], iban[5], iban[6], iban[7], iban[8], 0 }, NULL, 10);
+            const int qr_iban = iid >= 30000 && iid <= 31999;
+            const char *ref = l[27];
+            if (qr_iban && strcmp(ref, "QRR") != 0)
+                r = grym_formater("QR-facture : « %s » est un QR-IBAN ; il exige une référence QR (QRR), pas « %s ». "
+                                  "Donne l'IBAN ordinaire du compte.", iban, ref);
+            else if (!qr_iban && !strcmp(ref, "QRR"))
+                r = grym_dupliquer("QR-facture : une référence QR (QRR) exige un QR-IBAN.");
+            else if (strcmp(ref, "QRR") && strcmp(ref, "SCOR") && strcmp(ref, "NON"))
+                r = grym_formater("QR-facture : type de référence « %s » inconnu (QRR, SCOR ou NON).", ref);
+        }
+    }
+    if (!r && strcmp(l[19], "CHF") && strcmp(l[19], "EUR"))
+        r = grym_formater("QR-facture : la monnaie est CHF ou EUR, pas « %s ».", l[19]);
+    if (!r) r = qr_adresse(l, 4, "du créancier");
+    if (!r) {
+        int vide = 1;
+        for (int k = 20; k <= 26; k++) vide &= !*l[k];
+        if (!vide) r = qr_adresse(l, 20, "du débiteur");
+    }
+    free(copie);
+    return r;
+}
+
 /* --- le code --- */
 
 unsigned char *qr_png(const char *texte, int suisse, size_t *taille, char **erreur) {
@@ -98,6 +174,7 @@ unsigned char *qr_png(const char *texte, int suisse, size_t *taille, char **erre
         *erreur = grym_dupliquer("Un code QR contient au plus 2953 octets.");
         return NULL;
     }
+    if (suisse && (*erreur = qr_suisse_verifier(texte)) != NULL) return NULL;
     memcpy(tmp, texte, n);
     /* en octets (UTF-8 tel quel) : le Swiss QR Code est du « binary coding » (SIX IG 2.4, § 6.2) */
     const int ok = qrcodegen_encodeBinary(tmp, n, qr, qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN,

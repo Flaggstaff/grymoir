@@ -3888,7 +3888,48 @@ int main(void) {
          "~La section paiement d'une QR-facture va dans un document, pas dans un écran.");
     /* Le code QR, le saut de ligne, le format technique (2.27) */
     PROG("Le q vaut le code QR de « https://nicolas-seydoux.ch ».\nAfficher le format du q.", "PNG");
-    PROG("Le q vaut le code QR suisse de « SPC ».\nAfficher le format du q.", "PNG");
+    /* Les lignes d'un Swiss QR Code, vérifiées (2.29) : juste, sans débiteur, clé fausse, QR-IBAN sans QRR, monnaie, adresse */
+    PROG("Le s vaut un saut de ligne.\nLe d vaut « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s suivi de « CH5204835012345671000 » suivi du s suivi de « S » suivi du s suivi de « Cabinet » suivi du s suivi de « Rue » suivi du s suivi de « 1 » suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « 130.00 » suivi du s suivi de « CHF » suivi du s suivi de « S » suivi du s suivi de « Anne Rochat » suivi du s suivi de « Route » suivi du s suivi de « 12a » suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « NON » suivi du s suivi de « » suivi du s suivi de « Facture » suivi du s suivi de « EPD ».\nLe q vaut le code QR suisse du d.\nAfficher le format du q.",
+         "PNG");
+    PROG("Le s vaut un saut de ligne.\nLe d vaut « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s suivi de « CH5204835012345671000 » suivi du s suivi de « S » suivi du s suivi de « Cabinet » suivi du s suivi de « Rue » suivi du s suivi de « 1 » suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « 130.00 » suivi du s suivi de « CHF » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « NON » suivi du s suivi de « » suivi du s suivi de « Facture » suivi du s suivi de « EPD ».\nLe q vaut le code QR suisse du d.\nAfficher le format du q.",
+         "PNG");
+    PROG("Le s vaut un saut de ligne.\nLe d vaut « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s suivi de « CH5304835012345671000 » suivi du s suivi de « S » suivi du s suivi de « Cabinet » suivi du s suivi de « Rue » suivi du s suivi de « 1 » suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « 130.00 » suivi du s suivi de « CHF » suivi du s suivi de « S » suivi du s suivi de « Anne Rochat » suivi du s suivi de « Route » suivi du s suivi de « 12a » suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « NON » suivi du s suivi de « » suivi du s suivi de « Facture » suivi du s suivi de « EPD ».\nLe q vaut le code QR suisse du d.",
+         "~n'est pas un IBAN suisse ou liechtensteinois valable");
+    PROG("Le s vaut un saut de ligne.\nLe d vaut « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s suivi de « CH4431999123000889012 » suivi du s suivi de « S » suivi du s suivi de « Cabinet » suivi du s suivi de « Rue » suivi du s suivi de « 1 » suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « 130.00 » suivi du s suivi de « CHF » suivi du s suivi de « S » suivi du s suivi de « Anne Rochat » suivi du s suivi de « Route » suivi du s suivi de « 12a » suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « NON » suivi du s suivi de « » suivi du s suivi de « Facture » suivi du s suivi de « EPD ».\nLe q vaut le code QR suisse du d.",
+         "~est un QR-IBAN ; il exige une référence QR (QRR)");
+    PROG("Le s vaut un saut de ligne.\nLe d vaut « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s suivi de « CH5204835012345671000 » suivi du s suivi de « S » suivi du s suivi de « Cabinet » suivi du s suivi de « Rue » suivi du s suivi de « 1 » suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « 130.00 » suivi du s suivi de « USD » suivi du s suivi de « S » suivi du s suivi de « Anne Rochat » suivi du s suivi de « Route » suivi du s suivi de « 12a » suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « NON » suivi du s suivi de « » suivi du s suivi de « Facture » suivi du s suivi de « EPD ».\nLe q vaut le code QR suisse du d.",
+         "~la monnaie est CHF ou EUR");
+    PROG("Le s vaut un saut de ligne.\nLe d vaut « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s suivi de « CH5204835012345671000 » suivi du s suivi de « S » suivi du s suivi de « Cabinet » suivi du s suivi de « Rue » suivi du s suivi de « 1 » suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « 130.00 » suivi du s suivi de « CHF » suivi du s suivi de « S » suivi du s suivi de « Anne Rochat » suivi du s suivi de « Route » suivi du s suivi de « 12a » suivi du s suivi de « » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « NON » suivi du s suivi de « » suivi du s suivi de « Facture » suivi du s suivi de « EPD ».\nLe q vaut le code QR suisse du d.",
+         "~l'adresse du débiteur n'a pas de numéro postal");
+    PROG("Le q vaut le code QR suisse de « SPC ».", "~QR-facture : 1 ligne au lieu de 31 au moins");
+    /* « Sauvegarder la base dans … » (2.29) : sans base, refusé ; deux copies, la seconde « (2) » ; pas dans un calcul */
+    PROG("Sauvegarder la base dans « _essai_copie.grymd ».", "~Ce programme n'a pas de base : il ne conserve aucune entité.");
+    remove("_essai_copie.grymd");
+    remove("_essai_copie (2).grymd");
+    PROG("Un livre, conservé, a :\n    un titre (texte).\nLe l vaut un nouveau livre :\n    Le titre vaut « Candide ».\n"
+         "Conserver le l.\nSauvegarder la base dans « _essai_copie.grymd ».\nSauvegarder la base dans « _essai_copie.grymd ».\n"
+         "Afficher le nombre de livres conservés.", "1");
+    {
+        FILE *a = fopen("_essai_copie.grymd", "rb"), *b2 = fopen("_essai_copie (2).grymd", "rb");
+        char tete[16] = "";
+        if (a && fread(tete, 1, 16, a) != 16) tete[0] = 0;
+        total++;
+        if (!(a && b2 && memcmp(tete, "SQLite format 3", 15) == 0))
+            signaler(__LINE__, "Sauvegarder la base", "deux sauvegardes, des bases SQLite", a ? "une seule" : "aucune");
+        if (a) fclose(a);
+        if (b2) fclose(b2);
+        remove("_essai_copie.grymd");
+        remove("_essai_copie (2).grymd");
+    }
+    PROG("Le double d'un nombre :\n    Sauvegarder la base dans « x.grymd ».\n    Rendre nombre × 2.\nAfficher le double de 2.",
+         "~Un calcul n'écrit pas sur le disque : sauvegarde la base dans une action.");
+    /* « en IBAN » (2.29) : sans espaces, en capitales, vérifié ; trois refus */
+    PROG("Afficher « ch52 0483 5012 3456 7100 0 » en IBAN.\nAfficher « GB82 WEST 1234 5698 7654 32 » en IBAN.",
+         "CH5204835012345671000\nGB82WEST12345698765432");
+    PROG("Afficher « CH53 0483 5012 3456 7100 0 » en IBAN.", "~sa clé de contrôle ne correspond pas");
+    PROG("Afficher « 1234 » en IBAN.", "~de 15 à 34 lettres et chiffres");
+    PROG("Afficher « 1234 5678 9012 3456 » en IBAN.", "~les deux lettres du pays");
+    PROG("Afficher 3 en IBAN.", "~« en IBAN » s'applique à un texte, pas à un nombre.");
     PROG("Le t vaut « a » suivi d'un saut de ligne suivi de « b ».\nAfficher la longueur du t.", "3");
     PROG("Afficher 1590 en format technique.\nAfficher 260,00 en format technique.\nAfficher (0 − 12,30) en format technique.",
          "1590\n260.00\n-12.30");

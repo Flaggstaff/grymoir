@@ -591,7 +591,9 @@ static void expression(Impression *im, const Noeud *n) {
         if (!simple) aj(im, "(");
         expression(im, x);
         if (!simple) aj(im, ")");
-        if (im->compact) {
+        if (n->entier == 10) {
+            aj(im, im->compact ? " _en_IBAN" : " en IBAN");   /* un sigle, en capitales (2.29) */
+        } else if (im->compact) {
             aj(im, " _en_");
             ecrire_nom(im, n->texte2, 0);
         } else {
@@ -2156,6 +2158,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         aj(im, c ? "\n" : ".\n");
         return;
     }
+    case P_SAUVEGARDER:
+        aj(im, c ? "_sauvegarder _dans " : "Sauvegarder la base dans ");
+        expression(im, n->enfants[0]);
+        aj(im, c ? "\n" : ".\n");
+        return;
     case P_ENREGISTRER:
         aj(im, c ? "_enregistrer " : "Enregistrer ");
         expression(im, n->enfants[0]);

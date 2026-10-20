@@ -101,6 +101,10 @@ int base_regle_utile(Base *b, const char *cle);
 void base_regle_faite(Base *b, const char *cle);
 void base_noter_lecture(Base *b, const ClasseVM *c);
 
+/* Une copie complète de la base, telle que la transaction en cours la voit (sqlite3_serialize) : ses octets, à libérer
+ * par free ; NULL et *erreur sinon (grammaire, 2.29). */
+unsigned char *base_copie(Base *b, size_t *taille, char **erreur);
+
 /* L'objet d'identifiant id est-il dans la corbeille ? */
 int base_est_supprime(Base *b, long id);
 

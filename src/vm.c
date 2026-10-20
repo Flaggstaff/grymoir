@@ -4572,6 +4572,49 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
+        case I_SAUVEGARDER: {   /* « Sauvegarder la base dans « Cabinet.grymd ». » (2.29) */
+            Valeur c = depiler(&pile);
+            char *probleme = NULL;
+            if (c.type != V_TEXTE) probleme = grym_formater("Le chemin d'un fichier est un texte, pas %s.", nom_type(c.type));
+            else if (!*c.texte) probleme = grym_dupliquer("Chemin de fichier vide.");
+            else if (!m->base) probleme = grym_dupliquer("Ce programme n'a pas de base : il ne conserve aucune entité.");
+            Fichier *f = NULL;
+            char *libre = NULL;
+            if (!probleme) {
+                /* jamais par-dessus un fichier, ni deux fois le même chemin : « copie (2).grymd », « copie (3).grymd »… */
+                const char *point = strrchr(c.texte, '.'), *barre = strrchr(c.texte, '/');
+                const size_t radical = point && (!barre || point > barre) ? (size_t)(point - c.texte) : strlen(c.texte);
+                for (int rang = 1; !libre && rang < 1000; rang++) {
+                    char *essai = rang == 1 ? grym_dupliquer(c.texte)
+                                            : grym_formater("%.*s (%d)%s", (int)radical, c.texte, rang, c.texte + radical);
+                    char *chemin = chemin_ecriture(m, essai);
+                    FILE *existe = grym_fopen(chemin, "rb");
+                    int pris = existe != NULL;
+                    if (existe) fclose(existe);
+                    for (size_t k = 0; k < m->nb_a_ecrire && !pris; k++) pris = strcmp(m->a_ecrire[k].chemin, chemin) == 0;
+                    free(chemin);
+                    if (pris) free(essai);
+                    else libre = essai;
+                }
+                if (!libre) probleme = grym_formater("« %s » : plus de mille sauvegardes de ce nom.", c.texte);
+            }
+            if (!probleme) {
+                f = grym_allouer(sizeof *f);
+                f->references = 1;
+                f->format = NULL;
+                f->base = NULL;
+                f->cle = 0;
+                f->octets = base_copie(m->base, &f->taille, &probleme);
+                const char *barre = strrchr(libre, '/');
+                f->nom = grym_dupliquer(barre ? barre + 1 : libre);
+                if (!probleme) probleme = planifier_ecriture(m, libre, f);
+                if (probleme) { free(f->octets); free(f->nom); free(f); }
+            }
+            free(libre);
+            valeur_liberer(&c);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
         case I_EXPORTER: {   /* « Exporter les membres conservés … dans « m.csv ». » (§ 15.4) */
             Valeur c = depiler(&pile), l = depiler(&pile);
             char *probleme = NULL;
@@ -4976,6 +5019,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             EcranVM *e = m->ecran;
             char *t = texte_valeur(m, &v);
             valeur_liberer(&v);
+            if (e->elements[op].capitales == 2 && *t) {
+                /* la section paiement (2.28) : des lignes de Swiss QR Code justes, ou rien (2.29) */
+                char *probleme = qr_suisse_verifier(t);
+                if (probleme) { free(t); ok = echouer(diag, b, debut, probleme); break; }
+            }
             free(e->textes[op]);
             e->textes[op] = t;
             e->elements[op].texte = t;
@@ -5251,9 +5299,55 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         case I_CONVERTIR: {   /* « le nom en majuscules », « le code en nombre » (§ 4.5) */
             static const char *const CIBLES[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
-                                                  "vrai ou faux", "heure", "toutes lettres", "format technique" };
+                                                  "vrai ou faux", "heure", "toutes lettres", "format technique", "IBAN" };
             static const char *const NOMS[] = { "", "", "un nombre entier", "un nombre", "une date", "une année",
-                                                "vrai ou faux", "une heure", "", "" };
+                                                "vrai ou faux", "une heure", "", "", "" };
+            (void)CIBLES;
+            if (op == 10) {
+                /* « l'IBAN du cabinet en IBAN » (2.29) : sans espaces, en capitales, et vérifié (ISO 13616) : deux
+                 * lettres de pays, deux chiffres de clé, de 15 à 34 lettres et chiffres en tout, la clé mod 97 = 1 */
+                Valeur vt = depiler(&pile);
+                if (vt.type != V_TEXTE) {
+                    char *mp = vt.type == V_ABSENT ? message_absent(&vt)
+                             : grym_formater("« en IBAN » s'applique à un texte, pas à %s.", nom_type(vt.type));
+                    valeur_liberer(&vt);
+                    ok = echouer(diag, b, debut, mp);
+                    break;
+                }
+                char x[64];
+                size_t n = 0;
+                int mauvais = 0;
+                for (const unsigned char *p = (const unsigned char *)(vt.texte ? vt.texte : ""); *p && !mauvais; p++) {
+                    if (*p == ' ') continue;
+                    if (p[0] == 0xC2 && p[1] == 0xA0) { p++; continue; }                         /* espace insécable */
+                    if (p[0] == 0xE2 && p[1] == 0x80 && p[2] == 0xAF) { p += 2; continue; }      /* fine insécable */
+                    unsigned char ch = *p >= 'a' && *p <= 'z' ? (unsigned char)(*p - 32) : *p;
+                    if (!((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) || n >= 40) mauvais = 1;
+                    else x[n++] = (char)ch;
+                }
+                x[n] = 0;
+                char *probleme = NULL;
+                if (mauvais || n < 15 || n > 34)
+                    probleme = grym_formater("« %s » n'est pas un IBAN : de 15 à 34 lettres et chiffres, espaces permises.", vt.texte);
+                else if (!(x[0] >= 'A' && x[0] <= 'Z' && x[1] >= 'A' && x[1] <= 'Z' && x[2] >= '0' && x[2] <= '9' && x[3] >= '0' && x[3] <= '9'))
+                    probleme = grym_formater("« %s » n'est pas un IBAN : il commence par les deux lettres du pays et les "
+                                             "deux chiffres de sa clé (CH52…).", vt.texte);
+                else {
+                    unsigned reste = 0;
+                    for (size_t q = 0; q < n; q++) {
+                        const char ch = x[(q + 4) % n];   /* le pays et la clé passent à la fin */
+                        if (ch >= 'A') reste = (reste * 100 + (unsigned)(ch - 'A' + 10)) % 97;
+                        else reste = (reste * 10 + (unsigned)(ch - '0')) % 97;
+                    }
+                    if (reste != 1)
+                        probleme = grym_formater("« %s » n'est pas un IBAN : sa clé de contrôle ne correspond pas "
+                                                 "(une faute de frappe ?).", vt.texte);
+                }
+                valeur_liberer(&vt);
+                if (probleme) { ok = echouer(diag, b, debut, probleme); break; }
+                empiler(&pile, vi_texte(x));
+                break;
+            }
             if (op == 9) {
                 /* « le montant en format technique » (2.27) : l'écriture qu'attend une machine (code QR suisse, XML) ;
                  * un nombre : « 1590.00 », sans séparateur de milliers, le point décimal, les décimales gardées ; une

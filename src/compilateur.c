@@ -1260,6 +1260,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
         emettre(c, I_EXPORTER, k, ph->ligne, ph->colonne);
         return;
     }
+    case P_SAUVEGARDER:   /* « Sauvegarder la base dans « … ». » (2.29) */
+        expression(c, ph->enfants[0]);
+        emettre(c, I_SAUVEGARDER, 0, ph->ligne, ph->colonne);
+        return;
     case P_ENREGISTRER:
         expression(c, ph->enfants[0]);
         expression(c, ph->enfants[1]);

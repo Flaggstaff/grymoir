@@ -121,11 +121,13 @@ typedef enum {
     I_DOCUMENT,         /* opérande : 0 le PDF, 1 l'aperçu, 2 dépile un fichier et le montre (2.26) ; l'écran ouvert est un document (2.25), lu une fois : sa
                            page HTML, mise en page en PDF par l'interface ; l'écran se ferme. 0 empile le fichier PDF,
                            1 le montre (montrer_document) */
-    I_CODE_QR           /* opérande : 1 le Swiss QR Code (croix, M, version 25 au plus), 0 un code QR ; dépile un
+    I_CODE_QR,          /* opérande : 1 le Swiss QR Code (croix, M, version 25 au plus), 0 un code QR ; dépile un
                            texte, empile l'image PNG de son code QR (2.27) */
+    I_SAUVEGARDER       /* dépile un chemin ; une copie de la base, telle que l'exécution la voit, s'y écrira à la fin
+                           de l'exécution réussie, jamais par-dessus un fichier : « (2) », « (3) »… (2.29) */
 } CodeInstruction;
 
-#define I_DERNIER I_CODE_QR
+#define I_DERNIER I_SAUVEGARDER
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

@@ -3107,3 +3107,18 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
     *resultat = vi_objet(o);
     return 1;
 }
+
+unsigned char *base_copie(Base *b, size_t *taille, char **erreur) {
+    sqlite3_int64 n = 0;
+    unsigned char *o = sqlite3_serialize(b->db, "main", &n, 0);
+    if (!o || n <= 0) {
+        *erreur = grym_formater("Sauvegarde de la base impossible : %s.", sqlite3_errmsg(b->db));
+        sqlite3_free(o);
+        return NULL;
+    }
+    unsigned char *r = grym_allouer((size_t)n);
+    memcpy(r, o, (size_t)n);
+    sqlite3_free(o);
+    *taille = (size_t)n;
+    return r;
+}

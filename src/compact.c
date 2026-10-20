@@ -499,7 +499,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
         if (t->type == J_MOT_CLE && strncmp(t->valeur, "en_", 3) == 0) {
             /* nom _en_majuscules → nom en majuscules ; code _en_nombre_entier → code en nombre entier (§ 4.5) */
             static const char *const C[] = { "majuscules", "minuscules", "nombre_entier", "nombre", "date", "année",
-                                             "vrai_ou_faux", "heure", "toutes_lettres", "format_technique" };
+                                             "vrai_ou_faux", "heure", "toutes_lettres", "format_technique", "iban" };
             size_t q = 0;
             while (q < sizeof C / sizeof *C && strcmp(t->valeur + 3, C[q]) != 0) q++;
             if (q == sizeof C / sizeof *C) {
@@ -511,7 +511,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             for (const char *p = C[q]; *p; ) {
                 const char *e = strchr(p, '_');
                 char *w = e ? grym_formater("%.*s", (int)(e - p), p) : grym_dupliquer(p);
-                mot(r, w, t);
+                mot(r, w, t);   /* « iban » : l'imprimeur l'écrit en capitales */
                 free(w);
                 p = e ? e + 1 : p + strlen(p);
             }
@@ -2131,6 +2131,17 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             }
             mot(r, "dans", &r->e[dans]);
             expression(r, dans + 1, f);
+            point(r, f);
+        } else if (!strcmp(c, "sauvegarder")) {   /* _sauvegarder _dans « c.grymd » (2.29) */
+            if (f < d + 3 || !est_cle(&r->e[d + 1], "dans")) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _sauvegarder _dans « copie.grymd » »."));
+                return;
+            }
+            mot(r, "sauvegarder", t);
+            mot(r, "la", t);
+            mot(r, "base", t);
+            mot(r, "dans", &r->e[d + 1]);
+            expression(r, d + 2, f);
             point(r, f);
         } else if (!strcmp(c, "enregistrer")) {
             size_t dans = chercher(r, d + 1, f, "dans");
