@@ -4624,6 +4624,26 @@ int main(int argc, char **argv) {
         e.close();
     }
 
+    // « avec le choix d'un dossier » (2.32) : l'icône au bout du champ, qui ouvre le sélecteur de dossiers
+    {
+        QTemporaryDir d;
+        const QString prog = d.filePath("dossier.grym");
+        QFile f(prog);
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write("L'écran x montre :\n    un dossier (texte), facultatif, avec le choix d'un dossier,\n    un bouton « Fini ».\n"
+                "Quand on clique sur « Fini » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n");
+        f.close();
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto action = [&]() -> QAction * { return e.findChild<QAction *>("choix-dossier"); };
+        while (z.elapsed() < 15000 && !action()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(action() != nullptr);
+        e.close();
+    }
+
     // Cabinet, « Nouvelle séance » : le soin choisi propose son prix, avec ou sans patient (19 octobre 2026)
     {
         QTemporaryDir d;
@@ -4875,7 +4895,7 @@ Afficher « fin des essais ».
         VERIFIER(t.contains("fin des essais"));
         VERIFIER(t.contains(QString::fromUtf8("essai I sans échec")));
         {   // la sauvegarde automatique : une copie chiffrée du jour dans le dossier choisi, créé ; la seconde le même jour, rien
-            const QString du_jour = d.filePath("sync/Cabinet/Cabinet " + QDate::currentDate().toString("yyyy-MM-dd") + ".coffre");
+            const QString du_jour = d.filePath("sync/Cabinet/" + QDate::currentDate().toString("yyyy-MM-dd") + " - Nicolas Seydoux.coffre");
             QElapsedTimer y;
             y.start();
             while (y.elapsed() < 10000 && !QFile::exists(du_jour)) QApplication::processEvents(QEventLoop::AllEvents, 50);

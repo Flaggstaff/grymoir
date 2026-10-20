@@ -21,6 +21,12 @@ La personne proposée vaut absent.
 Remarque : la séance et le soin dont la page est ouverte.
 La séance ouverte vaut absent.
 
+Remarque : ce qui est cherché dans les listes des patients et des factures ; vide, tout.
+La recherche des patients vaut « ».
+La recherche des factures vaut « ».
+Remarque : ce que la Comptabilité dit après un export.
+L'avis des comptes vaut absent.
+
 Remarque : la quittance et le frais en cours.
 La pièce en cours vaut absent.
 Le frais ouvert vaut absent.
@@ -63,10 +69,14 @@ Si le nombre de rubriques conservées est nul :
 Remarque : le cabinet, créé une seule fois à son nom ; Nicolas complète sa fiche dans la configuration.
 Si le nombre de cabinets conservés est nul, fonder le cabinet.
 
-Remarque : la copie chiffrée de toute la base, datée, dans un dossier ; la date d'abord, pour qu'elle y soit.
+Remarque : une base d'avant le 20 octobre 2026 : le logo et la signature des fichiers de l'application, une fois ; ensuite, la configuration.
+Si le logo du cabinet conservé est absent, le logo du cabinet conservé devient le fichier « images/coeur-encre.png ».
+Si la signature du cabinet conservé est absente, la signature du cabinet conservé devient le fichier « images/signature.png ».
+
+Remarque : la copie chiffrée de toute la base, dans un dossier, nommée par le jour et le cabinet : « 2026-10-20 - Nicolas Seydoux.coffre ».
 Pour copier la base dans un dossier :
     La dernière sauvegarde du cabinet conservé devient aujourd'hui.
-    Sauvegarder la base dans (dossier suivi de "/Cabinet " suivi d'aujourd'hui en format technique suivi de « .coffre ») avec le mot de passe la clé de session.
+    Sauvegarder la base dans (dossier suivi de « / » suivi d'aujourd'hui en format technique suivi de " - " suivi du nom du cabinet conservé suivi de « .coffre ») avec le mot de passe la clé de session.
 
 Remarque : la sauvegarde automatique : une fois par jour, à l'ouverture, dans le dossier de sauvegarde ; ratée, l'accueil le dit.
 Pour archiver les données :
@@ -194,11 +204,14 @@ L'écran de comptabilité, « Comptabilité », montre :
     un bouton « Rappels », en tuile, avec la description « Factures échues, séances à facturer »,
     un bouton « Factures », en tuile, avec la description « Envoyées, et ce qui en est réglé »,
     un bouton « Journal de l'année », en tuile, avec la description « Recettes et frais, à imprimer »,
-    un bouton « Fermer ».
+    un bouton « Exporter en CSV », en tuile, avec la description « Recettes et frais, pour un tableur ou la fiduciaire »,
+    un bouton « Fermer »,
+    le texte l'annonce de l'avis des comptes.
 
 Remarque : les factures envoyées, les plus récentes d'abord ; une facture choisie se remontre telle qu'elle a été envoyée.
 L'écran des factures, « Factures », montre :
-    la liste des factures conservées, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et l'état,
+    une recherche (texte), facultative, avec l'indication « Un numéro, un nom de patient, un état »,
+    la liste des factures conservées dont le numéro contient la recherche des factures ou le nom du patient contient la recherche des factures ou l'état contient la recherche des factures, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et l'état,
     un bouton « Fermer »,
     un bouton « Annuler la facture ».
 
@@ -218,7 +231,7 @@ Remarque : la facture, sur papier : le cabinet et ses numéros, le patient, les 
 Le document de facture, « Facture », montre :
     côte à côte :
         l'un sous l'autre :
-            l'image « images/signature.png », large de 220,
+            l'image de la signature du cabinet conservé, large de 220,
             le texte l'adresse professionnelle du cabinet conservé,
             le texte la ville professionnelle du cabinet conservé,
             le texte la ligne des numéros du cabinet conservé,
@@ -239,7 +252,7 @@ Remarque : le rappel d'une facture, sur papier : ses séances pas encore payées
 Le document de rappel, « Rappel », montre :
     côte à côte :
         l'un sous l'autre :
-            l'image « images/signature.png », large de 220,
+            l'image de la signature du cabinet conservé, large de 220,
             le texte l'adresse professionnelle du cabinet conservé,
             le texte la ville professionnelle du cabinet conservé,
             le texte la ligne des numéros du cabinet conservé,
@@ -257,7 +270,7 @@ Le document de rappel, « Rappel », montre :
 
 Remarque : le journal d'une année, l'année des comptes, pour la déclaration d'impôts : les recettes à leur date d'encaissement, les frais, le résultat.
 Le document de journal, « Journal des recettes et des frais », montre :
-    l'image « images/signature.png », large de 220,
+    l'image de la signature du cabinet conservé, large de 220,
     le texte "Année " suivi de l'année des comptes suivi de ", état au " suivi d'aujourd'hui,
     le texte « Recettes », en petites capitales,
     la liste des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement,
@@ -303,7 +316,7 @@ Remarque : assurance complémentaire demande pour rembourser : le thérapeute, l
 Le document de quittance, « Quittance », montre :
     côte à côte :
         l'un sous l'autre :
-            l'image « images/signature.png », large de 220,
+            l'image de la signature du cabinet conservé, large de 220,
             le texte l'adresse professionnelle du cabinet conservé,
             le texte la ville professionnelle du cabinet conservé,
             le texte la ligne des numéros du cabinet conservé,
@@ -319,8 +332,10 @@ Le document de quittance, « Quittance », montre :
     le texte "Montant reçu : CHF " suivi de l'arrondi du montant de la pièce en cours à 0,01 suivi de la mention du moyen de la pièce en cours,
     le texte "Pour acquit, " suivi du nom du cabinet conservé.
 
+Remarque : la recherche filtre la liste à chaque changement : le nom, le téléphone, la localité ou le courriel contient ce qui est tapé.
 L'écran des patients montre :
-    la liste des patients conservés, par nom, avec le nom, le téléphone et le courriel,
+    une recherche (texte), facultative, avec l'indication « Un nom, un téléphone, une localité »,
+    la liste des patients conservés dont le nom contient la recherche des patients ou le téléphone contient la recherche des patients ou la localité contient la recherche des patients ou le courriel contient la recherche des patients, par nom, avec le nom, le téléphone, la localité et le courriel,
     côte à côte :
         un bouton « Nouveau patient »,
         un bouton « Fermer ».
@@ -383,6 +398,8 @@ L'écran du cabinet, « Le cabinet », montre :
             un numéro ASCA (texte), facultatif,
             un IBAN (texte), facultatif, avec l'indication « Le compte des QR-factures, un IBAN (pas un QR-IBAN) : CH52 0483 5012 3456 7100 0 »,
             une facturation des absences (vrai ou faux), en interrupteur, avec l'indication « Seulement si les patients en sont avertis, par écrit »,
+            un logo (image), facultatif, avec l'indication « Le logo du cabinet »,
+            une signature (image), facultative, avec l'indication « Le nom du cabinet dessiné, en tête des factures et des quittances »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer ».
@@ -438,7 +455,7 @@ Remarque : les sauvegardes : le dossier (synchronisé de préférence), une copi
 L'écran des sauvegardes, « Sauvegardes », montre :
     le texte l'annonce de l'avis des sauvegardes,
     le texte « Sauvegarde », en petites capitales,
-    un dossier (texte), facultatif, avec l'indication « Un dossier synchronisé, par exemple iCloud Drive : ~/Library/Mobile Documents/com~apple~CloudDocs/Cabinet. Une copie chiffrée y va chaque jour. Vide : pas de copie automatique. »,
+    un dossier (texte), facultatif, avec le choix d'un dossier, avec l'indication « Un dossier synchronisé, par exemple dans iCloud Drive : l'icône au bout du champ choisit le dossier. Une copie chiffrée y va chaque jour. Vide : pas de copie automatique. »,
     côte à côte :
         un bouton « Sauvegarder maintenant », principal,
         un bouton « Enregistrer le dossier »,
@@ -553,6 +570,7 @@ Quand on clique sur « Comptabilité » dans l'écran d'accueil :
 
 Quand on ouvre l'écran de comptabilité :
     L'année de l'écran devient l'année des comptes.
+    L'avis des comptes devient absent.
 
 Remarque : une autre année : les totaux, puis le journal, la suivent.
 Quand on change l'année dans l'écran de comptabilité :
@@ -590,6 +608,17 @@ Quand on clique sur « Annuler la facture » dans l'écran des factures :
 Quand on clique sur « Rappels » dans l'écran de comptabilité :
     La limite des rappels devient aujourd'hui − 30 jours.
     Ouvrir l'écran des rappels.
+
+Remarque : les comptes de l'année choisie en deux tableaux CSV (un tableur les ouvre), datés à la minute : dans Exports, à côté
+Remarque : de l'application (Documents/Cabinet une fois installée) ; un même export à la même minute est refusé, rien n'est écrasé.
+Quand on clique sur « Exporter en CSV » dans l'écran de comptabilité :
+    La marque vaut " " suivi de l'année des comptes suivi de ", exporté le " suivi d'aujourd'hui en format technique suivi de " à " suivi de l'horodatage de maintenant suivi de « .csv ».
+    Essayer :
+        Exporter les séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement, dans ("Exports/Recettes" suivi de la marque).
+        Exporter les frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date, avec la date, le libellé, le nom de la rubrique, le montant et le moyen, dans ("Exports/Frais" suivi de la marque).
+        L'avis des comptes devient "Exporté dans Exports : Recettes" suivi de la marque suivi de " et Frais" suivi de la marque.
+    En cas d'échec :
+        L'avis des comptes devient le motif de l'échec.
 
 Quand on clique sur « Journal de l'année » dans l'écran de comptabilité :
     Ouvrir le document de journal.
@@ -908,6 +937,20 @@ Quand on clique sur « Supprimer » dans l'écran des notes :
     Supprimer la note choisie de l'écran.
     La note ouverte devient absente.
 
+Quand on ouvre l'écran des patients :
+    La recherche des patients devient « ».
+
+Quand on change la recherche dans l'écran des patients :
+    Si la recherche de l'écran est présente, la recherche des patients devient la recherche de l'écran.
+    Sinon, la recherche des patients devient « ».
+
+Quand on ouvre l'écran des factures :
+    La recherche des factures devient « ».
+
+Quand on change la recherche dans l'écran des factures :
+    Si la recherche de l'écran est présente, la recherche des factures devient la recherche de l'écran.
+    Sinon, la recherche des factures devient « ».
+
 Quand on clique sur « Nouveau patient » dans l'écran des patients :
     Ouvrir l'écran d'inscription.
 
@@ -1184,6 +1227,8 @@ Quand on ouvre l'écran du cabinet :
     Le numéro ASCA de l'écran devient le numéro ASCA du c.
     L'IBAN de l'écran devient l'IBAN du c.
     La facturation des absences de l'écran devient la facturation des absences du c.
+    Le logo de l'écran devient le logo du c.
+    La signature de l'écran devient la signature du c.
 
 Quand on clique sur « Enregistrer » dans l'écran du cabinet :
     Le c vaut le cabinet conservé.
@@ -1202,6 +1247,8 @@ Quand on clique sur « Enregistrer » dans l'écran du cabinet :
     Le numéro ASCA du c devient le numéro ASCA de l'écran.
     L'IBAN du c devient l'IBAN de l'écran.
     La facturation des absences du c devient la facturation des absences de l'écran.
+    Si le logo de l'écran est présent, le logo du c devient le logo de l'écran.
+    Si la signature de l'écran est présente, la signature du c devient la signature de l'écran.
     Fermer l'écran.
 
 Quand on clique sur « Fermer » dans l'écran du cabinet :

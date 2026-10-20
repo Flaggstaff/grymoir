@@ -25,6 +25,8 @@ Pour fonder le cabinet :
         Le pays vaut « Suisse ».
         La facturation des absences vaut faux.
         Le dossier de sauvegarde vaut « ~/Library/Mobile Documents/com~apple~CloudDocs/Cabinet ».
+    Le logo du c devient le fichier « images/coeur-encre.png ».
+    La signature du c devient le fichier « images/signature.png ».
     Conserver le c.
 
 Remarque : les lignes d'adresse d'une quittance ; un champ absent laisse la ligne vide, rien ne casse.
@@ -68,6 +70,14 @@ Le numéro de pièce d'une lettre et d'une année et d'un rang :
     Si rang < 100, rendre lettre suivi d'année suivi de « -00 » suivi de rang.
     Si rang < 1000, rendre lettre suivi d'année suivi de « -0 » suivi de rang.
     Rendre lettre suivi d'année suivi de « - » suivi de rang.
+
+Remarque : « 14h30 » : une heure dans un nom de fichier (les deux-points y sont mal vus par le Finder).
+L'horodatage d'une heure :
+    Le total vaut le nombre de minutes entre 0:00 et heure.
+    Le h vaut la partie entière de (total ÷ 60).
+    Le m vaut total − h × 60.
+    Si m < 10, rendre h suivi de « h0 » suivi de m.
+    Rendre h suivi de « h » suivi de m.
 
 Remarque : le premier janvier : d'où partent les numéros des pièces et les comptes d'une année.
 Le premier janvier d'une date vaut (« 01.01. » suivi de l'année de date) en date.
