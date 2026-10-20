@@ -41,6 +41,7 @@ struct ElementVue {
     bool recherche = false;          // zone d'un objet « avec recherche » (§ 22.6)
     int longueur_max = 0;            // zone de texte « au plus N caractères » : la frappe s'arrête là (§ 22.6)
     bool masque = false;             // zone de texte « masqué » : un mot de passe (§ 22.6)
+    bool dossier = false;            // zone de texte « avec le choix d'un dossier » (2.32)
     QString unite;                   // « , avec l'unité « CHF » » ; unite_devant : à gauche du champ (§ 22.6)
     bool unite_devant = false;
     bool place = false;              // élément d'un bloc en position libre (§ 22.9)
@@ -119,6 +120,8 @@ void epingler_total(QTableWidget *t);
 // l'avait tapé, et la zone change (§ 22.1). Le champ reste un champ de texte : on peut toujours taper, ou le vider.
 class QLineEdit;
 void ajouter_calendrier(QLineEdit *champ);
+// Une zone (dossier) (2.32) : une icône au bout du champ ouvre le sélecteur de dossiers du système.
+void ajouter_choix_dossier(QLineEdit *champ);
 
 // Une cellule de liste qui se trie comme on la lit (§ 22.1) : les nombres par leur valeur (« 70 » avant « 130 »,
 // « 1'234,50 », « −3 »), les dates par le calendrier (jj.mm.aaaa), les heures par l'horloge, le reste selon la langue.

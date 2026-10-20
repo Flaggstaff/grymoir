@@ -2558,6 +2558,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].multiple = s2 && memchr(s2 + 1, 'p', nopt) != NULL;   /* « des genres (genre) » */
             e->elements[k].recherche = s2 && memchr(s2 + 1, 'r', nopt) != NULL;   /* « avec recherche » */
             e->elements[k].masque = (s2 && memchr(s2 + 1, 'c', nopt) != NULL) || type_secret(e->types[k]);   /* « masqué », ou un mot de passe */
+            e->elements[k].dossier = s2 && memchr(s2 + 1, 'd', nopt) != NULL;   /* « avec le choix d'un dossier » (2.32) */
             e->elements[k].choix = NULL;
             e->elements[k].nb_choix = 0;
             const ClasseVM *lie = classe_vm(m, e->types[k]);

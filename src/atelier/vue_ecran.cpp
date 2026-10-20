@@ -35,6 +35,8 @@
 #include <QRegularExpression>
 #include <QCollator>
 #include <QCalendarWidget>
+#include <QDir>
+#include <QFileDialog>
 #include <QToolButton>
 #include <QDate>
 #include <QFile>
@@ -546,6 +548,8 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             }
             if (auto *le = qobject_cast<QLineEdit *>(w); le && e.type == "date" && !e.lecture_seule)
                 ajouter_calendrier(le);   // un calendrier au bout du champ (19 octobre 2026)
+            if (auto *le = qobject_cast<QLineEdit *>(w); le && e.dossier && !e.lecture_seule)
+                ajouter_choix_dossier(le);   // le sélecteur de dossiers du système au bout du champ (2.32)
             if (auto *le = qobject_cast<QLineEdit *>(w)) {   // courriel, téléphone, adresse web : le bon clavier (§ 16.1)
                 if (e.type == "courriel") le->setInputMethodHints(Qt::ImhEmailCharactersOnly);
                 else if (e.type == QString::fromUtf8("téléphone")) le->setInputMethodHints(Qt::ImhDialableCharactersOnly);
@@ -804,6 +808,24 @@ static QIcon icone_lucide(const char *nom) {
     rendu.render(&p);
     p.end();
     return QIcon(QPixmap::fromImage(image));
+}
+
+void ajouter_choix_dossier(QLineEdit *champ) {
+    QAction *ouvrir = champ->addAction(icone_lucide("folder-open"), QLineEdit::TrailingPosition);
+    ouvrir->setToolTip(QString::fromUtf8("Choisir un dossier"));
+    ouvrir->setObjectName("choix-dossier");
+    QObject::connect(ouvrir, &QAction::triggered, champ, [champ] {
+        if (!champ->isEnabled() || champ->isReadOnly()) return;
+        QString depart = champ->text().trimmed();
+        if (depart.startsWith("~/")) depart = QDir::homePath() + depart.mid(1);
+        if (depart.isEmpty() || !QDir(depart).exists()) depart = QDir::homePath();
+        const QString d = QFileDialog::getExistingDirectory(champ->window(), QString::fromUtf8("Choisir un dossier"), depart);
+        if (d.isEmpty()) return;   // annulé : rien ne change
+        champ->setText(QDir::toNativeSeparators(d));
+        champ->setModified(true);
+        champ->setFocus();
+        emit champ->editingFinished();   // la zone change, comme après une frappe (§ 22.2)
+    });
 }
 
 void ajouter_calendrier(QLineEdit *champ) {

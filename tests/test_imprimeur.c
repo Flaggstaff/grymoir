@@ -105,6 +105,8 @@ int main(void) {
     COMP("La charge vaut « SPC ».\nLe document de rappel montre :\n    la section paiement de la charge.",
          "_la charge << « SPC »\n_document de_rappel\n    _section_paiement charge\n_fin\n");
     /* Le code QR, le saut de ligne, le format technique (2.27) */
+    LITT("L'écran x montre :\n    un dossier (texte), facultatif, avec le choix d'un dossier.",
+         "L'écran x montre :\n    un dossier (texte), facultatif, avec le choix d'un dossier.\n");   /* 2.32 */
     LITT("Pour acquitter le solde d'un relevé :\n    Afficher relevé.\nLe relevé vaut 3.\nAcquitter le solde du relevé.\nAcquitter le solde de 4.",
          "Pour acquitter le solde d'un relevé :\n    Afficher relevé.\nLe relevé vaut 3.\nAcquitter le solde du relevé.\nAcquitter le solde de 4.\n");   /* 2.31 */
     LITT("Le m vaut « x ».\nLe f vaut « c.coffre ».\nSauvegarder la base dans « c.coffre » avec le mot de passe m.\nRestaurer la base depuis f avec le mot de passe m.\nRestaurer la base depuis « c.grymd ».",

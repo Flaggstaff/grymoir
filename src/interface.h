@@ -55,6 +55,7 @@ typedef struct {
     const char *borne_min, *borne_max;   /* zone : ses bornes en forme canonique (« 1 », « -2.5 »), en caractères pour un
                                             texte ; NULL sans borne (§ 22.6) */
     int masque;                     /* zone de texte « masqué » : la frappe cachée, un mot de passe (§ 22.6) */
+    int dossier;                    /* zone de texte « avec le choix d'un dossier » : le sélecteur de dossiers (2.32) */
     int recherche;                  /* zone d'un objet « avec recherche » : un champ où l'on tape, avec des propositions ;
                                        les interfaces le font aussi d'elles-mêmes au-delà de RECHERCHE_AU_DELA objets */
     int multiple;                   /* « des genres (genre) » : des choix multiples parmi `choix` ; sa valeur (ecran_valeurs)

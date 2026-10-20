@@ -776,6 +776,7 @@ static long description_ecran(Compilation *c, const Noeud *e, const Noeud *ph) {
             if (el->entier & 16) chaine_ajouter(&d, "p");  /* des choix multiples */
             if (el->entier & 32) chaine_ajouter(&d, "r");  /* avec recherche */
             if (el->entier & 64) chaine_ajouter(&d, "c");  /* masqué */
+            if (el->entier & 4096) chaine_ajouter(&d, "d");  /* avec le choix d'un dossier (2.32) */
             if (el->borne_min || el->borne_max) {   /* « ␜ 1 ␛ 99 » : les bornes, l'une ou l'autre vide (§ 22.6) */
                 chaine_ajouter(&d, "\x1c");
                 if (el->borne_min) chaine_ajouter(&d, el->borne_min);

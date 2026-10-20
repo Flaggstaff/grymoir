@@ -1383,6 +1383,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 if (el->entier & 8) aj(im, c ? " _interrupteur" : ", en interrupteur");   /* § 22.6 */
                 if (el->entier & 32) aj(im, c ? " _recherche" : ", avec recherche");   /* § 22.6 */
                 if (el->entier & 64) aj(im, c ? " _masqué" : fz ? ", masquée" : ", masqué");   /* § 22.6 */
+                if (el->entier & 4096) aj(im, c ? " _choix_dossier" : ", avec le choix d'un dossier");   /* 2.32 */
                 if (el->transcrit_de) {   /* « , transcrite du mémo » ; « _transcrit mémo » (§ 15.8) */
                     if (c) { aj(im, " _transcrit "); ecrire_nom(im, el->transcrit_de, 0); }
                     else {

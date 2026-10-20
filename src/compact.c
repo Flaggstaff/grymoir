@@ -773,7 +773,7 @@ static void condition_de_cas(Reecriture *r, size_t d, size_t f) {
 
 static int est_etat(const Jeton *t) {
     return est_cle(t, "actif_si") || est_cle(t, "active_si") || est_cle(t, "visible_si") || est_cle(t, "plusieurs_lignes")
-        || est_cle(t, "interrupteur") || est_cle(t, "indication") || est_cle(t, "recherche") || est_cle(t, "min") || est_cle(t, "max") || est_cle(t, "masqué") || est_cle(t, "unité") || est_cle(t, "transcrit")
+        || est_cle(t, "interrupteur") || est_cle(t, "choix_dossier") || est_cle(t, "indication") || est_cle(t, "recherche") || est_cle(t, "min") || est_cle(t, "max") || est_cle(t, "masqué") || est_cle(t, "unité") || est_cle(t, "transcrit")
         || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur")
         || est_cle(t, "principal") || est_cle(t, "tuile") || est_cle(t, "description") || est_cle(t, "image")
         || est_cle(t, "côté_titre") || est_cle(t, "inversé") || est_cle(t, "capitales");
@@ -855,6 +855,15 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             emettre(r, J_VIRGULE, NULL, x, 1);
             mot(r, "avec", x);
             mot(r, "recherche", x);
+            k++;
+        } else if (zone && est_cle(x, "choix_dossier")) {   /* _choix_dossier → , avec le choix d'un dossier (2.32) */
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "avec", x);
+            mot(r, "le", x);
+            mot(r, "choix", x);
+            emettre(r, J_ELISION, "d", x, 1);
+            mot(r, "un", x);
+            mot(r, "dossier", x);
             k++;
         } else if (zone && est_cle(x, "interrupteur")) {   /* _interrupteur → , en interrupteur (§ 22.6) */
             emettre(r, J_VIRGULE, NULL, x, 1);

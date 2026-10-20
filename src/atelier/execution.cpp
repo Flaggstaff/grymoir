@@ -190,7 +190,8 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         t->types_zones << (el[k].sorte == ELEMENT_ZONE ? QString::fromUtf8(el[k].type) : QString());
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0)
                              | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0) | (el[k].masque ? 32 : 0)
-                             | (el[k].principal ? 64 : 0) | (el[k].tuile ? 128 : 0) | (el[k].a_cote_du_titre ? 256 : 0) | (el[k].inverse ? 512 : 0) | (el[k].cartes ? 1024 : 0) | (el[k].capitales ? 2048 : 0));
+                             | (el[k].principal ? 64 : 0) | (el[k].tuile ? 128 : 0) | (el[k].a_cote_du_titre ? 256 : 0) | (el[k].inverse ? 512 : 0) | (el[k].cartes ? 1024 : 0) | (el[k].capitales ? 2048 : 0)
+                             | (el[k].dossier ? 4096 : 0));
         t->facultatives << el[k].facultatif;
         t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
         t->unites << (el[k].unite ? QString(el[k].unite_devant ? "<" : ">") + QString::fromUtf8(el[k].unite) : QString());
@@ -1207,6 +1208,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].multiple = o & 8;   // § 22.1
         elements[k].recherche = o & 16;   // § 22.6
         elements[k].masque = o & 32;   // § 22.6
+        elements[k].dossier = o & 4096;   // 2.32
         elements[k].graphique = travail.graphiques.value(k);   // § 22.11
         if (travail.valeurs_fiche.value(k).size() == 3) {   // une valeur de fiche (§ 22.3)
             const QVector<int> &f = travail.valeurs_fiche[k];
@@ -1393,14 +1395,14 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
     defile->viewport()->setAutoFillBackground(false);
     cadre->setAutoFillBackground(false);
     if (ajuster_fenetre && recouverts.isEmpty()) {
-        // un écran qui n'en recouvre aucun (la connexion, puis l'accueil) décide de la taille de la fenêtre : sa largeur
-        // et sa hauteur naturelles, plus les marges ; jamais plus que l'écran disponible ; les écrans qu'il ouvre
-        // gardent cette fenêtre, et défilent s'ils sont plus grands
+        // un écran qui n'en recouvre aucun (la connexion, puis l'accueil) décide de la largeur de la fenêtre : la sienne,
+        // plus les marges, jamais plus que l'écran disponible ; la hauteur est celle de l'écran disponible ; les écrans
+        // qu'il ouvre gardent cette fenêtre, et défilent s'ils sont plus grands
         if (QScreen *ecran = screen() ? screen() : QGuiApplication::primaryScreen()) {
             const QRect dispo = ecran->availableGeometry();
             const QSize voulu = cadre->sizeHint() + QSize(2 * Theme::courant().mesure("espace-6") + 24, 2 * Theme::courant().mesure("espace-6") + 24);
             const int l = qMin(qMax(voulu.width(), Theme::courant().mesure("largeur-contenu") + 48), dispo.width());
-            const int h = qMin(qMax(voulu.height(), 480), dispo.height());
+            const int h = dispo.height();   // toute la hauteur de l'écran (20 octobre 2026) : la largeur suit l'accueil
             setWindowState(windowState() & ~(Qt::WindowMaximized | Qt::WindowFullScreen));
             setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, QSize(l, h), dispo));
         }

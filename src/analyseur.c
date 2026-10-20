@@ -6434,6 +6434,16 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
             a->i += 3;
             return 1;
         }
+        if (zone && est_mot(x, "avec") && est_mot(voir(a, 2), "le") && est_mot(voir(a, 3), "choix") && voir(a, 4)->type == J_ELISION
+            && est_mot(voir(a, 5), "un") && est_mot(voir(a, 6), "dossier")) {
+            /* « , avec le choix d'un dossier » (2.32) : le chemin d'un dossier, choisi dans le sélecteur du système */
+            if (strcmp(el->texte2, "texte") != 0)
+                return erreur(a, x, grym_dupliquer("Seule une zone (texte) se remplit par le choix d'un dossier.")), -1;
+            if (el->entier & 4096) return erreur(a, x, grym_dupliquer("« avec le choix d'un dossier » est déjà dit.")), -1;
+            el->entier |= 4096;
+            a->i += 7;
+            return 1;
+        }
         if (zone && est_mot(x, "en") && est_mot(voir(a, 2), "interrupteur")) {   /* « , en interrupteur » (§ 22.6) */
             if (strcmp(el->texte2, "vrai ou faux") != 0)
                 return erreur(a, x, grym_dupliquer("Seule une zone (vrai ou faux) se montre en interrupteur.")), -1;

@@ -163,6 +163,8 @@ int main(void) {
     /* « Ouvrir » un fichier (2.26) */
     ALLER_RETOUR("_ouvrir_fichier _fichier « x.pdf »\n", "Ouvrir le fichier « x.pdf ».\n");
     /* Documents (2.25) */
+    ALLER_RETOUR("_écran x\n    _un dossier (texte) _facultatif _choix_dossier\n_fin\n",
+                 "L'écran x montre :\n    un dossier (texte), facultatif, avec le choix d'un dossier.\n");   /* 2.32 */
     ALLER_RETOUR("_sauvegarder _dans « c.coffre » _mot_de_passe « m »\n_restaurer _depuis « c.coffre » _mot_de_passe « m »\n",
                  "Sauvegarder la base dans « c.coffre » avec le mot de passe « m ».\nRestaurer la base depuis « c.coffre » avec le mot de passe « m ».\n");   /* 2.30 */
     ALLER_RETOUR("_sauvegarder _dans « copie.grymd »\n_afficher « CH52 » _en_IBAN\n",
