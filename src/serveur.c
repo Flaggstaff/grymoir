@@ -1111,6 +1111,11 @@ static void zone(Chaine *c, const EcranWeb *e, size_t k) {
             if (el->type && strcmp(el->type, "nombre") == 0) chaine_ajouter(c, " inputmode=\"decimal\"");
             if (el->type && strcmp(el->type, "courriel") == 0) chaine_ajouter(c, " inputmode=\"email\" autocomplete=\"email\"");
             if (el->type && strcmp(el->type, "adresse web") == 0) chaine_ajouter(c, " inputmode=\"url\"");
+            if (el->largeur_caracteres > 0) {   /* « large de 12 caractères » (2.34) */
+                char w[96];
+                snprintf(w, sizeof w, " size=\"%d\" style=\"width:calc(%dch + 2em);max-width:100%%\"", el->largeur_caracteres, el->largeur_caracteres);
+                chaine_ajouter(c, w);
+            }
             if (tel) chaine_ajouter(c, " autocomplete=\"tel\"");
             else if (el->type && strcmp(el->type, "nombre entier") == 0) chaine_ajouter(c, " inputmode=\"numeric\"");
             if (el->unite) {   /* le lecteur d'écran l'entend avec le libellé : « Montant, CHF » */

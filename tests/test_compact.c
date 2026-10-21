@@ -167,6 +167,18 @@ int main(void) {
                  "_écran x _titre (« A » _suivi (_le r _conservé).logo) _en_grand\n    _texte « OK »\n_fin\n(_le r _conservé).logo << _absent\n",
                  "Un r, conservé, a :\n    un logo (image), facultatif.\nLes écrans ont la couleur verte et le logo (le logo du r conservé).\n"
                  "L'écran x, (« A » suivi du logo du r conservé) en grand, montre :\n    le texte « OK ».\nLe logo du r conservé devient absent.\n");   /* 2.33 */
+    /* 2.34 : le « dont » d'un membre gauche garde ses parenthèses ; un appel entre deux arguments aussi ; les articles des
+       calculs et des propriétés ; « l'heure » */
+    ALLER_RETOUR("_classe _une note _conservé\n    _un prix (nombre)\n    _une heure (heure)\n_fin\n"
+                 "_afficher _arrondi((_somme_de prix _de note _conservé _dont prix > 1) − (_somme_de prix _de note _conservé) ; 0,01)\n",
+                 "Une note, conservée, a :\n    un prix (nombre),\n    une heure (heure).\n"
+                 "Afficher l'arrondi de (la somme des prix des notes conservées dont le prix > 1) − (la somme des prix des notes conservées) à 0,01.\n");
+    ALLER_RETOUR("_calcul _le double(_un nombre) << nombre × 2\n_calcul _la somme_de_deux(_un a ; _un b) << a + b\n"
+                 "_afficher somme_de_deux(double(3) ; 4)\n_le t << « abc »\n_afficher t.longueur\n",
+                 "Le double d'un nombre vaut nombre × 2.\nLa somme de deux d'un a et d'un b vaut a + b.\n"
+                 "Afficher la somme de deux de (le double de 3) et de 4.\nLe t vaut « abc ».\nAfficher la longueur du t.\n");
+    ALLER_RETOUR("_écran x\n    _un code (texte) _masqué _largeur_caractères 12\n_fin\n",
+                 "L'écran x montre :\n    un code (texte), masqué, large de 12 caractères.\n");
     ALLER_RETOUR("_écran x\n    _un dossier (texte) _facultatif _choix_dossier\n_fin\n",
                  "L'écran x montre :\n    un dossier (texte), facultatif, avec le choix d'un dossier.\n");   /* 2.32 */
     ALLER_RETOUR("_sauvegarder _dans « c.coffre » _mot_de_passe « m »\n_restaurer _depuis « c.coffre » _mot_de_passe « m »\n",
@@ -205,14 +217,14 @@ int main(void) {
     EXEC("_afficher _arrondi(2,5 ; 1) ; _arrondi_pair(2,5 ; 1) ; _arrondi((1 + 1) × 3 ; 4)\n", "3 2 8\n");
     ERR("_afficher _arrondi(2,5)\n", 1, 11, "« _arrondi » prend deux arguments, la valeur et le pas : _arrondi(x ; 0,05).");
     ALLER_RETOUR("_le n << 10\n_afficher _reste(n × 2 ; 3) ; (n − 20).valeur_absolue ; (−2,7).partie_entière\n",
-                 "Le n vaut 10.\nAfficher le reste du n × 2 par 3 puis valeur absolue de (n − 20) puis partie entière de (−2,7).\n");
+                 "Le n vaut 10.\nAfficher le reste du n × 2 par 3 puis la valeur absolue de (le n − 20) puis la partie entière de (−2,7).\n");
     EXEC("_afficher _reste(−7 ; 3) ; _reste((1 + 9) ; 4)\n", "−1 2\n");
     ERR("_afficher _reste(7)\n", 1, 11, "« _reste » prend deux arguments, le dividende et le diviseur : _reste(17 ; 5).");
     ALLER_RETOUR("_le h << 8:05 + 15 _minutes\n_afficher _écart_heures(h ; 19:30) ; _maintenant ; « 7:45 » _en_heure\n", NULL);
     ALLER_RETOUR("_afficher _écart_mois(31.01.2026 ; 28.02.2026) ; _écart_années(21.09.1990 ; _aujourd'hui)\n"
                  "_le n << _hasard(1 ; 6)\n_les faces << « a » ; « b »\n_afficher _hasard_parmi(faces)\n", NULL);
     ALLER_RETOUR("_calcul _le carré(_un nombre) << nombre × nombre\n_exemple carré(7) << 49\n",
-                 "Le carré d'un nombre vaut nombre × nombre.\nExemple : carré de 7 vaut 49.\n");
+                 "Le carré d'un nombre vaut nombre × nombre.\nExemple : le carré de 7 vaut 49.\n");
     ALLER_RETOUR("_les couleurs << « a » ; « b »\n_les couleurs _gagnent « c »\n_les vides << _ensemble_vide\n"
                  "_afficher _nombre_de couleurs ; couleurs _jointes « , »\n_pour_chaque c _parmi couleurs\n    _afficher c\n_fin\n"
                  "_si couleurs _contient « a » _alors\n    _les vides _deviennent couleurs\n_fin\n", NULL);
@@ -226,7 +238,7 @@ int main(void) {
     /* Textes (§ 4.5) */
     ALLER_RETOUR("_le n << « Élodie »\n_afficher n.longueur ; n _en_majuscules ; « 3 » _en_nombre_entier + 1\n"
                  "_si n _inclut « lo » _et _non (n _commence « x ») _alors\n    _afficher n _finit « ie »\n_fin\n",
-                 "Le n vaut « Élodie ».\nAfficher longueur de n puis le n en majuscules puis « 3 » en nombre entier + 1.\n"
+                 "Le n vaut « Élodie ».\nAfficher la longueur du n puis le n en majuscules puis « 3 » en nombre entier + 1.\n"
                  "Si le n contient « lo » et le n ne commence pas par « x », afficher le n finit par « ie ».\n");
     EXEC("_afficher « éa » _en_majuscules ; « ab » _inclut « B » ; _non (« ab » _finit « b »)\n", "ÉA vrai faux\n");
     ERR("_afficher « a » _en_rouge\n", 1, 17, "« _en_rouge » inconnu");
@@ -257,7 +269,7 @@ int main(void) {
 
     ALLER_RETOUR("_la photo << _fichier « a.jpg »\n_afficher (_fichier « b.png »).taille ; photo.format\n"
                  "_enregistrer photo _dans « c.jpg »\n",
-                 "La photo vaut le fichier « a.jpg ».\nAfficher taille de (le fichier « b.png ») puis format de photo.\n"
+                 "La photo vaut le fichier « a.jpg ».\nAfficher la taille de (le fichier « b.png ») puis le format de la photo.\n"
                  "Enregistrer la photo dans « c.jpg ».\n");
     ERR("_enregistrer photo\n", 1, 1, "Forme attendue : « _enregistrer photo _dans « copie.jpg » »");
 
@@ -416,7 +428,7 @@ int main(void) {
                  "    _afficher t\n_fin\n_répéter 3 _fois\n    _sortir\n_fin\n", NULL);
     ALLER_RETOUR("_calcul _le carré(_un nombre) << nombre × nombre\n_afficher carré(3 + 1) ; carré(2) + 1 ; carré(carré(2))\n",
                  "Le carré d'un nombre vaut nombre × nombre.\n"
-                 "Afficher carré de (3 + 1) puis carré de 2 + 1 puis carré de carré de 2.\n");
+                 "Afficher le carré de (3 + 1) puis le carré de 2 + 1 puis le carré du carré de 2.\n");
 
     ALLER_RETOUR("_classe _une facture\n    _un montant\n_fin\n_la f << _nouveau facture _avec\n    montant << 3\n_fin\n"
                  "f.montant << f.montant × 2\n_afficher f.montant\n",

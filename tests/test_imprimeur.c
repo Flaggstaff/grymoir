@@ -111,6 +111,10 @@ int main(void) {
          "Un r, conservé, a :\n    un nom (texte),\n    un logo (image), facultatif.\n"
          "Les écrans ont la couleur verte, le logo (le logo du r conservé) et la signature (le logo du r conservé).\n"
          "L'écran d'accueil, (\"Bonjour \" suivi du nom du r conservé) en grand, montre :\n    le texte « OK ».\n");   /* 2.33 */
+    LITT("Une note, conservée, a :\n    un prix (nombre).\nAfficher l'arrondi de (la somme des prix des notes conservées dont le prix > 1) − (la somme des prix des notes conservées) à 0,01.",
+         "Une note, conservée, a :\n    un prix (nombre).\nAfficher l'arrondi de (la somme des prix des notes conservées dont le prix > 1) − (la somme des prix des notes conservées) à 0,01.\n");   /* 2.34 : le « dont » garde ses parenthèses */
+    LITT("L'écran x montre :\n    un code (texte), masqué, large de 12 caractères.",
+         "L'écran x montre :\n    un code (texte), masqué, large de 12 caractères.\n");   /* 2.34 */
     LITT("L'écran x montre :\n    un dossier (texte), facultatif, avec le choix d'un dossier.",
          "L'écran x montre :\n    un dossier (texte), facultatif, avec le choix d'un dossier.\n");   /* 2.32 */
     LITT("Pour acquitter le solde d'un relevé :\n    Afficher relevé.\nLe relevé vaut 3.\nAcquitter le solde du relevé.\nAcquitter le solde de 4.",

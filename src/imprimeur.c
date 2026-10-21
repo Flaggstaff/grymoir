@@ -40,6 +40,7 @@ typedef struct {
     size_t nb_a_liberer;
     int devine;            /* l'article du champ qu'on écrit a été deviné : son objet peut l'être aussi (« du c ») */
     int champ_nu;
+    int garder_groupe;     /* le membre gauche d'une opération : ses parenthèses restent (« de (… dont …) − … ») */
     int dans_dont;         /* on écrit la condition d'un « dont » : « = » devant une constante s'y écrit « est » */          /* on écrit l'objet d'un champ resté sans article : il reste nu aussi (« longueur de n ») */
     char **variables;      /* les variables créées avec un article (« L'effectif vaut 12. ») et leur genre (§ 11.4) */
     Genre *genres_var;
@@ -114,13 +115,35 @@ static void retrait(Impression *im, int niveau) {
 
 const char *article_ecrit(Article a, Genre g, const char *nom);
 
+/* Une expression qui finit par une condition « dont » (une recherche, ou une opération dont le dernier membre en est
+ * une) : un opérateur écrit après elle appartiendrait à la condition. */
+static int finit_par_dont(const Noeud *n) {
+    if (!n) return 0;
+    if (n->type == N_CHERCHER) return n->nb_enfants > 0 && n->enfants[0] && n->enfants[0]->type != N_NOM;
+    if (n->type == N_OPERATION) return finit_par_dont(n->enfants[1]);
+    return 0;
+}
+
+/* Les mots en « h » aspiré les plus courants : « la hauteur », « le haut », pas d'élision (2.33). */
+static int h_aspire(const char *s) {
+    static const char *const H[] = { "haut", "hauteur", "hasard", "hâte", "hausse", "héros", "honte", "hors", "hall",
+                                     "hameau", "hanche", "handicap", "hangar", "hareng", "haricot", "harpe", "hache",
+                                     "haie", "haine", "hamac", "hamster", "harcèlement", "hiérarchie", "hibou", "hockey",
+                                     "homard", "hongrois", "hollandais", "hublot", "huit", "hurlement", "hutte", "houx" };
+    for (size_t k = 0; k < sizeof H / sizeof *H; k++) {
+        const size_t l = strlen(H[k]);
+        if (strncmp(s, H[k], l) == 0 && (s[l] == 0 || s[l] == ' ' || s[l] == 's')) return 1;
+    }
+    return 0;
+}
+
 /* Commence par une voyelle (élision : l', d') ; le « h » est laissé de côté. */
 static int voyelle(const char *s) {
     static const char *const V[] = { "a", "e", "i", "o", "u", "y", "à", "â", "ä", "é", "è", "ê", "ë",
                                      "î", "ï", "ô", "ö", "ù", "û", "ü", "œ" };
     for (size_t k = 0; k < sizeof V / sizeof *V; k++)
         if (strncmp(s, V[k], strlen(V[k])) == 0) return 1;
-    return 0;
+    return s[0] == 'h' && !h_aspire(s);   /* « l'heure », « l'hôtel » : le « h » muet s'élide (2.33) */
 }
 
 /* L'article d'un champ en forme littéraire. La forme compacte n'en écrit pas (`_écran.compositeur_choisi.portrait`) :
@@ -128,6 +151,13 @@ static int voyelle(const char *s) {
  * Genre inconnu : aucun article, comme écrit. */
 static Article article_du_champ(const Impression *im, const Noeud *n) {
     if (n->article != ART_AUCUN || im->compact || !n->article_a_deviner) return n->article;
+    /* les propriétés du langage (§ 4.5, § 14, § 15) : leur genre ne vient d'aucune déclaration (2.33) */
+    static const char *const FEMININES[] = { "longueur", "taille", "partie entière", "année", "valeur absolue", "heure", "durée" };
+    static const char *const MASCULINES[] = { "jour", "mois", "format", "nom", "nombre de jours", "nombre de mois" };
+    for (size_t k = 0; k < sizeof FEMININES / sizeof *FEMININES; k++)
+        if (strcmp(n->texte, FEMININES[k]) == 0 && genre_de_nom(im, n->texte) == G_LIBRE) return voyelle(n->texte) ? ART_L : ART_LA;
+    for (size_t k = 0; k < sizeof MASCULINES / sizeof *MASCULINES; k++)
+        if (strcmp(n->texte, MASCULINES[k]) == 0 && genre_de_nom(im, n->texte) == G_LIBRE) return ART_LE;
     const Genre g = genre_de_nom(im, n->texte);
     if (g == G_LIBRE) return ART_AUCUN;
     return voyelle(n->texte) ? ART_L : g == G_FEMININ ? ART_LA : ART_LE;
@@ -241,7 +271,10 @@ static void preposition(Impression *im, const char *prep, const Noeud *x) {
     int a = strcmp(prep, "à") == 0;
     /* « du réglage conservé », pas « de (le réglage conservé) » : les parenthèses de la forme compacte
      * (`(_le réglage _conservé).logo`) ne servent plus en forme littéraire autour d'un objet cherché (2.33) */
-    if (!im->compact && x->type == N_GROUPE && x->nb_enfants == 1 && x->enfants[0]->type == N_CHERCHER) x = x->enfants[0];
+    if (!im->compact && x->type == N_GROUPE && x->nb_enfants == 1 && !(im->garder_groupe && finit_par_dont(x->enfants[0]))
+        && (x->enfants[0]->type == N_CHERCHER || x->enfants[0]->type == N_AUJOURDHUI || x->enfants[0]->type == N_MAINTENANT
+            || x->enfants[0]->type == N_NOMBRE || x->enfants[0]->type == N_TEXTE))
+        x = x->enfants[0];   /* « de 2,5 », « d'aujourd'hui » : un atome n'a pas besoin de ses parenthèses compactes */
     if (x->type == N_FICHIER && !im->compact) {   /* « du fichier « a.jpg » » */
         aj(im, a ? "au fichier " : "du fichier ");
         expression(im, x->enfants[0]);
@@ -301,7 +334,10 @@ static void preposition(Impression *im, const char *prep, const Noeud *x) {
 /* « de » suivi d'une expression entière, la préposition se contractant avec son premier terme : « du prix × 2 ». */
 static void de_expression(Impression *im, const Noeud *x) {
     if (x->type == N_OPERATION && !im->compact) {
+        const int avant = im->garder_groupe;
+        im->garder_groupe = 1;
         de_expression(im, x->enfants[0]);
+        im->garder_groupe = avant;
         aj(im, " ");
         aj(im, symbole(x->op));
         aj(im, " ");
@@ -338,6 +374,8 @@ static void nom_avec_article(Impression *im, const Noeud *n) {
     if (!im->compact && n->article == ART_AUCUN && n->article_a_deviner && !im->champ_nu) {   /* venu de la forme compacte (§ 11.4) */
         if (strcmp(n->texte, "nouveau") == 0) aj(im, "le ");
         else if (strcmp(n->texte, "nouvelle") == 0) aj(im, "la ");
+        else if (n->type == N_APPEL && n->genre_appel && (n->genre_appel != 3 || voyelle(n->texte)))   /* un calcul : son genre, retenu à l'analyse */
+            aj(im, voyelle(n->texte) ? "l'" : n->genre_appel == 2 ? "la " : "le ");
         else {
             const Genre g = genre_de_variable(im, n->texte);
             if (g != G_LIBRE) aj(im, voyelle(n->texte) ? "l'" : g == G_FEMININ ? "la " : "le ");
@@ -505,7 +543,14 @@ static void expression(Impression *im, const Noeud *n) {
         expression(im, n->enfants[0]);
         return;
     case N_OPERATION:
-        expression(im, n->enfants[0]);
+        if (!im->compact && finit_par_dont(n->enfants[0])) {
+            /* « (la somme … dont …) − (…) » : sans ses parenthèses, le « dont » prendrait l'opération pour lui (2.33) */
+            aj(im, "(");
+            expression(im, n->enfants[0]);
+            aj(im, ")");
+        } else {
+            expression(im, n->enfants[0]);
+        }
         aj(im, " ");
         aj(im, symbole(n->op));
         aj(im, " ");
@@ -553,11 +598,15 @@ static void expression(Impression *im, const Noeud *n) {
         for (size_t k = 0; k < n->nb_enfants; k++) {
             aj(im, k ? " et " : " ");
             const Noeud *x = n->enfants[k];
-            if (argument_simple(x)) {
+            /* un appel avec ses arguments, suivi d'un autre argument : « de (le dû de la relance) et de … », sans quoi
+             * le « et de » suivant irait à lui (2.33) */
+            const Noeud *xi = x->type == N_GROUPE && x->nb_enfants == 1 ? x->enfants[0] : x;
+            const int appel_suivi = k + 1 < n->nb_enfants && xi->type == N_APPEL && xi->nb_enfants > 0;
+            if (argument_simple(x) && !appel_suivi) {
                 preposition(im, "de", x);
             } else {
                 aj(im, "de (");
-                expression(im, x);
+                expression(im, x->type == N_GROUPE && x->nb_enfants == 1 ? x->enfants[0] : x);   /* une seule paire de parenthèses */
                 aj(im, ")");
             }
         }
@@ -1147,6 +1196,11 @@ static void place_ecran(Impression *im, const Noeud *el, int feminin) {
     if (el->place_dite & 1) {
         x = im->compact ? grym_formater(" _place %d %d", el->place[0], el->place[1])
                         : grym_formater(", à %d de la gauche et %d du haut", el->place[0], el->place[1]);
+        aj(im, x);
+        free(x);
+    }
+    if (el->place_dite & 8) {   /* 2.34 */
+        x = grym_formater(im->compact ? " _largeur_caractères %d" : ", large de %d caractères", el->place[2]);
         aj(im, x);
         free(x);
     }

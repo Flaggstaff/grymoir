@@ -773,7 +773,7 @@ static void condition_de_cas(Reecriture *r, size_t d, size_t f) {
 
 static int est_etat(const Jeton *t) {
     return est_cle(t, "actif_si") || est_cle(t, "active_si") || est_cle(t, "visible_si") || est_cle(t, "plusieurs_lignes")
-        || est_cle(t, "interrupteur") || est_cle(t, "choix_dossier") || est_cle(t, "indication") || est_cle(t, "recherche") || est_cle(t, "min") || est_cle(t, "max") || est_cle(t, "masqué") || est_cle(t, "unité") || est_cle(t, "transcrit")
+        || est_cle(t, "interrupteur") || est_cle(t, "choix_dossier") || est_cle(t, "largeur_caractères") || est_cle(t, "indication") || est_cle(t, "recherche") || est_cle(t, "min") || est_cle(t, "max") || est_cle(t, "masqué") || est_cle(t, "unité") || est_cle(t, "transcrit")
         || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur")
         || est_cle(t, "principal") || est_cle(t, "tuile") || est_cle(t, "description") || est_cle(t, "image")
         || est_cle(t, "côté_titre") || est_cle(t, "inversé") || est_cle(t, "capitales");
@@ -799,6 +799,17 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             copier(r, &r->e[k + 2]);
             mot(r, "du", x); mot(r, "haut", x);
             k += 3;
+        } else if (est_cle(x, "largeur_caractères")) {   /* « _largeur_caractères 12 » → « , large de 12 caractères » (2.34) */
+            if (k + 1 >= f || r->e[k + 1].type != J_NOMBRE) {
+                echouer(r, x, grym_dupliquer("Nombre de caractères attendu : « _largeur_caractères 12 »."));
+                return 0;
+            }
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "large", x);
+            mot(r, "de", x);
+            copier(r, &r->e[k + 1]);
+            mot(r, "caractères", x);
+            k += 2;
         } else if (est_cle(x, "largeur") || est_cle(x, "hauteur")) {   /* « _largeur 240 » → « , large de 240 » */
             if (k + 1 >= f || r->e[k + 1].type != J_NOMBRE) {
                 echouer(r, x, grym_formater("Nombre de pixels attendu : « _%s 80 ».", x->valeur));

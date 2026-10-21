@@ -40,6 +40,7 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->ancien = NULL;
     n->borne_min = n->borne_max = NULL;
     n->titre_calcule = NULL;
+    n->genre_appel = 0;
     return n;
 }
 

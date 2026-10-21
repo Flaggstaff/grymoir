@@ -203,6 +203,8 @@ typedef struct Noeud {
                              la clé, puis le champ additionné) */
     struct Noeud *titre_calcule;   /* P_ECRAN : « , (\"Bonjour \" suivi du prénom …) en grand, » (2.33) : le titre, une
                                       expression (N_GROUPE) relue avant chaque attente ; NULL pour un titre écrit */
+    int genre_appel;      /* N_APPEL : le genre du calcul appelé, 1 masculin, 2 féminin, 0 inconnu : la forme compacte n'écrit
+                             pas d'article, sa traduction le retrouve (« la longueur de … », « le premier jour de … ») */
     int article_a_deviner;   /* N_CHAMP, N_NOM venus de la forme compacte (`c.nom`), qui n'écrit pas d'article :
                                 l'imprimeur littéral le retrouve par le genre (« le nom du c ») */
 } Noeud;

@@ -4686,6 +4686,7 @@ int main(int argc, char **argv) {
             QLineEdit *z = libelle0(QString::fromUtf8(zone));
             VERIFIER(z != nullptr);
             if (!z) continue;
+            VERIFIER(z->maximumWidth() < 400);   // « large de 12 caractères » (2.34) : une largeur fixe, étroite
             z->setText("essai-essai");
             z->setModified(true);   // comme une frappe : setText seul ne marque pas la zone changée
             emit z->editingFinished();

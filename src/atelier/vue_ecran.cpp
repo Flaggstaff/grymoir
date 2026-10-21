@@ -561,6 +561,13 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                     le->setEchoMode(QLineEdit::Password);
                     le->setProperty("masque", true);
                 }
+            if (e.largeur_caracteres > 0) {   // « large de 12 caractères » (2.34) : la largeur de N caractères moyens, et les marges
+                if (auto *le = qobject_cast<QLineEdit *>(w)) {
+                    const QFontMetrics fm(le->font());
+                    const QMargins m = le->textMargins();
+                    le->setFixedWidth(fm.averageCharWidth() * e.largeur_caracteres + m.left() + m.right() + 2 * t.mesure("espace-3") + 4);
+                }
+            }
             if (e.longueur_max > 0) {   // « au plus N caractères » (§ 22.6) : la frappe s'arrête là
                 if (auto *le = qobject_cast<QLineEdit *>(w)) le->setMaxLength(e.longueur_max);
             }

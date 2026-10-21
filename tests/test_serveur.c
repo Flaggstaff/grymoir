@@ -1648,6 +1648,7 @@ int main(void) {
                  evenement("q=3&z1=essai-essai&z2=essai-essai&clic=3"), get("/"));
         servir_projet_base("projets/Cabinet/Cabinet.grym", "_essai_cabinet19.grymd", &sc, 2);
         CONTIENT(sc.reponses[0], "<h1>Choisir le mot de passe</h1>");
+        CONTIENT(sc.reponses[0], " size=\"12\" style=\"width:calc(12ch + 2em);max-width:100%\"");   /* large de 12 caractères (2.34) */
         NE_CONTIENT_PAS(sc.reponses[0], "Anne Rochat");
         CONTIENT(sc.reponses[2], "Au moins huit caractères : il protège des données de santé.");
         CONTIENT(sc.reponses[4], "Les deux saisies diffèrent.");

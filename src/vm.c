@@ -2560,6 +2560,10 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].recherche = s2 && memchr(s2 + 1, 'r', nopt) != NULL;   /* « avec recherche » */
             e->elements[k].masque = (s2 && memchr(s2 + 1, 'c', nopt) != NULL) || type_secret(e->types[k]);   /* « masqué », ou un mot de passe */
             e->elements[k].dossier = s2 && memchr(s2 + 1, 'd', nopt) != NULL;   /* « avec le choix d'un dossier » (2.32) */
+            {   /* « large de 12 caractères » (2.34) : « ␙12 » parmi les options */
+                const char *w = s2 ? memchr(s2 + 1, '\x19', nopt) : NULL;
+                e->elements[k].largeur_caracteres = w ? atoi(w + 1) : 0;
+            }
             e->elements[k].choix = NULL;
             e->elements[k].nb_choix = 0;
             const ClasseVM *lie = classe_vm(m, e->types[k]);

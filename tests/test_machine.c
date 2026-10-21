@@ -3963,6 +3963,7 @@ int main(void) {
          "~« code » est un mot de passe : il ne se lit pas, il se vérifie");
     PROG("L'écran x montre :\n    un n (nombre), avec le choix d'un dossier.", "~Seule une zone (texte) se remplit par le choix d'un dossier.");   /* 2.32 */
     PROG("L'écran x, (\"A\" suivi de « B ») montre :\n    un bouton « OK ».", "~« , » attendu après le titre");   /* 2.33 */
+    PROG("L'écran x montre :\n    un code (texte), large de 0 caractères.", "~Une largeur en caractères va de 1 à 200");   /* 2.34 */
     /* « en IBAN » (2.29) : sans espaces, en capitales, vérifié ; trois refus */
     PROG("Afficher « ch52 0483 5012 3456 7100 0 » en IBAN.\nAfficher « GB82 WEST 1234 5698 7654 32 » en IBAN.",
          "CH5204835012345671000\nGB82WEST12345698765432");

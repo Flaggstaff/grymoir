@@ -1489,7 +1489,10 @@ static Noeud *nom_expression(Analyse *a) {
     if (s->sorte == S_CALCUL) {
         a->i = fin;
         Noeud *appel = appel_calcul(a, s, premier);
-        if (appel) appel->article = art;
+        if (appel) {
+            appel->article = art;
+            appel->genre_appel = s->genre == GENRE_MASCULIN ? 1 : s->genre == GENRE_FEMININ ? 2 : 3;   /* 3 : élidé, « l'étiquette » */
+        }
         return appel;
     }
     if (s->sorte == S_ACTION)
@@ -3470,11 +3473,14 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
 
     int creation = est_mot(verbe, "vaut");
     Symbole *s = visible(a, nom);
+    /* « [statut] de séance devient statut » (la forme compacte, `séance.statut << statut`) : un champ, même si un nom
+     * local s'appelle comme lui ; seul le premier mot était cherché, et la phrase modifiait le paramètre (2.34) */
+    const int champ_entre_crochets = a->j[d].type == J_CROCHETS && !crochets;
 
     /* « Le solde du client devient … » : modification d'un champ (§ 13.3). Avec « vaut »,
      * c'est un champ seulement si ce qui suit « de » désigne un nom existant : « Le prix de
      * vente vaut 3. » crée un nom, même si « prix » est un champ. */
-    if (!s && !crochets) {
+    if ((!s && !crochets) || champ_entre_crochets) {
         int champ = a->j[d].type == J_CROCHETS;
         for (size_t k = d + 1; k < f && !champ; k++) {
             if (!complement_de(a, k)) continue;
@@ -6225,6 +6231,18 @@ static int place_element(Analyse *a, Noeud *el, Genre g, int *vus) {
     const int large = est_mot(x, "large") && est_mot(voir(a, 2), "de");
     const int haut = (est_mot(x, "haut") || est_mot(x, "haute")) && est_mot(voir(a, 2), "de");
     if (!a_gauche && !large && !haut) return 0;
+    if (large && !a->libre && voir(a, 3)->type == J_NOMBRE && (est_mot(voir(a, 4), "caractères") || est_mot(voir(a, 4), "caractère"))) {
+        /* « , large de 12 caractères » (2.34) : une zone de texte à la largeur de 12 caractères, partout */
+        if (*vus & 32) return erreur(a, x, grym_dupliquer("« large de » est déjà dit pour cet élément.")), -1;
+        const long n = strtol(voir(a, 3)->valeur, NULL, 10);
+        if (strchr(voir(a, 3)->valeur, '.') || n < 1 || n > 200)
+            return erreur(a, voir(a, 3), grym_dupliquer("Une largeur en caractères va de 1 à 200 : « , large de 12 caractères ».")), -1;
+        *vus |= 32;
+        el->place[2] = (int)n;
+        el->place_dite |= 8;
+        a->i += 5;
+        return 1;
+    }
     if (!a->libre && !(a->document && !a_gauche)) {
         if (a_gauche) return erreur(a, x, grym_dupliquer("« à … de la gauche » ne vaut que dans un bloc « en position libre : ».")), -1;
         return erreur(a, x, grym_dupliquer("Une taille ne vaut que dans un bloc « en position libre : ».")), -1;
@@ -8379,7 +8397,8 @@ static int phrase_courte_possible(const Noeud *corps) {
 
 static void marquer_compact(Noeud *n) {
     if (!n) return;
-    if (n->type == N_NOM && n->article == ART_AUCUN) n->article_a_deviner = 1;
+    if ((n->type == N_NOM || n->type == N_APPEL) && n->article == ART_AUCUN) n->article_a_deviner = 1;
+    if (n->type == P_ECRAN && n->titre_calcule) marquer_compact(n->titre_calcule);   /* le titre calculé (2.33) */
     if (n->type == N_COMPARAISON && n->forme == 1) n->article_a_deviner = 1;   /* un symbole : les mots sont à retrouver */
     /* « Si x, afficher … » : la forme compacte n'écrit le Si qu'en bloc ; une branche d'une seule phrase, qui n'ouvre
      * pas de bloc, revient en forme courte (bits 1 et 4 : « écrit en bloc », pour l'alors et le sinon) ; « Cas de …,
