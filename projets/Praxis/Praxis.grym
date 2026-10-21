@@ -2,8 +2,10 @@ Remarque : Praxis, le programme principal.
 Utiliser « actions ».
 Utiliser « départ ».
 
-Remarque : le mot de passe de la séance de travail, en mémoire seulement, jamais rangé : il chiffre les sauvegardes.
-La clé de session vaut absent.
+Remarque : les données des patients sont chiffrées sur le disque (grammaire, § 16.18) : l'application demande leur mot de passe
+Remarque : avant tout, le fait choisir au premier lancement, et l'enveloppe aussi pour la clé de secours du développeur, si le
+Remarque : projet en a une (clé-de-secours.pub). Les sauvegardes emportent les clés.
+La base est chiffrée.
 Remarque : une sauvegarde automatique ratée, que l'accueil montre ; ce que l'écran des sauvegardes dit après un geste.
 L'échec de sauvegarde vaut absent.
 L'avis des sauvegardes vaut absent.
@@ -60,16 +62,20 @@ Si le nombre de rubriques conservées est nul :
     Classer « Autres ».
 
 Remarque : le cabinet, créé une seule fois à son nom ; Nicolas complète sa fiche dans la configuration.
-Si le nombre de cabinets conservés est nul, fonder le cabinet.
+Le premier lancement vaut le nombre de cabinets conservés = 0.
+Si le premier lancement, fonder le cabinet.
+
+Remarque : l'ancien code d'accès (une empreinte, avant la base chiffrée du 21 octobre 2026) ne sert plus : il s'efface, une fois.
+Si le code d'accès du cabinet conservé est présent, le code d'accès du cabinet conservé devient absent.
 
 Remarque : les couleurs et la police du site de Nicolas Seydoux, à l'encre (pour un autre cabinet, cette phrase et départ.grym) ; le logo et la signature, ceux de la configuration
 Remarque : du cabinet (le cœur et le nom dessiné au départ), repris à chaque lancement ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
 Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf », le logo (le logo du cabinet conservé) et la signature (la signature du cabinet conservé).
 
-Remarque : la copie chiffrée de toute la base, dans un dossier, nommée par le jour et le cabinet : « 2026-10-20 - Nicolas Seydoux.coffre ».
+Remarque : la copie chiffrée de toute la base, avec ses clés, dans un dossier, nommée par le jour et le cabinet : « 2026-10-20 - Nicolas Seydoux.coffre ».
 Pour copier la base dans un dossier :
     La dernière sauvegarde du cabinet conservé devient aujourd'hui.
-    Sauvegarder la base dans (dossier suivi de « / » suivi d'aujourd'hui en format technique suivi de " - " suivi du nom du cabinet conservé suivi de « .coffre ») avec le mot de passe la clé de session.
+    Sauvegarder la base dans (dossier suivi de « / » suivi d'aujourd'hui en format technique suivi de " - " suivi du nom du cabinet conservé suivi de « .coffre »).
 
 Remarque : la sauvegarde automatique : une fois par jour, à l'ouverture, dans le dossier de sauvegarde ; ratée, l'accueil le dit.
 Pour archiver les données :
@@ -462,20 +468,12 @@ L'écran des archives, « Archives », montre :
         un bouton « Désarchiver »,
         un bouton « Fermer ».
 
-Remarque : la connexion : l'application ne montre rien sans le mot de passe du cabinet ; une empreinte lente (0,7 s) freine qui essaie.
-L'écran de connexion, « Praxis », montre :
-    le texte « Les données des patients sont protégées : donne le mot de passe du cabinet. »,
-    un mot de passe (texte), masqué, large de 12 caractères,
-    un bouton « Entrer », principal.
-
-Remarque : au premier lancement : choisir le mot de passe ; sans lui, les sauvegardes ne s'ouvrent plus, personne ne peut le retrouver ;
-Remarque : et le dossier des copies automatiques, celui du système qui se synchronise (rien ne le devine : on le montre).
-L'écran du premier mot de passe, « Choisir le mot de passe », montre :
-    le texte « Ce mot de passe protège l'application et chiffre les sauvegardes. Note-le en lieu sûr : sans lui, les sauvegardes ne s'ouvrent plus, et personne ne peut le retrouver. »,
-    un mot de passe (texte), masqué, large de 12 caractères,
-    une confirmation (texte), masquée, large de 12 caractères,
-    un dossier (texte), facultatif, avec le choix d'un dossier, avec l'indication « Un dossier synchronisé : iCloud Drive sur un Mac, OneDrive sous Windows. Une copie chiffrée y va chaque jour. Vide : à choisir plus tard, dans Configuration, Sauvegardes. »,
-    un bouton « Choisir », principal.
+Remarque : au premier lancement, après le mot de passe (que l'application a fait choisir) : le dossier des copies automatiques,
+Remarque : celui du système qui se synchronise (rien ne le devine : on le montre).
+L'écran de bienvenue, « Bienvenue », montre :
+    le texte « Les données des patients sont chiffrées : sans leur mot de passe, rien ne les ouvre. Note-le en lieu sûr. Une copie chiffrée part chaque jour dans un dossier, de préférence synchronisé, pour ne rien perdre si l'ordinateur lâche. »,
+    un dossier (texte), facultatif, avec le choix d'un dossier, avec l'indication « Un dossier synchronisé : iCloud Drive sur un Mac, OneDrive sous Windows. Vide : à choisir plus tard, dans Configuration, Sauvegardes. »,
+    un bouton « Continuer », principal.
 
 Remarque : les sauvegardes : le dossier (synchronisé de préférence), une copie tout de suite, la restauration d'une copie, le mot de passe.
 L'écran des sauvegardes, « Sauvegardes », montre :
@@ -781,17 +779,7 @@ Quand on clique sur « Fermer » dans l'écran de configuration :
 Quand on clique sur « Corbeille » dans l'écran de configuration :
     Ouvrir l'écran de la corbeille.
 
-Quand on clique sur « Entrer » dans l'écran de connexion :
-    Si le mot de passe de l'écran correspond au code d'accès du cabinet conservé :
-        La clé de session devient le mot de passe de l'écran.
-        Fermer l'écran.
-    Sinon, refuser « Mot de passe faux. ».
-
-Quand on clique sur « Choisir » dans l'écran du premier mot de passe :
-    Le motif vaut le défaut du mot de passe de l'écran et de la confirmation de l'écran.
-    Si le motif ≠ « », refuser le motif.
-    Le code d'accès du cabinet conservé devient le mot de passe de l'écran.
-    La clé de session devient le mot de passe de l'écran.
+Quand on clique sur « Continuer » dans l'écran de bienvenue :
     Si le dossier de l'écran est présent, le dossier de sauvegarde du cabinet conservé devient le dossier de l'écran.
     Fermer l'écran.
 
@@ -820,22 +808,21 @@ Quand on clique sur « Sauvegarder maintenant » dans l'écran des sauvegardes :
 Remarque : la copie choisie remplace toutes les données à la prochaine ouverture ; les actuelles restent à côté.
 Quand on clique sur « Restaurer » dans l'écran des sauvegardes :
     Si la sauvegarde de l'écran est absente, refuser « Choisis d'abord la copie à restaurer. ».
-    Le secret vaut la clé de session.
-    Si l'ancien mot de passe de l'écran est présent, le secret devient l'ancien mot de passe de l'écran.
-    Restaurer la base depuis la sauvegarde de l'écran avec le mot de passe le secret.
+    Si l'ancien mot de passe de l'écran est présent, restaurer la base depuis la sauvegarde de l'écran avec le mot de passe l'ancien mot de passe de l'écran.
+    Sinon, restaurer la base depuis la sauvegarde de l'écran.
     L'avis des sauvegardes devient « Restauration prête : ferme puis rouvre l'application. Ce que tu saisis d'ici là sera perdu. ».
     Si l'ancien mot de passe de l'écran est présent, l'avis des sauvegardes devient l'avis des sauvegardes suivi de " Le mot de passe sera alors celui de cette copie.".
 
 Remarque : changer le mot de passe demande l'actuel ; les copies déjà faites gardent l'ancien.
 Quand on clique sur « Changer le mot de passe » dans l'écran des sauvegardes :
     Si le mot de passe actuel de l'écran est absent, refuser « Donne d'abord le mot de passe actuel. ».
-    Si le mot de passe actuel de l'écran correspond au code d'accès du cabinet conservé :
-        Le motif vaut le défaut du nouveau mot de passe de l'écran et de la confirmation de l'écran.
-        Si le motif ≠ « », refuser le motif.
-        Le code d'accès du cabinet conservé devient le nouveau mot de passe de l'écran.
-        La clé de session devient le nouveau mot de passe de l'écran.
-        L'avis des sauvegardes devient « Mot de passe changé. Les copies déjà faites s'ouvrent avec l'ancien. ».
-    Sinon, refuser « Le mot de passe actuel est faux. ».
+    Le motif vaut le défaut du nouveau mot de passe de l'écran et de la confirmation de l'écran.
+    Si le motif ≠ « », refuser le motif.
+    Essayer :
+        Changer le mot de passe de la base pour le nouveau mot de passe de l'écran, l'ancien étant le mot de passe actuel de l'écran.
+    En cas d'échec :
+        Refuser le motif de l'échec.
+    L'avis des sauvegardes devient « Mot de passe changé. Les copies déjà faites s'ouvrent avec l'ancien. ».
 
 Quand on clique sur « Fermer » dans l'écran des sauvegardes :
     Fermer l'écran.
@@ -1361,9 +1348,7 @@ Quand on clique sur « Retirer la signature » dans l'écran du cabinet :
 Quand on clique sur « Fermer » dans l'écran des soins :
     Fermer l'écran.
 
-Remarque : d'abord le mot de passe : le choisir au premier lancement, le donner ensuite ; fermé sans lui, rien ne s'ouvre.
-Si le code d'accès du cabinet conservé est absent, ouvrir l'écran du premier mot de passe.
-Sinon, ouvrir l'écran de connexion.
-Si la clé de session est présente :
-    Archiver les données.
-    Ouvrir l'écran d'accueil.
+Remarque : le mot de passe, l'application l'a déjà demandé ; au premier lancement, le dossier des sauvegardes ; puis l'accueil.
+Si le premier lancement, ouvrir l'écran de bienvenue.
+Archiver les données.
+Ouvrir l'écran d'accueil.

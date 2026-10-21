@@ -7,7 +7,8 @@ Remarque : la dernière sauvegarde : l'accueil le rappelle après sept jours ; l
 Remarque : (iCloud Drive), reçoit chaque jour une copie chiffrée ; vide, pas de sauvegarde automatique.
 Remarque : le logo et la signature (le nom dessiné) du cabinet, en tête des écrans et des pièces ; le prénom de l'accueil
 Remarque : (« Bonjour Nicolas ») ; une autre installation les change ici, et les écrans les reprennent au lancement suivant.
-Remarque : le code d'accès : le mot de passe de l'application, rangé en empreinte (PBKDF2), jamais en clair ; il chiffre aussi les sauvegardes.
+Remarque : le code d'accès : l'ancien mot de passe de l'application (une empreinte), effacé depuis la base chiffrée du 21 octobre 2026 ;
+Remarque : vide partout, il pourra quitter le cabinet (grammaire 2.36).
 Un cabinet, conservé, a :
     un nom (texte), unique,
     une rue (texte), facultative,

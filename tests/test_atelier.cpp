@@ -182,6 +182,7 @@ int main(int argc, char **argv) {
     // rien ne doit attendre un humain : ni la demande du micro à macOS, ni la visionneuse d'un document
     qputenv("GRYMOIR_ESSAIS", "1");
     qputenv("GRYMOIR_SANS_APERCU", "1");
+    qputenv("GRYM_MOT_DE_PASSE_BASE", "essai-essai");   // Praxis a sa base chiffrée (21 octobre 2026)
     QApplication app(argc, argv);
 
     // Coloration : chaque mot selon le lexeur ; les noms restent sans couleur
@@ -4703,33 +4704,20 @@ int main(int argc, char **argv) {
                 if (l->isVisible() && (l->text() == t || l->text() == t + " *") && l->buddy()) return qobject_cast<QLineEdit *>(l->buddy());
             return nullptr;
         };
-        // le premier lancement : choisir le mot de passe (20 octobre 2026)
-        patienter([&] { return bouton(QString::fromUtf8("Choisir")) && attend(); });
-        VERIFIER(bouton(QString::fromUtf8("Choisir")) != nullptr);
-        {   // comme une personne : la première zone, puis la seconde, puis un seul clic sur « Choisir », la seconde zone
-            // encore modifiée : sa valeur part quand le bouton prend le focus, le clic la suit (21 octobre 2026)
-            QLineEdit *m = libelle0(QString::fromUtf8("Mot de passe")), *c = libelle0(QString::fromUtf8("Confirmation"));
-            VERIFIER(m && c && m->maximumWidth() < 400);
-            if (m && c) {
-                m->setText("essai-essai");
-                m->setModified(true);
-                emit m->editingFinished();
-                QElapsedTimer pause;
-                pause.start();
-                while (pause.elapsed() < 600) QApplication::processEvents(QEventLoop::AllEvents, 20);
-                patienter([&] { return attend(); });
-                c->setFocus();
-                c->setText("essai-essai");
-                c->setModified(true);
-                // comme sous macOS : le bouton ne prend pas le focus, la zone n'envoie rien d'elle-même ; le clic
-                // envoie d'abord sa valeur, puis lui-même : un seul clic suffit, et la zone n'est pas vue vide
-                if (auto *b = bouton(QString::fromUtf8("Choisir"))) b->click();
-            }
-        }
+        // le premier lancement (base chiffrée, 21 octobre 2026) : le mot de passe vient de l'exécution (ici, la variable
+        // d'environnement) ; la bienvenue demande le dossier des sauvegardes ; comme une personne, la zone tapée puis un
+        // seul clic sur « Continuer », sans que la zone ait envoyé sa valeur (le clic l'envoie d'abord, 21 octobre 2026)
+        patienter([&] { return bouton(QString::fromUtf8("Continuer")) && attend(); });
+        VERIFIER(bouton(QString::fromUtf8("Continuer")) != nullptr);
         {
-            QElapsedTimer pause;   // l'empreinte du mot de passe prend près d'une seconde (PBKDF2, 600 000 tours)
-            pause.start();
-            while (pause.elapsed() < 1500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            QLineEdit *z = libelle0(QString::fromUtf8("Dossier"));
+            VERIFIER(z != nullptr);
+            if (z) {
+                z->setFocus();
+                z->setText(d.filePath("sauvegardes-essai"));
+                z->setModified(true);
+            }
+            if (auto *b = bouton(QString::fromUtf8("Continuer"))) b->click();
         }
         patienter([&] { return bouton(QString::fromUtf8("Nouvelle séance")) && attend(); });
         {   // le titre calculé (2.33) : « Bonjour » et le prénom de la configuration
@@ -4798,7 +4786,7 @@ int main(int argc, char **argv) {
             "    Afficher « essai quittance » puis le montant de la quittance puis le moyen de la quittance.\n"
             "Afficher « essai liées » puis le nombre de séances conservées dont le patient = le marc et la quittance est présente.\n"
             "Afficher « fin des essais ».\n");
-        const int k = source.indexOf(QString::fromUtf8("Remarque : d'abord le mot de passe"));   // avant la connexion
+        const int k = source.indexOf(QString::fromUtf8("Remarque : le mot de passe, l'application l'a déjà demandé"));   // avant la connexion
         VERIFIER(k > 0);
         source.insert(k, essai);
         VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -4861,6 +4849,7 @@ int main(int argc, char **argv) {
                 if (bt->text() == "Choisir" || bt->text() == "Ouvrir") { bt->click(); break; }
         });
         minuterie.start();
+        qunsetenv("GRYM_MOT_DE_PASSE_BASE");   // la fenêtre, cette fois
         auto attendre = [&](std::function<bool()> c, int ms) {
             QElapsedTimer z;
             z.start();
@@ -4905,6 +4894,7 @@ int main(int argc, char **argv) {
             e.close();
         }
         minuterie.stop();
+        qputenv("GRYM_MOT_DE_PASSE_BASE", "essai-essai");
     }
 
     // La clé de secours (étape 3) : créée, posée dans un projet ; la fabrication emporte sa partie publique, jamais le
@@ -4956,7 +4946,7 @@ int main(int argc, char **argv) {
             VERIFIER(fil().contains("notes 1"));
             e.close();
         }
-        qunsetenv("GRYM_MOT_DE_PASSE_BASE");
+        qputenv("GRYM_MOT_DE_PASSE_BASE", "essai-essai");
     }
 
     // Praxis (21 octobre 2026) : une séance facturée qui passe annulée, ou absente quand le cabinet ne facture pas les
@@ -4985,7 +4975,7 @@ int main(int argc, char **argv) {
             "Afficher « essai prévues » puis l'alerte des prévues d'aujourd'hui puis « | ».\n"
             "Afficher « essai passées » puis l'alerte des prévues de (aujourd'hui + 10 jours).\n"
             "Afficher « fin des essais ».\n");
-        const int k = source.indexOf(QString::fromUtf8("Remarque : d'abord le mot de passe"));
+        const int k = source.indexOf(QString::fromUtf8("Remarque : le mot de passe, l'application l'a déjà demandé"));
         VERIFIER(k > 0);
         source.insert(k, essai);
         VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -5081,13 +5071,12 @@ Afficher « essai H » puis le nombre de factures supprimées puis le nombre de 
 Afficher « essai F » puis le nombre de séances conservées dont l'encaissement est présent et le paiement = « à payer ».
 Sauvegarder la base dans « essai.grymd ».
 Le dossier de sauvegarde du cabinet conservé devient « sync/Cabinet ».
-La clé de session devient « essai-essai ».
 Archiver les données.
 Si l'échec de sauvegarde est absent, afficher « essai I sans échec ».
 Archiver les données.
 Afficher « fin des essais ».
 )GRYM");
-        const int k = source.indexOf(QString::fromUtf8("Remarque : d'abord le mot de passe"));   // avant la connexion
+        const int k = source.indexOf(QString::fromUtf8("Remarque : le mot de passe, l'application l'a déjà demandé"));   // avant la connexion
         VERIFIER(k > 0);
         source.insert(k, essai);
         VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
@@ -5123,11 +5112,11 @@ Afficher « fin des essais ».
             y.start();
             while (y.elapsed() < 10000 && !QFile::exists(du_jour)) QApplication::processEvents(QEventLoop::AllEvents, 50);
             QFile coffre(du_jour);
-            VERIFIER(coffre.open(QIODevice::ReadOnly) && coffre.read(12) == "GRYMCOFFRE1\n");
+            VERIFIER(coffre.open(QIODevice::ReadOnly) && coffre.read(12) == "GRYMCOFFRE2\n");   // base chiffrée : le format 2
             VERIFIER(QDir(d.filePath("sync/Cabinet")).entryList(QDir::Files).size() == 1);
         }
         QFile copie(d.filePath("essai.grymd"));
-        VERIFIER(copie.open(QIODevice::ReadOnly) && copie.read(15) == "SQLite format 3");
+        VERIFIER(copie.open(QIODevice::ReadOnly) && copie.read(12) == "GRYMCOFFRE2\n");   // la copie d'une base chiffrée
         if (!t.contains("fin des essais") || !t.contains("essai F")) std::printf("%s\n", t.right(1500).toUtf8().constData());
         e.close();
     }
