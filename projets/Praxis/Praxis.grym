@@ -1,5 +1,6 @@
 Remarque : Praxis, le programme principal.
 Utiliser « actions ».
+Utiliser « départ ».
 
 Remarque : le mot de passe de la séance de travail, en mémoire seulement, jamais rangé : il chiffre les sauvegardes.
 La clé de session vaut absent.
@@ -37,6 +38,7 @@ Remarque : une facture échue depuis trente jours appelle un rappel ; la relance
 Remarque : la limite se recalcule à chaque ouverture des rappels : l'application peut rester ouverte des jours.
 La limite des rappels vaut aujourd'hui − 30 jours.
 La relance en cours vaut absent.
+Le rappel en cours vaut absent.
 
 Remarque : la facture dont on fait le PDF.
 La créance en cours vaut absent.
@@ -44,13 +46,8 @@ La créance en cours vaut absent.
 Le soin ouvert vaut absent.
 La note ouverte vaut absent.
 
-Remarque : les cinq soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
-Si le nombre de soins conservés est nul :
-    Proposer en deux prix « EPI » et 130 et 70.
-    Proposer en deux prix « LEAA » et 130 et 100.
-    Proposer « Kriya Massage » et 100.
-    Proposer « Toucher Thérapeutique » et 100.
-    Proposer « Soin à Distance » et 100.
+Remarque : les soins de départ (départ.grym), créés une seule fois ; ensuite, l'écran des soins les gère.
+Si le nombre de soins conservés est nul, poser les soins de départ.
 
 Remarque : les rubriques de frais de départ, créées une seule fois ; ensuite, la configuration les gère.
 Si le nombre de rubriques conservées est nul :
@@ -65,7 +62,7 @@ Si le nombre de rubriques conservées est nul :
 Remarque : le cabinet, créé une seule fois à son nom ; Nicolas complète sa fiche dans la configuration.
 Si le nombre de cabinets conservés est nul, fonder le cabinet.
 
-Remarque : les couleurs et la police du site de Nicolas Seydoux, à l'encre ; le logo et la signature, ceux de la configuration
+Remarque : les couleurs et la police du site de Nicolas Seydoux, à l'encre (pour un autre cabinet, cette phrase et départ.grym) ; le logo et la signature, ceux de la configuration
 Remarque : du cabinet (le cœur et le nom dessiné au départ), repris à chaque lancement ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
 Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf », le logo (le logo du cabinet conservé) et la signature (la signature du cabinet conservé).
 
@@ -107,7 +104,8 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     un bouton « Séances prévues », en tuile, avec la description « Faite, annulée, absence »,
     un bouton « Comptabilité », en tuile, avec la description « Encaisser, factures, rappels, frais »,
     un bouton « Configuration », en tuile, avec la description « Le cabinet, les soins, les rubriques, les sauvegardes »,
-    le texte l'alerte de sauvegarde du cabinet conservé et d'aujourd'hui et de l'échec de sauvegarde.
+    le texte l'alerte de sauvegarde du cabinet conservé et d'aujourd'hui et de l'échec de sauvegarde,
+    le texte l'alerte des prévues d'aujourd'hui.
 
 Remarque : les écrans posés au pixel tiennent dans 1072 points, la largeur utile du thème, mesurée sur un MacBook Pro 14 pouces (1512 × 982 et 1800 × 1169).
 Remarque : l'inscription d'un patient : les champs courts à gauche ; à côté, l'anamnèse, dictée (transcrite sur l'ordinateur) ou tapée.
@@ -225,7 +223,9 @@ L'écran des rappels, « Rappels », montre :
         un bouton « Fermer »,
     le texte « Dues depuis trente jours, sans facture », en petites capitales,
     la liste des séances conservées dont la facture est absente et le paiement = « à payer » et le statut ≠ « prévue » et le statut ≠ « annulée » et le statut ≠ l'exclu du cabinet conservé et la date ≤ la limite des rappels, par date, avec la date, le nom du patient, le nom du soin, le prix et le statut,
-    un bouton « Facturer ».
+    un bouton « Facturer »,
+    le texte « Rappels envoyés », en petites capitales,
+    la liste des rappels conservés, par date décroissant, avec la date, le rang, le numéro de la facture et le nom du patient de la facture.
 
 Remarque : la facture, sur papier : le cabinet et ses numéros, le patient, les séances, le montant dû, l'échéance, et la section paiement si le cabinet a un IBAN.
 Le document de facture, « Facture », montre :
@@ -260,7 +260,7 @@ Le document de rappel, « Rappel », montre :
             le texte le nom du patient de la relance en cours,
             le texte l'adresse du patient de la relance en cours,
             le texte la ville du patient de la relance en cours,
-    le texte "Rappel, le " suivi d'aujourd'hui en toutes lettres,
+    le texte "Rappel n° " suivi du rang du rappel en cours suivi de ", le " suivi de la date du rappel en cours en toutes lettres,
     le texte "Sauf erreur de notre part, la facture N° " suivi du numéro de la relance en cours suivi de " du " suivi de la date de la relance en cours suivi de « reste à régler pour les séances suivantes. »,
     la liste des séances conservées dont la facture = la relance en cours et le paiement = « à payer », par date, avec la date, le nom du soin, la durée et le prix,
     le texte "Reste dû : CHF " suivi de l'arrondi du dû de la relance en cours à 0,01,
@@ -423,22 +423,33 @@ L'écran des notes, « Notes confidentielles », montre :
         un bouton « Supprimer ».
 
 Remarque : la corbeille : ce qui a été supprimé, rétablissable ; un patient revient avec ses séances, ses notes et ses pièces.
+Remarque : « Effacer » supprime définitivement, sans retour (les sauvegardes d'avant le gardent) : un homonyme peut alors s'inscrire.
 Remarque : les pièces annulées y restent, leur exemplaire se remontre ; elles ne se rétablissent pas : on refait la pièce.
 L'écran de la corbeille, « Corbeille », montre :
     le texte « Patients », en petites capitales,
     la liste des patients supprimés, par nom, avec le nom, le téléphone et la localité,
-    un bouton « Rétablir le patient »,
+    côte à côte :
+        un bouton « Rétablir le patient »,
+        un bouton « Effacer le patient »,
     le texte « Séances », en petites capitales,
     la liste des séances supprimées, par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
-    un bouton « Rétablir la séance »,
+    côte à côte :
+        un bouton « Rétablir la séance »,
+        un bouton « Effacer la séance »,
     le texte « Frais », en petites capitales,
     la liste des frais supprimés, par date décroissant, avec la date, le libellé et le montant,
-    un bouton « Rétablir le frais »,
+    côte à côte :
+        un bouton « Rétablir le frais »,
+        un bouton « Effacer le frais »,
     le texte « Soins et rubriques », en petites capitales,
     la liste des soins supprimés, par nom, avec le nom et le tarif,
-    un bouton « Rétablir le soin »,
+    côte à côte :
+        un bouton « Rétablir le soin »,
+        un bouton « Effacer le soin »,
     la liste des rubriques supprimées, par nom, avec le nom,
-    un bouton « Rétablir la rubrique »,
+    côte à côte :
+        un bouton « Rétablir la rubrique »,
+        un bouton « Effacer la rubrique »,
     le texte « Pièces annulées », en petites capitales,
     la liste des factures supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
     la liste des quittances supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
@@ -457,11 +468,13 @@ L'écran de connexion, « Praxis », montre :
     un mot de passe (texte), masqué, large de 12 caractères,
     un bouton « Entrer », principal.
 
-Remarque : au premier lancement : choisir le mot de passe ; sans lui, les sauvegardes ne s'ouvrent plus, personne ne peut le retrouver.
+Remarque : au premier lancement : choisir le mot de passe ; sans lui, les sauvegardes ne s'ouvrent plus, personne ne peut le retrouver ;
+Remarque : et le dossier des copies automatiques, celui du système qui se synchronise (rien ne le devine : on le montre).
 L'écran du premier mot de passe, « Choisir le mot de passe », montre :
     le texte « Ce mot de passe protège l'application et chiffre les sauvegardes. Note-le en lieu sûr : sans lui, les sauvegardes ne s'ouvrent plus, et personne ne peut le retrouver. »,
     un mot de passe (texte), masqué, large de 12 caractères,
     une confirmation (texte), masquée, large de 12 caractères,
+    un dossier (texte), facultatif, avec le choix d'un dossier, avec l'indication « Un dossier synchronisé : iCloud Drive sur un Mac, OneDrive sous Windows. Une copie chiffrée y va chaque jour. Vide : à choisir plus tard, dans Configuration, Sauvegardes. »,
     un bouton « Choisir », principal.
 
 Remarque : les sauvegardes : le dossier (synchronisé de préférence), une copie tout de suite, la restauration d'une copie, le mot de passe.
@@ -535,6 +548,19 @@ Pour quittancer une séance :
         La pièce en cours devient la q.
         L'exemplaire de la q devient le document de quittance.
         Ouvrir le document de quittance.
+
+Remarque : le rappel d'une facture : numéroté à sa suite (premier, deuxième…), daté, son PDF gardé, puis montré pour l'imprimer.
+Pour relancer une créance :
+    La relance en cours devient créance.
+    Le dernier rappel de créance devient aujourd'hui.
+    Le r vaut un nouveau rappel :
+        La facture vaut créance.
+        La date vaut aujourd'hui.
+        Le rang vaut (le nombre de rappels conservés dont la facture = créance) + (le nombre de rappels supprimés dont la facture = créance) + 1.
+    Conserver le r.
+    Le rappel en cours devient le r.
+    L'exemplaire du r devient le document de rappel.
+    Ouvrir le document de rappel.
 
 Remarque : une facture réunit toutes les séances dues du patient qui n'en ont pas encore : faites, ou manquées si le cabinet facture les absences.
 Pour facturer une prestation :
@@ -636,12 +662,15 @@ Quand on clique sur « Exporter en CSV » dans l'écran de comptabilité :
 Quand on clique sur « Journal de l'année » dans l'écran de comptabilité :
     Ouvrir le document de journal.
 
-Remarque : le rappel daté sur sa facture, pour savoir à qui on a déjà écrit, et quand.
+Remarque : le rappel daté sur sa facture, pour savoir à qui on a déjà écrit, et quand ; son exemplaire gardé.
 Quand on clique sur « Rappel » dans l'écran des rappels :
     Si la facture choisie de l'écran est absente, refuser « Choisis d'abord une facture dans la liste. ».
-    La relance en cours devient la facture choisie de l'écran.
-    Le dernier rappel de la relance en cours devient aujourd'hui.
-    Ouvrir le document de rappel.
+    Relancer la facture choisie de l'écran.
+
+Remarque : un rappel envoyé se remontre tel qu'il est parti.
+Quand on choisit un rappel dans l'écran des rappels :
+    Si l'exemplaire du rappel choisi de l'écran est absent, refuser « Ce rappel n'a pas d'exemplaire gardé. ».
+    Ouvrir l'exemplaire du rappel choisi de l'écran.
 
 Remarque : la facture d'une séance due depuis trente jours ; elle réunit toutes les séances dues du patient.
 Quand on clique sur « Facturer » dans l'écran des rappels :
@@ -763,6 +792,7 @@ Quand on clique sur « Choisir » dans l'écran du premier mot de passe :
     Si le motif ≠ « », refuser le motif.
     Le code d'accès du cabinet conservé devient le mot de passe de l'écran.
     La clé de session devient le mot de passe de l'écran.
+    Si le dossier de l'écran est présent, le dossier de sauvegarde du cabinet conservé devient le dossier de l'écran.
     Fermer l'écran.
 
 Quand on clique sur « Sauvegardes » dans l'écran de configuration :
@@ -829,6 +859,44 @@ Quand on clique sur « Rétablir le soin » dans l'écran de la corbeille :
 Quand on clique sur « Rétablir la rubrique » dans l'écran de la corbeille :
     Si la rubrique choisie de l'écran est absente, refuser « Choisis d'abord une rubrique dans la liste. ».
     Rétablir la rubrique choisie de l'écran.
+
+Remarque : un patient effacé emporte ses séances et ses notes ; jamais ses pièces : avec elles, il se rétablit, puis s'archive.
+Quand on clique sur « Effacer le patient » dans l'écran de la corbeille :
+    Si le patient choisi de l'écran est absent, refuser « Choisis d'abord un patient dans la liste. ».
+    Si le compte des pièces du patient choisi de l'écran > 0, refuser « Ce patient a des factures ou des quittances, gardées dix ans : rétablis-le, puis archive-le. ».
+    Essayer :
+        Supprimer le patient choisi de l'écran définitivement.
+    En cas d'échec :
+        Refuser le motif de l'échec.
+
+Quand on clique sur « Effacer la séance » dans l'écran de la corbeille :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Essayer :
+        Supprimer la séance choisie de l'écran définitivement.
+    En cas d'échec :
+        Refuser le motif de l'échec.
+
+Quand on clique sur « Effacer le frais » dans l'écran de la corbeille :
+    Si le frais choisi de l'écran est absent, refuser « Choisis d'abord un frais dans la liste. ».
+    Essayer :
+        Supprimer le frais choisi de l'écran définitivement.
+    En cas d'échec :
+        Refuser le motif de l'échec.
+
+Remarque : un soin ou une rubrique encore désigné par une séance ou un frais ne s'efface pas : le motif le dit.
+Quand on clique sur « Effacer le soin » dans l'écran de la corbeille :
+    Si le soin choisi de l'écran est absent, refuser « Choisis d'abord un soin dans la liste. ».
+    Essayer :
+        Supprimer le soin choisi de l'écran définitivement.
+    En cas d'échec :
+        Refuser le motif de l'échec.
+
+Quand on clique sur « Effacer la rubrique » dans l'écran de la corbeille :
+    Si la rubrique choisie de l'écran est absente, refuser « Choisis d'abord une rubrique dans la liste. ».
+    Essayer :
+        Supprimer la rubrique choisie de l'écran définitivement.
+    En cas d'échec :
+        Refuser le motif de l'échec.
 
 Remarque : une pièce annulée se remontre telle qu'elle a été remise ou envoyée.
 Quand on choisit une facture dans l'écran de la corbeille :

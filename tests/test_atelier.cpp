@@ -4841,6 +4841,8 @@ int main(int argc, char **argv) {
             "    Sortir de la boucle.\n"
             "Afficher « essai absence » puis le nombre de factures conservées puis le nombre de factures supprimées puis le nombre de séances conservées dont la facture est présente.\n"
             "Afficher « essai pièces » puis le compte des pièces du marc puis le compte des pièces du patient conservé dont le nom = « Anne Rochat ».\n"
+            "Afficher « essai prévues » puis l'alerte des prévues d'aujourd'hui puis « | ».\n"
+            "Afficher « essai passées » puis l'alerte des prévues de (aujourd'hui + 10 jours).\n"
             "Afficher « fin des essais ».\n");
         const int k = source.indexOf(QString::fromUtf8("Remarque : d'abord le mot de passe"));
         VERIFIER(k > 0);
@@ -4860,6 +4862,9 @@ int main(int argc, char **argv) {
         VERIFIER(t.contains(QString::fromUtf8("essai absence 0 1 0")));
         // la facture annulée compte encore : Marc Dupraz s'archive, il ne se supprime plus ; Anne Rochat, sans pièce, si
         VERIFIER(t.contains(QString::fromUtf8("essai pièces 1 0")));
+        // les séances prévues passées : aucune aujourd'hui ; dans dix jours, les cinq des données d'essai
+        VERIFIER(t.contains(QString::fromUtf8("essai prévues |")) || t.contains(QString::fromUtf8("essai prévues  |")));
+        VERIFIER(t.contains(QString::fromUtf8("essai passées 5 séances prévues sont passées")));
         if (!t.contains("fin des essais")) std::printf("%s\n", t.right(800).toUtf8().constData());
         e.close();
     }
@@ -4927,9 +4932,9 @@ Pour chaque séance conservée dont le patient = l'anne et le paiement = « à p
     Attester la séance.
 Pour chaque facture conservée dont le patient = l'anne :
     Afficher « essai G » puis le numéro de la facture.
-La relance en cours devient la facture conservée dont le patient = la claire.
-Ouvrir le document de rappel.
-Afficher « essai J rappel ».
+Relancer la facture conservée dont le patient = la claire.
+Relancer la relance en cours.
+Afficher « essai J rappel » puis le rang du rappel en cours puis le nombre de rappels conservés.
 Afficher le numéro de la relance en cours.
 Afficher « essai H » puis le nombre de factures supprimées puis le nombre de séances conservées dont la facture est absente et le patient = l'anne et le statut = « faite » et le paiement = « à payer ».
 Afficher « essai F » puis le nombre de séances conservées dont l'encaissement est présent et le paiement = « à payer ».
@@ -4968,7 +4973,7 @@ Afficher « fin des essais ».
         VERIFIER(t.contains(QString::fromUtf8("essai H 1 0")));
         // le rappel d'une facture (2.36) : son document se fait, et sa section paiement passe la vérification du QR suisse
         // (un collage mal lu y aurait collé le numéro à la ligne « EPD », 2.35)
-        VERIFIER(t.contains(QString::fromUtf8("essai J rappel")));
+        VERIFIER(t.contains(QString::fromUtf8("essai J rappel 2 2")));   // deux rappels gardés, le second numéroté 2 (21 octobre 2026)
         VERIFIER(t.contains("fin des essais"));
         VERIFIER(t.contains(QString::fromUtf8("essai I sans échec")));
         {   // la sauvegarde automatique : une copie chiffrée du jour dans le dossier choisi, créé ; la seconde le même jour, rien
