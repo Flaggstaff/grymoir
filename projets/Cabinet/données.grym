@@ -87,7 +87,7 @@ Remarque : l'encaissement : le jour où l'argent est arrivé ; les comptes en re
 Remarque : le dernier rappel d'une séance date d'avant les rappels par facture (20 octobre 2026) : gardé, plus écrit.
 
 Une séance, conservée, a :
-    un patient (patient), anciennement « client », et disparaît avec lui,
+    un patient (patient), et disparaît avec lui, anciennement « client »,
     un soin (soin),
     une date (date),
     une heure (heure), facultative,
@@ -117,7 +117,7 @@ Un frais (frais), conservé, a :
 
 Remarque : ce que le patient confie ne s'affiche jamais dans sa fiche, qu'on peut ouvrir devant lui ; ses notes s'ouvrent à part, par « Notes ».
 Une note, conservée, hors des fiches, a :
-    un patient (patient), anciennement « client », et disparaît avec lui,
+    un patient (patient), et disparaît avec lui, anciennement « client »,
     une date (date),
     un contenu (texte).
 

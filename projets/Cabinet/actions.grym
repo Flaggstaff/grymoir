@@ -194,7 +194,7 @@ L'annonce d'un message :
 
 Remarque : ce que l'accueil dit de la dernière sauvegarde ; au-delà de sept jours, il presse ; une sauvegarde automatique ratée d'abord.
 L'alerte de sauvegarde d'un cabinet et d'un jour et d'un échec :
-    Si échec est présent, rendre "La sauvegarde automatique a échoué : " suivi de échec.
+    Si échec est présent, rendre "La sauvegarde automatique a échoué : " suivi d'échec.
     Si la dernière sauvegarde du cabinet est absente, rendre « Aucune sauvegarde encore : Configuration, puis Sauvegardes. ».
     L'écart vaut le nombre de jours entre la dernière sauvegarde du cabinet et jour.
     Si l'écart > 7, rendre "Dernière sauvegarde le " suivi de la dernière sauvegarde du cabinet suivi de « : il est temps d'en refaire une. ».

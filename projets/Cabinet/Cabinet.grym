@@ -2,7 +2,6 @@ Remarque : Cabinet, le programme principal.
 Utiliser « actions ».
 Utiliser « essais ».
 
-
 Remarque : le mot de passe de la séance de travail, en mémoire seulement, jamais rangé : il chiffre les sauvegardes.
 La clé de session vaut absent.
 Remarque : une sauvegarde automatique ratée, que l'accueil montre ; ce que l'écran des sauvegardes dit après un geste.
@@ -445,14 +444,14 @@ L'écran de la corbeille, « Corbeille », montre :
 Remarque : la connexion : l'application ne montre rien sans le mot de passe du cabinet ; une empreinte lente (0,7 s) freine qui essaie.
 L'écran de connexion, « Cabinet », montre :
     le texte « Les données des patients sont protégées : donne le mot de passe du cabinet. »,
-    un mot de passe (texte), masqué,
+    un mot de passe (texte), masqué, large de 12 caractères,
     un bouton « Entrer », principal.
 
 Remarque : au premier lancement : choisir le mot de passe ; sans lui, les sauvegardes ne s'ouvrent plus, personne ne peut le retrouver.
 L'écran du premier mot de passe, « Choisir le mot de passe », montre :
     le texte « Ce mot de passe protège l'application et chiffre les sauvegardes. Note-le en lieu sûr : sans lui, les sauvegardes ne s'ouvrent plus, et personne ne peut le retrouver. »,
-    un mot de passe (texte), masqué,
-    une confirmation (texte), masquée,
+    un mot de passe (texte), masqué, large de 12 caractères,
+    une confirmation (texte), masquée, large de 12 caractères,
     un bouton « Choisir », principal.
 
 Remarque : les sauvegardes : le dossier (synchronisé de préférence), une copie tout de suite, la restauration d'une copie, le mot de passe.
@@ -465,12 +464,12 @@ L'écran des sauvegardes, « Sauvegardes », montre :
         un bouton « Enregistrer le dossier »,
     le texte « Restaurer », en petites capitales,
     une sauvegarde (fichier), facultative, avec l'indication « Un fichier .coffre ; il remplacera toutes les données à la prochaine ouverture, les actuelles gardées à côté. »,
-    un ancien mot de passe (texte), facultatif, masqué, avec l'indication « Celui de cette copie, s'il a changé depuis ; vide : l'actuel. »,
+    un ancien mot de passe (texte), facultatif, masqué, avec l'indication « Celui de cette copie, s'il a changé depuis ; vide : l'actuel. », large de 12 caractères,
     un bouton « Restaurer »,
     le texte « Mot de passe », en petites capitales,
-    un mot de passe actuel (texte), facultatif, masqué,
-    un nouveau mot de passe (texte), facultatif, masqué,
-    une confirmation (texte), facultative, masquée,
+    un mot de passe actuel (texte), facultatif, masqué, large de 12 caractères,
+    un nouveau mot de passe (texte), facultatif, masqué, large de 12 caractères,
+    une confirmation (texte), facultative, masquée, large de 12 caractères,
     un bouton « Changer le mot de passe »,
     un bouton « Fermer ».
 
@@ -583,7 +582,6 @@ Quand on change l'année dans l'écran de comptabilité :
         Le début d'exercice devient le premier jour de l'année des comptes.
         La fin d'exercice devient le premier jour de (l'année des comptes + 1).
 
-
 Quand on clique sur « À encaisser » dans l'écran de comptabilité :
     Ouvrir l'écran des encaissements.
 
@@ -618,9 +616,9 @@ Remarque : de l'application (Documents/Cabinet une fois installée) ; un même e
 Quand on clique sur « Exporter en CSV » dans l'écran de comptabilité :
     La marque vaut " " suivi de l'année des comptes suivi de ", exporté le " suivi d'aujourd'hui en format technique suivi de " à " suivi de l'horodatage de maintenant suivi de « .csv ».
     Essayer :
-        Exporter les séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement, dans ("Exports/Recettes" suivi de la marque).
-        Exporter les frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date, avec la date, le libellé, le nom de la rubrique, le montant et le moyen, dans ("Exports/Frais" suivi de la marque).
-        L'avis des comptes devient "Exporté dans Exports : Recettes" suivi de la marque suivi de " et Frais" suivi de la marque.
+        Exporter les séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement, dans (« Exports/Recettes » suivi de la marque).
+        Exporter les frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date, avec la date, le libellé, le nom de la rubrique, le montant et le moyen, dans (« Exports/Frais » suivi de la marque).
+        L'avis des comptes devient « Exporté dans Exports : Recettes » suivi de la marque suivi de " et Frais" suivi de la marque.
     En cas d'échec :
         L'avis des comptes devient le motif de l'échec.
 
