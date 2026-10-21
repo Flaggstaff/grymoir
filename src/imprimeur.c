@@ -39,9 +39,9 @@ typedef struct {
     char **a_liberer;      /* formes masculines déduites */
     size_t nb_a_liberer;
     int devine;            /* l'article du champ qu'on écrit a été deviné : son objet peut l'être aussi (« du c ») */
-    int champ_nu;
+    int champ_nu;          /* on écrit l'objet d'un champ resté sans article : il reste nu aussi (« longueur de n ») */
     int garder_groupe;     /* le membre gauche d'une opération : ses parenthèses restent (« de (… dont …) − … ») */
-    int dans_dont;         /* on écrit la condition d'un « dont » : « = » devant une constante s'y écrit « est » */          /* on écrit l'objet d'un champ resté sans article : il reste nu aussi (« longueur de n ») */
+    int sans_marque;       /* l'objet d'un champ compact (`c.nom`) : pas de « _nu » ni d'article devant lui (2.35) */
     char **variables;      /* les variables créées avec un article (« L'effectif vaut 12. ») et leur genre (§ 11.4) */
     Genre *genres_var;
     size_t nb_var;
@@ -262,6 +262,7 @@ static int argument_simple(const Noeud *n) {
     switch (n->type) {
     case N_OPERATION: return n->op == '^';
     case N_COMPARAISON: case N_LOGIQUE: return 0;
+    case N_COLLAGE: return 0;   /* « de ("Rappel " suivi du numéro) » : sans parenthèses, « suivi de » s'appliquerait à l'appel (2.35) */
     default: return 1;
     }
 }
@@ -446,9 +447,9 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
     int adjectif = strchr("PN0VFAR", n->op) != NULL;
     if (im->compact) {
         if (n->forme == 2) { expression(im, droite); return; }            /* cas : une valeur */
-        if ((n->forme == 3 || n->forme == 4) && !n->negation) {          /* « est valeur » : « = » */
+        if ((n->forme == 3 || n->forme == 4) && !n->negation) {          /* « est valeur » : « _est » (2.35), « = » avant */
             expression(im, sujet);
-            aj(im, " = ");
+            aj(im, n->forme == 3 ? " _est " : " = ");
             expression(im, droite);
             return;
         }
@@ -472,18 +473,9 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
         expression(im, droite);
         return;
     }
-    /* Venu de la forme compacte (§ 11.4) : « = » devant une constante s'écrit « est » (« dont le numéro est 2 ») ; devant
-     * une variable, et pour les autres comparaisons, le symbole reste, comme le guide les écrit (« Si âge < 18 »). */
-    const int t = droite ? droite->type : 0;
-    const int en_mots = n->forme == 1 && n->article_a_deviner && !im->compact && n->op == '=' && !sans_sujet && im->dans_dont
-                        && (t == N_NOMBRE || t == N_TEXTE || t == N_DATE || t == N_HEURE || t == N_BOOLEEN);
-    if (en_mots) {
-        expression(im, sujet);
-        aj(im, n->negation ? " n'est pas " : " est ");
-        expression(im, droite);
-        return;
-    }
-    if (n->forme == 1 && !sans_sujet && !en_mots) {                        /* écrit en symbole */
+    /* 2.35 : la forme compacte dit « _est » ; un « = » compact reste un « = » (avant, devant une constante d'un « dont »,
+     * il devenait « est », et le texte de l'auteur changeait) */
+    if (n->forme == 1 && !sans_sujet) {                        /* écrit en symbole */
         expression(im, sujet);
         aj(im, " ");
         aj(im, symbole(n->op));
@@ -524,6 +516,15 @@ static void expression(Impression *im, const Noeud *n) {
         return;
     }
     case N_NOM:
+        if (im->compact && !n->crochets && n->article != ART_LES && !im->sans_marque) {
+            /* 2.35 : l'article écrit, quand la traduction ne le retrouverait pas : « _nu d » (écrit sans article, mais
+             * une variable connue en reçoit un), « _le relevé » (écrit avec, mais un paramètre n'en reçoit pas) */
+            const int defaut = genre_de_variable(im, n->texte) != G_LIBRE;
+            if (n->article == ART_AUCUN && !n->article_a_deviner && defaut) aj(im, "_nu ");
+            else if (n->article == ART_LE && !defaut) aj(im, "_le ");
+            else if (n->article == ART_LA && !defaut) aj(im, "_la ");
+            else if (n->article == ART_L && !defaut) aj(im, "_l' ");
+        }
         nom_avec_article(im, n);
         return;
     case N_TEXTE:
@@ -900,10 +901,7 @@ static void expression(Impression *im, const Noeud *n) {
         }
         if (n->nb_enfants > (size_t)inverse) {
             aj(im, im->compact ? " _dont " : " dont ");
-            const int avant = im->dans_dont;
-            im->dans_dont = 1;   /* « dont le numéro est 2 » : « est » n'y vaut que là (§ 11.4) */
             expression(im, n->enfants[0]);
-            im->dans_dont = avant;
         }
         if (n->texte2 && n->forme < 3) {   /* formes 3 à 7 : texte2 est le champ de l'agrégat, pas un tri */
             aj(im, im->compact ? " _par " : ", par ");
@@ -967,7 +965,10 @@ static void expression(Impression *im, const Noeud *n) {
             const Noeud *o = n->enfants[0];
             int simple = o->type == N_NOM || o->type == N_CHAMP || o->type == N_APPEL || o->type == N_GROUPE || o->type == N_ECRAN;
             if (!simple) aj(im, "(");
+            const int avant = im->sans_marque;
+            im->sans_marque = 1;
             expression(im, o);
+            im->sans_marque = avant;
             if (!simple) aj(im, ")");
             aj(im, ".");
             ecrire_nom(im, n->texte, 0);
@@ -1159,12 +1160,30 @@ static void parametres(Impression *im, const Noeud *liste, int de) {
     }
 }
 
+/* La règle du guide pour une forme compacte sans marque (analyseur.c, phrase_courte_possible) : une branche d'une seule
+ * phrase sans bloc, « Afficher » ou « Rendre », revient en forme courte. */
+static int courte_par_defaut(const Noeud *corps) {
+    if (!corps || corps->nb_enfants != 1) return 0;
+    const Noeud *p = corps->enfants[0];
+    for (size_t k = 0; k < p->nb_enfants; k++)
+        if (p->enfants[k] && p->enfants[k]->type == N_BLOC) return 0;
+    return p->type == P_AFFICHAGE || p->type == P_RENDRE;
+}
+
+/* « _court », « _bloc » (2.35) : la forme littéraire d'une branche, dite seulement quand la règle du guide se tromperait. */
+static void marque_branche(Impression *im, const Noeud *corps, int en_bloc) {
+    const int defaut_court = courte_par_defaut(corps);
+    if (!en_bloc && !defaut_court) aj(im, " _court");
+    else if (en_bloc && defaut_court) aj(im, " _bloc");
+}
+
 static void si(Impression *im, const Noeud *n, int niveau, int sinon_si) {
     const Noeud *cond = n->enfants[0];
     if (im->compact) {
         aj(im, sinon_si ? "_sinon_si " : "_si ");
         expression(im, cond);
         aj(im, " _alors");
+        marque_branche(im, n->enfants[1], n->forme & 1);
         branche(im, n->enfants[1], 0, niveau);
     } else {
         aj(im, sinon_si ? "Sinon si " : "Si ");
@@ -1178,6 +1197,7 @@ static void si(Impression *im, const Noeud *n, int niveau, int sinon_si) {
             si(im, autre->enfants[0], niveau, 1);
         } else if (im->compact) {
             aj(im, "_sinon");
+            marque_branche(im, autre, n->forme & 4);
             branche(im, autre, 0, niveau);
         } else {
             aj(im, "Sinon");
@@ -1707,10 +1727,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         aj(im, c ? " _conservé" : fem ? " conservée" : " conservé");
         if (cherche->nb_enfants) {
             aj(im, c ? " _dont " : " dont ");
-            const int avant = im->dans_dont;
-            im->dans_dont = 1;
             expression(im, cherche->enfants[0]);
-            im->dans_dont = avant;
         }
         aj(im, c ? " _vérifie " : " vérifie :\n");
         if (!c) retrait(im, niveau + 1);

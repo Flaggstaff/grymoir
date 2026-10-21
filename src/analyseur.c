@@ -1503,6 +1503,7 @@ static Noeud *nom_expression(Analyse *a) {
     n->texte = grym_dupliquer(s->nom);
     n->article = art;
     n->crochets = a->j[d].type == J_CROCHETS && !a->j[d].synthetique;
+    if (a->j[d].type == J_CROCHETS && a->j[d].synthetique == 2 && art == ART_AUCUN) n->article_a_deviner = -1;   /* « _nu » (2.35) */
     n->local = s->local;
     n->fin = fin_jeton(&a->j[fin - 1]);
     a->i = fin;
@@ -3674,10 +3675,14 @@ static Noeud *si(Analyse *a, int colonne, int sinon_si) {
             "« Si le total est supérieur à 100 ». Un calcul seul n'est ni vrai ni faux."));
     }
     int forme_bloc = 0;
+    /* la forme compacte dit la forme littéraire : « _alors _court », « _alors _bloc » (2.35) ; le bit 8 la fixe */
+    const Jeton *dp = cour(a);
+    const char *marque = dp->type == J_DEUX_POINTS && dp->synthetique ? dp->valeur : NULL;
     Noeud *alors = branche(a, colonne, "Si", &forme_bloc);
     if (!alors) { noeud_liberer(cond); return NULL; }
+    if (marque && !strcmp(marque, "court")) forme_bloc = 0;
     Noeud *n = noeud_creer(P_SI, t->ligne, t->colonne, t->debut);
-    n->forme = (forme_bloc ? 1 : 0) | (sinon_si ? 2 : 0);
+    n->forme = (forme_bloc ? 1 : 0) | (sinon_si ? 2 : 0) | (marque ? 8 : 0);
     noeud_ajouter(n, cond);
     noeud_ajouter(n, alors);
     n->fin = alors->fin;
@@ -3700,8 +3705,12 @@ static Noeud *si(Analyse *a, int colonne, int sinon_si) {
         autre->fin = imbrique->fin;
     } else {
         int f = 0;
+        const Jeton *dps = cour(a);
+        const char *marque_sinon = dps->type == J_DEUX_POINTS && dps->synthetique ? dps->valeur : NULL;
         autre = branche(a, colonne, "Sinon", &f);
         if (!autre) { noeud_liberer(n); return NULL; }
+        if (marque_sinon && !strcmp(marque_sinon, "court")) f = 0;
+        if (marque_sinon) n->forme |= 16;   /* la forme du « Sinon » dite par la forme compacte (2.35) */
         if (f) n->forme |= 4;   /* « Sinon » en bloc */
     }
     noeud_ajouter(n, autre);
@@ -8397,7 +8406,8 @@ static int phrase_courte_possible(const Noeud *corps) {
 
 static void marquer_compact(Noeud *n) {
     if (!n) return;
-    if ((n->type == N_NOM || n->type == N_APPEL) && n->article == ART_AUCUN) n->article_a_deviner = 1;
+    if (n->article_a_deviner == -1) n->article_a_deviner = 0;   /* « _nu » : écrit sans article, il le reste (2.35) */
+    else if ((n->type == N_NOM || n->type == N_APPEL) && n->article == ART_AUCUN) n->article_a_deviner = 1;
     if (n->type == P_ECRAN && n->titre_calcule) marquer_compact(n->titre_calcule);   /* le titre calculé (2.33) */
     if (n->type == N_COMPARAISON && n->forme == 1) n->article_a_deviner = 1;   /* un symbole : les mots sont à retrouver */
     /* « Si x, afficher … » : la forme compacte n'écrit le Si qu'en bloc ; une branche d'une seule phrase, qui n'ouvre
@@ -8405,9 +8415,9 @@ static void marquer_compact(Noeud *n) {
      * rendre … » aussi : un cas est court quand son corps est sur sa ligne */
     if (n->type == N_CAS && n->nb_enfants && phrase_courte_possible(n->enfants[n->nb_enfants - 1]))
         n->enfants[n->nb_enfants - 1]->ligne = n->ligne;
-    if (n->type == P_SI) {
-        if (n->nb_enfants > 1 && phrase_courte_possible(n->enfants[1])) n->forme &= ~1;
-        if (n->nb_enfants > 2 && phrase_courte_possible(n->enfants[2])
+    if (n->type == P_SI) {   /* sans marque (une forme compacte écrite à la main) : la règle du guide ; avec, rien */
+        if (!(n->forme & 8) && n->nb_enfants > 1 && phrase_courte_possible(n->enfants[1])) n->forme &= ~1;
+        if (!(n->forme & 16) && n->nb_enfants > 2 && phrase_courte_possible(n->enfants[2])
             && !(n->enfants[2]->enfants[0]->type == P_SI && (n->enfants[2]->enfants[0]->forme & 2)))
             n->forme &= ~4;
     }

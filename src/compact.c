@@ -186,6 +186,26 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                 continue;
             }
         }
+        if (est_cle(t, "nu") && k + 1 < f && r->e[k + 1].type == J_CROCHETS) {
+            /* « _nu d » → « d », sans article à deviner (2.35) */
+            emettre(r, J_CROCHETS, r->e[k + 1].valeur, &r->e[k + 1], 2);
+            k++;
+            continue;
+        }
+        if ((est_cle(t, "le") || est_cle(t, "la") || est_cle(t, "l'")) && k + 1 < f && r->e[k + 1].type == J_CROCHETS
+            && !(k + 2 < f && (est_cle(&r->e[k + 2], "conservé") || est_cle(&r->e[k + 2], "conservée") || est_cle(&r->e[k + 2], "supprimé")))
+            && !(k + 2 < f && r->e[k + 2].type == J_POINT)) {
+            /* « _le relevé » → « le relevé » : l'article écrit (2.35) */
+            if (!strcmp(t->valeur, "l'")) emettre(r, J_ELISION, "l", t, 1);
+            else mot(r, t->valeur, t);
+            copier(r, &r->e[k + 1]);
+            k++;
+            continue;
+        }
+        if (est_cle(t, "est")) {   /* « x _est v » → « x est v » (2.35) : l'égalité écrite en mots */
+            mot(r, "est", t);
+            continue;
+        }
         if (est_cle(t, "écran") && k + 2 < f && r->e[k + 1].type == J_POINT && r->e[k + 2].type == J_CROCHETS) {
             /* _écran.pays → pays de l'écran (§ 22.2) */
             size_t q = k + 1;
@@ -1667,6 +1687,11 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             }
             mot(r, "sinon", t);
             fixer_retrait(r, premier, haut->profondeur);
+            const char *marque = NULL;   /* « _sinon _court », « _sinon_si … _alors _bloc » (2.35) */
+            if (f >= d + 2 && (est_cle(&r->e[f - 1], "court") || est_cle(&r->e[f - 1], "bloc"))) {
+                marque = est_cle(&r->e[f - 1], "court") ? "court" : "bloc";
+                f--;
+            }
             if (!strcmp(c, "sinon_si")) {
                 size_t alors = chercher(r, d + 1, f, "alors");
                 if (alors != f - 1) { echouer(r, t, grym_dupliquer("« _alors » attendu en fin de ligne.")); return; }
@@ -1676,7 +1701,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 echouer(r, &r->e[d + 1], grym_dupliquer("« _sinon » s'écrit seul sur sa ligne."));
                 return;
             }
-            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            emettre(r, J_DEUX_POINTS, marque, &r->e[f - 1], 1);
             return;
         }
         if (!strcmp(c, "échec")) {   /* _échec → En cas d'échec : (§ 18) */
@@ -1906,6 +1931,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             point(r, f);
         } else if (!strcmp(c, "si") || !strcmp(c, "tant_que")) {
             size_t alors = !strcmp(c, "si") ? chercher(r, d + 1, f, "alors") : f;
+            /* « _alors _court », « _alors _bloc » (2.35) : la forme littéraire de la branche */
+            const char *marque = NULL;
+            if (!strcmp(c, "si") && alors == f - 2 && (est_cle(&r->e[f - 1], "court") || est_cle(&r->e[f - 1], "bloc"))) {
+                marque = est_cle(&r->e[f - 1], "court") ? "court" : "bloc";
+                f--;
+            }
             if (!strcmp(c, "si") && alors != f - 1) {
                 echouer(r, t, grym_dupliquer("« _alors » attendu en fin de ligne : « _si x > 0 _alors »."));
                 return;
@@ -1913,7 +1944,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             if (!strcmp(c, "si")) mot(r, "si", t);
             else { mot(r, "tant", t); mot(r, "que", t); }
             expression(r, d + 1, alors);
-            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            emettre(r, J_DEUX_POINTS, marque, &r->e[f - 1], 1);
             ouvrir(r, !strcmp(c, "si") ? O_SI : O_BOUCLE, prof, t);
         } else if (!strcmp(c, "répéter")) {
             size_t fois = chercher(r, d + 1, f, "fois");

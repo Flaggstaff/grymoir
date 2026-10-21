@@ -160,7 +160,7 @@ int main(void) {
          "Afficher le numéro RCC du c.\n");
     LITT("La TVA vaut 8,1.\nAfficher tva.", "La tva vaut 8,1.\nAfficher tva.\n");
     LITT("Le Ab vaut 1.\nAfficher AB.", "Le ab vaut 1.\nAfficher ab.\n");
-    COMP("Le numéro RCC vaut 1.\nAfficher numéro RCC.", "_le numéro_RCC << 1\n_afficher numéro_RCC\n");
+    COMP("Le numéro RCC vaut 1.\nAfficher numéro RCC.", "_le numéro_RCC << 1\n_afficher _nu numéro_RCC\n");
     FIXE("Le [GLN du cabinet] vaut 1.\nAfficher [GLN du cabinet].");
     COMP("Le pas vaut 1.\nAfficher l'arrondi de 2,5 au pas vers le haut.", "_le pas << 1\n_afficher _arrondi_haut(2,5 ; pas)\n");
     FIXE("Le nom vaut « a ».\nSi le nom ne contient pas « b » et nom finit par « a », afficher nom en majuscules.\n");
@@ -182,7 +182,7 @@ int main(void) {
          "Afficher le tarif de suivi du s suivi de « CHF ».\n");
     COMP("Une tâche, conservée, a : un état (« a » ou « b »).",
          "_classe _une tâche _conservé\n    _un état (« a » ; « b »)\n_fin\n");
-    COMP("Le nom vaut « a ».\nAfficher nom ne commence pas par « b ».", "_le nom << « a »\n_afficher _non (nom _commence « b »)\n");
+    COMP("Le nom vaut « a ».\nAfficher nom ne commence pas par « b ».", "_le nom << « a »\n_afficher _non (_nu nom _commence « b »)\n");
     FIXE("Un membre, conservé, a : un nom (texte), une cotisation (nombre).\nAfficher la moyenne des cotisations des membres conservés puis la plus grande cotisation des membres conservés.\n"
          "Afficher nom du membre conservé à la plus petite cotisation dont le nom est « a ».\n");
     FIXE("Le x vaut 0.\nTant que vrai :\n    Le x devient x + 1.\n    Si x = 3, sortir de la boucle.\n"
@@ -192,13 +192,13 @@ int main(void) {
     COMP("Remarque : exemple\nLe prix unitaire vaut 12,50.\nLa quantité vaut 3.\nL'addition vaut 0.\n"
          "L'addition devient prix unitaire × quantité.\nAfficher « Total : » puis l'addition.",
          "# exemple\n_le prix_unitaire << 12,50\n_la quantité << 3\n_l'addition << 0\n"
-         "addition << prix_unitaire × quantité\n_afficher « Total : » ; addition\n");
+         "addition << _nu prix_unitaire × _nu quantité\n_afficher « Total : » ; addition\n");
     COMP("Le total vaut 120.\nSi le total est supérieur à 100 :\n    Le total devient 1.\n"
          "Sinon si total ≥ 50, le total devient 2.\nSinon :\n    Le total devient 3.",
-         "_le total << 120\n_si total > 100 _alors\n    total << 1\n_sinon_si total ≥ 50 _alors\n"
+         "_le total << 120\n_si total > 100 _alors\n    total << 1\n_sinon_si _nu total ≥ 50 _alors _court\n"
          "    total << 2\n_sinon\n    total << 3\n_fin\n");
     COMP("Le x vaut 1.\nAfficher x n'est pas nul et (x est positif ou faux) puis x est différent de 2.",
-         "_le x << 1\n_afficher _non (x _nul) _et (x _positif _ou _faux) ; x ≠ 2\n");
+         "_le x << 1\n_afficher _non (_nu x _nul) _et (_nu x _positif _ou _faux) ; _nu x ≠ 2\n");
     COMP("Le [frais de port et d'emballage] vaut 12.", "_le frais_de_port_et_d'emballage << 12\n");
     COMP("La moyenne d'un premier nombre et d'une seconde valeur vaut (premier nombre + seconde valeur) ÷ 2.\n"
          "Afficher la moyenne de 4 et de (1 + 1).",
@@ -206,7 +206,7 @@ int main(void) {
          "_afficher moyenne(4 ; 1 + 1)\n");
     COMP("Le total vaut 0.\nPour ajouter un montant :\n    Le total devient total + montant.\nAjouter 5.\n"
          "Pour saluer :\n    Afficher 1.\nSaluer.",
-         "_le total << 0\n_action ajouter(_un montant)\n    total << total + montant\n_fin\najouter(5)\n"
+         "_le total << 0\n_action ajouter(_un montant)\n    total << _nu total + montant\n_fin\najouter(5)\n"
          "_action saluer()\n    _afficher 1\n_fin\nsaluer()\n");
     /* initiale accentuée d'une action : capitale en tête de phrase, minuscule après la virgule */
     LITT("Pour étiqueter :\n    Afficher 1.\nétiqueter.\nSi vrai, Étiqueter.\nPour œuvrer :\n    Afficher 2.\nŒuvrer.",
@@ -262,15 +262,15 @@ int main(void) {
         FIXE(blocs);
 
         COMP("Un point a : un x.\nLe p vaut un nouveau point.\nOuvrir la fiche de p.\n",
-             "_classe _un point\n    _un x\n_fin\n_le p << _nouveau point\n_ouvrir _fiche p\n");
+             "_classe _un point\n    _un x\n_fin\n_le p << _nouveau point\n_ouvrir _fiche _nu p\n");
 
         COMP(zones, "_classe _un compositeur _conservé\n    _un nom (texte) _unique\n    _un pays (texte)\n_fin\n"
                     "_écran de_recherche\n    _un pays (texte) _départ « Suisse »\n    _une ville (texte) _facultatif\n"
                     "    _un âge (nombre) _départ −3\n"
-                    "    _liste compositeur _conservé _dont pays = _écran.pays _par nom\n    _bouton « Supprimer »\n_fin\n"
+                    "    _liste compositeur _conservé _dont pays _est _écran.pays _par nom\n    _bouton « Supprimer »\n_fin\n"
                     "_quand _ouvre de_recherche\n    _écran.pays << « France »\n_fin\n"
                     "_quand _change ville _dans de_recherche\n    _afficher _écran.ville\n_fin\n"
-                    "_quand _clique « Supprimer » _dans de_recherche\n    _si _écran.compositeur_choisi _présent _alors\n"
+                    "_quand _clique « Supprimer » _dans de_recherche\n    _si _écran.compositeur_choisi _présent _alors _court\n"
                     "        _supprimer _écran.compositeur_choisi\n    _fin\n_fin\n"
                     "_quand _ferme de_recherche\n    _afficher « fermé »\n_fin\n_ouvrir de_recherche\n");
         FIXE("L'écran d'accueil montre :\n    un bouton « OK ».\nQuand on clique sur « OK » dans l'écran d'accueil :\n"
@@ -281,11 +281,11 @@ int main(void) {
          "    _fin\n    _rendre nombre\n_fin\n");
     COMP("Le x vaut 3.\nTant que x > 0, le x devient x − 1.\nRépéter 2 fois :\n    Sortir de la boucle.\n"
          "Pour chaque i de 1 à 9 par pas de 2, passer au tour suivant.",
-         "_le x << 3\n_tant_que x > 0\n    x << x − 1\n_fin\n_répéter 2 _fois\n    _sortir\n_fin\n"
+         "_le x << 3\n_tant_que _nu x > 0\n    x << _nu x − 1\n_fin\n_répéter 2 _fois\n    _sortir\n_fin\n"
          "_pour_chaque i _de 1 _à 9 _pas 2\n    _passer\n_fin\n");
     COMP("Le x vaut 1.\nSelon x :\n    Cas 1 ou de 2 à 3, afficher 1.\n    Cas supérieur ou égal à 10 ou négatif :\n"
          "        Afficher 2.\n    Autrement, afficher 3.",
-         "_le x << 1\n_selon x\n    _cas 1 _ou _de 2 _à 3\n        _afficher 1\n    _cas ≥ 10 _ou _négatif\n"
+         "_le x << 1\n_selon _nu x\n    _cas 1 _ou _de 2 _à 3\n        _afficher 1\n    _cas ≥ 10 _ou _négatif\n"
          "        _afficher 2\n    _autrement\n        _afficher 3\n_fin\n");
 
     /* --- Objets (§ 13) --- */
@@ -308,7 +308,7 @@ int main(void) {
     LITT("Le jour vaut 1.3.2026 + 30.\nSi aujourd'hui > jour, afficher 21.9.2026.",
          "Le jour vaut 01.03.2026 + 30.\nSi aujourd'hui > jour, afficher 21.09.2026.\n");
     COMP("Le jour vaut 1.3.2026.\nSi aujourd'hui > jour, afficher jour + 1.",
-         "_le jour << 01.03.2026\n_si _aujourd'hui > jour _alors\n    _afficher jour + 1\n_fin\n");
+         "_le jour << 01.03.2026\n_si _aujourd'hui > _nu jour _alors\n    _afficher _nu jour + 1\n_fin\n");
 
     /* --- Fichiers (§ 15) --- */
     LITT("La photo vaut le fichier « a.jpg ».\nAfficher la taille du fichier « b.png ».\nEnregistrer la photo dans « c.jpg ».",
@@ -332,7 +332,7 @@ int main(void) {
     LITT("Un client, conservé, a : un nom (texte).\nLe c vaut un nouveau client.\nConserver le c.\nSupprimer c.",
          "Un client, conservé, a :\n    un nom (texte).\nLe c vaut un nouveau client.\nConserver le c.\nSupprimer c.\n");
     COMP("Un client, conservé, a : un nom (texte).\nLe c vaut un nouveau client.\nConserver le c.\nSupprimer c.",
-         "_classe _un client _conservé\n    _un nom (texte)\n_fin\n_le c << _nouveau client\n_conserver c\n_supprimer c\n");
+         "_classe _un client _conservé\n    _un nom (texte)\n_fin\n_le c << _nouveau client\n_conserver c\n_supprimer _nu c\n");
 
     /* --- Retrouver (§ 16.4) --- */
     LITT("Une facture, conservée, a : un montant (nombre), un payé (vrai ou faux).\n"
@@ -348,7 +348,7 @@ int main(void) {
          "L'a vaut l'avoir conservé dont le motif est « x ».\nAfficher le nombre d'avoirs conservés.",
          "_classe _une facture _conservé\n    _un montant (nombre)\n_fin\n_classe _un avoir (avoirs) _conservé\n"
          "    _un motif (texte)\n_fin\n_pour_chaque facture _conservé _dont montant _positif _par montant\n"
-         "    _afficher facture\n_fin\n_l'a << _l'avoir _conservé _dont motif = « x »\n"
+         "    _afficher facture\n_fin\n_l'a << _l'avoir _conservé _dont motif _est « x »\n"
          "_afficher _nombre_de avoir _conservé\n");
 
     COMP("Un client, conservé, a : un pays (texte), « Suisse » au départ, un code (nombre), unique, −1 au départ, "
@@ -399,7 +399,7 @@ int main(void) {
     FIXE("Le d vaut 16.10.2026.\nAfficher le jour de la semaine de d puis le mois de d.\nAfficher d en toutes lettres.\n"
          "Afficher le nombre de jours ouvrables entre d et (d + 10).");
     COMP("Le d vaut 16.10.2026.\nAfficher le nombre de jours ouvrables entre d et d.\nAfficher d en toutes lettres.",
-         "_le d << 16.10.2026\n_afficher _écart_ouvrables(d ; d)\n_afficher d _en_toutes_lettres\n");
+         "_le d << 16.10.2026\n_afficher _écart_ouvrables(_nu d ; _nu d)\n_afficher _nu d _en_toutes_lettres\n");
     FIXE("Une tâche, conservée, a :\n    une échéance (date), facultative.\n"
          "L'écran x montre :\n    le graphique des tâches conservées, par mois de l'échéance.");
     /* la période se garde au formatage : un point fixe ne le voyait pas, elle disparaissait dès la première fois */
@@ -416,7 +416,7 @@ int main(void) {
     /* les mots de passe (§ 16.1) : le type, « correspond au », les deux formes */
     FIXE("Un membre, conservé, a :\n    un nom (texte), unique,\n    un code (mot de passe).\n"
          "Pour chaque membre conservé :\n    Si « x » correspond au code du membre, afficher « ok ».");
-    COMP("Le c vaut « x ».\nSi « x » correspond à c, afficher 1.", "_le c << « x »\n_si « x » _correspond c _alors\n    _afficher 1\n_fin\n");
+    COMP("Le c vaut « x ».\nSi « x » correspond à c, afficher 1.", "_le c << « x »\n_si « x » _correspond _nu c _alors\n    _afficher 1\n_fin\n");
     /* les étiquettes (§ 16.15) : une couleur par valeur permise, certaines sans ; les deux formes */
     FIXE("Une cotisation, conservée, a :\n    un état (« payée » en vert, « en retard » en rouge, « en attente » ou « annulée » en gris).");
     COMP("Une cotisation, conservée, a :\n    un état (« payée » en vert ou « annulée »).",
@@ -529,17 +529,17 @@ int main(void) {
          "Pour chaque chanson de p dont le titre > « a », par titre, afficher chanson.\n"
          "Afficher le nombre de chansons de p puis le nombre de chansons conservées dont p est l'auteur.",
          "_classe _une personne _conservé\n    _un nom (texte)\n_fin\n_classe _une chanson _conservé\n    _un titre (texte)\n"
-         "    _un auteur (personne)\n_fin\n_la p << _la personne _conservé _dont nom = « a »\n"
-         "_pour_chaque chanson _de p _dont titre > « a » _par titre\n    _afficher chanson\n_fin\n"
-         "_afficher _nombre_de chanson _de p ; _nombre_de chanson _conservé _dont auteur = p\n");
+         "    _un auteur (personne)\n_fin\n_la p << _la personne _conservé _dont nom _est « a »\n"
+         "_pour_chaque chanson _de _nu p _dont titre > « a » _par titre\n    _afficher chanson\n_fin\n"
+         "_afficher _nombre_de chanson _de _nu p ; _nombre_de chanson _conservé _dont auteur = _nu p\n");
 
     /* --- Corbeille et cascade (§ 16.12) --- */
     COMP("Une partition, conservée, a : un titre (texte).\nUn pupitre, conservé, a : une partition (partition), "
          "et disparaît avec elle.\nLa p vaut la partition supprimée dont le titre est « a ».\nRétablir p.\n"
          "Supprimer p définitivement.\nAfficher le nombre de pupitres supprimés.",
          "_classe _une partition _conservé\n    _un titre (texte)\n_fin\n_classe _un pupitre _conservé\n"
-         "    _une partition (partition) _disparaît_avec\n_fin\n_la p << _la partition _supprimé _dont titre = « a »\n"
-         "_rétablir p\n_supprimer p _définitivement\n_afficher _nombre_de pupitre _supprimé\n");
+         "    _une partition (partition) _disparaît_avec\n_fin\n_la p << _la partition _supprimé _dont titre _est « a »\n"
+         "_rétablir _nu p\n_supprimer _nu p _définitivement\n_afficher _nombre_de pupitre _supprimé\n");
     LITT("Une partition, conservée, a : un titre (texte).\nUn pupitre, conservé, a : une partition (partition), "
          "et disparaît avec elle.\nPour chaque partition supprimée, afficher partition.",
          "Une partition, conservée, a :\n    un titre (texte).\nUn pupitre, conservé, a :\n"
@@ -561,10 +561,10 @@ int main(void) {
          "puis le nombre d'œuvres conservées dont o n'est pas parmi les travaux.",
          "_classe _une personne _conservé\n    _un nom (texte)\n_fin\n_classe _une œuvre _conservé\n    _un titre (texte)\n"
          "    _des interprètes (personne)\n    _des travaux (travail) (personne)\n_fin\n"
-         "_la o << _l'œuvre _conservé _dont titre = « a »\no.interprètes _gagne o\no.travaux _perd o\n"
-         "_pour_chaque travail _de o\n    _afficher travail\n_fin\n"
-         "_afficher _nombre_de travail _de o ; _nombre_de œuvre _conservé _dont interprètes _contient o ; "
-         "_nombre_de œuvre _conservé _dont _non (travaux _contient o)\n");
+         "_la o << _l'œuvre _conservé _dont titre _est « a »\no.interprètes _gagne _nu o\no.travaux _perd _nu o\n"
+         "_pour_chaque travail _de _nu o\n    _afficher travail\n_fin\n"
+         "_afficher _nombre_de travail _de _nu o ; _nombre_de œuvre _conservé _dont interprètes _contient _nu o ; "
+         "_nombre_de œuvre _conservé _dont _non (travaux _contient _nu o)\n");
 
     /* --- Années (§ 14.5) --- */
     COMP("Une œuvre, conservée, a : une composition (année), facultative, une reprise (année), 1900 au départ.\n"
@@ -657,7 +657,7 @@ int main(void) {
     FIXE("Le nom vaut « a ».\nL'âge vaut 3.\nLa date vaut 01.01.2000.\n"
          "Le t vaut « n° » suivi du nom suivi de l'âge suivi de la date.\n");
     COMP("Le nom vaut « a ».\nAfficher « ( » suivi de 1 puis de nom.",
-         "_le nom << « a »\n_afficher « ( » _suivi 1 ; _de nom\n");
+         "_le nom << « a »\n_afficher « ( » _suivi 1 ; _de _nu nom\n");
     FIXE("Un client, conservé, a :\n    un nom (texte).\nPour f un client :\n    Saisir à nouveau le client.\n");
     COMP("Un client, conservé, a :\n    un nom (texte).\nPour f un client :\n    Saisir à nouveau client.\n",
          "_classe _un client _conservé\n    _un nom (texte)\n_fin\n_action f(_un client)\n    _saisir client\n_fin\n");

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.34 de la spécification, révisée le 21 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.35 de la spécification, révisée le 21 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2279,3 +2279,4 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 | 2.32 | 2026-10-20 | § 22.6 : `, avec le choix d'un dossier`, une zone (texte) que remplit le sélecteur de dossiers du système |
 | 2.33 | 2026-10-20 | § 22.5 : le logo et la signature calculés, `le logo (…)` ; le titre d'un écran calculé, `L'écran d'accueil, (…) en grand, montre :` ; forme compacte : `(_le cabinet _conservé).logo << x` se relit (la ligne était refusée), et « du cabinet conservé » remplace « de (le cabinet conservé) » à la traduction |
 | 2.34 | 2026-10-21 | § 22.6 : `, large de 12 caractères` ; forme canonique : le membre gauche d'une opération qui finit par un `dont` garde ses parenthèses (la 2.33 les retirait après `de` : « l'arrondi de (… dont …) − (…) » ne se relisait plus) ; un appel avec ses arguments, suivi d'un autre argument, garde les siennes ; la forme compacte traduite retrouve l'article des calculs et des propriétés (« la longueur du t », « le carré de 7 ») et élide devant un « h » muet (« l'heure ») |
+| 2.35 | 2026-10-21 | Forme compacte sans perte : `_alors _court`, `_sinon _court` (une branche courte), `_alors _bloc` (un bloc que la règle du guide raccourcirait) ; `x _est v` (l'égalité écrite en mots ; un `=` compact reste `=`) ; `_nu x` (un nom écrit sans article qu'une variable recevrait), `_le x`, `_la x`, `_l' x` (un article écrit qu'un paramètre ne recevrait pas) ; un collage en argument garde ses parenthèses (`de ("Rappel " suivi du numéro)`) |

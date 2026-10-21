@@ -342,7 +342,7 @@ int main(void) {
                  "_la f << _la facture _conservé _dont montant = 3\n_afficher _nombre_de facture _conservé\n",
                  "Une facture, conservée, a :\n    un montant (nombre).\n"
                  "Pour chaque facture conservée dont le montant n'est pas nul, par montant décroissant :\n    Afficher facture.\n"
-                 "La f vaut la facture conservée dont le montant est 3.\nAfficher le nombre de factures conservées.\n");
+                 "La f vaut la facture conservée dont le montant = 3.\nAfficher le nombre de factures conservées.\n");
 
     ALLER_RETOUR("_classe _une p _conservé\n    _une date (date) _facultatif\n_fin\n_la x << _nouveau p _avec\n"
                  "    date << _absent\n_fin\n_si x.date _présent _alors\n    _afficher 1\n_fin\n",
@@ -381,7 +381,7 @@ int main(void) {
     ALLER_RETOUR("_effacer\n_afficher « a »\n", "Effacer l'écran.\nAfficher « a ».\n");
     ALLER_RETOUR("_classe _un point\n    _un x\n_fin\n_le p << _nouveau point\n_fiche p\n",
                  "Un point a :\n    un x.\nLe p vaut un nouveau point.\nAfficher la fiche du p.\n");
-    ALLER_RETOUR("_l'année << 1\n_le nom << « a »\n_afficher « ( » _suivi année _suivi « ) » ; _de nom ; _que nom\n",
+    ALLER_RETOUR("_l'année << 1\n_le nom << « a »\n_afficher « ( » _suivi année _suivi « ) » ; _de _nu nom ; _que nom\n",
                  "L'année vaut 1.\nLe nom vaut « a ».\nAfficher « ( » suivi de l'année suivi de « ) » puis de nom puis que le nom.\n");
     ALLER_RETOUR("_classe _une fiche _conservé\n    _un nom (texte)\n_fin\n_action f(_une fiche)\n    _saisir fiche\n_fin\n",
                  "Une fiche, conservée, a :\n    un nom (texte).\nPour f une fiche :\n    Saisir à nouveau fiche.\n");
