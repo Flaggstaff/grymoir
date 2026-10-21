@@ -1438,7 +1438,7 @@ int main(void) {
                  evenement("q=5&" CAB_ZONES "&z14=7601000000000&clic=25"), get("/"),
                  evenement("q=6&clic=0"), get("/"), evenement("q=7&clic=26"), evenement("q=8&clic=1"), get("/"));
 #undef CAB_ZONES
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet3.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet3.grymd", &sc);
         CONTIENT(sc.reponses[2], "<h1>Configuration</h1>");   /* le cabinet, les soins, les rubriques */
         CONTIENT(sc.reponses[13], "<th>Code tarifaire</th>");
         CONTIENT(sc.reponses[4], "<h1>Le cabinet</h1>");
@@ -1469,7 +1469,7 @@ int main(void) {
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), get("/"), evenement("q=2&clic=6"), get("/"), evenement("q=3&clic=7"), evenement("q=4&clic=2"), get("/"),
                  evenement(ev_frais), get("/"),
                  evenement("q=6&clic=3"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet8.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet8.grymd", &sc);
         CONTIENT(sc.reponses[1], "Comptabilité</span></span><span class=\"description\">Encaisser, quittances, frais</span>");
         CONTIENT(sc.reponses[3], "<p class=\"texte\">Frais : CHF 0,00</p>");
         CONTIENT(sc.reponses[6], "Libellé");
@@ -1489,7 +1489,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), get("/"), evenement("q=2&clic=6"), evenement("q=3&clic=6"), get("/"), evenement("q=4&choix=1.0"),
                  evenement("q=5&clic=3"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet9.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet9.grymd", &sc);
         CONTIENT(sc.reponses[4], "<h1>Quittances</h1>");
         CONTIENT(sc.reponses[7], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
         liberer(&sc);
@@ -1502,7 +1502,7 @@ int main(void) {
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=0"),
                  evenement("q=3&z2=Anne+Rochat&z4=EPI&z5=19.10.2026&z6=&z7=&z8=oui&z8p=1&z9=%C3%A0+payer&z12=0&clic=19"),
                  evenement("q=4&clic=4"), evenement("q=5&choix=1.0"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet10.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet10.grymd", &sc);
         CONTIENT(sc.reponses[5], "<h1>Patient</h1>");
         CONTIENT(sc.reponses[5], ">offert</span>");
         liberer(&sc);
@@ -1511,7 +1511,7 @@ int main(void) {
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=7"), evenement("q=3&clic=2"), get("/"),
                  evenement("q=4&z2=Supervision&clic=3"), get("/"), evenement("q=5&choix=0.7"), get("/"),
                  evenement("q=6&z0=Supervision+clinique&clic=2"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet11.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet11.grymd", &sc);
         CONTIENT(sc.reponses[3], ">Loyer</button>");   /* les rubriques de départ */
         CONTIENT(sc.reponses[5], ">Supervision</button>");
         CONTIENT(sc.reponses[7], "<h1>Rubrique</h1>");
@@ -1527,7 +1527,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=6"), evenement("q=3&clic=8"), get("/"), evenement("q=4&clic=3"), get("/"),
                  evenement("q=5&s7=0&clic=8"), get("/"), evenement("q=6&clic=4"), evenement("q=7&clic=10"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet12.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet12.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>Rappels</h1>");
         CONTIENT(sc.reponses[3], "Factures échues");
         CONTIENT(sc.reponses[3], "<td>Marc Dupraz</td>");          /* ses deux séances faites il y a 45 et 38 jours */
@@ -1547,7 +1547,7 @@ int main(void) {
                  evenement("q=5&z17=CH44+3199+9123+0008+8901+2&clic=25"), get("/"),
                  evenement("q=6&z17=CH53+0483+5012+3456+7100+0&clic=25"), get("/"),
                  evenement("q=7&z17=CH52+0483+5012+3456+7100+0&clic=25"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet13.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet13.grymd", &sc);
         CONTIENT(sc.reponses[3], "value=\"CH52 0483 5012 3456 7100 0\"");   /* celui des données d'essai */
         CONTIENT(sc.reponses[5], "Un IBAN suisse compte 21 caractères : CH, puis 19 chiffres et lettres.");
         /* un QR-IBAN : la QR-facture de contrôle le refuse (2.29) ; une clé fausse aussi */
@@ -1565,7 +1565,7 @@ int main(void) {
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=6"), evenement("q=3&clic=5"), get("/"), evenement("q=4&s0=0&clic=6"), get("/"),
                  evenement("q=5&clic=7"), evenement("q=6&clic=12"), evenement("q=7&clic=4"), evenement("q=8&choix=1.0"),
                  evenement("q=9&choix=16.0"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet14.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet14.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>À encaisser</h1>");
         CONTIENT(sc.reponses[3], ">Facture</button>");
         CONTIENT(sc.reponses[5], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
@@ -1575,7 +1575,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);   /* la séance offerte de Marc Dupraz, il y a quinze jours (après celle, prévue, du jour) */
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=4"), evenement("q=3&choix=1.4"), evenement("q=4&choix=16.1"), get("/"),
                  evenement("q=5&clic=17"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet15.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet15.grymd", &sc);
         CONTIENT(sc.reponses[4], "value=\"Marc Dupraz\" selected");
         CONTIENT(sc.reponses[4], "name=\"z10\" value=\"oui\" checked");
         CONTIENT(sc.reponses[6], "Une séance offerte n&#39;a ni facture ni quittance.");
@@ -1590,7 +1590,7 @@ int main(void) {
         char jour[11], copie[120];
         const time_t maintenant = time(NULL);
         strftime(jour, sizeof jour, "%Y-%m-%d", localtime(&maintenant));
-        snprintf(copie, sizeof copie, "projets/Cabinet/Sauvegardes/%s - Nicolas Seydoux.coffre", jour);   /* le jour, puis le cabinet */
+        snprintf(copie, sizeof copie, "projets/Praxis/Sauvegardes/%s - Nicolas Seydoux.coffre", jour);   /* le jour, puis le cabinet */
         remove(copie);
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), get("/"), evenement("q=2&clic=5"), evenement("q=3&choix=0.0"),
@@ -1598,7 +1598,7 @@ int main(void) {
                  evenement("q=7&clic=7"), evenement("q=8&clic=4"), get("/"), evenement("q=9&z2=&clic=4"), get("/"),
                  evenement("q=10&clic=10"), get("/"), evenement("q=11&z12=mauvais-mot&clic=15"), get("/"),
                  evenement("q=12&fermer=1"), evenement("q=13&fermer=1"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet17.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet17.grymd", &sc);
         CONTIENT(sc.reponses[1], "Aucune sauvegarde encore : Configuration, puis Sauvegardes.");
         CONTIENT(sc.reponses[4], "<h1>Séance</h1>");
         CONTIENT(sc.reponses[6], "Une séance prévue se facture une fois faite : change d&#39;abord son statut.");
@@ -1615,7 +1615,7 @@ int main(void) {
         if (!c || memcmp(tete, "GRYMCOFFRE1\n", 12) != 0) { echecs++; printf("ÉCHEC (test ligne %d) : la sauvegarde chiffrée %s\n", __LINE__, copie); }
         if (c) fclose(c);
         remove(copie);
-        remove("projets/Cabinet/Sauvegardes");
+        remove("projets/Praxis/Sauvegardes");
         liberer(&sc);
         remove("_essai_cabinet17.grymd");
     }
@@ -1627,7 +1627,7 @@ int main(void) {
                  evenement("q=5&fermer=1"), evenement("q=6&clic=7"), evenement("q=7&clic=3"), get("/"),
                  evenement("q=8&s1=0&clic=2"), get("/"), evenement("q=9&clic=17"), evenement("q=10&fermer=1"),
                  evenement("q=11&clic=4"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet18.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet18.grymd", &sc);
         CONTIENT(sc.reponses[3], "value=\"Anne Rochat\"");
         CONTIENT(sc.reponses[3], ">Supprimer</button>");
         NE_CONTIENT_PAS(sc.reponses[5], ">Anne Rochat</button>");   /* plus dans la liste des patients */
@@ -1646,7 +1646,7 @@ int main(void) {
         REQUETES(get("/"), evenement("q=1&z1=court&z2=court&clic=3"), get("/"),
                  evenement("q=2&z1=essai-essai&z2=essai-autre&clic=3"), get("/"),
                  evenement("q=3&z1=essai-essai&z2=essai-essai&clic=3"), get("/"));
-        servir_projet_base("projets/Cabinet/Cabinet.grym", "_essai_cabinet19.grymd", &sc, 2);
+        servir_projet_base("projets/Praxis/Praxis.grym", "_essai_cabinet19.grymd", &sc, 2);
         CONTIENT(sc.reponses[0], "<h1>Choisir le mot de passe</h1>");
         CONTIENT(sc.reponses[0], " size=\"12\" style=\"width:calc(12ch + 2em);max-width:100%\"");   /* large de 12 caractères (2.34) */
         NE_CONTIENT_PAS(sc.reponses[0], "Anne Rochat");
@@ -1658,8 +1658,8 @@ int main(void) {
            passe faux refusé, le bon ouvre l'accueil */
         memset(&sc, 0, sizeof sc);
         REQUETES(get("/"), evenement("q=1&z1=mauvais-mot&clic=2"), get("/"), evenement("q=2&z1=essai-essai&clic=2"), get("/"));
-        servir_projet_base("projets/Cabinet/Cabinet.grym", "_essai_cabinet19.grymd", &sc, 1);
-        CONTIENT(sc.reponses[0], "<h1>Cabinet</h1>");
+        servir_projet_base("projets/Praxis/Praxis.grym", "_essai_cabinet19.grymd", &sc, 1);
+        CONTIENT(sc.reponses[0], "<h1>Praxis</h1>");
         CONTIENT(sc.reponses[0], "donne le mot de passe du cabinet");
         CONTIENT(sc.reponses[2], "Mot de passe faux.");
         CONTIENT(sc.reponses[4], "Bonjour Nicolas");
@@ -1673,7 +1673,7 @@ int main(void) {
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=4"), get("/"),
                  evenement("q=3&z0=rochat&clic=-1"), get("/"), evenement("q=4&z0=Romont&clic=-1"), get("/"),
                  evenement("q=5&fermer=1"), evenement("q=6&clic=6"), evenement("q=7&clic=11"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet20.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet20.grymd", &sc);
         CONTIENT(sc.reponses[2], ">Louis Bapst</button>");
         CONTIENT(sc.reponses[4], ">Anne Rochat</button>");
         NE_CONTIENT_PAS(sc.reponses[4], ">Louis Bapst</button>");
@@ -1683,27 +1683,41 @@ int main(void) {
         liberer(&sc);
         remove("_essai_cabinet20.grymd");
         int recettes = 0, frais = 0;
-        DIR *d = opendir("projets/Cabinet/Exports");
+        DIR *d = opendir("projets/Praxis/Exports");
         if (d) {
             struct dirent *e;
             while ((e = readdir(d))) {
                 char chemin[600];
-                snprintf(chemin, sizeof chemin, "projets/Cabinet/Exports/%s", e->d_name);
+                snprintf(chemin, sizeof chemin, "projets/Praxis/Exports/%s", e->d_name);
                 if (!strncmp(e->d_name, "Recettes ", 9)) recettes++;
                 if (!strncmp(e->d_name, "Frais ", 6)) frais++;
                 if (e->d_name[0] != '.') remove(chemin);
             }
             closedir(d);
         }
-        remove("projets/Cabinet/Exports");
+        remove("projets/Praxis/Exports");
         total++;
         if (recettes != 1 || frais != 1) { echecs++; printf("ÉCHEC (test ligne %d) : l'export CSV (%d, %d)\n", __LINE__, recettes, frais); }
+    }
+
+    {   /* « Faire comme un clic sur « B ». » (2.36) : le corps d'un autre événement de clic, dans la même transaction ;
+           un clic par libellé, « clic=Deux fois », comme par rang */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=1"), get("/"), evenement("q=2&clic=Deux+fois"), get("/"));
+        servir("Le total vaut 0.\nL'écran x montre :\n    le texte \"Total : \" suivi du total,\n    un bouton « Ajouter »,\n"
+               "    un bouton « Deux fois ».\nQuand on clique sur « Ajouter » dans l'écran x :\n    Le total devient le total + 1.\n"
+               "Quand on clique sur « Deux fois » dans l'écran x :\n    Faire comme un clic sur « Ajouter ».\n"
+               "    Faire comme un clic sur « Ajouter ».\nOuvrir l'écran x.\n", &sc);
+        CONTIENT(sc.reponses[0], "Total : 0");
+        CONTIENT(sc.reponses[2], "Total : 1");
+        CONTIENT(sc.reponses[4], "Total : 3");
+        liberer(&sc);
     }
 
     {   /* Cabinet : l'écran des factures (vide tant qu'aucune n'est faite dans l'atelier) (20 octobre 2026) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=6"), evenement("q=3&clic=9"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet16.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet16.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>Factures</h1>");
         CONTIENT(sc.reponses[3], "<th>État</th>");
         liberer(&sc);
@@ -1724,7 +1738,7 @@ int main(void) {
         /* Cabinet : le surtitre daté de l'accueil */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet7.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet7.grymd", &sc);
         CONTIENT(sc.reponses[1], "<p class=\"texte capitales\">Aujourd&#39;hui, ");
         liberer(&sc);
         remove("_essai_cabinet7.grymd");
@@ -1738,7 +1752,7 @@ int main(void) {
                  evenement("q=7&z1=Anne+Rochat&z3=EPI&z5=09%3A00&z6=60&z7=70&z8=faite&z9=Twint"
                            "&z12=Nuque+d%C3%A9tendue&clic=16"),
                  evenement("q=8&choix=16.0"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet5.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet5.grymd", &sc);
         CONTIENT(sc.reponses[4], "<h1>Séance</h1>");
         CONTIENT(sc.reponses[4], ">Commentaire dicté</label>");
         CONTIENT(sc.reponses[4], "<option value=\"Anne Rochat\" selected>Anne Rochat</option>");
@@ -1752,7 +1766,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=7"), evenement("q=3&clic=1"), evenement("q=4&choix=0.0"), get("/"),
                  evenement("q=5&z0=EPI&z1=130&z2=70&z3=60&z4=1003&clic=6"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet6.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet6.grymd", &sc);
         CONTIENT(sc.reponses[4], "<h1>Soin</h1>");
         CONTIENT(sc.reponses[6], "<td>1003</td>");   /* le code tarifaire, dans la liste des soins */
         liberer(&sc);
@@ -1765,7 +1779,7 @@ int main(void) {
                  evenement("q=4&z1=Anne+Rochat&z2=079+000+00+01&z3=&z4=&z5=Route+de+Riaz&z6=12a&z7=&z8=1630&z9=Bulle"
                            "&z10=Suisse&z12=Migraines+depuis+2019&clic=18"),
                  evenement("q=5&choix=1.0"), get("/"), evenement("q=6&clic=19"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet4.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet4.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>Patient</h1>");
         CONTIENT(sc.reponses[3], "value=\"Anne Rochat\"");
         /* l'ajout, dicté ou tapé, rejoint l'anamnèse (vide jusque-là) à l'enregistrement ; relue à la réouverture */
@@ -1783,7 +1797,7 @@ int main(void) {
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=0"), evenement("q=3&clic=3"), get("/"),
                  evenement("q=4&z1=Zo%C3%A9+Neuve&z2=079+000+00+09&z3=&z4=&z5=Rue+du+Pont&z6=1&z7=&z8=1630&z9=Bulle"
                            "&z10=Suisse&z12=Douleurs+lombaires&clic=15"), get("/"));
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet2.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet2.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>Nouveau patient</h1>");
         CONTIENT(sc.reponses[3], ">Anamnèse</label>");
         CONTIENT(sc.reponses[5], "<option value=\"Zoé Neuve\" selected>Zoé Neuve</option>");
@@ -1816,7 +1830,7 @@ int main(void) {
                  evenement("q=13&clic=4"),                                      /* 14 : Clients */
                  evenement("q=14&choix=1.6"),                                   /* 15 : la fiche d'Anne */
                  get("/"));                                                     /* 16 */
-        servir_projet("projets/Cabinet/Cabinet.grym", "_essai_cabinet.grymd", &sc);
+        servir_projet("projets/Praxis/Praxis.grym", "_essai_cabinet.grymd", &sc);
         /* l'inscription demande le téléphone et le courriel, des textes vérifiés (§ 22.13) */
         CONTIENT(sc.reponses[3], ">Téléphone</label>");
         CONTIENT(sc.reponses[3], ">Courriel</label>");

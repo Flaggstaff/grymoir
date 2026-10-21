@@ -1,4 +1,4 @@
-Remarque : Cabinet, le programme principal.
+Remarque : Praxis, le programme principal.
 Utiliser « actions ».
 Utiliser « essais ».
 
@@ -95,6 +95,11 @@ Pour archiver les données :
 Remarque : les données d'essai (essais.grym), une seule fois ; à retirer à la livraison avec ce fichier.
 Si le nombre de patients conservés est nul, remplir les essais.
 
+Remarque : le dernier rappel d'une séance ne sert plus depuis les rappels par facture : ses valeurs s'effacent, une fois ; vide
+Remarque : partout, le champ pourra quitter la séance (grammaire 2.36 : un champ sans valeur se retire).
+Pour chaque séance conservée dont le dernier rappel est présent :
+    Le dernier rappel de la séance devient absent.
+
 Remarque : les séances payées d'avant le 20 octobre 2026 n'ont pas de date d'encaissement : elles prennent celle de la séance, une fois.
 Pour chaque séance conservée dont l'encaissement est absent et le paiement ≠ « à payer » et le paiement ≠ « offert » :
     L'encaissement de la séance devient la date de la séance.
@@ -109,7 +114,7 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     un bouton « Patients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png »,
     un bouton « Séances prévues », en tuile, avec la description « Faite, annulée, absence »,
     un bouton « Comptabilité », en tuile, avec la description « Encaisser, quittances, frais »,
-    un bouton « Configuration », en tuile, avec la description « Cabinet, soins, rubriques, sauvegardes »,
+    un bouton « Configuration », en tuile, avec la description « Le cabinet, les soins, les rubriques, les sauvegardes »,
     le texte l'alerte de sauvegarde du cabinet conservé et d'aujourd'hui et de l'échec de sauvegarde.
 
 Remarque : les écrans posés au pixel tiennent dans 1072 points, la largeur utile du thème, mesurée sur un MacBook Pro 14 pouces (1512 × 982 et 1800 × 1169).
@@ -442,7 +447,7 @@ L'écran de la corbeille, « Corbeille », montre :
     un bouton « Fermer ».
 
 Remarque : la connexion : l'application ne montre rien sans le mot de passe du cabinet ; une empreinte lente (0,7 s) freine qui essaie.
-L'écran de connexion, « Cabinet », montre :
+L'écran de connexion, « Praxis », montre :
     le texte « Les données des patients sont protégées : donne le mot de passe du cabinet. »,
     un mot de passe (texte), masqué, large de 12 caractères,
     un bouton « Entrer », principal.
@@ -612,7 +617,7 @@ Quand on clique sur « Rappels » dans l'écran de comptabilité :
     Ouvrir l'écran des rappels.
 
 Remarque : les comptes de l'année choisie en deux tableaux CSV (un tableur les ouvre), datés à la minute : dans Exports, à côté
-Remarque : de l'application (Documents/Cabinet une fois installée) ; un même export à la même minute est refusé, rien n'est écrasé.
+Remarque : de l'application (Documents/Praxis une fois installée) ; un même export à la même minute est refusé, rien n'est écrasé.
 Quand on clique sur « Exporter en CSV » dans l'écran de comptabilité :
     La marque vaut " " suivi de l'année des comptes suivi de ", exporté le " suivi d'aujourd'hui en format technique suivi de " à " suivi de l'horodatage de maintenant suivi de « .csv ».
     Essayer :
@@ -738,8 +743,8 @@ Quand on clique sur « Entrer » dans l'écran de connexion :
     Sinon, refuser « Mot de passe faux. ».
 
 Quand on clique sur « Choisir » dans l'écran du premier mot de passe :
-    Si la longueur du mot de passe de l'écran < 8, refuser « Au moins huit caractères : il protège des données de santé. ».
-    Si le mot de passe de l'écran ≠ la confirmation de l'écran, refuser « Les deux saisies diffèrent. ».
+    Le motif vaut le défaut du mot de passe de l'écran et de la confirmation de l'écran.
+    Si le motif ≠ « », refuser le motif.
     Le code d'accès du cabinet conservé devient le mot de passe de l'écran.
     La clé de session devient le mot de passe de l'écran.
     Fermer l'écran.
@@ -778,9 +783,8 @@ Remarque : changer le mot de passe demande l'actuel ; les copies déjà faites g
 Quand on clique sur « Changer le mot de passe » dans l'écran des sauvegardes :
     Si le mot de passe actuel de l'écran est absent, refuser « Donne d'abord le mot de passe actuel. ».
     Si le mot de passe actuel de l'écran correspond au code d'accès du cabinet conservé :
-        Si le nouveau mot de passe de l'écran est absent, refuser « Donne le nouveau mot de passe. ».
-        Si la longueur du nouveau mot de passe de l'écran < 8, refuser « Au moins huit caractères : il protège des données de santé. ».
-        Si le nouveau mot de passe de l'écran ≠ la confirmation de l'écran, refuser « Les deux saisies diffèrent. ».
+        Le motif vaut le défaut du nouveau mot de passe de l'écran et de la confirmation de l'écran.
+        Si le motif ≠ « », refuser le motif.
         Le code d'accès du cabinet conservé devient le nouveau mot de passe de l'écran.
         La clé de session devient le nouveau mot de passe de l'écran.
         L'avis des sauvegardes devient « Mot de passe changé. Les copies déjà faites s'ouvrent avec l'ancien. ».
@@ -1164,31 +1168,8 @@ Remarque : la séance enregistrée telle qu'à l'écran, puis sa pièce : à pay
 Remarque : tout se modifie ; une séance qui a sa pièce et change de patient, de soin, de date ou de prix (ou de paiement, pour une
 Remarque : quittance) la voit annulée : dans la corbeille, son exemplaire gardé ; « Facture ou quittance » en refait une juste.
 Quand on clique sur « Facture ou quittance » dans l'écran de la séance :
-    Le s vaut la séance ouverte.
-    Le nouveau paiement vaut le paiement de l'écran.
-    Si l'offerte de l'écran est vraie, le nouveau paiement devient « offert ».
-    Si la facture du s est présente ou la quittance du s est présente :
-        Si le patient de l'écran ≠ le patient du s ou le soin de l'écran ≠ le soin du s ou la date de l'écran ≠ la date du s ou le prix de l'écran ≠ le prix du s :
-            Si la quittance du s est présente, défaire la quittance du s.
-            Si la facture du s est présente, annuler la facture du s.
-    Si la quittance du s est présente et le nouveau paiement ≠ le paiement du s, défaire la quittance du s.
-    Le patient du s devient le patient de l'écran.
-    Le soin du s devient le soin de l'écran.
-    La date du s devient la date de l'écran.
-    L'heure du s devient l'heure de l'écran.
-    La durée du s devient la durée de l'écran.
-    Le prix du s devient le prix de l'écran.
-    Le statut du s devient le statut de l'écran.
-    Le paiement du s devient le nouveau paiement.
-    Si le nouveau paiement = « à payer » ou le nouveau paiement = « offert » :
-        L'encaissement du s devient absent.
-    Sinon :
-        Si l'encaissement de l'écran est présent, l'encaissement du s devient l'encaissement de l'écran.
-        Sinon, l'encaissement du s devient aujourd'hui.
-    Si la facture du s est présente, suivre la facture du s.
-    Le commentaire dicté du s devient le commentaire dicté de l'écran.
-    Le commentaire du s devient le commentaire de l'écran.
-    Attester le s.
+    Faire comme un clic sur « Enregistrer ».
+    Attester la séance ouverte.
 
 Remarque : la page du patient s'ouvre par-dessus ; à son retour, la page d'en dessous retrouve son patient.
 Quand on clique sur « Voir le patient » dans l'écran de la séance :

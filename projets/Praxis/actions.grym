@@ -1,4 +1,4 @@
-Remarque : Cabinet : ce qu'on fait des soins et des séances.
+Remarque : Praxis : ce qu'on fait des soins et des séances.
 Utiliser « données ».
 
 Pour proposer un nom et un tarif :
@@ -24,7 +24,7 @@ Pour fonder le cabinet :
         Le nom vaut « Nicolas Seydoux ».
         Le pays vaut « Suisse ».
         La facturation des absences vaut faux.
-        Le dossier de sauvegarde vaut « ~/Library/Mobile Documents/com~apple~CloudDocs/Cabinet ».
+        Le dossier de sauvegarde vaut « ~/Library/Mobile Documents/com~apple~CloudDocs/Praxis ».
     Le logo du c devient le fichier « images/coeur-encre.png ».
     La signature du c devient le fichier « images/signature.png ».
     Le prénom du c devient « Nicolas ».
@@ -186,6 +186,14 @@ Remarque : le titre de l'accueil : « Bonjour » et le prénom de la configurati
 L'accueil d'un cabinet :
     Si le prénom du cabinet est absent, rendre « Bonjour ».
     Rendre "Bonjour " suivi du prénom du cabinet.
+
+Remarque : ce qui ne va pas dans un mot de passe choisi, ou rien : le même motif sur les trois écrans qui en choisissent un.
+Le défaut d'un secret et d'une confirmation :
+    Si secret est absent, rendre « Donne le nouveau mot de passe. ».
+    Si la longueur du secret < 8, rendre « Au moins huit caractères : il protège des données de santé. ».
+    Si confirmation est absente, rendre « Les deux saisies diffèrent. ».
+    Si secret ≠ confirmation, rendre « Les deux saisies diffèrent. ».
+    Rendre « ».
 
 Remarque : un message facultatif, pour un texte d'écran : rien s'il est absent.
 L'annonce d'un message :

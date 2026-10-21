@@ -1,4 +1,4 @@
-Remarque : Cabinet : les données d'un cabinet de thérapie, ses soins, ses patients, leurs séances.
+Remarque : Praxis : les données d'un cabinet de thérapie, ses soins, ses patients, leurs séances.
 
 Remarque : le cabinet, un seul : ce qui figure en tête des quittances et des factures.
 Remarque : RCC (SASIS), GLN, RME et ASCA restent vides tant que Nicolas n'en a pas ; la facture du Tarif 590 exigera le RCC.
@@ -131,7 +131,7 @@ Chaque cabinet conservé vérifie :
     le nombre de cabinets conservés = 1,
     sinon « Il n'y a qu'un cabinet : modifie sa fiche. ».
 
-Remarque : l'IBAN du compte où les patients paient, avec ou sans espaces ; suisse ou liechtensteinois, 21 caractères (SIX, QR-facture, § 4.2.2) ; un IBAN ordinaire : un QR-IBAN (IID 30000 à 31999) exige une référence QR, que Cabinet ne fait pas.
+Remarque : l'IBAN du compte où les patients paient, avec ou sans espaces ; suisse ou liechtensteinois, 21 caractères (SIX, QR-facture, § 4.2.2) ; un IBAN ordinaire : un QR-IBAN (IID 30000 à 31999) exige une référence QR, que Praxis ne fait pas.
 Chaque cabinet conservé dont l'IBAN est présent vérifie :
     la longueur de (l'IBAN du cabinet en format technique) = 21,
     sinon « Un IBAN suisse compte 21 caractères : CH, puis 19 chiffres et lettres. ».

@@ -245,7 +245,7 @@ int main(int argc, char **argv) {
         const QStringList p = projets_du_depot(QString(GRYM_SOURCE) + "/construction", &trouve);
         VERIFIER(trouve && p.size() >= 3);
         bool cabinet = false;
-        for (const QString &x : p) cabinet |= x.endsWith("/projets/Cabinet");
+        for (const QString &x : p) cabinet |= x.endsWith("/projets/Praxis");
         VERIFIER(cabinet);
         QTemporaryDir ailleurs;
         VERIFIER(projets_du_depot(ailleurs.path(), &trouve).isEmpty() && !trouve);
@@ -4647,14 +4647,14 @@ int main(int argc, char **argv) {
     // Cabinet, « Nouvelle séance » : le soin choisi propose son prix, avec ou sans patient (19 octobre 2026)
     {
         QTemporaryDir d;
-        for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet").entryList(QDir::Files))
-            if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(GRYM_SOURCE "/projets/Cabinet/" + n, d.filePath(n));
+        for (const QString &n : QDir(GRYM_SOURCE "/projets/Praxis").entryList(QDir::Files))
+            if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(GRYM_SOURCE "/projets/Praxis/" + n, d.filePath(n));
         for (const QString &sous : {QString("images"), QString("polices")}) {
             QDir().mkpath(d.filePath(sous));
-            for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet/" + sous).entryList(QDir::Files))
-                QFile::copy(GRYM_SOURCE "/projets/Cabinet/" + sous + "/" + n, d.filePath(sous + "/" + n));
+            for (const QString &n : QDir(GRYM_SOURCE "/projets/Praxis/" + sous).entryList(QDir::Files))
+                QFile::copy(GRYM_SOURCE "/projets/Praxis/" + sous + "/" + n, d.filePath(sous + "/" + n));
         }
-        Execution e(d.filePath("Cabinet.grym"));
+        Execution e(d.filePath("Praxis.grym"));
         e.resize(1400, 1000);
         e.show();
         e.demarrer();
@@ -4682,20 +4682,28 @@ int main(int argc, char **argv) {
         // le premier lancement : choisir le mot de passe (20 octobre 2026)
         patienter([&] { return bouton(QString::fromUtf8("Choisir")) && attend(); });
         VERIFIER(bouton(QString::fromUtf8("Choisir")) != nullptr);
-        for (const char *zone : {"Mot de passe", "Confirmation"}) {   // une zone remonte à la fin de la frappe (§ 22.2)
-            QLineEdit *z = libelle0(QString::fromUtf8(zone));
-            VERIFIER(z != nullptr);
-            if (!z) continue;
-            VERIFIER(z->maximumWidth() < 400);   // « large de 12 caractères » (2.34) : une largeur fixe, étroite
-            z->setText("essai-essai");
-            z->setModified(true);   // comme une frappe : setText seul ne marque pas la zone changée
-            emit z->editingFinished();
-            QElapsedTimer pause;   // l'événement part ; « L'écran attend. » revient quand la machine a fini
-            pause.start();
-            while (pause.elapsed() < 600) QApplication::processEvents(QEventLoop::AllEvents, 20);
-            patienter([&] { return attend(); });
+        {   // comme une personne : la première zone, puis la seconde, puis un seul clic sur « Choisir », la seconde zone
+            // encore modifiée : sa valeur part quand le bouton prend le focus, le clic la suit (21 octobre 2026)
+            QLineEdit *m = libelle0(QString::fromUtf8("Mot de passe")), *c = libelle0(QString::fromUtf8("Confirmation"));
+            VERIFIER(m && c && m->maximumWidth() < 400);
+            if (m && c) {
+                m->setText("essai-essai");
+                m->setModified(true);
+                emit m->editingFinished();
+                QElapsedTimer pause;
+                pause.start();
+                while (pause.elapsed() < 600) QApplication::processEvents(QEventLoop::AllEvents, 20);
+                patienter([&] { return attend(); });
+                c->setFocus();
+                c->setText("essai-essai");
+                c->setModified(true);
+                if (auto *b = bouton(QString::fromUtf8("Choisir"))) {
+                    b->setFocus();                 // le bouton prend le focus : la zone part la première…
+                    emit c->editingFinished();
+                    b->click();                    // … et ce clic, arrivé pendant l'envoi, n'est pas perdu
+                }
+            }
         }
-        if (auto *b = bouton(QString::fromUtf8("Choisir"))) b->click();
         {
             QElapsedTimer pause;   // l'empreinte du mot de passe prend près d'une seconde (PBKDF2, 600 000 tours)
             pause.start();
@@ -4744,14 +4752,14 @@ int main(int argc, char **argv) {
     // la règle, et la quittance de toutes ses séances se fait seule, une fois (20 octobre 2026)
     {
         QTemporaryDir d;
-        for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet").entryList(QDir::Files))
-            if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(GRYM_SOURCE "/projets/Cabinet/" + n, d.filePath(n));
+        for (const QString &n : QDir(GRYM_SOURCE "/projets/Praxis").entryList(QDir::Files))
+            if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(GRYM_SOURCE "/projets/Praxis/" + n, d.filePath(n));
         for (const QString &sous : {QString("images"), QString("polices")}) {
             QDir().mkpath(d.filePath(sous));
-            for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet/" + sous).entryList(QDir::Files))
-                QFile::copy(GRYM_SOURCE "/projets/Cabinet/" + sous + "/" + n, d.filePath(sous + "/" + n));
+            for (const QString &n : QDir(GRYM_SOURCE "/projets/Praxis/" + sous).entryList(QDir::Files))
+                QFile::copy(GRYM_SOURCE "/projets/Praxis/" + sous + "/" + n, d.filePath(sous + "/" + n));
         }
-        QFile f(d.filePath("Cabinet.grym"));
+        QFile f(d.filePath("Praxis.grym"));
         VERIFIER(f.open(QIODevice::ReadOnly));
         QString source = QString::fromUtf8(f.readAll());
         f.close();
@@ -4780,7 +4788,7 @@ int main(int argc, char **argv) {
         VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
         f.write(source.toUtf8());
         f.close();
-        Execution e(d.filePath("Cabinet.grym"));
+        Execution e(d.filePath("Praxis.grym"));
         e.demarrer();
         QElapsedTimer z;
         z.start();
@@ -4803,14 +4811,14 @@ int main(int argc, char **argv) {
     // séance à payer n'a de date d'encaissement ; la base sauvegardée
     {
         QTemporaryDir d;
-        for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet").entryList(QDir::Files))
-            if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(GRYM_SOURCE "/projets/Cabinet/" + n, d.filePath(n));
+        for (const QString &n : QDir(GRYM_SOURCE "/projets/Praxis").entryList(QDir::Files))
+            if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(GRYM_SOURCE "/projets/Praxis/" + n, d.filePath(n));
         for (const QString &sous : {QString("images"), QString("polices")}) {
             QDir().mkpath(d.filePath(sous));
-            for (const QString &n : QDir(GRYM_SOURCE "/projets/Cabinet/" + sous).entryList(QDir::Files))
-                QFile::copy(GRYM_SOURCE "/projets/Cabinet/" + sous + "/" + n, d.filePath(sous + "/" + n));
+            for (const QString &n : QDir(GRYM_SOURCE "/projets/Praxis/" + sous).entryList(QDir::Files))
+                QFile::copy(GRYM_SOURCE "/projets/Praxis/" + sous + "/" + n, d.filePath(sous + "/" + n));
         }
-        QFile f(d.filePath("Cabinet.grym"));
+        QFile f(d.filePath("Praxis.grym"));
         VERIFIER(f.open(QIODevice::ReadOnly));
         QString source = QString::fromUtf8(f.readAll());
         f.close();
@@ -4866,6 +4874,10 @@ Pour chaque séance conservée dont le patient = l'anne et le paiement = « à p
     Attester la séance.
 Pour chaque facture conservée dont le patient = l'anne :
     Afficher « essai G » puis le numéro de la facture.
+La relance en cours devient la facture conservée dont le patient = la claire.
+Ouvrir le document de rappel.
+Afficher « essai J rappel ».
+Afficher le numéro de la relance en cours.
 Afficher « essai H » puis le nombre de factures supprimées puis le nombre de séances conservées dont la facture est absente et le patient = l'anne et le statut = « faite » et le paiement = « à payer ».
 Afficher « essai F » puis le nombre de séances conservées dont l'encaissement est présent et le paiement = « à payer ».
 Sauvegarder la base dans « essai.grymd ».
@@ -4882,7 +4894,7 @@ Afficher « fin des essais ».
         VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
         f.write(source.toUtf8());
         f.close();
-        Execution e(d.filePath("Cabinet.grym"));
+        Execution e(d.filePath("Praxis.grym"));
         e.demarrer();
         QElapsedTimer z;
         z.start();
@@ -4901,6 +4913,9 @@ Afficher « fin des essais ».
         VERIFIER(t.contains(QString::fromUtf8("essai F 0")));
         VERIFIER(t.contains(QString::fromUtf8("-0005")) && t.contains(QString::fromUtf8("essai G F-")));   // F-…-0004 annulée, jamais reprise
         VERIFIER(t.contains(QString::fromUtf8("essai H 1 0")));
+        // le rappel d'une facture (2.36) : son document se fait, et sa section paiement passe la vérification du QR suisse
+        // (un collage mal lu y aurait collé le numéro à la ligne « EPD », 2.35)
+        VERIFIER(t.contains(QString::fromUtf8("essai J rappel")));
         VERIFIER(t.contains("fin des essais"));
         VERIFIER(t.contains(QString::fromUtf8("essai I sans échec")));
         {   // la sauvegarde automatique : une copie chiffrée du jour dans le dossier choisi, créé ; la seconde le même jour, rien
