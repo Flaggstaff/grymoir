@@ -1,6 +1,5 @@
 Remarque : Praxis, le programme principal.
 Utiliser « actions ».
-Utiliser « essais ».
 
 Remarque : le mot de passe de la séance de travail, en mémoire seulement, jamais rangé : il chiffre les sauvegardes.
 La clé de session vaut absent.
@@ -91,9 +90,6 @@ Pour archiver les données :
                 Copier la base dans le dossier de sauvegarde du c.
             En cas d'échec :
                 L'échec de sauvegarde devient le motif de l'échec.
-
-Remarque : les données d'essai (essais.grym), une seule fois ; à retirer à la livraison avec ce fichier.
-Si le nombre de patients conservés est nul, remplir les essais.
 
 Remarque : le dernier rappel d'une séance ne sert plus depuis les rappels par facture : ses valeurs s'effacent, une fois ; vide
 Remarque : partout, le champ pourra quitter la séance (grammaire 2.36 : un champ sans valeur se retire).

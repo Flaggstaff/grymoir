@@ -148,6 +148,33 @@ static QString dessin(const QString &ligne, bool compacte = false) {
     return r;
 }
 
+
+// Praxis et ses données d'essai (21 octobre 2026) : l'application livrée part vide ; l'essai en fait une copie, où les
+// données d'essai (tests/praxis/essais.grym) sont branchées avant le dernier rappel, comme dans test_serveur.c.
+static bool copier_praxis_essai(const QString &vers) {
+    const QString source = QString(GRYM_SOURCE) + "/projets/Praxis";
+    for (const QString &n : QDir(source).entryList(QDir::Files))
+        if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(source + "/" + n, vers + "/" + n);
+    for (const QString &sous : {QString("images"), QString("polices")}) {
+        QDir().mkpath(vers + "/" + sous);
+        for (const QString &n : QDir(source + "/" + sous).entryList(QDir::Files))
+            QFile::copy(source + "/" + sous + "/" + n, vers + "/" + sous + "/" + n);
+    }
+    if (!QFile::copy(QString(GRYM_SOURCE) + "/tests/praxis/essais.grym", vers + "/essais.grym")) return false;
+    QFile f(vers + "/Praxis.grym");
+    if (!f.open(QIODevice::ReadOnly)) return false;
+    QString s = QString::fromUtf8(f.readAll());
+    f.close();
+    const QString u = QString::fromUtf8("Utiliser « actions ».\n");
+    const int i = s.indexOf(QString::fromUtf8("Remarque : le dernier rappel d'une séance"));
+    if (!s.contains(u) || i < 0) return false;
+    s.insert(i, QString::fromUtf8("Si le nombre de patients conservés est nul, remplir les essais.\n\n"));
+    s.replace(u, u + QString::fromUtf8("Utiliser « essais ».\n"));
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) return false;
+    f.write(s.toUtf8());
+    return true;
+}
+
 int main(int argc, char **argv) {
     // rien ne doit attendre un humain : ni la demande du micro à macOS, ni la visionneuse d'un document
     qputenv("GRYMOIR_ESSAIS", "1");
@@ -4647,13 +4674,7 @@ int main(int argc, char **argv) {
     // Cabinet, « Nouvelle séance » : le soin choisi propose son prix, avec ou sans patient (19 octobre 2026)
     {
         QTemporaryDir d;
-        for (const QString &n : QDir(GRYM_SOURCE "/projets/Praxis").entryList(QDir::Files))
-            if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(GRYM_SOURCE "/projets/Praxis/" + n, d.filePath(n));
-        for (const QString &sous : {QString("images"), QString("polices")}) {
-            QDir().mkpath(d.filePath(sous));
-            for (const QString &n : QDir(GRYM_SOURCE "/projets/Praxis/" + sous).entryList(QDir::Files))
-                QFile::copy(GRYM_SOURCE "/projets/Praxis/" + sous + "/" + n, d.filePath(sous + "/" + n));
-        }
+        VERIFIER(copier_praxis_essai(d.path()));
         Execution e(d.filePath("Praxis.grym"));
         e.resize(1400, 1000);
         e.show();
@@ -4697,11 +4718,9 @@ int main(int argc, char **argv) {
                 c->setFocus();
                 c->setText("essai-essai");
                 c->setModified(true);
-                if (auto *b = bouton(QString::fromUtf8("Choisir"))) {
-                    b->setFocus();                 // le bouton prend le focus : la zone part la première…
-                    emit c->editingFinished();
-                    b->click();                    // … et ce clic, arrivé pendant l'envoi, n'est pas perdu
-                }
+                // comme sous macOS : le bouton ne prend pas le focus, la zone n'envoie rien d'elle-même ; le clic
+                // envoie d'abord sa valeur, puis lui-même : un seul clic suffit, et la zone n'est pas vue vide
+                if (auto *b = bouton(QString::fromUtf8("Choisir"))) b->click();
             }
         }
         {
@@ -4752,13 +4771,7 @@ int main(int argc, char **argv) {
     // la règle, et la quittance de toutes ses séances se fait seule, une fois (20 octobre 2026)
     {
         QTemporaryDir d;
-        for (const QString &n : QDir(GRYM_SOURCE "/projets/Praxis").entryList(QDir::Files))
-            if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(GRYM_SOURCE "/projets/Praxis/" + n, d.filePath(n));
-        for (const QString &sous : {QString("images"), QString("polices")}) {
-            QDir().mkpath(d.filePath(sous));
-            for (const QString &n : QDir(GRYM_SOURCE "/projets/Praxis/" + sous).entryList(QDir::Files))
-                QFile::copy(GRYM_SOURCE "/projets/Praxis/" + sous + "/" + n, d.filePath(sous + "/" + n));
-        }
+        VERIFIER(copier_praxis_essai(d.path()));
         QFile f(d.filePath("Praxis.grym"));
         VERIFIER(f.open(QIODevice::ReadOnly));
         QString source = QString::fromUtf8(f.readAll());
@@ -4811,13 +4824,7 @@ int main(int argc, char **argv) {
     // séance à payer n'a de date d'encaissement ; la base sauvegardée
     {
         QTemporaryDir d;
-        for (const QString &n : QDir(GRYM_SOURCE "/projets/Praxis").entryList(QDir::Files))
-            if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(GRYM_SOURCE "/projets/Praxis/" + n, d.filePath(n));
-        for (const QString &sous : {QString("images"), QString("polices")}) {
-            QDir().mkpath(d.filePath(sous));
-            for (const QString &n : QDir(GRYM_SOURCE "/projets/Praxis/" + sous).entryList(QDir::Files))
-                QFile::copy(GRYM_SOURCE "/projets/Praxis/" + sous + "/" + n, d.filePath(sous + "/" + n));
-        }
+        VERIFIER(copier_praxis_essai(d.path()));
         QFile f(d.filePath("Praxis.grym"));
         VERIFIER(f.open(QIODevice::ReadOnly));
         QString source = QString::fromUtf8(f.readAll());

@@ -1,5 +1,6 @@
 Remarque : Praxis : des données d'essai, toutes inventées, pour voir l'application remplie.
-Remarque : à retirer à la livraison : ce fichier, et les deux lignes qui le citent dans Praxis.grym.
+Remarque : hors de l'application depuis le 21 octobre 2026 : les essais (test_serveur, test_atelier) copient Praxis, y ajoutent ce
+Remarque : fichier, « Utiliser « essais ». » et « Si le nombre de patients conservés est nul, remplir les essais. ».
 Utiliser « actions ».
 
 Pour inscrire un nom et une rue et un numéro et un numéro postal et une localité et un téléphone :
