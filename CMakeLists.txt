@@ -31,7 +31,7 @@ FetchContent_MakeAvailable(whisper)
 
 # SQLite embarqué, avec les réglages du Makefile (vendor/sqlite, voir PROVENANCE.md).
 add_library(grym_sqlite STATIC vendor/sqlite/sqlite3.c)
-target_include_directories(grym_sqlite PUBLIC vendor/sqlite)
+target_include_directories(grym_sqlite SYSTEM PUBLIC vendor/sqlite)
 target_compile_definitions(grym_sqlite PRIVATE SQLITE_THREADSAFE=0 SQLITE_OMIT_LOAD_EXTENSION SQLITE_DQS=0
     SQLITE_DEFAULT_FOREIGN_KEYS=1 SQLITE_OMIT_DEPRECATED SQLITE_DEFAULT_MEMSTATUS=0)
 if(UNIX AND NOT APPLE)

@@ -1,13 +1,13 @@
 CC     ?= cc
 CFLAGS ?= -std=c99 -Wall -Wextra -pedantic -O2
-CPPFLAGS += -Ivendor/sqlite
+CPPFLAGS += -isystem vendor/sqlite   # en-tête tiers : ses avertissements ne sont pas les nôtres
 
 # Sous Windows, chaque exécutable porte le manifeste UTF-8 (outils/windows) : les essais ouvrent leurs fichiers
 # dans les mêmes conditions que grym.exe, noms accentués compris (« données.grym »).
 LEXEUR    = src/lexeur.c src/date.c src/texte.c src/teinte.c $(RESSOURCES)
 ANALYSEUR = src/chemins.c src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c $(LEXEUR)
 EXECUTION = src/qr.c vendor/qrcodegen/qrcodegen.c src/coffre.c vendor/monocypher/monocypher.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c $(ANALYSEUR) $(SQLITE_O)
-# SQLite embarqué (vendor/sqlite, voir PROVENANCE.md) : compilé une fois, sans les avertissements
+# SQLite embarqué, avec SQLite3MC (vendor/sqlite, voir PROVENANCE.md) : compilé une fois, sans les avertissements
 # de GrymoiR (ce code n'est pas le nôtre), avec les réglages de la charte.
 SQLITE_FLAGS = -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DQS=0 \
                -DSQLITE_DEFAULT_FOREIGN_KEYS=1 -DSQLITE_OMIT_DEPRECATED -DSQLITE_DEFAULT_MEMSTATUS=0
@@ -59,7 +59,7 @@ test_compact: tests/test_compact.c $(EXECUTION) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_compact.c $(EXECUTION)
 
 test_base: tests/test_base.c $(SQLITE_O)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -Ivendor/sqlite -o $@ tests/test_base.c $(SQLITE_O)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ tests/test_base.c $(SQLITE_O)
 
 test_lsp: tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR) $(ENTETES) src/lsp.h src/json.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR)

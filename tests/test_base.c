@@ -49,6 +49,37 @@ int main(void) {
       "identifiant de la version officielle");
     V(sqlite3_threadsafe() == 0, "compilé sans fils d'exécution (SQLITE_THREADSAFE=0)");
     V(sqlite3_compileoption_used("OMIT_LOAD_EXTENSION"), "chargement d'extensions retiré");
+    V(strcmp(SQLITE3MC_VERSION_STRING, "SQLite3 Multiple Ciphers 2.5.1") == 0, "SQLite3 Multiple Ciphers 2.5.1 (21 octobre 2026)");
+
+    {   /* le chiffrement au repos (SQLite3MC) : une base en clair se chiffre sur place ; sans la clé, ou avec une
+           autre, elle ne s'ouvre pas ; avec la bonne, tout est là ; le texte n'est plus lisible dans le fichier */
+        const char *f = "_essai_chiffree.db";
+        remove(f);
+        sqlite3 *c = NULL;
+        sqlite3_open(f, &c);
+        V(executer(c, "CREATE TABLE note (texte TEXT); INSERT INTO note VALUES ('secret-anamnese');") == SQLITE_OK, "base en clair");
+        V(sqlite3_rekey(c, "essai-essai", -1) == SQLITE_OK, "chiffrée sur place (rekey)");
+        sqlite3_close(c);
+        sqlite3_open(f, &c);
+        V(executer(c, "SELECT count(*) FROM note;") == SQLITE_NOTADB, "sans clé : pas une base");
+        sqlite3_close(c);
+        sqlite3_open(f, &c);
+        sqlite3_key(c, "autre", -1);
+        V(executer(c, "SELECT count(*) FROM note;") == SQLITE_NOTADB, "une autre clé : pas une base");
+        sqlite3_close(c);
+        sqlite3_open(f, &c);
+        sqlite3_key(c, "essai-essai", -1);
+        V(egal(lire(c, "SELECT texte FROM note"), "secret-anamnese"), "la bonne clé : le contenu");
+        sqlite3_close(c);
+        FILE *h = fopen(f, "rb");
+        static char tout[65536];
+        const size_t n = h ? fread(tout, 1, sizeof tout, h) : 0;
+        if (h) fclose(h);
+        int lisible = 0;
+        for (size_t i = 0; i + 15 <= n; i++) if (memcmp(tout + i, "secret-anamnese", 15) == 0) lisible = 1;
+        V(n > 0 && !lisible, "le texte n'est plus lisible dans le fichier");
+        remove(f);
+    }
 
     sqlite3 *b = NULL;
     V(sqlite3_open(":memory:", &b) == SQLITE_OK, "ouverture d'une base en mémoire");

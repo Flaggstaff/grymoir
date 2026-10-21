@@ -1,6 +1,37 @@
-# SQLite embarqué
+# SQLite embarqué, avec son chiffrement
 
-GrymoiR embarque SQLite (charte, art. 7 : « SQLite embarqué, invisible pour le développeur »).
+GrymoiR embarque SQLite (charte, art. 7 : « SQLite embarqué, invisible pour le développeur »). Depuis le 21 octobre 2026,
+c'est SQLite **avec** l'extension de chiffrement SQLite3 Multiple Ciphers (SQLite3MC), pour chiffrer les bases au repos
+(données de santé de Praxis). Le SQLite qu'elle contient est la même version 3.53.4, au même identifiant officiel.
+
+| | |
+|---|---|
+| Extension | SQLite3 Multiple Ciphers 2.5.1, d'Ulrich Telle, publiée le 27 août 2026 (https://github.com/utelle/SQLite3MultipleCiphers/releases/tag/v2.5.1) |
+| Archive | `sqlite3mc-2.5.1-sqlite-3.53.4-amalgamation.zip`, SHA-256 `4125f8ff275ea953dabb3289331b20a0e76d4fc060f57148f4a5df3bf3b0d5e0` |
+| Fichiers | `sqlite3.c` = `sqlite3mc_amalgamation.c`, `sqlite3.h` = `sqlite3mc_amalgamation.h`, renommés seulement (octet pour octet) |
+| Licences | SQLite : domaine public (`LICENSE.md`) ; SQLite3MC : MIT (`LICENSE-SQLite3MC.txt`) ; l'amalgamation porte aussi du code CC0 et Unlicense (Argon2 : CC0 ou Apache 2.0), selon son auteur |
+
+## Obtention et vérification, le 21 octobre 2026
+
+1. Téléchargement de l'archive et du fichier `sqlite3mc-2.5.1-SHA256SUMS` de la publication : l'empreinte de l'archive y figure, identique.
+2. La version 2.6.1 (SQLite 3.54.0), publiée le 12 octobre 2026, est écartée : moins de quinze jours, et un autre SQLite.
+3. `tests/test_base.c` vérifie la version de SQLite (3.53.4), son identifiant officiel (`bf7c7f30…`), la version de SQLite3MC, et un aller-retour de chiffrement.
+
+**La chaîne de confiance change.** Jusqu'ici, elle remontait au dépôt Fossil officiel de SQLite (section suivante). Désormais
+elle s'arrête à la publication de l'auteur de SQLite3MC : l'amalgamation est la sienne, SQLite compris. Le fichier des
+empreintes est signé par Sigstore ; pour le vérifier (cosign : `brew install cosign`), dans le dossier des trois fichiers
+`sqlite3mc-2.5.1-SHA256SUMS`, `.pem` et `.sig` de la publication :
+
+```
+cosign verify-blob --certificate sqlite3mc-2.5.1-SHA256SUMS.pem --signature sqlite3mc-2.5.1-SHA256SUMS.sig \
+  --certificate-identity-regexp '^https://github.com/utelle/SQLite3MultipleCiphers/.*' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com sqlite3mc-2.5.1-SHA256SUMS
+```
+
+Signature vérifiée par : *(à remplir par Flaggstaff)*.
+
+## Avant le 21 octobre 2026 : SQLite seul
+
 
 | | |
 |---|---|
