@@ -1535,13 +1535,13 @@ int main(void) {
         char jour[11], ev_frais[200];
         const time_t maintenant = time(NULL);
         strftime(jour, sizeof jour, "%d.%m.%Y", localtime(&maintenant));
-        snprintf(ev_frais, sizeof ev_frais, "q=5&z1=%s&z2=80&z3=Huiles+de+massage&z4=Mat%%C3%%A9riel&z5=carte&clic=10", jour);
+        snprintf(ev_frais, sizeof ev_frais, "q=5&z1=%s&z2=80&z3=Huiles+de+massage&z4=Mat%%C3%%A9riel&z5=carte&clic=Enregistrer", jour);
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), get("/"), evenement("q=2&clic=6"), get("/"), evenement("q=3&clic=7"), evenement("q=4&clic=2"), get("/"),
                  evenement(ev_frais), get("/"),
                  evenement("q=6&clic=3"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet8.grymd", &sc);
-        CONTIENT(sc.reponses[1], "Comptabilité</span></span><span class=\"description\">Encaisser, quittances, frais</span>");
+        CONTIENT(sc.reponses[1], "Comptabilité</span></span><span class=\"description\">Encaisser, factures, rappels, frais</span>");
         CONTIENT(sc.reponses[3], "<p class=\"texte\">Frais : CHF 0,00</p>");
         CONTIENT(sc.reponses[6], "Libellé");
         CONTIENT(sc.reponses[8], "<td>Huiles de massage</td>");

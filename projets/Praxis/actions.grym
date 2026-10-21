@@ -173,6 +173,12 @@ Pour défaire un reçu :
         La quittance de la séance devient absente.
     Supprimer le reçu.
 
+Remarque : une séance facturée qui ne se doit plus, annulée, prévue, ou absente quand le cabinet ne facture pas les absences,
+Remarque : annule sa facture, sinon jamais réglée ; les autres séances de la facture se facturent à nouveau, sous un nouveau numéro.
+Pour dégager une séance et un statut :
+    Si la facture de la séance est présente :
+        Si statut = « annulée » ou statut = « prévue » ou statut = l'exclu du cabinet conservé, annuler la facture de la séance.
+
 Remarque : encaisser une séance : son moyen, la date du jour ; facturée, sa facture suit ; la dernière encaissée la règle.
 Pour encaisser une séance et un moyen :
     Si le statut de la séance = « annulée », refuser « Une séance annulée ne s'encaisse pas. ».

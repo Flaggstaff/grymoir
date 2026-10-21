@@ -4818,6 +4818,49 @@ int main(int argc, char **argv) {
         e.close();
     }
 
+    // Praxis (21 octobre 2026) : une séance facturée qui passe annulée, ou absente quand le cabinet ne facture pas les
+    // absences, annule sa facture (sinon jamais réglée) ; les autres séances se facturent à nouveau ; une séance
+    // facturée qui reste faite garde la sienne
+    {
+        QTemporaryDir d;
+        VERIFIER(copier_praxis_essai(d.path()));
+        QFile f(d.filePath("Praxis.grym"));
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        QString source = QString::fromUtf8(f.readAll());
+        f.close();
+        const QString essai = QString::fromUtf8(
+            "Le marc vaut le patient conservé dont le nom = « Marc Dupraz ».\n"
+            "Pour chaque séance conservée dont le patient = le marc et le paiement = « à payer » et le statut = « faite » :\n"
+            "    Si la facture de la séance est absente, facturer la séance.\n"
+            "Afficher « essai facturées » puis le nombre de séances conservées dont le patient = le marc et la facture est présente.\n"
+            "Pour chaque séance conservée dont le patient = le marc et la facture est présente :\n"
+            "    Dégager la séance et « faite ».\n"
+            "Afficher « essai restée » puis le nombre de factures conservées.\n"
+            "Pour chaque séance conservée dont le patient = le marc et la facture est présente :\n"
+            "    Dégager la séance et « absence ».\n"
+            "    Sortir de la boucle.\n"
+            "Afficher « essai absence » puis le nombre de factures conservées puis le nombre de factures supprimées puis le nombre de séances conservées dont la facture est présente.\n"
+            "Afficher « fin des essais ».\n");
+        const int k = source.indexOf(QString::fromUtf8("Remarque : d'abord le mot de passe"));
+        VERIFIER(k > 0);
+        source.insert(k, essai);
+        VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(source.toUtf8());
+        f.close();
+        Execution e(d.filePath("Praxis.grym"));
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 40000 && !fil().contains("fin des essais")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        const QString t = fil();
+        VERIFIER(t.contains(QString::fromUtf8("essai facturées 2")));
+        VERIFIER(t.contains(QString::fromUtf8("essai restée 1")));
+        VERIFIER(t.contains(QString::fromUtf8("essai absence 0 1 0")));
+        if (!t.contains("fin des essais")) std::printf("%s\n", t.right(800).toUtf8().constData());
+        e.close();
+    }
+
     // Cabinet (20 octobre 2026) : la dernière séance d'une facture offerte n'empêche pas la quittance des autres ; une
     // quittance faite à part n'empêche pas celle du solde ; une séance prévue, une absence non facturée refusées, puis
     // facturée une fois le réglage allumé ; une facture annulée va dans la corbeille, son numéro jamais repris ; aucune

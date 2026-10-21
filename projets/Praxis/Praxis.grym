@@ -65,10 +65,6 @@ Si le nombre de rubriques conservées est nul :
 Remarque : le cabinet, créé une seule fois à son nom ; Nicolas complète sa fiche dans la configuration.
 Si le nombre de cabinets conservés est nul, fonder le cabinet.
 
-Remarque : une base d'avant le 20 octobre 2026 : le logo et la signature des fichiers de l'application, une fois ; ensuite, la configuration.
-Si le logo du cabinet conservé est absent, le logo du cabinet conservé devient le fichier « images/coeur-encre.png ».
-Si la signature du cabinet conservé est absente, la signature du cabinet conservé devient le fichier « images/signature.png ».
-
 Remarque : les couleurs et la police du site de Nicolas Seydoux, à l'encre ; le logo et la signature, ceux de la configuration
 Remarque : du cabinet (le cœur et le nom dessiné au départ), repris à chaque lancement ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
 Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf », le logo (le logo du cabinet conservé) et la signature (la signature du cabinet conservé).
@@ -109,7 +105,7 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     le texte « Le cabinet », en petites capitales,
     un bouton « Patients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png »,
     un bouton « Séances prévues », en tuile, avec la description « Faite, annulée, absence »,
-    un bouton « Comptabilité », en tuile, avec la description « Encaisser, quittances, frais »,
+    un bouton « Comptabilité », en tuile, avec la description « Encaisser, factures, rappels, frais »,
     un bouton « Configuration », en tuile, avec la description « Le cabinet, les soins, les rubriques, les sauvegardes »,
     le texte l'alerte de sauvegarde du cabinet conservé et d'aujourd'hui et de l'échec de sauvegarde.
 
@@ -310,9 +306,11 @@ L'écran du frais, « Frais », montre :
         un moyen (« espèces », « Twint », « virement » ou « carte »), à 0 de la gauche et 216 du haut, large de 520,
         un justificatif (fichier), facultatif, avec l'indication « Un scan, une photo ou un PDF », à 552 de la gauche et 0 du haut, large de 520,
         un bouton « Voir le justificatif », à 552 de la gauche et 96 du haut, actif si le justificatif de l'écran est présent,
+        un bouton « Retirer le justificatif », à 552 de la gauche et 144 du haut, actif si le justificatif de l'écran est présent,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer ».
+        un bouton « Fermer »,
+        un bouton « Supprimer ».
 
 Remarque : la quittance, sur papier : le cabinet et ses numéros, le patient, les séances et leur paiement, le montant reçu ; ce qu'une
 Remarque : assurance complémentaire demande pour rembourser : le thérapeute, la méthode, la date, la durée, le prix.
@@ -406,7 +404,9 @@ L'écran du cabinet, « Le cabinet », montre :
             un prénom (texte), facultatif, avec l'indication « Pour l'accueil : Bonjour Nicolas »,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer ».
+        un bouton « Fermer »,
+        un bouton « Retirer le logo »,
+        un bouton « Retirer la signature ».
 
 Remarque : les notes confidentielles d'un patient : jamais dans sa fiche ni sa page, qu'on ouvre devant lui ; datées, dictées ou tapées.
 L'écran des notes, « Notes confidentielles », montre :
@@ -714,6 +714,16 @@ Quand on clique sur « Voir le justificatif » dans l'écran du frais :
 Quand on clique sur « Fermer » dans l'écran du frais :
     Fermer l'écran.
 
+Remarque : le justificatif retiré quitte le frais tout de suite (il reste dans les sauvegardes d'avant).
+Quand on clique sur « Retirer le justificatif » dans l'écran du frais :
+    Si le frais ouvert est présent, le justificatif du frais ouvert devient absent.
+    Le justificatif de l'écran devient absent.
+
+Remarque : supprimer depuis la page du frais, comme pour un patient ou une séance : il va dans la corbeille.
+Quand on clique sur « Supprimer » dans l'écran du frais :
+    Si le frais ouvert est présent, supprimer le frais ouvert.
+    Fermer l'écran.
+
 Quand on clique sur « Configuration » dans l'écran d'accueil :
     Ouvrir l'écran de configuration.
 
@@ -774,6 +784,7 @@ Quand on clique sur « Restaurer » dans l'écran des sauvegardes :
     Si l'ancien mot de passe de l'écran est présent, le secret devient l'ancien mot de passe de l'écran.
     Restaurer la base depuis la sauvegarde de l'écran avec le mot de passe le secret.
     L'avis des sauvegardes devient « Restauration prête : ferme puis rouvre l'application. Ce que tu saisis d'ici là sera perdu. ».
+    Si l'ancien mot de passe de l'écran est présent, l'avis des sauvegardes devient l'avis des sauvegardes suivi de " Le mot de passe sera alors celui de cette copie.".
 
 Remarque : changer le mot de passe demande l'actuel ; les copies déjà faites gardent l'ancien.
 Quand on clique sur « Changer le mot de passe » dans l'écran des sauvegardes :
@@ -849,7 +860,7 @@ Quand on clique sur « Supprimer » dans l'écran de la rubrique :
     Supprimer la rubrique ouverte.
     Fermer l'écran.
 
-Remarque : la fiche du patient montre ses séances, sa ligne « Total », et le bouton d'une nouvelle séance.
+Remarque : la page du patient montre ses données, ses séances, et le bouton d'une nouvelle séance.
 Quand on choisit un patient dans l'écran des patients :
     La personne ouverte devient le patient choisi de l'écran.
     Ouvrir l'écran du patient.
@@ -1141,6 +1152,7 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
         Si le patient de l'écran ≠ le patient du s ou le soin de l'écran ≠ le soin du s ou la date de l'écran ≠ la date du s ou le prix de l'écran ≠ le prix du s :
             Si la quittance du s est présente, défaire la quittance du s.
             Si la facture du s est présente, annuler la facture du s.
+    Dégager le s et le statut de l'écran.
     Si la quittance du s est présente et le nouveau paiement ≠ le paiement du s, défaire la quittance du s.
     Le patient du s devient le patient de l'écran.
     Le soin du s devient le soin de l'écran.
@@ -1163,6 +1175,7 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
 Remarque : la séance enregistrée telle qu'à l'écran, puis sa pièce : à payer, sa facture ; payée, sa quittance.
 Remarque : tout se modifie ; une séance qui a sa pièce et change de patient, de soin, de date ou de prix (ou de paiement, pour une
 Remarque : quittance) la voit annulée : dans la corbeille, son exemplaire gardé ; « Facture ou quittance » en refait une juste.
+Remarque : une séance facturée qui ne se doit plus (annulée, prévue, absence non facturée) libère sa facture : « dégager ».
 Quand on clique sur « Facture ou quittance » dans l'écran de la séance :
     Faire comme un clic sur « Enregistrer ».
     Attester la séance ouverte.
@@ -1234,6 +1247,15 @@ Quand on clique sur « Enregistrer » dans l'écran du cabinet :
 
 Quand on clique sur « Fermer » dans l'écran du cabinet :
     Fermer l'écran.
+
+Remarque : sans logo ni signature, les écrans et les pièces n'en montrent pas, dès le lancement suivant.
+Quand on clique sur « Retirer le logo » dans l'écran du cabinet :
+    Le logo du cabinet conservé devient absent.
+    Le logo de l'écran devient absent.
+
+Quand on clique sur « Retirer la signature » dans l'écran du cabinet :
+    La signature du cabinet conservé devient absente.
+    La signature de l'écran devient absente.
 
 Quand on clique sur « Fermer » dans l'écran des soins :
     Fermer l'écran.
