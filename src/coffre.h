@@ -27,4 +27,35 @@ unsigned char *coffre_ouvrir(const unsigned char *coffre, size_t n, const char *
 /* La clé d'un mot de passe, exposée pour les essais. 0 si la mémoire manque. */
 int coffre_cle(const char *mdp, const unsigned char sel[16], unsigned long blocs, unsigned long passes, unsigned char cle[32]);
 
+/* Les clés d'une base chiffrée (grammaire, § 16.18) : la base est chiffrée par une clé aléatoire de 32 octets, que
+ * personne ne tape ; elle est rangée, enveloppée, dans le fichier « base.grymd.clés », à côté de la base.
+ *
+ * Le fichier : « GRYMCLES1\n » (10 octets), le nombre d'enveloppes (1 octet), puis chaque enveloppe. Une enveloppe de
+ * mot de passe (sorte 1) : la sorte (1), les blocs et les passes d'Argon2id (2 × 4, petit-boutistes), le sel (16), le
+ * nonce (24), le code d'authentification (16), la clé enveloppée (32), soit 97 octets ; XChaCha20-Poly1305 sous la clé
+ * tirée du mot de passe, avec pour données associées la magie et l'en-tête de l'enveloppe. Une enveloppe de secours
+ * (sorte 2, la clé publique du développeur) viendra à l'étape 3 ; une sorte inconnue se garde telle quelle. */
+#define CLES_ENVELOPPE_MDP 97
+
+/* Une clé tirée au hasard, et le fichier des clés qui l'enveloppe sous `mdp` ; 0 et *erreur sinon. */
+int cles_creer(const char *mdp, unsigned char cle[32], unsigned char **cles, size_t *n, char **erreur);
+
+/* La clé, sortie du fichier des clés par `mdp` ; 0 et *erreur sinon (« Mot de passe faux. »). */
+int cles_ouvrir(const unsigned char *cles, size_t n, const char *mdp, unsigned char cle[32], char **erreur);
+
+/* Le même fichier, l'enveloppe du mot de passe refaite sous `nouveau` (la clé ne change pas) ; NULL et *erreur si
+ * `ancien` n'ouvre pas les clés. */
+unsigned char *cles_changer(const unsigned char *cles, size_t n, const char *ancien, const char *nouveau, size_t *taille,
+                            char **erreur);
+
+/* Le coffre d'une base chiffrée (format 2) : « GRYMCOFFRE2\n » (12), la longueur du fichier des clés (4), le fichier
+ * des clés, le nonce (24), le code d'authentification (16), la copie claire chiffrée sous la clé de la base ; tout ce
+ * qui précède le code est authentifié avec lui. Il s'ouvre par toute enveloppe des clés qu'il emporte. */
+int coffre2_est(const unsigned char *o, size_t n);
+unsigned char *coffre2_fermer(const unsigned char *clair, size_t n, const unsigned char *cles, size_t ncles,
+                              const unsigned char cle[32], size_t *taille, char **erreur);
+/* Rend la copie claire (à libérer), et, si demandés, la clé et une copie du fichier des clés (à libérer). */
+unsigned char *coffre2_ouvrir(const unsigned char *o, size_t n, const char *mdp, size_t *taille, unsigned char cle[32],
+                              unsigned char **cles, size_t *ncles, char **erreur);
+
 #endif

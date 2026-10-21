@@ -1285,6 +1285,14 @@ static void phrase(Compilation *c, const Noeud *ph) {
         if (ph->forme) expression(c, ph->enfants[1]);
         emettre(c, I_RESTAURER, ph->forme, ph->ligne, ph->colonne);
         return;
+    case P_BASE_CHIFFREE:   /* « La base est chiffrée. » (2.37) : une marque du module, lue avant d'ouvrir la base */
+        c->module->base_chiffree = 1;
+        return;
+    case P_CHANGER_MDP:     /* « Changer le mot de passe de la base pour n, l'ancien étant a. » (2.37) */
+        expression(c, ph->enfants[1]);
+        expression(c, ph->enfants[0]);
+        emettre(c, I_CHANGER_MDP_BASE, 0, ph->ligne, ph->colonne);
+        return;
     case P_ENREGISTRER:
         expression(c, ph->enfants[0]);
         expression(c, ph->enfants[1]);

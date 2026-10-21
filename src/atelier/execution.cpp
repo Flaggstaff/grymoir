@@ -13,6 +13,9 @@
 #  endif
 #endif
 #include <QMessageBox>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QVBoxLayout>
 #include "son.h"
 
 #include <QApplication>
@@ -278,6 +281,52 @@ static char *iface_transcrire(void *, const unsigned char *octets, size_t taille
     return grym_dupliquer(texte.toUtf8().constData());
 }
 
+// « La base est chiffrée. » (2.37) : le mot de passe, demandé dans une fenêtre du fil de l'interface, qui attend ; la
+// première fois, choisi puis confirmé, au moins huit caractères. Rien n'est gardé ici : la machine le garde en mémoire.
+static QString demande_mot_de_passe(bool nouveau) {
+    QDialog d;
+    d.setWindowTitle(nouveau ? QString("Choisir le mot de passe de la base") : QString("Mot de passe de la base"));
+    auto *l = new QVBoxLayout(&d);
+    auto *texte = new QLabel(nouveau ? QString("Les données de cette application sont chiffrées. Choisis leur mot de passe "
+                                               "et note-le en lieu sûr : sans lui, rien ne les ouvrira.")
+                                     : QString("Les données de cette application sont chiffrées : donne leur mot de passe."));
+    texte->setWordWrap(true);
+    l->addWidget(texte);
+    auto *a = new QLineEdit, *b = new QLineEdit;
+    a->setEchoMode(QLineEdit::Password);
+    b->setEchoMode(QLineEdit::Password);
+    a->setAccessibleName("Mot de passe");
+    b->setAccessibleName("Confirmation");
+    auto *formulaire = new QFormLayout;
+    formulaire->addRow("Mot de passe", a);
+    if (nouveau) formulaire->addRow("Confirmation", b);
+    else b->hide();
+    l->addLayout(formulaire);
+    auto *motif = new QLabel;
+    motif->setStyleSheet("color: #B3261E;");
+    l->addWidget(motif);
+    auto *boutons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    boutons->button(QDialogButtonBox::Ok)->setText(nouveau ? "Choisir" : "Ouvrir");
+    boutons->button(QDialogButtonBox::Cancel)->setText("Renoncer");
+    l->addWidget(boutons);
+    QObject::connect(boutons, &QDialogButtonBox::rejected, &d, &QDialog::reject);
+    QObject::connect(boutons, &QDialogButtonBox::accepted, &d, [&] {
+        if (a->text().isEmpty()) { motif->setText("Donne le mot de passe."); return; }
+        if (nouveau && a->text().size() < 8) { motif->setText("Au moins huit caractères."); return; }
+        if (nouveau && a->text() != b->text()) { motif->setText("Les deux saisies diffèrent."); return; }
+        d.accept();
+    });
+    return d.exec() == QDialog::Accepted ? a->text() : QString();
+}
+
+char *atelier_demander_mot_de_passe(void *, int nouveau) {
+    QString mdp;
+    auto faire = [&] { mdp = demande_mot_de_passe(nouveau != 0); };
+    if (QThread::currentThread() == qApp->thread()) faire();
+    else QMetaObject::invokeMethod(qApp, faire, Qt::BlockingQueuedConnection);
+    return mdp.isEmpty() ? nullptr : grym_dupliquer(mdp.toUtf8().constData());
+}
+
 // Un rapport en PDF (§ 15.6) : appelé dans le fil de la machine, dessiné dans celui de l'interface, qui attend.
 static unsigned char *iface_rendre_pdf(void *, const char *html, size_t *taille, char **erreur) {
     QByteArray octets;
@@ -477,6 +526,7 @@ void Travail::run() {
                    iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte,
                    iface_montrer_document};
     machine_interface(m, &i);
+    machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     situer(m, chemin, base_imposee, dossier_ecriture);
     Chaine sortie = {};
     grym_interruption = 0;

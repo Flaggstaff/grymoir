@@ -18,6 +18,19 @@ typedef struct Base Base;
 
 /* chemin NULL : base en mémoire. NULL et *erreur si la base ne s'ouvre pas. */
 Base *base_ouvrir(const char *chemin, char **erreur);
+
+/* La base chiffrée (grammaire, § 16.18) : ouverte avec son mot de passe, qui sort sa clé du fichier « chemin.clés » ;
+ * sans ce fichier, une clé neuve naît, enveloppée sous `mdp`, et une base en clair se chiffre sur place. Une
+ * restauration en attente de format 2 s'ouvre avec le mot de passe de sa copie. */
+Base *base_ouvrir_chiffree(const char *chemin, const char *mdp, char **erreur);
+/* Vrai si le fichier des clés existe (ou base en mémoire) : sinon, le mot de passe demandé sera un nouveau. */
+int base_cles_existent(const char *chemin);
+int base_est_chiffree(const Base *b);
+/* Refait l'enveloppe du mot de passe ; 0 et *erreur (« Le mot de passe actuel est faux. ») sinon. */
+int base_changer_mot_de_passe(Base *b, const char *ancien, const char *nouveau, char **erreur);
+/* Le coffre de format 2 de la base telle qu'elle est (ou d'une copie claire donnée), avec ses clés. */
+unsigned char *base_coffre(Base *b, size_t *taille, char **erreur);
+unsigned char *base_coffre_depuis(Base *b, const unsigned char *clair, size_t n, size_t *taille, char **erreur);
 void base_fermer(Base *b);
 
 /* Transaction d'une exécution (§ 16.6). */

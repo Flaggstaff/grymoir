@@ -195,4 +195,8 @@ private:
     int lien_son(const QString &nom, const QByteArray &octets);   // range le son, rend son rang
 };
 
+// « La base est chiffrée. » (2.37) : demande le mot de passe dans une fenêtre, depuis n'importe quel fil ; une copie à
+// libérer, ou NULL si l'utilisateur renonce. Pour machine_demande_mot_de_passe.
+char *atelier_demander_mot_de_passe(void *contexte, int nouveau);
+
 #endif

@@ -31,6 +31,10 @@ Serveur *serveur_ouvrir(int port, const char *titre, char **erreur);
 
 void serveur_fermer(Serveur *s);
 
+/* « La base est chiffrée. » (2.37) : le mot de passe, demandé par une page (nouveau : choisi puis confirmé) ; une copie
+ * à libérer, ou NULL. Pour machine_demande_mot_de_passe, le serveur en contexte. */
+char *serveur_demander_mot_de_passe(void *serveur, int nouveau);
+
 /* « http://127.0.0.1:PORT/?jeton=… » : l'adresse à ouvrir. */
 const char *serveur_adresse(const Serveur *s);
 

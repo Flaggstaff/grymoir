@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.36 de la spécification, révisée le 21 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.37 de la spécification, révisée le 21 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1633,6 +1633,25 @@ Une tâche, conservée, a :
 - Une liste ne se déclare que sur un champ d'entité ou d'aptitude, comme tout type ; elle n'existe que pour le texte.
 - En forme compacte : `_un état (« à faire » ; « en cours » ; « fini »)`.
 
+### 16.18 La base chiffrée *(2.37, implémenté le 21 octobre 2026)*
+
+```
+La base est chiffrée.
+Changer le mot de passe de la base pour le nouveau mot de passe de l'écran, l'ancien étant le mot de passe actuel de l'écran.
+```
+
+- **La déclaration.** `La base est chiffrée.`, une fois, au premier niveau du programme principal (« … se déclare au premier niveau du programme. », « … se déclare une seule fois. »). Elle ne s'exécute pas : le module la note, et la base s'ouvre chiffrée, où que la phrase soit écrite. Une base en mémoire n'est pas concernée.
+- **Le moteur.** SQLite3 Multiple Ciphers (vendor/sqlite, PROVENANCE.md), schéma ChaCha20-Poly1305 : toute la base est chiffrée, pages, index et journal compris. Rien de lisible dans le fichier.
+- **La clé et ses enveloppes.** La base est chiffrée par une clé de 32 octets tirée au hasard, que personne ne tape. Elle est rangée, enveloppée, dans `base.grymd.clés`, à côté de la base : sous le mot de passe (Argon2id, 64 Mio, 3 passes ; XChaCha20-Poly1305 ; `coffre.h`). Changer le mot de passe refait l'enveloppe seulement : instantané, la base ne bouge pas. Une enveloppe de secours, ouverte par la clé du développeur, viendra (étape 3).
+- **Le mot de passe, demandé par l'exécution**, avant la première lecture de la base, jamais par le programme : la phrase du thème lit déjà la base, avant tout `Ouvrir`. L'atelier et l'application fabriquée ouvrent une fenêtre, `grym servir` une page à champs masqués, `grym lancer` une saisie sans écho. La première fois (pas encore de fichier des clés), il se choisit et se confirme ; huit caractères au moins dans l'atelier et le navigateur. Il reste en mémoire, jamais écrit. Pour les essais automatiques, la variable d'environnement `GRYM_MOT_DE_PASSE_BASE` le donne.
+- **Refus.** « Mot de passe faux. » ; sans mot de passe : « Cette base est chiffrée : sans son mot de passe, rien ne s'ouvre. » ; une base chiffrée lue par un programme qui ne le déclare pas : « La base « … » est chiffrée : écris « La base est chiffrée. » en tête du programme. ».
+- **Une base en clair** (d'avant la déclaration) se chiffre sur place à la première ouverture, une fois, sans retour.
+- **Sauvegarder** (§ 15.6 bis) une base chiffrée écrit d'office un coffre de format 2 : `GRYMCOFFRE2`, le fichier des clés, la copie chiffrée sous la clé de la base. Il s'ouvre avec le mot de passe de la base au moment de la sauvegarde. `avec le mot de passe` y est refusé : « La base est chiffrée : sa sauvegarde l'est d'office, avec ses clés. … ». Une sauvegarde emporte donc tout ce qu'il faut pour rouvrir la base sur un autre ordinateur.
+- **Restaurer** accepte un coffre de format 2 (avec son mot de passe, ou celui de la séance), de format 1, ou une copie en clair. Rien n'attend en clair sur le disque : l'attente est un coffre de format 2. À la prochaine ouverture, elle prend la place de la base avec ses clés, et s'ouvre avec le mot de passe **de sa copie** ; l'ancienne base et ses clés restent à côté (« … avant restauration … »).
+- **`Changer le mot de passe de la base pour n, l'ancien étant a.`** : « Donne d'abord le mot de passe actuel. », « Le mot de passe actuel est faux. », « Cette base n'est pas chiffrée : … ». Pas de contraction à écrire : `pour` et `étant` précèdent les deux valeurs.
+- **Oublié**, le mot de passe ne se retrouve pas : la base et les coffres faits sous lui sont perdus, jusqu'à l'enveloppe de secours.
+- Forme compacte : `_base_chiffrée`, `_changer_mot_de_passe n _ancien a`.
+
 ## 17. Questions à l'utilisateur *(v1.0)*
 
 ```
@@ -2286,3 +2305,4 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 | 2.34 | 2026-10-21 | § 22.6 : `, large de 12 caractères` ; forme canonique : le membre gauche d'une opération qui finit par un `dont` garde ses parenthèses (la 2.33 les retirait après `de` : « l'arrondi de (… dont …) − (…) » ne se relisait plus) ; un appel avec ses arguments, suivi d'un autre argument, garde les siennes ; la forme compacte traduite retrouve l'article des calculs et des propriétés (« la longueur du t », « le carré de 7 ») et élide devant un « h » muet (« l'heure ») |
 | 2.35 | 2026-10-21 | Forme compacte sans perte : `_alors _court`, `_sinon _court` (une branche courte), `_alors _bloc` (un bloc que la règle du guide raccourcirait) ; `x _est v` (l'égalité écrite en mots ; un `=` compact reste `=`) ; `_nu x` (un nom écrit sans article qu'une variable recevrait), `_le x`, `_la x`, `_l' x` (un article écrit qu'un paramètre ne recevrait pas) ; un collage en argument garde ses parenthèses (`de ("Rappel " suivi du numéro)`) |
 | 2.36 | 2026-10-21 | § 16.7 : un champ retiré sans aucune valeur présente part ; § 22.2 : `Faire comme un clic sur « B ».`, le clic par libellé dans le navigateur, le clic qui suit une zone et la touche Entrée dans l'atelier ; forme compacte : `_le patient.nom`, `_nu date.année`, `_la s.date << …`, `_absente` |
+| 2.37 | 2026-10-21 | Nouveau § 16.18 : la base chiffrée, `La base est chiffrée.` (SQLite3 Multiple Ciphers, la clé enveloppée dans `base.grymd.clés`, le mot de passe demandé par l'exécution), `Changer le mot de passe de la base pour n, l'ancien étant a.` ; § 15.6 bis : le coffre de format 2 d'une base chiffrée, la restauration sans rien en clair sur le disque |

@@ -2286,6 +2286,16 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         }
         aj(im, c ? "\n" : ".\n");
         return;
+    case P_BASE_CHIFFREE:   /* 2.37 */
+        aj(im, c ? "_base_chiffrée\n" : "La base est chiffrée.\n");
+        return;
+    case P_CHANGER_MDP:     /* 2.37 */
+        aj(im, c ? "_changer_mot_de_passe " : "Changer le mot de passe de la base pour ");
+        expression(im, n->enfants[0]);
+        aj(im, c ? " _ancien " : ", l'ancien étant ");
+        expression(im, n->enfants[1]);
+        aj(im, c ? "\n" : ".\n");
+        return;
     case P_ENREGISTRER:
         aj(im, c ? "_enregistrer " : "Enregistrer ");
         expression(im, n->enfants[0]);

@@ -185,6 +185,8 @@ int main(void) {
                  "Sauvegarder la base dans « c.coffre » avec le mot de passe « m ».\nRestaurer la base depuis « c.coffre » avec le mot de passe « m ».\n");   /* 2.30 */
     ALLER_RETOUR("_sauvegarder _dans « copie.grymd »\n_afficher « CH52 » _en_IBAN\n",
                  "Sauvegarder la base dans « copie.grymd ».\nAfficher « CH52 » en IBAN.\n");   /* 2.29 */
+    ALLER_RETOUR("_base_chiffrée\n_le m << « x »\n_changer_mot_de_passe « nouveau » _ancien m\n",
+                 "La base est chiffrée.\nLe m vaut « x ».\nChanger le mot de passe de la base pour « nouveau », l'ancien étant le m.\n");   /* 2.37 */
     ALLER_RETOUR("_document de_reçu « Reçu »\n    _texte « Cabinet »\n_fin\n_ouvrir _document de_reçu\n_le d << _document de_reçu\n",
                  "Le document de reçu, « Reçu », montre :\n    le texte « Cabinet ».\nOuvrir le document de reçu.\n"
                  "Le d vaut le document de reçu.\n");

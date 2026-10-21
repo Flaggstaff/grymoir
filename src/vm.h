@@ -46,6 +46,12 @@ void machine_transcripteur(Machine *m, char *(*transcrire)(void *, const unsigne
 /* Fichier de la base des entités (§ 16.5) ; NULL : base en mémoire. Ouverte au premier besoin. */
 void machine_base(Machine *m, const char *chemin);
 
+/* La base chiffrée (« La base est chiffrée. », 2.37) : son mot de passe, donné d'avance (NULL : l'oublier), ou un hôte
+ * qui le demande au premier besoin (`nouveau` : il n'existe pas encore, à choisir et confirmer) et rend une copie à
+ * libérer, ou NULL si l'utilisateur renonce. Le mot de passe reste en mémoire seulement. */
+void machine_mot_de_passe_base(Machine *m, const char *mdp);
+void machine_demande_mot_de_passe(Machine *m, char *(*demander)(void *contexte, int nouveau), void *contexte);
+
 /* La sortie est un terminal : « Effacer l'écran. » n'écrit sa séquence que dans ce cas (§ 4.3). */
 void machine_terminal(Machine *m, int terminal);
 

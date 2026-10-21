@@ -465,6 +465,7 @@ typedef struct {
     Portee *portee;    /* copie de travail, validée seulement en cas de succès */
     int interactif;
     int style_declare;   /* « Les nombres s'affichent … » : une seule fois (§ 4.1) */
+    int base_chiffree_vue;   /* « La base est chiffrée. » : une seule fois (2.37) */
     int apparence_declaree;   /* « Les écrans ont … » : une seule fois (§ 22.5) */
     int ouvrir_vu;            /* un « Ouvrir » déjà lu : l'apparence se déclare avant (§ 22.5) */
     int affichage_vu;
@@ -8139,6 +8140,44 @@ static Noeud *phrase(Analyse *a, int colonne) {
         if (mdp) { noeud_ajouter(n, mdp); n->fin = mdp->fin; n->forme = 1; }
         return n;
     }
+    if (est_mot(t, "la") && est_mot(voir(a, 1), "base") && est_mot(voir(a, 2), "est") && est_mot(voir(a, 3), "chiffrée")) {
+        /* « La base est chiffrée. » (2.37, § 16.18) : au premier niveau du programme principal, une seule fois */
+        if (a->formule || a->niveau)
+            return erreur(a, t, grym_dupliquer("« La base est chiffrée. » se déclare au premier niveau du programme."));
+        if (a->base_chiffree_vue) return erreur(a, t, grym_dupliquer("« La base est chiffrée. » se déclare une seule fois."));
+        a->base_chiffree_vue = 1;
+        a->i += 4;
+        if (!fin_phrase(a, 0)) return NULL;
+        Noeud *n = noeud_creer(P_BASE_CHIFFREE, t->ligne, t->colonne, t->debut);
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
+    if (est_mot(t, "changer") && est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "mot") && est_mot(voir(a, 3), "de")
+        && est_mot(voir(a, 4), "passe") && est_mot(voir(a, 5), "de") && est_mot(voir(a, 6), "la") && est_mot(voir(a, 7), "base")) {
+        /* « Changer le mot de passe de la base pour n, l'ancien étant a. » (2.37) : sans réserver « changer » */
+        if (a->formule == 1)
+            return erreur(a, t, grym_dupliquer("Un calcul ne change pas le mot de passe de la base : change-le dans une action."));
+        a->i += 8;
+        static const char *const POUR[] = { "pour" };
+        if (!mots_fixes(a, POUR, 1)) return NULL;
+        Noeud *nouveau = valeur(a);
+        if (!nouveau) return NULL;
+        const Jeton *l = voir(a, 1);
+        if (cour(a)->type != J_VIRGULE || l->type != J_ELISION || !l->valeur || strcmp(l->valeur, "l") != 0
+            || !est_mot(voir(a, 2), "ancien") || !est_mot(voir(a, 3), "étant")) {
+            noeud_liberer(nouveau);
+            return erreur(a, cour(a), grym_dupliquer("Écris « Changer le mot de passe de la base pour n, l'ancien étant a. »."));
+        }
+        a->i += 4;
+        Noeud *ancien = valeur(a);
+        if (!ancien) { noeud_liberer(nouveau); return NULL; }
+        if (!fin_phrase(a, 0)) { noeud_liberer(nouveau); noeud_liberer(ancien); return NULL; }
+        Noeud *n = noeud_creer(P_CHANGER_MDP, t->ligne, t->colonne, t->debut);
+        noeud_ajouter(n, nouveau);
+        noeud_ajouter(n, ancien);
+        n->fin = ancien->fin;
+        return n;
+    }
     if (est_mot(t, "enregistrer")) {
         /* « Enregistrer … dans « chemin ». » (§ 15.2) */
         if (a->formule == 1)
@@ -8516,6 +8555,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.portee = &copie;
     a.interactif = interactif;
     a.style_declare = 0;
+    a.base_chiffree_vue = 0;
     a.affichage_vu = 0;
     a.apparence_declaree = 0;
     a.ouvrir_vu = 0;

@@ -2,6 +2,7 @@
  * Spécification : docs/grammaire.md (révision 1.37), § 16 ; docs/vm.md (révision 1.32), § 8.
  */
 #include "base.h"
+#include "coffre.h"
 #include "chemins.h"
 #include "decimal.h"
 #include "date.h"
@@ -53,6 +54,8 @@ struct Base {
     size_t nb_regles;
     sqlite3_int64 version_connue;   /* PRAGMA data_version : un autre programme a-t-il écrit ? */
     int changee_ailleurs;           /* oui, depuis notre transaction précédente */
+    int chiffree;                   /* « La base est chiffrée. » (§ 16.18) : sa clé, et le fichier qui l'enveloppe */
+    unsigned char cle[32];
 };
 
 static void noms_vider(Noms *n) {
@@ -611,6 +614,20 @@ static int restaurer_en_attente(const char *chemin, char **erreur) {
         }
     }
     if (ok) ok = grym_renommer(attente, chemin) == 0;
+    if (ok) {   /* une base chiffrée (§ 16.18) : ses clés suivent, les anciennes gardées à côté de l'ancienne base */
+        char *cles = grym_formater("%s.clés", chemin), *cles_attente = grym_formater("%s.restaurer.clés", chemin);
+        FILE *nc = grym_fopen(cles_attente, "rb");
+        if (nc) {
+            fclose(nc);
+            char *cles_avant = grym_formater("%s.clés", avant);
+            FILE *ac = grym_fopen(cles, "rb");
+            if (ac) { fclose(ac); grym_renommer(cles, cles_avant); }
+            ok = grym_renommer(cles_attente, cles) == 0;
+            free(cles_avant);
+        }
+        free(cles);
+        free(cles_attente);
+    }
     if (!ok) *erreur = grym_formater("Base « %s » : la restauration en attente n'a pas pu prendre sa place.", chemin);
     free(avant);
     free(attente);
@@ -649,8 +666,226 @@ int base_verifier_copie(const unsigned char *o, size_t n, char **erreur) {
     return ok;
 }
 
-Base *base_ouvrir(const char *chemin, char **erreur) {
-    if (chemin && !restaurer_en_attente(chemin, erreur)) return NULL;
+static Base *ouvrir(const char *chemin, const unsigned char *cle, int chiffrer, char **erreur);
+
+Base *base_ouvrir(const char *chemin, char **erreur) { return ouvrir(chemin, NULL, 0, erreur); }
+
+/* ---- La base chiffrée (§ 16.18, 21 octobre 2026) ---- */
+
+/* La clé, en 64 chiffres hexadécimaux : la phrase que reçoit SQLite3MC. */
+static void cle_hex(const unsigned char cle[32], char h[65]) {
+    static const char H[] = "0123456789abcdef";
+    for (int k = 0; k < 32; k++) { h[2 * k] = H[cle[k] >> 4]; h[2 * k + 1] = H[cle[k] & 15]; }
+    h[64] = 0;
+}
+
+static unsigned char *lire_tout_fichier(const char *chemin, size_t *n) {
+    FILE *f = grym_fopen(chemin, "rb");
+    if (!f) return NULL;
+    char t[65536];
+    size_t k;
+    unsigned char *r = NULL;
+    size_t total = 0;
+    while ((k = fread(t, 1, sizeof t, f)) > 0) {
+        unsigned char *nr = realloc(r, total + k);
+        if (!nr) { free(r); fclose(f); return NULL; }
+        r = nr;
+        memcpy(r + total, t, k);
+        total += k;
+    }
+    fclose(f);
+    if (!r) r = malloc(1);
+    *n = total;
+    return r;
+}
+
+/* Écrit `o` dans `chemin` par un fichier voisin renommé : jamais à moitié écrit. */
+static int ecrire_entier(const char *chemin, const unsigned char *o, size_t n) {
+    char *tmp = grym_formater("%s.tmp", chemin);
+    FILE *f = grym_fopen(tmp, "wb");
+    int ok = f && fwrite(o, 1, n, f) == n;
+    if (f) ok = fclose(f) == 0 && ok;
+    if (ok) {
+        grym_supprimer(chemin);
+        ok = grym_renommer(tmp, chemin) == 0;
+    }
+    if (!ok) grym_supprimer(tmp);
+    free(tmp);
+    return ok;
+}
+
+int base_cles_existent(const char *chemin) {
+    if (!chemin) return 1;
+    char *c = grym_formater("%s.clés", chemin);
+    FILE *f = grym_fopen(c, "rb");
+    free(c);
+    if (f) { fclose(f); return 1; }
+    f = grym_fopen(chemin, "rb");   /* ni clés ni base : la base naîtra ; une base sans clés sera chiffrée sur place */
+    if (f) fclose(f);
+    return 0;
+}
+
+/* Vrai si le fichier commence comme une base SQLite en clair. */
+static int fichier_en_clair(const char *chemin) {
+    FILE *f = grym_fopen(chemin, "rb");
+    if (!f) return 0;
+    char t[16];
+    const int clair = fread(t, 1, 16, f) == 16 && memcmp(t, "SQLite format 3", 16) == 0;
+    fclose(f);
+    return clair;
+}
+
+/* Une copie claire, chiffrée sous `cle` dans `chemin`, sans passer par le disque en clair : désérialisée en mémoire,
+ * puis « VACUUM INTO » vers un fichier que SQLite3MC chiffre (une adresse « file: », la clé en paramètre). */
+static int copie_chiffree(const unsigned char *clair, size_t n, const char *chemin, const unsigned char cle[32], char **erreur) {
+    sqlite3 *db = NULL;
+    if (sqlite3_open_v2(":memory:", &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_URI, NULL) != SQLITE_OK) {
+        sqlite3_close(db);
+        *erreur = grym_dupliquer("Mémoire insuffisante pour la restauration.");
+        return 0;
+    }
+    unsigned char *o = sqlite3_malloc64(n ? n : 1);
+    if (!o) { sqlite3_close(db); *erreur = grym_dupliquer("Mémoire insuffisante pour la restauration."); return 0; }
+    memcpy(o, clair, n);
+    int ok = sqlite3_deserialize(db, "main", o, (sqlite3_int64)n, (sqlite3_int64)n,
+                                 SQLITE_DESERIALIZE_FREEONCLOSE | SQLITE_DESERIALIZE_RESIZEABLE) == SQLITE_OK;
+    Chaine u = {0};
+    chaine_ajouter(&u, "VACUUM INTO 'file:");
+    for (const unsigned char *p = (const unsigned char *)chemin; *p; p++) {   /* le chemin, codé pour une adresse */
+        if ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || strchr("/._-~", *p)) {
+            char c[2] = { (char)*p, 0 };
+            chaine_ajouter(&u, c);
+        } else {
+            char c[4];
+            snprintf(c, sizeof c, "%%%02X", *p);
+            chaine_ajouter(&u, c);
+        }
+    }
+    char h[65];
+    cle_hex(cle, h);
+    chaine_ajouter(&u, "?cipher=chacha20&key=");
+    chaine_ajouter(&u, h);
+    chaine_ajouter(&u, "'");
+    grym_supprimer(chemin);
+    if (ok) ok = sqlite3_exec(db, u.d, NULL, NULL, NULL) == SQLITE_OK;
+    if (!ok) *erreur = grym_formater("La copie restaurée ne s'écrit pas chiffrée : %s.", sqlite3_errmsg(db));
+    memset(h, 0, sizeof h);
+    memset(u.d, 0, u.n);
+    free(u.d);
+    sqlite3_close(db);
+    return ok;
+}
+
+/* Une restauration en attente de format 2 : la copie, chiffrée sous sa propre clé, et ses clés, prêtes à prendre la
+ * place de la base ; `mdp` doit ouvrir les clés de la copie. Une attente d'un autre format reste telle quelle. */
+static int preparer_restauration_chiffree(const char *chemin, const char *mdp, char **erreur) {
+    char *attente = grym_formater("%s.restaurer", chemin);
+    size_t n = 0;
+    unsigned char *o = lire_tout_fichier(attente, &n);
+    int ok = 1;
+    if (o && coffre2_est(o, n)) {
+        unsigned char cle[32], *cles = NULL;
+        size_t nc = 0, ncles = 0;
+        unsigned char *clair = coffre2_ouvrir(o, n, mdp, &nc, cle, &cles, &ncles, erreur);
+        if (!clair) {
+            ok = 0;
+            char *e = *erreur;
+            *erreur = grym_formater("Une restauration attend : elle s'ouvre avec le mot de passe de sa copie. %s", e);
+            free(e);
+        } else {
+            char *base_attente = grym_formater("%s.restaurer.base", chemin), *cles_attente = grym_formater("%s.restaurer.clés", chemin);
+            ok = copie_chiffree(clair, nc, base_attente, cle, erreur);
+            if (ok && !(ok = ecrire_entier(cles_attente, cles, ncles)))
+                *erreur = grym_formater("Base « %s » : les clés de la restauration ne s'écrivent pas.", chemin);
+            if (ok) ok = grym_supprimer(attente) == 0 && grym_renommer(base_attente, attente) == 0;
+            if (!ok && !*erreur) *erreur = grym_formater("Base « %s » : la restauration en attente n'a pas pu prendre sa place.", chemin);
+            memset(clair, 0, nc);
+            free(clair);
+            free(cles);
+            free(base_attente);
+            free(cles_attente);
+        }
+        memset(cle, 0, sizeof cle);
+    }
+    free(o);
+    free(attente);
+    return ok;
+}
+
+Base *base_ouvrir_chiffree(const char *chemin, const char *mdp, char **erreur) {
+    if (!chemin) return ouvrir(NULL, NULL, 0, erreur);   /* une base en mémoire ne touche pas le disque */
+    if (!mdp || !*mdp) { *erreur = grym_dupliquer("Cette base est chiffrée : sans son mot de passe, rien ne s'ouvre."); return NULL; }
+    if (!preparer_restauration_chiffree(chemin, mdp, erreur)) return NULL;
+    if (!restaurer_en_attente(chemin, erreur)) return NULL;
+    char *fichier_cles = grym_formater("%s.clés", chemin);
+    size_t n = 0;
+    unsigned char *cles = lire_tout_fichier(fichier_cles, &n);
+    unsigned char cle[32];
+    int ok;
+    if (cles) {
+        ok = cles_ouvrir(cles, n, mdp, cle, erreur);
+    } else {   /* la première fois : une clé neuve, enveloppée sous ce mot de passe, rangée avant tout */
+        ok = cles_creer(mdp, cle, &cles, &n, erreur);
+        if (ok && !(ok = ecrire_entier(fichier_cles, cles, n)))
+            *erreur = grym_formater("Base « %s » : le fichier de ses clés ne s'écrit pas.", chemin);
+    }
+    free(fichier_cles);
+    if (cles) { memset(cles, 0, n); free(cles); }
+    if (!ok) return NULL;
+    /* une base en clair (d'avant la déclaration, ou restaurée d'avant) se chiffre sur place, une fois */
+    Base *b = ouvrir(chemin, cle, fichier_en_clair(chemin), erreur);
+    memset(cle, 0, sizeof cle);
+    return b;
+}
+
+int base_changer_mot_de_passe(Base *b, const char *ancien, const char *nouveau, char **erreur) {
+    if (!b->chiffree) { *erreur = grym_dupliquer("Cette base n'est pas chiffrée : elle n'a pas de mot de passe."); return 0; }
+    char *fichier_cles = grym_formater("%s.clés", b->chemin);
+    size_t n = 0, nn = 0;
+    unsigned char *cles = lire_tout_fichier(fichier_cles, &n);
+    unsigned char *nouvelles = cles ? cles_changer(cles, n, ancien, nouveau, &nn, erreur) : NULL;
+    if (!cles) *erreur = grym_formater("Base « %s » : le fichier de ses clés manque.", b->chemin);
+    else if (!nouvelles && *erreur && !strcmp(*erreur, "Mot de passe faux.")) {
+        free(*erreur);
+        *erreur = grym_dupliquer("Le mot de passe actuel est faux.");
+    }
+    int ok = nouvelles != NULL;
+    if (ok && !(ok = ecrire_entier(fichier_cles, nouvelles, nn)))
+        *erreur = grym_formater("Base « %s » : le fichier de ses clés ne s'écrit pas.", b->chemin);
+    free(cles);
+    free(nouvelles);
+    free(fichier_cles);
+    return ok;
+}
+
+int base_est_chiffree(const Base *b) { return b && b->chiffree; }
+
+unsigned char *base_coffre(Base *b, size_t *taille, char **erreur) {
+    char *fichier_cles = grym_formater("%s.clés", b->chemin);
+    size_t nc = 0, n = 0;
+    unsigned char *cles = lire_tout_fichier(fichier_cles, &nc);
+    free(fichier_cles);
+    if (!cles) { *erreur = grym_formater("Base « %s » : le fichier de ses clés manque.", b->chemin); return NULL; }
+    unsigned char *clair = base_copie(b, &n, erreur);
+    unsigned char *r = clair ? coffre2_fermer(clair, n, cles, nc, b->cle, taille, erreur) : NULL;
+    if (clair) { memset(clair, 0, n); free(clair); }
+    free(cles);
+    return r;
+}
+
+unsigned char *base_coffre_depuis(Base *b, const unsigned char *clair, size_t n, size_t *taille, char **erreur) {
+    char *fichier_cles = grym_formater("%s.clés", b->chemin);
+    size_t nc = 0;
+    unsigned char *cles = lire_tout_fichier(fichier_cles, &nc);
+    free(fichier_cles);
+    if (!cles) { *erreur = grym_formater("Base « %s » : le fichier de ses clés manque.", b->chemin); return NULL; }
+    unsigned char *r = coffre2_fermer(clair, n, cles, nc, b->cle, taille, erreur);
+    free(cles);
+    return r;
+}
+
+static Base *ouvrir(const char *chemin, const unsigned char *cle, int chiffrer, char **erreur) {
+    if (chemin && !cle && !restaurer_en_attente(chemin, erreur)) return NULL;
     Base *b = grym_allouer(sizeof *b);
     memset(b, 0, sizeof *b);
     b->db = NULL;
@@ -663,6 +898,28 @@ Base *base_ouvrir(const char *chemin, char **erreur) {
                                 b->db ? sqlite3_errmsg(b->db) : "mémoire épuisée");
         base_fermer(b);
         return NULL;
+    }
+    if (!cle && chemin && base_cles_existent(chemin) && !fichier_en_clair(chemin)) {
+        FILE *existe = grym_fopen(chemin, "rb");   /* une base chiffrée lue par un programme qui ne le dit pas */
+        if (existe) {
+            fclose(existe);
+            *erreur = grym_formater("La base « %s » est chiffrée : écris « La base est chiffrée. » en tête du programme.", b->chemin);
+            base_fermer(b);
+            return NULL;
+        }
+    }
+    if (cle) {   /* § 16.18 : la clé avant toute lecture ; une base en clair se chiffre sur place */
+        char h[65];
+        cle_hex(cle, h);
+        const int rc = chiffrer ? sqlite3_rekey(b->db, h, 64) : sqlite3_key(b->db, h, 64);
+        memset(h, 0, sizeof h);
+        b->chiffree = 1;
+        memcpy(b->cle, cle, 32);
+        if (rc != SQLITE_OK) {
+            *erreur = grym_formater("Base « %s » : le chiffrement ne se pose pas (%s).", b->chemin, sqlite3_errmsg(b->db));
+            base_fermer(b);
+            return NULL;
+        }
     }
     sqlite3_busy_timeout(b->db, 2000);
     if (!base_collations(b->db)) {

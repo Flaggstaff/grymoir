@@ -16,6 +16,8 @@
 #include "relecture.h"
 #include "son.h"
 #include <QTextBrowser>
+#include <QDialog>
+#include <QTimer>
 #include "schema.h"
 #include "reecriture.h"
 #include "lien.h"
@@ -4816,6 +4818,92 @@ int main(int argc, char **argv) {
         VERIFIER(t.contains(QString::fromUtf8("essai liées 2")));
         if (!t.contains("fin des essais")) std::printf("%s\n", t.right(800).toUtf8().constData());
         e.close();
+    }
+
+    // La base chiffrée (2.37) : l'exécution demande le mot de passe dans une fenêtre, choisi puis confirmé la première
+    // fois ; trop court, refusé dans la fenêtre ; accepté, le programme tourne et les clés naissent à côté de la base ;
+    // au lancement suivant, une fenêtre d'un seul champ, et un mot de passe faux arrête l'exécution. La fenêtre tourne
+    // dans sa propre boucle : une minuterie la remplit de l'intérieur, comme une personne.
+    {
+        QTemporaryDir d;
+        QFile f(d.filePath("app.grym"));
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write(QString::fromUtf8("La base est chiffrée.\nUne note, conservée, a :\n    un texte (texte).\n"
+                                  "La n vaut une nouvelle note :\n    Le texte vaut « secret-anamnese ».\nConserver la n.\n"
+                                  "Afficher « notes » puis le nombre de notes conservées.\nAfficher « fin des essais ».\n").toUtf8());
+        f.close();
+        auto fenetre = [] () -> QDialog * {
+            for (QWidget *w : QApplication::topLevelWidgets())
+                if (auto *dl = qobject_cast<QDialog *>(w); dl && dl->isVisible() && dl->windowTitle().contains("ot de passe de la base"))
+                    return dl;
+            return nullptr;
+        };
+        // les gestes, dans l'ordre : chaque passage de la minuterie en fait un si la fenêtre est là
+        struct Geste { QString a, b; };
+        QList<Geste> gestes;
+        QStringList titres;
+        int champs_premiere = 0;
+        bool motif_vu = false;
+        QTimer minuterie;
+        minuterie.setInterval(50);
+        QObject::connect(&minuterie, &QTimer::timeout, [&] {
+            QDialog *dl = fenetre();
+            if (!dl || gestes.isEmpty()) return;
+            for (QLabel *l : dl->findChildren<QLabel *>()) motif_vu |= l->text() == QString::fromUtf8("Au moins huit caractères.");
+            if (titres.isEmpty() || titres.last() != dl->windowTitle() || gestes.size() == 1) titres << dl->windowTitle();
+            const auto zones = dl->findChildren<QLineEdit *>();
+            if (!champs_premiere) for (QLineEdit *z : zones) champs_premiere += z->isVisibleTo(dl) ? 1 : 0;
+            const Geste g = gestes.takeFirst();
+            if (zones.size() >= 1) zones[0]->setText(g.a);
+            if (zones.size() >= 2) zones[1]->setText(g.b);
+            for (QPushButton *bt : dl->findChildren<QPushButton *>())
+                if (bt->text() == "Choisir" || bt->text() == "Ouvrir") { bt->click(); break; }
+        });
+        minuterie.start();
+        auto attendre = [&](std::function<bool()> c, int ms) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < ms && !c()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        };
+        {
+            gestes = { { "court", "court" }, { "essai-essai", "essai-essai" } };
+            Execution e(d.filePath("app.grym"));
+            e.demarrer();
+            auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+            attendre([&] { return fil().contains("fin des essais"); }, 60000);   // Argon2id : 64 Mio, trois passes
+            VERIFIER(!titres.isEmpty() && titres.first() == QString::fromUtf8("Choisir le mot de passe de la base"));
+            VERIFIER(champs_premiere == 2);
+            VERIFIER(motif_vu);
+            VERIFIER(gestes.isEmpty());
+            VERIFIER(fil().contains("notes 1"));
+            VERIFIER(QFile::exists(d.filePath("app.grymd.clés")));
+            e.close();
+        }
+        {
+            QFile b(d.filePath("app.grymd"));
+            VERIFIER(b.open(QIODevice::ReadOnly));
+            VERIFIER(!b.readAll().contains("secret-anamnese"));
+        }
+        {
+            gestes = { { "faux-faux", "" } };
+            titres.clear();
+            champs_premiere = 0;
+            Execution e(d.filePath("app.grym"));
+            e.demarrer();
+            auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+            auto arrete = [&] {
+                if (fil().contains(QString::fromUtf8("Mot de passe faux."))) return true;
+                for (QLabel *l : e.findChildren<QLabel *>()) if (l->text().contains(QString::fromUtf8("Mot de passe faux."))) return true;
+                return false;
+            };
+            attendre(arrete, 60000);
+            VERIFIER(arrete());
+            VERIFIER(!titres.isEmpty() && titres.first() == QString::fromUtf8("Mot de passe de la base"));
+            VERIFIER(champs_premiere == 1);
+            VERIFIER(!fil().contains("notes"));
+            e.close();
+        }
+        minuterie.stop();
     }
 
     // Praxis (21 octobre 2026) : une séance facturée qui passe annulée, ou absente quand le cabinet ne facture pas les

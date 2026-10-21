@@ -123,6 +123,8 @@ int main(void) {
          "Le m vaut « x ».\nLe f vaut « c.coffre ».\nSauvegarder la base dans « c.coffre » avec le mot de passe m.\nRestaurer la base depuis f avec le mot de passe m.\nRestaurer la base depuis « c.grymd ».\n");   /* 2.30 */
     LITT("Sauvegarder la base dans « copie.grymd ».\nAfficher « ch52 0483 5012 3456 7100 0 » en IBAN.",
          "Sauvegarder la base dans « copie.grymd ».\nAfficher « ch52 0483 5012 3456 7100 0 » en IBAN.\n");   /* 2.29 */
+    LITT("La base est chiffrée.\nLe m vaut « x ».\nChanger le mot de passe de la base pour « nouveau-mot », l'ancien étant m.",
+         "La base est chiffrée.\nLe m vaut « x ».\nChanger le mot de passe de la base pour « nouveau-mot », l'ancien étant m.\n");   /* 2.37 */
     LITT("Le c vaut « SPC » suivi d'un saut de ligne suivi de 1590 en format technique.\nLe q vaut le code QR suisse du c.",
          "Le c vaut « SPC » suivi d'un saut de ligne suivi de 1590 en format technique.\nLe q vaut le code QR suisse du c.\n");
     COMP("Le c vaut « SPC » suivi d'un saut de ligne.\nLe q vaut le code QR du c.",

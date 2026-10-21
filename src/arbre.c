@@ -560,6 +560,16 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->nb_enfants > 1) { chaine_ajouter(c, " "); decrire(n->enfants[1], c); }
         chaine_ajouter(c, ")");
         return;
+    case P_BASE_CHIFFREE:
+        chaine_ajouter(c, "(base chiffrée)");
+        return;
+    case P_CHANGER_MDP:
+        chaine_ajouter(c, "(changer le mot de passe ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
     case P_ENREGISTRER:
         chaine_ajouter(c, "(enregistrer ");
         decrire(n->enfants[0], c);

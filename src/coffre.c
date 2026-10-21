@@ -85,3 +85,158 @@ unsigned char *coffre_ouvrir(const unsigned char *coffre, size_t n, const char *
     *taille = m;
     return r;
 }
+
+/* ---- Les clés d'une base chiffrée et le coffre de format 2 (21 octobre 2026) ---- */
+
+static const char MAGIE_CLES[10] = { 'G', 'R', 'Y', 'M', 'C', 'L', 'E', 'S', '1', '\n' };
+static const char MAGIE2[12] = { 'G', 'R', 'Y', 'M', 'C', 'O', 'F', 'F', 'R', 'E', '2', '\n' };
+
+/* Une enveloppe de mot de passe, écrite en `e` (97 octets) : la clé de la base, enfermée sous `mdp`. */
+static int envelopper(unsigned char *e, const char *mdp, const unsigned char cle[32], char **erreur) {
+    e[0] = 1;
+    ecrire32(e + 1, BLOCS);
+    ecrire32(e + 5, PASSES);
+    unsigned char *sel = e + 9, *nonce = e + 25, *mac = e + 49, *enveloppee = e + 65;
+    if (!aleatoire_systeme(sel, 16) || !aleatoire_systeme(nonce, 24)) {
+        *erreur = grym_dupliquer("Aucun générateur aléatoire du système : la base ne peut pas être chiffrée.");
+        return 0;
+    }
+    unsigned char k[32];
+    if (!coffre_cle(mdp, sel, BLOCS, PASSES, k)) { *erreur = grym_dupliquer("Mémoire insuffisante pour la clé (64 Mio)."); return 0; }
+    unsigned char ad[10 + 49];
+    memcpy(ad, MAGIE_CLES, 10);
+    memcpy(ad + 10, e, 49);
+    crypto_aead_lock(enveloppee, mac, k, nonce, ad, sizeof ad, cle, 32);
+    crypto_wipe(k, sizeof k);
+    return 1;
+}
+
+/* La longueur d'une enveloppe de sorte `s`, 0 si inconnue. */
+static size_t longueur_enveloppe(unsigned s) { return s == 1 ? CLES_ENVELOPPE_MDP : 0; }
+
+/* Vrai si le fichier des clés est bien formé : la magie, puis des enveloppes de longueur connue, jusqu'au bout. */
+static int cles_bien_formees(const unsigned char *c, size_t n) {
+    if (n < 11 || memcmp(c, MAGIE_CLES, 10) != 0) return 0;
+    size_t p = 11;
+    for (unsigned k = 0; k < c[10]; k++) {
+        if (p >= n) return 0;
+        const size_t l = longueur_enveloppe(c[p]);
+        if (!l || p + l > n) return 0;
+        p += l;
+    }
+    return p == n;
+}
+
+int cles_creer(const char *mdp, unsigned char cle[32], unsigned char **cles, size_t *n, char **erreur) {
+    if (!mdp || !*mdp) { *erreur = grym_dupliquer("Le mot de passe de la base est vide."); return 0; }
+    if (!aleatoire_systeme(cle, 32)) {
+        *erreur = grym_dupliquer("Aucun générateur aléatoire du système : la base ne peut pas être chiffrée.");
+        return 0;
+    }
+    unsigned char *c = malloc(11 + CLES_ENVELOPPE_MDP);
+    if (!c) { *erreur = grym_dupliquer("Mémoire insuffisante pour les clés."); return 0; }
+    memcpy(c, MAGIE_CLES, 10);
+    c[10] = 1;
+    if (!envelopper(c + 11, mdp, cle, erreur)) { free(c); crypto_wipe(cle, 32); return 0; }
+    *cles = c;
+    *n = 11 + CLES_ENVELOPPE_MDP;
+    return 1;
+}
+
+int cles_ouvrir(const unsigned char *c, size_t n, const char *mdp, unsigned char cle[32], char **erreur) {
+    if (!cles_bien_formees(c, n)) { *erreur = grym_dupliquer("Le fichier des clés de la base est abîmé."); return 0; }
+    size_t p = 11;
+    for (unsigned k = 0; k < c[10]; p += longueur_enveloppe(c[p]), k++) {
+        if (c[p] != 1) continue;
+        const unsigned char *e = c + p;
+        const uint32_t blocs = lire32(e + 1), passes = lire32(e + 5);
+        if (blocs < 8 || blocs > (1u << 21) || passes < 1 || passes > 16) continue;
+        unsigned char kk[32];
+        if (!coffre_cle(mdp ? mdp : "", e + 9, blocs, passes, kk)) {
+            *erreur = grym_dupliquer("Mémoire insuffisante pour la clé de la base.");
+            return 0;
+        }
+        unsigned char ad[10 + 49];
+        memcpy(ad, MAGIE_CLES, 10);
+        memcpy(ad + 10, e, 49);
+        const int faux = crypto_aead_unlock(cle, e + 49, kk, e + 25, ad, sizeof ad, e + 65, 32);
+        crypto_wipe(kk, sizeof kk);
+        if (!faux) return 1;
+    }
+    *erreur = grym_dupliquer("Mot de passe faux.");
+    return 0;
+}
+
+unsigned char *cles_changer(const unsigned char *c, size_t n, const char *ancien, const char *nouveau, size_t *taille,
+                            char **erreur) {
+    unsigned char cle[32];
+    if (!cles_ouvrir(c, n, ancien, cle, erreur)) return NULL;
+    if (!nouveau || !*nouveau) { crypto_wipe(cle, 32); *erreur = grym_dupliquer("Le nouveau mot de passe est vide."); return NULL; }
+    unsigned char *r = malloc(n);
+    if (!r) { crypto_wipe(cle, 32); *erreur = grym_dupliquer("Mémoire insuffisante pour les clés."); return NULL; }
+    memcpy(r, c, n);
+    /* chaque enveloppe de mot de passe est refaite sous le nouveau ; les autres (le secours) restent telles quelles */
+    size_t p = 11;
+    int ok = 1;
+    for (unsigned k = 0; ok && k < r[10]; p += longueur_enveloppe(r[p]), k++)
+        if (r[p] == 1) ok = envelopper(r + p, nouveau, cle, erreur);
+    crypto_wipe(cle, 32);
+    if (!ok) { free(r); return NULL; }
+    *taille = n;
+    return r;
+}
+
+int coffre2_est(const unsigned char *o, size_t n) { return n >= 16 && memcmp(o, MAGIE2, 12) == 0; }
+
+unsigned char *coffre2_fermer(const unsigned char *clair, size_t n, const unsigned char *cles, size_t ncles,
+                              const unsigned char cle[32], size_t *taille, char **erreur) {
+    const size_t tete = 12 + 4 + ncles + 24 + 16;
+    unsigned char *r = malloc(tete + n);
+    if (!r) { *erreur = grym_dupliquer("Mémoire insuffisante pour chiffrer la sauvegarde."); return NULL; }
+    memcpy(r, MAGIE2, 12);
+    ecrire32(r + 12, (uint32_t)ncles);
+    memcpy(r + 16, cles, ncles);
+    unsigned char *nonce = r + 16 + ncles, *mac = nonce + 24;
+    if (!aleatoire_systeme(nonce, 24)) {
+        free(r);
+        *erreur = grym_dupliquer("Aucun générateur aléatoire du système : la sauvegarde ne peut pas être chiffrée.");
+        return NULL;
+    }
+    crypto_aead_lock(r + tete, mac, cle, nonce, r, (size_t)(mac - r), clair, n);
+    *taille = tete + n;
+    return r;
+}
+
+unsigned char *coffre2_ouvrir(const unsigned char *o, size_t n, const char *mdp, size_t *taille, unsigned char cle[32],
+                              unsigned char **cles, size_t *ncles, char **erreur) {
+    if (!coffre2_est(o, n)) { *erreur = grym_dupliquer("Ce fichier n'est pas une sauvegarde d'une base chiffrée."); return NULL; }
+    const size_t nc = lire32(o + 12);
+    if (nc > n || 16 + nc + 40 > n) { *erreur = grym_dupliquer("Cette sauvegarde chiffrée est abîmée."); return NULL; }
+    unsigned char k[32];
+    if (!cles_ouvrir(o + 16, nc, mdp, k, erreur)) {
+        if (!strcmp(*erreur, "Mot de passe faux.")) {
+            free(*erreur);
+            *erreur = grym_dupliquer("Mot de passe faux, ou sauvegarde abîmée : elle ne s'ouvre pas.");
+        }
+        return NULL;
+    }
+    const unsigned char *nonce = o + 16 + nc, *mac = nonce + 24, *chiffre = mac + 16;
+    const size_t m = n - (size_t)(chiffre - o);
+    unsigned char *r = malloc(m ? m : 1);
+    if (!r) { crypto_wipe(k, 32); *erreur = grym_dupliquer("Mémoire insuffisante pour déchiffrer."); return NULL; }
+    if (crypto_aead_unlock(r, mac, k, nonce, o, (size_t)(mac - o), chiffre, m)) {
+        crypto_wipe(k, 32);
+        free(r);
+        *erreur = grym_dupliquer("Cette sauvegarde chiffrée est abîmée : elle ne s'ouvre pas.");
+        return NULL;
+    }
+    if (cle) memcpy(cle, k, 32);
+    crypto_wipe(k, 32);
+    if (cles) {
+        *cles = malloc(nc ? nc : 1);
+        if (*cles) memcpy(*cles, o + 16, nc);
+        *ncles = nc;
+    }
+    *taille = m;
+    return r;
+}

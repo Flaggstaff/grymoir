@@ -1,6 +1,7 @@
 // GrymoiR : l'atelier, le schéma des données.
 #include "schema.h"
 #include "theme.h"
+#include "execution.h"
 
 #include <QDirIterator>
 #include <QFile>
@@ -151,6 +152,7 @@ QString apercu_migration(const QString &programme, bool *refusee) {
     machine_base(m, base.constData());
     Chaine rapport = {}, sortie = {};
     machine_essai_migration(m, &rapport);
+    machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // une base chiffrée (2.37)
     const int reussi = machine_executer(m, module, &sortie, &d);
     machine_detruire(m);
     module_detruire(module);

@@ -126,12 +126,13 @@ typedef enum {
     I_SAUVEGARDER,      /* dépile un chemin ; une copie de la base, telle que l'exécution la voit, s'y écrira à la fin
                            de l'exécution réussie, jamais par-dessus un fichier : « (2) », « (3) »… (2.29) */
     I_SAUVEGARDER_COFFRE, /* dépile un mot de passe, puis un chemin : comme SAUVEGARDER, la copie chiffrée (coffre.h, 2.30) */
-    I_RESTAURER         /* opérande : 1 avec un mot de passe (dépilé d'abord) ; dépile un chemin ou un fichier, une copie
+    I_RESTAURER,        /* opérande : 1 avec un mot de passe (dépilé d'abord) ; dépile un chemin ou un fichier, une copie
                            de base, chiffrée ou non ; vérifiée, elle s'écrit à côté de la base (« .restaurer ») à la fin de
                            l'exécution réussie et la remplace à la prochaine ouverture (2.30) */
+    I_CHANGER_MDP_BASE  /* dépile le nouveau mot de passe, puis l'ancien : l'enveloppe des clés de la base refaite (2.37) */
 } CodeInstruction;
 
-#define I_DERNIER I_RESTAURER
+#define I_DERNIER I_CHANGER_MDP_BASE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);
@@ -232,6 +233,7 @@ typedef struct {
     size_t nb;
     ClasseModule *classes;
     size_t nb_classes;
+    int base_chiffree;    /* « La base est chiffrée. » (2.37, § 16.18) : le mot de passe avant d'ouvrir la base */
 } Module;
 
 Module *module_creer(void);

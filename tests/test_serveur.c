@@ -96,6 +96,11 @@ static char *enc(const char *v) {
 
 /* Réponse à la question suivante : « c0=…&c1=… » à partir des valeurs brutes, séparées par « | ». */
 static long question_suivante;
+static int fichier_present(const char *nom) {
+    FILE *f = fopen(nom, "rb");
+    if (f) fclose(f);
+    return f != NULL;
+}
 static char *reponse(const char *valeurs) {
     Chaine c = {0};
     char *debut = grym_formater("q=%ld", ++question_suivante);
@@ -283,6 +288,7 @@ static void servir_projet_base(const char *chemin, const char *base, Script *sc,
     Machine *m = machine_creer();
     Interface i = serveur_interface(s);
     machine_interface(m, &i);
+    machine_demande_mot_de_passe(m, serveur_demander_mot_de_passe, s);   /* comme grym servir (2.37) */
     const char *barre = strrchr(chemin, '/');
     char *dossier = grym_formater("%.*s", (int)(barre - chemin), chemin);
     machine_dossier(m, dossier);
@@ -1746,6 +1752,41 @@ int main(void) {
         NE_CONTIENT_PAS(sc.reponses[9], "class=\"erreur\"");
         liberer(&sc);
         remove("_essai_cabinet22.grymd");
+    }
+
+    {   /* La base chiffrée (2.37) : grym servir demande le mot de passe par une page, deux champs masqués la première
+           fois, jamais renvoyés ; trop court, ou deux saisies qui diffèrent, refusés ; choisi, le programme s'exécute */
+#ifdef _WIN32
+        _mkdir("_essai_chiffre");
+#else
+        mkdir("_essai_chiffre", 0755);
+#endif
+        FILE *f = fopen("_essai_chiffre/app.grym", "wb");
+        if (f) {
+            fputs("La base est chiffrée.\nUne note, conservée, a :\n    un texte (texte).\n"
+                  "Afficher « notes : » puis le nombre de notes conservées.\n", f);
+            fclose(f);
+        }
+        remove("_essai_chiffre.grymd.clés");
+        question_suivante = 0;
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), post("q=1&c0=court&c1=court"), get("/"), post("q=1&c0=essai-essai&c1=essai-autre"), get("/"),
+                 post("q=1&c1=essai-essai"), get("/"));
+        servir_projet("_essai_chiffre/app.grym", "_essai_chiffre.grymd", &sc);
+        CONTIENT(sc.reponses[0], "choisis leur mot de passe");
+        CONTIENT(sc.reponses[0], "type=\"password\" id=\"c0\"");
+        CONTIENT(sc.reponses[0], "type=\"password\" id=\"c1\"");
+        CONTIENT(sc.reponses[2], "Au moins huit caractères.");
+        NE_CONTIENT_PAS(sc.reponses[2], "court");   /* jamais renvoyé dans la page */
+        CONTIENT(sc.reponses[4], "Les deux saisies diffèrent.");
+        CONTIENT(sc.reponses[6], "notes : 0");
+        liberer(&sc);
+        total++;
+        if (!fichier_present("_essai_chiffre.grymd.clés")) { echecs++; printf("ÉCHEC (test ligne %d) : les clés\n", __LINE__); }
+        remove("_essai_chiffre.grymd");
+        remove("_essai_chiffre.grymd.clés");
+        remove("_essai_chiffre/app.grym");
+        remove("_essai_chiffre");
     }
 
     {   /* Cabinet : le premier mot de passe : rien sans lui ; trop court, deux saisies qui diffèrent, refusés ; choisi, l'accueil

@@ -140,6 +140,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 97 | `SAUVEGARDER` | aucun | dépile un chemin ; copie la base telle que la transaction la voit (`base_copie`, `sqlite3_serialize`) et la planifie comme `ENREGISTRER`, sous un nom libre : « copie (2).grymd », « (3) »… ; sans base, erreur (grammaire 2.29, § 16.5) |
 | 98 | `SAUVEGARDER_COFFRE` | aucun | dépile un mot de passe, puis un chemin : comme `SAUVEGARDER`, la copie chiffrée par `coffre_fermer` (`src/coffre.c`, grammaire 2.30) |
 | 99 | `RESTAURER` | 1 avec un mot de passe, dépilé d'abord | dépile un chemin ou un fichier ; une copie chiffrée est ouverte par `coffre_ouvrir`, puis vérifiée par `base_verifier_copie` ; elle se planifie comme `ENREGISTRER` à `base.grymd.restaurer`, que `base_ouvrir` met à la place de la base, l'ancienne renommée (grammaire 2.30) |
+| 100 | `CHANGER_MDP_BASE` | — | dépile le nouveau mot de passe, puis l'ancien ; `base_changer_mot_de_passe` refait l'enveloppe du fichier des clés (la clé de la base ne change pas), et la machine garde le nouveau en mémoire ; erreur si la base n'est pas chiffrée ou si l'ancien est faux (grammaire 2.37, § 16.18) |
 
 ### 3.1 Boucles et Selon
 
@@ -467,3 +468,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.89 | 2026-10-20 | Instruction `SAUVEGARDER` (97) ; `CONVERTIR` 10 : en IBAN ; `ÉCRAN_TEXTE` vérifie la section paiement, `CODE_QR` 1 son texte (`qr_suisse_verifier`) ; format version 68 |
 | 1.90 | 2026-10-20 | Instructions `SAUVEGARDER_COFFRE` (98) et `RESTAURER` (99) ; `base_ouvrir` applique une restauration en attente ; format version 69 |
 | 1.91 | 2026-10-20 | `ÉCRAN_TEXTE` 0xFFFF : le titre calculé de l'écran, passé à `ecran_texte` avec l'élément (size_t)−1 ; `APPARENCE` lit le format d'un logo pris en base (grammaire 2.33) |
+| 1.92 | 2026-10-21 | Instruction `CHANGER_MDP_BASE` (100) ; la marque « base chiffrée » du module (`base_chiffree`), un octet à la fin du fichier (bit 1) ; `machine_mot_de_passe_base`, `machine_demande_mot_de_passe` ; `base_ouvrir_chiffree` ; `SAUVEGARDER` d'une base chiffrée : un coffre de format 2 ; format version 70 (grammaire 2.37) |

@@ -809,6 +809,17 @@ static void page_question(Serveur *s, const Question *q) {
             option(&c, "oui", "oui", strcmp(v, "oui") == 0);
             option(&c, "non", "non", strcmp(v, "non") == 0);
             chaine_ajouter(&c, "</select>");
+        } else if (ch->type && strcmp(ch->type, "mot de passe") == 0) {   /* la base chiffrée (2.37) : jamais renvoyé */
+            if (q->acceptes[k]) chaine_ajouter(&c, "<span class=\"recu\">reçu</span>");
+            else {
+                chaine_ajouter(&c, "<input type=\"password\" id=\"");
+                chaine_ajouter(&c, id);
+                chaine_ajouter(&c, "\" name=\"");
+                chaine_ajouter(&c, id);
+                chaine_ajouter(&c, "\" autocomplete=\"off\"");
+                chaine_ajouter(&c, attente);
+                chaine_ajouter(&c, ">");
+            }
         } else {
             chaine_ajouter(&c, "<input type=\"text\" id=\"");
             chaine_ajouter(&c, id);
@@ -1965,6 +1976,50 @@ static Issue serveur_formulaire(void *contexte, Chaine *sortie, Champ *champs, s
     free(q.refus);
     free(q.acceptes);
     return issue;
+}
+
+/* « La base est chiffrée. » (2.37) : le mot de passe, demandé par une page ; nouveau, choisi (huit caractères au moins)
+ * puis confirmé. */
+typedef struct { Champ *champs; int nouveau; int premier_refuse; } DemandeMdp;
+
+/* La confirmation suit le premier champ : refusé, elle l'est aussi, et les deux se retapent ensemble. */
+static int valider_mdp(void *contexte, size_t k, char **message) {
+    DemandeMdp *d = contexte;
+    const char *l = d->champs[k].ligne ? d->champs[k].ligne : "";
+    if (k == 0) d->premier_refuse = 1;
+    if (k == 0 && !*l) { *message = grym_dupliquer("Donne le mot de passe."); return 1; }
+    if (k == 0 && d->nouveau && strlen(l) < 8) { *message = grym_dupliquer("Au moins huit caractères."); return 1; }
+    if (k == 0) d->premier_refuse = 0;
+    if (k == 1 && d->premier_refuse) { *message = grym_dupliquer("Retape-le aussi."); return 1; }
+    if (k == 1 && strcmp(l, d->champs[0].ligne ? d->champs[0].ligne : "") != 0) {
+        *message = grym_dupliquer("Les deux saisies diffèrent.");
+        return 1;
+    }
+    return 0;
+}
+
+char *serveur_demander_mot_de_passe(void *contexte, int nouveau) {
+    Serveur *s = contexte;
+    Champ ch[2];
+    memset(ch, 0, sizeof ch);
+    ch[0].libelle = nouveau ? "Les données sont chiffrées : choisis leur mot de passe (au moins huit caractères), et note-le "
+                              "en lieu sûr."
+                            : "Les données sont chiffrées : leur mot de passe ?";
+    ch[0].question = 1;
+    ch[0].type = "mot de passe";
+    ch[1].libelle = "Le même, encore";
+    ch[1].question = 1;
+    ch[1].type = "mot de passe";
+    DemandeMdp d = { ch, nouveau, 0 };
+    Chaine vide = {0};
+    size_t arret = 0;
+    const Issue issue = serveur_formulaire(s, &vide, ch, nouveau ? 2 : 1, &arret, valider_mdp, &d);
+    free(vide.d);
+    char *r = issue == ISSUE_REPONDU && ch[0].ligne ? grym_dupliquer(ch[0].ligne) : NULL;
+    for (int k = 0; k < 2; k++) {
+        if (ch[k].ligne) { memset(ch[k].ligne, 0, strlen(ch[k].ligne)); free(ch[k].ligne); }
+    }
+    return r;
 }
 
 static void serveur_effacer(void *contexte, Chaine *sortie) {

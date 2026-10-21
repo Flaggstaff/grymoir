@@ -32,6 +32,7 @@
 #include <windows.h>
 #define terminal() _isatty(_fileno(stdin))
 #else
+#include <termios.h>
 #include <unistd.h>
 #define terminal() isatty(fileno(stdin))
 #endif
@@ -86,6 +87,53 @@ static char *lire_pour_la_machine(void *contexte, Chaine *sortie, const char *qu
     fputc(' ', stdout);
     fflush(stdout);
     return lire_ligne();
+}
+
+/* Une ligne tapée sans écho (le mot de passe de la base, 2.37) ; hors d'un terminal, une ligne ordinaire. */
+static char *lire_masque(const char *invite) {
+    fputs(invite, stderr);
+    fflush(stderr);
+    if (!terminal()) return lire_ligne();
+#ifdef _WIN32
+    HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode = 0;
+    const int regle = GetConsoleMode(h, &mode) && SetConsoleMode(h, mode & ~(DWORD)ENABLE_ECHO_INPUT);
+    char *l = lire_ligne();
+    if (regle) SetConsoleMode(h, mode);
+#else
+    struct termios avant, sans;
+    const int regle = tcgetattr(fileno(stdin), &avant) == 0;
+    if (regle) {
+        sans = avant;
+        sans.c_lflag &= ~(tcflag_t)ECHO;
+        tcsetattr(fileno(stdin), TCSAFLUSH, &sans);
+    }
+    char *l = lire_ligne();
+    if (regle) tcsetattr(fileno(stdin), TCSAFLUSH, &avant);
+#endif
+    fputc('\n', stderr);
+    return l;
+}
+
+/* « La base est chiffrée. » (2.37) : le mot de passe, demandé à la console ; nouveau, choisi puis confirmé. */
+static char *demander_mdp_console(void *contexte, int nouveau) {
+    (void)contexte;
+    if (!nouveau) return lire_masque("Mot de passe de la base : ");
+    fputs("La base est chiffrée : choisis son mot de passe. Sans lui, rien ne l'ouvrira.\n", stderr);
+    for (int essai = 0; essai < 3; essai++) {
+        char *a = lire_masque("Mot de passe : ");
+        if (!a) return NULL;
+        char *b = lire_masque("Le même, encore : ");
+        if (!b) { free(a); return NULL; }
+        const int vide = !*a, pareil = strcmp(a, b) == 0 && !vide;
+        memset(b, 0, strlen(b));
+        free(b);
+        if (pareil) return a;
+        memset(a, 0, strlen(a));
+        free(a);
+        fputs(vide ? "Le mot de passe est vide.\n" : "Les deux saisies diffèrent.\n", stderr);
+    }
+    return NULL;
 }
 
 /* La sortie standard est-elle un terminal ? Sous Windows, le mode virtuel est activé au passage :
@@ -187,6 +235,7 @@ static int lancer(const char *chemin) {
     Machine *m = machine_creer();
     machine_lecteur(m, lire_pour_la_machine, NULL);
     machine_terminal(m, sortie_terminal());
+    machine_demande_mot_de_passe(m, demander_mdp_console, NULL);
     situer(m, chemin);
     Chaine sortie = {0};
     Diagnostic d;
@@ -303,6 +352,7 @@ static int servir(const char *chemin, int port, int navigateur) {
     Machine *m = machine_creer();
     Interface i = serveur_interface(s);
     machine_interface(m, &i);
+    machine_demande_mot_de_passe(m, serveur_demander_mot_de_passe, s);   /* une base chiffrée (2.37) */
     situer(m, chemin);
     Chaine sortie = {0};
     Diagnostic d;

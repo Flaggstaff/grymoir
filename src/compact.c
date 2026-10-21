@@ -2264,6 +2264,28 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 expression(r, mdp + 1, f);
             }
             point(r, f);
+        } else if (!strcmp(c, "base_chiffrée")) {   /* _base_chiffrée → La base est chiffrée. (2.37) */
+            if (d + 1 != f) { echouer(r, t, grym_dupliquer("« _base_chiffrée » s'écrit seul.")); return; }
+            mot(r, "la", t);
+            mot(r, "base", t);
+            mot(r, "est", t);
+            mot(r, "chiffrée", t);
+            point(r, f);
+        } else if (!strcmp(c, "changer_mot_de_passe")) {   /* _changer_mot_de_passe n _ancien a (2.37) */
+            size_t anc = chercher(r, d + 1, f, "ancien");
+            if (anc == f || anc == d + 1 || anc + 1 == f) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _changer_mot_de_passe nouveau _ancien ancien »."));
+                return;
+            }
+            static const char *const M[] = { "changer", "le", "mot", "de", "passe", "de", "la", "base", "pour" };
+            for (size_t k = 0; k < sizeof M / sizeof *M; k++) mot(r, M[k], t);
+            expression(r, d + 1, anc);
+            emettre(r, J_VIRGULE, NULL, &r->e[anc], 0);
+            emettre(r, J_ELISION, "l", &r->e[anc], 1);
+            mot(r, "ancien", &r->e[anc]);
+            mot(r, "étant", &r->e[anc]);
+            expression(r, anc + 1, f);
+            point(r, f);
         } else if (!strcmp(c, "enregistrer")) {
             size_t dans = chercher(r, d + 1, f, "dans");
             if (dans == f || dans == d + 1) {

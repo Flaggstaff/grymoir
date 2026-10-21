@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -259,6 +260,129 @@ static int fichier_existe(const char *nom) {
 
 #define APT_M "Une chose horodatée a : une date.\nUne chose numérotée a : un numéro.\nUne personne a : un nom.\n"
 
+
+/* ---------------------------------------------------------------- */
+/* La base chiffrée (2.37, § 16.18)                                  */
+/* ---------------------------------------------------------------- */
+
+static char *lancer_chiffre(const char *chemin, const char *mdp, const char *src) {
+    Portee *p = portee_creer();
+    Machine *m = machine_creer();
+    machine_base(m, chemin);
+    machine_mot_de_passe_base(m, mdp);
+    char *r = executer_source(p, m, src, 0);
+    machine_detruire(m);
+    portee_detruire(p);
+    return r;
+}
+
+/* Vrai si le fichier contient ce texte en clair. */
+static int contient_en_clair(const char *chemin, const char *texte) {
+    FILE *f = fopen(chemin, "rb");
+    if (!f) return 0;
+    static char tout[1 << 20];
+    const size_t n = fread(tout, 1, sizeof tout, f), l = strlen(texte);
+    fclose(f);
+    for (size_t i = 0; i + l <= n; i++) if (memcmp(tout + i, texte, l) == 0) return 1;
+    return 0;
+}
+
+static void verifier_chiffre(int ligne, const char *chemin, const char *mdp, const char *src, const char *attendu) {
+    char *r = lancer_chiffre(chemin, mdp, src);
+    total++;
+    const int ok = attendu[0] == '~' ? strstr(r, attendu + 1) != NULL : strcmp(r, attendu) == 0;
+    if (!ok) { echecs++; signaler(ligne, src, attendu, r); }
+    free(r);
+}
+
+static void effacer_base(const char *b) {
+    const char *suffixes[] = { "", ".clés", ".restaurer", ".restaurer.clés", "-wal", "-shm" };
+    for (size_t k = 0; k < sizeof suffixes / sizeof *suffixes; k++) {
+        char *c = grym_formater("%s%s", b, suffixes[k]);
+        remove(c);
+        free(c);
+    }
+}
+
+static void essais_base_chiffree(void) {
+#define NOTE "Une note, conservée, a :\n    un texte (texte).\n"
+#define CH "La base est chiffrée.\n" NOTE
+    const char *b = "_essai_chiffree.grymd";
+    effacer_base(b);
+    /* la première fois : les clés naissent, la base est chiffrée, rien de lisible dans le fichier */
+    verifier_chiffre(__LINE__, b, "essai-essai",
+                     CH "La n vaut une nouvelle note :\n    Le texte vaut « secret-anamnese ».\nConserver la n.\n"
+                        "Afficher le nombre de notes conservées.", "1");
+    total++;
+    if (!fichier_existe("_essai_chiffree.grymd.clés") || contient_en_clair(b, "secret-anamnese") || contient_en_clair(b, "SQLite format 3")) {
+        echecs++;
+        printf("ÉCHEC (ligne %d) : la base n'est pas chiffrée, ou ses clés manquent\n", __LINE__);
+    }
+    /* le bon mot de passe l'ouvre ; un autre, ou aucun, non */
+    verifier_chiffre(__LINE__, b, "essai-essai", CH "Afficher le texte de la note conservée dont le texte contient « secret ».", "secret-anamnese");
+    verifier_chiffre(__LINE__, b, "autre-mot", CH "Afficher le nombre de notes conservées.", "~Mot de passe faux.");
+    verifier_chiffre(__LINE__, b, NULL, CH "Afficher le nombre de notes conservées.", "~sans son mot de passe, rien ne s'ouvre");
+    /* sans la déclaration, la base chiffrée ne se lit pas */
+    verifier_chiffre(__LINE__, b, NULL, NOTE "Afficher le nombre de notes conservées.", "~écris « La base est chiffrée. » en tête du programme");
+    /* la sauvegarde : un coffre de format 2, rien de lisible ; « avec le mot de passe » refusé sur une base chiffrée */
+    remove("_essai_chiffree_copie.coffre");
+    verifier_chiffre(__LINE__, b, "essai-essai", CH "Sauvegarder la base dans « _essai_chiffree_copie.coffre ».\nAfficher « fait ».", "fait");
+    total++;
+    {
+        FILE *f = fopen("_essai_chiffree_copie.coffre", "rb");
+        char tete[12] = "";
+        if (f) { if (fread(tete, 1, 12, f) != 12) tete[0] = 0; fclose(f); }
+        if (memcmp(tete, "GRYMCOFFRE2\n", 12) != 0 || contient_en_clair("_essai_chiffree_copie.coffre", "secret-anamnese")) {
+            echecs++;
+            printf("ÉCHEC (ligne %d) : le coffre de format 2\n", __LINE__);
+        }
+    }
+    verifier_chiffre(__LINE__, b, "essai-essai", CH "Sauvegarder la base dans « x.coffre » avec le mot de passe « m ».",
+                     "~sa sauvegarde l'est d'office, avec ses clés");
+    /* le mot de passe change : l'ancien ne sert plus, le nouveau ouvre ; un faux actuel est refusé */
+    verifier_chiffre(__LINE__, b, "essai-essai", CH "Changer le mot de passe de la base pour « nouveau-mot », l'ancien étant « faux ».",
+                     "~Le mot de passe actuel est faux.");
+    verifier_chiffre(__LINE__, b, "essai-essai", CH "Changer le mot de passe de la base pour « nouveau-mot », l'ancien étant « essai-essai ».\n"
+                                                 "Afficher « changé ».", "changé");
+    verifier_chiffre(__LINE__, b, "essai-essai", CH "Afficher 1.", "~Mot de passe faux.");
+    verifier_chiffre(__LINE__, b, "nouveau-mot", CH "Afficher le nombre de notes conservées.", "1");
+    /* la restauration du coffre d'avant : rien en clair en attente ; elle s'ouvre avec le mot de passe de sa copie */
+    verifier_chiffre(__LINE__, b, "nouveau-mot", CH "La m vaut une nouvelle note :\n    Le texte vaut « deuxième ».\nConserver la m.\n"
+                                                 "Restaurer la base depuis « _essai_chiffree_copie.coffre » avec le mot de passe « essai-essai ».\n"
+                                                 "Afficher « prête ».", "prête");
+    total++;
+    if (contient_en_clair("_essai_chiffree.grymd.restaurer", "secret-anamnese")) { echecs++; printf("ÉCHEC (ligne %d) : attente en clair\n", __LINE__); }
+    verifier_chiffre(__LINE__, b, "nouveau-mot", CH "Afficher 1.", "~elle s'ouvre avec le mot de passe de sa copie");
+    verifier_chiffre(__LINE__, b, "essai-essai", CH "Afficher le nombre de notes conservées.", "1");
+    total++;
+    if (contient_en_clair(b, "secret-anamnese")) { echecs++; printf("ÉCHEC (ligne %d) : la base restaurée est en clair\n", __LINE__); }
+    /* une base en clair, d'avant la déclaration, se chiffre sur place à la première ouverture */
+    const char *c = "_essai_clair.grymd";
+    effacer_base(c);
+    verifier_chiffre(__LINE__, c, NULL, NOTE "La n vaut une nouvelle note :\n    Le texte vaut « secret-anamnese ».\nConserver la n.\nAfficher 1.", "1");
+    total++;
+    if (!contient_en_clair(c, "secret-anamnese")) { echecs++; printf("ÉCHEC (ligne %d) : la base d'essai devrait être en clair\n", __LINE__); }
+    verifier_chiffre(__LINE__, c, "essai-essai", CH "Afficher le nombre de notes conservées.", "1");
+    total++;
+    if (contient_en_clair(c, "secret-anamnese")) { echecs++; printf("ÉCHEC (ligne %d) : la base n'a pas été chiffrée sur place\n", __LINE__); }
+    /* la phrase : une seule fois, au premier niveau ; « Changer » sur une base qui n'est pas chiffrée */
+    verifier_chiffre(__LINE__, NULL, NULL, "La base est chiffrée.\nLa base est chiffrée.", "~se déclare une seule fois");
+    verifier_chiffre(__LINE__, NULL, NULL, "Si vrai :\n    La base est chiffrée.", "~au premier niveau");
+    effacer_base(c);
+    verifier_chiffre(__LINE__, c, NULL, NOTE "Changer le mot de passe de la base pour « a », l'ancien étant « b ».", "~n'est pas chiffrée");
+    effacer_base(b);
+    effacer_base(c);
+    remove("_essai_chiffree_copie.coffre");
+    {   /* les « avant restauration » laissés par l'essai */
+        DIR *d = opendir(".");
+        struct dirent *e;
+        while (d && (e = readdir(d)))
+            if (!strncmp(e->d_name, "_essai_chiffree.grymd avant restauration", 40)) remove(e->d_name);
+        if (d) closedir(d);
+    }
+#undef CH
+#undef NOTE
+}
 
 /* ---------------------------------------------------------------- */
 /* Fichiers utilisés (grammaire, § 21)                              */
@@ -4026,6 +4150,7 @@ int main(void) {
     PROG("Un patient, anciennement « client », a : un nom.", "~Seule une entité se renomme");
     PROG("Un patient, conservé, anciennement « patient », a : un nom (texte).", "~« patient » est déjà le nom de cette entité.");
     essais_migration();
+    essais_base_chiffree();
     essais_ecrans();
     essais_etats_ecran();
     essai_case_vide();

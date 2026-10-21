@@ -208,6 +208,9 @@ struct Machine {
     char *dossier;          /* dossier du programme : base des chemins relatifs */
     char *dossier_ecriture; /* où s'écrit un fichier au chemin relatif, s'il diffère (une application fabriquée) */
     char *chemin_base;      /* fichier de la base des entités, NULL : en mémoire (§ 16.5) */
+    char *mdp_base;         /* le mot de passe de la base chiffrée (§ 16.18), en mémoire seulement, ou NULL */
+    char *(*demander_mdp)(void *contexte, int nouveau);   /* l'hôte le demande (2.37) ; NULL : pas d'hôte pour cela */
+    void *contexte_mdp;
     Chaine *essai_migration;   /* non NULL : préparer la base, dire ce qui changerait, tout annuler (A2-c) */
     size_t regles_verifiees;   /* vérifications complètes de règles (docs/vm.md, § 3.3), pour les essais */
     struct EcranVM *ecran;     /* l'écran ouvert (§ 22), ou NULL */
@@ -380,6 +383,36 @@ void machine_base(Machine *m, const char *chemin) {
     m->chemin_base = chemin ? grym_dupliquer(chemin) : NULL;
 }
 
+static void oublier_mdp(Machine *m) {
+    if (m->mdp_base) { memset(m->mdp_base, 0, strlen(m->mdp_base)); free(m->mdp_base); }
+    m->mdp_base = NULL;
+}
+
+void machine_mot_de_passe_base(Machine *m, const char *mdp) {
+    oublier_mdp(m);
+    m->mdp_base = mdp ? grym_dupliquer(mdp) : NULL;
+}
+
+void machine_demande_mot_de_passe(Machine *m, char *(*demander)(void *contexte, int nouveau), void *contexte) {
+    m->demander_mdp = demander;
+    m->contexte_mdp = contexte;
+}
+
+/* La base, ouverte au premier besoin ; chiffrée (« La base est chiffrée. », 2.37), avec son mot de passe : celui que
+ * l'hôte a donné, sinon la variable d'environnement GRYM_MOT_DE_PASSE_BASE (les essais automatiques), sinon celui que
+ * l'hôte demande (nouveau : le fichier des clés n'existe pas encore). Un mot de passe refusé est oublié. */
+static Base *ouvrir_la_base(Machine *m, const Module *module, char **erreur) {
+    if (!module->base_chiffree || !m->chemin_base) return base_ouvrir(m->chemin_base, erreur);
+    /* un essai de migration ne crée ni clés ni chiffrement : une base encore en clair s'y lit telle quelle */
+    if (m->essai_migration && !base_cles_existent(m->chemin_base)) return base_ouvrir(m->chemin_base, erreur);
+    if (!m->mdp_base && getenv("GRYM_MOT_DE_PASSE_BASE")) m->mdp_base = grym_dupliquer(getenv("GRYM_MOT_DE_PASSE_BASE"));
+    if (!m->mdp_base && m->demander_mdp) m->mdp_base = m->demander_mdp(m->contexte_mdp, !base_cles_existent(m->chemin_base));
+    if (!m->mdp_base) { *erreur = grym_dupliquer("Cette base est chiffrée : sans son mot de passe, rien ne s'ouvre."); return NULL; }
+    Base *b = base_ouvrir_chiffree(m->chemin_base, m->mdp_base, erreur);
+    if (!b) oublier_mdp(m);
+    return b;
+}
+
 void machine_dossier(Machine *m, const char *dossier) {
     free(m->dossier);
     m->dossier = dossier && *dossier ? grym_dupliquer(dossier) : NULL;
@@ -436,6 +469,7 @@ void machine_detruire(Machine *m) {
         m->ecran = d;
     }
     base_fermer(m->base);
+    oublier_mdp(m);
     free(m->carte_cles);
     free(m->carte_objets);
     free(m->chemin_base);
@@ -4022,7 +4056,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         if (existe) fclose(existe);
         char *erreur = NULL;
-        if (!m->base) m->base = base_ouvrir(m->chemin_base, &erreur);
+        if (!m->base) m->base = ouvrir_la_base(m, module, &erreur);
         int pret = m->base && base_commencer(m->base, &erreur);
         if (pret) base_rapport(m->base, r);
         if (pret) pret = base_renommer_entites(m->base, m->classes, m->nb_classes, &erreur);   /* § 16.7 */
@@ -4048,7 +4082,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     }
     if (entites) {
         char *erreur = NULL;
-        if (!m->base) m->base = base_ouvrir(m->chemin_base, &erreur);
+        if (!m->base) m->base = ouvrir_la_base(m, module, &erreur);
         int pret = m->base && base_commencer(m->base, &erreur);
         if (pret) pret = base_renommer_entites(m->base, m->classes, m->nb_classes, &erreur);   /* § 16.7 */
         for (size_t i = m->nb_classes - module->nb_classes; pret && i < m->nb_classes; i++)
@@ -4634,7 +4668,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 f->format = NULL;
                 f->base = NULL;
                 f->cle = 0;
-                f->octets = base_copie(m->base, &f->taille, &probleme);
+                f->octets = NULL;
+                f->taille = 0;
+                if (base_est_chiffree(m->base)) {   /* 2.37 : le coffre de format 2, avec les clés de la base */
+                    if (code == I_SAUVEGARDER_COFFRE)
+                        probleme = grym_dupliquer("La base est chiffrée : sa sauvegarde l'est d'office, avec ses clés. "
+                                                  "Écris « Sauvegarder la base dans … » sans mot de passe.");
+                    else f->octets = base_coffre(m->base, &f->taille, &probleme);
+                } else f->octets = base_copie(m->base, &f->taille, &probleme);
                 if (!probleme && code == I_SAUVEGARDER_COFFRE) {   /* le coffre : rien ne s'ouvre sans le mot de passe */
                     size_t n = 0;
                     unsigned char *ferme = coffre_fermer(f->octets, f->taille, mdp.texte, &n, &probleme);
@@ -4677,6 +4718,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 if (coffre_est(o, n)) {
                     if (!op || mdp.type != V_TEXTE) probleme = grym_dupliquer("Cette sauvegarde est chiffrée : il faut son mot de passe.");
                     else clair = coffre_ouvrir(o, n, mdp.texte, &nc, &probleme);
+                } else if (coffre2_est(o, n)) {   /* 2.37 : une sauvegarde d'une base chiffrée, par ses propres clés */
+                    const char *secret = op && mdp.type == V_TEXTE ? mdp.texte : m->mdp_base;
+                    if (!secret) probleme = grym_dupliquer("Cette sauvegarde est chiffrée : il faut son mot de passe.");
+                    else clair = coffre2_ouvrir(o, n, secret, &nc, NULL, NULL, NULL, &probleme);
                 } else {
                     clair = malloc(n ? n : 1);
                     if (clair) { memcpy(clair, o, n); nc = n; }
@@ -4685,6 +4730,18 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             if (!probleme && clair && !base_verifier_copie(clair, nc, &probleme)) { /* probleme rempli */ }
             if (!probleme && clair && !m->chemin_base) probleme = grym_dupliquer("Cette base vit en mémoire : rien à remplacer.");
+            if (!probleme && clair && base_est_chiffree(m->base)) {
+                /* 2.37 : rien en clair sur le disque ; l'attente est un coffre de format 2, celui qu'on a choisi tel quel,
+                 * sinon la copie enfermée sous les clés de la base ; elle s'ouvrira avec le mot de passe de sa copie */
+                size_t nf = 0;
+                unsigned char *ferme = coffre2_est(o, n) ? malloc(n ? n : 1) : base_coffre_depuis(m->base, clair, nc, &nf, &probleme);
+                if (ferme && coffre2_est(o, n)) { memcpy(ferme, o, n); nf = n; }
+                memset(clair, 0, nc);
+                free(clair);
+                clair = ferme;
+                nc = nf;
+                if (!clair && !probleme) probleme = grym_dupliquer("Mémoire insuffisante pour la restauration.");
+            }
             if (!probleme && clair) {
                 /* à côté de la base, en attente : elle prend sa place à la prochaine ouverture, l'ancienne gardée */
                 char *absolu = chemin_absolu(m->chemin_base);
@@ -4709,6 +4766,23 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (lu) { free(lu->octets); free(lu->nom); free(lu); }
             valeur_liberer(&src);
             valeur_liberer(&mdp);
+            if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
+        case I_CHANGER_MDP_BASE: {   /* « Changer le mot de passe de la base pour n, l'ancien étant a. » (2.37) */
+            Valeur nouveau = depiler(&pile), ancien = depiler(&pile);
+            char *probleme = NULL;
+            if (!m->base) probleme = grym_dupliquer("Ce programme n'a pas de base : il ne conserve aucune entité.");
+            else if (!base_est_chiffree(m->base))
+                probleme = grym_dupliquer("Cette base n'est pas chiffrée : écris « La base est chiffrée. » en tête du programme.");
+            else if (ancien.type != V_TEXTE || !ancien.texte || !*ancien.texte)
+                probleme = grym_dupliquer("Donne d'abord le mot de passe actuel.");
+            else if (nouveau.type != V_TEXTE || !nouveau.texte || !*nouveau.texte)
+                probleme = grym_dupliquer("Le nouveau mot de passe est un texte, et pas vide.");
+            else if (base_changer_mot_de_passe(m->base, ancien.texte, nouveau.texte, &probleme))
+                machine_mot_de_passe_base(m, nouveau.texte);
+            valeur_liberer(&nouveau);
+            valeur_liberer(&ancien);
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
