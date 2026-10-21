@@ -36,7 +36,8 @@ QString programme_d_application(QString *nom, QString *principal) {
 static bool a_ignorer(const QFileInfo &i) {
     const QString n = i.fileName();
     return n.startsWith('.') || n.endsWith(".grymd") || n.endsWith(".grymb") || n == "projet.grymatelier"
-           || n.endsWith(".installation");
+           || n.endsWith(".installation") || n.endsWith(".grymsecours") || n.endsWith(".clés")
+           || n.endsWith(".coffre");   // jamais la clé secrète de secours, ni des clés ou des sauvegardes de base
 }
 
 static bool copier(const QString &de, const QString &vers, QString *erreur) {

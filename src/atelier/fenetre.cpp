@@ -10,6 +10,7 @@
 #include "lien.h"
 #include "onglet_ecrans.h"
 #include "theme.h"
+#include "secours.h"
 
 #include <QAction>
 #include <QApplication>
@@ -453,6 +454,12 @@ Fenetre::Fenetre() {
         if (paquet.isEmpty()) QMessageBox::warning(this, "Atelier", erreur);
         else QMessageBox::information(this, "Atelier", QString("Application fabriquée :\n%1%2").arg(paquet, remarque.isEmpty() ? QString() : "\n\n" + remarque));
     });
+    // La clé de secours du développeur (base chiffrée, étape 3 ; grammaire, § 16.18)
+    programme->addSeparator();
+    QMenu *secours = programme->addMenu("Clé de secours");
+    secours->addAction("Créer ma clé de secours…", this, [this] { secours_creer_dialogue(this); });
+    secours->addAction("Poser la clé de secours dans le projet", this, [this] { secours_poser_dialogue(this, projet); });
+    secours->addAction("Rouvrir une base avec la clé de secours…", this, [this] { secours_rouvrir_dialogue(this); });
     QMenu *menu_aide = menuBar()->addMenu("Aide");
     QAction *langage = menu_aide->addAction("Le langage GrymoiR", this, [this] {
         if (!aide) aide = new Aide(this);

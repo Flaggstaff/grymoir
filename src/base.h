@@ -22,7 +22,16 @@ Base *base_ouvrir(const char *chemin, char **erreur);
 /* La base chiffrée (grammaire, § 16.18) : ouverte avec son mot de passe, qui sort sa clé du fichier « chemin.clés » ;
  * sans ce fichier, une clé neuve naît, enveloppée sous `mdp`, et une base en clair se chiffre sur place. Une
  * restauration en attente de format 2 s'ouvre avec le mot de passe de sa copie. */
-Base *base_ouvrir_chiffree(const char *chemin, const char *mdp, char **erreur);
+Base *base_ouvrir_chiffree(const char *chemin, const char *mdp, const unsigned char *publique, char **erreur);
+/* La clé publique de secours du développeur, lue dans « dossier/clé-de-secours.pub » (64 chiffres hexadécimaux) ; 0 sans
+ * elle. Donnée à base_ouvrir_chiffree, elle reçoit une enveloppe de la clé de la base, dès la première ouverture. */
+int base_lire_cle_publique(const char *dossier, unsigned char publique[32]);
+/* Le secours (étape 3) : la clé secrète du développeur ouvre l'enveloppe de secours, et le mot de passe de la base
+ * devient `nouveau` ; l'ancien fichier des clés est gardé (« .clés avant secours »). D'un coffre de format 2, une base
+ * neuve à `destination` (jamais par-dessus un fichier), avec ses clés sous `nouveau`. */
+int base_secourir(const char *chemin, const unsigned char secrete[32], const char *nouveau, char **erreur);
+int base_secourir_coffre(const char *coffre, const unsigned char secrete[32], const char *nouveau, const char *destination,
+                         char **erreur);
 /* Vrai si le fichier des clés existe (ou base en mémoire) : sinon, le mot de passe demandé sera un nouveau. */
 int base_cles_existent(const char *chemin);
 int base_est_chiffree(const Base *b);

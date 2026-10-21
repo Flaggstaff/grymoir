@@ -355,6 +355,16 @@ Programme > Fabriquer l'application… fait du projet une application autonome, 
 
 Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée dans un dossier personnel vierge, crée sa base avec les données du guide. La partie macOS de la voie C et toute la partie Windows n'ont tourné que sur GitHub, pas ici.
 
+## 9. La clé de secours *(faite le 21 octobre 2026)*
+
+Pour une application à base chiffrée (grammaire, § 16.18), le menu Programme, Clé de secours :
+
+- **Créer ma clé de secours…** : une fois pour toutes. Un fichier `.grymsecours` (par défaut dans Documents), protégé par un mot de passe de secours de douze caractères au moins. L'atelier retient où il est. À garder en deux exemplaires, loin de son mot de passe.
+- **Poser la clé de secours dans le projet** : écrit `clé-de-secours.pub`, la partie publique, dans le projet ; l'application fabriquée l'emporte. Chaque base chiffrée reçoit alors, à sa prochaine ouverture, une enveloppe que seule la clé de secours ouvre. La fabrication n'emporte jamais un `.grymsecours`, un `.clés` ni un `.coffre`, même posés dans le projet par erreur.
+- **Rouvrir une base avec la clé de secours…** : la base du client (avec son `.clés`) ou une de ses sauvegardes (`.coffre`), la clé de secours et son mot de passe, puis le nouveau mot de passe du client. D'une sauvegarde, une base neuve s'écrit à côté, à remettre avec son `.clés` à la place de celle de l'application.
+
+La fenêtre du mot de passe de la base, à chaque lancement d'une application chiffrée, est large de 520 points au moins (le titre entier sous macOS), son bouton « Choisir » ou « Ouvrir » le bouton principal, qui répond à la touche Entrée.
+
 ## Journal des révisions
 
 | Version | Date | Changement |

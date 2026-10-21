@@ -812,7 +812,7 @@ static int preparer_restauration_chiffree(const char *chemin, const char *mdp, c
     return ok;
 }
 
-Base *base_ouvrir_chiffree(const char *chemin, const char *mdp, char **erreur) {
+Base *base_ouvrir_chiffree(const char *chemin, const char *mdp, const unsigned char *publique, char **erreur) {
     if (!chemin) return ouvrir(NULL, NULL, 0, erreur);   /* une base en mémoire ne touche pas le disque */
     if (!mdp || !*mdp) { *erreur = grym_dupliquer("Cette base est chiffrée : sans son mot de passe, rien ne s'ouvre."); return NULL; }
     if (!preparer_restauration_chiffree(chemin, mdp, erreur)) return NULL;
@@ -822,13 +822,21 @@ Base *base_ouvrir_chiffree(const char *chemin, const char *mdp, char **erreur) {
     unsigned char *cles = lire_tout_fichier(fichier_cles, &n);
     unsigned char cle[32];
     int ok;
+    int a_ecrire = 0;
     if (cles) {
         ok = cles_ouvrir(cles, n, mdp, cle, erreur);
     } else {   /* la première fois : une clé neuve, enveloppée sous ce mot de passe, rangée avant tout */
         ok = cles_creer(mdp, cle, &cles, &n, erreur);
-        if (ok && !(ok = ecrire_entier(fichier_cles, cles, n)))
-            *erreur = grym_formater("Base « %s » : le fichier de ses clés ne s'écrit pas.", chemin);
+        a_ecrire = ok;
     }
+    if (ok && publique && !cles_ont_secours(cles, n)) {   /* étape 3 : l'enveloppe de secours, posée dès qu'on la connaît */
+        size_t nn = 0;
+        unsigned char *avec = cles_ajouter_secours(cles, n, cle, publique, &nn, erreur);
+        if (!avec) ok = 0;
+        else { memset(cles, 0, n); free(cles); cles = avec; n = nn; a_ecrire = 1; }
+    }
+    if (ok && a_ecrire && !(ok = ecrire_entier(fichier_cles, cles, n)))
+        *erreur = grym_formater("Base « %s » : le fichier de ses clés ne s'écrit pas.", chemin);
     free(fichier_cles);
     if (cles) { memset(cles, 0, n); free(cles); }
     if (!ok) return NULL;
@@ -859,6 +867,65 @@ int base_changer_mot_de_passe(Base *b, const char *ancien, const char *nouveau, 
 }
 
 int base_est_chiffree(const Base *b) { return b && b->chiffree; }
+
+int base_lire_cle_publique(const char *dossier, unsigned char publique[32]) {
+    char *c = grym_formater("%s/clé-de-secours.pub", dossier ? dossier : ".");
+    size_t n = 0;
+    unsigned char *o = lire_tout_fichier(c, &n);
+    free(c);
+    if (!o) return 0;
+    char *t = grym_allouer(n + 1);
+    memcpy(t, o, n);
+    t[n] = 0;
+    free(o);
+    const int ok = secours_hex_lire(t, publique);
+    free(t);
+    return ok;
+}
+
+int base_secourir(const char *chemin, const unsigned char secrete[32], const char *nouveau, char **erreur) {
+    char *fichier_cles = grym_formater("%s.clés", chemin), *avant = grym_formater("%s.clés avant secours", chemin);
+    size_t n = 0, nn = 0;
+    unsigned char *cles = lire_tout_fichier(fichier_cles, &n);
+    unsigned char *neuves = cles ? cles_secourir(cles, n, secrete, nouveau, &nn, NULL, erreur) : NULL;
+    if (!cles) *erreur = grym_formater("« %s » : le fichier de ses clés manque, à côté d'elle.", chemin);
+    int ok = neuves != NULL;
+    if (ok) ok = ecrire_entier(avant, cles, n) && ecrire_entier(fichier_cles, neuves, nn);
+    if (neuves && !ok) *erreur = grym_formater("« %s » : le fichier de ses clés ne s'écrit pas.", chemin);
+    free(cles);
+    free(neuves);
+    free(fichier_cles);
+    free(avant);
+    return ok;
+}
+
+int base_secourir_coffre(const char *coffre, const unsigned char secrete[32], const char *nouveau, const char *destination,
+                         char **erreur) {
+    size_t n = 0, nc = 0, ncles = 0;
+    unsigned char *o = lire_tout_fichier(coffre, &n);
+    if (!o) { *erreur = grym_formater("« %s » ne se lit pas.", coffre); return 0; }
+    FILE *existe = grym_fopen(destination, "rb");
+    if (existe) {
+        fclose(existe);
+        free(o);
+        *erreur = grym_formater("« %s » existe déjà : il n'est jamais écrasé.", destination);
+        return 0;
+    }
+    unsigned char cle[32], *cles = NULL;
+    unsigned char *clair = coffre2_secourir(o, n, secrete, nouveau, &nc, cle, &cles, &ncles, erreur);
+    free(o);
+    if (!clair) return 0;
+    int ok = base_verifier_copie(clair, nc, erreur) && copie_chiffree(clair, nc, destination, cle, erreur);
+    char *fichier_cles = grym_formater("%s.clés", destination);
+    if (ok && !(ok = ecrire_entier(fichier_cles, cles, ncles)))
+        *erreur = grym_formater("« %s » : le fichier de ses clés ne s'écrit pas.", destination);
+    free(fichier_cles);
+    memset(cle, 0, sizeof cle);
+    memset(clair, 0, nc);
+    free(clair);
+    free(cles);
+    return ok;
+}
 
 unsigned char *base_coffre(Base *b, size_t *taille, char **erreur) {
     char *fichier_cles = grym_formater("%s.clés", b->chemin);

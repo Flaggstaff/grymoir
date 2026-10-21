@@ -4,6 +4,8 @@
 #include "compilateur.h"
 #include "vm.h"
 #include "empreinte.h"
+#include "coffre.h"
+#include "base.h"
 #include "date.h"
 #include "imprimeur.h"
 #include "sqlite3.h"
@@ -15,6 +17,9 @@
 #include <dirent.h>
 #ifdef _WIN32
 #include <windows.h>
+#include <direct.h>
+#else
+#include <sys/stat.h>
 #endif
 
 static int total = 0, echecs = 0;
@@ -382,6 +387,116 @@ static void essais_base_chiffree(void) {
     }
 #undef CH
 #undef NOTE
+}
+
+static char *lancer_chiffre_dans(const char *dossier, const char *chemin, const char *mdp, const char *src) {
+    Portee *p = portee_creer();
+    Machine *m = machine_creer();
+    machine_dossier(m, dossier);
+    machine_base(m, chemin);
+    machine_mot_de_passe_base(m, mdp);
+    char *r = executer_source(p, m, src, 0);
+    machine_detruire(m);
+    portee_detruire(p);
+    return r;
+}
+
+static unsigned char *lire_fichier_entier(const char *chemin, size_t *n) {
+    FILE *f = fopen(chemin, "rb");
+    if (!f) return NULL;
+    static unsigned char t[1 << 16];
+    *n = fread(t, 1, sizeof t, f);
+    fclose(f);
+    unsigned char *r = malloc(*n ? *n : 1);
+    memcpy(r, t, *n);
+    return r;
+}
+
+#define VRAI(c, quoi) do { total++; if (!(c)) { echecs++; printf("ÉCHEC (ligne %d) : %s\n", __LINE__, quoi); } } while (0)
+
+/* Le secours (étape 3) : la clé de secours du développeur ; sa partie publique dans le projet donne à chaque base une
+ * enveloppe de secours ; la partie secrète remet un mot de passe à neuf, sur la base ou depuis un coffre. */
+static void essais_secours(void) {
+#define CH "La base est chiffrée.\nUne note, conservée, a :\n    un texte (texte).\n"
+    char *e = NULL;
+    unsigned char pub[32], sec[32], pub2[32], sec2[32];
+    size_t nf = 0, nf2 = 0;
+    VRAI(!secours_creer("court", pub, &nf, &e) && e && strstr(e, "douze"), "mot de passe de secours trop court refusé");
+    free(e); e = NULL;
+    unsigned char *fichier = secours_creer("superadmin-essai", pub, &nf, &e);
+    unsigned char *fichier2 = secours_creer("un-autre-developpeur", pub2, &nf2, &e);
+    VRAI(fichier && fichier2 && nf == 141, "la clé de secours naît (141 octets)");
+    unsigned char lue[32];
+    VRAI(fichier && secours_publique(fichier, nf, lue) && memcmp(lue, pub, 32) == 0, "sa partie publique se lit sans mot de passe");
+    VRAI(fichier && !secours_ouvrir(fichier, nf, "faux-faux-faux", sec, &e), "mot de passe de secours faux refusé");
+    free(e); e = NULL;
+    VRAI(fichier && secours_ouvrir(fichier, nf, "superadmin-essai", sec, &e), "le bon mot de passe ouvre la clé de secours");
+    VRAI(fichier2 && secours_ouvrir(fichier2, nf2, "un-autre-developpeur", sec2, &e), "la seconde clé s'ouvre");
+    char h[65];
+    secours_hex_ecrire(pub, h);
+    VRAI(secours_hex_lire(h, lue) && memcmp(lue, pub, 32) == 0, "la clé publique en hexadécimal, aller et retour");
+#ifdef _WIN32
+    _mkdir("_essai_secours");
+#else
+    mkdir("_essai_secours", 0755);
+#endif
+    const char *b = "_essai_secours/app.grymd";
+    effacer_base(b);
+    remove("_essai_secours/clé-de-secours.pub");
+    /* une base née sans clé publique : pas d'enveloppe de secours */
+    char *r = lancer_chiffre_dans("_essai_secours", b, "mot-de-nicolas", CH "La n vaut une nouvelle note :\n    Le texte vaut « a ».\nConserver la n.\nAfficher 1.");
+    free(r);
+    size_t nc = 0;
+    unsigned char *cles = lire_fichier_entier("_essai_secours/app.grymd.clés", &nc);
+    VRAI(cles && !cles_ont_secours(cles, nc), "sans clé publique, pas d'enveloppe de secours");
+    free(cles);
+    VRAI(!base_secourir(b, sec, "neuf-mot-de-passe", &e) && e && strstr(e, "pas d'enveloppe de secours"), "le secours refusé, et dit pourquoi");
+    free(e); e = NULL;
+    /* la clé publique posée dans le projet : l'enveloppe s'ajoute à l'ouverture suivante */
+    FILE *f = fopen("_essai_secours/clé-de-secours.pub", "wb");
+    if (f) { fputs(h, f); fputc('\n', f); fclose(f); }
+    r = lancer_chiffre_dans("_essai_secours", b, "mot-de-nicolas", CH "Afficher le nombre de notes conservées.");
+    VRAI(r && !strcmp(r, "1"), "la base s'ouvre comme avant");
+    free(r);
+    cles = lire_fichier_entier("_essai_secours/app.grymd.clés", &nc);
+    VRAI(cles && cles_ont_secours(cles, nc), "l'enveloppe de secours ajoutée");
+    free(cles);
+    /* une sauvegarde, faite avec l'enveloppe de secours */
+    remove("_essai_secours/copie.coffre");
+    r = lancer_chiffre_dans("_essai_secours", b, "mot-de-nicolas", CH "Sauvegarder la base dans « copie.coffre ».\nAfficher « fait ».");
+    VRAI(r && !strcmp(r, "fait"), "la sauvegarde");
+    free(r);
+    /* Nicolas oublie : une autre clé de secours ne sert à rien ; la bonne remet un mot de passe neuf */
+    VRAI(!base_secourir(b, sec2, "neuf-mot-de-passe", &e) && e && strstr(e, "n'est pas celle de cette base"), "une autre clé refusée");
+    free(e); e = NULL;
+    VRAI(base_secourir(b, sec, "neuf-mot-de-passe", &e), "le secours remet un mot de passe");
+    r = lancer_chiffre_dans("_essai_secours", b, "mot-de-nicolas", CH "Afficher 1.");
+    VRAI(r && strstr(r, "Mot de passe faux."), "l'ancien ne sert plus");
+    free(r);
+    r = lancer_chiffre_dans("_essai_secours", b, "neuf-mot-de-passe", CH "Afficher le nombre de notes conservées.");
+    VRAI(r && !strcmp(r, "1"), "le nouveau ouvre la base, ses données intactes");
+    free(r);
+    VRAI(fichier_existe("_essai_secours/app.grymd.clés avant secours"), "les anciennes clés gardées");
+    /* l'ordinateur perdu, le mot de passe oublié : depuis le coffre, une base neuve */
+    remove("_essai_secours/sauvee.grymd");
+    remove("_essai_secours/sauvee.grymd.clés");
+    VRAI(base_secourir_coffre("_essai_secours/copie.coffre", sec, "mot-retrouve", "_essai_secours/sauvee.grymd", &e), "le secours depuis un coffre");
+    VRAI(!base_secourir_coffre("_essai_secours/copie.coffre", sec, "mot-retrouve", "_essai_secours/sauvee.grymd", &e) && e && strstr(e, "jamais écrasé"),
+         "jamais par-dessus une base");
+    free(e); e = NULL;
+    r = lancer_chiffre_dans("_essai_secours", "_essai_secours/sauvee.grymd", "mot-retrouve", CH "Afficher le texte de la note conservée dont le texte est « a ».");
+    VRAI(r && !strcmp(r, "a"), "la base sauvée s'ouvre avec le mot de passe retrouvé");
+    free(r);
+    VRAI(!contient_en_clair("_essai_secours/sauvee.grymd", "SQLite format 3"), "la base sauvée est chiffrée");
+    free(fichier);
+    free(fichier2);
+    effacer_base(b);
+    effacer_base("_essai_secours/sauvee.grymd");
+    remove("_essai_secours/app.grymd.clés avant secours");
+    remove("_essai_secours/copie.coffre");
+    remove("_essai_secours/clé-de-secours.pub");
+    remove("_essai_secours");
+#undef CH
 }
 
 /* ---------------------------------------------------------------- */
@@ -4151,6 +4266,7 @@ int main(void) {
     PROG("Un patient, conservé, anciennement « patient », a : un nom (texte).", "~« patient » est déjà le nom de cette entité.");
     essais_migration();
     essais_base_chiffree();
+    essais_secours();
     essais_ecrans();
     essais_etats_ecran();
     essai_case_vide();

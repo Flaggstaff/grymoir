@@ -408,7 +408,9 @@ static Base *ouvrir_la_base(Machine *m, const Module *module, char **erreur) {
     if (!m->mdp_base && getenv("GRYM_MOT_DE_PASSE_BASE")) m->mdp_base = grym_dupliquer(getenv("GRYM_MOT_DE_PASSE_BASE"));
     if (!m->mdp_base && m->demander_mdp) m->mdp_base = m->demander_mdp(m->contexte_mdp, !base_cles_existent(m->chemin_base));
     if (!m->mdp_base) { *erreur = grym_dupliquer("Cette base est chiffrée : sans son mot de passe, rien ne s'ouvre."); return NULL; }
-    Base *b = base_ouvrir_chiffree(m->chemin_base, m->mdp_base, erreur);
+    unsigned char publique[32];   /* étape 3 : la clé publique de secours du projet, s'il en a une */
+    const int secours = base_lire_cle_publique(m->dossier, publique);
+    Base *b = base_ouvrir_chiffree(m->chemin_base, m->mdp_base, secours ? publique : NULL, erreur);
     if (!b) oublier_mdp(m);
     return b;
 }

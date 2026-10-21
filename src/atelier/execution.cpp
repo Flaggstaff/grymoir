@@ -286,6 +286,7 @@ static char *iface_transcrire(void *, const unsigned char *octets, size_t taille
 static QString demande_mot_de_passe(bool nouveau) {
     QDialog d;
     d.setWindowTitle(nouveau ? QString("Choisir le mot de passe de la base") : QString("Mot de passe de la base"));
+    d.setMinimumWidth(520);   // le titre entier, sous macOS aussi
     auto *l = new QVBoxLayout(&d);
     auto *texte = new QLabel(nouveau ? QString("Les données de cette application sont chiffrées. Choisis leur mot de passe "
                                                "et note-le en lieu sûr : sans lui, rien ne les ouvrira.")
@@ -307,6 +308,8 @@ static QString demande_mot_de_passe(bool nouveau) {
     l->addWidget(motif);
     auto *boutons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     boutons->button(QDialogButtonBox::Ok)->setText(nouveau ? "Choisir" : "Ouvrir");
+    boutons->button(QDialogButtonBox::Ok)->setDefault(true);   // Entrée ; le bouton principal du thème
+    boutons->button(QDialogButtonBox::Ok)->setProperty("role", "principal");   // la feuille du thème : fond d'accent
     boutons->button(QDialogButtonBox::Cancel)->setText("Renoncer");
     l->addWidget(boutons);
     QObject::connect(boutons, &QDialogButtonBox::rejected, &d, &QDialog::reject);

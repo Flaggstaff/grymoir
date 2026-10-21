@@ -36,6 +36,7 @@ int coffre_cle(const char *mdp, const unsigned char sel[16], unsigned long blocs
  * tirée du mot de passe, avec pour données associées la magie et l'en-tête de l'enveloppe. Une enveloppe de secours
  * (sorte 2, la clé publique du développeur) viendra à l'étape 3 ; une sorte inconnue se garde telle quelle. */
 #define CLES_ENVELOPPE_MDP 97
+#define CLES_ENVELOPPE_SECOURS 105
 
 /* Une clé tirée au hasard, et le fichier des clés qui l'enveloppe sous `mdp` ; 0 et *erreur sinon. */
 int cles_creer(const char *mdp, unsigned char cle[32], unsigned char **cles, size_t *n, char **erreur);
@@ -57,5 +58,27 @@ unsigned char *coffre2_fermer(const unsigned char *clair, size_t n, const unsign
 /* Rend la copie claire (à libérer), et, si demandés, la clé et une copie du fichier des clés (à libérer). */
 unsigned char *coffre2_ouvrir(const unsigned char *o, size_t n, const char *mdp, size_t *taille, unsigned char cle[32],
                               unsigned char **cles, size_t *ncles, char **erreur);
+
+/* Le secours (étape 3) : une enveloppe de sorte 2 met la clé de la base sous la clé publique X25519 du développeur
+ * (une clé éphémère, BLAKE2b du secret partagé, XChaCha20-Poly1305) ; seule sa clé secrète l'ouvre. */
+int cles_ont_secours(const unsigned char *cles, size_t n);
+unsigned char *cles_ajouter_secours(const unsigned char *cles, size_t n, const unsigned char cle[32],
+                                    const unsigned char publique[32], size_t *taille, char **erreur);
+/* Le fichier des clés, chaque enveloppe de mot de passe refaite sous `nouveau`, la clé sortie par le secours (et
+ * rendue dans `cle` si non NULL) ; NULL et *erreur si la clé secrète n'ouvre pas l'enveloppe de secours. */
+unsigned char *cles_secourir(const unsigned char *cles, size_t n, const unsigned char secrete[32], const char *nouveau,
+                             size_t *taille, unsigned char cle[32], char **erreur);
+/* Un coffre de format 2 ouvert par le secours : la copie claire, la clé, et les clés refaites sous `nouveau`. */
+unsigned char *coffre2_secourir(const unsigned char *o, size_t n, const unsigned char secrete[32], const char *nouveau,
+                                size_t *taille, unsigned char cle[32], unsigned char **cles, size_t *ncles, char **erreur);
+
+/* Le fichier de la clé de secours (« GRYMSECOURS1 », 141 octets) : la clé secrète X25519 chiffrée sous le mot de passe de
+ * secours (Argon2id, XChaCha20-Poly1305), la clé publique en clair, authentifiée avec. */
+unsigned char *secours_creer(const char *mdp, unsigned char publique[32], size_t *taille, char **erreur);
+int secours_publique(const unsigned char *fichier, size_t n, unsigned char publique[32]);
+int secours_ouvrir(const unsigned char *fichier, size_t n, const char *mdp, unsigned char secrete[32], char **erreur);
+/* La clé publique en 64 chiffres hexadécimaux (le fichier « clé-de-secours.pub » d'un projet). */
+int secours_hex_lire(const char *texte, unsigned char publique[32]);
+void secours_hex_ecrire(const unsigned char publique[32], char h[65]);
 
 #endif

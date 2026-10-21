@@ -26,6 +26,7 @@
 #include <QRadioButton>
 #include "importation.h"
 #include "panneau.h"
+#include "secours.h"
 #include <QInputMethodEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -4904,6 +4905,58 @@ int main(int argc, char **argv) {
             e.close();
         }
         minuterie.stop();
+    }
+
+    // La clé de secours (étape 3) : créée, posée dans un projet ; la fabrication emporte sa partie publique, jamais le
+    // fichier secret ni des clés de base ; une base dont le client a oublié le mot de passe se rouvre par elle
+    {
+        QTemporaryDir d;
+        const QString cle = d.filePath("moi.grymsecours");
+        VERIFIER(!secours_creer_fichier(cle, "court").isEmpty());   // douze caractères au moins
+        VERIFIER(secours_creer_fichier(cle, "superadmin-essai").isEmpty());
+        VERIFIER(!secours_creer_fichier(cle, "superadmin-essai").isEmpty());   // jamais écrasée
+        QDir().mkpath(d.filePath("projet"));
+        const QString projet = d.filePath("projet");
+        VERIFIER(secours_poser(cle, projet).isEmpty());
+        VERIFIER(QFile::exists(QDir(projet).filePath(QString::fromUtf8("clé-de-secours.pub"))));
+        QFile p(QDir(projet).filePath("app.grym"));
+        VERIFIER(p.open(QIODevice::WriteOnly));
+        p.write(QString::fromUtf8("La base est chiffrée.\nUne note, conservée, a :\n    un texte (texte).\n"
+                                  "Si le nombre de notes conservées est nul :\n    La n vaut une nouvelle note :\n"
+                                  "        Le texte vaut « a ».\n    Conserver la n.\nAfficher « notes » puis le nombre de notes conservées.\n").toUtf8());
+        p.close();
+        QFile::copy(cle, QDir(projet).filePath("oublie.grymsecours"));   // posé là par erreur : la fabrication l'écarte
+        QString erreur;
+        VERIFIER(preparer_programme(projet, "app.grym", "App", d.filePath("prog"), &erreur));
+        VERIFIER(QFile::exists(d.filePath(QString::fromUtf8("prog/clé-de-secours.pub"))));
+        VERIFIER(!QFile::exists(d.filePath("prog/oublie.grymsecours")));
+        // la base du client, créée avec la clé publique ; il oublie son mot de passe ; le secours lui en donne un neuf
+        qputenv("GRYM_MOT_DE_PASSE_BASE", "mot-du-client");
+        {
+            Execution e(QDir(projet).filePath("app.grym"));
+            e.demarrer();
+            QElapsedTimer z;
+            z.start();
+            auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+            while (z.elapsed() < 30000 && !fil().contains("notes 1")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            VERIFIER(fil().contains("notes 1"));
+            e.close();
+        }
+        const QString base = QDir(projet).filePath("app.grymd");
+        VERIFIER(!secours_rouvrir(cle, "faux-faux-faux", base, "nouveau-du-client", QString()).isEmpty());
+        VERIFIER(secours_rouvrir(cle, "superadmin-essai", base, "nouveau-du-client", QString()).isEmpty());
+        qputenv("GRYM_MOT_DE_PASSE_BASE", "nouveau-du-client");
+        {
+            Execution e(QDir(projet).filePath("app.grym"));
+            e.demarrer();
+            QElapsedTimer z;
+            z.start();
+            auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+            while (z.elapsed() < 30000 && !fil().contains("notes 1")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            VERIFIER(fil().contains("notes 1"));
+            e.close();
+        }
+        qunsetenv("GRYM_MOT_DE_PASSE_BASE");
     }
 
     // Praxis (21 octobre 2026) : une séance facturée qui passe annulée, ou absente quand le cabinet ne facture pas les
