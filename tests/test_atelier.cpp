@@ -4840,6 +4840,7 @@ int main(int argc, char **argv) {
             "    Dégager la séance et « absence ».\n"
             "    Sortir de la boucle.\n"
             "Afficher « essai absence » puis le nombre de factures conservées puis le nombre de factures supprimées puis le nombre de séances conservées dont la facture est présente.\n"
+            "Afficher « essai pièces » puis le compte des pièces du marc puis le compte des pièces du patient conservé dont le nom = « Anne Rochat ».\n"
             "Afficher « fin des essais ».\n");
         const int k = source.indexOf(QString::fromUtf8("Remarque : d'abord le mot de passe"));
         VERIFIER(k > 0);
@@ -4857,6 +4858,8 @@ int main(int argc, char **argv) {
         VERIFIER(t.contains(QString::fromUtf8("essai facturées 2")));
         VERIFIER(t.contains(QString::fromUtf8("essai restée 1")));
         VERIFIER(t.contains(QString::fromUtf8("essai absence 0 1 0")));
+        // la facture annulée compte encore : Marc Dupraz s'archive, il ne se supprime plus ; Anne Rochat, sans pièce, si
+        VERIFIER(t.contains(QString::fromUtf8("essai pièces 1 0")));
         if (!t.contains("fin des essais")) std::printf("%s\n", t.right(800).toUtf8().constData());
         e.close();
     }

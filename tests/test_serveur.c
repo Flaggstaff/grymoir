@@ -1611,6 +1611,27 @@ int main(void) {
         remove("_essai_cabinet12.grymd");
     }
 
+    {   /* Praxis : archiver un patient le retire de la liste des patients ; « Archives », dans la Configuration, le
+           montre et le désarchive ; sans pièce, il se supprime encore (21 octobre 2026) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=Patients"), evenement("q=3&choix=1.0"), get("/"),
+                 evenement("q=4&clic=Archiver"), get("/"), evenement("q=5&clic=Fermer"), evenement("q=6&clic=Configuration"),
+                 evenement("q=7&clic=Archives"), get("/"), evenement("q=8&s0=0&clic=D%C3%A9sarchiver"), get("/"),
+                 evenement("q=9&clic=Fermer"), evenement("q=10&clic=Fermer"), evenement("q=11&clic=Patients"), get("/"));
+        servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet21.grymd", &sc);
+        CONTIENT(sc.reponses[3], "<h1>Patient</h1>");
+        CONTIENT(sc.reponses[3], ">Archiver</button>");
+        CONTIENT(sc.reponses[3], "value=\"Anne Rochat\"");
+        NE_CONTIENT_PAS(sc.reponses[5], ">Anne Rochat</button>");   /* archivée : hors de la liste des patients */
+        CONTIENT(sc.reponses[5], ">Louis Bapst</button>");
+        CONTIENT(sc.reponses[9], "<h1>Archives</h1>");
+        CONTIENT(sc.reponses[9], ">Anne Rochat</button>");
+        NE_CONTIENT_PAS(sc.reponses[11], ">Anne Rochat</button>");   /* désarchivée : plus dans les archives */
+        CONTIENT(sc.reponses[15], ">Anne Rochat</button>");          /* et de retour dans la liste */
+        liberer(&sc);
+        remove("_essai_cabinet21.grymd");
+    }
+
     {   /* Cabinet : l'IBAN des QR-factures, avec ou sans espaces ; vingt et un caractères (2.27) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&z1=essai-essai&z2=essai-essai&clic=3"), evenement("q=2&clic=7"), evenement("q=3&clic=0"), get("/"),

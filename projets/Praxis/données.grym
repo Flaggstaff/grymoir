@@ -56,8 +56,11 @@ Un patient, conservé, anciennement « client », a :
     un pays (texte), « Suisse » au départ,
     une date de naissance (date), facultative,
     une anamnèse (texte), facultative, anciennement « remarque »,
-    une dernière dictée (son), facultative.
+    une dernière dictée (son), facultative,
+    un archivage (date), facultatif.
 
+Remarque : l'archivage : le jour où le patient a été archivé ; absent, il est actif. Un patient qui a des factures ou des quittances
+Remarque : ne se supprime pas (pièces gardées dix ans, CO 958f) : il s'archive, et quitte la liste des patients.
 Remarque : un patient supprimé emporte dans la corbeille ses séances, ses notes et ses pièces ; rétabli, il les ramène.
 Remarque : la facture des séances à payer d'un patient, numérotée par année (« F-2026-0001 ») ; son exemplaire, le PDF envoyé, gardé tel quel ;
 Remarque : son état suit ses séances : à régler, en partie réglée (certaines encaissées), réglée (toutes) ; réglée, sa quittance se fait seule.

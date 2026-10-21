@@ -153,7 +153,8 @@ L'écran du patient, « Patient », montre :
         un bouton « Nouvelle séance »,
         un bouton « Fermer »,
         un bouton « Notes »,
-        un bouton « Supprimer ».
+        un bouton « Supprimer »,
+        un bouton « Archiver ».
 
 Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
 L'écran de la séance, « Séance », montre :
@@ -334,9 +335,10 @@ Le document de quittance, « Quittance », montre :
     le texte "Pour acquit, " suivi du nom du cabinet conservé.
 
 Remarque : la recherche filtre la liste à chaque changement : le nom, le téléphone, la localité ou le courriel contient ce qui est tapé.
+Remarque : les patients archivés n'y sont pas : la Configuration les montre, dans « Archives ».
 L'écran des patients montre :
     une recherche (texte), facultative, avec l'indication « Un nom, un téléphone, une localité »,
-    la liste des patients conservés dont le nom contient la recherche des patients ou le téléphone contient la recherche des patients ou la localité contient la recherche des patients ou le courriel contient la recherche des patients, par nom, avec le nom, le téléphone, la localité et le courriel,
+    la liste des patients conservés dont l'archivage est absent et (le nom contient la recherche des patients ou le téléphone contient la recherche des patients ou la localité contient la recherche des patients ou le courriel contient la recherche des patients), par nom, avec le nom, le téléphone, la localité et le courriel,
     côte à côte :
         un bouton « Nouveau patient »,
         un bouton « Fermer ».
@@ -442,6 +444,13 @@ L'écran de la corbeille, « Corbeille », montre :
     la liste des quittances supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
     un bouton « Fermer ».
 
+Remarque : les patients archivés : ceux qui ont des pièces et ne viennent plus ; leur page s'ouvre, leur historique avec.
+L'écran des archives, « Archives », montre :
+    la liste des patients conservés dont l'archivage est présent, par nom, avec le nom, le téléphone, la localité et l'archivage,
+    côte à côte :
+        un bouton « Désarchiver »,
+        un bouton « Fermer ».
+
 Remarque : la connexion : l'application ne montre rien sans le mot de passe du cabinet ; une empreinte lente (0,7 s) freine qui essaie.
 L'écran de connexion, « Praxis », montre :
     le texte « Les données des patients sont protégées : donne le mot de passe du cabinet. »,
@@ -481,6 +490,7 @@ L'écran de configuration, « Configuration », montre :
     un bouton « Rubriques de frais », en tuile, avec la description « Loyer, matériel… »,
     un bouton « Corbeille », en tuile, avec la description « Rétablir ce qui a été supprimé »,
     un bouton « Sauvegardes », en tuile, avec la description « Copies chiffrées, restauration, mot de passe »,
+    un bouton « Archives », en tuile, avec la description « Patients archivés, leurs pièces gardées »,
     un bouton « Fermer ».
 
 L'écran des soins, « Soins », montre :
@@ -832,6 +842,21 @@ Quand on choisit une quittance dans l'écran de la corbeille :
 Quand on clique sur « Fermer » dans l'écran de la corbeille :
     Fermer l'écran.
 
+Quand on clique sur « Archives » dans l'écran de configuration :
+    Ouvrir l'écran des archives.
+
+Quand on choisit un patient dans l'écran des archives :
+    La personne ouverte devient le patient choisi de l'écran.
+    Ouvrir l'écran du patient.
+
+Remarque : désarchivé, le patient revient dans la liste des patients.
+Quand on clique sur « Désarchiver » dans l'écran des archives :
+    Si le patient choisi de l'écran est absent, refuser « Choisis d'abord un patient dans la liste. ».
+    L'archivage du patient choisi de l'écran devient absent.
+
+Quand on clique sur « Fermer » dans l'écran des archives :
+    Fermer l'écran.
+
 Quand on clique sur « Ajouter » dans l'écran des rubriques :
     Si la nouvelle rubrique de l'écran est absente, refuser « Écris d'abord le nom de la rubrique. ».
     La r vaut une nouvelle rubrique :
@@ -916,7 +941,13 @@ Quand on clique sur « Notes » dans l'écran du patient :
 
 Remarque : un patient supprimé emporte ses séances, ses notes et ses pièces dans la corbeille ; la Configuration les rétablit ensemble.
 Quand on clique sur « Supprimer » dans l'écran du patient :
+    Si le compte des pièces de la personne ouverte > 0, refuser « Ce patient a des factures ou des quittances, gardées dix ans : archive-le plutôt. ».
     Supprimer la personne ouverte.
+    Fermer l'écran.
+
+Remarque : archiver : le patient quitte la liste des patients, rien ne se perd ; « Archives » le montre et le ramène.
+Quand on clique sur « Archiver » dans l'écran du patient :
+    L'archivage de la personne ouverte devient aujourd'hui.
     Fermer l'écran.
 
 Remarque : une note s'ajoute, datée ; rien de ce qui est déjà noté ne se perd.
@@ -990,6 +1021,7 @@ Quand on change le soin dans l'écran de séance :
         Sinon, le prix de l'écran devient le tarif du soin de l'écran.
 
 Remarque : une séance passée est faite ; plus tard, ou aujourd'hui à une heure pas encore venue, elle est prévue.
+Remarque : un patient archivé qui revient pour une séance quitte les archives.
 Remarque : payée, elle est encaissée le jour de la séance (ou aujourd'hui, payée d'avance).
 Quand on clique sur « Enregistrer » dans l'écran de séance :
     La nouvelle vaut une nouvelle séance :
@@ -1007,6 +1039,7 @@ Quand on clique sur « Enregistrer » dans l'écran de séance :
     Si la date de la nouvelle > aujourd'hui, le statut de la nouvelle devient « prévue ».
     Si la date de la nouvelle = aujourd'hui et l'heure de l'écran est présente :
         Si l'heure de l'écran > maintenant, le statut de la nouvelle devient « prévue ».
+    Si l'archivage du patient de la nouvelle est présent, l'archivage du patient de la nouvelle devient absent.
     Si le paiement de la nouvelle ≠ « à payer » et le paiement de la nouvelle ≠ « offert » :
         Si la date de la nouvelle ≤ aujourd'hui, l'encaissement de la nouvelle devient la date de la nouvelle.
         Sinon, l'encaissement de la nouvelle devient aujourd'hui.
