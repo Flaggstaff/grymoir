@@ -4115,7 +4115,9 @@ static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
     if (cour(a)->type != J_POINT && cour(a)->type != J_FIN
         && !(est_mot(cour(a), "comme") && (est_mot(voir(a, 1), "un") || est_mot(voir(a, 1), "une")))) {
         for (;;) {
-            Noeud *arg = comparaison(a);
+            /* un argument logique entre parenthèses, « (le reste > 0 et le dé ≤ 15) » (§ 9.2) : un groupe logique,
+             * comme dans une condition ; avant le 21 octobre 2026, la parenthèse attendait un calcul et était refusée */
+            Noeud *arg = cour(a)->type == J_PAR_OUV && groupe_logique(a) ? element_logique(a) : comparaison(a);
             if (!arg) { noeud_liberer(n); return NULL; }
             noeud_ajouter(n, arg);
             n->fin = arg->fin;

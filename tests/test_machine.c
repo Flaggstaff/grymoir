@@ -1748,6 +1748,10 @@ int main(void) {
     PROG("Le total vaut 0.\nPour ajouter un montant :\n    Le total devient total + montant.\n"
          "Ajouter 5.\nAjouter 2,50.\nAfficher le total.", "7,50");
     PROG("Pour saluer :\n    Afficher « Bonjour ».\nSaluer.\nSaluer.", "Bonjour\nBonjour");
+    /* § 9.2 : un argument logique entre parenthèses (2.38 ; avant, « Parenthèse fermante manquante ») */
+    PROG("Pour montrer un a et un b et un c :\n    Afficher a puis b puis c.\nLe f vaut 3.\nLe p vaut 10.\n"
+         "Montrer 1 et 2 et (le f > 1 et le p ≤ 15).\nMontrer (f = 3 ou p = 0) et (f + 1) × 2 et (f > 5).",
+         "1 2 vrai\nvrai 8 faux");
     PROG("Pour payer un montant et une remise :\n    Afficher montant − remise.\nPayer 10 et 2.", "8");
     PROG("Le compteur vaut 0.\nPour compter un nombre :\n    Si nombre > 0 :\n        Le compteur devient compteur + 1.\n"
          "        Compter nombre − 1.\nCompter 50.\nAfficher le compteur.", "50");

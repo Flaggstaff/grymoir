@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.37 de la spécification, révisée le 21 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.38 de la spécification, révisée le 21 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -619,7 +619,7 @@ Relancer le client.
 ```
 
 - Une action s'écrit en bloc, après `Pour` et son nom (un ou plusieurs mots, à l'infinitif).
-- Appel : le nom de l'action commence la phrase, suivi des arguments séparés par `et`. Chaque argument est une comparaison ou une expression ; un `et` logique dans un argument demande des parenthèses.
+- Appel : le nom de l'action commence la phrase, suivi des arguments séparés par `et`. Chaque argument est une comparaison ou une expression ; un `et` logique dans un argument demande des parenthèses. *(2.38)* Entre parenthèses, l'argument est un groupe logique, comme dans une condition : `Encaisser la dette et le jour et (le reste > 1 et le dé ≤ 15).` La 2.37 le refusait encore (« Parenthèse fermante manquante ») ; l'essai de charge de Praxis l'a révélé.
 - Une action ne rend rien : `Rendre` y est une erreur.
 - *(2.31)* Un nom qui finit par `de` devant son premier paramètre s'écrit avec l'élision : `Pour acquitter le solde d'un relevé :`. L'appel contracte comme partout : `Acquitter le solde du relevé.`, `… de 4.`, `… d'Anne.`, `… des notes.`
 
@@ -2308,3 +2308,4 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 | 2.35 | 2026-10-21 | Forme compacte sans perte : `_alors _court`, `_sinon _court` (une branche courte), `_alors _bloc` (un bloc que la règle du guide raccourcirait) ; `x _est v` (l'égalité écrite en mots ; un `=` compact reste `=`) ; `_nu x` (un nom écrit sans article qu'une variable recevrait), `_le x`, `_la x`, `_l' x` (un article écrit qu'un paramètre ne recevrait pas) ; un collage en argument garde ses parenthèses (`de ("Rappel " suivi du numéro)`) |
 | 2.36 | 2026-10-21 | § 16.7 : un champ retiré sans aucune valeur présente part ; § 22.2 : `Faire comme un clic sur « B ».`, le clic par libellé dans le navigateur, le clic qui suit une zone et la touche Entrée dans l'atelier ; forme compacte : `_le patient.nom`, `_nu date.année`, `_la s.date << …`, `_absente` |
 | 2.37 | 2026-10-21 | Nouveau § 16.18 : la base chiffrée, `La base est chiffrée.` (SQLite3 Multiple Ciphers, la clé enveloppée dans `base.grymd.clés`, le mot de passe demandé par l'exécution), `Changer le mot de passe de la base pour n, l'ancien étant a.` ; § 15.6 bis : le coffre de format 2 d'une base chiffrée, la restauration sans rien en clair sur le disque ; le secours : la clé de secours du développeur, `clé-de-secours.pub` dans le projet, l'enveloppe de secours, « Rouvrir une base avec la clé de secours » |
+| 2.38 | 2026-10-21 | § 9.2 : un argument d'action logique entre parenthèses, `(a > 1 et b ≤ 15)`, est un groupe logique (il était refusé : la parenthèse attendait un calcul) |
