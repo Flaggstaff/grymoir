@@ -1563,9 +1563,9 @@ int main(void) {
         strftime(jour, sizeof jour, "%d.%m.%Y", localtime(&maintenant));
         snprintf(ev_frais, sizeof ev_frais, "q=5&z1=%s&z2=80&z3=Huiles+de+massage&z4=Mat%%C3%%A9riel&z5=carte&clic=Enregistrer", jour);
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=6"), get("/"), evenement("q=3&clic=7"), evenement("q=4&clic=2"), get("/"),
+        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=6"), get("/"), evenement("q=3&clic=7"), evenement("q=4&clic=3"), get("/"),
                  evenement(ev_frais), get("/"),
-                 evenement("q=6&clic=3"), get("/"));
+                 evenement("q=6&clic=4"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet8.grymd", &sc);
         CONTIENT(sc.reponses[1], "Comptabilité</span></span><span class=\"description\">Encaisser, factures, rappels, frais</span>");
         CONTIENT(sc.reponses[3], "<p class=\"texte\">Frais : CHF 0,00</p>");
@@ -1583,11 +1583,22 @@ int main(void) {
         }
         liberer(&sc);
         remove("_essai_cabinet8.grymd");
+        /* les listes suivent l'année choisie (21 octobre 2026) : celle de la séance payée il y a quatre jours, choisie
+           dans le menu de la Comptabilité, pour valoir aussi les premiers jours de janvier */
+        char ev_annee[40], titre[40];
+        {
+            const time_t il_y_a = time(NULL) - 4 * 86400;
+            char an[5];
+            strftime(an, sizeof an, "%Y", localtime(&il_y_a));
+            snprintf(ev_annee, sizeof ev_annee, "q=3&z0=%s&clic=6", an);   /* l'année, puis « Quittances » */
+            snprintf(titre, sizeof titre, "<h1>Quittances %s</h1>", an);
+        }
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=6"), evenement("q=3&clic=6"), get("/"), evenement("q=4&choix=1.0"),
-                 evenement("q=5&clic=3"), get("/"));
+        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=6"), evenement(ev_annee), get("/"),
+                 evenement("q=4&choix=2.0"), evenement("q=5&clic=4"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet9.grymd", &sc);
-        CONTIENT(sc.reponses[4], "<h1>Quittances</h1>");
+        CONTIENT(sc.reponses[4], titre);
+        CONTIENT(sc.reponses[4], "<td>Sophie Clément</td>");   /* payée par virement il y a quatre jours, sans quittance */
         CONTIENT(sc.reponses[7], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
         liberer(&sc);
         remove("_essai_cabinet9.grymd");
@@ -1622,8 +1633,8 @@ int main(void) {
            « Facturer » facture ; « Rappel » sans facture choisie est refusé ; la facture et le journal sont des
            documents : refusés dans le navigateur, sans rien numéroter ni dater (20 octobre 2026) */
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=6"), evenement("q=3&clic=8"), get("/"), evenement("q=4&clic=3"), get("/"),
-                 evenement("q=5&s7=0&clic=8"), get("/"), evenement("q=6&clic=4"), evenement("q=7&clic=10"), get("/"));
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=6"), evenement("q=3&clic=8"), get("/"), evenement("q=4&clic=4"), get("/"),
+                 evenement("q=5&s8=0&clic=9"), get("/"), evenement("q=6&clic=5"), evenement("q=7&clic=10"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet12.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>Rappels</h1>");
         CONTIENT(sc.reponses[3], "Factures échues");
@@ -1889,7 +1900,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=6"), evenement("q=3&clic=9"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet16.grymd", &sc);
-        CONTIENT(sc.reponses[3], "<h1>Factures</h1>");
+        CONTIENT(sc.reponses[3], "<h1>Factures 20");   /* l'année des comptes, celle du jour */
         CONTIENT(sc.reponses[3], "<th>État</th>");
         liberer(&sc);
         remove("_essai_cabinet16.grymd");

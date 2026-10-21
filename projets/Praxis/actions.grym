@@ -222,3 +222,37 @@ L'alerte des prévues d'un jour :
     Si le nombre passé = 0, rendre « ».
     Si le nombre passé = 1, rendre « Une séance prévue est passée : Séances prévues, pour la dire faite, annulée ou absence. ».
     Rendre le nombre passé suivi de " séances prévues sont passées : Séances prévues, pour les clore.".
+
+Remarque : les exercices : de l'année de la première séance ou du premier frais jusqu'à l'année en cours, ceux qui manquent.
+Pour recenser les exercices d'un jour :
+    La borne haute vaut (l'année du jour suivi de « ») en nombre entier.
+    La borne basse vaut la borne haute.
+    Si le nombre de séances conservées > 0 :
+        La doyenne vaut la séance conservée à la plus petite date.
+        La borne basse devient (l'année de la date de la doyenne suivi de « ») en nombre entier.
+    Si le nombre de frais conservés > 0 :
+        Le doyen vaut le frais conservé à la plus petite date.
+        L'origine des frais vaut (l'année de la date du doyen suivi de « ») en nombre entier.
+        Si l'origine des frais < la borne basse, la borne basse devient l'origine des frais.
+    Si la borne basse > la borne haute, la borne basse devient la borne haute.
+    Pour chaque an de borne basse à borne haute :
+        Le repère vaut an suivi de « ».
+        Si le nombre d'exercices conservés dont le millésime est le repère = 0 :
+            L'e vaut un nouvel exercice :
+                Le millésime vaut le repère.
+            Conserver l'e.
+
+Remarque : l'exercice d'une année des comptes (un nombre entier), pour le menu des années.
+La période d'une année :
+    Le repère vaut année suivi de « ».
+    Rendre l'exercice conservé dont le millésime est le repère.
+
+Remarque : le titre de l'écran des factures : l'année choisie ; une recherche les parcourt toutes.
+Le titre des factures d'une année et d'une recherche :
+    Si recherche = « », rendre "Factures " suivi d'année.
+    Rendre « Factures, toutes les années ».
+
+Remarque : où vont les CSV : le dossier choisi dans la Comptabilité, sinon « Exports ».
+La destination des exports d'un cabinet :
+    Si le dossier d'export du cabinet est absent, rendre « Exports ».
+    Rendre le dossier d'export du cabinet.

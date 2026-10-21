@@ -35,6 +35,9 @@ Remarque : l'année des comptes, choisie dans la Comptabilité, celle du jour au
 L'année des comptes vaut (l'année d'aujourd'hui suivi de « ») en nombre entier.
 Le début d'exercice vaut le premier jour de l'année des comptes.
 La fin d'exercice vaut le premier jour de (l'année des comptes + 1).
+Remarque : les factures de l'année des comptes ; une recherche les cherche dans toutes les années.
+Le début des factures vaut le début d'exercice.
+La fin des factures vaut la fin d'exercice.
 
 Remarque : une facture échue depuis trente jours appelle un rappel ; la relance en cours, la facture dont on l'imprime.
 Remarque : la limite se recalcule à chaque ouverture des rappels : l'application peut rester ouverte des jours.
@@ -185,7 +188,7 @@ L'écran du soin, « Soin », montre :
 Remarque : la comptabilité en recettes-dépenses d'une année, celle du jour au départ : ce qui est encaissé (à la date d'encaissement),
 Remarque : ce qui est dépensé, ce qui reste ; une autre année se choisit en haut, pour la déclaration d'impôts de l'année passée.
 L'écran de comptabilité, « Comptabilité », montre :
-    une année (nombre entier), de 2000 à 2999, avec l'indication « L'année des comptes et du journal »,
+    une année (exercice), avec l'indication « L'année des comptes, du journal, de l'export et des listes »,
     le texte "Recettes encaissées : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » à 0,01,
     le texte "Frais : CHF " suivi de l'arrondi de la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice à 0,01,
     le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01,
@@ -198,18 +201,21 @@ L'écran de comptabilité, « Comptabilité », montre :
     un bouton « Journal de l'année », en tuile, avec la description « Recettes et frais, à imprimer »,
     un bouton « Exporter en CSV », en tuile, avec la description « Recettes et frais, pour un tableur ou la fiduciaire »,
     un bouton « Fermer »,
-    le texte l'annonce de l'avis des comptes.
+    le texte l'annonce de l'avis des comptes,
+    un dossier d'export (texte), facultatif, avec le choix d'un dossier, avec l'indication « Où vont les CSV ; vide : Exports, à côté de l'application. ».
 
 Remarque : les factures envoyées, les plus récentes d'abord ; une facture choisie se remontre telle qu'elle a été envoyée.
-L'écran des factures, « Factures », montre :
+L'écran des factures, (le titre des factures de l'année des comptes et de la recherche des factures), montre :
+    une année (exercice), avec l'indication « Une autre année ; la recherche, elle, les parcourt toutes »,
     une recherche (texte), facultative, avec l'indication « Un numéro, un nom de patient, un état »,
-    la liste des factures conservées dont le numéro contient la recherche des factures ou le nom du patient contient la recherche des factures ou l'état contient la recherche des factures, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et l'état,
+    la liste des factures conservées dont la date ≥ le début des factures et la date < la fin des factures et (le numéro contient la recherche des factures ou le nom du patient contient la recherche des factures ou l'état contient la recherche des factures), par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et l'état,
     un bouton « Fermer »,
     un bouton « Annuler la facture ».
 
 Remarque : les factures échues (trente jours) et pas réglées : « Rappel » imprime le rappel de la facture choisie ;
 Remarque : dessous, les séances dues depuis trente jours qui n'ont pas encore de facture : « Facturer » la fait.
 L'écran des rappels, « Rappels », montre :
+    une année (exercice), avec l'indication « L'année des rappels envoyés ; les factures échues, elles, de toutes les années »,
     le texte « Factures échues », en petites capitales,
     la liste des factures conservées dont l'état ≠ « réglée » et la date ≤ la limite des rappels, par date, avec le numéro, la date, le nom du patient, le montant, l'état et le dernier rappel,
     côte à côte :
@@ -218,8 +224,8 @@ L'écran des rappels, « Rappels », montre :
     le texte « Dues depuis trente jours, sans facture », en petites capitales,
     la liste des séances conservées dont la facture est absente et le paiement = « à payer » et le statut ≠ « prévue » et le statut ≠ « annulée » et le statut ≠ l'exclu du cabinet conservé et la date ≤ la limite des rappels, par date, avec la date, le nom du patient, le nom du soin, le prix et le statut,
     un bouton « Facturer »,
-    le texte « Rappels envoyés », en petites capitales,
-    la liste des rappels conservés, par date décroissant, avec la date, le rang, le numéro de la facture et le nom du patient de la facture.
+    le texte "Rappels envoyés en " suivi de l'année des comptes, en petites capitales,
+    la liste des rappels conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date décroissant, avec la date, le rang, le numéro de la facture et le nom du patient de la facture.
 
 Remarque : la facture, sur papier : le cabinet et ses numéros, le patient, les séances, le montant dû, l'échéance, et la section paiement si le cabinet a un IBAN.
 Le document de facture, « Facture », montre :
@@ -275,18 +281,20 @@ Le document de journal, « Journal des recettes et des frais », montre :
     le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01.
 
 Remarque : les séances payées attendent leur quittance ; les quittances remises se retrouvent dessous.
-L'écran des quittances, « Quittances », montre :
+L'écran des quittances, ("Quittances " suivi de l'année des comptes), montre :
+    une année (exercice), avec l'indication « Une autre année »,
     le texte « Payées, sans quittance », en petites capitales,
-    la liste des séances conservées dont la quittance est absente et le paiement ≠ « à payer » et le paiement ≠ « offert », par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
+    la liste des séances conservées dont la quittance est absente et le paiement ≠ « à payer » et le paiement ≠ « offert » et l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice, par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
     côte à côte :
         un bouton « Quittance », principal,
         un bouton « Fermer »,
     le texte « Quittances remises », en petites capitales,
-    la liste des quittances conservées, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et le moyen,
+    la liste des quittances conservées dont la date ≥ le début d'exercice et la date < la fin d'exercice, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et le moyen,
     un bouton « Annuler la quittance ».
 
-L'écran des frais, « Frais », montre :
-    la liste des frais conservés, par date décroissant, avec la date, le libellé, le nom de la rubrique, le montant et le moyen,
+L'écran des frais, ("Frais " suivi de l'année des comptes), montre :
+    une année (exercice), avec l'indication « Une autre année »,
+    la liste des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date décroissant, avec la date, le libellé, le nom de la rubrique, le montant et le moyen,
     côte à côte :
         un bouton « Nouveau frais », principal,
         un bouton « Fermer »,
@@ -513,6 +521,15 @@ L'écran de la rubrique, « Rubrique », montre :
         un bouton « Fermer »,
         un bouton « Supprimer ».
 
+Remarque : les bornes des factures : l'année des comptes, ou toutes les années pendant une recherche.
+Pour borner les factures :
+    Si la recherche des factures = « » :
+        Le début des factures devient le début d'exercice.
+        La fin des factures devient la fin d'exercice.
+    Sinon :
+        Le début des factures devient 01.01.1900.
+        La fin des factures devient 01.01.3000.
+
 Remarque : attester une séance : payée, sa quittance ; à payer, sa facture, avec la section paiement QR si le cabinet a un IBAN.
 Remarque : une pièce déjà faite se remontre telle qu'elle a été remise, son exemplaire gardé.
 Pour quittancer une séance :
@@ -594,28 +611,62 @@ Quand on clique sur « Séances prévues » dans l'écran d'accueil :
 Quand on clique sur « Comptabilité » dans l'écran d'accueil :
     Ouvrir l'écran de comptabilité.
 
-Quand on ouvre l'écran de comptabilité :
-    L'année de l'écran devient l'année des comptes.
-    L'avis des comptes devient absent.
-
-Remarque : une autre année : les totaux, puis le journal, la suivent.
-Quand on change l'année dans l'écran de comptabilité :
-    Si l'année de l'écran est présente :
-        L'année des comptes devient l'année de l'écran.
+Remarque : l'année choisie, où qu'on la choisisse : les totaux, le journal, l'export et les listes la suivent ; vide, rien ne change.
+Remarque : choisie dans une liste, la Comptabilité la reprend au retour (chaque « Ouvrir » des listes est suivi de cette reprise).
+Pour retenir une période :
+    Si période est présente :
+        L'année des comptes devient le millésime de la période en nombre entier.
         Le début d'exercice devient le premier jour de l'année des comptes.
         La fin d'exercice devient le premier jour de (l'année des comptes + 1).
+        Borner les factures.
+
+Quand on ouvre l'écran de comptabilité :
+    L'année de l'écran devient la période de l'année des comptes.
+    Le dossier d'export de l'écran devient le dossier d'export du cabinet conservé.
+    L'avis des comptes devient absent.
+
+Quand on change l'année dans l'écran de comptabilité :
+    Retenir l'année de l'écran.
+
+Remarque : le dossier des exports se retient dès qu'on le choisit ; vidé, « Exports ».
+Quand on change le dossier d'export dans l'écran de comptabilité :
+    Le dossier d'export du cabinet conservé devient le dossier d'export de l'écran.
+
+Quand on ouvre l'écran des quittances :
+    L'année de l'écran devient la période de l'année des comptes.
+
+Quand on change l'année dans l'écran des quittances :
+    Retenir l'année de l'écran.
+
+Quand on ouvre l'écran des frais :
+    L'année de l'écran devient la période de l'année des comptes.
+
+Quand on change l'année dans l'écran des frais :
+    Retenir l'année de l'écran.
+
+Quand on ouvre l'écran des rappels :
+    L'année de l'écran devient la période de l'année des comptes.
+
+Quand on change l'année dans l'écran des rappels :
+    Retenir l'année de l'écran.
+
+Quand on change l'année dans l'écran des factures :
+    Retenir l'année de l'écran.
 
 Quand on clique sur « À encaisser » dans l'écran de comptabilité :
     Ouvrir l'écran des encaissements.
 
 Quand on clique sur « Quittances » dans l'écran de comptabilité :
     Ouvrir l'écran des quittances.
+    L'année de l'écran devient la période de l'année des comptes.
 
 Quand on clique sur « Frais » dans l'écran de comptabilité :
     Ouvrir l'écran des frais.
+    L'année de l'écran devient la période de l'année des comptes.
 
 Quand on clique sur « Factures » dans l'écran de comptabilité :
     Ouvrir l'écran des factures.
+    L'année de l'écran devient la période de l'année des comptes.
 
 Quand on choisit une facture dans l'écran des factures :
     La créance en cours devient la facture choisie de l'écran.
@@ -633,15 +684,18 @@ Quand on clique sur « Annuler la facture » dans l'écran des factures :
 Quand on clique sur « Rappels » dans l'écran de comptabilité :
     La limite des rappels devient aujourd'hui − 30 jours.
     Ouvrir l'écran des rappels.
+    L'année de l'écran devient la période de l'année des comptes.
 
-Remarque : les comptes de l'année choisie en deux tableaux CSV (un tableur les ouvre), datés à la minute : dans Exports, à côté
-Remarque : de l'application (Documents/Praxis une fois installée) ; un même export à la même minute est refusé, rien n'est écrasé.
+Remarque : les comptes de l'année choisie en deux tableaux CSV (un tableur les ouvre), datés à la minute : dans le dossier d'export
+Remarque : choisi, sinon dans Exports, à côté de l'application (Documents/Praxis une fois installée) ; un même export à la même minute
+Remarque : est refusé, rien n'est écrasé.
 Quand on clique sur « Exporter en CSV » dans l'écran de comptabilité :
     La marque vaut " " suivi de l'année des comptes suivi de ", exporté le " suivi d'aujourd'hui en format technique suivi de " à " suivi de l'horodatage de maintenant suivi de « .csv ».
+    Le dossier vaut la destination des exports du cabinet conservé.
     Essayer :
-        Exporter les séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement, dans (« Exports/Recettes » suivi de la marque).
-        Exporter les frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date, avec la date, le libellé, le nom de la rubrique, le montant et le moyen, dans (« Exports/Frais » suivi de la marque).
-        L'avis des comptes devient « Exporté dans Exports : Recettes » suivi de la marque suivi de " et Frais" suivi de la marque.
+        Exporter les séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement, dans (le dossier suivi de « /Recettes » suivi de la marque).
+        Exporter les frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date, avec la date, le libellé, le nom de la rubrique, le montant et le moyen, dans (le dossier suivi de « /Frais » suivi de la marque).
+        L'avis des comptes devient "Exporté dans " suivi du dossier suivi de " : Recettes" suivi de la marque suivi de " et Frais" suivi de la marque.
     En cas d'échec :
         L'avis des comptes devient le motif de l'échec.
 
@@ -1033,10 +1087,13 @@ Quand on change la recherche dans l'écran des patients :
 
 Quand on ouvre l'écran des factures :
     La recherche des factures devient « ».
+    Borner les factures.
+    L'année de l'écran devient la période de l'année des comptes.
 
 Quand on change la recherche dans l'écran des factures :
     Si la recherche de l'écran est présente, la recherche des factures devient la recherche de l'écran.
     Sinon, la recherche des factures devient « ».
+    Borner les factures.
 
 Quand on clique sur « Nouveau patient » dans l'écran des patients :
     Ouvrir l'écran d'inscription.
@@ -1336,6 +1393,8 @@ Quand on clique sur « Retirer la signature » dans l'écran du cabinet :
 Quand on clique sur « Fermer » dans l'écran des soins :
     Fermer l'écran.
 
+Remarque : les années du menu : celles des séances et des frais, et l'année en cours.
+Recenser les exercices d'aujourd'hui.
 Remarque : le mot de passe, l'application l'a déjà demandé ; au premier lancement, le dossier des sauvegardes ; puis l'accueil.
 Si le premier lancement, ouvrir l'écran de bienvenue.
 Archiver les données.
