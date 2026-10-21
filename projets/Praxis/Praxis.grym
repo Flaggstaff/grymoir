@@ -65,9 +65,6 @@ Remarque : le cabinet, créé une seule fois à son nom ; Nicolas complète sa f
 Le premier lancement vaut le nombre de cabinets conservés = 0.
 Si le premier lancement, fonder le cabinet.
 
-Remarque : l'ancien code d'accès (une empreinte, avant la base chiffrée du 21 octobre 2026) ne sert plus : il s'efface, une fois.
-Si le code d'accès du cabinet conservé est présent, le code d'accès du cabinet conservé devient absent.
-
 Remarque : les couleurs et la police du site de Nicolas Seydoux, à l'encre (pour un autre cabinet, cette phrase et départ.grym) ; le logo et la signature, ceux de la configuration
 Remarque : du cabinet (le cœur et le nom dessiné au départ), repris à chaque lancement ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
 Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf », le logo (le logo du cabinet conservé) et la signature (la signature du cabinet conservé).
@@ -89,15 +86,6 @@ Pour archiver les données :
                 Copier la base dans le dossier de sauvegarde du c.
             En cas d'échec :
                 L'échec de sauvegarde devient le motif de l'échec.
-
-Remarque : le dernier rappel d'une séance ne sert plus depuis les rappels par facture : ses valeurs s'effacent, une fois ; vide
-Remarque : partout, le champ pourra quitter la séance (grammaire 2.36 : un champ sans valeur se retire).
-Pour chaque séance conservée dont le dernier rappel est présent :
-    Le dernier rappel de la séance devient absent.
-
-Remarque : les séances payées d'avant le 20 octobre 2026 n'ont pas de date d'encaissement : elles prennent celle de la séance, une fois.
-Pour chaque séance conservée dont l'encaissement est absent et le paiement ≠ « à payer » et le paiement ≠ « offert » :
-    L'encaissement de la séance devient la date de la séance.
 
 Remarque : l'accueil de la maquette : l'action du jour, puis le cabinet en quatre tuiles ; le cœur sur les patients.
 Remarque : le titre de l'accueil, calculé : « Bonjour » et le prénom de la configuration.

@@ -1,6 +1,6 @@
 Remarque : Praxis : des données d'essai, toutes inventées, pour voir l'application remplie.
 Remarque : hors de l'application depuis le 21 octobre 2026 : les essais (test_serveur, test_atelier) copient Praxis, y ajoutent ce
-Remarque : fichier, « Utiliser « essais ». » et « Si le nombre de patients conservés est nul, remplir les essais. ».
+Remarque : fichier, « Utiliser « essais ». » et, avant l'accueil, « Si le nombre de patients conservés est nul, remplir les essais. ».
 Utiliser « actions ».
 
 Pour inscrire un nom et une rue et un numéro et un numéro postal et une localité et un téléphone :
@@ -14,7 +14,7 @@ Pour inscrire un nom et une rue et un numéro et un numéro postal et une locali
         Le téléphone vaut téléphone.
     Conserver le c.
 
-Remarque : une séance à aujourd'hui + écart jours (négatif : passée) ; la date dit si elle est faite ou prévue.
+Remarque : une séance à aujourd'hui + écart jours (négatif : passée) ; la date dit si elle est faite ou prévue ; payée, encaissée ce jour-là.
 Pour consigner une personne et une prestation et un écart et un prix et un statut et un paiement :
     La s vaut une nouvelle séance :
         Le patient vaut le patient conservé dont le nom est personne.
@@ -23,6 +23,7 @@ Pour consigner une personne et une prestation et un écart et un prix et un stat
         Le prix vaut prix.
         Le statut vaut statut.
         Le paiement vaut paiement.
+    Si paiement ≠ « à payer » et paiement ≠ « offert », l'encaissement de la s devient la date de la s.
     Conserver la s.
 
 Remarque : une séance d'aujourd'hui, à son heure, pour les cartes de l'accueil.

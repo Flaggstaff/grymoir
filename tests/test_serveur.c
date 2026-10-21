@@ -343,7 +343,7 @@ static void servir_projet_base(const char *chemin, const char *base, Script *sc,
 
 
 /* Praxis et ses données d'essai (21 octobre 2026) : l'application livrée part vide ; les essais en font une copie,
- * « _essai_praxis », où les données d'essai (tests/praxis/essais.grym) sont branchées avant le dernier rappel. */
+ * « _essai_praxis », où les données d'essai (tests/praxis/essais.grym) sont branchées avant l'accueil. */
 static int copier_fichier(const char *de, const char *vers) {
     FILE *a = fopen(de, "rb"), *b = a ? fopen(vers, "wb") : NULL;
     char tampon[65536];
@@ -387,7 +387,7 @@ static void preparer_praxis(void) {
     char *src = lire_tout("_essai_praxis/Praxis.grym");
     if (!src) return;
     Chaine c = {0};
-    const char *u = strstr(src, "Utiliser « actions ».\n"), *r = strstr(src, "Remarque : le dernier rappel d'une séance");
+    const char *u = strstr(src, "Utiliser « actions ».\n"), *r = strstr(src, "Remarque : l'accueil de la maquette");
     if (!u || !r || r < u) { free(src); return; }
     u += strlen("Utiliser « actions ».\n");
     const char garde_u = *u;

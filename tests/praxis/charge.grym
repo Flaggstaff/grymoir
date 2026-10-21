@@ -1,0 +1,396 @@
+Remarque : Praxis en grandeur réelle : l'année 2025 d'un cabinet, toute inventée, pour éprouver l'application chargée.
+Remarque : 120 patients ; de six à huit séances par jour ouvrable de 2025, hors fériés fribourgeois et trois semaines de
+Remarque : vacances ; facturées à la fin du mois, payées au fil des jours jusqu'à hier, rappels à 45, 75 et 105 jours ;
+Remarque : quittances, frais, notes, deux patients archivés, trois séances prévues restées sans suite, l'agenda du jour.
+Remarque : tirée au hasard : GRYM_HASARD=2025 rejoue exactement la même année. Hors de l'application : tests/praxis/charger.
+Utiliser « actions ».
+
+Le prénom inventé d'un rang :
+    Selon rang :
+        Cas 1, rendre « Anne ».
+        Cas 2, rendre « Louis ».
+        Cas 3, rendre « Claire ».
+        Cas 4, rendre « Julien ».
+        Cas 5, rendre « Sophie ».
+        Cas 6, rendre « Marc ».
+        Cas 7, rendre « Élodie ».
+        Cas 8, rendre « Thierry ».
+        Cas 9, rendre « Nathalie ».
+        Cas 10, rendre « Pascal ».
+        Cas 11, rendre « Isabelle ».
+        Cas 12, rendre « Olivier ».
+        Cas 13, rendre « Céline ».
+        Cas 14, rendre « François ».
+        Cas 15, rendre « Valérie ».
+        Cas 16, rendre « Stéphane ».
+        Cas 17, rendre « Muriel ».
+        Cas 18, rendre « Jean-Marc ».
+        Cas 19, rendre « Aurélie ».
+        Cas 20, rendre « Dominique ».
+        Cas 21, rendre « Joëlle ».
+        Cas 22, rendre « Grégoire ».
+        Cas 23, rendre « Laetitia ».
+        Cas 24, rendre « Benoît ».
+        Cas 25, rendre « Martine ».
+        Cas 26, rendre « Cédric ».
+        Cas 27, rendre « Françoise ».
+        Cas 28, rendre « Raphaël ».
+        Cas 29, rendre « Chantal ».
+    Rendre « Yves ».
+
+Le patronyme inventé d'un rang :
+    Selon rang :
+        Cas 1, rendre « Rochat ».
+        Cas 2, rendre « Gremaud ».
+        Cas 3, rendre « Castella ».
+        Cas 4, rendre « Overney ».
+        Cas 5, rendre « Repond ».
+        Cas 6, rendre « Jaquet ».
+        Cas 7, rendre « Bapst ».
+        Cas 8, rendre « Monney ».
+        Cas 9, rendre « Pasquier ».
+        Cas 10, rendre « Dupasquier ».
+        Cas 11, rendre « Ruffieux ».
+        Cas 12, rendre « Pugin ».
+        Cas 13, rendre « Sudan ».
+        Cas 14, rendre « Thürler ».
+        Cas 15, rendre « Yerly ».
+        Cas 16, rendre « Buchs ».
+        Cas 17, rendre « Genoud ».
+        Cas 18, rendre « Menoud ».
+        Cas 19, rendre « Chappuis ».
+        Cas 20, rendre « Magnin ».
+        Cas 21, rendre « Ecoffey ».
+        Cas 22, rendre « Murith ».
+        Cas 23, rendre « Savary ».
+        Cas 24, rendre « Borcard ».
+        Cas 25, rendre « Andrey ».
+        Cas 26, rendre « Musy ».
+        Cas 27, rendre « Gachet ».
+        Cas 28, rendre « Barras ».
+        Cas 29, rendre « Tinguely ».
+        Cas 30, rendre « Rime ».
+        Cas 31, rendre « Beaud ».
+        Cas 32, rendre « Fragnière ».
+        Cas 33, rendre « Grandjean ».
+        Cas 34, rendre « Clément ».
+        Cas 35, rendre « Dupraz ».
+        Cas 36, rendre « Remy ».
+        Cas 37, rendre « Sciboz ».
+        Cas 38, rendre « Bovigny ».
+        Cas 39, rendre « Pittet ».
+    Rendre « Morel ».
+
+Remarque : le patient numéro r, de 1 à 120 : un prénom sur 30 et un nom sur 40, sans homonyme (30 × 40 / 120 couples, tous
+Remarque : distincts : r et r' de même couple diffèrent d'un multiple de 120). Les rangs 30, 60, 90, 120 s'appellent Yves.
+Le nom inventé d'un rang vaut le prénom inventé de (le reste de rang − 1 par 30 + 1) suivi de " " suivi du patronyme inventé de (le reste de (rang − 1) × 7 par 40 + 1).
+
+Remarque : le patient r, retrouvé par son nom.
+La fiche inventée d'un rang :
+    L'identité vaut le nom inventé du rang.
+    Rendre le patient conservé dont le nom est l'identité.
+
+La voie inventée d'un rang :
+    Selon rang :
+        Cas 1, rendre « Rue de Gruyères ».
+        Cas 2, rendre « Route de Riaz ».
+        Cas 3, rendre « Grand-Rue ».
+        Cas 4, rendre « Rue de la Condémine ».
+        Cas 5, rendre « Chemin des Crêts ».
+        Cas 6, rendre « Route de Morlon ».
+        Cas 7, rendre « Rue Nicolas-Glasson ».
+        Cas 8, rendre « Avenue de la Gare ».
+        Cas 9, rendre « Route du Moléson ».
+        Cas 10, rendre « Chemin de la Pâla ».
+        Cas 11, rendre « Rue de Vevey ».
+        Cas 12, rendre « Route de la Jogne ».
+        Cas 13, rendre « Chemin du Verger ».
+        Cas 14, rendre « Rue du Château ».
+    Rendre « Route des Alpes ».
+
+La commune inventée d'un rang :
+    Selon rang :
+        Cas 1, rendre « Bulle ».
+        Cas 2, rendre « La Tour-de-Trême ».
+        Cas 3, rendre « Riaz ».
+        Cas 4, rendre « Vuadens ».
+        Cas 5, rendre « Broc ».
+        Cas 6, rendre « Gruyères ».
+        Cas 7, rendre « Charmey ».
+        Cas 8, rendre « Sâles ».
+        Cas 9, rendre « Marsens ».
+        Cas 10, rendre « Romont ».
+        Cas 11, rendre « Châtel-St-Denis ».
+        Cas 12, rendre « Fribourg ».
+        Cas 13, rendre « Marly ».
+        Cas 14, rendre « Vaulruz ».
+    Rendre « Le Pâquier ».
+
+Le code de la commune inventée d'un rang :
+    Selon rang :
+        Cas 1, rendre « 1630 ».
+        Cas 2, rendre « 1635 ».
+        Cas 3, rendre « 1632 ».
+        Cas 4, rendre « 1628 ».
+        Cas 5, rendre « 1636 ».
+        Cas 6, rendre « 1663 ».
+        Cas 7, rendre « 1637 ».
+        Cas 8, rendre « 1625 ».
+        Cas 9, rendre « 1633 ».
+        Cas 10, rendre « 1680 ».
+        Cas 11, rendre « 1618 ».
+        Cas 12, rendre « 1700 ».
+        Cas 13, rendre « 1723 ».
+        Cas 14, rendre « 1627 ».
+    Rendre « 1661 ».
+
+Remarque : la clientèle d'un cabinet : beaucoup d'EPI et de LEAA, le reste plus rare.
+Le soin tiré d'un rang :
+    Selon rang :
+        Cas de 1 à 4, rendre « EPI ».
+        Cas de 5 à 7, rendre « LEAA ».
+        Cas 8, rendre « Kriya Massage ».
+        Cas 9, rendre « Toucher Thérapeutique ».
+    Rendre « Soin à Distance ».
+
+Le commentaire inventé d'un rang :
+    Selon rang :
+        Cas 1, rendre « Séance calme, bon ressenti en fin de séance. ».
+        Cas 2, rendre « Tensions dans les épaules, à reprendre. ».
+        Cas 3, rendre « Sommeil meilleur depuis la dernière fois. ».
+        Cas 4, rendre « Arrivé en retard, séance raccourcie. ».
+        Cas 5, rendre « Fatigue marquée, conseillé du repos. ».
+    Rendre « Rien de particulier. ».
+
+Remarque : les fériés du canton de Fribourg en 2025, cités de mémoire (le 1er novembre tombait un samedi), et les vacances du cabinet.
+Le repos d'une date :
+    Si date = 01.01.2025 ou date = 02.01.2025 ou date = 18.04.2025 ou date = 21.04.2025, rendre vrai.
+    Si date = 29.05.2025 ou date = 09.06.2025 ou date = 19.06.2025 ou date = 01.08.2025, rendre vrai.
+    Si date = 15.08.2025 ou date = 08.12.2025 ou date = 25.12.2025 ou date = 26.12.2025, rendre vrai.
+    Si date ≥ 14.07.2025 et date ≤ 03.08.2025, rendre vrai.
+    Si date ≥ 13.10.2025 et date ≤ 17.10.2025, rendre vrai.
+    Rendre faux.
+
+Remarque : un jour de travail : du lundi au vendredi de 2025, hors repos.
+Le travail d'une date :
+    Si date > 31.12.2025, rendre faux.
+    Si le jour de la semaine de date = « samedi » ou le jour de la semaine de date = « dimanche », rendre faux.
+    Si le repos de date, rendre faux.
+    Rendre vrai.
+
+Remarque : le patient r : une adresse en Gruyère et alentour ; un sur vingt sans adresse, quelques-uns en France ;
+Remarque : deux sur trois avec leur date de naissance, un sur deux avec un courriel, un sur quatre avec une anamnèse.
+Pour inscrire l'inventé d'un rang :
+    Le p vaut un nouveau patient :
+        Le nom vaut le nom inventé du rang.
+        Le téléphone vaut "079 " suivi de (rang + 300) suivi de " " suivi de (rang + 10) suivi de " 00".
+        Le pays vaut « Suisse ».
+    Si le reste de rang par 20 ≠ 0 :
+        Si le reste de rang par 25 = 0 :
+            La rue du p devient « Avenue de Genève ».
+            Le numéro de maison du p devient (le reste de rang par 30 + 1) suivi de « ».
+            Le numéro postal du p devient « 74000 ».
+            La localité du p devient « Annecy ».
+            Le pays du p devient « France ».
+        Sinon :
+            La rue du p devient la voie inventée de (le reste de rang × 3 par 15 + 1).
+            Le numéro de maison du p devient (le reste de rang × 7 par 60 + 1) suivi de « ».
+            Le numéro postal du p devient le code de la commune inventée de (le reste de rang × 11 par 15 + 1).
+            La localité du p devient la commune inventée de (le reste de rang × 11 par 15 + 1).
+    Si le reste de rang par 3 ≠ 0, la date de naissance du p devient 01.01.1945 + un nombre au hasard de 0 à 25000.
+    Si le reste de rang par 2 = 0, le courriel du p devient "patient" suivi de rang suivi de "@exemple.ch".
+    Si le reste de rang par 4 = 1, l'anamnèse du p devient « Douleurs lombaires anciennes ; stress professionnel ; dort mal depuis l'hiver. ».
+    Conserver le p.
+
+Remarque : le prochain numéro de pièce de l'année d'une date, comme l'application le compte (corbeille comprise).
+Le rang de facture d'une date :
+    Le début vaut le premier janvier de date.
+    Rendre (le nombre de factures conservées dont la date ≥ le début) + (le nombre de factures supprimées dont la date ≥ le début) + 1.
+
+Le rang de quittance d'une date :
+    Le début vaut le premier janvier de date.
+    Rendre (le nombre de quittances conservées dont la date ≥ le début) + (le nombre de quittances supprimées dont la date ≥ le début) + 1.
+
+Remarque : la quittance d'une séance payée sur place, remise le jour même.
+Pour remettre la quittance d'une séance :
+    La q vaut une nouvelle quittance :
+        Le numéro vaut le numéro de pièce de « Q- » et de l'année de la date de la séance et du rang de quittance de la date de la séance.
+        La date vaut la date de la séance.
+        Le patient vaut le patient de la séance.
+        Le montant vaut le prix de la séance.
+        Le moyen vaut le paiement de la séance.
+    Conserver la q.
+    La quittance de la séance devient la q.
+
+Remarque : une journée de travail : de six à huit séances, quatre le matin dès 8:00, le reste dès 14:00, toutes les 75 minutes ;
+Remarque : la moitié des séances pour les trente patients fidèles ; 4 % annulées, 3 % d'absences ; payées sur place
+Remarque : (espèces, Twint) deux fois sur trois, offertes deux fois sur cent, à facturer sinon ; une quittance sur quatre.
+Pour tenir une journée :
+    Le combien vaut un nombre au hasard de 6 à 8.
+    L'horaire vaut 8:00.
+    Pour chaque créneau de 1 à combien :
+        Si créneau = 5, l'horaire devient 14:00.
+        Le r vaut un nombre au hasard de 1 à 120.
+        Si un nombre au hasard de 1 à 2 = 1, le r devient un nombre au hasard de 1 à 30.
+        La personne vaut la fiche inventée du r.
+        La prestation vaut le soin conservé dont le nom est le soin tiré de (un nombre au hasard de 1 à 10).
+        Le prix vaut le prix conseillé de la personne et de la prestation.
+        Le statut vaut « faite ».
+        Le dé vaut un nombre au hasard de 1 à 100.
+        Si le dé ≤ 4, le statut devient « annulée ».
+        Si le dé > 4 et le dé ≤ 7, le statut devient « absence ».
+        Le paiement vaut « à payer ».
+        Si le statut = « faite » :
+            Le dé devient un nombre au hasard de 1 à 100.
+            Si le dé ≤ 35, le paiement devient « espèces ».
+            Si le dé > 35 et le dé ≤ 65, le paiement devient « Twint ».
+            Si le dé > 65 et le dé ≤ 67, le paiement devient « offert ».
+        La s vaut une nouvelle séance :
+            Le patient vaut la personne.
+            Le soin vaut la prestation.
+            La date vaut journée.
+            L'heure vaut l'horaire.
+            La durée vaut 60.
+            Le prix vaut prix.
+            Le statut vaut statut.
+            Le paiement vaut paiement.
+        Si le paiement = « espèces » ou le paiement = « Twint », l'encaissement de la s devient journée.
+        Si un nombre au hasard de 1 à 100 ≤ 15, le commentaire de la s devient le commentaire inventé de (un nombre au hasard de 1 à 6).
+        Conserver la s.
+        Si le paiement = « espèces » ou le paiement = « Twint » :
+            Si un nombre au hasard de 1 à 4 = 1, remettre la quittance de la s.
+        L'horaire devient l'horaire + 75 minutes.
+
+Remarque : la fin du mois : une facture par patient pour ses séances dues du mois et d'avant, sans facture encore.
+Pour facturer le mois d'une journée :
+    Pour chaque patient conservé :
+        La personne vaut le patient.
+        La part vaut le nombre de séances conservées dont le patient = personne et le paiement = « à payer » et la facture est absente et le statut = « faite » et la date ≤ journée.
+        Si la part > 0 :
+            La f vaut une nouvelle facture :
+                Le numéro vaut le numéro de pièce de « F- » et de l'année de journée et du rang de facture de journée.
+                La date vaut journée.
+                Le patient vaut personne.
+                Le montant vaut 0.
+                L'état vaut « à régler ».
+            Conserver la f.
+            Pour chaque séance conservée dont le patient = personne et le paiement = « à payer » et la facture est absente et le statut = « faite » et la date ≤ journée :
+                La facture de la séance devient la f.
+                Le montant de la f devient le montant de la f + le prix de la séance.
+
+Remarque : un virement arrive : toute la facture, ou seulement sa première séance (un acompte) ; réglée, sa quittance, ce jour-là.
+Pour encaisser par virement une créance et une journée et un acompte :
+    Pour chaque séance conservée dont la facture = créance et le paiement = « à payer », par date :
+        Le paiement de la séance devient « virement ».
+        L'encaissement de la séance devient journée.
+        Si acompte, sortir de la boucle.
+    Le reste vaut le nombre de séances conservées dont la facture = créance et le paiement = « à payer ».
+    Si le reste > 0 :
+        L'état de la créance devient « en partie réglée ».
+    Sinon :
+        L'état de la créance devient « réglée ».
+        La q vaut une nouvelle quittance :
+            Le numéro vaut le numéro de pièce de « Q- » et de l'année de journée et du rang de quittance de journée.
+            La date vaut journée.
+            Le patient vaut le patient de la créance.
+            Le montant vaut la somme des prix des séances conservées dont la facture = créance et la quittance est absente et le paiement ≠ « offert ».
+            Le moyen vaut « virement ».
+        Conserver la q.
+        Pour chaque séance conservée dont la facture = créance et la quittance est absente et le paiement ≠ « offert » :
+            La quittance de la séance devient la q.
+
+Remarque : chaque jour, chaque facture ouverte depuis cinq jours a une chance sur vingt d'être payée, sauf chez les Yves,
+Remarque : qui ne paient jamais : leurs factures reçoivent les rappels, à 45, 75 et 105 jours.
+Pour suivre les créances d'une journée :
+    Pour chaque facture conservée dont l'état ≠ « réglée » et la date < journée − 4 :
+        La dette vaut la facture.
+        Si le nom du patient de la dette ne commence pas par « Yves » :
+            Si un nombre au hasard de 1 à 20 = 1 :
+                Le fragment vaut le nombre de séances conservées dont la facture = dette et le paiement = « à payer ».
+                Le pile vaut un nombre au hasard de 1 à 100.
+                L'acompte vaut le fragment > 1 et le pile ≤ 15.
+                Encaisser par virement la dette et journée et l'acompte.
+    Pour chaque facture conservée dont l'état ≠ « réglée » et (la date = journée − 45 ou la date = journée − 75 ou la date = journée − 105) :
+        La relancée vaut la facture.
+        Le r vaut un nouveau rappel :
+            La facture vaut relancée.
+            La date vaut journée.
+            Le rang vaut (le nombre de rappels conservés dont la facture = relancée) + 1.
+        Conserver le r.
+        Le dernier rappel de la relancée devient journée.
+
+Remarque : les frais d'un mois : le loyer le premier jour, puis du matériel et des déplacements au hasard des jours de travail.
+Pour dépenser une somme et un libellé et une rubrique et un moyen et une journée :
+    Le f vaut un nouveau frais :
+        La date vaut journée.
+        Le libellé vaut libellé.
+        Le montant vaut somme.
+        La rubrique vaut la rubrique conservée dont le nom est rubrique.
+        Le moyen vaut moyen.
+    Conserver le f.
+
+Pour payer les frais d'une journée :
+    Si le jour de journée = 1, dépenser 950 et ("Loyer du cabinet, " suivi du mois de journée suivi de "/2025") et « Loyer » et « virement » et journée.
+    Si journée = 31.01.2025, dépenser 418,60 et « Assurance responsabilité civile professionnelle » et « Assurances » et « virement » et journée.
+    Si journée = 28.02.2025, dépenser 250 et « Cotisation à l'association professionnelle » et « Cotisations » et « virement » et journée.
+    Si journée = 15.03.2025, dépenser 680 et « Formation continue, deux jours » et « Formation » et « carte » et journée.
+    Si journée = 20.09.2025, dépenser 450 et « Formation continue, une journée » et « Formation » et « carte » et journée.
+    Si le travail de journée :
+        Le dé vaut un nombre au hasard de 1 à 100.
+        Si le dé ≤ 8, dépenser (un nombre au hasard de 300 à 3600) × 0,05 et « Huiles, linge et petit matériel » et « Matériel » et « carte » et journée.
+        Si le dé > 8 et le dé ≤ 12, dépenser (un nombre au hasard de 300 à 1200) × 0,05 et « Déplacement à domicile » et « Déplacements » et « espèces » et journée.
+
+Remarque : des notes confidentielles pour les quarante premiers patients, d'une à trois chacun.
+Pour noter les confidences :
+    Pour chaque rang de 1 à 40 :
+        La personne vaut la fiche inventée du rang.
+        Répéter un nombre au hasard de 1 à 3 fois :
+            La n vaut une nouvelle note :
+                Le patient vaut la personne.
+                La date vaut 06.01.2025 + un nombre au hasard de 0 à 340.
+                Le contenu vaut « Parle d'un deuil récent ; souhaite avancer à son rythme. Ne pas aborder le travail pour l'instant. ».
+            Conserver la n.
+
+Remarque : l'année 2025, puis le suivi des créances jusqu'à hier, puis ce qui reste ouvert : l'application chargée comme après un an.
+Pour remplir la charge :
+    Le cabinet chargé vaut le cabinet conservé.
+    La rue du cabinet chargé devient « Rue de Gruyères ».
+    Le numéro de maison du cabinet chargé devient « 12 ».
+    Le numéro postal du cabinet chargé devient « 1630 ».
+    La localité du cabinet chargé devient « Bulle ».
+    L'IBAN du cabinet chargé devient « CH52 0483 5012 3456 7100 0 ».
+    Le dossier de sauvegarde du cabinet chargé devient absent.
+    Pour chaque rang de 1 à 120 :
+        Inscrire l'inventé du rang.
+    Noter les confidences.
+    La veille vaut aujourd'hui − 1.
+    Pour chaque journée du 01.01.2025 à la veille :
+        Si le travail de journée, tenir la journée.
+        Si journée ≤ 31.12.2025, payer les frais de la journée.
+        Si le jour de (journée + 1) = 1 et journée ≤ 31.12.2025, facturer le mois de la journée.
+        Suivre les créances de la journée.
+    Remarque : trois séances de fin décembre restées « prévue » : l'accueil doit le dire.
+    Le compte vaut 0.
+    Pour chaque séance conservée dont la date ≥ 29.12.2025 et la date ≤ 31.12.2025 et la facture est absente et la quittance est absente, par date :
+        Si le compte < 3 :
+            Le statut de la séance devient « prévue ».
+            Le paiement de la séance devient « à payer ».
+            L'encaissement de la séance devient absent.
+            Le compte devient le compte + 1.
+    Remarque : l'agenda du jour, six séances prévues.
+    L'horaire vaut 8:30.
+    Pour chaque créneau de 1 à 6 :
+        La s vaut une nouvelle séance :
+            Le patient vaut la fiche inventée de (créneau × 13).
+            Le soin vaut le soin conservé dont le nom est « EPI ».
+            La date vaut aujourd'hui.
+            L'heure vaut l'horaire.
+            La durée vaut 60.
+            Le prix vaut 70.
+            Le statut vaut « prévue ».
+            Le paiement vaut « à payer ».
+        Conserver la s.
+        L'horaire devient l'horaire + 75 minutes.
+    Remarque : deux patients archivés le 15 décembre 2025.
+    Pour chaque rang de 118 à 119 :
+        L'archivage de la fiche inventée du rang devient 15.12.2025.

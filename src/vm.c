@@ -3535,7 +3535,7 @@ static char *tableau_montrer(Machine *m, Objet *o, TableauFiche *t) {
     total = total && nl > 0 && nc > 0;
     Decimal *sommes = grym_allouer((nc ? nc : 1) * sizeof *sommes);
     for (size_t k = 0; k < nc; k++) sommes[k] = dec_zero();
-    char **cellules = grym_allouer(((nl + 1) * nc ? (nl + 1) * nc : 1) * sizeof *cellules);
+    char **cellules = grym_allouer(((nl + 1) * nc != 0 ? (nl + 1) * nc : 1) * sizeof *cellules);
     size_t faites = 0, montres = 0;
     for (size_t r = 0; r < nl && !erreur; r++) {
         Objet *x = machine_objet_en_base(m, liste.liste->ids[r], liste.liste->classes[r], &erreur);

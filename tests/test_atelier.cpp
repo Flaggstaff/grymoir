@@ -153,7 +153,7 @@ static QString dessin(const QString &ligne, bool compacte = false) {
 
 
 // Praxis et ses données d'essai (21 octobre 2026) : l'application livrée part vide ; l'essai en fait une copie, où les
-// données d'essai (tests/praxis/essais.grym) sont branchées avant le dernier rappel, comme dans test_serveur.c.
+// données d'essai (tests/praxis/essais.grym) sont branchées avant l'accueil, comme dans test_serveur.c.
 static bool copier_praxis_essai(const QString &vers) {
     const QString source = QString(GRYM_SOURCE) + "/projets/Praxis";
     for (const QString &n : QDir(source).entryList(QDir::Files))
@@ -169,7 +169,7 @@ static bool copier_praxis_essai(const QString &vers) {
     QString s = QString::fromUtf8(f.readAll());
     f.close();
     const QString u = QString::fromUtf8("Utiliser « actions ».\n");
-    const int i = s.indexOf(QString::fromUtf8("Remarque : le dernier rappel d'une séance"));
+    const int i = s.indexOf(QString::fromUtf8("Remarque : l'accueil de la maquette"));
     if (!s.contains(u) || i < 0) return false;
     s.insert(i, QString::fromUtf8("Si le nombre de patients conservés est nul, remplir les essais.\n\n"));
     s.replace(u, u + QString::fromUtf8("Utiliser « essais ».\n"));

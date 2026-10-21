@@ -1,0 +1,83 @@
+#!/bin/sh
+# Praxis en grandeur réelle : une copie de Praxis branchée sur l'année 2025 inventée (tests/praxis/charge.grym).
+#
+#   tests/praxis/charger              prépare _charge_praxis/ (à la racine du dépôt, ignoré par Git) ; on l'ouvre
+#                                     dans l'atelier et on lance : le premier lancement fabrique l'année
+#   tests/praxis/charger --console    fabrique l'année dans la console, sans écrans ni chiffrement, et chronomètre
+#                                     la fabrication puis les lectures lourdes de la Comptabilité et des Rappels
+#
+# GRYM_HASARD=2025 rejoue exactement la même année. La copie précédente, et sa base, sont effacées.
+set -e
+depot="$(cd "$(dirname "$0")/../.." && pwd)"
+cible="$depot/_charge_praxis"
+rm -rf "$cible"
+mkdir -p "$cible/images" "$cible/polices"
+for f in "$depot"/projets/Praxis/*.grym "$depot"/projets/Praxis/projet.grymatelier; do cp "$f" "$cible/"; done
+cp "$depot"/projets/Praxis/images/* "$cible/images/"
+cp "$depot"/projets/Praxis/polices/* "$cible/polices/"
+cp "$depot/tests/praxis/charge.grym" "$cible/"
+[ -f "$depot/projets/Praxis/clé-de-secours.pub" ] && cp "$depot/projets/Praxis/clé-de-secours.pub" "$cible/"
+
+if [ "$1" = "--console" ]; then
+    grym="$depot/grym"
+    [ -x "$grym" ] || { echo "grym introuvable : construis d'abord (make)." >&2; exit 1; }
+    cat > "$cible/mesure.grym" <<'FIN'
+Remarque : la charge dans la console : l'année fabriquée, puis ce que la Comptabilité et les Rappels lisent.
+Utiliser « charge ».
+Utiliser « départ ».
+Si le nombre de soins conservés est nul, poser les soins de départ.
+Si le nombre de rubriques conservées est nul :
+    Classer « Loyer ».
+    Classer « Matériel ».
+    Classer « Formation ».
+    Classer « Assurances ».
+    Classer « Cotisations ».
+    Classer « Déplacements ».
+    Classer « Autres ».
+Si le nombre de cabinets conservés = 0, fonder le cabinet.
+Si le nombre de patients conservés est nul, remplir la charge.
+Afficher « Patients : » puis le nombre de patients conservés.
+Afficher « Séances : » puis le nombre de séances conservées.
+Afficher « Factures : » puis le nombre de factures conservées.
+Afficher « Quittances : » puis le nombre de quittances conservées.
+Afficher « Rappels : » puis le nombre de rappels conservés.
+Afficher « Frais : » puis le nombre de frais conservés.
+Afficher « Notes : » puis le nombre de notes conservées.
+FIN
+    cat > "$cible/lecture.grym" <<'FIN'
+Remarque : les lectures de la Comptabilité 2025 et des Rappels, sur la base déjà fabriquée.
+Utiliser « actions ».
+Le début vaut 01.01.2025.
+La fin vaut 01.01.2026.
+La limite vaut aujourd'hui − 30 jours.
+Le chiffre vaut la somme des prix des séances conservées dont l'encaissement ≥ le début et l'encaissement < la fin et le paiement ≠ « à payer » et le paiement ≠ « offert ».
+La dépense vaut la somme des montants des frais conservés dont la date ≥ le début et la date < la fin.
+Afficher « Recettes encaissées 2025 : CHF » puis l'arrondi du chiffre à 0,01.
+Afficher « Frais 2025 : CHF » puis l'arrondi de la dépense à 0,01.
+Afficher « Résultat 2025 : CHF » puis l'arrondi de (le chiffre − la dépense) à 0,01.
+Afficher « Factures échues : » puis le nombre de factures conservées dont l'état ≠ « réglée » et la date ≤ la limite.
+Afficher « Reste dû : CHF » puis l'arrondi de la somme des prix des séances conservées dont la facture est présente et le paiement = « à payer » à 0,01.
+Afficher « Séances prévues passées : » puis le nombre de séances conservées dont le statut = « prévue » et la date < aujourd'hui.
+FIN
+    cd "$cible"
+    debut=$(date +%s)
+    "$grym" lancer mesure.grym
+    milieu=$(date +%s)
+    cp mesure.grymd lecture.grymd   # chaque programme a sa base : la lecture prend une copie de celle fabriquée
+    "$grym" lancer lecture.grym
+    fin=$(date +%s)
+    echo "Fabrication : $((milieu - debut)) s ; lectures : $((fin - milieu)) s."
+    exit 0
+fi
+
+# Dans l'application : l'année se fabrique au premier lancement, après la fondation du cabinet et avant l'accueil.
+awk '
+    $0 == "Utiliser « actions »." && !u { print; print "Utiliser « charge »."; u = 1; next }
+    index($0, "Remarque : l'\''accueil de la maquette") == 1 && !r {
+        print "Si le nombre de patients conservés est nul, remplir la charge."; print ""; r = 1
+    }
+    { print }
+    END { if (!u || !r) exit 1 }
+' "$depot/projets/Praxis/Praxis.grym" > "$cible/Praxis.grym" || { echo "Praxis.grym a changé : les ancres de la charge manquent." >&2; exit 1; }
+echo "Prêt : $cible"
+echo "Ouvre ce dossier dans l'atelier et lance. Le premier lancement demande un mot de passe, puis fabrique l'année."
