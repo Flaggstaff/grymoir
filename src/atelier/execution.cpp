@@ -879,7 +879,7 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             const bool meme_ecran = vue_ecran && vue_ecran == ecran_du_clic;
             clic_en_attente = -1;
             ecran_du_clic = nullptr;
-            if (meme_ecran) envoyer_evenement(EVENEMENT_CLIC, k, 0);
+            if (meme_ecran) cliquer(k);   // une autre zone encore modifiée part d'abord, puis le clic
         }
     });
     connect(&travail, &Travail::ecran_erreur, this, [this](const QString &m) {
@@ -1359,14 +1359,14 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                         if (auto *b = qobject_cast<QPushButton *>(controles_ecran[q]))
                             if (b->property("role").toString() == "principal") principal = q;
                     if (principal < 0) return;
-                    if (attente_ecran) envoyer_evenement(EVENEMENT_CLIC, principal, 0);
+                    if (attente_ecran) cliquer(principal);
                     else { clic_en_attente = principal; ecran_du_clic = vue_ecran; }
                 });
             }
         } else if (auto *b = qobject_cast<QPushButton *>(v.controles[k])) {
             connect(b, &QPushButton::clicked, this, [this, k] {
                 if (clic_en_attente == k) { clic_en_attente = -1; ecran_du_clic = nullptr; }   // déjà gardé : une fois
-                envoyer_evenement(EVENEMENT_CLIC, k, 0);
+                cliquer(k);
             });
         }
     }
@@ -1456,6 +1456,21 @@ void Execution::ranger() {
 void Execution::effacer_erreurs_zones() {
     for (QWidget *c : controles_ecran)
         if (c) for (QLabel *l : c->findChildren<QLabel *>("erreur-zone", Qt::FindDirectChildrenOnly)) l->deleteLater();
+}
+
+void Execution::cliquer(int k) {
+    if (!attente_ecran) return;
+    for (int q = 0; q < zones.size(); q++) {   // une zone tapée mais pas encore envoyée : elle d'abord
+        auto *z = qobject_cast<QLineEdit *>(zones[q]);
+        if (!z || !z->isModified() || !z->isEnabled() || z->isReadOnly()) continue;
+        z->setModified(false);
+        texte_envoye = z->text().toUtf8();
+        clic_en_attente = k;
+        ecran_du_clic = vue_ecran;
+        envoyer_evenement(EVENEMENT_CHANGEMENT, q, 0);
+        return;
+    }
+    envoyer_evenement(EVENEMENT_CLIC, k, 0);
 }
 
 void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) {

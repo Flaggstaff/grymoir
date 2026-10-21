@@ -181,6 +181,9 @@ private:
     // Un clic arrivé pendant qu'une zone envoyait sa valeur (le bouton prend le focus, la zone le perd et part la
     // première) : gardé, et envoyé dès que l'écran attend de nouveau, s'il est toujours le même (21 octobre 2026)
     int clic_en_attente = -1;
+    // Un clic : d'abord la valeur d'une zone encore modifiée (sous macOS, un bouton ne prend pas le focus : la zone
+    // n'envoie rien d'elle-même), puis le clic, quand l'écran attend de nouveau (21 octobre 2026)
+    void cliquer(int k);
     QWidget *ecran_du_clic = nullptr;
     bool attente = false, fini = false, fermer_a_la_fin = false;
     int images = 0;
