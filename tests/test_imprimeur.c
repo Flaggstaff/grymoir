@@ -315,7 +315,7 @@ int main(void) {
          "La photo vaut le fichier « a.jpg ».\nAfficher la taille du fichier « b.png ».\nEnregistrer la photo dans « c.jpg ».\n");
     COMP("La photo vaut le fichier « a.jpg ».\nAfficher la taille du fichier « b.png » puis nom de fichier de photo.\n"
          "Enregistrer la photo dans « c.jpg ».",
-         "_la photo << _fichier « a.jpg »\n_afficher (_fichier « b.png »).taille ; photo.nom_de_fichier\n"
+         "_la photo << _fichier « a.jpg »\n_afficher (_fichier « b.png »).taille ; _nu photo.nom_de_fichier\n"
          "_enregistrer photo _dans « c.jpg »\n");
 
     /* --- Entités (§ 16.1) --- */
@@ -514,8 +514,8 @@ int main(void) {
          "Pour chaque rangée du tableau « o.csv » :\n    Si la colonne « Année » de la rangée est présente, afficher 1.\n");
     COMP("Une p, conservée, a : une date (date), facultative.\nLa x vaut une nouvelle p :\n    La date vaut absente.\n"
          "Si la date de x est présente, afficher 1.",
-         "_classe _une p _conservé\n    _une date (date) _facultatif\n_fin\n_la x << _nouveau p _avec\n    date << _absent\n"
-         "_fin\n_si x.date _présent _alors\n    _afficher 1\n_fin\n");
+         "_classe _une p _conservé\n    _une date (date) _facultatif\n_fin\n_la x << _nouveau p _avec\n    date << _absente\n"
+         "_fin\n_si _nu x.date _présent _alors\n    _afficher 1\n_fin\n");
 
     /* --- Relations inverses (§ 16.10) --- */
     LITT("Une personne, conservée, a : un nom (texte).\nUne chanson, conservée, a : un titre (texte), "
@@ -570,7 +570,7 @@ int main(void) {
     COMP("Une œuvre, conservée, a : une composition (année), facultative, une reprise (année), 1900 au départ.\n"
          "Le d vaut 01.01.2000.\nAfficher l'année de d puis l'année d'aujourd'hui.",
          "_classe _une œuvre _conservé\n    _une composition (année) _facultatif\n    _une reprise (année) _départ 1900\n_fin\n"
-         "_le d << 01.01.2000\n_afficher d.année ; (_aujourd'hui).année\n");
+         "_le d << 01.01.2000\n_afficher _nu d.année ; (_aujourd'hui).année\n");
 
     /* --- Séparateur de milliers : l'auteur décide de grouper, le style est normalisé (§ 12) --- */
     LITT("Le x vaut 1747.\nLe y vaut 1'000.\nLe z vaut 1\u00a0234\u00a0567,50 + 12345,5 − 0,001.",

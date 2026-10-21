@@ -345,7 +345,7 @@ int main(void) {
                  "La f vaut la facture conservée dont le montant = 3.\nAfficher le nombre de factures conservées.\n");
 
     ALLER_RETOUR("_classe _une p _conservé\n    _une date (date) _facultatif\n_fin\n_la x << _nouveau p _avec\n"
-                 "    date << _absent\n_fin\n_si x.date _présent _alors\n    _afficher 1\n_fin\n",
+                 "    date << _absente\n_fin\n_si x.date _présent _alors\n    _afficher 1\n_fin\n",
                  "Une p, conservée, a :\n    une date (date), facultative.\nLa x vaut une nouvelle p :\n    La date vaut absente.\n"
                  "Si la date de la x est présente, afficher 1.\n");
 

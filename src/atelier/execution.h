@@ -178,6 +178,10 @@ private:
     QVector<class QTableWidget *> tables;
     QVector<QPushButton *> boutons_ecran;
     bool attente_ecran = false;
+    // Un clic arrivé pendant qu'une zone envoyait sa valeur (le bouton prend le focus, la zone le perd et part la
+    // première) : gardé, et envoyé dès que l'écran attend de nouveau, s'il est toujours le même (21 octobre 2026)
+    int clic_en_attente = -1;
+    QWidget *ecran_du_clic = nullptr;
     bool attente = false, fini = false, fermer_a_la_fin = false;
     int images = 0;
     // Les sons du fil (§ 15.7) : « son:K » dans le texte, joués par un lecteur caché ; nom et octets

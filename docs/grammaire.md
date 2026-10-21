@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.35 de la spécification, révisée le 21 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.36 de la spécification, révisée le 21 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1418,6 +1418,7 @@ La charte (art. 7) promet des migrations de schéma automatiques ; le principe 1
 - `, unique` s'ajoute à un champ existant si ses valeurs sont déjà toutes différentes. Il se retire seulement s'il a été ajouté par une migration.
 - `(nombre entier)` devient `(nombre)` si le champ n'est pas unique.
 - Changer la classe parente d'une entité est refusé.
+- *(2.36)* Un champ retiré, ni unique ni lien, dont aucune valeur n'est présente (toutes absentes, corbeille comprise) part sans rien emporter, même si des objets sont conservés. Pour retirer un champ facultatif qui a encore des valeurs : un programme les efface d'abord (`Le rappel de la séance devient absent.`), puis la déclaration suivante ne le porte plus.
 - Retirer un champ pour de bon, ou lever les limites ci-dessus, demandera une commande explicite de l'outil `grym`, à concevoir.
 
 **Renommer** *(2.23)* :
@@ -1843,6 +1844,10 @@ Ouvrir l'écran des compositeurs.
 - `Quand on ouvre l'écran X :`, `Quand on clique sur « B » dans l'écran X :`, `Quand on choisit un c dans l'écran X :`, `Quand on change la zone dans l'écran X :`, `Quand on ferme l'écran X :`, suivis d'un bloc. Ce sont des actions (§ 9).
 - `Quand on choisit un compositeur` nomme la ligne `compositeur` dans son corps. `le compositeur choisi de l'écran` désigne la ligne sélectionnée, ou `absent`. `le pays de l'écran` lit une zone ; `Le pays de l'écran devient … .` la modifie. `de l'écran` hors d'un événement est une erreur.
 - Un bouton sans événement, un événement qui cite un bouton ou une zone inexistants, deux listes de la même entité dans un écran : erreurs d'analyse. La fermeture ne se refuse pas.
+
+- **`Faire comme un clic sur « B ».`** *(2.36)* : dans un événement d'un écran, le corps de l'événement « Quand on clique sur « B » » du même écran, déjà déclaré plus haut, s'exécute à cet endroit, dans la même transaction ; un refus plus loin annule tout. Un écran évite ainsi de recopier un événement dans un autre : « Facture ou quittance » fait d'abord ce que fait « Enregistrer ». Ailleurs qu'un événement : « « Faire comme un clic » ne vaut que dans un événement d'écran ». Forme compacte : `_comme_clic « B »`.
+- **Dans le navigateur** *(2.36)* : un clic s'envoie par le rang du bouton (`clic=25`) ou par son libellé (`clic=Enregistrer`), unique dans l'écran.
+- **Dans l'atelier et une application fabriquée** *(21 octobre 2026)* : un clic arrivé pendant qu'une zone envoie sa valeur (le bouton prend le focus, la zone le perd et part la première) n'est plus perdu : il suit, dès que l'écran attend de nouveau. La touche Entrée dans une zone vaut un clic sur le bouton principal de l'écran.
 
 ### 22.3 Ouvrir, fermer, transactions
 
@@ -2280,3 +2285,4 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 | 2.33 | 2026-10-20 | § 22.5 : le logo et la signature calculés, `le logo (…)` ; le titre d'un écran calculé, `L'écran d'accueil, (…) en grand, montre :` ; forme compacte : `(_le cabinet _conservé).logo << x` se relit (la ligne était refusée), et « du cabinet conservé » remplace « de (le cabinet conservé) » à la traduction |
 | 2.34 | 2026-10-21 | § 22.6 : `, large de 12 caractères` ; forme canonique : le membre gauche d'une opération qui finit par un `dont` garde ses parenthèses (la 2.33 les retirait après `de` : « l'arrondi de (… dont …) − (…) » ne se relisait plus) ; un appel avec ses arguments, suivi d'un autre argument, garde les siennes ; la forme compacte traduite retrouve l'article des calculs et des propriétés (« la longueur du t », « le carré de 7 ») et élide devant un « h » muet (« l'heure ») |
 | 2.35 | 2026-10-21 | Forme compacte sans perte : `_alors _court`, `_sinon _court` (une branche courte), `_alors _bloc` (un bloc que la règle du guide raccourcirait) ; `x _est v` (l'égalité écrite en mots ; un `=` compact reste `=`) ; `_nu x` (un nom écrit sans article qu'une variable recevrait), `_le x`, `_la x`, `_l' x` (un article écrit qu'un paramètre ne recevrait pas) ; un collage en argument garde ses parenthèses (`de ("Rappel " suivi du numéro)`) |
+| 2.36 | 2026-10-21 | § 16.7 : un champ retiré sans aucune valeur présente part ; § 22.2 : `Faire comme un clic sur « B ».`, le clic par libellé dans le navigateur, le clic qui suit une zone et la touche Entrée dans l'atelier ; forme compacte : `_le patient.nom`, `_nu date.année`, `_la s.date << …`, `_absente` |

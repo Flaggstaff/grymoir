@@ -1690,7 +1690,13 @@ static int evenements_de(Serveur *s, Envoi *env) {
         file_ajouter(s, ev);
     } else if (pc && !pc->fichier) {
         unsigned long k = strtoul(pc->valeur, &fin, 10);
-        if (fin != pc->valeur && !*fin && k < e->n && e->el[k].sorte == ELEMENT_BOUTON && !e->etats[k]) {
+        if (fin == pc->valeur || *fin) {   /* « clic=Enregistrer » (2.36) : un bouton par son libellé, unique dans l'écran */
+            k = e->n;
+            for (size_t q = 0; q < e->n && k == e->n; q++)
+                if (e->el[q].sorte == ELEMENT_BOUTON && e->el[q].texte && strcmp(e->el[q].texte, pc->valeur) == 0) k = q;
+            fin = (char *)"";
+        }
+        if (k < e->n && e->el[k].sorte == ELEMENT_BOUTON && !e->etats[k]) {
             Evenement ev = { EVENEMENT_CLIC, (size_t)k, 0, NULL, choisies(e), e->n, NULL, 0 };
             file_ajouter(s, ev);
         }

@@ -186,6 +186,25 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                 continue;
             }
         }
+        if ((est_cle(t, "le") || est_cle(t, "la") || est_cle(t, "l'") || est_cle(t, "nu")) && k + 2 < f && r->e[k + 1].type == J_CROCHETS
+            && r->e[k + 2].type == J_POINT && k + 3 < f && r->e[k + 3].type == J_CROCHETS) {
+            /* « _le patient.nom » → « nom du patient » : l'article écrit de l'objet d'un champ (2.36) */
+            const size_t b = k + 2;
+            size_t q = b;
+            while (q + 1 < f && r->e[q].type == J_POINT && r->e[q + 1].type == J_CROCHETS) q += 2;
+            for (size_t i = q; i > b; i -= 2) {
+                copier(r, &r->e[i - 1]);
+                if (i - 2 != b) { mot(r, "de", &r->e[i - 2]); continue; }
+                if (est_cle(t, "le")) mot(r, "du", t);
+                else if (est_cle(t, "la")) { mot(r, "de", t); mot(r, "la", t); }
+                else if (est_cle(t, "nu")) mot(r, "de", t);
+                else { mot(r, "de", t); emettre(r, J_ELISION, "l", t, 1); }
+            }
+            if (est_cle(t, "nu")) emettre(r, J_CROCHETS, r->e[k + 1].valeur, &r->e[k + 1], 2);   /* sans article à deviner */
+            else copier(r, &r->e[k + 1]);
+            k = q - 1;
+            continue;
+        }
         if (est_cle(t, "nu") && k + 1 < f && r->e[k + 1].type == J_CROCHETS) {
             /* « _nu d » → « d », sans article à deviner (2.35) */
             emettre(r, J_CROCHETS, r->e[k + 1].valeur, &r->e[k + 1], 2);
@@ -614,7 +633,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                 mot(r, "est", t);          /* x _positif → x est positif */
                 mot(r, adj, t);
             } else if (strcmp(t->valeur, "vrai") == 0 || strcmp(t->valeur, "faux") == 0
-                       || strcmp(t->valeur, "absent") == 0) {
+                       || strcmp(t->valeur, "absent") == 0 || strcmp(t->valeur, "absente") == 0) {   /* _absente (2.36) */
                 mot(r, t->valeur, t);      /* valeur booléenne, ou absente */
             } else if (strcmp(t->valeur, "non") == 0) {
                 /* _non (x > 0) → x n'est pas supérieur à 0 */
@@ -1670,7 +1689,10 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         fixer_retrait(r, premier, prof);
         return;
     }
-    if (t->type == J_MOT_CLE) {
+    /* « _la séance.date << … » (2.36) : une affectation au champ d'un objet dont l'article est écrit, pas une création */
+    const int article_champ = t->type == J_MOT_CLE && (est_cle(t, "le") || est_cle(t, "la") || est_cle(t, "l'") || est_cle(t, "nu")) && d + 3 < f
+                              && r->e[d + 1].type == J_CROCHETS && r->e[d + 2].type == J_POINT;
+    if (t->type == J_MOT_CLE && !article_champ) {
         const char *c = t->valeur;
         if (!strcmp(c, "fin")) {
             if (f != d + 1) { echouer(r, &r->e[d + 1], grym_dupliquer("« _fin » s'écrit seul sur sa ligne.")); return; }
@@ -1749,7 +1771,8 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             echouer(r, t, grym_dupliquer("« _cas » ou « _autrement » attendu dans un « _selon »."));
             return;
         }
-        if (!strcmp(c, "le") || !strcmp(c, "la") || !strcmp(c, "l'")) {
+        if ((!strcmp(c, "le") || !strcmp(c, "la") || !strcmp(c, "l'"))
+            && !(d + 3 < f && r->e[d + 1].type == J_CROCHETS && r->e[d + 2].type == J_POINT)) {   /* « _la s.date << … » : plus bas (2.36) */
             if (d + 2 >= f || r->e[d + 1].type != J_CROCHETS || r->e[d + 2].type != J_AFFECTE) {
                 echouer(r, t, grym_formater("Création attendue : « _%s nom << valeur ».", c));
                 return;
@@ -2206,6 +2229,18 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "dans", &r->e[dans]);
             expression(r, dans + 1, f);
             point(r, f);
+        } else if (!strcmp(c, "comme_clic")) {   /* _comme_clic « B » → Faire comme un clic sur « B ». (2.36) */
+            if (f != d + 2 || r->e[d + 1].type != J_TEXTE) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _comme_clic « Enregistrer » »."));
+                return;
+            }
+            mot(r, "faire", t);
+            mot(r, "comme", t);
+            mot(r, "un", t);
+            mot(r, "clic", t);
+            mot(r, "sur", t);
+            copier(r, &r->e[d + 1]);
+            point(r, f);
         } else if (!strcmp(c, "sauvegarder") || !strcmp(c, "restaurer")) {
             /* _sauvegarder _dans « c.grymd » [_mot_de_passe m] (2.29, 2.30) ; _restaurer _depuis f [_mot_de_passe m] */
             const int sauver = !strcmp(c, "sauvegarder");
@@ -2315,8 +2350,11 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     while (affecte < f && r->e[affecte].type != J_AFFECTE) affecte++;
     /* (_le cabinet _conservé).logo << x : le champ d'un objet cherché, entre parenthèses (2.33 ; la ligne n'était pas relue) */
     const size_t ferme_objet = t->type == J_PAR_OUV ? fermante(r, d, f) : f;
-    const int champ_cherche = t->type == J_PAR_OUV && affecte < f && ferme_objet + 2 < affecte
-                              && r->e[ferme_objet + 1].type == J_POINT;
+    const int champ_cherche = (t->type == J_PAR_OUV && affecte < f && ferme_objet + 2 < affecte
+                               && r->e[ferme_objet + 1].type == J_POINT)
+        /* « _la séance.date << … » : l'objet du champ avec son article écrit (2.36) */
+        || ((est_cle(t, "le") || est_cle(t, "la") || est_cle(t, "l'") || est_cle(t, "nu")) && affecte < f && d + 3 < affecte
+            && r->e[d + 1].type == J_CROCHETS && r->e[d + 2].type == J_POINT);
     if (((t->type == J_CROCHETS || (est_cle(t, "écran") && d + 1 < f && r->e[d + 1].type == J_POINT)) && affecte < f && affecte > d
          && (affecte == d + 1 || r->e[d + 1].type == J_POINT)) || champ_cherche) {
         emettre(r, J_ARTICLE_IMPLICITE, NULL, t, 1);   /* total << … → Le total devient … */

@@ -588,12 +588,12 @@ static void essais_migration(void) {
         free(y);
         free(nouveau);
         free(lire);
-        total++;   /* l'ancien nom, oublié : le refus dit comment le déclarer */
+        total++;   /* l'ancien nom, oublié, mais sans aucune valeur : il part sans rien emporter (2.36) */
         x = essai_migration(ren, "Un genre, conservé, a : un nom (texte), unique.\n"
             "Un patient, conservé, a : un nom (texte), unique, un dossier (fichier), facultatif, des humeurs (genre).\n"
             "Une séance, conservée, a : un patient (patient), un prix (nombre).\n");
-        if (!strstr(x, "s'il a changé de nom, écris-le sur le nouveau : « , anciennement « document » »"))
-            signaler(__LINE__, "document oublié", "anciennement « document »", x);
+        if (!strstr(x, "champ « document » retiré ; aucune valeur n'est perdue"))
+            signaler(__LINE__, "document vide oublié", "retiré ; aucune valeur n'est perdue", x);
         free(x);
         remove(ren);
     }
@@ -2428,6 +2428,30 @@ int main(void) {
         free(relire);
         remove("_essai_relire.txt");
         remove("_essai_relire.grymd");
+    }
+    /* --- 2.36 : un champ facultatif retiré dont aucune valeur n'est présente part ; une seule valeur, et il reste --- */
+    {
+        remove("_essai_mig2.grymd");
+        const char *etapes[][2] = {
+            { "Une séance, conservée, a : un prix (nombre), un rappel (date), facultatif, une note (texte), facultative.\n"
+              "Le s vaut une nouvelle séance :\n    Le prix vaut 10.\n    La note vaut « x ».\nConserver s.\n", "" },
+            { "Une séance, conservée, a : un prix (nombre), une note (texte), facultative.\nAfficher le nombre de séances conservées.\n", "1" },
+            { "Une séance, conservée, a : un prix (nombre).\n", "~« note » a disparu de « séance » : 1 valeur conservée serait perdue." },
+        };
+        for (int i = 0; i < 3; i++) {
+            total++;
+            Portee *p = portee_creer();
+            Machine *m = machine_creer();
+            machine_base(m, "_essai_mig2.grymd");
+            char *r = executer_source(p, m, etapes[i][0], 0);
+            const char *att = etapes[i][1];
+            int ok = att[0] == '~' ? strstr(r, att + 1) != NULL : strcmp(r, att) == 0;
+            if (!ok) signaler(__LINE__, etapes[i][0], att, r);
+            free(r);
+            machine_detruire(m);
+            portee_detruire(p);
+        }
+        remove("_essai_mig2.grymd");
     }
     /* --- Migrations (§ 16.7) : une même base, des déclarations qui évoluent --- */
     {

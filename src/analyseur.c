@@ -8160,6 +8160,31 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "si")) return si(a, colonne, 0);
     if (est_mot(t, "essayer")) return essayer(a, colonne);
     if (est_mot(t, "chaque")) return regle(a, colonne);   /* § 16.14 */
+    if (est_mot(t, "faire") && est_mot(voir(a, 1), "comme") && est_mot(voir(a, 2), "un") && est_mot(voir(a, 3), "clic")
+        && est_mot(voir(a, 4), "sur") && voir(a, 5)->type == J_TEXTE) {
+        /* « Faire comme un clic sur « Enregistrer ». » (2.36) : dans un événement d'un écran, le corps de son autre
+         * événement de clic, déjà déclaré, s'exécute ici, dans la même transaction ; sans réserver « faire » */
+        const Jeton *b = voir(a, 5);
+        if (!a->evenement || !a->ecran || strncmp(a->ecran, "écran ", strlen("écran ")) != 0)
+            return erreur(a, t, grym_dupliquer("« Faire comme un clic » ne vaut que dans un événement d'écran : « Quand on clique … : »."));
+        const char *ecran = a->ecran + strlen("écran ");
+        char *interne = grym_formater("quand clic « %s » dans l'écran %s", b->valeur, ecran);
+        int trouve = 0;
+        for (size_t q = 0; q < a->portee->n && !trouve; q++) trouve = strcmp(a->portee->s[q].nom, interne) == 0;
+        if (!trouve) {
+            free(interne);
+            return erreur(a, b, grym_formater("L'écran « %s » n'a pas encore d'événement « Quand on clique sur « %s » » : "
+                                              "déclare-le plus haut.", ecran, b->valeur));
+        }
+        a->i += 6;
+        if (!fin_phrase(a, 0)) { free(interne); return NULL; }
+        Noeud *n = noeud_creer(P_APPEL, t->ligne, t->colonne, t->debut);
+        n->texte = interne;
+        n->indication = grym_dupliquer(b->valeur);   /* le libellé du bouton (texte2 dirait une classe, § 13.8) */
+        n->forme = 9;   /* « Faire comme un clic sur « B ». » : imprimé ainsi, pas par son nom interne */
+        n->fin = fin_jeton(b);
+        return n;
+    }
     if (est_mot(t, "refuser")) {   /* « Refuser « … ». » (§ 18.1) : l'exécution échoue avec ce message */
         avancer(a);
         Noeud *n = noeud_creer(P_REFUSER, t->ligne, t->colonne, t->debut);

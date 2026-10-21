@@ -1017,6 +1017,23 @@ static long compter_lignes(Base *b, const ClasseVM *c) {
     return n;
 }
 
+/* Les valeurs présentes d'un champ (2.36) : les lignes où il n'est pas absent, la corbeille comprise. */
+static long compter_valeurs(Base *b, const ClasseVM *c, const char *champ) {
+    Chaine sql = {0};
+    chaine_ajouter(&sql, "SELECT count(*) FROM ");
+    ajouter_nom(&sql, "e ", c->nom);
+    chaine_ajouter(&sql, " WHERE ");
+    ajouter_nom(&sql, "c ", champ);
+    chaine_ajouter(&sql, " IS NOT NULL");
+    char *t = chaine_rendre(&sql);
+    sqlite3_stmt *st = NULL;
+    preparer(b, t, &st);
+    free(t);
+    long n = st && sqlite3_step(st) == SQLITE_ROW ? (long)sqlite3_column_int64(st, 0) : 0;
+    rendre(b, st);
+    return n;
+}
+
 /* Littéral SQL d'une valeur de départ (forme canonique), ou d'une valeur neutre pour une table vide. */
 static void ajouter_litteral(Chaine *sql, const char *type, const char *depart) {
     if (strcmp(type, "nombre entier") == 0 || strcmp(type, "année") == 0) {
@@ -1354,11 +1371,15 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
                 ajouter_liaison(&sql, c->nom, a.noms[k]);
                 ok = executer_chaine(b, &sql, erreur);
             }
-        } else if (chercher_champ(&n, a.noms[k]) < 0 && lignes > 0) {
+        } else if (chercher_champ(&n, a.noms[k]) < 0 && lignes > 0
+                   && ((a.uniques[k] & 1) || est_lien(a.types[k]) || compter_valeurs(b, c, a.noms[k]) > 0)) {
+            /* 2.36 : un champ facultatif retiré dont aucune valeur n'est présente part sans rien emporter ; avant, il
+             * était refusé dès qu'un objet était conservé */
+            const long perdues = (a.uniques[k] & 1) || est_lien(a.types[k]) ? lignes : compter_valeurs(b, c, a.noms[k]);
             *erreur = grym_formater("« %s » a disparu de « %s » : %ld valeur%s conservée%s serai%s perdue%s. Remets ce "
                                     "champ ; s'il a changé de nom, écris-le sur le nouveau : « , anciennement « %s » ».", a.noms[k], c->nom,
-                                    lignes, lignes > 1 ? "s" : "", lignes > 1 ? "s" : "", lignes > 1 ? "ent" : "t",
-                                    lignes > 1 ? "s" : "", a.noms[k]);
+                                    perdues, perdues > 1 ? "s" : "", perdues > 1 ? "s" : "", perdues > 1 ? "ent" : "t",
+                                    perdues > 1 ? "s" : "", a.noms[k]);
             ok = 0;
         } else if (chercher_champ(&n, a.noms[k]) < 0) {
             Chaine sql = {0};   /* table vide : la colonne part sans rien emporter */

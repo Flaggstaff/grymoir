@@ -42,6 +42,7 @@ typedef struct {
     int champ_nu;          /* on écrit l'objet d'un champ resté sans article : il reste nu aussi (« longueur de n ») */
     int garder_groupe;     /* le membre gauche d'une opération : ses parenthèses restent (« de (… dont …) − … ») */
     int sans_marque;       /* l'objet d'un champ compact (`c.nom`) : pas de « _nu » ni d'article devant lui (2.35) */
+    int sans_marque_objet; /* « o.genres _gagne … » : pas de marque devant l'objet d'un champ en tête de phrase (2.36) */
     char **variables;      /* les variables créées avec un article (« L'effectif vaut 12. ») et leur genre (§ 11.4) */
     Genre *genres_var;
     size_t nb_var;
@@ -763,7 +764,7 @@ static void expression(Impression *im, const Noeud *n) {
         return;
     }
     case N_ABSENT:
-        aj(im, im->compact ? "_absent" : n->forme == 2 ? "absente" : "absent");
+        aj(im, im->compact ? (n->forme == 2 ? "_absente" : "_absent") : n->forme == 2 ? "absente" : "absent");   /* 2.36 : l'accord passe */
         return;
     case N_CHAMP_DONT: {
         /* un chemin (§ 16.4) : texte2, les liens de l'entité examinée vers le champ, séparés par U+001C */
@@ -964,9 +965,21 @@ static void expression(Impression *im, const Noeud *n) {
         if (im->compact) {
             const Noeud *o = n->enfants[0];
             int simple = o->type == N_NOM || o->type == N_CHAMP || o->type == N_APPEL || o->type == N_GROUPE || o->type == N_ECRAN;
+            if (im->sans_marque_objet) {
+                /* rien : en tête d'une phrase « _gagne », l'objet reste tel quel */
+            } else if (o->type == N_NOM && !o->crochets && genre_de_variable(im, o->texte) == G_LIBRE
+                       && genre_de_nom(im, o->texte) == G_LIBRE && n->enfants[0] == o) {
+                /* « _le patient.nom » (2.36) : l'article écrit d'un objet que la traduction laisserait nu */
+                if (o->article == ART_LE) aj(im, "_le ");
+                else if (o->article == ART_LA) aj(im, "_la ");
+                else if (o->article == ART_L) aj(im, "_l' ");
+            } else if (o->type == N_NOM && !o->crochets && o->article == ART_AUCUN && !o->article_a_deviner
+                       && (genre_de_variable(im, o->texte) != G_LIBRE || genre_de_nom(im, o->texte) != G_LIBRE)) {
+                aj(im, "_nu ");   /* « l'année de date », écrit sans article : « _nu date.année » (2.36) */
+            }
             if (!simple) aj(im, "(");
             const int avant = im->sans_marque;
-            im->sans_marque = 1;
+            im->sans_marque = o->type == N_NOM;   /* seulement l'objet lui-même : ce qu'il contient garde ses marques */
             expression(im, o);
             im->sans_marque = avant;
             if (!simple) aj(im, ")");
@@ -1871,6 +1884,12 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         aj(im, c ? "\n" : ".\n");
         return;
     case P_APPEL:
+        if (n->forme == 9) {   /* « Faire comme un clic sur « B ». » ; « _comme_clic « B » » (2.36) */
+            aj(im, c ? "_comme_clic " : "Faire comme un clic sur ");
+            ecrire_texte(im, n->indication);
+            aj(im, c ? "\n" : ".\n");
+            return;
+        }
         if (c) {
             ecrire_nom(im, n->texte, 0);
             aj(im, "(");
@@ -2110,7 +2129,10 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             Noeud champ = *n;
             champ.type = N_CHAMP;
             champ.nb_enfants = 1;
+            const int avant = im->sans_marque_objet;
+            im->sans_marque_objet = 1;   /* « o.genres _gagne … » : la phrase commence par l'objet, sans marque (2.36) */
             expression(im, &champ);
+            im->sans_marque_objet = avant;
             aj(im, n->forme ? " _perd " : " _gagne ");
             expression(im, n->enfants[1]);
             aj(im, "\n");

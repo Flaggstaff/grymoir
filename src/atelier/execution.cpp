@@ -874,6 +874,13 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         attente_ecran = true;
         if (vue_ecran) vue_ecran->setEnabled(true);
         etat->setText("L'écran attend.");
+        if (clic_en_attente >= 0) {   // le clic qu'une zone avait devancé : un seul geste suffit
+            const int k = clic_en_attente;
+            const bool meme_ecran = vue_ecran && vue_ecran == ecran_du_clic;
+            clic_en_attente = -1;
+            ecran_du_clic = nullptr;
+            if (meme_ecran) envoyer_evenement(EVENEMENT_CLIC, k, 0);
+        }
     });
     connect(&travail, &Travail::ecran_erreur, this, [this](const QString &m) {
         if (erreur_ecran) { erreur_ecran->setText(m); erreur_ecran->show(); }
@@ -1337,11 +1344,30 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                     if (!l->isModified()) return;   // quittée sans changement : pas d'événement
                     l->setModified(false);
                     texte_envoye = l->text().toUtf8();
+                    // quittée pour un bouton de l'écran (« Entrer ») : son clic suivra la valeur, sans second clic
+                    int bouton = -1;
+                    if (auto *fb = qobject_cast<QPushButton *>(QApplication::focusWidget()))
+                        for (int q = 0; q < controles_ecran.size(); q++)
+                            if (controles_ecran[q] == fb) bouton = q;
                     envoyer_evenement(EVENEMENT_CHANGEMENT, k, 0);
+                    if (bouton >= 0) { clic_en_attente = bouton; ecran_du_clic = vue_ecran; }
+                });
+                connect(l, &QLineEdit::returnPressed, this, [this] {
+                    // « Entrée » dans une zone : le bouton principal de l'écran, comme un clic (21 octobre 2026)
+                    int principal = -1;
+                    for (int q = 0; q < controles_ecran.size() && principal < 0; q++)
+                        if (auto *b = qobject_cast<QPushButton *>(controles_ecran[q]))
+                            if (b->property("role").toString() == "principal") principal = q;
+                    if (principal < 0) return;
+                    if (attente_ecran) envoyer_evenement(EVENEMENT_CLIC, principal, 0);
+                    else { clic_en_attente = principal; ecran_du_clic = vue_ecran; }
                 });
             }
         } else if (auto *b = qobject_cast<QPushButton *>(v.controles[k])) {
-            connect(b, &QPushButton::clicked, this, [this, k] { envoyer_evenement(EVENEMENT_CLIC, k, 0); });
+            connect(b, &QPushButton::clicked, this, [this, k] {
+                if (clic_en_attente == k) { clic_en_attente = -1; ecran_du_clic = nullptr; }   // déjà gardé : une fois
+                envoyer_evenement(EVENEMENT_CLIC, k, 0);
+            });
         }
     }
     // L'écran garde une largeur de lecture (« largeur-contenu ») et se centre dans une fenêtre plus large, comme une page
