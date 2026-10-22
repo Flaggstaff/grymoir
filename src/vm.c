@@ -2035,8 +2035,9 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
         static const char *const BASE[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure" };
         int de_base = ci.fichier;
         for (size_t q = 0; q < sizeof BASE / sizeof *BASE; q++) de_base |= strcmp(type, BASE[q]) == 0;
-        /* courriel, téléphone, adresse web : des textes ; un mot de passe ne passe pas par le formulaire, qui ne le hacherait pas */
-        de_base |= type_textuel(type) && !type_secret(type);
+        /* courriel, téléphone, adresse web : des textes ; un mot de passe ne passe pas par le formulaire, qui ne le hacherait pas,
+         * ni un secret, qu'il montrerait en clair */
+        de_base |= type_textuel(type) && !type_cache(type);
         if (!de_base) {
             ci.lie = classe_vm(m, type);
             ci.cle = ci.lie ? champ_cle(ci.lie) : NULL;
@@ -2049,7 +2050,7 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
             }
         }
         /* un mot de passe ne se propose pas en valeur actuelle : vide, il est gardé ; tapé, il est remplacé (§ 16.1) */
-        ci.actuel = modifier && o->definis[k] && !type_secret(o->classe->types[k]) ? valeur_montree(m, &o->champs[k], ci.cle) : NULL;
+        ci.actuel = modifier && o->definis[k] && !type_cache(o->classe->types[k]) ? valeur_montree(m, &o->champs[k], ci.cle) : NULL;
         ci.a_depart = !modifier && cl->departs[k] != NULL;
         if (ci.a_depart) {
             valeur_liberer(&ci.depart);
@@ -2201,8 +2202,8 @@ static char *afficher_fiche(Machine *m, Objet *o, Chaine *sortie) {
             textes[k] = grym_dupliquer("absent");
         } else if (o->champs[k].type == V_OBJET) {
             textes[k] = nom_objet(m, o->champs[k].objet);
-        } else if (type_secret(o->classe->types[k])) {
-            textes[k] = grym_dupliquer("••••••");   /* un mot de passe ne se montre pas (§ 16.1) */
+        } else if (type_cache(o->classe->types[k])) {
+            textes[k] = grym_dupliquer("••••••");   /* un mot de passe, un secret ne se montrent pas (§ 16.1, § 22.17) */
         } else {
             textes[k] = texte_valeur(m, &o->champs[k]);
             l[k].etiquette = lettre_etiquette(cl, k, textes[k]);   /* « payée » en vert (§ 16.15) */
@@ -2594,7 +2595,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].interrupteur = s2 && memchr(s2 + 1, 'i', nopt) != NULL;   /* § 22.6 */
             e->elements[k].multiple = s2 && memchr(s2 + 1, 'p', nopt) != NULL;   /* « des genres (genre) » */
             e->elements[k].recherche = s2 && memchr(s2 + 1, 'r', nopt) != NULL;   /* « avec recherche » */
-            e->elements[k].masque = (s2 && memchr(s2 + 1, 'c', nopt) != NULL) || type_secret(e->types[k]);   /* « masqué », ou un mot de passe */
+            e->elements[k].masque = (s2 && memchr(s2 + 1, 'c', nopt) != NULL) || type_cache(e->types[k]);   /* « masqué », ou un mot de passe */
             e->elements[k].dossier = s2 && memchr(s2 + 1, 'd', nopt) != NULL;   /* « avec le choix d'un dossier » (2.32) */
             {   /* « large de 12 caractères » (2.34) : « ␙12 » parmi les options */
                 const char *w = s2 ? memchr(s2 + 1, '\x19', nopt) : NULL;
@@ -2964,14 +2965,14 @@ static char *tableau_csv(Machine *m, const char *descripteur, const Valeur *l, F
             if (format == 0) {
                 if (k) chaine_ajouter(&c, ";");
                 if (v) {
-                    char *t = type_secret(x->classe->types[q]) ? grym_dupliquer("") : cellule_csv(m, v);
+                    char *t = type_cache(x->classe->types[q]) ? grym_dupliquer("") : cellule_csv(m, v);
                     ajouter_cellule(&c, t);
                     free(t);
                 }
             } else {
                 chaine_ajouter(&c, v && v->type == V_NOMBRE ? "<td class=\"n\" align=\"right\">" : "<td>");
                 if (v) {
-                    char *t = type_secret(x->classe->types[q]) ? grym_dupliquer("••••••")
+                    char *t = type_cache(x->classe->types[q]) ? grym_dupliquer("••••••")
                             : v->type == V_OBJET ? nom_objet(m, v->objet) : texte_valeur(m, v);
                     html_echapper(&c, t);
                     free(t);
@@ -3309,7 +3310,7 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
             if (!x || q < 0 || (size_t)q >= x->classe->nb_champs || !x->definis[q] || x->champs[q].type == V_ABSENT)
                 t = grym_dupliquer("");
             else if (x->champs[q].type == V_OBJET) t = nom_objet(m, x->champs[q].objet);
-            else if (type_secret(x->classe->types[q])) t = grym_dupliquer("••••••");   /* § 16.1 */
+            else if (type_cache(x->classe->types[q])) t = grym_dupliquer("••••••");   /* § 16.1 */
             else t = texte_valeur(m, &x->champs[q]);
             if ((graphe & 56) && faites % nc == 0 && x && q >= 0 && x->definis[q] && x->champs[q].type == V_DATE) {
                 /* la clé d'un graphique par période : triable dans l'ordre du calendrier, lisible plus tard (§ 22.11) */
@@ -3483,7 +3484,7 @@ static TableauFiche *tableaux_fiche(Machine *m, const Objet *o, size_t *nb) {
             f->titres = grym_allouer((c->nb_champs ? c->nb_champs : 1) * sizeof *f->titres);
             for (size_t r = 0; r < c->nb_champs; r++) {
                 const char *ty = c->types[r];
-                if (r == q || (c->uniques[r] & 8) || !ty || type_fichier(ty) || type_secret(ty)) continue;
+                if (r == q || (c->uniques[r] & 8) || !ty || type_fichier(ty) || type_cache(ty)) continue;
                 f->champs[f->nb_colonnes] = r;
                 f->titres[f->nb_colonnes++] = capitale(c->champs[r]);
             }
@@ -4951,8 +4952,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                                          v.objet->classe->feminin ? "e" : "", verbe);
                 free(qui);
             } else if (code == I_CONSERVER) {
+                /* un secret donné avant « Conserver » : la même règle qu'à l'écriture du champ (§ 22.17) */
+                for (size_t q = 0; q < v.objet->classe->nb_champs && !probleme && !module->base_chiffree; q++)
+                    if (type_secret(v.objet->classe->types[q]) && v.objet->definis[q] && v.objet->champs[q].type == V_TEXTE)
+                        probleme = grym_formater("« %s » est un secret : il se range dans une base chiffrée. Écris « La base "
+                                                 "est chiffrée. » dans le programme.", v.objet->classe->champs[q]);
                 long id = 0;
-                if (base_conserver(m->base, v.objet, &id, &probleme)) ecrire_id(m, v.objet, id);
+                if (!probleme && base_conserver(m->base, v.objet, &id, &probleme)) ecrire_id(m, v.objet, id);
             } else if (code == I_RETABLIR) {
                 if (charger(m, v.objet, &probleme)) base_retablir(m->base, v.objet, m->classes, m->nb_classes, &probleme);
             } else if (charger(m, v.objet, &probleme)) {   /* l'objet reste en mémoire, avec ses valeurs */
@@ -6372,6 +6378,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     break;
                 }
                 if (type_secret(o->classe->types[k]) && strncmp(o->classe->nom, "écran ", strlen("écran ")) != 0
+                    && !(ip < b->taille_code && b->code[ip] == I_EST_ABSENT)) {
+                    /* un secret ne se lit que pour être envoyé (§ 22.17) ; sa présence se teste comme un mot de passe */
+                    ok = echouer(diag, b, debut, grym_formater(
+                        "« %s » est un secret : il ne se lit que pour être envoyé.", champ));
+                    break;
+                }
+                if (type_mot_de_passe(o->classe->types[k]) && strncmp(o->classe->nom, "écran ", strlen("écran ")) != 0
                     && !(ip < b->taille_code && (b->code[ip] == I_CORRESPOND || b->code[ip] == I_EST_ABSENT))) {
                     /* un mot de passe ne se lit pas, sauf pour être vérifié (§ 16.1), ou pour savoir s'il y en a un
                      * (« est présent », « est absent ») : ce test ne dit rien de lui ; la zone d'un écran, elle, se lit */
@@ -6385,7 +6398,15 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 *vo = v;
             } else {
                 Valeur v = depiler(&pile);
-                if (v.type == V_TEXTE && type_secret(o->classe->types[k]) && strncmp(o->classe->nom, "écran ", strlen("écran ")) != 0) {
+                if (v.type == V_TEXTE && type_secret(o->classe->types[k]) && o->id && !module->base_chiffree) {
+                    /* un secret se range tel quel, il doit pouvoir repartir : seulement dans une base chiffrée (§ 22.17) */
+                    valeur_liberer(&v);
+                    ok = echouer(diag, b, debut, grym_formater(
+                        "« %s » est un secret : il se range dans une base chiffrée. Écris « La base est chiffrée. » dans le "
+                        "programme.", champ));
+                    break;
+                }
+                if (v.type == V_TEXTE && type_mot_de_passe(o->classe->types[k]) && strncmp(o->classe->nom, "écran ", strlen("écran ")) != 0) {
                     /* un mot de passe se range en empreinte, jamais en clair (§ 16.1) ; la zone d'un écran garde le sien */
                     char *e = empreinte_creer(v.texte);
                     valeur_liberer(&v);

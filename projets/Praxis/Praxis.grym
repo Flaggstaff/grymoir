@@ -341,9 +341,11 @@ Le document de quittance, « Quittance », montre :
     le texte "Montant reçu : CHF " suivi de l'arrondi du montant de la pièce en cours à 0,01 suivi de la mention du moyen de la pièce en cours,
     le texte "Pour acquit, " suivi du nom du cabinet conservé.
 
+Remarque : « Patient à ouvrir » propose les patients dès la première lettre tapée, sans égard aux accents ; un choix ouvre sa fiche.
 Remarque : la recherche filtre la liste à chaque changement : le nom, le téléphone, la localité ou le courriel contient ce qui est tapé.
 Remarque : les patients archivés n'y sont pas : la Configuration les montre, dans « Archives ».
 L'écran des patients montre :
+    un patient à ouvrir (patient), facultatif, avec recherche, avec l'indication « Une partie du nom : choisis, la fiche s'ouvre »,
     une recherche (texte), facultative, avec l'indication « Un nom, un téléphone, une localité »,
     la liste des patients conservés dont l'archivage est absent et (le nom contient la recherche des patients ou le téléphone contient la recherche des patients ou la localité contient la recherche des patients ou le courriel contient la recherche des patients), par nom, avec le nom, le téléphone, la localité et le courriel,
     côte à côte :
@@ -1101,6 +1103,14 @@ Quand on clique sur « Supprimer » dans l'écran des notes :
 
 Quand on ouvre l'écran des patients :
     La recherche des patients devient « ».
+
+Quand on change le patient à ouvrir dans l'écran des patients :
+    Si le patient à ouvrir de l'écran est présent :
+        Le p vaut le patient à ouvrir de l'écran.
+        Le patient à ouvrir de l'écran devient absent.
+        Si l'archivage du p est présent, refuser « Ce patient est archivé : la Configuration le montre, sous Archives. ».
+        La personne ouverte devient le p.
+        Ouvrir l'écran du patient.
 
 Quand on change la recherche dans l'écran des patients :
     Si la recherche de l'écran est présente, la recherche des patients devient la recherche de l'écran.

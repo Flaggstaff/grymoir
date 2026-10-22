@@ -2570,6 +2570,29 @@ int main(int argc, char **argv) {
         v = dessiner_ecran("Saisie", el);
         VERIFIER(qobject_cast<QComboBox *>(v.zones[0]) != nullptr);
         delete v.vue;
+        // « avec recherche » (2.40) : les propositions sans égard aux majuscules ni aux accents ; le choix remet le nom
+        // tel qu'il est écrit, et le menu le prend comme un clic dans sa liste (son rang, le signal « activated »)
+        el[0].type = "patient";   // une zone qui désigne un objet conservé
+        el[0].facultatif = false;
+        el[0].choix = QStringList({"Anne Rochat", "Hélène Rochat", "Louis Bapst"});
+        el[0].recherche = true;
+        v = dessiner_ecran("Saisie", el);
+        auto *menu = qobject_cast<QComboBox *>(v.zones[0]);
+        VERIFIER(menu && menu->isEditable() && menu->completer());
+        if (menu && menu->completer()) {
+            QCompleter *c = menu->completer();
+            c->setCompletionPrefix("helene");
+            VERIFIER(c->completionCount() == 1 && c->currentCompletion() == QString::fromUtf8("Hélène Rochat"));
+            c->setCompletionPrefix("ROCHAT");
+            VERIFIER(c->completionCount() == 2);
+            c->setCompletionPrefix(QString::fromUtf8("Hél"));
+            VERIFIER(c->completionCount() == 1);
+            int active = -1;
+            QObject::connect(menu, &QComboBox::activated, menu, [&](int i) { active = i; });
+            emit c->activated(c->currentIndex());
+            VERIFIER(menu->currentText() == QString::fromUtf8("Hélène Rochat") && active == 2);   // la ligne vide en tête
+        }
+        delete v.vue;
     }
 
     // L'image (§ 22.8) : ajoutée, relue, dessinée depuis le dossier du programme

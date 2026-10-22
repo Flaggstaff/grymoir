@@ -385,6 +385,28 @@ static void essais_base_chiffree(void) {
             if (!strncmp(e->d_name, "_essai_chiffree.grymd avant restauration", 40)) remove(e->d_name);
         if (d) closedir(d);
     }
+    /* Un secret (§ 22.17, 2.40) : rangé tel quel dans une base chiffrée, illisible dans le fichier ; sa présence se teste,
+       la fiche le cache, le lire est refusé, et il ne se vérifie pas comme un mot de passe */
+#define CAB "La base est chiffrée.\nUn cabinet, conservé, a :\n    un nom (texte), unique,\n    une clé (secret), facultative.\n"
+    const char *s = "_essai_secret.grymd";
+    effacer_base(s);
+    verifier_chiffre(__LINE__, s, "essai-essai",
+                     CAB "Le c vaut un nouveau cabinet :\n    Le nom vaut « Praxis ».\n    La clé vaut « cle-api-4417 ».\n"
+                         "Conserver le c.\nSi la clé du c est présente, afficher « présente ».\nAfficher la fiche du c.",
+                     "présente\nCabinet Praxis\n  Nom  Praxis\n  Clé  ••••••");
+    total++;
+    if (contient_en_clair(s, "cle-api-4417")) {
+        echecs++;
+        printf("ÉCHEC (ligne %d) : un secret se lit dans le fichier de la base\n", __LINE__);
+    }
+    verifier_chiffre(__LINE__, s, "essai-essai", CAB "Afficher la clé du cabinet conservé.",
+                     "~« clé » est un secret : il ne se lit que pour être envoyé.");
+    verifier_chiffre(__LINE__, s, "essai-essai", CAB "Si « cle-api-4417 » correspond à la clé du cabinet conservé, afficher « oui ».",
+                     "~« clé » est un secret : il ne se lit que pour être envoyé.");
+    verifier_chiffre(__LINE__, s, "essai-essai", CAB "La clé du cabinet conservé devient « autre ».\n"
+                                                 "Si la clé du cabinet conservé est présente, afficher « gardée ».", "gardée");
+    effacer_base(s);
+#undef CAB
 #undef CH
 #undef NOTE
 }
@@ -4228,6 +4250,17 @@ int main(void) {
          "sans\navec\nrelu");
     PROG("Un membre, conservé, a :\n    un code (mot de passe).\nLe m vaut un nouveau membre :\n    Le code vaut « secret-1 ».\nAfficher le code du m.",
          "~« code » est un mot de passe : il ne se lit pas, il se vérifie");
+    /* Un secret (§ 22.17, 2.40) : dans une base en clair, refusé à l'écriture du champ comme à « Conserver » ; un objet
+       qui n'est pas conservé le garde en mémoire */
+    PROG("Un cabinet, conservé, a :\n    un nom (texte),\n    une clé (secret), facultative.\nLe c vaut un nouveau cabinet :\n"
+         "    Le nom vaut « A ».\n    La clé vaut « k ».\nConserver le c.",
+         "~« clé » est un secret : il se range dans une base chiffrée. Écris « La base est chiffrée. » dans le programme.");
+    PROG("Un cabinet, conservé, a :\n    un nom (texte),\n    une clé (secret), facultative.\nLe c vaut un nouveau cabinet :\n"
+         "    Le nom vaut « A ».\nConserver le c.\nLa clé du c devient « k ».",
+         "~« clé » est un secret : il se range dans une base chiffrée.");
+    PROG("Un cabinet, conservé, a :\n    une clé (secret), facultative.\nLe c vaut un nouveau cabinet :\n    La clé vaut « k ».\n"
+         "Si la clé du c est présente, afficher « en mémoire ».", "en mémoire");
+    PROG("L'écran x montre :\n    une clé (secret).", "");   /* une zone (secret) se déclare */
     PROG("L'écran x montre :\n    un n (nombre), avec le choix d'un dossier.", "~Seule une zone (texte) se remplit par le choix d'un dossier.");   /* 2.32 */
     PROG("L'écran x, (\"A\" suivi de « B ») montre :\n    un bouton « OK ».", "~« , » attendu après le titre");   /* 2.33 */
     PROG("L'écran x montre :\n    un code (texte), large de 0 caractères.", "~Une largeur en caractères va de 1 à 200");   /* 2.34 */

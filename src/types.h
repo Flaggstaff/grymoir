@@ -1,5 +1,6 @@
 /* Les types de valeur qui sont des textes (grammaire, § 16.1) : « texte », et trois textes à la forme contrôlée,
- * « courriel », « téléphone », « adresse web ». Rangés et comparés comme des textes ; seul leur contrôle diffère. */
+ * « courriel », « téléphone », « adresse web ». Rangés et comparés comme des textes ; seul leur contrôle diffère.
+ * Deux textes cachés s'y ajoutent : « mot de passe » (rangé en empreinte) et « secret » (§ 22.17, rangé tel quel). */
 #ifndef GRYM_TYPES_H
 #define GRYM_TYPES_H
 
@@ -7,7 +8,8 @@
 
 static inline int type_textuel(const char *t) {
     return t && (strcmp(t, "texte") == 0 || strcmp(t, "courriel") == 0 || strcmp(t, "téléphone") == 0
-                 || strcmp(t, "adresse web") == 0 || strcmp(t, "mot de passe") == 0);
+                 || strcmp(t, "adresse web") == 0 || strcmp(t, "mot de passe") == 0
+                 || strcmp(t, "secret") == 0);
 }
 
 /* Un fichier (§ 15.1) : « fichier », ou un fichier à la signature reconnue, « image » (§ 15.3) ou « son » (§ 15.7). */
@@ -16,8 +18,20 @@ static inline int type_fichier(const char *t) {
 }
 
 /* Un mot de passe (§ 16.1) : rangé en empreinte, jamais en clair ; il ne se lit pas, il se vérifie (« correspond à »). */
-static inline int type_secret(const char *t) {
+static inline int type_mot_de_passe(const char *t) {
     return t && strcmp(t, "mot de passe") == 0;
+}
+
+/* Un secret (§ 22.17, 2.40) : la clé d'un service, rangée telle quelle dans une base chiffrée ; il ne se lit que pour être
+ * envoyé. */
+static inline int type_secret(const char *t) {
+    return t && strcmp(t, "secret") == 0;
+}
+
+/* Ce qui ne se montre jamais : un mot de passe ou un secret (« •••••• » dans les fiches et les listes, vide dans un CSV,
+ * masqué dans une zone, jamais proposé en valeur actuelle). */
+static inline int type_cache(const char *t) {
+    return type_mot_de_passe(t) || type_secret(t);
 }
 
 /* La forme d'un texte d'un de ces types : NULL si elle convient, sinon ce qu'on attendait. Volontairement simple :

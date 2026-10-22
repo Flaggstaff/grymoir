@@ -18,6 +18,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCompleter>
+#include <QIdentityProxyModel>
 #include <QHeaderView>
 #include <QLabel>
 #include <QImage>
@@ -47,6 +48,40 @@
 extern "C" {
 #include "interface.h"
 }
+
+namespace {
+
+// La recherche d'une zone (§ 22.6, 2.40) : sans égard aux majuscules ni aux accents, comme « contient » (§ 16.4).
+// « helene » propose « Hélène Rochat ». Le texte comparé est plié : décomposé (NFD), sans ses accents, en minuscules.
+QString plier(const QString &t) {
+    QString d = t.normalized(QString::NormalizationForm_D), r;
+    r.reserve(d.size());
+    for (QChar c : d)
+        if (c.category() != QChar::Mark_NonSpacing) r += c;
+    return r.toCaseFolded();
+}
+
+constexpr int ROLE_PLIE = Qt::UserRole + 40;
+
+// Le modèle du menu, tel quel, avec en plus son texte plié : la proposition choisie garde son rang dans le menu.
+class TextesPlies : public QIdentityProxyModel {
+public:
+    using QIdentityProxyModel::QIdentityProxyModel;
+    QVariant data(const QModelIndex &i, int role) const override {
+        if (role == ROLE_PLIE) return plier(QIdentityProxyModel::data(i, Qt::DisplayRole).toString());
+        return QIdentityProxyModel::data(i, role);
+    }
+};
+
+// Compare la saisie pliée aux textes pliés ; remet dans la zone le texte d'origine, accents compris.
+class CompletionSansAccents : public QCompleter {
+public:
+    using QCompleter::QCompleter;
+    QStringList splitPath(const QString &chemin) const override { return {plier(chemin)}; }
+    QString pathFromIndex(const QModelIndex &i) const override { return i.data(Qt::DisplayRole).toString(); }
+};
+
+}   // namespace
 
 QPair<QString, QString> teinte_etiquette(QChar lettre) {
     static const QHash<QChar, QPair<QString, QString>> teintes = {
@@ -508,12 +543,19 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 m->addItem(QString());
                 m->addItems(e.choix);
                 if (e.recherche || e.choix.size() > RECHERCHE_AU_DELA) {
-                    // « avec recherche », ou beaucoup d'objets : on tape, les objets qui contiennent la saisie sont proposés
+                    // « avec recherche », ou beaucoup d'objets : on tape, les objets qui contiennent la saisie sont proposés,
+                    // sans égard aux majuscules ni aux accents (2.40)
                     m->setEditable(true);
                     m->setInsertPolicy(QComboBox::NoInsert);
-                    m->completer()->setFilterMode(Qt::MatchContains);
-                    m->completer()->setCompletionMode(QCompleter::PopupCompletion);
-                    m->completer()->setCaseSensitivity(Qt::CaseInsensitive);
+                    auto *plies = new TextesPlies(m);
+                    plies->setSourceModel(m->model());
+                    auto *completion = new CompletionSansAccents(plies, m);
+                    completion->setCompletionRole(ROLE_PLIE);
+                    completion->setFilterMode(Qt::MatchContains);
+                    completion->setCompletionMode(QCompleter::PopupCompletion);
+                    completion->setCaseSensitivity(Qt::CaseInsensitive);
+                    completion->setMaxVisibleItems(12);
+                    m->setCompleter(completion);
                     m->lineEdit()->setPlaceholderText(QString::fromUtf8("Tape pour chercher…"));
                     m->setProperty("recherche", true);
                 }

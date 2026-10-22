@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.39 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.40 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1946,7 +1946,7 @@ L'écran de saisie montre :
 - Aucun mot réservé : `sur`, `lignes`, `lecture`, `seule`, `actif`, `visible` ne comptent qu'ainsi placés, après la virgule d'un élément.
 - `, en interrupteur` *(1.92)* : une zone `(vrai ou faux)` se montre en interrupteur plutôt qu'en case à cocher, `un actif (vrai ou faux), en interrupteur`. La valeur et les événements sont ceux d'une case ; seule la présentation change. Une autre zone le refuse : « Seule une zone (vrai ou faux) se montre en interrupteur. » Forme compacte : `_interrupteur`.
 - `, avec l'indication « … »` *(1.95)* : une phrase sous le libellé d'une zone, qui dit quoi y écrire, `un code postal (texte), avec l'indication « 4 chiffres, sans espace »`. Toute zone la prend, cases à cocher, interrupteurs et choix multiples compris ; une seule par zone (« L'indication est déjà donnée. »). Forme compacte : `_indication « … »`.
-- `, avec recherche` *(1.96)* : une zone qui désigne un objet conservé devient un champ où l'on tape, avec les objets qui contiennent la saisie pour propositions, `un membre (membre), avec recherche`. Au-delà de vingt objets, elle le devient d'elle-même, sans qu'on l'écrive ; vingt est un choix du projet, pas une norme. Une saisie qui ne désigne aucun objet est refusée. Une autre zone le refuse : « Seule une zone qui désigne un objet conservé se cherche ». Forme compacte : `_recherche`.
+- `, avec recherche` *(1.96)* : une zone qui désigne un objet conservé devient un champ où l'on tape, avec les objets qui contiennent la saisie pour propositions, `un membre (membre), avec recherche`. Au-delà de vingt objets, elle le devient d'elle-même, sans qu'on l'écrive ; vingt est un choix du projet, pas une norme. Une saisie qui ne désigne aucun objet est refusée. Une autre zone le refuse : « Seule une zone qui désigne un objet conservé se cherche ». *(2.40)* Les propositions ne tiennent compte ni des majuscules ni des accents, comme `contient` : « helene » propose « Hélène Rochat », et le choix remet le nom tel qu'il est écrit. Forme compacte : `_recherche`.
 - Les bornes d'une zone *(1.97)*, comme les intervalles des boucles (§ 9) : `, de 1 à 99`, `, au moins 16`, `, au plus 50` pour un nombre ; les mêmes suivies de `caractères` pour un texte, et `, de 4 caractères` pour une longueur exacte. Bornes comprises. Une saisie hors bornes est refusée avec la règle (« « Quantité » va de 1 à 99. », « « Code » a 4 caractères. »). Une zone d'un autre type n'en a pas. Forme compacte : `_min 1 _max 99`.
 - `, large de 12 caractères` *(2.34)* : une zone de texte à la largeur de N caractères moyens de la police, hors d'un bloc en position libre (où `large de N` compte des pixels) ; de 1 à 200. Le mot de passe d'une connexion, un code postal : `un code (texte), masqué, large de 12 caractères`. Dans le navigateur, `size` et une largeur en `ch`. Forme compacte : `_largeur_caractères 12`.
 - `, avec le choix d'un dossier` *(2.32)* : une zone (texte) au bout de laquelle une icône ouvre le sélecteur de dossiers du système ; le chemin choisi la remplit, et la zone change comme après une frappe. Dans le navigateur, il se tape. `un dossier de sauvegarde (texte), facultatif, avec le choix d'un dossier`. Autre zone : « Seule une zone (texte) se remplit par le choix d'un dossier. ». Forme compacte : `_choix_dossier`.
@@ -2166,6 +2166,26 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 - **`t en IBAN`** *(2.29)* : le texte sans ses espaces (ordinaires ou insécables), en capitales, s'il est un IBAN (ISO 13616) : deux lettres de pays, deux chiffres de clé, de 15 à 34 lettres et chiffres en tout, la clé vérifiée modulo 97. Sinon, une erreur rattrapable qui dit pourquoi : « « CH53 0483 … » n'est pas un IBAN : sa clé de contrôle ne correspond pas (une faute de frappe ?). ». Le pays et la longueur propres à un pays (21 pour la Suisse) restent au programme : `la longueur de (l'IBAN du cabinet en IBAN) = 21`. Écrit `IBAN`, en capitales, par la forme canonique ; compacte : `t _en_IBAN`.
 - **La section paiement** *(2.28)* : dans un document, `la section paiement de la charge` met au bas de la dernière page la section paiement d'une QR-facture et son récépissé, 210 × 105 mm, au bord de la page, d'après les 31 lignes du Swiss QR Code qu'est `la charge` : « Récépissé », « Section paiement », le code de 46 mm avec sa croix, « Compte / Payable à », « Référence », « Informations supplémentaires », « Payable par » (ou un cadre à remplir), « Monnaie », « Montant », « Point de dépôt », et les lignes de découpe avec « A détacher avant le versement ». Intitulés et tailles : *Swiss Implementation Guidelines for the QR-bill* de SIX, version 2.4, chapitres 3.4 à 3.7 et annexe C ; les cotes fines ne viennent pas du Style Guide de SIX. Si la dernière page n'a plus ses 105 mm de bas libres, la section prend une page à elle. Une charge vide (pas d'IBAN) : rien. Dans un écran : « La section paiement d'une QR-facture va dans un document, pas dans un écran. ». Forme compacte : `_section_paiement charge`.
 
+### 22.17 Secrets *(2.40, implémenté le 22 octobre 2026)*
+
+`(secret)` est un type, pour un champ d'entité comme pour une zone d'écran : la clé d'un service, que le programme doit pouvoir renvoyer telle quelle.
+
+```
+La base est chiffrée.
+Un cabinet, conservé, a :
+    un identifiant SMS (texte), facultatif,
+    une clé SMS (secret), facultative.
+
+La clé SMS du cabinet devient la clé de l'écran.
+Si la clé SMS du cabinet est présente, …
+```
+
+- **Il s'écrit comme un texte** et se range **tel quel** : à l'inverse d'un mot de passe (§ 22.14), qui devient une empreinte, un secret doit repartir. C'est pourquoi il exige une base chiffrée (§ 16.18) : « « clé SMS » est un secret : il se range dans une base chiffrée. Écris « La base est chiffrée. » dans le programme. », à l'écriture d'un objet conservé comme à `Conserver`. Un objet qui n'est pas conservé le garde en mémoire, le temps de l'exécution.
+- **Il ne se lit que pour être envoyé** : « « clé SMS » est un secret : il ne se lit que pour être envoyé. ». L'envoi qui le lira est la prochaine révision ; d'ici là, rien ne le lit. `correspond à` ne s'y applique pas : il se range en clair, il n'a pas d'empreinte.
+- **Sa présence se teste**, comme celle d'un mot de passe : `Si la clé SMS du cabinet est présente`.
+- **Il ne se montre jamais** : « •••••• » dans les fiches et les listes, une cellule vide dans un CSV, absent des rapports et du formulaire (§ 19). Une zone `(secret)` est masquée d'elle-même ; elle se lit dans son événement, pour être rangée dans un champ.
+- Forme compacte : `(secret)`.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -2310,3 +2330,4 @@ Afficher « CH52 0483 5012 3456 7100 0 » en format technique.  →  CH520483501
 | 2.37 | 2026-10-21 | Nouveau § 16.18 : la base chiffrée, `La base est chiffrée.` (SQLite3 Multiple Ciphers, la clé enveloppée dans `base.grymd.clés`, le mot de passe demandé par l'exécution), `Changer le mot de passe de la base pour n, l'ancien étant a.` ; § 15.6 bis : le coffre de format 2 d'une base chiffrée, la restauration sans rien en clair sur le disque ; le secours : la clé de secours du développeur, `clé-de-secours.pub` dans le projet, l'enveloppe de secours, « Rouvrir une base avec la clé de secours » |
 | 2.38 | 2026-10-21 | § 9.2 : un argument d'action logique entre parenthèses, `(a > 1 et b ≤ 15)`, est un groupe logique (il était refusé : la parenthèse attendait un calcul) |
 | 2.39 | 2026-10-22 | § 15.8 : le modèle de transcription entre dans toute application fabriquée, qu'elle transcrive ou non (il n'entrait que dans celles qui déclarent un champ transcrit) ; `grym-atelier --transcrit` disparaît |
+| 2.40 | 2026-10-22 | Nouveau § 22.17 : le type `(secret)`, rangé tel quel dans une base chiffrée, illisible sauf pour être envoyé, caché partout ; § 22.6 : les propositions d'une zone `avec recherche` sans égard aux majuscules ni aux accents |

@@ -1903,7 +1903,7 @@ void OngletEcrans::ajouter(int sorte) {
         n.texte = QInputDialog::getText(this, "Nouvelle zone", "Nom (« pays », « date de début ») :", QLineEdit::Normal, "", &ok);
         if (ok) {
             QStringList types = {"texte", "nombre", "nombre entier", "vrai ou faux", "date", "année", "heure", "fichier", "image",
-                                 "son", "courriel", "téléphone", "adresse web", "mot de passe"};
+                                 "son", "courriel", "téléphone", "adresse web", "mot de passe", "secret"};
             for (const auto &en : lire_schema(dossier)) types << en.nom;
             n.type = QInputDialog::getItem(this, "Nouvelle zone", "Type :", types, 0, false, &ok);
         }
@@ -1918,7 +1918,7 @@ void OngletEcrans::ajouter(int sorte) {
         for (const auto &en : schema)
             if (en.nom == n.texte)
                 for (const auto &c : en.champs)
-                    if (c.type != "fichier" && c.type != "image" && c.type != "son" && c.type != "mot de passe") champs << c.nom;
+                    if (c.type != "fichier" && c.type != "image" && c.type != "son" && c.type != "mot de passe" && c.type != "secret") champs << c.nom;
         if (champs.isEmpty()) return;
         n.cle = QInputDialog::getItem(this, "Nouveau graphique", "Regroupés par :", champs, 0, false, &ok);
     } else {

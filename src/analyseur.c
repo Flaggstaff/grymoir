@@ -734,7 +734,8 @@ static void *erreur_a(Analyse *a, int ligne, int colonne, char *message) {
 }
 
 static const char *const TYPES[] = { "texte", "nombre", "nombre entier", "vrai ou faux", "date", "fichier", "image", "son",
-                                     "année", "heure", "courriel", "téléphone", "adresse web", "mot de passe" };   /* types.h */
+                                     "année", "heure", "courriel", "téléphone", "adresse web", "mot de passe",
+                                     "secret" };   /* types.h */
 
 /* ---------------------------------------------------------------- */
 /* Typage strict des entités, à l'analyse (§ 16.2)                  */
