@@ -105,6 +105,7 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     un bouton « Séances prévues », en tuile, avec la description « Faite, annulée, absence »,
     un bouton « Comptabilité », en tuile, avec la description « Encaisser, factures, rappels, frais »,
     un bouton « Configuration », en tuile, avec la description « Le cabinet, les soins, les rubriques, les sauvegardes »,
+    un bouton « Agenda OneDoc », en tuile, avec la description « Rendez-vous et rappels », visible si l'agenda du cabinet conservé = « OneDoc »,
     le texte l'alerte de sauvegarde du cabinet conservé et d'aujourd'hui et de l'échec de sauvegarde,
     le texte l'alerte des prévues d'aujourd'hui.
 
@@ -505,7 +506,16 @@ L'écran de configuration, « Configuration », montre :
     un bouton « Corbeille », en tuile, avec la description « Rétablir ce qui a été supprimé »,
     un bouton « Sauvegardes », en tuile, avec la description « Copies chiffrées, restauration, mot de passe »,
     un bouton « Archives », en tuile, avec la description « Patients archivés, leurs pièces gardées »,
+    un bouton « Rendez-vous », en tuile, avec la description « L'agenda : Praxis ou OneDoc »,
     un bouton « Fermer ».
+
+Remarque : le choix de l'agenda ; avec OneDoc, l'accueil a une tuile qui ouvre l'agenda OneDoc dans le navigateur.
+L'écran des rendez-vous, « Rendez-vous », montre :
+    un agenda (« Praxis » ou « OneDoc »), avec l'indication « OneDoc : les rendez-vous et leurs rappels restent sur OneDoc, Praxis ouvre l'agenda »,
+    une adresse de l'agenda (adresse web), facultative, avec l'indication « L'adresse de l'agenda OneDoc Pro, telle que le navigateur la montre : https://… »,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Fermer ».
 
 L'écran des soins, « Soins », montre :
     la liste des soins conservés, par nom, avec le nom, le tarif, le tarif de suivi, la durée et le code tarifaire,
@@ -831,6 +841,27 @@ Quand on clique sur « Configuration » dans l'écran d'accueil :
 
 Quand on clique sur « Le cabinet » dans l'écran de configuration :
     Ouvrir l'écran du cabinet.
+
+Quand on clique sur « Rendez-vous » dans l'écran de configuration :
+    Ouvrir l'écran des rendez-vous.
+
+Quand on ouvre l'écran des rendez-vous :
+    L'agenda de l'écran devient l'agenda du cabinet conservé.
+    L'adresse de l'agenda de l'écran devient l'adresse de l'agenda du cabinet conservé.
+
+Quand on clique sur « Enregistrer » dans l'écran des rendez-vous :
+    Si l'agenda de l'écran = « OneDoc » et l'adresse de l'agenda de l'écran est absente, refuser « Avec OneDoc, donne l'adresse de l'agenda OneDoc. ».
+    Le c vaut le cabinet conservé.
+    L'agenda du c devient l'agenda de l'écran.
+    L'adresse de l'agenda du c devient l'adresse de l'agenda de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran des rendez-vous :
+    Fermer l'écran.
+
+Quand on clique sur « Agenda OneDoc » dans l'écran d'accueil :
+    Si l'adresse de l'agenda du cabinet conservé est absente, refuser « Donne d'abord l'adresse de l'agenda OneDoc : Configuration, Rendez-vous. ».
+    Ouvrir l'adresse de l'agenda du cabinet conservé.
 
 Quand on clique sur « Soins » dans l'écran de configuration :
     Ouvrir l'écran des soins.

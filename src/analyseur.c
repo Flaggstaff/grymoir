@@ -7545,10 +7545,10 @@ static Noeud *ouvrir_ecran(Analyse *a, const Jeton *t) {
         Noeud *x = expression(a);
         if (!x) return NULL;
         const char *ty = type_statique(x);
-        if (ty && strcmp(ty, "fichier") != 0) {
+        if (ty && strcmp(ty, "fichier") != 0 && strcmp(ty, "adresse web") != 0 && strcmp(ty, "texte") != 0) {
             noeud_liberer(x);
-            return erreur(a, t, grym_dupliquer("« Ouvrir » montre un fichier : « Ouvrir le justificatif du frais. », ou un écran : "
-                                               "« Ouvrir l'écran d'accueil. »."));
+            return erreur(a, t, grym_dupliquer("« Ouvrir » montre un fichier : « Ouvrir le justificatif du frais. », une adresse "
+                                               "web : « Ouvrir le site du cabinet. », ou un écran : « Ouvrir l'écran d'accueil. »."));
         }
         if (!fin_phrase(a, 0)) { noeud_liberer(x); return NULL; }
         Noeud *n = noeud_creer(P_OUVRIR, t->ligne, t->colonne, t->debut);

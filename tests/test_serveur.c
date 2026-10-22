@@ -1657,6 +1657,26 @@ int main(void) {
         remove("_essai_cabinet12.grymd");
     }
 
+    {   /* Praxis 2 : l'agenda, Praxis ou OneDoc, choisi dans la Configuration (« Rendez-vous ») ; OneDoc sans adresse est
+           refusé ; avec, l'accueil montre la tuile « Agenda OneDoc », qui ouvre l'adresse dans le navigateur du système,
+           ce que le navigateur de grym ne sait pas faire (22 octobre 2026) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=Configuration"),
+                 evenement("q=3&clic=Rendez-vous"), get("/"),
+                 evenement("q=4&z0=OneDoc&z1=&clic=Enregistrer"), get("/"),
+                 evenement("q=5&z0=OneDoc&z1=https%3A%2F%2Fpro.onedoc.ch%2Fagenda&clic=Enregistrer"),
+                 evenement("q=6&clic=Fermer"), get("/"), evenement("q=7&clic=Agenda+OneDoc"), get("/"));
+        servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet24.grymd", &sc);
+        NE_CONTIENT_PAS(sc.reponses[1], ">Agenda OneDoc<");   /* « Praxis » au départ : pas de tuile */
+        CONTIENT(sc.reponses[4], "<h1>Rendez-vous</h1>");
+        CONTIENT(sc.reponses[4], ">Adresse de l&#39;agenda</label>");
+        CONTIENT(sc.reponses[6], "Avec OneDoc, donne l&#39;adresse de l&#39;agenda OneDoc.");
+        CONTIENT(sc.reponses[9], ">Agenda OneDoc<");
+        CONTIENT(sc.reponses[11], "Une adresse web s&#39;ouvre depuis l&#39;atelier ou une application fabriquée.");
+        liberer(&sc);
+        remove("_essai_cabinet24.grymd");
+    }
+
     {   /* Praxis : « Patient à ouvrir », une zone à recherche en tête de l'écran des patients ; choisir un patient ouvre sa
            page, et la zone se vide au retour ; un patient archivé est refusé (22 octobre 2026) */
         memset(&sc, 0, sizeof sc);

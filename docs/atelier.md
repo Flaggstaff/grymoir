@@ -467,3 +467,4 @@ La fenêtre du mot de passe de la base, à chaque lancement d'une application ch
 | 0.96 | 2026-10-22 | Le modèle de transcription dans toute application fabriquée (grammaire 2.39) : la fabrication sous macOS et `outils/fabriquer-ci` le copient toujours ; `programme_transcrit` et `--transcrit` disparaissent |
 | 0.97 | 2026-10-22 | « Lancer » ne demande plus deux fois le mot de passe d'une base chiffrée : l'aperçu de la migration (A2-c), fait par l'atelier avant de lancer et dans l'onglet des données, ne lit plus une base chiffrée déjà créée ; il le dit, et l'exécution, qui demande le mot de passe, refuse de même une migration destructrice |
 | 0.98 | 2026-10-22 | Le type `(secret)` dans les menus de types (données, nouvelle zone) ; les zones à recherche proposent sans égard aux majuscules ni aux accents (grammaire 2.40) |
+| 0.99 | 2026-10-22 | `Ouvrir` une adresse web (grammaire 2.41) : le navigateur du système ; `GRYMOIR_SANS_APERCU` la note sans l'ouvrir |

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.40 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.41 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2143,6 +2143,7 @@ L'exemplaire de q devient le document de reçu.
 - Limites : pas de total sous une liste (un texte calculé le donne, `la somme des prix des séances conservées dont …`) ; la police du document est celle des rapports, pas encore celle des écrans.
 - Forme compacte : `_document de_reçu « Reçu »` … `_fin`, `_ouvrir _document de_reçu`, `_document de_reçu` (la valeur).
 - **Ouvrir un fichier** *(2.26)* : `Ouvrir le justificatif du frais.`, `Ouvrir l'exemplaire de la quittance.` montre un fichier tel qu'il est rangé, sous son nom d'origine (« ticket.jpg »), dans la visionneuse du système. Autre chose qu'un fichier : « « Ouvrir » montre un fichier. » ; un fichier absent : « Rien à ouvrir : ce fichier est absent. ». En console et dans le navigateur : « Un fichier s'ouvre dans l'atelier ou dans une application fabriquée. ». Forme compacte : `_ouvrir_fichier frais.justificatif`.
+- **Ouvrir une adresse web** *(2.41)* : `Ouvrir l'adresse de l'agenda du cabinet conservé.` montre une adresse `http://` ou `https://` (un champ `(adresse web)`, ou un texte) dans le navigateur du système. Un texte qui n'en est pas une : « « Ouvrir » montre une adresse web qui commence par https:// : « onedoc.ch » n'en est pas une. » ; en console et dans le navigateur de `grym` : « Une adresse web s'ouvre depuis l'atelier ou une application fabriquée. ». Autre chose qu'un fichier ou un texte : « « Ouvrir » montre un fichier ou une adresse web. ».
 
 ### 22.16 Code QR *(2.27, implémenté le 20 octobre 2026)*
 
@@ -2331,3 +2332,4 @@ Si la clé SMS du cabinet est présente, …
 | 2.38 | 2026-10-21 | § 9.2 : un argument d'action logique entre parenthèses, `(a > 1 et b ≤ 15)`, est un groupe logique (il était refusé : la parenthèse attendait un calcul) |
 | 2.39 | 2026-10-22 | § 15.8 : le modèle de transcription entre dans toute application fabriquée, qu'elle transcrive ou non (il n'entrait que dans celles qui déclarent un champ transcrit) ; `grym-atelier --transcrit` disparaît |
 | 2.40 | 2026-10-22 | Nouveau § 22.17 : le type `(secret)`, rangé tel quel dans une base chiffrée, illisible sauf pour être envoyé, caché partout ; § 22.6 : les propositions d'une zone `avec recherche` sans égard aux majuscules ni aux accents |
+| 2.41 | 2026-10-22 | § 22.15 : `Ouvrir` une adresse web, dans le navigateur du système (atelier, application fabriquée) |

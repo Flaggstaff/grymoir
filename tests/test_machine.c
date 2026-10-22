@@ -4279,7 +4279,11 @@ int main(void) {
     PROG("Le n vaut absent.\nAfficher le code QR de n.", "~Un code QR se fait d'un texte : celui-ci est absent.");
     /* « Ouvrir » un fichier (2.26) : rien d'autre ; un fichier absent ; la console ne montre rien */
     PROG("Ouvrir 3.", "~« Ouvrir » montre un fichier : « Ouvrir le justificatif du frais. »");
-    PROG("Le n vaut 3.\nOuvrir le n.", "~« Ouvrir » montre un fichier.");
+    PROG("Le n vaut 3.\nOuvrir le n.", "~« Ouvrir » montre un fichier ou une adresse web.");
+    /* une adresse web (2.41) : refusée en console, qui n'a pas de navigateur ; un texte qui n'en est pas une, refusé */
+    PROG("Un cabinet, conservé, a :\n    un site (adresse web).\nLe c vaut un nouveau cabinet :\n    Le site vaut « https://onedoc.ch ».\n"
+         "Ouvrir le site du c.", "~Une adresse web s'ouvre depuis l'atelier ou une application fabriquée.");
+    PROG("Ouvrir « onedoc.ch ».", "~« Ouvrir » montre une adresse web qui commence par https:// : « onedoc.ch » n'en est pas une.");
     PROG("Un dossier, conservé, a :\n    un scan (fichier), facultatif.\nLe d vaut un nouveau dossier.\nOuvrir le scan du d.",
          "~Rien à ouvrir : ce fichier est absent.");
     /* Documents (2.25) : refus de l'analyse */

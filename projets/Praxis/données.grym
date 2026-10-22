@@ -29,8 +29,12 @@ Un cabinet, conservé, a :
     un logo (image), facultatif,
     une signature (image), facultative,
     un prénom (texte), facultatif,
-    un dossier d'export (texte), facultatif.
+    un dossier d'export (texte), facultatif,
+    un agenda (« Praxis » ou « OneDoc »), « Praxis » au départ,
+    une adresse de l'agenda (adresse web), facultative.
 
+Remarque : l'agenda (Praxis 2, 22 octobre 2026) : « Praxis », les séances prévues dans Praxis ; « OneDoc », les rendez-vous
+Remarque : et leurs rappels sur OneDoc, que l'accueil ouvre par l'adresse de l'agenda (OneDoc n'a pas d'API publique : rien ne s'échange).
 Remarque : un exercice : une année où le cabinet a une séance ou un frais, et l'année en cours ; le menu des années
 Remarque : de la Comptabilité et des listes (factures, quittances, rappels envoyés, frais) les propose. Le millésime en
 Remarque : texte, « 2025 » : c'est la clé qu'affiche le menu déroulant.

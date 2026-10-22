@@ -5149,7 +5149,15 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 Valeur v = depiler(&pile);
                 char *probleme = NULL;
                 if (v.type == V_ABSENT) probleme = grym_dupliquer("Rien à ouvrir : ce fichier est absent.");
-                else if (v.type != V_FICHIER) probleme = grym_dupliquer("« Ouvrir » montre un fichier.");
+                else if (v.type == V_TEXTE) {   /* une adresse web, dans le navigateur du système (2.41) */
+                    if (strncmp(v.texte, "https://", 8) != 0 && strncmp(v.texte, "http://", 7) != 0)
+                        probleme = grym_formater("« Ouvrir » montre une adresse web qui commence par https:// : « %s » n'en est pas une.",
+                                                 v.texte);
+                    else if (!m->iface.ouvrir_adresse)
+                        probleme = grym_dupliquer("Une adresse web s'ouvre depuis l'atelier ou une application fabriquée.");
+                    else m->iface.ouvrir_adresse(m->iface.contexte, v.texte);
+                }
+                else if (v.type != V_FICHIER) probleme = grym_dupliquer("« Ouvrir » montre un fichier ou une adresse web.");
                 else if (!m->iface.montrer_document)
                     probleme = grym_dupliquer("Un fichier s'ouvre dans l'atelier ou dans une application fabriquée.");
                 else {

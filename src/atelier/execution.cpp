@@ -237,6 +237,10 @@ static void iface_montrer_document(void *contexte, const unsigned char *octets, 
                                                     QString::fromUtf8(nom ? nom : "document.pdf"));
 }
 
+static void iface_ouvrir_adresse(void *contexte, const char *adresse) {   // 2.41
+    emit static_cast<Travail *>(contexte)->adresse(QString::fromUtf8(adresse));
+}
+
 static void iface_ecran_texte(void *contexte, size_t k, const char *texte) {   // le texte calculé (2.24)
     emit static_cast<Travail *>(contexte)->ecran_texte((int)k, QString::fromUtf8(texte ? texte : ""));
 }
@@ -527,7 +531,7 @@ void Travail::run() {
                    iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
                    iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf,
                    iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte,
-                   iface_montrer_document};
+                   iface_montrer_document, iface_ouvrir_adresse};
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     situer(m, chemin, base_imposee, dossier_ecriture);
@@ -680,6 +684,13 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         f.close();
         setProperty("dernier_document", chemin);
         if (qEnvironmentVariableIsEmpty("GRYMOIR_SANS_APERCU")) QDesktopServices::openUrl(QUrl::fromLocalFile(chemin));
+    });
+    connect(&travail, &Travail::adresse, this, [this](const QString &url) {
+        // « Ouvrir le lien … » (2.41) : le navigateur du système ; les essais la notent sans l'ouvrir
+        setProperty("derniere_adresse", url);
+        const QUrl u(url);
+        if ((u.scheme() == "http" || u.scheme() == "https") && qEnvironmentVariableIsEmpty("GRYMOIR_SANS_APERCU"))
+            QDesktopServices::openUrl(u);
     });
     connect(&travail, &Travail::ecran_ouvert, this, &Execution::montrer_ecran);
     connect(&travail, &Travail::apparence, this, [this](int couleur, const QByteArray &octets) {

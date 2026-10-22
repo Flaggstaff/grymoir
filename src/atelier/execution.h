@@ -82,6 +82,7 @@ signals:
     void reponses(const QString &echo);   // les réponses acceptées, recopiées dans le fil comme en console
     void utilise_micro();   // le programme a un champ ou une zone (son) : le micro se demande dès l'ouverture (§ 15.7)
     void document(const QByteArray &octets, const QString &nom);   // « Ouvrir le document … », « Ouvrir x. » (2.25, 2.26)
+    void adresse(const QString &url);   // « Ouvrir le lien OneDoc du cabinet. » : une adresse web (2.41)
     void fin(bool ok, const QString &erreur, const QString &annulation);
 
 public:

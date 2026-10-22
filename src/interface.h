@@ -204,6 +204,9 @@ typedef struct {
     /* « Ouvrir le document de quittance. » (2.25) : le PDF, à montrer dans un aperçu d'où l'on imprime. NULL : la
      * machine refuse « Ouvrir le document » (console, navigateur). */
     void (*montrer_document)(void *contexte, const unsigned char *octets, size_t taille, const char *nom);   /* nom : « document.pdf », « ticket.jpg » (2.26) */
+    /* « Ouvrir le lien OneDoc du cabinet. » (2.41) : une adresse http:// ou https://, dans le navigateur du système. NULL :
+     * la machine refuse (console, navigateur). */
+    void (*ouvrir_adresse)(void *contexte, const char *adresse);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.
