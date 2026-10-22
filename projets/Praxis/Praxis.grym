@@ -38,6 +38,10 @@ La fin d'exercice vaut le premier jour de (l'année des comptes + 1).
 Remarque : les factures de l'année des comptes ; une recherche les cherche dans toutes les années.
 Le début des factures vaut le début d'exercice.
 La fin des factures vaut la fin d'exercice.
+Remarque : les quittances de même : l'année des comptes, ou toutes les années quand on cherche un patient par son nom.
+La recherche des quittances vaut « ».
+Le début des quittances vaut le début d'exercice.
+La fin des quittances vaut la fin d'exercice.
 
 Remarque : une facture échue depuis trente jours appelle un rappel ; la relance en cours, la facture dont on l'imprime.
 Remarque : la limite se recalcule à chaque ouverture des rappels : l'application peut rester ouverte des jours.
@@ -281,15 +285,16 @@ Le document de journal, « Journal des recettes et des frais », montre :
     le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01.
 
 Remarque : les séances payées attendent leur quittance ; les quittances remises se retrouvent dessous.
-L'écran des quittances, ("Quittances " suivi de l'année des comptes), montre :
-    une année (exercice), avec l'indication « Une autre année »,
+L'écran des quittances, (le titre des quittances de l'année des comptes et de la recherche des quittances), montre :
+    une année (exercice), avec l'indication « Une autre année ; un nom, lui, les cherche dans toutes »,
+    une recherche (texte), facultative, avec l'indication « Un nom de patient, ou une partie : Rochat, Anne »,
     le texte « Payées, sans quittance », en petites capitales,
-    la liste des séances conservées dont la quittance est absente et le paiement ≠ « à payer » et le paiement ≠ « offert » et l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice, par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
+    la liste des séances conservées dont la quittance est absente et le paiement ≠ « à payer » et le paiement ≠ « offert » et l'encaissement ≥ le début des quittances et l'encaissement < la fin des quittances et le nom du patient contient la recherche des quittances, par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
     côte à côte :
         un bouton « Quittance », principal,
         un bouton « Fermer »,
     le texte « Quittances remises », en petites capitales,
-    la liste des quittances conservées dont la date ≥ le début d'exercice et la date < la fin d'exercice, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et le moyen,
+    la liste des quittances conservées dont la date ≥ le début des quittances et la date < la fin des quittances et le nom du patient contient la recherche des quittances, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et le moyen,
     un bouton « Annuler la quittance ».
 
 L'écran des frais, ("Frais " suivi de l'année des comptes), montre :
@@ -530,6 +535,14 @@ Pour borner les factures :
         Le début des factures devient 01.01.1900.
         La fin des factures devient 01.01.3000.
 
+Pour borner les quittances :
+    Si la recherche des quittances = « » :
+        Le début des quittances devient le début d'exercice.
+        La fin des quittances devient la fin d'exercice.
+    Sinon :
+        Le début des quittances devient 01.01.1900.
+        La fin des quittances devient 01.01.3000.
+
 Remarque : attester une séance : payée, sa quittance ; à payer, sa facture, avec la section paiement QR si le cabinet a un IBAN.
 Remarque : une pièce déjà faite se remontre telle qu'elle a été remise, son exemplaire gardé.
 Pour quittancer une séance :
@@ -619,6 +632,7 @@ Pour retenir une période :
         Le début d'exercice devient le premier jour de l'année des comptes.
         La fin d'exercice devient le premier jour de (l'année des comptes + 1).
         Borner les factures.
+        Borner les quittances.
 
 Quand on ouvre l'écran de comptabilité :
     L'année de l'écran devient la période de l'année des comptes.
@@ -633,7 +647,14 @@ Quand on change le dossier d'export dans l'écran de comptabilité :
     Le dossier d'export du cabinet conservé devient le dossier d'export de l'écran.
 
 Quand on ouvre l'écran des quittances :
+    La recherche des quittances devient « ».
+    Borner les quittances.
     L'année de l'écran devient la période de l'année des comptes.
+
+Quand on change la recherche dans l'écran des quittances :
+    Si la recherche de l'écran est présente, la recherche des quittances devient la recherche de l'écran.
+    Sinon, la recherche des quittances devient « ».
+    Borner les quittances.
 
 Quand on change l'année dans l'écran des quittances :
     Retenir l'année de l'écran.

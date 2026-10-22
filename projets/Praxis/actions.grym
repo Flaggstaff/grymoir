@@ -252,6 +252,11 @@ Le titre des factures d'une année et d'une recherche :
     Si recherche = « », rendre "Factures " suivi d'année.
     Rendre « Factures, toutes les années ».
 
+Remarque : le titre de l'écran des quittances : l'année choisie, ou toutes quand on cherche un patient.
+Le titre des quittances d'une année et d'une recherche :
+    Si recherche = « », rendre "Quittances " suivi d'année.
+    Rendre « Quittances, toutes les années ».
+
 Remarque : où vont les CSV : le dossier choisi dans la Comptabilité, sinon « Exports ».
 La destination des exports d'un cabinet :
     Si le dossier d'export du cabinet est absent, rendre « Exports ».

@@ -1595,10 +1595,19 @@ int main(void) {
         }
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=6"), evenement(ev_annee), get("/"),
-                 evenement("q=4&choix=2.0"), evenement("q=5&clic=4"), get("/"));
+                 evenement("q=4&choix=3.0"), evenement("q=5&clic=5"), get("/"),
+                 evenement("q=6&z1=cl%C3%A9ment"), get("/"), evenement("q=7&z1=Personne"), get("/"), evenement("q=8&z1="), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet9.grymd", &sc);
         CONTIENT(sc.reponses[4], titre);
         CONTIENT(sc.reponses[4], "<td>Sophie Clément</td>");   /* payée par virement il y a quatre jours, sans quittance */
+        CONTIENT(sc.reponses[4], "<td>Anne Rochat</td>");
+        /* un nom de patient, en minuscules : toutes les années, ses seules séances ; un nom inconnu : rien ; vide : l'année */
+        CONTIENT(sc.reponses[9], "<h1>Quittances, toutes les années</h1>");
+        CONTIENT(sc.reponses[9], "<td>Sophie Clément</td>");
+        NE_CONTIENT_PAS(sc.reponses[9], "<td>Anne Rochat</td>");
+        NE_CONTIENT_PAS(sc.reponses[11], "<td>Sophie Clément</td>");
+        CONTIENT(sc.reponses[13], titre);
+        CONTIENT(sc.reponses[13], "<td>Anne Rochat</td>");
         CONTIENT(sc.reponses[7], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
         liberer(&sc);
         remove("_essai_cabinet9.grymd");
