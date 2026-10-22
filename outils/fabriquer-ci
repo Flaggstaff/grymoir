@@ -34,10 +34,8 @@ Linux)
     mkdir -p "$appdir/usr/bin" "$appdir/usr/share/applications" "$appdir/usr/share/icons/hicolor/256x256/apps"
     cp construction/grym-atelier "$appdir/usr/bin/"
     construction/grym-atelier --preparer "$projet" "$appdir/usr/bin/Programme"
-    if [ "$(construction/grym-atelier --transcrit "$projet")" = oui ]; then   # le modèle, s'il transcrit (§ 15.8)
-        mkdir -p "$appdir/usr/share/grymoir/modeles"
-        cp "$(outils/modele-transcription)" "$appdir/usr/share/grymoir/modeles/"
-    fi
+    mkdir -p "$appdir/usr/share/grymoir/modeles"   # le modèle de transcription, dans toute application (§ 15.8)
+    cp "$(outils/modele-transcription)" "$appdir/usr/share/grymoir/modeles/"
     printf '[Desktop Entry]\nType=Application\nName=%s\nExec=grym-atelier\nIcon=%s\nCategories=Office;\n' \
         "$nom" "$ident" > "$appdir/usr/share/applications/$ident.desktop"
     cp "$icone" "$appdir/usr/share/icons/hicolor/256x256/apps/$ident.png"
@@ -68,10 +66,8 @@ MINGW*|MSYS*)
     mkdir -p "$dossier"
     cp construction/grym-atelier.exe "$dossier/$nom.exe"
     "$dossier/$nom.exe" --preparer "$projet" "$dossier/Programme"
-    if [ "$("$dossier/$nom.exe" --transcrit "$projet" | tr -d '\r')" = oui ]; then   # le modèle, s'il transcrit (§ 15.8)
-        mkdir -p "$dossier/modeles"
-        cp "$(outils/modele-transcription)" "$dossier/modeles/"
-    fi
+    mkdir -p "$dossier/modeles"   # le modèle de transcription, dans toute application (§ 15.8)
+    cp "$(outils/modele-transcription)" "$dossier/modeles/"
     deploy="$(command -v windeployqt6 || command -v windeployqt)"
     "$deploy" --release --no-translations "$dossier/$nom.exe"
     # Le Qt de MSYS2 dépend d'autres bibliothèques de /ucrt64/bin (ICU, zstd, freetype…), que windeployqt ne

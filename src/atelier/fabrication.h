@@ -19,8 +19,6 @@ QString programme_d_application(QString *nom, QString *principal);
 // éditeur (vide par défaut), et l'identifiant tiré du nom (« amis-du-tilleul »), lus dans projet.grymatelier.
 struct Identite { QString nom, version, editeur, ident; };
 Identite identite_du_projet(const QString &projet);
-// Le programme transcrit-il des sons (« , transcrite du mémo », § 15.8) ? Alors son application embarque le modèle.
-bool programme_transcrit(const QString &projet);
 // Ce qui ne va pas dans une identité saisie, ou vide : un nom, une version en chiffres et points (« 1.0 », « 2.3.1 »),
 // ce que le Mac exige (CFBundleVersion).
 QString identite_refusee(const QString &nom, const QString &version);

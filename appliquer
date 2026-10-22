@@ -13,6 +13,12 @@ if [ -d .git/rebase-apply ]; then
     echo "Un patch précédent était resté à moitié appliqué : je l'abandonne."
     git am --abort
 fi
+# l'autre ordinateur a peut-être publié : on le récupère d'abord, en avance rapide seulement (22 octobre 2026)
+if ! git pull -q --ff-only; then
+    echo "GitHub injoignable, ou le dépôt local a divergé de GitHub (des commits ou des modifications des deux côtés) : rien n'a changé." >&2
+    echo "Le dépôt est à : $(git log --oneline -1)" >&2
+    exit 1
+fi
 avant="$(git rev-parse HEAD)"
 if ! git am "$patch"; then
     git am --abort

@@ -582,18 +582,6 @@ int main(int argc, char **argv) {
             for (const auto &r : ordinaire.document()->firstBlock().layout()->formats()) colore |= r.format.background().style() != Qt::NoBrush;
             VERIFIER(!colore);
         }
-        // le modèle n'entre que dans les applications qui transcrivent
-        {
-            QTemporaryDir p1, p2;
-            QFile a(p1.filePath("a.grym")), b(p2.filePath("b.grym"));
-            VERIFIER(a.open(QIODevice::WriteOnly) && b.open(QIODevice::WriteOnly));
-            a.write("Une visite, conservée, a :\n    un mémo (son),\n    une note (texte), transcrite du mémo.\n");
-            b.write("Un membre, conservé, a :\n    un nom (texte).\nAfficher « transcrite du mémo ».\n");
-            a.close();
-            b.close();
-            VERIFIER(programme_transcrit(p1.path()));
-            VERIFIER(!programme_transcrit(p2.path()));   // le mot dans un texte n'est pas une déclaration
-        }
         // une vraie exécution
         qputenv("GRYMOIR_MODELE_TRANSCRIPTION", MODELE_ESSAI);
         QTemporaryDir dossier;
