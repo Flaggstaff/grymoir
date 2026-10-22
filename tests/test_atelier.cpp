@@ -4862,6 +4862,19 @@ int main(int argc, char **argv) {
             VERIFIER(b.open(QIODevice::ReadOnly));
             VERIFIER(!b.readAll().contains("secret-anamnese"));
         }
+        {   // l'aperçu de la migration, avant chaque lancement depuis l'atelier, ne demande pas le mot de passe : sinon
+            // « Lancer » le demandait deux fois (22 octobre 2026). Une fenêtre qui s'ouvrirait prendrait ce geste.
+            gestes = { { "essai-essai", "" } };
+            titres.clear();
+            bool refusee = true;
+            const QString a = apercu_migration(d.filePath("app.grym"), &refusee);
+            QApplication::processEvents();
+            VERIFIER(titres.isEmpty());
+            VERIFIER(gestes.size() == 1);
+            VERIFIER(!refusee);
+            VERIFIER(a.startsWith(QString::fromUtf8("La base est chiffrée")));
+            gestes.clear();
+        }
         {
             gestes = { { "faux-faux", "" } };
             titres.clear();

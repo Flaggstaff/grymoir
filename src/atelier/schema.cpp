@@ -22,6 +22,7 @@
 
 extern "C" {
 #include "analyseur.h"
+#include "base.h"
 #include "compilateur.h"
 #include "vm.h"
 }
@@ -147,6 +148,13 @@ QString apercu_migration(const QString &programme, bool *refusee) {
     const QFileInfo i(programme);
     const QByteArray dossier = i.absolutePath().toUtf8();
     const QByteArray base = (i.absolutePath() + "/" + i.completeBaseName() + ".grymd").toUtf8();
+    // une base chiffrée déjà créée ne se lit pas sans son mot de passe : l'aperçu ne le demande pas, sans quoi le
+    // lancement le demandait deux fois (ici, puis l'exécution ; 22 octobre 2026) ; l'exécution refuse de même une
+    // migration qui détruirait des données, la base restant telle quelle
+    if (module->base_chiffree && base_cles_existent(base.constData())) {
+        module_detruire(module);
+        return QString::fromUtf8("La base est chiffrée : ce que le lancement y changera se vérifie au lancement, après le mot de passe.");
+    }
     Machine *m = machine_creer();
     machine_dossier(m, dossier.constData());
     machine_base(m, base.constData());
