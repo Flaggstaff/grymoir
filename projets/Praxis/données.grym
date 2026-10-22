@@ -8,6 +8,9 @@ Remarque : (iCloud Drive), reçoit chaque jour une copie chiffrée ; vide, pas d
 Remarque : le dossier d'export : où vont les CSV de la Comptabilité ; vide, « Exports », à côté de l'application.
 Remarque : le logo et la signature (le nom dessiné) du cabinet, en tête des écrans et des pièces ; le prénom de l'accueil
 Remarque : (« Bonjour Nicolas ») ; une autre installation les change ici, et les écrans les reprennent au lancement suivant.
+Remarque : le code d'accès : l'ancien mot de passe de l'application (une empreinte), effacé depuis la base chiffrée du 21 octobre 2026.
+Remarque : retiré le 21 octobre, il revient le 22 : une base qui n'avait pas été lancée entre-temps le gardait plein, et la migration
+Remarque : refusait de le perdre. Il ne part qu'une fois chaque base installée lancée avec cette version (grammaire 2.36).
 Un cabinet, conservé, a :
     un nom (texte), unique,
     une rue (texte), facultative,
@@ -25,6 +28,7 @@ Un cabinet, conservé, a :
     un IBAN (texte), facultatif,
     une facturation des absences (vrai ou faux), faux au départ,
     une dernière sauvegarde (date), facultative,
+    un code d'accès (mot de passe), facultatif,
     un dossier de sauvegarde (texte), facultatif,
     un logo (image), facultatif,
     une signature (image), facultative,
@@ -104,6 +108,8 @@ Une quittance, conservée, a :
 
 Remarque : la séance garde le son de son commentaire, s'il a été dicté, et le texte, transcrit ou tapé.
 Remarque : l'encaissement : le jour où l'argent est arrivé ; les comptes en recettes-dépenses comptent à cette date, pas à celle de la séance.
+Remarque : le dernier rappel d'une séance date d'avant les rappels par facture (20 octobre 2026) : gardé, plus écrit ; revenu le
+Remarque : 22 octobre pour la même raison que le code d'accès du cabinet.
 
 Une séance, conservée, a :
     un patient (patient), et disparaît avec lui, anciennement « client »,
@@ -118,6 +124,7 @@ Une séance, conservée, a :
     un commentaire (texte), facultatif,
     une quittance (quittance), facultative,
     une facture (facture), facultative,
+    un dernier rappel (date), facultatif,
     un encaissement (date), facultatif.
 
 Remarque : les rubriques des frais (loyer, matériel…) : Nicolas les nomme, les renomme et en ajoute dans la configuration.
