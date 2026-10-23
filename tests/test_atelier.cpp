@@ -4771,6 +4771,63 @@ int main(int argc, char **argv) {
         e.close();
     }
 
+    // Praxis 2, chantier B (23 octobre 2026) : la facture tiers payant d'une ordonnance : ses séances faites, cotées en
+    // points (24 points × 4 quarts d'heure × 1,10 = 105,60, valeurs inventées des essais), son exemplaire et sa copie en PDF ;
+    // réglée, ses séances sont encaissées
+    {
+        QTemporaryDir d;
+        VERIFIER(copier_praxis_essai(d.path()));
+        QFile f(d.filePath("Praxis.grym"));
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        QString source = QString::fromUtf8(f.readAll());
+        f.close();
+        const QString essai = QString::fromUtf8(
+            "La claire vaut le patient conservé dont le nom = « Claire Monney ».\n"
+            "Le soin d'ergo vaut le soin conservé dont le nom = « Ergothérapie ».\n"
+            "L'ordo d'essai vaut une nouvelle ordonnance :\n"
+            "    Le patient vaut la claire.\n"
+            "    La date vaut aujourd'hui − 10 jours.\n"
+            "    Le médecin vaut « Dre Morel ».\n"
+            "    Le maximum de séances vaut 9.\n"
+            "    Le cas vaut « maladie ».\n"
+            "Conserver l'ordo d'essai.\n"
+            "La séance d'essai vaut une nouvelle séance :\n"
+            "    Le patient vaut la claire.\n"
+            "    Le soin vaut le soin d'ergo.\n"
+            "    La date vaut aujourd'hui − 5 jours.\n"
+            "    Le prix vaut 105,6.\n"
+            "    Le statut vaut « faite ».\n"
+            "    Le paiement vaut « assurance ».\n"
+            "La durée de la séance d'essai devient 60.\n"
+            "Rattacher la séance d'essai.\n"
+            "Conserver la séance d'essai.\n"
+            "Décompter l'ordo d'essai.\n"
+            "Pour chaque décompte conservé :\n"
+            "    Afficher « essai tiers payant » puis le numéro du décompte puis l'arrondi du montant du décompte à 0,01 puis l'état du décompte puis la suite du décompte.\n"
+            "    Si l'exemplaire du décompte est présent et la copie du décompte est présente, afficher « essai pdf deux ».\n"
+            "Afficher « essai cotation » puis le total de points de la séance d'essai puis le chiffre du tarif de la séance d'essai.\n"
+            "Afficher « essai avant règlement » puis le nombre de séances conservées dont l'encaissement est présent et le paiement = « assurance ».\n"
+            "Afficher « fin des essais ».\n");
+        const int k = source.indexOf(QString::fromUtf8("Remarque : le mot de passe, l'application l'a déjà demandé"));
+        VERIFIER(k > 0);
+        source.insert(k, essai);
+        VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(source.toUtf8());
+        f.close();
+        Execution e(d.filePath("Praxis.grym"));
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 40000 && !fil().contains("fin des essais")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        const QString t = fil();
+        VERIFIER(t.contains(QString::fromUtf8("essai tiers payant TP-2026-0001 105,60 à régler se poursuit"))
+                 || t.contains(QString::fromUtf8("essai tiers payant TP-2026-0001 105.60 à régler se poursuit")));
+        VERIFIER(t.contains(QString::fromUtf8("essai pdf deux")));
+        VERIFIER(t.contains(QString::fromUtf8("essai cotation 96 7601")));
+        VERIFIER(t.contains(QString::fromUtf8("essai avant règlement 0")));
+    }
+
     // Cabinet : la facture réunit les séances à payer du patient ; une séance encaissée la règle en partie, la dernière
     // la règle, et la quittance de toutes ses séances se fait seule, une fois (20 octobre 2026)
     {

@@ -292,3 +292,33 @@ L'usage d'une ordonnance :
     Si le compte = 0, rendre "Aucune séance encore ; la première au plus tard le " suivi de (la date du o + 56 jours) suivi de « . ».
     Si le compte ≥ le maximum de séances du o, rendre "Les " suivi du compte suivi de " séances sont faites : une nouvelle ordonnance est nécessaire.".
     Rendre "Séances : " suivi du compte suivi de " sur " suivi du maximum de séances du o suivi de « . ».
+
+Remarque : la valeur en points d'une séance facturée à l'assurance : celle de la position tarifaire de son soin, par séance ou par
+Remarque : quart d'heure entier ou entamé (60 minutes : 4 quarts d'heure ; 50 minutes : 4 ; 45 minutes : 3).
+La cotation d'une séance :
+    La position vaut la position tarifaire du soin de la séance.
+    Si l'unité de la position = « séance », rendre la valeur en points de la position.
+    Rendre la valeur en points de la position × l'arrondi de la durée de la séance ÷ 15 à 1 vers le haut.
+
+L'adresse postale d'un assureur :
+    Si la rue de l'assureur est absente et la case postale de l'assureur est absente, rendre « ».
+    Si la case postale de l'assureur est présente et la rue de l'assureur est absente, rendre "Case postale " suivi de la case postale de l'assureur.
+    Si le numéro de maison de l'assureur est absent, rendre la rue de l'assureur.
+    Rendre la rue de l'assureur suivi de " " suivi du numéro de maison de l'assureur.
+
+La ville d'un assureur :
+    Si la localité de l'assureur est absente, rendre « ».
+    Si le numéro postal de l'assureur est absent, rendre la localité de l'assureur.
+    Rendre le numéro postal de l'assureur suivi de " " suivi de la localité de l'assureur.
+
+La ligne d'assuré d'un patient :
+    Le texte vaut "N° d'assuré : " suivi du numéro d'assuré du patient.
+    Si le numéro de carte d'assuré du patient est présent, le texte devient le texte suivi de " ; carte d'assuré : " suivi du numéro de carte d'assuré du patient.
+    Rendre le texte.
+
+Remarque : le médecin prescripteur et ses numéros, la date de l'ordonnance.
+La ligne du prescripteur d'une ordonnance :
+    Le texte vaut le médecin de l'ordonnance.
+    Si le numéro RCC du médecin de l'ordonnance est présent, le texte devient le texte suivi de ", RCC " suivi du numéro RCC du médecin de l'ordonnance.
+    Si le numéro GLN du médecin de l'ordonnance est présent, le texte devient le texte suivi de ", GLN " suivi du numéro GLN du médecin de l'ordonnance.
+    Rendre le texte suivi de " ; ordonnance du " suivi de la date de l'ordonnance.

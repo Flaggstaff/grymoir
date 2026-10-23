@@ -55,6 +55,11 @@ Le rappel en cours vaut absent.
 
 Remarque : la facture dont on fait le PDF.
 La créance en cours vaut absent.
+Remarque : la facture tiers payant en cours d'écriture, et à qui va l'exemplaire (l'assureur, ou l'assuré pour la copie).
+Le tiers payant en cours vaut absent.
+Le destinataire en cours vaut « ».
+La position ouverte vaut absent.
+Le décompte ouvert vaut absent.
 
 Le soin ouvert vaut absent.
 La note ouverte vaut absent.
@@ -122,6 +127,7 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     un bouton « Comptabilité », en tuile, avec la description « Encaisser, factures, rappels, frais »,
     un bouton « Configuration », en tuile, avec la description « Le cabinet, les soins, les rubriques, les sauvegardes »,
     un bouton « Agenda OneDoc », en tuile, avec la description « Rendez-vous et rappels », visible si l'agenda du cabinet conservé = « OneDoc »,
+    un bouton « Assurances », en tuile, avec la description « Factures tiers payant et leurs règlements », visible si la facturation aux assurances du cabinet conservé,
     le texte l'alerte de sauvegarde du cabinet conservé et d'aujourd'hui et de l'échec de sauvegarde,
     le texte l'alerte des prévues d'aujourd'hui.
 
@@ -208,6 +214,7 @@ L'écran du soin, « Soin », montre :
     un code tarifaire (texte), facultatif,
     une ordonnance exigée (vrai ou faux), en interrupteur, avec l'indication « L'ergothérapie : sur ordonnance, toujours facturée à l'assurance de base », visible si la facturation aux assurances du cabinet conservé,
     une facturation (« patient » ou « assurance »), avec l'indication « Sans ordonnance : au patient (QR-facture, quittance) ou à son assurance », visible si la facturation aux assurances du cabinet conservé,
+    une position tarifaire (position), facultative, avec l'indication « Facturé à l'assurance : sa position (Configuration, Tarif des assurances) », visible si la facturation aux assurances du cabinet conservé,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
@@ -217,9 +224,9 @@ Remarque : la comptabilité en recettes-dépenses d'une année, celle du jour au
 Remarque : ce qui est dépensé, ce qui reste ; une autre année se choisit en haut, pour la déclaration d'impôts de l'année passée.
 L'écran de comptabilité, « Comptabilité », montre :
     une année (exercice), avec l'indication « L'année des comptes, du journal, de l'export et des listes »,
-    le texte "Recettes encaissées : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance » à 0,01,
+    le texte "Recettes encaissées : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » à 0,01,
     le texte "Frais : CHF " suivi de l'arrondi de la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice à 0,01,
-    le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01,
+    le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01,
     le texte « Le cabinet », en petites capitales,
     un bouton « À encaisser », en tuile, avec la description « Les séances à payer »,
     un bouton « Quittances », en tuile, avec la description « Remettre et retrouver »,
@@ -301,12 +308,12 @@ Le document de journal, « Journal des recettes et des frais », montre :
     l'image de la signature du cabinet conservé, large de 220,
     le texte "Année " suivi de l'année des comptes suivi de ", état au " suivi d'aujourd'hui,
     le texte « Recettes », en petites capitales,
-    la liste des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement,
-    le texte "Total des recettes : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance » à 0,01,
+    la liste des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement,
+    le texte "Total des recettes : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » à 0,01,
     le texte « Frais », en petites capitales,
     la liste des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date, avec la date, le libellé, le nom de la rubrique, le montant et le moyen,
     le texte "Total des frais : CHF " suivi de l'arrondi de la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice à 0,01,
-    le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01.
+    le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01.
 
 Remarque : les séances payées attendent leur quittance ; les quittances remises se retrouvent dessous.
 L'écran des quittances, (le titre des quittances de l'année des comptes et de la recherche des quittances), montre :
@@ -533,6 +540,7 @@ L'écran de configuration, « Configuration », montre :
     un bouton « Archives », en tuile, avec la description « Patients archivés, leurs pièces gardées »,
     un bouton « Rendez-vous », en tuile, avec la description « L'agenda : Praxis ou OneDoc », visible si le choix d'agenda du cabinet conservé,
     un bouton « Assureurs », en tuile, avec la description « Caisses-maladie et leur GLN », visible si la facturation aux assurances du cabinet conservé,
+    un bouton « Tarif des assurances », en tuile, avec la description « Positions, points et valeur du point », visible si la facturation aux assurances du cabinet conservé,
     un bouton « Fermer ».
 
 Remarque : le choix de l'agenda ; avec OneDoc, l'accueil a une tuile qui ouvre l'agenda OneDoc dans le navigateur.
@@ -640,10 +648,87 @@ Pour facturer une prestation :
         L'exemplaire de la f devient le document de facture.
         Ouvrir le document de facture.
 
+Remarque : la facture tiers payant, sur papier (convention ASE, art. 7.4) : le cabinet et ses numéros, l'assureur, le patient et
+Remarque : son numéro d'assuré, le médecin prescripteur et ses numéros, la nature du cas, la suite du traitement, et le calendrier
+Remarque : des prestations : chiffre du tarif, points, valeur du point, montant ; l'exemplaire va à l'assureur, la copie au patient.
+Le document de décompte, « Facture tiers payant », montre :
+    côte à côte :
+        l'un sous l'autre :
+            l'image de la signature du cabinet conservé, large de 220,
+            le texte l'adresse professionnelle du cabinet conservé,
+            le texte la ville professionnelle du cabinet conservé,
+            le texte la ligne des numéros du cabinet conservé,
+        l'un sous l'autre :
+            le texte le nom de l'assureur du tiers payant en cours,
+            le texte l'adresse postale de l'assureur du tiers payant en cours,
+            le texte la ville de l'assureur du tiers payant en cours,
+    le texte le destinataire en cours, en petites capitales,
+    le texte "Facture tiers payant N° " suivi du numéro du tiers payant en cours suivi de ", le " suivi de la date du tiers payant en cours en toutes lettres,
+    le texte « Patient », en petites capitales,
+    le texte le nom du patient du tiers payant en cours,
+    le texte l'adresse du patient du tiers payant en cours,
+    le texte la ville du patient du tiers payant en cours,
+    le texte la naissance du patient du tiers payant en cours,
+    le texte la ligne d'assuré du patient du tiers payant en cours,
+    le texte « Prescription », en petites capitales,
+    le texte la ligne du prescripteur de l'ordonnance du tiers payant en cours,
+    le texte "Cas : " suivi du cas de l'ordonnance du tiers payant en cours suivi de " ; traitement : " suivi de la suite du tiers payant en cours,
+    le texte « Prestations », en petites capitales,
+    la liste des séances conservées dont le décompte = le tiers payant en cours, par date, avec la date, le chiffre du tarif, le nom du soin, la durée, le total de points et le prix,
+    le texte "Valeur du point : CHF " suivi de la valeur du point du tiers payant en cours,
+    le texte "Montant total : CHF " suivi de l'arrondi du montant du tiers payant en cours à 0,01,
+    le texte "Débiteur : l'assureur (tiers payant). Avec mes salutations, " suivi du nom du cabinet conservé.
+
+Remarque : la facture tiers payant d'une ordonnance : ses séances faites qui n'en ont pas encore ; tout ce qu'elle doit montrer
+Remarque : est vérifié d'abord, et le refus dit où le compléter ; puis l'exemplaire pour l'assureur et la copie pour le patient.
+Pour décompter une ordonnance :
+    Le o vaut l'ordonnance.
+    Le p vaut le patient du o.
+    Le c vaut le cabinet conservé.
+    Si le numéro RCC du c est absent, refuser « Il manque le numéro RCC du cabinet : Configuration, Le cabinet. ».
+    Si le numéro GLN du c est absent, refuser « Il manque le GLN du cabinet : Configuration, Le cabinet. ».
+    Si l'assureur du p est absent, refuser « Il manque l'assureur du patient : sa page, Assurance maladie. ».
+    Si le numéro d'assuré du p est absent, refuser « Il manque le numéro d'assuré du patient : sa page. ».
+    Si la date de naissance du p est absente, refuser « Il manque la date de naissance du patient : sa page. ».
+    Le a vaut l'assureur du p.
+    Le point vaut la valeur du point du c.
+    Si la valeur du point du a est présente, le point devient la valeur du point du a.
+    Si le point est absent, refuser « Il manque la valeur du point : Configuration, Tarif des assurances. ».
+    Si le nombre de séances conservées dont l'ordonnance = le o et le décompte est absent et le statut = « faite » = 0, refuser « Aucune séance faite de cette ordonnance n'attend sa facture. ».
+    Pour chaque séance conservée dont l'ordonnance = le o et le décompte est absent et le statut = « faite » :
+        Si la position tarifaire du soin de la séance est absente, refuser "Le soin " suivi du nom du soin de la séance suivi de " n'a pas de position tarifaire : Configuration, Soins.".
+        Si l'unité de la position tarifaire du soin de la séance = « quart d'heure » et la durée de la séance est absente, refuser "La séance du " suivi de la date de la séance suivi de " n'a pas de durée : sa page.".
+    Le début vaut le premier janvier d'aujourd'hui.
+    Le rang vaut (le nombre de décomptes conservés dont la date ≥ le début) + (le nombre de décomptes supprimés dont la date ≥ le début) + 1.
+    Le d vaut un nouveau décompte :
+        Le numéro vaut le numéro de pièce de « TP- » et de l'année d'aujourd'hui et du rang.
+        La date vaut aujourd'hui.
+        Le patient vaut le p.
+        L'assureur vaut le a.
+        La valeur du point vaut le point.
+        Le montant vaut 0.
+        La suite vaut « se poursuit ».
+        L'état vaut « à régler ».
+    L'ordonnance du d devient le o.
+    Conserver le d.
+    Pour chaque séance conservée dont l'ordonnance = le o et le décompte est absent et le statut = « faite » :
+        Le chiffre du tarif de la séance devient le code de la position tarifaire du soin de la séance.
+        Le total de points de la séance devient la cotation de la séance.
+        Le prix de la séance devient l'arrondi de la cotation de la séance × le point à 0,01.
+        Le décompte de la séance devient le d.
+        Le montant du d devient le montant du d + le prix de la séance.
+    Si le nombre de séances conservées dont l'ordonnance = le o et le statut = « faite » ≥ le maximum de séances du o, la suite du d devient « terminé ».
+    Le tiers payant en cours devient le d.
+    Le destinataire en cours devient « Exemplaire pour l'assureur ».
+    L'exemplaire du d devient le document de décompte.
+    Le destinataire en cours devient « Copie pour l'assuré : cette facture est adressée à votre assureur, qui la règle ».
+    La copie du d devient le document de décompte.
+    Ouvrir l'exemplaire du d.
+
 Remarque : une séance prévue se facture une fois faite ; une absence, seulement si le cabinet facture les absences.
 Pour attester une séance :
     Si le paiement de la séance = « offert », refuser « Une séance offerte n'a ni facture ni quittance. ».
-    Si le paiement de la séance = « assurance », refuser « Cette séance se facture à l'assurance : sa facture tiers payant viendra avec la prochaine version de Praxis. ».
+    Si le paiement de la séance = « assurance », refuser « Cette séance se facture à l'assurance : page de son ordonnance, Facturer à l'assurance. ».
     Si le statut de la séance = « annulée », refuser « Une séance annulée n'a ni facture ni quittance. ».
     Si le paiement de la séance = « à payer » :
         Si le statut de la séance = « prévue », refuser « Une séance prévue se facture une fois faite : change d'abord son statut. ».
@@ -753,7 +838,7 @@ Quand on clique sur « Exporter en CSV » dans l'écran de comptabilité :
     La marque vaut " " suivi de l'année des comptes suivi de ", exporté le " suivi d'aujourd'hui en format technique suivi de " à " suivi de l'horodatage de maintenant suivi de « .csv ».
     Le dossier vaut la destination des exports du cabinet conservé.
     Essayer :
-        Exporter les séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement, dans (le dossier suivi de « /Recettes » suivi de la marque).
+        Exporter les séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement, dans (le dossier suivi de « /Recettes » suivi de la marque).
         Exporter les frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date, avec la date, le libellé, le nom de la rubrique, le montant et le moyen, dans (le dossier suivi de « /Frais » suivi de la marque).
         L'avis des comptes devient "Exporté dans " suivi du dossier suivi de " : Recettes" suivi de la marque suivi de " et Frais" suivi de la marque.
     En cas d'échec :
@@ -1341,6 +1426,7 @@ Quand on ouvre l'écran du soin :
     Le code tarifaire de l'écran devient le code tarifaire du s.
     L'ordonnance exigée de l'écran devient l'ordonnance exigée du s.
     La facturation de l'écran devient la facturation du s.
+    La position tarifaire de l'écran devient la position tarifaire du s.
 
 Quand on clique sur « Enregistrer » dans l'écran du soin :
     Le s vaut le soin ouvert.
@@ -1352,6 +1438,7 @@ Quand on clique sur « Enregistrer » dans l'écran du soin :
     Si la facturation aux assurances du cabinet conservé :
         L'ordonnance exigée du s devient l'ordonnance exigée de l'écran.
         La facturation du s devient la facturation de l'écran.
+        La position tarifaire du s devient la position tarifaire de l'écran.
         Si l'ordonnance exigée du s est vraie, la facturation du s devient « assurance ».
     Fermer l'écran.
 
@@ -1527,6 +1614,7 @@ L'écran de l'assureur, « Assureur », montre :
     une case postale (texte), facultative,
     un numéro postal (texte), facultatif,
     une localité (texte), facultative,
+    une valeur du point (nombre), facultative, avec l'indication « Seulement si elle diffère de celle du cabinet (Tarif des assurances) »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
@@ -1555,7 +1643,8 @@ L'écran de l'ordonnance, « Ordonnance », montre :
         un bouton « Enregistrer », principal,
         un bouton « Voir le scan »,
         un bouton « Fermer »,
-        un bouton « Supprimer ».
+        un bouton « Supprimer »,
+        un bouton « Facturer à l'assurance ».
 
 Quand on clique sur « Assureurs » dans l'écran de configuration :
     Ouvrir l'écran des assureurs.
@@ -1581,6 +1670,7 @@ Quand on ouvre l'écran de l'assureur :
         La case postale de l'écran devient la case postale du a.
         Le numéro postal de l'écran devient le numéro postal du a.
         La localité de l'écran devient la localité du a.
+        La valeur du point de l'écran devient la valeur du point du a.
 
 Quand on clique sur « Enregistrer » dans l'écran de l'assureur :
     Si le numéro GLN de l'écran est présent :
@@ -1598,6 +1688,7 @@ Quand on clique sur « Enregistrer » dans l'écran de l'assureur :
     La case postale du a devient la case postale de l'écran.
     Le numéro postal du a devient le numéro postal de l'écran.
     La localité du a devient la localité de l'écran.
+    La valeur du point du a devient la valeur du point de l'écran.
     Fermer l'écran.
 
 Quand on clique sur « Fermer » dans l'écran de l'assureur :
@@ -1684,3 +1775,134 @@ Quand on clique sur « Supprimer » dans l'écran de l'ordonnance :
         Si le nombre de séances conservées dont l'ordonnance = le o > 0, refuser « Des séances relèvent de cette ordonnance : elle reste. ».
         Supprimer le o.
         Fermer l'écran.
+
+Remarque : le tarif des assurances (chantier B, 23 octobre 2026) : la valeur du point du cabinet, et ses positions tarifaires.
+L'écran du tarif, « Tarif des assurances », montre :
+    une valeur du point (nombre), facultative, avec l'unité « CHF », avec l'indication « La valeur d'un point convenue avec les assureurs ; un assureur peut avoir la sienne »,
+    la liste des positions conservées, par code, avec le code, le libellé, la valeur en points et l'unité,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Nouvelle position »,
+        un bouton « Fermer ».
+
+L'écran de la position, « Position tarifaire », montre :
+    un code (texte), avec l'indication « Le chiffre du tarif : 7601 »,
+    un libellé (texte), avec l'indication « Traitement individuel »,
+    une valeur en points (nombre),
+    une unité (« quart d'heure » ou « séance »), avec l'indication « Par quart d'heure entier ou entamé, ou par séance »,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Fermer »,
+        un bouton « Supprimer ».
+
+Remarque : les factures tiers payant, la plus récente en tête ; une facture choisie s'ouvre : ses PDF, et son règlement.
+L'écran des assurances, « Factures aux assurances », montre :
+    la liste des décomptes conservés, par date décroissant, avec le numéro, la date, le nom du patient, le nom de l'assureur, le montant et l'état,
+    un bouton « Fermer ».
+
+L'écran du décompte, « Facture tiers payant », montre :
+    le texte "N° " suivi du numéro du décompte ouvert suivi de ", du " suivi de la date du décompte ouvert,
+    le texte "Patient : " suivi du nom du patient du décompte ouvert,
+    le texte "Assureur : " suivi du nom de l'assureur du décompte ouvert,
+    le texte "Montant : CHF " suivi de l'arrondi du montant du décompte ouvert à 0,01 suivi de " ; " suivi de l'état du décompte ouvert,
+    un règlement (date), facultatif, avec l'indication « Le jour où l'assureur a payé : ses séances sont alors encaissées »,
+    côte à côte :
+        un bouton « Réglée », principal,
+        un bouton « Voir la facture »,
+        un bouton « Voir la copie »,
+        un bouton « Fermer ».
+
+Quand on clique sur « Facturer à l'assurance » dans l'écran de l'ordonnance :
+    Si l'ordonnance ouverte est absente, refuser « Enregistre d'abord l'ordonnance. ».
+    Décompter l'ordonnance ouverte.
+
+Quand on clique sur « Tarif des assurances » dans l'écran de configuration :
+    Ouvrir l'écran du tarif.
+
+Quand on ouvre l'écran du tarif :
+    La valeur du point de l'écran devient la valeur du point du cabinet conservé.
+
+Quand on clique sur « Enregistrer » dans l'écran du tarif :
+    Le c vaut le cabinet conservé.
+    La valeur du point du c devient la valeur du point de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Nouvelle position » dans l'écran du tarif :
+    La position ouverte devient absent.
+    Ouvrir l'écran de la position.
+
+Quand on choisit une position dans l'écran du tarif :
+    La position ouverte devient la position choisie de l'écran.
+    Ouvrir l'écran de la position.
+
+Quand on clique sur « Fermer » dans l'écran du tarif :
+    Fermer l'écran.
+
+Quand on ouvre l'écran de la position :
+    Si la position ouverte est présente :
+        La p vaut la position ouverte.
+        Le code de l'écran devient le code de la p.
+        Le libellé de l'écran devient le libellé de la p.
+        La valeur en points de l'écran devient la valeur en points de la p.
+        L'unité de l'écran devient l'unité de la p.
+    Sinon, l'unité de l'écran devient « quart d'heure ».
+
+Quand on clique sur « Enregistrer » dans l'écran de la position :
+    Si la position ouverte est absente :
+        La nouvelle vaut une nouvelle position :
+            Le code vaut le code de l'écran.
+            Le libellé vaut le libellé de l'écran.
+            La valeur en points vaut la valeur en points de l'écran.
+            L'unité vaut l'unité de l'écran.
+        Conserver la nouvelle.
+        La position ouverte devient la nouvelle.
+    La p vaut la position ouverte.
+    Le code de la p devient le code de l'écran.
+    Le libellé de la p devient le libellé de l'écran.
+    La valeur en points de la p devient la valeur en points de l'écran.
+    L'unité de la p devient l'unité de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran de la position :
+    Fermer l'écran.
+
+Remarque : une position qu'un soin désigne encore ne se supprime pas.
+Quand on clique sur « Supprimer » dans l'écran de la position :
+    Si la position ouverte est absente, fermer l'écran.
+    Sinon :
+        La p vaut la position ouverte.
+        Si le nombre de soins conservés dont la position tarifaire = la p > 0, refuser « Un soin facture encore cette position : change d'abord le soin. ».
+        Supprimer la p.
+        Fermer l'écran.
+
+Quand on clique sur « Assurances » dans l'écran d'accueil :
+    Ouvrir l'écran des assurances.
+
+Quand on choisit un décompte dans l'écran des assurances :
+    Le décompte ouvert devient le décompte choisi de l'écran.
+    Ouvrir l'écran du décompte.
+
+Quand on clique sur « Fermer » dans l'écran des assurances :
+    Fermer l'écran.
+
+Quand on ouvre l'écran du décompte :
+    Le règlement de l'écran devient le règlement du décompte ouvert.
+
+Remarque : réglée par l'assureur : ses séances sont encaissées ce jour-là, et entrent dans les recettes de l'année.
+Quand on clique sur « Réglée » dans l'écran du décompte :
+    Si le règlement de l'écran est absent, refuser « Donne le jour du règlement. ».
+    Le d vaut le décompte ouvert.
+    L'état du d devient « réglé ».
+    Le règlement du d devient le règlement de l'écran.
+    Pour chaque séance conservée dont le décompte = le d :
+        L'encaissement de la séance devient le règlement du d.
+    Fermer l'écran.
+
+Quand on clique sur « Voir la facture » dans l'écran du décompte :
+    Ouvrir l'exemplaire du décompte ouvert.
+
+Quand on clique sur « Voir la copie » dans l'écran du décompte :
+    Ouvrir la copie du décompte ouvert.
+
+Quand on clique sur « Fermer » dans l'écran du décompte :
+    Fermer l'écran.

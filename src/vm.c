@@ -3398,7 +3398,8 @@ static char *ecran_montrer_liste(Machine *m, EcranVM *e, size_t k, Valeur *l) {
         }
         e->doc_lignes[k] = nc ? faites / nc : 0;
     } else if (!erreur) {
-        m->iface.ecran_lignes(m->iface.contexte, k, (const char *const *)cellules, nl);
+        /* seulement les lignes remplies : un objet qui ne se charge plus (une ligne coupée) laissait des cellules au hasard */
+        m->iface.ecran_lignes(m->iface.contexte, k, (const char *const *)cellules, nc ? faites / nc : 0);
         valeur_liberer(&e->listes[k]);
         e->listes[k] = valeur_copier(l);
     }

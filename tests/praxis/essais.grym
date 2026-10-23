@@ -47,6 +47,28 @@ Pour remplir les essais :
     Le numéro postal du cabinet d'essai devient « 1630 ».
     La localité du cabinet d'essai devient « Bulle ».
     L'IBAN du cabinet d'essai devient « CH52 0483 5012 3456 7100 0 ».
+    Remarque : la facturation aux assurances (Praxis 2, chantier B) : des numéros, un tarif et une caisse inventés.
+    Le numéro RCC du cabinet d'essai devient « Z999999 ».
+    Le numéro GLN du cabinet d'essai devient « 7601000000000 ».
+    La valeur du point du cabinet d'essai devient 1,1.
+    La position d'essai vaut une nouvelle position :
+        Le code vaut « 7601 ».
+        Le libellé vaut « Traitement individuel ».
+        La valeur en points vaut 24.
+        L'unité vaut « quart d'heure ».
+    Conserver la position d'essai.
+    L'ergo vaut un nouveau soin :
+        Le nom vaut « Ergothérapie ».
+        Le tarif vaut 105,6.
+        La durée vaut 60.
+        L'ordonnance exigée vaut vrai.
+        La facturation vaut « assurance ».
+    La position tarifaire de l'ergo devient la position d'essai.
+    Conserver l'ergo.
+    La caisse vaut un nouvel assureur :
+        Le nom vaut « Caisse d'essai ».
+    Le numéro GLN de la caisse devient « 7601000000001 ».
+    Conserver la caisse.
     Le dossier de sauvegarde du cabinet d'essai devient absent.
     Inscrire « Anne Rochat » et « Route de Riaz » et « 12a » et « 1630 » et « Bulle » et « 079 000 00 01 ».
     Inscrire « Louis Bapst » et « Rue de Lausanne » et « 40 » et « 1700 » et « Fribourg » et « 079 000 00 02 ».
@@ -54,6 +76,10 @@ Pour remplir les essais :
     Inscrire « Julien Pasquier » et « Avenue de la Gare » et « 18 » et « 1618 » et « Châtel-St-Denis » et « 079 000 00 04 ».
     Inscrire « Sophie Clément » et « Route de Bourguillon » et « 7 » et « 1723 » et « Marly » et « 079 000 00 05 ».
     Inscrire « Marc Dupraz » et « Chemin des Crêts » et « 2 » et « 1632 » et « Riaz » et « 079 000 00 06 ».
+    L'assurée vaut le patient conservé dont le nom = « Claire Monney ».
+    L'assureur de l'assurée devient la caisse.
+    Le numéro d'assuré de l'assurée devient « 756.0000.0000.03 ».
+    La date de naissance de l'assurée devient 03.03.1980.
     Consigner « Anne Rochat » et « EPI » et −48 et 130 et « faite » et « espèces ».
     Consigner « Anne Rochat » et « EPI » et −11 et 70 et « faite » et « Twint ».
     Consigner « Anne Rochat » et « EPI » et −1 et 70 et « faite » et « à payer ».

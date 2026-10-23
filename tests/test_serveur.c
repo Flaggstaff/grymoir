@@ -1666,7 +1666,7 @@ int main(void) {
         snprintf(q11, sizeof q11, "q=11&%s", seance);
         snprintf(q18, sizeof q18, "q=18&%s", seance);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Configuration"), evenement("q=3&clic=1"),
-                 evenement("q=4&choix=0.0"), evenement("q=5&z0=EPI&z1=130&z2=70&z3=60&z4=1003&z5=oui&z5p=1&z6=patient&clic=8"),
+                 evenement("q=4&choix=0.0"), evenement("q=5&z0=EPI&z1=130&z2=70&z3=60&z4=1003&z5=oui&z5p=1&z6=patient&clic=9"),
                  evenement("q=6&clic=Fermer"), evenement("q=7&clic=Fermer"), evenement("q=8&clic=Patients"),
                  evenement("q=9&z0=Anne+Rochat&clic=-1"), evenement("q=10&clic=Nouvelle+s%C3%A9ance"),
                  evenement(q11), get("/"),
@@ -1684,6 +1684,28 @@ int main(void) {
         liberer(&sc);
         remove("_essai_ordonnance.grymd");
         remove("_essai_ordonnance.grymd.clés");
+    }
+
+    {   /* Praxis 2, chantier B (23 octobre 2026) : « Facturer à l'assurance » vérifie d'abord tout ce que la facture tiers
+           payant doit montrer ; tout y est (essais.grym), il ne reste que le PDF, que seuls l'atelier et une application
+           fabriquée savent faire (le parcours complet : test_atelier) ; la liste des factures aux assurances, vide */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Patients"), evenement("q=3&z0=Claire+Monney&clic=-1"),
+                 evenement("q=4&clic=Ordonnances"), evenement("q=5&clic=Nouvelle+ordonnance"),
+                 evenement("q=6&z0=01.10.2026&z1=Dre+Morel&z2=&z3=&z4=9&z5=maladie&z7=&clic=Enregistrer"),
+                 evenement("q=7&clic=Fermer"), evenement("q=8&clic=Nouvelle+s%C3%A9ance"),
+                 evenement("q=9&z2=Claire+Monney&z4=Ergoth%C3%A9rapie&z5=05.10.2026&z6=&z7=60&z9=%C3%A0+payer&z12=105%2C6&clic=19"),
+                 evenement("q=10&clic=Ordonnances"), evenement("q=11&choix=1.0"),
+                 evenement("q=12&clic=Facturer+%C3%A0+l%27assurance"), get("/"),
+                 evenement("q=13&clic=Fermer"), evenement("q=14&clic=Fermer"), evenement("q=15&clic=Fermer"), evenement("q=16&clic=Fermer"),
+                 get("/"), evenement("q=17&clic=Assurances"), get("/"));
+        servir_projet("_essai_praxis/Praxis.grym", "_essai_tiers_payant.grymd", &sc);
+        CONTIENT(sc.reponses[12], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
+        CONTIENT(sc.reponses[17], ">Assurances<");
+        CONTIENT(sc.reponses[19], "<h1>Factures aux assurances</h1>");
+        liberer(&sc);
+        remove("_essai_tiers_payant.grymd");
+        remove("_essai_tiers_payant.grymd.clés");
     }
 
     {   /* Le cabinet de Lorianne (outils/cabinet lorianne, 22 octobre 2026) : sa copie se fonde à son nom, à Bulle, avec
@@ -2047,7 +2069,7 @@ int main(void) {
         remove("_essai_cabinet5.grymd");
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=7"), evenement("q=3&clic=1"), evenement("q=4&choix=0.0"), get("/"),
-                 evenement("q=5&z0=EPI&z1=130&z2=70&z3=60&z4=1003&z6=patient&clic=8"), get("/"));
+                 evenement("q=5&z0=EPI&z1=130&z2=70&z3=60&z4=1003&z6=patient&clic=9"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet6.grymd", &sc);
         CONTIENT(sc.reponses[4], "<h1>Soin</h1>");
         CONTIENT(sc.reponses[6], "<td>1003</td>");   /* le code tarifaire, dans la liste des soins */
