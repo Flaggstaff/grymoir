@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.45 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.46 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2221,6 +2221,31 @@ et du tableau :
 - **L'atelier et les applications fabriquées** envoient (Qt Network, les certificats du système). La console et le navigateur de `grym` refusent : « Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée. »
 - Une adresse donnée par un nom s'écrit entre parenthèses, `l'envoi à (le service) de :`, sans quoi « service de » se lit comme un nom. En forme compacte *(2.45)* : `_la r << _envoi « … » _avec`, une paire `« clé » : valeur` par ligne, sans virgule, `_et_de` ou `_et_du_tableau` au retrait de la phrase, puis `_fin` ; `_lecture « … » _avec` ; `_envoi « … » _de`, `_envoi « … » _du_tableau` ; `_champ « a.b » r`.
 
+### 22.19 XML déclaré *(2.46, implémenté le 23 octobre 2026)*
+
+```
+Le XML de facture, « invoice:request », montre :
+    l'attribut « language » : « fr »,
+    l'élément « invoice:payload » :
+        l'attribut « type » : « invoice »,
+        l'élément « invoice:invoice » :
+            l'attribut « request_id » : le numéro du tiers payant en cours,
+        l'élément « invoice:body » :
+            Pour chaque séance conservée dont le décompte = le tiers payant en cours, par date :
+                l'élément « invoice:service » :
+                    l'attribut « code » : le chiffre du tarif de la séance,
+                    le contenu : le prix de la séance.
+
+Le fichier XML du d devient le XML de facture.
+```
+
+- **`Le XML de x, « racine », montre :`** déclare un document XML, au niveau du programme, avant son usage. **`le XML de x`** l'écrit et rend un fichier (`request.xml`, du nom de la racine sans son préfixe), en UTF-8, avec sa déclaration `<?xml version="1.0" encoding="UTF-8"?>`, indenté de deux espaces.
+- Ses éléments, un par ligne, séparés par des virgules, le dernier fini par un point : **`l'attribut « nom » : valeur`** ; **`le contenu : valeur`** ; **`l'élément « nom »`** (vide) ; **`l'élément « nom » : valeur`** (avec son contenu) ; **`l'élément « nom » :`** suivi de ses enfants, indentés.
+- Une phrase y écrit aussi : `Pour chaque … :`, `Si … :`, `Le x vaut …` ; leurs éléments vont où elles se trouvent.
+- Une valeur s'écrit telle quelle pour un texte, en forme canonique pour un nombre (`105.6`), en `AAAA-MM-JJ` pour une date, `true` ou `false` pour vrai ou faux. Un attribut absent n'est pas écrit ; un contenu absent non plus. Le langage échappe `&`, `<`, `>` et, dans un attribut, `"` : le développeur n'écrit jamais un chevron.
+- Les refus : un nom qui n'est pas un nom XML (« Un nom XML entre guillemets : une lettre d'abord, puis lettres, chiffres, « - », « _ », « . » ou « : » ») ; un attribut après le contenu ou un élément (« L'attribut « k » vient avant le contenu et les éléments de « x ». ») ; un XML inconnu ou déclaré deux fois.
+- Le XML produit est bien formé ; sa conformité à un schéma (XSD) n'est pas vérifiée. La forme compacte du XML n'existe pas encore.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -2371,3 +2396,4 @@ et du tableau :
 | 2.43 | 2026-10-23 | § 22.18 : `avec :` met des valeurs dans l'adresse d'un envoi ; `et de :` ou `et du tableau :` en donne le corps, un objet ou une liste JSON |
 | 2.44 | 2026-10-23 | Correction : `suivi du nombre de séances conservées […]` se lit comme `le nombre de …` ; « du » donnait déjà l'article, et l'analyse cherchait un nom « nombre de séances conservées » |
 | 2.45 | 2026-10-23 | § 22.18 : la forme compacte de l'envoi, de la lecture et du champ JSON (`_envoi`, `_lecture`, `_avec`, `_et_de`, `_et_du_tableau`, `_fin`, `_champ`) |
+| 2.46 | 2026-10-23 | Nouveau § 22.19 : le XML déclaré (`Le XML de x, « racine », montre :`, éléments, attributs, contenus, boucles ; `le XML de x`, un fichier UTF-8 échappé) |

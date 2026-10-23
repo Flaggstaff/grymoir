@@ -185,6 +185,17 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }
         chaine_ajouter(c, ")");
         return;
+    case N_XML:   /* (xml « xml de facture ») (2.46) */
+        chaine_ajouter(c, "(xml « ");
+        chaine_ajouter(c, n->texte ? n->texte : "");
+        chaine_ajouter(c, " »)");
+        return;
+    case P_XML:   /* (attribut « n » v), (contenu v), (élément « n » …) (2.46) */
+        chaine_ajouter(c, n->op == 'a' ? "(attribut « " : n->op == 'c' ? "(contenu" : "(élément « ");
+        if (n->op != 'c') { chaine_ajouter(c, n->texte ? n->texte : ""); chaine_ajouter(c, " »"); }
+        for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }
+        chaine_ajouter(c, ")");
+        return;
     case N_CHAMP_JSON:   /* (champ « a.b » r) (2.42) */
         chaine_ajouter(c, "(champ « ");
         chaine_ajouter(c, n->texte ? n->texte : "");

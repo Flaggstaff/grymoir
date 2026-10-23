@@ -134,10 +134,16 @@ typedef enum {
     I_ENVOI,            /* opérande : bit 0 la lecture (GET) ; bits 1-2 le corps (0 aucun, 1 objet, 2 tableau) ; bits 3-8
                            les paires de l'adresse ; bits 9-15 les éléments du corps ; dépile le corps, les paires, puis
                            l'adresse ; valide ce qui précède, envoie, empile la réponse, un texte (2.42, 2.43) */
-    I_CHAMP_JSON        /* opérande : la constante du chemin ; dépile une réponse, empile le texte du champ, ou absent */
+    I_CHAMP_JSON,       /* opérande : la constante du chemin ; dépile une réponse, empile le texte du champ, ou absent */
+    I_XML_DEBUT,        /* opérande : la constante de la racine ; ouvre un XML (2.46) */
+    I_XML_ELEMENT,      /* opérande : la constante du nom ; ouvre un élément */
+    I_XML_ATTRIBUT,     /* opérande : la constante du nom ; dépile la valeur (absente : pas d'attribut) */
+    I_XML_CONTENU,      /* dépile un texte, écrit dans l'élément ouvert, échappé */
+    I_XML_FERMER,       /* ferme l'élément ouvert */
+    I_XML_FIN           /* ferme la racine ; empile le fichier XML (UTF-8) */
 } CodeInstruction;
 
-#define I_DERNIER I_CHAMP_JSON
+#define I_DERNIER I_XML_FIN
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

@@ -207,6 +207,11 @@ typedef struct {
 } Ecriture_disque;
 
 struct Machine {
+    Chaine *xml;            /* le XML en cours d'écriture (2.46), NULL hors d'un XML */
+    char **xml_pile;        /* les éléments ouverts, la racine en bas */
+    int *xml_enfants;       /* chacun : 1 s'il a déjà des enfants ou un contenu */
+    size_t xml_n;
+    int xml_balise;         /* la balise du dernier élément ouvert n'est pas encore fermée par « > » : un attribut y va */
     int envoi_ouvert;       /* les valeurs d'un envoi s'évaluent : un secret s'y lit (2.42) */
     char *dossier;          /* dossier du programme : base des chemins relatifs */
     char *dossier_ecriture; /* où s'écrit un fichier au chemin relatif, s'il diffère (une application fabriquée) */
@@ -1208,6 +1213,87 @@ static char *valider_jusqu_ici(Machine *m, Chaine *sortie) {
     return NULL;
 }
 
+
+
+/* ---------------------------------------------------------------- */
+/* XML déclaré (2.46)                                               */
+/* ---------------------------------------------------------------- */
+
+static void xml_echapper(Chaine *c, const char *t, int attribut) {
+    for (const char *p = t; *p; p++) {
+        char x[2] = { *p, 0 };
+        if (*p == '&') chaine_ajouter(c, "&amp;");
+        else if (*p == '<') chaine_ajouter(c, "&lt;");
+        else if (*p == '>') chaine_ajouter(c, "&gt;");
+        else if (attribut && *p == '"') chaine_ajouter(c, "&quot;");
+        else chaine_ajouter(c, x);
+    }
+}
+
+/* Une valeur dans un XML : un texte tel quel, un nombre canonique (1234.5), une date AAAA-MM-JJ, vrai ou faux en
+ * true/false. NULL et *probleme sinon. */
+static char *xml_texte(const Machine *m, const Valeur *v, char **probleme) {
+    switch (v->type) {
+    case V_TEXTE: return grym_dupliquer(v->texte);
+    case V_NOMBRE: return dec_canonique(&v->nombre);
+    case V_BOOLEEN: return grym_dupliquer(v->vrai ? "true" : "false");
+    case V_DATE: {
+        int an, mo, jo;
+        date_civile(v->jours, &an, &mo, &jo);
+        return grym_formater("%04d-%02d-%02d", an, mo, jo);
+    }
+    default:
+        (void)m;
+        *probleme = grym_dupliquer("Un XML porte des textes, des nombres, des dates, vrai ou faux.");
+        return NULL;
+    }
+}
+
+static void xml_retrait(Machine *m) {
+    chaine_ajouter(m->xml, "\n");
+    for (size_t k = 0; k < m->xml_n; k++) chaine_ajouter(m->xml, "  ");
+}
+
+static void xml_ouvrir(Machine *m, const char *nom) {
+    if (m->xml_balise) chaine_ajouter(m->xml, ">");
+    if (m->xml_n) { m->xml_enfants[m->xml_n - 1] = 2; xml_retrait(m); }
+    chaine_ajouter(m->xml, "<");
+    chaine_ajouter(m->xml, nom);
+    char **p = grym_allouer((m->xml_n + 1) * sizeof *p);
+    int *e = grym_allouer((m->xml_n + 1) * sizeof *e);
+    for (size_t k = 0; k < m->xml_n; k++) { p[k] = m->xml_pile[k]; e[k] = m->xml_enfants[k]; }
+    free(m->xml_pile);
+    free(m->xml_enfants);
+    m->xml_pile = p;
+    m->xml_enfants = e;
+    m->xml_pile[m->xml_n] = grym_dupliquer(nom);
+    m->xml_enfants[m->xml_n++] = 0;
+    m->xml_balise = 1;
+}
+
+static void xml_fermer(Machine *m) {
+    char *nom = m->xml_pile[--m->xml_n];
+    const int enfants = m->xml_enfants[m->xml_n];
+    if (m->xml_balise) chaine_ajouter(m->xml, "/>");
+    else {
+        if (enfants == 2) xml_retrait(m);
+        chaine_ajouter(m->xml, "</");
+        chaine_ajouter(m->xml, nom);
+        chaine_ajouter(m->xml, ">");
+    }
+    m->xml_balise = 0;
+    free(nom);
+}
+
+static void xml_oublier(Machine *m) {   /* une erreur au milieu : le XML en cours est abandonné */
+    while (m->xml_n) free(m->xml_pile[--m->xml_n]);
+    free(m->xml_pile);
+    free(m->xml_enfants);
+    m->xml_pile = NULL;
+    m->xml_enfants = NULL;
+    if (m->xml) { free(chaine_rendre(m->xml)); free(m->xml); m->xml = NULL; }
+    m->xml_balise = 0;
+}
 
 /* ---------------------------------------------------------------- */
 /* Envoi à un service web (2.42)                                    */
@@ -5204,6 +5290,81 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             free(msgs);
             free(els);
+            break;
+        }
+        case I_XML_DEBUT: {   /* 2.46 */
+            if (m->xml) xml_oublier(m);   /* un XML resté ouvert par une erreur rattrapée */
+            m->xml = grym_allouer(sizeof *m->xml);
+            memset(m->xml, 0, sizeof *m->xml);
+            chaine_ajouter(m->xml, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            xml_ouvrir(m, b->constantes[op].texte);
+            break;
+        }
+        case I_XML_ELEMENT:
+            if (!m->xml) { ok = echouer(diag, b, debut, grym_dupliquer("Un élément s'écrit dans un XML : « le XML de … »."));
+                           break; }
+            xml_ouvrir(m, b->constantes[op].texte);
+            break;
+        case I_XML_ATTRIBUT: {
+            Valeur v = depiler(&pile);
+            char *probleme = NULL;
+            if (!m->xml) probleme = grym_dupliquer("Un attribut s'écrit dans un XML : « le XML de … ».");
+            else if (!m->xml_balise)
+                probleme = grym_formater("L'attribut « %s » vient avant le contenu et les éléments de « %s ».",
+                                         b->constantes[op].texte, m->xml_pile[m->xml_n - 1]);
+            else if (v.type != V_ABSENT) {
+                char *t = xml_texte(m, &v, &probleme);
+                if (t) {
+                    chaine_ajouter(m->xml, " ");
+                    chaine_ajouter(m->xml, b->constantes[op].texte);
+                    chaine_ajouter(m->xml, "=\"");
+                    xml_echapper(m->xml, t, 1);
+                    chaine_ajouter(m->xml, "\"");
+                    free(t);
+                }
+            }
+            valeur_liberer(&v);
+            if (probleme) { xml_oublier(m); ok = echouer(diag, b, debut, probleme); }
+            break;
+        }
+        case I_XML_CONTENU: {
+            Valeur v = depiler(&pile);
+            char *probleme = NULL;
+            if (!m->xml) probleme = grym_dupliquer("Un contenu s'écrit dans un XML : « le XML de … ».");
+            else if (v.type != V_ABSENT) {
+                char *t = xml_texte(m, &v, &probleme);
+                if (t) {
+                    if (m->xml_balise) { chaine_ajouter(m->xml, ">"); m->xml_balise = 0; }
+                    if (!m->xml_enfants[m->xml_n - 1]) m->xml_enfants[m->xml_n - 1] = 1;
+                    xml_echapper(m->xml, t, 0);
+                    free(t);
+                }
+            }
+            valeur_liberer(&v);
+            if (probleme) { xml_oublier(m); ok = echouer(diag, b, debut, probleme); }
+            break;
+        }
+        case I_XML_FERMER:
+            if (!m->xml || m->xml_n < 2) { ok = echouer(diag, b, debut, grym_dupliquer("Élément XML fermé sans être ouvert.")); break; }
+            xml_fermer(m);
+            break;
+        case I_XML_FIN: {
+            if (!m->xml || m->xml_n != 1) { xml_oublier(m); ok = echouer(diag, b, debut, grym_dupliquer("XML mal fermé.")); break; }
+            const char *racine = m->xml_pile[0];
+            char *nom = grym_formater("%s.xml", strchr(racine, ':') ? strchr(racine, ':') + 1 : racine);
+            xml_fermer(m);
+            chaine_ajouter(m->xml, "\n");
+            char *texte = chaine_rendre(m->xml);
+            free(m->xml);
+            m->xml = NULL;
+            free(m->xml_pile);
+            free(m->xml_enfants);
+            m->xml_pile = NULL;
+            m->xml_enfants = NULL;
+            Valeur f = vi_fichier(texte, strlen(texte), nom);
+            free(texte);
+            free(nom);
+            empiler(&pile, f);
             break;
         }
         case I_ENVOI_DEBUT:

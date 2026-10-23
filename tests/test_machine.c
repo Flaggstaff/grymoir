@@ -4295,6 +4295,22 @@ int main(void) {
          "3.5 20 vrai\nabsents");
     PROG("La r vaut « pas du JSON ».\nAfficher le champ « a » de la r.", "~La réponse n'est pas du JSON");
     PROG("La r vaut l'envoi à « https://exemple.ch » de :\n    « a » : 1,\n    « a » : 2.", "~La clé « a » est déjà envoyée.");
+    /* le XML déclaré (2.46) : éléments, attributs, contenus, boucle, échappement ; les refus */
+    PROG("Une séance, conservée, a :\n    une date (date),\n    un code (texte),\n    un prix (nombre).\n"
+         "La a vaut une nouvelle séance :\n    La date vaut 01.10.2026.\n    Le code vaut « 7601 ».\n    Le prix vaut 105,6.\nConserver la a.\n"
+         "La b vaut une nouvelle séance :\n    La date vaut 02.10.2026.\n    Le code vaut « A&B <x> \"y\" ».\n    Le prix vaut 26,4.\nConserver la b.\n"
+         "Le XML de facture, « invoice:request », montre :\n    l'attribut « language » : « fr »,\n"
+         "    l'élément « invoice:body » :\n        Pour chaque séance conservée, par date :\n"
+         "            l'élément « invoice:service » :\n                l'attribut « code » : le code de la séance,\n"
+         "                l'attribut « date » : la date de la séance,\n                l'attribut « vide » : absent,\n"
+         "                le contenu : le prix de la séance,\n    l'élément « fin ».\n"
+         "Le f vaut le XML de facture.\nAfficher le nom de fichier du f.\nAfficher la taille du f > 100.",
+         "request.xml\nvrai");
+    PROG("Le XML de a, « r », montre :\n    l'élément « x » :\n        le contenu : « t »,\n        l'attribut « k » : 1.\nLe f vaut le XML de a.",
+         "~L'attribut « k » vient avant le contenu et les éléments de « x ».");
+    PROG("Le XML de a, « 1r », montre :\n    le contenu : 1.", "~La racine d'un XML est un nom XML");
+    PROG("Le f vaut le XML de b.", "~XML inconnu : déclare-le avant");
+    PROG("Le XML de a, « r », montre :\n    l'élément « x y ».", "~Un nom XML entre guillemets");
     /* 2.43 : des valeurs d'adresse, puis un objet ou un tableau ; une lecture n'a pas de corps */
     PROG("La r vaut l'envoi à « https://exemple.ch » avec :\n    « k » : 1,\net du tableau :\n    « a »,\n    2.",
          "~Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée.");

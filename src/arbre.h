@@ -167,7 +167,10 @@ typedef enum {
     N_ENVOI,         /* « l'envoi à « https://… » de : « clé » : valeur, … » (forme 0, POST JSON) ; « la lecture de
                         « https://… » avec : … » (forme 1, GET) (2.42) : enfants[0] : l'adresse, puis des paires, une
                         clé (N_TEXTE) et sa valeur */
-    N_CHAMP_JSON     /* « le champ « a.b » de r » (2.42) : texte : le chemin ; enfant : la réponse */
+    N_CHAMP_JSON,    /* « le champ « a.b » de r » (2.42) : texte : le chemin ; enfant : la réponse */
+    N_XML,           /* « le XML de facture » (2.46) : texte : l'action qui l'écrit (« xml de facture ») ; texte2 : la racine */
+    P_XML            /* un élément d'un XML déclaré (2.46) : op 'a' attribut (texte, enfant : la valeur), 'c' contenu (enfant),
+                        'e' élément (texte, enfant facultatif : son contenu), 'b' élément à enfants (texte, enfant : N_BLOC) */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */

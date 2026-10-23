@@ -614,6 +614,10 @@ static void expression(Impression *im, const Noeud *n) {
         }
         return;
     }
+    case N_XML:   /* « le XML de facture » (2.46) */
+        aj(im, "le XML de ");
+        ecrire_nom(im, n->texte + 7, 0);
+        return;
     case N_CHAMP_JSON:   /* « le champ « a.b » de r » (2.42) ; « _champ « a.b » r » */
         if (im->compact) { aj(im, "_champ "); ecrire_texte(im, n->texte); aj(im, " "); expression(im, n->enfants[0]); return; }
         aj(im, "le champ ");
@@ -1391,6 +1395,15 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     int c = im->compact;
     retrait(im, niveau);
     switch (n->type) {
+    case P_XML:   /* un élément d'un XML déclaré (2.46) ; la virgule du dernier devient un point (P_ACTION 'X') */
+        if (n->op == 'a') { aj(im, "l'attribut "); ecrire_texte(im, n->texte); aj(im, " : "); expression(im, n->enfants[0]); aj(im, ",\n"); return; }
+        if (n->op == 'c') { aj(im, "le contenu : "); expression(im, n->enfants[0]); aj(im, ",\n"); return; }
+        aj(im, "l'élément ");
+        ecrire_texte(im, n->texte);
+        if (n->op == 'b') { aj(im, " :\n"); bloc(im, n->enfants[0], niveau + 1); return; }
+        if (n->nb_enfants) { aj(im, " : "); expression(im, n->enfants[0]); }
+        aj(im, ",\n");
+        return;
     case P_REMARQUE:
         aj(im, c ? "#" : "Remarque :");
         if (n->texte[0]) { aj(im, " "); aj(im, n->texte); }
@@ -1934,6 +1947,17 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     }
     case P_ACTION: {
         size_t apres_nom = im->nb;
+        if (n->op == 'X') {   /* « Le XML de facture, « invoice:request », montre : » (2.46) */
+            aj(im, "Le XML de ");
+            ecrire_nom(im, n->texte + 7, 0);   /* sans « xml de » */
+            aj(im, ", ");
+            ecrire_texte(im, n->texte3);
+            aj(im, ", montre :\n");
+            bloc(im, n->enfants[1], niveau + 1);
+            if (im->c.n >= 2 && im->c.d[im->c.n - 2] == ',' && im->c.d[im->c.n - 1] == '\n') im->c.d[im->c.n - 2] = '.';
+            im->nb = apres_nom;
+            return;
+        }
         if (c) {
             aj(im, "_action ");
             ecrire_nom(im, n->texte, 0);

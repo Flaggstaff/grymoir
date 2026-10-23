@@ -224,6 +224,12 @@ const char *instruction_nom(CodeInstruction code) {
     case I_ENVOI_DEBUT:    return "ENVOI_DEBUT";
     case I_ENVOI:          return "ENVOI";
     case I_CHAMP_JSON:     return "CHAMP_JSON";
+    case I_XML_DEBUT:      return "XML_DEBUT";
+    case I_XML_ELEMENT:    return "XML_ELEMENT";
+    case I_XML_ATTRIBUT:   return "XML_ATTRIBUT";
+    case I_XML_CONTENU:    return "XML_CONTENU";
+    case I_XML_FERMER:     return "XML_FERMER";
+    case I_XML_FIN:        return "XML_FIN";
     case I_SAUVEGARDER:    return "SAUVEGARDER";
     case I_SAUVEGARDER_COFFRE: return "SAUVEGARDER_COFFRE";
     case I_RESTAURER:      return "RESTAURER";
@@ -244,7 +250,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_EXEMPLE || code == I_EXEMPLE_RATE || code == I_ECART || code == I_HASARD || code == I_HEURE
         || code == I_REGLE_UTILE || code == I_REGLE_FAITE || code == I_ECRAN_ETAT || code == I_ECRAN_IMAGE || code == I_ECRAN_EXIGER
         || code == I_SIGLES || code == I_ECRAN_TEXTE || code == I_DOCUMENT || code == I_CODE_QR || code == I_RESTAURER
-        || code == I_ENVOI || code == I_CHAMP_JSON;
+        || code == I_ENVOI || code == I_CHAMP_JSON || code == I_XML_DEBUT || code == I_XML_ELEMENT || code == I_XML_ATTRIBUT;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -304,7 +310,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
         if (c == I_HEURE && op >= 1440)
             ok = refuser(erreur, grym_formater("HEURE : %u minutes, au-delà de 23:59 (octet %lu).", op, (unsigned long)d));
         else if ((c == I_EXPORTER || c == I_EXEMPLE || c == I_EXEMPLE_RATE || c == I_REGLE_UTILE || c == I_REGLE_FAITE
-                  || c == I_CHAMP_JSON)
+                  || c == I_CHAMP_JSON || c == I_XML_DEBUT || c == I_XML_ELEMENT || c == I_XML_ATTRIBUT)
                  && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
             ok = refuser(erreur, grym_formater("EXPORTER : constante %u absente ou pas un texte (octet %lu).", op,
                                                (unsigned long)d));
@@ -432,6 +438,9 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                 break;
             }
             case I_CHAMP_JSON: besoin = 1; effet = 0; break;
+            case I_XML_DEBUT: case I_XML_ELEMENT: case I_XML_FERMER: besoin = 0; effet = 0; break;
+            case I_XML_ATTRIBUT: case I_XML_CONTENU: besoin = 1; effet = -1; break;
+            case I_XML_FIN: besoin = 0; effet = 1; break;
             case I_SAUVEGARDER: besoin = 1; effet = -1; break;
             case I_SAUVEGARDER_COFFRE: besoin = 2; effet = -2; break;
             case I_RESTAURER: besoin = op ? 2 : 1; effet = -besoin; break;

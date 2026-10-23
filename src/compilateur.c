@@ -359,6 +359,19 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_ENVOI, n->forme | (n->op == 'o' ? 2 : n->op == 't' ? 4 : 0) | nq << 3 | nb << 9, n->ligne, n->colonne);
         return;
     }
+    case N_XML: {   /* « le XML de facture » (2.46) : la racine, l'action qui écrit les éléments, puis le fichier */
+        long k = bloc_constante(c->b, C_TEXTE, n->texte2);
+        if (k < 0) { trop_grand(c, n); return; }
+        emettre(c, I_XML_DEBUT, k, n->ligne, n->colonne);
+        Noeud ap = *n;
+        ap.type = P_APPEL;
+        ap.nb_enfants = 0;
+        ap.texte2 = NULL;   /* la racine n'est pas une classe : l'action n'a qu'une version */
+        ap.texte3 = NULL;
+        appel(c, &ap, 0);
+        emettre(c, I_XML_FIN, 0, n->ligne, n->colonne);
+        return;
+    }
     case N_CHAMP_JSON: {   /* « le champ « a.b » de r » (2.42) */
         expression(c, n->enfants[0]);
         long k = bloc_constante(c->b, C_TEXTE, n->texte);
@@ -1010,6 +1023,17 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_APPEL:
         appel(c, ph, 0);
         return;
+    case P_XML: {   /* un élément d'un XML déclaré (2.46) */
+        long k = ph->texte ? bloc_constante(c->b, C_TEXTE, ph->texte) : 0;
+        if (k < 0) { trop_grand(c, ph); return; }
+        if (ph->op == 'a') { expression(c, ph->enfants[0]); emettre(c, I_XML_ATTRIBUT, k, ph->ligne, ph->colonne); return; }
+        if (ph->op == 'c') { expression(c, ph->enfants[0]); emettre(c, I_XML_CONTENU, 0, ph->ligne, ph->colonne); return; }
+        emettre(c, I_XML_ELEMENT, k, ph->ligne, ph->colonne);
+        if (ph->op == 'b') phrase(c, ph->enfants[0]);
+        else if (ph->nb_enfants) { expression(c, ph->enfants[0]); emettre(c, I_XML_CONTENU, 0, ph->ligne, ph->colonne); }
+        emettre(c, I_XML_FERMER, 0, ph->ligne, ph->colonne);
+        return;
+    }
     case P_TANT_QUE: {
         /* test ; si faux → sortie ; corps ; → test */
         size_t test = c->b->taille_code;

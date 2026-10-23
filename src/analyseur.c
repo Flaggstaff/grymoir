@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -486,6 +487,10 @@ typedef struct {
     int menu;                /* … dans un menu (§ 22.12) : des boutons seulement */
     int document;            /* … dans un document (2.25) : une taille se dit partout (« l'image « logo.png », large de 40 ») */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
+    int dans_xml;            /* le corps d'un XML déclaré (2.46) : attributs, contenus, éléments */
+    char **xml_noms;         /* les XML déclarés : « facture », leur racine (2.46) */
+    char **xml_racines;
+    size_t nb_xml;
     int duree_permise;       /* « par pas de 1 mois » : une durée peut suivre la valeur lue (§ 14.2) */
     int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
     char *valeurs_lues;      /* « (« à faire », « fini »)» : la liste lue par lire_type, séparée par U+001E (§ 16.15) */
@@ -785,6 +790,7 @@ static const char *type_statique(const Noeud *n) {
     case N_CONVERSION: return n->entier <= 1 || n->entier == 8 || n->entier == 10 ? "texte" : n->texte2;
     case N_NOUVEAU: return n->texte;
     case N_ENVOI: case N_CHAMP_JSON: return "texte";   /* 2.42 */
+    case N_XML: return "fichier";   /* 2.46 */
     case N_GROUPE: case N_NEGATION: return type_statique(n->enfants[0]);
     default: return NULL;
     }
@@ -2122,6 +2128,26 @@ static Noeud *base(Analyse *a) {
                 }
             }
             return n;
+        }
+        /* « le XML de facture » (2.46) : le fichier qu'un XML déclaré écrit */
+        {
+            const int m2 = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : -1;
+            if (m2 >= 0 && est_mot(voir(a, m2), "xml") && de_ou_d(voir(a, m2 + 1))) {
+                size_t d = a->i + (size_t)m2 + 2, meilleur = 0, q_meilleur = 0;
+                for (size_t q = 0; q < a->nb_xml; q++)
+                    for (size_t k = d + 1; k <= a->n && mot_de_nom(a, k - 1); k++) {
+                        char *x = cle(a, d, k);
+                        if (!strcmp(x, a->xml_noms[q]) && k > meilleur) { meilleur = k; q_meilleur = q; }
+                        free(x);
+                    }
+                if (!meilleur) return erreur(a, t, grym_dupliquer("XML inconnu : déclare-le avant, « Le XML de facture, « … », montre : »."));
+                Noeud *n = noeud_creer(N_XML, t->ligne, t->colonne, t->debut);
+                n->texte = grym_formater("xml de %s", a->xml_noms[q_meilleur]);
+                n->texte2 = grym_dupliquer(a->xml_racines[q_meilleur]);
+                a->article_force = ART_AUCUN;
+                a->i = meilleur;
+                return n;
+            }
         }
         /* « le champ « a.b » de r » (2.42) : un champ de la réponse JSON d'un envoi, en texte, ou absent */
         const int m1 = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : -1;
@@ -8172,6 +8198,126 @@ static Noeud *exemple(Analyse *a, const Jeton *t) {
     return n;
 }
 
+/* ---------------------------------------------------------------- */
+/* XML déclaré (2.46)                                               */
+/* ---------------------------------------------------------------- */
+
+/* Un nom d'élément ou d'attribut XML : une lettre, « _ » ou un caractère non ASCII d'abord, puis aussi chiffres, « - »,
+ * « . », « : ». */
+static int nom_xml_valide(const char *n) {
+    if (!n || !*n) return 0;
+    const unsigned char *p = (const unsigned char *)n;
+    if (!(isalpha(*p) || *p == '_' || *p >= 0x80)) return 0;
+    for (; *p; p++)
+        if (!(isalnum(*p) || *p == '_' || *p == '-' || *p == '.' || *p == ':' || *p >= 0x80)) return 0;
+    return 1;
+}
+
+static int fin_d_element(Analyse *a) {   /* « , » ou « . » après un élément simple ; le retour à la ligne suffit sinon */
+    if (cour(a)->type == J_VIRGULE || cour(a)->type == J_POINT) { avancer(a); return 1; }
+    erreur(a, cour(a), grym_dupliquer("« , » ou « . » attendu après un élément du XML."));
+    return 0;
+}
+
+/* « l'attribut « n » : v, », « le contenu : v, », « l'élément « n » », « l'élément « n » : v, », « l'élément « n » : » et son bloc */
+static Noeud *element_xml(Analyse *a, int colonne) {
+    Jeton *t = cour(a);
+    const int attribut = t->type == J_ELISION && est_mot(voir(a, 1), "attribut");
+    const int element = t->type == J_ELISION && (est_mot(voir(a, 1), "élément") || est_mot(voir(a, 1), "element"));
+    const int contenu = est_mot(t, "le") && est_mot(voir(a, 1), "contenu");
+    if (!attribut && !element && !contenu) return NULL;
+    Noeud *n = noeud_creer(P_XML, t->ligne, t->colonne, t->debut);
+    avancer(a);
+    avancer(a);
+    if (attribut || element) {
+        Jeton *tn = cour(a);
+        if (tn->type != J_TEXTE || !nom_xml_valide(tn->valeur)) {
+            noeud_liberer(n);
+            return erreur(a, tn, grym_formater("Un nom XML entre guillemets : une lettre d'abord, puis lettres, chiffres, « - », "
+                                               "« _ », « . » ou « : » (« invoice:body »)."));
+        }
+        n->texte = grym_dupliquer(tn->valeur);
+        avancer(a);
+    }
+    n->op = attribut ? 'a' : contenu ? 'c' : 'e';
+    if (element && cour(a)->type != J_DEUX_POINTS) {   /* vide */
+        if (!fin_d_element(a)) { noeud_liberer(n); return NULL; }
+        return n;
+    }
+    Jeton *dp = cour(a);
+    if (dp->type != J_DEUX_POINTS) { noeud_liberer(n); return erreur(a, dp, grym_dupliquer("« : » attendu, puis la valeur.")); }
+    if (element && (voir(a, 1)->type == J_FIN || voir(a, 1)->ligne > dp->ligne)) {   /* ses enfants, en bloc */
+        n->op = 'b';
+        (void)colonne;
+        avancer(a);
+        Noeud *b = corps_en_bloc(a, dp, t->retrait);
+        if (!b) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, b);
+        n->fin = b->fin;
+        return n;
+    }
+    avancer(a);
+    Noeud *v = expression(a);
+    if (!v) { noeud_liberer(n); return NULL; }
+    noeud_ajouter(n, v);
+    n->fin = v->fin;
+    if (!fin_d_element(a)) { noeud_liberer(n); return NULL; }
+    return n;
+}
+
+/* « Le XML de facture, « invoice:request », montre : » (2.46) : une action sans paramètre, qui écrit ses éléments. */
+static Noeud *declaration_xml(Analyse *a, int colonne, Jeton *tle) {
+    size_t d = a->i + 3, k = d;
+    while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_DEUX_POINTS && a->j[k].type != J_FIN && mot_de_nom(a, k)) k++;
+    if (k == d || a->j[k].type != J_VIRGULE || a->j[k + 1].type != J_TEXTE || a->j[k + 2].type != J_VIRGULE
+        || !est_mot(&a->j[k + 3], "montre") || a->j[k + 4].type != J_DEUX_POINTS)
+        return erreur(a, tle, grym_dupliquer("Un XML se déclare ainsi : « Le XML de facture, « invoice:request », montre : »."));
+    char *nom_court = cle(a, d, k);
+    const char *racine = a->j[k + 1].valeur;
+    if (!nom_xml_valide(racine)) {
+        free(nom_court);
+        return erreur(a, &a->j[k + 1], grym_dupliquer("La racine d'un XML est un nom XML : « invoice:request »."));
+    }
+    for (size_t q = 0; q < a->nb_xml; q++)
+        if (!strcmp(a->xml_noms[q], nom_court)) {
+            Noeud *e = erreur(a, &a->j[d], grym_formater("Le XML de %s est déjà déclaré.", nom_court));
+            free(nom_court);
+            return e;
+        }
+    char *nom = grym_formater("xml de %s", nom_court);
+    char **noms = grym_allouer((a->nb_xml + 1) * sizeof *noms), **racines = grym_allouer((a->nb_xml + 1) * sizeof *racines);
+    for (size_t q = 0; q < a->nb_xml; q++) { noms[q] = a->xml_noms[q]; racines[q] = a->xml_racines[q]; }
+    free(a->xml_noms);
+    free(a->xml_racines);
+    a->xml_noms = noms;
+    a->xml_racines = racines;
+    a->xml_noms[a->nb_xml] = nom_court;
+    a->xml_racines[a->nb_xml++] = grym_dupliquer(racine);
+    Noeud *params = noeud_creer(N_BLOC, tle->ligne, tle->colonne, tle->debut);
+    portee_declarer(a->portee, nom, GENRE_LIBRE, tle->ligne);
+    Symbole *s = &a->portee->s[a->portee->n - 1];
+    s->sorte = S_ACTION;
+    s->nb_parametres = 0;
+    Contexte ctx = entrer_formule(a, 2, params);
+    a->i = k + 5;
+    a->dans_xml++;
+    Noeud *corps = corps_en_bloc(a, &a->j[k + 4], colonne);
+    a->dans_xml--;
+    int locaux = a->nb_locaux;
+    sortir_formule(a, ctx);
+    if (!corps) { noeud_liberer(params); free(nom); return NULL; }
+    Noeud *n = noeud_creer(P_ACTION, tle->ligne, tle->colonne, tle->debut);
+    n->texte = nom;
+    n->texte3 = grym_dupliquer(racine);
+    n->op = 'X';
+    n->forme = 1;
+    n->entier = locaux;
+    noeud_ajouter(n, params);
+    noeud_ajouter(n, corps);
+    n->fin = corps->fin;
+    return n;
+}
+
 static Noeud *phrase(Analyse *a, int colonne) {
     Jeton *t = cour(a);
     attendre(a, A_DEBUT | (a->interactif ? A_VALEUR | A_BOOLEEN : 0) | (a->boucle ? A_BOUCLE : 0));
@@ -8182,6 +8328,11 @@ static Noeud *phrase(Analyse *a, int colonne) {
         return n;
     }
     if (est_mot(t, "utiliser")) return utiliser(a, t);
+    if (a->dans_xml) {   /* le corps d'un XML : ses éléments, ou une phrase (« Pour chaque », « Si ») qui en écrit (2.46) */
+        Noeud *x = element_xml(a, colonne);
+        if (x || a->echec) return x;
+    }
+    if (est_mot(t, "le") && est_mot(voir(a, 1), "xml") && de_ou_d(voir(a, 2)) && !a->formule) return declaration_xml(a, colonne, t);
     if (t->type == J_ELISION && est_mot(voir(a, 1), "écran") && ecran_suit(a)) return declaration_ecran(a, t);
     if (est_mot(t, "le") && est_mot(voir(a, 1), "document") && ecran_suit(a)) return declaration_ecran(a, t);   /* 2.25 */
     if (est_mot(t, "quand")) return quand(a, colonne);
@@ -8681,6 +8832,10 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     Portee copie;
     portee_copier(&copie, portee);
     Analyse a;
+    a.dans_xml = 0;   /* 2.46 */
+    a.xml_noms = NULL;
+    a.xml_racines = NULL;
+    a.nb_xml = 0;
     a.j = j;
     a.n = n;
     a.i = 0;
@@ -8768,6 +8923,9 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
         free(a.att_mots);
     }
     free(a.valeurs_lues);
+    for (size_t q = 0; q < a.nb_xml; q++) { free(a.xml_noms[q]); free(a.xml_racines[q]); }
+    free(a.xml_noms);
+    free(a.xml_racines);
     free(a.couleurs_lues);
     liberer_noms_fin(&a);
     free(a.a_completer);
