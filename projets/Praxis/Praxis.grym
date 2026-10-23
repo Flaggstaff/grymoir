@@ -59,6 +59,12 @@ Remarque : la facture dont on fait le PDF.
 La créance en cours vaut absent.
 Remarque : la facture tiers payant en cours d'écriture, et à qui va l'exemplaire (l'assureur, ou l'assuré pour la copie).
 Le tiers payant en cours vaut absent.
+Remarque : les lignes de la facture tiers payant qui changent entre la base (une ordonnance) et la complémentaire.
+L'assuré en cours vaut « ».
+L'entête de prescription en cours vaut « ».
+La prescription en cours vaut « ».
+Le cas en cours vaut « ».
+Le point en cours vaut « ».
 L'ordonnance annoncée vaut absent.
 Le destinataire en cours vaut « ».
 La position ouverte vaut absent.
@@ -176,7 +182,12 @@ L'écran du patient, « Patient », montre :
         un assureur (assureur), facultatif, avec recherche, visible si la facturation aux assurances du cabinet conservé,
         un numéro d'assuré (texte), facultatif, visible si la facturation aux assurances du cabinet conservé,
         un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré », visible si la facturation aux assurances du cabinet conservé,
-        un bouton « Ordonnances », visible si la facturation aux assurances du cabinet conservé.
+        un bouton « Ordonnances », visible si la facturation aux assurances du cabinet conservé,
+    côte à côte :
+        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », visible si la facturation aux assurances du cabinet conservé,
+        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », visible si la facturation aux assurances du cabinet conservé,
+        une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base », visible si la facturation aux assurances du cabinet conservé,
+        un bouton « Facturer la complémentaire », visible si la facturation aux assurances du cabinet conservé.
 
 Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
 L'écran de la séance, « Séance », montre :
@@ -665,13 +676,13 @@ Le document de décompte, « Facture tiers payant », montre :
     le texte l'adresse du patient du tiers payant en cours,
     le texte la ville du patient du tiers payant en cours,
     le texte la naissance du patient du tiers payant en cours,
-    le texte la ligne d'assuré du patient du tiers payant en cours,
-    le texte « Prescription », en petites capitales,
-    le texte la ligne du prescripteur de l'ordonnance du tiers payant en cours,
-    le texte "Cas : " suivi du cas de l'ordonnance du tiers payant en cours suivi de " ; traitement : " suivi de la suite du tiers payant en cours,
+    le texte l'assuré en cours,
+    le texte l'entête de prescription en cours, en petites capitales,
+    le texte la prescription en cours,
+    le texte le cas en cours,
     le texte « Prestations », en petites capitales,
+    le texte le point en cours,
     la liste des séances conservées dont le décompte = le tiers payant en cours, par date, avec la date, le chiffre du tarif, le nom du soin, la durée, le total de points et le prix,
-    le texte "Valeur du point : CHF " suivi de la valeur du point du tiers payant en cours,
     le texte "Montant total : CHF " suivi de l'arrondi du montant du tiers payant en cours à 0,01,
     le texte "Débiteur : l'assureur (tiers payant). Avec mes salutations, " suivi du nom du cabinet conservé.
 
@@ -749,9 +760,64 @@ Pour décompter une ordonnance :
         Le montant du d devient le montant du d + le prix de la séance.
     Si le nombre de séances conservées dont l'ordonnance = le o et le statut = « faite » ≥ le maximum de séances du o et le nombre de séances conservées dont l'ordonnance = le o et le décompte est absent et le statut = « faite » = 0, la suite du d devient « terminé ».
     Le tiers payant en cours devient le d.
+    L'assuré en cours devient la ligne d'assuré du p.
+    L'entête de prescription en cours devient « Prescription ».
+    La prescription en cours devient la ligne du prescripteur du o.
+    Le cas en cours devient "Cas : " suivi du cas du o suivi de " ; traitement : " suivi de la suite du d.
+    Le point en cours devient "Valeur du point : CHF " suivi du point.
     Le destinataire en cours devient « Exemplaire pour l'assureur ».
     L'exemplaire du d devient le document de décompte.
     Le destinataire en cours devient « Copie pour l'assuré : cette facture est adressée à votre assureur, qui la règle ».
+    La copie du d devient le document de décompte.
+    Ouvrir l'exemplaire du d.
+
+Remarque : la facture tiers payant de la complémentaire d'un patient (23 octobre 2026) : ses séances faites de soins hors
+Remarque : ordonnance « à l'assurance », d'une même année ; son assureur et son numéro complémentaires, ou ceux de la base ; le code
+Remarque : tarifaire et le prix de chaque soin (Tarif 590 ou celui que la complémentaire demande), sans points.
+Pour décompter la complémentaire d'un patient :
+    Le p vaut le patient.
+    Le c vaut le cabinet conservé.
+    Si le numéro RCC du c est absent, refuser « Il manque le numéro RCC du cabinet : Configuration, Le cabinet. ».
+    Le a vaut l'assureur du p.
+    Si l'assureur complémentaire du p est présent, le a devient l'assureur complémentaire du p.
+    Si le a est absent, refuser « Il manque l'assureur du patient : sa page, Assurance maladie. ».
+    Le numéro vaut le numéro d'assuré du p.
+    Si le numéro d'assuré complémentaire du p est présent, le numéro devient le numéro d'assuré complémentaire du p.
+    Si le numéro est absent, refuser « Il manque le numéro d'assuré du patient : sa page. ».
+    Si la date de naissance du p est absente, refuser « Il manque la date de naissance du patient : sa page. ».
+    Si la facturation complémentaire du p est présente :
+        Si la facturation complémentaire du p = « tiers garant », refuser « Ce patient est en tiers garant : il paie sa facture et la transmet à sa complémentaire. ».
+    Si le nombre de séances conservées dont le patient = le p et le paiement = « assurance » et l'ordonnance est absente et le décompte est absent et le statut = « faite » = 0, refuser « Aucune séance hors ordonnance n'attend sa facture complémentaire. ».
+    La plus ancienne vaut aujourd'hui.
+    Pour chaque séance conservée dont le patient = le p et le paiement = « assurance » et l'ordonnance est absente et le décompte est absent et le statut = « faite » :
+        Si la date de la séance < la plus ancienne, la plus ancienne devient la date de la séance.
+        Si le code tarifaire du soin de la séance est absent, refuser "Le soin " suivi du nom du soin de la séance suivi de " n'a pas de code tarifaire : Configuration, Soins.".
+    Le début d'année vaut le premier janvier de la plus ancienne.
+    La fin d'année vaut le début d'année + 1 an.
+    Le rang vaut (le nombre de décomptes conservés dont la date ≥ le premier janvier d'aujourd'hui) + (le nombre de décomptes supprimés dont la date ≥ le premier janvier d'aujourd'hui) + 1.
+    Le d vaut un nouveau décompte :
+        Le numéro vaut le numéro de pièce de « TP- » et de l'année d'aujourd'hui et du rang.
+        La date vaut aujourd'hui.
+        Le patient vaut le p.
+        L'assureur vaut le a.
+        La valeur du point vaut 0.
+        Le montant vaut 0.
+        La suite vaut « terminé ».
+        L'état vaut « à régler ».
+    Conserver le d.
+    Pour chaque séance conservée dont le patient = le p et le paiement = « assurance » et l'ordonnance est absente et le décompte est absent et le statut = « faite » et la date ≥ le début d'année et la date < la fin d'année :
+        Le chiffre du tarif de la séance devient le code tarifaire du soin de la séance.
+        Le décompte de la séance devient le d.
+        Le montant du d devient le montant du d + le prix de la séance.
+    Le tiers payant en cours devient le d.
+    L'assuré en cours devient "N° d'assuré complémentaire : " suivi du numéro.
+    L'entête de prescription en cours devient « Assurance complémentaire ».
+    La prescription en cours devient « Soins hors ordonnance, facturés selon le tarif de la complémentaire. ».
+    Le cas en cours devient « Cas : maladie ».
+    Le point en cours devient « ».
+    Le destinataire en cours devient « Exemplaire pour l'assureur complémentaire ».
+    L'exemplaire du d devient le document de décompte.
+    Le destinataire en cours devient « Copie pour l'assuré : cette facture est adressée à votre assurance complémentaire, qui la règle ».
     La copie du d devient le document de décompte.
     Ouvrir l'exemplaire du d.
 
@@ -1199,6 +1265,9 @@ Quand on ouvre l'écran du patient :
     L'assureur de l'écran devient l'assureur du p.
     Le numéro d'assuré de l'écran devient le numéro d'assuré du p.
     Le numéro de carte d'assuré de l'écran devient le numéro de carte d'assuré du p.
+    L'assureur complémentaire de l'écran devient l'assureur complémentaire du p.
+    Le numéro d'assuré complémentaire de l'écran devient le numéro d'assuré complémentaire du p.
+    La facturation complémentaire de l'écran devient la facturation complémentaire du p.
 
 Quand on clique sur « Enregistrer » dans l'écran du patient :
     Le p vaut la personne ouverte.
@@ -1217,6 +1286,9 @@ Quand on clique sur « Enregistrer » dans l'écran du patient :
         L'assureur du p devient l'assureur de l'écran.
         Le numéro d'assuré du p devient le numéro d'assuré de l'écran.
         Le numéro de carte d'assuré du p devient le numéro de carte d'assuré de l'écran.
+        L'assureur complémentaire du p devient l'assureur complémentaire de l'écran.
+        Le numéro d'assuré complémentaire du p devient le numéro d'assuré complémentaire de l'écran.
+        La facturation complémentaire du p devient la facturation complémentaire de l'écran.
     Si l'ajout de l'écran est présent :
         Si l'anamnèse du p est présente, l'anamnèse du p devient l'anamnèse du p suivi de " [" suivi d'aujourd'hui suivi de « ] » suivi de " " suivi de l'ajout de l'écran.
         Sinon, l'anamnèse du p devient l'ajout de l'écran.
@@ -1344,6 +1416,8 @@ Quand on clique sur « Enregistrer » dans l'écran de séance :
         Le statut vaut « faite ».
     Si l'offerte de l'écran est vraie, le paiement de la nouvelle devient « offert ».
     Si la facturation du soin de la nouvelle = « assurance », le paiement de la nouvelle devient « assurance ».
+    Si l'ordonnance exigée du soin de la nouvelle est fausse et la facturation complémentaire du patient de la nouvelle est présente :
+        Si la facturation complémentaire du patient de la nouvelle = « tiers garant », le paiement de la nouvelle devient le paiement de l'écran.
     Si l'heure de l'écran est présente, l'heure de la nouvelle devient l'heure de l'écran.
     Si la durée de l'écran est présente, la durée de la nouvelle devient la durée de l'écran.
     Le commentaire dicté de la nouvelle devient le commentaire dicté de l'écran.
@@ -1504,6 +1578,8 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
     Le nouveau paiement vaut le paiement de l'écran.
     Si l'offerte de l'écran est vraie, le nouveau paiement devient « offert ».
     Si la facturation du soin de l'écran = « assurance », le nouveau paiement devient « assurance ».
+    Si l'ordonnance exigée du soin de l'écran est fausse et la facturation complémentaire du patient de l'écran est présente :
+        Si la facturation complémentaire du patient de l'écran = « tiers garant », le nouveau paiement devient le paiement de l'écran.
     Si la facture du s est présente ou la quittance du s est présente :
         Si le patient de l'écran ≠ le patient du s ou le soin de l'écran ≠ le soin du s ou la date de l'écran ≠ la date du s ou le prix de l'écran ≠ le prix du s :
             Si la quittance du s est présente, défaire la quittance du s.
@@ -2015,3 +2091,6 @@ Quand on clique sur « SMS d'essai » dans l'écran des SMS :
 
 Quand on clique sur « Fermer » dans l'écran des SMS :
     Fermer l'écran.
+
+Quand on clique sur « Facturer la complémentaire » dans l'écran du patient :
+    Décompter la complémentaire de la personne ouverte.

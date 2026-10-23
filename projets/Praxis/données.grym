@@ -114,7 +114,14 @@ Un patient, conservé, anciennement « client », a :
     un archivage (date), facultatif,
     un assureur (assureur), facultatif,
     un numéro d'assuré (texte), facultatif,
-    un numéro de carte d'assuré (texte), facultatif.
+    un numéro de carte d'assuré (texte), facultatif,
+    un assureur complémentaire (assureur), facultatif,
+    un numéro d'assuré complémentaire (texte), facultatif,
+    une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative.
+
+Remarque : l'assurance complémentaire (23 octobre 2026) : les soins hors ordonnance « à l'assurance » ; sans assureur ni numéro
+Remarque : complémentaires, ceux de la base servent ; sans mode, le tiers payant, comme la base. En tiers garant, le patient paie
+Remarque : sa facture et la transmet lui-même à sa complémentaire ; en tiers payant, la complémentaire reçoit la facture.
 
 Remarque : une ordonnance médicale (OPAS art. 6, al. 2) : neuf séances au plus, la première dans les huit semaines qui suivent sa
 Remarque : date ; le médecin prescripteur et ses numéros, que la facture tiers payant reprend ; le document scanné.

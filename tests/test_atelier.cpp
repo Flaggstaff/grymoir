@@ -4895,6 +4895,61 @@ int main(int argc, char **argv) {
         if (!t.contains("fin des essais")) printf("TRACE %s\n", t.right(600).toUtf8().constData());
     }
 
+    // Praxis 2 (23 octobre 2026) : la complémentaire ; un soin hors ordonnance « à l'assurance » se facture en tiers payant à
+    // l'assureur complémentaire, ou à celui de la base s'il n'y en a pas ; en tiers garant, refusé : le patient paie
+    {
+        QTemporaryDir d;
+        VERIFIER(copier_praxis_essai(d.path()));
+        QFile f(d.filePath("Praxis.grym"));
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        QString source = QString::fromUtf8(f.readAll());
+        f.close();
+        const QString essai = QString::fromUtf8(
+            "La claire vaut le patient conservé dont le nom = « Claire Monney ».\n"
+            "La kinésio vaut un nouveau soin :\n"
+            "    Le nom vaut « Kinésiologie ».\n"
+            "    Le tarif vaut 120.\n"
+            "    L'ordonnance exigée vaut faux.\n"
+            "    La facturation vaut « assurance ».\n"
+            "Le code tarifaire de la kinésio devient « 1200 ».\n"
+            "Conserver la kinésio.\n"
+            "La séance complémentaire vaut une nouvelle séance :\n"
+            "    Le patient vaut la claire.\n"
+            "    Le soin vaut la kinésio.\n"
+            "    La date vaut aujourd'hui − 3 jours.\n"
+            "    Le prix vaut 120.\n"
+            "    Le statut vaut « faite ».\n"
+            "    Le paiement vaut « assurance ».\n"
+            "Conserver la séance complémentaire.\n"
+            "Décompter la complémentaire de la claire.\n"
+            "Pour chaque décompte conservé :\n"
+            "    Afficher « essai complémentaire » puis le numéro du décompte puis le montant du décompte puis le nom de l'assureur du décompte.\n"
+            "Afficher « essai chiffre » puis le chiffre du tarif de la séance complémentaire.\n"
+            "La facturation complémentaire de la claire devient « tiers garant ».\n"
+            "Essayer :\n"
+            "    Décompter la complémentaire de la claire.\n"
+            "En cas d'échec :\n"
+            "    Afficher « essai garant » puis le motif de l'échec.\n"
+            "Afficher « fin des essais ».\n");
+        const int k = source.indexOf(QString::fromUtf8("Remarque : le mot de passe, l'application l'a déjà demandé"));
+        VERIFIER(k > 0);
+        source.insert(k, essai);
+        VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(source.toUtf8());
+        f.close();
+        Execution e(d.filePath("Praxis.grym"));
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 40000 && !fil().contains("fin des essais")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        const QString t = fil();
+        VERIFIER(t.contains(QString::fromUtf8("essai complémentaire TP-2026-0001 120 Caisse d'essai")));
+        VERIFIER(t.contains(QString::fromUtf8("essai chiffre 1200")));
+        VERIFIER(t.contains(QString::fromUtf8("essai garant Ce patient est en tiers garant")));
+        if (!t.contains("fin des essais") || !t.contains(QString::fromUtf8("essai chiffre"))) printf("TRACE %s\n", t.right(500).toUtf8().constData());
+    }
+
     // Praxis 2 (23 octobre 2026) : une facture tiers payant par année civile ; l'annonce du traitement à l'assureur ; au-delà
     // de 36 séances sur ordonnance, l'accord du médecin conseil
     {
