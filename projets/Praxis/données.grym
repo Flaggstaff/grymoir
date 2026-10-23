@@ -34,9 +34,12 @@ Un cabinet, conservé, a :
     une signature (image), facultative,
     un prénom (texte), facultatif,
     un dossier d'export (texte), facultatif,
+    un choix d'agenda (vrai ou faux), faux au départ,
     un agenda (« Praxis » ou « OneDoc »), « Praxis » au départ,
     une adresse de l'agenda (adresse web), facultative.
 
+Remarque : le choix d'agenda : la tuile « Rendez-vous » de la Configuration, posée par départ.grym à la fondation du cabinet ;
+Remarque : faux chez Nicolas (Calendly), qui ne voit rien de Praxis 2 ; une base d'avant le 22 octobre le reçoit faux.
 Remarque : l'agenda (Praxis 2, 22 octobre 2026) : « Praxis », les séances prévues dans Praxis ; « OneDoc », les rendez-vous
 Remarque : et leurs rappels sur OneDoc, que l'accueil ouvre par l'adresse de l'agenda (OneDoc n'a pas d'API publique : rien ne s'échange).
 Remarque : un exercice : une année où le cabinet a une séance ou un frais, et l'année en cours ; le menu des années

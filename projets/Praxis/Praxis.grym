@@ -518,7 +518,7 @@ L'écran de configuration, « Configuration », montre :
     un bouton « Corbeille », en tuile, avec la description « Rétablir ce qui a été supprimé »,
     un bouton « Sauvegardes », en tuile, avec la description « Copies chiffrées, restauration, mot de passe »,
     un bouton « Archives », en tuile, avec la description « Patients archivés, leurs pièces gardées »,
-    un bouton « Rendez-vous », en tuile, avec la description « L'agenda : Praxis ou OneDoc »,
+    un bouton « Rendez-vous », en tuile, avec la description « L'agenda : Praxis ou OneDoc », visible si le choix d'agenda du cabinet conservé,
     un bouton « Fermer ».
 
 Remarque : le choix de l'agenda ; avec OneDoc, l'accueil a une tuile qui ouvre l'agenda OneDoc dans le navigateur.

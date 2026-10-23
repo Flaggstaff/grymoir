@@ -40,6 +40,7 @@ Pour prévoir une personne et une prestation et une heure et un prix et un statu
 
 Pour remplir les essais :
     Le cabinet d'essai vaut le cabinet conservé.
+    Le choix d'agenda du cabinet d'essai devient vrai.
     La rue du cabinet d'essai devient « Rue de l'Essai ».
     Le numéro de maison du cabinet d'essai devient « 1 ».
     Le numéro postal du cabinet d'essai devient « 1630 ».
