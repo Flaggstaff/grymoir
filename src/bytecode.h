@@ -131,8 +131,9 @@ typedef enum {
                            l'exécution réussie et la remplace à la prochaine ouverture (2.30) */
     I_CHANGER_MDP_BASE, /* dépile le nouveau mot de passe, puis l'ancien : l'enveloppe des clés de la base refaite (2.37) */
     I_ENVOI_DEBUT,      /* ouvre les valeurs d'un envoi : un secret s'y lit (2.42) */
-    I_ENVOI,            /* opérande : nombre de paires × 2 + forme (0 POST, 1 GET) ; dépile les paires (clé, valeur),
-                           puis l'adresse ; valide ce qui précède, envoie, empile la réponse, un texte (2.42) */
+    I_ENVOI,            /* opérande : bit 0 la lecture (GET) ; bits 1-2 le corps (0 aucun, 1 objet, 2 tableau) ; bits 3-8
+                           les paires de l'adresse ; bits 9-15 les éléments du corps ; dépile le corps, les paires, puis
+                           l'adresse ; valide ce qui précède, envoie, empile la réponse, un texte (2.42, 2.43) */
     I_CHAMP_JSON        /* opérande : la constante du chemin ; dépile une réponse, empile le texte du champ, ou absent */
 } CodeInstruction;
 

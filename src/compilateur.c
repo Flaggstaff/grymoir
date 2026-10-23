@@ -340,9 +340,23 @@ static void expression(Compilation *c, const Noeud *n) {
         chercher(c, n);
         return;
     case N_ENVOI: {   /* « l'envoi à … de : » (2.42) : l'adresse, puis chaque clé et sa valeur ; un secret s'y lit */
+        /* l'opérande : la lecture (bit 0), le corps (bits 1-2 : 0 aucun, 1 objet, 2 tableau), les paires de l'adresse
+         * (bits 3-8), les éléments du corps (bits 9-15) (2.43) */
+        const long nq = n->entier;
+        const long nb = n->op == 'o' ? (long)(n->nb_enfants - 1 - 2 * nq) / 2 : n->op == 't' ? (long)(n->nb_enfants - 1 - 2 * nq) : 0;
+        if (nq > 63 || nb > 127) {
+            if (!c->echec) {
+                c->echec = 1;
+                c->diag->message = grym_dupliquer("Un envoi porte au plus 63 valeurs d'adresse et 127 valeurs de corps.");
+                c->diag->ligne = n->ligne;
+                c->diag->colonne = n->colonne;
+                c->diag->fichier = c->fichier ? grym_dupliquer(c->fichier) : NULL;
+            }
+            return;
+        }
         emettre(c, I_ENVOI_DEBUT, 0, n->ligne, n->colonne);
         for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
-        emettre(c, I_ENVOI, (long)((n->nb_enfants - 1) / 2) * 2 + n->forme, n->ligne, n->colonne);
+        emettre(c, I_ENVOI, n->forme | (n->op == 'o' ? 2 : n->op == 't' ? 4 : 0) | nq << 3 | nb << 9, n->ligne, n->colonne);
         return;
     }
     case N_CHAMP_JSON: {   /* « le champ « a.b » de r » (2.42) */

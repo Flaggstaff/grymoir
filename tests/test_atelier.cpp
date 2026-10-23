@@ -4868,6 +4868,9 @@ int main(int argc, char **argv) {
             "Afficher « essai statut » puis le champ « StatusCode » de la r puis le champ « Ref.n » de la r puis le champ « Liste.1 » de la r.\n"
             "La l vaut la lecture de « %1/etat » avec :\n    « ref » : « a b ».\n"
             "Afficher « essai lecture » puis le champ « StatusCode » de la l.\n"
+            "La n vaut l'envoi à « %1/annule » avec :\n    « Userkey » : le nom du c,\n    « Password » : la clé du c,\n"
+            "et du tableau :\n    « 1234 »,\n    « 1235 ».\n"
+            "Afficher « essai annule » puis le champ « StatusCode » de la n.\n"
             "Essayer :\n    La x vaut l'envoi à « %1/refus » de :\n        « a » : 1.\n"
             "En cas d'échec :\n    Afficher « essai refus » puis le motif de l'échec.\n"
             "Afficher « fin des essais ».\n").arg(base).toUtf8());
@@ -4886,6 +4889,9 @@ int main(int argc, char **argv) {
         VERIFIER(recu.contains("\"Password\":\"cle-secrete-17\""));
         VERIFIER(recu.contains("\"Recu\":12.5") && recu.contains("\"Jour\":\"2026-10-01\""));
         VERIFIER(recu.contains("GET /etat?ref=a%20b"));
+        VERIFIER(t.contains(QString::fromUtf8("essai annule 1")));   // 2.43 : l'adresse et un tableau
+        VERIFIER(recu.contains("POST /annule?Userkey=essai&Password=cle-secrete-17"));
+        VERIFIER(recu.contains("[\"1234\",\"1235\"]"));
         if (!t.contains("fin des essais")) printf("TRACE %s\n", t.right(600).toUtf8().constData());
     }
 

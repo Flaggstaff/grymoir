@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.42 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.43 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2202,6 +2202,17 @@ L'état vaut la lecture de « https://webapi.exemple.ch/etat » avec :
 
 - **`l'envoi à « … » de :`** envoie un objet JSON par POST : une paire par ligne, `« clé » : valeur`, alignées, séparées par des virgules, la dernière finie par le point de la phrase. Un texte devient une chaîne, un nombre un nombre (`12.5`), une date une chaîne `AAAA-MM-JJ`, vrai ou faux `true` ou `false`, un absent `null`. Une clé envoyée deux fois : « La clé « a » est déjà envoyée. »
 - **`la lecture de « … » avec :`** lit par GET : les paires s'ajoutent à l'adresse (`?ref=a%20b`), encodées. Sans valeurs, `la lecture de « … »` lit l'adresse telle quelle.
+- **Des valeurs d'adresse dans un envoi** *(2.43)* : `avec :` met ses paires dans l'adresse, encodées, comme pour une lecture ; le corps suit, après une virgule et `et`, à la ligne, au retrait de la phrase. Un service qui demande ses identifiants dans l'adresse et une liste dans le corps (ASPSMS) :
+
+```
+La réponse vaut l'envoi à « https://webapi.aspsms.com/ASPSMSDeactivatePendingSMSWithTransactionReferenceNumber » avec :
+    « Userkey » : l'identifiant SMS du cabinet,
+    « Password » : la clé SMS du cabinet,
+et du tableau :
+    le numéro du rappel.
+```
+
+- **Le corps d'un envoi** : `de :` un objet JSON (des paires), `du tableau :` une liste JSON (une valeur par ligne), ou rien : `l'envoi à « … » avec : …` seul envoie un POST vide. Une lecture n'a que des valeurs d'adresse : « Une lecture n'a que des valeurs d'adresse : pas de « et de : ». » Après `et`, autre chose : « Après « et », « de : » (un objet) ou « du tableau : » (une liste). » Au plus 63 valeurs d'adresse et 127 valeurs de corps.
 - **La réponse est un texte**, le corps renvoyé par le service. **`le champ « a.b » de r`** y lit un champ JSON : les objets par leur clé, les tableaux par leur rang, le premier étant 0 (`« Liste.1 »`). Il rend un texte (un nombre tel qu'écrit, vrai ou faux en mots, un objet en JSON), ou absent si le chemin n'existe pas ou vaut `null`. Une réponse qui n'est pas du JSON : « La réponse n'est pas du JSON : « a » ne s'y lit pas. »
 - **HTTPS obligatoire** : « Un envoi passe par https:// : « http://… » enverrait en clair. » Seule exception, la machine elle-même (`http://127.0.0.1`, `http://localhost`) : un service local, les essais.
 - **Un échec est une erreur rattrapable** (`Essayer`, § 22) : pas de réponse en 15 secondes, un réseau coupé, un certificat refusé, ou un statut HTTP de 400 ou plus (« Le service a répondu 401 : … », suivi du début de la réponse).
@@ -2357,3 +2368,4 @@ L'état vaut la lecture de « https://webapi.exemple.ch/etat » avec :
 | 2.40 | 2026-10-22 | Nouveau § 22.17 : le type `(secret)`, rangé tel quel dans une base chiffrée, illisible sauf pour être envoyé, caché partout ; § 22.6 : les propositions d'une zone `avec recherche` sans égard aux majuscules ni aux accents |
 | 2.41 | 2026-10-22 | § 22.15 : `Ouvrir` une adresse web, dans le navigateur du système (atelier, application fabriquée) |
 | 2.42 | 2026-10-23 | Nouveau § 22.18 : l'envoi à un service web (POST JSON), la lecture (GET), `le champ « a.b » de r` ; un secret se lit dans un envoi ; HTTPS obligatoire, sauf vers la machine elle-même |
+| 2.43 | 2026-10-23 | § 22.18 : `avec :` met des valeurs dans l'adresse d'un envoi ; `et de :` ou `et du tableau :` en donne le corps, un objet ou une liste JSON |

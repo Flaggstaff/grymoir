@@ -4295,6 +4295,15 @@ int main(void) {
          "3.5 20 vrai\nabsents");
     PROG("La r vaut « pas du JSON ».\nAfficher le champ « a » de la r.", "~La réponse n'est pas du JSON");
     PROG("La r vaut l'envoi à « https://exemple.ch » de :\n    « a » : 1,\n    « a » : 2.", "~La clé « a » est déjà envoyée.");
+    /* 2.43 : des valeurs d'adresse, puis un objet ou un tableau ; une lecture n'a pas de corps */
+    PROG("La r vaut l'envoi à « https://exemple.ch » avec :\n    « k » : 1,\net du tableau :\n    « a »,\n    2.",
+         "~Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée.");
+    PROG("La r vaut l'envoi à « https://exemple.ch » avec :\n    « k » : 1,\net de :\n    « a » : 2.",
+         "~Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée.");
+    PROG("La r vaut la lecture de « https://exemple.ch » avec :\n    « k » : 1,\net de :\n    « a » : 2.",
+         "~Une lecture n'a que des valeurs d'adresse");
+    PROG("La r vaut l'envoi à « https://exemple.ch » avec :\n    « k » : 1,\net puis :\n    « a » : 2.",
+         "~Après « et », « de : » (un objet) ou « du tableau : » (une liste).");
     /* une adresse web (2.41) : refusée en console, qui n'a pas de navigateur ; un texte qui n'en est pas une, refusé */
     PROG("Un cabinet, conservé, a :\n    un site (adresse web).\nLe c vaut un nouveau cabinet :\n    Le site vaut « https://onedoc.ch ».\n"
          "Ouvrir le site du c.", "~Une adresse web s'ouvre depuis l'atelier ou une application fabriquée.");

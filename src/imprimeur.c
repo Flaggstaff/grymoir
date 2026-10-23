@@ -532,21 +532,44 @@ static void expression(Impression *im, const Noeud *n) {
         if (strcmp(n->texte, "\n") == 0) { aj(im, im->compact ? "_saut_de_ligne" : "un saut de ligne"); return; }   /* 2.27 */
         ecrire_texte(im, n->texte);
         return;
-    case N_ENVOI: {   /* « l'envoi à « … » de : » ou « la lecture de « … » avec : », puis une paire par ligne (2.42) */
+    case N_ENVOI: {   /* « l'envoi à « … » avec : … et de : / du tableau : », « la lecture de « … » avec : » (2.42, 2.43) */
         aj(im, n->forme ? "la lecture de " : "l'envoi à ");
         expression(im, n->enfants[0]);
-        if (n->nb_enfants < 2) return;
-        aj(im, n->forme ? " avec :" : " de :");
-        size_t debut = im->c.n;   /* le retrait de la ligne en cours, plus un cran */
+        size_t debut = im->c.n;   /* le retrait de la ligne en cours */
         while (debut > 0 && im->c.d[debut - 1] != '\n') debut--;
         size_t r = 0;
         while (debut + r < im->c.n && im->c.d[debut + r] == ' ') r++;
-        for (size_t k = 1; k + 1 < n->nb_enfants; k += 2) {
-            aj(im, k > 1 ? ",\n" : "\n");
-            for (size_t e = 0; e < r + 4; e++) aj(im, " ");
-            ecrire_texte(im, n->enfants[k]->texte);
-            aj(im, " : ");
-            expression(im, n->enfants[k + 1]);
+        const size_t nq = (size_t)n->entier;
+        size_t k = 1;
+        if (nq) {
+            aj(im, " avec :");
+            for (size_t q = 0; q < nq; q++, k += 2) {
+                aj(im, q ? ",\n" : "\n");
+                for (size_t e = 0; e < r + 4; e++) aj(im, " ");
+                ecrire_texte(im, n->enfants[k]->texte);
+                aj(im, " : ");
+                expression(im, n->enfants[k + 1]);
+            }
+        }
+        if (n->op == 'o' || n->op == 't') {
+            if (nq) {
+                aj(im, ",\n");
+                for (size_t e = 0; e < r; e++) aj(im, " ");
+                aj(im, n->op == 'o' ? "et de :" : "et du tableau :");
+            } else aj(im, n->op == 'o' ? " de :" : " du tableau :");
+            for (int premier = 1; k < n->nb_enfants; premier = 0) {
+                aj(im, premier ? "\n" : ",\n");
+                for (size_t e = 0; e < r + 4; e++) aj(im, " ");
+                if (n->op == 'o') {
+                    ecrire_texte(im, n->enfants[k]->texte);
+                    aj(im, " : ");
+                    expression(im, n->enfants[k + 1]);
+                    k += 2;
+                } else {
+                    expression(im, n->enfants[k]);
+                    k++;
+                }
+            }
         }
         return;
     }

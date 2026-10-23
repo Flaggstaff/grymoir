@@ -2019,51 +2019,57 @@ static EcranConnu *document_nomme(Analyse *a, size_t d, size_t *f, char **nom);
 
 static int premier_de_ligne(const Analyse *a, size_t k);
 
-/* Les paires d'un envoi (2.42), une par ligne, alignées : « « clé » : valeur, » ; la dernière laisse son point à la phrase. */
-static int paires_envoi(Analyse *a, Noeud *n, const Jeton *tdeb) {
+/* Un bloc d'un envoi (2.42, 2.43), une ligne par élément, alignées, séparées par des virgules : des paires « « clé » :
+ * valeur » (paires 1), ou des valeurs seules (un tableau, paires 0). Rend 0 sur une erreur, 1 au bout du bloc (le point
+ * reste à la phrase), 2 si une virgule annonce « et de : » ou « et du tableau : » à la ligne suivante. */
+static int bloc_envoi(Analyse *a, Noeud *n, const Jeton *tdeb, int paires) {
     Jeton *dp = cour(a);
     if (dp->type != J_DEUX_POINTS) {
-        erreur(a, dp, grym_dupliquer(n->forme ? "« la lecture de « https://… » » attend « avec : », puis ses valeurs, une par ligne."
-                                              : "« l'envoi à « https://… » » attend « de : », puis ses valeurs, une par ligne."));
+        erreur(a, dp, grym_dupliquer("« : » attendu, puis les valeurs, une par ligne."));
         return 0;
     }
     avancer(a);
     Jeton *premier = cour(a);
     if (premier->type == J_FIN || premier->ligne == dp->ligne || premier->retrait <= tdeb->retrait) {
-        erreur(a, premier->type == J_FIN || premier->ligne == dp->ligne ? dp : premier, grym_dupliquer(
-            "Après « : », les valeurs envoyées, une par ligne, indentées : « « clé » : valeur, »."));
+        erreur(a, premier->type == J_FIN || premier->ligne == dp->ligne ? dp : premier, grym_dupliquer(paires
+            ? "Après « : », les valeurs envoyées, une par ligne, indentées : « « clé » : valeur, »."
+            : "Après « du tableau : », les valeurs, une par ligne, indentées."));
         return 0;
     }
     const int col = premier->retrait;
+    const size_t avant = n->nb_enfants;
     for (;;) {
         Jeton *k = cour(a);
-        if (!premier_de_ligne(a, a->i) || k->retrait != col || k->type != J_TEXTE) {
-            erreur(a, k, grym_dupliquer("Une valeur envoyée s'écrit « « clé » : valeur », une par ligne, alignées."));
+        if (!premier_de_ligne(a, a->i) || k->retrait != col || (paires && k->type != J_TEXTE)) {
+            erreur(a, k, grym_dupliquer(paires ? "Une valeur envoyée s'écrit « « clé » : valeur », une par ligne, alignées."
+                                               : "Une valeur du tableau par ligne, alignées."));
             return 0;
         }
-        for (size_t r = 1; r < n->nb_enfants; r += 2)
-            if (strcmp(n->enfants[r]->texte, k->valeur) == 0) {
-                erreur(a, k, grym_formater("La clé « %s » est déjà envoyée.", k->valeur));
+        if (paires) {
+            for (size_t r = avant; r < n->nb_enfants; r += 2)
+                if (strcmp(n->enfants[r]->texte, k->valeur) == 0) {
+                    erreur(a, k, grym_formater("La clé « %s » est déjà envoyée.", k->valeur));
+                    return 0;
+                }
+            Noeud *cle_n = noeud_creer(N_TEXTE, k->ligne, k->colonne, k->debut);
+            cle_n->texte = grym_dupliquer(k->valeur);
+            avancer(a);
+            if (cour(a)->type != J_DEUX_POINTS) {
+                noeud_liberer(cle_n);
+                erreur(a, cour(a), grym_formater("« : » attendu après la clé « %s ».", k->valeur));
                 return 0;
             }
-        Noeud *cle_n = noeud_creer(N_TEXTE, k->ligne, k->colonne, k->debut);
-        cle_n->texte = grym_dupliquer(k->valeur);
-        avancer(a);
-        if (cour(a)->type != J_DEUX_POINTS) {
-            noeud_liberer(cle_n);
-            erreur(a, cour(a), grym_formater("« : » attendu après la clé « %s ».", k->valeur));
-            return 0;
+            avancer(a);
+            noeud_ajouter(n, cle_n);
         }
-        avancer(a);
         Noeud *v = expression(a);
-        if (!v) { noeud_liberer(cle_n); return 0; }
-        noeud_ajouter(n, cle_n);
+        if (!v) return 0;
         noeud_ajouter(n, v);
         n->fin = v->fin;
-        if (cour(a)->type != J_VIRGULE) break;
+        if (cour(a)->type != J_VIRGULE) return 1;
         avancer(a);
+        if (premier_de_ligne(a, a->i) && est_mot(cour(a), "et")) return 2;
     }
-    return 1;
 }
 
 static Noeud *base(Analyse *a) {
@@ -2084,18 +2090,37 @@ static Noeud *base(Analyse *a) {
             if (!url) { noeud_liberer(n); return NULL; }
             noeud_ajouter(n, url);
             n->fin = url->fin;
-            if (envoi) {
-                if (!de_ou_d(cour(a))) {
-                    noeud_liberer(n);
-                    return erreur(a, cour(a), grym_dupliquer("« l'envoi à « https://… » » attend « de : », puis ses valeurs."));
-                }
+            /* « avec : » : des valeurs dans l'adresse (2.42, 2.43) */
+            int suite = 0;
+            if (est_mot(cour(a), "avec")) {
                 avancer(a);
-            } else if (est_mot(cour(a), "avec")) {
-                avancer(a);
-            } else {
-                return n;   /* « la lecture de « https://… » » : sans valeurs, l'adresse telle quelle */
+                suite = bloc_envoi(a, n, tligne, 1);
+                if (!suite) { noeud_liberer(n); return NULL; }
             }
-            if (!paires_envoi(a, n, tligne)) { noeud_liberer(n); return NULL; }
+            n->entier = (long)(n->nb_enfants - 1) / 2;   /* les paires de l'adresse */
+            if (suite == 2) {
+                if (lecture) {
+                    noeud_liberer(n);
+                    return erreur(a, cour(a), grym_dupliquer("Une lecture n'a que des valeurs d'adresse : pas de « et de : »."));
+                }
+                avancer(a);   /* « et » */
+            }
+            /* le corps d'un envoi : « de : » un objet, « du tableau : » une liste (2.43) */
+            if (envoi && (suite == 2 || suite == 0)) {
+                if (de_ou_d(cour(a)) && voir(a, 1)->type == J_DEUX_POINTS) {
+                    avancer(a);
+                    n->op = 'o';
+                    if (!bloc_envoi(a, n, tligne, 1)) { noeud_liberer(n); return NULL; }
+                } else if (est_mot(cour(a), "du") && est_mot(voir(a, 1), "tableau")) {
+                    avancer(a);
+                    avancer(a);
+                    n->op = 't';
+                    if (!bloc_envoi(a, n, tligne, 0)) { noeud_liberer(n); return NULL; }
+                } else if (suite == 2) {
+                    noeud_liberer(n);
+                    return erreur(a, cour(a), grym_dupliquer("Après « et », « de : » (un objet) ou « du tableau : » (une liste)."));
+                }
+            }
             return n;
         }
         /* « le champ « a.b » de r » (2.42) : un champ de la réponse JSON d'un envoi, en texte, ou absent */

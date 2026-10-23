@@ -5209,11 +5209,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_ENVOI_DEBUT:
             m->envoi_ouvert++;
             break;
-        case I_ENVOI: {   /* « l'envoi à … de : », « la lecture de … avec : » (2.42) */
-            const size_t np = op / 2;
-            const int lecture = (int)(op % 2);
-            Valeur *vals = grym_allouer((2 * np ? 2 * np : 1) * sizeof *vals);
-            for (size_t q = 2 * np; q-- > 0;) vals[q] = depiler(&pile);
+        case I_ENVOI: {   /* « l'envoi à … avec : … et de : / du tableau : », « la lecture de … avec : » (2.42, 2.43) */
+            const int lecture = (int)(op & 1), corps_t = (int)((op >> 1) & 3);
+            const size_t nq = (op >> 3) & 63, nb = op >> 9;
+            const size_t nc = corps_t == 1 ? 2 * nb : corps_t == 2 ? nb : 0;
+            Valeur *qv = grym_allouer((2 * nq ? 2 * nq : 1) * sizeof *qv);
+            Valeur *cv = grym_allouer((nc ? nc : 1) * sizeof *cv);
+            for (size_t q = nc; q-- > 0;) cv[q] = depiler(&pile);
+            for (size_t q = 2 * nq; q-- > 0;) qv[q] = depiler(&pile);
             Valeur u = depiler(&pile);
             if (m->envoi_ouvert > 0) m->envoi_ouvert--;
             char *probleme = NULL;
@@ -5223,38 +5226,51 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 probleme = grym_formater("Un envoi passe par https:// : « %s » enverrait en clair.", u.texte);
             if (!probleme) {
                 chaine_ajouter(&adresse, u.texte);
-                if (!lecture) chaine_ajouter(&corps, "{");
-                for (size_t q = 0; q < np && !probleme; q++) {
-                    const Valeur *cle = &vals[2 * q], *v = &vals[2 * q + 1];
-                    if (lecture) {
-                        chaine_ajouter(&adresse, q == 0 && !strchr(u.texte, '?') ? "?" : "&");
-                        pourcent_encoder(&adresse, cle->texte);
-                        chaine_ajouter(&adresse, "=");
-                        if (v->type == V_ABSENT) continue;
-                        if (v->type != V_TEXTE && v->type != V_NOMBRE && v->type != V_BOOLEEN && v->type != V_DATE) {
-                            probleme = grym_dupliquer("Une lecture porte des textes, des nombres, des dates, vrai ou faux.");
-                            break;
-                        }
-                        char *t = v->type == V_BOOLEEN ? grym_dupliquer(v->vrai ? "true" : "false") : texte_valeur(m, v);
-                        if (v->type == V_DATE) {
-                            int an, mo, jo;
-                            date_civile(v->jours, &an, &mo, &jo);
-                            free(t);
-                            t = grym_formater("%04d-%02d-%02d", an, mo, jo);
-                        } else if (v->type == V_NOMBRE) { free(t); t = dec_canonique(&v->nombre); }
-                        pourcent_encoder(&adresse, t);
-                        free(t);
-                    } else {
-                        if (q) chaine_ajouter(&corps, ",");
-                        json_ecrire_texte(&corps, cle->texte);
-                        chaine_ajouter(&corps, ":");
-                        probleme = valeur_en_json(m, v, &corps);
+                int premiere = !strchr(u.texte, '?');
+                for (size_t q = 0; q < nq && !probleme; q++) {   /* les valeurs de l'adresse, encodées */
+                    const Valeur *cle = &qv[2 * q], *v = &qv[2 * q + 1];
+                    if (v->type == V_ABSENT) continue;
+                    if (v->type != V_TEXTE && v->type != V_NOMBRE && v->type != V_BOOLEEN && v->type != V_DATE) {
+                        probleme = grym_dupliquer("Une adresse porte des textes, des nombres, des dates, vrai ou faux.");
+                        break;
                     }
+                    chaine_ajouter(&adresse, premiere ? "?" : "&");
+                    premiere = 0;
+                    pourcent_encoder(&adresse, cle->texte);
+                    chaine_ajouter(&adresse, "=");
+                    char *t;
+                    if (v->type == V_BOOLEEN) t = grym_dupliquer(v->vrai ? "true" : "false");
+                    else if (v->type == V_NOMBRE) t = dec_canonique(&v->nombre);
+                    else if (v->type == V_DATE) {
+                        int an, mo, jo;
+                        date_civile(v->jours, &an, &mo, &jo);
+                        t = grym_formater("%04d-%02d-%02d", an, mo, jo);
+                    } else t = grym_dupliquer(v->texte);
+                    pourcent_encoder(&adresse, t);
+                    free(t);
                 }
-                if (!lecture) chaine_ajouter(&corps, "}");
+                if (corps_t == 1) {   /* un objet JSON */
+                    chaine_ajouter(&corps, "{");
+                    for (size_t q = 0; q < nb && !probleme; q++) {
+                        if (q) chaine_ajouter(&corps, ",");
+                        json_ecrire_texte(&corps, cv[2 * q].texte);
+                        chaine_ajouter(&corps, ":");
+                        probleme = valeur_en_json(m, &cv[2 * q + 1], &corps);
+                    }
+                    chaine_ajouter(&corps, "}");
+                } else if (corps_t == 2) {   /* une liste JSON */
+                    chaine_ajouter(&corps, "[");
+                    for (size_t q = 0; q < nb && !probleme; q++) {
+                        if (q) chaine_ajouter(&corps, ",");
+                        probleme = valeur_en_json(m, &cv[q], &corps);
+                    }
+                    chaine_ajouter(&corps, "]");
+                }
             }
-            for (size_t q = 0; q < 2 * np; q++) valeur_liberer(&vals[q]);
-            free(vals);
+            for (size_t q = 0; q < 2 * nq; q++) valeur_liberer(&qv[q]);
+            for (size_t q = 0; q < nc; q++) valeur_liberer(&cv[q]);
+            free(qv);
+            free(cv);
             valeur_liberer(&u);
             char *url = chaine_rendre(&adresse), *json = chaine_rendre(&corps);
             if (!probleme && !m->iface.envoyer)
@@ -5262,8 +5278,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (!probleme) probleme = valider_jusqu_ici(m, sortie);   /* l'envoi valide ce qui précède, comme « Ouvrir » */
             long statut = 0;
             char *reponse = NULL;
-            if (!probleme && !m->iface.envoyer(m->iface.contexte, lecture, url, lecture ? NULL : json, &statut, &reponse, &probleme)
-                && !probleme)
+            if (!probleme && !m->iface.envoyer(m->iface.contexte, lecture, url, lecture ? NULL : (json ? json : ""), &statut,
+                                               &reponse, &probleme) && !probleme)
                 probleme = grym_dupliquer("Le service n'a pas répondu.");
             if (!probleme && statut >= 400)
                 probleme = grym_formater("Le service a répondu %ld : %.200s", statut, reponse ? reponse : "");

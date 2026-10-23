@@ -425,7 +425,12 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_DOCUMENT: besoin = op == 2 ? 1 : 0; effet = op == 2 ? -1 : op ? 0 : 1; break;
             case I_CODE_QR: besoin = 1; effet = 0; break;
             case I_ENVOI_DEBUT: besoin = 0; effet = 0; break;
-            case I_ENVOI: besoin = 1 + 2 * (int)(op / 2); effet = -2 * (int)(op / 2); break;
+            case I_ENVOI: {   /* 2.43 : l'adresse, ses paires, puis le corps */
+                const int nq = (int)((op >> 3) & 63), nb = (int)(op >> 9), corps = (int)((op >> 1) & 3);
+                besoin = 1 + 2 * nq + (corps == 1 ? 2 * nb : corps == 2 ? nb : 0);
+                effet = 1 - besoin;
+                break;
+            }
             case I_CHAMP_JSON: besoin = 1; effet = 0; break;
             case I_SAUVEGARDER: besoin = 1; effet = -1; break;
             case I_SAUVEGARDER_COFFRE: besoin = 2; effet = -2; break;
