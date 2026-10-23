@@ -11,6 +11,7 @@ Pour fonder le cabinet :
         Le pays vaut « Suisse ».
         La facturation des absences vaut faux.
         Le choix d'agenda vaut faux.
+        La facturation aux assurances vaut faux.
         L'agenda vaut « Praxis ».
     Le logo du c devient le fichier « images/coeur-encre.png ».
     La signature du c devient le fichier « images/signature.png ».

@@ -1531,9 +1531,9 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
 #define CAB_ZONES "z2=Nicolas+Seydoux&z3=Rue+X&z4=1&z5=&z6=1700&z7=Fribourg&z8=Suisse&z11=&z12=&z13=Z123456&z15=&z16="
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=7"), get("/"), evenement("q=3&clic=0"), get("/"),
-                 evenement("q=4&" CAB_ZONES "&z14=760100000000&clic=26"), get("/"),
-                 evenement("q=5&" CAB_ZONES "&z14=7601000000000&clic=26"), get("/"),
-                 evenement("q=6&clic=0"), get("/"), evenement("q=7&clic=27"), evenement("q=8&clic=1"), get("/"));
+                 evenement("q=4&" CAB_ZONES "&z14=760100000000&clic=27"), get("/"),
+                 evenement("q=5&" CAB_ZONES "&z14=7601000000000&clic=27"), get("/"),
+                 evenement("q=6&clic=0"), get("/"), evenement("q=7&clic=28"), evenement("q=8&clic=1"), get("/"));
 #undef CAB_ZONES
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet3.grymd", &sc);
         CONTIENT(sc.reponses[2], "<h1>Configuration</h1>");   /* le cabinet, les soins, les rubriques */
@@ -1657,6 +1657,35 @@ int main(void) {
         remove("_essai_cabinet12.grymd");
     }
 
+    {   /* Praxis 2, chantier A (23 octobre 2026) : un soin sur ordonnance se facture à l'assurance ; sans ordonnance qui la
+           couvre, sa séance est refusée ; l'ordonnance saisie dans la page du patient, la séance s'y rattache, payée
+           « assurance », et l'ordonnance en compte une sur neuf */
+        memset(&sc, 0, sizeof sc);
+        const char *seance = "z2=Anne+Rochat&z4=EPI&z5=05.10.2026&z6=&z7=&z9=%C3%A0+payer&z12=130&clic=19";
+        char q11[200], q18[200];
+        snprintf(q11, sizeof q11, "q=11&%s", seance);
+        snprintf(q18, sizeof q18, "q=18&%s", seance);
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Configuration"), evenement("q=3&clic=1"),
+                 evenement("q=4&choix=0.0"), evenement("q=5&z0=EPI&z1=130&z2=70&z3=60&z4=1003&z5=oui&z5p=1&z6=patient&clic=8"),
+                 evenement("q=6&clic=Fermer"), evenement("q=7&clic=Fermer"), evenement("q=8&clic=Patients"),
+                 evenement("q=9&z0=Anne+Rochat&clic=-1"), evenement("q=10&clic=Nouvelle+s%C3%A9ance"),
+                 evenement(q11), get("/"),
+                 evenement("q=12&clic=Fermer"), evenement("q=13&clic=Ordonnances"), evenement("q=14&clic=Nouvelle+ordonnance"),
+                 evenement("q=15&z0=01.10.2026&z1=Dre+Morel&z2=&z3=&z4=9&z5=maladie&z7=&clic=Enregistrer"), get("/"),
+                 evenement("q=16&clic=Fermer"), evenement("q=17&clic=Nouvelle+s%C3%A9ance"), evenement(q18), get("/"),
+                 evenement("q=19&clic=Ordonnances"), evenement("q=20&choix=1.0"), get("/"));
+        servir_projet("_essai_praxis/Praxis.grym", "_essai_ordonnance.grymd", &sc);
+        CONTIENT(sc.reponses[11], "Pas d&#39;ordonnance valable pour Anne Rochat à cette date");
+        CONTIENT(sc.reponses[16], ">Dre Morel</td>");
+        CONTIENT(sc.reponses[20], "<h1>Patient</h1>");
+        CONTIENT(sc.reponses[20], ">assurance</");
+        NE_CONTIENT_PAS(sc.reponses[20], "class=\"erreur\"");
+        CONTIENT(sc.reponses[23], "Séances : 1 sur 9.");
+        liberer(&sc);
+        remove("_essai_ordonnance.grymd");
+        remove("_essai_ordonnance.grymd.clés");
+    }
+
     {   /* Le cabinet de Lorianne (outils/cabinet lorianne, 22 octobre 2026) : sa copie se fonde à son nom, à Bulle, avec
            l'agenda OneDoc et le choix d'agenda allumé ; aucun soin d'avance ; la fiche du cabinet a l'interrupteur */
         memset(&sc, 0, sizeof sc);
@@ -1743,10 +1772,10 @@ int main(void) {
     {   /* Cabinet : l'IBAN des QR-factures, avec ou sans espaces ; vingt et un caractères (2.27) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=7"), evenement("q=3&clic=0"), get("/"),
-                 evenement("q=4&z17=CH52+0483+5012&clic=26"), get("/"),
-                 evenement("q=5&z17=CH44+3199+9123+0008+8901+2&clic=26"), get("/"),
-                 evenement("q=6&z17=CH53+0483+5012+3456+7100+0&clic=26"), get("/"),
-                 evenement("q=7&z17=CH52+0483+5012+3456+7100+0&clic=26"), get("/"));
+                 evenement("q=4&z17=CH52+0483+5012&clic=27"), get("/"),
+                 evenement("q=5&z17=CH44+3199+9123+0008+8901+2&clic=27"), get("/"),
+                 evenement("q=6&z17=CH53+0483+5012+3456+7100+0&clic=27"), get("/"),
+                 evenement("q=7&z17=CH52+0483+5012+3456+7100+0&clic=27"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet13.grymd", &sc);
         CONTIENT(sc.reponses[3], "value=\"CH52 0483 5012 3456 7100 0\"");   /* celui des données d'essai */
         CONTIENT(sc.reponses[5], "Un IBAN suisse compte 21 caractères : CH, puis 19 chiffres et lettres.");
@@ -2018,7 +2047,7 @@ int main(void) {
         remove("_essai_cabinet5.grymd");
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=7"), evenement("q=3&clic=1"), evenement("q=4&choix=0.0"), get("/"),
-                 evenement("q=5&z0=EPI&z1=130&z2=70&z3=60&z4=1003&clic=6"), get("/"));
+                 evenement("q=5&z0=EPI&z1=130&z2=70&z3=60&z4=1003&z6=patient&clic=8"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet6.grymd", &sc);
         CONTIENT(sc.reponses[4], "<h1>Soin</h1>");
         CONTIENT(sc.reponses[6], "<td>1003</td>");   /* le code tarifaire, dans la liste des soins */

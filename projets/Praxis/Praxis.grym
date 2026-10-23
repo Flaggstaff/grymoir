@@ -19,6 +19,10 @@ La personne proposée vaut absent.
 
 Remarque : la séance et le soin dont la page est ouverte.
 La séance ouverte vaut absent.
+L'assureur ouvert vaut absent.
+L'ordonnance ouverte vaut absent.
+Remarque : où en est l'ordonnance ouverte, calculé avant d'ouvrir son écran (un calcul appelé depuis l'écran le dérangeait).
+L'usage ouvert vaut « ».
 
 Remarque : ce qui est cherché dans les listes des patients et des factures ; vide, tout.
 La recherche des patients vaut « ».
@@ -103,7 +107,7 @@ Pour chaque séance conservée dont le dernier rappel est présent :
     Le dernier rappel de la séance devient absent.
 
 Remarque : les séances payées d'avant le 20 octobre 2026 n'ont pas de date d'encaissement : elles prennent celle de la séance, une fois.
-Pour chaque séance conservée dont l'encaissement est absent et le paiement ≠ « à payer » et le paiement ≠ « offert » :
+Pour chaque séance conservée dont l'encaissement est absent et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance » :
     L'encaissement de la séance devient la date de la séance.
 
 Remarque : l'accueil de la maquette : l'action du jour, puis le cabinet en quatre tuiles ; le cœur sur les patients.
@@ -166,7 +170,12 @@ L'écran du patient, « Patient », montre :
         un bouton « Fermer »,
         un bouton « Notes »,
         un bouton « Supprimer »,
-        un bouton « Archiver ».
+        un bouton « Archiver »,
+    côte à côte :
+        un assureur (assureur), facultatif, avec recherche, visible si la facturation aux assurances du cabinet conservé,
+        un numéro d'assuré (texte), facultatif, visible si la facturation aux assurances du cabinet conservé,
+        un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré », visible si la facturation aux assurances du cabinet conservé,
+        un bouton « Ordonnances », visible si la facturation aux assurances du cabinet conservé.
 
 Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
 L'écran de la séance, « Séance », montre :
@@ -197,6 +206,8 @@ L'écran du soin, « Soin », montre :
     un tarif de suivi (nombre), facultatif, avec l'unité « CHF »,
     une durée (nombre entier), facultative, avec l'unité « min »,
     un code tarifaire (texte), facultatif,
+    une ordonnance exigée (vrai ou faux), en interrupteur, avec l'indication « L'ergothérapie : sur ordonnance, toujours facturée à l'assurance de base », visible si la facturation aux assurances du cabinet conservé,
+    une facturation (« patient » ou « assurance »), avec l'indication « Sans ordonnance : au patient (QR-facture, quittance) ou à son assurance », visible si la facturation aux assurances du cabinet conservé,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
@@ -206,9 +217,9 @@ Remarque : la comptabilité en recettes-dépenses d'une année, celle du jour au
 Remarque : ce qui est dépensé, ce qui reste ; une autre année se choisit en haut, pour la déclaration d'impôts de l'année passée.
 L'écran de comptabilité, « Comptabilité », montre :
     une année (exercice), avec l'indication « L'année des comptes, du journal, de l'export et des listes »,
-    le texte "Recettes encaissées : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » à 0,01,
+    le texte "Recettes encaissées : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance » à 0,01,
     le texte "Frais : CHF " suivi de l'arrondi de la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice à 0,01,
-    le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01,
+    le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01,
     le texte « Le cabinet », en petites capitales,
     un bouton « À encaisser », en tuile, avec la description « Les séances à payer »,
     un bouton « Quittances », en tuile, avec la description « Remettre et retrouver »,
@@ -290,19 +301,19 @@ Le document de journal, « Journal des recettes et des frais », montre :
     l'image de la signature du cabinet conservé, large de 220,
     le texte "Année " suivi de l'année des comptes suivi de ", état au " suivi d'aujourd'hui,
     le texte « Recettes », en petites capitales,
-    la liste des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement,
-    le texte "Total des recettes : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » à 0,01,
+    la liste des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement,
+    le texte "Total des recettes : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance » à 0,01,
     le texte « Frais », en petites capitales,
     la liste des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date, avec la date, le libellé, le nom de la rubrique, le montant et le moyen,
     le texte "Total des frais : CHF " suivi de l'arrondi de la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice à 0,01,
-    le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01.
+    le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01.
 
 Remarque : les séances payées attendent leur quittance ; les quittances remises se retrouvent dessous.
 L'écran des quittances, (le titre des quittances de l'année des comptes et de la recherche des quittances), montre :
     une année (exercice), avec l'indication « Une autre année ; un nom, lui, les cherche dans toutes »,
     une recherche (texte), facultative, avec l'indication « Un nom de patient, ou une partie : Rochat, Anne »,
     le texte « Payées, sans quittance », en petites capitales,
-    la liste des séances conservées dont la quittance est absente et le paiement ≠ « à payer » et le paiement ≠ « offert » et l'encaissement ≥ le début des quittances et l'encaissement < la fin des quittances et le nom du patient contient la recherche des quittances, par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
+    la liste des séances conservées dont la quittance est absente et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance » et l'encaissement ≥ le début des quittances et l'encaissement < la fin des quittances et le nom du patient contient la recherche des quittances, par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
     côte à côte :
         un bouton « Quittance », principal,
         un bouton « Fermer »,
@@ -424,6 +435,7 @@ L'écran du cabinet, « Le cabinet », montre :
             un IBAN (texte), facultatif, avec l'indication « Le compte des QR-factures, un IBAN (pas un QR-IBAN) : CH52 0483 5012 3456 7100 0 »,
             une facturation des absences (vrai ou faux), en interrupteur, avec l'indication « Seulement si les patients en sont avertis, par écrit »,
             un choix d'agenda (vrai ou faux), en interrupteur, avec l'indication « Allumé : la Configuration propose Rendez-vous, l'agenda Praxis ou OneDoc »,
+            une facturation aux assurances (vrai ou faux), en interrupteur, avec l'indication « Allumé : les assureurs, l'assurance des patients, leurs ordonnances »,
             un logo (image), facultatif, avec l'indication « Le logo du cabinet »,
             une signature (image), facultative, avec l'indication « Le nom du cabinet dessiné, en tête des écrans et des pièces »,
             un prénom (texte), facultatif, avec l'indication « Pour l'accueil : Bonjour Nicolas »,
@@ -520,6 +532,7 @@ L'écran de configuration, « Configuration », montre :
     un bouton « Sauvegardes », en tuile, avec la description « Copies chiffrées, restauration, mot de passe »,
     un bouton « Archives », en tuile, avec la description « Patients archivés, leurs pièces gardées »,
     un bouton « Rendez-vous », en tuile, avec la description « L'agenda : Praxis ou OneDoc », visible si le choix d'agenda du cabinet conservé,
+    un bouton « Assureurs », en tuile, avec la description « Caisses-maladie et leur GLN », visible si la facturation aux assurances du cabinet conservé,
     un bouton « Fermer ».
 
 Remarque : le choix de l'agenda ; avec OneDoc, l'accueil a une tuile qui ouvre l'agenda OneDoc dans le navigateur.
@@ -630,6 +643,7 @@ Pour facturer une prestation :
 Remarque : une séance prévue se facture une fois faite ; une absence, seulement si le cabinet facture les absences.
 Pour attester une séance :
     Si le paiement de la séance = « offert », refuser « Une séance offerte n'a ni facture ni quittance. ».
+    Si le paiement de la séance = « assurance », refuser « Cette séance se facture à l'assurance : sa facture tiers payant viendra avec la prochaine version de Praxis. ».
     Si le statut de la séance = « annulée », refuser « Une séance annulée n'a ni facture ni quittance. ».
     Si le paiement de la séance = « à payer » :
         Si le statut de la séance = « prévue », refuser « Une séance prévue se facture une fois faite : change d'abord son statut. ».
@@ -739,7 +753,7 @@ Quand on clique sur « Exporter en CSV » dans l'écran de comptabilité :
     La marque vaut " " suivi de l'année des comptes suivi de ", exporté le " suivi d'aujourd'hui en format technique suivi de " à " suivi de l'horodatage de maintenant suivi de « .csv ».
     Le dossier vaut la destination des exports du cabinet conservé.
     Essayer :
-        Exporter les séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement, dans (le dossier suivi de « /Recettes » suivi de la marque).
+        Exporter les séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance », par encaissement, avec l'encaissement, la date, le nom du patient, le nom du soin, le prix et le paiement, dans (le dossier suivi de « /Recettes » suivi de la marque).
         Exporter les frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date, avec la date, le libellé, le nom de la rubrique, le montant et le moyen, dans (le dossier suivi de « /Frais » suivi de la marque).
         L'avis des comptes devient "Exporté dans " suivi du dossier suivi de " : Recettes" suivi de la marque suivi de " et Frais" suivi de la marque.
     En cas d'échec :
@@ -1067,6 +1081,9 @@ Quand on ouvre l'écran du patient :
     La localité de l'écran devient la localité du p.
     Le pays de l'écran devient le pays du p.
     L'anamnèse de l'écran devient l'anamnèse du p.
+    L'assureur de l'écran devient l'assureur du p.
+    Le numéro d'assuré de l'écran devient le numéro d'assuré du p.
+    Le numéro de carte d'assuré de l'écran devient le numéro de carte d'assuré du p.
 
 Quand on clique sur « Enregistrer » dans l'écran du patient :
     Le p vaut la personne ouverte.
@@ -1081,6 +1098,10 @@ Quand on clique sur « Enregistrer » dans l'écran du patient :
     La localité du p devient la localité de l'écran.
     Le pays du p devient le pays de l'écran.
     L'anamnèse du p devient l'anamnèse de l'écran.
+    Si la facturation aux assurances du cabinet conservé :
+        L'assureur du p devient l'assureur de l'écran.
+        Le numéro d'assuré du p devient le numéro d'assuré de l'écran.
+        Le numéro de carte d'assuré du p devient le numéro de carte d'assuré de l'écran.
     Si l'ajout de l'écran est présent :
         Si l'anamnèse du p est présente, l'anamnèse du p devient l'anamnèse du p suivi de " [" suivi d'aujourd'hui suivi de « ] » suivi de " " suivi de l'ajout de l'écran.
         Sinon, l'anamnèse du p devient l'ajout de l'écran.
@@ -1207,6 +1228,7 @@ Quand on clique sur « Enregistrer » dans l'écran de séance :
         Le paiement vaut le paiement de l'écran.
         Le statut vaut « faite ».
     Si l'offerte de l'écran est vraie, le paiement de la nouvelle devient « offert ».
+    Si la facturation du soin de la nouvelle = « assurance », le paiement de la nouvelle devient « assurance ».
     Si l'heure de l'écran est présente, l'heure de la nouvelle devient l'heure de l'écran.
     Si la durée de l'écran est présente, la durée de la nouvelle devient la durée de l'écran.
     Le commentaire dicté de la nouvelle devient le commentaire dicté de l'écran.
@@ -1215,7 +1237,8 @@ Quand on clique sur « Enregistrer » dans l'écran de séance :
     Si la date de la nouvelle = aujourd'hui et l'heure de l'écran est présente :
         Si l'heure de l'écran > maintenant, le statut de la nouvelle devient « prévue ».
     Si l'archivage du patient de la nouvelle est présent, l'archivage du patient de la nouvelle devient absent.
-    Si le paiement de la nouvelle ≠ « à payer » et le paiement de la nouvelle ≠ « offert » :
+    Si l'ordonnance exigée du soin de la nouvelle est vraie, rattacher la nouvelle.
+    Si le paiement de la nouvelle ≠ « à payer » et le paiement de la nouvelle ≠ « offert » et le paiement de la nouvelle ≠ « assurance » :
         Si la date de la nouvelle ≤ aujourd'hui, l'encaissement de la nouvelle devient la date de la nouvelle.
         Sinon, l'encaissement de la nouvelle devient aujourd'hui.
     Conserver la nouvelle.
@@ -1316,6 +1339,8 @@ Quand on ouvre l'écran du soin :
     Le tarif de suivi de l'écran devient le tarif de suivi du s.
     La durée de l'écran devient la durée du s.
     Le code tarifaire de l'écran devient le code tarifaire du s.
+    L'ordonnance exigée de l'écran devient l'ordonnance exigée du s.
+    La facturation de l'écran devient la facturation du s.
 
 Quand on clique sur « Enregistrer » dans l'écran du soin :
     Le s vaut le soin ouvert.
@@ -1324,6 +1349,10 @@ Quand on clique sur « Enregistrer » dans l'écran du soin :
     Le tarif de suivi du s devient le tarif de suivi de l'écran.
     La durée du s devient la durée de l'écran.
     Le code tarifaire du s devient le code tarifaire de l'écran.
+    Si la facturation aux assurances du cabinet conservé :
+        L'ordonnance exigée du s devient l'ordonnance exigée de l'écran.
+        La facturation du s devient la facturation de l'écran.
+        Si l'ordonnance exigée du s est vraie, la facturation du s devient « assurance ».
     Fermer l'écran.
 
 Quand on clique sur « Fermer » dans l'écran du soin :
@@ -1347,6 +1376,7 @@ Quand on ouvre l'écran de la séance :
     Si le paiement du s = « offert » :
         L'offerte de l'écran devient vrai.
         Le paiement de l'écran devient « à payer ».
+    Sinon si le paiement du s = « assurance », le paiement de l'écran devient « à payer ».
     Sinon, le paiement de l'écran devient le paiement du s.
     Le commentaire dicté de l'écran devient le commentaire dicté du s.
     Le commentaire de l'écran devient le commentaire du s.
@@ -1356,6 +1386,7 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
     Le s vaut la séance ouverte.
     Le nouveau paiement vaut le paiement de l'écran.
     Si l'offerte de l'écran est vraie, le nouveau paiement devient « offert ».
+    Si la facturation du soin de l'écran = « assurance », le nouveau paiement devient « assurance ».
     Si la facture du s est présente ou la quittance du s est présente :
         Si le patient de l'écran ≠ le patient du s ou le soin de l'écran ≠ le soin du s ou la date de l'écran ≠ la date du s ou le prix de l'écran ≠ le prix du s :
             Si la quittance du s est présente, défaire la quittance du s.
@@ -1370,7 +1401,8 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
     Le prix du s devient le prix de l'écran.
     Le statut du s devient le statut de l'écran.
     Le paiement du s devient le nouveau paiement.
-    Si le nouveau paiement = « à payer » ou le nouveau paiement = « offert » :
+    Si l'ordonnance exigée du soin du s est vraie et l'ordonnance du s est absente, rattacher le s.
+    Si le nouveau paiement = « à payer » ou le nouveau paiement = « offert » ou le nouveau paiement = « assurance » :
         L'encaissement du s devient absent.
     Sinon :
         Si l'encaissement de l'écran est présent, l'encaissement du s devient l'encaissement de l'écran.
@@ -1428,6 +1460,7 @@ Quand on ouvre l'écran du cabinet :
     L'IBAN de l'écran devient l'IBAN du c.
     La facturation des absences de l'écran devient la facturation des absences du c.
     Le choix d'agenda de l'écran devient le choix d'agenda du c.
+    La facturation aux assurances de l'écran devient la facturation aux assurances du c.
     Le logo de l'écran devient le logo du c.
     La signature de l'écran devient la signature du c.
     Le prénom de l'écran devient le prénom du c.
@@ -1450,6 +1483,7 @@ Quand on clique sur « Enregistrer » dans l'écran du cabinet :
     L'IBAN du c devient l'IBAN de l'écran.
     La facturation des absences du c devient la facturation des absences de l'écran.
     Le choix d'agenda du c devient le choix d'agenda de l'écran.
+    La facturation aux assurances du c devient la facturation aux assurances de l'écran.
     Si le choix d'agenda du c est faux, l'agenda du c devient « Praxis ».
     Si le logo de l'écran est présent, le logo du c devient le logo de l'écran.
     Si la signature de l'écran est présente, la signature du c devient la signature de l'écran.
@@ -1477,3 +1511,176 @@ Remarque : le mot de passe, l'application l'a déjà demandé ; au premier lance
 Si le premier lancement, ouvrir l'écran de bienvenue.
 Archiver les données.
 Ouvrir l'écran d'accueil.
+
+Remarque : les assureurs (Praxis 2, 23 octobre 2026) : la liste, un nouvel assureur par le formulaire, un assureur choisi s'ouvre.
+L'écran des assureurs, « Assureurs », montre :
+    la liste des assureurs conservés, par nom, avec le nom, le numéro GLN et la localité,
+    côte à côte :
+        un bouton « Nouvel assureur »,
+        un bouton « Fermer ».
+
+L'écran de l'assureur, « Assureur », montre :
+    un nom (texte),
+    un numéro GLN (texte), facultatif, avec l'indication « 13 chiffres, le destinataire des factures électroniques »,
+    une rue (texte), facultative,
+    un numéro de maison (texte), facultatif,
+    une case postale (texte), facultative,
+    un numéro postal (texte), facultatif,
+    une localité (texte), facultative,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Fermer »,
+        un bouton « Supprimer ».
+
+Remarque : les ordonnances d'un patient (l'écran des prescriptions : « des ordonnances » se confondrait avec l'écran de l'ordonnance),
+Remarque : la plus récente en tête ; une nouvelle s'ouvre vide, une choisie s'ouvre remplie.
+L'écran des prescriptions, « Ordonnances », montre :
+    le texte "Ordonnances de " suivi du nom de la personne ouverte, en petites capitales,
+    la liste des ordonnances conservées dont le patient = la personne ouverte, par date décroissant, avec la date, le médecin, le maximum de séances et le cas,
+    côte à côte :
+        un bouton « Nouvelle ordonnance », principal,
+        un bouton « Fermer ».
+
+L'écran de l'ordonnance, « Ordonnance », montre :
+    une date (date), avec l'indication « Le jour de la prescription »,
+    un médecin (texte), avec l'indication « Le médecin prescripteur »,
+    un numéro RCC du médecin (texte), facultatif,
+    un numéro GLN du médecin (texte), facultatif, avec l'indication « 13 chiffres »,
+    un maximum de séances (nombre entier), avec l'indication « Neuf au plus par ordonnance (OPAS art. 6, al. 2) »,
+    un cas (« maladie », « accident » ou « invalidité »),
+    un scan (fichier), facultatif, avec l'indication « L'ordonnance scannée »,
+    une remarque (texte), facultative, sur plusieurs lignes,
+    le texte l'usage ouvert,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Voir le scan »,
+        un bouton « Fermer »,
+        un bouton « Supprimer ».
+
+Quand on clique sur « Assureurs » dans l'écran de configuration :
+    Ouvrir l'écran des assureurs.
+
+Quand on clique sur « Nouvel assureur » dans l'écran des assureurs :
+    L'assureur ouvert devient absent.
+    Ouvrir l'écran de l'assureur.
+
+Quand on choisit un assureur dans l'écran des assureurs :
+    L'assureur ouvert devient l'assureur choisi de l'écran.
+    Ouvrir l'écran de l'assureur.
+
+Quand on clique sur « Fermer » dans l'écran des assureurs :
+    Fermer l'écran.
+
+Quand on ouvre l'écran de l'assureur :
+    Si l'assureur ouvert est présent :
+        Le a vaut l'assureur ouvert.
+        Le nom de l'écran devient le nom du a.
+        Le numéro GLN de l'écran devient le numéro GLN du a.
+        La rue de l'écran devient la rue du a.
+        Le numéro de maison de l'écran devient le numéro de maison du a.
+        La case postale de l'écran devient la case postale du a.
+        Le numéro postal de l'écran devient le numéro postal du a.
+        La localité de l'écran devient la localité du a.
+
+Quand on clique sur « Enregistrer » dans l'écran de l'assureur :
+    Si le numéro GLN de l'écran est présent :
+        Si la longueur du numéro GLN de l'écran ≠ 13, refuser « Un GLN a treize chiffres. ».
+    Si l'assureur ouvert est absent :
+        Le nouveau vaut un nouvel assureur :
+            Le nom vaut le nom de l'écran.
+        Conserver le nouveau.
+        L'assureur ouvert devient le nouveau.
+    Le a vaut l'assureur ouvert.
+    Le nom du a devient le nom de l'écran.
+    Le numéro GLN du a devient le numéro GLN de l'écran.
+    La rue du a devient la rue de l'écran.
+    Le numéro de maison du a devient le numéro de maison de l'écran.
+    La case postale du a devient la case postale de l'écran.
+    Le numéro postal du a devient le numéro postal de l'écran.
+    La localité du a devient la localité de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran de l'assureur :
+    Fermer l'écran.
+
+Remarque : un assureur qu'un patient désigne encore ne se supprime pas : on change d'abord l'assurance du patient.
+Quand on clique sur « Supprimer » dans l'écran de l'assureur :
+    Si l'assureur ouvert est absent, fermer l'écran.
+    Sinon :
+        Le a vaut l'assureur ouvert.
+        Si le nombre de patients conservés dont l'assureur = le a > 0, refuser « Des patients ont encore cet assureur : change d'abord leur assurance. ».
+        Supprimer le a.
+        Fermer l'écran.
+
+Quand on clique sur « Ordonnances » dans l'écran du patient :
+    Ouvrir l'écran des prescriptions.
+
+Quand on clique sur « Nouvelle ordonnance » dans l'écran des prescriptions :
+    L'ordonnance ouverte devient absent.
+    L'usage ouvert devient « Une nouvelle ordonnance : ses séances se comptent dès la première. ».
+    Ouvrir l'écran de l'ordonnance.
+
+Quand on choisit une ordonnance dans l'écran des prescriptions :
+    L'ordonnance ouverte devient l'ordonnance choisie de l'écran.
+    L'usage ouvert devient l'usage de l'ordonnance ouverte.
+    Ouvrir l'écran de l'ordonnance.
+
+Quand on clique sur « Fermer » dans l'écran des prescriptions :
+    Fermer l'écran.
+
+Quand on ouvre l'écran de l'ordonnance :
+    Si l'ordonnance ouverte est présente :
+        Le o vaut l'ordonnance ouverte.
+        La date de l'écran devient la date du o.
+        Le médecin de l'écran devient le médecin du o.
+        Le numéro RCC du médecin de l'écran devient le numéro RCC du médecin du o.
+        Le numéro GLN du médecin de l'écran devient le numéro GLN du médecin du o.
+        Le maximum de séances de l'écran devient le maximum de séances du o.
+        Le cas de l'écran devient le cas du o.
+        Le scan de l'écran devient le scan du o.
+        La remarque de l'écran devient la remarque du o.
+    Sinon :
+        La date de l'écran devient aujourd'hui.
+        Le maximum de séances de l'écran devient 9.
+        Le cas de l'écran devient « maladie ».
+
+Quand on clique sur « Enregistrer » dans l'écran de l'ordonnance :
+    Si le maximum de séances de l'écran < 1 ou le maximum de séances de l'écran > 9, refuser « Une ordonnance couvre de une à neuf séances (OPAS art. 6, al. 2). ».
+    Si le numéro GLN du médecin de l'écran est présent :
+        Si la longueur du numéro GLN du médecin de l'écran ≠ 13, refuser « Un GLN a treize chiffres. ».
+    Si l'ordonnance ouverte est absente :
+        La nouvelle vaut une nouvelle ordonnance :
+            Le patient vaut la personne ouverte.
+            La date vaut la date de l'écran.
+            Le médecin vaut le médecin de l'écran.
+            Le maximum de séances vaut le maximum de séances de l'écran.
+            Le cas vaut le cas de l'écran.
+        Conserver la nouvelle.
+        L'ordonnance ouverte devient la nouvelle.
+    Le o vaut l'ordonnance ouverte.
+    La date du o devient la date de l'écran.
+    Le médecin du o devient le médecin de l'écran.
+    Le numéro RCC du médecin du o devient le numéro RCC du médecin de l'écran.
+    Le numéro GLN du médecin du o devient le numéro GLN du médecin de l'écran.
+    Le maximum de séances du o devient le maximum de séances de l'écran.
+    Le cas du o devient le cas de l'écran.
+    Si le scan de l'écran est présent, le scan du o devient le scan de l'écran.
+    La remarque du o devient la remarque de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Voir le scan » dans l'écran de l'ordonnance :
+    Si l'ordonnance ouverte est absente, refuser « Enregistre d'abord l'ordonnance. ».
+    Si le scan de l'ordonnance ouverte est absent, refuser « Pas de scan pour cette ordonnance. ».
+    Ouvrir le scan de l'ordonnance ouverte.
+
+Quand on clique sur « Fermer » dans l'écran de l'ordonnance :
+    Fermer l'écran.
+
+Remarque : une ordonnance qui couvre déjà des séances ne se supprime pas : la facture tiers payant la cite.
+Quand on clique sur « Supprimer » dans l'écran de l'ordonnance :
+    Si l'ordonnance ouverte est absente, fermer l'écran.
+    Sinon :
+        Le o vaut l'ordonnance ouverte.
+        Si le nombre de séances conservées dont l'ordonnance = le o > 0, refuser « Des séances relèvent de cette ordonnance : elle reste. ».
+        Supprimer le o.
+        Fermer l'écran.

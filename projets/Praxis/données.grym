@@ -36,11 +36,14 @@ Un cabinet, conservé, a :
     un dossier d'export (texte), facultatif,
     un choix d'agenda (vrai ou faux), faux au départ,
     un agenda (« Praxis » ou « OneDoc »), « Praxis » au départ,
-    une adresse de l'agenda (adresse web), facultative.
+    une adresse de l'agenda (adresse web), facultative,
+    une facturation aux assurances (vrai ou faux), faux au départ.
 
 Remarque : le choix d'agenda : la tuile « Rendez-vous » de la Configuration ; un interrupteur de la fiche du cabinet, posé par
 Remarque : départ.grym à la fondation ; faux chez Nicolas (Calendly) et pour une base d'avant le 22 octobre. L'éteindre remet
 Remarque : l'agenda à « Praxis » : la tuile « Agenda OneDoc » de l'accueil disparaît avec lui.
+Remarque : la facturation aux assurances (Praxis 2, 23 octobre 2026) : un interrupteur de la fiche du cabinet ; allumé, Praxis montre
+Remarque : les assureurs, l'assurance du patient, ses ordonnances, et la facturation de chaque soin ; éteint (Nicolas), rien de tout cela.
 Remarque : l'agenda (Praxis 2, 22 octobre 2026) : « Praxis », les séances prévues dans Praxis ; « OneDoc », les rendez-vous
 Remarque : et leurs rappels sur OneDoc, que l'accueil ouvre par l'adresse de l'agenda (OneDoc n'a pas d'API publique : rien ne s'échange).
 Remarque : un exercice : une année où le cabinet a une séance ou un frais, et l'année en cours ; le menu des années
@@ -56,7 +59,23 @@ Un soin, conservé, a :
     un tarif (nombre),
     un tarif de suivi (nombre), facultatif,
     une durée (nombre entier), facultative,
-    un code tarifaire (texte), facultatif.
+    un code tarifaire (texte), facultatif,
+    une ordonnance exigée (vrai ou faux), faux au départ,
+    une facturation (« patient » ou « assurance »), « patient » au départ.
+
+Remarque : un soin sur ordonnance (l'ergothérapie, OPAS art. 6) se facture toujours à l'assurance de base, en tiers payant ; un autre
+Remarque : soin se facture au patient (QR-facture, quittance) ou à son assurance, au choix du cabinet. La facture à l'assurance est le
+Remarque : chantier B : d'ici là, une séance « à l'assurance » n'entre ni dans les factures ni dans les quittances du patient.
+
+Remarque : les assureurs du cabinet : leur nom, leur GLN (le destinataire d'une facture électronique), leur adresse postale.
+Un assureur, conservé, a :
+    un nom (texte), unique,
+    un numéro GLN (texte), facultatif,
+    une rue (texte), facultative,
+    un numéro de maison (texte), facultatif,
+    une case postale (texte), facultative,
+    un numéro postal (texte), facultatif,
+    une localité (texte), facultative.
 
 Remarque : le nom est la clé : « Anne Rochat » ; deux homonymes se distinguent par une initiale ou une ville.
 Remarque : l'adresse postale en champs séparés, comme la QR-facture l'exige depuis le 21 novembre 2025 (adresse structurée) :
@@ -75,7 +94,23 @@ Un patient, conservé, anciennement « client », a :
     une date de naissance (date), facultative,
     une anamnèse (texte), facultative, anciennement « remarque »,
     une dernière dictée (son), facultative,
-    un archivage (date), facultatif.
+    un archivage (date), facultatif,
+    un assureur (assureur), facultatif,
+    un numéro d'assuré (texte), facultatif,
+    un numéro de carte d'assuré (texte), facultatif.
+
+Remarque : une ordonnance médicale (OPAS art. 6, al. 2) : neuf séances au plus, la première dans les huit semaines qui suivent sa
+Remarque : date ; le médecin prescripteur et ses numéros, que la facture tiers payant reprend ; le document scanné.
+Une ordonnance, conservée, a :
+    un patient (patient), et disparaît avec lui,
+    une date (date),
+    un médecin (texte),
+    un numéro RCC du médecin (texte), facultatif,
+    un numéro GLN du médecin (texte), facultatif,
+    un maximum de séances (nombre entier), 9 au départ,
+    un cas (« maladie », « accident » ou « invalidité »), « maladie » au départ,
+    un scan (fichier), facultatif,
+    une remarque (texte), facultative.
 
 Remarque : l'archivage : le jour où le patient a été archivé ; absent, il est actif. Un patient qui a des factures ou des quittances
 Remarque : ne se supprime pas (pièces gardées dix ans, CO 958f) : il s'archive, et quitte la liste des patients.
@@ -123,13 +158,14 @@ Une séance, conservée, a :
     une durée (nombre entier), facultative,
     un prix (nombre),
     un statut (« prévue » en bleu, « faite » en vert, « annulée » en gris ou « absence » en rouge),
-    un paiement (« à payer » en orange, « espèces » en vert, « Twint » en vert, « virement » en vert ou « offert » en gris),
+    un paiement (« à payer » en orange, « espèces » en vert, « Twint » en vert, « virement » en vert, « offert » en gris ou « assurance » en bleu),
     un commentaire dicté (son), facultatif,
     un commentaire (texte), facultatif,
     une quittance (quittance), facultative,
     une facture (facture), facultative,
     un dernier rappel (date), facultatif,
-    un encaissement (date), facultatif.
+    un encaissement (date), facultatif,
+    une ordonnance (ordonnance), facultative.
 
 Remarque : les rubriques des frais (loyer, matériel…) : Nicolas les nomme, les renomme et en ajoute dans la configuration.
 Une rubrique, conservée, a :

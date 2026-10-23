@@ -5,6 +5,8 @@ Pour proposer un nom et un tarif :
     Le s vaut un nouveau soin :
         Le nom vaut nom.
         Le tarif vaut tarif.
+        L'ordonnance exigée vaut faux.
+        La facturation vaut « patient ».
     Conserver le s.
 
 Remarque : un soin dont la séance de suivi coûte moins que la première.
@@ -13,6 +15,8 @@ Pour proposer en deux prix un nom et un premier prix et un prix de suivi :
         Le nom vaut nom.
         Le tarif vaut premier prix.
         Le tarif de suivi vaut prix de suivi.
+        L'ordonnance exigée vaut faux.
+        La facturation vaut « patient ».
     Conserver le s.
 
 Pour clore une séance et un statut :
@@ -261,3 +265,30 @@ Remarque : où vont les CSV : le dossier choisi dans la Comptabilité, sinon « 
 La destination des exports d'un cabinet :
     Si le dossier d'export du cabinet est absent, rendre « Exports ».
     Rendre le dossier d'export du cabinet.
+
+Remarque : une séance d'un soin sur ordonnance prend la plus ancienne ordonnance de son patient qui la couvre : datée au plus tard
+Remarque : le jour de la séance, avec encore une place (neuf séances au plus, ni annulées ni absences), et commencée dans les huit
+Remarque : semaines qui suivent sa date (OPAS art. 6, al. 2) ; sans ordonnance qui la couvre, la séance est refusée.
+Pour rattacher une séance :
+    Le choix vaut absent.
+    Le p vaut le patient de la séance.
+    Le jour vaut la date de la séance.
+    Pour chaque ordonnance conservée dont le patient = le p et la date ≤ le jour :
+        Le o vaut l'ordonnance.
+        Le compte vaut le nombre de séances conservées dont l'ordonnance = le o et le statut ≠ « annulée » et le statut ≠ « absence ».
+        Le valable vaut le compte < le maximum de séances du o.
+        Si le compte = 0 et le jour > la date du o + 56 jours, le valable devient faux.
+        Si le valable et le choix est absent, le choix devient le o.
+        Si le valable et le choix est présent :
+            Si la date du o < la date du choix, le choix devient le o.
+    Si le choix est absent, refuser "Pas d'ordonnance valable pour " suivi du nom du patient de la séance suivi de " à cette date : neuf séances au plus par ordonnance, la première dans les huit semaines. Ajoute l'ordonnance depuis sa page, bouton Ordonnances.".
+    L'ordonnance de la séance devient le choix.
+
+Remarque : où en est une ordonnance : ses séances comptées (ni annulées ni absences) sur son maximum, et la limite de sa première
+Remarque : séance, huit semaines après sa date (OPAS art. 6, al. 2).
+L'usage d'une ordonnance :
+    Le o vaut l'ordonnance.
+    Le compte vaut le nombre de séances conservées dont l'ordonnance = le o et le statut ≠ « annulée » et le statut ≠ « absence ».
+    Si le compte = 0, rendre "Aucune séance encore ; la première au plus tard le " suivi de (la date du o + 56 jours) suivi de « . ».
+    Si le compte ≥ le maximum de séances du o, rendre "Les " suivi du compte suivi de " séances sont faites : une nouvelle ordonnance est nécessaire.".
+    Rendre "Séances : " suivi du compte suivi de " sur " suivi du maximum de séances du o suivi de « . ».
