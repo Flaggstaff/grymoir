@@ -156,8 +156,10 @@ static QString dessin(const QString &ligne, bool compacte = false) {
 // données d'essai (tests/praxis/essais.grym) sont branchées avant l'accueil, comme dans test_serveur.c.
 static bool copier_praxis_essai(const QString &vers) {
     const QString source = QString(GRYM_SOURCE) + "/projets/Praxis";
+    // ni la base du projet, ni ses clés (« Praxis.grymd.clés ») : celles d'un développeur qui a lancé Praxis feraient
+    // échouer l'essai sur « Mot de passe faux » (23 octobre 2026)
     for (const QString &n : QDir(source).entryList(QDir::Files))
-        if (!n.endsWith(".grymd") && !n.endsWith(".grymb")) QFile::copy(source + "/" + n, vers + "/" + n);
+        if (!n.contains(".grymd") && !n.endsWith(".grymb")) QFile::copy(source + "/" + n, vers + "/" + n);
     for (const QString &sous : {QString("images"), QString("polices")}) {
         QDir().mkpath(vers + "/" + sous);
         for (const QString &n : QDir(source + "/" + sous).entryList(QDir::Files))

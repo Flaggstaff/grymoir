@@ -367,7 +367,7 @@ static void copier_dossier(const char *de, const char *vers) {
     while ((e = readdir(d))) {
         if (e->d_name[0] == '.') continue;
         const size_t l = strlen(e->d_name);
-        if (l > 6 && (!strcmp(e->d_name + l - 6, ".grymd") || !strcmp(e->d_name + l - 6, ".grymb"))) continue;
+        if (strstr(e->d_name, ".grymd") || (l > 6 && !strcmp(e->d_name + l - 6, ".grymb"))) continue;   /* ni base ni clés */
         char a[1024], b[1024];
         snprintf(a, sizeof a, "%s/%s", de, e->d_name);
         snprintf(b, sizeof b, "%s/%s", vers, e->d_name);
