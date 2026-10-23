@@ -1531,9 +1531,9 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
 #define CAB_ZONES "z2=Nicolas+Seydoux&z3=Rue+X&z4=1&z5=&z6=1700&z7=Fribourg&z8=Suisse&z11=&z12=&z13=Z123456&z15=&z16="
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=7"), get("/"), evenement("q=3&clic=0"), get("/"),
-                 evenement("q=4&" CAB_ZONES "&z14=760100000000&clic=25"), get("/"),
-                 evenement("q=5&" CAB_ZONES "&z14=7601000000000&clic=25"), get("/"),
-                 evenement("q=6&clic=0"), get("/"), evenement("q=7&clic=26"), evenement("q=8&clic=1"), get("/"));
+                 evenement("q=4&" CAB_ZONES "&z14=760100000000&clic=26"), get("/"),
+                 evenement("q=5&" CAB_ZONES "&z14=7601000000000&clic=26"), get("/"),
+                 evenement("q=6&clic=0"), get("/"), evenement("q=7&clic=27"), evenement("q=8&clic=1"), get("/"));
 #undef CAB_ZONES
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet3.grymd", &sc);
         CONTIENT(sc.reponses[2], "<h1>Configuration</h1>");   /* le cabinet, les soins, les rubriques */
@@ -1657,6 +1657,29 @@ int main(void) {
         remove("_essai_cabinet12.grymd");
     }
 
+    {   /* Le cabinet de Lorianne (outils/cabinet lorianne, 22 octobre 2026) : sa copie se fonde à son nom, à Bulle, avec
+           l'agenda OneDoc et le choix d'agenda allumé ; aucun soin d'avance ; la fiche du cabinet a l'interrupteur */
+        memset(&sc, 0, sizeof sc);
+        total++;
+        if (system("sh outils/cabinet lorianne --effacer > /dev/null") != 0) {
+            echecs++;
+            printf("ÉCHEC (ligne %d) : outils/cabinet lorianne\n", __LINE__);
+        }
+        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=Configuration"), get("/"),
+                 evenement("q=3&clic=Le+cabinet"), get("/"), evenement("q=4&clic=Fermer"), evenement("q=5&clic=Soins"), get("/"));
+        servir_projet("_cabinets/lorianne/Praxis.grym", "_essai_lorianne.grymd", &sc);
+        CONTIENT(sc.reponses[1], "Bonjour Lorianne");
+        CONTIENT(sc.reponses[1], ">Agenda OneDoc<");
+        CONTIENT(sc.reponses[3], ">Rendez-vous<");
+        CONTIENT(sc.reponses[5], "value=\"Grand-Rue\"");
+        CONTIENT(sc.reponses[5], "value=\"Lorianne Clément\"");
+        CONTIENT(sc.reponses[5], "> Choix d&#39;agenda</label>");
+        NE_CONTIENT_PAS(sc.reponses[8], ">EPI</button>");
+        liberer(&sc);
+        remove("_essai_lorianne.grymd");
+        remove("_essai_lorianne.grymd.clés");
+    }
+
     {   /* Praxis 2 : l'agenda, Praxis ou OneDoc, choisi dans la Configuration (« Rendez-vous ») ; OneDoc sans adresse est
            refusé ; avec, l'accueil montre la tuile « Agenda OneDoc », qui ouvre l'adresse dans le navigateur du système,
            ce que le navigateur de grym ne sait pas faire (22 octobre 2026) */
@@ -1720,10 +1743,10 @@ int main(void) {
     {   /* Cabinet : l'IBAN des QR-factures, avec ou sans espaces ; vingt et un caractères (2.27) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=7"), evenement("q=3&clic=0"), get("/"),
-                 evenement("q=4&z17=CH52+0483+5012&clic=25"), get("/"),
-                 evenement("q=5&z17=CH44+3199+9123+0008+8901+2&clic=25"), get("/"),
-                 evenement("q=6&z17=CH53+0483+5012+3456+7100+0&clic=25"), get("/"),
-                 evenement("q=7&z17=CH52+0483+5012+3456+7100+0&clic=25"), get("/"));
+                 evenement("q=4&z17=CH52+0483+5012&clic=26"), get("/"),
+                 evenement("q=5&z17=CH44+3199+9123+0008+8901+2&clic=26"), get("/"),
+                 evenement("q=6&z17=CH53+0483+5012+3456+7100+0&clic=26"), get("/"),
+                 evenement("q=7&z17=CH52+0483+5012+3456+7100+0&clic=26"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet13.grymd", &sc);
         CONTIENT(sc.reponses[3], "value=\"CH52 0483 5012 3456 7100 0\"");   /* celui des données d'essai */
         CONTIENT(sc.reponses[5], "Un IBAN suisse compte 21 caractères : CH, puis 19 chiffres et lettres.");

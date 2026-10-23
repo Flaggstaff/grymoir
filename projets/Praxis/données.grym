@@ -38,8 +38,9 @@ Un cabinet, conservé, a :
     un agenda (« Praxis » ou « OneDoc »), « Praxis » au départ,
     une adresse de l'agenda (adresse web), facultative.
 
-Remarque : le choix d'agenda : la tuile « Rendez-vous » de la Configuration, posée par départ.grym à la fondation du cabinet ;
-Remarque : faux chez Nicolas (Calendly), qui ne voit rien de Praxis 2 ; une base d'avant le 22 octobre le reçoit faux.
+Remarque : le choix d'agenda : la tuile « Rendez-vous » de la Configuration ; un interrupteur de la fiche du cabinet, posé par
+Remarque : départ.grym à la fondation ; faux chez Nicolas (Calendly) et pour une base d'avant le 22 octobre. L'éteindre remet
+Remarque : l'agenda à « Praxis » : la tuile « Agenda OneDoc » de l'accueil disparaît avec lui.
 Remarque : l'agenda (Praxis 2, 22 octobre 2026) : « Praxis », les séances prévues dans Praxis ; « OneDoc », les rendez-vous
 Remarque : et leurs rappels sur OneDoc, que l'accueil ouvre par l'adresse de l'agenda (OneDoc n'a pas d'API publique : rien ne s'échange).
 Remarque : un exercice : une année où le cabinet a une séance ou un frais, et l'année en cours ; le menu des années

@@ -423,6 +423,7 @@ L'écran du cabinet, « Le cabinet », montre :
             un numéro ASCA (texte), facultatif,
             un IBAN (texte), facultatif, avec l'indication « Le compte des QR-factures, un IBAN (pas un QR-IBAN) : CH52 0483 5012 3456 7100 0 »,
             une facturation des absences (vrai ou faux), en interrupteur, avec l'indication « Seulement si les patients en sont avertis, par écrit »,
+            un choix d'agenda (vrai ou faux), en interrupteur, avec l'indication « Allumé : la Configuration propose Rendez-vous, l'agenda Praxis ou OneDoc »,
             un logo (image), facultatif, avec l'indication « Le logo du cabinet »,
             une signature (image), facultative, avec l'indication « Le nom du cabinet dessiné, en tête des écrans et des pièces »,
             un prénom (texte), facultatif, avec l'indication « Pour l'accueil : Bonjour Nicolas »,
@@ -1426,6 +1427,7 @@ Quand on ouvre l'écran du cabinet :
     Le numéro ASCA de l'écran devient le numéro ASCA du c.
     L'IBAN de l'écran devient l'IBAN du c.
     La facturation des absences de l'écran devient la facturation des absences du c.
+    Le choix d'agenda de l'écran devient le choix d'agenda du c.
     Le logo de l'écran devient le logo du c.
     La signature de l'écran devient la signature du c.
     Le prénom de l'écran devient le prénom du c.
@@ -1447,6 +1449,8 @@ Quand on clique sur « Enregistrer » dans l'écran du cabinet :
     Le numéro ASCA du c devient le numéro ASCA de l'écran.
     L'IBAN du c devient l'IBAN de l'écran.
     La facturation des absences du c devient la facturation des absences de l'écran.
+    Le choix d'agenda du c devient le choix d'agenda de l'écran.
+    Si le choix d'agenda du c est faux, l'agenda du c devient « Praxis ».
     Si le logo de l'écran est présent, le logo du c devient le logo de l'écran.
     Si la signature de l'écran est présente, la signature du c devient la signature de l'écran.
     Le prénom du c devient le prénom de l'écran.

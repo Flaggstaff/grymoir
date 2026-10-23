@@ -1,0 +1,27 @@
+Remarque : Praxis : ce qui est propre au cabinet de Lorianne Clément (La Clé en Soi, Bulle), et seulement cela ; outils/cabinet
+Remarque : le pose sur une copie de projets/Praxis, avec ses images, sa police et la phrase « Les écrans ont … » (apparence.grym).
+Remarque : l'adresse et le téléphone viennent de la maquette de son site (22 octobre 2026) ; le reste se complète dans sa fiche.
+Utiliser « actions ».
+
+Remarque : l'agenda : Lorianne garde OneDoc ; l'adresse de son agenda se donne dans la Configuration, « Rendez-vous ».
+Pour fonder le cabinet :
+    Le c vaut un nouveau cabinet :
+        Le nom vaut « Lorianne Clément ».
+        Le pays vaut « Suisse ».
+        La facturation des absences vaut faux.
+        Le choix d'agenda vaut vrai.
+        L'agenda vaut « OneDoc ».
+    La rue du c devient « Grand-Rue ».
+    Le numéro de maison du c devient « 35 ».
+    Le numéro postal du c devient « 1630 ».
+    La localité du c devient « Bulle ».
+    Le téléphone du c devient « 079 350 23 09 ».
+    Le logo du c devient le fichier « images/papillon.png ».
+    La signature du c devient le fichier « images/la-cle-en-soi.png ».
+    Le prénom du c devient « Lorianne ».
+    Conserver le c.
+
+Remarque : ses soins : kinésiologie et ergothérapie, 60 minutes chacune ; ses tarifs ne sont pas encore connus (« CHF ... » sur
+Remarque : la maquette) : aucun soin n'est posé d'avance, Lorianne les crée dans l'écran des soins avec leurs vrais prix.
+Pour poser les soins de départ :
+    Remarque : rien d'avance.
