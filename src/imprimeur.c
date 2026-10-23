@@ -622,7 +622,8 @@ static void expression(Impression *im, const Noeud *n) {
         }
         return;
     }
-    case N_XML:   /* « le XML de facture » (2.46) */
+    case N_XML:   /* « le XML de facture » (2.46) ; « _xml facture » */
+        if (im->compact) { aj(im, "_xml "); ecrire_nom(im, n->texte + 7, 0); return; }
         aj(im, "le XML de ");
         ecrire_nom(im, n->texte + 7, 0);
         return;
@@ -1404,6 +1405,14 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     retrait(im, niveau);
     switch (n->type) {
     case P_XML:   /* un élément d'un XML déclaré (2.46) ; la virgule du dernier devient un point (P_ACTION 'X') */
+        if (c) {   /* « _attribut « n » v », « _contenu v », « _élément « n » [v | _enfants … _fin] » */
+            aj(im, n->op == 'a' ? "_attribut " : n->op == 'c' ? "_contenu " : "_élément ");
+            if (n->op != 'c') { ecrire_texte(im, n->texte); if (n->nb_enfants) aj(im, " "); }
+            if (n->op == 'b') { aj(im, "_enfants\n"); bloc(im, n->enfants[0], niveau + 1); fin_compacte(im, niveau); return; }
+            if (n->nb_enfants) expression(im, n->enfants[0]);
+            aj(im, "\n");
+            return;
+        }
         if (n->op == 'a') { aj(im, "l'attribut "); ecrire_texte(im, n->texte); aj(im, " : "); expression(im, n->enfants[0]); aj(im, ",\n"); return; }
         if (n->op == 'c') { aj(im, "le contenu : "); expression(im, n->enfants[0]); aj(im, ",\n"); return; }
         aj(im, "l'élément ");
@@ -1573,6 +1582,10 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                         p = f2 + 1;
                     }
                 } else if (c) ecrire_nom(im, el->texte2, 0); else aj(im, el->texte2);
+                if (el->titre_calcule && el->titre_calcule->nb_enfants) {   /* « (patient dont l'archivage est absent) » (2.48) */
+                    aj(im, c ? " _dont " : " dont ");
+                    expression(im, el->titre_calcule->enfants[0]);
+                }
                 aj(im, ")");
                 if (el->nb_enfants && el->enfants[0]->type != N_SI_ECRAN) {
                     aj(im, c ? " _départ " : ", ");
@@ -1957,6 +1970,17 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     }
     case P_ACTION: {
         size_t apres_nom = im->nb;
+        if (n->op == 'X' && c) {   /* « _xml facture « invoice:request » » … « _fin » (2.46) */
+            aj(im, "_xml ");
+            ecrire_nom(im, n->texte + 7, 0);
+            aj(im, " ");
+            ecrire_texte(im, n->texte3);
+            aj(im, "\n");
+            bloc(im, n->enfants[1], niveau + 1);
+            fin_compacte(im, niveau);
+            im->nb = apres_nom;
+            return;
+        }
         if (n->op == 'X') {   /* « Le XML de facture, « invoice:request », montre : » (2.46) */
             aj(im, "Le XML de ");
             ecrire_nom(im, n->texte + 7, 0);   /* sans « xml de » */

@@ -207,6 +207,9 @@ typedef struct {
 } Ecriture_disque;
 
 struct Machine {
+    Valeur *filtres;        /* les choix filtrés des zones de l'écran qui s'ouvre (2.48), par rang de zone */
+    size_t *filtres_k;
+    size_t nb_filtres;
     Chaine *xml;            /* le XML en cours d'écriture (2.46), NULL hors d'un XML */
     char **xml_pile;        /* les éléments ouverts, la racine en bas */
     int *xml_enfants;       /* chacun : 1 s'il a déjà des enfants ou un contenu */
@@ -2298,6 +2301,20 @@ static size_t largeur_utf8(const char *s) {
 }
 
 /* Un objet tel qu'une fiche le nomme : par sa clé, sinon « un compositeur ». */
+static int filtre_de_zone(const Machine *m, size_t k) {   /* 2.48 : le rang du filtre de la zone k, ou −1 */
+    for (size_t q = 0; q < m->nb_filtres; q++) if (m->filtres_k[q] == k) return (int)q;
+    return -1;
+}
+
+static void oublier_filtres(Machine *m) {
+    for (size_t q = 0; q < m->nb_filtres; q++) valeur_liberer(&m->filtres[q]);
+    free(m->filtres);
+    free(m->filtres_k);
+    m->filtres = NULL;
+    m->filtres_k = NULL;
+    m->nb_filtres = 0;
+}
+
 static char *nom_objet(Machine *m, Objet *x) {
     const char *cle = champ_cle(x->classe);
     Valeur v = vi_objet(x);
@@ -2772,6 +2789,24 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             if (ce && e->champ[k] >= 0 && ce->valeurs[e->champ[k]]) {   /* valeurs permises : leur menu (§ 16.15) */
                 size_t nv = 0;
                 char **vals = decouper_valeurs(ce->valeurs[e->champ[k]], &nv);
+                e->choix[k] = vals;
+                e->nb_choix[k] = nv;
+                e->elements[k].choix = (const char *const *)vals;
+                e->elements[k].nb_choix = nv;
+            } else if (lie && lie->conserve && m->base && filtre_de_zone(m, k) >= 0) {
+                /* « un patient (patient dont l'archivage est absent) » (2.48) : les clés des objets que le filtre a trouvés */
+                Machine *mm = (Machine *)m;   /* charger les objets : la lecture de l'écran ne change rien d'autre */
+                const Valeur *l = &mm->filtres[filtre_de_zone(m, k)];
+                char **vals = grym_allouer((l->liste->n ? l->liste->n : 1) * sizeof *vals);
+                size_t nv = 0;
+                for (size_t r = 0; r < l->liste->n; r++) {
+                    char *err = NULL;
+                    Objet *o = machine_objet_en_base(mm, l->liste->ids[r], l->liste->classes[r], &err);
+                    free(err);
+                    err = NULL;
+                    if (!o || (o->id && !charger(mm, o, &err))) { free(err); continue; }
+                    vals[nv++] = nom_objet(mm, o);
+                }
                 e->choix[k] = vals;
                 e->nb_choix[k] = nv;
                 e->elements[k].choix = (const char *const *)vals;
@@ -5178,6 +5213,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             /* « Ouvrir l'écran X. » (grammaire, § 22.3) : l'écran se montre ; la boucle compilée attend ensuite */
             char *probleme = NULL;
             EcranVM *e = ecran_lire(m, b->constantes[op].texte, &probleme);
+            oublier_filtres(m);   /* servis à la lecture de l'écran (2.48) */
             if (e) {
                 /* l'objet de l'écran : ses zones vivent le temps de l'écran, jamais conservées */
                 const char *fin_nom = strchr(b->constantes[op].texte, '\x1f');
@@ -5290,6 +5326,20 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             free(msgs);
             free(els);
+            break;
+        }
+        case I_ECRAN_FILTRE: {   /* 2.48 : la liste des choix d'une zone, gardée pour l'écran qui s'ouvre */
+            Valeur l = depiler(&pile);
+            if (l.type != V_LISTE) { valeur_liberer(&l); ok = echouer(diag, b, debut, grym_dupliquer("Filtre de zone invalide.")); break; }
+            Valeur *f = grym_allouer((m->nb_filtres + 1) * sizeof *f);
+            size_t *fk = grym_allouer((m->nb_filtres + 1) * sizeof *fk);
+            for (size_t q = 0; q < m->nb_filtres; q++) { f[q] = m->filtres[q]; fk[q] = m->filtres_k[q]; }
+            free(m->filtres);
+            free(m->filtres_k);
+            m->filtres = f;
+            m->filtres_k = fk;
+            m->filtres[m->nb_filtres] = l;
+            m->filtres_k[m->nb_filtres++] = op;
             break;
         }
         case I_XML_DEBUT: {   /* 2.46 */

@@ -2134,12 +2134,17 @@ static Noeud *base(Analyse *a) {
             const int m2 = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : -1;
             if (m2 >= 0 && est_mot(voir(a, m2), "xml") && de_ou_d(voir(a, m2 + 1))) {
                 size_t d = a->i + (size_t)m2 + 2, meilleur = 0, q_meilleur = 0;
-                for (size_t q = 0; q < a->nb_xml; q++)
+                for (size_t q = 0; q < a->nb_xml; q++) {
+                    if (a->j[d].type == J_CROCHETS) {   /* la forme compacte : « [facture] » */
+                        if (!strcmp(a->j[d].valeur, a->xml_noms[q])) { meilleur = d + 1; q_meilleur = q; }
+                        continue;
+                    }
                     for (size_t k = d + 1; k <= a->n && mot_de_nom(a, k - 1); k++) {
                         char *x = cle(a, d, k);
                         if (!strcmp(x, a->xml_noms[q]) && k > meilleur) { meilleur = k; q_meilleur = q; }
                         free(x);
                     }
+                }
                 if (!meilleur) return erreur(a, t, grym_dupliquer("XML inconnu : déclare-le avant, « Le XML de facture, « … », montre : »."));
                 Noeud *n = noeud_creer(N_XML, t->ligne, t->colonne, t->debut);
                 n->texte = grym_formater("xml de %s", a->xml_noms[q_meilleur]);
@@ -7186,7 +7191,13 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 break;
             }
             size_t q = k + 1;
-            while (q < a->n && a->j[q].type != J_PAR_FERM && a->j[q].type != J_FIN) q++;
+            size_t pos_dont = 0;   /* « (patient dont l'archivage est absent) » (2.48) : un filtre des choix */
+            for (int prof = 0; q < a->n && a->j[q].type != J_FIN; q++) {
+                if (a->j[q].type == J_PAR_OUV) prof++;
+                else if (a->j[q].type == J_PAR_FERM) { if (!prof) break; prof--; }
+                else if (!prof && !pos_dont && est_mot(&a->j[q], "dont")) pos_dont = q;
+            }
+            const size_t fin_type = pos_dont ? pos_dont : q;
             char *nomz = a->j[a->i + 1].type == J_CROCHETS ? grym_dupliquer(a->j[a->i + 1].valeur) : cle(a, a->i + 1, k);
             char *valeurs = NULL;
             char *type;
@@ -7200,8 +7211,31 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 valeurs = a->valeurs_lues;
                 a->valeurs_lues = NULL;
             } else
-                type = q == k + 2 && a->j[k + 1].type == J_CROCHETS ? grym_dupliquer(a->j[k + 1].valeur) : cle(a, k + 1, q);
+                type = fin_type == k + 2 && a->j[k + 1].type == J_CROCHETS ? grym_dupliquer(a->j[k + 1].valeur) : cle(a, k + 1, fin_type);
             const Classe *lie = classe_de(a->portee, type);
+            Noeud *filtre = NULL;
+            if (pos_dont) {   /* la condition, comme dans « la liste des patients conservés dont … » (§ 16.4) */
+                if (!lie || !lie->conserve) {
+                    erreur(a, &a->j[pos_dont], grym_dupliquer("« dont » filtre les choix d'une zone qui désigne une entité "
+                                                              "conservée : « un patient (patient dont l'archivage est absent) »."));
+                    free(nomz); free(type);
+                    break;
+                }
+                const size_t garde = a->i;
+                a->i = pos_dont;
+                Noeud *cond = NULL;
+                if (!clause_dont(a, lie, &cond)) { free(nomz); free(type); break; }
+                if (a->i != q) {
+                    noeud_liberer(cond);
+                    erreur(a, cour(a), grym_dupliquer("« ) » attendu après la condition des choix."));
+                    free(nomz); free(type);
+                    break;
+                }
+                a->i = garde;
+                filtre = noeud_creer(N_CHERCHER, a->j[pos_dont].ligne, a->j[pos_dont].colonne, a->j[pos_dont].debut);
+                filtre->texte = grym_dupliquer(lie->nom);
+                if (cond) noeud_ajouter(filtre, cond);
+            }
             if (!type_de_base(type) && !(lie && lie->conserve)) {
                 erreur(a, &a->j[k + 1], grym_formater("« %s » n'est ni un type (texte, nombre, date, vrai ou faux…) ni une "
                                                       "entité.", type));
@@ -7215,6 +7249,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             el->texte = nomz;
             el->texte2 = type;
             el->texte3 = valeurs;
+            el->titre_calcule = filtre;   /* le filtre des choix d'une zone (2.48) */
             el->forme = g == GENRE_FEMININ ? 2 : 1;
             a->i = q + 1;
             int vus = 0;
@@ -8271,11 +8306,12 @@ static Noeud *element_xml(Analyse *a, int colonne) {
 /* « Le XML de facture, « invoice:request », montre : » (2.46) : une action sans paramètre, qui écrit ses éléments. */
 static Noeud *declaration_xml(Analyse *a, int colonne, Jeton *tle) {
     size_t d = a->i + 3, k = d;
-    while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_DEUX_POINTS && a->j[k].type != J_FIN && mot_de_nom(a, k)) k++;
+    if (a->j[d].type == J_CROCHETS) k = d + 1;   /* la forme compacte : « [facture] » */
+    else while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_DEUX_POINTS && a->j[k].type != J_FIN && mot_de_nom(a, k)) k++;
     if (k == d || a->j[k].type != J_VIRGULE || a->j[k + 1].type != J_TEXTE || a->j[k + 2].type != J_VIRGULE
         || !est_mot(&a->j[k + 3], "montre") || a->j[k + 4].type != J_DEUX_POINTS)
         return erreur(a, tle, grym_dupliquer("Un XML se déclare ainsi : « Le XML de facture, « invoice:request », montre : »."));
-    char *nom_court = cle(a, d, k);
+    char *nom_court = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
     const char *racine = a->j[k + 1].valeur;
     if (!nom_xml_valide(racine)) {
         free(nom_court);

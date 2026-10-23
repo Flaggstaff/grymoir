@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE, O_CLASSE, O_INIT, O_ESSAI, O_ECRAN, O_BLOC, O_ENVOI } Ouverture;
+typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE, O_CLASSE, O_INIT, O_ESSAI, O_ECRAN, O_BLOC, O_ENVOI, O_XML } Ouverture;
 
 typedef struct {
     Ouverture type;
@@ -580,6 +580,12 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "ligne", t);
             continue;
         }
+        if (est_cle(t, "xml")) {                     /* _xml facture → le XML de facture (2.46) */
+            mot(r, "le", t);
+            mot(r, "xml", t);
+            mot(r, "de", t);
+            continue;
+        }
         if (est_cle(t, "envoi")) {                   /* _envoi « url » → l'envoi à « url » (2.42) */
             emettre(r, J_ELISION, "l", t, 1);
             mot(r, "envoi", t);
@@ -1030,6 +1036,52 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         fixer_retrait(r, premier, prof);
         return;
     }
+    /* le XML déclaré (2.46) : « _xml facture « invoice:request » », puis « _attribut », « _contenu », « _élément » ; « _fin » */
+    if (t->type == J_MOT_CLE && est_cle(t, "xml") && f == d + 3 && r->e[d + 1].type == J_CROCHETS && r->e[d + 2].type == J_TEXTE) {
+        mot(r, "le", t);
+        mot(r, "xml", t);
+        mot(r, "de", t);
+        copier(r, &r->e[d + 1]);
+        emettre(r, J_VIRGULE, NULL, &r->e[d + 2], 1);
+        copier(r, &r->e[d + 2]);
+        emettre(r, J_VIRGULE, NULL, &r->e[d + 2], 1);
+        mot(r, "montre", &r->e[d + 2]);
+        emettre(r, J_DEUX_POINTS, NULL, &r->e[d + 2], 1);
+        fixer_retrait(r, premier, prof);
+        ouvrir(r, O_XML, prof, t);
+        return;
+    }
+    int dans_xml = 0;
+    for (size_t q = 0; q < r->np; q++) dans_xml |= r->pile[q].type == O_XML;
+    if (dans_xml && t->type == J_MOT_CLE && (est_cle(t, "attribut") || est_cle(t, "contenu") || est_cle(t, "élément"))) {
+        if (est_cle(t, "contenu")) {
+            mot(r, "le", t);
+            mot(r, "contenu", t);
+            emettre(r, J_DEUX_POINTS, NULL, t, 1);
+            expression(r, d + 1, f);
+            emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
+            fixer_retrait(r, premier, prof);
+            return;
+        }
+        if (f < d + 2 || r->e[d + 1].type != J_TEXTE) { echouer(r, t, grym_dupliquer("Un nom XML entre guillemets suit « _attribut » ou « _élément »."));
+                                                         return; }
+        emettre(r, J_ELISION, "l", t, 1);
+        mot(r, est_cle(t, "attribut") ? "attribut" : "élément", t);
+        copier(r, &r->e[d + 1]);
+        if (est_cle(t, "élément") && f == d + 2) emettre(r, J_VIRGULE, NULL, &r->e[d + 1], 1);
+        else if (est_cle(t, "élément") && f == d + 3 && est_cle(&r->e[d + 2], "enfants")) {
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[d + 2], 1);
+            fixer_retrait(r, premier, prof);
+            ouvrir(r, O_XML, prof, t);   /* ses enfants : un bloc du XML, fermé par « _fin » */
+            return;
+        } else {
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[d + 1], 1);
+            expression(r, d + 2, f);
+            emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
+        }
+        fixer_retrait(r, premier, prof);
+        return;
+    }
     /* le bloc d'un envoi (2.43) : « « clé » : valeur » ou une valeur par ligne ; « _et_de », « _et_du_tableau » ; « _fin » */
     if (haut && haut->type == O_ENVOI) {
         if (t->type == J_MOT_CLE && !strcmp(t->valeur, "fin") && f == d + 1) {
@@ -1306,7 +1358,8 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             f = fin_places;
         } else if ((est_cle(t, "un") || est_cle(t, "une") || est_cle(t, "des")) && d + 4 < f + 1 && r->e[d + 1].type == J_CROCHETS
                    && r->e[d + 2].type == J_PAR_OUV
-                   && ((r->e[d + 3].type == J_CROCHETS && r->e[d + 4].type == J_PAR_FERM) || r->e[d + 3].type == J_TEXTE)) {
+                   && ((r->e[d + 3].type == J_CROCHETS && (r->e[d + 4].type == J_PAR_FERM || est_cle(&r->e[d + 4], "dont")))
+                       || r->e[d + 3].type == J_TEXTE)) {
             /* _un pays (texte) [_départ « Suisse »] [_facultatif] → un pays (texte), « Suisse » au départ, facultatif ;
              * _un état (« actif » ; « retiré ») → un état (« actif », « retiré ») (§ 22.7) */
             mot(r, t->valeur, t);
@@ -1320,6 +1373,14 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                     if (r->e[v].type == J_POINT_VIRGULE) emettre(r, J_VIRGULE, NULL, &r->e[v], 1);
                     else copier(r, &r->e[v]);
                 }
+                emettre(r, J_PAR_FERM, NULL, &r->e[fv], 1);
+                k = fv + 1;
+            } else if (est_cle(&r->e[d + 4], "dont")) {   /* « (patient _dont archivage _absent) » (2.48) */
+                const size_t fv = fermante(r, d + 2, f);
+                if (fv == f) { echouer(r, &r->e[d + 2], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+                copier(r, &r->e[d + 3]);
+                mot(r, "dont", &r->e[d + 4]);
+                expression(r, d + 5, fv);
                 emettre(r, J_PAR_FERM, NULL, &r->e[fv], 1);
                 k = fv + 1;
             } else {

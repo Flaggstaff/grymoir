@@ -1729,6 +1729,19 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* les choix filtrés d'une zone (2.48) : « (patient dont l'archivage est absent) » ne propose pas l'archivé */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"));
+        servir("Un patient, conservé, a :\n    un nom (texte), unique,\n    un archivage (date), facultatif.\n"
+               "Le a vaut un nouveau patient :\n    Le nom vaut « Anne ».\nConserver le a.\n"
+               "Le b vaut un nouveau patient :\n    Le nom vaut « Bruno ».\nL'archivage du b devient 01.01.2026.\nConserver le b.\n"
+               "L'écran x montre :\n    un patient (patient dont l'archivage est absent), facultatif,\n    un bouton « Fermer ».\n"
+               "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n", &sc);
+        CONTIENT(sc.reponses[0], ">Anne<");
+        NE_CONTIENT_PAS(sc.reponses[0], "Bruno");
+        liberer(&sc);
+    }
+
     {   /* une colonne qui traverse trois objets : la séance, son soin, la position du soin (23 octobre 2026) */
         memset(&sc, 0, sizeof sc);
         REQUETES(get("/"));

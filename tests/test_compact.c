@@ -169,6 +169,11 @@ int main(void) {
                  "La s vaut l'envoi à « https://x.ch » de :\n    « a » : 1.\n"
                  "La l vaut la lecture de « https://x.ch/l » avec :\n    « ref » : « a b ».\n"
                  "Afficher le champ « a.b » de la l.\n");
+    /* Le XML déclaré (2.46) et le filtre des choix d'une zone (2.48) */
+    ALLER_RETOUR("_xml facture « r:req »\n    _attribut « lang » « fr »\n    _élément « r:corps » _enfants\n        _élément « vide »\n"
+                 "        _élément « x » 3\n        _contenu « t »\n    _fin\n_fin\n_le f << _xml facture\n",
+                 "Le XML de facture, « r:req », montre :\n    l'attribut « lang » : « fr »,\n    l'élément « r:corps » :\n"
+                 "        l'élément « vide »,\n        l'élément « x » : 3,\n        le contenu : « t ».\nLe f vaut le XML de facture.\n");
     /* « Ouvrir » un fichier (2.26) */
     ALLER_RETOUR("_ouvrir_fichier _fichier « x.pdf »\n", "Ouvrir le fichier « x.pdf ».\n");
     /* Documents (2.25) */

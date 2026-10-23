@@ -874,6 +874,17 @@ static void relire_ecran(Compilation *c, const Noeud *e, const Noeud *ph) {
         }
 }
 
+/* Les choix filtrés des zones (2.48) : « un patient (patient dont l'archivage est absent) » ; chaque liste, empilée avant
+ * que l'écran s'ouvre, remplace le menu de toutes les clés. */
+static void filtres_de_zones(Compilation *c, const Noeud *e, const Noeud *ph) {
+    for (size_t k = 0; k < e->nb_enfants; k++) {
+        const Noeud *el = e->enfants[k];
+        if (el->type != N_NOM || !el->titre_calcule) continue;
+        expression(c, el->titre_calcule);
+        emettre(c, I_ECRAN_FILTRE, (long)k, ph->ligne, ph->colonne);
+    }
+}
+
 /* Un document (2.25) : l'écran qu'il déclare, ouvert sans interface, lu une fois, puis rendu en PDF : empilé
  * (montrer = 0), ou montré dans un aperçu d'où l'on imprime (montrer = 1). */
 static void document(Compilation *c, const Noeud *n, int montrer) {
@@ -881,6 +892,7 @@ static void document(Compilation *c, const Noeud *n, int montrer) {
     if (!e) { trop_grand(c, n); return; }
     const long kd = description_ecran(c, e, n);
     if (kd < 0) return;
+    filtres_de_zones(c, e, n);
     emettre(c, I_ECRAN_OUVRIR, kd, n->ligne, n->colonne);
     relire_ecran(c, e, n);
     emettre(c, I_DOCUMENT, montrer, n->ligne, n->colonne);
@@ -1470,6 +1482,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         if (kd < 0) return;
         const int ev = ph->local, objet = ph->local + 1;
         verifier_regles(c, ph->ligne, ph->colonne);   /* « Ouvrir » valide ce qui précède */
+        filtres_de_zones(c, e, ph);
         emettre(c, I_ECRAN_OUVRIR, kd, ph->ligne, ph->colonne);
         for (size_t k = 0; k < e->nb_enfants; k++) {   /* les valeurs de départ des zones */
             const Noeud *el = e->enfants[k];

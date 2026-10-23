@@ -379,7 +379,7 @@ Remarque : « Patient à ouvrir » propose les patients dès la première lettre
 Remarque : la recherche filtre la liste à chaque changement : le nom, le téléphone, la localité ou le courriel contient ce qui est tapé.
 Remarque : les patients archivés n'y sont pas : la Configuration les montre, dans « Archives ».
 L'écran des patients montre :
-    un patient à ouvrir (patient), facultatif, avec recherche, avec l'indication « Une partie du nom : choisis, la fiche s'ouvre »,
+    un patient à ouvrir (patient dont l'archivage est absent), facultatif, avec recherche, avec l'indication « Une partie du nom : choisis, la fiche s'ouvre »,
     une recherche (texte), facultative, avec l'indication « Un nom, un téléphone, une localité »,
     la liste des patients conservés dont l'archivage est absent et (le nom contient la recherche des patients ou le téléphone contient la recherche des patients ou la localité contient la recherche des patients ou le courriel contient la recherche des patients), par nom, avec le nom, le téléphone, la localité et le courriel,
     côte à côte :

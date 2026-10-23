@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.47 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.48 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1947,6 +1947,7 @@ L'écran de saisie montre :
 - `, en interrupteur` *(1.92)* : une zone `(vrai ou faux)` se montre en interrupteur plutôt qu'en case à cocher, `un actif (vrai ou faux), en interrupteur`. La valeur et les événements sont ceux d'une case ; seule la présentation change. Une autre zone le refuse : « Seule une zone (vrai ou faux) se montre en interrupteur. » Forme compacte : `_interrupteur`.
 - `, avec l'indication « … »` *(1.95)* : une phrase sous le libellé d'une zone, qui dit quoi y écrire, `un code postal (texte), avec l'indication « 4 chiffres, sans espace »`. Toute zone la prend, cases à cocher, interrupteurs et choix multiples compris ; une seule par zone (« L'indication est déjà donnée. »). Forme compacte : `_indication « … »`.
 - `, avec recherche` *(1.96)* : une zone qui désigne un objet conservé devient un champ où l'on tape, avec les objets qui contiennent la saisie pour propositions, `un membre (membre), avec recherche`. Au-delà de vingt objets, elle le devient d'elle-même, sans qu'on l'écrive ; vingt est un choix du projet, pas une norme. Une saisie qui ne désigne aucun objet est refusée. Une autre zone le refuse : « Seule une zone qui désigne un objet conservé se cherche ». *(2.40)* Les propositions ne tiennent compte ni des majuscules ni des accents, comme `contient` : « helene » propose « Hélène Rochat », et le choix remet le nom tel qu'il est écrit. Forme compacte : `_recherche`.
+- **Des choix filtrés** *(2.48)* : `un patient (patient dont l'archivage est absent), avec recherche` ne propose que les objets qui remplissent la condition, écrite comme celle d'une recherche (§ 16.4). Elle s'évalue à l'ouverture de l'écran ; une saisie tapée garde le droit de désigner un autre objet, et l'événement qui la reçoit décide. Seule une zone qui désigne une entité conservée se filtre. Forme compacte : `(patient _dont archivage _absent)`.
 - Les bornes d'une zone *(1.97)*, comme les intervalles des boucles (§ 9) : `, de 1 à 99`, `, au moins 16`, `, au plus 50` pour un nombre ; les mêmes suivies de `caractères` pour un texte, et `, de 4 caractères` pour une longueur exacte. Bornes comprises. Une saisie hors bornes est refusée avec la règle (« « Quantité » va de 1 à 99. », « « Code » a 4 caractères. »). Une zone d'un autre type n'en a pas. Forme compacte : `_min 1 _max 99`.
 - `, large de 12 caractères` *(2.34)* : une zone de texte à la largeur de N caractères moyens de la police, hors d'un bloc en position libre (où `large de N` compte des pixels) ; de 1 à 200. Le mot de passe d'une connexion, un code postal : `un code (texte), masqué, large de 12 caractères`. Dans le navigateur, `size` et une largeur en `ch`. Forme compacte : `_largeur_caractères 12`.
 - `, avec le choix d'un dossier` *(2.32)* : une zone (texte) au bout de laquelle une icône ouvre le sélecteur de dossiers du système ; le chemin choisi la remplit, et la zone change comme après une frappe. Dans le navigateur, il se tape. `un dossier de sauvegarde (texte), facultatif, avec le choix d'un dossier`. Autre zone : « Seule une zone (texte) se remplit par le choix d'un dossier. ». Forme compacte : `_choix_dossier`.
@@ -2244,7 +2245,7 @@ Le fichier XML du d devient le XML de facture.
 - Une phrase y écrit aussi : `Pour chaque … :`, `Si … :`, `Le x vaut …` ; leurs éléments vont où elles se trouvent.
 - Une valeur s'écrit telle quelle pour un texte, en forme canonique pour un nombre (`105.6`), en `AAAA-MM-JJ` pour une date, `true` ou `false` pour vrai ou faux. Un attribut absent n'est pas écrit ; un contenu absent non plus. Le langage échappe `&`, `<`, `>` et, dans un attribut, `"` : le développeur n'écrit jamais un chevron.
 - Les refus : un nom qui n'est pas un nom XML (« Un nom XML entre guillemets : une lettre d'abord, puis lettres, chiffres, « - », « _ », « . » ou « : » ») ; un attribut après le contenu ou un élément (« L'attribut « k » vient avant le contenu et les éléments de « x ». ») ; un XML inconnu ou déclaré deux fois.
-- Le XML produit est bien formé ; sa conformité à un schéma (XSD) n'est pas vérifiée. La forme compacte du XML n'existe pas encore.
+- Le XML produit est bien formé ; sa conformité à un schéma (XSD) n'est pas vérifiée. En forme compacte *(2.48)* : `_xml facture « invoice:request »` … `_fin` ; `_attribut « n » v`, `_contenu v`, `_élément « n »`, `_élément « n » v`, `_élément « n » _enfants` … `_fin` ; `_xml facture` dans une expression.
 
 ## Journal des révisions
 
@@ -2398,3 +2399,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.45 | 2026-10-23 | § 22.18 : la forme compacte de l'envoi, de la lecture et du champ JSON (`_envoi`, `_lecture`, `_avec`, `_et_de`, `_et_du_tableau`, `_fin`, `_champ`) |
 | 2.46 | 2026-10-23 | Nouveau § 22.19 : le XML déclaré (`Le XML de x, « racine », montre :`, éléments, attributs, contenus, boucles ; `le XML de x`, un fichier UTF-8 échappé) |
 | 2.47 | 2026-10-23 | Un nom d'écran refuse le trait d'union, comme tout nom (§ 1.4) : « l'écran des rendez-vous » cassait la forme canonique et la forme compacte ; la forme canonique garde les sigles des noms d'écran et des colonnes (« l'écran des SMS », « le numéro GLN ») et l'accord écrit d'un nom au genre inconnu (« l'ordonnance ouverte est présente ») ; `tests/formes` : chaque projet du dépôt, forme canonique stable et aller-retour compact |
+| 2.48 | 2026-10-23 | Les choix d'une zone se filtrent : `un patient (patient dont l'archivage est absent)`, la condition d'une recherche (§ 16.4), évaluée à l'ouverture de l'écran ; la forme compacte du XML déclaré (§ 22.19) |

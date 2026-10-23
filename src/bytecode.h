@@ -140,10 +140,11 @@ typedef enum {
     I_XML_ATTRIBUT,     /* opérande : la constante du nom ; dépile la valeur (absente : pas d'attribut) */
     I_XML_CONTENU,      /* dépile un texte, écrit dans l'élément ouvert, échappé */
     I_XML_FERMER,       /* ferme l'élément ouvert */
-    I_XML_FIN           /* ferme la racine ; empile le fichier XML (UTF-8) */
+    I_XML_FIN,          /* ferme la racine ; empile le fichier XML (UTF-8) */
+    I_ECRAN_FILTRE      /* opérande : le rang de la zone ; dépile la liste de ses choix, pour l'écran qui s'ouvre (2.48) */
 } CodeInstruction;
 
-#define I_DERNIER I_XML_FIN
+#define I_DERNIER I_ECRAN_FILTRE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);
