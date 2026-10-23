@@ -382,7 +382,7 @@ static void copier_dossier(const char *de, const char *vers) {
 }
 
 static void preparer_praxis(void) {
-    copier_dossier("projets/Praxis", "_essai_praxis");
+    copier_dossier("projets/Praxis/Nicolas", "_essai_praxis");
     copier_fichier("tests/praxis/essais.grym", "_essai_praxis/essais.grym");
     char *src = lire_tout("_essai_praxis/Praxis.grym");
     if (!src) return;
@@ -1795,6 +1795,21 @@ int main(void) {
         remove("_essai_tiers_payant.grymd.clés");
     }
 
+    {   /* la version neutre (projets/Praxis/Praxis, 23 octobre 2026) : un cabinet sans nom propre, sans soin, Praxis 2 éteint */
+        memset(&sc, 0, sizeof sc);
+        copier_dossier("projets/Praxis/Praxis", "_essai_neutre_projet");
+        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=Configuration"), get("/"));
+        servir_projet("_essai_neutre_projet/Praxis.grym", "_essai_neutre.grymd", &sc);
+        CONTIENT(sc.reponses[1], ">Patients<");
+        NE_CONTIENT_PAS(sc.reponses[1], "class=\"erreur\"");
+        NE_CONTIENT_PAS(sc.reponses[1], "Nicolas");
+        CONTIENT(sc.reponses[3], "<h1>Configuration</h1>");
+        NE_CONTIENT_PAS(sc.reponses[3], ">Rendez-vous<");
+        liberer(&sc);
+        remove("_essai_neutre.grymd");
+        remove("_essai_neutre.grymd.clés");
+    }
+
     {   /* Praxis 1 chez Nicolas (23 octobre 2026) : les deux interrupteurs de la fiche du cabinet éteints, plus rien de
            Praxis 2 ne se voit : ni Rendez-vous, SMS, Assureurs, Tarif dans la Configuration, ni Assurances ni Agenda OneDoc
            sur l'accueil, ni l'assurance et les ordonnances dans la page du patient */
@@ -1842,17 +1857,13 @@ int main(void) {
         remove("_essai_sms.grymd.clés");
     }
 
-    {   /* Le cabinet de Lorianne (outils/cabinet lorianne, 22 octobre 2026) : sa copie se fonde à son nom, à Bulle, avec
+    {   /* Le cabinet de Lorianne (projets/Praxis/Lorianne, 22 octobre 2026) : sa copie se fonde à son nom, à Bulle, avec
            l'agenda OneDoc et le choix d'agenda allumé ; aucun soin d'avance ; la fiche du cabinet a l'interrupteur */
         memset(&sc, 0, sizeof sc);
-        total++;
-        if (system("sh outils/cabinet lorianne --effacer > /dev/null") != 0) {
-            echecs++;
-            printf("ÉCHEC (ligne %d) : outils/cabinet lorianne\n", __LINE__);
-        }
+        copier_dossier("projets/Praxis/Lorianne", "_essai_lorianne_projet");
         REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=Configuration"), get("/"),
                  evenement("q=3&clic=Le+cabinet"), get("/"), evenement("q=4&clic=Fermer"), evenement("q=5&clic=Soins"), get("/"));
-        servir_projet("_cabinets/lorianne/Praxis.grym", "_essai_lorianne.grymd", &sc);
+        servir_projet("_essai_lorianne_projet/Praxis.grym", "_essai_lorianne.grymd", &sc);
         CONTIENT(sc.reponses[1], "Bonjour Lorianne");
         CONTIENT(sc.reponses[1], ">Agenda OneDoc<");
         CONTIENT(sc.reponses[3], ">Rendez-vous<");

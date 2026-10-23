@@ -2,7 +2,7 @@ Remarque : Praxis en grandeur réelle : l'année 2025 d'un cabinet, toute invent
 Remarque : 120 patients ; de six à huit séances par jour ouvrable de 2025, hors fériés fribourgeois et trois semaines de
 Remarque : vacances ; facturées à la fin du mois, payées au fil des jours jusqu'à hier, rappels à 45, 75 et 105 jours ;
 Remarque : quittances, frais, notes, deux patients archivés, trois séances prévues restées sans suite, l'agenda du jour.
-Remarque : tirée au hasard : GRYM_HASARD=2025 rejoue exactement la même année. Hors de l'application : tests/praxis/charger.
+Remarque : tirée au hasard : GRYM_HASARD=2025 rejoue exactement la même année. Hors de l'application, en console : tests/praxis/charger.
 Utiliser « actions ».
 
 Le prénom inventé d'un rang :
@@ -198,7 +198,7 @@ Pour inscrire l'inventé d'un rang :
             Le numéro postal du p devient le code de la commune inventée de (le reste de rang × 11 par 15 + 1).
             La localité du p devient la commune inventée de (le reste de rang × 11 par 15 + 1).
     Si le reste de rang par 3 ≠ 0, la date de naissance du p devient 01.01.1945 + un nombre au hasard de 0 à 25000.
-    Si le reste de rang par 2 = 0, le courriel du p devient "patient" suivi de rang suivi de "@exemple.ch".
+    Si le reste de rang par 2 = 0, le courriel du p devient « patient » suivi de rang suivi de « @exemple.ch ».
     Si le reste de rang par 4 = 1, l'anamnèse du p devient « Douleurs lombaires anciennes ; stress professionnel ; dort mal depuis l'hiver. ».
     Conserver le p.
 
@@ -330,7 +330,7 @@ Pour dépenser une somme et un libellé et une rubrique et un moyen et une journ
     Conserver le f.
 
 Pour payer les frais d'une journée :
-    Si le jour de journée = 1, dépenser 950 et ("Loyer du cabinet, " suivi du mois de journée suivi de "/2025") et « Loyer » et « virement » et journée.
+    Si le jour de journée = 1, dépenser 950 et ("Loyer du cabinet, " suivi du mois de journée suivi de « /2025 ») et « Loyer » et « virement » et journée.
     Si journée = 31.01.2025, dépenser 418,60 et « Assurance responsabilité civile professionnelle » et « Assurances » et « virement » et journée.
     Si journée = 28.02.2025, dépenser 250 et « Cotisation à l'association professionnelle » et « Cotisations » et « virement » et journée.
     Si journée = 15.03.2025, dépenser 680 et « Formation continue, deux jours » et « Formation » et « carte » et journée.
@@ -393,4 +393,5 @@ Pour remplir la charge :
         L'horaire devient l'horaire + 75 minutes.
     Remarque : deux patients archivés le 15 décembre 2025.
     Pour chaque rang de 118 à 119 :
-        L'archivage de la fiche inventée du rang devient 15.12.2025.
+        La fiche archivée vaut la fiche inventée du rang.
+        L'archivage de la fiche archivée devient 15.12.2025.

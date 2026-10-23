@@ -1,0 +1,314 @@
+Remarque : Praxis : les données d'un cabinet de thérapie, ses soins, ses patients, leurs séances.
+
+Remarque : le cabinet, un seul : ce qui figure en tête des quittances et des factures.
+Remarque : RCC (SASIS), GLN, RME et ASCA restent vides tant que Nicolas n'en a pas ; la facture du Tarif 590 exigera le RCC.
+Remarque : facturer les absences : un choix de Nicolas, éteint au départ ; allumé, une absence se doit comme une séance faite.
+Remarque : la dernière sauvegarde : l'accueil le rappelle après sept jours ; le dossier de sauvegarde, de préférence synchronisé
+Remarque : (iCloud Drive), reçoit chaque jour une copie chiffrée ; vide, pas de sauvegarde automatique.
+Remarque : le dossier d'export : où vont les CSV de la Comptabilité ; vide, « Exports », à côté de l'application.
+Remarque : le logo et la signature (le nom dessiné) du cabinet, en tête des écrans et des pièces ; le prénom de l'accueil
+Remarque : (« Bonjour Nicolas ») ; une autre installation les change ici, et les écrans les reprennent au lancement suivant.
+Remarque : le code d'accès, l'ancien mot de passe de l'application, est abandonné (grammaire 2.49) : la migration efface sa
+Remarque : valeur, et la ligne reste, pour qu'une base pas encore lancée depuis le 21 octobre 2026 s'y retrouve aussi.
+Un cabinet, conservé, a :
+    un nom (texte), unique,
+    une rue (texte), facultative,
+    un numéro de maison (texte), facultatif,
+    un complément d'adresse (texte), facultatif,
+    un numéro postal (texte), facultatif,
+    une localité (texte), facultative,
+    un pays (texte), « Suisse » au départ,
+    un téléphone (téléphone), facultatif,
+    un courriel (courriel), facultatif,
+    un numéro RCC (texte), facultatif,
+    un numéro GLN (texte), facultatif,
+    un numéro RME (texte), facultatif,
+    un numéro ASCA (texte), facultatif,
+    un IBAN (texte), facultatif,
+    une facturation des absences (vrai ou faux), faux au départ,
+    une dernière sauvegarde (date), facultative,
+    un code d'accès (mot de passe), abandonné,
+    un dossier de sauvegarde (texte), facultatif,
+    un logo (image), facultatif,
+    une signature (image), facultative,
+    un prénom (texte), facultatif,
+    un dossier d'export (texte), facultatif,
+    un choix d'agenda (vrai ou faux), faux au départ,
+    un agenda (« Praxis » ou « OneDoc »), « Praxis » au départ,
+    une adresse de l'agenda (adresse web), facultative,
+    une facturation aux assurances (vrai ou faux), faux au départ,
+    une valeur du point (nombre), facultative,
+    un identifiant SMS (texte), facultatif,
+    une clé SMS (secret), facultative,
+    un expéditeur SMS (texte), facultatif.
+
+Remarque : le choix d'agenda : la tuile « Rendez-vous » de la Configuration ; un interrupteur de la fiche du cabinet, posé par
+Remarque : départ.grym à la fondation ; faux chez Nicolas (Calendly) et pour une base d'avant le 22 octobre. L'éteindre remet
+Remarque : l'agenda à « Praxis » : la tuile « Agenda OneDoc » de l'accueil disparaît avec lui.
+Remarque : les SMS (Praxis 2, 23 octobre 2026) : le compte ASPSMS du cabinet, son identifiant (« Userkey ») et sa clé d'API,
+Remarque : un secret, rangé dans la base chiffrée, qui ne se lit que pour être envoyé ; l'expéditeur, le nom que le patient voit.
+Remarque : la facturation aux assurances (Praxis 2, 23 octobre 2026) : un interrupteur de la fiche du cabinet ; allumé, Praxis montre
+Remarque : les assureurs, l'assurance du patient, ses ordonnances, et la facturation de chaque soin ; éteint (Nicolas), rien de tout cela.
+Remarque : l'agenda (Praxis 2, 22 octobre 2026) : « Praxis », les séances prévues dans Praxis ; « OneDoc », les rendez-vous
+Remarque : et leurs rappels sur OneDoc, que l'accueil ouvre par l'adresse de l'agenda (OneDoc n'a pas d'API publique : rien ne s'échange).
+Remarque : un exercice : une année où le cabinet a une séance ou un frais, et l'année en cours ; le menu des années
+Remarque : de la Comptabilité et des listes (factures, quittances, rappels envoyés, frais) les propose. Le millésime en
+Remarque : texte, « 2025 » : c'est la clé qu'affiche le menu déroulant.
+Un exercice, conservé, hors des fiches, a :
+    un millésime (texte), unique.
+
+Remarque : un soin a son tarif ; s'il a un tarif de suivi, les séances suivantes d'un même patient le paient.
+Remarque : la durée en minutes ; le code tarifaire, celui de la méthode au Tarif 590, s'il est reconnu.
+Remarque : le tarif des assurances (chantier B, 23 octobre 2026) : les positions que le cabinet facture (« 7601 », traitement
+Remarque : individuel), leur valeur en points, comptée par quart d'heure entier ou entamé ou par séance ; la Configuration les saisit.
+Remarque : le montant d'une séance : sa valeur en points, fois ses quarts d'heure, fois la valeur du point (celle de l'assureur s'il
+Remarque : en a une, sinon celle du cabinet).
+Une position, conservée, a :
+    un code (texte), unique,
+    un libellé (texte),
+    une valeur en points (nombre),
+    une unité (« quart d'heure » ou « séance »), « quart d'heure » au départ.
+
+Un soin, conservé, a :
+    un nom (texte), unique,
+    un tarif (nombre),
+    un tarif de suivi (nombre), facultatif,
+    une durée (nombre entier), facultative,
+    un code tarifaire (texte), facultatif,
+    une ordonnance exigée (vrai ou faux), faux au départ,
+    une facturation (« patient » ou « assurance »), « patient » au départ,
+    une position tarifaire (position), facultative.
+
+Remarque : un soin sur ordonnance (l'ergothérapie, OPAS art. 6) se facture toujours à l'assurance de base, en tiers payant ; un autre
+Remarque : soin se facture au patient (QR-facture, quittance) ou à son assurance, au choix du cabinet. La facture à l'assurance est le
+Remarque : chantier B : d'ici là, une séance « à l'assurance » n'entre ni dans les factures ni dans les quittances du patient.
+
+Remarque : les assureurs du cabinet : leur nom, leur GLN (le destinataire d'une facture électronique), leur adresse postale.
+Un assureur, conservé, a :
+    un nom (texte), unique,
+    un numéro GLN (texte), facultatif,
+    une rue (texte), facultative,
+    un numéro de maison (texte), facultatif,
+    une case postale (texte), facultative,
+    un numéro postal (texte), facultatif,
+    une localité (texte), facultative,
+    une valeur du point (nombre), facultative.
+
+Remarque : le nom est la clé : « Anne Rochat » ; deux homonymes se distinguent par une initiale ou une ville.
+Remarque : l'adresse postale en champs séparés, comme la QR-facture l'exige depuis le 21 novembre 2025 (adresse structurée) :
+Remarque : rue, numéro de maison (« 10a »), numéro postal (NPA), localité, pays ; le complément porte une case postale ou un « c/o ».
+Remarque : « client » jusqu'au 18 octobre 2026 ; la base de cette époque se renomme d'elle-même (grammaire, § 16.7).
+Un patient, conservé, anciennement « client », a :
+    un nom (texte), unique,
+    un téléphone (téléphone), facultatif,
+    un courriel (courriel), facultatif,
+    une rue (texte), facultative,
+    un numéro de maison (texte), facultatif,
+    un complément d'adresse (texte), facultatif,
+    un numéro postal (texte), facultatif,
+    une localité (texte), facultative,
+    un pays (texte), « Suisse » au départ,
+    une date de naissance (date), facultative,
+    une anamnèse (texte), facultative, anciennement « remarque »,
+    une dernière dictée (son), facultative,
+    un archivage (date), facultatif,
+    un assureur (assureur), facultatif,
+    un numéro d'assuré (texte), facultatif,
+    un numéro de carte d'assuré (texte), facultatif,
+    un assureur complémentaire (assureur), facultatif,
+    un numéro d'assuré complémentaire (texte), facultatif,
+    une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative.
+
+Remarque : l'assurance complémentaire (23 octobre 2026) : les soins hors ordonnance « à l'assurance » ; sans assureur ni numéro
+Remarque : complémentaires, ceux de la base servent ; sans mode, le tiers payant, comme la base. En tiers garant, le patient paie
+Remarque : sa facture et la transmet lui-même à sa complémentaire ; en tiers payant, la complémentaire reçoit la facture.
+
+Remarque : une ordonnance médicale (OPAS art. 6, al. 2) : neuf séances au plus, la première dans les huit semaines qui suivent sa
+Remarque : date ; le médecin prescripteur et ses numéros, que la facture tiers payant reprend ; le document scanné.
+Une ordonnance, conservée, a :
+    un patient (patient), et disparaît avec lui,
+    une date (date),
+    un médecin (texte),
+    un numéro RCC du médecin (texte), facultatif,
+    un numéro GLN du médecin (texte), facultatif,
+    un maximum de séances (nombre entier), 9 au départ,
+    un cas (« maladie », « accident » ou « invalidité »), « maladie » au départ,
+    un scan (fichier), facultatif,
+    une remarque (texte), facultative,
+    un jour d'annonce (date), facultatif,
+    une lettre d'annonce (fichier), facultative,
+    un accord du médecin conseil (date), facultatif.
+
+Remarque : le jour d'annonce : le jour où le traitement a été annoncé à l'assureur, et la lettre envoyée avec la copie de l'ordonnance.
+Remarque : l'accord du médecin-conseil : au-delà de 36 séances, la thérapie ne continue à la charge de l'assurance qu'avec son accord
+Remarque : (convention ASE, art. 6.3) ; une ordonnance qui le porte couvre les séances suivantes.
+
+Remarque : une facture tiers payant (convention ASE, art. 7) : adressée à l'assureur, qui la paie ; sa copie va au patient. Elle
+Remarque : réunit les séances faites d'une ordonnance ; son exemplaire et sa copie, les PDF envoyés, gardés tels quels.
+Un décompte, conservé, a :
+    un numéro (texte), unique,
+    une date (date),
+    un patient (patient), et disparaît avec lui,
+    un assureur (assureur),
+    une ordonnance (ordonnance), facultative,
+    une valeur du point (nombre),
+    un montant (nombre),
+    une suite (« terminé » ou « se poursuit »),
+    un état (« à régler » en orange ou « réglé » en vert),
+    un règlement (date), facultatif,
+    un exemplaire (fichier), facultatif,
+    une copie (fichier), facultative.
+
+Remarque : l'archivage : le jour où le patient a été archivé ; absent, il est actif. Un patient qui a des factures ou des quittances
+Remarque : ne se supprime pas (pièces gardées dix ans, CO 958f) : il s'archive, et quitte la liste des patients.
+Remarque : un patient supprimé emporte dans la corbeille ses séances, ses notes et ses pièces ; rétabli, il les ramène.
+Remarque : la facture des séances à payer d'un patient, numérotée par année (« F-2026-0001 ») ; son exemplaire, le PDF envoyé, gardé tel quel ;
+Remarque : son état suit ses séances : à régler, en partie réglée (certaines encaissées), réglée (toutes) ; réglée, sa quittance se fait seule.
+Remarque : échue trente jours après sa date ; le dernier rappel envoyé pour elle, daté.
+Une facture, conservée, a :
+    un numéro (texte), unique,
+    une date (date),
+    un patient (patient), et disparaît avec lui,
+    un montant (nombre),
+    un état (« à régler », « en partie réglée » ou « réglée »),
+    un exemplaire (fichier), facultatif,
+    un dernier rappel (date), facultatif.
+
+Remarque : un rappel envoyé pour une facture : son rang (premier, deuxième…), sa date, son exemplaire, le PDF envoyé, gardé tel quel.
+Un rappel, conservé, a :
+    une facture (facture), et disparaît avec elle,
+    une date (date),
+    un rang (nombre entier),
+    un exemplaire (fichier), facultatif.
+
+Remarque : la quittance d'une ou plusieurs séances payées (CO 88) ; son exemplaire, le PDF remis, est gardé tel quel.
+Remarque : numérotée par année, « Q-2026-0001 » ; jamais supprimée définitivement : la corbeille garde la suite sans trou.
+Remarque : « plusieurs » quand les séances d'une facture ont été payées de façons différentes ; chaque séance garde la sienne.
+Une quittance, conservée, a :
+    un numéro (texte), unique,
+    une date (date),
+    un patient (patient), et disparaît avec lui,
+    un montant (nombre),
+    un moyen (« espèces », « Twint », « virement » ou « plusieurs »),
+    un exemplaire (fichier), facultatif.
+
+Remarque : la séance garde le son de son commentaire, s'il a été dicté, et le texte, transcrit ou tapé.
+Remarque : l'encaissement : le jour où l'argent est arrivé ; les comptes en recettes-dépenses comptent à cette date, pas à celle de la séance.
+Remarque : le dernier rappel d'une séance date d'avant les rappels par facture (20 octobre 2026) : abandonné (2.49).
+
+Une séance, conservée, a :
+    un patient (patient), et disparaît avec lui, anciennement « client »,
+    un soin (soin),
+    une date (date),
+    une heure (heure), facultative,
+    une durée (nombre entier), facultative,
+    un prix (nombre),
+    un statut (« prévue » en bleu, « faite » en vert, « annulée » en gris ou « absence » en rouge),
+    un paiement (« à payer » en orange, « espèces » en vert, « Twint » en vert, « virement » en vert, « offert » en gris ou « assurance » en bleu),
+    un commentaire dicté (son), facultatif,
+    un commentaire (texte), facultatif,
+    une quittance (quittance), facultative,
+    une facture (facture), facultative,
+    un dernier rappel (date), abandonné,
+    un encaissement (date), facultatif,
+    une ordonnance (ordonnance), facultative,
+    un chiffre du tarif (texte), facultatif,
+    un total de points (nombre), facultatif,
+    un décompte (décompte), facultatif.
+
+Remarque : les rubriques des frais (loyer, matériel…) : Nicolas les nomme, les renomme et en ajoute dans la configuration.
+Une rubrique, conservée, a :
+    un nom (texte), unique.
+
+Remarque : les frais du cabinet, en recettes-dépenses (CO 957, al. 2) ; le justificatif, un scan, une photo ou un PDF, gardé dix ans.
+Un frais (frais), conservé, a :
+    une date (date),
+    un libellé (texte),
+    un montant (nombre),
+    une rubrique (rubrique),
+    un moyen (« espèces », « Twint », « virement » ou « carte »),
+    un justificatif (fichier), facultatif.
+
+Remarque : ce que le patient confie ne s'affiche jamais dans sa fiche, qu'on peut ouvrir devant lui ; ses notes s'ouvrent à part, par « Notes ».
+Une note, conservée, hors des fiches, a :
+    un patient (patient), et disparaît avec lui, anciennement « client »,
+    une date (date),
+    un contenu (texte).
+
+Remarque : un numéro postal (NPA) suisse a quatre chiffres.
+Chaque patient conservé dont le pays est « Suisse » et le numéro postal est présent vérifie :
+    la longueur du numéro postal du patient = 4,
+    sinon « Le numéro postal » puis le numéro postal du patient puis « n'a pas quatre chiffres. ».
+
+Remarque : un seul cabinet ; le programme principal le crée, sa fiche le modifie.
+Chaque cabinet conservé vérifie :
+    le nombre de cabinets conservés = 1,
+    sinon « Il n'y a qu'un cabinet : modifie sa fiche. ».
+
+Remarque : l'IBAN du compte où les patients paient, avec ou sans espaces ; suisse ou liechtensteinois, 21 caractères (SIX, QR-facture, § 4.2.2) ; un IBAN ordinaire : un QR-IBAN (IID 30000 à 31999) exige une référence QR, que Praxis ne fait pas.
+Chaque cabinet conservé dont l'IBAN est présent vérifie :
+    la longueur de (l'IBAN du cabinet en format technique) = 21,
+    sinon « Un IBAN suisse compte 21 caractères : CH, puis 19 chiffres et lettres. ».
+
+Remarque : une ligne de QR-facture : vide si la valeur est absente.
+La ligne QR d'une valeur :
+    Si valeur est absente, rendre « ».
+    Rendre valeur.
+
+Remarque : le pays en deux lettres (ISO 3166-1), comme la QR-facture l'écrit : les pays voisins par leur nom, sinon tel qu'écrit s'il a deux lettres ; vide sinon.
+Le code pays d'un pays :
+    Si pays est absent, rendre « ».
+    Le p vaut pays en minuscules.
+    Si le p = « suisse », rendre « CH ».
+    Si le p = « liechtenstein », rendre « LI ».
+    Si le p = « france », rendre « FR ».
+    Si le p = « allemagne », rendre « DE ».
+    Si le p = « italie », rendre « IT ».
+    Si le p = « autriche », rendre « AT ».
+    Si le p = « belgique », rendre « BE ».
+    Si le p = « luxembourg », rendre « LU ».
+    Si le p = « espagne », rendre « ES ».
+    Si le p = « portugal », rendre « PT ».
+    Si la longueur du p = 2, rendre pays en majuscules.
+    Rendre « ».
+
+Remarque : le créancier d'une QR-facture, le cabinet : sept lignes (SIX IG 2.4, § 4.2.2), adresse structurée (S), chacune suivie d'un saut.
+Le créancier QR d'un cabinet :
+    Le s vaut un saut de ligne.
+    Rendre « S » suivi du s suivi du nom du cabinet suivi du s suivi de la ligne QR de la rue du cabinet suivi du s suivi de la ligne QR du numéro de maison du cabinet suivi du s suivi de la ligne QR du numéro postal du cabinet suivi du s suivi de la ligne QR de la localité du cabinet suivi du s suivi du code pays du pays du cabinet suivi du s.
+
+Remarque : une QR-facture sans montant ni débiteur, pour essayer l'IBAN et l'adresse du cabinet.
+La charge de contrôle d'un cabinet :
+    Le s vaut un saut de ligne.
+    Rendre « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s suivi de l'IBAN du cabinet en IBAN suivi du s suivi du créancier QR du cabinet suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi de « CHF » suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi de « NON » suivi du s suivi du s suivi du s suivi de « EPD ».
+
+Remarque : l'IBAN essayé dans une QR-facture de contrôle : sa clé vérifiée, le QR-IBAN refusé, l'adresse du cabinet complète, chacun avec son motif (grammaire 2.29).
+Chaque cabinet conservé dont l'IBAN est présent vérifie :
+    la taille du code QR suisse de la charge de contrôle du cabinet > 0,
+    sinon « L'IBAN ne convient pas à une QR-facture. ».
+
+Remarque : un GLN (Global Location Number, GS1) a treize chiffres.
+Chaque cabinet conservé dont le numéro GLN est présent vérifie :
+    la longueur du numéro GLN du cabinet = 13,
+    sinon « Le numéro GLN » puis le numéro GLN du cabinet puis « n'a pas treize chiffres. ».
+
+Chaque séance conservée vérifie :
+    le prix de la séance ≥ 0,
+    sinon « Le prix d'une séance n'est jamais négatif. ».
+
+Remarque : une séance encaissée a sa date d'encaissement ; à payer ou offerte, elle n'en a pas.
+Chaque séance conservée dont l'encaissement est présent vérifie :
+    le paiement de la séance ≠ « à payer » et le paiement de la séance ≠ « offert »,
+    sinon « Une séance à payer ou offerte n'a pas de date d'encaissement. ».
+
+Remarque : une quittance remise ne se défait pas : sa séance reste payée, ni à payer ni offerte.
+Chaque séance conservée dont la quittance est présente vérifie :
+    le paiement de la séance ≠ « à payer » et le paiement de la séance ≠ « offert »,
+    sinon « Cette séance a sa quittance : elle reste payée. ».
+
+Remarque : la première séance d'un soin se paie au tarif ; dès la deuxième, au tarif de suivi s'il y en a un.
+Remarque : une séance annulée ou manquée ne compte pas comme une première séance.
+Le prix conseillé d'une personne et d'une prestation :
+    Si le tarif de suivi de la prestation est absent, rendre le tarif de la prestation.
+    Si le nombre de séances conservées dont le patient = personne et le soin = prestation et le statut ≠ « annulée » et le statut ≠ « absence » > 0, rendre le tarif de suivi de la prestation.
+    Rendre le tarif de la prestation.

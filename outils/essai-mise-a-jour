@@ -4,21 +4,22 @@
 #   outils/essai-mise-a-jour <dossier de la base> [cabinet]
 #
 # <dossier de la base> : un dossier qui contient la base copiée depuis l'ordinateur du cabinet (Praxis.grymd et son fichier de
-# clés Praxis.grymd.clés ; sous macOS, l'original est dans ~/Library/Application Support/Praxis). [cabinet] : nicolas (par
-# défaut) ou un dossier de outils/cabinets. L'outil copie Praxis telle qu'elle est dans le dépôt, y met une copie de la base,
+# clés Praxis.grymd.clés ; sous macOS, l'original est dans ~/Library/Application Support/Praxis). [cabinet] : Nicolas (par
+# défaut), Lorianne, ou un autre dossier de projets/Praxis. L'outil copie cette version de Praxis, y met une copie de la base,
 # demande le mot de passe de la base et dit ce que le prochain lancement changerait : champs ajoutés, abandonnés, valeurs
 # effacées, ou le refus qui bloquerait l'application. Il n'écrit rien dans le dossier donné ni dans la copie de la base.
 set -eu
 depot="$(cd "$(dirname "$0")/.." && pwd)"
 [ $# -ge 1 ] || { echo "usage : outils/essai-mise-a-jour <dossier de la base> [cabinet]" >&2; exit 2; }
 source_base="$(cd "$1" && pwd)"
-cabinet="${2:-nicolas}"
+cabinet="${2:-Nicolas}"
 [ -f "$source_base/Praxis.grymd" ] || { echo "Pas de Praxis.grymd dans $source_base." >&2; exit 1; }
 [ -x "$depot/grym" ] || (cd "$depot" && make -s grym)
 travail="$(mktemp -d)"
 trap 'rm -rf "$travail"' EXIT
-sh "$depot/outils/cabinet" "$cabinet" --effacer > /dev/null
-cp -R "$depot/_cabinets/$cabinet/." "$travail/"
+[ -f "$depot/projets/Praxis/$cabinet/Praxis.grym" ] || { echo "Pas de version « $cabinet » dans projets/Praxis." >&2; exit 1; }
+cp -R "$depot/projets/Praxis/$cabinet/." "$travail/"
+rm -f "$travail"/*.grymd* "$travail"/*.grymb
 cp "$source_base/Praxis.grymd" "$travail/"
 [ -f "$source_base/Praxis.grymd.clés" ] && cp "$source_base/Praxis.grymd.clés" "$travail/"
 echo "Praxis du dépôt : $(cd "$depot" && git log --oneline -1 | cut -c1-70)"

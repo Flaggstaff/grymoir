@@ -1,0 +1,26 @@
+#!/bin/sh
+# Les versions de Praxis (projets/Praxis/*) partagent leur code (23 octobre 2026) : actions.grym et données.grym identiques à
+# ceux de Nicolas ; Praxis.grym identique, hormis la phrase « Les écrans ont … » et, pour le test de charge, ses lignes de
+# charge. Une différence : une correction oubliée dans une version (outils/praxis-propager la recopie).
+set -u
+depot="$(cd "$(dirname "$0")/.." && pwd)"
+R="$depot/projets/Praxis/Nicolas"
+total=0
+echecs=0
+filtre() { grep -v -e '^Les écrans ont ' -e '^Utiliser « charge »\.' -e '^Remarque : le test de charge :' \
+                   -e '^Si le nombre de patients conservés est nul, remplir la charge\.' "$1" | cat -s; }
+for v in "$depot"/projets/Praxis/*/; do
+    nom="$(basename "$v")"
+    [ "$nom" = Nicolas ] && continue
+    for f in actions.grym données.grym; do
+        total=$((total + 1))
+        cmp -s "$R/$f" "$v/$f" || { echecs=$((echecs + 1)); echo "ÉCHEC : $nom/$f diffère de Nicolas/$f"; }
+    done
+    total=$((total + 1))
+    filtre "$R/Praxis.grym" > /tmp/praxis-versions-a.$$
+    filtre "$v/Praxis.grym" > /tmp/praxis-versions-b.$$
+    cmp -s /tmp/praxis-versions-a.$$ /tmp/praxis-versions-b.$$ || { echecs=$((echecs + 1)); echo "ÉCHEC : $nom/Praxis.grym diffère de Nicolas/Praxis.grym au-delà de ce qui lui est propre"; }
+    rm -f /tmp/praxis-versions-a.$$ /tmp/praxis-versions-b.$$
+done
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]

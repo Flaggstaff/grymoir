@@ -1,5 +1,5 @@
 #!/bin/sh
-# Praxis en grandeur réelle : une copie de Praxis branchée sur l'année 2025 inventée (tests/praxis/charge.grym).
+# Praxis en grandeur réelle : une copie de « projets/Praxis/Test de charge », l'année 2025 inventée (charge.grym).
 #
 #   tests/praxis/charger              prépare _charge_praxis/ (à la racine du dépôt, ignoré par Git) ; on l'ouvre
 #                                     dans l'atelier et on lance : le premier lancement fabrique l'année
@@ -11,12 +11,9 @@ set -e
 depot="$(cd "$(dirname "$0")/../.." && pwd)"
 cible="$depot/_charge_praxis"
 rm -rf "$cible"
-mkdir -p "$cible/images" "$cible/polices"
-for f in "$depot"/projets/Praxis/*.grym "$depot"/projets/Praxis/projet.grymatelier; do cp "$f" "$cible/"; done
-cp "$depot"/projets/Praxis/images/* "$cible/images/"
-cp "$depot"/projets/Praxis/polices/* "$cible/polices/"
-cp "$depot/tests/praxis/charge.grym" "$cible/"
-[ -f "$depot/projets/Praxis/clé-de-secours.pub" ] && cp "$depot/projets/Praxis/clé-de-secours.pub" "$cible/"
+mkdir -p "$cible"
+cp -R "$depot/projets/Praxis/Test de charge/." "$cible/"
+rm -f "$cible"/*.grymd* "$cible"/*.grymb
 
 if [ "$1" = "--console" ]; then
     grym="$depot/grym"
@@ -70,14 +67,6 @@ FIN
     exit 0
 fi
 
-# Dans l'application : l'année se fabrique au premier lancement, après la fondation du cabinet et avant l'accueil.
-awk '
-    $0 == "Utiliser « actions »." && !u { print; print "Utiliser « charge »."; u = 1; next }
-    index($0, "Remarque : l'\''accueil de la maquette") == 1 && !r {
-        print "Si le nombre de patients conservés est nul, remplir la charge."; print ""; r = 1
-    }
-    { print }
-    END { if (!u || !r) exit 1 }
-' "$depot/projets/Praxis/Praxis.grym" > "$cible/Praxis.grym" || { echo "Praxis.grym a changé : les ancres de la charge manquent." >&2; exit 1; }
-echo "Prêt : $cible"
-echo "Ouvre ce dossier dans l'atelier et lance. Le premier lancement demande un mot de passe, puis fabrique l'année."
+# Dans l'application : le projet « projets/Praxis/Test de charge » s'ouvre tel quel dans l'atelier ; l'année s'y fabrique au
+# premier lancement, après la fondation du cabinet et avant l'accueil (charge.grym, branché dans son Praxis.grym).
+echo "Prêt : $cible. Pour l'application, ouvre directement projets/Praxis/Test de charge dans l'atelier."

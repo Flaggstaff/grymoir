@@ -1,0 +1,27 @@
+Remarque : Praxis : ce qui est propre au cabinet de Nicolas Seydoux, et seulement cela ; pour un autre cabinet, on change ce fichier,
+Remarque : les images, et la phrase « Les écrans ont … » du programme principal ; tout le reste s'y règle dans la Configuration.
+Utiliser « actions ».
+
+Remarque : le cabinet à son nom ; l'adresse et les numéros se complètent dans sa fiche ; les absences, pas facturées au départ ;
+Remarque : le dossier de sauvegarde se choisit au premier lancement, avec le mot de passe ; Nicolas prend ses rendez-vous sur
+Remarque : Calendly : pas de choix d'agenda (un cabinet qui choisit entre Praxis et OneDoc écrit « Le choix d'agenda vaut vrai. »).
+Pour fonder le cabinet :
+    Le c vaut un nouveau cabinet :
+        Le nom vaut « Nicolas Seydoux ».
+        Le pays vaut « Suisse ».
+        La facturation des absences vaut faux.
+        Le choix d'agenda vaut faux.
+        La facturation aux assurances vaut faux.
+        L'agenda vaut « Praxis ».
+    Le logo du c devient le fichier « images/coeur-encre.png ».
+    La signature du c devient le fichier « images/signature.png ».
+    Le prénom du c devient « Nicolas ».
+    Conserver le c.
+
+Remarque : les soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
+Pour poser les soins de départ :
+    Proposer en deux prix « EPI » et 130 et 70.
+    Proposer en deux prix « LEAA » et 130 et 100.
+    Proposer « Kriya Massage » et 100.
+    Proposer « Toucher Thérapeutique » et 100.
+    Proposer « Soin à Distance » et 100.

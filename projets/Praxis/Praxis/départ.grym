@@ -1,0 +1,20 @@
+Remarque : Praxis, version neutre : le point de départ d'un nouveau cabinet. Pour l'installer chez quelqu'un, copier ce dossier
+Remarque : dans projets/Praxis/<Nom>, puis changer ce fichier (nom, prénom, interrupteurs, soins), les images, et la phrase
+Remarque : « Les écrans ont … » du programme principal ; le reste se règle dans la Configuration de l'application.
+Utiliser « actions ».
+
+Remarque : un cabinet sans nom propre : le nom et l'adresse se complètent dans sa fiche ; les deux interrupteurs de Praxis 2
+Remarque : (le choix d'agenda, la facturation aux assurances) éteints, comme Praxis 1 ; ils s'allument dans la fiche du cabinet.
+Pour fonder le cabinet :
+    Le c vaut un nouveau cabinet :
+        Le nom vaut « Mon cabinet ».
+        Le pays vaut « Suisse ».
+        La facturation des absences vaut faux.
+        Le choix d'agenda vaut faux.
+        La facturation aux assurances vaut faux.
+        L'agenda vaut « Praxis ».
+    Conserver le c.
+
+Remarque : aucun soin d'avance : chaque cabinet crée les siens, avec leurs tarifs, dans l'écran des soins.
+Pour poser les soins de départ :
+    Remarque : rien d'avance.

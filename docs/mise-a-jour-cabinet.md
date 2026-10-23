@@ -1,11 +1,16 @@
 # Mettre à jour Praxis chez un cabinet
 
+Les versions de Praxis sont toutes dans `projets/Praxis` : `Nicolas`, `Lorianne`, `Praxis` (neutre, le point de départ d'un nouveau
+cabinet) et `Test de charge` (l'année 2025 inventée, fabriquée au premier lancement). Elles partagent leur code : une correction se
+fait dans une version, puis `outils/praxis-propager <version>` la recopie dans les autres ; `make test` vérifie qu'elles ne
+divergent pas (`tests/praxis-versions`).
+
 Marche à suivre, rédigée le 23 octobre 2026 pour la visite chez Nicolas. Elle vaut pour tout cabinet.
 
 ## Avant la visite, sur ton Mac
 
 1. Dépôt à jour : `cd ~/Downloads/grymoir && git pull --ff-only && make -s test`. Tous les essais passent.
-2. Application du cabinet : `outils/cabinet nicolas`, puis, dans l'atelier, ouvrir `_cabinets/nicolas` et fabriquer l'application.
+2. Application du cabinet : dans l'atelier, ouvrir `projets/Praxis/Nicolas` et fabriquer l'application.
 3. Emporter l'application fabriquée et une clé USB vide.
 
 ## Chez le cabinet, dans cet ordre

@@ -1,0 +1,35 @@
+#!/bin/sh
+# Un seul code pour toutes les versions de Praxis (23 octobre 2026) : après une correction dans une version (Nicolas par défaut),
+# copie son code commun (Praxis.grym, actions.grym, données.grym) dans les autres versions de projets/Praxis. Chacune garde ce
+# qui lui est propre : son départ.grym, ses images, ses polices, sa phrase « Les écrans ont … », et, pour le test de charge,
+# ses lignes qui branchent charge.grym. tests/praxis-versions vérifie ensuite que rien d'autre ne diffère.
+#
+#   outils/praxis-propager [version source]
+set -eu
+depot="$(cd "$(dirname "$0")/.." && pwd)"
+source="${1:-Nicolas}"
+S="$depot/projets/Praxis/$source"
+[ -f "$S/Praxis.grym" ] || { echo "Pas de version « $source » dans projets/Praxis." >&2; exit 1; }
+for cible in "$depot"/projets/Praxis/*/; do
+    nom="$(basename "$cible")"
+    [ "$nom" = "$source" ] && continue
+    [ -f "$cible/Praxis.grym" ] || continue
+    cp "$S/actions.grym" "$S/données.grym" "$cible/"
+    ecrans="$(grep '^Les écrans ont ' "$cible/Praxis.grym")"
+    charge=0
+    grep -q '^Utiliser « charge »\.' "$cible/Praxis.grym" && charge=1
+    awk -v e="$ecrans" -v c="$charge" '
+        index($0, "Utiliser « charge ».") == 1 || index($0, "Remarque : le test de charge :") == 1 \
+            || index($0, "Si le nombre de patients conservés est nul, remplir la charge.") == 1 { next }
+        index($0, "Les écrans ont ") == 1 { print e; next }
+        c == 1 && $0 == "Utiliser « actions »." && !u { print; print "Utiliser « charge »."; u = 1; next }
+        c == 1 && index($0, "Remarque : l'\''accueil de la maquette") == 1 && !r {
+            print "Remarque : le test de charge : l'\''année 2025 d'\''un cabinet, fabriquée au premier lancement (charge.grym)."
+            print "Si le nombre de patients conservés est nul, remplir la charge."; print ""; r = 1
+        }
+        { print }' "$S/Praxis.grym" > "$cible/Praxis.grym.nouveau"
+    "$depot/grym" formater "$cible/Praxis.grym.nouveau" > "$cible/Praxis.grym" 2>/dev/null || mv "$cible/Praxis.grym.nouveau" "$cible/Praxis.grym"
+    rm -f "$cible/Praxis.grym.nouveau"
+    echo "→ $nom"
+done
+sh "$depot/tests/praxis-versions"

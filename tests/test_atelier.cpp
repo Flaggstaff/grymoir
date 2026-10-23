@@ -157,7 +157,7 @@ static QString dessin(const QString &ligne, bool compacte = false) {
 // Praxis et ses données d'essai (21 octobre 2026) : l'application livrée part vide ; l'essai en fait une copie, où les
 // données d'essai (tests/praxis/essais.grym) sont branchées avant l'accueil, comme dans test_serveur.c.
 static bool copier_praxis_essai(const QString &vers) {
-    const QString source = QString(GRYM_SOURCE) + "/projets/Praxis";
+    const QString source = QString(GRYM_SOURCE) + "/projets/Praxis/Nicolas";
     // ni la base du projet, ni ses clés (« Praxis.grymd.clés ») : celles d'un développeur qui a lancé Praxis feraient
     // échouer l'essai sur « Mot de passe faux » (23 octobre 2026)
     for (const QString &n : QDir(source).entryList(QDir::Files))
@@ -278,10 +278,14 @@ int main(int argc, char **argv) {
     {
         bool trouve = false;
         const QStringList p = projets_du_depot(QString(GRYM_SOURCE) + "/construction", &trouve);
-        VERIFIER(trouve && p.size() >= 3);
-        bool cabinet = false;
-        for (const QString &x : p) cabinet |= x.endsWith("/projets/Praxis");
-        VERIFIER(cabinet);
+        VERIFIER(trouve && p.size() >= 6);
+        bool cabinet = false, neutre = false, charge = false;   // un groupe : projets/Praxis/Nicolas, …/Praxis, …/Test de charge
+        for (const QString &x : p) {
+            cabinet |= x.endsWith("/projets/Praxis/Nicolas");
+            neutre |= x.endsWith("/projets/Praxis/Praxis");
+            charge |= x.endsWith("/projets/Praxis/Test de charge");
+        }
+        VERIFIER(cabinet && neutre && charge);
         QTemporaryDir ailleurs;
         VERIFIER(projets_du_depot(ailleurs.path(), &trouve).isEmpty() && !trouve);
     }
