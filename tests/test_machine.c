@@ -403,6 +403,10 @@ static void essais_base_chiffree(void) {
                      "~« clé » est un secret : il ne se lit que pour être envoyé.");
     verifier_chiffre(__LINE__, s, "essai-essai", CAB "Si « cle-api-4417 » correspond à la clé du cabinet conservé, afficher « oui ».",
                      "~« clé » est un secret : il ne se lit que pour être envoyé.");
+    /* dans un envoi, le secret se lit (2.42) : la console n'envoie pas, et le dit */
+    verifier_chiffre(__LINE__, s, "essai-essai", CAB "La r vaut l'envoi à « https://exemple.ch/api » de :\n"
+                                                 "    « clé » : la clé du cabinet conservé,\n    « n » : 3.\n",
+                     "~Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée.");
     verifier_chiffre(__LINE__, s, "essai-essai", CAB "La clé du cabinet conservé devient « autre ».\n"
                                                  "Si la clé du cabinet conservé est présente, afficher « gardée ».", "gardée");
     effacer_base(s);
@@ -4280,6 +4284,17 @@ int main(void) {
     /* « Ouvrir » un fichier (2.26) : rien d'autre ; un fichier absent ; la console ne montre rien */
     PROG("Ouvrir 3.", "~« Ouvrir » montre un fichier : « Ouvrir le justificatif du frais. »");
     PROG("Le n vaut 3.\nOuvrir le n.", "~« Ouvrir » montre un fichier ou une adresse web.");
+    /* l'envoi à un service web (2.42) : https:// seulement (ou la machine elle-même) ; la console refuse ; la réponse JSON se
+       lit champ par champ, objets par leur clé, tableaux par leur rang ; un champ qui manque est absent */
+    PROG("La r vaut l'envoi à « http://exemple.ch » de :\n    « a » : 1.", "~Un envoi passe par https:// : « http://exemple.ch » enverrait en clair.");
+    PROG("La r vaut la lecture de « https://exemple.ch/x » avec :\n    « a » : 1,\n    « b » : « z ».",
+         "~Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée.");
+    PROG("La r vaut « {\"a\": {\"b\": 3.5, \"t\": [10, 20]}, \"d\": true, \"n\": null} ».\n"
+         "Afficher le champ « a.b » de la r puis le champ « a.t.1 » de la r puis le champ « d » de la r.\n"
+         "Si le champ « n » de la r est absent et le champ « z.y » de la r est absent, afficher « absents ».",
+         "3.5 20 vrai\nabsents");
+    PROG("La r vaut « pas du JSON ».\nAfficher le champ « a » de la r.", "~La réponse n'est pas du JSON");
+    PROG("La r vaut l'envoi à « https://exemple.ch » de :\n    « a » : 1,\n    « a » : 2.", "~La clé « a » est déjà envoyée.");
     /* une adresse web (2.41) : refusée en console, qui n'a pas de navigateur ; un texte qui n'en est pas une, refusé */
     PROG("Un cabinet, conservé, a :\n    un site (adresse web).\nLe c vaut un nouveau cabinet :\n    Le site vaut « https://onedoc.ch ».\n"
          "Ouvrir le site du c.", "~Une adresse web s'ouvre depuis l'atelier ou une application fabriquée.");

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.41 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.42 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2182,10 +2182,33 @@ Si la clé SMS du cabinet est présente, …
 ```
 
 - **Il s'écrit comme un texte** et se range **tel quel** : à l'inverse d'un mot de passe (§ 22.14), qui devient une empreinte, un secret doit repartir. C'est pourquoi il exige une base chiffrée (§ 16.18) : « « clé SMS » est un secret : il se range dans une base chiffrée. Écris « La base est chiffrée. » dans le programme. », à l'écriture d'un objet conservé comme à `Conserver`. Un objet qui n'est pas conservé le garde en mémoire, le temps de l'exécution.
-- **Il ne se lit que pour être envoyé** : « « clé SMS » est un secret : il ne se lit que pour être envoyé. ». L'envoi qui le lira est la prochaine révision ; d'ici là, rien ne le lit. `correspond à` ne s'y applique pas : il se range en clair, il n'a pas d'empreinte.
+- **Il ne se lit que pour être envoyé** : « « clé SMS » est un secret : il ne se lit que pour être envoyé. ». Seul un envoi le lit (§ 22.18), dans ses valeurs. `correspond à` ne s'y applique pas : il se range en clair, il n'a pas d'empreinte.
 - **Sa présence se teste**, comme celle d'un mot de passe : `Si la clé SMS du cabinet est présente`.
 - **Il ne se montre jamais** : « •••••• » dans les fiches et les listes, une cellule vide dans un CSV, absent des rapports et du formulaire (§ 19). Une zone `(secret)` est masquée d'elle-même ; elle se lit dans son événement, pour être rangée dans un champ.
 - Forme compacte : `(secret)`.
+
+### 22.18 Envoi à un service web *(2.42, implémenté le 23 octobre 2026)*
+
+```
+La réponse vaut l'envoi à « https://webapi.exemple.ch/sms » de :
+    « UserName » : l'identifiant SMS du cabinet,
+    « Password » : la clé SMS du cabinet,
+    « MessageText » : le texte du rappel.
+Le numéro du rappel vaut le champ « TransactionReferenceNumber » de la réponse.
+
+L'état vaut la lecture de « https://webapi.exemple.ch/etat » avec :
+    « ref » : le numéro du rappel.
+```
+
+- **`l'envoi à « … » de :`** envoie un objet JSON par POST : une paire par ligne, `« clé » : valeur`, alignées, séparées par des virgules, la dernière finie par le point de la phrase. Un texte devient une chaîne, un nombre un nombre (`12.5`), une date une chaîne `AAAA-MM-JJ`, vrai ou faux `true` ou `false`, un absent `null`. Une clé envoyée deux fois : « La clé « a » est déjà envoyée. »
+- **`la lecture de « … » avec :`** lit par GET : les paires s'ajoutent à l'adresse (`?ref=a%20b`), encodées. Sans valeurs, `la lecture de « … »` lit l'adresse telle quelle.
+- **La réponse est un texte**, le corps renvoyé par le service. **`le champ « a.b » de r`** y lit un champ JSON : les objets par leur clé, les tableaux par leur rang, le premier étant 0 (`« Liste.1 »`). Il rend un texte (un nombre tel qu'écrit, vrai ou faux en mots, un objet en JSON), ou absent si le chemin n'existe pas ou vaut `null`. Une réponse qui n'est pas du JSON : « La réponse n'est pas du JSON : « a » ne s'y lit pas. »
+- **HTTPS obligatoire** : « Un envoi passe par https:// : « http://… » enverrait en clair. » Seule exception, la machine elle-même (`http://127.0.0.1`, `http://localhost`) : un service local, les essais.
+- **Un échec est une erreur rattrapable** (`Essayer`, § 22) : pas de réponse en 15 secondes, un réseau coupé, un certificat refusé, ou un statut HTTP de 400 ou plus (« Le service a répondu 401 : … », suivi du début de la réponse).
+- **L'envoi valide ce qui précède**, comme `Ouvrir` : une erreur plus loin dans l'événement n'annule pas un message déjà parti, ni la trace de son départ.
+- **Un secret (§ 22.17) se lit dans les valeurs d'un envoi**, et nulle part ailleurs.
+- **L'atelier et les applications fabriquées** envoient (Qt Network, les certificats du système). La console et le navigateur de `grym` refusent : « Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée. »
+- Une adresse donnée par un nom s'écrit entre parenthèses, `l'envoi à (le service) de :`, sans quoi « service de » se lit comme un nom. La forme compacte de l'envoi n'existe pas encore.
 
 ## Journal des révisions
 
@@ -2333,3 +2356,4 @@ Si la clé SMS du cabinet est présente, …
 | 2.39 | 2026-10-22 | § 15.8 : le modèle de transcription entre dans toute application fabriquée, qu'elle transcrive ou non (il n'entrait que dans celles qui déclarent un champ transcrit) ; `grym-atelier --transcrit` disparaît |
 | 2.40 | 2026-10-22 | Nouveau § 22.17 : le type `(secret)`, rangé tel quel dans une base chiffrée, illisible sauf pour être envoyé, caché partout ; § 22.6 : les propositions d'une zone `avec recherche` sans égard aux majuscules ni aux accents |
 | 2.41 | 2026-10-22 | § 22.15 : `Ouvrir` une adresse web, dans le navigateur du système (atelier, application fabriquée) |
+| 2.42 | 2026-10-23 | Nouveau § 22.18 : l'envoi à un service web (POST JSON), la lecture (GET), `le champ « a.b » de r` ; un secret se lit dans un envoi ; HTTPS obligatoire, sauf vers la machine elle-même |

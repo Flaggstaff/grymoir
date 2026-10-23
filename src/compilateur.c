@@ -339,6 +339,19 @@ static void expression(Compilation *c, const Noeud *n) {
     case N_CHERCHER:
         chercher(c, n);
         return;
+    case N_ENVOI: {   /* « l'envoi à … de : » (2.42) : l'adresse, puis chaque clé et sa valeur ; un secret s'y lit */
+        emettre(c, I_ENVOI_DEBUT, 0, n->ligne, n->colonne);
+        for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
+        emettre(c, I_ENVOI, (long)((n->nb_enfants - 1) / 2) * 2 + n->forme, n->ligne, n->colonne);
+        return;
+    }
+    case N_CHAMP_JSON: {   /* « le champ « a.b » de r » (2.42) */
+        expression(c, n->enfants[0]);
+        long k = bloc_constante(c->b, C_TEXTE, n->texte);
+        if (k < 0) { trop_grand(c, n); return; }
+        emettre(c, I_CHAMP_JSON, k, n->ligne, n->colonne);
+        return;
+    }
     case N_CODE_QR:   /* « le code QR suisse de t » : le texte, puis son image PNG (2.27) */
         expression(c, n->enfants[0]);
         emettre(c, I_CODE_QR, n->forme, n->ligne, n->colonne);

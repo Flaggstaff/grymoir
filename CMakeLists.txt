@@ -12,7 +12,7 @@ set(CMAKE_AUTOMOC ON)
 
 # Qt 6.4 au moins : la version des distributions Linux courantes (Ubuntu 24.04, Debian 12).
 # Svg : les icônes du thème (vendor/lucide), rendues par QSvgRenderer.
-find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets Svg Multimedia)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets Svg Multimedia Network)
 
 # La transcription des sons (grammaire, § 15.8) : whisper.cpp, épinglé à une version et à l'empreinte de son archive ;
 # seulement la bibliothèque, sans ses exemples. GGML_NATIVE à OFF : une application fabriquée tourne sur d'autres
@@ -42,7 +42,7 @@ endif()
 add_library(grym_coeur STATIC
     src/chemins.c src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c
     src/lexeur.c src/date.c src/texte.c src/teinte.c
-    src/qr.c vendor/qrcodegen/qrcodegen.c src/coffre.c vendor/monocypher/monocypher.c
+    src/json.c src/qr.c vendor/qrcodegen/qrcodegen.c src/coffre.c vendor/monocypher/monocypher.c
     src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c)
 target_include_directories(grym_coeur PUBLIC src)
 target_link_libraries(grym_coeur PUBLIC grym_sqlite)
@@ -53,7 +53,7 @@ endif()
 add_executable(grym-atelier MACOSX_BUNDLE WIN32
     src/atelier/principal.cpp src/atelier/fenetre.cpp src/atelier/editeur.cpp src/atelier/coloration.cpp
     src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp src/atelier/relecture.cpp src/atelier/son.cpp src/atelier/secours.cpp)
-target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia whisper)
+target_link_libraries(grym-atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia Qt6::Network whisper)
 # Windows : l'icône de l'exécutable et le manifeste qui fait lire les chemins en UTF-8 (outils/windows).
 if(WIN32)
     enable_language(RC)
@@ -102,7 +102,7 @@ add_executable(test_atelier tests/test_atelier.cpp src/atelier/coloration.cpp sr
     src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp src/atelier/relecture.cpp src/atelier/son.cpp src/atelier/secours.cpp)
 qt_add_resources(test_atelier "documentation_essais" PREFIX "/documentation" BASE docs FILES docs/grammaire.md docs/guide.md)
 target_include_directories(test_atelier PRIVATE src/atelier)
-target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia whisper)
+target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia Qt6::Network whisper)
 # le modèle d'essai miniature de whisper.cpp : il se charge et tourne comme un vrai, sans rien transcrire d'utile
 target_compile_definitions(test_atelier PRIVATE MODELE_ESSAI="${whisper_SOURCE_DIR}/models/for-tests-ggml-tiny.bin")
 grym_ressources_theme(test_atelier)

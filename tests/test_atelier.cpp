@@ -68,6 +68,8 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QStandardPaths>
+#include <QTcpServer>
+#include <QTcpSocket>
 #include <QTemporaryDir>
 #include <QTextBlock>
 #include <QTextBrowser>
@@ -4826,6 +4828,65 @@ int main(int argc, char **argv) {
         VERIFIER(t.contains(QString::fromUtf8("essai pdf deux")));
         VERIFIER(t.contains(QString::fromUtf8("essai cotation 96 7601")));
         VERIFIER(t.contains(QString::fromUtf8("essai avant règlement 0")));
+    }
+
+    // L'envoi à un service web (2.42) : un faux service sur la machine elle-même ; le corps JSON reçu tel qu'envoyé, le secret
+    // compris ; la réponse lue champ par champ ; la lecture (GET) et ses valeurs dans l'adresse ; un statut 401, une erreur
+    // rattrapable ; ce qui précède l'envoi est validé
+    {
+        QTcpServer service;
+        VERIFIER(service.listen(QHostAddress::LocalHost));
+        QByteArray recu;
+        QObject::connect(&service, &QTcpServer::newConnection, &service, [&] {
+            QTcpSocket *so = service.nextPendingConnection();
+            QObject::connect(so, &QTcpSocket::readyRead, so, [&, so] {
+                recu += so->readAll();
+                const int fin = recu.indexOf("\r\n\r\n");
+                if (fin < 0) return;
+                const int lg = recu.indexOf("Content-Length:");
+                const int attendu = lg >= 0 ? recu.mid(lg + 15, recu.indexOf("\r\n", lg) - lg - 15).trimmed().toInt() : 0;
+                if (recu.size() - fin - 4 < attendu) return;
+                const bool refuse = recu.contains("/refus");
+                const QByteArray corps = refuse ? QByteArray("{\"erreur\": \"clé inconnue\"}")
+                                                : QByteArray("{\"StatusCode\": \"1\", \"Ref\": {\"n\": 42}, \"Liste\": [\"a\", \"b\"]}");
+                so->write((refuse ? QByteArray("HTTP/1.1 401 Unauthorized\r\n") : QByteArray("HTTP/1.1 200 OK\r\n"))
+                          + "Content-Type: application/json\r\nContent-Length: " + QByteArray::number(corps.size())
+                          + "\r\nConnection: close\r\n\r\n" + corps);
+                so->disconnectFromHost();
+            });
+        });
+        const QString base = QString("http://127.0.0.1:%1").arg(service.serverPort());
+        QTemporaryDir d;
+        QFile f(d.filePath("envoi.grym"));
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write(QString::fromUtf8(
+            "La base est chiffrée.\n"
+            "Un compte, conservé, a :\n    un nom (texte), unique,\n    une clé (secret), facultative.\n"
+            "Le c vaut un nouveau compte :\n    Le nom vaut « essai ».\n    La clé vaut « cle-secrete-17 ».\nConserver le c.\n"
+            "La r vaut l'envoi à « %1/sms » de :\n    « UserName » : le nom du c,\n    « Password » : la clé du c,\n"
+            "    « Recu » : 12,5,\n    « Jour » : 01.10.2026.\n"
+            "Afficher « essai statut » puis le champ « StatusCode » de la r puis le champ « Ref.n » de la r puis le champ « Liste.1 » de la r.\n"
+            "La l vaut la lecture de « %1/etat » avec :\n    « ref » : « a b ».\n"
+            "Afficher « essai lecture » puis le champ « StatusCode » de la l.\n"
+            "Essayer :\n    La x vaut l'envoi à « %1/refus » de :\n        « a » : 1.\n"
+            "En cas d'échec :\n    Afficher « essai refus » puis le motif de l'échec.\n"
+            "Afficher « fin des essais ».\n").arg(base).toUtf8());
+        f.close();
+        Execution e(d.filePath("envoi.grym"));   // le mot de passe des essais : GRYM_MOT_DE_PASSE_BASE, posé pour tous
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 30000 && !fil().contains("fin des essais")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        const QString t = fil();
+        VERIFIER(t.contains(QString::fromUtf8("essai statut 1 42 b")));
+        VERIFIER(t.contains(QString::fromUtf8("essai lecture 1")));
+        VERIFIER(t.contains(QString::fromUtf8("essai refus Le service a répondu 401")));
+        VERIFIER(recu.contains("POST /sms"));
+        VERIFIER(recu.contains("\"Password\":\"cle-secrete-17\""));
+        VERIFIER(recu.contains("\"Recu\":12.5") && recu.contains("\"Jour\":\"2026-10-01\""));
+        VERIFIER(recu.contains("GET /etat?ref=a%20b"));
+        if (!t.contains("fin des essais")) printf("TRACE %s\n", t.right(600).toUtf8().constData());
     }
 
     // Praxis 2 (23 octobre 2026) : une facture tiers payant par année civile ; l'annonce du traitement à l'assureur ; au-delà

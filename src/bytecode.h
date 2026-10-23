@@ -129,10 +129,14 @@ typedef enum {
     I_RESTAURER,        /* opérande : 1 avec un mot de passe (dépilé d'abord) ; dépile un chemin ou un fichier, une copie
                            de base, chiffrée ou non ; vérifiée, elle s'écrit à côté de la base (« .restaurer ») à la fin de
                            l'exécution réussie et la remplace à la prochaine ouverture (2.30) */
-    I_CHANGER_MDP_BASE  /* dépile le nouveau mot de passe, puis l'ancien : l'enveloppe des clés de la base refaite (2.37) */
+    I_CHANGER_MDP_BASE, /* dépile le nouveau mot de passe, puis l'ancien : l'enveloppe des clés de la base refaite (2.37) */
+    I_ENVOI_DEBUT,      /* ouvre les valeurs d'un envoi : un secret s'y lit (2.42) */
+    I_ENVOI,            /* opérande : nombre de paires × 2 + forme (0 POST, 1 GET) ; dépile les paires (clé, valeur),
+                           puis l'adresse ; valide ce qui précède, envoie, empile la réponse, un texte (2.42) */
+    I_CHAMP_JSON        /* opérande : la constante du chemin ; dépile une réponse, empile le texte du champ, ou absent */
 } CodeInstruction;
 
-#define I_DERNIER I_CHANGER_MDP_BASE
+#define I_DERNIER I_CHAMP_JSON
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

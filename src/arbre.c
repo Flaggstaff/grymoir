@@ -180,6 +180,18 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         }
         chaine_ajouter(c, ")");
         return;
+    case N_ENVOI:   /* (envoi url « clé » v …) ou (lecture url …) (2.42) */
+        chaine_ajouter(c, n->forme ? "(lecture" : "(envoi");
+        for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }
+        chaine_ajouter(c, ")");
+        return;
+    case N_CHAMP_JSON:   /* (champ « a.b » r) (2.42) */
+        chaine_ajouter(c, "(champ « ");
+        chaine_ajouter(c, n->texte ? n->texte : "");
+        chaine_ajouter(c, " » ");
+        if (n->nb_enfants) decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_CODE_QR:   /* (code-qr t) ou (code-qr-suisse t) */
         chaine_ajouter(c, n->forme ? "(code-qr-suisse " : "(code-qr ");
         if (n->nb_enfants) decrire(n->enfants[0], c);

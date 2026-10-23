@@ -52,6 +52,11 @@
 #include <QHeaderView>
 #include <QTextBrowser>
 #include <QDesktopServices>
+#include <QEventLoop>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QTimer>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <csignal>
@@ -235,6 +240,49 @@ static void iface_ecran_theme(void *contexte, const char *const *noms, const cha
 static void iface_montrer_document(void *contexte, const unsigned char *octets, size_t taille, const char *nom) {   // 2.25, 2.26
     emit static_cast<Travail *>(contexte)->document(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille),
                                                     QString::fromUtf8(nom ? nom : "document.pdf"));
+}
+
+// « l'envoi à … de : », « la lecture de … » (2.42) : dans le fil de l'exécution, une requête HTTPS attendue sur place, 15 s
+// au plus ; le chiffrement est celui de Qt Network, avec les certificats du système
+static int iface_envoyer(void *contexte, int lecture, const char *adresse, const char *corps, long *statut, char **reponse,
+                         char **erreur) {
+    (void)contexte;
+    QNetworkAccessManager reseau;
+    QNetworkRequest requete{QUrl(QString::fromUtf8(adresse))};
+    requete.setRawHeader("Accept", "application/json");
+    requete.setTransferTimeout(15000);
+    QNetworkReply *r;
+    if (lecture) r = reseau.get(requete);
+    else {
+        requete.setHeader(QNetworkRequest::ContentTypeHeader, "application/json; charset=utf-8");
+        r = reseau.post(requete, QByteArray(corps ? corps : ""));
+    }
+    QEventLoop attente;
+    QObject::connect(r, &QNetworkReply::finished, &attente, &QEventLoop::quit);
+    QTimer garde;
+    garde.setSingleShot(true);
+    QObject::connect(&garde, &QTimer::timeout, &attente, &QEventLoop::quit);
+    garde.start(16000);
+    if (!r->isFinished()) attente.exec();
+    const QByteArray recu = r->isFinished() ? r->readAll() : QByteArray();
+    const QVariant code = r->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+    const bool fini = r->isFinished();
+    const QNetworkReply::NetworkError e = r->error();
+    const QString message = r->errorString();
+    r->abort();
+    r->deleteLater();
+    if (!fini) {
+        *erreur = grym_dupliquer("Le service n'a pas répondu en 15 secondes.");
+        return 0;
+    }
+    if (!code.isValid()) {   // rien de HTTP : réseau, nom, certificat
+        *erreur = grym_formater("L'envoi n'a pas abouti : %s.", message.toUtf8().constData());
+        return 0;
+    }
+    (void)e;
+    *statut = code.toLongLong();
+    *reponse = grym_dupliquer(recu.constData());
+    return 1;
 }
 
 static void iface_ouvrir_adresse(void *contexte, const char *adresse) {   // 2.41
@@ -531,7 +579,7 @@ void Travail::run() {
                    iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
                    iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf,
                    iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte,
-                   iface_montrer_document, iface_ouvrir_adresse};
+                   iface_montrer_document, iface_ouvrir_adresse, iface_envoyer};
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     situer(m, chemin, base_imposee, dossier_ecriture);

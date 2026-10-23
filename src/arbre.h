@@ -162,8 +162,12 @@ typedef enum {
     P_RESTAURER,     /* « Restaurer la base depuis f [avec le mot de passe m]. » (2.30) : enfants[0] : un chemin ou un
                         fichier ; enfants[1] : le mot de passe (forme 1) */
     P_BASE_CHIFFREE, /* « La base est chiffrée. » (2.37, § 16.18) : le module le note ; rien ne s'exécute */
-    P_CHANGER_MDP    /* « Changer le mot de passe de la base pour n, l'ancien étant a. » (2.37) : enfants[0] : le nouveau,
+    P_CHANGER_MDP,   /* « Changer le mot de passe de la base pour n, l'ancien étant a. » (2.37) : enfants[0] : le nouveau,
                         enfants[1] : l'ancien */
+    N_ENVOI,         /* « l'envoi à « https://… » de : « clé » : valeur, … » (forme 0, POST JSON) ; « la lecture de
+                        « https://… » avec : … » (forme 1, GET) (2.42) : enfants[0] : l'adresse, puis des paires, une
+                        clé (N_TEXTE) et sa valeur */
+    N_CHAMP_JSON     /* « le champ « a.b » de r » (2.42) : texte : le chemin ; enfant : la réponse */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */

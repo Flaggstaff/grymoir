@@ -6,7 +6,7 @@ CPPFLAGS += -isystem vendor/sqlite   # en-tête tiers : ses avertissements ne so
 # dans les mêmes conditions que grym.exe, noms accentués compris (« données.grym »).
 LEXEUR    = src/lexeur.c src/date.c src/texte.c src/teinte.c $(RESSOURCES)
 ANALYSEUR = src/chemins.c src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c $(LEXEUR)
-EXECUTION = src/qr.c vendor/qrcodegen/qrcodegen.c src/coffre.c vendor/monocypher/monocypher.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c $(ANALYSEUR) $(SQLITE_O)
+EXECUTION = src/json.c src/qr.c vendor/qrcodegen/qrcodegen.c src/coffre.c vendor/monocypher/monocypher.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c $(ANALYSEUR) $(SQLITE_O)
 # SQLite embarqué, avec SQLite3MC (vendor/sqlite, voir PROVENANCE.md) : compilé une fois, sans les avertissements
 # de GrymoiR (ce code n'est pas le nôtre), avec les réglages de la charte.
 SQLITE_FLAGS = -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DQS=0 \
@@ -28,8 +28,8 @@ all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_mac
 $(SQLITE_O): vendor/sqlite/sqlite3.c vendor/sqlite/sqlite3.h
 	$(CC) $(SQLITE_FLAGS) -c -o $@ vendor/sqlite/sqlite3.c
 
-grym: src/grym.c src/lsp.c src/json.c src/serveur.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h src/serveur.h
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/json.c src/serveur.c $(EXECUTION) $(RESEAU)
+grym: src/grym.c src/lsp.c src/serveur.c $(EXECUTION) $(ENTETES) src/lsp.h src/json.h src/serveur.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym.c src/lsp.c src/serveur.c $(EXECUTION) $(RESEAU)
 
 outils/windows/grym-ressources.o: outils/windows/grym.rc outils/windows/grymoir.manifest
 	$(WINDRES) -I outils/windows -i outils/windows/grym.rc -o $@
@@ -64,8 +64,8 @@ test_base: tests/test_base.c $(SQLITE_O)
 test_lsp: tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR) $(ENTETES) src/lsp.h src/json.h
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_lsp.c src/lsp.c src/json.c $(ANALYSEUR)
 
-test_serveur: tests/test_serveur.c src/serveur.c src/json.c $(EXECUTION) $(ENTETES) src/serveur.h src/json.h
-	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_serveur.c src/serveur.c src/json.c $(EXECUTION) $(RESEAU)
+test_serveur: tests/test_serveur.c src/serveur.c $(EXECUTION) $(ENTETES) src/serveur.h src/json.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_serveur.c src/serveur.c $(EXECUTION) $(RESEAU)
 
 test_guide: tests/test_guide.c docs/guide.md $(EXECUTION) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_guide.c $(EXECUTION)

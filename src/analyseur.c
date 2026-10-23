@@ -784,6 +784,7 @@ static const char *type_statique(const Noeud *n) {
     case N_MOTIF: return "texte";
     case N_CONVERSION: return n->entier <= 1 || n->entier == 8 || n->entier == 10 ? "texte" : n->texte2;
     case N_NOUVEAU: return n->texte;
+    case N_ENVOI: case N_CHAMP_JSON: return "texte";   /* 2.42 */
     case N_GROUPE: case N_NEGATION: return type_statique(n->enfants[0]);
     default: return NULL;
     }
@@ -2016,8 +2017,105 @@ static Noeud *nouveau(Analyse *a) {
 
 static EcranConnu *document_nomme(Analyse *a, size_t d, size_t *f, char **nom);
 
+static int premier_de_ligne(const Analyse *a, size_t k);
+
+/* Les paires d'un envoi (2.42), une par ligne, alignées : « « clé » : valeur, » ; la dernière laisse son point à la phrase. */
+static int paires_envoi(Analyse *a, Noeud *n, const Jeton *tdeb) {
+    Jeton *dp = cour(a);
+    if (dp->type != J_DEUX_POINTS) {
+        erreur(a, dp, grym_dupliquer(n->forme ? "« la lecture de « https://… » » attend « avec : », puis ses valeurs, une par ligne."
+                                              : "« l'envoi à « https://… » » attend « de : », puis ses valeurs, une par ligne."));
+        return 0;
+    }
+    avancer(a);
+    Jeton *premier = cour(a);
+    if (premier->type == J_FIN || premier->ligne == dp->ligne || premier->retrait <= tdeb->retrait) {
+        erreur(a, premier->type == J_FIN || premier->ligne == dp->ligne ? dp : premier, grym_dupliquer(
+            "Après « : », les valeurs envoyées, une par ligne, indentées : « « clé » : valeur, »."));
+        return 0;
+    }
+    const int col = premier->retrait;
+    for (;;) {
+        Jeton *k = cour(a);
+        if (!premier_de_ligne(a, a->i) || k->retrait != col || k->type != J_TEXTE) {
+            erreur(a, k, grym_dupliquer("Une valeur envoyée s'écrit « « clé » : valeur », une par ligne, alignées."));
+            return 0;
+        }
+        for (size_t r = 1; r < n->nb_enfants; r += 2)
+            if (strcmp(n->enfants[r]->texte, k->valeur) == 0) {
+                erreur(a, k, grym_formater("La clé « %s » est déjà envoyée.", k->valeur));
+                return 0;
+            }
+        Noeud *cle_n = noeud_creer(N_TEXTE, k->ligne, k->colonne, k->debut);
+        cle_n->texte = grym_dupliquer(k->valeur);
+        avancer(a);
+        if (cour(a)->type != J_DEUX_POINTS) {
+            noeud_liberer(cle_n);
+            erreur(a, cour(a), grym_formater("« : » attendu après la clé « %s ».", k->valeur));
+            return 0;
+        }
+        avancer(a);
+        Noeud *v = expression(a);
+        if (!v) { noeud_liberer(cle_n); return 0; }
+        noeud_ajouter(n, cle_n);
+        noeud_ajouter(n, v);
+        n->fin = v->fin;
+        if (cour(a)->type != J_VIRGULE) break;
+        avancer(a);
+    }
+    return 1;
+}
+
 static Noeud *base(Analyse *a) {
     Jeton *t = cour(a);
+    {
+        /* « l'envoi à « https://… » de : », « la lecture de « https://… » avec : » (2.42) : la réponse d'un service web */
+        const int envoi = t->type == J_ELISION && strcmp(t->valeur, "l") == 0 && est_mot(voir(a, 1), "envoi")
+                          && est_mot(voir(a, 2), "à");
+        const int lecture = est_mot(t, "la") && est_mot(voir(a, 1), "lecture") && de_ou_d(voir(a, 2));
+        if (envoi || lecture) {
+            size_t q = a->i;   /* le premier jeton de la ligne : le retrait de la phrase */
+            while (q > 0 && a->j[q - 1].ligne == t->ligne) q--;
+            const Jeton *tligne = &a->j[q];
+            Noeud *n = noeud_creer(N_ENVOI, t->ligne, t->colonne, t->debut);
+            n->forme = lecture;
+            for (int k = 0; k < 3; k++) avancer(a);
+            Noeud *url = expression(a);
+            if (!url) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, url);
+            n->fin = url->fin;
+            if (envoi) {
+                if (!de_ou_d(cour(a))) {
+                    noeud_liberer(n);
+                    return erreur(a, cour(a), grym_dupliquer("« l'envoi à « https://… » » attend « de : », puis ses valeurs."));
+                }
+                avancer(a);
+            } else if (est_mot(cour(a), "avec")) {
+                avancer(a);
+            } else {
+                return n;   /* « la lecture de « https://… » » : sans valeurs, l'adresse telle quelle */
+            }
+            if (!paires_envoi(a, n, tligne)) { noeud_liberer(n); return NULL; }
+            return n;
+        }
+        /* « le champ « a.b » de r » (2.42) : un champ de la réponse JSON d'un envoi, en texte, ou absent */
+        const int m1 = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : -1;
+        if (m1 >= 0 && est_mot(voir(a, m1), "champ") && voir(a, m1 + 1)->type == J_TEXTE
+            && (de_ou_d(voir(a, m1 + 2)) || est_mot(voir(a, m1 + 2), "du"))) {
+            const Jeton *tc = voir(a, m1 + 1), *td = voir(a, m1 + 2);
+            Noeud *n = noeud_creer(N_CHAMP_JSON, t->ligne, t->colonne, t->debut);
+            n->texte = grym_dupliquer(tc->valeur);
+            a->article_force = ART_AUCUN;
+            for (int k = 0; k < m1 + 3; k++) avancer(a);
+            if (est_mot(td, "du")) { a->article_force = ART_LE; a->jeton_force = td; }
+            Noeud *x = expression(a);
+            a->article_force = ART_AUCUN;
+            if (!x) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, x);
+            n->fin = x->fin;
+            return n;
+        }
+    }
     {
         /* « le code QR de t », « le code QR suisse de t », « l'image du code QR suisse de t » (2.27) : l'image PNG du
          * code QR d'un texte */

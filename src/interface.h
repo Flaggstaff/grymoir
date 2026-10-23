@@ -207,6 +207,10 @@ typedef struct {
     /* « Ouvrir le lien OneDoc du cabinet. » (2.41) : une adresse http:// ou https://, dans le navigateur du système. NULL :
      * la machine refuse (console, navigateur). */
     void (*ouvrir_adresse)(void *contexte, const char *adresse);
+    /* « l'envoi à … de : » (2.42) : lecture 0, un POST du corps JSON ; 1, un GET de l'adresse déjà complétée. Rend 1 et la
+     * réponse (allouée), avec son statut HTTP ; 0 et *erreur (allouée) si rien n'est revenu. NULL : la machine refuse. */
+    int (*envoyer)(void *contexte, int lecture, const char *adresse, const char *corps, long *statut, char **reponse,
+                   char **erreur);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

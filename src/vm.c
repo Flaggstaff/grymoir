@@ -3,6 +3,7 @@
  */
 #include "chemins.h"
 #include "vm.h"
+#include "json.h"
 #include "qr.h"
 #include "coffre.h"
 #include "teinte.h"
@@ -15,6 +16,7 @@
 #include "empreinte.h"
 
 #include <errno.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -205,6 +207,7 @@ typedef struct {
 } Ecriture_disque;
 
 struct Machine {
+    int envoi_ouvert;       /* les valeurs d'un envoi s'évaluent : un secret s'y lit (2.42) */
     char *dossier;          /* dossier du programme : base des chemins relatifs */
     char *dossier_ecriture; /* où s'écrit un fichier au chemin relatif, s'il diffère (une application fabriquée) */
     char *chemin_base;      /* fichier de la base des entités, NULL : en mémoire (§ 16.5) */
@@ -1203,6 +1206,82 @@ static char *valider_jusqu_ici(Machine *m, Chaine *sortie) {
     valider(m);
     m->epoque++;   /* ce qui s'écrit ensuite repasse au journal : une erreur l'annulera */
     return NULL;
+}
+
+
+/* ---------------------------------------------------------------- */
+/* Envoi à un service web (2.42)                                    */
+/* ---------------------------------------------------------------- */
+
+/* https://, ou http:// vers la machine elle-même (127.0.0.1, localhost : un service local, les essais). */
+static Valeur vi_texte_pris(char *t) {
+    Valeur v = vi_texte(t);
+    free(t);
+    return v;
+}
+
+static int adresse_envoyable(const char *u) {
+    if (!strncmp(u, "https://", 8)) return 1;
+    return !strncmp(u, "http://127.0.0.1", 16) || !strncmp(u, "http://localhost", 16) || !strncmp(u, "http://[::1]", 12);
+}
+
+/* Une valeur envoyée, en JSON : texte, nombre, vrai ou faux, date (AAAA-MM-JJ), absent (null). */
+static char *valeur_en_json(const Machine *m, const Valeur *v, Chaine *c) {
+    switch (v->type) {
+    case V_ABSENT: chaine_ajouter(c, "null"); return NULL;
+    case V_BOOLEEN: chaine_ajouter(c, v->vrai ? "true" : "false"); return NULL;
+    case V_NOMBRE: {
+        char *t = dec_canonique(&v->nombre);
+        chaine_ajouter(c, t);
+        free(t);
+        return NULL;
+    }
+    case V_DATE: {
+        int an, mo, jo;
+        date_civile(v->jours, &an, &mo, &jo);
+        char *t = grym_formater("\"%04d-%02d-%02d\"", an, mo, jo);
+        chaine_ajouter(c, t);
+        free(t);
+        return NULL;
+    }
+    case V_TEXTE: json_ecrire_texte(c, v->texte); return NULL;
+    default: {
+        (void)m;
+        return grym_dupliquer("Un envoi porte des textes, des nombres, des dates, vrai ou faux.");
+    }
+    }
+}
+
+static void pourcent_encoder(Chaine *c, const char *t) {
+    for (const unsigned char *p = (const unsigned char *)t; *p; p++) {
+        if (isalnum(*p) || *p == '-' || *p == '_' || *p == '.' || *p == '~') {
+            char x[2] = { (char)*p, 0 };
+            chaine_ajouter(c, x);
+        } else {
+            char x[4];
+            snprintf(x, sizeof x, "%%%02X", *p);
+            chaine_ajouter(c, x);
+        }
+    }
+}
+
+/* « le champ « a.b.0 » de r » : les objets par leur clé, les tableaux par leur rang (0 le premier). */
+static const Json *json_suivre(const Json *j, const char *chemin) {
+    char *c = grym_dupliquer(chemin);
+    const Json *r = j;
+    char *reste = c;
+    for (char *p = reste; r && p; ) {
+        char *point = strchr(p, '.');
+        if (point) *point = '\0';
+        if (r->type == JSON_TABLEAU) {
+            char *fin = NULL;
+            long k = strtol(p, &fin, 10);
+            r = (*p && fin && !*fin && k >= 0 && (size_t)k < r->nb) ? r->elements[k] : NULL;
+        } else r = json_champ(r, p);
+        p = point ? point + 1 : NULL;
+    }
+    free(c);
+    return r;
 }
 
 /* ---------------------------------------------------------------- */
@@ -5127,6 +5206,104 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             free(els);
             break;
         }
+        case I_ENVOI_DEBUT:
+            m->envoi_ouvert++;
+            break;
+        case I_ENVOI: {   /* « l'envoi à … de : », « la lecture de … avec : » (2.42) */
+            const size_t np = op / 2;
+            const int lecture = (int)(op % 2);
+            Valeur *vals = grym_allouer((2 * np ? 2 * np : 1) * sizeof *vals);
+            for (size_t q = 2 * np; q-- > 0;) vals[q] = depiler(&pile);
+            Valeur u = depiler(&pile);
+            if (m->envoi_ouvert > 0) m->envoi_ouvert--;
+            char *probleme = NULL;
+            Chaine corps = {0}, adresse = {0};
+            if (u.type != V_TEXTE) probleme = grym_dupliquer("L'adresse d'un envoi est un texte : « https://… ».");
+            else if (!adresse_envoyable(u.texte))
+                probleme = grym_formater("Un envoi passe par https:// : « %s » enverrait en clair.", u.texte);
+            if (!probleme) {
+                chaine_ajouter(&adresse, u.texte);
+                if (!lecture) chaine_ajouter(&corps, "{");
+                for (size_t q = 0; q < np && !probleme; q++) {
+                    const Valeur *cle = &vals[2 * q], *v = &vals[2 * q + 1];
+                    if (lecture) {
+                        chaine_ajouter(&adresse, q == 0 && !strchr(u.texte, '?') ? "?" : "&");
+                        pourcent_encoder(&adresse, cle->texte);
+                        chaine_ajouter(&adresse, "=");
+                        if (v->type == V_ABSENT) continue;
+                        if (v->type != V_TEXTE && v->type != V_NOMBRE && v->type != V_BOOLEEN && v->type != V_DATE) {
+                            probleme = grym_dupliquer("Une lecture porte des textes, des nombres, des dates, vrai ou faux.");
+                            break;
+                        }
+                        char *t = v->type == V_BOOLEEN ? grym_dupliquer(v->vrai ? "true" : "false") : texte_valeur(m, v);
+                        if (v->type == V_DATE) {
+                            int an, mo, jo;
+                            date_civile(v->jours, &an, &mo, &jo);
+                            free(t);
+                            t = grym_formater("%04d-%02d-%02d", an, mo, jo);
+                        } else if (v->type == V_NOMBRE) { free(t); t = dec_canonique(&v->nombre); }
+                        pourcent_encoder(&adresse, t);
+                        free(t);
+                    } else {
+                        if (q) chaine_ajouter(&corps, ",");
+                        json_ecrire_texte(&corps, cle->texte);
+                        chaine_ajouter(&corps, ":");
+                        probleme = valeur_en_json(m, v, &corps);
+                    }
+                }
+                if (!lecture) chaine_ajouter(&corps, "}");
+            }
+            for (size_t q = 0; q < 2 * np; q++) valeur_liberer(&vals[q]);
+            free(vals);
+            valeur_liberer(&u);
+            char *url = chaine_rendre(&adresse), *json = chaine_rendre(&corps);
+            if (!probleme && !m->iface.envoyer)
+                probleme = grym_dupliquer("Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée.");
+            if (!probleme) probleme = valider_jusqu_ici(m, sortie);   /* l'envoi valide ce qui précède, comme « Ouvrir » */
+            long statut = 0;
+            char *reponse = NULL;
+            if (!probleme && !m->iface.envoyer(m->iface.contexte, lecture, url, lecture ? NULL : json, &statut, &reponse, &probleme)
+                && !probleme)
+                probleme = grym_dupliquer("Le service n'a pas répondu.");
+            if (!probleme && statut >= 400)
+                probleme = grym_formater("Le service a répondu %ld : %.200s", statut, reponse ? reponse : "");
+            free(url);
+            free(json);
+            if (probleme) { free(reponse); ok = echouer(diag, b, debut, probleme); break; }
+            empiler(&pile, vi_texte_pris(reponse ? reponse : grym_dupliquer("")));
+            break;
+        }
+        case I_CHAMP_JSON: {   /* « le champ « a.b » de r » (2.42) */
+            Valeur r = depiler(&pile);
+            const char *chemin = b->constantes[op].texte;
+            if (r.type == V_ABSENT) { empiler(&pile, r); break; }
+            if (r.type != V_TEXTE) {
+                valeur_liberer(&r);
+                ok = echouer(diag, b, debut, grym_dupliquer("« le champ « … » de » lit la réponse d'un envoi, un texte."));
+                break;
+            }
+            char *illisible = NULL;
+            Json *j = json_lire(r.texte, strlen(r.texte), &illisible);
+            valeur_liberer(&r);
+            if (!j) {
+                free(illisible);
+                ok = echouer(diag, b, debut, grym_formater("La réponse n'est pas du JSON : « %s » ne s'y lit pas.", chemin));
+                break;
+            }
+            const Json *x = json_suivre(j, chemin);
+            Valeur v;
+            if (!x || x->type == JSON_NUL) v = vi_absent(NULL);
+            else if (x->type == JSON_TEXTE || x->type == JSON_NOMBRE) v = vi_texte_pris(grym_dupliquer(x->texte ? x->texte : ""));
+            else if (x->type == JSON_BOOLEEN) v = vi_texte_pris(grym_dupliquer(x->vrai ? "vrai" : "faux"));
+            else {
+                Chaine c = {0};
+                json_ecrire(&c, x);
+                v = vi_texte_pris(chaine_rendre(&c));
+            }
+            json_liberer(j);
+            empiler(&pile, v);
+            break;
+        }
         case I_CODE_QR: {   /* « le code QR suisse de t » (2.27) : le texte, écrit comme Afficher, en image PNG */
             Valeur v = depiler(&pile);
             char *probleme = NULL;
@@ -6387,7 +6564,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     break;
                 }
                 if (type_secret(o->classe->types[k]) && strncmp(o->classe->nom, "écran ", strlen("écran ")) != 0
-                    && !(ip < b->taille_code && b->code[ip] == I_EST_ABSENT)) {
+                    && !m->envoi_ouvert && !(ip < b->taille_code && b->code[ip] == I_EST_ABSENT)) {
                     /* un secret ne se lit que pour être envoyé (§ 22.17) ; sa présence se teste comme un mot de passe */
                     ok = echouer(diag, b, debut, grym_formater(
                         "« %s » est un secret : il ne se lit que pour être envoyé.", champ));
