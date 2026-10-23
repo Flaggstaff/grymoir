@@ -70,6 +70,8 @@ typedef struct ClasseVM {
     char **anciens;       /* champ propre « , anciennement « client » » : son nom d'avant (§ 16.7), ou NULL ; tableau NULL
                              pour une classe qui n'en a aucun */
     char *ancien;         /* entité « anciennement « client » » : son nom d'avant, ou NULL */
+    char **abandonnes;    /* champs abandonnés (2.49) : la migration efface leurs valeurs */
+    size_t nb_abandonnes;
 } ClasseVM;
 
 /* Objet du tas : sa classe, ses champs, et de quoi le ramasser (docs/vm.md, § 9). */

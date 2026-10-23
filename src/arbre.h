@@ -8,6 +8,9 @@
 
 #include <stddef.h>
 
+/* N_NOM d'un champ d'entité : « , abandonné » (2.49), un bit de entier */
+#define ABANDONNE (1 << 20)
+
 typedef enum {
     /* expressions */
     N_NOMBRE,        /* texte : valeur canonique « 12.50 » ; forme 1 : écrit avec un séparateur de milliers */

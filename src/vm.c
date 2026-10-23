@@ -531,6 +531,8 @@ void machine_detruire(Machine *m) {
         if (m->classes[i]->anciens)
             for (size_t k = 0; k < m->classes[i]->nb_champs; k++) free(m->classes[i]->anciens[k]);
         free(m->classes[i]->anciens);
+        for (size_t k = 0; k < m->classes[i]->nb_abandonnes; k++) free(m->classes[i]->abandonnes[k]);
+        free(m->classes[i]->abandonnes);
         free(m->classes[i]->ancien);
         free(m->classes[i]->champs);
         free(m->classes[i]->proprietaires);
@@ -4198,6 +4200,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         c->hors_fiches = cm->hors_fiches;
         c->pluriel = cm->pluriel ? grym_dupliquer(cm->pluriel) : NULL;
         c->ancien = cm->ancien ? grym_dupliquer(cm->ancien) : NULL;
+        c->nb_abandonnes = cm->nb_abandonnes;   /* 2.49 */
+        c->abandonnes = grym_allouer((cm->nb_abandonnes ? cm->nb_abandonnes : 1) * sizeof *c->abandonnes);
+        for (size_t q = 0; q < cm->nb_abandonnes; q++) c->abandonnes[q] = grym_dupliquer(cm->abandonnes[q]);
         c->anciens = NULL;
         for (size_t q = 0; cm->anciens && q < cm->nb_champs; q++) {
             if (!cm->anciens[q]) continue;

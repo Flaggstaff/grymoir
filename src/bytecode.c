@@ -527,7 +527,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
 /* Fichier .grymb (docs/vm.md, § 11)                                */
 /* ---------------------------------------------------------------- */
 
-#define VERSION_FORMAT 70  /* versions 1 à 69 restent lisibles : sans base chiffrée (69) ; un seul bloc (1, 2), sans classes (3),
+#define VERSION_FORMAT 71  /* 71 : les champs abandonnés d'une classe (2.49) ; versions 1 à 70 restent lisibles : sans base chiffrée (69) ; un seul bloc (1, 2), sans classes (3),
                               sans héritage (4), sans méthodes (5), sans aptitudes (6), sans dates (7),
                               sans fichiers (8), sans entités (9), sans base (10), sans recherche (11),
                               sans valeur de départ (12), sans champ facultatif (13), sans corbeille (14),
@@ -623,6 +623,8 @@ unsigned char *module_serialiser(const Module *m, size_t *taille) {
             ecrire_chaine(&o, c->departs && c->departs[q] ? c->departs[q] : "");
             ecrire_chaine(&o, c->anciens && c->anciens[q] ? c->anciens[q] : "");   /* format 64 */
         }
+        ecrire_u32(&o, (uint32_t)c->nb_abandonnes);   /* format 71 (2.49) */
+        for (size_t q = 0; q < c->nb_abandonnes; q++) ecrire_chaine(&o, c->abandonnes[q]);
     }
     ecrire_u8(&o, m->base_chiffree ? 1u : 0u);   /* format 70 : les marques du module ; bit 1 : base chiffrée */
     *taille = o.n;
@@ -865,6 +867,16 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
                     }
                 }
             }
+            if (version >= 71) {   /* les champs abandonnés (2.49) */
+                const uint32_t na = lire_u(&l, 4);
+                if (l.echec || na > (taille - l.pos) / 4) return echec_module(m, erreur, grym_formater("champs abandonnés de la classe %u illisibles.", (unsigned)k));
+                for (uint32_t q = 0; q < na; q++) {
+                    char *ab = lire_chaine(&l);
+                    if (!ab || !*ab) { free(ab); return echec_module(m, erreur, grym_formater("champ abandonné illisible (classe %u).", (unsigned)k)); }
+                    classe_ajouter_abandonne(c, ab);
+                    free(ab);
+                }
+            }
         }
     }
     if (version >= 70) {
@@ -911,6 +923,8 @@ ClasseModule *module_ajouter_classe(Module *m, const char *nom, int feminin) {
     c->departs = NULL;
     c->anciens = NULL;
     c->ancien = NULL;
+    c->abandonnes = NULL;
+    c->nb_abandonnes = 0;
     c->aptitude = 0;
     c->aptitudes = NULL;
     c->nb_aptitudes = 0;
@@ -941,6 +955,11 @@ void classe_depart_dernier_champ(ClasseModule *c, const char *depart) {
     if (!c->nb_champs) return;
     free(c->departs[c->nb_champs - 1]);
     c->departs[c->nb_champs - 1] = depart ? grym_dupliquer(depart) : NULL;
+}
+
+void classe_ajouter_abandonne(ClasseModule *c, const char *nom) {
+    c->abandonnes = agrandir(c->abandonnes, c->nb_abandonnes + 1, sizeof *c->abandonnes);
+    c->abandonnes[c->nb_abandonnes++] = grym_dupliquer(nom);
 }
 
 void classe_ancien_dernier_champ(ClasseModule *c, const char *ancien) {
@@ -984,6 +1003,8 @@ void module_detruire(Module *m) {
         free(m->classes[k].departs);
         free(m->classes[k].anciens);
         free(m->classes[k].ancien);
+        for (size_t q = 0; q < m->classes[k].nb_abandonnes; q++) free(m->classes[k].abandonnes[q]);
+        free(m->classes[k].abandonnes);
         free(m->classes[k].types);
         free(m->classes[k].uniques);
         for (size_t q = 0; q < m->classes[k].nb_aptitudes; q++) free(m->classes[k].aptitudes[q]);

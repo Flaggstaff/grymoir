@@ -237,6 +237,8 @@ typedef struct {
     char **anciens;       /* « , anciennement « client » » : le nom d'avant du champ, ou NULL (§ 16.7) */
     char *ancien;         /* « Un patient, conservé, anciennement « client », a : » : le nom d'avant, ou NULL */
     size_t nb_champs;
+    char **abandonnes;    /* « un code d'accès (mot de passe), abandonné » : les champs dont la base efface les valeurs (2.49) */
+    size_t nb_abandonnes;
 } ClasseModule;
 
 /* Un module : le programme (bloc 0), ses formules et ses classes. */
@@ -257,6 +259,7 @@ void classe_typer_dernier_champ(ClasseModule *c, const char *type, int unique);
 void classe_depart_dernier_champ(ClasseModule *c, const char *depart);
 void classe_facultatif_dernier_champ(ClasseModule *c);
 void classe_ancien_dernier_champ(ClasseModule *c, const char *ancien);
+void classe_ajouter_abandonne(ClasseModule *c, const char *nom);   /* 2.49 */
 void classe_cascade_dernier_champ(ClasseModule *c);
 void classe_multiple_dernier_champ(ClasseModule *c);
 void module_detruire(Module *m);          /* ignore les entrées mises à NULL */

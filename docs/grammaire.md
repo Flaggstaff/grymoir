@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.48 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.49 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1311,6 +1311,7 @@ Un client, conservé, a :
 - Un lien pointe vers une entité, jamais vers une classe ordinaire.
 - `, unique` : deux objets conservés n'ont pas la même valeur pour ce champ.
 - Un champ est obligatoire, sauf s'il est déclaré `, facultatif` (§ 16.9) : conserver un objet dont un champ obligatoire n'a pas de valeur est une erreur.
+- Un champ qui ne sert plus se déclare `, abandonné` *(2.49)* : `un code d'accès (mot de passe), abandonné`. Le programme ne le connaît plus (« « code d'accès » inconnu ») ; la migration efface ses valeurs, même conservées, et le dit (« champ « code d'accès » abandonné ; 1 valeur effacée »). On garde la ligne : une base qui n'a pas été lancée depuis l'abandon s'y retrouve aussi, alors que retirer le champ plein serait refusé (2.36). Forme compacte : `_abandonné`.
 - `conservé` s'accorde avec le genre de l'entité (`Une facture, conservée, a :`). Seule une entité déclare un type, `, unique` ou un pluriel ; une aptitude peut typer ses champs, sans `, unique`.
 - Une entité peut se désigner elle-même dans un lien (`un parrain (client)` dans `client`) ; un lien vers une autre entité suppose qu'elle soit déclarée avant.
 - Une entité qui hérite se déclare `Un membre, conservé, est un client.` ; ses champs propres suivent dans la phrase suivante, `Un membre a :`, sans répéter `conservé`. `Un document, conservé, est une chose datée.` déclare une entité qui n'a que des aptitudes.
@@ -2400,3 +2401,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.46 | 2026-10-23 | Nouveau § 22.19 : le XML déclaré (`Le XML de x, « racine », montre :`, éléments, attributs, contenus, boucles ; `le XML de x`, un fichier UTF-8 échappé) |
 | 2.47 | 2026-10-23 | Un nom d'écran refuse le trait d'union, comme tout nom (§ 1.4) : « l'écran des rendez-vous » cassait la forme canonique et la forme compacte ; la forme canonique garde les sigles des noms d'écran et des colonnes (« l'écran des SMS », « le numéro GLN ») et l'accord écrit d'un nom au genre inconnu (« l'ordonnance ouverte est présente ») ; `tests/formes` : chaque projet du dépôt, forme canonique stable et aller-retour compact |
 | 2.48 | 2026-10-23 | Les choix d'une zone se filtrent : `un patient (patient dont l'archivage est absent)`, la condition d'une recherche (§ 16.4), évaluée à l'ouverture de l'écran ; la forme compacte du XML déclaré (§ 22.19) |
+| 2.49 | 2026-10-23 | Un champ d'entité s'abandonne : `un code d'accès (mot de passe), abandonné` ; il n'est plus lisible, et la migration efface ses valeurs, même conservées, en le disant (« champ « code d'accès » abandonné ; 1 valeur effacée ») ; la ligne reste, pour les bases pas encore lancées (format du bytecode 71) ; l'adresse d'un envoi s'écrit par un nom, sans parenthèses : `l'envoi au service de :`, `la lecture du service avec :` |

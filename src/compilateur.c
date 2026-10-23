@@ -1230,6 +1230,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         for (size_t q = 0; q < ph->nb_enfants; q++) {
             const Noeud *ch = ph->enfants[q];
             if (ch->type == N_TEXTE) classe_ajouter_aptitude(cm, ch->texte);
+            else if (ch->entier & ABANDONNE) classe_ajouter_abandonne(cm, ch->texte);   /* 2.49 */
             else {
                 classe_ajouter_champ(cm, ch->texte);
                 if (ch->texte3 && ch->forme != 3 && ch->texte2) {   /* valeurs permises : « texte␞à faire␞fini » (§ 16.15) */

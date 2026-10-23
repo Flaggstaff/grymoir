@@ -2722,6 +2722,33 @@ int main(void) {
         }
         remove("_essai_mig2.grymd");
     }
+    /* --- 2.49 : un champ abandonné, plein, part avec ses valeurs ; on ne le lit plus --- */
+    {
+        remove("_essai_mig3.grymd");
+        const char *etapes[][2] = {
+            { "Une séance, conservée, a : un prix (nombre), un code (texte), facultatif.\n"
+              "Le s vaut une nouvelle séance :\n    Le prix vaut 10.\n    Le code vaut « x ».\nConserver s.\n", "" },
+            { "Une séance, conservée, a : un prix (nombre), un code (texte), abandonné.\n"
+              "Afficher le nombre de séances conservées.\n", "1" },
+            { "Une séance, conservée, a : un prix (nombre), un code (texte), abandonné.\n"
+              "Pour chaque séance conservée, afficher le code de la séance.\n", "~« code" },
+            { "Une séance, conservée, a : un prix (nombre).\nAfficher le nombre de séances conservées.\n", "1" },
+        };
+        for (int i = 0; i < 4; i++) {
+            total++;
+            Portee *p = portee_creer();
+            Machine *m = machine_creer();
+            machine_base(m, "_essai_mig3.grymd");
+            char *r = executer_source(p, m, etapes[i][0], 0);
+            const char *att = etapes[i][1];
+            int ok = att[0] == '~' ? strstr(r, att + 1) != NULL : strcmp(r, att) == 0;
+            if (!ok) signaler(__LINE__, etapes[i][0], att, r);
+            free(r);
+            machine_detruire(m);
+            portee_detruire(p);
+        }
+        remove("_essai_mig3.grymd");
+    }
     /* --- Migrations (§ 16.7) : une même base, des déclarations qui évoluent --- */
     {
         remove("_essai_mig.grymd");
@@ -4311,6 +4338,13 @@ int main(void) {
     PROG("Le XML de a, « 1r », montre :\n    le contenu : 1.", "~La racine d'un XML est un nom XML");
     PROG("Le f vaut le XML de b.", "~XML inconnu : déclare-le avant");
     PROG("Le XML de a, « r », montre :\n    l'élément « x y ».", "~Un nom XML entre guillemets");
+    /* 2.49 : une adresse donnée par un nom, sans parenthèses : « au service », « du service », « à le service » */
+    PROG("Le service vaut « https://exemple.ch ».\nLa r vaut l'envoi au service de :\n    « a » : 1.",
+         "~Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée.");
+    PROG("Le service vaut « https://exemple.ch ».\nLa r vaut la lecture du service avec :\n    « a » : 1.",
+         "~Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée.");
+    PROG("Le service vaut « http://exemple.ch ».\nLa r vaut l'envoi à le service avec :\n    « a » : 1,\net du tableau :\n    2.",
+         "~Un envoi passe par https://");
     /* 2.43 : des valeurs d'adresse, puis un objet ou un tableau ; une lecture n'a pas de corps */
     PROG("La r vaut l'envoi à « https://exemple.ch » avec :\n    « k » : 1,\net du tableau :\n    « a »,\n    2.",
          "~Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée.");

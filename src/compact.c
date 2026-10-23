@@ -1607,6 +1607,8 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         if (facultatif) q++;
         int cascade = q < f && est_cle(&r->e[q], "disparaît_avec");
         if (cascade) q++;
+        const size_t abandon = q < f && (est_cle(&r->e[q], "abandonné") || est_cle(&r->e[q], "abandonnée")) ? q : 0;   /* 2.49 */
+        if (abandon) q++;
         size_t transcrit = 0;   /* _transcrit mémo (§ 15.8) */
         if (q + 1 < f && est_cle(&r->e[q], "transcrit") && r->e[q + 1].type == J_CROCHETS) { transcrit = q + 1; q += 2; }
         size_t depart = 0, fin_depart = 0;   /* _départ « Suisse », _départ −3,5 */
@@ -1662,6 +1664,10 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "transcrit", &r->e[transcrit - 1]);
             emettre(r, J_ELISION, "d", &r->e[transcrit - 1], 1);
             copier(r, &r->e[transcrit]);
+        }
+        if (abandon) {   /* _abandonné → , abandonné (2.49) */
+            emettre(r, J_VIRGULE, NULL, &r->e[abandon], 1);
+            mot(r, est_cle(t, "une") ? "abandonnée" : "abandonné", &r->e[abandon]);
         }
         if (cascade) {   /* _disparaît_avec → , et disparaît avec lui (accord non vérifié) */
             emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);

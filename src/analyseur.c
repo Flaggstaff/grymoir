@@ -2083,8 +2083,9 @@ static Noeud *base(Analyse *a) {
     {
         /* « l'envoi à « https://… » de : », « la lecture de « https://… » avec : » (2.42) : la réponse d'un service web */
         const int envoi = t->type == J_ELISION && strcmp(t->valeur, "l") == 0 && est_mot(voir(a, 1), "envoi")
-                          && est_mot(voir(a, 2), "à");
-        const int lecture = est_mot(t, "la") && est_mot(voir(a, 1), "lecture") && de_ou_d(voir(a, 2));
+                          && (est_mot(voir(a, 2), "à") || est_mot(voir(a, 2), "au"));
+        const int lecture = est_mot(t, "la") && est_mot(voir(a, 1), "lecture") && (de_ou_d(voir(a, 2)) || est_mot(voir(a, 2), "du"));
+        const Jeton *contraction = (envoi || lecture) && (est_mot(voir(a, 2), "au") || est_mot(voir(a, 2), "du")) ? voir(a, 2) : NULL;
         if (envoi || lecture) {
             size_t q = a->i;   /* le premier jeton de la ligne : le retrait de la phrase */
             while (q > 0 && a->j[q - 1].ligne == t->ligne) q--;
@@ -2092,7 +2093,19 @@ static Noeud *base(Analyse *a) {
             Noeud *n = noeud_creer(N_ENVOI, t->ligne, t->colonne, t->debut);
             n->forme = lecture;
             for (int k = 0; k < 3; k++) avancer(a);
+            /* l'adresse finit avant « de : », « avec : » ou « du tableau : » : « l'envoi à le service de : » ne lit pas un
+             * nom « service de » (2.49) ; le jeton qui suit l'adresse est masqué le temps de la lire */
+            size_t borne = 0;
+            for (size_t p = a->i; p + 1 < a->n && a->j[p].ligne == t->ligne && !borne; p++)
+                if (((de_ou_d(&a->j[p]) || est_mot(&a->j[p], "avec")) && a->j[p + 1].type == J_DEUX_POINTS)
+                    || (est_mot(&a->j[p], "du") && est_mot(&a->j[p + 1], "tableau")))
+                    borne = p;
+            TypeJeton type_borne = borne ? a->j[borne].type : J_FIN;
+            if (borne) a->j[borne].type = J_POINT;
+            if (contraction) { a->article_force = ART_LE; a->jeton_force = contraction; }   /* « au service », « du service » */
             Noeud *url = expression(a);
+            a->article_force = ART_AUCUN;
+            if (borne) a->j[borne].type = type_borne;
             if (!url) { noeud_liberer(n); return NULL; }
             noeud_ajouter(n, url);
             n->fin = url->fin;
@@ -5199,6 +5212,18 @@ static int lire_champs(Analyse *a, Noeud *n, const Classe *base, int mode, const
                 avancer(a);
                 continue;
             }
+            if (cour(a)->type == J_VIRGULE && (est_mot(voir(a, 1), "abandonné") || est_mot(voir(a, 1), "abandonnée"))
+                && !(c->entier & ABANDONNE)) {
+                /* « , abandonné » (2.49) : le champ ne sert plus ; la migration efface ses valeurs, même conservées */
+                if (mode != 1) {
+                    erreur(a, voir(a, 1), grym_dupliquer("Seul un champ d'entité s'abandonne : « un code (texte), abandonné »."));
+                    return 0;
+                }
+                c->entier |= ABANDONNE;
+                avancer(a);
+                avancer(a);
+                continue;
+            }
             if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "unique") && c->op != 'U') {
                 if (mode != 1) {
                     erreur(a, voir(a, 1), grym_dupliquer("Seul un champ d'entité est unique."));
@@ -5323,7 +5348,7 @@ static void classe_remplir(Classe *c, const Noeud *n) {
     c->types_multiples = grym_allouer((nm ? nm : 1) * sizeof *c->types_multiples);
     for (size_t q = 0; q < n->nb_enfants; q++) {
         const Noeud *ch = n->enfants[q];
-        if (ch->type != N_NOM || ch->forme != 3) continue;
+        if (ch->type != N_NOM || ch->forme != 3 || (ch->entier & ABANDONNE)) continue;
         c->multiples[c->nb_multiples] = grym_dupliquer(ch->texte);
         c->singuliers[c->nb_multiples] = ch->texte3 ? grym_dupliquer(ch->texte3) : singulier_regulier(ch->texte);
         c->types_multiples[c->nb_multiples] = grym_dupliquer(ch->texte2);
@@ -5337,7 +5362,7 @@ static void classe_remplir(Classe *c, const Noeud *n) {
     c->valeurs = grym_allouer((nb ? nb : 1) * sizeof *c->valeurs);
     for (size_t q = 0; q < n->nb_enfants; q++) {
         const Noeud *ch = n->enfants[q];
-        if (ch->type != N_NOM || ch->forme == 3) continue;
+        if (ch->type != N_NOM || ch->forme == 3 || (ch->entier & ABANDONNE)) continue;   /* abandonné : hors d'usage (2.49) */
         c->champs[c->nb] = grym_dupliquer(ch->texte);
         c->genres[c->nb] = ch->forme == 2 ? GENRE_FEMININ : GENRE_MASCULIN;
         c->types[c->nb] = ch->texte2 ? grym_dupliquer(ch->texte2) : NULL;

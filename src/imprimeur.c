@@ -582,8 +582,8 @@ static void expression(Impression *im, const Noeud *n) {
             aj(im, "_fin");
             return;
         }
-        aj(im, n->forme ? "la lecture de " : "l'envoi à ");
-        expression(im, n->enfants[0]);
+        aj(im, n->forme ? "la lecture " : "l'envoi ");
+        preposition(im, n->forme ? "de" : "à", n->enfants[0]);   /* « au service », « du service », « à « https://… » » */
         size_t debut = im->c.n;   /* le retrait de la ligne en cours */
         while (debut > 0 && im->c.d[debut - 1] != '\n') debut--;
         size_t r = 0;
@@ -1163,6 +1163,7 @@ static void type_de_champ(Impression *im, const Noeud *ch) {
             aj(im, ch->transcrit_de);
         }
     }
+    if (ch->entier & ABANDONNE) aj(im, im->compact ? " _abandonné" : ch->forme == 2 ? ", abandonnée" : ", abandonné");   /* 2.49 */
     if (ch->entier & 2)
         aj(im, im->compact ? " _disparaît_avec"
                : genre_de_nom(im, ch->texte2) == G_FEMININ ? ", et disparaît avec elle" : ", et disparaît avec lui");

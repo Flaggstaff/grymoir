@@ -1679,9 +1679,36 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
         *erreur = grym_formater("« %s » ne peut pas changer de classe parente : %s.", c->nom, deja);
         ok = 0;
     }
-    /* un champ retiré, ou renommé : ses valeurs seraient perdues */
-    for (size_t k = 0; ok && k < a.n; k++)
-        if (chercher_champ(&n, a.noms[k]) < 0 && (a.uniques[k] & 8)) {
+    /* un champ retiré, ou renommé : ses valeurs seraient perdues ; abandonné (2.49), elles le sont, voulues */
+    for (size_t k = 0; ok && k < a.n; k++) {
+        int abandonne = 0;
+        for (size_t q = 0; q < c->nb_abandonnes; q++) abandonne |= strcmp(c->abandonnes[q], a.noms[k]) == 0;
+        if (abandonne && chercher_champ(&n, a.noms[k]) < 0 && lignes > 0 && b->rapport) {
+            const long nv = (a.uniques[k] & 8) ? compter_liaisons(b, c->nom, a.noms[k]) : compter_valeurs(b, c, a.noms[k]);
+            char *l = grym_formater("« %s » : champ « %s » abandonné ; %ld valeur%s effacée%s.\n", c->nom, a.noms[k], nv,
+                                    nv > 1 ? "s" : "", nv > 1 ? "s" : "");
+            chaine_ajouter(b->rapport, l);
+            free(l);
+        }
+        if (chercher_champ(&n, a.noms[k]) < 0 && (a.uniques[k] & 8) && abandonne) {
+            Chaine sql = {0};
+            chaine_ajouter(&sql, "DROP TABLE IF EXISTS ");
+            ajouter_liaison(&sql, c->nom, a.noms[k]);
+            ok = executer_chaine(b, &sql, erreur);
+        } else if (chercher_champ(&n, a.noms[k]) < 0 && abandonne) {
+            Chaine sql = {0};
+            chaine_ajouter(&sql, "ALTER TABLE ");
+            ajouter_nom(&sql, "e ", c->nom);
+            chaine_ajouter(&sql, " DROP COLUMN ");
+            ajouter_nom(&sql, "c ", a.noms[k]);
+            if (est_fichier(a.types[k])) {
+                chaine_ajouter(&sql, "; ALTER TABLE ");
+                ajouter_nom(&sql, "e ", c->nom);
+                chaine_ajouter(&sql, " DROP COLUMN ");
+                ajouter_nom(&sql, "n ", a.noms[k]);
+            }
+            ok = executer_chaine(b, &sql, erreur);
+        } else if (chercher_champ(&n, a.noms[k]) < 0 && (a.uniques[k] & 8)) {
             /* champ multiple retiré : sa table de liaison part si elle est vide (§ 16.13) */
             long liaisons = compter_liaisons(b, c->nom, a.noms[k]);
             if (liaisons > 0) {
@@ -1724,6 +1751,7 @@ static int migrer(Base *b, const ClasseVM *c, const char *ancienne, const char *
                 ok = 0;
             }
         }
+    }
     /* un champ gardé : même type, ou nombre entier devenu nombre */
     for (size_t k = 0; ok && k < n.n; k++) {
         long i = chercher_champ(&a, n.noms[k]);

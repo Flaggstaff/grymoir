@@ -23,6 +23,14 @@ avant="$(git rev-parse HEAD)"
 if ! git am "$patch"; then
     git am --abort
     echo "Le patch ne s'applique pas : rien n'a changé. Le dépôt est à : $(git log --oneline -1)" >&2
+    # le diagnostic le plus fréquent (23 octobre 2026) : le patch est déjà là, ou il en manque un avant lui
+    sujet="$(sed -n 's/^Subject: \[PATCH[^]]*\] //p' "$patch" | head -1 | cut -c1-60)"
+    if [ -n "$sujet" ] && git log -20 --format=%s | cut -c1-60 | grep -qxF "$sujet"; then
+        echo "Ce patch est déjà appliqué (son commit est dans les 20 derniers) : rien à faire." >&2
+    else
+        echo "Il en manque sans doute un avant lui : applique d'abord, dans l'ordre, ceux que tu n'as pas encore appliqués" >&2
+        echo "(ls -t ~/Downloads/*.patch | head montre les derniers reçus)." >&2
+    fi
     exit 1
 fi
 
