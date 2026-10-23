@@ -1,0 +1,7 @@
+Un genre, conservé, a : un nom (texte).
+Une œuvre, conservée, a : un titre (texte), des genres (genre).
+Le g vaut un nouveau genre :
+    Le nom vaut « b ».
+Conserver g.
+Les genres de l'œuvre conservée dont le titre est « X » gagnent g.
+Afficher le nombre de genres de l'œuvre conservée dont le titre est « X ».

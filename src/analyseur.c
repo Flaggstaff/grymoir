@@ -3620,7 +3620,21 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
     } else if (a->j[d].type == J_CROCHETS) {
         nom = grym_dupliquer(a->j[d].valeur);   /* champ entre crochets, suivi de « de » */
     } else {
-        for (size_t k = d; k < f; k++) {
+        /* « L'archivage de la fiche nommée de « A » devient … » : le champ d'un objet que rend un calcul, avec un argument
+         * qui n'est pas un nom ; seul le champ, avant son « de », doit être un nom (2.51) */
+        size_t prefixe = 0;
+        int hors_nom = 0;   /* seulement si un mot de la cible n'est pas un mot de nom : sinon, rien ne change */
+        for (size_t k = d; k < f && !hors_nom; k++) hors_nom = !mot_de_nom(a, k);
+        for (size_t k = d + 1; k < f && hors_nom && !prefixe && !est_mot(verbe, "vaut"); k++) {
+            if (!complement_de(a, k)) continue;
+            int mots = 1;
+            for (size_t q = d; q < k && mots; q++) mots = mot_de_nom(a, q);
+            if (!mots) break;
+            char *c = cle(a, d, k);
+            if (champ_connu(a->portee, c, NULL)) prefixe = k;
+            free(c);
+        }
+        for (size_t k = d; k < (prefixe ? prefixe : f); k++) {
             Jeton *t = &a->j[k];
             /* « Le tarif de suivi du s devient … » : « suivi » après « de » est un mot de nom, comme partout (mot_de_nom) */
             if ((est_reserve(t) || t->type == J_ELISION) && !mot_de_nom(a, k)) {
@@ -3645,7 +3659,7 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
             free(x);
             return erreur(a, &a->j[d], m);
         }
-        nom = cle(a, d, f);
+        nom = cle(a, d, prefixe ? prefixe : f);
     }
 
     int creation = est_mot(verbe, "vaut");
@@ -7165,7 +7179,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 classe_ajouter_zone(&a->portee->classes[ic], choisi, c->genre, c->nom, 1, NULL);   /* « le compositeur choisi de l'écran » */
                 free(choisi);
             }
-        } else if (est_mot(u, "des") && voir(a, 1)->type == J_MOT) {
+        } else if (est_mot(u, "des") && (voir(a, 1)->type == J_MOT || voir(a, 1)->type == J_CROCHETS)) {   /* la forme compacte : « [genres] » (2.51) */
             /* « des genres (genre) » : des choix multiples parmi les objets conservés d'une entité, comme le champ multiple
              * d'une entité (§ 16.13) ; il se lit par « Pour chaque genre de l'écran », « le nombre de genres de l'écran » */
             size_t k = a->i + 1;

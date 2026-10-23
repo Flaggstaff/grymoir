@@ -1,0 +1,20 @@
+Un genre, conservé, a :
+    un nom (texte), unique.
+Le a vaut un nouveau genre :
+    Le nom vaut « baroque ».
+Conserver a.
+Le b vaut un nouveau genre :
+    Le nom vaut « sacré ».
+Conserver b.
+Le c vaut un nouveau genre :
+    Le nom vaut « fugue ».
+Conserver c.
+L'écran x montre :
+    des genres (genre),
+    un bouton « OK ».
+Quand on clique sur « OK » dans l'écran x :
+    Pour chaque genre de l'écran :
+        Afficher « choisi : » puis le nom du genre.
+    Afficher le nombre de genres de l'écran.
+    Fermer l'écran.
+Ouvrir l'écran x.

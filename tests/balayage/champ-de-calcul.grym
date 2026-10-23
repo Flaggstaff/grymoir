@@ -1,0 +1,11 @@
+Une fiche, conservée, a :
+    un nom (texte), unique,
+    un archivage (date), facultatif.
+La f vaut une nouvelle fiche :
+    Le nom vaut « A ».
+Conserver la f.
+La fiche nommée d'un rang :
+    Rendre la fiche conservée dont le nom = rang.
+Le r vaut « A ».
+L'archivage de la fiche nommée du r devient 15.12.2025.
+Afficher l'archivage de la fiche conservée dont le nom = « A ».

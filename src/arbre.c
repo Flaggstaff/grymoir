@@ -235,6 +235,12 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
             chaine_ajouter(c, ")");
             return;
         }
+        if (!n->texte) {   /* « Ouvrir le n. » : un fichier ou une adresse (2.26, 2.41) ; l'outil plantait */
+            chaine_ajouter(c, "(ouvrir-valeur ");
+            if (n->nb_enfants) decrire(n->enfants[0], c);
+            chaine_ajouter(c, ")");
+            return;
+        }
         chaine_ajouter(c, "(ouvrir [");
         chaine_ajouter(c, n->texte);
         chaine_ajouter(c, "])");

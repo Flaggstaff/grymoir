@@ -226,6 +226,11 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "est", t);
             continue;
         }
+        if (est_cle(t, "écran") && !(k + 1 < f && r->e[k + 1].type == J_POINT)) {   /* _écran seul → l'écran (2.51) */
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "écran", t);
+            continue;
+        }
         if (est_cle(t, "écran") && k + 2 < f && r->e[k + 1].type == J_POINT && r->e[k + 2].type == J_CROCHETS) {
             /* _écran.pays → pays de l'écran (§ 22.2) */
             size_t q = k + 1;
@@ -426,6 +431,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             continue;
         }
         if ((est_cle(t, "écart_jours") || est_cle(t, "écart_semaines") || est_cle(t, "écart_mois") || est_cle(t, "écart_années")
+             || est_cle(t, "écart_ans")
              || est_cle(t, "écart_minutes") || est_cle(t, "écart_heures") || est_cle(t, "écart_ouvrables")
              || est_cle(t, "hasard") || est_cle(t, "hasard_parmi")) && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
             /* _écart_mois(d1 ; d2) → le nombre de mois entre (d1) et (d2) (§ 14.6) ; _hasard(1 ; 6) → un nombre au hasard
@@ -455,7 +461,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             else {
                 const char *u = t->valeur + strlen("écart_");
                 mot(r, "le", t); mot(r, "nombre", t);
-                if (!strcmp(u, "années") || !strcmp(u, "heures")) emettre(r, J_ELISION, "d", t, 1); else mot(r, "de", t);
+                if (!strcmp(u, "années") || !strcmp(u, "ans") || !strcmp(u, "heures")) emettre(r, J_ELISION, "d", t, 1); else mot(r, "de", t);
                 if (!strcmp(u, "ouvrables")) { mot(r, "jours", t); mot(r, "ouvrables", t); }   /* § 14.6 */
                 else mot(r, u, t);
                 mot(r, "entre", t);
@@ -1033,7 +1039,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
 
     if (t->type == J_REMARQUE) {
         copier(r, t);
-        fixer_retrait(r, premier, prof);
+        /* une remarque entre deux « _cas » d'un « _selon », alignée sur eux : au niveau des cas, pas dans le corps du
+         * précédent (2.51) */
+        if (haut && haut->type == O_SELON && haut->dans_cas && f < r->n && r->e[f].type == J_MOT_CLE
+            && (est_cle(&r->e[f], "cas") || est_cle(&r->e[f], "autrement")) && r->e[f].retrait == t->retrait && prof > 0)
+            fixer_retrait(r, premier, prof - 1);
+        else fixer_retrait(r, premier, prof);
         return;
     }
     /* le XML déclaré (2.46) : « _xml facture « invoice:request » », puis « _attribut », « _contenu », « _élément » ; « _fin » */
@@ -1207,7 +1218,15 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             emettre(r, J_ELISION, "l", t, 1);
             mot(r, "image", t);
             mot(r, "de", t);
+            const size_t ici = r->ns;
             expression(r, d + 1, g);
+            if (r->ns > ici && r->s[ici].type == J_MOT && !strcmp(r->s[ici].valeur, "le")) {   /* « de le fichier » → « du fichier » (2.51) */
+                free(r->s[ici - 1].valeur);
+                r->s[ici - 1].valeur = grym_dupliquer("du");
+                free(r->s[ici].valeur);
+                memmove(&r->s[ici], &r->s[ici + 1], (r->ns - ici - 1) * sizeof *r->s);
+                r->ns--;
+            }
             if (!etats_compacts(r, g, f, 1, 0)) return;
         } else if (est_cle(t, "image") && f >= d + 2 && r->e[d + 1].type == J_TEXTE && (f == d + 2 || est_etat(&r->e[d + 2]))) {
             emettre(r, J_ELISION, "l", t, 1);   /* _image « plan.png » → l'image « plan.png » (§ 22.8) */
@@ -2335,7 +2354,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 copier(r, &r->e[par + 1]);
                 if (par + 2 < avec) mot(r, "décroissant", &r->e[par + 2]);
             }
-            if (avec < dans) {
+            if (avec < fin_cols && avec < dans) {   /* sans « _avec », pas de colonnes : « _titre » n'en ouvre pas (2.51) */
                 emettre(r, J_VIRGULE, NULL, &r->e[avec], 1);
                 mot(r, "avec", &r->e[avec]);
                 size_t debut = avec + 1, i = 0;
@@ -2500,8 +2519,8 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     }
     size_t gagne = d;   /* o.genres _gagne baroque → Les genres de o gagnent baroque. (§ 16.13) */
     while (gagne < f && !est_cle(&r->e[gagne], "gagne") && !est_cle(&r->e[gagne], "perd")) gagne++;
-    if (t->type == J_CROCHETS && gagne < f && gagne >= d + 3 && r->e[gagne - 2].type == J_POINT
-        && r->e[gagne - 1].type == J_CROCHETS) {
+    if ((t->type == J_CROCHETS || t->type == J_PAR_OUV) && gagne < f && gagne >= d + 3 && r->e[gagne - 2].type == J_POINT
+        && r->e[gagne - 1].type == J_CROCHETS) {   /* (_l'œuvre _conservé _dont …).genres _gagne g (2.51) */
         mot(r, "les", t);
         copier(r, &r->e[gagne - 1]);
         mot(r, "de", &r->e[gagne - 2]);
@@ -2520,7 +2539,10 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                                && r->e[ferme_objet + 1].type == J_POINT)
         /* « _la séance.date << … » : l'objet du champ avec son article écrit (2.36) */
         || ((est_cle(t, "le") || est_cle(t, "la") || est_cle(t, "l'") || est_cle(t, "nu")) && affecte < f && d + 3 < affecte
-            && r->e[d + 1].type == J_CROCHETS && r->e[d + 2].type == J_POINT);
+            && r->e[d + 1].type == J_CROCHETS && r->e[d + 2].type == J_POINT)
+        /* « fiche_inventée(rang).archivage << … » : le champ du résultat d'un calcul (2.51) */
+        || (t->type == J_CROCHETS && d + 1 < f && r->e[d + 1].type == J_PAR_OUV && affecte < f
+            && fermante(r, d + 1, f) + 2 < affecte && r->e[fermante(r, d + 1, f) + 1].type == J_POINT);
     if (((t->type == J_CROCHETS || (est_cle(t, "écran") && d + 1 < f && r->e[d + 1].type == J_POINT)) && affecte < f && affecte > d
          && (affecte == d + 1 || r->e[d + 1].type == J_POINT)) || champ_cherche) {
         emettre(r, J_ARTICLE_IMPLICITE, NULL, t, 1);   /* total << … → Le total devient … */

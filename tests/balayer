@@ -1,0 +1,77 @@
+#!/bin/sh
+# Le balayage des formes (23 octobre 2026) : chaque programme passe par la forme canonique (stable), puis par la forme
+# compacte et retour ; l'arbre revenu doit être celui de départ (numéros de ligne et parenthèses ajoutées mis à part).
+# Corpus : tests/balayage/*.grym (les programmes qui ont révélé un défaut), et, si python3 est là, tous les programmes cités
+# dans les essais (tests/*.c, *.cpp), qui s'analysent seuls. Lancé par make test.
+set -u
+depot="$(cd "$(dirname "$0")/.." && pwd)"
+G="$depot/grym"; A="$depot/grym-arbre"
+corpus="$(mktemp -d)"
+trap 'rm -rf "$corpus"' EXIT
+cp "$depot"/tests/balayage/*.grym "$corpus/"
+if command -v python3 > /dev/null 2>&1; then
+    python3 - "$depot" "$corpus" <<'PY'
+import glob, sys
+depot, corpus = sys.argv[1], sys.argv[2]
+def litteraux(src):
+    i, n, out = 0, len(src), []
+    while i < n:
+        if src[i] == '"' and (i == 0 or src[i-1] != "'"):
+            parts = []
+            while True:
+                j, buf = i + 1, []
+                while j < n and src[j] != '"':
+                    if src[j] == '\\' and j + 1 < n:
+                        buf.append({'n': '\n', 't': '\t', '"': '"', '\\': '\\'}.get(src[j+1], src[j+1])); j += 2
+                    else:
+                        buf.append(src[j]); j += 1
+                parts.append(''.join(buf)); i = j + 1
+                k = i
+                while k < n and src[k] in ' \n\t': k += 1
+                if k < n and src[k] == '"': i = k; continue
+                break
+            out.append(''.join(parts))
+        else:
+            i += 1
+    return out
+vus, c = set(), 0
+for f in sorted(glob.glob(depot + '/tests/*.c')) + sorted(glob.glob(depot + '/tests/*.cpp')):
+    for s in litteraux(open(f, encoding='utf-8', errors='replace').read()):
+        if len(s) < 15 or s in vus or not ('.\n' in s or s.rstrip().endswith('.')): continue
+        if s.lstrip().startswith(('_', '#', 'HTTP', 'POST', 'GET', 'q=', 'z')): continue
+        vus.add(s); c += 1
+        open('%s/e%05d.grym' % (corpus, c), 'w', encoding='utf-8').write(s if s.endswith('\n') else s + '\n')
+PY
+fi
+n=0; e=0
+for f in "$corpus"/*.grym; do
+    b="$(basename "$f" .grym)"; t="$corpus/t_$b"; mkdir "$t"; cp "$f" "$t/"
+    r=$( cd "$t"
+        "$G" formater "$b.grym" > c1 2> /dev/null || { echo "ignoré"; exit 0; }
+        cp c1 "$b.grym"; "$G" formater "$b.grym" > c2 2> /dev/null
+        cmp -s c1 c2 || { echo "forme canonique instable"; exit 0; }
+        "$A" "$b.grym" 2> /dev/null | sed 's/^ *[0-9]*  //' > a1
+        "$G" traduire "$b.grym" > /dev/null 2> err || { echo "aller compact : $(head -c 160 err)"; exit 0; }
+        mv "$b.grym" "$b.orig"
+        "$G" traduire "$b.grymc" > /dev/null 2> err || { echo "retour compact : $(head -c 200 err)"; exit 0; }
+        "$A" "$b.grym" 2> /dev/null | sed 's/^ *[0-9]*  //' > a2
+        for x in a1 a2; do
+            python3 -c "import sys
+t=open(sys.argv[1]).read()
+while '(groupe ' in t:
+    k=t.index('(groupe '); j=k+8; d=1; m=j
+    while d:
+        d += {'(':1, ')':-1}.get(t[m],0); m+=1
+    t=t[:k]+t[j:m-1]+t[m:]
+open(sys.argv[1],'w').write(t)" "$x" 2> /dev/null || true
+        done
+        cmp -s a1 a2 || { echo "l'arbre change : $(diff a1 a2 | head -3 | tr '\n' ' ' | cut -c1-200)"; exit 0; }
+        echo "ok" )
+    case "$r" in
+        ok) n=$((n + 1)) ;;
+        ignoré) ;;
+        *) n=$((n + 1)); e=$((e + 1)); echo "ÉCHEC : $(basename "$f") : $r" ;;
+    esac
+done
+echo "$((n - e))/$n tests réussis"
+[ $e = 0 ]

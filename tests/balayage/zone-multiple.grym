@@ -1,0 +1,5 @@
+Un genre, conservé, a :
+    un nom (texte), unique.
+L'écran x montre :
+    des genres (genre), visible si vrai,
+    le texte « t ».

@@ -70,7 +70,7 @@ test_serveur: tests/test_serveur.c src/serveur.c $(EXECUTION) $(ENTETES) src/ser
 test_guide: tests/test_guide.c docs/guide.md $(EXECUTION) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_guide.c $(EXECUTION)
 
-test: grym test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide
+test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide
 	./test_lexeur
 	./test_analyseur
 	./test_machine
@@ -82,6 +82,7 @@ test: grym test_lexeur test_analyseur test_machine test_imprimeur test_compact t
 	./test_guide
 	sh tests/formes
 	sh tests/praxis-versions
+	sh tests/balayer
 
 clean:
 	rm -f grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide *.exe outils/windows/grym-ressources.o

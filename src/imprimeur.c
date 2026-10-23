@@ -762,7 +762,7 @@ static void expression(Impression *im, const Noeud *n) {
         if (im->compact) {
             aj(im, n->op == 'j' ? "_écart_jours(" : n->op == 's' ? "_écart_semaines(" : n->op == 'm' ? "_écart_mois("
                    : n->op == 'n' ? "_écart_minutes(" : n->op == 'h' ? "_écart_heures(" : n->op == 'o' ? "_écart_ouvrables("
-                   : "_écart_années(");
+                   : n->texte && !strcmp(n->texte, "ans") ? "_écart_ans(" : "_écart_années(");   /* « ans » gardé (2.51) */
             expression(im, n->enfants[0]);
             aj(im, " ; ");
             expression(im, n->enfants[1]);

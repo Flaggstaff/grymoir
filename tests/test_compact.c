@@ -174,6 +174,8 @@ int main(void) {
                  "        _élément « x » 3\n        _contenu « t »\n    _fin\n_fin\n_le f << _xml facture\n",
                  "Le XML de facture, « r:req », montre :\n    l'attribut « lang » : « fr »,\n    l'élément « r:corps » :\n"
                  "        l'élément « vide »,\n        l'élément « x » : 3,\n        le contenu : « t ».\nLe f vaut le XML de facture.\n");
+    /* 2.51 : le balayage de tous les programmes des essais par la forme compacte ; chaque défaut trouvé, un aller-retour */
+    ALLER_RETOUR("_afficher _écart_ans(01.01.2000 ; 01.01.2026)\n", "Afficher le nombre d'ans entre 01.01.2000 et 01.01.2026.\n");
     /* « Ouvrir » un fichier (2.26) */
     ALLER_RETOUR("_ouvrir_fichier _fichier « x.pdf »\n", "Ouvrir le fichier « x.pdf ».\n");
     /* Documents (2.25) */

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.50 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.51 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2403,3 +2403,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.48 | 2026-10-23 | Les choix d'une zone se filtrent : `un patient (patient dont l'archivage est absent)`, la condition d'une recherche (§ 16.4), évaluée à l'ouverture de l'écran ; la forme compacte du XML déclaré (§ 22.19) |
 | 2.49 | 2026-10-23 | Un champ d'entité s'abandonne : `un code d'accès (mot de passe), abandonné` ; il n'est plus lisible, et la migration efface ses valeurs, même conservées, en le disant (« champ « code d'accès » abandonné ; 1 valeur effacée ») ; la ligne reste, pour les bases pas encore lancées (format du bytecode 71) ; l'adresse d'un envoi s'écrit par un nom, sans parenthèses : `l'envoi au service de :`, `la lecture du service avec :` |
 | 2.50 | 2026-10-23 | Correction : les colonnes d'une liste (`avec a, b et c`) s'arrêtent après la colonne qui suit « et » ; un texte calculé placé ensuite (`le texte la note`) était lu comme une colonne de plus |
+| 2.51 | 2026-10-23 | Corrections trouvées par le balayage de tous les programmes des essais (tests/balayer, dans make test) : la cible d'une modification accepte un calcul à argument littéral (`L'archivage de la fiche nommée de « A » devient …`) ; la forme compacte réécrit le champ du résultat d'un calcul (`f(r).champ << v`), garde « ans » (`_écart_ans`), écrit « l'image du fichier », n'ouvre plus de colonnes vides avant `_titre`, lit une zone multiple (`_des genres (genre)`), `_gagne` sur un objet cherché, `_écran` seul, et une remarque entre deux `_cas` ; `grym-arbre` ne plante plus sur `Ouvrir le n.` |
