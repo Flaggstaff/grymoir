@@ -160,6 +160,15 @@ int main(void) {
     /* Le code QR, le saut de ligne, le format technique (2.27) */
     ALLER_RETOUR("_le c << « SPC » _suivi _saut_de_ligne\n_le q << _code_qr_suisse c\n_afficher 3 _en_format_technique\n",
                  "Le c vaut « SPC » suivi d'un saut de ligne.\nLe q vaut le code QR suisse du c.\nAfficher 3 en format technique.\n");
+    /* L'envoi à un service web : adresse, objet, tableau, lecture, champ JSON (2.42, 2.43) */
+    ALLER_RETOUR("_la r << _envoi « https://x.ch/a » _avec\n    « k » : « u »\n    « p » : 2\n_et_du_tableau\n    « 1 »\n    « 2 »\n_fin\n"
+                 "_la s << _envoi « https://x.ch » _de\n    « a » : 1\n_fin\n"
+                 "_la l << _lecture « https://x.ch/l » _avec\n    « ref » : « a b »\n_fin\n"
+                 "_afficher _champ « a.b » l\n",
+                 "La r vaut l'envoi à « https://x.ch/a » avec :\n    « k » : « u »,\n    « p » : 2,\net du tableau :\n    « 1 »,\n    « 2 ».\n"
+                 "La s vaut l'envoi à « https://x.ch » de :\n    « a » : 1.\n"
+                 "La l vaut la lecture de « https://x.ch/l » avec :\n    « ref » : « a b ».\n"
+                 "Afficher le champ « a.b » de la l.\n");
     /* « Ouvrir » un fichier (2.26) */
     ALLER_RETOUR("_ouvrir_fichier _fichier « x.pdf »\n", "Ouvrir le fichier « x.pdf ».\n");
     /* Documents (2.25) */

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.44 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.45 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2219,7 +2219,7 @@ et du tableau :
 - **L'envoi valide ce qui précède**, comme `Ouvrir` : une erreur plus loin dans l'événement n'annule pas un message déjà parti, ni la trace de son départ.
 - **Un secret (§ 22.17) se lit dans les valeurs d'un envoi**, et nulle part ailleurs.
 - **L'atelier et les applications fabriquées** envoient (Qt Network, les certificats du système). La console et le navigateur de `grym` refusent : « Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée. »
-- Une adresse donnée par un nom s'écrit entre parenthèses, `l'envoi à (le service) de :`, sans quoi « service de » se lit comme un nom. La forme compacte de l'envoi n'existe pas encore.
+- Une adresse donnée par un nom s'écrit entre parenthèses, `l'envoi à (le service) de :`, sans quoi « service de » se lit comme un nom. En forme compacte *(2.45)* : `_la r << _envoi « … » _avec`, une paire `« clé » : valeur` par ligne, sans virgule, `_et_de` ou `_et_du_tableau` au retrait de la phrase, puis `_fin` ; `_lecture « … » _avec` ; `_envoi « … » _de`, `_envoi « … » _du_tableau` ; `_champ « a.b » r`.
 
 ## Journal des révisions
 
@@ -2370,3 +2370,4 @@ et du tableau :
 | 2.42 | 2026-10-23 | Nouveau § 22.18 : l'envoi à un service web (POST JSON), la lecture (GET), `le champ « a.b » de r` ; un secret se lit dans un envoi ; HTTPS obligatoire, sauf vers la machine elle-même |
 | 2.43 | 2026-10-23 | § 22.18 : `avec :` met des valeurs dans l'adresse d'un envoi ; `et de :` ou `et du tableau :` en donne le corps, un objet ou une liste JSON |
 | 2.44 | 2026-10-23 | Correction : `suivi du nombre de séances conservées […]` se lit comme `le nombre de …` ; « du » donnait déjà l'article, et l'analyse cherchait un nom « nombre de séances conservées » |
+| 2.45 | 2026-10-23 | § 22.18 : la forme compacte de l'envoi, de la lecture et du champ JSON (`_envoi`, `_lecture`, `_avec`, `_et_de`, `_et_du_tableau`, `_fin`, `_champ`) |

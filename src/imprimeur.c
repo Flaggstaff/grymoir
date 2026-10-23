@@ -533,6 +533,47 @@ static void expression(Impression *im, const Noeud *n) {
         ecrire_texte(im, n->texte);
         return;
     case N_ENVOI: {   /* « l'envoi à « … » avec : … et de : / du tableau : », « la lecture de « … » avec : » (2.42, 2.43) */
+        if (im->compact) {   /* « _envoi « … » _avec », une valeur par ligne, « _et_du_tableau », « _fin » */
+            aj(im, n->forme ? "_lecture " : "_envoi ");
+            expression(im, n->enfants[0]);
+            size_t debut = im->c.n;
+            while (debut > 0 && im->c.d[debut - 1] != '\n') debut--;
+            size_t r = 0;
+            while (debut + r < im->c.n && im->c.d[debut + r] == ' ') r++;
+            const size_t nq = (size_t)n->entier;
+            if (!nq && n->op != 'o' && n->op != 't') return;
+            aj(im, nq ? " _avec" : n->op == 'o' ? " _de" : " _du_tableau");
+            size_t k = 1;
+            for (size_t q = 0; q < nq; q++, k += 2) {
+                aj(im, "\n");
+                for (size_t e = 0; e < r + 4; e++) aj(im, " ");
+                ecrire_texte(im, n->enfants[k]->texte);
+                aj(im, " : ");
+                expression(im, n->enfants[k + 1]);
+            }
+            if (nq && (n->op == 'o' || n->op == 't')) {
+                aj(im, "\n");
+                for (size_t e = 0; e < r; e++) aj(im, " ");
+                aj(im, n->op == 'o' ? "_et_de" : "_et_du_tableau");
+            }
+            while (k < n->nb_enfants) {
+                aj(im, "\n");
+                for (size_t e = 0; e < r + 4; e++) aj(im, " ");
+                if (n->op == 'o') {
+                    ecrire_texte(im, n->enfants[k]->texte);
+                    aj(im, " : ");
+                    expression(im, n->enfants[k + 1]);
+                    k += 2;
+                } else {
+                    expression(im, n->enfants[k]);
+                    k++;
+                }
+            }
+            aj(im, "\n");
+            for (size_t e = 0; e < r; e++) aj(im, " ");
+            aj(im, "_fin");
+            return;
+        }
         aj(im, n->forme ? "la lecture de " : "l'envoi à ");
         expression(im, n->enfants[0]);
         size_t debut = im->c.n;   /* le retrait de la ligne en cours */
@@ -573,7 +614,8 @@ static void expression(Impression *im, const Noeud *n) {
         }
         return;
     }
-    case N_CHAMP_JSON:   /* « le champ « a.b » de r » (2.42) */
+    case N_CHAMP_JSON:   /* « le champ « a.b » de r » (2.42) ; « _champ « a.b » r » */
+        if (im->compact) { aj(im, "_champ "); ecrire_texte(im, n->texte); aj(im, " "); expression(im, n->enfants[0]); return; }
         aj(im, "le champ ");
         ecrire_texte(im, n->texte);
         aj(im, " ");

@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE, O_CLASSE, O_INIT, O_ESSAI, O_ECRAN, O_BLOC } Ouverture;
+typedef enum { O_SI, O_BOUCLE, O_SELON, O_FORMULE, O_CLASSE, O_INIT, O_ESSAI, O_ECRAN, O_BLOC, O_ENVOI } Ouverture;
 
 typedef struct {
     Ouverture type;
@@ -34,6 +34,7 @@ typedef struct {
     size_t np, capp;
     Diagnostic *diag;
     int echec;
+    int envoi_ouvrant;     /* la phrase finit par « _avec », « _de » ou « _du_tableau » d'un envoi (2.43) : 1, 2, 3 */
 } Reecriture;
 
 /* ---------------------------------------------------------------- */
@@ -579,6 +580,26 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "ligne", t);
             continue;
         }
+        if (est_cle(t, "envoi")) {                   /* _envoi « url » → l'envoi à « url » (2.42) */
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "envoi", t);
+            mot(r, "à", t);
+            continue;
+        }
+        if (est_cle(t, "lecture")) {                 /* _lecture « url » → la lecture de « url » (2.42) */
+            mot(r, "la", t);
+            mot(r, "lecture", t);
+            mot(r, "de", t);
+            continue;
+        }
+        if (est_cle(t, "champ") && k + 1 < f && r->e[k + 1].type == J_TEXTE) {   /* _champ « a.b » r → le champ « a.b » de r */
+            mot(r, "le", t);
+            mot(r, "champ", t);
+            copier(r, &r->e[k + 1]);
+            mot(r, "de", t);
+            k++;
+            continue;
+        }
         if (est_cle(t, "code_qr") || est_cle(t, "code_qr_suisse")) {   /* _code_qr_suisse t → le code QR suisse de t (2.27) */
             mot(r, "le", t);
             mot(r, "code", t);
@@ -753,7 +774,22 @@ static size_t chercher(const Reecriture *r, size_t d, size_t f, const char *m) {
     return f;
 }
 
+static int profondeur_corps(const Reecriture *r);
+static void ouvrir(Reecriture *r, Ouverture type, int profondeur, const Jeton *mot_);
+
 static void point(Reecriture *r, size_t f) {
+    if (r->envoi_ouvrant) {   /* « _envoi « … » _avec » : le bloc des valeurs suit, la phrase finira avec lui (2.43) */
+        const int o = r->envoi_ouvrant;
+        const Jeton *x = &r->e[f];
+        r->envoi_ouvrant = 0;
+        if (o == 1) mot(r, "avec", x);
+        else if (o == 2) mot(r, "de", x);
+        else { mot(r, "du", x); mot(r, "tableau", x); }
+        emettre(r, J_DEUX_POINTS, NULL, x, 1);
+        ouvrir(r, O_ENVOI, profondeur_corps(r), x);
+        r->pile[r->np - 1].dans_cas = o == 3;   /* des valeurs seules, ou des paires */
+        return;
+    }
     emettre(r, J_POINT, NULL, &r->e[f - 1], 1);
 }
 
@@ -993,6 +1029,47 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         copier(r, t);
         fixer_retrait(r, premier, prof);
         return;
+    }
+    /* le bloc d'un envoi (2.43) : « « clé » : valeur » ou une valeur par ligne ; « _et_de », « _et_du_tableau » ; « _fin » */
+    if (haut && haut->type == O_ENVOI) {
+        if (t->type == J_MOT_CLE && !strcmp(t->valeur, "fin") && f == d + 1) {
+            if (!r->ns || r->s[r->ns - 1].type != J_VIRGULE) { echouer(r, t, grym_dupliquer("Un envoi porte au moins une valeur.")); return; }
+            r->s[r->ns - 1].type = J_POINT;   /* la dernière valeur finit la phrase */
+            if (r->s[r->ns - 1].ligne_fin < t->ligne) r->s[r->ns - 1].ligne_fin = t->ligne;
+            r->np--;
+            return;
+        }
+        if (f == d + 1 && (est_cle(t, "et_de") || est_cle(t, "et_du_tableau"))) {
+            mot(r, "et", t);
+            if (est_cle(t, "et_de")) mot(r, "de", t);
+            else { mot(r, "du", t); mot(r, "tableau", t); }
+            emettre(r, J_DEUX_POINTS, NULL, t, 1);
+            fixer_retrait(r, premier, haut->profondeur);
+            haut->dans_cas = est_cle(t, "et_du_tableau");
+            return;
+        }
+        if (!haut->dans_cas) {
+            if (t->type != J_TEXTE || f < d + 3 || r->e[d + 1].type != J_DEUX_POINTS) {
+                echouer(r, t, grym_dupliquer("Une valeur envoyée s'écrit « « clé » : valeur »."));
+                return;
+            }
+            copier(r, t);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[d + 1], 1);
+            expression(r, d + 2, f);
+        } else expression(r, d, f);
+        emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
+        fixer_retrait(r, premier, prof);
+        return;
+    }
+    /* « … _envoi « … » _avec » : la phrase ouvre le bloc de ses valeurs (2.43) */
+    if (f > d + 1 && r->e[f - 1].type == J_MOT_CLE
+        && (est_cle(&r->e[f - 1], "avec") || est_cle(&r->e[f - 1], "de") || est_cle(&r->e[f - 1], "du_tableau"))) {
+        int envoi = 0;
+        for (size_t k = d; k < f - 1; k++) envoi |= est_cle(&r->e[k], "envoi") || est_cle(&r->e[k], "lecture");
+        if (envoi) {
+            r->envoi_ouvrant = est_cle(&r->e[f - 1], "avec") ? 1 : est_cle(&r->e[f - 1], "de") ? 2 : 3;
+            f--;
+        }
     }
     if (t->type == J_MOT_CLE && !strcmp(t->valeur, "fin") && haut && haut->type == O_CLASSE && f == d + 1) {
         if (haut->classe && !haut->champs) {   /* héritière sans champ propre */
