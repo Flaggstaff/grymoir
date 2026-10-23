@@ -123,7 +123,14 @@ Une ordonnance, conservée, a :
     un maximum de séances (nombre entier), 9 au départ,
     un cas (« maladie », « accident » ou « invalidité »), « maladie » au départ,
     un scan (fichier), facultatif,
-    une remarque (texte), facultative.
+    une remarque (texte), facultative,
+    un jour d'annonce (date), facultatif,
+    une lettre d'annonce (fichier), facultative,
+    un accord du médecin conseil (date), facultatif.
+
+Remarque : le jour d'annonce : le jour où le traitement a été annoncé à l'assureur, et la lettre envoyée avec la copie de l'ordonnance.
+Remarque : l'accord du médecin-conseil : au-delà de 36 séances, la thérapie ne continue à la charge de l'assurance qu'avec son accord
+Remarque : (convention ASE, art. 6.3) ; une ordonnance qui le porte couvre les séances suivantes.
 
 Remarque : une facture tiers payant (convention ASE, art. 7) : adressée à l'assureur, qui la paie ; sa copie va au patient. Elle
 Remarque : réunit les séances faites d'une ordonnance ; son exemplaire et sa copie, les PDF envoyés, gardés tels quels.

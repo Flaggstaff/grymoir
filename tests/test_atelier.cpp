@@ -4828,6 +4828,99 @@ int main(int argc, char **argv) {
         VERIFIER(t.contains(QString::fromUtf8("essai avant règlement 0")));
     }
 
+    // Praxis 2 (23 octobre 2026) : une facture tiers payant par année civile ; l'annonce du traitement à l'assureur ; au-delà
+    // de 36 séances sur ordonnance, l'accord du médecin conseil
+    {
+        QTemporaryDir d;
+        VERIFIER(copier_praxis_essai(d.path()));
+        QFile f(d.filePath("Praxis.grym"));
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        QString source = QString::fromUtf8(f.readAll());
+        f.close();
+        const QString essai = QString::fromUtf8(
+            "La claire vaut le patient conservé dont le nom = « Claire Monney ».\n"
+            "Le soin d'ergo vaut le soin conservé dont le nom = « Ergothérapie ».\n"
+            "Le nouvel an vaut le premier janvier d'aujourd'hui.\n"
+            "L'ordo d'essai vaut une nouvelle ordonnance :\n"
+            "    Le patient vaut la claire.\n"
+            "    La date vaut le nouvel an − 10 jours.\n"
+            "    Le médecin vaut « Dre Morel ».\n"
+            "    Le maximum de séances vaut 9.\n"
+            "    Le cas vaut « maladie ».\n"
+            "Conserver l'ordo d'essai.\n"
+            "Pour chaque décalage de 1 à 2 :\n"
+            "    La séance d'essai vaut une nouvelle séance :\n"
+            "        Le patient vaut la claire.\n"
+            "        Le soin vaut le soin d'ergo.\n"
+            "        La date vaut le nouvel an − 5 jours + (décalage − 1) × 8 jours.\n"
+            "        Le prix vaut 105,6.\n"
+            "        Le statut vaut « faite ».\n"
+            "        Le paiement vaut « assurance ».\n"
+            "    La durée de la séance d'essai devient 60.\n"
+            "    Rattacher la séance d'essai.\n"
+            "    Conserver la séance d'essai.\n"
+            "Décompter l'ordo d'essai.\n"
+            "Décompter l'ordo d'essai.\n"
+            "Pour chaque décompte conservé :\n"
+            "    Le dc vaut le décompte.\n"
+            "    Afficher « essai année » puis le nombre de séances conservées dont le décompte = le dc puis la suite du dc.\n"
+            "Afficher « essai décomptes » puis le nombre de décomptes conservés.\n"
+            "L'ordonnance annoncée devient l'ordo d'essai.\n"
+            "Le jour d'annonce de l'ordo d'essai devient aujourd'hui.\n"
+            "La lettre d'annonce de l'ordo d'essai devient le document d'annonce.\n"
+            "Si la lettre d'annonce de l'ordo d'essai est présente, afficher « essai annonce ».\n"
+            "Pour chaque rang de 1 à 4 :\n"
+            "    L'ordo suivante vaut une nouvelle ordonnance :\n"
+            "        Le patient vaut la claire.\n"
+            "        La date vaut aujourd'hui − 40 jours.\n"
+            "        Le médecin vaut « Dre Morel ».\n"
+            "        Le maximum de séances vaut 9.\n"
+            "        Le cas vaut « maladie ».\n"
+            "    Conserver l'ordo suivante.\n"
+            "Pour chaque rang de 1 à 34 :\n"
+            "    La séance suivante vaut une nouvelle séance :\n"
+            "        Le patient vaut la claire.\n"
+            "        Le soin vaut le soin d'ergo.\n"
+            "        La date vaut aujourd'hui − 30 jours.\n"
+            "        Le prix vaut 105,6.\n"
+            "        Le statut vaut « faite ».\n"
+            "        Le paiement vaut « assurance ».\n"
+            "    Rattacher la séance suivante.\n"
+            "    Conserver la séance suivante.\n"
+            "Afficher « essai cumul » puis le nombre de séances conservées dont le patient = la claire et l'ordonnance est présente.\n"
+            "La séance de trop vaut une nouvelle séance :\n"
+            "    Le patient vaut la claire.\n"
+            "    Le soin vaut le soin d'ergo.\n"
+            "    La date vaut aujourd'hui − 29 jours.\n"
+            "    Le prix vaut 105,6.\n"
+            "    Le statut vaut « faite ».\n"
+            "    Le paiement vaut « assurance ».\n"
+            "Essayer :\n"
+            "    Rattacher la séance de trop.\n"
+            "    Afficher « essai 37e acceptée ».\n"
+            "En cas d'échec :\n"
+            "    Afficher « essai 37e refusée ».\n"
+            "Afficher « fin des essais ».\n");
+        const int k = source.indexOf(QString::fromUtf8("Remarque : le mot de passe, l'application l'a déjà demandé"));
+        VERIFIER(k > 0);
+        source.insert(k, essai);
+        VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(source.toUtf8());
+        f.close();
+        Execution e(d.filePath("Praxis.grym"));
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 60000 && !fil().contains("fin des essais")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        const QString t = fil();
+        VERIFIER(t.contains(QString::fromUtf8("essai décomptes 2")));
+        VERIFIER(t.count(QString::fromUtf8("essai année 1")) == 2);
+        VERIFIER(t.contains(QString::fromUtf8("essai annonce")));
+        VERIFIER(t.contains(QString::fromUtf8("essai cumul 36")));
+        VERIFIER(t.contains(QString::fromUtf8("essai 37e refusée")));
+    }
+
     // Cabinet : la facture réunit les séances à payer du patient ; une séance encaissée la règle en partie, la dernière
     // la règle, et la quittance de toutes ses séances se fait seule, une fois (20 octobre 2026)
     {

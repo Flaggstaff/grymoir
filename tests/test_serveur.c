@@ -1686,6 +1686,24 @@ int main(void) {
         remove("_essai_ordonnance.grymd.clés");
     }
 
+    {   /* une colonne qui traverse trois objets : la séance, son soin, la position du soin (23 octobre 2026) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"));
+        servir("Une position, conservée, a : un code (texte), unique.\n"
+               "Un soin, conservé, a : un nom (texte), unique, une position (position), facultative.\n"
+               "Une séance, conservée, a : une date (date), un soin (soin).\n"
+               "La p vaut une nouvelle position :\n    Le code vaut « 7601 ».\nConserver la p.\n"
+               "Le s vaut un nouveau soin :\n    Le nom vaut « Ergo ».\nLa position du s devient la p.\nConserver le s.\n"
+               "Le t vaut un nouveau soin :\n    Le nom vaut « Sans ».\nConserver le t.\n"
+               "La a vaut une nouvelle séance :\n    La date vaut 01.10.2026.\n    Le soin vaut le s.\nConserver la a.\n"
+               "La b vaut une nouvelle séance :\n    La date vaut 02.10.2026.\n    Le soin vaut le t.\nConserver la b.\n"
+               "L'écran x montre :\n    la liste des séances conservées, par date, avec la date, le code de la position du soin et le nom du soin.\n"
+               "Ouvrir l'écran x.\n", &sc);
+        CONTIENT(sc.reponses[0], "<td>7601</td><td>Ergo</td>");
+        CONTIENT(sc.reponses[0], "<td></td><td>Sans</td>");
+        liberer(&sc);
+    }
+
     {   /* Praxis 2, chantier B (23 octobre 2026) : « Facturer à l'assurance » vérifie d'abord tout ce que la facture tiers
            payant doit montrer ; tout y est (essais.grym), il ne reste que le PDF, que seuls l'atelier et une application
            fabriquée savent faire (le parcours complet : test_atelier) ; la liste des factures aux assurances, vide */

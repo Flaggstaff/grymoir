@@ -57,6 +57,7 @@ Remarque : la facture dont on fait le PDF.
 La créance en cours vaut absent.
 Remarque : la facture tiers payant en cours d'écriture, et à qui va l'exemplaire (l'assureur, ou l'assuré pour la copie).
 Le tiers payant en cours vaut absent.
+L'ordonnance annoncée vaut absent.
 Le destinataire en cours vaut « ».
 La position ouverte vaut absent.
 Le décompte ouvert vaut absent.
@@ -679,6 +680,33 @@ Le document de décompte, « Facture tiers payant », montre :
     le texte "Montant total : CHF " suivi de l'arrondi du montant du tiers payant en cours à 0,01,
     le texte "Débiteur : l'assureur (tiers payant). Avec mes salutations, " suivi du nom du cabinet conservé.
 
+Remarque : l'annonce du traitement à l'assureur (convention ASE) : le patient et ses numéros d'assuré, le médecin prescripteur, l'ordonnance ;
+Remarque : la copie de l'ordonnance l'accompagne (son scan, à imprimer avec).
+Le document d'annonce, « Annonce de traitement », montre :
+    côte à côte :
+        l'un sous l'autre :
+            l'image de la signature du cabinet conservé, large de 220,
+            le texte l'adresse professionnelle du cabinet conservé,
+            le texte la ville professionnelle du cabinet conservé,
+            le texte la ligne des numéros du cabinet conservé,
+        l'un sous l'autre :
+            le texte le nom de l'assureur du patient de l'ordonnance annoncée,
+            le texte l'adresse postale de l'assureur du patient de l'ordonnance annoncée,
+            le texte la ville de l'assureur du patient de l'ordonnance annoncée,
+    le texte « Annonce de traitement », en petites capitales,
+    le texte "Le " suivi du jour d'annonce de l'ordonnance annoncée en toutes lettres,
+    le texte « Patient », en petites capitales,
+    le texte le nom du patient de l'ordonnance annoncée,
+    le texte l'adresse du patient de l'ordonnance annoncée,
+    le texte la ville du patient de l'ordonnance annoncée,
+    le texte la naissance du patient de l'ordonnance annoncée,
+    le texte la ligne d'assuré du patient de l'ordonnance annoncée,
+    le texte « Prescription », en petites capitales,
+    le texte la ligne du prescripteur de l'ordonnance annoncée,
+    le texte "Séances prescrites : " suivi du maximum de séances de l'ordonnance annoncée suivi de " ; cas : " suivi du cas de l'ordonnance annoncée,
+    le texte « Copie de l'ordonnance médicale jointe. »,
+    le texte "Avec mes salutations, " suivi du nom du cabinet conservé.
+
 Remarque : la facture tiers payant d'une ordonnance : ses séances faites qui n'en ont pas encore ; tout ce qu'elle doit montrer
 Remarque : est vérifié d'abord, et le refus dit où le compléter ; puis l'exemplaire pour l'assureur et la copie pour le patient.
 Pour décompter une ordonnance :
@@ -695,7 +723,14 @@ Pour décompter une ordonnance :
     Si la valeur du point du a est présente, le point devient la valeur du point du a.
     Si le point est absent, refuser « Il manque la valeur du point : Configuration, Tarif des assurances. ».
     Si le nombre de séances conservées dont l'ordonnance = le o et le décompte est absent et le statut = « faite » = 0, refuser « Aucune séance faite de cette ordonnance n'attend sa facture. ».
+    Remarque : une facture par année civile : les séances de l'année la plus ancienne d'abord ; celles de l'année suivante attendent
+    Remarque : la facture suivante (le traitement à cheval sur deux années se facture au 31 décembre).
+    La plus ancienne vaut aujourd'hui.
     Pour chaque séance conservée dont l'ordonnance = le o et le décompte est absent et le statut = « faite » :
+        Si la date de la séance < la plus ancienne, la plus ancienne devient la date de la séance.
+    Le début d'année vaut le premier janvier de la plus ancienne.
+    La fin d'année vaut le début d'année + 1 an.
+    Pour chaque séance conservée dont l'ordonnance = le o et le décompte est absent et le statut = « faite » et la date ≥ le début d'année et la date < la fin d'année :
         Si la position tarifaire du soin de la séance est absente, refuser "Le soin " suivi du nom du soin de la séance suivi de " n'a pas de position tarifaire : Configuration, Soins.".
         Si l'unité de la position tarifaire du soin de la séance = « quart d'heure » et la durée de la séance est absente, refuser "La séance du " suivi de la date de la séance suivi de " n'a pas de durée : sa page.".
     Le début vaut le premier janvier d'aujourd'hui.
@@ -711,13 +746,13 @@ Pour décompter une ordonnance :
         L'état vaut « à régler ».
     L'ordonnance du d devient le o.
     Conserver le d.
-    Pour chaque séance conservée dont l'ordonnance = le o et le décompte est absent et le statut = « faite » :
+    Pour chaque séance conservée dont l'ordonnance = le o et le décompte est absent et le statut = « faite » et la date ≥ le début d'année et la date < la fin d'année :
         Le chiffre du tarif de la séance devient le code de la position tarifaire du soin de la séance.
         Le total de points de la séance devient la cotation de la séance.
         Le prix de la séance devient l'arrondi de la cotation de la séance × le point à 0,01.
         Le décompte de la séance devient le d.
         Le montant du d devient le montant du d + le prix de la séance.
-    Si le nombre de séances conservées dont l'ordonnance = le o et le statut = « faite » ≥ le maximum de séances du o, la suite du d devient « terminé ».
+    Si le nombre de séances conservées dont l'ordonnance = le o et le statut = « faite » ≥ le maximum de séances du o et le nombre de séances conservées dont l'ordonnance = le o et le décompte est absent et le statut = « faite » = 0, la suite du d devient « terminé ».
     Le tiers payant en cours devient le d.
     Le destinataire en cours devient « Exemplaire pour l'assureur ».
     L'exemplaire du d devient le document de décompte.
@@ -1638,13 +1673,15 @@ L'écran de l'ordonnance, « Ordonnance », montre :
     un cas (« maladie », « accident » ou « invalidité »),
     un scan (fichier), facultatif, avec l'indication « L'ordonnance scannée »,
     une remarque (texte), facultative, sur plusieurs lignes,
+    un accord du médecin conseil (date), facultatif, avec l'indication « Au-delà de 36 séances sur ordonnance : le jour de son accord (convention ASE, art. 6.3) »,
     le texte l'usage ouvert,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Voir le scan »,
         un bouton « Fermer »,
         un bouton « Supprimer »,
-        un bouton « Facturer à l'assurance ».
+        un bouton « Facturer à l'assurance »,
+        un bouton « Annoncer à l'assureur ».
 
 Quand on clique sur « Assureurs » dans l'écran de configuration :
     Ouvrir l'écran des assureurs.
@@ -1730,6 +1767,7 @@ Quand on ouvre l'écran de l'ordonnance :
         Le cas de l'écran devient le cas du o.
         Le scan de l'écran devient le scan du o.
         La remarque de l'écran devient la remarque du o.
+        L'accord du médecin conseil de l'écran devient l'accord du médecin conseil du o.
     Sinon :
         La date de l'écran devient aujourd'hui.
         Le maximum de séances de l'écran devient 9.
@@ -1757,6 +1795,7 @@ Quand on clique sur « Enregistrer » dans l'écran de l'ordonnance :
     Le cas du o devient le cas de l'écran.
     Si le scan de l'écran est présent, le scan du o devient le scan de l'écran.
     La remarque du o devient la remarque de l'écran.
+    L'accord du médecin conseil du o devient l'accord du médecin conseil de l'écran.
     Fermer l'écran.
 
 Quand on clique sur « Voir le scan » dans l'écran de l'ordonnance :
@@ -1906,3 +1945,17 @@ Quand on clique sur « Voir la copie » dans l'écran du décompte :
 
 Quand on clique sur « Fermer » dans l'écran du décompte :
     Fermer l'écran.
+
+Remarque : l'annonce : une lettre à l'assureur, gardée dans l'ordonnance ; une seconde fois, la même lettre s'ouvre.
+Quand on clique sur « Annoncer à l'assureur » dans l'écran de l'ordonnance :
+    Si l'ordonnance ouverte est absente, refuser « Enregistre d'abord l'ordonnance. ».
+    Le o vaut l'ordonnance ouverte.
+    Si la lettre d'annonce du o est présente :
+        Ouvrir la lettre d'annonce du o.
+    Sinon :
+        Si l'assureur du patient du o est absent, refuser « Il manque l'assureur du patient : sa page, Assurance maladie. ».
+        Si le numéro d'assuré du patient du o est absent, refuser « Il manque le numéro d'assuré du patient : sa page. ».
+        Le jour d'annonce du o devient aujourd'hui.
+        L'ordonnance annoncée devient le o.
+        La lettre d'annonce du o devient le document d'annonce.
+        Ouvrir la lettre d'annonce du o.
