@@ -1729,6 +1729,19 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* après une liste à colonnes « … et c », un texte calculé est l'élément suivant, pas une colonne (2.50) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"));
+        servir("Une séance, conservée, a :\n    une date (date),\n    un prix (nombre).\n"
+               "La s vaut une nouvelle séance :\n    La date vaut 01.10.2026.\n    Le prix vaut 12.\nConserver la s.\n"
+               "La note vaut « valeur du point : 1,10 ».\n"
+               "L'écran x montre :\n    la liste des séances conservées, avec la date et le prix,\n    le texte la note,\n    un bouton « Fermer ».\n"
+               "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n", &sc);
+        CONTIENT(sc.reponses[0], "valeur du point : 1,10");
+        NE_CONTIENT_PAS(sc.reponses[0], "class=\"erreur\"");
+        liberer(&sc);
+    }
+
     {   /* les choix filtrés d'une zone (2.48) : « (patient dont l'archivage est absent) » ne propose pas l'archivé */
         memset(&sc, 0, sizeof sc);
         REQUETES(get("/"));

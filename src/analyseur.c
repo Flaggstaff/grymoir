@@ -7103,6 +7103,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 /* « , avec le titre, le compositeur et la naissance du compositeur » : les colonnes (§ 22.1) */
                 a->i += 2;
                 Chaine cols = {0};
+                int apres_et = 0;   /* « a, b et c » : après la colonne qui suit « et », une virgule passe à l'élément suivant (2.50) */
                 for (int premiere = 1;; premiere = 0) {
                     size_t d = a->i, k = d;
                     while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_POINT && a->j[k].type != J_FIN
@@ -7123,9 +7124,9 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                     free(ecrit);
                     free(chemin);
                     a->i = k;
-                    if (est_mot(cour(a), "et")) { avancer(a); continue; }
+                    if (est_mot(cour(a), "et") && !apres_et) { apres_et = 1; avancer(a); continue; }
                     /* « , le compositeur » continue les colonnes ; « , un bouton … » ou « , la liste … » passe à l'élément suivant */
-                    if (cour(a)->type == J_VIRGULE && !est_mot(voir(a, 1), "un") && !est_mot(voir(a, 1), "une")
+                    if (cour(a)->type == J_VIRGULE && !apres_et && !est_mot(voir(a, 1), "un") && !est_mot(voir(a, 1), "une")
                         && !est_mot(voir(a, 1), "côte") && voir(a, 1)->type != J_FIN
                         && !est_mot(voir(a, 1), "à") && !est_mot(voir(a, 1), "large") && !est_mot(voir(a, 1), "haut")
                         && !est_mot(voir(a, 1), "haute")

@@ -681,8 +681,8 @@ Le document de décompte, « Facture tiers payant », montre :
     le texte la prescription en cours,
     le texte le cas en cours,
     le texte « Prestations », en petites capitales,
-    le texte le point en cours,
     la liste des séances conservées dont le décompte = le tiers payant en cours, par date, avec la date, le chiffre du tarif, le nom du soin, la durée, le total de points et le prix,
+    le texte le point en cours,
     le texte "Montant total : CHF " suivi de l'arrondi du montant du tiers payant en cours à 0,01,
     le texte "Débiteur : l'assureur (tiers payant). Avec mes salutations, " suivi du nom du cabinet conservé.
 
