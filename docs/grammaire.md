@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.43 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.44 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2369,3 +2369,4 @@ et du tableau :
 | 2.41 | 2026-10-22 | § 22.15 : `Ouvrir` une adresse web, dans le navigateur du système (atelier, application fabriquée) |
 | 2.42 | 2026-10-23 | Nouveau § 22.18 : l'envoi à un service web (POST JSON), la lecture (GET), `le champ « a.b » de r` ; un secret se lit dans un envoi ; HTTPS obligatoire, sauf vers la machine elle-même |
 | 2.43 | 2026-10-23 | § 22.18 : `avec :` met des valeurs dans l'adresse d'un envoi ; `et de :` ou `et du tableau :` en donne le corps, un objet ou une liste JSON |
+| 2.44 | 2026-10-23 | Correction : `suivi du nombre de séances conservées […]` se lit comme `le nombre de …` ; « du » donnait déjà l'article, et l'analyse cherchait un nom « nombre de séances conservées » |

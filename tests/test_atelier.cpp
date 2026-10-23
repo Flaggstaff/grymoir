@@ -4967,6 +4967,16 @@ int main(int argc, char **argv) {
             "    Afficher « essai 37e acceptée ».\n"
             "En cas d'échec :\n"
             "    Afficher « essai 37e refusée ».\n"
+            "L'ordo d'accord vaut une nouvelle ordonnance :\n"
+            "    Le patient vaut la claire.\n"
+            "    La date vaut aujourd'hui − 35 jours.\n"
+            "    Le médecin vaut « Dre Morel ».\n"
+            "    Le maximum de séances vaut 9.\n"
+            "    Le cas vaut « maladie ».\n"
+            "Conserver l'ordo d'accord.\n"
+            "L'accord du médecin conseil de l'ordo d'accord devient aujourd'hui − 1 jour.\n"
+            "Rattacher la séance de trop.\n"
+            "Si l'ordonnance de la séance de trop = l'ordo d'accord, afficher « essai 37e avec accord ».\n"
             "Afficher « fin des essais ».\n");
         const int k = source.indexOf(QString::fromUtf8("Remarque : le mot de passe, l'application l'a déjà demandé"));
         VERIFIER(k > 0);
@@ -4986,6 +4996,7 @@ int main(int argc, char **argv) {
         VERIFIER(t.contains(QString::fromUtf8("essai annonce")));
         VERIFIER(t.contains(QString::fromUtf8("essai cumul 36")));
         VERIFIER(t.contains(QString::fromUtf8("essai 37e refusée")));
+        VERIFIER(t.contains(QString::fromUtf8("essai 37e avec accord")));
     }
 
     // Cabinet : la facture réunit les séances à payer du patient ; une séance encaissée la règle en partie, la dernière

@@ -1686,6 +1686,49 @@ int main(void) {
         remove("_essai_ordonnance.grymd.clés");
     }
 
+    {   /* « l'écran des ordonnances » et « l'écran de l'ordonnance » : deux écrans, pas un (23 octobre 2026) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&choix=0.0"), get("/"), evenement("q=2&clic=Fermer"), get("/"));
+        servir("Une ordonnance, conservée, a :\n    un médecin (texte), unique.\n"
+               "La o vaut une nouvelle ordonnance :\n    Le médecin vaut « Dre Morel ».\nConserver la o.\n"
+               "L'ouverte vaut la o.\n"
+               "L'écran des ordonnances, « Liste », montre :\n    la liste des ordonnances conservées, avec le médecin,\n    un bouton « Quitter ».\n"
+               "L'écran de l'ordonnance, « Une », montre :\n    le texte le médecin de l'ouverte,\n    un bouton « Fermer ».\n"
+               "Quand on choisit une ordonnance dans l'écran des ordonnances :\n    L'ouverte devient l'ordonnance choisie de l'écran.\n"
+               "    Ouvrir l'écran de l'ordonnance.\n"
+               "Quand on clique sur « Fermer » dans l'écran de l'ordonnance :\n    Fermer l'écran.\n"
+               "Quand on clique sur « Quitter » dans l'écran des ordonnances :\n    Fermer l'écran.\n"
+               "Ouvrir l'écran des ordonnances.\n", &sc);
+        CONTIENT(sc.reponses[2], "<h1>Une</h1>");
+        NE_CONTIENT_PAS(sc.reponses[2], "class=\"erreur\"");
+        CONTIENT(sc.reponses[4], "<h1>Liste</h1>");
+        NE_CONTIENT_PAS(sc.reponses[4], "class=\"erreur\"");
+        liberer(&sc);
+    }
+
+    {   /* un calcul appelé depuis le texte d'un écran ouvert par-dessus une liste (23 octobre 2026) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&choix=0.0"), get("/"), evenement("q=2&clic=Fermer"), get("/"));
+        servir("Une fiche, conservée, a :\n    un nom (texte), unique.\n"
+               "Une trace, conservée, a :\n    un parent (fiche),\n    une valeur (nombre).\n"
+               "La f vaut une nouvelle fiche :\n    Le nom vaut « A ».\nConserver la f.\n"
+               "L'usage d'une fiche :\n    Le x vaut la fiche.\n"
+               "    Rendre \"lignes : \" suivi du nombre de traces conservées dont le parent = le x.\n"
+               "La choisie vaut la f.\n"
+               "L'écran des fiches montre :\n    la liste des fiches conservées, avec le nom,\n    un bouton « Quitter ».\n"
+               "L'écran de la fiche montre :\n    le texte l'usage de la choisie,\n    un bouton « Fermer ».\n"
+               "Quand on choisit une fiche dans l'écran des fiches :\n    La choisie devient la fiche choisie de l'écran.\n"
+               "    Ouvrir l'écran de la fiche.\n"
+               "Quand on clique sur « Fermer » dans l'écran de la fiche :\n    Fermer l'écran.\n"
+               "Quand on clique sur « Quitter » dans l'écran des fiches :\n    Fermer l'écran.\n"
+               "Ouvrir l'écran des fiches.\n", &sc);
+        CONTIENT(sc.reponses[2], "lignes : 0");
+        NE_CONTIENT_PAS(sc.reponses[2], "class=\"erreur\"");
+        CONTIENT(sc.reponses[4], ">A</button>");
+        NE_CONTIENT_PAS(sc.reponses[4], "class=\"erreur\"");
+        liberer(&sc);
+    }
+
     {   /* une colonne qui traverse trois objets : la séance, son soin, la position du soin (23 octobre 2026) */
         memset(&sc, 0, sizeof sc);
         REQUETES(get("/"));

@@ -2216,6 +2216,12 @@ static Noeud *base(Analyse *a) {
         if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2))
             && (e = entite_conservee(a, a->i + 3, 1, &apres)) != NULL)
             return chercher(a, t, e, 2, apres, NULL);
+        /* « suivi du nombre de séances conservées » : « du » a déjà donné l'article (23 octobre 2026) */
+        if (a->article_force == ART_LE && est_mot(t, "nombre") && de_ou_d(voir(a, 1))
+            && (e = entite_conservee(a, a->i + 2, 1, &apres)) != NULL) {
+            a->article_force = ART_AUCUN;
+            return chercher(a, t, e, 2, apres, NULL);
+        }
         if (a->echec) return NULL;
         size_t de;
         const char *champ, *sg;

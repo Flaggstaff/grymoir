@@ -273,18 +273,20 @@ Pour rattacher une séance :
     Le choix vaut absent.
     Le p vaut le patient de la séance.
     Le jour vaut la date de la séance.
+    Remarque : au-delà de 36 séances sur ordonnance, seule une ordonnance qui porte l'accord du médecin conseil couvre la suite
+    Remarque : (convention ASE, art. 6.3).
+    Le cumul vaut le nombre de séances conservées dont le patient = le p et l'ordonnance est présente et le statut ≠ « annulée » et le statut ≠ « absence ».
     Pour chaque ordonnance conservée dont le patient = le p et la date ≤ le jour :
         Le o vaut l'ordonnance.
         Le compte vaut le nombre de séances conservées dont l'ordonnance = le o et le statut ≠ « annulée » et le statut ≠ « absence ».
         Le valable vaut le compte < le maximum de séances du o.
         Si le compte = 0 et le jour > la date du o + 56 jours, le valable devient faux.
+        Si le cumul ≥ 36 et l'accord du médecin conseil du o est absent, le valable devient faux.
         Si le valable et le choix est absent, le choix devient le o.
         Si le valable et le choix est présent :
             Si la date du o < la date du choix, le choix devient le o.
+    Si le cumul ≥ 36 et le choix est absent, refuser "36 séances sur ordonnance pour " suivi du nom du p suivi de " : la suite exige l'accord du médecin-conseil de l'assureur, sur proposition motivée du médecin. Note son accord dans l'ordonnance.".
     Si le choix est absent, refuser "Pas d'ordonnance valable pour " suivi du nom du patient de la séance suivi de " à cette date : neuf séances au plus par ordonnance, la première dans les huit semaines. Ajoute l'ordonnance depuis sa page, bouton Ordonnances.".
-    Remarque : au-delà de 36 séances sur ordonnance, l'accord du médecin-conseil (convention ASE, art. 6.3).
-    Le cumul vaut le nombre de séances conservées dont le patient = le p et l'ordonnance est présente et le statut ≠ « annulée » et le statut ≠ « absence ».
-    Si le cumul ≥ 36 et l'accord du médecin conseil du choix est absent, refuser "36 séances sur ordonnance pour " suivi du nom du p suivi de " : la suite exige l'accord du médecin-conseil de l'assureur, sur proposition motivée du médecin. Note son accord dans l'ordonnance.".
     L'ordonnance de la séance devient le choix.
 
 Remarque : où en est une ordonnance : ses séances comptées (ni annulées ni absences) sur son maximum, et la limite de sa première
