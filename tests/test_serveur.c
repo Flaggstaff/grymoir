@@ -1726,6 +1726,27 @@ int main(void) {
         remove("_essai_tiers_payant.grymd.clés");
     }
 
+    {   /* Praxis 2, les SMS (23 octobre 2026) : la page « SMS » ; sans identifiant ni clé, rien ne part ; la clé enregistrée
+           ne se relit pas ; le navigateur de grym n'envoie pas, il le dit */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Configuration"), evenement("q=3&clic=SMS"), get("/"),
+                 evenement("q=4&clic=V%C3%A9rifier+le+compte"), get("/"),
+                 evenement("q=5&z0=essai-cle&z1=secret-api-9&z2=Praxis&z3=&clic=Enregistrer"), get("/"),
+                 evenement("q=6&z0=essai-cle&z1=&z2=Praxis&z3=&clic=V%C3%A9rifier+le+compte"), get("/"),
+                 evenement("q=7&z0=essai-cle&z1=&z2=AnExpediteurTropLong&z3=&clic=Enregistrer"), get("/"));
+        servir_projet("_essai_praxis/Praxis.grym", "_essai_sms.grymd", &sc);
+        CONTIENT(sc.reponses[3], "<h1>SMS</h1>");
+        CONTIENT(sc.reponses[3], "Aucun essai encore.");
+        CONTIENT(sc.reponses[5], "Enregistre d&#39;abord l&#39;identifiant et la clé.");
+        CONTIENT(sc.reponses[7], "Enregistré.");
+        NE_CONTIENT_PAS(sc.reponses[7], "secret-api-9");
+        CONTIENT(sc.reponses[9], "Un envoi sur internet se fait dans l&#39;atelier ou dans une application fabriquée.");
+        CONTIENT(sc.reponses[11], "L&#39;expéditeur a 11 caractères au plus.");
+        liberer(&sc);
+        remove("_essai_sms.grymd");
+        remove("_essai_sms.grymd.clés");
+    }
+
     {   /* Le cabinet de Lorianne (outils/cabinet lorianne, 22 octobre 2026) : sa copie se fonde à son nom, à Bulle, avec
            l'agenda OneDoc et le choix d'agenda allumé ; aucun soin d'avance ; la fiche du cabinet a l'interrupteur */
         memset(&sc, 0, sizeof sc);

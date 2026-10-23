@@ -23,6 +23,8 @@ L'assureur ouvert vaut absent.
 L'ordonnance ouverte vaut absent.
 Remarque : où en est l'ordonnance ouverte, calculé avant d'ouvrir son écran (un calcul appelé depuis l'écran le dérangeait).
 L'usage ouvert vaut « ».
+Remarque : ce que le service SMS a répondu au dernier essai, tel quel.
+L'état SMS vaut « Aucun essai encore. ».
 
 Remarque : ce qui est cherché dans les listes des patients et des factures ; vide, tout.
 La recherche des patients vaut « ».
@@ -540,6 +542,7 @@ L'écran de configuration, « Configuration », montre :
     un bouton « Sauvegardes », en tuile, avec la description « Copies chiffrées, restauration, mot de passe »,
     un bouton « Archives », en tuile, avec la description « Patients archivés, leurs pièces gardées »,
     un bouton « Rendez-vous », en tuile, avec la description « L'agenda : Praxis ou OneDoc », visible si le choix d'agenda du cabinet conservé,
+    un bouton « SMS », en tuile, avec la description « Le compte ASPSMS, un essai », visible si le choix d'agenda du cabinet conservé,
     un bouton « Assureurs », en tuile, avec la description « Caisses-maladie et leur GLN », visible si la facturation aux assurances du cabinet conservé,
     un bouton « Tarif des assurances », en tuile, avec la description « Positions, points et valeur du point », visible si la facturation aux assurances du cabinet conservé,
     un bouton « Fermer ».
@@ -1959,3 +1962,64 @@ Quand on clique sur « Annoncer à l'assureur » dans l'écran de l'ordonnance :
         L'ordonnance annoncée devient le o.
         La lettre d'annonce du o devient le document d'annonce.
         Ouvrir la lettre d'annonce du o.
+
+Remarque : le compte SMS (Praxis 2, 23 octobre 2026) : ASPSMS (VADIAN.NET AG, Saint-Gall) ; l'identifiant et la clé dans l'adresse,
+Remarque : comme ASPSMS le demande ; la clé ne se relit jamais : une zone vide la laisse telle quelle. Les réponses s'affichent
+Remarque : brutes : leur forme exacte, et le fuseau de l'heure différée, se vérifient ainsi avant de programmer des rappels.
+L'écran des SMS, « SMS », montre :
+    un identifiant (texte), facultatif, avec l'indication « Le Userkey du compte ASPSMS »,
+    une clé (secret), facultative, avec l'indication « Le mot de passe d'API ; vide, la clé enregistrée reste »,
+    un expéditeur (texte), facultatif, avec l'indication « Le nom que le patient voit : 11 lettres ou chiffres au plus »,
+    un numéro d'essai (texte), facultatif, avec l'indication « Ton propre natel, au format +41791234567 : jamais celui d'un patient »,
+    le texte l'état SMS,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Vérifier le compte »,
+        un bouton « SMS d'essai »,
+        un bouton « Fermer ».
+
+Quand on clique sur « SMS » dans l'écran de configuration :
+    L'état SMS devient « Aucun essai encore. ».
+    Ouvrir l'écran des SMS.
+
+Quand on ouvre l'écran des SMS :
+    L'identifiant de l'écran devient l'identifiant SMS du cabinet conservé.
+    L'expéditeur de l'écran devient l'expéditeur SMS du cabinet conservé.
+
+Quand on clique sur « Enregistrer » dans l'écran des SMS :
+    Si l'expéditeur de l'écran est présent :
+        Si la longueur de l'expéditeur de l'écran > 11, refuser « L'expéditeur a 11 caractères au plus. ».
+    Le c vaut le cabinet conservé.
+    L'identifiant SMS du c devient l'identifiant de l'écran.
+    L'expéditeur SMS du c devient l'expéditeur de l'écran.
+    Si la clé de l'écran est présente, la clé SMS du c devient la clé de l'écran.
+    L'état SMS devient « Enregistré. ».
+
+Remarque : vérifier le compte : ses identifiants, puis son solde ; rien n'est envoyé, aucun crédit ne part.
+Quand on clique sur « Vérifier le compte » dans l'écran des SMS :
+    Le c vaut le cabinet conservé.
+    Si l'identifiant SMS du c est absent ou la clé SMS du c est absente, refuser « Enregistre d'abord l'identifiant et la clé. ».
+    La réponse vaut la lecture de « https://webapi.aspsms.com/CheckUserCredentials » avec :
+        « Userkey » : l'identifiant SMS du c,
+        « Password » : la clé SMS du c.
+    Le solde vaut la lecture de « https://webapi.aspsms.com/ASPSMSCredits » avec :
+        « Userkey » : l'identifiant SMS du c,
+        « Password » : la clé SMS du c.
+    L'état SMS devient "Identifiants : " suivi de la réponse suivi de " ; solde : " suivi du solde.
+
+Remarque : un SMS d'essai, tout de suite, vers le numéro tapé, sans rien de la base des patients.
+Quand on clique sur « SMS d'essai » dans l'écran des SMS :
+    Le c vaut le cabinet conservé.
+    Si l'identifiant SMS du c est absent ou la clé SMS du c est absente, refuser « Enregistre d'abord l'identifiant et la clé. ».
+    Si le numéro d'essai de l'écran est absent, refuser « Tape ton propre numéro, au format +41791234567. ».
+    La réponse vaut la lecture de « https://webapi.aspsms.com/SendSimpleSMS » avec :
+        « Userkey » : l'identifiant SMS du c,
+        « Password » : la clé SMS du c,
+        « MSISDN » : le numéro d'essai de l'écran,
+        « Operation » : « SendTextSMS »,
+        « MessageData » : « Essai de Praxis : la configuration SMS fonctionne. »,
+        « Originator » : l'expéditeur SMS du c.
+    L'état SMS devient "Envoi d'essai : " suivi de la réponse.
+
+Quand on clique sur « Fermer » dans l'écran des SMS :
+    Fermer l'écran.

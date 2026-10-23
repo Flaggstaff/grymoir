@@ -38,11 +38,16 @@ Un cabinet, conservé, a :
     un agenda (« Praxis » ou « OneDoc »), « Praxis » au départ,
     une adresse de l'agenda (adresse web), facultative,
     une facturation aux assurances (vrai ou faux), faux au départ,
-    une valeur du point (nombre), facultative.
+    une valeur du point (nombre), facultative,
+    un identifiant SMS (texte), facultatif,
+    une clé SMS (secret), facultative,
+    un expéditeur SMS (texte), facultatif.
 
 Remarque : le choix d'agenda : la tuile « Rendez-vous » de la Configuration ; un interrupteur de la fiche du cabinet, posé par
 Remarque : départ.grym à la fondation ; faux chez Nicolas (Calendly) et pour une base d'avant le 22 octobre. L'éteindre remet
 Remarque : l'agenda à « Praxis » : la tuile « Agenda OneDoc » de l'accueil disparaît avec lui.
+Remarque : les SMS (Praxis 2, 23 octobre 2026) : le compte ASPSMS du cabinet, son identifiant (« Userkey ») et sa clé d'API,
+Remarque : un secret, rangé dans la base chiffrée, qui ne se lit que pour être envoyé ; l'expéditeur, le nom que le patient voit.
 Remarque : la facturation aux assurances (Praxis 2, 23 octobre 2026) : un interrupteur de la fiche du cabinet ; allumé, Praxis montre
 Remarque : les assureurs, l'assurance du patient, ses ordonnances, et la facturation de chaque soin ; éteint (Nicolas), rien de tout cela.
 Remarque : l'agenda (Praxis 2, 22 octobre 2026) : « Praxis », les séances prévues dans Praxis ; « OneDoc », les rendez-vous
