@@ -167,6 +167,13 @@ static Article article_du_champ(const Impression *im, const Noeud *n) {
 static void ecrire_nom_tel(Impression *im, const char *nom, int crochets);
 
 /* Un nom s'écrit avec ses sigles en capitales (§ 2.4) : « numéro RCC ». */
+/* un nom d'écran avec ses sigles en capitales (§ 2.4) : « l'écran des SMS » */
+static void aj_sigles(Impression *im, const char *t) {
+    char *x = texte_avec_sigles(t);
+    aj(im, x);
+    free(x);
+}
+
 static void ecrire_nom(Impression *im, const char *nom, int crochets) {
     char *s = texte_avec_sigles(nom);
     ecrire_nom_tel(im, s, crochets);
@@ -492,6 +499,7 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
             ? genre_de_nom(im, sujet->texte)
             : sujet->type == N_COLONNE ? G_FEMININ   /* « la colonne « Année » de la ligne est présente » (§ 15.5) */
                                        : G_MASCULIN;
+    if (g == G_LIBRE && n->genre_appel == 2) g = G_FEMININ;   /* « L'ordonnance ouverte » : l'article ne dit pas le genre, l'accord écrit si */
     int k = relation(n->op);
     aj(im, g == G_FEMININ ? RELATIONS[k].f : RELATIONS[k].m);
     if (RELATIONS[k].complement) {
@@ -1477,7 +1485,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             aj(im, "\n");
         } else {
             aj(im, doc ? "Le document " : "L'écran ");
-            aj(im, nom_e);
+            aj_sigles(im, nom_e);
             if (n->texte2 || n->taille_titre || n->titre_calcule) {   /* « , « Recherche » en grand, » (§ 22.1, § 22.5) */
                 aj(im, ",");
                 if (n->texte2) { aj(im, " "); ecrire_texte(im, n->texte2); }
@@ -1728,7 +1736,9 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                         if (i) aj(im, i + 1 == nb ? " et " : ", ");
                         char *ecrit = grym_formater("%.*s", (int)((sep ? sep : fin) - q), q);
                         char *refait = sep ? colonne_avec_articles(im, ecrit, sep + 1, fin) : NULL;
-                        aj(im, refait ? refait : ecrit);
+                        char *sigles = texte_avec_sigles(refait ? refait : ecrit);   /* « le numéro GLN », pas « gln » */
+                        aj(im, sigles);
+                        free(sigles);
                         free(refait);
                         free(ecrit);
                         q = *fin ? fin + 1 : fin;
@@ -1746,7 +1756,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         size_t apres_nom = im->nb;
         if (n->forme >= 4) {   /* « Quand on ouvre l'écran X : », « Quand on ferme … » */
             if (c) { aj(im, n->forme == 4 ? "_quand _ouvre " : "_quand _ferme "); ecrire_nom(im, n->texte3, 0); aj(im, "\n"); }
-            else { aj(im, n->forme == 4 ? "Quand on ouvre l'écran " : "Quand on ferme l'écran "); aj(im, n->texte3); aj(im, " :\n"); }
+            else { aj(im, n->forme == 4 ? "Quand on ouvre l'écran " : "Quand on ferme l'écran "); aj_sigles(im, n->texte3); aj(im, " :\n"); }
         } else if (c) {
             aj(im, n->forme == 1 ? "_quand _clique " : n->forme == 3 ? "_quand _change " : "_quand _choisit ");
             if (n->forme == 1) ecrire_texte(im, n->enfants[2]->texte);
@@ -1765,7 +1775,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             }
             else parametres(im, n->enfants[0], 0);
             aj(im, " dans l'écran ");
-            aj(im, n->texte3);
+            aj_sigles(im, n->texte3);
             aj(im, " :\n");
         }
         bloc(im, n->enfants[1], niveau + 1);
@@ -1791,7 +1801,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             return;
         }
         if (c) { aj(im, "_ouvrir "); ecrire_nom(im, n->texte, 0); aj(im, "\n"); }
-        else { aj(im, "Ouvrir l'écran "); aj(im, n->texte); aj(im, ".\n"); }
+        else { aj(im, "Ouvrir l'écran "); aj_sigles(im, n->texte); aj(im, ".\n"); }
         return;
     case P_FERMER:
         aj(im, c ? "_fermer\n" : "Fermer l'écran.\n");

@@ -30,7 +30,7 @@ Pour faire le bilan :
     Pour chaque projet conservé, par début :
         Afficher le nom du projet puis « : » puis le nombre de terminées du projet puis « tâche(s) terminée(s) sur » puis le nombre de tâches du projet suivi de « , fin prévue le » puis la fin prévue du projet suivi de « . ».
         Pour chaque tâche du projet dont l'échéance < aujourd'hui et le nom de l'état ≠ « Terminée », par échéance :
-            Afficher «   en retard : » puis le titre de la tâche puis « ( » suivi de aujourd'hui − l'échéance de la tâche puis « jour(s)) ».
+            Afficher « en retard : » puis le titre de la tâche puis « ( » suivi d'aujourd'hui − l'échéance de la tâche puis « jour(s)) ».
 
 L'écran d'accueil, « Gestion de projet », montre :
     un bouton « Projets »,

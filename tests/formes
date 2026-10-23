@@ -1,0 +1,39 @@
+#!/bin/sh
+# Les formes de chaque projet du dépôt (23 octobre 2026) : la forme canonique est stable (« grym formater » ne change
+# rien), et l'aller-retour par la forme compacte (« grym traduire » puis retour) rend un programme qui se compile.
+# Les fichiers d'un projet passent dans l'ordre où ils s'utilisent, chacun seul dans sa forme (§ 11).
+set -u
+depot="$(cd "$(dirname "$0")/.." && pwd)"
+G="$depot/grym"
+total=0
+echecs=0
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+for projet in "$depot"/projets/*/; do
+    nom="$(basename "$projet")"
+    for f in "$projet"*.grym; do
+        total=$((total + 1))
+        "$G" formater "$f" > "$tmp/canon" 2> "$tmp/err" || { echecs=$((echecs + 1)); echo "ÉCHEC formater : $nom/$(basename "$f") : $(head -c 200 "$tmp/err")"; continue; }
+        cmp -s "$tmp/canon" "$f" || { echecs=$((echecs + 1)); echo "ÉCHEC : $nom/$(basename "$f") n'est pas en forme canonique"; }
+    done
+    total=$((total + 1))
+    rm -rf "$tmp/p" && cp -R "$projet" "$tmp/p" && rm -f "$tmp/p"/*.grymd* "$tmp/p"/*.grymb
+    principal="$(sed -n 's/^programme principal : //p' "$tmp/p/projet.grymatelier" 2>/dev/null)"
+    [ -n "$principal" ] || principal="$(ls "$tmp/p"/*.grym | head -1 | xargs basename)"
+    # l'ordre : les fichiers utilisés d'abord (ceux qui n'en utilisent aucun), le programme principal à la fin
+    nl='
+'
+    ordre=""
+    for f in "$tmp/p"/*.grym; do b="$(basename "$f" .grym)"; [ "$b.grym" = "$principal" ] && continue; grep -q "^Utiliser" "$f" || ordre="$ordre$b$nl"; done
+    for f in "$tmp/p"/*.grym; do b="$(basename "$f" .grym)"; [ "$b.grym" = "$principal" ] && continue; grep -q "^Utiliser" "$f" && ordre="$ordre$b$nl"; done
+    ordre="$ordre$(basename "$principal" .grym)"
+    IFS_avant="$IFS"; IFS="$nl"
+    ok=1
+    ( cd "$tmp/p" && for b in $ordre; do "$G" traduire "$b.grym" > /dev/null 2> "$tmp/err" || exit 1; rm "$b.grym"; done ) || { ok=0; echo "ÉCHEC aller compact : $nom : $(head -c 200 "$tmp/err")"; }
+    [ $ok = 1 ] && { ( cd "$tmp/p" && for b in $ordre; do "$G" traduire "$b.grymc" > /dev/null 2> "$tmp/err" || exit 1; rm "$b.grymc"; done ) || { ok=0; echo "ÉCHEC retour compact : $nom : $(head -c 200 "$tmp/err")"; }; }
+    [ $ok = 1 ] && { ( cd "$tmp/p" && "$G" compiler "$principal" > /dev/null 2> "$tmp/err" ) || { ok=0; echo "ÉCHEC : $nom, revenu de la forme compacte, ne se compile plus : $(head -c 200 "$tmp/err")"; }; }
+    IFS="$IFS_avant"
+    [ $ok = 1 ] || echecs=$((echecs + 1))
+done
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]

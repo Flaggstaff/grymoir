@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.46 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.47 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2397,3 +2397,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.44 | 2026-10-23 | Correction : `suivi du nombre de séances conservées […]` se lit comme `le nombre de …` ; « du » donnait déjà l'article, et l'analyse cherchait un nom « nombre de séances conservées » |
 | 2.45 | 2026-10-23 | § 22.18 : la forme compacte de l'envoi, de la lecture et du champ JSON (`_envoi`, `_lecture`, `_avec`, `_et_de`, `_et_du_tableau`, `_fin`, `_champ`) |
 | 2.46 | 2026-10-23 | Nouveau § 22.19 : le XML déclaré (`Le XML de x, « racine », montre :`, éléments, attributs, contenus, boucles ; `le XML de x`, un fichier UTF-8 échappé) |
+| 2.47 | 2026-10-23 | Un nom d'écran refuse le trait d'union, comme tout nom (§ 1.4) : « l'écran des rendez-vous » cassait la forme canonique et la forme compacte ; la forme canonique garde les sigles des noms d'écran et des colonnes (« l'écran des SMS », « le numéro GLN ») et l'accord écrit d'un nom au genre inconnu (« l'ordonnance ouverte est présente ») ; `tests/formes` : chaque projet du dépôt, forme canonique stable et aller-retour compact |

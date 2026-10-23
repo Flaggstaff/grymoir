@@ -3247,6 +3247,7 @@ static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test
     }
     Noeud *n = noeud_creer(N_COMPARAISON, sujet->ligne, sujet->colonne, sujet->debut);
     n->op = op;
+    n->genre_appel = g == GENRE_FEMININ ? 2 : 1;   /* l'accord écrit, pour réimprimer « l'ordonnance ouverte est présente » */
     n->negation = negation;
     n->op_ligne = test->ligne;
     n->op_colonne = test->colonne;
@@ -6311,6 +6312,8 @@ static char *lire_nom_ecran(Analyse *a, size_t d, size_t *f) {
     while (k < a->n && a->j[k].type != J_FIN && a->j[k].type != J_POINT && a->j[k].type != J_DEUX_POINTS
            && a->j[k].type != J_VIRGULE && !est_mot(&a->j[k], "montre") && a->j[k].ligne == a->j[d].ligne) k++;
     *f = k;
+    for (size_t q = d; q < k; q++)   /* « l'écran des rendez-vous » : le trait d'union, refusé comme dans tout nom (§ 1.4) */
+        if (a->j[q].type == J_MOINS) { erreur(a, &a->j[q], grym_dupliquer("Un nom d'écran ne prend pas de trait d'union.")); return NULL; }
     return k > d ? nom_ecran(a, d, k) : NULL;
 }
 

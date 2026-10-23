@@ -80,6 +80,7 @@ test: grym test_lexeur test_analyseur test_machine test_imprimeur test_compact t
 	./test_lsp
 	./test_serveur
 	./test_guide
+	sh tests/formes
 
 clean:
 	rm -f grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide *.exe outils/windows/grym-ressources.o

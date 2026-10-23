@@ -1769,6 +1769,32 @@ int main(void) {
         remove("_essai_tiers_payant.grymd.clés");
     }
 
+    {   /* Praxis 1 chez Nicolas (23 octobre 2026) : les deux interrupteurs de la fiche du cabinet éteints, plus rien de
+           Praxis 2 ne se voit : ni Rendez-vous, SMS, Assureurs, Tarif dans la Configuration, ni Assurances ni Agenda OneDoc
+           sur l'accueil, ni l'assurance et les ordonnances dans la page du patient */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Configuration"), evenement("q=3&clic=0"),
+                 evenement("q=4&z2=Cabinet+essai&z3=Rue+X&z4=1&z5=&z6=1700&z7=Fribourg&z8=Suisse&z11=&z12=&z13=&z14=&z15=&z16="
+                           "&z19p=1&z20p=1&clic=27"), get("/"),
+                 evenement("q=5&clic=Fermer"), get("/"), evenement("q=6&clic=Patients"), evenement("q=7&z0=Anne+Rochat&clic=-1"),
+                 get("/"));
+        servir_projet("_essai_praxis/Praxis.grym", "_essai_eteint.grymd", &sc);
+        CONTIENT(sc.reponses[4], "<h1>Configuration</h1>");
+        NE_CONTIENT_PAS(sc.reponses[4], ">Rendez-vous<");
+        NE_CONTIENT_PAS(sc.reponses[4], ">SMS<");
+        NE_CONTIENT_PAS(sc.reponses[4], ">Assureurs<");
+        NE_CONTIENT_PAS(sc.reponses[4], ">Tarif des assurances<");
+        NE_CONTIENT_PAS(sc.reponses[6], ">Assurances<");
+        NE_CONTIENT_PAS(sc.reponses[6], ">Agenda OneDoc<");
+        CONTIENT(sc.reponses[9], "<h1>Patient</h1>");
+        NE_CONTIENT_PAS(sc.reponses[9], ">Ordonnances<");
+        NE_CONTIENT_PAS(sc.reponses[9], ">Assureur</label>");
+        NE_CONTIENT_PAS(sc.reponses[9], "uméro d&#39;assuré");
+        liberer(&sc);
+        remove("_essai_eteint.grymd");
+        remove("_essai_eteint.grymd.clés");
+    }
+
     {   /* Praxis 2, les SMS (23 octobre 2026) : la page « SMS » ; sans identifiant ni clé, rien ne part ; la clé enregistrée
            ne se relit pas ; le navigateur de grym n'envoie pas, il le dit */
         memset(&sc, 0, sizeof sc);

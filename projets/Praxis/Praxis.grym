@@ -548,7 +548,7 @@ L'écran de configuration, « Configuration », montre :
     un bouton « Fermer ».
 
 Remarque : le choix de l'agenda ; avec OneDoc, l'accueil a une tuile qui ouvre l'agenda OneDoc dans le navigateur.
-L'écran des rendez-vous, « Rendez-vous », montre :
+L'écran de l'agenda, « Rendez-vous », montre :
     un agenda (« Praxis » ou « OneDoc »), avec l'indication « OneDoc : les rendez-vous et leurs rappels restent sur OneDoc, Praxis ouvre l'agenda »,
     une adresse de l'agenda (adresse web), facultative, avec l'indication « L'adresse de l'agenda OneDoc Pro, telle que le navigateur la montre : https://… »,
     côte à côte :
@@ -993,20 +993,20 @@ Quand on clique sur « Le cabinet » dans l'écran de configuration :
     Ouvrir l'écran du cabinet.
 
 Quand on clique sur « Rendez-vous » dans l'écran de configuration :
-    Ouvrir l'écran des rendez-vous.
+    Ouvrir l'écran de l'agenda.
 
-Quand on ouvre l'écran des rendez-vous :
+Quand on ouvre l'écran de l'agenda :
     L'agenda de l'écran devient l'agenda du cabinet conservé.
     L'adresse de l'agenda de l'écran devient l'adresse de l'agenda du cabinet conservé.
 
-Quand on clique sur « Enregistrer » dans l'écran des rendez-vous :
+Quand on clique sur « Enregistrer » dans l'écran de l'agenda :
     Si l'agenda de l'écran = « OneDoc » et l'adresse de l'agenda de l'écran est absente, refuser « Avec OneDoc, donne l'adresse de l'agenda OneDoc. ».
     Le c vaut le cabinet conservé.
     L'agenda du c devient l'agenda de l'écran.
     L'adresse de l'agenda du c devient l'adresse de l'agenda de l'écran.
     Fermer l'écran.
 
-Quand on clique sur « Fermer » dans l'écran des rendez-vous :
+Quand on clique sur « Fermer » dans l'écran de l'agenda :
     Fermer l'écran.
 
 Quand on clique sur « Agenda OneDoc » dans l'écran d'accueil :
