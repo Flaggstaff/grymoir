@@ -2587,6 +2587,24 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         copier(r, t);                                 /* relancer(client) → Relancer client. */
         arguments(r, d + 2, f - 1, 0, t);
         point(r, f);
+    } else if (t->type == J_CROCHETS && d + 1 < f && r->e[d + 1].type == J_PAR_OUV && f >= 3 && r->e[f - 1].type == J_CROCHETS
+               && ((fermante(r, d + 1, f) == f - 3 && est_cle(&r->e[f - 2], "qui_donne"))
+                   || (f >= 4 && fermante(r, d + 1, f) == f - 4 && est_cle(&r->e[f - 3], "qui_donne")
+                       && (est_cle(&r->e[f - 2], "le") || est_cle(&r->e[f - 2], "la") || est_cle(&r->e[f - 2], "l'"))))) {
+        /* quittancer(120) _qui_donne _la q → Quittancer 120, qui donne la q. (2.57) */
+        const int avec_article = est_cle(&r->e[f - 3], "qui_donne");
+        const size_t qd = avec_article ? f - 3 : f - 2;
+        copier(r, t);
+        arguments(r, d + 2, qd - 1, 0, t);
+        emettre(r, J_VIRGULE, NULL, &r->e[qd], 1);
+        mot(r, "qui", &r->e[qd]);
+        mot(r, "donne", &r->e[qd]);
+        if (avec_article) {
+            if (est_cle(&r->e[f - 2], "l'")) emettre(r, J_ELISION, "l", &r->e[f - 2], 1);
+            else mot(r, r->e[f - 2].valeur, &r->e[f - 2]);
+        }
+        copier(r, &r->e[f - 1]);
+        point(r, f);
     } else if (t->type == J_CROCHETS && d + 1 < f && r->e[d + 1].type == J_PAR_OUV && f >= 3 && fermante(r, d + 1, f) == f - 3
                && est_cle(&r->e[f - 2], "comme") && r->e[f - 1].type == J_CROCHETS) {
         copier(r, t);                                 /* saluer(m) _comme personne → Saluer m comme un personne. (§ 13.8) */

@@ -119,6 +119,37 @@ La charge QR d'un cabinet et d'un patient et d'un montant et d'un motif :
     Le d devient d suivi de « NON » suivi du s suivi du s suivi de motif suivi du s suivi de « EPD ».
     Rendre d.
 
+Remarque : une quittance nouvelle, numérotée à la suite de l'année, conservée (24 octobre 2026 : écrite une fois, pour une séance
+Remarque : comme pour une facture) ; « , qui donne la q » la reçoit.
+Pour faire la quittance d'un patient et un total et un moyen :
+    Le début vaut le premier janvier d'aujourd'hui.
+    Le rang vaut (le nombre de quittances conservées dont la date ≥ le début) + (le nombre de quittances supprimées dont la date ≥ le début) + 1.
+    La q vaut une nouvelle quittance :
+        Le numéro vaut le numéro de pièce de « Q- » et de l'année d'aujourd'hui et du rang.
+        La date vaut aujourd'hui.
+        Le patient vaut patient.
+        Le montant vaut total.
+        Le moyen vaut moyen.
+    Conserver la q.
+    Rendre la q.
+
+Remarque : une facture tiers payant nouvelle, numérotée à la suite de l'année, conservée, encore vide (24 octobre 2026 : écrite
+Remarque : une fois, pour une ordonnance comme pour la complémentaire).
+Pour faire le décompte d'un patient et un assureur et un point et une suite :
+    Le début vaut le premier janvier d'aujourd'hui.
+    Le rang vaut (le nombre de décomptes conservés dont la date ≥ le début) + (le nombre de décomptes supprimés dont la date ≥ le début) + 1.
+    Le d vaut un nouveau décompte :
+        Le numéro vaut le numéro de pièce de « TP- » et de l'année d'aujourd'hui et du rang.
+        La date vaut aujourd'hui.
+        Le patient vaut patient.
+        L'assureur vaut assureur.
+        La valeur du point vaut point.
+        Le montant vaut 0.
+        La suite vaut suite.
+        L'état vaut « à régler ».
+    Conserver le d.
+    Rendre le d.
+
 Remarque : la quittance des séances payées d'une facture qui n'en ont pas encore ; leur moyen, ou « plusieurs » s'ils diffèrent.
 Remarque : numérotée à la suite de l'année ; son PDF se fait quand on l'ouvre.
 Pour acquitter un relevé :
@@ -128,15 +159,8 @@ Pour acquitter un relevé :
             Le moyen devient le paiement de la séance.
         Sinon :
             Si le paiement de la séance ≠ le moyen, le moyen devient « plusieurs ».
-    Le début vaut le premier janvier d'aujourd'hui.
-    Le rang vaut (le nombre de quittances conservées dont la date ≥ le début) + (le nombre de quittances supprimées dont la date ≥ le début) + 1.
-    La q vaut une nouvelle quittance :
-        Le numéro vaut le numéro de pièce de « Q- » et de l'année d'aujourd'hui et du rang.
-        La date vaut aujourd'hui.
-        Le patient vaut le patient du relevé.
-        Le montant vaut la somme des prix des séances conservées dont la facture = relevé et la quittance est absente et le paiement ≠ « offert ».
-        Le moyen vaut moyen.
-    Conserver la q.
+    Le total vaut la somme des prix des séances conservées dont la facture = relevé et la quittance est absente et le paiement ≠ « offert ».
+    Faire la quittance du patient du relevé et le total et le moyen, qui donne la q.
     Pour chaque séance conservée dont la facture = relevé et la quittance est absente et le paiement ≠ « offert » :
         La quittance de la séance devient la q.
 

@@ -786,6 +786,7 @@ typedef struct {
     size_t ip;
     Valeur *locaux;
     unsigned char *definis;
+    int rend;   /* l'appelant attend une valeur (un calcul, ou une action « , qui donne … », 2.57) */
 } Cadre;
 
 static void liberer_cadre(Cadre *c) {
@@ -4428,6 +4429,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     cadres[0].b = principal;
     cadres[0].liaison = liaison_principale;
     cadres[0].ip = 0;
+    cadres[0].rend = 0;
     {
         int nl = principal->nb_locaux;
         cadres[0].locaux = grym_allouer((nl ? (size_t)nl : 1) * sizeof *cadres[0].locaux);
@@ -4468,6 +4470,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             if (!ok) break;
             if (nb_cadres == 1) break;                  /* fin du programme */
+            /* une action (2.57) : appelée en phrase, ce qu'elle rend s'oublie ; appelée « , qui donne … » sans avoir
+             * rendu, elle donne absent */
+            if (code == I_RENDRE && !cadre->rend) { Valeur v = depiler(&pile); valeur_liberer(&v); }
+            else if (code == I_RETOUR && cadre->rend) empiler(&pile, vi_absent(NULL));
             liberer_cadre(cadre);
             nb_cadres--;                                /* la valeur rendue reste au sommet de la pile */
             continue;
@@ -6982,7 +6988,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 ok = echouer(diag, b, debut, pourquoi);
                 break;
             }
-            if ((f->bloc->sorte == B_CALCUL) != rend || f->bloc->nb_parametres != (int)nb_args) {
+            if ((f->bloc->sorte == B_CALCUL && !rend) || f->bloc->nb_parametres != (int)nb_args) {
                 ok = echouer(diag, b, debut, grym_formater(
                     "Appel de « %s » incompatible : %s à %d paramètre%s attendu.", nom,
                     f->bloc->sorte == B_CALCUL ? "un calcul" : "une action",
@@ -7011,6 +7017,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             n->b = f->bloc;
             n->liaison = f->liaison;
             n->ip = 0;
+            n->rend = rend;
             int nl = f->bloc->nb_locaux;
             n->locaux = grym_allouer((nl ? (size_t)nl : 1) * sizeof *n->locaux);
             n->definis = grym_allouer(nl ? (size_t)nl : 1);

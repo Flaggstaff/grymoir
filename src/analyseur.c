@@ -39,6 +39,7 @@ typedef struct {
     char *classe;      /* méthode : classe de son premier paramètre (§ 13.6), sinon NULL */
     int ensemble;      /* variable qui contient un ensemble, nommée au pluriel avec « les » (§ 13.9) */
     int fichier;       /* fichier de la déclaration : 0 celui qu'on analyse, k le k-ième fichier utilisé (§ 21) */
+    int rend;          /* une action qui rend une valeur (2.57) : « , qui donne … » à l'appel */
 } Symbole;
 
 /* Classe déclarée (§ 11 de la charte, grammaire § 13) : son nom, son genre, ses champs. */
@@ -442,6 +443,7 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->lecture_seule = 0;
     s->ensemble = 0;
     s->classe = NULL;
+    s->rend = 0;
     s->nb_parametres = 0;
     s->local = -1;
 }
@@ -488,6 +490,7 @@ typedef struct {
     int document;            /* … dans un document (2.25) : une taille se dit partout (« l'image « logo.png », large de 40 ») */
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
     int dans_xml;            /* le corps d'un XML déclaré (2.46) : attributs, contenus, éléments */
+    int action_rend;         /* l'action en cours a un « Rendre » (2.57) */
     char **xml_noms;         /* les XML déclarés : « facture », leur racine (2.46) */
     char **xml_racines;
     size_t nb_xml;
@@ -4261,12 +4264,17 @@ static Noeud *definition_action(Analyse *a, int colonne) {
     s->nb_parametres = (int)params->nb_enfants;
     s->classe = classe;
 
+    const size_t indice_symbole = a->portee->n - 1;
+    const int rend_avant = a->action_rend;
+    a->action_rend = 0;
     Contexte ctx = entrer_formule(a, 2, params);
     const char *ecran_avant = a->ecran;
     if (dans_ecran) a->ecran = dans_ecran;
     a->i = fin + 1;
     Noeud *corps = corps_en_bloc(a, &a->j[fin], colonne);
     a->ecran = ecran_avant;
+    if (indice_symbole < a->portee->n) a->portee->s[indice_symbole].rend = a->action_rend;
+    a->action_rend = rend_avant;
     int locaux = a->nb_locaux;
     sortir_formule(a, ctx);
     if (!corps) { noeud_liberer(params); free(nom); free(dans_ecran); return NULL; }
@@ -4348,6 +4356,48 @@ static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
         return NULL;
     }
     if (!comme_classe(a, s, n)) { noeud_liberer(n); return NULL; }
+    if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "qui") && est_mot(voir(a, 2), "donne")) {
+        /* « Faire une quittance pour le p et 120, qui donne la q. » (2.57) : ce que l'action rend, dans une variable */
+        if (!s->rend) {
+            Noeud *r = erreur(a, voir(a, 2), grym_formater("« %s » ne rend rien : écris « Rendre … » dans l'action.", s->nom));
+            noeud_liberer(n);
+            return r;
+        }
+        a->i += 3;
+        Jeton *tart = cour(a);
+        Article art = article_de(tart);
+        if (art == ART_IMPLICITE) art = ART_AUCUN;
+        if (art != ART_AUCUN) avancer(a);
+        const size_t d = a->i;
+        size_t f = d;
+        if (a->j[d].type == J_CROCHETS) f = d + 1;   /* la forme compacte : « [q] » */
+        else while (f < a->n && mot_de_nom(a, f)) f++;
+        if (f == d) { noeud_liberer(n); return erreur(a, cour(a), grym_dupliquer("Le nom qui reçoit la valeur : « , qui donne la q »."));}
+        char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, f);
+        a->i = f;
+        if (!fin_phrase(a, 0)) { free(nom); noeud_liberer(n); return NULL; }
+        Symbole *v = visible(a, nom);
+        if (v && v->sorte != S_VARIABLE) {
+            Noeud *r = erreur(a, &a->j[d], grym_formater("« %s » n'est pas une variable : elle ne reçoit pas de valeur.", nom));
+            free(nom);
+            noeud_liberer(n);
+            return r;
+        }
+        int local = v ? v->local : -1;
+        if (!v) {
+            portee_declarer(a->portee, nom, genre_de(art), tart->ligne);
+            if (a->formule) a->portee->s[a->portee->n - 1].local = local = a->nb_locaux++;
+        }
+        n->type = N_APPEL;   /* l'appel devient une valeur */
+        Noeud *m = noeud_creer(v ? P_MODIFICATION : P_CREATION, t->ligne, t->colonne, t->debut);
+        m->local = local;
+        m->texte = nom;
+        m->article = art;
+        m->forme = 9;   /* « , qui donne … » : réimprimée ainsi */
+        noeud_ajouter(m, n);
+        m->fin = fin_jeton(&a->j[a->i - 1]);
+        return m;
+    }
     if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
     return n;
 }
@@ -8678,10 +8728,9 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "pour")) return definition_action(a, colonne);
     if ((est_mot(t, "un") || est_mot(t, "une")) && !est_nouveau(voir(a, 1))) return definition_classe(a);
     if (est_mot(t, "rendre")) {
-        if (a->formule != 1)
-            return erreur(a, t, grym_dupliquer(a->formule == 2
-                ? "Une action ne rend rien : pour rendre une valeur, écris un calcul."
-                : "« Rendre » ne s'emploie que dans un calcul."));
+        if (a->formule != 1 && a->formule != 2)
+            return erreur(a, t, grym_dupliquer("« Rendre » ne s'emploie que dans un calcul ou une action."));
+        if (a->formule == 2) a->action_rend = 1;   /* 2.57 : une action qui rend, appelée « , qui donne … » */
         avancer(a);
         Noeud *v = valeur(a);
         if (!v) return NULL;
@@ -9042,6 +9091,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     portee_copier(&copie, portee);
     Analyse a;
     a.dans_xml = 0;   /* 2.46 */
+    a.action_rend = 0;
     a.xml_noms = NULL;
     a.xml_racines = NULL;
     a.nb_xml = 0;

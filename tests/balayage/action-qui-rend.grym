@@ -1,0 +1,17 @@
+Une quittance, conservée, a :
+    un numéro (texte), unique,
+    un montant (nombre).
+
+Pour quittancer un total :
+    Le rang vaut le nombre de quittances conservées + 1.
+    La q vaut une nouvelle quittance :
+        Le numéro vaut « Q- » suivi de rang.
+        Le montant vaut total.
+    Conserver la q.
+    Rendre la q.
+
+Quittancer 120, qui donne la q.
+Afficher le numéro de la q puis le montant de la q.
+Quittancer 80.
+Quittancer 50, qui donne la q.
+Afficher le numéro de la q puis le nombre de quittances conservées.

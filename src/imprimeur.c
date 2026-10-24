@@ -1430,7 +1430,36 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         aj(im, "\n");
         return;
     case P_CREATION:
-    case P_MODIFICATION: {
+    case P_MODIFICATION:
+        if (n->forme == 9 && n->nb_enfants && n->enfants[0]->type == N_APPEL) {
+            /* « Quittancer 120, qui donne la q. » ; « quittancer(120) _qui_donne q » (2.57) : l'appel, puis la variable */
+            Noeud appel_seul = *n->enfants[0];
+            appel_seul.type = P_APPEL;
+            const size_t debut = im->c.n;
+            phrase(im, &appel_seul, 0);
+            while (im->c.n > debut && (im->c.d[im->c.n - 1] == '\n' || im->c.d[im->c.n - 1] == '.')) im->c.n--;
+            im->c.d[im->c.n] = '\0';
+            if (c) {
+                aj(im, " _qui_donne ");
+                aj(im, n->article == ART_LE ? "_le " : n->article == ART_LA ? "_la " : n->article == ART_L ? "_l' " : "");
+                ecrire_nom(im, n->texte, 0);
+                aj(im, "\n");
+            }
+            else {
+                aj(im, ", qui donne ");
+                if (n->article != ART_AUCUN) {   /* « la q », en minuscule au milieu de la phrase */
+                    char *art = grym_dupliquer(article_ecrit(n->article, genre_de_nom(im, n->texte), n->texte));
+                    if (art[0] >= 'A' && art[0] <= 'Z') art[0] = (char)(art[0] + 32);
+                    aj(im, art);
+                    free(art);
+                }
+                ecrire_nom(im, n->texte, 0);
+                aj(im, ".\n");
+            }
+            return;
+        }
+        /* fallthrough */
+    {
         if (n->type == P_CREATION && (n->article == ART_LE || n->article == ART_LA || n->article == ART_L)) {
             /* « L'effectif vaut 12. » : une variable avec un article, que la forme compacte perd (§ 11.4) */
             im->variables = realloc(im->variables, (im->nb_var + 1) * sizeof *im->variables);

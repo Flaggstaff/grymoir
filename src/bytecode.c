@@ -341,8 +341,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             ok = refuser(erreur, grym_formater("SAISIR sans liste de champs (octet %lu).", (unsigned long)d));
         else if (c == I_ECHOUER && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
             ok = refuser(erreur, grym_formater("ÉCHOUER sans message (octet %lu).", (unsigned long)d));
-        else if (c == I_RENDRE && b->sorte != B_CALCUL)
-            ok = refuser(erreur, grym_formater("RENDRE hors d'un calcul (octet %lu).", (unsigned long)d));
+        else if (c == I_RENDRE && b->sorte != B_CALCUL && b->sorte != B_ACTION)   /* 2.57 : une action peut rendre */
+            ok = refuser(erreur, grym_formater("RENDRE hors d'un calcul ou d'une action (octet %lu).", (unsigned long)d));
         else if (c == I_RETOUR && b->sorte == B_CALCUL)
             ok = refuser(erreur, grym_formater("RETOUR dans un calcul (octet %lu).", (unsigned long)d));
         debut_instr[d] = 1;

@@ -627,15 +627,7 @@ Pour quittancer une séance :
         Si l'exemplaire de la pièce en cours est absent, l'exemplaire de la pièce en cours devient le document de quittance.
         Ouvrir l'exemplaire de la pièce en cours.
     Sinon :
-        Le début vaut le premier janvier d'aujourd'hui.
-        Le rang vaut (le nombre de quittances conservées dont la date ≥ le début) + (le nombre de quittances supprimées dont la date ≥ le début) + 1.
-        La q vaut une nouvelle quittance :
-            Le numéro vaut le numéro de pièce de « Q- » et de l'année d'aujourd'hui et du rang.
-            La date vaut aujourd'hui.
-            Le patient vaut le patient de la séance.
-            Le montant vaut le prix de la séance.
-            Le moyen vaut le paiement de la séance.
-        Conserver la q.
+        Faire la quittance du patient de la séance et le prix de la séance et le paiement de la séance, qui donne la q.
         La quittance de la séance devient la q.
         La pièce en cours devient la q.
         L'exemplaire de la q devient le document de quittance.
@@ -754,19 +746,8 @@ Pour décompter une ordonnance :
     Pour chaque séance conservée dont l'ordonnance = le o et le décompte est absent et le statut = « faite » et la date ≥ le début d'année et la date < la fin d'année :
         Si la position tarifaire du soin de la séance est absente, refuser "Le soin " suivi du nom du soin de la séance suivi de " n'a pas de position tarifaire : Configuration, Soins.".
         Si l'unité de la position tarifaire du soin de la séance = « quart d'heure » et la durée de la séance est absente, refuser "La séance du " suivi de la date de la séance suivi de " n'a pas de durée : sa page.".
-    Le début vaut le premier janvier d'aujourd'hui.
-    Le rang vaut (le nombre de décomptes conservés dont la date ≥ le début) + (le nombre de décomptes supprimés dont la date ≥ le début) + 1.
-    Le d vaut un nouveau décompte :
-        Le numéro vaut le numéro de pièce de « TP- » et de l'année d'aujourd'hui et du rang.
-        La date vaut aujourd'hui.
-        Le patient vaut le p.
-        L'assureur vaut le a.
-        La valeur du point vaut le point.
-        Le montant vaut 0.
-        La suite vaut « se poursuit ».
-        L'état vaut « à régler ».
+    Faire le décompte du p et le a et le point et « se poursuit », qui donne le d.
     L'ordonnance du d devient le o.
-    Conserver le d.
     Pour chaque séance conservée dont l'ordonnance = le o et le décompte est absent et le statut = « faite » et la date ≥ le début d'année et la date < la fin d'année :
         Le chiffre du tarif de la séance devient le code de la position tarifaire du soin de la séance.
         Le total de points de la séance devient la cotation de la séance.
@@ -809,17 +790,7 @@ Pour décompter la complémentaire d'un patient :
         Si le code tarifaire du soin de la séance est absent, refuser "Le soin " suivi du nom du soin de la séance suivi de " n'a pas de code tarifaire : Configuration, Soins.".
     Le début d'année vaut le premier janvier de la plus ancienne.
     La fin d'année vaut le début d'année + 1 an.
-    Le rang vaut (le nombre de décomptes conservés dont la date ≥ le premier janvier d'aujourd'hui) + (le nombre de décomptes supprimés dont la date ≥ le premier janvier d'aujourd'hui) + 1.
-    Le d vaut un nouveau décompte :
-        Le numéro vaut le numéro de pièce de « TP- » et de l'année d'aujourd'hui et du rang.
-        La date vaut aujourd'hui.
-        Le patient vaut le p.
-        L'assureur vaut le a.
-        La valeur du point vaut 0.
-        Le montant vaut 0.
-        La suite vaut « terminé ».
-        L'état vaut « à régler ».
-    Conserver le d.
+    Faire le décompte du p et le a et 0 et « terminé », qui donne le d.
     Pour chaque séance conservée dont le patient = le p et le paiement = « assurance » et l'ordonnance est absente et le décompte est absent et le statut = « faite » et la date ≥ le début d'année et la date < la fin d'année :
         Le chiffre du tarif de la séance devient le code tarifaire du soin de la séance.
         Le décompte de la séance devient le d.

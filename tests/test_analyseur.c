@@ -340,8 +340,7 @@ int main(void) {
     VE("Le carré d'un nombre vaut nombre × nombre.\nAfficher le carré de le x.", 2, 19, "« de le » s'écrit « du ».");
     VE("La valeur d'un nombre :\n    Si nombre > 0, rendre 1.", 1, 1, "doit se terminer par « Rendre … »");
     VE("Le double d'un nombre :\n    Afficher nombre.\n    Rendre nombre.", 2, 5, "Un calcul n'affiche rien");
-    VE("Pour saluer :\n    Rendre 1.", 2, 5, "Une action ne rend rien");
-    VE("Rendre 1.", 1, 1, "« Rendre » ne s'emploie que dans un calcul.");
+    VE("Rendre 1.", 1, 1, "« Rendre » ne s'emploie que dans un calcul ou une action.");   /* 2.57 : une action peut rendre */
     VE("Pour saluer :\n    Afficher 1.\nLe f d'un nombre :\n    Saluer.\n    Rendre 1.", 4, 5,
        "Un calcul n'appelle pas d'action");
     VE("Si vrai :\n    Pour saluer :\n        Afficher 1.", 2, 5, "au premier niveau du programme");
