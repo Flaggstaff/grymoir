@@ -10,7 +10,9 @@ Marche à suivre, rédigée le 23 octobre 2026 pour la visite chez Nicolas. Elle
 ## Avant la visite, sur ton Mac
 
 1. Dépôt à jour : `cd ~/Downloads/grymoir && git pull --ff-only && make -s test`. Tous les essais passent.
-2. Application du cabinet : dans l'atelier, ouvrir `projets/Praxis/Nicolas` et fabriquer l'application.
+2. Application du cabinet : dans l'atelier, ouvrir `projets/Praxis/Nicolas` et fabriquer l'application. Elle s'appelle « Praxis »
+   (`application, nom : Praxis` dans son `projet.grymatelier`) : c'est ce nom qui désigne le dossier de sa base. Un autre nom, et
+   l'application ne retrouverait pas la base de Nicolas.
 3. Emporter l'application fabriquée et une clé USB vide.
 
 ## Chez le cabinet, dans cet ordre

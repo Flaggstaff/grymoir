@@ -1519,7 +1519,11 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
             b->setSpacing(Theme::courant().mesure("espace-4"));
             auto *image = new QLabel;
             const qreal densite = devicePixelRatioF();
-            QPixmap p = signature.scaledToHeight(qRound(26 * densite), Qt::SmoothTransformation);
+            // 26 pixels de haut pour une signature en longueur (un nom écrit) ; une image plus carrée (un logo en lettrage) monte
+            // jusqu'à 96, pour garder environ 160 pixels de large : un carré de 26 ne se lisait pas (2.52)
+            const qreal rapport = signature.height() > 0 ? qreal(signature.width()) / signature.height() : 8;
+            const int haut = qBound(26, qRound(160 / rapport), 96);
+            QPixmap p = signature.scaledToHeight(qRound(haut * densite), Qt::SmoothTransformation);
             p.setDevicePixelRatio(densite);
             image->setPixmap(p);
             image->setAccessibleName(QString::fromUtf8("Signature"));
