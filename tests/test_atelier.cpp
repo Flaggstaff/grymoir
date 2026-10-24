@@ -301,6 +301,10 @@ int main(int argc, char **argv) {
         const QStringList p = projets_du_depot(d.path(), &trouve);
         VERIFIER(trouve && p.size() == 3);
         VERIFIER(p.size() == 3 && p[0].endsWith("/projets/A") && p[1].endsWith("/projets/G/B") && p[2].endsWith("/projets/G/C"));
+        // un groupe s'ouvre en choisissant sa version ; un projet n'est pas un groupe (24 octobre 2026)
+        const QStringList g = projets_du_groupe(d.filePath("projets/G"));
+        VERIFIER(g.size() == 2 && g[0].endsWith("/projets/G/B") && g[1].endsWith("/projets/G/C"));
+        VERIFIER(projets_du_groupe(d.filePath("projets/A")).isEmpty());
         QTemporaryDir ailleurs;
         VERIFIER(projets_du_depot(ailleurs.path(), &trouve).isEmpty() && !trouve);
     }

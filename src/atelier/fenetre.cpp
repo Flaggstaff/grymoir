@@ -546,6 +546,21 @@ void Fenetre::choisir_projet() {
 }
 
 void Fenetre::ouvrir_projet(const QString &dossier) {
+    // un groupe (« projets/Praxis ») ne s'ouvre pas comme un projet : on lançait et fabriquait alors le programme d'une seule
+    // de ses versions, quelle que soit celle qu'on regardait (24 octobre 2026) ; on choisit la version
+    const QStringList versions = projets_du_groupe(dossier);
+    if (!versions.isEmpty()) {
+        QStringList noms;
+        for (const QString &v : versions) noms << QFileInfo(v).fileName();
+        if (!qEnvironmentVariableIsEmpty("GRYMOIR_ESSAIS")) { ouvrir_projet(versions.first()); return; }
+        bool ok = false;
+        const QString choix = QInputDialog::getItem(this, QString::fromUtf8("Ouvrir"),
+                                                    QString::fromUtf8("« %1 » regroupe plusieurs projets : lequel ouvrir ?")
+                                                        .arg(QFileInfo(dossier).fileName()),
+                                                    noms, 0, false, &ok);
+        if (ok) ouvrir_projet(versions.at(noms.indexOf(choix)));
+        return;
+    }
     if (!quitter_fichier()) return;
     // les gestes d'un autre projet ne s'annulent pas d'ici : ils réécriraient ses fichiers en silence
     gestes.clear();

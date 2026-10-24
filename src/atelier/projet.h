@@ -46,5 +46,7 @@ QStringList recents_avec(QStringList recents, const QString &dossier, int max = 
 // le dépôt se cherche en remontant depuis `depuis` (le dossier de l'exécutable), six niveaux au plus. *depot_trouve :
 // faux pour une application installée, qui n'a pas de dépôt autour d'elle.
 QStringList projets_du_depot(const QString &depuis, bool *depot_trouve);
+// un groupe de projets (« projets/Praxis ») : aucun programme à sa racine, des projets un niveau plus bas ; vide sinon
+QStringList projets_du_groupe(const QString &dossier);
 
 #endif

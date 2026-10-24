@@ -128,6 +128,19 @@ QStringList recents_avec(QStringList recents, const QString &dossier, int max) {
     return recents;
 }
 
+static bool est_un_projet(const QDir &x) {
+    return QFileInfo::exists(x.filePath("projet.grymatelier")) && !x.entryList({"*.grym"}, QDir::Files).isEmpty();
+}
+
+QStringList projets_du_groupe(const QString &dossier) {
+    const QDir g(dossier);
+    QStringList r;
+    if (!g.entryList({"*.grym"}, QDir::Files).isEmpty()) return r;   // des programmes à la racine : un projet, pas un groupe
+    for (const QString &n : g.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
+        if (est_un_projet(QDir(g.filePath(n)))) r << g.filePath(n);
+    return r;
+}
+
 QStringList projets_du_depot(const QString &depuis, bool *depot_trouve) {
     QDir d(depuis);
     *depot_trouve = false;
@@ -140,9 +153,7 @@ QStringList projets_du_depot(const QString &depuis, bool *depot_trouve) {
     const QDir projets(d.filePath("projets"));
     // un projet : un projet.grymatelier et au moins un programme ; un projet.grymatelier seul (l'atelier en écrit un quand on
     // ouvre un groupe) ne fait pas un projet (24 octobre 2026)
-    auto est_projet = [](const QDir &x) {
-        return QFileInfo::exists(x.filePath("projet.grymatelier")) && !x.entryList({"*.grym"}, QDir::Files).isEmpty();
-    };
+    auto est_projet = [](const QDir &x) { return est_un_projet(x); };
     for (const QString &nom : projets.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
         const QDir sous(projets.filePath(nom));
         if (est_projet(sous)) { r << projets.filePath(nom); continue; }
