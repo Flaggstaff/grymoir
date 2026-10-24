@@ -286,6 +286,21 @@ int main(int argc, char **argv) {
             charge |= x.endsWith("/projets/Praxis/Test de charge");
         }
         VERIFIER(cabinet && neutre && charge);
+    }
+    {   // un groupe où l'atelier a laissé un projet.grymatelier, sans programme : ses projets restent trouvés (24 octobre 2026)
+        QTemporaryDir d;
+        QDir().mkpath(d.filePath("src/atelier"));
+        for (const char *x : {"projets/A", "projets/G/B", "projets/G/C"}) QDir().mkpath(d.filePath(x));
+        for (const char *x : {"projets/A/projet.grymatelier", "projets/A/a.grym", "projets/G/projet.grymatelier",
+                              "projets/G/B/projet.grymatelier", "projets/G/B/b.grym", "projets/G/C/projet.grymatelier",
+                              "projets/G/C/c.grym"}) {
+            QFile f(d.filePath(x));
+            VERIFIER(f.open(QIODevice::WriteOnly));
+        }
+        bool trouve = false;
+        const QStringList p = projets_du_depot(d.path(), &trouve);
+        VERIFIER(trouve && p.size() == 3);
+        VERIFIER(p.size() == 3 && p[0].endsWith("/projets/A") && p[1].endsWith("/projets/G/B") && p[2].endsWith("/projets/G/C"));
         QTemporaryDir ailleurs;
         VERIFIER(projets_du_depot(ailleurs.path(), &trouve).isEmpty() && !trouve);
     }

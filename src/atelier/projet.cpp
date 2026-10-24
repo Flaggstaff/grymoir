@@ -138,12 +138,17 @@ QStringList projets_du_depot(const QString &depuis, bool *depot_trouve) {
     QStringList r;
     if (!*depot_trouve) return r;
     const QDir projets(d.filePath("projets"));
+    // un projet : un projet.grymatelier et au moins un programme ; un projet.grymatelier seul (l'atelier en écrit un quand on
+    // ouvre un groupe) ne fait pas un projet (24 octobre 2026)
+    auto est_projet = [](const QDir &x) {
+        return QFileInfo::exists(x.filePath("projet.grymatelier")) && !x.entryList({"*.grym"}, QDir::Files).isEmpty();
+    };
     for (const QString &nom : projets.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
         const QDir sous(projets.filePath(nom));
-        if (QFileInfo::exists(sous.filePath("projet.grymatelier"))) { r << projets.filePath(nom); continue; }
+        if (est_projet(sous)) { r << projets.filePath(nom); continue; }
         // un groupe de projets (« projets/Praxis » : Nicolas, Lorianne, Praxis, Test de charge), un niveau plus bas
         for (const QString &n2 : sous.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
-            if (QFileInfo::exists(QDir(sous.filePath(n2)).filePath("projet.grymatelier"))) r << sous.filePath(n2);
+            if (est_projet(QDir(sous.filePath(n2)))) r << sous.filePath(n2);
     }
     return r;
 }
