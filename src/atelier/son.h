@@ -60,6 +60,7 @@ public:
     bool enregistre_en_cours() const;
     QPushButton *bouton() const { return bouton_; }
     QLabel *message() const { return message_; }
+    class QComboBox *micros() const { return micro_; }
 
     // Le format choisi pour ce système : l'extension (« m4a »), vide si aucun ne s'écrit ici.
     static QString extension_choisie();
@@ -69,6 +70,8 @@ private:
     void fini();
     QPushButton *bouton_;
     QLabel *message_;
+    class QComboBox *micro_;   // le micro choisi (24 octobre 2026), retenu d'une fois à l'autre
+    void remplir_micros();
     QMediaCaptureSession *session = nullptr;
     QAudioInput *entree = nullptr;
     QMediaRecorder *enregistreur = nullptr;

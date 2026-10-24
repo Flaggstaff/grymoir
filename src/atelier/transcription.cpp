@@ -100,8 +100,21 @@ bool wav_en_16k(const QByteArray &o, std::vector<float> *pcm) {
     return true;
 }
 
+// L'extension d'un son, d'après ses premiers octets : le décodeur de macOS (AVFoundation) ne lit un fichier que s'il porte
+// la bonne ; sans elle, « Could not load media source's tracks » (24 octobre 2026)
+QString extension_de_son(const QByteArray &o) {
+    if (o.size() >= 12 && o.mid(4, 4) == "ftyp") return "m4a";
+    if (o.startsWith("RIFF") && o.mid(8, 4) == "WAVE") return "wav";
+    if (o.startsWith("OggS")) return "ogg";
+    if (o.startsWith("fLaC")) return "flac";
+    if (o.startsWith("\x1A\x45\xDF\xA3")) return "webm";
+    if (o.startsWith("ID3") || (o.size() >= 2 && (uchar)o[0] == 0xFF && ((uchar)o[1] & 0xE0) == 0xE0)) return "mp3";
+    return "son";
+}
+
 bool decoder_en_16k(const QByteArray &octets, std::vector<float> *pcm, QString *erreur) {
-    QTemporaryFile f(QDir::tempPath() + "/grymoir-son-XXXXXX");   // le décodeur lit un fichier : il reconnaît mieux le format
+    // le décodeur lit un fichier, qui porte l'extension de son format
+    QTemporaryFile f(QDir::tempPath() + "/grymoir-son-XXXXXX." + extension_de_son(octets));
     if (!f.open() || f.write(octets) != octets.size()) { *erreur = "Le son ne peut pas être préparé."; return false; }
     f.flush();
     QAudioDecoder d;

@@ -821,6 +821,18 @@ int main(int argc, char **argv) {
         VERIFIER(fil && fil->isVisible());     // le programme fini : le fil revient, avec son dernier mot
     }
 
+    // Le son (24 octobre 2026) : l'extension du fichier que lit le décodeur, d'après les octets ; le choix du micro
+    {
+        VERIFIER(extension_de_son(QByteArray("\0\0\0\x20" "ftypM4A ", 12)) == "m4a");
+        VERIFIER(extension_de_son(QByteArray("RIFF\x24\0\0\0WAVEfmt ", 16)) == "wav");
+        VERIFIER(extension_de_son(QByteArray("OggS\0\x02", 6)) == "ogg");
+        VERIFIER(extension_de_son(QByteArray("fLaC\0\0", 6)) == "flac");
+        VERIFIER(extension_de_son(QByteArray("ID3\x04", 4)) == "mp3");
+        VERIFIER(extension_de_son(QByteArray("xyz", 3)) == "son");
+        EnregistreurSon e;
+        VERIFIER(e.micros() && e.micros()->count() >= 1 && e.micros()->itemText(0) == QString::fromUtf8("Micro du système"));
+    }
+
     // La signature (2.16) : un bandeau en tête de l'écran, l'image et un filet ; plus de logo près du titre
     {
         QTemporaryDir dossier;

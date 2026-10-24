@@ -16,6 +16,7 @@ QString modele_de_transcription();
 bool wav_en_16k(const QByteArray &octets, std::vector<float> *pcm);
 // Les autres formats (MP3, M4A, Ogg, WebM, FLAC…) par le décodeur de Qt. À appeler hors du fil de l'interface (il
 // attend dans sa propre boucle).
+QString extension_de_son(const QByteArray &octets);   // « m4a », « wav », … d'après les premiers octets
 bool decoder_en_16k(const QByteArray &octets, std::vector<float> *pcm, QString *erreur);
 // Les phrases inventées dans les silences, retirées (formules de génériques de sous-titres).
 QString nettoyer_transcription(const QString &texte);

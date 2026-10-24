@@ -7,6 +7,8 @@
 #include <QAudioOutput>
 #include <QBuffer>
 #include <QDateTime>
+#include <QSettings>
+#include <QComboBox>
 #include <QFile>
 #include <QFileInfo>
 #include <QHBoxLayout>
@@ -157,6 +159,18 @@ EnregistreurSon::EnregistreurSon(QWidget *parent) : QWidget(parent) {
     message_ = new QLabel;
     message_->setProperty("niveau", "etiquette");
     rang->addWidget(bouton_);
+    // le micro : celui du système par défaut, ou celui qu'on a choisi ici (un casque Bluetooth dont on prend le micro
+    // passe en mode appel : son faible, volume de la musique qui saute ; on choisit alors celui de l'ordinateur)
+    micro_ = new QComboBox;
+    micro_->setToolTip(QString::fromUtf8("Le micro de la dictée"));
+    micro_->setSizeAdjustPolicy(QComboBox::AdjustToContents);
+    rang->addWidget(micro_);
+    remplir_micros();
+    connect(micro_, &QComboBox::activated, this, [this](int i) {
+        QSettings().setValue("micro de dictée", micro_->itemData(i).toString());
+    });
+    auto *appareils = new QMediaDevices(this);
+    connect(appareils, &QMediaDevices::audioInputsChanged, this, &EnregistreurSon::remplir_micros);
     rang->addWidget(message_, 1);
     // le texte entier, sur plusieurs lignes : « L'enregistrement a échoué : … » se coupait au bord du formulaire, et
     // « ■ Arrêter (0:00) » perdait sa parenthèse (24 octobre 2026)
@@ -164,6 +178,16 @@ EnregistreurSon::EnregistreurSon(QWidget *parent) : QWidget(parent) {
     message_->setMinimumWidth(0);
     bouton_->setMinimumWidth(bouton_->fontMetrics().horizontalAdvance(QString::fromUtf8("■ Arrêter (00:00)")) + 32);
     connect(bouton_, &QPushButton::clicked, this, &EnregistreurSon::basculer);
+}
+
+void EnregistreurSon::remplir_micros() {
+    const QString retenu = QSettings().value("micro de dictée").toString();
+    micro_->clear();
+    micro_->addItem(QString::fromUtf8("Micro du système"), QString());
+    for (const QAudioDevice &a : QMediaDevices::audioInputs())
+        micro_->addItem(a.description(), QString::fromUtf8(a.id()));
+    const int i = micro_->findData(retenu);
+    micro_->setCurrentIndex(i >= 0 ? i : 0);   // un micro débranché : celui du système, sans oublier le choix
 }
 
 EnregistreurSon::~EnregistreurSon() {
@@ -231,7 +255,11 @@ void EnregistreurSon::commencer() {
             message_->setText(QString::fromUtf8("L'enregistrement a échoué : ") + m);
         });
     }
-    entree->setDevice(QMediaDevices::defaultAudioInput());   // le micro par défaut, au moment de commencer
+    QAudioDevice choisi = QMediaDevices::defaultAudioInput();   // le micro choisi, s'il est branché ; sinon celui du système
+    const QString id = micro_->currentData().toString();
+    for (const QAudioDevice &a : QMediaDevices::audioInputs())
+        if (!id.isEmpty() && QString::fromUtf8(a.id()) == id) choisi = a;
+    entree->setDevice(choisi);
     enregistreur->setMediaFormat(f.format);
     enregistreur->setQuality(QMediaRecorder::HighQuality);
     enregistreur->setOutputLocation(QUrl::fromLocalFile(dossier->filePath("enregistrement." + extension)));
