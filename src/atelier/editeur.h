@@ -75,6 +75,9 @@ public:
     void clic_marge(int y);
     // Le plan : les déclarations de premier niveau qui ont un corps (« … : »), avec leur ligne (à partir de 1)
     QList<QPair<QString, int>> plan() const;
+    // Ne montrer que ces déclarations de premier niveau (leurs premières lignes, à partir de 1), cachées toutes les autres ;
+    // une liste vide montre tout. Une ligne ajoutée ou retirée montre tout de nouveau.
+    void montrer_seulement(const QList<int> &debuts);
     static bool debut_de_bloc(const QTextBlock &b);   // une ligne non vide, sans retrait
 private:
     QWidget *marge;
@@ -96,18 +99,28 @@ private:
 };
 
 // Le plan d'un fichier (24 octobre 2026) : ses déclarations, un filtre, un clic y mène.
+// Par écran (24 octobre 2026) : chaque écran, avec sa déclaration et tous ses événements, quelle que soit leur place dans le
+// fichier ; puis « Hors des écrans » (entités, actions, calculs, documents…). Ou l'ordre du fichier.
+QString ecran_de_ligne(const QString &entete);   // « du patient » pour « L'écran du patient … » et « … dans l'écran du patient : »
+
 class PlanDuCode : public QWidget {
     Q_OBJECT
 public:
     explicit PlanDuCode(Editeur *e, QWidget *parent = nullptr);
     void rafraichir();
-    class QListWidget *liste() const { return liste_; }
+    class QTreeWidget *arbre() const { return arbre_; }
     class QLineEdit *filtre() const { return filtre_; }
+    class QComboBox *ordre() const { return ordre_; }
+    class QPushButton *seul() const { return seul_; }
+    void montrer_seulement(const QString &ecran);   // l'éditeur ne montre que cet écran et ses événements ; vide : tout
 private:
     Editeur *editeur_;
     class QLineEdit *filtre_;
-    class QListWidget *liste_;
+    class QComboBox *ordre_;
+    class QTreeWidget *arbre_;
+    class QPushButton *seul_;
     QList<QPair<QString, int>> entrees_;
+    QString seul_ecran_;
     void remplir();
     void suivre(int ligne);
 };

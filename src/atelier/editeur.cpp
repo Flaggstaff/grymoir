@@ -9,6 +9,10 @@
 #include <QHelpEvent>
 #include <QKeyEvent>
 #include <QPainter>
+#include <QHash>
+#include <QPushButton>
+#include <QComboBox>
+#include <QTreeWidget>
 #include <QMouseEvent>
 #include <QVBoxLayout>
 #include <QListWidget>
@@ -536,32 +540,109 @@ void Editeur::guillemet(int position) {
 
 // --- Le plan (24 octobre 2026) ---
 
+QString ecran_de_ligne(const QString &entete) {
+    QString t = entete.trimmed();
+    if (t.endsWith(':')) t.chop(1);
+    t = t.trimmed();
+    auto apres = [&](const QString &marque) -> QString {
+        const int k = t.indexOf(marque);
+        return k < 0 ? QString() : t.mid(k + marque.size()).trimmed();
+    };
+    QString nom;
+    if (t.startsWith(QString::fromUtf8("L'écran "))) {   // « L'écran du patient, « Patient », montre » / « L'écran x montre »
+        nom = t.mid(QString::fromUtf8("L'écran ").size());
+        const int virgule = nom.indexOf(',');
+        if (virgule >= 0) nom = nom.left(virgule);
+        else if (nom.endsWith(" montre")) nom.chop(7);
+    } else if (t.startsWith("Quand on ")) {
+        nom = apres(QString::fromUtf8(" dans l'écran "));
+        if (nom.isEmpty()) nom = apres(QString::fromUtf8("Quand on ouvre l'écran "));
+        if (nom.isEmpty()) nom = apres(QString::fromUtf8("Quand on ferme l'écran "));
+    }
+    return nom.trimmed();
+}
+
+void Editeur::montrer_seulement(const QList<int> &debuts) {
+    if (debuts.isEmpty()) { deplier_tout(); return; }
+    replies_.clear();
+    bool garde = false;
+    for (QTextBlock b = document()->begin(); b.isValid(); b = b.next()) {
+        if (debut_de_bloc(b)) {
+            // une déclaration gardée, et les remarques collées au-dessus d'elle
+            garde = debuts.contains(b.blockNumber() + 1);
+            if (!garde && est_remarque(b)) {
+                QTextBlock k = b;
+                while (k.isValid() && debut_de_bloc(k) && est_remarque(k)) k = k.next();
+                garde = k.isValid() && debuts.contains(k.blockNumber() + 1);
+            }
+        }
+        b.setVisible(garde);
+    }
+    document()->markContentsDirty(0, document()->characterCount());
+    viewport()->update();
+    marge->update();
+}
+
 PlanDuCode::PlanDuCode(Editeur *e, QWidget *parent) : QWidget(parent), editeur_(e) {
     auto *pile = new QVBoxLayout(this);
     pile->setContentsMargins(0, 0, 0, 0);
     pile->setSpacing(4);
+    ordre_ = new QComboBox;
+    ordre_->addItem(QString::fromUtf8("Par écran"));
+    ordre_->addItem(QString::fromUtf8("Ordre du fichier"));
     filtre_ = new QLineEdit;
     filtre_->setPlaceholderText(QString::fromUtf8("Chercher dans le plan"));
     filtre_->setClearButtonEnabled(true);
-    liste_ = new QListWidget;
-    liste_->setObjectName("plan");
-    liste_->setAccessibleName(QString::fromUtf8("Plan du fichier"));
-    liste_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);   // une ligne longue s'abrège ; la bulle la donne entière
-    liste_->setTextElideMode(Qt::ElideRight);
+    arbre_ = new QTreeWidget;
+    arbre_->setObjectName("plan");
+    arbre_->setAccessibleName(QString::fromUtf8("Plan du fichier"));
+    arbre_->setHeaderHidden(true);
+    arbre_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);   // une ligne longue s'abrège ; la bulle la donne entière
+    arbre_->setTextElideMode(Qt::ElideRight);
+    seul_ = new QPushButton(QString::fromUtf8("Cet écran seulement"));
+    seul_->setCheckable(true);
+    seul_->setToolTip(QString::fromUtf8("L'éditeur ne montre que l'écran choisi et ses événements"));
+    pile->addWidget(ordre_);
     pile->addWidget(filtre_);
-    pile->addWidget(liste_, 1);
+    pile->addWidget(arbre_, 1);
+    pile->addWidget(seul_);
     connect(filtre_, &QLineEdit::textChanged, this, &PlanDuCode::remplir);
-    connect(liste_, &QListWidget::itemClicked, this, [this](QListWidgetItem *i) {
-        editeur_->aller_a(i->data(Qt::UserRole).toInt(), 1);
+    connect(ordre_, &QComboBox::currentIndexChanged, this, &PlanDuCode::remplir);
+    connect(arbre_, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem *i) {
+        const int ligne = i->data(0, Qt::UserRole).toInt();
+        const QString ecran = i->data(0, Qt::UserRole + 1).toString();
+        if (seul_->isChecked() && !ecran.isEmpty() && ecran != seul_ecran_) montrer_seulement(ecran);
+        if (ligne > 0) editeur_->aller_a(ligne, 1);
+    });
+    connect(seul_, &QPushButton::toggled, this, [this](bool oui) {
+        QTreeWidgetItem *i = arbre_->currentItem();
+        const QString ecran = i ? i->data(0, Qt::UserRole + 1).toString() : QString();
+        montrer_seulement(oui ? ecran : QString());
+        if (oui && ecran.isEmpty()) seul_->setChecked(false);
     });
     connect(editeur_, &Editeur::diagnostic_change, this, &PlanDuCode::rafraichir);
     connect(editeur_, &Editeur::bloc_change, this, &PlanDuCode::suivre);
+    connect(editeur_, &QPlainTextEdit::blockCountChanged, this, [this] {   // une ligne de plus ou de moins : tout revient
+        seul_ecran_.clear();
+        const QSignalBlocker b(seul_);
+        seul_->setChecked(false);
+    });
     rafraichir();
+}
+
+void PlanDuCode::montrer_seulement(const QString &ecran) {
+    seul_ecran_ = ecran;
+    QList<int> debuts;
+    if (!ecran.isEmpty())
+        for (const auto &[texte, ligne] : entrees_)
+            if (ecran_de_ligne(texte + " :") == ecran) debuts << ligne;
+    editeur_->montrer_seulement(debuts);
 }
 
 void PlanDuCode::rafraichir() {
     entrees_ = editeur_->plan();
     remplir();
+    if (!seul_ecran_.isEmpty()) montrer_seulement(seul_ecran_);
 }
 
 void PlanDuCode::remplir() {
@@ -573,23 +654,77 @@ void PlanDuCode::remplir() {
         return r;
     };
     const QString f = plat(filtre_->text().trimmed());
-    liste_->clear();
-    for (const auto &[texte, ligne] : entrees_) {
-        if (!f.isEmpty() && !plat(texte).contains(f)) continue;
-        auto *i = new QListWidgetItem(texte);
-        i->setData(Qt::UserRole, ligne);
-        i->setToolTip(QString::fromUtf8("%1\nLigne %2").arg(texte).arg(ligne));
-        liste_->addItem(i);
+    arbre_->clear();
+    auto feuille = [&](const QString &texte, int ligne, const QString &ecran) {
+        auto *i = new QTreeWidgetItem(QStringList{texte});
+        i->setData(0, Qt::UserRole, ligne);
+        i->setData(0, Qt::UserRole + 1, ecran);
+        i->setToolTip(0, QString::fromUtf8("%1\nLigne %2").arg(texte).arg(ligne));
+        return i;
+    };
+    if (ordre_->currentIndex() == 1) {   // l'ordre du fichier
+        for (const auto &[texte, ligne] : entrees_)
+            if (f.isEmpty() || plat(texte).contains(f)) arbre_->addTopLevelItem(feuille(texte, ligne, ecran_de_ligne(texte + " :")));
+        return;
     }
+    // par écran : les écrans dans l'ordre de leur déclaration, chacun avec ses événements ; puis le reste
+    QStringList ecrans;
+    QHash<QString, QList<QPair<QString, int>>> par_ecran;
+    QList<QPair<QString, int>> autres;
+    for (const auto &[texte, ligne] : entrees_) {
+        const QString e = ecran_de_ligne(texte + " :");
+        if (e.isEmpty()) { autres.append({texte, ligne}); continue; }
+        if (!ecrans.contains(e)) ecrans << e;
+        par_ecran[e].append({texte, ligne});
+    }
+    for (const QString &e : ecrans) {
+        auto *groupe = new QTreeWidgetItem(QStringList{QString::fromUtf8("Écran %1").arg(e)});
+        int premiere = 0;   // la déclaration de l'écran, sinon son premier événement
+        for (const auto &[texte, ligne] : par_ecran[e])
+            if (texte.startsWith(QString::fromUtf8("L'écran "))) premiere = ligne;
+        if (!premiere && !par_ecran[e].isEmpty()) premiere = par_ecran[e].first().second;
+        for (const auto &[texte, ligne] : par_ecran[e]) {
+            // sous son écran, un événement se dit court : « clique sur « Enregistrer » », « à l'ouverture »
+            QString court = texte;
+            if (court.startsWith(QString::fromUtf8("L'écran "))) court = QString::fromUtf8("Ce qu'il montre");
+            else if (court.startsWith(QString::fromUtf8("Quand on ouvre l'écran"))) court = QString::fromUtf8("À l'ouverture");
+            else if (court.startsWith(QString::fromUtf8("Quand on ferme l'écran"))) court = QString::fromUtf8("À la fermeture");
+            else if (court.startsWith("Quand on ")) {
+                court = court.mid(9);
+                court.remove(QString::fromUtf8(" dans l'écran ") + e);
+                court[0] = court[0].toUpper();
+            }
+            if (f.isEmpty() || plat(texte).contains(f) || plat(e).contains(f)) {
+                QTreeWidgetItem *i = feuille(court, ligne, e);
+                i->setToolTip(0, QString::fromUtf8("%1\nLigne %2").arg(texte).arg(ligne));
+                groupe->addChild(i);
+            }
+        }
+        groupe->setData(0, Qt::UserRole, premiere);
+        groupe->setData(0, Qt::UserRole + 1, e);
+        QFont gras = groupe->font(0);
+        gras.setBold(true);
+        groupe->setFont(0, gras);
+        if (groupe->childCount()) { arbre_->addTopLevelItem(groupe); groupe->setExpanded(!f.isEmpty()); }
+        else delete groupe;
+    }
+    auto *reste = new QTreeWidgetItem(QStringList{QString::fromUtf8("Hors des écrans")});
+    QFont gras = reste->font(0);
+    gras.setBold(true);
+    reste->setFont(0, gras);
+    for (const auto &[texte, ligne] : autres)
+        if (f.isEmpty() || plat(texte).contains(f)) reste->addChild(feuille(texte, ligne, QString()));
+    if (reste->childCount()) { arbre_->addTopLevelItem(reste); reste->setExpanded(!f.isEmpty()); }
+    else delete reste;
 }
 
 void PlanDuCode::suivre(int ligne) {   // le plan montre la déclaration où est le curseur
-    for (int k = 0; k < liste_->count(); k++) {
-        const int l = liste_->item(k)->data(Qt::UserRole).toInt();
-        if (l == ligne || (k + 1 < liste_->count() && l < ligne && liste_->item(k + 1)->data(Qt::UserRole).toInt() > ligne)) {
-            liste_->setCurrentRow(k);
-            liste_->scrollToItem(liste_->item(k));
+    if (ligne <= 0) return;
+    for (QTreeWidgetItemIterator it(arbre_); *it; ++it)
+        if ((*it)->childCount() == 0 && (*it)->data(0, Qt::UserRole).toInt() == ligne) {
+            const QSignalBlocker b(arbre_);
+            arbre_->setCurrentItem(*it);
+            arbre_->scrollToItem(*it);
             return;
         }
-    }
 }

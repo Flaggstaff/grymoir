@@ -844,12 +844,41 @@ int main(int argc, char **argv) {
         VERIFIER(p.size() == 3 && p[0].first == QString::fromUtf8("Un membre, conservé, a") && p[0].second == 2
                  && p[1].second == 7 && p[2].second == 10);
         PlanDuCode plan(&ed);
-        VERIFIER(plan.liste()->count() == 3);
-        plan.filtre()->setText(QString::fromUtf8("ECRAN"));
-        VERIFIER(plan.liste()->count() == 2);   // « L'écran x montre », « Quand … dans l'écran x »
+        // par écran : « Écran x » réunit sa déclaration et son événement ; l'entité va « Hors des écrans »
+        VERIFIER(ecran_de_ligne(QString::fromUtf8("L'écran du patient, « Patient », montre :")) == QString::fromUtf8("du patient"));
+        VERIFIER(ecran_de_ligne(QString::fromUtf8("Quand on clique sur « OK » dans l'écran du patient :")) == QString::fromUtf8("du patient"));
+        VERIFIER(ecran_de_ligne(QString::fromUtf8("Quand on ouvre l'écran d'accueil :")) == QString::fromUtf8("d'accueil"));
+        VERIFIER(ecran_de_ligne(QString::fromUtf8("Pour facturer une séance :")).isEmpty());
+        VERIFIER(plan.arbre()->topLevelItemCount() == 2 && plan.arbre()->topLevelItem(0)->text(0) == QString::fromUtf8("Écran x")
+                 && plan.arbre()->topLevelItem(0)->childCount() == 2 && plan.arbre()->topLevelItem(1)->childCount() == 1);
+        plan.filtre()->setText(QString::fromUtf8("MEMBRE"));
+        VERIFIER(plan.arbre()->topLevelItemCount() == 1);
         plan.filtre()->clear();
-        emit plan.liste()->itemClicked(plan.liste()->item(2));
+        emit plan.arbre()->itemClicked(plan.arbre()->topLevelItem(0)->child(1), 0);
         VERIFIER(ed.textCursor().blockNumber() == 9);
+        // cet écran seulement : l'entité disparaît, l'écran et son événement restent
+        plan.arbre()->setCurrentItem(plan.arbre()->topLevelItem(0));
+        plan.seul()->setChecked(true);
+        VERIFIER(!ed.document()->findBlockByNumber(1).isVisible() && ed.document()->findBlockByNumber(6).isVisible()
+                 && ed.document()->findBlockByNumber(9).isVisible() && !ed.document()->findBlockByNumber(11).isVisible());
+        plan.seul()->setChecked(false);
+        VERIFIER(ed.document()->findBlockByNumber(1).isVisible());
+        plan.ordre()->setCurrentIndex(1);   // l'ordre du fichier
+        VERIFIER(plan.arbre()->topLevelItemCount() == 3);
+        if (qEnvironmentVariableIsSet("GRYM_CAPTURE")) {   // Praxis, par écran : une image pour la documentation
+            QFile px(QString(GRYM_SOURCE) + "/projets/Praxis/Nicolas/Praxis.grym");
+            if (px.open(QIODevice::ReadOnly)) {
+                Editeur e2;
+                e2.charger(QString::fromUtf8(px.readAll()), false);
+                PlanDuCode p2(&e2);
+                p2.resize(320, 640);
+                for (int k = 0; k < p2.arbre()->topLevelItemCount(); k++)
+                    if (p2.arbre()->topLevelItem(k)->text(0) == QString::fromUtf8("Écran du patient")) p2.arbre()->topLevelItem(k)->setExpanded(true);
+                p2.show();
+                QApplication::processEvents();
+                p2.grab().save(qEnvironmentVariable("GRYM_CAPTURE") + "-plan-praxis.png");
+            }
+        }
         // le repli : l'entité se replie sur sa première ligne ; le curseur qui y entre la déplie
         const QTextBlock entete = ed.document()->findBlockByNumber(1);
         VERIFIER(ed.repliable(entete) && !ed.repliable(ed.document()->findBlockByNumber(2)));
