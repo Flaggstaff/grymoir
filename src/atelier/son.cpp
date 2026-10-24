@@ -246,7 +246,7 @@ void EnregistreurSon::commencer() {
         session->setAudioInput(entree);
         session->setRecorder(enregistreur);
         connect(enregistreur, &QMediaRecorder::durationChanged, this, [this](qint64 d) {
-            bouton_->setText(QString::fromUtf8("■ Arrêter (%1)").arg(duree_lisible(d)));
+            if (d > 0) bouton_->setText(QString::fromUtf8("■ Arrêter (%1)").arg(duree_lisible(d)));   // le son arrive : parler
         });
         connect(enregistreur, &QMediaRecorder::recorderStateChanged, this, [this](QMediaRecorder::RecorderState e) {
             if (e == QMediaRecorder::StoppedState) fini();
@@ -265,7 +265,9 @@ void EnregistreurSon::commencer() {
     enregistreur->setOutputLocation(QUrl::fromLocalFile(dossier->filePath("enregistrement." + extension)));
     message_->clear();
     muet_ = false;
-    bouton_->setText(QString::fromUtf8("■ Arrêter (0:00)"));
+    // macOS met environ une seconde à ouvrir le micro : « Un instant… » jusqu'à ce que le son arrive, puis le compteur
+    // (24 octobre 2026) ; on sait ainsi quand parler, et un clic arrête quand même
+    bouton_->setText(QString::fromUtf8("● Un instant…"));
     enregistreur->record();
     // un micro qui ne donne rien (le compteur figé à 0:00) : on le dit et on arrête, plutôt que d'attendre en silence
     QTimer::singleShot(3000, this, [this] {
