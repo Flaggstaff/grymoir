@@ -2054,6 +2054,9 @@ int main(void) {
     PROG("Afficher 8:05 + 1 jour.", "~Une heure se décale de minutes ou d'heures, pas de jours.");
     PROG("Afficher 01.01.2026 + 3 minutes.", "~Des minutes s'ajoutent à une heure, pas à une date.");
     PROG("Afficher « 25:00 » en heure.", "~« 25:00 » n'est pas une heure : écris heures:minutes (14:30).");
+    /* 2.56 : une partie inconnue ; une partie qui s'utilise elle-même */
+    PROG("L'écran x montre :\n    la partie « rien »,\n    un bouton « OK ».", "~La partie « rien » n'est pas déclarée");
+    PROG("La partie « a » montre :\n    la partie « a ».\nL'écran x montre :\n    la partie « a ».", "~La partie « a » s'utilise elle-même.");
     /* 2.55 : une action dans un écran ; un écran inconnu ; « l'écran » hors d'un écran, refusé */
     PROG("Pour remplir le nom, dans l'écran y :\n    Afficher 1.", "~L'écran « y » n'est pas déclaré");
     PROG("L'écran x montre :\n    un nom (texte).\nPour remplir le nom :\n    Le nom de l'écran devient « A ».",

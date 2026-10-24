@@ -1811,6 +1811,22 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* les parties (2.56) : une même partie dans deux écrans ; ses zones sont celles de chaque écran */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0=Anne&clic=2"), get("/"));
+        servir("La partie « en-tête » montre :\n    le texte « Cabinet Seydoux »,\n    un nom (texte), facultatif.\n"
+               "L'écran x montre :\n    la partie « en-tête »,\n    un bouton « Suite »,\n    un bouton « Fermer ».\n"
+               "L'écran y montre :\n    la partie « en-tête »,\n    un bouton « Fermer ».\n"
+               "Quand on clique sur « Suite » dans l'écran x :\n    La personne vaut le nom de l'écran.\n    Ouvrir l'écran y.\n"
+               "Quand on ouvre l'écran y :\n    Le nom de l'écran devient « Bonjour ».\n"
+               "Quand on clique sur « Fermer » dans l'écran y :\n    Fermer l'écran.\n"
+               "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n", &sc);
+        CONTIENT(sc.reponses[0], "Cabinet Seydoux");
+        CONTIENT(sc.reponses[2], "Cabinet Seydoux");
+        CONTIENT(sc.reponses[2], "value=\"Bonjour\"");
+        liberer(&sc);
+    }
+
     {   /* une action qui travaille dans un écran (2.55) : « Pour remplir …, dans l'écran x : » lit et écrit ses zones ;
            ailleurs, « l'écran » reste refusé */
         memset(&sc, 0, sizeof sc);

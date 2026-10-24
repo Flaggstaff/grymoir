@@ -30,6 +30,8 @@ typedef struct {
     Entree *genres;
     size_t nb, cap;
     int compact;
+    const Noeud **parties;   /* les parties du programme (2.56), pour reconnaître leurs éléments dépliés dans un écran */
+    size_t nb_parties;
     Aptitude *aptitudes;   /* formes des aptitudes déclarées, pour les accorder */
     Aptitude *pluriels;    /* pluriels irréguliers des entités (feminin : nom, masculin : pluriel) */
     size_t nb_pluriels;
@@ -1486,7 +1488,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 retenir(im, n->enfants[k]->texte, n->enfants[k]->forme == 2 ? G_FEMININ : G_MASCULIN);
         const int doc = n->op == 'D';   /* « Le document de quittance montre : » ; « _document de_quittance » (2.25) */
         const char *nom_e = doc && strncmp(n->texte, "document ", 9) == 0 ? n->texte + 9 : n->texte;
-        if (c) {
+        if (n->op == 'P') {   /* « La partie « en-tête » montre : » ; « _partie « en-tête » … _fin » (2.56) */
+            aj(im, c ? "_partie " : "La partie ");
+            ecrire_texte(im, n->texte + strlen("partie "));
+            aj(im, c ? "\n" : " montre :\n");
+        } else if (c) {
             aj(im, doc ? "_document " : "_écran ");
             ecrire_nom(im, nom_e, 0);
             if (n->texte2) { aj(im, " "); ecrire_texte(im, n->texte2); }
@@ -1510,6 +1516,31 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         int profondeur = 0;
         for (size_t k = 0; k < n->nb_enfants; k++) {
             const Noeud *el = n->enfants[k];
+            /* un élément venu d'une partie (2.56) : sa place dans la source est dans la déclaration de la partie ; on écrit
+             * « la partie « … » » une fois, et on passe tout ce qu'elle a déplié, blocs qu'elle a ouverts compris */
+            const Noeud *part = NULL;
+            if (n->op != 'P')
+                for (size_t q = 0; q < im->nb_parties && !part; q++)
+                    if (el->debut >= im->parties[q]->debut && el->debut < im->parties[q]->fin) part = im->parties[q];
+            if (part) {
+                int ouverts = 0;
+                size_t kk = k;
+                for (;;) {
+                    const Noeud *x = n->enfants[kk];
+                    if (x->type == N_DISPOSITION) ouverts += x->forme == 0 ? -1 : 1;
+                    if (kk + 1 >= n->nb_enfants) break;
+                    const Noeud *y = n->enfants[kk + 1];
+                    const int dedans = y->debut >= part->debut && y->debut < part->fin;
+                    if (!dedans && !(y->type == N_DISPOSITION && y->forme == 0 && ouverts > 0)) break;
+                    kk++;
+                }
+                retrait(im, niveau + 1 + profondeur);
+                aj(im, c ? "_partie " : "la partie ");
+                ecrire_texte(im, part->texte + strlen("partie "));
+                aj(im, c ? "\n" : kk < dernier ? ",\n" : ".\n");
+                k = kk;
+                continue;
+            }
             if (el->type == N_DISPOSITION) {   /* « côte à côte : », « l'un sous l'autre : » ; fin : « _fin » en compact */
                 if (el->forme == 0) {
                     profondeur--;
@@ -2508,6 +2539,9 @@ static char *imprimer(const Programme *p, int compact) {
     for (size_t k = 0; k < p->nb; k++)
         if (p->phrases[k]->type == P_UTILISER) apprendre(&im, p->phrases[k]->enfants, p->phrases[k]->nb_enfants, NULL);
     if (im.c.d) { im.c.n = 0; im.c.d[0] = '\0'; }
+    im.parties = grym_allouer((p->nb ? p->nb : 1) * sizeof *im.parties);   /* 2.56 */
+    for (size_t k = 0; k < p->nb; k++)
+        if (p->phrases[k]->type == P_ECRAN && p->phrases[k]->op == 'P') im.parties[im.nb_parties++] = p->phrases[k];
     for (size_t k = 0; k < p->nb; k++) {
         if (k > 0 && p->phrases[k]->ligne > p->phrases[k - 1]->ligne_fin + 1) aj(&im, "\n");
         phrase(&im, p->phrases[k], 0);
@@ -2518,6 +2552,7 @@ static char *imprimer(const Programme *p, int compact) {
     free(im.aptitudes);
     free(im.pluriels);
     free(im.singuliers);
+    free(im.parties);
     for (size_t k = 0; k < im.nb_a_liberer; k++) free(im.a_liberer[k]);
     free(im.a_liberer);
     return chaine_rendre(&im.c);

@@ -1251,6 +1251,11 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "texte", t);
             expression(r, d + 1, fin);
             if (!etats_compacts(r, fin, f, 0, 0)) return;
+        } else if (est_cle(t, "partie") && f == d + 2 && r->e[d + 1].type == J_TEXTE) {
+            /* _partie « en-tête » → la partie « en-tête » (2.56) : l'analyse la déplie */
+            mot(r, "la", t);
+            mot(r, "partie", t);
+            copier(r, &r->e[d + 1]);
         } else if ((est_cle(t, "bouton") || est_cle(t, "texte")) && f >= d + 2 && r->e[d + 1].type == J_TEXTE
             && (f == d + 2 || est_etat(&r->e[d + 2]))) {
             mot(r, est_cle(t, "bouton") ? "un" : "le", t);
@@ -1437,6 +1442,17 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         }
         emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
         fixer_retrait(r, premier, prof);
+        return;
+    }
+    if (!haut && est_cle(t, "partie") && f == d + 2 && r->e[d + 1].type == J_TEXTE) {
+        /* _partie « en-tête » … _fin → La partie « en-tête » montre : (2.56), ses éléments comme ceux d'un écran */
+        mot(r, "la", t);
+        mot(r, "partie", t);
+        copier(r, &r->e[d + 1]);
+        mot(r, "montre", t);
+        emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+        fixer_retrait(r, premier, prof);
+        ouvrir(r, O_ECRAN, prof, t);
         return;
     }
     const int document = t->type == J_MOT_CLE && !strcmp(t->valeur, "document") && d + 1 < f && r->e[d + 1].type == J_CROCHETS;

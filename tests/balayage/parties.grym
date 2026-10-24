@@ -1,0 +1,20 @@
+La partie « en-tête » montre :
+    le texte « Nicolas Seydoux »,
+    côte à côte :
+        le texte « Rue X »,
+        le texte « 1630 Bulle ».
+
+L'écran x montre :
+    la partie « en-tête »,
+    un nom (texte), facultatif,
+    un bouton « Fermer ».
+
+L'écran y montre :
+    un bouton « Fermer »,
+    la partie « en-tête ».
+
+Quand on clique sur « Fermer » dans l'écran x :
+    Fermer l'écran.
+Quand on clique sur « Fermer » dans l'écran y :
+    Fermer l'écran.
+Ouvrir l'écran x.

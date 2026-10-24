@@ -291,14 +291,18 @@ L'écran des rappels, « Rappels », montre :
     le texte "Rappels envoyés en " suivi de l'année des comptes, en petites capitales,
     la liste des rappels conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date décroissant, avec la date, le rang, le numéro de la facture et le nom du patient de la facture.
 
+Remarque : l'en-tête des pièces (24 octobre 2026) : la signature et l'adresse du cabinet, une seule fois pour toutes les pièces.
+La partie « en-tête du cabinet » montre :
+    l'un sous l'autre :
+        l'image de la signature du cabinet conservé, large de 220,
+        le texte l'adresse professionnelle du cabinet conservé,
+        le texte la ville professionnelle du cabinet conservé,
+        le texte la ligne des numéros du cabinet conservé.
+
 Remarque : la facture, sur papier : le cabinet et ses numéros, le patient, les séances, le montant dû, l'échéance, et la section paiement si le cabinet a un IBAN.
 Le document de facture, « Facture », montre :
     côte à côte :
-        l'un sous l'autre :
-            l'image de la signature du cabinet conservé, large de 220,
-            le texte l'adresse professionnelle du cabinet conservé,
-            le texte la ville professionnelle du cabinet conservé,
-            le texte la ligne des numéros du cabinet conservé,
+        la partie « en-tête du cabinet »,
         l'un sous l'autre :
             le texte le nom du patient de la créance en cours,
             le texte l'adresse du patient de la créance en cours,
@@ -315,11 +319,7 @@ Le document de facture, « Facture », montre :
 Remarque : le rappel d'une facture, sur papier : ses séances pas encore payées, ce qui reste dû, et comment payer.
 Le document de rappel, « Rappel », montre :
     côte à côte :
-        l'un sous l'autre :
-            l'image de la signature du cabinet conservé, large de 220,
-            le texte l'adresse professionnelle du cabinet conservé,
-            le texte la ville professionnelle du cabinet conservé,
-            le texte la ligne des numéros du cabinet conservé,
+        la partie « en-tête du cabinet »,
         l'un sous l'autre :
             le texte le nom du patient de la relance en cours,
             le texte l'adresse du patient de la relance en cours,
@@ -384,11 +384,7 @@ Remarque : la quittance, sur papier : le cabinet et ses numéros, le patient, le
 Remarque : assurance complémentaire demande pour rembourser : le thérapeute, la méthode, la date, la durée, le prix.
 Le document de quittance, « Quittance », montre :
     côte à côte :
-        l'un sous l'autre :
-            l'image de la signature du cabinet conservé, large de 220,
-            le texte l'adresse professionnelle du cabinet conservé,
-            le texte la ville professionnelle du cabinet conservé,
-            le texte la ligne des numéros du cabinet conservé,
+        la partie « en-tête du cabinet »,
         l'un sous l'autre :
             le texte « Reçu de », en petites capitales,
             le texte le nom du patient de la pièce en cours,
@@ -683,11 +679,7 @@ Remarque : son numéro d'assuré, le médecin prescripteur et ses numéros, la n
 Remarque : des prestations : chiffre du tarif, points, valeur du point, montant ; l'exemplaire va à l'assureur, la copie au patient.
 Le document de décompte, « Facture tiers payant », montre :
     côte à côte :
-        l'un sous l'autre :
-            l'image de la signature du cabinet conservé, large de 220,
-            le texte l'adresse professionnelle du cabinet conservé,
-            le texte la ville professionnelle du cabinet conservé,
-            le texte la ligne des numéros du cabinet conservé,
+        la partie « en-tête du cabinet »,
         l'un sous l'autre :
             le texte le nom de l'assureur du tiers payant en cours,
             le texte l'adresse postale de l'assureur du tiers payant en cours,
@@ -713,11 +705,7 @@ Remarque : l'annonce du traitement à l'assureur (convention ASE) : le patient e
 Remarque : la copie de l'ordonnance l'accompagne (son scan, à imprimer avec).
 Le document d'annonce, « Annonce de traitement », montre :
     côte à côte :
-        l'un sous l'autre :
-            l'image de la signature du cabinet conservé, large de 220,
-            le texte l'adresse professionnelle du cabinet conservé,
-            le texte la ville professionnelle du cabinet conservé,
-            le texte la ligne des numéros du cabinet conservé,
+        la partie « en-tête du cabinet »,
         l'un sous l'autre :
             le texte le nom de l'assureur du patient de l'ordonnance annoncée,
             le texte l'adresse postale de l'assureur du patient de l'ordonnance annoncée,

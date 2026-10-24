@@ -6845,7 +6845,11 @@ static int conditions_ecran(Analyse *a, Noeud *ecran) {
 static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     if (!premier_niveau(a, t)) return NULL;
     size_t d = a->i + 2, f;
-    char *nom = lire_nom_ecran(a, d, &f);
+    /* « La partie « en-tête » montre : » (2.56) : des éléments à poser dans plusieurs écrans ; elle se lit comme un écran,
+     * « partie en-tête », pour être vérifiée et réécrite, et se déplie là où « la partie « en-tête » » est écrite */
+    const int partie = est_mot(t, "la") && est_mot(voir(a, 1), "partie");
+    char *nom = partie ? (a->j[d].type == J_TEXTE ? grym_formater("partie %s", a->j[d].valeur) : NULL) : lire_nom_ecran(a, d, &f);
+    if (partie) f = d + 1;
     if (!nom) return erreur(a, &a->j[d], grym_dupliquer("Nom d'écran attendu : « L'écran des compositeurs montre : »."));
     const int document = est_mot(t, "le");   /* « Le document de quittance montre : » (2.25) : un écran pour le papier */
     if (document) {
@@ -6902,8 +6906,8 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     n->texte = nom;
     n->texte2 = titre;
     n->titre_calcule = titre_calcule;
-    n->op = document ? 'D' : 0;
-    a->document = document;
+    n->op = document ? 'D' : partie ? 'P' : 0;
+    a->document = document || partie;   /* une partie se vérifie là où elle sert ; seule, elle a les libertés d'un document */
     n->taille_titre = taille_titre;
     EcranConnu e = { grym_dupliquer(nom), NULL, 0, NULL, 0, t->ligne, NULL, 0 };
     /* Un écran est un objet : sa classe porte ses zones de saisie et la ligne choisie de chaque liste (§ 22.1) */
@@ -8439,6 +8443,8 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "le") && est_mot(voir(a, 1), "xml") && de_ou_d(voir(a, 2)) && !a->formule) return declaration_xml(a, colonne, t);
     if (t->type == J_ELISION && est_mot(voir(a, 1), "écran") && ecran_suit(a)) return declaration_ecran(a, t);
     if (est_mot(t, "le") && est_mot(voir(a, 1), "document") && ecran_suit(a)) return declaration_ecran(a, t);   /* 2.25 */
+    if (est_mot(t, "la") && est_mot(voir(a, 1), "partie") && voir(a, 2)->type == J_TEXTE && est_mot(voir(a, 3), "montre")
+        && voir(a, 4)->type == J_DEUX_POINTS) return declaration_ecran(a, t);   /* 2.56 */
     if (est_mot(t, "quand")) return quand(a, colonne);
     if (est_mot(t, "ouvrir")) return ouvrir_ecran(a, t);
     if (est_mot(t, "fermer")) return fermer_ecran(a, t);
@@ -8893,6 +8899,86 @@ static void marquer_compact(Noeud *n) {
     for (size_t k = 0; k < n->nb_enfants; k++) marquer_compact(n->enfants[k]);
 }
 
+
+/* Les parties (2.56) : avant l'analyse, chaque ligne « la partie « X », » d'un écran reçoit le corps de « La partie « X »
+ * montre : », recalé sur son retrait ; la dernière virgule ou le point final est celui de la ligne remplacée. Les jetons
+ * copiés gardent leur place dans la source : une erreur montre la partie, et l'imprimeur reconnaît ce qui vient d'elle. */
+static int premier_de_sa_ligne(const Jeton *j, size_t k) { return k == 0 || j[k - 1].ligne != j[k].ligne; }
+
+static int deplier_parties(Jeton **pj, size_t *pn, Diagnostic *diag) {
+    for (int tour = 0; tour < 8; tour++) {
+        Jeton *j = *pj;
+        size_t n = *pn;
+        /* les déclarations : [corps, fin] de chaque nom */
+        const char *noms[64];
+        size_t corps[64], fins[64], nb = 0;
+        for (size_t p = 0; p + 5 < n && nb < 64; p++) {
+            if (!premier_de_sa_ligne(j, p) || j[p].colonne != 1 || !est_mot(&j[p], "la") || !est_mot(&j[p + 1], "partie")
+                || j[p + 2].type != J_TEXTE || !est_mot(&j[p + 3], "montre") || j[p + 4].type != J_DEUX_POINTS) continue;
+            size_t q = p + 5;
+            while (q < n && j[q].type != J_FIN && !(premier_de_sa_ligne(j, q) && j[q].colonne == 1)) q++;
+            if (q == p + 5 || j[q - 1].type != J_POINT) continue;   /* une partie vide ou mal finie : l'analyse le dira */
+            noms[nb] = j[p + 2].valeur;
+            corps[nb] = p + 5;
+            fins[nb++] = q - 1;
+        }
+        /* les usages */
+        size_t ajout = 0, usages = 0;
+        for (size_t u = 0; u + 3 < n; u++) {
+            if (!premier_de_sa_ligne(j, u) || j[u].colonne == 1 || !est_mot(&j[u], "la") || !est_mot(&j[u + 1], "partie")
+                || j[u + 2].type != J_TEXTE || (j[u + 3].type != J_VIRGULE && j[u + 3].type != J_POINT)) continue;
+            int connue = 0;
+            for (size_t k = 0; k < nb; k++)
+                if (!strcmp(noms[k], j[u + 2].valeur)) { ajout += fins[k] - corps[k] + 1; usages++; connue = 1; }
+            if (!connue) {
+                diag->message = grym_formater("La partie « %s » n'est pas déclarée : « La partie « %s » montre : », dans ce fichier.",
+                                              j[u + 2].valeur, j[u + 2].valeur);
+                diag->ligne = j[u + 2].ligne;
+                diag->colonne = j[u + 2].colonne;
+                return 0;
+            }
+        }
+        if (!usages) return 1;
+        Jeton *r = grym_allouer((n + ajout + 1) * sizeof *r);
+        size_t m = 0;
+        for (size_t u = 0; u < n; u++) {
+            int remplace = 0;
+            if (premier_de_sa_ligne(j, u) && j[u].colonne != 1 && u + 3 < n && est_mot(&j[u], "la") && est_mot(&j[u + 1], "partie")
+                && j[u + 2].type == J_TEXTE && (j[u + 3].type == J_VIRGULE || j[u + 3].type == J_POINT)) {
+                for (size_t k = 0; k < nb && !remplace; k++) {
+                    if (strcmp(noms[k], j[u + 2].valeur) != 0) continue;
+                    if (u >= corps[k] && u <= fins[k]) {   /* une partie qui s'utilise elle-même */
+                        diag->message = grym_formater("La partie « %s » s'utilise elle-même.", noms[k]);
+                        diag->ligne = j[u].ligne;
+                        diag->colonne = j[u].colonne;
+                        free(r);
+                        return 0;
+                    }
+                    const int decalage = j[u].retrait - j[corps[k]].retrait;
+                    for (size_t c = corps[k]; c <= fins[k]; c++) {
+                        Jeton x = j[c];
+                        x.valeur = x.valeur ? grym_dupliquer(x.valeur) : NULL;
+                        x.retrait += decalage;
+                        if (c == fins[k]) { free(x.valeur); x.valeur = NULL; x.type = j[u + 3].type; }
+                        r[m++] = x;
+                    }
+                    remplace = 1;
+                }
+            }
+            if (remplace) {
+                for (size_t c = u; c < u + 4; c++) free(j[c].valeur);
+                u += 3;
+                continue;
+            }
+            r[m++] = j[u];
+        }
+        free(j);
+        *pj = r;
+        *pn = m;
+    }
+    return 1;
+}
+
 static int analyser_interne(const char *source, size_t taille, Portee *portee, int interactif,
                             Programme *programme, Diagnostic *diag, Capture *capture, int compact) {
     programme->phrases = NULL;
@@ -8950,6 +9036,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
         j = lj;
         n = ln;
     }
+    if (!deplier_parties(&j, &n, diag)) { liberer_jetons(j, n); return 0; }   /* 2.56 */
 
     Portee copie;
     portee_copier(&copie, portee);
