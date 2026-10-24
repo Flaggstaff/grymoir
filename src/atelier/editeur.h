@@ -5,6 +5,7 @@
 #define GRYM_ATELIER_EDITEUR_H
 
 #include <QPlainTextEdit>
+#include <QSet>
 #include <QTimer>
 
 class Coloration;
@@ -50,6 +51,7 @@ public:
 
 signals:
     void diagnostic_change();
+    void bloc_change(int premiere_ligne);   // le bloc du curseur a changé : sa première ligne, à partir de 1 (0 : aucun)
 
 protected:
     void resizeEvent(QResizeEvent *e) override;
@@ -64,6 +66,15 @@ public:
     // Le bloc du curseur (24 octobre 2026) : la déclaration de premier niveau qui le contient, avec ses remarques de tête
     // (une entité, un écran, une action, un événement) ; premier et dernier numéros de ligne, à partir de 0.
     QPair<int, int> bloc_du_curseur() const;
+    // Le repli (24 octobre 2026) : une ligne qui finit par « : » et dont la suite est en retrait se replie sur elle-même ;
+    // un clic sur le triangle de la marge la replie ou la déplie ; aller dans un bloc replié le déplie.
+    bool repliable(const QTextBlock &b) const;
+    bool replie(const QTextBlock &b) const;
+    void basculer_repli(const QTextBlock &b);
+    void deplier_tout();
+    void clic_marge(int y);
+    // Le plan : les déclarations de premier niveau qui ont un corps (« … : »), avec leur ligne (à partir de 1)
+    QList<QPair<QString, int>> plan() const;
     static bool debut_de_bloc(const QTextBlock &b);   // une ligne non vide, sans retrait
 private:
     QWidget *marge;
@@ -78,6 +89,27 @@ private:
     bool chargement = false;   // setPlainText : pas une frappe
     bool retouche = false;     // une modification faite par l'éditeur lui-même
     void sur_changement(int position, int retires, int ajoutes);
+    QSet<int> replies_;   // les en-têtes repliés, par numéro de ligne
+    int dernier_bloc_ = -2;
+    void appliquer_repli(const QTextBlock &entete, bool cacher);
+    QTextBlock fin_du_corps(const QTextBlock &entete) const;
+};
+
+// Le plan d'un fichier (24 octobre 2026) : ses déclarations, un filtre, un clic y mène.
+class PlanDuCode : public QWidget {
+    Q_OBJECT
+public:
+    explicit PlanDuCode(Editeur *e, QWidget *parent = nullptr);
+    void rafraichir();
+    class QListWidget *liste() const { return liste_; }
+    class QLineEdit *filtre() const { return filtre_; }
+private:
+    Editeur *editeur_;
+    class QLineEdit *filtre_;
+    class QListWidget *liste_;
+    QList<QPair<QString, int>> entrees_;
+    void remplir();
+    void suivre(int ligne);
 };
 
 #endif

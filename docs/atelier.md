@@ -470,3 +470,4 @@ La fenêtre du mot de passe de la base, à chaque lancement d'une application ch
 | 0.99 | 2026-10-22 | `Ouvrir` une adresse web (grammaire 2.41) : le navigateur du système ; `GRYMOIR_SANS_APERCU` la note sans l'ouvrir |
 | 1.00 | 2026-10-23 | L'envoi à un service web (grammaire 2.42) : Qt Network, en HTTPS, attendu 15 secondes au plus ; json.c entre dans le cœur |
 | 1.01 | 2026-10-24 | L'éditeur se lit mieux : le bloc du curseur (la déclaration de premier niveau, avec ses remarques de tête) sur un fond jaune léger ; un filet au-dessus de chaque déclaration ; un fil vertical par niveau de retrait |
+| 1.02 | 2026-10-24 | Le plan du fichier, à gauche du code : ses déclarations à corps, un filtre sans accents, un clic y mène, et il suit le curseur ; le repli : un triangle dans la marge replie une ligne « … : » sur elle-même (« ⋯ » au bout), le curseur qui entre dans un corps replié le déplie, une ligne ajoutée ou retirée défait les replis |

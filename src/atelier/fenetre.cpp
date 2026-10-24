@@ -297,7 +297,15 @@ Fenetre::Fenetre() {
         appliquer([=](Geste *g) { return supprimer_champ(projet, e, n, g); }, e);
     });
     onglets = new QTabWidget;
-    onglets->addTab(droite, "Code");
+    // le plan du fichier, à gauche du code (24 octobre 2026) : ses déclarations, un filtre, un clic y mène
+    auto *code = new QSplitter(Qt::Horizontal);
+    auto *plan = new PlanDuCode(editeur);
+    plan->setMinimumWidth(160);
+    code->addWidget(plan);
+    code->addWidget(droite);
+    code->setStretchFactor(1, 1);
+    code->setSizes({240, 900});
+    onglets->addTab(code, "Code");
     onglets->addTab(donnees, "Données");
     onglet_ecrans = new OngletEcrans;   // A4 : les écrans du projet, leur aperçu, leurs propriétés
     onglets->addTab(onglet_ecrans, "Écrans");

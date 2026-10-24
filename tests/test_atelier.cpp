@@ -71,6 +71,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QTemporaryDir>
+#include <QListWidget>
 #include <QTextBlock>
 #include <QTextBrowser>
 #include <QTextDocument>
@@ -838,9 +839,33 @@ int main(int argc, char **argv) {
         ed.setTextCursor(QTextCursor(ed.document()->findBlockByNumber(4)));   // une ligne vide : rien
         VERIFIER(ed.bloc_du_curseur().first == -1);
         ed.setTextCursor(QTextCursor(ed.document()->findBlockByNumber(2)));
+        // le plan : les déclarations à corps, avec leur ligne ; le filtre sans accents ; un clic y mène
+        const auto p = ed.plan();
+        VERIFIER(p.size() == 3 && p[0].first == QString::fromUtf8("Un membre, conservé, a") && p[0].second == 2
+                 && p[1].second == 7 && p[2].second == 10);
+        PlanDuCode plan(&ed);
+        VERIFIER(plan.liste()->count() == 3);
+        plan.filtre()->setText(QString::fromUtf8("ECRAN"));
+        VERIFIER(plan.liste()->count() == 2);   // « L'écran x montre », « Quand … dans l'écran x »
+        plan.filtre()->clear();
+        emit plan.liste()->itemClicked(plan.liste()->item(2));
+        VERIFIER(ed.textCursor().blockNumber() == 9);
+        // le repli : l'entité se replie sur sa première ligne ; le curseur qui y entre la déplie
+        const QTextBlock entete = ed.document()->findBlockByNumber(1);
+        VERIFIER(ed.repliable(entete) && !ed.repliable(ed.document()->findBlockByNumber(2)));
+        ed.basculer_repli(entete);
+        VERIFIER(ed.replie(entete) && !ed.document()->findBlockByNumber(2).isVisible() && !ed.document()->findBlockByNumber(3).isVisible()
+                 && ed.document()->findBlockByNumber(4).isVisible());
+        ed.basculer_repli(ed.document()->findBlockByNumber(6));   // l'écran aussi, pour la capture
         ed.show();
+        plan.resize(260, 500);
         QApplication::processEvents();
-        if (qEnvironmentVariableIsSet("GRYM_CAPTURE")) ed.grab().save(qEnvironmentVariable("GRYM_CAPTURE"));
+        if (qEnvironmentVariableIsSet("GRYM_CAPTURE")) {
+            ed.grab().save(qEnvironmentVariable("GRYM_CAPTURE"));
+            plan.grab().save(qEnvironmentVariable("GRYM_CAPTURE") + "-plan.png");
+        }
+        ed.setTextCursor(QTextCursor(ed.document()->findBlockByNumber(3)));
+        VERIFIER(!ed.replie(entete) && ed.document()->findBlockByNumber(3).isVisible());
     }
 
     // L'écran principal plus grand (24 octobre 2026) : un écran qui le recouvre rend la fenêtre plus petite, l'accueil la reprend
