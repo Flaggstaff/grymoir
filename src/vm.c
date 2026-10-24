@@ -6869,8 +6869,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 break;
             }
             if (code != I_LIRE_CHAMP) {
+                /* la zone d'un écran devient absente sans faute, même obligatoire : vide est son état de départ, et
+                 * l'obligation se vérifie quand on valide (24 octobre 2026 ; l'ouverture échouait tout entière) */
+                const int zone_d_ecran = strncmp(o->classe->nom, "écran ", strlen("écran ")) == 0;
                 char *probleme = verifier_type_champ(m, champ, o->classe->types[k], &pile.v[pile.n - 1],
-                                                     (o->classe->uniques[k] & 2) != 0, o->classe->valeurs[k]);
+                                                     (o->classe->uniques[k] & 2) != 0 || zone_d_ecran, o->classe->valeurs[k]);
                 if (probleme) { ok = echouer(diag, b, debut, probleme); break; }
             }
             if (code == I_LIRE_CHAMP) {

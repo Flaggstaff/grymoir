@@ -1795,6 +1795,22 @@ int main(void) {
         remove("_essai_tiers_payant.grymd.clés");
     }
 
+    {   /* une zone obligatoire d'écran devient absente sans faute à l'ouverture : la suite de l'événement s'exécute
+           (24 octobre 2026 ; l'ouverture échouait tout entière, avec « … n'est pas facultatif … ») */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0=&z1=x&clic=2"), get("/"));
+        servir("Une fiche, conservée, a :\n    un nom (texte), unique,\n    un surnom (texte), facultatif.\n"
+               "La f vaut une nouvelle fiche :\n    Le nom vaut « A ».\nConserver la f.\n"
+               "L'écran x montre :\n    un nom (texte),\n    un autre (texte), facultatif,\n    un bouton « Valider »,\n    un bouton « Fermer ».\n"
+               "Quand on clique sur « Valider » dans l'écran x :\n    Afficher le nom de l'écran.\n"
+               "Quand on ouvre l'écran x :\n    Le nom de l'écran devient le surnom de la f.\n    L'autre de l'écran devient « vu ».\n"
+               "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n", &sc);
+        CONTIENT(sc.reponses[0], "value=\"vu\"");
+        NE_CONTIENT_PAS(sc.reponses[0], "n&#39;est pas facultatif");
+        CONTIENT(sc.reponses[2], "Obligatoire");   /* à la validation, l'obligation tient toujours */
+        liberer(&sc);
+    }
+
     {   /* le nom et le prénom (24 octobre 2026) : saisis à part, réunis dans la clé « Prénom Nom » ; un homonyme est refusé */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Patients"), evenement("q=3&clic=4"),

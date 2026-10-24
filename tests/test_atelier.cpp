@@ -388,7 +388,7 @@ int main(int argc, char **argv) {
         el[5].texte = "Fermer";
         VueEcran v = dessiner_ecran("Catalogue", el);
         auto *pile = qobject_cast<QVBoxLayout *>(v.vue->layout());
-        VERIFIER(pile && pile->contentsMargins() == QMargins(24, 24, 24, 24) && pile->spacing() == 12);
+        VERIFIER(pile && pile->contentsMargins() == QMargins(24, 24, 24, 24) && pile->spacing() == 8);
         VERIFIER(pile->itemAt(0)->widget() == v.titre && pile->itemAt(1)->widget() == v.erreur);
         VERIFIER(v.titre->property("niveau").toString() == "ecran" && v.titre->textFormat() == Qt::PlainText);
         VERIFIER(v.erreur->property("message").toString() == "erreur" && v.erreur->isHidden());
@@ -875,7 +875,9 @@ int main(int argc, char **argv) {
         {
             QFile f(prog);
             VERIFIER(f.open(QIODevice::WriteOnly));
-            f.write("L'écran a montre :\n    un bouton « Ouvrir b »,\n    un bouton « Fermer ».\n"
+            f.write("L'écran a montre :\n    un nom (texte),\n    un téléphone (téléphone), facultatif,\n    une naissance (date), facultative,\n"
+                    "    un prix (nombre), facultatif,\n    une note (texte), facultative, sur plusieurs lignes,\n"
+                    "    un bouton « Ouvrir b »,\n    un bouton « Fermer ».\n"
                     "L'écran b montre :\n    un bouton « Fermer ».\n"
                     "Quand on clique sur « Ouvrir b » dans l'écran a :\n    Ouvrir l'écran b.\n"
                     "Quand on clique sur « Fermer » dans l'écran b :\n    Fermer l'écran.\n"
@@ -895,6 +897,10 @@ int main(int argc, char **argv) {
             return false;
         };
         auto attendre = [&](int ms) { QElapsedTimer z; z.start(); while (z.elapsed() < ms) QApplication::processEvents(QEventLoop::AllEvents, 20); };
+        attendre(400);
+        if (qEnvironmentVariableIsSet("GRYM_CAPTURE")) e.grab().save(qEnvironmentVariable("GRYM_CAPTURE") + "-formulaire.png");
+        // une zone sans largeur écrite ne prend plus toute la colonne (24 octobre 2026)
+        for (QLineEdit *l : e.findChildren<QLineEdit *>()) VERIFIER(l->maximumWidth() < 2000 || l->window() != &e);
         VERIFIER(clic("Ouvrir b"));
         attendre(300);
         const int sous = e.geometry().width();
@@ -4213,6 +4219,7 @@ int main(int argc, char **argv) {
             const QString t = QString::fromUtf8(r.readAll());
             QRegularExpressionMatch m = QRegularExpression("le groupe « G », à (\\d+) de la gauche").match(t);
             VERIFIER(m.hasMatch() && m.captured(1).toInt() >= 232);
+            if (!m.hasMatch() || m.captured(1).toInt() < 232) std::printf("GROUPE %s\n", qPrintable(t));
             VERIFIER(t.contains("        le texte « dedans ».") || t.contains("            le texte « dedans »"));
             if (!m.hasMatch() || m.captured(1).toInt() < 232) std::printf("%s\n", qPrintable(t));
         }

@@ -112,6 +112,7 @@ QSize taille_placee(QWidget *w, int largeur, int hauteur);
 VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &elements, const QPixmap &logo,
                         int taille_logo);
 VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &elements);
+void serrer_ecran(QWidget *vue);   // à l'exécution : la place en trop sous le dernier élément (24 octobre 2026)
 
 // Une ligne de total (§ 22.3, src/interface.h) : sa première cellule porte ce drapeau. Elle reste la dernière ligne quel
 // que soit le tri à l'écran ; ni choisie ni sélectionnée.

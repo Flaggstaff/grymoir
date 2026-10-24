@@ -1358,6 +1358,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
     const int taille = Theme::courant().mesure(recouverts.isEmpty() ? "logo-accueil" : "logo-titre");
     // avec une signature (2.16), le logo ne se pose plus près du titre : il reste l'icône de la fenêtre
     VueEcran v = dessiner_ecran(titre, elements, signature.isNull() ? logo : QPixmap(), taille);   // le même dessin que l'aperçu
+    serrer_ecran(v.vue);   // les zones serrées, la place en trop en bas (24 octobre 2026)
     taille_du_titre(v.titre, travail.taille_titre);
     vue_ecran = v.vue;
     erreur_ecran = v.erreur;

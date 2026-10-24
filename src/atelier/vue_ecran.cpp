@@ -30,6 +30,7 @@
 #include <QRadioButton>
 #include <QButtonGroup>
 #include <QPlainTextEdit>
+#include <QTextEdit>
 #include <QPixmap>
 #include <QPushButton>
 #include <QTableWidget>
@@ -269,6 +270,17 @@ private:
     QAction *action;
 };
 }  // namespace
+
+// La hauteur en trop d'un écran va sous son dernier élément : les zones restent serrées les unes sous les autres, sauf
+// si une zone haute peut grandir (24 octobre 2026). À l'exécution seulement : l'aperçu de l'onglet Écrans garde sa grille.
+void serrer_ecran(QWidget *vue) {
+    auto *pile = vue ? qobject_cast<QVBoxLayout *>(vue->layout()) : nullptr;
+    if (!pile) return;
+    for (int k = 0; k < pile->count(); k++)
+        if (QWidget *x = pile->itemAt(k)->widget(); x && (x->sizePolicy().verticalPolicy() & QSizePolicy::ExpandFlag)
+                                                      && x->maximumHeight() >= QWIDGETSIZE_MAX) return;
+    pile->addStretch(1);
+}
 
 VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &elements) {
     return dessiner_ecran(titre, elements, QPixmap(), 0);
@@ -588,6 +600,8 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 if (requise) libelle->setToolTip("Obligatoire");
                 libelle->setProperty("niveau", "etiquette");
                 libelle->setBuddy(w);
+                // le libellé reste collé à son champ : la place en trop va au champ, jamais au libellé (24 octobre 2026)
+                libelle->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
                 rang->addWidget(libelle);
             }
             if (auto *le = qobject_cast<QLineEdit *>(w); le && e.type == "date" && !e.lecture_seule)
@@ -609,6 +623,19 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                     const QFontMetrics fm(le->font());
                     const QMargins m = le->textMargins();
                     le->setFixedWidth(fm.averageCharWidth() * e.largeur_caracteres + m.left() + m.right() + 2 * t.mesure("espace-3") + 4);
+                }
+            }
+            else if (!e.place && !e.plusieurs_lignes && e.largeur == 0) {
+                // sans largeur écrite, une zone ne prend plus toute la colonne : une largeur selon son type (24 octobre 2026)
+                int car = 0;
+                if (e.type == "texte" || e.type == "courriel" || e.type == "adresse web" || e.type == "mot de passe") car = 40;
+                else if (e.type == "téléphone") car = 18;
+                else if (e.type == "nombre" || e.type == "nombre entier" || e.type == "montant") car = 14;
+                else if (e.type == "date") car = 16;
+                else if (e.type == "heure") car = 9;
+                if (car) {
+                    const QFontMetrics fm(w->font());
+                    w->setMaximumWidth(fm.averageCharWidth() * car + 2 * t.mesure("espace-3") + 40);
                 }
             }
             if (e.longueur_max > 0) {   // « au plus N caractères » (§ 22.6) : la frappe s'arrête là
@@ -647,8 +674,15 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 h->addWidget(w);
                 h->addStretch(1);
                 rang->addWidget(ligne);
-            } else
-            rang->addWidget(w);
+            } else {
+                // seule une zone sur plusieurs lignes prend la hauteur en trop ; les autres gardent la leur, libellé collé
+                const bool haute = qobject_cast<QPlainTextEdit *>(w) || qobject_cast<QTextEdit *>(w);
+                rang->addWidget(w, haute ? 1 : 0);
+            }
+            // un contrôle qui ne grandit pas (tous, sauf une zone haute libre de grandir) : son conteneur non plus ; la
+            // place en trop va sous le dernier élément, pas entre un libellé et son champ
+            if (!(w->sizePolicy().verticalPolicy() & QSizePolicy::ExpandFlag) || w->maximumHeight() < QWIDGETSIZE_MAX)
+                conteneur->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
             poser(conteneur);
             r.controles[k] = conteneur;
         } else if (e.sorte == ELEMENT_GRAPHIQUE) {   // « le graphique des tâches conservées, par état » (§ 22.11)
