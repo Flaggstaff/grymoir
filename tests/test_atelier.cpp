@@ -845,7 +845,7 @@ int main(int argc, char **argv) {
             for (QLabel *l : bandeau->findChildren<QLabel *>())
                 if (!l->pixmap().isNull()) { image = true; haut = qRound(l->pixmap().deviceIndependentSize().height()); }
         VERIFIER(image);
-        VERIFIER(haut == 96);   // une signature carrée monte à 96 pixels ; en longueur, elle reste à 26 (2.52)
+        VERIFIER(haut == 125);   // une signature carrée monte à 125 pixels ; en longueur, elle reste à 26 (2.52)
         for (QPushButton *b : e.findChildren<QPushButton *>())
             if (b->text() == "Fermer" && b->isVisible() && b->isEnabled()) { b->click(); break; }
         z.restart();

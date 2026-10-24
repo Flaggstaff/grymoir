@@ -96,12 +96,30 @@ if(NOT MSVC)
     target_compile_options(grym-atelier PRIVATE -Wall -Wextra -pedantic)
 endif()
 
+# L'accord du micro (micro.h) : AVFoundation sous macOS, la permission de Qt ailleurs (24 octobre 2026)
+if(APPLE)
+    # compilé comme du C++, en Objective-C++ par « -x objective-c++ » : enable_language(OBJCXX) cassait la configuration
+    # d'un dossier de construction déjà configuré (CMAKE_OBJCXX_COMPILE_OBJECT manquant, 24 octobre 2026)
+    set(GRYM_MICRO src/atelier/micro.mm)
+    set_source_files_properties(src/atelier/micro.mm PROPERTIES LANGUAGE CXX COMPILE_OPTIONS "-x;objective-c++;-fblocks")
+else()
+    set(GRYM_MICRO src/atelier/micro.cpp)
+endif()
+target_sources(grym-atelier PRIVATE ${GRYM_MICRO})
+if(APPLE)
+    target_link_libraries(grym-atelier PRIVATE "-framework AVFoundation")
+endif()
+
 # Essais de l'atelier, sans fenêtre (QT_QPA_PLATFORM=offscreen) : ctest --test-dir construction
 enable_testing()
 add_executable(test_atelier tests/test_atelier.cpp src/atelier/coloration.cpp src/atelier/editeur.cpp
     src/atelier/execution.cpp src/atelier/aide.cpp src/atelier/projet.cpp src/atelier/schema.cpp src/atelier/reecriture.cpp src/atelier/panneau.cpp src/atelier/lien.cpp src/atelier/vue_ecran.cpp src/atelier/onglet_ecrans.cpp src/atelier/theme.cpp src/atelier/fabrication.cpp src/atelier/contenu.cpp src/atelier/importation.cpp src/atelier/rapport.cpp src/atelier/transcription.cpp src/atelier/relecture.cpp src/atelier/son.cpp src/atelier/secours.cpp)
 qt_add_resources(test_atelier "documentation_essais" PREFIX "/documentation" BASE docs FILES docs/grammaire.md docs/guide.md)
 target_include_directories(test_atelier PRIVATE src/atelier)
+target_sources(test_atelier PRIVATE ${GRYM_MICRO})
+if(APPLE)
+    target_link_libraries(test_atelier PRIVATE "-framework AVFoundation")
+endif()
 target_link_libraries(test_atelier PRIVATE grym_coeur Qt6::Widgets Qt6::Svg Qt6::Multimedia Qt6::Network whisper)
 # le modèle d'essai miniature de whisper.cpp : il se charge et tourne comme un vrai, sans rien transcrire d'utile
 target_compile_definitions(test_atelier PRIVATE MODELE_ESSAI="${whisper_SOURCE_DIR}/models/for-tests-ggml-tiny.bin")

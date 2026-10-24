@@ -21,12 +21,7 @@
 #include <QUrl>
 
 // L'autorisation du micro (Qt 6.5 et suivants) ; Qt 6.4, celui des distributions Linux, n'en a pas besoin.
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-#  if QT_CONFIG(permissions)
-#    include <QPermission>
-#    define GRYM_AUTORISATION_MICRO 1
-#  endif
-#endif
+#include "micro.h"
 
 static QString duree_lisible(qint64 ms) {
     const qint64 s = ms / 1000;
@@ -182,21 +177,18 @@ void EnregistreurSon::basculer() {
         enregistreur->stop();   // la fin arrive par recorderStateChanged : le fichier est alors complet
         return;
     }
-#ifdef GRYM_AUTORISATION_MICRO
-    // macOS demande l'accord de l'utilisateur, une fois (Info.plist : NSMicrophoneUsageDescription)
-    QMicrophonePermission micro;
-    switch (qApp->checkPermission(micro)) {
-    case Qt::PermissionStatus::Undetermined:
-        qApp->requestPermission(micro, this, &EnregistreurSon::basculer);
+    // macOS demande l'accord de l'utilisateur, une fois (Info.plist : NSMicrophoneUsageDescription ; micro.h)
+    switch (etat_micro()) {
+    case EtatMicro::Indecis:
+        demander_micro(this, [this](EtatMicro) { basculer(); });
         return;
-    case Qt::PermissionStatus::Denied:
+    case EtatMicro::Refuse:
         message_->setText(QString::fromUtf8("Le micro est refusé à cette application : Réglages Système, "
                                             "Confidentialité et sécurité, Microphone."));
         return;
-    case Qt::PermissionStatus::Granted:
+    case EtatMicro::Accorde:
         break;
     }
-#endif
     commencer();
 }
 

@@ -6,12 +6,7 @@
 #include "vue_ecran.h"
 #include <QUrl>
 // L'autorisation du micro (Qt 6.5 et suivants), comme dans son.cpp ; Qt 6.4 n'en a pas besoin.
-#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
-#  if QT_CONFIG(permissions)
-#    include <QPermission>
-#    define GRYM_AUTORISATION_MICRO 1
-#  endif
-#endif
+#include "micro.h"
 #include <QMessageBox>
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -1058,15 +1053,13 @@ void Execution::demander_micro() {
     // les essais (GRYMOIR_ESSAIS) ne demandent rien à macOS : une boîte invisible (QT_QPA_PLATFORM=offscreen) les
     // bloquait jusqu'à ce qu'on les interrompe
     if (!qEnvironmentVariableIsEmpty("GRYMOIR_ESSAIS")) return;
-#ifdef GRYM_AUTORISATION_MICRO
-    QMicrophonePermission micro;
-    switch (qApp->checkPermission(micro)) {
-    case Qt::PermissionStatus::Undetermined:
-        qApp->requestPermission(micro, this, [this](const QPermission &p) {
-            if (p.status() == Qt::PermissionStatus::Denied) demander_micro();
+    switch (etat_micro()) {
+    case EtatMicro::Indecis:
+        ::demander_micro(this, [this](EtatMicro e) {
+            if (e == EtatMicro::Refuse) demander_micro();
         });
         return;
-    case Qt::PermissionStatus::Denied: {
+    case EtatMicro::Refuse: {
         if (micro_signale) return;   // une fois par lancement
         micro_signale = true;
         // une boîte qui n'arrête rien : le programme continue derrière elle
@@ -1086,10 +1079,9 @@ void Execution::demander_micro() {
         boite->show();
         return;
     }
-    case Qt::PermissionStatus::Granted:
+    case EtatMicro::Accorde:
         return;
     }
-#endif
 }
 
 // Détruite pendant l'exécution (fin brutale du processus principal) : on arrête la machine, qui annule,
@@ -1520,9 +1512,9 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
             auto *image = new QLabel;
             const qreal densite = devicePixelRatioF();
             // 26 pixels de haut pour une signature en longueur (un nom écrit) ; une image plus carrée (un logo en lettrage) monte
-            // jusqu'à 96, pour garder environ 160 pixels de large : un carré de 26 ne se lisait pas (2.52)
+            // jusqu'à 125, pour garder environ 208 pixels de large : un carré de 26 ne se lisait pas (2.52)
             const qreal rapport = signature.height() > 0 ? qreal(signature.width()) / signature.height() : 8;
-            const int haut = qBound(26, qRound(160 / rapport), 96);
+            const int haut = qBound(26, qRound(208 / rapport), 125);   // 24 octobre : 30 % de plus, à la demande de Lorianne
             QPixmap p = signature.scaledToHeight(qRound(haut * densite), Qt::SmoothTransformation);
             p.setDevicePixelRatio(densite);
             image->setPixmap(p);
