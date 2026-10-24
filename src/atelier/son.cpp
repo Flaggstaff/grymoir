@@ -18,6 +18,7 @@
 #include <QMediaRecorder>
 #include <QPushButton>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QUrl>
 
 // L'autorisation du micro (Qt 6.5 et suivants) ; Qt 6.4, celui des distributions Linux, n'en a pas besoin.
@@ -157,6 +158,11 @@ EnregistreurSon::EnregistreurSon(QWidget *parent) : QWidget(parent) {
     message_->setProperty("niveau", "etiquette");
     rang->addWidget(bouton_);
     rang->addWidget(message_, 1);
+    // le texte entier, sur plusieurs lignes : « L'enregistrement a échoué : … » se coupait au bord du formulaire, et
+    // « ■ Arrêter (0:00) » perdait sa parenthèse (24 octobre 2026)
+    message_->setWordWrap(true);
+    message_->setMinimumWidth(0);
+    bouton_->setMinimumWidth(bouton_->fontMetrics().horizontalAdvance(QString::fromUtf8("■ Arrêter (00:00)")) + 32);
     connect(bouton_, &QPushButton::clicked, this, &EnregistreurSon::basculer);
 }
 
@@ -230,8 +236,18 @@ void EnregistreurSon::commencer() {
     enregistreur->setQuality(QMediaRecorder::HighQuality);
     enregistreur->setOutputLocation(QUrl::fromLocalFile(dossier->filePath("enregistrement." + extension)));
     message_->clear();
+    muet_ = false;
     bouton_->setText(QString::fromUtf8("■ Arrêter (0:00)"));
     enregistreur->record();
+    // un micro qui ne donne rien (le compteur figé à 0:00) : on le dit et on arrête, plutôt que d'attendre en silence
+    QTimer::singleShot(3000, this, [this] {
+        if (enregistre_en_cours() && enregistreur->duration() == 0) {
+            muet_ = true;
+            enregistreur->stop();
+            message_->setText(QString::fromUtf8("Aucun son n'arrive du micro : l'enregistrement est arrêté. Vérifie le micro "
+                                                "choisi dans Réglages Système, Son, Entrée."));
+        }
+    });
 }
 
 void EnregistreurSon::fini() {
@@ -245,6 +261,7 @@ void EnregistreurSon::fini() {
     f.close();
     delete dossier;   // le fichier provisoire disparaît : les octets suffisent
     dossier = nullptr;
+    if (muet_) return;   // un enregistrement sans son : le message le dit déjà, rien n'est gardé
     if (octets.isEmpty()) {
         if (message_->text().isEmpty()) message_->setText(QString::fromUtf8("Rien n'a été enregistré."));
         return;

@@ -109,6 +109,17 @@ target_sources(grym-atelier PRIVATE ${GRYM_MICRO})
 if(APPLE)
     target_link_libraries(grym-atelier PRIVATE "-framework AVFoundation")
 endif()
+# La permission du micro de Qt (24 octobre 2026) : sous macOS, un greffon statique que qt_add_executable lie d'office, mais
+# pas add_executable ; sans lui, Qt répond « refusé » même quand macOS a dit oui, et l'enregistreur de Qt ne reçoit aucun
+# son (le compteur restait à 0:00)
+if(APPLE)
+    if(TARGET Qt6::QDarwinMicrophonePermissionPlugin)
+        qt_import_plugins(grym-atelier INCLUDE Qt6::QDarwinMicrophonePermissionPlugin)
+        message(STATUS "Permission du micro de Qt : greffon lié")
+    else()
+        message(WARNING "Permission du micro de Qt : greffon Qt6::QDarwinMicrophonePermissionPlugin introuvable")
+    endif()
+endif()
 
 # Essais de l'atelier, sans fenêtre (QT_QPA_PLATFORM=offscreen) : ctest --test-dir construction
 enable_testing()
@@ -117,6 +128,9 @@ add_executable(test_atelier tests/test_atelier.cpp src/atelier/coloration.cpp sr
 qt_add_resources(test_atelier "documentation_essais" PREFIX "/documentation" BASE docs FILES docs/grammaire.md docs/guide.md)
 target_include_directories(test_atelier PRIVATE src/atelier)
 target_sources(test_atelier PRIVATE ${GRYM_MICRO})
+if(APPLE AND TARGET Qt6::QDarwinMicrophonePermissionPlugin)
+    qt_import_plugins(test_atelier INCLUDE Qt6::QDarwinMicrophonePermissionPlugin)
+endif()
 if(APPLE)
     target_link_libraries(test_atelier PRIVATE "-framework AVFoundation")
 endif()

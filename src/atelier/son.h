@@ -74,4 +74,5 @@ private:
     QMediaRecorder *enregistreur = nullptr;
     QTemporaryDir *dossier = nullptr;
     QString extension;
+    bool muet_ = false;   // arrêté faute de son (24 octobre 2026) : rien n'est gardé
 };
