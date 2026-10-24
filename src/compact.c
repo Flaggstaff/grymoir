@@ -2413,11 +2413,16 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 return;
             }
             size_t mdp = chercher(r, d + 2, f, "mot_de_passe");
+            const size_t jour = sauver ? chercher(r, d + 2, mdp, "une_par_jour_passé") : mdp;   /* 2.53 */
             mot(r, c, t);
             mot(r, "la", t);
             mot(r, "base", t);
             mot(r, sauver ? "dans" : "depuis", &r->e[d + 1]);
-            expression(r, d + 2, mdp);
+            expression(r, d + 2, jour);
+            if (jour < mdp) {
+                emettre(r, J_VIRGULE, NULL, &r->e[jour], 1);
+                mot(r, "une", &r->e[jour]); mot(r, "par", &r->e[jour]); mot(r, "jour", &r->e[jour]); mot(r, "passé", &r->e[jour]);
+            }
             if (mdp < f) {
                 mot(r, "avec", &r->e[mdp]);
                 mot(r, "le", &r->e[mdp]);

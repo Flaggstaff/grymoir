@@ -8485,8 +8485,20 @@ static Noeud *phrase(Analyse *a, int colonne) {
             return erreur(a, t, grym_dupliquer(restaurer ? "Un calcul ne restaure pas la base : restaure-la dans une action."
                                                          : "Un calcul n'écrit pas sur le disque : sauvegarde la base dans une action."));
         a->i += 4;
+        /* « , une par jour passé » (2.53) : le chemin est un préfixe ; la machine y ajoute la date et l'heure, et ne garde des
+         * jours passés que la dernière copie de chacun ; la virgule est masquée le temps de lire le chemin */
+        size_t vq = a->i;
+        while (vq + 4 < a->n && a->j[vq].ligne == t->ligne && !(a->j[vq].type == J_VIRGULE && est_mot(&a->j[vq + 1], "une")
+               && est_mot(&a->j[vq + 2], "par") && est_mot(&a->j[vq + 3], "jour") && est_mot(&a->j[vq + 4], "passé"))) vq++;
+        const int par_jour = !restaurer && vq + 4 < a->n && a->j[vq].type == J_VIRGULE && est_mot(&a->j[vq + 4], "passé");
+        if (par_jour) a->j[vq].type = J_POINT;
         Noeud *chemin = expression_avant(a, "avec", NULL);
+        if (par_jour) a->j[vq].type = J_VIRGULE;
         if (!chemin) return NULL;
+        if (par_jour) {
+            if (a->i != vq) { noeud_liberer(chemin); return erreur(a, cour(a), grym_dupliquer("« , une par jour passé » suit le chemin.")); }
+            a->i += 5;
+        }
         Noeud *mdp = NULL;
         attendre_ici(a, "avec le mot de passe");
         if (est_mot(cour(a), "avec")) {
@@ -8495,11 +8507,17 @@ static Noeud *phrase(Analyse *a, int colonne) {
             mdp = valeur(a);
             if (!mdp) { noeud_liberer(chemin); return NULL; }
         }
+        if (par_jour && mdp) {
+            noeud_liberer(chemin); noeud_liberer(mdp);
+            return erreur(a, t, grym_dupliquer("« , une par jour passé » ne se combine pas avec un mot de passe : la base chiffrée "
+                                               "se sauvegarde d'office en coffre."));
+        }
         if (!fin_phrase(a, 0)) { noeud_liberer(chemin); noeud_liberer(mdp); return NULL; }
         Noeud *n = noeud_creer(restaurer ? P_RESTAURER : P_SAUVEGARDER, t->ligne, t->colonne, t->debut);
         noeud_ajouter(n, chemin);
         n->fin = chemin->fin;
         if (mdp) { noeud_ajouter(n, mdp); n->fin = mdp->fin; n->forme = 1; }
+        n->entier = par_jour;
         return n;
     }
     if (est_mot(t, "la") && est_mot(voir(a, 1), "base") && est_mot(voir(a, 2), "est") && est_mot(voir(a, 3), "chiffrée")) {

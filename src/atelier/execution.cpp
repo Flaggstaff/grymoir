@@ -1477,7 +1477,14 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
     // L'écran garde une largeur de lecture (« largeur-contenu ») et se centre dans une fenêtre plus large, comme une page
     auto *cadre = new QWidget;
     auto *centre = new QHBoxLayout(cadre);
-    centre->setContentsMargins(0, 0, 0, 0);
+    // l'écran principal (celui qui n'en recouvre aucun : l'accueil) a 5 mm de marge de plus tout autour, pour qu'on le
+    // reconnaisse ; les écrans ouverts par-dessus n'en ont pas (24 octobre 2026)
+    {
+        const QScreen *ecran_m = screen() ? screen() : QGuiApplication::primaryScreen();
+        const int m = recouverts.isEmpty() ? qRound(5.0 / 25.4 * (ecran_m ? ecran_m->logicalDotsPerInch() : 96.0)) : 0;
+        centre->setContentsMargins(m, m, m, m);
+        cadre->setProperty("marge_principale", m);
+    }
     vue_ecran->setMaximumWidth(Theme::courant().mesure("largeur-contenu"));
     // rien qui ait besoin de hauteur (une liste, un graphique, un texte sur plusieurs lignes, des onglets) : l'écran
     // reste en haut, l'espace libre dessous, comme une page ; sinon Qt répartissait la hauteur entre les éléments et

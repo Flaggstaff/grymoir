@@ -94,10 +94,11 @@ Remarque : les couleurs et la police du site de Nicolas Seydoux, à l'encre (pou
 Remarque : du cabinet (le cœur et le nom dessiné au départ), repris à chaque lancement ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
 Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf », le logo (le logo du cabinet conservé) et la signature (la signature du cabinet conservé).
 
-Remarque : la copie chiffrée de toute la base, avec ses clés, dans un dossier, nommée par le jour et le cabinet : « 2026-10-20 - Nicolas Seydoux.coffre ».
+Remarque : la copie chiffrée de toute la base, avec ses clés, dans un dossier, nommée par l'application, le jour et l'heure :
+Remarque : « Praxis-2026-10-24-1017.coffre » ; des jours passés, seule la dernière copie de chacun reste (24 octobre 2026).
 Pour copier la base dans un dossier :
     La dernière sauvegarde du cabinet conservé devient aujourd'hui.
-    Sauvegarder la base dans (dossier suivi de « / » suivi d'aujourd'hui en format technique suivi de " - " suivi du nom du cabinet conservé suivi de « .coffre »).
+    Sauvegarder la base dans (dossier suivi de « /Praxis »), une par jour passé.
 
 Remarque : la sauvegarde automatique : une fois par jour, à l'ouverture, dans le dossier de sauvegarde ; ratée, l'accueil le dit.
 Pour archiver les données :

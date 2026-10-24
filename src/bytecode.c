@@ -231,6 +231,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_XML_FERMER:     return "XML_FERMER";
     case I_XML_FIN:        return "XML_FIN";
     case I_ECRAN_FILTRE:   return "ECRAN_FILTRE";
+    case I_SAUVEGARDER_JOUR: return "SAUVEGARDER_JOUR";
     case I_SAUVEGARDER:    return "SAUVEGARDER";
     case I_SAUVEGARDER_COFFRE: return "SAUVEGARDER_COFFRE";
     case I_RESTAURER:      return "RESTAURER";
@@ -444,6 +445,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_XML_ATTRIBUT: case I_XML_CONTENU: besoin = 1; effet = -1; break;
             case I_XML_FIN: besoin = 0; effet = 1; break;
             case I_ECRAN_FILTRE: besoin = 1; effet = -1; break;
+            case I_SAUVEGARDER_JOUR: besoin = 1; effet = -1; break;
             case I_SAUVEGARDER: besoin = 1; effet = -1; break;
             case I_SAUVEGARDER_COFFRE: besoin = 2; effet = -2; break;
             case I_RESTAURER: besoin = op ? 2 : 1; effet = -besoin; break;

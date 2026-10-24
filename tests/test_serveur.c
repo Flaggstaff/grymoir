@@ -2003,11 +2003,12 @@ int main(void) {
            rappelée à l'accueil tant qu'aucune n'est faite ; l'écran des sauvegardes : une copie chiffrée tout de suite (sans
            dossier choisi : « Sauvegardes », à côté du programme), une restauration sans copie choisie, un changement de
            mot de passe sans le bon actuel, refusés (20 octobre 2026) */
-        char jour[11], copie[120];
+        char jour[11], copie[300];
         const time_t maintenant = time(NULL);
         strftime(jour, sizeof jour, "%Y-%m-%d", localtime(&maintenant));
-        snprintf(copie, sizeof copie, "_essai_praxis/Sauvegardes/%s - Nicolas Seydoux.coffre", jour);   /* le jour, puis le cabinet */
-        remove(copie);
+        (void)jour;   /* « Praxis-AAAA-MM-JJ-HHMM.coffre », une par jour passé (24 octobre 2026) : trouvée après coup */
+        copie[0] = '\0';
+        system("rm -rf _essai_praxis/Sauvegardes");
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=5"), evenement("q=3&choix=0.0"),
                  get("/"), evenement("q=4&clic=17"), get("/"), evenement("q=5&clic=19"), get("/"), evenement("q=6&fermer=1"),
@@ -2024,14 +2025,22 @@ int main(void) {
         CONTIENT(sc.reponses[16], "Choisis d&#39;abord la copie à restaurer.");
         CONTIENT(sc.reponses[18], "Le mot de passe actuel est faux.");
         CONTIENT(sc.reponses[21], "Dernière sauvegarde le ");
+        {
+            char prefixe[40];
+            snprintf(prefixe, sizeof prefixe, "Praxis-%s-", jour);
+            DIR *dd = opendir("_essai_praxis/Sauvegardes");
+            for (struct dirent *x; dd && (x = readdir(dd)) != NULL;)
+                if (!strncmp(x->d_name, prefixe, strlen(prefixe)) && strstr(x->d_name, ".coffre"))
+                    snprintf(copie, sizeof copie, "_essai_praxis/Sauvegardes/%s", x->d_name);
+            if (dd) closedir(dd);
+        }
         FILE *c = fopen(copie, "rb");
         char tete[12] = "";
         if (c && fread(tete, 1, 12, c) != 12) tete[0] = 0;
         total++;
         if (!c || memcmp(tete, "GRYMCOFFRE2\n", 12) != 0) { echecs++; printf("ÉCHEC (test ligne %d) : la sauvegarde chiffrée %s\n", __LINE__, copie); }
         if (c) fclose(c);
-        remove(copie);
-        remove("_essai_praxis/Sauvegardes");
+        system("rm -rf _essai_praxis/Sauvegardes");
         liberer(&sc);
         remove("_essai_cabinet17.grymd");
     }

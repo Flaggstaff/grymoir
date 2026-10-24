@@ -862,6 +862,10 @@ int main(int argc, char **argv) {
                 if (!l->pixmap().isNull()) { image = true; haut = qRound(l->pixmap().deviceIndependentSize().height()); }
         VERIFIER(image);
         VERIFIER(haut == 125);   // une signature carrée monte à 125 pixels ; en longueur, elle reste à 26 (2.52)
+        // l'écran principal a 5 mm de marge de plus tout autour (24 octobre 2026)
+        QWidget *cadre_principal = nullptr;
+        for (QWidget *w : e.findChildren<QWidget *>()) if (w->property("marge_principale").isValid()) cadre_principal = w;
+        VERIFIER(cadre_principal && cadre_principal->property("marge_principale").toInt() > 0);
         for (QPushButton *b : e.findChildren<QPushButton *>())
             if (b->text() == "Fermer" && b->isVisible() && b->isEnabled()) { b->click(); break; }
         z.restart();
@@ -5455,10 +5459,13 @@ Afficher « fin des essais ».
         VERIFIER(t.contains("fin des essais"));
         VERIFIER(t.contains(QString::fromUtf8("essai I sans échec")));
         {   // la sauvegarde automatique : une copie chiffrée du jour dans le dossier choisi, créé ; la seconde le même jour, rien
-            const QString du_jour = d.filePath("sync/Cabinet/" + QDate::currentDate().toString("yyyy-MM-dd") + " - Nicolas Seydoux.coffre");
+            // 24 octobre 2026 : « Praxis-AAAA-MM-JJ-HHMM.coffre », une par jour passé
+            const QString motif = "Praxis-" + QDate::currentDate().toString("yyyy-MM-dd") + "-*.coffre";
             QElapsedTimer y;
             y.start();
-            while (y.elapsed() < 10000 && !QFile::exists(du_jour)) QApplication::processEvents(QEventLoop::AllEvents, 50);
+            auto trouve = [&] { return QDir(d.filePath("sync/Cabinet")).entryList({motif}, QDir::Files); };
+            while (y.elapsed() < 10000 && trouve().isEmpty()) QApplication::processEvents(QEventLoop::AllEvents, 50);
+            const QString du_jour = trouve().isEmpty() ? QString() : d.filePath("sync/Cabinet/" + trouve().first());
             QFile coffre(du_jour);
             VERIFIER(coffre.open(QIODevice::ReadOnly) && coffre.read(12) == "GRYMCOFFRE2\n");   // base chiffrée : le format 2
             VERIFIER(QDir(d.filePath("sync/Cabinet")).entryList(QDir::Files).size() == 1);

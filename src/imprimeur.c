@@ -2428,6 +2428,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         if (n->type == P_SAUVEGARDER) aj(im, c ? "_sauvegarder _dans " : "Sauvegarder la base dans ");
         else aj(im, c ? "_restaurer _depuis " : "Restaurer la base depuis ");
         expression(im, n->enfants[0]);
+        if (n->type == P_SAUVEGARDER && n->entier) aj(im, c ? " _une_par_jour_passé" : ", une par jour passé");   /* 2.53 */
         if (n->forme) {
             aj(im, c ? " _mot_de_passe " : " avec le mot de passe ");
             expression(im, n->enfants[1]);

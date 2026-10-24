@@ -17,6 +17,7 @@
 
 #include <errno.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <stdio.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -1301,6 +1302,65 @@ static void xml_oublier(Machine *m) {   /* une erreur au milieu : le XML en cour
     m->xml_enfants = NULL;
     if (m->xml) { free(chaine_rendre(m->xml)); free(m->xml); m->xml = NULL; }
     m->xml_balise = 0;
+}
+
+
+/* « Sauvegarder la base dans p, une par jour passé. » (2.53) : des copies « p-AAAA-MM-JJ-HHMM[ (n)].ext » ; pour chaque
+ * jour avant aujourd'hui, la plus récente reste, les autres s'effacent ; aucun autre fichier n'est touché. */
+static int copie_du_jour(const char *nom, const char *prefixe, char date[11], long *cle) {
+    const size_t lp = strlen(prefixe);
+    if (strncmp(nom, prefixe, lp) != 0 || nom[lp] != '-') return 0;
+    const char *p = nom + lp + 1;
+    for (int k = 0; k < 15; k++) {
+        const int tiret = k == 4 || k == 7 || k == 10;
+        if (tiret ? p[k] != '-' : !isdigit((unsigned char)p[k])) return 0;
+    }
+    memcpy(date, p, 10);
+    date[10] = '\0';
+    long rang = 1;
+    const char *q = p + 15;
+    if (q[0] == ' ' && q[1] == '(') {
+        char *fin = NULL;
+        rang = strtol(q + 2, &fin, 10);
+        if (!fin || *fin != ')' || rang < 2) return 0;
+        q = fin + 1;
+    }
+    if (strcmp(q, ".coffre") != 0 && strcmp(q, ".grymd") != 0) return 0;
+    *cle = atol(p + 11) * 1000 + rang;
+    return 1;
+}
+
+static void garder_une_par_jour(const char *dossier, const char *prefixe, const char *aujourdhui) {
+    DIR *d = opendir(dossier);
+    if (!d) return;
+    char **noms = NULL, (*dates)[11] = NULL;
+    long *cles = NULL;
+    size_t n = 0;
+    for (struct dirent *e; (e = readdir(d)) != NULL;) {
+        char date[11];
+        long cle;
+        if (!copie_du_jour(e->d_name, prefixe, date, &cle) || strcmp(date, aujourdhui) >= 0) continue;
+        noms = realloc(noms, (n + 1) * sizeof *noms);
+        dates = realloc(dates, (n + 1) * sizeof *dates);
+        cles = realloc(cles, (n + 1) * sizeof *cles);
+        noms[n] = grym_dupliquer(e->d_name);
+        memcpy(dates[n], date, 11);
+        cles[n++] = cle;
+    }
+    closedir(d);
+    for (size_t i = 0; i < n; i++) {
+        int plus_recente = 0;   /* une autre copie du même jour, plus tardive : celle-ci s'efface */
+        for (size_t j = 0; j < n && !plus_recente; j++) plus_recente = j != i && !strcmp(dates[i], dates[j]) && cles[j] > cles[i];
+        if (plus_recente) {
+            char *chemin = grym_formater("%s/%s", dossier, noms[i]);
+            grym_supprimer(chemin);
+            free(chemin);
+        }
+    }
+    for (size_t i = 0; i < n; i++) free(noms[i]);
+    free(noms);
+    free(dates);
+    free(cles);
 }
 
 /* ---------------------------------------------------------------- */
@@ -4833,6 +4893,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_SAUVEGARDER:
+        case I_SAUVEGARDER_JOUR:
         case I_SAUVEGARDER_COFFRE: {   /* « Sauvegarder la base dans « Cabinet.grymd » [avec le mot de passe m]. » (2.29, 2.30) */
             Valeur mdp = vi_absent(NULL);
             if (code == I_SAUVEGARDER_COFFRE) mdp = depiler(&pile);
@@ -4843,6 +4904,17 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (c.type != V_TEXTE) probleme = grym_formater("Le chemin d'un fichier est un texte, pas %s.", nom_type(c.type));
             else if (!*c.texte) probleme = grym_dupliquer("Chemin de fichier vide.");
             else if (!m->base) probleme = grym_dupliquer("Ce programme n'a pas de base : il ne conserve aucune entité.");
+            char *prefixe = NULL, aujourdhui_t[11] = "";
+            if (!probleme && code == I_SAUVEGARDER_JOUR) {   /* « , une par jour passé » (2.53) : le chemin reçoit la date et l'heure */
+                const time_t t = time(NULL);
+                const struct tm l = *localtime(&t);
+                snprintf(aujourdhui_t, sizeof aujourdhui_t, "%04d-%02d-%02d", l.tm_year + 1900, l.tm_mon + 1, l.tm_mday);
+                prefixe = grym_dupliquer(c.texte);
+                char *horodate = grym_formater("%s-%s-%02d%02d%s", c.texte, aujourdhui_t, l.tm_hour, l.tm_min,
+                                               code == I_SAUVEGARDER_COFFRE || base_est_chiffree(m->base) ? ".coffre" : ".grymd");
+                free(c.texte);
+                c.texte = horodate;
+            }
             Fichier *f = NULL;
             char *libre = NULL;
             if (!probleme) {
@@ -4901,6 +4973,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 if (!probleme) probleme = planifier_ecriture(m, libre, f);
                 if (probleme) { free(f->octets); free(f->nom); free(f); }
             }
+            if (!probleme && prefixe) {   /* les jours passés : une copie chacun, la plus récente */
+                char *chemin = chemin_ecriture(m, prefixe);
+                char *barre = strrchr(chemin, '/');
+                const char *base_nom = barre ? barre + 1 : chemin;
+                char *dossier = barre ? grym_formater("%.*s", (int)(barre - chemin), chemin) : grym_dupliquer(".");
+                garder_une_par_jour(dossier, base_nom, aujourdhui_t);
+                free(dossier);
+                free(chemin);
+            }
+            free(prefixe);
             free(libre);
             valeur_liberer(&c);
             valeur_liberer(&mdp);

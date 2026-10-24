@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.52 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.53 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1207,6 +1207,7 @@ Sauvegarder la base dans (« Cabinet du » suivi d'aujourd'hui suivi de « .grym
 - Écrite comme `Enregistrer` (§ 15.2) : à la fin de l'exécution réussie, jamais si elle échoue ; à côté du programme, ou dans `Documents/<Nom de l'application>` d'une application fabriquée (§ 15.6). Jamais par-dessus un fichier : si le nom est pris, sur le disque ou par cette exécution, la copie s'appelle « Sauvegarde Cabinet (2).grymd », puis « (3) »…
 - Un programme sans entité conservée n'a pas de base : « Ce programme n'a pas de base : il ne conserve aucune entité. ». Un calcul ne sauvegarde pas (§ 9.4).
 - Aucun mot réservé : `Sauvegarder` n'est cette phrase que suivi de `la base dans`.
+- **Une par jour passé** *(2.53)* : `Sauvegarder la base dans « Sauvegardes/Praxis », une par jour passé.` Le chemin devient un préfixe : la copie s'appelle `Praxis-2026-10-24-1017.coffre` (`.grymd` pour une base non chiffrée), à la date et à l'heure de la phrase ; puis, dans ce dossier, pour chaque jour avant aujourd'hui, seule la copie la plus récente de ce préfixe reste, les autres s'effacent. Aucun autre fichier n'est touché, ni un autre préfixe. Sans mot de passe : « une par jour passé » ne se combine pas avec `avec le mot de passe`. Forme compacte : `_sauvegarder _dans « … » _une_par_jour_passé`.
 - Forme compacte : `_sauvegarder _dans « c.grymd »`.
 
 #### Le coffre *(2.30)*
@@ -2405,3 +2406,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.50 | 2026-10-23 | Correction : les colonnes d'une liste (`avec a, b et c`) s'arrêtent après la colonne qui suit « et » ; un texte calculé placé ensuite (`le texte la note`) était lu comme une colonne de plus |
 | 2.51 | 2026-10-23 | Corrections trouvées par le balayage de tous les programmes des essais (tests/balayer, dans make test) : la cible d'une modification accepte un calcul à argument littéral (`L'archivage de la fiche nommée de « A » devient …`) ; la forme compacte réécrit le champ du résultat d'un calcul (`f(r).champ << v`), garde « ans » (`_écart_ans`), écrit « l'image du fichier », n'ouvre plus de colonnes vides avant `_titre`, lit une zone multiple (`_des genres (genre)`), `_gagne` sur un objet cherché, `_écran` seul, et une remarque entre deux `_cas` ; `grym-arbre` ne plante plus sur `Ouvrir le n.` |
 | 2.52 | 2026-10-24 | La signature d'un écran : 26 pixels de haut en longueur, jusqu'à 125 pour une image plus carrée (un logo en lettrage), environ 208 pixels de large |
+| 2.53 | 2026-10-24 | § 15.6 bis : `Sauvegarder la base dans « p », une par jour passé.` : la copie datée `p-AAAA-MM-JJ-HHMM`, et des jours passés seule la dernière de chacun reste |
