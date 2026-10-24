@@ -130,7 +130,22 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     un bouton « Agenda OneDoc », en tuile, avec la description « Rendez-vous et rappels », visible si l'agenda du cabinet conservé = « OneDoc »,
     un bouton « Assurances », en tuile, avec la description « Factures tiers payant et leurs règlements », visible si la facturation aux assurances du cabinet conservé,
     le texte l'alerte de sauvegarde du cabinet conservé et d'aujourd'hui et de l'échec de sauvegarde,
-    le texte l'alerte des prévues d'aujourd'hui.
+    le texte l'alerte des prévues d'aujourd'hui,
+    un bouton « Fermer l'application ».
+
+Remarque : quitter (24 octobre 2026) : le bouton « Fermer l'application » ou la croix de la fenêtre ferment l'accueil ; en
+Remarque : partant, une copie chiffrée de la base, dans le dossier de sauvegarde, sinon dans « Sauvegardes » à côté de
+Remarque : l'application ; jamais par-dessus une autre (« (2) », « (3) »… le même jour) ; ratée, l'application se ferme quand même.
+Quand on clique sur « Fermer l'application » dans l'écran d'accueil :
+    Fermer l'écran.
+
+Quand on ferme l'écran d'accueil :
+    Le lieu vaut « Sauvegardes ».
+    Si le dossier de sauvegarde du cabinet conservé est présent, le lieu devient le dossier de sauvegarde du cabinet conservé.
+    Essayer :
+        Copier la base dans le lieu.
+    En cas d'échec :
+        Remarque : la fermeture ne se refuse pas ; la sauvegarde du jour, faite à l'ouverture, reste.
 
 Remarque : les écrans posés au pixel tiennent dans 1072 points, la largeur utile du thème, mesurée sur un MacBook Pro 14 pouces (1512 × 982 et 1800 × 1169).
 Remarque : l'inscription d'un patient : les champs courts à gauche ; à côté, l'anamnèse, dictée (transcrite sur l'ordinateur) ou tapée.

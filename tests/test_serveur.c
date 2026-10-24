@@ -1795,6 +1795,26 @@ int main(void) {
         remove("_essai_tiers_payant.grymd.clés");
     }
 
+    {   /* quitter (24 octobre 2026) : « Fermer l'application » ferme l'accueil, et une copie chiffrée part dans « Sauvegardes » */
+        memset(&sc, 0, sizeof sc);
+        system("rm -rf _essai_praxis/Sauvegardes");
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Fermer+l%27application"), get("/"));
+        servir_projet("_essai_praxis/Praxis.grym", "_essai_quitter.grymd", &sc);
+        NE_CONTIENT_PAS(sc.reponses[2], "class=\"erreur\"");
+        int coffre = 0;
+        DIR *dd = opendir("_essai_praxis/Sauvegardes");
+        if (dd) {
+            for (struct dirent *x; (x = readdir(dd)) != NULL;) coffre |= strstr(x->d_name, ".coffre") != NULL;
+            closedir(dd);
+        }
+        total++;
+        if (!coffre) { echecs++; printf("ÉCHEC (ligne %d) : pas de copie chiffrée dans _essai_praxis/Sauvegardes\n", __LINE__); }
+        liberer(&sc);
+        system("rm -rf _essai_praxis/Sauvegardes");
+        remove("_essai_quitter.grymd");
+        remove("_essai_quitter.grymd.clés");
+    }
+
     {   /* la version neutre (projets/Praxis/Praxis, 23 octobre 2026) : un cabinet sans nom propre, sans soin, Praxis 2 éteint */
         memset(&sc, 0, sizeof sc);
         copier_dossier("projets/Praxis/Praxis", "_essai_neutre_projet");
