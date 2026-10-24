@@ -1,0 +1,14 @@
+L'écran x montre :
+    un nom (texte), facultatif,
+    un bouton « Fermer ».
+
+Pour remplir le nom avec un texte, dans l'écran x :
+    Le nom de l'écran devient texte.
+
+Quand on ouvre l'écran x :
+    Remplir le nom avec « A ».
+
+Quand on clique sur « Fermer » dans l'écran x :
+    Fermer l'écran.
+
+Ouvrir l'écran x.

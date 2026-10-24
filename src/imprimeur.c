@@ -1998,7 +1998,9 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             ecrire_nom(im, n->texte, 0);
             aj(im, "(");
             parametres(im, n->enfants[0], 0);
-            aj(im, ")\n");
+            aj(im, ")");
+            if (n->texte3) { aj(im, " _dans_écran "); ecrire_nom(im, n->texte3, 0); }   /* 2.55 */
+            aj(im, "\n");
             bloc(im, n->enfants[1], niveau + 1);
             fin_compacte(im, niveau);
         } else {
@@ -2013,6 +2015,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 ecrire_nom(im, n->texte, 0);
             }
             parametres(im, n->enfants[0], finit_de ? 2 : 0);
+            if (n->texte3) { aj(im, ", dans l'écran "); aj_sigles(im, n->texte3); }   /* 2.55 */
             aj(im, " :\n");
             bloc(im, n->enfants[1], niveau + 1);
         }

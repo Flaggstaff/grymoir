@@ -2504,8 +2504,19 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 expression(r, ferme + 2, f);
                 point(r, f);
             } else {
-                if (ferme + 1 < f) {
+                const int ecran_d = !calcul && ferme + 2 < f && est_cle(&r->e[ferme + 1], "dans_écran");   /* 2.55 */
+                if (ferme + 1 < f && !ecran_d) {
                     echouer(r, &r->e[ferme + 1], grym_dupliquer("Fin de ligne attendue : le corps suit, fermé par « _fin »."));
+                    return;
+                }
+                if (ecran_d) {   /* _action remplir() _dans_écran du_patient → Pour remplir, dans l'écran du patient : */
+                    emettre(r, J_VIRGULE, NULL, &r->e[ferme + 1], 1);
+                    mot(r, "dans", &r->e[ferme + 1]);
+                    emettre(r, J_ELISION, "l", &r->e[ferme + 1], 1);
+                    mot(r, "écran", &r->e[ferme + 1]);
+                    for (size_t q = ferme + 2; q < f; q++) copier(r, &r->e[q]);
+                    emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+                    ouvrir(r, O_FORMULE, prof, t);
                     return;
                 }
                 emettre(r, J_DEUX_POINTS, NULL, &r->e[ferme], 1);

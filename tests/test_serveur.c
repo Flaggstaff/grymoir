@@ -1811,6 +1811,21 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* une action qui travaille dans un écran (2.55) : « Pour remplir …, dans l'écran x : » lit et écrit ses zones ;
+           ailleurs, « l'écran » reste refusé */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&z0=B&clic=1"), get("/"));
+        servir("L'écran x montre :\n    un nom (texte), facultatif,\n    un bouton « Doubler »,\n    un bouton « Fermer ».\n"
+               "Pour remplir le nom avec un texte, dans l'écran x :\n    Le nom de l'écran devient texte.\n"
+               "Pour doubler le nom, dans l'écran x :\n    Le nom de l'écran devient le nom de l'écran suivi du nom de l'écran.\n"
+               "Quand on ouvre l'écran x :\n    Remplir le nom avec « A ».\n"
+               "Quand on clique sur « Doubler » dans l'écran x :\n    Doubler le nom.\n"
+               "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n", &sc);
+        CONTIENT(sc.reponses[0], "value=\"A\"");
+        CONTIENT(sc.reponses[2], "value=\"BB\"");
+        liberer(&sc);
+    }
+
     {   /* le nom et le prénom (24 octobre 2026) : saisis à part, réunis dans la clé « Prénom Nom » ; un homonyme est refusé */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Patients"), evenement("q=3&clic=4"),

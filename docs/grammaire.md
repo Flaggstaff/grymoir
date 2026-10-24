@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.54 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.55 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1866,6 +1866,7 @@ Ouvrir l'écran des compositeurs.
 ### 22.2 Événements
 
 - `Quand on ouvre l'écran X :`, `Quand on clique sur « B » dans l'écran X :`, `Quand on choisit un c dans l'écran X :`, `Quand on change la zone dans l'écran X :`, `Quand on ferme l'écran X :`, suivis d'un bloc. Ce sont des actions (§ 9).
+- *(2.55)* Une action peut travailler dans un écran : `Pour remplir la fiche avec un patient, dans l'écran du patient :`. Dans son corps, `l'écran` désigne cet écran, comme dans ses événements ; elle s'appelle depuis l'un d'eux (ou depuis une action du même écran). L'écran doit être déclaré avant l'action. Forme compacte : `_action remplir_la_fiche_avec(_un patient) _dans_écran du_patient`.
 - `Quand on choisit un compositeur` nomme la ligne `compositeur` dans son corps. `le compositeur choisi de l'écran` désigne la ligne sélectionnée, ou `absent`. `le pays de l'écran` lit une zone ; `Le pays de l'écran devient … .` la modifie. `de l'écran` hors d'un événement est une erreur.
 - Un bouton sans événement, un événement qui cite un bouton ou une zone inexistants, deux listes de la même entité dans un écran : erreurs d'analyse. La fermeture ne se refuse pas.
 
@@ -2409,3 +2410,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.52 | 2026-10-24 | La signature d'un écran : 26 pixels de haut en longueur, jusqu'à 125 pour une image plus carrée (un logo en lettrage), environ 208 pixels de large |
 | 2.53 | 2026-10-24 | § 15.6 bis : `Sauvegarder la base dans « p », une par jour passé.` : la copie datée `p-AAAA-MM-JJ-HHMM`, et des jours passés seule la dernière de chacun reste |
 | 2.54 | 2026-10-24 | § 14.7 : une heure saisie se tape aussi `13h30`, `13.30`, `1330`, `930`, `13h` |
+| 2.55 | 2026-10-24 | § 22 : une action « , dans l'écran X » lit et écrit les zones de cet écran, comme ses événements |

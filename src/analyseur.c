@@ -4192,6 +4192,9 @@ static Noeud *definition_calcul(Analyse *a, size_t marque, size_t fin_entete, in
     return n;
 }
 
+static EcranConnu *ecran_connu(Portee *p, const char *nom);
+static char *lire_nom_ecran(Analyse *a, size_t d, size_t *f);
+
 /* Action : « Pour relancer un client : » suivi d'un bloc. */
 static Noeud *definition_action(Analyse *a, int colonne) {
     Jeton *tpour = cour(a);
@@ -4216,9 +4219,27 @@ static Noeud *definition_action(Analyse *a, int colonne) {
            && a->j[fin].type != J_VIRGULE)
         fin++;
     attendre_en(a, fin, A_SUITE_SI);
-    if (a->j[fin].type != J_DEUX_POINTS)
+    /* « Pour remplir la fiche, dans l'écran du patient : » (2.55) : l'action lit et écrit les zones de cet écran,
+     * comme ses événements ; elle s'appelle depuis l'un d'eux */
+    char *dans_ecran = NULL;
+    const size_t fin_params = fin;
+    if (a->j[fin].type == J_VIRGULE && est_mot(&a->j[fin + 1], "dans") && a->j[fin + 2].type == J_ELISION
+        && est_mot(&a->j[fin + 3], "écran")) {
+        size_t f2 = fin + 4;
+        dans_ecran = lire_nom_ecran(a, fin + 4, &f2);
+        if (!dans_ecran) return a->echec ? NULL : erreur(a, &a->j[fin + 4], grym_dupliquer("Nom d'écran attendu : « , dans l'écran du patient : »."));
+        if (!ecran_connu(a->portee, dans_ecran)) {
+            Noeud *r = erreur(a, &a->j[fin + 4], grym_formater("L'écran « %s » n'est pas déclaré (avant cette action).", dans_ecran));
+            free(dans_ecran);
+            return r;
+        }
+        fin = f2;
+    }
+    if (a->j[fin].type != J_DEUX_POINTS) {
+        free(dans_ecran);
         return erreur(a, &a->j[fin], grym_dupliquer(
             "« : » attendu : une action s'écrit en bloc (« Pour relancer un client : »)."));
+    }
     char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
     if (k > d + 1 && a->j[k - 1].type == J_ELISION && strcmp(a->j[k - 1].valeur, "d") == 0) {
         /* « Pour acquitter le solde d'un relevé : » : l'élision devant « un » est un « de » ; le nom finit par « de », comme
@@ -4228,11 +4249,11 @@ static Noeud *definition_action(Analyse *a, int colonne) {
         nom = grym_formater("%s de", debut);
         free(debut);
     }
-    Noeud *params = parametres(a, k, fin, 0);
-    if (!params) { free(nom); return NULL; }
+    Noeud *params = parametres(a, k, fin_params, 0);
+    if (!params) { free(nom); free(dans_ecran); return NULL; }
     int refus;
     char *classe = version_de_formule(a, nom, S_ACTION, params, &a->j[d], &refus);
-    if (refus) { noeud_liberer(params); free(nom); return NULL; }
+    if (refus) { noeud_liberer(params); free(nom); free(dans_ecran); return NULL; }
 
     portee_declarer(a->portee, nom, GENRE_LIBRE, tpour->ligne);
     Symbole *s = &a->portee->s[a->portee->n - 1];
@@ -4241,13 +4262,17 @@ static Noeud *definition_action(Analyse *a, int colonne) {
     s->classe = classe;
 
     Contexte ctx = entrer_formule(a, 2, params);
+    const char *ecran_avant = a->ecran;
+    if (dans_ecran) a->ecran = dans_ecran;
     a->i = fin + 1;
     Noeud *corps = corps_en_bloc(a, &a->j[fin], colonne);
+    a->ecran = ecran_avant;
     int locaux = a->nb_locaux;
     sortir_formule(a, ctx);
-    if (!corps) { noeud_liberer(params); free(nom); return NULL; }
+    if (!corps) { noeud_liberer(params); free(nom); free(dans_ecran); return NULL; }
     Noeud *n = noeud_creer(P_ACTION, tpour->ligne, tpour->colonne, tpour->debut);
     n->texte = nom;
+    n->texte3 = dans_ecran;   /* l'écran de l'action (2.55), ou NULL */
     n->texte2 = classe ? grym_dupliquer(classe) : NULL;
     n->forme = 1;
     n->entier = locaux;
