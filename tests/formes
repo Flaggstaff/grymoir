@@ -11,6 +11,7 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 for projet in "$depot"/projets/*/ "$depot"/projets/*/*/; do
     [ -f "$projet/projet.grymatelier" ] || continue   # un groupe (projets/Praxis) n'est pas un projet : ses dossiers le sont
+    ls "$projet"*.grym > /dev/null 2>&1 || continue    # un projet.grymatelier seul (l'atelier l'écrit en ouvrant un groupe) non plus
     nom="$(basename "$projet")"
     for f in "$projet"*.grym; do
         total=$((total + 1))
