@@ -187,6 +187,7 @@ private:
     void cliquer(int k);
     QWidget *ecran_du_clic = nullptr;
     bool attente = false, fini = false, fermer_a_la_fin = false;
+    bool ecran_vu = false;   // un écran s'est montré : à la fin, la fenêtre se ferme (24 octobre 2026)
     int images = 0;
     // Les sons du fil (§ 15.7) : « son:K » dans le texte, joués par un lecteur caché ; nom et octets
     QVector<QPair<QString, QByteArray>> sons_du_fil;

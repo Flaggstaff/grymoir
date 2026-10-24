@@ -35,6 +35,7 @@
 #include <QTableWidget>
 #include <QRegularExpression>
 #include <QCollator>
+#include <QAbstractItemView>
 #include <QCalendarWidget>
 #include <QDir>
 #include <QFileDialog>
@@ -896,7 +897,12 @@ void ajouter_calendrier(QLineEdit *champ) {
         cal->setGridVisible(false);
         cal->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
         cal->setHorizontalHeaderFormat(QCalendarWidget::SingleLetterDayNames);   // L M M J V S D : jamais tronqués
-        cal->setMinimumWidth(300);
+        // des jours lisibles : la marge des cellules du thème coupait « 10 » à « 31 » en « … » (24 octobre 2026)
+        cal->setMinimumWidth(420);
+        if (auto *vue = cal->findChild<QAbstractItemView *>("qt_calendar_calendarview")) {
+            vue->setStyleSheet("QAbstractItemView::item { padding: 0px; margin: 0px; }");
+            vue->setTextElideMode(Qt::ElideNone);
+        }
         // les flèches du mois, aux chevrons du thème plutôt qu'aux icônes vertes du style Fusion
         if (auto *b = cal->findChild<QToolButton *>("qt_calendar_prevmonth")) b->setIcon(icone_lucide("chevron-left"));
         if (auto *b = cal->findChild<QToolButton *>("qt_calendar_nextmonth")) b->setIcon(icone_lucide("chevron-right"));

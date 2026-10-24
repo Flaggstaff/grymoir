@@ -1144,6 +1144,24 @@ static int lire_reponse(const char *type, const char *ligne, Valeur *v, char **p
     if (strcmp(type, "heure") == 0) {   /* « 14:30 », « 8:05 » (§ 14.7) */
         long mi = 0;
         int bon = heure_lire(t, &mi);
+        if (!bon) {   /* une saisie : « 13h30 », « 13.30 », « 13 30 », « 1330 », « 930 », « 13h » (2.54) */
+            char h[8] = "";
+            size_t n = 0, chiffres = 0, seps = 0;
+            for (const char *p = t; *p && n < sizeof h - 2; p++) {
+                if (*p >= '0' && *p <= '9') { h[n++] = *p; chiffres++; }
+                else if ((*p == 'h' || *p == 'H' || *p == '.' || *p == ' ') && !seps && chiffres) { h[n++] = ':'; seps++; }
+                else { chiffres = 99; break; }
+            }
+            h[n] = '\0';
+            if (chiffres < 99) {
+                char r[8];
+                if (seps && n > 0 && h[n - 1] == ':') snprintf(r, sizeof r, "%s00", h);              /* « 13h » */
+                else if (!seps && (chiffres == 3 || chiffres == 4))                                 /* « 1330 », « 930 » */
+                    snprintf(r, sizeof r, "%.*s:%s", (int)(chiffres - 2), h, h + chiffres - 2);
+                else snprintf(r, sizeof r, "%s", h);
+                bon = heure_lire(r, &mi);
+            }
+        }
         if (!bon) *probleme = grym_formater("« %s » n'est pas une heure : écris heures:minutes (14:30).", t);
         else *v = valeur_heure(mi);
         free(t);

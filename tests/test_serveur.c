@@ -1843,14 +1843,13 @@ int main(void) {
         CONTIENT(sc.reponses[4], "<h1>Configuration</h1>");
         NE_CONTIENT_PAS(sc.reponses[4], ">Rendez-vous<");
         NE_CONTIENT_PAS(sc.reponses[4], ">SMS<");
-        NE_CONTIENT_PAS(sc.reponses[4], ">Assureurs<");
+        CONTIENT(sc.reponses[4], ">Assureurs<");   /* 24 octobre 2026 : les caisses se saisissent partout */
         NE_CONTIENT_PAS(sc.reponses[4], ">Tarif des assurances<");
         NE_CONTIENT_PAS(sc.reponses[6], ">Assurances<");
         NE_CONTIENT_PAS(sc.reponses[6], ">Agenda OneDoc<");
         CONTIENT(sc.reponses[9], "<h1>Patient</h1>");
         NE_CONTIENT_PAS(sc.reponses[9], ">Ordonnances<");
-        NE_CONTIENT_PAS(sc.reponses[9], ">Assureur</label>");
-        NE_CONTIENT_PAS(sc.reponses[9], "uméro d&#39;assuré");
+        CONTIENT(sc.reponses[9], "uméro d&#39;assuré");   /* 24 octobre 2026 : l'assurance se note partout ; seule sa facturation reste éteinte */
         liberer(&sc);
         remove("_essai_eteint.grymd");
         remove("_essai_eteint.grymd.clés");

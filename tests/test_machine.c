@@ -2054,6 +2054,11 @@ int main(void) {
     PROG("Afficher 8:05 + 1 jour.", "~Une heure se décale de minutes ou d'heures, pas de jours.");
     PROG("Afficher 01.01.2026 + 3 minutes.", "~Des minutes s'ajoutent à une heure, pas à une date.");
     PROG("Afficher « 25:00 » en heure.", "~« 25:00 » n'est pas une heure : écris heures:minutes (14:30).");
+    /* 2.54 : une heure saisie se tape aussi « 13h30 », « 1330 », « 9.05 », « 13h » */
+    PROG("Afficher « 13h30 » en heure puis « 1330 » en heure puis « 9.05 » en heure puis « 13h » en heure puis « 930 » en heure.",
+         "13:30 13:30 09:05 13:00 09:30");
+    PROG("Afficher « 2530 » en heure.", "~« 2530 » n'est pas une heure");
+    PROG("Afficher « 13h30x » en heure.", "~« 13h30x » n'est pas une heure");
     PROG("L'arrivée d'une h vaut maintenant.", "~Un calcul ne dépend pas de l'heure");
     PROG("Afficher un nombre au hasard de 1 à 2,5.", "~Un nombre au hasard se tire entre deux nombres entiers");
     PROG("Les vides valent un ensemble vide.\nAfficher un élément au hasard parmi les vides.",

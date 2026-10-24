@@ -195,14 +195,14 @@ L'écran du patient, « Patient », montre :
         un bouton « Supprimer »,
         un bouton « Archiver »,
     côte à côte :
-        un assureur (assureur), facultatif, avec recherche, visible si la facturation aux assurances du cabinet conservé,
-        un numéro d'assuré (texte), facultatif, visible si la facturation aux assurances du cabinet conservé,
-        un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré », visible si la facturation aux assurances du cabinet conservé,
+        un assureur (assureur), facultatif, avec recherche,
+        un numéro d'assuré (texte), facultatif,
+        un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré »,
         un bouton « Ordonnances », visible si la facturation aux assurances du cabinet conservé,
     côte à côte :
-        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », visible si la facturation aux assurances du cabinet conservé,
-        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », visible si la facturation aux assurances du cabinet conservé,
-        une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base », visible si la facturation aux assurances du cabinet conservé,
+        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base »,
+        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base »,
+        une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base »,
         un bouton « Facturer la complémentaire », visible si la facturation aux assurances du cabinet conservé.
 
 Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
@@ -562,7 +562,7 @@ L'écran de configuration, « Configuration », montre :
     un bouton « Archives », en tuile, avec la description « Patients archivés, leurs pièces gardées »,
     un bouton « Rendez-vous », en tuile, avec la description « L'agenda : Praxis ou OneDoc », visible si le choix d'agenda du cabinet conservé,
     un bouton « SMS », en tuile, avec la description « Le compte ASPSMS, un essai », visible si le choix d'agenda du cabinet conservé,
-    un bouton « Assureurs », en tuile, avec la description « Caisses-maladie et leur GLN », visible si la facturation aux assurances du cabinet conservé,
+    un bouton « Assureurs », en tuile, avec la description « Caisses-maladie et leur GLN »,
     un bouton « Tarif des assurances », en tuile, avec la description « Positions, points et valeur du point », visible si la facturation aux assurances du cabinet conservé,
     un bouton « Fermer ».
 

@@ -1556,6 +1556,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         }
     }
     vue_ecran = defile;
+    ecran_vu = true;
     vue_ecran->setEnabled(false);   // actif seulement quand la machine attend un événement
     partage->insertWidget(0, vue_ecran);
     partage->setSizes({height() * 2 / 3, height() / 6, height() / 6});
@@ -1627,6 +1628,9 @@ void Execution::terminer(bool ok, const QString &erreur, const QString &annulati
     }
     etat->setText(ok ? "Terminé." : "Terminé sur une erreur.");
     setWindowTitle(windowTitle().replace("exécution", ok ? "terminé" : "erreur"));
+    // un programme à écrans qui finit bien (« Fermer l'application », le dernier écran fermé) : la fenêtre se ferme aussi,
+    // au lieu de rester sur une page vide (24 octobre 2026) ; sur une erreur, elle reste, pour la montrer
+    if (ok && ecran_vu && qEnvironmentVariableIsEmpty("GRYMOIR_ESSAIS")) fermer_a_la_fin = true;
     if (fermer_a_la_fin) close();
 }
 

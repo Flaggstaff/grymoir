@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.53 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.54 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1111,6 +1111,7 @@ Si maintenant > 12:00, afficher « Bon après-midi ».
 - `h + 15 minutes`, `h − 2 heures` : l'heure tourne comme une horloge, `23:50 + 15 minutes` donne `00:05`. Une heure ne se décale que de minutes ou d'heures ; un nombre seul est refusé (« ADDITION impossible avec une heure »), comme les jours ne s'ajoutent qu'à une date.
 - `h2 − h1` donne des minutes, négatives si h2 précède : `14:30 − 8:05` vaut 385. `le nombre de minutes entre h1 et h2`, `le nombre d'heures entre h1 et h2` comptent les unités entières (§ 14.6).
 - Les heures se comparent (`<`, `≥`…) et se trient. Un champ `(heure)` d'entité se range en texte `14:30`, triable ; dans `dont`, `le début est supérieur à 12:00`.
+- *(2.54)* Une heure saisie (une zone, `t en heure`, une réponse) se tape aussi `13h30`, `13.30`, `13 30`, `1330`, `930` ou `13h`.
 - `t en heure` lit un texte (§ 4.5) ; `la réponse en heure à « Début ? »` aussi (§ 17) : « « 25:00 » n'est pas une heure : écris heures:minutes (14:30). »
 - Les unités `minute`, `minutes`, `heure`, `heures` après un nombre, comme `jours` ou `mois`, ne réservent rien ailleurs.
 - En forme compacte : `8:05 + 15 _minutes`, `_maintenant`, `_écart_minutes(h1 ; h2)`, `_écart_heures(h1 ; h2)`, `t _en_heure`.
@@ -2407,3 +2408,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.51 | 2026-10-23 | Corrections trouvées par le balayage de tous les programmes des essais (tests/balayer, dans make test) : la cible d'une modification accepte un calcul à argument littéral (`L'archivage de la fiche nommée de « A » devient …`) ; la forme compacte réécrit le champ du résultat d'un calcul (`f(r).champ << v`), garde « ans » (`_écart_ans`), écrit « l'image du fichier », n'ouvre plus de colonnes vides avant `_titre`, lit une zone multiple (`_des genres (genre)`), `_gagne` sur un objet cherché, `_écran` seul, et une remarque entre deux `_cas` ; `grym-arbre` ne plante plus sur `Ouvrir le n.` |
 | 2.52 | 2026-10-24 | La signature d'un écran : 26 pixels de haut en longueur, jusqu'à 125 pour une image plus carrée (un logo en lettrage), environ 208 pixels de large |
 | 2.53 | 2026-10-24 | § 15.6 bis : `Sauvegarder la base dans « p », une par jour passé.` : la copie datée `p-AAAA-MM-JJ-HHMM`, et des jours passés seule la dernière de chacun reste |
+| 2.54 | 2026-10-24 | § 14.7 : une heure saisie se tape aussi `13h30`, `13.30`, `1330`, `930`, `13h` |
