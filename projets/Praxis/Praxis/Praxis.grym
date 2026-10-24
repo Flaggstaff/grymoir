@@ -153,15 +153,22 @@ Remarque : l'inscription d'un patient : les champs courts à gauche ; à côté,
 L'écran d'inscription, « Nouveau patient », montre :
     en position libre :
         un nom (texte), à 0 de la gauche et 0 du haut, large de 260,
-        un téléphone (téléphone), facultatif, à 0 de la gauche et 72 du haut, large de 260,
-        un courriel (courriel), facultatif, à 0 de la gauche et 144 du haut, large de 260,
-        une date de naissance (date), facultative, à 0 de la gauche et 216 du haut, large de 260,
-        une rue (texte), facultative, à 276 de la gauche et 0 du haut, large de 260,
+        un prénom (texte), facultatif, à 276 de la gauche et 0 du haut, large de 260,
+        une rue (texte), facultative, à 0 de la gauche et 72 du haut, large de 260,
         un numéro de maison (texte), facultatif, à 276 de la gauche et 72 du haut, large de 110,
-        un complément d'adresse (texte), facultatif, à 276 de la gauche et 144 du haut, large de 260,
-        un numéro postal (texte), facultatif, à 276 de la gauche et 216 du haut, large de 110,
-        une localité (texte), facultative, à 276 de la gauche et 288 du haut, large de 260,
-        un pays (texte), « Suisse » au départ, à 276 de la gauche et 360 du haut, large de 260,
+        un complément d'adresse (texte), facultatif, à 0 de la gauche et 144 du haut, large de 260,
+        un pays (texte), « Suisse » au départ, à 276 de la gauche et 144 du haut, large de 260,
+        un numéro postal (texte), facultatif, à 0 de la gauche et 216 du haut, large de 110,
+        une localité (texte), facultative, à 126 de la gauche et 216 du haut, large de 410,
+        un téléphone (téléphone), facultatif, à 0 de la gauche et 288 du haut, large de 260,
+        un courriel (courriel), facultatif, à 276 de la gauche et 288 du haut, large de 260,
+        une date de naissance (date), facultative, à 0 de la gauche et 360 du haut, large de 260,
+        un assureur (assureur), facultatif, avec recherche, à 0 de la gauche et 432 du haut, large de 260,
+        un numéro d'assuré (texte), facultatif, à 276 de la gauche et 432 du haut, large de 260,
+        un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré », à 0 de la gauche et 504 du haut, large de 260,
+        une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base », à 276 de la gauche et 504 du haut, large de 260,
+        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 576 du haut, large de 260,
+        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », à 276 de la gauche et 576 du haut, large de 260,
         une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
         une anamnèse (texte), facultative, sur plusieurs lignes, transcrite de la dictée, à 552 de la gauche et 72 du haut, large de 520, haute de 340,
     côte à côte :
@@ -173,15 +180,22 @@ Remarque : l'ajout, dicté ou tapé, s'ajoute à la fin de l'anamnèse, daté, �
 L'écran du patient, « Patient », montre :
     en position libre :
         un nom (texte), à 0 de la gauche et 0 du haut, large de 260,
-        un téléphone (téléphone), facultatif, à 0 de la gauche et 72 du haut, large de 260,
-        un courriel (courriel), facultatif, à 0 de la gauche et 144 du haut, large de 260,
-        une date de naissance (date), facultative, à 0 de la gauche et 216 du haut, large de 260,
-        une rue (texte), facultative, à 276 de la gauche et 0 du haut, large de 260,
+        un prénom (texte), facultatif, à 276 de la gauche et 0 du haut, large de 260,
+        une rue (texte), facultative, à 0 de la gauche et 72 du haut, large de 260,
         un numéro de maison (texte), facultatif, à 276 de la gauche et 72 du haut, large de 110,
-        un complément d'adresse (texte), facultatif, à 276 de la gauche et 144 du haut, large de 260,
-        un numéro postal (texte), facultatif, à 276 de la gauche et 216 du haut, large de 110,
-        une localité (texte), facultative, à 276 de la gauche et 288 du haut, large de 260,
-        un pays (texte), « Suisse » au départ, à 276 de la gauche et 360 du haut, large de 260,
+        un complément d'adresse (texte), facultatif, à 0 de la gauche et 144 du haut, large de 260,
+        un pays (texte), « Suisse » au départ, à 276 de la gauche et 144 du haut, large de 260,
+        un numéro postal (texte), facultatif, à 0 de la gauche et 216 du haut, large de 110,
+        une localité (texte), facultative, à 126 de la gauche et 216 du haut, large de 410,
+        un téléphone (téléphone), facultatif, à 0 de la gauche et 288 du haut, large de 260,
+        un courriel (courriel), facultatif, à 276 de la gauche et 288 du haut, large de 260,
+        une date de naissance (date), facultative, à 0 de la gauche et 360 du haut, large de 260,
+        un assureur (assureur), facultatif, avec recherche, à 0 de la gauche et 432 du haut, large de 260,
+        un numéro d'assuré (texte), facultatif, à 276 de la gauche et 432 du haut, large de 260,
+        un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré », à 0 de la gauche et 504 du haut, large de 260,
+        une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base », à 276 de la gauche et 504 du haut, large de 260,
+        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 576 du haut, large de 260,
+        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », à 276 de la gauche et 576 du haut, large de 260,
         une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
         un ajout (texte), facultatif, sur plusieurs lignes, transcrit de la dictée, à 552 de la gauche et 72 du haut, large de 520, haut de 112,
         une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 204 du haut, large de 520, haute de 208,
@@ -195,14 +209,7 @@ L'écran du patient, « Patient », montre :
         un bouton « Supprimer »,
         un bouton « Archiver »,
     côte à côte :
-        un assureur (assureur), facultatif, avec recherche,
-        un numéro d'assuré (texte), facultatif,
-        un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré »,
         un bouton « Ordonnances », visible si la facturation aux assurances du cabinet conservé,
-    côte à côte :
-        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base »,
-        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base »,
-        une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base »,
         un bouton « Facturer la complémentaire », visible si la facturation aux assurances du cabinet conservé.
 
 Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
@@ -1267,7 +1274,10 @@ Quand on choisit un patient dans l'écran des patients :
 
 Quand on ouvre l'écran du patient :
     Le p vaut la personne ouverte.
-    Le nom de l'écran devient le nom du p.
+    Remarque : un patient d'avant le 24 octobre 2026 n'a qu'un nom, entier : il reste dans « Nom », à partager si on veut.
+    Si le nom de famille du p est présent, le nom de l'écran devient le nom de famille du p.
+    Sinon, le nom de l'écran devient le nom du p.
+    Le prénom de l'écran devient le prénom du p.
     Le téléphone de l'écran devient le téléphone du p.
     Le courriel de l'écran devient le courriel du p.
     La date de naissance de l'écran devient la date de naissance du p.
@@ -1287,7 +1297,13 @@ Quand on ouvre l'écran du patient :
 
 Quand on clique sur « Enregistrer » dans l'écran du patient :
     Le p vaut la personne ouverte.
-    Le nom du p devient le nom de l'écran.
+    Le complet vaut le nom de l'écran.
+    Si le prénom de l'écran est présent, le complet devient le prénom de l'écran suivi de " " suivi du nom de l'écran.
+    Si le complet ≠ le nom du p :
+        Si le nombre de patients conservés dont le nom = le complet > 0, refuser "Il y a déjà un patient « " suivi du complet suivi de " » : ajoute un second prénom, ou une initiale.".
+    Le nom du p devient le complet.
+    Le nom de famille du p devient le nom de l'écran.
+    Le prénom du p devient le prénom de l'écran.
     Le téléphone du p devient le téléphone de l'écran.
     Le courriel du p devient le courriel de l'écran.
     La date de naissance du p devient la date de naissance de l'écran.
@@ -1298,13 +1314,12 @@ Quand on clique sur « Enregistrer » dans l'écran du patient :
     La localité du p devient la localité de l'écran.
     Le pays du p devient le pays de l'écran.
     L'anamnèse du p devient l'anamnèse de l'écran.
-    Si la facturation aux assurances du cabinet conservé :
-        L'assureur du p devient l'assureur de l'écran.
-        Le numéro d'assuré du p devient le numéro d'assuré de l'écran.
-        Le numéro de carte d'assuré du p devient le numéro de carte d'assuré de l'écran.
-        L'assureur complémentaire du p devient l'assureur complémentaire de l'écran.
-        Le numéro d'assuré complémentaire du p devient le numéro d'assuré complémentaire de l'écran.
-        La facturation complémentaire du p devient la facturation complémentaire de l'écran.
+    L'assureur du p devient l'assureur de l'écran.
+    Le numéro d'assuré du p devient le numéro d'assuré de l'écran.
+    Le numéro de carte d'assuré du p devient le numéro de carte d'assuré de l'écran.
+    L'assureur complémentaire du p devient l'assureur complémentaire de l'écran.
+    Le numéro d'assuré complémentaire du p devient le numéro d'assuré complémentaire de l'écran.
+    La facturation complémentaire du p devient la facturation complémentaire de l'écran.
     Si l'ajout de l'écran est présent :
         Si l'anamnèse du p est présente, l'anamnèse du p devient l'anamnèse du p suivi de " [" suivi d'aujourd'hui suivi de « ] » suivi de " " suivi de l'ajout de l'écran.
         Sinon, l'anamnèse du p devient l'ajout de l'écran.
@@ -1459,9 +1474,20 @@ Quand on clique sur « Nouveau patient » dans l'écran de séance :
 
 Remarque : le patient inscrit est rangé dans « l'inscrit », que l'écran de séance reprend à la fermeture.
 Quand on clique sur « Enregistrer » dans l'écran d'inscription :
+    Le complet vaut le nom de l'écran.
+    Si le prénom de l'écran est présent, le complet devient le prénom de l'écran suivi de " " suivi du nom de l'écran.
+    Si le nombre de patients conservés dont le nom = le complet > 0, refuser "Il y a déjà un patient « " suivi du complet suivi de " » : ajoute un second prénom, ou une initiale.".
     Le p vaut un nouveau patient :
-        Le nom vaut le nom de l'écran.
+        Le nom vaut le complet.
         Le pays vaut le pays de l'écran.
+    Le nom de famille du p devient le nom de l'écran.
+    Le prénom du p devient le prénom de l'écran.
+    L'assureur du p devient l'assureur de l'écran.
+    Le numéro d'assuré du p devient le numéro d'assuré de l'écran.
+    Le numéro de carte d'assuré du p devient le numéro de carte d'assuré de l'écran.
+    L'assureur complémentaire du p devient l'assureur complémentaire de l'écran.
+    Le numéro d'assuré complémentaire du p devient le numéro d'assuré complémentaire de l'écran.
+    La facturation complémentaire du p devient la facturation complémentaire de l'écran.
     Le téléphone du p devient le téléphone de l'écran.
     Le courriel du p devient le courriel de l'écran.
     La date de naissance du p devient la date de naissance de l'écran.

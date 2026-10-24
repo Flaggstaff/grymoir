@@ -98,8 +98,12 @@ Remarque : le nom est la clé : « Anne Rochat » ; deux homonymes se distinguen
 Remarque : l'adresse postale en champs séparés, comme la QR-facture l'exige depuis le 21 novembre 2025 (adresse structurée) :
 Remarque : rue, numéro de maison (« 10a »), numéro postal (NPA), localité, pays ; le complément porte une case postale ou un « c/o ».
 Remarque : « client » jusqu'au 18 octobre 2026 ; la base de cette époque se renomme d'elle-même (grammaire, § 16.7).
+Remarque : le nom d'un patient (24 octobre 2026) : son nom de famille et son prénom, saisis à part ; le nom, sa clé, les réunit
+Remarque : (« Alain Thiémard ») : c'est lui que montrent les listes, les menus et les pièces.
 Un patient, conservé, anciennement « client », a :
     un nom (texte), unique,
+    un nom de famille (texte), facultatif,
+    un prénom (texte), facultatif,
     un téléphone (téléphone), facultatif,
     un courriel (courriel), facultatif,
     une rue (texte), facultative,

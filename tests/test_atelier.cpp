@@ -821,6 +821,45 @@ int main(int argc, char **argv) {
         VERIFIER(fil && fil->isVisible());     // le programme fini : le fil revient, avec son dernier mot
     }
 
+    // L'écran principal plus grand (24 octobre 2026) : un écran qui le recouvre rend la fenêtre plus petite, l'accueil la reprend
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran a montre :\n    un bouton « Ouvrir b »,\n    un bouton « Fermer ».\n"
+                    "L'écran b montre :\n    un bouton « Fermer ».\n"
+                    "Quand on clique sur « Ouvrir b » dans l'écran a :\n    Ouvrir l'écran b.\n"
+                    "Quand on clique sur « Fermer » dans l'écran b :\n    Fermer l'écran.\n"
+                    "Quand on clique sur « Fermer » dans l'écran a :\n    Fermer l'écran.\nOuvrir l'écran a.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto clic = [&](const char *texte) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 10000) {
+                QApplication::processEvents(QEventLoop::AllEvents, 20);
+                for (QPushButton *b : e.findChildren<QPushButton *>())
+                    if (b->text() == QString::fromUtf8(texte) && b->isVisible() && b->isEnabled()) { b->click(); return true; }
+            }
+            return false;
+        };
+        auto attendre = [&](int ms) { QElapsedTimer z; z.start(); while (z.elapsed() < ms) QApplication::processEvents(QEventLoop::AllEvents, 20); };
+        VERIFIER(clic("Ouvrir b"));
+        attendre(300);
+        const int sous = e.geometry().width();
+        attendre(100);
+        VERIFIER(clic("Fermer"));
+        attendre(300);
+        const int principal = e.geometry().width();
+        VERIFIER(principal > sous);
+        clic("Fermer");
+        attendre(300);
+    }
+
     // Le son (24 octobre 2026) : l'extension du fichier que lit le décodeur, d'après les octets ; le choix du micro
     {
         VERIFIER(extension_de_son(QByteArray("\0\0\0\x20" "ftypM4A ", 12)) == "m4a");

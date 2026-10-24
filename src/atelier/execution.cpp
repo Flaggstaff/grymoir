@@ -1002,6 +1002,10 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         attente_ecran = false;
         if (!recouverts.isEmpty()) {   // l'écran du dessous revient (§ 22.3)
             const EcranMontre e = recouverts.takeLast();
+            if (recouverts.isEmpty() && reduction) {   // l'écran principal retrouve sa taille
+                setGeometry(geometry().adjusted(-reduction, -reduction, reduction, reduction));
+                reduction = 0;
+            }
             vue_ecran = e.vue;
             erreur_ecran = e.erreur;
             tables = e.tables;
@@ -1298,6 +1302,13 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         vue_ecran->hide();
         recouverts.push_back({vue_ecran, erreur_ecran, tables, boutons_ecran, zones, windowTitle(), controles_ecran});
         vue_ecran = nullptr;
+        // l'écran principal est plus grand : un écran qui le recouvre rend la fenêtre de 5 mm plus petite de chaque côté,
+        // l'accueil la lui rend en revenant (24 octobre 2026)
+        if (recouverts.size() == 1 && !isMaximized() && !isFullScreen()) {
+            const QScreen *ec = screen() ? screen() : QGuiApplication::primaryScreen();
+            reduction = qRound(5.0 / 25.4 * (ec ? ec->logicalDotsPerInch() : 96.0));
+            setGeometry(geometry().adjusted(reduction, reduction, -reduction, -reduction));
+        }
     }
     QVector<ElementVue> elements(sortes.size());
     for (int k = 0; k < sortes.size(); k++) {
