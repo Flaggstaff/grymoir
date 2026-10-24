@@ -638,8 +638,11 @@ static long transcrire_si_besoin(Machine *m, Objet *o, size_t k) {
         if (!octets) continue;
         char *erreur = NULL;
         char *texte = m->iface.transcrire(m->iface.contexte, octets, o->champs[k].fichier->taille, &erreur);
+        /* l'échec se dit dans le champ même, là où on attend le texte : il se taisait, et le champ restait vide sans
+         * qu'on sache pourquoi (24 octobre 2026) ; un silence aussi */
+        if (!texte) texte = grym_formater("⚠ Transcription impossible : %s", erreur ? erreur : "raison inconnue.");
+        else if (!*texte) { free(texte); texte = grym_dupliquer("⚠ Rien n'a été reconnu dans cet enregistrement."); }
         free(erreur);
-        if (!texte) continue;
         ecrire_champ(m, o, q, vi_texte(texte));
         free(texte);
         fait = (long)q;

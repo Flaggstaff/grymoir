@@ -1,4 +1,6 @@
 #include "transcription.h"
+#include <cmath>
+#include <algorithm>
 
 #include <QAudioBuffer>
 #include <QAudioDecoder>
@@ -176,6 +178,14 @@ QString transcrire_son(const QByteArray &octets, const QString &modele, QString 
     }
     std::vector<float> pcm;
     if (!wav_en_16k(octets, &pcm) && !decoder_en_16k(octets, &pcm, erreur)) return QString();
+    // un enregistrement faible (micro peu sensible, casque) : ramené à un niveau que Whisper entend, au plus vingt fois plus
+    // fort ; le son gardé dans la fiche ne change pas (24 octobre 2026)
+    float crete = 0;
+    for (const float x : pcm) crete = std::max(crete, std::fabs(x));
+    if (crete > 0 && crete < 0.5f) {
+        const float gain = std::min(0.9f / crete, 20.0f);
+        for (float &x : pcm) x *= gain;
+    }
     // le modèle, chargé une fois (environ un gigaoctet en mémoire), gardé pour les transcriptions suivantes
     QMutexLocker garde(&verrou);
     if (!ctx || charge != modele) {

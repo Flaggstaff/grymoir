@@ -194,7 +194,9 @@ typedef struct {
 /* Un faux transcripteur (§ 15.8) : il rend « transcription de N octets », pour vérifier que la machine l'appelle au
  * bon moment et range son texte au bon endroit, sans Whisper. */
 static char *faux_transcrire(void *contexte, const unsigned char *octets, size_t taille, char **erreur) {
-    (void)contexte; (void)octets; (void)erreur;
+    (void)contexte; (void)octets;
+    if (taille == 17) { *erreur = grym_dupliquer("modèle absent."); return NULL; }   /* un échec (24 octobre 2026) */
+    if (taille == 18) return grym_dupliquer("");                                      /* un silence */
     return grym_formater("transcription de %lu octets", (unsigned long)taille);
 }
 
@@ -2259,6 +2261,20 @@ int main(void) {
              "Pour chaque visite conservée :\n    Afficher la note de la visite.\n    La note de la visite devient « corrigée ».\n"
              "Pour chaque visite conservée :\n    Afficher la note de la visite.",
              "transcription de 16 octets\ntranscription de 16 octets\ncorrigée");
+        /* un échec ou un silence se disent dans le champ, au lieu de le laisser vide sans raison (24 octobre 2026) */
+        {
+            unsigned char long17[17], long18[18];
+            memcpy(long17, WAV, sizeof WAV); long17[16] = 0;
+            memcpy(long18, WAV, sizeof WAV); long18[16] = 0; long18[17] = 0;
+            creer_fichier("_essai_son17.wav", long17, sizeof long17);
+            creer_fichier("_essai_son18.wav", long18, sizeof long18);
+            PROG("Une visite, conservée, a :\n    un mémo (son),\n    une note (texte), facultative, transcrite du mémo.\n"
+                 "Le v vaut une nouvelle visite :\n    Le mémo vaut le fichier « _essai_son17.wav ».\nAfficher la note de v.\n"
+                 "Le w vaut une nouvelle visite :\n    Le mémo vaut le fichier « _essai_son18.wav ».\nAfficher la note de w.",
+                 "⚠ Transcription impossible : modèle absent.\n⚠ Rien n'a été reconnu dans cet enregistrement.");
+            remove("_essai_son17.wav");
+            remove("_essai_son18.wav");
+        }
         remove("_essai_son.wav");
         remove("_essai_son.mp3");
         remove("_essai_son.ogg");
