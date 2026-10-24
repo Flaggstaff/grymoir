@@ -53,12 +53,19 @@ signals:
 
 protected:
     void resizeEvent(QResizeEvent *e) override;
+    void paintEvent(QPaintEvent *e) override;
     bool event(QEvent *e) override;
     void keyPressEvent(QKeyEvent *e) override;
 
 private:
     void analyser();
     void marquer_erreur();
+public:
+    // Le bloc du curseur (24 octobre 2026) : la déclaration de premier niveau qui le contient, avec ses remarques de tête
+    // (une entité, un écran, une action, un événement) ; premier et dernier numéros de ligne, à partir de 0.
+    QPair<int, int> bloc_du_curseur() const;
+    static bool debut_de_bloc(const QTextBlock &b);   // une ligne non vide, sans retrait
+private:
     QWidget *marge;
     Coloration *coloration = nullptr;
     bool compacte = false;

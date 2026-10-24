@@ -821,6 +821,28 @@ int main(int argc, char **argv) {
         VERIFIER(fil && fil->isVisible());     // le programme fini : le fil revient, avec son dernier mot
     }
 
+    // L'éditeur (24 octobre 2026) : le bloc du curseur, la déclaration de premier niveau avec ses remarques de tête
+    {
+        Editeur ed;
+        ed.resize(900, 500);
+        ed.charger(QString::fromUtf8("Remarque : une entité.\nUn membre, conservé, a :\n    un nom (texte),\n    un âge (nombre).\n\n"
+                                     "Remarque : l'accueil.\nL'écran x montre :\n    un bouton « Fermer ».\n\n"
+                                     "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n"), false);
+        QTextCursor c(ed.document()->findBlockByNumber(3));   // « un âge » : le bloc de l'entité, remarque comprise
+        ed.setTextCursor(c);
+        VERIFIER(ed.bloc_du_curseur() == qMakePair(0, 3));
+        ed.setTextCursor(QTextCursor(ed.document()->findBlockByNumber(5)));   // la remarque de l'écran : l'écran avec elle
+        VERIFIER(ed.bloc_du_curseur() == qMakePair(5, 7));
+        ed.setTextCursor(QTextCursor(ed.document()->findBlockByNumber(10)));   // le corps de l'événement
+        VERIFIER(ed.bloc_du_curseur() == qMakePair(9, 10));
+        ed.setTextCursor(QTextCursor(ed.document()->findBlockByNumber(4)));   // une ligne vide : rien
+        VERIFIER(ed.bloc_du_curseur().first == -1);
+        ed.setTextCursor(QTextCursor(ed.document()->findBlockByNumber(2)));
+        ed.show();
+        QApplication::processEvents();
+        if (qEnvironmentVariableIsSet("GRYM_CAPTURE")) ed.grab().save(qEnvironmentVariable("GRYM_CAPTURE"));
+    }
+
     // L'écran principal plus grand (24 octobre 2026) : un écran qui le recouvre rend la fenêtre plus petite, l'accueil la reprend
     {
         QTemporaryDir dossier;

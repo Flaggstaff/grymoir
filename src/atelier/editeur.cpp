@@ -88,6 +88,74 @@ Editeur::Editeur(QWidget *parent)
         else marge->update(0, r.y(), marge->width(), r.height());
     });
     setViewportMargins(largeur_marge(), 0, 0, 0);
+    // le bloc du curseur se surligne, et suit le curseur (24 octobre 2026)
+    connect(this, &QPlainTextEdit::cursorPositionChanged, this, &Editeur::marquer_erreur);
+}
+
+bool Editeur::debut_de_bloc(const QTextBlock &b) {
+    const QString t = b.text();
+    return !t.isEmpty() && !t.at(0).isSpace();
+}
+
+static bool est_remarque(const QTextBlock &b) {
+    const QString t = b.text();
+    return t.startsWith("Remarque") || t.startsWith("#");
+}
+
+QPair<int, int> Editeur::bloc_du_curseur() const {
+    QTextBlock b = textCursor().block();
+    if (b.text().trimmed().isEmpty()) return {-1, -1};   // sur une ligne vide, entre deux blocs : rien
+    while (b.isValid() && !debut_de_bloc(b)) b = b.previous();   // la tête de la déclaration
+    if (!b.isValid()) return {-1, -1};
+    QTextBlock fin = b;
+    if (est_remarque(b)) {   // dans les remarques de tête : la déclaration qu'elles annoncent suit
+        while (fin.next().isValid() && debut_de_bloc(fin.next()) && est_remarque(fin.next())) fin = fin.next();
+        if (fin.next().isValid() && debut_de_bloc(fin.next())) fin = fin.next();
+    }
+    QTextBlock debut = b;   // les remarques collées au-dessus font partie du bloc
+    while (debut.previous().isValid() && debut_de_bloc(debut.previous()) && est_remarque(debut.previous())) debut = debut.previous();
+    // le corps : les lignes en retrait qui suivent, jusqu'à la prochaine ligne sans retrait (les lignes vides finales exclues)
+    QTextBlock k = fin.next(), dernier = fin;
+    while (k.isValid() && !debut_de_bloc(k)) {
+        if (!k.text().trimmed().isEmpty()) dernier = k;
+        k = k.next();
+    }
+    return {debut.blockNumber(), dernier.blockNumber()};
+}
+
+// Des repères pour lire le code (24 octobre 2026) : un filet au-dessus de chaque déclaration de premier niveau, et un
+// fil vertical léger par niveau de retrait.
+void Editeur::paintEvent(QPaintEvent *e) {
+    QPlainTextEdit::paintEvent(e);
+    QPainter p(viewport());
+    QColor filet = palette().color(QPalette::PlaceholderText);
+    filet.setAlpha(90);
+    QColor fil = filet;
+    fil.setAlpha(45);
+    const int pas = fontMetrics().horizontalAdvance(QString(4, ' '));
+    const qreal x0 = contentOffset().x() + document()->documentMargin();
+    QTextBlock bloc = firstVisibleBlock();
+    while (bloc.isValid()) {
+        const QRectF r = blockBoundingGeometry(bloc).translated(contentOffset());
+        if (r.top() > e->rect().bottom()) break;
+        const QString t = bloc.text();
+        if (debut_de_bloc(bloc) && bloc.blockNumber() > 0) {
+            QTextBlock avant = bloc.previous();   // un filet entre deux blocs, pas entre une remarque et sa déclaration
+            const bool suite = avant.isValid() && debut_de_bloc(avant) && est_remarque(avant);
+            if (!suite) {
+                p.setPen(QPen(filet, 1));
+                p.drawLine(QPointF(x0, r.top() + 0.5), QPointF(viewport()->width(), r.top() + 0.5));
+            }
+        }
+        int retrait = 0;
+        while (retrait < t.size() && t.at(retrait) == ' ') retrait++;
+        p.setPen(QPen(fil, 1));
+        for (int n = 1; n * 4 <= retrait; n++) {
+            const qreal x = x0 + (n - 1) * pas + 2;
+            p.drawLine(QPointF(x, r.top()), QPointF(x, r.bottom()));
+        }
+        bloc = bloc.next();
+    }
 }
 
 void Editeur::charger(const QString &texte, bool c, const QString &ch) {
@@ -152,6 +220,19 @@ static int position_bloc(const QTextBlock &bloc, int colonne) {
 
 void Editeur::marquer_erreur() {
     QList<QTextEdit::ExtraSelection> marques;
+    const QPair<int, int> zone = bloc_du_curseur();   // le bloc du curseur, sur un fond jaune léger
+    if (zone.first >= 0) {
+        QTextEdit::ExtraSelection s;
+        s.format.setBackground(QColor(255, 210, 0, 40));
+        s.format.setProperty(QTextFormat::FullWidthSelection, true);
+        QTextCursor c(document()->findBlockByNumber(zone.first));
+        const QTextBlock dernier = document()->findBlockByNumber(zone.second);
+        // jusqu'au début de la ligne suivante : la dernière ligne du bloc se surligne aussi sur toute la largeur
+        if (dernier.next().isValid()) c.setPosition(dernier.next().position(), QTextCursor::KeepAnchor);
+        else { c.setPosition(dernier.position(), QTextCursor::KeepAnchor); c.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor); }
+        s.cursor = c;
+        marques.append(s);
+    }
     if (!diag.message.isEmpty() && diag.ligne > 0) {
         const QTextBlock bloc = document()->findBlockByNumber(diag.ligne - 1);
         if (bloc.isValid()) {
