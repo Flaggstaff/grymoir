@@ -5930,7 +5930,23 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     code_ev = -1;   /* aucun événement ne s'exécute */
                 } else {
                     ecrire_champ(m, e->objet, (size_t)e->champ[ev.element], v);
-                    transcrire_si_besoin(m, e->objet, (size_t)e->champ[ev.element]);   /* « transcrite du mémo » (§ 15.8) */
+                    const size_t ks = (size_t)e->champ[ev.element];
+                    const ClasseVM *ce = e->objet->classe;
+                    if (m->iface.ecran_transcrire && ce->transcrit_de && e->objet->definis[ks]
+                        && e->objet->champs[ks].type == V_FICHIER) {
+                        /* en arrière-plan (24 octobre 2026) : l'interface transcrit pendant qu'on continue, et renvoie le
+                         * texte dans la zone ; la page n'est plus bloquée le temps de Whisper */
+                        char *eo = NULL;
+                        const unsigned char *octets = octets_du_fichier(e->objet->champs[ks].fichier, &eo);
+                        free(eo);
+                        for (size_t q = 0; octets && q < ce->nb_champs; q++) {
+                            if (!ce->transcrit_de[q] || strcmp(ce->transcrit_de[q], ce->champs[ks]) != 0) continue;
+                            for (size_t el = 0; el < e->n; el++)
+                                if (e->champ[el] == (long)q)
+                                    m->iface.ecran_transcrire(m->iface.contexte, el, octets, e->objet->champs[ks].fichier->taille);
+                        }
+                    } else
+                        transcrire_si_besoin(m, e->objet, ks);   /* « transcrite du mémo » (§ 15.8) */
                     code_ev = (long)ev.element + 1;
                 }
             zone_lue:

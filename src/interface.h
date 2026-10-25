@@ -211,6 +211,10 @@ typedef struct {
      * réponse (allouée), avec son statut HTTP ; 0 et *erreur (allouée) si rien n'est revenu. NULL : la machine refuse. */
     int (*envoyer)(void *contexte, int lecture, const char *adresse, const char *corps, long *statut, char **reponse,
                    char **erreur);
+    /* La transcription d'une zone d'écran en arrière-plan (24 octobre 2026) : le son de la zone vient de changer ; la
+     * zone « transcrite du … » d'indice cible recevra le texte quand il sera prêt, par un événement de changement que
+     * l'interface enverra elle-même ; la machine n'attend pas. NULL : la machine transcrit elle-même, et attend. */
+    void (*ecran_transcrire)(void *contexte, size_t cible, const unsigned char *octets, size_t taille);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

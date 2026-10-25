@@ -32,6 +32,9 @@
 #include <QButtonGroup>
 #include <functional>
 #include <QPlainTextEdit>
+#include <QMap>
+#include <QPointer>
+#include <thread>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStyle>
@@ -316,6 +319,13 @@ static void iface_ecran_image(void *contexte, size_t k, const unsigned char *oct
                                                                     : QByteArray());
 }
 
+// Une zone d'écran à transcrire (24 octobre 2026) : la machine n'attend pas ; la fenêtre transcrit en arrière-plan.
+static void iface_ecran_transcrire(void *contexte, size_t cible, const unsigned char *octets, size_t taille) {
+    auto *t = static_cast<Travail *>(contexte);
+    t->transcriptions_en_cours++;   // compté ici, dans le fil de la machine : un clic qui suit l'attend déjà
+    emit t->transcrire_zone((int)cible, QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille));
+}
+
 // La transcription d'un son (§ 15.8) : dans le fil de la machine, la fenêtre reste libre pendant ce temps.
 static char *iface_transcrire(void *, const unsigned char *octets, size_t taille, char **erreur) {
     QString probleme;
@@ -574,7 +584,7 @@ void Travail::run() {
                    iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
                    iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf,
                    iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte,
-                   iface_montrer_document, iface_ouvrir_adresse, iface_envoyer};
+                   iface_montrer_document, iface_ouvrir_adresse, iface_envoyer, iface_ecran_transcrire};
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     situer(m, chemin, base_imposee, dossier_ecriture);
@@ -961,6 +971,7 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             rang->insertWidget(qMin(1, rang->count()), l);   // sous le libellé
         }
     });
+    connect(&travail, &Travail::transcrire_zone, this, &Execution::transcrire_dans);   // en arrière-plan (24 octobre 2026)
     connect(&travail, &Travail::ecran_texte, this, [this](int k, const QString &t) {   // le texte calculé (2.24)
         if (k < 0) {   // le titre calculé (2.33) : le titre de l'écran montré, et celui de la fenêtre
             if (vue_ecran)
@@ -981,6 +992,18 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         attente_ecran = true;
         if (vue_ecran) vue_ecran->setEnabled(true);
         etat->setText("L'écran attend.");
+        if (!transcrits_a_envoyer.isEmpty()) {   // un texte transcrit pendant que la machine travaillait : il part d'abord
+            const int cible = transcrits_a_envoyer.firstKey();
+            texte_envoye = transcrits_a_envoyer.take(cible).toUtf8();
+            envoyer_evenement(EVENEMENT_CHANGEMENT, cible, 0);
+            return;
+        }
+        if (travail.transcriptions_en_cours == 0 && clic_apres_transcription >= 0) {   // le clic retenu, maintenant que tout est là
+            const int k = clic_apres_transcription;
+            clic_apres_transcription = -1;
+            cliquer(k);
+            return;
+        }
         if (clic_en_attente >= 0) {   // le clic qu'une zone avait devancé : un seul geste suffit
             const int k = clic_en_attente;
             const bool meme_ecran = vue_ecran && vue_ecran == ecran_du_clic;
@@ -1604,6 +1627,12 @@ void Execution::cliquer(int k) {
 void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) {
     effacer_erreurs_zones();   // les messages tiennent jusqu'au prochain geste (§ 22.6)
     if (!attente_ecran) return;
+    if (sorte == EVENEMENT_CLIC && travail.transcriptions_en_cours > 0) {
+        // un clic pendant une transcription : il attend le texte, pour qu'« Enregistrer » ne parte pas sans lui
+        clic_apres_transcription = element;
+        etat->setText(QString::fromUtf8("Transcription en cours : le clic suivra."));
+        return;
+    }
     attente_ecran = false;
     if (vue_ecran) vue_ecran->setEnabled(false);
     if (erreur_ecran) erreur_ecran->hide();
@@ -1634,6 +1663,7 @@ void Execution::terminer(bool ok, const QString &erreur, const QString &annulati
     bouton_envoyer->setEnabled(false);
     bouton_annuler->setEnabled(false);
     bouton_arreter->setEnabled(false);
+    vue_ecran = nullptr;   // ses widgets viennent d'être détruits avec la zone
     if (!ok) {
         ecrire("\n" + erreur + "\n", true);
         if (!annulation.isEmpty()) ecrire(annulation + "\n", true);
@@ -1676,4 +1706,43 @@ void Execution::jouer_son_du_fil(int k) {
         son_joue = k;
     }
     lecteur_fil->basculer();   // le même : arrêter, ou reprendre au début
+}
+
+// La transcription en arrière-plan (24 octobre 2026) : la zone cible dit qu'elle attend, Whisper travaille dans un fil à part,
+// la page reste libre ; le texte revient dans la zone, puis part à la machine comme une saisie.
+void Execution::transcrire_dans(int cible, const QByteArray &octets) {
+    QWidget *c = controles_ecran.value(cible);
+    // un pointeur d'un écran déjà refait ne vaut plus rien : seule une zone de l'écran montré compte
+    if (c && !findChildren<QWidget *>().contains(c)) c = nullptr;
+    QPointer<QPlainTextEdit> zone_t = c ? (qobject_cast<QPlainTextEdit *>(c) ? qobject_cast<QPlainTextEdit *>(c)
+                                                                               : c->findChild<QPlainTextEdit *>()) : nullptr;
+    if (zone_t) {
+        zone_t->setPlainText(QString::fromUtf8("⏳ Transcription en cours…"));
+        zone_t->setReadOnly(true);
+    }
+    if (fini || !c) { travail.transcriptions_en_cours--; return; }
+    QPointer<Execution> moi(this);
+    QPointer<QWidget> ecran(c);   // la zone même : si l'écran change, elle disparaît, et le texte ne part pas
+    std::thread([moi, cible, octets, zone_t, ecran] {
+        QString probleme;
+        QString texte = transcrire_son(octets, modele_de_transcription(), &probleme);
+        if (!probleme.isEmpty()) texte = QString::fromUtf8("⚠ Transcription impossible : %1").arg(probleme);
+        else if (texte.trimmed().isEmpty()) texte = QString::fromUtf8("⚠ Rien n'a été reconnu dans cet enregistrement.");
+        if (!moi) return;
+        QMetaObject::invokeMethod(moi.data(), [moi, cible, texte, zone_t, ecran] {
+            if (!moi) return;
+            moi->travail.transcriptions_en_cours--;
+            if (zone_t) { zone_t->setReadOnly(false); zone_t->setPlainText(texte); zone_t->document()->setModified(false); }
+            if (!ecran || moi->fini) {   // l'écran a changé entre-temps : le texte ne part pas, le clic retenu non plus
+                if (moi->travail.transcriptions_en_cours == 0) moi->clic_apres_transcription = -1;
+                return;
+            }
+            if (moi->attente_ecran) {
+                moi->texte_envoye = texte.toUtf8();
+                moi->envoyer_evenement(EVENEMENT_CHANGEMENT, cible, 0);
+            } else {
+                moi->transcrits_a_envoyer.insert(cible, texte);
+            }
+        }, Qt::QueuedConnection);
+    }).detach();
 }

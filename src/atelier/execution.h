@@ -11,6 +11,8 @@
 #include <QSemaphore>
 #include <QThread>
 #include <QVector>
+#include <QMap>
+#include <atomic>
 
 extern "C" {
 #include "interface.h"
@@ -35,6 +37,7 @@ struct Saisie {
 class Travail : public QThread {
     Q_OBJECT
 public:
+    std::atomic<int> transcriptions_en_cours{0};   // des zones transcrites en arrière-plan (24 octobre 2026)
     explicit Travail(const QString &chemin);
     void run() override;
     // Une application fabriquée par l'atelier : sa base dans le dossier de données du système, pas à côté du
@@ -55,6 +58,7 @@ public:
     QVector<bool> acceptes;
 
 signals:
+    void transcrire_zone(int cible, const QByteArray &octets);   // la transcription en arrière-plan (24 octobre 2026)
     void texte(const QString &t);
     void effacer();
     void image(const QByteArray &octets, const QString &description);
@@ -118,6 +122,7 @@ private:
 class Execution : public QMainWindow {
     Q_OBJECT
 public:
+    void transcrire_dans(int cible, const QByteArray &octets);   // la transcription en arrière-plan (24 octobre 2026)
     explicit Execution(const QString &chemin);
     void placer_base(const QString &chemin) { travail.base_imposee = chemin; }   // avant demarrer()
     void placer_ecriture(const QString &dossier) { travail.dossier_ecriture = dossier; }   // avant demarrer()
@@ -188,6 +193,8 @@ private:
     QWidget *ecran_du_clic = nullptr;
     bool attente = false, fini = false, fermer_a_la_fin = false;
     bool ecran_vu = false;
+    int clic_apres_transcription = -1;       // un clic arrivé pendant une transcription : il part après elle
+    QMap<int, QString> transcrits_a_envoyer; // les textes prêts pendant que la machine travaillait
     int reduction = 0;   // la fenêtre, réduite de ces pixels de chaque côté sous un écran qui recouvre l'accueil   // un écran s'est montré : à la fin, la fenêtre se ferme (24 octobre 2026)
     int images = 0;
     // Les sons du fil (§ 15.7) : « son:K » dans le texte, joués par un lecteur caché ; nom et octets

@@ -672,6 +672,54 @@ int main(int argc, char **argv) {
             while (z2.elapsed() < 60000 && !sortie2().contains("zone transcrite")) QApplication::processEvents(QEventLoop::AllEvents, 20);
             VERIFIER(sortie2().contains("zone transcrite"));
         }
+        // en arrière-plan (24 octobre 2026) : un son enregistré dans l'écran ; la page reste libre pendant que Whisper
+        // travaille, la zone dit qu'elle attend ; « Enregistrer » cliqué tout de suite attend le texte, puis part avec lui
+        {
+            const QString prog3 = dossier.filePath("f.grym");
+            QFile f(prog3);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    un mémo (son), facultatif,\n"
+                    "    une transcription (texte), sur plusieurs lignes, facultative, transcrite du mémo,\n"
+                    "    un bouton « Enregistrer ».\n"
+                    "Quand on clique sur « Enregistrer » dans l'écran x :\n"
+                    "    Si la transcription de l'écran est présente, afficher « reçue : » suivi de la transcription de l'écran.\n"
+                    "    Fermer l'écran.\n"
+                    "Ouvrir l'écran x.\n");
+            f.close();
+            Execution e3(prog3);
+            e3.show();
+            e3.demarrer();
+            QElapsedTimer z3;
+            z3.start();
+            EnregistreurSon *micro = nullptr;
+            while (z3.elapsed() < 15000 && !micro) {
+                QApplication::processEvents(QEventLoop::AllEvents, 20);
+                micro = e3.findChild<EnregistreurSon *>();
+            }
+            VERIFIER(micro && micro->enregistre);
+            if (micro && micro->enregistre) micro->enregistre(wav(16000, 1, 16, 1.0), "m.wav");
+            QPlainTextEdit *t3 = nullptr;
+            for (QPlainTextEdit *x : e3.findChildren<QPlainTextEdit *>()) if (x->isVisible()) t3 = x;
+            bool en_cours_vu = false;
+            while (z3.elapsed() < 20000 && !en_cours_vu) {   // la zone annonce la transcription, l'écran attend déjà
+                QApplication::processEvents(QEventLoop::AllEvents, 20);
+                en_cours_vu = t3 && t3->toPlainText().startsWith(QString::fromUtf8("⏳"));
+                if (t3 && t3->toPlainText().startsWith(QString::fromUtf8("⚠"))) break;   // une transcription éclair
+            }
+            QPushButton *enr = nullptr;
+            for (QPushButton *b : e3.findChildren<QPushButton *>()) if (b->text() == "Enregistrer" && b->isVisible()) enr = b;
+            VERIFIER(enr != nullptr);
+            while (z3.elapsed() < 20000 && enr && !enr->isEnabled()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            if (enr) enr->click();   // tout de suite : le clic attend le texte
+            auto sortie3 = [&] {
+                QString t;
+                for (QTextEdit *x : e3.findChildren<QTextEdit *>()) t += x->toPlainText();
+                for (QPlainTextEdit *x : e3.findChildren<QPlainTextEdit *>()) t += x->toPlainText();
+                return t;
+            };
+            while (z3.elapsed() < 120000 && !sortie3().contains(QString::fromUtf8("reçue :"))) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            VERIFIER(sortie3().contains(QString::fromUtf8("reçue :")) && !sortie3().contains(QString::fromUtf8("reçue : ⏳")));
+        }
         // la zone de transcription, telle que la palette la pose sous un son
         {
             QTemporaryDir d3;
