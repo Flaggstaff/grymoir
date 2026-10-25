@@ -4198,6 +4198,32 @@ static Noeud *definition_calcul(Analyse *a, size_t marque, size_t fin_entete, in
 static EcranConnu *ecran_connu(Portee *p, const char *nom);
 static char *lire_nom_ecran(Analyse *a, size_t d, size_t *f);
 
+
+/* Une action dans un ou plusieurs écrans (2.55, 2.58) : chaque zone « … de l'écran » qu'elle lit ou écrit existe dans
+ * chacun ; sinon, l'erreur nomme la zone et l'écran où elle manque. */
+static int zones_dans_ecrans(Analyse *a, const Noeud *n, const char *const *ecrans, int ne) {
+    if (!n) return 1;
+    if ((n->type == N_CHAMP || n->type == P_MODIF_CHAMP) && n->texte && n->nb_enfants && n->enfants[0]
+        && n->enfants[0]->type == N_ECRAN) {
+        for (int q = 0; q < ne; q++) {
+            char *nom_c = grym_formater("écran %s", ecrans[q]);
+            const Classe *c = classe_de(a->portee, nom_c);
+            free(nom_c);
+            if (c && !type_du_champ(a->portee, c, n->texte)) {
+                Jeton faux = a->j[0];
+                faux.ligne = n->ligne;
+                faux.colonne = n->colonne;
+                erreur(a, &faux, grym_formater("L'écran « %s » n'a pas de zone « %s » : l'action y travaille aussi.",
+                                               ecrans[q], n->texte));
+                return 0;
+            }
+        }
+    }
+    for (size_t k = 0; k < n->nb_enfants; k++)
+        if (!zones_dans_ecrans(a, n->enfants[k], ecrans, ne)) return 0;
+    return 1;
+}
+
 /* Action : « Pour relancer un client : » suivi d'un bloc. */
 static Noeud *definition_action(Analyse *a, int colonne) {
     Jeton *tpour = cour(a);
@@ -4225,18 +4251,42 @@ static Noeud *definition_action(Analyse *a, int colonne) {
     /* « Pour remplir la fiche, dans l'écran du patient : » (2.55) : l'action lit et écrit les zones de cet écran,
      * comme ses événements ; elle s'appelle depuis l'un d'eux */
     char *dans_ecran = NULL;
+    char *autres_ecrans[8];   /* « … ou l'écran du patient » (2.58) : les écrans suivants, vérifiés eux aussi */
+    int nb_autres = 0;
     const size_t fin_params = fin;
     if (a->j[fin].type == J_VIRGULE && est_mot(&a->j[fin + 1], "dans") && a->j[fin + 2].type == J_ELISION
         && est_mot(&a->j[fin + 3], "écran")) {
-        size_t f2 = fin + 4;
-        dans_ecran = lire_nom_ecran(a, fin + 4, &f2);
-        if (!dans_ecran) return a->echec ? NULL : erreur(a, &a->j[fin + 4], grym_dupliquer("Nom d'écran attendu : « , dans l'écran du patient : »."));
-        if (!ecran_connu(a->portee, dans_ecran)) {
-            Noeud *r = erreur(a, &a->j[fin + 4], grym_formater("L'écran « %s » n'est pas déclaré (avant cette action).", dans_ecran));
-            free(dans_ecran);
-            return r;
+        size_t debut_nom = fin + 4;
+        for (int rang = 0;; rang++) {
+            /* le nom s'arrête avant « ou l'écran » : la marque est masquée le temps de le lire */
+            size_t ou = debut_nom;
+            while (ou + 2 < a->n && a->j[ou].type != J_DEUX_POINTS && a->j[ou].type != J_FIN
+                   && !(est_mot(&a->j[ou], "ou") && a->j[ou + 1].type == J_ELISION && est_mot(&a->j[ou + 2], "écran"))) ou++;
+            const int suite = ou + 2 < a->n && est_mot(&a->j[ou], "ou") && a->j[ou + 1].type == J_ELISION;
+            TypeJeton garde = a->j[ou].type;
+            if (suite) a->j[ou].type = J_DEUX_POINTS;
+            size_t f2 = debut_nom;
+            char *nom_e = lire_nom_ecran(a, debut_nom, &f2);
+            if (suite) a->j[ou].type = garde;
+            if (!nom_e) {
+                free(dans_ecran);
+                for (int q = 0; q < nb_autres; q++) free(autres_ecrans[q]);
+                return a->echec ? NULL : erreur(a, &a->j[debut_nom], grym_dupliquer("Nom d'écran attendu : « , dans l'écran du patient : »."));
+            }
+            if (!ecran_connu(a->portee, nom_e)) {
+                Noeud *r = erreur(a, &a->j[debut_nom], grym_formater("L'écran « %s » n'est pas déclaré (avant cette action).", nom_e));
+                free(nom_e);
+                free(dans_ecran);
+                for (int q = 0; q < nb_autres; q++) free(autres_ecrans[q]);
+                return r;
+            }
+            if (rang == 0) dans_ecran = nom_e;
+            else if (nb_autres < 8) autres_ecrans[nb_autres++] = nom_e;
+            else free(nom_e);
+            fin = f2;
+            if (!suite) break;
+            debut_nom = ou + 3;
         }
-        fin = f2;
     }
     if (a->j[fin].type != J_DEUX_POINTS) {
         free(dans_ecran);
@@ -4277,6 +4327,23 @@ static Noeud *definition_action(Analyse *a, int colonne) {
     a->action_rend = rend_avant;
     int locaux = a->nb_locaux;
     sortir_formule(a, ctx);
+    /* les zones de « l'écran » qu'emploie le corps (2.55, 2.58) : chacune doit exister dans chaque écran nommé */
+    if (corps && dans_ecran && !a->echec) {
+        const char *ecrans[9];
+        int ne = 0;
+        ecrans[ne++] = dans_ecran;
+        for (int q = 0; q < nb_autres; q++) ecrans[ne++] = autres_ecrans[q];
+        if (!zones_dans_ecrans(a, corps, ecrans, ne)) { noeud_liberer(corps); corps = NULL; }
+    }
+    if (dans_ecran && nb_autres) {   /* les noms, pour l'imprimeur : « a␟b » */
+        for (int q = 0; q < nb_autres; q++) {
+            char *x = grym_formater("%s\x1f%s", dans_ecran, autres_ecrans[q]);
+            free(dans_ecran);
+            free(autres_ecrans[q]);
+            dans_ecran = x;
+        }
+    }
+    if (a->echec) { noeud_liberer(corps); corps = NULL; }
     if (!corps) { noeud_liberer(params); free(nom); free(dans_ecran); return NULL; }
     Noeud *n = noeud_creer(P_ACTION, tpour->ligne, tpour->colonne, tpour->debut);
     n->texte = nom;

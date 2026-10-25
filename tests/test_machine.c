@@ -2054,6 +2054,10 @@ int main(void) {
     PROG("Afficher 8:05 + 1 jour.", "~Une heure se décale de minutes ou d'heures, pas de jours.");
     PROG("Afficher 01.01.2026 + 3 minutes.", "~Des minutes s'ajoutent à une heure, pas à une date.");
     PROG("Afficher « 25:00 » en heure.", "~« 25:00 » n'est pas une heure : écris heures:minutes (14:30).");
+    /* 2.58 : une action pour plusieurs écrans ; une zone qui manque à l'un */
+    PROG("L'écran a montre :\n    un nom (texte).\nL'écran b montre :\n    un âge (nombre).\n"
+         "Pour remplir, dans l'écran a ou l'écran b :\n    L'âge de l'écran devient 3.",
+         "~L'écran « a » n'a pas de zone « âge »");
     /* 2.57 : une action qui rend ; appelée en phrase, sa valeur s'oublie ; « , qui donne » sur une action qui ne rend rien */
     PROG("Pour doubler un nombre :\n    Rendre nombre × 2.\nDoubler 3, qui donne le d.\nDoubler 4.\nDoubler le d, qui donne le d.\nAfficher le d.",
          "12");

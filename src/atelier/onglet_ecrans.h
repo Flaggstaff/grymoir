@@ -63,6 +63,7 @@ struct EcranLu {
     // le thème libre (2.13) : couleur et fond en « #RRGGBB » (vides : non écrits), chemin absolu de la police
     QString couleur_libre, fond, police;
     QString signature;   // chemin absolu de la signature (2.16), vide sinon
+    bool avec_partie = false;   // l'écran pose une partie (2.56) : il se modifie dans le code, pas ici
 };
 
 // Les écrans déclarés dans les fichiers .grym et .grymc du dossier, fichiers utilisés compris, chacun une fois.
@@ -128,8 +129,17 @@ signals:
     void ecran_vide();                                // « Nouvel écran vide »
     void geste(const std::function<QString(Geste *)> &faire);   // A4-c : une modification, que la fenêtre applique
 
+public:
+    QString dernier_refus;   // le dernier geste refusé (2.56), pour les essais
+
 protected:
     bool eventFilter(QObject *o, QEvent *e) override;
+
+public:
+    // un geste sur l'écran courant ; refusé, avec un mot, si l'écran pose une partie (2.56)
+    void proposer(const std::function<QString(Geste *)> &faire);
+
+protected:
 
 private:
     void dessiner();

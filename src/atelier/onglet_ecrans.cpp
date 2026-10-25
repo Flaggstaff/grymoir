@@ -3,6 +3,8 @@ extern "C" {
 #include "texte.h"
 }
 #include "onglet_ecrans.h"
+#include <QToolTip>
+#include <QCursor>
 #include "theme.h"
 
 #include <QPixmap>
@@ -178,8 +180,11 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                     continue;
                 }
                 if (n->type != P_ECRAN || vus.contains(cle)) continue;
+                if (n->op == 'P') continue;   // une partie (2.56) n'est pas un écran : elle se modifie dans le code
                 vus.insert(cle);
                 EcranLu e;
+                for (size_t q = 0; q < n->nb_enfants; q++)   // un élément écrit ailleurs que dans l'écran : venu d'une partie
+                    if (n->enfants[q]->debut < n->debut || n->enfants[q]->debut > n->fin) e.avec_partie = true;
                 e.nom = QString::fromUtf8(n->texte);
                 e.titre = n->texte2 ? QString::fromUtf8(n->texte2) : titre_du_nom(e.nom);
                 e.taille_titre = n->taille_titre;
@@ -632,7 +637,7 @@ void OngletEcrans::deposer(int source, int cible, int cote) {
     if (courant < 0 || source < 0 || cible < 0 || source == cible) return;
     const QString ecran = lus[courant].nom;
     element = -1;
-    emit geste([=](Geste *g) { return ecran_deplacer(dossier, ecran, source, cible, cote, g); });
+    proposer([=](Geste *g) { return ecran_deplacer(dossier, ecran, source, cible, cote, g); });
 }
 
 // La grille d'alignement (§ 5 octies) : un trait tous les 8 pixels, appuyé tous les 32, sur la toile du bloc libre,
@@ -791,7 +796,7 @@ QMenu *OngletEcrans::menu_du_titre() {
         x->setCheckable(true);
         x->setChecked(t == taille);
         connect(x, &QAction::triggered, this, [=] {
-            if (t != taille) emit geste([=](Geste *g) { return ecran_taille_titre(dossier, ecran, t, g); });
+            if (t != taille) proposer([=](Geste *g) { return ecran_taille_titre(dossier, ecran, t, g); });
         });
     }
     menu->addSeparator();
@@ -800,7 +805,7 @@ QMenu *OngletEcrans::menu_du_titre() {
         bool ok = false;
         const QString t = QInputDialog::getText(this, "Titre de l'écran", "Titre :", QLineEdit::Normal, actuel, &ok);
         if (!ok || t.trimmed().isEmpty() || t == actuel) return;
-        emit geste([=](Geste *g) { return ecran_titre(dossier, ecran, t.trimmed(), g); });
+        proposer([=](Geste *g) { return ecran_titre(dossier, ecran, t.trimmed(), g); });
     });
     return menu;
 }
@@ -861,7 +866,7 @@ QMenu *OngletEcrans::menu_des_champs(QPoint global, int sur) {
                 n.valeurs = c.valeurs;
                 n.facultatif = c.facultatif;
                 n.multiple = c.multiple;
-                emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
+                proposer([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
             });
         }
         if (en.champs.isEmpty()) sous->addAction("(aucun champ)")->setEnabled(false);
@@ -951,7 +956,7 @@ bool OngletEcrans::clavier(int t, Qt::KeyboardModifiers m) {
                 const QString ecran = lus[courant].nom;
                 const int k = element;
                 element = -1;
-                emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, q, g); });
+                proposer([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, q, g); });
                 return true;
             }
         if (m & Qt::AltModifier) r.setSize(QSize(qMax(8, r.width() + dx), qMax(8, r.height() + dy)));
@@ -972,7 +977,7 @@ bool OngletEcrans::clavier(int t, Qt::KeyboardModifiers m) {
 void OngletEcrans::placer(int k, int gauche, int haut, int largeur, int hauteur) {
     if (courant < 0 || k < 0 || k >= lus[courant].elements.size()) return;
     const QString ecran = lus[courant].nom;
-    emit geste([=](Geste *g) {
+    proposer([=](Geste *g) {
         int apres = k;
         const QString r = ecran_placer(dossier, ecran, k, gauche, haut, largeur, hauteur, g, &apres);
         if (r.isEmpty()) element = apres;   // l'élément reste choisi, à son nouveau rang
@@ -1027,7 +1032,7 @@ void OngletEcrans::liberer(int k, QRect nouveau) {
     for (QRect &r : places)
         if (!r.isNull()) r = QRect(aimanter(r.x() - coin.x()), aimanter(r.y() - coin.y()), qMax(8, aimanter(r.width())), qMax(8, aimanter(r.height())));
     element = -1;
-    emit geste([=](Geste *g) { return ecran_liberer(dossier, ecran, places, g); });
+    proposer([=](Geste *g) { return ecran_liberer(dossier, ecran, places, g); });
 }
 
 bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
@@ -1175,7 +1180,7 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
                 vise >= 0 && lus[courant].elements.value(k).sorte != ELEMENT_ONGLETS) {   // lâché sur un onglet : rangé dedans
                 const QString ecran = lus[courant].nom;
                 element = -1;
-                emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, vise, g); });
+                proposer([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, vise, g); });
                 return true;
             }
             {   // lâché dans la page ouverte d'un onglet : il y est rangé, là où on l'a lâché, et n'est plus que sur cet onglet
@@ -1192,7 +1197,7 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
                     }
                     const QString ecran = lus[courant].nom;
                     element = -1;
-                    emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, vise, g, ou); });
+                    proposer([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, vise, g, ou); });
                     return true;
                 }
             }
@@ -1209,7 +1214,7 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
                 const QPoint ou(aimanter(qMax(0, l.x())), aimanter(qMax(0, l.y())));
                 const QString ecran = lus[courant].nom;
                 element = -1;
-                emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, bloc, g, ou); });
+                proposer([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, bloc, g, ou); });
                 return true;
             }
             const QRect r = w->geometry();
@@ -1228,7 +1233,7 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
                     const QPoint ou(aimanter(qMax(0, l.x())), aimanter(qMax(0, l.y())));
                     const QString ecran = lus[courant].nom;
                     element = -1;
-                    emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, bloc, g, ou); });
+                    proposer([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, bloc, g, ou); });
                     return true;
                 }
             }
@@ -1277,7 +1282,7 @@ bool OngletEcrans::eventFilter(QObject *o, QEvent *ev) {
             n.sorte = ELEMENT_IMAGE;
             n.texte = image_dans_le_projet(dossier, f, &erreur);
             if (n.texte.isEmpty()) { QMessageBox::warning(this, "Nouvelle image", erreur); continue; }
-            emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans); });
+            proposer([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans); });
         }
         etat->setText(images.size() == 1 ? "Image ajoutée, copiée dans le projet." : "Images ajoutées, copiées dans le projet.");
         return true;
@@ -1451,7 +1456,7 @@ void OngletEcrans::editer() {
         }
         connect(appliquer, &QPushButton::clicked, this, [this, ecran, titre] {
             const QString t = titre->text();
-            emit geste([=](Geste *g) { return ecran_titre(dossier, ecran, t, g); });
+            proposer([=](Geste *g) { return ecran_titre(dossier, ecran, t, g); });
         });
     } else {
         const ElementLu &x = e.elements[element];
@@ -1463,7 +1468,7 @@ void OngletEcrans::editer() {
             const int ko = onglets_de(k);
             connect(tous, &QPushButton::clicked, this, [this, ecran, ko] {
                 element = -1;
-                emit geste([=](Geste *g) { return ecran_supprimer(dossier, ecran, ko, g); });
+                proposer([=](Geste *g) { return ecran_supprimer(dossier, ecran, ko, g); });
             });
         }
         if (const int ko = onglets_de(k); ko >= 0 && x.sorte != ELEMENT_ONGLET && x.sorte != ELEMENT_FIN_DE_BLOC) {
@@ -1486,7 +1491,7 @@ void OngletEcrans::editer() {
             connect(ranger, &QPushButton::clicked, this, [this, ecran, k, vers] {
                 const int vise = vers->currentData().toInt();
                 element = -1;
-                emit geste([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, vise, g); });
+                proposer([=](Geste *g) { return ecran_mettre_dans(dossier, ecran, k, vise, g); });
             });
         }
         if (x.sorte == ELEMENT_GROUPE || x.sorte == ELEMENT_ONGLET || x.sorte == ELEMENT_MENU) {   // son titre (§ 22.7, § 22.10, § 22.12)
@@ -1497,7 +1502,7 @@ void OngletEcrans::editer() {
                 ElementNouveau n;
                 n.sorte = sorte;
                 n.texte = titre->text();
-                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+                proposer([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
         } else if (x.sorte == ELEMENT_IMAGE && !x.source.isEmpty()) {   // « l'image de … » : la valeur, « visible si » (§ 22.8)
             auto *source = new QLineEdit(x.source);
@@ -1510,7 +1515,7 @@ void OngletEcrans::editer() {
                 n.sorte = ELEMENT_IMAGE;
                 n.source = source->text();
                 n.visible_si = visible->text();
-                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+                proposer([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
         } else if (x.sorte == ELEMENT_IMAGE) {   // « l'image « … » » : le fichier, « visible si » (§ 22.8)
             auto *chemin = new QLineEdit(x.texte);
@@ -1536,7 +1541,7 @@ void OngletEcrans::editer() {
                 n.sorte = ELEMENT_IMAGE;
                 n.texte = chemin->text();
                 n.visible_si = visible->text();
-                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+                proposer([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
         } else if (x.sorte == ELEMENT_BOUTON || x.sorte == ELEMENT_TEXTE) {
             auto *texte = new QLineEdit(x.texte);
@@ -1555,7 +1560,7 @@ void OngletEcrans::editer() {
                 n.texte = texte->text();
                 if (actif) n.actif_si = actif->text();
                 n.visible_si = visible->text();
-                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+                proposer([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
         } else if (x.sorte == ELEMENT_ZONE) {
             auto *nom = new QLineEdit(x.texte);
@@ -1633,7 +1638,7 @@ void OngletEcrans::editer() {
                 n.multiple = x.multiple;   // une zone multiple le reste
                 n.actif_si = actif->text();
                 n.visible_si = visible->text();
-                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+                proposer([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
         } else if (x.sorte == ELEMENT_GRAPHIQUE) {   // le regroupement, compter ou additionner, barres ou secteurs (§ 22.11)
             EntiteSchema en;
@@ -1693,7 +1698,7 @@ void OngletEcrans::editer() {
                 n.somme = valeur->currentData().toString();
                 n.secteurs = forme->currentIndex() == 1;
                 n.periode = periode->isEnabled() ? periode->currentData().toInt() : 0;
-                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+                proposer([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
         } else if (x.sorte == ELEMENT_LISTE) {
             EntiteSchema en;
@@ -1722,7 +1727,7 @@ void OngletEcrans::editer() {
                 n.decroissant = decroissant->isChecked();
                 for (int r = 0; r < colonnes->count(); r++)
                     if (colonnes->item(r)->checkState() == Qt::Checked) n.colonnes << colonnes->item(r)->text();
-                emit geste([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
+                proposer([=](Geste *g) { return ecran_modifier(dossier, ecran, k, n, g); });
             });
         } else {   // un bloc : seulement le retirer
             appliquer->hide();
@@ -1758,7 +1763,7 @@ void OngletEcrans::editer() {
             connect(grouper, &QPushButton::clicked, this, [this, ecran, k] {
                 bool ok = false;
                 const QString t = QInputDialog::getText(this, "Grouper", "Titre du groupe (« Adresse ») :", QLineEdit::Normal, "", &ok);
-                if (ok) emit geste([=](Geste *g) { return ecran_grouper(dossier, ecran, k, t, g); });
+                if (ok) proposer([=](Geste *g) { return ecran_grouper(dossier, ecran, k, t, g); });
             });
         }
     }
@@ -1783,7 +1788,7 @@ void OngletEcrans::supprimer() {
                                                         + "\n\nLe supprimer ?") != QMessageBox::Yes)
         return;
     element = -1;
-    emit geste([=](Geste *g) { return ecran_supprimer(dossier, ecran, k, g); });
+    proposer([=](Geste *g) { return ecran_supprimer(dossier, ecran, k, g); });
 }
 
 void OngletEcrans::ajouter(int sorte) {
@@ -1794,11 +1799,11 @@ void OngletEcrans::ajouter(int sorte) {
     const QPoint ou = dans_clic >= -1 ? ou_clic : QPoint(-1, -1);
     dans_clic = -2;
     if (sorte == ELEMENT_MENU) {   // un menu en tête de l'écran, avec un élément et son événement (§ 22.12)
-        emit geste([=](Geste *g) { return ecran_ajouter_menu(dossier, ecran, g); });
+        proposer([=](Geste *g) { return ecran_ajouter_menu(dossier, ecran, g); });
         return;
     }
     if (sorte == ELEMENT_ONGLETS) {   // deux onglets à renommer, un texte dans chacun (§ 22.10)
-        emit geste([=](Geste *g) { return ecran_ajouter_onglets(dossier, ecran, g); });
+        proposer([=](Geste *g) { return ecran_ajouter_onglets(dossier, ecran, g); });
         return;
     }
     ElementNouveau n;
@@ -1818,7 +1823,7 @@ void OngletEcrans::ajouter(int sorte) {
         n.multiple = true;
         n.texte = QInputDialog::getText(this, "Choix multiples", "Nom, au pluriel :", QLineEdit::Normal, pluriel, &ok);
         if (!ok || n.texte.trimmed().isEmpty()) return;
-        emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
+        proposer([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
         return;
     }
     if (sorte == FICHIER_PALETTE || sorte == SON_PALETTE) {   // une zone de fichier, d'image ou de son (§ 22.1, § 15.7)
@@ -1836,7 +1841,7 @@ void OngletEcrans::ajouter(int sorte) {
                                         n.type == "image" ? "photo" : n.type == "son" ? "mémo" : "contrat", &ok);
         if (!ok || n.texte.trimmed().isEmpty()) return;
         if (n.type != "son") {
-            emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
+            proposer([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
             return;
         }
         // un son : sa transcription juste dessous, sur plusieurs lignes, une zone à part pour que chacune garde sa taille
@@ -1857,7 +1862,7 @@ void OngletEcrans::ajouter(int sorte) {
                 break;
             }
         const QPoint dessous = ou.isNull() ? ou : ou + QPoint(0, 56);
-        emit geste([=](Geste *g) {
+        proposer([=](Geste *g) {
             const QString r = ecran_ajouter(dossier, ecran, n, g, dans, ou);
             if (!r.isEmpty()) return r;
             Geste second;   // le premier geste garde le programme d'avant les deux ajouts
@@ -1871,7 +1876,7 @@ void OngletEcrans::ajouter(int sorte) {
         n.interrupteur = true;
         n.texte = QInputDialog::getText(this, "Nouvel interrupteur", "Nom (« actif », « payée ») :", QLineEdit::Normal, "", &ok);
         if (!ok || n.texte.trimmed().isEmpty()) return;
-        emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
+        proposer([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
         return;
     }
     if (sorte == ELEMENT_IMAGE) {   // un fichier du projet, ou une valeur (§ 22.8)
@@ -1882,7 +1887,7 @@ void OngletEcrans::ajouter(int sorte) {
             n.source = QInputDialog::getText(this, "Nouvelle image", "Image de (« le portrait du compositeur choisi de l'écran ») :",
                                              QLineEdit::Normal, "", &ok);
             if (!ok) return;
-            emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
+            proposer([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
             return;
         }
     }
@@ -1928,7 +1933,18 @@ void OngletEcrans::ajouter(int sorte) {
         n.texte = QInputDialog::getItem(this, "Nouvelle liste", "Entité :", entites, 0, false, &ok);
     }
     if (!ok) return;
-    emit geste([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
+    proposer([=](Geste *g) { return ecran_ajouter(dossier, ecran, n, g, dans, ou); });
 }
 
 QString OngletEcrans::proprietes() const { return panneau->toPlainText(); }
+
+void OngletEcrans::proposer(const std::function<QString(Geste *)> &faire) {
+    if (courant >= 0 && courant < lus.size() && lus[courant].avec_partie) {
+        dernier_refus = QString::fromUtf8("Cet écran pose une partie : il se modifie dans le code (onglet Code), "
+                                          "pour que la partie reste la même partout.");
+        QToolTip::showText(QCursor::pos(), dernier_refus, this);
+        dessiner();   // l'aperçu revient à ce que dit le code
+        return;
+    }
+    emit geste(faire);
+}

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.57 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.58 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1882,6 +1882,7 @@ Le document de quittance montre :
 
   `la partie « … »` s'écrit seule sur sa ligne, à la place d'un élément, avec sa virgule ou son point. Ses éléments se lisent là, dans l'écran qui l'accueille : ses zones sont les siennes, `l'écran` est le sien, et une erreur montre la ligne de la partie. La partie se déclare dans le même fichier, avant ou après ses usages ; une partie inconnue ou qui s'utilise elle-même est refusée. `grym formater` et la forme compacte (`_partie « en-tête du cabinet »`, la déclaration `_partie « … »` … `_fin`) écrivent la partie, jamais son contenu déplié.
 - *(2.57)* **Une action peut rendre un objet ou une valeur** : `Rendre la q.` dans son corps. On la reçoit à l'appel : `Faire la quittance du patient et le total et le moyen, qui donne la q.` crée la variable `q`, ou la remplace si elle existe. Appelée en phrase seule, ce qu'elle rend s'oublie ; si elle finit sans rendre, elle donne absent. Un calcul, lui, ne conserve toujours rien : il peut être relu plusieurs fois, dans le texte d'un écran par exemple ; l'action qui crée, conserve et rend est la façon d'écrire une fois une création répétée. `, qui donne` sur une action qui ne rend rien : « « dire » ne rend rien : écris « Rendre … » dans l'action. » Forme compacte : `faire_la_quittance_de(p ; total ; moyen) _qui_donne _la q`.
+- *(2.58)* **Une action pour plusieurs écrans** : `Pour remplir le nom avec un texte, dans l'écran d'inscription ou l'écran du patient :`. `l'écran` y désigne celui qui l'appelle. Chaque zone qu'elle lit ou écrit doit exister dans chacun des écrans nommés : « L'écran « a » n'a pas de zone « âge » : l'action y travaille aussi. » Forme compacte : `… _dans_écran d_inscription _ou du_patient`. Une action dans un seul écran est vérifiée de même.
 - *(2.55)* Une action peut travailler dans un écran : `Pour remplir la fiche avec un patient, dans l'écran du patient :`. Dans son corps, `l'écran` désigne cet écran, comme dans ses événements ; elle s'appelle depuis l'un d'eux (ou depuis une action du même écran). L'écran doit être déclaré avant l'action. Forme compacte : `_action remplir_la_fiche_avec(_un patient) _dans_écran du_patient`.
 - `Quand on choisit un compositeur` nomme la ligne `compositeur` dans son corps. `le compositeur choisi de l'écran` désigne la ligne sélectionnée, ou `absent`. `le pays de l'écran` lit une zone ; `Le pays de l'écran devient … .` la modifie. `de l'écran` hors d'un événement est une erreur.
 - Un bouton sans événement, un événement qui cite un bouton ou une zone inexistants, deux listes de la même entité dans un écran : erreurs d'analyse. La fermeture ne se refuse pas.
@@ -2429,3 +2430,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.55 | 2026-10-24 | § 22 : une action « , dans l'écran X » lit et écrit les zones de cet écran, comme ses événements |
 | 2.56 | 2026-10-24 | § 22 : les parties (`La partie « X » montre :`, `la partie « X »` dans un écran ou un document) |
 | 2.57 | 2026-10-24 | § 9 : une action peut rendre (`Rendre …`), reçu à l'appel par `, qui donne la q` |
+| 2.58 | 2026-10-24 | § 22 : une action « , dans l'écran a ou l'écran b » ; ses zones vérifiées dans chaque écran nommé |

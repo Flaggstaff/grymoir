@@ -2530,7 +2530,13 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                     mot(r, "dans", &r->e[ferme + 1]);
                     emettre(r, J_ELISION, "l", &r->e[ferme + 1], 1);
                     mot(r, "écran", &r->e[ferme + 1]);
-                    for (size_t q = ferme + 2; q < f; q++) copier(r, &r->e[q]);
+                    for (size_t q = ferme + 2; q < f; q++) {
+                        if (est_cle(&r->e[q], "ou")) {   /* _ou des_soins → ou l'écran des soins (2.58) */
+                            mot(r, "ou", &r->e[q]);
+                            emettre(r, J_ELISION, "l", &r->e[q], 1);
+                            mot(r, "écran", &r->e[q]);
+                        } else copier(r, &r->e[q]);
+                    }
                     emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
                     ouvrir(r, O_FORMULE, prof, t);
                     return;

@@ -2341,6 +2341,33 @@ int main(int argc, char **argv) {
         VERIFIER(accent_de_l_apercu && Theme::courant().accent() == "bleue");
     }
 
+    // Les parties dans l'onglet Écrans (2.56) : la partie n'est pas un écran de la liste ; un écran qui en pose une se modifie
+    // dans le code : un geste de l'aperçu y est refusé, avec un mot
+    {
+        QTemporaryDir dossier;
+        QFile f(dossier.filePath("p.grym"));
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write("La partie « tête » montre :\n    le texte « Cabinet ».\n"
+                "L'écran a montre :\n    la partie « tête »,\n    un bouton « OK ».\n"
+                "L'écran b montre :\n    un bouton « OK ».\n"
+                "Quand on clique sur « OK » dans l'écran a :\n    Fermer l'écran.\n"
+                "Quand on clique sur « OK » dans l'écran b :\n    Fermer l'écran.\nOuvrir l'écran a.\n");
+        f.close();
+        const QVector<EcranLu> lus = lire_ecrans(dossier.path());
+        VERIFIER(lus.size() == 2);
+        for (const EcranLu &x : lus) VERIFIER(x.avec_partie == (x.nom == "a"));
+        OngletEcrans o;
+        o.montrer(dossier.path());
+        int gestes = 0;
+        QObject::connect(&o, &OngletEcrans::geste, &o, [&](const std::function<QString(Geste *)> &) { gestes++; });
+        o.choisir_ecran("a");
+        o.proposer([](Geste *) { return QString(); });
+        VERIFIER(gestes == 0 && !o.dernier_refus.isEmpty());
+        o.choisir_ecran("b");
+        o.proposer([](Geste *) { return QString(); });
+        VERIFIER(gestes == 1);
+    }
+
     // A3-b dans la fenêtre : une zone, sa valeur de départ, sa validation, la liste qui suit, la ligne choisie
     {
         QTemporaryDir dossier;

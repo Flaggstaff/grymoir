@@ -1,0 +1,27 @@
+L'écran a montre :
+    un nom (texte), facultatif,
+    un bouton « Remplir »,
+    un bouton « Fermer ».
+
+L'écran b montre :
+    un nom (texte), facultatif,
+    un âge (nombre), facultatif,
+    un bouton « Remplir »,
+    un bouton « Fermer ».
+
+Pour remplir le nom avec un texte, dans l'écran a ou l'écran b :
+    Le nom de l'écran devient texte.
+
+Quand on clique sur « Remplir » dans l'écran a :
+    Remplir le nom avec « A ».
+
+Quand on clique sur « Remplir » dans l'écran b :
+    Remplir le nom avec « B ».
+
+Quand on clique sur « Fermer » dans l'écran a :
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran b :
+    Fermer l'écran.
+
+Ouvrir l'écran a.

@@ -1827,6 +1827,21 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* une action pour deux écrans (2.58) : « , dans l'écran a ou l'écran b » ; elle remplit la zone de celui qui l'appelle */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&z0=&clic=1"), get("/"), evenement("q=2&z0=A&clic=2"), evenement("q=3&z0=&clic=1"), get("/"));
+        servir("L'écran a montre :\n    un nom (texte), facultatif,\n    un bouton « Remplir »,\n    un bouton « Vers b ».\n"
+               "L'écran b montre :\n    un nom (texte), facultatif,\n    un bouton « Remplir »,\n    un bouton « Fermer ».\n"
+               "Pour remplir le nom avec un texte, dans l'écran a ou l'écran b :\n    Le nom de l'écran devient texte.\n"
+               "Quand on clique sur « Remplir » dans l'écran a :\n    Remplir le nom avec « A ».\n"
+               "Quand on clique sur « Vers b » dans l'écran a :\n    Ouvrir l'écran b.\n"
+               "Quand on clique sur « Remplir » dans l'écran b :\n    Remplir le nom avec « B ».\n"
+               "Quand on clique sur « Fermer » dans l'écran b :\n    Fermer l'écran.\nOuvrir l'écran a.\n", &sc);
+        CONTIENT(sc.reponses[1], "value=\"A\"");
+        CONTIENT(sc.reponses[4], "value=\"B\"");
+        liberer(&sc);
+    }
+
     {   /* une action qui travaille dans un écran (2.55) : « Pour remplir …, dans l'écran x : » lit et écrit ses zones ;
            ailleurs, « l'écran » reste refusé */
         memset(&sc, 0, sizeof sc);

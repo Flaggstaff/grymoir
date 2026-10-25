@@ -2059,7 +2059,17 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             aj(im, "(");
             parametres(im, n->enfants[0], 0);
             aj(im, ")");
-            if (n->texte3) { aj(im, " _dans_écran "); ecrire_nom(im, n->texte3, 0); }   /* 2.55 */
+            if (n->texte3) {   /* 2.55 ; « _ou » pour chaque autre écran (2.58) */
+                aj(im, " _dans_écran ");
+                char *noms = grym_dupliquer(n->texte3);
+                for (char *p = noms, *suite; p; p = suite) {
+                    suite = strchr(p, '\x1f');
+                    if (suite) *suite++ = '\0';
+                    if (p != noms) aj(im, " _ou ");
+                    ecrire_nom(im, p, 0);
+                }
+                free(noms);
+            }
             aj(im, "\n");
             bloc(im, n->enfants[1], niveau + 1);
             fin_compacte(im, niveau);
@@ -2075,7 +2085,16 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 ecrire_nom(im, n->texte, 0);
             }
             parametres(im, n->enfants[0], finit_de ? 2 : 0);
-            if (n->texte3) { aj(im, ", dans l'écran "); aj_sigles(im, n->texte3); }   /* 2.55 */
+            if (n->texte3) {   /* 2.55 ; « ou l'écran … » pour chaque autre écran (2.58) */
+                char *noms = grym_dupliquer(n->texte3);
+                for (char *p = noms, *suite; p; p = suite) {
+                    suite = strchr(p, '\x1f');
+                    if (suite) *suite++ = '\0';
+                    aj(im, p == noms ? ", dans l'écran " : " ou l'écran ");
+                    aj_sigles(im, p);
+                }
+                free(noms);
+            }
             aj(im, " :\n");
             bloc(im, n->enfants[1], niveau + 1);
         }
