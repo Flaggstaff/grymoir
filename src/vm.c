@@ -4373,8 +4373,18 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     }
     if (entites) {
         char *erreur = NULL;
+        const int premiere_ouverture = !m->base;
         if (!m->base) m->base = ouvrir_la_base(m, module, &erreur);
-        int pret = m->base && base_commencer(m->base, &erreur);
+        int pret = m->base != NULL;
+        /* un programme mis à jour qui va changer les tables d'une base qui a des données : d'abord une copie du fichier,
+         * à côté, que rien n'efface ; sans elle, rien ne change (25 octobre 2026) */
+        if (pret && premiere_ouverture && !getenv("GRYM_SANS_COPIE_DE_MISE_A_JOUR")
+            && base_schema_change(m->base, m->classes, m->nb_classes)) {
+            char *copie = base_copie_avant_mise_a_jour(m->base, &erreur);
+            pret = copie != NULL;
+            free(copie);
+        }
+        pret = pret && base_commencer(m->base, &erreur);
         if (pret) pret = base_renommer_entites(m->base, m->classes, m->nb_classes, &erreur);   /* § 16.7 */
         for (size_t i = m->nb_classes - module->nb_classes; pret && i < m->nb_classes; i++)
             pret = base_preparer(m->base, m->classes[i], &erreur);

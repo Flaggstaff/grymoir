@@ -80,6 +80,11 @@ void base_rapport(Base *b, Chaine *rapport);
 
 /* Crée la table d'une entité, ou vérifie que la base la connaît sous la même définition. */
 int base_preparer(Base *b, const ClasseVM *c, char **erreur);
+/* La mise à jour d'un programme (25 octobre 2026) : vrai si la base a des données et que ses tables ne sont plus celles
+ * du programme (une migration va suivre) ; puis une copie du fichier (et de ses clés), « … avant mise à jour AAAA-MM-JJ
+ * HHMM.grymd », à côté, avant tout changement : son chemin (malloc), ou NULL avec *erreur. */
+int base_schema_change(Base *b, ClasseVM *const *classes, size_t n);
+char *base_copie_avant_mise_a_jour(Base *b, char **erreur);
 /* Les entités renommées (« Un patient, conservé, anciennement « client », a : », grammaire, § 16.7) : leur table,
  * leurs liaisons, leurs index, leurs objets et les définitions qui les désignent prennent le nouveau nom. Avant
  * base_preparer, pour toutes les classes : une entité peut en désigner une autre, déclarée plus loin. */

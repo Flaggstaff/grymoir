@@ -3571,3 +3571,70 @@ unsigned char *base_copie(Base *b, size_t *taille, char **erreur) {
     *taille = (size_t)n;
     return r;
 }
+
+/* ---- La copie avant une mise à jour (25 octobre 2026) ---- */
+
+int base_schema_change(Base *b, ClasseVM *const *classes, size_t n) {
+    sqlite3_stmt *st = NULL;
+    int change = 0, donnees = 0;
+    if (preparer(b, "SELECT entite, definition FROM grym_schema", &st) != SQLITE_OK) return 0;
+    while (sqlite3_step(st) == SQLITE_ROW) {
+        const char *entite = (const char *)sqlite3_column_text(st, 0), *ecrite = (const char *)sqlite3_column_text(st, 1);
+        const ClasseVM *c = NULL;
+        for (size_t k = 0; k < n && !c; k++) if (classes[k]->conserve && !strcmp(classes[k]->nom, entite)) c = classes[k];
+        if (!c) { change = 1; donnees = 1; continue; }   /* une entité que le programme ne nomme plus (ou plus ainsi) */
+        char *def = definition(c);
+        if (strcmp(def, ecrite) != 0) change = 1;
+        free(def);
+        if (!donnees) donnees = compter_lignes(b, c) > 0;
+    }
+    rendre(b, st);
+    return change && donnees;   /* une base sans données : rien à protéger */
+}
+
+static int copier_fichier(const char *source, const char *cible) {
+    FILE *e = grym_fopen(source, "rb");
+    if (!e) return 0;
+    FILE *s = grym_fopen(cible, "wb");
+    if (!s) { fclose(e); return 0; }
+    char tampon[65536];
+    size_t lu;
+    int ok = 1;
+    while ((lu = fread(tampon, 1, sizeof tampon, e)) > 0) ok &= fwrite(tampon, 1, lu, s) == lu;
+    ok &= !ferror(e);
+    fclose(e);
+    ok &= fclose(s) == 0;
+    return ok;
+}
+
+char *base_copie_avant_mise_a_jour(Base *b, char **erreur) {
+    /* « Cabinet.grymd » → « Cabinet avant mise à jour 2026-10-25 0812.grymd », à côté ; ses clés aussi */
+    const time_t t = time(NULL);
+    const struct tm l = *localtime(&t);
+    const char *point = strrchr(b->chemin, '.');
+    const char *barre = strrchr(b->chemin, '/');
+    const size_t radical = point && (!barre || point > barre) ? (size_t)(point - b->chemin) : strlen(b->chemin);
+    char *copie = grym_formater("%.*s avant mise à jour %04d-%02d-%02d %02d%02d%s", (int)radical, b->chemin,
+                                l.tm_year + 1900, l.tm_mon + 1, l.tm_mday, l.tm_hour, l.tm_min, b->chemin + radical);
+    if (!copier_fichier(b->chemin, copie)) {
+        *erreur = grym_formater("La copie de sécurité avant la mise à jour ne s'écrit pas : « %s ». La base n'est pas touchée.", copie);
+        free(copie);
+        return NULL;
+    }
+    char *cles = grym_formater("%s.clés", b->chemin);
+    FILE *f = grym_fopen(cles, "rb");
+    if (f) {
+        fclose(f);
+        char *copie_cles = grym_formater("%s.clés", copie);
+        const int ok = copier_fichier(cles, copie_cles);
+        free(copie_cles);
+        if (!ok) {
+            *erreur = grym_formater("Les clés de la copie de sécurité ne s'écrivent pas : « %s.clés ».", copie);
+            free(cles);
+            free(copie);
+            return NULL;
+        }
+    }
+    free(cles);
+    return copie;
+}

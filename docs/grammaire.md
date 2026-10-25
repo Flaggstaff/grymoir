@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.58 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.59 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2431,3 +2431,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.56 | 2026-10-24 | § 22 : les parties (`La partie « X » montre :`, `la partie « X »` dans un écran ou un document) |
 | 2.57 | 2026-10-24 | § 9 : une action peut rendre (`Rendre …`), reçu à l'appel par `, qui donne la q` |
 | 2.58 | 2026-10-24 | § 22 : une action « , dans l'écran a ou l'écran b » ; ses zones vérifiées dans chaque écran nommé |
+| 2.59 | 2026-10-25 | § 16.7 : un programme mis à jour qui va changer les tables d'une base qui a des données en fait d'abord une copie, « … avant mise à jour AAAA-MM-JJ HHMM.grymd » (et ses clés), à côté, que rien n'efface ; sans elle, rien ne change |

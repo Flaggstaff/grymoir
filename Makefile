@@ -82,6 +82,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	./test_guide
 	sh tests/formes
 	sh tests/praxis-versions
+	sh tests/mise-a-jour
 	sh tests/balayer
 
 clean:

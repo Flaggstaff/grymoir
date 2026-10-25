@@ -1,0 +1,30 @@
+#!/bin/sh
+# La mise à jour d'un programme (25 octobre 2026) : un programme qui change les tables d'une base qui a des données en
+# fait d'abord une copie, « … avant mise à jour AAAA-MM-JJ HHMM.grymd », une seule fois ; l'ancien programme la rouvre
+# telle qu'elle était. Une base vide, ou un programme qui ne change rien, ne laisse aucune copie.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+printf 'Une note, conservée, a :\n    un texte (texte).\nAfficher le nombre de notes conservées.\n' > p.grym
+"$grym" lancer p.grym > /dev/null 2>&1 < /dev/null
+printf 'Une note, conservée, a :\n    un texte (texte),\n    une date (date), facultative.\nAfficher 1.\n' > p.grym
+"$grym" lancer p.grym > /dev/null 2>&1 < /dev/null
+verifier "$(ls | grep -c 'avant mise à jour')" 0 "une base vide n'a pas de copie"
+printf 'Une note, conservée, a :\n    un texte (texte).\nLa n vaut une nouvelle note :\n    Le texte vaut « a ».\nConserver la n.\nAfficher le nombre de notes conservées.\n' > q.grym
+"$grym" lancer q.grym > /dev/null 2>&1 < /dev/null
+"$grym" lancer q.grym > /dev/null 2>&1 < /dev/null
+verifier "$(ls | grep -c 'q avant mise à jour')" 0 "le même programme ne copie rien"
+printf 'Une note, conservée, a :\n    un texte (texte),\n    une date (date), facultative.\nAfficher le nombre de notes conservées.\n' > q.grym
+verifier "$("$grym" lancer q.grym 2>&1 < /dev/null)" 2 "le programme mis à jour garde les notes"
+verifier "$(ls | grep -c 'q avant mise à jour .*\.grymd$')" 1 "une copie avant la mise à jour"
+"$grym" lancer q.grym > /dev/null 2>&1 < /dev/null
+verifier "$(ls | grep -c 'q avant mise à jour .*\.grymd$')" 1 "une seule copie : la base est déjà à jour"
+cp q\ avant\ mise\ à\ jour*.grymd ancien.grymd
+printf 'Une note, conservée, a :\n    un texte (texte).\nAfficher le nombre de notes conservées.\n' > ancien.grym
+verifier "$("$grym" lancer ancien.grym 2>&1 < /dev/null)" 2 "l'ancien programme rouvre la copie"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]
