@@ -1860,9 +1860,9 @@ int main(void) {
     {   /* le nom et le prénom (24 octobre 2026) : saisis à part, réunis dans la clé « Prénom Nom » ; un homonyme est refusé */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Patients"), evenement("q=3&clic=4"),
-                 evenement("q=4&z1=Thi%C3%A9mard&z2=Alain&z3=Rue+de+Gruy%C3%A8re&z4=65&z5=&z7=1630&z8=Bulle&z6=Suisse&z19=&clic=22"),
+                 evenement("q=4&z1=Thi%C3%A9mard&z2=Alain&z3=Rue+de+Gruy%C3%A8re&z4=65&z5=&z7=1630&z8=Bulle&z6=Suisse&z20=&clic=23"),
                  get("/"), evenement("q=5&clic=4"),
-                 evenement("q=6&z1=Thi%C3%A9mard&z2=Alain&z3=&z4=&z5=&z7=&z8=&z6=Suisse&z19=&clic=22"), get("/"));
+                 evenement("q=6&z1=Thi%C3%A9mard&z2=Alain&z3=&z4=&z5=&z7=&z8=&z6=Suisse&z20=&clic=23"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_prenom.grymd", &sc);
         CONTIENT(sc.reponses[4], ">Alain Thiémard</button>");
         CONTIENT(sc.reponses[7], "Il y a déjà un patient « Alain Thiémard »");
@@ -2055,7 +2055,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=6"), evenement("q=3&clic=5"), get("/"), evenement("q=4&s0=0&clic=6"), get("/"),
                  evenement("q=5&clic=7"), evenement("q=6&clic=12"), evenement("q=7&clic=4"), evenement("q=8&choix=2.0"),
-                 evenement("q=9&choix=23.0"), get("/"));
+                 evenement("q=9&choix=24.0"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet14.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>À encaisser</h1>");
         CONTIENT(sc.reponses[3], ">Facture</button>");
@@ -2064,7 +2064,7 @@ int main(void) {
         liberer(&sc);
         remove("_essai_cabinet14.grymd");
         memset(&sc, 0, sizeof sc);   /* la séance offerte de Marc Dupraz, il y a quinze jours (après celle, prévue, du jour) */
-        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"), evenement("q=3&choix=2.4"), evenement("q=4&choix=23.1"), get("/"),
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"), evenement("q=3&choix=2.4"), evenement("q=4&choix=24.1"), get("/"),
                  evenement("q=5&clic=17"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet15.grymd", &sc);
         CONTIENT(sc.reponses[4], "value=\"Marc Dupraz\" selected");
@@ -2123,7 +2123,7 @@ int main(void) {
     {   /* Cabinet : tout se supprime et se rétablit : un patient supprimé va dans la corbeille avec ses séances ;
            rétabli depuis la Configuration, il revient avec elles (20 octobre 2026) */
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"), evenement("q=3&choix=2.0"), get("/"), evenement("q=4&clic=29"), get("/"),
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"), evenement("q=3&choix=2.0"), get("/"), evenement("q=4&clic=30"), get("/"),
                  evenement("q=5&fermer=1"), evenement("q=6&clic=7"), evenement("q=7&clic=3"), get("/"),
                  evenement("q=8&s1=0&clic=R%C3%A9tablir+le+patient"), get("/"), evenement("q=9&clic=Fermer"), evenement("q=10&fermer=1"),
                  evenement("q=11&clic=4"), get("/"));
@@ -2300,11 +2300,11 @@ int main(void) {
     {   /* Cabinet : la page d'une séance (commentaire tapé, enregistré) ; son patient s'ouvre sur sa page, jamais sur la
            fiche déduite ; la page d'un soin (19 octobre 2026) */
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"), evenement("q=3&choix=2.0"), evenement("q=4&choix=23.0"), get("/"),
-                 evenement("q=5&clic=2"), get("/"), evenement("q=6&clic=27"),
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"), evenement("q=3&choix=2.0"), evenement("q=4&choix=24.0"), get("/"),
+                 evenement("q=5&clic=2"), get("/"), evenement("q=6&clic=28"),
                  evenement("q=7&z1=Anne+Rochat&z3=EPI&z5=09%3A00&z6=60&z7=70&z8=faite&z9=Twint"
                            "&z12=Nuque+d%C3%A9tendue&clic=16"),
-                 evenement("q=8&choix=23.0"), get("/"));
+                 evenement("q=8&choix=24.0"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet5.grymd", &sc);
         CONTIENT(sc.reponses[4], "<h1>Séance</h1>");
         CONTIENT(sc.reponses[4], ">Commentaire dicté</label>");
@@ -2330,8 +2330,8 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"), evenement("q=3&choix=2.0"), get("/"),
                  evenement("q=4&z1=Anne+Rochat&z9=079+000+00+01&z10=&z11=&z3=Route+de+Riaz&z4=12a&z5=&z7=1630&z8=Bulle"
-                           "&z6=Suisse&z19=Migraines+depuis+2019&clic=25"),
-                 evenement("q=5&choix=2.0"), get("/"), evenement("q=6&clic=26"), get("/"));
+                           "&z6=Suisse&z20=Migraines+depuis+2019&clic=26"),
+                 evenement("q=5&choix=2.0"), get("/"), evenement("q=6&clic=27"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet4.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>Patient</h1>");
         CONTIENT(sc.reponses[3], "value=\"Anne Rochat\"");
@@ -2349,7 +2349,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=0"), evenement("q=3&clic=3"), get("/"),
                  evenement("q=4&z1=Zo%C3%A9+Neuve&z9=079+000+00+09&z10=&z11=&z3=Rue+du+Pont&z4=1&z5=&z7=1630&z8=Bulle"
-                           "&z6=Suisse&z19=Douleurs+lombaires&clic=22"), get("/"));
+                           "&z6=Suisse&z20=Douleurs+lombaires&clic=23"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet2.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>Nouveau patient</h1>");
         CONTIENT(sc.reponses[3], ">Anamnèse</label>");
@@ -2364,7 +2364,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         /* l'écran d'inscription : le pays garde sa valeur de départ, « Suisse » */
         char *formulaire = evenement("q=4&z1=Zo%C3%A9+Essai&z9=079+000+00+00&z10=&z11=&z3=Route+de+Riaz&z4=12a&z5=&z7=1630"
-                                     "&z8=Bulle&z6=Suisse&z19=&clic=22");
+                                     "&z8=Bulle&z6=Suisse&z20=&clic=23");
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"),                                       /* 0 : Clients */
                  evenement("q=3&clic=4"),                                       /* 1 : Nouveau client */
                  get("/"),                                                      /* 2 : l'écran d'inscription */
@@ -2402,10 +2402,10 @@ int main(void) {
            la première au tarif, la suivante au tarif réduit, avec leur durée */
         CONTIENT(sc.reponses[17], "value=\"Route de Riaz\"");
         CONTIENT(sc.reponses[17], ">Anamnèse</label>");
-        CONTIENT(sc.reponses[17], "value=\"23.0\">08.10.2026</button></td><td>14:30</td><td>EPI</td><td>50</td><td>70</td>");
-        CONTIENT(sc.reponses[17], "value=\"23.1\">01.10.2026</button></td><td></td><td>EPI</td><td></td><td>130</td>");
+        CONTIENT(sc.reponses[17], "value=\"24.0\">08.10.2026</button></td><td>14:30</td><td>EPI</td><td>50</td><td>70</td>");
+        CONTIENT(sc.reponses[17], "value=\"24.1\">01.10.2026</button></td><td></td><td>EPI</td><td></td><td>130</td>");
         CONTIENT(sc.reponses[17], "<span class=\"etiquette etiquette-o\">à payer</span>");
-        NE_CONTIENT_PAS(sc.reponses[17], "value=\"23.2\"");
+        NE_CONTIENT_PAS(sc.reponses[17], "value=\"24.2\"");
         CONTIENT(sc.reponses[17], ">Nouvelle séance</button>");
         NE_CONTIENT_PAS(sc.reponses[17], "class=\"erreur\"");
         liberer(&sc);

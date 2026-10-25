@@ -173,6 +173,7 @@ L'écran d'inscription, « Nouveau patient », montre :
         une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base », à 276 de la gauche et 504 du haut, large de 260,
         un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 576 du haut, large de 260,
         un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », à 276 de la gauche et 576 du haut, large de 260,
+        un rappel par SMS (vrai ou faux), facultatif, avec l'indication « Le patient accepte un SMS la veille de ses séances », à 0 de la gauche et 648 du haut, large de 260,
         une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
         une anamnèse (texte), facultative, sur plusieurs lignes, transcrite de la dictée, à 552 de la gauche et 72 du haut, large de 520, haute de 340,
     côte à côte :
@@ -200,6 +201,7 @@ L'écran du patient, « Patient », montre :
         une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base », à 276 de la gauche et 504 du haut, large de 260,
         un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 576 du haut, large de 260,
         un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », à 276 de la gauche et 576 du haut, large de 260,
+        un rappel par SMS (vrai ou faux), facultatif, avec l'indication « Le patient accepte un SMS la veille de ses séances », à 0 de la gauche et 648 du haut, large de 260,
         une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
         un ajout (texte), facultatif, sur plusieurs lignes, transcrit de la dictée, à 552 de la gauche et 72 du haut, large de 520, haut de 112,
         une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 204 du haut, large de 520, haute de 208,
@@ -1242,6 +1244,7 @@ Quand on ouvre l'écran du patient :
     Sinon, le nom de l'écran devient le nom du p.
     Le prénom de l'écran devient le prénom du p.
     Le téléphone de l'écran devient le téléphone du p.
+    Le rappel par SMS de l'écran devient l'accord de rappel du p.
     Le courriel de l'écran devient le courriel du p.
     La date de naissance de l'écran devient la date de naissance du p.
     La rue de l'écran devient la rue du p.
@@ -1286,12 +1289,24 @@ Pour noter un patient, dans l'écran d'inscription ou l'écran du patient :
     L'assureur complémentaire du patient devient l'assureur complémentaire de l'écran.
     Le numéro d'assuré complémentaire du patient devient le numéro d'assuré complémentaire de l'écran.
     La facturation complémentaire du patient devient la facturation complémentaire de l'écran.
+    Le rappel par SMS du patient devient faux.
+    Si le rappel par SMS de l'écran est présent :
+        Si le rappel par SMS de l'écran est vrai, le rappel par SMS du patient devient vrai.
 
 Quand on clique sur « Enregistrer » dans l'écran du patient :
     Le p vaut la personne ouverte.
+    Le rappel d'avant vaut l'accord de rappel du p.
+    Le téléphone d'avant vaut le téléphone du p.
     Réunir le nom sauf le nom du p, qui donne le complet.
     Le nom du p devient le complet.
     Noter le p.
+    Remarque : l'accord ou le téléphone changent : les rappels de ses séances prévues suivent (25 octobre 2026).
+    Le téléphone d'après vaut le téléphone du p.
+    Si le téléphone d'avant est absent, le téléphone d'avant devient « ».
+    Si le téléphone d'après est absent, le téléphone d'après devient « ».
+    Si l'accord de rappel du p ≠ le rappel d'avant ou le téléphone d'après ≠ le téléphone d'avant :
+        Pour chaque séance conservée dont le patient = le p et le statut = « prévue », par date :
+            Programmer le rappel de la séance.
     L'anamnèse du p devient l'anamnèse de l'écran.
     Si l'ajout de l'écran est présent :
         Si l'anamnèse du p est présente, l'anamnèse du p devient l'anamnèse du p suivi de " [" suivi d'aujourd'hui suivi de « ] » suivi de " " suivi de l'ajout de l'écran.
@@ -1435,6 +1450,7 @@ Quand on clique sur « Enregistrer » dans l'écran de séance :
         Si la date de la nouvelle ≤ aujourd'hui, l'encaissement de la nouvelle devient la date de la nouvelle.
         Sinon, l'encaissement de la nouvelle devient aujourd'hui.
     Conserver la nouvelle.
+    Programmer le rappel de la nouvelle.
     Fermer l'écran.
 
 Remarque : un patient qui vient pour la première fois s'inscrit sans quitter la séance ; il devient le patient choisi.
@@ -1474,14 +1490,17 @@ Quand on choisit une séance dans l'écran des prévues :
 
 Quand on clique sur « Faite » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Annuler le rappel de la séance choisie de l'écran.
     Clore la séance choisie de l'écran et « faite ».
 
 Quand on clique sur « Annulée » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Annuler le rappel de la séance choisie de l'écran.
     Clore la séance choisie de l'écran et « annulée ».
 
 Quand on clique sur « Absence » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
+    Annuler le rappel de la séance choisie de l'écran.
     Clore la séance choisie de l'écran et « absence ».
 
 Quand on clique sur « Fermer » dans l'écran des prévues :
@@ -1601,6 +1620,7 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
     Si la facture du s est présente, suivre la facture du s.
     Le commentaire dicté du s devient le commentaire dicté de l'écran.
     Le commentaire du s devient le commentaire de l'écran.
+    Programmer le rappel du s.
     Fermer l'écran.
 
 Remarque : la séance enregistrée telle qu'à l'écran, puis sa pièce : à payer, sa facture ; payée, sa quittance.
@@ -1626,6 +1646,7 @@ Quand on clique sur « Supprimer » dans l'écran de la séance :
     Le s vaut la séance ouverte.
     Si la quittance du s est présente, défaire la quittance du s.
     Si la facture du s est présente, annuler la facture du s.
+    Annuler le rappel du s.
     Supprimer le s.
     Fermer l'écran.
 
@@ -2037,11 +2058,13 @@ L'écran des SMS, « SMS », montre :
     une clé (secret), facultative, avec l'indication « Le mot de passe d'API ; vide, la clé enregistrée reste »,
     un expéditeur (texte), facultatif, avec l'indication « Le nom que le patient voit : 11 lettres ou chiffres au plus »,
     un numéro d'essai (texte), facultatif, avec l'indication « Ton propre natel, au format +41791234567 : jamais celui d'un patient »,
+    une heure d'essai (heure), facultative, avec l'indication « Dans trois minutes : le rappel d'essai arrive-t-il à l'heure ? »,
     le texte l'état SMS,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Vérifier le compte »,
         un bouton « SMS d'essai »,
+        un bouton « Rappel d'essai »,
         un bouton « Fermer ».
 
 Quand on clique sur « SMS » dans l'écran de configuration :
@@ -2086,6 +2109,24 @@ Quand on clique sur « SMS d'essai » dans l'écran des SMS :
         « MessageData » : « Essai de Praxis : la configuration SMS fonctionne. »,
         « Originator » : l'expéditeur SMS du c.
     L'état SMS devient "Envoi d'essai : " suivi de la réponse.
+
+Remarque : un rappel d'essai, différé à l'heure tapée, aujourd'hui (25 octobre 2026) : l'heure d'arrivée dit si ASPSMS compte en
+Remarque : heure suisse ; à vérifier avant les vrais rappels, et après le passage à l'heure d'été.
+Quand on clique sur « Rappel d'essai » dans l'écran des SMS :
+    Le c vaut le cabinet conservé.
+    Si l'identifiant SMS du c est absent ou la clé SMS du c est absente, refuser « Enregistre d'abord l'identifiant et la clé. ».
+    Si le numéro d'essai de l'écran est absent, refuser « Tape ton propre numéro, au format +41791234567. ».
+    Si l'heure d'essai de l'écran est absente, refuser « Tape l'heure d'arrivée voulue, dans trois minutes par exemple. ».
+    La réponse vaut la lecture de « https://webapi.aspsms.com/SendSimpleSMS » avec :
+        « Userkey » : l'identifiant SMS du c,
+        « Password » : la clé SMS du c,
+        « MSISDN » : le natel international du numéro d'essai de l'écran,
+        « Operation » : « SendTextSMS »,
+        « MessageData » : "Rappel d'essai de Praxis, prévu à " suivi de (l'heure d'essai de l'écran en format technique) suivi de « . »,
+        « Originator » : l'expéditeur SMS du c,
+        « DeferredDeliveryTime » : le moment d'envoi d'aujourd'hui et de l'heure d'essai de l'écran,
+        « TransactionReferenceNumber » : « PX-essai ».
+    L'état SMS devient "Rappel d'essai programmé : " suivi de la réponse.
 
 Quand on clique sur « Fermer » dans l'écran des SMS :
     Fermer l'écran.

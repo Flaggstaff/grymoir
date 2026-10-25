@@ -100,6 +100,8 @@ Remarque : rue, numéro de maison (« 10a »), numéro postal (NPA), localité, 
 Remarque : « client » jusqu'au 18 octobre 2026 ; la base de cette époque se renomme d'elle-même (grammaire, § 16.7).
 Remarque : le nom d'un patient (24 octobre 2026) : son nom de famille et son prénom, saisis à part ; le nom, sa clé, les réunit
 Remarque : (« Alain Thiémard ») : c'est lui que montrent les listes, les menus et les pièces.
+Remarque : le rappel par SMS (25 octobre 2026) : le patient l'a accepté ; la veille de chaque séance prévue, à 18:00 ; la
+Remarque : séance garde la référence du SMS confié à ASPSMS, pour l'annuler si elle change.
 Un patient, conservé, anciennement « client », a :
     un nom (texte), unique,
     un nom de famille (texte), facultatif,
@@ -121,7 +123,8 @@ Un patient, conservé, anciennement « client », a :
     un numéro de carte d'assuré (texte), facultatif,
     un assureur complémentaire (assureur), facultatif,
     un numéro d'assuré complémentaire (texte), facultatif,
-    une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative.
+    une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative,
+    un rappel par SMS (vrai ou faux), facultatif.
 
 Remarque : l'assurance complémentaire (23 octobre 2026) : les soins hors ordonnance « à l'assurance » ; sans assureur ni numéro
 Remarque : complémentaires, ceux de la base servent ; sans mode, le tiers payant, comme la base. En tiers garant, le patient paie
@@ -218,7 +221,8 @@ Une séance, conservée, a :
     une ordonnance (ordonnance), facultative,
     un chiffre du tarif (texte), facultatif,
     un total de points (nombre), facultatif,
-    un décompte (décompte), facultatif.
+    un décompte (décompte), facultatif,
+    une référence de rappel (texte), facultative.
 
 Remarque : les rubriques des frais (loyer, matériel…) : Nicolas les nomme, les renomme et en ajoute dans la configuration.
 Une rubrique, conservée, a :

@@ -56,6 +56,78 @@ L'étiquette d'un sigle et d'une valeur :
 La ligne des numéros d'un cabinet :
     Rendre l'étiquette de « RCC » et du numéro RCC du cabinet suivi de l'étiquette de « GLN » et du numéro GLN du cabinet suivi de l'étiquette de « RME » et du numéro RME du cabinet suivi de l'étiquette de « ASCA » et du numéro ASCA du cabinet.
 
+Remarque : les rappels par SMS (25 octobre 2026) : la veille d'une séance prévue, à 18:00, un SMS confié d'avance à ASPSMS
+Remarque : (envoi différé : il part même si l'ordinateur est éteint) ; une séance déplacée, annulée ou supprimée l'annule.
+Le nombre à deux chiffres d'un nombre :
+    Si nombre < 10, rendre « 0 » suivi de (nombre en format technique).
+    Rendre nombre en format technique.
+
+Remarque : « 079 123 45 67 », « +41 79 … », « 0041 79 … » : « +41791234567 », le format qu'ASPSMS recommande.
+Le natel international d'un numéro :
+    Le n vaut numéro en format technique.
+    Si le n commence par « + », rendre le n.
+    Si le n commence par « 00 », rendre « + » suivi de ((le n en nombre) en format technique).
+    Rendre « +41 » suivi de ((le n en nombre) en format technique).
+
+Remarque : « 27/10/2026 18:00:00 », la forme qu'ASPSMS attend pour un envoi différé.
+Le moment d'envoi d'une date et d'une heure :
+    Rendre le nombre à deux chiffres du jour de date suivi de « / » suivi du nombre à deux chiffres du mois de date suivi de « / » suivi de (l'année de date en format technique) suivi de " " suivi de (heure en format technique) suivi de « :00 ».
+
+Remarque : « Nous vous rappelons votre RDV chez Nicolas Seydoux mardi 28.10 à 14:30, Rue St-Pierre 4, 2e étage, 1700 Fribourg
+Remarque : - Tél: 026 … » : ce qui manque à la fiche du cabinet ne s'écrit pas.
+Le texte du rappel d'une séance :
+    Le c vaut le cabinet conservé.
+    Le message vaut "Nous vous rappelons votre RDV chez " suivi du nom du c suivi de " " suivi du jour de la semaine de la date de la séance suivi de " " suivi du nombre à deux chiffres du jour de la date de la séance suivi de « . » suivi du nombre à deux chiffres du mois de la date de la séance suivi de " à " suivi de (l'heure de la séance en format technique).
+    Si l'adresse professionnelle du c ≠ « », le message devient le message suivi de ", " suivi de l'adresse professionnelle du c.
+    Si le complément d'adresse du c est présent, le message devient le message suivi de ", " suivi du complément d'adresse du c.
+    Si la ville professionnelle du c ≠ « », le message devient le message suivi de ", " suivi de la ville professionnelle du c.
+    Si le téléphone du c est présent, le message devient le message suivi de " - Tél: " suivi du téléphone du c.
+    Rendre le message.
+
+Remarque : l'accord du patient ; absent (un patient d'avant le 25 octobre 2026, ou jamais demandé) : non.
+L'accord de rappel d'un patient :
+    Si le rappel par SMS du patient est absent, rendre faux.
+    Rendre le rappel par SMS du patient.
+
+Remarque : un rappel en attente chez ASPSMS, annulé ; déjà parti, ou ASPSMS injoignable : la référence s'oublie quand même.
+Pour annuler le rappel d'une séance :
+    Si la référence de rappel de la séance est présente :
+        Le c vaut le cabinet conservé.
+        Essayer :
+            La réponse vaut l'envoi à « https://webapi.aspsms.com/ASPSMSDeactivatePendingSMSWithTransactionReferenceNumber » avec :
+                « Userkey » : l'identifiant SMS du c,
+                « Password » : la clé SMS du c,
+            et du tableau :
+                la référence de rappel de la séance.
+        En cas d'échec :
+            Remarque : rien à faire de plus : la séance s'enregistre quand même.
+        La référence de rappel de la séance devient absente.
+
+Remarque : le rappel d'une séance, refait : l'ancien annulé, puis un nouveau si la séance est prévue, à une heure, pour un
+Remarque : patient qui l'accepte et a un téléphone, si le compte SMS est réglé et la veille à 18:00 pas encore passée. Un échec
+Remarque : n'empêche jamais la séance de s'enregistrer.
+Pour programmer le rappel d'une séance :
+    Annuler le rappel de la séance.
+    Le c vaut le cabinet conservé.
+    Le p vaut le patient de la séance.
+    Si le statut de la séance = « prévue » et l'heure de la séance est présente et l'accord de rappel du p est vrai et le téléphone du p est présent et l'identifiant SMS du c est présent et la clé SMS du c est présente :
+        La veille vaut la date de la séance − 1 jour.
+        Si la veille > aujourd'hui ou (la veille = aujourd'hui et maintenant < 18:00) :
+            La référence vaut « PX- » suivi de (la date de la séance en format technique) suivi de « - » suivi de (l'heure de la séance en format technique).
+            Essayer :
+                La réponse vaut la lecture de « https://webapi.aspsms.com/SendSimpleSMS » avec :
+                    « Userkey » : l'identifiant SMS du c,
+                    « Password » : la clé SMS du c,
+                    « MSISDN » : le natel international du téléphone du p,
+                    « Operation » : « SendTextSMS »,
+                    « MessageData » : le texte du rappel de la séance,
+                    « Originator » : l'expéditeur SMS du c,
+                    « DeferredDeliveryTime » : le moment d'envoi de la veille et de 18:00,
+                    « TransactionReferenceNumber » : la référence.
+                Si le champ « ErrorCode » de la réponse = « 1 », la référence de rappel de la séance devient la référence.
+            En cas d'échec :
+                Remarque : un numéro illisible, ASPSMS injoignable : pas de rappel pour cette séance.
+
 Remarque : « Q-2026-0007 » : l'année, puis le rang sur quatre chiffres.
 Remarque : « F- » pour une facture, « Q- » pour une quittance.
 Le numéro de pièce d'une lettre et d'une année et d'un rang :
