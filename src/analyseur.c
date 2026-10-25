@@ -790,7 +790,8 @@ static const char *type_statique(const Noeud *n) {
     case N_COLLAGE: case N_ELISION: return "texte";
     case N_REPONSE: return n->texte2;
     case N_MOTIF: return "texte";
-    case N_CONVERSION: return n->entier <= 1 || n->entier == 8 || n->entier == 10 ? "texte" : n->texte2;
+    case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure"
+                              : n->entier <= 1 || n->entier == 8 || n->entier >= 10 ? "texte" : n->texte2;
     case N_NOUVEAU: return n->texte;
     case N_ENVOI: case N_CHAMP_JSON: return "texte";   /* 2.42 */
     case N_XML: return "fichier";   /* 2.46 */
@@ -2049,7 +2050,17 @@ static int bloc_envoi(Analyse *a, Noeud *n, const Jeton *tdeb, int paires) {
     const size_t avant = n->nb_enfants;
     for (;;) {
         Jeton *k = cour(a);
-        if (!premier_de_ligne(a, a->i) || k->retrait != col || (paires && k->type != J_TEXTE)) {
+        /* « l'en-tête « Authorization » : … » (2.60) : une paire de l'adresse qui part dans les en-têtes de la requête ;
+         * sa clé porte la marque \x01 */
+        int entete = 0;
+        if (paires == 3 && k->type == J_ELISION && strcmp(k->valeur, "l") == 0 && est_mot(voir(a, 1), "en")
+            && voir(a, 2)->type == J_MOINS && est_mot(voir(a, 3), "tête") && voir(a, 4)->type == J_TEXTE
+            && premier_de_ligne(a, a->i) && k->retrait == col) {
+            entete = 1;
+            for (int s = 0; s < 4; s++) avancer(a);
+            k = cour(a);
+        }
+        if (!entete && (!premier_de_ligne(a, a->i) || k->retrait != col || (paires && k->type != J_TEXTE))) {
             erreur(a, k, grym_dupliquer(paires ? "Une valeur envoyée s'écrit « « clé » : valeur », une par ligne, alignées."
                                                : "Une valeur du tableau par ligne, alignées."));
             return 0;
@@ -2061,7 +2072,7 @@ static int bloc_envoi(Analyse *a, Noeud *n, const Jeton *tdeb, int paires) {
                     return 0;
                 }
             Noeud *cle_n = noeud_creer(N_TEXTE, k->ligne, k->colonne, k->debut);
-            cle_n->texte = grym_dupliquer(k->valeur);
+            cle_n->texte = entete ? grym_formater("\x01%s", k->valeur) : grym_dupliquer(k->valeur);
             avancer(a);
             if (cour(a)->type != J_DEUX_POINTS) {
                 noeud_liberer(cle_n);
@@ -2116,7 +2127,7 @@ static Noeud *base(Analyse *a) {
             int suite = 0;
             if (est_mot(cour(a), "avec")) {
                 avancer(a);
-                suite = bloc_envoi(a, n, tligne, 1);
+                suite = bloc_envoi(a, n, tligne, 3);   /* 3 : des paires, et des en-têtes permis (2.60) */
                 if (!suite) { noeud_liberer(n); return NULL; }
             }
             n->entier = (long)(n->nb_enfants - 1) / 2;   /* les paires de l'adresse */
@@ -2169,6 +2180,23 @@ static Noeud *base(Analyse *a) {
                 a->i = meilleur;
                 return n;
             }
+        }
+        /* « le nombre d'éléments du champ « collection » de r » (2.60) */
+        if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && voir(a, 2)->type == J_ELISION && est_mot(voir(a, 3), "éléments")
+            && est_mot(voir(a, 4), "du") && est_mot(voir(a, 5), "champ") && voir(a, 6)->type == J_TEXTE) {
+            const Jeton *du = voir(a, 4);
+            for (int k = 0; k < 5; k++) avancer(a);
+            a->article_force = ART_LE;
+            a->jeton_force = du;
+            Noeud *x = base(a);
+            if (!x) return NULL;
+            if (x->type != N_CHAMP_JSON) { noeud_liberer(x); return erreur(a, t, grym_dupliquer("« le nombre d'éléments du champ « … » de r »."));}
+            x->type = N_JSON_LISTE;
+            x->forme = 1;
+            x->ligne = t->ligne;
+            x->colonne = t->colonne;
+            x->debut = t->debut;
+            return x;
         }
         /* « le champ « a.b » de r » (2.42) : un champ de la réponse JSON d'un envoi, en texte, ou absent */
         const int m1 = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : -1;
@@ -2716,7 +2744,8 @@ static Noeud *base(Analyse *a) {
 static const char *const CONVERSIONS[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
                                            "vrai ou faux", "heure", "toutes lettres",   /* une date (§ 14.8) */
                                            "format technique",     /* pour une machine : QR, XML (2.27) */
-                                           "iban" };               /* vérifié, sans espaces (2.29) */
+                                           "iban",                 /* vérifié, sans espaces (2.29) */
+                                           "date locale", "heure locale", "format universel" };   /* 2.60 */
 #define NB_CONVERSIONS (sizeof CONVERSIONS / sizeof *CONVERSIONS)
 
 static Noeud *conversion(Analyse *a, Noeud *g) {
@@ -2734,7 +2763,7 @@ static Noeud *conversion(Analyse *a, Noeud *g) {
     }
     while (g && est_mot(cour(a), "en")) {
         size_t trouve = NB_CONVERSIONS, mots = 0;
-        for (size_t k = 0; k < NB_CONVERSIONS && trouve == NB_CONVERSIONS; k++) {
+        for (size_t k = 0; k < NB_CONVERSIONS; k++) {
             size_t nb = 1, ok = 1;
             const char *p = CONVERSIONS[k];
             for (const char *q = p; *q; q++) nb += *q == ' ';
@@ -2745,7 +2774,7 @@ static Noeud *conversion(Analyse *a, Noeud *g) {
                 ok = j->type == J_MOT && j->valeur && strlen(j->valeur) == l && strncmp(j->valeur, p, l) == 0;
                 p = e ? e + 1 : p + l;
             }
-            if (ok) { trouve = k; mots = nb; }
+            if (ok && (trouve == NB_CONVERSIONS || nb > mots)) { trouve = k; mots = nb; }   /* la plus longue : « date locale » */
         }
         if (trouve == NB_CONVERSIONS) break;
         Noeud *n = noeud_creer(N_CONVERSION, g->ligne, g->colonne, g->debut);
@@ -4746,6 +4775,51 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
             n->fin = corps->fin;
             return n;
         }
+    }
+    if (k > d && est_mot(&a->j[k], "du") && est_mot(&a->j[k + 1], "champ") && a->j[k + 2].type == J_TEXTE
+        && article_de(&a->j[d]) == ART_AUCUN) {
+        /* « Pour chaque rendez-vous du champ « collection » de la réponse : » (2.60) : chaque élément de la liste, en texte
+         * (un objet en JSON, qu'on lit avec « le champ « … » de ») */
+        char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+        if (visible(a, nom)) {
+            erreur(a, &a->j[d], grym_formater("« %s » existe déjà : choisis un autre nom.", nom));
+            free(nom);
+            return NULL;
+        }
+        a->i = k + 1;
+        a->article_force = ART_LE;
+        a->jeton_force = &a->j[k];
+        Noeud *source = base(a);
+        a->article_force = ART_AUCUN;
+        if (!source) { free(nom); return NULL; }
+        if (source->type != N_CHAMP_JSON) {
+            noeud_liberer(source);
+            free(nom);
+            return erreur(a, &a->j[k], grym_dupliquer("« Pour chaque rendez-vous du champ « collection » de la réponse : »."));
+        }
+        source->type = N_JSON_LISTE;
+        size_t sauve = a->portee->n;
+        portee_declarer(a->portee, nom, GENRE_LIBRE, t->ligne);
+        Symbole *s = &a->portee->s[a->portee->n - 1];
+        s->lecture_seule = 1;
+        int case_el = s->local = a->nb_locaux++;
+        int case_ens = a->nb_locaux++;
+        a->nb_locaux++;   /* rang */
+        int forme = 0;
+        a->boucle++;
+        Noeud *corps = branche(a, colonne, "Pour chaque", &forme);
+        a->boucle--;
+        portee_tronquer(a->portee, sauve);
+        if (!corps) { noeud_liberer(source); free(nom); return NULL; }
+        Noeud *n = noeud_creer(P_POUR_TABLEAU, t->ligne, t->colonne, t->debut);
+        n->op = 'p';
+        n->texte = nom;
+        n->local = case_el;
+        n->entier = case_ens;
+        noeud_ajouter(n, source);
+        noeud_ajouter(n, corps);
+        n->fin = corps->fin;
+        return n;
     }
     if (k > d && est_mot(&a->j[k], "du") && est_mot(&a->j[k + 1], "tableau") && article_de(&a->j[d]) == ART_AUCUN) {
         /* « Pour chaque ligne du tableau « import.csv » : » (§ 15.5) */

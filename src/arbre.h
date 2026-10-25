@@ -171,6 +171,8 @@ typedef enum {
                         « https://… » avec : … » (forme 1, GET) (2.42) : enfants[0] : l'adresse, puis des paires, une
                         clé (N_TEXTE) et sa valeur */
     N_CHAMP_JSON,    /* « le champ « a.b » de r » (2.42) : texte : le chemin ; enfant : la réponse */
+    N_JSON_LISTE,    /* la liste d'un champ JSON (2.60) : texte : le chemin ; enfant : la réponse ; forme 1 : son nombre
+                        d'éléments ; forme 0 : la source d'un « Pour chaque … du champ « … » de … » */
     N_XML,           /* « le XML de facture » (2.46) : texte : l'action qui l'écrit (« xml de facture ») ; texte2 : la racine */
     P_XML            /* un élément d'un XML déclaré (2.46) : op 'a' attribut (texte, enfant : la valeur), 'c' contenu (enfant),
                         'e' élément (texte, enfant facultatif : son contenu), 'b' élément à enfants (texte, enfant : N_BLOC) */

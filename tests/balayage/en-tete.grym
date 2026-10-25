@@ -1,0 +1,7 @@
+Le jeton vaut « abc ».
+Essayer :
+    La réponse vaut la lecture de « https://api.exemple.ch/rdv » avec :
+        l'en-tête « Authorization » : "Bearer " suivi du jeton,
+        « status » : « active ».
+En cas d'échec :
+    Afficher « refusé ici ».

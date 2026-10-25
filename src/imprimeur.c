@@ -557,7 +557,9 @@ static void expression(Impression *im, const Noeud *n) {
             for (size_t q = 0; q < nq; q++, k += 2) {
                 aj(im, "\n");
                 for (size_t e = 0; e < r + 4; e++) aj(im, " ");
-                ecrire_texte(im, n->enfants[k]->texte);
+                const char *cle = n->enfants[k]->texte;
+                if (cle[0] == '\x01') { aj(im, "_entête "); cle++; }   /* 2.60 */
+                ecrire_texte(im, cle);
                 aj(im, " : ");
                 expression(im, n->enfants[k + 1]);
             }
@@ -597,7 +599,9 @@ static void expression(Impression *im, const Noeud *n) {
             for (size_t q = 0; q < nq; q++, k += 2) {
                 aj(im, q ? ",\n" : "\n");
                 for (size_t e = 0; e < r + 4; e++) aj(im, " ");
-                ecrire_texte(im, n->enfants[k]->texte);
+                const char *cle = n->enfants[k]->texte;
+                if (cle[0] == '\x01') { aj(im, "l'en-tête "); cle++; }   /* « l'en-tête « Authorization » : … » (2.60) */
+                ecrire_texte(im, cle);
                 aj(im, " : ");
                 expression(im, n->enfants[k + 1]);
             }
@@ -628,6 +632,13 @@ static void expression(Impression *im, const Noeud *n) {
         if (im->compact) { aj(im, "_xml "); ecrire_nom(im, n->texte + 7, 0); return; }
         aj(im, "le XML de ");
         ecrire_nom(im, n->texte + 7, 0);
+        return;
+    case N_JSON_LISTE:   /* « le nombre d'éléments du champ « a » de r » ; « _nombre_éléments « a » r » (2.60) */
+        if (im->compact) { aj(im, "_nombre_éléments "); ecrire_texte(im, n->texte); aj(im, " "); expression(im, n->enfants[0]); return; }
+        aj(im, "le nombre d'éléments du champ ");
+        ecrire_texte(im, n->texte);
+        aj(im, " ");
+        de_expression(im, n->enfants[0]);
         return;
     case N_CHAMP_JSON:   /* « le champ « a.b » de r » (2.42) ; « _champ « a.b » r » */
         if (im->compact) { aj(im, "_champ "); ecrire_texte(im, n->texte); aj(im, " "); expression(im, n->enfants[0]); return; }
@@ -2190,9 +2201,18 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         size_t sauve = im->nb;
         aj(im, c ? "_pour_chaque " : "Pour chaque ");
         ecrire_nom(im, n->texte, 0);
-        if (n->op == 'p') aj(im, c ? " _parmi " : " parmi ");   /* « parmi les couleurs » (§ 13.9) */
-        else aj(im, c ? " _tableau " : " du tableau ");
-        expression(im, n->enfants[0]);
+        if (n->op == 'p' && n->enfants[0]->type == N_JSON_LISTE) {   /* « du champ « collection » de r » (2.60) */
+            const Noeud *src = n->enfants[0];
+            aj(im, c ? " _champ " : " du champ ");
+            ecrire_texte(im, src->texte);
+            aj(im, " ");
+            if (c) expression(im, src->enfants[0]);
+            else de_expression(im, src->enfants[0]);
+        } else {
+            if (n->op == 'p') aj(im, c ? " _parmi " : " parmi ");   /* « parmi les couleurs » (§ 13.9) */
+            else aj(im, c ? " _tableau " : " du tableau ");
+            expression(im, n->enfants[0]);
+        }
         retenir(im, n->texte, G_FEMININ);
         const Noeud *corps = n->enfants[1];
         branche(im, corps, corps->ligne == n->ligne, niveau);

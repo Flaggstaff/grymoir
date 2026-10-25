@@ -232,6 +232,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_XML_FIN:        return "XML_FIN";
     case I_ECRAN_FILTRE:   return "ECRAN_FILTRE";
     case I_SAUVEGARDER_JOUR: return "SAUVEGARDER_JOUR";
+    case I_JSON_LISTE:     return "JSON_LISTE";
     case I_SAUVEGARDER:    return "SAUVEGARDER";
     case I_SAUVEGARDER_COFFRE: return "SAUVEGARDER_COFFRE";
     case I_RESTAURER:      return "RESTAURER";
@@ -253,7 +254,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_REGLE_UTILE || code == I_REGLE_FAITE || code == I_ECRAN_ETAT || code == I_ECRAN_IMAGE || code == I_ECRAN_EXIGER
         || code == I_SIGLES || code == I_ECRAN_TEXTE || code == I_DOCUMENT || code == I_CODE_QR || code == I_RESTAURER
         || code == I_ENVOI || code == I_CHAMP_JSON || code == I_XML_DEBUT || code == I_XML_ELEMENT || code == I_XML_ATTRIBUT
-        || code == I_ECRAN_FILTRE;
+        || code == I_ECRAN_FILTRE || code == I_JSON_LISTE;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -313,7 +314,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
         if (c == I_HEURE && op >= 1440)
             ok = refuser(erreur, grym_formater("HEURE : %u minutes, au-delà de 23:59 (octet %lu).", op, (unsigned long)d));
         else if ((c == I_EXPORTER || c == I_EXEMPLE || c == I_EXEMPLE_RATE || c == I_REGLE_UTILE || c == I_REGLE_FAITE
-                  || c == I_CHAMP_JSON || c == I_XML_DEBUT || c == I_XML_ELEMENT || c == I_XML_ATTRIBUT)
+                  || c == I_CHAMP_JSON || c == I_JSON_LISTE || c == I_XML_DEBUT || c == I_XML_ELEMENT || c == I_XML_ATTRIBUT)
                  && (op >= b->nb_constantes || b->constantes[op].type != C_TEXTE))
             ok = refuser(erreur, grym_formater("EXPORTER : constante %u absente ou pas un texte (octet %lu).", op,
                                                (unsigned long)d));
@@ -446,6 +447,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_XML_FIN: besoin = 0; effet = 1; break;
             case I_ECRAN_FILTRE: besoin = 1; effet = -1; break;
             case I_SAUVEGARDER_JOUR: besoin = 1; effet = -1; break;
+            case I_JSON_LISTE: besoin = 1; effet = 0; break;
             case I_SAUVEGARDER: besoin = 1; effet = -1; break;
             case I_SAUVEGARDER_COFFRE: besoin = 2; effet = -2; break;
             case I_RESTAURER: besoin = op ? 2 : 1; effet = -besoin; break;

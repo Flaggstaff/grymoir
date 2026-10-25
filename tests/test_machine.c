@@ -2054,6 +2054,22 @@ int main(void) {
     PROG("Afficher 8:05 + 1 jour.", "~Une heure se décale de minutes ou d'heures, pas de jours.");
     PROG("Afficher 01.01.2026 + 3 minutes.", "~Des minutes s'ajoutent à une heure, pas à une date.");
     PROG("Afficher « 25:00 » en heure.", "~« 25:00 » n'est pas une heure : écris heures:minutes (14:30).");
+    /* 2.60 : la liste d'un champ JSON, son nombre d'éléments ; les fuseaux (l'heure suisse, été et hiver) */
+    PROG("La r vaut « {\"c\":[{\"u\":\"a\"},{\"u\":\"b\"},{\"u\":\"a\"}],\"x\":1} ».\n"
+         "Afficher le nombre d'éléments du champ « c » de la r.\n"
+         "Pour chaque élément du champ « c » de la r :\n    Afficher le champ « u » de l'élément.",
+         "3\na\nb\na");
+    PROG("La r vaut « {\"x\":1} ».\nAfficher le nombre d'éléments du champ « x » de la r.", "~Le champ « x » n'est pas une liste.");
+    {   /* le fuseau de l'essai : l'heure suisse, quel que soit l'ordinateur */
+        extern int setenv(const char *, const char *, int);
+        extern void tzset(void);
+        setenv("TZ", "Europe/Zurich", 1);
+        tzset();
+    }
+    PROG("Afficher « 2026-10-28T13:30:00Z » en date locale puis « 2026-10-28T13:30:00Z » en heure locale.", "28.10.2026 14:30");
+    PROG("Afficher « 2026-07-01T13:30:00.000000Z » en heure locale puis « 2026-10-28T23:30:00Z » en date locale.", "15:30 29.10.2026");
+    PROG("Afficher 28.10.2026 en format universel puis 01.07.2026 en format universel.", "2026-10-27T23:00:00Z 2026-06-30T22:00:00Z");
+    PROG("Afficher « hier » en heure locale.", "~n'est pas un moment avec son fuseau");
     /* 2.58 : une action pour plusieurs écrans ; une zone qui manque à l'un */
     PROG("L'écran a montre :\n    un nom (texte).\nL'écran b montre :\n    un âge (nombre).\n"
          "Pour remplir, dans l'écran a ou l'écran b :\n    L'âge de l'écran devient 3.",

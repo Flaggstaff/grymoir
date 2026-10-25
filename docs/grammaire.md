@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.59 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.60 de la spécification, révisée le 22 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2243,6 +2243,10 @@ et du tableau :
 - **L'atelier et les applications fabriquées** envoient (Qt Network, les certificats du système). La console et le navigateur de `grym` refusent : « Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée. »
 - Une adresse donnée par un nom s'écrit entre parenthèses, `l'envoi à (le service) de :`, sans quoi « service de » se lit comme un nom. En forme compacte *(2.45)* : `_la r << _envoi « … » _avec`, une paire `« clé » : valeur` par ligne, sans virgule, `_et_de` ou `_et_du_tableau` au retrait de la phrase, puis `_fin` ; `_lecture « … » _avec` ; `_envoi « … » _de`, `_envoi « … » _du_tableau` ; `_champ « a.b » r`.
 
+- *(2.60)* **Les en-têtes** : dans le bloc `avec :` d'une lecture ou d'un envoi, une paire `l'en-tête « Authorization » : "Bearer " suivi du jeton,` part dans les en-têtes de la requête, pas dans l'adresse. Un secret s'y lit, comme dans les autres valeurs d'un envoi. Un nom d'en-tête ne porte pas de « : », une valeur pas de retour à la ligne. Forme compacte : `_entête « Authorization » : …`.
+- *(2.60)* **Les listes d'une réponse** : `Pour chaque réservation du champ « collection » de la réponse :` parcourt les éléments d'une liste JSON, dans l'ordre, doublons compris ; chacun est un texte (un objet ou une liste en JSON), qu'on lit avec `le champ « … » de la réservation`. `le nombre d'éléments du champ « collection » de r` les compte. Un champ qui n'est pas une liste : « Le champ « x » n'est pas une liste. » Le nom de la boucle suit la règle des noms : pas de trait d'union (« rendez-vous » est refusé, « réservation » convient). Formes compactes : `_pour_chaque réservation _champ « collection » réponse`, `_nombre_éléments « collection » r`.
+- *(2.60)* **Le temps universel** : `t en date locale` et `t en heure locale` lisent un moment ISO 8601 avec son fuseau (« 2026-10-28T13:30:00Z », « …+01:00 », fractions de seconde admises) et le rendent dans le fuseau de l'ordinateur, heure d'été comprise : « 2026-10-28T13:30:00Z » devient 28.10.2026 et 14:30 en Suisse. `x en format universel` fait l'inverse, pour une date (à minuit, ici) ou une heure (d'aujourd'hui) : `maintenant en format universel` donne « 2026-10-25T07:42:00Z ». Un texte sans fuseau : « … n'est pas un moment avec son fuseau ». Formes compactes : `_en_date_locale`, `_en_heure_locale`, `_en_format_universel`.
+
 ### 22.19 XML déclaré *(2.46, implémenté le 23 octobre 2026)*
 
 ```
@@ -2432,3 +2436,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.57 | 2026-10-24 | § 9 : une action peut rendre (`Rendre …`), reçu à l'appel par `, qui donne la q` |
 | 2.58 | 2026-10-24 | § 22 : une action « , dans l'écran a ou l'écran b » ; ses zones vérifiées dans chaque écran nommé |
 | 2.59 | 2026-10-25 | § 16.7 : un programme mis à jour qui va changer les tables d'une base qui a des données en fait d'abord une copie, « … avant mise à jour AAAA-MM-JJ HHMM.grymd » (et ses clés), à côté, que rien n'efface ; sans elle, rien ne change |
+| 2.60 | 2026-10-25 | § 22.18 : `l'en-tête « … » :` dans un envoi ; `Pour chaque … du champ « … » de r`, `le nombre d'éléments du champ « … » de r` ; `en date locale`, `en heure locale`, `en format universel` |

@@ -372,6 +372,14 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_XML_FIN, 0, n->ligne, n->colonne);
         return;
     }
+    case N_JSON_LISTE: {   /* la liste d'un champ JSON, ou son nombre d'éléments (2.60) */
+        expression(c, n->enfants[0]);
+        long k = bloc_constante(c->b, C_TEXTE, n->texte);
+        if (k < 0) { trop_grand(c, n); return; }
+        emettre(c, I_JSON_LISTE, k, n->ligne, n->colonne);
+        if (n->forme == 1) emettre(c, I_TAILLE_ENSEMBLE, 0, n->ligne, n->colonne);
+        return;
+    }
     case N_CHAMP_JSON: {   /* « le champ « a.b » de r » (2.42) */
         expression(c, n->enfants[0]);
         long k = bloc_constante(c->b, C_TEXTE, n->texte);

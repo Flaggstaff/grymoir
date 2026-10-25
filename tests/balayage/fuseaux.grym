@@ -1,0 +1,6 @@
+Afficher « 2026-10-28T13:30:00Z » en date locale puis « 2026-10-28T13:30:00Z » en heure locale.
+Afficher « 2026-07-01T13:30:00.000000Z » en heure locale.
+Afficher « 2026-10-28T23:30:00Z » en date locale puis « 2026-10-28T23:30:00Z » en heure locale.
+Afficher « 2026-10-28T14:30:00+01:00 » en heure locale.
+Afficher 28.10.2026 en format universel.
+Afficher 01.07.2026 en format universel.

@@ -5555,7 +5555,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             Valeur u = depiler(&pile);
             if (m->envoi_ouvert > 0) m->envoi_ouvert--;
             char *probleme = NULL;
-            Chaine corps = {0}, adresse = {0};
+            Chaine corps = {0}, adresse = {0}, entetes = {0};
             if (u.type != V_TEXTE) probleme = grym_dupliquer("L'adresse d'un envoi est un texte : « https://… ».");
             else if (!adresse_envoyable(u.texte))
                 probleme = grym_formater("Un envoi passe par https:// : « %s » enverrait en clair.", u.texte);
@@ -5568,6 +5568,18 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     if (v->type != V_TEXTE && v->type != V_NOMBRE && v->type != V_BOOLEEN && v->type != V_DATE) {
                         probleme = grym_dupliquer("Une adresse porte des textes, des nombres, des dates, vrai ou faux.");
                         break;
+                    }
+                    if (cle->texte[0] == '\x01') {   /* « l'en-tête « … » : … » (2.60) : une ligne d'en-tête, pas l'adresse */
+                        char *t = v->type == V_TEXTE ? grym_dupliquer(v->texte) : v->type == V_NOMBRE ? dec_canonique(&v->nombre)
+                                : grym_dupliquer(v->type == V_BOOLEEN ? (v->vrai ? "true" : "false") : "");
+                        if (strchr(t, '\n') || strchr(t, '\r') || strchr(cle->texte + 1, ':'))
+                            probleme = grym_formater("L'en-tête « %s » ne porte ni retour à la ligne ni « : » dans son nom.", cle->texte + 1);
+                        chaine_ajouter(&entetes, cle->texte + 1);
+                        chaine_ajouter(&entetes, ": ");
+                        chaine_ajouter(&entetes, t);
+                        chaine_ajouter(&entetes, "\n");
+                        free(t);
+                        continue;
                     }
                     chaine_ajouter(&adresse, premiere ? "?" : "&");
                     premiere = 0;
@@ -5607,21 +5619,66 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             free(qv);
             free(cv);
             valeur_liberer(&u);
-            char *url = chaine_rendre(&adresse), *json = chaine_rendre(&corps);
+            char *url = chaine_rendre(&adresse), *json = chaine_rendre(&corps), *lignes_entetes = chaine_rendre(&entetes);
             if (!probleme && !m->iface.envoyer)
                 probleme = grym_dupliquer("Un envoi sur internet se fait dans l'atelier ou dans une application fabriquée.");
             if (!probleme) probleme = valider_jusqu_ici(m, sortie);   /* l'envoi valide ce qui précède, comme « Ouvrir » */
             long statut = 0;
             char *reponse = NULL;
-            if (!probleme && !m->iface.envoyer(m->iface.contexte, lecture, url, lecture ? NULL : (json ? json : ""), &statut,
-                                               &reponse, &probleme) && !probleme)
+            if (!probleme && !m->iface.envoyer(m->iface.contexte, lecture, url, lecture ? NULL : (json ? json : ""),
+                                               lignes_entetes ? lignes_entetes : "", &statut, &reponse, &probleme) && !probleme)
                 probleme = grym_dupliquer("Le service n'a pas répondu.");
             if (!probleme && statut >= 400)
                 probleme = grym_formater("Le service a répondu %ld : %.200s", statut, reponse ? reponse : "");
             free(url);
             free(json);
+            free(lignes_entetes);
             if (probleme) { free(reponse); ok = echouer(diag, b, debut, probleme); break; }
             empiler(&pile, vi_texte_pris(reponse ? reponse : grym_dupliquer("")));
+            break;
+        }
+        case I_JSON_LISTE: {   /* « Pour chaque rendez-vous du champ « collection » de r », son nombre (2.60) */
+            Valeur r = depiler(&pile);
+            const char *chemin = b->constantes[op].texte;
+            if (r.type != V_TEXTE) {
+                valeur_liberer(&r);
+                ok = echouer(diag, b, debut, grym_dupliquer("« le champ « … » de » lit la réponse d'un envoi, un texte."));
+                break;
+            }
+            char *illisible = NULL;
+            Json *j = json_lire(r.texte, strlen(r.texte), &illisible);
+            valeur_liberer(&r);
+            if (!j) {
+                free(illisible);
+                ok = echouer(diag, b, debut, grym_formater("La réponse n'est pas du JSON : « %s » ne s'y lit pas.", chemin));
+                break;
+            }
+            const Json *x = *chemin ? json_suivre(j, chemin) : j;
+            if (!x || x->type != JSON_TABLEAU) {
+                json_liberer(j);
+                ok = echouer(diag, b, debut, grym_formater("Le champ « %s » n'est pas une liste.", chemin));
+                break;
+            }
+            Valeur e = ensemble_vide();
+            Liste *l = e.liste;
+            for (size_t q = 0; q < x->nb; q++) {   /* tels quels, doublons compris : une liste garde chacun de ses éléments */
+                const Json *el = x->elements[q];
+                Valeur v;
+                if (el->type == JSON_NUL) v = vi_absent(NULL);
+                else if (el->type == JSON_TEXTE || el->type == JSON_NOMBRE) v = vi_texte_pris(grym_dupliquer(el->texte ? el->texte : ""));
+                else if (el->type == JSON_BOOLEEN) v = vi_texte_pris(grym_dupliquer(el->vrai ? "vrai" : "faux"));
+                else { Chaine c = {0}; json_ecrire(&c, el); v = vi_texte_pris(chaine_rendre(&c)); }
+                if (l->n == l->cap) {
+                    l->cap = l->cap ? l->cap * 2 : 4;
+                    Valeur *t = grym_allouer(l->cap * sizeof *t);
+                    if (l->n) memcpy(t, l->valeurs, l->n * sizeof *t);
+                    free(l->valeurs);
+                    l->valeurs = t;
+                }
+                l->valeurs[l->n++] = v;
+            }
+            json_liberer(j);
+            empiler(&pile, e);
             break;
         }
         case I_CHAMP_JSON: {   /* « le champ « a.b » de r » (2.42) */
@@ -6041,10 +6098,65 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         }
         case I_CONVERTIR: {   /* « le nom en majuscules », « le code en nombre » (§ 4.5) */
             static const char *const CIBLES[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
-                                                  "vrai ou faux", "heure", "toutes lettres", "format technique", "IBAN" };
+                                                  "vrai ou faux", "heure", "toutes lettres", "format technique", "IBAN",
+                                                  "date locale", "heure locale", "format universel" };
             static const char *const NOMS[] = { "", "", "un nombre entier", "un nombre", "une date", "une année",
-                                                "vrai ou faux", "une heure", "", "", "" };
+                                                "vrai ou faux", "une heure", "", "", "", "", "", "" };
             (void)CIBLES;
+            (void)NOMS;
+            if (op == 11 || op == 12) {
+                /* « le champ « start_time » de r en date locale », « … en heure locale » (2.60) : un moment ISO 8601 avec
+                 * son fuseau (« 2026-10-28T13:30:00Z », « …+01:00 »), dans le fuseau de l'ordinateur, heure d'été comprise */
+                Valeur vt = depiler(&pile);
+                if (vt.type == V_ABSENT) { empiler(&pile, vt); break; }
+                int an, mo, jo, h, mi, s = 0, oh = 0, om = 0, signe = 0;
+                char z = 0;
+                const char *p = vt.type == V_TEXTE ? vt.texte : "";
+                int lus = sscanf(p, "%4d-%2d-%2dT%2d:%2d", &an, &mo, &jo, &h, &mi);
+                const char *q = lus == 5 ? strchr(p, 'T') + 6 : NULL;
+                if (q && *q == ':') { s = atoi(q + 1); q += 3; while (*q == '.' || (*q >= '0' && *q <= '9')) q++; }
+                if (q && (*q == 'Z' || *q == 'z')) z = 'Z';
+                else if (q && (*q == '+' || *q == '-') && sscanf(q + 1, "%2d:%2d", &oh, &om) >= 1) { signe = *q == '-' ? -1 : 1; z = '+'; }
+                if (lus != 5 || !z || mo < 1 || mo > 12 || jo < 1 || jo > 31 || h > 23 || mi > 59) {
+                    char *x = grym_formater("« %s » n'est pas un moment avec son fuseau : « 2026-10-28T13:30:00Z ».",
+                                            vt.type == V_TEXTE ? vt.texte : "?");
+                    valeur_liberer(&vt);
+                    ok = echouer(diag, b, debut, x);
+                    break;
+                }
+                valeur_liberer(&vt);
+                const long long utc = (long long)(date_jours(an, mo, jo) - date_jours(1970, 1, 1)) * 86400LL + h * 3600LL + mi * 60LL + s
+                                      - signe * (oh * 3600LL + om * 60LL);
+                const time_t tt = (time_t)utc;
+                const struct tm l = *localtime(&tt);
+                if (op == 11) empiler(&pile, valeur_date(date_jours(l.tm_year + 1900, l.tm_mon + 1, l.tm_mday)));
+                else empiler(&pile, valeur_heure(l.tm_hour * 60L + l.tm_min));
+                break;
+            }
+            if (op == 13) {
+                /* « maintenant en format universel », « aujourd'hui … » (2.60) : « 2026-10-25T07:42:00Z », le temps universel
+                 * qu'attend un service ; une heure seule est d'aujourd'hui, une date seule à minuit, ici */
+                Valeur vt = depiler(&pile);
+                if (vt.type != V_HEURE && vt.type != V_DATE) {
+                    valeur_liberer(&vt);
+                    ok = echouer(diag, b, debut, grym_dupliquer("« en format universel » s'applique à une date ou une heure."));
+                    break;
+                }
+                int an, mo, jo;
+                date_civile(vt.type == V_DATE ? vt.jours : aujourdhui, &an, &mo, &jo);
+                struct tm l = {0};
+                l.tm_year = an - 1900;
+                l.tm_mon = mo - 1;
+                l.tm_mday = jo;
+                l.tm_hour = vt.type == V_HEURE ? (int)(vt.jours / 60) : 0;
+                l.tm_min = vt.type == V_HEURE ? (int)(vt.jours % 60) : 0;
+                l.tm_isdst = -1;   /* l'heure d'été, s'il le faut */
+                const time_t tt = mktime(&l);
+                const struct tm u = *gmtime(&tt);
+                empiler(&pile, vi_texte_pris(grym_formater("%04d-%02d-%02dT%02d:%02d:00Z", u.tm_year + 1900, u.tm_mon + 1,
+                                                           u.tm_mday, u.tm_hour, u.tm_min)));
+                break;
+            }
             if (op == 10) {
                 /* « l'IBAN du cabinet en IBAN » (2.29) : sans espaces, en capitales, et vérifié (ISO 13616) : deux
                  * lettres de pays, deux chiffres de clé, de 15 à 34 lettres et chiffres en tout, la clé mod 97 = 1 */

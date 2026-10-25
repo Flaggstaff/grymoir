@@ -196,6 +196,13 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }
         chaine_ajouter(c, ")");
         return;
+    case N_JSON_LISTE:   /* (liste-json « a » r), (nombre-json « a » r) (2.60) */
+        chaine_ajouter(c, n->forme == 1 ? "(nombre-json « " : "(liste-json « ");
+        chaine_ajouter(c, n->texte ? n->texte : "");
+        chaine_ajouter(c, " » ");
+        if (n->nb_enfants) decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_CHAMP_JSON:   /* (champ « a.b » r) (2.42) */
         chaine_ajouter(c, "(champ « ");
         chaine_ajouter(c, n->texte ? n->texte : "");

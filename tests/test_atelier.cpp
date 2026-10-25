@@ -5137,7 +5137,7 @@ int main(int argc, char **argv) {
             "La r vaut l'envoi à « %1/sms » de :\n    « UserName » : le nom du c,\n    « Password » : la clé du c,\n"
             "    « Recu » : 12,5,\n    « Jour » : 01.10.2026.\n"
             "Afficher « essai statut » puis le champ « StatusCode » de la r puis le champ « Ref.n » de la r puis le champ « Liste.1 » de la r.\n"
-            "La l vaut la lecture de « %1/etat » avec :\n    « ref » : « a b ».\n"
+            "La l vaut la lecture de « %1/etat » avec :\n    l'en-tête « Authorization » : \"Bearer \" suivi de la clé du c,\n    « ref » : « a b ».\n"
             "Afficher « essai lecture » puis le champ « StatusCode » de la l.\n"
             "La n vaut l'envoi à « %1/annule » avec :\n    « Userkey » : le nom du c,\n    « Password » : la clé du c,\n"
             "et du tableau :\n    « 1234 »,\n    « 1235 ».\n"
@@ -5157,6 +5157,8 @@ int main(int argc, char **argv) {
         VERIFIER(t.contains(QString::fromUtf8("essai lecture 1")));
         VERIFIER(t.contains(QString::fromUtf8("essai refus Le service a répondu 401")));
         VERIFIER(recu.contains("POST /sms"));
+        VERIFIER(recu.contains("Authorization: Bearer cle-secrete-17"));   // l'en-tête, le secret compris (2.60)
+        VERIFIER(recu.contains("GET /etat?ref=a%20b"));                     // il n'est pas parti dans l'adresse
         VERIFIER(recu.contains("\"Password\":\"cle-secrete-17\""));
         VERIFIER(recu.contains("\"Recu\":12.5") && recu.contains("\"Jour\":\"2026-10-01\""));
         VERIFIER(recu.contains("GET /etat?ref=a%20b"));

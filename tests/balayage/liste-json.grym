@@ -1,0 +1,4 @@
+La réponse vaut « {"collection":[{"uri":"a","start_time":"2026-10-28T13:30:00Z"},{"uri":"b","start_time":"2026-10-29T08:00:00Z"}]} ».
+Afficher le nombre d'éléments du champ « collection » de la réponse.
+Pour chaque réservation du champ « collection » de la réponse :
+    Afficher le champ « uri » de la réservation puis le champ « start_time » de la réservation.

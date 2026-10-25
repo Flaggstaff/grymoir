@@ -545,7 +545,8 @@ static void expression(Reecriture *r, size_t d, size_t f) {
         if (t->type == J_MOT_CLE && strncmp(t->valeur, "en_", 3) == 0) {
             /* nom _en_majuscules → nom en majuscules ; code _en_nombre_entier → code en nombre entier (§ 4.5) */
             static const char *const C[] = { "majuscules", "minuscules", "nombre_entier", "nombre", "date", "année",
-                                             "vrai_ou_faux", "heure", "toutes_lettres", "format_technique", "iban" };
+                                             "vrai_ou_faux", "heure", "toutes_lettres", "format_technique", "iban",
+                                             "date_locale", "heure_locale", "format_universel" };   /* 2.60 */
             size_t q = 0;
             while (q < sizeof C / sizeof *C && strcmp(t->valeur + 3, C[q]) != 0) q++;
             if (q == sizeof C / sizeof *C) {
@@ -602,6 +603,19 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "la", t);
             mot(r, "lecture", t);
             mot(r, "de", t);
+            continue;
+        }
+        if (est_cle(t, "nombre_éléments") && k + 1 < f && r->e[k + 1].type == J_TEXTE) {
+            /* _nombre_éléments « a » r → le nombre d'éléments du champ « a » de r (2.60) */
+            mot(r, "le", t);
+            mot(r, "nombre", t);
+            emettre(r, J_ELISION, "d", t, 1);
+            mot(r, "éléments", t);
+            mot(r, "du", t);
+            mot(r, "champ", t);
+            copier(r, &r->e[k + 1]);
+            mot(r, "de", t);
+            k++;
             continue;
         }
         if (est_cle(t, "champ") && k + 1 < f && r->e[k + 1].type == J_TEXTE) {   /* _champ « a.b » r → le champ « a.b » de r */
@@ -1109,6 +1123,19 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             emettre(r, J_DEUX_POINTS, NULL, t, 1);
             fixer_retrait(r, premier, haut->profondeur);
             haut->dans_cas = est_cle(t, "et_du_tableau");
+            return;
+        }
+        if (!haut->dans_cas && est_cle(t, "entête") && f >= d + 4 && r->e[d + 1].type == J_TEXTE && r->e[d + 2].type == J_DEUX_POINTS) {
+            /* _entête « Authorization » : v → l'en-tête « Authorization » : v (2.60) */
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "en", t);
+            emettre(r, J_MOINS, NULL, t, 1);
+            mot(r, "tête", t);
+            copier(r, &r->e[d + 1]);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[d + 2], 1);
+            expression(r, d + 3, f);
+            emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
+            fixer_retrait(r, premier, prof);
             return;
         }
         if (!haut->dans_cas) {
@@ -2164,6 +2191,19 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "parmi", &r->e[d + 2]);
             mot(r, "les", &r->e[d + 2]);
             expression(r, d + 3, f);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            ouvrir(r, O_BOUCLE, prof, t);
+        } else if (!strcmp(c, "pour_chaque") && d + 4 < f && r->e[d + 1].type == J_CROCHETS && est_cle(&r->e[d + 2], "champ")
+                   && r->e[d + 3].type == J_TEXTE) {
+            /* _pour_chaque rdv _champ « collection » r → Pour chaque rdv du champ « collection » de r : (2.60) */
+            mot(r, "pour", t);
+            mot(r, "chaque", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, "du", &r->e[d + 2]);
+            mot(r, "champ", &r->e[d + 2]);
+            copier(r, &r->e[d + 3]);
+            mot(r, "de", &r->e[d + 3]);
+            expression(r, d + 4, f);
             emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
             ouvrir(r, O_BOUCLE, prof, t);
         } else if (!strcmp(c, "pour_chaque") && d + 3 < f && r->e[d + 1].type == J_CROCHETS && est_cle(&r->e[d + 2], "tableau")) {

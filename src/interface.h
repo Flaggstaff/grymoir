@@ -209,8 +209,8 @@ typedef struct {
     void (*ouvrir_adresse)(void *contexte, const char *adresse);
     /* « l'envoi à … de : » (2.42) : lecture 0, un POST du corps JSON ; 1, un GET de l'adresse déjà complétée. Rend 1 et la
      * réponse (allouée), avec son statut HTTP ; 0 et *erreur (allouée) si rien n'est revenu. NULL : la machine refuse. */
-    int (*envoyer)(void *contexte, int lecture, const char *adresse, const char *corps, long *statut, char **reponse,
-                   char **erreur);
+    int (*envoyer)(void *contexte, int lecture, const char *adresse, const char *corps, const char *entetes, long *statut,
+                   char **reponse, char **erreur);   /* entetes : « Nom: valeur\n » par ligne, ou « » (2.60) */
     /* La transcription d'une zone d'écran en arrière-plan (24 octobre 2026) : le son de la zone vient de changer ; la
      * zone « transcrite du … » d'indice cible recevra le texte quand il sera prêt, par un événement de changement que
      * l'interface enverra elle-même ; la machine n'attend pas. NULL : la machine transcrit elle-même, et attend. */

@@ -242,12 +242,17 @@ static void iface_montrer_document(void *contexte, const unsigned char *octets, 
 
 // « l'envoi à … de : », « la lecture de … » (2.42) : dans le fil de l'exécution, une requête HTTPS attendue sur place, 15 s
 // au plus ; le chiffrement est celui de Qt Network, avec les certificats du système
-static int iface_envoyer(void *contexte, int lecture, const char *adresse, const char *corps, long *statut, char **reponse,
-                         char **erreur) {
+static int iface_envoyer(void *contexte, int lecture, const char *adresse, const char *corps, const char *entetes,
+                         long *statut, char **reponse, char **erreur) {
     (void)contexte;
     QNetworkAccessManager reseau;
     QNetworkRequest requete{QUrl(QString::fromUtf8(adresse))};
     requete.setRawHeader("Accept", "application/json");
+    // « l'en-tête « Authorization » : … » (2.60) : une ligne « Nom: valeur » chacun
+    for (const QByteArray &ligne : QByteArray(entetes ? entetes : "").split('\n')) {
+        const qsizetype deux = ligne.indexOf(": ");
+        if (deux > 0) requete.setRawHeader(ligne.left(deux), ligne.mid(deux + 2));
+    }
     requete.setTransferTimeout(15000);
     QNetworkReply *r;
     if (lecture) r = reseau.get(requete);
