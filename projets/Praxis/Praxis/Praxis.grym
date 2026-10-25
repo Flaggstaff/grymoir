@@ -1254,31 +1254,41 @@ Quand on ouvre l'écran du patient :
     Le numéro d'assuré complémentaire de l'écran devient le numéro d'assuré complémentaire du p.
     La facturation complémentaire de l'écran devient la facturation complémentaire du p.
 
-Quand on clique sur « Enregistrer » dans l'écran du patient :
-    Le p vaut la personne ouverte.
+Remarque : le nom réuni (« Alain Thiémard ») d'après le nom et le prénom de l'écran ; un homonyme est refusé, sauf l'ancien nom
+Remarque : du même patient (24 octobre 2026 : une seule écriture pour l'inscription et la page du patient).
+Pour réunir le nom sauf un ancien, dans l'écran d'inscription ou l'écran du patient :
     Le complet vaut le nom de l'écran.
     Si le prénom de l'écran est présent, le complet devient le prénom de l'écran suivi de " " suivi du nom de l'écran.
-    Si le complet ≠ le nom du p :
+    Si le complet ≠ ancien :
         Si le nombre de patients conservés dont le nom = le complet > 0, refuser "Il y a déjà un patient « " suivi du complet suivi de " » : ajoute un second prénom, ou une initiale.".
+    Rendre le complet.
+
+Remarque : les zones communes de l'inscription et de la page du patient, notées dans le patient.
+Pour noter un patient, dans l'écran d'inscription ou l'écran du patient :
+    Le nom de famille du patient devient le nom de l'écran.
+    Le prénom du patient devient le prénom de l'écran.
+    Le téléphone du patient devient le téléphone de l'écran.
+    Le courriel du patient devient le courriel de l'écran.
+    La date de naissance du patient devient la date de naissance de l'écran.
+    La rue du patient devient la rue de l'écran.
+    Le numéro de maison du patient devient le numéro de maison de l'écran.
+    Le complément d'adresse du patient devient le complément d'adresse de l'écran.
+    Le numéro postal du patient devient le numéro postal de l'écran.
+    La localité du patient devient la localité de l'écran.
+    Le pays du patient devient le pays de l'écran.
+    L'assureur du patient devient l'assureur de l'écran.
+    Le numéro d'assuré du patient devient le numéro d'assuré de l'écran.
+    Le numéro de carte d'assuré du patient devient le numéro de carte d'assuré de l'écran.
+    L'assureur complémentaire du patient devient l'assureur complémentaire de l'écran.
+    Le numéro d'assuré complémentaire du patient devient le numéro d'assuré complémentaire de l'écran.
+    La facturation complémentaire du patient devient la facturation complémentaire de l'écran.
+
+Quand on clique sur « Enregistrer » dans l'écran du patient :
+    Le p vaut la personne ouverte.
+    Réunir le nom sauf le nom du p, qui donne le complet.
     Le nom du p devient le complet.
-    Le nom de famille du p devient le nom de l'écran.
-    Le prénom du p devient le prénom de l'écran.
-    Le téléphone du p devient le téléphone de l'écran.
-    Le courriel du p devient le courriel de l'écran.
-    La date de naissance du p devient la date de naissance de l'écran.
-    La rue du p devient la rue de l'écran.
-    Le numéro de maison du p devient le numéro de maison de l'écran.
-    Le complément d'adresse du p devient le complément d'adresse de l'écran.
-    Le numéro postal du p devient le numéro postal de l'écran.
-    La localité du p devient la localité de l'écran.
-    Le pays du p devient le pays de l'écran.
+    Noter le p.
     L'anamnèse du p devient l'anamnèse de l'écran.
-    L'assureur du p devient l'assureur de l'écran.
-    Le numéro d'assuré du p devient le numéro d'assuré de l'écran.
-    Le numéro de carte d'assuré du p devient le numéro de carte d'assuré de l'écran.
-    L'assureur complémentaire du p devient l'assureur complémentaire de l'écran.
-    Le numéro d'assuré complémentaire du p devient le numéro d'assuré complémentaire de l'écran.
-    La facturation complémentaire du p devient la facturation complémentaire de l'écran.
     Si l'ajout de l'écran est présent :
         Si l'anamnèse du p est présente, l'anamnèse du p devient l'anamnèse du p suivi de " [" suivi d'aujourd'hui suivi de « ] » suivi de " " suivi de l'ajout de l'écran.
         Sinon, l'anamnèse du p devient l'ajout de l'écran.
@@ -1433,28 +1443,11 @@ Quand on clique sur « Nouveau patient » dans l'écran de séance :
 
 Remarque : le patient inscrit est rangé dans « l'inscrit », que l'écran de séance reprend à la fermeture.
 Quand on clique sur « Enregistrer » dans l'écran d'inscription :
-    Le complet vaut le nom de l'écran.
-    Si le prénom de l'écran est présent, le complet devient le prénom de l'écran suivi de " " suivi du nom de l'écran.
-    Si le nombre de patients conservés dont le nom = le complet > 0, refuser "Il y a déjà un patient « " suivi du complet suivi de " » : ajoute un second prénom, ou une initiale.".
+    Réunir le nom sauf « », qui donne le complet.
     Le p vaut un nouveau patient :
         Le nom vaut le complet.
         Le pays vaut le pays de l'écran.
-    Le nom de famille du p devient le nom de l'écran.
-    Le prénom du p devient le prénom de l'écran.
-    L'assureur du p devient l'assureur de l'écran.
-    Le numéro d'assuré du p devient le numéro d'assuré de l'écran.
-    Le numéro de carte d'assuré du p devient le numéro de carte d'assuré de l'écran.
-    L'assureur complémentaire du p devient l'assureur complémentaire de l'écran.
-    Le numéro d'assuré complémentaire du p devient le numéro d'assuré complémentaire de l'écran.
-    La facturation complémentaire du p devient la facturation complémentaire de l'écran.
-    Le téléphone du p devient le téléphone de l'écran.
-    Le courriel du p devient le courriel de l'écran.
-    La date de naissance du p devient la date de naissance de l'écran.
-    La rue du p devient la rue de l'écran.
-    Le numéro de maison du p devient le numéro de maison de l'écran.
-    Le complément d'adresse du p devient le complément d'adresse de l'écran.
-    Le numéro postal du p devient le numéro postal de l'écran.
-    La localité du p devient la localité de l'écran.
+    Noter le p.
     L'anamnèse du p devient l'anamnèse de l'écran.
     La dernière dictée du p devient la dictée de l'écran.
     Conserver le p.
