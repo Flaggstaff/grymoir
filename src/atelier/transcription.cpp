@@ -191,6 +191,14 @@ QString transcrire_son(const QByteArray &octets, const QString &modele, QString 
     }
     std::vector<float> pcm;
     if (!wav_en_16k(octets, &pcm) && !decoder_en_16k(octets, &pcm, erreur)) return QString();
+    return transcrire_pcm(std::move(pcm), modele, erreur, false);
+}
+
+QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *erreur, bool rapide) {
+    if (modele.isEmpty()) {
+        *erreur = "Le modèle de transcription est introuvable (ggml-large-v3-turbo-q5_0.bin).";
+        return QString();
+    }
     // un enregistrement faible (micro peu sensible, casque) : ramené à un niveau que Whisper entend, au plus vingt fois plus
     // fort ; le son gardé dans la fiche ne change pas (24 octobre 2026)
     float crete = 0;
@@ -214,7 +222,8 @@ QString transcrire_son(const QByteArray &octets, const QString &modele, QString 
         }
         if (!ctx) { *erreur = "Le modèle de transcription ne se charge pas : " + modele; return QString(); }
     }
-    whisper_full_params p = whisper_full_default_params(WHISPER_SAMPLING_BEAM_SEARCH);
+    // en direct (24 octobre 2026) : la recherche gloutonne, plus rapide ; le texte final reprend la recherche en faisceau
+    whisper_full_params p = whisper_full_default_params(rapide ? WHISPER_SAMPLING_GREEDY : WHISPER_SAMPLING_BEAM_SEARCH);
     p.language = "fr";
     p.translate = false;
     p.n_max_text_ctx = 0;   // « -mc 0 » : sans s'appuyer sur son propre texte, il ne s'y enferme pas
@@ -259,4 +268,51 @@ QString transcrire_son(const QByteArray &octets, const QString &modele, QString 
         if (!passage.trimmed().isEmpty()) passages << passage.trimmed();
     }
     return passages.isEmpty() ? QString() : QString(QChar(MARQUE_TRANSCRIT)) + passages.join('\n');
+}
+
+// --- La transcription en direct (24 octobre 2026) ---
+
+void pcm_en_16k(const std::vector<float> &entree, int frequence, int canaux, std::vector<float> *pcm) {
+    std::vector<float> mono;
+    if (canaux <= 1) mono = entree;
+    else {
+        mono.reserve(entree.size() / (size_t)canaux);
+        for (size_t i = 0; i + (size_t)canaux <= entree.size(); i += (size_t)canaux) {
+            float x = 0;
+            for (int c = 0; c < canaux; c++) x += entree[i + (size_t)c];
+            mono.push_back(x / (float)canaux);
+        }
+    }
+    if (frequence == 16000) { pcm->insert(pcm->end(), mono.begin(), mono.end()); return; }
+    std::vector<float> r;
+    reechantillonner(mono, frequence, &r);
+    pcm->insert(pcm->end(), r.begin(), r.end());
+}
+
+void TranscriptionDirecte::ajouter(const std::vector<float> &pcm16k) { son.insert(son.end(), pcm16k.begin(), pcm16k.end()); }
+
+bool TranscriptionDirecte::passe(std::vector<float> *morceau, size_t *fin) const {
+    if (son.size() < debut + (size_t)(16000 * 1.5)) return false;   // moins d'une seconde et demie : rien à dire encore
+    *fin = son.size();
+    morceau->assign(son.begin() + (long)debut, son.begin() + (long)*fin);
+    return true;
+}
+
+void TranscriptionDirecte::recevoir(const QString &texte, size_t fin) {
+    QString t = texte;
+    t.remove(QChar(MARQUE_TRANSCRIT)).remove(QChar(DEBUT_DOUTE)).remove(QChar(FIN_DOUTE));
+    t = t.simplified();
+    if (fin - debut >= (size_t)(16000 * fenetre_secondes)) {
+        // une fenêtre pleine : son texte est acquis, la suite repart de là (Whisper ne voit que trente secondes à la fois)
+        if (!t.isEmpty()) acquis = acquis.isEmpty() ? t : acquis + " " + t;
+        debut = fin;
+        courant.clear();
+    } else {
+        courant = t;
+    }
+}
+
+QString TranscriptionDirecte::texte() const {
+    if (acquis.isEmpty()) return courant;
+    return courant.isEmpty() ? acquis : acquis + " " + courant;
 }

@@ -990,6 +990,37 @@ int main(int argc, char **argv) {
         attendre(300);
     }
 
+    // Le direct (24 octobre 2026) : les passes, la fenêtre acquise à vingt-cinq secondes, la suite raccordée
+    {
+        TranscriptionDirecte d;
+        std::vector<float> m;
+        size_t fin = 0;
+        d.ajouter(std::vector<float>(16000, 0.f));
+        VERIFIER(!d.passe(&m, &fin));   // une seconde : trop tôt
+        d.ajouter(std::vector<float>(32000, 0.f));
+        VERIFIER(d.passe(&m, &fin) && m.size() == 48000 && fin == 48000);
+        d.recevoir(QString(QChar(MARQUE_TRANSCRIT)) + QString::fromUtf8("bonjour ") + QChar(DEBUT_DOUTE) + "Nicolas" + QChar(FIN_DOUTE), fin);
+        VERIFIER(d.texte() == QString::fromUtf8("bonjour Nicolas"));   // les marques de relecture n'ont rien à faire ici
+        d.ajouter(std::vector<float>(16000 * 23, 0.f));   // 26 secondes en tout : la fenêtre est pleine
+        VERIFIER(d.passe(&m, &fin) && m.size() == 16000 * 26);
+        d.recevoir(QString::fromUtf8("bonjour Nicolas, la séance de ce matin"), fin);
+        VERIFIER(d.debut == 16000 * 26 && d.acquis == QString::fromUtf8("bonjour Nicolas, la séance de ce matin"));
+        d.ajouter(std::vector<float>(32000, 0.f));
+        VERIFIER(d.passe(&m, &fin) && m.size() == 32000);   // la suite seulement
+        d.recevoir(QString::fromUtf8("s'est bien passée"), fin);
+        VERIFIER(d.texte() == QString::fromUtf8("bonjour Nicolas, la séance de ce matin s'est bien passée"));
+        std::vector<float> stereo{0.5f, -0.5f, 1.f, 1.f};   // 48 kHz stéréo : une moyenne, puis un rééchantillonnage
+        std::vector<float> r;
+        pcm_en_16k(stereo, 16000, 2, &r);
+        VERIFIER(r.size() == 2 && r[0] == 0.f && r[1] == 1.f);
+        EnregistreurSon e;   // sans micro ni modèle : nourri à la main, il ne plante pas
+        e.nourrir_direct(std::vector<float>(16000 * 2, 0.f));
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 3000) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(true);
+    }
+
     // Le son (24 octobre 2026) : l'extension du fichier que lit le décodeur, d'après les octets ; le choix du micro
     {
         VERIFIER(extension_de_son(QByteArray("\0\0\0\x20" "ftypM4A ", 12)) == "m4a");

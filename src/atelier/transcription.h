@@ -32,3 +32,21 @@ bool modele_charge();
 
 // Le texte d'un son, ou vide avec *erreur. Le modèle est chargé une fois, puis gardé.
 QString transcrire_son(const QByteArray &octets, const QString &modele, QString *erreur);
+
+// Le texte d'un son déjà en 16 kHz mono ; rapide : la recherche gloutonne (pour le direct).
+QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *erreur, bool rapide);
+
+// La transcription en direct (24 octobre 2026) : pendant qu'on parle, le son arrive par morceaux ; à chaque passe, tout ce
+// qui suit le dernier point acquis est retranscrit (moins de vingt-cinq secondes : pas de mot coupé à raccorder) ; une
+// fenêtre pleine devient acquise et la suivante repart de sa fin. Le texte final, à l'arrêt, reprend tout le son.
+void pcm_en_16k(const std::vector<float> &entree, int frequence, int canaux, std::vector<float> *pcm);
+struct TranscriptionDirecte {
+    double fenetre_secondes = 25;
+    std::vector<float> son;   // 16 kHz mono, depuis le début de l'enregistrement
+    size_t debut = 0;         // le début de la fenêtre en cours
+    QString acquis, courant;
+    void ajouter(const std::vector<float> &pcm16k);
+    bool passe(std::vector<float> *morceau, size_t *fin) const;   // le morceau à transcrire maintenant, s'il y en a un
+    void recevoir(const QString &texte, size_t fin);            // le texte du morceau qui finissait à « fin »
+    QString texte() const;                                      // ce qu'on montre
+};
