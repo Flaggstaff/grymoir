@@ -1,0 +1,44 @@
+Remarque : Suisse santé, la bibliothèque de Praxis (26 octobre 2026) : ce qui ne dépend pas du cabinet.
+Remarque : la QR-facture (SIX, Implementation Guidelines QR-bill 2.4, § 4.2.2) et les formats d'ASPSMS.
+Remarque : elle ne connaît aucune entité : le programme lui donne des valeurs, et range ce qu'elle rend.
+Cette bibliothèque est « Suisse santé », version 1.
+Utiliser « outils ».
+
+Remarque : une adresse de QR-facture, sept lignes, adresse structurée (S), chacune suivie d'un saut : celle du créancier.
+Le créancier QR d'un nom et d'une rue et d'un numéro et d'un code et d'une localité et d'un pays :
+    Le s vaut un saut de ligne.
+    Rendre « S » suivi du s suivi de nom suivi du s suivi de la ligne QR de rue suivi du s suivi de la ligne QR de numéro suivi du s suivi de la ligne QR de code suivi du s suivi de la ligne QR de localité suivi du s suivi du code pays de pays suivi du s.
+
+Remarque : celle du débiteur : une adresse sans numéro postal, localité ou pays reconnu laisse les sept lignes vides ; la
+Remarque : section paiement montre alors un cadre « Payable par » à remplir (SIX IG 2.4).
+Le débiteur QR d'un nom et d'une rue et d'un numéro et d'un code et d'une localité et d'un pays :
+    Le s vaut un saut de ligne.
+    Si code est absent, rendre le bloc vide de s.
+    Si localité est absente, rendre le bloc vide de s.
+    Si le code pays de pays = « », rendre le bloc vide de s.
+    Rendre « S » suivi du s suivi de nom suivi du s suivi de la ligne QR de rue suivi du s suivi de la ligne QR de numéro suivi du s suivi de code suivi du s suivi de localité suivi du s suivi du code pays de pays suivi du s.
+
+Remarque : les 31 lignes du Swiss QR Code d'une facture : sans créancier final, sans référence (NON), le motif en message ;
+Remarque : le compte en IBAN, le créancier et le débiteur en sept lignes. GrymoiR vérifie les lignes (le code QR suisse).
+La charge QR suisse d'un compte et d'un créancier et d'un montant et d'un débiteur et d'un motif :
+    Rendre le contenu QR de compte et de créancier et de ((l'arrondi de montant à 0,01) en format technique) et de débiteur et de motif.
+
+Remarque : une QR-facture sans montant ni débiteur, pour essayer un IBAN et l'adresse du créancier.
+La charge QR de contrôle d'un compte et d'un créancier :
+    Le s vaut un saut de ligne.
+    Rendre le contenu QR de compte et de créancier et de « » et de (le bloc vide du s) et de « ».
+
+Remarque : « 079 123 45 67 », « +41 79 … », « 0041 79 … » : « +41791234567 », le format qu'ASPSMS recommande.
+Le natel international d'un numéro :
+    Le n vaut numéro en format technique.
+    Si le n commence par « + », rendre le n.
+    Si le n commence par « 00 », rendre « + » suivi de ((le n en nombre) en format technique).
+    Rendre « +41 » suivi de ((le n en nombre) en format technique).
+
+Le nombre à deux chiffres d'un nombre :
+    Si nombre < 10, rendre « 0 » suivi de (nombre en format technique).
+    Rendre nombre en format technique.
+
+Remarque : « 27/10/2026 18:00:00 », la forme qu'ASPSMS attend pour un envoi différé.
+Le moment d'envoi d'une date et d'une heure :
+    Rendre le nombre à deux chiffres du jour de date suivi de « / » suivi du nombre à deux chiffres du mois de date suivi de « / » suivi de (l'année de date en format technique) suivi de " " suivi de (heure en format technique) suivi de « :00 ».

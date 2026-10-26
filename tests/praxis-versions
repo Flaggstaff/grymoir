@@ -12,6 +12,8 @@ filtre() { grep -v -e '^Les écrans ont ' -e '^Utiliser « charge »\.' -e '^Rem
 for v in "$depot"/projets/Praxis/*/; do
     nom="$(basename "$v")"
     [ "$nom" = Nicolas ] && continue
+    total=$((total + 1))   # la bibliothèque « Suisse santé », recopiée dans chaque version (26 octobre 2026)
+    diff -r -x '.*' "$R/bibliothèques" "$v/bibliothèques" > /dev/null 2>&1 || { echecs=$((echecs + 1)); echo "ÉCHEC : $nom/bibliothèques diffère de Nicolas/bibliothèques"; }
     for f in actions.grym données.grym; do
         total=$((total + 1))
         cmp -s "$R/$f" "$v/$f" || { echecs=$((echecs + 1)); echo "ÉCHEC : $nom/$f diffère de Nicolas/$f"; }

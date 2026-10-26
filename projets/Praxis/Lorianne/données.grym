@@ -1,4 +1,5 @@
 Remarque : Praxis : les données d'un cabinet de thérapie, ses soins, ses patients, leurs séances.
+Utiliser la bibliothèque « Suisse santé », version 1.
 
 Remarque : le cabinet, un seul : ce qui figure en tête des quittances et des factures.
 Remarque : RCC (SASIS), GLN, RME et ASCA restent vides tant que Nicolas n'en a pas ; la facture du Tarif 590 exigera le RCC.
@@ -262,37 +263,11 @@ Chaque cabinet conservé dont l'IBAN est présent vérifie :
     la longueur de (l'IBAN du cabinet en format technique) = 21,
     sinon « Un IBAN suisse compte 21 caractères : CH, puis 19 chiffres et lettres. ».
 
-Remarque : une ligne de QR-facture : vide si la valeur est absente.
-La ligne QR d'une valeur :
-    Si valeur est absente, rendre « ».
-    Rendre valeur.
-
-Remarque : le pays en deux lettres (ISO 3166-1), comme la QR-facture l'écrit : les pays voisins par leur nom, sinon tel qu'écrit s'il a deux lettres ; vide sinon.
-Le code pays d'un pays :
-    Si pays est absent, rendre « ».
-    Le p vaut pays en minuscules.
-    Si le p = « suisse », rendre « CH ».
-    Si le p = « liechtenstein », rendre « LI ».
-    Si le p = « france », rendre « FR ».
-    Si le p = « allemagne », rendre « DE ».
-    Si le p = « italie », rendre « IT ».
-    Si le p = « autriche », rendre « AT ».
-    Si le p = « belgique », rendre « BE ».
-    Si le p = « luxembourg », rendre « LU ».
-    Si le p = « espagne », rendre « ES ».
-    Si le p = « portugal », rendre « PT ».
-    Si la longueur du p = 2, rendre pays en majuscules.
-    Rendre « ».
-
-Remarque : le créancier d'une QR-facture, le cabinet : sept lignes (SIX IG 2.4, § 4.2.2), adresse structurée (S), chacune suivie d'un saut.
-Le créancier QR d'un cabinet :
-    Le s vaut un saut de ligne.
-    Rendre « S » suivi du s suivi du nom du cabinet suivi du s suivi de la ligne QR de la rue du cabinet suivi du s suivi de la ligne QR du numéro de maison du cabinet suivi du s suivi de la ligne QR du numéro postal du cabinet suivi du s suivi de la ligne QR de la localité du cabinet suivi du s suivi du code pays du pays du cabinet suivi du s.
+Remarque : la QR-facture vient de la bibliothèque « Suisse santé » (26 octobre 2026) ; Praxis lui donne l'adresse du cabinet.
+L'adresse de créancier d'un cabinet vaut le créancier QR du nom du cabinet et de la rue du cabinet et du numéro de maison du cabinet et du numéro postal du cabinet et de la localité du cabinet et du pays du cabinet.
 
 Remarque : une QR-facture sans montant ni débiteur, pour essayer l'IBAN et l'adresse du cabinet.
-La charge de contrôle d'un cabinet :
-    Le s vaut un saut de ligne.
-    Rendre « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s suivi de l'IBAN du cabinet en IBAN suivi du s suivi du créancier QR du cabinet suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi de « CHF » suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi de « NON » suivi du s suivi du s suivi du s suivi de « EPD ».
+La charge de contrôle d'un cabinet vaut la charge QR de contrôle de (l'IBAN du cabinet en IBAN) et de (l'adresse de créancier du cabinet).
 
 Remarque : l'IBAN essayé dans une QR-facture de contrôle : sa clé vérifiée, le QR-IBAN refusé, l'adresse du cabinet complète, chacun avec son motif (grammaire 2.29).
 Chaque cabinet conservé dont l'IBAN est présent vérifie :

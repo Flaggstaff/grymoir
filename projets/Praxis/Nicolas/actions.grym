@@ -58,21 +58,7 @@ La ligne des numéros d'un cabinet :
 
 Remarque : les rappels par SMS (25 octobre 2026) : la veille d'une séance prévue, à 18:00, un SMS confié d'avance à ASPSMS
 Remarque : (envoi différé : il part même si l'ordinateur est éteint) ; une séance déplacée, annulée ou supprimée l'annule.
-Le nombre à deux chiffres d'un nombre :
-    Si nombre < 10, rendre « 0 » suivi de (nombre en format technique).
-    Rendre nombre en format technique.
-
-Remarque : « 079 123 45 67 », « +41 79 … », « 0041 79 … » : « +41791234567 », le format qu'ASPSMS recommande.
-Le natel international d'un numéro :
-    Le n vaut numéro en format technique.
-    Si le n commence par « + », rendre le n.
-    Si le n commence par « 00 », rendre « + » suivi de ((le n en nombre) en format technique).
-    Rendre « +41 » suivi de ((le n en nombre) en format technique).
-
-Remarque : « 27/10/2026 18:00:00 », la forme qu'ASPSMS attend pour un envoi différé.
-Le moment d'envoi d'une date et d'une heure :
-    Rendre le nombre à deux chiffres du jour de date suivi de « / » suivi du nombre à deux chiffres du mois de date suivi de « / » suivi de (l'année de date en format technique) suivi de " " suivi de (heure en format technique) suivi de « :00 ».
-
+Remarque : le numéro au format international et le moment d'envoi viennent de la bibliothèque « Suisse santé ».
 Remarque : « Nous vous rappelons votre RDV chez Nicolas Seydoux mardi 28.10 à 14:30, Rue St-Pierre 4, 2e étage, 1700 Fribourg
 Remarque : - Tél: 026 … » : ce qui manque à la fiche du cabinet ne s'écrit pas.
 Le texte du rappel d'une séance :
@@ -255,27 +241,14 @@ La mention du moyen d'une pièce :
     Si le moyen de la pièce = « plusieurs », rendre « . ».
     Rendre ", en " suivi du moyen de la pièce suivi de « . ».
 
-Remarque : le débiteur d'une QR-facture, le patient : sept lignes, adresse structurée (S) ; une adresse sans numéro postal, localité
-Remarque : ou pays reconnu laisse les sept lignes vides : la section paiement montre alors un cadre « Payable par » à remplir (SIX IG 2.4).
-Le débiteur QR d'un patient :
-    Le s vaut un saut de ligne.
-    Si le numéro postal du patient est absent, rendre le s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s.
-    Si la localité du patient est absente, rendre le s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s.
-    Si le code pays du pays du patient = « », rendre le s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s.
-    Rendre « S » suivi du s suivi du nom du patient suivi du s suivi de la ligne QR de la rue du patient suivi du s suivi de la ligne QR du numéro de maison du patient suivi du s suivi du numéro postal du patient suivi du s suivi de la localité du patient suivi du s suivi du code pays du pays du patient suivi du s.
+Remarque : le débiteur de la QR-facture, le patient (bibliothèque « Suisse santé ») : sans numéro postal, localité ou pays
+Remarque : reconnu, ses sept lignes restent vides, et la section paiement montre un cadre « Payable par » à remplir.
+L'adresse de débiteur d'un patient vaut le débiteur QR du nom du patient et de la rue du patient et du numéro de maison du patient et du numéro postal du patient et de la localité du patient et du pays du patient.
 
-Remarque : la QR-facture d'une facture ou d'un rappel (SIX, Implementation Guidelines QR-bill 2.4, § 4.2.2) : les 31 lignes du
-Remarque : Swiss QR Code, sans créancier final, sans référence (NON), le motif en message ; rien sans IBAN. GrymoiR vérifie les lignes.
+Remarque : la QR-facture d'une facture ou d'un rappel ; rien sans IBAN.
 La charge QR d'un cabinet et d'un patient et d'un montant et d'un motif :
     Si l'IBAN du cabinet est absent, rendre « ».
-    Le s vaut un saut de ligne.
-    Le d vaut « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s.
-    Le d devient d suivi de l'IBAN du cabinet en IBAN suivi du s suivi du créancier QR du cabinet.
-    Le d devient d suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s suivi du s.
-    Le d devient d suivi de (l'arrondi de montant à 0,01) en format technique suivi du s suivi de « CHF » suivi du s.
-    Le d devient d suivi du débiteur QR du patient.
-    Le d devient d suivi de « NON » suivi du s suivi du s suivi de motif suivi du s suivi de « EPD ».
-    Rendre d.
+    Rendre la charge QR suisse de (l'IBAN du cabinet en IBAN) et de (l'adresse de créancier du cabinet) et de montant et de (l'adresse de débiteur du patient) et de motif.
 
 Remarque : une quittance nouvelle, numérotée à la suite de l'année, conservée (24 octobre 2026 : écrite une fois, pour une séance
 Remarque : comme pour une facture) ; « , qui donne la q » la reçoit.

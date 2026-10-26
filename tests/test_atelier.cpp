@@ -155,6 +155,15 @@ static QString dessin(const QString &ligne, bool compacte = false) {
 }
 
 
+// Un dossier et ce qu'il contient, sous-dossiers compris (la bibliothèque de Praxis, 26 octobre 2026).
+static void copier_arbre(const QString &de, const QString &vers) {
+    QDir().mkpath(vers);
+    for (const QFileInfo &i : QDir(de).entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot)) {
+        if (i.isDir()) copier_arbre(i.filePath(), vers + "/" + i.fileName());
+        else QFile::copy(i.filePath(), vers + "/" + i.fileName());
+    }
+}
+
 // Praxis et ses données d'essai (21 octobre 2026) : l'application livrée part vide ; l'essai en fait une copie, où les
 // données d'essai (tests/praxis/essais.grym) sont branchées avant l'accueil, comme dans test_serveur.c.
 static bool copier_praxis_essai(const QString &vers) {
@@ -168,6 +177,7 @@ static bool copier_praxis_essai(const QString &vers) {
         for (const QString &n : QDir(source + "/" + sous).entryList(QDir::Files))
             QFile::copy(source + "/" + sous + "/" + n, vers + "/" + sous + "/" + n);
     }
+    copier_arbre(source + QString::fromUtf8("/bibliothèques"), vers + QString::fromUtf8("/bibliothèques"));   // « Suisse santé »
     if (!QFile::copy(QString(GRYM_SOURCE) + "/tests/praxis/essais.grym", vers + "/essais.grym")) return false;
     QFile f(vers + "/Praxis.grym");
     if (!f.open(QIODevice::ReadOnly)) return false;

@@ -1,6 +1,7 @@
 #!/bin/sh
 # Un seul code pour toutes les versions de Praxis (23 octobre 2026) : après une correction dans une version (Nicolas par défaut),
-# copie son code commun (Praxis.grym, actions.grym, données.grym) dans les autres versions de projets/Praxis. Chacune garde ce
+# copie son code commun (Praxis.grym, actions.grym, données.grym, et son dossier bibliothèques/ depuis le 26 octobre 2026) dans
+# les autres versions de projets/Praxis. Chacune garde ce
 # qui lui est propre : son départ.grym, ses images, ses polices, sa phrase « Les écrans ont … », et, pour le test de charge,
 # ses lignes qui branchent charge.grym. tests/praxis-versions vérifie ensuite que rien d'autre ne diffère.
 #
@@ -15,6 +16,9 @@ for cible in "$depot"/projets/Praxis/*/; do
     [ "$nom" = "$source" ] && continue
     [ -f "$cible/Praxis.grym" ] || continue
     cp "$S/actions.grym" "$S/données.grym" "$cible/"
+    # chaque version garde sa copie de la bibliothèque (grammaire, § 21.9) : la même, recopiée entière
+    rm -rf "$cible/bibliothèques"
+    [ -d "$S/bibliothèques" ] && cp -R "$S/bibliothèques" "$cible/bibliothèques"
     ecrans="$(grep '^Les écrans ont ' "$cible/Praxis.grym")"
     charge=0
     grep -q '^Utiliser « charge »\.' "$cible/Praxis.grym" && charge=1
