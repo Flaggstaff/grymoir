@@ -1,12 +1,27 @@
 #!/bin/sh
-# GrymoiR : appliquer un patch reçu, vérifier, publier, puis relancer l'atelier.
+# GrymoiR : appliquer des patchs reçus, vérifier, publier, puis relancer l'atelier.
 #   ./appliquer ~/Downloads/grymoir-t2.patch
-# Si le patch ne s'applique pas, ou si un essai échoue, rien n'est publié et le dépôt reste tel qu'il était.
+#   ./appliquer ~/Downloads/a-58.patch ~/Downloads/b-59.patch      plusieurs, dans l'ordre donné (27 octobre 2026)
+# Les patchs s'appliquent l'un après l'autre, puis tout se construit et s'essaie une fois. Si l'un ne s'applique pas, ou si un
+# essai échoue, rien n'est publié et le dépôt revient tel qu'il était. Un patch déjà appliqué est reconnu et passé.
+# L'atelier ne s'ouvre qu'une fois, à la fin.
 set -e
-depot="$(cd "$(dirname "$0")" && pwd)"
-[ -n "$1" ] || { echo "Usage : ./appliquer chemin/du/fichier.patch" >&2; exit 1; }
-[ -f "$1" ] || { echo "Patch introuvable : $1" >&2; exit 1; }
-patch="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+# Le script tourne depuis une copie : un patch qui le modifie ne réécrit pas, sous ses pieds, le fichier que le shell est en
+# train de lire (27 octobre 2026). La copie s'efface aussitôt ; le shell la garde ouverte jusqu'à la fin.
+if [ -z "$GRYM_APPLIQUER_DEPOT" ]; then
+    copie="$(mktemp "${TMPDIR:-/tmp}/appliquer.XXXXXX")"
+    cp "$0" "$copie"
+    GRYM_APPLIQUER_DEPOT="$(cd "$(dirname "$0")" && pwd)" exec sh "$copie" "$@"
+fi
+rm -f "$0"
+depot="$GRYM_APPLIQUER_DEPOT"
+[ $# -gt 0 ] || { echo "Usage : ./appliquer chemin/du/fichier.patch [autre.patch …]" >&2; exit 1; }
+for p in "$@"; do
+    [ -f "$p" ] || { echo "Patch introuvable : $p" >&2; exit 1; }
+done
+n=$#   # en chemins absolus : on change de dossier ensuite
+for p in "$@"; do set -- "$@" "$(cd "$(dirname "$p")" && pwd)/$(basename "$p")"; done
+shift "$n"
 cd "$depot"
 
 if [ -d .git/rebase-apply ]; then
@@ -16,31 +31,61 @@ fi
 # l'autre ordinateur a peut-être publié : on le récupère d'abord, en avance rapide seulement (22 octobre 2026)
 if ! git pull -q --ff-only; then
     echo "GitHub injoignable, ou le dépôt local a divergé de GitHub (des commits ou des modifications des deux côtés) : rien n'a changé." >&2
-    echo "Le dépôt est à : $(git log --oneline -1)" >&2
+    echo "Le dépôt est à : $(git log --oneline -1 | cut -c1-90)" >&2
     exit 1
 fi
+en_attente="$(git rev-list --count @{u}..HEAD 2>/dev/null || echo 0)"
+if [ "$en_attente" -gt 0 ]; then
+    echo "$en_attente commit(s) déjà dans ce dépôt, pas encore sur GitHub : ils partiront avec les nouveaux."
+fi
+
+# Le sujet d'un patch, décodé : dans le fichier, il est encodé (« =?UTF-8?q?… ») dès qu'il a un accent ou un guillemet ;
+# git mailinfo le rend tel que git log l'écrit (27 octobre 2026).
+sujet_du_patch() {
+    git mailinfo /dev/null /dev/null < "$1" 2>/dev/null | sed -n 's/^Subject: //p' | head -1
+}
+
 avant="$(git rev-parse HEAD)"
-if ! git am "$patch"; then
-    git am --abort
-    echo "Le patch ne s'applique pas : rien n'a changé. Le dépôt est à : $(git log --oneline -1)" >&2
-    # le diagnostic le plus fréquent (23 octobre 2026) : le patch est déjà là, ou il en manque un avant lui
-    sujet="$(sed -n 's/^Subject: \[PATCH[^]]*\] //p' "$patch" | head -1 | cut -c1-60)"
-    if [ -n "$sujet" ] && git log -20 --format=%s | cut -c1-60 | grep -qxF "$sujet"; then
-        echo "Ce patch est déjà appliqué (son commit est dans les 20 derniers) : rien à faire." >&2
-    else
+appliques=0
+for p in "$@"; do
+    nom="$(basename "$p")"
+    sujet="$(sujet_du_patch "$p")"
+    if [ -n "$sujet" ] && git log -50 --format=%s | grep -qxF -- "$sujet"; then
+        echo "Déjà appliqué, je passe : $nom"
+        continue
+    fi
+    echo "Application de $nom…"
+    if ! git am -q "$p"; then
+        git am --abort
+        git reset -q --hard "$avant"
+        echo "« $nom » ne s'applique pas : rien n'a changé. Le dépôt est à : $(git log --oneline -1 | cut -c1-90)" >&2
         echo "Il en manque sans doute un avant lui : applique d'abord, dans l'ordre, ceux que tu n'as pas encore appliqués" >&2
         echo "(ls -t ~/Downloads/*.patch | head montre les derniers reçus)." >&2
+        exit 1
     fi
-    exit 1
+    appliques=$((appliques + 1))
+done
+
+if [ "$appliques" -gt 0 ]; then
+    echo "Construction et essais…"
+    if ! ./atelier --construire || ! make -s test || ! ctest --test-dir construction --output-on-failure; then
+        git reset -q --hard "$avant"
+        echo "Échec de la construction ou d'un essai : les $appliques patch(s) appliqués sont retirés, rien n'est publié." >&2
+        echo "Envoie-moi ce qui s'est affiché ci-dessus." >&2
+        exit 1
+    fi
+elif [ "$en_attente" -eq 0 ]; then
+    echo "Rien de nouveau : tous ces patchs sont déjà appliqués et publiés."
+    exit 0
 fi
 
-echo "Construction et essais…"
-if ! ./atelier --construire || ! make -s test || ! ctest --test-dir construction --output-on-failure; then
-    git reset -q --hard "$avant"
-    echo "Échec de la construction ou d'un essai : le patch est retiré, rien n'est publié." >&2
-    echo "Envoie-moi ce qui s'est affiché ci-dessus." >&2
+# Publier ; un refus de GitHub laisse les commits ici, essayés : il suffit de relancer le push (26 octobre 2026).
+if ! git push -q; then
+    echo "" >&2
+    echo "Les essais ont réussi et les commits sont dans ce dépôt, mais GitHub n'a pas répondu ou a refusé l'envoi." >&2
+    echo "Rien n'est perdu. Relance la publication seule :" >&2
+    echo "    cd \"$depot\" && git push" >&2
     exit 1
 fi
-
-git push
+echo "Publié : $(git log --oneline -1 | cut -c1-90)"
 exec "$depot/atelier"

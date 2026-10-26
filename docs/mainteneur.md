@@ -44,6 +44,7 @@ Au quotidien, deux scripts suffisent, depuis le dossier du dépôt :
 ./atelier                        # construit le cœur et l'atelier, ferme l'atelier ouvert, lance le nouveau
 ./atelier exemples               # idem, sur un projet (un dossier) ou un fichier
 ./appliquer ~/Downloads/x.patch  # applique un patch, construit, fait tourner tous les essais, publie (git push), relance
+./appliquer a.patch b.patch      # plusieurs, dans l'ordre : une seule construction, un seul essai, l'atelier une fois
 ```
 
 Le guide « Premiers pas » (`docs/guide.md`) est vérifié comme le code : `test_guide` exécute le programme de chaque chapitre (`docs/guide/chapitre-NN.grym`), exige qu'il soit en forme canonique, que chaque bloc ```` ```grymoir ```` du chapitre en soit un extrait et que chaque bloc ```` ```sortie ```` apparaisse dans ce qu'il affiche, dans l'ordre. Un chapitre en plusieurs fichiers vit dans un dossier (`docs/guide/chapitre-12/association.grym` et les fichiers qu'il utilise) ; ses extraits peuvent venir de n'importe lequel. `test_guide` ne fait que compiler un programme à écrans, que la console n'ouvre pas : les chapitres 11 et 12 s'exécutent vraiment dans `test_atelier`, qui clique à la place du lecteur. Un changement du langage qui casse un exemple du guide casse donc les essais : corrigez le programme du chapitre, puis le texte.
@@ -56,7 +57,7 @@ Pour Windows : `./paquet-windows`, dans MSYS2 (UCRT64), fabrique `paquet/GrymoiR
 
 Les applications des projets de `projets/` : GitHub les fabrique pour les trois systèmes (Actions > applications) ; à la main, sur un des trois systèmes : `outils/fabriquer-ci "projets/Amis du Tilleul" sortie`. « Amis du Tilleul » y est une copie du chapitre 12 du guide (`docs/guide/chapitre-12`) : changer l'un demande de changer l'autre.
 
-`./appliquer` ne publie rien si le patch ne s'applique pas, ni si la construction ou un essai échoue : le patch est alors retiré, et le dépôt reste tel qu'il était. Sous macOS, `./atelier` ferme d'abord l'atelier ouvert (qui demande d'enregistrer ce qui ne l'est pas) : sans cela, `open` remettrait l'ancienne version au premier plan au lieu de lancer la nouvelle.
+`./appliquer` ne publie rien si un patch ne s'applique pas, ni si la construction ou un essai échoue : les patchs de cette fois sont alors retirés, et le dépôt reste tel qu'il était. Depuis le 27 octobre 2026 : un patch déjà appliqué est reconnu par son sujet (décodé par `git mailinfo` : celui du fichier est encodé dès qu'il porte un accent) et passé ; des commits restés ici après un envoi refusé partent avec les suivants, et un envoi refusé le dit, avec la commande à relancer (`git push`) ; le script tourne depuis une copie de lui-même, pour qu'un patch qui le modifie ne le réécrive pas pendant qu'il s'exécute. Sous macOS, `./atelier` ferme d'abord l'atelier ouvert (qui demande d'enregistrer ce qui ne l'est pas) : sans cela, `open` remettrait l'ancienne version au premier plan au lieu de lancer la nouvelle.
 
 Le détail, pour qui veut faire à la main :
 
@@ -279,3 +280,4 @@ Le reste du vocabulaire (mots de construction, synonymes) est encore dans le cod
 | 1.6 | 2026-09-29 | § 2 : l'icône de l'atelier et `outils/icone/fabriquer` |
 | 1.7 | 2026-10-10 | § 2 : `./paquet-windows`, l'installateur Windows (Inno Setup), et le manifeste UTF-8 des exécutables |
 | 1.8 | 2026-10-10 | § 2 : `grym_fopen` et `grym_supprimer`, les chemins UTF-8 sous Windows ; le manifeste sur tous les exécutables, essais compris |
+| 1.9 | 2026-10-27 | § 2 : `./appliquer` à plusieurs patchs ; le patch déjà appliqué reconnu ; l'envoi refusé dit quoi relancer ; le script tourne depuis une copie |

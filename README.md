@@ -56,6 +56,7 @@ L'atelier, en une commande (construit tout, puis lance ; sous macOS, Qt 6 par Ho
 
     ./atelier
     ./appliquer ~/Downloads/grymoir-x.patch   # appliquer un patch, vérifier, publier, relancer
+    ./appliquer a.patch b.patch               # plusieurs, dans l'ordre
 
 Compilation et tests (compilateur C99 requis : gcc, clang ou zig cc) :
 
