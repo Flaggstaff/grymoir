@@ -591,6 +591,14 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "le", t);
             mot(r, "xml", t);
             mot(r, "de", t);
+            if (k + 2 < f && r->e[k + 1].type == J_CROCHETS && r->e[k + 2].type == J_PAR_OUV) {
+                /* _xml quittance(f) → le XML de quittance de (f) (2.63) : parenthèses synthétiques */
+                size_t fin = fermante(r, k + 2, f);
+                if (fin == f) { echouer(r, &r->e[k + 2], grym_dupliquer("« ) » attendu.")); return; }
+                copier(r, &r->e[k + 1]);
+                arguments(r, k + 3, fin, 1, &r->e[k + 2]);
+                k = fin;
+            }
             continue;
         }
         if (est_cle(t, "envoi")) {                   /* _envoi « url » → l'envoi à « url » (2.42) */
@@ -1062,6 +1070,24 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
         return;
     }
     /* le XML déclaré (2.46) : « _xml facture « invoice:request » », puis « _attribut », « _contenu », « _élément » ; « _fin » */
+    /* « _xml quittance(_une chose_tarifée) « quittance » » (2.63) : ses paramètres, comme ceux d'un calcul */
+    const size_t xml_par = t->type == J_MOT_CLE && est_cle(t, "xml") && f >= d + 5 && r->e[d + 1].type == J_CROCHETS
+                           && r->e[d + 2].type == J_PAR_OUV ? fermante(r, d + 2, f) : f;
+    if (xml_par + 2 == f && r->e[f - 1].type == J_TEXTE) {
+        mot(r, "le", t);
+        mot(r, "xml", t);
+        mot(r, "de", t);
+        copier(r, &r->e[d + 1]);
+        parametres(r, d + 3, xml_par, 1);
+        emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
+        copier(r, &r->e[f - 1]);
+        emettre(r, J_VIRGULE, NULL, &r->e[f - 1], 1);
+        mot(r, "montre", &r->e[f - 1]);
+        emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+        fixer_retrait(r, premier, prof);
+        ouvrir(r, O_XML, prof, t);
+        return;
+    }
     if (t->type == J_MOT_CLE && est_cle(t, "xml") && f == d + 3 && r->e[d + 1].type == J_CROCHETS && r->e[d + 2].type == J_TEXTE) {
         mot(r, "le", t);
         mot(r, "xml", t);

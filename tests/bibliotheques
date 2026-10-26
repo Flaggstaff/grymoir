@@ -2,7 +2,7 @@
 # Les bibliothèques (grammaire 2.61, § 21.9, 26 octobre 2026) : « Utiliser la bibliothèque « X », version N. » trouve
 # bibliothèques/X/bibliothèque.grym à côté du programme ; version exacte, une seule par application ; ni entité ni
 # règle ; ses fichiers restent dans son dossier ; un programme n'y entre pas par un chemin. Ses fichiers internes (2.62)
-# ne montrent leurs formules qu'à elle.
+# ne montrent leurs formules qu'à elle ; elle déclare des XML à valeurs (2.63).
 racine=$(cd "$(dirname "$0")/.." && pwd)
 grym="$racine/grym"
 d=$(mktemp -d)
@@ -90,5 +90,28 @@ contient "$(lancer)" "L'entrée d'une bibliothèque n'est pas interne" "l'entré
 printf 'Ce fichier est interne à sa bibliothèque.\nLe un d'"'"'un x vaut 1.\n' > commun.grym
 printf 'Utiliser « commun ».\n' > p.grym
 contient "$(lancer)" "n'appartient à aucune bibliothèque" "l'interne hors d'une bibliothèque"
+# le XML à valeurs (2.63) : déclaré pour une aptitude dans la bibliothèque, rempli par l'entité du programme
+entree
+printf '\nLe XML de quittance d'"'"'une chose tarifée, « quittance », montre :\n    l'"'"'attribut « montant » : le montant de la chose.\n' >> "$S/bibliothèque.grym"
+printf 'Le centime suisse d'"'"'un x vaut l'"'"'arrondi de x à 0,05.\n' > "$S/arrondis.grym"
+printf 'Utiliser la bibliothèque « Suisse santé », version 2.\nUne facture, conservée, est une chose tarifée.\nLa f vaut une nouvelle facture :\n    Le montant vaut 12,5.\nEnregistrer le XML de quittance de la f dans « q.xml ».\n' > p.grym
+lancer > /dev/null
+verifier "$(sed -n 2p q.xml 2>/dev/null)" '<quittance montant="12.5"/>' "le XML d'une bibliothèque, rempli par le programme"
+"$grym" traduire p.grym > /dev/null 2>&1
+verifier "$(grep -c '_xml quittance(f)' p.grymc)" "1" "forme compacte de l'appel"
+mv p.grym p0.grym; "$grym" traduire p.grymc > /dev/null 2>&1
+verifier "$(cmp -s p.grym p0.grym && echo pareil)" "pareil" "aller-retour du XML à valeurs"
+rm -f p.grymc p0.grym q.xml
+(cd "$S" && "$grym" traduire bibliothèque.grym > /dev/null 2>&1)
+verifier "$(grep -c '_xml quittance(_une chose_tarifée) « quittance »' "$S/bibliothèque.grymc")" "1" "forme compacte de la déclaration"
+(cd "$S" && mv bibliothèque.grym b0 && "$grym" traduire bibliothèque.grymc > /dev/null 2>&1)
+verifier "$(cmp -s "$S/bibliothèque.grym" "$S/b0" && echo pareil)" "pareil" "aller-retour de la déclaration"
+mv "$S/b0" "$S/bibliothèque.grym"; rm -f "$S/bibliothèque.grymc"
+printf 'Utiliser la bibliothèque « Suisse santé », version 2.\nLe x vaut le XML de quittance.\n' > p.grym
+contient "$(lancer)" "Le XML de quittance attend sa valeur" "le XML sans sa valeur"
+printf 'Le XML de bon d'"'"'un x, « bon », montre :\n    le contenu : x.\n' > d.grym
+printf 'Utiliser « d ».\nEnregistrer le XML de bon de 3 dans « b.xml ».\n' > p.grym
+lancer > /dev/null
+verifier "$(sed -n 2p b.xml 2>/dev/null)" "<bon>3</bon>" "un XML déclaré dans un fichier utilisé"
 echo "$((total - echecs))/$total tests réussis"
 [ "$echecs" -eq 0 ]

@@ -628,10 +628,36 @@ static void expression(Impression *im, const Noeud *n) {
         }
         return;
     }
-    case N_XML:   /* « le XML de facture » (2.46) ; « _xml facture » */
-        if (im->compact) { aj(im, "_xml "); ecrire_nom(im, n->texte + 7, 0); return; }
+    case N_XML:   /* « le XML de facture » (2.46) ; « _xml facture » ; avec ses valeurs (2.63), comme un appel */
+        if (im->compact) {
+            aj(im, "_xml ");
+            ecrire_nom(im, n->texte + 7, 0);
+            if (n->nb_enfants) {
+                aj(im, "(");
+                for (size_t k = 0; k < n->nb_enfants; k++) {
+                    if (k) aj(im, " ; ");
+                    const Noeud *x = n->enfants[k];
+                    expression(im, x->type == N_GROUPE ? x->enfants[0] : x);
+                }
+                aj(im, ")");
+            }
+            return;
+        }
         aj(im, "le XML de ");
         ecrire_nom(im, n->texte + 7, 0);
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            aj(im, k ? " et " : " ");
+            const Noeud *x = n->enfants[k];
+            const Noeud *xi = x->type == N_GROUPE && x->nb_enfants == 1 ? x->enfants[0] : x;
+            const int appel_suivi = k + 1 < n->nb_enfants && xi->type == N_APPEL && xi->nb_enfants > 0;
+            if (argument_simple(x) && !appel_suivi) {
+                preposition(im, "de", x);
+            } else {
+                aj(im, "de (");
+                expression(im, xi);
+                aj(im, ")");
+            }
+        }
         return;
     case N_JSON_LISTE:   /* « le nombre d'éléments du champ « a » de r » ; « _nombre_éléments « a » r » (2.60) */
         if (im->compact) { aj(im, "_nombre_éléments "); ecrire_texte(im, n->texte); aj(im, " "); expression(im, n->enfants[0]); return; }
@@ -2057,6 +2083,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         if (n->op == 'X' && c) {   /* « _xml facture « invoice:request » » … « _fin » (2.46) */
             aj(im, "_xml ");
             ecrire_nom(im, n->texte + 7, 0);
+            if (n->enfants[0]->nb_enfants) {   /* « _xml quittance(_une chose_tarifée) » (2.63) */
+                aj(im, "(");
+                parametres(im, n->enfants[0], 0);
+                aj(im, ")");
+            }
             aj(im, " ");
             ecrire_texte(im, n->texte3);
             aj(im, "\n");
@@ -2068,6 +2099,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         if (n->op == 'X') {   /* « Le XML de facture, « invoice:request », montre : » (2.46) */
             aj(im, "Le XML de ");
             ecrire_nom(im, n->texte + 7, 0);   /* sans « xml de » */
+            parametres(im, n->enfants[0], 1);   /* « d'une chose tarifée » (2.63) */
             aj(im, ", ");
             ecrire_texte(im, n->texte3);
             aj(im, ", montre :\n");

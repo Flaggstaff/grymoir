@@ -364,8 +364,7 @@ static void expression(Compilation *c, const Noeud *n) {
         if (k < 0) { trop_grand(c, n); return; }
         emettre(c, I_XML_DEBUT, k, n->ligne, n->colonne);
         Noeud ap = *n;
-        ap.type = P_APPEL;
-        ap.nb_enfants = 0;
+        ap.type = P_APPEL;   /* ses valeurs, s'il en a (2.63), sont celles de l'appel */
         ap.texte2 = NULL;   /* la racine n'est pas une classe : l'action n'a qu'une version */
         ap.texte3 = NULL;
         appel(c, &ap, 0);

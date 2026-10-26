@@ -92,6 +92,11 @@ struct Portee {
     char **bib_versions;  /* la version demandée, et vérifiée */
     size_t nb_bibs;
     int bib_principale;   /* k : le fichier principal est l'entrée de la k-ième bibliothèque, ouverte seule */
+    /* Les XML déclarés (2.46) : « facture », leur racine ; dans la portée depuis la 2.63, pour qu'un fichier utilisé ou
+     * une bibliothèque en déclare. */
+    char **xml_noms;
+    char **xml_racines;
+    size_t nb_xml;
     /* Écrans déclarés (§ 22) : leurs boutons et les entités de leurs listes, pour vérifier les événements. */
     struct EcranConnu *ecrans;
     size_t nb_ecrans;
@@ -140,6 +145,8 @@ Portee *portee_creer(void) {
     p->bib_noms = p->bib_dossiers = p->bib_versions = NULL;
     p->nb_bibs = 0;
     p->bib_principale = 0;
+    p->xml_noms = p->xml_racines = NULL;
+    p->nb_xml = 0;
     p->ecrans = NULL;
     p->nb_ecrans = 0;
     return p;
@@ -226,6 +233,11 @@ static void portee_vider(Portee *p) {
     p->bib_noms = p->bib_dossiers = p->bib_versions = NULL;
     p->nb_bibs = 0;
     p->bib_principale = 0;
+    for (size_t i = 0; i < p->nb_xml; i++) { free(p->xml_noms[i]); free(p->xml_racines[i]); }
+    free(p->xml_noms);
+    free(p->xml_racines);
+    p->xml_noms = p->xml_racines = NULL;
+    p->nb_xml = 0;
     for (size_t i = 0; i < p->nb_ecrans; i++) ecran_liberer(&p->ecrans[i]);
     free(p->ecrans);
     p->ecrans = NULL;
@@ -274,6 +286,9 @@ static void portee_copier(Portee *dst, const Portee *src) {
     dst->bib_dossiers = src->nb_bibs ? copier_noms(src->bib_dossiers, src->nb_bibs) : NULL;
     dst->bib_versions = src->nb_bibs ? copier_noms(src->bib_versions, src->nb_bibs) : NULL;
     dst->bib_principale = src->bib_principale;
+    dst->nb_xml = src->nb_xml;
+    dst->xml_noms = src->nb_xml ? copier_noms(src->xml_noms, src->nb_xml) : NULL;
+    dst->xml_racines = src->nb_xml ? copier_noms(src->xml_racines, src->nb_xml) : NULL;
     dst->nb_ecrans = src->nb_ecrans;
     dst->ecrans = src->nb_ecrans ? grym_allouer(src->nb_ecrans * sizeof *dst->ecrans) : NULL;
     for (size_t i = 0; i < src->nb_ecrans; i++) {
@@ -527,9 +542,6 @@ typedef struct {
     int boucle;              /* boucles englobantes dans la formule ou le programme en cours (§ 10) */
     int dans_xml;            /* le corps d'un XML déclaré (2.46) : attributs, contenus, éléments */
     int action_rend;         /* l'action en cours a un « Rendre » (2.57) */
-    char **xml_noms;         /* les XML déclarés : « facture », leur racine (2.46) */
-    char **xml_racines;
-    size_t nb_xml;
     int duree_permise;       /* « par pas de 1 mois » : une durée peut suivre la valeur lue (§ 14.2) */
     int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
     char *valeurs_lues;      /* « (« à faire », « fini »)» : la liste lue par lire_type, séparée par U+001E (§ 16.15) */
@@ -1042,8 +1054,9 @@ static char *message_interne(Analyse *a, const char *nom) {
         size_t l = strlen(s->nom);   /* « centime suisse de » : le nom lu emporte le « de » qui suit */
         if (strncmp(s->nom, nom, l) != 0 || (nom[l] && nom[l] != ' ')) continue;
         const char *b = bibliotheque_cachante(a->portee, s);
-        if (b) return grym_formater("« %s » est interne à la bibliothèque « %s » : elle ne le montre qu'à ses propres "
-                                    "fichiers.", s->nom, b);
+        if (b) return grym_formater("« %s%s » est interne à la bibliothèque « %s » : elle ne le montre qu'à ses propres "
+                                    "fichiers.", strncmp(s->nom, "xml de ", 7) ? "" : "le XML de ",
+                                    strncmp(s->nom, "xml de ", 7) ? s->nom : s->nom + 7, b);   /* un XML (2.63) */
     }
     return NULL;
 }
@@ -1223,7 +1236,11 @@ static Noeud *appel_calcul(Analyse *a, Symbole *s, const Jeton *premier) {
     }
     if (nb != s->nb_parametres) {
         char *att = pluriel(s->nb_parametres, "paramètre");
-        erreur(a, premier, grym_formater("« %s » attend %s, %d donné%s.", s->nom, att, nb, nb > 1 ? "s" : ""));
+        if (strncmp(s->nom, "xml de ", 7) == 0)   /* un XML à valeurs (2.63) */
+            erreur(a, premier, grym_formater("Le XML de %s attend %s, %d donnée%s.", s->nom + 7,
+                                             s->nb_parametres > 1 ? "plusieurs valeurs" : "une valeur", nb, nb > 1 ? "s" : ""));
+        else
+            erreur(a, premier, grym_formater("« %s » attend %s, %d donné%s.", s->nom, att, nb, nb > 1 ? "s" : ""));
         free(att);
         noeud_liberer(n);
         return NULL;
@@ -2227,23 +2244,47 @@ static Noeud *base(Analyse *a) {
             const int m2 = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : -1;
             if (m2 >= 0 && est_mot(voir(a, m2), "xml") && de_ou_d(voir(a, m2 + 1))) {
                 size_t d = a->i + (size_t)m2 + 2, meilleur = 0, q_meilleur = 0;
-                for (size_t q = 0; q < a->nb_xml; q++) {
+                Portee *px = a->portee;
+                for (size_t q = 0; q < px->nb_xml; q++) {
                     if (a->j[d].type == J_CROCHETS) {   /* la forme compacte : « [facture] » */
-                        if (!strcmp(a->j[d].valeur, a->xml_noms[q])) { meilleur = d + 1; q_meilleur = q; }
+                        if (!strcmp(a->j[d].valeur, px->xml_noms[q])) { meilleur = d + 1; q_meilleur = q; }
                         continue;
                     }
                     for (size_t k = d + 1; k <= a->n && mot_de_nom(a, k - 1); k++) {
                         char *x = cle(a, d, k);
-                        if (!strcmp(x, a->xml_noms[q]) && k > meilleur) { meilleur = k; q_meilleur = q; }
+                        if (!strcmp(x, px->xml_noms[q]) && k > meilleur) { meilleur = k; q_meilleur = q; }
                         free(x);
                     }
                 }
                 if (!meilleur) return erreur(a, t, grym_dupliquer("XML inconnu : déclare-le avant, « Le XML de facture, « … », montre : »."));
+                char *nom_x = grym_formater("xml de %s", px->xml_noms[q_meilleur]);
+                Symbole *sx = visible(a, nom_x);
+                if (!sx) {   /* déclaré dans un fichier interne d'une bibliothèque (2.62, 2.63) */
+                    char *mi = message_interne(a, nom_x);
+                    free(nom_x);
+                    return erreur(a, t, mi ? mi : grym_dupliquer("XML inconnu."));
+                }
                 Noeud *n = noeud_creer(N_XML, t->ligne, t->colonne, t->debut);
-                n->texte = grym_formater("xml de %s", a->xml_noms[q_meilleur]);
-                n->texte2 = grym_dupliquer(a->xml_racines[q_meilleur]);
+                n->texte = nom_x;
+                n->texte2 = grym_dupliquer(px->xml_racines[q_meilleur]);
                 a->article_force = ART_AUCUN;
                 a->i = meilleur;
+                if (sx->nb_parametres > 0) {
+                    /* « le XML de quittance de la facture » (2.63) : ses valeurs, comme celles d'un calcul (§ 9.1) */
+                    if (!complement_de(a, a->i)) {
+                        char *m = grym_formater("Le XML de %s attend %s : « le XML de %s de la facture ».",
+                                                px->xml_noms[q_meilleur], sx->nb_parametres > 1 ? "ses valeurs" : "sa valeur",
+                                                px->xml_noms[q_meilleur]);
+                        noeud_liberer(n);
+                        return erreur(a, t, m);
+                    }
+                    Noeud *ap = appel_calcul(a, sx, t);
+                    if (!ap) { noeud_liberer(n); return NULL; }
+                    for (size_t q = 0; q < ap->nb_enfants; q++) noeud_ajouter(n, ap->enfants[q]);
+                    n->fin = ap->fin;
+                    ap->nb_enfants = 0;
+                    noeud_liberer(ap);
+                }
                 return n;
             }
         }
@@ -8858,40 +8899,49 @@ static Noeud *element_xml(Analyse *a, int colonne) {
     return n;
 }
 
-/* « Le XML de facture, « invoice:request », montre : » (2.46) : une action sans paramètre, qui écrit ses éléments. */
+/* « Le XML de facture, « invoice:request », montre : » (2.46) : une action sans paramètre, qui écrit ses éléments.
+ * « Le XML de quittance d'une chose tarifée, « quittance », montre : » (2.63) : avec des paramètres, comme un calcul. */
 static Noeud *declaration_xml(Analyse *a, int colonne, Jeton *tle) {
     size_t d = a->i + 3, k = d;
     if (a->j[d].type == J_CROCHETS) k = d + 1;   /* la forme compacte : « [facture] » */
-    else while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_DEUX_POINTS && a->j[k].type != J_FIN && mot_de_nom(a, k)) k++;
+    else while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_DEUX_POINTS && a->j[k].type != J_FIN
+                && !marque_parametre(a, k) && mot_de_nom(a, k)) k++;
+    const size_t fin_nom = k;
+    if (k > d && marque_parametre(a, k)) {   /* « d'une chose tarifée [et d'un …] » jusqu'à la virgule */
+        while (k < a->n && a->j[k].type != J_VIRGULE && a->j[k].type != J_DEUX_POINTS && a->j[k].type != J_FIN) k++;
+    }
     if (k == d || a->j[k].type != J_VIRGULE || a->j[k + 1].type != J_TEXTE || a->j[k + 2].type != J_VIRGULE
         || !est_mot(&a->j[k + 3], "montre") || a->j[k + 4].type != J_DEUX_POINTS)
         return erreur(a, tle, grym_dupliquer("Un XML se déclare ainsi : « Le XML de facture, « invoice:request », montre : »."));
-    char *nom_court = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k);
+    char *nom_court = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, fin_nom);
     const char *racine = a->j[k + 1].valeur;
     if (!nom_xml_valide(racine)) {
         free(nom_court);
         return erreur(a, &a->j[k + 1], grym_dupliquer("La racine d'un XML est un nom XML : « invoice:request »."));
     }
-    for (size_t q = 0; q < a->nb_xml; q++)
-        if (!strcmp(a->xml_noms[q], nom_court)) {
+    Portee *px = a->portee;
+    for (size_t q = 0; q < px->nb_xml; q++)
+        if (!strcmp(px->xml_noms[q], nom_court)) {
             Noeud *e = erreur(a, &a->j[d], grym_formater("Le XML de %s est déjà déclaré.", nom_court));
             free(nom_court);
             return e;
         }
+    Noeud *params = fin_nom < k ? parametres(a, fin_nom, k, 1)
+                                : noeud_creer(N_BLOC, tle->ligne, tle->colonne, tle->debut);
+    if (!params) { free(nom_court); return NULL; }
     char *nom = grym_formater("xml de %s", nom_court);
-    char **noms = grym_allouer((a->nb_xml + 1) * sizeof *noms), **racines = grym_allouer((a->nb_xml + 1) * sizeof *racines);
-    for (size_t q = 0; q < a->nb_xml; q++) { noms[q] = a->xml_noms[q]; racines[q] = a->xml_racines[q]; }
-    free(a->xml_noms);
-    free(a->xml_racines);
-    a->xml_noms = noms;
-    a->xml_racines = racines;
-    a->xml_noms[a->nb_xml] = nom_court;
-    a->xml_racines[a->nb_xml++] = grym_dupliquer(racine);
-    Noeud *params = noeud_creer(N_BLOC, tle->ligne, tle->colonne, tle->debut);
+    char **noms = grym_allouer((px->nb_xml + 1) * sizeof *noms), **racines = grym_allouer((px->nb_xml + 1) * sizeof *racines);
+    for (size_t q = 0; q < px->nb_xml; q++) { noms[q] = px->xml_noms[q]; racines[q] = px->xml_racines[q]; }
+    free(px->xml_noms);
+    free(px->xml_racines);
+    px->xml_noms = noms;
+    px->xml_racines = racines;
+    px->xml_noms[px->nb_xml] = nom_court;
+    px->xml_racines[px->nb_xml++] = grym_dupliquer(racine);
     portee_declarer(a->portee, nom, GENRE_LIBRE, tle->ligne);
     Symbole *s = &a->portee->s[a->portee->n - 1];
     s->sorte = S_ACTION;
-    s->nb_parametres = 0;
+    s->nb_parametres = (int)params->nb_enfants;
     Contexte ctx = entrer_formule(a, 2, params);
     a->i = k + 5;
     a->dans_xml++;
@@ -9556,9 +9606,6 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     Analyse a;
     a.dans_xml = 0;   /* 2.46 */
     a.action_rend = 0;
-    a.xml_noms = NULL;
-    a.xml_racines = NULL;
-    a.nb_xml = 0;
     a.j = j;
     a.n = n;
     a.i = 0;
@@ -9648,9 +9695,6 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
         free(a.att_mots);
     }
     free(a.valeurs_lues);
-    for (size_t q = 0; q < a.nb_xml; q++) { free(a.xml_noms[q]); free(a.xml_racines[q]); }
-    free(a.xml_noms);
-    free(a.xml_racines);
     free(a.couleurs_lues);
     liberer_noms_fin(&a);
     free(a.a_completer);

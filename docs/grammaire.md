@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.62 de la spécification, révisée le 26 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.63 de la spécification, révisée le 26 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1852,18 +1852,18 @@ Une facture, conservée, est une chose tarifée.
 - **Sa déclaration.** L'entrée commence, après ses remarques, par `Cette bibliothèque est « Suisse santé », version 2.` Le nom y est celui du dossier ; la version est un nombre entier, à partir de 1, sans zéro en tête. Ailleurs que dans une entrée, la phrase est une erreur : un fichier ordinaire qui se déclare bibliothèque se range dans `bibliothèques/`.
 - **La version demandée** est la version de la bibliothèque, exactement : « La bibliothèque « X » est en version 3 ; le programme demande la version 2 : relis ce qui a changé, puis écris « version 3 ». » Pas d'intervalle, pas de « au moins » : changer de version est une décision écrite dans le programme.
 - **Une seule version par application.** Si deux fichiers, ou deux bibliothèques, demandent la même bibliothèque en deux versions : « La bibliothèque « X » est déjà utilisée en version 2 : une application n'en utilise qu'une version. »
-- **Pas d'entité, pas de règle.** Une bibliothèque déclare des aptitudes, des classes, des calculs et des actions ; les tables restent celles du programme (charte, art. 7 et 13). « Une bibliothèque ne déclare pas d'entité (« facture », …) : déclare une aptitude, que l'entité du programme adopte. » De même pour une règle (§ 16.14).
+- **Pas d'entité, pas de règle.** Une bibliothèque déclare des aptitudes, des classes, des calculs, des actions et des XML à valeurs (§ 22.19, 2.63) ; les tables restent celles du programme (charte, art. 7 et 13). « Une bibliothèque ne déclare pas d'entité (« facture », …) : déclare une aptitude, que l'entité du programme adopte. » De même pour une règle (§ 16.14).
 - **Ses fichiers.** Une bibliothèque utilise d'autres fichiers par `Utiliser « … »`, dans son dossier seulement : « Une bibliothèque n'utilise que ses propres fichiers : « ../commun » sort du dossier de « X ». » Elle utilise d'autres bibliothèques, cherchées dans le même `bibliothèques/`. Un programme n'entre pas dans une bibliothèque par un chemin, ce qui sauterait sa version : « « bibliothèques/X/arrondis » appartient à une bibliothèque : écris « Utiliser la bibliothèque « … », version … ». »
 - **Les fichiers internes** *(2.62)*. Un fichier d'une bibliothèque qui commence par `Ce fichier est interne à sa bibliothèque.` (après ses remarques, parmi ses phrases `Utiliser`) ne montre ses calculs et ses actions qu'aux fichiers de cette bibliothèque. Ailleurs : « « centime suisse » est interne à la bibliothèque « Suisse santé » : elle ne le montre qu'à ses propres fichiers. » La bibliothèque peut ainsi changer ses outils sans toucher les programmes qui l'utilisent, à condition de garder ce que son entrée montre.
   - Le choix se fait par fichier, comme Java, depuis sa version 9, exporte des paquets et non des classes (JSR 376, de mémoire) : une phrase en tête de fichier se lit d'un coup d'œil, et les en-têtes de formules restent ceux du § 9.
-  - Un fichier interne ne déclare que des calculs et des actions : une classe ou une aptitude se voit dans les entités du programme, elle ne peut pas être cachée.
+  - Un fichier interne ne déclare que des calculs et des actions (un XML en est une) : une classe ou une aptitude se voit dans les entités du programme, elle ne peut pas être cachée.
   - L'entrée d'une bibliothèque n'est jamais interne : elle est ce que la bibliothèque montre. Un fichier hors d'une bibliothèque ne se dit pas interne.
   - Un nom interne reste réservé dans tout le projet : la machine range les formules par nom (`docs/vm.md`), et un programme qui le redéclare est refusé comme au § 21.5.
   - Forme compacte : `_interne`.
 - **Les noms.** Ce qu'une bibliothèque déclare est visible comme toute déclaration d'un fichier utilisé (§ 21.5) : un nom reste unique dans tout le projet, et le message d'un doublon nomme le fichier de la bibliothèque. Un programme qui déclare un calcul du même nom qu'une bibliothèque est refusé, rien n'est remplacé en silence (charte, art. 6).
 - **Ouverte seule**, dans l'atelier ou par `grym lsp`, l'entrée cherche les autres bibliothèques dans le `bibliothèques/` qui la contient.
 - **Forme compacte** : `_utiliser _bibliothèque « Suisse santé » 2` et `_bibliothèque « Suisse santé » 2`.
-- **Pas encore** : un XML déclaré (§ 22.19) dans une bibliothèque, car il nomme l'entité de son objet, que la bibliothèque ne connaît pas ; des écrans, des parties et des documents dans une bibliothèque (un fichier utilisé n'en contient pas, § 21.2).
+- **Pas encore** : des écrans, des parties et des documents dans une bibliothèque (un fichier utilisé n'en contient pas, § 21.2).
 
 ## 22. Écrans *(A3 : implémenté le 25 septembre 2026)*
 
@@ -2310,6 +2310,8 @@ Le fichier XML du d devient le XML de facture.
 - Une phrase y écrit aussi : `Pour chaque … :`, `Si … :`, `Le x vaut …` ; leurs éléments vont où elles se trouvent.
 - Une valeur s'écrit telle quelle pour un texte, en forme canonique pour un nombre (`105.6`), en `AAAA-MM-JJ` pour une date, `true` ou `false` pour vrai ou faux. Un attribut absent n'est pas écrit ; un contenu absent non plus. Le langage échappe `&`, `<`, `>` et, dans un attribut, `"` : le développeur n'écrit jamais un chevron.
 - Les refus : un nom qui n'est pas un nom XML (« Un nom XML entre guillemets : une lettre d'abord, puis lettres, chiffres, « - », « _ », « . » ou « : » ») ; un attribut après le contenu ou un élément (« L'attribut « k » vient avant le contenu et les éléments de « x ». ») ; un XML inconnu ou déclaré deux fois.
+- **Ses valeurs** *(2.63)*. Un XML prend des paramètres, comme un calcul (§ 9.3) : `Le XML de quittance d'une chose tarifée, « quittance », montre :`, puis `le montant de la chose` dans ses éléments ; on l'écrit avec ses valeurs, `le XML de quittance de la facture`. Ainsi un XML ne dépend que de ce qu'on lui donne : une bibliothèque peut le déclarer pour une aptitude, et chaque programme le remplit avec son entité qui l'adopte. Sans sa valeur : « Le XML de quittance attend sa valeur : « le XML de quittance de la facture ». » Formes compactes : `_xml quittance(_une chose_tarifée) « quittance »` … `_fin` ; `_xml quittance(f)` dans une expression.
+- *(2.63)* Un XML déclaré dans un fichier utilisé (§ 21) se voit dans le programme qui l'utilise, comme ses calculs ; il restait jusque-là propre à son fichier.
 - Le XML produit est bien formé ; sa conformité à un schéma (XSD) n'est pas vérifiée. En forme compacte *(2.48)* : `_xml facture « invoice:request »` … `_fin` ; `_attribut « n » v`, `_contenu v`, `_élément « n »`, `_élément « n » v`, `_élément « n » _enfants` … `_fin` ; `_xml facture` dans une expression.
 
 ## Journal des révisions
@@ -2479,3 +2481,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.60 | 2026-10-25 | § 22.18 : `l'en-tête « … » :` dans un envoi ; `Pour chaque … du champ « … » de r`, `le nombre d'éléments du champ « … » de r` ; `en date locale`, `en heure locale`, `en format universel` |
 | 2.61 | 2026-10-26 | Nouveau § 21.9 : les bibliothèques, `Utiliser la bibliothèque « Suisse santé », version 2.`, dans `bibliothèques/`, à côté du programme ; `Cette bibliothèque est « Suisse santé », version 2.` en tête de son entrée ; version exacte, une seule par application ; ni entité ni règle ; ses fichiers restent dans son dossier |
 | 2.62 | 2026-10-26 | § 21.9 : les fichiers internes d'une bibliothèque, `Ce fichier est interne à sa bibliothèque.` (forme compacte `_interne`) ; leurs calculs et actions ne se voient que dans les fichiers de la bibliothèque, et le message le dit |
+| 2.63 | 2026-10-26 | § 22.19 : le XML à valeurs, `Le XML de quittance d'une chose tarifée, « quittance », montre :` et `le XML de quittance de la facture` (formes compactes `_xml quittance(_une chose_tarifée) « … »`, `_xml quittance(f)`) ; un XML déclaré dans un fichier utilisé ou une bibliothèque se voit dans le programme ; § 21.9 : une bibliothèque déclare des XML |
