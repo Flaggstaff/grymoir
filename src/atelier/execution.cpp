@@ -246,7 +246,12 @@ static int iface_envoyer(void *contexte, int lecture, const char *adresse, const
                          long *statut, char **reponse, char **erreur) {
     (void)contexte;
     QNetworkAccessManager reseau;
-    QNetworkRequest requete{QUrl(QString::fromUtf8(adresse))};
+    QString cible = QString::fromUtf8(adresse);
+    // pour les essais seulement : « https://api.calendly.com=http://127.0.0.1:4242 » envoie à un faux service local
+    const QString redirection = qEnvironmentVariable("GRYM_ESSAI_REDIRECTION");
+    if (const qsizetype egal = redirection.indexOf('='); egal > 0 && cible.startsWith(redirection.left(egal)))
+        cible = redirection.mid(egal + 1) + cible.mid(egal);
+    QNetworkRequest requete{QUrl(cible)};
     requete.setRawHeader("Accept", "application/json");
     // « l'en-tête « Authorization » : … » (2.60) : une ligne « Nom: valeur » chacun
     for (const QByteArray &ligne : QByteArray(entetes ? entetes : "").split('\n')) {

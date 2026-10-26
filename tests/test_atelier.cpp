@@ -5101,6 +5101,100 @@ int main(int argc, char **argv) {
         VERIFIER(t.contains(QString::fromUtf8("essai avant règlement 0")));
     }
 
+    // Calendly (25 octobre 2026) : un faux Calendly local ; deux réservations deviennent deux séances prévues, l'une rapprochée
+    // de Claire Monney par son nom, l'autre d'une patiente nouvelle ; relues, rien ne double ; une réservation disparue annule
+    // sa séance ; le jeton part dans l'en-tête
+    {
+        QTcpServer service;
+        VERIFIER(service.listen(QHostAddress::LocalHost));
+        QByteArray recu;
+        bool les_deux = true;
+        const QString demain = QDateTime::currentDateTimeUtc().addDays(2).toString("yyyy-MM-dd") + "T09:30:00Z";
+        QObject::connect(&service, &QTcpServer::newConnection, &service, [&] {
+            QTcpSocket *so = service.nextPendingConnection();
+            QObject::connect(so, &QTcpSocket::readyRead, so, [&, so] {
+                const QByteArray requete = so->readAll();
+                recu += requete;
+                if (!requete.contains("\r\n\r\n")) return;
+                const QByteArray ligne = requete.left(requete.indexOf("\r\n"));
+                const QByteArray base = "http://127.0.0.1:" + QByteArray::number(service.serverPort());
+                QByteArray corps;
+                if (ligne.contains("/users/me")) corps = "{\"resource\":{\"uri\":\"" + base + "/users/NS\"}}";
+                else if (ligne.contains("/invitees")) {
+                    const bool a = ligne.contains("/scheduled_events/A/");
+                    corps = a ? QByteArray("{\"collection\":[{\"name\":\"Claire Monney\",\"email\":null,\"text_reminder_number\":null}],\"pagination\":{}}")
+                              : QByteArray("{\"collection\":[{\"name\":\"L\\u00e9a Essai\",\"email\":\"lea@exemple.ch\",\"text_reminder_number\":\"+41 79 000 00 11\"}],\"pagination\":{}}");
+                } else if (ligne.contains("/scheduled_events")) {
+                    corps = "{\"collection\":[{\"uri\":\"" + base + "/scheduled_events/A\",\"start_time\":\"" + demain.toUtf8() + "\"}";
+                    if (les_deux) corps += ",{\"uri\":\"" + base + "/scheduled_events/B\",\"start_time\":\"" + demain.toUtf8() + "\"}";
+                    corps += "],\"pagination\":{}}";
+                }
+                so->write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " + QByteArray::number(corps.size())
+                          + "\r\nConnection: close\r\n\r\n" + corps);
+                so->disconnectFromHost();
+            });
+        });
+        qputenv("GRYM_ESSAI_REDIRECTION", ("https://api.calendly.com=http://127.0.0.1:" + QByteArray::number(service.serverPort())));
+        QTemporaryDir d;
+        VERIFIER(copier_praxis_essai(d.path()));
+        QFile f(d.filePath("Praxis.grym"));
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        QString source = QString::fromUtf8(f.readAll());
+        f.close();
+        const QString essai = QString::fromUtf8(
+            "Le cab vaut le cabinet conservé.\n"
+            "L'agenda du cab devient « Calendly ».\n"
+            "Le jeton Calendly du cab devient « jeton-essai-9 ».\n"
+            "Relire les réservations, qui donne l'état d'essai.\n"
+            "Relire les réservations, qui donne l'état d'essai.\n"
+            "Afficher « essai état » puis l'état d'essai.\n"
+            "Afficher « essai calendly » puis le nombre de séances conservées dont la réservation Calendly est présente puis le nombre de patients conservés dont le courriel = « lea@exemple.ch ».\n"
+            "Pour chaque séance conservée dont la réservation Calendly finit par « /A » :\n"
+            "    Afficher « essai claire » puis le nom du patient de la séance puis le statut de la séance.\n"
+            "Afficher « fin des essais calendly ».\n");
+        const int k = source.indexOf(QString::fromUtf8("Remarque : le mot de passe, l'application l'a déjà demandé"));
+        VERIFIER(k > 0);
+        source.insert(k, essai);
+        VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(source.toUtf8());
+        f.close();
+        {
+            Execution e(d.filePath("Praxis.grym"));
+            e.demarrer();
+            QElapsedTimer z;
+            z.start();
+            auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+            while (z.elapsed() < 40000 && !fil().contains("fin des essais calendly")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            const QString t = fil();
+            VERIFIER(t.contains(QString::fromUtf8("essai calendly 2 1")));   // deux séances, une patiente nouvelle, rien en double
+            VERIFIER(t.contains(QString::fromUtf8("essai claire Claire Monney prévue")));
+            VERIFIER(recu.contains("Authorization: Bearer jeton-essai-9"));
+            e.close();
+        }
+        // la réservation B disparaît : sa séance prévue est annulée à la relecture suivante
+        les_deux = false;
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        source = QString::fromUtf8(f.readAll());
+        f.close();
+        source.replace(QString::fromUtf8("finit par « /A »"), QString::fromUtf8("finit par « /B »"));
+        source.replace(QString::fromUtf8("essai claire"), QString::fromUtf8("essai lea"));
+        VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(source.toUtf8());
+        f.close();
+        {
+            Execution e(d.filePath("Praxis.grym"));
+            e.demarrer();
+            QElapsedTimer z;
+            z.start();
+            auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+            while (z.elapsed() < 40000 && !fil().contains("fin des essais calendly")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            const QString t = fil();
+            VERIFIER(t.contains(QString::fromUtf8("essai lea Léa Essai annulée")));
+            e.close();
+        }
+        qunsetenv("GRYM_ESSAI_REDIRECTION");
+    }
+
     // L'envoi à un service web (2.42) : un faux service sur la machine elle-même ; le corps JSON reçu tel qu'envoyé, le secret
     // compris ; la réponse lue champ par champ ; la lecture (GET) et ses valeurs dans l'adresse ; un statut 401, une erreur
     // rattrapable ; ce qui précède l'envoi est validé

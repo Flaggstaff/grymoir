@@ -128,6 +128,92 @@ Pour programmer le rappel d'une séance :
             En cas d'échec :
                 Remarque : un numéro illisible, ASPSMS injoignable : pas de rappel pour cette séance.
 
+Remarque : Calendly (25 octobre 2026) : les réservations prises sur le site deviennent des séances prévues ; Praxis les relit
+Remarque : (à l'ouverture, et par « Relire les rendez-vous ») avec le jeton personnel du cabinet. Une réservation garde son
+Remarque : adresse Calendly dans la séance : relue, elle n'est pas importée deux fois ; disparue, sa séance prévue est annulée.
+
+Remarque : le patient d'une réservation : par son courriel, puis par son téléphone, puis par son nom ; sinon une fiche nouvelle.
+Pour trouver le patient d'une personne :
+    Le courriel vaut le champ « email » de la personne.
+    Le natel vaut le champ « text_reminder_number » de la personne.
+    L'appellation vaut le champ « name » de la personne.
+    Si le courriel est présent :
+        Pour chaque patient conservé dont le courriel est présent :
+            Si le courriel du patient en minuscules = le courriel en minuscules, rendre le patient.
+    Si le natel est présent :
+        Pour chaque patient conservé dont le téléphone est présent :
+            Essayer :
+                Si le natel international du téléphone du patient = le natel international du natel, rendre le patient.
+            En cas d'échec :
+                Remarque : un numéro illisible ne rapproche rien.
+    Si l'appellation est absent, l'appellation devient « Réservation en ligne ».
+    Si le nombre de patients conservés dont le nom = l'appellation > 0 :
+        Pour chaque patient conservé dont le nom = l'appellation, rendre le patient.
+    Le p vaut un nouveau patient :
+        Le nom vaut l'appellation.
+        Le pays vaut « Suisse ».
+    Si le courriel est présent, le courriel du p devient le courriel.
+    Si le natel est présent, le téléphone du p devient le natel.
+    Conserver le p.
+    Rendre le p.
+
+Remarque : une réservation Calendly (un objet JSON de « scheduled_events ») : une séance prévue, si elle n'existe pas encore.
+Pour importer une réservation :
+    Le c vaut le cabinet conservé.
+    Le lien vaut le champ « uri » de la réservation.
+    Si le nombre de séances conservées dont la réservation calendly = le lien = 0 :
+        La date vaut le champ « start_time » de la réservation en date locale.
+        L'heure vaut le champ « start_time » de la réservation en heure locale.
+        La liste des inscrits vaut la lecture de (le lien suivi de « /invitees ») avec :
+            l'en-tête « Authorization » : "Bearer " suivi du jeton calendly du c.
+        Si le nombre d'éléments du champ « collection » de la liste des inscrits > 0 :
+            Trouver le patient du champ « collection.0 » de la liste des inscrits, qui donne le patient.
+            Le choix vaut le soin des réservations du c.
+            Le fait vaut 0.
+            Pour chaque soin conservé, par nom :
+                Si le fait = 0 et (le choix est absent ou le nom du soin = le choix) :
+                    Le fait devient 1.
+                    La s vaut une nouvelle séance :
+                        Le patient vaut le patient.
+                        Le soin vaut le soin.
+                        La date vaut la date.
+                        Le prix vaut le tarif du soin.
+                        Le statut vaut « prévue ».
+                        Le paiement vaut « à payer ».
+                    L'heure de la s devient l'heure.
+                    La durée de la s devient la durée du soin.
+                    La réservation calendly de la s devient le lien.
+                    Conserver la s.
+                    Programmer le rappel de la s.
+
+Remarque : relire Calendly ; une panne de réseau ou un jeton refusé ne bloquent rien : ce qu'elle rend le dit, Praxis continue.
+Pour relire les réservations :
+    Le c vaut le cabinet conservé.
+    Si l'agenda du c = « Calendly » et le jeton calendly du c est présent :
+        Essayer :
+            Si l'utilisateur calendly du c est absent :
+                La moi vaut la lecture de « https://api.calendly.com/users/me » avec :
+                    l'en-tête « Authorization » : "Bearer " suivi du jeton calendly du c.
+                L'utilisateur calendly du c devient le champ « resource.uri » de la moi.
+            La réponse vaut la lecture de « https://api.calendly.com/scheduled_events » avec :
+                l'en-tête « Authorization » : "Bearer " suivi du jeton calendly du c,
+                « user » : l'utilisateur calendly du c,
+                « min_start_time » : aujourd'hui en format universel,
+                « status » : « active »,
+                « sort » : « start_time:asc »,
+                « count » : 100.
+            Pour chaque réservation du champ « collection » de la réponse :
+                Importer la réservation.
+            Remarque : une réservation annulée sur Calendly n'est plus dans la liste : sa séance prévue l'est aussi.
+            Pour chaque séance conservée dont le statut = « prévue » et la réservation calendly est présente et la date ≥ aujourd'hui :
+                Si la réponse ne contient pas la réservation calendly de la séance :
+                    Annuler le rappel de la séance.
+                    Le statut de la séance devient « annulée ».
+            Rendre "Rendez-vous relus à " suivi de (maintenant en format technique) suivi de « . ».
+        En cas d'échec :
+            Rendre "Calendly n'a pas répondu : " suivi du motif de l'échec.
+    Rendre « ».
+
 Remarque : « Q-2026-0007 » : l'année, puis le rang sur quatre chiffres.
 Remarque : « F- » pour une facture, « Q- » pour une quittance.
 Le numéro de pièce d'une lettre et d'une année et d'un rang :

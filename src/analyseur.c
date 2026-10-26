@@ -2208,7 +2208,8 @@ static Noeud *base(Analyse *a) {
             a->article_force = ART_AUCUN;
             for (int k = 0; k < m1 + 3; k++) avancer(a);
             if (est_mot(td, "du")) { a->article_force = ART_LE; a->jeton_force = td; }
-            Noeud *x = expression(a);
+            /* la réponse seule : « le champ « start_time » de r en date locale » convertit le champ, pas r (2.60) */
+            Noeud *x = base(a);
             a->article_force = ART_AUCUN;
             if (!x) { noeud_liberer(n); return NULL; }
             noeud_ajouter(n, x);
@@ -4431,6 +4432,7 @@ static Noeud *appel_action(Analyse *a, Symbole *s, size_t fin) {
     n->texte = grym_dupliquer(s->nom);
     int nb = 0;
     if (cour(a)->type != J_POINT && cour(a)->type != J_FIN
+        && !(cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "qui") && est_mot(voir(a, 2), "donne"))   /* sans argument (2.57) */
         && !(est_mot(cour(a), "comme") && (est_mot(voir(a, 1), "un") || est_mot(voir(a, 1), "une")))) {
         for (;;) {
             /* un argument logique entre parenthèses, « (le reste > 0 et le dé ≤ 15) » (§ 9.2) : un groupe logique,

@@ -34,13 +34,16 @@ Un cabinet, conservé, a :
     un prénom (texte), facultatif,
     un dossier d'export (texte), facultatif,
     un choix d'agenda (vrai ou faux), faux au départ,
-    un agenda (« Praxis » ou « OneDoc »), « Praxis » au départ,
+    un agenda (« Praxis », « OneDoc » ou « Calendly »), « Praxis » au départ,
     une adresse de l'agenda (adresse web), facultative,
     une facturation aux assurances (vrai ou faux), faux au départ,
     une valeur du point (nombre), facultative,
     un identifiant SMS (texte), facultatif,
     une clé SMS (secret), facultative,
-    un expéditeur SMS (texte), facultatif.
+    un expéditeur SMS (texte), facultatif,
+    un jeton calendly (secret), facultatif,
+    un utilisateur calendly (texte), facultatif,
+    un soin des réservations (texte), facultatif.
 
 Remarque : le choix d'agenda : la tuile « Rendez-vous » de la Configuration ; un interrupteur de la fiche du cabinet, posé par
 Remarque : départ.grym à la fondation ; faux chez Nicolas (Calendly) et pour une base d'avant le 22 octobre. L'éteindre remet
@@ -222,7 +225,8 @@ Une séance, conservée, a :
     un chiffre du tarif (texte), facultatif,
     un total de points (nombre), facultatif,
     un décompte (décompte), facultatif,
-    une référence de rappel (texte), facultative.
+    une référence de rappel (texte), facultative,
+    une réservation calendly (texte), facultative.
 
 Remarque : les rubriques des frais (loyer, matériel…) : Nicolas les nomme, les renomme et en ajoute dans la configuration.
 Une rubrique, conservée, a :

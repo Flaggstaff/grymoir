@@ -25,6 +25,7 @@ Remarque : où en est l'ordonnance ouverte, calculé avant d'ouvrir son écran (
 L'usage ouvert vaut « ».
 Remarque : ce que le service SMS a répondu au dernier essai, tel quel.
 L'état SMS vaut « Aucun essai encore. ».
+L'état calendly vaut « Les réservations du site, relues à l'ouverture ».
 
 Remarque : ce qui est cherché dans les listes des patients et des factures ; vide, tout.
 La recherche des patients vaut « ».
@@ -129,9 +130,11 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     un bouton « Comptabilité », en tuile, avec la description « Encaisser, factures, rappels, frais »,
     un bouton « Configuration », en tuile, avec la description « Le cabinet, les soins, les rubriques, les sauvegardes »,
     un bouton « Agenda OneDoc », en tuile, avec la description « Rendez-vous et rappels », visible si l'agenda du cabinet conservé = « OneDoc »,
+    un bouton « Relire les rendez-vous », en tuile, avec la description « Les réservations du site Calendly », visible si l'agenda du cabinet conservé = « Calendly »,
     un bouton « Assurances », en tuile, avec la description « Factures tiers payant et leurs règlements », visible si la facturation aux assurances du cabinet conservé,
     le texte l'alerte de sauvegarde du cabinet conservé et d'aujourd'hui et de l'échec de sauvegarde,
     le texte l'alerte des prévues d'aujourd'hui,
+    le texte l'état calendly, visible si l'agenda du cabinet conservé = « Calendly »,
     un bouton « Fermer l'application ».
 
 Remarque : quitter (24 octobre 2026) : le bouton « Fermer l'application » ou la croix de la fenêtre ferment l'accueil ; en
@@ -573,8 +576,10 @@ L'écran de configuration, « Configuration », montre :
 
 Remarque : le choix de l'agenda ; avec OneDoc, l'accueil a une tuile qui ouvre l'agenda OneDoc dans le navigateur.
 L'écran de l'agenda, « Rendez-vous », montre :
-    un agenda (« Praxis » ou « OneDoc »), avec l'indication « OneDoc : les rendez-vous et leurs rappels restent sur OneDoc, Praxis ouvre l'agenda »,
+    un agenda (« Praxis », « OneDoc » ou « Calendly »), avec l'indication « OneDoc : Praxis ouvre l'agenda ; Calendly : Praxis relit les réservations du site »,
     une adresse de l'agenda (adresse web), facultative, avec l'indication « L'adresse de l'agenda OneDoc Pro, telle que le navigateur la montre : https://… »,
+    un jeton calendly (secret), facultatif, avec l'indication « Calendly, Intégrations, API and webhooks : le jeton d'accès personnel »,
+    un soin des réservations (soin), facultatif, avec l'indication « Le soin d'une réservation en ligne ; vide : le premier soin »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer ».
@@ -1040,16 +1045,27 @@ Quand on clique sur « Rendez-vous » dans l'écran de configuration :
 Quand on ouvre l'écran de l'agenda :
     L'agenda de l'écran devient l'agenda du cabinet conservé.
     L'adresse de l'agenda de l'écran devient l'adresse de l'agenda du cabinet conservé.
+    Pour chaque soin conservé dont le nom = le soin des réservations du cabinet conservé :
+        Le soin des réservations de l'écran devient le soin.
+    Remarque : le jeton ne se relit pas à l'écran : un secret ne s'affiche jamais ; vide, il reste tel quel.
 
 Quand on clique sur « Enregistrer » dans l'écran de l'agenda :
     Si l'agenda de l'écran = « OneDoc » et l'adresse de l'agenda de l'écran est absente, refuser « Avec OneDoc, donne l'adresse de l'agenda OneDoc. ».
     Le c vaut le cabinet conservé.
     L'agenda du c devient l'agenda de l'écran.
     L'adresse de l'agenda du c devient l'adresse de l'agenda de l'écran.
+    Si le jeton calendly de l'écran est présent :
+        Le jeton calendly du c devient le jeton calendly de l'écran.
+        L'utilisateur calendly du c devient absent.
+    Si le soin des réservations de l'écran est présent, le soin des réservations du c devient le nom du soin des réservations de l'écran.
+    Sinon, le soin des réservations du c devient absent.
     Fermer l'écran.
 
 Quand on clique sur « Fermer » dans l'écran de l'agenda :
     Fermer l'écran.
+
+Quand on clique sur « Relire les rendez-vous » dans l'écran d'accueil :
+    Relire les réservations, qui donne l'état calendly.
 
 Quand on clique sur « Agenda OneDoc » dans l'écran d'accueil :
     Si l'adresse de l'agenda du cabinet conservé est absente, refuser « Donne d'abord l'adresse de l'agenda OneDoc : Configuration, Rendez-vous. ».
@@ -1718,6 +1734,8 @@ Recenser les exercices d'aujourd'hui.
 Remarque : le mot de passe, l'application l'a déjà demandé ; au premier lancement, le dossier des sauvegardes ; puis l'accueil.
 Si le premier lancement, ouvrir l'écran de bienvenue.
 Archiver les données.
+Remarque : les réservations du site, relues avant l'accueil (25 octobre 2026) ; sans Calendly, rien ne se passe.
+Relire les réservations, qui donne l'état calendly.
 Ouvrir l'écran d'accueil.
 
 Remarque : les assureurs (Praxis 2, 23 octobre 2026) : la liste, un nouvel assureur par le formulaire, un assureur choisi s'ouvre.
