@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.61 de la spécification, révisée le 26 octobre 2026. Tout ce qui suit est implémenté.
+Version 2.62 de la spécification, révisée le 26 octobre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1854,10 +1854,16 @@ Une facture, conservée, est une chose tarifée.
 - **Une seule version par application.** Si deux fichiers, ou deux bibliothèques, demandent la même bibliothèque en deux versions : « La bibliothèque « X » est déjà utilisée en version 2 : une application n'en utilise qu'une version. »
 - **Pas d'entité, pas de règle.** Une bibliothèque déclare des aptitudes, des classes, des calculs et des actions ; les tables restent celles du programme (charte, art. 7 et 13). « Une bibliothèque ne déclare pas d'entité (« facture », …) : déclare une aptitude, que l'entité du programme adopte. » De même pour une règle (§ 16.14).
 - **Ses fichiers.** Une bibliothèque utilise d'autres fichiers par `Utiliser « … »`, dans son dossier seulement : « Une bibliothèque n'utilise que ses propres fichiers : « ../commun » sort du dossier de « X ». » Elle utilise d'autres bibliothèques, cherchées dans le même `bibliothèques/`. Un programme n'entre pas dans une bibliothèque par un chemin, ce qui sauterait sa version : « « bibliothèques/X/arrondis » appartient à une bibliothèque : écris « Utiliser la bibliothèque « … », version … ». »
+- **Les fichiers internes** *(2.62)*. Un fichier d'une bibliothèque qui commence par `Ce fichier est interne à sa bibliothèque.` (après ses remarques, parmi ses phrases `Utiliser`) ne montre ses calculs et ses actions qu'aux fichiers de cette bibliothèque. Ailleurs : « « centime suisse » est interne à la bibliothèque « Suisse santé » : elle ne le montre qu'à ses propres fichiers. » La bibliothèque peut ainsi changer ses outils sans toucher les programmes qui l'utilisent, à condition de garder ce que son entrée montre.
+  - Le choix se fait par fichier, comme Java, depuis sa version 9, exporte des paquets et non des classes (JSR 376, de mémoire) : une phrase en tête de fichier se lit d'un coup d'œil, et les en-têtes de formules restent ceux du § 9.
+  - Un fichier interne ne déclare que des calculs et des actions : une classe ou une aptitude se voit dans les entités du programme, elle ne peut pas être cachée.
+  - L'entrée d'une bibliothèque n'est jamais interne : elle est ce que la bibliothèque montre. Un fichier hors d'une bibliothèque ne se dit pas interne.
+  - Un nom interne reste réservé dans tout le projet : la machine range les formules par nom (`docs/vm.md`), et un programme qui le redéclare est refusé comme au § 21.5.
+  - Forme compacte : `_interne`.
 - **Les noms.** Ce qu'une bibliothèque déclare est visible comme toute déclaration d'un fichier utilisé (§ 21.5) : un nom reste unique dans tout le projet, et le message d'un doublon nomme le fichier de la bibliothèque. Un programme qui déclare un calcul du même nom qu'une bibliothèque est refusé, rien n'est remplacé en silence (charte, art. 6).
 - **Ouverte seule**, dans l'atelier ou par `grym lsp`, l'entrée cherche les autres bibliothèques dans le `bibliothèques/` qui la contient.
 - **Forme compacte** : `_utiliser _bibliothèque « Suisse santé » 2` et `_bibliothèque « Suisse santé » 2`.
-- **Pas encore** : une formule « en interne », invisible hors de sa bibliothèque ; un XML déclaré (§ 22.19) dans une bibliothèque, car il nomme l'entité de son objet, que la bibliothèque ne connaît pas ; des écrans, des parties et des documents dans une bibliothèque (un fichier utilisé n'en contient pas, § 21.2).
+- **Pas encore** : un XML déclaré (§ 22.19) dans une bibliothèque, car il nomme l'entité de son objet, que la bibliothèque ne connaît pas ; des écrans, des parties et des documents dans une bibliothèque (un fichier utilisé n'en contient pas, § 21.2).
 
 ## 22. Écrans *(A3 : implémenté le 25 septembre 2026)*
 
@@ -2472,3 +2478,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.59 | 2026-10-25 | § 16.7 : un programme mis à jour qui va changer les tables d'une base qui a des données en fait d'abord une copie, « … avant mise à jour AAAA-MM-JJ HHMM.grymd » (et ses clés), à côté, que rien n'efface ; sans elle, rien ne change |
 | 2.60 | 2026-10-25 | § 22.18 : `l'en-tête « … » :` dans un envoi ; `Pour chaque … du champ « … » de r`, `le nombre d'éléments du champ « … » de r` ; `en date locale`, `en heure locale`, `en format universel` |
 | 2.61 | 2026-10-26 | Nouveau § 21.9 : les bibliothèques, `Utiliser la bibliothèque « Suisse santé », version 2.`, dans `bibliothèques/`, à côté du programme ; `Cette bibliothèque est « Suisse santé », version 2.` en tête de son entrée ; version exacte, une seule par application ; ni entité ni règle ; ses fichiers restent dans son dossier |
+| 2.62 | 2026-10-26 | § 21.9 : les fichiers internes d'une bibliothèque, `Ce fichier est interne à sa bibliothèque.` (forme compacte `_interne`) ; leurs calculs et actions ne se voient que dans les fichiers de la bibliothèque, et le message le dit |

@@ -1,7 +1,8 @@
 #!/bin/sh
 # Les bibliothèques (grammaire 2.61, § 21.9, 26 octobre 2026) : « Utiliser la bibliothèque « X », version N. » trouve
 # bibliothèques/X/bibliothèque.grym à côté du programme ; version exacte, une seule par application ; ni entité ni
-# règle ; ses fichiers restent dans son dossier ; un programme n'y entre pas par un chemin.
+# règle ; ses fichiers restent dans son dossier ; un programme n'y entre pas par un chemin. Ses fichiers internes (2.62)
+# ne montrent leurs formules qu'à elle.
 racine=$(cd "$(dirname "$0")/.." && pwd)
 grym="$racine/grym"
 d=$(mktemp -d)
@@ -67,5 +68,27 @@ printf 'Utiliser la bibliothèque « Monnaie », version 2.\nUtiliser la bibliot
 verifier "$(lancer)" "4" "deux bibliothèques, la même version partagée"
 printf 'Cette bibliothèque est « Banque », version 1.\nUtiliser la bibliothèque « Monnaie », version 1.\n' > bibliothèques/Banque/bibliothèque.grym
 contient "$(lancer)" "déjà utilisée en version 2" "deux versions d'une même bibliothèque"
+# les fichiers internes (2.62) : leurs formules ne se voient que dans la bibliothèque
+entree
+printf 'Remarque : outils.\nCe fichier est interne à sa bibliothèque.\n\nLe centime suisse d'"'"'un x vaut l'"'"'arrondi de x à 0,05.\n\nPour tracer un x :\n    Afficher « trace » puis x.\n' > "$S/arrondis.grym"
+programme 2
+verifier "$(lancer)" "12,35" "l'entrée emploie son fichier interne"
+printf 'Utiliser la bibliothèque « Suisse santé », version 2.\nAfficher le centime suisse de 12,33.\n' > p.grym
+contient "$(lancer)" "« centime suisse » est interne à la bibliothèque « Suisse santé »" "un calcul interne caché"
+printf 'Utiliser la bibliothèque « Suisse santé », version 2.\nTracer 4.\n' > p.grym
+contient "$(lancer)" "« tracer » est interne à la bibliothèque « Suisse santé »" "une action interne cachée"
+printf 'Utiliser la bibliothèque « Suisse santé », version 2.\nAfficher le centime suise de 12,33.\n' > p.grym
+total=$((total + 1)); case "$(lancer)" in *voulais-tu*) echecs=$((echecs + 1)); echo "ÉCHEC : une suggestion montre un nom interne";; esac
+(cd "$S" && "$grym" traduire arrondis.grym > /dev/null 2>&1)
+verifier "$(sed -n 2p "$S/arrondis.grymc")" "_interne" "forme compacte de l'interne"
+rm -f "$S/arrondis.grymc"
+verifier "$(cd "$S" && "$grym" lancer arrondis.grym > /dev/null 2>&1 < /dev/null; echo $?)" "0" "un fichier interne ouvert seul"
+printf 'Ce fichier est interne à sa bibliothèque.\nUne chose tarifée a :\n    un montant (nombre).\n' > "$S/arrondis.grym"
+contient "$(lancer)" "Un fichier interne ne déclare que des calculs et des actions" "ni classe ni aptitude interne"
+printf 'Cette bibliothèque est « Suisse santé », version 2.\nCe fichier est interne à sa bibliothèque.\n' > "$S/bibliothèque.grym"
+contient "$(lancer)" "L'entrée d'une bibliothèque n'est pas interne" "l'entrée n'est pas interne"
+printf 'Ce fichier est interne à sa bibliothèque.\nLe un d'"'"'un x vaut 1.\n' > commun.grym
+printf 'Utiliser « commun ».\n' > p.grym
+contient "$(lancer)" "n'appartient à aucune bibliothèque" "l'interne hors d'une bibliothèque"
 echo "$((total - echecs))/$total tests réussis"
 [ "$echecs" -eq 0 ]

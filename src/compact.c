@@ -2010,6 +2010,16 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "version", &r->e[d + 3]);
             copier(r, &r->e[d + 3]);
             point(r, f);
+        } else if (!strcmp(c, "interne")) {   /* _interne → Ce fichier est interne à sa bibliothèque. (2.62) */
+            if (d + 1 != f) { echouer(r, t, grym_dupliquer("« _interne » s'écrit seul.")); return; }
+            mot(r, "ce", t);
+            mot(r, "fichier", t);
+            mot(r, "est", t);
+            mot(r, "interne", t);
+            mot(r, "à", t);
+            mot(r, "sa", t);
+            mot(r, "bibliothèque", t);
+            point(r, f);
         } else if (!strcmp(c, "bibliothèque")) {   /* _bibliothèque « X » 2 → Cette bibliothèque est « X », version 2. */
             if (f != d + 3 || r->e[d + 1].type != J_TEXTE || r->e[d + 2].type != J_NOMBRE) {
                 echouer(r, t, grym_dupliquer("Forme attendue : « _bibliothèque « Suisse santé » 2 »."));

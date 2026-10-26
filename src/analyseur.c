@@ -82,7 +82,8 @@ struct Portee {
     char **cles;          /* chemins absolus, pour ne lire chaque fichier qu'une fois */
     int *lus;             /* 1 : analysé ; 0 : en cours (une utilisation circulaire le retrouve ainsi) */
     size_t nb_fichiers;
-    int *bib_de;          /* pour chaque fichier utilisé : 0, ou k s'il appartient à la k-ième bibliothèque (2.61) */
+    int *bib_de;          /* pour chaque fichier utilisé : 0, ou k s'il appartient à la k-ième bibliothèque (2.61) ;
+                             −k pour un fichier interne de cette bibliothèque (2.62) */
     /* Bibliothèques (2.61, § 21.9) : cherchées dans « bibliothèques/ », à côté du programme principal. */
     char *racine;         /* dossier du programme principal, barre finale comprise ; NULL tant qu'aucune phrase
                              « Utiliser » ne l'a fixé */
@@ -503,6 +504,7 @@ typedef struct {
     int style_declare;   /* « Les nombres s'affichent … » : une seule fois (§ 4.1) */
     int base_chiffree_vue;   /* « La base est chiffrée. » : une seule fois (2.37) */
     int bibliotheque_vue;    /* « Cette bibliothèque est … » : une seule fois (2.61) */
+    int interne_vu;          /* « Ce fichier est interne à sa bibliothèque. » : une seule fois (2.62) */
     int apparence_declaree;   /* « Les écrans ont … » : une seule fois (§ 22.5) */
     int ouvrir_vu;            /* un « Ouvrir » déjà lu : l'apparence se déclare avant (§ 22.5) */
     int affichage_vu;
@@ -1011,12 +1013,37 @@ static char *cle(Analyse *a, size_t d, size_t f) {
 /* Nom visible depuis la position courante : dans un calcul, les variables du
  * programme sont invisibles (calculs purs, § 9.4) ; formules et paramètres restent visibles.
  * La recherche part de la fin : un nom local masque un nom global homonyme. */
+static int bibliotheque_courante(const Portee *p);
+
+/* Le nom de la bibliothèque qui cache ce symbole au fichier qu'on analyse, ou NULL : un fichier interne d'une
+ * bibliothèque (2.62) ne montre ses formules qu'aux fichiers de cette bibliothèque. */
+static const char *bibliotheque_cachante(const Portee *p, const Symbole *s) {
+    if (s->fichier <= 0 || !p->bib_de || (size_t)s->fichier > p->nb_fichiers) return NULL;
+    int b = p->bib_de[s->fichier - 1];
+    if (b >= 0 || -b == bibliotheque_courante(p) || (size_t)-b > p->nb_bibs) return NULL;
+    return p->bib_noms[-b - 1];
+}
+
 static Symbole *visible(Analyse *a, const char *nom) {
     for (size_t i = a->portee->n; i > 0; i--) {
         Symbole *s = &a->portee->s[i - 1];
         if (strcmp(s->nom, nom) != 0) continue;
         if (a->formule == 1 && i - 1 < a->barriere && s->sorte == S_VARIABLE) continue;
+        if (bibliotheque_cachante(a->portee, s)) continue;
         return s;
+    }
+    return NULL;
+}
+
+/* Le nom est déclaré, mais caché dans une bibliothèque (2.62) : le message le dit, au lieu de « inconnu ». */
+static char *message_interne(Analyse *a, const char *nom) {
+    for (size_t i = 0; i < a->portee->n; i++) {
+        const Symbole *s = &a->portee->s[i];
+        size_t l = strlen(s->nom);   /* « centime suisse de » : le nom lu emporte le « de » qui suit */
+        if (strncmp(s->nom, nom, l) != 0 || (nom[l] && nom[l] != ' ')) continue;
+        const char *b = bibliotheque_cachante(a->portee, s);
+        if (b) return grym_formater("« %s » est interne à la bibliothèque « %s » : elle ne le montre qu'à ses propres "
+                                    "fichiers.", s->nom, b);
     }
     return NULL;
 }
@@ -1082,6 +1109,7 @@ static const char *suggerer(Analyse *a, const char *nom) {
     size_t ln = longueur_utf8(nom);
     for (size_t i = 0; i < a->portee->n; i++) {
         const char *candidat = a->portee->s[i].nom;
+        if (bibliotheque_cachante(a->portee, &a->portee->s[i])) continue;   /* 2.62 */
         size_t d = distance_edition(nom, candidat);
         size_t lc = longueur_utf8(candidat);
         size_t lmax = ln > lc ? ln : lc;
@@ -1094,6 +1122,8 @@ static const char *suggerer(Analyse *a, const char *nom) {
 }
 
 static void *erreur_inconnu(Analyse *a, const Jeton *t, const char *nom) {
+    char *mi = message_interne(a, nom);
+    if (mi) return erreur(a, t, mi);
     const char *s = suggerer(a, nom);
     if (s) return erreur(a, t, grym_formater("« %s » inconnu, voulais-tu « %s » ?", nom, s));
     return erreur(a, t, grym_formater("« %s » inconnu.", nom));
@@ -1441,7 +1471,9 @@ static Noeud *nom_expression(Analyse *a) {
         if (!s) {
             char *x = texte_jeton(&a->j[d]);
             const char *sug = suggerer(a, a->j[d].valeur);
-            if (sug) erreur(a, &a->j[d], grym_formater("« %s » inconnu, voulais-tu « %s » ?", x, sug));
+            char *mi = message_interne(a, a->j[d].valeur);
+            if (mi) erreur(a, &a->j[d], mi);
+            else if (sug) erreur(a, &a->j[d], grym_formater("« %s » inconnu, voulais-tu « %s » ?", x, sug));
             else     erreur(a, &a->j[d], grym_formater("« %s » inconnu.", x));
             free(x);
             return NULL;
@@ -3811,7 +3843,10 @@ static Noeud *declaration(Analyse *a, size_t iverbe) {
     if (!creation) {
         if (!s) {
             const char *sug = suggerer(a, nom);
-            if (sug) {
+            char *mi = message_interne(a, nom);
+            if (mi) {
+                erreur(a, &a->j[d], mi);
+            } else if (sug) {
                 erreur(a, &a->j[d], grym_formater("« %s » inconnu, voulais-tu « %s » ?", nom, sug));
             } else {
                 char *ecrit = ecrire_avec_article(art, ecrit_nom);
@@ -8112,7 +8147,8 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
 /* Les phrases permises dans un fichier utilisé : des déclarations, rien qui s'exécute. */
 static int phrase_de_declaration(const Noeud *n) {
     return n->type == P_REMARQUE || n->type == P_CLASSE || n->type == P_APTITUDE || n->type == P_CALCUL
-        || n->type == P_ACTION || n->type == P_UTILISER || n->type == P_REGLE || n->type == P_BIBLIOTHEQUE;
+        || n->type == P_ACTION || n->type == P_UTILISER || n->type == P_REGLE || n->type == P_BIBLIOTHEQUE
+        || n->type == P_INTERNE;
 }
 
 /* Dossier d'un chemin, barre finale comprise (« exemples/ »), ou chaîne vide. */
@@ -8199,7 +8235,9 @@ static Noeud *declaration_bibliotheque(Analyse *a, const Jeton *t) {
 
 /* Le rang (à partir de 1) de la bibliothèque à laquelle appartient le fichier qu'on analyse, ou 0. */
 static int bibliotheque_courante(const Portee *p) {
-    return p->fichier_index > 0 && p->bib_de ? p->bib_de[p->fichier_index - 1] : p->fichier_index == 0 ? p->bib_principale : 0;
+    int b = p->fichier_index > 0 && p->bib_de ? p->bib_de[p->fichier_index - 1]
+                                              : p->fichier_index == 0 ? p->bib_principale : 0;
+    return b < 0 ? -b : b;   /* un fichier interne appartient à sa bibliothèque (2.62) */
 }
 
 /* « Utiliser « données ». » : en tête du fichier, avant toute autre phrase (les remarques mises à part).
@@ -8430,10 +8468,21 @@ static Noeud *utiliser(Analyse *a, const Jeton *t) {
     const char *montre = p->fichiers[rang - 1];
     int dans_bib = p->bib_de[rang - 1];
     int premiere = 1;   /* la première phrase qui n'est pas une remarque */
+    int interne = 0;    /* « Ce fichier est interne à sa bibliothèque. » (2.62) */
+    for (size_t k = 0; k < prog.nb; k++)
+        if (prog.phrases[k]->type == P_INTERNE) interne = 1;
     for (size_t k = 0; k < prog.nb; k++) {
         const Noeud *ph = prog.phrases[k];
         char *m = NULL;
-        if (!phrase_de_declaration(ph))
+        if (interne && ph->type == P_INTERNE && biblio)
+            m = grym_formater("L'entrée d'une bibliothèque n'est pas interne : range ces formules dans un autre fichier "
+                              "de « %s », qui dit « Ce fichier est interne à sa bibliothèque. »", ecrit);
+        else if (interne && ph->type == P_INTERNE && !dans_bib)
+            m = grym_formater("« %s » se dit interne, mais n'appartient à aucune bibliothèque.", montre);
+        else if (interne && (ph->type == P_CLASSE || ph->type == P_APTITUDE))
+            m = grym_formater("Un fichier interne ne déclare que des calculs et des actions (« %s », ligne %d) : déclare "
+                              "la classe ou l'aptitude dans un autre fichier de la bibliothèque.", montre, ph->ligne);
+        else if (!phrase_de_declaration(ph))
             m = grym_formater("« %s » contient une phrase qui s'exécute (ligne %d) : seul un fichier de déclarations "
                               "s'utilise.", montre, ph->ligne);
         else if (dans_bib && ph->type == P_CLASSE && (ph->forme & 32))
@@ -8467,6 +8516,7 @@ static Noeud *utiliser(Analyse *a, const Jeton *t) {
         return n;
     }
     p->lus[rang - 1] = 1;
+    if (interne) p->bib_de[rang - 1] = -p->bib_de[rang - 1];   /* ses formules se cachent hors de la bibliothèque (2.62) */
     n->entier = (int)rang;
     for (size_t k = 0; k < prog.nb; k++) noeud_ajouter(n, prog.phrases[k]);
     free(prog.phrases);
@@ -8874,6 +8924,21 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "utiliser")) return utiliser(a, t);
     if (est_mot(t, "cette") && est_mot(voir(a, 1), "bibliothèque") && est_mot(voir(a, 2), "est"))
         return declaration_bibliotheque(a, t);   /* 2.61 */
+    if (est_mot(t, "ce") && est_mot(voir(a, 1), "fichier") && est_mot(voir(a, 2), "est") && est_mot(voir(a, 3), "interne")) {
+        /* « Ce fichier est interne à sa bibliothèque. » (2.62) : en tête du fichier, une fois ; utiliser() le vérifie */
+        if (a->niveau > 0 || a->formule || a->phrase_vue)
+            return erreur(a, t, grym_dupliquer("« Ce fichier est interne … » se place en tête du fichier, avant toute "
+                                               "autre phrase."));
+        if (!est_mot(voir(a, 4), "à") || !est_mot(voir(a, 5), "sa") || !est_mot(voir(a, 6), "bibliothèque"))
+            return erreur(a, voir(a, 4), grym_dupliquer("Écris : « Ce fichier est interne à sa bibliothèque. »"));
+        if (a->interne_vu) return erreur(a, t, grym_dupliquer("« Ce fichier est interne … » s'écrit une seule fois."));
+        a->interne_vu = 1;
+        a->i += 7;
+        if (!fin_phrase(a, 0)) return NULL;
+        Noeud *n = noeud_creer(P_INTERNE, t->ligne, t->colonne, t->debut);
+        n->fin = fin_jeton(&a->j[a->i - 1]);
+        return n;
+    }
     if (a->dans_xml) {   /* le corps d'un XML : ses éléments, ou une phrase (« Pour chaque », « Si ») qui en écrit (2.46) */
         Noeud *x = element_xml(a, colonne);
         if (x || a->echec) return x;
@@ -9181,6 +9246,16 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (action) return appel_action(a, action, fin_action);
 
     if (a->interactif) return phrase_expression(a);
+    {   /* une action interne d'une bibliothèque (2.62) : le dire, plutôt qu'une phrase mal commencée */
+        size_t k = a->i;
+        while (k < a->n && (a->j[k].type == J_MOT || a->j[k].type == J_ELISION)) k++;
+        if (k > a->i) {
+            char *nom = cle(a, a->i, k);
+            char *mi = message_interne(a, nom);
+            free(nom);
+            if (mi) return erreur(a, t, mi);
+        }
+    }
     char *x = texte_jeton(t);
     char *m = grym_formater("« %s » ne peut pas commencer une phrase : une phrase commence par "
                             "Le, La, L', Afficher, Si, Pour ou le nom d'une action.", x);
@@ -9239,7 +9314,8 @@ static Noeud *bloc(Analyse *a, int colonne, int racine) {
             noeud_liberer(p);
             continue;
         }
-        if (racine && p->type != P_REMARQUE && p->type != P_UTILISER && p->type != P_BIBLIOTHEQUE) a->phrase_vue = 1;
+        if (racine && p->type != P_REMARQUE && p->type != P_UTILISER && p->type != P_BIBLIOTHEQUE
+            && p->type != P_INTERNE) a->phrase_vue = 1;
         noeud_ajouter(b, p);
         b->fin = p->fin;
     }
@@ -9491,6 +9567,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.style_declare = 0;
     a.base_chiffree_vue = 0;
     a.bibliotheque_vue = 0;
+    a.interne_vu = 0;
     a.affichage_vu = 0;
     a.apparence_declaree = 0;
     a.ouvrir_vu = 0;
@@ -9688,11 +9765,14 @@ static int tete_de_fichier(const char *source, size_t taille) {
         if (!fin) {
             int m = t.type == J_MOT;
             if (etat == 0 && t.type == J_REMARQUE) {}
-            else if (etat == 0 && m && (strcmp(t.valeur, "utiliser") == 0 || strcmp(t.valeur, "cette") == 0)) etat = 1;
+            else if (etat == 0 && m && (strcmp(t.valeur, "utiliser") == 0 || strcmp(t.valeur, "cette") == 0
+                                        || strcmp(t.valeur, "ce") == 0)) etat = 1;
             else if (etat == 1 && t.type == J_POINT) etat = 0;
             else if (etat == 1 && (t.type == J_TEXTE || t.type == J_VIRGULE || t.type == J_NOMBRE
                                    || (m && (strcmp(t.valeur, "la") == 0 || strcmp(t.valeur, "bibliothèque") == 0
-                                             || strcmp(t.valeur, "est") == 0 || strcmp(t.valeur, "version") == 0)))) {}
+                                             || strcmp(t.valeur, "est") == 0 || strcmp(t.valeur, "version") == 0
+                                             || strcmp(t.valeur, "fichier") == 0 || strcmp(t.valeur, "interne") == 0
+                                             || strcmp(t.valeur, "à") == 0 || strcmp(t.valeur, "sa") == 0)))) {}
             else ok = 0;
         }
         jeton_liberer(&t);

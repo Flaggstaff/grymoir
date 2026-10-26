@@ -1898,6 +1898,9 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         if (n->forme == 1) { aj(im, c ? " " : ", version "); aj(im, n->texte2); }
         aj(im, c ? "\n" : ".\n");
         return;
+    case P_INTERNE:   /* « Ce fichier est interne à sa bibliothèque. » ; « _interne » (2.62, § 21.9) */
+        aj(im, c ? "_interne\n" : "Ce fichier est interne à sa bibliothèque.\n");
+        return;
     case P_BIBLIOTHEQUE:   /* « Cette bibliothèque est « X », version 2. » ; « _bibliothèque « X » 2 » (2.61, § 21.9) */
         aj(im, c ? "_bibliothèque " : "Cette bibliothèque est ");
         ecrire_texte(im, n->texte);

@@ -177,8 +177,10 @@ typedef enum {
     N_XML,           /* « le XML de facture » (2.46) : texte : l'action qui l'écrit (« xml de facture ») ; texte2 : la racine */
     P_XML,           /* un élément d'un XML déclaré (2.46) : op 'a' attribut (texte, enfant : la valeur), 'c' contenu (enfant),
                         'e' élément (texte, enfant facultatif : son contenu), 'b' élément à enfants (texte, enfant : N_BLOC) */
-    P_BIBLIOTHEQUE   /* « Cette bibliothèque est « Suisse santé », version 2. » (2.61, § 21.9) : texte : son nom ; texte2 : sa
+    P_BIBLIOTHEQUE,  /* « Cette bibliothèque est « Suisse santé », version 2. » (2.61, § 21.9) : texte : son nom ; texte2 : sa
                         version, un entier écrit en chiffres ; rien ne s'exécute */
+    P_INTERNE        /* « Ce fichier est interne à sa bibliothèque. » (2.62, § 21.9) : ses formules ne se voient que dans les
+                        fichiers de sa bibliothèque ; rien ne s'exécute */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */

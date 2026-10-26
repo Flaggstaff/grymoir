@@ -296,6 +296,9 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->forme == 1) { chaine_ajouter(c, " version "); chaine_ajouter(c, n->texte2); }
         chaine_ajouter(c, ")");
         return;
+    case P_INTERNE:   /* (interne) (2.62) */
+        chaine_ajouter(c, "(interne)");
+        return;
     case P_BIBLIOTHEQUE:   /* (bibliothèque « Suisse santé » version 2) (2.61) */
         chaine_ajouter(c, "(bibliothèque « ");
         chaine_ajouter(c, n->texte);
