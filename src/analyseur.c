@@ -82,6 +82,15 @@ struct Portee {
     char **cles;          /* chemins absolus, pour ne lire chaque fichier qu'une fois */
     int *lus;             /* 1 : analysé ; 0 : en cours (une utilisation circulaire le retrouve ainsi) */
     size_t nb_fichiers;
+    int *bib_de;          /* pour chaque fichier utilisé : 0, ou k s'il appartient à la k-ième bibliothèque (2.61) */
+    /* Bibliothèques (2.61, § 21.9) : cherchées dans « bibliothèques/ », à côté du programme principal. */
+    char *racine;         /* dossier du programme principal, barre finale comprise ; NULL tant qu'aucune phrase
+                             « Utiliser » ne l'a fixé */
+    char **bib_noms;      /* nom de chaque bibliothèque utilisée, tel qu'écrit */
+    char **bib_dossiers;  /* son dossier, en chemin absolu */
+    char **bib_versions;  /* la version demandée, et vérifiée */
+    size_t nb_bibs;
+    int bib_principale;   /* k : le fichier principal est l'entrée de la k-ième bibliothèque, ouverte seule */
     /* Écrans déclarés (§ 22) : leurs boutons et les entités de leurs listes, pour vérifier les événements. */
     struct EcranConnu *ecrans;
     size_t nb_ecrans;
@@ -125,6 +134,11 @@ Portee *portee_creer(void) {
     p->fichiers = p->cles = NULL;
     p->lus = NULL;
     p->nb_fichiers = 0;
+    p->bib_de = NULL;
+    p->racine = NULL;
+    p->bib_noms = p->bib_dossiers = p->bib_versions = NULL;
+    p->nb_bibs = 0;
+    p->bib_principale = 0;
     p->ecrans = NULL;
     p->nb_ecrans = 0;
     return p;
@@ -197,9 +211,20 @@ static void portee_vider(Portee *p) {
     free(p->fichiers);
     free(p->cles);
     free(p->lus);
+    free(p->bib_de);
     p->fichiers = p->cles = NULL;
     p->lus = NULL;
+    p->bib_de = NULL;
     p->nb_fichiers = 0;
+    free(p->racine);
+    p->racine = NULL;
+    for (size_t i = 0; i < p->nb_bibs; i++) { free(p->bib_noms[i]); free(p->bib_dossiers[i]); free(p->bib_versions[i]); }
+    free(p->bib_noms);
+    free(p->bib_dossiers);
+    free(p->bib_versions);
+    p->bib_noms = p->bib_dossiers = p->bib_versions = NULL;
+    p->nb_bibs = 0;
+    p->bib_principale = 0;
     for (size_t i = 0; i < p->nb_ecrans; i++) ecran_liberer(&p->ecrans[i]);
     free(p->ecrans);
     p->ecrans = NULL;
@@ -235,11 +260,19 @@ static void portee_copier(Portee *dst, const Portee *src) {
     dst->fichiers = src->nb_fichiers ? grym_allouer(src->nb_fichiers * sizeof *dst->fichiers) : NULL;
     dst->cles = src->nb_fichiers ? grym_allouer(src->nb_fichiers * sizeof *dst->cles) : NULL;
     dst->lus = src->nb_fichiers ? grym_allouer(src->nb_fichiers * sizeof *dst->lus) : NULL;
+    dst->bib_de = src->nb_fichiers ? grym_allouer(src->nb_fichiers * sizeof *dst->bib_de) : NULL;
     for (size_t i = 0; i < src->nb_fichiers; i++) {
         dst->fichiers[i] = grym_dupliquer(src->fichiers[i]);
         dst->cles[i] = grym_dupliquer(src->cles[i]);
         dst->lus[i] = src->lus[i];
+        dst->bib_de[i] = src->bib_de[i];
     }
+    dst->racine = src->racine ? grym_dupliquer(src->racine) : NULL;
+    dst->nb_bibs = src->nb_bibs;
+    dst->bib_noms = src->nb_bibs ? copier_noms(src->bib_noms, src->nb_bibs) : NULL;
+    dst->bib_dossiers = src->nb_bibs ? copier_noms(src->bib_dossiers, src->nb_bibs) : NULL;
+    dst->bib_versions = src->nb_bibs ? copier_noms(src->bib_versions, src->nb_bibs) : NULL;
+    dst->bib_principale = src->bib_principale;
     dst->nb_ecrans = src->nb_ecrans;
     dst->ecrans = src->nb_ecrans ? grym_allouer(src->nb_ecrans * sizeof *dst->ecrans) : NULL;
     for (size_t i = 0; i < src->nb_ecrans; i++) {
@@ -469,6 +502,7 @@ typedef struct {
     int interactif;
     int style_declare;   /* « Les nombres s'affichent … » : une seule fois (§ 4.1) */
     int base_chiffree_vue;   /* « La base est chiffrée. » : une seule fois (2.37) */
+    int bibliotheque_vue;    /* « Cette bibliothèque est … » : une seule fois (2.61) */
     int apparence_declaree;   /* « Les écrans ont … » : une seule fois (§ 22.5) */
     int ouvrir_vu;            /* un « Ouvrir » déjà lu : l'apparence se déclare avant (§ 22.5) */
     int affichage_vu;
@@ -8078,7 +8112,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
 /* Les phrases permises dans un fichier utilisé : des déclarations, rien qui s'exécute. */
 static int phrase_de_declaration(const Noeud *n) {
     return n->type == P_REMARQUE || n->type == P_CLASSE || n->type == P_APTITUDE || n->type == P_CALCUL
-        || n->type == P_ACTION || n->type == P_UTILISER || n->type == P_REGLE;
+        || n->type == P_ACTION || n->type == P_UTILISER || n->type == P_REGLE || n->type == P_BIBLIOTHEQUE;
 }
 
 /* Dossier d'un chemin, barre finale comprise (« exemples/ »), ou chaîne vide. */
@@ -8092,49 +8126,223 @@ static char *dossier_de(const char *chemin) {
     return barre ? grym_formater("%.*s", (int)(barre - chemin + 1), chemin) : grym_dupliquer("");
 }
 
+/* Un numéro de version : un entier écrit en chiffres, sans zéro en tête (2.61). */
+static int version_valide(const Jeton *t) {
+    if (t->type != J_NOMBRE || !t->valeur || !*t->valeur || t->valeur[0] == '0') return 0;
+    for (const char *c = t->valeur; *c; c++)
+        if (*c < '0' || *c > '9') return 0;
+    return 1;
+}
+
+/* Barres obliques partout, pour comparer deux chemins absolus (Windows en donne déjà, 2.61). */
+static char *chemin_de_comparaison(const char *chemin) {
+    char *c = chemin_absolu(chemin);
+    if (!c) return NULL;
+    for (char *q = c; *q; q++)
+        if (*q == '\\') *q = '/';
+    return c;
+}
+
+/* Vrai si le chemin absolu `cle` est dans le dossier absolu `dossier`. */
+static int dans_dossier(const char *cle, const char *dossier) {
+    size_t l = strlen(dossier);
+    return strncmp(cle, dossier, l) == 0 && (cle[l] == '/' || (l > 0 && dossier[l - 1] == '/'));
+}
+
+/* « Cette bibliothèque est « Suisse santé », version 2. » (2.61, § 21.9) : la première phrase du fichier
+ * « bibliothèque.grym » d'une bibliothèque, après les remarques. La vérification du nom et de la version se fait
+ * quand un programme l'utilise. */
+static Noeud *declaration_bibliotheque(Analyse *a, const Jeton *t) {
+    if (a->niveau > 0 || a->formule || a->phrase_vue)
+        return erreur(a, t, grym_dupliquer("« Cette bibliothèque est … » se place en tête du fichier, avant toute autre "
+                                           "phrase."));
+    if (a->bibliotheque_vue) return erreur(a, t, grym_dupliquer("« Cette bibliothèque est … » s'écrit une seule fois."));
+    a->bibliotheque_vue = 1;
+    a->i += 3;
+    const Jeton *tn = cour(a);
+    if (tn->type != J_TEXTE || !*tn->valeur)
+        return erreur(a, tn, grym_dupliquer("Le nom s'écrit entre guillemets : « Cette bibliothèque est « Suisse santé », "
+                                            "version 1. »"));
+    avancer(a);
+    if (cour(a)->type != J_VIRGULE || !est_mot(voir(a, 1), "version") || !version_valide(voir(a, 2)))
+        return erreur(a, cour(a), grym_formater("La version suit le nom : « Cette bibliothèque est « %s », version 1. » "
+                                                "(un nombre entier, à partir de 1).", tn->valeur));
+    a->i += 3;
+    if (!fin_phrase(a, 0)) return NULL;
+    Noeud *n = noeud_creer(P_BIBLIOTHEQUE, t->ligne, t->colonne, t->debut);
+    n->texte = grym_dupliquer(tn->valeur);
+    n->texte2 = grym_dupliquer(a->j[a->i - 2].valeur);
+    n->fin = fin_jeton(&a->j[a->i - 1]);
+    /* ouverte seule (dans l'atelier, par grym lsp), elle cherche les autres bibliothèques à côté d'elle :
+     * « bibliothèques/X/bibliothèque.grym » → le dossier qui contient « bibliothèques/ » */
+    Portee *p = a->portee;
+    if (p->fichier_index == 0 && !p->racine && !p->bib_principale) {
+        char *d = dossier_de(p->fichier);
+        p->racine = grym_formater("%s../../", d);
+        char *abs = chemin_de_comparaison(*d ? d : ".");
+        free(d);
+        if (abs) {   /* elle-même, la première bibliothèque : ses phrases « Utiliser » restent dans son dossier */
+            size_t l = strlen(abs);
+            if (l > 1 && abs[l - 1] == '/') abs[l - 1] = 0;
+            p->bib_noms = grym_allouer(sizeof *p->bib_noms);
+            p->bib_dossiers = grym_allouer(sizeof *p->bib_dossiers);
+            p->bib_versions = grym_allouer(sizeof *p->bib_versions);
+            p->bib_noms[0] = grym_dupliquer(n->texte);
+            p->bib_dossiers[0] = abs;
+            p->bib_versions[0] = grym_dupliquer(n->texte2);
+            p->nb_bibs = 1;
+            p->bib_principale = 1;
+        }
+    }
+    return n;
+}
+
+/* Le rang (à partir de 1) de la bibliothèque à laquelle appartient le fichier qu'on analyse, ou 0. */
+static int bibliotheque_courante(const Portee *p) {
+    return p->fichier_index > 0 && p->bib_de ? p->bib_de[p->fichier_index - 1] : p->fichier_index == 0 ? p->bib_principale : 0;
+}
+
 /* « Utiliser « données ». » : en tête du fichier, avant toute autre phrase (les remarques mises à part).
  * Le fichier utilisé s'analyse dans la même portée, une seule fois par projet ; ses déclarations deviennent
- * les enfants de la phrase, et le compilateur les compile comme si elles étaient écrites là. */
+ * les enfants de la phrase, et le compilateur les compile comme si elles étaient écrites là.
+ * « Utiliser la bibliothèque « Suisse santé », version 2. » (2.61, § 21.9) : le fichier
+ * « bibliothèques/Suisse santé/bibliothèque.grym », à côté du programme principal, de même. */
 static Noeud *utiliser(Analyse *a, const Jeton *t) {
     if (a->niveau > 0 || a->formule || a->phrase_vue)
         return erreur(a, t, grym_dupliquer("« Utiliser » se place en tête du fichier, avant toute autre phrase."));
     avancer(a);
+    int biblio = est_mot(cour(a), "la") && est_mot(voir(a, 1), "bibliothèque");
+    if (biblio) a->i += 2;
     const Jeton *tc = cour(a);
     if (tc->type != J_TEXTE)
-        return erreur(a, tc, grym_dupliquer("Le fichier s'écrit entre guillemets : « Utiliser « données ». »"));
+        return erreur(a, tc, grym_dupliquer(biblio ? "Le nom s'écrit entre guillemets : « Utiliser la bibliothèque "
+                                                     "« Suisse santé », version 1. »"
+                                                   : "Le fichier s'écrit entre guillemets : « Utiliser « données ». »"));
     avancer(a);
+    const Jeton *tv = NULL;
+    if (biblio) {
+        if (cour(a)->type != J_VIRGULE || !est_mot(voir(a, 1), "version") || !version_valide(voir(a, 2)))
+            return erreur(a, cour(a), grym_formater("La version suit le nom : « Utiliser la bibliothèque « %s », "
+                                                    "version 1. » (un nombre entier, à partir de 1).", tc->valeur));
+        tv = voir(a, 2);
+        a->i += 3;
+    }
     if (!fin_phrase(a, 0)) return NULL;
     const char *ecrit = tc->valeur;
     size_t l = strlen(ecrit);
-    if (l == 0) return erreur(a, tc, grym_dupliquer("Nom de fichier vide."));
-    if ((l > 5 && strcmp(ecrit + l - 5, ".grym") == 0) || (l > 6 && strcmp(ecrit + l - 6, ".grymc") == 0)) {
+    if (l == 0) return erreur(a, tc, grym_dupliquer(biblio ? "Nom de bibliothèque vide." : "Nom de fichier vide."));
+    if (!biblio && ((l > 5 && strcmp(ecrit + l - 5, ".grym") == 0) || (l > 6 && strcmp(ecrit + l - 6, ".grymc") == 0))) {
         size_t c = strcmp(ecrit + l - 5, ".grym") == 0 ? l - 5 : l - 6;
         return erreur(a, tc, grym_formater("Écris le fichier sans extension : « Utiliser « %.*s ». » trouve lui-même "
                                            "la forme littéraire ou compacte.", (int)c, ecrit));
     }
+    if (biblio && (strchr(ecrit, '/') || strchr(ecrit, '\\') || strcmp(ecrit, ".") == 0 || strcmp(ecrit, "..") == 0))
+        return erreur(a, tc, grym_formater("« %s » : le nom d'une bibliothèque est celui de son dossier, dans "
+                                           "« bibliothèques/ », sans barre oblique.", ecrit));
     Noeud *n = noeud_creer(P_UTILISER, t->ligne, t->colonne, t->debut);
     n->texte = grym_dupliquer(ecrit);
+    if (biblio) {
+        n->forme = 1;
+        n->texte2 = grym_dupliquer(tv->valeur);
+    }
     n->fin = fin_jeton(&a->j[a->i - 1]);
     if (a->echec) return n;
 
-    /* Le fichier se cherche dans le dossier du fichier qui l'utilise. */
     Portee *p = a->portee;
-    char *dossier = dossier_de(p->fichier);
-    char *litteral = grym_formater("%s%s.grym", dossier, ecrit);
-    char *compacte = grym_formater("%s%s.grymc", dossier, ecrit);
-    int il = chemin_existe(litteral), ic = chemin_existe(compacte);
+    /* le dossier du programme principal : celui où l'on cherche « bibliothèques/ » (2.61) */
+    if (p->fichier_index == 0 && !p->racine) p->racine = dossier_de(p->fichier);
+    const char *racine = p->racine ? p->racine : "";
+    int courante = bibliotheque_courante(p);
+    int nouvelle = 0;   /* rang de la bibliothèque que ce fichier ouvre, s'il en ouvre une */
+
     char *chemin = NULL;
-    if (il && ic) {
-        erreur(a, tc, grym_formater("« %s » désigne à la fois « %s » et « %s » : gardes-en un seul.", ecrit, litteral, compacte));
-    } else if (!il && !ic) {
-        erreur(a, tc, grym_formater("« %s » introuvable : ni « %s » ni « %s ».", ecrit, litteral, compacte));
+    if (biblio) {
+        for (size_t k = 0; k < p->nb_bibs; k++) {
+            if (strcmp(p->bib_noms[k], ecrit) != 0) continue;
+            if (strcmp(p->bib_versions[k], tv->valeur) != 0)
+                return erreur(a, tv, grym_formater("La bibliothèque « %s » est déjà utilisée en version %s : une "
+                                                   "application n'en utilise qu'une version.", ecrit,
+                                                   p->bib_versions[k])), n;
+            nouvelle = (int)k + 1;
+        }
+        char *litteral = grym_formater("%sbibliothèques/%s/bibliothèque.grym", racine, ecrit);
+        char *compacte = grym_formater("%sbibliothèques/%s/bibliothèque.grymc", racine, ecrit);
+        int il = chemin_existe(litteral), ic = chemin_existe(compacte);
+        if (il && ic)
+            erreur(a, tc, grym_formater("La bibliothèque « %s » a deux entrées, « %s » et « %s » : gardes-en une seule.",
+                                        ecrit, litteral, compacte));
+        else if (!il && !ic)
+            erreur(a, tc, grym_formater("La bibliothèque « %s » est introuvable : il manque « %s ».", ecrit, litteral));
+        else
+            chemin = grym_dupliquer(il ? litteral : compacte);
+        free(litteral);
+        free(compacte);
+        if (!chemin) return n;
+        if (!nouvelle) {   /* elle prend sa place dans la liste avant d'être lue : ses fichiers portent son rang */
+            char *dossier = grym_formater("%sbibliothèques/%s", racine, ecrit);
+            char *abs = chemin_de_comparaison(dossier);
+            free(dossier);
+            if (!abs) {
+                free(chemin);
+                return erreur(a, tc, grym_formater("La bibliothèque « %s » ne s'ouvre pas.", ecrit)), n;
+            }
+            size_t r = p->nb_bibs + 1;
+            char **nm = grym_allouer(r * sizeof *nm), **dd = grym_allouer(r * sizeof *dd), **vv = grym_allouer(r * sizeof *vv);
+            for (size_t k = 0; k + 1 < r; k++) { nm[k] = p->bib_noms[k]; dd[k] = p->bib_dossiers[k]; vv[k] = p->bib_versions[k]; }
+            nm[r - 1] = grym_dupliquer(ecrit);
+            dd[r - 1] = abs;
+            vv[r - 1] = grym_dupliquer(tv->valeur);
+            free(p->bib_noms);
+            free(p->bib_dossiers);
+            free(p->bib_versions);
+            p->bib_noms = nm;
+            p->bib_dossiers = dd;
+            p->bib_versions = vv;
+            p->nb_bibs = r;
+            nouvelle = (int)r;
+        }
     } else {
-        chemin = grym_dupliquer(il ? litteral : compacte);
+        /* Le fichier se cherche dans le dossier du fichier qui l'utilise. */
+        char *dossier = dossier_de(p->fichier);
+        char *litteral = grym_formater("%s%s.grym", dossier, ecrit);
+        char *compacte = grym_formater("%s%s.grymc", dossier, ecrit);
+        int il = chemin_existe(litteral), ic = chemin_existe(compacte);
+        if (il && ic) {
+            erreur(a, tc, grym_formater("« %s » désigne à la fois « %s » et « %s » : gardes-en un seul.", ecrit, litteral, compacte));
+        } else if (!il && !ic) {
+            erreur(a, tc, grym_formater("« %s » introuvable : ni « %s » ni « %s ».", ecrit, litteral, compacte));
+        } else {
+            chemin = grym_dupliquer(il ? litteral : compacte);
+        }
+        free(dossier);
+        free(litteral);
+        free(compacte);
+        if (!chemin) return n;
+        /* une bibliothèque n'utilise que ses propres fichiers ; un programme n'entre pas dans une bibliothèque par
+         * un chemin, ce qui sauterait sa version (2.61) */
+        char *cmp = chemin_de_comparaison(chemin);
+        if (cmp && courante) {
+            if (!dans_dossier(cmp, p->bib_dossiers[courante - 1])) {
+                free(cmp);
+                free(chemin);
+                return erreur(a, tc, grym_formater("Une bibliothèque n'utilise que ses propres fichiers : « %s » sort du "
+                                                   "dossier de « %s ».", ecrit, p->bib_noms[courante - 1])), n;
+            }
+        } else if (cmp) {
+            char *b = grym_formater("%sbibliothèques", racine);
+            char *babs = chemin_de_comparaison(b);
+            free(b);
+            int dedans = babs && dans_dossier(cmp, babs);
+            free(babs);
+            if (dedans) {
+                free(cmp);
+                free(chemin);
+                return erreur(a, tc, grym_formater("« %s » appartient à une bibliothèque : écris « Utiliser la "
+                                                   "bibliothèque « … », version … ».", ecrit)), n;
+            }
+        }
+        free(cmp);
     }
-    free(dossier);
-    free(litteral);
-    free(compacte);
-    if (!chemin) return n;
 
     char *cle = chemin_absolu(chemin);
     if (!cle) {
@@ -8174,17 +8382,20 @@ static Noeud *utiliser(Analyse *a, const Jeton *t) {
      * et une utilisation circulaire le trouve « en cours ». */
     size_t rang = p->nb_fichiers + 1;
     char **f = grym_allouer(rang * sizeof *f), **c = grym_allouer(rang * sizeof *c);
-    int *lus = grym_allouer(rang * sizeof *lus);
-    for (size_t k = 0; k + 1 < rang; k++) { f[k] = p->fichiers[k]; c[k] = p->cles[k]; lus[k] = p->lus[k]; }
+    int *lus = grym_allouer(rang * sizeof *lus), *bd = grym_allouer(rang * sizeof *bd);
+    for (size_t k = 0; k + 1 < rang; k++) { f[k] = p->fichiers[k]; c[k] = p->cles[k]; lus[k] = p->lus[k]; bd[k] = p->bib_de[k]; }
     f[rang - 1] = chemin;
     c[rang - 1] = cle;
     lus[rang - 1] = 0;
+    bd[rang - 1] = biblio ? nouvelle : courante;
     free(p->fichiers);
     free(p->cles);
     free(p->lus);
+    free(p->bib_de);
     p->fichiers = f;
     p->cles = c;
     p->lus = lus;
+    p->bib_de = bd;
     p->nb_fichiers = rang;
 
     char *fichier_prec = p->fichier;
@@ -8208,7 +8419,7 @@ static Noeud *utiliser(Analyse *a, const Jeton *t) {
             a->diag->message = d.message;
             a->diag->ligne = d.ligne;
             a->diag->colonne = d.colonne;
-            a->diag->fichier = d.fichier ? d.fichier : grym_dupliquer(chemin);
+            a->diag->fichier = d.fichier ? d.fichier : grym_dupliquer(p->fichiers[rang - 1]);
             a->diag->origine_ligne = t->ligne;     /* chaque niveau la remplace : le plus haut l'emporte */
             a->diag->origine_colonne = t->colonne;
         } else {
@@ -8216,10 +8427,42 @@ static Noeud *utiliser(Analyse *a, const Jeton *t) {
         }
         return n;
     }
+    const char *montre = p->fichiers[rang - 1];
+    int dans_bib = p->bib_de[rang - 1];
+    int premiere = 1;   /* la première phrase qui n'est pas une remarque */
     for (size_t k = 0; k < prog.nb; k++) {
-        if (phrase_de_declaration(prog.phrases[k])) continue;
-        erreur(a, tc, grym_formater("« %s » contient une phrase qui s'exécute (ligne %d) : seul un fichier de "
-                                    "déclarations s'utilise.", p->fichiers[rang - 1], prog.phrases[k]->ligne));
+        const Noeud *ph = prog.phrases[k];
+        char *m = NULL;
+        if (!phrase_de_declaration(ph))
+            m = grym_formater("« %s » contient une phrase qui s'exécute (ligne %d) : seul un fichier de déclarations "
+                              "s'utilise.", montre, ph->ligne);
+        else if (dans_bib && ph->type == P_CLASSE && (ph->forme & 32))
+            m = grym_formater("Une bibliothèque ne déclare pas d'entité (« %s », dans « %s », ligne %d) : déclare une "
+                              "aptitude, que l'entité du programme adopte.", ph->texte, montre, ph->ligne);
+        else if (dans_bib && ph->type == P_REGLE)
+            m = grym_formater("Une bibliothèque ne déclare pas de règle d'entité (« %s », ligne %d) : la règle s'écrit "
+                              "dans le programme.", montre, ph->ligne);
+        else if (ph->type == P_BIBLIOTHEQUE && !(biblio && premiere))
+            m = biblio ? grym_formater("« Cette bibliothèque est … » se place en tête de « %s ».", montre)
+                       : grym_formater("« %s » se déclare bibliothèque : écris « Utiliser la bibliothèque « %s », version "
+                                       "%s. », et range-la dans « bibliothèques/ ».", montre, ph->texte, ph->texte2);
+        else if (biblio && premiere && ph->type != P_REMARQUE && ph->type != P_BIBLIOTHEQUE)
+            m = grym_formater("« %s » doit commencer par « Cette bibliothèque est « %s », version %s. »", montre, ecrit, tv->valeur);
+        else if (biblio && premiere && ph->type == P_BIBLIOTHEQUE && strcmp(ph->texte, ecrit) != 0)
+            m = grym_formater("Le dossier se nomme « %s », mais la bibliothèque s'y déclare « %s » : les deux noms "
+                              "s'écrivent pareil.", ecrit, ph->texte);
+        else if (biblio && premiere && ph->type == P_BIBLIOTHEQUE && strcmp(ph->texte2, tv->valeur) != 0)
+            m = grym_formater("La bibliothèque « %s » est en version %s ; le programme demande la version %s : relis ce "
+                              "qui a changé, puis écris « version %s ».", ecrit, ph->texte2, tv->valeur, ph->texte2);
+        if (ph->type != P_REMARQUE) premiere = 0;
+        if (!m) continue;
+        erreur(a, tc, m);
+        programme_liberer(&prog);
+        return n;
+    }
+    if (biblio && premiere) {   /* rien que des remarques */
+        erreur(a, tc, grym_formater("« %s » doit commencer par « Cette bibliothèque est « %s », version %s. »", montre, ecrit,
+                                    tv->valeur));
         programme_liberer(&prog);
         return n;
     }
@@ -8629,6 +8872,8 @@ static Noeud *phrase(Analyse *a, int colonne) {
         return n;
     }
     if (est_mot(t, "utiliser")) return utiliser(a, t);
+    if (est_mot(t, "cette") && est_mot(voir(a, 1), "bibliothèque") && est_mot(voir(a, 2), "est"))
+        return declaration_bibliotheque(a, t);   /* 2.61 */
     if (a->dans_xml) {   /* le corps d'un XML : ses éléments, ou une phrase (« Pour chaque », « Si ») qui en écrit (2.46) */
         Noeud *x = element_xml(a, colonne);
         if (x || a->echec) return x;
@@ -8994,7 +9239,7 @@ static Noeud *bloc(Analyse *a, int colonne, int racine) {
             noeud_liberer(p);
             continue;
         }
-        if (racine && p->type != P_REMARQUE && p->type != P_UTILISER) a->phrase_vue = 1;
+        if (racine && p->type != P_REMARQUE && p->type != P_UTILISER && p->type != P_BIBLIOTHEQUE) a->phrase_vue = 1;
         noeud_ajouter(b, p);
         b->fin = p->fin;
     }
@@ -9245,6 +9490,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.interactif = interactif;
     a.style_declare = 0;
     a.base_chiffree_vue = 0;
+    a.bibliotheque_vue = 0;
     a.affichage_vu = 0;
     a.apparence_declaree = 0;
     a.ouvrir_vu = 0;
@@ -9434,15 +9680,19 @@ static int tete_de_fichier(const char *source, size_t taille) {
     char *err = NULL;
     Lexeur *lx = lexeur_creer(source, taille, &err);
     if (!lx) { free(err); return 0; }
-    int ok = 1, etat = 0;   /* 0 : début de phrase ; 1 : après « utiliser » ; 2 : après le texte */
+    int ok = 1, etat = 0;   /* 0 : début de phrase ; 1 : dans une phrase de tête (« Utiliser … », « Cette bibliothèque est
+                               … », 2.61), jusqu'à son point */
     for (;;) {
         Jeton t = lexeur_suivant(lx);
         int fin = t.type == J_FIN || t.type == J_ERREUR;
         if (!fin) {
+            int m = t.type == J_MOT;
             if (etat == 0 && t.type == J_REMARQUE) {}
-            else if (etat == 0 && t.type == J_MOT && strcmp(t.valeur, "utiliser") == 0) etat = 1;
-            else if (etat == 1 && t.type == J_TEXTE) etat = 2;
-            else if (etat == 2 && t.type == J_POINT) etat = 0;
+            else if (etat == 0 && m && (strcmp(t.valeur, "utiliser") == 0 || strcmp(t.valeur, "cette") == 0)) etat = 1;
+            else if (etat == 1 && t.type == J_POINT) etat = 0;
+            else if (etat == 1 && (t.type == J_TEXTE || t.type == J_VIRGULE || t.type == J_NOMBRE
+                                   || (m && (strcmp(t.valeur, "la") == 0 || strcmp(t.valeur, "bibliothèque") == 0
+                                             || strcmp(t.valeur, "est") == 0 || strcmp(t.valeur, "version") == 0)))) {}
             else ok = 0;
         }
         jeton_liberer(&t);

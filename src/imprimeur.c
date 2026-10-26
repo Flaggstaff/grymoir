@@ -1893,7 +1893,16 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         return;
     case P_UTILISER:   /* « Utiliser « données ». » ; « _utiliser « données » » (§ 21) : jamais ses déclarations */
         aj(im, c ? "_utiliser " : "Utiliser ");
+        if (n->forme == 1) aj(im, c ? "_bibliothèque " : "la bibliothèque ");   /* 2.61, § 21.9 */
         ecrire_texte(im, n->texte);
+        if (n->forme == 1) { aj(im, c ? " " : ", version "); aj(im, n->texte2); }
+        aj(im, c ? "\n" : ".\n");
+        return;
+    case P_BIBLIOTHEQUE:   /* « Cette bibliothèque est « X », version 2. » ; « _bibliothèque « X » 2 » (2.61, § 21.9) */
+        aj(im, c ? "_bibliothèque " : "Cette bibliothèque est ");
+        ecrire_texte(im, n->texte);
+        aj(im, c ? " " : ", version ");
+        aj(im, n->texte2);
         aj(im, c ? "\n" : ".\n");
         return;
     case P_FICHE:   /* « Afficher la fiche de p. » ; « _fiche p » (§ 20) */

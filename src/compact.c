@@ -1995,6 +1995,34 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "essayer", t);
             emettre(r, J_DEUX_POINTS, NULL, t, 1);
             ouvrir(r, O_ESSAI, prof, t);
+        } else if (!strcmp(c, "utiliser") && d + 1 < f && r->e[d + 1].type == J_MOT_CLE
+                   && !strcmp(r->e[d + 1].valeur, "bibliothèque")) {
+            /* _utiliser _bibliothèque « X » 2 → Utiliser la bibliothèque « X », version 2. (2.61, § 21.9) */
+            if (f != d + 4 || r->e[d + 2].type != J_TEXTE || r->e[d + 3].type != J_NOMBRE) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _utiliser _bibliothèque « Suisse santé » 2 »."));
+                return;
+            }
+            mot(r, "utiliser", t);
+            mot(r, "la", &r->e[d + 1]);
+            mot(r, "bibliothèque", &r->e[d + 1]);
+            emettre(r, J_TEXTE, r->e[d + 2].valeur, &r->e[d + 2], 0);
+            emettre(r, J_VIRGULE, NULL, &r->e[d + 3], 1);
+            mot(r, "version", &r->e[d + 3]);
+            copier(r, &r->e[d + 3]);
+            point(r, f);
+        } else if (!strcmp(c, "bibliothèque")) {   /* _bibliothèque « X » 2 → Cette bibliothèque est « X », version 2. */
+            if (f != d + 3 || r->e[d + 1].type != J_TEXTE || r->e[d + 2].type != J_NOMBRE) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _bibliothèque « Suisse santé » 2 »."));
+                return;
+            }
+            mot(r, "cette", t);
+            mot(r, "bibliothèque", t);
+            mot(r, "est", t);
+            emettre(r, J_TEXTE, r->e[d + 1].valeur, &r->e[d + 1], 0);
+            emettre(r, J_VIRGULE, NULL, &r->e[d + 2], 1);
+            mot(r, "version", &r->e[d + 2]);
+            copier(r, &r->e[d + 2]);
+            point(r, f);
         } else if (!strcmp(c, "utiliser")) {   /* _utiliser « données » → Utiliser « données ». (§ 21) */
             if (f != d + 2 || r->e[d + 1].type != J_TEXTE) {
                 echouer(r, t, grym_dupliquer("Forme attendue : « _utiliser « données » »."));

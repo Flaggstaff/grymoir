@@ -1,0 +1,71 @@
+#!/bin/sh
+# Les bibliothèques (grammaire 2.61, § 21.9, 26 octobre 2026) : « Utiliser la bibliothèque « X », version N. » trouve
+# bibliothèques/X/bibliothèque.grym à côté du programme ; version exacte, une seule par application ; ni entité ni
+# règle ; ses fichiers restent dans son dossier ; un programme n'y entre pas par un chemin.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+contient() { total=$((total + 1)); case "$1" in *"$2"*) ;; *) echecs=$((echecs + 1)); echo "ÉCHEC : $3 (« $2 » attendu dans « $1 »)";; esac; }
+S="bibliothèques/Suisse santé"
+mkdir -p "$S" "bibliothèques/Banque" "bibliothèques/Monnaie"
+entree() {
+    printf 'Remarque : outils suisses.\nCette bibliothèque est « Suisse santé », version 2.\nUtiliser « arrondis ».\n\nUne chose tarifée a :\n    un montant (nombre).\n\nLe total arrondi d'"'"'un montant vaut le centime suisse du montant.\n' > "$S/bibliothèque.grym"
+}
+entree
+printf 'Le centime suisse d'"'"'un x vaut l'"'"'arrondi de x à 0,05.\n' > "$S/arrondis.grym"
+programme() { printf 'Utiliser la bibliothèque « Suisse santé », version %s.\nUne facture, conservée, est une chose tarifée.\nAfficher le total arrondi de 12,33.\n' "$1" > p.grym; }
+lancer() { "$grym" lancer p.grym 2>&1 < /dev/null; }
+
+programme 2
+verifier "$(lancer)" "12,35" "la bibliothèque s'utilise"
+"$grym" traduire p.grym > /dev/null 2>&1
+verifier "$(head -1 p.grymc)" "_utiliser _bibliothèque « Suisse santé » 2" "forme compacte de la phrase"
+mv p.grym p0.grym
+"$grym" traduire p.grymc > /dev/null 2>&1
+verifier "$(cmp -s p.grym p0.grym && echo pareil)" "pareil" "aller-retour par la forme compacte"
+rm -f p.grymc p0.grym
+(cd "$S" && "$grym" traduire bibliothèque.grym > /dev/null 2>&1)
+verifier "$(sed -n 2p "$S/bibliothèque.grymc")" "_bibliothèque « Suisse santé » 2" "forme compacte de la déclaration"
+rm -f "$S/bibliothèque.grymc"
+verifier "$(cd "$S" && "$grym" lancer bibliothèque.grym 2>&1 < /dev/null; echo $?)" "0" "la bibliothèque ouverte seule"
+
+programme 3
+contient "$(lancer)" "est en version 2 ; le programme demande la version 3" "version différente"
+printf 'Utiliser la bibliothèque « Suisse santé ».\n' > p.grym
+contient "$(lancer)" "La version suit le nom" "version absente"
+printf 'Utiliser la bibliothèque « Inconnue », version 1.\n' > p.grym
+contient "$(lancer)" "il manque « bibliothèques/Inconnue/bibliothèque.grym »" "bibliothèque introuvable"
+printf 'Utiliser « bibliothèques/Suisse santé/arrondis ».\nAfficher 1.\n' > p.grym
+contient "$(lancer)" "appartient à une bibliothèque" "pas d'entrée par un chemin"
+printf 'Cette bibliothèque est « X », version 1.\nLe deux vaut 2.\n' > commun.grym
+printf 'Utiliser « commun ».\nAfficher le deux.\n' > p.grym
+contient "$(lancer)" "se déclare bibliothèque" "un fichier ordinaire ne se déclare pas bibliothèque"
+printf 'Utiliser la bibliothèque « Suisse santé », version 2.\nLe centime suisse d'"'"'un x vaut x.\nAfficher 1.\n' > p.grym
+contient "$(lancer)" "existe déjà : déclaré dans « bibliothèques/Suisse santé/arrondis.grym »" "aucun nom remplacé en silence"
+
+programme 2
+printf 'Cette bibliothèque est « Suisse santé », version 2.\nUn patient, conservé, a :\n    un nom (texte).\n' > "$S/bibliothèque.grym"
+contient "$(lancer)" "Une bibliothèque ne déclare pas d'entité" "pas d'entité"
+printf 'Cette bibliothèque est « Suisse », version 2.\n' > "$S/bibliothèque.grym"
+contient "$(lancer)" "s'y déclare « Suisse »" "le nom du dossier"
+printf 'Remarque : rien.\n' > "$S/bibliothèque.grym"
+contient "$(lancer)" "doit commencer par « Cette bibliothèque est" "la déclaration en tête"
+printf 'Cette bibliothèque est « Suisse santé », version 2.\nCette bibliothèque est « Suisse santé », version 2.\n' > "$S/bibliothèque.grym"
+contient "$(lancer)" "une seule fois" "une seule déclaration"
+printf 'Cette bibliothèque est « Suisse santé », version 2.\nUtiliser « ../../commun ».\n' > "$S/bibliothèque.grym"
+contient "$(lancer)" "n'utilise que ses propres fichiers" "les fichiers restent dans son dossier"
+
+# une seule version par application : Banque demande Monnaie 1, le programme Monnaie 2
+entree
+printf 'Cette bibliothèque est « Monnaie », version 2.\nLe franc d'"'"'un x vaut x.\n' > bibliothèques/Monnaie/bibliothèque.grym
+printf 'Cette bibliothèque est « Banque », version 1.\nUtiliser la bibliothèque « Monnaie », version 2.\nLe solde d'"'"'un x vaut le franc de x.\n' > bibliothèques/Banque/bibliothèque.grym
+printf 'Utiliser la bibliothèque « Monnaie », version 2.\nUtiliser la bibliothèque « Banque », version 1.\nAfficher le solde de 4.\n' > p.grym
+verifier "$(lancer)" "4" "deux bibliothèques, la même version partagée"
+printf 'Cette bibliothèque est « Banque », version 1.\nUtiliser la bibliothèque « Monnaie », version 1.\n' > bibliothèques/Banque/bibliothèque.grym
+contient "$(lancer)" "déjà utilisée en version 2" "deux versions d'une même bibliothèque"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

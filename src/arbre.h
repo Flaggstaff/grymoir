@@ -139,7 +139,8 @@ typedef enum {
                         forme 1 : « Ouvrir la fiche de c. », enfants[0] : l'objet */
     P_FERMER,        /* « Fermer l'écran. » (§ 22.3) */
     P_UTILISER,      /* « Utiliser « données ». » (§ 21) : texte : chemin écrit, sans extension ; entier : rang du fichier
-                        dans Programme.fichiers, 0 s'il était déjà lu ; enfants : ses déclarations */
+                        dans Programme.fichiers, 0 s'il était déjà lu ; enfants : ses déclarations ; forme 1 : « Utiliser la
+                        bibliothèque « Suisse santé », version 2. » (2.61, § 21.9), texte : son nom, texte2 : la version */
     P_GAGNER,        /* « Les genres de o gagnent baroque. » : texte : champ multiple ; enfants[0] : objet ;
                         enfants[1] : valeur ; forme 1 : « perdent » (§ 16.13) */
     P_APPARENCE,     /* « Les écrans ont la couleur verte et le logo « logo.png ». » (§ 22.5) : entier : couleur, rang
@@ -174,8 +175,10 @@ typedef enum {
     N_JSON_LISTE,    /* la liste d'un champ JSON (2.60) : texte : le chemin ; enfant : la réponse ; forme 1 : son nombre
                         d'éléments ; forme 0 : la source d'un « Pour chaque … du champ « … » de … » */
     N_XML,           /* « le XML de facture » (2.46) : texte : l'action qui l'écrit (« xml de facture ») ; texte2 : la racine */
-    P_XML            /* un élément d'un XML déclaré (2.46) : op 'a' attribut (texte, enfant : la valeur), 'c' contenu (enfant),
+    P_XML,           /* un élément d'un XML déclaré (2.46) : op 'a' attribut (texte, enfant : la valeur), 'c' contenu (enfant),
                         'e' élément (texte, enfant facultatif : son contenu), 'b' élément à enfants (texte, enfant : N_BLOC) */
+    P_BIBLIOTHEQUE   /* « Cette bibliothèque est « Suisse santé », version 2. » (2.61, § 21.9) : texte : son nom ; texte2 : sa
+                        version, un entier écrit en chiffres ; rien ne s'exécute */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */
