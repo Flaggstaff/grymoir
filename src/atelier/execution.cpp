@@ -249,7 +249,10 @@ static int iface_envoyer(void *contexte, int lecture, const char *adresse, const
     QString cible = QString::fromUtf8(adresse);
     // pour les essais seulement : « https://api.calendly.com=http://127.0.0.1:4242 » envoie à un faux service local
     const QString redirection = qEnvironmentVariable("GRYM_ESSAI_REDIRECTION");
-    if (const qsizetype egal = redirection.indexOf('='); egal > 0 && cible.startsWith(redirection.left(egal)))
+    // la cible ne peut être que cette machine elle-même : une variable d'environnement mal posée n'envoie jamais un jeton
+    // ou une clé ailleurs (relecture du 26 octobre 2026)
+    if (const qsizetype egal = redirection.indexOf('='); egal > 0 && cible.startsWith(redirection.left(egal))
+        && (redirection.mid(egal + 1).startsWith("http://127.0.0.1:") || redirection.mid(egal + 1).startsWith("http://localhost:")))
         cible = redirection.mid(egal + 1) + cible.mid(egal);
     QNetworkRequest requete{QUrl(cible)};
     requete.setRawHeader("Accept", "application/json");
