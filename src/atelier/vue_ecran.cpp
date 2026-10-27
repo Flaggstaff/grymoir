@@ -435,6 +435,11 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         if (e.sorte == ELEMENT_FIN_DE_BLOC) {
             if (niveaux.size() <= 1) continue;
             const Niveau fin = niveaux.takeLast();
+            // une colonne (« l'un sous l'autre ») à côté d'une plus haute : ses zones restent en haut, serrées ; sans
+            // ce ressort, Qt répartissait la hauteur en trop entre elles, et la colonne courte s'étirait (27 octobre 2026)
+            if (!fin.toile && !fin.onglets && qobject_cast<QVBoxLayout *>(fin.boite)
+                && qobject_cast<QHBoxLayout *>(niveaux.last().boite))
+                fin.boite->addStretch(1);
             if (fin.toile) fin.toile->updateGeometry();
             if (fin.place) {   // rempli : sa taille naturelle est connue maintenant
                 if (fin.boite) fin.boite->activate();

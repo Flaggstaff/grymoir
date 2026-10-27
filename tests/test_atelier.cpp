@@ -5,6 +5,8 @@
 #include "editeur.h"
 #include "execution.h"
 #include "aide.h"
+#include <QToolButton>
+#include <QMenu>
 #include "fabrication.h"
 #include "projet.h"
 #include "rapport.h"
@@ -1044,6 +1046,11 @@ int main(int argc, char **argv) {
         VERIFIER(extension_de_son(QByteArray("xyz", 3)) == "son");
         EnregistreurSon e;
         VERIFIER(e.micros() && e.micros()->count() >= 1 && e.micros()->itemText(0) == QString::fromUtf8("Micro du système"));
+        // le bouton « Micro ▾ » (27 octobre 2026) : un menu des mêmes micros, le choisi coché ; la liste reste cachée
+        VERIFIER(e.choix_du_micro() && e.choix_du_micro()->menu()
+                 && e.choix_du_micro()->menu()->actions().size() == e.micros()->count());
+        VERIFIER(e.choix_du_micro()->menu()->actions().value(0) && e.choix_du_micro()->menu()->actions().value(0)->isChecked());
+        VERIFIER(!e.micros()->isVisibleTo(&e));
     }
 
     // La signature (2.16) : un bandeau en tête de l'écran, l'image et un filet ; plus de logo près du titre

@@ -62,6 +62,7 @@ public:
     QPushButton *bouton() const { return bouton_; }
     QLabel *message() const { return message_; }
     class QComboBox *micros() const { return micro_; }
+    class QToolButton *choix_du_micro() const { return choix_; }
 
     // Le format choisi pour ce système : l'extension (« m4a »), vide si aucun ne s'écrit ici.
     static QString extension_choisie();
@@ -71,7 +72,8 @@ private:
     void fini();
     QPushButton *bouton_;
     QLabel *message_;
-    class QComboBox *micro_;   // le micro choisi (24 octobre 2026), retenu d'une fois à l'autre
+    class QComboBox *micro_;   // le micro choisi (24 octobre 2026), retenu d'une fois à l'autre ; caché depuis le 27 octobre
+    class QToolButton *choix_;   // « Micro ▾ » : le menu des micros, étroit, à la place de la liste déroulante
     void remplir_micros();
     QMediaCaptureSession *session = nullptr;
     QAudioInput *entree = nullptr;

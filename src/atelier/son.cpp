@@ -14,6 +14,9 @@
 #include <QAudioSource>
 #include <QSettings>
 #include <QComboBox>
+#include <QActionGroup>
+#include <QMenu>
+#include <QToolButton>
 #include <QFile>
 #include <QFileInfo>
 #include <QHBoxLayout>
@@ -166,14 +169,17 @@ EnregistreurSon::EnregistreurSon(QWidget *parent) : QWidget(parent) {
     rang->addWidget(bouton_);
     // le micro : celui du système par défaut, ou celui qu'on a choisi ici (un casque Bluetooth dont on prend le micro
     // passe en mode appel : son faible, volume de la musique qui saute ; on choisit alors celui de l'ordinateur)
-    micro_ = new QComboBox;
-    micro_->setToolTip(QString::fromUtf8("Le micro de la dictée"));
-    micro_->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    rang->addWidget(micro_);
+    // Le 27 octobre 2026 : un bouton étroit « Micro ▾ » et son menu, au lieu d'une liste déroulante à la largeur du nom du
+    // micro (« Microphone MacBook Air »), qui débordait sur « Dicter » dans une zone de largeur fixe. La liste reste, cachée :
+    // elle garde les micros et le choix ; le menu la reflète.
+    micro_ = new QComboBox(this);
+    micro_->hide();
+    choix_ = new QToolButton;
+    choix_->setText(QString::fromUtf8("Micro"));   // la flèche du menu, Qt la dessine
+    choix_->setPopupMode(QToolButton::InstantPopup);
+    choix_->setMenu(new QMenu(choix_));
+    rang->addWidget(choix_);
     remplir_micros();
-    connect(micro_, &QComboBox::activated, this, [this](int i) {
-        QSettings().setValue("micro de dictée", micro_->itemData(i).toString());
-    });
     auto *appareils = new QMediaDevices(this);
     connect(appareils, &QMediaDevices::audioInputsChanged, this, &EnregistreurSon::remplir_micros);
     rang->addWidget(message_, 1);
@@ -193,6 +199,21 @@ void EnregistreurSon::remplir_micros() {
         micro_->addItem(a.description(), QString::fromUtf8(a.id()));
     const int i = micro_->findData(retenu);
     micro_->setCurrentIndex(i >= 0 ? i : 0);   // un micro débranché : celui du système, sans oublier le choix
+    QMenu *menu = choix_->menu();   // le menu : chaque micro, celui choisi coché
+    menu->clear();
+    auto *groupe = new QActionGroup(menu);
+    for (int k = 0; k < micro_->count(); k++) {
+        QAction *a = menu->addAction(micro_->itemText(k));
+        a->setCheckable(true);
+        a->setChecked(k == micro_->currentIndex());
+        groupe->addAction(a);
+        connect(a, &QAction::triggered, this, [this, k] {
+            micro_->setCurrentIndex(k);
+            choix_->setToolTip(QString::fromUtf8("Le micro de la dictée : ") + micro_->itemText(k));
+            QSettings().setValue("micro de dictée", micro_->itemData(k).toString());
+        });
+    }
+    choix_->setToolTip(QString::fromUtf8("Le micro de la dictée : ") + micro_->currentText());
 }
 
 EnregistreurSon::~EnregistreurSon() {

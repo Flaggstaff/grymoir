@@ -153,6 +153,7 @@ Quand on ferme l'écran d'accueil :
 
 Remarque : les écrans posés au pixel tiennent dans 1072 points, la largeur utile du thème, mesurée sur un MacBook Pro 14 pouces (1512 × 982 et 1800 × 1169).
 Remarque : l'inscription d'un patient : les champs courts à gauche ; à côté, l'anamnèse, dictée (transcrite sur l'ordinateur) ou tapée.
+Remarque : une zone avec une indication est plus haute (son nom, l'indication, puis la zone) : 96 points, au lieu de 72, sous ces rangées (27 octobre 2026).
 L'écran d'inscription, « Nouveau patient », montre :
     en position libre :
         un nom (texte), à 0 de la gauche et 0 du haut, large de 260,
@@ -170,9 +171,9 @@ L'écran d'inscription, « Nouveau patient », montre :
         un numéro d'assuré (texte), facultatif, à 276 de la gauche et 432 du haut, large de 260,
         un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré », à 0 de la gauche et 504 du haut, large de 260,
         une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base », à 276 de la gauche et 504 du haut, large de 260,
-        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 576 du haut, large de 260,
-        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », à 276 de la gauche et 576 du haut, large de 260,
-        un rappel par SMS (vrai ou faux), facultatif, avec l'indication « Le patient accepte un SMS la veille de ses séances », à 0 de la gauche et 648 du haut, large de 260,
+        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 600 du haut, large de 260,
+        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », à 276 de la gauche et 600 du haut, large de 260,
+        un rappel par SMS (vrai ou faux), facultatif, avec l'indication « Le patient accepte un SMS la veille de ses séances », à 0 de la gauche et 696 du haut, large de 536,
         une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
         une anamnèse (texte), facultative, sur plusieurs lignes, transcrite de la dictée, à 552 de la gauche et 72 du haut, large de 520, haute de 340,
     côte à côte :
@@ -198,9 +199,9 @@ L'écran du patient, « Patient », montre :
         un numéro d'assuré (texte), facultatif, à 276 de la gauche et 432 du haut, large de 260,
         un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré », à 0 de la gauche et 504 du haut, large de 260,
         une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base », à 276 de la gauche et 504 du haut, large de 260,
-        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 576 du haut, large de 260,
-        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », à 276 de la gauche et 576 du haut, large de 260,
-        un rappel par SMS (vrai ou faux), facultatif, avec l'indication « Le patient accepte un SMS la veille de ses séances », à 0 de la gauche et 648 du haut, large de 260,
+        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 600 du haut, large de 260,
+        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », à 276 de la gauche et 600 du haut, large de 260,
+        un rappel par SMS (vrai ou faux), facultatif, avec l'indication « Le patient accepte un SMS la veille de ses séances », à 0 de la gauche et 696 du haut, large de 536,
         une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
         un ajout (texte), facultatif, sur plusieurs lignes, transcrit de la dictée, à 552 de la gauche et 72 du haut, large de 520, haut de 112,
         une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 204 du haut, large de 520, haute de 208,
@@ -452,6 +453,7 @@ L'écran des encaissements, « À encaisser », montre :
         un bouton « Fermer ».
 
 Remarque : le cabinet s'édite dans son écran : « Enregistrer » est un événement, les règles du cabinet s'y vérifient.
+Remarque : trois colonnes, l'adresse, les contacts et numéros, puis la facturation et l'image du cabinet : tout tient sur un écran (27 octobre 2026).
 L'écran du cabinet, « Le cabinet », montre :
     côte à côte :
         l'un sous l'autre :
@@ -463,19 +465,20 @@ L'écran du cabinet, « Le cabinet », montre :
             une localité (texte), facultative,
             un pays (texte),
         l'un sous l'autre :
+            un prénom (texte), facultatif, avec l'indication « Pour l'accueil : Bonjour Nicolas »,
             un téléphone (téléphone), facultatif,
             un courriel (courriel), facultatif,
             un numéro RCC (texte), facultatif, avec l'indication « Registre des codes-créanciers (SASIS) »,
             un numéro GLN (texte), facultatif, avec l'indication « 13 chiffres »,
             un numéro RME (texte), facultatif,
             un numéro ASCA (texte), facultatif,
+        l'un sous l'autre :
             un IBAN (texte), facultatif, avec l'indication « Le compte des QR-factures, un IBAN (pas un QR-IBAN) : CH52 0483 5012 3456 7100 0 »,
             une facturation des absences (vrai ou faux), en interrupteur, avec l'indication « Seulement si les patients en sont avertis, par écrit »,
             un choix d'agenda (vrai ou faux), en interrupteur, avec l'indication « Allumé : la Configuration propose Rendez-vous, l'agenda Praxis ou OneDoc »,
             une facturation aux assurances (vrai ou faux), en interrupteur, avec l'indication « Allumé : les assureurs, l'assurance des patients, leurs ordonnances »,
             un logo (image), facultatif, avec l'indication « Le logo du cabinet »,
             une signature (image), facultative, avec l'indication « Le nom du cabinet dessiné, en tête des écrans et des pièces »,
-            un prénom (texte), facultatif, avec l'indication « Pour l'accueil : Bonjour Nicolas »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
