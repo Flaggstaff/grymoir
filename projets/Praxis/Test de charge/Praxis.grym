@@ -87,6 +87,18 @@ Le début électronique vaut aujourd'hui.
 La fin électronique vaut aujourd'hui.
 Le total électronique vaut 0.
 L'assureur électronique vaut absent.
+Remarque : la pièce électronique en cours (27 octobre 2026) : une facture, sa quittance, son rappel ou son annulation ; la facture
+Remarque : d'origine, toujours (son numéro, sa date, son patient), ce qui est dû, et le rappel s'il y en a un.
+Le numéro électronique vaut « ».
+La personne électronique vaut absent.
+La date électronique vaut aujourd'hui.
+La demande électronique vaut « invoice ».
+Le genre de demande électronique vaut « normal ».
+Le dû électronique vaut 0.
+Le numéro du rappel électronique vaut « ».
+La date du rappel électronique vaut aujourd'hui.
+L'horodatage du rappel électronique vaut 0.
+Le niveau du rappel électronique vaut 1.
 L'avis des factures vaut « ».
 La méthode ouverte vaut absent.
 Le décompte ouvert vaut absent.
@@ -345,7 +357,9 @@ L'écran des rappels, « Rappels », montre :
     la liste des séances conservées dont la facture est absente et le paiement = « à payer » et le statut ≠ « prévue » et le statut ≠ « annulée » et le statut ≠ l'exclu du cabinet conservé et la date ≤ la limite des rappels, par date, avec la date, le nom du patient, le nom du soin, le prix et le statut,
     un bouton « Facturer »,
     le texte "Rappels envoyés en " suivi de l'année des comptes, en petites capitales,
-    la liste des rappels conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date décroissant, avec la date, le rang, le numéro de la facture et le nom du patient de la facture.
+    la liste des rappels conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date décroissant, avec la date, le rang, le numéro de la facture et le nom du patient de la facture,
+    un bouton « Rappel électronique »,
+    le texte l'avis des factures.
 
 Remarque : l'en-tête des pièces (24 octobre 2026) : la signature et l'adresse du cabinet, une seule fois pour toutes les pièces.
 La partie « en-tête du cabinet » montre :
@@ -411,7 +425,9 @@ L'écran des quittances, (le titre des quittances de l'année des comptes et de 
         un bouton « Fermer »,
     le texte « Quittances remises », en petites capitales,
     la liste des quittances conservées dont la date ≥ le début des quittances et la date < la fin des quittances et le nom du patient contient la recherche des quittances, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et le moyen,
-    un bouton « Annuler la quittance ».
+    un bouton « Annuler la quittance »,
+    un bouton « Quittance électronique »,
+    le texte l'avis des factures.
 
 L'écran des frais, ("Frais " suivi de l'année des comptes), montre :
     une année (exercice), avec l'indication « Une autre année »,
@@ -706,7 +722,7 @@ Remarque : 27 octobre 2026) : en tiers garant (le patient paie, puis se fait rem
 Remarque : Tarif 590, sa QR-facture sans référence (esrQRRed). Un débiteur sans GLN prend un GLN de l'espace privé, 2000000000008,
 Remarque : comme le recommande la documentation de Sumex1 (generalInvoiceRequest, SetDebitor). Le rôle « naturopathictherapist »,
 Remarque : « Médecine complémentaire », est un choix de Praxis : le schéma n'a pas de rôle plus proche.
-Le XML de facture électronique d'une facture, « invoice:request », montre :
+Le XML de pièce électronique, « invoice:request », montre :
     l'attribut « xmlns:invoice » : « http://www.forum-datenaustausch.ch/invoice »,
     l'attribut « language » : « fr »,
     l'attribut « modus » : « production »,
@@ -716,11 +732,18 @@ Le XML de facture électronique d'une facture, « invoice:request », montre :
             l'attribut « from » : le numéro GLN du cabinet conservé,
             l'attribut « to » : le numéro GLN de l'assureur électronique,
     l'élément « invoice:payload » :
-        l'attribut « request_type » : « invoice »,
+        l'attribut « request_type » : la demande électronique,
+        l'attribut « request_subtype » : le genre de demande électronique,
         l'élément « invoice:invoice » :
             l'attribut « request_timestamp » : l'horodatage électronique,
-            l'attribut « request_date » : (la date de la facture en format technique) suivi de « T00:00:00 »,
-            l'attribut « request_id » : le numéro de la facture,
+            l'attribut « request_date » : (la date électronique en format technique) suivi de « T00:00:00 »,
+            l'attribut « request_id » : le numéro électronique,
+        Si la demande électronique = « reminder » :
+            l'élément « invoice:reminder » :
+                l'attribut « request_timestamp » : l'horodatage du rappel électronique,
+                l'attribut « request_date » : (la date du rappel électronique en format technique) suivi de « T00:00:00 »,
+                l'attribut « request_id » : le numéro du rappel électronique,
+                l'attribut « reminder_level » : le niveau du rappel électronique,
         l'élément « invoice:body » :
             l'attribut « role » : « naturopathictherapist »,
             l'attribut « role_title » : « Médecine complémentaire »,
@@ -742,13 +765,13 @@ Le XML de facture électronique d'une facture, « invoice:request », montre :
                 l'élément « invoice:debitor » :
                     l'attribut « gln » : « 2000000000008 »,
                     l'élément « invoice:person » :
-                        l'élément « invoice:familyname » : le nom de famille électronique du patient de la facture,
-                        l'élément « invoice:givenname » : le prénom du patient de la facture,
+                        l'élément « invoice:familyname » : le nom de famille électronique de la personne électronique,
+                        l'élément « invoice:givenname » : le prénom de la personne électronique,
                         l'élément « invoice:postal » :
-                            Si la rue du patient de la facture est présente :
-                                l'élément « invoice:street » : l'adresse du patient de la facture,
-                            l'élément « invoice:zip » : le numéro postal du patient de la facture,
-                            l'élément « invoice:city » : la localité du patient de la facture,
+                            Si la rue de la personne électronique est présente :
+                                l'élément « invoice:street » : l'adresse de la personne électronique,
+                            l'élément « invoice:zip » : le numéro postal de la personne électronique,
+                            l'élément « invoice:city » : la localité de la personne électronique,
                 l'élément « invoice:providers » :
                     l'élément « invoice:provider_gln » :
                         l'attribut « gln » : le numéro GLN du cabinet conservé,
@@ -761,32 +784,33 @@ Le XML de facture électronique d'une facture, « invoice:request », montre :
                                 l'élément « invoice:zip » : le numéro postal du cabinet conservé,
                                 l'élément « invoice:city » : la localité du cabinet conservé,
                 l'élément « invoice:patient » :
-                    l'attribut « gender » : le genre électronique du patient de la facture,
-                    l'attribut « sex » : le genre électronique du patient de la facture,
-                    l'attribut « birthdate » : la date de naissance du patient de la facture,
-                    l'attribut « ssn » : le numéro AVS électronique du patient de la facture,
+                    l'attribut « gender » : le genre électronique de la personne électronique,
+                    l'attribut « sex » : le genre électronique de la personne électronique,
+                    l'attribut « birthdate » : la date de naissance de la personne électronique,
+                    l'attribut « ssn » : le numéro AVS électronique de la personne électronique,
                     l'élément « invoice:person » :
-                        l'élément « invoice:familyname » : le nom de famille électronique du patient de la facture,
-                        l'élément « invoice:givenname » : le prénom du patient de la facture,
+                        l'élément « invoice:familyname » : le nom de famille électronique de la personne électronique,
+                        l'élément « invoice:givenname » : le prénom de la personne électronique,
                         l'élément « invoice:postal » :
-                            Si la rue du patient de la facture est présente :
-                                l'élément « invoice:street » : l'adresse du patient de la facture,
-                            l'élément « invoice:zip » : le numéro postal du patient de la facture,
-                            l'élément « invoice:city » : la localité du patient de la facture,
+                            Si la rue de la personne électronique est présente :
+                                l'élément « invoice:street » : l'adresse de la personne électronique,
+                            l'élément « invoice:zip » : le numéro postal de la personne électronique,
+                            l'élément « invoice:city » : la localité de la personne électronique,
                 l'élément « invoice:guarantor » :
                     l'élément « invoice:person » :
-                        l'élément « invoice:familyname » : le nom de famille électronique du patient de la facture,
-                        l'élément « invoice:givenname » : le prénom du patient de la facture,
+                        l'élément « invoice:familyname » : le nom de famille électronique de la personne électronique,
+                        l'élément « invoice:givenname » : le prénom de la personne électronique,
                         l'élément « invoice:postal » :
-                            Si la rue du patient de la facture est présente :
-                                l'élément « invoice:street » : l'adresse du patient de la facture,
-                            l'élément « invoice:zip » : le numéro postal du patient de la facture,
-                            l'élément « invoice:city » : la localité du patient de la facture,
+                            Si la rue de la personne électronique est présente :
+                                l'élément « invoice:street » : l'adresse de la personne électronique,
+                            l'élément « invoice:zip » : le numéro postal de la personne électronique,
+                            l'élément « invoice:city » : la localité de la personne électronique,
                 l'élément « invoice:partners »,
                 l'élément « invoice:balance » :
                     l'attribut « currency » : « CHF »,
                     l'attribut « amount » : le total électronique,
-                    l'attribut « amount_due » : le total électronique,
+                    l'attribut « amount_prepaid » : le total électronique − le dû électronique,
+                    l'attribut « amount_due » : le dû électronique,
                     l'élément « invoice:vat » :
                         l'attribut « vat » : 0,
                         l'élément « invoice:vat_rate » :
@@ -795,7 +819,7 @@ Le XML de facture électronique d'une facture, « invoice:request », montre :
                             l'attribut « vat » : 0,
             l'élément « invoice:esrQRRed » :
                 l'attribut « iban » : l'IBAN du cabinet conservé en IBAN,
-                l'attribut « payment_reason » : le numéro de la facture,
+                l'attribut « payment_reason » : le numéro électronique,
                 l'élément « invoice:creditor » :
                     l'élément « invoice:company » :
                         l'élément « invoice:companyname » : le nom du cabinet conservé,
@@ -806,20 +830,20 @@ Le XML de facture électronique d'une facture, « invoice:request », montre :
                             l'élément « invoice:city » : la localité du cabinet conservé,
             l'élément « invoice:law » :
                 l'attribut « type » : « VVG »,
-                l'attribut « insured_id » : le numéro d'assuré électronique du patient de la facture,
-                l'attribut « case_id » : le numéro de cas du patient de la facture,
+                l'attribut « insured_id » : le numéro d'assuré électronique de la personne électronique,
+                l'attribut « case_id » : le numéro de cas de la personne électronique,
             l'élément « invoice:treatment » :
                 l'attribut « date_begin » : le début électronique,
                 l'attribut « date_end » : la fin électronique,
                 l'attribut « canton » : le canton du cabinet conservé en majuscules,
                 l'attribut « reason » : « disease »,
-                Si le diagnostic du patient de la facture est présent :
+                Si le diagnostic de la personne électronique est présent :
                     l'élément « invoice:diagnosis » :
                         l'attribut « type » : « freetext »,
-                        le contenu : le diagnostic du patient de la facture,
+                        le contenu : le diagnostic de la personne électronique,
             l'élément « invoice:services » :
                 Le rang vaut 0.
-                Pour chaque poste conservé dont la pièce = le numéro de la facture, par date :
+                Pour chaque poste conservé dont la pièce = le numéro électronique, par date :
                     Le rang devient le rang + 1.
                     l'élément « invoice:service » :
                         l'attribut « record_id » : le rang,
@@ -834,11 +858,10 @@ Le XML de facture électronique d'une facture, « invoice:request », montre :
                         l'attribut « amount » : le montant du poste.
 
 Remarque : ce que la facture électronique exige, vérifié avant de l'écrire : chaque refus dit quoi compléter, et où.
-Pour préparer la facture électronique d'une facture :
+Pour préparer la pièce électronique d'un numéro et un patient et un jour :
     Le c vaut le cabinet conservé.
-    Le p vaut le patient de la facture.
-    Le numéro vaut le numéro de la facture.
-    Si le nombre de postes conservés dont la pièce = le numéro = 0, refuser « Cette facture n'a pas de justificatif de remboursement : la facture électronique reprend ses postes du Tarif 590. ».
+    Le p vaut patient.
+    Si le nombre de postes conservés dont la pièce = numéro = 0, refuser "La pièce " suivi de numéro suivi de " n'a pas de postes du Tarif 590 : pas de justificatif de remboursement, donc rien d'électronique (une quittance qui règle une facture : la facture électronique suffit).".
     Si le numéro GLN du c est absent, refuser « Il manque le numéro GLN du cabinet : Configuration, Le cabinet. ».
     Si la longueur du numéro GLN du c ≠ 13, refuser « Le numéro GLN du cabinet a 13 chiffres : Configuration, Le cabinet. ».
     Si l'IBAN du c est absent, refuser « Il manque l'IBAN du cabinet : Configuration, Le cabinet. ».
@@ -858,11 +881,21 @@ Pour préparer la facture électronique d'une facture :
     Si l'assureur électronique est absent, refuser « Il manque l'assureur du patient : sa page. ».
     Si le numéro GLN de l'assureur électronique est absent, refuser "Il manque le numéro GLN de " suivi du nom de l'assureur électronique suivi de " : Configuration, Assureurs.".
     Le guid électronique devient (un nombre au hasard de 10000000 à 99999999) en format technique suivi de (un nombre au hasard de 10000000 à 99999999) en format technique suivi de (un nombre au hasard de 10000000 à 99999999) en format technique suivi de (un nombre au hasard de 10000000 à 99999999) en format technique.
-    L'horodatage électronique devient (aujourd'hui − 01.01.1970) × 86400.
-    Le total électronique devient la somme des montants des postes conservés dont la pièce = le numéro.
-    Le début électronique devient la date de la facture.
+    Le numéro électronique devient numéro.
+    La personne électronique devient patient.
+    La date électronique devient jour.
+    La demande électronique devient « invoice ».
+    Le genre de demande électronique devient « normal ».
+    Remarque : l'heure de la demande, en secondes depuis le 1er janvier 1970 : celle de la pièce, la même à chaque écriture, pour que
+    Remarque : son rappel et son annulation désignent la même facture.
+    L'horodatage électronique devient (jour − 01.01.1970) × 86400.
+    Le total électronique devient la somme des montants des postes conservés dont la pièce = numéro.
+    Le dû électronique devient 0.
+    Pour chaque poste conservé dont la pièce = numéro :
+        Si le paiement de la séance du poste = « à payer », le dû électronique devient le dû électronique + le montant du poste.
+    Le début électronique devient jour.
     La fin électronique devient 01.01.1900.
-    Pour chaque poste conservé dont la pièce = le numéro :
+    Pour chaque poste conservé dont la pièce = numéro :
         Si la date du poste < le début électronique, le début électronique devient la date du poste.
         Si la date du poste > la fin électronique, la fin électronique devient la date du poste.
 
@@ -1192,21 +1225,55 @@ Quand on clique sur « Fermer » dans l'écran des factures :
     Fermer l'écran.
 
 Remarque : une facture fausse s'annule : ses séances se corrigent, puis « Facture » en refait une, sous un nouveau numéro.
+Remarque : les pièces électroniques (generalInvoice 5.0, 27 octobre 2026) : chacune un fichier XML dans le dossier d'export, à
+Remarque : son numéro ; une facture, sa quittance, son rappel ; une facture électronique annulée laisse son annulation (storno).
+Pour écrire la pièce électronique dans un nom :
+    Le chemin vaut la destination des exports du cabinet conservé suivi de « / » suivi de nom suivi de « .xml ».
+    Essayer :
+        Enregistrer le XML de pièce électronique dans le chemin.
+        L'avis des factures devient "Écrit : " suivi du chemin.
+    En cas d'échec :
+        L'avis des factures devient le motif de l'échec.
+
+Remarque : annuler une facture déjà écrite en électronique écrit d'abord son annulation (storno : la même facture, marquée
+Remarque : annulée), à envoyer comme elle ; l'avis dit où elle est, ou pourquoi elle n'a pas pu s'écrire (27 octobre 2026).
 Quand on clique sur « Annuler la facture » dans l'écran des factures :
     Si la facture choisie de l'écran est absente, refuser « Choisis d'abord une facture dans la liste. ».
+    Le f vaut la facture choisie de l'écran.
+    Si l'envoi électronique du f est présent :
+        Préparer la pièce électronique du numéro du f et le patient du f et la date du f.
+        Le genre de demande électronique devient « storno ».
+        Écrire la pièce électronique dans le numéro du f suivi de " annulation".
     Annuler la facture choisie de l'écran.
 
-Remarque : la facture électronique (generalInvoice 5.0) de la facture choisie : un fichier XML dans le dossier d'export, à son numéro.
 Quand on clique sur « Facture électronique » dans l'écran des factures :
     Si la facture choisie de l'écran est absente, refuser « Choisis d'abord une facture dans la liste. ».
     Le f vaut la facture choisie de l'écran.
-    Préparer la facture électronique du f.
-    Le chemin vaut la destination des exports du cabinet conservé suivi de « / » suivi du numéro du f suivi de « .xml ».
-    Essayer :
-        Enregistrer le XML de facture électronique du f dans le chemin.
-        L'avis des factures devient "Facture électronique écrite : " suivi du chemin.
-    En cas d'échec :
-        L'avis des factures devient le motif de l'échec.
+    Préparer la pièce électronique du numéro du f et le patient du f et la date du f.
+    Écrire la pièce électronique dans le numéro du f.
+    Si l'avis des factures commence par « Écrit », l'envoi électronique du f devient aujourd'hui.
+
+Remarque : un rappel électronique : la facture d'origine, puis le rappel, son rang (au plus 3 pour le schéma) et ce qui reste dû.
+Quand on clique sur « Rappel électronique » dans l'écran des rappels :
+    Si le rappel choisi de l'écran est absent, refuser « Choisis d'abord un rappel envoyé dans la liste. ».
+    Le r vaut le rappel choisi de l'écran.
+    Le f vaut la facture du r.
+    Préparer la pièce électronique du numéro du f et le patient du f et la date du f.
+    La demande électronique devient « reminder ».
+    Le numéro du rappel électronique devient le numéro du f suivi de « -R » suivi du rang du r.
+    La date du rappel électronique devient la date du r.
+    L'horodatage du rappel électronique devient (la date du r − 01.01.1970) × 86400.
+    Le niveau du rappel électronique devient le rang du r.
+    Si le rang du r > 3, le niveau du rappel électronique devient 3.
+    Écrire la pièce électronique dans le numéro du rappel électronique.
+
+Remarque : une quittance électronique : ses séances payées sur place, rien de dû ; celle qui règle une facture n'a pas de postes à
+Remarque : elle (la facture électronique les porte déjà), et le refus le dit.
+Quand on clique sur « Quittance électronique » dans l'écran des quittances :
+    Si la quittance choisie de l'écran est absente, refuser « Choisis d'abord une quittance remise dans la liste. ».
+    Le q vaut la quittance choisie de l'écran.
+    Préparer la pièce électronique du numéro du q et le patient du q et la date du q.
+    Écrire la pièce électronique dans le numéro du q.
 
 Quand on clique sur « Rappels » dans l'écran de comptabilité :
     La limite des rappels devient aujourd'hui − 30 jours.

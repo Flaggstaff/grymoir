@@ -1,6 +1,7 @@
 #!/bin/sh
 # La facture électronique de Praxis (generalInvoice 5.0, 27 octobre 2026) : Praxis, ses données d'essai et une patiente en tiers
-# garant, lancés par l'atelier sans écran ; le XML écrit doit valider contre le schéma du Forum Datenaustausch (tests/schemas).
+# garant, lancés par l'atelier sans écran ; la facture, son rappel, son annulation et une quittance, chacun en XML, doivent
+# valider contre le schéma du Forum Datenaustausch (tests/schemas).
 # Il faut l'atelier construit (./atelier --construire) et xmllint ; sans eux, l'essai se dit sauté.
 racine=$(cd "$(dirname "$0")/.." && pwd)
 atelier="$racine/construction/grym-atelier"
@@ -11,7 +12,8 @@ trap 'rm -rf "$d"' EXIT
 N="$racine/projets/Praxis/Nicolas"
 for n in "$N"/*; do case "$n" in *.grymd*|*.grymb) ;; *) cp -R "$n" "$d/";; esac; done
 cp "$racine/tests/praxis/essais.grym" "$d/"
-sed -e "s#FACTURE_XML#$d/facture.xml#" -e "s#JUSTIFICATIF_PDF#$d/justificatif.pdf#" "$racine/tests/praxis/electronique.grym" > "$d/crochet.txt"
+sed -e "s#FACTURE_XML#$d/facture.xml#" -e "s#JUSTIFICATIF_PDF#$d/justificatif.pdf#" -e "s#RAPPEL_XML#$d/rappel.xml#" \
+    -e "s#ANNULATION_XML#$d/annulation.xml#" -e "s#QUITTANCE_XML#$d/quittance.xml#" "$racine/tests/praxis/electronique.grym" > "$d/crochet.txt"
 awk -v c="$d/crochet.txt" '
     $0 == "Utiliser « actions »." && !u { print; print "Utiliser « essais »."; u = 1; next }
     index($0, "Remarque : l'\''accueil de la maquette") == 1 && !r { print "Si le nombre de patients conservés est nul, remplir les essais."; print ""; r = 1 }
@@ -29,6 +31,16 @@ sed -e 's#http://www.w3.org/TR/xmldsig-core/xmldsig-core-schema.xsd#signature-vi
     -e 's#http://www.w3.org/TR/xmlenc-core1/xenc-schema.xsd#chiffrement-vide.xsd#' "$S/generalInvoiceRequest_500.xsd" > "$d/schema.xsd"
 verifier "$(xmllint --noout --schema "$d/schema.xsd" "$d/facture.xml" > /dev/null 2>&1 && echo valide)" "valide" "le XML valide contre generalInvoiceRequest_500.xsd"
 verifier "$(grep -c '<invoice:service ' "$d/facture.xml")" "2" "un service par poste du justificatif"
+for x in rappel annulation quittance; do
+    verifier "$(xmllint --noout --schema "$d/schema.xsd" "$d/$x.xml" > /dev/null 2>&1 && echo valide)" "valide" "le XML du $x valide"
+done
+verifier "$(grep -c 'request_type="reminder"' "$d/rappel.xml")" "1" "le rappel se dit rappel"
+verifier "$(grep -c '<invoice:reminder .*reminder_level="1"' "$d/rappel.xml")" "1" "le premier rappel, niveau 1"
+verifier "$(grep -c 'request_id="F-2026-0001"' "$d/rappel.xml")" "1" "le rappel désigne la facture d'origine"
+verifier "$(grep -c 'request_subtype="storno"' "$d/annulation.xml")" "1" "l'annulation se dit storno"
+verifier "$(grep -c 'amount_due="0"' "$d/quittance.xml")" "1" "la quittance : rien de dû"
+verifier "$(grep -c '<invoice:service ' "$d/quittance.xml")" "2" "la quittance de la première séance : l'anamnèse et la thérapie"
+
 verifier "$(grep -c 'ssn="7561234567897"' "$d/facture.xml")" "1" "le numéro AVS de la patiente"
 verifier "$(grep -c '<invoice:diagnosis type="freetext">Troubles digestifs</invoice:diagnosis>' "$d/facture.xml")" "1" "le diagnostic"
 echo "$((total - echecs))/$total tests réussis"

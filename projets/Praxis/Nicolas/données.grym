@@ -202,7 +202,8 @@ Une facture, conservée, a :
     un état (« à régler », « en partie réglée » ou « réglée »),
     un exemplaire (fichier), facultatif,
     un dernier rappel (date), facultatif,
-    un justificatif (fichier), facultatif.
+    un justificatif (fichier), facultatif,
+    un envoi électronique (date), facultatif.
 
 Remarque : un rappel envoyé pour une facture : son rang (premier, deuxième…), sa date, son exemplaire, le PDF envoyé, gardé tel quel.
 Un rappel, conservé, a :

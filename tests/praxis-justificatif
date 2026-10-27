@@ -24,6 +24,8 @@ verifier "$(echo "$sortie" | sed -n 8p)" "0" "une séance déjà justifiée ne l
 verifier "$(echo "$sortie" | sed -n 9p)" "0" "une absence n'est jamais justifiée"
 verifier "$(echo "$sortie" | sed -n 10p)" "vrai" "tiers garant, la complémentaire chez l'assureur de base"
 verifier "$(echo "$sortie" | sed -n 11p)" "Assurance complémentaire : Visana" "l'assureur de base, à défaut de complémentaire"
+verifier "$(echo "$sortie" | sed -n 12p)" "0" "une facture annulée efface ses postes"
+verifier "$(echo "$sortie" | sed -n 13p)" "2" "refacturée, la séance se justifie de nouveau"
 rm -f justificatif.grymd
 sed 's/^    Le prix vaut 120\.$/    Le prix vaut 130./' justificatif.grym > refus.grym
 contient "$("$grym" lancer refus.grym 2>&1 < /dev/null)" "La séance du 08.10.2026 coûte CHF 130,00, ses actes font CHF 120,00" "un prix qui ne colle pas"

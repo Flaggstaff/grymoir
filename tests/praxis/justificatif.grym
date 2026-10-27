@@ -86,3 +86,15 @@ Le q vaut un nouveau patient :
 Conserver le q.
 Afficher le justificatif voulu du q.
 Afficher la ligne d'assurance complémentaire du q.
+Remarque : une facture annulée rend ses séances : ses postes s'effacent, et une nouvelle facture les justifie de nouveau.
+Le f1 vaut une nouvelle facture :
+    Le numéro vaut « F-1 ».
+    La date vaut 09.10.2026.
+    Le patient vaut le p.
+    Le montant vaut 264.
+    L'état vaut « à régler ».
+Conserver le f1.
+Annuler le f1.
+Afficher le nombre de postes conservés dont la pièce = « F-1 ».
+Figer le s1 et « F-3 ».
+Afficher le nombre de postes conservés dont la pièce = « F-3 ».

@@ -418,11 +418,18 @@ Remarque : libérées, se modifient et se facturent à nouveau. Une quittance an
 Pour annuler un relevé :
     Pour chaque séance conservée dont la facture = relevé :
         La facture de la séance devient absente.
+    Remarque : ses postes du justificatif aussi (27 octobre 2026) : refacturées, ses séances se justifient de nouveau.
+    Le numéro annulé vaut le numéro du relevé.
+    Pour chaque poste conservé dont la pièce = le numéro annulé :
+        Supprimer le poste.
     Supprimer le relevé.
 
 Pour défaire un reçu :
     Pour chaque séance conservée dont la quittance = reçu :
         La quittance de la séance devient absente.
+    Le numéro défait vaut le numéro du reçu.
+    Pour chaque poste conservé dont la pièce = le numéro défait :
+        Supprimer le poste.
     Supprimer le reçu.
 
 Remarque : une séance facturée qui ne se doit plus, annulée, prévue, ou absente quand le cabinet ne facture pas les absences,

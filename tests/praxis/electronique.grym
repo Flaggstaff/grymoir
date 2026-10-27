@@ -33,7 +33,23 @@ Si le nombre d'actes conservés est nul :
     Pour chaque séance conservée dont le patient = l'anne et le paiement = « à payer » et le statut = « faite » :
         Facturer la séance.
     Le f vaut la créance en cours.
-    Préparer la facture électronique du f.
-    Enregistrer le XML de facture électronique du f dans « FACTURE_XML ».
+    Préparer la pièce électronique du numéro du f et le patient du f et la date du f.
+    Enregistrer le XML de pièce électronique dans « FACTURE_XML ».
     Enregistrer le justificatif du f dans « JUSTIFICATIF_PDF ».
-
+    Relancer le f.
+    Le r vaut le rappel en cours.
+    Préparer la pièce électronique du numéro du f et le patient du f et la date du f.
+    La demande électronique devient « reminder ».
+    Le numéro du rappel électronique devient le numéro du f suivi de « -R » suivi du rang du r.
+    La date du rappel électronique devient la date du r.
+    L'horodatage du rappel électronique devient (la date du r − 01.01.1970) × 86400.
+    Le niveau du rappel électronique devient le rang du r.
+    Enregistrer le XML de pièce électronique dans « RAPPEL_XML ».
+    Préparer la pièce électronique du numéro du f et le patient du f et la date du f.
+    Le genre de demande électronique devient « storno ».
+    Enregistrer le XML de pièce électronique dans « ANNULATION_XML ».
+    Pour chaque séance conservée dont le patient = l'anne et le paiement = « espèces » :
+        Si le prix de la séance = 130, quittancer la séance.
+    Le q vaut la pièce en cours.
+    Préparer la pièce électronique du numéro du q et le patient du q et la date du q.
+    Enregistrer le XML de pièce électronique dans « QUITTANCE_XML ».
