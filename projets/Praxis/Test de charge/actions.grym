@@ -295,6 +295,12 @@ Le genre électronique d'un patient :
     Si le sexe du patient = « féminin », rendre « female ».
     Rendre « male ».
 
+Remarque : le numéro AVS tel que la facture électronique l'attend : ses 13 chiffres, sans les points ni les espaces qu'on tape
+Remarque : (« 756.1234.5678.97 » devient « 7561234567897 », grammaire 2.64).
+Le numéro AVS électronique d'un patient :
+    Si le numéro AVS du patient est absent, rendre « ».
+    Rendre le numéro AVS du patient sans « . » sans " ".
+
 Le numéro d'assuré électronique d'un patient :
     Si le numéro d'assuré complémentaire du patient est présent, rendre le numéro d'assuré complémentaire du patient.
     Rendre le numéro d'assuré du patient.

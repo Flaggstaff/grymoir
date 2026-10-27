@@ -143,10 +143,11 @@ typedef enum {
     I_XML_FIN,          /* ferme la racine ; empile le fichier XML (UTF-8) */
     I_ECRAN_FILTRE,     /* opérande : le rang de la zone ; dépile la liste de ses choix, pour l'écran qui s'ouvre (2.48) */
     I_SAUVEGARDER_JOUR, /* dépile le préfixe : la copie datée « p-AAAA-MM-JJ-HHMM », une par jour passé (2.53) */
-    I_JSON_LISTE        /* opérande : le chemin (constante) ; remplace la réponse par l'ensemble des éléments de la liste (2.60) */
+    I_JSON_LISTE,       /* opérande : le chemin (constante) ; remplace la réponse par l'ensemble des éléments de la liste (2.60) */
+    I_RETIRER           /* dépile le texte à retirer, puis le texte ; empile le texte sans aucune de ses occurrences (2.64) */
 } CodeInstruction;
 
-#define I_DERNIER I_JSON_LISTE
+#define I_DERNIER I_RETIRER
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

@@ -718,6 +718,13 @@ static int mot_de_nom(const Analyse *a, size_t k) {
         && (est_mot(&a->j[k - 1], "de") || est_mot(&a->j[k - 1], "du") || est_mot(&a->j[k - 1], "des")
             || (a->j[k - 1].type == J_ELISION && strcmp(a->j[k - 1].valeur, "d") == 0)))
         return 1;
+    /* « sans » suivi d'un texte, d'un nom entre crochets ou d'un article ouvre « … sans « . » » (2.64), hors du nom */
+    if (t->type == J_MOT && est_mot(t, "sans") && k + 1 < a->n) {
+        const Jeton *u = &a->j[k + 1];
+        if (u->type == J_TEXTE || u->type == J_CROCHETS || est_mot(u, "le") || est_mot(u, "la") || est_mot(u, "les")
+            || (u->type == J_ELISION && strcmp(u->valeur, "l") == 0))
+            return 0;
+    }
     if (t->type == J_MOT) return !est_reserve(t);
     if (t->type == J_ELISION)
         return !(strcmp(t->valeur, "n") == 0 && k + 1 < a->n && est_mot(&a->j[k + 1], "est"));
@@ -835,7 +842,7 @@ static const char *type_statique(const Noeud *n) {
     case N_HEURE: case N_MAINTENANT: return "heure";
     case N_FICHIER: case N_DOCUMENT: return "fichier";
     case N_CADRE: return "texte";
-    case N_COLLAGE: case N_ELISION: return "texte";
+    case N_COLLAGE: case N_ELISION: case N_SANS: return "texte";   /* N_SANS : 2.64 */
     case N_REPONSE: return n->texte2;
     case N_MOTIF: return "texte";
     case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure"
@@ -2869,7 +2876,26 @@ static Noeud *conversion(Analyse *a, Noeud *g) {
         n->fin = sep->fin;
         g = n;
     }
-    while (g && est_mot(cour(a), "en")) {
+    for (;;) {
+        /* « le numéro AVS sans « . » » (2.64) : chaque occurrence retirée ; suivi d'un texte ou d'un nom avec son article,
+         * pour qu'un « sans » au milieu d'un nom pas encore déclaré ne s'y méprenne pas */
+        const Jeton *suite = voir(a, 1);
+        if (g && est_mot(cour(a), "sans")
+            && (suite->type == J_TEXTE || est_mot(suite, "le") || est_mot(suite, "la") || est_mot(suite, "les")
+                || (suite->type == J_ELISION && strcmp(suite->valeur, "l") == 0) || suite->type == J_CROCHETS)) {
+            Noeud *n = noeud_creer(N_SANS, g->ligne, g->colonne, g->debut);
+            n->op_ligne = cour(a)->ligne;
+            n->op_colonne = cour(a)->colonne;
+            avancer(a);
+            Noeud *x = base(a);
+            if (!x) { noeud_liberer(n); noeud_liberer(g); return NULL; }
+            noeud_ajouter(n, g);
+            noeud_ajouter(n, x);
+            n->fin = x->fin;
+            g = n;
+            continue;
+        }
+        if (!g || !est_mot(cour(a), "en")) break;
         size_t trouve = NB_CONVERSIONS, mots = 0;
         for (size_t k = 0; k < NB_CONVERSIONS; k++) {
             size_t nb = 1, ok = 1;
@@ -3692,7 +3718,8 @@ static Noeud *affichage(Analyse *a) {
             if (!el) { noeud_liberer(n); return NULL; }
         } else if (e->type == J_TEXTE && !est_mot(voir(a, 1), "en") && !est_mot(voir(a, 1), "contient")
                    && !est_mot(voir(a, 1), "commence") && !est_mot(voir(a, 1), "finit")
-                   && !est_mot(voir(a, 1), "ne")) {   /* « « 3 » en nombre », « « a » contient … » : une expression */
+                   && !est_mot(voir(a, 1), "ne") && !est_mot(voir(a, 1), "sans")) {   /* « « 3 » en nombre », « « a » contient … »,
+                                                                                         « « a.b » sans « . » » (2.64) : une expression */
             el = feuille(N_TEXTE, e);
             avancer(a);
             el = coller(a, cadrer(a, el));   /* « « x » sur 3 » (§ 4.2), « « ( » suivi de … » (§ 4.4) */

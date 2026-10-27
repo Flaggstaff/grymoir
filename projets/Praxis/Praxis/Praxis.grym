@@ -195,7 +195,7 @@ L'écran d'inscription, « Nouveau patient », montre :
         une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
         une anamnèse (texte), facultative, sur plusieurs lignes, transcrite de la dictée, à 552 de la gauche et 72 du haut, large de 520, haute de 340,
         un sexe (« féminin » ou « masculin »), facultatif, à 552 de la gauche et 448 du haut, large de 260,
-        un numéro AVS (texte), facultatif, avec l'indication « 13 chiffres, sans points : 7561234567897 », à 828 de la gauche et 448 du haut, large de 244,
+        un numéro AVS (texte), facultatif, avec l'indication « 756.1234.5678.97 », à 828 de la gauche et 448 du haut, large de 244,
         un numéro de cas (texte), facultatif, à 552 de la gauche et 544 du haut, large de 160,
         un diagnostic (texte), facultatif, à 728 de la gauche et 544 du haut, large de 344,
     côte à côte :
@@ -228,7 +228,7 @@ L'écran du patient, « Patient », montre :
         un ajout (texte), facultatif, sur plusieurs lignes, transcrit de la dictée, à 552 de la gauche et 72 du haut, large de 520, haut de 112,
         une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 204 du haut, large de 520, haute de 208,
         un sexe (« féminin » ou « masculin »), facultatif, à 552 de la gauche et 448 du haut, large de 260,
-        un numéro AVS (texte), facultatif, avec l'indication « 13 chiffres, sans points : 7561234567897 », à 828 de la gauche et 448 du haut, large de 244,
+        un numéro AVS (texte), facultatif, avec l'indication « 756.1234.5678.97 », à 828 de la gauche et 448 du haut, large de 244,
         un numéro de cas (texte), facultatif, à 552 de la gauche et 544 du haut, large de 160,
         un diagnostic (texte), facultatif, à 728 de la gauche et 544 du haut, large de 344,
     le texte "Séances de " suivi du nom de la personne ouverte, en petites capitales,
@@ -760,7 +760,7 @@ Le XML de facture électronique d'une facture, « invoice:request », montre :
                     l'attribut « gender » : le genre électronique du patient de la facture,
                     l'attribut « sex » : le genre électronique du patient de la facture,
                     l'attribut « birthdate » : la date de naissance du patient de la facture,
-                    l'attribut « ssn » : le numéro AVS du patient de la facture,
+                    l'attribut « ssn » : le numéro AVS électronique du patient de la facture,
                     l'élément « invoice:person » :
                         l'élément « invoice:familyname » : le nom de famille électronique du patient de la facture,
                         l'élément « invoice:givenname » : le prénom du patient de la facture,
@@ -845,7 +845,8 @@ Pour préparer la facture électronique d'une facture :
     Si le sexe du p est absent, refuser « Il manque le sexe du patient : sa page. ».
     Si la date de naissance du p est absente, refuser « Il manque la date de naissance du patient : sa page. ».
     Si le numéro AVS du p est absent, refuser « Il manque le numéro AVS du patient : sa page. ».
-    Si la longueur du numéro AVS du p ≠ 13 ou le numéro AVS du p ne commence pas par « 756 », refuser « Le numéro AVS du patient s'écrit en 13 chiffres, sans points : 7561234567897. ».
+    L'AVS vaut le numéro AVS électronique du p.
+    Si la longueur de l'AVS ≠ 13 ou l'AVS ne commence pas par « 756 », refuser « Le numéro AVS du patient a 13 chiffres, commence par 756 : 756.1234.5678.97. ».
     Si le numéro postal du p est absent, refuser « Il manque le numéro postal du patient : sa page. ».
     Si la localité du p est absente, refuser « Il manque la localité du patient : sa page. ».
     L'assureur électronique devient l'assureur du p.

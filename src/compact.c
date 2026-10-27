@@ -330,6 +330,10 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k++;
             continue;
         }
+        if (est_cle(t, "sans")) {   /* numéro_AVS _sans « . » → le numéro AVS sans « . » (2.64) */
+            mot(r, "sans", t);
+            continue;
+        }
         if (est_cle(t, "dont")) {
             mot(r, "dont", t);
             continue;

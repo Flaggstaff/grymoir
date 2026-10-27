@@ -520,6 +520,13 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_SANS:
+        chaine_ajouter(c, "(sans ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_JOINDRE:
         chaine_ajouter(c, "(joindre ");
         decrire(n->enfants[0], c);

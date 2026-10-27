@@ -2118,6 +2118,12 @@ int main(void) {
          "Si le nom ne contient pas « x », afficher « c ».\nSi le nom ne commence pas par « m », afficher « d ».\n"
          "Si le nom ne finit pas par « r », afficher « e ».", "a\nb\nc\nd");
     PROG("Afficher « ŒUVRE » contient « œu » puis « abc » contient « » puis « ab » contient « abc ».", "vrai vrai faux");
+    /* « sans » (2.64) : chaque occurrence retirée ; à la suite ; après un texte écrit ; ses refus */
+    PROG("Le n vaut « 756.1234.5678.97 ».\nAfficher le n sans « . » puis (le n sans « . ») sans « 56 » puis « a b c » sans \" \".",
+         "7561234567897 712347897 abc");
+    PROG("Le n vaut « 756.12 ».\nAfficher la longueur de (le n sans « . ») puis le n sans « 9 ».", "5 756.12");
+    PROG("Afficher 12 sans « 1 ».", "ERREUR 1:10 « sans » s'applique à un texte, pas à un nombre.");
+    PROG("Afficher « abc » sans « ».", "ERREUR 1:10 « sans » retire un texte vide : rien à retirer.");
     PROG("Le code vaut « 1'234,50 ».\nAfficher code en nombre + 1 puis « −3 » en nombre entier puis « 21.09.2026 » en date + 1.",
          "1'235,50 −3 22.09.2026");
     PROG("Afficher « Oui » en vrai ou faux puis « 1747 » en année puis (« a » suivi de « b ») en majuscules.", "vrai 1747 AB");

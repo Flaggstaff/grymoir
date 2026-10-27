@@ -27,7 +27,7 @@ Si le nombre d'actes conservés est nul :
     Le prénom de l'anne devient « Anne ».
     Le nom de famille de l'anne devient « Rochat ».
     Le sexe de l'anne devient « féminin ».
-    Le numéro AVS de l'anne devient « 7561234567897 ».
+    Le numéro AVS de l'anne devient « 756.1234.5678.97 ».
     Le numéro de cas de l'anne devient « 376 ».
     Le diagnostic de l'anne devient « Troubles digestifs ».
     Pour chaque séance conservée dont le patient = l'anne et le paiement = « à payer » et le statut = « faite » :

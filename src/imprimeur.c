@@ -835,6 +835,11 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, voyelle(n->enfants[0]->texte) ? "le nombre d'" : "le nombre de ");
         ecrire_nom(im, n->enfants[0]->texte, 0);
         return;
+    case N_SANS:   /* « le numéro AVS sans « . » » ; « numéro_AVS _sans « . » » (2.64) */
+        expression(im, n->enfants[0]);
+        aj(im, im->compact ? " _sans " : " sans ");
+        expression(im, n->enfants[1]);
+        return;
     case N_JOINDRE:   /* « les couleurs jointes par « , » » ; « couleurs _jointes « , » » */
         expression(im, n->enfants[0]);
         aj(im, im->compact ? " _jointes " : n->forme ? " joints par " : " jointes par ");

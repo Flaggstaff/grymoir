@@ -462,6 +462,11 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[1]);
         emettre(c, I_JOINDRE, 0, n->ligne, n->colonne);
         return;
+    case N_SANS:   /* le texte, ce qui s'en retire, puis RETIRER (2.64) */
+        expression(c, n->enfants[0]);
+        expression(c, n->enfants[1]);
+        emettre(c, I_RETIRER, 0, n->ligne, n->colonne);
+        return;
     case N_COLONNE:   /* la ligne, le titre, puis COLONNE (§ 15.5) */
         expression(c, n->enfants[1]);
         expression(c, n->enfants[0]);

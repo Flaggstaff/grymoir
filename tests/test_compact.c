@@ -259,6 +259,8 @@ int main(void) {
                  "Le n vaut « Élodie ».\nAfficher la longueur du n puis le n en majuscules puis « 3 » en nombre entier + 1.\n"
                  "Si le n contient « lo » et le n ne commence pas par « x », afficher le n finit par « ie ».\n");
     EXEC("_afficher « éa » _en_majuscules ; « ab » _inclut « B » ; _non (« ab » _finit « b »)\n", "ÉA vrai faux\n");
+    ALLER_RETOUR("_le n << « 7.5.6 »\n_afficher n _sans « . »\n", "Le n vaut « 7.5.6 ».\nAfficher le n sans « . ».\n");   /* 2.64 */
+    EXEC("_le n << « 7.5.6 »\n_afficher n _sans « . »\n", "756\n");
     ERR("_afficher « a » _en_rouge\n", 1, 17, "« _en_rouge » inconnu");
     ALLER_RETOUR("_classe _une tâche _conservé\n    _un état (« à faire » ; « fini ») _départ « fini »\n_fin\n", NULL);
     ALLER_RETOUR("_écran x\n    _bouton « B » _principal _côté_titre\n_fin\n_quand _clique « B » _dans x\n    _fermer\n_fin\n", NULL);   /* 2.17 */

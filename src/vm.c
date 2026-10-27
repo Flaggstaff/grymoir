@@ -6496,6 +6496,36 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, r);
             break;
         }
+        case I_RETIRER: {   /* « le numéro AVS sans « . » » : chaque occurrence retirée, de gauche à droite (2.64) */
+            Valeur x = depiler(&pile), t = depiler(&pile);
+            char *mp = NULL;
+            if (t.type == V_ABSENT) mp = grym_dupliquer("La valeur est absente : vérifie-la d'abord avec « est présent ».");
+            else if (t.type != V_TEXTE) mp = grym_formater("« sans » s'applique à un texte, pas à %s.", nom_type(t.type));
+            else if (x.type != V_TEXTE) mp = grym_formater("Ce que « sans » retire est un texte, pas %s.", nom_type(x.type));
+            else if (!x.texte || !*x.texte) mp = grym_dupliquer("« sans » retire un texte vide : rien à retirer.");
+            Chaine c = {0};
+            if (!mp) {
+                const char *p = t.texte ? t.texte : "";
+                const size_t l = strlen(x.texte);
+                const char *q;
+                while ((q = strstr(p, x.texte)) != NULL) {
+                    char *morceau = grym_allouer((size_t)(q - p) + 1);
+                    memcpy(morceau, p, (size_t)(q - p));
+                    morceau[q - p] = 0;
+                    chaine_ajouter(&c, morceau);
+                    free(morceau);
+                    p = q + l;
+                }
+                chaine_ajouter(&c, p);
+            }
+            char *r = chaine_rendre(&c);
+            valeur_liberer(&x);
+            valeur_liberer(&t);
+            if (mp) { free(r); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, vi_texte(r ? r : ""));
+            free(r);
+            break;
+        }
         case I_JOINDRE: {   /* « les couleurs jointes par « , » » */
             Valeur s = depiler(&pile), e = depiler(&pile);
             char *mp = NULL;
