@@ -679,7 +679,10 @@ int main(int argc, char **argv) {
                 for (QTextEdit *x : e2.findChildren<QTextEdit *>()) t += x->toPlainText();
                 return t;
             };
-            while (z2.elapsed() < 60000 && !sortie2().contains("zone transcrite")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            // trois minutes, et le temps affiché (27 octobre 2026) : sur un Mac M2 (macOS 26.6), sans écran (offscreen), cet
+            // essai dépassait la minute ; il dira désormais s'il est lent ou bloqué
+            while (z2.elapsed() < 180000 && !sortie2().contains("zone transcrite")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            std::printf("transcription dans un écran : %.1f s\n", z2.elapsed() / 1000.0);
             VERIFIER(sortie2().contains("zone transcrite"));
         }
         // en arrière-plan (24 octobre 2026) : un son enregistré dans l'écran ; la page reste libre pendant que Whisper
