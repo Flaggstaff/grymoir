@@ -1,0 +1,35 @@
+#!/bin/sh
+# La facture électronique de Praxis (generalInvoice 5.0, 27 octobre 2026) : Praxis, ses données d'essai et une patiente en tiers
+# garant, lancés par l'atelier sans écran ; le XML écrit doit valider contre le schéma du Forum Datenaustausch (tests/schemas).
+# Il faut l'atelier construit (./atelier --construire) et xmllint ; sans eux, l'essai se dit sauté.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+atelier="$racine/construction/grym-atelier"
+[ -x "$atelier" ] || atelier="$racine/construction/grym-atelier.app/Contents/MacOS/grym-atelier"
+if [ ! -x "$atelier" ] || ! command -v xmllint > /dev/null 2>&1; then echo "praxis-electronique : sauté (atelier ou xmllint absent)"; exit 0; fi
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+N="$racine/projets/Praxis/Nicolas"
+for n in "$N"/*; do case "$n" in *.grymd*|*.grymb) ;; *) cp -R "$n" "$d/";; esac; done
+cp "$racine/tests/praxis/essais.grym" "$d/"
+sed -e "s#FACTURE_XML#$d/facture.xml#" -e "s#JUSTIFICATIF_PDF#$d/justificatif.pdf#" "$racine/tests/praxis/electronique.grym" > "$d/crochet.txt"
+awk -v c="$d/crochet.txt" '
+    $0 == "Utiliser « actions »." && !u { print; print "Utiliser « essais »."; u = 1; next }
+    index($0, "Remarque : l'\''accueil de la maquette") == 1 && !r { print "Si le nombre de patients conservés est nul, remplir les essais."; print ""; r = 1 }
+    $0 == "Recenser les exercices d'\''aujourd'\''hui." && !k { while ((getline l < c) > 0) print l; print ""; k = 1 }
+    { print }' "$N/Praxis.grym" > "$d/Praxis.grym"
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+(cd "$d" && QT_QPA_PLATFORM=offscreen GRYMOIR_ESSAIS=1 GRYMOIR_SANS_APERCU=1 GRYM_MOT_DE_PASSE_BASE=essai-essai \
+    "$atelier" --capture "$d/accueil.png" --clics Continuer --taille 1170x900 Praxis.grym > "$d/sortie.txt" 2>&1 < /dev/null)
+verifier "$(test -s "$d/facture.xml" && echo écrit)" "écrit" "le XML de la facture électronique est écrit"
+verifier "$(test -s "$d/justificatif.pdf" && echo écrit)" "écrit" "le justificatif de la même facture"
+S="$racine/tests/schemas"
+cp "$S/signature-vide.xsd" "$S/chiffrement-vide.xsd" "$d/"
+sed -e 's#http://www.w3.org/TR/xmldsig-core/xmldsig-core-schema.xsd#signature-vide.xsd#' \
+    -e 's#http://www.w3.org/TR/xmlenc-core1/xenc-schema.xsd#chiffrement-vide.xsd#' "$S/generalInvoiceRequest_500.xsd" > "$d/schema.xsd"
+verifier "$(xmllint --noout --schema "$d/schema.xsd" "$d/facture.xml" > /dev/null 2>&1 && echo valide)" "valide" "le XML valide contre generalInvoiceRequest_500.xsd"
+verifier "$(grep -c '<invoice:service ' "$d/facture.xml")" "2" "un service par poste du justificatif"
+verifier "$(grep -c 'ssn="7561234567897"' "$d/facture.xml")" "1" "le numéro AVS de la patiente"
+verifier "$(grep -c '<invoice:diagnosis type="freetext">Troubles digestifs</invoice:diagnosis>' "$d/facture.xml")" "1" "le diagnostic"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ] || { tail -5 "$d/sortie.txt"; exit 1; }

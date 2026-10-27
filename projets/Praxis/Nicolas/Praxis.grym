@@ -78,6 +78,15 @@ Le montant justifié vaut 0.
 Le début justifié vaut aujourd'hui.
 La fin justifiée vaut aujourd'hui.
 L'acte ouvert vaut absent.
+Remarque : la facture électronique en cours (generalInvoice 5.0, 27 octobre 2026) : son identifiant tiré au hasard, l'heure de la
+Remarque : demande (en secondes depuis le 1er janvier 1970), le traitement de sa première à sa dernière séance, son total, son assureur.
+Le guid électronique vaut « ».
+L'horodatage électronique vaut 0.
+Le début électronique vaut aujourd'hui.
+La fin électronique vaut aujourd'hui.
+Le total électronique vaut 0.
+L'assureur électronique vaut absent.
+L'avis des factures vaut « ».
 La méthode ouverte vaut absent.
 Le décompte ouvert vaut absent.
 
@@ -141,7 +150,6 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     un bouton « Configuration », en tuile, avec la description « Le cabinet, les soins, les rubriques, les sauvegardes »,
     un bouton « Agenda OneDoc », en tuile, avec la description « Rendez-vous et rappels », visible si l'agenda du cabinet conservé = « OneDoc »,
     un bouton « Relire les rendez-vous », en tuile, avec la description « Les réservations du site Calendly », visible si l'agenda du cabinet conservé = « Calendly »,
-    un bouton « Assurances », en tuile, avec la description « Factures tiers payant et leurs règlements », visible si la facturation aux assurances du cabinet conservé,
     le texte l'alerte de sauvegarde du cabinet conservé et d'aujourd'hui et de l'échec de sauvegarde,
     le texte l'alerte des prévues d'aujourd'hui,
     le texte l'état calendly, visible si l'agenda du cabinet conservé = « Calendly »,
@@ -186,6 +194,10 @@ L'écran d'inscription, « Nouveau patient », montre :
         un rappel par SMS (vrai ou faux), facultatif, avec l'indication « Le patient accepte un SMS la veille de ses séances », à 0 de la gauche et 696 du haut, large de 536,
         une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
         une anamnèse (texte), facultative, sur plusieurs lignes, transcrite de la dictée, à 552 de la gauche et 72 du haut, large de 520, haute de 340,
+        un sexe (« féminin » ou « masculin »), facultatif, à 552 de la gauche et 448 du haut, large de 260,
+        un numéro AVS (texte), facultatif, avec l'indication « 13 chiffres, sans points : 7561234567897 », à 828 de la gauche et 448 du haut, large de 244,
+        un numéro de cas (texte), facultatif, à 552 de la gauche et 544 du haut, large de 160,
+        un diagnostic (texte), facultatif, à 728 de la gauche et 544 du haut, large de 344,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer ».
@@ -215,6 +227,10 @@ L'écran du patient, « Patient », montre :
         une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
         un ajout (texte), facultatif, sur plusieurs lignes, transcrit de la dictée, à 552 de la gauche et 72 du haut, large de 520, haut de 112,
         une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 204 du haut, large de 520, haute de 208,
+        un sexe (« féminin » ou « masculin »), facultatif, à 552 de la gauche et 448 du haut, large de 260,
+        un numéro AVS (texte), facultatif, avec l'indication « 13 chiffres, sans points : 7561234567897 », à 828 de la gauche et 448 du haut, large de 244,
+        un numéro de cas (texte), facultatif, à 552 de la gauche et 544 du haut, large de 160,
+        un diagnostic (texte), facultatif, à 728 de la gauche et 544 du haut, large de 344,
     le texte "Séances de " suivi du nom de la personne ouverte, en petites capitales,
     la liste des séances conservées dont le patient = la personne ouverte, par date décroissant, avec la date, l'heure, le nom du soin, la durée, le prix, le statut et le paiement,
     côte à côte :
@@ -295,6 +311,7 @@ L'écran de comptabilité, « Comptabilité », montre :
     un bouton « Frais », en tuile, avec la description « Dépenses et justificatifs »,
     un bouton « Rappels », en tuile, avec la description « Factures échues, séances à facturer »,
     un bouton « Factures », en tuile, avec la description « Envoyées, et ce qui en est réglé »,
+    un bouton « Assurances », en tuile, avec la description « Factures tiers payant et leurs règlements », visible si la facturation aux assurances du cabinet conservé,
     un bouton « Journal de l'année », en tuile, avec la description « Recettes et frais, à imprimer »,
     un bouton « Exporter en CSV », en tuile, avec la description « Recettes et frais, pour un tableur ou la fiduciaire »,
     un bouton « Fermer »,
@@ -307,7 +324,9 @@ L'écran des factures, (le titre des factures de l'année des comptes et de la r
     une recherche (texte), facultative, avec l'indication « Un numéro, un nom de patient, un état »,
     la liste des factures conservées dont la date ≥ le début des factures et la date < la fin des factures et (le numéro contient la recherche des factures ou le nom du patient contient la recherche des factures ou l'état contient la recherche des factures), par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et l'état,
     un bouton « Fermer »,
-    un bouton « Annuler la facture ».
+    un bouton « Annuler la facture »,
+    un bouton « Facture électronique »,
+    le texte l'avis des factures.
 
 Remarque : les factures échues (trente jours) et pas réglées : « Rappel » imprime le rappel de la facture choisie ;
 Remarque : dessous, les séances dues depuis trente jours qui n'ont pas encore de facture : « Facturer » la fait.
@@ -444,6 +463,8 @@ Le document de justificatif, « Justificatif de remboursement », montre :
             le texte la ville de la personne justifiée,
             le texte la naissance de la personne justifiée,
             le texte la ligne d'assurance complémentaire de la personne justifiée,
+            le texte la ligne d'identité de la personne justifiée,
+            le texte la ligne du cas de la personne justifiée,
     le texte "Pièce N° " suivi du numéro justifié suivi de ", le " suivi de la date justifiée en toutes lettres,
     le texte « Type de remboursement : TG ; loi : LCA ; thérapie individuelle ; motif : maladie ; médecine complémentaire »,
     le texte "Traitement du " suivi du début justifié suivi de " au " suivi de la fin justifiée,
@@ -529,6 +550,7 @@ L'écran du cabinet, « Le cabinet », montre :
             une facturation aux assurances (vrai ou faux), en interrupteur, avec l'indication « Allumé : les assureurs, l'assurance des patients, leurs ordonnances »,
             un logo (image), facultatif, avec l'indication « Le logo du cabinet »,
             une signature (image), facultative, avec l'indication « Le nom du cabinet dessiné, en tête des écrans et des pièces »,
+            un canton (texte), facultatif, avec l'indication « En deux lettres : FR »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
@@ -674,6 +696,170 @@ Pour borner les quittances :
     Sinon :
         Le début des quittances devient 01.01.1900.
         La fin des quittances devient 01.01.3000.
+
+Remarque : la facture électronique d'une facture (generalInvoice 5.0 du Forum Datenaustausch, schéma generalInvoiceRequest_500.xsd,
+Remarque : 27 octobre 2026) : en tiers garant (le patient paie, puis se fait rembourser par sa complémentaire, loi VVG), ses postes du
+Remarque : Tarif 590, sa QR-facture sans référence (esrQRRed). Un débiteur sans GLN prend un GLN de l'espace privé, 2000000000008,
+Remarque : comme le recommande la documentation de Sumex1 (generalInvoiceRequest, SetDebitor). Le rôle « naturopathictherapist »,
+Remarque : « Médecine complémentaire », est un choix de Praxis : le schéma n'a pas de rôle plus proche.
+Le XML de facture électronique d'une facture, « invoice:request », montre :
+    l'attribut « xmlns:invoice » : « http://www.forum-datenaustausch.ch/invoice »,
+    l'attribut « language » : « fr »,
+    l'attribut « modus » : « production »,
+    l'attribut « guid » : le guid électronique,
+    l'élément « invoice:processing » :
+        l'élément « invoice:transport » :
+            l'attribut « from » : le numéro GLN du cabinet conservé,
+            l'attribut « to » : le numéro GLN de l'assureur électronique,
+    l'élément « invoice:payload » :
+        l'attribut « request_type » : « invoice »,
+        l'élément « invoice:invoice » :
+            l'attribut « request_timestamp » : l'horodatage électronique,
+            l'attribut « request_date » : (la date de la facture en format technique) suivi de « T00:00:00 »,
+            l'attribut « request_id » : le numéro de la facture,
+        l'élément « invoice:body » :
+            l'attribut « role » : « naturopathictherapist »,
+            l'attribut « role_title » : « Médecine complémentaire »,
+            l'attribut « place » : « practice »,
+            l'élément « invoice:prolog » :
+                l'élément « invoice:generator » :
+                    l'attribut « name » : « Praxis (GrymoiR) »,
+            l'élément « invoice:tiers_garant » :
+                l'élément « invoice:billers » :
+                    l'élément « invoice:biller_gln » :
+                        l'attribut « gln » : le numéro GLN du cabinet conservé,
+                        l'élément « invoice:company » :
+                            l'élément « invoice:companyname » : le nom du cabinet conservé,
+                            l'élément « invoice:postal » :
+                                Si la rue du cabinet conservé est présente :
+                                    l'élément « invoice:street » : l'adresse professionnelle du cabinet conservé,
+                                l'élément « invoice:zip » : le numéro postal du cabinet conservé,
+                                l'élément « invoice:city » : la localité du cabinet conservé,
+                l'élément « invoice:debitor » :
+                    l'attribut « gln » : « 2000000000008 »,
+                    l'élément « invoice:person » :
+                        l'élément « invoice:familyname » : le nom de famille électronique du patient de la facture,
+                        l'élément « invoice:givenname » : le prénom du patient de la facture,
+                        l'élément « invoice:postal » :
+                            Si la rue du patient de la facture est présente :
+                                l'élément « invoice:street » : l'adresse du patient de la facture,
+                            l'élément « invoice:zip » : le numéro postal du patient de la facture,
+                            l'élément « invoice:city » : la localité du patient de la facture,
+                l'élément « invoice:providers » :
+                    l'élément « invoice:provider_gln » :
+                        l'attribut « gln » : le numéro GLN du cabinet conservé,
+                        l'attribut « gln_location » : le numéro GLN du cabinet conservé,
+                        l'élément « invoice:company » :
+                            l'élément « invoice:companyname » : le nom du cabinet conservé,
+                            l'élément « invoice:postal » :
+                                Si la rue du cabinet conservé est présente :
+                                    l'élément « invoice:street » : l'adresse professionnelle du cabinet conservé,
+                                l'élément « invoice:zip » : le numéro postal du cabinet conservé,
+                                l'élément « invoice:city » : la localité du cabinet conservé,
+                l'élément « invoice:patient » :
+                    l'attribut « gender » : le genre électronique du patient de la facture,
+                    l'attribut « sex » : le genre électronique du patient de la facture,
+                    l'attribut « birthdate » : la date de naissance du patient de la facture,
+                    l'attribut « ssn » : le numéro AVS du patient de la facture,
+                    l'élément « invoice:person » :
+                        l'élément « invoice:familyname » : le nom de famille électronique du patient de la facture,
+                        l'élément « invoice:givenname » : le prénom du patient de la facture,
+                        l'élément « invoice:postal » :
+                            Si la rue du patient de la facture est présente :
+                                l'élément « invoice:street » : l'adresse du patient de la facture,
+                            l'élément « invoice:zip » : le numéro postal du patient de la facture,
+                            l'élément « invoice:city » : la localité du patient de la facture,
+                l'élément « invoice:guarantor » :
+                    l'élément « invoice:person » :
+                        l'élément « invoice:familyname » : le nom de famille électronique du patient de la facture,
+                        l'élément « invoice:givenname » : le prénom du patient de la facture,
+                        l'élément « invoice:postal » :
+                            Si la rue du patient de la facture est présente :
+                                l'élément « invoice:street » : l'adresse du patient de la facture,
+                            l'élément « invoice:zip » : le numéro postal du patient de la facture,
+                            l'élément « invoice:city » : la localité du patient de la facture,
+                l'élément « invoice:partners »,
+                l'élément « invoice:balance » :
+                    l'attribut « currency » : « CHF »,
+                    l'attribut « amount » : le total électronique,
+                    l'attribut « amount_due » : le total électronique,
+                    l'élément « invoice:vat » :
+                        l'attribut « vat » : 0,
+                        l'élément « invoice:vat_rate » :
+                            l'attribut « vat_rate » : 0,
+                            l'attribut « amount » : le total électronique,
+                            l'attribut « vat » : 0,
+            l'élément « invoice:esrQRRed » :
+                l'attribut « iban » : l'IBAN du cabinet conservé en IBAN,
+                l'attribut « payment_reason » : le numéro de la facture,
+                l'élément « invoice:creditor » :
+                    l'élément « invoice:company » :
+                        l'élément « invoice:companyname » : le nom du cabinet conservé,
+                        l'élément « invoice:postal » :
+                            Si la rue du cabinet conservé est présente :
+                                l'élément « invoice:street » : l'adresse professionnelle du cabinet conservé,
+                            l'élément « invoice:zip » : le numéro postal du cabinet conservé,
+                            l'élément « invoice:city » : la localité du cabinet conservé,
+            l'élément « invoice:law » :
+                l'attribut « type » : « VVG »,
+                l'attribut « insured_id » : le numéro d'assuré électronique du patient de la facture,
+                l'attribut « case_id » : le numéro de cas du patient de la facture,
+            l'élément « invoice:treatment » :
+                l'attribut « date_begin » : le début électronique,
+                l'attribut « date_end » : la fin électronique,
+                l'attribut « canton » : le canton du cabinet conservé en majuscules,
+                l'attribut « reason » : « disease »,
+                Si le diagnostic du patient de la facture est présent :
+                    l'élément « invoice:diagnosis » :
+                        l'attribut « type » : « freetext »,
+                        le contenu : le diagnostic du patient de la facture,
+            l'élément « invoice:services » :
+                Le rang vaut 0.
+                Pour chaque poste conservé dont la pièce = le numéro de la facture, par date :
+                    Le rang devient le rang + 1.
+                    l'élément « invoice:service » :
+                        l'attribut « record_id » : le rang,
+                        l'attribut « tariff_type » : le tarif du poste,
+                        l'attribut « code » : le code du poste,
+                        l'attribut « name » : le libellé du poste,
+                        l'attribut « quantity » : la quantité du poste,
+                        l'attribut « date_begin » : (la date du poste en format technique) suivi de « T00:00:00 »,
+                        l'attribut « provider_id » : le numéro GLN du cabinet conservé,
+                        l'attribut « responsible_id » : le numéro GLN du cabinet conservé,
+                        l'attribut « unit » : le prix du poste,
+                        l'attribut « amount » : le montant du poste.
+
+Remarque : ce que la facture électronique exige, vérifié avant de l'écrire : chaque refus dit quoi compléter, et où.
+Pour préparer la facture électronique d'une facture :
+    Le c vaut le cabinet conservé.
+    Le p vaut le patient de la facture.
+    Le numéro vaut le numéro de la facture.
+    Si le nombre de postes conservés dont la pièce = le numéro = 0, refuser « Cette facture n'a pas de justificatif de remboursement : la facture électronique reprend ses postes du Tarif 590. ».
+    Si le numéro GLN du c est absent, refuser « Il manque le numéro GLN du cabinet : Configuration, Le cabinet. ».
+    Si la longueur du numéro GLN du c ≠ 13, refuser « Le numéro GLN du cabinet a 13 chiffres : Configuration, Le cabinet. ».
+    Si l'IBAN du c est absent, refuser « Il manque l'IBAN du cabinet : Configuration, Le cabinet. ».
+    Si le canton du c est absent, refuser « Il manque le canton du cabinet, en deux lettres : Configuration, Le cabinet. ».
+    Si le numéro postal du c est absent, refuser « Il manque le numéro postal du cabinet : Configuration, Le cabinet. ».
+    Si la localité du c est absente, refuser « Il manque la localité du cabinet : Configuration, Le cabinet. ».
+    Si le prénom du p est absent, refuser « Il manque le prénom du patient : sa page. ».
+    Si le sexe du p est absent, refuser « Il manque le sexe du patient : sa page. ».
+    Si la date de naissance du p est absente, refuser « Il manque la date de naissance du patient : sa page. ».
+    Si le numéro AVS du p est absent, refuser « Il manque le numéro AVS du patient : sa page. ».
+    Si la longueur du numéro AVS du p ≠ 13 ou le numéro AVS du p ne commence pas par « 756 », refuser « Le numéro AVS du patient s'écrit en 13 chiffres, sans points : 7561234567897. ».
+    Si le numéro postal du p est absent, refuser « Il manque le numéro postal du patient : sa page. ».
+    Si la localité du p est absente, refuser « Il manque la localité du patient : sa page. ».
+    L'assureur électronique devient l'assureur du p.
+    Si l'assureur complémentaire du p est présent, l'assureur électronique devient l'assureur complémentaire du p.
+    Si l'assureur électronique est absent, refuser « Il manque l'assureur du patient : sa page. ».
+    Si le numéro GLN de l'assureur électronique est absent, refuser "Il manque le numéro GLN de " suivi du nom de l'assureur électronique suivi de " : Configuration, Assureurs.".
+    Le guid électronique devient (un nombre au hasard de 10000000 à 99999999) en format technique suivi de (un nombre au hasard de 10000000 à 99999999) en format technique suivi de (un nombre au hasard de 10000000 à 99999999) en format technique suivi de (un nombre au hasard de 10000000 à 99999999) en format technique.
+    L'horodatage électronique devient (aujourd'hui − 01.01.1970) × 86400.
+    Le total électronique devient la somme des montants des postes conservés dont la pièce = le numéro.
+    Le début électronique devient la date de la facture.
+    La fin électronique devient 01.01.1900.
+    Pour chaque poste conservé dont la pièce = le numéro :
+        Si la date du poste < le début électronique, le début électronique devient la date du poste.
+        Si la date du poste > la fin électronique, la fin électronique devient la date du poste.
 
 Remarque : le justificatif de remboursement d'une pièce (27 octobre 2026) : fait une fois, à l'émission de la pièce, son PDF
 Remarque : gardé ; rien si le patient n'a pas de complémentaire à qui le présenter, ni si aucune de ses séances n'est à justifier
@@ -1004,6 +1190,18 @@ Remarque : une facture fausse s'annule : ses séances se corrigent, puis « Fact
 Quand on clique sur « Annuler la facture » dans l'écran des factures :
     Si la facture choisie de l'écran est absente, refuser « Choisis d'abord une facture dans la liste. ».
     Annuler la facture choisie de l'écran.
+
+Remarque : la facture électronique (generalInvoice 5.0) de la facture choisie : un fichier XML dans le dossier d'export, à son numéro.
+Quand on clique sur « Facture électronique » dans l'écran des factures :
+    Si la facture choisie de l'écran est absente, refuser « Choisis d'abord une facture dans la liste. ».
+    Le f vaut la facture choisie de l'écran.
+    Préparer la facture électronique du f.
+    Le chemin vaut la destination des exports du cabinet conservé suivi de « / » suivi du numéro du f suivi de « .xml ».
+    Essayer :
+        Enregistrer le XML de facture électronique du f dans le chemin.
+        L'avis des factures devient "Facture électronique écrite : " suivi du chemin.
+    En cas d'échec :
+        L'avis des factures devient le motif de l'échec.
 
 Quand on clique sur « Rappels » dans l'écran de comptabilité :
     La limite des rappels devient aujourd'hui − 30 jours.
@@ -1369,6 +1567,10 @@ Quand on ouvre l'écran du patient :
     L'assureur complémentaire de l'écran devient l'assureur complémentaire du p.
     Le numéro d'assuré complémentaire de l'écran devient le numéro d'assuré complémentaire du p.
     La facturation complémentaire de l'écran devient la facturation complémentaire du p.
+    Le sexe de l'écran devient le sexe du p.
+    Le numéro AVS de l'écran devient le numéro AVS du p.
+    Le numéro de cas de l'écran devient le numéro de cas du p.
+    Le diagnostic de l'écran devient le diagnostic du p.
 
 Remarque : le nom réuni (« Alain Thiémard ») d'après le nom et le prénom de l'écran ; un homonyme est refusé, sauf l'ancien nom
 Remarque : du même patient (24 octobre 2026 : une seule écriture pour l'inscription et la page du patient).
@@ -1398,6 +1600,10 @@ Pour noter un patient, dans l'écran d'inscription ou l'écran du patient :
     L'assureur complémentaire du patient devient l'assureur complémentaire de l'écran.
     Le numéro d'assuré complémentaire du patient devient le numéro d'assuré complémentaire de l'écran.
     La facturation complémentaire du patient devient la facturation complémentaire de l'écran.
+    Le sexe du patient devient le sexe de l'écran.
+    Le numéro AVS du patient devient le numéro AVS de l'écran.
+    Le numéro de cas du patient devient le numéro de cas de l'écran.
+    Le diagnostic du patient devient le diagnostic de l'écran.
     Le rappel par SMS du patient devient faux.
     Si le rappel par SMS de l'écran est présent :
         Si le rappel par SMS de l'écran est vrai, le rappel par SMS du patient devient vrai.
@@ -1817,6 +2023,7 @@ Quand on ouvre l'écran du cabinet :
     Le numéro postal de l'écran devient le numéro postal du c.
     La localité de l'écran devient la localité du c.
     Le pays de l'écran devient le pays du c.
+    Le canton de l'écran devient le canton du c.
     Le téléphone de l'écran devient le téléphone du c.
     Le courriel de l'écran devient le courriel du c.
     Le numéro RCC de l'écran devient le numéro RCC du c.
@@ -1840,6 +2047,7 @@ Quand on clique sur « Enregistrer » dans l'écran du cabinet :
     Le numéro postal du c devient le numéro postal de l'écran.
     La localité du c devient la localité de l'écran.
     Le pays du c devient le pays de l'écran.
+    Le canton du c devient le canton de l'écran.
     Le téléphone du c devient le téléphone de l'écran.
     Le courriel du c devient le courriel de l'écran.
     Le numéro RCC du c devient le numéro RCC de l'écran.
@@ -2160,7 +2368,8 @@ Quand on clique sur « Supprimer » dans l'écran de la position :
         Supprimer la p.
         Fermer l'écran.
 
-Quand on clique sur « Assurances » dans l'écran d'accueil :
+Remarque : les factures tiers payant, une tuile de la Comptabilité depuis le 27 octobre 2026 (avant : l'accueil).
+Quand on clique sur « Assurances » dans l'écran de comptabilité :
     Ouvrir l'écran des assurances.
 
 Quand on choisit un décompte dans l'écran des assurances :

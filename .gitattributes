@@ -1,3 +1,5 @@
 # Fins de ligne LF dans le dépôt, quel que soit le système
 * text=auto eol=lf
 *.zip binary
+# Les schémas tiers, tels que publiés (fins de ligne CRLF comprises) : leur licence interdit de les modifier (27 octobre 2026).
+tests/schemas/generalInvoiceRequest_500.xsd binary

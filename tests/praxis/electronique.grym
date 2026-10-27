@@ -1,0 +1,39 @@
+Remarque : la facture électronique de Praxis (27 octobre 2026), essayée par tests/praxis-electronique : des actes, une patiente
+Remarque : en tiers garant avec tout ce que le schéma exige, sa facture, puis son XML ; inséré avant l'accueil, données inventées.
+Si le nombre d'actes conservés est nul :
+    Le cab vaut le cabinet conservé.
+    Le canton du cab devient « FR ».
+    L'epi vaut le soin conservé dont le nom = « EPI ».
+    Le a1 vaut un nouvel acte :
+        Le soin vaut l'epi.
+        Le code vaut « 1200 ».
+        Le libellé vaut « Anamnèse / bilan / diagnostic, par période de 5 min. ».
+        La quantité vaut 5.
+        Le prix vaut 12.
+        La première séance seulement vaut vrai.
+    Conserver le a1.
+    Le a2 vaut un nouvel acte :
+        Le soin vaut l'epi.
+        Le code vaut « 1206 ».
+        Le libellé vaut « Thérapie individuelle, par période de 5 min. ».
+        La quantité vaut 7.
+        Le prix vaut 10.
+        La première séance seulement vaut faux.
+    Conserver le a2.
+    L'anne vaut le patient conservé dont le nom = « Anne Rochat ».
+    L'assureur de l'anne devient l'assureur conservé dont le nom = « Caisse d'essai ».
+    La facturation complémentaire de l'anne devient « tiers garant ».
+    La date de naissance de l'anne devient 12.05.1984.
+    Le prénom de l'anne devient « Anne ».
+    Le nom de famille de l'anne devient « Rochat ».
+    Le sexe de l'anne devient « féminin ».
+    Le numéro AVS de l'anne devient « 7561234567897 ».
+    Le numéro de cas de l'anne devient « 376 ».
+    Le diagnostic de l'anne devient « Troubles digestifs ».
+    Pour chaque séance conservée dont le patient = l'anne et le paiement = « à payer » et le statut = « faite » :
+        Facturer la séance.
+    Le f vaut la créance en cours.
+    Préparer la facture électronique du f.
+    Enregistrer le XML de facture électronique du f dans « FACTURE_XML ».
+    Enregistrer le justificatif du f dans « JUSTIFICATIF_PDF ».
+

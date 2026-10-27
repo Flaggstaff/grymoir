@@ -268,6 +268,37 @@ Le justificatif voulu d'un patient :
     Si la facturation aux assurances du cabinet conservé est vraie, rendre faux.
     Rendre vrai.
 
+Remarque : le patient sur le justificatif (27 octobre 2026) : son sexe et son numéro AVS, puis son cas et son diagnostic, s'il en a.
+La ligne d'identité d'un patient :
+    Le n vaut « ».
+    Si le sexe du patient est présent, le n devient "Sexe : " suivi du sexe du patient.
+    Si le numéro AVS du patient est présent :
+        Si le n ≠ « », le n devient le n suivi de « ; ».
+        Le n devient le n suivi de "N° AVS : " suivi du numéro AVS du patient.
+    Rendre le n.
+
+La ligne du cas d'un patient :
+    Le n vaut « ».
+    Si le numéro de cas du patient est présent, le n devient "Cas N° " suivi du numéro de cas du patient.
+    Si le diagnostic du patient est présent :
+        Si le n ≠ « », le n devient le n suivi de « ; ».
+        Le n devient le n suivi de "Diagnostic : " suivi du diagnostic du patient.
+    Rendre le n.
+
+Remarque : la facture électronique (generalInvoice 5.0, 27 octobre 2026) : le nom de famille (sinon le nom entier, d'avant le
+Remarque : 24 octobre 2026), le sexe en anglais, et le numéro d'assuré de la complémentaire, sinon celui de la base.
+Le nom de famille électronique d'un patient :
+    Si le nom de famille du patient est présent, rendre le nom de famille du patient.
+    Rendre le nom du patient.
+
+Le genre électronique d'un patient :
+    Si le sexe du patient = « féminin », rendre « female ».
+    Rendre « male ».
+
+Le numéro d'assuré électronique d'un patient :
+    Si le numéro d'assuré complémentaire du patient est présent, rendre le numéro d'assuré complémentaire du patient.
+    Rendre le numéro d'assuré du patient.
+
 Remarque : la complémentaire sur le justificatif : l'assureur, et le numéro d'assuré (celui de la base, s'il n'en a pas d'autre).
 La ligne d'assurance complémentaire d'un patient :
     Le a vaut l'assureur du patient.
