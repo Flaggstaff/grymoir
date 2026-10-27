@@ -1659,6 +1659,8 @@ int main(void) {
         remove("_essai_cabinet12.grymd");
     }
 
+    /* L'écran du soin, depuis le 27 octobre 2026 : ses actes (le titre, leur total, leur liste) avant la position tarifaire ;
+       « Enregistrer » est l'élément 12. */
     {   /* Praxis 2, chantier A (23 octobre 2026) : un soin sur ordonnance se facture à l'assurance ; sans ordonnance qui la
            couvre, sa séance est refusée ; l'ordonnance saisie dans la page du patient, la séance s'y rattache, payée
            « assurance », et l'ordonnance en compte une sur neuf */
@@ -1668,7 +1670,7 @@ int main(void) {
         snprintf(q11, sizeof q11, "q=11&%s", seance);
         snprintf(q18, sizeof q18, "q=18&%s", seance);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Configuration"), evenement("q=3&clic=1"),
-                 evenement("q=4&choix=0.0"), evenement("q=5&z0=EPI&z1=130&z2=70&z3=60&z4=1003&z5=oui&z5p=1&z6=patient&clic=9"),
+                 evenement("q=4&choix=0.0"), evenement("q=5&z0=EPI&z1=130&z2=70&z3=60&z4=1003&z5=oui&z5p=1&z6=patient&clic=12"),
                  evenement("q=6&clic=Fermer"), evenement("q=7&clic=Fermer"), evenement("q=8&clic=Patients"),
                  evenement("q=9&z0=Anne+Rochat&clic=-1"), evenement("q=10&clic=Nouvelle+s%C3%A9ance"),
                  evenement(q11), get("/"),
@@ -2320,7 +2322,7 @@ int main(void) {
         remove("_essai_cabinet5.grymd");
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=7"), evenement("q=3&clic=1"), evenement("q=4&choix=0.0"), get("/"),
-                 evenement("q=5&z0=EPI&z1=130&z2=70&z3=60&z4=1003&z6=patient&clic=9"), get("/"));
+                 evenement("q=5&z0=EPI&z1=130&z2=70&z3=60&z4=1003&z6=patient&clic=12"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet6.grymd", &sc);
         CONTIENT(sc.reponses[4], "<h1>Soin</h1>");
         CONTIENT(sc.reponses[6], "<td>1003</td>");   /* le code tarifaire, dans la liste des soins */

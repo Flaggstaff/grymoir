@@ -1,0 +1,26 @@
+#!/bin/sh
+# Le justificatif de remboursement de Praxis (27 octobre 2026) : les actes d'un soin (l'anamnèse à la première séance seulement),
+# les postes figés pour une pièce, leur somme égale au prix des séances, et le refus quand un prix ne colle pas.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+N="$racine/projets/Praxis/Nicolas"
+cp "$N/données.grym" "$N/actions.grym" "$d/" && cp -R "$N/bibliothèques" "$d/" && cp "$racine/tests/praxis/justificatif.grym" "$d/"
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+contient() { total=$((total + 1)); case "$1" in *"$2"*) ;; *) echecs=$((echecs + 1)); echo "ÉCHEC : $3 (« $2 » attendu dans « $1 »)";; esac; }
+sortie="$("$grym" lancer justificatif.grym 2>&1 < /dev/null)"
+verifier "$(echo "$sortie" | sed -n 1p)" "vrai" "le justificatif est voulu : une complémentaire, des actes"
+contient "$sortie" "Ses actes font CHF 144,00 à la première séance et CHF 120,00 ensuite" "la composition du soin"
+verifier "$(echo "$sortie" | sed -n 3p)" "01.10.2026 1200 2 12 24" "l'anamnèse à la première séance"
+verifier "$(echo "$sortie" | sed -n 4p)" "01.10.2026 1206 10 12 120" "la thérapie à la première séance"
+verifier "$(echo "$sortie" | sed -n 5p)" "08.10.2026 1206 10 12 120" "la séance suivante, sans anamnèse"
+verifier "$(echo "$sortie" | sed -n 6p)" "264" "la somme des postes"
+verifier "$(echo "$sortie" | sed -n 7p)" "Assurance complémentaire : Visana" "la complémentaire sur le justificatif"
+rm -f justificatif.grymd
+sed 's/^    Le prix vaut 120\.$/    Le prix vaut 130./' justificatif.grym > refus.grym
+contient "$("$grym" lancer refus.grym 2>&1 < /dev/null)" "La séance du 08.10.2026 coûte CHF 130,00, ses actes font CHF 120,00" "un prix qui ne colle pas"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ]

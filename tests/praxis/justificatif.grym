@@ -1,0 +1,66 @@
+Remarque : le justificatif de remboursement de Praxis (27 octobre 2026), essayé sans écran par tests/praxis-justificatif : les actes
+Remarque : d'un soin, la première séance et les suivantes, les postes figés et leur somme ; données inventées.
+Utiliser « actions ».
+Le c vaut un nouveau cabinet :
+    Le nom vaut « Cabinet essai ».
+    Le pays vaut « Suisse ».
+    La facturation des absences vaut faux.
+    Le choix d'agenda vaut faux.
+    L'agenda vaut « Praxis ».
+    La facturation aux assurances vaut faux.
+Conserver le c.
+La k vaut un nouveau soin :
+    Le nom vaut « Kinésiologie ».
+    Le tarif vaut 144.
+    Le tarif de suivi vaut 120.
+    L'ordonnance exigée vaut faux.
+    La facturation vaut « patient ».
+Conserver la k.
+Le a1 vaut un nouvel acte :
+    Le soin vaut la k.
+    Le code vaut « 1200 ».
+    Le libellé vaut « Anamnèse ».
+    La quantité vaut 2.
+    Le prix vaut 12.
+    La première séance seulement vaut vrai.
+Conserver le a1.
+Le a2 vaut un nouvel acte :
+    Le soin vaut la k.
+    Le code vaut « 1206 ».
+    Le libellé vaut « Thérapie ».
+    La quantité vaut 10.
+    Le prix vaut 12.
+    La première séance seulement vaut faux.
+Conserver le a2.
+L'as vaut un nouvel assureur :
+    Le nom vaut « Visana ».
+Conserver l'as.
+Le p vaut un nouveau patient :
+    Le nom vaut « Anne Rochat ».
+    Le pays vaut « Suisse ».
+    L'assureur complémentaire vaut l'as.
+Conserver le p.
+Afficher le justificatif voulu du p.
+Afficher la composition de la k.
+Le s1 vaut une nouvelle séance :
+    Le patient vaut le p.
+    Le soin vaut la k.
+    La date vaut 01.10.2026.
+    Le prix vaut 144.
+    Le statut vaut « faite ».
+    Le paiement vaut « à payer ».
+Conserver le s1.
+Le s2 vaut une nouvelle séance :
+    Le patient vaut le p.
+    Le soin vaut la k.
+    La date vaut 08.10.2026.
+    Le prix vaut 120.
+    Le statut vaut « faite ».
+    Le paiement vaut « à payer ».
+Conserver le s2.
+Figer le s1 et « F-1 ».
+Figer le s2 et « F-1 ».
+Pour chaque poste conservé dont la pièce = « F-1 », par date :
+    Afficher la date du poste puis le code du poste puis la quantité du poste puis le prix du poste puis le montant du poste.
+Afficher la somme des montants des postes conservés dont la pièce = « F-1 ».
+Afficher la ligne d'assurance complémentaire du p.

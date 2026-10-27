@@ -83,6 +83,29 @@ Un soin, conservé, a :
     une facturation (« patient » ou « assurance »), « patient » au départ,
     une position tarifaire (position), facultative.
 
+Remarque : le justificatif de remboursement (Tarif 590, 27 octobre 2026) : un soin se décompose en actes, chacun un code du
+Remarque : tarif, un libellé, une quantité en périodes de 5 minutes et le prix d'une période ; un acte de la première séance
+Remarque : seulement (l'anamnèse) manque aux séances suivantes.
+Un acte, conservé, a :
+    un soin (soin), et disparaît avec lui,
+    un code (texte),
+    un libellé (texte),
+    une quantité (nombre),
+    un prix (nombre),
+    une première séance seulement (vrai ou faux), faux au départ.
+
+Remarque : les postes d'un justificatif émis, figés : elles ne changent plus si le soin change ; la pièce est le numéro de la
+Remarque : facture ou de la quittance (« F-2026-0001 », « Q-2026-0003 »).
+Un poste, conservé, a :
+    une pièce (texte),
+    une date (date),
+    un tarif (texte),
+    un code (texte),
+    un libellé (texte),
+    une quantité (nombre),
+    un prix (nombre),
+    un montant (nombre).
+
 Remarque : un soin sur ordonnance (l'ergothérapie, OPAS art. 6) se facture toujours à l'assurance de base, en tiers payant ; un autre
 Remarque : soin se facture au patient (QR-facture, quittance) ou à son assurance, au choix du cabinet. La facture à l'assurance est le
 Remarque : chantier B : d'ici là, une séance « à l'assurance » n'entre ni dans les factures ni dans les quittances du patient.
@@ -183,7 +206,8 @@ Une facture, conservée, a :
     un montant (nombre),
     un état (« à régler », « en partie réglée » ou « réglée »),
     un exemplaire (fichier), facultatif,
-    un dernier rappel (date), facultatif.
+    un dernier rappel (date), facultatif,
+    un justificatif (fichier), facultatif.
 
 Remarque : un rappel envoyé pour une facture : son rang (premier, deuxième…), sa date, son exemplaire, le PDF envoyé, gardé tel quel.
 Un rappel, conservé, a :
@@ -201,7 +225,8 @@ Une quittance, conservée, a :
     un patient (patient), et disparaît avec lui,
     un montant (nombre),
     un moyen (« espèces », « Twint », « virement » ou « plusieurs »),
-    un exemplaire (fichier), facultatif.
+    un exemplaire (fichier), facultatif,
+    un justificatif (fichier), facultatif.
 
 Remarque : la séance garde le son de son commentaire, s'il a été dicté, et le texte, transcrit ou tapé.
 Remarque : l'encaissement : le jour où l'argent est arrivé ; les comptes en recettes-dépenses comptent à cette date, pas à celle de la séance.

@@ -70,6 +70,16 @@ Le point en cours vaut « ».
 L'ordonnance annoncée vaut absent.
 Le destinataire en cours vaut « ».
 La position ouverte vaut absent.
+Remarque : le justificatif de remboursement en cours d'impression (27 octobre 2026) : sa pièce, son patient, sa date, son montant,
+Remarque : et la période du traitement, de sa première à sa dernière ligne.
+Le numéro justifié vaut « ».
+La personne justifiée vaut absent.
+La date justifiée vaut aujourd'hui.
+Le montant justifié vaut 0.
+Le début justifié vaut aujourd'hui.
+La fin justifiée vaut aujourd'hui.
+L'acte ouvert vaut absent.
+La méthode ouverte vaut absent.
 Le décompte ouvert vaut absent.
 
 Le soin ouvert vaut absent.
@@ -253,7 +263,24 @@ L'écran du soin, « Soin », montre :
     un code tarifaire (texte), facultatif,
     une ordonnance exigée (vrai ou faux), en interrupteur, avec l'indication « L'ergothérapie : sur ordonnance, toujours facturée à l'assurance de base », visible si la facturation aux assurances du cabinet conservé,
     une facturation (« patient » ou « assurance »), avec l'indication « Sans ordonnance : au patient (QR-facture, quittance) ou à son assurance », visible si la facturation aux assurances du cabinet conservé,
+    le texte « Justificatif de remboursement », en petites capitales,
+    le texte la composition du soin ouvert,
+    la liste des actes conservés dont le soin = la méthode ouverte, par code, avec le code, le libellé, la quantité, le prix et la première séance seulement,
     une position tarifaire (position), facultative, avec l'indication « Facturé à l'assurance : sa position (Configuration, Tarif des assurances) », visible si la facturation aux assurances du cabinet conservé,
+    côte à côte :
+        un bouton « Enregistrer », principal,
+        un bouton « Fermer »,
+        un bouton « Nouvel acte »,
+        un bouton « Supprimer ».
+
+Remarque : un acte du justificatif de remboursement d'un soin (Tarif 590, 27 octobre 2026) : son code, son libellé, sa quantité
+Remarque : en périodes de 5 minutes et le prix d'une période ; l'anamnèse ne se compte qu'à la première séance.
+L'écran de l'acte, « Acte du Tarif 590 », montre :
+    un code (texte), avec l'indication « Le code du Tarif 590 : 1200 »,
+    un libellé (texte), avec l'indication « Anamnèse / bilan / diagnostic, par période de 5 min. »,
+    une quantité (nombre), avec l'indication « En périodes de 5 minutes : 10 pour 50 minutes »,
+    un prix (nombre), avec l'unité « CHF », avec l'indication « Le prix d'une période de 5 minutes »,
+    une première séance seulement (vrai ou faux), en interrupteur, avec l'indication « Allumé : l'anamnèse, que les séances suivantes n'ont pas »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
@@ -406,6 +433,29 @@ Le document de quittance, « Quittance », montre :
     la liste des séances conservées dont la quittance = la pièce en cours, par date, avec la date, le nom du soin, le code tarifaire du soin, la durée, le prix et le paiement,
     le texte "Montant reçu : CHF " suivi de l'arrondi du montant de la pièce en cours à 0,01 suivi de la mention du moyen de la pièce en cours,
     le texte "Pour acquit, " suivi du nom du cabinet conservé.
+
+Remarque : le justificatif de remboursement (Tarif 590, 27 octobre 2026), joint à la facture ou à la quittance d'un patient qui a
+Remarque : une assurance complémentaire : le cabinet et ses numéros (GLN, RCC), le patient, la pièce, le traitement, puis chaque
+Remarque : ligne du tarif : sa date, le tarif 590, le code, le libellé, la quantité en périodes de 5 minutes, le prix et le montant.
+Remarque : Remboursement en tiers garant (TG), loi sur le contrat d'assurance (LCA), valeur du point 1.00, sans TVA.
+Le document de justificatif, « Justificatif de remboursement », montre :
+    côte à côte :
+        la partie « en-tête du cabinet »,
+        l'un sous l'autre :
+            le texte « Patient », en petites capitales,
+            le texte le nom de la personne justifiée,
+            le texte l'adresse de la personne justifiée,
+            le texte la ville de la personne justifiée,
+            le texte la naissance de la personne justifiée,
+            le texte la ligne d'assurance complémentaire de la personne justifiée,
+    le texte "Pièce N° " suivi du numéro justifié suivi de ", le " suivi de la date justifiée en toutes lettres,
+    le texte « Type de remboursement : TG ; loi : LCA ; thérapie individuelle ; motif : maladie ; médecine complémentaire »,
+    le texte "Traitement du " suivi du début justifié suivi de " au " suivi de la fin justifiée,
+    le texte « Prestations », en petites capitales,
+    la liste des postes conservés dont la pièce = le numéro justifié, par date, avec la date, le tarif, le code, le libellé, la quantité, le prix et le montant,
+    le texte « Valeur du point : 1.00 ; TVA : 0.00 »,
+    le texte "Montant total : CHF " suivi de l'arrondi du montant justifié à 0,01,
+    le texte "Dont prestations obligatoires : CHF 0.00 ; montant de la facture : CHF " suivi de l'arrondi du montant justifié à 0,01.
 
 Remarque : « Patient à ouvrir » propose les patients dès la première lettre tapée, sans égard aux accents ; un choix ouvre sa fiche.
 Remarque : la recherche filtre la liste à chaque changement : le nom, le téléphone, la localité ou le courriel contient ce qui est tapé.
@@ -629,6 +679,39 @@ Pour borner les quittances :
         Le début des quittances devient 01.01.1900.
         La fin des quittances devient 01.01.3000.
 
+Remarque : le justificatif de remboursement d'une pièce (27 octobre 2026) : fait une fois, son PDF gardé, puis montré ; rien si le
+Remarque : patient n'a pas d'assurance complémentaire à qui le présenter.
+Pour montrer le justificatif d'un numéro et un patient et un jour et un total :
+    Le numéro justifié devient numéro.
+    La personne justifiée devient patient.
+    La date justifiée devient jour.
+    Le montant justifié devient total.
+    Le début justifié devient jour.
+    La fin justifiée devient 01.01.1900.
+    Pour chaque poste conservé dont la pièce = numéro :
+        Si la date du poste < le début justifié, le début justifié devient la date du poste.
+        Si la date du poste > la fin justifiée, la fin justifiée devient la date du poste.
+
+Pour justifier une facture :
+    Si le justificatif voulu du patient de la facture est vrai :
+        Si le justificatif de la facture est absent :
+            Le relevé vaut facture.
+            Pour chaque séance conservée dont la facture = le relevé :
+                Figer la séance et le numéro de la facture.
+            Montrer le justificatif du numéro de la facture et le patient de la facture et la date de la facture et le montant de la facture.
+            Le justificatif de la facture devient le document de justificatif.
+        Ouvrir le justificatif de la facture.
+
+Pour justifier une quittance :
+    Si le justificatif voulu du patient de la quittance est vrai :
+        Si le justificatif de la quittance est absent :
+            Le reçu vaut quittance.
+            Pour chaque séance conservée dont la quittance = le reçu :
+                Figer la séance et le numéro de la quittance.
+            Montrer le justificatif du numéro de la quittance et le patient de la quittance et la date de la quittance et le montant de la quittance.
+            Le justificatif de la quittance devient le document de justificatif.
+        Ouvrir le justificatif de la quittance.
+
 Remarque : attester une séance : payée, sa quittance ; à payer, sa facture, avec la section paiement QR si le cabinet a un IBAN.
 Remarque : une pièce déjà faite se remontre telle qu'elle a été remise, son exemplaire gardé.
 Pour quittancer une séance :
@@ -636,12 +719,14 @@ Pour quittancer une séance :
         La pièce en cours devient la quittance de la séance.
         Si l'exemplaire de la pièce en cours est absent, l'exemplaire de la pièce en cours devient le document de quittance.
         Ouvrir l'exemplaire de la pièce en cours.
+        Justifier la pièce en cours.
     Sinon :
         Faire la quittance du patient de la séance et le prix de la séance et le paiement de la séance, qui donne la q.
         La quittance de la séance devient la q.
         La pièce en cours devient la q.
         L'exemplaire de la q devient le document de quittance.
         Ouvrir le document de quittance.
+        Justifier la q.
 
 Remarque : le rappel d'une facture : numéroté à sa suite (premier, deuxième…), daté, son PDF gardé, puis montré pour l'imprimer.
 Pour relancer une créance :
@@ -662,6 +747,7 @@ Pour facturer une prestation :
         La créance en cours devient la facture de la prestation.
         Si l'exemplaire de la créance en cours est présent, ouvrir l'exemplaire de la créance en cours.
         Sinon, ouvrir le document de facture.
+        Justifier la créance en cours.
     Sinon :
         La personne facturée vaut le patient de la prestation.
         Le début vaut le premier janvier d'aujourd'hui.
@@ -679,6 +765,7 @@ Pour facturer une prestation :
         La créance en cours devient la f.
         L'exemplaire de la f devient le document de facture.
         Ouvrir le document de facture.
+        Justifier la f.
 
 Remarque : la facture tiers payant, sur papier (convention ASE, art. 7.4) : le cabinet et ses numéros, l'assureur, le patient et
 Remarque : son numéro d'assuré, le médecin prescripteur et ses numéros, la nature du cas, la suite du traitement, et le calendrier
@@ -909,6 +996,7 @@ Quand on choisit une facture dans l'écran des factures :
     La créance en cours devient la facture choisie de l'écran.
     Si l'exemplaire de la créance en cours est présent, ouvrir l'exemplaire de la créance en cours.
     Sinon, ouvrir le document de facture.
+    Justifier la créance en cours.
 
 Quand on clique sur « Fermer » dans l'écran des factures :
     Fermer l'écran.
@@ -970,6 +1058,7 @@ Quand on choisit une quittance dans l'écran des quittances :
     La pièce en cours devient la quittance choisie de l'écran.
     Si l'exemplaire de la pièce en cours est absent, l'exemplaire de la pièce en cours devient le document de quittance.
     Ouvrir l'exemplaire de la pièce en cours.
+    Justifier la pièce en cours.
 
 Quand on clique sur « Fermer » dans l'écran des quittances :
     Fermer l'écran.
@@ -1559,6 +1648,7 @@ Quand on choisit un soin dans l'écran des soins :
 
 Quand on ouvre l'écran du soin :
     Le s vaut le soin ouvert.
+    La méthode ouverte devient le s.
     Le nom de l'écran devient le nom du s.
     Le tarif de l'écran devient le tarif du s.
     Le tarif de suivi de l'écran devient le tarif de suivi du s.
@@ -1588,6 +1678,50 @@ Quand on clique sur « Fermer » dans l'écran du soin :
 Remarque : un soin ou une rubrique supprimé ne se propose plus ; les séances et les frais qui le désignent le gardent.
 Quand on clique sur « Supprimer » dans l'écran du soin :
     Supprimer le soin ouvert.
+    Fermer l'écran.
+
+Quand on clique sur « Nouvel acte » dans l'écran du soin :
+    L'acte ouvert devient absent.
+    Ouvrir l'écran de l'acte.
+
+Quand on choisit un acte dans l'écran du soin :
+    L'acte ouvert devient l'acte choisi de l'écran.
+    Ouvrir l'écran de l'acte.
+
+Quand on ouvre l'écran de l'acte :
+    Si l'acte ouvert est présent :
+        Le a vaut l'acte ouvert.
+        Le code de l'écran devient le code du a.
+        Le libellé de l'écran devient le libellé du a.
+        La quantité de l'écran devient la quantité du a.
+        Le prix de l'écran devient le prix du a.
+        La première séance seulement de l'écran devient la première séance seulement du a.
+
+Quand on clique sur « Enregistrer » dans l'écran de l'acte :
+    Si la quantité de l'écran ≤ 0, refuser « La quantité compte des périodes de 5 minutes : au moins une. ».
+    Si l'acte ouvert est absent :
+        Le nouveau vaut un nouvel acte :
+            Le soin vaut la méthode ouverte.
+            Le code vaut le code de l'écran.
+            Le libellé vaut le libellé de l'écran.
+            La quantité vaut la quantité de l'écran.
+            Le prix vaut le prix de l'écran.
+            La première séance seulement vaut la première séance seulement de l'écran.
+        Conserver le nouveau.
+        L'acte ouvert devient le nouveau.
+    Le a vaut l'acte ouvert.
+    Le code du a devient le code de l'écran.
+    Le libellé du a devient le libellé de l'écran.
+    La quantité du a devient la quantité de l'écran.
+    Le prix du a devient le prix de l'écran.
+    La première séance seulement du a devient la première séance seulement de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran de l'acte :
+    Fermer l'écran.
+
+Quand on clique sur « Supprimer » dans l'écran de l'acte :
+    Si l'acte ouvert est présent, supprimer l'acte ouvert.
     Fermer l'écran.
 
 Remarque : la page d'une séance ; son patient s'ouvre sur sa page, jamais sur la fiche déduite.

@@ -250,6 +250,61 @@ La charge QR d'un cabinet et d'un patient et d'un montant et d'un motif :
     Si l'IBAN du cabinet est absent, rendre « ».
     Rendre la charge QR suisse de (l'IBAN du cabinet en IBAN) et de (l'adresse de créancier du cabinet) et de montant et de (l'adresse de débiteur du patient) et de motif.
 
+Remarque : le justificatif de remboursement (27 octobre 2026) se joint à la pièce d'un patient qui a une assurance complémentaire
+Remarque : qu'il paie lui-même avant d'être remboursé (tiers garant : toujours, sauf si le cabinet facture aux assurances et que le
+Remarque : patient y est en tiers payant), dès que les soins ont des actes.
+Le justificatif voulu d'un patient :
+    Si l'assureur complémentaire du patient est absent, rendre faux.
+    Si le nombre d'actes conservés = 0, rendre faux.
+    Si la facturation aux assurances du cabinet conservé est fausse, rendre vrai.
+    Si la facturation complémentaire du patient est absente, rendre faux.
+    Si la facturation complémentaire du patient = « tiers garant », rendre vrai.
+    Rendre faux.
+
+Remarque : la complémentaire sur le justificatif : l'assureur, et le numéro d'assuré (celui de la base, s'il n'en a pas d'autre).
+La ligne d'assurance complémentaire d'un patient :
+    Si l'assureur complémentaire du patient est absent, rendre « ».
+    Le n vaut "Assurance complémentaire : " suivi du nom de l'assureur complémentaire du patient.
+    Si le numéro d'assuré complémentaire du patient est présent, rendre le n suivi de " ; assuré N° " suivi du numéro d'assuré complémentaire du patient.
+    Si le numéro d'assuré du patient est présent, rendre le n suivi de " ; assuré N° " suivi du numéro d'assuré du patient.
+    Rendre le n.
+
+Remarque : ce que font les actes d'un soin, à la première séance et ensuite : le tarif et le tarif de suivi du soin doivent valoir
+Remarque : autant, sinon le justificatif refuse de s'émettre (27 octobre 2026).
+La composition d'un soin :
+    Le s vaut soin.
+    Si le nombre d'actes conservés dont le soin = le s = 0, rendre « Aucun acte : ce soin n'a pas de justificatif de remboursement. ».
+    Le premier vaut 0.
+    Le suivant vaut 0.
+    Pour chaque acte conservé dont le soin = le s :
+        Le premier devient le premier + la quantité de l'acte × le prix de l'acte.
+        Si la première séance seulement de l'acte est fausse, le suivant devient le suivant + la quantité de l'acte × le prix de l'acte.
+    Rendre "Ses actes font CHF " suivi de l'arrondi du premier à 0,01 suivi de " à la première séance et CHF " suivi de l'arrondi du suivant à 0,01 suivi de " ensuite : le tarif et le tarif de suivi doivent valoir autant.".
+
+Remarque : les postes figés d'une séance pour sa pièce : les actes de son soin, sans ceux de la première séance seulement si
+Remarque : le patient a déjà eu ce soin ; leur somme doit faire le prix de la séance, sinon rien ne s'émet et le refus dit quoi corriger.
+Pour figer une séance et un numéro :
+    Le s vaut le soin de la séance.
+    Si le nombre d'actes conservés dont le soin = le s = 0, refuser "Le soin " suivi du nom du s suivi de " n'a pas de lignes pour le justificatif de remboursement : Configuration, Soins, " suivi du nom du s suivi de « . ».
+    La personne vaut le patient de la séance.
+    Le jour vaut la date de la séance.
+    Le compte d'avant vaut le nombre de séances conservées dont le patient = la personne et le soin = le s et le statut ≠ « annulée » et le statut ≠ « absence » et la date < le jour.
+    Le total vaut 0.
+    Pour chaque acte conservé dont le soin = le s :
+        Si la première séance seulement de l'acte est fausse ou le compte d'avant = 0 :
+            Le l vaut un nouveau poste :
+                La pièce vaut numéro.
+                La date vaut la date de la séance.
+                Le tarif vaut « 590 ».
+                Le code vaut le code de l'acte.
+                Le libellé vaut le libellé de l'acte.
+                La quantité vaut la quantité de l'acte.
+                Le prix vaut le prix de l'acte.
+                Le montant vaut la quantité de l'acte × le prix de l'acte.
+            Conserver le l.
+            Le total devient le total + le montant du l.
+    Si l'arrondi du total à 0,01 ≠ l'arrondi du prix de la séance à 0,01, refuser "La séance du " suivi de la date de la séance suivi de " coûte CHF " suivi de l'arrondi du prix de la séance à 0,01 suivi de ", ses actes font CHF " suivi de l'arrondi du total à 0,01 suivi de " : corrige le prix de la séance, ou les actes du soin " suivi du nom du s suivi de « . ».
+
 Remarque : une quittance nouvelle, numérotée à la suite de l'année, conservée (24 octobre 2026 : écrite une fois, pour une séance
 Remarque : comme pour une facture) ; « , qui donne la q » la reçoit.
 Pour faire la quittance d'un patient et un total et un moyen :
