@@ -1,6 +1,7 @@
 #!/bin/sh
 # Le justificatif de remboursement de Praxis (27 octobre 2026) : les actes d'un soin (l'anamnèse à la première séance seulement),
-# les postes figés pour une pièce, leur somme égale au prix des séances, et le refus quand un prix ne colle pas.
+# les postes figés pour une pièce, leur somme égale au prix des séances, et le refus quand un prix ne colle pas ; une
+# séance justifiée une fois, jamais une absence ; le tiers garant chez l'assureur de base (relecture du 27 octobre 2026).
 racine=$(cd "$(dirname "$0")/.." && pwd)
 grym="$racine/grym"
 d=$(mktemp -d)
@@ -19,6 +20,10 @@ verifier "$(echo "$sortie" | sed -n 4p)" "01.10.2026 1206 10 12 120" "la thérap
 verifier "$(echo "$sortie" | sed -n 5p)" "08.10.2026 1206 10 12 120" "la séance suivante, sans anamnèse"
 verifier "$(echo "$sortie" | sed -n 6p)" "264" "la somme des postes"
 verifier "$(echo "$sortie" | sed -n 7p)" "Assurance complémentaire : Visana" "la complémentaire sur le justificatif"
+verifier "$(echo "$sortie" | sed -n 8p)" "0" "une séance déjà justifiée ne l'est pas deux fois"
+verifier "$(echo "$sortie" | sed -n 9p)" "0" "une absence n'est jamais justifiée"
+verifier "$(echo "$sortie" | sed -n 10p)" "vrai" "tiers garant, la complémentaire chez l'assureur de base"
+verifier "$(echo "$sortie" | sed -n 11p)" "Assurance complémentaire : Visana" "l'assureur de base, à défaut de complémentaire"
 rm -f justificatif.grymd
 sed 's/^    Le prix vaut 120\.$/    Le prix vaut 130./' justificatif.grym > refus.grym
 contient "$("$grym" lancer refus.grym 2>&1 < /dev/null)" "La séance du 08.10.2026 coûte CHF 130,00, ses actes font CHF 120,00" "un prix qui ne colle pas"

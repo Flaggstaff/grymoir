@@ -64,3 +64,25 @@ Pour chaque poste conservé dont la pièce = « F-1 », par date :
     Afficher la date du poste puis le code du poste puis la quantité du poste puis le prix du poste puis le montant du poste.
 Afficher la somme des montants des postes conservés dont la pièce = « F-1 ».
 Afficher la ligne d'assurance complémentaire du p.
+Remarque : relecture du 27 octobre 2026 : une séance déjà justifiée ne l'est pas deux fois ; une absence ne l'est jamais.
+Figer le s1 et « Q-1 ».
+Afficher le nombre de postes conservés dont la pièce = « Q-1 ».
+Le s3 vaut une nouvelle séance :
+    Le patient vaut le p.
+    Le soin vaut la k.
+    La date vaut 15.10.2026.
+    Le prix vaut 120.
+    Le statut vaut « absence ».
+    Le paiement vaut « à payer ».
+Conserver le s3.
+Figer le s3 et « F-2 ».
+Afficher le nombre de postes conservés dont la pièce = « F-2 ».
+Remarque : la complémentaire chez l'assureur de base, en tiers garant.
+Le q vaut un nouveau patient :
+    Le nom vaut « Louis Bapst ».
+    Le pays vaut « Suisse ».
+    L'assureur vaut l'as.
+    La facturation complémentaire vaut « tiers garant ».
+Conserver le q.
+Afficher le justificatif voulu du q.
+Afficher la ligne d'assurance complémentaire du q.

@@ -201,6 +201,7 @@ void EnregistreurSon::remplir_micros() {
     micro_->setCurrentIndex(i >= 0 ? i : 0);   // un micro débranché : celui du système, sans oublier le choix
     QMenu *menu = choix_->menu();   // le menu : chaque micro, celui choisi coché
     menu->clear();
+    qDeleteAll(menu->findChildren<QActionGroup *>(Qt::FindDirectChildrenOnly));   // relecture : l'ancien groupe ne s'accumule pas
     auto *groupe = new QActionGroup(menu);
     for (int k = 0; k < micro_->count(); k++) {
         QAction *a = menu->addAction(micro_->itemText(k));

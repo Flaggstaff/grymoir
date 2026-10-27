@@ -679,13 +679,14 @@ Pour borner les quittances :
         Le début des quittances devient 01.01.1900.
         La fin des quittances devient 01.01.3000.
 
-Remarque : le justificatif de remboursement d'une pièce (27 octobre 2026) : fait une fois, son PDF gardé, puis montré ; rien si le
-Remarque : patient n'a pas d'assurance complémentaire à qui le présenter.
-Pour montrer le justificatif d'un numéro et un patient et un jour et un total :
+Remarque : le justificatif de remboursement d'une pièce (27 octobre 2026) : fait une fois, à l'émission de la pièce, son PDF
+Remarque : gardé ; rien si le patient n'a pas de complémentaire à qui le présenter, ni si aucune de ses séances n'est à justifier
+Remarque : (des absences, ou des séances déjà justifiées par la facture qu'une quittance règle). Le montant est celui des postes.
+Pour montrer le justificatif d'un numéro et un patient et un jour :
     Le numéro justifié devient numéro.
     La personne justifiée devient patient.
     La date justifiée devient jour.
-    Le montant justifié devient total.
+    Le montant justifié devient la somme des montants des postes conservés dont la pièce = numéro.
     Le début justifié devient jour.
     La fin justifiée devient 01.01.1900.
     Pour chaque poste conservé dont la pièce = numéro :
@@ -693,40 +694,41 @@ Pour montrer le justificatif d'un numéro et un patient et un jour et un total :
         Si la date du poste > la fin justifiée, la fin justifiée devient la date du poste.
 
 Pour justifier une facture :
-    Si le justificatif voulu du patient de la facture est vrai :
-        Si le justificatif de la facture est absent :
-            Le relevé vaut facture.
-            Pour chaque séance conservée dont la facture = le relevé :
-                Figer la séance et le numéro de la facture.
-            Montrer le justificatif du numéro de la facture et le patient de la facture et la date de la facture et le montant de la facture.
+    Si le justificatif voulu du patient de la facture est vrai et le justificatif de la facture est absent :
+        Le relevé vaut facture.
+        Pour chaque séance conservée dont la facture = le relevé :
+            Figer la séance et le numéro de la facture.
+        Si le nombre de postes conservés dont la pièce = le numéro de la facture > 0 :
+            Montrer le justificatif du numéro de la facture et le patient de la facture et la date de la facture.
             Le justificatif de la facture devient le document de justificatif.
-        Ouvrir le justificatif de la facture.
 
 Pour justifier une quittance :
-    Si le justificatif voulu du patient de la quittance est vrai :
-        Si le justificatif de la quittance est absent :
-            Le reçu vaut quittance.
-            Pour chaque séance conservée dont la quittance = le reçu :
-                Figer la séance et le numéro de la quittance.
-            Montrer le justificatif du numéro de la quittance et le patient de la quittance et la date de la quittance et le montant de la quittance.
+    Si le justificatif voulu du patient de la quittance est vrai et le justificatif de la quittance est absent :
+        Le reçu vaut quittance.
+        Pour chaque séance conservée dont la quittance = le reçu :
+            Figer la séance et le numéro de la quittance.
+        Si le nombre de postes conservés dont la pièce = le numéro de la quittance > 0 :
+            Montrer le justificatif du numéro de la quittance et le patient de la quittance et la date de la quittance.
             Le justificatif de la quittance devient le document de justificatif.
-        Ouvrir le justificatif de la quittance.
 
 Remarque : attester une séance : payée, sa quittance ; à payer, sa facture, avec la section paiement QR si le cabinet a un IBAN.
 Remarque : une pièce déjà faite se remontre telle qu'elle a été remise, son exemplaire gardé.
 Pour quittancer une séance :
     Si la quittance de la séance est présente :
         La pièce en cours devient la quittance de la séance.
-        Si l'exemplaire de la pièce en cours est absent, l'exemplaire de la pièce en cours devient le document de quittance.
+        Si l'exemplaire de la pièce en cours est absent :
+            L'exemplaire de la pièce en cours devient le document de quittance.
+            Justifier la pièce en cours.
         Ouvrir l'exemplaire de la pièce en cours.
-        Justifier la pièce en cours.
+        Si le justificatif de la pièce en cours est présent, ouvrir le justificatif de la pièce en cours.
     Sinon :
         Faire la quittance du patient de la séance et le prix de la séance et le paiement de la séance, qui donne la q.
         La quittance de la séance devient la q.
         La pièce en cours devient la q.
         L'exemplaire de la q devient le document de quittance.
-        Ouvrir le document de quittance.
         Justifier la q.
+        Ouvrir le document de quittance.
+        Si le justificatif de la q est présent, ouvrir le justificatif de la q.
 
 Remarque : le rappel d'une facture : numéroté à sa suite (premier, deuxième…), daté, son PDF gardé, puis montré pour l'imprimer.
 Pour relancer une créance :
@@ -747,7 +749,7 @@ Pour facturer une prestation :
         La créance en cours devient la facture de la prestation.
         Si l'exemplaire de la créance en cours est présent, ouvrir l'exemplaire de la créance en cours.
         Sinon, ouvrir le document de facture.
-        Justifier la créance en cours.
+        Si le justificatif de la créance en cours est présent, ouvrir le justificatif de la créance en cours.
     Sinon :
         La personne facturée vaut le patient de la prestation.
         Le début vaut le premier janvier d'aujourd'hui.
@@ -764,8 +766,9 @@ Pour facturer une prestation :
             Le montant de la f devient le montant de la f + le prix de la séance.
         La créance en cours devient la f.
         L'exemplaire de la f devient le document de facture.
-        Ouvrir le document de facture.
         Justifier la f.
+        Ouvrir le document de facture.
+        Si le justificatif de la f est présent, ouvrir le justificatif de la f.
 
 Remarque : la facture tiers payant, sur papier (convention ASE, art. 7.4) : le cabinet et ses numéros, l'assureur, le patient et
 Remarque : son numéro d'assuré, le médecin prescripteur et ses numéros, la nature du cas, la suite du traitement, et le calendrier
@@ -996,7 +999,7 @@ Quand on choisit une facture dans l'écran des factures :
     La créance en cours devient la facture choisie de l'écran.
     Si l'exemplaire de la créance en cours est présent, ouvrir l'exemplaire de la créance en cours.
     Sinon, ouvrir le document de facture.
-    Justifier la créance en cours.
+    Si le justificatif de la créance en cours est présent, ouvrir le justificatif de la créance en cours.
 
 Quand on clique sur « Fermer » dans l'écran des factures :
     Fermer l'écran.
@@ -1056,9 +1059,11 @@ Quand on clique sur « Quittance » dans l'écran des quittances :
 Remarque : une quittance déjà remise se remontre telle qu'elle a été remise : son exemplaire gardé.
 Quand on choisit une quittance dans l'écran des quittances :
     La pièce en cours devient la quittance choisie de l'écran.
-    Si l'exemplaire de la pièce en cours est absent, l'exemplaire de la pièce en cours devient le document de quittance.
+    Si l'exemplaire de la pièce en cours est absent :
+        L'exemplaire de la pièce en cours devient le document de quittance.
+        Justifier la pièce en cours.
     Ouvrir l'exemplaire de la pièce en cours.
-    Justifier la pièce en cours.
+    Si le justificatif de la pièce en cours est présent, ouvrir le justificatif de la pièce en cours.
 
 Quand on clique sur « Fermer » dans l'écran des quittances :
     Fermer l'écran.

@@ -94,18 +94,6 @@ Un acte, conservé, a :
     un prix (nombre),
     une première séance seulement (vrai ou faux), faux au départ.
 
-Remarque : les postes d'un justificatif émis, figés : elles ne changent plus si le soin change ; la pièce est le numéro de la
-Remarque : facture ou de la quittance (« F-2026-0001 », « Q-2026-0003 »).
-Un poste, conservé, a :
-    une pièce (texte),
-    une date (date),
-    un tarif (texte),
-    un code (texte),
-    un libellé (texte),
-    une quantité (nombre),
-    un prix (nombre),
-    un montant (nombre).
-
 Remarque : un soin sur ordonnance (l'ergothérapie, OPAS art. 6) se facture toujours à l'assurance de base, en tiers payant ; un autre
 Remarque : soin se facture au patient (QR-facture, quittance) ou à son assurance, au choix du cabinet. La facture à l'assurance est le
 Remarque : chantier B : d'ici là, une séance « à l'assurance » n'entre ni dans les factures ni dans les quittances du patient.
@@ -253,6 +241,20 @@ Une séance, conservée, a :
     un décompte (décompte), facultatif,
     une référence de rappel (texte), facultative,
     une réservation calendly (texte), facultative.
+
+Remarque : les postes d'un justificatif émis, figés : elles ne changent plus si le soin change ; la pièce est le numéro de la
+Remarque : facture ou de la quittance (« F-2026-0001 », « Q-2026-0003 ») ; la séance, pour qu'elle ne soit justifiée qu'une fois
+Remarque : (relecture du 27 octobre 2026 : la quittance d'une facture réglée ne la justifie pas une seconde fois).
+Un poste, conservé, a :
+    une séance (séance), facultative, et disparaît avec elle,
+    une pièce (texte),
+    une date (date),
+    un tarif (texte),
+    un code (texte),
+    un libellé (texte),
+    une quantité (nombre),
+    un prix (nombre),
+    un montant (nombre).
 
 Remarque : les rubriques des frais (loyer, matériel…) : Nicolas les nomme, les renomme et en ajoute dans la configuration.
 Une rubrique, conservée, a :
