@@ -16,6 +16,9 @@ for projet in "$depot"/projets/*/ "$depot"/projets/*/*/; do
     for f in "$projet"*.grym; do
         total=$((total + 1))
         "$G" formater "$f" > "$tmp/canon" 2> "$tmp/err" || { echecs=$((echecs + 1)); echo "ÉCHEC formater : $nom/$(basename "$f") : $(head -c 200 "$tmp/err")"; continue; }
+        # sous Windows, la sortie standard de grym est en mode texte : ses fins de ligne arrivent en \r\n, que le dépôt
+        # n'a pas (.gitattributes, eol=lf) ; seules les lignes comptent
+        tr -d '\r' < "$tmp/canon" > "$tmp/canon-lf" && mv "$tmp/canon-lf" "$tmp/canon"
         cmp -s "$tmp/canon" "$f" || { echecs=$((echecs + 1)); echo "ÉCHEC : $nom/$(basename "$f") n'est pas en forme canonique"; }
     done
     total=$((total + 1))
