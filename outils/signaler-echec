@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# GrymoiR : montrer pourquoi une étape a raté, à partir de son journal :
+#   outils/signaler-echec "titre" journal
+# Sur la sortie d'erreur : les « ÉCHEC » des essais avec leur contexte, sinon les lignes d'erreur du compilateur,
+# sinon la fin du journal. Dans l'intégration continue (GITHUB_ACTIONS), le même extrait devient une annotation
+# « error » et le résumé de l'exécution : les deux se lisent sur la page de l'exécution sans ouvrir le journal
+# complet, que GitHub ne montre qu'aux personnes connectées.
+set -u
+titre="$1"
+journal="$2"
+extrait="$(grep -a -B2 -A6 "ÉCHEC" "$journal" | head -n 150)"
+[ -n "$extrait" ] || extrait="$(grep -a -i -B3 -A3 -E "error|erreur|failed" "$journal" | head -n 150)"
+[ -n "$extrait" ] || extrait="$(tail -n 80 "$journal")"
+printf '%s\n' "$extrait" >&2
+if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    # format des commandes de GitHub : %, retour chariot et fin de ligne encodés dans le message
+    message="$(printf '%s' "$extrait" | awk 'BEGIN { ORS = "" } { gsub(/%/, "%25"); gsub(/\r/, "%0D"); if (NR > 1) print "%0A"; print }')"
+    titre_annotation="$(printf '%s' "$titre" | sed -e 's/%/%25/g' -e 's/:/%3A/g' -e 's/,/%2C/g')"
+    echo "::error title=${titre_annotation}::${message}"
+    if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+        resume="$GITHUB_STEP_SUMMARY"
+        command -v cygpath > /dev/null 2>&1 && resume="$(cygpath -u "$resume")"
+        { printf '### %s\n\n```\n' "$titre"; printf '%s\n' "$extrait"; printf '```\n'; } >> "$resume"
+    fi
+fi
+exit 0

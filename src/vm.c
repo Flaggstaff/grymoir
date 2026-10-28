@@ -4942,7 +4942,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (!probleme && code == I_SAUVEGARDER_JOUR) {   /* « , une par jour passé » (2.53) : le chemin reçoit la date et l'heure */
                 const time_t t = time(NULL);
                 const struct tm l = *localtime(&t);
-                snprintf(aujourdhui_t, sizeof aujourdhui_t, "%04d-%02d-%02d", l.tm_year + 1900, l.tm_mon + 1, l.tm_mday);
+                strftime(aujourdhui_t, sizeof aujourdhui_t, "%Y-%m-%d", &l);
                 prefixe = grym_dupliquer(c.texte);
                 char *horodate = grym_formater("%s-%s-%02d%02d%s", c.texte, aujourdhui_t, l.tm_hour, l.tm_min,
                                                code == I_SAUVEGARDER_COFFRE || base_est_chiffree(m->base) ? ".coffre" : ".grymd");
@@ -5548,7 +5548,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             const int lecture = (int)(op & 1), corps_t = (int)((op >> 1) & 3);
             const size_t nq = (op >> 3) & 63, nb = op >> 9;
             const size_t nc = corps_t == 1 ? 2 * nb : corps_t == 2 ? nb : 0;
-            Valeur *qv = grym_allouer((2 * nq ? 2 * nq : 1) * sizeof *qv);
+            Valeur *qv = grym_allouer((nq ? 2 * nq : 1) * sizeof *qv);
             Valeur *cv = grym_allouer((nc ? nc : 1) * sizeof *cv);
             for (size_t q = nc; q-- > 0;) cv[q] = depiler(&pile);
             for (size_t q = 2 * nq; q-- > 0;) qv[q] = depiler(&pile);

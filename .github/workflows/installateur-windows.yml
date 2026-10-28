@@ -1,10 +1,16 @@
 # L'installateur de l'atelier pour Windows : GrymoiR-installation.exe (./paquet-windows, Inno Setup).
 # Il se télécharge depuis la page de l'exécution : Actions > installateur-windows > « Artifacts ».
 # Déclenchement : à la main (Actions > installateur-windows > Run workflow), ou quand le code ou l'installateur change.
+# Un échec se lit sur la page de l'exécution, en annotation (outils/signaler-echec), sans se connecter.
 name: installateur-windows
 
 on:
   workflow_dispatch:
+    inputs:
+      sans_essais:
+        description: "Sans les essais (dépannage d'un bêta-testeur, jamais pour une livraison)"
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -15,6 +21,7 @@ on:
       - 'projets/Gestion de projet/**'
       - 'outils/windows/**'
       - 'paquet-windows'
+      - 'outils/signaler-echec'
       - 'CMakeLists.txt'
       - 'Makefile'
       - '.github/workflows/installateur-windows.yml'
@@ -43,6 +50,8 @@ jobs:
             mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-svg mingw-w64-ucrt-x86_64-qt6-multimedia mingw-w64-ucrt-x86_64-qt6-tools
       - name: Construction, essais, installateur
         shell: msys2 {0}
+        env:
+          GRYM_SANS_ESSAIS: ${{ inputs.sans_essais && '1' || '' }}
         run: ./paquet-windows
       - uses: actions/upload-artifact@v4
         with:

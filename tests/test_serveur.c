@@ -1881,7 +1881,7 @@ int main(void) {
 
     {   /* quitter (24 octobre 2026) : « Fermer l'application » ferme l'accueil, et une copie chiffrée part dans « Sauvegardes » */
         memset(&sc, 0, sizeof sc);
-        system("rm -rf _essai_praxis/Sauvegardes");
+        if (system("rm -rf _essai_praxis/Sauvegardes") != 0) { /* rien à effacer */ }
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Fermer+l%27application"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_quitter.grymd", &sc);
         NE_CONTIENT_PAS(sc.reponses[2], "class=\"erreur\"");
@@ -1894,7 +1894,7 @@ int main(void) {
         total++;
         if (!coffre) { echecs++; printf("ÉCHEC (ligne %d) : pas de copie chiffrée dans _essai_praxis/Sauvegardes\n", __LINE__); }
         liberer(&sc);
-        system("rm -rf _essai_praxis/Sauvegardes");
+        if (system("rm -rf _essai_praxis/Sauvegardes") != 0) { /* rien à effacer */ }
         remove("_essai_quitter.grymd");
         remove("_essai_quitter.grymd.clés");
     }
@@ -2093,7 +2093,7 @@ int main(void) {
         strftime(jour, sizeof jour, "%Y-%m-%d", localtime(&maintenant));
         (void)jour;   /* « Praxis-AAAA-MM-JJ-HHMM.coffre », une par jour passé (24 octobre 2026) : trouvée après coup */
         copie[0] = '\0';
-        system("rm -rf _essai_praxis/Sauvegardes");
+        if (system("rm -rf _essai_praxis/Sauvegardes") != 0) { /* rien à effacer */ }
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=5"), evenement("q=3&choix=0.0"),
                  get("/"), evenement("q=4&clic=17"), get("/"), evenement("q=5&clic=19"), get("/"), evenement("q=6&fermer=1"),
@@ -2125,7 +2125,7 @@ int main(void) {
         total++;
         if (!c || memcmp(tete, "GRYMCOFFRE2\n", 12) != 0) { echecs++; printf("ÉCHEC (test ligne %d) : la sauvegarde chiffrée %s\n", __LINE__, copie); }
         if (c) fclose(c);
-        system("rm -rf _essai_praxis/Sauvegardes");
+        if (system("rm -rf _essai_praxis/Sauvegardes") != 0) { /* rien à effacer */ }
         liberer(&sc);
         remove("_essai_cabinet17.grymd");
     }

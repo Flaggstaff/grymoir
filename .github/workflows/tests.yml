@@ -54,9 +54,13 @@ jobs:
           update: true
           install: make mingw-w64-ucrt-x86_64-gcc
       - name: Compilation, sans avertissement toléré
-        run: make CC=gcc CFLAGS="-std=c99 -Wall -Wextra -pedantic -O2 -Werror" all
+        run: |
+          make CC=gcc CFLAGS="-std=c99 -Wall -Wextra -pedantic -O2 -Werror" all > journal.txt 2>&1 \
+            || { outils/signaler-echec "Compilation sous Windows" journal.txt; exit 1; }
       - name: Tests
-        run: make CC=gcc CFLAGS="-std=c99 -Wall -Wextra -pedantic -O2 -Werror" test
+        run: |
+          make CC=gcc CFLAGS="-std=c99 -Wall -Wextra -pedantic -O2 -Werror" test > journal.txt 2>&1 \
+            || { outils/signaler-echec "Essais du cœur sous Windows" journal.txt; exit 1; }
       - name: Exemples en forme canonique
         run: |
           for f in exemples/*.grym; do ./grym formater "$f" > /dev/null; done
@@ -103,6 +107,9 @@ jobs:
       - name: Construction
         run: |
           cmake -B construction -G Ninja -DCMAKE_BUILD_TYPE=Release
-          cmake --build construction
+          cmake --build construction > journal.txt 2>&1 \
+            || { outils/signaler-echec "Construction de l'atelier sous Windows" journal.txt; exit 1; }
       - name: Essais
-        run: ctest --test-dir construction --output-on-failure
+        run: |
+          QT_QPA_PLATFORM=offscreen ctest --test-dir construction --output-on-failure > journal.txt 2>&1 \
+            || { outils/signaler-echec "Essais de l'atelier sous Windows" journal.txt; exit 1; }
