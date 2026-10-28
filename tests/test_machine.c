@@ -2060,7 +2060,11 @@ int main(void) {
          "Pour chaque élément du champ « c » de la r :\n    Afficher le champ « u » de l'élément.",
          "3\na\nb\na");
     PROG("La r vaut « {\"x\":1} ».\nAfficher le nombre d'éléments du champ « x » de la r.", "~Le champ « x » n'est pas une liste.");
-    {   /* le fuseau de l'essai : l'heure suisse, quel que soit l'ordinateur */
+#ifndef _WIN32
+    /* L'heure suisse, quel que soit l'ordinateur, par TZ. Pas sous Windows : son C (UCRT) n'a ni setenv ni la base
+       des fuseaux (« Europe/Zurich »), et sa forme « CET-1CEST » suit les dates d'été américaines ; l'exécution
+       y prend le fuseau du système, celui de l'utilisateur, que ces essais ne peuvent pas fixer. */
+    {
         extern int setenv(const char *, const char *, int);
         extern void tzset(void);
         setenv("TZ", "Europe/Zurich", 1);
@@ -2069,6 +2073,7 @@ int main(void) {
     PROG("Afficher « 2026-10-28T13:30:00Z » en date locale puis « 2026-10-28T13:30:00Z » en heure locale.", "28.10.2026 14:30");
     PROG("Afficher « 2026-07-01T13:30:00.000000Z » en heure locale puis « 2026-10-28T23:30:00Z » en date locale.", "15:30 29.10.2026");
     PROG("Afficher 28.10.2026 en format universel puis 01.07.2026 en format universel.", "2026-10-27T23:00:00Z 2026-06-30T22:00:00Z");
+#endif
     PROG("Afficher « hier » en heure locale.", "~n'est pas un moment avec son fuseau");
     /* 2.58 : une action pour plusieurs écrans ; une zone qui manque à l'un */
     PROG("L'écran a montre :\n    un nom (texte).\nL'écran b montre :\n    un âge (nombre).\n"

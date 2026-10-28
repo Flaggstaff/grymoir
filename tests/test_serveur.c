@@ -17,13 +17,11 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#else
+#include <direct.h>   /* _mkdir */
+#endif
+/* opendir et stat : POSIX, et fournis aussi par MinGW-w64 sous Windows (copier_dossier, les sauvegardes) */
 #include <dirent.h>
 #include <sys/stat.h>
-#ifdef _WIN32
-#include <direct.h>
-#endif
-#endif
 
 static int total = 0, echecs = 0;
 
