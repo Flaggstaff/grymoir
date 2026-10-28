@@ -5236,7 +5236,7 @@ int main(int argc, char **argv) {
         qunsetenv("GRYM_ESSAI_REDIRECTION");
     }
 
-    // Les rappels SMS manqués (28 octobre 2026) : un faux ASPSMS refuse le premier envoi (crédit épuisé) ; la séance reste
+    // Les rappels SMS manqués (28 octobre 2026) : le préfixe « NS » de Nicolas, posé même dans une base qui ne l'a pas ; un faux ASPSMS refuse le premier envoi (crédit épuisé) ; la séance reste
     // sans référence et l'accueil le dit ; « Rattraper les rappels » annule d'abord la référence attendue chez ASPSMS (un rappel
     // reçu sans réponse ne part jamais deux fois), puis renvoie, et l'alerte se tait
     {
@@ -5268,6 +5268,9 @@ int main(int argc, char **argv) {
         f.close();
         const QString essai = QString::fromUtf8(
             "Le cab vaut le cabinet conservé.\n"
+            "Le préfixe SMS du cab devient absent.\n"
+            "Régler le cabinet.\n"
+            "Afficher « essai préfixe » puis le préfixe SMS du cab.\n"
             "L'identifiant SMS du cab devient « essai-cle ».\n"
             "La clé SMS du cab devient « secret-api-9 ».\n"
             "La claire vaut le patient conservé dont le nom = « Claire Monney ».\n"
@@ -5301,7 +5304,8 @@ int main(int argc, char **argv) {
             while (z.elapsed() < 40000 && !fil().contains("fin des essais sms")) QApplication::processEvents(QEventLoop::AllEvents, 20);
             const QString t = fil();
             VERIFIER(t.contains(QString::fromUtf8("essai sms un Un rappel SMS n'a pas pu être confié à ASPSMS")));
-            VERIFIER(t.contains(QString::fromUtf8("essai sms deux PX-")));
+            VERIFIER(t.contains(QString::fromUtf8("essai préfixe NS")));   // une base d'avant reçoit « NS » au lancement
+            VERIFIER(t.contains(QString::fromUtf8("essai sms deux NS-")));
             VERIFIER(t.count(QString::fromUtf8("n'a pas pu être confié")) == 1);   // l'alerte s'est tue
             VERIFIER(envois == 2);
             VERIFIER(recu.contains("ASPSMSDeactivatePendingSMSWithTransactionReferenceNumber"));

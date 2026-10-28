@@ -50,7 +50,8 @@ Un cabinet, conservé, a :
 
 Remarque : le préfixe SMS (28 octobre 2026) : il ouvre la référence de chaque rappel confié à ASPSMS (« LC-2026-11-03-14:00 ») ;
 Remarque : deux cabinets qui partagent un compte ASPSMS ont chacun le leur, pour qu'annuler un rappel de l'un n'annule jamais
-Remarque : celui de l'autre à la même heure ; absent, « PX », comme avant.
+Remarque : celui de l'autre à la même heure ; départ.grym le pose (« NS » chez Nicolas, « LC » chez Lorianne), même dans une base
+Remarque : d'avant ; absent (version neutre), « PX ». Un rappel déjà confié garde sa référence : il s'annule toujours par elle.
 Remarque : le choix d'agenda : la tuile « Rendez-vous » de la Configuration ; un interrupteur de la fiche du cabinet, posé par
 Remarque : départ.grym à la fondation ; faux pour une base d'avant le 22 octobre. L'éteindre remet
 Remarque : l'agenda à « Praxis » : la tuile « Agenda OneDoc » de l'accueil disparaît avec lui.

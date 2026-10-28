@@ -5,7 +5,7 @@ Utiliser « actions ».
 Remarque : le cabinet à son nom ; l'adresse et les numéros se complètent dans sa fiche ; les absences, pas facturées au départ ;
 Remarque : le dossier de sauvegarde se choisit au premier lancement, avec le mot de passe ; Nicolas prend ses rendez-vous sur
 Remarque : Calendly, que Praxis relit (28 octobre 2026) : le choix d'agenda allumé montre les tuiles Rendez-vous (le jeton) et SMS ;
-Remarque : sans préfixe SMS, ses rappels gardent « PX », comme ceux de sa base d'avant.
+Remarque : « NS » ouvre les références de ses rappels SMS (28 octobre 2026), aussi dans sa base d'avant (régler le cabinet).
 Pour fonder le cabinet :
     Le c vaut un nouveau cabinet :
         Le nom vaut « Nicolas Seydoux ».
@@ -17,7 +17,13 @@ Pour fonder le cabinet :
     Le logo du c devient le fichier « images/coeur-encre.png ».
     La signature du c devient le fichier « images/signature.png ».
     Le prénom du c devient « Nicolas ».
+    Le préfixe SMS du c devient « NS ».
     Conserver le c.
+
+Remarque : à chaque lancement : le préfixe SMS, posé dans une base fondée avant lui (28 octobre 2026) ; un préfixe déjà là reste.
+Pour régler le cabinet :
+    Le c vaut le cabinet conservé.
+    Si le préfixe SMS du c est absent, le préfixe SMS du c devient « NS ».
 
 Remarque : les soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
 Pour poser les soins de départ :

@@ -89,11 +89,14 @@ Pour annuler le rappel d'une séance :
             Remarque : rien à faire de plus : la séance s'enregistre quand même.
         La référence de rappel de la séance devient absente.
 
-Remarque : la référence d'un rappel : le préfixe SMS du cabinet (« PX » sans lui), la date et l'heure de la séance.
+Remarque : le préfixe des références SMS d'un cabinet : le sien (« NS » chez Nicolas, « LC » chez Lorianne), « PX » sans lui.
+Le préfixe des rappels d'un cabinet :
+    Si le préfixe SMS du cabinet est absent, rendre « PX ».
+    Rendre le préfixe SMS du cabinet.
+
+Remarque : la référence d'un rappel : le préfixe du cabinet, la date et l'heure de la séance (« NS-2026-11-03-14:30 »).
 La référence de rappel prévue d'une séance :
-    Le préfixe vaut le préfixe SMS du cabinet conservé.
-    Si le préfixe est absent, le préfixe devient « PX ».
-    Rendre le préfixe suivi de « - » suivi de (la date de la séance en format technique) suivi de « - » suivi de (l'heure de la séance en format technique).
+    Rendre le préfixe des rappels du cabinet conservé suivi de « - » suivi de (la date de la séance en format technique) suivi de « - » suivi de (l'heure de la séance en format technique).
 
 Remarque : le rappel attendu d'une séance : prévue, à une heure, pour un patient qui l'accepte et a un téléphone, le compte
 Remarque : SMS réglé, et la veille à 18:00 pas encore passée.
