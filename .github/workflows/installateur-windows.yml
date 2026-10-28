@@ -22,6 +22,7 @@ on:
       - 'outils/windows/**'
       - 'paquet-windows'
       - 'outils/signaler-echec'
+      - 'tests/**'
       - 'CMakeLists.txt'
       - 'Makefile'
       - '.github/workflows/installateur-windows.yml'
@@ -46,7 +47,7 @@ jobs:
           msystem: UCRT64
           update: true
           install: >-
-            make mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+            make diffutils mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
             mingw-w64-ucrt-x86_64-qt6-base mingw-w64-ucrt-x86_64-qt6-svg mingw-w64-ucrt-x86_64-qt6-multimedia mingw-w64-ucrt-x86_64-qt6-tools
       - name: Construction, essais, installateur
         shell: msys2 {0}
