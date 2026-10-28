@@ -3,7 +3,8 @@ Remarque : le code commun de projets/Praxis (outils/praxis-propager), hormis ses
 Remarque : l'adresse et le téléphone viennent de la maquette de son site (22 octobre 2026) ; le reste se complète dans sa fiche.
 Utiliser « actions ».
 
-Remarque : l'agenda : Lorianne garde OneDoc ; l'adresse de son agenda se donne dans la Configuration, « Rendez-vous ».
+Remarque : l'agenda : Calendly, comme Nicolas, et les rappels SMS de Praxis (28 octobre 2026, à la place de OneDoc) ; le jeton
+Remarque : Calendly se donne dans la Configuration, « Rendez-vous » ; « LC » ouvre les références de ses rappels SMS.
 Pour fonder le cabinet :
     Le c vaut un nouveau cabinet :
         Le nom vaut « Lorianne Clément ».
@@ -11,7 +12,7 @@ Pour fonder le cabinet :
         La facturation des absences vaut faux.
         Le choix d'agenda vaut vrai.
         La facturation aux assurances vaut vrai.
-        L'agenda vaut « OneDoc ».
+        L'agenda vaut « Calendly ».
     La rue du c devient « Grand-Rue ».
     Le numéro de maison du c devient « 35 ».
     Le numéro postal du c devient « 1630 ».
@@ -20,6 +21,7 @@ Pour fonder le cabinet :
     Le logo du c devient le fichier « images/papillon.png ».
     La signature du c devient le fichier « images/la-cle-en-soi.png ».
     Le prénom du c devient « Lorianne ».
+    Le préfixe SMS du c devient « LC ».
     Conserver le c.
 
 Remarque : ses soins : kinésiologie et ergothérapie, 60 minutes chacune ; ses tarifs ne sont pas encore connus (« CHF ... » sur

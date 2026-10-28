@@ -1961,14 +1961,16 @@ int main(void) {
     }
 
     {   /* Le cabinet de Lorianne (projets/Praxis/Lorianne, 22 octobre 2026) : sa copie se fonde à son nom, à Bulle, avec
-           l'agenda OneDoc et le choix d'agenda allumé ; aucun soin d'avance ; la fiche du cabinet a l'interrupteur */
+           l'agenda Calendly (28 octobre 2026, OneDoc avant) et le choix d'agenda allumé ; aucun soin d'avance ; la fiche du
+           cabinet a l'interrupteur */
         memset(&sc, 0, sizeof sc);
         copier_dossier("projets/Praxis/Lorianne", "_essai_lorianne_projet");
         REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=Configuration"), get("/"),
                  evenement("q=3&clic=Le+cabinet"), get("/"), evenement("q=4&clic=Fermer"), evenement("q=5&clic=Soins"), get("/"));
         servir_projet("_essai_lorianne_projet/Praxis.grym", "_essai_lorianne.grymd", &sc);
         CONTIENT(sc.reponses[1], "Bonjour Lorianne");
-        CONTIENT(sc.reponses[1], ">Agenda OneDoc<");
+        CONTIENT(sc.reponses[1], ">Relire les rendez-vous<");
+        NE_CONTIENT_PAS(sc.reponses[1], ">Agenda OneDoc<");
         CONTIENT(sc.reponses[3], ">Rendez-vous<");
         CONTIENT(sc.reponses[5], "value=\"Grand-Rue\"");
         CONTIENT(sc.reponses[5], "value=\"Lorianne Clément\"");

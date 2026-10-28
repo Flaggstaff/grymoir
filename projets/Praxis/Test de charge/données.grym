@@ -45,10 +45,14 @@ Un cabinet, conservé, a :
     un jeton calendly (secret), facultatif,
     un utilisateur calendly (texte), facultatif,
     un soin des réservations (texte), facultatif,
-    un canton (texte), facultatif.
+    un canton (texte), facultatif,
+    un préfixe SMS (texte), facultatif.
 
+Remarque : le préfixe SMS (28 octobre 2026) : il ouvre la référence de chaque rappel confié à ASPSMS (« LC-2026-11-03-14:00 ») ;
+Remarque : deux cabinets qui partagent un compte ASPSMS ont chacun le leur, pour qu'annuler un rappel de l'un n'annule jamais
+Remarque : celui de l'autre à la même heure ; absent, « PX », comme avant.
 Remarque : le choix d'agenda : la tuile « Rendez-vous » de la Configuration ; un interrupteur de la fiche du cabinet, posé par
-Remarque : départ.grym à la fondation ; faux chez Nicolas (Calendly) et pour une base d'avant le 22 octobre. L'éteindre remet
+Remarque : départ.grym à la fondation ; faux pour une base d'avant le 22 octobre. L'éteindre remet
 Remarque : l'agenda à « Praxis » : la tuile « Agenda OneDoc » de l'accueil disparaît avec lui.
 Remarque : les SMS (Praxis 2, 23 octobre 2026) : le compte ASPSMS du cabinet, son identifiant (« Userkey ») et sa clé d'API,
 Remarque : un secret, rangé dans la base chiffrée, qui ne se lit que pour être envoyé ; l'expéditeur, le nom que le patient voit.
@@ -144,7 +148,11 @@ Un patient, conservé, anciennement « client », a :
     un sexe (« féminin » ou « masculin »), facultatif,
     un numéro AVS (texte), facultatif,
     un numéro de cas (texte), facultatif,
-    un diagnostic (texte), facultatif.
+    un diagnostic (texte), facultatif,
+    une vérification due (vrai ou faux), facultative.
+
+Remarque : la vérification due (28 octobre 2026) : une fiche créée par une réservation du site, que personne n'a encore relue ;
+Remarque : l'accueil la nomme jusqu'à ce que sa page soit enregistrée. Un homonyme y reçoit un rang (« Anne Rochat (2) »).
 
 Remarque : le sexe, le numéro AVS, le numéro de cas et le diagnostic (27 octobre 2026) : pour le justificatif de remboursement
 Remarque : et la facture électronique (generalInvoice 5.0), qui exige le sexe, la date de naissance et le numéro AVS du patient.

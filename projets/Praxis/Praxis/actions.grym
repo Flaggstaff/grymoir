@@ -89,39 +89,86 @@ Pour annuler le rappel d'une séance :
             Remarque : rien à faire de plus : la séance s'enregistre quand même.
         La référence de rappel de la séance devient absente.
 
-Remarque : le rappel d'une séance, refait : l'ancien annulé, puis un nouveau si la séance est prévue, à une heure, pour un
-Remarque : patient qui l'accepte et a un téléphone, si le compte SMS est réglé et la veille à 18:00 pas encore passée. Un échec
-Remarque : n'empêche jamais la séance de s'enregistrer.
+Remarque : la référence d'un rappel : le préfixe SMS du cabinet (« PX » sans lui), la date et l'heure de la séance.
+La référence de rappel prévue d'une séance :
+    Le préfixe vaut le préfixe SMS du cabinet conservé.
+    Si le préfixe est absent, le préfixe devient « PX ».
+    Rendre le préfixe suivi de « - » suivi de (la date de la séance en format technique) suivi de « - » suivi de (l'heure de la séance en format technique).
+
+Remarque : le rappel attendu d'une séance : prévue, à une heure, pour un patient qui l'accepte et a un téléphone, le compte
+Remarque : SMS réglé, et la veille à 18:00 pas encore passée.
+Le rappel attendu d'une séance et d'un jour et d'une heure :
+    Le c vaut le cabinet conservé.
+    Le p vaut le patient de la séance.
+    Si le statut de la séance ≠ « prévue » ou l'heure de la séance est absente, rendre faux.
+    Si l'identifiant SMS du c est absent ou la clé SMS du c est absente ou le téléphone du p est absent, rendre faux.
+    Si l'accord de rappel du p est faux, rendre faux.
+    La veille vaut la date de la séance − 1 jour.
+    Rendre la veille > jour ou (la veille = jour et heure < 18:00).
+
+Remarque : le rappel d'une séance, refait : l'ancien annulé, puis un nouveau s'il est attendu. Un échec n'empêche jamais la
+Remarque : séance de s'enregistrer : la séance reste sans référence, l'accueil le dit et l'ouverture suivante réessaie.
 Pour programmer le rappel d'une séance :
     Annuler le rappel de la séance.
     Le c vaut le cabinet conservé.
     Le p vaut le patient de la séance.
-    Si le statut de la séance = « prévue » et l'heure de la séance est présente et l'accord de rappel du p est vrai et le téléphone du p est présent et l'identifiant SMS du c est présent et la clé SMS du c est présente :
+    Si le rappel attendu de la séance et d'aujourd'hui et de maintenant :
         La veille vaut la date de la séance − 1 jour.
-        Si la veille > aujourd'hui ou (la veille = aujourd'hui et maintenant < 18:00) :
-            La référence vaut « PX- » suivi de (la date de la séance en format technique) suivi de « - » suivi de (l'heure de la séance en format technique).
-            Essayer :
-                La réponse vaut la lecture de « https://webapi.aspsms.com/SendSimpleSMS » avec :
-                    « Userkey » : l'identifiant SMS du c,
-                    « Password » : la clé SMS du c,
-                    « MSISDN » : le natel international du téléphone du p,
-                    « Operation » : « SendTextSMS »,
-                    « MessageData » : le texte du rappel de la séance,
-                    « Originator » : l'expéditeur SMS du c,
-                    « DeferredDeliveryTime » : le moment d'envoi de la veille et de 18:00,
-                    « TransactionReferenceNumber » : la référence.
-                Si le champ « ErrorCode » de la réponse = « 1 », la référence de rappel de la séance devient la référence.
-            En cas d'échec :
-                Remarque : un numéro illisible, ASPSMS injoignable : pas de rappel pour cette séance.
+        La référence vaut la référence de rappel prévue de la séance.
+        Essayer :
+            La réponse vaut la lecture de « https://webapi.aspsms.com/SendSimpleSMS » avec :
+                « Userkey » : l'identifiant SMS du c,
+                « Password » : la clé SMS du c,
+                « MSISDN » : le natel international du téléphone du p,
+                « Operation » : « SendTextSMS »,
+                « MessageData » : le texte du rappel de la séance,
+                « Originator » : l'expéditeur SMS du c,
+                « DeferredDeliveryTime » : le moment d'envoi de la veille et de 18:00,
+                « TransactionReferenceNumber » : la référence.
+            Si le champ « ErrorCode » de la réponse = « 1 », la référence de rappel de la séance devient la référence.
+        En cas d'échec :
+            Remarque : un numéro illisible, ASPSMS injoignable : pas de référence ; l'accueil le dit.
+
+Remarque : les rappels manqués (28 octobre 2026), refaits à l'ouverture : une séance qui attend un rappel et n'a pas de
+Remarque : référence (crédit épuisé, clé changée, réseau coupé). Un rappel peut avoir été reçu par ASPSMS sans que sa réponse
+Remarque : arrive : sa référence attendue est d'abord annulée chez ASPSMS, pour qu'il ne parte jamais deux fois.
+Pour rattraper les rappels :
+    Pour chaque séance conservée dont le statut = « prévue » et la référence de rappel est absente et la date > aujourd'hui :
+        Si le rappel attendu de la séance et d'aujourd'hui et de maintenant :
+            La référence de rappel de la séance devient la référence de rappel prévue de la séance.
+            Programmer le rappel de la séance.
+
+Remarque : l'alerte des rappels : les séances qui attendent un rappel sans l'avoir confié à ASPSMS.
+L'alerte des rappels d'un jour et d'une heure :
+    Le manque vaut 0.
+    Pour chaque séance conservée dont le statut = « prévue » et la référence de rappel est absente et la date ≥ jour :
+        Si le rappel attendu de la séance et du jour et de l'heure, le manque devient le manque + 1.
+    Si le manque = 0, rendre « ».
+    Si le manque = 1, rendre « Un rappel SMS n'a pas pu être confié à ASPSMS : Configuration, SMS, pour un essai ; Praxis réessaie à chaque ouverture. ».
+    Rendre le manque suivi de " rappels SMS n'ont pas pu être confiés à ASPSMS : Configuration, SMS, pour un essai ; Praxis réessaie à chaque ouverture.".
+
+Remarque : les fiches créées par le site et pas encore relues, par leur nom.
+L'alerte des fiches d'un jour :
+    La liste vaut « ».
+    Pour chaque patient conservé dont la vérification due est vraie, par nom :
+        Si la liste ≠ « », la liste devient la liste suivi de ", ".
+        La liste devient la liste suivi du nom du patient.
+    Si la liste = « », rendre « ».
+    Rendre "Fiches créées par le site, à relire et enregistrer : " suivi de la liste suivi de « . ».
 
 Remarque : Calendly (25 octobre 2026) : les réservations prises sur le site deviennent des séances prévues ; Praxis les relit
 Remarque : (à l'ouverture, et par « Relire les rendez-vous ») avec le jeton personnel du cabinet. Une réservation garde son
 Remarque : adresse Calendly dans la séance : relue, elle n'est pas importée deux fois ; disparue, sa séance prévue est annulée.
 
-Remarque : le patient d'une réservation : par son courriel, puis par son téléphone, puis par son nom ; sinon une fiche nouvelle.
+Remarque : le patient d'une réservation : par son courriel, puis par son natel ; sinon une fiche nouvelle, à vérifier. Jamais par
+Remarque : son seul nom (28 octobre 2026) : un homonyme recevrait les séances, les factures et l'anamnèse d'un autre. Le nom de
+Remarque : la fiche : le prénom et le nom de famille, quand le formulaire Calendly les demande à part, sinon le nom saisi ; déjà
+Remarque : pris, il reçoit un rang (« Anne Rochat (2) »).
 Pour trouver le patient d'une personne :
     Le courriel vaut le champ « email » de la personne.
     Le natel vaut le champ « text_reminder_number » de la personne.
+    Le prénom donné vaut le champ « first_name » de la personne.
+    La famille donnée vaut le champ « last_name » de la personne.
     L'appellation vaut le champ « name » de la personne.
     Si le courriel est présent :
         Pour chaque patient conservé dont le courriel est présent :
@@ -132,18 +179,28 @@ Pour trouver le patient d'une personne :
                 Si le natel international du téléphone du patient = le natel international du natel, rendre le patient.
             En cas d'échec :
                 Remarque : un numéro illisible ne rapproche rien.
-    Si l'appellation est absent, l'appellation devient « Réservation en ligne ».
-    Si le nombre de patients conservés dont le nom = l'appellation > 0 :
-        Pour chaque patient conservé dont le nom = l'appellation, rendre le patient.
+    Si le prénom donné est présent et la famille donnée est présente, l'appellation devient le prénom donné suivi de " " suivi de la famille donnée.
+    Si l'appellation est absente, l'appellation devient « Réservation en ligne ».
+    Le libre vaut l'appellation.
+    Le rang vaut 1.
+    Tant que le nombre de patients conservés dont le nom = le libre > 0 :
+        Le rang devient le rang + 1.
+        Le libre devient l'appellation suivi de " (" suivi du rang suivi de « ) ».
     Le p vaut un nouveau patient :
-        Le nom vaut l'appellation.
+        Le nom vaut le libre.
         Le pays vaut « Suisse ».
+    Si le prénom donné est présent et la famille donnée est présente :
+        Le prénom du p devient le prénom donné.
+        Le nom de famille du p devient la famille donnée.
     Si le courriel est présent, le courriel du p devient le courriel.
     Si le natel est présent, le téléphone du p devient le natel.
+    La vérification due du p devient vrai.
     Conserver le p.
     Rendre le p.
 
 Remarque : une réservation Calendly (un objet JSON de « scheduled_events ») : une séance prévue, si elle n'existe pas encore.
+Remarque : son soin (28 octobre 2026) : celui qui porte le nom du type de rendez-vous Calendly (« Ergothérapie »), sinon le soin
+Remarque : des réservations de la Configuration, sinon le premier soin.
 Pour importer une réservation :
     Le c vaut le cabinet conservé.
     Le lien vaut le champ « uri » de la réservation.
@@ -155,6 +212,10 @@ Pour importer une réservation :
         Si le nombre d'éléments du champ « collection » de la liste des inscrits > 0 :
             Trouver le patient du champ « collection.0 » de la liste des inscrits, qui donne le patient.
             Le choix vaut le soin des réservations du c.
+            Le type vaut le champ « name » de la réservation.
+            Si le type est présent :
+                Pour chaque soin conservé, par nom :
+                    Si le nom du soin en minuscules = le type en minuscules, le choix devient le nom du soin.
             Le fait vaut 0.
             Pour chaque soin conservé, par nom :
                 Si le fait = 0 et (le choix est absent ou le nom du soin = le choix) :
@@ -173,6 +234,8 @@ Pour importer une réservation :
                     Programmer le rappel de la s.
 
 Remarque : relire Calendly ; une panne de réseau ou un jeton refusé ne bloquent rien : ce qu'elle rend le dit, Praxis continue.
+Remarque : toutes les pages de la liste (28 octobre 2026 : au-delà de la centième, une réservation n'était pas lue et sa séance
+Remarque : prévue s'annulait) ; le relevé garde chaque adresse lue, suivie de « ; », et seule une liste lue en entier annule.
 Pour relire les réservations :
     Le c vaut le cabinet conservé.
     Si l'agenda du c = « Calendly » et le jeton calendly du c est présent :
@@ -188,11 +251,22 @@ Pour relire les réservations :
                 « status » : « active »,
                 « sort » : « start_time:asc »,
                 « count » : 100.
-            Pour chaque réservation du champ « collection » de la réponse :
-                Importer la réservation.
+            Le relevé vaut « ; ».
+            Le tour vaut 0.
+            Tant que le tour < 50 :
+                Le tour devient le tour + 1.
+                Pour chaque réservation du champ « collection » de la réponse :
+                    Importer la réservation.
+                    Le relevé devient le relevé suivi du champ « uri » de la réservation suivi de « ; ».
+                La suite vaut le champ « pagination.next_page » de la réponse.
+                Si la suite est absente, le tour devient 100.
+                Si la suite est présente :
+                    La réponse devient la lecture de (la suite) avec :
+                        l'en-tête « Authorization » : "Bearer " suivi du jeton calendly du c.
+            Si le tour < 100, rendre « Calendly a plus de 50 pages de rendez-vous : rien n'est annulé dans Praxis. ».
             Remarque : une réservation annulée sur Calendly n'est plus dans la liste : sa séance prévue l'est aussi.
             Pour chaque séance conservée dont le statut = « prévue » et la réservation calendly est présente et la date ≥ aujourd'hui :
-                Si la réponse ne contient pas la réservation calendly de la séance :
+                Si le relevé ne contient pas (« ; » suivi de la réservation calendly de la séance suivi de « ; ») :
                     Annuler le rappel de la séance.
                     Le statut de la séance devient « annulée ».
             Rendre "Rendez-vous relus à " suivi de (maintenant en format technique) suivi de « . ».
@@ -488,11 +562,22 @@ L'alerte de sauvegarde d'un cabinet et d'un jour et d'un échec :
     Rendre le message suivi de la mention du dossier du cabinet.
 
 Remarque : les séances prévues dont le jour est passé : à dire faites, annulées ou absences ; l'accueil les rappelle.
-L'alerte des prévues d'un jour :
+L'alerte des passées d'un jour :
     Le nombre passé vaut le nombre de séances conservées dont le statut = « prévue » et la date < jour.
     Si le nombre passé = 0, rendre « ».
     Si le nombre passé = 1, rendre « Une séance prévue est passée : Séances prévues, pour la dire faite, annulée ou absence. ».
     Rendre le nombre passé suivi de " séances prévues sont passées : Séances prévues, pour les clore.".
+
+Remarque : ce que l'accueil signale des séances et des patients (28 octobre 2026) : les séances prévues passées, les rappels SMS
+Remarque : qui n'ont pas pu partir, les fiches créées par le site, l'un après l'autre.
+L'alerte des prévues d'un jour et d'une heure :
+    Le message vaut l'alerte des passées du jour.
+    Le rappel vaut l'alerte des rappels du jour et de l'heure.
+    Si le rappel ≠ « » et le message ≠ « », le message devient le message suivi de " ".
+    Le message devient le message suivi du rappel.
+    La fiche vaut l'alerte des fiches du jour.
+    Si la fiche ≠ « » et le message ≠ « », le message devient le message suivi de " ".
+    Rendre le message suivi de la fiche.
 
 Remarque : les exercices : de l'année de la première séance ou du premier frais jusqu'à l'année en cours, ceux qui manquent.
 Pour recenser les exercices d'un jour :

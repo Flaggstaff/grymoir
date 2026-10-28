@@ -5121,9 +5121,11 @@ int main(int argc, char **argv) {
         VERIFIER(t.contains(QString::fromUtf8("essai avant règlement 0")));
     }
 
-    // Calendly (25 octobre 2026) : un faux Calendly local ; deux réservations deviennent deux séances prévues, l'une rapprochée
-    // de Claire Monney par son nom, l'autre d'une patiente nouvelle ; relues, rien ne double ; une réservation disparue annule
-    // sa séance ; le jeton part dans l'en-tête
+    // Calendly (25 octobre 2026) : un faux Calendly local ; trois réservations sur deux pages (28 octobre 2026) deviennent trois
+    // séances prévues : A rapprochée de Claire Monney par son natel, avec le soin qui porte le nom du type de rendez-vous ; B,
+    // une patiente nouvelle, son prénom et son nom de famille à part ; C, un homonyme de Claire Monney sans courriel ni natel,
+    // une fiche nouvelle « Claire Monney (2) », à vérifier (jamais rapprochée par le seul nom) ; relues, rien ne double ; une
+    // réservation disparue annule sa séance, une réservation de la seconde page non ; le jeton part dans l'en-tête
     {
         QTcpServer service;
         VERIFIER(service.listen(QHostAddress::LocalHost));
@@ -5138,16 +5140,25 @@ int main(int argc, char **argv) {
                 if (!requete.contains("\r\n\r\n")) return;
                 const QByteArray ligne = requete.left(requete.indexOf("\r\n"));
                 const QByteArray base = "http://127.0.0.1:" + QByteArray::number(service.serverPort());
+                const QByteArray quand = demain.toUtf8();
+                auto evenement = [&](const char *id, const char *nom) {
+                    return "{\"uri\":\"" + base + "/scheduled_events/" + id + "\",\"name\":\"" + nom + "\",\"start_time\":\"" + quand + "\"}";
+                };
                 QByteArray corps;
                 if (ligne.contains("/users/me")) corps = "{\"resource\":{\"uri\":\"" + base + "/users/NS\"}}";
                 else if (ligne.contains("/invitees")) {
-                    const bool a = ligne.contains("/scheduled_events/A/");
-                    corps = a ? QByteArray("{\"collection\":[{\"name\":\"Claire Monney\",\"email\":null,\"text_reminder_number\":null}],\"pagination\":{}}")
-                              : QByteArray("{\"collection\":[{\"name\":\"L\\u00e9a Essai\",\"email\":\"lea@exemple.ch\",\"text_reminder_number\":\"+41 79 000 00 11\"}],\"pagination\":{}}");
+                    if (ligne.contains("/scheduled_events/A/"))
+                        corps = "{\"collection\":[{\"name\":\"Claire M.\",\"email\":null,\"text_reminder_number\":\"+41 79 000 00 03\"}],\"pagination\":{}}";
+                    else if (ligne.contains("/scheduled_events/B/"))
+                        corps = "{\"collection\":[{\"name\":\"L\\u00e9a E.\",\"first_name\":\"L\\u00e9a\",\"last_name\":\"Essai\",\"email\":\"lea@exemple.ch\",\"text_reminder_number\":\"+41 79 000 00 11\"}],\"pagination\":{}}";
+                    else
+                        corps = "{\"collection\":[{\"name\":\"Claire Monney\",\"email\":null,\"text_reminder_number\":null}],\"pagination\":{}}";
+                } else if (ligne.contains("page_token=2")) {
+                    corps = "{\"collection\":[" + evenement("C", "Rendez-vous") + "],\"pagination\":{\"next_page\":null}}";
                 } else if (ligne.contains("/scheduled_events")) {
-                    corps = "{\"collection\":[{\"uri\":\"" + base + "/scheduled_events/A\",\"start_time\":\"" + demain.toUtf8() + "\"}";
-                    if (les_deux) corps += ",{\"uri\":\"" + base + "/scheduled_events/B\",\"start_time\":\"" + demain.toUtf8() + "\"}";
-                    corps += "],\"pagination\":{}}";
+                    corps = "{\"collection\":[" + evenement("A", "kriya massage");
+                    if (les_deux) corps += "," + evenement("B", "Rendez-vous");
+                    corps += "],\"pagination\":{\"next_page\":\"" + base + "/scheduled_events?page_token=2\"}}";
                 }
                 so->write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " + QByteArray::number(corps.size())
                           + "\r\nConnection: close\r\n\r\n" + corps);
@@ -5170,7 +5181,10 @@ int main(int argc, char **argv) {
             "Afficher « essai état » puis l'état d'essai.\n"
             "Afficher « essai calendly » puis le nombre de séances conservées dont la réservation Calendly est présente puis le nombre de patients conservés dont le courriel = « lea@exemple.ch ».\n"
             "Pour chaque séance conservée dont la réservation Calendly finit par « /A » :\n"
-            "    Afficher « essai claire » puis le nom du patient de la séance puis le statut de la séance.\n"
+            "    Afficher « essai claire » puis le nom du patient de la séance puis le statut de la séance puis le nom du soin de la séance.\n"
+            "Pour chaque séance conservée dont la réservation Calendly finit par « /C » :\n"
+            "    Afficher « essai homonyme » puis le nom du patient de la séance puis le statut de la séance puis la vérification due du patient de la séance.\n"
+            "Afficher « essai fiches » puis l'alerte des fiches d'aujourd'hui.\n"
             "Afficher « fin des essais calendly ».\n");
         const int k = source.indexOf(QString::fromUtf8("Remarque : le mot de passe, l'application l'a déjà demandé"));
         VERIFIER(k > 0);
@@ -5186,18 +5200,24 @@ int main(int argc, char **argv) {
             auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
             while (z.elapsed() < 40000 && !fil().contains("fin des essais calendly")) QApplication::processEvents(QEventLoop::AllEvents, 20);
             const QString t = fil();
-            VERIFIER(t.contains(QString::fromUtf8("essai calendly 2 1")));   // deux séances, une patiente nouvelle, rien en double
-            VERIFIER(t.contains(QString::fromUtf8("essai claire Claire Monney prévue")));
+            VERIFIER(t.contains(QString::fromUtf8("essai état Rendez-vous relus à")));
+            VERIFIER(t.contains(QString::fromUtf8("essai calendly 3 1")));   // trois séances, une patiente nouvelle, rien en double
+            VERIFIER(t.contains(QString::fromUtf8("essai claire Claire Monney prévue Kriya Massage")));
+            VERIFIER(t.contains(QString::fromUtf8("essai homonyme Claire Monney (2) prévue vrai")));
+            VERIFIER(t.contains(QString::fromUtf8("essai fiches Fiches créées par le site, à relire et enregistrer : Claire Monney (2), Léa Essai.")));
             VERIFIER(recu.contains("Authorization: Bearer jeton-essai-9"));
+            VERIFIER(recu.contains("page_token=2"));
             e.close();
         }
-        // la réservation B disparaît : sa séance prévue est annulée à la relecture suivante
+        // la réservation B disparaît de la première page : sa séance prévue est annulée à la relecture suivante ; C, sur la
+        // seconde, reste prévue
         les_deux = false;
         VERIFIER(f.open(QIODevice::ReadOnly));
         source = QString::fromUtf8(f.readAll());
         f.close();
         source.replace(QString::fromUtf8("finit par « /A »"), QString::fromUtf8("finit par « /B »"));
-        source.replace(QString::fromUtf8("essai claire"), QString::fromUtf8("essai lea"));
+        source.replace(QString::fromUtf8("essai claire » puis le nom du patient de la séance puis"),
+                       QString::fromUtf8("essai lea » puis le nom du patient de la séance puis le prénom du patient de la séance puis"));
         VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
         f.write(source.toUtf8());
         f.close();
@@ -5209,7 +5229,82 @@ int main(int argc, char **argv) {
             auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
             while (z.elapsed() < 40000 && !fil().contains("fin des essais calendly")) QApplication::processEvents(QEventLoop::AllEvents, 20);
             const QString t = fil();
-            VERIFIER(t.contains(QString::fromUtf8("essai lea Léa Essai annulée")));
+            VERIFIER(t.contains(QString::fromUtf8("essai lea Léa Essai Léa annulée")));
+            VERIFIER(t.contains(QString::fromUtf8("essai homonyme Claire Monney (2) prévue vrai")));
+            e.close();
+        }
+        qunsetenv("GRYM_ESSAI_REDIRECTION");
+    }
+
+    // Les rappels SMS manqués (28 octobre 2026) : un faux ASPSMS refuse le premier envoi (crédit épuisé) ; la séance reste
+    // sans référence et l'accueil le dit ; « Rattraper les rappels » annule d'abord la référence attendue chez ASPSMS (un rappel
+    // reçu sans réponse ne part jamais deux fois), puis renvoie, et l'alerte se tait
+    {
+        QTcpServer service;
+        VERIFIER(service.listen(QHostAddress::LocalHost));
+        QByteArray recu;
+        int envois = 0;
+        QObject::connect(&service, &QTcpServer::newConnection, &service, [&] {
+            QTcpSocket *so = service.nextPendingConnection();
+            QObject::connect(so, &QTcpSocket::readyRead, so, [&, so] {
+                const QByteArray requete = so->readAll();
+                recu += requete;
+                if (!requete.contains("\r\n\r\n")) return;
+                const QByteArray ligne = requete.left(requete.indexOf("\r\n"));
+                QByteArray corps = "{\"ErrorCode\":\"1\",\"ErrorDescription\":\"Ok\"}";
+                if (ligne.contains("SendSimpleSMS") && ++envois == 1)
+                    corps = "{\"ErrorCode\":\"9\",\"ErrorDescription\":\"Not enough credits\"}";
+                so->write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: " + QByteArray::number(corps.size())
+                          + "\r\nConnection: close\r\n\r\n" + corps);
+                so->disconnectFromHost();
+            });
+        });
+        qputenv("GRYM_ESSAI_REDIRECTION", ("https://webapi.aspsms.com=http://127.0.0.1:" + QByteArray::number(service.serverPort())));
+        QTemporaryDir d;
+        VERIFIER(copier_praxis_essai(d.path()));
+        QFile f(d.filePath("Praxis.grym"));
+        VERIFIER(f.open(QIODevice::ReadOnly));
+        QString source = QString::fromUtf8(f.readAll());
+        f.close();
+        const QString essai = QString::fromUtf8(
+            "Le cab vaut le cabinet conservé.\n"
+            "L'identifiant SMS du cab devient « essai-cle ».\n"
+            "La clé SMS du cab devient « secret-api-9 ».\n"
+            "La claire vaut le patient conservé dont le nom = « Claire Monney ».\n"
+            "Le rappel par SMS de la claire devient vrai.\n"
+            "La séance d'essai vaut une nouvelle séance :\n"
+            "    Le patient vaut la claire.\n"
+            "    Le soin vaut le soin conservé dont le nom = « EPI ».\n"
+            "    La date vaut aujourd'hui + 3 jours.\n"
+            "    Le prix vaut 130.\n"
+            "    Le statut vaut « prévue ».\n"
+            "    Le paiement vaut « à payer ».\n"
+            "L'heure de la séance d'essai devient 10:00.\n"
+            "Conserver la séance d'essai.\n"
+            "Programmer le rappel de la séance d'essai.\n"
+            "Afficher « essai sms un » puis l'alerte des rappels d'aujourd'hui et de maintenant.\n"
+            "Rattraper les rappels.\n"
+            "Afficher « essai sms deux » puis la référence de rappel de la séance d'essai puis « / » puis l'alerte des rappels d'aujourd'hui et de maintenant.\n"
+            "Afficher « fin des essais sms ».\n");
+        const int k = source.indexOf(QString::fromUtf8("Remarque : le mot de passe, l'application l'a déjà demandé"));
+        VERIFIER(k > 0);
+        source.insert(k, essai);
+        VERIFIER(f.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        f.write(source.toUtf8());
+        f.close();
+        {
+            Execution e(d.filePath("Praxis.grym"));
+            e.demarrer();
+            QElapsedTimer z;
+            z.start();
+            auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+            while (z.elapsed() < 40000 && !fil().contains("fin des essais sms")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            const QString t = fil();
+            VERIFIER(t.contains(QString::fromUtf8("essai sms un Un rappel SMS n'a pas pu être confié à ASPSMS")));
+            VERIFIER(t.contains(QString::fromUtf8("essai sms deux PX-")));
+            VERIFIER(t.count(QString::fromUtf8("n'a pas pu être confié")) == 1);   // l'alerte s'est tue
+            VERIFIER(envois == 2);
+            VERIFIER(recu.contains("ASPSMSDeactivatePendingSMSWithTransactionReferenceNumber"));
             e.close();
         }
         qunsetenv("GRYM_ESSAI_REDIRECTION");
@@ -5668,8 +5763,8 @@ int main(int argc, char **argv) {
             "    Sortir de la boucle.\n"
             "Afficher « essai absence » puis le nombre de factures conservées puis le nombre de factures supprimées puis le nombre de séances conservées dont la facture est présente.\n"
             "Afficher « essai pièces » puis le compte des pièces du marc puis le compte des pièces du patient conservé dont le nom = « Anne Rochat ».\n"
-            "Afficher « essai prévues » puis l'alerte des prévues d'aujourd'hui puis « | ».\n"
-            "Afficher « essai passées » puis l'alerte des prévues de (aujourd'hui + 10 jours).\n"
+            "Afficher « essai prévues » puis l'alerte des passées d'aujourd'hui puis « | ».\n"
+            "Afficher « essai passées » puis l'alerte des passées de (aujourd'hui + 10 jours).\n"
             "Afficher « fin des essais ».\n");
         const int k = source.indexOf(QString::fromUtf8("Remarque : le mot de passe, l'application l'a déjà demandé"));
         VERIFIER(k > 0);
