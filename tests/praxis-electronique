@@ -12,8 +12,13 @@ trap 'rm -rf "$d"' EXIT
 N="$racine/projets/Praxis/Nicolas"
 for n in "$N"/*; do case "$n" in *.grymd*|*.grymb) ;; *) cp -R "$n" "$d/";; esac; done
 cp "$racine/tests/praxis/essais.grym" "$d/"
-sed -e "s#FACTURE_XML#$d/facture.xml#" -e "s#JUSTIFICATIF_PDF#$d/justificatif.pdf#" -e "s#RAPPEL_XML#$d/rappel.xml#" \
-    -e "s#ANNULATION_XML#$d/annulation.xml#" -e "s#QUITTANCE_XML#$d/quittance.xml#" "$racine/tests/praxis/electronique.grym" > "$d/crochet.txt"
+# les chemins écrits dans le programme, tels que l'atelier les lit : sous Windows (MSYS2), « /tmp/… » n'existe que pour
+# le shell ; MSYS convertit les arguments de la ligne de commande, pas le texte d'un fichier : cygpath -m donne
+# « D:/a/_temp/msys64/tmp/… », que le programme Windows comprend (29 octobre 2026)
+dp="$d"
+command -v cygpath > /dev/null 2>&1 && dp=$(cygpath -m "$d")
+sed -e "s#FACTURE_XML#$dp/facture.xml#" -e "s#JUSTIFICATIF_PDF#$dp/justificatif.pdf#" -e "s#RAPPEL_XML#$dp/rappel.xml#" \
+    -e "s#ANNULATION_XML#$dp/annulation.xml#" -e "s#QUITTANCE_XML#$dp/quittance.xml#" "$racine/tests/praxis/electronique.grym" > "$d/crochet.txt"
 awk -v c="$d/crochet.txt" '
     $0 == "Utiliser « actions »." && !u { print; print "Utiliser « essais »."; u = 1; next }
     index($0, "Remarque : l'\''accueil de la maquette") == 1 && !r { print "Si le nombre de patients conservés est nul, remplir les essais."; print ""; r = 1 }
