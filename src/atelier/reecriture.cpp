@@ -159,9 +159,15 @@ public:
         // Le projet après le geste : un fichier qui s'analysait doit s'analyser encore.
         for (const QString &c : avant_ok.keys()) {
             if (!avant_ok.value(c)) continue;
-            QFile f(c);
-            if (!f.open(QIODevice::ReadOnly)) continue;
-            const Diagnostic_atelier d = analyser_source(QString::fromUtf8(f.readAll()), c.endsWith(".grymc"), c);
+            // lu puis refermé avant toute réécriture : Windows refuse de remplacer un fichier encore ouvert, et
+            // l'annulation (QSaveFile) échouait sans bruit, laissant le fichier cassé (29 octobre 2026)
+            QByteArray octets;
+            {
+                QFile f(c);
+                if (!f.open(QIODevice::ReadOnly)) continue;
+                octets = f.readAll();
+            }
+            const Diagnostic_atelier d = analyser_source(QString::fromUtf8(octets), c.endsWith(".grymc"), c);
             if (d.message.isEmpty()) continue;
             annuler_geste(*geste);
             return QString("Geste annulé : il casserait « %1 », ligne %2 : %3")
@@ -1567,8 +1573,10 @@ QString renommer_fichier(const QString &dossier, const QString &fichier, const Q
         }
     }
     if (principal) {
-        QFile f(FichierProjet::chemin(dossier));
-        geste->avant.insert(FichierProjet::chemin(dossier), f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray());
+        {   // refermé avant l'écriture : sous Windows, un fichier ouvert ne se remplace pas
+            QFile f(FichierProjet::chemin(dossier));
+            geste->avant.insert(FichierProjet::chemin(dossier), f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray());
+        }
         fp.programme_principal = QDir(dossier).relativeFilePath(arrivee);
         if (!fp.ecrire()) {
             annuler_geste(*geste);

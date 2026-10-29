@@ -3285,6 +3285,7 @@ int main(int argc, char **argv) {
             QFile r(dossier.filePath("p.grym"));
             VERIFIER(r.open(QIODevice::ReadOnly));
             VERIFIER(QString::fromUtf8(r.readAll()).contains("un bouton « A », à 56 de la gauche et 40 du haut."));
+            r.close();   // sous Windows, un fichier ouvert ne se remplace pas : l'atelier ne pourrait pas le réécrire
             // le clavier, sur l'aperçu relu : la poignée dans le coin ; Maj + flèche, 8 pixels ; Alt + flèche, la taille
             o.montrer(dossier.path());
             o.choisir_element(1);
@@ -4327,6 +4328,7 @@ int main(int argc, char **argv) {
         QFile r(dossier.filePath("p.grym"));
         VERIFIER(r.open(QIODevice::ReadOnly));
         const QString t = QString::fromUtf8(r.readAll());
+        r.close();   // refermé : sous Windows, l'atelier ne pourrait pas réécrire un fichier encore ouvert
         VERIFIER(t.contains("le texte « bien plus long que le bouton », à 20 de la gauche et 200 du haut."));
         if (!t.contains("à 20 de la gauche et 200")) std::printf("%s\n", qPrintable(t));
         o.montrer(dossier.path());
@@ -4617,9 +4619,11 @@ int main(int argc, char **argv) {
     {   // Projets récents : en tête, sans doublon, huit au plus
         QStringList l;
         for (int k = 0; k < 10; k++) l = recents_avec(l, QString("/p/%1").arg(k));
-        VERIFIER(l.size() == 8 && l.first() == "/p/9" && l.last() == "/p/2");
+        // le chemin absolu de « /p/9 » : sous Windows, il prend la lettre du disque (« D:/p/9 »)
+        auto a = [](const char *c) { return QFileInfo(QString(c)).absoluteFilePath(); };
+        VERIFIER(l.size() == 8 && l.first() == a("/p/9") && l.last() == a("/p/2"));
         l = recents_avec(l, "/p/5");
-        VERIFIER(l.size() == 8 && l.first() == "/p/5" && l.count("/p/5") == 1 && l.at(1) == "/p/9");
+        VERIFIER(l.size() == 8 && l.first() == a("/p/5") && l.count(a("/p/5")) == 1 && l.at(1) == a("/p/9"));
     }
     {   // Renommer : les « Utiliser » suivent (sous-dossier, forme compacte), la base suit le programme, tout s'annule
         QTemporaryDir dossier;

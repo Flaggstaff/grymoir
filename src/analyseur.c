@@ -6220,6 +6220,12 @@ static int fichier_image(const char *chemin) {
 
 static char *dossier_de(const char *chemin);
 
+/* Un chemin écrit absolu : « /… », « \\… », et sous Windows « C:/… » ou « C:\\… » (29 octobre 2026 : le logo, la police,
+   une image donnés par leur chemin complet sous Windows passaient pour relatifs, et introuvables), comme la machine. */
+static int ecrit_absolu(const char *e) {
+    return e[0] == '/' || e[0] == '\\' || (e[0] && e[1] == ':' && (e[2] == '/' || e[2] == '\\'));
+}
+
 /* « Chaque écriture conservée dont la comptabilisation est présente vérifie :
  *       la somme des débits … = la somme des crédits …,
  *       sinon « L'écriture » puis la pièce de l'écriture puis « n'est pas équilibrée. ». » (§ 16.14)
@@ -6497,7 +6503,7 @@ static Noeud *apparence(Analyse *a, const Jeton *t) {
         if (!textes[r]) continue;
         if (!*textes[r]) { echec = 1, erreur(a, jetons[r], grym_dupliquer("Nom de fichier vide.")); break; }
         char *dossier = dossier_de(a->portee->fichier);
-        char *chemin = textes[r][0] == '/' ? grym_dupliquer(textes[r]) : grym_formater("%s%s", dossier, textes[r]);
+        char *chemin = ecrit_absolu(textes[r]) ? grym_dupliquer(textes[r]) : grym_formater("%s%s", dossier, textes[r]);
         const int bon = r == 2 ? fichier_police(chemin) : fichier_image(chemin) == 1 ? 1 : fichier_svg(chemin);
         free(dossier);
         free(chemin);
@@ -6918,7 +6924,7 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
             if (ti->type != J_TEXTE || !*ti->valeur)
                 return erreur(a, ti, grym_dupliquer("Chemin attendu : « , avec l'image « images/coeur.png » ».")), -1;
             char *dossier = dossier_de(a->portee->fichier);
-            char *chemin = ti->valeur[0] == '/' ? grym_dupliquer(ti->valeur) : grym_formater("%s%s", dossier, ti->valeur);
+            char *chemin = ecrit_absolu(ti->valeur) ? grym_dupliquer(ti->valeur) : grym_formater("%s%s", dossier, ti->valeur);
             const int img = fichier_image(chemin) == 1 ? 1 : fichier_svg(chemin);
             free(dossier);
             free(chemin);
@@ -7771,7 +7777,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             const char *ecrit = tc->valeur;
             if (!*ecrit) { erreur(a, tc, grym_dupliquer("Nom de fichier vide.")); break; }
             char *dossier = dossier_de(a->portee->fichier);
-            char *chemin = ecrit[0] == '/' ? grym_dupliquer(ecrit) : grym_formater("%s%s", dossier, ecrit);
+            char *chemin = ecrit_absolu(ecrit) ? grym_dupliquer(ecrit) : grym_formater("%s%s", dossier, ecrit);
             const int image = fichier_image(chemin);
             free(dossier);
             free(chemin);
