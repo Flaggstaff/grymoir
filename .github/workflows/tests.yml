@@ -52,8 +52,8 @@ jobs:
         with:
           msystem: UCRT64
           update: true
-          # diffutils : cmp et diff, que tests/formes et tests/praxis-versions emploient
-          install: make diffutils mingw-w64-ucrt-x86_64-gcc
+          # diffutils : cmp et diff, que tests/formes et tests/praxis-versions emploient ; git : le contrôle des exemples
+          install: make diffutils git mingw-w64-ucrt-x86_64-gcc
       - name: Compilation, sans avertissement toléré
         run: |
           make CC=gcc CFLAGS="-std=c99 -Wall -Wextra -pedantic -O2 -Werror" all > journal.txt 2>&1 \
