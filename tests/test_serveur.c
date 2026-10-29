@@ -1833,6 +1833,34 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* un bouton à confirmer (2.65) : le clic montre la question, Annuler la retire sans rien faire ; le clic qui
+           revient de la confirmation compte ; avec un mot à taper, seul le bon mot (espaces et majuscules ASCII tolérés) */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&z0=&clic=1"), get("/"), evenement("q=1&z0=&annuler_confirmation=1&confirme=1"), get("/"),
+                 evenement("q=1&z0=&clic=1"), evenement("q=1&z0=&confirme=1&clic=1"), get("/"),
+                 evenement("q=2&z0=S&clic=2"), evenement("q=2&z0=S&confirme=2&mot_confirmation=efface&clic=2"), get("/"),
+                 evenement("q=2&z0=S&confirme=1&clic=2"), get("/"),
+                 evenement("q=2&z0=S&clic=2"), evenement("q=2&z0=S&confirme=2&mot_confirmation=+Effacer+&clic=2"), get("/"));
+        servir("L'écran x montre :\n    un nom (texte), facultatif,\n"
+               "    un bouton « Supprimer », à confirmer par « Supprimer ce patient ? »,\n"
+               "    un bouton « Effacer », à confirmer par « Effacer pour toujours ? » en tapant « effacer ».\n"
+               "Quand on clique sur « Supprimer » dans l'écran x :\n    Le nom de l'écran devient « S ».\n"
+               "Quand on clique sur « Effacer » dans l'écran x :\n    Le nom de l'écran devient « E ».\nOuvrir l'écran x.\n", &sc);
+        CONTIENT(sc.reponses[1], "Supprimer ce patient ?");
+        CONTIENT(sc.reponses[1], "name=\"confirme\" value=\"1\"");
+        CONTIENT(sc.reponses[1], ">Annuler</button>");
+        NE_CONTIENT_PAS(sc.reponses[3], "question-confirmation");
+        NE_CONTIENT_PAS(sc.reponses[3], "value=\"S\"");
+        CONTIENT(sc.reponses[6], "value=\"S\"");
+        NE_CONTIENT_PAS(sc.reponses[6], "question-confirmation");
+        CONTIENT(sc.reponses[9], "Effacer pour toujours ?");
+        CONTIENT(sc.reponses[9], "Le mot tapé ne correspond pas.");
+        CONTIENT(sc.reponses[9], "tape « effacer »");
+        NE_CONTIENT_PAS(sc.reponses[11], "value=\"E\"");   /* la confirmation d'un autre bouton ne vaut pas pour celui-ci */
+        CONTIENT(sc.reponses[14], "value=\"E\"");
+        liberer(&sc);
+    }
+
     {   /* une action pour deux écrans (2.58) : « , dans l'écran a ou l'écran b » ; elle remplit la zone de celui qui l'appelle */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&z0=&clic=1"), get("/"), evenement("q=2&z0=A&clic=2"), evenement("q=3&z0=&clic=1"), get("/"));
@@ -2094,20 +2122,21 @@ int main(void) {
         if (system("rm -rf _essai_praxis/Sauvegardes") != 0) { /* rien à effacer */ }
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=5"), evenement("q=3&choix=0.0"),
-                 get("/"), evenement("q=4&clic=17"), get("/"), evenement("q=5&clic=19"), get("/"), evenement("q=6&fermer=1"),
-                 evenement("q=7&clic=7"), evenement("q=8&clic=4"), get("/"), evenement("q=9&z2=&clic=4"), get("/"),
+                 get("/"), evenement("q=4&clic=17"), get("/"), evenement("q=5&clic=19"),
+                 evenement("q=5&confirme=19&clic=19"), get("/"), evenement("q=6&fermer=1"), evenement("q=7&clic=7"),
+                 evenement("q=8&clic=4"), get("/"), evenement("q=9&z2=&clic=4"), get("/"),
                  evenement("q=10&clic=10"), get("/"), evenement("q=11&z12=mauvais-mot&z13=nouveau-mot&z14=nouveau-mot&clic=15"), get("/"),
                  evenement("q=12&fermer=1"), evenement("q=13&fermer=1"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet17.grymd", &sc);
         CONTIENT(sc.reponses[1], "Aucune sauvegarde encore : Configuration, puis Sauvegardes.");
         CONTIENT(sc.reponses[4], "<h1>Séance</h1>");
         CONTIENT(sc.reponses[6], "Une séance prévue se facture une fois faite : change d&#39;abord son statut.");
-        CONTIENT(sc.reponses[8], "<h1>Séances prévues</h1>");   /* supprimée, la page s'est fermée */
-        CONTIENT(sc.reponses[12], "<h1>Sauvegardes</h1>");
-        CONTIENT(sc.reponses[14], "Copie chiffrée faite dans Sauvegardes.");
-        CONTIENT(sc.reponses[16], "Choisis d&#39;abord la copie à restaurer.");
-        CONTIENT(sc.reponses[18], "Le mot de passe actuel est faux.");
-        CONTIENT(sc.reponses[21], "Dernière sauvegarde le ");
+        CONTIENT(sc.reponses[9], "<h1>Séances prévues</h1>");   /* supprimée, la page s'est fermée */
+        CONTIENT(sc.reponses[13], "<h1>Sauvegardes</h1>");
+        CONTIENT(sc.reponses[15], "Copie chiffrée faite dans Sauvegardes.");
+        CONTIENT(sc.reponses[17], "Choisis d&#39;abord la copie à restaurer.");
+        CONTIENT(sc.reponses[19], "Le mot de passe actuel est faux.");
+        CONTIENT(sc.reponses[22], "Dernière sauvegarde le ");
         {
             char prefixe[40];
             snprintf(prefixe, sizeof prefixe, "Praxis-%s-", jour);
@@ -2131,19 +2160,20 @@ int main(void) {
     {   /* Cabinet : tout se supprime et se rétablit : un patient supprimé va dans la corbeille avec ses séances ;
            rétabli depuis la Configuration, il revient avec elles (20 octobre 2026) */
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"), evenement("q=3&choix=2.0"), get("/"), evenement("q=4&clic=34"), get("/"),
-                 evenement("q=5&fermer=1"), evenement("q=6&clic=7"), evenement("q=7&clic=3"), get("/"),
-                 evenement("q=8&s1=0&clic=R%C3%A9tablir+le+patient"), get("/"), evenement("q=9&clic=Fermer"), evenement("q=10&fermer=1"),
-                 evenement("q=11&clic=4"), get("/"));
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"), evenement("q=3&choix=2.0"), get("/"),
+                 evenement("q=4&clic=34"), evenement("q=4&confirme=34&clic=34"), get("/"), evenement("q=5&fermer=1"),
+                 evenement("q=6&clic=7"), evenement("q=7&clic=3"), get("/"), evenement("q=8&s1=0&clic=R%C3%A9tablir+le+patient"),
+                 get("/"), evenement("q=9&clic=Fermer"), evenement("q=10&fermer=1"), evenement("q=11&clic=4"),
+                 get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet18.grymd", &sc);
         CONTIENT(sc.reponses[3], "value=\"Anne Rochat\"");
         CONTIENT(sc.reponses[3], ">Supprimer</button>");
-        NE_CONTIENT_PAS(sc.reponses[5], ">Anne Rochat</button>");   /* plus dans la liste des patients */
-        CONTIENT(sc.reponses[9], "<h1>Corbeille</h1>");
-        CONTIENT(sc.reponses[9], ">Anne Rochat</button>");
-        CONTIENT(sc.reponses[9], "<td>Anne Rochat</td>");           /* ses séances, parties avec elle */
-        NE_CONTIENT_PAS(sc.reponses[11], "Anne Rochat");
-        CONTIENT(sc.reponses[15], ">Anne Rochat</button>");        /* rétablie, de retour parmi les patients */
+        NE_CONTIENT_PAS(sc.reponses[6], ">Anne Rochat</button>");   /* plus dans la liste des patients */
+        CONTIENT(sc.reponses[10], "<h1>Corbeille</h1>");
+        CONTIENT(sc.reponses[10], ">Anne Rochat</button>");
+        CONTIENT(sc.reponses[10], "<td>Anne Rochat</td>");           /* ses séances, parties avec elle */
+        NE_CONTIENT_PAS(sc.reponses[12], "Anne Rochat");
+        CONTIENT(sc.reponses[16], ">Anne Rochat</button>");        /* rétablie, de retour parmi les patients */
         liberer(&sc);
         remove("_essai_cabinet18.grymd");
     }
@@ -2151,15 +2181,15 @@ int main(void) {
     {   /* Praxis : « Effacer le patient », depuis la corbeille, le supprime définitivement : il n'y est plus, et un homonyme
            peut s'inscrire (21 octobre 2026) */
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Patients"), evenement("q=3&choix=2.0"),
-                 evenement("q=4&clic=Supprimer"), evenement("q=5&clic=Fermer"), evenement("q=6&clic=Configuration"),
-                 evenement("q=7&clic=Corbeille"), get("/"), evenement("q=8&s1=0&clic=Effacer+le+patient"), get("/"));
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Patients"), evenement("q=3&choix=2.0"), evenement("q=4&clic=Supprimer"),
+                 evenement("q=4&confirme=Supprimer&clic=Supprimer"), evenement("q=5&clic=Fermer"), evenement("q=6&clic=Configuration"), evenement("q=7&clic=Corbeille"),
+                 get("/"), evenement("q=8&s1=0&clic=Effacer+le+patient"), evenement("q=8&s1=0&confirme=Effacer+le+patient&mot_confirmation=effacer&clic=Effacer+le+patient"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet22.grymd", &sc);
-        CONTIENT(sc.reponses[7], "<h1>Corbeille</h1>");
-        CONTIENT(sc.reponses[7], ">Anne Rochat</button>");
-        CONTIENT(sc.reponses[7], ">Effacer le patient</button>");
-        NE_CONTIENT_PAS(sc.reponses[9], "Anne Rochat");   /* ni elle, ni ses séances */
-        NE_CONTIENT_PAS(sc.reponses[9], "class=\"erreur\"");
+        CONTIENT(sc.reponses[8], "<h1>Corbeille</h1>");
+        CONTIENT(sc.reponses[8], ">Anne Rochat</button>");
+        CONTIENT(sc.reponses[8], ">Effacer le patient</button>");
+        NE_CONTIENT_PAS(sc.reponses[11], "Anne Rochat");   /* ni elle, ni ses séances */
+        NE_CONTIENT_PAS(sc.reponses[11], "class=\"erreur\"");
         liberer(&sc);
         remove("_essai_cabinet22.grymd");
     }

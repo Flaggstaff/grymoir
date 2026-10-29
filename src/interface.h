@@ -72,6 +72,8 @@ typedef struct {
     int inverse;                    /* un groupe « , en couleur inversée » (2.18) : fond d'accent, texte clair */
     int cartes;                     /* une liste « , en cartes » (2.19) : une carte par ligne (voir ecran_lignes) */
     int capitales;                  /* un texte « , en petites capitales » (2.20) : surtitre, titre de section */
+    const char *confirmation;       /* un bouton « , à confirmer par « … » » : la question, ou NULL (2.65) */
+    const char *confirmation_mot;   /* « … en tapant « effacer » » : le mot à taper, ou NULL (2.65) */
     int tuile;                      /* un bouton « , en tuile » (2.15) : grand, son titre, sa description (indication) et
                                        son image (octets, taille, format) ; des tuiles qui se suivent forment une grille */
 } ElementEcran;

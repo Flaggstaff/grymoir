@@ -2937,12 +2937,23 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->elements[k].capitales = options_texte && strchr(options_texte + 1, 's') != NULL;
         if (options_texte && strchr(options_texte + 1, 'q')) e->elements[k].capitales = 2;   /* la section paiement (2.28) */
         if (options_bouton) {   /* « ␞ pt ␝ description ␚ image » (2.14, 2.15) */
-            const size_t nopt = strcspn(options_bouton + 1, "\x1c\x1a\x1d");
+            const size_t nopt = strcspn(options_bouton + 1, "\x1c\x1a\x1d\x19\x18");
             e->elements[k].principal = memchr(options_bouton + 1, 'p', nopt) != NULL;
             e->elements[k].tuile = memchr(options_bouton + 1, 't', nopt) != NULL;
             e->elements[k].a_cote_du_titre = memchr(options_bouton + 1, 'e', nopt) != NULL;   /* 2.17 */
             e->indications[k] = morceau_de_zone(options_bouton, '\x1d');
             e->elements[k].indication = e->indications[k];
+            /* à confirmer (2.65) : la question et le mot, gardés ensemble dans « unites », que les boutons n'ont pas */
+            char *question = morceau_de_zone(options_bouton, '\x19');
+            if (question) {
+                char *mot = morceau_de_zone(options_bouton, '\x18');
+                const size_t lq = strlen(question);
+                e->unites[k] = grym_formater("%s%c%s", question, 0, mot ? mot : "");
+                e->elements[k].confirmation = e->unites[k];
+                e->elements[k].confirmation_mot = mot && *mot ? e->unites[k] + lq + 1 : NULL;
+                free(question);
+                free(mot);
+            }
             char *image = morceau_de_zone(options_bouton, '\x1a');
             if (image) {   /* relue à chaque ouverture, comme « l'image « … » » (§ 22.8) */
                 Fichier *f = lire_fichier(m, image, erreur);
@@ -3497,7 +3508,7 @@ static char *morceau_de_zone(const char *s2, char sep) {
     const char *p = s2 ? strchr(s2, sep) : NULL;
     if (!p) return NULL;
     p++;
-    return grym_formater("%.*s", (int)strcspn(p, "\x1c\x1a\x1d"), p);
+    return grym_formater("%.*s", (int)strcspn(p, "\x1c\x1a\x1d\x19\x18"), p);
 }
 
 /* La saisie d'une zone qui a une unité, l'unité ôtée si on l'a tapée (« 12 CHF », « CHF 12 ») ; à libérer. */

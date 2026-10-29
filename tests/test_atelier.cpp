@@ -839,6 +839,83 @@ int main(int argc, char **argv) {
         VERIFIER(th.accent() == "bleue" && th.hex("fond") == "#f5efe6");
     }
 
+    // Un bouton à confirmer (2.65) : le clic ouvre la question, Annuler la ferme sans rien faire, le bouton de la fenêtre
+    // fait le clic ; avec un mot à taper, ce bouton ne s'active qu'avec le mot, majuscules et espaces tolérés
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    un nom (texte), facultatif,\n"
+                    "    un bouton « Supprimer », à confirmer par « Supprimer ce patient ? »,\n"
+                    "    un bouton « Effacer », à confirmer par « Effacer pour toujours ? » en tapant « effacer ».\n"
+                    "Quand on clique sur « Supprimer » dans l'écran x :\n    Le nom de l'écran devient « S ».\n"
+                    "Quand on clique sur « Effacer » dans l'écran x :\n    Le nom de l'écran devient « E ».\nOuvrir l'écran x.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto bouton = [&e](const char *l) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>())
+                if (b->text() == QString::fromUtf8(l) && b->isVisible() && b->isEnabled() && b->window() == &e) return b;
+            return nullptr;
+        };
+        auto dialogue = [&e]() -> QDialog * {
+            for (QDialog *d : e.findChildren<QDialog *>("confirmation")) if (d->isVisible()) return d;
+            return nullptr;
+        };
+        auto nom = [&e]() -> QString {
+            for (QLineEdit *l : e.findChildren<QLineEdit *>()) if (l->window() == &e && l->objectName() != "mot-confirmation" && l->isVisible()) return l->text();
+            return QString("?");
+        };
+        auto attendre = [](const std::function<bool()> &fini) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !fini()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        };
+        attendre([&] { return bouton("Supprimer") != nullptr; });
+        QPushButton *sup = bouton("Supprimer");
+        VERIFIER(sup != nullptr);
+        if (sup) {
+            sup->click();
+            attendre([&] { return dialogue() != nullptr; });
+            QDialog *d = dialogue();
+            VERIFIER(d && d->findChild<QLabel *>() && d->findChild<QLabel *>()->text() == QString::fromUtf8("Supprimer ce patient ?"));
+            if (d) {
+                for (QPushButton *b : d->findChildren<QPushButton *>()) if (b->text() == "Annuler") { VERIFIER(b->isDefault()); b->click(); break; }
+            }
+            attendre([&] { return dialogue() == nullptr; });
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 300) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            VERIFIER(nom() == "");   // annulé : rien ne s'est passé
+            bouton("Supprimer")->click();
+            attendre([&] { return dialogue() != nullptr; });
+            if (QDialog *d2 = dialogue()) { if (auto *o = d2->findChild<QPushButton *>("confirmer")) o->click(); }
+            attendre([&] { return nom() == "S"; });
+            VERIFIER(nom() == "S");
+        }
+        attendre([&] { return bouton("Effacer") != nullptr; });
+        if (QPushButton *eff = bouton("Effacer")) {
+            eff->click();
+            attendre([&] { return dialogue() != nullptr; });
+            QDialog *d = dialogue();
+            QPushButton *oui = d ? d->findChild<QPushButton *>("confirmer") : nullptr;
+            QLineEdit *mot = d ? d->findChild<QLineEdit *>("mot-confirmation") : nullptr;
+            VERIFIER(oui && mot && !oui->isEnabled());
+            if (oui && mot) {
+                mot->setText("efface");
+                VERIFIER(!oui->isEnabled());
+                mot->setText(" Effacer ");
+                VERIFIER(oui->isEnabled());
+                oui->click();
+            }
+            attendre([&] { return nom() == "E"; });
+            VERIFIER(nom() == "E");
+        } else VERIFIER(false);
+    }
+
     // Un écran occupe toute la fenêtre : le fil et la zone des questions se cachent, Ctrl+J les montre (docs/atelier.md,
     // § 8) ; le contenu reste en haut, dans sa largeur de lecture, sans flotter au milieu
     {

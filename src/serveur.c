@@ -79,6 +79,8 @@ typedef struct {
     int *onglets;              /* les onglets k : le rang de l'onglet choisi, retenu d'un envoi à l'autre (§ 22.10) */
     int taille_titre;          /* −1 en petit, 1 en grand, 0 celle du thème (§ 22.5) */
     char **erreurs_zones;      /* n messages, NULL pour une zone sans faute ; jusqu'au prochain événement (§ 22.6) */
+    size_t a_confirmer;        /* k + 1 : le bouton k « à confirmer » attend sa confirmation, montrée en haut ; 0 sinon (2.65) */
+    int mot_faux;              /* la confirmation est revenue sans le bon mot (2.65) */
 } EcranWeb;
 
 static void erreurs_vider(EcranWeb *e) {
@@ -527,6 +529,10 @@ static char *feuille_de_style(const Serveur *s) {
     "button.tuile{margin:0;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;text-align:left;"
     "min-height:120px;padding:20px 22px;border-radius:12px;border:0;background:var(--surface-alt)}"
     "button.tuile:hover{background:var(--separateur)}"
+    ".confirmation{border:2px solid var(--danger);border-radius:8px;padding:12px 16px;margin:0 0 16px}"   /* 2.65 */
+    ".confirmation .question{font-weight:600;margin-top:0}"
+    ".confirmation .boutons{display:flex;justify-content:flex-end;gap:8px}"
+    "button.danger{background:var(--danger);border-color:var(--danger);color:#fff}"
     "button.tuile .tete{display:flex;justify-content:space-between;align-items:center;gap:8px}"
     "button.tuile .titre{font-size:20px;font-weight:600}button.tuile img{width:22px;height:auto}"
     "button.tuile .description{font-weight:400;color:var(--texte-2)}"
@@ -1358,6 +1364,28 @@ static void page_ecran(Serveur *s) {
         echapper(&c, e->erreur);
         chaine_ajouter(&c, "</p>\n");
     }
+    if (e->a_confirmer && e->a_confirmer <= e->n) {   /* la confirmation d'un bouton (2.65) : en haut, Annuler d'abord */
+        const size_t k = e->a_confirmer - 1;
+        const ElementEcran *b = &e->el[k];
+        chaine_ajouter(&c, "<div class=\"confirmation\" role=\"alertdialog\" aria-labelledby=\"question-confirmation\">"
+                           "<p id=\"question-confirmation\" class=\"question\">");
+        echapper(&c, b->confirmation);
+        chaine_ajouter(&c, "</p>");
+        if (b->confirmation_mot) {
+            chaine_ajouter(&c, e->mot_faux ? "<p class=\"message\" role=\"alert\">Le mot tapé ne correspond pas.</p>" : "");
+            chaine_ajouter(&c, "<p><label for=\"mot-confirmation\">Ce qui suit ne se rattrape pas. Pour confirmer, tape « ");
+            echapper(&c, b->confirmation_mot);
+            chaine_ajouter(&c, " ».</label></p><p><input id=\"mot-confirmation\" name=\"mot_confirmation\" autofocus></p>");
+        }
+        char *v = grym_formater("<input type=\"hidden\" name=\"confirme\" value=\"%lu\"><div class=\"boutons\">"
+                                "<button name=\"annuler_confirmation\" value=\"1\"%s>Annuler</button>"
+                                "<button class=\"danger\" name=\"clic\" value=\"%lu\">", (unsigned long)k,
+                                b->confirmation_mot ? "" : " autofocus", (unsigned long)k);
+        chaine_ajouter(&c, v);
+        free(v);
+        echapper(&c, b->texte);
+        chaine_ajouter(&c, "</button></div></div>\n");
+    }
     int boutons = 0;   /* des boutons qui se suivent : une rangée, à droite (comme dans l'atelier) */
     int tuiles = 0;    /* des tuiles qui se suivent : une grille (2.15) */
     int groupes[16], prof = 0;   /* les blocs ouverts : 1 un groupe (fieldset), 4 un onglet (section), 0 un div ; + 2 placé */
@@ -1617,6 +1645,21 @@ static long *choisies(const EcranWeb *e) {
 
 /* Un envoi de l'écran : d'abord chaque zone modifiée (un changement chacune, dans l'ordre de l'écran), puis le
  * bouton, la ligne choisie ou la fermeture. Rend 1 si la machine a quelque chose à faire. */
+/* Le mot tapé pour confirmer (2.65) : sans les espaces autour, les majuscules ASCII comme les minuscules. */
+static int meme_mot(const char *tape, const char *attendu) {
+    while (*tape == ' ' || *tape == '\t') tape++;
+    size_t n = strlen(tape);
+    while (n && (tape[n - 1] == ' ' || tape[n - 1] == '\t' || tape[n - 1] == '\r' || tape[n - 1] == '\n')) n--;
+    if (n != strlen(attendu)) return 0;
+    for (size_t i = 0; i < n; i++) {
+        unsigned char a = (unsigned char)tape[i], b = (unsigned char)attendu[i];
+        if (a >= 'A' && a <= 'Z') a = (unsigned char)(a - 'A' + 'a');
+        if (b >= 'A' && b <= 'Z') b = (unsigned char)(b - 'A' + 'a');
+        if (a != b) return 0;
+    }
+    return 1;
+}
+
 static int evenements_de(Serveur *s, Envoi *env) {
     EcranWeb *e = ecran_dessus(s);
     for (size_t k = 0; k < e->n; k++) {   /* la ligne sélectionnée de chaque liste, d'abord */
@@ -1696,6 +1739,10 @@ static int evenements_de(Serveur *s, Envoi *env) {
         }
     Partie *pc = envoi_partie(env, "clic"), *px = envoi_partie(env, "choix"), *pf = envoi_partie(env, "fermer");
     char *fin = NULL;
+    /* une confirmation (2.65) tient jusqu'au geste suivant : Annuler, un autre bouton, une ligne, Fermer ; « Entrée » dans
+       le champ du mot (le bouton invisible « valider ») la laisse ouverte */
+    const size_t attendue = e->a_confirmer;
+    if (pc || px || pf || envoi_partie(env, "annuler_confirmation")) { e->a_confirmer = 0; e->mot_faux = 0; }
     if (pf && !pf->fichier) {
         Evenement ev = { EVENEMENT_FERMETURE, 0, 0, NULL, choisies(e), e->n, NULL, 0 };
         file_ajouter(s, ev);
@@ -1707,7 +1754,23 @@ static int evenements_de(Serveur *s, Envoi *env) {
                 if (e->el[q].sorte == ELEMENT_BOUTON && e->el[q].texte && strcmp(e->el[q].texte, pc->valeur) == 0) k = q;
             fin = (char *)"";
         }
-        if (k < e->n && e->el[k].sorte == ELEMENT_BOUTON && !e->etats[k]) {
+        int confirme = 1;
+        if (k < e->n && e->el[k].sorte == ELEMENT_BOUTON && !e->etats[k] && e->el[k].confirmation) {
+            /* à confirmer (2.65) : le clic montre d'abord la question ; il ne compte que revenu de la confirmation de ce
+               même bouton, avec le mot s'il en faut un (sans JavaScript : c'est le serveur qui vérifie) */
+            Partie *pq = envoi_partie(env, "confirme");
+            char *fq = NULL;
+            const unsigned long kq = pq && !pq->fichier ? strtoul(pq->valeur, &fq, 10) : 0;
+            confirme = attendue == k + 1 && pq && !pq->fichier
+                       && ((fq != pq->valeur && !*fq && kq == k) || strcmp(pq->valeur, e->el[k].texte) == 0);   /* le rang, ou le libellé (2.36) */
+            if (confirme && e->el[k].confirmation_mot) {
+                Partie *pm = envoi_partie(env, "mot_confirmation");
+                confirme = pm && !pm->fichier && meme_mot(pm->valeur, e->el[k].confirmation_mot);
+                if (!confirme) e->mot_faux = 1;
+            }
+            if (!confirme) e->a_confirmer = k + 1;
+        }
+        if (confirme && k < e->n && e->el[k].sorte == ELEMENT_BOUTON && !e->etats[k]) {
             Evenement ev = { EVENEMENT_CLIC, (size_t)k, 0, NULL, choisies(e), e->n, NULL, 0 };
             file_ajouter(s, ev);
         }

@@ -209,6 +209,8 @@ typedef struct Noeud {
     char *ancien;         /* « , anciennement « client » » : le nom d'avant d'un champ d'entité (N_NOM) ou d'une entité
                              (P_CLASSE, P_HERITAGE), qu'une migration renomme (§ 16.7) ; ou NULL */
     char *couleurs;       /* champ à valeurs permises : une lettre par valeur, sa couleur d'étiquette (§ 16.15), ou NULL */
+    char *confirmation;   /* bouton : « , à confirmer par « … » » (2.65), ou NULL */
+    char *confirmation_mot;   /* bouton : « … en tapant « effacer » » (2.65), ou NULL */
     char *unite;          /* zone d'écran : « , avec l'unité « CHF » [devant] » (entier & 128 : devant), ou NULL */
     char *borne_min, *borne_max;   /* zone d'écran : « de 1 à 99 », « au moins », « au plus », en forme canonique ; pour
                                       un texte, en caractères (§ 22.6) ; NULL sans borne */

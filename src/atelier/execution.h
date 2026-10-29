@@ -105,6 +105,7 @@ public:
     QVector<int> graphiques;                              // graphique (§ 22.11) : 1, + 2 en secteurs, + 4 une somme ; 0 sinon
     int taille_titre = 0;                                 // la taille du titre de l'écran qui s'ouvre (§ 22.5)
     QStringList indications;                              // zone : son indication, vide sinon (§ 22.6)
+    QStringList confirmations;                            // bouton à confirmer : « question ␟ mot », vide sinon (2.65)
     QVector<int> longueurs;                               // zone de texte : « au plus N caractères », 0 sinon (§ 22.6)
     QStringList unites;                                   // zone : « <CHF » devant, « >% » derrière, vide sinon (§ 22.6)
     QVector<QVector<int>> valeurs_fiche;                  // texte de fiche (§ 22.3) : rang de la valeur, étiquette, lien ; vide sinon
@@ -190,6 +191,9 @@ private:
     // Un clic : d'abord la valeur d'une zone encore modifiée (sous macOS, un bouton ne prend pas le focus : la zone
     // n'envoie rien d'elle-même), puis le clic, quand l'écran attend de nouveau (21 octobre 2026)
     void cliquer(int k);
+    // un bouton « à confirmer » (2.65) : la question dans une fenêtre, Annuler d'abord ; le clic part si on confirme,
+    // et, avec un mot à taper, le bouton ne s'active qu'une fois le mot écrit
+    void confirmer(int k, QWidget *bouton, const QString &question, const QString &mot);
     QWidget *ecran_du_clic = nullptr;
     bool attente = false, fini = false, fermer_a_la_fin = false;
     bool ecran_vu = false;

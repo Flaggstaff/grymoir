@@ -35,6 +35,8 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->taille_titre = 0;
     n->indication = NULL;
     n->unite = NULL;
+    n->confirmation = NULL;
+    n->confirmation_mot = NULL;
     n->couleurs = NULL;
     n->transcrit_de = NULL;
     n->ancien = NULL;
@@ -63,6 +65,8 @@ void noeud_liberer(Noeud *n) {
     free(n->texte3);
     free(n->indication);
     free(n->unite);
+    free(n->confirmation);
+    free(n->confirmation_mot);
     free(n->couleurs);
     free(n->transcrit_de);
     free(n->ancien);

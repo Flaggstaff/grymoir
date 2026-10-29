@@ -256,7 +256,7 @@ L'écran du patient, « Patient », montre :
         un bouton « Nouvelle séance »,
         un bouton « Fermer »,
         un bouton « Notes »,
-        un bouton « Supprimer »,
+        un bouton « Supprimer », à confirmer par « Supprimer ce patient ? Il part dans la corbeille, avec ses séances et ses notes. »,
         un bouton « Archiver »,
     côte à côte :
         un bouton « Ordonnances », visible si la facturation aux assurances du cabinet conservé,
@@ -282,7 +282,7 @@ L'écran de la séance, « Séance », montre :
         un bouton « Enregistrer », principal,
         un bouton « Facture ou quittance »,
         un bouton « Fermer »,
-        un bouton « Supprimer ».
+        un bouton « Supprimer », à confirmer par « Supprimer cette séance ? Elle part dans la corbeille. ».
 
 Remarque : un soin, ses tarifs et sa durée ; le code tarifaire est celui du Tarif 590.
 L'écran du soin, « Soin », montre :
@@ -301,7 +301,7 @@ L'écran du soin, « Soin », montre :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
         un bouton « Nouvel acte »,
-        un bouton « Supprimer ».
+        un bouton « Supprimer », à confirmer par « Supprimer ce soin ? Il part dans la corbeille. ».
 
 Remarque : un acte du justificatif de remboursement d'un soin (Tarif 590, 27 octobre 2026) : son code, son libellé, sa quantité
 Remarque : en périodes de 5 minutes et le prix d'une période ; l'anamnèse ne se compte qu'à la première séance.
@@ -314,7 +314,7 @@ L'écran de l'acte, « Acte du Tarif 590 », montre :
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
-        un bouton « Supprimer ».
+        un bouton « Supprimer », à confirmer par « Supprimer cet acte ? ».
 
 Remarque : la comptabilité en recettes-dépenses d'une année, celle du jour au départ : ce qui est encaissé (à la date d'encaissement),
 Remarque : ce qui est dépensé, ce qui reste ; une autre année se choisit en haut, pour la déclaration d'impôts de l'année passée.
@@ -437,7 +437,7 @@ L'écran des frais, ("Frais " suivi de l'année des comptes), montre :
     côte à côte :
         un bouton « Nouveau frais », principal,
         un bouton « Fermer »,
-        un bouton « Supprimer ».
+        un bouton « Supprimer », à confirmer par « Supprimer le frais choisi ? Il part dans la corbeille. ».
 
 L'écran du frais, « Frais », montre :
     en position libre :
@@ -452,7 +452,7 @@ L'écran du frais, « Frais », montre :
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
-        un bouton « Supprimer ».
+        un bouton « Supprimer », à confirmer par « Supprimer ce frais ? Il part dans la corbeille. ».
 
 Remarque : la quittance, sur papier : le cabinet et ses numéros, le patient, les séances et leur paiement, le montant reçu ; ce qu'une
 Remarque : assurance complémentaire demande pour rembourser : le thérapeute, la méthode, la date, la durée, le prix.
@@ -589,7 +589,7 @@ L'écran des notes, « Notes confidentielles », montre :
         un bouton « Ajouter », principal,
         un bouton « Fermer »,
         un bouton « Modifier »,
-        un bouton « Supprimer ».
+        un bouton « Supprimer », à confirmer par « Supprimer la note choisie ? ».
 
 Remarque : la corbeille : ce qui a été supprimé, rétablissable ; un patient revient avec ses séances, ses notes et ses pièces.
 Remarque : « Effacer » supprime définitivement, sans retour (les sauvegardes d'avant le gardent) : un homonyme peut alors s'inscrire.
@@ -599,26 +599,26 @@ L'écran de la corbeille, « Corbeille », montre :
     la liste des patients supprimés, par nom, avec le nom, le téléphone et la localité,
     côte à côte :
         un bouton « Rétablir le patient »,
-        un bouton « Effacer le patient »,
+        un bouton « Effacer le patient », à confirmer par « Effacer pour toujours le patient choisi, avec ses séances et ses notes ? » en tapant « effacer »,
     le texte « Séances », en petites capitales,
     la liste des séances supprimées, par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
     côte à côte :
         un bouton « Rétablir la séance »,
-        un bouton « Effacer la séance »,
+        un bouton « Effacer la séance », à confirmer par « Effacer pour toujours la séance choisie ? » en tapant « effacer »,
     le texte « Frais », en petites capitales,
     la liste des frais supprimés, par date décroissant, avec la date, le libellé et le montant,
     côte à côte :
         un bouton « Rétablir le frais »,
-        un bouton « Effacer le frais »,
+        un bouton « Effacer le frais », à confirmer par « Effacer pour toujours le frais choisi ? » en tapant « effacer »,
     le texte « Soins et rubriques », en petites capitales,
     la liste des soins supprimés, par nom, avec le nom et le tarif,
     côte à côte :
         un bouton « Rétablir le soin »,
-        un bouton « Effacer le soin »,
+        un bouton « Effacer le soin », à confirmer par « Effacer pour toujours le soin choisi ? » en tapant « effacer »,
     la liste des rubriques supprimées, par nom, avec le nom,
     côte à côte :
         un bouton « Rétablir la rubrique »,
-        un bouton « Effacer la rubrique »,
+        un bouton « Effacer la rubrique », à confirmer par « Effacer pour toujours la rubrique choisie ? » en tapant « effacer »,
     le texte « Pièces annulées », en petites capitales,
     la liste des factures supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
     la liste des quittances supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
@@ -700,7 +700,7 @@ L'écran de la rubrique, « Rubrique », montre :
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
-        un bouton « Supprimer ».
+        un bouton « Supprimer », à confirmer par « Supprimer cette rubrique ? Elle part dans la corbeille. ».
 
 Remarque : les bornes des factures : l'année des comptes, ou toutes les années pendant une recherche.
 Pour borner les factures :
@@ -2184,7 +2184,7 @@ L'écran de l'assureur, « Assureur », montre :
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
-        un bouton « Supprimer ».
+        un bouton « Supprimer », à confirmer par « Supprimer cet assureur ? ».
 
 Remarque : les ordonnances d'un patient (l'écran des prescriptions : « des ordonnances » se confondrait avec l'écran de l'ordonnance),
 Remarque : la plus récente en tête ; une nouvelle s'ouvre vide, une choisie s'ouvre remplie.
@@ -2210,7 +2210,7 @@ L'écran de l'ordonnance, « Ordonnance », montre :
         un bouton « Enregistrer », principal,
         un bouton « Voir le scan »,
         un bouton « Fermer »,
-        un bouton « Supprimer »,
+        un bouton « Supprimer », à confirmer par « Supprimer cette ordonnance ? »,
         un bouton « Facturer à l'assurance »,
         un bouton « Annoncer à l'assureur ».
 
@@ -2363,7 +2363,7 @@ L'écran de la position, « Position tarifaire », montre :
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
-        un bouton « Supprimer ».
+        un bouton « Supprimer », à confirmer par « Supprimer cette position tarifaire ? ».
 
 Remarque : les factures tiers payant, la plus récente en tête ; une facture choisie s'ouvre : ses PDF, et son règlement.
 L'écran des assurances, « Factures aux assurances », montre :

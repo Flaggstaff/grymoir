@@ -6869,6 +6869,26 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
         if (!el->indication) attendre_mot(a, a->i + 1, "avec la description «", strlen("avec la description «"));
         if (!el->texte2) attendre_mot(a, a->i + 1, "avec l'image «", strlen("avec l'image «"));
         if (!(el->entier & 1024)) attendre_mot(a, a->i + 1, "à côté du titre", strlen("à côté du titre"));
+        if (!el->confirmation) attendre_mot(a, a->i + 1, "à confirmer par «", strlen("à confirmer par «"));
+        if (est_mot(x, "à") && est_mot(voir(a, 2), "confirmer")) {
+            /* « , à confirmer par « Supprimer ce patient ? » » (2.65) : avant l'événement, une fenêtre demande
+               Annuler ou le bouton ; « … en tapant « effacer » » : le bouton ne s'active qu'une fois le mot tapé, pour
+               ce qui ne revient pas */
+            if (el->confirmation) return erreur(a, x, grym_dupliquer("La confirmation est déjà donnée.")), -1;
+            if (!est_mot(voir(a, 3), "par") || voir(a, 4)->type != J_TEXTE || !*voir(a, 4)->valeur)
+                return erreur(a, voir(a, 3), grym_dupliquer("Question attendue : « , à confirmer par « Supprimer ce patient ? » ».")), -1;
+            el->confirmation = grym_dupliquer(voir(a, 4)->valeur);
+            a->i += 5;
+            attendre_mot(a, a->i, "en tapant «", strlen("en tapant «"));
+            if (est_mot(cour(a), "en") && est_mot(voir(a, 1), "tapant")) {
+                const Jeton *m = voir(a, 2);
+                if (m->type != J_TEXTE || !*m->valeur)
+                    return erreur(a, m, grym_dupliquer("Mot attendu : « … en tapant « effacer » ».")), -1;
+                el->confirmation_mot = grym_dupliquer(m->valeur);
+                a->i += 3;
+            }
+            return 1;
+        }
         if (est_mot(x, "à") && est_mot(voir(a, 2), "côté") && est_mot(voir(a, 3), "du") && est_mot(voir(a, 4), "titre")) {
             /* « , à côté du titre » (2.17) : sur la ligne du titre, à droite, comme l'action d'une page */
             if (el->entier & 1024) return erreur(a, x, grym_dupliquer("« à côté du titre » est déjà dit.")), -1;

@@ -802,13 +802,16 @@ static long description_ecran(Compilation *c, const Noeud *e, const Noeud *ph) {
         if (el->texte) chaine_ajouter(&d, el->texte);   /* « J » : une image calculée, sans fichier écrit (§ 22.8) */
         if (el->type == N_TEXTE_ECRAN && (el->entier & 2048)) chaine_ajouter(&d, "\x1e" "s");   /* en petites capitales (2.20) */
         if (el->type == N_TEXTE_ECRAN && (el->entier & 4096)) chaine_ajouter(&d, "\x1e" "q");   /* la section paiement (2.28) */
-        if (el->type == N_BOUTON && (el->entier & (256 | 512 | 1024))) {   /* « Bclients ␞ pte ␝ description ␚ image » (2.14 à 2.17) */
+        if (el->type == N_BOUTON && ((el->entier & (256 | 512 | 1024)) || el->confirmation)) {   /* « Bclients ␞ pte ␝ description ␚ image » (2.14 à 2.17) */
             chaine_ajouter(&d, "\x1e");
             if (el->entier & 256) chaine_ajouter(&d, "p");
             if (el->entier & 512) chaine_ajouter(&d, "t");
             if (el->entier & 1024) chaine_ajouter(&d, "e");   /* à côté du titre, dans l'en-tête */
             if (el->indication) { chaine_ajouter(&d, "\x1d"); chaine_ajouter(&d, el->indication); }
             if (el->texte2) { chaine_ajouter(&d, "\x1a"); chaine_ajouter(&d, el->texte2); }
+            /* « ␙ question ␘ mot » : à confirmer, en tapant le mot (2.65) */
+            if (el->confirmation) { chaine_ajouter(&d, "\x19"); chaine_ajouter(&d, el->confirmation); }
+            if (el->confirmation_mot) { chaine_ajouter(&d, "\x18"); chaine_ajouter(&d, el->confirmation_mot); }
         }
         if (el->type == N_CHERCHER && el->texte3) {   /* colonnes choisies : « ␛ écrit ␝ a ␜ b ␞ … » */
             chaine_ajouter(&d, "\x1b");

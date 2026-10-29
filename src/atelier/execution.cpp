@@ -180,6 +180,7 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
     t->places.clear();
     t->graphiques.clear();
     t->indications.clear();
+    t->confirmations.clear();
     t->longueurs.clear();
     t->unites.clear();
     t->valeurs_fiche.clear();
@@ -200,6 +201,9 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
                              | (el[k].dossier ? 4096 : 0) | ((el[k].largeur_caracteres & 0xFF) << 16));
         t->facultatives << el[k].facultatif;
         t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
+        t->confirmations << (el[k].confirmation ? QString::fromUtf8(el[k].confirmation) + QChar(0x1f)
+                                                      + QString::fromUtf8(el[k].confirmation_mot ? el[k].confirmation_mot : "")
+                                                : QString());
         t->unites << (el[k].unite ? QString(el[k].unite_devant ? "<" : ">") + QString::fromUtf8(el[k].unite) : QString());
         t->longueurs << (el[k].borne_max && el[k].type && strcmp(el[k].type, "texte") == 0 ? (int)atol(el[k].borne_max) : 0);
         QStringList ch;
@@ -1355,6 +1359,10 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].choix = k < travail.choix_zones.size() ? travail.choix_zones[k] : QStringList();
         elements[k].facultatif = k < travail.facultatives.size() && travail.facultatives[k];
         elements[k].indication = travail.indications.value(k);
+        if (const QString c = travail.confirmations.value(k); !c.isEmpty()) {   // 2.65
+            elements[k].confirmation = c.section(QChar(0x1f), 0, 0);
+            elements[k].confirmation_mot = c.section(QChar(0x1f), 1);
+        }
         elements[k].unite = travail.unites.value(k).mid(1);
         elements[k].unite_devant = travail.unites.value(k).startsWith('<');
         elements[k].longueur_max = travail.longueurs.value(k);
@@ -1516,9 +1524,14 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                 });
             }
         } else if (auto *b = qobject_cast<QPushButton *>(v.controles[k])) {
-            connect(b, &QPushButton::clicked, this, [this, k] {
-                if (clic_en_attente == k) { clic_en_attente = -1; ecran_du_clic = nullptr; }   // déjà gardé : une fois
-                cliquer(k);
+            const QString question = elements[k].confirmation, mot = elements[k].confirmation_mot;
+            connect(b, &QPushButton::clicked, this, [this, k, question, mot, b] {
+                if (question.isEmpty()) {
+                    if (clic_en_attente == k) { clic_en_attente = -1; ecran_du_clic = nullptr; }   // déjà gardé : une fois
+                    cliquer(k);
+                    return;
+                }
+                confirmer(k, b, question, mot);
             });
         }
     }
@@ -1620,6 +1633,58 @@ void Execution::ranger() {
 void Execution::effacer_erreurs_zones() {
     for (QWidget *c : controles_ecran)
         if (c) for (QLabel *l : c->findChildren<QLabel *>("erreur-zone", Qt::FindDirectChildrenOnly)) l->deleteLater();
+}
+
+void Execution::confirmer(int k, QWidget *bouton, const QString &question, const QString &mot) {
+    auto *d = new QDialog(this);
+    d->setObjectName("confirmation");
+    d->setAttribute(Qt::WA_DeleteOnClose);
+    d->setWindowModality(Qt::WindowModal);   // sous macOS, une feuille qui descend de la fenêtre
+    d->setWindowTitle(question);
+    auto *pile = new QVBoxLayout(d);
+    auto *q = new QLabel(question);
+    q->setProperty("niveau", "titre-confirmation");
+    q->setWordWrap(true);
+    QFont f = q->font();
+    f.setBold(true);
+    q->setFont(f);
+    pile->addWidget(q);
+    QLineEdit *saisie = nullptr;
+    if (!mot.isEmpty()) {
+        auto *consigne = new QLabel(QString::fromUtf8("Ce qui suit ne se rattrape pas. Pour confirmer, tape « %1 ».").arg(mot));
+        consigne->setWordWrap(true);
+        pile->addWidget(consigne);
+        saisie = new QLineEdit;
+        saisie->setObjectName("mot-confirmation");
+        pile->addWidget(saisie);
+    }
+    auto *boutons = new QDialogButtonBox;
+    QPushButton *annuler = boutons->addButton(QString::fromUtf8("Annuler"), QDialogButtonBox::RejectRole);
+    const QString libelle = qobject_cast<QPushButton *>(bouton) ? qobject_cast<QPushButton *>(bouton)->text() : QString();
+    QPushButton *oui = boutons->addButton(libelle.isEmpty() ? QString::fromUtf8("Confirmer") : libelle, QDialogButtonBox::AcceptRole);
+    oui->setObjectName("confirmer");
+    oui->setProperty("role", "danger");
+    annuler->setDefault(true);   // Entrée annule : confirmer demande un geste voulu
+    annuler->setAutoDefault(true);
+    oui->setAutoDefault(false);
+    pile->addWidget(boutons);
+    if (saisie) {
+        oui->setEnabled(false);
+        connect(saisie, &QLineEdit::textChanged, oui, [oui, mot](const QString &t) {
+            oui->setEnabled(t.trimmed().compare(mot, Qt::CaseInsensitive) == 0);
+        });
+        saisie->setFocus();
+    } else
+        annuler->setFocus();
+    connect(boutons, &QDialogButtonBox::rejected, d, &QDialog::reject);
+    connect(boutons, &QDialogButtonBox::accepted, d, &QDialog::accept);
+    QPointer<QWidget> ecran = vue_ecran;
+    connect(d, &QDialog::accepted, this, [this, k, ecran] {
+        if (!ecran || ecran != vue_ecran) return;   // l'écran a changé entre-temps : le clic ne vise plus rien
+        if (clic_en_attente == k) { clic_en_attente = -1; ecran_du_clic = nullptr; }
+        cliquer(k);
+    });
+    d->open();
 }
 
 void Execution::cliquer(int k) {
