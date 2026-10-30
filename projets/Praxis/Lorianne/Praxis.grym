@@ -1900,17 +1900,25 @@ Quand on choisit une séance dans l'écran des encaissements :
     La séance ouverte devient la séance choisie de l'écran.
     Ouvrir l'écran de la séance.
 
+Remarque : payé au cabinet (30 octobre 2026) : espèces, Twint ou virement reçu ; la séance encaissée, sa quittance aussitôt, ouverte
+Remarque : dans Aperçu pour l'imprimer ; une séance déjà facturée n'en a pas : sa facture suit le paiement.
 Quand on clique sur « Espèces » dans l'écran des encaissements :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
-    Encaisser la séance choisie de l'écran et « espèces ».
+    La s vaut la séance choisie de l'écran.
+    Encaisser la s et « espèces ».
+    Si la facture de la s est absente, quittancer la s.
 
 Quand on clique sur « Twint » dans l'écran des encaissements :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
-    Encaisser la séance choisie de l'écran et « Twint ».
+    La s vaut la séance choisie de l'écran.
+    Encaisser la s et « Twint ».
+    Si la facture de la s est absente, quittancer la s.
 
 Quand on clique sur « Virement » dans l'écran des encaissements :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
-    Encaisser la séance choisie de l'écran et « virement ».
+    La s vaut la séance choisie de l'écran.
+    Encaisser la s et « virement ».
+    Si la facture de la s est absente, quittancer la s.
 
 Quand on clique sur « Offert » dans l'écran des encaissements :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
