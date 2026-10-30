@@ -367,7 +367,7 @@ La partie « en-tête du cabinet » montre :
         le texte la ville professionnelle du cabinet conservé,
         le texte la ligne des numéros du cabinet conservé.
 
-Remarque : la facture, sur papier : le cabinet et ses numéros, le patient, les séances, le montant dû, l'échéance, et la section paiement si le cabinet a un IBAN.
+Remarque : la facture, sur papier : le cabinet et ses numéros, le patient, les séances, le montant dû, l'échéance, le code QR Twint si le cabinet a un lien twint (30 octobre 2026), et la section paiement si le cabinet a un IBAN.
 Le document de facture, « Facture », montre :
     côte à côte :
         la partie « en-tête du cabinet »,
@@ -382,6 +382,9 @@ Le document de facture, « Facture », montre :
     le texte "Montant dû : CHF " suivi de l'arrondi du montant de la créance en cours à 0,01,
     le texte "Payable jusqu'au " suivi de (la date de la créance en cours + 30 jours) suivi de « , en espèces, par Twint ou par virement. »,
     le texte "Avec mes salutations, " suivi du nom du cabinet conservé,
+    côte à côte :
+        l'image du QR twint du cabinet conservé, large de 100,
+        le texte l'invite twint du cabinet conservé et du montant de la créance en cours,
     la section paiement de la charge QR du cabinet conservé et du patient de la créance en cours et du montant de la créance en cours et du numéro de la créance en cours.
 
 Remarque : le rappel d'une facture, sur papier : ses séances pas encore payées, ce qui reste dû, et comment payer.
@@ -569,6 +572,7 @@ L'écran du cabinet, « Le cabinet », montre :
             un logo (image), facultatif, avec l'indication « Le logo du cabinet »,
             une signature (image), facultative, avec l'indication « Le nom du cabinet dessiné, en tête des écrans et des pièces »,
             un canton (texte), facultatif, avec l'indication « En deux lettres : FR »,
+            un lien twint (adresse web), facultatif, avec l'indication « Le lien de paiement Twint du cabinet (https://go.twint.ch/…) : son code QR va sur les factures »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer »,
@@ -2102,6 +2106,7 @@ Quand on ouvre l'écran du cabinet :
     Le numéro RME de l'écran devient le numéro RME du c.
     Le numéro ASCA de l'écran devient le numéro ASCA du c.
     L'IBAN de l'écran devient l'IBAN du c.
+    Le lien twint de l'écran devient le lien twint du c.
     La facturation des absences de l'écran devient la facturation des absences du c.
     Le choix d'agenda de l'écran devient le choix d'agenda du c.
     La facturation aux assurances de l'écran devient la facturation aux assurances du c.
@@ -2126,6 +2131,9 @@ Quand on clique sur « Enregistrer » dans l'écran du cabinet :
     Le numéro RME du c devient le numéro RME de l'écran.
     Le numéro ASCA du c devient le numéro ASCA de l'écran.
     L'IBAN du c devient l'IBAN de l'écran.
+    Le lien twint du c devient le lien twint de l'écran.
+    Si le lien twint du c est présent, le QR twint du c devient le code QR du lien twint du c.
+    Sinon, le QR twint du c devient absent.
     La facturation des absences du c devient la facturation des absences de l'écran.
     Le choix d'agenda du c devient le choix d'agenda de l'écran.
     La facturation aux assurances du c devient la facturation aux assurances de l'écran.

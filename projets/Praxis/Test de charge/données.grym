@@ -26,6 +26,8 @@ Un cabinet, conservé, a :
     un numéro RME (texte), facultatif,
     un numéro ASCA (texte), facultatif,
     un IBAN (texte), facultatif,
+    un lien twint (adresse web), facultatif,
+    un QR twint (image), facultatif,
     une facturation des absences (vrai ou faux), faux au départ,
     une dernière sauvegarde (date), facultative,
     un code d'accès (mot de passe), abandonné,

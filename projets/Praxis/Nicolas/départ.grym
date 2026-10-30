@@ -18,12 +18,18 @@ Pour fonder le cabinet :
     La signature du c devient le fichier « images/signature.png ».
     Le prénom du c devient « Nicolas ».
     Le préfixe SMS du c devient « NS ».
+    Le lien twint du c devient « https://go.twint.ch/1/e/tw?tw=acq.qmxyzqW9SBeb0okXKZmWJccIdNYSZdQOwotwCrKEgUq9fReTm4hHSziOaFEwsb6j. ».
+    Le QR twint du c devient le code QR du lien twint du c.
     Conserver le c.
 
 Remarque : à chaque lancement : le préfixe SMS, posé dans une base fondée avant lui (28 octobre 2026) ; un préfixe déjà là reste.
+Remarque : de même le lien de paiement Twint de Nicolas et son code QR, sur ses factures (30 octobre 2026).
 Pour régler le cabinet :
     Le c vaut le cabinet conservé.
     Si le préfixe SMS du c est absent, le préfixe SMS du c devient « NS ».
+    Si le lien twint du c est absent :
+        Le lien twint du c devient « https://go.twint.ch/1/e/tw?tw=acq.qmxyzqW9SBeb0okXKZmWJccIdNYSZdQOwotwCrKEgUq9fReTm4hHSziOaFEwsb6j. ».
+        Le QR twint du c devient le code QR du lien twint du c.
 
 Remarque : les soins du cabinet et leurs tarifs, créés une seule fois ; ensuite, l'écran des soins les gère.
 Pour poser les soins de départ :
