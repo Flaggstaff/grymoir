@@ -27,7 +27,9 @@ Marche à suivre, rédigée le 23 octobre 2026 pour la visite chez Nicolas. Elle
 4. **Installer** l'application fabriquée à la place de l'ancienne.
 5. **Lancer et contrôler** avec le cabinet : le mot de passe ouvre la base ; l'accueil affiche les séances du jour ; la page d'un
    patient montre ses séances ; la Comptabilité de l'année tombe juste ; une quittance s'ouvre.
-6. **Interrupteurs** : Configuration, Le cabinet : « Choix d'agenda » et « Facturation aux assurances » restent éteints chez Nicolas.
+6. **Interrupteurs** : Configuration, Le cabinet. Chez Nicolas (depuis le 28 octobre 2026, `départ.grym`) : « Choix d'agenda »
+   allumé, agenda « Calendly », « Facturation aux assurances » éteint, préfixe SMS « NS ». Ne pas éteindre le choix d'agenda :
+   l'import des réservations Calendly et les rappels SMS passent par lui.
 
 ## Si quelque chose ne va pas
 
