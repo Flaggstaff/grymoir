@@ -5,6 +5,11 @@ cabinet) et `Test de charge` (l'année 2025 inventée, fabriquée au premier lan
 fait dans une version, puis `outils/praxis-propager <version>` la recopie dans les autres ; `make test` vérifie qu'elles ne
 divergent pas (`tests/praxis-versions`).
 
+Chaque version porte son propre nom d'application (`application, nom : …` dans son `projet.grymatelier`, que `praxis-propager`
+ne recopie pas) : « Praxis-N » pour Nicolas, « Praxis-L » pour Lorianne, « Praxis » pour la version neutre, « Praxis charge »
+pour le test de charge (30 octobre 2026). Le nom désigne le dossier de la base ; deux versions du même nom partageraient, sur un
+même Mac, la même base. Une fois un cabinet installé, son nom ne change plus.
+
 Marche à suivre, rédigée le 23 octobre 2026 pour la visite chez Nicolas. Elle vaut pour tout cabinet.
 
 ## Avant la visite, sur ton Mac
