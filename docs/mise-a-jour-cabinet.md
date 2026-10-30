@@ -10,15 +10,17 @@ Marche à suivre, rédigée le 23 octobre 2026 pour la visite chez Nicolas. Elle
 ## Avant la visite, sur ton Mac
 
 1. Dépôt à jour : `cd ~/Downloads/grymoir && git pull --ff-only && make -s test`. Tous les essais passent.
-2. Application du cabinet : dans l'atelier, ouvrir `projets/Praxis/Nicolas` et fabriquer l'application. Elle s'appelle « Praxis »
-   (`application, nom : Praxis` dans son `projet.grymatelier`) : c'est ce nom qui désigne le dossier de sa base. Un autre nom, et
-   l'application ne retrouverait pas la base de Nicolas.
+2. Application du cabinet : ouvrir `projets/Praxis/Nicolas` dans l'atelier **installé** (/Applications/GrymoiR.app, refait
+   par `./paquet-mac` après le `git pull`) et fabriquer l'application. Celle que fabrique `./atelier` dépend du Qt de ton Mac et ne
+   tourne pas ailleurs. Elle s'appelle « Praxis-N » (`application, nom : Praxis-N` dans son `projet.grymatelier`, depuis le
+   30 octobre 2026) : c'est ce nom qui désigne le dossier de sa base, `~/Library/Application Support/Praxis-N`. Un autre nom, et
+   l'application ne retrouverait pas la base de Nicolas ; le même nom pour deux cabinets, et sur ton Mac ils partageraient une base.
 3. Emporter l'application fabriquée et une clé USB vide.
 
 ## Chez le cabinet, dans cet ordre
 
 1. **Fermer Praxis.** Une base ouverte ne se copie pas proprement.
-2. **Sauvegarder.** Copier tout le dossier de données de Praxis sur la clé USB. Sous macOS : `~/Library/Application Support/Praxis`
+2. **Sauvegarder.** Copier tout le dossier de données de Praxis sur la clé USB. Sous macOS : `~/Library/Application Support/Praxis-N`
    (dans le Finder : Aller, Aller au dossier). Garder cette copie intacte jusqu'à ce que tout marche.
 3. **Essayer la mise à jour sur la copie**, sur ton Mac : `outils/essai-mise-a-jour /Volumes/<clé>/Praxis`. L'outil demande le
    mot de passe de la base et dit ce que le prochain lancement changerait, sans rien écrire.
@@ -33,5 +35,5 @@ Marche à suivre, rédigée le 23 octobre 2026 pour la visite chez Nicolas. Elle
 
 ## Si quelque chose ne va pas
 
-Remettre l'ancienne application, puis recopier le dossier de la clé USB à la place de `~/Library/Application Support/Praxis`.
+Remettre l'ancienne application, puis recopier le dossier de la clé USB à la place de `~/Library/Application Support/Praxis-N`.
 La base retrouve exactement son état d'avant la visite.
