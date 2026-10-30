@@ -60,7 +60,8 @@ mkdir -p "$dossier/Resources/modeles"
 cp "$(outils/modele-transcription)" "$dossier/Resources/modeles/"
 
 echo "3. Bibliothèques Qt et MSYS2…"
-deploy="$(command -v windeployqt6 || command -v windeployqt)"
+deploy="$(command -v windeployqt6 || command -v windeployqt || true)"
+[ -n "$deploy" ] || { echo "windeployqt introuvable (paquet mingw-w64-ucrt-x86_64-qt6-tools)." >&2; exit 1; }
 "$deploy" --release --no-translations "$dossier/bin/grym-atelier.exe" > /dev/null
 # Le Qt de MSYS2 dépend d'autres bibliothèques de /ucrt64/bin (ICU, zstd, freetype…), que windeployqt ne recopie
 # pas : on suit les dépendances jusqu'à ce qu'il n'en manque plus aucune (comme outils/fabriquer-ci).
@@ -89,7 +90,11 @@ resultat="$(PATH="$dossier/bin" "$dossier/bin/grym.exe" lancer "$essai/programme
 rm -rf "$(dirname "$essai")"
 
 echo "5. L'installateur (Inno Setup)…"
-version="$(date +%Y.%m.%d)-$(git rev-parse --short HEAD)"
+# le commit : par git, sinon par GitHub (GITHUB_SHA) ; sans git dans MSYS2, la commande rendait 127 et l'installateur
+# s'arrêtait là, sans message (exécution 40926784702)
+commit="$(git rev-parse --short HEAD 2>/dev/null || true)"
+[ -n "$commit" ] || commit="$(printf '%.7s' "${GITHUB_SHA:-local}")"
+version="$(date +%Y.%m.%d)-$commit"
 rm -f "$paquet/GrymoiR-installation.exe"
 MSYS2_ARG_CONV_EXCL='*' "$iscc" /Qp "/DSource=$(cygpath -w "$dossier")" "/DVersion=$version" \
     "/DSortie=$(cygpath -w "$paquet")" "$(cygpath -w "$depot/outils/windows/GrymoiR.iss")"
