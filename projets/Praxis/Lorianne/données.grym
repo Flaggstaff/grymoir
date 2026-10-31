@@ -31,6 +31,7 @@ Un cabinet, conservé, a :
     un affichage twint pro (vrai ou faux), facultatif,
     un natel twint (téléphone), facultatif,
     un affichage twint perso (vrai ou faux), facultatif,
+    une quittance différée (vrai ou faux), facultative,
     une facturation des absences (vrai ou faux), faux au départ,
     une dernière sauvegarde (date), facultative,
     un code d'accès (mot de passe), abandonné,

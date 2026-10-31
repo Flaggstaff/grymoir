@@ -1,0 +1,22 @@
+#!/bin/sh
+# Le reste dû d'un patient, sur sa page (31 octobre 2026) : ses séances dues jusqu'à aujourd'hui, ni prévues ni absences non
+# facturées, et la part pas encore facturée que « Facturer » réunit ; la quittance différée du cabinet.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+N="$racine/projets/Praxis/Nicolas"
+cp "$N/données.grym" "$N/actions.grym" "$d/" && cp -R "$N/bibliothèques" "$d/" && cp "$racine/tests/praxis/reste-du.grym" "$d/"
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+sortie="$("$grym" lancer reste-du.grym 2>&1 < /dev/null)"
+verifier "$(echo "$sortie" | sed -n 1p)" "Rien à payer." "sans séance, rien à payer"
+verifier "$(echo "$sortie" | sed -n 2p)" "Reste dû : CHF 100,00, pas encore facturé." "une séance faite ; la prévue à venir et l'absence non facturée ne comptent pas"
+verifier "$(echo "$sortie" | sed -n 3p)" "Reste dû : CHF 100,00, déjà facturé." "sa facture faite, le reste est facturé"
+verifier "$(echo "$sortie" | sed -n 4p)" "Reste dû : CHF 150,00, dont CHF 50,00 pas encore facturé." "une séance de plus, sans facture"
+verifier "$(echo "$sortie" | sed -n 5p)" "50" "le dû facturable : la séance sans facture"
+verifier "$(echo "$sortie" | sed -n 6p)" "vrai" "par défaut, la quittance tout de suite"
+verifier "$(echo "$sortie" | sed -n 7p)" "faux" "la quittance différée allumée : pas tout de suite"
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]

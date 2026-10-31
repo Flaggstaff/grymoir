@@ -1,0 +1,69 @@
+Remarque : le reste dû d'un patient et la quittance différée (31 octobre 2026), essayés sans écran par tests/praxis-reste-du ;
+Remarque : données inventées.
+Utiliser « actions ».
+Le c vaut un nouveau cabinet :
+    Le nom vaut « Cabinet essai ».
+    Le pays vaut « Suisse ».
+    La facturation des absences vaut faux.
+    Le choix d'agenda vaut faux.
+    L'agenda vaut « Praxis ».
+    La facturation aux assurances vaut faux.
+Conserver le c.
+Le soin d'essai vaut un nouveau soin :
+    Le nom vaut « Massage ».
+    Le tarif vaut 100.
+    L'ordonnance exigée vaut faux.
+    La facturation vaut « patient ».
+Conserver le soin d'essai.
+Le p vaut un nouveau patient :
+    Le nom vaut « Reste Essai ».
+    Le pays vaut « Suisse ».
+Conserver le p.
+Afficher le reste dû du p et d'aujourd'hui.
+Le s1 vaut une nouvelle séance :
+    Le patient vaut le p.
+    Le soin vaut le soin d'essai.
+    La date vaut aujourd'hui − 3.
+    Le prix vaut 100.
+    Le statut vaut « faite ».
+    Le paiement vaut « à payer ».
+Conserver le s1.
+Le s2 vaut une nouvelle séance :
+    Le patient vaut le p.
+    Le soin vaut le soin d'essai.
+    La date vaut aujourd'hui + 3.
+    Le prix vaut 80.
+    Le statut vaut « prévue ».
+    Le paiement vaut « à payer ».
+Conserver le s2.
+Le s3 vaut une nouvelle séance :
+    Le patient vaut le p.
+    Le soin vaut le soin d'essai.
+    La date vaut aujourd'hui − 2.
+    Le prix vaut 70.
+    Le statut vaut « absence ».
+    Le paiement vaut « à payer ».
+Conserver le s3.
+Afficher le reste dû du p et d'aujourd'hui.
+Le f vaut une nouvelle facture :
+    Le numéro vaut « F-2026-0001 ».
+    La date vaut aujourd'hui.
+    Le patient vaut le p.
+    Le montant vaut 100.
+    L'état vaut « à régler ».
+Conserver le f.
+La facture du s1 devient le f.
+Afficher le reste dû du p et d'aujourd'hui.
+Le s4 vaut une nouvelle séance :
+    Le patient vaut le p.
+    Le soin vaut le soin d'essai.
+    La date vaut aujourd'hui − 1.
+    Le prix vaut 50.
+    Le statut vaut « faite ».
+    Le paiement vaut « à payer ».
+Conserver le s4.
+Afficher le reste dû du p et d'aujourd'hui.
+Afficher le dû facturable du p et d'aujourd'hui.
+Afficher la quittance immédiate du c.
+La quittance différée du c devient vrai.
+Afficher la quittance immédiate du c.

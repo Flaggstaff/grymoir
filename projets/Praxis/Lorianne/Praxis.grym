@@ -165,6 +165,10 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     un bouton « Nouvelle séance », principal, à côté du titre,
     le texte "Aujourd'hui, " suivi d'aujourd'hui en toutes lettres, en petites capitales,
     la liste des séances conservées dont la date = aujourd'hui, par heure, avec l'heure, le statut, le nom du patient, le nom du soin et le prix, en cartes,
+    côte à côte :
+        un bouton « Espèces »,
+        un bouton « Twint »,
+        un bouton « Facture »,
     le texte « Le cabinet », en petites capitales,
     un bouton « Patients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png »,
     un bouton « Séances », en tuile, avec la description « Du jour, à venir, passées »,
@@ -258,10 +262,12 @@ L'écran du patient, « Patient », montre :
         un numéro de cas (texte), facultatif, à 552 de la gauche et 544 du haut, large de 160,
         un diagnostic (texte), facultatif, à 728 de la gauche et 544 du haut, large de 344,
     le texte "Séances de " suivi du nom de la personne ouverte, en petites capitales,
+    le texte le reste dû de la personne ouverte et d'aujourd'hui,
     la liste des séances conservées dont le patient = la personne ouverte, par date décroissant, avec la date, l'heure, le nom du soin, la durée, le prix, le statut et le paiement,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Nouvelle séance »,
+        un bouton « Facturer », actif si le dû facturable de la personne ouverte et d'aujourd'hui > 0,
         un bouton « Notes »,
         un bouton « Ordonnances », visible si la facturation aux assurances du cabinet conservé,
         un bouton « Facturer la complémentaire », visible si la facturation aux assurances du cabinet conservé,
@@ -549,7 +555,9 @@ Remarque : les séances (30 octobre 2026) : du jour, à venir ou passées ; une 
 Remarque : du jour ou passée se règle d'ici comme dans « À encaisser ».
 L'écran des prévues, « Séances », montre :
     un bouton « Nouvelle séance », principal, à côté du titre,
-    une période (« Aujourd'hui », « À venir » ou « Passées »), « Aujourd'hui » au départ,
+    côte à côte :
+        une période (« Aujourd'hui », « À venir » ou « Passées »), « Aujourd'hui » au départ,
+        un jour (date), facultatif, avec l'indication « Un jour précis ; vide : la période »,
     la liste des séances conservées dont la date ≥ le début des séances et la date ≤ la fin des séances, par date puis heure, avec la date, l'heure, le nom du patient, le nom du soin, le prix, le statut et le paiement,
     côte à côte :
         un bouton « Fiche »,
@@ -619,6 +627,7 @@ L'écran du cabinet, « Le cabinet », montre :
             un affichage twint pro (vrai ou faux), en interrupteur, avec l'indication « Allumé : le code QR Twint Pro sur les factures »,
             un natel twint (téléphone), facultatif, avec l'indication « Twint perso : le natel qui reçoit l'argent »,
             un affichage twint perso (vrai ou faux), en interrupteur, avec l'indication « Allumé : ce natel sur les factures, en clair (Twint privé n'a pas de code QR) »,
+            une quittance différée (vrai ou faux), en interrupteur, avec l'indication « Allumé : Espèces et Twint n'ouvrent pas de quittance ; Facturation, Quittances la fait sur demande »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
@@ -1199,7 +1208,7 @@ Pour régler une séance et un moyen :
         Annuler le rappel de la séance.
         Clore la séance et « faite ».
     Encaisser la séance et moyen.
-    Si moyen ≠ « offert » et la facture de la séance est absente, quittancer la séance.
+    Si moyen ≠ « offert » et la facture de la séance est absente et la quittance immédiate du cabinet conservé, quittancer la séance.
 
 Remarque : un virement compte au jour où l'argent est arrivé (31 octobre 2026), qui décide de l'année des comptes : saisi le 4 janvier,
 Remarque : un virement du 29 décembre reste dans l'ancienne année ; vide : aujourd'hui.
@@ -1911,8 +1920,14 @@ Quand on change le patient dans l'écran des factures :
     Sinon, le nom cherché des factures devient « ».
     Borner les factures.
 
+Remarque : inscrit depuis « Patients », le patient s'ouvre sur sa page (31 octobre 2026) : le geste suivant est presque toujours sa
+Remarque : première séance, en bas de sa page.
 Quand on clique sur « Nouveau patient » dans l'écran des patients :
+    L'inscrit devient absent.
     Ouvrir l'écran d'inscription.
+    Si l'inscrit est présent :
+        La personne ouverte devient l'inscrit.
+        Ouvrir l'écran du patient.
 
 Quand on clique sur « Fermer » dans l'écran des patients :
     Fermer l'écran.
@@ -1994,6 +2009,20 @@ Quand on choisit une séance dans l'écran d'accueil :
     La séance ouverte devient la séance choisie de l'écran.
     Ouvrir l'écran de la séance.
 
+Remarque : la séance du jour se règle depuis l'accueil (31 octobre 2026) : un clic sur sa carte la choisit, puis Espèces, Twint ou
+Remarque : Facture, comme depuis « Séances » ; le double-clic ouvre toujours sa fiche.
+Quand on clique sur « Espèces » dans l'écran d'accueil :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance du jour : un clic sur sa carte. ».
+    Régler la séance choisie de l'écran et « espèces ».
+
+Quand on clique sur « Twint » dans l'écran d'accueil :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance du jour : un clic sur sa carte. ».
+    Régler la séance choisie de l'écran et « Twint ».
+
+Quand on clique sur « Facture » dans l'écran d'accueil :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance du jour : un clic sur sa carte. ».
+    Facturer au comptoir la séance choisie de l'écran.
+
 Remarque : un clic sur une ligne la choisit seulement (31 octobre 2026) : les boutons agissent sur elle ; « Fiche » l'ouvre.
 Quand on clique sur « Fiche » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
@@ -2004,22 +2033,32 @@ Remarque : un double-clic sur une ligne (Entrée aussi) ouvre sa fiche, comme da
 Quand on choisit une séance dans l'écran des prévues :
     Faire comme un clic sur « Fiche ».
 
-Remarque : les bornes de la liste des séances : aujourd'hui seul, dès demain (cent ans), ou jusqu'à hier (cent ans en arrière).
+Remarque : les bornes de la liste des séances : aujourd'hui seul, dès demain, ou jusqu'à hier, sur un an (31 octobre 2026 ; avant :
+Remarque : cent ans, une liste sans fin) ; plus loin, un jour précis, ou la page du patient, qui les a toutes.
 Pour délimiter un choix :
     Le début des séances devient aujourd'hui.
     La fin des séances devient aujourd'hui.
     Si choix = « À venir » :
         Le début des séances devient aujourd'hui + 1.
-        La fin des séances devient aujourd'hui + 36525.
+        La fin des séances devient aujourd'hui + 365.
     Si choix = « Passées » :
-        Le début des séances devient aujourd'hui − 36525.
+        Le début des séances devient aujourd'hui − 365.
         La fin des séances devient aujourd'hui − 1.
 
 Quand on ouvre l'écran des prévues :
     Délimiter « Aujourd'hui ».
 
 Quand on change la période dans l'écran des prévues :
+    Le jour de l'écran devient absent.
     Si la période de l'écran est présente, délimiter la période de l'écran.
+
+Remarque : un jour précis (31 octobre 2026) : mardi prochain, ou une séance d'il y a deux ans ; vidé, la période reprend.
+Quand on change le jour dans l'écran des prévues :
+    Si le jour de l'écran est présent :
+        Le début des séances devient le jour de l'écran.
+        La fin des séances devient le jour de l'écran.
+    Sinon si la période de l'écran est présente, délimiter la période de l'écran.
+    Sinon, délimiter « Aujourd'hui ».
 
 Quand on clique sur « Nouvelle séance » dans l'écran des prévues :
     Ouvrir l'écran de séance.
@@ -2268,6 +2307,13 @@ Quand on clique sur « À payer » dans l'écran de la séance :
     Faire comme un clic sur « Enregistrer ».
     Remettre à payer la séance ouverte.
 
+Remarque : facturer un patient depuis sa page (31 octobre 2026) : toutes ses séances dues pas encore facturées, sur une facture.
+Quand on clique sur « Facturer » dans l'écran du patient :
+    Si la personne ouverte est absente, refuser « Enregistre d'abord ce patient. ».
+    Si le dû facturable de la personne ouverte et d'aujourd'hui = 0, refuser « Rien à facturer : ses séances dues sont déjà sur une facture, ou rien n'est dû. ».
+    Pour chaque séance conservée dont le patient = la personne ouverte et le paiement = « à payer » et la facture est absente et le statut ≠ « annulée » et le statut ≠ « prévue » et le statut ≠ l'exclu du cabinet conservé et la date ≤ aujourd'hui, par date :
+        Si la facture de la séance est absente, attester la séance.
+
 Remarque : la page du patient s'ouvre par-dessus ; à son retour, la page d'en dessous retrouve son patient.
 Quand on clique sur « Voir le patient » dans l'écran de la séance :
     Le précédent vaut la personne ouverte.
@@ -2317,6 +2363,8 @@ Quand on ouvre l'écran du cabinet :
     Le natel twint de l'écran devient le natel twint du c.
     Si l'affichage twint perso du c est présent, l'affichage twint perso de l'écran devient l'affichage twint perso du c.
     Sinon, l'affichage twint perso de l'écran devient faux.
+    Si la quittance différée du c est présente, la quittance différée de l'écran devient la quittance différée du c.
+    Sinon, la quittance différée de l'écran devient faux.
     La facturation des absences de l'écran devient la facturation des absences du c.
     Le choix d'agenda de l'écran devient le choix d'agenda du c.
     La facturation aux assurances de l'écran devient la facturation aux assurances du c.
@@ -2345,6 +2393,7 @@ Quand on clique sur « Enregistrer » dans l'écran du cabinet :
     L'affichage twint pro du c devient l'affichage twint pro de l'écran.
     Le natel twint du c devient le natel twint de l'écran.
     L'affichage twint perso du c devient l'affichage twint perso de l'écran.
+    La quittance différée du c devient la quittance différée de l'écran.
     Le QR twint du c devient absent.
     Si le lien twint du c est présent et l'affichage twint pro du c est vrai, le QR twint du c devient le code QR du lien twint du c.
     La facturation des absences du c devient la facturation des absences de l'écran.

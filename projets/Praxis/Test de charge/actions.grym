@@ -89,6 +89,13 @@ Pour annuler le rappel d'une séance :
             Remarque : rien à faire de plus : la séance s'enregistre quand même.
         La référence de rappel de la séance devient absente.
 
+Remarque : la quittance après Espèces ou Twint (31 octobre 2026) : tout de suite, sauf si le cabinet la veut sur demande ; elle se fait
+Remarque : alors depuis Facturation, Quittances, liste « Payées, sans quittance ».
+La quittance immédiate d'un cabinet :
+    Si la quittance différée du cabinet est absente, rendre vrai.
+    Si la quittance différée du cabinet est vraie, rendre faux.
+    Rendre vrai.
+
 Remarque : le préfixe des références SMS d'un cabinet : le sien (« NS » chez Nicolas, « LC » chez Lorianne), « PX » sans lui.
 Le préfixe des rappels d'un cabinet :
     Si le préfixe SMS du cabinet est absent, rendre « PX ».
@@ -608,6 +615,23 @@ L'alerte des passées d'un jour :
     Si le nombre passé = 0, rendre « ».
     Si le nombre passé = 1, rendre « Une séance prévue est passée : Séances, puis Passées, pour la dire faite, annulée ou absence. ».
     Rendre le nombre passé suivi de " séances prévues sont passées : Séances, puis Passées, pour les clore.".
+
+Remarque : ce qu'un patient doit encore (31 octobre 2026), sur sa page : ses séances à payer jusqu'à aujourd'hui, comme « À encaisser »,
+Remarque : et la part de ce reste pas encore facturée, que le bouton « Facturer » de sa page réunit sur une facture.
+L'impayé d'une personne et d'un jour :
+    Rendre la somme des prix des séances conservées dont le patient = personne et le paiement = « à payer » et le statut ≠ « annulée » et le statut ≠ « prévue » et le statut ≠ l'exclu du cabinet conservé et la date ≤ jour.
+
+Le dû facturable d'une personne et d'un jour :
+    Rendre la somme des prix des séances conservées dont le patient = personne et le paiement = « à payer » et la facture est absente et le statut ≠ « annulée » et le statut ≠ « prévue » et le statut ≠ l'exclu du cabinet conservé et la date ≤ jour.
+
+Le reste dû d'une personne et d'un jour :
+    Si personne est absente, rendre « ».
+    Le total vaut l'impayé de personne et de jour.
+    Si le total = 0, rendre « Rien à payer. ».
+    Le pas facturé vaut le dû facturable de personne et de jour.
+    Si le pas facturé = 0, rendre "Reste dû : CHF " suivi de (l'arrondi du total à 0,01) suivi de « , déjà facturé. ».
+    Si le pas facturé = le total, rendre "Reste dû : CHF " suivi de (l'arrondi du total à 0,01) suivi de « , pas encore facturé. ».
+    Rendre "Reste dû : CHF " suivi de (l'arrondi du total à 0,01) suivi de ", dont CHF " suivi de (l'arrondi du pas facturé à 0,01) suivi de " pas encore facturé.".
 
 Remarque : ce que l'accueil signale des séances et des patients (28 octobre 2026) : les séances prévues passées, les rappels SMS
 Remarque : qui n'ont pas pu partir, les fiches créées par le site, l'un après l'autre.
