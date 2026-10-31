@@ -990,6 +990,18 @@ int main(int argc, char **argv) {
             attendre([&] { return dialogue() != nullptr; });
             VERIFIER(dialogue() != nullptr);
             annuler();
+            // la croix de la fenêtre (31 octobre 2026) : la même question ; « Annuler » laisse l'écran et sa saisie
+            e.close();
+            attendre([&] { return dialogue() != nullptr; });
+            VERIFIER(dialogue() != nullptr && e.isVisible());
+            annuler();
+            repos();
+            VERIFIER(e.isVisible() && zone() && zone()->text() == "Bea");
+            e.close();   // confirmée : l'écran se ferme sans passer par « Fermer », puis la fenêtre
+            attendre([&] { return dialogue() != nullptr; });
+            if (QDialog *d = dialogue()) { if (auto *o = d->findChild<QPushButton *>("confirmer")) o->click(); }
+            attendre([&] { return !e.isVisible(); });
+            VERIFIER(!e.isVisible());
         }
     }
 

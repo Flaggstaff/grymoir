@@ -1535,6 +1535,11 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         } else if (auto *b = qobject_cast<QPushButton *>(v.controles[k])) {
             const QString question = elements[k].confirmation, mot = elements[k].confirmation_mot;
             const bool si_modifie = elements[k].confirmation_si_modifie;
+            // la croix de la fenêtre retrouve la question du bouton « Fermer » par ces propriétés (31 octobre 2026)
+            b->setProperty("confirmation", question);
+            b->setProperty("confirmation_mot", mot);
+            b->setProperty("confirmation_si_modifie", si_modifie);
+            b->setProperty("indice", k);
             connect(b, &QPushButton::clicked, this, [this, k, question, mot, b, si_modifie] {
                 // « … si l'écran est modifié » (2.67) : sans saisie en attente d'être écrite, le clic part sans question
                 const bool sans_question = question.isEmpty()
@@ -1648,7 +1653,7 @@ void Execution::effacer_erreurs_zones() {
         if (c) for (QLabel *l : c->findChildren<QLabel *>("erreur-zone", Qt::FindDirectChildrenOnly)) l->deleteLater();
 }
 
-void Execution::confirmer(int k, QWidget *bouton, const QString &question, const QString &mot) {
+void Execution::confirmer(int k, QWidget *bouton, const QString &question, const QString &mot, bool par_la_croix) {
     auto *d = new QDialog(this);
     d->setObjectName("confirmation");
     d->setAttribute(Qt::WA_DeleteOnClose);
@@ -1692,9 +1697,15 @@ void Execution::confirmer(int k, QWidget *bouton, const QString &question, const
     connect(boutons, &QDialogButtonBox::rejected, d, &QDialog::reject);
     connect(boutons, &QDialogButtonBox::accepted, d, &QDialog::accept);
     QPointer<QWidget> ecran = vue_ecran;
-    connect(d, &QDialog::accepted, this, [this, k, ecran] {
+    connect(d, &QDialog::accepted, this, [this, k, ecran, par_la_croix] {
         if (!ecran || ecran != vue_ecran) return;   // l'écran a changé entre-temps : le clic ne vise plus rien
         if (clic_en_attente == k) { clic_en_attente = -1; ecran_du_clic = nullptr; }
+        if (par_la_croix) {   // confirmée, la croix fait ce qu'elle aurait fait sans question : fermer l'écran, puis la fenêtre
+            if (!attente_ecran) return;
+            fermer_a_la_fin = true;
+            envoyer_evenement(EVENEMENT_FERMETURE, 0, 0);
+            return;
+        }
         cliquer(k);
     });
     d->open();
@@ -1794,12 +1805,29 @@ void Execution::closeEvent(QCloseEvent *e) {
         e->accept();
         return;
     }
-    fermer_a_la_fin = true;
-    if (attente_ecran) {   // la croix d'un écran le ferme ; le programme continue, puis la fenêtre se ferme (§ 22.2)
+    if (attente_ecran) {
+        // la croix (ou Cmd+Q) sur un écran dont le bouton « Fermer » poserait sa question la pose aussi (31 octobre 2026) :
+        // sinon une saisie pas encore enregistrée partait sans un mot ; « Annuler » laisse tout ouvert, comme avant le geste
+        for (QDialog *d : findChildren<QDialog *>("confirmation"))
+            if (d->isVisible()) { e->ignore(); return; }   // une question déjà posée : on y répond d'abord
+        for (QWidget *w : controles_ecran) {
+            auto *b = qobject_cast<QPushButton *>(w);
+            if (!b || b->text() != QString::fromUtf8("Fermer") || !b->isVisible() || !b->isEnabled()) continue;
+            const QString question = b->property("confirmation").toString();
+            if (question.isEmpty()) break;
+            const int k = b->property("indice").toInt();
+            const bool si_modifie = b->property("confirmation_si_modifie").toBool();
+            if (si_modifie && !(etats_recus.value(k) & ETAT_MODIFIE) && !saisie_en_suspens()) break;
+            e->ignore();
+            confirmer(k, b, question, b->property("confirmation_mot").toString(), true);
+            return;
+        }
+        fermer_a_la_fin = true;   // la croix d'un écran le ferme ; le programme continue, puis la fenêtre se ferme (§ 22.2)
         envoyer_evenement(EVENEMENT_FERMETURE, 0, 0);
         e->ignore();
         return;
     }
+    fermer_a_la_fin = true;
     arreter();   // ailleurs, fermer pendant l'exécution l'arrête d'abord, proprement
     e->ignore();
 }

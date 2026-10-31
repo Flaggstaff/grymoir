@@ -196,7 +196,7 @@ private:
     void cliquer(int k);
     // un bouton « à confirmer » (2.65) : la question dans une fenêtre, Annuler d'abord ; le clic part si on confirme,
     // et, avec un mot à taper, le bouton ne s'active qu'une fois le mot écrit
-    void confirmer(int k, QWidget *bouton, const QString &question, const QString &mot);
+    void confirmer(int k, QWidget *bouton, const QString &question, const QString &mot, bool par_la_croix = false);
     QWidget *ecran_du_clic = nullptr;
     bool attente = false, fini = false, fermer_a_la_fin = false;
     bool ecran_vu = false;
