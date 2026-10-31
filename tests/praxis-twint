@@ -1,0 +1,22 @@
+#!/bin/sh
+# Twint Pro et Twint perso sur la facture de Praxis (31 octobre 2026) : le code QR Twint Pro et son invite seulement quand le
+# cabinet a un code QR ; le natel Twint perso, en clair, seulement s'il est saisi et allumé, avec le numéro de la facture.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+N="$racine/projets/Praxis/Nicolas"
+cp "$N/données.grym" "$N/actions.grym" "$d/" && cp -R "$N/bibliothèques" "$d/" && cp "$racine/tests/praxis/twint.grym" "$d/"
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+sortie="$("$grym" lancer twint.grym 2>&1 < /dev/null)"
+verifier "$(echo "$sortie" | sed -n 1p)" "[]" "sans lien Twint Pro, pas d'invite"
+verifier "$(echo "$sortie" | sed -n 2p)" "[]" "sans natel Twint perso, pas de ligne"
+verifier "$(echo "$sortie" | sed -n 3p)" "Par Twint : scannez ce code avec l'app Twint et payez CHF 120,00." "l'invite sous le code QR Twint Pro"
+verifier "$(echo "$sortie" | sed -n 4p)" "[]" "un natel saisi, l'interrupteur jamais touché : pas de ligne"
+verifier "$(echo "$sortie" | sed -n 5p)" "[]" "un natel saisi, l'interrupteur éteint : pas de ligne"
+verifier "$(echo "$sortie" | sed -n 6p)" "Par Twint, depuis votre app : envoyez CHF 120,00 au 079 123 45 67, avec le message « F-2026-0001 »." "le natel en clair, avec le numéro de la facture"
+verifier "$(echo "$sortie" | sed -n 7p)" "[]" "Twint Pro éteint (pas de code QR) : pas d'invite"
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]

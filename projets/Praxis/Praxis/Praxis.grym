@@ -400,6 +400,7 @@ Le document de facture, « Facture », montre :
     côte à côte :
         l'image du QR twint du cabinet conservé, large de 100,
         le texte l'invite twint du cabinet conservé et du montant de la créance en cours,
+    le texte la ligne twint perso du cabinet conservé et du montant de la créance en cours et du numéro de la créance en cours,
     la section paiement de la charge QR du cabinet conservé et du patient de la créance en cours et du montant de la créance en cours et du numéro de la créance en cours.
 
 Remarque : le rappel d'une facture, sur papier : ses séances pas encore payées, ce qui reste dû, et comment payer.
@@ -608,7 +609,10 @@ L'écran du cabinet, « Le cabinet », montre :
             un logo (image), facultatif, avec l'indication « Le logo du cabinet »,
             une signature (image), facultative, avec l'indication « Le nom du cabinet dessiné, en tête des écrans et des pièces »,
             un canton (texte), facultatif, avec l'indication « En deux lettres : FR »,
-            un lien twint (adresse web), facultatif, avec l'indication « Le lien de paiement Twint du cabinet (https://go.twint.ch/…) : son code QR va sur les factures »,
+            un lien twint (adresse web), facultatif, avec l'indication « Twint Pro : le lien de paiement du cabinet (https://go.twint.ch/…) »,
+            un affichage twint pro (vrai ou faux), en interrupteur, avec l'indication « Allumé : le code QR Twint Pro sur les factures »,
+            un natel twint (téléphone), facultatif, avec l'indication « Twint perso : le natel qui reçoit l'argent »,
+            un affichage twint perso (vrai ou faux), en interrupteur, avec l'indication « Allumé : ce natel sur les factures, en clair (Twint privé n'a pas de code QR) »,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
@@ -2256,6 +2260,13 @@ Quand on ouvre l'écran du cabinet :
     Le numéro ASCA de l'écran devient le numéro ASCA du c.
     L'IBAN de l'écran devient l'IBAN du c.
     Le lien twint de l'écran devient le lien twint du c.
+    Remarque : un cabinet d'avant le 31 octobre 2026 n'a pas l'interrupteur : son code QR allait sur les factures dès qu'il avait un lien.
+    Si l'affichage twint pro du c est présent, l'affichage twint pro de l'écran devient l'affichage twint pro du c.
+    Sinon si le lien twint du c est présent, l'affichage twint pro de l'écran devient vrai.
+    Sinon, l'affichage twint pro de l'écran devient faux.
+    Le natel twint de l'écran devient le natel twint du c.
+    Si l'affichage twint perso du c est présent, l'affichage twint perso de l'écran devient l'affichage twint perso du c.
+    Sinon, l'affichage twint perso de l'écran devient faux.
     La facturation des absences de l'écran devient la facturation des absences du c.
     Le choix d'agenda de l'écran devient le choix d'agenda du c.
     La facturation aux assurances de l'écran devient la facturation aux assurances du c.
@@ -2281,8 +2292,11 @@ Quand on clique sur « Enregistrer » dans l'écran du cabinet :
     Le numéro ASCA du c devient le numéro ASCA de l'écran.
     L'IBAN du c devient l'IBAN de l'écran.
     Le lien twint du c devient le lien twint de l'écran.
-    Si le lien twint du c est présent, le QR twint du c devient le code QR du lien twint du c.
-    Sinon, le QR twint du c devient absent.
+    L'affichage twint pro du c devient l'affichage twint pro de l'écran.
+    Le natel twint du c devient le natel twint de l'écran.
+    L'affichage twint perso du c devient l'affichage twint perso de l'écran.
+    Le QR twint du c devient absent.
+    Si le lien twint du c est présent et l'affichage twint pro du c est vrai, le QR twint du c devient le code QR du lien twint du c.
     La facturation des absences du c devient la facturation des absences de l'écran.
     Le choix d'agenda du c devient le choix d'agenda de l'écran.
     La facturation aux assurances du c devient la facturation aux assurances de l'écran.

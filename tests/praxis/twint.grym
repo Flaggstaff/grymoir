@@ -1,0 +1,24 @@
+Remarque : Twint Pro et Twint perso sur la facture de Praxis (31 octobre 2026), essayés sans écran par tests/praxis-twint ;
+Remarque : données inventées.
+Utiliser « actions ».
+Le c vaut un nouveau cabinet :
+    Le nom vaut « Cabinet essai ».
+    Le pays vaut « Suisse ».
+    La facturation des absences vaut faux.
+    Le choix d'agenda vaut faux.
+    L'agenda vaut « Praxis ».
+    La facturation aux assurances vaut faux.
+Conserver le c.
+Afficher "[" suivi de l'invite twint du c et de 120 suivi de "]".
+Afficher "[" suivi de la ligne twint perso du c et de 120 et de « F-2026-0001 » suivi de "]".
+Le lien twint du c devient « https://go.twint.ch/1/e/tw?tw=acq.essai ».
+Le QR twint du c devient le code QR du lien twint du c.
+Afficher l'invite twint du c et de 120.
+Le natel twint du c devient « 079 123 45 67 ».
+Afficher "[" suivi de la ligne twint perso du c et de 120 et de « F-2026-0001 » suivi de "]".
+L'affichage twint perso du c devient faux.
+Afficher "[" suivi de la ligne twint perso du c et de 120 et de « F-2026-0001 » suivi de "]".
+L'affichage twint perso du c devient vrai.
+Afficher la ligne twint perso du c et de 120 et de « F-2026-0001 ».
+Le QR twint du c devient absent.
+Afficher "[" suivi de l'invite twint du c et de 120 suivi de "]".

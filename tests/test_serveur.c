@@ -1547,15 +1547,16 @@ int main(void) {
     }
 
     /* L'écran du cabinet, en trois colonnes depuis le 27 octobre 2026 : prénom z11, téléphone z12 … ASCA z17, IBAN z20,
-       les interrupteurs z21 à z23, le logo z24, la signature z25, le canton z26, le lien Twint z27 (30 octobre 2026) ; « Enregistrer » 31, « Fermer » 32. */
+       les interrupteurs z21 à z23, le logo z24, la signature z25, le canton z26, le lien Twint z27 (30 octobre 2026),
+       son interrupteur z28, le natel Twint perso z29 et son interrupteur z30 (31 octobre 2026) ; « Enregistrer » 34, « Fermer » 35. */
     {   /* Cabinet (N2a) : le cabinet, un seul, créé au lancement ; son écran depuis celui des soins ; ses sigles ;
            la règle du GLN vérifiée à « Enregistrer » */
         memset(&sc, 0, sizeof sc);
 #define CAB_ZONES "z2=Nicolas+Seydoux&z3=Rue+X&z4=1&z5=&z6=1700&z7=Fribourg&z8=Suisse&z12=&z13=&z14=Z123456&z16=&z17="
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Configuration"), get("/"), evenement("q=3&clic=0"), get("/"),
-                 evenement("q=4&" CAB_ZONES "&z15=760100000000&clic=31"), get("/"),
-                 evenement("q=5&" CAB_ZONES "&z15=7601000000000&clic=31"), get("/"),
-                 evenement("q=6&clic=0"), get("/"), evenement("q=7&clic=32"), evenement("q=8&clic=1"), get("/"));
+                 evenement("q=4&" CAB_ZONES "&z15=760100000000&clic=34"), get("/"),
+                 evenement("q=5&" CAB_ZONES "&z15=7601000000000&clic=34"), get("/"),
+                 evenement("q=6&clic=0"), get("/"), evenement("q=7&clic=35"), evenement("q=8&clic=1"), get("/"));
 #undef CAB_ZONES
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet3.grymd", &sc);
         CONTIENT(sc.reponses[2], "<h1>Configuration</h1>");   /* le cabinet, les soins, les rubriques */
@@ -2065,7 +2066,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Configuration"), evenement("q=3&clic=0"),
                  evenement("q=4&z2=Cabinet+essai&z3=Rue+X&z4=1&z5=&z6=1700&z7=Fribourg&z8=Suisse&z12=&z13=&z14=&z15=&z16=&z17="
-                           "&z22p=1&z23p=1&clic=31"), get("/"),
+                           "&z22p=1&z23p=1&clic=34"), get("/"),
                  evenement("q=5&clic=Fermer"), get("/"), evenement("q=6&clic=Patients"), evenement("q=7&z0=Anne+Rochat&clic=-1"),
                  get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_eteint.grymd", &sc);
@@ -2191,10 +2192,10 @@ int main(void) {
     {   /* Cabinet : l'IBAN des QR-factures, avec ou sans espaces ; vingt et un caractères (2.27) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Configuration"), evenement("q=3&clic=0"), get("/"),
-                 evenement("q=4&z20=CH52+0483+5012&clic=31"), get("/"),
-                 evenement("q=5&z20=CH44+3199+9123+0008+8901+2&clic=31"), get("/"),
-                 evenement("q=6&z20=CH53+0483+5012+3456+7100+0&clic=31"), get("/"),
-                 evenement("q=7&z20=CH52+0483+5012+3456+7100+0&clic=31"), get("/"));
+                 evenement("q=4&z20=CH52+0483+5012&clic=34"), get("/"),
+                 evenement("q=5&z20=CH44+3199+9123+0008+8901+2&clic=34"), get("/"),
+                 evenement("q=6&z20=CH53+0483+5012+3456+7100+0&clic=34"), get("/"),
+                 evenement("q=7&z20=CH52+0483+5012+3456+7100+0&clic=34"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet13.grymd", &sc);
         CONTIENT(sc.reponses[3], "value=\"CH52 0483 5012 3456 7100 0\"");   /* celui des données d'essai */
         CONTIENT(sc.reponses[5], "Un IBAN suisse compte 21 caractères : CH, puis 19 chiffres et lettres.");

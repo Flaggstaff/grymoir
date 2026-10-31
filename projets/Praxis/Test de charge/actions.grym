@@ -322,10 +322,18 @@ Remarque : le débiteur de la QR-facture, le patient (bibliothèque « Suisse sa
 Remarque : reconnu, ses sept lignes restent vides, et la section paiement montre un cadre « Payable par » à remplir.
 L'adresse de débiteur d'un patient vaut le débiteur QR du nom du patient et de la rue du patient et du numéro de maison du patient et du numéro postal du patient et de la localité du patient et du pays du patient.
 
-Remarque : sous le code QR Twint de la facture (30 octobre 2026) : le montant à payer ; rien sans lien twint.
+Remarque : sous le code QR Twint de la facture (30 octobre 2026) : le montant à payer ; rien sans code QR, c'est-à-dire sans
+Remarque : lien Twint Pro, ou avec son interrupteur éteint (31 octobre 2026).
 L'invite twint d'un cabinet et d'un montant :
-    Si le lien twint du cabinet est absent, rendre « ».
+    Si le QR twint du cabinet est absent, rendre « ».
     Rendre "Par Twint : scannez ce code avec l'app Twint et payez CHF " suivi de (l'arrondi de montant à 0,01) suivi de « . ».
+
+Remarque : Twint perso (31 octobre 2026) : un compte Twint privé reçoit l'argent sur son numéro de natel, que le patient tape
+Remarque : dans son app ; pas de code QR à imprimer. La ligne, en clair, seulement si le cabinet l'a allumée.
+La ligne twint perso d'un cabinet et d'un montant et d'un numéro :
+    Si le natel twint du cabinet est absent ou l'affichage twint perso du cabinet est absent, rendre « ».
+    Si l'affichage twint perso du cabinet est faux, rendre « ».
+    Rendre "Par Twint, depuis votre app : envoyez CHF " suivi de (l'arrondi de montant à 0,01) suivi de " au " suivi du natel twint du cabinet suivi de ", avec le message « " suivi de numéro suivi de " ».".
 
 Remarque : la QR-facture d'une facture ou d'un rappel ; rien sans IBAN.
 La charge QR d'un cabinet et d'un patient et d'un montant et d'un motif :
