@@ -132,6 +132,9 @@ Régler le cabinet.
 
 Remarque : les couleurs et la police du site de Nicolas Seydoux, à l'encre (pour un autre cabinet, cette phrase et départ.grym) ; le logo et la signature, ceux de la configuration
 Remarque : du cabinet (le cœur et le nom dessiné au départ), repris à chaque lancement ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
+Remarque : la version de Praxis, la même pour tous les cabinets ; la Configuration la montre. Elle change avec chaque
+Remarque : mise à jour livrée, ici et dans « application, version » du projet.grymatelier de chaque version (tests/praxis-versions).
+La version vaut « 2026.10.31 ».
 Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf », le logo (le logo du cabinet conservé) et la signature (la signature du cabinet conservé).
 
 Remarque : la copie chiffrée de toute la base, avec ses clés, dans un dossier, nommée par l'application, le jour et l'heure :
@@ -170,13 +173,14 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     un bouton « Patients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png »,
     un bouton « Séances », en tuile, avec la description « Du jour, à venir, passées »,
     un bouton « Facturation », en tuile, avec la description « À encaisser, factures, quittances »,
-    un bouton « Comptabilité », en tuile, avec la description « Encaisser, factures, rappels, frais »,
+    un bouton « Comptabilité », en tuile, avec la description « Recettes, frais, rappels, journal »,
     un bouton « Configuration », en tuile, avec la description « Le cabinet, les soins, les rubriques, les sauvegardes »,
     un bouton « Agenda OneDoc », en tuile, avec la description « Rendez-vous et rappels », visible si l'agenda du cabinet conservé = « OneDoc »,
     un bouton « Relire les rendez-vous », en tuile, avec la description « Les réservations du site Calendly », visible si l'agenda du cabinet conservé = « Calendly »,
     le texte l'alerte de sauvegarde du cabinet conservé et d'aujourd'hui et de l'échec de sauvegarde,
     le texte l'alerte des prévues d'aujourd'hui et de maintenant,
     le texte l'état calendly, visible si l'agenda du cabinet conservé = « Calendly »,
+    le texte l'inachevé du cabinet conservé,
     un bouton « Fermer l'application ».
 
 Remarque : quitter (24 octobre 2026) : le bouton « Fermer l'application » ou la croix de la fenêtre ferment l'accueil ; en
@@ -195,6 +199,8 @@ Quand on ferme l'écran d'accueil :
 
 Remarque : les écrans posés au pixel tiennent dans 1072 points, la largeur utile du thème, mesurée sur un MacBook Pro 14 pouces (1512 × 982 et 1800 × 1169).
 Remarque : l'inscription d'un patient : les champs courts à gauche ; à côté, l'anamnèse, dictée (transcrite sur l'ordinateur) ou tapée.
+Remarque : l'ordre écrit est celui de la touche Tab, rangée par rangée (31 octobre 2026) : l'adresse comme sur une enveloppe
+Remarque : (rue et numéro, complément, NPA, localité, pays) ; la carte d'assuré, pour le seul tiers payant, en dernière rangée.
 Remarque : une zone avec une indication est plus haute (son nom, l'indication, puis la zone) : 96 points, au lieu de 72, sous ces rangées (27 octobre 2026).
 L'écran d'inscription, « Nouveau patient », montre :
     en position libre :
@@ -202,20 +208,20 @@ L'écran d'inscription, « Nouveau patient », montre :
         un prénom (texte), facultatif, à 276 de la gauche et 0 du haut, large de 260,
         une rue (texte), facultative, à 0 de la gauche et 72 du haut, large de 260,
         un numéro de maison (texte), facultatif, à 276 de la gauche et 72 du haut, large de 110,
-        un complément d'adresse (texte), facultatif, à 0 de la gauche et 144 du haut, large de 260,
-        un pays (texte), « Suisse » au départ, à 276 de la gauche et 144 du haut, large de 260,
+        un complément d'adresse (texte), facultatif, à 0 de la gauche et 144 du haut, large de 536,
         un numéro postal (texte), facultatif, à 0 de la gauche et 216 du haut, large de 110,
-        une localité (texte), facultative, à 126 de la gauche et 216 du haut, large de 410,
+        une localité (texte), facultative, à 126 de la gauche et 216 du haut, large de 260,
+        un pays (texte), « Suisse » au départ, à 402 de la gauche et 216 du haut, large de 134,
         un téléphone (téléphone), facultatif, à 0 de la gauche et 288 du haut, large de 260,
         un courriel (courriel), facultatif, à 276 de la gauche et 288 du haut, large de 260,
         une date de naissance (date), facultative, à 0 de la gauche et 360 du haut, large de 260,
-        un assureur (assureur), facultatif, avec recherche, à 0 de la gauche et 432 du haut, large de 260,
-        un numéro d'assuré (texte), facultatif, à 276 de la gauche et 432 du haut, large de 260,
-        un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré », à 0 de la gauche et 504 du haut, large de 260,
-        une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base », à 276 de la gauche et 504 du haut, large de 260,
-        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 600 du haut, large de 260,
-        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », à 276 de la gauche et 600 du haut, large de 260,
-        un rappel par SMS (vrai ou faux), facultatif, avec l'indication « Le patient accepte un SMS la veille de ses séances », à 0 de la gauche et 696 du haut, large de 536,
+        un rappel par SMS (vrai ou faux), facultatif, avec l'indication « Un SMS la veille de ses séances », à 276 de la gauche et 360 du haut, large de 260, visible si le choix d'agenda du cabinet conservé,
+        un assureur (assureur), facultatif, avec recherche, à 0 de la gauche et 456 du haut, large de 260,
+        un numéro d'assuré (texte), facultatif, à 276 de la gauche et 456 du haut, large de 260,
+        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 528 du haut, large de 260,
+        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », à 276 de la gauche et 528 du haut, large de 260,
+        une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base », à 0 de la gauche et 624 du haut, large de 260,
+        un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré », à 276 de la gauche et 624 du haut, large de 260, visible si la facturation aux assurances du cabinet conservé,
         une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
         une anamnèse (texte), facultative, sur plusieurs lignes, transcrite de la dictée, à 552 de la gauche et 72 du haut, large de 520, haute de 340,
         un sexe (« féminin » ou « masculin »), facultatif, à 552 de la gauche et 448 du haut, large de 260,
@@ -224,7 +230,7 @@ L'écran d'inscription, « Nouveau patient », montre :
         un diagnostic (texte), facultatif, à 728 de la gauche et 544 du haut, large de 344,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer ».
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Remarque : la page d'un patient, comme son inscription, puis ses séances ; on y corrige ses données directement.
 Remarque : l'ajout, dicté ou tapé, s'ajoute à la fin de l'anamnèse, daté, à l'enregistrement : rien de ce qui est déjà écrit ne se perd.
@@ -234,20 +240,20 @@ L'écran du patient, « Patient », montre :
         un prénom (texte), facultatif, à 276 de la gauche et 0 du haut, large de 260,
         une rue (texte), facultative, à 0 de la gauche et 72 du haut, large de 260,
         un numéro de maison (texte), facultatif, à 276 de la gauche et 72 du haut, large de 110,
-        un complément d'adresse (texte), facultatif, à 0 de la gauche et 144 du haut, large de 260,
-        un pays (texte), « Suisse » au départ, à 276 de la gauche et 144 du haut, large de 260,
+        un complément d'adresse (texte), facultatif, à 0 de la gauche et 144 du haut, large de 536,
         un numéro postal (texte), facultatif, à 0 de la gauche et 216 du haut, large de 110,
-        une localité (texte), facultative, à 126 de la gauche et 216 du haut, large de 410,
+        une localité (texte), facultative, à 126 de la gauche et 216 du haut, large de 260,
+        un pays (texte), « Suisse » au départ, à 402 de la gauche et 216 du haut, large de 134,
         un téléphone (téléphone), facultatif, à 0 de la gauche et 288 du haut, large de 260,
         un courriel (courriel), facultatif, à 276 de la gauche et 288 du haut, large de 260,
         une date de naissance (date), facultative, à 0 de la gauche et 360 du haut, large de 260,
-        un assureur (assureur), facultatif, avec recherche, à 0 de la gauche et 432 du haut, large de 260,
-        un numéro d'assuré (texte), facultatif, à 276 de la gauche et 432 du haut, large de 260,
-        un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré », à 0 de la gauche et 504 du haut, large de 260,
-        une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base », à 276 de la gauche et 504 du haut, large de 260,
-        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 600 du haut, large de 260,
-        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », à 276 de la gauche et 600 du haut, large de 260,
-        un rappel par SMS (vrai ou faux), facultatif, avec l'indication « Le patient accepte un SMS la veille de ses séances », à 0 de la gauche et 696 du haut, large de 536,
+        un rappel par SMS (vrai ou faux), facultatif, avec l'indication « Un SMS la veille de ses séances », à 276 de la gauche et 360 du haut, large de 260, visible si le choix d'agenda du cabinet conservé,
+        un assureur (assureur), facultatif, avec recherche, à 0 de la gauche et 456 du haut, large de 260,
+        un numéro d'assuré (texte), facultatif, à 276 de la gauche et 456 du haut, large de 260,
+        un assureur complémentaire (assureur), facultatif, avec recherche, avec l'indication « Vide : celui de la base », à 0 de la gauche et 528 du haut, large de 260,
+        un numéro d'assuré complémentaire (texte), facultatif, avec l'indication « Vide : celui de la base », à 276 de la gauche et 528 du haut, large de 260,
+        une facturation complémentaire (« tiers payant » ou « tiers garant »), facultative, avec l'indication « Vide : tiers payant, comme la base », à 0 de la gauche et 624 du haut, large de 260,
+        un numéro de carte d'assuré (texte), facultatif, avec l'indication « Les vingt chiffres de sa carte d'assuré », à 276 de la gauche et 624 du haut, large de 260, visible si la facturation aux assurances du cabinet conservé,
         une dictée (son), facultative, à 552 de la gauche et 0 du haut, large de 520,
         un ajout (texte), facultatif, sur plusieurs lignes, transcrit de la dictée, à 552 de la gauche et 72 du haut, large de 520, haut de 112,
         une anamnèse (texte), facultative, sur plusieurs lignes, à 552 de la gauche et 204 du haut, large de 520, haute de 208,
@@ -260,13 +266,13 @@ L'écran du patient, « Patient », montre :
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Nouvelle séance »,
-        un bouton « Fermer »,
         un bouton « Notes »,
-        un bouton « Supprimer », à confirmer par « Supprimer ce patient ? Il part dans la corbeille, avec ses séances et ses notes. »,
-        un bouton « Archiver »,
-    côte à côte :
         un bouton « Ordonnances », visible si la facturation aux assurances du cabinet conservé,
-        un bouton « Facturer la complémentaire », visible si la facturation aux assurances du cabinet conservé.
+        un bouton « Facturer la complémentaire », visible si la facturation aux assurances du cabinet conservé,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+    côte à côte :
+        un bouton « Archiver »,
+        un bouton « Supprimer », à confirmer par « Supprimer ce patient ? Il part dans la corbeille, avec ses séances et ses notes. ».
 
 Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
 L'écran de la séance, « Séance », montre :
@@ -279,7 +285,7 @@ L'écran de la séance, « Séance », montre :
         une durée (nombre entier), facultative, avec l'unité « min », à 352 de la gauche et 144 du haut, large de 168,
         un prix (nombre), avec l'unité « CHF », à 0 de la gauche et 216 du haut, large de 200,
         un statut (« prévue », « faite », « annulée » ou « absence »), à 0 de la gauche et 288 du haut, large de 520,
-        un paiement (« à payer », « espèces », « Twint » ou « virement »), à 0 de la gauche et 360 du haut, large de 520, actif si l'offerte de l'écran est fausse,
+        un paiement (« à payer », « espèces », « Twint » ou « virement »), en lecture seule, avec l'indication « Les boutons du bas le changent : Espèces, Twint, Virement, À payer », à 0 de la gauche et 360 du haut, large de 520,
         une offerte (vrai ou faux), à 0 de la gauche et 420 du haut,
         un commentaire dicté (son), facultatif, à 552 de la gauche et 0 du haut, large de 520,
         un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté, à 552 de la gauche et 72 du haut, large de 520, haut de 352,
@@ -287,12 +293,13 @@ L'écran de la séance, « Séance », montre :
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Facture ou quittance »,
-        un bouton « Fermer »,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer cette séance ? Elle part dans la corbeille. »,
     côte à côte :
         un bouton « Espèces »,
         un bouton « Twint »,
-        un bouton « Virement ».
+        un bouton « Virement »,
+        un bouton « À payer ».
 
 Remarque : un soin, ses tarifs et sa durée ; le code tarifaire est celui du Tarif 590.
 L'écran du soin, « Soin », montre :
@@ -309,7 +316,7 @@ L'écran du soin, « Soin », montre :
     une position tarifaire (position), facultative, avec l'indication « Facturé à l'assurance : sa position (Configuration, Tarif des assurances) », visible si la facturation aux assurances du cabinet conservé,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer »,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Nouvel acte »,
         un bouton « Supprimer », à confirmer par « Supprimer ce soin ? Il part dans la corbeille. ».
 
@@ -323,7 +330,7 @@ L'écran de l'acte, « Acte du Tarif 590 », montre :
     une première séance seulement (vrai ou faux), en interrupteur, avec l'indication « Allumé : l'anamnèse, que les séances suivantes n'ont pas »,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer »,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer cet acte ? ».
 
 Remarque : la comptabilité en recettes-dépenses d'une année, celle du jour au départ : ce qui est encaissé (à la date d'encaissement),
@@ -334,17 +341,13 @@ L'écran de comptabilité, « Comptabilité », montre :
     le texte "Frais : CHF " suivi de l'arrondi de la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice à 0,01,
     le texte "Résultat : CHF " suivi de l'arrondi de (la somme des prix des séances conservées dont l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert ») − (la somme des montants des frais conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice) à 0,01,
     le texte « Le cabinet », en petites capitales,
-    un bouton « À encaisser », en tuile, avec la description « Les séances à payer »,
-    un bouton « Quittances », en tuile, avec la description « Remettre et retrouver »,
     un bouton « Frais », en tuile, avec la description « Dépenses et justificatifs »,
     un bouton « Rappels », en tuile, avec la description « Factures échues, séances à facturer »,
-    un bouton « Factures », en tuile, avec la description « Envoyées, et ce qui en est réglé »,
-    un bouton « Assurances », en tuile, avec la description « Factures tiers payant et leurs règlements », visible si la facturation aux assurances du cabinet conservé,
     un bouton « Journal de l'année », en tuile, avec la description « Recettes et frais, à imprimer »,
     un bouton « Exporter en CSV », en tuile, avec la description « Recettes et frais, pour un tableur ou la fiduciaire »,
-    un bouton « Fermer »,
+    un dossier d'export (texte), facultatif, avec le choix d'un dossier, avec l'indication « Où vont les CSV ; vide : Exports, à côté de l'application. »,
     le texte l'annonce de l'avis des comptes,
-    un dossier d'export (texte), facultatif, avec le choix d'un dossier, avec l'indication « Où vont les CSV ; vide : Exports, à côté de l'application. ».
+    un bouton « Fermer ».
 
 Remarque : les factures envoyées, les plus récentes d'abord ; une facture choisie se remontre telle qu'elle a été envoyée.
 L'écran des factures, (le titre des factures de l'année des comptes et de (la recherche des factures suivi du nom cherché des factures)), montre :
@@ -352,9 +355,10 @@ L'écran des factures, (le titre des factures de l'année des comptes et de (la 
     une recherche (texte), facultative, avec l'indication « Un numéro, un état, une partie de nom »,
     un patient (patient), facultatif, avec l'indication « Ses factures seules, toutes les années ; vide : tous »,
     la liste des factures conservées dont la date ≥ le début des factures et la date < la fin des factures et le nom du patient contient le nom cherché des factures et (le numéro contient la recherche des factures ou le nom du patient contient la recherche des factures ou l'état contient la recherche des factures), par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et l'état,
-    un bouton « Fermer »,
-    un bouton « Annuler la facture »,
-    un bouton « Facture électronique »,
+    côte à côte :
+        un bouton « Annuler la facture », à confirmer par « Annuler la facture choisie ? Elle ne se rétablit pas : on en refait une. Envoyée par voie électronique, son annulation part aussi. » en tapant « annuler »,
+        un bouton « Facture électronique »,
+        un bouton « Fermer »,
     le texte l'avis des factures.
 
 Remarque : les factures échues (trente jours) et pas réglées : « Rappel » imprime le rappel de la facture choisie ;
@@ -363,15 +367,15 @@ L'écran des rappels, « Rappels », montre :
     une année (exercice), avec l'indication « L'année des rappels envoyés ; les factures échues, elles, de toutes les années »,
     le texte « Factures échues », en petites capitales,
     la liste des factures conservées dont l'état ≠ « réglée » et la date ≤ la limite des rappels, par date, avec le numéro, la date, le nom du patient, le montant, l'état et le dernier rappel,
-    côte à côte :
-        un bouton « Rappel », principal,
-        un bouton « Fermer »,
+    un bouton « Rappel », principal,
     le texte « Dues depuis trente jours, sans facture », en petites capitales,
     la liste des séances conservées dont la facture est absente et le paiement = « à payer » et le statut ≠ « prévue » et le statut ≠ « annulée » et le statut ≠ l'exclu du cabinet conservé et la date ≤ la limite des rappels, par date, avec la date, le nom du patient, le nom du soin, le prix et le statut,
     un bouton « Facturer »,
     le texte "Rappels envoyés en " suivi de l'année des comptes, en petites capitales,
     la liste des rappels conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date décroissant, avec la date, le rang, le numéro de la facture et le nom du patient de la facture,
-    un bouton « Rappel électronique »,
+    côte à côte :
+        un bouton « Rappel électronique »,
+        un bouton « Fermer »,
     le texte l'avis des factures.
 
 Remarque : l'en-tête des pièces (24 octobre 2026) : la signature et l'adresse du cabinet, une seule fois pour toutes les pièces.
@@ -436,13 +440,13 @@ L'écran des quittances, (le titre des quittances de l'année des comptes et de 
     un patient (patient), facultatif, avec l'indication « Ses quittances seules, toutes les années ; vide : tous »,
     le texte « Payées, sans quittance », en petites capitales,
     la liste des séances conservées dont la quittance est absente et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance » et l'encaissement ≥ le début des quittances et l'encaissement < la fin des quittances et le nom du patient contient la recherche des quittances, par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
-    côte à côte :
-        un bouton « Quittance », principal,
-        un bouton « Fermer »,
+    un bouton « Quittance », principal,
     le texte « Quittances remises », en petites capitales,
     la liste des quittances conservées dont la date ≥ le début des quittances et la date < la fin des quittances et le nom du patient contient la recherche des quittances, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et le moyen,
-    un bouton « Annuler la quittance »,
-    un bouton « Quittance électronique »,
+    côte à côte :
+        un bouton « Annuler la quittance », à confirmer par « Annuler la quittance choisie ? Elle ne se rétablit pas : on en refait une. » en tapant « annuler »,
+        un bouton « Quittance électronique »,
+        un bouton « Fermer »,
     le texte l'avis des factures.
 
 L'écran des frais, ("Frais " suivi de l'année des comptes), montre :
@@ -465,7 +469,7 @@ L'écran du frais, « Frais », montre :
         un bouton « Retirer le justificatif », à 552 de la gauche et 144 du haut, actif si le justificatif de l'écran est présent,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer »,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer ce frais ? Il part dans la corbeille. ».
 
 Remarque : la quittance, sur papier : le cabinet et ses numéros, le patient, les séances et leur paiement, le montant reçu ; ce qu'une
@@ -538,7 +542,7 @@ L'écran de séance, « Nouvelle séance » en grand, montre :
     un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer ».
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Remarque : les séances (30 octobre 2026) : du jour, à venir ou passées ; une prévue se dit faite, annulée ou absente ; une séance
 Remarque : du jour ou passée se règle d'ici comme dans « À encaisser ».
@@ -557,7 +561,7 @@ L'écran des prévues, « Séances », montre :
         un bouton « Virement »,
         un bouton « Offert »,
         un bouton « Facture »,
-        un bouton « Fermer ».
+    un bouton « Fermer ».
 
 Remarque : tout ce qui n'est pas payé, jusqu'à aujourd'hui compris, prévues du jour aussi (30 octobre 2026).
 L'écran des encaissements, « À encaisser », montre :
@@ -569,13 +573,15 @@ L'écran des encaissements, « À encaisser », montre :
         un bouton « Virement »,
         un bouton « Offert »,
         un bouton « Facture »,
-        un bouton « Fermer ».
+    un bouton « Fermer ».
 
-Remarque : la facturation, depuis l'accueil (30 octobre 2026) : encaisser, les factures, les quittances.
+Remarque : la facturation, depuis l'accueil (30 octobre 2026) : encaisser, les factures, les quittances ; les factures aux
+Remarque : assurances aussi (31 octobre 2026), quand le cabinet les fait. La Comptabilité garde les comptes : frais, rappels, journal.
 L'écran de caisse, « Facturation », montre :
     un bouton « À encaisser », en tuile, avec la description « Ce qui n'est pas payé, jusqu'à aujourd'hui »,
     un bouton « Factures », en tuile, avec la description « Envoyées, et ce qui en est réglé »,
     un bouton « Quittances », en tuile, avec la description « Remettre et retrouver »,
+    un bouton « Assurances », en tuile, avec la description « Factures tiers payant et leurs règlements », visible si la facturation aux assurances du cabinet conservé,
     un bouton « Fermer ».
 
 Remarque : le cabinet s'édite dans son écran : « Enregistrer » est un événement, les règles du cabinet s'y vérifient.
@@ -601,7 +607,7 @@ L'écran du cabinet, « Le cabinet », montre :
         l'un sous l'autre :
             un IBAN (texte), facultatif, avec l'indication « Le compte des QR-factures, un IBAN (pas un QR-IBAN) : CH52 0483 5012 3456 7100 0 »,
             une facturation des absences (vrai ou faux), en interrupteur, avec l'indication « Seulement si les patients en sont avertis, par écrit »,
-            un choix d'agenda (vrai ou faux), en interrupteur, avec l'indication « Allumé : la Configuration propose Rendez-vous, l'agenda Praxis ou OneDoc »,
+            un choix d'agenda (vrai ou faux), en interrupteur, avec l'indication « Allumé : la Configuration propose Rendez-vous (Praxis, OneDoc ou Calendly) et SMS »,
             une facturation aux assurances (vrai ou faux), en interrupteur, avec l'indication « Allumé : les assureurs, l'assurance des patients, leurs ordonnances »,
             un logo (image), facultatif, avec l'indication « Le logo du cabinet »,
             une signature (image), facultative, avec l'indication « Le nom du cabinet dessiné, en tête des écrans et des pièces »,
@@ -609,7 +615,7 @@ L'écran du cabinet, « Le cabinet », montre :
             un lien twint (adresse web), facultatif, avec l'indication « Le lien de paiement Twint du cabinet (https://go.twint.ch/…) : son code QR va sur les factures »,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer »,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Retirer le logo »,
         un bouton « Retirer la signature ».
 
@@ -621,7 +627,7 @@ L'écran des notes, « Notes confidentielles », montre :
     une nouvelle note (texte), facultative, sur plusieurs lignes, transcrite de la dictée,
     côte à côte :
         un bouton « Ajouter », principal,
-        un bouton « Fermer »,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Modifier »,
         un bouton « Supprimer », à confirmer par « Supprimer la note choisie ? ».
 
@@ -683,7 +689,7 @@ L'écran des sauvegardes, « Sauvegardes », montre :
     le texte « Restaurer », en petites capitales,
     une sauvegarde (fichier), facultative, avec l'indication « Un fichier .coffre ; il remplacera toutes les données à la prochaine ouverture, les actuelles gardées à côté. »,
     un ancien mot de passe (texte), facultatif, masqué, avec l'indication « Celui de cette copie, s'il a changé depuis ; vide : l'actuel. », large de 12 caractères,
-    un bouton « Restaurer »,
+    un bouton « Restaurer », à confirmer par « Remplacer toutes les données par cette copie, à la prochaine ouverture ? Les données actuelles sont gardées à côté. »,
     le texte « Mot de passe », en petites capitales,
     un mot de passe actuel (texte), facultatif, masqué, large de 12 caractères,
     un nouveau mot de passe (texte), facultatif, masqué, large de 12 caractères,
@@ -699,10 +705,11 @@ L'écran de configuration, « Configuration », montre :
     un bouton « Corbeille », en tuile, avec la description « Rétablir ce qui a été supprimé »,
     un bouton « Sauvegardes », en tuile, avec la description « Copies chiffrées, restauration, mot de passe »,
     un bouton « Archives », en tuile, avec la description « Patients archivés, leurs pièces gardées »,
-    un bouton « Rendez-vous », en tuile, avec la description « L'agenda : Praxis ou OneDoc », visible si le choix d'agenda du cabinet conservé,
+    un bouton « Rendez-vous », en tuile, avec la description « L'agenda : Praxis, OneDoc ou Calendly », visible si le choix d'agenda du cabinet conservé,
     un bouton « SMS », en tuile, avec la description « Le compte ASPSMS, un essai », visible si le choix d'agenda du cabinet conservé,
     un bouton « Assureurs », en tuile, avec la description « Caisses-maladie et leur GLN »,
     un bouton « Tarif des assurances », en tuile, avec la description « Positions, points et valeur du point », visible si la facturation aux assurances du cabinet conservé,
+    le texte "Praxis, version " suivi de la version, en petites capitales,
     un bouton « Fermer ».
 
 Remarque : le choix de l'agenda ; avec OneDoc, l'accueil a une tuile qui ouvre l'agenda OneDoc dans le navigateur.
@@ -710,10 +717,11 @@ L'écran de l'agenda, « Rendez-vous », montre :
     un agenda (« Praxis », « OneDoc » ou « Calendly »), avec l'indication « OneDoc : Praxis ouvre l'agenda ; Calendly : Praxis relit les réservations du site »,
     une adresse de l'agenda (adresse web), facultative, avec l'indication « L'adresse de l'agenda OneDoc Pro, telle que le navigateur la montre : https://… »,
     un jeton calendly (secret), facultatif, avec l'indication « Calendly, Intégrations, API and webhooks : le jeton d'accès personnel »,
+    le texte le témoin du jeton du cabinet conservé,
     un soin des réservations (soin), facultatif, avec l'indication « Le soin d'une réservation en ligne ; vide : le premier soin »,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer ».
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 L'écran des soins, « Soins », montre :
     la liste des soins conservés, par nom, avec le nom, le tarif, le tarif de suivi, la durée et le code tarifaire,
@@ -733,7 +741,7 @@ L'écran de la rubrique, « Rubrique », montre :
     un nom (texte),
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer »,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer cette rubrique ? Elle part dans la corbeille. ».
 
 Remarque : les bornes des factures : l'année des comptes, ou toutes les années pendant une recherche.
@@ -1187,6 +1195,16 @@ Pour régler une séance et un moyen :
     Encaisser la séance et moyen.
     Si moyen ≠ « offert » et la facture de la séance est absente, quittancer la séance.
 
+Remarque : une séance réglée par erreur redevient à payer (31 octobre 2026) : sa quittance est défaite, son encaissement retiré ;
+Remarque : une séance facturée garde sa facture, qui suit (de nouveau due). Offerte, elle redevient à payer de même.
+Pour remettre à payer une séance :
+    Si le paiement de la séance = « à payer », refuser « Cette séance est déjà à payer. ».
+    Si le paiement de la séance = « assurance », refuser « Cette séance se facture à l'assurance : son paiement ne se change pas ici. ».
+    Si la quittance de la séance est présente, défaire la quittance de la séance.
+    Le paiement de la séance devient « à payer ».
+    L'encaissement de la séance devient absent.
+    Si la facture de la séance est présente, suivre la facture de la séance.
+
 Remarque : la facture d'une séance du jour ou passée (30 octobre 2026) ; une prévue du jour devient faite d'abord.
 Pour facturer au comptoir une séance :
     Si la date de la séance > aujourd'hui, refuser « Une séance à venir se facture le jour venu. ».
@@ -1274,19 +1292,8 @@ Quand on change l'année dans l'écran des rappels :
 Quand on change l'année dans l'écran des factures :
     Retenir l'année de l'écran.
 
-Quand on clique sur « À encaisser » dans l'écran de comptabilité :
-    Ouvrir l'écran des encaissements.
-
-Quand on clique sur « Quittances » dans l'écran de comptabilité :
-    Ouvrir l'écran des quittances.
-    L'année de l'écran devient la période de l'année des comptes.
-
 Quand on clique sur « Frais » dans l'écran de comptabilité :
     Ouvrir l'écran des frais.
-    L'année de l'écran devient la période de l'année des comptes.
-
-Quand on clique sur « Factures » dans l'écran de comptabilité :
-    Ouvrir l'écran des factures.
     L'année de l'écran devient la période de l'année des comptes.
 
 Quand on choisit une facture dans l'écran des factures :
@@ -1954,6 +1961,10 @@ Quand on clique sur « Fiche » dans l'écran des prévues :
     La séance ouverte devient la séance choisie de l'écran.
     Ouvrir l'écran de la séance.
 
+Remarque : un double-clic sur une ligne (Entrée aussi) ouvre sa fiche, comme dans les autres listes (31 octobre 2026).
+Quand on choisit une séance dans l'écran des prévues :
+    Faire comme un clic sur « Fiche ».
+
 Remarque : les bornes de la liste des séances : aujourd'hui seul, dès demain (cent ans), ou jusqu'à hier (cent ans en arrière).
 Pour délimiter un choix :
     Le début des séances devient aujourd'hui.
@@ -2020,6 +2031,9 @@ Quand on clique sur « Fiche » dans l'écran des encaissements :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
     La séance ouverte devient la séance choisie de l'écran.
     Ouvrir l'écran de la séance.
+
+Quand on choisit une séance dans l'écran des encaissements :
+    Faire comme un clic sur « Fiche ».
 
 Quand on clique sur « Espèces » dans l'écran des encaissements :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
@@ -2200,6 +2214,11 @@ Quand on clique sur « Virement » dans l'écran de la séance :
     Faire comme un clic sur « Enregistrer ».
     Régler la séance ouverte et « virement ».
 
+Remarque : une séance réglée par erreur redevient à payer (31 octobre 2026) : enregistrée telle qu'à l'écran, puis remise.
+Quand on clique sur « À payer » dans l'écran de la séance :
+    Faire comme un clic sur « Enregistrer ».
+    Remettre à payer la séance ouverte.
+
 Remarque : la page du patient s'ouvre par-dessus ; à son retour, la page d'en dessous retrouve son patient.
 Quand on clique sur « Voir le patient » dans l'écran de la séance :
     Le précédent vaut la personne ouverte.
@@ -2321,7 +2340,7 @@ L'écran de l'assureur, « Assureur », montre :
     une valeur du point (nombre), facultative, avec l'indication « Seulement si elle diffère de celle du cabinet (Tarif des assurances) »,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer »,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer cet assureur ? ».
 
 Remarque : les ordonnances d'un patient (l'écran des prescriptions : « des ordonnances » se confondrait avec l'écran de l'ordonnance),
@@ -2347,7 +2366,7 @@ L'écran de l'ordonnance, « Ordonnance », montre :
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Voir le scan »,
-        un bouton « Fermer »,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer cette ordonnance ? »,
         un bouton « Facturer à l'assurance »,
         un bouton « Annoncer à l'assureur ».
@@ -2491,7 +2510,7 @@ L'écran du tarif, « Tarif des assurances », montre :
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Nouvelle position »,
-        un bouton « Fermer ».
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 L'écran de la position, « Position tarifaire », montre :
     un code (texte), avec l'indication « Le chiffre du tarif : 7601 »,
@@ -2500,7 +2519,7 @@ L'écran de la position, « Position tarifaire », montre :
     une unité (« quart d'heure » ou « séance »), avec l'indication « Par quart d'heure entier ou entamé, ou par séance »,
     côte à côte :
         un bouton « Enregistrer », principal,
-        un bouton « Fermer »,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer cette position tarifaire ? ».
 
 Remarque : les factures tiers payant, la plus récente en tête ; une facture choisie s'ouvre : ses PDF, et son règlement.
@@ -2518,7 +2537,7 @@ L'écran du décompte, « Facture tiers payant », montre :
         un bouton « Réglée », principal,
         un bouton « Voir la facture »,
         un bouton « Voir la copie »,
-        un bouton « Fermer ».
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Quand on clique sur « Facturer à l'assurance » dans l'écran de l'ordonnance :
     Si l'ordonnance ouverte est absente, refuser « Enregistre d'abord l'ordonnance. ».
@@ -2584,7 +2603,7 @@ Quand on clique sur « Supprimer » dans l'écran de la position :
         Fermer l'écran.
 
 Remarque : les factures tiers payant, une tuile de la Comptabilité depuis le 27 octobre 2026 (avant : l'accueil).
-Quand on clique sur « Assurances » dans l'écran de comptabilité :
+Quand on clique sur « Assurances » dans l'écran de caisse :
     Ouvrir l'écran des assurances.
 
 Quand on choisit un décompte dans l'écran des assurances :
@@ -2636,6 +2655,7 @@ Remarque : brutes : leur forme exacte, et le fuseau de l'heure différée, se v�
 L'écran des SMS, « SMS », montre :
     un identifiant (texte), facultatif, avec l'indication « Le Userkey du compte ASPSMS »,
     une clé (secret), facultative, avec l'indication « Le mot de passe d'API ; vide, la clé enregistrée reste »,
+    le texte le témoin de la clé SMS du cabinet conservé,
     un expéditeur (texte), facultatif, avec l'indication « Le nom que le patient voit : 11 lettres ou chiffres au plus »,
     un numéro d'essai (texte), facultatif, avec l'indication « Ton propre natel, au format +41791234567 : jamais celui d'un patient »,
     une heure d'essai (heure), facultative, avec l'indication « Dans trois minutes : le rappel d'essai arrive-t-il à l'heure ? »,
@@ -2645,7 +2665,7 @@ L'écran des SMS, « SMS », montre :
         un bouton « Vérifier le compte »,
         un bouton « SMS d'essai »,
         un bouton « Rappel d'essai »,
-        un bouton « Fermer ».
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Quand on clique sur « SMS » dans l'écran de configuration :
     L'état SMS devient « Aucun essai encore. ».

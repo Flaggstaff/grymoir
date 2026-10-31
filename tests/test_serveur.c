@@ -1585,11 +1585,11 @@ int main(void) {
         strftime(jour, sizeof jour, "%d.%m.%Y", localtime(&maintenant));
         snprintf(ev_frais, sizeof ev_frais, "q=5&z1=%s&z2=80&z3=Huiles+de+massage&z4=Mat%%C3%%A9riel&z5=carte&clic=Enregistrer", jour);
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=Comptabilit%C3%A9"), get("/"), evenement("q=3&clic=7"), evenement("q=4&clic=3"), get("/"),
+        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=Comptabilit%C3%A9"), get("/"), evenement("q=3&clic=Frais"), evenement("q=4&clic=3"), get("/"),
                  evenement(ev_frais), get("/"),
                  evenement("q=6&clic=4"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet8.grymd", &sc);
-        CONTIENT(sc.reponses[1], "Comptabilité</span></span><span class=\"description\">Encaisser, factures, rappels, frais</span>");
+        CONTIENT(sc.reponses[1], "Comptabilité</span></span><span class=\"description\">Recettes, frais, rappels, journal</span>");
         CONTIENT(sc.reponses[3], "<p class=\"texte\">Frais : CHF 0,00</p>");
         CONTIENT(sc.reponses[6], "Libellé");
         CONTIENT(sc.reponses[8], "<td>Huiles de massage</td>");
@@ -1612,26 +1612,29 @@ int main(void) {
             const time_t il_y_a = time(NULL) - 4 * 86400;
             char an[5];
             strftime(an, sizeof an, "%Y", localtime(&il_y_a));
-            snprintf(ev_annee, sizeof ev_annee, "q=3&z0=%s&clic=6", an);   /* l'année, puis « Quittances » */
+            snprintf(ev_annee, sizeof ev_annee, "q=4&z0=%s&valider=1", an);   /* l'année, dans l'écran des quittances */
             snprintf(titre, sizeof titre, "<h1>Quittances %s</h1>", an);
         }
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=Comptabilit%C3%A9"), evenement(ev_annee), get("/"),
-                 evenement("q=4&choix=3.0"), evenement("q=5&clic=5"), get("/"),
-                 evenement("q=6&z1=Sophie+Cl%C3%A9ment"), get("/"), evenement("q=7&z1=Personne"), get("/"), evenement("q=8&z1="), get("/"));
+        /* les quittances, depuis la tuile Facturation (31 octobre 2026 : la Comptabilité ne garde que les comptes) */
+        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=Facturation"), evenement("q=3&clic=Quittances"),
+                 evenement(ev_annee), get("/"),                                                                /* 4, 5 */
+                 evenement("q=5&choix=3.0"), evenement("q=6&clic=Quittance"), get("/"),                       /* 6, 7, 8 */
+                 evenement("q=7&z1=Sophie+Cl%C3%A9ment"), get("/"), evenement("q=8&z1=Personne"), get("/"),   /* 9 à 12 */
+                 evenement("q=9&z1="), get("/"));                                                              /* 13, 14 */
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet9.grymd", &sc);
-        CONTIENT(sc.reponses[4], titre);
-        CONTIENT(sc.reponses[4], "<td>Sophie Clément</td>");   /* payée par virement il y a quatre jours, sans quittance */
-        CONTIENT(sc.reponses[4], "<td>Anne Rochat</td>");
+        CONTIENT(sc.reponses[5], titre);
+        CONTIENT(sc.reponses[5], "<td>Sophie Clément</td>");   /* payée par virement il y a quatre jours, sans quittance */
+        CONTIENT(sc.reponses[5], "<td>Anne Rochat</td>");
         /* un patient choisi dans la liste (30 octobre 2026) : toutes les années, ses seules séances ; un nom qui n'est pas
            un patient : refusé ; vide : l'année */
-        CONTIENT(sc.reponses[9], "<h1>Quittances, toutes les années</h1>");
-        CONTIENT(sc.reponses[9], "<td>Sophie Clément</td>");
-        NE_CONTIENT_PAS(sc.reponses[9], "<td>Anne Rochat</td>");
-        CONTIENT(sc.reponses[11], "Aucun patient conservé n&#39;a « Personne » pour nom.");
-        CONTIENT(sc.reponses[13], titre);
-        CONTIENT(sc.reponses[13], "<td>Anne Rochat</td>");
-        CONTIENT(sc.reponses[7], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
+        CONTIENT(sc.reponses[10], "<h1>Quittances, toutes les années</h1>");
+        CONTIENT(sc.reponses[10], "<td>Sophie Clément</td>");
+        NE_CONTIENT_PAS(sc.reponses[10], "<td>Anne Rochat</td>");
+        CONTIENT(sc.reponses[12], "Aucun patient conservé n&#39;a « Personne » pour nom.");
+        CONTIENT(sc.reponses[14], titre);
+        CONTIENT(sc.reponses[14], "<td>Anne Rochat</td>");
+        CONTIENT(sc.reponses[8], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
         liberer(&sc);
         remove("_essai_cabinet9.grymd");
     }
@@ -1644,12 +1647,13 @@ int main(void) {
                  evenement("q=2&clic=S%C3%A9ances"), get("/"),                                     /* 2, 3 */
                  evenement("q=3&z1=%C3%80+venir&valider=1"), get("/"),                             /* 4, 5 */
                  evenement("q=4&z1=Pass%C3%A9es&valider=1"), get("/"),                             /* 6, 7 */
-                 evenement("q=5&z1=%C3%80+venir&valider=1"), evenement("q=6&z1=%C3%80+venir&choix=2.0"),   /* 8, 9 */
-                 get("/"), evenement("q=7&z1=%C3%80+venir&s2=0&clic=Twint"), get("/"),                    /* 10, 11, 12 */
-                 evenement("q=8&clic=Nouvelle+s%C3%A9ance"), get("/"),                             /* 13, 14 */
-                 evenement("q=9&clic=Fermer"), evenement("q=10&clic=Fermer"),                      /* 15, 16 */
-                 evenement("q=11&clic=Facturation"), get("/"),                                     /* 17, 18 */
-                 evenement("q=12&clic=%C3%80+encaisser"), get("/"));                               /* 19, 20 */
+                 evenement("q=5&z1=%C3%80+venir&valider=1"), get("/"),                             /* 8, 9 */
+                 get("/"), evenement("q=6&z1=%C3%80+venir&s2=0&clic=Twint"), get("/"),                    /* 10, 11, 12 */
+                 evenement("q=7&clic=Nouvelle+s%C3%A9ance"), get("/"),                             /* 13, 14 */
+                 evenement("q=8&clic=Fermer"), evenement("q=9&clic=Fermer"),                       /* 15, 16 */
+                 evenement("q=10&clic=Facturation"), get("/"),                                     /* 17, 18 */
+                 evenement("q=11&clic=%C3%80+encaisser"), get("/"),                                /* 19, 20 */
+                 evenement("q=12&choix=0.0"), get("/"));                                           /* 21, 22 */
         servir_projet("_essai_praxis/Praxis.grym", "_essai_seances.grymd", &sc);
         CONTIENT(sc.reponses[1], ">Séances</span>");
         CONTIENT(sc.reponses[1], ">Facturation</span>");
@@ -1668,7 +1672,7 @@ int main(void) {
         NE_CONTIENT_PAS(sc.reponses[5], "Julien Pasquier");
         CONTIENT(sc.reponses[7], "Julien Pasquier");
         NE_CONTIENT_PAS(sc.reponses[7], ">14:30<");   /* la prévue du jour n'est pas passée */
-        NE_CONTIENT_PAS(sc.reponses[10], "<h1>Séance</h1>");   /* une ligne cliquée est choisie, sa fiche ne s'ouvre pas (31 octobre 2026) */
+        NE_CONTIENT_PAS(sc.reponses[10], "<h1>Séance</h1>");   /* une ligne cochée est choisie, sa fiche ne s'ouvre pas (31 octobre 2026) */
         CONTIENT(sc.reponses[10], ">Fiche</button>");
         CONTIENT(sc.reponses[12], "Une séance à venir se règle le jour venu.");
 
@@ -1679,6 +1683,7 @@ int main(void) {
         CONTIENT(sc.reponses[20], "<h1>À encaisser</h1>");
         CONTIENT(sc.reponses[20], "Marc Dupraz");
         NE_CONTIENT_PAS(sc.reponses[20], "Sophie Clément");
+        CONTIENT(sc.reponses[22], "<h1>Séance</h1>");   /* choisie dans la liste, le double-clic de l'atelier : sa fiche */
         liberer(&sc);
         remove("_essai_seances.grymd");
     }
@@ -1727,8 +1732,9 @@ int main(void) {
            « Facturer » facture ; « Rappel » sans facture choisie est refusé ; la facture et le journal sont des
            documents : refusés dans le navigateur, sans rien numéroter ni dater (20 octobre 2026) */
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Comptabilit%C3%A9"), evenement("q=3&clic=8"), get("/"), evenement("q=4&clic=4"), get("/"),
-                 evenement("q=5&s8=0&clic=9"), get("/"), evenement("q=6&clic=5"), evenement("q=7&clic=11"), get("/"));
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Comptabilit%C3%A9"), evenement("q=3&clic=Rappels"), get("/"),
+                 evenement("q=4&clic=Rappel"), get("/"), evenement("q=5&s5=0&clic=Facturer"), get("/"), evenement("q=6&clic=Fermer"),
+                 evenement("q=7&clic=Journal+de+l%27ann%C3%A9e"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet12.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>Rappels</h1>");
         CONTIENT(sc.reponses[3], "Factures échues");
@@ -1760,17 +1766,18 @@ int main(void) {
                  evenement("q=6&clic=Fermer"), evenement("q=7&clic=Fermer"), evenement("q=8&clic=Patients"),
                  evenement("q=9&z0=Anne+Rochat&clic=-1"), evenement("q=10&clic=Nouvelle+s%C3%A9ance"),
                  evenement(q11), get("/"),
-                 evenement("q=12&clic=Fermer"), evenement("q=13&clic=Ordonnances"), evenement("q=14&clic=Nouvelle+ordonnance"),
+                 evenement("q=12&clic=Fermer"), evenement("q=12&confirme=Fermer&clic=Fermer"),
+                 evenement("q=13&clic=Ordonnances"), evenement("q=14&clic=Nouvelle+ordonnance"),
                  evenement("q=15&z0=01.10.2026&z1=Dre+Morel&z2=&z3=&z4=9&z5=maladie&z7=&clic=Enregistrer"), get("/"),
                  evenement("q=16&clic=Fermer"), evenement("q=17&clic=Nouvelle+s%C3%A9ance"), evenement(q18), get("/"),
                  evenement("q=19&clic=Ordonnances"), evenement("q=20&choix=1.0"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_ordonnance.grymd", &sc);
         CONTIENT(sc.reponses[11], "Pas d&#39;ordonnance valable pour Anne Rochat à cette date");
-        CONTIENT(sc.reponses[16], ">Dre Morel</td>");
-        CONTIENT(sc.reponses[20], "<h1>Patient</h1>");
-        CONTIENT(sc.reponses[20], ">assurance</");
-        NE_CONTIENT_PAS(sc.reponses[20], "class=\"erreur\"");
-        CONTIENT(sc.reponses[23], "Séances : 1 sur 9.");
+        CONTIENT(sc.reponses[17], ">Dre Morel</td>");
+        CONTIENT(sc.reponses[21], "<h1>Patient</h1>");
+        CONTIENT(sc.reponses[21], ">assurance</");
+        NE_CONTIENT_PAS(sc.reponses[21], "class=\"erreur\"");
+        CONTIENT(sc.reponses[24], "Séances : 1 sur 9.");
         liberer(&sc);
         remove("_essai_ordonnance.grymd");
         remove("_essai_ordonnance.grymd.clés");
@@ -1875,10 +1882,10 @@ int main(void) {
                  evenement("q=10&clic=Ordonnances"), evenement("q=11&choix=1.0"),
                  evenement("q=12&clic=Facturer+%C3%A0+l%27assurance"), get("/"),
                  evenement("q=13&clic=Fermer"), evenement("q=14&clic=Fermer"), evenement("q=15&clic=Fermer"), evenement("q=16&clic=Fermer"),
-                 get("/"), evenement("q=17&clic=Comptabilit%C3%A9"), get("/"), evenement("q=18&clic=Assurances"), get("/"));
+                 get("/"), evenement("q=17&clic=Facturation"), get("/"), evenement("q=18&clic=Assurances"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_tiers_payant.grymd", &sc);
         CONTIENT(sc.reponses[12], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
-        NE_CONTIENT_PAS(sc.reponses[17], ">Assurances<");   /* 27 octobre 2026 : la tuile est passée dans la Comptabilité */
+        NE_CONTIENT_PAS(sc.reponses[17], ">Assurances<");   /* pas sur l'accueil : dans la Facturation (31 octobre 2026) */
         CONTIENT(sc.reponses[19], ">Assurances<");
         CONTIENT(sc.reponses[21], "<h1>Factures aux assurances</h1>");
         liberer(&sc);
@@ -2082,15 +2089,17 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Configuration"), evenement("q=3&clic=SMS"), get("/"),
                  evenement("q=4&clic=V%C3%A9rifier+le+compte"), get("/"),
-                 evenement("q=5&z0=essai-cle&z1=secret-api-9&z2=Praxis&z3=&clic=Enregistrer"), get("/"),
-                 evenement("q=6&z0=essai-cle&z1=&z2=Praxis&z3=&clic=V%C3%A9rifier+le+compte"), get("/"),
-                 evenement("q=7&z0=essai-cle&z1=&z2=AnExpediteurTropLong&z3=&clic=Enregistrer"), get("/"));
+                 evenement("q=5&z0=essai-cle&z1=secret-api-9&z3=Praxis&z4=&clic=Enregistrer"), get("/"),
+                 evenement("q=6&z0=essai-cle&z1=&z3=Praxis&z4=&clic=V%C3%A9rifier+le+compte"), get("/"),
+                 evenement("q=7&z0=essai-cle&z1=&z3=AnExpediteurTropLong&z4=&clic=Enregistrer"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_sms.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>SMS</h1>");
         CONTIENT(sc.reponses[3], "Aucun essai encore.");
+        CONTIENT(sc.reponses[3], "Aucune clé ASPSMS enregistrée.");   /* le témoin de la clé, qui ne s'affiche jamais (31 octobre 2026) */
         CONTIENT(sc.reponses[5], "Enregistre d&#39;abord l&#39;identifiant et la clé.");
         CONTIENT(sc.reponses[7], "Enregistré.");
         NE_CONTIENT_PAS(sc.reponses[7], "secret-api-9");
+        CONTIENT(sc.reponses[7], "Une clé ASPSMS est enregistrée ; en taper une autre la remplace.");
         CONTIENT(sc.reponses[9], "Un envoi sur internet se fait dans l&#39;atelier ou dans une application fabriquée.");
         CONTIENT(sc.reponses[11], "L&#39;expéditeur a 11 caractères au plus.");
         liberer(&sc);
@@ -2201,8 +2210,8 @@ int main(void) {
     {   /* Cabinet : « Facture » dans « À encaisser » ; un document, refusé dans le navigateur sans rien numéroter ; une
            séance offerte n'a ni facture ni quittance (20 octobre 2026) */
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Comptabilit%C3%A9"), evenement("q=3&clic=5"), get("/"), evenement("q=4&s0=0&clic=7"), get("/"),
-                 evenement("q=5&clic=8"), evenement("q=6&clic=13"), evenement("q=7&clic=4"), evenement("q=8&choix=2.0"),
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Facturation"), evenement("q=3&clic=%C3%80+encaisser"), get("/"), evenement("q=4&s0=0&clic=7"), get("/"),
+                 evenement("q=5&clic=Fermer"), evenement("q=6&clic=Fermer"), evenement("q=7&clic=Patients"), evenement("q=8&choix=2.0"),
                  evenement("q=9&choix=28.0"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet14.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>À encaisser</h1>");
@@ -2237,7 +2246,8 @@ int main(void) {
                  get("/"), evenement("q=4&clic=17"), get("/"), evenement("q=5&clic=19"),
                  evenement("q=5&confirme=19&clic=19"), get("/"), evenement("q=6&fermer=1"), evenement("q=7&clic=Configuration"),
                  evenement("q=8&clic=4"), get("/"), evenement("q=9&z2=&clic=4"), get("/"),
-                 evenement("q=10&clic=10"), get("/"), evenement("q=11&z12=mauvais-mot&z13=nouveau-mot&z14=nouveau-mot&clic=15"), get("/"),
+                 evenement("q=10&clic=10"), evenement("q=10&confirme=10&clic=10"), get("/"),   /* « Restaurer » demande d'abord (31 octobre 2026) */
+                 evenement("q=11&z12=mauvais-mot&z13=nouveau-mot&z14=nouveau-mot&clic=15"), get("/"),
                  evenement("q=12&fermer=1"), evenement("q=13&fermer=1"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet17.grymd", &sc);
         CONTIENT(sc.reponses[1], "Aucune sauvegarde encore : Configuration, puis Sauvegardes.");
@@ -2247,9 +2257,9 @@ int main(void) {
         CONTIENT(sc.reponses[9], "<h1>Séances</h1>");   /* supprimée, la page s'est fermée */
         CONTIENT(sc.reponses[13], "<h1>Sauvegardes</h1>");
         CONTIENT(sc.reponses[15], "Copie chiffrée faite dans Sauvegardes.");
-        CONTIENT(sc.reponses[17], "Choisis d&#39;abord la copie à restaurer.");
-        CONTIENT(sc.reponses[19], "Le mot de passe actuel est faux.");
-        CONTIENT(sc.reponses[22], "Dernière sauvegarde le ");
+        CONTIENT(sc.reponses[18], "Choisis d&#39;abord la copie à restaurer.");
+        CONTIENT(sc.reponses[20], "Le mot de passe actuel est faux.");
+        CONTIENT(sc.reponses[23], "Dernière sauvegarde le ");
         {
             char prefixe[40];
             snprintf(prefixe, sizeof prefixe, "Praxis-%s-", jour);
@@ -2274,7 +2284,7 @@ int main(void) {
            rétabli depuis la Configuration, il revient avec elles (20 octobre 2026) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"), evenement("q=3&choix=2.0"), get("/"),
-                 evenement("q=4&clic=34"), evenement("q=4&confirme=34&clic=34"), get("/"), evenement("q=5&fermer=1"),
+                 evenement("q=4&clic=Supprimer"), evenement("q=4&confirme=Supprimer&clic=Supprimer"), get("/"), evenement("q=5&fermer=1"),
                  evenement("q=6&clic=Configuration"), evenement("q=7&clic=3"), get("/"), evenement("q=8&s1=0&clic=R%C3%A9tablir+le+patient"),
                  get("/"), evenement("q=9&clic=Fermer"), evenement("q=10&fermer=1"), evenement("q=11&clic=4"),
                  get("/"));
@@ -2376,7 +2386,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"), get("/"),
                  evenement("q=3&z1=rochat&clic=-1"), get("/"), evenement("q=4&z1=Romont&clic=-1"), get("/"),
-                 evenement("q=5&fermer=1"), evenement("q=6&clic=Comptabilit%C3%A9"), evenement("q=7&clic=12"), get("/"));
+                 evenement("q=5&fermer=1"), evenement("q=6&clic=Comptabilit%C3%A9"), evenement("q=7&clic=Exporter+en+CSV"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet20.grymd", &sc);
         CONTIENT(sc.reponses[2], ">Louis Bapst</button>");
         CONTIENT(sc.reponses[4], ">Anne Rochat</button>");
@@ -2420,7 +2430,7 @@ int main(void) {
 
     {   /* Cabinet : l'écran des factures (vide tant qu'aucune n'est faite dans l'atelier) (20 octobre 2026) */
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Comptabilit%C3%A9"), evenement("q=3&clic=9"), get("/"));
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Facturation"), evenement("q=3&clic=Factures"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet16.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>Factures 20");   /* l'année des comptes, celle du jour */
         CONTIENT(sc.reponses[3], "<th>État</th>");
@@ -2452,8 +2462,8 @@ int main(void) {
            fiche déduite ; la page d'un soin (19 octobre 2026) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=4"), evenement("q=3&choix=2.0"), evenement("q=4&choix=28.0"), get("/"),
-                 evenement("q=5&clic=2"), get("/"), evenement("q=6&clic=32"),
-                 evenement("q=7&z1=Anne+Rochat&z3=EPI&z5=09%3A00&z6=60&z7=70&z8=faite&z9=Twint"
+                 evenement("q=5&clic=2"), get("/"), evenement("q=6&clic=Fermer"),
+                 evenement("q=7&z1=Anne+Rochat&z3=EPI&z5=09%3A00&z6=60&z7=70&z8=faite"
                            "&z12=Nuque+d%C3%A9tendue&clic=16"),
                  evenement("q=8&choix=28.0"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet5.grymd", &sc);

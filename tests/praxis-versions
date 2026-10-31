@@ -24,5 +24,16 @@ for v in "$depot"/projets/Praxis/*/; do
     cmp -s /tmp/praxis-versions-a.$$ /tmp/praxis-versions-b.$$ || { echecs=$((echecs + 1)); echo "ÉCHEC : $nom/Praxis.grym diffère de Nicolas/Praxis.grym au-delà de ce qui lui est propre"; }
     rm -f /tmp/praxis-versions-a.$$ /tmp/praxis-versions-b.$$
 done
+# la version de Praxis (31 octobre 2026) : celle que la Configuration montre (« La version vaut « … ». ») est celle que
+# chaque version fabrique (« application, version » de son projet.grymatelier) ; on change les deux ensemble
+version="$(sed -n 's/^La version vaut « \(.*\) »\.$/\1/p' "$R/Praxis.grym")"
+total=$((total + 1))
+[ -n "$version" ] || { echecs=$((echecs + 1)); echo "ÉCHEC : Nicolas/Praxis.grym ne dit pas sa version (« La version vaut « … ». »)"; }
+for v in "$depot"/projets/Praxis/*/; do
+    [ -f "$v/projet.grymatelier" ] || continue
+    total=$((total + 1))
+    a="$(sed -n 's/^application, version : //p' "$v/projet.grymatelier")"
+    [ "$a" = "$version" ] || { echecs=$((echecs + 1)); echo "ÉCHEC : $(basename "$v")/projet.grymatelier fabrique la version « $a », le programme dit « $version »"; }
+done
 echo "$((total - echecs))/$total tests réussis"
 [ $echecs = 0 ]
