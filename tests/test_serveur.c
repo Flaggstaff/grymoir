@@ -1613,15 +1613,54 @@ int main(void) {
         remove("_essai_cabinet9.grymd");
     }
 
-    {   /* Cabinet : une séance offerte, cochée, s'enregistre « offert » ; une rubrique de frais ajoutée puis renommée
+    {   /* Séances (30 octobre 2026) : du jour, à venir, passées ; « Nouvelle séance » en haut ; une séance à venir ne se
+           règle pas ; « À encaisser » montre les séances dues jusqu'à aujourd'hui, la prévue du jour comprise ; la tuile
+           Facturation ; la nouvelle séance sans paiement */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=Continuer"), get("/"),                                          /* 0, 1 */
+                 evenement("q=2&clic=S%C3%A9ances"), get("/"),                                     /* 2, 3 */
+                 evenement("q=3&z1=%C3%80+venir&valider=1"), get("/"),                             /* 4, 5 */
+                 evenement("q=4&z1=Pass%C3%A9es&valider=1"), get("/"),                             /* 6, 7 */
+                 evenement("q=5&z1=%C3%80+venir&valider=1"), evenement("q=6&z1=%C3%80+venir&choix=2.0"),   /* 8, 9 */
+                 evenement("q=7&clic=Fermer"), evenement("q=8&z1=%C3%80+venir&clic=Twint"), get("/"),      /* 10, 11, 12 */
+                 evenement("q=9&clic=Nouvelle+s%C3%A9ance"), get("/"),                             /* 13, 14 */
+                 evenement("q=10&clic=Fermer"), evenement("q=11&clic=Fermer"),                     /* 15, 16 */
+                 evenement("q=12&clic=Facturation"), get("/"),                                     /* 17, 18 */
+                 evenement("q=13&clic=%C3%80+encaisser"), get("/"));                               /* 19, 20 */
+        servir_projet("_essai_praxis/Praxis.grym", "_essai_seances.grymd", &sc);
+        CONTIENT(sc.reponses[1], ">Séances</span>");
+        CONTIENT(sc.reponses[1], ">Facturation</span>");
+        CONTIENT(sc.reponses[3], "<h1>Séances</h1>");
+        CONTIENT(sc.reponses[3], ">Nouvelle séance</button>");
+        CONTIENT(sc.reponses[3], "Louis Bapst");
+        NE_CONTIENT_PAS(sc.reponses[3], "Sophie Clément");
+        CONTIENT(sc.reponses[5], "Sophie Clément");
+        NE_CONTIENT_PAS(sc.reponses[5], "Julien Pasquier");
+        CONTIENT(sc.reponses[7], "Julien Pasquier");
+        NE_CONTIENT_PAS(sc.reponses[7], ">14:30<");   /* la prévue du jour n'est pas passée */
+        CONTIENT(sc.reponses[12], "Une séance à venir se règle le jour venu.");
+        CONTIENT(sc.reponses[14], "<legend>Prix proposé</legend>");
+        NE_CONTIENT_PAS(sc.reponses[14], ">Paiement</label>");
+        NE_CONTIENT_PAS(sc.reponses[14], ">Offerte</label>");
+        CONTIENT(sc.reponses[18], "<h1>Facturation</h1>");
+        CONTIENT(sc.reponses[20], "<h1>À encaisser</h1>");
+        CONTIENT(sc.reponses[20], "Marc Dupraz");
+        NE_CONTIENT_PAS(sc.reponses[20], "Sophie Clément");
+        liberer(&sc);
+        remove("_essai_seances.grymd");
+    }
+
+    {   /* Cabinet : une séance offerte, depuis « À encaisser » de la tuile Facturation (30 octobre 2026), s'enregistre « offert » ; une rubrique de frais ajoutée puis renommée
            (19 octobre 2026) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=0"),
-                 evenement("q=3&z2=Anne+Rochat&z4=EPI&z5=19.10.2026&z6=&z7=&z8=oui&z8p=1&z9=%C3%A0+payer&z12=0&clic=19"),
-                 evenement("q=4&clic=4"), evenement("q=5&choix=2.0"), get("/"));
+                 evenement("q=3&z2=Anne+Rochat&z4=EPI&z5=01.01.2020&z6=&z7=&z10=0&clic=17"),
+                 evenement("q=4&clic=Facturation"), evenement("q=5&clic=%C3%80+encaisser"), evenement("q=6&choix=0.0"),
+                 evenement("q=7&clic=Fermer"), evenement("q=8&clic=Offert"), evenement("q=9&clic=Fermer"),
+                 evenement("q=10&clic=Fermer"), evenement("q=11&clic=4"), evenement("q=12&choix=2.0"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet10.grymd", &sc);
-        CONTIENT(sc.reponses[5], "<h1>Patient</h1>");
-        CONTIENT(sc.reponses[5], ">offert</span>");
+        CONTIENT(sc.reponses[12], "<h1>Patient</h1>");
+        CONTIENT(sc.reponses[12], ">offert</span>");
         liberer(&sc);
         remove("_essai_cabinet10.grymd");
         memset(&sc, 0, sizeof sc);
@@ -1666,7 +1705,7 @@ int main(void) {
            couvre, sa séance est refusée ; l'ordonnance saisie dans la page du patient, la séance s'y rattache, payée
            « assurance », et l'ordonnance en compte une sur neuf */
         memset(&sc, 0, sizeof sc);
-        const char *seance = "z2=Anne+Rochat&z4=EPI&z5=05.10.2026&z6=&z7=&z9=%C3%A0+payer&z12=130&clic=19";
+        const char *seance = "z2=Anne+Rochat&z4=EPI&z5=05.10.2026&z6=&z7=&z10=130&clic=17";
         char q11[200], q18[200];
         snprintf(q11, sizeof q11, "q=11&%s", seance);
         snprintf(q18, sizeof q18, "q=18&%s", seance);
@@ -1786,7 +1825,7 @@ int main(void) {
                  evenement("q=4&clic=Ordonnances"), evenement("q=5&clic=Nouvelle+ordonnance"),
                  evenement("q=6&z0=01.10.2026&z1=Dre+Morel&z2=&z3=&z4=9&z5=maladie&z7=&clic=Enregistrer"),
                  evenement("q=7&clic=Fermer"), evenement("q=8&clic=Nouvelle+s%C3%A9ance"),
-                 evenement("q=9&z2=Claire+Monney&z4=Ergoth%C3%A9rapie&z5=05.10.2026&z6=&z7=60&z9=%C3%A0+payer&z12=105%2C6&clic=19"),
+                 evenement("q=9&z2=Claire+Monney&z4=Ergoth%C3%A9rapie&z5=05.10.2026&z6=&z7=60&z10=105%2C6&clic=17"),
                  evenement("q=10&clic=Ordonnances"), evenement("q=11&choix=1.0"),
                  evenement("q=12&clic=Facturer+%C3%A0+l%27assurance"), get("/"),
                  evenement("q=13&clic=Fermer"), evenement("q=14&clic=Fermer"), evenement("q=15&clic=Fermer"), evenement("q=16&clic=Fermer"),
@@ -2121,7 +2160,7 @@ int main(void) {
         copie[0] = '\0';
         if (system("rm -rf _essai_praxis/Sauvegardes") != 0) { /* rien à effacer */ }
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=5"), evenement("q=3&choix=0.0"),
+        REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=5"), evenement("q=3&choix=2.1"),
                  get("/"), evenement("q=4&clic=17"), get("/"), evenement("q=5&clic=19"),
                  evenement("q=5&confirme=19&clic=19"), get("/"), evenement("q=6&fermer=1"), evenement("q=7&clic=7"),
                  evenement("q=8&clic=4"), get("/"), evenement("q=9&z2=&clic=4"), get("/"),
@@ -2131,7 +2170,7 @@ int main(void) {
         CONTIENT(sc.reponses[1], "Aucune sauvegarde encore : Configuration, puis Sauvegardes.");
         CONTIENT(sc.reponses[4], "<h1>Séance</h1>");
         CONTIENT(sc.reponses[6], "Une séance prévue se facture une fois faite : change d&#39;abord son statut.");
-        CONTIENT(sc.reponses[9], "<h1>Séances prévues</h1>");   /* supprimée, la page s'est fermée */
+        CONTIENT(sc.reponses[9], "<h1>Séances</h1>");   /* supprimée, la page s'est fermée */
         CONTIENT(sc.reponses[13], "<h1>Sauvegardes</h1>");
         CONTIENT(sc.reponses[15], "Copie chiffrée faite dans Sauvegardes.");
         CONTIENT(sc.reponses[17], "Choisis d&#39;abord la copie à restaurer.");
@@ -2411,11 +2450,11 @@ int main(void) {
                  evenement("q=5&fermer=1"),                                     /* 5 : retour à l'accueil */
                  evenement("q=6&clic=0"),                                       /* 6 : Nouvelle séance */
                  /* 7 : client et soin choisis, prix laissé vide : il se calcule avant « Enregistrer » */
-                 evenement("q=7&z2=Zo%C3%A9+Essai&z4=EPI&z5=01.10.2026&z6=&z7=&z9=%C3%A0+payer&z12=&clic=19"),
+                 evenement("q=7&z2=Zo%C3%A9+Essai&z4=EPI&z5=01.10.2026&z6=&z7=&z10=&clic=17"),
                  evenement("q=8&clic=0"),                                       /* 8 : Nouvelle séance */
-                 evenement("q=9&z2=Zo%C3%A9+Essai&z4=EPI&z5=2026-10-08&z6=14%3A30&z7=50&z9=Twint&z12=&clic=19"),   /* 9 */
+                 evenement("q=9&z2=Zo%C3%A9+Essai&z4=EPI&z5=2026-10-08&z6=14%3A30&z7=50&z10=&clic=17"),   /* 9 */
                  evenement("q=10&clic=0"),                                       /* 10 : Nouvelle séance */
-                 evenement("q=11&z2=&z4=EPI&z5=08.10.2026&z6=&z7=&z9=Twint&z12=50&clic=19"),   /* 11 : sans client */
+                 evenement("q=11&z2=&z4=EPI&z5=08.10.2026&z6=&z7=&z10=50&clic=17"),   /* 11 : sans client */
                  get("/"),                                                      /* 12 */
                  evenement("q=12&fermer=1"),                                    /* 13 */
                  evenement("q=13&clic=4"),                                      /* 14 : Clients */

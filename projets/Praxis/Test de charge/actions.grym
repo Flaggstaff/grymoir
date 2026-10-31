@@ -573,8 +573,8 @@ Remarque : les séances prévues dont le jour est passé : à dire faites, annul
 L'alerte des passées d'un jour :
     Le nombre passé vaut le nombre de séances conservées dont le statut = « prévue » et la date < jour.
     Si le nombre passé = 0, rendre « ».
-    Si le nombre passé = 1, rendre « Une séance prévue est passée : Séances prévues, pour la dire faite, annulée ou absence. ».
-    Rendre le nombre passé suivi de " séances prévues sont passées : Séances prévues, pour les clore.".
+    Si le nombre passé = 1, rendre « Une séance prévue est passée : Séances, puis Passées, pour la dire faite, annulée ou absence. ».
+    Rendre le nombre passé suivi de " séances prévues sont passées : Séances, puis Passées, pour les clore.".
 
 Remarque : ce que l'accueil signale des séances et des patients (28 octobre 2026) : les séances prévues passées, les rappels SMS
 Remarque : qui n'ont pas pu partir, les fiches créées par le site, l'un après l'autre.
