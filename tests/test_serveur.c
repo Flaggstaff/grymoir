@@ -1671,6 +1671,7 @@ int main(void) {
         NE_CONTIENT_PAS(sc.reponses[10], "<h1>Séance</h1>");   /* une ligne cliquée est choisie, sa fiche ne s'ouvre pas (31 octobre 2026) */
         CONTIENT(sc.reponses[10], ">Fiche</button>");
         CONTIENT(sc.reponses[12], "Une séance à venir se règle le jour venu.");
+
         CONTIENT(sc.reponses[14], "<legend>Prix proposé</legend>");
         NE_CONTIENT_PAS(sc.reponses[14], ">Paiement</label>");
         NE_CONTIENT_PAS(sc.reponses[14], ">Offerte</label>");
@@ -1699,7 +1700,7 @@ int main(void) {
            (19 octobre 2026) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=0"),
-                 evenement("q=3&z2=Anne+Rochat&z4=EPI&z5=01.01.2020&z6=&z7=&z10=0&clic=17"),
+                 evenement("q=3&z3=Anne+Rochat&z6=EPI&z7=01.01.2020&z8=&z9=&z12=0&clic=19"),
                  evenement("q=4&clic=Facturation"), evenement("q=5&clic=%C3%80+encaisser"),
                  evenement("q=6&s0=0&clic=Offert"), evenement("q=7&clic=Fermer"),
                  evenement("q=8&clic=Fermer"), evenement("q=9&clic=4"), evenement("q=10&choix=2.0"), get("/"));
@@ -1750,7 +1751,7 @@ int main(void) {
            couvre, sa séance est refusée ; l'ordonnance saisie dans la page du patient, la séance s'y rattache, payée
            « assurance », et l'ordonnance en compte une sur neuf */
         memset(&sc, 0, sizeof sc);
-        const char *seance = "z2=Anne+Rochat&z4=EPI&z5=05.10.2026&z6=&z7=&z10=130&clic=17";
+        const char *seance = "z3=Anne+Rochat&z6=EPI&z7=05.10.2026&z8=&z9=&z12=130&clic=19";
         char q11[200], q18[200];
         snprintf(q11, sizeof q11, "q=11&%s", seance);
         snprintf(q18, sizeof q18, "q=18&%s", seance);
@@ -1870,7 +1871,7 @@ int main(void) {
                  evenement("q=4&clic=Ordonnances"), evenement("q=5&clic=Nouvelle+ordonnance"),
                  evenement("q=6&z0=01.10.2026&z1=Dre+Morel&z2=&z3=&z4=9&z5=maladie&z7=&clic=Enregistrer"),
                  evenement("q=7&clic=Fermer"), evenement("q=8&clic=Nouvelle+s%C3%A9ance"),
-                 evenement("q=9&z2=Claire+Monney&z4=Ergoth%C3%A9rapie&z5=05.10.2026&z6=&z7=60&z10=105%2C6&clic=17"),
+                 evenement("q=9&z3=Claire+Monney&z6=Ergoth%C3%A9rapie&z7=05.10.2026&z8=&z9=60&z12=105%2C6&clic=19"),
                  evenement("q=10&clic=Ordonnances"), evenement("q=11&choix=1.0"),
                  evenement("q=12&clic=Facturer+%C3%A0+l%27assurance"), get("/"),
                  evenement("q=13&clic=Fermer"), evenement("q=14&clic=Fermer"), evenement("q=15&clic=Fermer"), evenement("q=16&clic=Fermer"),
@@ -2470,7 +2471,7 @@ int main(void) {
     {   /* Cabinet : un nouveau patient depuis l'écran de séance, par l'écran d'inscription, aussitôt choisi ;
            l'anamnèse à côté des champs (19 octobre 2026) */
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=0"), evenement("q=3&clic=3"), get("/"),
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=0"), evenement("q=3&clic=4"), get("/"),
                  evenement("q=4&z1=Zo%C3%A9+Neuve&z9=079+000+00+09&z10=&z11=&z3=Rue+du+Pont&z4=1&z5=&z7=1630&z8=Bulle"
                            "&z6=Suisse&z20=Douleurs+lombaires&clic=27"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet2.grymd", &sc);
@@ -2496,11 +2497,11 @@ int main(void) {
                  evenement("q=5&fermer=1"),                                     /* 5 : retour à l'accueil */
                  evenement("q=6&clic=0"),                                       /* 6 : Nouvelle séance */
                  /* 7 : client et soin choisis, prix laissé vide : il se calcule avant « Enregistrer » */
-                 evenement("q=7&z2=Zo%C3%A9+Essai&z4=EPI&z5=01.10.2026&z6=&z7=&z10=&clic=17"),
+                 evenement("q=7&z3=Zo%C3%A9+Essai&z6=EPI&z7=01.10.2026&z8=&z9=&z12=&clic=19"),
                  evenement("q=8&clic=0"),                                       /* 8 : Nouvelle séance */
-                 evenement("q=9&z2=Zo%C3%A9+Essai&z4=EPI&z5=2026-10-08&z6=14%3A30&z7=50&z10=&clic=17"),   /* 9 */
+                 evenement("q=9&z3=Zo%C3%A9+Essai&z6=EPI&z7=2026-10-08&z8=14%3A30&z9=50&z12=&clic=19"),   /* 9 */
                  evenement("q=10&clic=0"),                                       /* 10 : Nouvelle séance */
-                 evenement("q=11&z2=&z4=EPI&z5=08.10.2026&z6=&z7=&z10=50&clic=17"),   /* 11 : sans client */
+                 evenement("q=11&z3=&z6=EPI&z7=08.10.2026&z8=&z9=&z12=50&clic=19"),   /* 11 : sans client */
                  get("/"),                                                      /* 12 */
                  evenement("q=12&fermer=1"),                                    /* 13 */
                  evenement("q=13&clic=4"),                                      /* 14 : Clients */
@@ -2520,7 +2521,7 @@ int main(void) {
         CONTIENT(sc.reponses[13], "Remplis « Patient » : cette zone est obligatoire.");
         /* la date : le calendrier du navigateur, en « 2026-10-08 » ; la séance enregistrée avec ce format est au
            08.10.2026 dans la page du patient (plus bas) */
-        CONTIENT(sc.reponses[13], "<input type=\"date\" id=\"z5\" name=\"z5\" value=\"2026-10-08\"");
+        CONTIENT(sc.reponses[13], "<input type=\"date\" id=\"z7\" name=\"z7\" value=\"2026-10-08\"");
         /* la page du patient : ses données dans les zones, l'anamnèse à droite ; ses séances, la plus récente en tête,
            la première au tarif, la suivante au tarif réduit, avec leur durée */
         CONTIENT(sc.reponses[17], "value=\"Route de Riaz\"");

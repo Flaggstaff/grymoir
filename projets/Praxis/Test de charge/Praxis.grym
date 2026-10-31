@@ -524,8 +524,9 @@ L'écran des patients montre :
 L'écran de séance, « Nouvelle séance » en grand, montre :
     côte à côte :
         l'un sous l'autre :
-            un patient (patient),
-            un bouton « Nouveau patient »,
+            côte à côte :
+                un patient (patient), large de 40 caractères,
+                un bouton « Nouveau patient »,
             un soin (soin),
             une date (date),
             une heure (heure), facultative,

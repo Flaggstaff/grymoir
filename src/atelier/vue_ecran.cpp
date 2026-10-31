@@ -628,6 +628,9 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                     const QFontMetrics fm(le->font());
                     const QMargins m = le->textMargins();
                     le->setFixedWidth(fm.averageCharWidth() * e.largeur_caracteres + m.left() + m.right() + 2 * t.mesure("espace-3") + 4);
+                } else if (auto *liste = qobject_cast<QComboBox *>(w)) {   // une liste de choix ou d'objets aussi (31 octobre 2026)
+                    const QFontMetrics fm(liste->font());
+                    liste->setFixedWidth(fm.averageCharWidth() * e.largeur_caracteres + 2 * t.mesure("espace-3") + 40);
                 }
             }
             else if (!e.place && !e.plusieurs_lignes && e.largeur == 0) {
@@ -638,6 +641,8 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 else if (e.type == "nombre" || e.type == "nombre entier" || e.type == "montant") car = 14;
                 else if (e.type == "date") car = 16;
                 else if (e.type == "heure") car = 9;
+                // une liste de choix ou d'objets (un patient, un soin) : comme un texte, plus toute la colonne (31 octobre 2026)
+                else if (qobject_cast<QComboBox *>(w)) car = 40;
                 if (car) {
                     const QFontMetrics fm(w->font());
                     w->setMaximumWidth(fm.averageCharWidth() * car + 2 * t.mesure("espace-3") + 40);
