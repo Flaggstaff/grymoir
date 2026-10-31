@@ -96,14 +96,53 @@ La quittance immédiate d'un cabinet :
     Si la quittance différée du cabinet est vraie, rendre faux.
     Rendre vrai.
 
+Remarque : deux séances au même moment (31 octobre 2026) : la Nouvelle séance avertit dès que la date et l'heure sont choisies,
+Remarque : et enregistre quand même (un couple reçu ensemble) ; une séance annulée ne compte pas.
+L'alerte d'horaire d'un jour et d'un moment :
+    Si jour est absent ou moment est absent, rendre « ».
+    Le nombre pris vaut le nombre de séances conservées dont la date = jour et l'heure = moment et le statut ≠ « annulée ».
+    Si le nombre pris = 0, rendre « ».
+    Si le nombre pris = 1, rendre "Attention : une séance est déjà prévue le " suivi de jour suivi de " à " suivi de moment suivi de « . ».
+    Rendre "Attention : " suivi du nombre pris suivi de " séances sont déjà prévues le " suivi de jour suivi de " à " suivi de moment suivi de « . ».
+
 Remarque : le préfixe des références SMS d'un cabinet : le sien (« NS » chez Nicolas, « LC » chez Lorianne), « PX » sans lui.
 Le préfixe des rappels d'un cabinet :
     Si le préfixe SMS du cabinet est absent, rendre « PX ».
     Rendre le préfixe SMS du cabinet.
 
 Remarque : la référence d'un rappel : le préfixe du cabinet, la date et l'heure de la séance (« NS-2026-11-03-14:30 »).
+Remarque : deux séances au même moment (31 octobre 2026) : chacune sa référence SMS, sinon annuler le rappel de l'une
+Remarque : toucherait l'autre. La première garde la forme d'avant ; une autre prend le premier rang libre, « -2 », « -3 »…
+Remarque : (jusqu'à dix au même moment) parmi les références déjà confiées à ASPSMS. Une séance sans référence retrouve la même, tant que rien d'autre ne change.
 La référence de rappel prévue d'une séance :
-    Rendre le préfixe des rappels du cabinet conservé suivi de « - » suivi de (la date de la séance en format technique) suivi de « - » suivi de (l'heure de la séance en format technique).
+    La base vaut le préfixe des rappels du cabinet conservé suivi de « - » suivi de (la date de la séance en format technique) suivi de « - » suivi de (l'heure de la séance en format technique).
+    Si le nombre de séances conservées dont la référence de rappel = la base = 0, rendre la base.
+    Le rang vaut 2.
+    Le candidat vaut la base suivi de « - » suivi du rang.
+    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
+    Le rang devient le rang + 1.
+    Le candidat devient la base suivi de « - » suivi du rang.
+    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
+    Le rang devient le rang + 1.
+    Le candidat devient la base suivi de « - » suivi du rang.
+    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
+    Le rang devient le rang + 1.
+    Le candidat devient la base suivi de « - » suivi du rang.
+    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
+    Le rang devient le rang + 1.
+    Le candidat devient la base suivi de « - » suivi du rang.
+    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
+    Le rang devient le rang + 1.
+    Le candidat devient la base suivi de « - » suivi du rang.
+    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
+    Le rang devient le rang + 1.
+    Le candidat devient la base suivi de « - » suivi du rang.
+    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
+    Le rang devient le rang + 1.
+    Le candidat devient la base suivi de « - » suivi du rang.
+    Si le nombre de séances conservées dont la référence de rappel = le candidat = 0, rendre le candidat.
+    Le rang devient le rang + 1.
+    Rendre la base suivi de « - » suivi du rang.
 
 Remarque : le rappel attendu d'une séance : prévue, à une heure, pour un patient qui l'accepte et a un téléphone, le compte
 Remarque : SMS réglé, et la veille à 18:00 pas encore passée.

@@ -1706,7 +1706,7 @@ int main(void) {
            (19 octobre 2026) */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=0"),
-                 evenement("q=3&z3=Anne+Rochat&z6=EPI&z7=01.01.2020&z8=&z9=&z12=0&clic=19"),
+                 evenement("q=3&z3=Anne+Rochat&z6=EPI&z7=01.01.2020&z8=&z9=&z13=0&clic=20"),
                  evenement("q=4&clic=Facturation"), evenement("q=5&clic=%C3%80+encaisser"),
                  evenement("q=6&s0=0&clic=Offert"), evenement("q=7&clic=Fermer"),
                  evenement("q=8&clic=Fermer"), evenement("q=9&clic=9"), evenement("q=10&choix=2.0"), get("/"));
@@ -1758,7 +1758,7 @@ int main(void) {
            couvre, sa séance est refusée ; l'ordonnance saisie dans la page du patient, la séance s'y rattache, payée
            « assurance », et l'ordonnance en compte une sur neuf */
         memset(&sc, 0, sizeof sc);
-        const char *seance = "z3=Anne+Rochat&z6=EPI&z7=05.10.2026&z8=&z9=&z12=130&clic=19";
+        const char *seance = "z3=Anne+Rochat&z6=EPI&z7=05.10.2026&z8=&z9=&z13=130&clic=20";
         char q11[200], q18[200];
         snprintf(q11, sizeof q11, "q=11&%s", seance);
         snprintf(q18, sizeof q18, "q=18&%s", seance);
@@ -1879,7 +1879,7 @@ int main(void) {
                  evenement("q=4&clic=Ordonnances"), evenement("q=5&clic=Nouvelle+ordonnance"),
                  evenement("q=6&z0=01.10.2026&z1=Dre+Morel&z2=&z3=&z4=9&z5=maladie&z7=&clic=Enregistrer"),
                  evenement("q=7&clic=Fermer"), evenement("q=8&clic=Nouvelle+s%C3%A9ance"),
-                 evenement("q=9&z3=Claire+Monney&z6=Ergoth%C3%A9rapie&z7=05.10.2026&z8=&z9=60&z12=105%2C6&clic=19"),
+                 evenement("q=9&z3=Claire+Monney&z6=Ergoth%C3%A9rapie&z7=05.10.2026&z8=&z9=60&z13=105%2C6&clic=20"),
                  evenement("q=10&clic=Ordonnances"), evenement("q=11&choix=1.0"),
                  evenement("q=12&clic=Facturer+%C3%A0+l%27assurance"), get("/"),
                  evenement("q=13&clic=Fermer"), evenement("q=14&clic=Fermer"), evenement("q=15&clic=Fermer"), evenement("q=16&clic=Fermer"),
@@ -2009,6 +2009,19 @@ int main(void) {
         CONTIENT(sc.reponses[0], "value=\"A\"");
         CONTIENT(sc.reponses[2], "value=\"BB\"");
         liberer(&sc);
+    }
+
+    {   /* deux séances au même moment (31 octobre 2026) : la Nouvelle séance avertit dès la date et l'heure choisies */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=0"),
+                 evenement("q=3&z3=Anne+Rochat&z6=EPI&z7=03.12.2030&z8=10%3A00&z9=&z13=100&clic=20"),
+                 evenement("q=4&clic=0"), get("/"),
+                 evenement("q=5&z3=Anne+Rochat&z6=EPI&z7=03.12.2030&z8=10%3A00&z9=&z13=100"), get("/"));
+        servir_projet("_essai_praxis/Praxis.grym", "_essai_horaire.grymd", &sc);
+        NE_CONTIENT_PAS(sc.reponses[4], "Attention : une séance est déjà prévue");
+        CONTIENT(sc.reponses[6], "Attention : une séance est déjà prévue le 03.12.2030 à 10:00.");
+        liberer(&sc);
+        remove("_essai_horaire.grymd");
     }
 
     {   /* l'accueil règle les séances du jour ; Séances, un jour précis ; la quittance différée du cabinet (31 octobre 2026) */
@@ -2552,11 +2565,11 @@ int main(void) {
                  evenement("q=6&fermer=1"),                                     /* 6 : retour à l'accueil */
                  evenement("q=7&clic=0"),                                       /* 6 : Nouvelle séance */
                  /* 7 : client et soin choisis, prix laissé vide : il se calcule avant « Enregistrer » */
-                 evenement("q=8&z3=Zo%C3%A9+Essai&z6=EPI&z7=01.10.2026&z8=&z9=&z12=&clic=19"),
+                 evenement("q=8&z3=Zo%C3%A9+Essai&z6=EPI&z7=01.10.2026&z8=&z9=&z13=&clic=20"),
                  evenement("q=9&clic=0"),                                       /* 8 : Nouvelle séance */
-                 evenement("q=10&z3=Zo%C3%A9+Essai&z6=EPI&z7=2026-10-08&z8=14%3A30&z9=50&z12=&clic=19"),   /* 9 */
+                 evenement("q=10&z3=Zo%C3%A9+Essai&z6=EPI&z7=2026-10-08&z8=14%3A30&z9=50&z13=&clic=20"),   /* 9 */
                  evenement("q=11&clic=0"),                                       /* 10 : Nouvelle séance */
-                 evenement("q=12&z3=&z6=EPI&z7=08.10.2026&z8=&z9=&z12=50&clic=19"),   /* 11 : sans client */
+                 evenement("q=12&z3=&z6=EPI&z7=08.10.2026&z8=&z9=&z13=50&clic=20"),   /* 11 : sans client */
                  get("/"),                                                      /* 12 */
                  evenement("q=13&fermer=1"),                                    /* 13 */
                  evenement("q=14&clic=9"),                                      /* 14 : Clients */

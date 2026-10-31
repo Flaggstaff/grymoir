@@ -546,6 +546,7 @@ L'écran de séance, « Nouvelle séance » en grand, montre :
             une date (date),
             une heure (heure), facultative,
             une durée (nombre entier), facultative, avec l'unité « min »,
+            le texte l'alerte d'horaire de la date de l'écran et de l'heure de l'écran, visible si l'alerte d'horaire de la date de l'écran et de l'heure de l'écran ≠ « »,
         le groupe « Prix proposé », en couleur inversée :
             un prix (nombre), avec l'unité « CHF »,
             le texte « Dès la deuxième séance d'un même soin, le tarif de suivi s'applique. Le prix reste modifiable. »,

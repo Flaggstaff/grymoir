@@ -1,0 +1,22 @@
+#!/bin/sh
+# Deux séances au même moment (31 octobre 2026) : l'alerte de la Nouvelle séance, et une référence SMS propre à chacune.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+N="$racine/projets/Praxis/Nicolas"
+cp "$N/données.grym" "$N/actions.grym" "$d/" && cp -R "$N/bibliothèques" "$d/" && cp "$racine/tests/praxis/horaire.grym" "$d/"
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+sortie="$("$grym" lancer horaire.grym 2>&1 < /dev/null)"
+verifier "$(echo "$sortie" | sed -n 1p)" "[]" "un moment libre : pas d'alerte"
+verifier "$(echo "$sortie" | sed -n 2p)" "NS-2026-11-03-14:30" "une séance seule garde la référence d'avant"
+verifier "$(echo "$sortie" | sed -n 3p)" "Attention : une séance est déjà prévue le 03.11.2026 à 14:30." "l'alerte du moment pris"
+verifier "$(echo "$sortie" | sed -n 4p)" "[]" "une autre heure, libre"
+verifier "$(echo "$sortie" | sed -n 5p)" "Attention : 2 séances sont déjà prévues le 03.11.2026 à 14:30." "deux séances au même moment"
+verifier "$(echo "$sortie" | sed -n 6p)" "NS-2026-11-03-14:30-2" "la seconde : sa propre référence"
+verifier "$(echo "$sortie" | sed -n 7p)" "Attention : une séance est déjà prévue le 03.11.2026 à 14:30." "une séance annulée ne compte plus"
+verifier "$(echo "$sortie" | sed -n 8p)" "NS-2026-11-03-14:30" "la référence libérée se reprend"
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]

@@ -1,0 +1,65 @@
+Remarque : deux séances au même moment (31 octobre 2026), essayées sans écran par tests/praxis-horaire : l'alerte de la
+Remarque : Nouvelle séance, et la référence SMS de chacune ; données inventées.
+Utiliser « actions ».
+Le c vaut un nouveau cabinet :
+    Le nom vaut « Cabinet essai ».
+    Le pays vaut « Suisse ».
+    La facturation des absences vaut faux.
+    Le choix d'agenda vaut faux.
+    L'agenda vaut « Praxis ».
+    La facturation aux assurances vaut faux.
+Conserver le c.
+Le préfixe SMS du c devient « NS ».
+Le soin d'essai vaut un nouveau soin :
+    Le nom vaut « Massage ».
+    Le tarif vaut 100.
+    L'ordonnance exigée vaut faux.
+    La facturation vaut « patient ».
+Conserver le soin d'essai.
+Le pa vaut un nouveau patient :
+    Le nom vaut « Anne Essai ».
+    Le pays vaut « Suisse ».
+Conserver le pa.
+Le pb vaut un nouveau patient :
+    Le nom vaut « Bruno Essai ».
+    Le pays vaut « Suisse ».
+Conserver le pb.
+Afficher "[" suivi de l'alerte d'horaire de 03.11.2026 et de 14:30 suivi de "]".
+Le sb vaut une nouvelle séance :
+    Le patient vaut le pb.
+    Le soin vaut le soin d'essai.
+    La date vaut 03.11.2026.
+    L'heure vaut 14:30.
+    Le prix vaut 100.
+    Le statut vaut « prévue ».
+    Le paiement vaut « à payer ».
+Conserver le sb.
+La référence de rappel du sb devient la référence de rappel prévue du sb.
+Afficher la référence de rappel du sb.
+Afficher l'alerte d'horaire de 03.11.2026 et de 14:30.
+Afficher "[" suivi de l'alerte d'horaire de 03.11.2026 et de 15:30 suivi de "]".
+Le sa vaut une nouvelle séance :
+    Le patient vaut le pa.
+    Le soin vaut le soin d'essai.
+    La date vaut 03.11.2026.
+    L'heure vaut 14:30.
+    Le prix vaut 100.
+    Le statut vaut « prévue ».
+    Le paiement vaut « à payer ».
+Conserver le sa.
+Afficher l'alerte d'horaire de 03.11.2026 et de 14:30.
+La référence de rappel du sa devient la référence de rappel prévue du sa.
+Afficher la référence de rappel du sa.
+Le statut du sb devient « annulée ».
+La référence de rappel du sb devient absente.
+Afficher l'alerte d'horaire de 03.11.2026 et de 14:30.
+Le sc vaut une nouvelle séance :
+    Le patient vaut le pb.
+    Le soin vaut le soin d'essai.
+    La date vaut 03.11.2026.
+    L'heure vaut 14:30.
+    Le prix vaut 100.
+    Le statut vaut « prévue ».
+    Le paiement vaut « à payer ».
+Conserver le sc.
+Afficher la référence de rappel prévue du sc.
