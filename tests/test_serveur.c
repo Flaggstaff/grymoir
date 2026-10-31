@@ -1596,16 +1596,17 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), get("/"), evenement("q=2&clic=6"), evenement(ev_annee), get("/"),
                  evenement("q=4&choix=3.0"), evenement("q=5&clic=5"), get("/"),
-                 evenement("q=6&z1=cl%C3%A9ment"), get("/"), evenement("q=7&z1=Personne"), get("/"), evenement("q=8&z1="), get("/"));
+                 evenement("q=6&z1=Sophie+Cl%C3%A9ment"), get("/"), evenement("q=7&z1=Personne"), get("/"), evenement("q=8&z1="), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet9.grymd", &sc);
         CONTIENT(sc.reponses[4], titre);
         CONTIENT(sc.reponses[4], "<td>Sophie Clément</td>");   /* payée par virement il y a quatre jours, sans quittance */
         CONTIENT(sc.reponses[4], "<td>Anne Rochat</td>");
-        /* un nom de patient, en minuscules : toutes les années, ses seules séances ; un nom inconnu : rien ; vide : l'année */
+        /* un patient choisi dans la liste (30 octobre 2026) : toutes les années, ses seules séances ; un nom qui n'est pas
+           un patient : refusé ; vide : l'année */
         CONTIENT(sc.reponses[9], "<h1>Quittances, toutes les années</h1>");
         CONTIENT(sc.reponses[9], "<td>Sophie Clément</td>");
         NE_CONTIENT_PAS(sc.reponses[9], "<td>Anne Rochat</td>");
-        NE_CONTIENT_PAS(sc.reponses[11], "<td>Sophie Clément</td>");
+        CONTIENT(sc.reponses[11], "Aucun patient conservé n&#39;a « Personne » pour nom.");
         CONTIENT(sc.reponses[13], titre);
         CONTIENT(sc.reponses[13], "<td>Anne Rochat</td>");
         CONTIENT(sc.reponses[7], "Un document se fabrique dans l&#39;atelier ou dans une application fabriquée.");
@@ -1648,6 +1649,19 @@ int main(void) {
         NE_CONTIENT_PAS(sc.reponses[20], "Sophie Clément");
         liberer(&sc);
         remove("_essai_seances.grymd");
+    }
+
+    {   /* Factures : le patient dans une liste déroulante (30 octobre 2026) ; choisi, ses factures de toutes les années */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Facturation"), evenement("q=3&clic=Factures"),
+                 get("/"), evenement("q=4&z2=Anne+Rochat&valider=1"), get("/"));
+        servir_projet("_essai_praxis/Praxis.grym", "_essai_factures_patient.grymd", &sc);
+        CONTIENT(sc.reponses[3], ">Patient</label>");
+        CONTIENT(sc.reponses[3], "<option value=\"Anne Rochat\">Anne Rochat</option>");
+        CONTIENT(sc.reponses[5], "<h1>Factures, toutes les années</h1>");
+        NE_CONTIENT_PAS(sc.reponses[5], "class=\"erreur\"");
+        liberer(&sc);
+        remove("_essai_factures_patient.grymd");
     }
 
     {   /* Cabinet : une séance offerte, depuis « À encaisser » de la tuile Facturation (30 octobre 2026), s'enregistre « offert » ; une rubrique de frais ajoutée puis renommée

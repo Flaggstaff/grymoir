@@ -30,6 +30,8 @@ L'état calendly vaut « Les réservations du site, relues à l'ouverture ».
 Remarque : ce qui est cherché dans les listes des patients et des factures ; vide, tout.
 La recherche des patients vaut « ».
 La recherche des factures vaut « ».
+Remarque : le patient choisi dans la liste déroulante des factures (30 octobre 2026), par son nom ; vide, tous.
+Le nom cherché des factures vaut « ».
 Remarque : les séances que montre leur écran : « Aujourd'hui », « À venir » ou « Passées » (30 octobre 2026).
 Le début des séances vaut aujourd'hui.
 La fin des séances vaut aujourd'hui.
@@ -337,10 +339,11 @@ L'écran de comptabilité, « Comptabilité », montre :
     un dossier d'export (texte), facultatif, avec le choix d'un dossier, avec l'indication « Où vont les CSV ; vide : Exports, à côté de l'application. ».
 
 Remarque : les factures envoyées, les plus récentes d'abord ; une facture choisie se remontre telle qu'elle a été envoyée.
-L'écran des factures, (le titre des factures de l'année des comptes et de la recherche des factures), montre :
+L'écran des factures, (le titre des factures de l'année des comptes et de (la recherche des factures suivi du nom cherché des factures)), montre :
     une année (exercice), avec l'indication « Une autre année ; la recherche, elle, les parcourt toutes »,
-    une recherche (texte), facultative, avec l'indication « Un numéro, un nom de patient, un état »,
-    la liste des factures conservées dont la date ≥ le début des factures et la date < la fin des factures et (le numéro contient la recherche des factures ou le nom du patient contient la recherche des factures ou l'état contient la recherche des factures), par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et l'état,
+    une recherche (texte), facultative, avec l'indication « Un numéro, un état, une partie de nom »,
+    un patient (patient), facultatif, avec l'indication « Ses factures seules, toutes les années ; vide : tous »,
+    la liste des factures conservées dont la date ≥ le début des factures et la date < la fin des factures et le nom du patient contient le nom cherché des factures et (le numéro contient la recherche des factures ou le nom du patient contient la recherche des factures ou l'état contient la recherche des factures), par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et l'état,
     un bouton « Fermer »,
     un bouton « Annuler la facture »,
     un bouton « Facture électronique »,
@@ -422,7 +425,7 @@ Le document de journal, « Journal des recettes et des frais », montre :
 Remarque : les séances payées attendent leur quittance ; les quittances remises se retrouvent dessous.
 L'écran des quittances, (le titre des quittances de l'année des comptes et de la recherche des quittances), montre :
     une année (exercice), avec l'indication « Une autre année ; un nom, lui, les cherche dans toutes »,
-    une recherche (texte), facultative, avec l'indication « Un nom de patient, ou une partie : Rochat, Anne »,
+    un patient (patient), facultatif, avec l'indication « Ses quittances seules, toutes les années ; vide : tous »,
     le texte « Payées, sans quittance », en petites capitales,
     la liste des séances conservées dont la quittance est absente et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance » et l'encaissement ≥ le début des quittances et l'encaissement < la fin des quittances et le nom du patient contient la recherche des quittances, par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
     côte à côte :
@@ -724,7 +727,7 @@ L'écran de la rubrique, « Rubrique », montre :
 
 Remarque : les bornes des factures : l'année des comptes, ou toutes les années pendant une recherche.
 Pour borner les factures :
-    Si la recherche des factures = « » :
+    Si la recherche des factures = « » et le nom cherché des factures = « » :
         Le début des factures devient le début d'exercice.
         La fin des factures devient la fin d'exercice.
     Sinon :
@@ -1237,8 +1240,8 @@ Quand on ouvre l'écran des quittances :
     Borner les quittances.
     L'année de l'écran devient la période de l'année des comptes.
 
-Quand on change la recherche dans l'écran des quittances :
-    Si la recherche de l'écran est présente, la recherche des quittances devient la recherche de l'écran.
+Quand on change le patient dans l'écran des quittances :
+    Si le patient de l'écran est présent, la recherche des quittances devient le nom du patient de l'écran.
     Sinon, la recherche des quittances devient « ».
     Borner les quittances.
 
@@ -1837,12 +1840,18 @@ Quand on change la recherche dans l'écran des patients :
 
 Quand on ouvre l'écran des factures :
     La recherche des factures devient « ».
+    Le nom cherché des factures devient « ».
     Borner les factures.
     L'année de l'écran devient la période de l'année des comptes.
 
 Quand on change la recherche dans l'écran des factures :
     Si la recherche de l'écran est présente, la recherche des factures devient la recherche de l'écran.
     Sinon, la recherche des factures devient « ».
+    Borner les factures.
+
+Quand on change le patient dans l'écran des factures :
+    Si le patient de l'écran est présent, le nom cherché des factures devient le nom du patient de l'écran.
+    Sinon, le nom cherché des factures devient « ».
     Borner les factures.
 
 Quand on clique sur « Nouveau patient » dans l'écran des patients :
