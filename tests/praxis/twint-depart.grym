@@ -1,0 +1,18 @@
+Remarque : le départ de Nicolas et son lien Twint Pro (31 octobre 2026), essayé sans écran par tests/praxis-twint :
+Remarque : une base d'avant l'interrupteur retrouve le lien ; un lien vidé, interrupteur éteint, reste vidé.
+Utiliser « départ ».
+Le c vaut un nouveau cabinet :
+    Le nom vaut « Cabinet essai ».
+    Le pays vaut « Suisse ».
+    La facturation des absences vaut faux.
+    Le choix d'agenda vaut faux.
+    L'agenda vaut « Praxis ».
+    La facturation aux assurances vaut faux.
+Conserver le c.
+Régler le cabinet.
+Si le QR twint du cabinet conservé est présent, afficher « avant l'interrupteur : lien remis ».
+Le lien twint du cabinet conservé devient absent.
+Le QR twint du cabinet conservé devient absent.
+L'affichage twint pro du cabinet conservé devient faux.
+Régler le cabinet.
+Si le QR twint du cabinet conservé est absent et le lien twint du cabinet conservé est absent, afficher « vidé et éteint : reste vidé ».

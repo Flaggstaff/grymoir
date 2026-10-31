@@ -6,7 +6,7 @@ grym="$racine/grym"
 d=$(mktemp -d)
 trap 'rm -rf "$d"' EXIT
 N="$racine/projets/Praxis/Nicolas"
-cp "$N/données.grym" "$N/actions.grym" "$d/" && cp -R "$N/bibliothèques" "$d/" && cp "$racine/tests/praxis/twint.grym" "$d/"
+cp "$N/données.grym" "$N/actions.grym" "$N/départ.grym" "$d/" && cp -R "$N/bibliothèques" "$d/" && cp "$racine/tests/praxis/twint.grym" "$racine/tests/praxis/twint-depart.grym" "$d/"
 cd "$d" || exit 1
 total=0; echecs=0
 verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
@@ -18,5 +18,9 @@ verifier "$(echo "$sortie" | sed -n 4p)" "[]" "un natel saisi, l'interrupteur ja
 verifier "$(echo "$sortie" | sed -n 5p)" "[]" "un natel saisi, l'interrupteur éteint : pas de ligne"
 verifier "$(echo "$sortie" | sed -n 6p)" "Par Twint, depuis votre app : envoyez CHF 120,00 au 079 123 45 67, avec le message « F-2026-0001 »." "le natel en clair, avec le numéro de la facture"
 verifier "$(echo "$sortie" | sed -n 7p)" "[]" "Twint Pro éteint (pas de code QR) : pas d'invite"
+# le départ de Nicolas (31 octobre 2026) : un lien vidé, interrupteur éteint, ne revient pas au lancement suivant
+depart="$("$grym" lancer twint-depart.grym 2>&1 < /dev/null)"
+verifier "$(echo "$depart" | sed -n 1p)" "avant l'interrupteur : lien remis" "une base d'avant l'interrupteur retrouve le lien de Nicolas"
+verifier "$(echo "$depart" | sed -n 2p)" "vidé et éteint : reste vidé" "un lien vidé, interrupteur éteint, reste vidé"
 echo "$((total - echecs))/$total tests réussis"
 [ $echecs = 0 ]

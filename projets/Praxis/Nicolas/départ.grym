@@ -20,14 +20,17 @@ Pour fonder le cabinet :
     Le préfixe SMS du c devient « NS ».
     Le lien twint du c devient « https://go.twint.ch/1/e/tw?tw=acq.qmxyzqW9SBeb0okXKZmWJccIdNYSZdQOwotwCrKEgUq9fReTm4hHSziOaFEwsb6j. ».
     Le QR twint du c devient le code QR du lien twint du c.
+    L'affichage twint pro du c devient vrai.
     Conserver le c.
 
 Remarque : à chaque lancement : le préfixe SMS, posé dans une base fondée avant lui (28 octobre 2026) ; un préfixe déjà là reste.
-Remarque : de même le lien de paiement Twint de Nicolas et son code QR, sur ses factures (30 octobre 2026).
+Remarque : de même le lien de paiement Twint de Nicolas et son code QR, sur ses factures (30 octobre 2026), mais seulement dans
+Remarque : une base d'avant l'interrupteur Twint Pro (31 octobre 2026) : une fiche du cabinet déjà enregistrée garde son choix,
+Remarque : sinon un lien vidé, interrupteur éteint, revenait au lancement suivant avec son code QR sur les factures.
 Pour régler le cabinet :
     Le c vaut le cabinet conservé.
     Si le préfixe SMS du c est absent, le préfixe SMS du c devient « NS ».
-    Si le lien twint du c est absent :
+    Si le lien twint du c est absent et l'affichage twint pro du c est absent :
         Le lien twint du c devient « https://go.twint.ch/1/e/tw?tw=acq.qmxyzqW9SBeb0okXKZmWJccIdNYSZdQOwotwCrKEgUq9fReTm4hHSziOaFEwsb6j. ».
         Le QR twint du c devient le code QR du lien twint du c.
 
