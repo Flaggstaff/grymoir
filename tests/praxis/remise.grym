@@ -1,0 +1,74 @@
+Remarque : une facture remise ne s'annule pas en passant ; un virement compte au jour reçu ; une facture se solde d'un coup
+Remarque : (31 octobre 2026), essayés par tests/praxis-remise : inséré avant l'accueil, données inventées.
+Si le nombre de patients conservés dont le nom = « Remise Essai » est nul :
+    Le p vaut un nouveau patient :
+        Le nom vaut « Remise Essai ».
+        Le pays vaut « Suisse ».
+        L'anamnèse vaut « ».
+    Conserver le p.
+    Le soin d'essai vaut le soin conservé dont le nom = « EPI ».
+    Le s1 vaut une nouvelle séance :
+        Le patient vaut le p.
+        Le soin vaut le soin d'essai.
+        La date vaut aujourd'hui − 10.
+        Le prix vaut 130.
+        Le statut vaut « faite ».
+        Le paiement vaut « à payer ».
+    Conserver le s1.
+    Le s2 vaut une nouvelle séance :
+        Le patient vaut le p.
+        Le soin vaut le soin d'essai.
+        La date vaut aujourd'hui − 5.
+        Le prix vaut 70.
+        Le statut vaut « faite ».
+        Le paiement vaut « à payer ».
+    Conserver le s2.
+    Facturer le s1.
+    Le f vaut la facture du s1.
+    Si la facture du s2 = le f, l'anamnèse du p devient l'anamnèse du p suivi de « |ESSAI même facture : vrai ».
+    L'anamnèse du p devient l'anamnèse du p suivi de "|ESSAI refus : " suivi du refus de facture du s1.
+    Essayer :
+        Solder le f et aujourd'hui + 1.
+    En cas d'échec :
+        L'anamnèse du p devient l'anamnèse du p suivi de "|ESSAI futur : " suivi du motif de l'échec.
+    Solder le f et aujourd'hui − 2.
+    L'anamnèse du p devient l'anamnèse du p suivi de "|ESSAI état : " suivi de l'état du f.
+    L'anamnèse du p devient l'anamnèse du p suivi de "|ESSAI moyen : " suivi du paiement du s2.
+    Si l'encaissement du s1 = aujourd'hui − 2 et l'encaissement du s2 = aujourd'hui − 2, l'anamnèse du p devient l'anamnèse du p suivi de « |ESSAI jour : vrai vrai ».
+    Si la quittance du s1 est présente, l'anamnèse du p devient l'anamnèse du p suivi de « |ESSAI quittance : vrai ».
+    Essayer :
+        Solder le f et aujourd'hui.
+    En cas d'échec :
+        L'anamnèse du p devient l'anamnèse du p suivi de "|ESSAI déjà : " suivi du motif de l'échec.
+    Le s3 vaut une nouvelle séance :
+        Le patient vaut le p.
+        Le soin vaut le soin d'essai.
+        La date vaut aujourd'hui − 4.
+        Le prix vaut 70.
+        Le statut vaut « faite ».
+        Le paiement vaut « à payer ».
+    Conserver le s3.
+    Régler par virement le s3 et aujourd'hui − 1.
+    Si l'encaissement du s3 = aujourd'hui − 1, l'anamnèse du p devient l'anamnèse du p suivi de "|ESSAI virement : " suivi du paiement du s3 suivi de " vrai".
+    Le s4 vaut une nouvelle séance :
+        Le patient vaut le p.
+        Le soin vaut le soin d'essai.
+        La date vaut aujourd'hui − 3.
+        Le prix vaut 70.
+        Le statut vaut « faite ».
+        Le paiement vaut « à payer ».
+    Conserver le s4.
+    Régler par virement le s4 et absent.
+    Si l'encaissement du s4 = aujourd'hui, l'anamnèse du p devient l'anamnèse du p suivi de « |ESSAI vide : vrai ».
+    Le s5 vaut une nouvelle séance :
+        Le patient vaut le p.
+        Le soin vaut le soin d'essai.
+        La date vaut aujourd'hui − 2.
+        Le prix vaut 70.
+        Le statut vaut « faite ».
+        Le paiement vaut « à payer ».
+    Conserver le s5.
+    Facturer le s5.
+    Le g vaut la facture du s5.
+    Retirer le g.
+    Si la facture du s5 est absente, l'anamnèse du p devient l'anamnèse du p suivi de "|ESSAI retirée : vrai " suivi du nombre de factures supprimées dont le patient = le p.

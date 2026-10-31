@@ -2211,7 +2211,7 @@ int main(void) {
     {   /* Cabinet : « Facture » dans « À encaisser » ; un document, refusé dans le navigateur sans rien numéroter ; une
            séance offerte n'a ni facture ni quittance (20 octobre 2026) */
         memset(&sc, 0, sizeof sc);
-        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Facturation"), evenement("q=3&clic=%C3%80+encaisser"), get("/"), evenement("q=4&s0=0&clic=7"), get("/"),
+        REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Facturation"), evenement("q=3&clic=%C3%80+encaisser"), get("/"), evenement("q=4&s0=0&clic=8"), get("/"),   /* « Facture » : 8 depuis la date du virement (31 octobre 2026) */
                  evenement("q=5&clic=Fermer"), evenement("q=6&clic=Fermer"), evenement("q=7&clic=Patients"), evenement("q=8&choix=2.0"),
                  evenement("q=9&choix=28.0"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet14.grymd", &sc);

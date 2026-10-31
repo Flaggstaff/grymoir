@@ -289,10 +289,11 @@ L'écran de la séance, « Séance », montre :
         une offerte (vrai ou faux), à 0 de la gauche et 420 du haut,
         un commentaire dicté (son), facultatif, à 552 de la gauche et 0 du haut, large de 520,
         un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté, à 552 de la gauche et 72 du haut, large de 520, haut de 352,
-        un encaissement (date), facultatif, avec l'indication « Le jour du paiement », à 216 de la gauche et 216 du haut, large de 200,
+        un encaissement (date), facultatif, avec l'indication « Le jour du paiement ; pour un virement, remplis-le avant le bouton », à 216 de la gauche et 216 du haut, large de 200,
     côte à côte :
         un bouton « Enregistrer », principal,
         un bouton « Facture ou quittance »,
+        un bouton « Annuler sa facture », à confirmer par « Annuler la facture de cette séance ? Elle ne se rétablit pas : ses autres séances se refacturent sous un nouveau numéro. Envoyée par voie électronique, son annulation part aussi. » en tapant « annuler », visible si la facture de la séance ouverte est présente,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer cette séance ? Elle part dans la corbeille. »,
     côte à côte :
@@ -355,6 +356,9 @@ L'écran des factures, (le titre des factures de l'année des comptes et de (la 
     une recherche (texte), facultative, avec l'indication « Un numéro, un état, une partie de nom »,
     un patient (patient), facultatif, avec l'indication « Ses factures seules, toutes les années ; vide : tous »,
     la liste des factures conservées dont la date ≥ le début des factures et la date < la fin des factures et le nom du patient contient le nom cherché des factures et (le numéro contient la recherche des factures ou le nom du patient contient la recherche des factures ou l'état contient la recherche des factures), par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et l'état,
+    côte à côte :
+        une date de virement (date), facultative, avec l'indication « Le jour où le virement est arrivé ; vide : aujourd'hui »,
+        un bouton « Payée par virement »,
     côte à côte :
         un bouton « Annuler la facture », à confirmer par « Annuler la facture choisie ? Elle ne se rétablit pas : on en refait une. Envoyée par voie électronique, son annulation part aussi. » en tapant « annuler »,
         un bouton « Facture électronique »,
@@ -560,6 +564,7 @@ L'écran des prévues, « Séances », montre :
         un bouton « Espèces »,
         un bouton « Twint »,
         un bouton « Virement »,
+        une date de virement (date), facultative, avec l'indication « Le jour où le virement est arrivé ; vide : aujourd'hui »,
         un bouton « Offert »,
         un bouton « Facture »,
     un bouton « Fermer ».
@@ -572,6 +577,7 @@ L'écran des encaissements, « À encaisser », montre :
         un bouton « Espèces »,
         un bouton « Twint »,
         un bouton « Virement »,
+        une date de virement (date), facultative, avec l'indication « Le jour où le virement est arrivé ; vide : aujourd'hui »,
         un bouton « Offert »,
         un bouton « Facture »,
     un bouton « Fermer ».
@@ -1199,6 +1205,30 @@ Pour régler une séance et un moyen :
     Encaisser la séance et moyen.
     Si moyen ≠ « offert » et la facture de la séance est absente, quittancer la séance.
 
+Remarque : un virement compte au jour où l'argent est arrivé (31 octobre 2026), qui décide de l'année des comptes : saisi le 4 janvier,
+Remarque : un virement du 29 décembre reste dans l'ancienne année ; vide : aujourd'hui.
+Pour régler par virement une séance et un jour :
+    Si jour est présent et jour > aujourd'hui, refuser « Un virement ne s'encaisse pas avant d'être arrivé : sa date est au plus aujourd'hui. ».
+    Régler la séance et « virement ».
+    Si jour est présent, l'encaissement de la séance devient jour.
+
+Remarque : une facture payée d'un coup, par virement (31 octobre 2026) : ses séances encore à payer, au jour où l'argent est arrivé ;
+Remarque : la facture suit, réglée, et sa quittance se fait seule, comme quand sa dernière séance est encaissée.
+Pour solder un relevé et un jour :
+    Si l'état du relevé = « réglée », refuser « Cette facture est déjà réglée. ».
+    Le jour reçu vaut aujourd'hui.
+    Si jour est présent, le jour reçu devient jour.
+    Si le jour reçu > aujourd'hui, refuser « Un virement ne s'encaisse pas avant d'être arrivé : sa date est au plus aujourd'hui. ».
+    Pour chaque séance conservée dont la facture = relevé et le paiement = « à payer » :
+        Le paiement de la séance devient « virement ».
+        L'encaissement de la séance devient le jour reçu.
+    Suivre le relevé.
+
+Remarque : une facture déjà remise ne s'annule jamais en passant (31 octobre 2026) : changer le patient, le soin, la date ou le prix
+Remarque : d'une séance facturée, la dire annulée, prévue ou absente non facturée, ou la supprimer, demande d'annuler d'abord sa facture.
+Le refus de facture d'une séance :
+    Rendre "Cette séance est sur la facture " suivi du numéro de la facture de la séance suivi de ", déjà remise. Pour la changer, annule d'abord sa facture : bouton « Annuler sa facture ». Ses autres séances se refactureront sous un nouveau numéro.".
+
 Remarque : une séance réglée par erreur redevient à payer (31 octobre 2026) : sa quittance est défaite, son encaissement retiré ;
 Remarque : une séance facturée garde sa facture, qui suit (de nouveau due). Offerte, elle redevient à payer de même.
 Pour remettre à payer une séance :
@@ -1320,16 +1350,25 @@ Pour écrire la pièce électronique dans un nom :
     En cas d'échec :
         L'avis des factures devient le motif de l'échec.
 
+Remarque : annuler une facture, depuis Factures ou depuis la fiche d'une de ses séances (31 octobre 2026) : envoyée par voie
+Remarque : électronique, son annulation (storno) s'écrit d'abord, à envoyer comme elle.
+Pour retirer un relevé :
+    Si l'envoi électronique du relevé est présent :
+        Préparer la pièce électronique du numéro du relevé et le patient du relevé et la date du relevé.
+        Le genre de demande électronique devient « storno ».
+        Écrire la pièce électronique dans le numéro du relevé suivi de " annulation".
+    Annuler le relevé.
+
 Remarque : annuler une facture déjà écrite en électronique écrit d'abord son annulation (storno : la même facture, marquée
 Remarque : annulée), à envoyer comme elle ; l'avis dit où elle est, ou pourquoi elle n'a pas pu s'écrire (27 octobre 2026).
 Quand on clique sur « Annuler la facture » dans l'écran des factures :
     Si la facture choisie de l'écran est absente, refuser « Choisis d'abord une facture dans la liste. ».
-    Le f vaut la facture choisie de l'écran.
-    Si l'envoi électronique du f est présent :
-        Préparer la pièce électronique du numéro du f et le patient du f et la date du f.
-        Le genre de demande électronique devient « storno ».
-        Écrire la pièce électronique dans le numéro du f suivi de " annulation".
-    Annuler la facture choisie de l'écran.
+    Retirer la facture choisie de l'écran.
+
+Quand on clique sur « Payée par virement » dans l'écran des factures :
+    Si la facture choisie de l'écran est absente, refuser « Choisis d'abord une facture dans la liste. ».
+    Solder la facture choisie de l'écran et la date de virement de l'écran.
+    La date de virement de l'écran devient absente.
 
 Quand on clique sur « Facture électronique » dans l'écran des factures :
     Si la facture choisie de l'écran est absente, refuser « Choisis d'abord une facture dans la liste. ».
@@ -2020,7 +2059,8 @@ Quand on clique sur « Twint » dans l'écran des prévues :
 
 Quand on clique sur « Virement » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
-    Régler la séance choisie de l'écran et « virement ».
+    Régler par virement la séance choisie de l'écran et la date de virement de l'écran.
+    La date de virement de l'écran devient absente.
 
 Quand on clique sur « Offert » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
@@ -2049,7 +2089,8 @@ Quand on clique sur « Twint » dans l'écran des encaissements :
 
 Quand on clique sur « Virement » dans l'écran des encaissements :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
-    Régler la séance choisie de l'écran et « virement ».
+    Régler par virement la séance choisie de l'écran et la date de virement de l'écran.
+    La date de virement de l'écran devient absente.
 
 Quand on clique sur « Offert » dans l'écran des encaissements :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
@@ -2171,10 +2212,12 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
     Si la facturation du soin de l'écran = « assurance », le nouveau paiement devient « assurance ».
     Si l'ordonnance exigée du soin de l'écran est fausse et la facturation complémentaire du patient de l'écran est présente :
         Si la facturation complémentaire du patient de l'écran = « tiers garant », le nouveau paiement devient le paiement de l'écran.
-    Si la facture du s est présente ou la quittance du s est présente :
+    Si la facture du s est présente :
+        Si le patient de l'écran ≠ le patient du s ou le soin de l'écran ≠ le soin du s ou la date de l'écran ≠ la date du s ou le prix de l'écran ≠ le prix du s, refuser le refus de facture du s.
+        Si le statut de l'écran = « annulée » ou le statut de l'écran = « prévue » ou le statut de l'écran = l'exclu du cabinet conservé, refuser le refus de facture du s.
+    Si la quittance du s est présente :
         Si le patient de l'écran ≠ le patient du s ou le soin de l'écran ≠ le soin du s ou la date de l'écran ≠ la date du s ou le prix de l'écran ≠ le prix du s :
-            Si la quittance du s est présente, défaire la quittance du s.
-            Si la facture du s est présente, annuler la facture du s.
+            Défaire la quittance du s.
     Dégager le s et le statut de l'écran.
     Si la quittance du s est présente et le nouveau paiement ≠ le paiement du s, défaire la quittance du s.
     Le patient du s devient le patient de l'écran.
@@ -2198,8 +2241,9 @@ Quand on clique sur « Enregistrer » dans l'écran de la séance :
     Fermer l'écran.
 
 Remarque : la séance enregistrée telle qu'à l'écran, puis sa pièce : à payer, sa facture ; payée, sa quittance.
-Remarque : tout se modifie ; une séance qui a sa pièce et change de patient, de soin, de date ou de prix (ou de paiement, pour une
-Remarque : quittance) la voit annulée : dans la corbeille, son exemplaire gardé ; « Facture ou quittance » en refait une juste.
+Remarque : tout se modifie ; une séance quittancée qui change de patient, de soin, de date ou de prix (ou de paiement) voit sa quittance
+Remarque : annulée : dans la corbeille, son exemplaire gardé ; « Facture ou quittance » en refait une juste. Facturée, elle refuse ces
+Remarque : changements tant que sa facture n'est pas annulée, par « Annuler sa facture » (31 octobre 2026).
 Remarque : une séance facturée qui ne se doit plus (annulée, prévue, absence non facturée) libère sa facture : « dégager ».
 Quand on clique sur « Facture ou quittance » dans l'écran de la séance :
     Faire comme un clic sur « Enregistrer ».
@@ -2215,8 +2259,13 @@ Quand on clique sur « Twint » dans l'écran de la séance :
     Régler la séance ouverte et « Twint ».
 
 Quand on clique sur « Virement » dans l'écran de la séance :
+    Le jour reçu vaut l'encaissement de l'écran.
     Faire comme un clic sur « Enregistrer ».
-    Régler la séance ouverte et « virement ».
+    Régler par virement la séance ouverte et le jour reçu.
+
+Quand on clique sur « Annuler sa facture » dans l'écran de la séance :
+    Si la facture de la séance ouverte est absente, refuser « Cette séance n'a pas de facture. ».
+    Retirer la facture de la séance ouverte.
 
 Remarque : une séance réglée par erreur redevient à payer (31 octobre 2026) : enregistrée telle qu'à l'écran, puis remise.
 Quand on clique sur « À payer » dans l'écran de la séance :
@@ -2233,11 +2282,12 @@ Quand on clique sur « Voir le patient » dans l'écran de la séance :
 Quand on clique sur « Fermer » dans l'écran de la séance :
     Fermer l'écran.
 
-Remarque : une séance supprimée va dans la corbeille, d'où elle se rétablit ; sa facture ou sa quittance est d'abord annulée.
+Remarque : une séance supprimée va dans la corbeille, d'où elle se rétablit ; sa quittance est d'abord annulée ; facturée, elle
+Remarque : attend que sa facture le soit, par « Annuler sa facture » (31 octobre 2026).
 Quand on clique sur « Supprimer » dans l'écran de la séance :
     Le s vaut la séance ouverte.
+    Si la facture du s est présente, refuser le refus de facture du s.
     Si la quittance du s est présente, défaire la quittance du s.
-    Si la facture du s est présente, annuler la facture du s.
     Annuler le rappel du s.
     Supprimer le s.
     Fermer l'écran.

@@ -1,0 +1,42 @@
+#!/bin/sh
+# Une facture remise (31 octobre 2026) : son refus nomme la facture ; « Payée par virement » solde toutes ses séances au jour
+# reçu, jamais dans le futur, une fois ; un virement compte au jour reçu (vide : aujourd'hui) ; « retirer » annule la facture.
+# Praxis, ses données d'essai et le crochet tests/praxis/remise.grym, lancés par l'atelier sans écran ; sans atelier, sauté.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+atelier="$racine/construction/grym-atelier"
+[ -x "$atelier" ] || atelier="$racine/construction/grym-atelier.app/Contents/MacOS/grym-atelier"
+if [ ! -x "$atelier" ]; then echo "praxis-remise : sauté (atelier absent)"; exit 0; fi
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+N="$racine/projets/Praxis/Nicolas"
+for n in "$N"/*; do case "$n" in *.grymd*|*.grymb) ;; *) cp -R "$n" "$d/";; esac; done
+cp "$racine/tests/praxis/essais.grym" "$d/"
+awk -v c="$racine/tests/praxis/remise.grym" '
+    $0 == "Utiliser « actions »." && !u { print; print "Utiliser « essais »."; u = 1; next }
+    index($0, "Remarque : l'\''accueil de la maquette") == 1 && !r { print "Si le nombre de patients conservés est nul, remplir les essais."; print ""; r = 1 }
+    $0 == "Recenser les exercices d'\''aujourd'\''hui." && !k { while ((getline l < c) > 0) print l; print ""; k = 1 }
+    { print }' "$N/Praxis.grym" > "$d/Praxis.grym"
+(cd "$d" && QT_QPA_PLATFORM=offscreen GRYMOIR_ESSAIS=1 GRYMOIR_SANS_APERCU=1 GRYM_MOT_DE_PASSE_BASE=essai-essai \
+    "$atelier" --capture "$d/accueil.png" --clics Continuer --taille 1170x900 Praxis.grym > "$d/sortie.txt" 2>&1 < /dev/null)
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+# l'atelier n'écrit pas « Afficher » sur la sortie : le crochet range ses résultats dans l'anamnèse du patient d'essai, relue ici
+# par grym sur une copie de la base
+base="$(ls "$d"/*.grymd 2>/dev/null | head -1)"
+printf 'Utiliser « données ».\nLa base est chiffrée.\nAfficher l%sanamnèse du patient conservé dont le nom = « Remise Essai ».\n' "'" > "$d/lire.grym"
+[ -n "$base" ] && cp "$base" "$d/lire.grymd" && cp "$base.clés" "$d/lire.grymd.clés"
+(cd "$d" && GRYM_MOT_DE_PASSE_BASE=essai-essai "$racine/grym" lancer lire.grym < /dev/null 2>&1) | tr '|' '\n' > "$d/resultats.txt"
+ligne() { grep -a "^ESSAI $1 : " "$d/resultats.txt" | head -1 | sed "s/^ESSAI $1 : //"; }
+verifier "$(ligne 'même facture')" "vrai" "les deux séances dues sur une seule facture"
+verifier "$(ligne refus | grep -c 'Cette séance est sur la facture F-')" "1" "le refus nomme la facture"
+verifier "$(ligne futur)" "Un virement ne s'encaisse pas avant d'être arrivé : sa date est au plus aujourd'hui." "un virement daté de demain, refusé"
+verifier "$(ligne état)" "réglée" "la facture soldée est réglée"
+verifier "$(ligne moyen)" "virement" "ses séances, payées par virement"
+verifier "$(ligne jour)" "vrai vrai" "ses séances, encaissées au jour reçu"
+verifier "$(ligne quittance)" "vrai" "sa quittance s'est faite seule"
+verifier "$(ligne déjà)" "Cette facture est déjà réglée." "une facture réglée ne se solde pas deux fois"
+verifier "$(ligne virement)" "virement vrai" "une séance réglée par virement au jour reçu"
+verifier "$(ligne vide)" "vrai" "sans date, le virement compte aujourd'hui"
+verifier "$(ligne retirée)" "vrai 1" "la facture retirée est dans la corbeille, sa séance libérée"
+echo "$((total - echecs))/$total tests réussis"
+[ "$echecs" -eq 0 ] || { cp "$d/sortie.txt" /tmp/remise-sortie.txt; cp "$d/resultats.txt" /tmp/remise-resultats.txt; grep -a "ESSAI\|erreur" "$d/sortie.txt" | head; tail -5 "$d/sortie.txt"; exit 1; }
