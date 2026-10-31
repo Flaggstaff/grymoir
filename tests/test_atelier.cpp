@@ -69,6 +69,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QShortcut>
 #include <QStandardPaths>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -914,6 +915,82 @@ int main(int argc, char **argv) {
             attendre([&] { return nom() == "E"; });
             VERIFIER(nom() == "E");
         } else VERIFIER(false);
+    }
+
+    // « … si l'écran est modifié » (2.67) : sans saisie, le clic part sans question ; une zone tapée la pose ; après
+    // « Enregistrer », qui écrit dans la base, plus de question ; Échap vaut un clic sur « Fermer », question comprise
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Un patient, conservé, a :\n    un nom (texte).\n"
+                    "L'écran x montre :\n    un nom (texte), facultatif,\n    un bouton « Enregistrer »,\n"
+                    "    un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? » si l'écran est modifié.\n"
+                    "Quand on clique sur « Enregistrer » dans l'écran x :\n    Le p vaut un nouveau patient :\n"
+                    "        Le nom vaut le nom de l'écran.\n    Conserver le p.\n"
+                    "Quand on clique sur « Fermer » dans l'écran x :\n    Le nom de l'écran devient « F ».\nOuvrir l'écran x.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto bouton = [&e](const char *l) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>())
+                if (b->text() == QString::fromUtf8(l) && b->isVisible() && b->isEnabled() && b->window() == &e) return b;
+            return nullptr;
+        };
+        auto dialogue = [&e]() -> QDialog * {
+            for (QDialog *d : e.findChildren<QDialog *>("confirmation")) if (d->isVisible()) return d;
+            return nullptr;
+        };
+        auto zone = [&e]() -> QLineEdit * {
+            for (QLineEdit *l : e.findChildren<QLineEdit *>()) if (l->window() == &e && l->isVisible()) return l;
+            return nullptr;
+        };
+        auto attendre = [](const std::function<bool()> &fini) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !fini()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        };
+        auto repos = [] {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 300) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        };
+        auto annuler = [&] {
+            if (QDialog *d = dialogue())
+                for (QPushButton *b : d->findChildren<QPushButton *>()) if (b->text() == "Annuler") { b->click(); break; }
+            attendre([&] { return dialogue() == nullptr; });
+        };
+        attendre([&] { return bouton("Fermer") != nullptr && zone() != nullptr; });
+        VERIFIER(bouton("Fermer") && zone());
+        if (bouton("Fermer") && zone()) {
+            bouton("Fermer")->click();   // rien de saisi : pas de question
+            attendre([&] { return zone() && zone()->text() == "F"; });
+            VERIFIER(dialogue() == nullptr && zone()->text() == "F");
+            zone()->setText("Anne");
+            zone()->setModified(true);
+            bouton("Fermer")->click();   // une saisie pas encore envoyée : la question
+            attendre([&] { return dialogue() != nullptr; });
+            VERIFIER(dialogue() != nullptr);
+            annuler();
+            bouton("Enregistrer")->click();   // la saisie part, puis s'écrit dans la base
+            attendre([&] { return bouton("Enregistrer") && bouton("Enregistrer")->isEnabled() && !zone()->isModified(); });
+            repos();
+            bouton("Fermer")->click();   // enregistrée : plus de question
+            attendre([&] { return zone()->text() == "F"; });
+            VERIFIER(dialogue() == nullptr && zone()->text() == "F");
+            zone()->setText("Bea");
+            zone()->setModified(true);
+            QShortcut *echap = nullptr;   // Échap : le bouton « Fermer », sa question comprise
+            for (QShortcut *x : e.findChildren<QShortcut *>()) if (x->key() == QKeySequence(Qt::Key_Escape)) echap = x;
+            VERIFIER(echap != nullptr);
+            if (echap) emit echap->activated();
+            attendre([&] { return dialogue() != nullptr; });
+            VERIFIER(dialogue() != nullptr);
+            annuler();
+        }
     }
 
     // Un écran occupe toute la fenêtre : le fil et la zone des questions se cachent, Ctrl+J les montre (docs/atelier.md,

@@ -166,6 +166,9 @@ private:
                        const QVector<QStringList> &colonnes);
     QVector<QWidget *> zones;              // zone de saisie de chaque élément, ou nullptr
     QVector<QWidget *> controles_ecran;    // ce qui montre chaque élément (libellé compris pour une zone), ou nullptr
+    QVector<int> etats_recus;              // les derniers états de chaque élément (§ 22.6), bit ETAT_MODIFIE compris (2.67)
+    bool saisie_en_suspens() const;        // une zone tapée que la machine n'a pas encore reçue (2.67)
+    void fermer_par_echap();               // Échap : le bouton « Fermer » de l'écran, comme un clic (2.67)
     QString texte_zone(int k) const;
     QVector<long> lignes_choisies;         // envoyées avec chaque événement (§ 22.2)
     QByteArray texte_envoye;

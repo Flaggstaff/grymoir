@@ -37,6 +37,7 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->unite = NULL;
     n->confirmation = NULL;
     n->confirmation_mot = NULL;
+    n->confirmation_si_modifie = 0;
     n->couleurs = NULL;
     n->transcrit_de = NULL;
     n->ancien = NULL;

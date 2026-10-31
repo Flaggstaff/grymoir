@@ -6893,6 +6893,14 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
                 el->confirmation_mot = grym_dupliquer(m->valeur);
                 a->i += 3;
             }
+            /* « … si l'écran est modifié » (2.67) : la question ne se pose qu'après une saisie pas encore enregistrée */
+            attendre_mot(a, a->i, "si l'écran est modifié", strlen("si l'écran est modifié"));
+            if (est_mot(cour(a), "si") && voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "écran")) {
+                if (!est_mot(voir(a, 3), "est") || !est_mot(voir(a, 4), "modifié"))
+                    return erreur(a, voir(a, 3), grym_dupliquer("Attendu : « , à confirmer par « … » si l'écran est modifié ».")), -1;
+                el->confirmation_si_modifie = 1;
+                a->i += 5;
+            }
             return 1;
         }
         if (est_mot(x, "à") && est_mot(voir(a, 2), "côté") && est_mot(voir(a, 3), "du") && est_mot(voir(a, 4), "titre")) {

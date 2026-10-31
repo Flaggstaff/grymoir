@@ -29,6 +29,7 @@ struct ElementVue {
     bool capitales = false;         // un texte « , en petites capitales » (2.20)
     QString confirmation;           // un bouton « , à confirmer par « … » » : la question, vide sinon (2.65)
     QString confirmation_mot;       // « … en tapant « effacer » » : le mot, vide sinon (2.65)
+    bool confirmation_si_modifie = false;   // « … si l'écran est modifié » (2.67)
     QString texte;          // libellé d'un bouton, texte fixe, nom affiché d'une zone ; pour une liste, l'entité
     QStringList colonnes;   // liste : titres des colonnes
     QString type;           // zone : son type

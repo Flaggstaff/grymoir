@@ -1673,7 +1673,7 @@ static int evenements_de(Serveur *s, Envoi *env) {
         if (fin != ps->valeur && !*fin && r < e->nb_lignes[k]) e->choisie[k] = (long)r;
     }
     for (size_t k = 0; k < e->n; k++) {
-        if (e->el[k].sorte != ELEMENT_ZONE || e->etats[k] || e->el[k].lecture_seule) continue;   /* § 22.6 */
+        if (e->el[k].sorte != ELEMENT_ZONE || (e->etats[k] & 3) || e->el[k].lecture_seule) continue;   /* § 22.6 */
         char nom[24];
         snprintf(nom, sizeof nom, "z%lu", (unsigned long)k);
         Partie *pv = envoi_partie(env, nom);
@@ -1755,7 +1755,11 @@ static int evenements_de(Serveur *s, Envoi *env) {
             fin = (char *)"";
         }
         int confirme = 1;
-        if (k < e->n && e->el[k].sorte == ELEMENT_BOUTON && !e->etats[k] && e->el[k].confirmation) {
+        /* « … si l'écran est modifié » (2.67) : la question ne se pose qu'après une saisie pas encore écrite dans la base,
+           celle d'avant (le bit ETAT_MODIFIE) ou celle que cet envoi apporte (un changement déjà dans la file) */
+        const int a_demander = k < e->n && e->el[k].confirmation
+                               && (!e->el[k].confirmation_si_modifie || (e->etats[k] & ETAT_MODIFIE) || s->nb_file > s->tete_file);
+        if (k < e->n && e->el[k].sorte == ELEMENT_BOUTON && !(e->etats[k] & 3) && a_demander) {
             /* à confirmer (2.65) : le clic montre d'abord la question ; il ne compte que revenu de la confirmation de ce
                même bouton, avec le mot s'il en faut un (sans JavaScript : c'est le serveur qui vérifie) */
             Partie *pq = envoi_partie(env, "confirme");
@@ -1770,7 +1774,7 @@ static int evenements_de(Serveur *s, Envoi *env) {
             }
             if (!confirme) e->a_confirmer = k + 1;
         }
-        if (confirme && k < e->n && e->el[k].sorte == ELEMENT_BOUTON && !e->etats[k]) {
+        if (confirme && k < e->n && e->el[k].sorte == ELEMENT_BOUTON && !(e->etats[k] & 3)) {
             Evenement ev = { EVENEMENT_CLIC, (size_t)k, 0, NULL, choisies(e), e->n, NULL, 0 };
             file_ajouter(s, ev);
         }

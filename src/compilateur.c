@@ -807,6 +807,7 @@ static long description_ecran(Compilation *c, const Noeud *e, const Noeud *ph) {
             if (el->entier & 256) chaine_ajouter(&d, "p");
             if (el->entier & 512) chaine_ajouter(&d, "t");
             if (el->entier & 1024) chaine_ajouter(&d, "e");   /* à côté du titre, dans l'en-tête */
+            if (el->confirmation_si_modifie) chaine_ajouter(&d, "m");   /* à confirmer si l'écran est modifié (2.67) */
             if (el->indication) { chaine_ajouter(&d, "\x1d"); chaine_ajouter(&d, el->indication); }
             if (el->texte2) { chaine_ajouter(&d, "\x1a"); chaine_ajouter(&d, el->texte2); }
             /* « ␙ question ␘ mot » : à confirmer, en tapant le mot (2.65) */

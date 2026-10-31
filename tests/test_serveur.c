@@ -1946,6 +1946,33 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* « … si l'écran est modifié » (2.67) : pas de question sans saisie ; une saisie apportée par le clic même la pose ;
+           un événement qui écrit dans la base (« Enregistrer ») lève la marque ; un événement qui n'écrit rien la laisse */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(evenement("q=1&z0=&clic=2"), get("/"),                                          /* 0, 1 */
+                 evenement("q=2&z0=Anne&clic=2"), get("/"),                                      /* 2, 3 */
+                 evenement("q=3&z0=Anne&clic=1"), evenement("q=4&z0=Anne&clic=2"), get("/"),     /* 4, 5, 6 */
+                 evenement("q=5&z0=Bea&clic=3"), evenement("q=6&z0=Bea&clic=2"), get("/"),       /* 7, 8, 9 */
+                 evenement("q=6&z0=Bea&confirme=2&clic=2"), get("/"));                           /* 10, 11 */
+        servir("Un patient, conservé, a :\n    un nom (texte).\n"
+               "L'écran x montre :\n    un nom (texte), facultatif,\n    un bouton « Enregistrer »,\n"
+               "    un bouton « Quitter », à confirmer par « Quitter sans enregistrer ? » si l'écran est modifié,\n"
+               "    un bouton « Rien ».\n"
+               "Quand on clique sur « Enregistrer » dans l'écran x :\n    Le p vaut un nouveau patient :\n"
+               "        Le nom vaut le nom de l'écran.\n    Conserver le p.\n"
+               "Quand on clique sur « Quitter » dans l'écran x :\n    Le nom de l'écran devient « Q ».\n"
+               "Quand on clique sur « Rien » dans l'écran x :\n    Le compte vaut 1.\nOuvrir l'écran x.\n", &sc);
+        NE_CONTIENT_PAS(sc.reponses[1], "question-confirmation");   /* rien de saisi : le clic part */
+        CONTIENT(sc.reponses[1], "value=\"Q\"");
+        CONTIENT(sc.reponses[3], "Quitter sans enregistrer ?");     /* la saisie arrive avec le clic */
+        CONTIENT(sc.reponses[3], "value=\"Anne\"");
+        NE_CONTIENT_PAS(sc.reponses[6], "question-confirmation");   /* enregistrée : plus de question */
+        CONTIENT(sc.reponses[6], "value=\"Q\"");
+        CONTIENT(sc.reponses[9], "Quitter sans enregistrer ?");     /* « Rien » n'écrit rien : la marque reste */
+        CONTIENT(sc.reponses[11], "value=\"Q\"");                   /* confirmé : le clic compte */
+        liberer(&sc);
+    }
+
     {   /* une action pour deux écrans (2.58) : « , dans l'écran a ou l'écran b » ; elle remplit la zone de celui qui l'appelle */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&z0=&clic=1"), get("/"), evenement("q=2&z0=A&clic=2"), evenement("q=3&z0=&clic=1"), get("/"));

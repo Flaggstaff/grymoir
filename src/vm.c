@@ -227,6 +227,8 @@ struct Machine {
     size_t regles_verifiees;   /* vérifications complètes de règles (docs/vm.md, § 3.3), pour les essais */
     struct EcranVM *ecran;     /* l'écran ouvert (§ 22), ou NULL */
     int fermer_ecran;          /* « Fermer l'écran. » a été demandé par l'événement en cours */
+    long ecrans_ouverts;       /* 2.67 : le numéro du dernier écran ouvert */
+    long ecran_evenement;      /* 2.67 : le numéro de l'écran dont l'événement s'exécute, 0 sinon */
     int imbrique;              /* > 0 : une exécution dans l'exécution (les règles d'une fiche, § 16.14) ; elle ne
                                   touche ni à la transaction, ni aux écrans, ni aux essais, ni au ramasse-miettes */
     int absent_permis;         /* la source d'une image calculée (§ 22.8) : un champ d'un objet absent vaut absent */
@@ -471,6 +473,9 @@ typedef struct EcranVM {
     int document;          /* un document (2.25) : jamais montré par l'interface, lu une fois puis rendu en PDF */
     char ***doc_cellules;  /* document : les cellules de chaque liste, ligne après ligne (possédées) */
     size_t *doc_lignes;
+    int modifie;           /* 2.67 : une zone a reçu une saisie depuis l'ouverture, ou depuis le dernier événement de cet
+                              écran qui a écrit dans la base (« Enregistrer ») ; relu par « … si l'écran est modifié » */
+    long numero;           /* 2.67 : un numéro propre à cet écran, pour le retrouver dans la pile sans garder son adresse */
 } EcranVM;
 
 static void ecran_detruire(EcranVM *e);
@@ -1226,6 +1231,11 @@ static int lire_reponse(const char *type, const char *ligne, Valeur *v, char **p
  * le journal se vide. Le verrou de la base reprend après la réponse. */
 static char *valider_jusqu_ici(Machine *m, Chaine *sortie) {
     (void)sortie;
+    if (m->ecran_evenement && m->base && base_modifiee(m->base))
+        /* l'événement d'un écran a écrit dans la base (« Enregistrer ») : ce qui y était saisi est gardé (2.67) ; l'écran
+           peut être sous celui que l'événement vient d'ouvrir */
+        for (EcranVM *e = m->ecran; e; e = e->dessous)
+            if (e->numero == m->ecran_evenement) { e->modifie = 0; break; }
     if (m->nb_a_ecrire) {
         char *erreur = ecrire_sur_le_disque(m);
         if (erreur) return erreur;
@@ -2941,6 +2951,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].principal = memchr(options_bouton + 1, 'p', nopt) != NULL;
             e->elements[k].tuile = memchr(options_bouton + 1, 't', nopt) != NULL;
             e->elements[k].a_cote_du_titre = memchr(options_bouton + 1, 'e', nopt) != NULL;   /* 2.17 */
+            e->elements[k].confirmation_si_modifie = memchr(options_bouton + 1, 'm', nopt) != NULL;   /* 2.67 */
             e->indications[k] = morceau_de_zone(options_bouton, '\x1d');
             e->elements[k].indication = e->indications[k];
             /* à confirmer (2.65) : la question et le mot, gardés ensemble dans « unites », que les boutons n'ont pas */
@@ -5360,6 +5371,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 if (m->depuis_ramassage >= m->seuil) ramasser(m, &pile, cadres, nb_cadres);
                 e->objet = ce ? creer_objet(m, ce, m->epoque) : NULL;
                 e->dessous = m->ecran;   /* par-dessus l'écran ouvert, s'il y en a un (§ 22.3) */
+                e->numero = ++m->ecrans_ouverts;   /* 2.67 */
                 e->cadre = nb_cadres;
                 m->ecran = e;
                 /* un document (2.25) : son nom commence par « document » ; l'interface ne le voit jamais */
@@ -5880,6 +5892,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 for (size_t k = 0; k < e->n; k++) free(v[k]);
                 free(v);
             }
+            if (!probleme && m->ecran)   /* 2.67 : « … si l'écran est modifié » : le bit 4 dit au bouton si la question se pose */
+                for (size_t k = 0; k < m->ecran->n; k++) {
+                    m->ecran->etats[k] &= (unsigned char)~ETAT_MODIFIE;
+                    if (m->ecran->elements[k].confirmation_si_modifie && m->ecran->modifie) m->ecran->etats[k] |= ETAT_MODIFIE;
+                }
             if (!probleme && m->ecran && m->iface.ecran_etats) m->iface.ecran_etats(m->iface.contexte, m->ecran->etats, m->ecran->n);
             for (size_t k = 0; !probleme && m->ecran && m->iface.ecran_texte && k < m->ecran->n; k++)   /* 2.24 */
                 if (m->ecran->calcules[k]) m->iface.ecran_texte(m->iface.contexte, k, m->ecran->textes[k]);
@@ -5896,7 +5913,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     issue = m->iface.ecran_attendre(m->iface.contexte, sortie, &ev);
                     if (issue != ISSUE_REPONDU || ev.sorte == EVENEMENT_FERMETURE || !m->ecran || ev.element >= m->ecran->n)
                         break;
-                    const int refuse = m->ecran->etats[ev.element]
+                    const int refuse = (m->ecran->etats[ev.element] & 3)
                                     || (ev.sorte == EVENEMENT_CHANGEMENT && m->ecran->elements[ev.element].lecture_seule);
                     if (!refuse) break;
                 }
@@ -5961,6 +5978,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     else { v = vi_liste(ids, cls, n); lu = 1; }
                     if (lu) {   /* pas de contrôle de type : une liste n'est pas une valeur de champ ordinaire */
                         ecrire_champ(m, e->objet, (size_t)e->champ[ev.element], v);
+                        e->modifie = 1;   /* 2.67 */
                         code_ev = (long)ev.element + 1;
                         goto zone_lue;
                     }
@@ -6008,6 +6026,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     code_ev = -1;   /* aucun événement ne s'exécute */
                 } else {
                     ecrire_champ(m, e->objet, (size_t)e->champ[ev.element], v);
+                    e->modifie = 1;   /* une saisie, que rien n'a encore écrite dans la base (2.67) */
                     const size_t ks = (size_t)e->champ[ev.element];
                     const ClasseVM *ce = e->objet->classe;
                     if (m->iface.ecran_transcrire && ce->transcrit_de && e->objet->definis[ks]
@@ -6041,6 +6060,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 code_ev = -1;   /* un événement qui ne désigne rien (ligne disparue entre-temps) : rien ne s'exécute */
             }
             if (probleme) { valeur_liberer(&objet); ok = echouer(diag, b, debut, probleme); break; }
+            m->ecran_evenement = code_ev > 0 && m->ecran ? m->ecran->numero : 0;   /* 2.67 : à qui revient ce qu'il écrira */
             char num[24];
             snprintf(num, sizeof num, "%ld", code_ev);
             if (code_ev == -1) snprintf(num, sizeof num, "-1");

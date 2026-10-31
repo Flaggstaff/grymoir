@@ -36,6 +36,7 @@
 #include <QPointer>
 #include <thread>
 #include <QPushButton>
+#include <QShortcut>
 #include <QScrollArea>
 #include <QStyle>
 #include <QGuiApplication>
@@ -201,8 +202,10 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
                              | (el[k].dossier ? 4096 : 0) | ((el[k].largeur_caracteres & 0xFF) << 16));
         t->facultatives << el[k].facultatif;
         t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
+        // « question ␟ mot ␟ m » : le « m » d'une confirmation « … si l'écran est modifié » (2.67)
         t->confirmations << (el[k].confirmation ? QString::fromUtf8(el[k].confirmation) + QChar(0x1f)
                                                       + QString::fromUtf8(el[k].confirmation_mot ? el[k].confirmation_mot : "")
+                                                      + QChar(0x1f) + (el[k].confirmation_si_modifie ? "m" : "")
                                                 : QString());
         t->unites << (el[k].unite ? QString(el[k].unite_devant ? "<" : ">") + QString::fromUtf8(el[k].unite) : QString());
         t->longueurs << (el[k].borne_max && el[k].type && strcmp(el[k].type, "texte") == 0 ? (int)atol(el[k].borne_max) : 0);
@@ -654,6 +657,10 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
     connect(bouton_envoyer, &QPushButton::clicked, this, [this] { envoyer(0); });
     connect(bouton_annuler, &QPushButton::clicked, this, [this] { envoyer(1); });
     connect(bouton_arreter, &QPushButton::clicked, this, &Execution::arreter);
+    // Échap ferme l'écran ouvert par son bouton « Fermer » (2.67) ; une fenêtre de confirmation ouverte le prend d'abord
+    auto *echap = new QShortcut(QKeySequence(Qt::Key_Escape), this);
+    echap->setContext(Qt::WindowShortcut);
+    connect(echap, &QShortcut::activated, this, &Execution::fermer_par_echap);
     bouton_envoyer->setEnabled(false);
     bouton_annuler->setEnabled(false);
     bouton_envoyer->setDefault(true);
@@ -962,6 +969,7 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         }
     });
     connect(&travail, &Travail::ecran_etats, this, [this](const QVector<int> &e) {   // § 22.6
+        etats_recus = e;
         for (int k = 0; k < e.size() && k < controles_ecran.size(); k++) {
             QWidget *w = controles_ecran[k];
             if (!w) continue;
@@ -1361,7 +1369,8 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].indication = travail.indications.value(k);
         if (const QString c = travail.confirmations.value(k); !c.isEmpty()) {   // 2.65
             elements[k].confirmation = c.section(QChar(0x1f), 0, 0);
-            elements[k].confirmation_mot = c.section(QChar(0x1f), 1);
+            elements[k].confirmation_mot = c.section(QChar(0x1f), 1, 1);
+            elements[k].confirmation_si_modifie = c.section(QChar(0x1f), 2, 2) == "m";   // 2.67
         }
         elements[k].unite = travail.unites.value(k).mid(1);
         elements[k].unite_devant = travail.unites.value(k).startsWith('<');
@@ -1525,8 +1534,12 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
             }
         } else if (auto *b = qobject_cast<QPushButton *>(v.controles[k])) {
             const QString question = elements[k].confirmation, mot = elements[k].confirmation_mot;
-            connect(b, &QPushButton::clicked, this, [this, k, question, mot, b] {
-                if (question.isEmpty()) {
+            const bool si_modifie = elements[k].confirmation_si_modifie;
+            connect(b, &QPushButton::clicked, this, [this, k, question, mot, b, si_modifie] {
+                // « … si l'écran est modifié » (2.67) : sans saisie en attente d'être écrite, le clic part sans question
+                const bool sans_question = question.isEmpty()
+                    || (si_modifie && !(etats_recus.value(k) & ETAT_MODIFIE) && !saisie_en_suspens());
+                if (sans_question) {
                     if (clic_en_attente == k) { clic_en_attente = -1; ecran_du_clic = nullptr; }   // déjà gardé : une fois
                     cliquer(k);
                     return;
@@ -1685,6 +1698,27 @@ void Execution::confirmer(int k, QWidget *bouton, const QString &question, const
         cliquer(k);
     });
     d->open();
+}
+
+// Une zone tapée que la machine n'a pas encore reçue (2.67) : elle partira avant le clic, et marquera l'écran.
+bool Execution::saisie_en_suspens() const {
+    for (QWidget *z : zones) {
+        if (!z || !z->isEnabled()) continue;
+        if (auto *l = qobject_cast<QLineEdit *>(z); l && l->isModified() && !l->isReadOnly()) return true;
+        if (auto *p = qobject_cast<QPlainTextEdit *>(z); p && p->document()->isModified() && !p->isReadOnly()) return true;
+    }
+    return false;
+}
+
+// Échap (2.67) : le bouton « Fermer » visible et actif de l'écran, comme un clic, sa confirmation comprise ; un écran
+// sans bouton « Fermer » (l'accueil et son « Fermer l'application ») n'en fait rien.
+void Execution::fermer_par_echap() {
+    if (!vue_ecran || !attente_ecran) return;
+    for (QWidget *w : controles_ecran)
+        if (auto *b = qobject_cast<QPushButton *>(w); b && b->text() == QString::fromUtf8("Fermer") && b->isVisible() && b->isEnabled()) {
+            b->click();
+            return;
+        }
 }
 
 void Execution::cliquer(int k) {

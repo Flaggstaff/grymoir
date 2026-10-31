@@ -890,7 +890,7 @@ static int est_etat(const Jeton *t) {
         || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur")
         || est_cle(t, "principal") || est_cle(t, "tuile") || est_cle(t, "description") || est_cle(t, "image")
         || est_cle(t, "côté_titre") || est_cle(t, "inversé") || est_cle(t, "capitales") || est_cle(t, "confirmer")
-        || est_cle(t, "en_tapant");
+        || est_cle(t, "en_tapant") || est_cle(t, "si_modifié");
 }
 
 /* Les états d'un élément d'écran, de k à f (§ 22.6) : « _plusieurs_lignes », « _lecture_seule » (zones),
@@ -1031,6 +1031,13 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             mot(r, "tapant", x);
             copier(r, &r->e[k + 1]);
             k += 2;
+        } else if (!zone && est_cle(x, "si_modifié")) {
+            mot(r, "si", x);   /* _si_modifié → si l'écran est modifié (2.67), à la suite de la confirmation */
+            emettre(r, J_ELISION, "l", x, 1);
+            mot(r, "écran", x);
+            mot(r, "est", x);
+            mot(r, "modifié", x);
+            k += 1;
         } else if (!zone && est_cle(x, "image") && k + 1 < f && r->e[k + 1].type == J_TEXTE) {
             emettre(r, J_VIRGULE, NULL, x, 1);   /* _image « … » → , avec l'image « … » (2.15) */
             mot(r, "avec", x);

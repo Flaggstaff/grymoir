@@ -74,9 +74,17 @@ typedef struct {
     int capitales;                  /* un texte « , en petites capitales » (2.20) : surtitre, titre de section */
     const char *confirmation;       /* un bouton « , à confirmer par « … » » : la question, ou NULL (2.65) */
     const char *confirmation_mot;   /* « … en tapant « effacer » » : le mot à taper, ou NULL (2.65) */
+    int confirmation_si_modifie;    /* « … si l'écran est modifié » (2.67) : la question, seulement quand l'état du bouton
+                                       a le bit ETAT_MODIFIE, ou qu'une zone a encore une saisie que l'interface n'a pas
+                                       envoyée ; sinon le clic part sans question */
     int tuile;                      /* un bouton « , en tuile » (2.15) : grand, son titre, sa description (indication) et
                                        son image (octets, taille, format) ; des tuiles qui se suivent forment une grille */
 } ElementEcran;
+
+/* Les états d'un élément (ecran_etats, § 22.6) : bit 1 inactif, bit 2 caché ; bit 4 sur un bouton « … si l'écran est
+   modifié » (2.67) : une zone de l'écran a reçu une saisie que rien n'a encore écrite dans la base. Ce bit n'empêche
+   rien : seuls les bits 1 et 2 font ignorer un geste. */
+#define ETAT_MODIFIE 4
 
 #define LIEN_COURRIEL 1   /* « mailto: » + la valeur */
 #define LIEN_WEB 2        /* la valeur elle-même, http:// ou https:// (§ 22.13) */
