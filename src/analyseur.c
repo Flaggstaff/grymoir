@@ -7476,12 +7476,13 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 el->texte3 = chaine_rendre(&cols);
                 el->fin = fin_jeton(&a->j[a->i - 1]);
             }
-            if (!graph && cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "par")) {   /* « , par nom [décroissant] » */
+            if (!graph && cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "par")) {   /* « , par nom [décroissant] [puis heure] » */
                 avancer(a);
                 avancer(a);
                 size_t dd = a->i, k = dd;
                 if (a->j[k].type == J_CROCHETS) k++;   /* forme compacte : « _par nom » */
-                else while (mot_de_nom(a, k) && !est_mot(&a->j[k], "décroissant") && !est_mot(&a->j[k], "croissant")) k++;
+                else while (mot_de_nom(a, k) && !est_mot(&a->j[k], "décroissant") && !est_mot(&a->j[k], "croissant")
+                            && !est_mot(&a->j[k], "puis")) k++;
                 if (k > dd && article_de(&a->j[dd]) != ART_AUCUN) dd++;
                 char *champ = k > dd ? (a->j[dd].type == J_CROCHETS ? grym_dupliquer(a->j[dd].valeur) : cle(a, dd, k)) : NULL;
                 const char *type = champ ? type_du_champ(a->portee, c, champ) : NULL;
@@ -7496,6 +7497,26 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 a->i = k;
                 if (est_mot(cour(a), "décroissant")) { el->entier = 1; avancer(a); }
                 else if (est_mot(cour(a), "croissant")) avancer(a);
+                if (est_mot(cour(a), "puis")) {   /* « , par date puis heure » : un second tri, croissant, à égalité (2.66) */
+                    avancer(a);
+                    size_t d2 = a->i, k2 = d2;
+                    if (a->j[k2].type == J_CROCHETS) k2++;
+                    else while (mot_de_nom(a, k2) && !est_mot(&a->j[k2], "décroissant") && !est_mot(&a->j[k2], "croissant")) k2++;
+                    if (k2 > d2 && article_de(&a->j[d2]) != ART_AUCUN) d2++;
+                    char *second = k2 > d2 ? (a->j[d2].type == J_CROCHETS ? grym_dupliquer(a->j[d2].valeur) : cle(a, d2, k2)) : NULL;
+                    const char *type2 = second ? type_du_champ(a->portee, c, second) : NULL;
+                    if (!type2 || type_fichier(type2) || !type_de_base(type2)) {
+                        erreur(a, &a->j[d2], grym_dupliquer("Second tri attendu sur un champ de texte, de nombre, de date ou "
+                                                             "vrai ou faux : « , par date puis heure »."));
+                        free(second);
+                        noeud_liberer(el);
+                        break;
+                    }
+                    el->texte2 = grym_formater("%s|%s", champ, second);
+                    free(champ);
+                    free(second);
+                    a->i = k2;
+                }
                 el->fin = fin_jeton(&a->j[a->i - 1]);
             }
             if (!graph && cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec")) {

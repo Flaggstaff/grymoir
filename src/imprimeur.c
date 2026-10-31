@@ -1052,8 +1052,15 @@ static void expression(Impression *im, const Noeud *n) {
         }
         if (n->texte2 && n->forme < 3) {   /* formes 3 à 7 : texte2 est le champ de l'agrégat, pas un tri */
             aj(im, im->compact ? " _par " : ", par ");
-            ecrire_nom(im, n->texte2, 0);
+            const char *barre = strchr(n->texte2, '|');   /* « , par date puis heure » (2.66) */
+            char *premier = barre ? grym_formater("%.*s", (int)(barre - n->texte2), n->texte2) : grym_dupliquer(n->texte2);
+            ecrire_nom(im, premier, 0);
+            free(premier);
             if (n->entier & 1) aj(im, im->compact ? " _décroissant" : " décroissant");
+            if (barre) {
+                aj(im, im->compact ? " _puis " : " puis ");
+                ecrire_nom(im, barre + 1, 0);
+            }
         }
         return;
     }

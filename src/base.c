@@ -3404,15 +3404,19 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
     }
     if (ok && mode == 0) {
         chaine_ajouter(&r.sql, " ORDER BY ");
-        if (*tri) {
+        /* « date|heure » : un second tri, croissant, à égalité du premier (2.66) */
+        for (char *champ_tri = *tri ? tri : NULL, *suite = NULL; ok && champ_tri; champ_tri = suite) {
+            char *barre = strchr(champ_tri, '|');
+            suite = barre ? barre + 1 : NULL;
+            if (barre) *barre = '\0';
             long k = -1;
-            for (size_t q = 0; q < e->nb_champs && k < 0; q++) if (strcmp(e->champs[q], tri) == 0) k = (long)q;
+            for (size_t q = 0; q < e->nb_champs && k < 0; q++) if (strcmp(e->champs[q], champ_tri) == 0) k = (long)q;
             if (k < 0 || !e->types[k] || multiple(e, (size_t)k)) { r.erreur = grym_dupliquer("champ du tri inconnu"); ok = 0; }
             else {
                 colonne(&r, (size_t)k);
                 if (strcmp(e->types[k], "nombre") == 0) chaine_ajouter(&r.sql, " COLLATE GRYM_NOMBRE");
                 else if (type_textuel(e->types[k])) chaine_ajouter(&r.sql, " COLLATE GRYM_TEXTE");
-                if (decroissant) chaine_ajouter(&r.sql, " DESC");
+                if (decroissant && champ_tri == tri) chaine_ajouter(&r.sql, " DESC");
                 chaine_ajouter(&r.sql, " NULLS LAST");   /* les absents en dernier, dans les deux sens */
                 chaine_ajouter(&r.sql, ", ");
             }

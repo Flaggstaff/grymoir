@@ -165,11 +165,11 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     le texte « Le cabinet », en petites capitales,
     un bouton « Patients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png »,
     un bouton « Séances », en tuile, avec la description « Du jour, à venir, passées »,
+    un bouton « Facturation », en tuile, avec la description « À encaisser, factures, quittances »,
     un bouton « Comptabilité », en tuile, avec la description « Encaisser, factures, rappels, frais »,
     un bouton « Configuration », en tuile, avec la description « Le cabinet, les soins, les rubriques, les sauvegardes »,
     un bouton « Agenda OneDoc », en tuile, avec la description « Rendez-vous et rappels », visible si l'agenda du cabinet conservé = « OneDoc »,
     un bouton « Relire les rendez-vous », en tuile, avec la description « Les réservations du site Calendly », visible si l'agenda du cabinet conservé = « Calendly »,
-    un bouton « Facturation », en tuile, avec la description « À encaisser, factures, quittances »,
     le texte l'alerte de sauvegarde du cabinet conservé et d'aujourd'hui et de l'échec de sauvegarde,
     le texte l'alerte des prévues d'aujourd'hui et de maintenant,
     le texte l'état calendly, visible si l'agenda du cabinet conservé = « Calendly »,
@@ -284,7 +284,11 @@ L'écran de la séance, « Séance », montre :
         un bouton « Enregistrer », principal,
         un bouton « Facture ou quittance »,
         un bouton « Fermer »,
-        un bouton « Supprimer », à confirmer par « Supprimer cette séance ? Elle part dans la corbeille. ».
+        un bouton « Supprimer », à confirmer par « Supprimer cette séance ? Elle part dans la corbeille. »,
+    côte à côte :
+        un bouton « Espèces »,
+        un bouton « Twint »,
+        un bouton « Virement ».
 
 Remarque : un soin, ses tarifs et sa durée ; le code tarifaire est celui du Tarif 590.
 L'écran du soin, « Soin », montre :
@@ -506,8 +510,8 @@ Remarque : « Patient à ouvrir » propose les patients dès la première lettre
 Remarque : la recherche filtre la liste à chaque changement : le nom, le téléphone, la localité ou le courriel contient ce qui est tapé.
 Remarque : les patients archivés n'y sont pas : la Configuration les montre, dans « Archives ».
 L'écran des patients montre :
-    un patient à ouvrir (patient dont l'archivage est absent), facultatif, avec recherche, avec l'indication « Une partie du nom : choisis, la fiche s'ouvre »,
-    une recherche (texte), facultative, avec l'indication « Un nom, un téléphone, une localité »,
+    un patient à ouvrir (patient dont l'archivage est absent), facultatif, avec recherche, avec l'indication « Le nom, ou une partie : choisis, la fiche s'ouvre »,
+    une recherche (texte), facultative, avec l'indication « Un téléphone ou une localité : la liste se resserre ; un nom, la zone du dessus »,
     la liste des patients conservés dont l'archivage est absent et (le nom contient la recherche des patients ou le téléphone contient la recherche des patients ou la localité contient la recherche des patients ou le courriel contient la recherche des patients), par nom, avec le nom, le téléphone, la localité et le courriel,
     côte à côte :
         un bouton « Nouveau patient »,
@@ -536,8 +540,9 @@ Remarque : du jour ou passée se règle d'ici comme dans « À encaisser ».
 L'écran des prévues, « Séances », montre :
     un bouton « Nouvelle séance », principal, à côté du titre,
     une période (« Aujourd'hui », « À venir » ou « Passées »), « Aujourd'hui » au départ,
-    la liste des séances conservées dont la date ≥ le début des séances et la date ≤ la fin des séances, par date, avec la date, l'heure, le nom du patient, le nom du soin, le prix, le statut et le paiement,
+    la liste des séances conservées dont la date ≥ le début des séances et la date ≤ la fin des séances, par date puis heure, avec la date, l'heure, le nom du patient, le nom du soin, le prix, le statut et le paiement,
     côte à côte :
+        un bouton « Fiche »,
         un bouton « Faite »,
         un bouton « Annulée »,
         un bouton « Absence »,
@@ -551,8 +556,9 @@ L'écran des prévues, « Séances », montre :
 
 Remarque : tout ce qui n'est pas payé, jusqu'à aujourd'hui compris, prévues du jour aussi (30 octobre 2026).
 L'écran des encaissements, « À encaisser », montre :
-    la liste des séances conservées dont le paiement est « à payer » et le statut ≠ « annulée » et le statut ≠ l'exclu du cabinet conservé et la date ≤ aujourd'hui, par date, avec la date, le nom du patient, le nom du soin, le prix et le statut,
+    la liste des séances conservées dont le paiement est « à payer » et le statut ≠ « annulée » et le statut ≠ l'exclu du cabinet conservé et la date ≤ aujourd'hui, par date puis heure, avec la date, le nom du patient, le nom du soin, le prix et le statut,
     côte à côte :
+        un bouton « Fiche »,
         un bouton « Espèces »,
         un bouton « Twint »,
         un bouton « Virement »,
@@ -1937,7 +1943,9 @@ Quand on choisit une séance dans l'écran d'accueil :
     La séance ouverte devient la séance choisie de l'écran.
     Ouvrir l'écran de la séance.
 
-Quand on choisit une séance dans l'écran des prévues :
+Remarque : un clic sur une ligne la choisit seulement (31 octobre 2026) : les boutons agissent sur elle ; « Fiche » l'ouvre.
+Quand on clique sur « Fiche » dans l'écran des prévues :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
     La séance ouverte devient la séance choisie de l'écran.
     Ouvrir l'écran de la séance.
 
@@ -2002,7 +2010,9 @@ Quand on clique sur « Facture » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
     Facturer au comptoir la séance choisie de l'écran.
 
-Quand on choisit une séance dans l'écran des encaissements :
+Remarque : un clic sur une ligne la choisit seulement (31 octobre 2026) : les boutons agissent sur elle ; « Fiche » l'ouvre.
+Quand on clique sur « Fiche » dans l'écran des encaissements :
+    Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
     La séance ouverte devient la séance choisie de l'écran.
     Ouvrir l'écran de la séance.
 
@@ -2171,6 +2181,19 @@ Remarque : une séance facturée qui ne se doit plus (annulée, prévue, absence
 Quand on clique sur « Facture ou quittance » dans l'écran de la séance :
     Faire comme un clic sur « Enregistrer ».
     Attester la séance ouverte.
+
+Remarque : payée depuis sa fiche (31 octobre 2026), comme depuis « Séances » : enregistrée telle qu'à l'écran, puis réglée.
+Quand on clique sur « Espèces » dans l'écran de la séance :
+    Faire comme un clic sur « Enregistrer ».
+    Régler la séance ouverte et « espèces ».
+
+Quand on clique sur « Twint » dans l'écran de la séance :
+    Faire comme un clic sur « Enregistrer ».
+    Régler la séance ouverte et « Twint ».
+
+Quand on clique sur « Virement » dans l'écran de la séance :
+    Faire comme un clic sur « Enregistrer ».
+    Régler la séance ouverte et « virement ».
 
 Remarque : la page du patient s'ouvre par-dessus ; à son retour, la page d'en dessous retrouve son patient.
 Quand on clique sur « Voir le patient » dans l'écran de la séance :

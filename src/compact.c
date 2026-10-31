@@ -1424,7 +1424,21 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 emettre(r, J_VIRGULE, NULL, &r->e[par], 1);
                 mot(r, "par", &r->e[par]);
                 copier(r, &r->e[par + 1]);
-                if (par + 2 < f) mot(r, "décroissant", &r->e[par + 2]);
+                size_t q = par + 2;
+                if (q < f && est_cle(&r->e[q], "décroissant")) { mot(r, "décroissant", &r->e[q]); q++; }
+                if (q < f && est_cle(&r->e[q], "puis")) {   /* « _par date _puis heure » (2.66) */
+                    if (q + 1 >= f || r->e[q + 1].type != J_CROCHETS) {
+                        echouer(r, &r->e[q], grym_dupliquer("Second tri attendu : « _par date _puis heure »."));
+                        return;
+                    }
+                    mot(r, "puis", &r->e[q]);
+                    copier(r, &r->e[q + 1]);
+                    q += 2;
+                }
+                if (q < f) {
+                    echouer(r, &r->e[q], grym_dupliquer("Tri attendu : « _par nom », « _par date _décroissant » ou « _par date _puis heure »."));
+                    return;
+                }
             }
             if (avec < fin_liste) {   /* « _avec a ; b.c » → « , avec a, c de b » ; « et » devant la dernière */
                 emettre(r, J_VIRGULE, NULL, &r->e[avec], 1);

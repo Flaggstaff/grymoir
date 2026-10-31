@@ -179,6 +179,13 @@ int main(void) {
     FIXE("L'écran x montre :\n    le texte « Aujourd'hui », en petites capitales.\n");   /* 2.20 */
     FIXE("Une séance, conservée, a :\n    une heure (heure),\n    un prix (nombre).\nL'écran x montre :\n"
          "    la liste des séances conservées, par heure décroissant, avec l'heure et le prix, en cartes.\n");   /* 2.19 */
+    FIXE("Une séance, conservée, a :\n    une date (date),\n    une heure (heure).\nL'écran x montre :\n"
+         "    la liste des séances conservées, par date puis heure, avec la date et l'heure.\n");   /* 2.66 */
+    FIXE("Une séance, conservée, a :\n    une date (date),\n    une heure (heure).\nL'écran x montre :\n"
+         "    la liste des séances conservées, par date décroissant puis heure.\n");   /* 2.66 */
+    COMP("Une séance, conservée, a : une date (date), une heure (heure).\nL'écran x montre : la liste des séances conservées, par date puis heure.",
+         "_classe _une séance _conservé\n    _une date (date)\n    _une heure (heure)\n_fin\n"
+         "_écran x\n    _liste séance _conservé _par date _puis heure\n_fin\n");   /* 2.66 */
     /* « suivi » après « de » est un mot de nom ; l'opérateur « suivi de » reste (§ 4.4) */
     FIXE("Un soin, conservé, a :\n    un tarif de suivi (nombre).\nLe s vaut un nouveau soin :\n    Le tarif de suivi vaut 70.\n"
          "Afficher le tarif de suivi du s suivi de « CHF ».\n");
