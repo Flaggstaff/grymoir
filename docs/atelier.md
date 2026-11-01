@@ -501,3 +501,4 @@ La fenêtre du mot de passe de la base, à chaque lancement d'une application ch
 | 1.16 | 2026-11-01 | L'agenda dessine les créneaux libres (« libre 08:00 – 10:00 ») dans chaque plage, d'un quart d'heure au moins ; un bloc montre l'heure et son premier texte sur une ligne |
 | 1.17 | 2026-11-01 | Une zone dans un groupe en couleur inversée (2.18) est un vrai champ : cadre arrondi à la couleur d'accent douce, texte de 32 px (au lieu d'un trait seul, qui ne se voyait pas vide) ; cadre plus épais au focus ; dans le navigateur aussi |
 | 1.18 | 2026-11-01 | Un clic arrivé avant que la machine attende (un écran qui vient de s'ouvrir, déjà actif) est gardé et part dès qu'elle attend, comme celui qui suit une zone (0.94) ; il se perdait en silence, et rendait l'essai des écoutes instable |
+| 1.19 | 2026-11-01 | L'onglet Écrans montre un agenda (2.74) comme une grille : sans données, la semaine en cours, du lundi au vendredi, de 8 h à 12 h et de 13 h 30 à 18 h |

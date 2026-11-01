@@ -1028,6 +1028,12 @@ int main(int argc, char **argv) {
                 QApplication::sendEvent(ag, &b);
             }
             VERIFIER(attendre([&] { return signal() == QString::fromUtf8("créneau : 02.11.2026 10:30"); }));
+            // l'aperçu de l'onglet Écrans (1er novembre 2026) : l'agenda, sans données, montre une semaine de travail
+            OngletEcrans o;
+            o.montrer(dossier.path());
+            o.choisir_ecran("de l'agenda");
+            Agenda *apercu = o.findChild<Agenda *>();
+            VERIFIER(apercu && apercu->jours().size() == 5 && apercu->jours().first().dayOfWeek() == 1);
         }
         for (QPushButton *x : e.findChildren<QPushButton *>())
             if (x->text() == "Fermer" && x->isVisible() && x->isEnabled()) { x->click(); break; }

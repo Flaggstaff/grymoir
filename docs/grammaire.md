@@ -2431,7 +2431,7 @@ Quand on déplace une séance dans l'écran de l'agenda :
 - **La grille** est une valeur, relue avant chaque attente comme un texte calculé (2.24) : `premier jour|dernier jour|plages` ; chaque plage, `n hh:mm-hh:mm [hh:mm-hh:mm …]`, n de 1 (lundi) à 7 (dimanche). Un jour de la période sans plage n'est pas montré ; sans aucune plage, tous les jours le sont, sans rien griser. Hors des plages, la colonne est hachurée. Six semaines au plus. Les heures vont de 7 h à 20 h, élargies aux plages et aux objets.
 - **`Quand on choisit une séance`** : un clic sur son bloc. **`Quand on déplace une séance dans l'écran X :`** : le bloc glissé puis lâché ailleurs, au quart d'heure ; dans le corps, `la date d'arrivée de l'écran` et `l'heure d'arrivée de l'écran`. Le programme décide : écrire la date et l'heure, refuser (`Refuser « … »` : le bloc revient), ou demander.
 - **`Quand on choisit un créneau dans l'écran X :`** *(2.75)* : un clic dans la grille, hors des objets ; `la date d'arrivée` et `l'heure d'arrivée` de l'écran disent le jour et le quart d'heure (celui d'avant le clic). Sans paramètre. Une entité nommée « créneau » garde la forme ordinaire de `Quand on choisit un …`. Forme compacte : `_quand _choisit _un créneau _dans …`.
-- Dans l'atelier et les applications fabriquées. **Le navigateur** montre la liste ordinaire, sans glisser. L'onglet Écrans de l'atelier la montre comme une liste.
+- Dans l'atelier et les applications fabriquées. **Le navigateur** montre la liste ordinaire, sans glisser. L'onglet Écrans de l'atelier la montre en grille, sur une semaine de travail d'exemple.
 - Forme compacte : `_liste séance _conservé _avec date ; heure ; durée _agenda grille` ; `_quand _déplace _une séance _dans de_l_agenda`.
 
 ## Journal des révisions

@@ -22,6 +22,7 @@ struct ElementLu {
     bool plusieurs_lignes = false, lecture_seule = false;   // zone (§ 22.6)
     bool principal = false;  // bouton « , principal » (2.14)
     bool destructif = false; // bouton « , destructif » (2.72)
+    bool agenda = false;     // liste « , en agenda selon … » (2.74)
     bool a_cote_du_titre = false;   // bouton « , à côté du titre » (2.17)
     bool inverse = false;           // groupe « , en couleur inversée » (2.18)
     bool capitales = false;         // texte « , en petites capitales » (2.20)

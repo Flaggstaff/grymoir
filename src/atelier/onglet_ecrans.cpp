@@ -3,6 +3,7 @@ extern "C" {
 #include "texte.h"
 }
 #include "onglet_ecrans.h"
+#include "agenda.h"
 #include <QToolTip>
 #include <QCursor>
 #include "theme.h"
@@ -265,6 +266,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                     } else if (el->type == N_CHERCHER) {
                         x.sorte = el->ecoutes ? ELEMENT_ECOUTES : el->graphique ? ELEMENT_GRAPHIQUE : ELEMENT_LISTE;   // § 22.11, 2.70
                         x.graphique = el->graphique;
+                        x.agenda = el->agenda != 0;   // 2.74
                         x.texte = QString::fromUtf8(el->texte);
                         x.tri = el->texte2 ? QString::fromUtf8(el->texte2) : QString();
                         x.decroissant = el->entier == 1;
@@ -451,6 +453,7 @@ void OngletEcrans::dessiner() {
         el[k].sorte = e.elements[k].sorte;
         el[k].principal = e.elements[k].principal;
         el[k].destructif = e.elements[k].destructif;
+        el[k].agenda = e.elements[k].agenda;
         el[k].tuile = e.elements[k].tuile;
         el[k].a_cote_du_titre = e.elements[k].a_cote_du_titre;
         el[k].inverse = e.elements[k].inverse;
@@ -521,6 +524,16 @@ void OngletEcrans::dessiner() {
         }
     }
     vue = dessiner_ecran(e.titre, el, signature.isNull() ? logo : QPixmap(), th.mesure(e.accueil ? "logo-accueil" : "logo-titre"));   // le même dessin que l'exécution
+    // un agenda (2.74) : sans données, la semaine en cours, du lundi au vendredi, de 8 h à 12 h et de 13 h 30 à 18 h, pour
+    // qu'on voie sa forme ; la vraie grille vient du programme, à l'exécution
+    for (QTableWidget *tab : vue.tables)
+        if (tab)
+            if (auto *ag = qobject_cast<Agenda *>(tab->property("agenda").value<QObject *>())) {
+                const QDate lundi = QDate::currentDate().addDays(1 - QDate::currentDate().dayOfWeek());
+                QString g = lundi.toString("dd.MM.yyyy") + "|" + lundi.addDays(6).toString("dd.MM.yyyy");
+                for (int j = 1; j <= 5; j++) g += QString("|%1 08:00-12:00 13:30-18:00").arg(j);
+                ag->donner_grille(g);
+            }
     if (!signature.isNull())
         if (auto *pile = qobject_cast<QBoxLayout *>(vue.vue->layout())) {
             auto *bandeau = new QWidget;
