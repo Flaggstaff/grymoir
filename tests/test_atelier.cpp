@@ -1093,6 +1093,72 @@ int main(int argc, char **argv) {
         VERIFIER(!fil().contains("mauvais corps"));
     }
 
+    // Écoutille, la traduction (1er novembre 2026) : DeepL d'abord (api-free, la clé dans l'en-tête, le texte en liste) ; s'il
+    // répond 456 (quota épuisé), Google (la clé dans l'adresse) ; sans clé, rien
+    {
+        QTcpServer service;
+        VERIFIER(service.listen(QHostAddress::LocalHost));
+        QByteArray tout;
+        QObject::connect(&service, &QTcpServer::newConnection, &service, [&] {
+            QTcpSocket *so = service.nextPendingConnection();
+            auto *recu = new QByteArray;
+            QObject::connect(so, &QTcpSocket::readyRead, so, [&, so, recu] {
+                *recu += so->readAll();
+                const int fin_tete = recu->indexOf("\r\n\r\n");
+                if (fin_tete < 0) return;
+                const int lg = recu->left(fin_tete).toLower().indexOf("content-length:");
+                const int attendu = lg < 0 ? 0 : recu->mid(lg + 15, recu->indexOf("\r\n", lg) - lg - 15).trimmed().toInt();
+                if (recu->size() - fin_tete - 4 < attendu) return;
+                tout += *recu + "\n----\n";
+                QByteArray statut = "200 OK", corps;
+                if (recu->startsWith("POST /api-free.deepl.com/v2/translate")) {
+                    if (recu->contains("\"text\":[\"Hello\"]")) { statut = "456 Quota Exceeded"; corps = "{\"message\":\"Quota exceeded\"}"; }
+                    else corps = "{\"translations\":[{\"detected_source_language\":\"EN\",\"text\":\"Salut\"}]}";
+                } else if (recu->startsWith("POST /translation.googleapis.com/language/translate/v2?key=g-essai"))
+                    corps = "{\"data\":{\"translations\":[{\"translatedText\":\"Bonjour\"}]}}";
+                else { statut = "404 Not Found"; corps = "{}"; }
+                so->write("HTTP/1.1 " + statut + "\r\nContent-Type: application/json\r\nContent-Length: " + QByteArray::number(corps.size())
+                          + "\r\nConnection: close\r\n\r\n" + corps);
+                so->disconnectFromHost();
+                delete recu;
+            });
+        });
+        qputenv("GRYM_ESSAI_REDIRECTION", "https://=http://127.0.0.1:" + QByteArray::number(service.serverPort()) + "/");
+        QTemporaryDir d;
+        QFile src(QString(GRYM_SOURCE) + QString::fromUtf8("/projets/Écoutille/Écoutille.grym"));
+        VERIFIER(src.open(QIODevice::ReadOnly));
+        QString programme = QString::fromUtf8(src.readAll());
+        const int ouvrir = programme.lastIndexOf(QString::fromUtf8("Ouvrir l'écran de veille."));
+        VERIFIER(ouvrir > 0);
+        programme = programme.left(ouvrir) + QString::fromUtf8(
+            "Le rg vaut le réglage conservé.\n"
+            "Traduire « Hello », qui donne la t0.\n"
+            "Si la t0 est absente, afficher « essai sans clé ».\n"
+            "La clé principale du rg devient « d-essai ».\n"
+            "La clé de relève du rg devient « g-essai ».\n"
+            "Traduire « Hello », qui donne la t1.\n"
+            "Afficher « essai relève » puis la t1.\n"
+            "Traduire « Hi », qui donne la t2.\n"
+            "Afficher « essai principale » puis la t2.\n"
+            "Afficher « fin des essais ».\n");
+        QFile f(d.filePath(QString::fromUtf8("Écoutille.grym")));
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write(programme.toUtf8());
+        f.close();
+        Execution e(d.filePath(QString::fromUtf8("Écoutille.grym")));
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 40000 && !fil().contains("fin des essais")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        if (!fil().contains("fin des essais")) std::printf("%s\n", qPrintable(fil().right(600)));
+        VERIFIER(fil().contains(QString::fromUtf8("essai sans clé")));
+        VERIFIER(fil().contains(QString::fromUtf8("essai relève Bonjour")));      // DeepL : 456 ; Google a traduit
+        VERIFIER(fil().contains(QString::fromUtf8("essai principale Salut")));    // DeepL a traduit
+        VERIFIER(tout.contains("Authorization: DeepL-Auth-Key d-essai") && !tout.contains("g-essai\",") && tout.contains("\"target_lang\":\"FR\""));
+        qunsetenv("GRYM_ESSAI_REDIRECTION");
+    }
+
     // « Signaler » (2.71) : après un geste réussi, le message au pied de la fenêtre ; un geste refusé l'efface
     {
         QTemporaryDir dossier;

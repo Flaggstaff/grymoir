@@ -1,6 +1,6 @@
 #!/bin/sh
 # Écoutille (1er novembre 2026) : l'application lancée par l'atelier sans écran, l'écran de veille ouvert puis fermé
-# (« Fermer », confirmé) ; sa base relue par grym : le catalogue rempli, un seul réglage, aucun passage effacé sans réglage.
+# (« Fermer », confirmé) ; sa base, chiffrée, relue par grym : le catalogue rempli, un seul réglage, aucun passage effacé sans réglage.
 # Sans atelier, l'essai se dit sauté.
 racine=$(cd "$(dirname "$0")/.." && pwd)
 atelier="$racine/construction/grym-atelier"
@@ -12,7 +12,7 @@ cp "$racine/projets/Écoutille/Écoutille.grym" "$d/"
 total=0; echecs=0
 verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
 lancer() {
-    (cd "$d" && QT_QPA_PLATFORM=offscreen GRYMOIR_ESSAIS=1 GRYMOIR_SANS_APERCU=1 \
+    (cd "$d" && QT_QPA_PLATFORM=offscreen GRYMOIR_ESSAIS=1 GRYMOIR_SANS_APERCU=1 GRYM_MOT_DE_PASSE_BASE=essai-essai \
         "$atelier" --capture "$d/veille.png" --taille 1170x900 Écoutille.grym > "$d/sortie.txt" 2>&1 < /dev/null)
 }
 lancer
@@ -21,9 +21,10 @@ verifier "$([ -s "$d/veille.png" ] && echo oui)" "oui" "l'écran de veille se de
 lire() {
     printf '%s\n' "$1" > "$d/lire.grym"
     sed -n '/^Un modèle, conservé, a :/,/^Le début des passages vaut/p' "$d/Écoutille.grym" | sed '$d' > "$d/entites.txt"
-    cat "$d/entites.txt" "$d/lire.grym" > "$d/lire2.grym"
+    { echo "La base est chiffrée."; cat "$d/entites.txt" "$d/lire.grym"; } > "$d/lire2.grym"
     cp "$d/Écoutille.grymd" "$d/lire2.grymd" 2>/dev/null
-    (cd "$d" && "$racine/grym" lancer lire2.grym < /dev/null 2>&1)
+    cp "$d/Écoutille.grymd.clés" "$d/lire2.grymd.clés" 2>/dev/null
+    (cd "$d" && GRYM_MOT_DE_PASSE_BASE=essai-essai "$racine/grym" lancer lire2.grym < /dev/null 2>&1)
 }
 verifier "$(lire 'Afficher le nombre de modèles conservés puis le nombre de réglages conservés puis le nombre de postes conservés.')" \
          "120 1 0" "le catalogue, un réglage, aucun poste"
@@ -35,6 +36,7 @@ Le a vaut un nouveau poste :
     La veille vaut faux.
     L'affichage vaut vrai.
     La parole transcrite vaut vrai.
+    La traduction voulue vaut faux.
 Conserver a.
 Le p vaut un nouveau passage :
     Le poste vaut a.
@@ -51,10 +53,12 @@ Conserver q.
 Pour chaque réglage conservé, la conservation du réglage devient 30.
 FIN
 printf 'RIFF$\000\000\000WAVEfmt ' > "$d/son.wav"
-cat "$d/entites.txt" "$d/ajout.grym" > "$d/ajout2.grym"
+{ echo "La base est chiffrée."; cat "$d/entites.txt" "$d/ajout.grym"; } > "$d/ajout2.grym"
 cp "$d/Écoutille.grymd" "$d/ajout2.grymd"
-(cd "$d" && "$racine/grym" lancer ajout2.grym < /dev/null > "$d/ajout.txt" 2>&1)
+cp "$d/Écoutille.grymd.clés" "$d/ajout2.grymd.clés"
+(cd "$d" && GRYM_MOT_DE_PASSE_BASE=essai-essai "$racine/grym" lancer ajout2.grym < /dev/null > "$d/ajout.txt" 2>&1)
 cp "$d/ajout2.grymd" "$d/Écoutille.grymd"
+cp "$d/ajout2.grymd.clés" "$d/Écoutille.grymd.clés"
 lancer
 verifier "$(lire 'Afficher le nombre de passages conservés.')" "1" "le passage de 40 jours effacé, celui du jour gardé"
 echo "$((total - echecs))/$total tests réussis"

@@ -2,6 +2,11 @@ Remarque : Écoutille, la veille radio de Michel (grammaire, § 22.20 et § 22.2
 Remarque : ajoute, les modifie ou les retire par « Postes », sans toucher au code. Chaque poste en veille a son bandeau ;
 Remarque : chaque passage capté est conservé avec son enregistrement, relié à son poste, puis transcrit.
 
+Remarque : la base est chiffrée sur le disque (grammaire, § 16.18 ; 1er novembre 2026) : elle garde les clés de DeepL et de
+Remarque : Google ; l'application demande son mot de passe à chaque lancement, et le fait choisir au premier. Une base d'avant
+Remarque : se chiffre sur place au premier lancement.
+La base est chiffrée.
+
 Remarque : le catalogue des modèles : de quoi choisir le modèle d'un poste. Il se complète à chaque lancement et par
 Remarque : « Modèles ». Un modèle manquant est ajouté ; un modèle d'une révision plus ancienne du catalogue est mis à jour une
 Remarque : fois, puis laissé tel que Michel le modifie ; un modèle saisi dans l'application (source « ajouté dans Écoutille »)
@@ -30,7 +35,8 @@ Un poste, conservé, a :
     une remarque (texte), facultative,
     un modèle (modèle), facultatif,
     un affichage (vrai ou faux), vrai au départ,
-    une parole transcrite (vrai ou faux), vrai au départ.
+    une parole transcrite (vrai ou faux), vrai au départ,
+    une traduction voulue (vrai ou faux), faux au départ.
 
 Un passage, conservé, a :
     un poste (poste),
@@ -39,14 +45,59 @@ Un passage, conservé, a :
     un enregistrement (son),
     une durée (texte), facultative,
     un morse (texte), facultatif,
-    une transcription (texte), facultative.
+    une transcription (texte), facultative,
+    une traduction (texte), facultative.
 
 Remarque : les réglages de Michel (1er novembre 2026) : combien de jours garder les passages ; vide, tout est gardé.
+Remarque : la traduction en français (1er novembre 2026) : DeepL d'abord ; quota épuisé (456) ou DeepL injoignable, Google.
+Remarque : Les clés sont des secrets : elles ne se relisent jamais, elles partent seulement vers leur service.
 Un réglage, conservé, a :
-    une conservation (nombre entier), facultative.
+    une conservation (nombre entier), facultative,
+    une clé principale (secret), facultative,
+    un compte gratuit (vrai ou faux), vrai au départ,
+    une clé de relève (secret), facultative.
 
 Remarque : les passages montrés : depuis ce jour (la période de l'écran de veille).
 Le début des passages vaut aujourd'hui.
+
+Remarque : ce que l'écran des réglages dit des clés, sans jamais les montrer.
+Le témoin des clés d'un réglage :
+    Le t vaut « Aucune clé DeepL ; ».
+    Si la clé principale du réglage est présente, le t devient « Une clé DeepL est enregistrée ; ».
+    Si la clé de relève du réglage est présente, rendre le t suivi de " une clé Google aussi.".
+    Rendre le t suivi de " aucune clé Google.".
+
+Remarque : un texte en français (1er novembre 2026) : DeepL (https://developers.deepl.com, le texte en liste, la clé dans
+Remarque : l'en-tête « DeepL-Auth-Key ») ; s'il refuse (456 : quota épuisé) ou ne répond pas, Google Cloud Translation, version
+Remarque : simple (la clé dans l'adresse) ; sans clé ni réponse, absent : le passage reste sans traduction.
+Pour traduire un texte :
+    Le rg vaut le réglage conservé.
+    Si la clé principale du rg est présente :
+        L'adresse vaut « https://api.deepl.com/v2/translate ».
+        Si le compte gratuit du rg, l'adresse devient « https://api-free.deepl.com/v2/translate ».
+        Les textes valent un ensemble vide.
+        Les textes gagnent texte.
+        Essayer :
+            La r vaut l'envoi à (l'adresse) avec :
+                l'en-tête « Authorization » : "DeepL-Auth-Key " suivi de la clé principale du rg,
+            et de :
+                « text » : les textes,
+                « target_lang » : « FR ».
+            Rendre le champ « translations.0.text » de la r.
+        En cas d'échec :
+            Remarque : quota épuisé ou service muet : Google prend le relais.
+    Si la clé de relève du rg est présente :
+        Essayer :
+            La r vaut l'envoi à « https://translation.googleapis.com/language/translate/v2 » avec :
+                « key » : la clé de relève du rg,
+            et de :
+                « q » : texte,
+                « target » : « fr »,
+                « format » : « text ».
+            Rendre le champ « data.translations.0.translatedText » de la r.
+        En cas d'échec :
+            Remarque : rien de plus : le passage reste sans traduction.
+    Rendre absent.
 
 Remarque : la veille (1er novembre 2026) : le plus récent en haut, en cartes (l'heure, le poste, la transcription), sur une
 Remarque : période et pour un poste ou tous ; « Fermer » arrête la veille, après une question.
@@ -56,19 +107,20 @@ L'écran de veille montre :
     côte à côte :
         une période (« Aujourd'hui », « 7 jours », « 30 jours » ou « Tout »), « Aujourd'hui » au départ,
         un seul poste (poste), facultatif, avec l'indication « Vide : tous les postes »,
-    la liste des passages conservés dont le jour ≥ le début des passages et l'affichage du poste est vrai, par jour décroissant puis heure décroissant, avec l'heure, le nom du poste, le morse, la transcription, le jour et la durée, en cartes,
+    la liste des passages conservés dont le jour ≥ le début des passages et l'affichage du poste est vrai, par jour décroissant puis heure décroissant, avec l'heure, le nom du poste, le morse, la transcription, la traduction, le jour et la durée, en cartes,
     côte à côte :
         un bouton « Postes », au clavier « P »,
         un bouton « Réglages »,
         un bouton « Fermer », à confirmer par « Arrêter la veille ? Un passage en cours d'enregistrement sera perdu. ».
 
 L'écran des postes montre :
-    la liste des postes conservés, par nom, avec le nom, la désignation du modèle, la sorte, la veille et la parole transcrite,
+    la liste des postes conservés, par nom, avec le nom, la désignation du modèle, la sorte, la veille, la parole transcrite et la traduction voulue,
     côte à côte :
         un modèle (modèle), facultatif, avec l'indication « Le nom et la sorte en viennent »,
         un nom (texte), facultatif,
         une sorte (« émetteur-récepteur » ou « scanner »), « émetteur-récepteur » au départ, visible si le modèle de l'écran est absent,
         une parole transcrite (vrai ou faux), vrai au départ, en interrupteur, avec l'indication « Le morse est toujours lu ; la parole, transcrite si allumé »,
+        une traduction voulue (vrai ou faux), faux au départ, en interrupteur, avec l'indication « La parole traduite en français (Réglages : les clés) »,
     côte à côte :
         un bouton « Ajouter », principal, actif si le nom de l'écran est présent,
         un bouton « Modèles »,
@@ -88,6 +140,11 @@ L'écran des modèles montre :
 
 L'écran des réglages, « Réglages », montre :
     une conservation (nombre entier), facultative, de 1 à 3650, avec l'unité « jours », avec l'indication « Les passages plus vieux s'effacent au lancement ; vide : tout garder »,
+    le texte « Traduction en français », en petites capitales,
+    une clé principale (secret), facultative, avec l'indication « DeepL, Compte, Clé d'API ; vide : celle enregistrée reste »,
+    un compte gratuit (vrai ou faux), vrai au départ, en interrupteur, avec l'indication « Allumé : un compte DeepL API Free ; éteint : Pro »,
+    une clé de relève (secret), facultative, avec l'indication « Google Cloud, Cloud Translation API, clé d'API ; quand le quota DeepL est épuisé »,
+    le texte le témoin des clés du réglage conservé,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer ».
@@ -101,6 +158,10 @@ Quand un poste capte un son dans l'écran de veille :
     Remarque : le morse d'abord, lu sur l'ordinateur ; sinon la parole, transcrite si le poste le veut (1er novembre 2026).
     Le morse du p devient le morse du son capté.
     Si le morse du p est absent et la parole transcrite du poste, la transcription du p devient la transcription du son capté.
+    Remarque : la parole traduite en français si le poste le veut ; le morse, fait d'abréviations, ne se traduit pas.
+    Si la transcription du p est présente et la traduction voulue du poste :
+        Traduire la transcription du p, qui donne le texte traduit.
+        Si le texte traduit est présent et le texte traduit ≠ la transcription du p, la traduction du p devient le texte traduit.
     Remarque : la durée d'après la taille : un WAV de 16 kHz, mono, 16 bits, 32'000 octets la seconde, après 44 octets d'en-tête.
     La seconde vaut l'arrondi de (la taille du son capté − 44) ÷ 32000 à 1.
     La durée du p devient la seconde suivi de " s".
@@ -132,10 +193,15 @@ Quand on clique sur « Réglages » dans l'écran de veille :
 Quand on ouvre l'écran des réglages :
     Pour chaque réglage conservé :
         La conservation de l'écran devient la conservation du réglage.
+        Le compte gratuit de l'écran devient le compte gratuit du réglage.
+    Remarque : les clés ne se relisent pas à l'écran : un secret ne s'affiche jamais ; vide, il reste tel quel.
 
 Quand on clique sur « Enregistrer » dans l'écran des réglages :
     Pour chaque réglage conservé :
         La conservation du réglage devient la conservation de l'écran.
+        Le compte gratuit du réglage devient le compte gratuit de l'écran.
+        Si la clé principale de l'écran est présente, la clé principale du réglage devient la clé principale de l'écran.
+        Si la clé de relève de l'écran est présente, la clé de relève du réglage devient la clé de relève de l'écran.
     Si la conservation de l'écran est présente, signaler « Les passages de plus de » puis la conservation de l'écran puis « jours s'effaceront au prochain lancement. ».
     Sinon, signaler « Tous les passages sont gardés. ».
     Fermer l'écran.
@@ -167,6 +233,7 @@ Quand on clique sur « Ajouter » dans l'écran des postes :
         La veille vaut vrai.
         L'affichage vaut vrai.
         La parole transcrite vaut la parole transcrite de l'écran.
+        La traduction voulue vaut la traduction voulue de l'écran.
     Si le modèle de l'écran est présent :
         Le modèle du p devient le modèle de l'écran.
         La sorte du p devient « émetteur-récepteur ».
@@ -374,7 +441,8 @@ Cataloguer « Icom IC-R15 » et « Icom » et « scanner » et (absent) et (abse
 
 Remarque : un seul réglage, créé au premier lancement ; puis le ménage des vieux passages, effacés pour de bon (leur son pèse).
 Si le nombre de réglages conservés = 0 :
-    Le r vaut un nouveau réglage.
+    Le r vaut un nouveau réglage :
+        Le compte gratuit vaut vrai.
     Conserver le r.
 Le délai vaut absent.
 Pour chaque réglage conservé, le délai devient la conservation du réglage.
