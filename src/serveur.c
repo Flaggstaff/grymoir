@@ -526,8 +526,9 @@ static char *feuille_de_style(const Serveur *s) {
     "fieldset.groupe.inverse{background:var(--accent);border-color:var(--accent);color:var(--sur-accent);border-radius:12px;padding:20px 24px}"
     "fieldset.groupe.inverse>legend{color:var(--accent-doux);float:left;padding:0;margin-bottom:8px;font-size:12px;letter-spacing:.14em;text-transform:uppercase}"
     "fieldset.groupe.inverse label,fieldset.groupe.inverse .texte{color:var(--sur-accent)}"
-    "fieldset.groupe.inverse input[type=text]{background:transparent;color:var(--sur-accent);border:0;border-bottom:1px solid var(--accent-doux);"
-    "border-radius:0;font-size:40px;font-weight:700;min-height:56px}"
+    "fieldset.groupe.inverse input[type=text]{background:transparent;color:var(--sur-accent);border:1px solid var(--accent-doux);"
+    "border-radius:8px;padding:0 12px;font-size:32px;font-weight:700;min-height:56px}"
+    "fieldset.groupe.inverse input[type=text]:focus{outline:2px solid var(--sur-accent);outline-offset:0}"
     );
     chaine_ajouter(&c,   /* en deux morceaux : une chaîne littérale de C99 tient en 4095 octets */
     "p.texte.capitales{font-size:12px;line-height:16px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;"

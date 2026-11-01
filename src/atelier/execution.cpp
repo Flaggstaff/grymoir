@@ -1838,7 +1838,12 @@ void Execution::cliquer(int k) {
 
 void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) {
     effacer_erreurs_zones();   // les messages tiennent jusqu'au prochain geste (§ 22.6)
-    if (!attente_ecran) return;
+    if (!attente_ecran) {
+        // un clic arrivé avant que la machine attende (l'écran vient de s'ouvrir, actif mais pas encore à l'écoute) : gardé,
+        // il part dès qu'elle attend, comme celui qui suit une zone (0.94) ; il se perdait en silence (1er novembre 2026)
+        if (sorte == EVENEMENT_CLIC && vue_ecran && clic_en_attente < 0) { clic_en_attente = element; ecran_du_clic = vue_ecran; }
+        return;
+    }
     if (sorte == EVENEMENT_CLIC && travail.transcriptions_en_cours > 0) {
         // un clic pendant une transcription : il attend le texte, pour qu'« Enregistrer » ne parte pas sans lui
         clic_apres_transcription = element;

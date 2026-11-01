@@ -73,16 +73,19 @@ QGroupBox[role="inverse"] {
 QGroupBox[role="inverse"]::title { color: @accent-doux@; subcontrol-position: top left; padding: 16px 0 0 24px; }
 QGroupBox[role="inverse"] QWidget { background: transparent; }
 QGroupBox[role="inverse"] QLabel { color: @sur-accent@; background: transparent; }
+/* une zone dans un groupe inversé (1er novembre 2026) : un vrai champ, cadré, même vide ; avant, un trait seul */
 QGroupBox[role="inverse"] QLineEdit {
     background: transparent;
     color: @sur-accent@;
-    border: none;
-    border-bottom: 1px solid @accent-doux@;
-    border-radius: 0;
-    font-size: 40px;
+    border: 1px solid @accent-doux@;
+    border-radius: 8px;
+    padding: 0 12px;
+    font-size: 32px;
     font-weight: 700;
     min-height: 56px;
 }
+QGroupBox[role="inverse"] QLineEdit:focus { border: 2px solid @sur-accent@; padding: 0 11px; }
+QGroupBox[role="inverse"] QLineEdit[readOnly="true"] { border-style: dashed; }
 QPushButton[role="carte"] {
     min-height: 96px;
     border: 1px solid @separateur@;
