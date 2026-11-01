@@ -213,6 +213,24 @@ static void publier_diagnostics(Serveur *s, const Document *d) {
         chaine_ajouter(&c, t);
         json_ecrire_texte(&c, diag.message ? diag.message : "Erreur.");
         chaine_ajouter(&c, "}");
+        if (!ailleurs) {   /* les suivantes (1er novembre 2026), en avertissement : peut-être des conséquences de la première */
+            Diagnostic suite[10];
+            char *chemin = uri_vers_chemin(d->uri);
+            const size_t n = erreurs_suivantes(d->texte, strlen(d->texte), chemin, est_compact(d->uri), &diag, suite, 10);
+            free(chemin);
+            for (size_t k = 0; k < n; k++) {
+                long f2;
+                long d2 = colonne_utf16(d->texte, suite[k].ligne, suite[k].colonne > 0 ? suite[k].colonne : 1, &f2);
+                snprintf(t, sizeof t, ",{\"range\":{\"start\":{\"line\":%d,\"character\":%ld},\"end\":{\"line\":%d,\"character\":%ld}},"
+                                      "\"severity\":2,\"source\":\"grym\",\"message\":", suite[k].ligne - 1, d2, suite[k].ligne - 1, f2);
+                chaine_ajouter(&c, t);
+                char *m = grym_formater("%s (après la première erreur : peut-être sa suite)", suite[k].message ? suite[k].message : "Erreur.");
+                json_ecrire_texte(&c, m);
+                free(m);
+                chaine_ajouter(&c, "}");
+                diagnostic_liberer(&suite[k]);
+            }
+        }
         diagnostic_liberer(&diag);
     }
     chaine_ajouter(&c, "]}}");

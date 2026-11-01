@@ -912,6 +912,10 @@ int main(int argc, char **argv) {
         VERIFIER(forme_canonique(QString::fromUtf8("Remarque : x.\nle  prix vaut   3.\nafficher le prix.\n"), false, QString(), &erreur)
                  == QString::fromUtf8("Remarque : x.\nLe prix vaut 3.\nAfficher le prix.\n"));
         VERIFIER(forme_canonique(QString::fromUtf8("Le prix vaut.\n"), false, QString(), &erreur).isNull() && erreur.startsWith("ligne 1"));
+        // plusieurs erreurs (1er novembre 2026) : la première, puis celles des déclarations suivantes
+        const Diagnostic_atelier plusieurs = analyser_source(QString::fromUtf8("Le a vaut 1 +.\nLe b vaut 2.\nAfficher (3.\n"), false);
+        VERIFIER(plusieurs.ligne == 1 && plusieurs.suivantes.size() == 1 && plusieurs.suivantes[0].ligne == 3);
+        VERIFIER(analyser_source(QString::fromUtf8("Le a vaut 1.\n"), false).suivantes.isEmpty());
     }
 
     // « Signaler » (2.71) : après un geste réussi, le message au pied de la fenêtre ; un geste refusé l'efface

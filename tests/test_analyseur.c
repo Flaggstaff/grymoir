@@ -67,6 +67,36 @@ static void verifier_erreur(int l, const char *src, int ligne, int colonne, cons
     portee_detruire(p);
 }
 
+
+/* Les erreurs suivantes (1er novembre 2026) : « l:c » de chaque erreur, la première comprise, séparées par « | ». */
+static void verifier_plusieurs(int l, const char *src, const char *attendu) {
+    total++;
+    Portee *p = portee_creer();
+    Programme prog;
+    Diagnostic d;
+    Chaine c = {0};
+    if (!analyser(src, strlen(src), p, 0, &prog, &d)) {
+        char t[32];
+        snprintf(t, sizeof t, "%d:%d", d.ligne, d.colonne);
+        chaine_ajouter(&c, t);
+        Diagnostic suite[10];
+        const size_t n = erreurs_suivantes(src, strlen(src), NULL, 0, &d, suite, 10);
+        for (size_t k = 0; k < n; k++) {
+            snprintf(t, sizeof t, "|%d:%d", suite[k].ligne, suite[k].colonne);
+            chaine_ajouter(&c, t);
+            diagnostic_liberer(&suite[k]);
+        }
+        diagnostic_liberer(&d);
+    } else {
+        programme_liberer(&prog);
+        chaine_ajouter(&c, "aucune");
+    }
+    char *r = chaine_rendre(&c);
+    if (strcmp(r, attendu) != 0) signaler(l, src, attendu, r);
+    free(r);
+    portee_detruire(p);
+}
+
 /* Boucle interactive : plusieurs saisies qui partagent la même portée. */
 static void verifier_session(int l, const char **saisies, const char **attendus, int nb) {
     total++;
@@ -100,6 +130,7 @@ static void verifier_suites(int l, const char *src, const char *attendu) {
     suggestions_liberer(&s);
 }
 
+#define VP(src, att)           verifier_plusieurs(__LINE__, src, att)
 #define VS(src, att)           verifier_suites(__LINE__, src, att)
 #define V(src, att)            verifier(__LINE__, src, att)
 #define VE(src, li, co, frag)  verifier_erreur(__LINE__, src, li, co, frag)
@@ -1005,6 +1036,12 @@ int main(void) {
     VS("Tant que vrai :\n    Afficher 1.\n    S", "Si | Selon | Signaler | Saisir à nouveau | Sortir de la boucle");
     VS("Répéter 3 ", "sur | suivi de | fois | + | − | × | ÷ | ^");
 
+    /* plusieurs erreurs (1er novembre 2026) : trois déclarations fautives, une saine entre elles */
+    VP("Le a vaut 1 +.\nLe b vaut 2.\nPour doubler un nombre :\n    Rendre nombre ×.\nAfficher b.\nAfficher (3.\n",
+       "1:14|4:20|6:12");
+    VP("Le a vaut 1.\nAfficher a.\n", "aucune");
+    VP("Le a vaut 1 +.\n", "1:14");   /* une seule : rien après */
+    VP("Une note, conservée, a :\n    un texte (texte),\n    un rang (nombre entier.\nAfficher 1 +.\n", "3:27|4:13");
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

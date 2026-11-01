@@ -36,7 +36,9 @@ langage, sans dépendance : il se lance par `grym lsp`.
 - À l'ouverture et à chaque modification d'un document, le serveur l'analyse (forme littéraire, ou
   compacte si son nom finit par `.grymc`) et publie la première erreur, avec le message de GrymoiR.
   Un document correct efface les erreurs publiées ; sa fermeture aussi.
-- Une seule erreur à la fois : l'analyseur s'arrête à la première. Les erreurs qui n'apparaissent
+- Plusieurs erreurs *(1er novembre 2026)* : la première en erreur (gravité 1) ; puis, jusqu'à dix, celles des
+  déclarations suivantes, en avertissement (gravité 2), « peut-être sa suite » : l'analyseur s'arrête toujours à la
+  première, et `erreurs_suivantes` efface d'une copie la déclaration fautive pour reprendre. Les erreurs qui n'apparaissent
   qu'à l'exécution (division par zéro, base) ne sont pas signalées.
 
 ## 5. Autocomplétion
@@ -67,7 +69,7 @@ langage, sans dépendance : il se lance par `grym lsp`.
 
 ## 8. Reporté
 
-Survol d'un nom, aller à la définition, renommer, rechercher les usages ; plusieurs erreurs à la fois ;
+Survol d'un nom, aller à la définition, renommer, rechercher les usages ;
 suites en forme compacte ; autres éditeurs (Neovim : quelques lignes de configuration, à documenter).
 
 ## Journal des révisions

@@ -10033,6 +10033,56 @@ int analyser_compact(const char *source, size_t taille, Portee *portee,
     return analyser_interne(source, taille, portee, 0, programme, diag, NULL, 1);
 }
 
+/* Efface (garde seulement les sauts de ligne) la déclaration de premier niveau qui contient la ligne l (à partir de 1).
+ * Rend 0 si aucune ligne sans retrait ne la précède, ou si rien n'a changé. */
+static int effacer_declaration(char *t, size_t taille, int l) {
+    size_t nb = 1;
+    for (size_t k = 0; k < taille; k++) nb += t[k] == '\n';
+    size_t *debut = grym_allouer((nb + 1) * sizeof *debut);
+    size_t q = 0;
+    debut[q++] = 0;
+    for (size_t k = 0; k < taille; k++) if (t[k] == '\n') debut[q++] = k + 1;
+    debut[q] = taille + 1;   /* au-delà de la dernière ligne */
+    if (l < 1 || (size_t)l > nb) { free(debut); return 0; }
+    #define TETE(x) (debut[x] < taille && t[debut[x]] != ' ' && t[debut[x]] != '\t' && t[debut[x]] != '\n' && t[debut[x]] != '\r')
+    long s = l - 1;
+    while (s >= 0 && !TETE((size_t)s)) s--;
+    if (s < 0) { free(debut); return 0; }
+    size_t e = (size_t)s + 1;
+    while (e < nb && !TETE(e)) e++;
+    #undef TETE
+    const size_t de = debut[s], a = e < nb ? debut[e] : taille;
+    int change = 0;
+    for (size_t k = de; k < a && k < taille; k++)
+        if (t[k] != '\n' && t[k] != ' ') { t[k] = ' '; change = 1; }
+    free(debut);
+    return change;
+}
+
+size_t erreurs_suivantes(const char *source, size_t taille, const char *chemin, int compact,
+                         const Diagnostic *premiere, Diagnostic *suite, size_t max) {
+    if (!premiere || !premiere->message || premiere->ligne <= 0 || premiere->fichier || max == 0) return 0;
+    char *t = grym_allouer(taille + 1);
+    memcpy(t, source, taille);
+    t[taille] = '\0';
+    size_t n = 0;
+    int ligne = premiere->ligne;
+    while (n < max && effacer_declaration(t, taille, ligne)) {
+        Portee *p = portee_creer();
+        if (chemin) portee_fichier(p, chemin);
+        Programme prog = {0};
+        Diagnostic d = {0};
+        const int ok = compact ? analyser_compact(t, taille, p, &prog, &d) : analyser(t, taille, p, 0, &prog, &d);
+        programme_liberer(&prog);
+        portee_detruire(p);
+        if (ok || !d.message || d.ligne <= 0 || d.fichier) { diagnostic_liberer(&d); break; }
+        suite[n++] = d;
+        ligne = d.ligne;
+    }
+    free(t);
+    return n;
+}
+
 /* ---------------------------------------------------------------- */
 /* Aide à la saisie (§ 8, charte art. 9)                            */
 /* ---------------------------------------------------------------- */

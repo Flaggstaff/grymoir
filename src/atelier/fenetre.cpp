@@ -742,6 +742,15 @@ void Fenetre::montrer_diagnostic() {
     if (d.message.isEmpty()) ajouter("Aucune erreur.", 0, 0, false);
     else if (d.ligne > 0) ajouter(QString("Ligne %1, colonne %2 : %3").arg(d.ligne).arg(d.colonne).arg(d.message), d.ligne, d.colonne, true);
     else ajouter(d.message, 0, 0, true);
+    // les suivantes (1er novembre 2026) : en couleur ordinaire, car corriger la première peut les faire disparaître
+    for (const auto &e : d.suivantes)
+        ajouter(QString::fromUtf8("Puis, ligne %1, colonne %2 : %3").arg(e.ligne).arg(e.colonne).arg(e.message), e.ligne, e.colonne, false);
+    if (!d.suivantes.isEmpty()) {
+        erreurs->setMaximumHeight(qMin(90 + 18 * (int)d.suivantes.size(), 220));
+        auto *i = new QListWidgetItem(QString::fromUtf8("Les erreurs après la première peuvent en être la suite : corrige d'abord la première."), erreurs);
+        i->setFlags(Qt::ItemIsEnabled);
+        i->setForeground(Theme::courant().couleur("texte-2"));
+    } else erreurs->setMaximumHeight(90);
     if (!erreur_execution.isEmpty()) {
         const bool ici = erreur_fichier.isEmpty()
                       || QFileInfo(erreur_fichier).absoluteFilePath() == QFileInfo(fichier).absoluteFilePath();

@@ -1,6 +1,6 @@
 # Charte de GrymoiR
 
-Version 1.61, révisée le 19 octobre 2026.
+Version 1.62, révisée le 1er novembre 2026.
 Toute modification passe par une révision numérotée.
 
 ---
@@ -188,7 +188,7 @@ Reportés sans jalon fixé, chacun à concevoir avant d'entrer dans un jalon :
 - base (grammaire, § 16.7) : commande de `grym` qui retire ou renomme un champ, lève les limites des migrations imposées par SQLite, et reconstruit une table ;
 - dates (grammaire, § 14) : moment complet (date et heure) et fuseaux horaires, après l'heure seule (faite) ;
 - langage : modifier le champ d'une recherche sans passer par un nom (`L'âge du client conservé dont … devient …`) ;
-- aide à la saisie (`docs/lsp.md`, § 8) : survol d'un nom, aller à la définition, renommer, rechercher les usages, plusieurs erreurs à la fois, suites en forme compacte, Neovim ;
+- aide à la saisie (`docs/lsp.md`, § 8) : survol d'un nom, aller à la définition, renommer, rechercher les usages, suites en forme compacte, Neovim ;
 - installation pour l'utilisateur final : `grym` embarqué dans l'extension (un paquet par système, construit par GitHub Actions), aucun réglage, fonctionnement en mode restreint, bouton « Lancer », publication sur la place de marché de VS Code et sur Open VSX (licence et comptes d'éditeur requis).
 
 ## 13. Compatibilité
@@ -277,3 +277,4 @@ GrymoiR doit pouvoir évoluer par une seule personne, sans aide extérieure, hum
 | 1.59 | 2026-10-13 | Art. 12 : règles ciblées par entité (grammaire 1.71, § 16.14) ; reste le ciblage par objet. Format 2 des bases, fichiers à part (docs/vm.md 1.57, § 8), permis par l'art. 13 |
 | 1.60 | 2026-10-18 | Apparence assouplie (révise 1.43) : une application peut porter l'image de marque de celui pour qui elle est faite. Couleur d'accent libre en hexadécimal, fond, police embarquée et logo SVG, en plus de la palette de cinq ; GrymoiR en dérive les autres couleurs et refuse dès l'analyse toute couleur illisible (WCAG 2.1, 4,5:1 pour le texte). Espacements, tailles et formes restent fixés par GrymoiR (grammaire 2.13, § 22.5 ; `docs/ecrans.md`, § 5) |
 | 1.61 | 2026-10-19 | Art. 4 : les sigles. Un nom reste insensible à la casse ; un mot qu'on écrit toujours en capitales les garde dans les libellés et la forme canonique, parce que « Numéro rcc » sur la fiche d'un thérapeute serait une faute (grammaire 2.21, § 2.4) |
+| 1.62 | 2026-11-01 | Art. 12 : plusieurs erreurs à la fois, faites (l'atelier et `grym lsp` montrent, après la première, celles des déclarations suivantes) |

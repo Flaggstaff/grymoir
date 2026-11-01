@@ -166,6 +166,23 @@ int main(void) {
         remove("_l_bon.grym");
     }
 
+    /* --- Plusieurs erreurs (1er novembre 2026) : la première en erreur, les suivantes en avertissement --- */
+    {
+        const char *m[] = {
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"capabilities\":{}}}",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{\"textDocument\":{\"uri\":\"file:///b.grym\","
+            "\"languageId\":\"grymoir\",\"version\":1,\"text\":\"Le a vaut 1 +.\\nLe b vaut 2.\\nAfficher (3.\\n\"}}}",
+            "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"shutdown\"}",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"exit\"}",
+        };
+        int code;
+        char *r = session(m, sizeof m / sizeof *m, &code);
+        V(strstr(r, "\"start\":{\"line\":0,") && strstr(r, "\"severity\":1") != NULL, "la première, en erreur", r);
+        V(strstr(r, "\"start\":{\"line\":2,") && strstr(r, "\"severity\":2") && strstr(r, "peut-être sa suite") != NULL,
+          "la suivante, ligne 3, en avertissement", r);
+        free(r);
+    }
+
     printf("%d/%d tests réussis\n", total - echecs, total);
     return echecs ? EXIT_FAILURE : EXIT_SUCCESS;
 }

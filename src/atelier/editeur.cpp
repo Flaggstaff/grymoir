@@ -47,6 +47,14 @@ Diagnostic_atelier analyser_source(const QString &source, bool compacte, const Q
             r.message = QString("« %1 », ligne %2 : %3").arg(QString::fromUtf8(d.fichier)).arg(d.ligne).arg(r.message);
             r.ligne = d.origine_ligne;
             r.colonne = d.origine_colonne;
+        } else {   // les suivantes, jusqu'à dix (1er novembre 2026)
+            Diagnostic suite[10];
+            const size_t n = erreurs_suivantes(octets.constData(), (size_t)octets.size(), chemin.isEmpty() ? nullptr : c.constData(),
+                                               compacte, &d, suite, 10);
+            for (size_t k = 0; k < n; k++) {
+                r.suivantes.append({QString::fromUtf8(suite[k].message ? suite[k].message : "Erreur."), suite[k].ligne, suite[k].colonne});
+                diagnostic_liberer(&suite[k]);
+            }
         }
     }
     diagnostic_liberer(&d);
@@ -378,15 +386,20 @@ void Editeur::marquer_erreur() {
         s.cursor = c;
         marques.append(s);
     }
-    if (!diag.message.isEmpty() && diag.ligne > 0) {
-        const QTextBlock bloc = document()->findBlockByNumber(diag.ligne - 1);
+    // la première erreur sur un fond rouge doux ; les suivantes soulignées seulement (peut-être des conséquences)
+    QVector<Diagnostic_atelier::Suivante> toutes;
+    if (!diag.message.isEmpty() && diag.ligne > 0) toutes.append({diag.message, diag.ligne, diag.colonne});
+    if (!diag.message.isEmpty()) toutes += diag.suivantes;
+    for (int rang = 0; rang < toutes.size(); rang++) {
+        const auto &e = toutes[rang];
+        const QTextBlock bloc = document()->findBlockByNumber(e.ligne - 1);
         if (bloc.isValid()) {
             QTextEdit::ExtraSelection s;
             s.format.setUnderlineStyle(QTextCharFormat::WaveUnderline);
             s.format.setUnderlineColor(Theme::courant().couleur("danger"));
-            s.format.setBackground(Theme::courant().couleur("danger-doux"));
+            if (rang == 0) s.format.setBackground(Theme::courant().couleur("danger-doux"));
             QTextCursor c(bloc);
-            int debut = position_bloc(bloc, diag.colonne);
+            int debut = position_bloc(bloc, e.colonne);
             const QString t = bloc.text();
             int fin = debut;
             while (fin < t.size() && !t.at(fin).isSpace()) fin++;

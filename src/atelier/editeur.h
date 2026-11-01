@@ -7,6 +7,7 @@
 #include <QPlainTextEdit>
 #include <QSet>
 #include <QTimer>
+#include <QVector>
 
 class Coloration;
 class QCompleter;
@@ -16,6 +17,10 @@ struct Diagnostic_atelier {
     QString message;   // vide : aucune erreur
     int ligne = 0;     // à partir de 1 ; 0 : sans position
     int colonne = 0;   // en points de code, à partir de 1
+    // les erreurs suivantes (1er novembre 2026) : après la première, chaque déclaration fautive effacée d'une copie ; peut-être
+    // des conséquences de la première ; ligne, colonne, message
+    struct Suivante { QString message; int ligne = 0; int colonne = 0; };
+    QVector<Suivante> suivantes;
 };
 
 // Analyse une source complète par le cœur, sans rien exécuter. `chemin` : le fichier, pour trouver ceux qu'il

@@ -78,4 +78,13 @@ Suggestions suites_valides_fichier(const char *source, size_t taille, const char
 void suggestions_liberer(Suggestions *s);
 void diagnostic_liberer(Diagnostic *d);
 
+/* Les erreurs qui suivent la première (1er novembre 2026) : la déclaration de premier niveau qui contient l'erreur (une
+ * entité, un écran, un événement, une action…, de sa première ligne sans retrait à la suivante) est effacée d'une copie, ses
+ * lignes gardées, et l'analyse reprend ; jusqu'à max erreurs, rangées dans suite[] (à libérer). La première, `premiere`,
+ * n'y est pas répétée. Une erreur sans ligne ou dans un fichier utilisé arrête la recherche. L'analyseur n'est pas
+ * changé : une erreur suivante peut être la conséquence de la première (un nom déclaré dans la partie effacée).
+ * `chemin` : le fichier, pour ses « Utiliser » (NULL : aucun). Rend le nombre d'erreurs rangées. */
+size_t erreurs_suivantes(const char *source, size_t taille, const char *chemin, int compact,
+                         const Diagnostic *premiere, Diagnostic *suite, size_t max);
+
 #endif
