@@ -884,6 +884,12 @@ int main(void) {
     VE("L'écran x montre :\n    le texte « T », actif si vrai.", 2, 21, "Un texte fixe ne se clique pas : « visible si » seulement.");
     VE("L'écran x montre :\n    un bouton « B », visible si 3.", 2, 33, "« visible si » attend une condition");
     VE("L'écran x montre :\n    un bouton « B », actif si vrai, actif si faux.", 2, 37, "« actif si » est déjà dit pour cet élément.");
+    /* « , au clavier « N » » (2.68) : une lettre ou un chiffre, pas celles du système, un raccourci par bouton dans l'écran */
+    VE("L'écran x montre :\n    un bouton « B », au clavier « NN ».", 2, 33, "Une lettre ou un chiffre attendu");
+    VE("L'écran x montre :\n    un bouton « B », au clavier « q ».", 2, 33, "« Q » sert déjà au système");
+    VE("L'écran x montre :\n    un bouton « B », au clavier « N », au clavier « S ».", 2, 40, "« au clavier » est déjà dit.");
+    VE("L'écran x montre :\n    un bouton « A », au clavier « N »,\n    un bouton « B », au clavier « n ».", 3, 5,
+       "est déjà le raccourci de « A » dans cet écran.");
     VE("Pour effacer un x :\n    Afficher 1.", 1, 6, "« effacer » commence une construction du langage");
 
     V("Essayer :\n    Afficher 1.\nEn cas d'échec, afficher le motif de l'échec.",
@@ -924,7 +930,7 @@ int main(void) {
     VS("L'écran x montre :\n    l'", "image « | image de | un sous l'autre :");
     VS("L'écran x montre :\n    le ", "texte « | graphique des | groupe « | menu «");
     VS("L'écran x montre :\n    une note (texte), fac", "facultative");
-    VS("L'écran x montre :\n    un bouton « B », ", "principal | actif si | visible si | en tuile | avec la description « | avec l'image « | à côté du titre | à confirmer par « | un bouton « | le texte « | un | une | la liste des | "
+    VS("L'écran x montre :\n    un bouton « B », ", "principal | actif si | visible si | en tuile | avec la description « | avec l'image « | à côté du titre | à confirmer par « | au clavier « | un bouton « | le texte « | un | une | la liste des | "
        "le graphique des | l'image « | l'image de | côte à côte : | l'un sous l'autre : | le groupe « | en position libre : | "
        "les onglets : | le menu «");
     VS("L'écran x montre :\n    en position libre :\n        le texte « t », à 1 de la gauche et 1 du haut, l", "large de | le texte « | "

@@ -2747,6 +2747,14 @@ static char *titre_d_ecran(const char *nom) {
 }
 
 /* La description compilée (« nom ␟ titre ␟ Lentité ␟ Bbouton ␟ Ttexte ») devient un écran prêt à montrer. */
+/* Une allocation remise à zéro : un écran dont la lecture échoue en chemin (une image introuvable) se détruit sans
+   toucher aux éléments pas encore lus (1er novembre 2026 ; avant : des pointeurs jamais écrits, libérés). */
+static void *allouer_a_zero(size_t taille) {
+    void *p = grym_allouer(taille);
+    memset(p, 0, taille ? taille : 1);
+    return p;
+}
+
 static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     size_t nb = 1;
     for (const char *p = desc; *p; p++) nb += *p == '\x1f';
@@ -2770,26 +2778,26 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     e->titre = np > 1 && parts[1][0] ? grym_dupliquer(parts[1]) : titre_d_ecran(parts[0]);
     e->n = np > 2 ? np - 2 : 0;
     size_t t = e->n ? e->n : 1;
-    e->elements = grym_allouer(t * sizeof *e->elements);
+    e->elements = allouer_a_zero(t * sizeof *e->elements);
     memset(e->elements, 0, t * sizeof *e->elements);   /* type, choix : seulement pour une zone */
-    e->textes = grym_allouer(t * sizeof *e->textes);
-    e->colonnes = grym_allouer(t * sizeof *e->colonnes);
-    e->nb_colonnes = grym_allouer(t * sizeof *e->nb_colonnes);
-    e->champs = grym_allouer(t * sizeof *e->champs);
-    e->listes = grym_allouer(t * sizeof *e->listes);
-    e->champ = grym_allouer(t * sizeof *e->champ);
-    e->types = grym_allouer(t * sizeof *e->types);
-    e->indications = grym_allouer(t * sizeof *e->indications);
-    e->bornes = grym_allouer(t * sizeof *e->bornes);
-    e->unites = grym_allouer(t * sizeof *e->unites);
-    e->choix = grym_allouer(t * sizeof *e->choix);
-    e->nb_choix = grym_allouer(t * sizeof *e->nb_choix);
-    e->chemins = grym_allouer(t * sizeof *e->chemins);
-    e->etats = grym_allouer(t);
+    e->textes = allouer_a_zero(t * sizeof *e->textes);
+    e->colonnes = allouer_a_zero(t * sizeof *e->colonnes);
+    e->nb_colonnes = allouer_a_zero(t * sizeof *e->nb_colonnes);
+    e->champs = allouer_a_zero(t * sizeof *e->champs);
+    e->listes = allouer_a_zero(t * sizeof *e->listes);
+    e->champ = allouer_a_zero(t * sizeof *e->champ);
+    e->types = allouer_a_zero(t * sizeof *e->types);
+    e->indications = allouer_a_zero(t * sizeof *e->indications);
+    e->bornes = allouer_a_zero(t * sizeof *e->bornes);
+    e->unites = allouer_a_zero(t * sizeof *e->unites);
+    e->choix = allouer_a_zero(t * sizeof *e->choix);
+    e->nb_choix = allouer_a_zero(t * sizeof *e->nb_choix);
+    e->chemins = allouer_a_zero(t * sizeof *e->chemins);
+    e->etats = allouer_a_zero(t);
     memset(e->etats, 0, t);
-    e->images = grym_allouer(t * sizeof *e->images);
+    e->images = allouer_a_zero(t * sizeof *e->images);
     for (size_t k = 0; k < t; k++) e->images[k] = vi_absent(NULL);
-    e->calcules = grym_allouer(t);
+    e->calcules = allouer_a_zero(t);
     memset(e->calcules, 0, t);
     char *nom_classe = grym_formater("écran %s", parts[0]);
     const ClasseVM *ce = classe_vm(m, nom_classe);
@@ -2947,13 +2955,15 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         e->elements[k].capitales = options_texte && strchr(options_texte + 1, 's') != NULL;
         if (options_texte && strchr(options_texte + 1, 'q')) e->elements[k].capitales = 2;   /* la section paiement (2.28) */
         if (options_bouton) {   /* « ␞ pt ␝ description ␚ image » (2.14, 2.15) */
-            const size_t nopt = strcspn(options_bouton + 1, "\x1c\x1a\x1d\x19\x18");
+            const size_t nopt = strcspn(options_bouton + 1, "\x1c\x1a\x1d\x19\x18\x17");
             e->elements[k].principal = memchr(options_bouton + 1, 'p', nopt) != NULL;
             e->elements[k].tuile = memchr(options_bouton + 1, 't', nopt) != NULL;
             e->elements[k].a_cote_du_titre = memchr(options_bouton + 1, 'e', nopt) != NULL;   /* 2.17 */
             e->elements[k].confirmation_si_modifie = memchr(options_bouton + 1, 'm', nopt) != NULL;   /* 2.67 */
             e->indications[k] = morceau_de_zone(options_bouton, '\x1d');
             e->elements[k].indication = e->indications[k];
+            const char *raccourci = strchr(options_bouton, '\x17');   /* « ␗ N » (2.68) */
+            e->elements[k].raccourci = raccourci && raccourci[1] ? raccourci[1] : 0;
             /* à confirmer (2.65) : la question et le mot, gardés ensemble dans « unites », que les boutons n'ont pas */
             char *question = morceau_de_zone(options_bouton, '\x19');
             if (question) {
@@ -3519,7 +3529,7 @@ static char *morceau_de_zone(const char *s2, char sep) {
     const char *p = s2 ? strchr(s2, sep) : NULL;
     if (!p) return NULL;
     p++;
-    return grym_formater("%.*s", (int)strcspn(p, "\x1c\x1a\x1d\x19\x18"), p);
+    return grym_formater("%.*s", (int)strcspn(p, "\x1c\x1a\x1d\x19\x18\x17"), p);
 }
 
 /* La saisie d'une zone qui a une unité, l'unité ôtée si on l'a tapée (« 12 CHF », « CHF 12 ») ; à libérer. */

@@ -6876,6 +6876,24 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
         if (!el->texte2) attendre_mot(a, a->i + 1, "avec l'image «", strlen("avec l'image «"));
         if (!(el->entier & 1024)) attendre_mot(a, a->i + 1, "à côté du titre", strlen("à côté du titre"));
         if (!el->confirmation) attendre_mot(a, a->i + 1, "à confirmer par «", strlen("à confirmer par «"));
+        if (!el->raccourci) attendre_mot(a, a->i + 1, "au clavier «", strlen("au clavier «"));
+        if (est_mot(x, "au") && est_mot(voir(a, 2), "clavier")) {
+            /* « , au clavier « N » » (2.68) : Cmd+N sous macOS, Ctrl+N ailleurs, comme un clic, tant que l'écran est
+               dessus et le bouton actif. Une lettre ou un chiffre ; celles du système et de l'édition restent à eux. */
+            if (el->raccourci) return erreur(a, x, grym_dupliquer("« au clavier » est déjà dit.")), -1;
+            const Jeton *t = voir(a, 3);
+            if (t->type != J_TEXTE || strlen(t->valeur) != 1 || !isalnum((unsigned char)t->valeur[0]))
+                return erreur(a, t->type == J_TEXTE ? t : x,
+                              grym_dupliquer("Une lettre ou un chiffre attendu : « , au clavier « N » » (Cmd+N sous macOS, Ctrl+N ailleurs).")), -1;
+            const char c = (char)toupper((unsigned char)t->valeur[0]);
+            static const char *reservees = "ACHJMQVWXZ";
+            if (strchr(reservees, c))
+                return erreur(a, t, grym_formater("« %c » sert déjà au système ou à l'édition (copier, coller, annuler, quitter, "
+                                                  "fermer, masquer…) : choisis une autre lettre que A, C, H, J, M, Q, V, W, X ou Z.", c)), -1;
+            el->raccourci = c;
+            a->i += 4;
+            return 1;
+        }
         if (est_mot(x, "à") && est_mot(voir(a, 2), "confirmer")) {
             /* « , à confirmer par « Supprimer ce patient ? » » (2.65) : avant l'événement, une fenêtre demande
                Annuler ou le bouton ; « … en tapant « effacer » » : le bouton ne s'active qu'une fois le mot tapé, pour
@@ -7133,6 +7151,25 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
         *vus_ = vus;
         return 1;
     }
+}
+
+/* Deux boutons d'un même écran ne partagent pas un raccourci (2.68). Rend 0 sur erreur. */
+static int raccourcis_ecran(Analyse *a, Noeud *ecran) {
+    for (size_t k = 0; k < ecran->nb_enfants; k++) {
+        const Noeud *b = ecran->enfants[k];
+        if (b->type != N_BOUTON || !b->raccourci) continue;
+        for (size_t q = 0; q < k; q++)
+            if (ecran->enfants[q]->type == N_BOUTON && ecran->enfants[q]->raccourci == b->raccourci) {
+                Jeton j = {0};
+                j.ligne = b->ligne;
+                j.colonne = b->colonne;
+                j.debut = b->debut;
+                erreur(a, &j, grym_formater("« au clavier « %c » » est déjà le raccourci de « %s » dans cet écran.", b->raccourci,
+                                            ecran->enfants[q]->texte ? ecran->enfants[q]->texte : "un autre bouton"));
+                return 0;
+            }
+    }
+    return 1;
 }
 
 /* Les conditions d'un écran (§ 22.6), une fois tous ses éléments connus. Rend 0 sur erreur. */
@@ -7938,6 +7975,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     a->document = 0;
     a->menu = 0;
     if (!a->echec) conditions_ecran(a, n);   /* « actif si », « visible si » : tout l'écran est connu (§ 22.6) */
+    if (!a->echec) raccourcis_ecran(a, n);   /* un raccourci par bouton, distinct dans l'écran (2.68) */
     a->ecran = NULL;
     free(classe);
     if (a->echec) {

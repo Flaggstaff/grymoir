@@ -1926,6 +1926,17 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* « , au clavier « N » » (2.68) : dans le navigateur, la touche d'accès du bouton, en minuscule */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"));
+        servir("L'écran x montre :\n    un bouton « Nouveau », au clavier « N »,\n    un bouton « Fermer ».\n"
+               "Quand on clique sur « Nouveau » dans l'écran x :\n    Afficher « n ».\n"
+               "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n", &sc);
+        CONTIENT(sc.reponses[0], "value=\"0\" accesskey=\"n\">Nouveau</button>");
+        NE_CONTIENT_PAS(sc.reponses[0], "value=\"1\" accesskey");
+        liberer(&sc);
+    }
+
     {   /* un bouton à confirmer (2.65) : le clic montre la question, Annuler la retire sans rien faire ; le clic qui
            revient de la confirmation compte ; avec un mot à taper, seul le bon mot (espaces et majuscules ASCII tolérés) */
         memset(&sc, 0, sizeof sc);

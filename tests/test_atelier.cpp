@@ -1005,6 +1005,56 @@ int main(int argc, char **argv) {
         }
     }
 
+    // « , au clavier « N » » (2.68) : le raccourci clique le bouton, la saisie en cours envoyée d'abord ; un bouton
+    // masqué ne répond pas au sien ; l'infobulle montre la combinaison
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    un nom (texte), facultatif,\n    un bouton « Nouveau », au clavier « N »,\n"
+                    "    un bouton « Caché », au clavier « K », visible si faux,\n    un bouton « Fermer ».\n"
+                    "Quand on clique sur « Nouveau » dans l'écran x :\n    Le nom de l'écran devient le nom de l'écran suivi de « + ».\n"
+                    "Quand on clique sur « Caché » dans l'écran x :\n    Le nom de l'écran devient « K ».\n"
+                    "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto zone = [&e]() -> QLineEdit * {
+            for (QLineEdit *l : e.findChildren<QLineEdit *>()) if (l->window() == &e && l->isVisible()) return l;
+            return nullptr;
+        };
+        auto raccourci = [&e](const char *touches) -> QShortcut * {
+            for (QShortcut *x : e.findChildren<QShortcut *>()) if (x->key() == QKeySequence(QString::fromUtf8(touches))) return x;
+            return nullptr;
+        };
+        auto attendre = [](const std::function<bool()> &fini) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !fini()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        };
+        attendre([&] { return zone() != nullptr && raccourci("Ctrl+N") != nullptr; });
+        VERIFIER(zone() && raccourci("Ctrl+N") && raccourci("Ctrl+K"));
+        if (zone() && raccourci("Ctrl+N") && raccourci("Ctrl+K")) {
+            QPushButton *nouveau = nullptr;
+            for (QPushButton *b : e.findChildren<QPushButton *>()) if (b->text() == "Nouveau") nouveau = b;
+            VERIFIER(nouveau && !nouveau->toolTip().isEmpty());
+            zone()->setFocus();
+            zone()->setText("Anne");
+            zone()->setModified(true);   // une saisie pas encore envoyée : le raccourci l'envoie avant le clic
+            emit raccourci("Ctrl+N")->activated();
+            attendre([&] { return zone()->text() == "Anne+"; });
+            VERIFIER(zone()->text() == "Anne+");
+            emit raccourci("Ctrl+K")->activated();   // « Caché » n'est pas visible : rien
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            VERIFIER(zone()->text() == "Anne+");
+        } else VERIFIER(false);
+    }
+
     // Un écran occupe toute la fenêtre : le fil et la zone des questions se cachent, Ctrl+J les montre (docs/atelier.md,
     // § 8) ; le contenu reste en haut, dans sa largeur de lecture, sans flotter au milieu
     {

@@ -212,6 +212,7 @@ typedef struct Noeud {
     char *confirmation;   /* bouton : « , à confirmer par « … » » (2.65), ou NULL */
     char *confirmation_mot;   /* bouton : « … en tapant « effacer » » (2.65), ou NULL */
     int confirmation_si_modifie;   /* bouton : « … si l'écran est modifié » (2.67) : la question, seulement après une saisie */
+    char raccourci;       /* bouton : « , au clavier « N » » (2.68) : Cmd+N sous macOS, Ctrl+N ailleurs ; 0 sinon */
     char *unite;          /* zone d'écran : « , avec l'unité « CHF » [devant] » (entier & 128 : devant), ou NULL */
     char *borne_min, *borne_max;   /* zone d'écran : « de 1 à 99 », « au moins », « au plus », en forme canonique ; pour
                                       un texte, en caractères (§ 22.6) ; NULL sans borne */

@@ -1449,6 +1449,11 @@ static void etats_ecran(Impression *im, const Noeud *el, int feminin) {
         if (el->confirmation_mot) { aj(im, im->compact ? " _en_tapant " : " en tapant "); ecrire_texte(im, el->confirmation_mot); }
         if (el->confirmation_si_modifie) aj(im, im->compact ? " _si_modifié" : " si l'écran est modifié");   /* 2.67 */
     }
+    if (el->type == N_BOUTON && el->raccourci) {   /* 2.75 */
+        const char r[2] = {el->raccourci, 0};
+        aj(im, im->compact ? " _clavier " : ", au clavier ");
+        ecrire_texte(im, r);
+    }
     for (size_t q = 0; q < 2 * el->nb_enfants; q++) {   /* « actif si » avant « visible si », quel que soit l'ordre écrit */
         const Noeud *x = el->enfants[q % el->nb_enfants];
         if (x->type != N_SI_ECRAN || x->forme != (q < el->nb_enfants ? 1 : 2)) continue;

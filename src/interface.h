@@ -74,6 +74,7 @@ typedef struct {
     int capitales;                  /* un texte « , en petites capitales » (2.20) : surtitre, titre de section */
     const char *confirmation;       /* un bouton « , à confirmer par « … » » : la question, ou NULL (2.65) */
     const char *confirmation_mot;   /* « … en tapant « effacer » » : le mot à taper, ou NULL (2.65) */
+    char raccourci;                 /* un bouton « , au clavier « N » » : sa lettre (Cmd+N sous macOS, Ctrl+N ailleurs), 0 sinon (2.68) */
     int confirmation_si_modifie;    /* « … si l'écran est modifié » (2.67) : la question, seulement quand l'état du bouton
                                        a le bit ETAT_MODIFIE, ou qu'une zone a encore une saisie que l'interface n'a pas
                                        envoyée ; sinon le clic part sans question */

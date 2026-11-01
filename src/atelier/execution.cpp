@@ -199,7 +199,8 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0)
                              | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0) | (el[k].masque ? 32 : 0)
                              | (el[k].principal ? 64 : 0) | (el[k].tuile ? 128 : 0) | (el[k].a_cote_du_titre ? 256 : 0) | (el[k].inverse ? 512 : 0) | (el[k].cartes ? 1024 : 0) | (el[k].capitales ? 2048 : 0)
-                             | (el[k].dossier ? 4096 : 0) | ((el[k].largeur_caracteres & 0xFF) << 16));
+                             | (el[k].dossier ? 4096 : 0) | ((el[k].largeur_caracteres & 0xFF) << 16)
+                             | ((el[k].raccourci & 0x7F) << 24));   // « , au clavier « N » » (2.68)
         t->facultatives << el[k].facultatif;
         t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
         // « question ␟ mot ␟ m » : le « m » d'une confirmation « … si l'écran est modifié » (2.67)
@@ -1391,6 +1392,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].masque = o & 32;   // § 22.6
         elements[k].dossier = o & 4096;   // 2.32
         elements[k].largeur_caracteres = (o >> 16) & 0xFF;   // 2.34
+        elements[k].raccourci = (char)((o >> 24) & 0x7F);       // 2.68
         elements[k].graphique = travail.graphiques.value(k);   // § 22.11
         if (travail.valeurs_fiche.value(k).size() == 3) {   // une valeur de fiche (§ 22.3)
             const QVector<int> &f = travail.valeurs_fiche[k];
@@ -1540,6 +1542,20 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
             b->setProperty("confirmation_mot", mot);
             b->setProperty("confirmation_si_modifie", si_modifie);
             b->setProperty("indice", k);
+            if (const char r = elements[k].raccourci) {
+                // « , au clavier « N » » (2.68) : Cmd+N sous macOS (Qt::CTRL y est la touche Cmd), Ctrl+N ailleurs. Le
+                // raccourci vit avec le bouton : masqué (écran recouvert, « visible si ») ou inactif, il ne part pas. Le
+                // bouton prend le focus d'abord, comme sous la souris : la zone quittée envoie sa saisie avant le clic.
+                const QKeySequence touches(QKeySequence(QString("Ctrl+") + QChar(r)));
+                auto *raccourci = new QShortcut(touches, b);
+                raccourci->setContext(Qt::WindowShortcut);
+                connect(raccourci, &QShortcut::activated, b, [b] {
+                    if (!b->isVisible() || !b->isEnabled()) return;
+                    b->setFocus(Qt::ShortcutFocusReason);
+                    b->click();
+                });
+                b->setToolTip(touches.toString(QKeySequence::NativeText));
+            }
             connect(b, &QPushButton::clicked, this, [this, k, question, mot, b, si_modifie] {
                 // « … si l'écran est modifié » (2.67) : sans saisie en attente d'être écrite, le clic part sans question
                 const bool sans_question = question.isEmpty()

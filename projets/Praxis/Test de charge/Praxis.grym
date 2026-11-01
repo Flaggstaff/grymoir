@@ -166,7 +166,7 @@ Si le nombre de patients conservés est nul, remplir la charge.
 Remarque : l'accueil de la maquette : l'action du jour, puis le cabinet en quatre tuiles ; le cœur sur les patients.
 Remarque : le titre de l'accueil, calculé : « Bonjour » et le prénom de la configuration.
 L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
-    un bouton « Nouvelle séance », principal, à côté du titre,
+    un bouton « Nouvelle séance », principal, à côté du titre, au clavier « N »,
     le texte "Aujourd'hui, " suivi d'aujourd'hui en toutes lettres, en petites capitales,
     la liste des séances conservées dont la date = aujourd'hui, par heure, avec l'heure, le statut, le nom du patient, le nom du soin et le prix, en cartes,
     côte à côte :
@@ -174,7 +174,7 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
         un bouton « Twint »,
         un bouton « Facture »,
     le texte « Le cabinet », en petites capitales,
-    un bouton « Patients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png »,
+    un bouton « Patients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png », au clavier « F »,
     un bouton « Séances », en tuile, avec la description « Du jour, à venir, passées »,
     un bouton « Facturation », en tuile, avec la description « À encaisser, factures, quittances »,
     un bouton « Comptabilité », en tuile, avec la description « Recettes, frais, rappels, journal »,
@@ -233,7 +233,7 @@ L'écran d'inscription, « Nouveau patient », montre :
         un numéro de cas (texte), facultatif, à 552 de la gauche et 544 du haut, large de 160,
         un diagnostic (texte), facultatif, à 728 de la gauche et 544 du haut, large de 344,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Remarque : la page d'un patient, comme son inscription, puis ses séances ; on y corrige ses données directement.
@@ -269,8 +269,8 @@ L'écran du patient, « Patient », montre :
     le texte le reste dû de la personne ouverte et d'aujourd'hui,
     la liste des séances conservées dont le patient = la personne ouverte, par date décroissant, avec la date, l'heure, le nom du soin, la durée, le prix, le statut et le paiement,
     côte à côte :
-        un bouton « Enregistrer », principal,
-        un bouton « Nouvelle séance »,
+        un bouton « Enregistrer », principal, au clavier « S »,
+        un bouton « Nouvelle séance », au clavier « N »,
         un bouton « Facturer », actif si le dû facturable de la personne ouverte et d'aujourd'hui > 0,
         un bouton « Notes »,
         un bouton « Ordonnances », visible si la facturation aux assurances du cabinet conservé,
@@ -297,7 +297,7 @@ L'écran de la séance, « Séance », montre :
         un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté, à 552 de la gauche et 72 du haut, large de 520, haut de 352,
         un encaissement (date), facultatif, avec l'indication « Le jour du paiement ; pour un virement, remplis-le avant le bouton », à 216 de la gauche et 216 du haut, large de 200,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Facture ou quittance »,
         un bouton « Annuler sa facture », à confirmer par « Annuler la facture de cette séance ? Elle ne se rétablit pas : ses autres séances se refacturent sous un nouveau numéro. Envoyée par voie électronique, son annulation part aussi. » en tapant « annuler », visible si la facture de la séance ouverte est présente,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
@@ -322,7 +322,7 @@ L'écran du soin, « Soin », montre :
     la liste des actes conservés dont le soin = la méthode ouverte, par code, avec le code, le libellé, la quantité, le prix et la première séance seulement,
     une position tarifaire (position), facultative, avec l'indication « Facturé à l'assurance : sa position (Configuration, Tarif des assurances) », visible si la facturation aux assurances du cabinet conservé,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Nouvel acte »,
         un bouton « Supprimer », à confirmer par « Supprimer ce soin ? Il part dans la corbeille. ».
@@ -336,7 +336,7 @@ L'écran de l'acte, « Acte du Tarif 590 », montre :
     un prix (nombre), avec l'unité « CHF », avec l'indication « Le prix d'une période de 5 minutes »,
     une première séance seulement (vrai ou faux), en interrupteur, avec l'indication « Allumé : l'anamnèse, que les séances suivantes n'ont pas »,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer cet acte ? ».
 
@@ -479,7 +479,7 @@ L'écran du frais, « Frais », montre :
         un bouton « Voir le justificatif », à 552 de la gauche et 96 du haut, actif si le justificatif de l'écran est présent,
         un bouton « Retirer le justificatif », à 552 de la gauche et 144 du haut, actif si le justificatif de l'écran est présent,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer ce frais ? Il part dans la corbeille. ».
 
@@ -533,7 +533,7 @@ L'écran des patients montre :
     une recherche (texte), facultative, avec l'indication « Un téléphone ou une localité : la liste se resserre ; un nom, la zone du dessus »,
     la liste des patients conservés dont l'archivage est absent et (le nom contient la recherche des patients ou le téléphone contient la recherche des patients ou la localité contient la recherche des patients ou le courriel contient la recherche des patients), par nom, avec le nom, le téléphone, la localité et le courriel,
     côte à côte :
-        un bouton « Nouveau patient »,
+        un bouton « Nouveau patient », au clavier « N »,
         un bouton « Fermer ».
 
 L'écran de séance, « Nouvelle séance » en grand, montre :
@@ -553,13 +553,13 @@ L'écran de séance, « Nouvelle séance » en grand, montre :
     un commentaire dicté (son), facultatif,
     un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 Remarque : les séances (30 octobre 2026) : du jour, à venir ou passées ; une prévue se dit faite, annulée ou absente ; une séance
 Remarque : du jour ou passée se règle d'ici comme dans « À encaisser ».
 L'écran des prévues, « Séances », montre :
-    un bouton « Nouvelle séance », principal, à côté du titre,
+    un bouton « Nouvelle séance », principal, à côté du titre, au clavier « N »,
     côte à côte :
         une période (« Aujourd'hui », « À venir » ou « Passées »), « Aujourd'hui » au départ,
         un jour (date), facultatif, avec l'indication « Un jour précis ; vide : la période »,
@@ -634,7 +634,7 @@ L'écran du cabinet, « Le cabinet », montre :
             un affichage twint perso (vrai ou faux), en interrupteur, avec l'indication « Allumé : ce natel sur les factures, en clair (Twint privé n'a pas de code QR) »,
             une quittance différée (vrai ou faux), en interrupteur, avec l'indication « Allumé : Espèces et Twint n'ouvrent pas de quittance ; Facturation, Quittances la fait sur demande »,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Retirer le logo »,
         un bouton « Retirer la signature ».
@@ -740,7 +740,7 @@ L'écran de l'agenda, « Rendez-vous », montre :
     le texte le témoin du jeton du cabinet conservé,
     un soin des réservations (soin), facultatif, avec l'indication « Le soin d'une réservation en ligne ; vide : le premier soin »,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
 L'écran des soins, « Soins », montre :
@@ -760,7 +760,7 @@ L'écran des rubriques, « Rubriques de frais », montre :
 L'écran de la rubrique, « Rubrique », montre :
     un nom (texte),
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer cette rubrique ? Elle part dans la corbeille. ».
 
@@ -2453,7 +2453,7 @@ L'écran de l'assureur, « Assureur », montre :
     une localité (texte), facultative,
     une valeur du point (nombre), facultative, avec l'indication « Seulement si elle diffère de celle du cabinet (Tarif des assurances) »,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer cet assureur ? ».
 
@@ -2478,7 +2478,7 @@ L'écran de l'ordonnance, « Ordonnance », montre :
     un accord du médecin conseil (date), facultatif, avec l'indication « Au-delà de 36 séances sur ordonnance : le jour de son accord (convention ASE, art. 6.3) »,
     le texte l'usage ouvert,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Voir le scan »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer cette ordonnance ? »,
@@ -2622,7 +2622,7 @@ L'écran du tarif, « Tarif des assurances », montre :
     une valeur du point (nombre), facultative, avec l'unité « CHF », avec l'indication « La valeur d'un point convenue avec les assureurs ; un assureur peut avoir la sienne »,
     la liste des positions conservées, par code, avec le code, le libellé, la valeur en points et l'unité,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Nouvelle position »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
 
@@ -2632,7 +2632,7 @@ L'écran de la position, « Position tarifaire », montre :
     une valeur en points (nombre),
     une unité (« quart d'heure » ou « séance »), avec l'indication « Par quart d'heure entier ou entamé, ou par séance »,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Supprimer », à confirmer par « Supprimer cette position tarifaire ? ».
 
@@ -2775,7 +2775,7 @@ L'écran des SMS, « SMS », montre :
     une heure d'essai (heure), facultative, avec l'indication « Dans trois minutes : le rappel d'essai arrive-t-il à l'heure ? »,
     le texte l'état SMS,
     côte à côte :
-        un bouton « Enregistrer », principal,
+        un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Vérifier le compte »,
         un bouton « SMS d'essai »,
         un bouton « Rappel d'essai »,

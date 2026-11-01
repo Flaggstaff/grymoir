@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
 
 #ifdef _WIN32
@@ -205,6 +206,17 @@ static char *decoder(const char *s, size_t n) {
 }
 
 
+
+/* « , au clavier « N » » (2.68) : dans le navigateur, la touche d'accès du bouton ; chaque navigateur choisit sa combinaison
+   (Ctrl+Option+N dans Safari et Chrome sous macOS, Alt+N sous Windows), Cmd+N y restant au navigateur. */
+static const char *touche_d_acces(const ElementEcran *b) {
+    static char t[2][24];
+    static int tour;
+    if (!b->raccourci) return "";
+    tour = !tour;
+    snprintf(t[tour], sizeof t[tour], " accesskey=\"%c\"", (char)tolower((unsigned char)b->raccourci));
+    return t[tour];
+}
 
 /* Un envoi de formulaire, en « application/x-www-form-urlencoded » ou en « multipart/form-data ». */
 typedef struct {
@@ -1334,8 +1346,8 @@ static void page_ecran(Serveur *s) {
     for (size_t k = 0; k < e->n; k++) {   /* les boutons « à côté du titre » (2.17), sur la ligne du titre */
         const ElementEcran *b = &e->el[k];
         if (b->sorte != ELEMENT_BOUTON || !b->a_cote_du_titre || (e->etats[k] & 2)) continue;
-        char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s%s>", (unsigned long)k, b->principal ? " class=\"principal\"" : "",
-                                (e->etats[k] & 1) ? " disabled" : "");
+        char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s%s%s>", (unsigned long)k, b->principal ? " class=\"principal\"" : "",
+                                (e->etats[k] & 1) ? " disabled" : "", touche_d_acces(b));
         chaine_ajouter(&c, v);
         free(v);
         echapper(&c, b->texte);
@@ -1518,8 +1530,9 @@ static void page_ecran(Serveur *s) {
         case ELEMENT_BOUTON: {
             if (el->tuile && !el->place) {   /* une tuile (2.15) : son titre, sa description, son image */
                 if (!tuiles) { chaine_ajouter(&c, "<div class=\"tuiles\">"); tuiles = 1; }
-                char *v = grym_formater("<button class=\"tuile%s\" name=\"clic\" value=\"%lu\"%s><span class=\"tete\"><span class=\"titre\">",
-                                        el->principal ? " principal" : "", (unsigned long)k, (e->etats[k] & 1) ? " disabled" : "");
+                char *v = grym_formater("<button class=\"tuile%s\" name=\"clic\" value=\"%lu\"%s%s><span class=\"tete\"><span class=\"titre\">",
+                                        el->principal ? " principal" : "", (unsigned long)k, (e->etats[k] & 1) ? " disabled" : "",
+                                        touche_d_acces(el));
                 chaine_ajouter(&c, v);
                 free(v);
                 echapper(&c, el->texte);
@@ -1539,9 +1552,10 @@ static void page_ecran(Serveur *s) {
                 break;
             }
             if (!boutons && !el->place) { chaine_ajouter(&c, "<div class=\"boutons\">"); boutons = 1; }
-            char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s%s>", (unsigned long)k,
+            char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s%s%s>", (unsigned long)k,
                                     el->principal ? " class=\"principal\"" : "",   /* 2.14 */
-                                    (e->etats[k] & 1) ? " disabled" : "");   /* « actif si » faux (§ 22.6) */
+                                    (e->etats[k] & 1) ? " disabled" : "",   /* « actif si » faux (§ 22.6) */
+                                    touche_d_acces(el));   /* 2.68 */
             chaine_ajouter(&c, v);
             free(v);
             echapper(&c, el->texte);
@@ -1678,6 +1692,9 @@ static int evenements_de(Serveur *s, Envoi *env) {
         snprintf(nom, sizeof nom, "z%lu", (unsigned long)k);
         Partie *pv = envoi_partie(env, nom);
         const char *nouveau;
+        /* le calendrier du navigateur envoie « 2026-10-19 » : la machine lit « 19.10.2026 » (§ 14.1) ; déclarée ici, car
+           « nouveau » la désigne encore après le bloc qui la remplit (1er novembre 2026 ; avant : lue hors de sa portée) */
+        char suisse[11];
         if (est_case(&e->el[k])) {
             snprintf(nom, sizeof nom, "z%lup", (unsigned long)k);
             if (!envoi_partie(env, nom)) continue;   /* case absente de l'envoi : rien à dire */
@@ -1715,7 +1732,6 @@ static int evenements_de(Serveur *s, Envoi *env) {
             }
             nouveau = pv->valeur;
             if (e->el[k].masque && !*nouveau) continue;   /* la page ne le renvoie pas : vide, il ne change rien */
-            char suisse[11];   /* le calendrier du navigateur envoie « 2026-10-19 » : la machine lit « 19.10.2026 » (§ 14.1) */
             if (e->el[k].type && strcmp(e->el[k].type, "date") == 0 && strlen(nouveau) == 10 && nouveau[4] == '-'
                 && nouveau[7] == '-') {
                 snprintf(suisse, sizeof suisse, "%.2s.%.2s.%.4s", nouveau + 8, nouveau + 5, nouveau);
