@@ -6114,15 +6114,19 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             if (!probleme && code_ev == 0 && ev.sorte == EVENEMENT_CLIC && ev.element < m->ecran->n) {
                 code_ev = (long)ev.element + 1;
-            } else if (!probleme && ev.sorte == EVENEMENT_DEPLACEMENT && ev.element < m->ecran->n
-                       && m->ecran->elements[ev.element].agenda && m->ecran->listes[ev.element].type == V_LISTE
-                       && ev.ligne < m->ecran->listes[ev.element].liste->n && ev.texte && m->ecran->objet) {
+            } else if (!probleme && ((ev.sorte == EVENEMENT_DEPLACEMENT && ev.element < m->ecran->n
+                                      && m->ecran->elements[ev.element].agenda && m->ecran->listes[ev.element].type == V_LISTE
+                                      && ev.ligne < m->ecran->listes[ev.element].liste->n)
+                                     || (ev.sorte == EVENEMENT_CRENEAU && ev.element < m->ecran->n
+                                         && m->ecran->elements[ev.element].agenda))
+                       && ev.texte && m->ecran->objet) {
+                const int creneau = ev.sorte == EVENEMENT_CRENEAU;   /* 2.75 : un clic hors des objets, sans objet */
                 /* une séance déposée ailleurs dans l'agenda (2.74) : l'objet, et « la date d'arrivée » et « l'heure
                  * d'arrivée » de l'écran, lues dans « JJ.MM.AAAA|HH:MM » */
-                const Liste *l = m->ecran->listes[ev.element].liste;
-                Objet *o = machine_objet_en_base(m, l->ids[ev.ligne], l->classes[ev.ligne], &probleme);
+                const Liste *l = creneau ? NULL : m->ecran->listes[ev.element].liste;
+                Objet *o = creneau ? NULL : machine_objet_en_base(m, l->ids[ev.ligne], l->classes[ev.ligne], &probleme);
                 const char *barre = strchr(ev.texte, '|');
-                if (o && barre) {
+                if ((o || creneau) && barre) {
                     char *jour = grym_formater("%.*s", (int)(barre - ev.texte), ev.texte);
                     Valeur vd, vh;
                     char *refus = NULL;
@@ -6142,8 +6146,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                         ecrire_champ(m, m->ecran->objet, (size_t)kd, vd);
                         ecrire_champ(m, m->ecran->objet, (size_t)kh, vh);
                         valeur_liberer(&objet);
-                        objet = vi_objet(o);
-                        code_ev = (long)ev.element + 10001;
+                        objet = o ? vi_objet(o) : vi_absent(NULL);
+                        code_ev = (long)ev.element + (creneau ? 20001 : 10001);
                     } else {
                         if (okd) valeur_liberer(&vd);
                         if (okh) valeur_liberer(&vh);

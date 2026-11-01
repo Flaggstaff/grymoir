@@ -30,6 +30,7 @@ public:
 signals:
     void choisir(int rang);
     void deplacer(int rang, const QString &arrivee);   // « JJ.MM.AAAA|HH:MM »
+    void creneau(const QString &arrivee);              // un clic hors des objets, au quart d'heure inférieur (2.75)
 
 protected:
     void paintEvent(QPaintEvent *e) override;
@@ -46,6 +47,7 @@ private:
     int heure_debut_ = 7, heure_fin_ = 20;
     int saisi_ = -1;          // le bloc sous la souris au clic
     bool glisse_ = false;
+    bool vide_ = false;       // le clic est tombé hors des objets
     QPoint depart_, courant_;
     void recalculer();
     int largeur_heures() const { return 56; }

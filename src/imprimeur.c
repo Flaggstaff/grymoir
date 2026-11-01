@@ -1951,6 +1951,9 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 aj_sigles(im, n->texte3);
                 aj(im, " :\n");
             }
+        } else if (n->forme == 9) {   /* « Quand on choisit un créneau dans l'écran X : » (2.75) */
+            if (c) { aj(im, "_quand _choisit _un créneau _dans "); ecrire_nom(im, n->texte3, 0); aj(im, "\n"); }
+            else { aj(im, "Quand on choisit un créneau dans l'écran "); aj_sigles(im, n->texte3); aj(im, " :\n"); }
         } else if (n->forme >= 4 && n->forme != 8) {   /* « Quand on ouvre l'écran X : », « Quand on ferme … » */
             if (c) { aj(im, n->forme == 4 ? "_quand _ouvre " : "_quand _ferme "); ecrire_nom(im, n->texte3, 0); aj(im, "\n"); }
             else { aj(im, n->forme == 4 ? "Quand on ouvre l'écran " : "Quand on ferme l'écran "); aj_sigles(im, n->texte3); aj(im, " :\n"); }

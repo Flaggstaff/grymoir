@@ -23,5 +23,12 @@ verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 
 verifier "$(grep -c 'erreur' "$d/sortie.txt")" "0" "l'agenda s'ouvre sans erreur"
 verifier "$([ -s "$d/agenda.png" ] && echo oui)" "oui" "l'agenda se dessine"
 cp "$d/agenda.png" /tmp/praxis-agenda.png 2>/dev/null
+# un clic dans un créneau (2.75) : le lundi de cette semaine à 14:00 ouvre « Nouvelle séance » à ce jour et cette heure
+lundi=$(date -d "-$(( $(date +%u) - 1 )) days" +%d.%m.%Y 2>/dev/null || date -v-"$(( $(date +%u) - 1 ))"d +%d.%m.%Y)
+(cd "$d" && QT_QPA_PLATFORM=offscreen GRYMOIR_ESSAIS=1 GRYMOIR_SANS_APERCU=1 GRYM_MOT_DE_PASSE_BASE=essai-essai \
+    "$atelier" --capture "$d/creneau.png" --clics "Continuer;Agenda;créneau:$lundi 14:00" --taille 1170x900 Praxis.grym > "$d/sortie2.txt" 2>&1 < /dev/null)
+verifier "$(grep -c 'erreur' "$d/sortie2.txt")" "0" "un créneau ouvre la nouvelle séance sans erreur"
+verifier "$([ -s "$d/creneau.png" ] && echo oui)" "oui" "la nouvelle séance se dessine"
+cp "$d/creneau.png" /tmp/praxis-creneau.png 2>/dev/null
 echo "$((total - echecs))/$total tests réussis"
 [ $echecs = 0 ]

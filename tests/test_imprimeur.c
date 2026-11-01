@@ -180,7 +180,8 @@ int main(void) {
     FIXE("Une séance, conservée, a :\n    une date (date),\n    une heure (heure),\n    une durée (nombre entier).\n"
          "La grille vaut « ».\nL'écran x montre :\n"
          "    la liste des séances conservées, avec la date, l'heure et la durée, en agenda selon la grille.\n"
-         "Quand on déplace une séance dans l'écran x :\n    La date de la séance devient la date d'arrivée de l'écran.\n");   /* 2.74 */
+         "Quand on déplace une séance dans l'écran x :\n    La date de la séance devient la date d'arrivée de l'écran.\n"
+         "Quand on choisit un créneau dans l'écran x :\n    Afficher l'heure d'arrivée de l'écran.\n");   /* 2.74, 2.75 */
     COMP("Une séance, conservée, a :\n    une date (date),\n    une heure (heure),\n    une durée (nombre entier).\n"
          "La grille vaut « ».\nL'écran x montre :\n"
          "    la liste des séances conservées, avec la date, l'heure et la durée, en agenda selon la grille.\n"

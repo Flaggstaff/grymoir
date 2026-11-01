@@ -33,6 +33,7 @@ La fin du calendrier vaut aujourd'hui.
 La grille du calendrier vaut « ».
 Le titre du calendrier vaut « ».
 La date proposée vaut absent.
+L'heure proposée vaut absent.
 
 Remarque : ce qui est cherché dans les listes des patients et des factures ; vide, tout.
 La recherche des patients vaut « ».
@@ -596,7 +597,8 @@ L'écran des encaissements, « À encaisser », montre :
     un bouton « Fermer ».
 
 Remarque : l'agenda (1er novembre 2026) : la semaine ou le jour ; un clic ouvre une séance, la glisser la déplace (au quart
-Remarque : d'heure, son rappel SMS reprogrammé) ; hors des horaires, hachuré ; un jour sans horaire n'est pas montré
+Remarque : d'heure, son rappel SMS reprogrammé) ; un clic dans le vide ouvre une nouvelle séance à cette heure ; hors des
+Remarque : horaires, hachuré ; un jour sans horaire n'est pas montré
 Remarque : (Configuration, Rendez-vous) ; les séances annulées n'y sont pas.
 L'écran du calendrier, « Agenda », montre :
     un bouton « Nouvelle séance », principal, à côté du titre, au clavier « N »,
@@ -1702,6 +1704,14 @@ Quand on clique sur « Nouvelle séance » dans l'écran du calendrier :
     Ouvrir l'écran de séance.
     La date proposée devient absente.
 
+Remarque : un clic dans un créneau (1er novembre 2026) : « Nouvelle séance », à ce jour et à ce quart d'heure.
+Quand on choisit un créneau dans l'écran du calendrier :
+    La date proposée devient la date d'arrivée de l'écran.
+    L'heure proposée devient l'heure d'arrivée de l'écran.
+    Ouvrir l'écran de séance.
+    La date proposée devient absente.
+    L'heure proposée devient absente.
+
 Quand on clique sur « Fermer » dans l'écran du calendrier :
     Fermer l'écran.
 
@@ -2080,6 +2090,7 @@ Quand on clique sur « Fermer » dans l'écran des patients :
 Quand on ouvre l'écran de séance :
     La date de l'écran devient aujourd'hui.
     Si la date proposée est présente, la date de l'écran devient la date proposée.
+    Si l'heure proposée est présente, l'heure de l'écran devient l'heure proposée.
     Si la personne proposée est présente, le patient de l'écran devient la personne proposée.
 
 Remarque : le prix se propose dès que le soin est choisi, à son tarif ; le patient choisi, il devient le prix conseillé (le tarif de suivi dès la deuxième séance) ; dans l'ordre qu'on veut, toujours modifiable.

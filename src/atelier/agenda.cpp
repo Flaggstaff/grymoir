@@ -237,6 +237,7 @@ void Agenda::mousePressEvent(QMouseEvent *e) {
     for (const Bloc &b : blocs_) if (place(b.rang).contains(e->position().toPoint())) saisi_ = b.rang;
     depart_ = courant_ = e->position().toPoint();
     glisse_ = false;
+    vide_ = saisi_ < 0;
 }
 
 void Agenda::mouseMoveEvent(QMouseEvent *e) {
@@ -252,6 +253,17 @@ void Agenda::mouseMoveEvent(QMouseEvent *e) {
 }
 
 void Agenda::mouseReleaseEvent(QMouseEvent *e) {
+    if (e->button() == Qt::LeftButton && vide_ && saisi_ < 0) {   // un créneau : le jour et le quart d'heure sous le clic (2.75)
+        vide_ = false;
+        const QPoint q = e->position().toPoint();
+        if ((q - depart_).manhattanLength() >= 6 || q.x() < largeur_heures() || q.y() < haut_tete() || jours_.isEmpty()) return;
+        const int c = (q.x() - largeur_heures()) / largeur_colonne();
+        if (c < 0 || c >= jours_.size()) return;
+        const int minutes = (int)((q.y() - haut_tete()) / pixels_par_minute()) / 15 * 15 + heure_debut_ * 60;
+        if (minutes >= 24 * 60) return;
+        emit creneau(jours_[c].toString("dd.MM.yyyy") + "|" + QTime(minutes / 60, minutes % 60).toString("HH:mm"));
+        return;
+    }
     if (e->button() != Qt::LeftButton || saisi_ < 0) return;
     const int rang = saisi_;
     const bool glisse = glisse_;

@@ -8259,6 +8259,16 @@ static Noeud *quand(Analyse *a, int colonne) {
             return erreur(a, &a->j[k + 1], grym_dupliquer("Un seul objet : « Quand on déplace une séance dans … »."));
         }
         tl = &a->j[k + 1];
+    } else if (est_mot(&a->j[k], "choisit") && est_mot(&a->j[k + 1], "un")
+               && (est_mot(&a->j[k + 2], "créneau")   /* de la forme compacte, un nom : « _un créneau » (2.75) */
+                   || (a->j[k + 2].type == J_CROCHETS && strcmp(a->j[k + 2].valeur, "créneau") == 0))
+               && !classe_de(a->portee, "créneau")) {
+        /* « Quand on choisit un créneau dans l'écran X : » (2.75) : un clic dans un agenda, hors des objets ; « la date
+           d'arrivée » et « l'heure d'arrivée » de l'écran disent où */
+        forme = 9;
+        tl = &a->j[k + 2];
+        dans = k + 3;
+        params = noeud_creer(N_BLOC, tq->ligne, tq->colonne, tq->debut);
     } else if (est_mot(&a->j[k], "choisit")) {
         forme = 2;
         dans = k + 1;
@@ -8336,6 +8346,8 @@ static Noeud *quand(Analyse *a, int colonne) {
             }
         }
         objet = grym_dupliquer(l_ecoute ? tl->valeur : "");
+    } else if (forme == 9) {
+        objet = grym_dupliquer("créneau");
     } else if (forme >= 4 && forme != 8) {
         objet = grym_dupliquer(forme == 4 ? "ouverture" : "fermeture");
     } else if (forme == 3) {
@@ -8384,7 +8396,7 @@ static Noeud *quand(Analyse *a, int colonne) {
         objet = grym_dupliquer(c->nom);
     }
     static const char *const sortes[] = { "", "clic", "choix", "changement", "ouverture", "fermeture", "capture", "capture par",
-                                          "déplacement" };
+                                          "déplacement", "créneau" };
     char *interne = grym_formater("quand %s « %s » dans l'écran %s", sortes[forme], objet, nom);
     for (size_t q = 0; q < a->portee->n; q++)
         if (strcmp(a->portee->s[q].nom, interne) == 0) {

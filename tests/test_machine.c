@@ -1023,6 +1023,16 @@ static Issue scene_attendre(void *contexte, Chaine *sortie, Evenement *e) {
             }
         return ISSUE_REPONDU;
     }
+    if (strncmp(x, "créneau ", strlen("créneau ")) == 0) {   /* « créneau 04.11.2026|10:30 » : un clic hors des objets (2.75) */
+        for (size_t k = 0; k < s->nb_elements; k++)
+            if (s->elements[k].sorte == ELEMENT_LISTE && s->elements[k].agenda) {
+                e->sorte = EVENEMENT_CRENEAU;
+                e->element = k;
+                snprintf(texte, sizeof texte, "%s", x + strlen("créneau "));
+                e->texte = texte;
+            }
+        return ISSUE_REPONDU;
+    }
     if (strncmp(x, "déplace ", strlen("déplace ")) == 0) {   /* « déplace 2 03.11.2026|14:15 » : la ligne 2 de l'agenda (2.74) */
         const char *p = x + strlen("déplace ");
         char *apres = NULL;
@@ -1319,13 +1329,16 @@ static void essais_agenda(void) {   /* 2.74 : une liste en agenda ; déplacer un
         "    L'heure de la séance devient l'heure d'arrivée de l'écran.\n"
         "    Afficher « déplacée : » puis la date de la séance puis l'heure de la séance.\n"
         "Quand on choisit une séance dans l'écran de l'agenda :\n    Afficher « choisie : » puis le nom de la séance.\n"
+        "Quand on choisit un créneau dans l'écran de l'agenda :\n"
+        "    Afficher « créneau : » puis la date d'arrivée de l'écran puis l'heure d'arrivée de l'écran.\n"
         "Quand on clique sur « Fermer » dans l'écran de l'agenda :\n    Fermer l'écran.\n"
         "Ouvrir l'écran de l'agenda.\n";
-    const char *ev[] = { "déplace 1 04.11.2026|14:15", "clic Fermer" };
+    const char *ev[] = { "déplace 1 04.11.2026|14:15", "créneau 05.11.2026|10:30", "clic Fermer" };
     const char *rep[] = { "" };
     ECRANS(src, ev, rep, "[ouvrir Agenda ; liste séance (Date, Heure, Durée, Nom) ; bouton Fermer]\n"
                          "[lignes 02.11.2026|09:00|60|Anne]\n[lignes 04.11.2026|14:15|60|Anne]\n"
-                         "déplacée : 04.11.2026 14:15\n[lignes 04.11.2026|14:15|60|Anne]\n[fermer]\n");
+                         "déplacée : 04.11.2026 14:15\n[lignes 04.11.2026|14:15|60|Anne]\n"
+                         "créneau : 05.11.2026 10:30\n[lignes 04.11.2026|14:15|60|Anne]\n[fermer]\n");
     PROG("Une séance, conservée, a : une date (date), une heure (heure), une durée (nombre entier).\n"
          "L'écran x montre :\n    la liste des séances conservées, en cartes, en agenda selon « ».\nOuvrir l'écran x.\n",
          "~Une liste est en cartes ou en agenda, pas les deux.");

@@ -1490,6 +1490,10 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                     texte_envoye = arrivee.toUtf8();
                     envoyer_evenement(EVENEMENT_DEPLACEMENT, k, rang);
                 });
+                connect(ag, &Agenda::creneau, this, [this, k](const QString &arrivee) {   // 2.75
+                    texte_envoye = arrivee.toUtf8();
+                    envoyer_evenement(EVENEMENT_CRENEAU, k, -1);
+                });
             }
         }
         if (auto *tab = v.tables[k]) {
@@ -1855,6 +1859,7 @@ void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) 
     const bool avec_fichier = (sorte == EVENEMENT_CHANGEMENT || sorte == EVENEMENT_CAPTURE) && fichier_envoye;
     travail.evenement = {sorte, (size_t)element, (size_t)ligne,
                          sorte == EVENEMENT_CHANGEMENT || sorte == EVENEMENT_CAPTURE || sorte == EVENEMENT_DEPLACEMENT
+                                 || sorte == EVENEMENT_CRENEAU
                              ? texte_envoye.constData() : nullptr,
                          lignes_choisies.constData(), (size_t)lignes_choisies.size(),
                          avec_fichier ? reinterpret_cast<const unsigned char *>(octets_envoyes.constData()) : nullptr,

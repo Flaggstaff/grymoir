@@ -969,6 +969,8 @@ int main(int argc, char **argv) {
                     "    L'heure de la séance devient l'heure d'arrivée de l'écran.\n"
                     "    Signaler « déplacée : » puis la date de la séance puis l'heure de la séance.\n"
                     "Quand on choisit une séance dans l'écran de l'agenda :\n    Signaler « choisie : » puis le nom de la séance.\n"
+                    "Quand on choisit un créneau dans l'écran de l'agenda :\n"
+                    "    Signaler « créneau : » puis la date d'arrivée de l'écran puis l'heure d'arrivée de l'écran.\n"
                     "Quand on clique sur « Fermer » dans l'écran de l'agenda :\n    Fermer l'écran.\n"
                     "Ouvrir l'écran de l'agenda.\n");
         }
@@ -1016,6 +1018,16 @@ int main(int argc, char **argv) {
                 QApplication::sendEvent(ag, &d);
             }
             VERIFIER(attendre([&] { return signal() == QString::fromUtf8("déplacée : 04.11.2026 14:15"); }));
+            // un clic dans le vide (2.75) : lundi 10:40 donne le quart d'heure d'avant, 10:30
+            ag = e.findChild<Agenda *>();
+            if (ag) {
+                const QPoint vide = ag->point_de(QDate(2026, 11, 2), QTime(10, 40));
+                QMouseEvent a(QEvent::MouseButtonPress, QPointF(vide), ag->mapToGlobal(QPointF(vide)), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                QApplication::sendEvent(ag, &a);
+                QMouseEvent b(QEvent::MouseButtonRelease, QPointF(vide), ag->mapToGlobal(QPointF(vide)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                QApplication::sendEvent(ag, &b);
+            }
+            VERIFIER(attendre([&] { return signal() == QString::fromUtf8("créneau : 02.11.2026 10:30"); }));
         }
         for (QPushButton *x : e.findChildren<QPushButton *>())
             if (x->text() == "Fermer" && x->isVisible() && x->isEnabled()) { x->click(); break; }

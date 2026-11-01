@@ -1559,7 +1559,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         size_t vers_sortie = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
         bloc_corriger_saut(c->b, vers_suite, c->b->taille_code);
         size_t vers_rate = bloc_emettre_saut(c->b, I_ESSAYER, ph->ligne, ph->colonne);
-        size_t *vers_apres = grym_allouer((e->nb_enfants ? 2 * e->nb_enfants : 1) * sizeof *vers_apres);
+        size_t *vers_apres = grym_allouer((e->nb_enfants ? 3 * e->nb_enfants : 1) * sizeof *vers_apres);
         size_t nb_apres = 0;
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
@@ -1585,6 +1585,22 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 long nomd = bloc_nom(c->b, qd->texte);
                 if (nomd < 0) { free(vers_apres); trop_grand(c, ph); return; }
                 bloc_emettre_appel(c->b, (uint16_t)nomd, 1, 0, ph->ligne, ph->colonne);
+                vers_apres[nb_apres++] = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+                bloc_corriger_saut(c->b, autre, c->b->taille_code);
+            }
+            /* un agenda (2.75) : « Quand on choisit un créneau », code 20001 + k ; sans paramètre */
+            const Noeud *qc = el->type == N_CHERCHER && el->agenda
+                            ? trouver_quand(c->programme->phrases, c->programme->nb, e->texte, 9, "créneau") : NULL;
+            if (qc) {
+                char numc[24];
+                snprintf(numc, sizeof numc, "%lu", (unsigned long)(k + 20001));
+                emettre(c, I_LIRE_LOCAL, ev, ph->ligne, ph->colonne);
+                emettre(c, I_CONSTANTE, bloc_constante(c->b, C_NOMBRE, numc), ph->ligne, ph->colonne);
+                emettre(c, I_EGAL, 0, ph->ligne, ph->colonne);
+                size_t autre = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, ph->ligne, ph->colonne);
+                long nomc = bloc_nom(c->b, qc->texte);
+                if (nomc < 0) { free(vers_apres); trop_grand(c, ph); return; }
+                bloc_emettre_appel(c->b, (uint16_t)nomc, 0, 0, ph->ligne, ph->colonne);
                 vers_apres[nb_apres++] = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
                 bloc_corriger_saut(c->b, autre, c->b->taille_code);
             }

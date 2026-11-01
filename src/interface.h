@@ -104,7 +104,9 @@ typedef struct {
 /* EVENEMENT_DEPLACEMENT (2.74) : une ligne d'un agenda déposée ailleurs ; element : l'agenda, ligne : son rang dans la liste,
  * texte : « JJ.MM.AAAA|HH:MM », là où elle arrive. */
 typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT, EVENEMENT_CAPTURE,
-               EVENEMENT_DEPLACEMENT } SorteEvenement;
+               EVENEMENT_DEPLACEMENT,
+               EVENEMENT_CRENEAU } SorteEvenement;   /* 2.75 : un clic dans un agenda, hors des objets ; element : l'agenda ;
+                                                        texte : « JJ.MM.AAAA|HH:MM », au quart d'heure */
 typedef struct {
     SorteEvenement sorte;
     size_t element;   /* le bouton cliqué, la liste où l'on a choisi */

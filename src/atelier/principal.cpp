@@ -23,6 +23,8 @@
 #include <QIcon>
 #include <QMessageBox>
 #include <QSettings>
+#include <QMouseEvent>
+#include "agenda.h"
 #include <QStandardPaths>
 #include <csignal>
 #include <cstdio>
@@ -168,6 +170,17 @@ int main(int argc, char **argv) {
                 const QString l = clics.takeFirst();
                 if (l == QString::fromUtf8("calendrier")) {   // ouvrir le calendrier de la première zone (date)
                     for (QAction *a : e->findChildren<QAction *>("calendrier")) { a->trigger(); break; }
+                } else if (l.startsWith(QString::fromUtf8("créneau:"))) {   // « créneau:02.11.2026 10:30 » : un clic dans l'agenda (2.75)
+                    const QStringList jh = l.mid(8).split(' ');
+                    const QDate j = QDate::fromString(jh.value(0), "dd.MM.yyyy");
+                    const QTime h = QTime::fromString(jh.value(1), "HH:mm");
+                    if (Agenda *ag = e->findChild<Agenda *>(); ag && j.isValid() && h.isValid()) {
+                        const QPointF p = ag->point_de(j, h) + QPoint(0, 2);
+                        QMouseEvent a(QEvent::MouseButtonPress, p, ag->mapToGlobal(p), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                        QApplication::sendEvent(ag, &a);
+                        QMouseEvent b(QEvent::MouseButtonRelease, p, ag->mapToGlobal(p), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                        QApplication::sendEvent(ag, &b);
+                    }
                 } else if (l.startsWith(QString::fromUtf8("ligne:"))) {   // « ligne:Anne Rochat » : choisir la ligne qui porte ce texte
                     const QString cherche = l.mid(6);
                     for (QTableWidget *t : e->findChildren<QTableWidget *>()) {
