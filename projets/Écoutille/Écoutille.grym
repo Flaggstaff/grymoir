@@ -2,16 +2,24 @@ Remarque : Écoutille, la veille radio de Michel (grammaire, § 22.20 et § 22.2
 Remarque : ajoute, les modifie ou les retire par « Postes », sans toucher au code. Chaque poste en veille a son bandeau ;
 Remarque : chaque passage capté est conservé avec son enregistrement, relié à son poste, puis transcrit.
 
-Remarque : le catalogue des modèles : de quoi choisir le modèle d'un poste. Il se remplit au premier lancement et se
-Remarque : complète par « Modèles ». « USB intégré » : vrai quand le poste donne son et pilotage par un seul câble USB
-Remarque : (vérifié pour quelques modèles seulement) ; vide : inconnu, à vérifier sur le poste.
+Remarque : le catalogue des modèles : de quoi choisir le modèle d'un poste. Il se complète à chaque lancement et par
+Remarque : « Modèles ». Un modèle manquant est ajouté ; un modèle d'une révision plus ancienne du catalogue est mis à jour une
+Remarque : fois, puis laissé tel que Michel le modifie ; un modèle saisi dans l'application (source « ajouté dans Écoutille »)
+Remarque : n'est jamais réécrit. Connectique et raccordement ne sont remplis que là où une source les donne ; vide : à
+Remarque : vérifier sur le poste. Le raccordement dit comment Écoutille reçoit le son : un câble USB qui porte son et
+Remarque : pilotage, un pilotage avec le son sur une prise analogique, le son analogique seul, le son par le réseau, ou un
+Remarque : câble audio virtuel depuis un logiciel (récepteurs SDR).
 
 Un modèle, conservé, a :
     une désignation (texte), unique,
     une marque (texte),
     une sorte (« CB », « 10 mètres », « radioamateur », « scanner » ou « récepteur SDR »),
     un USB intégré (vrai ou faux), facultatif,
-    une remarque (texte), facultative.
+    une remarque (texte), facultative,
+    une connectique (texte), facultative,
+    une source (texte), facultative,
+    un raccordement (« USB son et pilotage », « pilotage et son analogique », « son analogique seul », « son réseau » ou « câble audio virtuel »), facultatif,
+    une révision (nombre entier), facultative.
 
 Un poste, conservé, a :
     un nom (texte), unique,
@@ -45,7 +53,7 @@ L'écran des postes montre :
     un bouton « Fermer ».
 
 L'écran des modèles montre :
-    la liste des modèles conservés, par sorte puis désignation, avec la désignation, la sorte, l'USB intégré et la remarque,
+    la liste des modèles conservés, par sorte puis désignation, avec la désignation, la sorte, le raccordement, la connectique et la source,
     côte à côte :
         une désignation (texte), facultative,
         une marque (texte), facultative,
@@ -99,6 +107,7 @@ Quand on clique sur « Ajouter » dans l'écran des modèles :
         La désignation vaut la désignation de l'écran.
         La marque vaut la marque de l'écran.
         La sorte vaut la sorte de l'écran.
+        La source vaut « ajouté dans Écoutille ».
     Conserver le m.
 
 Quand on clique sur « Supprimer » dans l'écran des modèles :
@@ -107,76 +116,170 @@ Quand on clique sur « Supprimer » dans l'écran des modèles :
 Quand on clique sur « Fermer » dans l'écran des modèles :
     Fermer l'écran.
 
-Pour cataloguer une désignation et une marque et une sorte et un USB :
-    Le m vaut un nouveau modèle :
-        La désignation vaut désignation.
-        La marque vaut marque.
-        La sorte vaut sorte.
-    Si USB, l'USB intégré du m devient vrai.
-    Conserver le m.
+Pour cataloguer un nom et une marque et une sorte et un mode et une prise et une origine :
+    Si le nombre de modèles conservés dont la désignation est nom = 0 :
+        Le x vaut un nouveau modèle :
+            La désignation vaut nom.
+            La marque vaut marque.
+            La sorte vaut sorte.
+            La source vaut origine.
+            La révision vaut 2.
+        Si prise est présente, la connectique du x devient prise.
+        Si mode est présent :
+            Le raccordement du x devient mode.
+            Si mode = « USB son et pilotage », l'USB intégré du x devient vrai.
+        Conserver le x.
+    Sinon :
+        Pour chaque modèle conservé dont la désignation est nom :
+            La reprise vaut vrai.
+            Si la source du modèle est présente :
+                Si la source du modèle = « ajouté dans Écoutille », la reprise devient faux.
+            Si la révision du modèle est présente :
+                Si la révision du modèle ≥ 2, la reprise devient faux.
+            Si reprise :
+                La sorte du modèle devient sorte.
+                La source du modèle devient origine.
+                La révision du modèle devient 2.
+                Si prise est présente, la connectique du modèle devient prise.
+                Si mode est présent :
+                    Le raccordement du modèle devient mode.
+                    Si mode = « USB son et pilotage », l'USB intégré du modèle devient vrai.
 
-Remarque : le catalogue de départ, une seule fois. Noms de modèles donnés de mémoire pour la plupart : à corriger
-Remarque : ou compléter par « Modèles ».
-Si le nombre de modèles conservés = 0 :
-    Cataloguer « President George II » et « President » et « CB » et (faux).
-    Cataloguer « President Jackson II » et « President » et « CB » et (faux).
-    Cataloguer « President Lincoln II+ » et « President » et « CB » et (faux).
-    Cataloguer « President McKinley » et « President » et « CB » et (faux).
-    Cataloguer « President Bill II » et « President » et « CB » et (faux).
-    Cataloguer « President Barry II » et « President » et « CB » et (faux).
-    Cataloguer « President Johnson III » et « President » et « CB » et (faux).
-    Cataloguer « President Harrison II » et « President » et « CB » et (faux).
-    Cataloguer « President Randy II » et « President » et « CB » et (faux).
-    Cataloguer « President Teddy II » et « President » et « CB » et (faux).
-    Cataloguer « President Jimmy III » et « President » et « CB » et (faux).
-    Cataloguer « President William II » et « President » et « CB » et (faux).
-    Cataloguer « President Richard II » et « President » et « CB » et (faux).
-    Cataloguer « President JFK III » et « President » et « CB » et (faux).
-    Cataloguer « Midland Alan 48 Plus » et « Midland » et « CB » et (faux).
-    Cataloguer « Midland Alan 78 Plus » et « Midland » et « CB » et (faux).
-    Cataloguer « Cobra 29 LTD » et « Cobra » et « CB » et (faux).
-    Cataloguer « Stryker SR-955HPC » et « Stryker » et « 10 mètres » et (faux).
-    Cataloguer « Stryker SR-655HPC » et « Stryker » et « 10 mètres » et (faux).
-    Cataloguer « President Washington » et « President » et « 10 mètres » et (faux).
-    Cataloguer « Anytone AT-5555N II » et « Anytone » et « 10 mètres » et (faux).
-    Cataloguer « Radioddity QT60 Pro » et « Radioddity » et « 10 mètres » et (faux).
-    Cataloguer « Galaxy DX99V2 » et « Galaxy » et « 10 mètres » et (faux).
-    Cataloguer « CRT SS 9900 » et « CRT » et « 10 mètres » et (faux).
-    Cataloguer « Yaesu FT-991A » et « Yaesu » et « radioamateur » et (vrai).
-    Cataloguer « Yaesu FT-710 » et « Yaesu » et « radioamateur » et (vrai).
-    Cataloguer « Yaesu FTDX10 » et « Yaesu » et « radioamateur » et (vrai).
-    Cataloguer « Yaesu FTDX101D » et « Yaesu » et « radioamateur » et (faux).
-    Cataloguer « Yaesu FT-891 » et « Yaesu » et « radioamateur » et (faux).
-    Cataloguer « Yaesu FT-857D » et « Yaesu » et « radioamateur » et (faux).
-    Cataloguer « Yaesu FT-818ND » et « Yaesu » et « radioamateur » et (faux).
-    Cataloguer « Yaesu FT-450D » et « Yaesu » et « radioamateur » et (faux).
-    Cataloguer « Yaesu FT-65 » et « Yaesu » et « radioamateur » et (faux).
-    Cataloguer « Yaesu FT5D » et « Yaesu » et « radioamateur » et (faux).
-    Cataloguer « Icom IC-7300 » et « Icom » et « radioamateur » et (faux).
-    Cataloguer « Icom IC-705 » et « Icom » et « radioamateur » et (faux).
-    Cataloguer « Icom IC-7610 » et « Icom » et « radioamateur » et (faux).
-    Cataloguer « Icom IC-9700 » et « Icom » et « radioamateur » et (faux).
-    Cataloguer « Icom IC-7100 » et « Icom » et « radioamateur » et (faux).
-    Cataloguer « Kenwood TS-590SG » et « Kenwood » et « radioamateur » et (faux).
-    Cataloguer « Kenwood TS-890S » et « Kenwood » et « radioamateur » et (faux).
-    Cataloguer « Kenwood TH-D74 » et « Kenwood » et « radioamateur » et (faux).
-    Cataloguer « Elecraft KX3 » et « Elecraft » et « radioamateur » et (faux).
-    Cataloguer « Elecraft K4 » et « Elecraft » et « radioamateur » et (faux).
-    Cataloguer « Xiegu G90 » et « Xiegu » et « radioamateur » et (faux).
-    Cataloguer « Xiegu X6100 » et « Xiegu » et « radioamateur » et (faux).
-    Cataloguer « Baofeng UV-5R » et « Baofeng » et « radioamateur » et (faux).
-    Cataloguer « Uniden SDS100 » et « Uniden » et « scanner » et (faux).
-    Cataloguer « Uniden SDS200 » et « Uniden » et « scanner » et (faux).
-    Cataloguer « Uniden BCD436HP » et « Uniden » et « scanner » et (faux).
-    Cataloguer « Uniden BCD536HP » et « Uniden » et « scanner » et (faux).
-    Cataloguer « Uniden UBC125XLT » et « Uniden » et « scanner » et (faux).
-    Cataloguer « Whistler TRX-1 » et « Whistler » et « scanner » et (faux).
-    Cataloguer « AOR AR-DV1 » et « AOR » et « scanner » et (faux).
-    Cataloguer « Icom IC-R8600 » et « Icom » et « scanner » et (faux).
-    Cataloguer « Icom IC-R30 » et « Icom » et « scanner » et (faux).
-    Cataloguer « RTL-SDR Blog V4 » et « RTL-SDR Blog » et « récepteur SDR » et (faux).
-    Cataloguer « Airspy R2 » et « Airspy » et « récepteur SDR » et (faux).
-    Cataloguer « SDRplay RSP1B » et « SDRplay » et « récepteur SDR » et (faux).
-    Cataloguer « SDRplay RSPdx » et « SDRplay » et « récepteur SDR » et (faux).
+Pour corriger un ancien et un nouveau :
+    Si le nombre de modèles conservés dont la désignation est nouveau = 0 :
+        Pour chaque modèle conservé dont la désignation est ancien :
+            La désignation du modèle devient nouveau.
+
+Remarque : le catalogue, révision 2 (1er novembre 2026) : la connectique et le raccordement du relevé dans les manuels.
+Corriger « Midland Alan 48 Plus » et « Midland Alan 48 ».
+Corriger « Midland Alan 78 Plus » et « Midland Alan 78 Pro ».
+Corriger « Yaesu FT5D » et « Yaesu FT5DE ».
+Corriger « Kenwood TH-D74 » et « Kenwood TH-D74E ».
+Remarque : CB 27 MHz.
+Cataloguer « President George II » et « President » et « CB » et « son analogique seul » et « HP externe jack 3,5 mm 8 Ω ; HP PA jack 3,5 mm 8 Ω ; USB-A en façade pour la charge seulement ; micro 6 broches, jack 2,5 mm VOX » et « President Electronics, fiche GEORGE II et manuel v1.08 ».
+Cataloguer « President Jackson II » et « President » et « CB » et (absent) et (absent) et « ebay.de ; manuel President Jackson II (manualslib) ».
+Cataloguer « President McKinley » et « President » et « CB » et (absent) et (absent) et « passion-radio.com, wimo.com, moonrakeronline.com (catalogues 2025-2026) ».
+Cataloguer « President Barry II » et « President » et « CB » et (absent) et (absent) et « passion-radio.com, wimo.com, moonrakeronline.com (catalogues 2025-2026) ».
+Cataloguer « President Teddy II » et « President » et « CB » et (absent) et (absent) et « passion-radio.com, wimo.com, moonrakeronline.com (catalogues 2025-2026) ».
+Cataloguer « President Bill II » et « President » et « CB » et (absent) et (absent) et « moonrakeronline.com ».
+Cataloguer « President Johnson III » et « President » et « CB » et (absent) et (absent) et « moonrakeronline.com ».
+Cataloguer « President Harrison II » et « President » et « CB » et (absent) et (absent) et « moonrakeronline.com, wimo.com ».
+Cataloguer « President Randy II » et « President » et « CB » et « son analogique seul » et « prise haut-parleur externe ; prise micro externe » et « President Electronics USA, manuel RANDY II FCC ».
+Cataloguer « President Randy III » et « President » et « CB » et (absent) et (absent) et « passion-radio.com, ebay.de ».
+Cataloguer « President Jimmy III » et « President » et « CB » et (absent) et (absent) et « moonrakeronline.com ».
+Cataloguer « President William II » et « President » et « CB » et (absent) et (absent) et « moonrakeronline.com, wimo.com ».
+Cataloguer « President Richard II » et « President » et « CB » et (absent) et (absent) et « moonrakeronline.com ».
+Cataloguer « President JFK III » et « President » et « CB » et « son analogique seul » et « prises haut-parleur externe et PA ; USB-A pour la charge seulement » et « Buy Two Way Radios, article de novembre 2025 (revendeur) ».
+Cataloguer « Midland Alan 48 » et « Midland » et « CB » et (absent) et (absent) et « ebay.de ».
+Cataloguer « Midland Alan 78 Pro » et « Midland » et « CB » et (absent) et (absent) et « passion-radio.com, pricerunner.dk ».
+Cataloguer « Midland Alan 42 DS » et « Midland » et « CB » et (absent) et (absent) et « passion-radio.com, ebay.de ».
+Cataloguer « Midland Alan 42 Multi » et « Midland » et « CB » et (absent) et (absent) et « ebay.de ».
+Cataloguer « Midland M-Mini USB » et « Midland » et « CB » et « son analogique seul » et « haut-parleur externe à l'arrière ; USB en façade pour recharger un appareil ; micro RJ-45 » et « Midland Europe, fiche M-Mini USB ».
+Cataloguer « Albrecht AE 6110 » et « Albrecht » et « CB » et « son analogique seul » et « jack 3,5 mm haut-parleur externe » et « Diesnerfunk (revendeur) ; catalogue Albrecht CB 2021 ».
+Cataloguer « Albrecht AE 6120 » et « Albrecht » et « CB » et « son analogique seul » et « haut-parleur externe, 1 W / 8 Ω ; micro RJ-45 » et « Bensons Funktechnik (revendeur) ».
+Cataloguer « Albrecht AE 6290 » et « Albrecht » et « CB » et « son analogique seul » et « haut-parleur externe 4 à 8 Ω ; micro RJ-45 » et « Alan Electronics, manuel AE 6290 ».
+Cataloguer « Albrecht AE 6491 » et « Albrecht » et « CB » et « son analogique seul » et « jack 3,5 mm mono haut-parleur externe 8 Ω ; micro 6 broches » et « Alan Electronics, notice AE 6490/AE 6491 ».
+Cataloguer « Stabo xm 3004e » et « Stabo » et « CB » et (absent) et (absent) et « ebay.de ».
+Cataloguer « Stabo xm 3006e » et « Stabo » et « CB » et (absent) et (absent) et « ebay.de ».
+Cataloguer « Stabo xm 3008e » et « Stabo » et « CB » et (absent) et (absent) et « pricerunner.dk ».
+Cataloguer « Team MiniCom » et « Team » et « CB » et (absent) et (absent) et « ebay.de ».
+Cataloguer « Team FX-CBmobile » et « Team » et « CB » et (absent) et (absent) et « ebay.de ».
+Cataloguer « PNI Escort HP 8000L » et « PNI » et « CB » et (absent) et (absent) et « ebay.de ».
+Cataloguer « Uniden BearTracker 885 » et « Uniden » et « CB » et « son analogique seul » et « haut-parleur externe 8 Ω (jack 3,5 mm selon RigPix) ; PA séparé ; micro 6 broches ; CB et scanner en un seul poste » et « Uniden, manuel BearTracker 885 ; RigPix ».
+Remarque : 10 mètres.
+Cataloguer « Stryker SR-955HPC » et « Stryker » et « 10 mètres » et « son analogique seul » et « jack EXT arrière, haut-parleur 8 Ω ; PA ; prise de programmation et câble USB pour les réglages, sans pilotage » et « Stryker Radios, manuel SR-955HPC V2 ».
+Cataloguer « Stryker SR-655HPC » et « Stryker » et « 10 mètres » et (absent) et (absent) et « walcottradio.com ».
+Cataloguer « President Lincoln II+ » et « President » et « 10 mètres » et « son analogique seul » et « haut-parleur externe jack 3,5 mm 8 Ω ; USB pour la programmation seulement ; micro 6 broches ; prise CW KEY » et « President Electronics, manuel LINCOLN II + v1.02 ».
+Cataloguer « President Washington » et « President » et « 10 mètres » et (absent) et (absent) et « moonrakeronline.com (10 m et 12 m) ».
+Cataloguer « Anytone AT-5555N II » et « Anytone » et « 10 mètres » et (absent) et (absent) et « walcottradio.com ».
+Cataloguer « Radioddity QT60 Pro » et « Radioddity » et « 10 mètres » et (absent) et (absent) et « worldwidedx.com ».
+Cataloguer « Galaxy DX99V2 » et « Galaxy » et « 10 mètres » et (absent) et (absent) et « walcottradio.com ».
+Cataloguer « CRT SS 9900 » et « CRT » et « 10 mètres » et (absent) et (absent) et « transmission1.net (forum, faible) ».
+Remarque : radioamateur.
+Cataloguer « Yaesu FTX-1 Field » et « Yaesu » et « radioamateur » et (absent) et « USB-C, pont série CP210x double (pilotage) ; entrée son par l'USB ; sortie son USB non confirmée ; prise RTTY/DATA » et « Yaesu, manuel CAT FTX-1 2507-B et manuel d'utilisation 2508I ».
+Cataloguer « Yaesu FTX-1 Optima » et « Yaesu » et « radioamateur » et (absent) et « USB-C, pont série CP210x double (pilotage) ; entrée son par l'USB ; sortie son USB non confirmée » et « Yaesu, manuel CAT FTX-1 2507-B et manuel d'utilisation 2508I ».
+Cataloguer « Yaesu FTDX101MP » et « Yaesu » et « radioamateur » et « pilotage et son analogique » et « USB (CP210x double) et RS-232C pour le pilotage ; prises AUDIO et ACC ; son USB non trouvé ; macOS : pilote Silicon Labs v6.0.2 » et « Yaesu, manuel CAT FTDX101 2308-L ; Dog Park Software ».
+Cataloguer « Yaesu FTDX101D » et « Yaesu » et « radioamateur » et « pilotage et son analogique » et « USB (CP210x double) et RS-232C pour le pilotage ; prises AUDIO et ACC ; son USB non trouvé ; macOS : pilote Silicon Labs v6.0.2 » et « Yaesu, manuel CAT FTDX101 2308-L ; Dog Park Software ».
+Cataloguer « Yaesu FTDX10 » et « Yaesu » et « radioamateur » et « USB son et pilotage » et « USB (CP210x double) : pilotage, et USB Audio CODEC ; prise RTTY/DATA ; macOS : pilote Silicon Labs v6.0.2 » et « Yaesu, manuel CAT FTDX10 2308-F ; Moonraker, fiche V1.0 (11/01/2021) ».
+Cataloguer « Yaesu FT-710 » et « Yaesu » et « radioamateur » et « USB son et pilotage » et « USB-B : son et pilotage (CP2105, deux ports COM) ; EXT SPKR jack 3,5 mm ; PHONES jack 3,5 mm stéréo ; RTTY/DATA mini-DIN 6 ; macOS : pilote Silicon Labs v6.0.2 » et « Yaesu, manuel FT-710 et manuel CAT 2306-C ».
+Cataloguer « Yaesu FT-991A » et « Yaesu » et « radioamateur » et « USB son et pilotage » et « USB : pilotage (pont double UART) et son (USB Audio CODEC) ; GPS/CAT RS-232C ; macOS : pilote Silicon Labs v6.0.2 » et « Yaesu, manuel CAT FT-991A 1711-D ; guide HB9AUR (20/08/2019) ».
+Cataloguer « Yaesu FT-891 » et « Yaesu » et « radioamateur » et (absent) et « USB (pont double UART) pour le pilotage ; sortie son non trouvée » et « Yaesu, manuel CAT FT-891 ».
+Cataloguer « Yaesu FT-450D » et « Yaesu » et « radioamateur » et « pilotage et son analogique » et « DATA 6 broches (son, squelch, AFSK, PTT) ; jack PHONE 3,5 mm ; prise SPKR ; DB9 RS-232 pour le pilotage ; micro 8 broches ; pas d'USB » et « Yaesu, manuel FT-450D 1901L et manuel CAT 1710-B ».
+Cataloguer « Yaesu FT-818ND » et « Yaesu » et « radioamateur » et « pilotage et son analogique » et « DATA mini-DIN 6 ; ACC mini-DIN 8 (pilotage par câble CT-62) ; pas d'USB » et « Yaesu, manuel FT-818ND 1810P ».
+Cataloguer « Yaesu FT-857D » et « Yaesu » et « radioamateur » et « pilotage et son analogique » et « DATA mini-DIN 6 ; EXT SPKR ; CAT/LINEAR mini-DIN 8 ; pas d'USB » et « Yaesu/Vertex Standard, manuel FT-857D EH007M108 ».
+Cataloguer « Yaesu FT5DE » et « Yaesu » et « radioamateur » et (absent) et (absent) et « moonrakeronline.com ».
+Cataloguer « Yaesu FT-4XE » et « Yaesu » et « radioamateur » et (absent) et (absent) et « moonrakeronline.com ».
+Cataloguer « Yaesu FTM-510DE » et « Yaesu » et « radioamateur » et (absent) et (absent) et « wimo.com ».
+Cataloguer « Icom IC-7760 » et « Icom » et « radioamateur » et (absent) et (absent) et « wimo.com ».
+Cataloguer « Icom IC-7610 » et « Icom » et « radioamateur » et « USB son et pilotage » et « USB : pilotage CI-V et entrée son (MOD INPUT USB) » et « POTACAT Users Guide (source tierce) ».
+Cataloguer « Icom IC-7300MK2 » et « Icom » et « radioamateur » et « USB son et pilotage » et « USB-C : son et pilotage (deux ports COM) ; LAN ; HDMI ; ACC 13 broches ; haut-parleur externe ; REMOTE CI-V » et « Icom America ; Icom, manuel de base IC-7300MK2 ».
+Cataloguer « Icom IC-7300 » et « Icom » et « radioamateur » et « USB son et pilotage » et « USB-B : son et pilotage (CI-V, CP210x) ; ACC 13 broches ; REMOTE CI-V jack 3,5 mm » et « Icom, manuel de base IC-7300 ».
+Cataloguer « Icom IC-705 » et « Icom » et « radioamateur » et (absent) et (absent) et « wimo.com ».
+Cataloguer « Icom IC-718 » et « Icom » et « radioamateur » et (absent) et (absent) et « wimo.com ».
+Cataloguer « Icom IC-9700 » et « Icom » et « radioamateur » et (absent) et (absent) et « wimo.com ».
+Cataloguer « Icom IC-905 » et « Icom » et « radioamateur » et (absent) et (absent) et « wimo.com ».
+Cataloguer « Icom IC-7100 » et « Icom » et « radioamateur » et (absent) et (absent) et « qrper.com (sondage POTA 2026) ; moonrakeronline.com ».
+Cataloguer « Icom IC-706MKIIG » et « Icom » et « radioamateur » et (absent) et (absent) et « qrper.com (sondage POTA 2026) ».
+Cataloguer « Icom ID-52E PLUS » et « Icom » et « radioamateur » et (absent) et (absent) et « wimo.com ».
+Cataloguer « Kenwood TS-990S » et « Kenwood » et « radioamateur » et « USB son et pilotage » et « USB : carte son (compatible ARUA-10) et pilotage (pilote de port COM virtuel) » et « Kenwood, page ARUA-10 v4.00 et pilote VCP ».
+Cataloguer « Kenwood TS-890S » et « Kenwood » et « radioamateur » et « USB son et pilotage » et « USB : carte son (compatible ARUA-10) et pilotage (deux ports COM virtuels) ; LAN » et « Kenwood, page ARUA-10 v4.00 et pilote VCP ».
+Cataloguer « Kenwood TS-590SG » et « Kenwood » et « radioamateur » et « USB son et pilotage » et « USB-B : son et pilotage (port COM virtuel) ; COM RS-232 ; ACC2 » et « Kenwood, USB Audio Setting Manual TS-590SG (2014, rév. 2018) ; PC Control Command Reference rév. 3 ».
+Cataloguer « Kenwood TS-480 » et « Kenwood » et « radioamateur » et (absent) et « mini-DIN 6 ; DB9 (RS-232) » et « passion-radio.com (câble Digirig) ».
+Cataloguer « Kenwood TS-2000 » et « Kenwood » et « radioamateur » et (absent) et (absent) et « qrper.com (sondage POTA 2026) ».
+Cataloguer « Kenwood TH-D75E » et « Kenwood » et « radioamateur » et (absent) et (absent) et « kenwoodcommunications.co.uk ».
+Cataloguer « Kenwood TH-D74E » et « Kenwood » et « radioamateur » et (absent) et (absent) et « wimo.com ».
+Cataloguer « Kenwood TM-D750E » et « Kenwood » et « radioamateur » et (absent) et (absent) et « wimo.com ».
+Cataloguer « Kenwood TM-D710G » et « Kenwood » et « radioamateur » et (absent) et (absent) et « wimo.com ».
+Cataloguer « Xiegu G90 » et « Xiegu » et « radioamateur » et « pilotage et son analogique » et « pas de carte son USB ; son par ACC mini-DIN 8 ; jack COM 3,5 mm CI-V (niveaux logiques) ; interface DE-19 ou CE-19 » et « Radioddity ; Digirig ; Passion Radio ».
+Cataloguer « Xiegu X6100 » et « Xiegu » et « radioamateur » et « USB son et pilotage » et « USB-C : son et pilotage (CI-V) ; son Bluetooth ; Wi-Fi » et « Xiegu.eu, fiche X6100 ».
+Cataloguer « Xiegu X6200 » et « Xiegu » et « radioamateur » et « USB son et pilotage » et « USB-C : son et pilotage (CI-V) » et « wiki Nexus Ham Radio (source faible) ».
+Cataloguer « Elecraft KX3 » et « Elecraft » et « radioamateur » et (absent) et (absent) et « qrper.com (sondage POTA 2026) ».
+Cataloguer « Elecraft KX2 » et « Elecraft » et « radioamateur » et (absent) et (absent) et « passion-radio.com (câble Digirig) ».
+Cataloguer « Elecraft K4 » et « Elecraft » et « radioamateur » et (absent) et (absent) et « qrper.com (sondage POTA 2026) ».
+Cataloguer « QRP Labs QMX » et « QRP Labs » et « radioamateur » et « USB son et pilotage » et « USB-C : carte son 24 bits 48 kHz et pilotage (CAT style Kenwood) » et « QRP Labs, manuels d'utilisation 1_00_009 et 1_02_000 ».
+Cataloguer « Baofeng UV-5R » et « Baofeng » et « radioamateur » et (absent) et (absent) et « ebay.com ».
+Remarque : scanners.
+Cataloguer « Uniden SDS100 » et « Uniden » et « scanner » et « son analogique seul » et « jack casque 3,5 mm ; l'USB sert à la programmation et au pilotage, sans son » et « forum RadioReference, réponse de l'éditeur de ProScan (source faible) ».
+Cataloguer « Uniden SDS150 » et « Uniden » et « scanner » et (absent) et (absent) et « uniden.com (annonce du 1er décembre 2025) ».
+Cataloguer « Uniden SDS200 » et « Uniden » et « scanner » et « son réseau » et « EXT SP jack 3,5 mm mono 8 Ω ; son par Ethernet (ProScan) ; USB pour la programmation » et « Scanner Master ; RigPix ; forums RadioReference ».
+Cataloguer « Uniden BCD325P2 » et « Uniden » et « scanner » et (absent) et « USB (câble GPS USB vendu par Uniden) » et « uniden.com ; scannermaster.com ».
+Cataloguer « Uniden BCD996P2 » et « Uniden » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Uniden BCD436HP » et « Uniden » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Uniden BCD536HP » et « Uniden » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Uniden HomePatrol-2 » et « Uniden » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Uniden BC125AT » et « Uniden » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Uniden BCD160DN » et « Uniden » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Uniden BCD260DN » et « Uniden » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Uniden BCT15X » et « Uniden » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Uniden BC355N » et « Uniden » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Uniden BC365CRS » et « Uniden » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Uniden SR30C » et « Uniden » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Uniden BC75XLT » et « Uniden » et « scanner » et (absent) et (absent) et « ebay.com ».
+Cataloguer « Whistler TRX-1 » et « Whistler » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Whistler TRX-2 » et « Whistler » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Whistler WS1010 » et « Whistler » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Whistler WS1025 » et « Whistler » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Whistler WS1040 » et « Whistler » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Whistler WS1065 » et « Whistler » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « Whistler WS1080 » et « Whistler » et « scanner » et (absent) et (absent) et « scannermaster.com ».
+Cataloguer « AOR AR-DV1 » et « AOR » et « scanner » et (absent) et (absent) et « wiki.radioreference.com ».
+Cataloguer « AOR AR-DV10 » et « AOR » et « scanner » et (absent) et (absent) et « ebay.com ; wiki.radioreference.com ».
+Cataloguer « AOR AR5700D » et « AOR » et « scanner » et (absent) et (absent) et « wiki.radioreference.com ».
+Cataloguer « Icom IC-R8600 » et « Icom » et « scanner » et « USB son et pilotage » et « USB : son (AF ou FI 12 kHz) et pilotage CI-V ; jack AF/IF 3,5 mm ; haut-parleur externe ; LAN » et « Icom, manuel IC-R8600 ; guide CI-V (Icom France) ».
+Cataloguer « Icom IC-R30 » et « Icom » et « scanner » et (absent) et (absent) et « wiki.radioreference.com ».
+Remarque : récepteurs SDR.
+Cataloguer « RTL-SDR Blog V4 » et « RTL-SDR Blog » et « récepteur SDR » et « câble audio virtuel » et « USB seulement : le son vient du logiciel SDR, par un câble audio virtuel (BlackHole sous macOS, VB-Cable sous Windows) » et « RTL-SDR Blog, guide V4 ; rtl-sdr.com ».
+Cataloguer « Airspy R2 » et « Airspy » et « récepteur SDR » et (absent) et « USB, sans sortie son : passe par un logiciel SDR » et « de mémoire, non vérifié ».
+Cataloguer « SDRplay RSP1B » et « SDRplay » et « récepteur SDR » et (absent) et « USB, sans sortie son : passe par un logiciel SDR » et « de mémoire, non vérifié ».
+Cataloguer « SDRplay RSPdx » et « SDRplay » et « récepteur SDR » et (absent) et « USB, sans sortie son : passe par un logiciel SDR » et « de mémoire, non vérifié ».
+Remarque : ajoutés d'après le relevé.
+Cataloguer « QRP Labs QMX+ » et « QRP Labs » et « radioamateur » et « USB son et pilotage » et « USB-C : carte son et pilotage, comme le QMX ; 160 à 6 m » et « QRP Labs, page QMX+ ».
+Cataloguer « Xiegu G106 » et « Xiegu » et « radioamateur » et (absent) et « même câblage que le G90 selon Digirig » et « Digirig, jeu de câbles G90 ».
+Cataloguer « Uniden SDS100E » et « Uniden » et « scanner » et « son analogique seul » et « version européenne du SDS100 » et « ProScan (page des nouveautés) ».
+Cataloguer « Uniden SDS200E » et « Uniden » et « scanner » et « son réseau » et « version européenne du SDS200 » et « ProScan (page des nouveautés) ».
+Cataloguer « President Jerry » et « President » et « CB » et (absent) et (absent) et « President Electronics, catalogue ».
+Cataloguer « President Johnny III » et « President » et « CB » et (absent) et (absent) et « President Electronics, catalogue ».
+Cataloguer « Albrecht AE 6490 » et « Albrecht » et « CB » et « son analogique seul » et « jack 3,5 mm mono haut-parleur externe 8 Ω ; micro 6 broches (notice commune avec l'AE 6491) » et « Alan Electronics, notice AE 6490/AE 6491 ».
+Cataloguer « Icom IC-R15 » et « Icom » et « scanner » et (absent) et (absent) et « Icom Japan (liste du pilote USB Icom) ».
 
 Ouvrir l'écran de veille.
