@@ -133,7 +133,7 @@ Remarque : les couleurs et la police du site de Nicolas Seydoux, à l'encre (pou
 Remarque : du cabinet (le cœur et le nom dessiné au départ), repris à chaque lancement ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
 Remarque : la version de Praxis, la même pour tous les cabinets ; la Configuration la montre. Elle change avec chaque
 Remarque : mise à jour livrée, ici et dans « application, version » du projet.grymatelier de chaque version (tests/praxis-versions).
-La version vaut « 2026.10.31 ».
+La version vaut « 2026.11.01 ».
 Les écrans ont la couleur « #2E7770 », le fond « #F7F3EC », la police « polices/Jost.ttf », le logo (le logo du cabinet conservé) et la signature (la signature du cabinet conservé).
 
 Remarque : la copie chiffrée de toute la base, avec ses clés, dans un dossier, nommée par l'application, le jour et l'heure :
@@ -274,7 +274,7 @@ L'écran du patient, « Patient », montre :
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
     côte à côte :
         un bouton « Archiver »,
-        un bouton « Supprimer », à confirmer par « Supprimer ce patient ? Il part dans la corbeille, avec ses séances et ses notes. ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer ce patient ? Il part dans la corbeille, avec ses séances et ses notes. ».
 
 Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
 L'écran de la séance, « Séance », montre :
@@ -295,9 +295,9 @@ L'écran de la séance, « Séance », montre :
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Facture ou quittance »,
-        un bouton « Annuler sa facture », à confirmer par « Annuler la facture de cette séance ? Elle ne se rétablit pas : ses autres séances se refacturent sous un nouveau numéro. Envoyée par voie électronique, son annulation part aussi. » en tapant « annuler », visible si la facture de la séance ouverte est présente,
+        un bouton « Annuler sa facture », destructif, à confirmer par « Annuler la facture de cette séance ? Elle ne se rétablit pas : ses autres séances se refacturent sous un nouveau numéro. Envoyée par voie électronique, son annulation part aussi. » en tapant « annuler », visible si la facture de la séance ouverte est présente,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », à confirmer par « Supprimer cette séance ? Elle part dans la corbeille. »,
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer cette séance ? Elle part dans la corbeille. »,
     côte à côte :
         un bouton « Espèces »,
         un bouton « Twint »,
@@ -321,7 +321,7 @@ L'écran du soin, « Soin », montre :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Nouvel acte »,
-        un bouton « Supprimer », à confirmer par « Supprimer ce soin ? Il part dans la corbeille. ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer ce soin ? Il part dans la corbeille. ».
 
 Remarque : un acte du justificatif de remboursement d'un soin (Tarif 590, 27 octobre 2026) : son code, son libellé, sa quantité
 Remarque : en périodes de 5 minutes et le prix d'une période ; l'anamnèse ne se compte qu'à la première séance.
@@ -334,7 +334,7 @@ L'écran de l'acte, « Acte du Tarif 590 », montre :
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », à confirmer par « Supprimer cet acte ? ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer cet acte ? ».
 
 Remarque : la comptabilité en recettes-dépenses d'une année, celle du jour au départ : ce qui est encaissé (à la date d'encaissement),
 Remarque : ce qui est dépensé, ce qui reste ; une autre année se choisit en haut, pour la déclaration d'impôts de l'année passée.
@@ -362,7 +362,7 @@ L'écran des factures, (le titre des factures de l'année des comptes et de (la 
         une date de virement (date), facultative, avec l'indication « Le jour où le virement est arrivé ; vide : aujourd'hui »,
         un bouton « Payée par virement »,
     côte à côte :
-        un bouton « Annuler la facture », à confirmer par « Annuler la facture choisie ? Elle ne se rétablit pas : on en refait une. Envoyée par voie électronique, son annulation part aussi. » en tapant « annuler »,
+        un bouton « Annuler la facture », destructif, à confirmer par « Annuler la facture choisie ? Elle ne se rétablit pas : on en refait une. Envoyée par voie électronique, son annulation part aussi. » en tapant « annuler »,
         un bouton « Facture électronique »,
         un bouton « Fermer »,
     le texte l'avis des factures.
@@ -451,7 +451,7 @@ L'écran des quittances, (le titre des quittances de l'année des comptes et de 
     le texte « Quittances remises », en petites capitales,
     la liste des quittances conservées dont la date ≥ le début des quittances et la date < la fin des quittances et le nom du patient contient la recherche des quittances, par numéro décroissant, avec le numéro, la date, le nom du patient, le montant et le moyen,
     côte à côte :
-        un bouton « Annuler la quittance », à confirmer par « Annuler la quittance choisie ? Elle ne se rétablit pas : on en refait une. » en tapant « annuler »,
+        un bouton « Annuler la quittance », destructif, à confirmer par « Annuler la quittance choisie ? Elle ne se rétablit pas : on en refait une. » en tapant « annuler »,
         un bouton « Quittance électronique »,
         un bouton « Fermer »,
     le texte l'avis des factures.
@@ -462,7 +462,7 @@ L'écran des frais, ("Frais " suivi de l'année des comptes), montre :
     côte à côte :
         un bouton « Nouveau frais », principal,
         un bouton « Fermer »,
-        un bouton « Supprimer », à confirmer par « Supprimer le frais choisi ? Il part dans la corbeille. ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer le frais choisi ? Il part dans la corbeille. ».
 
 L'écran du frais, « Frais », montre :
     en position libre :
@@ -477,7 +477,7 @@ L'écran du frais, « Frais », montre :
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », à confirmer par « Supprimer ce frais ? Il part dans la corbeille. ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer ce frais ? Il part dans la corbeille. ».
 
 Remarque : la quittance, sur papier : le cabinet et ses numéros, le patient, les séances et leur paiement, le montant reçu ; ce qu'une
 Remarque : assurance complémentaire demande pour rembourser : le thérapeute, la méthode, la date, la durée, le prix.
@@ -645,7 +645,7 @@ L'écran des notes, « Notes confidentielles », montre :
         un bouton « Ajouter », principal,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
         un bouton « Modifier »,
-        un bouton « Supprimer », à confirmer par « Supprimer la note choisie ? ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer la note choisie ? ».
 
 Remarque : la corbeille : ce qui a été supprimé, rétablissable ; un patient revient avec ses séances, ses notes et ses pièces.
 Remarque : « Effacer » supprime définitivement, sans retour (les sauvegardes d'avant le gardent) : un homonyme peut alors s'inscrire.
@@ -655,26 +655,26 @@ L'écran de la corbeille, « Corbeille », montre :
     la liste des patients supprimés, par nom, avec le nom, le téléphone et la localité,
     côte à côte :
         un bouton « Rétablir le patient »,
-        un bouton « Effacer le patient », à confirmer par « Effacer pour toujours le patient choisi, avec ses séances et ses notes ? » en tapant « effacer »,
+        un bouton « Effacer le patient », destructif, à confirmer par « Effacer pour toujours le patient choisi, avec ses séances et ses notes ? » en tapant « effacer »,
     le texte « Séances », en petites capitales,
     la liste des séances supprimées, par date décroissant, avec la date, le nom du patient, le nom du soin, le prix et le paiement,
     côte à côte :
         un bouton « Rétablir la séance »,
-        un bouton « Effacer la séance », à confirmer par « Effacer pour toujours la séance choisie ? » en tapant « effacer »,
+        un bouton « Effacer la séance », destructif, à confirmer par « Effacer pour toujours la séance choisie ? » en tapant « effacer »,
     le texte « Frais », en petites capitales,
     la liste des frais supprimés, par date décroissant, avec la date, le libellé et le montant,
     côte à côte :
         un bouton « Rétablir le frais »,
-        un bouton « Effacer le frais », à confirmer par « Effacer pour toujours le frais choisi ? » en tapant « effacer »,
+        un bouton « Effacer le frais », destructif, à confirmer par « Effacer pour toujours le frais choisi ? » en tapant « effacer »,
     le texte « Soins et rubriques », en petites capitales,
     la liste des soins supprimés, par nom, avec le nom et le tarif,
     côte à côte :
         un bouton « Rétablir le soin »,
-        un bouton « Effacer le soin », à confirmer par « Effacer pour toujours le soin choisi ? » en tapant « effacer »,
+        un bouton « Effacer le soin », destructif, à confirmer par « Effacer pour toujours le soin choisi ? » en tapant « effacer »,
     la liste des rubriques supprimées, par nom, avec le nom,
     côte à côte :
         un bouton « Rétablir la rubrique »,
-        un bouton « Effacer la rubrique », à confirmer par « Effacer pour toujours la rubrique choisie ? » en tapant « effacer »,
+        un bouton « Effacer la rubrique », destructif, à confirmer par « Effacer pour toujours la rubrique choisie ? » en tapant « effacer »,
     le texte « Pièces annulées », en petites capitales,
     la liste des factures supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
     la liste des quittances supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
@@ -705,7 +705,7 @@ L'écran des sauvegardes, « Sauvegardes », montre :
     le texte « Restaurer », en petites capitales,
     une sauvegarde (fichier), facultative, avec l'indication « Un fichier .coffre ; il remplacera toutes les données à la prochaine ouverture, les actuelles gardées à côté. »,
     un ancien mot de passe (texte), facultatif, masqué, avec l'indication « Celui de cette copie, s'il a changé depuis ; vide : l'actuel. », large de 12 caractères,
-    un bouton « Restaurer », à confirmer par « Remplacer toutes les données par cette copie, à la prochaine ouverture ? Les données actuelles sont gardées à côté. »,
+    un bouton « Restaurer », destructif, à confirmer par « Remplacer toutes les données par cette copie, à la prochaine ouverture ? Les données actuelles sont gardées à côté. »,
     le texte « Mot de passe », en petites capitales,
     un mot de passe actuel (texte), facultatif, masqué, large de 12 caractères,
     un nouveau mot de passe (texte), facultatif, masqué, large de 12 caractères,
@@ -758,7 +758,7 @@ L'écran de la rubrique, « Rubrique », montre :
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », à confirmer par « Supprimer cette rubrique ? Elle part dans la corbeille. ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer cette rubrique ? Elle part dans la corbeille. ».
 
 Remarque : les bornes des factures : l'année des comptes, ou toutes les années pendant une recherche.
 Pour borner les factures :
@@ -1210,6 +1210,12 @@ Pour régler une séance et un moyen :
         Clore la séance et « faite ».
     Encaisser la séance et moyen.
     Si moyen ≠ « offert » et la facture de la séance est absente et la quittance immédiate du cabinet conservé, quittancer la séance.
+    Remarque : ce que le clic a fait, dit au pied de l'écran (1er novembre 2026, grammaire 2.71) : la bonne ligne, ou l'erreur à rattraper.
+    La manière vaut « offerte ».
+    Si moyen = « espèces », la manière devient « payée en espèces ».
+    Si moyen = « Twint », la manière devient « payée par Twint ».
+    Si moyen = « virement », la manière devient « payée par virement ».
+    Signaler le nom du patient de la séance suivi de « , » puis la date de la séance suivi de « : » puis la manière suivi de « . ».
 
 Remarque : un virement compte au jour où l'argent est arrivé (31 octobre 2026), qui décide de l'année des comptes : saisi le 4 janvier,
 Remarque : un virement du 29 décembre reste dans l'ancienne année ; vide : aujourd'hui.
@@ -2069,18 +2075,21 @@ Quand on clique sur « Faite » dans l'écran des prévues :
     Si le statut de la séance choisie de l'écran ≠ « prévue », refuser « Seule une séance prévue se dit faite, annulée ou absente ; les autres se modifient dans leur fiche. ».
     Annuler le rappel de la séance choisie de l'écran.
     Clore la séance choisie de l'écran et « faite ».
+    Signaler le nom du patient de la séance choisie de l'écran suivi de « , » puis la date de la séance choisie de l'écran suivi de « : faite. ».
 
 Quand on clique sur « Annulée » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
     Si le statut de la séance choisie de l'écran ≠ « prévue », refuser « Seule une séance prévue se dit faite, annulée ou absente ; les autres se modifient dans leur fiche. ».
     Annuler le rappel de la séance choisie de l'écran.
     Clore la séance choisie de l'écran et « annulée ».
+    Signaler le nom du patient de la séance choisie de l'écran suivi de « , » puis la date de la séance choisie de l'écran suivi de « : annulée. ».
 
 Quand on clique sur « Absence » dans l'écran des prévues :
     Si la séance choisie de l'écran est absente, refuser « Choisis d'abord une séance dans la liste. ».
     Si le statut de la séance choisie de l'écran ≠ « prévue », refuser « Seule une séance prévue se dit faite, annulée ou absente ; les autres se modifient dans leur fiche. ».
     Annuler le rappel de la séance choisie de l'écran.
     Clore la séance choisie de l'écran et « absence ».
+    Signaler le nom du patient de la séance choisie de l'écran suivi de « , » puis la date de la séance choisie de l'écran suivi de « : notée absente. ».
 
 Quand on clique sur « Fermer » dans l'écran des prévues :
     Fermer l'écran.
@@ -2451,7 +2460,7 @@ L'écran de l'assureur, « Assureur », montre :
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », à confirmer par « Supprimer cet assureur ? ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer cet assureur ? ».
 
 Remarque : les ordonnances d'un patient (l'écran des prescriptions : « des ordonnances » se confondrait avec l'écran de l'ordonnance),
 Remarque : la plus récente en tête ; une nouvelle s'ouvre vide, une choisie s'ouvre remplie.
@@ -2477,7 +2486,7 @@ L'écran de l'ordonnance, « Ordonnance », montre :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Voir le scan »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », à confirmer par « Supprimer cette ordonnance ? »,
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer cette ordonnance ? »,
         un bouton « Facturer à l'assurance »,
         un bouton « Annoncer à l'assureur ».
 
@@ -2630,7 +2639,7 @@ L'écran de la position, « Position tarifaire », montre :
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
-        un bouton « Supprimer », à confirmer par « Supprimer cette position tarifaire ? ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer cette position tarifaire ? ».
 
 Remarque : les factures tiers payant, la plus récente en tête ; une facture choisie s'ouvre : ses PDF, et son règlement.
 L'écran des assurances, « Factures aux assurances », montre :
