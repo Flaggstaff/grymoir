@@ -21,9 +21,11 @@
 #include <QStringListModel>
 #include <QTextBlock>
 #include <QToolTip>
+#include <cstdlib>
 
 extern "C" {
 #include "analyseur.h"
+#include "imprimeur.h"
 }
 
 Diagnostic_atelier analyser_source(const QString &source, bool compacte, const QString &chemin, bool *declarations) {
@@ -46,6 +48,30 @@ Diagnostic_atelier analyser_source(const QString &source, bool compacte, const Q
             r.ligne = d.origine_ligne;
             r.colonne = d.origine_colonne;
         }
+    }
+    diagnostic_liberer(&d);
+    programme_liberer(&programme);
+    portee_detruire(portee);
+    return r;
+}
+
+QString forme_canonique(const QString &source, bool compacte, const QString &chemin, QString *erreur) {
+    const QByteArray octets = source.toUtf8();
+    Portee *portee = portee_creer();
+    const QByteArray c = chemin.toUtf8();
+    if (!chemin.isEmpty()) portee_fichier(portee, c.constData());
+    Programme programme = {};
+    Diagnostic d = {};
+    const int ok = compacte ? analyser_compact(octets.constData(), (size_t)octets.size(), portee, &programme, &d)
+                            : analyser(octets.constData(), (size_t)octets.size(), portee, 0, &programme, &d);
+    QString r;
+    if (ok) {
+        char *t = compacte ? imprimer_compact(&programme) : imprimer_litteraire(&programme);
+        r = QString::fromUtf8(t);
+        std::free(t);
+    } else if (erreur) {
+        *erreur = QString::fromUtf8(d.message ? d.message : "Erreur.");
+        if (d.ligne) *erreur = QString::fromUtf8("ligne %1 : %2").arg(d.ligne).arg(*erreur);
     }
     diagnostic_liberer(&d);
     programme_liberer(&programme);

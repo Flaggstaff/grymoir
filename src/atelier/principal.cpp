@@ -225,6 +225,7 @@ int main(int argc, char **argv) {
     }
     // En fenêtre, la plus grande possible : l'écran disponible, sans le plein écran (zoom sous macOS)
     if (QScreen *ecran = f.screen() ? f.screen() : QGuiApplication::primaryScreen()) f.setGeometry(ecran->availableGeometry());
-    f.showMaximized();
+    if (f.reprendre_disposition()) f.show();   // la taille et les panneaux du dernier lancement
+    else f.showMaximized();
     return app.exec();
 }

@@ -296,6 +296,19 @@ La fenêtre d'exécution, donc aussi une application fabriquée, écoute et enre
 
 Sous macOS, l'autorisation du micro se demande à l'ouverture d'un programme qui a un champ ou une zone `(son)` (19 octobre 2026) ; si elle a déjà été refusée, une boîte dit où la rendre et ouvre la page Microphone des réglages. Elle passe par `QMicrophonePermission` (Qt 6.5 et suivants ; Qt 6.4 n'en a pas besoin), et le paquet déclare `NSMicrophoneUsageDescription` : `outils/Info.plist.in`, le modèle de CMake plus cette clé. Une application fabriquée l'hérite de l'atelier qui lui sert de lanceur. Rien n'est vérifié avec un vrai micro : le conteneur où se font les essais n'en a pas, et les essais appellent directement ce que rend la fin d'un enregistrement.
 
+## 5 quindecies. Le menu Édition *(fait le 1er novembre 2026)*
+
+Ce que tout éditeur de code a, et qui manquait dès qu'un projet dépassait quelques centaines de lignes (Praxis : 4'000).
+
+- **Annuler, Rétablir** (Cmd+Z, Maj+Cmd+Z). Dans l'onglet Code, l'éditeur ; dans les onglets Données et Écrans, le dernier geste (la même pile que « Annuler le dernier geste »).
+- **Chercher** (Cmd+F) : une barre sous l'éditeur, avec le nombre trouvé, Suivante (Entrée, Cmd+G) et Précédente (Maj+Entrée, Maj+Cmd+G), en repartant de l'autre bout. « Mot entier » ne coupe pas les accents : « séance » ne trouve pas « séances ». « Majuscules » les respecte. Une occurrence dans un bloc replié, ou caché par le plan, déplie tout. Échap ferme.
+- **Remplacer** (Alt+Cmd+F) : la même barre, avec « Remplacer » (l'occurrence choisie, puis la suivante) et « Tout remplacer », défait par un seul Cmd+Z. Le texte de remplacement s'écrit tel quel (`recherche.cpp`, `remplacer_litteralement`).
+- **Chercher dans le projet** (Maj+Cmd+F) : chaque occurrence des `.grym` et `.grymc` du projet, sous-dossiers compris, sauf `Sauvegardes` ; fichier, ligne, texte ; un double-clic y mène. « Mot entier » est coché d'office : on y cherche d'abord un nom. Le fichier ouvert et modifié est lu tel qu'on le voit. **« Tout remplacer… »** dit combien et où, demande, écrit, puis devient un geste : « Annuler le dernier geste » remet tous les fichiers.
+- **Aller à la ligne** (Cmd+L), **Fichier précédent** (Cmd+[), **Mettre en forme** (Maj+Cmd+I : la forme canonique de `grym formater`, défaite par un Cmd+Z ; refusée, avec la ligne, sur un texte qui ne s'analyse pas).
+- **Taille du texte** : Agrandir (Cmd+=), Réduire (Cmd+−), Taille normale (Cmd+0), de 9 à 32 points, retenue d'un lancement à l'autre.
+- **Ce que l'atelier retient** : le curseur de chaque fichier quitté, pendant la session ; la taille de la fenêtre et des trois séparateurs, d'un lancement à l'autre (au premier, la fenêtre s'ouvre en grand, comme avant).
+- **Aller ailleurs enregistre.** Suivre un résultat de recherche ou revenir au fichier précédent enregistre le fichier quitté sans demander, comme avant un geste. Cliquer un autre fichier dans la liste du projet demande toujours.
+
 ## 6. Questions ouvertes
 
 1. **Positions des boîtes du schéma.** Décidé le 24 septembre 2026 : un fichier texte `projet.grymatelier` à la racine du projet, lisible et versionné, que seul l'atelier lit (`grym` l'ignore). Une ligne par entité, triée par nom (`compositeur : 40, 120`), et le programme principal (`programme principal : partotheque.grym`), qui quitte les réglages de la machine : c'est une information du projet, pas du poste. S'il manque, ou s'il ignore une entité (nouvelle, ou renommée à la main), l'atelier la place lui-même et complète le fichier. Le perdre ne perd jamais rien du programme. Pas de syntaxe GrymoiR : ce n'est pas du programme.
@@ -479,3 +492,4 @@ La fenêtre du mot de passe de la base, à chaque lancement d'une application ch
 | 1.08 | 2026-10-31 | Une liste de choix ou d'objets (un patient, un soin) sans largeur écrite prend 40 caractères, comme un texte, au lieu de toute la colonne ; « large de N caractères » la règle aussi |
 | 1.09 | 2026-10-31 | Grammaire 2.67 : un bouton « à confirmer … si l'écran est modifié » ne pose sa question que si l'état reçu porte la marque ou si une zone a une saisie pas encore envoyée ; Échap vaut un clic sur le bouton « Fermer » visible et actif de l'écran |
 | 1.10 | 2026-11-01 | Grammaire 2.71 : `Signaler` montre son message au pied de la fenêtre d'exécution (`QFrame[message="signal"]`, accent doux), quelques secondes, sans prendre le focus ni les clics ; un refus l'efface |
+| 1.11 | 2026-11-01 | § 5 quindecies : le menu Édition (annuler partout, chercher, remplacer, chercher et remplacer dans le projet en un geste annulable, aller à la ligne, fichier précédent, mise en forme, taille du texte) ; position du curseur par fichier ; disposition de la fenêtre retenue (`recherche.cpp`) |

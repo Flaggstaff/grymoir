@@ -3,6 +3,8 @@
 #define GRYM_ATELIER_FENETRE_H
 
 #include <QMainWindow>
+#include <QHash>
+#include <QRegularExpression>
 
 #include "projet.h"
 #include "reecriture.h"
@@ -25,6 +27,8 @@ class OngletEcrans;
 class QTabWidget;
 class QLabel;
 class QMenu;
+class BarreRecherche;
+class RechercheProjet;
 
 class Fenetre : public QMainWindow {
     Q_OBJECT
@@ -89,6 +93,22 @@ private:
     void nouvelle_entite();
     void annuler_dernier_geste();
     void apres_geste(const QStringList &touches, const QString &choisir_ensuite);
+public:
+    // Le menu Édition (1er novembre 2026) : chercher, remplacer, aller à la ligne, mettre en forme, taille du code
+    BarreRecherche *barre_recherche = nullptr;
+    RechercheProjet *recherche_projet = nullptr;
+    void chercher_dans_le_projet();
+    void remplacer_dans_le_projet(const QRegularExpression &motif, const QString &par);
+    void mettre_en_forme();
+    void aller_a_la_ligne();
+    void taille_du_code(int pas);   // +1, −1 ; 0 : la taille normale (14)
+    void fichier_precedent();       // Cmd+[ : le fichier ouvert juste avant, à la même place
+    void aller_dans(const QString &chemin, int ligne, int colonne);   // ouvre (en enregistrant d'abord), puis y va
+    void garder_disposition();      // la taille de la fenêtre et des panneaux, d'un lancement à l'autre
+    bool reprendre_disposition();   // faux : rien de gardé (premier lancement)
+private:
+    QHash<QString, int> positions;  // le curseur de chaque fichier quitté, pendant la session
+    QStringList historique;         // les fichiers ouverts, du plus ancien au plus récent
 };
 
 #endif

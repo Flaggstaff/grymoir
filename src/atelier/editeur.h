@@ -24,6 +24,10 @@ struct Diagnostic_atelier {
 Diagnostic_atelier analyser_source(const QString &source, bool compacte, const QString &chemin = QString(),
                                    bool *declarations = nullptr);
 
+// La forme canonique d'une source (grammaire, § 12 ; grym formater), remarques comprises ; une chaîne nulle et *erreur si
+// elle ne s'analyse pas (1er novembre 2026).
+QString forme_canonique(const QString &source, bool compacte, const QString &chemin, QString *erreur);
+
 class Editeur : public QPlainTextEdit {
     Q_OBJECT
 public:

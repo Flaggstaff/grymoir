@@ -30,6 +30,11 @@
 #include "importation.h"
 #include "panneau.h"
 #include "secours.h"
+#include "recherche.h"
+#include <QCheckBox>
+#include <QLabel>
+#include <QLineEdit>
+#include <QTreeWidget>
 #include <QInputMethodEvent>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -839,6 +844,73 @@ int main(int argc, char **argv) {
         th.personnaliser({}, {}, false, {});
         th.appliquer(Theme::Clair, "bleue");
         VERIFIER(th.accent() == "bleue" && th.hex("fond") == "#f5efe6");
+    }
+
+    // Chercher et remplacer (1er novembre 2026) : le mot entier tient compte des accents ; « Tout remplacer » se défait d'un
+    // seul Cmd+Z ; la recherche dans le projet lit le texte ouvert et modifié plutôt que le disque
+    {
+        const QRegularExpression m = motif_recherche(QString::fromUtf8("séance"), true, false);
+        VERIFIER(QString::fromUtf8("la séance, Séance").count(m) == 2);
+        VERIFIER(QString::fromUtf8("les séances").count(m) == 0);
+        VERIFIER(QString::fromUtf8("ma_séance").count(m) == 0);
+        VERIFIER(QString::fromUtf8("les séances").count(motif_recherche(QString::fromUtf8("séance"), false, false)) == 1);
+        VERIFIER(QString::fromUtf8("Séance").count(motif_recherche(QString::fromUtf8("séance"), false, true)) == 0);
+        VERIFIER(QString("a.b axb").count(motif_recherche("a.b", false, true)) == 1);   // le point n'est pas un joker
+
+        Editeur ed;
+        ed.charger(QString::fromUtf8("Le prix vaut 3.\nAfficher le prix.\nLe prixfixe vaut 4.\n"), false);
+        BarreRecherche barre(&ed);
+        barre.montrer(true);
+        barre.mot_entier()->setChecked(true);
+        barre.cherche()->setText("prix");
+        VERIFIER(barre.compte()->text() == QString::fromUtf8("2 trouvées"));
+        VERIFIER(ed.textCursor().selectedText() == "prix" && ed.textCursor().blockNumber() == 0);
+        VERIFIER(barre.suivant() && ed.textCursor().blockNumber() == 1);
+        VERIFIER(barre.suivant() && ed.textCursor().blockNumber() == 0);   // au bout, on repart du début
+        VERIFIER(barre.suivant(true) && ed.textCursor().blockNumber() == 1);
+        barre.remplace()->setText("tarif");
+        VERIFIER(barre.remplacer_tout() == 2);
+        VERIFIER(ed.toPlainText() == QString::fromUtf8("Le tarif vaut 3.\nAfficher le tarif.\nLe prixfixe vaut 4.\n"));
+        ed.undo();
+        VERIFIER(ed.toPlainText() == QString::fromUtf8("Le prix vaut 3.\nAfficher le prix.\nLe prixfixe vaut 4.\n"));
+        barre.remplace()->setText("\\1");
+        barre.remplacer_tout();
+        VERIFIER(ed.toPlainText().startsWith(QString::fromUtf8("Le \\1 vaut")));   // remplacé tel quel
+
+        QTemporaryDir d;
+        auto ecrire = [&](const QString &nom, const QByteArray &t) {
+            QDir().mkpath(QFileInfo(d.filePath(nom)).absolutePath());
+            QFile f(d.filePath(nom));
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write(t);
+        };
+        ecrire("a.grym", "Le patient vaut 1.\nAfficher le patient.\n");
+        ecrire("sous/b.grym", "Afficher « patient ».\n");
+        ecrire("Sauvegardes/c.grym", "Afficher « patient ».\n");
+        ecrire("notes.txt", "patient\n");
+        const QStringList fichiers = fichiers_du_projet(d.path());
+        VERIFIER(fichiers.size() == 2);   // ni les sauvegardes, ni ce qui n'est pas du GrymoiR
+        const QRegularExpression p = motif_recherche("patient", true, false);
+        QVector<Occurrence> occ = chercher_dans_projet(d.path(), p);
+        VERIFIER(occ.size() == 3 && occ[0].ligne == 1 && occ[0].colonne == 4 && occ[1].ligne == 2 && occ[2].fichier.endsWith("b.grym"));
+        occ = chercher_dans_projet(d.path(), p, {{QFileInfo(d.filePath("a.grym")).absoluteFilePath(), QString("Rien.\n")}});
+        VERIFIER(occ.size() == 1);
+
+        RechercheProjet rp(d.path(), nullptr);
+        rp.cherche()->setText("patient");
+        rp.chercher_maintenant();
+        VERIFIER(rp.resultats()->topLevelItemCount() == 3 && rp.resultats()->topLevelItem(2)->text(0) == "sous/b.grym");
+        QString vers;
+        int ligne = 0;
+        QObject::connect(&rp, &RechercheProjet::aller, [&](const QString &f, int l, int) { vers = f; ligne = l; });
+        emit rp.resultats()->itemActivated(rp.resultats()->topLevelItem(1), 0);
+        VERIFIER(vers.endsWith("a.grym") && ligne == 2);
+
+        // la mise en forme : la forme canonique, remarques gardées ; refusée sur un texte qui ne s'analyse pas
+        QString erreur;
+        VERIFIER(forme_canonique(QString::fromUtf8("Remarque : x.\nle  prix vaut   3.\nafficher le prix.\n"), false, QString(), &erreur)
+                 == QString::fromUtf8("Remarque : x.\nLe prix vaut 3.\nAfficher le prix.\n"));
+        VERIFIER(forme_canonique(QString::fromUtf8("Le prix vaut.\n"), false, QString(), &erreur).isNull() && erreur.startsWith("ligne 1"));
     }
 
     // « Signaler » (2.71) : après un geste réussi, le message au pied de la fenêtre ; un geste refusé l'efface

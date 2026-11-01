@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, fenêtre principale.
 #include "fenetre.h"
+#include "recherche.h"
 #include "contenu.h"
 #include "importation.h"
 #include "editeur.h"
@@ -132,10 +133,20 @@ Fenetre::Fenetre() {
     connect(erreurs, &QListWidget::itemClicked, erreurs, &QListWidget::itemActivated);
 
     auto *droite = new QSplitter(Qt::Vertical);
-    droite->addWidget(editeur);
+    droite->setObjectName("partage-erreurs");
+    // l'éditeur et, dessous, la barre de recherche (Cmd+F), cachée tant qu'on ne cherche pas
+    auto *avec_barre = new QWidget;
+    auto *pile_editeur = new QVBoxLayout(avec_barre);
+    pile_editeur->setContentsMargins(0, 0, 0, 0);
+    pile_editeur->setSpacing(0);
+    pile_editeur->addWidget(editeur, 1);
+    barre_recherche = new BarreRecherche(editeur);
+    pile_editeur->addWidget(barre_recherche);
+    droite->addWidget(avec_barre);
     droite->addWidget(erreurs);
     droite->setStretchFactor(0, 1);
     auto *centre = new QSplitter;
+    centre->setObjectName("partage-projet");
     centre->addWidget(arbre);
     // Deux onglets : le code, et le schéma des données (A2-a), qui se relit chaque fois qu'on l'ouvre
     schema = new VueSchema;
@@ -299,6 +310,7 @@ Fenetre::Fenetre() {
     onglets = new QTabWidget;
     // le plan du fichier, à gauche du code (24 octobre 2026) : ses déclarations, un filtre, un clic y mène
     auto *code = new QSplitter(Qt::Horizontal);
+    code->setObjectName("partage-plan");
     auto *plan = new PlanDuCode(editeur);
     plan->setMinimumWidth(160);
     code->addWidget(plan);
@@ -433,6 +445,53 @@ Fenetre::Fenetre() {
     a->setShortcut(QKeySequence::Quit);
     a->setMenuRole(QAction::QuitRole);
 
+    // Édition (1er novembre 2026) : ce que tout éditeur de code a ; dans les onglets Données et Écrans, Annuler défait le
+    // dernier geste (le même que « Annuler le dernier geste » de la barre des données)
+    QMenu *edition = menuBar()->addMenu(QString::fromUtf8("Édition"));
+    a = edition->addAction(QString::fromUtf8("Annuler"), this, [this] {
+        if (onglets->currentIndex() == 0) editeur->undo();
+        else annuler_dernier_geste();
+    });
+    a->setShortcut(QKeySequence::Undo);
+    a->setShortcutContext(Qt::WindowShortcut);
+    a = edition->addAction(QString::fromUtf8("Rétablir"), this, [this] { if (onglets->currentIndex() == 0) editeur->redo(); });
+    a->setShortcut(QKeySequence::Redo);
+    edition->addSeparator();
+    auto vers_code = [this] { onglets->setCurrentIndex(0); };
+    a = edition->addAction(QString::fromUtf8("Chercher…"), this, [this, vers_code] {
+        if (fichier.isEmpty()) return;
+        vers_code();
+        barre_recherche->montrer(false);
+    });
+    a->setShortcut(QKeySequence::Find);
+    a = edition->addAction(QString::fromUtf8("Suivante"), this, [this] { if (!barre_recherche->suivant()) QApplication::beep(); });
+    a->setShortcut(QKeySequence::FindNext);
+    a = edition->addAction(QString::fromUtf8("Précédente"), this, [this] { if (!barre_recherche->suivant(true)) QApplication::beep(); });
+    a->setShortcut(QKeySequence::FindPrevious);
+    a = edition->addAction(QString::fromUtf8("Remplacer…"), this, [this, vers_code] {
+        if (fichier.isEmpty()) return;
+        vers_code();
+        barre_recherche->montrer(true);
+    });
+    a->setShortcut(QKeySequence("Ctrl+Alt+F"));
+    a = edition->addAction(QString::fromUtf8("Chercher dans le projet…"), this, &Fenetre::chercher_dans_le_projet);
+    a->setShortcut(QKeySequence("Ctrl+Shift+F"));
+    edition->addSeparator();
+    a = edition->addAction(QString::fromUtf8("Aller à la ligne…"), this, &Fenetre::aller_a_la_ligne);
+    a->setShortcut(QKeySequence("Ctrl+L"));
+    a = edition->addAction(QString::fromUtf8("Fichier précédent"), this, &Fenetre::fichier_precedent);
+    a->setShortcut(QKeySequence("Ctrl+["));
+    a = edition->addAction(QString::fromUtf8("Mettre en forme"), this, &Fenetre::mettre_en_forme);
+    a->setShortcut(QKeySequence("Ctrl+Shift+I"));
+    a->setStatusTip(QString::fromUtf8("La forme canonique du fichier (grym formater) ; Cmd+Z la défait"));
+    edition->addSeparator();
+    a = edition->addAction(QString::fromUtf8("Agrandir le texte"), this, [this] { taille_du_code(+1); });
+    a->setShortcuts({QKeySequence::ZoomIn, QKeySequence("Ctrl+=")});
+    a = edition->addAction(QString::fromUtf8("Réduire le texte"), this, [this] { taille_du_code(-1); });
+    a->setShortcut(QKeySequence::ZoomOut);
+    a = edition->addAction(QString::fromUtf8("Taille normale"), this, [this] { taille_du_code(0); });
+    a->setShortcut(QKeySequence("Ctrl+0"));
+
     QMenu *programme = menuBar()->addMenu("Programme");
     action_lancer = programme->addAction("Lancer", this, &Fenetre::lancer);
     action_lancer->setShortcut(QKeySequence("Ctrl+R"));
@@ -516,6 +575,7 @@ Fenetre::Fenetre() {
     connect(editeur->document(), &QTextDocument::modificationChanged, this, &Fenetre::mettre_a_jour_titre);
     editeur->setEnabled(false);
     resize(1200, 780);
+    if (QSettings().contains("taille du code")) taille_du_code(-100);   // relit la taille retenue, sans la changer
     mettre_a_jour_titre();
 }
 
@@ -608,9 +668,20 @@ void Fenetre::ouvrir_fichier(const QString &chemin) {
         QMessageBox::warning(this, "Atelier", QString("« %1 » n'est pas en UTF-8.").arg(QFileInfo(chemin).fileName()));
         return;
     }
+    if (!fichier.isEmpty()) positions[QFileInfo(fichier).absoluteFilePath()] = editeur->textCursor().position();
     fichier = chemin;
+    const QString absolu = QFileInfo(chemin).absoluteFilePath();
+    historique.removeAll(absolu);
+    historique << absolu;
     editeur->setEnabled(true);
     editeur->charger(texte, chemin.endsWith(".grymc", Qt::CaseInsensitive), chemin);
+    if (positions.contains(absolu)) {   // revenu dans un fichier : le curseur où on l'avait laissé
+        QTextCursor c = editeur->textCursor();
+        c.setPosition(qMin(positions.value(absolu), (int)editeur->document()->characterCount() - 1));
+        editeur->setTextCursor(c);
+        editeur->centerCursor();
+    }
+    if (barre_recherche) barre_recherche->hide();
     arbre->setCurrentIndex(modele->index(chemin));
     mettre_a_jour_titre();
 }
@@ -641,6 +712,7 @@ void Fenetre::closeEvent(QCloseEvent *e) {
         e->ignore();
         return;
     }
+    garder_disposition();
     if (execution) {   // l'atelier ne laisse pas un programme orphelin : il l'arrête, qui annule
         disconnect(execution, nullptr, this, nullptr);
         execution->terminate();
@@ -1071,4 +1143,161 @@ void Fenetre::supprimer_fichier_choisi() {
     rafraichir_schema();
     mettre_a_jour_titre();
     statusBar()->showMessage(avis, 8000);
+}
+
+// --- Édition (1er novembre 2026) ---
+
+void Fenetre::aller_dans(const QString &chemin, int ligne, int colonne) {
+    const QString absolu = QFileInfo(chemin).absoluteFilePath();
+    if (absolu != QFileInfo(fichier).absoluteFilePath()) {
+        // aller ailleurs n'est pas quitter son travail : on enregistre sans demander, comme avant un geste
+        if (!fichier.isEmpty() && editeur->document()->isModified() && !enregistrer()) return;
+        ouvrir_fichier(absolu);
+        if (absolu != QFileInfo(fichier).absoluteFilePath()) return;
+    }
+    onglets->setCurrentIndex(0);
+    QTextBlock b = editeur->document()->findBlockByNumber(ligne - 1);
+    if (!b.isValid()) return;
+    if (!b.isVisible()) editeur->deplier_tout();
+    QTextCursor c(b);
+    c.setPosition(b.position() + qMin(qMax(colonne - 1, 0), (int)b.length() - 1));
+    editeur->setTextCursor(c);
+    editeur->centerCursor();
+    editeur->setFocus();
+}
+
+void Fenetre::chercher_dans_le_projet() {
+    if (projet.isEmpty()) return;
+    if (!recherche_projet || recherche_projet->property("projet").toString() != projet) {
+        delete recherche_projet;
+        recherche_projet = new RechercheProjet(projet, [this] {
+            QMap<QString, QString> m;   // le fichier ouvert et modifié : ce qu'on voit, pas ce qui est sur le disque
+            if (!fichier.isEmpty() && editeur->document()->isModified())
+                m.insert(QFileInfo(fichier).absoluteFilePath(), editeur->toPlainText());
+            return m;
+        }, this);
+        recherche_projet->setProperty("projet", projet);
+        connect(recherche_projet, &RechercheProjet::aller, this, &Fenetre::aller_dans);
+        connect(recherche_projet, &RechercheProjet::remplacer_tout, this, &Fenetre::remplacer_dans_le_projet);
+    }
+    const QString choisi = editeur->textCursor().selectedText();
+    if (!choisi.isEmpty() && !choisi.contains(QChar(0x2029))) recherche_projet->cherche()->setText(choisi);
+    recherche_projet->show();
+    recherche_projet->raise();
+    recherche_projet->activateWindow();
+    recherche_projet->cherche()->setFocus();
+    recherche_projet->cherche()->selectAll();
+    if (!recherche_projet->cherche()->text().isEmpty()) recherche_projet->chercher_maintenant();
+}
+
+void Fenetre::remplacer_dans_le_projet(const QRegularExpression &motif, const QString &par) {
+    if (!fichier.isEmpty() && editeur->document()->isModified() && !enregistrer()) return;
+    QMap<QString, QString> nouveaux;
+    QMap<QString, QByteArray> anciens;
+    int total = 0;
+    QStringList detail;
+    for (const QString &f : fichiers_du_projet(projet)) {
+        QFile d(f);
+        if (!d.open(QIODevice::ReadOnly)) continue;
+        const QByteArray octets = d.readAll();
+        QString t = QString::fromUtf8(octets);
+        int n = 0;
+        t = remplacer_litteralement(t, motif, par, &n);
+        if (!n) continue;
+        anciens.insert(f, octets);
+        nouveaux.insert(f, t);
+        total += n;
+        detail << QString::fromUtf8("%1 : %2").arg(QDir(projet).relativeFilePath(f)).arg(n);
+    }
+    if (!total) return;
+    QWidget *parent = recherche_projet && recherche_projet->isVisible() ? static_cast<QWidget *>(recherche_projet) : this;
+    const auto r = QMessageBox::question(parent, QString::fromUtf8("Tout remplacer"),
+        QString::fromUtf8("Remplacer %1 occurrence%2 dans %3 fichier%4 ?\n\n%5\n\n"
+                          "« Annuler le dernier geste » (Cmd+Z dans les onglets Données et Écrans) les remet.")
+            .arg(total).arg(total > 1 ? "s" : "").arg(nouveaux.size()).arg(nouveaux.size() > 1 ? "s" : "")
+            .arg(detail.join("\n")),
+        QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+    if (r != QMessageBox::Yes) return;
+    Geste g;
+    g.description = QString::fromUtf8("Remplacer dans le projet (%1)").arg(total);
+    g.avant = anciens;
+    QStringList touches;
+    for (auto it = nouveaux.constBegin(); it != nouveaux.constEnd(); ++it) {
+        QSaveFile s(it.key());
+        if (!s.open(QIODevice::WriteOnly) || s.write(it.value().toUtf8()) < 0 || !s.commit()) {
+            QMessageBox::warning(this, "Atelier", QString::fromUtf8("« %1 » n'a pas pu être écrit ; les autres l'ont été.").arg(it.key()));
+            continue;
+        }
+        touches << it.key();
+    }
+    gestes.append(g);
+    action_annuler_geste->setEnabled(true);
+    action_annuler_geste->setToolTip(QString::fromUtf8("Annuler : ") + g.description);
+    apres_geste(touches, entite_choisie);
+    statusBar()->showMessage(QString::fromUtf8("%1 remplacement%2.").arg(total).arg(total > 1 ? "s" : ""), 5000);
+}
+
+void Fenetre::mettre_en_forme() {
+    if (fichier.isEmpty()) return;
+    const bool compacte = fichier.endsWith(".grymc", Qt::CaseInsensitive);
+    QString erreur;
+    const QString canon = forme_canonique(editeur->toPlainText(), compacte, fichier, &erreur);
+    if (canon.isNull()) {
+        statusBar()->showMessage(QString::fromUtf8("Pas de mise en forme : ") + erreur, 6000);
+        return;
+    }
+    if (canon == editeur->toPlainText()) { statusBar()->showMessage(QString::fromUtf8("Déjà en forme."), 3000); return; }
+    const int ligne = editeur->textCursor().blockNumber() + 1;
+    QTextCursor c(editeur->document());
+    c.beginEditBlock();   // un seul Cmd+Z la défait
+    c.select(QTextCursor::Document);
+    c.insertText(canon);
+    c.endEditBlock();
+    editeur->aller_a(ligne, 1);
+    statusBar()->showMessage(QString::fromUtf8("Mis en forme."), 3000);
+}
+
+void Fenetre::aller_a_la_ligne() {
+    if (fichier.isEmpty()) return;
+    bool ok = false;
+    const int n = editeur->document()->blockCount();
+    const int l = QInputDialog::getInt(this, QString::fromUtf8("Aller à la ligne"), QString::fromUtf8("Ligne (1 à %1) :").arg(n),
+                                       editeur->textCursor().blockNumber() + 1, 1, n, 1, &ok);
+    if (ok) aller_dans(fichier, l, 1);
+}
+
+void Fenetre::taille_du_code(int pas) {
+    QSettings r;
+    int t = r.value("taille du code", 14).toInt();
+    if (pas == 0) t = 14;
+    else if (pas > -100) t = qBound(9, t + pas, 32);
+    r.setValue("taille du code", t);
+    editeur->setFont(Theme::courant().police_code(t));
+}
+
+void Fenetre::fichier_precedent() {
+    const QString ici = QFileInfo(fichier).absoluteFilePath();
+    for (int k = historique.size() - 1; k >= 0; k--) {
+        const QString f = historique.at(k);
+        if (f == ici || !QFileInfo::exists(f)) continue;
+        if (!fichier.isEmpty() && editeur->document()->isModified() && !enregistrer()) return;
+        ouvrir_fichier(f);
+        return;
+    }
+    QApplication::beep();
+}
+
+void Fenetre::garder_disposition() {
+    QSettings r;
+    r.setValue("fenêtre/géométrie", saveGeometry());
+    for (QSplitter *s : findChildren<QSplitter *>())
+        if (s->objectName().startsWith("partage-")) r.setValue("fenêtre/" + s->objectName(), s->saveState());
+}
+
+bool Fenetre::reprendre_disposition() {
+    QSettings r;
+    for (QSplitter *s : findChildren<QSplitter *>())
+        if (s->objectName().startsWith("partage-") && r.contains("fenêtre/" + s->objectName()))
+            s->restoreState(r.value("fenêtre/" + s->objectName()).toByteArray());
+    return r.contains("fenêtre/géométrie") && restoreGeometry(r.value("fenêtre/géométrie").toByteArray());
 }
