@@ -1429,6 +1429,38 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* 2.74, 2.75 : l'agenda sans JavaScript ; un créneau ; « Déplacer » puis un créneau dépose la ligne mise de côté */
+        const char *src = "Une séance, conservée, a : une date (date), une heure (heure), une durée (nombre entier), un nom (texte).\n"
+                          "La s vaut une nouvelle séance :\n    La date vaut 02.11.2026.\n    L'heure vaut 09:00.\n    La durée vaut 60.\n"
+                          "    Le nom vaut « Anne ».\nConserver la s.\n"
+                          "La grille vaut « 02.11.2026|08.11.2026|1 08:00-12:00|3 08:00-12:00 ».\n"
+                          "L'écran x montre :\n    la liste des séances conservées, par date puis heure, avec la date, l'heure, la durée et le nom, "
+                          "en agenda selon la grille,\n    un bouton « Fermer ».\n"
+                          "Quand on choisit un créneau dans l'écran x :\n"
+                          "    Signaler « créneau » puis la date d'arrivée de l'écran puis l'heure d'arrivée de l'écran.\n"
+                          "Quand on déplace une séance dans l'écran x :\n"
+                          "    La date de la séance devient la date d'arrivée de l'écran.\n"
+                          "    L'heure de la séance devient l'heure d'arrivée de l'écran.\n"
+                          "    Signaler « déplacée » puis la date de la séance puis l'heure de la séance.\n"
+                          "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&creneau=0%7C02.11.2026%7C10%3A30"), get("/"), evenement("q=2&deplacer=0.0"), get("/"),
+                 evenement("q=2&creneau=0%7C04.11.2026%7C14%3A15"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<div class=\"agenda\"");
+        CONTIENT(sc.reponses[0], ">lun. 2.11.</div>");
+        CONTIENT(sc.reponses[0], ">mer. 4.11.</div>");
+        NE_CONTIENT_PAS(sc.reponses[0], ">mar. 3.11.</div>");   /* sans plage : pas montré */
+        CONTIENT(sc.reponses[0], "name=\"creneau\" value=\"0|02.11.2026|08:00\"");
+        CONTIENT(sc.reponses[0], "class=\"creneau hors\" name=\"creneau\" value=\"0|02.11.2026|07:00\"");
+        CONTIENT(sc.reponses[0], "name=\"choix\" value=\"0.0\"><span class=\"nom\">09:00 Anne");
+        CONTIENT(sc.reponses[2], "<p class=\"signal\" role=\"status\">créneau 02.11.2026 10:30</p>");
+        CONTIENT(sc.reponses[4], "Déplacement : choisis un quart d'heure.");
+        NE_CONTIENT_PAS(sc.reponses[4], "class=\"signal\"");   /* le message d'avant ne reste pas */
+        CONTIENT(sc.reponses[6], "<p class=\"signal\" role=\"status\">déplacée 04.11.2026 14:15</p>");
+        liberer(&sc);
+    }
+
     {   /* 2.16 : la signature en bandeau, servie à /signature ; le logo ne se pose plus près du titre */
         const char *src = "Les écrans ont le logo « exemples/pixel.png » et la signature « vendor/lucide/check.svg ».\n"
                           "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"

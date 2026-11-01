@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.76 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
+Version 2.77 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2431,7 +2431,7 @@ Quand on déplace une séance dans l'écran de l'agenda :
 - **La grille** est une valeur, relue avant chaque attente comme un texte calculé (2.24) : `premier jour|dernier jour|plages` ; chaque plage, `n hh:mm-hh:mm [hh:mm-hh:mm …]`, n de 1 (lundi) à 7 (dimanche). Un jour de la période sans plage n'est pas montré ; sans aucune plage, tous les jours le sont, sans rien griser. Hors des plages, la colonne est hachurée. Six semaines au plus. Les heures vont de 7 h à 20 h, élargies aux plages et aux objets.
 - **`Quand on choisit une séance`** : un clic sur son bloc. **`Quand on déplace une séance dans l'écran X :`** : le bloc glissé puis lâché ailleurs, au quart d'heure ; dans le corps, `la date d'arrivée de l'écran` et `l'heure d'arrivée de l'écran`. Le programme décide : écrire la date et l'heure, refuser (`Refuser « … »` : le bloc revient), ou demander.
 - **`Quand on choisit un créneau dans l'écran X :`** *(2.75)* : un clic dans la grille, hors des objets ; `la date d'arrivée` et `l'heure d'arrivée` de l'écran disent le jour et le quart d'heure (celui d'avant le clic). Sans paramètre. Une entité nommée « créneau » garde la forme ordinaire de `Quand on choisit un …`. Forme compacte : `_quand _choisit _un créneau _dans …`.
-- Dans l'atelier et les applications fabriquées. **Le navigateur** montre la liste ordinaire, sans glisser. L'onglet Écrans de l'atelier la montre en grille, sur une semaine de travail d'exemple.
+- Dans l'atelier et les applications fabriquées, à la souris. **Le navigateur**, sans JavaScript : la même grille en quarts d'heure ; un clic sur un quart d'heure est un créneau ; un objet a son bouton « Déplacer », qui le met de côté, et le quart d'heure cliqué ensuite le dépose (`Quand on déplace …`) ; « Annuler » le remet. L'onglet Écrans de l'atelier la montre en grille, sur une semaine de travail d'exemple.
 - Forme compacte : `_liste séance _conservé _avec date ; heure ; durée _agenda grille` ; `_quand _déplace _une séance _dans de_l_agenda`.
 
 ## Journal des révisions
@@ -2615,3 +2615,4 @@ Quand on déplace une séance dans l'écran de l'agenda :
 | 2.74 | 2026-11-01 | Nouveau § 22.24 : `, en agenda selon …`, une liste en grille horaire (date, heure, durée ; la grille : jours et plages) ; `Quand on déplace un … dans l'écran …`, avec `la date d'arrivée` et `l'heure d'arrivée` de l'écran |
 | 2.75 | 2026-11-01 | § 22.24 : `Quand on choisit un créneau dans l'écran …`, un clic dans un agenda hors des objets, avec la date et l'heure d'arrivée |
 | 2.76 | 2026-11-01 | § 13.2 : « un nouvel » aussi devant un h muet (« un nouvel horaire »), comme l'imprimeur l'écrivait déjà ; un h aspiré garde « un nouveau » (« un nouveau hangar ») ; « un nouveau horaire » reste accepté |
+| 2.77 | 2026-11-01 | § 22.24 : l'agenda dans le navigateur, sans JavaScript : la grille en quarts d'heure, un clic pour un créneau, « Déplacer » puis un quart d'heure pour déposer |

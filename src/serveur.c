@@ -6,6 +6,7 @@
 #endif
 
 #include "serveur.h"
+#include "date.h"
 #include "teinte.h"
 #include "vm.h"
 #include "types.h"
@@ -83,6 +84,8 @@ typedef struct {
     char **erreurs_zones;      /* n messages, NULL pour une zone sans faute ; jusqu'au prochain événement (§ 22.6) */
     size_t a_confirmer;        /* k + 1 : le bouton k « à confirmer » attend sa confirmation, montrée en haut ; 0 sinon (2.65) */
     int mot_faux;              /* la confirmation est revenue sans le bon mot (2.65) */
+    char **grilles;            /* agenda (2.74) : sa grille, telle que la machine la donne avant chaque attente */
+    long *deplace;             /* agenda : la ligne mise de côté par « Déplacer », que le prochain créneau dépose ; −1 */
 } EcranWeb;
 
 static void erreurs_vider(EcranWeb *e) {
@@ -504,6 +507,17 @@ static char *feuille_de_style(const Serveur *s) {
         variables(&c, 1, a, s);
         chaine_ajouter(&c, "}");
     }
+    chaine_ajouter(&c,   /* l'agenda (2.74), à part : une seule chaîne passerait la longueur que C99 garantit */
+    ".agenda{display:grid;gap:0;border:1px solid var(--bordure);border-radius:8px;overflow-x:auto;background:var(--surface)}"
+    ".agenda .jour{padding:6px;text-align:center;font-weight:600;border-bottom:1px solid var(--bordure)}"
+    ".agenda .heure{font-size:12px;color:var(--texte-2);text-align:right;padding-right:6px;border-top:1px solid var(--separateur)}"
+    ".agenda button.creneau{margin:0;padding:0;min-height:0;border:0;border-radius:0;border-left:1px solid var(--separateur);"
+    "background:transparent;cursor:pointer}.agenda button.creneau:hover{background:var(--accent-doux)}"
+    ".agenda button.creneau.hors{background:repeating-linear-gradient(135deg,var(--separateur) 0 4px,transparent 4px 8px)}"
+    ".agenda .rdv{z-index:1;display:flex;flex-direction:column;margin:1px 3px;overflow:hidden}"
+    ".agenda .rdv button.carte{flex:1;min-height:0;padding:2px 6px;text-align:left;border:1px solid var(--accent);background:var(--fond)}"
+    ".agenda .rdv button.deplacer{margin:0;min-height:0;padding:0 6px;font-size:12px;font-weight:400}"
+    ".agenda .rdv.pris button.carte{outline:2px dashed var(--accent)}.deplacement{color:var(--texte-2)}");
     chaine_ajouter(&c,
     "body{margin:0;background:var(--fond);color:var(--texte);"
     "font:14px/20px \"Atkinson Hyperlegible Next\",system-ui,sans-serif}"
@@ -1244,10 +1258,133 @@ static void cartes(Chaine *c, const EcranWeb *e, size_t k) {
     chaine_ajouter(c, "</div>\n");
 }
 
+/* L'agenda (2.74), sans JavaScript : une grille de quarts d'heure, une colonne par jour montré. Chaque quart d'heure est un
+ * bouton (« creneau=k|JJ.MM.AAAA|HH:MM ») : un clic choisit le créneau, ou dépose la ligne mise de côté par « Déplacer » ;
+ * chaque objet un bouton de choix, avec son bouton « Déplacer ». */
+static int jour_semaine(long j) {   /* 1 lundi … 7 dimanche ; le 2 novembre 2026 est un lundi */
+    const long d = (j - date_jours(2026, 11, 2)) % 7;
+    return (int)((d + 7) % 7) + 1;
+}
+
+static long lire_jour(const char *t) {   /* « 02.11.2026 » ; −1 si illisible */
+    int j = 0, m = 0, a = 0;
+    if (!t || sscanf(t, "%d.%d.%d", &j, &m, &a) != 3 || m < 1 || m > 12 || j < 1 || j > 31 || a < 1) return -1;
+    return date_jours(a, m, j);
+}
+
+static void agenda(Chaine *c, const EcranWeb *e, size_t k) {
+    const ElementEcran *el = &e->el[k];
+    const size_t nc = el->nb_colonnes;
+    const char *g = e->grilles[k] ? e->grilles[k] : "";
+    long premier = lire_jour(g), dernier = -1;
+    const char *b = strchr(g, '|');
+    if (b) dernier = lire_jour(b + 1);
+    if (premier < 0) premier = date_aujourdhui();
+    if (dernier < premier) dernier = premier;
+    if (dernier - premier > 41) dernier = premier + 41;
+    int plages[8][8][2];   /* jour de la semaine → au plus 8 plages, en minutes */
+    int nb[8] = {0};
+    int une_plage = 0, h0 = 7 * 60, h1 = 20 * 60;
+    for (const char *p = b ? strchr(b + 1, '|') : NULL; p; p = strchr(p + 1, '|')) {
+        char *f = NULL;
+        const long js = strtol(p + 1, &f, 10);
+        if (js < 1 || js > 7) continue;
+        int ha, ma, hb, mb, lu = 0;
+        for (const char *q = f; sscanf(q, " %d:%d-%d:%d%n", &ha, &ma, &hb, &mb, &lu) == 4; q += lu) {
+            const int a = ha * 60 + ma, z = hb * 60 + mb;
+            if (a < z && nb[js] < 8) { plages[js][nb[js]][0] = a; plages[js][nb[js]][1] = z; nb[js]++; une_plage = 1; }
+            if (a < h0) h0 = a / 60 * 60;
+            if (z > h1) h1 = (z + 59) / 60 * 60;
+        }
+    }
+    long jours[42];
+    int nj = 0;
+    for (long j = premier; j <= dernier && nj < 42; j++)
+        if (!une_plage || nb[jour_semaine(j)]) jours[nj++] = j;
+    if (!nj) { chaine_ajouter(c, "<p class=\"vide\">Aucun jour travaillé dans cette période.</p>\n"); return; }
+    for (size_t r = 0; r < e->nb_lignes[k] && nc >= 2; r++) {   /* les heures s'élargissent aux objets */
+        char *const *l = &e->cellules[k][r * nc];
+        int hh, mm;
+        if (sscanf(l[1][0] == '\x1d' ? l[1] + 2 : l[1], "%d:%d", &hh, &mm) != 2) continue;
+        const int d = nc > 2 ? atoi(l[2][0] == '\x1d' ? l[2] + 2 : l[2]) : 0;
+        if (hh * 60 < h0) h0 = hh * 60;
+        if (hh * 60 + mm + (d > 0 ? d : 60) > h1) h1 = ((hh * 60 + mm + (d > 0 ? d : 60)) + 59) / 60 * 60;
+    }
+    if (h1 > 24 * 60) h1 = 24 * 60;
+    const int rangs = (h1 - h0) / 15;
+    if (e->deplace[k] >= 0 && (size_t)e->deplace[k] < e->nb_lignes[k]) {
+        char *v = grym_formater("<p class=\"deplacement\" role=\"status\">Déplacement : choisis un quart d'heure. "
+                                "<button name=\"annuler_deplacement\" value=\"%lu\">Annuler</button></p>", (unsigned long)k);
+        chaine_ajouter(c, v);
+        free(v);
+    }
+    char *v = grym_formater("<div class=\"agenda\" style=\"grid-template-columns:3.5rem repeat(%d,minmax(6rem,1fr));"
+                            "grid-template-rows:auto repeat(%d,0.8rem)\">", nj, rangs);
+    chaine_ajouter(c, v);
+    free(v);
+    static const char *const NOMS[] = {"", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."};
+    for (int q = 0; q < nj; q++) {
+        int a, m, j;
+        date_civile(jours[q], &a, &m, &j);
+        v = grym_formater("<div class=\"jour\" style=\"grid-column:%d;grid-row:1\">%s %d.%d.</div>", q + 2,
+                          NOMS[jour_semaine(jours[q])], j, m);
+        chaine_ajouter(c, v);
+        free(v);
+    }
+    for (int t = 0; t < rangs; t++) {
+        const int min = h0 + t * 15;
+        if (min % 60 == 0) {
+            v = grym_formater("<div class=\"heure\" style=\"grid-column:1;grid-row:%d/span 4\">%02d:00</div>", t + 2, min / 60);
+            chaine_ajouter(c, v);
+            free(v);
+        }
+        for (int q = 0; q < nj; q++) {
+            const int js = jour_semaine(jours[q]);
+            int dedans = !une_plage;
+            for (int p = 0; p < nb[js]; p++) dedans |= min >= plages[js][p][0] && min < plages[js][p][1];
+            char *d = date_suisse(jours[q]);
+            v = grym_formater("<button class=\"creneau%s\" name=\"creneau\" value=\"%lu|%s|%02d:%02d\" style=\"grid-column:%d;grid-row:%d\" "
+                              "aria-label=\"%s %02d:%02d\"></button>", dedans ? "" : " hors", (unsigned long)k, d, min / 60, min % 60,
+                              q + 2, t + 2, d, min / 60, min % 60);
+            free(d);
+            chaine_ajouter(c, v);
+            free(v);
+        }
+    }
+    for (size_t r = 0; r < e->nb_lignes[k] && nc >= 2; r++) {
+        char *const *l = &e->cellules[k][r * nc];
+        if (l[0][0] == '\x1c') continue;
+        const long j = lire_jour(l[0][0] == '\x1d' ? l[0] + 2 : l[0]);
+        int hh, mm;
+        if (j < 0 || sscanf(l[1][0] == '\x1d' ? l[1] + 2 : l[1], "%d:%d", &hh, &mm) != 2) continue;
+        int q = 0;
+        while (q < nj && jours[q] != j) q++;
+        if (q == nj) continue;
+        const int d = nc > 2 ? atoi(l[2][0] == '\x1d' ? l[2] + 2 : l[2]) : 0;
+        const int debut = (hh * 60 + mm - h0) / 15, duree = ((d > 0 ? d : 60) + 14) / 15;
+        v = grym_formater("<div class=\"rdv%s\" style=\"grid-column:%d;grid-row:%d/span %d\"><button class=\"carte\" name=\"choix\" "
+                          "value=\"%lu.%lu\"><span class=\"nom\">%02d:%02d ", e->deplace[k] == (long)r ? " pris" : "", q + 2, debut + 2,
+                          duree < 1 ? 1 : duree, (unsigned long)k, (unsigned long)r, hh, mm);
+        chaine_ajouter(c, v);
+        free(v);
+        for (size_t x = 3; x < nc; x++) {
+            if (!l[x][0]) continue;
+            if (x > 3) chaine_ajouter(c, x == 4 ? "</span><span class=\"detail\">" : " · ");
+            cellule(c, l[x]);
+        }
+        chaine_ajouter(c, "</span></button>");
+        v = grym_formater("<button class=\"deplacer\" name=\"deplacer\" value=\"%lu.%lu\">Déplacer</button></div>", (unsigned long)k, (unsigned long)r);
+        chaine_ajouter(c, v);
+        free(v);
+    }
+    chaine_ajouter(c, "</div>\n");
+}
+
 static void liste(Chaine *c, const EcranWeb *e, size_t k) {
     const ElementEcran *el = &e->el[k];
     const size_t nc = el->nb_colonnes;
     if (el->cartes) { cartes(c, e, k); return; }
+    if (el->agenda) { agenda(c, e, k); return; }
     chaine_ajouter(c, "<div class=\"liste\"><table class=\"liste\"><thead><tr><th class=\"selection\"></th>");
     for (size_t q = 0; q < nc; q++) {
         chaine_ajouter(c, "<th>");
@@ -1804,6 +1941,33 @@ static int evenements_de(Serveur *s, Envoi *env) {
             Evenement ev = { EVENEMENT_CLIC, (size_t)k, 0, NULL, choisies(e), e->n, NULL, 0 };
             file_ajouter(s, ev);
         }
+    } else if (envoi_partie(env, "deplacer") && !envoi_partie(env, "deplacer")->fichier) {
+        /* « Déplacer » (2.74) : la ligne mise de côté ; le prochain créneau la déposera ; aucun événement */
+        Partie *pd = envoi_partie(env, "deplacer");
+        unsigned long k = strtoul(pd->valeur, &fin, 10), r = 0;
+        if (fin != pd->valeur && *fin == '.') {
+            const char *d = fin + 1;
+            r = strtoul(d, &fin, 10);
+            if (fin != d && !*fin && k < e->n && e->el[k].agenda && r < e->nb_lignes[k]) {
+                e->deplace[k] = (long)r;
+                free(e->signal);   /* le message du geste d'avant ne reste pas au-dessus de celui du déplacement */
+                e->signal = NULL;
+            }
+        }
+    } else if (envoi_partie(env, "annuler_deplacement")) {
+        for (size_t k = 0; k < e->n; k++) e->deplace[k] = -1;
+    } else if (envoi_partie(env, "creneau") && !envoi_partie(env, "creneau")->fichier) {
+        /* « k|JJ.MM.AAAA|HH:MM » : un créneau (2.75), ou le dépôt de la ligne mise de côté (2.74) */
+        Partie *pk = envoi_partie(env, "creneau");
+        unsigned long k = strtoul(pk->valeur, &fin, 10);
+        if (fin != pk->valeur && *fin == '|' && k < e->n && e->el[k].agenda && strchr(fin + 1, '|')) {
+            const long r = e->deplace[k];
+            e->deplace[k] = -1;
+            const int depot = r >= 0 && (size_t)r < e->nb_lignes[k];
+            Evenement ev = { depot ? EVENEMENT_DEPLACEMENT : EVENEMENT_CRENEAU, (size_t)k, depot ? (size_t)r : 0,
+                             grym_dupliquer(fin + 1), choisies(e), e->n, NULL, 0 };
+            file_ajouter(s, ev);
+        }
     } else if (px && !px->fichier) {   /* « k.r » : la ligne r de la liste k */
         unsigned long k = strtoul(px->valeur, &fin, 10), r = 0;
         int bon = fin != px->valeur && *fin == '.';
@@ -2232,6 +2396,9 @@ static void ecran_liberer(EcranWeb *e) {
     free(e->etats);
     free(e->versions);
     free(e->onglets);
+    for (size_t k = 0; e->grilles && k < e->n; k++) free(e->grilles[k]);
+    free(e->grilles);
+    free(e->deplace);
     free(e->titre);
     free(e->erreur);
     free(e->signal);
@@ -2278,6 +2445,10 @@ static void serveur_ecran_ouvrir(void *contexte, Chaine *sortie, const char *tit
     memset(e->etats, 0, m);
     e->onglets = grym_allouer(m * sizeof *e->onglets);
     memset(e->onglets, 0, m * sizeof *e->onglets);
+    e->grilles = grym_allouer(m * sizeof *e->grilles);
+    memset(e->grilles, 0, m * sizeof *e->grilles);
+    e->deplace = grym_allouer(m * sizeof *e->deplace);
+    for (size_t k = 0; k < m; k++) e->deplace[k] = -1;
     e->versions = grym_allouer(m * sizeof *e->versions);
     memset(e->versions, 0, m * sizeof *e->versions);
     for (size_t k = 0; k < n; k++) {
@@ -2586,7 +2757,11 @@ static void serveur_ecran_texte(void *contexte, size_t k, const char *texte) {
         return;
     }
     if (!e || k >= e->n) return;
-    if (e->el[k].agenda) return;   /* la grille d'un agenda (2.74) : le navigateur le montre en liste */
+    if (e->el[k].agenda) {   /* la grille d'un agenda (2.74) */
+        free(e->grilles[k]);
+        e->grilles[k] = grym_dupliquer(texte ? texte : "");
+        return;
+    }
     free((char *)e->el[k].texte);
     e->el[k].texte = grym_dupliquer(texte ? texte : "");
 }
