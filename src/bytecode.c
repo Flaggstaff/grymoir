@@ -234,6 +234,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_SAUVEGARDER_JOUR: return "SAUVEGARDER_JOUR";
     case I_JSON_LISTE:     return "JSON_LISTE";
     case I_RETIRER:        return "RETIRER";
+    case I_SIGNALER:       return "SIGNALER";
     case I_SAUVEGARDER:    return "SAUVEGARDER";
     case I_SAUVEGARDER_COFFRE: return "SAUVEGARDER_COFFRE";
     case I_RESTAURER:      return "RESTAURER";
@@ -249,7 +250,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_GAGNER || code == I_PERDRE || code == I_DEMANDER
         || code == I_CADRER || code == I_AFFICHER_SANS_LIGNE || code == I_STYLE
         || code == I_CHERCHER || code == I_SAISIR || code == I_ELIDER || code == I_ECRAN_OUVRIR || code == I_ECRAN_LISTE
-        || code == I_APPARENCE || code == I_REFUSER || code == I_DECALER || code == I_ARRONDIR
+        || code == I_APPARENCE || code == I_REFUSER || code == I_SIGNALER || code == I_DECALER || code == I_ARRONDIR
         || code == I_CONTIENT || code == I_CONVERTIR || code == I_EXPORTER || code == I_ENSEMBLE || code == I_AJOUTER
         || code == I_EXEMPLE || code == I_EXEMPLE_RATE || code == I_ECART || code == I_HASARD || code == I_HEURE
         || code == I_REGLE_UTILE || code == I_REGLE_FAITE || code == I_ECRAN_ETAT || code == I_ECRAN_IMAGE || code == I_ECRAN_EXIGER
@@ -427,7 +428,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
                 besoin = 1; effet = -1; break;
             case I_APPARENCE:   /* le logo ; avec 0x100 (2.13), aussi la police, la couleur libre, le fond */
                 besoin = (op & 0x100 ? 4 : 1) + (op & 0x200 ? 1 : 0); effet = -besoin; break;
-            case I_REFUSER: besoin = (long)op; effet = -(long)op; break;
+            case I_REFUSER: case I_SIGNALER: besoin = (long)op; effet = -(long)op; break;
             case I_ECRAN_ATTENDRE: besoin = 0; effet = 2; break;
             case I_ECRAN_OBJET: besoin = 0; effet = 1; break;
             case I_CORRESPOND: besoin = 2; effet = -1; break;

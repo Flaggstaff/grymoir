@@ -36,6 +36,14 @@ QFrame[message="erreur"] {
     padding: 12px 16px;
 }
 
+/* « Signaler » (2.71) : ce qu'a fait le dernier geste, au pied de la fenêtre, quelques secondes */
+QFrame[message="signal"] {
+    background: @accent-doux@;
+    border: 1px solid @accent@;
+    border-radius: 8px;
+    padding: 10px 16px;
+}
+
 /* ---------- Boutons ---------- */
 QPushButton {
     min-height: 28px;

@@ -38,6 +38,7 @@
 #include <thread>
 #include <QPushButton>
 #include <QShortcut>
+#include <QResizeEvent>
 #include <QScrollArea>
 #include <QStyle>
 #include <QGuiApplication>
@@ -56,7 +57,6 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QTimer>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <csignal>
@@ -328,6 +328,12 @@ static void iface_ecran_erreur(void *contexte, Chaine *sortie, const char *messa
     auto *t = static_cast<Travail *>(contexte);
     t->vider_sortie(sortie);
     emit t->ecran_erreur(QString::fromUtf8(message));
+}
+
+static void iface_ecran_signaler(void *contexte, Chaine *sortie, const char *message) {   // 2.71
+    auto *t = static_cast<Travail *>(contexte);
+    t->vider_sortie(sortie);
+    emit t->ecran_signal(QString::fromUtf8(message));
 }
 
 static void iface_ecran_valeurs(void *contexte, const char *const *v, size_t n) {
@@ -609,7 +615,8 @@ void Travail::run() {
                    iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf,
                    iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte,
                    iface_montrer_document, iface_ouvrir_adresse, iface_envoyer, iface_ecran_transcrire,
-                   1};   // les écoutes captent le son (2.69)
+                   1,    // les écoutes captent le son (2.69)
+                   iface_ecran_signaler};
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     situer(m, chemin, base_imposee, dossier_ecriture);
@@ -1053,6 +1060,25 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
     });
     connect(&travail, &Travail::ecran_erreur, this, [this](const QString &m) {
         if (erreur_ecran) { erreur_ecran->setText(m); erreur_ecran->show(); }
+        if (signal_ecran) signal_ecran->hide();   // un refus efface ce qu'avait dit le geste précédent
+    });
+    // « Signaler » (2.71) : par-dessus l'écran, au pied de la fenêtre ; il ne prend ni le focus ni les clics
+    signal_ecran = new QLabel(this);
+    signal_ecran->setProperty("message", "signal");
+    signal_ecran->setWordWrap(true);
+    signal_ecran->setAttribute(Qt::WA_TransparentForMouseEvents);
+    signal_ecran->setAccessibleName(QString::fromUtf8("Message"));
+    signal_ecran->hide();
+    signal_minuterie = new QTimer(this);
+    signal_minuterie->setSingleShot(true);
+    connect(signal_minuterie, &QTimer::timeout, signal_ecran, &QWidget::hide);
+    connect(&travail, &Travail::ecran_signal, this, [this](const QString &m) {
+        signal_ecran->setText(m);
+        signal_ecran->show();
+        placer_signal();
+        signal_ecran->raise();
+        // le temps de lire : 4 secondes, plus une par tranche de 40 caractères, 10 au plus
+        signal_minuterie->start(qMin(10000, 4000 + 1000 * (int)(m.size() / 40)));
     });
     connect(&travail, &Travail::ecran_ferme, this, [this] {
         if (vue_ecran) { vue_ecran->deleteLater(); vue_ecran = nullptr; }
@@ -1903,6 +1929,20 @@ void Execution::terminer(bool ok, const QString &erreur, const QString &annulati
     // au lieu de rester sur une page vide (24 octobre 2026) ; sur une erreur, elle reste, pour la montrer
     if (ok && ecran_vu && qEnvironmentVariableIsEmpty("GRYMOIR_ESSAIS")) fermer_a_la_fin = true;
     if (fermer_a_la_fin) close();
+}
+
+void Execution::placer_signal() {   // 2.71 : centré, en bas, sans dépasser la fenêtre
+    if (!signal_ecran || signal_ecran->isHidden()) return;
+    const int marge = 16;
+    const int largeur = qMin(560, width() - 2 * marge);
+    signal_ecran->setFixedWidth(largeur);
+    signal_ecran->adjustSize();
+    signal_ecran->move((width() - largeur) / 2, height() - signal_ecran->height() - marge);
+}
+
+void Execution::resizeEvent(QResizeEvent *e) {
+    QMainWindow::resizeEvent(e);
+    placer_signal();
 }
 
 void Execution::closeEvent(QCloseEvent *e) {

@@ -992,10 +992,11 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
         emettre(c, I_STYLE, ph->entier, ph->ligne, ph->colonne);
         return;
+    case P_SIGNALER:   /* « Signaler « … » puis x. » (§ 22.22) */
     case P_REFUSER:   /* « Refuser « … » puis x. » (§ 18.1) */
         if (ph->nb_enfants > 0xFFFF) { trop_grand(c, ph); return; }
         for (size_t e = 0; e < ph->nb_enfants; e++) expression(c, ph->enfants[e]);
-        emettre(c, I_REFUSER, (long)ph->nb_enfants, ph->ligne, ph->colonne);
+        emettre(c, ph->type == P_SIGNALER ? I_SIGNALER : I_REFUSER, (long)ph->nb_enfants, ph->ligne, ph->colonne);
         return;
     case P_APPARENCE:   /* « Les écrans ont la couleur verte et le logo « … ». » (§ 22.5) : le logo lu, ou absent */
         if (apparence_expression(ph, 'L')) {   /* 2.33 : le logo calculé, une image ou absent */

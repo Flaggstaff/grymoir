@@ -227,6 +227,7 @@ struct Machine {
     size_t regles_verifiees;   /* vérifications complètes de règles (docs/vm.md, § 3.3), pour les essais */
     struct EcranVM *ecran;     /* l'écran ouvert (§ 22), ou NULL */
     int fermer_ecran;          /* « Fermer l'écran. » a été demandé par l'événement en cours */
+    char *signal;              /* « Signaler « … ». » (2.71) : dit à la prochaine attente d'un écran, oublié si l'événement échoue */
     long ecrans_ouverts;       /* 2.67 : le numéro du dernier écran ouvert */
     long ecran_evenement;      /* 2.67 : le numéro de l'écran dont l'événement s'exécute, 0 sinon */
     int imbrique;              /* > 0 : une exécution dans l'exécution (les règles d'une fiche, § 16.14) ; elle ne
@@ -489,6 +490,7 @@ void machine_detruire(Machine *m) {
     }
     base_fermer(m->base);
     oublier_mdp(m);
+    free(m->signal);
     free(m->carte_cles);
     free(m->carte_objets);
     free(m->chemin_base);
@@ -5934,6 +5936,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     if (m->ecran->elements[k].confirmation_si_modifie && m->ecran->modifie) m->ecran->etats[k] |= ETAT_MODIFIE;
                 }
             if (!probleme && m->ecran && m->iface.ecran_etats) m->iface.ecran_etats(m->iface.contexte, m->ecran->etats, m->ecran->n);
+            if (!probleme && m->signal && m->ecran) {   /* « Signaler » (2.71) : ce que le geste réussi a dit */
+                if (m->iface.ecran_signaler) m->iface.ecran_signaler(m->iface.contexte, sortie, m->signal);
+                else { chaine_ajouter(sortie, m->signal); chaine_ajouter(sortie, "\n"); }
+                free(m->signal);
+                m->signal = NULL;
+            }
             for (size_t k = 0; !probleme && m->ecran && m->iface.ecran_texte && k < m->ecran->n; k++)   /* 2.24 */
                 if (m->ecran->calcules[k]) m->iface.ecran_texte(m->iface.contexte, k, m->ecran->textes[k]);
             if (!probleme && m->ecran && m->ecran->titre_calcule && m->iface.ecran_texte)   /* le titre calculé (2.33) */
@@ -6121,6 +6129,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             /* un événement raté : rien de ce qu'il a fait n'est écrit ; l'écran reste ouvert, avec le motif,
              * même si l'événement avait demandé « Fermer l'écran. » avant d'échouer (une règle violée, § 16.14) */
             m->fermer_ecran = 0;
+            free(m->signal);   /* « Signaler » (2.71) : rien de ce que l'événement raté a fait n'est vrai */
+            m->signal = NULL;
             Valeur motif = depiler(&pile);
             char *t = texte_valeur(m, &motif);
             if (m->iface.ecran_erreur) m->iface.ecran_erreur(m->iface.contexte, sortie, t);
@@ -6722,9 +6732,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, valeur_nombre(r));
             break;
         }
+        case I_SIGNALER:
         case I_REFUSER: {
             /* « Refuser « … » puis x. » (grammaire, § 18.1) : une erreur voulue, dont le message s'écrit comme
-             * « Afficher » l'écrirait ; Essayer la rattrape, la transaction annule */
+             * « Afficher » l'écrirait ; Essayer la rattrape, la transaction annule. « Signaler » (2.71) : le même
+             * message, gardé pour l'écran ; hors d'un écran, il s'affiche tout de suite, comme « Afficher ». */
             size_t n = (size_t)op;
             Valeur *v = grym_allouer((n ? n : 1) * sizeof *v);
             for (size_t k = n; k-- > 0;) v[k] = depiler(&pile);
@@ -6744,6 +6756,22 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 probleme = t ? t : grym_dupliquer("");
             } else {
                 free(chaine_rendre(&msg));
+                if (code == I_SIGNALER) { ok = echouer(diag, b, debut, probleme); break; }
+            }
+            if (code == I_SIGNALER) {
+                if (m->ecran) {   /* deux signaux d'un même geste : l'un sous l'autre */
+                    if (m->signal) {
+                        char *deux = grym_formater("%s\n%s", m->signal, probleme);
+                        free(m->signal);
+                        free(probleme);
+                        m->signal = deux;
+                    } else m->signal = probleme;
+                } else {
+                    chaine_ajouter(sortie, probleme);
+                    chaine_ajouter(sortie, "\n");
+                    free(probleme);
+                }
+                break;
             }
             ok = echouer(diag, b, debut, probleme);
             break;

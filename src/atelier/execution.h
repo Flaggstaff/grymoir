@@ -23,6 +23,8 @@ class QTextBrowser;
 class QWidget;
 class QPushButton;
 class QLabel;
+class QTimer;
+class QResizeEvent;
 
 // Une réponse saisie dans la fenêtre, avant sa validation par la machine.
 struct Saisie {
@@ -73,6 +75,7 @@ signals:
     void ecran_lignes(int element, const QStringList &cellules, int nb_lignes);
     void ecran_attente();
     void ecran_erreur(const QString &message);
+    void ecran_signal(const QString &message);   // « Signaler » (2.71)
     void ecran_valeurs(const QStringList &valeurs);   // une par élément ; vide pour un élément qui n'est pas une zone
     void ecran_etats(const QVector<int> &etats);      // un par élément : bit 1 inactif, bit 2 caché (§ 22.6)
     void ecran_image(int element, const QByteArray &octets);   // une image calculée, vide si absente (§ 22.8)
@@ -138,6 +141,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *e) override;
+    void resizeEvent(QResizeEvent *e) override;
 
 private:
     bool micro_signale = false;   // le refus du micro dit une fois par lancement
@@ -187,6 +191,9 @@ private:
     QPixmap logo;   // « … et le logo « … ». » (§ 22.5) : grand sur l'écran du dessous, petit sur les autres
     QPixmap signature;   // « … et la signature « … ». » (2.16) : en bandeau sur chaque écran ; le logo devient l'icône seule
     QLabel *erreur_ecran = nullptr;
+    QLabel *signal_ecran = nullptr;   // « Signaler » (2.71) : posé au pied de la fenêtre, effacé après quelques secondes
+    QTimer *signal_minuterie = nullptr;
+    void placer_signal();
     QVector<class QTableWidget *> tables;
     QVector<QPushButton *> boutons_ecran;
     bool attente_ecran = false;

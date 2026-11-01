@@ -2063,8 +2063,10 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         aj(im, c ? "\n" : ".\n");
         return;
     }
+    case P_SIGNALER:   /* « Signaler « … ». » ; « _signaler « … » » (§ 22.22) */
     case P_REFUSER:   /* « Refuser « … ». » ; « _refuser « … » » (§ 18.1) */
-        aj(im, c ? "_refuser " : "Refuser ");
+        if (n->type == P_SIGNALER) aj(im, c ? "_signaler " : "Signaler ");
+        else aj(im, c ? "_refuser " : "Refuser ");
         for (size_t k = 0; k < n->nb_enfants; k++) {
             if (k) aj(im, c ? " ; " : " puis ");
             expression(im, n->enfants[k]);

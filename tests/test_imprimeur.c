@@ -640,6 +640,8 @@ int main(void) {
     FIXE("Refuser « Non. ».\n");
     FIXE("Le d vaut 3.\nSi d > 2, refuser « Trop : » puis d puis « sur 2 ».\n");
     COMP("Refuser « Débits : » puis 120 puis « crédits : » puis 100.", "_refuser « Débits : » ; 120 ; « crédits : » ; 100\n");
+    FIXE("Signaler « Payé : » puis 20.\n");   /* 2.71 */
+    COMP("Signaler « Payé : » puis 20.", "_signaler « Payé : » ; 20\n");
 
     /* --- Texte vide : « », une seule espace, quelle que soit l'écriture d'origine --- */
     FIXE("Afficher « ».\nLe t vaut « ».\n");

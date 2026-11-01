@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.70 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
+Version 2.71 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2386,6 +2386,24 @@ Quand un poste capte un son dans l'écran de veille :
 - La console et le navigateur refusent l'écran, comme pour `une écoute` (§ 22.20). L'onglet Écrans de l'atelier montre l'élément ; il se modifie dans le code.
 - Forme compacte : `_écoutes poste _conservé _dont veille _vrai _par nom _silence 3` ; `_quand _capte _un poste _dans de_veille`.
 
+### 22.22 Signaler *(2.71, implémenté le 1er novembre 2026)*
+
+Un geste qui réussit le dit, sans rien bloquer.
+
+```
+Quand on clique sur « Espèces » dans l'écran des séances :
+    La s vaut la séance choisie de l'écran.
+    Le paiement de la s devient « espèces ».
+    Signaler « Séance de » puis le nom du patient de la s puis « payée en espèces. ».
+```
+
+- **`Signaler « … » [puis x …].`** s'écrit comme `Refuser` (§ 18.1) : des éléments reliés par `puis`, écrits comme `Afficher` les écrirait, séparés par une espace.
+- **Dans un événement**, le message attend la fin de l'événement. Réussi, il se montre à la prochaine attente d'un écran, celui du dessous si l'événement a fermé le sien. Raté (un refus, une règle violée), il est oublié avec tout ce que l'événement a fait. Deux `Signaler` du même geste se montrent l'un sous l'autre.
+- **Dans l'atelier et les applications fabriquées**, un bandeau à la couleur d'accent, au pied de la fenêtre, quatre secondes et une de plus par tranche de 40 caractères (dix au plus). Il ne prend ni le focus ni les clics. Un refus l'efface. **Dans le navigateur**, un paragraphe `role="status"` sous le titre, jusqu'au geste suivant.
+- **Hors d'un écran** (console, programme sans écran ouvert), il s'écrit tout de suite, comme `Afficher`.
+- Un calcul ne signale rien : « Un calcul ne signale rien : signale dans une action. »
+- Forme compacte : `_signaler « Payé : » ; 20`.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -2561,3 +2579,4 @@ Quand un poste capte un son dans l'écran de veille :
 | 2.68 | 2026-11-01 | § 22.6 : `, au clavier « N »` sur un bouton : Cmd+N sous macOS, Ctrl+N ailleurs, comme un clic, tant que l'écran est dessus et le bouton visible et actif ; lettres du système et de l'édition refusées, un raccourci par bouton dans un écran ; `accesskey` dans le navigateur ; forme compacte `_clavier « N »`. |
 | 2.69 | 2026-11-01 | Nouveau § 22.20 : `une écoute « … »`, `, coupée après N secondes de silence`, `Quand une écoute capte un son …` et `Quand l'écoute « … » capte un son …`, avec `le son capté` et `l'écoute` ; formes compactes `_écoute`, `_silence`, `_quand _capte` |
 | 2.70 | 2026-11-01 | Nouveau § 22.21 : `les écoutes des … conservés` (`dont`, `par`, `, coupées après N secondes de silence`), un bandeau par objet nommé par sa clé, relu avant chaque attente ; `Quand un poste capte un son …` avec l'objet et `le son capté` ; formes compactes `_écoutes`, `_quand _capte _un …` |
+| 2.71 | 2026-11-01 | Nouveau § 22.22 : `Signaler « … » [puis x].`, un message qui ne bloque rien, montré après un événement réussi, oublié s'il échoue ; hors écran, comme `Afficher` |

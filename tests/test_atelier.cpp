@@ -841,6 +841,52 @@ int main(int argc, char **argv) {
         VERIFIER(th.accent() == "bleue" && th.hex("fond") == "#f5efe6");
     }
 
+    // « Signaler » (2.71) : après un geste réussi, le message au pied de la fenêtre ; un geste refusé l'efface
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("L'écran x montre :\n    un bouton « Payer »,\n    un bouton « Rater »,\n    un bouton « Fermer ».\n"
+                    "Quand on clique sur « Payer » dans l'écran x :\n    Signaler « Payé : » puis 20.\n"
+                    "Quand on clique sur « Rater » dans l'écran x :\n    Signaler « jamais ».\n    Refuser « Non. ».\n"
+                    "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto bouton = [&e](const char *l) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>())
+                if (b->text() == QString::fromUtf8(l) && b->isVisible() && b->isEnabled() && b->window() == &e) return b;
+            return nullptr;
+        };
+        auto signal = [&e]() -> QLabel * {
+            for (QLabel *l : e.findChildren<QLabel *>()) if (l->property("message").toString() == "signal") return l;
+            return nullptr;
+        };
+        auto attendre = [](const std::function<bool()> &fini) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !fini()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        };
+        attendre([&] { return bouton("Payer") != nullptr; });
+        VERIFIER(signal() && signal()->isHidden());
+        if (QPushButton *b = bouton("Payer")) b->click();
+        attendre([&] { return signal() && signal()->isVisible(); });
+        VERIFIER(signal() && signal()->isVisible() && signal()->text() == QString::fromUtf8("Payé : 20"));
+        VERIFIER(signal() && signal()->geometry().bottom() < e.height() && signal()->geometry().left() > 0);
+        attendre([&] { return bouton("Rater") != nullptr; });
+        if (QPushButton *b = bouton("Rater")) b->click();
+        attendre([&] { return signal() && signal()->isHidden(); });
+        VERIFIER(signal() && signal()->isHidden());   // le refus a effacé le signal, « jamais » n'est pas venu
+        attendre([&] { return bouton("Fermer") != nullptr; });
+        if (QPushButton *b = bouton("Fermer")) b->click();
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+    }
+
     // Un bouton à confirmer (2.65) : le clic ouvre la question, Annuler la ferme sans rien faire, le bouton de la fenêtre
     // fait le clic ; avec un mot à taper, ce bouton ne s'active qu'avec le mot, majuscules et espaces tolérés
     {

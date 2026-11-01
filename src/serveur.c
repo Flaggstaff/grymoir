@@ -74,6 +74,7 @@ typedef struct {
     long *choisie;          /* liste : la ligne choisie en dernier, ou −1 (« le … choisi de l'écran ») */
     char **valeurs;         /* zone : son texte, tel que la machine le donne avant chaque attente */
     char *erreur;           /* message à montrer sous le titre, jusqu'au prochain événement */
+    char *signal;           /* « Signaler » (2.71) : ce qu'a dit le dernier geste réussi, jusqu'au prochain événement */
     unsigned char *etats;   /* élément : bit 1 inactif, bit 2 caché (§ 22.6) ; un élément caché n'est pas envoyé */
     unsigned long serie;    /* numéro d'ouverture : l'adresse d'une image change d'un écran à l'autre (§ 22.8) */
     unsigned long *versions;   /* image calculée : change avec ses octets, et l'adresse avec elle (§ 22.8) */
@@ -562,6 +563,7 @@ static char *feuille_de_style(const Serveur *s) {
     ".entete h1{flex:1;margin:0;font-size:20px;line-height:28px;font-weight:600}"
     ".entete img{height:24px;width:auto}.accueil .entete img{height:64px}"
     ".entete button{margin:0}"
+    ".signal{margin:0 0 8px;padding:8px 12px;border:1px solid var(--accent);border-radius:8px;white-space:pre-line}"
     ".message{margin:0;padding:8px 12px;border:1px solid var(--danger);border-radius:8px;"
     "background:var(--danger-doux);color:var(--danger)}"
     ".cote{display:flex;flex-wrap:wrap;gap:16px}.cote>*{flex:1 1 16rem;min-width:0}"
@@ -1376,6 +1378,11 @@ static void page_ecran(Serveur *s) {
         echapper(&c, e->erreur);
         chaine_ajouter(&c, "</p>\n");
     }
+    if (e->signal && !e->erreur) {   /* « Signaler » (2.71) : sans bloquer, lu par les lecteurs d'écran */
+        chaine_ajouter(&c, "<p class=\"signal\" role=\"status\">");
+        echapper(&c, e->signal);
+        chaine_ajouter(&c, "</p>\n");
+    }
     if (e->a_confirmer && e->a_confirmer <= e->n) {   /* la confirmation d'un bouton (2.65) : en haut, Annuler d'abord */
         const size_t k = e->a_confirmer - 1;
         const ElementEcran *b = &e->el[k];
@@ -1809,7 +1816,7 @@ static int evenements_de(Serveur *s, Envoi *env) {
             file_ajouter(s, ev);
         }
     }
-    if (s->nb_file) { free(e->erreur); e->erreur = NULL; erreurs_vider(e); }   /* les messages tiennent jusqu'au prochain événement */
+    if (s->nb_file) { free(e->erreur); e->erreur = NULL; free(e->signal); e->signal = NULL; erreurs_vider(e); }   /* les messages tiennent jusqu'au prochain événement */
     return s->nb_file > s->tete_file;
 }
 
@@ -2225,6 +2232,7 @@ static void ecran_liberer(EcranWeb *e) {
     free(e->onglets);
     free(e->titre);
     free(e->erreur);
+    free(e->signal);
     erreurs_vider(e);
     free(e);
 }
@@ -2466,6 +2474,15 @@ static void serveur_ecran_erreur(void *contexte, Chaine *sortie, const char *mes
     e->erreur = grym_dupliquer(message ? message : "");
 }
 
+static void serveur_ecran_signaler(void *contexte, Chaine *sortie, const char *message) {   /* 2.71 */
+    Serveur *s = contexte;
+    absorber(s, sortie);
+    EcranWeb *e = ecran_dessus(s);
+    if (!e) return;
+    free(e->signal);
+    e->signal = grym_dupliquer(message ? message : "");
+}
+
 static void serveur_ecran_fermer(void *contexte, Chaine *sortie) {
     Serveur *s = contexte;
     absorber(s, sortie);
@@ -2576,7 +2593,8 @@ Interface serveur_interface(Serveur *s) {
                     serveur_afficher_fiche, serveur_ecran_ouvrir, serveur_ecran_lignes, serveur_ecran_attendre,
                     serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence,
                     serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre, serveur_ecran_erreurs_zones, NULL, NULL,
-                    serveur_ecran_theme, serveur_ecran_signature, serveur_ecran_texte, NULL, NULL, NULL, NULL, 0 };
+                    serveur_ecran_theme, serveur_ecran_signature, serveur_ecran_texte, NULL, NULL, NULL, NULL, 0,
+                    serveur_ecran_signaler };
     return i;
 }
 

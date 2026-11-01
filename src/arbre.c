@@ -361,8 +361,9 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
     case P_STYLE:
         chaine_ajouter(c, n->entier == 0 ? "(style suisse)" : n->entier == 1 ? "(style française)" : "(style sans)");
         return;
+    case P_SIGNALER:   /* (signaler « … ») (§ 22.22) */
     case P_REFUSER:   /* (refuser « … ») (§ 18.1) */
-        chaine_ajouter(c, "(refuser");
+        chaine_ajouter(c, n->type == P_SIGNALER ? "(signaler" : "(refuser");
         for (size_t i = 0; i < n->nb_enfants; i++) { chaine_ajouter(c, " "); decrire(n->enfants[i], c); }
         chaine_ajouter(c, ")");
         return;

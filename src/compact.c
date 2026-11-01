@@ -2242,9 +2242,12 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 debut = k + 1;
             }
             point(r, f);
-        } else if (!strcmp(c, "refuser")) {   /* _refuser « … » → Refuser « … ». (§ 18.1) */
-            if (d + 1 >= f) { echouer(r, t, grym_dupliquer("« _refuser » attend un message : « _refuser « … » ».")); return; }
-            mot(r, "refuser", t);
+        } else if (!strcmp(c, "refuser") || !strcmp(c, "signaler")) {   /* _refuser « … » → Refuser « … ». (§ 18.1) ; _signaler (§ 22.22) */
+            if (d + 1 >= f) {
+                echouer(r, t, grym_formater("« _%s » attend un message : « _%s « … » ».", c, c));
+                return;
+            }
+            mot(r, c, t);
             size_t debut = d + 1;   /* les éléments, séparés par « ; » hors parenthèses, comme pour _afficher */
             int p = 0;
             for (size_t k = d + 1; k <= f; k++) {

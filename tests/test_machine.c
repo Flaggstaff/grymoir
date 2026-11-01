@@ -244,7 +244,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0 };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -1078,6 +1078,14 @@ static void scene_erreur(void *contexte, Chaine *sortie, const char *message) {
     chaine_ajouter(&s->page.journal, "]\n");
 }
 
+static void scene_signaler(void *contexte, Chaine *sortie, const char *message) {   /* 2.71 */
+    Scene *s = contexte;
+    (void)sortie;
+    chaine_ajouter(&s->page.journal, "[signal ");
+    chaine_ajouter(&s->page.journal, message);
+    chaine_ajouter(&s->page.journal, "]\n");
+}
+
 static void scene_fermer(void *contexte, Chaine *sortie) {
     Scene *s = contexte;
     if (sortie->n) {
@@ -1164,7 +1172,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
                     scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme, scene_signature,
-                    NULL, NULL, NULL, NULL, NULL, 1 };
+                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     if (transcrire_vraiment) i.transcrire = scene_transcrire;
@@ -1241,6 +1249,31 @@ static void essais_ecoute(void) {   /* 2.69 : l'événement d'une écoute, nomm�
     transcrire_vraiment = 1;
     ECRANS(src2, ev2, rep, "[ouvrir Veille ; écoute Stryker 0 ms]\nbonjour (48 octets)\n[fermer]\n");
     transcrire_vraiment = 0;
+}
+
+static void essais_signaler(void) {   /* 2.71 : un message après un geste réussi, oublié si le geste échoue */
+    const char *src =
+        "Un compte, conservé, a : un nom (texte), unique, un solde (nombre).\n"
+        "Le c vaut un nouveau compte :\n    Le nom vaut « Anne ».\n    Le solde vaut 0.\nConserver c.\n"
+        "L'écran de caisse montre :\n    un bouton « Payer »,\n    un bouton « Rater »,\n    un bouton « Fermer ».\n"
+        "Quand on clique sur « Payer » dans l'écran de caisse :\n"
+        "    Pour chaque compte conservé :\n        Le solde du compte devient le solde du compte + 20.\n"
+        "    Signaler « Payé : » puis 20 puis « CHF ».\n    Signaler « Deuxième ligne. ».\n"
+        "Quand on clique sur « Rater » dans l'écran de caisse :\n"
+        "    Signaler « Jamais dit ».\n    Refuser « Raté. ».\n"
+        "Quand on clique sur « Fermer » dans l'écran de caisse :\n    Fermer l'écran.\n"
+        "Ouvrir l'écran de caisse.\n"
+        "Signaler « Hors écran, comme Afficher. ».\n"
+        "Pour chaque compte conservé :\n    Afficher le solde du compte.\n";
+    const char *ev[] = { "clic Payer", "clic Rater", "clic Fermer" };
+    const char *rep[] = { "" };
+    ECRANS(src, ev, rep,
+           "[ouvrir Caisse ; bouton Payer ; bouton Rater ; bouton Fermer]\n"
+           "[signal Payé : 20 CHF\nDeuxième ligne.]\n"
+           "[erreur Raté.]\n"
+           "[fermer]\nHors écran, comme Afficher.\n20");
+    PROG("Le double d'un nombre :\n    Signaler « x ».\n    Rendre nombre × 2.\nAfficher le double de 2.",
+         "~Un calcul ne signale rien");
 }
 
 static void essais_etats_ecran(void) {   /* § 22.6 */
@@ -4551,6 +4584,7 @@ int main(void) {
     essais_base_chiffree();
     essais_secours();
     essais_ecrans();
+    essais_signaler();
     essais_etats_ecran();
     essais_ecoute();
     essai_case_vide();

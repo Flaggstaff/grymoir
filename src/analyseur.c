@@ -6166,7 +6166,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
 static int mot_de_construction(const Jeton *t) {
     static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
                                      "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer", "effacer", "essayer", "saisir",
-                                     "conserver", "supprimer", "rétablir", "utiliser", "quand", "ouvrir", "fermer", "refuser" };
+                                     "conserver", "supprimer", "rétablir", "utiliser", "quand", "ouvrir", "fermer", "refuser", "signaler" };
     for (size_t k = 0; k < sizeof M / sizeof *M; k++) if (est_mot(t, M[k])) return 1;
     return 0;
 }
@@ -9478,9 +9478,14 @@ static Noeud *phrase(Analyse *a, int colonne) {
         n->fin = fin_jeton(b);
         return n;
     }
-    if (est_mot(t, "refuser")) {   /* « Refuser « … ». » (§ 18.1) : l'exécution échoue avec ce message */
+    if (est_mot(t, "refuser") || est_mot(t, "signaler")) {
+        /* « Refuser « … ». » (§ 18.1) : l'exécution échoue avec ce message ; « Signaler « … ». » (§ 22.22) : le message
+         * s'affiche sans bloquer, si ce qui l'a dit réussit */
+        const int signal = est_mot(t, "signaler");
+        if (signal && a->formule == 1)
+            return erreur(a, t, grym_dupliquer("Un calcul ne signale rien : signale dans une action."));
         avancer(a);
-        Noeud *n = noeud_creer(P_REFUSER, t->ligne, t->colonne, t->debut);
+        Noeud *n = noeud_creer(signal ? P_SIGNALER : P_REFUSER, t->ligne, t->colonne, t->debut);
         for (;;) {   /* les éléments du message, reliés par « puis », comme pour « Afficher » (§ 4) */
             attendre(a, A_TEXTE);
             Noeud *v = valeur(a);
@@ -10145,6 +10150,7 @@ Suggestions suites_valides_fichier(const char *source, size_t taille, const char
             proposer(&r, "Selon", pre, lp, 0);
             proposer(&r, "Essayer", pre, lp, 0);
             proposer(&r, "Refuser", pre, lp, 0);
+            proposer(&r, "Signaler", pre, lp, 0);   /* § 22.22 */
             proposer(&r, "Chaque", pre, lp, 0);   /* une règle (§ 16.14) */
             proposer(&r, "Saisir à nouveau", pre, lp, 0);
             proposer(&r, "Pour", pre, lp, 0);

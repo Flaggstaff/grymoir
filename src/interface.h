@@ -236,6 +236,9 @@ typedef struct {
     /* L'interface capte le son des écoutes (2.69) : 1 dans l'atelier et les applications fabriquées. 0 : un écran qui a
      * une écoute est refusé à l'ouverture (console, navigateur). */
     int ecouter;
+    /* « Signaler « … ». » (2.71) : un message qui ne bloque rien, après un geste réussi, montré quelques secondes au pied
+     * de l'écran ; plusieurs lignes séparées par « \n ». NULL : la machine l'écrit dans la sortie. */
+    void (*ecran_signaler)(void *contexte, Chaine *sortie, const char *message);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.
