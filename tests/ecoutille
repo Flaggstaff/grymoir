@@ -34,6 +34,7 @@ Le a vaut un nouveau poste :
     La sorte vaut « émetteur-récepteur ».
     La veille vaut faux.
     L'affichage vaut vrai.
+    La parole transcrite vaut vrai.
 Conserver a.
 Le p vaut un nouveau passage :
     Le poste vaut a.

@@ -10,6 +10,7 @@
 #include "imprimeur.h"
 #include "sqlite3.h"
 #include "texte.h"
+#include "morse.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1062,6 +1063,22 @@ static Issue scene_attendre(void *contexte, Chaine *sortie, Evenement *e) {
             }
         return ISSUE_REPONDU;
     }
+    if (strncmp(x, "morse ", 6) == 0) {   /* « morse CQ DE HB9 » : un passage de morse fabriqué, sur la première écoute (2.78) */
+        static unsigned char *wav_morse = NULL;
+        free(wav_morse);
+        size_t n = 0;
+        wav_morse = morse_fabriquer(x + 6, 20, 700, 0.1, &n);
+        for (size_t k = 0; k < s->nb_elements; k++)
+            if (s->elements[k].sorte == ELEMENT_ECOUTE) {
+                e->sorte = EVENEMENT_CAPTURE;
+                e->element = k;
+                e->octets = wav_morse;
+                e->taille = n;
+                e->texte = "passage.wav";
+                break;
+            }
+        return ISSUE_REPONDU;
+    }
     if (strncmp(x, "capte ", 6) == 0) {   /* « capte Stryker » : un passage capté, un petit WAV (2.69) */
         static const unsigned char wav[48] = { 'R', 'I', 'F', 'F', 40, 0, 0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ',
                                                16, 0, 0, 0, 1, 0, 1, 0, 0x80, 0x3e, 0, 0, 0, 0x7d, 0, 0, 2, 0, 16, 0,
@@ -1345,6 +1362,29 @@ static void essais_agenda(void) {   /* 2.74 : une liste en agenda ; déplacer un
     PROG("Une séance, conservée, a : une date (date), une heure (heure), une durée (nombre entier).\n"
          "L'écran x montre :\n    la liste des séances conservées, en agenda d'abord.\nOuvrir l'écran x.\n",
          "~Forme attendue : « , en agenda selon la grille de l'agenda ».");
+}
+
+static void essais_morse(void) {   /* 2.78 : le morse d'un son, et sa transcription sur demande */
+    const char *src =
+        "L'écran de veille montre :\n    une écoute « Stryker »,\n    un bouton « Fermer ».\n"
+        "Quand une écoute capte un son dans l'écran de veille :\n"
+        "    Le m vaut le morse du son capté.\n"
+        "    Si le m est présent, afficher « morse : » puis le m.\n"
+        "    Sinon :\n"
+        "        Afficher « pas de morse ».\n"
+        "        Le t vaut la transcription du son capté.\n"
+        "        Si le t est présent, afficher « parole : » puis le t.\n"
+        "Quand on clique sur « Fermer » dans l'écran de veille :\n    Fermer l'écran.\n"
+        "Ouvrir l'écran de veille.\n";
+    const char *ev[] = { "morse CQ DE HB9ABC K", "capte Stryker", "clic Fermer" };
+    const char *rep[] = { "" };
+    transcrire_vraiment = 1;
+    ECRANS(src, ev, rep, "[ouvrir Veille ; écoute Stryker 0 ms ; bouton Fermer]\n"
+                         "morse : CQ DE HB9ABC K\npas de morse\nparole : bonjour (48 octets)\n[fermer]\n");
+    transcrire_vraiment = 0;
+    /* sans transcripteur (la console) : absent */
+    ECRANS(src, ev, rep, "[ouvrir Veille ; écoute Stryker 0 ms ; bouton Fermer]\n"
+                         "morse : CQ DE HB9ABC K\npas de morse\n[fermer]\n");
 }
 
 static void essais_etats_ecran(void) {   /* § 22.6 */
@@ -4662,6 +4702,7 @@ int main(void) {
     essais_signaler();
     essais_second_tri();
     essais_agenda();
+    essais_morse();
     essais_etats_ecran();
     essais_ecoute();
     essai_case_vide();

@@ -32,6 +32,9 @@
 #include "secours.h"
 #include "recherche.h"
 #include "agenda.h"
+extern "C" {
+#include "morse.h"
+}
 #include <QSettings>
 #include <QCheckBox>
 #include <QLabel>
@@ -1724,10 +1727,31 @@ int main(int argc, char **argv) {
         VERIFIER(ligne);   // dans la liste des postes
         if (QPushButton *b = bouton("Fermer")) b->click();
         VERIFIER(attendre([&] { return bouton("Réglages") != nullptr; }));
+        // le morse (2.78) : le Stryker reçoit du morse ; l'écoute découpe le passage, Écoutille le lit, la carte le montre
+        Ecoute *stryker = nullptr;
+        VERIFIER(attendre([&] {
+            for (Ecoute *x : e.findChildren<Ecoute *>()) if (x->nom_ecoute() == "Stryker") stryker = x;
+            return stryker != nullptr;
+        }));
+        if (stryker) {
+            size_t n = 0;
+            unsigned char *w = morse_fabriquer("CQ DE HB9ABC", 20, 700, 0.05, &n);
+            std::vector<float> morse((n - 44) / 2), silence(16000 * 4, 0.f);
+            for (size_t i = 0; i < morse.size(); i++) morse[i] = (float)(int16_t)(w[44 + 2 * i] | w[45 + 2 * i] << 8) / 32768.f;
+            free(w);
+            stryker->nourrir(morse);
+            stryker->nourrir(silence);
+        }
+        auto carte_morse = [&]() {
+            for (QLabel *l : e.findChildren<QLabel *>()) if (l->isVisible() && l->text().contains("CQ DE HB9ABC")) return true;
+            return false;
+        };
+        VERIFIER(attendre(carte_morse));
         bool rouge = false;   // « , destructif » (2.72) : le bouton de la page des postes, revu ici sur la veille : aucun
         for (QPushButton *b : e.findChildren<QPushButton *>())
             if (b->isVisible() && b->property("role").toString() == "danger") rouge = true;
         VERIFIER(!rouge);
+        VERIFIER(attendre([&] { return bouton("Fermer") != nullptr; }));   // le passage rangé, l'écran attend de nouveau
         if (QPushButton *b = bouton("Fermer")) b->click();
         auto dialogue = [&e]() -> QDialog * {
             for (QDialog *d : e.findChildren<QDialog *>("confirmation")) if (d->isVisible()) return d;

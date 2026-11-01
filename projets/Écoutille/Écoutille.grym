@@ -1,4 +1,4 @@
-Remarque : Écoutille, la veille radio de Michel (grammaire, § 22.20 et § 22.21). Les postes sont des données : on les
+Remarque : Écoutille, la veille radio de Michel (grammaire, § 22.20 et § 22.21 ; le morse, 2.78). Les postes sont des données : on les
 Remarque : ajoute, les modifie ou les retire par « Postes », sans toucher au code. Chaque poste en veille a son bandeau ;
 Remarque : chaque passage capté est conservé avec son enregistrement, relié à son poste, puis transcrit.
 
@@ -29,7 +29,8 @@ Un poste, conservé, a :
     une veille (vrai ou faux),
     une remarque (texte), facultative,
     un modèle (modèle), facultatif,
-    un affichage (vrai ou faux), vrai au départ.
+    un affichage (vrai ou faux), vrai au départ,
+    une parole transcrite (vrai ou faux), vrai au départ.
 
 Un passage, conservé, a :
     un poste (poste),
@@ -37,7 +38,8 @@ Un passage, conservé, a :
     une heure (heure),
     un enregistrement (son),
     une durée (texte), facultative,
-    une transcription (texte), facultative, transcrite de l'enregistrement.
+    un morse (texte), facultatif,
+    une transcription (texte), facultative.
 
 Remarque : les réglages de Michel (1er novembre 2026) : combien de jours garder les passages ; vide, tout est gardé.
 Un réglage, conservé, a :
@@ -54,18 +56,19 @@ L'écran de veille montre :
     côte à côte :
         une période (« Aujourd'hui », « 7 jours », « 30 jours » ou « Tout »), « Aujourd'hui » au départ,
         un seul poste (poste), facultatif, avec l'indication « Vide : tous les postes »,
-    la liste des passages conservés dont le jour ≥ le début des passages et l'affichage du poste est vrai, par jour décroissant puis heure décroissant, avec l'heure, le nom du poste, la transcription, le jour et la durée, en cartes,
+    la liste des passages conservés dont le jour ≥ le début des passages et l'affichage du poste est vrai, par jour décroissant puis heure décroissant, avec l'heure, le nom du poste, le morse, la transcription, le jour et la durée, en cartes,
     côte à côte :
         un bouton « Postes », au clavier « P »,
         un bouton « Réglages »,
         un bouton « Fermer », à confirmer par « Arrêter la veille ? Un passage en cours d'enregistrement sera perdu. ».
 
 L'écran des postes montre :
-    la liste des postes conservés, par nom, avec le nom, la désignation du modèle, la sorte et la veille,
+    la liste des postes conservés, par nom, avec le nom, la désignation du modèle, la sorte, la veille et la parole transcrite,
     côte à côte :
         un modèle (modèle), facultatif, avec l'indication « Le nom et la sorte en viennent »,
         un nom (texte), facultatif,
         une sorte (« émetteur-récepteur » ou « scanner »), « émetteur-récepteur » au départ, visible si le modèle de l'écran est absent,
+        une parole transcrite (vrai ou faux), vrai au départ, en interrupteur, avec l'indication « Le morse est toujours lu ; la parole, transcrite si allumé »,
     côte à côte :
         un bouton « Ajouter », principal, actif si le nom de l'écran est présent,
         un bouton « Modèles »,
@@ -95,6 +98,9 @@ Quand un poste capte un son dans l'écran de veille :
     Le jour du p devient aujourd'hui.
     L'heure du p devient maintenant.
     L'enregistrement du p devient le son capté.
+    Remarque : le morse d'abord, lu sur l'ordinateur ; sinon la parole, transcrite si le poste le veut (1er novembre 2026).
+    Le morse du p devient le morse du son capté.
+    Si le morse du p est absent et la parole transcrite du poste, la transcription du p devient la transcription du son capté.
     Remarque : la durée d'après la taille : un WAV de 16 kHz, mono, 16 bits, 32'000 octets la seconde, après 44 octets d'en-tête.
     La seconde vaut l'arrondi de (la taille du son capté − 44) ÷ 32000 à 1.
     La durée du p devient la seconde suivi de " s".
@@ -160,6 +166,7 @@ Quand on clique sur « Ajouter » dans l'écran des postes :
         La sorte vaut la sorte de l'écran.
         La veille vaut vrai.
         L'affichage vaut vrai.
+        La parole transcrite vaut la parole transcrite de l'écran.
     Si le modèle de l'écran est présent :
         Le modèle du p devient le modèle de l'écran.
         La sorte du p devient « émetteur-récepteur ».

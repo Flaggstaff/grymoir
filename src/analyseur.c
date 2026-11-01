@@ -459,12 +459,16 @@ static int multiple_connu(Portee *p, const char *nom, int singulier, const char 
 /* Champs de toute valeur fichier (§ 15.3) : ils ne réservent pas leur nom. */
 static int champ_integre(const char *nom, Genre *g) {
     if (strcmp(nom, "taille") == 0 || strcmp(nom, "année") == 0     /* année : d'une date */
+        || strcmp(nom, "transcription") == 0                          /* transcription : d'un son, sur demande (2.78) */
         || strcmp(nom, "longueur") == 0                               /* longueur : d'un texte (§ 4.5) */
         || strcmp(nom, "valeur absolue") == 0 || strcmp(nom, "partie entière") == 0) {   /* d'un nombre (§ 3.5) */
         if (g) *g = GENRE_FEMININ;
         return 1;
     }
-    if (strcmp(nom, "format") == 0 || strcmp(nom, "nom de fichier") == 0) { if (g) *g = GENRE_MASCULIN; return 1; }
+    if (strcmp(nom, "format") == 0 || strcmp(nom, "nom de fichier") == 0 || strcmp(nom, "morse") == 0) {   /* morse : d'un son (2.78) */
+        if (g) *g = GENRE_MASCULIN;
+        return 1;
+    }
     if (strcmp(nom, "mois") == 0 || strcmp(nom, "jour") == 0 || strcmp(nom, "jour de la semaine") == 0) {   /* d'une date (§ 14.8) */
         if (g) *g = GENRE_MASCULIN;
         return 1;

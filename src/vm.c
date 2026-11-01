@@ -3,6 +3,7 @@
  */
 #include "chemins.h"
 #include "vm.h"
+#include "morse.h"
 #include "json.h"
 #include "qr.h"
 #include "coffre.h"
@@ -7122,6 +7123,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     char t[32];
                     snprintf(t, sizeof t, "%lu", (unsigned long)f->taille);
                     r = valeur_nombre(dec_depuis_canonique(t));
+                } else if (strcmp(champ, "transcription") == 0) {   /* la transcription d'un son, sur demande (2.78) */
+                    char *err = NULL;
+                    char *t = m->iface.transcrire ? m->iface.transcrire(m->iface.contexte, f->octets, f->taille, &err) : NULL;
+                    free(err);   /* sans transcripteur (console, navigateur) ou s'il échoue : absent, comme un son muet */
+                    if (t && *t) { r = valeur_nombre(dec_zero()); r.type = V_TEXTE; r.texte = t; }
+                    else { free(t); r = vi_absent(NULL); }
+                } else if (strcmp(champ, "morse") == 0) {   /* le morse d'un son (2.78) : le texte lu, ou absent */
+                    char *t = morse_decoder(f->octets, f->taille);
+                    if (t) { r = valeur_nombre(dec_zero()); r.type = V_TEXTE; r.texte = t; }
+                    else r = vi_absent(NULL);
                 } else if (strcmp(champ, "format") == 0 || strcmp(champ, "nom de fichier") == 0) {
                     r = valeur_nombre(dec_zero());
                     r.type = V_TEXTE;
@@ -7131,7 +7142,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     r.texte = grym_dupliquer(strcmp(champ, "format") == 0 ? (fm ? fm : "inconnu") : f->nom);
                 } else {
                     ok = echouer(diag, b, debut, grym_formater(
-                        "Un fichier n'a pas de champ « %s » : taille, format ou nom de fichier.", champ));
+                        "Un fichier n'a pas de champ « %s » : taille, format, nom de fichier, morse ou transcription.", champ));
                     break;
                 }
                 valeur_liberer(vo);

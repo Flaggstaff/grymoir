@@ -42,10 +42,13 @@ endif()
 add_library(grym_coeur STATIC
     src/chemins.c src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c
     src/lexeur.c src/date.c src/texte.c src/teinte.c
-    src/json.c src/qr.c vendor/qrcodegen/qrcodegen.c src/coffre.c vendor/monocypher/monocypher.c
+    src/json.c src/morse.c src/qr.c vendor/qrcodegen/qrcodegen.c src/coffre.c vendor/monocypher/monocypher.c
     src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c)
 target_include_directories(grym_coeur PUBLIC src)
 target_link_libraries(grym_coeur PUBLIC grym_sqlite)
+if(UNIX AND NOT APPLE)   # sin, lrint : le morse (morse.c) ; sous macOS et Windows, la bibliothèque du C les a déjà
+    target_link_libraries(grym_coeur PUBLIC m)
+endif()
 if(NOT MSVC)
     target_compile_options(grym_coeur PRIVATE -Wall -Wextra -pedantic $<$<COMPILE_LANGUAGE:C>:-Werror=implicit-function-declaration>)
 endif()

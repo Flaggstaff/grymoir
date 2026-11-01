@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.77 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
+Version 2.78 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1260,6 +1260,8 @@ Une visite, conservée, a :
 - La transcription est faite par l'interface. Sans transcripteur (la console, le navigateur aujourd'hui), le champ reste tel quel.
 - **Le transcripteur** (étape 2, le 17 octobre 2026) : Whisper, par whisper.cpp (v1.9.5), dans l'atelier et les applications fabriquées, sur l'ordinateur, sans rien envoyer ; le modèle large-v3-turbo, sans contexte entre les passages (`-mc 0`) et sans découpe du son, configuration retenue après essai sur une assemblée de 71 minutes (complète, sans boucle, environ 12 fois le temps réel sur un Mac à puce Apple). Les phrases que Whisper invente dans les silences sont retirées. Un WAV se lit directement ; MP3, M4A, Ogg, WebM et FLAC passent par le décodeur de Qt. Le modèle (`ggml-large-v3-turbo-q5_0.bin`) est cherché dans l'application, puis dans le dossier de données de GrymoiR ; `GRYMOIR_MODELE_TRANSCRIPTION` en désigne un autre. Le modèle est inclus dans l'atelier (il transcrit hors ligne dès l'installation) et, *(2.39)*, dans toute application fabriquée, qu'elle transcrive ou non : 547 Mo de plus pour chacune ; jusqu'au 22 octobre 2026, seulement si son programme déclarait un champ transcrit. - **La relecture** (étape 3b) : dans la zone de saisie où on lit le texte transcrit, **tous les nombres** sont surlignés, et les **mots dont Whisper doute** (probabilité sous 0,5) sont en plus soulignés ; corriger un mot douteux retire son doute. Les marques sont des caractères Unicode invisibles, rangés dans le texte même (U+2064 en tête : « transcrit » ; U+2062 et U+2063 autour d'un mot douteux), pour qu'elles suivent le texte partout, base, écrans et copies d'un champ à l'autre. Elles ne se voient pas dans une fiche, un rapport ou un PDF, et sont retirées d'un export CSV. Elles comptent dans `la longueur de` un texte, et une recherche `contient` qui chevauche le bord d'un mot douteux ne le trouve pas. En console et dans le navigateur, pas encore de transcription.
 - Forme compacte : `_une note (texte) _transcrit mémo`.
+- **Sur demande** *(2.78)* : `la transcription de x`, x un son, rend son texte par le même transcripteur, ou absent (sans transcripteur, son muet, échec). Le programme décide alors quand transcrire : `Si le morse du p est absent et la parole transcrite du poste, la transcription du p devient la transcription du son capté.`
+- **Le morse** *(2.78)* : `le morse de x`, x un son (un WAV PCM 16 bits, mono ou non, à toute fréquence), rend le texte lu en capitales (« CQ DE HB9ABC K »), ou absent s'il n'y a pas de morse (de la voix, du bruit). Le décodage se fait sur l'ordinateur (`src/morse.c`) : la note dominante de 300 à 1500 Hz, qui doit porter l'essentiel de l'énergie ; son enveloppe toutes les 4 ms, avec deux seuils ; la durée du point tirée des porteuses et des silences (de 5 à 50 mots par minute) ; la table de l'UIT (lettres, chiffres, ponctuation, « `<SK>` »). Une suite inconnue s'écrit « ? » ; au-delà de trois sur dix, ou moins de deux signes reconnus : absent. Éprouvé sur du morse fabriqué, de 8 à 40 mots par minute, jusqu'à un bruit plus fort que la note.
 
 ### 15.5 Lire un tableau
 
@@ -2616,3 +2618,4 @@ Quand on déplace une séance dans l'écran de l'agenda :
 | 2.75 | 2026-11-01 | § 22.24 : `Quand on choisit un créneau dans l'écran …`, un clic dans un agenda hors des objets, avec la date et l'heure d'arrivée |
 | 2.76 | 2026-11-01 | § 13.2 : « un nouvel » aussi devant un h muet (« un nouvel horaire »), comme l'imprimeur l'écrivait déjà ; un h aspiré garde « un nouveau » (« un nouveau hangar ») ; « un nouveau horaire » reste accepté |
 | 2.77 | 2026-11-01 | § 22.24 : l'agenda dans le navigateur, sans JavaScript : la grille en quarts d'heure, un clic pour un créneau, « Déplacer » puis un quart d'heure pour déposer |
+| 2.78 | 2026-11-01 | § 15.8 : `le morse de x` (le texte lu dans un son, ou absent) et `la transcription de x` (sur demande) ; le cœur lie la bibliothèque mathématique du C |
