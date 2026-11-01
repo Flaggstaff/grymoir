@@ -202,7 +202,7 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0)
                              | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0) | (el[k].masque ? 32 : 0)
                              | (el[k].principal ? 64 : 0) | (el[k].tuile ? 128 : 0) | (el[k].a_cote_du_titre ? 256 : 0) | (el[k].inverse ? 512 : 0) | (el[k].cartes ? 1024 : 0) | (el[k].capitales ? 2048 : 0)
-                             | (el[k].dossier ? 4096 : 0) | ((el[k].largeur_caracteres & 0xFF) << 16)
+                             | (el[k].dossier ? 4096 : 0) | (el[k].destructif ? 8192 : 0) | ((el[k].largeur_caracteres & 0xFF) << 16)
                              | ((el[k].raccourci & 0x7F) << 24));   // « , au clavier « N » » (2.68)
         t->facultatives << el[k].facultatif;
         t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
@@ -1430,6 +1430,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].recherche = o & 16;   // § 22.6
         elements[k].masque = o & 32;   // § 22.6
         elements[k].dossier = o & 4096;   // 2.32
+        elements[k].destructif = o & 8192;   // 2.72
         elements[k].largeur_caracteres = (o >> 16) & 0xFF;   // 2.34
         elements[k].raccourci = (char)((o >> 24) & 0x7F);       // 2.68
         elements[k].graphique = travail.graphiques.value(k);   // § 22.11
@@ -1853,6 +1854,12 @@ void Execution::ecoutes_du_cadre(QWidget *cadre, int element, const QStringList 
     auto *pile = qobject_cast<QVBoxLayout *>(cadre->layout());
     if (!pile) return;
     QHash<QString, QWidget *> bords;   // chaque bandeau dans son cadre, comme « une écoute »
+    // un poste renommé (1er novembre 2026) : un seul nom parti et un seul venu au même tour ; le branchement le suit
+    const QStringList avant = cadre->property("noms").toStringList();
+    QStringList partis, venus;
+    for (const QString &n : avant) if (!noms.contains(n)) partis << n;
+    for (const QString &n : noms) if (!avant.contains(n)) venus << n;
+    if (partis.size() == 1 && venus.size() == 1) Ecoute::reporter_reglages(partis.first(), venus.first());
     for (QWidget *bord : cadre->findChildren<QWidget *>("ecoute-poste", Qt::FindDirectChildrenOnly)) {
         Ecoute *e = bord->findChild<Ecoute *>();
         if (e && noms.contains(e->nom_ecoute()) && !bords.contains(e->nom_ecoute())) bords.insert(e->nom_ecoute(), bord);

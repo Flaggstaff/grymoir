@@ -1060,7 +1060,8 @@ static void expression(Impression *im, const Noeud *n) {
             if (n->entier & 1) aj(im, im->compact ? " _décroissant" : " décroissant");
             if (barre) {
                 aj(im, im->compact ? " _puis " : " puis ");
-                ecrire_nom(im, barre + 1, 0);
+                ecrire_nom(im, barre + 1 + (barre[1] == '-'), 0);
+                if (barre[1] == '-') aj(im, im->compact ? " _décroissant" : " décroissant");   /* 2.73 */
             }
         }
         return;
@@ -1442,6 +1443,7 @@ static void etats_ecran(Impression *im, const Noeud *el, int feminin) {
     if (el->type == N_BOUTON && (el->entier & 256)) aj(im, im->compact ? " _principal" : ", principal");   /* 2.14 */
     if (el->type == N_BOUTON && (el->entier & 512)) aj(im, im->compact ? " _tuile" : ", en tuile");     /* 2.15 */
     if (el->type == N_BOUTON && (el->entier & 1024)) aj(im, im->compact ? " _côté_titre" : ", à côté du titre");   /* 2.17 */
+    if (el->type == N_BOUTON && el->destructif) aj(im, im->compact ? " _destructif" : ", destructif");   /* 2.72 */
     if (el->type == N_BOUTON && el->indication) { aj(im, im->compact ? " _description " : ", avec la description "); ecrire_texte(im, el->indication); }
     if (el->type == N_BOUTON && el->texte2) { aj(im, im->compact ? " _image " : ", avec l'image "); ecrire_texte(im, el->texte2); }
     if (el->type == N_BOUTON && el->confirmation) {   /* 2.65 */

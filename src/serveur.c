@@ -521,6 +521,7 @@ static char *feuille_de_style(const Serveur *s) {
     "background:var(--surface);border:1px solid var(--bordure);border-radius:8px;cursor:pointer}"
     "button:hover{background:var(--survol)}"
     "button.principal{background:var(--accent);border-color:var(--accent);color:var(--sur-accent)}"
+    "button.destructif{border-color:var(--danger);color:var(--danger)}button.destructif:hover{background:var(--danger-doux)}"
     "button.principal:hover{background:var(--accent-survol);border-color:var(--accent-survol)}"
     "fieldset.groupe.inverse{background:var(--accent);border-color:var(--accent);color:var(--sur-accent);border-radius:12px;padding:20px 24px}"
     "fieldset.groupe.inverse>legend{color:var(--accent-doux);float:left;padding:0;margin-bottom:8px;font-size:12px;letter-spacing:.14em;text-transform:uppercase}"
@@ -1348,7 +1349,7 @@ static void page_ecran(Serveur *s) {
     for (size_t k = 0; k < e->n; k++) {   /* les boutons « à côté du titre » (2.17), sur la ligne du titre */
         const ElementEcran *b = &e->el[k];
         if (b->sorte != ELEMENT_BOUTON || !b->a_cote_du_titre || (e->etats[k] & 2)) continue;
-        char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s%s%s>", (unsigned long)k, b->principal ? " class=\"principal\"" : "",
+        char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s%s%s>", (unsigned long)k, b->principal ? " class=\"principal\"" : b->destructif ? " class=\"destructif\"" : "",
                                 (e->etats[k] & 1) ? " disabled" : "", touche_d_acces(b));
         chaine_ajouter(&c, v);
         free(v);
@@ -1561,7 +1562,7 @@ static void page_ecran(Serveur *s) {
             }
             if (!boutons && !el->place) { chaine_ajouter(&c, "<div class=\"boutons\">"); boutons = 1; }
             char *v = grym_formater("<button name=\"clic\" value=\"%lu\"%s%s%s>", (unsigned long)k,
-                                    el->principal ? " class=\"principal\"" : "",   /* 2.14 */
+                                    el->principal ? " class=\"principal\"" : el->destructif ? " class=\"destructif\"" : "",   /* 2.14, 2.72 */
                                     (e->etats[k] & 1) ? " disabled" : "",   /* « actif si » faux (§ 22.6) */
                                     touche_d_acces(el));   /* 2.68 */
             chaine_ajouter(&c, v);

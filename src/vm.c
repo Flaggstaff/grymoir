@@ -2982,6 +2982,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].tuile = memchr(options_bouton + 1, 't', nopt) != NULL;
             e->elements[k].a_cote_du_titre = memchr(options_bouton + 1, 'e', nopt) != NULL;   /* 2.17 */
             e->elements[k].confirmation_si_modifie = memchr(options_bouton + 1, 'm', nopt) != NULL;   /* 2.67 */
+            e->elements[k].destructif = memchr(options_bouton + 1, 'd', nopt) != NULL;   /* 2.72 */
             e->indications[k] = morceau_de_zone(options_bouton, '\x1d');
             e->elements[k].indication = e->indications[k];
             const char *raccourci = strchr(options_bouton, '\x17');   /* « ␗ N » (2.68) */

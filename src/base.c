@@ -3409,6 +3409,8 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
             char *barre = strchr(champ_tri, '|');
             suite = barre ? barre + 1 : NULL;
             if (barre) *barre = '\0';
+            const int second_inverse = champ_tri != tri && champ_tri[0] == '-';   /* « puis heure décroissant » (2.73) */
+            if (second_inverse) champ_tri++;
             long k = -1;
             for (size_t q = 0; q < e->nb_champs && k < 0; q++) if (strcmp(e->champs[q], champ_tri) == 0) k = (long)q;
             if (k < 0 || !e->types[k] || multiple(e, (size_t)k)) { r.erreur = grym_dupliquer("champ du tri inconnu"); ok = 0; }
@@ -3416,7 +3418,7 @@ int base_chercher(Base *b, struct Machine *m, const char *d, const Valeur *param
                 colonne(&r, (size_t)k);
                 if (strcmp(e->types[k], "nombre") == 0) chaine_ajouter(&r.sql, " COLLATE GRYM_NOMBRE");
                 else if (type_textuel(e->types[k])) chaine_ajouter(&r.sql, " COLLATE GRYM_TEXTE");
-                if (decroissant && champ_tri == tri) chaine_ajouter(&r.sql, " DESC");
+                if ((decroissant && champ_tri == tri) || second_inverse) chaine_ajouter(&r.sql, " DESC");
                 chaine_ajouter(&r.sql, " NULLS LAST");   /* les absents en dernier, dans les deux sens */
                 chaine_ajouter(&r.sql, ", ");
             }

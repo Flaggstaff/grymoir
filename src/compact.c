@@ -890,7 +890,7 @@ static int est_etat(const Jeton *t) {
         || est_cle(t, "lecture_seule") || est_cle(t, "place") || est_cle(t, "largeur") || est_cle(t, "hauteur")
         || est_cle(t, "principal") || est_cle(t, "tuile") || est_cle(t, "description") || est_cle(t, "image")
         || est_cle(t, "côté_titre") || est_cle(t, "inversé") || est_cle(t, "capitales") || est_cle(t, "confirmer")
-        || est_cle(t, "en_tapant") || est_cle(t, "si_modifié") || est_cle(t, "clavier");
+        || est_cle(t, "en_tapant") || est_cle(t, "si_modifié") || est_cle(t, "clavier") || est_cle(t, "destructif");
 }
 
 /* Les états d'un élément d'écran, de k à f (§ 22.6) : « _plusieurs_lignes », « _lecture_seule » (zones),
@@ -1026,6 +1026,10 @@ static int etats_compacts(Reecriture *r, size_t k, size_t f, int feminin, int zo
             mot(r, "par", x);
             copier(r, &r->e[k + 1]);
             k += 2;
+        } else if (!zone && est_cle(x, "destructif")) {   /* _destructif → , destructif (un bouton, 2.72) */
+            emettre(r, J_VIRGULE, NULL, x, 1);
+            mot(r, "destructif", x);
+            k++;
         } else if (!zone && est_cle(x, "clavier") && k + 1 < f && r->e[k + 1].type == J_TEXTE) {
             emettre(r, J_VIRGULE, NULL, x, 1);   /* _clavier « N » → , au clavier « N » (un bouton, 2.75) */
             mot(r, "au", x);
@@ -1465,6 +1469,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                     mot(r, "puis", &r->e[q]);
                     copier(r, &r->e[q + 1]);
                     q += 2;
+                    if (q < f && est_cle(&r->e[q], "décroissant")) { mot(r, "décroissant", &r->e[q]); q++; }   /* 2.73 */
                 }
                 if (q < f) {
                     echouer(r, &r->e[q], grym_dupliquer("Tri attendu : « _par nom », « _par date _décroissant » ou « _par date _puis heure »."));

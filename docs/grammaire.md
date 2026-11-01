@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.71 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
+Version 2.73 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1897,7 +1897,7 @@ Ouvrir l'écran des compositeurs.
 - `, en cartes` *(2.19)*, après les colonnes : chaque objet devient une carte, trois par rangée. La première colonne s'y écrit en grand (une heure, un nom), les colonnes à étiquette (§ 16.15) en haut à droite, la deuxième colonne dessous, les suivantes jointes par « · ». Un clic sur une carte vaut le choix d'une ligne : `Quand on choisit …` s'exécute. Sans objet : « Rien pour l'instant. ». Pour un tableau de bord, un planning du jour ; une liste longue reste un tableau. Forme compacte : `_cartes`.
 - `L'écran des compositeurs montre :`, au premier niveau, suivi de ses éléments séparés par des virgules, le dernier suivi d'un point. Un titre différent du nom se donne entre guillemets : `L'écran des compositeurs, « Nos compositeurs », montre :` ; sinon le titre vient du nom (« Compositeurs », « Accueil »).
 - Éléments : `la liste des … conservés [dont …] [, par …] [, avec le …, le … et le …]` (recherche du § 16.4) ; `un bouton « … »` ; `le texte « … »` ; une zone de saisie déclarée comme un champ d'entité (`un pays (texte), « Suisse » au départ`, `, facultatif`) ; `côte à côte :` et `l'un sous l'autre :`, qui ouvrent un bloc indenté ; `le groupe « … » :` (§ 22.7) et `en position libre :` (§ 22.9), aussi.
-- `, par date puis heure` *(2.66)* : une liste d'écran ou de document trie sur un second champ, croissant, à égalité du premier ; `, par date décroissant puis heure` inverse le premier seulement. Le second champ est, comme le premier, de texte, de nombre, de date ou vrai ou faux : « Second tri attendu sur un champ de texte, de nombre, de date ou vrai ou faux ». Les absents vont en dernier. Forme compacte : `_par date _puis heure`.
+- `, par date puis heure` *(2.66)* : une liste d'écran ou de document trie sur un second champ, croissant, à égalité du premier ; `, par date décroissant puis heure` inverse le premier seulement ; *(2.73)* `, par jour décroissant puis heure décroissant` inverse aussi le second (le plus récent d'abord, dans le jour aussi ; forme compacte `_par jour _décroissant _puis heure _décroissant`). Le second champ est, comme le premier, de texte, de nombre, de date ou vrai ou faux : « Second tri attendu sur un champ de texte, de nombre, de date ou vrai ou faux ». Les absents vont en dernier. Forme compacte : `_par date _puis heure`.
 - Colonnes par défaut : les champs simples, dans l'ordre de la déclaration ; un lien montre la clé de l'objet désigné ; fichiers, images et champs « plusieurs » restent hors de la liste.
 - Une zone de fichier ou d'image *(1.91)* s'écrit comme le champ qu'elle remplit : `un contrat (fichier)`, `une photo (image), facultative`. On y choisit un fichier ; sa valeur est ce fichier, avec ses octets et son nom, prête à ranger dans un champ `(fichier)` ou `(image)`. Une zone d'image refuse un fichier qui n'est pas une image (« « notes.txt » n'est pas une image (PNG, JPEG, GIF ou WebP). »). Elle n'a pas de valeur de départ écrite.
 - Des choix multiples *(1.93)* s'écrivent comme le champ multiple d'une entité (§ 16.13) : `des genres (genre)`, une case par objet conservé de l'entité, désigné par sa clé. La zone se lit avec les tournures du champ multiple : `Pour chaque genre de l'écran`, `le nombre de genres de l'écran`. Elle ne se fait que parmi les objets d'une entité conservée (« Des choix multiples se font parmi les objets d'une entité conservée : « des genres (genre) » ; « couleur » n'en est pas une. »). Pour ranger les choix dans un objet : `Pour chaque genre de l'écran : Les genres de o gagnent genre.` Forme compacte : `_des genres (genre)`.
@@ -2404,6 +2404,14 @@ Quand on clique sur « Espèces » dans l'écran des séances :
 - Un calcul ne signale rien : « Un calcul ne signale rien : signale dans une action. »
 - Forme compacte : `_signaler « Payé : » ; 20`.
 
+### 22.23 Bouton destructif *(2.72, implémenté le 1er novembre 2026)*
+
+`un bouton « Supprimer », destructif, à confirmer par « Supprimer ce patient ? »` : un bouton qui retire, efface ou annule se dessine en rouge (bordure et texte, fond rouge doux au survol), comme le thème réserve le rouge aux erreurs et à ce qui se perd. Il se repère d'un coup d'œil à côté du bouton principal, qui dit l'action attendue.
+
+- Seul un bouton est destructif ; « destructive » : « Accord : « destructif » (le bouton). » ; un bouton principal ne l'est pas : « Un bouton principal n'est pas destructif : l'action attendue ne détruit rien. »
+- `destructif` ne demande rien : la question reste celle de `, à confirmer par « … »` (2.65).
+- Dans le navigateur : `class="destructif"`. Forme compacte : `_destructif`.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -2580,3 +2588,5 @@ Quand on clique sur « Espèces » dans l'écran des séances :
 | 2.69 | 2026-11-01 | Nouveau § 22.20 : `une écoute « … »`, `, coupée après N secondes de silence`, `Quand une écoute capte un son …` et `Quand l'écoute « … » capte un son …`, avec `le son capté` et `l'écoute` ; formes compactes `_écoute`, `_silence`, `_quand _capte` |
 | 2.70 | 2026-11-01 | Nouveau § 22.21 : `les écoutes des … conservés` (`dont`, `par`, `, coupées après N secondes de silence`), un bandeau par objet nommé par sa clé, relu avant chaque attente ; `Quand un poste capte un son …` avec l'objet et `le son capté` ; formes compactes `_écoutes`, `_quand _capte _un …` |
 | 2.71 | 2026-11-01 | Nouveau § 22.22 : `Signaler « … » [puis x].`, un message qui ne bloque rien, montré après un événement réussi, oublié s'il échoue ; hors écran, comme `Afficher` |
+| 2.72 | 2026-11-01 | Nouveau § 22.23 : `, destructif`, un bouton qui retire ou efface, dessiné en rouge ; jamais principal |
+| 2.73 | 2026-11-01 | § 22.1 : `puis heure décroissant`, le second tri d'une liste à l'envers aussi |

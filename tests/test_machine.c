@@ -1276,6 +1276,21 @@ static void essais_signaler(void) {   /* 2.71 : un message après un geste réus
          "~Un calcul ne signale rien");
 }
 
+static void essais_second_tri(void) {   /* 2.73 : « puis heure décroissant », le plus récent d'abord dans le jour aussi */
+    const char *src =
+        "Un passage, conservé, a : un jour (date), une heure (heure).\n"
+        "Le a vaut un nouveau passage :\n    Le jour vaut 01.11.2026.\n    L'heure vaut 10:00.\nConserver a.\n"
+        "Le b vaut un nouveau passage :\n    Le jour vaut 01.11.2026.\n    L'heure vaut 11:00.\nConserver b.\n"
+        "Le c vaut un nouveau passage :\n    Le jour vaut 31.10.2026.\n    L'heure vaut 12:00.\nConserver c.\n"
+        "L'écran x montre :\n    la liste des passages conservés, par jour décroissant puis heure décroissant,\n    un bouton « Fermer ».\n"
+        "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+    const char *ev[] = { "clic Fermer" };
+    const char *rep[] = { "" };
+    ECRANS(src, ev, rep, "[ouvrir X ; liste passage (Jour, Heure) ; bouton Fermer]\n"
+                         "[lignes 01.11.2026|11:00 / 01.11.2026|10:00 / 31.10.2026|12:00]\n"
+                         "[lignes 01.11.2026|11:00 / 01.11.2026|10:00 / 31.10.2026|12:00]\n[fermer]\n");
+}
+
 static void essais_etats_ecran(void) {   /* § 22.6 */
     const char *src =
         "L'écran de saisie montre :\n"
@@ -1733,6 +1748,10 @@ static void essais_ecrans(void) {
     /* 2.14 : un bouton principal ; seul un bouton l'est */
     PROG("L'écran x montre :\n    le texte « t », principal.\nOuvrir l'écran x.\n", "~Seul un bouton est principal");
     PROG("L'écran x montre :\n    un bouton « B », principale.\nOuvrir l'écran x.\n", "~Accord : « principal » (le bouton).");
+    /* 2.72 : un bouton destructif, jamais principal */
+    PROG("L'écran x montre :\n    un bouton « B », destructive.\nOuvrir l'écran x.\n", "~Accord : « destructif » (le bouton).");
+    PROG("L'écran x montre :\n    un bouton « B », principal, destructif.\nOuvrir l'écran x.\n", "~Un bouton principal n'est pas destructif");
+    PROG("L'écran x montre :\n    un bouton « B », destructif, destructif.\nOuvrir l'écran x.\n", "~« destructif » est déjà dit.");
     PROG("Un point, hors des fiches, a : un x.\n",
          "ERREUR 1:11 Seule une entité se tient hors des fiches : « Une note, conservée, hors des fiches, a : ».");
     PROG("Une personne, conservée, a : un nom (texte).\nUne cliente, conservée, hors des fiches, est une personne.\n"
@@ -4585,6 +4604,7 @@ int main(void) {
     essais_secours();
     essais_ecrans();
     essais_signaler();
+    essais_second_tri();
     essais_etats_ecran();
     essais_ecoute();
     essai_case_vide();

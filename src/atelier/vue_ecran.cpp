@@ -831,6 +831,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         } else {
             auto *b = new QPushButton(e.texte);
             if (e.principal) b->setProperty("role", "principal");   // la feuille du thème : fond d'accent (2.14)
+            else if (e.destructif) b->setProperty("role", "danger");   // bordure et texte rouges (2.72)
             r.boutons << b;
             r.controles[k] = b;
             if (e.a_cote_du_titre && !toile) {   // 2.17 : sur la ligne du titre, à droite

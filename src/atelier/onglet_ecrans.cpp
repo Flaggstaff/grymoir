@@ -219,6 +219,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.principal = (el->entier & 256) != 0;
                         x.tuile = (el->entier & 512) != 0;
                         x.a_cote_du_titre = (el->entier & 1024) != 0;
+                        x.destructif = el->destructif != 0;   // 2.72
                         if (el->indication) x.indication = QString::fromUtf8(el->indication);
                         if (el->texte2) x.image_tuile = QString::fromUtf8(el->texte2);
                     } else if (el->type == N_ECOUTE) {   // « une écoute « Stryker » » (2.69) : montrée, modifiée dans le code
@@ -449,6 +450,7 @@ void OngletEcrans::dessiner() {
     for (int k = 0; k < e.elements.size(); k++) {
         el[k].sorte = e.elements[k].sorte;
         el[k].principal = e.elements[k].principal;
+        el[k].destructif = e.elements[k].destructif;
         el[k].tuile = e.elements[k].tuile;
         el[k].a_cote_du_titre = e.elements[k].a_cote_du_titre;
         el[k].inverse = e.elements[k].inverse;

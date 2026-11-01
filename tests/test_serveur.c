@@ -1416,6 +1416,19 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* 2.72 : un bouton destructif, en rouge ; 2.71 : un signal sous le titre après un clic réussi */
+        const char *src = "L'écran x montre :\n    un bouton « Payer »,\n    un bouton « Supprimer », destructif.\n"
+                          "Quand on clique sur « Payer » dans l'écran x :\n    Signaler « Payé. ».\n"
+                          "Quand on clique sur « Supprimer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n";
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=0"), get("/"), evenement("q=2&clic=1"), get("/"));
+        servir(src, &sc);
+        CONTIENT(sc.reponses[0], "<button name=\"clic\" value=\"1\" class=\"destructif\">Supprimer</button>");
+        NE_CONTIENT_PAS(sc.reponses[0], "class=\"signal\"");
+        CONTIENT(sc.reponses[2], "<p class=\"signal\" role=\"status\">Payé.</p>");
+        liberer(&sc);
+    }
+
     {   /* 2.16 : la signature en bandeau, servie à /signature ; le logo ne se pose plus près du titre */
         const char *src = "Les écrans ont le logo « exemples/pixel.png » et la signature « vendor/lucide/check.svg ».\n"
                           "L'écran d'accueil montre :\n    un bouton « Fermer ».\n"

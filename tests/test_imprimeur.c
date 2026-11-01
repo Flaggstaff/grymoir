@@ -177,6 +177,12 @@ int main(void) {
          "Quand on clique sur « Nouvelle » dans l'écran x :\n    Fermer l'écran.\n");   /* 2.17 */
     FIXE("L'écran x montre :\n    le groupe « Prix proposé », en couleur inversée :\n        le texte « 70 ».\n");   /* 2.18 */
     FIXE("L'écran x montre :\n    le texte « Aujourd'hui », en petites capitales.\n");   /* 2.20 */
+    FIXE("Un passage, conservé, a :\n    un jour (date),\n    une heure (heure).\nL'écran x montre :\n"
+         "    la liste des passages conservés, par jour décroissant puis heure décroissant.\n");   /* 2.73 */
+    FIXE("L'écran x montre :\n    un bouton « Supprimer », destructif, à confirmer par « Supprimer ? ».\n"
+         "Quand on clique sur « Supprimer » dans l'écran x :\n    Fermer l'écran.\n");   /* 2.72 */
+    COMP("L'écran x montre :\n    un bouton « Supprimer », destructif.\nQuand on clique sur « Supprimer » dans l'écran x :\n    Fermer l'écran.\n",
+         "_écran x\n    _bouton « Supprimer » _destructif\n_fin\n_quand _clique « Supprimer » _dans x\n    _fermer\n_fin\n");
     FIXE("Une séance, conservée, a :\n    une heure (heure),\n    un prix (nombre).\nL'écran x montre :\n"
          "    la liste des séances conservées, par heure décroissant, avec l'heure et le prix, en cartes.\n");   /* 2.19 */
     FIXE("Une séance, conservée, a :\n    une date (date),\n    une heure (heure).\nL'écran x montre :\n"

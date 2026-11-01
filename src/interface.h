@@ -85,6 +85,7 @@ typedef struct {
     int tuile;                      /* un bouton « , en tuile » (2.15) : grand, son titre, sa description (indication) et
                                        son image (octets, taille, format) ; des tuiles qui se suivent forment une grille */
     int silence;                    /* une écoute (2.69) : le silence qui finit un passage, en millisecondes ; 0 : 1500 */
+    int destructif;                 /* un bouton « , destructif » (2.72) : en rouge */
 } ElementEcran;
 
 /* Les états d'un élément (ecran_etats, § 22.6) : bit 1 inactif, bit 2 caché ; bit 4 sur un bouton « … si l'écran est

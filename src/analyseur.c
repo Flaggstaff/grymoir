@@ -6887,6 +6887,16 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
         if (!(el->entier & 1024)) attendre_mot(a, a->i + 1, "à côté du titre", strlen("à côté du titre"));
         if (!el->confirmation) attendre_mot(a, a->i + 1, "à confirmer par «", strlen("à confirmer par «"));
         if (!el->raccourci) attendre_mot(a, a->i + 1, "au clavier «", strlen("au clavier «"));
+        if (!el->destructif && !(el->entier & 256)) attendre_mot(a, a->i + 1, "destructif", strlen("destructif"));
+        if (est_mot(x, "destructif") || est_mot(x, "destructive")) {
+            /* « , destructif » (2.72) : un bouton qui retire ou efface, dessiné en rouge, à l'écart de l'action attendue */
+            if (est_mot(x, "destructive")) return erreur(a, x, grym_dupliquer("Accord : « destructif » (le bouton).")), -1;
+            if (el->destructif) return erreur(a, x, grym_dupliquer("« destructif » est déjà dit.")), -1;
+            if (el->entier & 256) return erreur(a, x, grym_dupliquer("Un bouton principal n'est pas destructif : l'action attendue ne détruit rien.")), -1;
+            el->destructif = 1;
+            a->i += 2;
+            return 1;
+        }
         if (est_mot(x, "au") && est_mot(voir(a, 2), "clavier")) {
             /* « , au clavier « N » » (2.68) : Cmd+N sous macOS, Ctrl+N ailleurs, comme un clic, tant que l'écran est
                dessus et le bouton actif. Une lettre ou un chiffre ; celles du système et de l'édition restent à eux. */
@@ -7126,6 +7136,7 @@ static int etat_element(Analyse *a, Noeud *el, Genre g, int zone, int *vus_) {
                 return erreur(a, x, grym_dupliquer("Seul un bouton est principal : « un bouton « Nouvelle séance », principal ».")), -1;
             if (est_mot(x, "principale")) return erreur(a, x, grym_dupliquer("Accord : « principal » (le bouton).")), -1;
             if (el->entier & 256) return erreur(a, x, grym_dupliquer("« principal » est déjà dit.")), -1;
+            if (el->destructif) return erreur(a, x, grym_dupliquer("Un bouton principal n'est pas destructif : l'action attendue ne détruit rien.")), -1;
             el->entier |= 256;
             a->i += 2;
             return 1;
@@ -7575,10 +7586,13 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                         noeud_liberer(el);
                         break;
                     }
-                    el->texte2 = grym_formater("%s|%s", champ, second);
+                    a->i = k2;
+                    int inverse2 = 0;   /* « puis heure décroissant » (2.73) : le second tri à l'envers aussi, « date|-heure » */
+                    if (est_mot(cour(a), "décroissant")) { inverse2 = 1; avancer(a); }
+                    else if (est_mot(cour(a), "croissant")) avancer(a);
+                    el->texte2 = grym_formater("%s|%s%s", champ, inverse2 ? "-" : "", second);
                     free(champ);
                     free(second);
-                    a->i = k2;
                 }
                 el->fin = fin_jeton(&a->j[a->i - 1]);
             }
