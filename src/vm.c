@@ -1412,7 +1412,7 @@ static int adresse_envoyable(const char *u) {
     return !strncmp(u, "http://127.0.0.1", 16) || !strncmp(u, "http://localhost", 16) || !strncmp(u, "http://[::1]", 12);
 }
 
-/* Une valeur envoyée, en JSON : texte, nombre, vrai ou faux, date (AAAA-MM-JJ), absent (null). */
+/* Une valeur envoyée, en JSON : texte, nombre, vrai ou faux, date (AAAA-MM-JJ), absent (null), un ensemble (une liste). */
 static char *valeur_en_json(const Machine *m, const Valeur *v, Chaine *c) {
     switch (v->type) {
     case V_ABSENT: chaine_ajouter(c, "null"); return NULL;
@@ -1432,6 +1432,18 @@ static char *valeur_en_json(const Machine *m, const Valeur *v, Chaine *c) {
         return NULL;
     }
     case V_TEXTE: json_ecrire_texte(c, v->texte); return NULL;
+    case V_ENSEMBLE: {   /* une liste JSON, dans l'ordre d'arrivée (2.79) : « « text » : les textes » pour DeepL */
+        chaine_ajouter(c, "[");
+        for (size_t k = 0; v->liste && k < v->liste->n; k++) {
+            if (v->liste->valeurs[k].type == V_OBJET || v->liste->valeurs[k].type == V_ENSEMBLE)
+                return grym_dupliquer("Un ensemble envoyé porte des textes, des nombres, des dates, vrai ou faux.");
+            if (k) chaine_ajouter(c, ",");
+            char *e = valeur_en_json(m, &v->liste->valeurs[k], c);
+            if (e) return e;
+        }
+        chaine_ajouter(c, "]");
+        return NULL;
+    }
     default: {
         (void)m;
         return grym_dupliquer("Un envoi porte des textes, des nombres, des dates, vrai ou faux.");

@@ -1045,6 +1045,54 @@ int main(int argc, char **argv) {
         while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
     }
 
+    // Un ensemble envoyé (2.79) : une liste JSON, comme DeepL la veut (« "text": ["…"] ») ; son 456 (quota épuisé) se rattrape
+    {
+        QTcpServer service;
+        VERIFIER(service.listen(QHostAddress::LocalHost));
+        QByteArray recu;
+        QObject::connect(&service, &QTcpServer::newConnection, &service, [&] {
+            QTcpSocket *so = service.nextPendingConnection();
+            QObject::connect(so, &QTcpSocket::readyRead, so, [&, so] {
+                recu += so->readAll();
+                const int fin_tete = recu.indexOf("\r\n\r\n");
+                if (fin_tete < 0) return;
+                const int lg = recu.mid(0, fin_tete).toLower().indexOf("content-length:");
+                const int attendu = lg < 0 ? 0 : recu.mid(lg + 15, recu.indexOf("\r\n", lg) - lg - 15).trimmed().toInt();
+                if (recu.size() - fin_tete - 4 < attendu) return;
+                const bool bon = recu.contains("\"text\":[\"Hello\"]") && recu.contains("DeepL-Auth-Key k-essai");
+                const QByteArray corps = bon ? "{\"message\":\"Quota exceeded\"}" : "{\"translations\":[{\"text\":\"mauvais corps\"}]}";
+                so->write(QByteArray(bon ? "HTTP/1.1 456 Quota Exceeded" : "HTTP/1.1 200 OK") + "\r\nContent-Type: application/json\r\nContent-Length: "
+                          + QByteArray::number(corps.size()) + "\r\nConnection: close\r\n\r\n" + corps);
+                so->disconnectFromHost();
+            });
+        });
+        QTemporaryDir d;
+        QFile f(d.filePath("t.grym"));
+        VERIFIER(f.open(QIODevice::WriteOnly));
+        f.write(QString::fromUtf8(
+            "Les textes valent un ensemble vide.\n"
+            "Les textes gagnent « Hello ».\n"
+            "Essayer :\n"
+            "    La r vaut l'envoi à « http://127.0.0.1:%1/v2/translate » avec :\n"
+            "        l'en-tête « Authorization » : « DeepL-Auth-Key k-essai »,\n"
+            "    et de :\n"
+            "        « text » : les textes,\n"
+            "        « target_lang » : « FR ».\n"
+            "    Afficher « traduit » puis le champ « translations.0.text » de la r.\n"
+            "En cas d'échec :\n"
+            "    Afficher « repli » puis le motif de l'échec.\n"
+            "Afficher « fin ».\n").arg(service.serverPort()).toUtf8());
+        f.close();
+        Execution e(d.filePath("t.grym"));
+        e.demarrer();
+        QElapsedTimer z;
+        z.start();
+        auto fil = [&] { return e.findChild<QTextBrowser *>()->toPlainText(); };
+        while (z.elapsed() < 20000 && !fil().contains("fin")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        VERIFIER(fil().contains(QString::fromUtf8("repli Le service a répondu 456")));
+        VERIFIER(!fil().contains("mauvais corps"));
+    }
+
     // « Signaler » (2.71) : après un geste réussi, le message au pied de la fenêtre ; un geste refusé l'efface
     {
         QTemporaryDir dossier;
@@ -1651,8 +1699,12 @@ int main(int argc, char **argv) {
         VERIFIER(attendre([&] { return bandeaux() == "Alpha"; }));
         Ecoute *alpha = bandeau("Alpha");
         VERIFIER(alpha && alpha->veille()->isChecked() && !alpha->veille()->isVisible());   // la veille vient du programme
+        VERIFIER(attendre([&] {   // l'écran attend de nouveau : le bouton est actif
+            for (QPushButton *x : e.findChildren<QPushButton *>()) if (x->text() == "Bravo aussi" && x->isVisible() && x->isEnabled()) return true;
+            return false;
+        }));
         for (QPushButton *x : e.findChildren<QPushButton *>())
-            if (x->text() == "Bravo aussi" && x->isVisible()) { x->click(); break; }
+            if (x->text() == "Bravo aussi" && x->isVisible() && x->isEnabled()) { x->click(); break; }
         VERIFIER(attendre([&] { return bandeaux() == "Alpha,Bravo"; }));
         VERIFIER(bandeau("Alpha") == alpha);   // Alpha n'a pas été recréé : son passage en cours n'est pas coupé
         if (Ecoute *b = bandeau("Bravo")) {
@@ -1667,8 +1719,12 @@ int main(int argc, char **argv) {
             VERIFIER(attendre([&] { return ligne() == "Bravo"; }));   // relié au bon poste
         } else VERIFIER(false);
         // renommé (1er novembre 2026) : le bandeau suit, et son branchement avec lui
+        VERIFIER(attendre([&] {   // l'écran attend de nouveau : le bouton est actif
+            for (QPushButton *x : e.findChildren<QPushButton *>()) if (x->text() == "Renommer" && x->isVisible() && x->isEnabled()) return true;
+            return false;
+        }));
         for (QPushButton *x : e.findChildren<QPushButton *>())
-            if (x->text() == "Renommer" && x->isVisible()) { x->click(); break; }
+            if (x->text() == "Renommer" && x->isVisible() && x->isEnabled()) { x->click(); break; }
         VERIFIER(attendre([&] { return bandeaux() == "Alfa,Bravo"; }));
         VERIFIER(QSettings().value(QString::fromUtf8("écoute/Alfa/seuil")).toInt() == -20);
         VERIFIER(!QSettings().contains(QString::fromUtf8("écoute/Alpha/seuil")));
