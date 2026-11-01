@@ -291,7 +291,7 @@ L'écran de la séance, « Séance », montre :
         une durée (nombre entier), facultative, avec l'unité « min », à 352 de la gauche et 144 du haut, large de 168,
         un prix (nombre), avec l'unité « CHF », à 0 de la gauche et 216 du haut, large de 200,
         un statut (« prévue », « faite », « annulée » ou « absence »), à 0 de la gauche et 288 du haut, large de 520,
-        un paiement (« à payer », « espèces », « Twint » ou « virement »), en lecture seule, avec l'indication « Les boutons du bas le changent : Espèces, Twint, Virement, À payer », à 0 de la gauche et 360 du haut, large de 520,
+        un paiement (« à payer », « espèces », « Twint » ou « virement »), en lecture seule, avec l'indication « Les boutons du bas le changent, même déjà réglée : Espèces, Twint, Virement, À payer », à 0 de la gauche et 360 du haut, large de 520,
         une offerte (vrai ou faux), à 0 de la gauche et 420 du haut,
         un commentaire dicté (son), facultatif, à 552 de la gauche et 0 du haut, large de 520,
         un commentaire (texte), facultatif, sur plusieurs lignes, transcrit du commentaire dicté, à 552 de la gauche et 72 du haut, large de 520, haut de 352,
@@ -1207,7 +1207,7 @@ Remarque : prévue du jour devient faite (son rappel SMS annulé), la séance s'
 Remarque : l'imprimer ; une séance déjà facturée n'en a pas, sa facture suit le paiement ; offerte, pas de pièce. À venir : refusé.
 Pour régler une séance et un moyen :
     Si la date de la séance > aujourd'hui, refuser « Une séance à venir se règle le jour venu. ».
-    Si le paiement de la séance ≠ « à payer », refuser « Cette séance n'est plus à payer : sa fiche dit comment elle l'a été. ».
+    Si le paiement de la séance ≠ « à payer », refuser « Cette séance est déjà réglée ( » suivi du paiement de la séance suivi de « ) : pour changer de moyen, ouvre sa fiche. ».
     Si le statut de la séance = « annulée », refuser « Une séance annulée ne se règle pas. ».
     Si le statut de la séance = « prévue » :
         Annuler le rappel de la séance.
@@ -1254,6 +1254,17 @@ Pour remettre à payer une séance :
     Le paiement de la séance devient « à payer ».
     L'encaissement de la séance devient absent.
     Si la facture de la séance est présente, suivre la facture de la séance.
+
+Remarque : changer de moyen en un geste (1er novembre 2026), depuis la fiche de la séance seulement : sa quittance est annulée,
+Remarque : puis elle se règle autrement, avec une nouvelle quittance ; dans les listes, une séance réglée reste refusée, pour
+Remarque : qu'une ligne choisie par erreur ne change jamais un paiement.
+Pour payer autrement une séance et un moyen et un jour :
+    Si le paiement de la séance = moyen, refuser « Cette séance est déjà réglée ainsi ( » suivi de moyen suivi de « ). ».
+    L'ancien vaut le paiement de la séance.
+    Si l'ancien ≠ « à payer », remettre à payer la séance.
+    Si moyen = « virement », régler par virement la séance et jour.
+    Sinon, régler la séance et moyen.
+    Si l'ancien ≠ « à payer », signaler "Avant : " suivi de l'ancien suivi de « . ».
 
 Remarque : la facture d'une séance du jour ou passée (30 octobre 2026) ; une prévue du jour devient faite d'abord.
 Pour facturer au comptoir une séance :
@@ -2301,16 +2312,16 @@ Quand on clique sur « Facture ou quittance » dans l'écran de la séance :
 Remarque : payée depuis sa fiche (31 octobre 2026), comme depuis « Séances » : enregistrée telle qu'à l'écran, puis réglée.
 Quand on clique sur « Espèces » dans l'écran de la séance :
     Faire comme un clic sur « Enregistrer ».
-    Régler la séance ouverte et « espèces ».
+    Payer autrement la séance ouverte et « espèces » et (absent).
 
 Quand on clique sur « Twint » dans l'écran de la séance :
     Faire comme un clic sur « Enregistrer ».
-    Régler la séance ouverte et « Twint ».
+    Payer autrement la séance ouverte et « Twint » et (absent).
 
 Quand on clique sur « Virement » dans l'écran de la séance :
     Le jour reçu vaut l'encaissement de l'écran.
     Faire comme un clic sur « Enregistrer ».
-    Régler par virement la séance ouverte et le jour reçu.
+    Payer autrement la séance ouverte et « virement » et le jour reçu.
 
 Quand on clique sur « Annuler sa facture » dans l'écran de la séance :
     Si la facture de la séance ouverte est absente, refuser « Cette séance n'a pas de facture. ».

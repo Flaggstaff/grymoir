@@ -1,0 +1,35 @@
+Remarque : changer le moyen d'une séance déjà réglée (1er novembre 2026), essayé par tests/praxis-autrement : inséré avant
+Remarque : l'accueil, données inventées.
+Si le nombre de patients conservés dont le nom = « Autrement Essai » est nul :
+    Le p vaut un nouveau patient :
+        Le nom vaut « Autrement Essai ».
+        Le pays vaut « Suisse ».
+        L'anamnèse vaut « ».
+    Conserver le p.
+    Le soin d'essai vaut le soin conservé dont le nom = « EPI ».
+    Le s1 vaut une nouvelle séance :
+        Le patient vaut le p.
+        Le soin vaut le soin d'essai.
+        La date vaut aujourd'hui − 2.
+        Le prix vaut 120.
+        Le statut vaut « faite ».
+        Le paiement vaut « à payer ».
+    Conserver le s1.
+    Régler le s1 et « espèces ».
+    Le q1 vaut la quittance du s1.
+    Essayer :
+        Régler le s1 et « Twint ».
+    En cas d'échec :
+        L'anamnèse du p devient l'anamnèse du p suivi de "|ESSAI liste : " suivi du motif de l'échec.
+    L'anamnèse du p devient l'anamnèse du p suivi de "|ESSAI inchangé : " suivi du paiement du s1.
+    Payer autrement le s1 et « Twint » et (absent).
+    L'anamnèse du p devient l'anamnèse du p suivi de "|ESSAI autrement : " suivi du paiement du s1.
+    Si l'encaissement du s1 = aujourd'hui, l'anamnèse du p devient l'anamnèse du p suivi de « |ESSAI encaissé : vrai ».
+    Si le q1 est présent et la quittance du s1 ≠ le q1, l'anamnèse du p devient l'anamnèse du p suivi de « |ESSAI quittance : nouvelle ».
+    Si le q1 est absent et la quittance du s1 est absente, l'anamnèse du p devient l'anamnèse du p suivi de « |ESSAI quittance : nouvelle ».
+    Essayer :
+        Payer autrement le s1 et « Twint » et (absent).
+    En cas d'échec :
+        L'anamnèse du p devient l'anamnèse du p suivi de "|ESSAI même : " suivi du motif de l'échec.
+    Payer autrement le s1 et « virement » et aujourd'hui − 1.
+    Si l'encaissement du s1 = aujourd'hui − 1, l'anamnèse du p devient l'anamnèse du p suivi de "|ESSAI virement : " suivi du paiement du s1 suivi de " vrai".
