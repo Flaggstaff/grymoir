@@ -177,6 +177,9 @@ int main(void) {
          "Quand on clique sur « Nouvelle » dans l'écran x :\n    Fermer l'écran.\n");   /* 2.17 */
     FIXE("L'écran x montre :\n    le groupe « Prix proposé », en couleur inversée :\n        le texte « 70 ».\n");   /* 2.18 */
     FIXE("L'écran x montre :\n    le texte « Aujourd'hui », en petites capitales.\n");   /* 2.20 */
+    /* le h muet (1er novembre 2026) : l'imprimeur écrit « un nouvel horaire », l'analyse l'accepte ; le h aspiré garde « nouveau » */
+    FIXE("Un horaire, conservé, a :\n    un début (heure).\nLe h vaut un nouvel horaire :\n    Le début vaut 08:00.\n");
+    FIXE("Un hangar, conservé, a :\n    un nom (texte).\nLe h vaut un nouveau hangar :\n    Le nom vaut « A ».\n");
     FIXE("Une séance, conservée, a :\n    une date (date),\n    une heure (heure),\n    une durée (nombre entier).\n"
          "La grille vaut « ».\nL'écran x montre :\n"
          "    la liste des séances conservées, avec la date, l'heure et la durée, en agenda selon la grille.\n"

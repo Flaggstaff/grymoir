@@ -1626,13 +1626,27 @@ static Noeud *nom_expression(Analyse *a) {
 
 static Noeud *unaire(Analyse *a);
 
-/* Commence par une voyelle : « un nouvel employé », « l'addition ». Le « h » est laissé de côté. */
+/* Les mots en « h » aspiré les plus courants, les mêmes que l'imprimeur : « le haut », « un nouveau hangar ». */
+static int h_aspire(const char *s) {
+    static const char *const H[] = { "haut", "hauteur", "hasard", "hâte", "hausse", "héros", "honte", "hors", "hall",
+                                     "hameau", "hanche", "handicap", "hangar", "hareng", "haricot", "harpe", "hache",
+                                     "haie", "haine", "hamac", "hamster", "harcèlement", "hiérarchie", "hibou", "hockey",
+                                     "homard", "hongrois", "hollandais", "hublot", "huit", "hurlement", "hutte", "houx" };
+    for (size_t k = 0; k < sizeof H / sizeof *H; k++) {
+        const size_t l = strlen(H[k]);
+        if (strncmp(s, H[k], l) == 0 && (s[l] == 0 || s[l] == ' ' || s[l] == 's')) return 1;
+    }
+    return 0;
+}
+
+/* Commence par une voyelle ou un « h » muet : « un nouvel employé », « un nouvel horaire », « l'addition » (1er novembre
+ * 2026 : le « h » muet, comme l'imprimeur, qui écrivait « un nouvel horaire » que l'analyse refusait). */
 static int voyelle_initiale(const char *s) {
     static const char *const V[] = { "a", "e", "i", "o", "u", "y", "à", "â", "ä", "é", "è", "ê", "ë",
                                      "î", "ï", "ô", "ö", "ù", "û", "ü", "œ" };
     for (size_t k = 0; k < sizeof V / sizeof *V; k++)
         if (strncmp(s, V[k], strlen(V[k])) == 0) return 1;
-    return 0;
+    return s[0] == 'h' && !h_aspire(s);
 }
 
 /* ---------------------------------------------------------------- */

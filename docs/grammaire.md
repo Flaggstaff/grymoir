@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.75 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
+Version 2.76 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2614,3 +2614,4 @@ Quand on déplace une séance dans l'écran de l'agenda :
 | 2.73 | 2026-11-01 | § 22.1 : `puis heure décroissant`, le second tri d'une liste à l'envers aussi |
 | 2.74 | 2026-11-01 | Nouveau § 22.24 : `, en agenda selon …`, une liste en grille horaire (date, heure, durée ; la grille : jours et plages) ; `Quand on déplace un … dans l'écran …`, avec `la date d'arrivée` et `l'heure d'arrivée` de l'écran |
 | 2.75 | 2026-11-01 | § 22.24 : `Quand on choisit un créneau dans l'écran …`, un clic dans un agenda hors des objets, avec la date et l'heure d'arrivée |
+| 2.76 | 2026-11-01 | § 13.2 : « un nouvel » aussi devant un h muet (« un nouvel horaire »), comme l'imprimeur l'écrivait déjà ; un h aspiré garde « un nouveau » (« un nouveau hangar ») ; « un nouveau horaire » reste accepté |
