@@ -24,6 +24,17 @@ QRegularExpression motif_recherche(const QString &texte, bool mot_entier, bool c
 // Chaque occurrence remplacée par `par`, mot pour mot (un « \1 » reste « \1 ») ; *n : leur nombre.
 QString remplacer_litteralement(const QString &texte, const QRegularExpression &m, const QString &par, int *n = nullptr);
 
+// Renommer partout (1er novembre 2026). Dans le code seulement : ni les textes entre « » ou "", ni les remarques. Le nom,
+// au mot entier et sans égard aux majuscules (un nom GrymoiR n'en a pas), et son pluriel régulier (ancien + « s ») ;
+// la majuscule d'un début de phrase est gardée. Une entité conservée, ou un champ d'une entité conservée, reçoit
+// « anciennement « … » » (grammaire 2.23) : ses données suivent. *n : le nombre de mots changés.
+QString renommer_dans_code(const QString &texte, const QString &ancien, const QString &nouveau, int *n = nullptr);
+// Le projet copié ailleurs, les fichiers changés posés dessus, puis chaque fichier analysé : vide si tout s'analyse, sinon
+// « fichier, ligne N : message » de la première erreur. Les bases et les sauvegardes ne sont pas copiées.
+QString verifier_dans_une_copie(const QString &projet, const QMap<QString, QString> &changes);
+// La première erreur d'analyse d'un fichier du projet tel qu'il est sur le disque, ou vide.
+QString premiere_erreur_du_projet(const QString &projet);
+
 struct Occurrence {
     QString fichier;   // chemin absolu
     int ligne = 0;     // à partir de 1

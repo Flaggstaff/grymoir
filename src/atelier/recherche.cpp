@@ -17,6 +17,7 @@
 #include <QTextBlock>
 #include <QTextDocument>
 #include <QTreeWidget>
+#include <QTemporaryDir>
 #include <QVBoxLayout>
 
 QRegularExpression motif_recherche(const QString &texte, bool mot_entier, bool casse) {
@@ -80,6 +81,143 @@ QVector<Occurrence> chercher_dans_projet(const QString &projet, const QRegularEx
         }
     }
     return r;
+}
+
+
+// --- renommer partout (1er novembre 2026) ---
+
+static QString avec_majuscule(const QString &modele, const QString &mot) {
+    if (modele.isEmpty() || mot.isEmpty() || !modele.at(0).isUpper()) return mot;
+    return mot.at(0).toUpper() + mot.mid(1);
+}
+
+// Une ligne de code : les mots remplacés hors des textes « … » et "…".
+static QString renommer_ligne(const QString &ligne, const QRegularExpression &m, const QString &nouveau,
+                              const QString &nouveau_pluriel, int *n) {
+    QString r;
+    int i = 0;
+    while (i < ligne.size()) {
+        const QChar c = ligne.at(i);
+        if (c == QChar(0x00AB) || c == '"') {   // un texte : recopié tel quel jusqu'à sa fin
+            const QChar fin = c == '"' ? QChar('"') : QChar(0x00BB);
+            const int j = ligne.indexOf(fin, i + 1);
+            const int k = j < 0 ? ligne.size() : j + 1;
+            r += ligne.mid(i, k - i);
+            i = k;
+            continue;
+        }
+        int j = i;   // un morceau de code, jusqu'au prochain texte
+        while (j < ligne.size() && ligne.at(j) != QChar(0x00AB) && ligne.at(j) != '"') j++;
+        const QString code = ligne.mid(i, j - i);
+        int depuis = 0;
+        auto it = m.globalMatch(code);
+        while (it.hasNext()) {
+            const auto x = it.next();
+            r += code.mid(depuis, x.capturedStart() - depuis);
+            const bool pluriel = !x.captured(1).isEmpty();
+            r += avec_majuscule(x.captured(0), pluriel ? nouveau_pluriel : nouveau);
+            depuis = x.capturedEnd();
+            if (n) (*n)++;
+        }
+        r += code.mid(depuis);
+        i = j;
+    }
+    return r;
+}
+
+QString renommer_dans_code(const QString &texte, const QString &ancien, const QString &nouveau, int *n) {
+    if (n) *n = 0;
+    const auto pluriel_regulier = [](const QString &x) {
+        return x.endsWith('s') || x.endsWith('x') || x.endsWith('z') ? x : x + "s";
+    };
+    // le nom, ou son pluriel régulier (capturé à part) ; au mot entier, sans égard aux majuscules
+    const QString a = QRegularExpression::escape(ancien);
+    const QString plur = pluriel_regulier(ancien) != ancien ? QStringLiteral("(s)?") : QStringLiteral("()");
+    const QRegularExpression m(QStringLiteral("(?<![\\p{L}\\p{N}_])") + a + plur + QStringLiteral("(?![\\p{L}\\p{N}_])"),
+                               QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption);
+    QStringList lignes = texte.split('\n');
+    bool dans_entite = false;   // le corps d'une entité conservée : ses champs
+    for (int k = 0; k < lignes.size(); k++) {
+        QString &l = lignes[k];
+        const QString net = l.trimmed();
+        const bool tete = !l.isEmpty() && !l.at(0).isSpace();
+        if (tete) dans_entite = false;
+        if (net.startsWith(QStringLiteral("Remarque"), Qt::CaseInsensitive)) continue;
+        int avant = n ? *n : 0;
+        const QString neuve = renommer_ligne(l, m, nouveau, pluriel_regulier(nouveau), n);
+        const bool change = neuve != l;
+        // l'entité conservée renommée : « Un patient, conservé, anciennement « client », a : »
+        static const QRegularExpression entite(QStringLiteral("^(Une?) (.+?), conservée?,(.*) a :\\s*$"));
+        const auto e = entite.match(neuve);
+        if (tete && e.hasMatch()) {
+            dans_entite = true;
+            if (change && e.captured(2).compare(nouveau, Qt::CaseInsensitive) == 0 && !neuve.contains(QStringLiteral("anciennement"))) {
+                const int virgule = neuve.indexOf(QStringLiteral(", conservé")) + 1;
+                const int apres = neuve.indexOf(',', virgule) + 1;
+                l = neuve.left(apres) + QStringLiteral(" anciennement \u00AB ") + ancien + QStringLiteral(" \u00BB,") + neuve.mid(apres);
+                continue;
+            }
+        }
+        // un champ renommé dans une entité conservée : « un portrait (image), anciennement « photo », »
+        static const QRegularExpression champ(QStringLiteral("^\\s+(?:une?|des) (.+?) \\("));
+        const auto c = champ.match(neuve);
+        if (!tete && dans_entite && change && c.hasMatch() && c.captured(1).compare(nouveau, Qt::CaseInsensitive) == 0
+            && !neuve.contains(QStringLiteral("anciennement"))) {
+            QString corps = neuve;
+            QString fin;
+            while (!corps.isEmpty() && (corps.endsWith(',') || corps.endsWith('.') || corps.endsWith(' '))) {
+                fin.prepend(corps.back());
+                corps.chop(1);
+            }
+            l = corps + QStringLiteral(", anciennement \u00AB ") + ancien + QStringLiteral(" \u00BB") + fin;
+            continue;
+        }
+        Q_UNUSED(avant);
+        l = neuve;
+    }
+    return lignes.join('\n');
+}
+
+static bool a_copier(const QString &rel) {
+    return !(rel.endsWith(".grymd") || rel.contains(".grymd.") || rel.endsWith(".grymb") || rel.startsWith("Sauvegardes/")
+             || rel.contains("/Sauvegardes/"));
+}
+
+QString verifier_dans_une_copie(const QString &projet, const QMap<QString, QString> &changes) {
+    QTemporaryDir copie;
+    if (!copie.isValid()) return QString::fromUtf8("Pas de dossier temporaire pour vérifier.");
+    QDirIterator it(projet, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        const QString f = it.next();
+        const QString rel = QDir(projet).relativeFilePath(f);
+        if (!a_copier(rel)) continue;
+        QDir().mkpath(QFileInfo(copie.filePath(rel)).absolutePath());
+        QFile::copy(f, copie.filePath(rel));
+    }
+    for (auto c = changes.constBegin(); c != changes.constEnd(); ++c) {
+        QFile d(copie.filePath(QDir(projet).relativeFilePath(c.key())));
+        if (!d.open(QIODevice::WriteOnly | QIODevice::Truncate)) return QString::fromUtf8("La copie ne s'écrit pas.");
+        d.write(c.value().toUtf8());
+    }
+    for (const QString &f : fichiers_du_projet(copie.path())) {
+        QFile d(f);
+        if (!d.open(QIODevice::ReadOnly)) continue;
+        const Diagnostic_atelier r = analyser_source(QString::fromUtf8(d.readAll()), f.endsWith(".grymc"), f);
+        if (!r.message.isEmpty())
+            return QString::fromUtf8("%1, ligne %2 : %3").arg(QDir(copie.path()).relativeFilePath(f)).arg(r.ligne).arg(r.message);
+    }
+    return QString();
+}
+
+QString premiere_erreur_du_projet(const QString &projet) {
+    for (const QString &f : fichiers_du_projet(projet)) {
+        QFile d(f);
+        if (!d.open(QIODevice::ReadOnly)) continue;
+        const Diagnostic_atelier r = analyser_source(QString::fromUtf8(d.readAll()), f.endsWith(".grymc"), f);
+        if (!r.message.isEmpty())
+            return QString::fromUtf8("%1, ligne %2 : %3").arg(QDir(projet).relativeFilePath(f)).arg(r.ligne).arg(r.message);
+    }
+    return QString();
 }
 
 // --- la barre, dans le fichier ouvert ---

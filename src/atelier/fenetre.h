@@ -100,6 +100,7 @@ public:
     void chercher_dans_le_projet();
     void remplacer_dans_le_projet(const QRegularExpression &motif, const QString &par);
     void mettre_en_forme();
+    void renommer_partout();      // un nom, dans tout le code du projet, vérifié dans une copie avant d'écrire
     void aller_a_la_ligne();
     void taille_du_code(int pas);   // +1, −1 ; 0 : la taille normale (14)
     void fichier_precedent();       // Cmd+[ : le fichier ouvert juste avant, à la même place

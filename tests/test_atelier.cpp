@@ -916,6 +916,35 @@ int main(int argc, char **argv) {
         const Diagnostic_atelier plusieurs = analyser_source(QString::fromUtf8("Le a vaut 1 +.\nLe b vaut 2.\nAfficher (3.\n"), false);
         VERIFIER(plusieurs.ligne == 1 && plusieurs.suivantes.size() == 1 && plusieurs.suivantes[0].ligne == 3);
         VERIFIER(analyser_source(QString::fromUtf8("Le a vaut 1.\n"), false).suivantes.isEmpty());
+
+        // renommer partout (1er novembre 2026) : hors des textes et des remarques ; le pluriel ; la majuscule ; « anciennement »
+        int n = 0;
+        const QString avant = QString::fromUtf8("Remarque : un patient.\nUn patient, conservé, a :\n    un nom (texte), unique,\n"
+                                                "    une photo (image), facultative.\nL'écran x montre :\n"
+                                                "    la liste des patients conservés,\n    le texte « Patient ».\n");
+        VERIFIER(renommer_dans_code(avant, "patient", "client", &n)
+                 == QString::fromUtf8("Remarque : un patient.\nUn client, conservé, anciennement « patient », a :\n    un nom (texte), unique,\n"
+                                      "    une photo (image), facultative.\nL'écran x montre :\n"
+                                      "    la liste des clients conservés,\n    le texte « Patient ».\n"));
+        VERIFIER(n == 2);
+        VERIFIER(renommer_dans_code(avant, "photo", "image", &n).contains(QString::fromUtf8("    une image (image), facultative, anciennement « photo ».")));
+        // sur Praxis-N : du même genre, le projet s'analyse encore ; d'un autre genre, la copie le refuse
+        const QString praxis = QString(GRYM_SOURCE) + "/projets/Praxis/Nicolas";
+        VERIFIER(premiere_erreur_du_projet(praxis).isEmpty());
+        auto essayer = [&](const QString &a, const QString &b) {
+            QMap<QString, QString> m;
+            for (const QString &f : fichiers_du_projet(praxis)) {
+                QFile d(f);
+                if (!d.open(QIODevice::ReadOnly)) continue;
+                int k = 0;
+                const QString t = renommer_dans_code(QString::fromUtf8(d.readAll()), a, b, &k);
+                if (k) m.insert(f, t);
+            }
+            return verifier_dans_une_copie(praxis, m);
+        };
+        VERIFIER(essayer(QString::fromUtf8("anamnèse"), QString::fromUtf8("histoire")).isEmpty());
+        VERIFIER(essayer("rubrique", "famille").isEmpty());
+        VERIFIER(!essayer("patient", "personne").isEmpty());   // féminin : « le personne » ne s'analyse pas
     }
 
     // « Signaler » (2.71) : après un geste réussi, le message au pied de la fenêtre ; un geste refusé l'efface

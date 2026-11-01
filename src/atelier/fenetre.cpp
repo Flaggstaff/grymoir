@@ -476,6 +476,9 @@ Fenetre::Fenetre() {
     a->setShortcut(QKeySequence("Ctrl+Alt+F"));
     a = edition->addAction(QString::fromUtf8("Chercher dans le projet…"), this, &Fenetre::chercher_dans_le_projet);
     a->setShortcut(QKeySequence("Ctrl+Shift+F"));
+    a = edition->addAction(QString::fromUtf8("Renommer partout…"), this, &Fenetre::renommer_partout);
+    a->setShortcut(QKeySequence("Ctrl+Alt+R"));
+    a->setStatusTip(QString::fromUtf8("Un nom dans tout le code du projet ; vérifié dans une copie avant d'écrire ; annulable"));
     edition->addSeparator();
     a = edition->addAction(QString::fromUtf8("Aller à la ligne…"), this, &Fenetre::aller_a_la_ligne);
     a->setShortcut(QKeySequence("Ctrl+L"));
@@ -1309,4 +1312,80 @@ bool Fenetre::reprendre_disposition() {
         if (s->objectName().startsWith("partage-") && r.contains("fenêtre/" + s->objectName()))
             s->restoreState(r.value("fenêtre/" + s->objectName()).toByteArray());
     return r.contains("fenêtre/géométrie") && restoreGeometry(r.value("fenêtre/géométrie").toByteArray());
+}
+
+// Renommer partout (1er novembre 2026) : un nom dans tout le code, sans risque. Refusé si le projet a déjà une erreur ; le
+// nom et son pluriel régulier changent hors des textes et des remarques ; une entité ou un champ conservé reçoit
+// « anciennement », pour que la base suive ; tout est essayé dans une copie du projet, et rien ne s'écrit si un fichier ne
+// s'analyse plus ; puis un geste, qui s'annule.
+void Fenetre::renommer_partout() {
+    if (projet.isEmpty()) return;
+    if (!fichier.isEmpty() && editeur->document()->isModified() && !enregistrer()) return;
+    QTextCursor c = editeur->textCursor();
+    if (!c.hasSelection()) c.select(QTextCursor::WordUnderCursor);
+    const QString propose = c.selectedText().trimmed();
+    bool ok = false;
+    const QString ancien = QInputDialog::getText(this, QString::fromUtf8("Renommer partout"), QString::fromUtf8("Le nom à changer :"),
+                                                 QLineEdit::Normal, propose, &ok).trimmed();
+    if (!ok || ancien.isEmpty()) return;
+    const QString nouveau = QInputDialog::getText(this, QString::fromUtf8("Renommer partout"),
+                                                  QString::fromUtf8("« %1 » devient :").arg(ancien), QLineEdit::Normal, ancien, &ok).trimmed();
+    if (!ok || nouveau.isEmpty() || nouveau.compare(ancien, Qt::CaseInsensitive) == 0) return;
+    const QString avant = premiere_erreur_du_projet(projet);
+    if (!avant.isEmpty()) {
+        QMessageBox::warning(this, QString::fromUtf8("Renommer partout"),
+                             QString::fromUtf8("Le projet a déjà une erreur : corrige-la d'abord, pour qu'on sache que le renommage n'en "
+                                               "ajoute pas.\n\n%1").arg(avant));
+        return;
+    }
+    QMap<QString, QString> nouveaux;
+    QMap<QString, QByteArray> anciens;
+    QStringList detail;
+    int total = 0;
+    for (const QString &f : fichiers_du_projet(projet)) {
+        if (f.endsWith(".grymc")) continue;   // la forme compacte n'a pas de pluriels ni de remarques à éviter : à la main
+        QFile d(f);
+        if (!d.open(QIODevice::ReadOnly)) continue;
+        const QByteArray octets = d.readAll();
+        int n = 0;
+        const QString t = renommer_dans_code(QString::fromUtf8(octets), ancien, nouveau, &n);
+        if (!n) continue;
+        nouveaux.insert(f, t);
+        anciens.insert(f, octets);
+        total += n;
+        detail << QString::fromUtf8("%1 : %2").arg(QDir(projet).relativeFilePath(f)).arg(n);
+    }
+    if (!total) {
+        statusBar()->showMessage(QString::fromUtf8("« %1 » n'apparaît nulle part dans le code.").arg(ancien), 5000);
+        return;
+    }
+    const QString apres = verifier_dans_une_copie(projet, nouveaux);
+    if (!apres.isEmpty()) {
+        QMessageBox::warning(this, QString::fromUtf8("Renommer partout"),
+                             QString::fromUtf8("Rien n'a été changé : avec « %1 », le projet ne s'analyserait plus.\n\n%2\n\n"
+                                               "Un nom d'un autre genre, ou qui s'élide autrement (le → l'), change aussi les articles : "
+                                               "renomme alors à la main, avec « Chercher dans le projet ».").arg(nouveau, apres));
+        return;
+    }
+    const auto r = QMessageBox::question(this, QString::fromUtf8("Renommer partout"),
+        QString::fromUtf8("« %1 » devient « %2 » : %3 mot%4 dans %5 fichier%6, vérifié dans une copie du projet.\n\n%7\n\n"
+                          "Les textes entre guillemets et les remarques ne changent pas. Une entité ou un champ conservé reçoit "
+                          "« anciennement » : ses données suivent. « Annuler le dernier geste » remet tout.")
+            .arg(ancien, nouveau).arg(total).arg(total > 1 ? "s" : "").arg(nouveaux.size()).arg(nouveaux.size() > 1 ? "s" : "")
+            .arg(detail.join("\n")),
+        QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+    if (r != QMessageBox::Yes) return;
+    Geste g;
+    g.description = QString::fromUtf8("Renommer « %1 » en « %2 »").arg(ancien, nouveau);
+    g.avant = anciens;
+    QStringList touches;
+    for (auto it = nouveaux.constBegin(); it != nouveaux.constEnd(); ++it) {
+        QSaveFile s(it.key());
+        if (s.open(QIODevice::WriteOnly) && s.write(it.value().toUtf8()) >= 0 && s.commit()) touches << it.key();
+    }
+    gestes.append(g);
+    action_annuler_geste->setEnabled(true);
+    action_annuler_geste->setToolTip(QString::fromUtf8("Annuler : ") + g.description);
+    apres_geste(touches, entite_choisie);
+    statusBar()->showMessage(g.description + QString::fromUtf8(" : fait."), 5000);
 }
