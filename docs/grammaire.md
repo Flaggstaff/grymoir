@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.68 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
+Version 2.69 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2319,6 +2319,41 @@ Le fichier XML du d devient le XML de facture.
 - *(2.63)* Un XML déclaré dans un fichier utilisé (§ 21) se voit dans le programme qui l'utilise, comme ses calculs ; il restait jusque-là propre à son fichier.
 - Le XML produit est bien formé ; sa conformité à un schéma (XSD) n'est pas vérifiée. En forme compacte *(2.48)* : `_xml facture « invoice:request »` … `_fin` ; `_attribut « n » v`, `_contenu v`, `_élément « n »`, `_élément « n » v`, `_élément « n » _enfants` … `_fin` ; `_xml facture` dans une expression.
 
+### 22.20 Écoutes *(2.69, implémenté le 1er novembre 2026)*
+
+Une écoute capte le son d'une entrée de l'ordinateur (un poste de radio branché en USB, une interface audio), le découpe en passages et donne chacun au programme. Écoutille (`projets/Écoutille`) en est l'application d'exemple.
+
+```
+Un passage, conservé, a :
+    un poste (texte),
+    un jour (date),
+    une heure (heure),
+    un enregistrement (son),
+    une transcription (texte), facultative, transcrite de l'enregistrement.
+
+L'écran de veille montre :
+    une écoute « Stryker », coupée après 3 secondes de silence,
+    une écoute « George II »,
+    la liste des passages conservés, par jour puis heure.
+
+Quand une écoute capte un son dans l'écran de veille :
+    Le p vaut un nouveau passage.
+    Le poste du p devient l'écoute.
+    Le jour du p devient aujourd'hui.
+    L'heure du p devient maintenant.
+    L'enregistrement du p devient le son capté.
+    Conserver le p.
+```
+
+- **`une écoute « … »`** est un élément d'écran : son nom est unique dans l'écran (« L'écoute « A » existe déjà dans cet écran. »). Elle accepte `visible si` et la position libre (§ 22.9), pas `actif si`. Un document la refuse, comme un bouton.
+- **Le passage** commence quand le niveau du son dépasse le seuil, et finit après 1,5 seconde sous le seuil. `, coupée après 3 secondes de silence` change ce délai, de 1 à 60 secondes. Le passage garde les 300 ms qui précèdent la parole et 300 ms après ; moins de 300 ms de parole est un craquement, oublié ; au-delà de 5 minutes, il est coupé et un autre commence. C'est un WAV de 16 kHz mono, le format que lit le transcripteur (§ 15.8).
+- **`Quand une écoute capte un son dans l'écran X :`** s'exécute pour chaque passage, dans sa transaction, comme un clic. `Quand l'écoute « Stryker » capte un son dans l'écran X :` ne vaut que pour celle-là et l'emporte sur l'événement de toutes les écoutes. Dans le corps, **`le son capté`** est le passage, un `(son)` (§ 15.7), et **`l'écoute`** son nom, un texte. Ranger le son dans un champ `transcrit de` le fait transcrire, comme partout (§ 15.8). Un écran sans écoute : « L'écran « x » n'a pas d'écoute ». Une autre tournure que `capte un son` : « « capte un son » attendu ».
+- **Le bandeau de l'écoute**, dans l'atelier et les applications fabriquées : le nom, le menu des entrées (chaque appareil, et chaque canal d'un appareil stéréo : « U-Phoria UM2, entrée 1 » ; deux appareils au même nom sont numérotés, « USB Audio CODEC (2) »), la barre de niveau, le curseur du seuil (de −60 à −10 dB), le bouton **Haut-parleur** qui rejoue l'entrée sur la sortie son de l'ordinateur, et l'état : en écoute, passage en cours, son qui sature. L'entrée, le seuil et le haut-parleur sont retenus par nom d'écoute, d'un lancement à l'autre. Sous macOS, le système demande une fois l'accord pour le micro.
+- Les passages captés pendant que la machine travaille attendent, dans l'ordre, et partent quand leur écran attend ; ceux d'un écran recouvert (§ 22.3) attendent son retour ; ceux d'un écran fermé se perdent.
+- **La console et le navigateur** ne captent pas le son : ils refusent l'écran à son ouverture (« L'écoute « Stryker » capte le son de l'ordinateur : elle vit dans l'atelier et les applications fabriquées, pas dans la console ni le navigateur. »).
+- L'onglet Écrans de l'atelier montre l'écoute à sa place ; son silence se règle dans le code.
+- Forme compacte : `_écoute « Stryker » _silence 3` ; `_quand _capte « Stryker » _dans de_veille`, `_quand _capte _dans de_veille`.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -2492,3 +2527,4 @@ Le fichier XML du d devient le XML de facture.
 | 2.66 | 2026-10-31 | § 22.1 : `, par date puis heure`, un second tri dans une liste d'écran ou de document ; forme compacte `_par date _puis heure` |
 | 2.67 | 2026-10-31 | § 22.6 : `, à confirmer par « … » si l'écran est modifié`, une question seulement après une saisie pas encore écrite dans la base ; forme compacte `_si_modifié` ; § 22.2 : Échap vaut un clic sur « Fermer » dans l'atelier et une application fabriquée |
 | 2.68 | 2026-11-01 | § 22.6 : `, au clavier « N »` sur un bouton : Cmd+N sous macOS, Ctrl+N ailleurs, comme un clic, tant que l'écran est dessus et le bouton visible et actif ; lettres du système et de l'édition refusées, un raccourci par bouton dans un écran ; `accesskey` dans le navigateur ; forme compacte `_clavier « N »`. |
+| 2.69 | 2026-11-01 | Nouveau § 22.20 : `une écoute « … »`, `, coupée après N secondes de silence`, `Quand une écoute capte un son …` et `Quand l'écoute « … » capte un son …`, avec `le son capté` et `l'écoute` ; formes compactes `_écoute`, `_silence`, `_quand _capte` |

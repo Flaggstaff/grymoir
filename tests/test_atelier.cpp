@@ -17,6 +17,7 @@
 #include <QFontMetrics>
 #include "relecture.h"
 #include "son.h"
+#include "ecoute.h"
 #include <QTextBrowser>
 #include <QDialog>
 #include <QTimer>
@@ -1250,6 +1251,47 @@ int main(int argc, char **argv) {
         z.start();
         while (z.elapsed() < 3000) QApplication::processEvents(QEventLoop::AllEvents, 20);
         VERIFIER(true);
+    }
+
+    // L'écoute (2.69) : le découpage en passages, le WAV, et le bandeau nourri à la main
+    {
+        auto ton = [](size_t n, float amplitude) {   // 440 Hz, à 16 kHz
+            std::vector<float> v(n);
+            for (size_t i = 0; i < n; i++) v[i] = amplitude * (float)std::sin(2 * 3.14159265 * 440 * (double)i / 16000.0);
+            return v;
+        };
+        Decoupeur d;
+        d.silence_ms = 1000;
+        d.seuil = 0.02f;
+        std::vector<std::vector<float>> finis;
+        const std::vector<float> silence(16000, 0.f), parole = ton(16000, 0.3f), craquement = ton(1600, 0.3f);
+        d.nourrir(silence.data(), silence.size(), &finis);
+        VERIFIER(finis.empty() && !d.en_passage);
+        d.nourrir(parole.data(), parole.size(), &finis);   // une seconde de parole : un passage commence
+        VERIFIER(d.en_passage && finis.empty());
+        d.nourrir(silence.data(), silence.size(), &finis);   // une seconde de silence : il finit
+        VERIFIER(finis.size() == 1 && !d.en_passage);
+        // 300 ms avant, la parole, 300 ms après (à une fenêtre de 20 ms près)
+        VERIFIER(!finis.empty() && finis[0].size() >= 16000 + 4800 + 4800 - 320 && finis[0].size() <= 16000 + 4800 + 4800 + 320);
+        finis.clear();
+        d.nourrir(craquement.data(), craquement.size(), &finis);   // 100 ms : un craquement, oublié
+        d.nourrir(silence.data(), silence.size(), &finis);
+        VERIFIER(finis.empty());
+        d.nourrir(parole.data(), parole.size(), &finis);   // l'arrêt rend le passage en cours
+        d.finir(&finis);
+        VERIFIER(finis.size() == 1);
+        const QByteArray w = wav_16k(std::vector<float>(160, 0.5f));
+        VERIFIER(w.size() == 44 + 320 && w.startsWith("RIFF") && w.mid(8, 4) == "WAVE" && octets_de_son(w));
+        std::vector<float> relu;
+        VERIFIER(wav_en_16k(w, &relu) && relu.size() == 160 && std::fabs(relu[0] - 0.5f) < 0.001f);
+        Ecoute e(QString::fromUtf8("Essai Écoutille"), 1000, nullptr, false);   // sans entrée son ici : nourri à la main
+        int captes = 0;
+        QString nom;
+        e.capte = [&](const QByteArray &wav, const QString &n) { captes += octets_de_son(wav) ? 1 : 0; nom = n; };
+        e.nourrir(silence);
+        e.nourrir(parole);
+        e.nourrir(silence);
+        VERIFIER(captes == 1 && nom.startsWith(QString::fromUtf8("Essai Écoutille-")) && nom.endsWith(".wav"));
     }
 
     // Le son (24 octobre 2026) : l'extension du fichier que lit le décodeur, d'après les octets ; le choix du micro

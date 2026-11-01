@@ -8,6 +8,7 @@
 #include "types.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 /* ---------------------------------------------------------------- */
@@ -1662,6 +1663,16 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 aj(im, c ? "_bouton " : "un bouton ");
                 ecrire_texte(im, el->texte);
                 etats_ecran(im, el, 0);
+            } else if (el->type == N_ECOUTE) {   /* « une écoute « Stryker », coupée après 3 secondes de silence » (2.69) */
+                aj(im, c ? "_écoute " : "une écoute ");
+                ecrire_texte(im, el->texte);
+                if (el->entier) {
+                    char x[64];
+                    if (c) snprintf(x, sizeof x, " _silence %d", el->entier);
+                    else snprintf(x, sizeof x, ", coupée après %d seconde%s de silence", el->entier, el->entier > 1 ? "s" : "");
+                    aj(im, x);
+                }
+                etats_ecran(im, el, 1);
             } else if (el->type == N_IMAGE_ECRAN) {   /* « l'image « plan.png » » ; « _image « plan.png » » (§ 22.8) */
                 if (el->texte) {
                     aj(im, c ? "_image " : "l'image ");
@@ -1888,7 +1899,21 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     }
     case P_QUAND: {   /* « Quand on clique sur « B » dans l'écran X : » (§ 22.2) */
         size_t apres_nom = im->nb;
-        if (n->forme >= 4) {   /* « Quand on ouvre l'écran X : », « Quand on ferme … » */
+        if (n->forme == 6) {   /* « Quand une écoute capte un son dans l'écran X : » ; « _quand _capte « S » _dans X » (2.69) */
+            const char *nom = n->enfants[2]->texte;
+            if (c) {
+                aj(im, "_quand _capte ");
+                if (*nom) { ecrire_texte(im, nom); aj(im, " "); }
+                aj(im, "_dans ");
+                ecrire_nom(im, n->texte3, 0);
+                aj(im, "\n");
+            } else {
+                if (*nom) { aj(im, "Quand l'écoute "); ecrire_texte(im, nom); aj(im, " capte un son dans l'écran "); }
+                else aj(im, "Quand une écoute capte un son dans l'écran ");
+                aj_sigles(im, n->texte3);
+                aj(im, " :\n");
+            }
+        } else if (n->forme >= 4) {   /* « Quand on ouvre l'écran X : », « Quand on ferme … » */
             if (c) { aj(im, n->forme == 4 ? "_quand _ouvre " : "_quand _ferme "); ecrire_nom(im, n->texte3, 0); aj(im, "\n"); }
             else { aj(im, n->forme == 4 ? "Quand on ouvre l'écran " : "Quand on ferme l'écran "); aj_sigles(im, n->texte3); aj(im, " :\n"); }
         } else if (c) {

@@ -244,7 +244,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0 };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -904,6 +904,12 @@ static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, cons
     chaine_ajouter(&s->page.journal, titre);
     for (size_t k = 0; k < n; k++) {
         if (el[k].sorte == ELEMENT_LIBRE) { chaine_ajouter(&s->page.journal, " ; libre {"); continue; }   /* § 22.9 */
+        if (el[k].sorte == ELEMENT_ECOUTE) {   /* « ; écoute Stryker 3000 ms » (2.69) */
+            char *x = grym_formater(" ; écoute %s %d ms", el[k].texte, el[k].silence);
+            chaine_ajouter(&s->page.journal, x);
+            free(x);
+            continue;
+        }
         if (el[k].sorte >= ELEMENT_COTE_A_COTE && el[k].sorte <= ELEMENT_GROUPE) {   /* les blocs de disposition */
             chaine_ajouter(&s->page.journal, el[k].sorte == ELEMENT_COTE_A_COTE ? " ; côte à côte {"
                                              : el[k].sorte == ELEMENT_L_UN_SOUS_L_AUTRE ? " ; l'un sous l'autre {"
@@ -1008,6 +1014,20 @@ static Issue scene_attendre(void *contexte, Chaine *sortie, Evenement *e) {
                 e->element = k;
                 snprintf(texte, sizeof texte, "%s", egal + 1);
                 e->texte = texte;
+            }
+        return ISSUE_REPONDU;
+    }
+    if (strncmp(x, "capte ", 6) == 0) {   /* « capte Stryker » : un passage capté, un petit WAV (2.69) */
+        static const unsigned char wav[48] = { 'R', 'I', 'F', 'F', 40, 0, 0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ',
+                                               16, 0, 0, 0, 1, 0, 1, 0, 0x80, 0x3e, 0, 0, 0, 0x7d, 0, 0, 2, 0, 16, 0,
+                                               'd', 'a', 't', 'a', 4, 0, 0, 0, 0, 0, 0, 0 };
+        for (size_t k = 0; k < s->nb_elements; k++)
+            if (s->elements[k].sorte == ELEMENT_ECOUTE && strcmp(s->elements[k].texte, x + 6) == 0) {
+                e->sorte = EVENEMENT_CAPTURE;
+                e->element = k;
+                e->octets = wav;
+                e->taille = sizeof wav;
+                e->texte = "passage.wav";
             }
         return ISSUE_REPONDU;
     }
@@ -1117,7 +1137,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
                     scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme, scene_signature,
-                    NULL, NULL, NULL, NULL, NULL };
+                    NULL, NULL, NULL, NULL, NULL, 1 };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -1138,6 +1158,30 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
         if (strcmp(r_, att) != 0) signaler(__LINE__, src, att, r_); \
         free(r_); \
     } while (0)
+
+static void essais_ecoute(void) {   /* 2.69 : l'événement d'une écoute, nommée ou de toutes */
+    const char *src =
+        "Un passage, conservé, a : un poste (texte), un enregistrement (son).\n"
+        "L'écran de veille montre :\n"
+        "    une écoute « Stryker », coupée après 3 secondes de silence,\n"
+        "    une écoute « George II »,\n"
+        "    un bouton « Fermer ».\n"
+        "Quand l'écoute « Stryker » capte un son dans l'écran de veille :\n"
+        "    Afficher « Stryker : » puis l'écoute.\n"
+        "Quand une écoute capte un son dans l'écran de veille :\n"
+        "    Le p vaut un nouveau passage.\n"
+        "    Le poste du p devient l'écoute.\n"
+        "    L'enregistrement du p devient le son capté.\n"
+        "    Conserver le p.\n"
+        "    Afficher « toutes : » puis le poste du p puis le format de l'enregistrement du p.\n"
+        "Quand on clique sur « Fermer » dans l'écran de veille :\n    Fermer l'écran.\n"
+        "Ouvrir l'écran de veille.\n";
+    const char *ev[] = { "capte Stryker", "capte George II", "clic Fermer" };
+    const char *rep[] = { "" };
+    ECRANS(src, ev, rep,
+           "[ouvrir Veille ; écoute Stryker 3000 ms ; écoute George II 0 ms ; bouton Fermer]\n"
+           "Stryker : Stryker\ntoutes : George II WAV\n[fermer]\n");
+}
 
 static void essais_etats_ecran(void) {   /* § 22.6 */
     const char *src =
@@ -4448,6 +4492,7 @@ int main(void) {
     essais_secours();
     essais_ecrans();
     essais_etats_ecran();
+    essais_ecoute();
     essai_case_vide();
     essai_image();
 

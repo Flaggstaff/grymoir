@@ -764,6 +764,14 @@ Noeud *nouvel_element(const ElementNouveau &e, const QString &dossier, QString *
         return n;
     }
     if (e.texte.trimmed().isEmpty()) { *erreur = "Donne un libellé, un texte ou un nom."; return nullptr; }
+    if (e.sorte == ELEMENT_ECOUTE) {   // « une écoute « Stryker » » (2.69) ; son silence se règle dans le code
+        if (e.texte.contains(QChar(0x00BB)) || e.texte.contains(QChar(0x00AB))) { *erreur = "Pas de guillemets « » dans un nom."; return nullptr; }
+        n = noeud_creer(N_ECOUTE, 0, 0, 0);
+        n->texte = grym_dupliquer(t.constData());
+        const QString x = etats_voulus(n, e);
+        if (!x.isEmpty()) { *erreur = x; noeud_liberer(n); return nullptr; }
+        return n;
+    }
     if (e.sorte == ELEMENT_BOUTON || e.sorte == ELEMENT_TEXTE || e.sorte == ELEMENT_IMAGE) {
         if (e.texte.contains(QChar(0x00BB)) || e.texte.contains(QChar(0x00AB))) { *erreur = "Pas de guillemets « » dans un libellé."; return nullptr; }
         n = noeud_creer(e.sorte == ELEMENT_BOUTON ? N_BOUTON : e.sorte == ELEMENT_IMAGE ? N_IMAGE_ECRAN : N_TEXTE_ECRAN, 0, 0, 0);

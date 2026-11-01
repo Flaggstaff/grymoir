@@ -1311,6 +1311,23 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 r->ns--;
             }
             if (!etats_compacts(r, g, f, 1, 0)) return;
+        } else if (est_cle(t, "écoute") && f >= d + 2 && r->e[d + 1].type == J_TEXTE) {
+            /* _écoute « Stryker » _silence 3 → une écoute « Stryker », coupée après 3 secondes de silence (2.69) */
+            mot(r, "une", t);
+            mot(r, "écoute", t);
+            copier(r, &r->e[d + 1]);
+            size_t g = d + 2;
+            if (g + 1 < f && est_cle(&r->e[g], "silence") && r->e[g + 1].type == J_NOMBRE) {
+                emettre(r, J_VIRGULE, NULL, &r->e[g], 1);
+                mot(r, "coupée", &r->e[g]);
+                mot(r, "après", &r->e[g]);
+                copier(r, &r->e[g + 1]);
+                mot(r, strcmp(r->e[g + 1].valeur, "1") == 0 ? "seconde" : "secondes", &r->e[g]);
+                mot(r, "de", &r->e[g]);
+                mot(r, "silence", &r->e[g]);
+                g += 2;
+            }
+            if (!etats_compacts(r, g, f, 1, 0)) return;
         } else if (est_cle(t, "image") && f >= d + 2 && r->e[d + 1].type == J_TEXTE && (f == d + 2 || est_etat(&r->e[d + 2]))) {
             emettre(r, J_ELISION, "l", t, 1);   /* _image « plan.png » → l'image « plan.png » (§ 22.8) */
             mot(r, "image", t);
@@ -1597,6 +1614,31 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             return;
         }
         size_t dans = chercher(r, d + 1, f, "dans");
+        if (d + 1 < f && est_cle(&r->e[d + 1], "capte") && (dans == d + 2 || (dans == d + 3 && r->e[d + 2].type == J_TEXTE))
+            && dans + 1 < f) {
+            /* _quand _capte « S » _dans de_veille → Quand l'écoute « S » capte un son dans l'écran de veille : ;
+             * sans nom → Quand une écoute capte un son … (2.69) */
+            mot(r, "quand", t);
+            if (dans == d + 3) {
+                emettre(r, J_ELISION, "l", &r->e[d + 1], 1);
+                mot(r, "écoute", &r->e[d + 1]);
+                copier(r, &r->e[d + 2]);
+            } else {
+                mot(r, "une", &r->e[d + 1]);
+                mot(r, "écoute", &r->e[d + 1]);
+            }
+            mot(r, "capte", &r->e[d + 1]);
+            mot(r, "un", &r->e[d + 1]);
+            mot(r, "son", &r->e[d + 1]);
+            mot(r, "dans", &r->e[dans]);
+            emettre(r, J_ELISION, "l", &r->e[dans], 1);
+            mot(r, "écran", &r->e[dans]);
+            for (size_t k = dans + 1; k < f; k++) copier(r, &r->e[k]);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            fixer_retrait(r, premier, prof);
+            ouvrir(r, O_FORMULE, prof, t);
+            return;
+        }
         if (d + 1 < f && est_cle(&r->e[d + 1], "change") && dans == d + 3 && r->e[d + 2].type == J_CROCHETS && dans + 1 < f) {
             /* _quand _change pays _dans de_recherche → Quand on change pays dans l'écran de recherche : */
             mot(r, "quand", t);

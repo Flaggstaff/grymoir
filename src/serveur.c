@@ -1483,6 +1483,7 @@ static void page_ecran(Serveur *s) {
             chaine_ajouter(&c, "</legend>\n");
             if (prof < 16) groupes[prof++] = el->place ? 3 : 1;
             break;
+        case ELEMENT_ECOUTE: break;   /* jamais ici : la machine refuse l'écran d'une écoute au navigateur (2.69) */
         case ELEMENT_MENU:   /* « le menu « Membres » : » : un titre qui ouvre ses boutons (§ 22.12) */
             chaine_ajouter(&c, "<details class=\"menu\"><summary>");
             echapper(&c, el->texte);
@@ -2575,7 +2576,7 @@ Interface serveur_interface(Serveur *s) {
                     serveur_afficher_fiche, serveur_ecran_ouvrir, serveur_ecran_lignes, serveur_ecran_attendre,
                     serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence,
                     serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre, serveur_ecran_erreurs_zones, NULL, NULL,
-                    serveur_ecran_theme, serveur_ecran_signature, serveur_ecran_texte, NULL, NULL, NULL, NULL };
+                    serveur_ecran_theme, serveur_ecran_signature, serveur_ecran_texte, NULL, NULL, NULL, NULL, 0 };
     return i;
 }
 

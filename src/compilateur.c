@@ -787,6 +787,12 @@ static long description_ecran(Compilation *c, const Noeud *e, const Noeud *ph) {
             chaine_ajouter(&d, pl);
             free(pl);
         }
+        if (el->type == N_ECOUTE) {   /* « Ustryker ␞ 3000 » : une écoute, et le silence qui coupe, en ms (2.69) */
+            char *u = grym_formater("U%s\x1e%d", el->texte, el->entier * 1000);
+            chaine_ajouter(&d, u);
+            free(u);
+            continue;
+        }
         if (el->type == N_CHERCHER && el->graphique) {   /* « Rb+ » : un graphique, en barres ou en secteurs, compté ou additionné (§ 22.11) */
             /* « R », la forme et la période en une lettre (b s : sans ; c t : par mois ; d u : par semaine ; e v : par
              * année ; barres puis secteurs), « + » somme ou « n » nombre (§ 22.11) ; deux lettres seulement, pour
@@ -1535,8 +1541,11 @@ static void phrase(Compilation *c, const Noeud *ph) {
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
             if (el->type == N_TEXTE_ECRAN || el->type == N_DISPOSITION || el->type == N_IMAGE_ECRAN) continue;   /* sans événement */
+            const int ecoute = el->type == N_ECOUTE;
             const Noeud *q = trouver_quand(c->programme->phrases, c->programme->nb, e->texte,
-                                           el->type == N_BOUTON ? 1 : el->type == N_NOM ? 3 : 2, el->texte);
+                                           ecoute ? 6 : el->type == N_BOUTON ? 1 : el->type == N_NOM ? 3 : 2, el->texte);
+            /* une écoute sans événement à son nom : celui de toutes les écoutes, « Quand une écoute capte » (2.69) */
+            if (!q && ecoute) q = trouver_quand(c->programme->phrases, c->programme->nb, e->texte, 6, "");
             if (!q) continue;   /* une liste sans « Quand on choisit » : le choix ne fait rien */
             char num[24];
             snprintf(num, sizeof num, "%lu", (unsigned long)(k + 1));
@@ -1544,10 +1553,13 @@ static void phrase(Compilation *c, const Noeud *ph) {
             emettre(c, I_CONSTANTE, bloc_constante(c->b, C_NOMBRE, num), ph->ligne, ph->colonne);
             emettre(c, I_EGAL, 0, ph->ligne, ph->colonne);
             size_t suivant = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, ph->ligne, ph->colonne);
-            if (q->forme == 2) emettre(c, I_LIRE_LOCAL, objet, ph->ligne, ph->colonne);
+            if (q->forme == 2 || q->forme == 6) emettre(c, I_LIRE_LOCAL, objet, ph->ligne, ph->colonne);
+            if (q->forme == 6)   /* « l'écoute » : son nom, le second paramètre (2.69) */
+                emettre(c, I_CONSTANTE, bloc_constante(c->b, C_TEXTE, el->texte), ph->ligne, ph->colonne);
             long nom = bloc_nom(c->b, q->texte);
             if (nom < 0) { free(vers_apres); trop_grand(c, ph); return; }
-            bloc_emettre_appel(c->b, (uint16_t)nom, (uint8_t)(q->forme == 2 ? 1 : 0), 0, ph->ligne, ph->colonne);
+            bloc_emettre_appel(c->b, (uint16_t)nom, (uint8_t)(q->forme == 6 ? 2 : q->forme == 2 ? 1 : 0), 0, ph->ligne,
+                               ph->colonne);
             vers_apres[nb_apres++] = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
             bloc_corriger_saut(c->b, suivant, c->b->taille_code);
         }

@@ -780,6 +780,17 @@ int main(void) {
     V("L'écran x montre :\n    l'image « exemples/pixel.png », visible si vrai,\n    le texte « t ».",
       "(écran [x] (image « exemples/pixel.png » (visible-si vrai)) (texte « t »))");
     VE("L'écran x montre :\n    l'image « rien.png ».", 2, 13, "Fichier « rien.png » introuvable ou illisible.");
+    /* l'écoute (2.69) */
+    VE("L'écran x montre :\n    une écoute « A »,\n    une écoute « A ».", 3, 16, "L'écoute « A » existe déjà");
+    VE("L'écran x montre :\n    une écoute « A », coupée après 0 secondes de silence.", 2, 36, "de 1 à 60 secondes");
+    VE("L'écran x montre :\n    une écoute « A », coupée après 3 minutes de silence.", 2, 23, "Forme attendue : « , coupée après");
+    VE("L'écran x montre :\n    un bouton « B ».\nQuand une écoute capte un son dans l'écran x :\n    Afficher 1.", 3, 11,
+       "L'écran « x » n'a pas d'écoute");
+    VE("L'écran x montre :\n    une écoute « A ».\nQuand l'écoute « Z » capte un son dans l'écran x :\n    Afficher 1.", 3, 16,
+       "L'écran « x » n'a pas d'écoute « Z »");
+    VE("L'écran x montre :\n    une écoute « A ».\nQuand une écoute entend un son dans l'écran x :\n    Afficher 1.", 3, 18,
+       "« capte un son » attendu");
+    VE("Le document x montre :\n    une écoute « A ».", 2, 5, "Un document se lit sur papier");
     VE("L'écran x montre :\n    l'image « exemples/pixel.png », active si vrai.", 2, 37, "Une image ne se clique pas");
     VE("L'écran x montre :\n    un bouton « B », active si vrai.", 2, 22, "Accord : « actif si ».");
     /* une heure comme valeur de départ, d'une zone d'écran et d'un champ (§ 14.7) */

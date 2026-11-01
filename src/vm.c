@@ -2845,6 +2845,24 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->champs[k] = NULL;
             continue;
         }
+        if (x[0] == 'U') {   /* « UStryker ␞ 3000 » : une écoute, et le silence qui coupe un passage, en ms (2.69) */
+            if (!m->iface.ecouter) {
+                *erreur = grym_formater("L'écoute « %.*s » capte le son de l'ordinateur : elle vit dans l'atelier et les "
+                                        "applications fabriquées, pas dans la console ni le navigateur.",
+                                        (int)strcspn(x + 1, "\x1e"), x + 1);
+                break;
+            }
+            const char *s1 = strchr(x, '\x1e');
+            e->textes[k] = grym_formater("%.*s", (int)(s1 ? s1 - x - 1 : (long)strlen(x + 1)), x + 1);
+            e->elements[k].sorte = ELEMENT_ECOUTE;
+            e->elements[k].texte = e->textes[k];
+            e->elements[k].silence = s1 ? atoi(s1 + 1) : 0;
+            e->listes[k] = vi_absent(NULL);
+            e->colonnes[k] = NULL;
+            e->nb_colonnes[k] = 0;
+            e->champs[k] = NULL;
+            continue;
+        }
         if (x[0] == 'Z') {   /* « Zpays ␞ texte ␞ f » : une zone de saisie */
             const char *s1 = strchr(x, '\x1e'), *s2 = s1 ? strchr(s1 + 1, '\x1e') : NULL;
             char *nomz = grym_formater("%.*s", (int)(s1 ? s1 - x - 1 : (long)strlen(x + 1)), x + 1);
@@ -6066,6 +6084,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 const Liste *l = m->ecran->listes[ev.element].liste;
                 Objet *o = machine_objet_en_base(m, l->ids[ev.ligne], l->classes[ev.ligne], &probleme);
                 if (o) { valeur_liberer(&objet); objet = vi_objet(o); code_ev = (long)ev.element + 1; }
+            } else if (!probleme && ev.sorte == EVENEMENT_CAPTURE && ev.element < m->ecran->n
+                       && m->ecran->elements[ev.element].sorte == ELEMENT_ECOUTE && ev.octets && ev.taille) {
+                /* une écoute a capté un passage (2.69) : « le son capté », un fichier son, premier paramètre */
+                valeur_liberer(&objet);
+                objet = vi_fichier(ev.octets, ev.taille, ev.texte ? ev.texte : "passage.wav");
+                code_ev = (long)ev.element + 1;
             } else if (!probleme && code_ev == 0 && ev.sorte != EVENEMENT_FERMETURE) {
                 code_ev = -1;   /* un événement qui ne désigne rien (ligne disparue entre-temps) : rien ne s'exécute */
             }

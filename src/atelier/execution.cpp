@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, exécution d'un programme dans sa propre fenêtre.
 #include "execution.h"
+#include "ecoute.h"
 #include "rapport.h"
 #include "transcription.h"
 #include "theme.h"
@@ -185,7 +186,9 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
     t->longueurs.clear();
     t->unites.clear();
     t->valeurs_fiche.clear();
+    t->silences.clear();
     for (size_t k = 0; k < n; k++) {
+        t->silences << (el[k].sorte == ELEMENT_ECOUTE ? el[k].silence : 0);   // 2.69
         // le rang de la valeur, en caractères Qt : la machine le donne en octets UTF-8
         t->valeurs_fiche << (el[k].sorte == ELEMENT_TEXTE && el[k].valeur_depuis && el[k].texte
                                  && el[k].valeur_depuis <= strlen(el[k].texte)
@@ -605,7 +608,8 @@ void Travail::run() {
                    iface_ecran_valeurs, iface_ecran_apparence, iface_ecran_etats, iface_ecran_image,
                    iface_ecran_taille_titre, iface_ecran_erreurs_zones, iface_rendre_pdf,
                    iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte,
-                   iface_montrer_document, iface_ouvrir_adresse, iface_envoyer, iface_ecran_transcrire};
+                   iface_montrer_document, iface_ouvrir_adresse, iface_envoyer, iface_ecran_transcrire,
+                   1};   // les écoutes captent le son (2.69)
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     situer(m, chemin, base_imposee, dossier_ecriture);
@@ -1024,6 +1028,11 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             envoyer_evenement(EVENEMENT_CHANGEMENT, cible, 0);
             return;
         }
+        if (!captures.isEmpty()) {   // un passage capté pendant que la machine travaillait (2.69)
+            const int avant = captures.size();
+            envoyer_capture();
+            if (captures.size() < avant && !attente_ecran) return;
+        }
         if (travail.transcriptions_en_cours == 0 && clic_apres_transcription >= 0) {   // le clic retenu, maintenant que tout est là
             const int k = clic_apres_transcription;
             clic_apres_transcription = -1;
@@ -1423,6 +1432,22 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
     boutons_ecran = v.boutons;
     setWindowTitle(titre);
     for (int k = 0; k < sortes.size(); k++) {   // les événements, branchés sur les contrôles dessinés
+        if (sortes[k] == ELEMENT_ECOUTE && v.controles[k] && v.controles[k]->layout()) {   // 2.69 : le vrai bandeau
+            QWidget *cadre = v.controles[k];
+            if (auto *apercu = cadre->findChild<QLabel *>("ecoute-apercu")) apercu->deleteLater();
+            auto *e = new Ecoute(textes[k], travail.silences.value(k), cadre);
+            cadre->layout()->addWidget(e);
+            QWidget *vue = v.vue;
+            connect(vue, &QObject::destroyed, this, [this, vue] {   // un écran fermé : ses passages en attente avec lui
+                for (int i = 0; i < captures.size(); i++)
+                    if (captures[i].vue == vue) captures.removeAt(i--);
+            });
+            e->capte = [this, vue, k](const QByteArray &wav, const QString &nom) {
+                captures.push_back({vue, k, wav, nom});
+                envoyer_capture();
+            };
+            continue;
+        }
         if (auto *tab = v.tables[k]) {
             tab->setToolTip("Double-clic ou Entrée : choisir ; clic sur un titre : trier");
             connect(tab, &QTableWidget::cellActivated, this, [this, k, tab](int ligne, int) {
@@ -1781,15 +1806,33 @@ void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) 
     for (int k = 0; k < tables.size(); k++)
         if (tables[k] && tables[k]->currentRow() >= 0 && tables[k]->item(tables[k]->currentRow(), 0))
             lignes_choisies[k] = tables[k]->item(tables[k]->currentRow(), 0)->data(Qt::UserRole).toInt();
-    const bool avec_fichier = sorte == EVENEMENT_CHANGEMENT && fichier_envoye;
+    const bool avec_fichier = (sorte == EVENEMENT_CHANGEMENT || sorte == EVENEMENT_CAPTURE) && fichier_envoye;
     travail.evenement = {sorte, (size_t)element, (size_t)ligne,
-                         sorte == EVENEMENT_CHANGEMENT ? texte_envoye.constData() : nullptr,
+                         sorte == EVENEMENT_CHANGEMENT || sorte == EVENEMENT_CAPTURE ? texte_envoye.constData() : nullptr,
                          lignes_choisies.constData(), (size_t)lignes_choisies.size(),
                          avec_fichier ? reinterpret_cast<const unsigned char *>(octets_envoyes.constData()) : nullptr,
                          avec_fichier ? (size_t)octets_envoyes.size() : 0};
     fichier_envoye = false;   // les octets restent dans octets_envoyes jusqu'à l'événement suivant : la machine les lit
     travail.issue = 0;
     travail.reponse.release();
+}
+
+// Le premier passage capté par l'écran qui attend (2.69) ; ceux d'un écran détruit sont oubliés, ceux d'un écran
+// recouvert attendent son retour.
+void Execution::envoyer_capture() {
+    if (!attente_ecran || !vue_ecran) return;
+    for (int i = 0; i < captures.size(); i++) {
+        bool vivant = captures[i].vue == vue_ecran;
+        for (const EcranMontre &r : recouverts) vivant |= captures[i].vue == r.vue;
+        if (!vivant) { captures.removeAt(i--); continue; }
+        if (captures[i].vue != vue_ecran) continue;
+        const Capture c = captures.takeAt(i);
+        octets_envoyes = c.wav;
+        texte_envoye = c.nom.toUtf8();
+        fichier_envoye = true;
+        envoyer_evenement(EVENEMENT_CAPTURE, c.element, 0);
+        return;
+    }
 }
 
 void Execution::terminer(bool ok, const QString &erreur, const QString &annulation) {

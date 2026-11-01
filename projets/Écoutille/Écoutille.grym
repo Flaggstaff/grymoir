@@ -1,0 +1,35 @@
+Remarque : Écoutille, la veille radio de Michel (grammaire, § 22.20). Chaque poste a son écoute ; chaque passage capté
+Remarque : est conservé avec son enregistrement, puis transcrit. Le nom de l'écoute dit le poste.
+
+Un passage, conservé, a :
+    un poste (texte),
+    un jour (date),
+    une heure (heure),
+    un enregistrement (son),
+    une transcription (texte), facultative, transcrite de l'enregistrement.
+
+L'écran de veille montre :
+    côte à côte :
+        une écoute « FT-991A »,
+        une écoute « FT-710 »,
+    côte à côte :
+        une écoute « Stryker », coupée après 3 secondes de silence,
+        une écoute « George II », coupée après 3 secondes de silence,
+    la liste des passages conservés, par jour puis heure, avec l'heure, le poste et la transcription,
+    un bouton « Fermer ».
+
+Quand une écoute capte un son dans l'écran de veille :
+    Le p vaut un nouveau passage.
+    Le poste du p devient l'écoute.
+    Le jour du p devient aujourd'hui.
+    L'heure du p devient maintenant.
+    L'enregistrement du p devient le son capté.
+    Conserver le p.
+
+Quand on choisit un passage dans l'écran de veille :
+    Ouvrir la fiche du passage.
+
+Quand on clique sur « Fermer » dans l'écran de veille :
+    Fermer l'écran.
+
+Ouvrir l'écran de veille.

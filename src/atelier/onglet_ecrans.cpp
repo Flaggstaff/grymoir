@@ -80,7 +80,8 @@ static QString nom_palette(int sorte) {
          : sorte == INTERRUPTEUR_PALETTE ? "Interrupteur" : sorte == CHOIX_MULTIPLES_PALETTE ? "Choix multiples"
          : sorte == FICHIER_PALETTE ? "Fichier" : sorte == SON_PALETTE ? "Son" : sorte == ELEMENT_LISTE ? "Liste"
          : sorte == ELEMENT_GRAPHIQUE ? "Graphique"
-         : sorte == ELEMENT_IMAGE ? "Image" : sorte == ELEMENT_ONGLETS ? "Onglets" : "Menu";
+         : sorte == ELEMENT_IMAGE ? "Image" : sorte == ELEMENT_ONGLETS ? "Onglets"
+         : sorte == ELEMENT_ECOUTE ? QString::fromUtf8("Écoute") : "Menu";
 }
 
 static bool est_bloc(int s) {
@@ -220,6 +221,9 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                         x.a_cote_du_titre = (el->entier & 1024) != 0;
                         if (el->indication) x.indication = QString::fromUtf8(el->indication);
                         if (el->texte2) x.image_tuile = QString::fromUtf8(el->texte2);
+                    } else if (el->type == N_ECOUTE) {   // « une écoute « Stryker » » (2.69) : montrée, modifiée dans le code
+                        x.sorte = ELEMENT_ECOUTE;
+                        x.texte = QString::fromUtf8(el->texte);
                     } else if (el->type == N_IMAGE_ECRAN) {   // « l'image « plan.png » » : le chemin écrit (§ 22.8)
                         x.sorte = ELEMENT_IMAGE;
                         x.texte = el->texte ? QString::fromUtf8(el->texte) : QString();

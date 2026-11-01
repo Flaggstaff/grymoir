@@ -453,7 +453,19 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         QWidget *const toile = niveaux.last().toile;
         auto poser_ici = [&](QWidget *w, int etirement = 0) { poser(w, e, etirement); };
 #define poser poser_ici
-        if (e.sorte == ELEMENT_IMAGE) {   // « l'image « plan.png » » (§ 22.8) : sa taille, sans dépasser 480 × 320
+        if (e.sorte == ELEMENT_ECOUTE) {   // « une écoute « Stryker » » (2.69) : un cadre ; l'exécution y pose le bandeau
+            auto *cadre = new QFrame;
+            cadre->setObjectName("ecoute");
+            cadre->setFrameShape(QFrame::StyledPanel);
+            auto *pile = new QVBoxLayout(cadre);
+            pile->setContentsMargins(t.mesure("espace-2"), t.mesure("espace-2"), t.mesure("espace-2"), t.mesure("espace-2"));
+            auto *l = new QLabel(QString::fromUtf8("Écoute « %1 » : l'entrée son, le niveau et le seuil, à l'exécution").arg(e.texte));
+            l->setWordWrap(true);
+            l->setObjectName("ecoute-apercu");
+            pile->addWidget(l);
+            poser(cadre);
+            r.controles[k] = cadre;
+        } else if (e.sorte == ELEMENT_IMAGE) {   // « l'image « plan.png » » (§ 22.8) : sa taille, sans dépasser 480 × 320
             auto *l = new QLabel;
             montrer_image(l, e.octets, e.texte, e.largeur, e.hauteur);   // sans le fichier : son nom
             l->setToolTip(e.texte);

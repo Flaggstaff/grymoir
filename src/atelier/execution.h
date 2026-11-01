@@ -109,6 +109,7 @@ public:
     QVector<int> longueurs;                               // zone de texte : « au plus N caractères », 0 sinon (§ 22.6)
     QStringList unites;                                   // zone : « <CHF » devant, « >% » derrière, vide sinon (§ 22.6)
     QVector<QVector<int>> valeurs_fiche;                  // texte de fiche (§ 22.3) : rang de la valeur, étiquette, lien ; vide sinon
+    QVector<int> silences;                                // écoute (2.69) : le silence qui finit un passage, en ms ; 0 sinon
     // les descriptions des écrans du dessous (écrans empilés, § 22.3), rendues à la fermeture de celui du dessus
     struct Description { QVector<int> nb_colonnes; QStringList types_zones; QVector<int> facultatives; QVector<QStringList> choix_zones;
                          QVector<int> options_zones; QVector<QByteArray> images; QVector<QVector<int>> places;
@@ -205,6 +206,11 @@ private:
     int reduction = 0;   // la fenêtre, réduite de ces pixels de chaque côté sous un écran qui recouvre l'accueil   // un écran s'est montré : à la fin, la fenêtre se ferme (24 octobre 2026)
     int images = 0;
     // Les sons du fil (§ 15.7) : « son:K » dans le texte, joués par un lecteur caché ; nom et octets
+    // Les passages captés par les écoutes (2.69), dans l'ordre : chacun part quand son écran attend, et seulement
+    // celui-là ; un écran recouvert garde les siens jusqu'à son retour, un écran fermé les perd.
+    struct Capture { QWidget *vue; int element; QByteArray wav; QString nom; };
+    QList<Capture> captures;
+    void envoyer_capture();
     QVector<QPair<QString, QByteArray>> sons_du_fil;
     class LecteurSon *lecteur_fil = nullptr;
     int son_joue = -1;

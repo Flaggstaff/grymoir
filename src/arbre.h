@@ -180,8 +180,10 @@ typedef enum {
                         'e' élément (texte, enfant facultatif : son contenu), 'b' élément à enfants (texte, enfant : N_BLOC) */
     P_BIBLIOTHEQUE,  /* « Cette bibliothèque est « Suisse santé », version 2. » (2.61, § 21.9) : texte : son nom ; texte2 : sa
                         version, un entier écrit en chiffres ; rien ne s'exécute */
-    P_INTERNE        /* « Ce fichier est interne à sa bibliothèque. » (2.62, § 21.9) : ses formules ne se voient que dans les
+    P_INTERNE,       /* « Ce fichier est interne à sa bibliothèque. » (2.62, § 21.9) : ses formules ne se voient que dans les
                         fichiers de sa bibliothèque ; rien ne s'exécute */
+    N_ECOUTE         /* élément d'écran : « une écoute « Stryker » » (2.69) : texte : son nom ; entier : le silence qui finit
+                        un passage, en secondes, 0 s'il n'est pas dit (« , coupée après 3 secondes de silence ») */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */

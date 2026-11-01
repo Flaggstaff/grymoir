@@ -22,7 +22,8 @@ typedef enum { ELEMENT_LISTE, ELEMENT_BOUTON, ELEMENT_TEXTE, ELEMENT_ZONE,
                ELEMENT_LIBRE,
                ELEMENT_ONGLETS, ELEMENT_ONGLET,
                ELEMENT_GRAPHIQUE,
-               ELEMENT_MENU } SorteElement;   /* « le menu « T » : » (texte : le titre), fermé par une fin de bloc : § 22.12 */   /* blocs : § 22.1 ; groupe titré (texte : le titre) : § 22.7 ;
+               ELEMENT_MENU,      /* « le menu « T » : » (texte : le titre), fermé par une fin de bloc : § 22.12 */
+               ELEMENT_ECOUTE } SorteElement;   /* « une écoute « Stryker » » (texte : son nom ; silence) : 2.69 */   /* blocs : § 22.1 ; groupe titré (texte : le titre) : § 22.7 ;
                                                   image (texte : son nom ; octets, taille, format) : § 22.8 ;
                                                   bloc en position libre, fermé par ELEMENT_FIN_DE_BLOC : § 22.9 ;
                                                   les onglets, un onglet (texte : son titre), fermés de même : § 22.10 */
@@ -80,6 +81,7 @@ typedef struct {
                                        envoyée ; sinon le clic part sans question */
     int tuile;                      /* un bouton « , en tuile » (2.15) : grand, son titre, sa description (indication) et
                                        son image (octets, taille, format) ; des tuiles qui se suivent forment une grille */
+    int silence;                    /* une écoute (2.69) : le silence qui finit un passage, en millisecondes ; 0 : 1500 */
 } ElementEcran;
 
 /* Les états d'un élément (ecran_etats, § 22.6) : bit 1 inactif, bit 2 caché ; bit 4 sur un bouton « … si l'écran est
@@ -90,7 +92,9 @@ typedef struct {
 #define LIEN_COURRIEL 1   /* « mailto: » + la valeur */
 #define LIEN_WEB 2        /* la valeur elle-même, http:// ou https:// (§ 22.13) */
 
-typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT } SorteEvenement;
+/* EVENEMENT_CAPTURE (2.69) : une écoute a capté un passage ; element : l'écoute, octets et taille : le son (WAV),
+   texte : son nom de fichier */
+typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT, EVENEMENT_CAPTURE } SorteEvenement;
 typedef struct {
     SorteEvenement sorte;
     size_t element;   /* le bouton cliqué, la liste où l'on a choisi */
@@ -226,6 +230,9 @@ typedef struct {
      * zone « transcrite du … » d'indice cible recevra le texte quand il sera prêt, par un événement de changement que
      * l'interface enverra elle-même ; la machine n'attend pas. NULL : la machine transcrit elle-même, et attend. */
     void (*ecran_transcrire)(void *contexte, size_t cible, const unsigned char *octets, size_t taille);
+    /* L'interface capte le son des écoutes (2.69) : 1 dans l'atelier et les applications fabriquées. 0 : un écran qui a
+     * une écoute est refusé à l'ouverture (console, navigateur). */
+    int ecouter;
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.
