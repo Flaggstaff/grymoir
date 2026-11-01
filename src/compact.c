@@ -1430,7 +1430,8 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             const int des_ecoutes = est_cle(t, "écoutes");   /* _écoutes poste _conservé … _silence 3 (2.70) */
             for (size_t q = d + 3; q < f; q++)
                 if (est_cle(&r->e[q], "place") || est_cle(&r->e[q], "largeur") || est_cle(&r->e[q], "hauteur")) { f = q; break; }
-            for (size_t q = d + 3; q < f; q++) if (est_cle(&r->e[q], "cartes") || est_cle(&r->e[q], "silence")) { cartes = q; break; }
+            for (size_t q = d + 3; q < f; q++)
+                if (est_cle(&r->e[q], "cartes") || est_cle(&r->e[q], "silence") || est_cle(&r->e[q], "agenda")) { cartes = q; break; }
             const size_t places = f;
             if (cartes < f) f = cartes;
             size_t avec = chercher(r, d + 3, f, "avec");
@@ -1505,6 +1506,14 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 mot(r, strcmp(r->e[cartes + 1].valeur, "1") == 0 ? "seconde" : "secondes", &r->e[cartes]);
                 mot(r, "de", &r->e[cartes]);
                 mot(r, "silence", &r->e[cartes]);
+            } else if (cartes < places && est_cle(&r->e[cartes], "agenda")) {   /* « _agenda g » → « , en agenda selon g » (2.74) */
+                if (cartes + 1 >= places) { echouer(r, &r->e[cartes], grym_dupliquer("« _agenda » attend la grille : « _agenda grille »."));
+                                            return; }
+                emettre(r, J_VIRGULE, NULL, &r->e[cartes], 1);
+                mot(r, "en", &r->e[cartes]);
+                mot(r, "agenda", &r->e[cartes]);
+                mot(r, "selon", &r->e[cartes]);
+                expression(r, cartes + 1, places);
             } else if (cartes < places) {   /* « _cartes » → « , en cartes » (2.19) */
                 emettre(r, J_VIRGULE, NULL, &r->e[cartes], 1);
                 mot(r, "en", &r->e[cartes]);
@@ -1691,7 +1700,8 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             return;
         }
         int clic = d + 1 < f && est_cle(&r->e[d + 1], "clique") && dans == d + 3 && r->e[d + 2].type == J_TEXTE;
-        int choix = d + 1 < f && est_cle(&r->e[d + 1], "choisit") && dans == d + 4
+        const int deplace = d + 1 < f && est_cle(&r->e[d + 1], "déplace");   /* _quand _déplace _une séance _dans … (2.74) */
+        int choix = d + 1 < f && (est_cle(&r->e[d + 1], "choisit") || deplace) && dans == d + 4
                     && (est_cle(&r->e[d + 2], "un") || est_cle(&r->e[d + 2], "une")) && r->e[d + 3].type == J_CROCHETS;
         if ((!clic && !choix) || dans + 1 >= f) {
             echouer(r, t, grym_dupliquer("Forme attendue : « _quand _clique « OK » _dans d'accueil » ou "
@@ -1705,7 +1715,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "sur", &r->e[d + 1]);
             copier(r, &r->e[d + 2]);
         } else {
-            mot(r, "choisit", &r->e[d + 1]);
+            mot(r, deplace ? "déplace" : "choisit", &r->e[d + 1]);
             mot(r, r->e[d + 2].valeur, &r->e[d + 2]);
             copier(r, &r->e[d + 3]);
         }

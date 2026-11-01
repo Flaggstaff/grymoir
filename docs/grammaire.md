@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.73 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
+Version 2.74 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2412,6 +2412,27 @@ Quand on clique sur « Espèces » dans l'écran des séances :
 - `destructif` ne demande rien : la question reste celle de `, à confirmer par « … »` (2.65).
 - Dans le navigateur : `class="destructif"`. Forme compacte : `_destructif`.
 
+### 22.24 Agenda *(2.74, implémenté le 1er novembre 2026)*
+
+Une liste montrée en grille horaire : une colonne par jour, chaque objet à son heure et sur sa durée. Un clic le choisit ; on le glisse ailleurs à la souris.
+
+```
+La grille de l'agenda vaut « 02.11.2026|06.11.2026|1 08:00-12:00 13:30-18:00|3 08:00-12:00 ».
+
+L'écran de l'agenda montre :
+    la liste des séances conservées, par date puis heure, avec la date, l'heure, la durée et le nom du patient, en agenda selon la grille de l'agenda.
+
+Quand on déplace une séance dans l'écran de l'agenda :
+    La date de la séance devient la date d'arrivée de l'écran.
+    L'heure de la séance devient l'heure d'arrivée de l'écran.
+```
+
+- **`, en agenda selon …`** suit les colonnes d'une liste, à la place de `, en cartes` (« Une liste est en cartes ou en agenda, pas les deux. »). Ses trois premières colonnes sont **la date, l'heure et la durée** en minutes (vide : 60) ; les suivantes s'écrivent dans le bloc. Un objet sans date ou sans heure ne se place pas.
+- **La grille** est une valeur, relue avant chaque attente comme un texte calculé (2.24) : `premier jour|dernier jour|plages` ; chaque plage, `n hh:mm-hh:mm [hh:mm-hh:mm …]`, n de 1 (lundi) à 7 (dimanche). Un jour de la période sans plage n'est pas montré ; sans aucune plage, tous les jours le sont, sans rien griser. Hors des plages, la colonne est hachurée. Six semaines au plus. Les heures vont de 7 h à 20 h, élargies aux plages et aux objets.
+- **`Quand on choisit une séance`** : un clic sur son bloc. **`Quand on déplace une séance dans l'écran X :`** : le bloc glissé puis lâché ailleurs, au quart d'heure ; dans le corps, `la date d'arrivée de l'écran` et `l'heure d'arrivée de l'écran`. Le programme décide : écrire la date et l'heure, refuser (`Refuser « … »` : le bloc revient), ou demander.
+- Dans l'atelier et les applications fabriquées. **Le navigateur** montre la liste ordinaire, sans glisser. L'onglet Écrans de l'atelier la montre comme une liste.
+- Forme compacte : `_liste séance _conservé _avec date ; heure ; durée _agenda grille` ; `_quand _déplace _une séance _dans de_l_agenda`.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -2590,3 +2611,4 @@ Quand on clique sur « Espèces » dans l'écran des séances :
 | 2.71 | 2026-11-01 | Nouveau § 22.22 : `Signaler « … » [puis x].`, un message qui ne bloque rien, montré après un événement réussi, oublié s'il échoue ; hors écran, comme `Afficher` |
 | 2.72 | 2026-11-01 | Nouveau § 22.23 : `, destructif`, un bouton qui retire ou efface, dessiné en rouge ; jamais principal |
 | 2.73 | 2026-11-01 | § 22.1 : `puis heure décroissant`, le second tri d'une liste à l'envers aussi |
+| 2.74 | 2026-11-01 | Nouveau § 22.24 : `, en agenda selon …`, une liste en grille horaire (date, heure, durée ; la grille : jours et plages) ; `Quand on déplace un … dans l'écran …`, avec `la date d'arrivée` et `l'heure d'arrivée` de l'écran |

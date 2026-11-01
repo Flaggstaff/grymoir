@@ -1023,6 +1023,20 @@ static Issue scene_attendre(void *contexte, Chaine *sortie, Evenement *e) {
             }
         return ISSUE_REPONDU;
     }
+    if (strncmp(x, "déplace ", strlen("déplace ")) == 0) {   /* « déplace 2 03.11.2026|14:15 » : la ligne 2 de l'agenda (2.74) */
+        const char *p = x + strlen("déplace ");
+        char *apres = NULL;
+        const long r = strtol(p, &apres, 10);
+        for (size_t k = 0; k < s->nb_elements; k++)
+            if (s->elements[k].sorte == ELEMENT_LISTE && s->elements[k].agenda) {
+                e->sorte = EVENEMENT_DEPLACEMENT;
+                e->element = k;
+                e->ligne = (size_t)(r - 1);
+                snprintf(texte, sizeof texte, "%s", apres && *apres ? apres + 1 : "");
+                e->texte = texte;
+            }
+        return ISSUE_REPONDU;
+    }
     if (strncmp(x, "capte-ligne ", 12) == 0) {   /* « capte-ligne 2 » : la deuxième écoute des écoutes d'un écran (2.70) */
         static const unsigned char wav2[48] = { 'R', 'I', 'F', 'F', 40, 0, 0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ',
                                                 16, 0, 0, 0, 1, 0, 1, 0, 0x80, 0x3e, 0, 0, 0, 0x7d, 0, 0, 2, 0, 16, 0,
@@ -1289,6 +1303,35 @@ static void essais_second_tri(void) {   /* 2.73 : « puis heure décroissant »,
     ECRANS(src, ev, rep, "[ouvrir X ; liste passage (Jour, Heure) ; bouton Fermer]\n"
                          "[lignes 01.11.2026|11:00 / 01.11.2026|10:00 / 31.10.2026|12:00]\n"
                          "[lignes 01.11.2026|11:00 / 01.11.2026|10:00 / 31.10.2026|12:00]\n[fermer]\n");
+}
+
+static void essais_agenda(void) {   /* 2.74 : une liste en agenda ; déplacer une séance écrit sa date et son heure */
+    const char *src =
+        "Une séance, conservée, a : une date (date), une heure (heure), une durée (nombre entier), un nom (texte).\n"
+        "La s vaut une nouvelle séance :\n    La date vaut 02.11.2026.\n    L'heure vaut 09:00.\n    La durée vaut 60.\n"
+        "    Le nom vaut « Anne ».\nConserver la s.\n"
+        "La grille de l'agenda vaut « 02.11.2026|06.11.2026|1 08:00-12:00 13:30-18:00 ».\n"
+        "L'écran de l'agenda montre :\n"
+        "    la liste des séances conservées, par date puis heure, avec la date, l'heure, la durée et le nom, en agenda selon la grille de l'agenda,\n"
+        "    un bouton « Fermer ».\n"
+        "Quand on déplace une séance dans l'écran de l'agenda :\n"
+        "    La date de la séance devient la date d'arrivée de l'écran.\n"
+        "    L'heure de la séance devient l'heure d'arrivée de l'écran.\n"
+        "    Afficher « déplacée : » puis la date de la séance puis l'heure de la séance.\n"
+        "Quand on choisit une séance dans l'écran de l'agenda :\n    Afficher « choisie : » puis le nom de la séance.\n"
+        "Quand on clique sur « Fermer » dans l'écran de l'agenda :\n    Fermer l'écran.\n"
+        "Ouvrir l'écran de l'agenda.\n";
+    const char *ev[] = { "déplace 1 04.11.2026|14:15", "clic Fermer" };
+    const char *rep[] = { "" };
+    ECRANS(src, ev, rep, "[ouvrir Agenda ; liste séance (Date, Heure, Durée, Nom) ; bouton Fermer]\n"
+                         "[lignes 02.11.2026|09:00|60|Anne]\n[lignes 04.11.2026|14:15|60|Anne]\n"
+                         "déplacée : 04.11.2026 14:15\n[lignes 04.11.2026|14:15|60|Anne]\n[fermer]\n");
+    PROG("Une séance, conservée, a : une date (date), une heure (heure), une durée (nombre entier).\n"
+         "L'écran x montre :\n    la liste des séances conservées, en cartes, en agenda selon « ».\nOuvrir l'écran x.\n",
+         "~Une liste est en cartes ou en agenda, pas les deux.");
+    PROG("Une séance, conservée, a : une date (date), une heure (heure), une durée (nombre entier).\n"
+         "L'écran x montre :\n    la liste des séances conservées, en agenda d'abord.\nOuvrir l'écran x.\n",
+         "~Forme attendue : « , en agenda selon la grille de l'agenda ».");
 }
 
 static void essais_etats_ecran(void) {   /* § 22.6 */
@@ -4605,6 +4648,7 @@ int main(void) {
     essais_ecrans();
     essais_signaler();
     essais_second_tri();
+    essais_agenda();
     essais_etats_ecran();
     essais_ecoute();
     essai_case_vide();

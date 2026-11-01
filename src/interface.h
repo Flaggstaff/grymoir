@@ -86,6 +86,9 @@ typedef struct {
                                        son image (octets, taille, format) ; des tuiles qui se suivent forment une grille */
     int silence;                    /* une écoute (2.69) : le silence qui finit un passage, en millisecondes ; 0 : 1500 */
     int destructif;                 /* un bouton « , destructif » (2.72) : en rouge */
+    int agenda;                     /* une liste « , en agenda selon … » (2.74) : une grille horaire ; ses trois premières
+                                       colonnes sont la date, l'heure et la durée en minutes ; la grille arrive par
+                                       ecran_texte (l'élément de la liste), avant chaque attente (§ 22.24) */
 } ElementEcran;
 
 /* Les états d'un élément (ecran_etats, § 22.6) : bit 1 inactif, bit 2 caché ; bit 4 sur un bouton « … si l'écran est
@@ -98,7 +101,10 @@ typedef struct {
 
 /* EVENEMENT_CAPTURE (2.69) : une écoute a capté un passage ; element : l'écoute, octets et taille : le son (WAV),
    texte : son nom de fichier */
-typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT, EVENEMENT_CAPTURE } SorteEvenement;
+/* EVENEMENT_DEPLACEMENT (2.74) : une ligne d'un agenda déposée ailleurs ; element : l'agenda, ligne : son rang dans la liste,
+ * texte : « JJ.MM.AAAA|HH:MM », là où elle arrive. */
+typedef enum { EVENEMENT_FERMETURE, EVENEMENT_CLIC, EVENEMENT_CHOIX, EVENEMENT_CHANGEMENT, EVENEMENT_CAPTURE,
+               EVENEMENT_DEPLACEMENT } SorteEvenement;
 typedef struct {
     SorteEvenement sorte;
     size_t element;   /* le bouton cliqué, la liste où l'on a choisi */

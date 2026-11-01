@@ -170,8 +170,8 @@ int main(void) {
     {
         const char *m[] = {
             "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"capabilities\":{}}}",
-            "{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{\"textDocument\":{\"uri\":\"file:///b.grym\","
-            "\"languageId\":\"grymoir\",\"version\":1,\"text\":\"Le a vaut 1 +.\\nLe b vaut 2.\\nAfficher (3.\\n\"}}}",
+            ("{\"jsonrpc\":\"2.0\",\"method\":\"textDocument/didOpen\",\"params\":{\"textDocument\":{\"uri\":\"file:///b.grym\","
+             "\"languageId\":\"grymoir\",\"version\":1,\"text\":\"Le a vaut 1 +.\\nLe b vaut 2.\\nAfficher (3.\\n\"}}}"),
             "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"shutdown\"}",
             "{\"jsonrpc\":\"2.0\",\"method\":\"exit\"}",
         };

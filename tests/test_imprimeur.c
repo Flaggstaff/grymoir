@@ -177,6 +177,17 @@ int main(void) {
          "Quand on clique sur « Nouvelle » dans l'écran x :\n    Fermer l'écran.\n");   /* 2.17 */
     FIXE("L'écran x montre :\n    le groupe « Prix proposé », en couleur inversée :\n        le texte « 70 ».\n");   /* 2.18 */
     FIXE("L'écran x montre :\n    le texte « Aujourd'hui », en petites capitales.\n");   /* 2.20 */
+    FIXE("Une séance, conservée, a :\n    une date (date),\n    une heure (heure),\n    une durée (nombre entier).\n"
+         "La grille vaut « ».\nL'écran x montre :\n"
+         "    la liste des séances conservées, avec la date, l'heure et la durée, en agenda selon la grille.\n"
+         "Quand on déplace une séance dans l'écran x :\n    La date de la séance devient la date d'arrivée de l'écran.\n");   /* 2.74 */
+    COMP("Une séance, conservée, a :\n    une date (date),\n    une heure (heure),\n    une durée (nombre entier).\n"
+         "La grille vaut « ».\nL'écran x montre :\n"
+         "    la liste des séances conservées, avec la date, l'heure et la durée, en agenda selon la grille.\n"
+         "Quand on déplace une séance dans l'écran x :\n    La date de la séance devient la date d'arrivée de l'écran.\n",
+         "_classe _une séance _conservé\n    _une date (date)\n    _une heure (heure)\n    _une durée (nombre_entier)\n_fin\n"
+         "_la grille << « »\n_écran x\n    _liste séance _conservé _avec date ; heure ; durée _agenda grille\n_fin\n"
+         "_quand _déplace _une séance _dans x\n    séance.date << _écran.date_d'arrivée\n_fin\n");
     FIXE("Un passage, conservé, a :\n    un jour (date),\n    une heure (heure).\nL'écran x montre :\n"
          "    la liste des passages conservés, par jour décroissant puis heure décroissant.\n");   /* 2.73 */
     FIXE("L'écran x montre :\n    un bouton « Supprimer », destructif, à confirmer par « Supprimer ? ».\n"

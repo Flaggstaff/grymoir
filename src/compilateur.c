@@ -247,7 +247,8 @@ static void chercher(Compilation *c, const Noeud *n) {
     int parametres = 0;
     /* « les œuvres de bach » (§ 16.10), « les interprètes de o » (§ 16.13) : l'objet en dernier enfant */
     int inverse = n->op == 'I' || n->op == 'M';
-    int condition = n->nb_enfants > (size_t)inverse;
+    /* la grille d'un agenda (2.74), un enfant N_SI_ECRAN, n'est pas une condition */
+    int condition = n->nb_enfants > (size_t)inverse && n->enfants[0]->type != N_SI_ECRAN;
     if (inverse) {
         if (condition) chaine_ajouter(&d, "(e");
         expression(c, n->enfants[n->nb_enfants - 1]);
@@ -830,6 +831,7 @@ static long description_ecran(Compilation *c, const Noeud *e, const Noeud *ph) {
             free(cols);
         }
         if (el->type == N_CHERCHER && !el->graphique && (el->entier & 2)) chaine_ajouter(&d, "\x15" "c");   /* en cartes (2.19) */
+        if (el->type == N_CHERCHER && el->agenda) chaine_ajouter(&d, "\x15" "a");   /* en agenda (2.74) */
         if (el->type == N_CHERCHER && el->ecoutes) {   /* « ␕ u 3000 » : des écoutes, et le silence en ms (2.70) */
             char *u = grym_formater("\x15u%d", (el->ecoutes - 1) * 1000);
             chaine_ajouter(&d, u);
@@ -891,6 +893,11 @@ static void relire_ecran(Compilation *c, const Noeud *e, const Noeud *ph) {
             if (si->type != N_SI_ECRAN) continue;
             /* l'image calculée (§ 22.8) : ÉCRAN_IMAGE k × 2 + 1 ouvre la source (un objet absent la rend absente),
              * k × 2 la montre */
+            if (si->forme == 5) {   /* la grille d'un agenda (2.74) : ÉCRAN_TEXTE 0x8000 + k */
+                expression(c, si->enfants[0]);
+                emettre(c, I_ECRAN_TEXTE, (long)(0x8000 | k), si->ligne, si->colonne);
+                continue;
+            }
             if (si->forme == 4) {   /* le texte calculé (2.24) : sa valeur, relue à chaque tour */
                 expression(c, si->enfants[0]);
                 emettre(c, I_ECRAN_TEXTE, (long)k, si->ligne, si->colonne);
@@ -1481,6 +1488,14 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 classe_typer_dernier_champ(cm, el->texte, 0);
                 classe_facultatif_dernier_champ(cm);
                 free(choisi);
+                if (el->agenda) {   /* là où une séance a été déposée (2.74) : écrits par la machine avant « Quand on déplace » */
+                    classe_ajouter_champ(cm, "date d'arrivée");
+                    classe_typer_dernier_champ(cm, "date", 0);
+                    classe_facultatif_dernier_champ(cm);
+                    classe_ajouter_champ(cm, "heure d'arrivée");
+                    classe_typer_dernier_champ(cm, "heure", 0);
+                    classe_facultatif_dernier_champ(cm);
+                }
             }
         }
         return;
@@ -1544,7 +1559,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         size_t vers_sortie = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
         bloc_corriger_saut(c->b, vers_suite, c->b->taille_code);
         size_t vers_rate = bloc_emettre_saut(c->b, I_ESSAYER, ph->ligne, ph->colonne);
-        size_t *vers_apres = grym_allouer((e->nb_enfants ? e->nb_enfants : 1) * sizeof *vers_apres);
+        size_t *vers_apres = grym_allouer((e->nb_enfants ? 2 * e->nb_enfants : 1) * sizeof *vers_apres);
         size_t nb_apres = 0;
         for (size_t k = 0; k < e->nb_enfants; k++) {
             const Noeud *el = e->enfants[k];
@@ -1556,6 +1571,23 @@ static void phrase(Compilation *c, const Noeud *ph) {
                                            el->texte);
             /* une écoute sans événement à son nom : celui de toutes les écoutes, « Quand une écoute capte » (2.69) */
             if (!q && ecoute) q = trouver_quand(c->programme->phrases, c->programme->nb, e->texte, 6, "");
+            /* un agenda (2.74) : « Quand on déplace une séance », code 10001 + k ; l'objet, seul paramètre */
+            const Noeud *qd = el->type == N_CHERCHER && el->agenda
+                            ? trouver_quand(c->programme->phrases, c->programme->nb, e->texte, 8, el->texte) : NULL;
+            if (qd) {
+                char numd[24];
+                snprintf(numd, sizeof numd, "%lu", (unsigned long)(k + 10001));
+                emettre(c, I_LIRE_LOCAL, ev, ph->ligne, ph->colonne);
+                emettre(c, I_CONSTANTE, bloc_constante(c->b, C_NOMBRE, numd), ph->ligne, ph->colonne);
+                emettre(c, I_EGAL, 0, ph->ligne, ph->colonne);
+                size_t autre = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, ph->ligne, ph->colonne);
+                emettre(c, I_LIRE_LOCAL, objet, ph->ligne, ph->colonne);
+                long nomd = bloc_nom(c->b, qd->texte);
+                if (nomd < 0) { free(vers_apres); trop_grand(c, ph); return; }
+                bloc_emettre_appel(c->b, (uint16_t)nomd, 1, 0, ph->ligne, ph->colonne);
+                vers_apres[nb_apres++] = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
+                bloc_corriger_saut(c->b, autre, c->b->taille_code);
+            }
             if (!q) continue;   /* une liste sans « Quand on choisit » : le choix ne fait rien */
             char num[24];
             snprintf(num, sizeof num, "%lu", (unsigned long)(k + 1));

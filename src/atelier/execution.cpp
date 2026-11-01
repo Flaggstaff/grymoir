@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, exécution d'un programme dans sa propre fenêtre.
 #include "execution.h"
+#include "agenda.h"
 #include "ecoute.h"
 #include "rapport.h"
 #include "transcription.h"
@@ -202,7 +203,8 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
         t->options_zones << ((el[k].plusieurs_lignes ? 1 : 0) | (el[k].lecture_seule ? 2 : 0) | (el[k].interrupteur ? 4 : 0)
                              | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0) | (el[k].masque ? 32 : 0)
                              | (el[k].principal ? 64 : 0) | (el[k].tuile ? 128 : 0) | (el[k].a_cote_du_titre ? 256 : 0) | (el[k].inverse ? 512 : 0) | (el[k].cartes ? 1024 : 0) | (el[k].capitales ? 2048 : 0)
-                             | (el[k].dossier ? 4096 : 0) | (el[k].destructif ? 8192 : 0) | ((el[k].largeur_caracteres & 0xFF) << 16)
+                             | (el[k].dossier ? 4096 : 0) | (el[k].destructif ? 8192 : 0) | (el[k].agenda ? 16384 : 0)
+                             | ((el[k].largeur_caracteres & 0xFF) << 16)
                              | ((el[k].raccourci & 0x7F) << 24));   // « , au clavier « N » » (2.68)
         t->facultatives << el[k].facultatif;
         t->indications << QString::fromUtf8(el[k].indication ? el[k].indication : "");
@@ -848,6 +850,9 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
         }
         if (element < 0 || element >= tables.size() || !tables[element]) return;
         QTableWidget *t = tables[element];
+        if (auto *ag = qobject_cast<Agenda *>(t->property("agenda").value<QObject *>())) {   // 2.74 : la grille horaire
+            ag->donner_lignes(cellules, nb_lignes, (int)travail.colonnes_de((size_t)element));
+        }
         const int nc = t->columnCount();
         t->setRowCount(nb_lignes);
         for (int r = 0; r < nb_lignes; r++) {
@@ -1020,6 +1025,8 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             setWindowTitle(t);
             return;
         }
+        if (k < tables.size() && tables[k])   // la grille d'un agenda (2.74)
+            if (auto *ag = qobject_cast<Agenda *>(tables[k]->property("agenda").value<QObject *>())) { ag->donner_grille(t); return; }
         if (auto *l = qobject_cast<QLabel *>(controles_ecran.value(k))) l->setText(t);
     });
     connect(&travail, &Travail::ecran_image, this, [this](int k, const QByteArray &o) {   // l'image calculée (§ 22.8)
@@ -1431,6 +1438,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].masque = o & 32;   // § 22.6
         elements[k].dossier = o & 4096;   // 2.32
         elements[k].destructif = o & 8192;   // 2.72
+        elements[k].agenda = o & 16384;      // 2.74
         elements[k].largeur_caracteres = (o >> 16) & 0xFF;   // 2.34
         elements[k].raccourci = (char)((o >> 24) & 0x7F);       // 2.68
         elements[k].graphique = travail.graphiques.value(k);   // § 22.11
@@ -1474,6 +1482,15 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
                 envoyer_capture();
             };
             continue;
+        }
+        if (auto *tab = v.tables[k]; tab && tab->property("agenda").isValid()) {   // l'agenda (2.74) : un clic choisit, le glisser dépose
+            if (auto *ag = qobject_cast<Agenda *>(tab->property("agenda").value<QObject *>())) {
+                connect(ag, &Agenda::choisir, this, [this, k](int rang) { envoyer_evenement(EVENEMENT_CHOIX, k, rang); });
+                connect(ag, &Agenda::deplacer, this, [this, k](int rang, const QString &arrivee) {
+                    texte_envoye = arrivee.toUtf8();
+                    envoyer_evenement(EVENEMENT_DEPLACEMENT, k, rang);
+                });
+            }
         }
         if (auto *tab = v.tables[k]) {
             tab->setToolTip("Double-clic ou Entrée : choisir ; clic sur un titre : trier");
@@ -1837,7 +1854,8 @@ void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) 
         lignes_choisies[element] = ligne_capture;   // le poste qui a capté (2.70)
     const bool avec_fichier = (sorte == EVENEMENT_CHANGEMENT || sorte == EVENEMENT_CAPTURE) && fichier_envoye;
     travail.evenement = {sorte, (size_t)element, (size_t)ligne,
-                         sorte == EVENEMENT_CHANGEMENT || sorte == EVENEMENT_CAPTURE ? texte_envoye.constData() : nullptr,
+                         sorte == EVENEMENT_CHANGEMENT || sorte == EVENEMENT_CAPTURE || sorte == EVENEMENT_DEPLACEMENT
+                             ? texte_envoye.constData() : nullptr,
                          lignes_choisies.constData(), (size_t)lignes_choisies.size(),
                          avec_fichier ? reinterpret_cast<const unsigned char *>(octets_envoyes.constData()) : nullptr,
                          avec_fichier ? (size_t)octets_envoyes.size() : 0};

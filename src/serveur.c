@@ -2585,6 +2585,7 @@ static void serveur_ecran_texte(void *contexte, size_t k, const char *texte) {
         return;
     }
     if (!e || k >= e->n) return;
+    if (e->el[k].agenda) return;   /* la grille d'un agenda (2.74) : le navigateur le montre en liste */
     free((char *)e->el[k].texte);
     e->el[k].texte = grym_dupliquer(texte ? texte : "");
 }

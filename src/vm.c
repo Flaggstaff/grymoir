@@ -471,6 +471,7 @@ typedef struct EcranVM {
     size_t cadre;          /* le cadre qui a ouvert l'écran : y lire une zone vide (listes, conditions) rend absent */
     Valeur *images;        /* image (§ 22.8) : le fichier lu à l'ouverture, sinon absent */
     unsigned char *calcules;   /* 1 : texte calculé (§ 22.1, 2.24), relu à chaque tour */
+    char **grilles;            /* la grille d'un agenda (2.74), relue à chaque tour ; NULL sinon */
     int document;          /* un document (2.25) : jamais montré par l'interface, lu une fois puis rendu en PDF */
     char ***doc_cellules;  /* document : les cellules de chaque liste, ligne après ligne (possédées) */
     size_t *doc_lignes;
@@ -2723,6 +2724,8 @@ static void ecran_detruire(EcranVM *e) {
     free(e->etats);
     free(e->images);
     free(e->calcules);
+    for (size_t k = 0; e->grilles && k < e->n; k++) free(e->grilles[k]);
+    free(e->grilles);
     for (size_t k = 0; e->doc_cellules && k < e->n; k++) {
         for (size_t x = 0; e->doc_cellules[k] && x < e->doc_lignes[k] * e->nb_colonnes[k]; x++) free(e->doc_cellules[k][x]);
         free(e->doc_cellules[k]);
@@ -2801,12 +2804,14 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     for (size_t k = 0; k < t; k++) e->images[k] = vi_absent(NULL);
     e->calcules = allouer_a_zero(t);
     memset(e->calcules, 0, t);
+    e->grilles = allouer_a_zero(t * sizeof *e->grilles);
     char *nom_classe = grym_formater("écran %s", parts[0]);
     const ClasseVM *ce = classe_vm(m, nom_classe);
     free(nom_classe);
     for (size_t k = 0; k < e->n; k++) {
         char *nak = strchr(parts[k + 2], '\x15');   /* « … ␕ c » : une liste en cartes (2.19), lue puis retirée */
         const int cartes = nak && nak[1] == 'c';
+        const int agenda = nak && nak[1] == 'a';                  /* « ␕ a » : une liste en agenda (2.74) */
         const int ecoutes = nak && nak[1] == 'u';                 /* « ␕ u 3000 » : des écoutes, le silence en ms (2.70) */
         const int silence_ecoutes = ecoutes ? atoi(nak + 2) : 0;
         if (nak) *nak = '\0';
@@ -3018,6 +3023,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             }
         }
         e->elements[k].cartes = cartes && x[0] == 'L';
+        e->elements[k].agenda = agenda && x[0] == 'L';
         if (ecoutes && x[0] == 'L' && !m->iface.ecouter) {
             *erreur = grym_formater("Les écoutes des « %s » captent le son de l'ordinateur : elles vivent dans l'atelier et les "
                                     "applications fabriquées, pas dans la console ni le navigateur.", e->textes[k]);
@@ -5854,6 +5860,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 m->ecran->titre_calcule = 1;
                 break;
             }
+            if (m->ecran && (op & 0x8000) && (size_t)(op & 0x7FFF) < m->ecran->n) {   /* la grille d'un agenda (2.74) */
+                char *t = texte_valeur(m, &v);
+                valeur_liberer(&v);
+                free(m->ecran->grilles[op & 0x7FFF]);
+                m->ecran->grilles[op & 0x7FFF] = t;
+                break;
+            }
             if (!m->ecran || op >= m->ecran->n) {
                 valeur_liberer(&v);
                 ok = echouer(diag, b, debut, grym_dupliquer("Texte d'écran invalide."));
@@ -5945,6 +5958,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             for (size_t k = 0; !probleme && m->ecran && m->iface.ecran_texte && k < m->ecran->n; k++)   /* 2.24 */
                 if (m->ecran->calcules[k]) m->iface.ecran_texte(m->iface.contexte, k, m->ecran->textes[k]);
+                else if (m->ecran->elements[k].agenda && m->ecran->grilles[k])   /* la grille d'un agenda (2.74) */
+                    m->iface.ecran_texte(m->iface.contexte, k, m->ecran->grilles[k]);
             if (!probleme && m->ecran && m->ecran->titre_calcule && m->iface.ecran_texte)   /* le titre calculé (2.33) */
                 m->iface.ecran_texte(m->iface.contexte, (size_t)-1, m->ecran->titre ? m->ecran->titre : "");
             for (size_t k = 0; !probleme && m->ecran && m->iface.ecran_image && k < m->ecran->n; k++)   /* § 22.8 */
@@ -6099,6 +6114,42 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             if (!probleme && code_ev == 0 && ev.sorte == EVENEMENT_CLIC && ev.element < m->ecran->n) {
                 code_ev = (long)ev.element + 1;
+            } else if (!probleme && ev.sorte == EVENEMENT_DEPLACEMENT && ev.element < m->ecran->n
+                       && m->ecran->elements[ev.element].agenda && m->ecran->listes[ev.element].type == V_LISTE
+                       && ev.ligne < m->ecran->listes[ev.element].liste->n && ev.texte && m->ecran->objet) {
+                /* une séance déposée ailleurs dans l'agenda (2.74) : l'objet, et « la date d'arrivée » et « l'heure
+                 * d'arrivée » de l'écran, lues dans « JJ.MM.AAAA|HH:MM » */
+                const Liste *l = m->ecran->listes[ev.element].liste;
+                Objet *o = machine_objet_en_base(m, l->ids[ev.ligne], l->classes[ev.ligne], &probleme);
+                const char *barre = strchr(ev.texte, '|');
+                if (o && barre) {
+                    char *jour = grym_formater("%.*s", (int)(barre - ev.texte), ev.texte);
+                    Valeur vd, vh;
+                    char *refus = NULL;
+                    const int okd = lire_reponse("date", jour, &vd, &refus);
+                    free(refus);
+                    refus = NULL;
+                    const int okh = okd && lire_reponse("heure", barre + 1, &vh, &refus);
+                    free(refus);
+                    free(jour);
+                    const ClasseVM *ce = m->ecran->objet->classe;
+                    long kd = -1, kh = -1;
+                    for (size_t q = 0; q < ce->nb_champs; q++) {
+                        if (strcmp(ce->champs[q], "date d'arrivée") == 0) kd = (long)q;
+                        if (strcmp(ce->champs[q], "heure d'arrivée") == 0) kh = (long)q;
+                    }
+                    if (okd && okh && kd >= 0 && kh >= 0) {
+                        ecrire_champ(m, m->ecran->objet, (size_t)kd, vd);
+                        ecrire_champ(m, m->ecran->objet, (size_t)kh, vh);
+                        valeur_liberer(&objet);
+                        objet = vi_objet(o);
+                        code_ev = (long)ev.element + 10001;
+                    } else {
+                        if (okd) valeur_liberer(&vd);
+                        if (okh) valeur_liberer(&vh);
+                        code_ev = -1;
+                    }
+                } else if (!probleme) code_ev = -1;
             } else if (!probleme && ev.sorte == EVENEMENT_CHOIX && ev.element < m->ecran->n
                        && m->ecran->listes[ev.element].type == V_LISTE && ev.ligne < m->ecran->listes[ev.element].liste->n) {
                 const Liste *l = m->ecran->listes[ev.element].liste;

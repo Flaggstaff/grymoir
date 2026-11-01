@@ -7201,6 +7201,19 @@ static int conditions_ecran(Analyse *a, Noeud *ecran) {
             Noeud *si = ecran->enfants[k]->enfants[q];
             if (si->type != N_SI_ECRAN || si->nb_enfants) continue;
             a->i = (size_t)si->entier;
+            if (si->forme == 5) {   /* la grille d'un agenda (2.74) : une valeur, écrite comme Afficher */
+                const Jeton *debut = cour(a);
+                Noeud *c = valeur(a);
+                if (!c) return 0;
+                if (a->i != (size_t)si->local) {
+                    noeud_liberer(c);
+                    erreur(a, a->i < a->n ? cour(a) : debut,
+                           grym_dupliquer("« en agenda selon » attend une valeur : « , en agenda selon la grille de l'agenda »."));
+                    return 0;
+                }
+                noeud_ajouter(si, c);
+                continue;
+            }
             if (si->forme == 4) {   /* la valeur d'un texte calculé (2.24) : toute valeur, écrite comme Afficher */
                 const Jeton *debut = cour(a);
                 if (si->op == 'u') { a->article_force = ART_LE; a->jeton_force = &a->j[si->entier - 1]; }   /* 2.28 */
@@ -7634,6 +7647,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                         && !est_mot(voir(a, 1), "haute")
                         && !(est_mot(voir(a, 1), "en") && est_mot(voir(a, 2), "position"))
                         && !(est_mot(voir(a, 1), "en") && est_mot(voir(a, 2), "cartes"))
+                        && !(est_mot(voir(a, 1), "en") && est_mot(voir(a, 2), "agenda"))
                         && !(est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "liste"))
                         && !(est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "texte") && voir(a, 3)->type == J_TEXTE)
                         && !(voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "un") && est_mot(voir(a, 3), "sous"))
@@ -7687,6 +7701,46 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 el->entier |= 2;
                 a->i += 3;
                 el->fin = fin_jeton(&a->j[a->i - 1]);
+            }
+            if (!graph && !ecoutes && cour(a)->type == J_VIRGULE) attendre_mot(a, a->i + 1, "en agenda selon", strlen("en agenda selon"));
+            if (!graph && !ecoutes && cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "en") && est_mot(voir(a, 2), "agenda")) {
+                /* « , en agenda selon la grille de l'agenda » (2.74) : une grille horaire ; les trois premières colonnes
+                   sont la date, l'heure et la durée en minutes ; la grille, un texte relu avant chaque attente, dit les
+                   jours montrés et les horaires (§ 22.24) */
+                if (el->entier & 2) {
+                    noeud_liberer(el);
+                    erreur(a, voir(a, 2), grym_dupliquer("Une liste est en cartes ou en agenda, pas les deux."));
+                    break;
+                }
+                if (!est_mot(voir(a, 3), "selon")) {
+                    noeud_liberer(el);
+                    erreur(a, voir(a, 3), grym_dupliquer("Forme attendue : « , en agenda selon la grille de l'agenda »."));
+                    break;
+                }
+                a->i += 4;
+                size_t k = a->i;
+                int prof = 0;
+                while (k < a->n && a->j[k].type != J_FIN && !(prof == 0 && (a->j[k].type == J_VIRGULE || a->j[k].type == J_POINT))) {
+                    if (a->j[k].type == J_PAR_OUV) prof++;
+                    else if (a->j[k].type == J_PAR_FERM && prof > 0) prof--;
+                    k++;
+                }
+                if (k == a->i) {
+                    noeud_liberer(el);
+                    erreur(a, cour(a), grym_dupliquer("La grille attendue : « , en agenda selon la grille de l'agenda »."));
+                    break;
+                }
+                Noeud *grille = noeud_creer(N_SI_ECRAN, cour(a)->ligne, cour(a)->colonne, cour(a)->debut);
+                grille->forme = 5;
+                grille->entier = (int)a->i;
+                grille->local = (int)k;
+                noeud_ajouter(el, grille);
+                el->agenda = 1;
+                a->i = k;
+                el->fin = fin_jeton(&a->j[a->i - 1]);
+                /* là où une séance a été déposée : « la date d'arrivée de l'écran », « l'heure d'arrivée de l'écran » */
+                classe_ajouter_zone(&a->portee->classes[ic], "date d'arrivée", GENRE_FEMININ, "date", 1, NULL);
+                classe_ajouter_zone(&a->portee->classes[ic], "heure d'arrivée", GENRE_FEMININ, "heure", 1, NULL);
             }
             {   /* la place d'une liste en position libre (§ 22.9) */
                 int vus = 0, lu;
@@ -8193,6 +8247,18 @@ static Noeud *quand(Analyse *a, int colonne) {
         tl = &a->j[k + 2];
         dans = k + 3;
         params = noeud_creer(N_BLOC, tq->ligne, tq->colonne, tq->debut);
+    } else if (est_mot(&a->j[k], "déplace")) {
+        /* « Quand on déplace une séance dans l'écran X : » (2.74) : déposée ailleurs dans un agenda */
+        forme = 8;
+        dans = k + 1;
+        while (dans < a->n && !est_mot(&a->j[dans], "dans") && a->j[dans].type != J_DEUX_POINTS && a->j[dans].type != J_FIN) dans++;
+        params = parametres(a, k + 1, dans, 0);
+        if (!params) return NULL;
+        if (params->nb_enfants != 1) {
+            noeud_liberer(params);
+            return erreur(a, &a->j[k + 1], grym_dupliquer("Un seul objet : « Quand on déplace une séance dans … »."));
+        }
+        tl = &a->j[k + 1];
     } else if (est_mot(&a->j[k], "choisit")) {
         forme = 2;
         dans = k + 1;
@@ -8222,7 +8288,7 @@ static Noeud *quand(Analyse *a, int colonne) {
         dans = k;   /* « l'écran » suit le verbe */
         params = noeud_creer(N_BLOC, tq->ligne, tq->colonne, tq->debut);
     } else {
-        return erreur(a, &a->j[k], grym_dupliquer("Événement attendu : « clique sur « … » », « choisit un … », "
+        return erreur(a, &a->j[k], grym_dupliquer("Événement attendu : « clique sur « … » », « choisit un … », « déplace un … », "
                                                   "« change la zone … », « ouvre l'écran … » ou « ferme l'écran … »."));
     }
     if ((forme < 4 || forme >= 6) && !est_mot(&a->j[dans], "dans")) {
@@ -8270,7 +8336,7 @@ static Noeud *quand(Analyse *a, int colonne) {
             }
         }
         objet = grym_dupliquer(l_ecoute ? tl->valeur : "");
-    } else if (forme >= 4) {
+    } else if (forme >= 4 && forme != 8) {
         objet = grym_dupliquer(forme == 4 ? "ouverture" : "fermeture");
     } else if (forme == 3) {
         int trouve = 0;
@@ -8317,7 +8383,8 @@ static Noeud *quand(Analyse *a, int colonne) {
         }
         objet = grym_dupliquer(c->nom);
     }
-    static const char *const sortes[] = { "", "clic", "choix", "changement", "ouverture", "fermeture", "capture", "capture par" };
+    static const char *const sortes[] = { "", "clic", "choix", "changement", "ouverture", "fermeture", "capture", "capture par",
+                                          "déplacement" };
     char *interne = grym_formater("quand %s « %s » dans l'écran %s", sortes[forme], objet, nom);
     for (size_t q = 0; q < a->portee->n; q++)
         if (strcmp(a->portee->s[q].nom, interne) == 0) {

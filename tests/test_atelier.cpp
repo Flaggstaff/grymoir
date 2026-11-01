@@ -31,6 +31,7 @@
 #include "panneau.h"
 #include "secours.h"
 #include "recherche.h"
+#include "agenda.h"
 #include <QSettings>
 #include <QCheckBox>
 #include <QLabel>
@@ -945,6 +946,82 @@ int main(int argc, char **argv) {
         VERIFIER(essayer(QString::fromUtf8("anamnèse"), QString::fromUtf8("histoire")).isEmpty());
         VERIFIER(essayer("rubrique", "famille").isEmpty());
         VERIFIER(!essayer("patient", "personne").isEmpty());   // féminin : « le personne » ne s'analyse pas
+    }
+
+    // L'agenda (2.74) : la grille montre les jours travaillés ; un clic choisit ; glisser dépose au quart d'heure, et la
+    // machine reçoit la date et l'heure d'arrivée
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("agenda.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Une séance, conservée, a : une date (date), une heure (heure), une durée (nombre entier), un nom (texte).\n"
+                    "La s vaut une nouvelle séance :\n    La date vaut 02.11.2026.\n    L'heure vaut 09:00.\n    La durée vaut 60.\n"
+                    "    Le nom vaut « Anne ».\nConserver la s.\n"
+                    "La grille de l'agenda vaut « 02.11.2026|08.11.2026|1 08:00-12:00 13:30-18:00|2 08:00-12:00|3 08:00-12:00 ».\n"
+                    "L'écran de l'agenda montre :\n"
+                    "    la liste des séances conservées, par date puis heure, avec la date, l'heure, la durée et le nom, "
+                    "en agenda selon la grille de l'agenda,\n"
+                    "    un bouton « Fermer ».\n"
+                    "Quand on déplace une séance dans l'écran de l'agenda :\n"
+                    "    La date de la séance devient la date d'arrivée de l'écran.\n"
+                    "    L'heure de la séance devient l'heure d'arrivée de l'écran.\n"
+                    "    Signaler « déplacée : » puis la date de la séance puis l'heure de la séance.\n"
+                    "Quand on choisit une séance dans l'écran de l'agenda :\n    Signaler « choisie : » puis le nom de la séance.\n"
+                    "Quand on clique sur « Fermer » dans l'écran de l'agenda :\n    Fermer l'écran.\n"
+                    "Ouvrir l'écran de l'agenda.\n");
+        }
+        Execution e(prog);
+        e.resize(1100, 900);
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto signal = [&e]() -> QString {
+            for (QLabel *l : e.findChildren<QLabel *>())
+                if (l->property("message").toString() == "signal" && l->isVisible()) return l->text();
+            return QString();
+        };
+        Agenda *ag = nullptr;
+        VERIFIER(attendre([&] { ag = e.findChild<Agenda *>(); return ag && !ag->place(0).isNull(); }));
+        if (ag) {
+            // lundi à mercredi : les jours sans plage (jeudi à dimanche) ne sont pas montrés
+            VERIFIER(ag->jours().size() == 3 && ag->jours().first() == QDate(2026, 11, 2) && ag->jours().last() == QDate(2026, 11, 4));
+            const QRect r = ag->place(0);
+            VERIFIER(r.isValid() && r.top() > 0);
+            QMouseEvent p1(QEvent::MouseButtonPress, QPointF(r.center()), ag->mapToGlobal(QPointF(r.center())), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(ag, &p1);
+            QMouseEvent p2(QEvent::MouseButtonRelease, QPointF(r.center()), ag->mapToGlobal(QPointF(r.center())), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(ag, &p2);
+            VERIFIER(attendre([&] { return signal() == QString::fromUtf8("choisie : Anne"); }));
+            // glisser le haut du bloc vers mercredi 14:15 (le bloc est saisi en son milieu : on décale d'autant)
+            ag = e.findChild<Agenda *>();
+            const QRect r2 = ag ? ag->place(0) : QRect();
+            const QPoint prise = r2.center();
+            const QPoint cible = ag ? ag->point_de(QDate(2026, 11, 4), QTime(14, 15)) + (prise - r2.topLeft()) - QPoint(0, 0) : QPoint();
+            if (ag) {
+                QMouseEvent a(QEvent::MouseButtonPress, QPointF(prise), ag->mapToGlobal(QPointF(prise)), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                QApplication::sendEvent(ag, &a);
+                const QPoint milieu = (prise + cible) / 2;
+                QMouseEvent b(QEvent::MouseMove, QPointF(milieu), ag->mapToGlobal(QPointF(milieu)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+                QApplication::sendEvent(ag, &b);
+                QMouseEvent c(QEvent::MouseMove, QPointF(cible), ag->mapToGlobal(QPointF(cible)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+                QApplication::sendEvent(ag, &c);
+                QMouseEvent d(QEvent::MouseButtonRelease, QPointF(cible), ag->mapToGlobal(QPointF(cible)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                QApplication::sendEvent(ag, &d);
+            }
+            VERIFIER(attendre([&] { return signal() == QString::fromUtf8("déplacée : 04.11.2026 14:15"); }));
+        }
+        for (QPushButton *x : e.findChildren<QPushButton *>())
+            if (x->text() == "Fermer" && x->isVisible() && x->isEnabled()) { x->click(); break; }
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
     }
 
     // « Signaler » (2.71) : après un geste réussi, le message au pied de la fenêtre ; un geste refusé l'efface

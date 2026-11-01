@@ -1047,7 +1047,7 @@ static void expression(Impression *im, const Noeud *n) {
                 else { aj(im, " "); preposition(im, "de", objet); }
             }
         }
-        if (n->nb_enfants > (size_t)inverse) {
+        if (n->nb_enfants > (size_t)inverse && n->enfants[0]->type != N_SI_ECRAN) {   /* la grille (2.74) n'en est pas une */
             aj(im, im->compact ? " _dont " : " dont ");
             expression(im, n->enfants[0]);
         }
@@ -1437,6 +1437,14 @@ static char *colonne_avec_articles(Impression *im, const char *ecrit, const char
     return r;
 }
 
+/* La grille d'un agenda (2.74) : l'enfant N_SI_ECRAN forme 5 d'une liste, ou NULL. */
+static const Noeud *grille_agenda(const Noeud *el) {
+    for (size_t q = 0; el && q < el->nb_enfants; q++)
+        if (el->enfants[q] && el->enfants[q]->type == N_SI_ECRAN && el->enfants[q]->forme == 5 && el->enfants[q]->nb_enfants)
+            return el->enfants[q]->enfants[0];
+    return NULL;
+}
+
 static void etats_ecran(Impression *im, const Noeud *el, int feminin) {
     place_ecran(im, el, feminin);
     if (el->type == N_TEXTE_ECRAN && (el->entier & 2048)) aj(im, im->compact ? " _capitales" : ", en petites capitales");   /* 2.20 */
@@ -1815,6 +1823,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                     }
                 }
                 if (!el->graphique && (el->entier & 2)) aj(im, " _cartes");   /* 2.19 */
+                if (el->agenda && grille_agenda(el)) { aj(im, " _agenda "); expression(im, grille_agenda(el)); }   /* 2.74 */
                 if (el->ecoutes > 1) {   /* « _silence 3 » (2.70) */
                     char x[32];
                     snprintf(x, sizeof x, " _silence %d", el->ecoutes - 1);
@@ -1897,6 +1906,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                     }
                 }
                 if (!el->graphique && (el->entier & 2)) aj(im, ", en cartes");   /* 2.19 */
+                if (el->agenda && grille_agenda(el)) { aj(im, ", en agenda selon "); expression(im, grille_agenda(el)); }   /* 2.74 */
                 if (el->ecoutes > 1) {   /* « , coupées après 3 secondes de silence » (2.70) */
                     char x[64];
                     snprintf(x, sizeof x, ", coupées après %d seconde%s de silence", el->ecoutes - 1, el->ecoutes > 2 ? "s" : "");
@@ -1941,11 +1951,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 aj_sigles(im, n->texte3);
                 aj(im, " :\n");
             }
-        } else if (n->forme >= 4) {   /* « Quand on ouvre l'écran X : », « Quand on ferme … » */
+        } else if (n->forme >= 4 && n->forme != 8) {   /* « Quand on ouvre l'écran X : », « Quand on ferme … » */
             if (c) { aj(im, n->forme == 4 ? "_quand _ouvre " : "_quand _ferme "); ecrire_nom(im, n->texte3, 0); aj(im, "\n"); }
             else { aj(im, n->forme == 4 ? "Quand on ouvre l'écran " : "Quand on ferme l'écran "); aj_sigles(im, n->texte3); aj(im, " :\n"); }
         } else if (c) {
-            aj(im, n->forme == 1 ? "_quand _clique " : n->forme == 3 ? "_quand _change " : "_quand _choisit ");
+            aj(im, n->forme == 1 ? "_quand _clique " : n->forme == 3 ? "_quand _change " : n->forme == 8 ? "_quand _déplace " : "_quand _choisit ");
             if (n->forme == 1) ecrire_texte(im, n->enfants[2]->texte);
             else if (n->forme == 3) ecrire_nom(im, n->enfants[2]->texte, 0);
             else parametres(im, n->enfants[0], 0);
@@ -1953,7 +1963,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             ecrire_nom(im, n->texte3, 0);
             aj(im, "\n");
         } else {
-            aj(im, n->forme == 1 ? "Quand on clique sur " : n->forme == 3 ? "Quand on change " : "Quand on choisit");
+            aj(im, n->forme == 1 ? "Quand on clique sur " : n->forme == 3 ? "Quand on change " : n->forme == 8 ? "Quand on déplace" : "Quand on choisit");
             if (n->forme == 1) ecrire_texte(im, n->enfants[2]->texte);
             else if (n->forme == 3) {   /* « le pays », « la ville » : l'article selon le genre retenu */
                 const char *z = n->enfants[2]->texte;

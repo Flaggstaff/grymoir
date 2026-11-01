@@ -1,5 +1,6 @@
 // GrymoiR : l'atelier, le dessin d'un écran.
 #include "vue_ecran.h"
+#include "agenda.h"
 #include "relecture.h"
 #include "son.h"
 #include <QFontInfo>
@@ -756,7 +757,14 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             });
             r.tables[k] = tab;
             r.controles[k] = tab;
-            if (e.cartes) {   // 2.19 : la table garde les lignes, cachée ; les cartes se dessinent à chaque relecture
+            if (e.agenda) {   // 2.74 : la table garde les lignes, cachée ; l'agenda les dessine dans sa grille
+                auto *ag = new Agenda;
+                tab->setParent(ag);
+                tab->setFixedHeight(0);
+                tab->hide();
+                tab->setProperty("agenda", QVariant::fromValue<QObject *>(ag));
+                poser(ag);
+            } else if (e.cartes) {   // 2.19 : la table garde les lignes, cachée ; les cartes se dessinent à chaque relecture
                 auto *jeu = new QWidget;
                 jeu->setObjectName("cartes");
                 auto *g = new QGridLayout(jeu);
