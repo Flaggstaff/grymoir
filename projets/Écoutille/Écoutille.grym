@@ -2,11 +2,23 @@ Remarque : Écoutille, la veille radio de Michel (grammaire, § 22.20 et § 22.2
 Remarque : ajoute, les modifie ou les retire par « Postes », sans toucher au code. Chaque poste en veille a son bandeau ;
 Remarque : chaque passage capté est conservé avec son enregistrement, relié à son poste, puis transcrit.
 
+Remarque : le catalogue des modèles : de quoi choisir le modèle d'un poste. Il se remplit au premier lancement et se
+Remarque : complète par « Modèles ». « USB intégré » : vrai quand le poste donne son et pilotage par un seul câble USB
+Remarque : (vérifié pour quelques modèles seulement) ; vide : inconnu, à vérifier sur le poste.
+
+Un modèle, conservé, a :
+    une désignation (texte), unique,
+    une marque (texte),
+    une sorte (« CB », « 10 mètres », « radioamateur », « scanner » ou « récepteur SDR »),
+    un USB intégré (vrai ou faux), facultatif,
+    une remarque (texte), facultative.
+
 Un poste, conservé, a :
     un nom (texte), unique,
     une sorte (« émetteur-récepteur » ou « scanner »),
     une veille (vrai ou faux),
-    une remarque (texte), facultative.
+    une remarque (texte), facultative,
+    un modèle (modèle), facultatif.
 
 Un passage, conservé, a :
     un poste (poste),
@@ -22,12 +34,24 @@ L'écran de veille montre :
     un bouton « Fermer ».
 
 L'écran des postes montre :
-    la liste des postes conservés, par nom, avec le nom, la sorte et la veille,
+    la liste des postes conservés, par nom, avec le nom, la désignation du modèle, la sorte et la veille,
     côte à côte :
         un nom (texte), facultatif,
         une sorte (« émetteur-récepteur » ou « scanner »), « émetteur-récepteur » au départ,
+        un modèle (modèle), facultatif,
     un bouton « Ajouter », actif si le nom de l'écran est présent,
     un bouton « Supprimer », actif si le poste choisi de l'écran est présent,
+    un bouton « Modèles »,
+    un bouton « Fermer ».
+
+L'écran des modèles montre :
+    la liste des modèles conservés, par sorte puis désignation, avec la désignation, la sorte, l'USB intégré et la remarque,
+    côte à côte :
+        une désignation (texte), facultative,
+        une marque (texte), facultative,
+        une sorte (« CB », « 10 mètres », « radioamateur », « scanner » ou « récepteur SDR »), « radioamateur » au départ,
+    un bouton « Ajouter », actif si la désignation de l'écran est présente et la marque de l'écran est présente,
+    un bouton « Supprimer », actif si le modèle choisi de l'écran est présent,
     un bouton « Fermer ».
 
 Quand un poste capte un son dans l'écran de veille :
@@ -55,12 +79,104 @@ Quand on clique sur « Ajouter » dans l'écran des postes :
         Le nom vaut le nom de l'écran.
         La sorte vaut la sorte de l'écran.
         La veille vaut vrai.
+    Si le modèle de l'écran est présent, le modèle du p devient le modèle de l'écran.
     Conserver le p.
 
 Quand on clique sur « Supprimer » dans l'écran des postes :
     Supprimer le poste choisi de l'écran.
 
+Quand on clique sur « Modèles » dans l'écran des postes :
+    Ouvrir l'écran des modèles.
+
 Quand on clique sur « Fermer » dans l'écran des postes :
     Fermer l'écran.
+
+Quand on choisit un modèle dans l'écran des modèles :
+    Ouvrir la fiche du modèle.
+
+Quand on clique sur « Ajouter » dans l'écran des modèles :
+    Le m vaut un nouveau modèle :
+        La désignation vaut la désignation de l'écran.
+        La marque vaut la marque de l'écran.
+        La sorte vaut la sorte de l'écran.
+    Conserver le m.
+
+Quand on clique sur « Supprimer » dans l'écran des modèles :
+    Supprimer le modèle choisi de l'écran.
+
+Quand on clique sur « Fermer » dans l'écran des modèles :
+    Fermer l'écran.
+
+Pour cataloguer une désignation et une marque et une sorte et un USB :
+    Le m vaut un nouveau modèle :
+        La désignation vaut désignation.
+        La marque vaut marque.
+        La sorte vaut sorte.
+    Si USB, l'USB intégré du m devient vrai.
+    Conserver le m.
+
+Remarque : le catalogue de départ, une seule fois. Noms de modèles donnés de mémoire pour la plupart : à corriger
+Remarque : ou compléter par « Modèles ».
+Si le nombre de modèles conservés = 0 :
+    Cataloguer « President George II » et « President » et « CB » et (faux).
+    Cataloguer « President Jackson II » et « President » et « CB » et (faux).
+    Cataloguer « President Lincoln II+ » et « President » et « CB » et (faux).
+    Cataloguer « President McKinley » et « President » et « CB » et (faux).
+    Cataloguer « President Bill II » et « President » et « CB » et (faux).
+    Cataloguer « President Barry II » et « President » et « CB » et (faux).
+    Cataloguer « President Johnson III » et « President » et « CB » et (faux).
+    Cataloguer « President Harrison II » et « President » et « CB » et (faux).
+    Cataloguer « President Randy II » et « President » et « CB » et (faux).
+    Cataloguer « President Teddy II » et « President » et « CB » et (faux).
+    Cataloguer « President Jimmy III » et « President » et « CB » et (faux).
+    Cataloguer « President William II » et « President » et « CB » et (faux).
+    Cataloguer « President Richard II » et « President » et « CB » et (faux).
+    Cataloguer « President JFK III » et « President » et « CB » et (faux).
+    Cataloguer « Midland Alan 48 Plus » et « Midland » et « CB » et (faux).
+    Cataloguer « Midland Alan 78 Plus » et « Midland » et « CB » et (faux).
+    Cataloguer « Cobra 29 LTD » et « Cobra » et « CB » et (faux).
+    Cataloguer « Stryker SR-955HPC » et « Stryker » et « 10 mètres » et (faux).
+    Cataloguer « Stryker SR-655HPC » et « Stryker » et « 10 mètres » et (faux).
+    Cataloguer « President Washington » et « President » et « 10 mètres » et (faux).
+    Cataloguer « Anytone AT-5555N II » et « Anytone » et « 10 mètres » et (faux).
+    Cataloguer « Radioddity QT60 Pro » et « Radioddity » et « 10 mètres » et (faux).
+    Cataloguer « Galaxy DX99V2 » et « Galaxy » et « 10 mètres » et (faux).
+    Cataloguer « CRT SS 9900 » et « CRT » et « 10 mètres » et (faux).
+    Cataloguer « Yaesu FT-991A » et « Yaesu » et « radioamateur » et (vrai).
+    Cataloguer « Yaesu FT-710 » et « Yaesu » et « radioamateur » et (vrai).
+    Cataloguer « Yaesu FTDX10 » et « Yaesu » et « radioamateur » et (vrai).
+    Cataloguer « Yaesu FTDX101D » et « Yaesu » et « radioamateur » et (faux).
+    Cataloguer « Yaesu FT-891 » et « Yaesu » et « radioamateur » et (faux).
+    Cataloguer « Yaesu FT-857D » et « Yaesu » et « radioamateur » et (faux).
+    Cataloguer « Yaesu FT-818ND » et « Yaesu » et « radioamateur » et (faux).
+    Cataloguer « Yaesu FT-450D » et « Yaesu » et « radioamateur » et (faux).
+    Cataloguer « Yaesu FT-65 » et « Yaesu » et « radioamateur » et (faux).
+    Cataloguer « Yaesu FT5D » et « Yaesu » et « radioamateur » et (faux).
+    Cataloguer « Icom IC-7300 » et « Icom » et « radioamateur » et (faux).
+    Cataloguer « Icom IC-705 » et « Icom » et « radioamateur » et (faux).
+    Cataloguer « Icom IC-7610 » et « Icom » et « radioamateur » et (faux).
+    Cataloguer « Icom IC-9700 » et « Icom » et « radioamateur » et (faux).
+    Cataloguer « Icom IC-7100 » et « Icom » et « radioamateur » et (faux).
+    Cataloguer « Kenwood TS-590SG » et « Kenwood » et « radioamateur » et (faux).
+    Cataloguer « Kenwood TS-890S » et « Kenwood » et « radioamateur » et (faux).
+    Cataloguer « Kenwood TH-D74 » et « Kenwood » et « radioamateur » et (faux).
+    Cataloguer « Elecraft KX3 » et « Elecraft » et « radioamateur » et (faux).
+    Cataloguer « Elecraft K4 » et « Elecraft » et « radioamateur » et (faux).
+    Cataloguer « Xiegu G90 » et « Xiegu » et « radioamateur » et (faux).
+    Cataloguer « Xiegu X6100 » et « Xiegu » et « radioamateur » et (faux).
+    Cataloguer « Baofeng UV-5R » et « Baofeng » et « radioamateur » et (faux).
+    Cataloguer « Uniden SDS100 » et « Uniden » et « scanner » et (faux).
+    Cataloguer « Uniden SDS200 » et « Uniden » et « scanner » et (faux).
+    Cataloguer « Uniden BCD436HP » et « Uniden » et « scanner » et (faux).
+    Cataloguer « Uniden BCD536HP » et « Uniden » et « scanner » et (faux).
+    Cataloguer « Uniden UBC125XLT » et « Uniden » et « scanner » et (faux).
+    Cataloguer « Whistler TRX-1 » et « Whistler » et « scanner » et (faux).
+    Cataloguer « AOR AR-DV1 » et « AOR » et « scanner » et (faux).
+    Cataloguer « Icom IC-R8600 » et « Icom » et « scanner » et (faux).
+    Cataloguer « Icom IC-R30 » et « Icom » et « scanner » et (faux).
+    Cataloguer « RTL-SDR Blog V4 » et « RTL-SDR Blog » et « récepteur SDR » et (faux).
+    Cataloguer « Airspy R2 » et « Airspy » et « récepteur SDR » et (faux).
+    Cataloguer « SDRplay RSP1B » et « SDRplay » et « récepteur SDR » et (faux).
+    Cataloguer « SDRplay RSPdx » et « SDRplay » et « récepteur SDR » et (faux).
 
 Ouvrir l'écran de veille.
