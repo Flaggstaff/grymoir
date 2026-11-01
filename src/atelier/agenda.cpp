@@ -5,6 +5,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <algorithm>
 
 static const char *const JOURS[] = {"", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."};
 static const char *const MOIS[] = {"", "janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."};
@@ -161,6 +162,39 @@ void Agenda::paintEvent(QPaintEvent *) {
     }
     p.setPen(t.couleur("separateur"));
     for (int c = 0; c <= jours_.size(); c++) p.drawLine(colonne_x(c), 0, colonne_x(c), bas);
+    // les créneaux libres : dans chaque plage, ce qu'aucun objet n'occupe, d'un quart d'heure au moins
+    QFont petite = f;
+    petite.setPointSizeF(qMax(8.0, f.pointSizeF() - 1));
+    petite.setItalic(true);
+    p.setFont(petite);
+    p.setPen(t.couleur("texte-2"));
+    for (int c = 0; c < jours_.size(); c++) {
+        QVector<QPair<int, int>> pris;
+        for (const Bloc &b : blocs_)
+            if (b.jour == jours_[c]) pris.append({b.debut.hour() * 60 + b.debut.minute(), b.debut.hour() * 60 + b.debut.minute() + b.duree});
+        std::sort(pris.begin(), pris.end());
+        for (const auto &pl : plages_.value(jours_[c].dayOfWeek())) {
+            const int a = pl.first.hour() * 60 + pl.first.minute(), z = pl.second.hour() * 60 + pl.second.minute();
+            int t0 = a;
+            QVector<QPair<int, int>> libres;
+            for (const auto &o : pris) {
+                if (o.second <= a || o.first >= z) continue;
+                if (o.first > t0) libres.append({t0, o.first});
+                t0 = qMax(t0, o.second);
+            }
+            if (t0 < z) libres.append({t0, z});
+            for (const auto &l : libres) {
+                if (l.second - l.first < 15) continue;
+                const int y = haut + (int)((l.first - heure_debut_ * 60) * pixels_par_minute());
+                const int h = (int)((l.second - l.first) * pixels_par_minute());
+                if (h < 16) continue;
+                const QString x = QString::fromUtf8("libre %1:%2 – %3:%4").arg(l.first / 60, 2, 10, QChar('0')).arg(l.first % 60, 2, 10, QChar('0'))
+                                      .arg(l.second / 60, 2, 10, QChar('0')).arg(l.second % 60, 2, 10, QChar('0'));
+                p.drawText(QRect(colonne_x(c) + 8, y + 2, largeur_colonne() - 16, h - 4), Qt::AlignLeft | Qt::AlignTop, x);
+            }
+        }
+    }
+    p.setFont(f);
     // les blocs
     for (const Bloc &b : blocs_) {
         QRect r = place(b.rang);
@@ -171,9 +205,10 @@ void Agenda::paintEvent(QPaintEvent *) {
         p.setBrush(t.couleur("fond"));
         p.drawRoundedRect(r, 6, 6);
         p.setPen(t.couleur("texte"));
+        // l'heure et le premier texte sur une ligne, pour qu'une séance d'une heure montre aussi son soin
         QStringList lignes;
-        lignes << b.debut.toString("HH:mm") + QString::fromUtf8(" – ") + b.debut.addSecs(b.duree * 60).toString("HH:mm");
-        lignes << b.textes;
+        lignes << b.debut.toString("HH:mm") + (b.textes.isEmpty() ? QString() : "  " + b.textes.first());
+        lignes << b.textes.mid(1);
         p.drawText(r.adjusted(6, 3, -6, -3), Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, lignes.join('\n'));
         p.setOpacity(1.0);
     }

@@ -1,0 +1,36 @@
+Remarque : l'agenda (1er novembre 2026), essayé par tests/praxis-agenda : deux plages le lundi, une le mercredi, une séance
+Remarque : prévue demain à 10 h ; inséré avant l'accueil.
+Si le nombre de plages conservées est nul :
+    Le h1 vaut une nouvelle plage :
+        Le jour vaut « lundi ».
+        Le rang vaut 1.
+        Le début vaut 08:00.
+        La fin vaut 12:00.
+    Conserver le h1.
+    Le h2 vaut une nouvelle plage :
+        Le jour vaut « lundi ».
+        Le rang vaut 1.
+        Le début vaut 13:30.
+        La fin vaut 18:00.
+    Conserver le h2.
+    Le h3 vaut une nouvelle plage :
+        Le jour vaut « mercredi ».
+        Le rang vaut 3.
+        Le début vaut 08:00.
+        La fin vaut 12:00.
+    Conserver le h3.
+    Le p vaut un nouveau patient :
+        Le nom vaut « Agenda Essai ».
+        Le pays vaut « Suisse ».
+        L'anamnèse vaut « ».
+    Conserver le p.
+    La s vaut une nouvelle séance :
+        Le patient vaut le p.
+        Le soin vaut le soin conservé dont le nom = « EPI ».
+        La date vaut aujourd'hui − (le quantième du jour de la semaine d'aujourd'hui − 1).
+        L'heure vaut 10:00.
+        La durée vaut 60.
+        Le prix vaut 120.
+        Le statut vaut « prévue ».
+        Le paiement vaut « à payer ».
+    Conserver la s.

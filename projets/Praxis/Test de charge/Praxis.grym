@@ -27,6 +27,13 @@ L'usage ouvert vaut « ».
 Remarque : ce que le service SMS a répondu au dernier essai, tel quel.
 L'état SMS vaut « Aucun essai encore. ».
 L'état calendly vaut « Les réservations du site, relues à l'ouverture ».
+Remarque : l'agenda (1er novembre 2026) : les jours montrés, leur titre, la grille (jours et plages), le jour proposé à une
+Remarque : nouvelle séance ouverte depuis l'agenda.
+Le début du calendrier vaut aujourd'hui.
+La fin du calendrier vaut aujourd'hui.
+La grille du calendrier vaut « ».
+Le titre du calendrier vaut « ».
+La date proposée vaut absent.
 
 Remarque : ce qui est cherché dans les listes des patients et des factures ; vide, tout.
 La recherche des patients vaut « ».
@@ -176,6 +183,7 @@ L'écran d'accueil, (l'accueil du cabinet conservé) en grand, montre :
     le texte « Le cabinet », en petites capitales,
     un bouton « Patients », en tuile, avec la description « Fiches et historiques », avec l'image « images/coeur.png », au clavier « F »,
     un bouton « Séances », en tuile, avec la description « Du jour, à venir, passées »,
+    un bouton « Agenda », en tuile, avec la description « La semaine ou le jour, à la souris »,
     un bouton « Facturation », en tuile, avec la description « À encaisser, factures, quittances »,
     un bouton « Comptabilité », en tuile, avec la description « Recettes, frais, rappels, journal »,
     un bouton « Configuration », en tuile, avec la description « Le cabinet, les soins, les rubriques, les sauvegardes »,
@@ -591,6 +599,20 @@ L'écran des encaissements, « À encaisser », montre :
         un bouton « Facture »,
     un bouton « Fermer ».
 
+Remarque : l'agenda (1er novembre 2026) : la semaine ou le jour ; un clic ouvre une séance, la glisser la déplace (au quart
+Remarque : d'heure, son rappel SMS reprogrammé) ; hors des horaires, hachuré ; un jour sans horaire n'est pas montré
+Remarque : (Configuration, Rendez-vous) ; les séances annulées n'y sont pas.
+L'écran du calendrier, « Agenda », montre :
+    un bouton « Nouvelle séance », principal, à côté du titre, au clavier « N »,
+    côte à côte :
+        un bouton « Avant »,
+        un bouton « Après »,
+        un bouton « Aujourd'hui »,
+        une vue (« Semaine » ou « Jour »), « Semaine » au départ,
+    le texte le titre du calendrier, en petites capitales,
+    la liste des séances conservées dont la date ≥ le début du calendrier et la date ≤ la fin du calendrier et le statut ≠ « annulée », par date puis heure, avec la date, l'heure, la durée, le nom du patient et le nom du soin, en agenda selon la grille du calendrier,
+    un bouton « Fermer ».
+
 Remarque : la facturation, depuis l'accueil (30 octobre 2026) : encaisser, les factures, les quittances ; les factures aux
 Remarque : assurances aussi (31 octobre 2026), quand le cabinet les fait. La Comptabilité garde les comptes : frais, rappels, journal.
 L'écran de caisse, « Facturation », montre :
@@ -739,6 +761,17 @@ L'écran de l'agenda, « Rendez-vous », montre :
     un jeton calendly (secret), facultatif, avec l'indication « Calendly, Intégrations, API and webhooks : le jeton d'accès personnel »,
     le texte le témoin du jeton du cabinet conservé,
     un soin des réservations (soin), facultatif, avec l'indication « Le soin d'une réservation en ligne ; vide : le premier soin »,
+    une vue d'agenda (« Semaine » ou « Jour »), facultative, avec l'indication « L'agenda s'ouvre ainsi ; vide : la semaine »,
+    le texte « Horaires », en petites capitales,
+    la liste des plages conservées, par rang, avec le jour, le début et la fin,
+    côte à côte :
+        un jour (« lundi », « mardi », « mercredi », « jeudi », « vendredi », « samedi » ou « dimanche »), « lundi » au départ,
+        un début (heure), facultatif,
+        une fin (heure), facultative,
+    côte à côte :
+        un bouton « Ajouter la plage »,
+        un bouton « Retirer la plage », destructif,
+    le texte « Une plage par ligne ; deux le même jour pour le matin et l'après-midi. Sans aucune plage, l'agenda montre tous les jours. »,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
@@ -1566,6 +1599,7 @@ Quand on ouvre l'écran de l'agenda :
     Pour chaque soin conservé dont le nom = le soin des réservations du cabinet conservé :
         Le soin des réservations de l'écran devient le soin.
     Remarque : le jeton ne se relit pas à l'écran : un secret ne s'affiche jamais ; vide, il reste tel quel.
+    La vue d'agenda de l'écran devient la vue d'agenda du cabinet conservé.
 
 Quand on clique sur « Enregistrer » dans l'écran de l'agenda :
     Si l'agenda de l'écran = « OneDoc » et l'adresse de l'agenda de l'écran est absente, refuser « Avec OneDoc, donne l'adresse de l'agenda OneDoc. ».
@@ -1577,9 +1611,102 @@ Quand on clique sur « Enregistrer » dans l'écran de l'agenda :
         L'utilisateur calendly du c devient absent.
     Si le soin des réservations de l'écran est présent, le soin des réservations du c devient le nom du soin des réservations de l'écran.
     Sinon, le soin des réservations du c devient absent.
+    La vue d'agenda du c devient la vue d'agenda de l'écran.
     Fermer l'écran.
 
+Remarque : le rang d'un jour dans la semaine, du lundi (1) au dimanche (7).
+Le quantième d'un jour :
+    Si jour = « lundi », rendre 1.
+    Si jour = « mardi », rendre 2.
+    Si jour = « mercredi », rendre 3.
+    Si jour = « jeudi », rendre 4.
+    Si jour = « vendredi », rendre 5.
+    Si jour = « samedi », rendre 6.
+    Rendre 7.
+
+Remarque : une plage d'horaire (1er novembre 2026) : un jour, un début et une fin, rangée dans l'ordre de la semaine.
+Quand on clique sur « Ajouter la plage » dans l'écran de l'agenda :
+    Si le début de l'écran est absent ou la fin de l'écran est absente, refuser « Donne le début et la fin de la plage : 0800 et 1200. ».
+    Si le début de l'écran ≥ la fin de l'écran, refuser « La plage finit après son début. ».
+    Le h vaut une nouvelle plage :
+        Le jour vaut le jour de l'écran.
+        Le rang vaut le quantième du jour de l'écran.
+        Le début vaut le début de l'écran.
+        La fin vaut la fin de l'écran.
+    Conserver le h.
+    Signaler « Plage ajoutée : » puis le jour du h puis le début du h puis « à » puis la fin du h suivi de « . ».
+    Le début de l'écran devient absent.
+    La fin de l'écran devient absente.
+
+Quand on clique sur « Retirer la plage » dans l'écran de l'agenda :
+    Si la plage choisie de l'écran est absente, refuser « Choisis d'abord une plage dans la liste. ».
+    Le jour retiré vaut le jour de la plage choisie de l'écran.
+    Supprimer la plage choisie de l'écran définitivement.
+    Signaler « Plage retirée : » puis le jour retiré suivi de « . ».
+
 Quand on clique sur « Fermer » dans l'écran de l'agenda :
+    Fermer l'écran.
+
+Quand on clique sur « Agenda » dans l'écran d'accueil :
+    Ouvrir l'écran du calendrier.
+
+Remarque : les jours que l'agenda montre autour d'une date : elle seule, ou sa semaine du lundi au dimanche (les jours sans
+Remarque : horaire n'y paraissent pas) ; puis la grille : ces deux jours et chaque plage d'horaire, « 1 08:00-12:00 ».
+Pour caler une date, dans l'écran du calendrier :
+    Si la vue de l'écran = « Jour » :
+        Le début du calendrier devient date.
+        La fin du calendrier devient date.
+        Le titre du calendrier devient date en toutes lettres.
+    Sinon :
+        Le début du calendrier devient date − (le quantième du jour de la semaine de date − 1).
+        La fin du calendrier devient le début du calendrier + 6.
+        Le lundi vaut le début du calendrier en toutes lettres.
+        Le titre du calendrier devient "Semaine du " suivi du lundi.
+    La g vaut « » suivi du début du calendrier suivi de « | » suivi de la fin du calendrier.
+    Pour chaque plage conservée, par rang :
+        La g devient la g suivi de « | » suivi du rang de la plage suivi de " " suivi du début de la plage suivi de « - » suivi de la fin de la plage.
+    La grille du calendrier devient la g.
+
+Quand on ouvre l'écran du calendrier :
+    Si la vue d'agenda du cabinet conservé est présente, la vue de l'écran devient la vue d'agenda du cabinet conservé.
+    Caler aujourd'hui.
+
+Quand on change la vue dans l'écran du calendrier :
+    Si aujourd'hui ≥ le début du calendrier et aujourd'hui ≤ la fin du calendrier, caler aujourd'hui.
+    Sinon, caler le début du calendrier.
+
+Quand on clique sur « Avant » dans l'écran du calendrier :
+    Si la vue de l'écran = « Jour », caler le début du calendrier − 1.
+    Sinon, caler le début du calendrier − 7.
+
+Quand on clique sur « Après » dans l'écran du calendrier :
+    Si la vue de l'écran = « Jour », caler le début du calendrier + 1.
+    Sinon, caler le début du calendrier + 7.
+
+Quand on clique sur « Aujourd'hui » dans l'écran du calendrier :
+    Caler aujourd'hui.
+
+Quand on choisit une séance dans l'écran du calendrier :
+    La séance ouverte devient la séance.
+    Ouvrir l'écran de la séance.
+
+Remarque : une séance glissée ailleurs (1er novembre 2026) : seule une prévue se déplace ; facturée, la règle des séances
+Remarque : facturées la refuse ; son rappel SMS suit sa nouvelle date.
+Quand on déplace une séance dans l'écran du calendrier :
+    Si le statut de la séance ≠ « prévue », refuser « Seule une séance prévue se déplace : les autres gardent leur date. ».
+    La date de la séance devient la date d'arrivée de l'écran.
+    L'heure de la séance devient l'heure d'arrivée de l'écran.
+    Programmer le rappel de la séance.
+    Signaler le nom du patient de la séance suivi de « , » puis la date de la séance en toutes lettres suivi de « , » puis l'heure de la séance suivi de « . ».
+
+Remarque : une nouvelle séance depuis l'agenda : le jour montré (en semaine : aujourd'hui s'il en est, sinon le lundi).
+Quand on clique sur « Nouvelle séance » dans l'écran du calendrier :
+    La date proposée devient le début du calendrier.
+    Si aujourd'hui ≥ le début du calendrier et aujourd'hui ≤ la fin du calendrier, la date proposée devient aujourd'hui.
+    Ouvrir l'écran de séance.
+    La date proposée devient absente.
+
+Quand on clique sur « Fermer » dans l'écran du calendrier :
     Fermer l'écran.
 
 Quand on clique sur « Relire les rendez-vous » dans l'écran d'accueil :
@@ -1956,6 +2083,7 @@ Quand on clique sur « Fermer » dans l'écran des patients :
 
 Quand on ouvre l'écran de séance :
     La date de l'écran devient aujourd'hui.
+    Si la date proposée est présente, la date de l'écran devient la date proposée.
     Si la personne proposée est présente, le patient de l'écran devient la personne proposée.
 
 Remarque : le prix se propose dès que le soin est choisi, à son tarif ; le patient choisi, il devient le prix conseillé (le tarif de suivi dès la deuxième séance) ; dans l'ordre qu'on veut, toujours modifiable.
