@@ -1006,6 +1006,7 @@ QString ecran_supprimer(const QString &dossier, const QString &ecran, int index,
     // Les onglets, ou un onglet : ils partent avec leur contenu (un onglet sans les onglets, ou du contenu hors d'un onglet,
     // n'aurait pas de sens) ; le dernier onglet emporte ses onglets (§ 22.10).
     if (el->type == N_DISPOSITION && (el->forme == 5 || el->forme == 6)) {
+        const int forme_el = el->forme;   // el est libéré plus bas, avec les onglets (AddressSanitizer, 1er novembre 2026)
         size_t debut = (size_t)index;
         if (el->forme == 6) {
             const size_t parent = ouverture_de(n, debut);
@@ -1020,7 +1021,7 @@ QString ecran_supprimer(const QString &dossier, const QString &ecran, int index,
         if (!restants) return "C'est tout l'écran : un écran montre au moins un élément.";
         for (size_t q = fin + 1; q-- > debut;) enlever(q);
         reimprimer(ch, t);
-        geste->description = QString("Supprimer %1 de l'écran %2").arg(debut == (size_t)index && el->forme == 6 ? "un onglet" : "des onglets", ecran);
+        geste->description = QString("Supprimer %1 de l'écran %2").arg(debut == (size_t)index && forme_el == 6 ? "un onglet" : "des onglets", ecran);
         return ch.conclure(geste);
     }
     size_t reels = 0;

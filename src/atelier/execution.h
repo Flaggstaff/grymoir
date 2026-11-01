@@ -8,6 +8,7 @@
 #include <QTemporaryDir>
 #include <QMainWindow>
 #include <QPixmap>
+#include <QPointer>
 #include <QSemaphore>
 #include <QThread>
 #include <QVector>
@@ -208,7 +209,8 @@ private:
     // Les sons du fil (§ 15.7) : « son:K » dans le texte, joués par un lecteur caché ; nom et octets
     // Les passages captés par les écoutes (2.69), dans l'ordre : chacun part quand son écran attend, et seulement
     // celui-là ; un écran recouvert garde les siens jusqu'à son retour, un écran fermé les perd.
-    struct Capture { QWidget *vue; int element; QByteArray wav; QString nom; };
+    // La source : le bandeau de l'écoute ; son écran est celui de vue_ecran ou d'un écran recouvert qui le contient.
+    struct Capture { QPointer<QWidget> source; int element; QByteArray wav; QString nom; };
     QList<Capture> captures;
     void envoyer_capture();
     QVector<QPair<QString, QByteArray>> sons_du_fil;

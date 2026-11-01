@@ -34,6 +34,7 @@ QByteArray wav_16k(const std::vector<float> &pcm);
 
 class QAudioSink;
 class QAudioSource;
+class QCheckBox;
 class QComboBox;
 class QIODevice;
 class QLabel;
@@ -53,11 +54,14 @@ public:
     void nourrir(const std::vector<float> &pcm16k);   // pour les essais : du son, comme s'il venait de l'entrée
     const Decoupeur &decoupeur() const { return d; }
     QComboBox *entrees() const { return entree_; }
+    QCheckBox *veille() const { return veille_; }   // « En veille » : décochée, l'entrée reste fermée et rien ne part
 
 private:
     QString nom;
     Decoupeur d;
     QComboBox *entree_;
+    QCheckBox *veille_;
+    bool materiel;
     QProgressBar *niveau_;
     QSlider *seuil_;
     QToolButton *haut_parleur_;
@@ -70,7 +74,8 @@ private:
     int frequence_sortie = 0, canaux_sortie = 1, format_sortie = 0;
     void remplir();
     void demarrer();
-    void arreter();
+    void couper();    // le son seul : l'entrée fermée, le passage en cours oublié ; sûr dans le destructeur
+    void arreter();   // couper, puis l'affichage remis à zéro
     void lire();
     void ouvrir_sortie();
     void fermer_sortie();

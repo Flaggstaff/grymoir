@@ -1435,15 +1435,11 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         if (sortes[k] == ELEMENT_ECOUTE && v.controles[k] && v.controles[k]->layout()) {   // 2.69 : le vrai bandeau
             QWidget *cadre = v.controles[k];
             if (auto *apercu = cadre->findChild<QLabel *>("ecoute-apercu")) apercu->deleteLater();
-            auto *e = new Ecoute(textes[k], travail.silences.value(k), cadre);
+            // les essais (GRYMOIR_ESSAIS) n'ouvrent ni entrée ni micro : ils nourrissent le bandeau à la main
+            auto *e = new Ecoute(textes[k], travail.silences.value(k), cadre, qEnvironmentVariableIsEmpty("GRYMOIR_ESSAIS"));
             cadre->layout()->addWidget(e);
-            QWidget *vue = v.vue;
-            connect(vue, &QObject::destroyed, this, [this, vue] {   // un écran fermé : ses passages en attente avec lui
-                for (int i = 0; i < captures.size(); i++)
-                    if (captures[i].vue == vue) captures.removeAt(i--);
-            });
-            e->capte = [this, vue, k](const QByteArray &wav, const QString &nom) {
-                captures.push_back({vue, k, wav, nom});
+            e->capte = [this, e, k](const QByteArray &wav, const QString &nom) {
+                captures.push_back({QPointer<QWidget>(e), k, wav, nom});
                 envoyer_capture();
             };
             continue;
@@ -1822,10 +1818,14 @@ void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) 
 void Execution::envoyer_capture() {
     if (!attente_ecran || !vue_ecran) return;
     for (int i = 0; i < captures.size(); i++) {
-        bool vivant = captures[i].vue == vue_ecran;
-        for (const EcranMontre &r : recouverts) vivant |= captures[i].vue == r.vue;
+        QWidget *src = captures[i].source;
+        // l'écran montré est la zone de défilement qui enveloppe le dessin (1er novembre 2026 : comparer au dessin
+        // lui-même jetait chaque passage)
+        const bool ici = src && vue_ecran->isAncestorOf(src);
+        bool vivant = ici;
+        for (const EcranMontre &r : recouverts) vivant |= src && r.vue && r.vue->isAncestorOf(src);
         if (!vivant) { captures.removeAt(i--); continue; }
-        if (captures[i].vue != vue_ecran) continue;
+        if (!ici) continue;
         const Capture c = captures.takeAt(i);
         octets_envoyes = c.wav;
         texte_envoye = c.nom.toUtf8();

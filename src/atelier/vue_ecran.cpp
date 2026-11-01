@@ -457,6 +457,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
             auto *cadre = new QFrame;
             cadre->setObjectName("ecoute");
             cadre->setFrameShape(QFrame::StyledPanel);
+            cadre->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);   // sa hauteur, pas plus : la liste prend le reste
             auto *pile = new QVBoxLayout(cadre);
             pile->setContentsMargins(t.mesure("espace-2"), t.mesure("espace-2"), t.mesure("espace-2"), t.mesure("espace-2"));
             auto *l = new QLabel(QString::fromUtf8("Écoute « %1 » : l'entrée son, le niveau et le seuil, à l'exécution").arg(e.texte));

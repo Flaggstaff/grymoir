@@ -1285,6 +1285,7 @@ int main(int argc, char **argv) {
         std::vector<float> relu;
         VERIFIER(wav_en_16k(w, &relu) && relu.size() == 160 && std::fabs(relu[0] - 0.5f) < 0.001f);
         Ecoute e(QString::fromUtf8("Essai Écoutille"), 1000, nullptr, false);   // sans entrée son ici : nourri à la main
+        e.veille()->setChecked(true);   // hors veille, le bandeau ignore le son
         int captes = 0;
         QString nom;
         e.capte = [&](const QByteArray &wav, const QString &n) { captes += octets_de_son(wav) ? 1 : 0; nom = n; };
@@ -1292,6 +1293,63 @@ int main(int argc, char **argv) {
         e.nourrir(parole);
         e.nourrir(silence);
         VERIFIER(captes == 1 && nom.startsWith(QString::fromUtf8("Essai Écoutille-")) && nom.endsWith(".wav"));
+    }
+
+    // L'écoute dans la fenêtre d'exécution (2.69) : un passage capté arrive dans la liste. Le 1er novembre 2026, chaque
+    // passage était jeté, rattaché au dessin de l'écran au lieu de la zone de défilement qui l'enveloppe.
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("veille.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Un passage, conservé, a :\n    un poste (texte),\n    un enregistrement (son).\n"
+                    "L'écran de veille montre :\n    une écoute « Essai veille »,\n    une écoute « Muette »,\n"
+                    "    la liste des passages conservés, avec le poste,\n    un bouton « Fermer ».\n"
+                    "Quand une écoute capte un son dans l'écran de veille :\n"
+                    "    Le p vaut un nouveau passage.\n    Le poste du p devient l'écoute.\n"
+                    "    L'enregistrement du p devient le son capté.\n    Conserver le p.\n"
+                    "Quand on clique sur « Fermer » dans l'écran de veille :\n    Fermer l'écran.\n"
+                    "Ouvrir l'écran de veille.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto bandeau = [&](const QString &nom) -> Ecoute * {
+            for (Ecoute *x : e.findChildren<Ecoute *>())
+                for (QLabel *l : x->findChildren<QLabel *>()) if (l->text().contains(nom)) return x;
+            return nullptr;
+        };
+        VERIFIER(attendre([&] { return bandeau("Essai veille") && bandeau("Muette"); }));
+        Ecoute *a = bandeau("Essai veille"), *b = bandeau("Muette");
+        if (a && b) {
+            a->veille()->setChecked(true);
+            b->veille()->setChecked(false);   // hors veille : rien ne part
+            std::vector<float> silence(16000, 0.f), parole(16000);
+            for (size_t i = 0; i < parole.size(); i++) parole[i] = 0.3f * (float)std::sin(2 * 3.14159265 * 440 * (double)i / 16000.0);
+            for (Ecoute *x : {a, b}) { x->nourrir(silence); x->nourrir(parole); x->nourrir(silence); x->nourrir(silence); }
+            auto ligne = [&]() -> QString {
+                for (QTableWidget *t : e.findChildren<QTableWidget *>())
+                    if (t->isVisible() && t->rowCount() >= 1 && t->item(0, 0)) return t->item(0, 0)->text() + "/" + QString::number(t->rowCount());
+                return QString();
+            };
+            VERIFIER(attendre([&] { return !ligne().isEmpty(); }));
+            QElapsedTimer z;   // la muette aurait eu le temps d'arriver
+            z.start();
+            while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            VERIFIER(ligne() == QString::fromUtf8("Essai veille/1"));
+        }
+        for (QPushButton *x : e.findChildren<QPushButton *>())
+            if (x->text() == "Fermer" && x->isVisible() && x->isEnabled()) { x->click(); break; }
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
     }
 
     // Le son (24 octobre 2026) : l'extension du fichier que lit le décodeur, d'après les octets ; le choix du micro

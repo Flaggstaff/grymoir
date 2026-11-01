@@ -7,6 +7,7 @@
 #include <QAudioFormat>
 #include <QAudioSink>
 #include <QAudioSource>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDateTime>
 #include <QHBoxLayout>
@@ -101,13 +102,15 @@ QByteArray wav_16k(const std::vector<float> &pcm) {
 static float seuil_de(int db) { return (float)std::pow(10.0, db / 20.0); }
 static int db_de(float x) { return x <= 1e-6f ? -60 : std::max(-60, std::min(0, (int)std::lround(20.0 * std::log10(x)))); }
 
-Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel) : QWidget(parent), nom(n) {
+Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel_) : QWidget(parent), nom(n), materiel(materiel_) {
     d.silence_ms = silence_ms > 0 ? silence_ms : 1500;
     setObjectName("bandeau-ecoute");
     auto *pile = new QVBoxLayout(this);
     pile->setContentsMargins(0, 0, 0, 0);
     auto *haut = new QHBoxLayout;
     auto *titre = new QLabel(QString::fromUtf8("<b>%1</b>").arg(nom.toHtmlEscaped()));
+    veille_ = new QCheckBox(QString::fromUtf8("En veille"));
+    veille_->setToolTip(QString::fromUtf8("Écouter ce poste : ses passages sont gardés et transcrits"));
     entree_ = new QComboBox;
     entree_->setToolTip(QString::fromUtf8("L'entrée son de ce poste, et son canal"));
     haut_parleur_ = new QToolButton;
@@ -115,6 +118,7 @@ Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel)
     haut_parleur_->setCheckable(true);
     haut_parleur_->setToolTip(QString::fromUtf8("Écouter ce poste sur la sortie son de l'ordinateur"));
     haut->addWidget(titre);
+    haut->addWidget(veille_);
     haut->addWidget(entree_, 1);
     haut->addWidget(haut_parleur_);
     pile->addLayout(haut);
@@ -139,6 +143,13 @@ Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel)
     seuil_->setValue(s.value(cle("seuil"), -34).toInt());
     d.seuil = seuil_de(seuil_->value());
     haut_parleur_->setChecked(s.value(cle("haut-parleur"), false).toBool());
+    veille_->setChecked(s.value(cle("veille"), false).toBool());   // la première fois : rien n'écoute sans qu'on le veuille
+    connect(veille_, &QCheckBox::toggled, this, [this](bool oui) {
+        QSettings().setValue(cle("veille"), oui);
+        if (!this->materiel) return;
+        if (oui) demarrer();
+        else arreter();
+    });
     connect(seuil_, &QSlider::valueChanged, this, [this](int v) {
         d.seuil = seuil_de(v);
         QSettings().setValue(cle("seuil"), v);
@@ -148,6 +159,7 @@ Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel)
         if (oui) ouvrir_sortie();
         else fermer_sortie();
     });
+    if (!veille_->isChecked()) etat_->setText(QString::fromUtf8("Hors veille."));
     if (!materiel) return;
     remplir();
     connect(entree_, qOverload<int>(&QComboBox::activated), this, [this](int) {
@@ -171,8 +183,11 @@ Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel)
     if (haut_parleur_->isChecked()) ouvrir_sortie();
 }
 
+// Détruit avec son écran : rien ne touche plus aux barres ni aux libellés, dont l'écran parent est en pleine démolition
+// (sous macOS, la remise à zéro de la barre de niveau à cet instant faisait planter, 1er novembre 2026).
 Ecoute::~Ecoute() {
-    arreter();
+    capte = nullptr;
+    couper();
     fermer_sortie();
 }
 
@@ -203,6 +218,7 @@ void Ecoute::remplir() {
 
 void Ecoute::demarrer() {
     arreter();
+    if (!veille_->isChecked()) return;
     const QString choix = entree_->currentData().toString();
     if (choix.isEmpty()) return;
     const QByteArray id = QByteArray::fromHex(choix.section(QChar(0x1f), 0, 0).toUtf8());
@@ -224,11 +240,23 @@ void Ecoute::demarrer() {
     etat_->setText(QString::fromUtf8("En écoute."));
 }
 
-void Ecoute::arreter() {
-    if (source) { source->stop(); source->deleteLater(); source = nullptr; }
+void Ecoute::couper() {
+    if (source) {
+        source->disconnect(this);
+        source->stop();
+        delete source;   // son flux avec elle ; rien ne doit plus arriver dans lire()
+        source = nullptr;
+    }
     flux = nullptr;
     std::vector<std::vector<float>> finis;
     d.finir(&finis);   // un passage en cours quand on change d'entrée : perdu, il serait coupé en son milieu
+    d.niveau = d.crete = 0;
+}
+
+void Ecoute::arreter() {
+    couper();
+    if (niveau_) niveau_->setValue(-60);
+    if (etat_) etat_->setText(veille_ && veille_->isChecked() ? QString() : QString::fromUtf8("Hors veille."));
 }
 
 // Les octets reçus : le canal choisi, en flottants, puis en 16 kHz.
@@ -254,6 +282,7 @@ void Ecoute::lire() {
 }
 
 void Ecoute::nourrir(const std::vector<float> &pcm16k) {
+    if (!veille_->isChecked()) return;
     std::vector<std::vector<float>> finis;
     d.nourrir(pcm16k.data(), pcm16k.size(), &finis);
     jouer(pcm16k);
@@ -287,7 +316,7 @@ void Ecoute::ouvrir_sortie() {
 }
 
 void Ecoute::fermer_sortie() {
-    if (sortie) { sortie->stop(); sortie->deleteLater(); sortie = nullptr; }
+    if (sortie) { sortie->stop(); delete sortie; sortie = nullptr; }
     flux_sortie = nullptr;
 }
 

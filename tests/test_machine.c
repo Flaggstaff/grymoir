@@ -1132,6 +1132,12 @@ static void scene_image(void *contexte, size_t k, const unsigned char *octets, s
     free(x);
 }
 
+static int transcrire_vraiment = 0;   /* essai de l'écoute : un transcripteur factice (2.69) */
+static char *scene_transcrire(void *contexte, const unsigned char *octets, size_t taille, char **erreur) {
+    (void)contexte; (void)octets; (void)erreur;
+    return grym_formater("bonjour (%lu octets)", (unsigned long)taille);
+}
+
 static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, const char *const *rep, size_t nrep) {
     Scene sc = { { rep, nrep, 0, {0}, 0 }, ev, nev, 0, NULL, 0, {0}, {0}, 0 };
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
@@ -1140,6 +1146,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
                     NULL, NULL, NULL, NULL, NULL, 1 };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
+    if (transcrire_vraiment) i.transcrire = scene_transcrire;
     machine_interface(m, &i);
     char *r = executer_source(p, m, src, 0);
     machine_detruire(m);
@@ -1181,6 +1188,20 @@ static void essais_ecoute(void) {   /* 2.69 : l'événement d'une écoute, nomm�
     ECRANS(src, ev, rep,
            "[ouvrir Veille ; écoute Stryker 3000 ms ; écoute George II 0 ms ; bouton Fermer]\n"
            "Stryker : Stryker\ntoutes : George II WAV\n[fermer]\n");
+    /* le passage capté se transcrit dès qu'il entre dans un champ « transcrite de » */
+    const char *src2 =
+        "Un passage, conservé, a : un enregistrement (son), une transcription (texte), facultative, transcrite de l'enregistrement.\n"
+        "L'écran de veille montre :\n    une écoute « Stryker ».\n"
+        "Quand une écoute capte un son dans l'écran de veille :\n"
+        "    Le p vaut un nouveau passage.\n"
+        "    L'enregistrement du p devient le son capté.\n"
+        "    Conserver le p.\n"
+        "    Afficher la transcription du p.\n"
+        "Ouvrir l'écran de veille.\n";
+    const char *ev2[] = { "capte Stryker" };
+    transcrire_vraiment = 1;
+    ECRANS(src2, ev2, rep, "[ouvrir Veille ; écoute Stryker 0 ms]\nbonjour (48 octets)\n[fermer]\n");
+    transcrire_vraiment = 0;
 }
 
 static void essais_etats_ecran(void) {   /* § 22.6 */
