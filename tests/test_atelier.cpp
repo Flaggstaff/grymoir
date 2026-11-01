@@ -31,6 +31,7 @@
 #include "panneau.h"
 #include "secours.h"
 #include "recherche.h"
+#include <QSettings>
 #include <QCheckBox>
 #include <QLabel>
 #include <QLineEdit>
@@ -1484,7 +1485,9 @@ int main(int argc, char **argv) {
                     "Le b vaut un nouveau poste :\n    Le nom vaut « Bravo ».\n    La veille vaut faux.\nConserver b.\n"
                     "L'écran de veille montre :\n    les écoutes des postes conservés dont la veille est vraie, par nom,\n"
                     "    la liste des passages conservés, avec le nom du poste,\n"
-                    "    un bouton « Bravo aussi »,\n    un bouton « Fermer ».\n"
+                    "    un bouton « Bravo aussi »,\n    un bouton « Renommer »,\n    un bouton « Fermer ».\n"
+                    "Quand on clique sur « Renommer » dans l'écran de veille :\n"
+                    "    Pour chaque poste conservé dont le nom est « Alpha » :\n        Le nom du poste devient « Alfa ».\n"
                     "Quand un poste capte un son dans l'écran de veille :\n"
                     "    Le p vaut un nouveau passage.\n    Le poste du p devient le poste.\n"
                     "    L'enregistrement du p devient le son capté.\n    Conserver le p.\n"
@@ -1493,6 +1496,8 @@ int main(int argc, char **argv) {
                     "Quand on clique sur « Fermer » dans l'écran de veille :\n    Fermer l'écran.\n"
                     "Ouvrir l'écran de veille.\n");
         }
+        QSettings().remove(QString::fromUtf8("écoute/Alfa"));
+        QSettings().setValue(QString::fromUtf8("écoute/Alpha/seuil"), -20);   // le branchement d'Alpha, sur cet ordinateur
         Execution e(prog);
         e.show();
         e.demarrer();
@@ -1530,11 +1535,83 @@ int main(int argc, char **argv) {
             };
             VERIFIER(attendre([&] { return ligne() == "Bravo"; }));   // relié au bon poste
         } else VERIFIER(false);
+        // renommé (1er novembre 2026) : le bandeau suit, et son branchement avec lui
+        for (QPushButton *x : e.findChildren<QPushButton *>())
+            if (x->text() == "Renommer" && x->isVisible()) { x->click(); break; }
+        VERIFIER(attendre([&] { return bandeaux() == "Alfa,Bravo"; }));
+        VERIFIER(QSettings().value(QString::fromUtf8("écoute/Alfa/seuil")).toInt() == -20);
+        VERIFIER(!QSettings().contains(QString::fromUtf8("écoute/Alpha/seuil")));
+        QSettings().remove(QString::fromUtf8("écoute/Alfa"));
         for (QPushButton *x : e.findChildren<QPushButton *>())
             if (x->text() == "Fermer" && x->isVisible() && x->isEnabled()) { x->click(); break; }
         QElapsedTimer z;
         z.start();
         while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+    }
+
+    // Écoutille (1er novembre 2026) : ajouter un poste depuis l'application ; le signal le dit ; « Fermer » sur la veille
+    // demande avant d'arrêter
+    {
+        QTemporaryDir dossier;
+        QFile::copy(QString(GRYM_SOURCE) + QString::fromUtf8("/projets/Écoutille/Écoutille.grym"),
+                    dossier.filePath(QString::fromUtf8("Écoutille.grym")));
+        Execution e(dossier.filePath(QString::fromUtf8("Écoutille.grym")));
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 30000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto bouton = [&e](const char *l) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>())
+                if (b->text() == QString::fromUtf8(l) && b->isVisible() && b->isEnabled() && b->window() == &e) return b;
+            return nullptr;
+        };
+        auto signal = [&e]() -> QString {
+            for (QLabel *l : e.findChildren<QLabel *>())
+                if (l->property("message").toString() == "signal" && l->isVisible()) return l->text();
+            return QString();
+        };
+        VERIFIER(attendre([&] { return bouton("Postes") != nullptr; }));
+        if (QPushButton *b = bouton("Postes")) b->click();
+        VERIFIER(attendre([&] { return bouton("Modèles") != nullptr; }));
+        QLineEdit *nom = nullptr;   // la zone « Nom » : la seule zone de texte qui n'est pas celle d'un menu à recherche
+        for (QLineEdit *l : e.findChildren<QLineEdit *>())
+            if (l->isVisible() && l->window() == &e && !qobject_cast<QComboBox *>(l->parentWidget())) nom = l;
+        VERIFIER(nom != nullptr);
+        if (nom) {
+            nom->setFocus();
+            nom->setText("Stryker");
+            nom->setModified(true);   // comme une frappe : la zone part quand on la quitte
+            emit nom->editingFinished();
+        }
+        VERIFIER(attendre([&] { return bouton("Ajouter") != nullptr; }));
+        if (QPushButton *b = bouton("Ajouter")) b->click();
+        VERIFIER(attendre([&] { return signal() == QString::fromUtf8("Poste Stryker ajouté, en veille."); }));
+        bool ligne = false;
+        for (QTableWidget *t : e.findChildren<QTableWidget *>())
+            if (t->isVisible() && !t->findItems("Stryker", Qt::MatchExactly).isEmpty()) ligne = true;
+        VERIFIER(ligne);   // dans la liste des postes
+        if (QPushButton *b = bouton("Fermer")) b->click();
+        VERIFIER(attendre([&] { return bouton("Réglages") != nullptr; }));
+        bool rouge = false;   // « , destructif » (2.72) : le bouton de la page des postes, revu ici sur la veille : aucun
+        for (QPushButton *b : e.findChildren<QPushButton *>())
+            if (b->isVisible() && b->property("role").toString() == "danger") rouge = true;
+        VERIFIER(!rouge);
+        if (QPushButton *b = bouton("Fermer")) b->click();
+        auto dialogue = [&e]() -> QDialog * {
+            for (QDialog *d : e.findChildren<QDialog *>("confirmation")) if (d->isVisible()) return d;
+            return nullptr;
+        };
+        VERIFIER(attendre([&] { return dialogue() != nullptr; }));
+        if (QDialog *d = dialogue()) {
+            QLabel *q = d->findChild<QLabel *>();
+            VERIFIER(q && q->text().startsWith(QString::fromUtf8("Arrêter la veille ?")));
+            for (QPushButton *b : d->findChildren<QPushButton *>()) if (b->text() == "Annuler") { b->click(); break; }
+        }
+        VERIFIER(attendre([&] { return bouton("Réglages") != nullptr && dialogue() == nullptr; }));   // toujours en veille
     }
 
     // Le son (24 octobre 2026) : l'extension du fichier que lit le décodeur, d'après les octets ; le choix du micro

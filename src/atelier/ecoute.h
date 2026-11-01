@@ -51,6 +51,9 @@ public:
     // veille_libre faux : la veille est décidée par le programme (« les écoutes des postes … dont la veille est vraie »,
     // 2.70) : la case est cachée, toujours cochée
     Ecoute(const QString &nom, int silence_ms, QWidget *parent = nullptr, bool materiel = true, bool veille_libre = true);
+    // Un poste renommé (1er novembre 2026) : son entrée, son seuil, son haut-parleur passent au nouveau nom, sans écraser
+    // ce que le nouveau nom aurait déjà ; l'ancien nom les perd. Rend vrai si quelque chose a été reporté.
+    static bool reporter_reglages(const QString &ancien, const QString &nouveau);
     QString nom_ecoute() const { return nom; }
     ~Ecoute() override;
     std::function<void(const QByteArray &wav, const QString &nom_fichier)> capte;

@@ -90,6 +90,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	sh tests/praxis-remise
 	sh tests/praxis-reste-du
 	sh tests/praxis-horaire
+	sh tests/ecoutille
 	sh tests/balayer
 
 clean:

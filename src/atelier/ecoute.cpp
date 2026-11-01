@@ -15,6 +15,8 @@
 #include <QMediaDevices>
 #include <QProgressBar>
 #include <QSettings>
+#include <QHash>
+#include <QVariant>
 #include <QSlider>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -190,6 +192,24 @@ Ecoute::~Ecoute() {
     capte = nullptr;
     couper();
     fermer_sortie();
+}
+
+bool Ecoute::reporter_reglages(const QString &ancien, const QString &nouveau) {
+    QSettings s;
+    const QString de = QString::fromUtf8("écoute/%1").arg(ancien), vers = QString::fromUtf8("écoute/%1").arg(nouveau);
+    s.beginGroup(vers);
+    const bool deja = !s.childKeys().isEmpty();
+    s.endGroup();
+    if (deja) return false;
+    s.beginGroup(de);
+    const QStringList cles = s.childKeys();
+    QHash<QString, QVariant> valeurs;
+    for (const QString &k : cles) valeurs.insert(k, s.value(k));
+    s.endGroup();
+    if (valeurs.isEmpty()) return false;
+    for (auto it = valeurs.constBegin(); it != valeurs.constEnd(); ++it) s.setValue(vers + "/" + it.key(), it.value());
+    s.remove(de);
+    return true;
 }
 
 QString Ecoute::cle(const QString &reglage) const { return QString::fromUtf8("écoute/%1/%2").arg(nom, reglage); }
