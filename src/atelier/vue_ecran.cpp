@@ -453,7 +453,20 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         QWidget *const toile = niveaux.last().toile;
         auto poser_ici = [&](QWidget *w, int etirement = 0) { poser(w, e, etirement); };
 #define poser poser_ici
-        if (e.sorte == ELEMENT_ECOUTE) {   // « une écoute « Stryker » » (2.69) : un cadre ; l'exécution y pose le bandeau
+        if (e.sorte == ELEMENT_ECOUTES) {   // « les écoutes des postes conservés » (2.70) : un bandeau par poste, à l'exécution
+            auto *cadre = new QWidget;
+            cadre->setObjectName("ecoutes");
+            auto *pile = new QVBoxLayout(cadre);
+            pile->setContentsMargins(0, 0, 0, 0);
+            pile->setSpacing(t.mesure("espace-2"));
+            auto *l = new QLabel(QString::fromUtf8("Les écoutes des %1s : un bandeau par objet, à l'exécution").arg(e.texte));
+            l->setWordWrap(true);
+            l->setObjectName("ecoute-apercu");
+            pile->addWidget(l);
+            cadre->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+            poser(cadre);
+            r.controles[k] = cadre;
+        } else if (e.sorte == ELEMENT_ECOUTE) {   // « une écoute « Stryker » » (2.69) : un cadre ; l'exécution y pose le bandeau
             auto *cadre = new QFrame;
             cadre->setObjectName("ecoute");
             cadre->setFrameShape(QFrame::StyledPanel);

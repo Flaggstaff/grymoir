@@ -2805,6 +2805,8 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
     for (size_t k = 0; k < e->n; k++) {
         char *nak = strchr(parts[k + 2], '\x15');   /* « … ␕ c » : une liste en cartes (2.19), lue puis retirée */
         const int cartes = nak && nak[1] == 'c';
+        const int ecoutes = nak && nak[1] == 'u';                 /* « ␕ u 3000 » : des écoutes, le silence en ms (2.70) */
+        const int silence_ecoutes = ecoutes ? atoi(nak + 2) : 0;
         if (nak) *nak = '\0';
         const char *x = parts[k + 2];
         if (x[0] == '\x1d') {   /* « ␝96,16,240,0␝ » : la place d'un élément en position libre (§ 22.9) */
@@ -3013,7 +3015,13 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             }
         }
         e->elements[k].cartes = cartes && x[0] == 'L';
-        e->elements[k].sorte = graphe ? ELEMENT_GRAPHIQUE : x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON
+        if (ecoutes && x[0] == 'L' && !m->iface.ecouter) {
+            *erreur = grym_formater("Les écoutes des « %s » captent le son de l'ordinateur : elles vivent dans l'atelier et les "
+                                    "applications fabriquées, pas dans la console ni le navigateur.", e->textes[k]);
+            break;
+        }
+        e->elements[k].silence = silence_ecoutes;
+        e->elements[k].sorte = ecoutes && x[0] == 'L' ? ELEMENT_ECOUTES : graphe ? ELEMENT_GRAPHIQUE : x[0] == 'L' ? ELEMENT_LISTE : x[0] == 'B' ? ELEMENT_BOUTON
                              : x[0] == 'I' || x[0] == 'J' ? ELEMENT_IMAGE : ELEMENT_TEXTE;
         if (x[0] == 'J') { e->elements[k].calculee = 1; continue; }   /* image calculée : ÉCRAN_IMAGE la donne (§ 22.8) */
         if (x[0] == 'I') {   /* « l'image « plan.png » » (§ 22.8) : relue à chaque ouverture, elle a pu changer depuis l'analyse */
@@ -3031,8 +3039,8 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
         /* Colonnes par défaut : les champs simples, dans l'ordre ; ni fichiers, ni images, ni « plusieurs » (§ 22.1) */
         const ClasseVM *c = classe_vm(m, e->textes[k]);
         if (!c) { *erreur = grym_formater("Entité « %s » inconnue.", e->textes[k]); break; }
-        if (ce) {   /* le champ « … choisi » de la classe de l'écran */
-            char *choisi = grym_formater("%s %s", c->nom, c->feminin ? "choisie" : "choisi");
+        if (ce) {   /* le champ « … choisi » de la classe de l'écran ; « … capté » pour des écoutes (2.70) */
+            char *choisi = grym_formater("%s %s", c->nom, ecoutes ? (c->feminin ? "captée" : "capté") : c->feminin ? "choisie" : "choisi");
             e->champ[k] = index_champ(ce, choisi);
             free(choisi);
         }
@@ -3067,8 +3075,8 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             }
             e->elements[k].colonnes = (const char *const *)e->colonnes[k];
             e->elements[k].nb_colonnes = graphe ? 2 : nb;
-            if (ce) {
-                char *choisi = grym_formater("%s %s", c->nom, c->feminin ? "choisie" : "choisi");
+            if (ce) {   /* « … capté » pour des écoutes (2.70) */
+                char *choisi = grym_formater("%s %s", c->nom, ecoutes ? (c->feminin ? "captée" : "capté") : c->feminin ? "choisie" : "choisi");
                 e->champ[k] = index_champ(ce, choisi);
                 free(choisi);
             }
@@ -5955,7 +5963,10 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             /* la ligne choisie de chaque liste : « le compositeur choisi de l'écran » */
             for (size_t k = 0; !probleme && m->ecran && m->ecran->objet && k < m->ecran->n; k++) {
                 EcranVM *e = m->ecran;
-                if (e->elements[k].sorte != ELEMENT_LISTE || e->champ[k] < 0) continue;
+                if (e->champ[k] < 0) continue;
+                /* le poste d'une écoute (2.70) : écrit seulement quand c'est elle qui capte */
+                if (e->elements[k].sorte == ELEMENT_ECOUTES && !(ev.sorte == EVENEMENT_CAPTURE && ev.element == k)) continue;
+                if (e->elements[k].sorte != ELEMENT_LISTE && e->elements[k].sorte != ELEMENT_ECOUTES) continue;
                 long r = ev.choisies && k < ev.nb_choisies ? ev.choisies[k] : -1;
                 Valeur v = vi_absent(NULL);
                 if (r >= 0 && e->listes[k].type == V_LISTE && (size_t)r < e->listes[k].liste->n) {
@@ -6085,7 +6096,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 Objet *o = machine_objet_en_base(m, l->ids[ev.ligne], l->classes[ev.ligne], &probleme);
                 if (o) { valeur_liberer(&objet); objet = vi_objet(o); code_ev = (long)ev.element + 1; }
             } else if (!probleme && ev.sorte == EVENEMENT_CAPTURE && ev.element < m->ecran->n
-                       && m->ecran->elements[ev.element].sorte == ELEMENT_ECOUTE && ev.octets && ev.taille) {
+                       && (m->ecran->elements[ev.element].sorte == ELEMENT_ECOUTE
+                           || (m->ecran->elements[ev.element].sorte == ELEMENT_ECOUTES && ev.choisies && ev.element < ev.nb_choisies
+                               && ev.choisies[ev.element] >= 0 && m->ecran->listes[ev.element].type == V_LISTE
+                               && (size_t)ev.choisies[ev.element] < m->ecran->listes[ev.element].liste->n))
+                       && ev.octets && ev.taille) {
                 /* une écoute a capté un passage (2.69) : « le son capté », un fichier son, premier paramètre */
                 valeur_liberer(&objet);
                 objet = vi_fichier(ev.octets, ev.taille, ev.texte ? ev.texte : "passage.wav");

@@ -102,7 +102,7 @@ QByteArray wav_16k(const std::vector<float> &pcm) {
 static float seuil_de(int db) { return (float)std::pow(10.0, db / 20.0); }
 static int db_de(float x) { return x <= 1e-6f ? -60 : std::max(-60, std::min(0, (int)std::lround(20.0 * std::log10(x)))); }
 
-Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel_) : QWidget(parent), nom(n), materiel(materiel_) {
+Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel_, bool veille_libre) : QWidget(parent), nom(n), materiel(materiel_) {
     d.silence_ms = silence_ms > 0 ? silence_ms : 1500;
     setObjectName("bandeau-ecoute");
     auto *pile = new QVBoxLayout(this);
@@ -143,8 +143,9 @@ Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel_
     seuil_->setValue(s.value(cle("seuil"), -34).toInt());
     d.seuil = seuil_de(seuil_->value());
     haut_parleur_->setChecked(s.value(cle("haut-parleur"), false).toBool());
-    veille_->setChecked(s.value(cle("veille"), false).toBool());   // la première fois : rien n'écoute sans qu'on le veuille
-    connect(veille_, &QCheckBox::toggled, this, [this](bool oui) {
+    veille_->setChecked(veille_libre ? s.value(cle("veille"), false).toBool() : true);   // la première fois : rien n'écoute sans qu'on le veuille
+    veille_->setVisible(veille_libre);
+    if (veille_libre) connect(veille_, &QCheckBox::toggled, this, [this](bool oui) {
         QSettings().setValue(cle("veille"), oui);
         if (!this->materiel) return;
         if (oui) demarrer();

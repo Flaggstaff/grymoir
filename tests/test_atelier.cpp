@@ -1352,6 +1352,73 @@ int main(int argc, char **argv) {
         while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
     }
 
+    // Les écoutes des postes conservés (2.70) : un bandeau par poste en veille ; en ajouter un le fait apparaître sans
+    // toucher aux autres ; un passage capté se relie à son poste
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("postes.grym");
+        {
+            QFile f(prog);
+            VERIFIER(f.open(QIODevice::WriteOnly));
+            f.write("Un poste, conservé, a :\n    un nom (texte), unique,\n    une veille (vrai ou faux).\n"
+                    "Un passage, conservé, a :\n    un poste (poste),\n    un enregistrement (son).\n"
+                    "Le a vaut un nouveau poste :\n    Le nom vaut « Alpha ».\n    La veille vaut vrai.\nConserver a.\n"
+                    "Le b vaut un nouveau poste :\n    Le nom vaut « Bravo ».\n    La veille vaut faux.\nConserver b.\n"
+                    "L'écran de veille montre :\n    les écoutes des postes conservés dont la veille est vraie, par nom,\n"
+                    "    la liste des passages conservés, avec le nom du poste,\n"
+                    "    un bouton « Bravo aussi »,\n    un bouton « Fermer ».\n"
+                    "Quand un poste capte un son dans l'écran de veille :\n"
+                    "    Le p vaut un nouveau passage.\n    Le poste du p devient le poste.\n"
+                    "    L'enregistrement du p devient le son capté.\n    Conserver le p.\n"
+                    "Quand on clique sur « Bravo aussi » dans l'écran de veille :\n"
+                    "    Pour chaque poste conservé dont le nom est « Bravo » :\n        La veille du poste devient vrai.\n"
+                    "Quand on clique sur « Fermer » dans l'écran de veille :\n    Fermer l'écran.\n"
+                    "Ouvrir l'écran de veille.\n");
+        }
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 15000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto bandeaux = [&]() {
+            QStringList n;
+            for (Ecoute *x : e.findChildren<Ecoute *>()) if (x->isVisible()) n << x->nom_ecoute();
+            n.sort();
+            return n.join(",");
+        };
+        auto bandeau = [&](const QString &nom) -> Ecoute * {
+            for (Ecoute *x : e.findChildren<Ecoute *>()) if (x->nom_ecoute() == nom && x->isVisible()) return x;
+            return nullptr;
+        };
+        VERIFIER(attendre([&] { return bandeaux() == "Alpha"; }));
+        Ecoute *alpha = bandeau("Alpha");
+        VERIFIER(alpha && alpha->veille()->isChecked() && !alpha->veille()->isVisible());   // la veille vient du programme
+        for (QPushButton *x : e.findChildren<QPushButton *>())
+            if (x->text() == "Bravo aussi" && x->isVisible()) { x->click(); break; }
+        VERIFIER(attendre([&] { return bandeaux() == "Alpha,Bravo"; }));
+        VERIFIER(bandeau("Alpha") == alpha);   // Alpha n'a pas été recréé : son passage en cours n'est pas coupé
+        if (Ecoute *b = bandeau("Bravo")) {
+            std::vector<float> silence(16000, 0.f), parole(16000);
+            for (size_t i = 0; i < parole.size(); i++) parole[i] = 0.3f * (float)std::sin(2 * 3.14159265 * 440 * (double)i / 16000.0);
+            b->nourrir(silence); b->nourrir(parole); b->nourrir(silence); b->nourrir(silence);
+            auto ligne = [&]() -> QString {
+                for (QTableWidget *t : e.findChildren<QTableWidget *>())
+                    if (t->isVisible() && t->rowCount() >= 1 && t->item(0, 0)) return t->item(0, 0)->text();
+                return QString();
+            };
+            VERIFIER(attendre([&] { return ligne() == "Bravo"; }));   // relié au bon poste
+        } else VERIFIER(false);
+        for (QPushButton *x : e.findChildren<QPushButton *>())
+            if (x->text() == "Fermer" && x->isVisible() && x->isEnabled()) { x->click(); break; }
+        QElapsedTimer z;
+        z.start();
+        while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+    }
+
     // Le son (24 octobre 2026) : l'extension du fichier que lit le décodeur, d'après les octets ; le choix du micro
     {
         VERIFIER(extension_de_son(QByteArray("\0\0\0\x20" "ftypM4A ", 12)) == "m4a");

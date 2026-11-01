@@ -791,6 +791,19 @@ int main(void) {
     VE("L'écran x montre :\n    une écoute « A ».\nQuand une écoute entend un son dans l'écran x :\n    Afficher 1.", 3, 18,
        "« capte un son » attendu");
     VE("Le document x montre :\n    une écoute « A ».", 2, 5, "Un document se lit sur papier");
+    /* les écoutes des postes conservés (2.70) */
+#define PO "Un poste, conservé, a : un nom (texte), unique.\n"
+    VE("Un poste, conservé, a : une sorte (texte).\nL'écran x montre :\n    les écoutes des postes conservés.", 3, 5,
+       "n'a pas de champ texte unique");
+    VE(PO "L'écran x montre :\n    les écoutes des postes conservés, avec le nom.", 3, 39, "pas de colonnes");
+    VE(PO "L'écran x montre :\n    les écoutes des postes conservés,\n    les écoutes des postes conservés.", 4, 5,
+       "Deux fois les écoutes");
+    VE(PO "L'écran x montre :\n    les écoutes des postes conservés, coupées après 99 secondes de silence.", 3, 53,
+       "de 1 à 60 secondes");
+    VE(PO "L'écran x montre :\n    un bouton « B ».\nQuand un poste capte un son dans l'écran x :\n    Afficher 1.", 4, 10,
+       "n'a pas d'écoutes de « poste »");
+    VE(PO "Le document x montre :\n    les écoutes des postes conservés.", 3, 5, "Un document se lit sur papier");
+#undef PO
     VE("L'écran x montre :\n    l'image « exemples/pixel.png », active si vrai.", 2, 37, "Une image ne se clique pas");
     VE("L'écran x montre :\n    un bouton « B », active si vrai.", 2, 22, "Accord : « actif si ».");
     /* une heure comme valeur de départ, d'une zone d'écran et d'un champ (§ 14.7) */

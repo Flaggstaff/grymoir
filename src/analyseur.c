@@ -113,6 +113,8 @@ typedef struct EcranConnu {
     size_t nb_zones;
     char **ecoutes;    /* les écoutes, par leur nom (2.69) */
     size_t nb_ecoutes;
+    char **postes;     /* les entités de « les écoutes des … conservés » (2.70) */
+    size_t nb_postes;
 } EcranConnu;
 
 static void ecran_liberer(EcranConnu *e) {
@@ -121,6 +123,8 @@ static void ecran_liberer(EcranConnu *e) {
     for (size_t k = 0; k < e->nb_entites; k++) free(e->entites[k]);
     for (size_t k = 0; k < e->nb_zones; k++) free(e->zones[k]);
     for (size_t k = 0; k < e->nb_ecoutes; k++) free(e->ecoutes[k]);
+    for (size_t k = 0; k < e->nb_postes; k++) free(e->postes[k]);
+    free(e->postes);
     free(e->boutons);
     free(e->entites);
     free(e->zones);
@@ -300,7 +304,8 @@ static void portee_copier(Portee *dst, const Portee *src) {
         dst->ecrans[i] = (EcranConnu){ grym_dupliquer(e->nom), copier_noms(e->boutons, e->nb_boutons), e->nb_boutons,
                                        copier_noms(e->entites, e->nb_entites), e->nb_entites, e->ligne,
                                        copier_noms(e->zones, e->nb_zones), e->nb_zones,
-                                       copier_noms(e->ecoutes, e->nb_ecoutes), e->nb_ecoutes };
+                                       copier_noms(e->ecoutes, e->nb_ecoutes), e->nb_ecoutes,
+                                       copier_noms(e->postes, e->nb_postes), e->nb_postes };
     }
     dst->nb_classes = src->nb_classes;
     dst->classes = src->nb_classes ? grym_allouer(src->nb_classes * sizeof *dst->classes) : NULL;
@@ -7315,7 +7320,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
     n->op = document ? 'D' : partie ? 'P' : 0;
     a->document = document || partie;   /* une partie se vérifie là où elle sert ; seule, elle a les libertés d'un document */
     n->taille_titre = taille_titre;
-    EcranConnu e = { grym_dupliquer(nom), NULL, 0, NULL, 0, t->ligne, NULL, 0, NULL, 0 };
+    EcranConnu e = { grym_dupliquer(nom), NULL, 0, NULL, 0, t->ligne, NULL, 0, NULL, 0, NULL, 0 };
     /* Un écran est un objet : sa classe porte ses zones de saisie et la ligne choisie de chaque liste (§ 22.1) */
     char *classe = grym_formater("écran %s", nom);
     ajouter_classe(a->portee, classe, GENRE_MASCULIN, NULL);
@@ -7419,15 +7424,23 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             continue;
         }
         const int graph = est_mot(u, "le") && est_mot(voir(a, 1), "graphique") && est_mot(voir(a, 2), "des");   /* § 22.11 */
-        if ((est_mot(u, "la") && est_mot(voir(a, 1), "liste") && est_mot(voir(a, 2), "des")) || graph) {
+        /* « les écoutes des postes conservés dont la veille est vraie, par nom » (2.70) : une écoute par objet */
+        const int ecoutes = est_mot(u, "les") && est_mot(voir(a, 1), "écoutes") && est_mot(voir(a, 2), "des");
+        if ((est_mot(u, "la") && est_mot(voir(a, 1), "liste") && est_mot(voir(a, 2), "des")) || graph || ecoutes) {
             size_t apres;
             Classe *c = entite_conservee(a, a->i + 3, 1, &apres);
             if (!c) {
                 if (!a->echec) erreur(a, voir(a, 3), grym_dupliquer(graph ? "Graphique attendu : « le graphique des tâches conservées, par état »."
+                                                                         : ecoutes ? "Écoutes attendues : « les écoutes des postes conservés »."
                                                                          : "Liste attendue : « la liste des compositeurs conservés »."));
                 break;
             }
-            for (size_t k = 0; k < e.nb_entites && !graph; k++)
+            for (size_t k = 0; k < e.nb_postes && ecoutes; k++)
+                if (strcmp(e.postes[k], c->nom) == 0) {
+                    erreur(a, u, grym_formater("Deux fois les écoutes des « %s » dans un même écran.", c->nom));
+                    break;
+                }
+            for (size_t k = 0; k < e.nb_entites && !graph && !ecoutes; k++)
                 if (strcmp(e.entites[k], c->nom) == 0) {
                     erreur(a, u, grym_formater("Deux listes de « %s » dans un même écran : « Quand on choisit » ne saurait "
                                                "laquelle. Une seule pour l'instant.", c->nom));
@@ -7569,6 +7582,11 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 }
                 el->fin = fin_jeton(&a->j[a->i - 1]);
             }
+            if (ecoutes && cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec")) {
+                noeud_liberer(el);
+                erreur(a, voir(a, 1), grym_dupliquer("Une écoute se nomme par la clé de son poste : pas de colonnes."));
+                break;
+            }
             if (!graph && cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec")) {
                 /* « , avec le titre, le compositeur et la naissance du compositeur » : les colonnes (§ 22.1) */
                 a->i += 2;
@@ -7616,8 +7634,40 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 el->texte3 = chaine_rendre(&cols);
                 el->fin = fin_jeton(&a->j[a->i - 1]);
             }
-            if (!graph && cour(a)->type == J_VIRGULE) attendre_mot(a, a->i + 1, "en cartes", strlen("en cartes"));
-            if (!graph && cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "en") && est_mot(voir(a, 2), "cartes")) {
+            if (ecoutes) {   /* la clé nomme chaque écoute ; « , coupées après 3 secondes de silence » (2.70) */
+                const char *cle_e = NULL;
+                for (size_t q = 0; q < c->nb && !cle_e; q++)
+                    if (c->uniques && c->uniques[q] && c->types && c->types[q] && strcmp(c->types[q], "texte") == 0) cle_e = c->champs[q];
+                if (!cle_e) {
+                    noeud_liberer(el);
+                    erreur(a, u, grym_formater("« %s » n'a pas de champ texte unique pour nommer ses écoutes : "
+                                                        "« un nom (texte), unique ».", c->nom));
+                    break;
+                }
+                el->texte3 = grym_formater("%s\x1d%s", cle_e, cle_e);
+                el->ecoutes = 1;
+                if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "coupées")) {
+                    const Jeton *nb = voir(a, 3);
+                    long sec = nb->type == J_NOMBRE ? strtol(nb->valeur, NULL, 10) : 0;
+                    if (!est_mot(voir(a, 2), "après") || nb->type != J_NOMBRE || strspn(nb->valeur, "0123456789") != strlen(nb->valeur)
+                        || !(est_mot(voir(a, 4), "secondes") || est_mot(voir(a, 4), "seconde")) || !est_mot(voir(a, 5), "de")
+                        || !est_mot(voir(a, 6), "silence")) {
+                        noeud_liberer(el);
+                        erreur(a, voir(a, 1), grym_dupliquer("Forme attendue : « , coupées après 3 secondes de silence »."));
+                        break;
+                    }
+                    if (sec < 1 || sec > 60) {
+                        noeud_liberer(el);
+                        erreur(a, nb, grym_dupliquer("Le silence qui coupe un passage dure de 1 à 60 secondes."));
+                        break;
+                    }
+                    el->ecoutes = 1 + (int)sec;
+                    a->i += 7;
+                }
+                el->fin = fin_jeton(&a->j[a->i - 1]);
+            }
+            if (!graph && !ecoutes && cour(a)->type == J_VIRGULE) attendre_mot(a, a->i + 1, "en cartes", strlen("en cartes"));
+            if (!graph && !ecoutes && cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "en") && est_mot(voir(a, 2), "cartes")) {
                 /* « , en cartes » (2.19) : chaque objet une carte, la première colonne en grand, les étiquettes en haut à
                    droite, la deuxième colonne dessous, les autres jointes par « · » ; un clic choisit la carte */
                 el->entier |= 2;
@@ -7629,7 +7679,12 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
                 while ((lu = place_element(a, el, GENRE_FEMININ, &vus)) > 0) el->fin = fin_jeton(&a->j[a->i - 1]);
                 if (lu < 0) { noeud_liberer(el); break; }
             }
-            if (!graph) {   /* un graphique ne se choisit pas : ni « Quand on choisit », ni « … choisi » (§ 22.11) */
+            if (ecoutes) {   /* « le poste capté » : l'objet du dernier passage, lu par « Quand un poste capte un son » (2.70) */
+                ajouter_nom(&e.postes, &e.nb_postes, c->nom);
+                char *capte = grym_formater("%s %s", c->nom, c->genre == GENRE_FEMININ ? "captée" : "capté");
+                classe_ajouter_zone(&a->portee->classes[ic], capte, c->genre, c->nom, 1, NULL);
+                free(capte);
+            } else if (!graph) {   /* un graphique ne se choisit pas : ni « Quand on choisit », ni « … choisi » (§ 22.11) */
                 ajouter_nom(&e.entites, &e.nb_entites, c->nom);
                 char *choisi = grym_formater("%s %s", c->nom, c->genre == GENRE_FEMININ ? "choisie" : "choisi");
                 classe_ajouter_zone(&a->portee->classes[ic], choisi, c->genre, c->nom, 1, NULL);   /* « le compositeur choisi de l'écran » */
@@ -7994,7 +8049,7 @@ static Noeud *declaration_ecran(Analyse *a, const Jeton *t) {
             erreur(a, u, grym_dupliquer("La section paiement d'une QR-facture va dans un document, pas dans un écran."));
             break;
         }
-        if (n->op == 'D' && (el->type == N_BOUTON || el->type == N_NOM || el->type == N_ECOUTE)) {   /* 2.25 : le papier ne se clique pas */
+        if (n->op == 'D' && (el->type == N_BOUTON || el->type == N_NOM || el->type == N_ECOUTE || el->ecoutes)) {   /* 2.25 : le papier ne se clique pas */
             noeud_liberer(el);
             erreur(a, u, grym_dupliquer("Un document se lit sur papier : des textes, des images et des listes, ni bouton ni zone."));
             break;
@@ -8075,13 +8130,34 @@ static Noeud *quand(Analyse *a, int colonne) {
     /* « Quand une écoute capte un son dans l'écran X : », « Quand l'écoute « S » capte un son dans l'écran X : » (2.69) */
     const int une_ecoute = est_mot(voir(a, 1), "une") && est_mot(voir(a, 2), "écoute");
     const int l_ecoute = voir(a, 1)->type == J_ELISION && est_mot(voir(a, 2), "écoute") && voir(a, 3)->type == J_TEXTE;
-    if (!une_ecoute && !l_ecoute && !est_mot(voir(a, 1), "on"))
+    /* « Quand un poste capte un son dans l'écran X : » (2.70) : le poste d'une écoute « les écoutes des postes … » */
+    size_t capte_en = 0;
+    if (!une_ecoute && !l_ecoute && (est_mot(voir(a, 1), "un") || est_mot(voir(a, 1), "une")))
+        for (size_t q = a->i + 2; q < a->n && q < a->i + 10 && a->j[q].type != J_DEUX_POINTS && a->j[q].type != J_FIN; q++)
+            if (est_mot(&a->j[q], "capte")) { capte_en = q; break; }
+    if (!une_ecoute && !l_ecoute && !capte_en && !est_mot(voir(a, 1), "on"))
         return erreur(a, voir(a, 1), grym_dupliquer("« Quand on … » attendu : « Quand on clique sur « Nouveau » dans l'écran … : »."));
     int forme;
     size_t k = a->i + 2, dans;
     const Jeton *tl = NULL;
     Noeud *params = NULL;
-    if (une_ecoute || l_ecoute) {
+    if (capte_en) {
+        forme = 7;
+        tl = voir(a, 2);
+        if (!est_mot(&a->j[capte_en + 1], "un") || !est_mot(&a->j[capte_en + 2], "son"))
+            return erreur(a, &a->j[capte_en], grym_dupliquer("« capte un son » attendu : « Quand un poste capte un son dans l'écran … : »."));
+        params = parametres(a, a->i + 1, capte_en, 0);
+        if (!params) return NULL;
+        if (params->nb_enfants != 1) {
+            noeud_liberer(params);
+            return erreur(a, voir(a, 1), grym_dupliquer("Un seul objet : « Quand un poste capte un son dans … »."));
+        }
+        Noeud *ps = noeud_creer(N_NOM, tq->ligne, tq->colonne, tq->debut);
+        ps->texte = grym_dupliquer("son capté");
+        ps->forme = 1;
+        noeud_ajouter(params, ps);
+        dans = capte_en + 3;
+    } else if (une_ecoute || l_ecoute) {
         forme = 6;
         k = a->i + (l_ecoute ? 4 : 3);
         tl = l_ecoute ? voir(a, 3) : voir(a, 2);
@@ -8135,7 +8211,7 @@ static Noeud *quand(Analyse *a, int colonne) {
         return erreur(a, &a->j[k], grym_dupliquer("Événement attendu : « clique sur « … » », « choisit un … », "
                                                   "« change la zone … », « ouvre l'écran … » ou « ferme l'écran … »."));
     }
-    if ((forme < 4 || forme == 6) && !est_mot(&a->j[dans], "dans")) {
+    if ((forme < 4 || forme >= 6) && !est_mot(&a->j[dans], "dans")) {
         noeud_liberer(params);
         return erreur(a, &a->j[dans], grym_dupliquer("« dans l'écran … » attendu."));
     }
@@ -8149,7 +8225,19 @@ static Noeud *quand(Analyse *a, int colonne) {
         return erreur(a, &a->j[f], grym_dupliquer("« : » attendu : un événement s'écrit en bloc."));
     }
     char *objet = NULL;
-    if (forme == 6) {
+    if (forme == 7) {   /* l'entité des écoutes de l'écran (2.70) */
+        const Classe *c = classe_de(a->portee, params->enfants[0]->texte);
+        int trouve = 0;
+        for (size_t q = 0; c && q < e->nb_postes; q++) trouve |= strcmp(e->postes[q], c->nom) == 0;
+        if (!trouve) {
+            erreur(a, tl, grym_formater("L'écran « %s » n'a pas d'écoutes de « %s » : « les écoutes des %ss conservés ».", nom,
+                                        params->enfants[0]->texte, params->enfants[0]->texte));
+            free(nom);
+            noeud_liberer(params);
+            return NULL;
+        }
+        objet = grym_dupliquer(c->nom);
+    } else if (forme == 6) {
         /* l'écoute nommée, ou « » pour toutes (« une écoute ») : la nommée l'emporte sur toutes (2.69) */
         if (!e->nb_ecoutes) {
             erreur(a, tl, grym_formater("L'écran « %s » n'a pas d'écoute : « une écoute « Stryker » ».", nom));
@@ -8215,7 +8303,7 @@ static Noeud *quand(Analyse *a, int colonne) {
         }
         objet = grym_dupliquer(c->nom);
     }
-    static const char *const sortes[] = { "", "clic", "choix", "changement", "ouverture", "fermeture", "capture" };
+    static const char *const sortes[] = { "", "clic", "choix", "changement", "ouverture", "fermeture", "capture", "capture par" };
     char *interne = grym_formater("quand %s « %s » dans l'écran %s", sortes[forme], objet, nom);
     for (size_t q = 0; q < a->portee->n; q++)
         if (strcmp(a->portee->s[q].nom, interne) == 0) {

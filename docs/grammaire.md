@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.69 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
+Version 2.70 de la spécification, révisée le 1er novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2354,6 +2354,38 @@ Quand une écoute capte un son dans l'écran de veille :
 - L'onglet Écrans de l'atelier montre l'écoute à sa place ; son silence se règle dans le code.
 - Forme compacte : `_écoute « Stryker » _silence 3` ; `_quand _capte « Stryker » _dans de_veille`, `_quand _capte _dans de_veille`.
 
+### 22.21 Les écoutes d'une entité *(2.70, implémenté le 1er novembre 2026)*
+
+Les postes deviennent des données : on les ajoute, les modifie ou les retire depuis l'application, sans toucher au code.
+
+```
+Un poste, conservé, a :
+    un nom (texte), unique,
+    une veille (vrai ou faux).
+
+Un passage, conservé, a :
+    un poste (poste),
+    un enregistrement (son),
+    une transcription (texte), facultative, transcrite de l'enregistrement.
+
+L'écran de veille montre :
+    les écoutes des postes conservés dont la veille est vraie, par nom, coupées après 3 secondes de silence,
+    la liste des passages conservés, avec le nom du poste.
+
+Quand un poste capte un son dans l'écran de veille :
+    Le p vaut un nouveau passage.
+    Le poste du p devient le poste.
+    L'enregistrement du p devient le son capté.
+    Conserver le p.
+```
+
+- **`les écoutes des … conservés`** se lit comme `la liste des … conservés` (§ 22.1) : mêmes `dont` et `, par …`. Chaque objet trouvé donne un bandeau (§ 22.20), nommé par la clé de l'entité, son premier champ texte unique ; sans clé : « « poste » n'a pas de champ texte unique pour nommer ses écoutes : « un nom (texte), unique ». ». Pas de colonnes (« Une écoute se nomme par la clé de son poste : pas de colonnes. »), pas `en cartes`. `, coupées après 3 secondes de silence` vaut pour toutes, de 1 à 60 secondes. Une seule fois par entité dans un écran ; un document les refuse.
+- **Les écoutes se relisent avant chaque attente**, comme une liste : un poste ajouté, renommé ou mis en veille apparaît au tour suivant ; un poste qui sort de la liste perd son bandeau. Les bandeaux qui restent ne sont pas recréés et ne coupent pas leur passage en cours.
+- **`Quand un poste capte un son dans l'écran X :`** reçoit l'objet lui-même, nommé comme dans `Quand on choisit un compositeur` (§ 22.2), et **`le son capté`**. Le passage garde ainsi un lien vers son poste : renommer le poste renomme tout son historique, et la fiche du poste montre ses passages (§ 22.3). Un écran sans écoutes de cette entité : « L'écran « x » n'a pas d'écoutes de « poste » … ».
+- **Ce qui vit dans la base, ce qui reste à l'ordinateur.** Le poste (son nom, sa veille, tout ce que le programme déclare) est dans la base et suit la base d'un ordinateur à l'autre. Le branchement reste propre à chaque ordinateur, retenu par nom de poste : l'entrée son et son canal, le seuil, le haut-parleur. La case « En veille » du bandeau disparaît : c'est le `dont` du programme qui décide.
+- La console et le navigateur refusent l'écran, comme pour `une écoute` (§ 22.20). L'onglet Écrans de l'atelier montre l'élément ; il se modifie dans le code.
+- Forme compacte : `_écoutes poste _conservé _dont veille _vrai _par nom _silence 3` ; `_quand _capte _un poste _dans de_veille`.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -2528,3 +2560,4 @@ Quand une écoute capte un son dans l'écran de veille :
 | 2.67 | 2026-10-31 | § 22.6 : `, à confirmer par « … » si l'écran est modifié`, une question seulement après une saisie pas encore écrite dans la base ; forme compacte `_si_modifié` ; § 22.2 : Échap vaut un clic sur « Fermer » dans l'atelier et une application fabriquée |
 | 2.68 | 2026-11-01 | § 22.6 : `, au clavier « N »` sur un bouton : Cmd+N sous macOS, Ctrl+N ailleurs, comme un clic, tant que l'écran est dessus et le bouton visible et actif ; lettres du système et de l'édition refusées, un raccourci par bouton dans un écran ; `accesskey` dans le navigateur ; forme compacte `_clavier « N »`. |
 | 2.69 | 2026-11-01 | Nouveau § 22.20 : `une écoute « … »`, `, coupée après N secondes de silence`, `Quand une écoute capte un son …` et `Quand l'écoute « … » capte un son …`, avec `le son capté` et `l'écoute` ; formes compactes `_écoute`, `_silence`, `_quand _capte` |
+| 2.70 | 2026-11-01 | Nouveau § 22.21 : `les écoutes des … conservés` (`dont`, `par`, `, coupées après N secondes de silence`), un bandeau par objet nommé par sa clé, relu avant chaque attente ; `Quand un poste capte un son …` avec l'objet et `le son capté` ; formes compactes `_écoutes`, `_quand _capte _un …` |

@@ -1416,24 +1416,25 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             }
             if (!etats_compacts(r, places, fin_places, 1, 0)) return;
             f = fin_places;
-        } else if (est_cle(t, "liste") && d + 2 < f && r->e[d + 1].type == J_CROCHETS
+        } else if ((est_cle(t, "liste") || est_cle(t, "écoutes")) && d + 2 < f && r->e[d + 1].type == J_CROCHETS
                    && (est_cle(&r->e[d + 2], "conservé") || est_cle(&r->e[d + 2], "conservée")
                        || est_cle(&r->e[d + 2], "supprimé") || est_cle(&r->e[d + 2], "supprimée"))) {
             /* _liste compositeur _conservé [_dont …] [_par nom [_décroissant]] [_avec titre ; compositeur.nom]
              * [_place 96 16] [_largeur 240] [_hauteur 80] (§ 22.9) */
             size_t fin_places = f;
             size_t cartes = f;   /* « _cartes » (2.19) : après les colonnes, avant la place */
+            const int des_ecoutes = est_cle(t, "écoutes");   /* _écoutes poste _conservé … _silence 3 (2.70) */
             for (size_t q = d + 3; q < f; q++)
                 if (est_cle(&r->e[q], "place") || est_cle(&r->e[q], "largeur") || est_cle(&r->e[q], "hauteur")) { f = q; break; }
-            for (size_t q = d + 3; q < f; q++) if (est_cle(&r->e[q], "cartes")) { cartes = q; break; }
+            for (size_t q = d + 3; q < f; q++) if (est_cle(&r->e[q], "cartes") || est_cle(&r->e[q], "silence")) { cartes = q; break; }
             const size_t places = f;
             if (cartes < f) f = cartes;
             size_t avec = chercher(r, d + 3, f, "avec");
             size_t fin_liste = f;
             f = avec;
             size_t par = chercher(r, d + 3, f, "par");
-            mot(r, "la", t);
-            mot(r, "liste", t);
+            mot(r, des_ecoutes ? "les" : "la", t);
+            mot(r, des_ecoutes ? "écoutes" : "liste", t);
             mot(r, "des", t);
             copier(r, &r->e[d + 1]);
             mot(r, est_cle(&r->e[d + 2], "supprimé") || est_cle(&r->e[d + 2], "supprimée") ? "supprimés" : "conservés",
@@ -1487,7 +1488,19 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                     i++;
                 }
             }
-            if (cartes < places) {   /* « _cartes » → « , en cartes » (2.19) */
+            if (cartes < places && est_cle(&r->e[cartes], "silence")) {   /* « _silence 3 » → « , coupées après 3 secondes de silence » */
+                if (cartes + 1 >= places || r->e[cartes + 1].type != J_NOMBRE) {
+                    echouer(r, &r->e[cartes], grym_dupliquer("Durée attendue : « _silence 3 »."));
+                    return;
+                }
+                emettre(r, J_VIRGULE, NULL, &r->e[cartes], 1);
+                mot(r, "coupées", &r->e[cartes]);
+                mot(r, "après", &r->e[cartes]);
+                copier(r, &r->e[cartes + 1]);
+                mot(r, strcmp(r->e[cartes + 1].valeur, "1") == 0 ? "seconde" : "secondes", &r->e[cartes]);
+                mot(r, "de", &r->e[cartes]);
+                mot(r, "silence", &r->e[cartes]);
+            } else if (cartes < places) {   /* « _cartes » → « , en cartes » (2.19) */
                 emettre(r, J_VIRGULE, NULL, &r->e[cartes], 1);
                 mot(r, "en", &r->e[cartes]);
                 mot(r, "cartes", &r->e[cartes]);
@@ -1614,6 +1627,24 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             return;
         }
         size_t dans = chercher(r, d + 1, f, "dans");
+        if (d + 1 < f && est_cle(&r->e[d + 1], "capte") && dans == d + 4 && (est_cle(&r->e[d + 2], "un") || est_cle(&r->e[d + 2], "une"))
+            && r->e[d + 3].type == J_CROCHETS && dans + 1 < f) {
+            /* _quand _capte _un poste _dans de_veille → Quand un poste capte un son dans l'écran de veille : (2.70) */
+            mot(r, "quand", t);
+            mot(r, r->e[d + 2].valeur, &r->e[d + 2]);
+            copier(r, &r->e[d + 3]);
+            mot(r, "capte", &r->e[d + 1]);
+            mot(r, "un", &r->e[d + 1]);
+            mot(r, "son", &r->e[d + 1]);
+            mot(r, "dans", &r->e[dans]);
+            emettre(r, J_ELISION, "l", &r->e[dans], 1);
+            mot(r, "écran", &r->e[dans]);
+            for (size_t k = dans + 1; k < f; k++) copier(r, &r->e[k]);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            fixer_retrait(r, premier, prof);
+            ouvrir(r, O_FORMULE, prof, t);
+            return;
+        }
         if (d + 1 < f && est_cle(&r->e[d + 1], "capte") && (dans == d + 2 || (dans == d + 3 && r->e[d + 2].type == J_TEXTE))
             && dans + 1 < f) {
             /* _quand _capte « S » _dans de_veille → Quand l'écoute « S » capte un son dans l'écran de veille : ;

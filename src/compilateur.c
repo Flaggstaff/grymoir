@@ -829,6 +829,11 @@ static long description_ecran(Compilation *c, const Noeud *e, const Noeud *ph) {
             free(cols);
         }
         if (el->type == N_CHERCHER && !el->graphique && (el->entier & 2)) chaine_ajouter(&d, "\x15" "c");   /* en cartes (2.19) */
+        if (el->type == N_CHERCHER && el->ecoutes) {   /* « ␕ u 3000 » : des écoutes, et le silence en ms (2.70) */
+            char *u = grym_formater("\x15u%d", (el->ecoutes - 1) * 1000);
+            chaine_ajouter(&d, u);
+            free(u);
+        }
         if (el->type == N_NOM) {   /* « Zpays ␞ texte ␞ f » : le type, et « f » si facultative */
             chaine_ajouter(&d, "\x1e");
             chaine_ajouter(&d, el->texte2);
@@ -1468,7 +1473,8 @@ static void phrase(Compilation *c, const Noeud *ph) {
                 int fem = 0;   /* « le compositeur choisi », « la partition choisie » : le genre de l'entité */
                 for (size_t q = 0; q < c->module->nb_classes; q++)
                     if (strcmp(c->module->classes[q].nom, el->texte) == 0) fem = c->module->classes[q].feminin;
-                char *choisi = grym_formater("%s %s", el->texte, fem ? "choisie" : "choisi");
+                /* des écoutes (2.70) : « le poste capté », écrit par la machine avant « Quand un poste capte un son » */
+                char *choisi = grym_formater("%s %s", el->texte, el->ecoutes ? (fem ? "captée" : "capté") : fem ? "choisie" : "choisi");
                 classe_ajouter_champ(cm, choisi);
                 classe_typer_dernier_champ(cm, el->texte, 0);
                 classe_facultatif_dernier_champ(cm);
@@ -1542,8 +1548,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
             const Noeud *el = e->enfants[k];
             if (el->type == N_TEXTE_ECRAN || el->type == N_DISPOSITION || el->type == N_IMAGE_ECRAN) continue;   /* sans événement */
             const int ecoute = el->type == N_ECOUTE;
+            const int par_poste = el->type == N_CHERCHER && el->ecoutes;   /* « les écoutes des postes conservés » (2.70) */
             const Noeud *q = trouver_quand(c->programme->phrases, c->programme->nb, e->texte,
-                                           ecoute ? 6 : el->type == N_BOUTON ? 1 : el->type == N_NOM ? 3 : 2, el->texte);
+                                           par_poste ? 7 : ecoute ? 6 : el->type == N_BOUTON ? 1 : el->type == N_NOM ? 3 : 2,
+                                           el->texte);
             /* une écoute sans événement à son nom : celui de toutes les écoutes, « Quand une écoute capte » (2.69) */
             if (!q && ecoute) q = trouver_quand(c->programme->phrases, c->programme->nb, e->texte, 6, "");
             if (!q) continue;   /* une liste sans « Quand on choisit » : le choix ne fait rien */
@@ -1553,12 +1561,23 @@ static void phrase(Compilation *c, const Noeud *ph) {
             emettre(c, I_CONSTANTE, bloc_constante(c->b, C_NOMBRE, num), ph->ligne, ph->colonne);
             emettre(c, I_EGAL, 0, ph->ligne, ph->colonne);
             size_t suivant = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, ph->ligne, ph->colonne);
-            if (q->forme == 2 || q->forme == 6) emettre(c, I_LIRE_LOCAL, objet, ph->ligne, ph->colonne);
+            if (q->forme == 7) {   /* le poste capté, champ de l'écran que la machine vient d'écrire, puis le son (2.70) */
+                int fem = 0;
+                for (size_t m = 0; m < c->module->nb_classes; m++)
+                    if (strcmp(c->module->classes[m].nom, el->texte) == 0) fem = c->module->classes[m].feminin;
+                char *capte = grym_formater("%s %s", el->texte, fem ? "captée" : "capté");
+                const long nc = bloc_nom(c->b, capte);
+                free(capte);
+                if (nc < 0) { free(vers_apres); trop_grand(c, ph); return; }
+                emettre(c, I_ECRAN_OBJET, 0, ph->ligne, ph->colonne);
+                emettre(c, I_LIRE_CHAMP, nc, ph->ligne, ph->colonne);
+            }
+            if (q->forme == 2 || q->forme == 6 || q->forme == 7) emettre(c, I_LIRE_LOCAL, objet, ph->ligne, ph->colonne);
             if (q->forme == 6)   /* « l'écoute » : son nom, le second paramètre (2.69) */
                 emettre(c, I_CONSTANTE, bloc_constante(c->b, C_TEXTE, el->texte), ph->ligne, ph->colonne);
             long nom = bloc_nom(c->b, q->texte);
             if (nom < 0) { free(vers_apres); trop_grand(c, ph); return; }
-            bloc_emettre_appel(c->b, (uint16_t)nom, (uint8_t)(q->forme == 6 ? 2 : q->forme == 2 ? 1 : 0), 0, ph->ligne,
+            bloc_emettre_appel(c->b, (uint16_t)nom, (uint8_t)(q->forme >= 6 ? 2 : q->forme == 2 ? 1 : 0), 0, ph->ligne,
                                ph->colonne);
             vers_apres[nb_apres++] = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
             bloc_corriger_saut(c->b, suivant, c->b->taille_code);

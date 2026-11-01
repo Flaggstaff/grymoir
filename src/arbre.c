@@ -32,6 +32,7 @@ Noeud *noeud_creer(TypeNoeud type, int ligne, int colonne, size_t debut) {
     n->place_dite = 0;
     n->article_a_deviner = 0;
     n->graphique = 0;
+    n->ecoutes = 0;
     n->taille_titre = 0;
     n->indication = NULL;
     n->unite = NULL;
@@ -233,7 +234,8 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         return;
     case P_QUAND:   /* (quand clic « Nouveau » [des compositeurs] corps) */
         chaine_ajouter(c, n->forme == 1 ? "(quand clic « " : n->forme == 2 ? "(quand choix [" : n->forme == 3 ? "(quand change ["
-                          : n->forme == 4 ? "(quand ouvre [" : n->forme == 6 ? "(quand capte « " : "(quand ferme [");
+                          : n->forme == 4 ? "(quand ouvre [" : n->forme == 6 ? "(quand capte « "
+                          : n->forme == 7 ? "(quand capte-par [" : "(quand ferme [");
         chaine_ajouter(c, n->enfants[2]->texte);
         chaine_ajouter(c, n->forme == 1 || n->forme == 6 ? " » [" : "] [");
         chaine_ajouter(c, n->texte3);

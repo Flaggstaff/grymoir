@@ -213,6 +213,8 @@ private:
     struct Capture { QPointer<QWidget> source; int element; QByteArray wav; QString nom; };
     QList<Capture> captures;
     void envoyer_capture();
+    long ligne_capture = -1;   // la ligne de l'écoute d'entité qui a capté (2.70), le temps d'envoyer l'événement
+    void ecoutes_du_cadre(QWidget *cadre, int element, const QStringList &noms);
     QVector<QPair<QString, QByteArray>> sons_du_fil;
     class LecteurSon *lecteur_fil = nullptr;
     int son_joue = -1;

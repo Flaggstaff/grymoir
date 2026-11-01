@@ -904,6 +904,12 @@ static void scene_ouvrir(void *contexte, Chaine *sortie, const char *titre, cons
     chaine_ajouter(&s->page.journal, titre);
     for (size_t k = 0; k < n; k++) {
         if (el[k].sorte == ELEMENT_LIBRE) { chaine_ajouter(&s->page.journal, " ; libre {"); continue; }   /* § 22.9 */
+        if (el[k].sorte == ELEMENT_ECOUTES) {   /* « ; écoutes poste 3000 ms » (2.70) */
+            char *x = grym_formater(" ; écoutes %s %d ms", el[k].texte, el[k].silence);
+            chaine_ajouter(&s->page.journal, x);
+            free(x);
+            continue;
+        }
         if (el[k].sorte == ELEMENT_ECOUTE) {   /* « ; écoute Stryker 3000 ms » (2.69) */
             char *x = grym_formater(" ; écoute %s %d ms", el[k].texte, el[k].silence);
             chaine_ajouter(&s->page.journal, x);
@@ -1014,6 +1020,21 @@ static Issue scene_attendre(void *contexte, Chaine *sortie, Evenement *e) {
                 e->element = k;
                 snprintf(texte, sizeof texte, "%s", egal + 1);
                 e->texte = texte;
+            }
+        return ISSUE_REPONDU;
+    }
+    if (strncmp(x, "capte-ligne ", 12) == 0) {   /* « capte-ligne 2 » : la deuxième écoute des écoutes d'un écran (2.70) */
+        static const unsigned char wav2[48] = { 'R', 'I', 'F', 'F', 40, 0, 0, 0, 'W', 'A', 'V', 'E', 'f', 'm', 't', ' ',
+                                                16, 0, 0, 0, 1, 0, 1, 0, 0x80, 0x3e, 0, 0, 0, 0x7d, 0, 0, 2, 0, 16, 0,
+                                                'd', 'a', 't', 'a', 4, 0, 0, 0, 0, 0, 0, 0 };
+        for (size_t k = 0; k < s->nb_elements && k < 16; k++)
+            if (s->elements[k].sorte == ELEMENT_ECOUTES) {
+                e->sorte = EVENEMENT_CAPTURE;
+                e->element = k;
+                choisies[k] = atol(x + 12) - 1;
+                e->octets = wav2;
+                e->taille = sizeof wav2;
+                e->texte = "passage.wav";
             }
         return ISSUE_REPONDU;
     }
@@ -1198,6 +1219,24 @@ static void essais_ecoute(void) {   /* 2.69 : l'événement d'une écoute, nomm�
         "    Conserver le p.\n"
         "    Afficher la transcription du p.\n"
         "Ouvrir l'écran de veille.\n";
+    const char *src3 =   /* 2.70 : les écoutes des postes conservés ; le poste capté est l'objet de sa ligne */
+        "Un poste, conservé, a : un nom (texte), unique, une veille (vrai ou faux).\n"
+        "Un passage, conservé, a : un poste (poste), un enregistrement (son).\n"
+        "Le a vaut un nouveau poste :\n    Le nom vaut « FT-991A ».\n    La veille vaut vrai.\nConserver a.\n"
+        "Le b vaut un nouveau poste :\n    Le nom vaut « Bourdon ».\n    La veille vaut faux.\nConserver b.\n"
+        "Le c vaut un nouveau poste :\n    Le nom vaut « Stryker ».\n    La veille vaut vrai.\nConserver c.\n"
+        "L'écran de veille montre :\n    les écoutes des postes conservés dont la veille est vraie, par nom, coupées après 2 secondes de silence,\n"
+        "    un bouton « Fermer ».\n"
+        "Quand un poste capte un son dans l'écran de veille :\n"
+        "    Le p vaut un nouveau passage.\n    Le poste du p devient le poste.\n"
+        "    L'enregistrement du p devient le son capté.\n    Conserver le p.\n"
+        "    Afficher « capté : » puis le nom du poste puis le format de l'enregistrement du p.\n"
+        "Quand on clique sur « Fermer » dans l'écran de veille :\n    Fermer l'écran.\n"
+        "Ouvrir l'écran de veille.\n";
+    const char *ev3[] = { "capte-ligne 2", "capte-ligne 1", "clic Fermer" };
+    ECRANS(src3, ev3, rep,
+           "[ouvrir Veille ; écoutes poste 2000 ms ; bouton Fermer]\n[lignes FT-991A / Stryker]\n[lignes FT-991A / Stryker]\n"
+           "capté : Stryker WAV\n[lignes FT-991A / Stryker]\ncapté : FT-991A WAV\n[lignes FT-991A / Stryker]\n[fermer]\n");
     const char *ev2[] = { "capte Stryker" };
     transcrire_vraiment = 1;
     ECRANS(src2, ev2, rep, "[ouvrir Veille ; écoute Stryker 0 ms]\nbonjour (48 octets)\n[fermer]\n");

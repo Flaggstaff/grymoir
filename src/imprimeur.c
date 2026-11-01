@@ -1767,7 +1767,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 }
                 etats_ecran(im, el, fz);
             } else if (c) {
-                aj(im, el->graphique ? "_graphique " : "_liste ");
+                aj(im, el->graphique ? "_graphique " : el->ecoutes ? "_écoutes " : "_liste ");
                 ecrire_nom(im, el->texte, 0);
                 aj(im, el->negation ? " _supprimé" : " _conservé");
                 expression(im, el);   /* « _dont … » et « _par … » */
@@ -1792,7 +1792,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                         q = *fin ? fin + 1 : fin;
                     }
                     if (el->graphique & 2) aj(im, " _secteurs");
-                } else if (el->texte3) {   /* « _avec titre ; compositeur.naissance » : les chemins, séparés par « ; » */
+                } else if (el->texte3 && !el->ecoutes) {   /* « _avec titre ; compositeur.naissance » : les chemins, séparés par « ; » */
                     aj(im, " _avec ");
                     for (const char *q = el->texte3; *q;) {
                         const char *fin = strchr(q, '\x1e');
@@ -1813,6 +1813,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                     }
                 }
                 if (!el->graphique && (el->entier & 2)) aj(im, " _cartes");   /* 2.19 */
+                if (el->ecoutes > 1) {   /* « _silence 3 » (2.70) */
+                    char x[32];
+                    snprintf(x, sizeof x, " _silence %d", el->ecoutes - 1);
+                    aj(im, x);
+                }
                 place_ecran(im, el, 1);
             } else {
                 int fem = genre_de_nom(im, el->texte) == G_FEMININ;
@@ -1830,7 +1835,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 for (size_t q = 0; q < im->nb_pluriels && !pl; q++)
                     if (strcmp(im->pluriels[q].feminin, el->texte) == 0) pl = im->pluriels[q].masculin;
                 char *x = pl ? grym_dupliquer(pl) : grym_formater("%ss", el->texte);
-                aj(im, el->graphique ? "le graphique des " : "la liste des ");
+                aj(im, el->graphique ? "le graphique des " : el->ecoutes ? "les écoutes des " : "la liste des ");
                 aj(im, x);
                 free(x);
                 aj(im, el->negation ? (fem ? " supprimées" : " supprimés") : fem ? " conservées" : " conservés");
@@ -1870,7 +1875,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                         q = *fin ? fin + 1 : fin;
                     }
                     if (el->graphique & 2) aj(im, ", en secteurs");
-                } else if (el->texte3) {   /* « , avec le titre, le compositeur et l'année » : tels qu'écrits */
+                } else if (el->texte3 && !el->ecoutes) {   /* « , avec le titre, le compositeur et l'année » : tels qu'écrits */
                     aj(im, ", avec ");
                     size_t nb = 1, i = 0;
                     for (const char *q = el->texte3; *q; q++) nb += *q == '\x1e';
@@ -1890,6 +1895,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                     }
                 }
                 if (!el->graphique && (el->entier & 2)) aj(im, ", en cartes");   /* 2.19 */
+                if (el->ecoutes > 1) {   /* « , coupées après 3 secondes de silence » (2.70) */
+                    char x[64];
+                    snprintf(x, sizeof x, ", coupées après %d seconde%s de silence", el->ecoutes - 1, el->ecoutes > 2 ? "s" : "");
+                    aj(im, x);
+                }
                 place_ecran(im, el, 1);   /* la place d'une liste vient après ses colonnes (§ 22.9) */
             }
             aj(im, c ? "\n" : k < dernier ? ",\n" : ".\n");
@@ -1899,7 +1909,23 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     }
     case P_QUAND: {   /* « Quand on clique sur « B » dans l'écran X : » (§ 22.2) */
         size_t apres_nom = im->nb;
-        if (n->forme == 6) {   /* « Quand une écoute capte un son dans l'écran X : » ; « _quand _capte « S » _dans X » (2.69) */
+        if (n->forme == 7) {   /* « Quand un poste capte un son dans l'écran X : » ; « _quand _capte _un poste _dans X » (2.70) */
+            const Noeud *prm = n->enfants[0]->enfants[0];
+            if (c) {
+                aj(im, "_quand _capte ");
+                aj(im, prm->forme == 2 ? "_une " : "_un ");
+                ecrire_nom(im, prm->texte, 0);
+                aj(im, " _dans ");
+                ecrire_nom(im, n->texte3, 0);
+                aj(im, "\n");
+            } else {
+                aj(im, prm->forme == 2 ? "Quand une " : "Quand un ");
+                aj(im, prm->texte);
+                aj(im, " capte un son dans l'écran ");
+                aj_sigles(im, n->texte3);
+                aj(im, " :\n");
+            }
+        } else if (n->forme == 6) {   /* « Quand une écoute capte un son dans l'écran X : » ; « _quand _capte « S » _dans X » (2.69) */
             const char *nom = n->enfants[2]->texte;
             if (c) {
                 aj(im, "_quand _capte ");

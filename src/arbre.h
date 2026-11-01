@@ -226,6 +226,8 @@ typedef struct Noeud {
     int place[4];         /* élément d'un bloc en position libre (§ 22.9) : gauche, haut, largeur, hauteur, en pixels */
     int place_dite;       /* ce qui en est écrit : 1 la place, 2 la largeur, 4 la hauteur ; 0 hors d'un bloc libre */
     int taille_titre;     /* P_ECRAN : −1 « en petit », 1 « en grand », 0 la taille du thème (§ 22.5) */
+    int ecoutes;          /* N_CHERCHER d'un écran (2.70) : « les écoutes des postes conservés » : 1 + le silence qui coupe
+                             un passage, en secondes (1 : celui par défaut) ; 0 : une liste */
     int graphique;        /* N_CHERCHER d'un écran : 1 un graphique (§ 22.11), + 2 en secteurs, + 4 une somme (texte3 :
                              la clé, puis le champ additionné) */
     struct Noeud *titre_calcule;   /* P_ECRAN : « , (\"Bonjour \" suivi du prénom …) en grand, » (2.33) : le titre, une

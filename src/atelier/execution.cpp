@@ -188,7 +188,7 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
     t->valeurs_fiche.clear();
     t->silences.clear();
     for (size_t k = 0; k < n; k++) {
-        t->silences << (el[k].sorte == ELEMENT_ECOUTE ? el[k].silence : 0);   // 2.69
+        t->silences << (el[k].sorte == ELEMENT_ECOUTE || el[k].sorte == ELEMENT_ECOUTES ? el[k].silence : 0);   // 2.69, 2.70
         // le rang de la valeur, en caractères Qt : la machine le donne en octets UTF-8
         t->valeurs_fiche << (el[k].sorte == ELEMENT_TEXTE && el[k].valeur_depuis && el[k].texte
                                  && el[k].valeur_depuis <= strlen(el[k].texte)
@@ -833,6 +833,10 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
                 vals << nombre_affiche(cellules[2 * r + 1]);
             }
             gr->donner(noms, vals);
+            return;
+        }
+        if (QWidget *cadre = controles_ecran.value(element); cadre && cadre->objectName() == "ecoutes") {
+            ecoutes_du_cadre(cadre, element, cellules.mid(0, nb_lignes));   // un bandeau par ligne (2.70)
             return;
         }
         if (element < 0 || element >= tables.size() || !tables[element]) return;
@@ -1802,6 +1806,8 @@ void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) 
     for (int k = 0; k < tables.size(); k++)
         if (tables[k] && tables[k]->currentRow() >= 0 && tables[k]->item(tables[k]->currentRow(), 0))
             lignes_choisies[k] = tables[k]->item(tables[k]->currentRow(), 0)->data(Qt::UserRole).toInt();
+    if (sorte == EVENEMENT_CAPTURE && ligne_capture >= 0 && element < lignes_choisies.size())
+        lignes_choisies[element] = ligne_capture;   // le poste qui a capté (2.70)
     const bool avec_fichier = (sorte == EVENEMENT_CHANGEMENT || sorte == EVENEMENT_CAPTURE) && fichier_envoye;
     travail.evenement = {sorte, (size_t)element, (size_t)ligne,
                          sorte == EVENEMENT_CHANGEMENT || sorte == EVENEMENT_CAPTURE ? texte_envoye.constData() : nullptr,
@@ -1811,6 +1817,40 @@ void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) 
     fichier_envoye = false;   // les octets restent dans octets_envoyes jusqu'à l'événement suivant : la machine les lit
     travail.issue = 0;
     travail.reponse.release();
+}
+
+// Les bandeaux des écoutes d'une entité (2.70), d'après les clés de ses objets : ceux qui restent ne sont pas touchés (ils
+// n'interrompent pas leur passage en cours), les nouveaux s'ajoutent, les disparus s'en vont ; l'ordre suit la liste. Les
+// clés, gardées sur le cadre, donnent à chaque passage capté sa ligne au moment où il part.
+void Execution::ecoutes_du_cadre(QWidget *cadre, int element, const QStringList &noms) {
+    if (auto *apercu = cadre->findChild<QLabel *>("ecoute-apercu")) apercu->deleteLater();
+    auto *pile = qobject_cast<QVBoxLayout *>(cadre->layout());
+    if (!pile) return;
+    QHash<QString, QWidget *> bords;   // chaque bandeau dans son cadre, comme « une écoute »
+    for (QWidget *bord : cadre->findChildren<QWidget *>("ecoute-poste", Qt::FindDirectChildrenOnly)) {
+        Ecoute *e = bord->findChild<Ecoute *>();
+        if (e && noms.contains(e->nom_ecoute()) && !bords.contains(e->nom_ecoute())) bords.insert(e->nom_ecoute(), bord);
+        else { pile->removeWidget(bord); bord->deleteLater(); }
+    }
+    for (const QString &n : noms) {
+        if (bords.contains(n)) continue;
+        auto *bord = new QFrame(cadre);
+        bord->setObjectName("ecoute-poste");
+        bord->setFrameShape(QFrame::StyledPanel);
+        auto *dedans = new QVBoxLayout(bord);
+        auto *e = new Ecoute(n, travail.silences.value(element), bord, qEnvironmentVariableIsEmpty("GRYMOIR_ESSAIS"), false);
+        dedans->addWidget(e);
+        e->capte = [this, e, element](const QByteArray &wav, const QString &nom) {
+            captures.push_back({QPointer<QWidget>(e), element, wav, nom});
+            envoyer_capture();
+        };
+        bords.insert(n, bord);
+    }
+    for (const QString &n : noms) {   // l'ordre de la liste
+        pile->removeWidget(bords.value(n));
+        pile->addWidget(bords.value(n));
+    }
+    cadre->setProperty("noms", noms);
 }
 
 // Le premier passage capté par l'écran qui attend (2.69) ; ceux d'un écran détruit sont oubliés, ceux d'un écran
@@ -1827,6 +1867,13 @@ void Execution::envoyer_capture() {
         if (!vivant) { captures.removeAt(i--); continue; }
         if (!ici) continue;
         const Capture c = captures.takeAt(i);
+        ligne_capture = -1;
+        QWidget *cadre = c.source && c.source->parentWidget() ? c.source->parentWidget()->parentWidget() : nullptr;
+        if (auto *e = qobject_cast<Ecoute *>(c.source.data()); e && cadre && cadre->objectName() == "ecoutes") {
+            // une écoute d'entité (2.70) : sa ligne dans la liste, telle qu'elle est maintenant ; disparue, le passage aussi
+            ligne_capture = cadre->property("noms").toStringList().indexOf(e->nom_ecoute());
+            if (ligne_capture < 0) { i--; continue; }
+        }
         octets_envoyes = c.wav;
         texte_envoye = c.nom.toUtf8();
         fichier_envoye = true;

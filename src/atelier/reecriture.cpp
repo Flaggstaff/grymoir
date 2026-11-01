@@ -763,6 +763,7 @@ Noeud *nouvel_element(const ElementNouveau &e, const QString &dossier, QString *
         if (!x.isEmpty()) { *erreur = x; noeud_liberer(n); return nullptr; }
         return n;
     }
+    if (e.sorte == ELEMENT_ECOUTES) { *erreur = QString::fromUtf8("Les écoutes d'une entité se modifient dans le code."); return nullptr; }   // 2.70
     if (e.texte.trimmed().isEmpty()) { *erreur = "Donne un libellé, un texte ou un nom."; return nullptr; }
     if (e.sorte == ELEMENT_ECOUTE) {   // « une écoute « Stryker » » (2.69) ; son silence se règle dans le code
         if (e.texte.contains(QChar(0x00BB)) || e.texte.contains(QChar(0x00AB))) { *erreur = "Pas de guillemets « » dans un nom."; return nullptr; }

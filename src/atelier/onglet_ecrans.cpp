@@ -81,7 +81,7 @@ static QString nom_palette(int sorte) {
          : sorte == FICHIER_PALETTE ? "Fichier" : sorte == SON_PALETTE ? "Son" : sorte == ELEMENT_LISTE ? "Liste"
          : sorte == ELEMENT_GRAPHIQUE ? "Graphique"
          : sorte == ELEMENT_IMAGE ? "Image" : sorte == ELEMENT_ONGLETS ? "Onglets"
-         : sorte == ELEMENT_ECOUTE ? QString::fromUtf8("Écoute") : "Menu";
+         : sorte == ELEMENT_ECOUTE ? QString::fromUtf8("Écoute") : sorte == ELEMENT_ECOUTES ? QString::fromUtf8("Écoutes") : "Menu";
 }
 
 static bool est_bloc(int s) {
@@ -262,7 +262,7 @@ QVector<EcranLu> lire_ecrans(const QString &dossier, QStringList *problemes) {
                             if (v->type == N_NEGATION) x.depart = "−" + x.depart;
                         }
                     } else if (el->type == N_CHERCHER) {
-                        x.sorte = el->graphique ? ELEMENT_GRAPHIQUE : ELEMENT_LISTE;   // § 22.11
+                        x.sorte = el->ecoutes ? ELEMENT_ECOUTES : el->graphique ? ELEMENT_GRAPHIQUE : ELEMENT_LISTE;   // § 22.11, 2.70
                         x.graphique = el->graphique;
                         x.texte = QString::fromUtf8(el->texte);
                         x.tri = el->texte2 ? QString::fromUtf8(el->texte2) : QString();

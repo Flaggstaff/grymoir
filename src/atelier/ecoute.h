@@ -47,8 +47,11 @@ class QToolButton;
 class Ecoute : public QWidget {
     Q_OBJECT
 public:
-    // materiel faux : ni entrée, ni micro, ni haut-parleur (les essais, qui le nourrissent à la main)
-    Ecoute(const QString &nom, int silence_ms, QWidget *parent = nullptr, bool materiel = true);
+    // materiel faux : ni entrée, ni micro, ni haut-parleur (les essais, qui le nourrissent à la main) ;
+    // veille_libre faux : la veille est décidée par le programme (« les écoutes des postes … dont la veille est vraie »,
+    // 2.70) : la case est cachée, toujours cochée
+    Ecoute(const QString &nom, int silence_ms, QWidget *parent = nullptr, bool materiel = true, bool veille_libre = true);
+    QString nom_ecoute() const { return nom; }
     ~Ecoute() override;
     std::function<void(const QByteArray &wav, const QString &nom_fichier)> capte;
     void nourrir(const std::vector<float> &pcm16k);   // pour les essais : du son, comme s'il venait de l'entrée
