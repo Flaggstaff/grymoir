@@ -1080,7 +1080,13 @@ static void expression(Impression *im, const Noeud *n) {
             expression(im, n->enfants[1]);
         } else {
             aj(im, " suivi ");
+            /* « suivi de (le nombre de notes … dont le patient = p) suivi de « . » » : sans ses parenthèses, le « dont »
+             * prendrait le « suivi de » qui suit pour sa valeur (2 novembre 2026) ; on les garde toujours, la phrase
+             * suivante pouvant en dépendre */
+            const int garder = im->garder_groupe;
+            im->garder_groupe = 1;
             preposition(im, "de", n->enfants[1]);
+            im->garder_groupe = garder;
         }
         return;
     case N_ELISION:   /* « de x », « que x » ; « _de x », « _que x » (§ 4.4) */
