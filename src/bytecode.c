@@ -235,6 +235,7 @@ const char *instruction_nom(CodeInstruction code) {
     case I_JSON_LISTE:     return "JSON_LISTE";
     case I_RETIRER:        return "RETIRER";
     case I_SIGNALER:       return "SIGNALER";
+    case I_AMORCER:        return "AMORCER";
     case I_SAUVEGARDER:    return "SAUVEGARDER";
     case I_SAUVEGARDER_COFFRE: return "SAUVEGARDER_COFFRE";
     case I_RESTAURER:      return "RESTAURER";
@@ -429,6 +430,7 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_APPARENCE:   /* le logo ; avec 0x100 (2.13), aussi la police, la couleur libre, le fond */
                 besoin = (op & 0x100 ? 4 : 1) + (op & 0x200 ? 1 : 0); effet = -besoin; break;
             case I_REFUSER: case I_SIGNALER: besoin = (long)op; effet = -(long)op; break;
+            case I_AMORCER: besoin = 1; effet = -1; break;
             case I_ECRAN_ATTENDRE: besoin = 0; effet = 2; break;
             case I_ECRAN_OBJET: besoin = 0; effet = 1; break;
             case I_CORRESPOND: besoin = 2; effet = -1; break;

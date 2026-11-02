@@ -6184,7 +6184,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
 static int mot_de_construction(const Jeton *t) {
     static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
                                      "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer", "effacer", "essayer", "saisir",
-                                     "conserver", "supprimer", "rétablir", "utiliser", "quand", "ouvrir", "fermer", "refuser", "signaler" };
+                                     "conserver", "supprimer", "rétablir", "utiliser", "quand", "ouvrir", "fermer", "refuser", "signaler", "amorcer" };
     for (size_t k = 0; k < sizeof M / sizeof *M; k++) if (est_mot(t, M[k])) return 1;
     return 0;
 }
@@ -9589,6 +9589,22 @@ static Noeud *phrase(Analyse *a, int colonne) {
         n->fin = fin_jeton(b);
         return n;
     }
+    if (est_mot(t, "amorcer") && est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "transcription") && est_mot(voir(a, 3), "avec")) {
+        /* « Amorcer la transcription avec t. » (2.80) : t, un texte (ou absent), donne au transcripteur le vocabulaire
+         * attendu (indicatifs, codes, noms propres) pour les transcriptions suivantes de l'exécution */
+        if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'amorce rien : amorce dans une action."));
+        a->i += 4;
+        Noeud *n = noeud_creer(P_AMORCER, t->ligne, t->colonne, t->debut);
+        attendre(a, A_TEXTE);
+        Noeud *v = valeur(a);
+        if (!v) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, v);
+        n->fin = v->fin;
+        if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
+        return n;
+    }
+    if (est_mot(t, "amorcer"))
+        return erreur(a, t, grym_dupliquer("« Amorcer la transcription avec « … ». » : le vocabulaire qu'attend le transcripteur."));
     if (est_mot(t, "refuser") || est_mot(t, "signaler")) {
         /* « Refuser « … ». » (§ 18.1) : l'exécution échoue avec ce message ; « Signaler « … ». » (§ 22.22) : le message
          * s'affiche sans bloquer, si ce qui l'a dit réussit */

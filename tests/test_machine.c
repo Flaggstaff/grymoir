@@ -245,7 +245,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -1127,6 +1127,13 @@ static void scene_signaler(void *contexte, Chaine *sortie, const char *message) 
     chaine_ajouter(&s->page.journal, "]\n");
 }
 
+static void scene_amorcer(void *contexte, const char *texte) {   /* 2.80 */
+    Scene *s = contexte;
+    chaine_ajouter(&s->page.journal, "[amorce ");
+    chaine_ajouter(&s->page.journal, texte ? texte : "retirée");
+    chaine_ajouter(&s->page.journal, "]\n");
+}
+
 static void scene_fermer(void *contexte, Chaine *sortie) {
     Scene *s = contexte;
     if (sortie->n) {
@@ -1213,7 +1220,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
                     scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme, scene_signature,
-                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler };
+                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     if (transcrire_vraiment) i.transcrire = scene_transcrire;
@@ -1315,6 +1322,27 @@ static void essais_signaler(void) {   /* 2.71 : un message après un geste réus
            "[fermer]\nHors écran, comme Afficher.\n20");
     PROG("Le double d'un nombre :\n    Signaler « x ».\n    Rendre nombre × 2.\nAfficher le double de 2.",
          "~Un calcul ne signale rien");
+}
+
+static void essais_amorcer(void) {   /* 2.80 : le vocabulaire du transcripteur, donné par le programme */
+    const char *src =
+        "L'écran de veille montre :\n    un bouton « Amorcer »,\n    un bouton « Retirer »,\n    un bouton « Fermer ».\n"
+        "Quand on clique sur « Amorcer » dans l'écran de veille :\n"
+        "    Le code vaut « QTH ».\n    Amorcer la transcription avec \"QSO, \" suivi du code.\n"
+        "Quand on clique sur « Retirer » dans l'écran de veille :\n    Amorcer la transcription avec absent.\n"
+        "Quand on clique sur « Fermer » dans l'écran de veille :\n    Fermer l'écran.\n"
+        "Ouvrir l'écran de veille.\n";
+    const char *ev[] = { "clic Amorcer", "clic Retirer", "clic Fermer" };
+    const char *rep[] = { "" };
+    ECRANS(src, ev, rep,
+           "[ouvrir Veille ; bouton Amorcer ; bouton Retirer ; bouton Fermer]\n"
+           "[amorce QSO, QTH]\n"
+           "[amorce retirée]\n"
+           "[fermer]\n");
+    PROG("Amorcer la transcription avec « CQ ».\nAfficher « ok ».", "ok");   /* sans transcripteur : rien */
+    PROG("Le mot d'un nombre :\n    Amorcer la transcription avec « x ».\n    Rendre « y ».\nAfficher le mot de 2.",
+         "~Un calcul n'amorce rien");
+    PROG("Amorcer les voix.", "~Amorcer la transcription avec");
 }
 
 static void essais_second_tri(void) {   /* 2.73 : « puis heure décroissant », le plus récent d'abord dans le jour aussi */
@@ -4700,6 +4728,7 @@ int main(void) {
     essais_secours();
     essais_ecrans();
     essais_signaler();
+    essais_amorcer();
     essais_second_tri();
     essais_agenda();
     essais_morse();

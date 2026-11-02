@@ -248,6 +248,9 @@ typedef struct {
     /* « Signaler « … ». » (2.71) : un message qui ne bloque rien, après un geste réussi, montré quelques secondes au pied
      * de l'écran ; plusieurs lignes séparées par « \n ». NULL : la machine l'écrit dans la sortie. */
     void (*ecran_signaler)(void *contexte, Chaine *sortie, const char *message);
+    /* « Amorcer la transcription avec t. » (2.80) : le vocabulaire attendu par le transcripteur, pour les transcriptions
+     * suivantes de l'exécution ; NULL : l'amorce retirée. Sans transcripteur, NULL : la phrase ne fait rien. */
+    void (*amorcer)(void *contexte, const char *texte);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

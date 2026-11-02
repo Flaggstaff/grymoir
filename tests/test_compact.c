@@ -155,6 +155,7 @@ int main(void) {
          "_action dater(_une chose_horodatée)\n    chose.date << 5\n_fin\n_le d << _nouveau document\ndater(d)\n"
          "_afficher d.date\n", "5\n");
     /* La section paiement (2.28) */
+    ALLER_RETOUR("_amorcer « QSO, QTH »\n", "Amorcer la transcription avec « QSO, QTH ».\n");   /* 2.80 */
     ALLER_RETOUR("_la charge << « SPC »\n_document de_rappel\n    _section_paiement charge\n_fin\n",
                  "La charge vaut « SPC ».\nLe document de rappel montre :\n    la section paiement de la charge.\n");
     /* Le code QR, le saut de ligne, le format technique (2.27) */

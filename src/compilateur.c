@@ -1000,6 +1000,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
         emettre(c, I_STYLE, ph->entier, ph->ligne, ph->colonne);
         return;
+    case P_AMORCER:   /* « Amorcer la transcription avec t. » (2.80) */
+        expression(c, ph->enfants[0]);
+        emettre(c, I_AMORCER, 0, ph->ligne, ph->colonne);
+        return;
     case P_SIGNALER:   /* « Signaler « … » puis x. » (§ 22.22) */
     case P_REFUSER:   /* « Refuser « … » puis x. » (§ 18.1) */
         if (ph->nb_enfants > 0xFFFF) { trop_grand(c, ph); return; }

@@ -2257,6 +2257,17 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 debut = k + 1;
             }
             point(r, f);
+        } else if (!strcmp(c, "amorcer")) {   /* _amorcer t → Amorcer la transcription avec t. (2.80) */
+            if (d + 1 >= f) {
+                echouer(r, t, grym_dupliquer("« _amorcer » attend un texte : « _amorcer « … » »."));
+                return;
+            }
+            mot(r, "amorcer", t);
+            mot(r, "la", t);
+            mot(r, "transcription", t);
+            mot(r, "avec", t);
+            expression(r, d + 1, f);
+            point(r, f);
         } else if (!strcmp(c, "refuser") || !strcmp(c, "signaler")) {   /* _refuser « … » → Refuser « … ». (§ 18.1) ; _signaler (§ 22.22) */
             if (d + 1 >= f) {
                 echouer(r, t, grym_formater("« _%s » attend un message : « _%s « … » ».", c, c));

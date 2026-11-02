@@ -147,6 +147,7 @@ typedef enum {
     P_APPARENCE,     /* « Les écrans ont la couleur verte et le logo « logo.png ». » (§ 22.5) : entier : couleur, rang
                         dans la palette (0 bleue, 1 verte, 2 turquoise, 3 violette, 4 grise), −1 si non écrite ;
                         texte : chemin du logo tel qu'écrit, ou NULL */
+    P_AMORCER,       /* « Amorcer la transcription avec t. » (2.80) : un enfant, le texte qui amorce le transcripteur */
     P_SIGNALER,      /* « Signaler « Séance payée. » puis x. » (§ 22.22, 2.71) : enfants comme P_REFUSER */
     P_REFUSER,       /* « Refuser « Débits : » puis d. » (§ 18.1) : enfants : les éléments du message, comme
                         « Afficher » (reliés par « puis », séparés par une espace) */

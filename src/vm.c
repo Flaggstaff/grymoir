@@ -6801,6 +6801,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, valeur_nombre(r));
             break;
         }
+        case I_AMORCER: {   /* « Amorcer la transcription avec t. » (2.80) : absent retire l'amorce */
+            Valeur v = depiler(&pile);
+            char *t = v.type == V_ABSENT ? NULL : texte_valeur(m, &v);
+            valeur_liberer(&v);
+            if (m->iface.amorcer) m->iface.amorcer(m->iface.contexte, t && *t ? t : NULL);
+            free(t);
+            break;
+        }
         case I_SIGNALER:
         case I_REFUSER: {
             /* « Refuser « … » puis x. » (grammaire, § 18.1) : une erreur voulue, dont le message s'écrit comme

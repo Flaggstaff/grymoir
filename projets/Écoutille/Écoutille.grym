@@ -55,7 +55,8 @@ Un réglage, conservé, a :
     une conservation (nombre entier), facultative,
     une clé principale (secret), facultative,
     un compte gratuit (vrai ou faux), vrai au départ,
-    une clé de relève (secret), facultative.
+    une clé de relève (secret), facultative,
+    un vocabulaire personnel (texte), facultatif.
 
 Remarque : les passages montrés : depuis ce jour (la période de l'écran de veille).
 Le début des passages vaut aujourd'hui.
@@ -133,6 +134,16 @@ Le conseil d'un appareil :
     Si la connectique de l'appareil est présente, rendre le c suivi de " Connectique : " suivi de la connectique de l'appareil suivi de « . ».
     Rendre le c.
 
+Remarque : l'amorce de Whisper (2 novembre 2026) : le vocabulaire du trafic radio, pour qu'il écrive « QTH » et non
+Remarque : « cuté » ; codes Q les plus courants d'après HB9V (« Code Q : Guide Complet pour Radioamateurs », HB9HPG, hb9v.ch,
+Remarque : mise à jour de novembre 2025), alphabet de l'OTAN, puis le vocabulaire personnel des Réglages. Courte : Whisper en
+Remarque : garde au plus 223 morceaux, la fin s'il y en a trop.
+L'amorce d'un réglage :
+    Le vocabulaire vaut « Trafic radioamateur. CQ, QRZ ? QTH, QSL, QSO, QSY, QRT, QRL, QRM, QRN, QRP, QRO, QRV, QRX, QSB, QSP, QST, QRG. Report 59, RST 599. 73, 88. Indicatifs HB9, HB3. Alpha, Bravo, Charlie, Delta, Echo, Foxtrot, Golf, Hotel, India, Juliett, Kilo, Lima, Mike, November, Oscar, Papa, Quebec, Romeo, Sierra, Tango, Uniform, Victor, Whiskey, X-ray, Yankee, Zulu. ».
+    Si réglage est absent, rendre le vocabulaire.
+    Si le vocabulaire personnel du réglage est présent, rendre le vocabulaire suivi de " " suivi du vocabulaire personnel du réglage.
+    Rendre le vocabulaire.
+
 Remarque : la veille (1er novembre 2026) : le plus récent en haut, en cartes (l'heure, le poste, la transcription), sur une
 Remarque : période et pour un poste ou tous ; « Fermer » arrête la veille, après une question.
 L'écran de veille montre :
@@ -183,6 +194,8 @@ L'écran des réglages, « Réglages », montre :
     un compte gratuit (vrai ou faux), vrai au départ, en interrupteur, avec l'indication « Allumé : un compte DeepL API Free ; éteint : Pro »,
     une clé de relève (secret), facultative, avec l'indication « Google Cloud, Cloud Translation API, clé d'API ; quand le quota DeepL est épuisé »,
     le texte le témoin des clés du réglage conservé,
+    le texte « Transcription », en petites capitales,
+    un vocabulaire personnel (texte), facultatif, sur plusieurs lignes, avec l'indication « Indicatifs, noms et lieux entendus souvent, séparés par des virgules : la transcription les écrit juste »,
     le texte l'état du quota, visible si l'état du quota ≠ « »,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
@@ -196,6 +209,7 @@ Quand un poste capte un son dans l'écran de veille :
     L'heure du p devient maintenant.
     L'enregistrement du p devient le son capté.
     Remarque : le morse d'abord, lu sur l'ordinateur ; sinon la parole, transcrite si le poste le veut (1er novembre 2026).
+    Amorcer la transcription avec l'amorce du réglage conservé.
     Le morse du p devient le morse du son capté.
     Si le morse du p est absent et la parole transcrite du poste, la transcription du p devient la transcription du son capté.
     Remarque : la parole traduite en français si le poste le veut ; le morse, fait d'abréviations, ne se traduit pas.
@@ -238,11 +252,13 @@ Quand on ouvre l'écran des réglages :
     Pour chaque réglage conservé :
         La conservation de l'écran devient la conservation du réglage.
         Le compte gratuit de l'écran devient le compte gratuit du réglage.
+        Le vocabulaire personnel de l'écran devient le vocabulaire personnel du réglage.
     Remarque : les clés ne se relisent pas à l'écran : un secret ne s'affiche jamais ; vide, il reste tel quel.
 
 Quand on clique sur « Enregistrer » dans l'écran des réglages :
     Pour chaque réglage conservé :
         La conservation du réglage devient la conservation de l'écran.
+        Le vocabulaire personnel du réglage devient le vocabulaire personnel de l'écran.
         Le compte gratuit du réglage devient le compte gratuit de l'écran.
         Si la clé principale de l'écran est présente, la clé principale du réglage devient la clé principale de l'écran.
         Si la clé de relève de l'écran est présente, la clé de relève du réglage devient la clé de relève de l'écran.

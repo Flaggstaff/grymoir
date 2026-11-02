@@ -184,17 +184,17 @@ bool modele_charge() {
     return ctx != nullptr;
 }
 
-QString transcrire_son(const QByteArray &octets, const QString &modele, QString *erreur) {
+QString transcrire_son(const QByteArray &octets, const QString &modele, QString *erreur, const QString &amorce) {
     if (modele.isEmpty()) {
         *erreur = "Le modèle de transcription est introuvable (ggml-large-v3-turbo-q5_0.bin).";
         return QString();
     }
     std::vector<float> pcm;
     if (!wav_en_16k(octets, &pcm) && !decoder_en_16k(octets, &pcm, erreur)) return QString();
-    return transcrire_pcm(std::move(pcm), modele, erreur, false);
+    return transcrire_pcm(std::move(pcm), modele, erreur, false, amorce);
 }
 
-QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *erreur, bool rapide) {
+QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *erreur, bool rapide, const QString &amorce) {
     if (modele.isEmpty()) {
         *erreur = "Le modèle de transcription est introuvable (ggml-large-v3-turbo-q5_0.bin).";
         return QString();
@@ -232,6 +232,20 @@ QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *e
     p.print_realtime = false;
     p.print_timestamps = false;
     p.print_special = false;
+    // L'amorce (2.80) : le vocabulaire, donné comme texte précédent à chaque fenêtre de 30 secondes (carry_initial_prompt).
+    // whisper.cpp (v1.9.5) ne met aucun texte précédent si n_max_text_ctx vaut 0 : il vaut ici la taille de l'amorce,
+    // plus la marque qui la précède, si bien que le texte déjà transcrit n'y entre toujours pas (« -mc 0 » tenu).
+    const QByteArray amorce8 = amorce.trimmed().toUtf8();
+    if (!amorce8.isEmpty()) {
+        std::vector<whisper_token> jetons(1024);
+        int n = whisper_tokenize(ctx, amorce8.constData(), jetons.data(), (int)jetons.size());
+        if (n < 0) n = -n;   // trop long : coupé par whisper.cpp à la moitié du contexte de texte
+        if (n > 0) {
+            p.initial_prompt = amorce8.constData();
+            p.carry_initial_prompt = true;
+            p.n_max_text_ctx = n + 1;
+        }
+    }
     if (whisper_full(ctx, p, pcm.data(), (int)pcm.size()) != 0) {
         *erreur = "La transcription a échoué.";
         return QString();

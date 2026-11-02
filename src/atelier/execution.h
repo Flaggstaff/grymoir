@@ -41,6 +41,7 @@ class Travail : public QThread {
     Q_OBJECT
 public:
     std::atomic<int> transcriptions_en_cours{0};   // des zones transcrites en arrière-plan (24 octobre 2026)
+    QString amorce;   // « Amorcer la transcription avec t. » (2.80) : lu et écrit dans le fil de la machine seulement
     explicit Travail(const QString &chemin);
     void run() override;
     // Une application fabriquée par l'atelier : sa base dans le dossier de données du système, pas à côté du

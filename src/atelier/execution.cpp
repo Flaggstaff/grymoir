@@ -332,6 +332,10 @@ static void iface_ecran_erreur(void *contexte, Chaine *sortie, const char *messa
     emit t->ecran_erreur(QString::fromUtf8(message));
 }
 
+static void iface_amorcer(void *contexte, const char *texte) {   // 2.80
+    static_cast<Travail *>(contexte)->amorce = texte ? QString::fromUtf8(texte) : QString();
+}
+
 static void iface_ecran_signaler(void *contexte, Chaine *sortie, const char *message) {   // 2.71
     auto *t = static_cast<Travail *>(contexte);
     t->vider_sortie(sortie);
@@ -359,10 +363,11 @@ static void iface_ecran_transcrire(void *contexte, size_t cible, const unsigned 
 }
 
 // La transcription d'un son (§ 15.8) : dans le fil de la machine, la fenêtre reste libre pendant ce temps.
-static char *iface_transcrire(void *, const unsigned char *octets, size_t taille, char **erreur) {
+static char *iface_transcrire(void *contexte, const unsigned char *octets, size_t taille, char **erreur) {
     QString probleme;
+    const QString amorce = contexte ? static_cast<Travail *>(contexte)->amorce : QString();
     const QString texte = transcrire_son(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille),
-                                         modele_de_transcription(), &probleme);
+                                         modele_de_transcription(), &probleme, amorce);
     if (!probleme.isEmpty()) {
         *erreur = grym_dupliquer(probleme.toUtf8().constData());
         return nullptr;
@@ -618,7 +623,7 @@ void Travail::run() {
                    iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte,
                    iface_montrer_document, iface_ouvrir_adresse, iface_envoyer, iface_ecran_transcrire,
                    1,    // les écoutes captent le son (2.69)
-                   iface_ecran_signaler};
+                   iface_ecran_signaler, iface_amorcer};
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     situer(m, chemin, base_imposee, dossier_ecriture);

@@ -2084,6 +2084,11 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         aj(im, c ? "\n" : ".\n");
         return;
     }
+    case P_AMORCER:   /* « Amorcer la transcription avec t. » ; « _amorcer t » (2.80) */
+        aj(im, c ? "_amorcer " : "Amorcer la transcription avec ");
+        expression(im, n->enfants[0]);
+        aj(im, c ? "\n" : ".\n");
+        return;
     case P_SIGNALER:   /* « Signaler « … ». » ; « _signaler « … » » (§ 22.22) */
     case P_REFUSER:   /* « Refuser « … ». » ; « _refuser « … » » (§ 18.1) */
         if (n->type == P_SIGNALER) aj(im, c ? "_signaler " : "Signaler ");

@@ -31,10 +31,11 @@ void liberer_transcription();
 bool modele_charge();
 
 // Le texte d'un son, ou vide avec *erreur. Le modèle est chargé une fois, puis gardé.
-QString transcrire_son(const QByteArray &octets, const QString &modele, QString *erreur);
+// amorce (2.80) : le vocabulaire attendu (indicatifs, codes, noms propres), donné à Whisper comme texte précédent.
+QString transcrire_son(const QByteArray &octets, const QString &modele, QString *erreur, const QString &amorce = QString());
 
 // Le texte d'un son déjà en 16 kHz mono ; rapide : la recherche gloutonne (pour le direct).
-QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *erreur, bool rapide);
+QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *erreur, bool rapide, const QString &amorce = QString());
 
 // La transcription en direct (24 octobre 2026) : pendant qu'on parle, le son arrive par morceaux ; à chaque passe, tout ce
 // qui suit le dernier point acquis est retranscrit (moins de vingt-cinq secondes : pas de mot coupé à raccorder) ; une
