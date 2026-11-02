@@ -59,6 +59,11 @@ Un réglage, conservé, a :
 
 Remarque : les passages montrés : depuis ce jour (la période de l'écran de veille).
 Le début des passages vaut aujourd'hui.
+Remarque : un mot cherché dans les passages (2 novembre 2026) : dans le nom du poste, le morse, la transcription ou la traduction,
+Remarque : sans tenir compte des accents ni des majuscules ; vide, tout (le nom du poste contient toujours le texte vide).
+Le mot des passages vaut « ».
+Remarque : ce que DeepL dit du quota du mois, lu par « Quota DeepL » (Réglages).
+L'état du quota vaut « ».
 
 Remarque : ce que l'écran des réglages dit des clés, sans jamais les montrer.
 Le témoin des clés d'un réglage :
@@ -99,6 +104,35 @@ Pour traduire un texte :
             Remarque : rien de plus : le passage reste sans traduction.
     Rendre absent.
 
+Remarque : le quota DeepL du mois (2 novembre 2026) : ce que DeepL a compté et sa limite, lus sur /v2/usage avec la clé
+Remarque : enregistrée ; au-delà, Google prend le relais (« Traduire »). Rien n'est lu sans clé.
+Pour lire le quota :
+    Le rg vaut le réglage conservé.
+    Si la clé principale du rg est absente, rendre « Aucune clé DeepL enregistrée : rien à lire. ».
+    L'adresse vaut « https://api.deepl.com/v2/usage ».
+    Si le compte gratuit du rg, l'adresse devient « https://api-free.deepl.com/v2/usage ».
+    Essayer :
+        La r vaut la lecture de (l'adresse) avec :
+            l'en-tête « Authorization » : "DeepL-Auth-Key " suivi de la clé principale du rg.
+        Rendre "DeepL ce mois : " suivi du champ « character_count » de la r suivi de " caractères traduits sur " suivi du champ « character_limit » de la r suivi de « . ».
+    En cas d'échec :
+        Rendre "DeepL n'a pas répondu : " suivi du motif de l'échec.
+
+Remarque : comment brancher un modèle (2 novembre 2026), d'après son raccordement (relevé du 1er novembre 2026) ; la connectique
+Remarque : du catalogue suit, quand une source la donne.
+Remarque : le paramètre ne s'appelle pas « modèle » : un modèle absent, nommé comme son entité, ne se teste pas (relevé le 2 novembre 2026).
+Le conseil d'un appareil :
+    Si l'appareil est absent, rendre « ».
+    Le c vaut « Raccordement à vérifier sur le poste. ».
+    Si le raccordement de l'appareil est présent :
+        Si le raccordement de l'appareil = « USB son et pilotage », le c devient "Un seul câble USB : dans le bandeau du poste, choisis son entrée (souvent « USB Audio CODEC »). Sous macOS, certains Yaesu (puce CP2105) demandent le pilote Silicon Labs pour le pilotage ; le son n'en a pas besoin.".
+        Si le raccordement de l'appareil = « pilotage et son analogique », le c devient « Le son sort par une prise (haut-parleur, DATA ou ACC) : un câble vers l'entrée de l'interface audio (U-Phoria UM2), puis cette entrée dans le bandeau du poste. ».
+        Si le raccordement de l'appareil = « son analogique seul », le c devient « Prise haut-parleur (jack 3,5 mm) vers l'entrée de l'interface audio (U-Phoria UM2), volume du poste bas : c'est une sortie haut-parleur, pas une sortie ligne. Un isolateur de masse évite un ronflement. ».
+        Si le raccordement de l'appareil = « son réseau », le c devient « Écoutille ne reçoit pas le son par le réseau : prends la prise haut-parleur du poste, vers l'interface audio. ».
+        Si le raccordement de l'appareil = « câble audio virtuel », le c devient « Le son vient du logiciel SDR (SDR++, SDR#…) : envoie sa sortie vers BlackHole (macOS) ou VB-Cable (Windows), puis choisis ce câble comme entrée dans le bandeau du poste. ».
+    Si la connectique de l'appareil est présente, rendre le c suivi de " Connectique : " suivi de la connectique de l'appareil suivi de « . ».
+    Rendre le c.
+
 Remarque : la veille (1er novembre 2026) : le plus récent en haut, en cartes (l'heure, le poste, la transcription), sur une
 Remarque : période et pour un poste ou tous ; « Fermer » arrête la veille, après une question.
 L'écran de veille montre :
@@ -107,7 +141,8 @@ L'écran de veille montre :
     côte à côte :
         une période (« Aujourd'hui », « 7 jours », « 30 jours » ou « Tout »), « Aujourd'hui » au départ,
         un seul poste (poste), facultatif, avec l'indication « Vide : tous les postes »,
-    la liste des passages conservés dont le jour ≥ le début des passages et l'affichage du poste est vrai, par jour décroissant puis heure décroissant, avec l'heure, le nom du poste, le morse, la transcription, la traduction, le jour et la durée, en cartes,
+        un mot cherché (texte), facultatif, avec l'indication « Un poste, ou un mot du morse, de la parole, de la traduction ; vide : tout »,
+    la liste des passages conservés dont le jour ≥ le début des passages et l'affichage du poste est vrai et (le nom du poste contient le mot des passages ou le morse contient le mot des passages ou la transcription contient le mot des passages ou la traduction contient le mot des passages), par jour décroissant puis heure décroissant, avec l'heure, le nom du poste, le morse, la transcription, la traduction, le jour et la durée, en cartes,
     côte à côte :
         un bouton « Postes », au clavier « P »,
         un bouton « Réglages »,
@@ -119,6 +154,8 @@ L'écran des postes montre :
         un modèle (modèle), facultatif, avec l'indication « Le nom et la sorte en viennent »,
         un nom (texte), facultatif,
         une sorte (« émetteur-récepteur » ou « scanner »), « émetteur-récepteur » au départ, visible si le modèle de l'écran est absent,
+    le texte le conseil du modèle de l'écran, visible si le modèle de l'écran est présent,
+    côte à côte :
         une parole transcrite (vrai ou faux), vrai au départ, en interrupteur, avec l'indication « Le morse est toujours lu ; la parole, transcrite si allumé »,
         une traduction voulue (vrai ou faux), faux au départ, en interrupteur, avec l'indication « La parole traduite en français (Réglages : les clés) »,
     côte à côte :
@@ -135,6 +172,7 @@ L'écran des modèles montre :
         une sorte (« CB », « 10 mètres », « radioamateur », « scanner » ou « récepteur SDR »), « radioamateur » au départ,
     côte à côte :
         un bouton « Ajouter », principal, actif si la désignation de l'écran est présente et la marque de l'écran est présente,
+        un bouton « Exporter en CSV »,
         un bouton « Fermer »,
     un bouton « Supprimer », destructif, à confirmer par « Supprimer ce modèle du catalogue ? », actif si le modèle choisi de l'écran est présent.
 
@@ -145,8 +183,10 @@ L'écran des réglages, « Réglages », montre :
     un compte gratuit (vrai ou faux), vrai au départ, en interrupteur, avec l'indication « Allumé : un compte DeepL API Free ; éteint : Pro »,
     une clé de relève (secret), facultative, avec l'indication « Google Cloud, Cloud Translation API, clé d'API ; quand le quota DeepL est épuisé »,
     le texte le témoin des clés du réglage conservé,
+    le texte l'état du quota, visible si l'état du quota ≠ « »,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
+        un bouton « Quota DeepL »,
         un bouton « Fermer ».
 
 Quand un poste capte un son dans l'écran de veille :
@@ -187,6 +227,10 @@ Quand on change le seul poste dans l'écran de veille :
         L'affichage du poste devient vrai.
         Si le seul poste de l'écran est présent et le poste ≠ le seul poste de l'écran, l'affichage du poste devient faux.
 
+Quand on change le mot cherché dans l'écran de veille :
+    Le mot des passages devient « ».
+    Si le mot cherché de l'écran est présent, le mot des passages devient le mot cherché de l'écran.
+
 Quand on clique sur « Réglages » dans l'écran de veille :
     Ouvrir l'écran des réglages.
 
@@ -205,6 +249,9 @@ Quand on clique sur « Enregistrer » dans l'écran des réglages :
     Si la conservation de l'écran est présente, signaler « Les passages de plus de » puis la conservation de l'écran puis « jours s'effaceront au prochain lancement. ».
     Sinon, signaler « Tous les passages sont gardés. ».
     Fermer l'écran.
+
+Quand on clique sur « Quota DeepL » dans l'écran des réglages :
+    Lire le quota, qui donne l'état du quota.
 
 Quand on clique sur « Fermer » dans l'écran des réglages :
     Fermer l'écran.
@@ -269,6 +316,17 @@ Quand on clique sur « Supprimer » dans l'écran des modèles :
     Le nom vaut la désignation du modèle choisi de l'écran.
     Supprimer le modèle choisi de l'écran.
     Signaler « Modèle » puis le nom puis « supprimé. ».
+
+Remarque : le catalogue en tableau (2 novembre 2026), pour un tableur ou un autre radioamateur : dans Documents/Écoutille,
+Remarque : daté du jour ; un second export le même jour est refusé, rien n'est écrasé.
+Quand on clique sur « Exporter en CSV » dans l'écran des modèles :
+    La date vaut aujourd'hui en format technique.
+    Le chemin vaut "~/Documents/Écoutille/Catalogue " suivi de la date suivi de « .csv ».
+    Essayer :
+        Exporter les modèles conservés, par désignation, avec la désignation, la marque, la sorte, le raccordement, la connectique, la remarque et la source, dans ("~/Documents/Écoutille/Catalogue " suivi de la date suivi de « .csv »).
+        Signaler « Catalogue exporté dans » puis le chemin.
+    En cas d'échec :
+        Refuser le motif de l'échec.
 
 Quand on clique sur « Fermer » dans l'écran des modèles :
     Fermer l'écran.
