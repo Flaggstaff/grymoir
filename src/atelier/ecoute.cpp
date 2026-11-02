@@ -22,7 +22,9 @@
 #include <QVariant>
 #include <QSlider>
 #include <QToolButton>
+#include <QTimer>
 #include <QVBoxLayout>
+#include <algorithm>
 #include <QtEndian>
 #include <cmath>
 
@@ -194,6 +196,37 @@ protected:
 };
 
 QSlider *Ecoute::squelch() const { return seuil_->curseur; }
+
+void Ecoute::calibrer(int duree_ms) {
+    if (calibrage) return;
+    calibrage = true;
+    bruit.clear();
+    calibrer_->setEnabled(false);
+    etat_->setText(QString::fromUtf8("Calibrage : silence sur le poste, %1 secondes…").arg(duree_ms / 1000));
+    if (!minuterie) {
+        minuterie = new QTimer(this);
+        minuterie->setSingleShot(true);
+        connect(minuterie, &QTimer::timeout, this, [this] { finir_calibrage(); });
+    }
+    minuterie->start(duree_ms);
+}
+
+bool Ecoute::finir_calibrage() {
+    if (minuterie) minuterie->stop();
+    calibrage = false;
+    calibrer_->setEnabled(true);
+    if (bruit.size() < 10) {   // moins de 200 ms reçues : l'entrée est muette, ou hors veille
+        etat_->setText(QString::fromUtf8("Calibrage impossible : aucun son reçu. Vérifie l'entrée et la veille."));
+        return false;
+    }
+    std::vector<float> tri = bruit;
+    std::sort(tri.begin(), tri.end());
+    const float haut = tri[(tri.size() * 9) / 10];
+    const double db = haut <= 1e-6f ? -60.0 : 20.0 * std::log10(haut);
+    seuil_->curseur->setValue(position_du_squelch(db + 6.0));
+    etat_->setText(QString::fromUtf8("Squelch calibré à %1 : 6 dB au-dessus du bruit.").arg(seuil_->curseur->value()));
+    return true;
+}
 QSlider *Ecoute::gain() const { return gain_->curseur; }
 
 Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel_, bool veille_libre) : QWidget(parent), nom(n), materiel(materiel_) {
@@ -230,7 +263,15 @@ Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel_
     ligne_niveau->setContentsMargins(seuil_->demi_poignee(), 0, seuil_->demi_poignee(), 0);
     ligne_niveau->addWidget(niveau_);
     auto *titre_squelch = new QLabel(QString::fromUtf8("<b>Squelch</b>"));
-    pile->addWidget(titre_squelch);
+    calibrer_ = new QToolButton;
+    calibrer_->setText(QString::fromUtf8("Calibrer"));
+    calibrer_->setToolTip(QString::fromUtf8("Poste allumé, sans émission : Écoutille écoute le bruit 5 secondes et place le squelch juste au-dessus"));
+    connect(calibrer_, &QToolButton::clicked, this, [this] { calibrer(); });
+    auto *ligne_squelch = new QHBoxLayout;
+    ligne_squelch->addWidget(titre_squelch);
+    ligne_squelch->addStretch(1);
+    ligne_squelch->addWidget(calibrer_);
+    pile->addLayout(ligne_squelch);
     pile->addLayout(ligne_niveau);
     pile->addWidget(seuil_);
     // Le gain et le filtre : affiner le son avant tout le reste (découpage, haut-parleur, transcription)
@@ -428,6 +469,18 @@ void Ecoute::nourrir(const std::vector<float> &brut) {
     std::vector<float> pcm16k = brut;
     affinage.appliquer(&pcm16k);   // le gain et le filtre d'abord : ce qu'on découpe, entend et transcrit est le son affiné
     std::vector<std::vector<float>> finis;
+    if (calibrage) {   // le bruit seul, fenêtre par fenêtre ; rien ne devient un passage pendant ce temps
+        Decoupeur mesure;
+        mesure.seuil = 2.0f;   // jamais atteint
+        for (size_t i = 0; i + 320 <= pcm16k.size(); i += 320) {
+            mesure.nourrir(pcm16k.data() + i, 320, &finis);
+            bruit.push_back(mesure.niveau);
+        }
+        finis.clear();
+        jouer(pcm16k);
+        niveau_->setValue(position_du_niveau(mesure.niveau));
+        return;
+    }
     d.nourrir(pcm16k.data(), pcm16k.size(), &finis);
     jouer(pcm16k);
     montrer();

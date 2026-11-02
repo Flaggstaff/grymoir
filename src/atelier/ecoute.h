@@ -92,6 +92,11 @@ public:
     QSlider *squelch() const;
     QSlider *gain() const;
     QCheckBox *filtre() const { return filtre_; }
+    // « Calibrer » (2 novembre 2026) : écouter le bruit de fond, poste allumé sans émission, puis placer le squelch
+    // 6 dB au-dessus de son niveau le plus haut ordinaire (le 90e centile des fenêtres de 20 ms)
+    void calibrer(int duree_ms = 5000);
+    bool finir_calibrage();   // rend faux s'il n'a rien entendu ; les essais l'appellent sans attendre
+    bool en_calibrage() const { return calibrage; }
 
 private:
     QString nom;
@@ -103,6 +108,10 @@ private:
     Reglette *seuil_, *gain_;
     QCheckBox *filtre_;
     Affinage affinage;
+    QToolButton *calibrer_ = nullptr;
+    bool calibrage = false;
+    std::vector<float> bruit;
+    class QTimer *minuterie = nullptr;
     QToolButton *haut_parleur_;
     QLabel *etat_;
     QAudioSource *source = nullptr;

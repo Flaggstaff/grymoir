@@ -1713,6 +1713,52 @@ int main(int argc, char **argv) {
         QSettings().remove(QString::fromUtf8("écoute/Essai réglages"));
     }
 
+    // « Calibrer » (2 novembre 2026) : un bruit de fond à −40 dB environ, et le squelch se place 6 dB au-dessus, vers −34 dB
+    // (position +2) ; pendant le calibrage, rien ne devient un passage ; sans son reçu, un message, le squelch inchangé.
+    {
+        Ecoute e(QString::fromUtf8("Essai calibrage"), 1000, nullptr, false);
+        e.veille()->setChecked(true);
+        int captes = 0;
+        e.capte = [&](const QByteArray &, const QString &) { captes++; };
+        e.squelch()->setValue(-40);
+        VERIFIER(!e.finir_calibrage() && e.squelch()->value() == -40);   // rien entendu
+        e.calibrer(60000);
+        VERIFIER(e.en_calibrage());
+        std::vector<float> bruit(16000);
+        for (size_t i = 0; i < bruit.size(); i++) bruit[i] = 0.01f * ((i * 7919) % 2 ? 1.0f : -1.0f);   // RMS 0,01 : −40 dB
+        e.nourrir(bruit);
+        std::vector<float> fort(1600, 0.5f);   // 100 ms, 5 fenêtres sur 105
+        e.nourrir(fort);   // un claquement pendant le calibrage : le 90e centile l'écarte, et rien n'est capté
+        e.nourrir(bruit);
+        VERIFIER(e.finir_calibrage() && !e.en_calibrage());
+        VERIFIER(std::abs(e.squelch()->value() - 2) <= 1);
+        VERIFIER(captes == 0);
+        QSettings().remove(QString::fromUtf8("écoute/Essai calibrage"));
+    }
+
+    // « Calibrer » (2 novembre 2026) : 5 secondes de bruit, le squelch posé 6 dB au-dessus ; pendant ce temps, aucun passage
+    {
+        Ecoute e(QString::fromUtf8("Essai calibrage"), 1000, nullptr, false);
+        e.veille()->setChecked(true);
+        int captes = 0;
+        e.capte = [&](const QByteArray &, const QString &) { captes++; };
+        e.calibrer(60000);
+        VERIFIER(e.en_calibrage());
+        VERIFIER(!e.finir_calibrage());   // rien reçu : refusé, le squelch ne bouge pas
+        const int avant = e.squelch()->value();
+        VERIFIER(avant == e.squelch()->value());
+        std::vector<float> bruit(16000);
+        for (size_t i = 0; i < bruit.size(); i++) bruit[i] = 0.01f * (float)std::sin(2 * 3.14159265358979 * 1000.0 * (double)i / 16000.0);
+        e.calibrer(60000);
+        e.nourrir(bruit);
+        e.nourrir(bruit);
+        VERIFIER(captes == 0);
+        VERIFIER(e.finir_calibrage() && !e.en_calibrage());
+        // un sinus d'amplitude 0,01 : niveau efficace 0,00707, −43 dB ; +6 dB : −37 dB, soit la position −4
+        VERIFIER(e.squelch()->value() == -4);
+        QSettings().remove(QString::fromUtf8("écoute/Essai calibrage"));
+    }
+
     // L'écoute dans la fenêtre d'exécution (2.69) : un passage capté arrive dans la liste. Le 1er novembre 2026, chaque
     // passage était jeté, rattaché au dessin de l'écran au lieu de la zone de défilement qui l'enveloppe.
     {
