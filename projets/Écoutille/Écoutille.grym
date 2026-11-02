@@ -63,6 +63,8 @@ Le début des passages vaut aujourd'hui.
 Remarque : un mot cherché dans les passages (2 novembre 2026) : dans le nom du poste, le morse, la transcription ou la traduction,
 Remarque : sans tenir compte des accents ni des majuscules ; vide, tout (le nom du poste contient toujours le texte vide).
 Le mot des passages vaut « ».
+Remarque : le passage montré par l'écran du passage.
+Le passage ouvert vaut absent.
 Remarque : ce que DeepL dit du quota du mois, lu par « Quota DeepL » (Réglages).
 L'état du quota vaut « ».
 
@@ -269,6 +271,23 @@ L'épellation d'une phrase :
 
 Remarque : la veille (1er novembre 2026) : le plus récent en haut, en cartes (l'heure, le poste, la transcription), sur une
 Remarque : période et pour un poste ou tous ; « Fermer » arrête la veille, après une question.
+Remarque : une ligne de l'écran du passage, vide si la valeur manque (un passage de morse n'a pas de parole).
+La ligne d'un intitulé et d'une valeur :
+    Si la valeur est absente, rendre « ».
+    Rendre l'intitulé suivi de la valeur.
+
+Remarque : un passage (2 novembre 2026) : ce qui a été entendu, le son à réécouter, et « Garder le son » pour le copier hors
+Remarque : de la base (un QSO à garder, un échantillon à envoyer).
+L'écran du passage, « Passage », montre :
+    le texte "Poste " suivi du nom du poste du passage ouvert suivi de ", le " suivi du jour du passage ouvert suivi de " à " suivi de l'heure du passage ouvert,
+    le texte la ligne de « Morse : » et du morse du passage ouvert, visible si la ligne de « Morse : » et du morse du passage ouvert ≠ « »,
+    le texte la ligne de « Parole : » et de la transcription du passage ouvert, visible si la ligne de « Parole : » et de la transcription du passage ouvert ≠ « »,
+    le texte la ligne de « Traduction : » et de la traduction du passage ouvert, visible si la ligne de « Traduction : » et de la traduction du passage ouvert ≠ « »,
+    un enregistrement (son), facultatif,
+    côte à côte :
+        un bouton « Garder le son », principal,
+        un bouton « Fermer ».
+
 L'écran de veille montre :
     les écoutes des postes conservés dont la veille est vraie, par nom, coupées après 3 secondes de silence,
     le texte "Captés aujourd'hui : " suivi du nombre de passages conservés dont le jour = aujourd'hui, en petites capitales,
@@ -397,7 +416,30 @@ Quand on clique sur « Fermer » dans l'écran des réglages :
     Fermer l'écran.
 
 Quand on choisit un passage dans l'écran de veille :
-    Ouvrir la fiche du passage.
+    Le passage ouvert devient le passage.
+    Ouvrir l'écran du passage.
+
+Quand on ouvre l'écran du passage :
+    L'enregistrement de l'écran devient l'enregistrement du passage ouvert.
+
+Remarque : garder le son d'un passage (2 novembre 2026) : un WAV dans Documents/Écoutille, nommé par poste, jour et heure
+Remarque : (« Passage IC-7300 2026-11-02 14h30.wav ») ; deux passages de la même minute : le second prend « (2) » ; rien n'est
+Remarque : jamais écrasé.
+Quand on clique sur « Garder le son » dans l'écran du passage :
+    Le p vaut le passage ouvert.
+    Le nom vaut "~/Documents/Écoutille/Passage " suivi du nom du poste du p en remplaçant « / » par « - » suivi de " " suivi du jour du p en format technique suivi de " " suivi de (« » suivi de l'heure du p) en remplaçant « : » par « h ».
+    Essayer :
+        Enregistrer l'enregistrement du p dans (le nom suivi de « .wav »).
+        Signaler « Son gardé dans » puis le nom suivi de « .wav ».
+    En cas d'échec :
+        Essayer :
+            Enregistrer l'enregistrement du p dans (le nom suivi de « (2).wav »).
+            Signaler « Son gardé dans » puis le nom suivi de « (2).wav ».
+        En cas d'échec :
+            Refuser le motif de l'échec.
+
+Quand on clique sur « Fermer » dans l'écran du passage :
+    Fermer l'écran.
 
 Quand on clique sur « Postes » dans l'écran de veille :
     Ouvrir l'écran des postes.

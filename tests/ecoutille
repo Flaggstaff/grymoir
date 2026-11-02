@@ -61,5 +61,12 @@ cp "$d/ajout2.grymd" "$d/Écoutille.grymd"
 cp "$d/ajout2.grymd.clés" "$d/Écoutille.grymd.clés"
 lancer
 verifier "$(lire 'Afficher le nombre de passages conservés.')" "1" "le passage de 40 jours effacé, celui du jour gardé"
+# « Garder le son » (2 novembre 2026) : le passage du jour, ouvert depuis la veille, copié dans Documents/Écoutille
+mkdir -p "$d/maison"
+(cd "$d" && HOME="$d/maison" QT_QPA_PLATFORM=offscreen GRYMOIR_ESSAIS=1 GRYMOIR_SANS_APERCU=1 GRYM_MOT_DE_PASSE_BASE=essai-essai \
+    "$atelier" --capture "$d/passage.png" --clics "ligne:Stryker;Garder le son" --taille 1170x900 Écoutille.grym > "$d/sortie2.txt" 2>&1 < /dev/null)
+garde="$d/maison/Documents/Écoutille/Passage Stryker $(date +%Y-%m-%d) 11h00.wav"
+verifier "$(grep -c 'erreur' "$d/sortie2.txt")" "0" "l'écran du passage sans erreur"
+verifier "$(cmp -s "$garde" "$d/son.wav" && echo oui)" "oui" "le son gardé, tel qu'enregistré"
 echo "$((total - echecs))/$total tests réussis"
 [ $echecs = 0 ]
