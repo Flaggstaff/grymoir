@@ -1,0 +1,49 @@
+#!/bin/sh
+# Deux fiches pour une même personne (2 novembre 2026) : le doublon se verse dans la fiche gardée (séances, notes, corbeille
+# comprise), qui reçoit ce qui lui manque sans rien perdre ; le doublon part vide dans la corbeille ; une fiche en elle-même, refusée.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+N="$racine/projets/Praxis/Nicolas"
+cp "$N/données.grym" "$N/actions.grym" "$d/" && cp -R "$N/bibliothèques" "$d/" && cp "$racine/tests/praxis/fusion.grym" "$d/"
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+sortie="$("$grym" lancer fusion.grym 2>&1 < /dev/null)"
+verifier "$(echo "$sortie" | sed -n 1p)" "Séances : 1, factures : 0, quittances : 0, notes : 0." "la fiche gardée avant"
+verifier "$(echo "$sortie" | sed -n 2p)" "Séances : 1, factures : 0, quittances : 0, notes : 1." "le doublon avant (sa séance supprimée n'y compte pas)"
+verifier "$(echo "$sortie" | sed -n 3p)" "Séances : 2, factures : 0, quittances : 0, notes : 1." "la fiche gardée reçoit tout"
+verifier "$(echo "$sortie" | sed -n 4p)" "1" "un seul patient reste"
+verifier "$(echo "$sortie" | sed -n 5p)" "1" "le doublon est dans la corbeille"
+verifier "$(echo "$sortie" | sed -n 6p)" "anne@exemple.ch" "le courriel qui manquait"
+verifier "$(echo "$sortie" | sed -n 7p)" "Bulle" "la localité de la fiche gardée reste"
+verifier "$(echo "$sortie" | sed -n 8p)" "faux" "la fiche n'est plus à vérifier"
+verifier "$(echo "$sortie" | sed -n 9p)" "1" "la note confidentielle suit"
+verifier "$(echo "$sortie" | sed -n 10p)" "1" "la séance de la corbeille suit aussi"
+verifier "$(echo "$sortie" | sed -n 11p)" "Choisis une autre fiche que celle-ci : elle ne se verse pas en elle-même." "une fiche en elle-même, refusée"
+# les écrans (atelier sans écran) : la fusion depuis la fiche d'Anne Rochat ; la séance suivante d'une séance de Louis Bapst
+atelier="$racine/construction/grym-atelier"
+[ -x "$atelier" ] || atelier="$racine/construction/grym-atelier.app/Contents/MacOS/grym-atelier"
+if [ -x "$atelier" ]; then
+    e=$(mktemp -d)
+    for n in "$N"/*; do case "$n" in *.grymd*|*.grymb) ;; *) cp -R "$n" "$e/";; esac; done
+    cp "$racine/tests/praxis/essais.grym" "$e/"
+    awk '
+        $0 == "Utiliser « actions »." && !u { print; print "Utiliser « essais »."; u = 1; next }
+        index($0, "Remarque : l'\''accueil de la maquette") == 1 && !r { print "Si le nombre de patients conservés est nul, remplir les essais."; print ""; r = 1 }
+        { print }' "$N/Praxis.grym" > "$e/Praxis.grym"
+    for geste in "Continuer;Patients;ligne:Anne Rochat;Fusionner" "Continuer;Patients;ligne:Louis Bapst;ligne:Kriya Massage;Séance suivante"; do
+        rm -f "$e/capture.png"
+        (cd "$e" && QT_QPA_PLATFORM=offscreen GRYMOIR_ESSAIS=1 GRYMOIR_SANS_APERCU=1 GRYM_MOT_DE_PASSE_BASE=essai-essai \
+            "$atelier" --capture "$e/capture.png" --clics "$geste" --taille 1170x900 Praxis.grym > "$e/sortie.txt" 2>&1 < /dev/null)
+        verifier "$(grep -c 'erreur' "$e/sortie.txt")" "0" "« $geste » sans erreur"
+        verifier "$([ -s "$e/capture.png" ] && echo oui)" "oui" "« $geste » se dessine"
+        cp "$e/capture.png" "/tmp/praxis-$(echo "$geste" | sed 's/.*;//; s/ /-/g').png" 2>/dev/null
+    done
+    rm -rf "$e"
+else
+    echo "praxis-fusion : écrans sautés (atelier absent)"
+fi
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]

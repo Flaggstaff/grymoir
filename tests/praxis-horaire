@@ -1,5 +1,6 @@
 #!/bin/sh
 # Deux séances au même moment (31 octobre 2026) : l'alerte de la Nouvelle séance, et une référence SMS propre à chacune.
+# Sur leur durée (2 novembre 2026) : l'alerte nomme la séance qui gêne ; 14:00 pour 45 minutes recouvre 14:30.
 racine=$(cd "$(dirname "$0")/.." && pwd)
 grym="$racine/grym"
 d=$(mktemp -d)
@@ -12,11 +13,15 @@ verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 
 sortie="$("$grym" lancer horaire.grym 2>&1 < /dev/null)"
 verifier "$(echo "$sortie" | sed -n 1p)" "[]" "un moment libre : pas d'alerte"
 verifier "$(echo "$sortie" | sed -n 2p)" "NS-2026-11-03-14:30" "une séance seule garde la référence d'avant"
-verifier "$(echo "$sortie" | sed -n 3p)" "Attention : une séance est déjà prévue le 03.11.2026 à 14:30." "l'alerte du moment pris"
+verifier "$(echo "$sortie" | sed -n 3p)" "Attention : Bruno Essai a déjà une séance le 03.11.2026 à 14:30 (60 min)." "l'alerte du moment pris"
 verifier "$(echo "$sortie" | sed -n 4p)" "[]" "une autre heure, libre"
-verifier "$(echo "$sortie" | sed -n 5p)" "Attention : 2 séances sont déjà prévues le 03.11.2026 à 14:30." "deux séances au même moment"
+verifier "$(echo "$sortie" | sed -n 5p)" "Attention : 2 séances occupent déjà ce moment le 03.11.2026." "deux séances au même moment"
 verifier "$(echo "$sortie" | sed -n 6p)" "NS-2026-11-03-14:30-2" "la seconde : sa propre référence"
-verifier "$(echo "$sortie" | sed -n 7p)" "Attention : une séance est déjà prévue le 03.11.2026 à 14:30." "une séance annulée ne compte plus"
+verifier "$(echo "$sortie" | sed -n 7p)" "Attention : Anne Essai a déjà une séance le 03.11.2026 à 14:30 (60 min)." "une séance annulée ne compte plus"
 verifier "$(echo "$sortie" | sed -n 8p)" "NS-2026-11-03-14:30" "la référence libérée se reprend"
+verifier "$(echo "$sortie" | sed -n 9p)" "[]" "14:00 pour 30 minutes finit quand 14:30 commence"
+verifier "$(echo "$sortie" | sed -n 10p)" "Attention : 2 séances occupent déjà ce moment le 03.11.2026." "14:00 pour 45 minutes recouvre les deux séances de 14:30"
+verifier "$(echo "$sortie" | sed -n 11p)" "Attention : 2 séances occupent déjà ce moment le 03.11.2026." "15:00 tombe dans leur heure"
+verifier "$(echo "$sortie" | sed -n 12p)" "[Attention : Bruno Essai a déjà une séance le 03.11.2026 à 14:30 (60 min).]" "la séance déplacée ne se gêne pas elle-même"
 echo "$((total - echecs))/$total tests réussis"
 [ $echecs = 0 ]

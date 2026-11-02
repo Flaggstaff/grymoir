@@ -2074,8 +2074,8 @@ int main(void) {
                  evenement("q=4&clic=0"), get("/"),
                  evenement("q=5&z3=Anne+Rochat&z6=EPI&z7=03.12.2030&z8=10%3A00&z9=&z13=100"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_horaire.grymd", &sc);
-        NE_CONTIENT_PAS(sc.reponses[4], "Attention : une séance est déjà prévue");
-        CONTIENT(sc.reponses[6], "Attention : une séance est déjà prévue le 03.12.2030 à 10:00.");
+        NE_CONTIENT_PAS(sc.reponses[4], "a déjà une séance le");
+        CONTIENT(sc.reponses[6], "Attention : Anne Rochat a déjà une séance le 03.12.2030 à 10:00 (");   /* sur sa durée (2 novembre 2026) */
         liberer(&sc);
         remove("_essai_horaire.grymd");
     }

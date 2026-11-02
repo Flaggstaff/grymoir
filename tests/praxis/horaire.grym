@@ -24,7 +24,7 @@ Le pb vaut un nouveau patient :
     Le nom vaut « Bruno Essai ».
     Le pays vaut « Suisse ».
 Conserver le pb.
-Afficher "[" suivi de l'alerte d'horaire de 03.11.2026 et de 14:30 suivi de "]".
+Afficher "[" suivi de l'alerte d'horaire de 03.11.2026 et de 14:30 et d'absent suivi de "]".
 Le sb vaut une nouvelle séance :
     Le patient vaut le pb.
     Le soin vaut le soin d'essai.
@@ -36,8 +36,8 @@ Le sb vaut une nouvelle séance :
 Conserver le sb.
 La référence de rappel du sb devient la référence de rappel prévue du sb.
 Afficher la référence de rappel du sb.
-Afficher l'alerte d'horaire de 03.11.2026 et de 14:30.
-Afficher "[" suivi de l'alerte d'horaire de 03.11.2026 et de 15:30 suivi de "]".
+Afficher l'alerte d'horaire de 03.11.2026 et de 14:30 et d'absent.
+Afficher "[" suivi de l'alerte d'horaire de 03.11.2026 et de 15:30 et d'absent suivi de "]".
 Le sa vaut une nouvelle séance :
     Le patient vaut le pa.
     Le soin vaut le soin d'essai.
@@ -47,12 +47,12 @@ Le sa vaut une nouvelle séance :
     Le statut vaut « prévue ».
     Le paiement vaut « à payer ».
 Conserver le sa.
-Afficher l'alerte d'horaire de 03.11.2026 et de 14:30.
+Afficher l'alerte d'horaire de 03.11.2026 et de 14:30 et d'absent.
 La référence de rappel du sa devient la référence de rappel prévue du sa.
 Afficher la référence de rappel du sa.
 Le statut du sb devient « annulée ».
 La référence de rappel du sb devient absente.
-Afficher l'alerte d'horaire de 03.11.2026 et de 14:30.
+Afficher l'alerte d'horaire de 03.11.2026 et de 14:30 et d'absent.
 Le sc vaut une nouvelle séance :
     Le patient vaut le pb.
     Le soin vaut le soin d'essai.
@@ -63,3 +63,9 @@ Le sc vaut une nouvelle séance :
     Le paiement vaut « à payer ».
 Conserver le sc.
 Afficher la référence de rappel prévue du sc.
+Remarque : sur leur durée (2 novembre 2026) : 14:00 pour 45 minutes recouvre la séance de 14:30 ; 13:30 pour 60 aussi ;
+Remarque : 13:30 pour 60 au 3, mais 15:30, libre ; une séance qu'on déplace ne se gêne pas elle-même.
+Afficher "[" suivi de l'alerte d'horaire de 03.11.2026 et de 14:00 et de 30 suivi de "]".
+Afficher l'alerte d'horaire de 03.11.2026 et de 14:00 et de 45.
+Afficher l'alerte d'horaire de 03.11.2026 et de 15:00 et de 30.
+Afficher "[" suivi de l'alerte de chevauchement de 03.11.2026 et de 14:30 et de 60 et du sa suivi de "]".

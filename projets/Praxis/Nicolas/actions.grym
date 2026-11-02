@@ -98,12 +98,42 @@ La quittance immédiate d'un cabinet :
 
 Remarque : deux séances au même moment (31 octobre 2026) : la Nouvelle séance avertit dès que la date et l'heure sont choisies,
 Remarque : et enregistre quand même (un couple reçu ensemble) ; une séance annulée ne compte pas.
-L'alerte d'horaire d'un jour et d'un moment :
-    Si jour est absent ou moment est absent, rendre « ».
-    Le nombre pris vaut le nombre de séances conservées dont la date = jour et l'heure = moment et le statut ≠ « annulée ».
-    Si le nombre pris = 0, rendre « ».
-    Si le nombre pris = 1, rendre "Attention : une séance est déjà prévue le " suivi de jour suivi de " à " suivi de moment suivi de « . ».
-    Rendre "Attention : " suivi du nombre pris suivi de " séances sont déjà prévues le " suivi de jour suivi de " à " suivi de moment suivi de « . ».
+Remarque : sur leur durée (2 novembre 2026) : deux séances se chevauchent dès que leurs heures se recouvrent, chacune sur sa
+Remarque : durée (vide : 60 minutes, comme l'agenda) ; avant, seule la même heure exacte comptait, et 14:00 puis 14:30 passaient.
+Remarque : « exclue » : la séance qu'on déplace, qui ne se compare pas à elle-même. Une séance qui finit après minuit n'est pas
+Remarque : vue (l'heure tourne comme une horloge).
+Le nombre de chevauchements d'un jour et d'un moment et d'une longueur et d'une exclue :
+    Si jour est absent ou moment est absent, rendre 0.
+    La durée prise vaut 60.
+    Si longueur est présente et longueur > 0, la durée prise devient longueur.
+    La fin vaut moment + la durée prise minutes.
+    Le compte vaut 0.
+    Pour chaque séance conservée dont la date = jour et l'heure est présente et le statut ≠ « annulée » :
+        Si exclue est absente ou la séance ≠ exclue :
+            La sienne vaut 60.
+            Si la durée de la séance est présente, la sienne devient la durée de la séance.
+            Si l'heure de la séance < la fin et l'heure de la séance + la sienne minutes > moment, le compte devient le compte + 1.
+    Rendre le compte.
+
+Remarque : ce que l'alerte dit : la séance qui gêne, son patient, son heure et sa durée ; plusieurs, leur nombre.
+L'alerte de chevauchement d'un jour et d'un moment et d'une longueur et d'une exclue :
+    Le compte vaut le nombre de chevauchements de jour et de moment et de longueur et d'exclue.
+    Si le compte = 0, rendre « ».
+    Si le compte > 1, rendre "Attention : " suivi du compte suivi de " séances occupent déjà ce moment le " suivi de jour suivi de « . ».
+    La durée prise vaut 60.
+    Si longueur est présente et longueur > 0, la durée prise devient longueur.
+    La fin vaut moment + la durée prise minutes.
+    Pour chaque séance conservée dont la date = jour et l'heure est présente et le statut ≠ « annulée », par heure :
+        Si exclue est absente ou la séance ≠ exclue :
+            La sienne vaut 60.
+            Si la durée de la séance est présente, la sienne devient la durée de la séance.
+            Si l'heure de la séance < la fin et l'heure de la séance + la sienne minutes > moment :
+                Rendre "Attention : " suivi du nom du patient de la séance suivi de " a déjà une séance le " suivi de jour suivi de " à " suivi de l'heure de la séance suivi de " (" suivi de la sienne suivi de " min).".
+    Rendre « ».
+
+Remarque : l'alerte de la Nouvelle séance : la date, l'heure et la durée de l'écran.
+L'alerte d'horaire d'un jour et d'un moment et d'une longueur :
+    Rendre l'alerte de chevauchement de jour et de moment et de longueur et d'absent.
 
 Remarque : le préfixe des références SMS d'un cabinet : le sien (« NS » chez Nicolas, « LC » chez Lorianne), « PX » sans lui.
 Le préfixe des rappels d'un cabinet :
@@ -247,6 +277,77 @@ Pour trouver le patient d'une personne :
     Conserver le p.
     Rendre le p.
 
+Remarque : deux fiches pour une même personne (2 novembre 2026), par exemple une réservation Calendly faite avec une autre
+Remarque : adresse : le doublon se verse dans la fiche gardée. Ses séances, factures, quittances, ordonnances, décomptes et notes,
+Remarque : corbeille comprise, changent de fiche, numéros inchangés ; la fiche gardée reçoit ce qui lui manque (téléphone,
+Remarque : adresse, assurance…), jamais par-dessus ce qu'elle a ; les deux anamnèses se suivent. Le doublon, vide, part dans la
+Remarque : corbeille. Les rappels SMS des séances prévues suivent le téléphone de la fiche gardée.
+Le bilan d'une personne :
+    Si personne est absente, rendre « ».
+    Rendre "Séances : " suivi de (le nombre de séances conservées dont le patient = personne) suivi de ", factures : " suivi de (le nombre de factures conservées dont le patient = personne) suivi de ", quittances : " suivi de (le nombre de quittances conservées dont le patient = personne) suivi de ", notes : " suivi de (le nombre de notes conservées dont le patient = personne) suivi de « . ».
+
+Pour verser un doublon et une fiche :
+    Si le doublon = la fiche, refuser « Choisis une autre fiche que celle-ci : elle ne se verse pas en elle-même. ».
+    Si le nom de famille de la fiche est absent, le nom de famille de la fiche devient le nom de famille du doublon.
+    Si le prénom de la fiche est absent, le prénom de la fiche devient le prénom du doublon.
+    Si le téléphone de la fiche est absent, le téléphone de la fiche devient le téléphone du doublon.
+    Si le courriel de la fiche est absent, le courriel de la fiche devient le courriel du doublon.
+    Remarque : l'adresse va d'un bloc, seulement à une fiche qui n'en a aucune part : jamais une rue d'ici avec une localité de là.
+    Si la rue de la fiche est absente et le numéro postal de la fiche est absent et la localité de la fiche est absente :
+        La rue de la fiche devient la rue du doublon.
+        Le numéro de maison de la fiche devient le numéro de maison du doublon.
+        Le complément d'adresse de la fiche devient le complément d'adresse du doublon.
+        Le numéro postal de la fiche devient le numéro postal du doublon.
+        La localité de la fiche devient la localité du doublon.
+        Le pays de la fiche devient le pays du doublon.
+    Si la date de naissance de la fiche est absente, la date de naissance de la fiche devient la date de naissance du doublon.
+    Si l'assureur de la fiche est absent :
+        L'assureur de la fiche devient l'assureur du doublon.
+        Le numéro d'assuré de la fiche devient le numéro d'assuré du doublon.
+        Le numéro de carte d'assuré de la fiche devient le numéro de carte d'assuré du doublon.
+    Si l'assureur complémentaire de la fiche est absent :
+        L'assureur complémentaire de la fiche devient l'assureur complémentaire du doublon.
+        Le numéro d'assuré complémentaire de la fiche devient le numéro d'assuré complémentaire du doublon.
+        La facturation complémentaire de la fiche devient la facturation complémentaire du doublon.
+    Si le sexe de la fiche est absent, le sexe de la fiche devient le sexe du doublon.
+    Si le numéro AVS de la fiche est absent, le numéro AVS de la fiche devient le numéro AVS du doublon.
+    Si le numéro de cas de la fiche est absent, le numéro de cas de la fiche devient le numéro de cas du doublon.
+    Si le diagnostic de la fiche est absent, le diagnostic de la fiche devient le diagnostic du doublon.
+    Si le rappel par SMS de la fiche est absent, le rappel par SMS de la fiche devient le rappel par SMS du doublon.
+    Si la dernière dictée de la fiche est absente, la dernière dictée de la fiche devient la dernière dictée du doublon.
+    Si l'anamnèse du doublon est présente :
+        Si l'anamnèse de la fiche est présente, l'anamnèse de la fiche devient l'anamnèse de la fiche suivi de " [" suivi d'aujourd'hui suivi de "] " suivi de l'anamnèse du doublon.
+        Sinon, l'anamnèse de la fiche devient l'anamnèse du doublon.
+    Si l'archivage du doublon est absent, l'archivage de la fiche devient absent.
+    La vérification due de la fiche devient faux.
+    Pour chaque séance conservée dont le patient = le doublon :
+        Le patient de la séance devient la fiche.
+    Pour chaque séance supprimée dont le patient = le doublon :
+        Le patient de la séance devient la fiche.
+    Pour chaque facture conservée dont le patient = le doublon :
+        Le patient de la facture devient la fiche.
+    Pour chaque facture supprimée dont le patient = le doublon :
+        Le patient de la facture devient la fiche.
+    Pour chaque quittance conservée dont le patient = le doublon :
+        Le patient de la quittance devient la fiche.
+    Pour chaque quittance supprimée dont le patient = le doublon :
+        Le patient de la quittance devient la fiche.
+    Pour chaque ordonnance conservée dont le patient = le doublon :
+        Le patient de l'ordonnance devient la fiche.
+    Pour chaque ordonnance supprimée dont le patient = le doublon :
+        Le patient de l'ordonnance devient la fiche.
+    Pour chaque décompte conservé dont le patient = le doublon :
+        Le patient du décompte devient la fiche.
+    Pour chaque décompte supprimé dont le patient = le doublon :
+        Le patient du décompte devient la fiche.
+    Pour chaque note conservée dont le patient = le doublon :
+        Le patient de la note devient la fiche.
+    Pour chaque note supprimée dont le patient = le doublon :
+        Le patient de la note devient la fiche.
+    Supprimer le doublon.
+    Pour chaque séance conservée dont le patient = la fiche et le statut = « prévue » et la date ≥ aujourd'hui :
+        Programmer le rappel de la séance.
+
 Remarque : une réservation Calendly (un objet JSON de « scheduled_events ») : une séance prévue, si elle n'existe pas encore.
 Remarque : son soin (28 octobre 2026) : celui qui porte le nom du type de rendez-vous Calendly (« Ergothérapie »), sinon le soin
 Remarque : des réservations de la Configuration, sinon le premier soin.
@@ -318,7 +419,15 @@ Pour relire les réservations :
                 Si le relevé ne contient pas (« ; » suivi de la réservation calendly de la séance suivi de « ; ») :
                     Annuler le rappel de la séance.
                     Le statut de la séance devient « annulée ».
-            Rendre "Rendez-vous relus à " suivi de (maintenant en format technique) suivi de « . ».
+            Remarque : une réservation du site qui tombe sur une séance déjà prise dans Praxis (2 novembre 2026) : Calendly
+            Remarque : ne voit pas l'agenda de Praxis ; l'accueil le dit, Nicolas déplace l'une ou l'autre.
+            Le conflit vaut 0.
+            Pour chaque séance conservée dont le statut = « prévue » et la réservation calendly est présente et la date ≥ aujourd'hui :
+                Si le nombre de chevauchements de la date de la séance et de l'heure de la séance et de la durée de la séance et de la séance > 0, le conflit devient le conflit + 1.
+            Le relu vaut "Rendez-vous relus à " suivi de (maintenant en format technique) suivi de « . ».
+            Si le conflit = 1, rendre le relu suivi de " Attention : une réservation du site chevauche une séance de Praxis : voir l'agenda.".
+            Si le conflit > 1, rendre le relu suivi de " Attention : " suivi du conflit suivi de " réservations du site chevauchent une séance de Praxis : voir l'agenda.".
+            Rendre le relu.
         En cas d'échec :
             Rendre "Calendly n'a pas répondu : " suivi du motif de l'échec.
     Rendre « ».

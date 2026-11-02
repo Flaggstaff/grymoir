@@ -1,0 +1,65 @@
+Remarque : deux fiches pour une même personne (2 novembre 2026), essayées sans écran par tests/praxis-fusion : le doublon se
+Remarque : verse dans la fiche gardée ; données inventées.
+Utiliser « actions ».
+Le c vaut un nouveau cabinet :
+    Le nom vaut « Cabinet essai ».
+    Le pays vaut « Suisse ».
+    La facturation des absences vaut faux.
+    Le choix d'agenda vaut faux.
+    L'agenda vaut « Praxis ».
+    La facturation aux assurances vaut faux.
+Conserver le c.
+Le soin d'essai vaut un nouveau soin :
+    Le nom vaut « Massage ».
+    Le tarif vaut 100.
+    L'ordonnance exigée vaut faux.
+    La facturation vaut « patient ».
+Conserver le soin d'essai.
+La gardée vaut un nouveau patient :
+    Le nom vaut « Anne Rochat ».
+    Le pays vaut « Suisse ».
+La localité de la gardée devient « Bulle ».
+L'anamnèse de la gardée devient « Dos ».
+Conserver la gardée.
+Le double vaut un nouveau patient :
+    Le nom vaut « Anne Rochat (2) ».
+    Le pays vaut « Suisse ».
+Le courriel du double devient « anne@exemple.ch ».
+La localité du double devient « Fribourg ».
+L'anamnèse du double devient « Nuque ».
+La vérification due du double devient vrai.
+Conserver le double.
+Pour poser un patient et une date :
+    La s vaut une nouvelle séance :
+        Le patient vaut le patient.
+        Le soin vaut le soin d'essai.
+        La date vaut la date.
+        Le prix vaut 100.
+        Le statut vaut « faite ».
+        Le paiement vaut « à payer ».
+    Conserver la s.
+Poser la gardée et 01.10.2026.
+Poser le double et 08.10.2026.
+Poser le double et 15.10.2026.
+Pour chaque séance conservée dont le patient = le double et la date = 15.10.2026 :
+    Supprimer la séance.
+La n vaut une nouvelle note :
+    Le patient vaut le double.
+    La date vaut 08.10.2026.
+    Le contenu vaut « Confidentiel ».
+Conserver la n.
+Afficher le bilan de la gardée.
+Afficher le bilan du double.
+Verser le double et la gardée.
+Afficher le bilan de la gardée.
+Afficher le nombre de patients conservés.
+Afficher le nombre de patients supprimés.
+Afficher le courriel de la gardée.
+Afficher la localité de la gardée.
+Afficher la vérification due de la gardée.
+Afficher le nombre de notes conservées dont le patient = la gardée.
+Afficher le nombre de séances supprimées dont le patient = la gardée.
+Essayer :
+    Verser la gardée et la gardée.
+En cas d'échec :
+    Afficher le motif de l'échec.

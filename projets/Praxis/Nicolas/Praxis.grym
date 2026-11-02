@@ -34,6 +34,9 @@ La grille du calendrier vaut « ».
 Le titre du calendrier vaut « ».
 La date proposée vaut absent.
 L'heure proposée vaut absent.
+Remarque : le soin d'une séance suivante (2 novembre 2026), proposé à la Nouvelle séance avec sa durée et son prix.
+Le soin proposé vaut absent.
+La fusion faite vaut faux.
 
 Remarque : ce qui est cherché dans les listes des patients et des factures ; vide, tout.
 La recherche des patients vaut « ».
@@ -141,7 +144,7 @@ Remarque : les couleurs et la police du site de Nicolas Seydoux, à l'encre (pou
 Remarque : du cabinet (le cœur et le nom dessiné au départ), repris à chaque lancement ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
 Remarque : la version de Praxis, la même pour tous les cabinets ; la Configuration la montre. Elle change avec chaque
 Remarque : mise à jour livrée, ici et dans « application, version » du projet.grymatelier de chaque version (tests/praxis-versions).
-La version vaut « 2026.11.01 ».
+La version vaut « 2026.11.02 ».
 Les écrans ont la couleur « #46433B », le fond « #E8E2D6 », la police « polices/Outfit.ttf », le logo (le logo du cabinet conservé) et la signature (la signature du cabinet conservé).
 
 Remarque : la copie chiffrée de toute la base, avec ses clés, dans un dossier, nommée par l'application, le jour et l'heure :
@@ -198,7 +201,9 @@ Remarque : l'application ; jamais par-dessus une autre (« (2) », « (3) »… 
 Quand on clique sur « Fermer l'application » dans l'écran d'accueil :
     Fermer l'écran.
 
+Remarque : en partant (2 novembre 2026), les réservations du jour sont relues : leurs rappels SMS partent chez ASPSMS ce soir.
 Quand on ferme l'écran d'accueil :
+    Relire les réservations, qui donne l'état calendly.
     Le lieu vaut « Sauvegardes ».
     Si le dossier de sauvegarde du cabinet conservé est présent, le lieu devient le dossier de sauvegarde du cabinet conservé.
     Essayer :
@@ -283,7 +288,18 @@ L'écran du patient, « Patient », montre :
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
     côte à côte :
         un bouton « Archiver »,
-        un bouton « Supprimer », destructif, à confirmer par « Supprimer ce patient ? Il part dans la corbeille, avec ses séances et ses notes. ».
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer ce patient ? Il part dans la corbeille, avec ses séances et ses notes. »,
+        un bouton « Fusionner ».
+
+Remarque : fusionner deux fiches (2 novembre 2026) : celle qu'on a ouverte est gardée ; l'autre s'y verse, puis part vide dans
+Remarque : la corbeille. Les numéros des factures et quittances ne changent pas.
+L'écran de la fusion, « Fusionner deux fiches », montre :
+    le texte "Fiche gardée : " suivi du nom de la personne ouverte suivi de ". " suivi du bilan de la personne ouverte,
+    un doublon (patient), facultatif, avec recherche, avec l'indication « La fiche en double : tout ce qu'elle a passe sur la fiche gardée »,
+    le texte le bilan du doublon de l'écran,
+    côte à côte :
+        un bouton « Fusionner », destructif, à confirmer par « Verser cette fiche dans la fiche gardée ? Ses séances, factures, quittances et notes changent de fiche ; elle part vide dans la corbeille. » en tapant « fusionner »,
+        un bouton « Fermer ».
 
 Remarque : la page d'une séance : ce qui a été fait et payé ; à côté, le commentaire, dicté ou tapé.
 L'écran de la séance, « Séance », montre :
@@ -311,7 +327,8 @@ L'écran de la séance, « Séance », montre :
         un bouton « Espèces »,
         un bouton « Twint »,
         un bouton « Virement »,
-        un bouton « À payer ».
+        un bouton « À payer »,
+    un bouton « Séance suivante ».
 
 Remarque : un soin, ses tarifs et sa durée ; le code tarifaire est celui du Tarif 590.
 L'écran du soin, « Soin », montre :
@@ -551,7 +568,7 @@ L'écran de séance, « Nouvelle séance » en grand, montre :
             une date (date),
             une heure (heure), facultative,
             une durée (nombre entier), facultative, avec l'unité « min »,
-            le texte l'alerte d'horaire de la date de l'écran et de l'heure de l'écran, visible si l'alerte d'horaire de la date de l'écran et de l'heure de l'écran ≠ « »,
+            le texte l'alerte d'horaire de la date de l'écran et de l'heure de l'écran et de la durée de l'écran, visible si l'alerte d'horaire de la date de l'écran et de l'heure de l'écran et de la durée de l'écran ≠ « »,
         le groupe « Prix proposé », en couleur inversée :
             un prix (nombre), avec l'unité « CHF »,
             le texte « Dès la deuxième séance d'un même soin, le tarif de suivi s'applique. Le prix reste modifiable. »,
@@ -1665,7 +1682,11 @@ Pour caler une date, dans l'écran du calendrier :
         La g devient la g suivi de « | » suivi du rang de la plage suivi de " " suivi du début de la plage suivi de « - » suivi de la fin de la plage.
     La grille du calendrier devient la g.
 
+Remarque : les réservations du site relues aussi à l'ouverture de l'Agenda et des Séances (2 novembre 2026) : Praxis reste
+Remarque : ouvert la journée, une réservation prise à midi y entre sans attendre le lendemain. Sans Calendly, rien ne se passe.
 Quand on ouvre l'écran du calendrier :
+    Relire les réservations, qui donne l'état calendly.
+    Si l'état calendly contient « Attention », signaler l'état calendly.
     Si la vue d'agenda du cabinet conservé est présente, la vue de l'écran devient la vue d'agenda du cabinet conservé.
     Caler aujourd'hui.
 
@@ -1696,6 +1717,9 @@ Quand on déplace une séance dans l'écran du calendrier :
     L'heure de la séance devient l'heure d'arrivée de l'écran.
     Programmer le rappel de la séance.
     Signaler le nom du patient de la séance suivi de « , » puis la date de la séance en toutes lettres suivi de « , » puis l'heure de la séance suivi de « . ».
+    Remarque : arrivée sur une autre séance (2 novembre 2026) : le déplacement se fait, l'alerte le dit.
+    L'alerte vaut l'alerte de chevauchement de la date de la séance et de l'heure de la séance et de la durée de la séance et de la séance.
+    Si l'alerte ≠ « », signaler l'alerte.
 
 Remarque : une nouvelle séance depuis l'agenda : le jour montré (en semaine : aujourd'hui s'il en est, sinon le lundi).
 Quand on clique sur « Nouvelle séance » dans l'écran du calendrier :
@@ -1992,6 +2016,21 @@ Quand on clique sur « Nouvelle séance » dans l'écran du patient :
     Ouvrir l'écran de séance.
     La personne proposée devient absent.
 
+Remarque : la séance suivante (2 novembre 2026), depuis la fiche d'une séance : même patient, même soin, même heure, une
+Remarque : semaine plus tard (une semaine après aujourd'hui pour une séance ancienne) ; tout reste modifiable avant d'enregistrer.
+Quand on clique sur « Séance suivante » dans l'écran de la séance :
+    La s vaut la séance ouverte.
+    La personne proposée devient le patient de la s.
+    Le soin proposé devient le soin de la s.
+    La date proposée devient la date de la s + 7.
+    Si la date proposée ≤ aujourd'hui, la date proposée devient aujourd'hui + 7.
+    Si l'heure de la s est présente, l'heure proposée devient l'heure de la s.
+    Ouvrir l'écran de séance.
+    La personne proposée devient absent.
+    Le soin proposé devient absent.
+    La date proposée devient absente.
+    L'heure proposée devient absente.
+
 Quand on choisit une séance dans l'écran du patient :
     La séance ouverte devient la séance choisie de l'écran.
     Ouvrir l'écran de la séance.
@@ -2006,6 +2045,25 @@ Remarque : un patient supprimé emporte ses séances, ses notes et ses pièces d
 Quand on clique sur « Supprimer » dans l'écran du patient :
     Si le compte des pièces de la personne ouverte > 0, refuser « Ce patient a des factures ou des quittances, gardées dix ans : archive-le plutôt. ».
     Supprimer la personne ouverte.
+    Fermer l'écran.
+
+Remarque : fusionner (2 novembre 2026) : une fiche en double se verse dans celle-ci (actions.grym, « verser »).
+Quand on clique sur « Fusionner » dans l'écran du patient :
+    La fusion faite devient faux.
+    Ouvrir l'écran de la fusion.
+    Remarque : la fiche a reçu ce qui lui manquait : rouverte, elle le montre ; Enregistrer ne l'écrase pas avec l'écran d'avant.
+    Si la fusion faite, fermer l'écran.
+
+Quand on clique sur « Fusionner » dans l'écran de la fusion :
+    Si le doublon de l'écran est absent, refuser « Choisis d'abord la fiche en double. ».
+    La d vaut le doublon de l'écran.
+    Le versé vaut le nom de la d.
+    Verser la d et la personne ouverte.
+    La fusion faite devient vrai.
+    Signaler "Fiche « " suivi du versé suivi de " » versée dans « " suivi du nom de la personne ouverte suivi de " » ; elle est dans la corbeille.".
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran de la fusion :
     Fermer l'écran.
 
 Remarque : archiver : le patient quitte la liste des patients, rien ne se perd ; « Archives » le montre et le ramène.
@@ -2092,6 +2150,11 @@ Quand on ouvre l'écran de séance :
     Si la date proposée est présente, la date de l'écran devient la date proposée.
     Si l'heure proposée est présente, l'heure de l'écran devient l'heure proposée.
     Si la personne proposée est présente, le patient de l'écran devient la personne proposée.
+    Si le soin proposé est présent :
+        Le soin de l'écran devient le soin proposé.
+        Si la durée du soin proposé est présente, la durée de l'écran devient la durée du soin proposé.
+        Si la personne proposée est présente, le prix de l'écran devient le prix conseillé de la personne proposée et du soin proposé.
+        Sinon, le prix de l'écran devient le tarif du soin proposé.
 
 Remarque : le prix se propose dès que le soin est choisi, à son tarif ; le patient choisi, il devient le prix conseillé (le tarif de suivi dès la deuxième séance) ; dans l'ordre qu'on veut, toujours modifiable.
 Remarque : l'événement teste lui-même la présence des deux zones : elles ne l'arrêtent pas tant que l'autre est vide.
@@ -2203,6 +2266,8 @@ Pour délimiter un choix :
         La fin des séances devient aujourd'hui − 1.
 
 Quand on ouvre l'écran des prévues :
+    Relire les réservations, qui donne l'état calendly.
+    Si l'état calendly contient « Attention », signaler l'état calendly.
     Délimiter « Aujourd'hui ».
 
 Quand on change la période dans l'écran des prévues :
