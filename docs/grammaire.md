@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.80 de la spécification, révisée le 2 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.81 de la spécification, révisée le 2 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -318,7 +318,9 @@ Le prix vaut le texte saisi en nombre.
 - **Contenir.** `t contient p`, `t commence par p`, `t finit par p`, et leurs négations `ne contient pas`, `ne commence pas par`, `ne finit pas par`, sont des conditions. Elles ne tiennent compte **ni des accents ni de la casse**, comme le tri des recherches (§ 16.4) : `« Élodie Müller » contient « MUL »` est vrai. Un texte contient le texte vide. L'égalité, elle, reste exacte (`=`). Deux textes sont attendus : « « contient » compare deux textes, pas un nombre. »
 - Dans une condition `dont` (§ 16.4), elles s'appliquent à un champ `(texte)` : `dont le nom contient « mül »`, `dont la ville ne commence pas par « b »`. Un champ absent n'est jamais retenu (§ 16.9). Un autre type : « « âge » : contient, commence par et finit par s'appliquent à un texte. »
 - Aucun mot réservé : `contient`, `commence`, `finit` et `en` ne comptent qu'après une valeur, et seulement suivis de ce qu'ils annoncent (`par`, `pas`, un texte, une cible de conversion). L'aide à la saisie (§ 8) propose `contient`, `commence par`, `finit par` après une valeur dont le type texte est connu à l'analyse.
-- Effacer ou remplacer une partie d'un texte, le découper, en extraire un morceau : reportés.
+- **Remplacer** *(2.81)*. `t en remplaçant « a » par « b »` rend le texte `t` où chaque occurrence de `« a »` devient `« b »`, de gauche à droite, sans revenir sur ce qui vient d'être remplacé : `« CQ CQ de HB9 » en remplaçant « CQ » par « appel »` donne `appel appel de HB9`. Il se lie comme `sans`, à la valeur qui le précède, et se répète : `t en remplaçant « - » par « » en remplaçant « a » par « x »`. Un remplaçant vide retire, comme `sans`. Les refus : « « en remplaçant » s'applique à un texte, pas à un nombre. » ; « « en remplaçant » cherche un texte vide : rien à remplacer. » ; « « par » attendu : « t en remplaçant « a » par « b » ». » En forme compacte : `t _remplaçant « a » _par « b »`.
+- **Les mots d'un texte** *(2.81)*. `Pour chaque mot parmi les mots de t :` parcourt les mots de `t` dans l'ordre, **doublons compris** (« CQ CQ » fait deux tours, ce qu'un ensemble aurait fusionné, § 13.9) ; le texte est lu une fois, au début. Les mots sont séparés par les espaces, tabulations, retours à la ligne et espaces insécables (U+00A0, U+202F) ; la ponctuation reste collée au mot (« Neuf, ») et `sans « , »` l'ôte ; les marques invisibles de la relecture d'une transcription (U+2062 à U+2064, § 15.8) sont retirées des mots. `le nombre de mots de t` les compte. `de`, `d'` et `du` s'écrivent comme ailleurs : `les mots du texte`. Un texte vide n'a aucun mot. `les mots de t` ne se range pas encore dans une variable : seulement dans `Pour chaque … parmi` et `le nombre de mots de`. En forme compacte : `_pour_chaque m _parmi _mots t`, `_nombre_mots t`.
+- Extraire un morceau d'un texte (le 3e caractère, les 5 premiers) : reporté.
 - En forme compacte : `t.longueur`, `t _en_majuscules`, `t _en_minuscules`, `t _en_nombre`, `t _en_nombre_entier`, `t _en_date`, `t _en_année`, `t _en_vrai_ou_faux` ; `t _inclut p`, `t _commence p`, `t _finit p`, et `_non (t _inclut p)`. `_contient` reste réservé au champ multiple (§ 16.13).
 
 ## 5. Décider
@@ -2621,3 +2623,4 @@ Quand on déplace une séance dans l'écran de l'agenda :
 | 2.77 | 2026-11-01 | § 22.24 : l'agenda dans le navigateur, sans JavaScript : la grille en quarts d'heure, un clic pour un créneau, « Déplacer » puis un quart d'heure pour déposer |
 | 2.78 | 2026-11-01 | § 15.8 : `le morse de x` (le texte lu dans un son, ou absent) et `la transcription de x` (sur demande) ; le cœur lie la bibliothèque mathématique du C |
 | 2.80 | 2026-11-02 | § 15.8 : `Amorcer la transcription avec t.`, le vocabulaire attendu par le transcripteur |
+| 2.81 | 2026-11-02 | § 4.5 : `t en remplaçant « a » par « b »` (instruction `REMPLACER`) ; `Pour chaque mot parmi les mots de t`, `le nombre de mots de t` (instruction `MOTS`) |

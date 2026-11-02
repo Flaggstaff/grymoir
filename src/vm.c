@@ -6655,6 +6655,95 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, r);
             break;
         }
+        case I_REMPLACER: {   /* « t en remplaçant « a » par « b » » : chaque occurrence, de gauche à droite (2.81) */
+            Valeur y = depiler(&pile), x = depiler(&pile), t = depiler(&pile);
+            char *mp = NULL;
+            if (t.type == V_ABSENT) mp = message_absent(&t);
+            else if (t.type != V_TEXTE) mp = grym_formater("« en remplaçant » s'applique à un texte, pas à %s.", nom_type(t.type));
+            else if (x.type != V_TEXTE) mp = grym_formater("Ce qu'on remplace est un texte, pas %s.", nom_type(x.type));
+            else if (!x.texte || !*x.texte) mp = grym_dupliquer("« en remplaçant » cherche un texte vide : rien à remplacer.");
+            else if (y.type == V_ABSENT) mp = message_absent(&y);
+            else if (y.type != V_TEXTE) mp = grym_formater("Ce qui remplace est un texte, pas %s.", nom_type(y.type));
+            Chaine c = {0};
+            if (!mp) {
+                const char *p = t.texte ? t.texte : "";
+                const size_t l = strlen(x.texte);
+                const char *q;
+                while ((q = strstr(p, x.texte)) != NULL) {
+                    char *morceau = grym_allouer((size_t)(q - p) + 1);
+                    memcpy(morceau, p, (size_t)(q - p));
+                    morceau[q - p] = 0;
+                    chaine_ajouter(&c, morceau);
+                    free(morceau);
+                    chaine_ajouter(&c, y.texte ? y.texte : "");
+                    p = q + l;
+                }
+                chaine_ajouter(&c, p);
+            }
+            char *r = chaine_rendre(&c);
+            valeur_liberer(&y);
+            valeur_liberer(&x);
+            valeur_liberer(&t);
+            if (mp) { free(r); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, vi_texte(r ? r : ""));
+            free(r);
+            break;
+        }
+        case I_MOTS: {   /* « les mots de t » (2.81) : séparés par les espaces, tabulations, retours à la ligne et espaces
+                          * insécables ; la ponctuation reste au mot ; les marques invisibles de la relecture (U+2062 à
+                          * U+2064, § 15.8) sont ôtées, un mot douteux est un mot comme un autre */
+            Valeur t = depiler(&pile);
+            if (t.type != V_TEXTE) {
+                char *mp = t.type == V_ABSENT ? message_absent(&t)
+                                              : grym_formater("« les mots de » s'applique à un texte, pas à %s.", nom_type(t.type));
+                valeur_liberer(&t);
+                ok = echouer(diag, b, debut, mp);
+                break;
+            }
+            Valeur e = ensemble_vide();
+            Liste *l = e.liste;
+            Chaine mot = {0};
+            size_t n_mot = 0;
+            const unsigned char *p = (const unsigned char *)(t.texte ? t.texte : "");
+            for (;;) {
+                int separe = 0, saute = 0;
+                size_t lg = 1;
+                if (!*p) separe = 1;
+                else if (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r') separe = 1;
+                else if (p[0] == 0xC2 && p[1] == 0xA0) { separe = 1; lg = 2; }                       /* U+00A0 */
+                else if (p[0] == 0xE2 && p[1] == 0x80 && p[2] == 0xAF) { separe = 1; lg = 3; }       /* U+202F */
+                else if (p[0] == 0xE2 && p[1] == 0x81 && p[2] >= 0xA2 && p[2] <= 0xA4) { saute = 1; lg = 3; }   /* U+2062-2064 */
+                if (separe) {
+                    if (n_mot) {
+                        if (l->n == l->cap) {
+                            l->cap = l->cap ? l->cap * 2 : 8;
+                            Valeur *nv = grym_allouer(l->cap * sizeof *nv);
+                            if (l->n) memcpy(nv, l->valeurs, l->n * sizeof *nv);
+                            free(l->valeurs);
+                            l->valeurs = nv;
+                        }
+                        l->valeurs[l->n++] = vi_texte_pris(chaine_rendre(&mot));
+                        mot = (Chaine){0};
+                        n_mot = 0;
+                    }
+                    if (!*p) break;
+                } else if (!saute) {
+                    if (*p >= 0xC0) {   /* un caractère de plusieurs octets, recopié entier */
+                        lg = *p >= 0xF0 ? 4 : *p >= 0xE0 ? 3 : 2;
+                        for (size_t q = 1; q < lg; q++) if (!p[q]) { lg = q; break; }
+                    }
+                    char tmp[5] = {0};
+                    memcpy(tmp, p, lg);
+                    chaine_ajouter(&mot, tmp);
+                    n_mot++;
+                }
+                p += lg;
+            }
+            free(chaine_rendre(&mot));
+            valeur_liberer(&t);
+            empiler(&pile, e);
+            break;
+        }
         case I_RETIRER: {   /* « le numéro AVS sans « . » » : chaque occurrence retirée, de gauche à droite (2.64) */
             Valeur x = depiler(&pile), t = depiler(&pile);
             char *mp = NULL;

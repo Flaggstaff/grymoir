@@ -144,6 +144,129 @@ L'amorce d'un réglage :
     Si le vocabulaire personnel du réglage est présent, rendre le vocabulaire suivi de " " suivi du vocabulaire personnel du réglage.
     Rendre le vocabulaire.
 
+Remarque : l'alphabet phonétique en lettres (2 novembre 2026) : « Hotel Bravo Neuf Alpha Bravo Charlie » devient « HB9ABC ».
+Remarque : une suite d'au moins deux mots épelés, dont au moins une lettre de l'OTAN, se resserre en un mot ; un mot seul reste
+Remarque : tel quel (« Charlie » le prénom, « un » l'article). Les chiffres se disent en français ; Whisper les écrit souvent déjà
+Remarque : en chiffres (« 9 »), qui comptent aussi. Sans rien à resserrer, le texte reste intact, marques de relecture comprises.
+Le mot nettoyé d'un mot :
+    Rendre le mot en minuscules sans « , » sans « . » sans « ; » sans « : » sans « ! » sans « ? ».
+
+La lettre d'un mot :
+    Le m vaut le mot nettoyé du mot.
+    Si le m = « alpha », rendre « A ».
+    Si le m = « alfa », rendre « A ».
+    Si le m = « bravo », rendre « B ».
+    Si le m = « charlie », rendre « C ».
+    Si le m = « delta », rendre « D ».
+    Si le m = « echo », rendre « E ».
+    Si le m = « écho », rendre « E ».
+    Si le m = « foxtrot », rendre « F ».
+    Si le m = « golf », rendre « G ».
+    Si le m = « hotel », rendre « H ».
+    Si le m = « hôtel », rendre « H ».
+    Si le m = « india », rendre « I ».
+    Si le m = « juliett », rendre « J ».
+    Si le m = « juliette », rendre « J ».
+    Si le m = « juliet », rendre « J ».
+    Si le m = « kilo », rendre « K ».
+    Si le m = « lima », rendre « L ».
+    Si le m = « mike », rendre « M ».
+    Si le m = « november », rendre « N ».
+    Si le m = « oscar », rendre « O ».
+    Si le m = « papa », rendre « P ».
+    Si le m = « quebec », rendre « Q ».
+    Si le m = « québec », rendre « Q ».
+    Si le m = « romeo », rendre « R ».
+    Si le m = « roméo », rendre « R ».
+    Si le m = « sierra », rendre « S ».
+    Si le m = « tango », rendre « T ».
+    Si le m = « uniform », rendre « U ».
+    Si le m = « victor », rendre « V ».
+    Si le m = « whiskey », rendre « W ».
+    Si le m = « whisky », rendre « W ».
+    Si le m = « x-ray », rendre « X ».
+    Si le m = « xray », rendre « X ».
+    Si le m = « yankee », rendre « Y ».
+    Si le m = « zulu », rendre « Z ».
+    Rendre « ».
+
+Le chiffre d'un mot :
+    Le m vaut le mot nettoyé du mot.
+    Si le m = « zéro », rendre « 0 ».
+    Si le m = « zero », rendre « 0 ».
+    Si le m = « un », rendre « 1 ».
+    Si le m = « deux », rendre « 2 ».
+    Si le m = « trois », rendre « 3 ».
+    Si le m = « quatre », rendre « 4 ».
+    Si le m = « cinq », rendre « 5 ».
+    Si le m = « six », rendre « 6 ».
+    Si le m = « sept », rendre « 7 ».
+    Si le m = « huit », rendre « 8 ».
+    Si le m = « neuf », rendre « 9 ».
+    Si le m = « 0 » ou le m = « 1 » ou le m = « 2 » ou le m = « 3 » ou le m = « 4 », rendre le m.
+    Si le m = « 5 » ou le m = « 6 » ou le m = « 7 » ou le m = « 8 » ou le m = « 9 », rendre le m.
+    Rendre « ».
+
+Remarque : un préfixe déjà écrit (« HB9 », « F4 ») : un mot court, de six signes au plus, qui contient un chiffre ; il rejoint
+Remarque : la suite épelée qui le suit ou le précède (« HB9 Alpha Bravo Charlie » : « HB9ABC »).
+Le préfixe d'un mot :
+    Le m vaut le mot nettoyé du mot.
+    Si la longueur du m > 6 ou la longueur du m < 2, rendre « ».
+    Le chiffré vaut faux.
+    Pour chaque n de 0 à 9 :
+        Si le m contient (« » suivi de n), le chiffré devient vrai.
+    Si le chiffré, rendre le m en majuscules.
+    Rendre « ».
+
+Remarque : la ponctuation qui finissait la suite épelée, gardée après elle.
+La fin d'un mot :
+    Si le mot contient « , », rendre « , ».
+    Si le mot contient « . », rendre « . ».
+    Si le mot contient « ? », rendre « ? ».
+    Si le mot contient « ! », rendre « ! ».
+    Rendre « ».
+
+La jonction d'un début et d'une suite :
+    Si le début = « », rendre la suite.
+    Si la suite = « », rendre le début.
+    Rendre le début suivi de " " suivi de la suite.
+
+L'épellation d'une phrase :
+    Si la phrase est absente, rendre absent.
+    Le résultat vaut « ».
+    Le serré vaut « ».
+    L'original vaut « ».
+    La ponctuation vaut « ».
+    Le pris vaut 0.
+    Le compte OTAN vaut 0.
+    Le converti vaut faux.
+    Remarque : « ␄ », un dernier mot qui ne s'épelle jamais : il referme la dernière suite, puis s'efface.
+    Pour chaque mot parmi les mots de (la phrase suivi de " ␄") :
+        La l vaut la lettre du mot.
+        Le c vaut le chiffre du mot.
+        Si la l = « » et le c = « », le c devient le préfixe du mot.
+        Si la l ≠ « » ou le c ≠ « » :
+            Si la l ≠ « » :
+                Le serré devient le serré suivi de la l.
+                Le compte OTAN devient le compte OTAN + 1.
+            Sinon, le serré devient le serré suivi du c.
+            L'original devient la jonction de l'original et du mot.
+            La ponctuation devient la fin du mot.
+            Le pris devient le pris + 1.
+        Sinon :
+            Si le pris ≥ 2 et le compte OTAN ≥ 1 :
+                Le résultat devient la jonction du résultat et du serré suivi de la ponctuation.
+                Le converti devient vrai.
+            Sinon, le résultat devient la jonction du résultat et de l'original.
+            Si le mot ≠ « ␄ », le résultat devient la jonction du résultat et du mot.
+            Le serré devient « ».
+            L'original devient « ».
+            La ponctuation devient « ».
+            Le pris devient 0.
+            Le compte OTAN devient 0.
+    Si le converti, rendre le résultat.
+    Rendre la phrase.
+
 Remarque : la veille (1er novembre 2026) : le plus récent en haut, en cartes (l'heure, le poste, la transcription), sur une
 Remarque : période et pour un poste ou tous ; « Fermer » arrête la veille, après une question.
 L'écran de veille montre :
@@ -212,6 +335,7 @@ Quand un poste capte un son dans l'écran de veille :
     Amorcer la transcription avec l'amorce du réglage conservé.
     Le morse du p devient le morse du son capté.
     Si le morse du p est absent et la parole transcrite du poste, la transcription du p devient la transcription du son capté.
+    Si la transcription du p est présente, la transcription du p devient l'épellation de la transcription du p.
     Remarque : la parole traduite en français si le poste le veut ; le morse, fait d'abréviations, ne se traduit pas.
     Si la transcription du p est présente et la traduction voulue du poste :
         Traduire la transcription du p, qui donne le texte traduit.

@@ -1324,6 +1324,23 @@ static void essais_signaler(void) {   /* 2.71 : un message après un geste réus
          "~Un calcul ne signale rien");
 }
 
+static void essais_mots(void) {   /* 2.81 : les mots d'un texte, et remplacer dans un texte */
+    PROG("La phrase vaut « CQ CQ  de Hotel Bravo Neuf, Alpha ».\nAfficher le nombre de mots de la phrase.\n"
+         "Pour chaque mot parmi les mots de la phrase :\n    Afficher « [ » suivi de mot suivi de « ] ».",
+         "7\n[CQ]\n[CQ]\n[de]\n[Hotel]\n[Bravo]\n[Neuf,]\n[Alpha]");   /* doublons gardés, ponctuation au mot */
+    PROG("Afficher le nombre de mots de « ».\nPour chaque m parmi les mots de «   », afficher m.\nAfficher « fin ».", "0\nfin");
+    PROG("Pour chaque m parmi les mots de \"a\u00a0b\u202fc\td\", afficher m.", "a\nb\nc\nd");   /* insécables */
+    PROG("Le t vaut \"\u2064Hotel \u2062Brovo\u2063\".\nPour chaque m parmi les mots du t, afficher m.", "Hotel\nBrovo");   /* § 15.8 */
+    PROG("Afficher « CQ CQ de HB9 » en remplaçant « CQ » par « appel ».", "appel appel de HB9");
+    PROG("Afficher « a-b-c » en remplaçant « - » par « » en remplaçant « a » par « x ».", "xbc");   /* enchaîné */
+    PROG("Le t vaut « Alpha ».\nLe r vaut « A ».\nAfficher le t en remplaçant « Alpha » par le r suivi de « ! ».", "A!");
+    PROG("Afficher « a » en remplaçant « » par « b ».", "~cherche un texte vide");
+    PROG("Afficher 3 en remplaçant « 3 » par « b ».", "~s'applique à un texte");
+    PROG("Le n vaut 3.\nPour chaque m parmi les mots du n, afficher m.", "~s'applique à un texte");
+    PROG("Afficher « a » en remplaçant « a » « b ».", "~« par » attendu");
+    PROG("Les couleurs valent « rouge » et « vert ».\nPour chaque c parmi les couleurs, afficher c.", "rouge\nvert");   /* l'ensemble, intact */
+}
+
 static void essais_amorcer(void) {   /* 2.80 : le vocabulaire du transcripteur, donné par le programme */
     const char *src =
         "L'écran de veille montre :\n    un bouton « Amorcer »,\n    un bouton « Retirer »,\n    un bouton « Fermer ».\n"
@@ -4729,6 +4746,7 @@ int main(void) {
     essais_ecrans();
     essais_signaler();
     essais_amorcer();
+    essais_mots();
     essais_second_tri();
     essais_agenda();
     essais_morse();

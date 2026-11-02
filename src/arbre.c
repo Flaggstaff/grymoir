@@ -548,6 +548,20 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_REMPLACER:
+        chaine_ajouter(c, "(remplacer ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[2], c);
+        chaine_ajouter(c, ")");
+        return;
+    case N_MOTS:
+        chaine_ajouter(c, n->forme ? "(nombre-mots " : "(mots ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_SANS:
         chaine_ajouter(c, "(sans ");
         decrire(n->enfants[0], c);

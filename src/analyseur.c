@@ -739,6 +739,8 @@ static int mot_de_nom(const Analyse *a, size_t k) {
             || (u->type == J_ELISION && strcmp(u->valeur, "l") == 0))
             return 0;
     }
+    /* « en remplaçant » ouvre « … en remplaçant « a » par « b » » (2.81), hors du nom */
+    if (t->type == J_MOT && est_mot(t, "en") && k + 1 < a->n && est_mot(&a->j[k + 1], "remplaçant")) return 0;
     if (t->type == J_MOT) return !est_reserve(t);
     if (t->type == J_ELISION)
         return !(strcmp(t->valeur, "n") == 0 && k + 1 < a->n && est_mot(&a->j[k + 1], "est"));
@@ -856,7 +858,7 @@ static const char *type_statique(const Noeud *n) {
     case N_HEURE: case N_MAINTENANT: return "heure";
     case N_FICHIER: case N_DOCUMENT: return "fichier";
     case N_CADRE: return "texte";
-    case N_COLLAGE: case N_ELISION: case N_SANS: return "texte";   /* N_SANS : 2.64 */
+    case N_COLLAGE: case N_ELISION: case N_SANS: case N_REMPLACER: return "texte";   /* N_SANS : 2.64 ; N_REMPLACER : 2.81 */
     case N_REPONSE: return n->texte2;
     case N_MOTIF: return "texte";
     case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure"
@@ -1664,6 +1666,7 @@ static void arrets(Analyse *a, const char *m1, const char *m2);
 static Symbole *ensemble_en(Analyse *a, size_t k, size_t *fin);
 static Noeud *expression_avant(Analyse *a, const char *m1, const char *m2);
 static Noeud *nom_ensemble(Analyse *a);
+static Noeud *mots_de(Analyse *a);
 
 static int contient_champ_dont(const Noeud *n) {
     if (n->type == N_CHAMP_DONT) return 1;
@@ -2323,6 +2326,18 @@ static Noeud *base(Analyse *a) {
                 return n;
             }
         }
+        /* « le nombre de mots de la transcription » (2.81) */
+        if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && est_mot(voir(a, 2), "de") && est_mot(voir(a, 3), "mots")
+            && (de_ou_d(voir(a, 4)) || est_mot(voir(a, 4), "du")) && !ensemble_en(a, a->i + 3, &(size_t){0})) {
+            for (int k = 0; k < 4; k++) avancer(a);
+            Noeud *texte = mots_de(a);
+            if (!texte) return NULL;
+            Noeud *n = noeud_creer(N_MOTS, t->ligne, t->colonne, t->debut);
+            n->forme = 1;
+            noeud_ajouter(n, texte);
+            n->fin = texte->fin;
+            return n;
+        }
         /* « le nombre d'éléments du champ « collection » de r » (2.60) */
         if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && voir(a, 2)->type == J_ELISION && est_mot(voir(a, 3), "éléments")
             && est_mot(voir(a, 4), "du") && est_mot(voir(a, 5), "champ") && voir(a, 6)->type == J_TEXTE) {
@@ -2920,6 +2935,32 @@ static Noeud *conversion(Analyse *a, Noeud *g) {
             noeud_ajouter(n, g);
             noeud_ajouter(n, x);
             n->fin = x->fin;
+            g = n;
+            continue;
+        }
+        if (g && est_mot(cour(a), "en") && est_mot(voir(a, 1), "remplaçant")) {
+            /* « la transcription en remplaçant « Hotel » par « H » » (2.81) : chaque occurrence, de gauche à droite ;
+             * se lie comme « sans », à la valeur qui précède, et se répète */
+            Noeud *n = noeud_creer(N_REMPLACER, g->ligne, g->colonne, g->debut);
+            n->op_ligne = cour(a)->ligne;
+            n->op_colonne = cour(a)->colonne;
+            avancer(a);
+            avancer(a);
+            Noeud *x = base(a);
+            if (!x) { noeud_liberer(n); noeud_liberer(g); return NULL; }
+            if (!est_mot(cour(a), "par")) {
+                noeud_liberer(x);
+                noeud_liberer(n);
+                noeud_liberer(g);
+                return erreur(a, cour(a), grym_dupliquer("« par » attendu : « t en remplaçant « a » par « b » »."));
+            }
+            avancer(a);
+            Noeud *y = base(a);
+            if (!y) { noeud_liberer(x); noeud_liberer(n); noeud_liberer(g); return NULL; }
+            noeud_ajouter(n, g);
+            noeud_ajouter(n, x);
+            noeud_ajouter(n, y);
+            n->fin = y->fin;
             g = n;
             continue;
         }
@@ -4728,6 +4769,22 @@ static int de_ou_d(const Jeton *t) {
     return est_mot(t, "de") || (t->type == J_ELISION && strcmp(t->valeur, "d") == 0);
 }
 
+/* « … de la transcription », « … du texte », « … d'une phrase », « … de « CQ CQ » » : le texte dont on prend les mots
+ * (2.81), lu après « de », « d' » ou « du » ; le jeton courant est cette préposition. */
+static Noeud *mots_de(Analyse *a) {
+    const Jeton *p = cour(a);
+    if (est_mot(p, "du")) {
+        avancer(a);
+        a->article_force = ART_LE;
+        a->jeton_force = p;
+        Noeud *x = base(a);
+        a->article_force = ART_AUCUN;
+        return x;
+    }
+    avancer(a);
+    return base(a);
+}
+
 /* Tant que condition , phrase | : bloc */
 static Noeud *tant_que(Analyse *a, int colonne) {
     Jeton *t = cour(a);
@@ -4907,6 +4964,46 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
         size_t k2 = d, fe;
         if (a->j[k2].type == J_CROCHETS) k2++;
         else while (mot_de_nom(a, k2) && !est_mot(&a->j[k2], "parmi")) k2++;
+        if (k2 > d && est_mot(&a->j[k2], "parmi") && est_mot(&a->j[k2 + 1], "les") && est_mot(&a->j[k2 + 2], "mots")
+            && (de_ou_d(&a->j[k2 + 3]) || est_mot(&a->j[k2 + 3], "du")) && !ensemble_en(a, k2 + 2, &fe)
+            && article_de(&a->j[d]) == ART_AUCUN) {
+            /* « Pour chaque mot parmi les mots de la transcription : » (2.81) : les mots du texte, lus une fois au début,
+             * dans l'ordre, doublons compris */
+            char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k2);
+            if (visible(a, nom)) {
+                erreur(a, &a->j[d], grym_formater("« %s » existe déjà : choisis un autre nom.", nom));
+                free(nom);
+                return NULL;
+            }
+            a->i = k2 + 3;
+            Noeud *texte = mots_de(a);
+            if (!texte) { free(nom); return NULL; }
+            Noeud *source = noeud_creer(N_MOTS, a->j[k2 + 1].ligne, a->j[k2 + 1].colonne, a->j[k2 + 1].debut);
+            noeud_ajouter(source, texte);
+            source->fin = texte->fin;
+            size_t sauve = a->portee->n;
+            portee_declarer(a->portee, nom, GENRE_LIBRE, t->ligne);
+            Symbole *s = &a->portee->s[a->portee->n - 1];
+            s->lecture_seule = 1;
+            int case_el = s->local = a->nb_locaux++;
+            int case_ens = a->nb_locaux++;
+            a->nb_locaux++;   /* rang */
+            int forme = 0;
+            a->boucle++;
+            Noeud *corps = branche(a, colonne, "Pour chaque", &forme);
+            a->boucle--;
+            portee_tronquer(a->portee, sauve);
+            if (!corps) { noeud_liberer(source); free(nom); return NULL; }
+            Noeud *n = noeud_creer(P_POUR_TABLEAU, t->ligne, t->colonne, t->debut);
+            n->op = 'p';
+            n->texte = nom;
+            n->local = case_el;
+            n->entier = case_ens;
+            noeud_ajouter(n, source);
+            noeud_ajouter(n, corps);
+            n->fin = corps->fin;
+            return n;
+        }
         if (k2 > d && est_mot(&a->j[k2], "parmi") && est_mot(&a->j[k2 + 1], "les") && ensemble_en(a, k2 + 2, &fe)
             && article_de(&a->j[d]) == ART_AUCUN) {
             /* « Pour chaque couleur parmi les couleurs : » (§ 13.9) : l'ensemble figé au début, parcouru dans l'ordre */

@@ -146,10 +146,12 @@ typedef enum {
     I_JSON_LISTE,       /* opérande : le chemin (constante) ; remplace la réponse par l'ensemble des éléments de la liste (2.60) */
     I_RETIRER,          /* dépile le texte à retirer, puis le texte ; empile le texte sans aucune de ses occurrences (2.64) */
     I_SIGNALER,         /* opérande : n ; dépile n valeurs, écrites comme REFUSER : le message montré sans bloquer (2.71) */
-    I_AMORCER           /* dépile un texte (ou absent) : l'amorce des transcriptions suivantes (2.80) */
+    I_AMORCER,          /* dépile un texte (ou absent) : l'amorce des transcriptions suivantes (2.80) */
+    I_REMPLACER,        /* dépile le remplaçant, ce qu'on cherche, puis le texte ; empile le texte remplacé (2.81) */
+    I_MOTS              /* dépile un texte ; empile la liste de ses mots, dans l'ordre, doublons compris (2.81) */
 } CodeInstruction;
 
-#define I_DERNIER I_AMORCER
+#define I_DERNIER I_MOTS
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

@@ -463,6 +463,17 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[1]);
         emettre(c, I_JOINDRE, 0, n->ligne, n->colonne);
         return;
+    case N_REMPLACER:   /* le texte, ce qu'on cherche, le remplaçant, puis REMPLACER (2.81) */
+        expression(c, n->enfants[0]);
+        expression(c, n->enfants[1]);
+        expression(c, n->enfants[2]);
+        emettre(c, I_REMPLACER, 0, n->ligne, n->colonne);
+        return;
+    case N_MOTS:   /* le texte, puis MOTS ; leur nombre : TAILLE_ENSEMBLE (2.81) */
+        expression(c, n->enfants[0]);
+        emettre(c, I_MOTS, 0, n->ligne, n->colonne);
+        if (n->forme == 1) emettre(c, I_TAILLE_ENSEMBLE, 0, n->ligne, n->colonne);
+        return;
     case N_SANS:   /* le texte, ce qui s'en retire, puis RETIRER (2.64) */
         expression(c, n->enfants[0]);
         expression(c, n->enfants[1]);

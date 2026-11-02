@@ -1,0 +1,30 @@
+#!/bin/sh
+# Écoutille, l'alphabet phonétique en lettres (2 novembre 2026) : les calculs de l'épellation, tirés du programme, essayés
+# sans écran : une suite épelée se resserre (« Hotel Bravo Neuf Alpha Bravo Charlie » : « HB9ABC »), un préfixe déjà écrit
+# la rejoint, un mot épelé seul et des chiffres seuls restent tels quels.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+awk 'index($0, "Le mot nettoyé d'\''un mot :") == 1 { dedans = 1 }
+     index($0, "Remarque : la veille (1er novembre 2026)") == 1 { dedans = 0 }
+     dedans { print }' "$racine/projets/Écoutille/Écoutille.grym" > "$d/e.grym"
+cat >> "$d/e.grym" <<'FIN'
+Afficher l'épellation de « CQ CQ de Hotel Bravo Neuf Alpha Bravo Charlie, à vous ».
+Afficher l'épellation de « QRZ ? Ici HB9 Alpha Bravo Charlie. ».
+Afficher l'épellation de « Charlie est là, un instant ».
+Afficher l'épellation de « report 59, merci ».
+Afficher l'épellation de « hotel bravo 9 alpha bravo charlie ».
+Afficher l'épellation de « un deux trois ».
+FIN
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+sortie="$(cd "$d" && "$grym" lancer e.grym 2>&1 < /dev/null)"
+verifier "$(echo "$sortie" | sed -n 1p)" "CQ CQ de HB9ABC, à vous" "une suite épelée, sa virgule gardée"
+verifier "$(echo "$sortie" | sed -n 2p)" "QRZ ? Ici HB9ABC." "un préfixe déjà écrit rejoint la suite"
+verifier "$(echo "$sortie" | sed -n 3p)" "Charlie est là, un instant" "un mot épelé seul reste"
+verifier "$(echo "$sortie" | sed -n 4p)" "report 59, merci" "des chiffres seuls restent"
+verifier "$(echo "$sortie" | sed -n 5p)" "HB9ABC" "en minuscules, avec un chiffre écrit"
+verifier "$(echo "$sortie" | sed -n 6p)" "un deux trois" "des chiffres en mots, sans lettre de l'OTAN"
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]

@@ -836,6 +836,18 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, voyelle(n->enfants[0]->texte) ? "le nombre d'" : "le nombre de ");
         ecrire_nom(im, n->enfants[0]->texte, 0);
         return;
+    case N_REMPLACER:   /* « t en remplaçant « a » par « b » » ; « t _remplaçant « a » _par « b » » (2.81) */
+        expression(im, n->enfants[0]);
+        aj(im, im->compact ? " _remplaçant " : " en remplaçant ");
+        expression(im, n->enfants[1]);
+        aj(im, im->compact ? " _par " : " par ");
+        expression(im, n->enfants[2]);
+        return;
+    case N_MOTS:   /* « le nombre de mots de t » ; « _nombre_mots t » (2.81) ; « les mots de t » dans une boucle */
+        if (im->compact) { aj(im, n->forme ? "_nombre_mots " : "_mots "); expression(im, n->enfants[0]); return; }
+        aj(im, n->forme ? "le nombre de mots " : "les mots ");
+        de_expression(im, n->enfants[0]);
+        return;
     case N_SANS:   /* « le numéro AVS sans « . » » ; « numéro_AVS _sans « . » » (2.64) */
         expression(im, n->enfants[0]);
         aj(im, im->compact ? " _sans " : " sans ");
@@ -2355,7 +2367,8 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             if (c) expression(im, src->enfants[0]);
             else de_expression(im, src->enfants[0]);
         } else {
-            if (n->op == 'p') aj(im, c ? " _parmi " : " parmi ");   /* « parmi les couleurs » (§ 13.9) */
+            if (n->op == 'p' && n->enfants[0]->type == N_MOTS) aj(im, c ? " _parmi " : " parmi ");   /* « parmi les mots de t » (2.81) */
+            else if (n->op == 'p') aj(im, c ? " _parmi " : " parmi ");   /* « parmi les couleurs » (§ 13.9) */
             else aj(im, c ? " _tableau " : " du tableau ");
             expression(im, n->enfants[0]);
         }

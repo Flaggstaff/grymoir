@@ -113,6 +113,10 @@ int main(void) {
          "L'écran d'accueil, (\"Bonjour \" suivi du nom du r conservé) en grand, montre :\n    le texte « OK ».\n");   /* 2.33 */
     LITT("Une note, conservée, a :\n    un prix (nombre).\nAfficher l'arrondi de (la somme des prix des notes conservées dont le prix > 1) − (la somme des prix des notes conservées) à 0,01.",
          "Une note, conservée, a :\n    un prix (nombre).\nAfficher l'arrondi de (la somme des prix des notes conservées dont le prix > 1) − (la somme des prix des notes conservées) à 0,01.\n");   /* 2.34 : le « dont » garde ses parenthèses */
+    LITT("Le t vaut « a ».\nAfficher le t en remplaçant « a » par « b » en remplaçant « c » par « ».",
+         "Le t vaut « a ».\nAfficher le t en remplaçant « a » par « b » en remplaçant « c » par « ».\n");   /* 2.81 */
+    LITT("Le t vaut « a b ».\nAfficher le nombre de mots du t.\nPour chaque m parmi les mots du t :\n    Afficher m.",
+         "Le t vaut « a b ».\nAfficher le nombre de mots du t.\nPour chaque m parmi les mots du t :\n    Afficher m.\n");
     LITT("Amorcer la transcription avec « QSO, QTH ».", "Amorcer la transcription avec « QSO, QTH ».\n");   /* 2.80 */
     LITT("Une note, conservée, a :\n    un prix (nombre).\nAfficher \"Notes : \" suivi de (le nombre de notes conservées dont le prix > 1) suivi de « . ».",
          "Une note, conservée, a :\n    un prix (nombre).\nAfficher \"Notes : \" suivi de (le nombre de notes conservées dont le prix > 1) suivi de « . ».\n");   /* 2 novembre 2026 : « suivi de (… dont …) suivi de » garde ses parenthèses */

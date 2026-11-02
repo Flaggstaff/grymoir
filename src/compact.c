@@ -334,6 +334,23 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "sans", t);
             continue;
         }
+        if (est_cle(t, "remplaçant")) {   /* t _remplaçant « a » _par « b » → t en remplaçant « a » par « b » (2.81) */
+            mot(r, "en", t);
+            mot(r, "remplaçant", t);
+            continue;
+        }
+        if (est_cle(t, "par")) {   /* … _remplaçant « a » _par « b » (2.81) */
+            mot(r, "par", t);
+            continue;
+        }
+        if (est_cle(t, "nombre_mots")) {   /* _nombre_mots t → le nombre de mots de t (2.81) */
+            mot(r, "le", t);
+            mot(r, "nombre", t);
+            mot(r, "de", t);
+            mot(r, "mots", t);
+            mot(r, "de", t);
+            continue;
+        }
         if (est_cle(t, "dont")) {
             mot(r, "dont", t);
             continue;
@@ -2391,6 +2408,19 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "répéter", t);
             expression(r, d + 1, fois);
             mot(r, "fois", &r->e[fois]);
+            emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
+            ouvrir(r, O_BOUCLE, prof, t);
+        } else if (!strcmp(c, "pour_chaque") && d + 4 < f && r->e[d + 1].type == J_CROCHETS && est_cle(&r->e[d + 2], "parmi")
+                   && est_cle(&r->e[d + 3], "mots")) {
+            /* _pour_chaque m _parmi _mots t → Pour chaque m parmi les mots de t : (2.81) */
+            mot(r, "pour", t);
+            mot(r, "chaque", t);
+            copier(r, &r->e[d + 1]);
+            mot(r, "parmi", &r->e[d + 2]);
+            mot(r, "les", &r->e[d + 3]);
+            mot(r, "mots", &r->e[d + 3]);
+            mot(r, "de", &r->e[d + 3]);
+            expression(r, d + 4, f);
             emettre(r, J_DEUX_POINTS, NULL, &r->e[f - 1], 1);
             ouvrir(r, O_BOUCLE, prof, t);
         } else if (!strcmp(c, "pour_chaque") && d + 3 < f && r->e[d + 1].type == J_CROCHETS && est_cle(&r->e[d + 2], "parmi")) {
