@@ -993,7 +993,9 @@ int main(int argc, char **argv) {
             return QString();
         };
         Agenda *ag = nullptr;
-        VERIFIER(attendre([&] { ag = e.findChild<Agenda *>(); return ag && !ag->place(0).isNull(); }));
+        // la séance et la grille arrivent l'une après l'autre : avant la grille, l'agenda montre aujourd'hui seul ; le
+        // 2 novembre 2026, ce jour-là était celui de la séance, et l'essai regardait avant la grille (2 novembre 2026)
+        VERIFIER(attendre([&] { ag = e.findChild<Agenda *>(); return ag && !ag->place(0).isNull() && ag->jours().size() > 1; }));
         if (ag) {
             // lundi à mercredi : les jours sans plage (jeudi à dimanche) ne sont pas montrés
             VERIFIER(ag->jours().size() == 3 && ag->jours().first() == QDate(2026, 11, 2) && ag->jours().last() == QDate(2026, 11, 4));
@@ -1657,6 +1659,58 @@ int main(int argc, char **argv) {
         e.nourrir(parole);
         e.nourrir(silence);
         VERIFIER(captes == 1 && nom.startsWith(QString::fromUtf8("Essai Écoutille-")) && nom.endsWith(".wav"));
+    }
+
+    // L'affinage du son (2 novembre 2026) : le squelch de −50 à +50, 0 au milieu, un cran pour ½ dB (de −60 à −10 dB) ;
+    // le gain en dB ; le filtre radio laisse passer 1 kHz et ôte 50 Hz et 6 kHz ; un réglage en dB d'avant garde son sens.
+    {
+        VERIFIER(squelch_en_db(0) == -35.0 && squelch_en_db(-50) == -60.0 && squelch_en_db(50) == -10.0);
+        VERIFIER(position_du_squelch(-20.0) == 30 && position_du_squelch(-34.0) == 2 && position_du_squelch(-90.0) == -50);
+        auto sinus = [](double f, size_t n) {
+            std::vector<float> v(n);
+            for (size_t i = 0; i < n; i++) v[i] = 0.5f * (float)std::sin(2 * 3.14159265358979 * f * (double)i / 16000.0);
+            return v;
+        };
+        auto efficace = [](const std::vector<float> &v) {   // la seconde moitié : le filtre a fini de s'installer
+            double s2 = 0;
+            for (size_t i = v.size() / 2; i < v.size(); i++) s2 += (double)v[i] * v[i];
+            return std::sqrt(s2 / (double)(v.size() - v.size() / 2));
+        };
+        const double ref = efficace(sinus(1000, 16000));
+        Affinage a;
+        a.filtre = true;
+        std::vector<float> v = sinus(1000, 16000);
+        a.appliquer(&v);
+        VERIFIER(efficace(v) > 0.8 * ref);   // la voix passe
+        a.vider();
+        v = sinus(50, 16000);
+        a.appliquer(&v);
+        VERIFIER(efficace(v) < 0.05 * ref);   // le secteur, ôté (plus de 26 dB)
+        a.vider();
+        v = sinus(6000, 16000);
+        a.appliquer(&v);
+        VERIFIER(efficace(v) < 0.3 * ref);   // le souffle aigu, atténué
+        Affinage g;
+        g.gain_db = 6;
+        v = sinus(1000, 1600);
+        g.appliquer(&v);
+        VERIFIER(std::fabs(efficace(v) / ref - 1.995) < 0.05);   // +6 dB : presque deux fois plus fort
+        g.gain_db = 30;
+        v = sinus(1000, 1600);
+        g.appliquer(&v);
+        float m = 0;
+        for (float x : v) m = std::max(m, std::fabs(x));
+        VERIFIER(m <= 1.0f);   // borné : la saturation se voit au bandeau, sans débordement
+        Ecoute e(QString::fromUtf8("Essai réglages"), 1000, nullptr, false);
+        VERIFIER(e.squelch()->minimum() == -50 && e.squelch()->maximum() == 50);
+        VERIFIER(e.gain()->minimum() == -30 && e.gain()->maximum() == 30);
+        e.squelch()->setValue(-10);
+        VERIFIER(QSettings().value(QString::fromUtf8("écoute/Essai réglages/seuil")).toDouble() == -40.0);
+        e.gain()->setValue(12);
+        e.filtre()->setChecked(true);
+        Ecoute relu(QString::fromUtf8("Essai réglages"), 1000, nullptr, false);   // retenus d'un lancement à l'autre
+        VERIFIER(relu.squelch()->value() == -10 && relu.gain()->value() == 12 && relu.filtre()->isChecked());
+        QSettings().remove(QString::fromUtf8("écoute/Essai réglages"));
     }
 
     // L'écoute dans la fenêtre d'exécution (2.69) : un passage capté arrive dans la liste. Le 1er novembre 2026, chaque

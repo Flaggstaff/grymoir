@@ -12,6 +12,9 @@
 #include <QDateTime>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QPainter>
+#include <QStyle>
+#include <QStyleOptionSlider>
 #include <QMediaDevices>
 #include <QProgressBar>
 #include <QSettings>
@@ -100,9 +103,98 @@ QByteArray wav_16k(const std::vector<float> &pcm) {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-// Le seuil du curseur : de −60 dB à −10 dB, par pas de 1 dB ; le niveau de la barre : de −60 dB à 0 dB.
-static float seuil_de(int db) { return (float)std::pow(10.0, db / 20.0); }
-static int db_de(float x) { return x <= 1e-6f ? -60 : std::max(-60, std::min(0, (int)std::lround(20.0 * std::log10(x)))); }
+void Biquad::regler(bool passe_haut, double f, double fe) {
+    const double w = 2 * 3.14159265358979323846 * f / fe, cw = std::cos(w), al = std::sin(w) / (2 * 0.7071067811865476);
+    const double a0 = 1 + al;
+    if (passe_haut) { b0 = (1 + cw) / 2; b1 = -(1 + cw); b2 = (1 + cw) / 2; }
+    else { b0 = (1 - cw) / 2; b1 = 1 - cw; b2 = (1 - cw) / 2; }
+    b0 /= a0; b1 /= a0; b2 /= a0;
+    a1 = -2 * cw / a0;
+    a2 = (1 - al) / a0;
+}
+
+float Biquad::passer(float x) {
+    const double y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+    x2 = x1; x1 = x;
+    y2 = y1; y1 = y;
+    return (float)y;
+}
+
+void Affinage::appliquer(std::vector<float> *pcm) {
+    const float g = (float)std::pow(10.0, gain_db / 20.0);
+    for (float &x : *pcm) {
+        float y = x * g;
+        if (filtre) y = bas.passer(haut.passer(y));
+        x = std::max(-1.0f, std::min(1.0f, y));
+    }
+}
+
+double squelch_en_db(int p) { return -35.0 + std::max(-50, std::min(50, p)) / 2.0; }
+int position_du_squelch(double db) { return std::max(-50, std::min(50, (int)std::lround((db + 35.0) * 2.0))); }
+
+// Le niveau sur l'échelle du squelch : la barre et le curseur, l'un sous l'autre, parlent la même langue.
+static int position_du_niveau(float x) { return x <= 1e-6f ? -50 : position_du_squelch(20.0 * std::log10(x)); }
+static float seuil_de(double db) { return (float)std::pow(10.0, db / 20.0); }
+
+// Une réglette (2 novembre 2026) : un curseur large, ses chiffres de 10 en 10 dessous (0 au milieu), et un mot à chaque
+// bout. Les chiffres sont posés sous la poignée, à la place exacte que le style lui donne.
+class Reglette : public QWidget {
+public:
+    QSlider *curseur;
+    QString gauche, droite;
+    Reglette(int min, int max, const QString &g, const QString &d, QWidget *parent = nullptr)
+        : QWidget(parent), curseur(new QSlider(Qt::Horizontal, this)), gauche(g), droite(d) {
+        curseur->setRange(min, max);
+        curseur->setSingleStep(1);
+        curseur->setPageStep(10);
+        curseur->setTickPosition(QSlider::NoTicks);
+        curseur->setMinimumHeight(30);
+        curseur->setStyleSheet(QString::fromUtf8(
+            "QSlider::groove:horizontal { height: 10px; border-radius: 5px; background: palette(mid); }"
+            "QSlider::handle:horizontal { width: 26px; height: 26px; margin: -8px 0; border-radius: 13px;"
+            " background: palette(highlight); border: 2px solid palette(base); }"
+            "QSlider::handle:horizontal { width: 24px; height: 24px; margin: -7px 0; border-radius: 12px; }"));
+        setMinimumHeight(30 + 2 * fontMetrics().height() + 6);
+    }
+    // les chiffres des bouts (« −50 », « +50 ») débordent la poignée : le curseur laisse cette marge de chaque côté
+    static constexpr int MARGE = 20;
+    int demi_poignee() const { return MARGE + 12; }
+
+protected:
+    void resizeEvent(QResizeEvent *) override { curseur->setGeometry(MARGE, 0, width() - 2 * MARGE, 30); }
+    void paintEvent(QPaintEvent *) override {
+        QPainter p(this);
+        p.setPen(palette().color(QPalette::WindowText));
+        QStyleOptionSlider o;
+        o.initFrom(curseur);
+        o.orientation = Qt::Horizontal;
+        o.minimum = curseur->minimum();
+        o.maximum = curseur->maximum();
+        o.rect = curseur->rect();
+        const int h = fontMetrics().height();
+        const int premier = (int)std::ceil(curseur->minimum() / 10.0) * 10;
+        for (int v = premier; v <= curseur->maximum(); v += 10) {
+            o.sliderPosition = o.sliderValue = v;
+            const QRect poignee = curseur->style()->subControlRect(QStyle::CC_Slider, &o, QStyle::SC_SliderHandle, curseur);
+            const int x = MARGE + poignee.center().x();
+            p.drawLine(x, 31, x, 35);
+            const QString t = v > 0 ? QString("+%1").arg(v) : QString::number(v);
+            QFont f = font();
+            f.setBold(v == 0);
+            p.setFont(f);
+            p.drawText(QRect(x - 30, 36, 60, h), Qt::AlignHCenter | Qt::AlignTop, t);
+        }
+        QFont f = font();
+        f.setBold(false);
+        p.setFont(f);
+        p.setPen(palette().color(QPalette::PlaceholderText));
+        p.drawText(QRect(MARGE, 36 + h, width() / 2 - MARGE, h), Qt::AlignLeft | Qt::AlignTop, gauche);
+        p.drawText(QRect(width() / 2, 36 + h, width() / 2 - MARGE, h), Qt::AlignRight | Qt::AlignTop, droite);
+    }
+};
+
+QSlider *Ecoute::squelch() const { return seuil_->curseur; }
+QSlider *Ecoute::gain() const { return gain_->curseur; }
 
 Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel_, bool veille_libre) : QWidget(parent), nom(n), materiel(materiel_) {
     d.silence_ms = silence_ms > 0 ? silence_ms : 1500;
@@ -124,26 +216,45 @@ Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel_
     haut->addWidget(entree_, 1);
     haut->addWidget(haut_parleur_);
     pile->addLayout(haut);
-    auto *bas = new QHBoxLayout;
+    // Le niveau, puis le squelch juste dessous, à la même échelle et à la même largeur : quand la barre dépasse la
+    // poignée, un passage commence (2 novembre 2026 ; avant, un petit curseur « Seuil » à droite, de −60 à −10 dB).
     niveau_ = new QProgressBar;
-    niveau_->setRange(-60, 0);
+    niveau_->setRange(-50, 50);
+    niveau_->setValue(-50);
     niveau_->setTextVisible(false);
-    niveau_->setToolTip(QString::fromUtf8("Le niveau du son reçu"));
-    seuil_ = new QSlider(Qt::Horizontal);
-    seuil_->setRange(-60, -10);
-    seuil_->setToolTip(QString::fromUtf8("Le seuil : au-dessus, c'est un passage ; en dessous, du silence"));
-    seuil_->setMaximumWidth(160);
-    bas->addWidget(niveau_, 1);
-    bas->addWidget(new QLabel(QString::fromUtf8("Seuil")));
-    bas->addWidget(seuil_);
-    pile->addLayout(bas);
+    niveau_->setMaximumHeight(12);
+    niveau_->setToolTip(QString::fromUtf8("Le niveau du son reçu, sur l'échelle du squelch : quand il dépasse la poignée, c'est un passage"));
+    seuil_ = new Reglette(-50, 50, QString::fromUtf8("◀ prend plus de son, même faible"), QString::fromUtf8("seulement les sons forts ▶"));
+    seuil_->curseur->setToolTip(QString::fromUtf8("Le squelch : plus il est à gauche, plus il prend le son. 0 = −35 dB ; un cran = ½ dB"));
+    auto *ligne_niveau = new QHBoxLayout;
+    ligne_niveau->setContentsMargins(seuil_->demi_poignee(), 0, seuil_->demi_poignee(), 0);
+    ligne_niveau->addWidget(niveau_);
+    auto *titre_squelch = new QLabel(QString::fromUtf8("<b>Squelch</b>"));
+    pile->addWidget(titre_squelch);
+    pile->addLayout(ligne_niveau);
+    pile->addWidget(seuil_);
+    // Le gain et le filtre : affiner le son avant tout le reste (découpage, haut-parleur, transcription)
+    auto *ligne_gain = new QHBoxLayout;
+    gain_ = new Reglette(-30, 30, QString::fromUtf8("◀ plus faible"), QString::fromUtf8("plus fort ▶"));
+    gain_->curseur->setToolTip(QString::fromUtf8("Le gain, en dB : pour un poste trop faible ou trop fort ; 0 ne change rien"));
+    filtre_ = new QCheckBox(QString::fromUtf8("Filtre radio (300 à 3000 Hz)"));
+    filtre_->setToolTip(QString::fromUtf8("Ôte le ronflement du secteur et le souffle aigu ; la voix et le morse passent"));
+    ligne_gain->addWidget(new QLabel(QString::fromUtf8("<b>Gain</b>")));
+    ligne_gain->addStretch(1);
+    ligne_gain->addWidget(filtre_);
+    pile->addLayout(ligne_gain);
+    pile->addWidget(gain_);
     etat_ = new QLabel;
     etat_->setObjectName("ecoute-etat");
     pile->addWidget(etat_);
-
     QSettings s;
-    seuil_->setValue(s.value(cle("seuil"), -34).toInt());
-    d.seuil = seuil_de(seuil_->value());
+    // le seuil reste retenu en dB (« seuil »), comme avant : les réglages déjà faits gardent leur sens
+    seuil_->curseur->setValue(position_du_squelch(s.value(cle("seuil"), -35.0).toDouble()));
+    d.seuil = seuil_de(squelch_en_db(seuil_->curseur->value()));
+    gain_->curseur->setValue(s.value(cle("gain"), 0).toInt());
+    affinage.gain_db = gain_->curseur->value();
+    filtre_->setChecked(s.value(cle("filtre"), false).toBool());
+    affinage.filtre = filtre_->isChecked();
     haut_parleur_->setChecked(s.value(cle("haut-parleur"), false).toBool());
     veille_->setChecked(veille_libre ? s.value(cle("veille"), false).toBool() : true);   // la première fois : rien n'écoute sans qu'on le veuille
     veille_->setVisible(veille_libre);
@@ -153,9 +264,18 @@ Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel_
         if (oui) demarrer();
         else arreter();
     });
-    connect(seuil_, &QSlider::valueChanged, this, [this](int v) {
-        d.seuil = seuil_de(v);
-        QSettings().setValue(cle("seuil"), v);
+    connect(seuil_->curseur, &QSlider::valueChanged, this, [this](int v) {
+        d.seuil = seuil_de(squelch_en_db(v));
+        QSettings().setValue(cle("seuil"), squelch_en_db(v));
+    });
+    connect(gain_->curseur, &QSlider::valueChanged, this, [this](int v) {
+        affinage.gain_db = v;
+        QSettings().setValue(cle("gain"), v);
+    });
+    connect(filtre_, &QCheckBox::toggled, this, [this](bool oui) {
+        affinage.filtre = oui;
+        affinage.vider();
+        QSettings().setValue(cle("filtre"), oui);
     });
     connect(haut_parleur_, &QToolButton::toggled, this, [this](bool oui) {
         QSettings().setValue(cle("haut-parleur"), oui);
@@ -239,6 +359,7 @@ void Ecoute::remplir() {
 
 void Ecoute::demarrer() {
     arreter();
+    affinage.vider();   // une autre entrée : le filtre ne garde rien de l'ancienne
     if (!veille_->isChecked()) return;
     const QString choix = entree_->currentData().toString();
     if (choix.isEmpty()) return;
@@ -276,7 +397,7 @@ void Ecoute::couper() {
 
 void Ecoute::arreter() {
     couper();
-    if (niveau_) niveau_->setValue(-60);
+    if (niveau_) niveau_->setValue(-50);
     if (etat_) etat_->setText(veille_ && veille_->isChecked() ? QString() : QString::fromUtf8("Hors veille."));
 }
 
@@ -302,8 +423,10 @@ void Ecoute::lire() {
     nourrir(pcm);
 }
 
-void Ecoute::nourrir(const std::vector<float> &pcm16k) {
+void Ecoute::nourrir(const std::vector<float> &brut) {
     if (!veille_->isChecked()) return;
+    std::vector<float> pcm16k = brut;
+    affinage.appliquer(&pcm16k);   // le gain et le filtre d'abord : ce qu'on découpe, entend et transcrit est le son affiné
     std::vector<std::vector<float>> finis;
     d.nourrir(pcm16k.data(), pcm16k.size(), &finis);
     jouer(pcm16k);
@@ -315,9 +438,9 @@ void Ecoute::nourrir(const std::vector<float> &pcm16k) {
 }
 
 void Ecoute::montrer() {
-    niveau_->setValue(db_de(d.niveau));
+    niveau_->setValue(position_du_niveau(d.niveau));
     niveau_->setProperty("sature", d.crete >= 0.98f);   // la feuille du thème peut le colorer
-    if (d.crete >= 0.98f) etat_->setText(QString::fromUtf8("Le son sature : baisse le volume du poste."));
+    if (d.crete >= 0.98f) etat_->setText(QString::fromUtf8("Le son sature : baisse le gain, ou le volume du poste."));
     else if (d.en_passage) etat_->setText(QString::fromUtf8("Passage en cours (%1 s)").arg((int)d.secondes_en_cours()));
     else if (source) etat_->setText(QString::fromUtf8("En écoute."));
 }

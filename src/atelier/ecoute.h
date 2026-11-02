@@ -32,6 +32,33 @@ private:
 // Un WAV PCM 16 bits, 16 kHz, mono.
 QByteArray wav_16k(const std::vector<float> &pcm);
 
+// Un filtre du second ordre (RBJ, « Audio EQ Cookbook ») à 16 kHz : passe-haut ou passe-bas, Q = 0,707.
+struct Biquad {
+    double b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    void regler(bool passe_haut, double frequence, double echantillonnage = 16000);
+    float passer(float x);
+    void vider() { x1 = x2 = y1 = y2 = 0; }
+};
+
+// L'affinage du son (2 novembre 2026), avant le découpage, le haut-parleur et la transcription : le gain (en dB, de −30
+// à +30), puis, si voulu, le filtre radio (de 300 à 3000 Hz : le ronflement du secteur et le souffle aigu ôtés). Le
+// résultat est borné à ±1 : un gain trop fort sature, et le bandeau le dit.
+struct Affinage {
+    int gain_db = 0;
+    bool filtre = false;
+    void appliquer(std::vector<float> *pcm16k);
+    void vider() { haut.vider(); bas.vider(); }
+    Affinage() { haut.regler(true, 300); bas.regler(false, 3000); }
+
+private:
+    Biquad haut, bas;
+};
+
+// Le squelch montré à Michel : de −50 à +50, 0 au milieu, un cran pour ½ dB, soit de −60 à −10 dB sur le niveau
+// efficace ; à gauche, il laisse passer les sons faibles (il prend plus), à droite seulement les forts.
+double squelch_en_db(int position);
+int position_du_squelch(double db);
+
 class QAudioSink;
 class QAudioSource;
 class QCheckBox;
@@ -40,6 +67,7 @@ class QIODevice;
 class QLabel;
 class QProgressBar;
 class QSlider;
+class Reglette;
 class QToolButton;
 
 // Le bandeau d'une écoute : l'entrée (appareil et canal), le niveau, le seuil, le haut-parleur, l'état. Les réglages
@@ -61,6 +89,9 @@ public:
     const Decoupeur &decoupeur() const { return d; }
     QComboBox *entrees() const { return entree_; }
     QCheckBox *veille() const { return veille_; }   // « En veille » : décochée, l'entrée reste fermée et rien ne part
+    QSlider *squelch() const;
+    QSlider *gain() const;
+    QCheckBox *filtre() const { return filtre_; }
 
 private:
     QString nom;
@@ -69,7 +100,9 @@ private:
     QCheckBox *veille_;
     bool materiel;
     QProgressBar *niveau_;
-    QSlider *seuil_;
+    Reglette *seuil_, *gain_;
+    QCheckBox *filtre_;
+    Affinage affinage;
     QToolButton *haut_parleur_;
     QLabel *etat_;
     QAudioSource *source = nullptr;
