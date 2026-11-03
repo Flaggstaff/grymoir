@@ -1885,6 +1885,18 @@ int main(void) {
         liberer(&sc);
     }
 
+    {   /* un menu lié relu (3 novembre 2026) : un objet conservé après l'ouverture de l'écran s'y voit au retour */
+        memset(&sc, 0, sizeof sc);
+        REQUETES(get("/"), evenement("q=1&clic=1"), get("/"));
+        servir("Un poste, conservé, a :\n    un nom (texte), unique.\n"
+               "L'écran x montre :\n    un seul poste (poste), facultatif,\n    un bouton « Ajouter »,\n    un bouton « Fermer ».\n"
+               "Quand on clique sur « Ajouter » dans l'écran x :\n    Le p vaut un nouveau poste :\n        Le nom vaut « Stryker ».\n    Conserver le p.\n"
+               "Quand on clique sur « Fermer » dans l'écran x :\n    Fermer l'écran.\nOuvrir l'écran x.\n", &sc);
+        NE_CONTIENT_PAS(sc.reponses[0], ">Stryker<");
+        CONTIENT(sc.reponses[2], "<option value=\"Stryker\">Stryker</option>");
+        liberer(&sc);
+    }
+
     {   /* les choix filtrés d'une zone (2.48) : « (patient dont l'archivage est absent) » ne propose pas l'archivé */
         memset(&sc, 0, sizeof sc);
         REQUETES(get("/"));

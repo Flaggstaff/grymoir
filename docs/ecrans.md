@@ -57,6 +57,7 @@ Coût accepté : `quand`, `ouvrir` et `fermer` deviennent des mots de constructi
 On décrit l'ordre et le voisinage, jamais des pixels : le texte reste lisible, et l'écran s'adapte à toute taille, police ou système. L'éditeur d'écrans d'A4 écrira les mêmes phrases.
 
 - Sans rien écrire : les contrôles s'empilent de haut en bas, dans l'ordre écrit ; des boutons qui se suivent se rangent sur une ligne, en bas à droite ; une liste prend la hauteur libre ; la fenêtre se redimensionne.
+- *(3 novembre 2026)* Le bouton « Fermer » se pose toujours au même endroit, dans l'atelier et les applications fabriquées : le dernier de la dernière rangée de boutons, en bas à droite de l'écran, où qu'il soit écrit ; si l'écran finit par autre chose qu'un bouton, sur une rangée à lui. Seuls `, à côté du titre` et la position libre le gardent où ils le mettent. Son rang ne change pas : les événements le reconnaissent comme avant. Le navigateur (`grym servir`) le laisse où il est écrit.
 - `côte à côte :` range son bloc à l'horizontale, `l'un sous l'autre :` à la verticale ; les blocs s'emboîtent.
 - Le titre de la fenêtre vient du nom de l'écran (« l'écran des compositeurs » : « Compositeurs » ; « l'écran d'accueil » : « Accueil »), ou se donne entre guillemets : `L'écran des compositeurs, « Nos compositeurs », montre :`.
 - Écartés : positions et tailles au pixel, marges réglées à la main, onglets (à concevoir plus tard).

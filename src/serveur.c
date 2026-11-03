@@ -2748,6 +2748,17 @@ static void serveur_ecran_signature(void *contexte, const unsigned char *octets,
     s->type_signature = type_image(format);
 }
 
+/* Les clés d'une zone liée, changées depuis l'ouverture (3 novembre 2026) : copiées, le menu les montre au prochain
+ * affichage. */
+static void serveur_ecran_choix(void *contexte, size_t k, const char *const *choix, size_t n) {
+    EcranWeb *e = ecran_dessus(contexte);
+    if (!e || k >= e->n) return;
+    for (size_t q = 0; q < e->el[k].nb_choix; q++) free((char *)e->el[k].choix[q]);
+    free((char **)e->el[k].choix);
+    e->el[k].choix = copier_textes(choix, n);
+    e->el[k].nb_choix = n;
+}
+
 /* Le texte calculé (§ 22.1, 2.24) : copié, la page le montre au prochain affichage. */
 static void serveur_ecran_texte(void *contexte, size_t k, const char *texte) {
     EcranWeb *e = ecran_dessus(contexte);
@@ -2772,7 +2783,7 @@ Interface serveur_interface(Serveur *s) {
                     serveur_ecran_erreur, serveur_ecran_fermer, serveur_ecran_valeurs, serveur_ecran_apparence,
                     serveur_ecran_etats, serveur_ecran_image, serveur_ecran_taille_titre, serveur_ecran_erreurs_zones, NULL, NULL,
                     serveur_ecran_theme, serveur_ecran_signature, serveur_ecran_texte, NULL, NULL, NULL, NULL, 0,
-                    serveur_ecran_signaler, NULL };
+                    serveur_ecran_signaler, NULL, serveur_ecran_choix };
     return i;
 }
 

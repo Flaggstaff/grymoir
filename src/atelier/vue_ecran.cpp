@@ -324,6 +324,10 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
         pile->addLayout(entete);
     }
     QHBoxLayout *rangee = nullptr;   // des boutons qui se suivent : une ligne, en bas à droite (§ 3.3)
+    // « Fermer », partout au même endroit (3 novembre 2026) : le dernier bouton de la dernière rangée, en bas à droite de
+    // l'écran, où qu'il soit écrit ; seul, sur une rangée à lui. Son rang ne change pas : la machine le connaît toujours.
+    QPushButton *fermer = nullptr;
+    QHBoxLayout *rangee_finale = nullptr;
     QGridLayout *grille = nullptr;   // des tuiles qui se suivent : une grille (2.15)
     QHBoxLayout *ligne_titre = nullptr;   // la ligne du titre, quand un bouton s'y met (2.17)
     int tuiles_posees = 0;
@@ -358,6 +362,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
     for (int k = 0; k < n; k++) {
         const ElementVue &e = elements[k];
         if (e.sorte != ELEMENT_BOUTON || niveaux.last().toile || e.tuile || e.a_cote_du_titre) rangee = nullptr;
+        if (e.sorte != ELEMENT_BOUTON && e.sorte != ELEMENT_FIN_DE_BLOC) rangee_finale = nullptr;   // un élément après : plus la fin
         if (e.sorte != ELEMENT_BOUTON || !e.tuile) grille = nullptr;   // une grille de tuiles s'arrête au premier autre élément
         if (e.sorte == ELEMENT_MENU) {   // « le menu « Membres » : » : un menu de la barre, en tête de l'écran (§ 22.12)
             if (!barre) {
@@ -583,7 +588,7 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                     rang->addWidget(b);
                 }
                 rang->addStretch(1);
-            } else if (!e.choix.isEmpty() || e.recherche) {
+            } else if (!e.choix.isEmpty() || e.recherche || e.objets) {
                 auto *m = new QComboBox;
                 m->addItem(QString());
                 m->addItems(e.choix);
@@ -857,16 +862,26 @@ VueEcran dessiner_ecran(const QString &titre, const QVector<ElementVue> &element
                 }
                 if (ligne_titre) { ligne_titre->addWidget(b, 0, Qt::AlignVCenter); continue; }
             }
+            if (!toile && !fermer && e.texte == QString::fromUtf8("Fermer")) { fermer = b; continue; }   // posé à la fin
             if (!rangee && !toile) {
                 rangee = new QHBoxLayout;
                 rangee->setSpacing(t.mesure("espace-2"));
                 rangee->addStretch(1);
                 ici->addLayout(rangee);
             }
-            if (toile) poser(b); else rangee->addWidget(b);   // en position libre : chaque bouton à sa place (§ 22.9)
+            if (toile) poser(b); else { rangee->addWidget(b); rangee_finale = rangee; }   // en position libre : chaque bouton à sa place (§ 22.9)
         }
     }
 #undef poser
+    if (fermer) {   // « Fermer » en bas à droite : au bout de la dernière rangée, ou sur une rangée à lui
+        if (!rangee_finale) {
+            rangee_finale = new QHBoxLayout;
+            rangee_finale->setSpacing(t.mesure("espace-2"));
+            rangee_finale->addStretch(1);
+            pile->addLayout(rangee_finale);
+        }
+        rangee_finale->addWidget(fermer);
+    }
     r.erreur = new QLabel;
     r.erreur->setProperty("message", "erreur");   // le cadre du message d'erreur, selon la feuille du thème
     r.erreur->setWordWrap(true);

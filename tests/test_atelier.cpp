@@ -1992,6 +1992,135 @@ int main(int argc, char **argv) {
         VERIFIER(attendre([&] { return bouton("Réglages") != nullptr && dialogue() == nullptr; }));   // toujours en veille
     }
 
+    // Un menu lié (3 novembre 2026) : choisi tout de suite, avant que la machine attende, son changement est gardé et part ;
+    // la liste se filtre (il se perdait en silence)
+    {
+        QTemporaryDir dossier;
+        const QString prog = dossier.filePath("p.grym");
+        QFile f(prog);
+        f.open(QIODevice::WriteOnly);
+        f.write("Un poste, conservé, a :\n    un nom (texte), unique,\n    un affichage (vrai ou faux), vrai au départ.\n"
+                "Un passage, conservé, a :\n    un poste (poste),\n    un texte (texte).\n"
+                "Si le nombre de postes conservés = 0 :\n"
+                "    Le a vaut un nouveau poste :\n        Le nom vaut « Alpha ».\n        L'affichage vaut vrai.\n    Conserver a.\n"
+                "    Le b vaut un nouveau poste :\n        Le nom vaut « Bravo ».\n        L'affichage vaut vrai.\n    Conserver b.\n"
+                "    Le p vaut un nouveau passage :\n        Le poste vaut a.\n        Le texte vaut « de-alpha ».\n    Conserver p.\n"
+                "    Le q vaut un nouveau passage :\n        Le poste vaut b.\n        Le texte vaut « de-bravo ».\n    Conserver q.\n"
+                "L'écran de veille montre :\n    un seul poste (poste), facultatif,\n    une note (texte), facultative,\n"
+                "    la liste des passages conservés dont l'affichage du poste est vrai, avec le texte et le nom du poste,\n    un bouton « Fermer ».\n"
+                "Quand on change le seul poste dans l'écran de veille :\n    La note de l'écran devient « vu ».\n    Pour chaque poste conservé :\n"
+                "        L'affichage du poste devient vrai.\n"
+                "        Si le seul poste de l'écran est présent et le poste ≠ le seul poste de l'écran, l'affichage du poste devient faux.\n"
+                "Quand on clique sur « Fermer » dans l'écran de veille :\n    Fermer l'écran.\n"
+                "Ouvrir l'écran de veille.\n");
+        f.close();
+        Execution e(prog);
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 10000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto ligne = [&](const char *t) {
+            for (QTableWidget *w : e.findChildren<QTableWidget *>())
+                if (w->isVisible() && !w->findItems(QString::fromUtf8(t), Qt::MatchExactly).isEmpty()) return true;
+            return false;
+        };
+        VERIFIER(attendre([&] { return ligne("de-alpha") && ligne("de-bravo"); }));
+        QComboBox *seul = nullptr;
+        for (QComboBox *m : e.findChildren<QComboBox *>()) if (m->findText("Alpha") >= 0) seul = m;
+        VERIFIER(seul != nullptr);
+        if (seul) { seul->setCurrentIndex(seul->findText("Alpha")); emit seul->activated(seul->currentIndex()); }
+        bool vu = attendre([&] { for (QLineEdit *l : e.findChildren<QLineEdit *>()) if (l->text() == "vu") return true; return false; });
+        VERIFIER(vu);
+        VERIFIER(attendre([&] { return ligne("de-alpha") && !ligne("de-bravo"); }));
+    }
+
+    // Écoutille, « Seul poste » (3 novembre 2026) : deux postes captent du morse ; choisir un poste dans le menu ne garde
+    // que ses cartes ; le vider les rend toutes
+    {
+        QTemporaryDir dossier;
+        QFile::copy(QString(GRYM_SOURCE) + QString::fromUtf8("/projets/Écoutille/Écoutille.grym"),
+                    dossier.filePath(QString::fromUtf8("Écoutille.grym")));
+        Execution e(dossier.filePath(QString::fromUtf8("Écoutille.grym")));
+        e.show();
+        e.demarrer();
+        auto attendre = [&](const std::function<bool()> &cond) {
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 30000 && !cond()) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            return cond();
+        };
+        auto bouton = [&e](const char *l) -> QPushButton * {
+            for (QPushButton *b : e.findChildren<QPushButton *>())
+                if (b->text() == QString::fromUtf8(l) && b->isVisible() && b->isEnabled() && b->window() == &e) return b;
+            return nullptr;
+        };
+        auto ajouter = [&](const char *n) {
+            if (QPushButton *b = bouton("Postes")) b->click();
+            attendre([&] { return bouton("Modèles") != nullptr; });
+            QLineEdit *nom = nullptr;
+            for (QLineEdit *l : e.findChildren<QLineEdit *>())
+                if (l->isVisible() && l->window() == &e && !qobject_cast<QComboBox *>(l->parentWidget())) nom = l;
+            if (nom) {
+                nom->setFocus();
+                nom->setText(QString::fromUtf8(n));
+                nom->setModified(true);
+                emit nom->editingFinished();
+            }
+            attendre([&] { return bouton("Ajouter") != nullptr; });
+            if (QPushButton *b = bouton("Ajouter")) b->click();
+            attendre([&] { QApplication::processEvents(); return true; });
+            QElapsedTimer z;
+            z.start();
+            while (z.elapsed() < 500) QApplication::processEvents(QEventLoop::AllEvents, 20);
+            if (QPushButton *b = bouton("Fermer")) b->click();
+            attendre([&] { return bouton("Réglages") != nullptr; });
+        };
+        VERIFIER(attendre([&] { return bouton("Postes") != nullptr; }));
+        ajouter("Alpha");
+        ajouter("Bravo");
+        auto nourrir = [&](const char *poste, const char *texte) {
+            Ecoute *x = nullptr;
+            attendre([&] {
+                for (Ecoute *y : e.findChildren<Ecoute *>()) if (y->nom_ecoute() == QString::fromUtf8(poste)) x = y;
+                return x != nullptr;
+            });
+            if (!x) return;
+            size_t n = 0;
+            unsigned char *w = morse_fabriquer(texte, 20, 700, 0.05, &n);
+            std::vector<float> morse((n - 44) / 2), silence(16000 * 4, 0.f);
+            for (size_t i = 0; i < morse.size(); i++) morse[i] = (float)(int16_t)(w[44 + 2 * i] | w[45 + 2 * i] << 8) / 32768.f;
+            free(w);
+            x->nourrir(morse);
+            x->nourrir(silence);
+        };
+        auto carte = [&](const char *t) {
+            for (QLabel *l : e.findChildren<QLabel *>()) if (l->isVisible() && l->text().contains(QString::fromUtf8(t))) return true;
+            return false;
+        };
+        nourrir("Alpha", "CQ DE HB9AA");
+        VERIFIER(attendre([&] { return carte("CQ DE HB9AA"); }));
+        nourrir("Bravo", "CQ DE HB9BB");
+        VERIFIER(attendre([&] { return carte("CQ DE HB9BB"); }));
+        QComboBox *seul = nullptr;   // le menu « Seul poste » : celui qui propose Alpha et Bravo
+        for (QComboBox *m : e.findChildren<QComboBox *>())
+            if (m->isVisible() && m->findText("Alpha") >= 0 && m->findText("Bravo") >= 0) seul = m;
+        VERIFIER(seul != nullptr);
+        if (seul) {
+            seul->setCurrentIndex(seul->findText("Alpha"));
+            emit seul->activated(seul->currentIndex());
+        }
+        VERIFIER(attendre([&] { return carte("CQ DE HB9AA") && !carte("CQ DE HB9BB"); }));
+        if (seul) {
+            seul->setCurrentIndex(0);
+            emit seul->activated(0);
+        }
+        VERIFIER(attendre([&] { return carte("CQ DE HB9AA") && carte("CQ DE HB9BB"); }));
+    }
+
     // Le son (24 octobre 2026) : l'extension du fichier que lit le décodeur, d'après les octets ; le choix du micro
     {
         VERIFIER(extension_de_son(QByteArray("\0\0\0\x20" "ftypM4A ", 12)) == "m4a");

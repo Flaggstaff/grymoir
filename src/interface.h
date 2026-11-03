@@ -89,6 +89,9 @@ typedef struct {
     int agenda;                     /* une liste « , en agenda selon … » (2.74) : une grille horaire ; ses trois premières
                                        colonnes sont la date, l'heure et la durée en minutes ; la grille arrive par
                                        ecran_texte (l'élément de la liste), avant chaque attente (§ 22.24) */
+    int objets;                     /* zone liée à une entité conservée (3 novembre 2026) : un menu, même sans objet encore ;
+                                       1 : ecran_choix le remplit quand des objets arrivent ; 2 : filtrée (2.48), ses clés
+                                       restent celles de l'ouverture */
 } ElementEcran;
 
 /* Les états d'un élément (ecran_etats, § 22.6) : bit 1 inactif, bit 2 caché ; bit 4 sur un bouton « … si l'écran est
@@ -251,6 +254,10 @@ typedef struct {
     /* « Amorcer la transcription avec t. » (2.80) : le vocabulaire attendu par le transcripteur, pour les transcriptions
      * suivantes de l'exécution ; NULL : l'amorce retirée. Sans transcripteur, NULL : la phrase ne fait rien. */
     void (*amorcer)(void *contexte, const char *texte);
+    /* Avant chaque attente, pour une zone liée à une entité dont les objets ont changé depuis l'ouverture (un poste
+     * ajouté par un autre écran) : ses clés, comme à l'ouverture (3 novembre 2026). NULL : le menu garde celles de
+     * l'ouverture. */
+    void (*ecran_choix)(void *contexte, size_t element, const char *const *choix, size_t n);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

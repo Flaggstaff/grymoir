@@ -204,6 +204,7 @@ static void iface_ecran_ouvrir(void *contexte, Chaine *sortie, const char *titre
                              | (el[k].multiple ? 8 : 0) | (el[k].recherche ? 16 : 0) | (el[k].masque ? 32 : 0)
                              | (el[k].principal ? 64 : 0) | (el[k].tuile ? 128 : 0) | (el[k].a_cote_du_titre ? 256 : 0) | (el[k].inverse ? 512 : 0) | (el[k].cartes ? 1024 : 0) | (el[k].capitales ? 2048 : 0)
                              | (el[k].dossier ? 4096 : 0) | (el[k].destructif ? 8192 : 0) | (el[k].agenda ? 16384 : 0)
+                             | (el[k].objets ? 32768 : 0)   // une zone liée : un menu, même vide (3 novembre 2026)
                              | ((el[k].largeur_caracteres & 0xFF) << 16)
                              | ((el[k].raccourci & 0x7F) << 24));   // « , au clavier « N » » (2.68)
         t->facultatives << el[k].facultatif;
@@ -340,6 +341,12 @@ static void iface_ecran_signaler(void *contexte, Chaine *sortie, const char *mes
     auto *t = static_cast<Travail *>(contexte);
     t->vider_sortie(sortie);
     emit t->ecran_signal(QString::fromUtf8(message));
+}
+
+static void iface_ecran_choix(void *contexte, size_t k, const char *const *c, size_t n) {   // 3 novembre 2026
+    QStringList l;
+    for (size_t q = 0; q < n; q++) l << QString::fromUtf8(c[q]);
+    emit static_cast<Travail *>(contexte)->ecran_choix((int)k, l);
 }
 
 static void iface_ecran_valeurs(void *contexte, const char *const *v, size_t n) {
@@ -623,7 +630,7 @@ void Travail::run() {
                    iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte,
                    iface_montrer_document, iface_ouvrir_adresse, iface_envoyer, iface_ecran_transcrire,
                    1,    // les écoutes captent le son (2.69)
-                   iface_ecran_signaler, iface_amorcer};
+                   iface_ecran_signaler, iface_amorcer, iface_ecran_choix};
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     situer(m, chemin, base_imposee, dossier_ecriture);
@@ -947,6 +954,21 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             }
         }
     });
+    // les clés d'une zone liée, changées depuis l'ouverture (3 novembre 2026) : le menu les reprend, la valeur choisie
+    // gardée ; elles arrivent avant les valeurs, qui la posent ensuite
+    connect(&travail, &Travail::ecran_choix, this, [this](int k, const QStringList &c) {
+        if (k >= 0 && k < travail.choix_zones.size()) travail.choix_zones[k] = c;
+        if (k < 0 || k >= zones.size()) return;
+        auto *m = qobject_cast<QComboBox *>(zones[k]);
+        if (!m) return;
+        const QString garde = m->currentText();
+        const QSignalBlocker silence(m);
+        m->clear();
+        m->addItem(QString());
+        m->addItems(c);
+        if (!garde.isEmpty() && m->findText(garde) < 0) m->addItem(garde);
+        m->setCurrentIndex(qMax(0, m->findText(garde)));
+    });
     connect(&travail, &Travail::ecran_valeurs, this, [this](const QStringList &v) {
         for (int k = 0; k < v.size() && k < zones.size(); k++) {
             QWidget *z = zones[k];
@@ -1055,6 +1077,13 @@ Execution::Execution(const QString &chemin) : travail(chemin) {
             const int avant = captures.size();
             envoyer_capture();
             if (captures.size() < avant && !attente_ecran) return;
+        }
+        while (!changements_en_attente.isEmpty()) {   // une zone changée pendant le travail : son événement, maintenant
+            const ChangementGarde c = changements_en_attente.takeFirst();
+            if (!vue_ecran || vue_ecran != c.ecran) continue;   // un autre écran : le changement n'a plus de sens
+            texte_envoye = c.texte;
+            envoyer_evenement(EVENEMENT_CHANGEMENT, c.element, 0);
+            return;
         }
         if (travail.transcriptions_en_cours == 0 && clic_apres_transcription >= 0) {   // le clic retenu, maintenant que tout est là
             const int k = clic_apres_transcription;
@@ -1444,6 +1473,7 @@ void Execution::montrer_ecran(const QString &titre, const QVector<int> &sortes, 
         elements[k].dossier = o & 4096;   // 2.32
         elements[k].destructif = o & 8192;   // 2.72
         elements[k].agenda = o & 16384;      // 2.74
+        elements[k].objets = o & 32768;      // 3 novembre 2026
         elements[k].largeur_caracteres = (o >> 16) & 0xFF;   // 2.34
         elements[k].raccourci = (char)((o >> 24) & 0x7F);       // 2.68
         elements[k].graphique = travail.graphiques.value(k);   // § 22.11
@@ -1847,6 +1877,11 @@ void Execution::envoyer_evenement(SorteEvenement sorte, int element, int ligne) 
         // un clic arrivé avant que la machine attende (l'écran vient de s'ouvrir, actif mais pas encore à l'écoute) : gardé,
         // il part dès qu'elle attend, comme celui qui suit une zone (0.94) ; il se perdait en silence (1er novembre 2026)
         if (sorte == EVENEMENT_CLIC && vue_ecran && clic_en_attente < 0) { clic_en_attente = element; ecran_du_clic = vue_ecran; }
+        if (sorte == EVENEMENT_CHANGEMENT && vue_ecran && !fichier_envoye) {   // le dernier état d'une zone suffit
+            for (int q = changements_en_attente.size() - 1; q >= 0; q--)
+                if (changements_en_attente[q].element == element) changements_en_attente.remove(q);
+            changements_en_attente.push_back({element, texte_envoye, vue_ecran});
+        }
         return;
     }
     if (sorte == EVENEMENT_CLIC && travail.transcriptions_en_cours > 0) {

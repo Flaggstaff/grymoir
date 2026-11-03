@@ -2929,6 +2929,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
             e->elements[k].choix = NULL;
             e->elements[k].nb_choix = 0;
             const ClasseVM *lie = classe_vm(m, e->types[k]);
+            e->elements[k].objets = lie && lie->conserve && m->base;
             if (ce && e->champ[k] >= 0 && ce->valeurs[e->champ[k]]) {   /* valeurs permises : leur menu (§ 16.15) */
                 size_t nv = 0;
                 char **vals = decouper_valeurs(ce->valeurs[e->champ[k]], &nv);
@@ -2938,6 +2939,7 @@ static EcranVM *ecran_lire(const Machine *m, const char *desc, char **erreur) {
                 e->elements[k].nb_choix = nv;
             } else if (lie && lie->conserve && m->base && filtre_de_zone(m, k) >= 0) {
                 /* « un patient (patient dont l'archivage est absent) » (2.48) : les clés des objets que le filtre a trouvés */
+                e->elements[k].objets = 2;   /* filtrée : le filtre n'est lu qu'à l'ouverture, ses clés ne se relisent pas */
                 Machine *mm = (Machine *)m;   /* charger les objets : la lecture de l'écran ne change rien d'autre */
                 const Valeur *l = &mm->filtres[filtre_de_zone(m, k)];
                 char **vals = grym_allouer((l->liste->n ? l->liste->n : 1) * sizeof *vals);
@@ -5957,6 +5959,38 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 m->iface.ecran_valeurs(m->iface.contexte, (const char *const *)v, e->n);
                 for (size_t k = 0; k < e->n; k++) free(v[k]);
                 free(v);
+            }
+            if (!probleme && m->ecran && m->iface.ecran_choix && m->base) {
+                /* les menus des zones liées (3 novembre 2026) : un objet ajouté ou retiré par un autre écran s'y voit au
+                 * retour ; seuls les menus changés partent */
+                EcranVM *e = m->ecran;
+                for (size_t k = 0; k < e->n; k++) {
+                    if (e->elements[k].sorte != ELEMENT_ZONE || e->elements[k].objets != 1) continue;
+                    const ClasseVM *lie = classe_vm(m, e->types[k]);
+                    if (!lie || !lie->conserve) continue;
+                    const char *cle = champ_cle(lie);
+                    long kc = cle ? index_champ(lie, cle) : -1;
+                    char **vals = NULL, *err = NULL;
+                    size_t nv = 0;
+                    if (kc < 0 || !base_valeurs(m->base, lie->nom, lie->proprietaires[kc]->nom, cle, 1000, &vals, &nv, &err)) {
+                        free(err);
+                        continue;
+                    }
+                    int pareil = nv == e->nb_choix[k];
+                    for (size_t c = 0; pareil && c < nv; c++) pareil = !strcmp(vals[c], e->choix[k][c]);
+                    if (pareil) {
+                        for (size_t c = 0; c < nv; c++) free(vals[c]);
+                        free(vals);
+                        continue;
+                    }
+                    for (size_t c = 0; c < e->nb_choix[k]; c++) free(e->choix[k][c]);
+                    free(e->choix[k]);
+                    e->choix[k] = vals;
+                    e->nb_choix[k] = nv;
+                    e->elements[k].choix = (const char *const *)vals;
+                    e->elements[k].nb_choix = nv;
+                    m->iface.ecran_choix(m->iface.contexte, k, (const char *const *)vals, nv);
+                }
             }
             if (!probleme && m->ecran)   /* 2.67 : « … si l'écran est modifié » : le bit 4 dit au bouton si la question se pose */
                 for (size_t k = 0; k < m->ecran->n; k++) {

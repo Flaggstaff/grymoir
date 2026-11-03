@@ -78,6 +78,7 @@ signals:
     void ecran_erreur(const QString &message);
     void ecran_signal(const QString &message);   // « Signaler » (2.71)
     void ecran_valeurs(const QStringList &valeurs);   // une par élément ; vide pour un élément qui n'est pas une zone
+    void ecran_choix(int element, const QStringList &choix);   // les clés d'une zone liée, changées depuis l'ouverture
     void ecran_etats(const QVector<int> &etats);      // un par élément : bit 1 inactif, bit 2 caché (§ 22.6)
     void ecran_image(int element, const QByteArray &octets);   // une image calculée, vide si absente (§ 22.8)
     void ecran_texte(int element, const QString &texte);       // un texte calculé, relu avant chaque attente (2.24)
@@ -201,6 +202,10 @@ private:
     // Un clic arrivé pendant qu'une zone envoyait sa valeur (le bouton prend le focus, la zone le perd et part la
     // première) : gardé, et envoyé dès que l'écran attend de nouveau, s'il est toujours le même (21 octobre 2026)
     int clic_en_attente = -1;
+    // les changements de zone arrivés pendant que la machine travaillait (un menu choisi pendant un passage capté) :
+    // gardés dans l'ordre, ils partent quand elle attend ; ils se perdaient en silence (3 novembre 2026)
+    struct ChangementGarde { int element; QByteArray texte; QWidget *ecran; };
+    QVector<ChangementGarde> changements_en_attente;
     // Un clic : d'abord la valeur d'une zone encore modifiée (sous macOS, un bouton ne prend pas le focus : la zone
     // n'envoie rien d'elle-même), puis le clic, quand l'écran attend de nouveau (21 octobre 2026)
     void cliquer(int k);

@@ -45,6 +45,7 @@ struct ElementVue {
     bool multiple = false;           // « des genres (genre) » : une case par choix (§ 22.1)
     QString indication;              // « , avec l'indication « … » », sous le libellé (§ 22.6)
     bool recherche = false;          // zone d'un objet « avec recherche » (§ 22.6)
+    bool objets = false;             // zone liée à une entité conservée : un menu, même vide (3 novembre 2026)
     int longueur_max = 0;            // zone de texte « au plus N caractères » : la frappe s'arrête là (§ 22.6)
     bool masque = false;             // zone de texte « masqué » : un mot de passe (§ 22.6)
     bool dossier = false;            // zone de texte « avec le choix d'un dossier » (2.32)
