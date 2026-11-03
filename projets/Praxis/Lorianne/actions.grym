@@ -892,3 +892,84 @@ La ligne du prescripteur d'une ordonnance :
     Si le numéro RCC du médecin de l'ordonnance est présent, le texte devient le texte suivi de ", RCC " suivi du numéro RCC du médecin de l'ordonnance.
     Si le numéro GLN du médecin de l'ordonnance est présent, le texte devient le texte suivi de ", GLN " suivi du numéro GLN du médecin de l'ordonnance.
     Rendre le texte suivi de " ; ordonnance du " suivi de la date de l'ordonnance.
+
+Remarque : le personnel (3 novembre 2026) : le nom d'un mois, de 1 à 12.
+Le mois en lettres d'un numéro de mois :
+    Si numéro de mois = 1, rendre « janvier ».
+    Si numéro de mois = 2, rendre « février ».
+    Si numéro de mois = 3, rendre « mars ».
+    Si numéro de mois = 4, rendre « avril ».
+    Si numéro de mois = 5, rendre « mai ».
+    Si numéro de mois = 6, rendre « juin ».
+    Si numéro de mois = 7, rendre « juillet ».
+    Si numéro de mois = 8, rendre « août ».
+    Si numéro de mois = 9, rendre « septembre ».
+    Si numéro de mois = 10, rendre « octobre ».
+    Si numéro de mois = 11, rendre « novembre ».
+    Rendre « décembre ».
+
+Remarque : l'ouverture d'un mois, son premier jour : un numéro de 1 à 12 et une année.
+L'ouverture d'un numéro de mois et d'un millésime :
+    Rendre le premier jour du millésime + (numéro de mois − 1) mois.
+
+Remarque : le brut d'un mois : le salaire d'un plein temps au taux d'occupation ; en décembre, le treizième par-dessus.
+Le salaire brut d'un salarié et d'un mois :
+    Le base vaut l'arrondi du salaire mensuel du salarié × le taux d'occupation du salarié ÷ 100 à 0,05.
+    Si le treizième du salarié est vrai et le mois du mois = 12, rendre base × 2.
+    Rendre base.
+
+Remarque : l'AC ne se prélève que sur la part du salaire annuel sous le plafond : ce qui a déjà été gagné dans l'année compte.
+Remarque : la feuille d'un salarié pour un mois (son premier jour), conservée ; refusée sans barème de l'année, ou si elle existe déjà.
+Pour établir la feuille d'un employé et un jour :
+    Si le nombre de feuilles conservées dont le salarié = employé et le mois = jour > 0, refuser "La feuille de " suivi du nom de l'employé suivi de " existe déjà pour ce mois : efface-la d'abord si elle est fausse.".
+    Le millésime vaut l'année du jour.
+    Si le nombre de barèmes conservés dont l'année = le millésime = 0, refuser "Pas de barème pour " suivi du millésime suivi de " : ajoute-le dans Personnel, Barèmes.".
+    Le b vaut le barème conservé dont l'année = le millésime.
+    Le janvier vaut le premier janvier du jour.
+    Le gagné vaut la somme des bruts des feuilles conservées dont le salarié = employé et le mois ≥ le janvier et le mois < jour.
+    Le total vaut le salaire brut de l'employé et du jour.
+    L'assiette vaut total.
+    Si le gagné + total > le plafond AC du b, l'assiette devient le plafond AC du b − le gagné.
+    Si l'assiette < 0, l'assiette devient 0.
+    La f vaut une nouvelle feuille :
+        Le salarié vaut employé.
+        Le mois vaut jour.
+        L'intitulé vaut le mois en lettres du mois du jour suivi de " " suivi du millésime.
+        Le brut vaut total.
+        La retenue AVS vaut l'arrondi de total × le taux AVS du b ÷ 100 à 0,05.
+        La retenue AC vaut l'arrondi de l'assiette × le taux AC du b ÷ 100 à 0,05.
+        La retenue LAA vaut l'arrondi de total × le taux LAA de l'employé ÷ 100 à 0,05.
+        La retenue LPP vaut la retenue LPP de l'employé.
+        La retenue d'impôt vaut la retenue d'impôt de l'employé.
+        Le net vaut 0.
+    Le net de la f devient le brut de la f − la retenue AVS de la f − la retenue AC de la f − la retenue LAA de la f − la retenue LPP de la f − la retenue d'impôt de la f.
+    Conserver la f.
+    Rendre la f.
+
+Remarque : le nom complet d'un salarié, pour les listes et la feuille.
+L'appellation d'un salarié :
+    Si le prénom du salarié est absent, rendre le nom du salarié.
+    Rendre le prénom du salarié suivi de " " suivi du nom du salarié.
+
+Remarque : l'adresse d'un salarié, pour l'enveloppe à fenêtre de sa feuille ; vide quand elle manque.
+L'adresse d'un salarié :
+    Si la rue du salarié est absente, rendre « ».
+    Si le numéro de maison du salarié est absent, rendre la rue du salarié.
+    Rendre la rue du salarié suivi de " " suivi du numéro de maison du salarié.
+
+La ville d'un salarié :
+    Si la localité du salarié est absente, rendre « ».
+    Si le numéro postal du salarié est absent, rendre la localité du salarié.
+    Rendre le numéro postal du salarié suivi de " " suivi de la localité du salarié.
+
+La ligne AVS d'un salarié :
+    Si le numéro AVS du salarié est absent, rendre « ».
+    Rendre "N° AVS " suivi du numéro AVS du salarié.
+
+Remarque : le contrat sur la feuille : le taux d'occupation et le salaire d'un plein temps.
+Le contrat d'un salarié :
+    Rendre "Taux d'occupation " suivi du taux d'occupation du salarié suivi de " %, salaire mensuel à 100 % : CHF " suivi de (l'arrondi du salaire mensuel du salarié à 0,01) suivi de « . ».
+
+La mention du compte d'un salarié :
+    Si l'IBAN du salarié est absent, rendre « ».
+    Rendre "Versé sur " suivi de l'IBAN du salarié suivi de « . ».

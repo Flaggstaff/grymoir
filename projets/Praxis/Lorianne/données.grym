@@ -368,3 +368,62 @@ Une plage, conservée, a :
     un rang (nombre entier),
     un début (heure),
     une fin (heure).
+
+Remarque : le personnel (3 novembre 2026) : les salariés du cabinet, quand il gère son personnel ; les taux d'une année, les
+Remarque : feuilles de salaire. Le salaire mensuel est celui d'un plein temps : le brut du mois le prend au taux d'occupation.
+Remarque : LPP, LAA non professionnelle et impôt à la source se lisent sur les décomptes de la caisse et du canton : Praxis les
+Remarque : retient tels quels, elle ne les calcule pas (le plan LPP dépend de la caisse et de l'âge, l'impôt du canton et de la
+Remarque : situation). Un salarié sorti ne reçoit plus de feuille ; il reste, ses feuilles aussi.
+Un salarié, conservé, a :
+    un nom (texte),
+    un prénom (texte), facultatif,
+    une rue (texte), facultative,
+    un numéro de maison (texte), facultatif,
+    un complément d'adresse (texte), facultatif,
+    un numéro postal (texte), facultatif,
+    une localité (texte), facultative,
+    un pays (texte), « Suisse » au départ,
+    un courriel (courriel), facultatif,
+    un numéro AVS (texte), facultatif,
+    une date de naissance (date), facultative,
+    une entrée (date), facultative,
+    une sortie (date), facultative,
+    une fonction (texte), facultative,
+    un taux d'occupation (nombre), 100 au départ,
+    un salaire mensuel (nombre), 0 au départ,
+    un treizième (vrai ou faux), faux au départ,
+    un IBAN (texte), facultatif,
+    un permis (texte), facultatif,
+    une retenue LPP (nombre), 0 au départ,
+    un taux LAA (nombre), 0 au départ,
+    une retenue d'impôt (nombre), 0 au départ.
+
+Remarque : le barème d'une année : les taux en pour cent, salarié et employeur, et le plafond annuel de l'AC ; ceux de 2026 au
+Remarque : départ (OFAS, tableau synoptique au 1er janvier 2026) ; la Configuration les change, rien n'est dans le code.
+Remarque : les allocations familiales et la LAA professionnelle, à la charge de l'employeur seul : pour le coût du cabinet.
+Un barème, conservé, a :
+    une année (nombre entier), unique,
+    un taux AVS (nombre), 5,3 au départ,
+    un taux AC (nombre), 1,1 au départ,
+    un plafond AC (nombre), 148200 au départ,
+    un taux AVS employeur (nombre), 5,3 au départ,
+    un taux AC employeur (nombre), 1,1 au départ,
+    un taux allocations familiales (nombre), 0 au départ,
+    un taux LAA employeur (nombre), 0 au départ.
+
+Remarque : une feuille de salaire : un salarié, un mois (son premier jour), le brut, chaque retenue aux cinq centimes, le net ;
+Remarque : l'intitulé en toutes lettres pour les listes ; versée le jour du virement ; envoyée le jour du courriel ou du courrier.
+Remarque : une feuille fausse s'efface définitivement (rien d'autre ne la désigne) et se refait.
+Une feuille, conservée, a :
+    un salarié (salarié),
+    un mois (date),
+    un intitulé (texte),
+    un brut (nombre),
+    une retenue AVS (nombre),
+    une retenue AC (nombre),
+    une retenue LAA (nombre),
+    une retenue LPP (nombre),
+    une retenue d'impôt (nombre),
+    un net (nombre),
+    un versement (date), facultatif,
+    un envoi (date), facultatif.

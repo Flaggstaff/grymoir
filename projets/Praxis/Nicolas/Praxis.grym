@@ -10,6 +10,15 @@ Remarque : une sauvegarde automatique ratée, que l'accueil montre ; ce que l'é
 L'échec de sauvegarde vaut absent.
 L'avis des sauvegardes vaut absent.
 L'avis des accès vaut absent.
+Remarque : le personnel (3 novembre 2026) : le salarié, le barème et la feuille dont la page est ouverte ; ce que les feuilles disent.
+Le salarié ouvert vaut absent.
+Le barème ouvert vaut absent.
+La feuille ouverte vaut absent.
+L'avis du personnel vaut absent.
+Remarque : l'année des feuilles, celle du jour au départ ; les feuilles montrées vont du premier janvier au suivant, exclu.
+L'année des feuilles vaut (l'année d'aujourd'hui suivi de « ») en nombre entier.
+Le début des feuilles vaut le premier jour de l'année des feuilles.
+La fin des feuilles vaut le premier jour de (l'année des feuilles + 1).
 
 Remarque : le dernier patient inscrit par l'écran d'inscription ; absent avant.
 L'inscrit vaut absent.
@@ -224,15 +233,329 @@ Quand on clique sur « Verrouiller » dans l'écran d'accueil :
     Le rôle ouvert devient « ».
     Ouvrir l'écran de garde.
 
-Remarque : le personnel (3 novembre 2026) : la tuile est là, le module salaire arrive avec la prochaine mise à jour.
+Remarque : le personnel (3 novembre 2026) : les salariés en poste, leurs feuilles, les barèmes ; un salarié sorti s'archive de
+Remarque : lui-même (sa sortie est posée), ses feuilles restent. Visible de la Direction seule.
 L'écran du personnel, « Personnel », montre :
-    le texte « Les salariés, leurs salaires et leurs feuilles de salaire arrivent avec la prochaine mise à jour de Praxis. »,
+    un bouton « Nouveau salarié », principal, à côté du titre, au clavier « N »,
+    le texte « Salariés », en petites capitales,
+    la liste des salariés conservés dont la sortie est absente, par nom, avec le nom, le prénom, la fonction, le taux d'occupation et le salaire mensuel,
+    côte à côte :
+        un bouton « Feuilles de salaire », en tuile, avec la description « Établir le mois, imprimer, verser »,
+        un bouton « Barèmes », en tuile, avec la description « Les taux de chaque année »,
+        un bouton « Salariés sortis », en tuile, avec la description « Ceux qui ont quitté le cabinet »,
     un bouton « Fermer ».
+
+Remarque : la fiche d'un salarié : l'adresse comme sur une enveloppe (la feuille part par la poste), le contrat, les retenues
+Remarque : que la caisse et le canton fixent. Le salaire mensuel est celui d'un plein temps.
+L'écran du salarié, « Salarié », montre :
+    en position libre :
+        un nom (texte), à 0 de la gauche et 0 du haut, large de 260,
+        un prénom (texte), facultatif, à 276 de la gauche et 0 du haut, large de 260,
+        une rue (texte), facultative, à 0 de la gauche et 72 du haut, large de 260,
+        un numéro de maison (texte), facultatif, à 276 de la gauche et 72 du haut, large de 110,
+        un complément d'adresse (texte), facultatif, à 0 de la gauche et 144 du haut, large de 536,
+        un numéro postal (texte), facultatif, à 0 de la gauche et 216 du haut, large de 110,
+        une localité (texte), facultative, à 126 de la gauche et 216 du haut, large de 260,
+        un pays (texte), « Suisse » au départ, à 402 de la gauche et 216 du haut, large de 134,
+        un courriel (courriel), facultatif, avec l'indication « Pour la feuille de salaire par courriel », à 0 de la gauche et 288 du haut, large de 260,
+        un numéro AVS (texte), facultatif, avec l'indication « 756.1234.5678.97 », à 276 de la gauche et 288 du haut, large de 260,
+        une date de naissance (date), facultative, à 0 de la gauche et 384 du haut, large de 260,
+        un permis (texte), facultatif, avec l'indication « B, G… : vide pour un Suisse ou un permis C », à 276 de la gauche et 384 du haut, large de 260,
+        une fonction (texte), facultative, à 552 de la gauche et 0 du haut, large de 260,
+        un taux d'occupation (nombre), de 1 à 100, avec l'unité « % », à 828 de la gauche et 0 du haut, large de 134,
+        un salaire mensuel (nombre), avec l'unité « CHF », avec l'indication « À 100 %, treizième non compris », à 552 de la gauche et 72 du haut, large de 260,
+        un treizième (vrai ou faux), en interrupteur, avec l'indication « Versé avec décembre », à 828 de la gauche et 72 du haut, large de 240,
+        une entrée (date), facultative, à 552 de la gauche et 168 du haut, large de 260,
+        une sortie (date), facultative, avec l'indication « Posée, le salarié quitte la liste et ne reçoit plus de feuille », à 828 de la gauche et 168 du haut, large de 240,
+        un IBAN (texte), facultatif, avec l'indication « Le compte du virement », à 552 de la gauche et 264 du haut, large de 516,
+        une retenue LPP (nombre), avec l'unité « CHF », avec l'indication « Par mois, part du salarié, d'après la caisse de pension », à 552 de la gauche et 360 du haut, large de 260,
+        un taux LAA (nombre), avec l'unité « % », avec l'indication « Accidents non professionnels, part du salarié ; 0 sous 8 h par semaine », à 828 de la gauche et 360 du haut, large de 240,
+        une retenue d'impôt (nombre), avec l'unité « CHF », avec l'indication « Impôt à la source par mois, d'après le barème cantonal ; 0 sans permis B ou G », à 552 de la gauche et 456 du haut, large de 260,
+    côte à côte :
+        un bouton « Enregistrer », principal, au clavier « S »,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
+        un bouton « Supprimer », destructif, à confirmer par « Supprimer ce salarié ? Il part dans la corbeille, ses feuilles restent. », visible si le salarié ouvert est présent.
+
+Remarque : les salariés sortis : leur fiche s'ouvre encore, pour une attestation ou une feuille d'avant ; vider la sortie les ramène.
+L'écran des sortis, « Salariés sortis », montre :
+    la liste des salariés conservés dont la sortie est présente, par nom, avec le nom, le prénom, la fonction et la sortie,
+    un bouton « Fermer ».
+
+Remarque : les barèmes : un par année ; une année nouvelle reçoit les taux de 2026, à corriger si l'OFAS les change.
+L'écran des barèmes, « Barèmes », montre :
+    la liste des barèmes conservés, par année décroissant, avec l'année, le taux AVS, le taux AC et le plafond AC,
+    côte à côte :
+        une nouvelle année (nombre entier), facultative, de 2000 à 2100,
+        un bouton « Ajouter », principal,
+    un bouton « Fermer ».
+
+L'écran du barème, ("Barème " suivi de l'année du barème ouvert), montre :
+    le texte « Part du salarié », en petites capitales,
+    côte à côte :
+        un taux AVS (nombre), avec l'unité « % », avec l'indication « AVS, AI et APG ensemble ; 5,3 en 2026 »,
+        un taux AC (nombre), avec l'unité « % », avec l'indication « Assurance-chômage ; 1,1 en 2026 »,
+        un plafond AC (nombre), avec l'unité « CHF », avec l'indication « Salaire annuel au-delà duquel l'AC cesse ; 148 200 en 2026 »,
+    le texte « Part de l'employeur », en petites capitales,
+    côte à côte :
+        un taux AVS employeur (nombre), avec l'unité « % »,
+        un taux AC employeur (nombre), avec l'unité « % »,
+        un taux allocations familiales (nombre), avec l'unité « % », avec l'indication « Selon la caisse de compensation du cabinet »,
+        un taux LAA employeur (nombre), avec l'unité « % », avec l'indication « Accidents professionnels, selon l'assureur »,
+    côte à côte :
+        un bouton « Enregistrer », principal, au clavier « S »,
+        un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
+
+Remarque : les feuilles de salaire : l'année choisie ; « Établir le mois » fait la feuille de chaque salarié en poste qui n'en a
+Remarque : pas encore pour ce mois ; une feuille choisie s'ouvre, s'imprime, se marque versée ou envoyée, ou s'efface.
+L'écran des feuilles, ("Feuilles de salaire " suivi de l'année des feuilles), montre :
+    côte à côte :
+        une année (nombre entier), de 2000 à 2100,
+        un bouton « Voir l'année »,
+        un mois (nombre entier), de 1 à 12, avec l'indication « 1 à 12 »,
+        un bouton « Établir le mois », principal,
+    le texte l'annonce de l'avis du personnel,
+    la liste des feuilles conservées dont le mois ≥ le début des feuilles et le mois < la fin des feuilles, par mois décroissant, avec l'intitulé, le nom du salarié, le brut, le net, le versement et l'envoi,
+    un bouton « Fermer ».
+
+L'écran de la feuille, ("Feuille de salaire, " suivi de l'intitulé de la feuille ouverte), montre :
+    le texte l'appellation du salarié de la feuille ouverte, en petites capitales,
+    le texte "Salaire brut : CHF " suivi de l'arrondi du brut de la feuille ouverte à 0,01,
+    le texte "AVS/AI/APG : CHF " suivi de l'arrondi de la retenue AVS de la feuille ouverte à 0,01,
+    le texte "AC : CHF " suivi de l'arrondi de la retenue AC de la feuille ouverte à 0,01,
+    le texte "LAA non professionnelle : CHF " suivi de l'arrondi de la retenue LAA de la feuille ouverte à 0,01,
+    le texte "LPP : CHF " suivi de l'arrondi de la retenue LPP de la feuille ouverte à 0,01,
+    le texte "Impôt à la source : CHF " suivi de l'arrondi de la retenue d'impôt de la feuille ouverte à 0,01,
+    le texte "Salaire net : CHF " suivi de l'arrondi du net de la feuille ouverte à 0,01, en petites capitales,
+    côte à côte :
+        un versement (date), facultatif, avec l'indication « Le jour du virement »,
+        un envoi (date), facultatif, avec l'indication « Le jour du courriel ou du courrier »,
+    côte à côte :
+        un bouton « Imprimer », principal, au clavier « P »,
+        un bouton « Enregistrer », au clavier « S »,
+        un bouton « Fermer »,
+        un bouton « Effacer », destructif, à confirmer par « Effacer cette feuille pour toujours ? Elle se refait depuis les feuilles, par le mois. » en tapant « effacer ».
+
+Remarque : la feuille de salaire sur papier (3 novembre 2026) : le cabinet, le salarié et son adresse (enveloppe à fenêtre),
+Remarque : le mois, le brut, chaque retenue, le net, le compte du virement.
+Le document de feuille, « Feuille de salaire », montre :
+    côte à côte :
+        la partie « en-tête du cabinet »,
+        l'un sous l'autre :
+            le texte « Salarié », en petites capitales,
+            le texte l'appellation du salarié de la feuille ouverte,
+            le texte l'adresse du salarié de la feuille ouverte,
+            le texte la ville du salarié de la feuille ouverte,
+            le texte la ligne AVS du salarié de la feuille ouverte,
+    le texte "Feuille de salaire, " suivi de l'intitulé de la feuille ouverte, en petites capitales,
+    le texte le contrat du salarié de la feuille ouverte,
+    le texte "Salaire brut : CHF " suivi de l'arrondi du brut de la feuille ouverte à 0,01,
+    le texte "AVS/AI/APG : CHF " suivi de l'arrondi de la retenue AVS de la feuille ouverte à 0,01,
+    le texte "Assurance-chômage (AC) : CHF " suivi de l'arrondi de la retenue AC de la feuille ouverte à 0,01,
+    le texte "Assurance-accidents non professionnels (LAA) : CHF " suivi de l'arrondi de la retenue LAA de la feuille ouverte à 0,01,
+    le texte "Prévoyance professionnelle (LPP) : CHF " suivi de l'arrondi de la retenue LPP de la feuille ouverte à 0,01,
+    le texte "Impôt à la source : CHF " suivi de l'arrondi de la retenue d'impôt de la feuille ouverte à 0,01,
+    le texte "Salaire net : CHF " suivi de l'arrondi du net de la feuille ouverte à 0,01, en petites capitales,
+    le texte la mention du compte du salarié de la feuille ouverte,
+    le texte "Pour le cabinet, " suivi du nom du cabinet conservé.
 
 Quand on clique sur « Personnel » dans l'écran d'accueil :
     Ouvrir l'écran du personnel.
 
 Quand on clique sur « Fermer » dans l'écran du personnel :
+    Fermer l'écran.
+
+Quand on clique sur « Nouveau salarié » dans l'écran du personnel :
+    Le salarié ouvert devient absent.
+    Ouvrir l'écran du salarié.
+
+Quand on choisit un salarié dans l'écran du personnel :
+    Le salarié ouvert devient le salarié choisi de l'écran.
+    Ouvrir l'écran du salarié.
+
+Quand on clique sur « Salariés sortis » dans l'écran du personnel :
+    Ouvrir l'écran des sortis.
+
+Quand on choisit un salarié dans l'écran des sortis :
+    Le salarié ouvert devient le salarié choisi de l'écran.
+    Ouvrir l'écran du salarié.
+
+Quand on clique sur « Fermer » dans l'écran des sortis :
+    Fermer l'écran.
+
+Quand on ouvre l'écran du salarié :
+    Si le salarié ouvert est présent :
+        Le s vaut le salarié ouvert.
+        Le nom de l'écran devient le nom du s.
+        Le prénom de l'écran devient le prénom du s.
+        La rue de l'écran devient la rue du s.
+        Le numéro de maison de l'écran devient le numéro de maison du s.
+        Le complément d'adresse de l'écran devient le complément d'adresse du s.
+        Le numéro postal de l'écran devient le numéro postal du s.
+        La localité de l'écran devient la localité du s.
+        Le pays de l'écran devient le pays du s.
+        Le courriel de l'écran devient le courriel du s.
+        Le numéro AVS de l'écran devient le numéro AVS du s.
+        La date de naissance de l'écran devient la date de naissance du s.
+        Le permis de l'écran devient le permis du s.
+        La fonction de l'écran devient la fonction du s.
+        Le taux d'occupation de l'écran devient le taux d'occupation du s.
+        Le salaire mensuel de l'écran devient le salaire mensuel du s.
+        Le treizième de l'écran devient le treizième du s.
+        L'entrée de l'écran devient l'entrée du s.
+        La sortie de l'écran devient la sortie du s.
+        L'IBAN de l'écran devient l'IBAN du s.
+        La retenue LPP de l'écran devient la retenue LPP du s.
+        Le taux LAA de l'écran devient le taux LAA du s.
+        La retenue d'impôt de l'écran devient la retenue d'impôt du s.
+
+Remarque : un salarié nouveau se conserve d'abord, puis se remplit comme un ancien.
+Quand on clique sur « Enregistrer » dans l'écran du salarié :
+    Si le salarié ouvert est absent :
+        Le n vaut un nouveau salarié :
+            Le nom vaut le nom de l'écran.
+            Le pays vaut le pays de l'écran.
+            Le taux d'occupation vaut le taux d'occupation de l'écran.
+            Le salaire mensuel vaut le salaire mensuel de l'écran.
+            Le treizième vaut le treizième de l'écran.
+            La retenue LPP vaut la retenue LPP de l'écran.
+            Le taux LAA vaut le taux LAA de l'écran.
+            La retenue d'impôt vaut la retenue d'impôt de l'écran.
+        Conserver le n.
+        Le salarié ouvert devient le n.
+    Le s vaut le salarié ouvert.
+    Le nom du s devient le nom de l'écran.
+    Le prénom du s devient le prénom de l'écran.
+    La rue du s devient la rue de l'écran.
+    Le numéro de maison du s devient le numéro de maison de l'écran.
+    Le complément d'adresse du s devient le complément d'adresse de l'écran.
+    Le numéro postal du s devient le numéro postal de l'écran.
+    La localité du s devient la localité de l'écran.
+    Le pays du s devient le pays de l'écran.
+    Le courriel du s devient le courriel de l'écran.
+    Le numéro AVS du s devient le numéro AVS de l'écran.
+    La date de naissance du s devient la date de naissance de l'écran.
+    Le permis du s devient le permis de l'écran.
+    La fonction du s devient la fonction de l'écran.
+    Le taux d'occupation du s devient le taux d'occupation de l'écran.
+    Le salaire mensuel du s devient le salaire mensuel de l'écran.
+    Le treizième du s devient le treizième de l'écran.
+    L'entrée du s devient l'entrée de l'écran.
+    La sortie du s devient la sortie de l'écran.
+    L'IBAN du s devient l'IBAN de l'écran.
+    La retenue LPP du s devient la retenue LPP de l'écran.
+    Le taux LAA du s devient le taux LAA de l'écran.
+    La retenue d'impôt du s devient la retenue d'impôt de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran du salarié :
+    Fermer l'écran.
+
+Quand on clique sur « Supprimer » dans l'écran du salarié :
+    Supprimer le salarié ouvert.
+    Fermer l'écran.
+
+Quand on clique sur « Barèmes » dans l'écran du personnel :
+    Ouvrir l'écran des barèmes.
+
+Remarque : une année nouvelle avec les taux de 2026 (OFAS, tableau synoptique au 1er janvier 2026) ; à corriger dans sa fiche.
+Quand on clique sur « Ajouter » dans l'écran des barèmes :
+    Si la nouvelle année de l'écran est absente, refuser « Écris d'abord l'année du barème. ».
+    Si le nombre de barèmes conservés dont l'année = la nouvelle année de l'écran > 0, refuser « Cette année a déjà son barème : choisis-le dans la liste. ».
+    Le b vaut un nouveau barème :
+        L'année vaut la nouvelle année de l'écran.
+        Le taux AVS vaut 5,3.
+        Le taux AC vaut 1,1.
+        Le plafond AC vaut 148200.
+        Le taux AVS employeur vaut 5,3.
+        Le taux AC employeur vaut 1,1.
+        Le taux allocations familiales vaut 0.
+        Le taux LAA employeur vaut 0.
+    Conserver le b.
+    La nouvelle année de l'écran devient absente.
+
+Quand on choisit un barème dans l'écran des barèmes :
+    Le barème ouvert devient le barème choisi de l'écran.
+    Ouvrir l'écran du barème.
+
+Quand on clique sur « Fermer » dans l'écran des barèmes :
+    Fermer l'écran.
+
+Quand on ouvre l'écran du barème :
+    Le b vaut le barème ouvert.
+    Le taux AVS de l'écran devient le taux AVS du b.
+    Le taux AC de l'écran devient le taux AC du b.
+    Le plafond AC de l'écran devient le plafond AC du b.
+    Le taux AVS employeur de l'écran devient le taux AVS employeur du b.
+    Le taux AC employeur de l'écran devient le taux AC employeur du b.
+    Le taux allocations familiales de l'écran devient le taux allocations familiales du b.
+    Le taux LAA employeur de l'écran devient le taux LAA employeur du b.
+
+Quand on clique sur « Enregistrer » dans l'écran du barème :
+    Le b vaut le barème ouvert.
+    Le taux AVS du b devient le taux AVS de l'écran.
+    Le taux AC du b devient le taux AC de l'écran.
+    Le plafond AC du b devient le plafond AC de l'écran.
+    Le taux AVS employeur du b devient le taux AVS employeur de l'écran.
+    Le taux AC employeur du b devient le taux AC employeur de l'écran.
+    Le taux allocations familiales du b devient le taux allocations familiales de l'écran.
+    Le taux LAA employeur du b devient le taux LAA employeur de l'écran.
+    Fermer l'écran.
+
+Quand on clique sur « Fermer » dans l'écran du barème :
+    Fermer l'écran.
+
+Quand on clique sur « Feuilles de salaire » dans l'écran du personnel :
+    L'avis du personnel devient absent.
+    Ouvrir l'écran des feuilles.
+
+Quand on ouvre l'écran des feuilles :
+    L'année de l'écran devient l'année des feuilles.
+    Le mois de l'écran devient le mois d'aujourd'hui.
+
+Quand on clique sur « Voir l'année » dans l'écran des feuilles :
+    L'année des feuilles devient l'année de l'écran.
+    Le début des feuilles devient le premier jour de l'année des feuilles.
+    La fin des feuilles devient le premier jour de (l'année des feuilles + 1).
+
+Remarque : établir le mois : une feuille par salarié en poste qui n'en a pas encore ; ceux qui en ont une sont passés.
+Quand on clique sur « Établir le mois » dans l'écran des feuilles :
+    Le jour vaut l'ouverture du mois de l'écran et de l'année de l'écran.
+    Le nombre fait vaut 0.
+    Pour chaque salarié conservé dont la sortie est absente, par nom :
+        L'employé vaut le salarié.
+        Si le nombre de feuilles conservées dont le salarié = l'employé et le mois = le jour = 0 :
+            Établir la feuille de l'employé et le jour, qui donne la f.
+            Le nombre fait devient le nombre fait + 1.
+    L'année des feuilles devient l'année de l'écran.
+    Le début des feuilles devient le premier jour de l'année des feuilles.
+    La fin des feuilles devient le premier jour de (l'année des feuilles + 1).
+    L'avis du personnel devient le nombre fait suivi de " feuille(s) établie(s) pour " suivi du mois en lettres du mois de l'écran suivi de " " suivi de l'année de l'écran suivi de « . ».
+
+Quand on choisit une feuille dans l'écran des feuilles :
+    La feuille ouverte devient la feuille choisie de l'écran.
+    Ouvrir l'écran de la feuille.
+
+Quand on clique sur « Fermer » dans l'écran des feuilles :
+    Fermer l'écran.
+
+Quand on ouvre l'écran de la feuille :
+    Le versement de l'écran devient le versement de la feuille ouverte.
+    L'envoi de l'écran devient l'envoi de la feuille ouverte.
+
+Quand on clique sur « Enregistrer » dans l'écran de la feuille :
+    Le versement de la feuille ouverte devient le versement de l'écran.
+    L'envoi de la feuille ouverte devient l'envoi de l'écran.
+    Fermer l'écran.
+
+Remarque : l'aperçu du document, d'où l'on imprime ou enregistre un PDF (Cmd+P suffit à Nicolas) ; l'envoi se note à la main.
+Quand on clique sur « Imprimer » dans l'écran de la feuille :
+    Ouvrir le document de feuille.
+
+Quand on clique sur « Fermer » dans l'écran de la feuille :
+    Fermer l'écran.
+
+Quand on clique sur « Effacer » dans l'écran de la feuille :
+    Supprimer la feuille ouverte définitivement.
     Fermer l'écran.
 
 Remarque : quitter (24 octobre 2026) : le bouton « Fermer l'application » ou la croix de la fenêtre ferment l'accueil ; en
@@ -757,6 +1080,11 @@ L'écran de la corbeille, « Corbeille », montre :
     côte à côte :
         un bouton « Rétablir la rubrique »,
         un bouton « Effacer la rubrique », destructif, à confirmer par « Effacer pour toujours la rubrique choisie ? » en tapant « effacer », visible si le rôle ouvert = « Direction »,
+    le texte « Salariés », en petites capitales,
+    la liste des salariés supprimés, par nom, avec le nom, le prénom et la fonction,
+    côte à côte :
+        un bouton « Rétablir le salarié »,
+        un bouton « Effacer le salarié », destructif, à confirmer par « Effacer pour toujours le salarié choisi ? » en tapant « effacer », visible si le rôle ouvert = « Direction »,
     le texte « Pièces annulées », en petites capitales,
     la liste des factures supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
     la liste des quittances supprimées, par numéro décroissant, avec le numéro, la date, le nom du patient et le montant,
@@ -1905,6 +2233,17 @@ Quand on clique sur « Rétablir le soin » dans l'écran de la corbeille :
 Quand on clique sur « Rétablir la rubrique » dans l'écran de la corbeille :
     Si la rubrique choisie de l'écran est absente, refuser « Choisis d'abord une rubrique dans la liste. ».
     Rétablir la rubrique choisie de l'écran.
+
+Quand on clique sur « Rétablir le salarié » dans l'écran de la corbeille :
+    Si le salarié choisi de l'écran est absent, refuser « Choisis d'abord un salarié dans la liste. ».
+    Rétablir le salarié choisi de l'écran.
+
+Remarque : un salarié qui a des feuilles ne s'efface pas : elles sont dues au fisc et à la caisse ; on le rétablit, et on pose sa sortie.
+Quand on clique sur « Effacer le salarié » dans l'écran de la corbeille :
+    Si le salarié choisi de l'écran est absent, refuser « Choisis d'abord un salarié dans la liste. ».
+    L'employé vaut le salarié choisi de l'écran.
+    Si le nombre de feuilles conservées dont le salarié = l'employé > 0, refuser « Ce salarié a des feuilles de salaire : rétablis-le, puis pose sa date de sortie. ».
+    Supprimer le salarié choisi de l'écran définitivement.
 
 Remarque : un patient effacé emporte ses séances et ses notes ; jamais ses pièces : avec elles, il se rétablit, puis s'archive.
 Quand on clique sur « Effacer le patient » dans l'écran de la corbeille :

@@ -1,0 +1,71 @@
+Remarque : le module salaire (3 novembre 2026) : le brut au taux d'occupation, le treizième en décembre, les retenues aux cinq
+Remarque : centimes, le plafond de l'AC sur l'année, le refus d'une feuille en double et sans barème.
+Utiliser « actions ».
+Le c vaut un nouveau cabinet :
+    Le nom vaut « Essai ».
+    Le pays vaut « Suisse ».
+    La facturation des absences vaut faux.
+    Le choix d'agenda vaut faux.
+    La facturation aux assurances vaut faux.
+    La gestion du personnel vaut vrai.
+    L'agenda vaut « Praxis ».
+Conserver le c.
+Le b vaut un nouveau barème :
+    L'année vaut 2026.
+    Le taux AVS vaut 5,3.
+    Le taux AC vaut 1,1.
+    Le plafond AC vaut 148200.
+    Le taux AVS employeur vaut 5,3.
+    Le taux AC employeur vaut 1,1.
+    Le taux allocations familiales vaut 0.
+    Le taux LAA employeur vaut 0.
+Conserver le b.
+Le s vaut un nouveau salarié :
+    Le nom vaut « Favre ».
+    Le prénom vaut « Maria ».
+    Le pays vaut « Suisse ».
+    Le taux d'occupation vaut 80.
+    Le salaire mensuel vaut 6000.
+    Le treizième vaut vrai.
+    La retenue LPP vaut 300.
+    Le taux LAA vaut 1,2.
+    La retenue d'impôt vaut 0.
+Conserver le s.
+Établir la feuille du s et l'ouverture de 11 et de 2026, qui donne la f.
+Afficher l'intitulé de la f.
+Afficher le brut de la f.
+Afficher la retenue AVS de la f.
+Afficher la retenue AC de la f.
+Afficher la retenue LAA de la f.
+Afficher le net de la f.
+Établir la feuille du s et l'ouverture de 12 et de 2026, qui donne la d.
+Afficher le brut de la d.
+Afficher le nombre de feuilles conservées.
+Essayer :
+    Établir la feuille du s et l'ouverture de 12 et de 2026, qui donne la e.
+    Afficher « pas refusée ».
+En cas d'échec :
+    Afficher le motif de l'échec.
+Essayer :
+    Établir la feuille du s et l'ouverture de 1 et de 2025, qui donne la g.
+    Afficher « pas refusée ».
+En cas d'échec :
+    Afficher le motif de l'échec.
+Remarque : le plafond de l'AC : 15 000 par mois, 180 000 sur l'année ; en octobre, 135 000 gagnés, 13 200 restent sous 148 200.
+Le h vaut un nouveau salarié :
+    Le nom vaut « Haut ».
+    Le pays vaut « Suisse ».
+    Le taux d'occupation vaut 100.
+    Le salaire mensuel vaut 15000.
+    Le treizième vaut faux.
+    La retenue LPP vaut 0.
+    Le taux LAA vaut 0.
+    La retenue d'impôt vaut 0.
+Conserver le h.
+Pour chaque m de 1 à 10 :
+    Établir la feuille du h et l'ouverture de m et de 2026, qui donne la k.
+Afficher la retenue AC de la feuille conservée dont le salarié = le h et le mois = l'ouverture de 9 et de 2026.
+Afficher la retenue AC de la feuille conservée dont le salarié = le h et le mois = l'ouverture de 10 et de 2026.
+Établir la feuille du h et l'ouverture de 11 et de 2026, qui donne la n.
+Afficher la retenue AC de la n.
+Afficher l'appellation du s.

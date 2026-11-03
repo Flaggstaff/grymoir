@@ -1,0 +1,29 @@
+#!/bin/sh
+# Le module salaire de Praxis (3 novembre 2026) : le brut au taux d'occupation, le treizième en décembre, les retenues aux cinq
+# centimes, le plafond annuel de l'AC, le refus d'une feuille en double et d'un mois sans barème (tests/praxis/salaire.grym).
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+N="$racine/projets/Praxis/Nicolas"
+cp "$N/données.grym" "$N/actions.grym" "$d/" && cp -R "$N/bibliothèques" "$d/" && cp "$racine/tests/praxis/salaire.grym" "$d/"
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+sortie="$("$grym" lancer salaire.grym 2>&1 < /dev/null)"
+verifier "$(echo "$sortie" | sed -n 1p)" "novembre 2026" "l'intitulé du mois"
+verifier "$(echo "$sortie" | sed -n 2p)" "4'800,00" "le brut : 6 000 à 80 %"
+verifier "$(echo "$sortie" | sed -n 3p)" "254,40" "l'AVS/AI/APG à 5,3 %"
+verifier "$(echo "$sortie" | sed -n 4p)" "52,80" "l'AC à 1,1 %"
+verifier "$(echo "$sortie" | sed -n 5p)" "57,60" "la LAA non professionnelle au taux du salarié"
+verifier "$(echo "$sortie" | sed -n 6p)" "4'135,20" "le net, LPP retenue telle quelle"
+verifier "$(echo "$sortie" | sed -n 7p)" "9'600,00" "décembre : le treizième par-dessus"
+verifier "$(echo "$sortie" | sed -n 8p)" "2" "deux feuilles conservées"
+verifier "$(echo "$sortie" | sed -n 9p)" "La feuille de Favre existe déjà pour ce mois : efface-la d'abord si elle est fausse." "une feuille en double est refusée"
+verifier "$(echo "$sortie" | sed -n 10p)" "Pas de barème pour 2025 : ajoute-le dans Personnel, Barèmes." "un mois sans barème est refusé"
+verifier "$(echo "$sortie" | sed -n 11p)" "165,00" "l'AC pleine sous le plafond"
+verifier "$(echo "$sortie" | sed -n 12p)" "145,20" "l'AC sur ce qui reste sous 148 200"
+verifier "$(echo "$sortie" | sed -n 13p)" "0,00" "plus d'AC au-dessus du plafond"
+verifier "$(echo "$sortie" | sed -n 14p)" "Maria Favre" "l'appellation d'un salarié"
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]

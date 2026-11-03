@@ -1,14 +1,16 @@
 #!/bin/sh
-# Les accès de Praxis (3 novembre 2026) : un cabinet qui gère son personnel, sans mot de passe de Direction encore, ouvre en
-# Direction ; Configuration, Accès s'ouvre sans erreur, et la capture le montre. Lancé par l'atelier sans écran ; sans atelier, sauté.
+# Les accès de Praxis (3 novembre 2026) : la version neutre, la gestion du personnel allumée par son départ.grym (nulle part
+# allumée dans les versions livrées), sans mot de passe de Direction encore, ouvre en Direction ; Configuration, Accès et la
+# tuile Personnel s'ouvrent sans erreur. Lancé par l'atelier sans écran ; sans atelier, sauté.
 racine=$(cd "$(dirname "$0")/.." && pwd)
 atelier="$racine/construction/grym-atelier"
 [ -x "$atelier" ] || atelier="$racine/construction/grym-atelier.app/Contents/MacOS/grym-atelier"
 if [ ! -x "$atelier" ]; then echo "praxis-acces : sauté (atelier absent)"; exit 0; fi
 d=$(mktemp -d)
 trap 'rm -rf "$d"' EXIT
-C="$racine/projets/Praxis/Cabinet du Centre"
+C="$racine/projets/Praxis/Praxis"
 for n in "$C"/*; do case "$n" in *.grymd*|*.grymb) ;; *) cp -R "$n" "$d/";; esac; done
+sed -i.orig 's/^        La gestion du personnel vaut faux\.$/        La gestion du personnel vaut vrai./' "$d/départ.grym" && rm -f "$d/départ.grym.orig"
 total=0; echecs=0
 verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
 (cd "$d" && QT_QPA_PLATFORM=offscreen GRYMOIR_ESSAIS=1 GRYMOIR_SANS_APERCU=1 GRYM_MOT_DE_PASSE_BASE=essai-essai \
