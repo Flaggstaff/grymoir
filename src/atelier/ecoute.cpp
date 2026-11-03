@@ -278,7 +278,7 @@ Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel_
     auto *ligne_gain = new QHBoxLayout;
     gain_ = new Reglette(-30, 30, QString::fromUtf8("◀ plus faible"), QString::fromUtf8("plus fort ▶"));
     gain_->curseur->setToolTip(QString::fromUtf8("Le gain, en dB : pour un poste trop faible ou trop fort ; 0 ne change rien"));
-    filtre_ = new QCheckBox(QString::fromUtf8("Filtre radio (300 à 3000 Hz)"));
+    filtre_ = new QCheckBox(QString::fromUtf8("Filtre radio (150 à 3000 Hz)"));
     filtre_->setToolTip(QString::fromUtf8("Ôte le ronflement du secteur et le souffle aigu ; la voix et le morse passent"));
     ligne_gain->addWidget(new QLabel(QString::fromUtf8("<b>Gain</b>")));
     ligne_gain->addStretch(1);

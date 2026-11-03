@@ -41,14 +41,15 @@ struct Biquad {
 };
 
 // L'affinage du son (2 novembre 2026), avant le découpage, le haut-parleur et la transcription : le gain (en dB, de −30
-// à +30), puis, si voulu, le filtre radio (de 300 à 3000 Hz : le ronflement du secteur et le souffle aigu ôtés). Le
+// à +30), puis, si voulu, le filtre radio (de 150 à 3000 Hz : le ronflement du secteur et le souffle aigu ôtés ; 150 et non
+// 300 Hz depuis le 2 novembre 2026 : la fondamentale d'une voix d'homme, vers 190 Hz, y perdait 5 dB). Le
 // résultat est borné à ±1 : un gain trop fort sature, et le bandeau le dit.
 struct Affinage {
     int gain_db = 0;
     bool filtre = false;
     void appliquer(std::vector<float> *pcm16k);
     void vider() { haut.vider(); bas.vider(); }
-    Affinage() { haut.regler(true, 300); bas.regler(false, 3000); }
+    Affinage() { haut.regler(true, 150); bas.regler(false, 3000); }
 
 private:
     Biquad haut, bas;

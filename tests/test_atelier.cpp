@@ -1685,7 +1685,11 @@ int main(int argc, char **argv) {
         a.vider();
         v = sinus(50, 16000);
         a.appliquer(&v);
-        VERIFIER(efficace(v) < 0.05 * ref);   // le secteur, ôté (plus de 26 dB)
+        VERIFIER(efficace(v) < 0.13 * ref);   // le secteur, atténué (2e ordre à 150 Hz : environ 19 dB à 50 Hz)
+        a.vider();
+        v = sinus(190, 16000);
+        a.appliquer(&v);
+        VERIFIER(efficace(v) > 0.75 * ref);   // la fondamentale d'une voix d'homme passe (environ −1 dB)
         a.vider();
         v = sinus(6000, 16000);
         a.appliquer(&v);
