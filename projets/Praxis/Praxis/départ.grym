@@ -3,8 +3,8 @@ Remarque : dans projets/Praxis/<Nom>, puis changer ce fichier (nom, prénom, int
 Remarque : « Les écrans ont … » du programme principal ; le reste se règle dans la Configuration de l'application.
 Utiliser « actions ».
 
-Remarque : un cabinet sans nom propre : le nom et l'adresse se complètent dans sa fiche ; les deux interrupteurs de Praxis 2
-Remarque : (le choix d'agenda, la facturation aux assurances) éteints, comme Praxis 1 ; ils s'allument dans la fiche du cabinet.
+Remarque : un cabinet sans nom propre : le nom et l'adresse se complètent dans sa fiche ; les trois interrupteurs (le choix
+Remarque : d'agenda, la facturation aux assurances, la gestion du personnel) éteints, comme Praxis 1 ; ils s'allument dans la fiche du cabinet.
 Pour fonder le cabinet :
     Le c vaut un nouveau cabinet :
         Le nom vaut « Mon cabinet ».
@@ -12,6 +12,7 @@ Pour fonder le cabinet :
         La facturation des absences vaut faux.
         Le choix d'agenda vaut faux.
         La facturation aux assurances vaut faux.
+        La gestion du personnel vaut faux.
         L'agenda vaut « Praxis ».
     Conserver le c.
 

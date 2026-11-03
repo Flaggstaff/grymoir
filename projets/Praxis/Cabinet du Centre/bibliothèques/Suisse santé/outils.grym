@@ -1,0 +1,39 @@
+Remarque : les outils de la QR-facture, que seule la bibliothèque emploie.
+Ce fichier est interne à sa bibliothèque.
+
+Remarque : une ligne de QR-facture : vide si la valeur est absente.
+La ligne QR d'une valeur :
+    Si valeur est absente, rendre « ».
+    Rendre valeur.
+
+Remarque : le pays en deux lettres (ISO 3166-1), comme la QR-facture l'écrit : les pays voisins par leur nom, sinon tel qu'écrit s'il a deux lettres ; vide sinon.
+Le code pays d'un pays :
+    Si pays est absent, rendre « ».
+    Le p vaut pays en minuscules.
+    Si le p = « suisse », rendre « CH ».
+    Si le p = « liechtenstein », rendre « LI ».
+    Si le p = « france », rendre « FR ».
+    Si le p = « allemagne », rendre « DE ».
+    Si le p = « italie », rendre « IT ».
+    Si le p = « autriche », rendre « AT ».
+    Si le p = « belgique », rendre « BE ».
+    Si le p = « luxembourg », rendre « LU ».
+    Si le p = « espagne », rendre « ES ».
+    Si le p = « portugal », rendre « PT ».
+    Si la longueur du p = 2, rendre pays en majuscules.
+    Rendre « ».
+
+Remarque : sept lignes vides : un créancier final, ou un débiteur qu'on ne connaît pas.
+Le bloc vide d'un saut :
+    Rendre saut suivi de saut suivi de saut suivi de saut suivi de saut suivi de saut suivi de saut.
+
+Remarque : la charge entière ; la somme est déjà écrite (« 120.00 »), ou vide.
+Le contenu QR d'un compte et d'un créancier et d'une somme et d'un débiteur et d'un motif :
+    Le s vaut un saut de ligne.
+    Le d vaut « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s.
+    Le d devient d suivi de compte suivi du s suivi de créancier.
+    Le d devient d suivi du bloc vide du s.
+    Le d devient d suivi de somme suivi du s suivi de « CHF » suivi du s.
+    Le d devient d suivi de débiteur.
+    Le d devient d suivi de « NON » suivi du s suivi du s suivi de la ligne QR de motif suivi du s suivi de « EPD ».
+    Rendre d.

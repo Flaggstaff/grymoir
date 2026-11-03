@@ -12,6 +12,7 @@ Pour fonder le cabinet :
         La facturation des absences vaut faux.
         Le choix d'agenda vaut faux.
         La facturation aux assurances vaut faux.
+        La gestion du personnel vaut faux.
         L'agenda vaut « Praxis ».
     Le logo du c devient le fichier « images/coeur-encre.png ».
     La signature du c devient le fichier « images/signature.png ».
