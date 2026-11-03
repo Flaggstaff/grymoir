@@ -46,6 +46,8 @@ typedef enum {
     N_JOINDRE,       /* « les couleurs jointes par « , » » : enfants[0] l'ensemble, enfants[1] le séparateur ; forme 1 : joints */
     N_REMPLACER,     /* « t en remplaçant « a » par « b » » (2.81) : enfants : le texte, ce qu'on cherche, ce qui le remplace */
     N_MOTS,          /* « les mots de t » (2.81) : enfant : le texte ; forme 1 : leur nombre (« le nombre de mots de t ») */
+    N_PORTS,         /* « les ports série » (2.82) : sans enfant ; la liste des noms, dans une boucle « Pour chaque … parmi » */
+    N_PORT_SERIE,    /* « la réponse du port p à q, à v bauds » (2.82) : enfants : le port, la question, la vitesse */
     N_SANS,          /* « le numéro AVS sans « . » » (2.64) : enfants[0] le texte, enfants[1] ce qui s'en retire, partout */
     N_HEURE,         /* « 14:30 » (§ 14.7) : texte « 14:30 » ; entier : les minutes depuis minuit */
     N_MAINTENANT,    /* « maintenant » : l'heure, lue une fois au début de l'exécution (§ 14.7) */

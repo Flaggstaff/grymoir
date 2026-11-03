@@ -6,7 +6,7 @@ CPPFLAGS += -isystem vendor/sqlite   # en-tête tiers : ses avertissements ne so
 # dans les mêmes conditions que grym.exe, noms accentués compris (« données.grym »).
 LEXEUR    = src/lexeur.c src/date.c src/texte.c src/teinte.c $(RESSOURCES)
 ANALYSEUR = src/chemins.c src/analyseur.c src/compact.c src/arbre.c src/imprimeur.c src/decimal.c $(LEXEUR)
-EXECUTION = src/json.c src/morse.c src/qr.c vendor/qrcodegen/qrcodegen.c src/coffre.c vendor/monocypher/monocypher.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c $(ANALYSEUR) $(SQLITE_O)
+EXECUTION = src/json.c src/morse.c src/serie.c src/qr.c vendor/qrcodegen/qrcodegen.c src/coffre.c vendor/monocypher/monocypher.c src/compilateur.c src/vm.c src/console.c src/base.c src/bytecode.c src/empreinte.c $(ANALYSEUR) $(SQLITE_O)
 # SQLite embarqué, avec SQLite3MC (vendor/sqlite, voir PROVENANCE.md) : compilé une fois, sans les avertissements
 # de GrymoiR (ce code n'est pas le nôtre), avec les réglages de la charte.
 SQLITE_FLAGS = -std=c99 -O2 -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DQS=0 \
@@ -23,7 +23,7 @@ endif
 
 ENTETES   = src/qr.h src/coffre.h src/teinte.h src/chemins.h src/interface.h src/base.h src/vm_interne.h src/date.h src/compact.h src/imprimeur.h src/lexeur.h src/analyseur.h src/arbre.h src/texte.h src/compilateur.h src/vm.h src/bytecode.h src/decimal.h
 
-all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide
+all: grym grym-lexeur grym-arbre grym-suites test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide test_serie
 
 $(SQLITE_O): vendor/sqlite/sqlite3.c vendor/sqlite/sqlite3.h
 	$(CC) $(SQLITE_FLAGS) -c -o $@ vendor/sqlite/sqlite3.c
@@ -42,6 +42,9 @@ grym-arbre: src/grym-arbre.c $(ANALYSEUR) $(ENTETES)
 
 grym-suites: src/grym-suites.c $(ANALYSEUR) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ src/grym-suites.c $(ANALYSEUR)
+
+test_serie: tests/test_serie.c src/serie.c src/texte.c src/serie.h $(RESSOURCES)
+	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_serie.c src/serie.c src/texte.c $(RESSOURCES)
 
 test_lexeur: tests/test_lexeur.c $(LEXEUR) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_lexeur.c $(LEXEUR)
@@ -70,7 +73,7 @@ test_serveur: tests/test_serveur.c src/serveur.c $(EXECUTION) $(ENTETES) src/ser
 test_guide: tests/test_guide.c docs/guide.md $(EXECUTION) $(ENTETES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -Isrc -o $@ tests/test_guide.c $(EXECUTION) -lm
 
-test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide
+test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur test_compact test_base test_lsp test_serveur test_guide test_serie
 	./test_lexeur
 	./test_analyseur
 	./test_machine
@@ -80,6 +83,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	./test_lsp
 	./test_serveur
 	./test_guide
+	./test_serie
 	sh tests/formes
 	sh tests/praxis-versions
 	sh tests/mise-a-jour
@@ -97,6 +101,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	sh tests/praxis-salaire
 	sh tests/praxis-virements
 	sh tests/ecoutille-epellation
+	sh tests/ecoutille-pilotage
 	sh tests/ecoutille
 	sh tests/balayer
 

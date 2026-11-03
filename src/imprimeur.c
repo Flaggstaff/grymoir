@@ -848,6 +848,28 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, n->forme ? "le nombre de mots " : "les mots ");
         de_expression(im, n->enfants[0]);
         return;
+    case N_PORTS:   /* « les ports série » ; « _ports_série » (2.82), dans une boucle */
+        aj(im, im->compact ? "_ports_série" : "les ports série");
+        return;
+    case N_PORT_SERIE:   /* « la réponse du port p à q, à v bauds » ; « _réponse_port p _question q _vitesse v _bauds » (2.82) */
+        if (im->compact) {
+            aj(im, "_réponse_port ");
+            expression(im, n->enfants[0]);
+            aj(im, " _question ");
+            expression(im, n->enfants[1]);
+            aj(im, " _vitesse ");
+            expression(im, n->enfants[2]);
+            aj(im, " _bauds");
+            return;
+        }
+        aj(im, "la réponse ");
+        de_expression(im, n->enfants[0]);
+        aj(im, " à ");
+        expression(im, n->enfants[1]);
+        aj(im, ", à ");
+        expression(im, n->enfants[2]);
+        aj(im, " bauds");
+        return;
     case N_SANS:   /* « le numéro AVS sans « . » » ; « numéro_AVS _sans « . » » (2.64) */
         expression(im, n->enfants[0]);
         aj(im, im->compact ? " _sans " : " sans ");
@@ -2367,7 +2389,8 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             if (c) expression(im, src->enfants[0]);
             else de_expression(im, src->enfants[0]);
         } else {
-            if (n->op == 'p' && n->enfants[0]->type == N_MOTS) aj(im, c ? " _parmi " : " parmi ");   /* « parmi les mots de t » (2.81) */
+            if (n->op == 'p' && (n->enfants[0]->type == N_MOTS || n->enfants[0]->type == N_PORTS))
+                aj(im, c ? " _parmi " : " parmi ");   /* « parmi les mots de t » (2.81), « parmi les ports série » (2.82) */
             else if (n->op == 'p') aj(im, c ? " _parmi " : " parmi ");   /* « parmi les couleurs » (§ 13.9) */
             else aj(im, c ? " _tableau " : " du tableau ");
             expression(im, n->enfants[0]);

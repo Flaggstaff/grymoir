@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.81 de la spécification, révisée le 2 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.82 de la spécification, révisée le 3 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2439,6 +2439,24 @@ Quand on déplace une séance dans l'écran de l'agenda :
 - Dans l'atelier et les applications fabriquées, à la souris. **Le navigateur**, sans JavaScript : la même grille en quarts d'heure ; un clic sur un quart d'heure est un créneau ; un objet a son bouton « Déplacer », qui le met de côté, et le quart d'heure cliqué ensuite le dépose (`Quand on déplace …`) ; « Annuler » le remet. L'onglet Écrans de l'atelier la montre en grille, sur une semaine de travail d'exemple.
 - Forme compacte : `_liste séance _conservé _avec date ; heure ; durée _agenda grille` ; `_quand _déplace _une séance _dans de_l_agenda`.
 
+### 22.25 Ports série *(2.82, implémenté le 3 novembre 2026)*
+
+Un poste de radio récent se pilote par un port série : un câble USB qui apparaît comme un port COM (Windows) ou un `/dev/cu.…` (macOS). On lui pose une question en texte, il répond en texte. Écoutille (`projets/Écoutille`) y lit la fréquence et le mode des Yaesu (protocole CAT).
+
+```
+Afficher la réponse de « /dev/cu.SLAB_USBtoUART » à « FA; », à 38400 bauds.      →  FA014074000;
+Le mode vaut la réponse du port CAT du poste à « MD0; », à 4800 bauds.
+Pour chaque port parmi les ports série, afficher port.
+```
+
+- **`la réponse de p à q, à v bauds`** ouvre le port `p` (un texte), y écrit la question `q` telle quelle, lit la réponse et referme le port. Elle se reconnaît au mot `bauds`, sur la même ligne, après `, à`. La vitesse : 1200, 2400, 4800, 9600, 19200, 38400, 57600 ou 115200 ; autre chose : « La vitesse d'un port série : 1200, … ou 115200 bauds. ». Le format est fixe : 8 bits, sans parité, 2 bits d'arrêt, sans contrôle de flux ; un poste réglé sur 1 bit d'arrêt les accepte. Les lignes DTR et RTS sont baissées dès l'ouverture : sur le second port d'un Yaesu (« Standard »), elles passent le poste en émission. Sous macOS et Linux, l'ouverture les lève quelques instants avant qu'on les baisse : on ne parle donc qu'au port CAT d'un poste, jamais à tous.
+- **La réponse** est ce qui arrive jusqu'à 100 ms de silence après le dernier octet reçu, ou rien après 1 seconde : un texte vide (un poste éteint, une vitesse fausse) n'est pas une erreur. Rien n'est propre à une marque : la question et le sens de la réponse appartiennent au programme.
+- **Les refus**, rattrapables par `Essayer` : un port qui ne s'ouvre pas (« Le port « COM3 » ne s'ouvre pas : le poste est-il branché et allumé ? ») ; un port déjà ouvert par un autre programme (WSJT-X, un carnet de trafic : un port ne s'ouvre qu'une fois) ; un port absent, un port qui n'est pas un texte, une question vide.
+- **`Pour chaque p parmi les ports série :`** parcourt les ports de l'ordinateur, triés, lus une fois au début : `/dev/cu.*` sous macOS, `/dev/ttyUSB*` et `/dev/ttyACM*` sous Linux, COM1 à COM256 sous Windows. Aucun port : la boucle ne tourne pas.
+- Un calcul ne parle pas à un port série, ni ne les parcourt (§ 9.4) : le résultat dépendrait de l'appareil branché.
+- Sous macOS, les Yaesu à puce Silicon Labs CP2105 (FT-991A, FT-710) demandent le pilote du fabricant pour que leur port apparaisse ; le son USB n'en a pas besoin.
+- Forme compacte : `_réponse_port p _question « FA; » _vitesse 38400 _bauds` ; `_pour_chaque p _parmi _ports_série`.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -2624,3 +2642,4 @@ Quand on déplace une séance dans l'écran de l'agenda :
 | 2.78 | 2026-11-01 | § 15.8 : `le morse de x` (le texte lu dans un son, ou absent) et `la transcription de x` (sur demande) ; le cœur lie la bibliothèque mathématique du C |
 | 2.80 | 2026-11-02 | § 15.8 : `Amorcer la transcription avec t.`, le vocabulaire attendu par le transcripteur |
 | 2.81 | 2026-11-02 | § 4.5 : `t en remplaçant « a » par « b »` (instruction `REMPLACER`) ; `Pour chaque mot parmi les mots de t`, `le nombre de mots de t` (instruction `MOTS`) |
+| 2.82 | 2026-11-03 | Nouveau § 22.25 : `la réponse de p à q, à v bauds` (instruction `PORT_SERIE`, src/serie.c) et `Pour chaque p parmi les ports série :` (instruction `PORTS`) ; formes compactes `_réponse_port`, `_question`, `_vitesse`, `_bauds`, `_ports_série` |

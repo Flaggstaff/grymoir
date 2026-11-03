@@ -12,6 +12,7 @@ test_serveur
 test_base
 test_lsp
 test_guide
+test_serie
 *.exe
 *.o
 *.obj

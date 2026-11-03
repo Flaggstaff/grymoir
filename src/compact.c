@@ -334,6 +334,30 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "sans", t);
             continue;
         }
+        if (est_cle(t, "réponse_port")) {   /* _réponse_port p _question « FA; » _vitesse 4800 _bauds (2.82) */
+            mot(r, "la", t);
+            mot(r, "réponse", t);
+            mot(r, "de", t);
+            continue;
+        }
+        if (est_cle(t, "question")) {   /* … → la réponse de p à « FA; », à 4800 bauds (2.82) */
+            mot(r, "à", t);
+            continue;
+        }
+        if (est_cle(t, "vitesse")) {
+            emettre(r, J_VIRGULE, NULL, t, 1);
+            mot(r, "à", t);
+            continue;
+        }
+        if (est_cle(t, "bauds")) {
+            mot(r, "bauds", t);
+            continue;
+        }
+        if (est_cle(t, "ports_série")) {   /* _pour_chaque p _parmi _ports_série → Pour chaque p parmi les ports série : (2.82) */
+            mot(r, "ports", t);
+            mot(r, "série", t);
+            continue;
+        }
         if (est_cle(t, "remplaçant")) {   /* t _remplaçant « a » _par « b » → t en remplaçant « a » par « b » (2.81) */
             mot(r, "en", t);
             mot(r, "remplaçant", t);

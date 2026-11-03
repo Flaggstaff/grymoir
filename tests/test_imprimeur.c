@@ -115,6 +115,8 @@ int main(void) {
          "Une note, conservée, a :\n    un prix (nombre).\nAfficher l'arrondi de (la somme des prix des notes conservées dont le prix > 1) − (la somme des prix des notes conservées) à 0,01.\n");   /* 2.34 : le « dont » garde ses parenthèses */
     LITT("Le t vaut « a ».\nAfficher le t en remplaçant « a » par « b » en remplaçant « c » par « ».",
          "Le t vaut « a ».\nAfficher le t en remplaçant « a » par « b » en remplaçant « c » par « ».\n");   /* 2.81 */
+    LITT("Le port vaut « COM3 ».\nAfficher la réponse du port à « FA; », à 38400 bauds.\nPour chaque p parmi les ports série :\n    Afficher p.",
+         "Le port vaut « COM3 ».\nAfficher la réponse du port à « FA; », à 38400 bauds.\nPour chaque p parmi les ports série :\n    Afficher p.\n");   /* 2.82 */
     LITT("Le t vaut « a b ».\nAfficher le nombre de mots du t.\nPour chaque m parmi les mots du t :\n    Afficher m.",
          "Le t vaut « a b ».\nAfficher le nombre de mots du t.\nPour chaque m parmi les mots du t :\n    Afficher m.\n");
     LITT("Amorcer la transcription avec « QSO, QTH ».", "Amorcer la transcription avec « QSO, QTH ».\n");   /* 2.80 */

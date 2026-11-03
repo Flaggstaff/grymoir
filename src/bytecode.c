@@ -238,6 +238,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_AMORCER:        return "AMORCER";
     case I_REMPLACER:      return "REMPLACER";
     case I_MOTS:           return "MOTS";
+    case I_PORTS:          return "PORTS";
+    case I_PORT_SERIE:     return "PORT_SERIE";
     case I_SAUVEGARDER:    return "SAUVEGARDER";
     case I_SAUVEGARDER_COFFRE: return "SAUVEGARDER_COFFRE";
     case I_RESTAURER:      return "RESTAURER";
@@ -435,6 +437,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_AMORCER: besoin = 1; effet = -1; break;
             case I_REMPLACER: besoin = 3; effet = -2; break;
             case I_MOTS: besoin = 1; effet = 0; break;
+            case I_PORTS: besoin = 0; effet = 1; break;
+            case I_PORT_SERIE: besoin = 3; effet = -2; break;
             case I_ECRAN_ATTENDRE: besoin = 0; effet = 2; break;
             case I_ECRAN_OBJET: besoin = 0; effet = 1; break;
             case I_CORRESPOND: besoin = 2; effet = -1; break;

@@ -562,6 +562,18 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_PORTS:
+        chaine_ajouter(c, "(ports-série)");
+        return;
+    case N_PORT_SERIE:
+        chaine_ajouter(c, "(port-série ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[1], c);
+        chaine_ajouter(c, " ");
+        decrire(n->enfants[2], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_SANS:
         chaine_ajouter(c, "(sans ");
         decrire(n->enfants[0], c);

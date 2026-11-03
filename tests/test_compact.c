@@ -157,6 +157,8 @@ int main(void) {
     /* La section paiement (2.28) */
     ALLER_RETOUR("_le t << « a b »\n_afficher t _remplaçant « a » _par « c »\n_afficher _nombre_mots t\n_pour_chaque m _parmi _mots t\n    _afficher m\n_fin\n",
                  "Le t vaut « a b ».\nAfficher le t en remplaçant « a » par « c ».\nAfficher le nombre de mots du t.\nPour chaque m parmi les mots du t :\n    Afficher m.\n");   /* 2.81 */
+    ALLER_RETOUR("_le port << « COM3 »\n_afficher _réponse_port port _question « FA; » _vitesse 38400 _bauds\n_pour_chaque p _parmi _ports_série\n    _afficher p\n_fin\n",
+                 "Le port vaut « COM3 ».\nAfficher la réponse du port à « FA; », à 38400 bauds.\nPour chaque p parmi les ports série :\n    Afficher p.\n");   /* 2.82 */
     ALLER_RETOUR("_amorcer « QSO, QTH »\n", "Amorcer la transcription avec « QSO, QTH ».\n");   /* 2.80 */
     ALLER_RETOUR("_la charge << « SPC »\n_document de_rappel\n    _section_paiement charge\n_fin\n",
                  "La charge vaut « SPC ».\nLe document de rappel montre :\n    la section paiement de la charge.\n");

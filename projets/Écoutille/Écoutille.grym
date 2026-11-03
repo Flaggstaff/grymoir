@@ -36,7 +36,14 @@ Un poste, conservé, a :
     un modèle (modèle), facultatif,
     un affichage (vrai ou faux), vrai au départ,
     une parole transcrite (vrai ou faux), vrai au départ,
-    une traduction voulue (vrai ou faux), faux au départ.
+    une traduction voulue (vrai ou faux), faux au départ,
+    un port de pilotage (texte), facultatif,
+    une vitesse de pilotage (nombre entier), 4800 au départ.
+
+Remarque : le pilotage (3 novembre 2026) : un poste qui se pilote par un port série (CAT des Yaesu) dit sa fréquence et son mode
+Remarque : à la fin de chaque passage. Le port est celui de cet ordinateur : la base ne voyage pas d'un ordinateur à l'autre.
+Remarque : La vitesse est celle du menu du poste (FT-991A : 031 CAT RATE ; manuel CAT de Yaesu) ; 4800 au départ, celle que
+Remarque : Hamlib donne pour le FT-991.
 
 Un passage, conservé, a :
     un poste (poste),
@@ -46,7 +53,13 @@ Un passage, conservé, a :
     une durée (texte), facultative,
     un morse (texte), facultatif,
     une transcription (texte), facultative,
-    une traduction (texte), facultative.
+    une traduction (texte), facultative,
+    une fréquence (nombre entier), facultative,
+    un mode (texte), facultatif,
+    un accord (texte), facultatif.
+
+Remarque : la fréquence d'un passage en hertz, son mode (« USB », « FM »…), et l'accord, les deux écrits pour la veille :
+Remarque : « 14,074 MHz DATA-USB ». Lus à la fin du passage : un bouton tourné pendant l'émission donne la fréquence de la fin.
 
 Remarque : les réglages de Michel (1er novembre 2026) : combien de jours garder les passages ; vide, tout est gardé.
 Remarque : la traduction en français (1er novembre 2026) : DeepL d'abord ; quota épuisé (456) ou DeepL injoignable, Google.
@@ -276,10 +289,47 @@ La ligne d'un intitulé et d'une valeur :
     Si la valeur est absente, rendre « ».
     Rendre l'intitulé suivi de la valeur.
 
+Remarque : le mode d'un Yaesu d'après la réponse à « MD0; » (3 novembre 2026) : la table du manuel CAT du FT-991A (commande MD),
+Remarque : et « F », DATA-FM-N, que le FT-710 ajoute d'après Hamlib (rigs/yaesu/newcat.c) ; un code inconnu reste tel quel.
+Le mode yaesu d'un code :
+    Si le code = « 1 », rendre « LSB ».
+    Si le code = « 2 », rendre « USB ».
+    Si le code = « 3 », rendre « CW-U ».
+    Si le code = « 4 », rendre « FM ».
+    Si le code = « 5 », rendre « AM ».
+    Si le code = « 6 », rendre « RTTY-LSB ».
+    Si le code = « 7 », rendre « CW-L ».
+    Si le code = « 8 », rendre « DATA-LSB ».
+    Si le code = « 9 », rendre « RTTY-USB ».
+    Si le code = « A », rendre « DATA-FM ».
+    Si le code = « B », rendre « FM-N ».
+    Si le code = « C », rendre « DATA-USB ».
+    Si le code = « D », rendre « AM-N ».
+    Si le code = « E », rendre « C4FM ».
+    Si le code = « F », rendre « DATA-FM-N ».
+    Rendre le code.
+
+Remarque : l'accord d'un passage (3 novembre 2026) : « FA; » rend « FA014074000; » (9 chiffres, en hertz), « MD0; » rend
+Remarque : « MD0C; » ; un poste éteint, muet ou tenu par un autre logiciel (WSJT-X…) : le passage se garde sans accord.
+Pour lire l'accord d'un passage :
+    Le port vaut le port de pilotage du poste du passage.
+    Si le port est présent :
+        Essayer :
+            Le retour vaut la réponse du port à « FA; », à la vitesse de pilotage du poste du passage bauds.
+            Si le retour sur 2 = « FA », la fréquence du passage devient (le retour sans « FA » sans « ; ») en nombre entier.
+            Le retour devient la réponse du port à « MD0; », à la vitesse de pilotage du poste du passage bauds.
+            Si le retour sur 3 = « MD0 », le mode du passage devient le mode yaesu de (le retour sans « MD0 » sans « ; »).
+        En cas d'échec :
+            Le port devient absent.
+    Si la fréquence du passage est présente :
+        L'accord du passage devient (la fréquence du passage ÷ 1000000) suivi de " MHz".
+        Si le mode du passage est présent, l'accord du passage devient l'accord du passage suivi de " " suivi du mode du passage.
+
 Remarque : un passage (2 novembre 2026) : ce qui a été entendu, le son à réécouter, et « Garder le son » pour le copier hors
 Remarque : de la base (un QSO à garder, un échantillon à envoyer).
 L'écran du passage, « Passage », montre :
     le texte "Poste " suivi du nom du poste du passage ouvert suivi de ", le " suivi du jour du passage ouvert suivi de " à " suivi de l'heure du passage ouvert,
+    le texte la ligne de « Accord : » et de l'accord du passage ouvert, visible si la ligne de « Accord : » et de l'accord du passage ouvert ≠ « »,
     le texte la ligne de « Morse : » et du morse du passage ouvert, visible si la ligne de « Morse : » et du morse du passage ouvert ≠ « »,
     le texte la ligne de « Parole : » et de la transcription du passage ouvert, visible si la ligne de « Parole : » et de la transcription du passage ouvert ≠ « »,
     le texte la ligne de « Traduction : » et de la traduction du passage ouvert, visible si la ligne de « Traduction : » et de la traduction du passage ouvert ≠ « »,
@@ -295,7 +345,7 @@ L'écran de veille montre :
         une période (« Aujourd'hui », « 7 jours », « 30 jours » ou « Tout »), « Aujourd'hui » au départ,
         un seul poste (poste), facultatif, avec l'indication « Vide : tous les postes »,
         un mot cherché (texte), facultatif, avec l'indication « Un poste, ou un mot du morse, de la parole, de la traduction ; vide : tout »,
-    la liste des passages conservés dont le jour ≥ le début des passages et l'affichage du poste est vrai et (le nom du poste contient le mot des passages ou le morse contient le mot des passages ou la transcription contient le mot des passages ou la traduction contient le mot des passages), par jour décroissant puis heure décroissant, avec l'heure, le nom du poste, le morse, la transcription, la traduction, le jour et la durée, en cartes,
+    la liste des passages conservés dont le jour ≥ le début des passages et l'affichage du poste est vrai et (le nom du poste contient le mot des passages ou le morse contient le mot des passages ou la transcription contient le mot des passages ou la traduction contient le mot des passages), par jour décroissant puis heure décroissant, avec l'heure, le nom du poste, l'accord, le morse, la transcription, la traduction, le jour et la durée, en cartes,
     côte à côte :
         un bouton « Postes », au clavier « P »,
         un bouton « Réglages »,
@@ -315,6 +365,9 @@ L'écran des postes montre :
         un bouton « Ajouter », principal, actif si le nom de l'écran est présent,
         un bouton « Modèles »,
         un bouton « Fermer »,
+    côte à côte :
+        un bouton « Ports série »,
+        un bouton « Essayer le pilotage », actif si le poste choisi de l'écran est présent,
     un bouton « Supprimer », destructif, à confirmer par « Supprimer ce poste ? Il part dans la corbeille ; ses passages restent. », actif si le poste choisi de l'écran est présent.
 
 L'écran des modèles montre :
@@ -363,6 +416,8 @@ Quand un poste capte un son dans l'écran de veille :
     La seconde vaut l'arrondi de (la taille du son capté − 44) ÷ 32000 à 1.
     La durée du p devient la seconde suivi de " s".
     Conserver le p.
+    Remarque : la fréquence et le mode, si le poste se pilote (3 novembre 2026).
+    Lire l'accord du p.
 
 Pour délimiter une période :
     Le début des passages devient aujourd'hui.
@@ -463,6 +518,7 @@ Quand on clique sur « Ajouter » dans l'écran des postes :
         L'affichage vaut vrai.
         La parole transcrite vaut la parole transcrite de l'écran.
         La traduction voulue vaut la traduction voulue de l'écran.
+        La vitesse de pilotage vaut 4800.
     Si le modèle de l'écran est présent :
         Le modèle du p devient le modèle de l'écran.
         La sorte du p devient « émetteur-récepteur ».
@@ -476,6 +532,34 @@ Quand on clique sur « Supprimer » dans l'écran des postes :
     Le nom vaut le nom du poste choisi de l'écran.
     Supprimer le poste choisi de l'écran.
     Signaler « Poste » puis le nom puis « supprimé : il est dans la corbeille. ».
+
+Remarque : les ports de cet ordinateur (3 novembre 2026), pour remplir le port de pilotage d'un poste dans sa fiche. Un Yaesu en
+Remarque : montre deux : le port CAT (« Enhanced ») répond ; l'autre (« Standard ») commande l'émission : n'y parle jamais.
+Quand on clique sur « Ports série » dans l'écran des postes :
+    La liste vaut « ».
+    Pour chaque port parmi les ports série :
+        Si la liste ≠ « », la liste devient la liste suivi de « ; ».
+        La liste devient la liste suivi de port.
+    Si la liste = « », signaler « Aucun port série : le poste est-il branché ? Sous macOS, un Yaesu demande le pilote Silicon Labs. ».
+    Sinon, signaler « Ports série : » puis la liste puis ". Le port CAT d'un poste se pose dans sa fiche, puis « Essayer le pilotage ».".
+
+Remarque : essayer le pilotage du poste choisi : la fréquence et le mode lus maintenant, comme à la fin d'un passage.
+Quand on clique sur « Essayer le pilotage » dans l'écran des postes :
+    Le p vaut le poste choisi de l'écran.
+    Si le port de pilotage du p est absent, refuser "Ce poste n'a pas de port de pilotage : pose-le dans sa fiche (bouton « Ports série » pour la liste).".
+    Essayer :
+        Le retour vaut la réponse du port de pilotage du p à « FA; », à la vitesse de pilotage du p bauds.
+        Si le retour sur 2 = « FA » :
+            Le hertz vaut (le retour sans « FA » sans « ; ») en nombre.
+            Le code vaut « ».
+            Le retour devient la réponse du port de pilotage du p à « MD0; », à la vitesse de pilotage du p bauds.
+            Si le retour sur 3 = « MD0 », le code devient le mode yaesu de (le retour sans « MD0 » sans « ; »).
+            Signaler « Le poste répond : » puis (le hertz ÷ 1000000) puis « MHz » puis le code puis « . ».
+        Sinon :
+            Si le retour = « », signaler "Aucune réponse à " suivi de la vitesse de pilotage du p suivi de " bauds : la vitesse du menu CAT du poste, le bon port des deux, le poste allumé ?".
+            Sinon, signaler "Réponse inattendue : « " suivi du retour suivi de " » : ce poste ne parle peut-être pas le CAT de Yaesu.".
+    En cas d'échec :
+        Signaler le motif de l'échec.
 
 Quand on clique sur « Modèles » dans l'écran des postes :
     Ouvrir l'écran des modèles.

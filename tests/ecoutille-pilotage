@@ -1,0 +1,66 @@
+#!/bin/sh
+# Écoutille, le pilotage (3 novembre 2026) : un passage d'un poste qui se pilote lit sa fréquence et son mode sur un faux
+# FT-991A (test_serie --faux-poste, un pseudo-terminal) : « 14,074 MHz DATA-USB » ; un poste sans port, ou un port qui ne
+# s'ouvre pas, garde le passage sans accord. Sous Windows, pas de pseudo-terminal : sauté.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) echo "ecoutille-pilotage : sauté sous Windows"; exit 0;; esac
+[ -x "$racine/test_serie" ] || { echo "ecoutille-pilotage : test_serie absent"; exit 1; }
+d=$(mktemp -d)
+"$racine/test_serie" --faux-poste "$d/port.txt" &
+faux=$!
+trap 'kill $faux 2>/dev/null; wait $faux 2>/dev/null; rm -rf "$d"' EXIT
+n=0; while [ ! -s "$d/port.txt" ] && [ $n -lt 50 ]; do sleep 0.1; n=$((n + 1)); done
+port=$(cat "$d/port.txt")
+src="$racine/projets/Écoutille/Écoutille.grym"
+awk 'index($0, "Un modèle, conservé, a :") == 1 { dedans = 1 }
+     index($0, "Remarque : les réglages de Michel") == 1 { dedans = 0 }
+     dedans { print }' "$src" > "$d/e.grym"
+awk 'index($0, "Remarque : le mode d'\''un Yaesu") == 1 { dedans = 1 }
+     index($0, "Remarque : un passage (2 novembre 2026)") == 1 { dedans = 0 }
+     dedans { print }' "$src" >> "$d/e.grym"
+cat >> "$d/e.grym" <<FIN
+Le k vaut un nouveau poste :
+    Le nom vaut « FT-991A ».
+    La sorte vaut « émetteur-récepteur ».
+    La veille vaut vrai.
+    L'affichage vaut vrai.
+    La parole transcrite vaut vrai.
+    La traduction voulue vaut faux.
+    La vitesse de pilotage vaut 38400.
+Conserver le k.
+Le port de pilotage du k devient « $port ».
+Le p vaut un nouveau passage :
+    Le poste vaut le k.
+    Le jour vaut aujourd'hui.
+    L'heure vaut 14:30.
+    L'enregistrement vaut le fichier « a.wav ».
+Conserver le p.
+Lire l'accord du p.
+Afficher l'accord du p.
+Afficher la fréquence du p.
+Afficher le mode du p.
+Le port de pilotage du k devient « /dev/grymoir-pas-de-port ».
+Le q vaut un nouveau passage :
+    Le poste vaut le k.
+    Le jour vaut aujourd'hui.
+    L'heure vaut 14:31.
+    L'enregistrement vaut le fichier « a.wav ».
+Conserver le q.
+Lire l'accord du q.
+Si l'accord du q est absent et la fréquence du q est absente, afficher « sans accord ».
+Afficher le mode Yaesu de « E » suivi de « , » suivi du mode Yaesu de « Z ».
+FIN
+# un WAV de 16 kHz, mono, 16 bits, d'un dixième de seconde de silence
+printf 'RIFF\044\014\000\000WAVEfmt \020\000\000\000\001\000\001\000\200\076\000\000\000\175\000\000\002\000\020\000data\000\014\000\000' > "$d/a.wav"
+head -c 3200 /dev/zero >> "$d/a.wav"
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+sortie="$(cd "$d" && "$grym" lancer e.grym 2>&1 < /dev/null)"
+verifier "$(echo "$sortie" | sed -n 1p)" "14,074 MHz DATA-USB" "l'accord lu sur le poste"
+verifier "$(echo "$sortie" | sed -n 2p)" "14'074'000" "la fréquence en hertz"
+verifier "$(echo "$sortie" | sed -n 3p)" "DATA-USB" "le mode, code C"
+verifier "$(echo "$sortie" | sed -n 4p)" "sans accord" "un port qui ne s'ouvre pas : pas d'accord, pas d'arrêt"
+verifier "$(echo "$sortie" | sed -n 5p)" "C4FM,Z" "la table des modes, un code inconnu gardé"
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]

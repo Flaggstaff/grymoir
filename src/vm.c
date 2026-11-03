@@ -4,6 +4,7 @@
 #include "chemins.h"
 #include "vm.h"
 #include "morse.h"
+#include "serie.h"
 #include "json.h"
 #include "qr.h"
 #include "coffre.h"
@@ -6742,6 +6743,40 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             free(chaine_rendre(&mot));
             valeur_liberer(&t);
             empiler(&pile, e);
+            break;
+        }
+        case I_PORTS: {   /* « Pour chaque port parmi les ports série : » (2.82) : les ports de l'ordinateur, triés */
+            char **noms = NULL;
+            size_t nb = serie_ports(&noms);
+            Valeur e = ensemble_vide();
+            Liste *l = e.liste;
+            if (nb) {
+                l->cap = nb;
+                l->valeurs = grym_allouer(nb * sizeof *l->valeurs);
+                for (size_t k = 0; k < nb; k++) l->valeurs[l->n++] = vi_texte_pris(noms[k]);
+            }
+            free(noms);   /* les noms sont passés aux valeurs */
+            empiler(&pile, e);
+            break;
+        }
+        case I_PORT_SERIE: {   /* « la réponse du port CAT du poste à « FA; », à 38400 bauds » (2.82) : une erreur
+                                * rattrapable si le port ne s'ouvre pas ; une réponse vide si le poste se tait */
+            Valeur v = depiler(&pile), q = depiler(&pile), port = depiler(&pile);
+            char *mp = NULL;
+            long bauds = 0;
+            if (port.type == V_ABSENT) mp = grym_dupliquer("Le port est absent : choisis d'abord le port du poste.");
+            else if (port.type != V_TEXTE || !port.texte || !*port.texte)
+                mp = grym_dupliquer("Le port est un texte : « /dev/cu.SLAB_USBtoUART » sous macOS, « COM3 » sous Windows.");
+            else if (q.type != V_TEXTE || !q.texte || !*q.texte) mp = grym_dupliquer("La question au port est un texte non vide : « FA; ».");
+            if (!mp && (v.type != V_NOMBRE || !dec_en_long_borne(&v.nombre, 1, 1000000, &bauds) || !serie_vitesse_connue(bauds)))
+                mp = grym_dupliquer("La vitesse d'un port série : 1200, 2400, 4800, 9600, 19200, 38400, 57600 ou 115200 bauds.");
+            char *reponse = NULL;
+            if (!mp) reponse = serie_echanger(port.texte, bauds, q.texte, &mp);
+            valeur_liberer(&v);
+            valeur_liberer(&q);
+            valeur_liberer(&port);
+            if (mp) { ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, vi_texte_pris(reponse));
             break;
         }
         case I_RETIRER: {   /* « le numéro AVS sans « . » » : chaque occurrence retirée, de gauche à droite (2.64) */

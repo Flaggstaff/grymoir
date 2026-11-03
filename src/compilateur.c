@@ -474,6 +474,15 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_MOTS, 0, n->ligne, n->colonne);
         if (n->forme == 1) emettre(c, I_TAILLE_ENSEMBLE, 0, n->ligne, n->colonne);
         return;
+    case N_PORTS:   /* la liste des ports série (2.82) */
+        emettre(c, I_PORTS, 0, n->ligne, n->colonne);
+        return;
+    case N_PORT_SERIE:   /* le port, la question, la vitesse, puis PORT_SERIE (2.82) */
+        expression(c, n->enfants[0]);
+        expression(c, n->enfants[1]);
+        expression(c, n->enfants[2]);
+        emettre(c, I_PORT_SERIE, 0, n->ligne, n->colonne);
+        return;
     case N_SANS:   /* le texte, ce qui s'en retire, puis RETIRER (2.64) */
         expression(c, n->enfants[0]);
         expression(c, n->enfants[1]);

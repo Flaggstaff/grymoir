@@ -148,10 +148,12 @@ typedef enum {
     I_SIGNALER,         /* opérande : n ; dépile n valeurs, écrites comme REFUSER : le message montré sans bloquer (2.71) */
     I_AMORCER,          /* dépile un texte (ou absent) : l'amorce des transcriptions suivantes (2.80) */
     I_REMPLACER,        /* dépile le remplaçant, ce qu'on cherche, puis le texte ; empile le texte remplacé (2.81) */
-    I_MOTS              /* dépile un texte ; empile la liste de ses mots, dans l'ordre, doublons compris (2.81) */
+    I_MOTS,             /* dépile un texte ; empile la liste de ses mots, dans l'ordre, doublons compris (2.81) */
+    I_PORTS,            /* empile la liste des ports série de l'ordinateur, triés (2.82) */
+    I_PORT_SERIE        /* dépile la vitesse, la question, puis le port ; empile la réponse, un texte (2.82) */
 } CodeInstruction;
 
-#define I_DERNIER I_MOTS
+#define I_DERNIER I_PORT_SERIE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

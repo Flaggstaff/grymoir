@@ -2213,8 +2213,55 @@ static int bloc_envoi(Analyse *a, Noeud *n, const Jeton *tdeb, int paires) {
     }
 }
 
+/* « la réponse du port CAT du poste à « FA; », à 38400 bauds » (2.82) : une question à un port série, sa réponse en
+ * texte ; reconnue au mot « bauds » sur la même ligne, après « , à ». Le port finit au premier « à », la question à la
+ * virgule qui précède le dernier « à », la vitesse avant « bauds » : chaque borne est masquée le temps de sa lecture. */
+static Noeud *port_serie(Analyse *a) {
+    Jeton *t = cour(a);
+    if (!est_mot(t, "la") || !est_mot(voir(a, 1), "réponse") || !(de_ou_d(voir(a, 2)) || est_mot(voir(a, 2), "du")))
+        return NULL;
+    size_t bauds = 0, virgule = 0, a1 = 0;
+    for (size_t p = a->i + 3; p < a->n && a->j[p].ligne == t->ligne; p++) {
+        if (!a1 && est_mot(&a->j[p], "à")) a1 = p;
+        if (a->j[p].type == J_VIRGULE && p + 1 < a->n && est_mot(&a->j[p + 1], "à")) virgule = p;
+        if (est_mot(&a->j[p], "bauds")) { bauds = p; break; }
+    }
+    if (!bauds || !virgule || !a1 || a1 >= virgule) return NULL;
+    if (a->formule == 1)
+        return erreur(a, t, grym_dupliquer("Un calcul ne parle pas à un port série : interroge-le dans une action."));
+    Noeud *n = noeud_creer(N_PORT_SERIE, t->ligne, t->colonne, t->debut);
+    const Jeton *contraction = est_mot(voir(a, 2), "du") ? voir(a, 2) : NULL;
+    avancer(a);
+    avancer(a);
+    avancer(a);
+    const size_t bornes[3] = {a1, virgule, bauds};
+    for (int k = 0; k < 3; k++) {
+        TypeJeton garde = a->j[bornes[k]].type;
+        a->j[bornes[k]].type = J_POINT;
+        if (k == 0 && contraction) { a->article_force = ART_LE; a->jeton_force = contraction; }
+        Noeud *x = expression(a);
+        a->article_force = ART_AUCUN;
+        a->j[bornes[k]].type = garde;
+        if (!x) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, x);
+        n->fin = x->fin;
+        if (a->i != bornes[k]) {
+            noeud_liberer(n);
+            return erreur(a, cour(a), grym_dupliquer("« la réponse de « COM3 » à « FA; », à 38400 bauds » attendu."));
+        }
+        avancer(a);
+        if (k == 1) avancer(a);   /* la virgule, puis « à » */
+    }
+    n->fin = fin_jeton(&a->j[bauds]);
+    return n;
+}
+
 static Noeud *base(Analyse *a) {
     Jeton *t = cour(a);
+    {
+        Noeud *ps = port_serie(a);
+        if (ps || a->echec) return ps;
+    }
     {
         /* « l'envoi à « https://… » de : », « la lecture de « https://… » avec : » (2.42) : la réponse d'un service web */
         const int envoi = t->type == J_ELISION && strcmp(t->valeur, "l") == 0 && est_mot(voir(a, 1), "envoi")
@@ -4964,6 +5011,44 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
         size_t k2 = d, fe;
         if (a->j[k2].type == J_CROCHETS) k2++;
         else while (mot_de_nom(a, k2) && !est_mot(&a->j[k2], "parmi")) k2++;
+        if (k2 > d && est_mot(&a->j[k2], "parmi") && est_mot(&a->j[k2 + 1], "les") && est_mot(&a->j[k2 + 2], "ports")
+            && est_mot(&a->j[k2 + 3], "série") && (a->j[k2 + 4].type == J_DEUX_POINTS || a->j[k2 + 4].type == J_VIRGULE)
+            && article_de(&a->j[d]) == ART_AUCUN) {
+            /* « Pour chaque port parmi les ports série : » (2.82) : les ports de l'ordinateur, lus une fois au début */
+            if (a->formule == 1)
+                return erreur(a, t, grym_dupliquer("Un calcul ne parcourt pas les ports série : parcours-les dans une action."));
+            char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k2);
+            if (visible(a, nom)) {
+                erreur(a, &a->j[d], grym_formater("« %s » existe déjà : choisis un autre nom.", nom));
+                free(nom);
+                return NULL;
+            }
+            a->i = k2 + 4;
+            Noeud *source = noeud_creer(N_PORTS, a->j[k2 + 1].ligne, a->j[k2 + 1].colonne, a->j[k2 + 1].debut);
+            source->fin = fin_jeton(&a->j[k2 + 3]);
+            size_t sauve = a->portee->n;
+            portee_declarer(a->portee, nom, GENRE_LIBRE, t->ligne);
+            Symbole *s = &a->portee->s[a->portee->n - 1];
+            s->lecture_seule = 1;
+            int case_el = s->local = a->nb_locaux++;
+            int case_ens = a->nb_locaux++;
+            a->nb_locaux++;   /* rang */
+            int forme = 0;
+            a->boucle++;
+            Noeud *corps = branche(a, colonne, "Pour chaque", &forme);
+            a->boucle--;
+            portee_tronquer(a->portee, sauve);
+            if (!corps) { noeud_liberer(source); free(nom); return NULL; }
+            Noeud *n = noeud_creer(P_POUR_TABLEAU, t->ligne, t->colonne, t->debut);
+            n->op = 'p';
+            n->texte = nom;
+            n->local = case_el;
+            n->entier = case_ens;
+            noeud_ajouter(n, source);
+            noeud_ajouter(n, corps);
+            n->fin = corps->fin;
+            return n;
+        }
         if (k2 > d && est_mot(&a->j[k2], "parmi") && est_mot(&a->j[k2 + 1], "les") && est_mot(&a->j[k2 + 2], "mots")
             && (de_ou_d(&a->j[k2 + 3]) || est_mot(&a->j[k2 + 3], "du")) && !ensemble_en(a, k2 + 2, &fe)
             && article_de(&a->j[d]) == ART_AUCUN) {

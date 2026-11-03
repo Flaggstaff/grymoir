@@ -1341,6 +1341,21 @@ static void essais_mots(void) {   /* 2.81 : les mots d'un texte, et remplacer da
     PROG("Les couleurs valent « rouge » et « vert ».\nPour chaque c parmi les couleurs, afficher c.", "rouge\nvert");   /* l'ensemble, intact */
 }
 
+static void essais_ports(void) {   /* 2.82 : les refus de « la réponse du port … » ; l'échange réel : test_serie */
+    PROG("Afficher la réponse de « grymoir-pas-de-port » à « FA; », à 4800 bauds.", "~ne s'ouvre pas : le poste est-il branché");
+    PROG("Essayer :\n    Afficher la réponse de « grymoir-pas-de-port » à « FA; », à 4800 bauds.\nEn cas d'échec :\n    Afficher « rattrapé ».",
+         "rattrapé");
+    PROG("Afficher la réponse de « COM3 » à « FA; », à 4801 bauds.", "~1200, 2400, 4800, 9600, 19200, 38400, 57600 ou 115200 bauds");
+    PROG("Afficher la réponse de « COM3 » à « », à 4800 bauds.", "~un texte non vide");
+    PROG("Afficher la réponse de 3 à « FA; », à 4800 bauds.", "~Le port est un texte");
+    PROG("Le p vaut absent.\nAfficher la réponse du p à « FA; », à 4800 bauds.", "~Le port est absent");
+    PROG("La fréquence d'un port :\n    Rendre la réponse du port à « FA; », à 4800 bauds.\nAfficher la fréquence de « COM3 ».",
+         "~Un calcul ne parle pas à un port série");
+    PROG("Le nombre d'un texte :\n    Le n vaut 0.\n    Pour chaque p parmi les ports série :\n        Le n devient le n + 1.\n    Rendre n.\n"
+         "Afficher le nombre de « a ».", "~Un calcul ne parcourt pas les ports série");
+    PROG("Le n vaut 0.\nPour chaque p parmi les ports série :\n    Le n devient le n + 1.\nAfficher « fini ».", "fini");
+}
+
 static void essais_amorcer(void) {   /* 2.80 : le vocabulaire du transcripteur, donné par le programme */
     const char *src =
         "L'écran de veille montre :\n    un bouton « Amorcer »,\n    un bouton « Retirer »,\n    un bouton « Fermer ».\n"
@@ -4747,6 +4762,7 @@ int main(void) {
     essais_signaler();
     essais_amorcer();
     essais_mots();
+    essais_ports();
     essais_second_tri();
     essais_agenda();
     essais_morse();
