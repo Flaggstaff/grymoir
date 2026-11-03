@@ -1,0 +1,36 @@
+#!/bin/sh
+# Les virements de salaires de Praxis (3 novembre 2026) : un lot pain.001 (SPS 2026, pain.001.001.09) pour les feuilles d'un
+# mois : en-tête, groupe SALA en écriture groupée, le cabinet débiteur avec son IBAN et son BIC, un virement par feuille
+# rattachée au lot, les IBAN sans espaces, les caractères échappés (tests/praxis/virements.grym).
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+N="$racine/projets/Praxis/Nicolas"
+cp "$N/données.grym" "$N/actions.grym" "$d/" && cp -R "$N/bibliothèques" "$d/" && cp "$racine/tests/praxis/virements.grym" "$d/"
+cd "$d" || exit 1
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+contient() { total=$((total + 1)); if ! grep -q -F "$2" lot.xml; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (« $2 » attendu dans lot.xml)"; fi; }
+sortie="$("$grym" lancer virements.grym 2>&1 < /dev/null)"
+verifier "$(echo "$sortie" | sed -n 1p)" "CHFR" "le code ISO des pays connus, vide sinon"
+verifier "$([ -s lot.xml ] && echo oui)" "oui" "le fichier est écrit"
+contient x '<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09">' "le schéma pain.001.001.09"
+contient x "<MsgId>SAL-2026-11-01-4242</MsgId>" "l'identifiant du lot"
+contient x "<NbOfTxs>1</NbOfTxs>" "le nombre de virements : la feuille sans IBAN n'y est pas"
+contient x "<CtrlSum>4135.20</CtrlSum>" "la somme de contrôle"
+contient x "<ChanlTp>SPSV</ChanlTp>" "la version de l'IG"
+contient x "<BtchBookg>true</BtchBookg>" "l'écriture groupée"
+contient x "<Cd>SALA</Cd>" "le code salaire"
+contient x "<Dt>2026-11-25</Dt>" "la date d'exécution"
+contient x "<IBAN>CH5204835012345671000</IBAN>" "l'IBAN du cabinet sans espaces"
+contient x "<BICFI>CRESCHZZ80A</BICFI>" "le BIC de la banque du cabinet"
+contient x "<EndToEndId>SAL-2026-11-01-4242-1-1</EndToEndId>" "la référence du virement"
+contient x '<InstdAmt Ccy="CHF">4135.20</InstdAmt>' "le montant en CHF"
+contient x "<Nm>Élodie Müller &amp; Fils</Nm>" "le nom du salarié, l'esperluette échappée"
+contient x "<Ctry>CH</Ctry>" "le pays en code ISO"
+contient x "<IBAN>CH9300762011623852957</IBAN>" "l'IBAN du salarié sans espaces"
+contient x "<Ustrd>Salaire novembre 2026</Ustrd>" "le motif"
+verifier "$(grep -c "<CdtTrfTxInf>" lot.xml)" "1" "un seul virement"
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]

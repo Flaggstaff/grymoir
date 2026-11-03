@@ -18,6 +18,9 @@ La feuille ouverte vaut absent.
 L'avis du personnel vaut absent.
 Remarque : l'année des feuilles, celle du jour au départ ; les feuilles montrées vont du premier janvier au suivant, exclu.
 L'année des feuilles vaut (l'année d'aujourd'hui suivi de « ») en nombre entier.
+Remarque : les virements (3 novembre 2026) : le mois (son premier jour) dont l'écran des virements s'ouvre.
+Le jour des virements vaut aujourd'hui.
+Le nombre fait vaut 0.
 Le début des feuilles vaut le premier jour de l'année des feuilles.
 La fin des feuilles vaut le premier jour de (l'année des feuilles + 1).
 
@@ -317,6 +320,7 @@ L'écran des feuilles, ("Feuilles de salaire " suivi de l'année des feuilles), 
         un bouton « Voir l'année »,
         un mois (nombre entier), de 1 à 12, avec l'indication « 1 à 12 »,
         un bouton « Établir le mois », principal,
+        un bouton « Virements »,
     le texte l'annonce de l'avis du personnel,
     la liste des feuilles conservées dont le mois ≥ le début des feuilles et le mois < la fin des feuilles, par mois décroissant, avec l'intitulé, le nom du salarié, le brut, le net, le versement et l'envoi,
     un bouton « Fermer ».
@@ -338,6 +342,24 @@ L'écran de la feuille, ("Feuille de salaire, " suivi de l'intitulé de la feuil
         un bouton « Enregistrer », au clavier « S »,
         un bouton « Fermer »,
         un bouton « Effacer », destructif, à confirmer par « Effacer cette feuille pour toujours ? Elle se refait depuis les feuilles, par le mois. » en tapant « effacer ».
+
+Remarque : les virements (3 novembre 2026) : un fichier pain.001 (ISO 20022, Swiss Payment Standards 2026, IG 2.3 du 20 février
+Remarque : 2026, schéma pain.001.001.09, seul admis dès le 20 novembre 2026) pour les feuilles d'un mois pas encore versées, dont le
+Remarque : salarié a un IBAN suisse ou liechtensteinois ; à charger dans l'e-banking du cabinet. Écriture groupée et code SALA :
+Remarque : les salaires n'apparaissent pas un à un sur le relevé. Le BIC de la banque du cabinet est exigé (établissement du débiteur).
+L'écran des virements, « Virements des salaires », montre :
+    le texte « Le fichier de virements d'un mois, pour l'e-banking du cabinet : les feuilles pas encore versées, des salariés qui ont un IBAN. »,
+    côte à côte :
+        un mois (nombre entier), de 1 à 12, avec l'indication « 1 à 12 »,
+        une année (nombre entier), de 2000 à 2100,
+        une exécution (date), avec l'indication « Le jour où la banque doit virer »,
+    côte à côte :
+        un BIC (texte), facultatif, avec l'indication « La banque du cabinet, 8 ou 11 caractères : POFICHBEXXX, RAIFCH22… », large de 14 caractères,
+        un bouton « Enregistrer le BIC »,
+    le texte l'annonce de l'avis du personnel,
+    côte à côte :
+        un bouton « Écrire le fichier », principal,
+        un bouton « Fermer ».
 
 Remarque : la feuille de salaire sur papier (3 novembre 2026) : le cabinet, le salarié et son adresse (enveloppe à fenêtre),
 Remarque : le mois, le brut, chaque retenue, le net, le compte du virement.
@@ -524,7 +546,7 @@ Quand on clique sur « Voir l'année » dans l'écran des feuilles :
 Remarque : établir le mois : une feuille par salarié en poste qui n'en a pas encore ; ceux qui en ont une sont passés.
 Quand on clique sur « Établir le mois » dans l'écran des feuilles :
     Le jour vaut l'ouverture du mois de l'écran et de l'année de l'écran.
-    Le nombre fait vaut 0.
+    Le nombre fait devient 0.
     Pour chaque salarié conservé dont la sortie est absente, par nom :
         L'employé vaut le salarié.
         Si le nombre de feuilles conservées dont le salarié = l'employé et le mois = le jour = 0 :
@@ -534,6 +556,71 @@ Quand on clique sur « Établir le mois » dans l'écran des feuilles :
     Le début des feuilles devient le premier jour de l'année des feuilles.
     La fin des feuilles devient le premier jour de (l'année des feuilles + 1).
     L'avis du personnel devient le nombre fait suivi de " feuille(s) établie(s) pour " suivi du mois en lettres du mois de l'écran suivi de " " suivi de l'année de l'écran suivi de « . ».
+
+Quand on clique sur « Virements » dans l'écran des feuilles :
+    Le jour des virements devient l'ouverture du mois de l'écran et de l'année de l'écran.
+    L'avis du personnel devient absent.
+    Ouvrir l'écran des virements.
+
+Quand on ouvre l'écran des virements :
+    Le mois de l'écran devient le mois du jour des virements.
+    L'année de l'écran devient l'année du jour des virements.
+    L'exécution de l'écran devient aujourd'hui.
+    Le BIC de l'écran devient le BIC du cabinet conservé.
+
+Quand on clique sur « Enregistrer le BIC » dans l'écran des virements :
+    Si le BIC de l'écran est présent :
+        Si la longueur du BIC de l'écran ≠ 8 et la longueur du BIC de l'écran ≠ 11, refuser « Un BIC a 8 ou 11 caractères : POFICHBEXXX, RAIFCH22. ».
+        Le BIC du cabinet conservé devient le BIC de l'écran en majuscules.
+    Sinon, le BIC du cabinet conservé devient absent.
+    L'avis du personnel devient « BIC enregistré. ».
+
+Remarque : le fichier : vérifié avant d'écrire (le BIC, l'IBAN du cabinet, chaque IBAN suisse ou liechtensteinois, chaque pays
+Remarque : connu), un lot conservé, chaque feuille rattachée au lot avec la référence de son virement, le fichier écrit dans le
+Remarque : dossier d'export au nom du lot, puis chaque feuille versée à la date d'exécution.
+Quand on clique sur « Écrire le fichier » dans l'écran des virements :
+    Le c vaut le cabinet conservé.
+    Si le BIC du c est absent, refuser « Donne d'abord le BIC de la banque du cabinet, et enregistre-le. ».
+    Si l'IBAN du c est absent, refuser « Le cabinet n'a pas d'IBAN : il se pose dans Configuration, Le cabinet. ».
+    Le jour vaut l'ouverture du mois de l'écran et de l'année de l'écran.
+    Si l'exécution de l'écran < aujourd'hui, refuser « La banque ne vire pas dans le passé : une date d'exécution d'aujourd'hui ou plus tard. ».
+    Si la localité du c est présente et le code ISO du pays du c = « », refuser « Le pays du cabinet n'est pas connu des virements : Suisse, Liechtenstein, France, Allemagne, Italie ou Autriche. ».
+    Le nombre fait devient 0.
+    Le total vaut 0.
+    Pour chaque feuille conservée dont le mois = le jour et le versement est absent :
+        Le s vaut le salarié de la feuille.
+        Si l'IBAN du s est présent :
+            Le compte vaut l'IBAN du s en IBAN.
+            Si le compte sur 2 ≠ « CH » et le compte sur 2 ≠ « LI », refuser "L'IBAN de " suivi de l'appellation du s suivi de " n'est ni suisse ni liechtensteinois : ce virement se fait à la main dans l'e-banking.".
+            Si la localité du s est présente et le code ISO du pays du s = « », refuser "Le pays de " suivi de l'appellation du s suivi de " n'est pas connu des virements : Suisse, Liechtenstein, France, Allemagne, Italie ou Autriche.".
+            Le nombre fait devient le nombre fait + 1.
+            Le total devient le total + le net de la feuille.
+    Si le nombre fait = 0, refuser « Rien à virer : aucune feuille de ce mois en attente, pour un salarié qui a un IBAN. ».
+    Le l vaut un nouveau lot :
+        L'identifiant vaut « SAL- » suivi de (le jour en format technique) suivi de « - » suivi de (un nombre au hasard de 1000 à 9999).
+        Le mois vaut le jour.
+        L'exécution vaut l'exécution de l'écran.
+        La création vaut aujourd'hui.
+        Le nombre vaut le nombre fait.
+        Le total vaut le total.
+    Conserver le l.
+    Le rang vaut 0.
+    Pour chaque feuille conservée dont le mois = le jour et le versement est absent :
+        Si l'IBAN du salarié de la feuille est présent :
+            Le rang devient le rang + 1.
+            Le lot de la feuille devient le l.
+            Le virement de la feuille devient l'identifiant du l suivi de « -1- » suivi du rang.
+    Le chemin vaut la destination des exports du c suivi de « / » suivi de l'identifiant du l suivi de « .xml ».
+    Essayer :
+        Enregistrer le XML de virements du l dans le chemin.
+    En cas d'échec :
+        Refuser le motif de l'échec.
+    Pour chaque feuille conservée dont le lot = le l :
+        Le versement de la feuille devient l'exécution du l.
+    L'avis du personnel devient le nombre fait suivi de " virement(s), CHF " suivi de (l'arrondi du total à 0,01) suivi de ", écrits dans " suivi du chemin suivi de " ; les feuilles sont marquées versées le " suivi de l'exécution du l suivi de « . ».
+
+Quand on clique sur « Fermer » dans l'écran des virements :
+    Fermer l'écran.
 
 Quand on choisit une feuille dans l'écran des feuilles :
     La feuille ouverte devient la feuille choisie de l'écran.

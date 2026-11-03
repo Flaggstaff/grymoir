@@ -95,6 +95,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	sh tests/praxis-fusion
 	sh tests/praxis-acces
 	sh tests/praxis-salaire
+	sh tests/praxis-virements
 	sh tests/ecoutille-epellation
 	sh tests/ecoutille
 	sh tests/balayer

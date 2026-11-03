@@ -55,6 +55,7 @@ Un cabinet, conservé, a :
     un préfixe SMS (texte), facultatif,
     une vue d'agenda (« Semaine » ou « Jour »), facultative,
     une gestion du personnel (vrai ou faux), faux au départ,
+    un BIC (texte), facultatif,
     un mot de passe de direction (mot de passe), facultatif,
     un mot de passe d'équipe (mot de passe), facultatif.
 
@@ -63,6 +64,8 @@ Remarque : départ.grym à la fondation ; faux pour une base d'avant. Allumé, P
 Remarque : qui voit tout, ou l'Équipe, qui ne voit ni le Personnel, ni les Sauvegardes, ni les Rendez-vous, ni les SMS, et qui
 Remarque : ne peut rien effacer de la corbeille. Les deux mots de passe, des empreintes, se posent dans Configuration, Accès ;
 Remarque : tant que celui de la Direction manque, Praxis ouvre sans rien demander, en Direction, pour qu'on puisse le poser.
+Remarque : le BIC (3 novembre 2026) : la banque du cabinet, pour les virements de salaires (pain.001 exige l'établissement du
+Remarque : débiteur, par son BIC ou son IID) ; se pose dans Personnel, Virements.
 
 Remarque : le préfixe SMS (28 octobre 2026) : il ouvre la référence de chaque rappel confié à ASPSMS (« LC-2026-11-03-14:00 ») ;
 Remarque : deux cabinets qui partagent un compte ASPSMS ont chacun le leur, pour qu'annuler un rappel de l'un n'annule jamais
@@ -411,6 +414,17 @@ Un barème, conservé, a :
     un taux allocations familiales (nombre), 0 au départ,
     un taux LAA employeur (nombre), 0 au départ.
 
+Remarque : un lot de virements (3 novembre 2026) : un fichier pain.001 écrit pour les feuilles d'un mois, son identifiant (unique
+Remarque : 90 jours chez la banque), la date d'exécution demandée, le nombre et la somme des virements ; chaque feuille virée garde
+Remarque : son lot et la référence de son virement (EndToEndId), celle que le salarié voit sur son relevé.
+Un lot, conservé, a :
+    un identifiant (texte), unique,
+    un mois (date),
+    une exécution (date),
+    une création (date),
+    un nombre (nombre entier),
+    un total (nombre).
+
 Remarque : une feuille de salaire : un salarié, un mois (son premier jour), le brut, chaque retenue aux cinq centimes, le net ;
 Remarque : l'intitulé en toutes lettres pour les listes ; versée le jour du virement ; envoyée le jour du courriel ou du courrier.
 Remarque : une feuille fausse s'efface définitivement (rien d'autre ne la désigne) et se refait.
@@ -426,4 +440,6 @@ Une feuille, conservée, a :
     une retenue d'impôt (nombre),
     un net (nombre),
     un versement (date), facultatif,
-    un envoi (date), facultatif.
+    un envoi (date), facultatif,
+    un lot (lot), facultatif,
+    un virement (texte), facultatif.

@@ -1,0 +1,68 @@
+Remarque : les virements de salaires (3 novembre 2026) : un lot pain.001 pour deux feuilles d'un mois, écrit dans « lot.xml ».
+Utiliser « actions ».
+Le c vaut un nouveau cabinet :
+    Le nom vaut « Cabinet d'essai ».
+    La rue vaut « Rue de l'Essai ».
+    Le numéro de maison vaut « 1 ».
+    Le numéro postal vaut « 1630 ».
+    La localité vaut « Bulle ».
+    Le pays vaut « Suisse ».
+    L'IBAN vaut « CH52 0483 5012 3456 7100 0 ».
+    Le BIC vaut « CRESCHZZ80A ».
+    La facturation des absences vaut faux.
+    Le choix d'agenda vaut faux.
+    La facturation aux assurances vaut faux.
+    La gestion du personnel vaut vrai.
+    L'agenda vaut « Praxis ».
+Conserver le c.
+Le b vaut un nouveau barème :
+    L'année vaut 2026.
+    Le taux AVS vaut 5,3.
+    Le taux AC vaut 1,1.
+    Le plafond AC vaut 148200.
+    Le taux AVS employeur vaut 5,3.
+    Le taux AC employeur vaut 1,1.
+    Le taux allocations familiales vaut 0.
+    Le taux LAA employeur vaut 0.
+Conserver le b.
+Le s vaut un nouveau salarié :
+    Le nom vaut « Müller & Fils ».
+    Le prénom vaut « Élodie ».
+    La rue vaut « Chemin des Prés ».
+    Le numéro de maison vaut « 12b ».
+    Le numéro postal vaut « 1700 ».
+    La localité vaut « Fribourg ».
+    Le pays vaut « Suisse ».
+    Le taux d'occupation vaut 80.
+    Le salaire mensuel vaut 6000.
+    Le treizième vaut vrai.
+    L'IBAN vaut « CH93 0076 2011 6238 5295 7 ».
+    La retenue LPP vaut 300.
+    Le taux LAA vaut 1,2.
+    La retenue d'impôt vaut 0.
+Conserver le s.
+Le t vaut un nouveau salarié :
+    Le nom vaut « Sans Compte ».
+    Le pays vaut « Suisse ».
+    Le taux d'occupation vaut 100.
+    Le salaire mensuel vaut 5000.
+    Le treizième vaut faux.
+    La retenue LPP vaut 0.
+    Le taux LAA vaut 0.
+    La retenue d'impôt vaut 0.
+Conserver le t.
+Établir la feuille du s et l'ouverture de 11 et de 2026, qui donne la f.
+Établir la feuille du t et l'ouverture de 11 et de 2026, qui donne la g.
+Le l vaut un nouveau lot :
+    L'identifiant vaut « SAL-2026-11-01-4242 ».
+    Le mois vaut l'ouverture de 11 et de 2026.
+    L'exécution vaut 25.11.2026.
+    La création vaut 03.11.2026.
+    Le nombre vaut 1.
+    Le total vaut le net de la f.
+Conserver le l.
+Le lot de la f devient le l.
+Le virement de la f devient « SAL-2026-11-01-4242-1-1 ».
+Enregistrer le XML de virements du l dans « lot.xml ».
+Afficher le code ISO de « Suisse » suivi de le code ISO de « france » suivi de le code ISO de « Mars ».
+Afficher le net de la f.

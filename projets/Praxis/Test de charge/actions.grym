@@ -973,3 +973,92 @@ Le contrat d'un salarié :
 La mention du compte d'un salarié :
     Si l'IBAN du salarié est absent, rendre « ».
     Rendre "Versé sur " suivi de l'IBAN du salarié suivi de « . ».
+
+Remarque : le code ISO 3166 d'un pays écrit en français, pour les virements ; les voisins seulement, le reste se refuse.
+Le code ISO d'un pays :
+    Si pays en minuscules = « suisse », rendre « CH ».
+    Si pays en minuscules = « liechtenstein », rendre « LI ».
+    Si pays en minuscules = « france », rendre « FR ».
+    Si pays en minuscules = « allemagne », rendre « DE ».
+    Si pays en minuscules = « italie », rendre « IT ».
+    Si pays en minuscules = « autriche », rendre « AT ».
+    Rendre « ».
+
+Remarque : le pain.001 d'un lot de virements (SPS 2026, IG 2.3) : l'en-tête A (identifiant, nombre, somme, le logiciel), un seul
+Remarque : groupe B (TRF, écriture groupée, SALA, date d'exécution, le cabinet débiteur, son IBAN, le BIC de sa banque), un virement C
+Remarque : par feuille (références, montant en CHF, le salarié et son adresse structurée, son IBAN, le motif). L'heure de création
+Remarque : est posée à minuit : la grammaire n'écrit pas encore une heure sur deux chiffres. Les références n'ont que des lettres sans
+Remarque : accent et des chiffres (SPS, § 3.2) : le rang du virement, pas le nom du salarié.
+Le XML de virements d'une fournée, « Document », montre :
+    l'attribut « xmlns » : « urn:iso:std:iso:20022:tech:xsd:pain.001.001.09 »,
+    l'élément « CstmrCdtTrfInitn » :
+        l'élément « GrpHdr » :
+            l'élément « MsgId » : l'identifiant de la fournée,
+            l'élément « CreDtTm » : (la création de la fournée en format technique) suivi de « T00:00:00 »,
+            l'élément « NbOfTxs » : le nombre de la fournée,
+            l'élément « CtrlSum » : le total de la fournée,
+            l'élément « InitgPty » :
+                l'élément « Nm » : le nom du cabinet conservé,
+                l'élément « CtctDtls » :
+                    l'élément « Othr » :
+                        l'élément « ChanlTp » : « NAME »,
+                        l'élément « Id » : « Praxis »,
+                    l'élément « Othr » :
+                        l'élément « ChanlTp » : « PRVD »,
+                        l'élément « Id » : « GrymoiR »,
+                    l'élément « Othr » :
+                        l'élément « ChanlTp » : « SPSV »,
+                        l'élément « Id » : « 0203 »,
+        l'élément « PmtInf » :
+            l'élément « PmtInfId » : l'identifiant de la fournée suivi de « -1 »,
+            l'élément « PmtMtd » : « TRF »,
+            l'élément « BtchBookg » : « true »,
+            l'élément « PmtTpInf » :
+                l'élément « CtgyPurp » :
+                    l'élément « Cd » : « SALA »,
+            l'élément « ReqdExctnDt » :
+                l'élément « Dt » : l'exécution de la fournée,
+            l'élément « Dbtr » :
+                l'élément « Nm » : le nom du cabinet conservé,
+                Si la localité du cabinet conservé est présente :
+                    l'élément « PstlAdr » :
+                        Si la rue du cabinet conservé est présente :
+                            l'élément « StrtNm » : la rue du cabinet conservé,
+                        Si le numéro de maison du cabinet conservé est présent :
+                            l'élément « BldgNb » : le numéro de maison du cabinet conservé,
+                        Si le numéro postal du cabinet conservé est présent :
+                            l'élément « PstCd » : le numéro postal du cabinet conservé,
+                        l'élément « TwnNm » : la localité du cabinet conservé,
+                        l'élément « Ctry » : le code ISO du pays du cabinet conservé,
+            l'élément « DbtrAcct » :
+                l'élément « Id » :
+                    l'élément « IBAN » : l'IBAN du cabinet conservé en IBAN,
+            l'élément « DbtrAgt » :
+                l'élément « FinInstnId » :
+                    l'élément « BICFI » : le BIC du cabinet conservé,
+            Pour chaque feuille conservée dont le lot = fournée :
+                l'élément « CdtTrfTxInf » :
+                    l'élément « PmtId » :
+                        l'élément « InstrId » : le virement de la feuille,
+                        l'élément « EndToEndId » : le virement de la feuille,
+                    l'élément « Amt » :
+                        l'élément « InstdAmt » :
+                            l'attribut « Ccy » : « CHF »,
+                            le contenu : le net de la feuille,
+                    l'élément « Cdtr » :
+                        l'élément « Nm » : l'appellation du salarié de la feuille,
+                        Si la localité du salarié de la feuille est présente :
+                            l'élément « PstlAdr » :
+                                Si la rue du salarié de la feuille est présente :
+                                    l'élément « StrtNm » : la rue du salarié de la feuille,
+                                Si le numéro de maison du salarié de la feuille est présent :
+                                    l'élément « BldgNb » : le numéro de maison du salarié de la feuille,
+                                Si le numéro postal du salarié de la feuille est présent :
+                                    l'élément « PstCd » : le numéro postal du salarié de la feuille,
+                                l'élément « TwnNm » : la localité du salarié de la feuille,
+                                l'élément « Ctry » : le code ISO du pays du salarié de la feuille,
+                    l'élément « CdtrAcct » :
+                        l'élément « Id » :
+                            l'élément « IBAN » : l'IBAN du salarié de la feuille en IBAN,
+                    l'élément « RmtInf » :
+                        l'élément « Ustrd » : "Salaire " suivi de l'intitulé de la feuille.
