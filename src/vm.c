@@ -6259,9 +6259,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         case I_CONVERTIR: {   /* « le nom en majuscules », « le code en nombre » (§ 4.5) */
             static const char *const CIBLES[] = { "majuscules", "minuscules", "nombre entier", "nombre", "date", "année",
                                                   "vrai ou faux", "heure", "toutes lettres", "format technique", "IBAN",
-                                                  "date locale", "heure locale", "format universel" };
+                                                  "date locale", "heure locale", "format universel", "fichier" };
             static const char *const NOMS[] = { "", "", "un nombre entier", "un nombre", "une date", "une année",
-                                                "vrai ou faux", "une heure", "", "", "", "", "", "" };
+                                                "vrai ou faux", "une heure", "", "", "", "", "", "", "" };
             (void)CIBLES;
             (void)NOMS;
             if (op == 11 || op == 12) {
@@ -6291,6 +6291,22 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 const struct tm l = *localtime(&tt);
                 if (op == 11) empiler(&pile, valeur_date(date_jours(l.tm_year + 1900, l.tm_mon + 1, l.tm_mday)));
                 else empiler(&pile, valeur_heure(l.tm_hour * 60L + l.tm_min));
+                break;
+            }
+            if (op == 14) {
+                /* « le carnet en fichier » (2.83) : le texte, en UTF-8, tel quel, à enregistrer (« Enregistrer … dans ») */
+                Valeur vt = depiler(&pile);
+                if (vt.type != V_TEXTE) {
+                    char *mp = vt.type == V_ABSENT ? message_absent(&vt)
+                             : grym_formater("« en fichier » s'applique à un texte, pas à %s.", nom_type(vt.type));
+                    valeur_liberer(&vt);
+                    ok = echouer(diag, b, debut, mp);
+                    break;
+                }
+                const char *x = vt.texte ? vt.texte : "";
+                Valeur f = vi_fichier(x, strlen(x), "texte.txt");
+                valeur_liberer(&vt);
+                empiler(&pile, f);
                 break;
             }
             if (op == 13) {

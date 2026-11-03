@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.82 de la spécification, révisée le 3 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.83 de la spécification, révisée le 3 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1151,6 +1151,7 @@ Enregistrer la photo du membre dans « copie.jpg ».
 - `le fichier « chemin »` lit un fichier du disque. Le chemin est un texte écrit tel quel, ou une expression entre parenthèses : `le fichier (chemin)`. Sans texte ni parenthèse après lui, `le fichier` reste un nom ordinaire.
 - Un chemin relatif part du dossier du programme ; dans la boucle interactive, du dossier courant. Fichier absent ou illisible : erreur à l'exécution.
 - Une image est un fichier dont la signature est reconnue. Ranger dans un champ `(image)` un fichier qui n'en est pas une est une erreur : « « rapport.pdf » n'est pas une image (PNG, JPEG, GIF ou WebP). »
+- *(2.83)* `t en fichier` fait d'un texte un fichier, en UTF-8, tel quel, pour l'enregistrer : `Le f vaut le carnet en fichier.` puis `Enregistrer le f dans « carnet.adi ».` Un carnet de trafic, un fichier de réglages, un texte pour un autre logiciel. Autre chose qu'un texte : « « en fichier » s'applique à un texte, pas à un nombre. » Forme compacte : `t _en_fichier`.
 - `Enregistrer … dans « chemin ».` écrit le contenu. Un fichier existant n'est jamais écrasé : erreur, vérifiée à la phrase puis au moment d'écrire. Enregistrer deux fois au même chemin dans une exécution est aussi une erreur. *(Écraser explicitement demandera sa propre tournure.)*
 - `enregistrer` ne peut pas commencer le nom d'une action.
 - Lire ou écrire sur le disque est un effet de bord : réservé aux actions, jamais aux calculs.
@@ -2643,3 +2644,4 @@ Pour chaque port parmi les ports série, afficher port.
 | 2.80 | 2026-11-02 | § 15.8 : `Amorcer la transcription avec t.`, le vocabulaire attendu par le transcripteur |
 | 2.81 | 2026-11-02 | § 4.5 : `t en remplaçant « a » par « b »` (instruction `REMPLACER`) ; `Pour chaque mot parmi les mots de t`, `le nombre de mots de t` (instruction `MOTS`) |
 | 2.82 | 2026-11-03 | Nouveau § 22.25 : `la réponse de p à q, à v bauds` (instruction `PORT_SERIE`, src/serie.c) et `Pour chaque p parmi les ports série :` (instruction `PORTS`) ; formes compactes `_réponse_port`, `_question`, `_vitesse`, `_bauds`, `_ports_série` |
+| 2.83 | 2026-11-03 | § 15.2 : `t en fichier`, un texte en fichier UTF-8 à enregistrer (conversion 14) ; forme compacte `_en_fichier` |

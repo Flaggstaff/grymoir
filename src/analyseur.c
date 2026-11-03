@@ -861,7 +861,7 @@ static const char *type_statique(const Noeud *n) {
     case N_COLLAGE: case N_ELISION: case N_SANS: case N_REMPLACER: return "texte";   /* N_SANS : 2.64 ; N_REMPLACER : 2.81 */
     case N_REPONSE: return n->texte2;
     case N_MOTIF: return "texte";
-    case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure"
+    case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure" : n->entier == 14 ? "fichier"
                               : n->entier <= 1 || n->entier == 8 || n->entier >= 10 ? "texte" : n->texte2;
     case N_NOUVEAU: return n->texte;
     case N_ENVOI: case N_CHAMP_JSON: return "texte";   /* 2.42 */
@@ -1555,7 +1555,7 @@ static Noeud *nom_expression(Analyse *a) {
             && (est_mot(&a->j[fin + 1], "un") || est_mot(&a->j[fin + 1], "une"))) arret = 1;   /* § 13.8 */
         /* « vrai » clôt la suite des mots du nom : il se regarde au-delà de f (« t en vrai ou faux ») */
         if (fin < f && fin + 1 < a->n && est_mot(&a->j[fin], "en")) {   /* « nom en majuscules » (§ 4.5) */
-            static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai", "heure", "toutes", "format", "iban" };
+            static const char *const C[] = { "majuscules", "minuscules", "nombre", "date", "année", "vrai", "heure", "toutes", "format", "iban", "fichier" };
             for (size_t q = 0; q < sizeof C / sizeof *C; q++) if (est_mot(&a->j[fin + 1], C[q])) arret = 1;
         }
         if (!s || (fin < f && s->sorte != S_CALCUL && !arret)) {
@@ -2950,7 +2950,8 @@ static const char *const CONVERSIONS[] = { "majuscules", "minuscules", "nombre e
                                            "vrai ou faux", "heure", "toutes lettres",   /* une date (§ 14.8) */
                                            "format technique",     /* pour une machine : QR, XML (2.27) */
                                            "iban",                 /* vérifié, sans espaces (2.29) */
-                                           "date locale", "heure locale", "format universel" };   /* 2.60 */
+                                           "date locale", "heure locale", "format universel",   /* 2.60 */
+                                           "fichier" };   /* un texte écrit en UTF-8, à enregistrer (2.83) */
 #define NB_CONVERSIONS (sizeof CONVERSIONS / sizeof *CONVERSIONS)
 
 static Noeud *conversion(Analyse *a, Noeud *g) {

@@ -56,10 +56,15 @@ Un passage, conservé, a :
     une traduction (texte), facultative,
     une fréquence (nombre entier), facultative,
     un mode (texte), facultatif,
-    un accord (texte), facultatif.
+    un accord (texte), facultatif,
+    un moment universel (texte), facultatif,
+    un relevé d'indicatifs (texte), facultatif,
+    une bande (texte), facultative.
 
 Remarque : la fréquence d'un passage en hertz, son mode (« USB », « FM »…), et l'accord, les deux écrits pour la veille :
 Remarque : « 14,074 MHz DATA-USB ». Lus à la fin du passage : un bouton tourné pendant l'émission donne la fréquence de la fin.
+Remarque : le carnet (3 novembre 2026) : le moment du passage en temps universel (« 2026-11-03T14:30:00Z »), comme le veut un
+Remarque : carnet de trafic ; les indicatifs reconnus dans le morse et la parole, séparés par une espace ; la bande de la fréquence.
 
 Remarque : les réglages de Michel (1er novembre 2026) : combien de jours garder les passages ; vide, tout est gardé.
 Remarque : la traduction en français (1er novembre 2026) : DeepL d'abord ; quota épuisé (456) ou DeepL injoignable, Google.
@@ -69,7 +74,11 @@ Un réglage, conservé, a :
     une clé principale (secret), facultative,
     un compte gratuit (vrai ou faux), vrai au départ,
     une clé de relève (secret), facultative,
-    un vocabulaire personnel (texte), facultatif.
+    un vocabulaire personnel (texte), facultatif,
+    une alerte (texte), facultative.
+
+Remarque : l'alerte (3 novembre 2026) : des mots séparés par des espaces (« CQ HB9XYZ ») ; un passage dont le morse, la parole ou
+Remarque : les indicatifs en contiennent un le signale à l'écran, avec le poste et l'accord.
 
 Remarque : les passages montrés : depuis ce jour (la période de l'écran de veille).
 Le début des passages vaut aujourd'hui.
@@ -325,10 +334,122 @@ Pour lire l'accord d'un passage :
         L'accord du passage devient (la fréquence du passage ÷ 1000000) suivi de " MHz".
         Si le mode du passage est présent, l'accord du passage devient l'accord du passage suivi de " " suivi du mode du passage.
 
+Remarque : ce qu'un passage a fait entendre, les indicatifs, le morse et la parole, en un texte ; vide s'il n'y a rien.
+Le texte entendu d'un passage :
+    Le t vaut « ».
+    Si le relevé d'indicatifs du passage est présent, le t devient le t suivi de " " suivi du relevé d'indicatifs du passage.
+    Si le morse du passage est présent, le t devient le t suivi de " " suivi du morse du passage.
+    Si la transcription du passage est présente, le t devient le t suivi de " " suivi de la transcription du passage.
+    Rendre le t.
+
+Remarque : le premier mot d'alerte qu'un texte contient (3 novembre 2026), ou « » ; entier : « CQ » ne s'allume pas sur « CQD ».
+Le déclencheur d'une alerte et d'un texte :
+    Si l'alerte est absente ou le texte est absent, rendre « ».
+    Le t vaut " " suivi du texte sans « , » sans « . » sans « ? » sans « ! » suivi de " ".
+    Pour chaque mot parmi les mots de l'alerte :
+        Si le t contient (" " suivi du mot suivi de " "), rendre le mot.
+    Rendre « ».
+
+Remarque : les indicatifs (3 novembre 2026) : un mot reconnu à sa forme, comme le règlement des radiocommunications de l'UIT
+Remarque : la décrit (un préfixe, un chiffre, un suffixe) : de 4 à 8 lettres et chiffres, un ou deux chiffres, au moins deux
+Remarque : lettres, une lettre ou un chiffre puis une lettre en tête, une lettre à la fin : HB9ABC, F4XYZ, 9A2AA, 4X4AB ; pas 5NN,
+Remarque : 599, QSL73. Une heuristique : un mot inventé de la même forme passe.
+Le reste alphanumérique d'un mot :
+    Le r vaut le mot.
+    Pour chaque c parmi les mots de « A B C D E F G H I J K L M N O P Q R S T U V W X Y Z 0 1 2 3 4 5 6 7 8 9 », le r devient le r sans le c.
+    Rendre le r.
+
+Le compte de chiffres d'un mot :
+    Le r vaut le mot.
+    Pour chaque c parmi les mots de « 0 1 2 3 4 5 6 7 8 9 », le r devient le r sans le c.
+    Rendre la longueur du mot − la longueur du r.
+
+L'indicatif d'un mot :
+    Le m vaut (le mot sans « , » sans « . » sans « ? » sans « ! » sans « : » sans « ; ») en majuscules.
+    Si la longueur du m < 4 ou la longueur du m > 8, rendre « ».
+    Si le reste alphanumérique du m ≠ « », rendre « ».
+    Le n vaut le compte de chiffres du m.
+    Si le n < 1 ou le n > 2 ou la longueur du m − le n < 2, rendre « ».
+    Pour chaque c parmi les mots de « 0 1 2 3 4 5 6 7 8 9 » :
+        Si le m finit par c, rendre « ».
+    Si le compte de chiffres de (le m sur 2) = 2, rendre « ».
+    Rendre le m.
+
+Le repérage d'un texte :
+    Si le texte est absent, rendre « ».
+    Le r vaut « ».
+    Pour chaque mot parmi les mots du texte :
+        Le i vaut l'indicatif du mot.
+        Si le i ≠ « » et (" " suivi du r suivi de " ") ne contient pas (" " suivi du i suivi de " ") :
+            Si le r = « », le r devient le i.
+            Sinon, le r devient le r suivi de " " suivi du i.
+    Rendre le r.
+
+Remarque : la bande d'une fréquence en hertz (3 novembre 2026) : les bornes de l'énumération Band de l'ADIF (d'après la table
+Remarque : de PyQSO, ADIF 3.0.4) ; la CB à part (canaux 1 à 40 de la CEPT, de 26,965 à 27,405 MHz), qui n'est pas une bande
+Remarque : de l'ADIF ; hors bande : « ».
+La bande ADIF d'une fréquence :
+    Si la fréquence est absente, rendre « ».
+    Le f vaut la fréquence ÷ 1000.
+    Si le f ≥ 136 et le f ≤ 137, rendre « 2190m ».
+    Si le f ≥ 472 et le f ≤ 479, rendre « 630m ».
+    Si le f ≥ 1800 et le f ≤ 2000, rendre « 160m ».
+    Si le f ≥ 3500 et le f ≤ 4000, rendre « 80m ».
+    Si le f ≥ 5102 et le f ≤ 5406,5, rendre « 60m ».
+    Si le f ≥ 7000 et le f ≤ 7300, rendre « 40m ».
+    Si le f ≥ 10100 et le f ≤ 10150, rendre « 30m ».
+    Si le f ≥ 14000 et le f ≤ 14350, rendre « 20m ».
+    Si le f ≥ 18068 et le f ≤ 18168, rendre « 17m ».
+    Si le f ≥ 21000 et le f ≤ 21450, rendre « 15m ».
+    Si le f ≥ 24890 et le f ≤ 24990, rendre « 12m ».
+    Si le f ≥ 26965 et le f ≤ 27405, rendre « CB ».
+    Si le f ≥ 28000 et le f ≤ 29700, rendre « 10m ».
+    Si le f ≥ 50000 et le f ≤ 54000, rendre « 6m ».
+    Si le f ≥ 70000 et le f ≤ 71000, rendre « 4m ».
+    Si le f ≥ 144000 et le f ≤ 148000, rendre « 2m ».
+    Si le f ≥ 420000 et le f ≤ 450000, rendre « 70cm ».
+    Si le f ≥ 1240000 et le f ≤ 1300000, rendre « 23cm ».
+    Rendre « ».
+
+Remarque : un champ ADIF (3 novembre 2026) : « <CALL:6>HB9ABC », la longueur en caractères ; vide : rien.
+Le champ ADIF d'un nom et d'une valeur :
+    Si la valeur est absente ou la valeur = « », rendre « ».
+    Rendre « < » suivi du nom suivi de « : » suivi de (la longueur de la valeur en format technique) suivi de « > » suivi de la valeur suivi de " ".
+
+Remarque : le mode ADIF d'un mode du poste : SSB pour LSB et USB (sous-mode à part), CW, FM, AM, RTTY, DIGITALVOICE pour C4FM ;
+Remarque : un mode DATA ne dit pas lequel (FT8, PSK…) : rien plutôt qu'un faux.
+Le mode ADIF d'un mode :
+    Si le mode est absent, rendre « ».
+    Si le mode = « LSB » ou le mode = « USB », rendre « SSB ».
+    Si le mode = « CW-U » ou le mode = « CW-L », rendre « CW ».
+    Si le mode = « FM » ou le mode = « FM-N », rendre « FM ».
+    Si le mode = « AM » ou le mode = « AM-N », rendre « AM ».
+    Si le mode = « RTTY-LSB » ou le mode = « RTTY-USB », rendre « RTTY ».
+    Si le mode = « C4FM », rendre « DIGITALVOICE ».
+    Rendre « ».
+
+Le sous mode ADIF d'un mode :
+    Si le mode = « LSB » ou le mode = « USB » ou le mode = « C4FM », rendre le mode.
+    Rendre « ».
+
+Remarque : une ligne du carnet pour un indicatif entendu ; la date et l'heure du moment universel (« 20261103 », « 143000 »).
+L'enregistrement ADIF d'un passage et d'un indicatif :
+    Le u vaut le moment universel du passage sans « - » sans « : ».
+    Le r vaut le champ ADIF de « CALL » et de l'indicatif.
+    Le r devient le r suivi du champ ADIF de « QSO_DATE » et de (le u sur 8).
+    Le début vaut le u sur 9.
+    Le r devient le r suivi du champ ADIF de « TIME_ON » et de (le u sans le début sans « Z »).
+    Si la fréquence du passage est présente, le r devient le r suivi du champ ADIF de « FREQ » et de ((la fréquence du passage ÷ 1000000) en format technique).
+    Si la bande du passage est présente et la bande du passage ≠ « CB », le r devient le r suivi du champ ADIF de « BAND » et de la bande du passage.
+    Le r devient le r suivi du champ ADIF de « MODE » et du mode ADIF du mode du passage.
+    Le r devient le r suivi du champ ADIF de « SUBMODE » et du sous mode ADIF du mode du passage.
+    Rendre le r suivi de « <EOR> ».
+
 Remarque : un passage (2 novembre 2026) : ce qui a été entendu, le son à réécouter, et « Garder le son » pour le copier hors
 Remarque : de la base (un QSO à garder, un échantillon à envoyer).
 L'écran du passage, « Passage », montre :
     le texte "Poste " suivi du nom du poste du passage ouvert suivi de ", le " suivi du jour du passage ouvert suivi de " à " suivi de l'heure du passage ouvert,
+    le texte la ligne de « Indicatifs : » et du relevé d'indicatifs du passage ouvert, visible si la ligne de « Indicatifs : » et du relevé d'indicatifs du passage ouvert ≠ « »,
     le texte la ligne de « Accord : » et de l'accord du passage ouvert, visible si la ligne de « Accord : » et de l'accord du passage ouvert ≠ « »,
     le texte la ligne de « Morse : » et du morse du passage ouvert, visible si la ligne de « Morse : » et du morse du passage ouvert ≠ « »,
     le texte la ligne de « Parole : » et de la transcription du passage ouvert, visible si la ligne de « Parole : » et de la transcription du passage ouvert ≠ « »,
@@ -345,9 +466,10 @@ L'écran de veille montre :
         une période (« Aujourd'hui », « 7 jours », « 30 jours » ou « Tout »), « Aujourd'hui » au départ,
         un seul poste (poste), facultatif, avec l'indication « Vide : tous les postes »,
         un mot cherché (texte), facultatif, avec l'indication « Un poste, ou un mot du morse, de la parole, de la traduction ; vide : tout »,
-    la liste des passages conservés dont le jour ≥ le début des passages et l'affichage du poste est vrai et (le nom du poste contient le mot des passages ou le morse contient le mot des passages ou la transcription contient le mot des passages ou la traduction contient le mot des passages), par jour décroissant puis heure décroissant, avec l'heure, le nom du poste, l'accord, le morse, la transcription, la traduction, le jour et la durée, en cartes,
+    la liste des passages conservés dont le jour ≥ le début des passages et l'affichage du poste est vrai et (le nom du poste contient le mot des passages ou le relevé d'indicatifs contient le mot des passages ou le morse contient le mot des passages ou la transcription contient le mot des passages ou la traduction contient le mot des passages), par jour décroissant puis heure décroissant, avec l'heure, le nom du poste, le relevé d'indicatifs, l'accord, le morse, la transcription, la traduction, le jour et la durée, en cartes,
     côte à côte :
         un bouton « Postes », au clavier « P »,
+        un bouton « Carnet ADIF »,
         un bouton « Réglages »,
         un bouton « Fermer », à confirmer par « Arrêter la veille ? Un passage en cours d'enregistrement sera perdu. ».
 
@@ -391,6 +513,8 @@ L'écran des réglages, « Réglages », montre :
     le texte le témoin des clés du réglage conservé,
     le texte « Transcription », en petites capitales,
     un vocabulaire personnel (texte), facultatif, sur plusieurs lignes, avec l'indication « Indicatifs, noms et lieux entendus souvent, séparés par des virgules : la transcription les écrit juste »,
+    le texte « Alerte », en petites capitales,
+    une alerte (texte), facultative, avec l'indication « Des mots séparés par des espaces (CQ, ton indicatif) : un passage qui en contient un est signalé »,
     le texte l'état du quota, visible si l'état du quota ≠ « »,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
@@ -408,6 +532,10 @@ Quand un poste capte un son dans l'écran de veille :
     Le morse du p devient le morse du son capté.
     Si le morse du p est absent et la parole transcrite du poste, la transcription du p devient la transcription du son capté.
     Si la transcription du p est présente, la transcription du p devient l'épellation de la transcription du p.
+    Remarque : le carnet (3 novembre 2026) : le temps universel, et les indicatifs entendus en morse ou en parole.
+    Le moment universel du p devient maintenant en format universel.
+    Le relevé vaut le repérage du texte entendu du p.
+    Si le relevé ≠ « », le relevé d'indicatifs du p devient le relevé.
     Remarque : la parole traduite en français si le poste le veut ; le morse, fait d'abréviations, ne se traduit pas.
     Si la transcription du p est présente et la traduction voulue du poste :
         Traduire la transcription du p, qui donne le texte traduit.
@@ -418,6 +546,13 @@ Quand un poste capte un son dans l'écran de veille :
     Conserver le p.
     Remarque : la fréquence et le mode, si le poste se pilote (3 novembre 2026).
     Lire l'accord du p.
+    Si la bande ADIF de la fréquence du p ≠ « », la bande du p devient la bande ADIF de la fréquence du p.
+    Remarque : l'alerte (3 novembre 2026).
+    Pour chaque réglage conservé :
+        Le mot vaut le déclencheur de l'alerte du réglage et du texte entendu du p.
+        Si le mot ≠ « » :
+            Si l'accord du p est présent, signaler « Alerte » puis le mot puis « : » puis le nom du poste puis « , » suivi de l'accord du p suivi de « . ».
+            Sinon, signaler « Alerte » puis le mot puis « : » puis le nom du poste suivi de « . ».
 
 Pour délimiter une période :
     Le début des passages devient aujourd'hui.
@@ -443,6 +578,23 @@ Quand on change le mot cherché dans l'écran de veille :
     Le mot des passages devient « ».
     Si le mot cherché de l'écran est présent, le mot des passages devient le mot cherché de l'écran.
 
+Remarque : le carnet ADIF (3 novembre 2026) : une ligne par indicatif entendu dans les passages montrés (la période et le poste
+Remarque : choisis), pour un logiciel de carnet ; dans Documents/Écoutille, « Carnet 2026-11-03T1430Z.adi ». En-tête : ADIF 3.1.6.
+Remarque : Les passages d'avant le carnet, sans moment universel, n'y sont pas.
+Quand on clique sur « Carnet ADIF » dans l'écran de veille :
+    Le texte vaut "Carnet de veille d'Écoutille " suivi de « <ADIF_VER:5>3.1.6 <PROGRAMID:9>Ecoutille <EOH> ».
+    Le compte vaut 0.
+    Pour chaque passage conservé dont le jour ≥ le début des passages et l'affichage du poste est vrai, par jour :
+        Si le relevé d'indicatifs du passage est présent et le moment universel du passage est présent :
+            Pour chaque i parmi les mots du relevé d'indicatifs du passage :
+                Le texte devient le texte suivi de " " suivi de l'enregistrement ADIF du passage et de l'i.
+                Le compte devient le compte + 1.
+    Si le compte = 0, refuser « Aucun indicatif dans les passages montrés : rien à mettre au carnet. ».
+    Le nom vaut "~/Documents/Écoutille/Carnet " suivi de (maintenant en format universel sans « : » sans « 00Z ») suivi de « Z.adi ».
+    Le fichier vaut le texte en fichier.
+    Enregistrer le fichier dans le nom.
+    Signaler le compte puis « ligne(s) au carnet : » puis le nom suivi de « . ».
+
 Quand on clique sur « Réglages » dans l'écran de veille :
     Ouvrir l'écran des réglages.
 
@@ -451,12 +603,14 @@ Quand on ouvre l'écran des réglages :
         La conservation de l'écran devient la conservation du réglage.
         Le compte gratuit de l'écran devient le compte gratuit du réglage.
         Le vocabulaire personnel de l'écran devient le vocabulaire personnel du réglage.
+        L'alerte de l'écran devient l'alerte du réglage.
     Remarque : les clés ne se relisent pas à l'écran : un secret ne s'affiche jamais ; vide, il reste tel quel.
 
 Quand on clique sur « Enregistrer » dans l'écran des réglages :
     Pour chaque réglage conservé :
         La conservation du réglage devient la conservation de l'écran.
         Le vocabulaire personnel du réglage devient le vocabulaire personnel de l'écran.
+        L'alerte du réglage devient l'alerte de l'écran.
         Le compte gratuit du réglage devient le compte gratuit de l'écran.
         Si la clé principale de l'écran est présente, la clé principale du réglage devient la clé principale de l'écran.
         Si la clé de relève de l'écran est présente, la clé de relève du réglage devient la clé de relève de l'écran.

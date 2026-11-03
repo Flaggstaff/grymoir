@@ -591,7 +591,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             /* nom _en_majuscules → nom en majuscules ; code _en_nombre_entier → code en nombre entier (§ 4.5) */
             static const char *const C[] = { "majuscules", "minuscules", "nombre_entier", "nombre", "date", "année",
                                              "vrai_ou_faux", "heure", "toutes_lettres", "format_technique", "iban",
-                                             "date_locale", "heure_locale", "format_universel" };   /* 2.60 */
+                                             "date_locale", "heure_locale", "format_universel", "fichier" };   /* 2.60, 2.83 */
             size_t q = 0;
             while (q < sizeof C / sizeof *C && strcmp(t->valeur + 3, C[q]) != 0) q++;
             if (q == sizeof C / sizeof *C) {

@@ -1354,6 +1354,8 @@ static void essais_ports(void) {   /* 2.82 : les refus de « la réponse du port
     PROG("Le nombre d'un texte :\n    Le n vaut 0.\n    Pour chaque p parmi les ports série :\n        Le n devient le n + 1.\n    Rendre n.\n"
          "Afficher le nombre de « a ».", "~Un calcul ne parcourt pas les ports série");
     PROG("Le n vaut 0.\nPour chaque p parmi les ports série :\n    Le n devient le n + 1.\nAfficher « fini ».", "fini");
+    PROG("Le f vaut « été » en fichier.\nAfficher le f.", "un fichier de 5 octets");   /* 2.83 : UTF-8, tel quel */
+    PROG("Afficher 3 en fichier.", "~« en fichier » s'applique à un texte, pas à un nombre");
 }
 
 static void essais_amorcer(void) {   /* 2.80 : le vocabulaire du transcripteur, donné par le programme */

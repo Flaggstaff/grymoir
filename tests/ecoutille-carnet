@@ -1,0 +1,67 @@
+#!/bin/sh
+# Écoutille, le carnet (3 novembre 2026) : les calculs tirés du programme, essayés sans écran : les indicatifs reconnus à leur
+# forme (HB9ABC, F4XYZ, 9A2AA, 4X4AB ; pas 5NN, 599, QSL73, CQ), la bande d'une fréquence, le mode ADIF, une ligne de carnet
+# ADIF ; « t en fichier » écrit le carnet.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+grym="$racine/grym"
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+src="$racine/projets/Écoutille/Écoutille.grym"
+awk 'index($0, "Un modèle, conservé, a :") == 1 { dedans = 1 }
+     index($0, "Remarque : les réglages de Michel") == 1 { dedans = 0 }
+     dedans { print }' "$src" > "$d/e.grym"
+awk 'index($0, "Remarque : ce qu'\''un passage a fait entendre") == 1 { dedans = 1 }
+     index($0, "Remarque : un passage (2 novembre 2026)") == 1 { dedans = 0 }
+     dedans { print }' "$src" >> "$d/e.grym"
+cat >> "$d/e.grym" <<'FIN'
+Afficher le repérage de « CQ CQ de HB9ABC, 5NN 599 QSL73 f4xyz? 9A2AA et 4X4AB, HB9ABC encore ».
+Afficher « [ » suivi du repérage de « Bonjour à tous, QRZ ? » suivi de « ] ».
+Afficher la bande ADIF de 14074000 suivi de " " suivi de la bande ADIF de 7100000 suivi de " " suivi de la bande ADIF de 27205000 suivi de " " suivi de la bande ADIF de 145500000.
+Afficher « [ » suivi de la bande ADIF de 15000000 suivi de « ] ».
+Afficher le mode ADIF de « USB » suivi de " " suivi du sous mode ADIF de « USB » suivi de " " suivi du mode ADIF de « CW-L » suivi de " " suivi du mode ADIF de « C4FM ».
+Afficher « [ » suivi du mode ADIF de « DATA-USB » suivi de « ] ».
+Le k vaut un nouveau poste :
+    Le nom vaut « FT-991A ».
+    La sorte vaut « émetteur-récepteur ».
+    La veille vaut vrai.
+    L'affichage vaut vrai.
+    La parole transcrite vaut vrai.
+    La traduction voulue vaut faux.
+    La vitesse de pilotage vaut 38400.
+Conserver le k.
+Le p vaut un nouveau passage :
+    Le poste vaut le k.
+    Le jour vaut aujourd'hui.
+    L'heure vaut 14:30.
+    L'enregistrement vaut le fichier « a.wav ».
+    La fréquence vaut 14205000.
+    Le mode vaut « USB ».
+    La bande vaut « 20m ».
+    Le moment universel vaut « 2026-11-03T13:30:00Z ».
+Conserver le p.
+Afficher l'enregistrement ADIF du p et de « HB9ABC ».
+Afficher « [ » suivi du texte entendu du p suivi de « ] ».
+La transcription du p devient « CQ CQ de HB9ABC ».
+Afficher le déclencheur de « hb9xyz cq » et du texte entendu du p.
+Afficher « [ » suivi du déclencheur de « CQ » et de « CQD here » suivi de « ] ».
+Le t vaut « <EOH> » suivi de l'enregistrement ADIF du p et de « F4XYZ ».
+Le f vaut le t en fichier.
+Enregistrer le f dans « carnet.adi ».
+FIN
+printf 'RIFF$\000\000\000WAVEfmt ' > "$d/a.wav"
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+sortie="$(cd "$d" && "$grym" lancer e.grym 2>&1 < /dev/null)"
+verifier "$(echo "$sortie" | sed -n 1p)" "HB9ABC F4XYZ 9A2AA 4X4AB" "les indicatifs, une fois chacun, sans 5NN, 599 ni QSL73"
+verifier "$(echo "$sortie" | sed -n 2p)" "[]" "aucun indicatif dans une phrase ordinaire"
+verifier "$(echo "$sortie" | sed -n 3p)" "20m 40m CB 2m" "la bande d'une fréquence"
+verifier "$(echo "$sortie" | sed -n 4p)" "[]" "hors bande"
+verifier "$(echo "$sortie" | sed -n 5p)" "SSB USB CW DIGITALVOICE" "le mode et le sous-mode ADIF"
+verifier "$(echo "$sortie" | sed -n 6p)" "[]" "un mode DATA ne dit pas lequel"
+verifier "$(echo "$sortie" | sed -n 7p)" "<CALL:6>HB9ABC <QSO_DATE:8>20261103 <TIME_ON:6>133000 <FREQ:6>14.205 <BAND:3>20m <MODE:3>SSB <SUBMODE:3>USB <EOR>" "une ligne de carnet"
+verifier "$(echo "$sortie" | sed -n 8p)" "[]" "un passage muet : le texte entendu est vide"
+verifier "$(echo "$sortie" | sed -n 9p)" "cq" "l'alerte : le premier mot de l'alerte trouvé, sans tenir compte de la casse"
+verifier "$(echo "$sortie" | sed -n 10p)" "[]" "un mot entier : CQ ne s'allume pas sur CQD"
+verifier "$(cat "$d/carnet.adi" 2>/dev/null)" "<EOH><CALL:5>F4XYZ <QSO_DATE:8>20261103 <TIME_ON:6>133000 <FREQ:6>14.205 <BAND:3>20m <MODE:3>SSB <SUBMODE:3>USB <EOR>" "le carnet écrit par « en fichier »"
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]
