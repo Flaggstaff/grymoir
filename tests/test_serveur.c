@@ -2108,9 +2108,9 @@ int main(void) {
     {   /* le nom et le prénom (24 octobre 2026) : saisis à part, réunis dans la clé « Prénom Nom » ; un homonyme est refusé */
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=Patients"), evenement("q=3&clic=4"),
-                 evenement("q=4&z1=Thi%C3%A9mard&z2=Alain&z3=Rue+de+Gruy%C3%A8re&z4=65&z5=&z7=1630&z8=Bulle&z6=Suisse&z20=&clic=27"),
+                 evenement("q=4&z1=Thi%C3%A9mard&z2=Alain&z3=Rue+de+Gruy%C3%A8re&z4=65&z5=&z7=1630&z8=Bulle&z6=Suisse&z20=&clic=28"),
                  get("/"), evenement("q=5&fermer=1"), get("/"), evenement("q=6&clic=4"),
-                 evenement("q=7&z1=Thi%C3%A9mard&z2=Alain&z3=&z4=&z5=&z7=&z8=&z6=Suisse&z20=&clic=27"), get("/"));
+                 evenement("q=7&z1=Thi%C3%A9mard&z2=Alain&z3=&z4=&z5=&z7=&z8=&z6=Suisse&z20=&clic=28"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_prenom.grymd", &sc);
         /* inscrit depuis « Patients », il s'ouvre sur sa page (31 octobre 2026), puis la liste le montre */
         CONTIENT(sc.reponses[4], "<h1>Patient</h1>");
@@ -2608,7 +2608,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=0"), evenement("q=3&clic=4"), get("/"),
                  evenement("q=4&z1=Zo%C3%A9+Neuve&z9=079+000+00+09&z10=&z11=&z3=Rue+du+Pont&z4=1&z5=&z7=1630&z8=Bulle"
-                           "&z6=Suisse&z20=Douleurs+lombaires&clic=27"), get("/"));
+                           "&z6=Suisse&z20=Douleurs+lombaires&clic=28"), get("/"));
         servir_projet("_essai_praxis/Praxis.grym", "_essai_cabinet2.grymd", &sc);
         CONTIENT(sc.reponses[3], "<h1>Nouveau patient</h1>");
         CONTIENT(sc.reponses[3], ">Anamnèse</label>");
@@ -2623,7 +2623,7 @@ int main(void) {
         memset(&sc, 0, sizeof sc);
         /* l'écran d'inscription : le pays garde sa valeur de départ, « Suisse » */
         char *formulaire = evenement("q=4&z1=Zo%C3%A9+Essai&z9=079+000+00+00&z10=&z11=&z3=Route+de+Riaz&z4=12a&z5=&z7=1630"
-                                     "&z8=Bulle&z6=Suisse&z20=&clic=27");
+                                     "&z8=Bulle&z6=Suisse&z20=&clic=28");
         REQUETES(evenement("q=1&clic=Continuer"), evenement("q=2&clic=9"),                                       /* 0 : Clients */
                  evenement("q=3&clic=4"),                                       /* 1 : Nouveau client */
                  get("/"),                                                      /* 2 : l'écran d'inscription */

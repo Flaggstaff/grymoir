@@ -277,6 +277,24 @@ Pour trouver le patient d'une personne :
     Conserver le p.
     Rendre le p.
 
+Remarque : une fiche qui ressemble à une autre, à sa création (4 novembre 2026) : le même courriel, le même natel, ou le même nom de
+Remarque : famille né le même jour (« Ann Rochat » et « Anne Rochat ») ; rend la phrase qui le dit, ou « ». Le nom entier, lui, est
+Remarque : déjà unique. Une vraie autre personne passe en cochant « Autre personne » : ce n'est qu'un avertissement.
+Pour chercher le double d'un courriel donné et un natel donné et une famille donnée et une naissance donnée :
+    Si le courriel donné est présent :
+        Pour chaque patient conservé dont le courriel est présent :
+            Si le courriel du patient en minuscules = le courriel donné en minuscules, rendre "« " suivi du nom du patient suivi de " » a déjà ce courriel".
+    Si le natel donné est présent :
+        Pour chaque patient conservé dont le téléphone est présent :
+            Essayer :
+                Si le natel international du téléphone du patient = le natel international du natel donné, rendre "« " suivi du nom du patient suivi de " » a déjà ce natel".
+            En cas d'échec :
+                Remarque : un numéro illisible ne rapproche rien.
+    Si la famille donnée est présente et la naissance donnée est présente :
+        Pour chaque patient conservé dont le nom de famille est présent et la date de naissance = la naissance donnée :
+            Si le nom de famille du patient en minuscules = la famille donnée en minuscules, rendre "« " suivi du nom du patient suivi de " » porte ce nom de famille, avec la même date de naissance".
+    Rendre « ».
+
 Remarque : deux fiches pour une même personne (2 novembre 2026), par exemple une réservation Calendly faite avec une autre
 Remarque : adresse : le doublon se verse dans la fiche gardée. Ses séances, factures, quittances, ordonnances, décomptes et notes,
 Remarque : corbeille comprise, changent de fiche, numéros inchangés ; la fiche gardée reçoit ce qui lui manque (téléphone,
@@ -490,10 +508,12 @@ La ligne twint perso d'un cabinet et d'un montant et d'un numéro :
     Si l'affichage twint perso du cabinet est faux, rendre « ».
     Rendre "Par Twint, depuis votre app : envoyez CHF " suivi de (l'arrondi de montant à 0,01) suivi de " au " suivi du natel twint du cabinet suivi de ", avec le message « " suivi de numéro suivi de " ».".
 
-Remarque : la QR-facture d'une facture ou d'un rappel ; rien sans IBAN.
+Remarque : la QR-facture d'une facture ou d'un rappel ; rien sans IBAN. Depuis le 4 novembre 2026, elle porte la référence du
+Remarque : créancier de la facture (SCOR, « RF12F20260001 »), la même pour ses rappels : l'avis de crédit de la banque la rend, et
+Remarque : « Virements reçus » retrouve la facture sans lire le message. Le motif reste écrit, pour le payeur.
 La charge QR d'un cabinet et d'un patient et d'un montant et d'un motif :
     Si l'IBAN du cabinet est absent, rendre « ».
-    Rendre la charge QR suisse de (l'IBAN du cabinet en IBAN) et de (l'adresse de créancier du cabinet) et de montant et de (l'adresse de débiteur du patient) et de motif.
+    Rendre la charge QR référencée de (l'IBAN du cabinet en IBAN) et de (l'adresse de créancier du cabinet) et de montant et de (l'adresse de débiteur du patient) et de motif et de (la référence RF de (motif sans « Rappel »)).
 
 Remarque : le justificatif de remboursement (27 octobre 2026) se joint à la pièce d'un patient qui a une assurance complémentaire
 Remarque : qu'il paie lui-même avant d'être remboursé (tiers garant : toujours, sauf si le cabinet facture aux assurances et que le
@@ -1062,3 +1082,160 @@ Le XML de virements d'une fournée, « Document », montre :
                             l'élément « IBAN » : l'IBAN du salarié de la feuille en IBAN,
                     l'élément « RmtInf » :
                         l'élément « Ustrd » : "Salaire " suivi de l'intitulé de la feuille.
+
+Remarque : une facture payée d'un coup, par virement (31 octobre 2026) : ses séances encore à payer, au jour où l'argent est arrivé ;
+Remarque : la facture suit, réglée, et sa quittance se fait seule, comme quand sa dernière séance est encaissée.
+Pour solder un relevé et un jour :
+    Si l'état du relevé = « réglée », refuser « Cette facture est déjà réglée. ».
+    Le jour reçu vaut aujourd'hui.
+    Si jour est présent, le jour reçu devient jour.
+    Si le jour reçu > aujourd'hui, refuser « Un virement ne s'encaisse pas avant d'être arrivé : sa date est au plus aujourd'hui. ».
+    Pour chaque séance conservée dont la facture = relevé et le paiement = « à payer » :
+        Le paiement de la séance devient « virement ».
+        L'encaissement de la séance devient le jour reçu.
+    Suivre le relevé.
+
+Remarque : le jour d'une écriture : sa date de comptabilisation, sinon sa date de valeur ; « 2026-11-03 », ou un moment complet ;
+Remarque : absent sans l'un ni l'autre.
+Le jour bancaire d'une date lue :
+    Si date lue est absente, rendre absent.
+    Le jour seul vaut le champ « Dt » de date lue.
+    Si le jour seul est présent, rendre (le jour seul suivi de « T12:00:00Z ») en date locale.
+    Le moment lu vaut le champ « DtTm » de date lue.
+    Si le moment lu est présent, rendre le moment lu en date locale.
+    Rendre absent.
+
+Remarque : un montant de la banque, « 120.00 », en nombre.
+Le montant bancaire d'un texte :
+    Rendre (texte en remplaçant « . » par « , ») en nombre.
+
+Remarque : la facture d'un crédit : celle dont la référence du créancier est la sienne, sinon celle dont le numéro est un mot de son
+Remarque : message (« Rappel F-2026-0001 ») ; absente sinon. Les annulées aussi : payer une facture annulée est à vérifier.
+La facture visée d'un crédit :
+    Si la référence du crédit est présente :
+        La cherchée vaut (la référence du crédit sans " ") en majuscules.
+        Pour chaque facture conservée :
+            Si la référence RF du numéro de la facture = la cherchée, rendre la facture.
+    Si le message du crédit est présent :
+        Pour chaque mot parmi les mots du message du crédit :
+            La pièce lue vaut (mot sans « , » sans « . » sans « ; » sans « : ») en majuscules.
+            Pour chaque facture conservée dont le numéro = la pièce lue :
+                Rendre la facture.
+    Rendre absent.
+
+La facture tiers payant visée d'un crédit :
+    Si le message du crédit est présent :
+        Pour chaque mot parmi les mots du message du crédit :
+            La pièce lue vaut (mot sans « , » sans « . » sans « ; » sans « : ») en majuscules.
+            Pour chaque décompte conservé dont le numéro = la pièce lue :
+                Rendre le décompte.
+    Rendre absent.
+
+Remarque : une facture tiers payant réglée par l'assureur : ses séances encaissées ce jour-là (comme « Réglée » sur son écran).
+Pour régler le tiers payant d'un tiers et un jour :
+    L'état du tiers devient « réglé ».
+    Le règlement du tiers devient jour.
+    Pour chaque séance conservée dont le décompte = tiers :
+        L'encaissement de la séance devient jour.
+
+Remarque : rapprocher un crédit : sa facture, si le montant est juste et qu'elle attend, se solde au jour du virement ; sa facture
+Remarque : tiers payant de même ; sinon il reste à vérifier, et sa raison le dit.
+Pour rapprocher un crédit :
+    Si la monnaie du crédit ≠ « CHF » :
+        La raison du crédit devient "Un virement en " suivi de la monnaie du crédit suivi de " : Praxis facture en CHF.".
+    Sinon :
+        La f vaut la facture visée du crédit.
+        Si la f est présente :
+            La facture du crédit devient la f.
+            Si l'état de la f = « réglée » :
+                La raison du crédit devient "La facture " suivi du numéro de la f suivi de « est déjà réglée : un double paiement ? ».
+            Sinon :
+                Si l'arrondi du montant du crédit à 0,01 = l'arrondi du dû de la f à 0,01 :
+                    Solder la f et la date du crédit.
+                    L'état du crédit devient « rapproché ».
+                    La raison du crédit devient absente.
+                Sinon :
+                    La raison du crédit devient "CHF " suivi de (l'arrondi du montant du crédit à 0,01) suivi de " reçus ; la facture " suivi du numéro de la f suivi de " attend CHF " suivi de (l'arrondi du dû de la f à 0,01) suivi de « . ».
+        Sinon :
+            Le d vaut la facture tiers payant visée du crédit.
+            Si le d est présent :
+                Le décompte du crédit devient le d.
+                Si l'état du d = « réglé » :
+                    La raison du crédit devient "La facture tiers payant " suivi du numéro du d suivi de « est déjà réglée. ».
+                Sinon :
+                    Si l'arrondi du montant du crédit à 0,01 = l'arrondi du montant du d à 0,01 :
+                        Régler le tiers payant du d et la date du crédit.
+                        L'état du crédit devient « rapproché ».
+                        La raison du crédit devient absente.
+                    Sinon :
+                        La raison du crédit devient "CHF " suivi de (l'arrondi du montant du crédit à 0,01) suivi de " reçus ; la facture tiers payant " suivi du numéro du d suivi de " vaut CHF " suivi de (l'arrondi du montant du d à 0,01) suivi de « . ».
+            Sinon :
+                La raison du crédit devient « Aucune facture ne porte cette référence ni ce numéro : choisis-la, ou écarte ce virement. ».
+
+Pour consigner le virement d'une écriture et un détail et un rang :
+    Le montant lu vaut le champ « Amt » de détail.
+    La monnaie lue vaut le champ « Amt@Ccy » de détail.
+    Si le montant lu est absent :
+        Le montant lu devient le champ « AmtDtls.TxAmt.Amt » de détail.
+        La monnaie lue devient le champ « AmtDtls.TxAmt.Amt@Ccy » de détail.
+    Si le montant lu est absent :
+        Le montant lu devient le champ « Amt » d'écriture.
+        La monnaie lue devient le champ « Amt@Ccy » d'écriture.
+    Si la monnaie lue est absente, la monnaie lue devient « CHF ».
+    Le jour lu vaut le jour bancaire de (le champ « BookgDt » d'écriture).
+    Si le champ « BookgDt » d'écriture est absent, le jour lu devient le jour bancaire de (le champ « ValDt » d'écriture).
+    Si le jour lu est absent, le jour lu devient aujourd'hui.
+    La source lue vaut le champ « Refs.AcctSvcrRef » de détail.
+    Si la source lue est absente ou rang > 1 ou le champ « NtryDtls.TxDtls » d'écriture est absent :
+        La base vaut le champ « AcctSvcrRef » d'écriture.
+        Si la base est absente, la base devient le champ « NtryRef » d'écriture.
+        Si la base est absente, la base devient (le jour lu en format technique) suivi de « - » suivi du montant lu.
+        Si la source lue est absente, la source lue devient la base suivi de « / » suivi de rang.
+    Le payeur lu vaut le champ « RltdPties.Dbtr.Nm » de détail.
+    Si le payeur lu est absent, le payeur lu devient le champ « RltdPties.Dbtr.Pty.Nm » de détail.
+    La clé lue vaut la source lue.
+    Si le nombre de crédits conservés dont la source = la clé lue = 0 :
+        Le c vaut un nouveau crédit :
+            La source vaut la source lue.
+            La date vaut le jour lu.
+            Le montant vaut le montant bancaire du montant lu.
+            La monnaie vaut la monnaie lue.
+            La référence vaut le champ « RmtInf.Strd.CdtrRefInf.Ref » de détail.
+            Le message vaut le champ « RmtInf.Ustrd » de détail.
+            Le payeur vaut le payeur lu.
+            L'état vaut « à vérifier ».
+        Conserver le c.
+        Rapprocher le c.
+
+Pour relever les écritures d'un extrait :
+    Pour chaque écriture du champ « Ntry » d'extrait :
+        Si le champ « CdtDbtInd » d'écriture = « CRDT » :
+            Si le champ « NtryDtls.TxDtls » d'écriture est absent :
+                Consigner le virement d'écriture et écriture et 1.
+            Sinon :
+                Le rang vaut 0.
+                Pour chaque détail du champ « NtryDtls.TxDtls » d'écriture :
+                    Le rang devient le rang + 1.
+                    Consigner le virement d'écriture et détail et le rang.
+
+Remarque : les virements reçus (4 novembre 2026) : l'avis de crédit (camt.054) ou le relevé de compte (camt.053), un fichier XML
+Remarque : ISO 20022 que l'e-banking donne ; chaque crédit (CRDT) y devient un crédit, une fois, que Praxis rapproche d'une facture
+Remarque : par sa référence du créancier (SCOR), sinon par le numéro de pièce écrit dans le message. Les débits sont ignorés.
+Pour lire l'avis d'un document :
+    Si le champ « BkToCstmrDbtCdtNtfctn » de document est présent :
+        Pour chaque extrait du champ « BkToCstmrDbtCdtNtfctn.Ntfctn » de document :
+            Relever les écritures de l'extrait.
+    Sinon :
+        Si le champ « BkToCstmrStmt » de document est absent, refuser « Ce fichier n'est ni un avis de crédit (camt.054) ni un relevé de compte (camt.053) de la banque. ».
+        Pour chaque extrait du champ « BkToCstmrStmt.Stmt » de document :
+            Relever les écritures de l'extrait.
+
+Remarque : un crédit à vérifier, attribué à la main à une facture : elle se solde au jour du virement, quel qu'en soit le montant
+Remarque : (le cabinet a jugé) ; une facture déjà réglée ne se solde pas deux fois.
+Pour attribuer un crédit et une facture choisie :
+    Si l'état du crédit = « rapproché », refuser « Ce virement est déjà rapproché. ».
+    Si facture choisie est absente, refuser « Choisis la facture que ce virement règle. ».
+    Solder la facture choisie et la date du crédit.
+    La facture du crédit devient facture choisie.
+    L'état du crédit devient « rapproché ».
+    La raison du crédit devient absente.

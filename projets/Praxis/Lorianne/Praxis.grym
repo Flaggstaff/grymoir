@@ -132,6 +132,8 @@ Le niveau du rappel électronique vaut 1.
 L'avis des factures vaut « ».
 La méthode ouverte vaut absent.
 Le décompte ouvert vaut absent.
+Le crédit ouvert vaut absent.
+L'annonce des crédits vaut "Choisis le fichier de la banque, puis « Lire l'avis ».".
 
 Le soin ouvert vaut absent.
 La note ouverte vaut absent.
@@ -159,7 +161,7 @@ Remarque : les couleurs et la police du site de Nicolas Seydoux, à l'encre (pou
 Remarque : du cabinet (le cœur et le nom dessiné au départ), repris à chaque lancement ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
 Remarque : la version de Praxis, la même pour tous les cabinets ; la Configuration la montre. Elle change avec chaque
 Remarque : mise à jour livrée, ici et dans « application, version » du projet.grymatelier de chaque version (tests/praxis-versions).
-La version vaut « 2026.11.03 ».
+La version vaut « 2026.11.04 ».
 Les écrans ont la couleur « #2E7770 », le fond « #F7F3EC », la police « polices/Jost.ttf », le logo (le logo du cabinet conservé) et la signature (la signature du cabinet conservé).
 
 Remarque : la copie chiffrée de toute la base, avec ses clés, dans un dossier, nommée par l'application, le jour et l'heure :
@@ -692,6 +694,7 @@ L'écran d'inscription, « Nouveau patient », montre :
         un numéro AVS (texte), facultatif, avec l'indication « 756.1234.5678.97 », à 828 de la gauche et 448 du haut, large de 244,
         un numéro de cas (texte), facultatif, à 552 de la gauche et 544 du haut, large de 160,
         un diagnostic (texte), facultatif, à 728 de la gauche et 544 du haut, large de 344,
+        une autre personne (vrai ou faux), facultative, avec l'indication « À cocher si Praxis signale une fiche semblable et que ce n'est pas la même personne », à 552 de la gauche et 640 du haut, large de 520,
     côte à côte :
         un bouton « Enregistrer », principal, au clavier « S »,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié.
@@ -733,6 +736,7 @@ L'écran du patient, « Patient », montre :
         un bouton « Nouvelle séance », au clavier « N »,
         un bouton « Facturer », actif si le dû facturable de la personne ouverte et d'aujourd'hui > 0,
         un bouton « Notes »,
+        un bouton « Attestation annuelle »,
         un bouton « Ordonnances », visible si la facturation aux assurances du cabinet conservé,
         un bouton « Facturer la complémentaire », visible si la facturation aux assurances du cabinet conservé,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
@@ -972,6 +976,24 @@ Le document de quittance, « Quittance », montre :
     le texte "Montant reçu : CHF " suivi de l'arrondi du montant de la pièce en cours à 0,01 suivi de la mention du moyen de la pièce en cours,
     le texte "Pour acquit, " suivi du nom du cabinet conservé.
 
+Remarque : l'attestation annuelle (4 novembre 2026) : ce que le patient a payé lui-même dans l'année choisie dans la Comptabilité,
+Remarque : séance par séance, au jour du paiement, avec sa pièce ; pour sa déclaration d'impôt ou son assurance complémentaire. Les
+Remarque : séances payées par l'assurance (tiers payant) et les séances offertes n'y figurent pas.
+Le document d'attestation, ("Attestation " suivi de l'année des comptes), montre :
+    côte à côte :
+        la partie « en-tête du cabinet »,
+        l'un sous l'autre :
+            le texte « Patient », en petites capitales,
+            le texte le nom de la personne ouverte,
+            le texte l'adresse de la personne ouverte,
+            le texte la ville de la personne ouverte,
+            le texte la naissance de la personne ouverte,
+    le texte "Attestation des soins payés en " suivi de l'année des comptes suivi de ", établie le " suivi d'aujourd'hui en toutes lettres,
+    le texte « Séances », en petites capitales,
+    la liste des séances conservées dont le patient = la personne ouverte et l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance », par date, avec la date, le nom du soin, le code tarifaire du soin, la durée, le prix, le paiement, l'encaissement, le numéro de la facture et le numéro de la quittance,
+    le texte "Total payé en " suivi de l'année des comptes suivi de " : CHF " suivi de l'arrondi de la somme des prix des séances conservées dont le patient = la personne ouverte et l'encaissement ≥ le début d'exercice et l'encaissement < la fin d'exercice et le paiement ≠ « à payer » et le paiement ≠ « offert » et le paiement ≠ « assurance » à 0,01,
+    le texte "Pour attestation, " suivi du nom du cabinet conservé.
+
 Remarque : le justificatif de remboursement (Tarif 590, 27 octobre 2026), joint à la facture ou à la quittance d'un patient qui a
 Remarque : une assurance complémentaire : le cabinet et ses numéros (GLN, RCC), le patient, la pièce, le traitement, puis chaque
 Remarque : ligne du tarif : sa date, le tarif 590, le code, le libellé, la quantité en périodes de 5 minutes, le prix et le montant.
@@ -1085,7 +1107,33 @@ L'écran de caisse, « Facturation », montre :
     un bouton « Factures », en tuile, avec la description « Envoyées, et ce qui en est réglé »,
     un bouton « Quittances », en tuile, avec la description « Remettre et retrouver »,
     un bouton « Assurances », en tuile, avec la description « Factures tiers payant et leurs règlements », visible si la facturation aux assurances du cabinet conservé,
+    un bouton « Virements reçus », en tuile, avec la description « L'avis de la banque, rapproché des factures »,
     un bouton « Fermer ».
+
+Remarque : les virements reçus (4 novembre 2026) : l'avis de crédit (camt.054) ou le relevé (camt.053) de l'e-banking, lu une fois
+Remarque : ou plusieurs (rien n'est compté deux fois) ; ceux de l'année, les plus récents d'abord ; un virement choisi s'ouvre.
+L'écran des crédits, ("Virements reçus " suivi de l'année des comptes), montre :
+    une année (exercice), avec l'indication « Une autre année »,
+    un avis (fichier), facultatif, avec l'indication « Le fichier camt.054 ou camt.053 que donne l'e-banking, en XML »,
+    un bouton « Lire l'avis », principal, actif si l'avis de l'écran est présent,
+    le texte l'annonce des crédits,
+    la liste des crédits conservés dont la date ≥ le début d'exercice et la date < la fin d'exercice, par date décroissant, avec la date, le montant, le payeur, l'état, le numéro de la facture, le numéro du décompte et la raison,
+    un bouton « Fermer ».
+
+Remarque : un virement à vérifier : la facture qu'il règle, choisie à la main, se solde au jour du virement ; « Écarter » le met de
+Remarque : côté (un remboursement, un virement privé) ; « À vérifier » l'y remet.
+L'écran du crédit, « Virement reçu », montre :
+    le texte "Reçu le " suivi de la date du crédit ouvert suivi de " : CHF " suivi de (l'arrondi du montant du crédit ouvert à 0,01) suivi de « . »,
+    le texte "Payeur : " suivi de l'annonce du payeur du crédit ouvert,
+    le texte "Référence : " suivi de l'annonce de la référence du crédit ouvert,
+    le texte "Message : " suivi de l'annonce du message du crédit ouvert,
+    le texte l'annonce de la raison du crédit ouvert,
+    une facture (facture dont l'état ≠ « réglée »), facultative, avec recherche, avec l'indication « La facture que ce virement règle »,
+    côte à côte :
+        un bouton « Rapprocher », principal, actif si l'état du crédit ouvert ≠ « rapproché »,
+        un bouton « Écarter », actif si l'état du crédit ouvert = « à vérifier »,
+        un bouton « À vérifier », actif si l'état du crédit ouvert = « écarté »,
+        un bouton « Fermer ».
 
 Remarque : le cabinet s'édite dans son écran : « Enregistrer » est un événement, les règles du cabinet s'y vérifient.
 Remarque : trois colonnes, l'adresse, les contacts et numéros, puis la facturation et l'image du cabinet : tout tient sur un écran (27 octobre 2026).
@@ -1771,18 +1819,6 @@ Pour régler par virement une séance et un jour :
     Régler la séance et « virement ».
     Si jour est présent, l'encaissement de la séance devient jour.
 
-Remarque : une facture payée d'un coup, par virement (31 octobre 2026) : ses séances encore à payer, au jour où l'argent est arrivé ;
-Remarque : la facture suit, réglée, et sa quittance se fait seule, comme quand sa dernière séance est encaissée.
-Pour solder un relevé et un jour :
-    Si l'état du relevé = « réglée », refuser « Cette facture est déjà réglée. ».
-    Le jour reçu vaut aujourd'hui.
-    Si jour est présent, le jour reçu devient jour.
-    Si le jour reçu > aujourd'hui, refuser « Un virement ne s'encaisse pas avant d'être arrivé : sa date est au plus aujourd'hui. ».
-    Pour chaque séance conservée dont la facture = relevé et le paiement = « à payer » :
-        Le paiement de la séance devient « virement ».
-        L'encaissement de la séance devient le jour reçu.
-    Suivre le relevé.
-
 Remarque : une facture déjà remise ne s'annule jamais en passant (31 octobre 2026) : changer le patient, le soin, la date ou le prix
 Remarque : d'une séance facturée, la dire annulée, prévue ou absente non facturée, ou la supprimer, demande d'annuler d'abord sa facture.
 Le refus de facture d'une séance :
@@ -1840,6 +1876,45 @@ Quand on clique sur « Quittances » dans l'écran de caisse :
     Ouvrir l'écran des quittances.
     L'année de l'écran devient la période de l'année des comptes.
 
+Quand on clique sur « Virements reçus » dans l'écran de caisse :
+    Ouvrir l'écran des crédits.
+    L'année de l'écran devient la période de l'année des comptes.
+
+Quand on clique sur « Lire l'avis » dans l'écran des crédits :
+    Si l'avis de l'écran est absent, refuser « Choisis le fichier de la banque. ».
+    Le compte d'avant vaut le nombre de crédits conservés.
+    Lire l'avis de (l'avis de l'écran).
+    Le compte lu vaut le nombre de crédits conservés − le compte d'avant.
+    Le compte à voir vaut le nombre de crédits conservés dont l'état = « à vérifier ».
+    L'annonce des crédits devient le compte lu suivi de " virement(s) nouveau(x) ; " suivi du compte à voir suivi de " à vérifier en tout.".
+    L'avis de l'écran devient absent.
+    Signaler l'annonce des crédits.
+
+Quand on choisit un crédit dans l'écran des crédits :
+    Le crédit ouvert devient le crédit choisi de l'écran.
+    Ouvrir l'écran du crédit.
+
+Quand on clique sur « Fermer » dans l'écran des crédits :
+    Fermer l'écran.
+
+Quand on ouvre l'écran du crédit :
+    La facture de l'écran devient la facture du crédit ouvert.
+
+Quand on clique sur « Rapprocher » dans l'écran du crédit :
+    Attribuer le crédit ouvert et la facture de l'écran.
+    Signaler "Facture " suivi du numéro de la facture du crédit ouvert suivi de « réglée par ce virement. ».
+    Fermer l'écran.
+
+Quand on clique sur « Écarter » dans l'écran du crédit :
+    L'état du crédit ouvert devient « écarté ».
+    Fermer l'écran.
+
+Quand on clique sur « À vérifier » dans l'écran du crédit :
+    L'état du crédit ouvert devient « à vérifier ».
+
+Quand on clique sur « Fermer » dans l'écran du crédit :
+    Fermer l'écran.
+
 Quand on clique sur « Fermer » dans l'écran de caisse :
     Fermer l'écran.
 
@@ -1885,6 +1960,9 @@ Quand on ouvre l'écran des frais :
     L'année de l'écran devient la période de l'année des comptes.
 
 Quand on change l'année dans l'écran des frais :
+    Retenir l'année de l'écran.
+
+Quand on change l'année dans l'écran des crédits :
     Retenir l'année de l'écran.
 
 Quand on ouvre l'écran des rappels :
@@ -2715,6 +2793,9 @@ Quand on clique sur « Nouveau patient » dans l'écran de séance :
 Remarque : le patient inscrit est rangé dans « l'inscrit », que l'écran de séance reprend à la fermeture.
 Quand on clique sur « Enregistrer » dans l'écran d'inscription :
     Réunir le nom sauf « », qui donne le complet.
+    Si l'autre personne de l'écran est absente ou l'autre personne de l'écran est fausse :
+        Chercher le double du courriel de l'écran et le téléphone de l'écran et le nom de l'écran et la date de naissance de l'écran, qui donne le semblable.
+        Si le semblable ≠ « », refuser le semblable suivi de " : c'est peut-être la même personne. Ouvre sa fiche depuis Patients, ou coche « Autre personne ».".
     Le p vaut un nouveau patient :
         Le nom vaut le complet.
         Le pays vaut le pays de l'écran.
@@ -2724,6 +2805,10 @@ Quand on clique sur « Enregistrer » dans l'écran d'inscription :
     Conserver le p.
     L'inscrit devient le p.
     Fermer l'écran.
+
+Quand on clique sur « Attestation annuelle » dans l'écran du patient :
+    Ouvrir le document d'attestation.
+    Signaler "Attestation " suivi de l'année des comptes suivi de « : une autre année se choisit dans la Comptabilité. ».
 
 Quand on clique sur « Fermer » dans l'écran d'inscription :
     Fermer l'écran.

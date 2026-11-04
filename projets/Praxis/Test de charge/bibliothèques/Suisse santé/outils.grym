@@ -28,12 +28,25 @@ Le bloc vide d'un saut :
     Rendre saut suivi de saut suivi de saut suivi de saut suivi de saut suivi de saut suivi de saut.
 
 Remarque : la charge entière ; la somme est déjà écrite (« 120.00 »), ou vide.
-Le contenu QR d'un compte et d'un créancier et d'une somme et d'un débiteur et d'un motif :
+Remarque : la référence : vide, aucune (NON) ; sinon une référence du créancier (SCOR, version 2).
+Le contenu QR d'un compte et d'un créancier et d'une somme et d'un débiteur et d'un motif et d'une référence :
     Le s vaut un saut de ligne.
     Le d vaut « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s.
     Le d devient d suivi de compte suivi du s suivi de créancier.
     Le d devient d suivi du bloc vide du s.
     Le d devient d suivi de somme suivi du s suivi de « CHF » suivi du s.
     Le d devient d suivi de débiteur.
-    Le d devient d suivi de « NON » suivi du s suivi du s suivi de la ligne QR de motif suivi du s suivi de « EPD ».
+    Si référence = « », le d devient d suivi de « NON » suivi du s suivi du s.
+    Sinon, le d devient d suivi de « SCOR » suivi du s suivi de référence suivi du s.
+    Le d devient d suivi de la ligne QR de motif suivi du s suivi de « EPD ».
     Rendre d.
+
+Remarque : un texte en chiffres pour le contrôle ISO 11649 et ISO 13616 : chaque lettre majuscule en deux chiffres, A = 10 … Z = 35.
+Le chiffrage d'un texte :
+    Le c vaut texte en remplaçant « A » par « 10 » en remplaçant « B » par « 11 » en remplaçant « C » par « 12 » en remplaçant « D » par « 13 ».
+    Le c devient c en remplaçant « E » par « 14 » en remplaçant « F » par « 15 » en remplaçant « G » par « 16 » en remplaçant « H » par « 17 ».
+    Le c devient c en remplaçant « I » par « 18 » en remplaçant « J » par « 19 » en remplaçant « K » par « 20 » en remplaçant « L » par « 21 ».
+    Le c devient c en remplaçant « M » par « 22 » en remplaçant « N » par « 23 » en remplaçant « O » par « 24 » en remplaçant « P » par « 25 ».
+    Le c devient c en remplaçant « Q » par « 26 » en remplaçant « R » par « 27 » en remplaçant « S » par « 28 » en remplaçant « T » par « 29 ».
+    Le c devient c en remplaçant « U » par « 30 » en remplaçant « V » par « 31 » en remplaçant « W » par « 32 » en remplaçant « X » par « 33 ».
+    Rendre c en remplaçant « Y » par « 34 » en remplaçant « Z » par « 35 ».

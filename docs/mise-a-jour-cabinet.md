@@ -49,3 +49,18 @@ Marche à suivre, rédigée le 23 octobre 2026 pour la visite chez Nicolas. Elle
 
 Remettre l'ancienne application, puis recopier le dossier de la clé USB à la place de `~/Library/Application Support/Praxis-N`.
 La base retrouve exactement son état d'avant la visite.
+
+## Version 2026.11.04 : ce qui change chez le cabinet
+
+- **Les QR-factures portent une référence** (« RF12 F202 6000 1 », référence du créancier ISO 11649, type SCOR), la même pour
+  une facture et ses rappels. Le compte reste l'IBAN ordinaire : aucune démarche auprès de la banque n'est nécessaire pour
+  émettre ces factures. Les factures déjà envoyées, sans référence, restent valables.
+- **Virements reçus** (Facturation) : Praxis lit l'avis de crédit (camt.054) ou le relevé de compte (camt.053) exporté depuis
+  l'e-banking, en XML, et règle les factures qu'il retrouve, par leur référence, sinon par leur numéro écrit dans le message.
+  Ce que Praxis ne sait pas attribuer (un acompte, un montant qui ne colle pas, un virement sans facture) reste « à vérifier ».
+  À demander au cabinet avant la visite : sa banque propose-t-elle l'export camt.054 ou camt.053 dans son e-banking, et à quel
+  prix ? Cela dépend de la banque et du contrat ; non vérifié ici.
+- **Attestation annuelle** sur la page d'un patient : ce qu'il a payé dans l'année choisie dans la Comptabilité.
+- **Nouveau patient** : une fiche semblable (même courriel, même natel, ou même nom de famille et même date de naissance) est
+  signalée ; la case « Autre personne » permet de l'enregistrer quand même.
+- La mise à jour ajoute une table (les virements reçus) : la copie « avant mise à jour » se fait d'elle-même (grammaire 2.59).

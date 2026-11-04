@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <GrpHdr><MsgId>REL-1</MsgId></GrpHdr>
+    <Stmt>
+      <Ntry>
+        <Amt Ccy="CHF">80.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><BookgDt><DtTm>2026-11-03T09:15:00+01:00</DtTm></BookgDt>
+        <NtryRef>REL-001</NtryRef>
+        <NtryDtls><TxDtls><RmtInf><Ustrd>Facture TP-2026-0012</Ustrd></RmtInf></TxDtls></NtryDtls>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="EUR">10.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><BookgDt><Dt>2026-11-03</Dt></BookgDt><NtryRef>REL-002</NtryRef>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

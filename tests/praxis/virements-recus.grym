@@ -1,0 +1,93 @@
+Remarque : les virements reçus (4 novembre 2026) : un avis camt.054 lu deux fois et un relevé camt.053, rapprochés de trois
+Remarque : factures et d'une facture tiers payant ; la QR-facture référencée ; une fiche semblable à l'inscription.
+Utiliser « actions ».
+Le c vaut un nouveau cabinet :
+    Le nom vaut « Cabinet d'essai ».
+    La rue vaut « Rue de l'Essai ».
+    Le numéro de maison vaut « 1 ».
+    Le numéro postal vaut « 1630 ».
+    La localité vaut « Bulle ».
+    Le pays vaut « Suisse ».
+    L'IBAN vaut « CH52 0483 5012 3456 7100 0 ».
+    La facturation des absences vaut faux.
+    Le choix d'agenda vaut faux.
+    La facturation aux assurances vaut faux.
+    La gestion du personnel vaut faux.
+    L'agenda vaut « Praxis ».
+Conserver le c.
+Le s vaut un nouveau soin :
+    Le nom vaut « Séance ».
+    Le tarif vaut 120.
+    L'ordonnance exigée vaut faux.
+    La facturation vaut « patient ».
+Conserver le s.
+Le p vaut un nouveau patient :
+    Le nom vaut « Anne Rochat ».
+    La rue vaut « Rue du Lac ».
+    Le numéro de maison vaut « 3 ».
+    Le numéro postal vaut « 1630 ».
+    La localité vaut « Bulle ».
+    Le pays vaut « Suisse ».
+Conserver le p.
+Le a vaut un nouvel assureur :
+    Le nom vaut « Caisse d'essai ».
+Conserver le a.
+Pour facturer un numéro et un prix :
+    La f vaut une nouvelle facture :
+        Le numéro vaut numéro.
+        La date vaut 01.10.2026.
+        Le patient vaut le p.
+        Le montant vaut prix.
+        L'état vaut « à régler ».
+    Conserver la f.
+    La x vaut une nouvelle séance :
+        Le patient vaut le p.
+        Le soin vaut le s.
+        La date vaut 30.09.2026.
+        Le prix vaut prix.
+        Le statut vaut « faite ».
+        Le paiement vaut « à payer ».
+        La facture vaut la f.
+    Conserver la x.
+Facturer « F-2026-0001 » et 120.
+Facturer « F-2026-0002 » et 200.
+Facturer « F-2026-0003 » et 80.
+Le d vaut un nouveau décompte :
+    Le numéro vaut « TP-2026-0012 ».
+    La date vaut 01.10.2026.
+    Le patient vaut le p.
+    L'assureur vaut le a.
+    La valeur du point vaut 1.
+    Le montant vaut 80.
+    La suite vaut « terminé ».
+    L'état vaut « à régler ».
+Conserver le d.
+Afficher la charge QR du c et du p et de 120 et de « Rappel F-2026-0001 ».
+Lire l'avis du fichier « avis-camt054.xml ».
+Lire l'avis du fichier « avis-camt054.xml ».
+Afficher le nombre de crédits conservés.
+Pour chaque crédit conservé, par source :
+    Afficher la source du crédit suivi de « | » suivi de la date du crédit suivi de « | » suivi du montant du crédit suivi de « | » suivi de l'état du crédit suivi de « | » suivi de l'annonce de la raison du crédit suivi de « | » suivi de l'annonce du payeur du crédit.
+Pour chaque facture conservée, par numéro :
+    Afficher le numéro de la facture suivi de « | » suivi de l'état de la facture.
+Pour chaque séance conservée dont la facture est présente, par prix :
+    Afficher le prix de la séance suivi de « | » suivi du paiement de la séance suivi de « | » suivi de l'annonce de (l'encaissement de la séance).
+Pour chaque crédit conservé dont la source = « BQ-002/2 » :
+    Attribuer le crédit et la facture conservée dont le numéro = « F-2026-0003 ».
+Afficher l'état de la facture conservée dont le numéro = « F-2026-0003 ».
+Lire l'avis du fichier « releve-camt053.xml ».
+Pour chaque crédit conservé dont la source commence par « REL », par source :
+    Afficher la source du crédit suivi de « | » suivi de la date du crédit suivi de « | » suivi du montant du crédit suivi de « | » suivi de l'état du crédit suivi de « | » suivi de l'annonce de la raison du crédit.
+Afficher l'état du d suivi de « | » suivi du règlement du d.
+Le téléphone du p devient « 079 123 45 67 ».
+Le courriel du p devient « anne@exemple.ch ».
+Le nom de famille du p devient « Rochat ».
+La date de naissance du p devient 12.03.1980.
+Chercher le double de « ANNE@exemple.ch » et absent et absent et absent, qui donne le un.
+Afficher le un.
+Chercher le double de absent et « +41 79 123 45 67 » et absent et absent, qui donne le deux.
+Afficher le deux.
+Chercher le double de absent et absent et « rochat » et 12.03.1980, qui donne le trois.
+Afficher le trois.
+Chercher le double de « autre@exemple.ch » et « 079 999 99 99 » et « Rochat » et 13.03.1980, qui donne le quatre.
+Afficher « [ » suivi du quatre suivi de « ] ».

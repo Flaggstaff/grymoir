@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.08">
+  <BkToCstmrDbtCdtNtfctn>
+    <GrpHdr><MsgId>AVIS-1</MsgId><CreDtTm>2026-11-03T18:00:00+01:00</CreDtTm></GrpHdr>
+    <Ntfctn>
+      <Id>N1</Id>
+      <Ntry>
+        <Amt Ccy="CHF">120.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts>
+        <BookgDt><Dt>2026-11-02</Dt></BookgDt><AcctSvcrRef>BQ-001</AcctSvcrRef>
+        <NtryDtls><TxDtls><Refs><AcctSvcrRef>TX-001</AcctSvcrRef></Refs><Amt Ccy="CHF">120.00</Amt>
+          <RltdPties><Dbtr><Pty><Nm>Anne Rochat</Nm></Pty></Dbtr></RltdPties>
+          <RmtInf><Strd><CdtrRefInf><Tp><CdOrPrtry><Cd>SCOR</Cd></CdOrPrtry></Tp><Ref>RF12F20260001</Ref></CdtrRefInf></Strd></RmtInf>
+        </TxDtls></NtryDtls>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="CHF">250.00</Amt><CdtDbtInd>CRDT</CdtDbtInd>
+        <BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BQ-002</AcctSvcrRef>
+        <NtryDtls>
+          <TxDtls><Amt Ccy="CHF">200.00</Amt><RmtInf><Ustrd>Rappel F-2026-0002, merci</Ustrd></RmtInf></TxDtls>
+          <TxDtls><Amt Ccy="CHF">50.00</Amt><RltdPties><Dbtr><Nm>Bernard Dupuis</Nm></Dbtr></RltdPties><RmtInf><Ustrd>F-2026-0003 acompte</Ustrd></RmtInf></TxDtls>
+        </NtryDtls>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="CHF">99.00</Amt><CdtDbtInd>DBIT</CdtDbtInd><BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BQ-003</AcctSvcrRef>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="CHF">35.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><ValDt><Dt>2026-11-03</Dt></ValDt><AcctSvcrRef>BQ-004</AcctSvcrRef>
+      </Ntry>
+    </Ntfctn>
+  </BkToCstmrDbtCdtNtfctn>
+</Document>

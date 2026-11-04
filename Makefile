@@ -100,6 +100,7 @@ test: grym grym-arbre test_lexeur test_analyseur test_machine test_imprimeur tes
 	sh tests/praxis-acces
 	sh tests/praxis-salaire
 	sh tests/praxis-virements
+	sh tests/praxis-virements-recus
 	sh tests/ecoutille-epellation
 	sh tests/ecoutille-pilotage
 	sh tests/ecoutille-carnet

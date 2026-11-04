@@ -1,5 +1,5 @@
 Remarque : Praxis : les données d'un cabinet de thérapie, ses soins, ses patients, leurs séances.
-Utiliser la bibliothèque « Suisse santé », version 1.
+Utiliser la bibliothèque « Suisse santé », version 2.
 
 Remarque : le cabinet, un seul : ce qui figure en tête des quittances et des factures.
 Remarque : RCC (SASIS), GLN, RME et ASCA restent vides tant que Nicolas n'en a pas ; la facture du Tarif 590 exigera le RCC.
@@ -232,6 +232,23 @@ Une facture, conservée, a :
     un dernier rappel (date), facultatif,
     un justificatif (fichier), facultatif,
     un envoi électronique (date), facultatif.
+
+Remarque : un virement reçu (4 novembre 2026), lu dans l'avis de crédit (camt.054) ou le relevé (camt.053) que la banque donne :
+Remarque : sa source (la référence de la banque, unique : un avis relu n'ajoute rien), le jour où l'argent est arrivé, le montant,
+Remarque : la référence du créancier, le message, le payeur ; la facture ou la facture tiers payant qu'il règle ; rapproché quand
+Remarque : Praxis l'a soldée, à vérifier sinon (avec la raison), écarté quand ce n'est pas un paiement de patient (un remboursement).
+Un crédit, conservé, hors des fiches, a :
+    une source (texte), unique,
+    une date (date),
+    un montant (nombre),
+    une monnaie (texte), « CHF » au départ,
+    une référence (texte), facultative,
+    un message (texte), facultatif,
+    un payeur (texte), facultatif,
+    une facture (facture), facultative,
+    un décompte (décompte), facultatif,
+    un état (« rapproché » en vert, « à vérifier » en orange ou « écarté » en gris),
+    une raison (texte), facultative.
 
 Remarque : un rappel envoyé pour une facture : son rang (premier, deuxième…), sa date, son exemplaire, le PDF envoyé, gardé tel quel.
 Un rappel, conservé, a :
