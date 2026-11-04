@@ -152,10 +152,12 @@ typedef enum {
     I_PORTS,            /* empile la liste des ports série de l'ordinateur, triés (2.82) */
     I_PORT_SERIE,       /* dépile la vitesse, la question, puis le port ; empile la réponse, un texte (2.82) */
     I_DERNIERE_SAUVEGARDE, /* remplace un préfixe par le chemin de sa copie datée la plus récente, ou absent (2.85) */
-    I_HISTORIQUE        /* opérande 0 : remplace un objet par son historique ; 1 : empile celui de la base ; un texte (2.85) */
+    I_HISTORIQUE,       /* opérande 0 : remplace un objet par son historique ; 1 : empile celui de la base ; un texte (2.85) */
+    I_AMORCER_LANGUES,  /* comme I_AMORCER, la langue parlée reconnue au lieu du français (2.86) */
+    I_LANGUE            /* remplace un texte par le code de sa langue reconnue (« fr », « en »…), ou absent (2.86) */
 } CodeInstruction;
 
-#define I_DERNIER I_HISTORIQUE
+#define I_DERNIER I_LANGUE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

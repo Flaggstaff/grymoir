@@ -193,8 +193,9 @@ typedef enum {
                         un passage, en secondes, 0 s'il n'est pas dit (« , coupée après 3 secondes de silence ») */
     N_DERNIERE_SAUVEGARDE, /* « la dernière sauvegarde de « Sauvegardes/Praxis » » (2.85) : enfant : le préfixe ; le chemin de
                         la copie la plus récente de ce préfixe, ou absent */
-    N_HISTORIQUE     /* « l'historique de x » (2.85) : enfant : l'objet ; forme 1 « l'historique de la base », sans enfant :
+    N_HISTORIQUE,    /* « l'historique de x » (2.85) : enfant : l'objet ; forme 1 « l'historique de la base », sans enfant :
                         le journal des entités journalisées, en texte, le plus récent d'abord */
+    N_LANGUE         /* « la langue reconnue de t » (2.86) : enfant : le texte ; son code ISO 639-1, ou absent */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */

@@ -7191,12 +7191,31 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, valeur_nombre(r));
             break;
         }
-        case I_AMORCER: {   /* « Amorcer la transcription avec t. » (2.80) : absent retire l'amorce */
+        case I_AMORCER:
+        case I_AMORCER_LANGUES: {   /* « Amorcer la transcription avec t[, en toute langue]. » (2.80, 2.86) : absent retire l'amorce */
             Valeur v = depiler(&pile);
             char *t = v.type == V_ABSENT ? NULL : texte_valeur(m, &v);
             valeur_liberer(&v);
+            if (code == I_AMORCER_LANGUES) {   /* l'interface lit U+001D en tête : la langue parlée, reconnue (interface.h) */
+                char *l = grym_formater("\x1d%s", t ? t : "");
+                free(t);
+                t = l;
+            }
             if (m->iface.amorcer) m->iface.amorcer(m->iface.contexte, t && *t ? t : NULL);
             free(t);
+            break;
+        }
+        case I_LANGUE: {   /* « la langue reconnue de t » (2.86) */
+            Valeur v = depiler(&pile);
+            if (v.type == V_ABSENT) { empiler(&pile, v); break; }
+            if (v.type != V_TEXTE) {
+                valeur_liberer(&v);
+                ok = echouer(diag, b, debut, grym_dupliquer("« la langue reconnue de » attend un texte."));
+                break;
+            }
+            const char *l = langue_reconnue(v.texte);
+            valeur_liberer(&v);
+            empiler(&pile, l ? vi_texte(l) : vi_absent(NULL));
             break;
         }
         case I_SIGNALER:

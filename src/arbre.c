@@ -219,6 +219,11 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->nb_enfants) decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_LANGUE:   /* (langue t) (2.86) */
+        chaine_ajouter(c, "(langue ");
+        if (n->nb_enfants) decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_HISTORIQUE:   /* (historique x) ou (historique-base) (2.85) */
         if (n->forme) { chaine_ajouter(c, "(historique-base)"); return; }
         chaine_ajouter(c, "(historique ");
@@ -375,7 +380,7 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, n->entier == 0 ? "(style suisse)" : n->entier == 1 ? "(style française)" : "(style sans)");
         return;
     case P_AMORCER:   /* (amorcer t) (2.80) */
-        chaine_ajouter(c, "(amorcer ");
+        chaine_ajouter(c, n->forme ? "(amorcer-toute-langue " : "(amorcer ");
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;

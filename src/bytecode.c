@@ -245,6 +245,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_RESTAURER:      return "RESTAURER";
     case I_DERNIERE_SAUVEGARDE: return "DERNIERE_SAUVEGARDE";
     case I_HISTORIQUE:     return "HISTORIQUE";
+    case I_AMORCER_LANGUES: return "AMORCER_LANGUES";
+    case I_LANGUE:         return "LANGUE";
     case I_CHANGER_MDP_BASE: return "CHANGER_MDP_BASE";
     }
     return "INCONNUE";
@@ -436,7 +438,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_APPARENCE:   /* le logo ; avec 0x100 (2.13), aussi la police, la couleur libre, le fond */
                 besoin = (op & 0x100 ? 4 : 1) + (op & 0x200 ? 1 : 0); effet = -besoin; break;
             case I_REFUSER: case I_SIGNALER: besoin = (long)op; effet = -(long)op; break;
-            case I_AMORCER: besoin = 1; effet = -1; break;
+            case I_AMORCER: case I_AMORCER_LANGUES: besoin = 1; effet = -1; break;
+            case I_LANGUE: besoin = 1; effet = 0; break;
             case I_REMPLACER: besoin = 3; effet = -2; break;
             case I_MOTS: besoin = 1; effet = 0; break;
             case I_PORTS: besoin = 0; effet = 1; break;

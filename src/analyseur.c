@@ -2422,6 +2422,23 @@ static Noeud *base(Analyse *a) {
         }
     }
     {
+        /* « la langue reconnue de t » (2.86) : la langue d'un texte par ses mots outils, en code ISO 639-1, ou absent */
+        const int m0 = est_mot(t, "la") ? 1 : a->article_force == ART_LA ? 0 : -1;
+        const Jeton *td = m0 >= 0 ? voir(a, m0 + 2) : NULL;
+        if (m0 >= 0 && est_mot(voir(a, m0), "langue") && est_mot(voir(a, m0 + 1), "reconnue") && (de_ou_d(td) || est_mot(td, "du"))) {
+            Noeud *n = noeud_creer(N_LANGUE, t->ligne, t->colonne, t->debut);
+            a->article_force = ART_AUCUN;
+            for (int k = 0; k < m0 + 3; k++) avancer(a);
+            if (est_mot(td, "du")) { a->article_force = ART_LE; a->jeton_force = td; }
+            Noeud *x = base(a);
+            a->article_force = ART_AUCUN;
+            if (!x) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, x);
+            n->fin = x->fin;
+            return n;
+        }
+    }
+    {
         /* « l'historique de x » (2.85) : le journal d'un objet d'une entité journalisée, en texte, le plus récent d'abord ;
          * « l'historique de la base » : celui de toutes ses entités */
         const int m0 = t->type == J_ELISION && t->valeur && !strcmp(t->valeur, "l") ? 1
@@ -9872,6 +9889,13 @@ static Noeud *phrase(Analyse *a, int colonne) {
         if (!v) { noeud_liberer(n); return NULL; }
         noeud_ajouter(n, v);
         n->fin = v->fin;
+        /* « , en toute langue » (2.86) : le transcripteur reconnaît la langue parlée et l'écrit telle quelle, au lieu du
+         * français imposé */
+        if (cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "en") && est_mot(voir(a, 2), "toute") && est_mot(voir(a, 3), "langue")) {
+            a->i += 4;
+            n->forme = 1;
+            n->fin = fin_jeton(&a->j[a->i - 1]);
+        }
         if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
         return n;
     }

@@ -500,7 +500,8 @@ static void comparaison(Impression *im, const Noeud *n, int sans_sujet) {
     }
     Genre g = sujet->type == N_NOM || sujet->type == N_CHAMP_DONT || sujet->type == N_CHAMP
             ? genre_de_nom(im, sujet->texte)
-            : sujet->type == N_COLONNE ? G_FEMININ   /* « la colonne « Année » de la ligne est présente » (§ 15.5) */
+            : sujet->type == N_COLONNE || sujet->type == N_LANGUE || sujet->type == N_DERNIERE_SAUVEGARDE
+                  ? G_FEMININ   /* « la colonne « Année » de la ligne est présente » (§ 15.5) ; 2.85, 2.86 */
                                        : G_MASCULIN;
     if (g == G_LIBRE && n->genre_appel == 2) g = G_FEMININ;   /* « L'ordonnance ouverte » : l'article ne dit pas le genre, l'accord écrit si */
     int k = relation(n->op);
@@ -672,6 +673,11 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, "le champ ");
         ecrire_texte(im, n->texte);
         aj(im, " ");
+        de_expression(im, n->enfants[0]);
+        return;
+    case N_LANGUE:   /* « la langue reconnue de t » ; « _langue t » (2.86) */
+        if (im->compact) { aj(im, "_langue "); expression(im, n->enfants[0]); return; }
+        aj(im, "la langue reconnue ");
         de_expression(im, n->enfants[0]);
         return;
     case N_HISTORIQUE:   /* « l'historique de x », « l'historique de la base » ; « _historique x », « _historique_base » (2.85) */
@@ -2143,6 +2149,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     case P_AMORCER:   /* « Amorcer la transcription avec t. » ; « _amorcer t » (2.80) */
         aj(im, c ? "_amorcer " : "Amorcer la transcription avec ");
         expression(im, n->enfants[0]);
+        if (n->forme) aj(im, c ? " _toute_langue" : ", en toute langue");   /* 2.86 */
         aj(im, c ? "\n" : ".\n");
         return;
     case P_SIGNALER:   /* « Signaler « … ». » ; « _signaler « … » » (§ 22.22) */

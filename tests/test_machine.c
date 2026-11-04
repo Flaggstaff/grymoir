@@ -4656,6 +4656,17 @@ int main(void) {
     PROG("Une note, conservée, journalisé, a :\n    un texte (texte).", "~Accord : « journalisée ».");
     PROG("Une note, journalisée, a :\n    un texte (texte).", "~Seule une entité tient un journal");
     PROG("Le récit d'un x :\n    Rendre l'historique de x.", "~Un calcul ne lit pas l'historique");
+    /* 2.86 : la langue reconnue d'un texte, par ses mots outils ; indécise, absente ; un nombre, refusé ; dans un calcul ;
+       « Amorcer … , en toute langue » sans transcripteur ne fait rien */
+    PROG("Afficher la langue reconnue de « Bonjour, je suis à Bulle et il fait beau ».\n"
+         "Afficher la langue reconnue de « This is HB9XYZ, how do you copy, over ».\n"
+         "Afficher la langue reconnue de « Hier ist DL1ABC, ich höre dich gut, bitte kommen ».\n"
+         "Afficher la langue reconnue de « CQ CQ HB9 » est absente.\n"
+         "La l d'un texte :\n    Rendre la langue reconnue du texte.\n"
+         "Afficher la l de « Ciao, sono a Milano, grazie per il contatto ».\n"
+         "Amorcer la transcription avec « HB9 », en toute langue.\nAfficher « ok ».",
+         "fr\nen\nde\nvrai\nit\nok");
+    PROG("Afficher la langue reconnue de 3.", "~« la langue reconnue de » attend un texte.");
     PROG("Le q vaut le code QR suisse de « SPC ».", "~QR-facture : 1 ligne au lieu de 31 au moins");
     /* « Sauvegarder la base dans … » (2.29) : sans base, refusé ; deux copies, la seconde « (2) » ; pas dans un calcul */
     PROG("Sauvegarder la base dans « _essai_copie.grymd ».", "~Ce programme n'a pas de base : il ne conserve aucune entité.");

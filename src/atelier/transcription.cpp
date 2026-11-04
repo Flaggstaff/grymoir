@@ -224,7 +224,10 @@ QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *e
     }
     // en direct (24 octobre 2026) : la recherche gloutonne, plus rapide ; le texte final reprend la recherche en faisceau
     whisper_full_params p = whisper_full_default_params(rapide ? WHISPER_SAMPLING_GREEDY : WHISPER_SAMPLING_BEAM_SEARCH);
-    p.language = "fr";
+    // « en toute langue » (2.86) : l'amorce commence par U+001D ; Whisper reconnaît la langue parlée et l'écrit telle
+    // quelle (« auto ») ; sinon, le français imposé, comme avant
+    const bool toute_langue = amorce.startsWith(QChar(0x1d));
+    p.language = toute_langue ? "auto" : "fr";
     p.translate = false;
     p.n_max_text_ctx = 0;   // « -mc 0 » : sans s'appuyer sur son propre texte, il ne s'y enferme pas
     p.n_threads = qMin(4, qMax(1, QThread::idealThreadCount()));
@@ -235,7 +238,7 @@ QString transcrire_pcm(std::vector<float> pcm, const QString &modele, QString *e
     // L'amorce (2.80) : le vocabulaire, donné comme texte précédent à chaque fenêtre de 30 secondes (carry_initial_prompt).
     // whisper.cpp (v1.9.5) ne met aucun texte précédent si n_max_text_ctx vaut 0 : il vaut ici la taille de l'amorce,
     // plus la marque qui la précède, si bien que le texte déjà transcrit n'y entre toujours pas (« -mc 0 » tenu).
-    const QByteArray amorce8 = amorce.trimmed().toUtf8();
+    const QByteArray amorce8 = (toute_langue ? amorce.mid(1) : amorce).trimmed().toUtf8();
     if (!amorce8.isEmpty()) {
         std::vector<whisper_token> jetons(1024);
         int n = whisper_tokenize(ctx, amorce8.constData(), jetons.data(), (int)jetons.size());

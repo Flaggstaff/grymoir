@@ -387,6 +387,10 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_CHAMP_JSON, k, n->ligne, n->colonne);
         return;
     }
+    case N_LANGUE:   /* « la langue reconnue de t » (2.86) */
+        expression(c, n->enfants[0]);
+        emettre(c, I_LANGUE, 0, n->ligne, n->colonne);
+        return;
     case N_HISTORIQUE:   /* « l'historique de x », « l'historique de la base » (2.85) */
         if (!n->forme) expression(c, n->enfants[0]);
         emettre(c, I_HISTORIQUE, n->forme ? 1 : 0, n->ligne, n->colonne);
@@ -1030,7 +1034,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         return;
     case P_AMORCER:   /* « Amorcer la transcription avec t. » (2.80) */
         expression(c, ph->enfants[0]);
-        emettre(c, I_AMORCER, 0, ph->ligne, ph->colonne);
+        emettre(c, ph->forme ? I_AMORCER_LANGUES : I_AMORCER, 0, ph->ligne, ph->colonne);
         return;
     case P_SIGNALER:   /* « Signaler « … » puis x. » (§ 22.22) */
     case P_REFUSER:   /* « Refuser « … » puis x. » (§ 18.1) */

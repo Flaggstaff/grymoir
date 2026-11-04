@@ -270,3 +270,50 @@ char *texte_sigles(void) {
     free(l);
     return chaine_rendre(&c);
 }
+
+/* La langue d'un texte (grammaire 2.86) : ses mots outils, comptés dans sept langues ; la plus présente l'emporte si elle a
+ * deux mots au moins et un de plus que la suivante. Les mots sont pliés (sans accents ni casse) et coupés aux apostrophes :
+ * « c'est » donne « c » et « est ». Un mot propre à plusieurs langues (« de », « la ») compte pour chacune. NULL : indécis
+ * (trop court, des indicatifs, des chiffres). Codes ISO 639-1. */
+const char *langue_reconnue(const char *texte) {
+    static const char *const CODES[] = { "fr", "en", "de", "es", "it", "nl", "pt" };
+    static const char *const MOTS[] = {
+        /* fr */ " le la les un une des et est je tu il elle nous vous ils elles du que qui pas ne au aux pour avec sur ce cette"
+                 " mais ou suis sont c j qu l d n bonjour merci oui non tres bien ici ",
+        /* en */ " the and is are you i he she we they of to in that it for on with this be not have at was your what"
+                 " hello thanks yes no my me over here there will ",
+        /* de */ " der die das und ist ich du er sie wir ihr nicht ein eine zu mit auf fur von den dem ja nein bitte danke"
+                 " hier auch sind bin habe ",
+        /* es */ " el la los las y es de que en un una por con para no se lo como pero esta muy hola gracias si estoy ",
+        /* it */ " il lo la gli le e di che non un una per con sono ma come questo della ciao grazie si ho sei ",
+        /* nl */ " de het een en is van ik je niet dat die op te met voor zijn wat hallo dank ja nee ",
+        /* pt */ " o a os as e de que nao um uma para com por em do da sao mas ola obrigado sim estou ",
+    };
+    enum { NL = 7 };
+    int compte[NL] = { 0 };
+    char *p = texte_plier(texte ? texte : "");
+    for (char *q = p; *q;) {
+        while (*q && !((*q >= 'a' && *q <= 'z') || (unsigned char)*q >= 0x80)) q++;
+        char *d = q;
+        while ((*q >= 'a' && *q <= 'z') || (unsigned char)*q >= 0x80) q++;
+        if (q == d) continue;
+        char mot[40];
+        const size_t n = (size_t)(q - d);
+        if (n >= sizeof mot - 2) continue;
+        mot[0] = ' ';
+        memcpy(mot + 1, d, n);
+        mot[n + 1] = ' ';
+        mot[n + 2] = '\0';
+        for (int k = 0; k < NL; k++) if (strstr(MOTS[k], mot)) compte[k]++;
+    }
+    free(p);
+    int premiere = -1, seconde = 0;
+    for (int k = 0; k < NL; k++) {
+        if (premiere < 0 || compte[k] > compte[premiere]) {
+            if (premiere >= 0) seconde = compte[premiere] > seconde ? compte[premiere] : seconde;
+            premiere = k;
+        } else if (compte[k] > seconde) seconde = compte[k];
+    }
+    if (premiere < 0 || compte[premiere] < 2 || compte[premiere] <= seconde) return NULL;
+    return CODES[premiere];
+}

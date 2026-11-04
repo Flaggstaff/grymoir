@@ -253,7 +253,7 @@ typedef struct {
     void (*ecran_signaler)(void *contexte, Chaine *sortie, const char *message);
     /* « Amorcer la transcription avec t. » (2.80) : le vocabulaire attendu par le transcripteur, pour les transcriptions
      * suivantes de l'exécution ; NULL : l'amorce retirée. Sans transcripteur, NULL : la phrase ne fait rien. */
-    void (*amorcer)(void *contexte, const char *texte);
+    void (*amorcer)(void *contexte, const char *texte);   /* 2.86 : U+001D en tête, « en toute langue » */
     /* Avant chaque attente, pour une zone liée à une entité dont les objets ont changé depuis l'ouverture (un poste
      * ajouté par un autre écran) : ses clés, comme à l'ouverture (3 novembre 2026). NULL : le menu garde celles de
      * l'ouverture. */

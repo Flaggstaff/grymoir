@@ -679,6 +679,13 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k++;
             continue;
         }
+        if (est_cle(t, "langue")) {                  /* _langue t → la langue reconnue de t (2.86) */
+            mot(r, "la", t);
+            mot(r, "langue", t);
+            mot(r, "reconnue", t);
+            mot(r, "de", t);
+            continue;
+        }
         if (est_cle(t, "historique_base")) {         /* _historique_base → l'historique de la base (2.85) */
             emettre(r, J_ELISION, "l", t, 1);
             mot(r, "historique", t);
@@ -2332,11 +2339,18 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 echouer(r, t, grym_dupliquer("« _amorcer » attend un texte : « _amorcer « … » »."));
                 return;
             }
+            const size_t toute = chercher(r, d + 1, f, "toute_langue");   /* _amorcer t _toute_langue (2.86) */
             mot(r, "amorcer", t);
             mot(r, "la", t);
             mot(r, "transcription", t);
             mot(r, "avec", t);
-            expression(r, d + 1, f);
+            expression(r, d + 1, toute);
+            if (toute < f) {
+                emettre(r, J_VIRGULE, NULL, &r->e[toute], 1);
+                mot(r, "en", &r->e[toute]);
+                mot(r, "toute", &r->e[toute]);
+                mot(r, "langue", &r->e[toute]);
+            }
             point(r, f);
         } else if (!strcmp(c, "refuser") || !strcmp(c, "signaler")) {   /* _refuser « … » → Refuser « … ». (§ 18.1) ; _signaler (§ 22.22) */
             if (d + 1 >= f) {

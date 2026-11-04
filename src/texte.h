@@ -23,6 +23,8 @@ char *texte_majuscules(const char *s);  /* « élodie » → « ÉLODIE » */
 char *texte_minuscules(const char *s);  /* « ÉLODIE » → « élodie » */
 /* 'c' contient, 'd' commence par, 'f' finit par, sans tenir compte des accents ni de la casse. */
 int texte_contient(const char *texte, const char *partie, char sens);
+/* La langue d'un texte, par ses mots outils (2.86) : « fr », « en », « de », « es », « it », « nl », « pt », ou NULL. */
+const char *langue_reconnue(const char *texte);
 
 /* Sigles (grammaire, § 2.4) : un mot écrit tout en capitales, deux lettres au moins, et jamais autrement (« numéro RCC »).
  * L'identité ne change pas, le registre retient le mot en minuscules ; l'affichage lui rend ses capitales. */
