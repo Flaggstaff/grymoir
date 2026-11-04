@@ -31,6 +31,8 @@ private:
 
 // Un WAV PCM 16 bits, 16 kHz, mono.
 QByteArray wav_16k(const std::vector<float> &pcm);
+// Du son de 16 kHz pour une sortie : sa fréquence, ses canaux, son format (QAudioFormat::SampleFormat).
+QByteArray en_sortie(const std::vector<float> &pcm16k, int frequence, int canaux, int format);
 
 // Un filtre du second ordre (RBJ, « Audio EQ Cookbook ») à 16 kHz : passe-haut ou passe-bas, Q = 0,707.
 struct Biquad {
@@ -98,6 +100,17 @@ public:
     void calibrer(int duree_ms = 5000);
     bool finir_calibrage();   // rend faux s'il n'a rien entendu ; les essais l'appellent sans attendre
     bool en_calibrage() const { return calibrage; }
+    // La dernière minute (5 novembre 2026) : le son affiné des 60 dernières secondes, gardé en mémoire, passage ou non ;
+    // « Réécouter » la rejoue sur le haut-parleur, « Garder » en fait un passage, comme si le squelch s'était ouvert.
+    static constexpr size_t MINUTE = 60 * 16000;
+    std::vector<float> derniere_minute() const;
+    void garder_minute();
+    void reecouter_minute();
+    // Un fichier son comme entrée (5 novembre 2026) : un WAV, lu au rythme réel, pour essayer réglages, morse et
+    // transcription sans poste ; à sa fin, le passage en cours se ferme. avancer_fichier : un pas de 20 ms (les essais).
+    bool ouvrir_fichier(const QString &chemin, QString *erreur = nullptr);
+    bool avancer_fichier();   // faux à la fin du fichier
+    bool en_fichier() const { return !fichier_pcm.empty(); }
 
 private:
     QString nom;
@@ -110,6 +123,17 @@ private:
     QCheckBox *filtre_;
     Affinage affinage;
     QToolButton *calibrer_ = nullptr;
+    QToolButton *reecouter_ = nullptr, *garder_ = nullptr;
+    std::vector<float> tampon;   // circulaire, MINUTE échantillons au plus
+    size_t tete = 0;             // la prochaine case écrite
+    QAudioSink *rejeu = nullptr;
+    class QBuffer *rejeu_octets = nullptr;
+    std::vector<float> fichier_pcm;
+    size_t fichier_pos = 0;
+    class QTimer *lecteur = nullptr, *relance = nullptr;
+    void fin_du_fichier();
+    void choisir_fichier();
+    void perte_entree();   // l'entrée s'est tue (débranchée) : on réessaie toutes les 2 secondes
     bool calibrage = false;
     std::vector<float> bruit;
     class QTimer *minuterie = nullptr;
@@ -129,6 +153,7 @@ private:
     void ouvrir_sortie();
     void fermer_sortie();
     void jouer(const std::vector<float> &pcm16k);
+    void retenir(const std::vector<float> &pcm16k);
     void montrer();
     QString cle(const QString &reglage) const;
 };

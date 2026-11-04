@@ -1661,6 +1661,49 @@ int main(int argc, char **argv) {
         VERIFIER(captes == 1 && nom.startsWith(QString::fromUtf8("Essai Écoutille-")) && nom.endsWith(".wav"));
     }
 
+    // La dernière minute (5 novembre 2026) : 70 secondes reçues, la minute gardée en est la fin, dans l'ordre ; « Garder »
+    // en fait un passage nommé « …-minute.wav » ; un bandeau neuf n'a rien à garder. Un fichier WAV comme entrée : lu par
+    // pas de 20 ms, sa parole devient un passage, et le passage en cours se ferme à la fin du fichier.
+    {
+        Ecoute e(QString::fromUtf8("Essai minute"), 1000, nullptr, false);
+        e.veille()->setChecked(true);
+        int captes = 0;
+        QString nom;
+        QByteArray garde;
+        e.capte = [&](const QByteArray &wav, const QString &n) { captes++; nom = n; garde = wav; };
+        e.garder_minute();
+        VERIFIER(captes == 0);   // rien reçu
+        e.squelch()->setValue(50);   // seulement les sons forts : rien ne devient passage pendant le remplissage
+        for (int s = 0; s < 70; s++) e.nourrir(std::vector<float>(16000, 0.001f * (float)(s + 1)));
+        const std::vector<float> m = e.derniere_minute();
+        VERIFIER(m.size() == Ecoute::MINUTE);
+        VERIFIER(std::fabs(m.front() - 0.011f) < 1e-6f && std::fabs(m.back() - 0.070f) < 1e-6f);   // les secondes 11 à 70
+        e.garder_minute();
+        std::vector<float> relu;
+        VERIFIER(captes == 1 && nom.endsWith("-minute.wav") && wav_en_16k(garde, &relu) && relu.size() == Ecoute::MINUTE);
+        QSettings().remove(QString::fromUtf8("écoute/Essai minute"));
+
+        Ecoute f(QString::fromUtf8("Essai fichier"), 500, nullptr, false);
+        f.veille()->setChecked(true);
+        int passages = 0;
+        f.capte = [&](const QByteArray &wav, const QString &) { passages += octets_de_son(wav) ? 1 : 0; };
+        std::vector<float> son(16000, 0.0f);
+        son.insert(son.end(), 16000, 0.3f);   // une seconde de son fort, sans silence après : la fin du fichier ferme le passage
+        const QString chemin = QDir::temp().filePath("essai-ecoutille-fichier.wav");
+        {
+            QFile w(chemin);
+            VERIFIER(w.open(QIODevice::WriteOnly) && w.write(wav_16k(son)) > 0);
+        }
+        QString pourquoi;
+        VERIFIER(f.ouvrir_fichier(chemin, &pourquoi) && f.en_fichier());
+        int pas = 0;
+        while (f.avancer_fichier()) pas++;
+        VERIFIER(pas == 99 && !f.en_fichier() && passages == 1);   // 100 pas de 20 ms, le dernier rend faux
+        QFile::remove(chemin);
+        VERIFIER(!f.ouvrir_fichier(chemin, &pourquoi) && pourquoi.contains("WAV"));
+        QSettings().remove(QString::fromUtf8("écoute/Essai fichier"));
+    }
+
     // L'affinage du son (2 novembre 2026) : le squelch de −50 à +50, 0 au milieu, un cran pour ½ dB (de −60 à −10 dB) ;
     // le gain en dB ; le filtre radio laisse passer 1 kHz et ôte 50 Hz et 6 kHz ; un réglage en dB d'avant garde son sens.
     {

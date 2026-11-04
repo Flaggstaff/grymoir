@@ -7,6 +7,10 @@
 #include <QAudioFormat>
 #include <QAudioSink>
 #include <QAudioSource>
+#include <QBuffer>
+#include <QFile>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDateTime>
@@ -244,9 +248,19 @@ Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel_
     haut_parleur_->setText(QString::fromUtf8("Haut-parleur"));
     haut_parleur_->setCheckable(true);
     haut_parleur_->setToolTip(QString::fromUtf8("Écouter ce poste sur la sortie son de l'ordinateur"));
+    reecouter_ = new QToolButton;
+    reecouter_->setText(QString::fromUtf8("Réécouter 1 min"));
+    reecouter_->setToolTip(QString::fromUtf8("La dernière minute de ce poste, rejouée sur le haut-parleur, passage ou non"));
+    garder_ = new QToolButton;
+    garder_->setText(QString::fromUtf8("Garder 1 min"));
+    garder_->setToolTip(QString::fromUtf8("La dernière minute devient un passage : gardée, transcrite, comme si le squelch s'était ouvert"));
+    connect(reecouter_, &QToolButton::clicked, this, [this] { reecouter_minute(); });
+    connect(garder_, &QToolButton::clicked, this, [this] { garder_minute(); });
     haut->addWidget(titre);
     haut->addWidget(veille_);
     haut->addWidget(entree_, 1);
+    haut->addWidget(reecouter_);
+    haut->addWidget(garder_);
     haut->addWidget(haut_parleur_);
     pile->addLayout(haut);
     // Le niveau, puis le squelch juste dessous, à la même échelle et à la même largeur : quand la barre dépasse la
@@ -327,7 +341,9 @@ Ecoute::Ecoute(const QString &n, int silence_ms, QWidget *parent, bool materiel_
     if (!materiel) return;
     remplir();
     connect(entree_, qOverload<int>(&QComboBox::activated), this, [this](int) {
+        if (entree_->currentData().toString() == "choisir") { choisir_fichier(); return; }
         QSettings().setValue(cle("entrée"), entree_->currentData().toString());
+        QSettings().setValue(cle("entrée-nom"), entree_->currentText());
         demarrer();
     });
     auto *appareils = new QMediaDevices(this);
@@ -353,6 +369,7 @@ Ecoute::~Ecoute() {
     capte = nullptr;
     couper();
     fermer_sortie();
+    if (rejeu) { rejeu->stop(); delete rejeu; rejeu = nullptr; }
 }
 
 bool Ecoute::reporter_reglages(const QString &ancien, const QString &nouveau) {
@@ -393,9 +410,134 @@ void Ecoute::remplir() {
             for (int c = 0; c < nc; c++)
                 entree_->addItem(QString::fromUtf8("%1, entrée %2").arg(n).arg(c + 1), id + QChar(0x1f) + QString::number(c));
     }
-    if (entree_->count() == 0) { etat_->setText(QString::fromUtf8("Aucune entrée son sur cet ordinateur.")); return; }
-    const int i = entree_->findData(retenu);
-    entree_->setCurrentIndex(i >= 0 ? i : 0);   // une entrée débranchée : la première, sans oublier le choix
+    if (entree_->count() == 0) etat_->setText(QString::fromUtf8("Aucune entrée son sur cet ordinateur : un fichier son, peut-être."));
+    // un fichier son choisi (5 novembre 2026), puis le choix d'un autre
+    if (retenu.startsWith(QString::fromUtf8("fichier") + QChar(0x1f)))
+        entree_->addItem(QString::fromUtf8("Fichier : %1").arg(QFileInfo(retenu.section(QChar(0x1f), 1)).fileName()), retenu);
+    entree_->addItem(QString::fromUtf8("Un fichier son…"), "choisir");
+    int i = entree_->findData(retenu);
+    if (i < 0 && !retenu.isEmpty()) {
+        // l'entrée retenue est débranchée (5 novembre 2026) : elle reste choisie, marquée, plutôt que de passer en silence à
+        // une autre radio ; elle reprend seule à son retour (audioInputsChanged)
+        const QString nom_retenu = QSettings().value(cle("entrée-nom"), QString::fromUtf8("L'entrée choisie")).toString();
+        entree_->insertItem(0, QString::fromUtf8("%1 (débranchée)").arg(nom_retenu), retenu);
+        i = 0;
+    }
+    entree_->setCurrentIndex(i >= 0 ? i : 0);
+    if (entree_->currentData().toString() == "choisir") entree_->setCurrentIndex(-1);
+}
+
+void Ecoute::choisir_fichier() {
+    const QString chemin = QFileDialog::getOpenFileName(this, QString::fromUtf8("Un fichier son pour %1").arg(nom), QString(),
+                                                        QString::fromUtf8("Sons WAV (*.wav *.WAV)"));
+    if (chemin.isEmpty()) { remplir(); return; }
+    QSettings().setValue(cle("entrée"), QString::fromUtf8("fichier") + QChar(0x1f) + chemin);
+    remplir();
+    demarrer();
+}
+
+bool Ecoute::ouvrir_fichier(const QString &chemin, QString *erreur) {
+    QFile f(chemin);
+    std::vector<float> pcm;
+    if (!f.open(QIODevice::ReadOnly) || !wav_en_16k(f.readAll(), &pcm) || pcm.empty()) {
+        const QString m = QString::fromUtf8("Ce fichier ne se lit pas comme un WAV : %1").arg(QFileInfo(chemin).fileName());
+        if (erreur) *erreur = m;
+        if (etat_) etat_->setText(m);
+        return false;
+    }
+    fichier_pcm = std::move(pcm);
+    fichier_pos = 0;
+    if (etat_) etat_->setText(QString::fromUtf8("Lecture du fichier (%1 s).").arg((int)(fichier_pcm.size() / 16000)));
+    if (materiel) {
+        if (!lecteur) {
+            lecteur = new QTimer(this);
+            connect(lecteur, &QTimer::timeout, this, [this] { if (!avancer_fichier()) lecteur->stop(); });
+        }
+        lecteur->start(20);
+    }
+    return true;
+}
+
+bool Ecoute::avancer_fichier() {
+    if (fichier_pcm.empty()) return false;
+    const size_t n = std::min<size_t>(320, fichier_pcm.size() - fichier_pos);   // 20 ms
+    nourrir(std::vector<float>(fichier_pcm.begin() + (long)fichier_pos, fichier_pcm.begin() + (long)(fichier_pos + n)));
+    fichier_pos += n;
+    if (fichier_pos < fichier_pcm.size()) return true;
+    fin_du_fichier();
+    return false;
+}
+
+void Ecoute::fin_du_fichier() {
+    fichier_pcm.clear();
+    fichier_pos = 0;
+    std::vector<std::vector<float>> finis;
+    d.finir(&finis);   // le passage en cours se ferme : il est entier, rien ne vient après
+    for (const auto &p : finis) {
+        const QString fichier = QString::fromUtf8("%1-%2.wav").arg(nom, QDateTime::currentDateTime().toString("yyyy-MM-dd-HHmmss"));
+        if (capte) capte(wav_16k(p), fichier);
+    }
+    if (etat_) etat_->setText(QString::fromUtf8("Fichier lu jusqu'au bout."));
+}
+
+void Ecoute::perte_entree() {
+    couper();
+    if (etat_) etat_->setText(QString::fromUtf8("Entrée muette ou débranchée : nouvel essai toutes les 2 secondes."));
+    if (!relance) {
+        relance = new QTimer(this);
+        relance->setSingleShot(true);
+        connect(relance, &QTimer::timeout, this, [this] { remplir(); demarrer(); });
+    }
+    relance->start(2000);
+}
+
+void Ecoute::retenir(const std::vector<float> &pcm16k) {
+    if (tampon.size() < MINUTE) {   // la première minute : il grandit
+        const size_t place = std::min(MINUTE - tampon.size(), pcm16k.size());
+        tampon.insert(tampon.end(), pcm16k.begin(), pcm16k.begin() + (long)place);
+        tete = tampon.size() % MINUTE;
+        for (size_t k = place; k < pcm16k.size(); k++) { tampon[tete] = pcm16k[k]; tete = (tete + 1) % MINUTE; }
+        return;
+    }
+    for (const float x : pcm16k) { tampon[tete] = x; tete = (tete + 1) % MINUTE; }
+}
+
+std::vector<float> Ecoute::derniere_minute() const {
+    if (tampon.size() < MINUTE) return tampon;
+    std::vector<float> r(tampon.begin() + (long)tete, tampon.end());
+    r.insert(r.end(), tampon.begin(), tampon.begin() + (long)tete);
+    return r;
+}
+
+void Ecoute::garder_minute() {
+    const std::vector<float> m = derniere_minute();
+    if (m.size() < 16000 / 2) {   // moins d'une demi-seconde : rien à garder
+        if (etat_) etat_->setText(QString::fromUtf8("Rien à garder : ce poste n'a encore rien reçu."));
+        return;
+    }
+    const QString fichier = QString::fromUtf8("%1-%2-minute.wav").arg(nom, QDateTime::currentDateTime().toString("yyyy-MM-dd-HHmmss"));
+    if (capte) capte(wav_16k(m), fichier);
+    if (etat_) etat_->setText(QString::fromUtf8("La dernière minute est gardée (%1 s).").arg((int)(m.size() / 16000)));
+}
+
+void Ecoute::reecouter_minute() {
+    const std::vector<float> m = derniere_minute();
+    if (rejeu) { rejeu->stop(); delete rejeu; rejeu = nullptr; }
+    if (rejeu_octets) { delete rejeu_octets; rejeu_octets = nullptr; }
+    if (m.empty()) { if (etat_) etat_->setText(QString::fromUtf8("Rien à réécouter : ce poste n'a encore rien reçu.")); return; }
+    const QAudioDevice dev = QMediaDevices::defaultAudioOutput();
+    if (dev.isNull() || !materiel) return;
+    const QAudioFormat f = dev.preferredFormat();
+    if (f.sampleFormat() == QAudioFormat::Unknown) return;
+    rejeu_octets = new QBuffer(this);
+    rejeu_octets->setData(en_sortie(m, f.sampleRate(), std::max(1, f.channelCount()), (int)f.sampleFormat()));
+    rejeu_octets->open(QIODevice::ReadOnly);
+    rejeu = new QAudioSink(dev, f, this);
+    connect(rejeu, &QAudioSink::stateChanged, this, [this](QAudio::State s) {
+        if (s == QAudio::IdleState && rejeu) rejeu->stop();
+    });
+    rejeu->start(rejeu_octets);
+    if (etat_) etat_->setText(QString::fromUtf8("Réécoute de la dernière minute (%1 s).").arg((int)(m.size() / 16000)));
 }
 
 void Ecoute::demarrer() {
@@ -403,13 +545,17 @@ void Ecoute::demarrer() {
     affinage.vider();   // une autre entrée : le filtre ne garde rien de l'ancienne
     if (!veille_->isChecked()) return;
     const QString choix = entree_->currentData().toString();
-    if (choix.isEmpty()) return;
+    if (choix.isEmpty() || choix == "choisir") return;
+    if (choix.startsWith(QString::fromUtf8("fichier") + QChar(0x1f))) { ouvrir_fichier(choix.section(QChar(0x1f), 1)); return; }
     const QByteArray id = QByteArray::fromHex(choix.section(QChar(0x1f), 0, 0).toUtf8());
     canal = choix.section(QChar(0x1f), 1, 1).toInt();
     QAudioDevice appareil;
     for (const QAudioDevice &a : QMediaDevices::audioInputs())
         if (a.id() == id) appareil = a;
-    if (appareil.isNull()) { etat_->setText(QString::fromUtf8("Entrée débranchée.")); return; }
+    if (appareil.isNull()) {
+        etat_->setText(QString::fromUtf8("Entrée débranchée : l'écoute reprendra seule quand elle reviendra."));
+        return;
+    }
     QAudioFormat f = appareil.preferredFormat();
     if (f.sampleFormat() == QAudioFormat::Unknown) { etat_->setText(QString::fromUtf8("Format de l'entrée illisible.")); return; }
     frequence = f.sampleRate();
@@ -420,10 +566,18 @@ void Ecoute::demarrer() {
     flux = source->start();
     if (!flux) { etat_->setText(QString::fromUtf8("L'entrée ne s'ouvre pas.")); return; }
     connect(flux, &QIODevice::readyRead, this, &Ecoute::lire);
+    // une entrée qui se tait sans quitter la liste (un câble USB qui faiblit) : on la rouvre (5 novembre 2026)
+    connect(source, &QAudioSource::stateChanged, this, [this](QAudio::State s) {
+        if (source && s == QAudio::StoppedState && source->error() != QAudio::NoError)
+            QTimer::singleShot(0, this, [this] { perte_entree(); });
+    });
     etat_->setText(QString::fromUtf8("En écoute."));
 }
 
 void Ecoute::couper() {
+    if (lecteur) lecteur->stop();
+    fichier_pcm.clear();
+    fichier_pos = 0;
     if (source) {
         source->disconnect(this);
         source->stop();
@@ -468,6 +622,7 @@ void Ecoute::nourrir(const std::vector<float> &brut) {
     if (!veille_->isChecked()) return;
     std::vector<float> pcm16k = brut;
     affinage.appliquer(&pcm16k);   // le gain et le filtre d'abord : ce qu'on découpe, entend et transcrit est le son affiné
+    retenir(pcm16k);               // la dernière minute, passage ou non
     std::vector<std::vector<float>> finis;
     if (calibrage) {   // le bruit seul, fenêtre par fenêtre ; rien ne devient un passage pendant ce temps
         Decoupeur mesure;
@@ -517,28 +672,34 @@ void Ecoute::fermer_sortie() {
     flux_sortie = nullptr;
 }
 
-void Ecoute::jouer(const std::vector<float> &pcm16k) {
-    if (!flux_sortie || pcm16k.empty() || frequence_sortie <= 0) return;
-    const double rapport = 16000.0 / frequence_sortie;
-    const size_t n = (size_t)((double)pcm16k.size() / rapport);
+// Du son de 16 kHz, porté à la fréquence et au format d'une sortie (interpolation linéaire, assez bonne pour l'oreille).
+QByteArray en_sortie(const std::vector<float> &pcm16k, int frequence, int canaux, int format) {
     QByteArray o;
-    const int taille = format_sortie == QAudioFormat::Int16 ? 2 : format_sortie == QAudioFormat::UInt8 ? 1 : 4;
-    o.reserve((qsizetype)(n * (size_t)canaux_sortie * (size_t)taille));
-    for (size_t i = 0; i < n; i++) {   // interpolation linéaire, assez bonne pour l'oreille
+    if (pcm16k.empty() || frequence <= 0) return o;
+    const double rapport = 16000.0 / frequence;
+    const size_t n = (size_t)((double)pcm16k.size() / rapport);
+    const int taille = format == QAudioFormat::Int16 ? 2 : format == QAudioFormat::UInt8 ? 1 : 4;
+    o.reserve((qsizetype)(n * (size_t)canaux * (size_t)taille));
+    for (size_t i = 0; i < n; i++) {
         const double x = (double)i * rapport;
         const size_t a = std::min((size_t)x, pcm16k.size() - 1), b = std::min(a + 1, pcm16k.size() - 1);
         const float v = (float)(pcm16k[a] + (pcm16k[b] - pcm16k[a]) * (x - (double)a));
-        for (int c = 0; c < canaux_sortie; c++) {
+        for (int c = 0; c < canaux; c++) {
             char t[4];
-            switch ((QAudioFormat::SampleFormat)format_sortie) {
+            switch ((QAudioFormat::SampleFormat)format) {
             case QAudioFormat::Int16: qToLittleEndian<qint16>((qint16)std::lround(std::max(-1.0f, std::min(1.0f, v)) * 32767), t); break;
             case QAudioFormat::Int32: qToLittleEndian<qint32>((qint32)std::llround(std::max(-1.0f, std::min(1.0f, v)) * 2147483647.0), t); break;
             case QAudioFormat::Float: memcpy(t, &v, 4); break;
             case QAudioFormat::UInt8: t[0] = (char)(unsigned char)std::lround((std::max(-1.0f, std::min(1.0f, v)) + 1) * 127.5); break;
-            default: return;
+            default: return QByteArray();
             }
             o.append(t, taille);
         }
     }
-    flux_sortie->write(o);
+    return o;
+}
+
+void Ecoute::jouer(const std::vector<float> &pcm16k) {
+    if (!flux_sortie || pcm16k.empty() || frequence_sortie <= 0) return;
+    flux_sortie->write(en_sortie(pcm16k, frequence_sortie, canaux_sortie, format_sortie));
 }

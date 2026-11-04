@@ -528,7 +528,9 @@ Quand un poste capte un son dans l'écran de veille :
     L'heure du p devient maintenant.
     L'enregistrement du p devient le son capté.
     Remarque : le morse d'abord, lu sur l'ordinateur ; sinon la parole, transcrite si le poste le veut (1er novembre 2026).
-    Amorcer la transcription avec l'amorce du réglage conservé.
+    Remarque : un poste traduit (5 novembre 2026) : la parole transcrite dans sa langue, telle qu'elle est dite, pas en français.
+    Si la traduction voulue du poste, amorcer la transcription avec l'amorce du réglage conservé, en toute langue.
+    Sinon, amorcer la transcription avec l'amorce du réglage conservé.
     Le morse du p devient le morse du son capté.
     Si le morse du p est absent et la parole transcrite du poste, la transcription du p devient la transcription du son capté.
     Si la transcription du p est présente, la transcription du p devient l'épellation de la transcription du p.
@@ -536,8 +538,11 @@ Quand un poste capte un son dans l'écran de veille :
     Le moment universel du p devient maintenant en format universel.
     Le relevé vaut le repérage du texte entendu du p.
     Si le relevé ≠ « », le relevé d'indicatifs du p devient le relevé.
-    Remarque : la parole traduite en français si le poste le veut ; le morse, fait d'abréviations, ne se traduit pas.
-    Si la transcription du p est présente et la traduction voulue du poste :
+    Remarque : la parole traduite en français si le poste le veut ; le morse, fait d'abréviations, ne se traduit pas. Une parole
+    Remarque : reconnue française ne part pas chez DeepL (5 novembre 2026) : le quota sert aux autres langues ; indécise, elle part.
+    Le parler vaut « ? ».
+    Si la transcription du p est présente et la langue reconnue de la transcription du p est présente, le parler devient la langue reconnue de la transcription du p.
+    Si la transcription du p est présente et la traduction voulue du poste et le parler ≠ « fr » :
         Traduire la transcription du p, qui donne le texte traduit.
         Si le texte traduit est présent et le texte traduit ≠ la transcription du p, la traduction du p devient le texte traduit.
     Remarque : la durée d'après la taille : un WAV de 16 kHz, mono, 16 bits, 32'000 octets la seconde, après 44 octets d'en-tête.
