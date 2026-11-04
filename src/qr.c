@@ -151,6 +151,23 @@ char *qr_suisse_verifier(const char *texte) {
                 r = grym_dupliquer("QR-facture : une référence QR (QRR) exige un QR-IBAN.");
             else if (strcmp(ref, "QRR") && strcmp(ref, "SCOR") && strcmp(ref, "NON"))
                 r = grym_formater("QR-facture : type de référence « %s » inconnu (QRR, SCOR ou NON).", ref);
+            else if (!strcmp(ref, "NON") && *l[28])
+                r = grym_formater("QR-facture : sans référence (NON), la ligne de la référence reste vide, pas « %s ».", l[28]);
+            else if (!strcmp(ref, "SCOR")) {   /* référence du créancier, ISO 11649 (SIX IG 2.4, § 4.3.3) : RF, deux chiffres, 1 à 21 caractères */
+                const char *f = l[28];
+                size_t lf = strlen(f);
+                int ok = lf >= 5 && lf <= 25 && f[0] == 'R' && f[1] == 'F' && f[2] >= '0' && f[2] <= '9' && f[3] >= '0' && f[3] <= '9';
+                unsigned m = 0;
+                for (size_t q = 0; ok && q < lf; q++) {
+                    const char ch = f[(q + 4) % lf];
+                    if (ch >= '0' && ch <= '9') m = (m * 10 + (unsigned)(ch - '0')) % 97;
+                    else if (ch >= 'A' && ch <= 'Z') m = (m * 100 + (unsigned)(ch - 'A' + 10)) % 97;
+                    else ok = 0;
+                }
+                if (!ok || m != 1)
+                    r = grym_formater("QR-facture : « %s » n'est pas une référence du créancier valable (ISO 11649 : RF, "
+                                      "deux chiffres de contrôle justes, puis 1 à 21 lettres majuscules ou chiffres).", f);
+            }
         }
     }
     if (!r && strcmp(l[19], "CHF") && strcmp(l[19], "EUR"))

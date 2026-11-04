@@ -1465,23 +1465,72 @@ static void pourcent_encoder(Chaine *c, const char *t) {
     }
 }
 
-/* « le champ « a.b.0 » de r » : les objets par leur clé, les tableaux par leur rang (0 le premier). */
-static const Json *json_suivre(const Json *j, const char *chemin) {
+/* « le champ « a.b.0 » de r » : les objets par leur clé, les tableaux par leur rang (0 le premier). Dans un XML (2.84),
+ * un élément seul est aussi son propre rang 0, et un nom dans un élément répété se lit dans le premier. */
+static const Json *json_suivre(const Json *j, const char *chemin, int xml) {
     char *c = grym_dupliquer(chemin);
     const Json *r = j;
     char *reste = c;
     for (char *p = reste; r && p; ) {
         char *point = strchr(p, '.');
         if (point) *point = '\0';
+        char *fin = NULL;
+        long k = strtol(p, &fin, 10);
+        int rang = *p && fin && !*fin && k >= 0;
         if (r->type == JSON_TABLEAU) {
-            char *fin = NULL;
-            long k = strtol(p, &fin, 10);
-            r = (*p && fin && !*fin && k >= 0 && (size_t)k < r->nb) ? r->elements[k] : NULL;
-        } else r = json_champ(r, p);
+            if (rang) r = (size_t)k < r->nb ? r->elements[k] : NULL;
+            else r = xml && r->nb ? json_champ(r->elements[0], p) : NULL;
+        } else if (xml && rang) r = k == 0 ? r : NULL;
+        else r = json_champ(r, p);
         p = point ? point + 1 : NULL;
     }
     free(c);
     return r;
+}
+
+/* Le document que lisent « le champ » et ses listes : la réponse d'un envoi (un texte) ou un fichier ; du JSON, ou du XML
+ * dès son premier caractère « < » (2.84). NULL et *probleme sinon. */
+static Json *document_lu(const Valeur *r, const char *chemin, int *xml, char **probleme) {
+    const char *t = NULL;
+    size_t n = 0;
+    if (r->type == V_TEXTE) { t = r->texte; n = strlen(t); }
+    else if (r->type == V_FICHIER) {
+        char *e = NULL;
+        t = (const char *)octets_du_fichier(r->fichier, &e);
+        if (!t) { *probleme = e ? e : grym_dupliquer("Le fichier ne se lit pas."); return NULL; }
+        free(e);
+        n = r->fichier->taille;
+    } else {
+        *probleme = grym_dupliquer("« le champ « … » de » lit un texte (la réponse d'un envoi) ou un fichier.");
+        return NULL;
+    }
+    char *illisible = NULL;
+    Json *j;
+    *xml = json_est_xml(t, n);
+    if (*xml) {
+        j = json_depuis_xml(t, n, &illisible);
+        if (!j) { *probleme = grym_formater("Ce n'est pas un XML lisible : « %s » ne s'y lit pas. %s", chemin, illisible); free(illisible); }
+        return j;
+    }
+    j = json_lire(t, n, &illisible);
+    if (!j) {
+        free(illisible);
+        *probleme = grym_formater(r->type == V_FICHIER ? "Ce fichier n'est ni du JSON ni du XML : « %s » ne s'y lit pas."
+                                                        : "La réponse n'est pas du JSON : « %s » ne s'y lit pas.", chemin);
+    }
+    return j;
+}
+
+/* Une valeur lue : un texte, absent, ou un objet ou une liste en JSON ; d'un XML, un élément en son XML, un répété par le premier. */
+static Valeur valeur_lue(const Json *x, int xml) {
+    if (xml && x && x->type == JSON_TABLEAU) x = x->nb ? x->elements[0] : NULL;
+    if (!x || x->type == JSON_NUL) return vi_absent(NULL);
+    if (x->type == JSON_TEXTE || x->type == JSON_NOMBRE) return vi_texte_pris(grym_dupliquer(x->texte ? x->texte : ""));
+    if (x->type == JSON_BOOLEEN) return vi_texte_pris(grym_dupliquer(x->vrai ? "vrai" : "faux"));
+    if (xml && x->texte) return vi_texte_pris(grym_dupliquer(x->texte));
+    Chaine c = {0};
+    json_ecrire(&c, x);
+    return vi_texte_pris(chaine_rendre(&c));
 }
 
 /* ---------------------------------------------------------------- */
@@ -5721,37 +5770,25 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, vi_texte_pris(reponse ? reponse : grym_dupliquer("")));
             break;
         }
-        case I_JSON_LISTE: {   /* « Pour chaque rendez-vous du champ « collection » de r », son nombre (2.60) */
+        case I_JSON_LISTE: {   /* « Pour chaque rendez-vous du champ « collection » de r », son nombre (2.60) ; un XML (2.84) */
             Valeur r = depiler(&pile);
             const char *chemin = b->constantes[op].texte;
-            if (r.type != V_TEXTE) {
-                valeur_liberer(&r);
-                ok = echouer(diag, b, debut, grym_dupliquer("« le champ « … » de » lit la réponse d'un envoi, un texte."));
-                break;
-            }
-            char *illisible = NULL;
-            Json *j = json_lire(r.texte, strlen(r.texte), &illisible);
+            int xml = 0;
+            char *probleme = NULL;
+            Json *j = document_lu(&r, chemin, &xml, &probleme);
             valeur_liberer(&r);
-            if (!j) {
-                free(illisible);
-                ok = echouer(diag, b, debut, grym_formater("La réponse n'est pas du JSON : « %s » ne s'y lit pas.", chemin));
-                break;
-            }
-            const Json *x = *chemin ? json_suivre(j, chemin) : j;
-            if (!x || x->type != JSON_TABLEAU) {
+            if (!j) { ok = echouer(diag, b, debut, probleme); break; }
+            const Json *x = *chemin ? json_suivre(j, chemin, xml) : j;
+            if (!x || (x->type != JSON_TABLEAU && !xml)) {
                 json_liberer(j);
-                ok = echouer(diag, b, debut, grym_formater("Le champ « %s » n'est pas une liste.", chemin));
+                ok = echouer(diag, b, debut, grym_formater(xml ? "Aucun élément « %s » dans ce XML." : "Le champ « %s » n'est pas une liste.", chemin));
                 break;
             }
             Valeur e = ensemble_vide();
             Liste *l = e.liste;
-            for (size_t q = 0; q < x->nb; q++) {   /* tels quels, doublons compris : une liste garde chacun de ses éléments */
-                const Json *el = x->elements[q];
-                Valeur v;
-                if (el->type == JSON_NUL) v = vi_absent(NULL);
-                else if (el->type == JSON_TEXTE || el->type == JSON_NOMBRE) v = vi_texte_pris(grym_dupliquer(el->texte ? el->texte : ""));
-                else if (el->type == JSON_BOOLEEN) v = vi_texte_pris(grym_dupliquer(el->vrai ? "vrai" : "faux"));
-                else { Chaine c = {0}; json_ecrire(&c, el); v = vi_texte_pris(chaine_rendre(&c)); }
+            size_t combien = x->type == JSON_TABLEAU ? x->nb : 1;   /* d'un XML, un élément seul est une liste d'un */
+            for (size_t q = 0; q < combien; q++) {   /* tels quels, doublons compris : une liste garde chacun de ses éléments */
+                Valeur v = valeur_lue(x->type == JSON_TABLEAU ? x->elements[q] : x, xml);
                 if (l->n == l->cap) {
                     l->cap = l->cap ? l->cap * 2 : 4;
                     Valeur *t = grym_allouer(l->cap * sizeof *t);
@@ -5765,33 +5802,16 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, e);
             break;
         }
-        case I_CHAMP_JSON: {   /* « le champ « a.b » de r » (2.42) */
+        case I_CHAMP_JSON: {   /* « le champ « a.b » de r » (2.42) ; d'un fichier, d'un XML (2.84) */
             Valeur r = depiler(&pile);
             const char *chemin = b->constantes[op].texte;
             if (r.type == V_ABSENT) { empiler(&pile, r); break; }
-            if (r.type != V_TEXTE) {
-                valeur_liberer(&r);
-                ok = echouer(diag, b, debut, grym_dupliquer("« le champ « … » de » lit la réponse d'un envoi, un texte."));
-                break;
-            }
-            char *illisible = NULL;
-            Json *j = json_lire(r.texte, strlen(r.texte), &illisible);
+            int xml = 0;
+            char *probleme = NULL;
+            Json *j = document_lu(&r, chemin, &xml, &probleme);
             valeur_liberer(&r);
-            if (!j) {
-                free(illisible);
-                ok = echouer(diag, b, debut, grym_formater("La réponse n'est pas du JSON : « %s » ne s'y lit pas.", chemin));
-                break;
-            }
-            const Json *x = json_suivre(j, chemin);
-            Valeur v;
-            if (!x || x->type == JSON_NUL) v = vi_absent(NULL);
-            else if (x->type == JSON_TEXTE || x->type == JSON_NOMBRE) v = vi_texte_pris(grym_dupliquer(x->texte ? x->texte : ""));
-            else if (x->type == JSON_BOOLEEN) v = vi_texte_pris(grym_dupliquer(x->vrai ? "vrai" : "faux"));
-            else {
-                Chaine c = {0};
-                json_ecrire(&c, x);
-                v = vi_texte_pris(chaine_rendre(&c));
-            }
+            if (!j) { ok = echouer(diag, b, debut, probleme); break; }
+            Valeur v = valeur_lue(json_suivre(j, chemin, xml), xml);
             json_liberer(j);
             empiler(&pile, v);
             break;

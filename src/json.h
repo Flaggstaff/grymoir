@@ -36,4 +36,8 @@ void json_ecrire_texte(Chaine *c, const char *texte);
 /* Écrit une valeur lue (pour renvoyer un identifiant de requête tel quel). */
 void json_ecrire(Chaine *c, const Json *j);
 
+/* XML lu comme JSON (grammaire 2.84) : l'élément racine devient le document ; un objet garde sa source XML dans texte. */
+int json_est_xml(const char *texte, size_t taille);
+Json *json_depuis_xml(const char *texte, size_t taille, char **erreur);
+
 #endif

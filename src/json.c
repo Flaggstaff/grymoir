@@ -273,3 +273,323 @@ void json_ecrire(Chaine *c, const Json *j) {
         return;
     }
 }
+
+/* ---------------------------------------------------------------- */
+/* XML lu comme JSON (grammaire 2.84, § 22.18) : pour « le champ »  */
+/* ---------------------------------------------------------------- */
+/* Un élément qui a des éléments enfants devient un objet, ses enfants rangés par leur nom local (sans préfixe d'espace de
+ * noms) ; un enfant répété devient un tableau, dans l'ordre. Un élément sans enfant devient un texte, débarrassé des blancs
+ * à ses bords. Les attributs d'un objet sont ses clés « @nom » ; ceux d'un texte, des clés « élément@nom » de son parent.
+ * Les « xmlns » sont ignorés. Le texte d'un objet garde sa source (son XML tel qu'écrit), pour qu'un élément parcouru ou lu
+ * se relise lui-même : la racine du document devient le document, son nom ne s'écrit donc pas dans les chemins. */
+
+typedef struct {
+    const char *p, *fin, *debut;
+    int profondeur;
+    char *erreur;
+} LectureXml;
+
+static void *xml_echec(LectureXml *l, const char *m) {
+    if (!l->erreur) {
+        int ligne = 1;
+        for (const char *q = l->debut; q < l->p && q < l->fin; q++) ligne += *q == '\n';
+        l->erreur = grym_formater("XML mal formé, ligne %d : %s.", ligne, m);
+    }
+    return NULL;
+}
+
+static int xml_blanc(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\r'; }
+
+static int xml_nom_car(char c) {
+    return (unsigned char)c >= 0x80 || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+           || c == '_' || c == '-' || c == '.' || c == ':';
+}
+
+static int xml_commence(LectureXml *l, const char *m) {
+    size_t n = strlen(m);
+    return (size_t)(l->fin - l->p) >= n && memcmp(l->p, m, n) == 0;
+}
+
+/* Saute jusqu'après « m » ; 0 s'il manque. */
+static int xml_sauter(LectureXml *l, const char *m) {
+    size_t n = strlen(m);
+    while ((size_t)(l->fin - l->p) >= n) {
+        if (memcmp(l->p, m, n) == 0) { l->p += n; return 1; }
+        l->p++;
+    }
+    l->p = l->fin;
+    return 0;
+}
+
+/* Commentaires, instructions de traitement et déclarations ; 0 si rien de tel, -1 si mal fermé. */
+static int xml_annexe(LectureXml *l) {
+    if (xml_commence(l, "<!--")) return xml_sauter(l, "-->") ? 1 : -1;
+    if (xml_commence(l, "<?")) return xml_sauter(l, "?>") ? 1 : -1;
+    if (xml_commence(l, "<!DOCTYPE") || xml_commence(l, "<!doctype")) {
+        int crochets = 0;
+        while (l->p < l->fin) {
+            char c = *l->p++;
+            if (c == '[') crochets++;
+            else if (c == ']') crochets--;
+            else if (c == '>' && crochets <= 0) return 1;
+        }
+        return -1;
+    }
+    return 0;
+}
+
+static char *xml_nom(LectureXml *l) {
+    const char *d = l->p;
+    while (l->p < l->fin && xml_nom_car(*l->p)) l->p++;
+    if (l->p == d) return NULL;
+    const char *local = d;
+    for (const char *q = d; q < l->p; q++) if (*q == ':') local = q + 1;
+    return grym_formater("%.*s", (int)(l->p - local), local);
+}
+
+/* Le texte de [d, f), entités et références de caractère résolues. */
+static void xml_decoder(Chaine *c, const char *d, const char *f) {
+    while (d < f) {
+        if (*d != '&') {
+            const char *e = d;
+            while (e < f && *e != '&') e++;
+            char *m = grym_formater("%.*s", (int)(e - d), d);
+            chaine_ajouter(c, m);
+            free(m);
+            d = e;
+            continue;
+        }
+        const char *pv = d;
+        while (pv < f && *pv != ';' && pv - d < 12) pv++;
+        if (pv >= f || *pv != ';') { chaine_ajouter(c, "&"); d++; continue; }
+        size_t n = (size_t)(pv - d - 1);
+        const char *e = d + 1;
+        static const struct { const char *nom, *car; } ENT[] = {
+            { "amp", "&" }, { "lt", "<" }, { "gt", ">" }, { "quot", "\"" }, { "apos", "'" }
+        };
+        int fait = 0;
+        for (size_t k = 0; k < 5 && !fait; k++)
+            if (strlen(ENT[k].nom) == n && memcmp(e, ENT[k].nom, n) == 0) { chaine_ajouter(c, ENT[k].car); fait = 1; }
+        if (!fait && n >= 2 && *e == '#') {
+            unsigned long cp = (e[1] == 'x' || e[1] == 'X') ? strtoul(e + 2, NULL, 16) : strtoul(e + 1, NULL, 10);
+            if (cp == 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) cp = 0xFFFD;
+            utf8(c, (unsigned)cp);
+            fait = 1;
+        }
+        if (!fait) { char *m = grym_formater("%.*s", (int)(pv - d + 1), d); chaine_ajouter(c, m); free(m); }
+        d = pv + 1;
+    }
+}
+
+static void xml_ranger(Json *o, char *cle, Json *v, size_t *cap) {
+    for (size_t k = 0; k < o->nb; k++) {
+        if (strcmp(o->cles[k], cle) != 0) continue;
+        Json *x = o->elements[k];
+        if (x->type != JSON_TABLEAU) {   /* un second enfant du même nom : le premier et lui forment un tableau */
+            Json *t = nouveau(JSON_TABLEAU);
+            t->elements = grym_allouer(2 * sizeof *t->elements);
+            t->elements[0] = x;
+            t->nb = 1;
+            o->elements[k] = x = t;
+        } else {
+            Json **e = grym_allouer((x->nb + 1) * sizeof *e);
+            memcpy(e, x->elements, x->nb * sizeof *e);
+            free(x->elements);
+            x->elements = e;
+        }
+        x->elements[x->nb++] = v;
+        free(cle);
+        return;
+    }
+    if (o->nb == *cap) {
+        *cap = *cap ? *cap * 2 : 8;
+        Json **e = grym_allouer(*cap * sizeof *e);
+        char **k = grym_allouer(*cap * sizeof *k);
+        if (o->nb) { memcpy(e, o->elements, o->nb * sizeof *e); memcpy(k, o->cles, o->nb * sizeof *k); }
+        free(o->elements);
+        free(o->cles);
+        o->elements = e;
+        o->cles = k;
+    }
+    o->cles[o->nb] = cle;
+    o->elements[o->nb++] = v;
+}
+
+typedef struct { char *nom; char *valeur; } AttributXml;
+
+/* Un élément, « < » compris ; *nom reçoit son nom local, *attributs ses attributs (hors xmlns). */
+static Json *xml_element(LectureXml *l, char **nom, AttributXml **attributs, size_t *nb_attributs) {
+    if (++l->profondeur > PROFONDEUR_MAX) return xml_echec(l, "imbrication trop profonde");
+    const char *source = l->p;
+    l->p++;
+    *nom = xml_nom(l);
+    if (!*nom) return xml_echec(l, "nom d'élément attendu après « < »");
+    *attributs = NULL;
+    *nb_attributs = 0;
+    for (;;) {
+        while (l->p < l->fin && xml_blanc(*l->p)) l->p++;
+        if (l->p >= l->fin) return xml_echec(l, "élément non fermé");
+        if (*l->p == '/' || *l->p == '>') break;
+        const char *debut_nom = l->p;
+        char *an = xml_nom(l);
+        if (!an) return xml_echec(l, "nom d'attribut attendu");
+        int xmlns = (l->p - debut_nom == 5 && memcmp(debut_nom, "xmlns", 5) == 0)
+                    || (l->p - debut_nom > 6 && memcmp(debut_nom, "xmlns:", 6) == 0);
+        while (l->p < l->fin && xml_blanc(*l->p)) l->p++;
+        if (l->p >= l->fin || *l->p != '=') { free(an); return xml_echec(l, "« = » attendu après un attribut"); }
+        l->p++;
+        while (l->p < l->fin && xml_blanc(*l->p)) l->p++;
+        if (l->p >= l->fin || (*l->p != '"' && *l->p != '\'')) { free(an); return xml_echec(l, "valeur d'attribut entre guillemets attendue"); }
+        char q = *l->p++;
+        const char *d = l->p;
+        while (l->p < l->fin && *l->p != q) l->p++;
+        if (l->p >= l->fin) { free(an); return xml_echec(l, "valeur d'attribut non fermée"); }
+        Chaine v = {0};
+        chaine_ajouter(&v, "");
+        xml_decoder(&v, d, l->p);
+        l->p++;
+        if (xmlns) { free(an); free(chaine_rendre(&v)); continue; }
+        AttributXml *t = grym_allouer((*nb_attributs + 1) * sizeof *t);
+        if (*nb_attributs) memcpy(t, *attributs, *nb_attributs * sizeof *t);
+        free(*attributs);
+        *attributs = t;
+        t[*nb_attributs].nom = an;
+        t[(*nb_attributs)++].valeur = chaine_rendre(&v);
+    }
+    Json *objet = NULL;
+    size_t cap = 0;
+    Chaine texte = {0};
+    chaine_ajouter(&texte, "");
+    if (*l->p == '/') {
+        l->p++;
+        if (l->p >= l->fin || *l->p != '>') { free(chaine_rendre(&texte)); return xml_echec(l, "« > » attendu après « / »"); }
+        l->p++;
+    } else {
+        l->p++;
+        for (;;) {
+            const char *d = l->p;
+            while (l->p < l->fin && *l->p != '<') l->p++;
+            if (!objet) xml_decoder(&texte, d, l->p);
+            if (l->p >= l->fin) { free(chaine_rendre(&texte)); json_liberer(objet); return xml_echec(l, "élément non fermé"); }
+            if (xml_commence(l, "<![CDATA[")) {
+                l->p += 9;
+                const char *c0 = l->p;
+                if (!xml_sauter(l, "]]>")) { free(chaine_rendre(&texte)); json_liberer(objet); return xml_echec(l, "CDATA non fermé"); }
+                if (!objet) { char *m = grym_formater("%.*s", (int)(l->p - 3 - c0), c0); chaine_ajouter(&texte, m); free(m); }
+                continue;
+            }
+            int a = xml_annexe(l);
+            if (a < 0) { free(chaine_rendre(&texte)); json_liberer(objet); return xml_echec(l, "commentaire non fermé"); }
+            if (a > 0) continue;
+            if (xml_commence(l, "</")) {
+                l->p += 2;
+                char *fin_nom = xml_nom(l);
+                int pareil = fin_nom && strcmp(fin_nom, *nom) == 0;
+                free(fin_nom);
+                while (l->p < l->fin && xml_blanc(*l->p)) l->p++;
+                if (!pareil || l->p >= l->fin || *l->p != '>') {
+                    free(chaine_rendre(&texte)); json_liberer(objet);
+                    return xml_echec(l, "la balise fermante ne répond pas à l'élément ouvert");
+                }
+                l->p++;
+                break;
+            }
+            char *enfant_nom = NULL;
+            AttributXml *ea = NULL;
+            size_t nea = 0;
+            Json *enfant = xml_element(l, &enfant_nom, &ea, &nea);
+            if (!enfant) {
+                free(enfant_nom);
+                for (size_t k = 0; k < nea; k++) { free(ea[k].nom); free(ea[k].valeur); }
+                free(ea);
+                free(chaine_rendre(&texte)); json_liberer(objet);
+                return NULL;
+            }
+            if (!objet) objet = nouveau(JSON_OBJET);
+            if (enfant->type == JSON_TEXTE) {   /* les attributs d'un texte : « élément@nom » chez le parent */
+                for (size_t k = 0; k < nea; k++) {
+                    char *cle = grym_formater("%s@%s", enfant_nom, ea[k].nom);
+                    if (json_champ(objet, cle)) { free(cle); free(ea[k].valeur); }
+                    else { Json *v = nouveau(JSON_TEXTE); v->texte = ea[k].valeur; xml_ranger(objet, cle, v, &cap); }
+                    free(ea[k].nom);
+                }
+            } else {
+                for (size_t k = 0; k < nea; k++) { free(ea[k].nom); free(ea[k].valeur); }
+            }
+            free(ea);
+            xml_ranger(objet, enfant_nom, enfant, &cap);
+        }
+    }
+    l->profondeur--;
+    if (objet) {
+        free(chaine_rendre(&texte));
+        for (size_t k = 0; k < *nb_attributs; k++) {   /* les attributs d'un objet : ses clés « @nom » */
+            Json *v = nouveau(JSON_TEXTE);
+            v->texte = (*attributs)[k].valeur;
+            (*attributs)[k].valeur = NULL;
+            xml_ranger(objet, grym_formater("@%s", (*attributs)[k].nom), v, &cap);
+        }
+        objet->texte = grym_formater("%.*s", (int)(l->p - source), source);
+        return objet;
+    }
+    char *t = chaine_rendre(&texte);
+    char *d = t, *f = t + strlen(t);
+    while (*d && xml_blanc(*d)) d++;
+    while (f > d && xml_blanc(f[-1])) f--;
+    Json *j = nouveau(JSON_TEXTE);
+    j->texte = grym_formater("%.*s", (int)(f - d), d);
+    free(t);
+    /* Un élément vide qui n'a que des attributs (« <Pt Cd="X"/> ») : un objet de ses attributs. */
+    if (*nb_attributs && !*j->texte) {
+        json_liberer(j);
+        Json *o = nouveau(JSON_OBJET);
+        for (size_t k = 0; k < *nb_attributs; k++) {
+            Json *v = nouveau(JSON_TEXTE);
+            v->texte = (*attributs)[k].valeur;
+            (*attributs)[k].valeur = NULL;
+            xml_ranger(o, grym_formater("@%s", (*attributs)[k].nom), v, &cap);
+        }
+        o->texte = grym_formater("%.*s", (int)(l->p - source), source);
+        return o;
+    }
+    return j;
+}
+
+int json_est_xml(const char *t, size_t n) {
+    size_t k = 0;
+    if (n >= 3 && (unsigned char)t[0] == 0xEF && (unsigned char)t[1] == 0xBB && (unsigned char)t[2] == 0xBF) k = 3;
+    while (k < n && xml_blanc(t[k])) k++;
+    return k < n && t[k] == '<';
+}
+
+Json *json_depuis_xml(const char *texte, size_t taille, char **erreur) {
+    LectureXml l = { texte, texte + taille, texte, 0, NULL };
+    if (taille >= 3 && (unsigned char)texte[0] == 0xEF && (unsigned char)texte[1] == 0xBB && (unsigned char)texte[2] == 0xBF) l.p += 3;
+    Json *j = NULL;
+    for (;;) {
+        while (l.p < l.fin && xml_blanc(*l.p)) l.p++;
+        if (l.p >= l.fin) { xml_echec(&l, "aucun élément"); break; }
+        if (*l.p != '<') { xml_echec(&l, "« < » attendu"); break; }
+        int a = xml_annexe(&l);
+        if (a < 0) { xml_echec(&l, "déclaration non fermée"); break; }
+        if (a > 0) continue;
+        char *nom = NULL;
+        AttributXml *at = NULL;
+        size_t nat = 0;
+        j = xml_element(&l, &nom, &at, &nat);
+        free(nom);
+        for (size_t k = 0; k < nat; k++) { free(at[k].nom); free(at[k].valeur); }
+        free(at);
+        break;
+    }
+    if (j) {
+        for (;;) {
+            while (l.p < l.fin && xml_blanc(*l.p)) l.p++;
+            if (l.p >= l.fin) break;
+            int a = xml_annexe(&l);
+            if (a <= 0) { json_liberer(j); j = xml_echec(&l, "contenu après l'élément racine"); break; }
+        }
+    }
+    if (!j) *erreur = l.erreur ? l.erreur : grym_dupliquer("XML mal formé.");
+    return j;
+}
