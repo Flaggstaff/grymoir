@@ -4667,6 +4667,15 @@ int main(void) {
          "Amorcer la transcription avec « HB9 », en toute langue.\nAfficher « ok ».",
          "fr\nen\nde\nvrai\nit\nok");
     PROG("Afficher la langue reconnue de 3.", "~« la langue reconnue de » attend un texte.");
+    /* 2.87 : le journal signé : la ligne écrite après « Signer le journal avec », jusqu'à « avec absent » ; dans un calcul, refusé */
+    PROG("Un patient, conservé, journalisé, a :\n    un nom (texte), unique,\n    un téléphone (texte), facultatif.\n"
+         "Le p vaut un nouveau patient :\n    Le nom vaut « Anne ».\nConserver le p.\n"
+         "Signer le journal avec « Équipe ».\nLe téléphone du p devient « 079 ».\n"
+         "Signer le journal avec absent.\nLe téléphone du p devient « 078 ».\n"
+         "Afficher l'historique du p contient « (Équipe) · téléphone : (vide) → 079 ».\n"
+         "Afficher l'historique du p contient « (Équipe) · téléphone : 079 → 078 » puis l'historique du p contient « (Équipe) · créé ».",
+         "vrai\nfaux faux");
+    PROG("Le s d'un x :\n    Signer le journal avec x.\n    Rendre x.", "~Un calcul ne signe rien");
     PROG("Le q vaut le code QR suisse de « SPC ».", "~QR-facture : 1 ligne au lieu de 31 au moins");
     /* « Sauvegarder la base dans … » (2.29) : sans base, refusé ; deux copies, la seconde « (2) » ; pas dans un calcul */
     PROG("Sauvegarder la base dans « _essai_copie.grymd ».", "~Ce programme n'a pas de base : il ne conserve aucune entité.");

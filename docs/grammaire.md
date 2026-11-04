@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.86 de la spécification, révisée le 5 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.87 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1683,7 +1683,7 @@ Afficher l'historique de la base.
 - **Dans la transaction.** Une ligne du journal part avec ce qu'elle décrit : une exécution qui échoue n'en laisse aucune, un `Essayer` rattrapé efface celles de son bloc. La table naît au premier changement ; une base sans entité journalisée ne la reçoit jamais.
 - **`l'historique de x`** : le journal de l'objet x, en texte, une ligne par changement, le plus récent d'abord, 200 au plus : « 05.11.2026 09:14 · téléphone : 079 123 45 67 → 078 000 00 00 », « … · genres : + Jazz », « … · créé ». L'heure est locale ; une valeur absente s'écrit « (vide) », une valeur longue est coupée après 80 caractères (le journal la garde entière). x absent : absent. Une entité qui n'est pas journalisée : « Un genre n'a pas d'historique : écris « , journalisé, » dans la déclaration de son entité. »
 - **`l'historique de la base`** : les 500 derniers changements de toutes les entités journalisées, chacun avec son entité et son objet : « 05.11.2026 09:14 · patient « Anne Rochat » · téléphone : … ».
-- Le journal dit quoi et quand, pas qui : GrymoiR ne connaît pas l'utilisateur d'un programme.
+- *(2.87)* **`Signer le journal avec t.`** : les lignes suivantes du journal portent l'auteur t (un texte), jusqu'à la prochaine signature ou la fin de l'exécution ; `Signer le journal avec absent.` les laisse sans auteur. L'historique le montre après l'heure : « 05.11.2026 09:14 (Direction) · téléphone : … ». GrymoiR ne connaît pas l'utilisateur d'un programme : c'est le programme qui dit qui travaille (un mot de passe de rôle, un choix d'utilisateur). Un journal né en 2.85 reçoit la colonne de l'auteur à sa première ligne signée ou non ; ses lignes d'avant restent sans auteur. Pas dans un calcul : « Un calcul ne signe rien : signe le journal dans une action. » Forme compacte : `_signer_journal t`.
 - Pas dans un calcul : « Un calcul ne lit pas l'historique : lis-le dans une action ou un écran. » Forme compacte : `_classe _un patient _conservé _journalisé`, `_historique x`, `_historique_base`.
 
 ## 17. Questions à l'utilisateur *(v1.0)*
@@ -2671,3 +2671,4 @@ Pour chaque port parmi les ports série, afficher port.
 | 2.84 | 2026-11-04 | § 22.18 : `le champ « … »` et ses listes lisent un fichier et du XML (racine omise, préfixes ignorés, `élément@attribut`, un élément seul comme une liste d'un) ; § 22.16 : la référence du créancier (SCOR, ISO 11649) vérifiée dans un code QR suisse, et la ligne de référence vide avec NON |
 | 2.85 | 2026-11-05 | § 15.6 bis : `Vérifier la sauvegarde f [avec le mot de passe m].` et `la dernière sauvegarde de « p »` ; § 16.19 : l'entité journalisée (`, journalisé,`), `l'historique de x` et `l'historique de la base` |
 | 2.86 | 2026-11-05 | § 15.8 : `Amorcer la transcription avec t, en toute langue.` (la langue parlée reconnue par Whisper) et `la langue reconnue de t` (sept langues, par les mots outils) |
+| 2.87 | 2026-11-06 | § 16.19 : `Signer le journal avec t.`, l'auteur des lignes du journal ; l'historique le montre |

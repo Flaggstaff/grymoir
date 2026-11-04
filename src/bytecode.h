@@ -154,10 +154,11 @@ typedef enum {
     I_DERNIERE_SAUVEGARDE, /* remplace un préfixe par le chemin de sa copie datée la plus récente, ou absent (2.85) */
     I_HISTORIQUE,       /* opérande 0 : remplace un objet par son historique ; 1 : empile celui de la base ; un texte (2.85) */
     I_AMORCER_LANGUES,  /* comme I_AMORCER, la langue parlée reconnue au lieu du français (2.86) */
-    I_LANGUE            /* remplace un texte par le code de sa langue reconnue (« fr », « en »…), ou absent (2.86) */
+    I_LANGUE,           /* remplace un texte par le code de sa langue reconnue (« fr », « en »…), ou absent (2.86) */
+    I_SIGNER            /* dépile un texte (ou absent) : l'auteur des lignes suivantes du journal (2.87) */
 } CodeInstruction;
 
-#define I_DERNIER I_LANGUE
+#define I_DERNIER I_SIGNER
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

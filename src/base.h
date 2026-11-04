@@ -140,9 +140,10 @@ int base_verifier_copie(const unsigned char *o, size_t n, char **erreur);
 int base_est_supprime(Base *b, long id);
 
 /* Le journal des changements des entités journalisées (2.85) : une ligne, dans la transaction ; les lignes d'un objet ou de
- * toute la base, les plus récentes d'abord (six textes chacune : moment UTC, entité, désignation, champ, avant, après). */
+ * toute la base, les plus récentes d'abord (sept textes chacune : moment UTC, entité, désignation, champ, avant, après,
+ * auteur, 2.87). */
 int base_journaliser(Base *b, const char *entite, long objet, const char *designation, const char *champ, const char *avant,
-                     const char *apres, char **erreur);
+                     const char *apres, const char *auteur, char **erreur);
 int base_journal(Base *b, const char *entite, long objet, size_t max, char ****lignes, size_t *n, char **erreur);
 
 #endif

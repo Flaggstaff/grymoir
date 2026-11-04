@@ -2334,6 +2334,17 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 debut = k + 1;
             }
             point(r, f);
+        } else if (!strcmp(c, "signer_journal")) {   /* _signer_journal t → Signer le journal avec t. (2.87) */
+            if (d + 1 >= f) {
+                echouer(r, t, grym_dupliquer("« _signer_journal » attend un texte : « _signer_journal « … » »."));
+                return;
+            }
+            mot(r, "signer", t);
+            mot(r, "le", t);
+            mot(r, "journal", t);
+            mot(r, "avec", t);
+            expression(r, d + 1, f);
+            point(r, f);
         } else if (!strcmp(c, "amorcer")) {   /* _amorcer t → Amorcer la transcription avec t. (2.80) */
             if (d + 1 >= f) {
                 echouer(r, t, grym_dupliquer("« _amorcer » attend un texte : « _amorcer « … » »."));

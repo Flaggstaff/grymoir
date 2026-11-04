@@ -379,6 +379,11 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
     case P_STYLE:
         chaine_ajouter(c, n->entier == 0 ? "(style suisse)" : n->entier == 1 ? "(style française)" : "(style sans)");
         return;
+    case P_SIGNER:   /* (signer t) (2.87) */
+        chaine_ajouter(c, "(signer ");
+        decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
     case P_AMORCER:   /* (amorcer t) (2.80) */
         chaine_ajouter(c, n->forme ? "(amorcer-toute-langue " : "(amorcer ");
         decrire(n->enfants[0], c);

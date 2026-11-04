@@ -236,6 +236,7 @@ struct Machine {
                                   touche ni à la transaction, ni aux écrans, ni aux essais, ni au ramasse-miettes */
     int absent_permis;         /* la source d'une image calculée (§ 22.8) : un champ d'un objet absent vaut absent */
     Base *base;             /* ouverte au premier besoin */
+    char *signature;        /* « Signer le journal avec t. » (2.87) : l'auteur des lignes du journal, ou NULL */
     int base_engagee;       /* dernière exécution : une base était en jeu (message d'annulation, § 3.3) */
     int fichiers_prevus;    /* dernière exécution : des fichiers devaient être écrits */
     int style;              /* affichage des nombres : 0 suisse, 1 française, 2 sans séparateur (§ 4.1) */
@@ -396,6 +397,8 @@ void machine_interface(Machine *m, const Interface *i) {
 void machine_essai_migration(Machine *m, Chaine *rapport) { m->essai_migration = rapport; }
 
 void machine_base(Machine *m, const char *chemin) {
+    free(m->signature);
+    m->signature = NULL;
     free(m->chemin_base);
     m->chemin_base = chemin ? grym_dupliquer(chemin) : NULL;
 }
@@ -496,6 +499,7 @@ void machine_detruire(Machine *m) {
     free(m->signal);
     free(m->carte_cles);
     free(m->carte_objets);
+    free(m->signature);
     free(m->chemin_base);
     free(m->dossier);
     free(m->dossier_ecriture);
@@ -1794,7 +1798,7 @@ static int journal_actif(const Machine *m, const Objet *o) {
 static void journaliser(Machine *m, Objet *o, const char *champ, const char *avant, const char *apres, char **probleme) {
     if (!journal_actif(m, o) || *probleme) return;
     char *qui = designation_journal(m, o);
-    base_journaliser(m->base, o->classe->nom, o->id, qui, champ, avant, apres, probleme);
+    base_journaliser(m->base, o->classe->nom, o->id, qui, champ, avant, apres, m->signature, probleme);
     free(qui);
 }
 
@@ -5351,6 +5355,11 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                         if (q) chaine_ajouter(&c, "\n");
                         chaine_ajouter(&c, quand);
                         free(quand);
+                        if (l[q][6]) {   /* signé (2.87) : « 05.11.2026 09:14 (Direction) » */
+                            chaine_ajouter(&c, " (");
+                            chaine_ajouter(&c, l[q][6]);
+                            chaine_ajouter(&c, ")");
+                        }
                         if (op) {   /* toute la base : l'entité et l'objet */
                             chaine_ajouter(&c, " · ");
                             chaine_ajouter(&c, l[q][1] ? l[q][1] : "");
@@ -5372,7 +5381,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                             chaine_ajouter(&c, " → ");
                             valeur_historique(&c, l[q][5]);
                         } else chaine_ajouter(&c, l[q][5] ? l[q][5] : "");
-                        for (int k = 0; k < 6; k++) free(l[q][k]);
+                        for (int k = 0; k < 7; k++) free(l[q][k]);
                         free(l[q]);
                     }
                     free(l);
@@ -7203,6 +7212,15 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             if (m->iface.amorcer) m->iface.amorcer(m->iface.contexte, t && *t ? t : NULL);
             free(t);
+            break;
+        }
+        case I_SIGNER: {   /* « Signer le journal avec t. » (2.87) : absent ou vide, plus de signature */
+            Valeur v = depiler(&pile);
+            char *t = v.type == V_ABSENT ? NULL : texte_valeur(m, &v);
+            valeur_liberer(&v);
+            free(m->signature);
+            m->signature = t && *t ? t : NULL;
+            if (!m->signature) free(t);
             break;
         }
         case I_LANGUE: {   /* « la langue reconnue de t » (2.86) */

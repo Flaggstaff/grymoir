@@ -3654,25 +3654,37 @@ char *base_copie_avant_mise_a_jour(Base *b, char **erreur) {
 
 /* Une ligne au journal, dans la transaction en cours : elle part avec elle si l'exécution échoue. La table naît au premier
  * changement d'une entité journalisée ; une base qui n'en a pas ne la reçoit jamais. */
+/* La colonne auteur (2.87) manque à un journal né en 2.85 : elle s'ajoute, vide pour les lignes d'avant. */
+static int journal_a_auteur(Base *b) {
+    sqlite3_stmt *st = NULL;
+    int oui = 0;
+    if (preparer(b, "SELECT count(*) FROM pragma_table_info('grym_journal') WHERE name = 'auteur'", &st) == SQLITE_OK
+        && sqlite3_step(st) == SQLITE_ROW) oui = sqlite3_column_int(st, 0) > 0;
+    rendre(b, st);
+    return oui;
+}
+
 int base_journaliser(Base *b, const char *entite, long objet, const char *designation, const char *champ, const char *avant,
-                     const char *apres, char **erreur) {
+                     const char *apres, const char *auteur, char **erreur) {
     if (!b->journal_pret) {
         if (!executer(b, "CREATE TABLE IF NOT EXISTS grym_journal (id INTEGER PRIMARY KEY AUTOINCREMENT, moment TEXT NOT NULL, "
-                         "entite TEXT NOT NULL, objet INTEGER NOT NULL, designation TEXT, champ TEXT, avant TEXT, apres TEXT);"
+                         "entite TEXT NOT NULL, objet INTEGER NOT NULL, designation TEXT, champ TEXT, avant TEXT, apres TEXT, "
+                         "auteur TEXT);"
                          "CREATE INDEX IF NOT EXISTS grym_journal_objet ON grym_journal (entite, objet);", erreur))
             return 0;
+        if (!journal_a_auteur(b) && !executer(b, "ALTER TABLE grym_journal ADD COLUMN auteur TEXT;", erreur)) return 0;
         b->journal_pret = 1;
     }
     sqlite3_stmt *st = NULL;
-    if (preparer(b, "INSERT INTO grym_journal (moment, entite, objet, designation, champ, avant, apres) "
-                    "VALUES (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), ?, ?, ?, ?, ?, ?)", &st) != SQLITE_OK) {
+    if (preparer(b, "INSERT INTO grym_journal (moment, entite, objet, designation, champ, avant, apres, auteur) "
+                    "VALUES (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), ?, ?, ?, ?, ?, ?, ?)", &st) != SQLITE_OK) {
         *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
         return 0;
     }
     sqlite3_bind_text(st, 1, entite, -1, SQLITE_TRANSIENT);
     sqlite3_bind_int64(st, 2, (sqlite3_int64)objet);
-    const char *t[4] = { designation, champ, avant, apres };
-    for (int k = 0; k < 4; k++) {
+    const char *t[5] = { designation, champ, avant, apres, auteur };
+    for (int k = 0; k < 5; k++) {
         if (t[k]) sqlite3_bind_text(st, 3 + k, t[k], -1, SQLITE_TRANSIENT);
         else sqlite3_bind_null(st, 3 + k);
     }
@@ -3695,10 +3707,14 @@ int base_journal(Base *b, const char *entite, long objet, size_t max, char ****l
     rendre(b, st);
     if (!present) return 1;
     st = NULL;
+    const int auteur = journal_a_auteur(b);   /* un journal de 2.85, pas encore écrit depuis : sans la colonne */
     const char *sql = entite
-        ? "SELECT moment, entite, designation, champ, avant, apres FROM grym_journal WHERE entite = ? AND objet = ? "
-          "ORDER BY id DESC LIMIT ?"
-        : "SELECT moment, entite, designation, champ, avant, apres FROM grym_journal ORDER BY id DESC LIMIT ?";
+        ? (auteur ? "SELECT moment, entite, designation, champ, avant, apres, auteur FROM grym_journal WHERE entite = ? AND objet = ? "
+                    "ORDER BY id DESC LIMIT ?"
+                  : "SELECT moment, entite, designation, champ, avant, apres, NULL FROM grym_journal WHERE entite = ? AND objet = ? "
+                    "ORDER BY id DESC LIMIT ?")
+        : (auteur ? "SELECT moment, entite, designation, champ, avant, apres, auteur FROM grym_journal ORDER BY id DESC LIMIT ?"
+                  : "SELECT moment, entite, designation, champ, avant, apres, NULL FROM grym_journal ORDER BY id DESC LIMIT ?");
     if (preparer(b, sql, &st) != SQLITE_OK) {
         *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
         return 0;
@@ -3714,8 +3730,8 @@ int base_journal(Base *b, const char *entite, long objet, size_t max, char ****l
         if (*n) memcpy(t, *lignes, *n * sizeof *t);
         free(*lignes);
         *lignes = t;
-        char **l = grym_allouer(6 * sizeof *l);
-        for (int k = 0; k < 6; k++) {
+        char **l = grym_allouer(7 * sizeof *l);
+        for (int k = 0; k < 7; k++) {
             const unsigned char *x = sqlite3_column_text(st, k);
             l[k] = x ? grym_dupliquer((const char *)x) : NULL;
         }

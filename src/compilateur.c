@@ -1032,6 +1032,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */
         emettre(c, I_STYLE, ph->entier, ph->ligne, ph->colonne);
         return;
+    case P_SIGNER:   /* « Signer le journal avec t. » (2.87) */
+        expression(c, ph->enfants[0]);
+        emettre(c, I_SIGNER, 0, ph->ligne, ph->colonne);
+        return;
     case P_AMORCER:   /* « Amorcer la transcription avec t. » (2.80) */
         expression(c, ph->enfants[0]);
         emettre(c, ph->forme ? I_AMORCER_LANGUES : I_AMORCER, 0, ph->ligne, ph->colonne);
