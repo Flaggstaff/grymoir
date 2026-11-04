@@ -18,7 +18,7 @@ ligne() { echo "$sortie" | sed -n "$1p"; }
 verifier "$(ligne 28)" "SCOR" "la QR-facture porte une référence du créancier"
 verifier "$(ligne 29)" "RF12F20260001" "la référence RF de F-2026-0001, celle aussi de son rappel (ISO 11649, contrôle 12)"
 verifier "$(ligne 30)" "Rappel F-2026-0001" "le motif reste écrit pour le payeur"
-verifier "$(ligne 32)" "4" "quatre crédits : le débit ignoré, l'avis relu n'ajoute rien"
+verifier "$(ligne 32)" "4" "quatre crédits : le débit et l'écriture en attente (PDNG) ignorés, l'avis relu n'ajoute rien"
 verifier "$(ligne 33)" "BQ-002/1|03.11.2026|200,00|rapproché||" "une écriture groupée : le premier virement, par le numéro du message (« Rappel F-2026-0002, merci »)"
 verifier "$(ligne 34)" "BQ-002/2|03.11.2026|50,00|à vérifier|CHF 50,00 reçus ; la facture F-2026-0003 attend CHF 80,00.|Bernard Dupuis" "un acompte reste à vérifier, avec sa raison et son payeur"
 verifier "$(ligne 35)" "BQ-004/1|03.11.2026|35,00|à vérifier|Aucune facture ne porte cette référence ni ce numéro : choisis-la, ou écarte ce virement.|" "sans détail, sa date de valeur ; rien à rapprocher"

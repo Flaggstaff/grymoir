@@ -72,5 +72,16 @@ La base retrouve exactement son état d'avant la visite.
   Configuration, Sauvegardes.
 - **Historique** sur la page d'un patient : chaque changement de sa fiche depuis cette version, avec l'avant et l'après.
   **Journal** dans la Configuration (Direction) : les 500 derniers changements des patients et des séances. Le journal dit
-  quoi et quand, pas qui. Les changements d'avant la mise à jour n'y sont pas.
+  quoi et quand ; depuis la version 2026.11.06, aussi qui (Direction ou Équipe) quand la page de garde est en service. Les
+  changements d'avant la mise à jour n'y sont pas.
 - La mise à jour ne change pas la structure de la base : aucune migration (vérifié avec `grym migration`).
+
+## Version 2026.11.06 : ce qui change chez le cabinet
+
+- Les **factures**, les **factures tiers payant** et les **virements reçus** entrent aussi dans le journal.
+- Le journal est **signé** Direction ou Équipe quand la page de garde est en service (gestion du personnel et mot de passe de
+  la Direction) ; sinon, il reste sans auteur.
+- **Virements reçus** : une écriture en attente (« PDNG ») n'est plus lue, la facture n'est soldée que sur de l'argent
+  comptabilisé ; le montant, le payeur et le message se cherchent aussi aux places où certaines banques les mettent
+  (`AmtDtls.InstdAmt`, `UltmtDbtr`, `AddtlTxInf`, `AddtlNtryInf`).
+- Aucune migration de la base (vérifié avec `grym migration` sur une base de la version 2026.11.05).

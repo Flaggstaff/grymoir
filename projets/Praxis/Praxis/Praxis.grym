@@ -161,7 +161,7 @@ Remarque : les couleurs et la police du site de Nicolas Seydoux, à l'encre (pou
 Remarque : du cabinet (le cœur et le nom dessiné au départ), repris à chaque lancement ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
 Remarque : la version de Praxis, la même pour tous les cabinets ; la Configuration la montre. Elle change avec chaque
 Remarque : mise à jour livrée, ici et dans « application, version » du projet.grymatelier de chaque version (tests/praxis-versions).
-La version vaut « 2026.11.05 ».
+La version vaut « 2026.11.06 ».
 Les écrans ont la couleur « #34495E », le fond « #F2F4F6 », la police « polices/Outfit.ttf », le logo (le logo du cabinet conservé) et la signature (la signature du cabinet conservé).
 
 Remarque : la copie chiffrée de toute la base, avec ses clés, dans un dossier, nommée par l'application, le jour et l'heure :
@@ -237,11 +237,14 @@ Quand on clique sur « Entrer » dans l'écran de garde :
         Si le mot de passe de l'écran correspond au mot de passe de direction du c, le qui devient « Direction ».
     Si le qui = « », refuser « Ce mot de passe n'ouvre rien. ».
     Le rôle ouvert devient le qui.
+    Remarque : le journal dit qui (6 novembre 2026) : la Direction ou l'Équipe, jusqu'au verrouillage.
+    Signer le journal avec le qui.
     Fermer l'écran.
 
 Remarque : verrouiller : la page de garde par-dessus l'accueil, qui ne se ferme pas et ne sauvegarde pas ; au retour, les tuiles suivent le rôle.
 Quand on clique sur « Verrouiller » dans l'écran d'accueil :
     Le rôle ouvert devient « ».
+    Signer le journal avec absent.
     Ouvrir l'écran de garde.
 
 Remarque : le personnel (3 novembre 2026) : les salariés en poste, leurs feuilles, les barèmes ; un salarié sorti s'archive de
@@ -984,7 +987,8 @@ Le document de quittance, « Quittance », montre :
     le texte "Pour acquit, " suivi du nom du cabinet conservé.
 
 Remarque : l'historique d'un patient (5 novembre 2026) : chaque changement de sa fiche, le plus récent d'abord, avec l'avant et
-Remarque : l'après ; un mot de passe ou un secret n'y paraît jamais. Le journal : les 500 derniers changements des patients et des séances.
+Remarque : l'après ; un mot de passe ou un secret n'y paraît jamais. Le journal : les 500 derniers changements des patients, des
+Remarque : séances, des factures et des virements reçus ; signés Direction ou Équipe quand la page de garde est en service.
 L'écran de l'historique, « Historique », montre :
     le texte le nom de la personne ouverte, en petites capitales,
     le texte l'historique de la personne ouverte,
@@ -1288,7 +1292,7 @@ L'écran de configuration, « Configuration », montre :
     un bouton « SMS », en tuile, avec la description « Le compte ASPSMS, un essai », visible si le choix d'agenda du cabinet conservé et le rôle ouvert = « Direction »,
     un bouton « Accès », en tuile, avec la description « Les mots de passe de la Direction et de l'Équipe », visible si la gestion du personnel du cabinet conservé et le rôle ouvert = « Direction »,
     un bouton « Assureurs », en tuile, avec la description « Caisses-maladie et leur GLN »,
-    un bouton « Journal », en tuile, avec la description « Les derniers changements des patients et des séances », visible si le rôle ouvert = « Direction »,
+    un bouton « Journal », en tuile, avec la description « Les derniers changements : patients, séances, factures, virements », visible si le rôle ouvert = « Direction »,
     un bouton « Tarif des assurances », en tuile, avec la description « Positions, points et valeur du point », visible si la facturation aux assurances du cabinet conservé,
     le texte "Praxis, version " suivi de la version, en petites capitales,
     un bouton « Fermer ».

@@ -203,7 +203,8 @@ Remarque : (convention ASE, art. 6.3) ; une ordonnance qui le porte couvre les s
 
 Remarque : une facture tiers payant (convention ASE, art. 7) : adressée à l'assureur, qui la paie ; sa copie va au patient. Elle
 Remarque : réunit les séances faites d'une ordonnance ; son exemplaire et sa copie, les PDF envoyés, gardés tels quels.
-Un décompte, conservé, a :
+Remarque : journalisé (6 novembre 2026), comme la facture et le virement reçu : leurs changements dans le journal de la base.
+Un décompte, conservé, journalisé, a :
     un numéro (texte), unique,
     une date (date),
     un patient (patient), et disparaît avec lui,
@@ -223,7 +224,7 @@ Remarque : un patient supprimé emporte dans la corbeille ses séances, ses note
 Remarque : la facture des séances à payer d'un patient, numérotée par année (« F-2026-0001 ») ; son exemplaire, le PDF envoyé, gardé tel quel ;
 Remarque : son état suit ses séances : à régler, en partie réglée (certaines encaissées), réglée (toutes) ; réglée, sa quittance se fait seule.
 Remarque : échue trente jours après sa date ; le dernier rappel envoyé pour elle, daté.
-Une facture, conservée, a :
+Une facture, conservée, journalisée, a :
     un numéro (texte), unique,
     une date (date),
     un patient (patient), et disparaît avec lui,
@@ -238,7 +239,7 @@ Remarque : un virement reçu (4 novembre 2026), lu dans l'avis de crédit (camt.
 Remarque : sa source (la référence de la banque, unique : un avis relu n'ajoute rien), le jour où l'argent est arrivé, le montant,
 Remarque : la référence du créancier, le message, le payeur ; la facture ou la facture tiers payant qu'il règle ; rapproché quand
 Remarque : Praxis l'a soldée, à vérifier sinon (avec la raison), écarté quand ce n'est pas un paiement de patient (un remboursement).
-Un crédit, conservé, hors des fiches, a :
+Un crédit, conservé, hors des fiches, journalisé, a :
     une source (texte), unique,
     une date (date),
     un montant (nombre),

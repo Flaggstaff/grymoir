@@ -1179,6 +1179,9 @@ Pour consigner le virement d'une écriture et un détail et un rang :
         Le montant lu devient le champ « AmtDtls.TxAmt.Amt » de détail.
         La monnaie lue devient le champ « AmtDtls.TxAmt.Amt@Ccy » de détail.
     Si le montant lu est absent :
+        Le montant lu devient le champ « AmtDtls.InstdAmt.Amt » de détail.
+        La monnaie lue devient le champ « AmtDtls.InstdAmt.Amt@Ccy » de détail.
+    Si le montant lu est absent :
         Le montant lu devient le champ « Amt » d'écriture.
         La monnaie lue devient le champ « Amt@Ccy » d'écriture.
     Si la monnaie lue est absente, la monnaie lue devient « CHF ».
@@ -1193,6 +1196,12 @@ Pour consigner le virement d'une écriture et un détail et un rang :
         Si la source lue est absente, la source lue devient la base suivi de « / » suivi de rang.
     Le payeur lu vaut le champ « RltdPties.Dbtr.Nm » de détail.
     Si le payeur lu est absent, le payeur lu devient le champ « RltdPties.Dbtr.Pty.Nm » de détail.
+    Si le payeur lu est absent, le payeur lu devient le champ « RltdPties.UltmtDbtr.Nm » de détail.
+    Si le payeur lu est absent, le payeur lu devient le champ « RltdPties.UltmtDbtr.Pty.Nm » de détail.
+    Remarque : le message : celui du virement, sinon les informations ajoutées par la banque (6 novembre 2026).
+    Le message lu vaut le champ « RmtInf.Ustrd » de détail.
+    Si le message lu est absent, le message lu devient le champ « AddtlTxInf » de détail.
+    Si le message lu est absent, le message lu devient le champ « AddtlNtryInf » d'écriture.
     La clé lue vaut la source lue.
     Si le nombre de crédits conservés dont la source = la clé lue = 0 :
         Le c vaut un nouveau crédit :
@@ -1201,15 +1210,22 @@ Pour consigner le virement d'une écriture et un détail et un rang :
             Le montant vaut le montant bancaire du montant lu.
             La monnaie vaut la monnaie lue.
             La référence vaut le champ « RmtInf.Strd.CdtrRefInf.Ref » de détail.
-            Le message vaut le champ « RmtInf.Ustrd » de détail.
+            Le message vaut le message lu.
             Le payeur vaut le payeur lu.
             L'état vaut « à vérifier ».
         Conserver le c.
         Rapprocher le c.
 
+Remarque : l'état d'une écriture : « BOOK » (comptabilisée) ou absent se lit ; « PDNG » (en attente) et « INFO » attendent un
+Remarque : avis suivant (6 novembre 2026) : la facture n'est soldée que sur de l'argent arrivé. « Sts.Cd » (camt version 8), « Sts » (4).
+L'état bancaire d'une écriture :
+    Si le champ « Sts.Cd » d'écriture est présent, rendre le champ « Sts.Cd » d'écriture.
+    Si le champ « Sts » d'écriture est présent, rendre le champ « Sts » d'écriture.
+    Rendre « BOOK ».
+
 Pour relever les écritures d'un extrait :
     Pour chaque écriture du champ « Ntry » d'extrait :
-        Si le champ « CdtDbtInd » d'écriture = « CRDT » :
+        Si le champ « CdtDbtInd » d'écriture = « CRDT » et l'état bancaire d'écriture = « BOOK » :
             Si le champ « NtryDtls.TxDtls » d'écriture est absent :
                 Consigner le virement d'écriture et écriture et 1.
             Sinon :

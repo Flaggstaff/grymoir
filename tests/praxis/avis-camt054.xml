@@ -26,6 +26,10 @@
       <Ntry>
         <Amt Ccy="CHF">35.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><ValDt><Dt>2026-11-03</Dt></ValDt><AcctSvcrRef>BQ-004</AcctSvcrRef>
       </Ntry>
+      <Ntry>
+        <Amt Ccy="CHF">80.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts><Cd>PDNG</Cd></Sts><BookgDt><Dt>2026-11-03</Dt></BookgDt><AcctSvcrRef>BQ-005</AcctSvcrRef>
+        <NtryDtls><TxDtls><RmtInf><Ustrd>F-2026-0003</Ustrd></RmtInf></TxDtls></NtryDtls>
+      </Ntry>
     </Ntfctn>
   </BkToCstmrDbtCdtNtfctn>
 </Document>
