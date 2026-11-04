@@ -616,7 +616,7 @@ static char *feuille_de_style(const Serveur *s) {
     ".menu[open]>.boutons{position:absolute;z-index:10;display:flex;flex-direction:column;align-items:stretch;background:inherit}"
     ".libre>.place>.zone,.libre>.place>p{margin:0}"
     ".boutons{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.boutons button{margin:0}"
-    ".texte{margin:0}"
+    ".texte{margin:0;white-space:pre-line}"
     ".zone label{display:block;font-size:12px;line-height:16px;font-weight:600;color:var(--texte-2);margin-bottom:4px}"
     ".zone label.case{display:flex;align-items:center;gap:8px;font-size:14px;line-height:20px;font-weight:400;color:var(--texte)}"
     ".liste{overflow-x:auto}"

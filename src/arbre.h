@@ -170,7 +170,8 @@ typedef enum {
                         que l'écran le range (« document de quittance ») */
     P_SAUVEGARDER,   /* « Sauvegarder la base dans « copie.grymd » [avec le mot de passe m]. » (2.29, 2.30) : enfants[0] :
                         le chemin ; enfants[1] : le mot de passe, s'il y en a un (forme 1 : chiffrée, un coffre) */
-    P_RESTAURER,     /* « Restaurer la base depuis f [avec le mot de passe m]. » (2.30) : enfants[0] : un chemin ou un
+    P_RESTAURER,     /* « Restaurer la base depuis f [avec le mot de passe m]. » (2.30) ; entier 1 : « Vérifier la sauvegarde
+                        f [avec le mot de passe m]. » (2.85), sans rien remplacer ; enfants[0] : un chemin ou un
                         fichier ; enfants[1] : le mot de passe (forme 1) */
     P_BASE_CHIFFREE, /* « La base est chiffrée. » (2.37, § 16.18) : le module le note ; rien ne s'exécute */
     P_CHANGER_MDP,   /* « Changer le mot de passe de la base pour n, l'ancien étant a. » (2.37) : enfants[0] : le nouveau,
@@ -188,8 +189,12 @@ typedef enum {
                         version, un entier écrit en chiffres ; rien ne s'exécute */
     P_INTERNE,       /* « Ce fichier est interne à sa bibliothèque. » (2.62, § 21.9) : ses formules ne se voient que dans les
                         fichiers de sa bibliothèque ; rien ne s'exécute */
-    N_ECOUTE         /* élément d'écran : « une écoute « Stryker » » (2.69) : texte : son nom ; entier : le silence qui finit
+    N_ECOUTE,        /* élément d'écran : « une écoute « Stryker » » (2.69) : texte : son nom ; entier : le silence qui finit
                         un passage, en secondes, 0 s'il n'est pas dit (« , coupée après 3 secondes de silence ») */
+    N_DERNIERE_SAUVEGARDE, /* « la dernière sauvegarde de « Sauvegardes/Praxis » » (2.85) : enfant : le préfixe ; le chemin de
+                        la copie la plus récente de ce préfixe, ou absent */
+    N_HISTORIQUE     /* « l'historique de x » (2.85) : enfant : l'objet ; forme 1 « l'historique de la base », sans enfant :
+                        le journal des entités journalisées, en texte, le plus récent d'abord */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */

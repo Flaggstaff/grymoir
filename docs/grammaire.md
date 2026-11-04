@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.84 de la spécification, révisée le 4 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.85 de la spécification, révisée le 5 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1228,6 +1228,8 @@ Restaurer la base depuis « Cabinet 20.10.2026.grymd ».
 - **Quand elle a lieu.** La copie vérifiée s'écrit à côté de la base, `base.grymd.restaurer`, à la fin de l'exécution réussie, comme `Enregistrer` ; elle prend la place de la base **à la prochaine ouverture**, avant qu'aucun objet ne soit lu : un programme en cours garde en mémoire des objets de l'ancienne base, qui ne doivent pas se mêler à la nouvelle. La base d'avant n'est jamais perdue : elle devient `base.grymd avant restauration 2026-10-20 14h26.grymd`. Une seconde restauration demandée avant la réouverture remplace la première.
 - **Chemins** *(2.30, pour toutes les écritures)* : `~/` en tête désigne le dossier de l'utilisateur (`~/Library/Mobile Documents/com~apple~CloudDocs/Cabinet`, le dossier iCloud Drive sur un Mac) ; un dossier qui manque se crée, pour `Enregistrer`, `Exporter` et `Sauvegarder`. `Sauvegarder` crée et essaie son dossier dès la phrase : une sauvegarde impossible (un dossier synchronisé absent, un disque plein) se dit là, où `Essayer` la rattrape (« Sauvegarde impossible dans « … » : le dossier ne s'écrit pas. »).
 - Forme compacte : `_sauvegarder _dans « c.coffre » _mot_de_passe m`, `_restaurer _depuis f [_mot_de_passe m]`.
+- *(2.85)* **`Vérifier la sauvegarde f [avec le mot de passe m].`** fait tout ce que `Restaurer` fait avant de remplacer : la copie se lit, se déchiffre (un coffre de format 2 avec son mot de passe, sinon celui de la séance ; un coffre de format 1 avec le sien), puis se vérifie : une base GrymoiR (`grym_schema`), intacte (`PRAGMA integrity_check`). Rien ne change, ni la base ni le disque. Sinon, l'échec se rattrape et dit pourquoi : « Ce fichier n'est pas une base GrymoiR. », « Ce fichier n'est pas une base GrymoiR intacte : la sauvegarde est abîmée ou incomplète. », « Mot de passe faux, ou sauvegarde abîmée : elle ne s'ouvre pas. », « Aucune sauvegarde à vérifier. » (f absent). Le programme n'a pas besoin d'une base pour vérifier une copie en clair. Après « Vérifier la sauvegarde », un mot qui n'est ni « de », « du », « des » ni « d' » : `Vérifier la sauvegarde du cabinet.` reste une action du programme. Pas dans un calcul : « Un calcul ne lit pas le disque : vérifie la sauvegarde dans une action. » Forme compacte : `_vérifier_sauvegarde f [_mot_de_passe m]`.
+- *(2.85)* **`la dernière sauvegarde de « Sauvegardes/Praxis »`** : le chemin de la copie la plus récente qu'a écrite `Sauvegarder la base dans « Sauvegardes/Praxis », une par jour passé.` (`Praxis-AAAA-MM-JJ-HHMM[ (n)].coffre` ou `.grymd`, la date puis l'heure puis le rang), ou absent s'il n'y en a aucune. Les copies écrites par l'exécution en cours, qui n'arrivent sur le disque qu'à sa fin, n'y sont pas encore. Après « de », un texte écrit ou une parenthèse : `la dernière sauvegarde du cabinet` reste le champ d'un objet. Pas dans un calcul. Forme compacte : `_dernière_sauvegarde « p »`. Praxis vérifie ainsi, une fois par jour, la copie de la veille avant d'écrire celle du jour : `Vérifier la sauvegarde (la dernière sauvegarde de (dossier suivi de « /Praxis »)).`
 
 ### 15.7 Un son *(implémenté le 16 octobre 2026)*
 
@@ -1663,6 +1665,24 @@ Changer le mot de passe de la base pour le nouveau mot de passe de l'écran, l'a
 - **Mot de passe oublié.** Dans l'atelier, « Rouvrir une base avec la clé de secours » : la base (avec son `.clés` à côté) ou un coffre de format 2, la clé de secours et son mot de passe, puis un nouveau mot de passe pour le client. Sur une base, le fichier des clés est refait, l'ancien gardé (« .clés avant secours ») ; d'un coffre, une base neuve s'écrit à côté, jamais par-dessus un fichier, avec ses clés. Refus : « Cette clé de secours n'est pas celle de cette base. », « Cette base n'a pas d'enveloppe de secours : elle a été créée sans clé de secours. », « Mot de passe de secours faux, ou clé de secours abîmée. ». Sans clé de secours, un mot de passe oublié reste perdu.
 - Le client doit savoir, par écrit, que le développeur peut rouvrir sa base s'il en a le fichier en main.
 - Forme compacte : `_base_chiffrée`, `_changer_mot_de_passe n _ancien a`.
+
+### 16.19 Le journal d'une entité *(2.85, implémenté le 5 novembre 2026)*
+
+```
+Un patient, conservé, journalisé, a :
+    un nom (texte), unique,
+    un téléphone (texte), facultatif.
+Afficher l'historique du p.
+Afficher l'historique de la base.
+```
+
+- **`, journalisé,`** (`, journalisée,` pour une entité féminine) suit `conservé` (et `hors des fiches`, s'il y est), avant `anciennement`. Seule une entité tient un journal : « Seule une entité tient un journal : « Un patient, conservé, journalisé, a : ». » L'accord est vérifié.
+- **Ce qui s'inscrit**, dans la table `grym_journal`, au moment UTC du changement : la création (`Conserver`), chaque champ changé avec sa valeur d'avant et d'après (par une phrase ou par un formulaire), un élément gagné ou perdu (§ 16.13), la mise à la corbeille, l'effacement définitif, le rétablissement. Une réécriture de la même valeur ne s'inscrit pas. Un mot de passe ou un secret (§ 22.17) s'inscrit « (caché) », jamais en clair ; un fichier par son nom ; un objet désigné par son premier champ unique, sinon son premier texte, sinon son numéro.
+- **Dans la transaction.** Une ligne du journal part avec ce qu'elle décrit : une exécution qui échoue n'en laisse aucune, un `Essayer` rattrapé efface celles de son bloc. La table naît au premier changement ; une base sans entité journalisée ne la reçoit jamais.
+- **`l'historique de x`** : le journal de l'objet x, en texte, une ligne par changement, le plus récent d'abord, 200 au plus : « 05.11.2026 09:14 · téléphone : 079 123 45 67 → 078 000 00 00 », « … · genres : + Jazz », « … · créé ». L'heure est locale ; une valeur absente s'écrit « (vide) », une valeur longue est coupée après 80 caractères (le journal la garde entière). x absent : absent. Une entité qui n'est pas journalisée : « Un genre n'a pas d'historique : écris « , journalisé, » dans la déclaration de son entité. »
+- **`l'historique de la base`** : les 500 derniers changements de toutes les entités journalisées, chacun avec son entité et son objet : « 05.11.2026 09:14 · patient « Anne Rochat » · téléphone : … ».
+- Le journal dit quoi et quand, pas qui : GrymoiR ne connaît pas l'utilisateur d'un programme.
+- Pas dans un calcul : « Un calcul ne lit pas l'historique : lis-le dans une action ou un écran. » Forme compacte : `_classe _un patient _conservé _journalisé`, `_historique x`, `_historique_base`.
 
 ## 17. Questions à l'utilisateur *(v1.0)*
 
@@ -2647,3 +2667,4 @@ Pour chaque port parmi les ports série, afficher port.
 | 2.82 | 2026-11-03 | Nouveau § 22.25 : `la réponse de p à q, à v bauds` (instruction `PORT_SERIE`, src/serie.c) et `Pour chaque p parmi les ports série :` (instruction `PORTS`) ; formes compactes `_réponse_port`, `_question`, `_vitesse`, `_bauds`, `_ports_série` |
 | 2.83 | 2026-11-03 | § 15.2 : `t en fichier`, un texte en fichier UTF-8 à enregistrer (conversion 14) ; forme compacte `_en_fichier` |
 | 2.84 | 2026-11-04 | § 22.18 : `le champ « … »` et ses listes lisent un fichier et du XML (racine omise, préfixes ignorés, `élément@attribut`, un élément seul comme une liste d'un) ; § 22.16 : la référence du créancier (SCOR, ISO 11649) vérifiée dans un code QR suisse, et la ligne de référence vide avec NON |
+| 2.85 | 2026-11-05 | § 15.6 bis : `Vérifier la sauvegarde f [avec le mot de passe m].` et `la dernière sauvegarde de « p »` ; § 16.19 : l'entité journalisée (`, journalisé,`), `l'historique de x` et `l'historique de la base` |

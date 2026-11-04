@@ -387,6 +387,14 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_CHAMP_JSON, k, n->ligne, n->colonne);
         return;
     }
+    case N_HISTORIQUE:   /* « l'historique de x », « l'historique de la base » (2.85) */
+        if (!n->forme) expression(c, n->enfants[0]);
+        emettre(c, I_HISTORIQUE, n->forme ? 1 : 0, n->ligne, n->colonne);
+        return;
+    case N_DERNIERE_SAUVEGARDE:   /* « la dernière sauvegarde de p » (2.85) */
+        expression(c, n->enfants[0]);
+        emettre(c, I_DERNIERE_SAUVEGARDE, 0, n->ligne, n->colonne);
+        return;
     case N_CODE_QR:   /* « le code QR suisse de t » : le texte, puis son image PNG (2.27) */
         expression(c, n->enfants[0]);
         emettre(c, I_CODE_QR, n->forme, n->ligne, n->colonne);
@@ -1285,6 +1293,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
         cm->aptitude = ph->type == P_APTITUDE;
         cm->conserve = ph->type == P_CLASSE && (ph->forme & 32);
         cm->hors_fiches = ph->type == P_CLASSE && (ph->forme & 64);
+        cm->journal = ph->type == P_CLASSE && (ph->forme & 128);   /* 2.85 */
         if (ph->type == P_CLASSE && ph->texte3) cm->pluriel = grym_dupliquer(ph->texte3);
         if (ph->type == P_CLASSE && ph->texte2) cm->parent = grym_dupliquer(ph->texte2);
         if (ph->type == P_CLASSE && ph->ancien) cm->ancien = grym_dupliquer(ph->ancien);   /* § 16.7 */
@@ -1408,7 +1417,7 @@ static void phrase(Compilation *c, const Noeud *ph) {
     case P_RESTAURER:     /* « Restaurer la base depuis f [avec le mot de passe m]. » (2.30) */
         expression(c, ph->enfants[0]);
         if (ph->forme) expression(c, ph->enfants[1]);
-        emettre(c, I_RESTAURER, ph->forme, ph->ligne, ph->colonne);
+        emettre(c, I_RESTAURER, ph->forme | (ph->entier ? 2 : 0), ph->ligne, ph->colonne);
         return;
     case P_BASE_CHIFFREE:   /* « La base est chiffrée. » (2.37) : une marque du module, lue avant d'ouvrir la base */
         c->module->base_chiffree = 1;

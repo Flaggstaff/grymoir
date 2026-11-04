@@ -2422,6 +2422,52 @@ static Noeud *base(Analyse *a) {
         }
     }
     {
+        /* « l'historique de x » (2.85) : le journal d'un objet d'une entité journalisée, en texte, le plus récent d'abord ;
+         * « l'historique de la base » : celui de toutes ses entités */
+        const int m0 = t->type == J_ELISION && t->valeur && !strcmp(t->valeur, "l") ? 1
+                       : a->article_force == ART_LE && est_mot(t, "historique") ? 0 : -1;
+        const Jeton *td = m0 >= 0 ? voir(a, m0 + 1) : NULL;
+        if (m0 >= 0 && est_mot(voir(a, m0), "historique") && (de_ou_d(td) || est_mot(td, "du"))) {
+            if (a->formule == 1)
+                return erreur(a, t, grym_dupliquer("Un calcul ne lit pas l'historique : lis-le dans une action ou un écran."));
+            Noeud *n = noeud_creer(N_HISTORIQUE, t->ligne, t->colonne, t->debut);
+            if (est_mot(td, "de") && est_mot(voir(a, m0 + 2), "la") && est_mot(voir(a, m0 + 3), "base")) {
+                a->article_force = ART_AUCUN;
+                for (int k = 0; k < m0 + 4; k++) avancer(a);
+                n->forme = 1;
+                n->fin = fin_jeton(&a->j[a->i - 1]);
+                return n;
+            }
+            a->article_force = ART_AUCUN;
+            for (int k = 0; k < m0 + 2; k++) avancer(a);
+            if (est_mot(td, "du")) { a->article_force = ART_LE; a->jeton_force = td; }
+            Noeud *x = base(a);
+            a->article_force = ART_AUCUN;
+            if (!x) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, x);
+            n->fin = x->fin;
+            return n;
+        }
+    }
+    {
+        /* « la dernière sauvegarde de « Sauvegardes/Praxis » » (2.85) : le chemin de la copie datée la plus récente de ce
+         * préfixe (« , une par jour passé »), ou absent. Un texte écrit ou une parenthèse après « de » : « la dernière
+         * sauvegarde du cabinet » reste le champ d'un objet. */
+        const int m0 = est_mot(t, "la") ? 1 : -1;
+        if (m0 >= 0 && est_mot(voir(a, 1), "dernière") && est_mot(voir(a, 2), "sauvegarde") && est_mot(voir(a, 3), "de")
+            && (voir(a, 4)->type == J_TEXTE || voir(a, 4)->type == J_PAR_OUV)) {
+            if (a->formule == 1)
+                return erreur(a, t, grym_dupliquer("Un calcul ne lit pas le disque : cherche la dernière sauvegarde dans une action."));
+            Noeud *n = noeud_creer(N_DERNIERE_SAUVEGARDE, t->ligne, t->colonne, t->debut);
+            for (int k = 0; k < 4; k++) avancer(a);
+            Noeud *x = base(a);
+            if (!x) { noeud_liberer(n); return NULL; }
+            noeud_ajouter(n, x);
+            n->fin = x->fin;
+            return n;
+        }
+    }
+    {
         /* « le code QR de t », « le code QR suisse de t », « l'image du code QR suisse de t » (2.27) : l'image PNG du
          * code QR d'un texte */
         const int m0 = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : -1;
@@ -6169,6 +6215,16 @@ static Noeud *definition_classe(Analyse *a) {
         thors = &a->j[k + 1];   /* refusé plus bas, avec un message qui dit pourquoi */
         k += 5;
     }
+    /* « Un patient, conservé, journalisé, a : » (2.85) : chaque changement d'un de ses objets s'inscrit au journal */
+    const Jeton *tjournal = NULL;
+    if (tconserve && (est_mot(&a->j[k], "journalisé") || est_mot(&a->j[k], "journalisée")) && a->j[k + 1].type == J_VIRGULE) {
+        tjournal = &a->j[k];
+        k += 2;
+    } else if (!tconserve && a->j[k].type == J_VIRGULE && (est_mot(&a->j[k + 1], "journalisé") || est_mot(&a->j[k + 1], "journalisée"))
+               && a->j[k + 2].type == J_VIRGULE) {
+        tjournal = &a->j[k + 1];   /* refusé plus bas */
+        k += 3;
+    }
     /* « Un patient, conservé, anciennement « client », a : » : l'entité s'appelait ainsi (§ 16.7) */
     const Jeton *tancien = NULL;
     if (tconserve && est_mot(&a->j[k], "anciennement") && a->j[k + 2].type == J_VIRGULE) {
@@ -6187,6 +6243,7 @@ static Noeud *definition_classe(Analyse *a) {
         if (!tconserve && a->j[k].type == J_VIRGULE) attendre_mot(a, k, ", conservé,", 3);
         if (tconserve && !thors) attendre_mot(a, k, "hors des fiches,", 15);   /* § 22.3 */
         if (tconserve && !tancien) attendre_mot(a, k, "anciennement", 12);   /* § 16.7 */
+        if (tconserve && !tjournal) attendre_mot(a, k, "journalisé,", 11);   /* 2.85 */
         return erreur_inattendu(a, &a->j[k]);
     }
     if (article_de(&a->j[d]) != ART_AUCUN)
@@ -6197,6 +6254,10 @@ static Noeud *definition_classe(Analyse *a) {
     if (tancien && !tconserve)
         return erreur(a, tancien, grym_dupliquer("Seule une entité se renomme : « Un patient, conservé, anciennement "
                                                  "« client », a : »."));
+    if (tjournal && !tconserve)
+        return erreur(a, tjournal, grym_dupliquer("Seule une entité tient un journal : « Un patient, conservé, journalisé, a : »."));
+    if (tjournal && !tjournal->synthetique && est_mot(tjournal, "journalisée") != (g == GENRE_FEMININ))
+        return erreur(a, tjournal, grym_formater("Accord : « %s ».", g == GENRE_FEMININ ? "journalisée" : "journalisé"));
     if (tpluriel && !tconserve)
         return erreur(a, tpluriel, grym_dupliquer("Seule une entité déclare son pluriel : « Un cheval (chevaux), conservé, a : »."));
     if (tconserve && !tconserve->synthetique && est_mot(tconserve, "conservée") != (g == GENRE_FEMININ))
@@ -6236,9 +6297,9 @@ static Noeud *definition_classe(Analyse *a) {
             return NULL;
         }
     }
-    if (complement && (tconserve || tpluriel || thors)) {
+    if (complement && (tconserve || tpluriel || thors || tjournal)) {
         free(ancien);
-        erreur(a, tconserve ? tconserve : tpluriel ? tpluriel : thors, grym_formater(
+        erreur(a, tconserve ? tconserve : tpluriel ? tpluriel : thors ? thors : tjournal, grym_formater(
             "« %s » est déjà déclaré : ses champs suivent avec « %s %s a : ».", nom, g == GENRE_FEMININ ? "Une" : "Un", nom));
         free(nom);
         return NULL;
@@ -6252,6 +6313,7 @@ static Noeud *definition_classe(Analyse *a) {
             Classe *ch = classe_de(a->portee, h->texte);
             if (ch) ch->hors_fiches = 1;
         }
+        if (h && tjournal) h->forme |= 128;   /* 2.85 */
         return h;
     }
     if (complement && existante->genre != g && !tun->synthetique) {
@@ -6265,7 +6327,8 @@ static Noeud *definition_classe(Analyse *a) {
     n->texte = nom;
     int conserve = complement ? existante->conserve : tconserve != NULL;
     int hors = complement ? existante->hors_fiches : thors != NULL;
-    n->forme = (g == GENRE_FEMININ ? 2 : 1) | (complement ? 4 : 0) | (conserve ? 32 : 0) | (hors ? 64 : 0);
+    n->forme = (g == GENRE_FEMININ ? 2 : 1) | (complement ? 4 : 0) | (conserve ? 32 : 0) | (hors ? 64 : 0)
+               | (tjournal ? 128 : 0);
     if (tpluriel) n->texte3 = grym_dupliquer(tpluriel->valeur);
     n->ancien = ancien;
 
@@ -9643,6 +9706,32 @@ static Noeud *phrase(Analyse *a, int colonne) {
         int ok = entite_conservee(a, a->i + 2, 1, &apres) != NULL;
         if (a->echec) return NULL;
         if (ok) return exporter(a, t);
+    }
+    if (est_mot(t, "vérifier") && est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "sauvegarde") && !de_ou_d(voir(a, 3))
+        && !est_mot(voir(a, 3), "du") && !est_mot(voir(a, 3), "des") && voir(a, 3)->type != J_POINT) {
+        /* « Vérifier la sauvegarde f [avec le mot de passe m]. » (2.85) : la copie s'ouvre et se vérifie comme pour la
+         * restaurer, sans rien remplacer ; sinon, l'échec rattrapable dit pourquoi. « Vérifier la sauvegarde du cabinet »
+         * reste une action du programme. */
+        if (a->formule == 1)
+            return erreur(a, t, grym_dupliquer("Un calcul ne lit pas le disque : vérifie la sauvegarde dans une action."));
+        a->i += 3;
+        Noeud *chemin = expression_avant(a, "avec", NULL);
+        if (!chemin) return NULL;
+        Noeud *mdp = NULL;
+        attendre_ici(a, "avec le mot de passe");
+        if (est_mot(cour(a), "avec")) {
+            static const char *const MDP[] = { "avec", "le", "mot", "de", "passe" };
+            if (!mots_fixes(a, MDP, 5)) { noeud_liberer(chemin); return NULL; }
+            mdp = valeur(a);
+            if (!mdp) { noeud_liberer(chemin); return NULL; }
+        }
+        if (!fin_phrase(a, 0)) { noeud_liberer(chemin); noeud_liberer(mdp); return NULL; }
+        Noeud *n = noeud_creer(P_RESTAURER, t->ligne, t->colonne, t->debut);
+        noeud_ajouter(n, chemin);
+        n->fin = chemin->fin;
+        if (mdp) { noeud_ajouter(n, mdp); n->fin = mdp->fin; n->forme = 1; }
+        n->entier = 1;
+        return n;
     }
     if ((est_mot(t, "sauvegarder") && est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "base") && est_mot(voir(a, 3), "dans"))
         || (est_mot(t, "restaurer") && est_mot(voir(a, 1), "la") && est_mot(voir(a, 2), "base") && est_mot(voir(a, 3), "depuis"))) {

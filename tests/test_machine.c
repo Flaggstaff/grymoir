@@ -4622,6 +4622,40 @@ int main(void) {
          "~n'est pas une référence du créancier valable");
     PROG("Le s vaut un saut de ligne.\nLe d vaut « SPC » suivi du s suivi de « 0200 » suivi du s suivi de « 1 » suivi du s suivi de « CH5204835012345671000 » suivi du s suivi de « S » suivi du s suivi de « Cabinet » suivi du s suivi de « Rue » suivi du s suivi de « 1 » suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « » suivi du s suivi de « 130.00 » suivi du s suivi de « CHF » suivi du s suivi de « S » suivi du s suivi de « Anne Rochat » suivi du s suivi de « Route » suivi du s suivi de « 12a » suivi du s suivi de « 1630 » suivi du s suivi de « Bulle » suivi du s suivi de « CH » suivi du s suivi de « NON » suivi du s suivi de « RF12F20260001 » suivi du s suivi de « Facture » suivi du s suivi de « EPD ».\nLe q vaut le code QR suisse du d.\nAfficher le format du q.",
          "~sans référence (NON), la ligne de la référence reste vide");
+    /* 2.85 : la dernière sauvegarde d'un préfixe, absente sans copie ; vérifier une sauvegarde qui n'en est pas une, une absente */
+    PROG("Afficher la dernière sauvegarde de « _essai_aucune/Praxis » est absente.", "vrai");
+    {
+        FILE *f = fopen("_essai_pas_une_base.grymd", "wb");
+        if (f) { fputs("pas une base", f); fclose(f); }
+    }
+    PROG("Essayer :\n    Vérifier la sauvegarde « _essai_pas_une_base.grymd ».\nEn cas d'échec :\n    Afficher le motif de l'échec.",
+         "Ce fichier n'est pas une base GrymoiR.");
+    remove("_essai_pas_une_base.grymd");
+    PROG("Vérifier la sauvegarde (la dernière sauvegarde de « _essai_aucune/Praxis »).", "~Aucune sauvegarde à vérifier.");
+    PROG("Le double d'un x :\n    Vérifier la sauvegarde x.\n    Rendre x.", "~Un calcul ne lit pas le disque : vérifie la sauvegarde dans une action.");
+    /* 2.85 : le journal d'une entité journalisée : la création, un champ changé (une réécriture identique ne compte pas),
+       un mot de passe caché, un élément gagné ; l'historique de la base ; les refus */
+    PROG("Un genre, conservé, a :\n    un nom (texte), unique.\n"
+         "Un patient, conservé, journalisé, a :\n    un nom (texte), unique,\n    un téléphone (texte), facultatif,\n"
+         "    un code (mot de passe), facultatif,\n    des genres (genre).\n"
+         "Le g vaut un nouveau genre :\n    Le nom vaut « Jazz ».\nConserver le g.\n"
+         "Le p vaut un nouveau patient :\n    Le nom vaut « Anne ».\nConserver le p.\n"
+         "Le téléphone du p devient « 079 ».\nLe téléphone du p devient « 078 ».\nLe téléphone du p devient « 078 ».\n"
+         "Le code du p devient « secret ».\nLes genres du p gagnent le g.\n"
+         "Afficher l'historique du p contient « téléphone : 079 → 078 » puis l'historique du p contient « code : (vide) → (caché) ».\n"
+         "Afficher l'historique du p contient « genres : + Jazz » puis l'historique de la base contient « patient » puis l'historique de la base contient « · créé ».\n"
+         "Essayer :\n    Afficher l'historique du g.\nEn cas d'échec :\n    Afficher le motif de l'échec.",
+         "vrai vrai\nvrai vrai vrai\nUn genre n'a pas d'historique : écris « , journalisé, » dans la déclaration de son entité.");
+    PROG("Un patient, conservé, journalisé, a :\n    un nom (texte), unique,\n    un téléphone (texte), facultatif.\n"
+         "Le p vaut un nouveau patient :\n    Le nom vaut « Anne ».\nConserver le p.\n"
+         "Le téléphone du p devient « 079 ».\nLe téléphone du p devient « 078 ».\nLe téléphone du p devient « 078 ».\n"
+         "Essayer :\n    Le téléphone du p devient « 000 ».\n    Refuser « non ».\nEn cas d'échec :\n    Afficher le motif de l'échec.\n"
+         "Afficher l'historique du p contient « 000 ».\n"
+         "Afficher l'historique du p contient « téléphone : 079 → 078 » puis l'historique du p contient « créé ».",
+         "non\nfaux\nvrai vrai");
+    PROG("Une note, conservée, journalisé, a :\n    un texte (texte).", "~Accord : « journalisée ».");
+    PROG("Une note, journalisée, a :\n    un texte (texte).", "~Seule une entité tient un journal");
+    PROG("Le récit d'un x :\n    Rendre l'historique de x.", "~Un calcul ne lit pas l'historique");
     PROG("Le q vaut le code QR suisse de « SPC ».", "~QR-facture : 1 ligne au lieu de 31 au moins");
     /* « Sauvegarder la base dans … » (2.29) : sans base, refusé ; deux copies, la seconde « (2) » ; pas dans un calcul */
     PROG("Sauvegarder la base dans « _essai_copie.grymd ».", "~Ce programme n'a pas de base : il ne conserve aucune entité.");

@@ -126,7 +126,7 @@ typedef enum {
     I_SAUVEGARDER,      /* dépile un chemin ; une copie de la base, telle que l'exécution la voit, s'y écrira à la fin
                            de l'exécution réussie, jamais par-dessus un fichier : « (2) », « (3) »… (2.29) */
     I_SAUVEGARDER_COFFRE, /* dépile un mot de passe, puis un chemin : comme SAUVEGARDER, la copie chiffrée (coffre.h, 2.30) */
-    I_RESTAURER,        /* opérande : 1 avec un mot de passe (dépilé d'abord) ; dépile un chemin ou un fichier, une copie
+    I_RESTAURER,        /* opérande : bit 1 avec un mot de passe (dépilé d'abord), bit 2 vérifier seulement (2.85) ; dépile un chemin ou un fichier, une copie
                            de base, chiffrée ou non ; vérifiée, elle s'écrit à côté de la base (« .restaurer ») à la fin de
                            l'exécution réussie et la remplace à la prochaine ouverture (2.30) */
     I_CHANGER_MDP_BASE, /* dépile le nouveau mot de passe, puis l'ancien : l'enveloppe des clés de la base refaite (2.37) */
@@ -150,10 +150,12 @@ typedef enum {
     I_REMPLACER,        /* dépile le remplaçant, ce qu'on cherche, puis le texte ; empile le texte remplacé (2.81) */
     I_MOTS,             /* dépile un texte ; empile la liste de ses mots, dans l'ordre, doublons compris (2.81) */
     I_PORTS,            /* empile la liste des ports série de l'ordinateur, triés (2.82) */
-    I_PORT_SERIE        /* dépile la vitesse, la question, puis le port ; empile la réponse, un texte (2.82) */
+    I_PORT_SERIE,       /* dépile la vitesse, la question, puis le port ; empile la réponse, un texte (2.82) */
+    I_DERNIERE_SAUVEGARDE, /* remplace un préfixe par le chemin de sa copie datée la plus récente, ou absent (2.85) */
+    I_HISTORIQUE        /* opérande 0 : remplace un objet par son historique ; 1 : empile celui de la base ; un texte (2.85) */
 } CodeInstruction;
 
-#define I_DERNIER I_PORT_SERIE
+#define I_DERNIER I_HISTORIQUE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);
@@ -237,6 +239,7 @@ typedef struct {
     size_t nb_aptitudes;
     int conserve;         /* entité (grammaire, § 16) */
     int hors_fiches;      /* « , hors des fiches, » : absente des fiches (grammaire, § 22.3) */
+    int journal;          /* « , journalisé, » : ses changements s'inscrivent au journal (2.85) */
     char *pluriel;        /* pluriel irrégulier, ou NULL */
     char **champs;        /* champs propres */
     char **types;         /* type de chaque champ, ou NULL (classe ordinaire) */

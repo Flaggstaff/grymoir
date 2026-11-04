@@ -674,6 +674,28 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, " ");
         de_expression(im, n->enfants[0]);
         return;
+    case N_HISTORIQUE:   /* « l'historique de x », « l'historique de la base » ; « _historique x », « _historique_base » (2.85) */
+        if (n->forme) { aj(im, im->compact ? "_historique_base" : "l'historique de la base"); return; }
+        if (im->compact) { aj(im, "_historique "); expression(im, n->enfants[0]); return; }
+        aj(im, "l'historique ");
+        de_expression(im, n->enfants[0]);
+        return;
+    case N_DERNIERE_SAUVEGARDE:   /* « la dernière sauvegarde de « p » » ; « _dernière_sauvegarde « p » » (2.85) */
+        if (im->compact) { aj(im, "_dernière_sauvegarde "); expression(im, n->enfants[0]); return; }
+        aj(im, "la dernière sauvegarde de ");   /* un texte écrit, sinon entre parenthèses : sans cela, un champ */
+        {
+            Impression tmp = *im;
+            tmp.c.d = NULL;
+            tmp.c.n = tmp.c.cap = 0;
+            expression(&tmp, n->enfants[0]);
+            char *t = chaine_rendre(&tmp.c);
+            const int entoure = n->enfants[0]->type != N_TEXTE && t[0] != '(';
+            if (entoure) aj(im, "(");
+            aj(im, t);
+            if (entoure) aj(im, ")");
+            free(t);
+        }
+        return;
     case N_CODE_QR:   /* « le code QR suisse de t » ; « _code_qr_suisse t » (2.27) */
         if (im->compact) { aj(im, n->forme ? "_code_qr_suisse " : "_code_qr "); expression(im, n->enfants[0]); return; }
         aj(im, n->forme ? "le code QR suisse " : "le code QR ");
@@ -2476,12 +2498,14 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         }
         int conserve = (n->forme & 32) != 0;
         int hors = conserve && (n->forme & 64) != 0;   /* « , hors des fiches, » (§ 22.3) */
+        int journal = conserve && (n->forme & 128) != 0;   /* « , journalisé, » (2.85) */
         if (c) {
             aj(im, fem ? "_classe _une " : "_classe _un ");
             ecrire_nom(im, n->texte, 0);
             if (n->texte3) { aj(im, " ("); ecrire_nom(im, n->texte3, 0); aj(im, ")"); }
             if (conserve) aj(im, " _conservé");
             if (hors) aj(im, " _hors_des_fiches");
+            if (journal) aj(im, fem ? " _journalisée" : " _journalisé");
             if (n->ancien) { aj(im, " _anciennement "); ecrire_texte(im, n->ancien); }
             if (herite) {
                 aj(im, fem_base ? " _est _une " : " _est _un ");
@@ -2502,6 +2526,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
                 if (n->texte3) { aj(im, " ("); aj(im, n->texte3); aj(im, ")"); }
                 if (conserve) aj(im, fem ? ", conservée," : ", conservé,");
                 if (hors) aj(im, " hors des fiches,");
+                if (journal) aj(im, fem ? " journalisée," : " journalisé,");
                 if (n->ancien) { aj(im, " anciennement "); ecrire_texte(im, n->ancien); aj(im, ","); }
                 aj(im, fem_base ? " est une " : " est un ");
                 ecrire_nom(im, n->texte2 ? n->texte2 : "chose", 0);
@@ -2522,6 +2547,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             if (!herite && n->texte3) { aj(im, " ("); aj(im, n->texte3); aj(im, ")"); }
             if (!herite && conserve) aj(im, fem ? ", conservée," : ", conservé,");
             if (!herite && hors) aj(im, " hors des fiches,");
+            if (!herite && journal) aj(im, fem ? " journalisée," : " journalisé,");
             if (!herite && n->ancien) { aj(im, " anciennement "); ecrire_texte(im, n->ancien); aj(im, ","); }
             aj(im, " a :\n");
         }
@@ -2710,6 +2736,7 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     case P_SAUVEGARDER:
     case P_RESTAURER:
         if (n->type == P_SAUVEGARDER) aj(im, c ? "_sauvegarder _dans " : "Sauvegarder la base dans ");
+        else if (n->entier) aj(im, c ? "_vérifier_sauvegarde " : "Vérifier la sauvegarde ");   /* 2.85 */
         else aj(im, c ? "_restaurer _depuis " : "Restaurer la base depuis ");
         expression(im, n->enfants[0]);
         if (n->type == P_SAUVEGARDER && n->entier) aj(im, c ? " _une_par_jour_passé" : ", une par jour passé");   /* 2.53 */

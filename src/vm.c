@@ -1756,6 +1756,88 @@ static int charger(Machine *m, Objet *o, char **erreur) {
     return 1;
 }
 
+/* ---------------------------------------------------------------- */
+/* Le journal des entités journalisées (2.85)                       */
+/* ---------------------------------------------------------------- */
+
+/* Ce qui désigne un objet dans le journal : son premier champ unique, sinon son premier texte, sinon son numéro. */
+static char *designation_journal(Machine *m, Objet *o) {
+    char *e = NULL;
+    if (o->id && !charger(m, o, &e)) { free(e); return grym_formater("n° %ld", o->id); }
+    const ClasseVM *c = o->classe;
+    for (int passe = 0; passe < 2; passe++)
+        for (size_t k = 0; k < c->nb_champs; k++) {
+            if (!o->definis[k] || type_cache(c->types[k])) continue;
+            const Valeur *v = &o->champs[k];
+            if (passe == 0 ? (c->uniques && (c->uniques[k] & 1) && v->type != V_OBJET && v->type != V_FICHIER)
+                           : v->type == V_TEXTE && v->texte && *v->texte)
+                return texte_valeur(m, v);
+        }
+    return grym_formater("n° %ld", o->id);
+}
+
+/* La valeur d'un champ, telle que le journal la garde : NULL pour absente ; un secret ou un mot de passe, jamais. */
+static char *valeur_journal(Machine *m, const ClasseVM *c, size_t k, const Objet *o) {
+    if (!o->definis[k] || o->champs[k].type == V_ABSENT) return NULL;
+    if (type_cache(c->types[k])) return grym_dupliquer("(caché)");
+    const Valeur *v = &o->champs[k];
+    if (v->type == V_FICHIER) return grym_dupliquer(v->fichier && v->fichier->nom ? v->fichier->nom : "(fichier)");
+    if (v->type == V_OBJET) return designation_journal(m, v->objet);
+    return texte_valeur(m, v);
+}
+
+static int journal_actif(const Machine *m, const Objet *o) {
+    return m->base && o && o->id && o->classe->journal;
+}
+
+/* Une ligne au journal ; *probleme reçoit l'échec de la base, s'il y en a un. */
+static void journaliser(Machine *m, Objet *o, const char *champ, const char *avant, const char *apres, char **probleme) {
+    if (!journal_actif(m, o) || *probleme) return;
+    char *qui = designation_journal(m, o);
+    base_journaliser(m->base, o->classe->nom, o->id, qui, champ, avant, apres, probleme);
+    free(qui);
+}
+
+/* Un champ écrit : l'avant pris par l'appelant, l'après lu ici ; rien si rien n'a changé. Consomme avant. */
+static void journaliser_champ(Machine *m, Objet *o, size_t k, char *avant, char **probleme) {
+    if (journal_actif(m, o)) {
+        char *apres = valeur_journal(m, o->classe, k, o);
+        if ((avant == NULL) != (apres == NULL) || (avant && strcmp(avant, apres) != 0))
+            journaliser(m, o, o->classe->champs[k], avant, apres, probleme);
+        free(apres);
+    }
+    free(avant);
+}
+
+/* Un moment UTC du journal (« 2026-11-04T10:51:00Z ») à l'heure locale : « 04.11.2026 11:51 ». */
+static char *moment_journal(const char *iso) {
+    int an, mo, jo, h, mi, se;
+    if (!iso || sscanf(iso, "%d-%d-%dT%d:%d:%d", &an, &mo, &jo, &h, &mi, &se) != 6) return grym_dupliquer(iso ? iso : "");
+    const time_t t = (time_t)(date_jours(an, mo, jo) - date_jours(1970, 1, 1)) * 86400 + h * 3600 + mi * 60 + se;
+    struct tm l = *localtime(&t);
+    return grym_formater("%02d.%02d.%04d %02d:%02d", l.tm_mday, l.tm_mon + 1, l.tm_year + 1900, l.tm_hour, l.tm_min);
+}
+
+/* Une valeur du journal, pour l'historique : « (vide) » pour absente, coupée après 80 caractères. */
+static void valeur_historique(Chaine *c, const char *v) {
+    if (!v) { chaine_ajouter(c, "(vide)"); return; }
+    size_t n = 0, octets = 0;
+    while (v[octets] && n < 80) { octets++; while (((unsigned char)v[octets] & 0xC0) == 0x80) octets++; n++; }
+    for (size_t k = 0; k < octets; k++) {
+        char u[2] = { v[k] == '\n' || v[k] == '\r' ? ' ' : v[k], 0 };
+        chaine_ajouter(c, u);
+    }
+    if (v[octets]) chaine_ajouter(c, "…");
+}
+
+/* L'avant d'un champ qu'on va écrire, si son entité tient un journal. */
+static char *avant_journal(Machine *m, Objet *o, size_t k) {
+    if (!journal_actif(m, o)) return NULL;
+    char *e = NULL;
+    if (!charger(m, o, &e)) { free(e); return NULL; }
+    return valeur_journal(m, o->classe, k, o);
+}
+
 size_t machine_regles_verifiees(const Machine *m) { return m->regles_verifiees; }
 
 size_t machine_objets_vivants(const Machine *m) {
@@ -2427,9 +2509,12 @@ static char *saisir(Machine *m, Objet *o, const char *deja, Chaine *sortie, Cadr
     if (!probleme && modifier) {
         /* toutes les réponses sont là : les champs s'écrivent maintenant, et la base les suit (§ 16.3) */
         for (size_t q = 0; q < f.nb_attente && !probleme; q++) {
+            char *avant = avant_journal(m, o, f.attente[q].k);   /* 2.85 */
             ecrire_champ(m, o, f.attente[q].k, f.attente[q].v);
             f.attente[q].v = vi_absent("");
             if (o->id) base_ecrire_champ(m->base, o, f.attente[q].k, &probleme);
+            if (!probleme) journaliser_champ(m, o, f.attente[q].k, avant, &probleme);
+            else free(avant);
         }
     }
     for (size_t q = 0; q < n; q++) {
@@ -4412,6 +4497,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
         c->nb_champs = n;
         c->conserve = cm->conserve;
         c->hors_fiches = cm->hors_fiches;
+        c->journal = cm->journal;
         c->pluriel = cm->pluriel ? grym_dupliquer(cm->pluriel) : NULL;
         c->ancien = cm->ancien ? grym_dupliquer(cm->ancien) : NULL;
         c->nb_abandonnes = cm->nb_abandonnes;   /* 2.49 */
@@ -5155,7 +5241,9 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             if (probleme) ok = echouer(diag, b, debut, probleme);
             break;
         }
-        case I_RESTAURER: {   /* « Restaurer la base depuis f [avec le mot de passe m]. » (2.30) */
+        case I_RESTAURER: {   /* « Restaurer la base depuis f [avec le mot de passe m]. » (2.30) ; « Vérifier la sauvegarde f » (2.85) */
+            const int verifier = (op & 2) != 0;
+            op &= 1;
             Valeur mdp = vi_absent(NULL);
             if (op) mdp = depiler(&pile);
             Valeur src = depiler(&pile);
@@ -5163,15 +5251,17 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             const unsigned char *o = NULL;
             size_t n = 0;
             Fichier *lu = NULL;
-            if (!m->base) probleme = grym_dupliquer("Ce programme n'a pas de base : rien à restaurer.");
+            if (!m->base && !verifier) probleme = grym_dupliquer("Ce programme n'a pas de base : rien à restaurer.");
             else if (src.type == V_TEXTE) {
                 lu = lire_fichier(m, src.texte ? src.texte : "", &probleme);
                 if (lu) o = octets_du_fichier(lu, &probleme), n = lu->taille;
             } else if (src.type == V_FICHIER && src.fichier) {
                 o = octets_du_fichier(src.fichier, &probleme);
                 n = src.fichier->taille;
-            } else if (src.type == V_ABSENT) probleme = grym_dupliquer("Choisis d'abord la sauvegarde à restaurer.");
-            else probleme = grym_formater("On restaure depuis un chemin ou un fichier, pas %s.", nom_type(src.type));
+            } else if (src.type == V_ABSENT) probleme = grym_dupliquer(verifier ? "Aucune sauvegarde à vérifier."
+                                                                               : "Choisis d'abord la sauvegarde à restaurer.");
+            else probleme = grym_formater(verifier ? "On vérifie une sauvegarde par son chemin ou son fichier, pas %s."
+                                                   : "On restaure depuis un chemin ou un fichier, pas %s.", nom_type(src.type));
             unsigned char *clair = NULL;
             size_t nc = 0;
             if (!probleme && o) {
@@ -5189,6 +5279,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 }
             }
             if (!probleme && clair && !base_verifier_copie(clair, nc, &probleme)) { /* probleme rempli */ }
+            if (verifier) {   /* 2.85 : ouverte, déchiffrée, intacte : rien d'autre à faire */
+                if (clair) { memset(clair, 0, nc); free(clair); }
+                if (lu) { free(lu->octets); free(lu->nom); free(lu); }
+                valeur_liberer(&src);
+                valeur_liberer(&mdp);
+                if (probleme) ok = echouer(diag, b, debut, probleme);
+                break;
+            }
             if (!probleme && clair && !m->chemin_base) probleme = grym_dupliquer("Cette base vit en mémoire : rien à remplacer.");
             if (!probleme && clair && base_est_chiffree(m->base)) {
                 /* 2.37 : rien en clair sur le disque ; l'attente est un coffre de format 2, celui qu'on a choisi tel quel,
@@ -5227,6 +5325,97 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&src);
             valeur_liberer(&mdp);
             if (probleme) ok = echouer(diag, b, debut, probleme);
+            break;
+        }
+        case I_HISTORIQUE: {   /* « l'historique de x », « l'historique de la base » (2.85) : une ligne par changement */
+            Valeur x = op ? vi_absent(NULL) : depiler(&pile);
+            char *probleme = NULL;
+            if (!op && x.type == V_ABSENT) { empiler(&pile, x); break; }
+            if (!op && x.type != V_OBJET)
+                probleme = grym_formater("« l'historique de » attend un objet, pas %s.", nom_type(x.type));
+            else if (!op && !x.objet->classe->journal) {
+                char *qui = article_classe(x.objet->classe);
+                qui[0] = (char)(qui[0] - 32);
+                probleme = grym_formater("%s n'a pas d'historique : écris « , journalisé%s, » dans la déclaration de son entité.",
+                                         qui, x.objet->classe->feminin ? "e" : "");
+                free(qui);
+            }
+            Chaine c = {0};
+            chaine_ajouter(&c, "");
+            if (!probleme && m->base && (op || x.objet->id)) {
+                char ***l = NULL;
+                size_t n = 0;
+                if (base_journal(m->base, op ? NULL : x.objet->classe->nom, op ? 0 : x.objet->id, op ? 500 : 200, &l, &n, &probleme)) {
+                    for (size_t q = 0; q < n; q++) {
+                        char *quand = moment_journal(l[q][0]);
+                        if (q) chaine_ajouter(&c, "\n");
+                        chaine_ajouter(&c, quand);
+                        free(quand);
+                        if (op) {   /* toute la base : l'entité et l'objet */
+                            chaine_ajouter(&c, " · ");
+                            chaine_ajouter(&c, l[q][1] ? l[q][1] : "");
+                            chaine_ajouter(&c, " « ");
+                            chaine_ajouter(&c, l[q][2] ? l[q][2] : "");
+                            chaine_ajouter(&c, " »");
+                        }
+                        chaine_ajouter(&c, " · ");
+                        const char *ch = l[q][3];
+                        const int ajout = ch && ch[0] == '+', retrait = ch && !strncmp(ch, "−", strlen("−"));
+                        if (ajout || retrait) {   /* « gagner », « perdre » : un élément de plus ou de moins */
+                            chaine_ajouter(&c, ch + (ajout ? 1 : strlen("−")));
+                            chaine_ajouter(&c, ajout ? " : + " : " : − ");
+                            valeur_historique(&c, l[q][5]);
+                        } else if (ch) {
+                            chaine_ajouter(&c, ch);
+                            chaine_ajouter(&c, " : ");
+                            valeur_historique(&c, l[q][4]);
+                            chaine_ajouter(&c, " → ");
+                            valeur_historique(&c, l[q][5]);
+                        } else chaine_ajouter(&c, l[q][5] ? l[q][5] : "");
+                        for (int k = 0; k < 6; k++) free(l[q][k]);
+                        free(l[q]);
+                    }
+                    free(l);
+                }
+            }
+            valeur_liberer(&x);
+            if (probleme) { free(chaine_rendre(&c)); ok = echouer(diag, b, debut, probleme); break; }
+            empiler(&pile, vi_texte_pris(chaine_rendre(&c)));
+            break;
+        }
+        case I_DERNIERE_SAUVEGARDE: {   /* « la dernière sauvegarde de « Sauvegardes/Praxis » » (2.85) */
+            Valeur p = depiler(&pile);
+            if (p.type != V_TEXTE || !p.texte || !*p.texte) {
+                valeur_liberer(&p);
+                ok = echouer(diag, b, debut, grym_dupliquer("« la dernière sauvegarde de » attend le chemin d'une sauvegarde "
+                                                            "« une par jour passé », un texte (« Sauvegardes/Praxis »)."));
+                break;
+            }
+            char *chemin = chemin_ecriture(m, p.texte);
+            char *barre = strrchr(chemin, '/');
+            const char *prefixe = barre ? barre + 1 : chemin;
+            char *dossier = barre ? grym_formater("%.*s", (int)(barre - chemin), chemin) : grym_dupliquer(".");
+            char *meilleur = NULL, meilleure_date[11] = "";
+            long meilleure_cle = -1;
+            DIR *d = opendir(dossier);
+            for (struct dirent *e; d && (e = readdir(d)) != NULL;) {
+                char date[11];
+                long cle;
+                if (!copie_du_jour(e->d_name, prefixe, date, &cle)) continue;
+                const int c = strcmp(date, meilleure_date);
+                if (meilleur && (c < 0 || (c == 0 && cle <= meilleure_cle))) continue;
+                free(meilleur);
+                meilleur = grym_dupliquer(e->d_name);
+                memcpy(meilleure_date, date, 11);
+                meilleure_cle = cle;
+            }
+            if (d) closedir(d);
+            Valeur v = meilleur ? vi_texte_pris(grym_formater("%s/%s", dossier, meilleur)) : vi_absent(NULL);
+            free(meilleur);
+            free(dossier);
+            free(chemin);
+            valeur_liberer(&p);
+            empiler(&pile, v);
             break;
         }
         case I_CHANGER_MDP_BASE: {   /* « Changer le mot de passe de la base pour n, l'ancien étant a. » (2.37) */
@@ -5415,13 +5604,20 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                         probleme = grym_formater("« %s » est un secret : il se range dans une base chiffrée. Écris « La base "
                                                  "est chiffrée. » dans le programme.", v.objet->classe->champs[q]);
                 long id = 0;
-                if (!probleme && base_conserver(m->base, v.objet, &id, &probleme)) ecrire_id(m, v.objet, id);
+                if (!probleme && base_conserver(m->base, v.objet, &id, &probleme)) {
+                    ecrire_id(m, v.objet, id);
+                    journaliser(m, v.objet, NULL, NULL, "créé", &probleme);   /* 2.85 */
+                }
             } else if (code == I_RETABLIR) {
-                if (charger(m, v.objet, &probleme)) base_retablir(m->base, v.objet, m->classes, m->nb_classes, &probleme);
+                if (charger(m, v.objet, &probleme)
+                    && base_retablir(m->base, v.objet, m->classes, m->nb_classes, &probleme))
+                    journaliser(m, v.objet, NULL, NULL, "rétabli", &probleme);
             } else if (charger(m, v.objet, &probleme)) {   /* l'objet reste en mémoire, avec ses valeurs */
                 /* simple : mis de côté ; définitive : effacé, et ceux qui disparaissent avec lui (§ 16.12) */
-                base_supprimer(m->base, m, v.objet, m->classes, m->nb_classes, code == I_SUPPRIMER_DEFINITIVEMENT,
-                               &probleme);
+                journaliser(m, v.objet, NULL, NULL, code == I_SUPPRIMER_DEFINITIVEMENT ? "effacé" : "supprimé", &probleme);
+                if (!probleme)
+                    base_supprimer(m->base, m, v.objet, m->classes, m->nb_classes, code == I_SUPPRIMER_DEFINITIVEMENT,
+                                   &probleme);
             }
             valeur_liberer(&v);
             if (probleme) ok = echouer(diag, b, debut, probleme);
@@ -7201,7 +7397,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             } else if (v.type == V_ABSENT) {
                 probleme = message_absent(&v);
             } else if ((probleme = verifier_type_champ(m, champ, ob.objet->classe->types[k], &v, 0, NULL)) == NULL) {
-                base_gagner(m->base, ob.objet, (size_t)k, &v, code == I_PERDRE, &probleme);
+                if (base_gagner(m->base, ob.objet, (size_t)k, &v, code == I_PERDRE, &probleme) && journal_actif(m, ob.objet)) {
+                    char *x = v.type == V_OBJET ? designation_journal(m, v.objet) : texte_valeur(m, &v);   /* 2.85 */
+                    char *signe = grym_formater("%s%s", code == I_PERDRE ? "−" : "+", champ);   /* « +genres » : un ajout */
+                    journaliser(m, ob.objet, signe, NULL, x, &probleme);
+                    free(signe);
+                    free(x);
+                }
             }
             valeur_liberer(&v);
             valeur_liberer(&ob);
@@ -7507,6 +7709,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     valeur_liberer(&v);
                     v = valeur_annee(a);
                 }
+                char *avant = code == I_ECRIRE_CHAMP ? avant_journal(m, o, (size_t)k) : NULL;   /* 2.85 */
                 ecrire_champ(m, o, (size_t)k, v);
                 const long transcrit = transcrire_si_besoin(m, o, (size_t)k);   /* « transcrite du mémo » (§ 15.8) */
                 if (code == I_ECRIRE_CHAMP) {
@@ -7516,10 +7719,13 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                     char *erreur = NULL;
                     if (o->id && (!base_ecrire_champ(m->base, o, (size_t)k, &erreur)
                                   || (transcrit >= 0 && !base_ecrire_champ(m->base, o, (size_t)transcrit, &erreur)))) {
+                        free(avant);
                         ok = echouer(diag, b, debut, erreur);
                         break;
                     }
-                }
+                    journaliser_champ(m, o, (size_t)k, avant, &erreur);
+                    if (erreur) { ok = echouer(diag, b, debut, erreur); break; }
+                } else free(avant);
             }
             break;
         }

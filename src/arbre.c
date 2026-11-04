@@ -219,6 +219,17 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->nb_enfants) decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_HISTORIQUE:   /* (historique x) ou (historique-base) (2.85) */
+        if (n->forme) { chaine_ajouter(c, "(historique-base)"); return; }
+        chaine_ajouter(c, "(historique ");
+        if (n->nb_enfants) decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
+    case N_DERNIERE_SAUVEGARDE:   /* (dernière-sauvegarde p) (2.85) */
+        chaine_ajouter(c, "(dernière-sauvegarde ");
+        if (n->nb_enfants) decrire(n->enfants[0], c);
+        chaine_ajouter(c, ")");
+        return;
     case N_CODE_QR:   /* (code-qr t) ou (code-qr-suisse t) */
         chaine_ajouter(c, n->forme ? "(code-qr-suisse " : "(code-qr ");
         if (n->nb_enfants) decrire(n->enfants[0], c);
@@ -664,7 +675,8 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         return;
     case P_SAUVEGARDER:
     case P_RESTAURER:
-        chaine_ajouter(c, n->type == P_SAUVEGARDER ? (n->entier ? "(sauvegarder-par-jour " : "(sauvegarder ") : "(restaurer ");
+        chaine_ajouter(c, n->type == P_SAUVEGARDER ? (n->entier ? "(sauvegarder-par-jour " : "(sauvegarder ")
+                                                   : n->entier ? "(vérifier-sauvegarde " : "(restaurer ");
         decrire(n->enfants[0], c);
         if (n->nb_enfants > 1) { chaine_ajouter(c, " "); decrire(n->enfants[1], c); }
         chaine_ajouter(c, ")");

@@ -679,6 +679,27 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k++;
             continue;
         }
+        if (est_cle(t, "historique_base")) {         /* _historique_base → l'historique de la base (2.85) */
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "historique", t);
+            mot(r, "de", t);
+            mot(r, "la", t);
+            mot(r, "base", t);
+            continue;
+        }
+        if (est_cle(t, "historique")) {              /* _historique x → l'historique de x (2.85) */
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "historique", t);
+            mot(r, "de", t);
+            continue;
+        }
+        if (est_cle(t, "dernière_sauvegarde")) {     /* _dernière_sauvegarde « p » → la dernière sauvegarde de « p » (2.85) */
+            mot(r, "la", t);
+            mot(r, "dernière", t);
+            mot(r, "sauvegarde", t);
+            mot(r, "de", t);
+            continue;
+        }
         if (est_cle(t, "code_qr") || est_cle(t, "code_qr_suisse")) {   /* _code_qr_suisse t → le code QR suisse de t (2.27) */
             mot(r, "le", t);
             mot(r, "code", t);
@@ -1999,7 +2020,7 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
     if (t->type == J_MOT_CLE && !strcmp(t->valeur, "classe")) {
         /* _classe _un cheval [(chevaux)] [_conservé [_hors_des_fiches]] [_est _une personne [_adopte horodatée ; active]] */
         size_t p = d + 3;
-        const Jeton *pluriel = NULL, *conserve = NULL, *hors = NULL, *ancien = NULL;
+        const Jeton *pluriel = NULL, *conserve = NULL, *hors = NULL, *ancien = NULL, *journal = NULL;
         if (p + 2 < f && r->e[p].type == J_PAR_OUV && r->e[p + 1].type == J_CROCHETS
             && r->e[p + 2].type == J_PAR_FERM) {
             pluriel = &r->e[p + 1];
@@ -2010,6 +2031,10 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             p++;
             if (p < f && est_cle(&r->e[p], "hors_des_fiches")) {   /* § 22.3 */
                 hors = &r->e[p];
+                p++;
+            }
+            if (p < f && (est_cle(&r->e[p], "journalisé") || est_cle(&r->e[p], "journalisée"))) {   /* 2.85 */
+                journal = &r->e[p];
                 p++;
             }
             if (p + 1 < f && est_cle(&r->e[p], "anciennement") && r->e[p + 1].type == J_TEXTE) {   /* § 16.7 */
@@ -2053,6 +2078,10 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             mot(r, "des", hors);
             mot(r, "fiches", hors);
             emettre(r, J_VIRGULE, NULL, hors, 1);
+        }
+        if (journal) {
+            mot(r, journal->valeur, journal);   /* synthétique : l'accord n'est pas vérifié */
+            emettre(r, J_VIRGULE, NULL, journal, 1);
         }
         if (ancien) {   /* _anciennement « client » → anciennement « client », */
             mot(r, "anciennement", ancien);
@@ -2743,6 +2772,25 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 emettre(r, J_VIRGULE, NULL, &r->e[jour], 1);
                 mot(r, "une", &r->e[jour]); mot(r, "par", &r->e[jour]); mot(r, "jour", &r->e[jour]); mot(r, "passé", &r->e[jour]);
             }
+            if (mdp < f) {
+                mot(r, "avec", &r->e[mdp]);
+                mot(r, "le", &r->e[mdp]);
+                mot(r, "mot", &r->e[mdp]);
+                mot(r, "de", &r->e[mdp]);
+                mot(r, "passe", &r->e[mdp]);
+                expression(r, mdp + 1, f);
+            }
+            point(r, f);
+        } else if (!strcmp(c, "vérifier_sauvegarde")) {   /* _vérifier_sauvegarde f [_mot_de_passe m] (2.85) */
+            if (f < d + 2) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _vérifier_sauvegarde « copie.coffre » [_mot_de_passe m] »."));
+                return;
+            }
+            size_t mdp = chercher(r, d + 1, f, "mot_de_passe");
+            mot(r, "vérifier", t);
+            mot(r, "la", t);
+            mot(r, "sauvegarde", t);
+            expression(r, d + 1, mdp);
             if (mdp < f) {
                 mot(r, "avec", &r->e[mdp]);
                 mot(r, "le", &r->e[mdp]);

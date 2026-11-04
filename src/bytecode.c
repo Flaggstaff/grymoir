@@ -243,6 +243,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_SAUVEGARDER:    return "SAUVEGARDER";
     case I_SAUVEGARDER_COFFRE: return "SAUVEGARDER_COFFRE";
     case I_RESTAURER:      return "RESTAURER";
+    case I_DERNIERE_SAUVEGARDE: return "DERNIERE_SAUVEGARDE";
+    case I_HISTORIQUE:     return "HISTORIQUE";
     case I_CHANGER_MDP_BASE: return "CHANGER_MDP_BASE";
     }
     return "INCONNUE";
@@ -261,7 +263,7 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_REGLE_UTILE || code == I_REGLE_FAITE || code == I_ECRAN_ETAT || code == I_ECRAN_IMAGE || code == I_ECRAN_EXIGER
         || code == I_SIGLES || code == I_ECRAN_TEXTE || code == I_DOCUMENT || code == I_CODE_QR || code == I_RESTAURER
         || code == I_ENVOI || code == I_CHAMP_JSON || code == I_XML_DEBUT || code == I_XML_ELEMENT || code == I_XML_ATTRIBUT
-        || code == I_ECRAN_FILTRE || code == I_JSON_LISTE;
+        || code == I_ECRAN_FILTRE || code == I_JSON_LISTE || code == I_HISTORIQUE;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -463,7 +465,9 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_RETIRER: besoin = 2; effet = -1; break;
             case I_SAUVEGARDER: besoin = 1; effet = -1; break;
             case I_SAUVEGARDER_COFFRE: besoin = 2; effet = -2; break;
-            case I_RESTAURER: besoin = op ? 2 : 1; effet = -besoin; break;
+            case I_RESTAURER: besoin = op & 1 ? 2 : 1; effet = -besoin; break;
+            case I_DERNIERE_SAUVEGARDE: besoin = 1; effet = 0; break;
+            case I_HISTORIQUE: besoin = op ? 0 : 1; effet = op ? 1 : 0; break;
             case I_CHANGER_MDP_BASE: besoin = 2; effet = -2; break;
             case I_ECRIRE_CHAMP: case I_GAGNER: case I_PERDRE: case I_EXPORTER: besoin = 2; effet = -2; break;
             case I_DEMANDER: besoin = 1; effet = 0; break;   /* dépile la question, empile la réponse */
@@ -626,7 +630,7 @@ unsigned char *module_serialiser(const Module *m, size_t *taille) {
         const ClasseModule *c = &m->classes[k];
         ecrire_chaine(&o, c->nom);
         ecrire_u8(&o, (c->feminin ? 1u : 0u) | (c->aptitude ? 2u : 0u) | (c->conserve ? 4u : 0u)
-                    | (c->hors_fiches ? 8u : 0u));
+                    | (c->hors_fiches ? 8u : 0u) | (c->journal ? 16u : 0u));
         ecrire_chaine(&o, c->parent ? c->parent : "");
         ecrire_chaine(&o, c->pluriel ? c->pluriel : "");
         ecrire_chaine(&o, c->ancien ? c->ancien : "");   /* format 64 (§ 16.7) */
@@ -815,7 +819,7 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
             char *pluriel = version >= 10 ? lire_chaine(&l) : grym_dupliquer("");
             char *ancien = version >= 64 ? lire_chaine(&l) : grym_dupliquer("");
             uint32_t nap = version >= 7 ? lire_u(&l, 4) : 0;
-            if (!nom || !*nom || !parent || !pluriel || !ancien || l.echec || fem > 15 || nap > (taille - l.pos) / 4) {
+            if (!nom || !*nom || !parent || !pluriel || !ancien || l.echec || fem > 31 || nap > (taille - l.pos) / 4) {
                 free(nom);
                 free(parent);
                 free(pluriel);
@@ -826,6 +830,7 @@ Module *module_lire(const unsigned char *donnees, size_t taille, char **erreur) 
             c->aptitude = (fem & 2) != 0;
             c->conserve = (fem & 4) != 0;
             c->hors_fiches = (fem & 8) != 0;
+            c->journal = (fem & 16) != 0;
             if (*pluriel) c->pluriel = pluriel;
             else free(pluriel);
             if (*parent) c->parent = parent;
@@ -934,6 +939,7 @@ ClasseModule *module_ajouter_classe(Module *m, const char *nom, int feminin) {
     c->parent = NULL;
     c->conserve = 0;
     c->hors_fiches = 0;
+    c->journal = 0;
     c->pluriel = NULL;
     c->types = NULL;
     c->uniques = NULL;

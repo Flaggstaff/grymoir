@@ -47,6 +47,7 @@ struct Base {
     int a_convertir;  /* base d'avant le format 2 dont des fichiers sont encore dans les tables des entités */
     long convertis;   /* fichiers déménagés par la transaction en cours : le rapport des migrations les compte */
     int fichiers_prets;   /* grym_fichier existe, validée par une transaction */
+    int journal_pret;     /* grym_journal existe (2.85) ; remis à 0 quand une transaction s'annule */
     Noms ecrites;         /* entités écrites par la transaction en cours, lignées comprises */
     int lecture;          /* une règle s'évalue : ses lectures se notent dans « lues » */
     Noms lues;
@@ -662,7 +663,7 @@ int base_verifier_copie(const unsigned char *o, size_t n, char **erreur) {
         sqlite3_finalize(st);
     }
     sqlite3_close(db);
-    if (!ok) *erreur = grym_dupliquer("Ce fichier n'est pas une base GrymoiR intacte : rien n'est restauré.");
+    if (!ok) *erreur = grym_dupliquer("Ce fichier n'est pas une base GrymoiR intacte : la sauvegarde est abîmée ou incomplète.");
     return ok;
 }
 
@@ -1130,6 +1131,7 @@ int base_valider(Base *b, char **erreur) {
 }
 
 void base_annuler(Base *b) {
+    b->journal_pret = 0;   /* la table a pu naître dans la transaction annulée */
     regles_valider(b, 0);
     if (!b->transaction) return;
     b->transaction = 0;
@@ -1235,6 +1237,7 @@ int base_lacher(Base *b, size_t n, char **erreur) {
 }
 
 int base_revenir(Base *b, size_t n, char **erreur) {
+    b->journal_pret = 0;   /* 2.85 : la table a pu naître après le point de retour */
     regles_valider(b, 0);   /* ce qu'une règle a lu dans ce qui s'annule ne vaut plus */
     return point_sql(b, grym_formater("ROLLBACK TO grym_essai_%lu; RELEASE grym_essai_%lu;", (unsigned long)n,
                                       (unsigned long)n), erreur);
@@ -3643,4 +3646,81 @@ char *base_copie_avant_mise_a_jour(Base *b, char **erreur) {
     }
     free(cles);
     return copie;
+}
+
+/* ---------------------------------------------------------------- */
+/* Le journal des changements (2.85)                                */
+/* ---------------------------------------------------------------- */
+
+/* Une ligne au journal, dans la transaction en cours : elle part avec elle si l'exécution échoue. La table naît au premier
+ * changement d'une entité journalisée ; une base qui n'en a pas ne la reçoit jamais. */
+int base_journaliser(Base *b, const char *entite, long objet, const char *designation, const char *champ, const char *avant,
+                     const char *apres, char **erreur) {
+    if (!b->journal_pret) {
+        if (!executer(b, "CREATE TABLE IF NOT EXISTS grym_journal (id INTEGER PRIMARY KEY AUTOINCREMENT, moment TEXT NOT NULL, "
+                         "entite TEXT NOT NULL, objet INTEGER NOT NULL, designation TEXT, champ TEXT, avant TEXT, apres TEXT);"
+                         "CREATE INDEX IF NOT EXISTS grym_journal_objet ON grym_journal (entite, objet);", erreur))
+            return 0;
+        b->journal_pret = 1;
+    }
+    sqlite3_stmt *st = NULL;
+    if (preparer(b, "INSERT INTO grym_journal (moment, entite, objet, designation, champ, avant, apres) "
+                    "VALUES (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), ?, ?, ?, ?, ?, ?)", &st) != SQLITE_OK) {
+        *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+        return 0;
+    }
+    sqlite3_bind_text(st, 1, entite, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int64(st, 2, (sqlite3_int64)objet);
+    const char *t[4] = { designation, champ, avant, apres };
+    for (int k = 0; k < 4; k++) {
+        if (t[k]) sqlite3_bind_text(st, 3 + k, t[k], -1, SQLITE_TRANSIENT);
+        else sqlite3_bind_null(st, 3 + k);
+    }
+    const int ok = sqlite3_step(st) == SQLITE_DONE;
+    if (!ok) *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+    rendre(b, st);
+    return ok;
+}
+
+/* Les lignes du journal, les plus récentes d'abord, au plus max : celles d'un objet (entite et objet), ou toutes (entite
+ * NULL). Chaque ligne : six textes, moment, entité, désignation, champ, avant, après (NULL pour absent). 0 et *erreur si la
+ * lecture échoue ; une base sans journal en rend zéro. */
+int base_journal(Base *b, const char *entite, long objet, size_t max, char ****lignes, size_t *n, char **erreur) {
+    *lignes = NULL;
+    *n = 0;
+    sqlite3_stmt *st = NULL;
+    int present = 0;
+    if (preparer(b, "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = 'grym_journal'", &st) == SQLITE_OK
+        && sqlite3_step(st) == SQLITE_ROW) present = sqlite3_column_int(st, 0);
+    rendre(b, st);
+    if (!present) return 1;
+    st = NULL;
+    const char *sql = entite
+        ? "SELECT moment, entite, designation, champ, avant, apres FROM grym_journal WHERE entite = ? AND objet = ? "
+          "ORDER BY id DESC LIMIT ?"
+        : "SELECT moment, entite, designation, champ, avant, apres FROM grym_journal ORDER BY id DESC LIMIT ?";
+    if (preparer(b, sql, &st) != SQLITE_OK) {
+        *erreur = grym_formater("Base « %s » : %s.", b->chemin, sqlite3_errmsg(b->db));
+        return 0;
+    }
+    int i = 1;
+    if (entite) {
+        sqlite3_bind_text(st, i++, entite, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int64(st, i++, (sqlite3_int64)objet);
+    }
+    sqlite3_bind_int64(st, i, (sqlite3_int64)max);
+    while (sqlite3_step(st) == SQLITE_ROW) {
+        char ***t = grym_allouer((*n + 1) * sizeof *t);
+        if (*n) memcpy(t, *lignes, *n * sizeof *t);
+        free(*lignes);
+        *lignes = t;
+        char **l = grym_allouer(6 * sizeof *l);
+        for (int k = 0; k < 6; k++) {
+            const unsigned char *x = sqlite3_column_text(st, k);
+            l[k] = x ? grym_dupliquer((const char *)x) : NULL;
+        }
+        t[(*n)++] = l;
+    }
+    rendre(b, st);
+    return 1;
 }
