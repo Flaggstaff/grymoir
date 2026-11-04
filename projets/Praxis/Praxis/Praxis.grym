@@ -161,7 +161,7 @@ Remarque : les couleurs et la police du site de Nicolas Seydoux, à l'encre (pou
 Remarque : du cabinet (le cœur et le nom dessiné au départ), repris à chaque lancement ; Outfit, sous licence SIL Open Font 1.1 (polices/OFL.txt).
 Remarque : la version de Praxis, la même pour tous les cabinets ; la Configuration la montre. Elle change avec chaque
 Remarque : mise à jour livrée, ici et dans « application, version » du projet.grymatelier de chaque version (tests/praxis-versions).
-La version vaut « 2026.11.04 ».
+La version vaut « 2026.11.05 ».
 Les écrans ont la couleur « #34495E », le fond « #F2F4F6 », la police « polices/Outfit.ttf », le logo (le logo du cabinet conservé) et la signature (la signature du cabinet conservé).
 
 Remarque : la copie chiffrée de toute la base, avec ses clés, dans un dossier, nommée par l'application, le jour et l'heure :
@@ -178,6 +178,12 @@ Pour archiver les données :
         Si la dernière sauvegarde du c est présente :
             Si la dernière sauvegarde du c = aujourd'hui, le besoin devient faux.
         Si le besoin :
+            Remarque : la copie d'avant, vérifiée d'abord (5 novembre 2026) : déchiffrée et intacte, sinon l'accueil le dit.
+            Essayer :
+                La copie d'avant vaut la dernière sauvegarde de (le dossier de sauvegarde du c suivi de « /Praxis »).
+                Si la copie d'avant est présente, vérifier la sauvegarde la copie d'avant.
+            En cas d'échec :
+                L'échec de sauvegarde devient « La dernière copie ne s'ouvre pas ( » suivi du motif de l'échec suivi de « ) : restaure-en une plus ancienne si besoin, et vérifie le dossier. ».
             Essayer :
                 Copier la base dans le dossier de sauvegarde du c.
             En cas d'échec :
@@ -737,6 +743,7 @@ L'écran du patient, « Patient », montre :
         un bouton « Facturer », actif si le dû facturable de la personne ouverte et d'aujourd'hui > 0,
         un bouton « Notes »,
         un bouton « Attestation annuelle »,
+        un bouton « Historique »,
         un bouton « Ordonnances », visible si la facturation aux assurances du cabinet conservé,
         un bouton « Facturer la complémentaire », visible si la facturation aux assurances du cabinet conservé,
         un bouton « Fermer », à confirmer par « Fermer sans enregistrer ? Ce qui a été changé sera perdu. » si l'écran est modifié,
@@ -975,6 +982,17 @@ Le document de quittance, « Quittance », montre :
     la liste des séances conservées dont la quittance = la pièce en cours, par date, avec la date, le nom du soin, le code tarifaire du soin, la durée, le prix et le paiement,
     le texte "Montant reçu : CHF " suivi de l'arrondi du montant de la pièce en cours à 0,01 suivi de la mention du moyen de la pièce en cours,
     le texte "Pour acquit, " suivi du nom du cabinet conservé.
+
+Remarque : l'historique d'un patient (5 novembre 2026) : chaque changement de sa fiche, le plus récent d'abord, avec l'avant et
+Remarque : l'après ; un mot de passe ou un secret n'y paraît jamais. Le journal : les 500 derniers changements des patients et des séances.
+L'écran de l'historique, « Historique », montre :
+    le texte le nom de la personne ouverte, en petites capitales,
+    le texte l'historique de la personne ouverte,
+    un bouton « Fermer ».
+
+L'écran du journal, « Journal des changements », montre :
+    le texte l'historique de la base,
+    un bouton « Fermer ».
 
 Remarque : l'attestation annuelle (4 novembre 2026) : ce que le patient a payé lui-même dans l'année choisie dans la Comptabilité,
 Remarque : séance par séance, au jour du paiement, avec sa pièce ; pour sa déclaration d'impôt ou son assurance complémentaire. Les
@@ -1270,6 +1288,7 @@ L'écran de configuration, « Configuration », montre :
     un bouton « SMS », en tuile, avec la description « Le compte ASPSMS, un essai », visible si le choix d'agenda du cabinet conservé et le rôle ouvert = « Direction »,
     un bouton « Accès », en tuile, avec la description « Les mots de passe de la Direction et de l'Équipe », visible si la gestion du personnel du cabinet conservé et le rôle ouvert = « Direction »,
     un bouton « Assureurs », en tuile, avec la description « Caisses-maladie et leur GLN »,
+    un bouton « Journal », en tuile, avec la description « Les derniers changements des patients et des séances », visible si le rôle ouvert = « Direction »,
     un bouton « Tarif des assurances », en tuile, avec la description « Positions, points et valeur du point », visible si la facturation aux assurances du cabinet conservé,
     le texte "Praxis, version " suivi de la version, en petites capitales,
     un bouton « Fermer ».
@@ -2804,6 +2823,18 @@ Quand on clique sur « Enregistrer » dans l'écran d'inscription :
     La dernière dictée du p devient la dictée de l'écran.
     Conserver le p.
     L'inscrit devient le p.
+    Fermer l'écran.
+
+Quand on clique sur « Historique » dans l'écran du patient :
+    Ouvrir l'écran de l'historique.
+
+Quand on clique sur « Fermer » dans l'écran de l'historique :
+    Fermer l'écran.
+
+Quand on clique sur « Journal » dans l'écran de configuration :
+    Ouvrir l'écran du journal.
+
+Quand on clique sur « Fermer » dans l'écran du journal :
     Fermer l'écran.
 
 Quand on clique sur « Attestation annuelle » dans l'écran du patient :

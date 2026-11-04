@@ -142,7 +142,8 @@ Remarque : le nom d'un patient (24 octobre 2026) : son nom de famille et son pr�
 Remarque : (« Alain Thiémard ») : c'est lui que montrent les listes, les menus et les pièces.
 Remarque : le rappel par SMS (25 octobre 2026) : le patient l'a accepté ; la veille de chaque séance prévue, à 18:00 ; la
 Remarque : séance garde la référence du SMS confié à ASPSMS, pour l'annuler si elle change.
-Un patient, conservé, anciennement « client », a :
+Remarque : journalisé (5 novembre 2026) : chaque changement d'un patient s'inscrit, avec l'avant et l'après (son historique).
+Un patient, conservé, journalisé, anciennement « client », a :
     un nom (texte), unique,
     un nom de famille (texte), facultatif,
     un prénom (texte), facultatif,
@@ -273,7 +274,8 @@ Remarque : la séance garde le son de son commentaire, s'il a été dicté, et l
 Remarque : l'encaissement : le jour où l'argent est arrivé ; les comptes en recettes-dépenses comptent à cette date, pas à celle de la séance.
 Remarque : le dernier rappel d'une séance date d'avant les rappels par facture (20 octobre 2026) : abandonné (2.49).
 
-Une séance, conservée, a :
+Remarque : journalisée (5 novembre 2026) : un prix, un paiement, une date changés se retrouvent dans le journal de la base.
+Une séance, conservée, journalisée, a :
     un patient (patient), et disparaît avec lui, anciennement « client »,
     un soin (soin),
     une date (date),

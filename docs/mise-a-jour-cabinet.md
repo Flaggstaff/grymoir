@@ -64,3 +64,13 @@ La base retrouve exactement son état d'avant la visite.
 - **Nouveau patient** : une fiche semblable (même courriel, même natel, ou même nom de famille et même date de naissance) est
   signalée ; la case « Autre personne » permet de l'enregistrer quand même.
 - La mise à jour ajoute une table (les virements reçus) : la copie « avant mise à jour » se fait d'elle-même (grammaire 2.59).
+
+## Version 2026.11.05 : ce qui change chez le cabinet
+
+- **La copie de la veille est vérifiée** une fois par jour, à l'ouverture, avant la copie du jour : déchiffrée et intacte. Si
+  elle ne s'ouvre pas, l'accueil le dit, comme pour une sauvegarde ratée ; une copie plus ancienne se restaure depuis
+  Configuration, Sauvegardes.
+- **Historique** sur la page d'un patient : chaque changement de sa fiche depuis cette version, avec l'avant et l'après.
+  **Journal** dans la Configuration (Direction) : les 500 derniers changements des patients et des séances. Le journal dit
+  quoi et quand, pas qui. Les changements d'avant la mise à jour n'y sont pas.
+- La mise à jour ne change pas la structure de la base : aucune migration (vérifié avec `grym migration`).
