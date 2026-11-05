@@ -369,6 +369,11 @@ Programme > Fabriquer l'application… fait du projet une application autonome, 
 
 Vérifié ici : l'AppImage des Amis du Tilleul, fabriquée sans écran, lancée dans un dossier personnel vierge, crée sa base avec les données du guide. La partie macOS de la voie C et toute la partie Windows n'ont tourné que sur GitHub, pas ici.
 
+
+### Le journal des plantages *(6 novembre 2026)*
+
+Une application fabriquée qui s'arrête brusquement (accès mémoire interdit, abandon, erreur de calcul, instruction illégale ; sous Windows, une exception non rattrapée) écrit avant de mourir dans `Documents/<Nom>/Plantages.txt` : le moment (en secondes depuis 1970, UTC), le signal, l'application et sa version (celle du paquet : Info.plist sous macOS, VERSIONINFO sous Windows), le système, et sous macOS et Linux la pile d'appels. Les données du programme n'y sont pas. Au lancement suivant, une fenêtre le dit et donne le chemin du fichier, une fois par plantage. Le gestionnaire n'utilise que des appels permis dans un signal ; un message fatal de Qt (`qFatal`) s'y note aussi. Essai : `tests/plantages`, avec `grym-atelier --essai-plantage dossier`.
+
 ## 9. La clé de secours *(faite le 21 octobre 2026)*
 
 Pour une application à base chiffrée (grammaire, § 16.18), le menu Programme, Clé de secours :

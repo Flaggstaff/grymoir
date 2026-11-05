@@ -1,0 +1,21 @@
+#!/bin/sh
+# Le journal des plantages d'une application fabriquée (6 novembre 2026) : grym-atelier --essai-plantage installe le
+# journal dans un dossier puis plante ; le fichier Plantages.txt dit le signal, l'application et sa version, la pile.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+atelier="$racine/construction/grym-atelier"
+[ -x "$atelier" ] || atelier="$racine/construction/grym-atelier.app/Contents/MacOS/grym-atelier"
+if [ ! -x "$atelier" ]; then echo "plantages : sauté (atelier absent)"; exit 0; fi
+d=$(mktemp -d)
+trap 'rm -rf "$d"' EXIT
+total=0; echecs=0
+verifier() { total=$((total + 1)); if [ "$1" != "$2" ]; then echecs=$((echecs + 1)); echo "ÉCHEC : $3 (attendu « $2 », obtenu « $1 »)"; fi; }
+QT_QPA_PLATFORM=offscreen "$atelier" --essai-plantage "$d" > /dev/null 2>&1
+code=$?
+verifier "$([ $code -ne 0 ] && echo oui)" "oui" "le processus meurt du plantage"
+verifier "$(grep -c 'Plantage, ' "$d/Plantages.txt" 2>/dev/null)" "1" "une entrée au journal"
+verifier "$(grep -c 'Application : Essai, version 1.0' "$d/Plantages.txt" 2>/dev/null)" "1" "l'application et sa version"
+verifier "$(grep -c 'SIGSEGV' "$d/Plantages.txt" 2>/dev/null)" "1" "le signal, nommé"
+QT_QPA_PLATFORM=offscreen "$atelier" --essai-plantage "$d" > /dev/null 2>&1
+verifier "$(grep -c 'Plantage, ' "$d/Plantages.txt" 2>/dev/null)" "2" "un second plantage s'ajoute au premier"
+echo "$((total - echecs))/$total tests réussis"
+[ $echecs = 0 ]

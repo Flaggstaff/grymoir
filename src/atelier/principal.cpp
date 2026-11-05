@@ -29,6 +29,21 @@
 #include <csignal>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
+#include <QDateTime>
+#include <QFile>
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <fcntl.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#if defined(__APPLE__) || defined(__GLIBC__)
+#include <execinfo.h>
+#define GRYM_PILE 1
+#endif
+#endif
 
 extern "C" {
 #include "vm.h"
@@ -45,6 +60,143 @@ static void sur_arret(int signal_recu) {
     grym_interruption = 1;
     grym_fermeture_demandee = 1;
     std::signal(signal_recu, sur_arret);
+}
+
+// Le journal des plantages (6 novembre 2026) : une application fabriquée qui s'arrête brusquement (accès mémoire interdit,
+// abandon, erreur de calcul, instruction illégale ; sous Windows, toute exception non rattrapée) écrit, avant de mourir,
+// dans Documents/<Nom>/Plantages.txt : le moment, le signal, l'application et sa version, la pile d'appels (macOS, Linux).
+// Au lancement suivant, l'application le dit, pour que le fichier parte chez qui la maintient. Le gestionnaire n'utilise
+// que des appels permis dans un signal (open, write, close, backtrace_symbols_fd) ; tout le reste est préparé d'avance.
+static char plantage_chemin[4096];
+static char plantage_entete[1024];
+
+static void plantage_ecrire(int fd, const char *t) {
+    const size_t n = std::strlen(t);
+#ifdef _WIN32
+    _write(fd, t, (unsigned)n);
+#else
+    if (write(fd, t, n) < 0) {}
+#endif
+}
+
+static void plantage_nombre(int fd, long long v) {
+    char t[32], *p = t + sizeof t - 1;
+    *p = 0;
+    const bool negatif = v < 0;
+    unsigned long long u = negatif ? (unsigned long long)(-v) : (unsigned long long)v;
+    do { *--p = (char)('0' + u % 10); u /= 10; } while (u);
+    if (negatif) *--p = '-';
+    plantage_ecrire(fd, p);
+}
+
+static int plantage_ouvrir() {
+#ifdef _WIN32
+    return _open(plantage_chemin, _O_WRONLY | _O_APPEND | _O_CREAT | _O_BINARY, 0644);
+#else
+    return open(plantage_chemin, O_WRONLY | O_APPEND | O_CREAT, 0644);
+#endif
+}
+
+static void plantage_fermer(int fd) {
+#ifdef _WIN32
+    _close(fd);
+#else
+    close(fd);
+#endif
+}
+
+static void sur_plantage(int signal_recu) {
+    const int fd = plantage_ouvrir();
+    if (fd >= 0) {
+        plantage_ecrire(fd, "\n--- Plantage, ");
+        plantage_nombre(fd, (long long)std::time(nullptr));
+        plantage_ecrire(fd, " (secondes depuis 1970, UTC) ---\n");
+        plantage_ecrire(fd, plantage_entete);
+        plantage_ecrire(fd, "Signal : ");
+        plantage_ecrire(fd, signal_recu == SIGSEGV ? "SIGSEGV (accès mémoire interdit)"
+                            : signal_recu == SIGABRT ? "SIGABRT (abandon)"
+                            : signal_recu == SIGFPE ? "SIGFPE (erreur de calcul)"
+                            : signal_recu == SIGILL ? "SIGILL (instruction illégale)"
+#ifdef SIGBUS
+                            : signal_recu == SIGBUS ? "SIGBUS (erreur de bus)"
+#endif
+                            : "autre");
+        plantage_ecrire(fd, "\n");
+#ifdef GRYM_PILE
+        void *pile[64];
+        const int n = backtrace(pile, 64);
+        plantage_ecrire(fd, "Pile d'appels :\n");
+        backtrace_symbols_fd(pile, n, fd);
+#endif
+        plantage_fermer(fd);
+    }
+    std::signal(signal_recu, SIG_DFL);
+    std::raise(signal_recu);
+}
+
+#ifdef _WIN32
+static LONG WINAPI sur_exception(EXCEPTION_POINTERS *e) {
+    const int fd = plantage_ouvrir();
+    if (fd >= 0) {
+        plantage_ecrire(fd, "\n--- Plantage, ");
+        plantage_nombre(fd, (long long)std::time(nullptr));
+        plantage_ecrire(fd, " (secondes depuis 1970, UTC) ---\n");
+        plantage_ecrire(fd, plantage_entete);
+        plantage_ecrire(fd, "Exception Windows : ");
+        plantage_nombre(fd, (long long)e->ExceptionRecord->ExceptionCode);
+        plantage_ecrire(fd, ", à l'adresse ");
+        plantage_nombre(fd, (long long)(uintptr_t)e->ExceptionRecord->ExceptionAddress);
+        plantage_ecrire(fd, "\n");
+        plantage_fermer(fd);
+    }
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
+
+// Les messages fatals de Qt (qFatal) : écrits au journal, puis l'abandon habituel, que sur_plantage note aussi.
+static void sur_message_qt(QtMsgType sorte, const QMessageLogContext &, const QString &message) {
+    std::fprintf(stderr, "%s\n", message.toLocal8Bit().constData());
+    if (sorte != QtFatalMsg) return;
+    const int fd = plantage_ouvrir();
+    if (fd >= 0) {
+        plantage_ecrire(fd, "\nMessage fatal de Qt : ");
+        plantage_ecrire(fd, message.toUtf8().constData());
+        plantage_ecrire(fd, "\n");
+        plantage_fermer(fd);
+    }
+}
+
+// Prépare le journal dans le dossier donné, pour l'application nommée ; rend le chemin du fichier.
+static QString installer_journal_plantages(const QString &dossier, const QString &nom, const QString &version) {
+    const QString chemin = QDir(dossier).filePath("Plantages.txt");
+    std::snprintf(plantage_chemin, sizeof plantage_chemin, "%s", QFile::encodeName(chemin).constData());
+    std::snprintf(plantage_entete, sizeof plantage_entete, "Application : %s, version %s ; GrymoiR, atelier de %s ; %s\n",
+                  nom.toUtf8().constData(), version.isEmpty() ? "inconnue" : version.toUtf8().constData(), __DATE__,
+                  QSysInfo::prettyProductName().toUtf8().constData());
+    for (int s : {SIGSEGV, SIGABRT, SIGFPE, SIGILL
+#ifdef SIGBUS
+                  , SIGBUS
+#endif
+         })
+        std::signal(s, sur_plantage);
+#ifdef _WIN32
+    SetUnhandledExceptionFilter(sur_exception);
+#endif
+    qInstallMessageHandler(sur_message_qt);
+    return chemin;
+}
+
+// Au lancement : un plantage noté depuis le lancement d'avant se dit, une fois.
+static void annoncer_plantage(const QString &chemin, const QString &nom, QWidget *parent) {
+    const qint64 taille = QFileInfo(chemin).size(), vue = QSettings().value("plantages-vus", (qint64)0).toLongLong();
+    QSettings().setValue("plantages-vus", taille);
+    if (taille <= vue) return;
+    QTimer::singleShot(0, parent, [chemin, nom, parent] {
+        QMessageBox::information(parent, nom,
+                                 QString::fromUtf8("%1 s'est arrêté brusquement la dernière fois. Ce qui s'est passé est noté dans :\n%2\n\n"
+                                                   "Envoie ce fichier à qui maintient l'application : il aide à trouver la cause. "
+                                                   "Tes données n'y sont pas.").arg(nom, chemin));
+    });
 }
 
 // Les commandes sans fenêtre (--fabriquer, --preparer) : pour les scripts et l'intégration continue, qui n'ont pas
@@ -109,6 +261,13 @@ int main(int argc, char **argv) {
                        || std::strcmp(argv[1], "--icone-ico") == 0))
         || (argc == 3 && std::strcmp(argv[1], "--identite") == 0))
         return sans_fenetre(argc, argv);
+    // grym-atelier --essai-plantage dossier : installe le journal des plantages dans le dossier, puis plante (les essais)
+    if (argc == 3 && std::strcmp(argv[1], "--essai-plantage") == 0) {
+        QCoreApplication app(argc, argv);
+        installer_journal_plantages(QString::fromLocal8Bit(argv[2]), QString::fromUtf8("Essai"), QString::fromUtf8("1.0"));
+        volatile int *rien = nullptr;
+        return *rien;   // un accès mémoire interdit, voulu
+    }
     QApplication app(argc, argv);
     QApplication::setOrganizationName("GrymoiR");
     QApplication::setApplicationName("Atelier");
@@ -131,6 +290,9 @@ int main(int argc, char **argv) {
         const QString documents = QDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)).filePath(nom);
         QDir().mkpath(documents);
         e.placer_ecriture(documents);
+        // le journal des plantages, dans le même dossier (6 novembre 2026)
+        const QString plantages = installer_journal_plantages(documents, nom, QCoreApplication::applicationVersion());   // Info.plist, VERSIONINFO
+        annoncer_plantage(plantages, nom, &e);
         // la fenêtre prend la taille de l'accueil (sans vide autour), centrée ; un écran plus grand défile
         e.ajuster_au_premier_ecran();
         e.show();

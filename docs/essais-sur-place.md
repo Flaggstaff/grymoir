@@ -48,3 +48,13 @@ Sur un poste branché en USB, en veille :
    est dans la langue parlée et la traduction en français suit ; un QSO en français n'est pas envoyé à DeepL (le quota du
    mois, bouton « Quota DeepL », ne bouge pas). Les QSO très courts ou faits d'indicatifs partent quand même chez DeepL :
    la langue n'y est pas reconnaissable.
+5. **WSJT-X** : dans WSJT-X, Réglages, Rapports, « UDP Server » : 127.0.0.1, port 2237, cases « Accept UDP requests »
+   sans importance. Décoder quelques minutes de FT8, puis dans Écoutille, bouton « WSJT-X » : les décodages apparaissent,
+   avec l'heure UTC, le mode, la bande et le message. Si l'avis dit que le port ne s'ouvre pas : JTAlert ou GridTracker
+   l'écoutent déjà ; les fermer, ou régler l'un des deux sur un autre port (Écoutille lit le 2237). À rapporter si rien
+   n'arrive : la version de WSJT-X (le format UDP de WSJT-X n'a été vérifié ici que contre des messages fabriqués).
+
+## Les deux applications : un plantage
+
+Si l'application se ferme brusquement, le lancement suivant le dit et donne le chemin de `Plantages.txt` (dans Documents,
+le dossier de l'application). Ce fichier ne contient aucune donnée de patient ni de passage : il peut être envoyé tel quel.
