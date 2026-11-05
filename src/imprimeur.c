@@ -675,6 +675,19 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, " ");
         de_expression(im, n->enfants[0]);
         return;
+    case N_WSJTX:   /* « les décodages WSJT [du port p] » ; « _décodages_wsjt [p] » (2.88) */
+        if (im->compact) {
+            aj(im, "_décodages_wsjt");
+            if (n->nb_enfants) { aj(im, " "); expression(im, n->enfants[0]); }
+            return;
+        }
+        aj(im, "les décodages WSJT");
+        if (n->nb_enfants) {
+            aj(im, " du port ");
+            if (argument_simple(n->enfants[0])) expression(im, n->enfants[0]);
+            else { aj(im, "("); expression(im, n->enfants[0]); aj(im, ")"); }
+        }
+        return;
     case N_LANGUE:   /* « la langue reconnue de t » ; « _langue t » (2.86) */
         if (im->compact) { aj(im, "_langue "); expression(im, n->enfants[0]); return; }
         aj(im, "la langue reconnue ");

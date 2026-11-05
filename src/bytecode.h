@@ -155,10 +155,11 @@ typedef enum {
     I_HISTORIQUE,       /* opérande 0 : remplace un objet par son historique ; 1 : empile celui de la base ; un texte (2.85) */
     I_AMORCER_LANGUES,  /* comme I_AMORCER, la langue parlée reconnue au lieu du français (2.86) */
     I_LANGUE,           /* remplace un texte par le code de sa langue reconnue (« fr », « en »…), ou absent (2.86) */
-    I_SIGNER            /* dépile un texte (ou absent) : l'auteur des lignes suivantes du journal (2.87) */
+    I_SIGNER,           /* dépile un texte (ou absent) : l'auteur des lignes suivantes du journal (2.87) */
+    I_WSJTX             /* opérande 1 : dépile le port (sinon 2237) ; empile la liste des nouveaux décodages (2.88) */
 } CodeInstruction;
 
-#define I_DERNIER I_SIGNER
+#define I_DERNIER I_WSJTX
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

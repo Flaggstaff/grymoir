@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.87 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.88 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2481,6 +2481,21 @@ Pour chaque port parmi les ports série, afficher port.
 - Sous macOS, les Yaesu à puce Silicon Labs CP2105 (FT-991A, FT-710) demandent le pilote du fabricant pour que leur port apparaisse ; le son USB n'en a pas besoin.
 - Forme compacte : `_réponse_port p _question « FA; » _vitesse 38400 _bauds` ; `_pour_chaque p _parmi _ports_série`.
 
+
+### 22.26 Les décodages de WSJT-X *(2.88, implémenté le 6 novembre 2026)*
+
+```
+Pour chaque d parmi les décodages WSJT :
+    Afficher le champ « heure » de d puis le champ « message » de d.
+Pour chaque d parmi les décodages WSJT du port 2238 :
+    …
+```
+
+- **`les décodages WSJT [du port p]`** : ce que WSJT-X (FT8, FT4, JT65…) a décodé depuis la dernière lecture, une liste de textes JSON qui se lisent avec `le champ « … » de d` (§ 22.18) : `heure` (« 14:30:15 », UTC, celle de WSJT-X), `mode` (« FT8 »), `fréquence` (la fréquence de cadran, en hertz, absente tant que WSJT-X n'a pas dit son état), `rapport` (dB), `décalage` (le décalage audio, Hz), `écart` (le décalage temporel, s), `message` (« CQ HB9ABC JN36 »), `douteux` (vrai ou faux). Sans port, 2237, celui de WSJT-X. Seuls les décodages nouveaux comptent, pas ceux que WSJT-X rejoue.
+- **La prise UDP** s'ouvre sur 127.0.0.1 au premier appel et le reste jusqu'à la fin du programme : ce qui arrive entre deux lectures attend dans le système, rien ne se perd tant que le programme tourne ; ce qui arrive avant le premier appel est perdu. La lecture n'attend jamais : rien d'arrivé, une liste vide. Dans WSJT-X : Réglages, Rapports, « UDP Server » 127.0.0.1, port 2237. Un seul logiciel peut écouter ce port : JTAlert ou GridTracker l'occupent peut-être déjà.
+- **Les refus** (rattrapables) : « Le port UDP 2237 ne s'ouvre pas : un autre logiciel l'écoute peut-être déjà (JTAlert, GridTracker). … » ; un port hors de 1 à 65535 : « Le port de WSJT-X est un nombre entier de 1 à 65535 (2237, celui de WSJT-X). » ; `WSJT-X` écrit avec son trait d'union : « « les décodages WSJT » s'écrit sans « -X » : un trait d'union est une soustraction. ». Pas dans un calcul.
+- **Le format** est celui des messages UDP de WSJT-X (NetworkMessage.hpp dans ses sources), décrit ici de mémoire et vérifié seulement contre des messages fabriqués : les messages « Status » (1) donnent la fréquence et le mode, chaque « Decode » (2) un décodage ; les autres sont ignorés. Le mode d'un décodage vient du dernier Status ; sans lui, du caractère du Decode (« ~ » FT8, « + » FT4).
+- Forme compacte : `_décodages_wsjt [p]`.
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -2672,3 +2687,4 @@ Pour chaque port parmi les ports série, afficher port.
 | 2.85 | 2026-11-05 | § 15.6 bis : `Vérifier la sauvegarde f [avec le mot de passe m].` et `la dernière sauvegarde de « p »` ; § 16.19 : l'entité journalisée (`, journalisé,`), `l'historique de x` et `l'historique de la base` |
 | 2.86 | 2026-11-05 | § 15.8 : `Amorcer la transcription avec t, en toute langue.` (la langue parlée reconnue par Whisper) et `la langue reconnue de t` (sept langues, par les mots outils) |
 | 2.87 | 2026-11-06 | § 16.19 : `Signer le journal avec t.`, l'auteur des lignes du journal ; l'historique le montre |
+| 2.88 | 2026-11-06 | § 22.26 : `les décodages WSJT [du port p]`, les décodages de WSJT-X reçus en UDP, en textes JSON |

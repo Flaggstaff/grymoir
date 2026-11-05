@@ -387,6 +387,10 @@ static void expression(Compilation *c, const Noeud *n) {
         emettre(c, I_CHAMP_JSON, k, n->ligne, n->colonne);
         return;
     }
+    case N_WSJTX:   /* « les décodages WSJT [du port p] » (2.88) */
+        if (n->nb_enfants) expression(c, n->enfants[0]);
+        emettre(c, I_WSJTX, n->nb_enfants ? 1 : 0, n->ligne, n->colonne);
+        return;
     case N_LANGUE:   /* « la langue reconnue de t » (2.86) */
         expression(c, n->enfants[0]);
         emettre(c, I_LANGUE, 0, n->ligne, n->colonne);

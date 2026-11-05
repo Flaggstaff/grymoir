@@ -19,4 +19,13 @@ char *serie_echanger(const char *port, long bauds, const char *question, char **
 /* Les vitesses acceptées, en bauds : de 1200 à 115200. */
 int serie_vitesse_connue(long bauds);
 
+/* Les décodages de WSJT-X (grammaire 2.88) : au premier appel pour un port, une prise UDP s'ouvre sur 127.0.0.1:port et le
+ * reste jusqu'à la fin du processus ; chaque appel lit sans attendre ce qui est arrivé depuis. Les messages « Status » (1)
+ * donnent la fréquence et le mode ; chaque « Decode » (2) nouveau devient un objet JSON alloué : heure, mode, fréquence (Hz,
+ * absente si inconnue), rapport (dB), décalage (Hz), écart (s), message, douteux. Rend leur nombre, *decodages les textes
+ * (à libérer avec serie_liberer) ; (size_t)-1 et *erreur si la prise ne s'ouvre pas. */
+size_t wsjtx_decodages(long port, char ***decodages, char **erreur);
+/* Le même décodage, depuis un datagramme déjà reçu : NULL si ce n'en est pas un (les essais). */
+char *wsjtx_lire_datagramme(const unsigned char *d, size_t n);
+
 #endif

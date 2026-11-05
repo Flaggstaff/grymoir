@@ -219,6 +219,11 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->nb_enfants) decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_WSJTX:   /* (décodages-wsjt [p]) (2.88) */
+        chaine_ajouter(c, "(décodages-wsjt");
+        if (n->nb_enfants) { chaine_ajouter(c, " "); decrire(n->enfants[0], c); }
+        chaine_ajouter(c, ")");
+        return;
     case N_LANGUE:   /* (langue t) (2.86) */
         chaine_ajouter(c, "(langue ");
         if (n->nb_enfants) decrire(n->enfants[0], c);

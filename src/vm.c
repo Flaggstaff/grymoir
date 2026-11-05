@@ -7214,6 +7214,34 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             free(t);
             break;
         }
+        case I_WSJTX: {   /* « les décodages WSJT [du port p] » (2.88) */
+            long port = 2237;
+            if (op) {
+                Valeur p = depiler(&pile);
+                const int bon = p.type == V_NOMBRE && dec_en_long_borne(&p.nombre, 1, 65535, &port);
+                valeur_liberer(&p);
+                if (!bon) { ok = echouer(diag, b, debut, grym_dupliquer("Le port de WSJT-X est un nombre entier de 1 à 65535 (2237, celui de WSJT-X).")); break; }
+            }
+            char **d = NULL, *mp = NULL;
+            const size_t n = wsjtx_decodages(port, &d, &mp);
+            if (n == (size_t)-1) { ok = echouer(diag, b, debut, mp); break; }
+            Valeur e = ensemble_vide();
+            Liste *l = e.liste;
+            for (size_t q = 0; q < n; q++) {
+                if (l->n == l->cap) {
+                    l->cap = l->cap ? l->cap * 2 : 4;
+                    Valeur *t = grym_allouer(l->cap * sizeof *t);
+                    if (l->n) memcpy(t, l->valeurs, l->n * sizeof *t);
+                    free(l->valeurs);
+                    l->valeurs = t;
+                }
+                l->valeurs[l->n++] = vi_texte_pris(d[q]);
+                d[q] = NULL;
+            }
+            free(d);
+            empiler(&pile, e);
+            break;
+        }
         case I_SIGNER: {   /* « Signer le journal avec t. » (2.87) : absent ou vide, plus de signature */
             Valeur v = depiler(&pile);
             char *t = v.type == V_ABSENT ? NULL : texte_valeur(m, &v);

@@ -2422,6 +2422,30 @@ static Noeud *base(Analyse *a) {
         }
     }
     {
+        /* « les décodages WSJT [du port p] » (2.88) : ce que WSJT-X a décodé depuis la dernière lecture, en UDP sur le port p
+         * (2237 sans port) ; une liste de textes JSON (« le champ « message » de d ») */
+        const int m0 = est_mot(t, "les") ? 1 : a->article_force == ART_LES ? 0 : -1;
+        if (m0 >= 0 && est_mot(voir(a, m0), "décodages") && (est_mot(voir(a, m0 + 1), "wsjt") || est_mot(voir(a, m0 + 1), "WSJT"))) {
+            if (a->formule == 1)
+                return erreur(a, t, grym_dupliquer("Un calcul n'écoute pas le réseau : lis les décodages WSJT dans une action."));
+            if (voir(a, m0 + 2)->type == J_MOINS)
+                return erreur_a(a, voir(a, m0 + 2)->ligne, voir(a, m0 + 2)->colonne,
+                                grym_dupliquer("« les décodages WSJT » s'écrit sans « -X » : un trait d'union est une soustraction."));
+            Noeud *n = noeud_creer(N_WSJTX, t->ligne, t->colonne, t->debut);
+            a->article_force = ART_AUCUN;
+            for (int k = 0; k < m0 + 2; k++) avancer(a);
+            n->fin = fin_jeton(&a->j[a->i - 1]);
+            if (est_mot(cour(a), "du") && est_mot(voir(a, 1), "port")) {
+                a->i += 2;
+                Noeud *x = base(a);
+                if (!x) { noeud_liberer(n); return NULL; }
+                noeud_ajouter(n, x);
+                n->fin = x->fin;
+            }
+            return n;
+        }
+    }
+    {
         /* « la langue reconnue de t » (2.86) : la langue d'un texte par ses mots outils, en code ISO 639-1, ou absent */
         const int m0 = est_mot(t, "la") ? 1 : a->article_force == ART_LA ? 0 : -1;
         const Jeton *td = m0 >= 0 ? voir(a, m0 + 2) : NULL;
@@ -5075,6 +5099,41 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
         size_t k2 = d, fe;
         if (a->j[k2].type == J_CROCHETS) k2++;
         else while (mot_de_nom(a, k2) && !est_mot(&a->j[k2], "parmi")) k2++;
+        if (k2 > d && est_mot(&a->j[k2], "parmi") && est_mot(&a->j[k2 + 1], "les") && est_mot(&a->j[k2 + 2], "décodages")
+            && est_mot(&a->j[k2 + 3], "wsjt") && article_de(&a->j[d]) == ART_AUCUN) {
+            /* « Pour chaque d parmi les décodages WSJT [du port p] : » (2.88) : lus une fois au début */
+            char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k2);
+            if (visible(a, nom)) {
+                erreur(a, &a->j[d], grym_formater("« %s » existe déjà : choisis un autre nom.", nom));
+                free(nom);
+                return NULL;
+            }
+            a->i = k2 + 1;
+            Noeud *source = base(a);
+            if (!source) { free(nom); return NULL; }
+            size_t sauve = a->portee->n;
+            portee_declarer(a->portee, nom, GENRE_LIBRE, t->ligne);
+            Symbole *s = &a->portee->s[a->portee->n - 1];
+            s->lecture_seule = 1;
+            int case_el = s->local = a->nb_locaux++;
+            int case_ens = a->nb_locaux++;
+            a->nb_locaux++;   /* rang */
+            int forme = 0;
+            a->boucle++;
+            Noeud *corps = branche(a, colonne, "Pour chaque", &forme);
+            a->boucle--;
+            portee_tronquer(a->portee, sauve);
+            if (!corps) { noeud_liberer(source); free(nom); return NULL; }
+            Noeud *n = noeud_creer(P_POUR_TABLEAU, t->ligne, t->colonne, t->debut);
+            n->op = 'p';
+            n->texte = nom;
+            n->local = case_el;
+            n->entier = case_ens;
+            noeud_ajouter(n, source);
+            noeud_ajouter(n, corps);
+            n->fin = corps->fin;
+            return n;
+        }
         if (k2 > d && est_mot(&a->j[k2], "parmi") && est_mot(&a->j[k2 + 1], "les") && est_mot(&a->j[k2 + 2], "ports")
             && est_mot(&a->j[k2 + 3], "série") && (a->j[k2 + 4].type == J_DEUX_POINTS || a->j[k2 + 4].type == J_VIRGULE)
             && article_de(&a->j[d]) == ART_AUCUN) {

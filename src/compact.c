@@ -679,6 +679,16 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k++;
             continue;
         }
+        if (est_cle(t, "décodages_wsjt")) {          /* _décodages_wsjt [p] → les décodages WSJT [du port p] (2.88) */
+            if (!(k > 0 && est_cle(&r->e[k - 1], "parmi"))) mot(r, "les", t);   /* « _parmi » a déjà écrit « parmi les » */
+            mot(r, "décodages", t);
+            mot(r, "wsjt", t);
+            if (k + 1 < f && (r->e[k + 1].type == J_NOMBRE || r->e[k + 1].type == J_PAR_OUV)) {
+                mot(r, "du", t);
+                mot(r, "port", t);
+            }
+            continue;
+        }
         if (est_cle(t, "langue")) {                  /* _langue t → la langue reconnue de t (2.86) */
             mot(r, "la", t);
             mot(r, "langue", t);

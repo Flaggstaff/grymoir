@@ -69,6 +69,20 @@ Remarque : carnet de trafic ; les indicatifs reconnus dans le morse et la parole
 Remarque : les réglages de Michel (1er novembre 2026) : combien de jours garder les passages ; vide, tout est gardé.
 Remarque : la traduction en français (1er novembre 2026) : DeepL d'abord ; quota épuisé (456) ou DeepL injoignable, Google.
 Remarque : Les clés sont des secrets : elles ne se relisent jamais, elles partent seulement vers leur service.
+Remarque : un décodage de WSJT-X (6 novembre 2026) : FT8, FT4…, reçu en UDP sur le port 2237 de cet ordinateur (WSJT-X,
+Remarque : Réglages, Rapports, « UDP Server » : 127.0.0.1, 2237). Le jour et l'heure UTC du décodage, le mode, la fréquence de
+Remarque : cadran en hertz, le rapport (dB), le décalage audio (Hz), le message, ses indicatifs et sa bande.
+Un décodage, conservé, a :
+    un jour (date),
+    une heure (texte),
+    un mode (texte),
+    une fréquence (nombre entier), facultative,
+    un rapport (nombre entier),
+    un décalage (nombre entier),
+    un message (texte),
+    un relevé d'indicatifs (texte), facultatif,
+    une bande (texte), facultative.
+
 Un réglage, conservé, a :
     une conservation (nombre entier), facultative,
     une clé principale (secret), facultative,
@@ -85,6 +99,10 @@ Le début des passages vaut aujourd'hui.
 Remarque : un mot cherché dans les passages (2 novembre 2026) : dans le nom du poste, le morse, la transcription ou la traduction,
 Remarque : sans tenir compte des accents ni des majuscules ; vide, tout (le nom du poste contient toujours le texte vide).
 Le mot des passages vaut « ».
+Le mot des décodages vaut « ».
+Remarque : ce que WSJT-X a donné ou dit (6 novembre 2026) : le nombre de décodages relevés, ou pourquoi l'écoute ne s'ouvre pas.
+L'avis WSJT vaut "Aucun décodage pour l'instant : WSJT-X, Réglages, Rapports, « UDP Server » 127.0.0.1, port 2237.".
+
 Remarque : le passage montré par l'écran du passage.
 Le passage ouvert vaut absent.
 Remarque : ce que DeepL dit du quota du mois, lu par « Quota DeepL » (Réglages).
@@ -470,8 +488,19 @@ L'écran de veille montre :
     côte à côte :
         un bouton « Postes », au clavier « P »,
         un bouton « Carnet ADIF »,
+        un bouton « WSJT-X »,
         un bouton « Réglages »,
         un bouton « Fermer », à confirmer par « Arrêter la veille ? Un passage en cours d'enregistrement sera perdu. ».
+
+Remarque : les décodages de WSJT-X (6 novembre 2026), relevés à l'ouverture de la veille, à chaque passage capté et par
+Remarque : « Relever » ; les plus récents d'abord. Un mot cherché, comme dans la veille.
+L'écran des décodages, « WSJT-X », montre :
+    le texte l'avis WSJT,
+    côte à côte :
+        un bouton « Relever », principal, au clavier « R »,
+        un mot cherché (texte), facultatif, avec l'indication « Un indicatif, un mot du message ; vide : tout »,
+    la liste des décodages conservés dont le jour ≥ le début des passages et le message contient le mot des décodages, par jour décroissant puis heure décroissant, avec l'heure, le mode, la bande, le rapport, le décalage, le message et le jour,
+    un bouton « Fermer ».
 
 L'écran des postes montre :
     la liste des postes conservés, par nom, avec le nom, la désignation du modèle, la sorte, la veille, la parole transcrite et la traduction voulue,
@@ -521,6 +550,30 @@ L'écran des réglages, « Réglages », montre :
         un bouton « Quota DeepL »,
         un bouton « Fermer ».
 
+Remarque : relever les décodages arrivés depuis la dernière fois (6 novembre 2026) ; WSJT-X absent ou le port pris : l'avis le dit,
+Remarque : rien d'autre ne s'arrête. Le jour est celui de cet ordinateur ; l'heure, celle de WSJT-X, en temps universel.
+Pour relever les décodages :
+    Le compte vaut 0.
+    Essayer :
+        Pour chaque d parmi les décodages WSJT :
+            Le x vaut un nouveau décodage :
+                Le jour vaut aujourd'hui.
+                L'heure vaut le champ « heure » de d.
+                Le mode vaut le champ « mode » de d.
+                Le rapport vaut le champ « rapport » de d en nombre entier.
+                Le décalage vaut le champ « décalage » de d en nombre entier.
+                Le message vaut le champ « message » de d.
+            Si le champ « fréquence » de d est présent :
+                La fréquence du x devient le champ « fréquence » de d en nombre entier.
+                Si la bande ADIF de la fréquence du x ≠ « », la bande du x devient la bande ADIF de la fréquence du x.
+            Le relevé vaut le repérage du message du x.
+            Si le relevé ≠ « », le relevé d'indicatifs du x devient le relevé.
+            Conserver le x.
+            Le compte devient le compte + 1.
+        Si le compte > 0, l'avis WSJT devient le compte suivi de " décodage(s) relevé(s) à " suivi de (maintenant en format universel) suivi de « . ».
+    En cas d'échec :
+        L'avis WSJT devient le motif de l'échec.
+
 Quand un poste capte un son dans l'écran de veille :
     Le p vaut un nouveau passage.
     Le poste du p devient le poste.
@@ -552,6 +605,7 @@ Quand un poste capte un son dans l'écran de veille :
     Remarque : la fréquence et le mode, si le poste se pilote (3 novembre 2026).
     Lire l'accord du p.
     Si la bande ADIF de la fréquence du p ≠ « », la bande du p devient la bande ADIF de la fréquence du p.
+    Relever les décodages.
     Remarque : l'alerte (3 novembre 2026).
     Pour chaque réglage conservé :
         Le mot vaut le déclencheur de l'alerte du réglage et du texte entendu du p.
@@ -567,6 +621,7 @@ Pour délimiter une période :
 
 Quand on ouvre l'écran de veille :
     Délimiter « Aujourd'hui ».
+    Relever les décodages.
     Pour chaque poste conservé :
         L'affichage du poste devient vrai.
 
@@ -586,6 +641,20 @@ Quand on change le mot cherché dans l'écran de veille :
 Remarque : le carnet ADIF (3 novembre 2026) : une ligne par indicatif entendu dans les passages montrés (la période et le poste
 Remarque : choisis), pour un logiciel de carnet ; dans Documents/Écoutille, « Carnet 2026-11-03T1430Z.adi ». En-tête : ADIF 3.1.6.
 Remarque : Les passages d'avant le carnet, sans moment universel, n'y sont pas.
+Quand on clique sur « WSJT-X » dans l'écran de veille :
+    Relever les décodages.
+    Ouvrir l'écran des décodages.
+
+Quand on clique sur « Relever » dans l'écran des décodages :
+    Relever les décodages.
+
+Quand on change le mot cherché dans l'écran des décodages :
+    Si le mot cherché de l'écran est présent, le mot des décodages devient le mot cherché de l'écran.
+    Sinon, le mot des décodages devient « ».
+
+Quand on clique sur « Fermer » dans l'écran des décodages :
+    Fermer l'écran.
+
 Quand on clique sur « Carnet ADIF » dans l'écran de veille :
     Le texte vaut "Carnet de veille d'Écoutille " suivi de « <ADIF_VER:5>3.1.6 <PROGRAMID:9>Ecoutille <EOH> ».
     Le compte vaut 0.
@@ -932,5 +1001,10 @@ Pour chaque réglage conservé, le délai devient la conservation du réglage.
 Si le délai est présent :
     Pour chaque passage conservé dont le jour < aujourd'hui − délai :
         Supprimer le passage définitivement.
+Remarque : les décodages, nombreux (un QSO FT8 en fait une dizaine) : 30 jours au plus, ou la conservation si elle est plus courte.
+Le délai des décodages vaut 30.
+Si le délai est présent et le délai < 30, le délai des décodages devient le délai.
+Pour chaque décodage conservé dont le jour < aujourd'hui − le délai des décodages :
+    Supprimer le décodage définitivement.
 
 Ouvrir l'écran de veille.

@@ -196,7 +196,8 @@ typedef enum {
                         la copie la plus récente de ce préfixe, ou absent */
     N_HISTORIQUE,    /* « l'historique de x » (2.85) : enfant : l'objet ; forme 1 « l'historique de la base », sans enfant :
                         le journal des entités journalisées, en texte, le plus récent d'abord */
-    N_LANGUE         /* « la langue reconnue de t » (2.86) : enfant : le texte ; son code ISO 639-1, ou absent */
+    N_LANGUE,        /* « la langue reconnue de t » (2.86) : enfant : le texte ; son code ISO 639-1, ou absent */
+    N_WSJTX          /* « les décodages WSJT [du port p] » (2.88) : enfant facultatif : le port ; une liste de textes JSON */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */

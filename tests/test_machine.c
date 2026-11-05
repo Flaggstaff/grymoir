@@ -11,6 +11,7 @@
 #include "sqlite3.h"
 #include "texte.h"
 #include "morse.h"
+#include "serie.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +22,10 @@
 #include <direct.h>
 #else
 #include <sys/stat.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #endif
 
 static int total = 0, echecs = 0;
@@ -1964,6 +1969,32 @@ static void essais_ecrans(void) {
     /* en console : refusé avant toute exécution, rien n'est affiché */
     PROG("Afficher 1.\nL'écran d'accueil montre :\n    le texte « a ».\nOuvrir l'écran d'accueil.\n",
          "ERREUR 0:0 Ce programme ouvre des écrans ou des documents : lance-le dans une fenêtre, avec grym-atelier.");
+}
+
+/* Un datagramme de WSJT-X (2.88), écrit comme son QDataStream : Status (fréquence, mode) ou Decode. */
+typedef struct { unsigned char d[512]; size_t n; } Datagramme;
+static void dg_entier(Datagramme *g, unsigned long long v, int octets) {
+    for (int k = octets - 1; k >= 0; k--) g->d[g->n++] = (unsigned char)(v >> (8 * k));
+}
+static void dg_texte(Datagramme *g, const char *t) {
+    dg_entier(g, strlen(t), 4);
+    memcpy(g->d + g->n, t, strlen(t));
+    g->n += strlen(t);
+}
+static Datagramme dg_status(unsigned long long hz, const char *mode) {
+    Datagramme g = {{0}, 0};
+    dg_entier(&g, 0xadbccbdaULL, 4); dg_entier(&g, 2, 4); dg_entier(&g, 1, 4); dg_texte(&g, "WSJT-X");
+    dg_entier(&g, hz, 8); dg_texte(&g, mode);
+    return g;
+}
+static Datagramme dg_decode(int nouveau, unsigned ms, int snr, double dt, unsigned df, const char *mode, const char *msg) {
+    Datagramme g = {{0}, 0};
+    dg_entier(&g, 0xadbccbdaULL, 4); dg_entier(&g, 2, 4); dg_entier(&g, 2, 4); dg_texte(&g, "WSJT-X");
+    dg_entier(&g, (unsigned)nouveau, 1); dg_entier(&g, ms, 4); dg_entier(&g, (unsigned)snr, 4);
+    unsigned long long b;
+    memcpy(&b, &dt, 8);
+    dg_entier(&g, b, 8); dg_entier(&g, df, 4); dg_texte(&g, mode); dg_texte(&g, msg); dg_entier(&g, 0, 1); dg_entier(&g, 0, 1);
+    return g;
 }
 
 int main(void) {
@@ -4676,6 +4707,44 @@ int main(void) {
          "Afficher l'historique du p contient « (Équipe) · téléphone : 079 → 078 » puis l'historique du p contient « (Équipe) · créé ».",
          "vrai\nfaux faux");
     PROG("Le s d'un x :\n    Signer le journal avec x.\n    Rendre x.", "~Un calcul ne signe rien");
+    /* 2.88 : un datagramme de WSJT-X lu : Status puis Decode, le mode et la fréquence du Status ; un Decode rejoué (pas
+       nouveau), rien ; autre chose qu'un message WSJT-X, rien */
+    {
+        Datagramme st = dg_status(14074000ULL, "FT8"), de = dg_decode(1, 52215000u, -12, 0.2, 1234, "~", "CQ HB9ABC JN36");
+        char *x = wsjtx_lire_datagramme(st.d, st.n);
+        VRAI(x == NULL, "datagramme WSJT-X");
+        x = wsjtx_lire_datagramme(de.d, de.n);
+        VRAI(x && !strcmp(x, "{\"heure\":\"14:30:15\",\"mode\":\"FT8\",\"fréquence\":14074000,\"rapport\":-12,\"décalage\":1234,"
+                                 "\"écart\":0.2,\"message\":\"CQ HB9ABC JN36\",\"douteux\":false}"), "datagramme WSJT-X");
+        free(x);
+        Datagramme vieux = dg_decode(0, 1000, -5, 0.1, 500, "~", "CQ DL1XYZ JO40");
+        VRAI(wsjtx_lire_datagramme(vieux.d, vieux.n) == NULL, "datagramme WSJT-X");
+        VRAI(wsjtx_lire_datagramme((const unsigned char *)"bonjour", 7) == NULL, "datagramme WSJT-X");
+    }
+    /* 2.88 : « les décodages WSJT du port p » : la prise s'ouvre au premier appel (rien encore), puis ce qui arrive se lit,
+       une fois ; un port hors bornes ; dans un calcul ; « WSJT-X » écrit avec son trait d'union */
+    PROG("Pour chaque d parmi les décodages WSJT du port 52237 :\n    Afficher d.\nAfficher « rien ».", "rien");
+#ifndef _WIN32
+    {
+        int s = socket(AF_INET, SOCK_DGRAM, 0);
+        struct sockaddr_in a;
+        memset(&a, 0, sizeof a);
+        a.sin_family = AF_INET;
+        a.sin_port = htons(52237);
+        a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        Datagramme st = dg_status(7074000ULL, "FT8"), de = dg_decode(1, 3600000u, 3, -0.4, 800, "~", "HB9ABC DL1XYZ -05");
+        sendto(s, (const char *)st.d, st.n, 0, (struct sockaddr *)&a, sizeof a);
+        sendto(s, (const char *)de.d, de.n, 0, (struct sockaddr *)&a, sizeof a);
+        close(s);
+    }
+    PROG("Pour chaque d parmi les décodages WSJT du port 52237 :\n"
+         "    Afficher le champ « heure » de d puis le champ « mode » de d puis le champ « fréquence » de d puis le champ « message » de d.\n"
+         "Pour chaque d parmi les décodages WSJT du port 52237 :\n    Afficher d.\nAfficher « une fois ».",
+         "01:00:00 FT8 7074000 HB9ABC DL1XYZ -05\nune fois");
+#endif
+    PROG("Afficher les décodages WSJT du port 70000.", "~Le port de WSJT-X est un nombre entier de 1 à 65535");
+    PROG("Le d d'un x :\n    Rendre les décodages WSJT.", "~Un calcul n'écoute pas le réseau");
+    PROG("Afficher les décodages WSJT-X.", "~s'écrit sans « -X »");
     PROG("Le q vaut le code QR suisse de « SPC ».", "~QR-facture : 1 ligne au lieu de 31 au moins");
     /* « Sauvegarder la base dans … » (2.29) : sans base, refusé ; deux copies, la seconde « (2) » ; pas dans un calcul */
     PROG("Sauvegarder la base dans « _essai_copie.grymd ».", "~Ce programme n'a pas de base : il ne conserve aucune entité.");
