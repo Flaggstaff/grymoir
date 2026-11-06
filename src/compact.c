@@ -481,6 +481,14 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, t->valeur, t);
             continue;
         }
+        if (est_cle(t, "sorte")) {                  /* _sorte → la sorte de l'échec (§ 18.2) */
+            mot(r, "la", t);
+            mot(r, "sorte", t);
+            mot(r, "de", t);
+            emettre(r, J_ELISION, "l", t, 1);
+            mot(r, "échec", t);
+            continue;
+        }
         if (est_cle(t, "motif")) {                  /* _motif → le motif de l'échec (§ 18) */
             mot(r, "le", t);
             mot(r, "motif", t);
@@ -2391,6 +2399,42 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 return;
             }
             emettre(r, J_DEUX_POINTS, marque, &r->e[f - 1], 1);
+            return;
+        }
+        if (!strcmp(c, "échec_de")) {   /* _échec_de réseau _ou fichier → En cas d'échec de réseau ou de fichier : (§ 18.2) */
+            if (!haut || haut->type != O_ESSAI) {
+                echouer(r, t, grym_dupliquer("« _échec_de » hors d'un « _essayer »."));
+                return;
+            }
+            mot(r, "en", t);
+            mot(r, "cas", t);
+            emettre(r, J_ELISION, "d", t, 1);
+            mot(r, "échec", t);
+            for (size_t q = d + 1; q < f; q++) {
+                const Jeton *s = &r->e[q];
+                if (q > d + 1) {
+                    if (!est_cle(s, "ou") || q + 1 >= f) {
+                        echouer(r, s, grym_dupliquer("Forme attendue : « _échec_de réseau _ou fichier »."));
+                        return;
+                    }
+                    mot(r, "ou", s);
+                    s = &r->e[++q];
+                }
+                if (s->type != J_CROCHETS) {
+                    echouer(r, s, grym_dupliquer("Une sorte attendue : « _échec_de réseau »."));
+                    return;
+                }
+                const unsigned char v = (unsigned char)s->valeur[0];
+                if (v == 'a' || v == 'e' || v == 'i' || v == 'o' || v == 'u' || v == 0xC3) emettre(r, J_ELISION, "d", s, 1);
+                else mot(r, "de", s);
+                mot(r, s->valeur, s);
+            }
+            if (f == d + 1) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _échec_de réseau _ou fichier »."));
+                return;
+            }
+            fixer_retrait(r, premier, haut->profondeur);
+            emettre(r, J_DEUX_POINTS, NULL, t, 1);
             return;
         }
         if (!strcmp(c, "échec")) {   /* _échec → En cas d'échec : (§ 18) */

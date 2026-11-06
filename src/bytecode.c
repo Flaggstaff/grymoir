@@ -256,6 +256,8 @@ const char *instruction_nom(CodeInstruction code) {
     case I_TABLE_LIRE:     return "TABLE_LIRE";
     case I_TABLE_ECRIRE:   return "TABLE_ECRIRE";
     case I_TABLE_LISTE:    return "TABLE_LISTE";
+    case I_SORTE_ECHEC:    return "SORTE_ECHEC";
+    case I_RELANCER:       return "RELANCER";
     case I_CHANGER_MDP_BASE: return "CHANGER_MDP_BASE";
     }
     return "INCONNUE";
@@ -466,6 +468,8 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_TABLE_LIRE: besoin = 3; effet = -2; break;
             case I_TABLE_ECRIRE: besoin = op == 2 ? 2 : 4; effet = 1 - besoin; break;
             case I_TABLE_LISTE: besoin = 1; effet = 0; break;
+            case I_SORTE_ECHEC: besoin = 0; effet = 1; break;
+            case I_RELANCER: besoin = 2; effet = -2; break;
             case I_REMPLACER: besoin = 3; effet = -2; break;
             case I_MOTS: besoin = 1; effet = 0; break;
             case I_PORTS: besoin = 0; effet = 1; break;

@@ -113,6 +113,10 @@ int main(void) {
          "Si « a » n'est pas parmi les clés des t, afficher 1.\nLes t perdent « a ».\n",
          "_les t << _table « a » _vaut 1 ; « b » _vaut 2\n_dans t « c » _vaut 3\n_afficher _valeur(« a » ; t)\n"
          "_si _non (_clés(t) _contient « a ») _alors\n    _afficher 1\n_fin\n_les t _perdent « a »\n");
+    FIXE("Essayer :\n    Afficher 1.\nEn cas d'échec d'unicité ou de réseau :\n    Afficher la sorte de l'échec.\n"
+         "En cas d'échec de division, afficher 2.\nEn cas d'échec, afficher le motif de l'échec.\n");
+    COMP("Essayer :\n    Afficher 1.\nEn cas d'échec d'unicité ou de réseau :\n    Afficher la sorte de l'échec.\nEn cas d'échec :\n    Afficher 2.\n",
+         "_essayer\n    _afficher 1\n_échec_de unicité _ou réseau\n    _afficher _sorte\n_échec\n    _afficher 2\n_fin\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

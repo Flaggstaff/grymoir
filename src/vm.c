@@ -210,6 +210,11 @@ typedef struct {
 } Ecriture_disque;
 
 struct Machine {
+    const char *sorte_fixee;   /* la sorte d'un échec, fixée par son instruction (§ 18.2) ; NULL : la table SORTES décide */
+    char *sorte_echec;         /* la sorte du dernier échec rattrapé, pour SORTE_ÉCHEC */
+    char *sorte_relancee;      /* la sorte d'un échec qui remonte (RELANCER) */
+    int echec_ligne, echec_colonne;   /* la position d'origine du dernier échec rattrapé, pour RELANCER */
+    char *echec_fichier;
     Valeur *filtres;        /* les choix filtrés des zones de l'écran qui s'ouvre (2.48), par rang de zone */
     size_t *filtres_k;
     size_t nb_filtres;
@@ -489,6 +494,9 @@ static void ecran_detruire(EcranVM *e);
 
 void machine_detruire(Machine *m) {
     if (!m) return;
+    free(m->sorte_echec);   /* § 18.2 */
+    free(m->sorte_relancee);
+    free(m->echec_fichier);
     while (m->ecran) {   /* les écrans empilés, du dessus au dessous */
         struct EcranVM *d = m->ecran->dessous;
         ecran_detruire(m->ecran);
@@ -752,6 +760,29 @@ static int echouer(Diagnostic *d, const Bloc *b, size_t decalage, char *message)
     free(d->fichier);   /* une formule d'un fichier utilisé désigne son fichier (§ 21) */
     d->fichier = b->fichier ? grym_dupliquer(b->fichier) : NULL;
     return 0;
+}
+
+/* Les sortes d'échec (grammaire, § 18.2) : un fragment du motif et sa sorte, dans l'ordre où on les cherche. La sorte est
+ * promise, le motif non : reformuler un motif oblige à tenir cette table à jour ; chaque sorte a son essai (test_machine). */
+static const struct { const char *fragment, *sorte; } SORTES[] = {
+    { "n'est pas une clé des", "clé" }, { "est déjà une clé des", "clé" },
+    { "est unique :", "unicité" },
+    { "désign", "lien" }, { "lien vers un objet", "lien" },
+    { " élément : ", "rang" }, { " caractère : ", "rang" }, { "la première borne dépasse", "rang" },
+    { "d'abord avec « contient »", "texte" },
+    { "Division par zéro", "division" },
+    { "Nombre trop grand", "nombre" }, { "Exposant non entier", "nombre" }, { "Un rang est un nombre entier", "nombre" },
+    { "Un nombre de caractères est", "nombre" },
+    { "n'est pas un nombre", "lecture" }, { "n'est pas une date", "lecture" }, { "n'est pas une heure", "lecture" },
+    { "n'est pas une année", "lecture" }, { "Un texte vide n'est pas", "lecture" }, { "Réponds par oui ou non", "lecture" },
+    { "introuvable ou illisible", "fichier" }, { "n'est jamais écrasé", "fichier" }, { "ce fichier est absent", "fichier" },
+    { "Saisie annulée", "saisie" },
+    { "absent", "absence" },
+};
+
+static const char *sorte_du_motif(const char *motif) {
+    for (size_t k = 0; motif && k < sizeof SORTES / sizeof *SORTES; k++) if (strstr(motif, SORTES[k].fragment)) return SORTES[k].sorte;
+    return "autre";
 }
 
 static char *message_statut(StatutDecimal st) {
@@ -4781,6 +4812,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
     Pile pile = { NULL, 0, 0 };
     int ok = 1;
     int fatal = 0;   /* erreur qu'aucun « Essayer » ne rattrape : Ctrl+C, entrée épuisée, base perdue (§ 18) */
+    m->sorte_fixee = NULL;   /* une sorte laissée par un échec qui n'a pas été rattrapé (§ 18.2) */
     for (;;) {
         Cadre *cadre = &cadres[nb_cadres - 1];
         const Bloc *b = cadre->b;
@@ -7050,6 +7082,25 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, x);
             break;
         }
+        case I_SORTE_ECHEC:   /* « la sorte de l'échec » (§ 18.2) */
+            empiler(&pile, vi_texte(m->sorte_echec ? m->sorte_echec : "autre"));
+            break;
+        case I_RELANCER: {   /* aucun bloc ne convient : l'échec remonte, sorte et position d'origine comprises (§ 18.2) */
+            Valeur s = depiler(&pile), mo = depiler(&pile);
+            free(m->sorte_relancee);
+            m->sorte_relancee = grym_dupliquer(s.type == V_TEXTE && s.texte ? s.texte : "autre");
+            m->sorte_fixee = m->sorte_relancee;
+            ok = echouer(diag, b, debut, grym_dupliquer(mo.type == V_TEXTE && mo.texte ? mo.texte : ""));
+            if (m->echec_ligne) {
+                diag->ligne = m->echec_ligne;
+                diag->colonne = m->echec_colonne;
+                free(diag->fichier);
+                diag->fichier = m->echec_fichier ? grym_dupliquer(m->echec_fichier) : NULL;
+            }
+            valeur_liberer(&s);
+            valeur_liberer(&mo);
+            break;
+        }
         case I_TABLE: {   /* « la table où « a » vaut 1 et « b » vaut 2 », « une table vide » (§ 13.11) */
             Valeur nom = depiler(&pile);
             const size_t n = 2 * (size_t)op, base_pile = pile.n - n;
@@ -8234,6 +8285,12 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             ok = echouer(diag, b, debut, grym_dupliquer("Instruction inconnue."));
             break;
         }
+        if (!ok && !m->sorte_fixee) {   /* les instructions au contexte sans ambiguïté fixent la sorte (§ 18.2) */
+            if (code == I_ENVOI) m->sorte_fixee = "réseau";
+            else if (code == I_PORTS || code == I_PORT_SERIE || code == I_WSJTX) m->sorte_fixee = "port";
+            else if (code == I_REFUSER) m->sorte_fixee = "refus";
+            else if (code == I_LIRE_FICHIER || code == I_ENREGISTRER) m->sorte_fixee = "fichier";
+        }
         if (!ok && !fatal && m->nb_essais) {
             /* L'essai le plus récent rattrape l'erreur : tout ce qu'il a fait est annulé, puis son bloc
              * « En cas d'échec » s'exécute avec le motif sur la pile (grammaire, § 18). */
@@ -8251,6 +8308,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             }
             restaurer_photo(&e, &cadres[e.cadre]);
             oublier_photo(&e);
+            /* la sorte (§ 18.2) : fixée par l'instruction, sinon d'après le motif ; la position, pour un échec qui remonte */
+            free(m->sorte_echec);
+            m->sorte_echec = grym_dupliquer(m->sorte_fixee ? m->sorte_fixee : sorte_du_motif(diag->message));
+            m->sorte_fixee = NULL;
+            m->echec_ligne = diag->ligne;
+            m->echec_colonne = diag->colonne;
+            free(m->echec_fichier);
+            m->echec_fichier = diag->fichier ? grym_dupliquer(diag->fichier) : NULL;
             Valeur motif = valeur_nombre(dec_zero());
             motif.type = V_TEXTE;
             motif.texte = diag->message;

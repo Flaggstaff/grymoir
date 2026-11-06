@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.95 de la spécification, révisée le 6 novembre 2026.
+Version 1.96 de la spécification, révisée le 6 novembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -150,6 +150,8 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 130 | `TABLE_LIRE` | aucun | dépile le nom, la table, puis la clé ; empile sa valeur ; une clé absente est une erreur |
 | 131 | `TABLE_ECRIRE` | 0 vaut, 1 devient, 2 perdre | formes 0 et 1 : dépile le nom, la valeur, la clé, puis la table ; 0 exige une clé nouvelle, 1 une clé présente ; forme 2 : dépile la clé, puis la table, et retire la paire si elle y est ; empile la table changée |
 | 132 | `TABLE_LISTE` | 0 les clés, 1 les valeurs | remplace la table par la liste de ses clés ou de ses valeurs, dans l'ordre d'arrivée des clés |
+| 133 | `SORTE_ÉCHEC` | aucun | empile la sorte du dernier échec rattrapé, un texte (grammaire, § 18.2) : fixée par l'instruction qui a échoué (`ENVOI` : réseau ; `PORTS`, `PORT_SERIE`, `WSJTX` : port ; `REFUSER` : refus ; `LIRE_FICHIER`, `ENREGISTRER` : fichier), sinon tirée du motif par la table `SORTES` de `src/vm.c` |
+| 134 | `RELANCER` | aucun | dépile la sorte, puis le motif : l'échec repart, rattrapable par l'essai englobant, avec la position d'origine du dernier échec rattrapé |
 
 ### 3.1 Boucles et Selon
 
@@ -481,3 +483,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.93 | 2026-11-06 | Instructions `LISTE` (126) et `RANG` (127) (grammaire 2.89, § 13.10) ; une `Liste` porte `doublons` : une liste garde ses doublons, `GAGNER` l'ajoute toujours à la fin ; l'égalité de deux listes suit l'ordre ; `ÉGAL` entre deux ensembles ne lit plus un texte absent ; format inchangé (71) |
 | 1.94 | 2026-11-06 | Instruction `EXTRAIRE` (128) (grammaire 2.90, § 4.6) ; les caractères se comptent en UTF-8, un par caractère, comme `la longueur de` |
 | 1.95 | 2026-11-06 | Type de valeur `table` (`V_TABLE`, § 2) : la liste d'un ensemble, clé, valeur, clé, valeur… ; instructions `TABLE` (129), `TABLE_LIRE` (130), `TABLE_ECRIRE` (131), `TABLE_LISTE` (132) (grammaire 2.91, § 13.11) ; le nom de la table, empilé par le compilateur, ne sert qu'aux messages |
+| 1.96 | 2026-11-06 | Instructions `SORTE_ÉCHEC` (133) et `RELANCER` (134) (grammaire 2.92, § 18.2) ; un `Essayer` range le motif, puis la sorte, chacun dans sa case ; chaque bloc `En cas d'échec de …` compare la sorte, le premier qui convient s'exécute ; sans bloc qui convienne, `RELANCER` |

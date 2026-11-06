@@ -2355,6 +2355,32 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* Les sortes d'échec (§ 18.2) : une par sorte, car la sorte est promise et le motif ne l'est pas */
+    PROG("Essayer :\n    Afficher 1 ÷ 0.\nEn cas d'échec, afficher la sorte de l'échec.", "division");
+    PROG("Essayer :\n    Afficher 2 ^ 0,5.\nEn cas d'échec, afficher la sorte de l'échec.", "nombre");
+    PROG("Essayer :\n    Afficher « abc » en nombre.\nEn cas d'échec, afficher la sorte de l'échec.", "lecture");
+    PROG("Une note a : une remarque, facultative.\nEssayer :\n    Le n vaut une nouvelle note.\n    Afficher la remarque du n + 1.\nEn cas d'échec, afficher la sorte de l'échec.", "absence");
+    PROG("Essayer :\n    Les t valent une table vide.\n    Afficher la valeur de 1 dans les t.\nEn cas d'échec, afficher la sorte de l'échec.", "clé");
+    PROG("Essayer :\n    Les l valent la liste 1.\n    Afficher le 2e élément des l.\nEn cas d'échec, afficher la sorte de l'échec.", "rang");
+    PROG("Essayer :\n    Afficher le 4e caractère de « abc ».\nEn cas d'échec, afficher la sorte de l'échec.", "rang");
+    PROG("Essayer :\n    Afficher « abc » après « z ».\nEn cas d'échec, afficher la sorte de l'échec.", "texte");
+    PROG("Un membre, conservé, a :\n    un nom (texte), unique.\nEssayer :\n    Le a vaut un nouveau membre :\n        Le nom vaut « A ».\n    Conserver a.\n    Le b vaut un nouveau membre :\n        Le nom vaut « A ».\n    Conserver b.\nEn cas d'échec, afficher la sorte de l'échec.", "unicité");
+    PROG("Un membre, conservé, a :\n    un nom (texte),\n    un parrain (membre), facultatif.\nEssayer :\n    Le a vaut un nouveau membre :\n        Le nom vaut « A ».\n    Le b vaut un nouveau membre :\n        Le nom vaut « B ».\n        Le parrain vaut a.\n    Conserver b.\nEn cas d'échec, afficher la sorte de l'échec.", "lien");
+    PROG("Essayer :\n    Afficher le fichier « _pas_de_fichier.txt ».\nEn cas d'échec, afficher la sorte de l'échec.", "fichier");
+    PROG("Essayer :\n    La r vaut l'envoi à « https://exemple.ch/api » de :\n        « n » : 3.\n    Afficher r.\nEn cas d'échec, afficher la sorte de l'échec.", "réseau");
+    PROG("Essayer :\n    Afficher la réponse de « grymoir-pas-de-port » à « FA; », à 4800 bauds.\nEn cas d'échec, afficher la sorte de l'échec.", "port");
+    PROG("Essayer :\n    Refuser « non ».\nEn cas d'échec, afficher la sorte de l'échec.", "refus");
+    PROG("Le x vaut « a ».\nEssayer :\n    Afficher x + 1.\nEn cas d'échec, afficher la sorte de l'échec.", "autre");
+    PROG("Essayer :\n    Afficher 1 ÷ 0.\nEn cas d'échec de clé :\n    Afficher « clé ».\nEn cas d'échec de division ou de nombre :\n"
+         "    Afficher « division : » puis la sorte de l'échec.\nEn cas d'échec :\n    Afficher « autre ».\n"
+         "Essayer :\n    Essayer :\n        Refuser « Stock vide ».\n    En cas d'échec de division :\n        Afficher « jamais ».\n"
+         "En cas d'échec :\n    Afficher la sorte de l'échec puis le motif de l'échec.",
+         "division : division\nrefus Stock vide");
+    /* sans bloc qui convienne, l'échec remonte, avec sa position d'origine ; ce que l'essai a fait reste annulé */
+    PROG("Le x vaut 1.\nEssayer :\n    Le x devient 2.\n    Afficher « abc » en nombre.\nEn cas d'échec de réseau :\n    Afficher « jamais ».",
+         "ERREUR 4:22 « abc » n'est pas un nombre.");
+    PROG("Le x vaut 1.\nEssayer :\n    Essayer :\n        Le x devient 2.\n        Afficher 1 ÷ 0.\n    En cas d'échec d'unicité, afficher 0.\n"
+         "En cas d'échec de division, afficher x.", "1");
     /* Tables (§ 13.11) */
     PROG("Les tarifs valent la table où « 7601 » vaut 24 et « 7602 » vaut 12.\nLes compteurs valent une table vide.\n"
          "Dans les compteurs, « CQ » vaut 0.\nDans les compteurs, « CQ » devient la valeur de « CQ » dans les compteurs + 1.\n"
@@ -3883,6 +3909,7 @@ int main(void) {
            "079 123 45 67",
            "Anne", "anne@", "anne@tilleul.ch", "12", "079 123 45 67", "");
     SAISIE("Le nom vaut la réponse à « Nom ? ».\nAfficher « Bonjour » puis nom.", "Nom ? Bonjour Ana", "  Ana  ");
+    SAISIE("Essayer :\n    Le x vaut la réponse à « ? ».\nEn cas d'échec, afficher la sorte de l'échec.", "? saisie", ".");   /* § 18.2 */
     SAISIE("Une tâche, conservée, a : un titre (texte), un état (« à faire », « en cours » ou « fini »).\n" "Le t vaut une nouvelle tâche saisie.\nAfficher état de t.",
            "~État (« à faire », « en cours » ou « fini ») ? en cours", "Courses", "fermé", "en cours");
     SAISIE("L'âge vaut la réponse en nombre entier à « Âge ? ».\nAfficher âge + 1.", "Âge ? 34", "33");

@@ -427,6 +427,7 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[0]);
         emettre(c, I_ELIDER, n->op == 'q', n->ligne, n->colonne);
         return;
+    case N_SORTE:   /* « la sorte de l'échec » : sa case (§ 18.2) */
     case N_MOTIF:   /* « le motif de l'échec » : la case où l'échec l'a rangé (§ 18) */
         emettre(c, I_LIRE_LOCAL, n->local, n->ligne, n->colonne);
         return;
@@ -1030,7 +1031,49 @@ static void phrase(Compilation *c, const Noeud *ph) {
         size_t vers_fin = bloc_emettre_saut(c->b, I_SAUTER, ph->ligne, ph->colonne);
         bloc_corriger_saut(c->b, vers_echec, c->b->taille_code);
         emettre(c, I_ECRIRE_LOCAL, ph->entier, ph->ligne, ph->colonne);
-        phrase(c, ph->enfants[1]);
+        emettre(c, I_SORTE_ECHEC, 0, ph->ligne, ph->colonne);   /* § 18.2 */
+        emettre(c, I_ECRIRE_LOCAL, ph->local, ph->ligne, ph->colonne);
+        /* chaque bloc : ses sortes testées l'une après l'autre ; le premier qui convient s'exécute, puis la fin ; sans bloc
+         * qui convienne, l'échec remonte (RELANCER) */
+        size_t vers_fins[64], nb_fins = 0;
+        int tout_pris = 0;
+        for (size_t q = 1; q < ph->nb_enfants && !tout_pris; q++) {
+            const Noeud *cas = ph->enfants[q];
+            size_t vers_suivant = (size_t)-1;
+            if (cas->texte) {
+                size_t vers_corps[16], nb_corps = 0;
+                char *s = grym_dupliquer(cas->texte);
+                char *mot = s;
+                for (;;) {
+                    char *barre = strchr(mot, '|');
+                    if (barre) *barre = 0;
+                    long k = bloc_constante(c->b, C_TEXTE, mot);
+                    if (k < 0) { free(s); trop_grand(c, ph); return; }
+                    emettre(c, I_LIRE_LOCAL, ph->local, cas->ligne, cas->colonne);
+                    emettre(c, I_CONSTANTE, k, cas->ligne, cas->colonne);
+                    emettre(c, I_EGAL, 0, cas->ligne, cas->colonne);
+                    if (!barre) {
+                        vers_suivant = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, cas->ligne, cas->colonne);
+                        break;
+                    }
+                    size_t non = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, cas->ligne, cas->colonne);
+                    if (nb_corps < 16) vers_corps[nb_corps++] = bloc_emettre_saut(c->b, I_SAUTER, cas->ligne, cas->colonne);
+                    bloc_corriger_saut(c->b, non, c->b->taille_code);
+                    mot = barre + 1;
+                }
+                free(s);
+                for (size_t v = 0; v < nb_corps; v++) bloc_corriger_saut(c->b, vers_corps[v], c->b->taille_code);
+            } else tout_pris = 1;
+            phrase(c, cas->enfants[0]);
+            if (nb_fins < 64) vers_fins[nb_fins++] = bloc_emettre_saut(c->b, I_SAUTER, cas->ligne, cas->colonne);
+            if (vers_suivant != (size_t)-1) bloc_corriger_saut(c->b, vers_suivant, c->b->taille_code);
+        }
+        if (!tout_pris) {   /* aucun bloc ne convient : l'échec remonte, avec son motif et sa sorte (§ 18.2) */
+            emettre(c, I_LIRE_LOCAL, ph->entier, ph->ligne, ph->colonne);
+            emettre(c, I_LIRE_LOCAL, ph->local, ph->ligne, ph->colonne);
+            emettre(c, I_RELANCER, 0, ph->ligne, ph->colonne);
+        }
+        for (size_t v = 0; v < nb_fins; v++) bloc_corriger_saut(c->b, vers_fins[v], c->b->taille_code);
         bloc_corriger_saut(c->b, vers_fin, c->b->taille_code);
         return;
     }

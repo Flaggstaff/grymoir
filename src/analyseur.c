@@ -562,6 +562,7 @@ typedef struct {
     int action_rend;         /* l'action en cours a un « Rendre » (2.57) */
     int duree_permise;       /* « par pas de 1 mois » : une durée peut suivre la valeur lue (§ 14.2) */
     int motif;               /* case du motif du bloc « En cas d'échec » englobant, −1 hors d'un tel bloc (§ 18) */
+    int sorte;               /* case de la sorte de l'échec, de même (§ 18.2) */
     char *valeurs_lues;      /* « (« à faire », « fini »)» : la liste lue par lire_type, séparée par U+001E (§ 16.15) */
     char *couleurs_lues;     /* « « payée » en vert » : une lettre par valeur (b v t p g r o, - sans), ou NULL */
     const char *arrets[3];   /* mots qui peuvent suivre un nom dans le contexte courant (« à », « fois »…) */
@@ -875,7 +876,7 @@ static const char *type_statique(const Noeud *n) {
     case N_COLLAGE: case N_ELISION: case N_SANS: case N_REMPLACER: return "texte";   /* N_SANS : 2.64 ; N_REMPLACER : 2.81 */
     case N_EXTRAIRE: return n->forme == 9 ? "nombre entier" : n->forme == 10 ? NULL : "texte";   /* § 4.6 */
     case N_REPONSE: return n->texte2;
-    case N_MOTIF: return "texte";
+    case N_MOTIF: case N_SORTE: return "texte";
     case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure" : n->entier == 14 ? "fichier"
                               : n->entier <= 1 || n->entier == 8 || n->entier >= 10 ? "texte" : n->texte2;
     case N_NOUVEAU: return n->texte;
@@ -3140,6 +3141,25 @@ static Noeud *base(Analyse *a) {
         avancer(a);
         return n;
     }
+    /* « la sorte de l'échec », dans un bloc « En cas d'échec » (§ 18.2) */
+    {
+        size_t m0 = est_mot(t, "la") ? 1 : 0;
+        const Jeton *el = voir(a, (int)m0 + 2);
+        if (est_mot(voir(a, (int)m0), "sorte") && est_mot(voir(a, (int)m0 + 1), "de") && el->type == J_ELISION
+            && strcmp(el->valeur, "l") == 0 && est_mot(voir(a, (int)m0 + 3), "échec")) {
+            Genre g;
+            if (a->sorte >= 0) {
+                a->article_force = ART_AUCUN;
+                Noeud *n = noeud_creer(N_SORTE, t->ligne, t->colonne, t->debut);
+                n->local = a->sorte;
+                n->fin = fin_jeton(voir(a, (int)m0 + 3));
+                for (size_t k = 0; k < m0 + 4; k++) avancer(a);
+                return n;
+            }
+            if (!visible(a, "sorte") && !champ_connu(a->portee, "sorte", &g))
+                return erreur(a, t, grym_dupliquer("« la sorte de l'échec » ne s'emploie que dans un bloc « En cas d'échec »."));
+        }
+    }
     /* « le motif de l'échec », dans un bloc « En cas d'échec » (§ 18) */
     {
         size_t m0 = est_mot(t, "le") ? 1 : 0;
@@ -4625,20 +4645,64 @@ static Noeud *essayer(Analyse *a, int colonne) {
         return erreur(a, e->type == J_FIN ? t : e, grym_dupliquer(
             "« Essayer » attend son « En cas d'échec », aligné sur lui : une erreur ne passe jamais sous silence."));
     }
-    a->i += 4;
-    int motif = a->nb_locaux++;
-    int englobant = a->motif;
-    a->motif = motif;
-    int forme_echec = 0;
-    Noeud *echec = branche(a, colonne, "En cas d'échec", &forme_echec);
-    a->motif = englobant;
-    if (!echec) { noeud_liberer(corps); return NULL; }
+    int motif = a->nb_locaux++, sorte = a->nb_locaux++;
+    int englobant = a->motif, englobante = a->sorte;
     Noeud *n = noeud_creer(P_ESSAYER, t->ligne, t->colonne, t->debut);
-    n->forme = forme_echec;
     n->entier = motif;
+    n->local = sorte;
     noeud_ajouter(n, corps);
-    noeud_ajouter(n, echec);
-    n->fin = echec->fin;
+    static const char *const SORTES[] = { "division", "nombre", "lecture", "absence", "clé", "rang", "texte", "unicité", "lien",
+                                          "fichier", "réseau", "port", "saisie", "refus", "autre" };
+    int seul_vu = 0, ligne_vue[sizeof SORTES / sizeof *SORTES] = { 0 };
+    while (en_cas_d_echec(a, a->i) && premier_de_ligne(a, a->i) && cour(a)->retrait == colonne) {
+        const Jeton *te = cour(a);
+        if (seul_vu) {
+            noeud_liberer(n);
+            return erreur(a, te, grym_dupliquer("« En cas d'échec » sans sorte vient après les blocs qui en ont une."));
+        }
+        a->i += 4;
+        Chaine sortes = {0};
+        int nb = 0;
+        /* « de réseau ou de fichier », « d'unicité » (§ 18.2) */
+        while (de_ou_d(cour(a)) && voir(a, 1)->type == J_MOT) {
+            const Jeton *ts = voir(a, 1);
+            size_t q = 0;
+            while (q < sizeof SORTES / sizeof *SORTES && !est_mot(ts, SORTES[q])) q++;
+            if (q == sizeof SORTES / sizeof *SORTES) {
+                free(chaine_rendre(&sortes));
+                noeud_liberer(n);
+                return erreur(a, ts, grym_formater("« %s » n'est pas une sorte d'échec : division, nombre, lecture, absence, clé, "
+                                                   "rang, texte, unicité, lien, fichier, réseau, port, saisie, refus ou autre.",
+                                                   ts->valeur));
+            }
+            if (ligne_vue[q]) {
+                free(chaine_rendre(&sortes));
+                noeud_liberer(n);
+                return erreur(a, ts, grym_formater("La sorte « %s » a déjà son bloc, ligne %d.", SORTES[q], ligne_vue[q]));
+            }
+            ligne_vue[q] = te->ligne;
+            if (nb++) chaine_ajouter(&sortes, "|");
+            chaine_ajouter(&sortes, SORTES[q]);
+            a->i += 2;
+            if (est_mot(cour(a), "ou") && de_ou_d(voir(a, 1))) { avancer(a); continue; }
+            break;
+        }
+        a->motif = motif;
+        a->sorte = sorte;
+        int forme_echec = 0;
+        Noeud *echec = branche(a, colonne, "En cas d'échec", &forme_echec);
+        a->motif = englobant;
+        a->sorte = englobante;
+        if (!echec) { free(chaine_rendre(&sortes)); noeud_liberer(n); return NULL; }
+        Noeud *cas = noeud_creer(P_CAS_ECHEC, te->ligne, te->colonne, te->debut);
+        cas->texte = nb ? chaine_rendre(&sortes) : (free(chaine_rendre(&sortes)), NULL);
+        cas->forme = forme_echec;
+        noeud_ajouter(cas, echec);
+        cas->fin = echec->fin;
+        noeud_ajouter(n, cas);
+        n->fin = cas->fin;
+        if (!nb) seul_vu = 1;
+    }
     return n;
 }
 
@@ -10991,6 +11055,7 @@ static int analyser_interne(const char *source, size_t taille, Portee *portee, i
     a.boucle = 0;
     a.duree_permise = 0;
     a.motif = -1;
+    a.sorte = -1;
     a.nb_arrets = 0;
     a.a_completer = NULL;
     a.dont = NULL;

@@ -66,6 +66,7 @@ typedef enum {
                         enfants[0] : la question */
     N_FICHIER,       /* « le fichier « photos/ana.jpg » » : enfants[0] : chemin (§ 15.2) */
     N_MOTIF,         /* « le motif de l'échec » (§ 18) : local : case du motif */
+    N_SORTE,         /* « la sorte de l'échec » (§ 18.2) : local : case de la sorte */
     N_COLLAGE,       /* « a suivi de b » (§ 4.4) : enfants[0], enfants[1] ; texte collé, sans espace */
     N_ELISION,       /* « de x », « que x » dans un assemblage (§ 4.4) : op 'd' ou 'q' ; enfants[0] */
     N_ECRAN,         /* « l'écran », dans un événement ou une liste d'écran : l'écran en cours (§ 22.2) ; texte : sa classe */
@@ -129,8 +130,10 @@ typedef enum {
     P_EFFACER,       /* « Effacer l'écran. » (§ 4.3) */
     P_RESAISIR,      /* « Saisir à nouveau p. » (§ 19) : enfants[0] : l'objet */
     P_FICHE,         /* « Afficher la fiche de p. » (§ 20) : enfants[0] : l'objet */
-    P_ESSAYER,       /* « Essayer : … En cas d'échec : … » (§ 18) : enfants[0] : N_BLOC essayé ; enfants[1] : N_BLOC
-                        de l'échec ; entier : case du motif ; forme 1 : « En cas d'échec » en bloc (sinon forme courte) */
+    P_ESSAYER,       /* « Essayer : … En cas d'échec … » (§ 18) : enfants[0] : N_BLOC essayé ; enfants[1…] : les P_CAS_ECHEC, dans
+                        l'ordre ; entier : case du motif ; local : case de la sorte (§ 18.2) */
+    P_CAS_ECHEC,     /* « En cas d'échec de réseau ou de fichier : » (§ 18.2) : texte : les sortes séparées par « | », NULL pour
+                        « En cas d'échec » seul ; forme : celle de la branche (1 : forme courte) ; enfants[0] : N_BLOC */
     P_STYLE,         /* « Les nombres s'affichent à la française. » (§ 4.1) : entier 0 suisse, 1 française,
                         2 sans séparateur */
     P_ECRAN,         /* « L'écran des compositeurs montre : … » (§ 22) : texte : nom (« des compositeurs ») ; texte2 : titre

@@ -374,6 +374,9 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, n->texte2);
         chaine_ajouter(c, ")");
         return;
+    case N_SORTE:
+        chaine_ajouter(c, "(sorte-échec)");
+        return;
     case N_MOTIF:
         chaine_ajouter(c, "(motif)");
         return;
@@ -399,11 +402,18 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
-    case P_ESSAYER:
+    case P_CAS_ECHEC:   /* décrit par son P_ESSAYER ; seul, son bloc */
+        decrire(n->enfants[0], c);
+        return;
+    case P_ESSAYER:   /* (essayer corps échec bloc) ; (essayer corps échec-de réseau|fichier bloc échec bloc) (§ 18.2) */
         chaine_ajouter(c, "(essayer ");
         decrire(n->enfants[0], c);
-        chaine_ajouter(c, " échec ");
-        decrire(n->enfants[1], c);
+        for (size_t k = 1; k < n->nb_enfants; k++) {
+            const Noeud *e = n->enfants[k];
+            if (e->texte) { chaine_ajouter(c, " échec-de "); chaine_ajouter(c, e->texte); chaine_ajouter(c, " "); }
+            else chaine_ajouter(c, " échec ");
+            decrire(e->enfants[0], c);
+        }
         chaine_ajouter(c, ")");
         return;
     case P_STYLE:

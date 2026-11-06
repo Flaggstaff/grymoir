@@ -270,6 +270,9 @@ int main(void) {
                  "_les t _perdent « a »\n", NULL);
     ERR("_les t << _table_vide\n_afficher _valeur(« a »)\n", 2, 11, "« _valeur » s'écrit ainsi : _valeur(« clé » ; tarifs).");
     ERR("_les t << _table « a » 1\n", 1, 18, "Paire attendue : « « a » _vaut 1 ».");
+    ALLER_RETOUR("_essayer\n    _afficher 1 ÷ 0\n_échec_de division _ou nombre\n    _afficher _sorte\n_échec_de absence\n    _afficher 2\n"
+                 "_échec\n    _afficher _motif\n_fin\n", NULL);
+    ERR("_échec_de réseau\n", 1, 1, "« _échec_de » hors d'un « _essayer ».");
     ERR("_les l << _liste 1 ; 2\n_afficher _élément(l)\n", 2, 11, "« _élément » prend la liste et le rang : _élément(étapes ; 3).");
     ERR("_les l << _liste 1 ; 2\n_afficher _premier(l ; 2)\n", 2, 11, "« _premier » prend la liste seule : _premier(étapes).");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"

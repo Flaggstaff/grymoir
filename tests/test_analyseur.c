@@ -206,6 +206,17 @@ int main(void) {
 
     /* --- Erreurs de référence (§ 6) --- */
     /* Listes et rangs (§ 13.10) */
+    /* Les sortes d'échec (§ 18.2) */
+    V("Essayer :\n    Afficher 1.\nEn cas d'échec d'unicité ou de réseau :\n    Afficher la sorte de l'échec.\nEn cas d'échec, afficher 2.",
+      "(essayer (bloc (afficher 1)) échec-de unicité|réseau (bloc (afficher (sorte-échec))) échec (bloc (afficher 2)))");
+    VE("Essayer :\n    Afficher 1.\nEn cas d'échec de unicite, afficher 2.", 3, 19,
+       "« unicite » n'est pas une sorte d'échec : division, nombre, lecture, absence, clé, rang, texte, unicité, lien, fichier, "
+       "réseau, port, saisie, refus ou autre.");
+    VE("Essayer :\n    Afficher 1.\nEn cas d'échec de réseau, afficher 2.\nEn cas d'échec de fichier ou de réseau, afficher 3.", 4, 33,
+       "La sorte « réseau » a déjà son bloc, ligne 3.");
+    VE("Essayer :\n    Afficher 1.\nEn cas d'échec, afficher 2.\nEn cas d'échec de réseau, afficher 3.", 4, 1,
+       "« En cas d'échec » sans sorte vient après les blocs qui en ont une.");
+    VE("Afficher la sorte de l'échec.", 1, 10, "« la sorte de l'échec » ne s'emploie que dans un bloc « En cas d'échec ».");
     /* Tables (§ 13.11) */
     V("Les t valent la table où « a » vaut 1 et « b » vaut 2.\nLes v valent une table vide.\nDans les v, « x » vaut 0.\n"
       "Dans les v, « x » devient la valeur de « x » dans les v + 1.\nLes t perdent « a ».\nAfficher les clés des t puis les valeurs des t.\n"

@@ -1305,6 +1305,9 @@ static void expression(Impression *im, const Noeud *n) {
             im->champ_nu = nu;
         }
         return;
+    case N_SORTE:   /* « la sorte de l'échec » ; « _sorte » (§ 18.2) */
+        aj(im, im->compact ? "_sorte" : "la sorte de l'échec");
+        return;
     case N_MOTIF:   /* « le motif de l'échec » ; « _motif » (§ 18) */
         aj(im, im->compact ? "_motif" : "le motif de l'échec");
         return;
@@ -2296,9 +2299,30 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
     case P_ESSAYER:   /* « Essayer : … En cas d'échec : … » ; « _essayer … _échec … _fin » (§ 18) */
         aj(im, c ? "_essayer" : "Essayer");
         branche(im, n->enfants[0], 0, niveau);
-        retrait(im, niveau);
-        aj(im, c ? "_échec" : "En cas d'échec");
-        branche(im, n->enfants[1], !(n->forme & 1), niveau);
+        for (size_t k = 1; k < n->nb_enfants; k++) {   /* les blocs d'échec, avec leurs sortes (§ 18.2) */
+            const Noeud *cas = n->enfants[k];
+            retrait(im, niveau);
+            if (!cas->texte) aj(im, c ? "_échec" : "En cas d'échec");
+            else {
+                aj(im, c ? "_échec_de " : "En cas d'échec ");
+                char *s = grym_dupliquer(cas->texte), *mot = s;
+                for (int premier = 1;; premier = 0) {
+                    char *barre = strchr(mot, '|');
+                    if (barre) *barre = 0;
+                    if (c) { if (!premier) aj(im, " _ou "); aj(im, mot); }
+                    else {
+                        if (!premier) aj(im, " ou ");
+                        const unsigned char v = (unsigned char)mot[0];
+                        aj(im, v == 'a' || v == 'e' || v == 'i' || v == 'o' || v == 'u' || v == 0xC3 ? "d'" : "de ");
+                        aj(im, mot);
+                    }
+                    if (!barre) break;
+                    mot = barre + 1;
+                }
+                free(s);
+            }
+            branche(im, cas->enfants[0], !(cas->forme & 1), niveau);
+        }
         fin_compacte(im, niveau);
         return;
     case P_STYLE:   /* « Les nombres s'affichent à la française. » (§ 4.1) */

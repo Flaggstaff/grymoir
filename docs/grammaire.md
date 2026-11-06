@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.91 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.92 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1833,6 +1833,50 @@ Pour comptabiliser une écriture :
 - `refuser` est un mot de construction (§ 10.7) : il ne commence pas le nom d'une action.
 - En forme compacte : `_refuser « Écriture déséquilibrée : » ; d`.
 
+### 18.2 Les sortes d'échec *(2.92)*
+
+```
+Essayer :
+    La réponse vaut l'envoi au service de :
+        « numéro » : le numéro du patient.
+    Conserver le patient.
+En cas d'échec d'unicité :
+    Afficher « Ce patient existe déjà. »
+En cas d'échec de réseau ou de fichier :
+    Afficher « Réessaie plus tard : » puis le motif de l'échec.
+En cas d'échec :
+    Afficher la sorte de l'échec puis le motif de l'échec.
+```
+
+- Chaque échec a une **sorte**, un mot de la liste ci-dessous. La sorte est **promise** : elle ne change pas d'une version à l'autre (charte, art. 13.3). Le texte du motif, lui, ne l'est pas (art. 13.4) : un programme qui choisit sa conduite d'après le motif se casserait à la première reformulation, d'où les sortes.
+- **Les sortes.**
+
+| Sorte | Échecs |
+|---|---|
+| `division` | une division par zéro (§ 3.2) |
+| `nombre` | un nombre trop grand, un exposant non entier, un rang ou un nombre de caractères qui n'est pas un entier convenable |
+| `lecture` | un texte qui ne se lit pas comme un nombre, une date, une heure, une année, vrai ou faux (§ 4.5, § 15.5) |
+| `absence` | une valeur absente employée (§ 16.9) |
+| `clé` | une clé absente d'une table, ou déjà présente (§ 13.11) |
+| `rang` | un élément ou un caractère au-delà de la fin (§ 4.6, § 13.10) |
+| `texte` | un repère absent d'un texte (`après`, `avant`, § 4.6) |
+| `unicité` | une valeur déjà prise par un champ `, unique` (§ 16.3) |
+| `lien` | un lien vers un objet non conservé ou supprimé, une suppression définitive empêchée par un lien (§ 16.3, § 16.12) |
+| `fichier` | un fichier introuvable, illisible, ou qui existe déjà (§ 15.2) |
+| `réseau` | tout échec d'un envoi ou d'une lecture à un service web (§ 22.18) |
+| `port` | tout échec d'un port série ou de l'écoute de WSJT-X (§ 22.25, § 22.26) |
+| `saisie` | une question annulée par « . » (§ 17) |
+| `refus` | un `Refuser « … ».` (§ 18.1) |
+| `autre` | tout le reste : en général une faute du programme plutôt qu'un aléa |
+
+- **Les blocs.** Après le bloc `Essayer`, un ou plusieurs blocs `En cas d'échec de … :`, alignés sur lui, chacun en forme courte ou en bloc ; la sorte suit `de` ou `d'` (`d'unicité`, `d'absence`), plusieurs se séparent par `ou` (`de réseau ou de fichier`). Le premier bloc dont une sorte convient s'exécute ; les autres sont sautés. Un bloc `En cas d'échec` sans sorte prend tout ce qui reste ; il vient en dernier : « « En cas d'échec » sans sorte vient après les blocs qui en ont une. »
+- **Rien n'est avalé.** Sans bloc qui convienne, l'échec **remonte** : à l'essai englobant, sinon il arrête le programme, avec son motif et sa position d'origine. Ce qu'a fait le bloc essayé reste annulé.
+- `la sorte de l'échec` vaut la sorte, en texte (`« unicité »`), dans tout bloc `En cas d'échec`, comme `le motif de l'échec`. Elle se compare : `Si la sorte de l'échec est « réseau », …`.
+- Les refus à l'analyse : une sorte inconnue (« « unicite » n'est pas une sorte d'échec : division, nombre, lecture, absence, clé, rang, texte, unicité, lien, fichier, réseau, port, saisie, refus ou autre. »), une sorte nommée deux fois dans le même essai (« La sorte « réseau » a déjà son bloc, ligne 4. »).
+- **Comment la machine trouve la sorte.** Les instructions dont le contexte est clair la fixent (un envoi : `réseau` ; un port : `port` ; `Refuser` : `refus`) ; pour les autres, une table relie des fragments de motif à leur sorte (`src/vm.c`, `SORTES`). Chaque sorte a son essai dans `test_machine` : reformuler un motif sans mettre la table à jour fait échouer les essais, la sorte ne change jamais en silence.
+- Un `Essayer` de la 2.91, avec son seul `En cas d'échec`, se lit et se comporte comme avant.
+- En forme compacte : `_échec_de unicité`, `_échec_de réseau _ou fichier`, après le bloc essayé ; `_sorte` pour la sorte de l'échec.
+
 ## 19. Formulaire *(v1.0)*
 
 ```
@@ -2777,3 +2821,4 @@ Pour chaque d parmi les décodages WSJT du port 2238 :
 | 2.89 | 2026-11-06 | Nouveau § 13.10 : les listes (`Les étapes valent la liste … .`, `une liste vide`), qui gardent leurs doublons ; `gagnent` ajoute à la fin, `perdent` retire la première occurrence ; les rangs, dans une liste ou un ensemble : `le 3e élément des …`, `le 1er`, `le premier`, `le dernier`, `l'élément de rang k des …` (instructions `LISTE` et `RANG`) ; les ordinaux `1er`, `2e` au lexeur, et la bonne graphie proposée pour `3ème`, `2nd`… ; `les mots de t`, `les éléments du champ « … » de r` et `les décodages WSJT` se rangent dans une liste ; égalité des listes dans l'ordre ; correction : `les e = les f` entre deux ensembles plantait la machine. Formes compactes `_liste`, `_liste_vide`, `_élément(l ; k)`, `_premier(l)`, `_dernier(l)`, `_mots t`, `_éléments « c » r` |
 | 2.90 | 2026-11-06 | Nouveau § 4.6 : découper un texte. `le 3e caractère de t`, `le premier`, `le dernier`, `le caractère de rang k de t` ; `les 5 premiers caractères de t`, `les 3 derniers` (un texte plus court se rend entier) ; `les caractères 3 à 7 de t` ; `t après « x »`, `t avant « x »` (la première occurrence ; absente, une erreur) ; `la position de « x » dans t` (0 si absente) ; `les morceaux de t séparés par « ; »`, une liste, vides compris (instruction `EXTRAIRE`). Comparaison exacte. Compatibilité (charte, art. 13.2) : `après` et `avant` suivis d'un texte, d'un nom entre crochets ou de `le`, `la`, `l'`, et `séparés par`, ferment désormais un nom, comme `sans` depuis la 2.64 ; aucun programme du dépôt n'en avait dans un nom. Formes compactes `_caractère`, `_premier_caractère`, `_dernier_caractère`, `_premiers_caractères`, `_derniers_caractères`, `_caractères`, `_après`, `_avant`, `_position`, `_morceaux` |
 | 2.91 | 2026-11-06 | Nouveau § 13.11 : les tables (`la table où « a » vaut 1 et « b » vaut 2`, `une table vide`) ; `Dans les t, k vaut v.` crée une clé, `devient` la modifie, l'un refusant ce que l'autre fait ; `la valeur de k dans les t` (clé absente : erreur) ; `les clés des t`, `les valeurs des t`, des listes ; `perdent` retire une clé ; `le nombre de t`. Type de valeur `V_TABLE` ; instructions `TABLE`, `TABLE_LIRE`, `TABLE_ECRIRE`, `TABLE_LISTE`. `dans` devient un mot de construction en tête de phrase. Correction : un symbole déclaré n'initialisait pas sa marque de liste (2.89), si bien qu'un ensemble pouvait garder ses doublons selon l'état de la mémoire. Formes compactes `_table`, `_table_vide`, `_dans t k _vaut v`, `_valeur(k ; t)`, `_clés(t)`, `_valeurs(t)` |
+| 2.92 | 2026-11-06 | Nouveau § 18.2 : les sortes d'échec (`division`, `nombre`, `lecture`, `absence`, `clé`, `rang`, `texte`, `unicité`, `lien`, `fichier`, `réseau`, `port`, `saisie`, `refus`, `autre`), promises, contrairement au motif ; `En cas d'échec de réseau ou de fichier :`, plusieurs blocs, le premier qui convient ; sans bloc qui convienne, l'échec remonte ; `la sorte de l'échec`. Instructions `SORTE_ECHEC` et `RELANCER`. Formes compactes `_échec_de`, `_sorte` |
