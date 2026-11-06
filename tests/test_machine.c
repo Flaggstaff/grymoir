@@ -2422,6 +2422,20 @@ int main(void) {
          "Les i valent la liste a.\nEssayer :\n    Afficher les i triés par remarque.\nEn cas d'échec d'absence, afficher le motif de l'échec.",
          "Le champ « remarque » est absent : vérifie-le d'abord avec « est présent ».");
     PROG("Les dossiers triés manuellement valent la liste 2 et 1.\nAfficher les dossiers triés manuellement triés.", "1, 2");
+    /* Trier par un calcul (2.97) : une clé par élément, une fois ; stable ; dans un calcul, dans une boucle */
+    PROG("Le poids d'un mot vaut la longueur de mot.\nLes termes valent les mots de « le chat dort profondément ».\n"
+         "Afficher les termes triés par le calcul poids.\nAfficher les termes triés par le calcul poids décroissant.\n"
+         "Le plus court d'une phrase :\n    Les t valent les mots de phrase.\n    Les u valent les t triés par le calcul poids.\n"
+         "    Rendre le premier élément des u.\nAfficher le plus court de « ccc a bb ».\n"
+         "Pour chaque m parmi les mots de « x yy » triés par le calcul poids décroissant, afficher m.",
+         "le, chat, dort, profondément\nprofondément, chat, dort, le\na\nyy\nx");
+    PROG("Le compte vaut 0.\nLa clé d'un n vaut 0 - n.\nLes m valent la liste 1, 3 et 2.\nAfficher les m triés par le calcul clé.",
+         "3, 2, 1");
+    PROG("Les m valent la liste 1.\nAfficher les m triés par le calcul poids.", "ERREUR 2:36 « poids » n'est pas un calcul déclaré.");
+    PROG("La somme d'un a et d'un b vaut a + b.\nLes m valent la liste 1.\nAfficher les m triés par le calcul somme.",
+         "ERREUR 3:36 « somme » attend 2 paramètres : pour trier, un calcul n'en a qu'un, l'élément.");
+    PROG("L'inverse d'un n vaut 1 / n.\nLes m valent la liste 2, 0 et 1.\nAfficher les m triés par le calcul inverse.",
+         "ERREUR 1:25 Division par zéro.");
     /* Racine carrée, plus grand, plus petit, somme et moyenne d'une liste (§ 3.7) ; les racines comparées à Python : la
      * grammaire ; ici, des valeurs exactes, des zéros de queue, des extrêmes */
     PROG("Afficher la racine carrée de 2,25 puis la racine carrée de 2.\n"

@@ -7124,15 +7124,17 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         case I_TRIER: {   /* « les notes triées [par ordre décroissant] », « triés par nom [décroissant] » (§ 13.12) */
-            Valeur champ = op & 2 ? depiler(&pile) : vi_absent(NULL), l = depiler(&pile);
+            Valeur champ = op & 6 ? depiler(&pile) : vi_absent(NULL), l = depiler(&pile);   /* op & 4 : la liste des clés (2.97) */
             char *mp = NULL;
-            const char *nc = champ.type == V_TEXTE && champ.texte ? champ.texte : NULL;
+            const char *nc = !(op & 4) && champ.type == V_TEXTE && champ.texte ? champ.texte : NULL;
             if (l.type == V_ABSENT) mp = message_absent(&l);
             else if (l.type != V_ENSEMBLE) mp = grym_formater("Seule une liste ou un ensemble se trie, pas %s.", nom_type(l.type));
             const size_t n = mp ? 0 : l.liste->n;
             const Valeur **cles = grym_allouer((n ? n : 1) * sizeof *cles);
+            if (!mp && (op & 4) && (champ.type != V_ENSEMBLE || champ.liste->n != n))
+                mp = grym_dupliquer("TRIER : les clés ne correspondent pas à la liste.");   /* le compilateur les fait : ne doit pas arriver */
             for (size_t q = 0; q < n && !mp; q++) {
-                const Valeur *x = &l.liste->valeurs[q];
+                const Valeur *x = op & 4 ? &champ.liste->valeurs[q] : &l.liste->valeurs[q];
                 if (nc) {   /* par un champ : un objet qui l'a */
                     size_t k = 0;
                     if (x->type == V_OBJET) while (k < x->objet->classe->nb_champs && strcmp(x->objet->classe->champs[k], nc) != 0) k++;

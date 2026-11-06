@@ -949,7 +949,7 @@ static void expression(Impression *im, const Noeud *n) {
         if (im->compact) {
             aj(im, "_trier(");
             expression(im, l);
-            if (n->texte) { aj(im, " ; "); ecrire_nom(im, n->texte, 0); }
+            if (n->texte) { aj(im, n->forme & 16 ? " ; _calcul " : " ; "); ecrire_nom(im, n->texte, 0); }
             if (n->forme & 1) aj(im, " ; _décroissant");
             aj(im, ")");
             return;
@@ -959,7 +959,7 @@ static void expression(Impression *im, const Noeud *n) {
         if (paren) aj(im, ")");
         aj(im, n->forme & 2 ? " triées" : " triés");
         if (n->texte) {
-            aj(im, " par ");
+            aj(im, n->forme & 16 ? " par le calcul " : " par ");   /* 2.97 */
             ecrire_nom(im, n->texte, 0);
             if (n->forme & 1) aj(im, " décroissant");
             else if (n->forme & 8) aj(im, " croissant");

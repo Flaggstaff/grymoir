@@ -396,20 +396,29 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             }
             const size_t fin0 = nb ? pv[0] : fin;
             const Jeton *champ = NULL;
-            int decroissant = 0, bon = fin0 > k + 2 && nb <= 2;
+            int decroissant = 0, calcul = 0, bon = fin0 > k + 2 && nb <= 2;
             for (size_t q = 0; q < nb && bon; q++) {
                 const size_t d0 = pv[q] + 1, f0 = q + 1 < nb ? pv[q + 1] : fin;
-                if (f0 != d0 + 1) bon = 0;
+                if (f0 == d0 + 2 && est_cle(&r->e[d0], "calcul") && r->e[d0 + 1].type == J_CROCHETS && !champ && !decroissant) {
+                    champ = &r->e[d0 + 1];   /* « _calcul poids » (2.97) */
+                    calcul = 1;
+                } else if (f0 != d0 + 1) bon = 0;
                 else if (est_cle(&r->e[d0], "décroissant")) decroissant = 1;
                 else if (r->e[d0].type == J_CROCHETS && !champ && !decroissant) champ = &r->e[d0];
                 else bon = 0;
             }
             if (!bon) {
-                echouer(r, t, grym_dupliquer("« _trier » s'écrit ainsi : _trier(notes), _trier(inscrits ; nom ; _décroissant)."));
+                echouer(r, t, grym_dupliquer("« _trier » s'écrit ainsi : _trier(notes), _trier(inscrits ; nom ; _décroissant), "
+                                             "_trier(mots ; _calcul poids)."));
                 return;
             }
             if (fin0 == k + 3 && r->e[k + 2].type == J_CROCHETS) copier(r, &r->e[k + 2]);   /* un nom : « parmi les inscrits triés » */
-            else {
+            else if (k > 0 && est_cle(&r->e[k - 1], "parmi") && est_cle(&r->e[k + 2], "mots")) {
+                /* _parmi _trier(_mots t ; …) : « parmi les » est écrit, reste « mots de t » (2.97) */
+                mot(r, "mots", &r->e[k + 2]);
+                mot(r, "de", &r->e[k + 2]);
+                expression(r, k + 3, fin0);
+            } else {
                 emettre(r, J_PAR_OUV, NULL, &r->e[k + 2], 1);
                 expression(r, k + 2, fin0);
                 emettre(r, J_PAR_FERM, NULL, &r->e[fin0], 1);
@@ -417,6 +426,7 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             mot(r, "triés", t);
             if (champ) {
                 mot(r, "par", t);
+                if (calcul) { mot(r, "le", t); mot(r, "calcul", t); }
                 copier(r, champ);
                 if (decroissant) mot(r, "décroissant", t);
             } else if (decroissant) {

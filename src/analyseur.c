@@ -2370,6 +2370,49 @@ static Noeud *trier_apres(Analyse *a, Noeud *g) {
     if (est_mot(cour(a), "triées")) n->forme |= 2;
     n->fin = fin_jeton(cour(a));
     avancer(a);
+    if (est_mot(cour(a), "par") && est_mot(voir(a, 1), "le") && est_mot(voir(a, 2), "calcul")
+        && (voir(a, 3)->type == J_CROCHETS || mot_de_nom(a, a->i + 3))) {
+        /* « triés par le calcul poids [décroissant] » (2.97) : un calcul déclaré, d'un paramètre, appelé sur chaque élément */
+        size_t d = a->i + 3, f = d;
+        if (a->j[d].type == J_CROCHETS) f = d + 1;
+        else while (f < a->n && mot_de_nom(a, f) && !est_mot(&a->j[f], "croissant") && !est_mot(&a->j[f], "décroissant")) f++;
+        char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, f);
+        Symbole *s = visible(a, nom);
+        if (!s || s->sorte != S_CALCUL) {
+            Noeud *x = erreur(a, &a->j[d], grym_formater("« %s » n'est pas un calcul déclaré.", nom));
+            free(nom);
+            noeud_liberer(n);
+            noeud_liberer(g);
+            return x;
+        }
+        if (s->nb_parametres != 1) {
+            Noeud *x = erreur(a, &a->j[d], grym_formater("« %s » attend %d paramètres : pour trier, un calcul n'en a qu'un, l'élément.",
+                                                         nom, s->nb_parametres));
+            free(nom);
+            noeud_liberer(n);
+            noeud_liberer(g);
+            return x;
+        }
+        n->forme |= 16;
+        n->texte = nom;
+        n->entier = a->nb_locaux;
+        a->nb_locaux += 4;   /* la liste, les clés, le rang, l'élément */
+        Noeud *ap = noeud_creer(N_APPEL, a->j[d].ligne, a->j[d].colonne, a->j[d].debut);
+        ap->texte = grym_dupliquer(s->nom);
+        Noeud *el = noeud_creer(N_LOCAL, a->j[d].ligne, a->j[d].colonne, a->j[d].debut);
+        el->local = n->entier + 3;
+        noeud_ajouter(ap, el);
+        n->fin = fin_jeton(&a->j[f - 1]);
+        a->i = f;
+        if (est_mot(cour(a), "croissant") || est_mot(cour(a), "décroissant")) {
+            n->forme |= est_mot(cour(a), "décroissant") ? 1 : 8;
+            n->fin = fin_jeton(cour(a));
+            avancer(a);
+        }
+        noeud_ajouter(n, g);
+        noeud_ajouter(n, ap);
+        return n;
+    }
     if (est_mot(cour(a), "par") && est_mot(voir(a, 1), "ordre")
         && (est_mot(voir(a, 2), "croissant") || est_mot(voir(a, 2), "décroissant"))) {
         n->forme |= 4 | (est_mot(voir(a, 2), "décroissant") ? 1 : 8);
@@ -5652,6 +5695,10 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
             a->nb_locaux++;   /* rang */
             int forme = 0;
             a->boucle++;
+            while (est_mot(cour(a), "triés") || est_mot(cour(a), "triées")) {   /* « parmi … triés par … » (§ 13.12) */
+                source = trier_apres(a, source);
+                if (!source) return NULL;
+            }
             Noeud *corps = branche(a, colonne, "Pour chaque", &forme);
             a->boucle--;
             portee_tronquer(a->portee, sauve);
@@ -5730,6 +5777,10 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
             a->nb_locaux++;   /* rang */
             int forme = 0;
             a->boucle++;
+            while (est_mot(cour(a), "triés") || est_mot(cour(a), "triées")) {   /* « parmi … triés par … » (§ 13.12) */
+                source = trier_apres(a, source);
+                if (!source) return NULL;
+            }
             Noeud *corps = branche(a, colonne, "Pour chaque", &forme);
             a->boucle--;
             portee_tronquer(a->portee, sauve);
@@ -5815,6 +5866,10 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
         a->nb_locaux++;   /* rang */
         int forme = 0;
         a->boucle++;
+        while (est_mot(cour(a), "triés") || est_mot(cour(a), "triées")) {   /* « parmi … triés par … » (§ 13.12) */
+            source = trier_apres(a, source);
+            if (!source) return NULL;
+        }
         Noeud *corps = branche(a, colonne, "Pour chaque", &forme);
         a->boucle--;
         portee_tronquer(a->portee, sauve);

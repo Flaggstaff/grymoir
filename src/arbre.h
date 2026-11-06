@@ -207,7 +207,10 @@ typedef enum {
                         et 1) ; forme 0 : en chiffres (« 3e »), 1 : « l'élément de rang k », 2 : « le premier », 3 : « le dernier » */
     N_TRI,           /* « les notes triées [par ordre décroissant] », « les inscrits triés par nom [décroissant] » (§ 13.12) :
                         enfants[0] : la liste ; texte : le champ, ou NULL ; forme : 1 décroissant, 2 « triées », 4 « par
-                        ordre » écrit, 8 « croissant » écrit */
+                        ordre » écrit, 8 « croissant » écrit, 16 « par le calcul » (2.97) : texte, le calcul ; enfants[1],
+                        son appel sur l'élément (N_LOCAL) ; entier : la première des quatre cases cachées (liste, clés,
+                        rang, élément) */
+    N_LOCAL,         /* la lecture d'une case cachée, que le compilateur remplit (2.97) : local : la case */
     N_MATH,          /* § 3.7 ; forme : 0 « la racine carrée de x » (x), 1 « le plus grand de a et de b » (a, b…), 2 « le plus
                         petit de … » (a, b…), 3 « la somme des notes », 4 « la moyenne des », 5 « le plus grand élément des »,
                         6 « le plus petit élément des » (la liste) */

@@ -211,6 +211,8 @@ int main(void) {
       "Pour chaque x parmi les n triés, afficher x.",
       "(créer [n] (liste 2 1))\n(afficher (tri [n]) (tri-décroissant [n]) (tri-décroissant [n] nom))\n"
       "(pour-chaque-ligne [x] (tri [n]) (bloc (afficher [x])))");
+    V("Le poids d'un m vaut m.\nLes n valent la liste 2 et 1.\nAfficher les n triés par le calcul poids décroissant.",
+      "(calcul [poids] ([m]) [m])\n(créer [n] (liste 2 1))\n(afficher (tri-décroissant [n] calcul poids))");
     /* § 3.7 */
     V("Les n valent la liste 1 et 2.\nAfficher la racine carrée de 2 puis le plus grand de 1, de 2 et de 3.\n"
       "Afficher la somme des n puis la moyenne des n puis le plus grand élément des n puis le plus petit élément des n.",

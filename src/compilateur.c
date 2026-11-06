@@ -418,7 +418,44 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[1]);
         emettre(c, I_CADRER, (long)n->forme, n->op_ligne, n->op_colonne);
         return;
+    case N_LOCAL:   /* une case cachée (2.97) */
+        emettre(c, I_LIRE_LOCAL, n->local, n->ligne, n->colonne);
+        return;
     case N_TRI: {   /* la liste, [le nom du champ], puis TRIER 1 décroissant | 2 par un champ (§ 13.12) */
+        if (n->forme & 16) {   /* par un calcul (2.97) : une boucle qui range sa clé pour chaque élément, puis TRIER | 4 */
+            const int L = n->entier, K = n->entier + 1, R = n->entier + 2, E = n->entier + 3, l = n->ligne, col = n->colonne;
+            expression(c, n->enfants[0]);
+            emettre(c, I_ECRIRE_LOCAL, L, l, col);
+            emettre(c, I_LISTE, 0, l, col);
+            emettre(c, I_ECRIRE_LOCAL, K, l, col);
+            constante(c, C_NOMBRE, "0", n, l, col);
+            emettre(c, I_ECRIRE_LOCAL, R, l, col);
+            const size_t test = c->b->taille_code;
+            emettre(c, I_LIRE_LOCAL, R, l, col);
+            emettre(c, I_LIRE_LOCAL, L, l, col);
+            emettre(c, I_TAILLE_LISTE, 0, l, col);
+            emettre(c, I_INFERIEUR, 0, l, col);
+            const size_t sortie = bloc_emettre_saut(c->b, I_SAUTER_SI_FAUX, l, col);
+            emettre(c, I_LIRE_LOCAL, L, l, col);
+            emettre(c, I_LIRE_LOCAL, R, l, col);
+            emettre(c, I_ELEMENT, 0, l, col);
+            emettre(c, I_ECRIRE_LOCAL, E, l, col);
+            emettre(c, I_LIRE_LOCAL, K, l, col);
+            expression(c, n->enfants[1]);   /* l'appel du calcul, sur la case E */
+            emettre(c, I_AJOUTER, 0, l, col);
+            emettre(c, I_ECRIRE_LOCAL, K, l, col);
+            emettre(c, I_LIRE_LOCAL, R, l, col);
+            constante(c, C_NOMBRE, "1", n, l, col);
+            emettre(c, I_ADDITION, 0, l, col);
+            emettre(c, I_ECRIRE_LOCAL, R, l, col);
+            const size_t retour = bloc_emettre_saut(c->b, I_SAUTER, l, col);
+            bloc_corriger_saut(c->b, retour, test);
+            bloc_corriger_saut(c->b, sortie, c->b->taille_code);
+            emettre(c, I_LIRE_LOCAL, L, l, col);
+            emettre(c, I_LIRE_LOCAL, K, l, col);
+            emettre(c, I_TRIER, (n->forme & 1) | 4, n->op_ligne ? n->op_ligne : l, n->op_ligne ? n->op_colonne : col);
+            return;
+        }
         expression(c, n->enfants[0]);
         if (n->texte) {
             long k = bloc_constante(c->b, C_TEXTE, n->texte);

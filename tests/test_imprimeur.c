@@ -158,6 +158,7 @@ int main(void) {
          "Les c valent les notes triées.\n");
     COMP("Les notes valent la liste 2 et 1.\nAfficher les notes triées puis les notes triées par nom décroissant.\n",
          "_les notes << _liste 2 ; 1\n_afficher _trier(notes) ; _trier(notes ; nom ; _décroissant)\n");
+    FIXE("Le poids d'un m vaut m.\nLes n valent la liste 2 et 1.\nAfficher les n triées par le calcul poids puis les n triés par le calcul poids décroissant.\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.96 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.97 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1130,8 +1130,15 @@ Afficher les inscrits triés par nom puis les inscrits triés par cotisation dé
 - **Stable** : deux éléments égaux gardent leur ordre d'arrivée, comme dans la base. Deux tris successifs font donc un tri sur deux clés : trier par prénom, puis le résultat par nom, range par nom puis par prénom.
 - Un calcul trie librement.
 - `triés` et `triées` ne comptent qu'ainsi placés, après une liste ou un ensemble ; aucun mot réservé.
-- Reporté, à la 2.97 : trier par un calcul (`triés par le calcul poids`), qui appelle le calcul pour chaque élément.
-- En forme compacte : `_trier(notes)`, `_trier(notes ; _décroissant)`, `_trier(inscrits ; nom)`, `_trier(inscrits ; cotisation ; _décroissant)`. La forme compacte ne garde pas le genre : `triés` revient par défaut.
+- **Par un calcul** *(2.97)* : `les mots triés par le calcul longueur`, `… par le calcul poids décroissant`. Le calcul est déclaré, avec **un** paramètre ; il est appelé une fois par élément, dans l'ordre de la liste, et ce qu'il rend est la clé du tri, qui suit les règles ci-dessus (nombres, dates, heures ou textes, d'une seule sorte). Un nom qui n'est pas un calcul : « « poids » n'est pas un calcul déclaré. » ; un calcul à deux paramètres : « « poids » attend 2 paramètres : pour trier, un calcul n'en a qu'un, l'élément. » ; une erreur dans le calcul arrête le tri, avec sa position dans le calcul. Les clés se calculent une fois chacune, jamais à chaque comparaison : un calcul coûteux reste raisonnable.
+
+```
+Le poids d'un mot vaut la longueur de mot.
+Les mots valent les mots de « le chat dort profondément ».
+Afficher les mots triés par le calcul poids.               →  le, chat, dort, profondément
+```
+
+- En forme compacte : `_trier(notes)`, `_trier(notes ; _décroissant)`, `_trier(inscrits ; nom)`, `_trier(inscrits ; cotisation ; _décroissant)`, `_trier(mots ; _calcul poids ; _décroissant)`. La forme compacte ne garde pas le genre : `triés` revient par défaut.
 
 Un vrai affichage des objets reste à concevoir. L'absence de valeur est faite (§ 16.9).
 
@@ -2915,3 +2922,4 @@ Pour rappeler un patient :
 | 2.94 | 2026-11-06 | Nouveau § 22.27 : les courriels, `Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t.` ; la messagerie, un objet aux champs `adresse de courriel`, `serveur de courriel`, `compte de courriel`, `clé de courriel (secret)` ; SMTP sur TLS implicite (465), `AUTH PLAIN` ; dans l'atelier et les applications fabriquées (fonction d'interface `courriel`, `src/atelier/courriel.cpp`) ; instruction `COURRIEL` ; refus de sorte `réseau`. Forme compacte `_envoyer_courriel` |
 | 2.95 | 2026-11-06 | Nouveau § 3.7 : `la racine carrée de x` (exacte si finie, sinon 28 chiffres, comparée à Python) ; `le plus grand de a et de b`, `le plus petit de …` ; sur une liste ou un ensemble, `la somme des notes`, `la moyenne des notes`, `le plus grand élément des notes`, `le plus petit élément des notes` (instruction `MATH`). Formes compactes `_racine`, `_plus_grand`, `_plus_petit`, `_somme`, `_moyenne`, `_plus_grand_élément`, `_plus_petit_élément` |
 | 2.96 | 2026-11-06 | Nouveau § 13.12 : trier une liste ou un ensemble, `les notes triées`, `par ordre décroissant`, `les inscrits triés par nom [décroissant]` ; une nouvelle liste, tri stable ; les textes dans l'ordre de la base (collation `GRYM_TEXTE`, même fonction). Instruction `TRIER`. Forme compacte `_trier(l ; champ ; _décroissant)` |
+| 2.97 | 2026-11-06 | § 13.12 : trier par un calcul, `les mots triés par le calcul longueur [décroissant]` ; le compilateur écrit une boucle qui appelle le calcul une fois par élément, puis `TRIER` range la liste selon ces clés (forme 4). Forme compacte `_trier(l ; _calcul c)` |

@@ -284,7 +284,8 @@ int main(void) {
     ERR("_afficher _plus_grand(1)\n", 1, 11, "« _plus_grand » s'écrit ainsi : _plus_grand(a ; b).");
     ALLER_RETOUR("_les notes << _liste 2 ; 1\n_afficher _trier(notes) ; _trier(notes ; _décroissant) ; _trier(notes ; nom)\n"
                  "_pour_chaque x _parmi _trier(notes ; nom ; _décroissant)\n    _afficher x\n_fin\n", NULL);
-    ERR("_afficher _trier(notes ; _croissant ; nom)\n", 1, 11, "« _trier » s'écrit ainsi : _trier(notes), _trier(inscrits ; nom ; _décroissant).");
+    ERR("_afficher _trier(notes ; _croissant ; nom)\n", 1, 11, "« _trier » s'écrit ainsi : _trier(notes), _trier(inscrits ; nom ; _décroissant), _trier(mots ; _calcul poids).");
+    ALLER_RETOUR("_calcul _le poids(_un m)\n    _rendre m\n_fin\n_les n << _liste 2 ; 1\n_afficher _trier(n ; _calcul poids) ; _trier(n ; _calcul poids ; _décroissant)\n", NULL);
     ERR("_les l << _liste 1 ; 2\n_afficher _élément(l)\n", 2, 11, "« _élément » prend la liste et le rang : _élément(étapes ; 3).");
     ERR("_les l << _liste 1 ; 2\n_afficher _premier(l ; 2)\n", 2, 11, "« _premier » prend la liste seule : _premier(étapes).");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"

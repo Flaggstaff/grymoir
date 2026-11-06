@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.99 de la spécification, révisée le 6 novembre 2026.
+Version 2.00 de la spécification, révisée le 6 novembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -154,7 +154,7 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 134 | `RELANCER` | aucun | dépile la sorte, puis le motif : l'échec repart, rattrapable par l'essai englobant, avec la position d'origine du dernier échec rattrapé |
 | 135 | `COURRIEL` | aucun | dépile le texte, la messagerie, l'objet, puis le destinataire ; vérifie la messagerie (ses quatre champs, la clé en secret) puis les valeurs, et envoie par la fonction d'interface `courriel` ; sans elle (console, navigateur), refuse ; tout refus est de sorte `réseau` (grammaire 2.94, § 22.27) |
 | 136 | `MATH` | forme (3 bits) + nombre d'arguments × 8 | 0 la racine carrée (`dec_racine`, exacte si finie, sinon 28 chiffres) ; 1, 2 le plus grand, le plus petit de n arguments ; 3, 4 la somme, la moyenne d'une liste ; 5, 6 son plus grand, son plus petit élément (grammaire 2.95, § 3.7) |
-| 137 | `TRIER` | 1 décroissant, 2 par un champ | dépile [le nom du champ, puis] la liste ou l'ensemble ; empile une nouvelle liste, triée par fusion, stable ; les textes par `base_comparer_textes`, l'ordre de la base (grammaire 2.96, § 13.12) |
+| 137 | `TRIER` | 1 décroissant, 2 par un champ, 4 par des clés | dépile [le nom du champ ou la liste des clés, puis] la liste ou l'ensemble ; empile une nouvelle liste, triée par fusion, stable ; les textes par `base_comparer_textes`, l'ordre de la base (grammaire 2.96, § 13.12) ; forme 4 (2.97) : les clés, une par élément, rangées par une boucle que le compilateur écrit autour de l'appel du calcul |
 
 ### 3.1 Boucles et Selon
 
@@ -490,3 +490,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.97 | 2026-11-06 | Instruction `COURRIEL` (135) ; fonction d'interface `courriel` (`src/interface.h`), dans l'atelier par `src/atelier/courriel.cpp` (SMTP sur TLS implicite, Qt Network) |
 | 1.98 | 2026-11-06 | Instruction `MATH` (136) ; `dec_racine` dans `src/decimal.c` : Newton puis un ajustement par carrés exacts, comparée à Python sur 5 000 tirages |
 | 1.99 | 2026-11-06 | Instruction `TRIER` (137) ; `base_comparer_textes` (`src/base.h`), la collation `GRYM_TEXTE` ouverte à la machine |
+| 2.00 | 2026-11-06 | `TRIER` forme 4 : par des clés (grammaire 2.97, trier par un calcul) |

@@ -219,9 +219,13 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->nb_enfants) decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
-    case N_TRI:   /* (tri l), (tri-décroissant l nom) (§ 13.12) ; le genre écrit n'y paraît pas */
+    case N_LOCAL:
+        chaine_ajouter(c, "(case)");
+        return;
+    case N_TRI:   /* (tri l), (tri-décroissant l nom), (tri l calcul poids) (§ 13.12) ; le genre écrit n'y paraît pas */
         chaine_ajouter(c, n->forme & 1 ? "(tri-décroissant " : "(tri ");
         decrire(n->enfants[0], c);
+        if (n->forme & 16) chaine_ajouter(c, " calcul");
         if (n->texte) { chaine_ajouter(c, " "); chaine_ajouter(c, n->texte); }
         chaine_ajouter(c, ")");
         return;
