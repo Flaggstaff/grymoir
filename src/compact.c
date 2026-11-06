@@ -521,6 +521,61 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k = fin;
             continue;
         }
+        if ((est_cle(t, "élément") || est_cle(t, "premier") || est_cle(t, "dernier")) && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
+            /* _élément(étapes ; 3) → le 3e élément des étapes ; _élément(étapes ; n + 1) → l'élément de rang n + 1 des étapes ;
+             * _premier(étapes), _dernier(étapes) → le premier élément des étapes (§ 13.10) */
+            const int rang = est_cle(t, "élément");
+            size_t fin = fermante(r, k + 1, f);
+            if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+            const size_t pv = k + 3;
+            if (k + 2 >= fin || r->e[k + 2].type != J_CROCHETS
+                || (rang ? (pv >= fin || r->e[pv].type != J_POINT_VIRGULE || pv + 1 == fin) : k + 3 != fin)) {
+                echouer(r, t, grym_formater(rang ? "« _élément » prend la liste et le rang : _élément(étapes ; 3)."
+                                                 : "« _%s » prend la liste seule : _%s(étapes).", t->valeur, t->valeur));
+                return;
+            }
+            const Jeton *k1 = rang ? &r->e[pv + 1] : NULL;
+            const int ordinal = rang && pv + 2 == fin && k1->type == J_NOMBRE && k1->valeur
+                                && strspn(k1->valeur, "0123456789") == strlen(k1->valeur) && strtol(k1->valeur, NULL, 10) >= 1;
+            if (!rang) {   /* le premier élément */
+                mot(r, "le", t);
+                mot(r, t->valeur, t);
+                mot(r, "élément", t);
+            } else if (ordinal) {   /* un rang constant revient en chiffres : le 3e élément */
+                char *o = grym_formater("%s%s", k1->valeur, strcmp(k1->valeur, "1") == 0 ? "er" : "e");
+                mot(r, "le", t);
+                emettre(r, J_ORDINAL, o, k1, 1);
+                free(o);
+                mot(r, "élément", t);
+            } else {   /* un rang calculé : l'élément de rang n + 1 */
+                emettre(r, J_ELISION, "l", t, 1);
+                mot(r, "élément", t);
+                mot(r, "de", t);
+                mot(r, "rang", t);
+                expression(r, pv + 1, fin);
+            }
+            mot(r, "des", &r->e[k + 2]);
+            copier(r, &r->e[k + 2]);
+            k = fin;
+            continue;
+        }
+        if (est_cle(t, "mots")) {   /* _mots t → les mots de t (§ 13.10, 2.81) */
+            mot(r, "les", t);
+            mot(r, "mots", t);
+            mot(r, "de", t);
+            continue;
+        }
+        if (est_cle(t, "éléments") && k + 1 < f && r->e[k + 1].type == J_TEXTE) {
+            /* _éléments « collection » r → les éléments du champ « collection » de r (§ 13.10, 2.60) */
+            mot(r, "les", t);
+            mot(r, "éléments", t);
+            mot(r, "du", t);
+            mot(r, "champ", t);
+            copier(r, &r->e[k + 1]);
+            mot(r, "de", t);
+            k++;
+            continue;
+        }
         if (est_cle(t, "reste") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
             /* _reste(17 ; 5) → le reste de (17) par (5), parenthèses synthétiques (§ 3.5) */
             size_t fin = fermante(r, k + 1, f);
@@ -2665,20 +2720,31 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             copier(r, &r->e[d + 1]);
             const Jeton *v = &r->e[d + 2];
             mot(r, v->type == J_AFFECTE ? "valent" : v->valeur, v);
+            size_t premier = d + 3;   /* le premier élément, après « _liste » (§ 13.10) */
             if (d + 3 < f && est_cle(&r->e[d + 3], "ensemble_vide") && d + 4 == f) {
                 mot(r, "un", &r->e[d + 3]);
                 mot(r, "ensemble", &r->e[d + 3]);
                 mot(r, "vide", &r->e[d + 3]);
+            } else if (d + 3 < f && est_cle(&r->e[d + 3], "liste_vide") && d + 4 == f) {
+                mot(r, "une", &r->e[d + 3]);
+                mot(r, "liste", &r->e[d + 3]);
+                mot(r, "vide", &r->e[d + 3]);
             } else if (v->type == J_AFFECTE || est_cle(v, "deviennent")) {
-                size_t debut = d + 3;
+                if (d + 3 < f && est_cle(&r->e[d + 3], "liste")) {
+                    if (d + 4 == f) { echouer(r, &r->e[d + 3], grym_dupliquer("Éléments attendus après « _liste », ou « _liste_vide »."));  return; }
+                    mot(r, "la", &r->e[d + 3]);
+                    mot(r, "liste", &r->e[d + 3]);
+                    premier = d + 4;
+                }
+                size_t debut = premier;
                 int p = 0;
-                for (size_t q = d + 3; q <= f; q++) {
+                for (size_t q = premier; q <= f; q++) {
                     if (q < f) {
                         if (r->e[q].type == J_PAR_OUV) p++;
                         else if (r->e[q].type == J_PAR_FERM) p--;
                         if (!(p == 0 && r->e[q].type == J_POINT_VIRGULE)) continue;
                     }
-                    if (debut > d + 3) emettre(r, J_VIRGULE, NULL, &r->e[debut - 1], 1);
+                    if (debut > premier) emettre(r, J_VIRGULE, NULL, &r->e[debut - 1], 1);
                     if (q == debut) { echouer(r, &r->e[q < f ? q : f - 1], grym_dupliquer("Élément vide entre « ; »."));  return; }
                     expression(r, debut, q);
                     debut = q + 1;

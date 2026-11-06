@@ -156,10 +156,12 @@ typedef enum {
     I_AMORCER_LANGUES,  /* comme I_AMORCER, la langue parlée reconnue au lieu du français (2.86) */
     I_LANGUE,           /* remplace un texte par le code de sa langue reconnue (« fr », « en »…), ou absent (2.86) */
     I_SIGNER,           /* dépile un texte (ou absent) : l'auteur des lignes suivantes du journal (2.87) */
-    I_WSJTX             /* opérande 1 : dépile le port (sinon 2237) ; empile la liste des nouveaux décodages (2.88) */
+    I_WSJTX,            /* opérande 1 : dépile le port (sinon 2237) ; empile la liste des nouveaux décodages (2.88) */
+    I_LISTE,            /* opérande : n ; dépile n valeurs, empile la liste de ces valeurs, doublons compris (§ 13.10) */
+    I_RANG              /* opérande 0 : dépile le rang, puis la liste ; 1 : le premier, 2 : le dernier ; empile l'élément (§ 13.10) */
 } CodeInstruction;
 
-#define I_DERNIER I_WSJTX
+#define I_DERNIER I_RANG
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

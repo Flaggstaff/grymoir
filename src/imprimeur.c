@@ -661,9 +661,16 @@ static void expression(Impression *im, const Noeud *n) {
             }
         }
         return;
-    case N_JSON_LISTE:   /* « le nombre d'éléments du champ « a » de r » ; « _nombre_éléments « a » r » (2.60) */
-        if (im->compact) { aj(im, "_nombre_éléments "); ecrire_texte(im, n->texte); aj(im, " "); expression(im, n->enfants[0]); return; }
-        aj(im, "le nombre d'éléments du champ ");
+    case N_JSON_LISTE:   /* « le nombre d'éléments du champ « a » de r » ; « _nombre_éléments « a » r » (2.60) ; forme 0 : « les
+                          * éléments du champ « a » de r », rangés dans une liste ; « _éléments « a » r » (§ 13.10) */
+        if (im->compact) {
+            aj(im, n->forme ? "_nombre_éléments " : "_éléments ");
+            ecrire_texte(im, n->texte);
+            aj(im, " ");
+            expression(im, n->enfants[0]);
+            return;
+        }
+        aj(im, n->forme ? "le nombre d'éléments du champ " : "les éléments du champ ");
         ecrire_texte(im, n->texte);
         aj(im, " ");
         de_expression(im, n->enfants[0]);
@@ -920,6 +927,26 @@ static void expression(Impression *im, const Noeud *n) {
         expression(im, n->enfants[0]);
         aj(im, im->compact ? " _jointes " : n->forme ? " joints par " : " jointes par ");
         expression(im, n->enfants[1]);
+        return;
+    case N_RANG:   /* « le 3e élément des étapes », « l'élément de rang k des … », « le premier », « le dernier » ;
+                    * « _élément(étapes ; 3) », « _premier(étapes) », « _dernier(étapes) » (§ 13.10) */
+        if (im->compact) {
+            aj(im, n->forme == 2 ? "_premier(" : n->forme == 3 ? "_dernier(" : "_élément(");
+            ecrire_nom(im, n->enfants[0]->texte, 0);
+            if (n->nb_enfants > 1) { aj(im, " ; "); expression(im, n->enfants[1]); }
+            aj(im, ")");
+            return;
+        }
+        if (n->forme == 0) {
+            aj(im, "le ");
+            aj(im, n->enfants[1]->texte);
+            aj(im, strcmp(n->enfants[1]->texte, "1") == 0 ? "er élément des " : "e élément des ");
+        } else if (n->forme == 1) {
+            aj(im, "l'élément de rang ");
+            expression(im, n->enfants[1]);
+            aj(im, " des ");
+        } else aj(im, n->forme == 2 ? "le premier élément des " : "le dernier élément des ");
+        ecrire_nom(im, n->enfants[0]->texte, 0);
         return;
     case N_ENSEMBLE:   /* hors d'une création : ne s'écrit pas seul */
         aj(im, "?");
@@ -1629,8 +1656,10 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             else if (n->type == P_CREATION) aj(im, c ? " << " : " valent ");
             else aj(im, c ? " _deviennent " : " deviennent ");
             if (ajout) expression(im, v->enfants[1]);
-            else if (v->type == N_ENSEMBLE && v->nb_enfants == 0) aj(im, c ? "_ensemble_vide" : "un ensemble vide");
+            else if (v->type == N_ENSEMBLE && v->nb_enfants == 0)
+                aj(im, v->forme == 1 ? (c ? "_liste_vide" : "une liste vide") : (c ? "_ensemble_vide" : "un ensemble vide"));
             else if (v->type == N_ENSEMBLE) {
+                if (v->forme == 1) aj(im, c ? "_liste " : "la liste ");   /* § 13.10 */
                 for (size_t k = 0; k < v->nb_enfants; k++) {
                     if (k) aj(im, c ? " ; " : k + 1 == v->nb_enfants ? " et " : ", ");
                     expression(im, v->enfants[k]);

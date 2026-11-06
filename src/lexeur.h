@@ -37,6 +37,7 @@ typedef enum {
     J_MOT_CLE,      /* forme compacte : « _si » ; valeur : « si » */
     J_AFFECTE,      /* forme compacte : << */
     J_POINT_VIRGULE,/* forme compacte : ; */
+    J_ORDINAL,      /* « 3e », « 1er », « 1re » (§ 13.10) ; valeur : le nombre puis l'abréviation, en minuscules */
     J_ERREUR        /* valeur : message en français */
 } TypeJeton;
 

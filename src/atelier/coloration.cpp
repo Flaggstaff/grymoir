@@ -44,6 +44,7 @@ static int sorte_jeton(const Jeton &j, bool compacte) {
         return controles().contains(m) || m == "fin" || m == "alors" ? Coloration::Controle : Coloration::MotCle;
     }
     case J_NOMBRE:
+    case J_ORDINAL:   /* « 3e », « 1er » (§ 13.10) */
         return Coloration::Nombre;
     case J_DATE:
         return Coloration::Date;

@@ -219,6 +219,12 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->nb_enfants) decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_RANG:   /* (rang l k), (premier l), (dernier l) (§ 13.10) */
+        chaine_ajouter(c, n->forme == 2 ? "(premier " : n->forme == 3 ? "(dernier " : "(rang ");
+        decrire(n->enfants[0], c);
+        if (n->nb_enfants > 1) { chaine_ajouter(c, " "); decrire(n->enfants[1], c); }
+        chaine_ajouter(c, ")");
+        return;
     case N_WSJTX:   /* (décodages-wsjt [p]) (2.88) */
         chaine_ajouter(c, "(décodages-wsjt");
         if (n->nb_enfants) { chaine_ajouter(c, " "); decrire(n->enfants[0], c); }
@@ -558,7 +564,7 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         chaine_ajouter(c, ")");
         return;
     case N_ENSEMBLE:
-        chaine_ajouter(c, "(ensemble");
+        chaine_ajouter(c, n->forme == 1 ? "(liste" : "(ensemble");
         for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }
         chaine_ajouter(c, ")");
         return;

@@ -251,6 +251,15 @@ int main(void) {
     ALLER_RETOUR("_les couleurs << « a » ; « b »\n_les couleurs _gagnent « c »\n_les vides << _ensemble_vide\n"
                  "_afficher _nombre_de couleurs ; couleurs _jointes « , »\n_pour_chaque c _parmi couleurs\n    _afficher c\n_fin\n"
                  "_si couleurs _contient « a » _alors\n    _les vides _deviennent couleurs\n_fin\n", NULL);
+    ALLER_RETOUR("_les étapes << _liste « a » ; « b » ; « a »\n_les v << _liste_vide\n_les étapes _deviennent _liste 1 ; 1\n"
+                 "_les m << _mots « a b »\n_afficher _élément(étapes ; 3) ; _élément(étapes ; 1) ; _premier(m) ; _dernier(m)\n"
+                 "_afficher _élément(étapes ; 1 + 1)\n",
+                 "Les étapes valent la liste « a », « b » et « a ».\nLes v valent une liste vide.\n"
+                 "Les étapes deviennent la liste 1 et 1.\nLes m valent les mots de « a b ».\n"
+                 "Afficher le 3e élément des étapes puis le 1er élément des étapes puis le premier élément des m "
+                 "puis le dernier élément des m.\nAfficher l'élément de rang 1 + 1 des étapes.\n");
+    ERR("_les l << _liste 1 ; 2\n_afficher _élément(l)\n", 2, 11, "« _élément » prend la liste et le rang : _élément(étapes ; 3).");
+    ERR("_les l << _liste 1 ; 2\n_afficher _premier(l ; 2)\n", 2, 11, "« _premier » prend la liste seule : _premier(étapes).");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"
                  "_calcul _le titre(_une personne) << personne.nom\n_le p << _nouveau personne _avec\n    nom << « a »\n_fin\n"
                  "saluer(p) _comme personne\n_afficher titre(p) _comme personne\n", NULL);

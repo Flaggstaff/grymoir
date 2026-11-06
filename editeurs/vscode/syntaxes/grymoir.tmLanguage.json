@@ -56,7 +56,7 @@
     },
     "nombre": {
       "name": "constant.numeric.grymoir",
-      "match": "\\b\\d(?:[\\d']*\\d)?(?:,\\d+)?\\b"
+      "match": "\\b(?:\\d+(?:er|re|e)\\b|\\d(?:[\\d']*\\d)?(?:,\\d+)?\\b)"
     },
     "crochets": {
       "name": "variable.other.grymoir",

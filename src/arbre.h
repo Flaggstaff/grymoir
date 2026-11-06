@@ -40,7 +40,8 @@ typedef enum {
                         (« majuscules », « minuscules », « nombre entier », « nombre », « date », « année »,
                         « vrai ou faux ») ; entier : son rang, opérande de CONVERTIR */
     N_COLONNE,       /* « la colonne « Nom » de la ligne » (§ 15.5) : enfants[0] le titre, enfants[1] la ligne */
-    N_ENSEMBLE,      /* « « rouge », « vert » et « bleu » », « un ensemble vide » (§ 13.9) : enfants : les éléments */
+    N_ENSEMBLE,      /* « « rouge », « vert » et « bleu » », « un ensemble vide » (§ 13.9) : enfants : les éléments ;
+                        forme 1 : une liste, qui garde ses doublons (« la liste … », « une liste vide », § 13.10) */
     N_AJOUT,         /* « les élus gagnent m » : enfants[0] l'ensemble, enfants[1] la valeur ; op 'g' gagner, 'p' perdre */
     N_TAILLE,        /* « le nombre de couleurs » : enfants[0] l'ensemble */
     N_JOINDRE,       /* « les couleurs jointes par « , » » : enfants[0] l'ensemble, enfants[1] le séparateur ; forme 1 : joints */
@@ -197,7 +198,9 @@ typedef enum {
     N_HISTORIQUE,    /* « l'historique de x » (2.85) : enfant : l'objet ; forme 1 « l'historique de la base », sans enfant :
                         le journal des entités journalisées, en texte, le plus récent d'abord */
     N_LANGUE,        /* « la langue reconnue de t » (2.86) : enfant : le texte ; son code ISO 639-1, ou absent */
-    N_WSJTX          /* « les décodages WSJT [du port p] » (2.88) : enfant facultatif : le port ; une liste de textes JSON */
+    N_WSJTX,         /* « les décodages WSJT [du port p] » (2.88) : enfant facultatif : le port ; une liste de textes JSON */
+    N_RANG           /* « le 3e élément des étapes » (§ 13.10) : enfants[0] la liste ou l'ensemble, enfants[1] le rang (formes 0
+                        et 1) ; forme 0 : en chiffres (« 3e »), 1 : « l'élément de rang k », 2 : « le premier », 3 : « le dernier » */
 } TypeNoeud;
 
 typedef enum { ART_AUCUN, ART_LE, ART_LA, ART_L, ART_IMPLICITE, ART_LES } Article;   /* ART_LES : un ensemble (§ 13.9) */

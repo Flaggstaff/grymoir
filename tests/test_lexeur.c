@@ -151,6 +151,16 @@ int main(void) {
     VM("Le total vaut 3.5.", "Écris « 3,5 »");
     VM("1,2,3", "qu'une virgule");
     VM("3kg", "collé à un mot");
+    /* Rangs abrégés (§ 13.10) : « 1er », « 2e » ; les autres graphies, refusées avec la bonne */
+    V("le 3e élément", "MOT(le) ORDINAL(3e) MOT(élément)");
+    V("1er 1re 10E", "ORDINAL(1er) ORDINAL(1re) ORDINAL(10e)");
+    VM("3ème", "« 3ème » s'écrit « 3e ».");
+    VM("3eme", "« 3eme » s'écrit « 3e ».");
+    VM("2nd", "« 2nd » s'écrit « 2e ».");
+    VM("1e", "« 1e » s'écrit « 1er ».");
+    VM("2er", "« 2er » s'écrit « 2e ».");
+    VM("3,5e", "collé à un mot");
+    VM("1'000e", "collé à un mot");
 
     /* --- Mots, casse, élision --- */
     V("SOLDE Solde solde", "MOT(solde) MOT(solde) MOT(solde)");

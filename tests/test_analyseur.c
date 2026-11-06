@@ -205,6 +205,22 @@ int main(void) {
     V("Le a vaut 1\n  + 2.", "(créer [a] (+ 1 2))");
 
     /* --- Erreurs de référence (§ 6) --- */
+    /* Listes et rangs (§ 13.10) */
+    V("Les étapes valent la liste « a », « b » et « a ».\nLes v valent une liste vide.\nAfficher le 3e élément des étapes.\n"
+      "Afficher le premier élément des étapes puis le dernier élément des v.\nAfficher l'élément de rang 1 + 1 des étapes.",
+      "(créer [étapes] (liste «a» «b» «a»))\n(créer [v] (liste))\n(afficher (rang [étapes] 3))\n"
+      "(afficher (premier [étapes]) (dernier [v]))\n(afficher (rang [étapes] (+ 1 1)))");
+    V("Les m valent les mots de « a b ».\nLes c valent 1 et 2.\nAfficher le 1er élément des c.",
+      "(créer [m] (mots «a b»))\n(créer [c] (ensemble 1 2))\n(afficher (rang [c] 1))");
+    VE("Les l valent la liste 1.\nAfficher le 0e élément des l.", 2, 13, "Le premier élément a le rang 1 : « le 1er élément ».");
+    VE("Les l valent la liste 1.\nAfficher le 1re élément des l.", 2, 13, "« élément » est masculin : écris « 1er ».");
+    VE("Le x vaut 3.\nAfficher le 2e élément des x.", 2, 24, "« le 3e élément des … » : une liste ou un ensemble attendu");
+    VE("Les c valent 1 et 2.\nLes c deviennent la liste 1 et 1.", 2, 18, "« c » est un ensemble : il ne devient pas une liste.");
+    VE("Les c valent 1 et 2.\nLes c deviennent une liste vide.", 2, 18, "« c » est un ensemble : il ne devient pas une liste.");
+    VE("Les c valent 1 et 2.\nLes c deviennent les mots de « a ».", 2, 18, "« c » est un ensemble : il ne devient pas une liste.");
+    VE("Les l valent la liste 1.\nLes l deviennent un ensemble vide.", 2, 18, "« l » est une liste : « une liste vide ».");
+    VE("Les l valent la liste 1.\nLes c valent 1.\nLes l deviennent les c.", 3, 18,
+       "« l » est une liste et « c » un ensemble : l'un ne devient pas l'autre.");
     VE("Le total vaut 3.\nLe total vaut 4.", 2, 4,
        "« total » existe déjà (ligne 1). Pour le modifier, écris : Le total devient …");
     VE("Le total devient 4.", 1, 4,

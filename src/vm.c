@@ -1718,6 +1718,7 @@ Valeur vi_liste(long *ids, char **classes, size_t n) {
     l->n = n;
     l->valeurs = NULL;
     l->cap = 0;
+    l->doublons = 0;
     Valeur v = valeur_nombre(dec_zero());
     v.type = V_LISTE;
     v.liste = l;
@@ -3643,6 +3644,12 @@ static int valeurs_identiques(const Valeur *a, const Valeur *b) {
     case V_FICHIER: return a->fichier == b->fichier;
     case V_ENSEMBLE: {
         if (a->liste->n != b->liste->n) return 0;
+        if (a->liste->doublons || b->liste->doublons) {   /* deux listes : dans l'ordre, doublons compris (§ 13.10) */
+            if (!a->liste->doublons || !b->liste->doublons) return 0;
+            for (size_t k = 0; k < a->liste->n; k++)
+                if (!valeurs_identiques(&a->liste->valeurs[k], &b->liste->valeurs[k])) return 0;
+            return 1;
+        }
         for (size_t k = 0; k < a->liste->n; k++) {
             int trouve = 0;
             for (size_t q = 0; q < b->liste->n && !trouve; q++) trouve = valeurs_identiques(&a->liste->valeurs[k], &b->liste->valeurs[q]);
@@ -3661,10 +3668,18 @@ static Valeur ensemble_vide(void) {
     l->classes = NULL;
     l->n = 0;
     l->cap = 4;
+    l->doublons = 0;
     l->valeurs = grym_allouer(l->cap * sizeof *l->valeurs);
     Valeur v = valeur_nombre(dec_zero());
     v.type = V_ENSEMBLE;
     v.liste = l;
+    return v;
+}
+
+/* Une liste vide : un ensemble qui garde ses doublons (§ 13.10). */
+static Valeur liste_vide(void) {
+    Valeur v = ensemble_vide();
+    v.liste->doublons = 1;
     return v;
 }
 
@@ -3677,6 +3692,7 @@ static long ensemble_rang(const Valeur *e, const Valeur *x) {
 static void ensemble_seul(Valeur *e) {
     if (e->liste->references == 1) return;
     Valeur c = ensemble_vide();
+    c.liste->doublons = e->liste->doublons;
     for (size_t k = 0; k < e->liste->n; k++) {
         if (c.liste->n == c.liste->cap) {
             c.liste->cap *= 2;
@@ -3691,9 +3707,9 @@ static void ensemble_seul(Valeur *e) {
     *e = c;
 }
 
-/* Ajoute x (dont il prend possession), sauf s'il y est déjà. */
+/* Ajoute x (dont il prend possession) à la fin, sauf s'il y est déjà ; une liste le prend toujours (§ 13.10). */
 static void ensemble_gagner(Valeur *e, Valeur x) {
-    if (ensemble_rang(e, &x) >= 0) { valeur_liberer(&x); return; }
+    if (!e->liste->doublons && ensemble_rang(e, &x) >= 0) { valeur_liberer(&x); return; }
     ensemble_seul(e);
     Liste *l = e->liste;
     if (l->n == l->cap) {
@@ -5064,7 +5080,8 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 int egaux = va.type == V_BOOLEEN ? va.vrai == vb.vrai
                           : va.type == V_OBJET  ? va.objet == vb.objet       /* identité */
                           : va.type == V_FICHIER ? fichiers_egaux(va.fichier, vb.fichier)
-                          : strcmp(va.texte, vb.texte) == 0;
+                          : va.type == V_ENSEMBLE ? valeurs_identiques(&va, &vb)   /* § 13.9, § 13.10 ; plantait avant la 2.89 */
+                          : strcmp(va.texte ? va.texte : "", vb.texte ? vb.texte : "") == 0;
                 resultat = code == I_EGAL ? egaux : !egaux;
             }
             valeur_liberer(&va);
@@ -5989,7 +6006,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 ok = echouer(diag, b, debut, grym_formater(xml ? "Aucun élément « %s » dans ce XML." : "Le champ « %s » n'est pas une liste.", chemin));
                 break;
             }
-            Valeur e = ensemble_vide();
+            Valeur e = liste_vide();
             Liste *l = e.liste;
             size_t combien = x->type == JSON_TABLEAU ? x->nb : 1;   /* d'un XML, un élément seul est une liste d'un */
             for (size_t q = 0; q < combien; q++) {   /* tels quels, doublons compris : une liste garde chacun de ses éléments */
@@ -6883,6 +6900,63 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, e);
             break;
         }
+        case I_LISTE: {   /* « la liste « tri », « lavage » et « tri » » (§ 13.10) : dans l'ordre, doublons compris */
+            Valeur e = liste_vide();
+            size_t n = op, base_pile = pile.n - n;
+            for (size_t k = 0; k < n; k++) {
+                Valeur x = pile.v[base_pile + k];
+                if (x.type == V_ABSENT) {
+                    char *mp = message_absent(&x);
+                    for (size_t q = k; q < n; q++) valeur_liberer(&pile.v[base_pile + q]);
+                    pile.n = base_pile;
+                    valeur_liberer(&e);
+                    ok = echouer(diag, b, debut, mp);
+                    break;
+                }
+                ensemble_gagner(&e, x);
+            }
+            if (!ok) break;
+            pile.n = base_pile;
+            empiler(&pile, e);
+            break;
+        }
+        case I_RANG: {   /* « le 3e élément des étapes », « le premier », « le dernier » (§ 13.10) : le rang 1 est le premier */
+            Valeur k = op ? valeur_nombre(dec_zero()) : depiler(&pile), e = depiler(&pile);
+            char *mp = NULL;
+            long r = 0;
+            if (e.type != V_ENSEMBLE)
+                mp = e.type == V_ABSENT ? message_absent(&e)
+                     : grym_formater("« le 3e élément de » se lit dans une liste ou un ensemble, pas dans %s.", nom_type(e.type));
+            else if (op == 0) {
+                Decimal zero = dec_zero();
+                if (k.type == V_ABSENT) mp = message_absent(&k);
+                else if (k.type != V_NOMBRE || !dec_est_entier(&k.nombre) || dec_comparer(&k.nombre, &zero) <= 0) {
+                    char *v = k.type == V_NOMBRE ? dec_afficher(&k.nombre) : grym_dupliquer(nom_type(k.type));
+                    mp = grym_formater("Un rang est un nombre entier à partir de 1, pas %s.", v);
+                    free(v);
+                } else {
+                    char *c = dec_canonique(&k.nombre), *v = dec_afficher(&k.nombre);
+                    const char *point = strchr(c, '.');
+                    const size_t chiffres = point ? (size_t)(point - c) : strlen(c);
+                    r = chiffres > 15 ? -1 : strtol(c, NULL, 10);
+                    if (r < 0 || (size_t)r > e.liste->n) {
+                        if (e.liste->n) mp = grym_formater("Pas de %s%s élément : il n'y en a que %lu.", v, r == 1 ? "er" : "e",
+                                                           (unsigned long)e.liste->n);
+                        else mp = grym_formater("Pas de %s%s élément : la liste est vide.", v, r == 1 ? "er" : "e");
+                    }
+                    free(c);
+                    free(v);
+                }
+                dec_liberer(&zero);
+            } else if (e.liste->n == 0)
+                mp = grym_formater("Pas de %s élément : la liste est vide.", op == 1 ? "premier" : "dernier");
+            Valeur x = mp ? valeur_nombre(dec_zero()) : valeur_copier(&e.liste->valeurs[op == 1 ? 0 : op == 2 ? e.liste->n - 1 : (size_t)r - 1]);
+            valeur_liberer(&k);
+            valeur_liberer(&e);
+            if (mp) { valeur_liberer(&x); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, x);
+            break;
+        }
         case I_AJOUTER: {   /* « Les élus gagnent m. », « perdent » */
             Valeur x = depiler(&pile), e = depiler(&pile);
             if (e.type != V_ENSEMBLE || x.type == V_ABSENT) {
@@ -6976,7 +7050,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 ok = echouer(diag, b, debut, mp);
                 break;
             }
-            Valeur e = ensemble_vide();
+            Valeur e = liste_vide();
             Liste *l = e.liste;
             Chaine mot = {0};
             size_t n_mot = 0;
@@ -7225,7 +7299,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             char **d = NULL, *mp = NULL;
             const size_t n = wsjtx_decodages(port, &d, &mp);
             if (n == (size_t)-1) { ok = echouer(diag, b, debut, mp); break; }
-            Valeur e = ensemble_vide();
+            Valeur e = liste_vide();
             Liste *l = e.liste;
             for (size_t q = 0; q < n; q++) {
                 if (l->n == l->cap) {

@@ -2354,6 +2354,37 @@ int main(void) {
          "~« x » existe déjà");
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
+    /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    PROG("Les étapes valent la liste « tri », « lavage », « tri » et « séchage ».\nLes étapes gagnent « tri ».\n"
+         "Afficher les étapes puis le nombre d'étapes.\nAfficher le 3e élément des étapes puis le premier élément des étapes "
+         "puis le dernier élément des étapes.\nLe n vaut 1.\nAfficher l'élément de rang n + 1 des étapes.\n"
+         "Les étapes perdent « tri ».\nAfficher les étapes.\nLes étapes perdent « absent ».\nAfficher le nombre d'étapes.",
+         "tri, lavage, tri, séchage, tri 5\ntri tri tri\nlavage\nlavage, tri, séchage, tri\n4");
+    PROG("Les étapes valent la liste 1 et 1.\nLes autres valent les étapes.\nLes autres gagnent 1.\n"
+         "Afficher le nombre d'étapes puis le nombre d'autres.\nLes étapes deviennent 2 et 2.\nAfficher les étapes.\n"
+         "Les v valent une liste vide.\nLes v gagnent 3.\nLes v gagnent 3.\nAfficher les v jointes par « + ».",
+         "2 3\n2, 2\n3+3");
+    PROG("Les c valent « a », « b » et « a ».\nAfficher le 2e élément des c puis le dernier élément des c.", "b b");
+    PROG("Les m valent les mots de « CQ CQ de HB9 ».\nAfficher le nombre de m puis le 2e élément des m.", "4 CQ");
+    PROG("La r vaut « {\"collection\": [1, 2, 2]} ».\nLes e valent les éléments du champ « collection » de la r.\n"
+         "Afficher le nombre de e puis le dernier élément des e.", "3 2");
+    PROG("Un membre a : un nom.\nLe a vaut un nouveau membre :\n    Le nom vaut « Ana ».\nLes l valent la liste a et a.\n"
+         "Afficher le nom du 1er élément des l puis le nom de l'élément de rang 2 des l.", "Ana Ana");
+    /* égalité : deux listes dans l'ordre, deux ensembles dans un ordre quelconque, jamais l'une avec l'autre ;
+     * comparer deux ensembles plantait la machine avant la 2.89 */
+    PROG("Les x valent la liste 1, 2 et 2.\nLes y valent la liste 1, 2 et 2.\nLes z valent la liste 2, 1 et 2.\n"
+         "Les e valent 2 et 1.\nLes f valent 1 et 2.\nLes g valent 1 et 2.\nLes h valent la liste 1 et 2.\n"
+         "Afficher (les x = les y) puis (les x = les z) puis (les e = les f) puis (les g = les h) puis (les e ≠ les f).",
+         "vrai faux vrai faux faux");
+    PROG("Le deuxième d'un nombre vaut nombre.\nLes l valent la liste 1 et 2.\nAfficher le deuxième du 2e élément des l.", "2");
+    PROG("Les l valent la liste 1 et 2.\nAfficher l'élément de rang 2,5 des l.",
+         "ERREUR 2:10 Un rang est un nombre entier à partir de 1, pas 2,5.");
+    PROG("Les l valent la liste 1 et 2.\nAfficher l'élément de rang « a » des l.",
+         "ERREUR 2:10 Un rang est un nombre entier à partir de 1, pas un texte.");
+    PROG("Les l valent la liste 1 et 2.\nAfficher le 5e élément des l.", "ERREUR 2:10 Pas de 5e élément : il n'y en a que 2.");
+    PROG("Les l valent une liste vide.\nAfficher le 1er élément des l.", "ERREUR 2:10 Pas de 1er élément : la liste est vide.");
+    PROG("Les l valent une liste vide.\nAfficher le premier élément des l.", "ERREUR 2:10 Pas de premier élément : la liste est vide.");
+    PROG("Les l valent une liste vide.\nAfficher le dernier élément des l.", "ERREUR 2:10 Pas de dernier élément : la liste est vide.");
     /* Exemples (§ 9.6) : ignorés à l'exécution, vérifiés en mode exemples */
     PROG("Le carré d'un nombre vaut nombre × nombre.\nExemple : le carré de 2 vaut 5.\nAfficher 1.", "1");
     compilateur_mode_exemples(1);

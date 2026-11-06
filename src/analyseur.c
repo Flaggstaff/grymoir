@@ -38,6 +38,7 @@ typedef struct {
     int local;         /* case locale dans une formule, −1 pour un nom global */
     char *classe;      /* méthode : classe de son premier paramètre (§ 13.6), sinon NULL */
     int ensemble;      /* variable qui contient un ensemble, nommée au pluriel avec « les » (§ 13.9) */
+    int liste;         /* cet ensemble est une liste, qui garde ses doublons (§ 13.10) */
     int fichier;       /* fichier de la déclaration : 0 celui qu'on analyse, k le k-ième fichier utilisé (§ 21) */
     int rend;          /* une action qui rend une valeur (2.57) : « , qui donne … » à l'appel */
 } Symbole;
@@ -2701,6 +2702,61 @@ static Noeud *base(Analyse *a) {
     {
         size_t fe;
         if (est_mot(t, "les") && ensemble_en(a, a->i + 1, &fe)) return nom_ensemble(a);   /* « les couleurs » (§ 13.9) */
+        {
+            /* Les rangs (§ 13.10) : « le 3e élément des étapes », « le premier élément des … », « le dernier élément
+             * des … », « l'élément de rang k des … » ; aussi après « du », « de l' » (article forcé) */
+            const int m_le = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : -1;
+            const int m_l = t->type == J_ELISION && strcmp(t->valeur, "l") == 0 ? 1 : a->article_force == ART_L ? 0 : -1;
+            int forme = -1, apres = 0;   /* apres : le nombre de jetons avant « des » (forme 1 : avant « de rang ») */
+            if (m_le >= 0 && voir(a, m_le)->type == J_ORDINAL && est_mot(voir(a, m_le + 1), "élément")) { forme = 0; apres = m_le + 2; }
+            else if (m_le >= 0 && (est_mot(voir(a, m_le), "premier") || est_mot(voir(a, m_le), "dernier"))
+                     && est_mot(voir(a, m_le + 1), "élément") && est_mot(voir(a, m_le + 2), "des")
+                     && ensemble_en(a, a->i + (size_t)m_le + 3, &fe)) {
+                forme = est_mot(voir(a, m_le), "premier") ? 2 : 3;
+                apres = m_le + 2;
+            } else if (m_l >= 0 && est_mot(voir(a, m_l), "élément") && est_mot(voir(a, m_l + 1), "de")
+                       && est_mot(voir(a, m_l + 2), "rang")) { forme = 1; apres = m_l + 3; }
+            if (forme >= 0) {
+                Noeud *n = noeud_creer(N_RANG, t->ligne, t->colonne, t->debut);
+                n->forme = forme;
+                Noeud *rang = NULL;
+                a->article_force = ART_AUCUN;
+                if (forme == 0) {
+                    const Jeton *o = voir(a, m_le);
+                    const long k = strtol(o->valeur, NULL, 10);
+                    if (strstr(o->valeur, "re")) {
+                        noeud_liberer(n);
+                        return erreur(a, o, grym_dupliquer("« élément » est masculin : écris « 1er »."));
+                    }
+                    if (k < 1) {
+                        noeud_liberer(n);
+                        return erreur(a, o, grym_dupliquer("Le premier élément a le rang 1 : « le 1er élément »."));
+                    }
+                    rang = noeud_creer(N_NOMBRE, o->ligne, o->colonne, o->debut);
+                    rang->fin = fin_jeton(o);
+                    rang->texte = grym_formater("%ld", k);
+                    for (int q = 0; q < apres; q++) avancer(a);
+                } else if (forme == 1) {
+                    for (int q = 0; q < apres; q++) avancer(a);
+                    rang = expression_avant(a, "des", NULL);
+                    if (!rang) { noeud_liberer(n); return NULL; }
+                } else for (int q = 0; q < apres; q++) avancer(a);
+                if (!est_mot(cour(a), "des") || !ensemble_en(a, a->i + 1, &fe)) {
+                    const Jeton *x = cour(a);
+                    noeud_liberer(rang);
+                    noeud_liberer(n);
+                    return erreur(a, x, grym_formater("« %s » : une liste ou un ensemble attendu (§ 13.9, § 13.10).",
+                                                      forme == 0 ? "le 3e élément des …" : forme == 1 ? "l'élément de rang k des …"
+                                                      : forme == 2 ? "le premier élément des …" : "le dernier élément des …"));
+                }
+                Noeud *l = nom_ensemble(a);
+                if (!l) { noeud_liberer(rang); noeud_liberer(n); return NULL; }
+                noeud_ajouter(n, l);
+                if (rang) noeud_ajouter(n, rang);
+                n->fin = l->fin;
+                return n;
+            }
+        }
         if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2)) && ensemble_en(a, a->i + 3, &fe)) {
             Noeud *n = noeud_creer(N_TAILLE, t->ligne, t->colonne, t->debut);   /* « le nombre de couleurs » */
             a->i += 3;
@@ -9469,6 +9525,7 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
     }
     a->i = v + 1;
     Noeud *valeur_n = NULL;
+    int devient_liste = 0;   /* la valeur est une liste (§ 13.10) */
     if (gagner || perdre) {
         Noeud *x = valeur(a);
         if (!x) { free(nom); return NULL; }
@@ -9482,12 +9539,82 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
         noeud_ajouter(valeur_n, x);
         valeur_n->fin = x->fin;
     } else if (est_mot(cour(a), "un") && est_mot(voir(a, 1), "ensemble") && est_mot(voir(a, 2), "vide")) {
+        if (changer && s->liste) {
+            Noeud *x = erreur(a, cour(a), grym_formater("« %s » est une liste : « une liste vide ».", nom));
+            free(nom);
+            return x;
+        }
         valeur_n = noeud_creer(N_ENSEMBLE, cour(a)->ligne, cour(a)->colonne, cour(a)->debut);
         valeur_n->fin = fin_jeton(voir(a, 2));
         a->i += 3;
-    } else {
-        /* des éléments, séparés par des virgules et un « et » ; un seul ensemble : sa copie */
+    } else if (est_mot(cour(a), "une") && est_mot(voir(a, 1), "liste") && est_mot(voir(a, 2), "vide")) {
+        if (changer && !s->liste) {   /* « une liste vide » (§ 13.10) */
+            Noeud *x = erreur(a, cour(a), grym_formater("« %s » est un ensemble : il ne devient pas une liste.", nom));
+            free(nom);
+            return x;
+        }
         valeur_n = noeud_creer(N_ENSEMBLE, cour(a)->ligne, cour(a)->colonne, cour(a)->debut);
+        valeur_n->forme = 1;
+        valeur_n->fin = fin_jeton(voir(a, 2));
+        a->i += 3;
+    } else if (est_mot(cour(a), "les") && est_mot(voir(a, 1), "mots") && (de_ou_d(voir(a, 2)) || est_mot(voir(a, 2), "du"))
+               && !ensemble_en(a, a->i + 1, &(size_t){0})) {
+        /* « Les morceaux valent les mots de t. » : une liste (§ 13.10, 2.81) */
+        if (changer && !s->liste) {
+            Noeud *x = erreur(a, cour(a), grym_formater("« %s » est un ensemble : il ne devient pas une liste.", nom));
+            free(nom);
+            return x;
+        }
+        const Jeton *tl = cour(a);
+        a->i += 2;
+        Noeud *texte = mots_de(a);
+        if (!texte) { free(nom); return NULL; }
+        valeur_n = noeud_creer(N_MOTS, tl->ligne, tl->colonne, tl->debut);
+        noeud_ajouter(valeur_n, texte);
+        valeur_n->fin = texte->fin;
+        devient_liste = 1;
+    } else if (est_mot(cour(a), "les") && est_mot(voir(a, 1), "éléments") && est_mot(voir(a, 2), "du")
+               && est_mot(voir(a, 3), "champ") && voir(a, 4)->type == J_TEXTE) {
+        /* « Les réservations valent les éléments du champ « collection » de r. » (§ 13.10, 2.60) */
+        if (changer && !s->liste) {
+            Noeud *x = erreur(a, cour(a), grym_formater("« %s » est un ensemble : il ne devient pas une liste.", nom));
+            free(nom);
+            return x;
+        }
+        const Jeton *tl = cour(a), *du = voir(a, 2);
+        a->i += 3;
+        a->article_force = ART_LE;
+        a->jeton_force = du;
+        Noeud *x = base(a);
+        a->article_force = ART_AUCUN;
+        if (!x) { free(nom); return NULL; }
+        if (x->type != N_CHAMP_JSON) {
+            noeud_liberer(x);
+            free(nom);
+            return erreur(a, tl, grym_dupliquer("« les éléments du champ « … » de r »."));
+        }
+        x->type = N_JSON_LISTE;
+        x->forme = 0;
+        x->ligne = tl->ligne;
+        x->colonne = tl->colonne;
+        x->debut = tl->debut;
+        valeur_n = x;
+        devient_liste = 1;
+    } else {
+        /* des éléments, séparés par des virgules et un « et » ; un seul ensemble : sa copie ; « la liste » d'abord, une
+         * liste (§ 13.10) */
+        int ecrit_liste = 0;
+        if (est_mot(cour(a), "la") && est_mot(voir(a, 1), "liste") && !visible(a, "liste")) {
+            if (changer && !s->liste) {
+                Noeud *x = erreur(a, cour(a), grym_formater("« %s » est un ensemble : il ne devient pas une liste.", nom));
+                free(nom);
+                return x;
+            }
+            ecrit_liste = 1;
+            a->i += 2;
+        }
+        valeur_n = noeud_creer(N_ENSEMBLE, cour(a)->ligne, cour(a)->colonne, cour(a)->debut);
+        valeur_n->forme = ecrit_liste || (changer && s->liste);
         for (;;) {
             Noeud *x = expression(a);
             if (!x) { noeud_liberer(valeur_n); free(nom); return NULL; }
@@ -9497,13 +9624,36 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
             break;
         }
         Symbole *seul = valeur_n->nb_enfants == 1 && valeur_n->enfants[0]->type == N_NOM ? visible(a, valeur_n->enfants[0]->texte) : NULL;
-        if (seul && seul->ensemble) {   /* « Les autres valent les couleurs. » : une copie */
+        if (seul && seul->ensemble && !ecrit_liste) {   /* « Les autres valent les couleurs. » : une copie */
+            if (changer && seul->liste != s->liste) {
+                Noeud *x = erreur_a(a, valeur_n->enfants[0]->ligne, valeur_n->enfants[0]->colonne, grym_formater("« %s » est %s et « %s » %s : l'un ne devient pas l'autre.",
+                                  nom, s->liste ? "une liste" : "un ensemble", valeur_n->enfants[0]->texte,
+                                  seul->liste ? "une liste" : "un ensemble"));
+                noeud_liberer(valeur_n);
+                free(nom);
+                return x;
+            }
+            devient_liste = seul->liste;
             valeur_n->enfants[0]->article = ART_LES;
             Noeud *x = valeur_n->enfants[0];
             valeur_n->nb_enfants = 0;
             noeud_liberer(valeur_n);
             valeur_n = x;
-        }
+        } else if (valeur_n->nb_enfants == 1 && valeur_n->enfants[0]->type == N_WSJTX && !ecrit_liste) {
+            /* « Les décodages valent les décodages WSJT. » : la liste elle-même (§ 13.10, 2.88) */
+            if (changer && !s->liste) {
+                Noeud *x = erreur_a(a, valeur_n->enfants[0]->ligne, valeur_n->enfants[0]->colonne,
+                                   grym_formater("« %s » est un ensemble : il ne devient pas une liste.", nom));
+                noeud_liberer(valeur_n);
+                free(nom);
+                return x;
+            }
+            Noeud *x = valeur_n->enfants[0];
+            valeur_n->nb_enfants = 0;
+            noeud_liberer(valeur_n);
+            valeur_n = x;
+            devient_liste = 1;
+        } else if (valeur_n->forme == 1) devient_liste = 1;
     }
     if (!fin_phrase(a, 0)) { noeud_liberer(valeur_n); free(nom); return NULL; }
     int local = -1;
@@ -9511,6 +9661,7 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
         portee_declarer(a->portee, nom, GENRE_LIBRE, t->ligne);
         Symbole *ns = &a->portee->s[a->portee->n - 1];
         ns->ensemble = 1;
+        ns->liste = devient_liste || (valeur_n->type == N_ENSEMBLE && valeur_n->forme == 1);
         if (a->formule) ns->local = local = a->nb_locaux++;
     } else local = s->local;
     Noeud *n = noeud_creer(creer ? P_CREATION : P_MODIFICATION, t->ligne, t->colonne, t->debut);

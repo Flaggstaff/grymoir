@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.88 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.89 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -319,7 +319,7 @@ Le prix vaut le texte saisi en nombre.
 - Dans une condition `dont` (§ 16.4), elles s'appliquent à un champ `(texte)` : `dont le nom contient « mül »`, `dont la ville ne commence pas par « b »`. Un champ absent n'est jamais retenu (§ 16.9). Un autre type : « « âge » : contient, commence par et finit par s'appliquent à un texte. »
 - Aucun mot réservé : `contient`, `commence`, `finit` et `en` ne comptent qu'après une valeur, et seulement suivis de ce qu'ils annoncent (`par`, `pas`, un texte, une cible de conversion). L'aide à la saisie (§ 8) propose `contient`, `commence par`, `finit par` après une valeur dont le type texte est connu à l'analyse.
 - **Remplacer** *(2.81)*. `t en remplaçant « a » par « b »` rend le texte `t` où chaque occurrence de `« a »` devient `« b »`, de gauche à droite, sans revenir sur ce qui vient d'être remplacé : `« CQ CQ de HB9 » en remplaçant « CQ » par « appel »` donne `appel appel de HB9`. Il se lie comme `sans`, à la valeur qui le précède, et se répète : `t en remplaçant « - » par « » en remplaçant « a » par « x »`. Un remplaçant vide retire, comme `sans`. Les refus : « « en remplaçant » s'applique à un texte, pas à un nombre. » ; « « en remplaçant » cherche un texte vide : rien à remplacer. » ; « « par » attendu : « t en remplaçant « a » par « b » ». » En forme compacte : `t _remplaçant « a » _par « b »`.
-- **Les mots d'un texte** *(2.81)*. `Pour chaque mot parmi les mots de t :` parcourt les mots de `t` dans l'ordre, **doublons compris** (« CQ CQ » fait deux tours, ce qu'un ensemble aurait fusionné, § 13.9) ; le texte est lu une fois, au début. Les mots sont séparés par les espaces, tabulations, retours à la ligne et espaces insécables (U+00A0, U+202F) ; la ponctuation reste collée au mot (« Neuf, ») et `sans « , »` l'ôte ; les marques invisibles de la relecture d'une transcription (U+2062 à U+2064, § 15.8) sont retirées des mots. `le nombre de mots de t` les compte. `de`, `d'` et `du` s'écrivent comme ailleurs : `les mots du texte`. Un texte vide n'a aucun mot. `les mots de t` ne se range pas encore dans une variable : seulement dans `Pour chaque … parmi` et `le nombre de mots de`. En forme compacte : `_pour_chaque m _parmi _mots t`, `_nombre_mots t`.
+- **Les mots d'un texte** *(2.81)*. `Pour chaque mot parmi les mots de t :` parcourt les mots de `t` dans l'ordre, **doublons compris** (« CQ CQ » fait deux tours, ce qu'un ensemble aurait fusionné, § 13.9) ; le texte est lu une fois, au début. Les mots sont séparés par les espaces, tabulations, retours à la ligne et espaces insécables (U+00A0, U+202F) ; la ponctuation reste collée au mot (« Neuf, ») et `sans « , »` l'ôte ; les marques invisibles de la relecture d'une transcription (U+2062 à U+2064, § 15.8) sont retirées des mots. `le nombre de mots de t` les compte. `de`, `d'` et `du` s'écrivent comme ailleurs : `les mots du texte`. Un texte vide n'a aucun mot. `les mots de t` est une liste (§ 13.10) : `Les morceaux valent les mots de t.` En forme compacte : `_pour_chaque m _parmi _mots t`, `_nombre_mots t`.
 - Extraire un morceau d'un texte (le 3e caractère, les 5 premiers) : reporté.
 - En forme compacte : `t.longueur`, `t _en_majuscules`, `t _en_minuscules`, `t _en_nombre`, `t _en_nombre_entier`, `t _en_date`, `t _en_année`, `t _en_vrai_ou_faux` ; `t _inclut p`, `t _commence p`, `t _finit p`, et `_non (t _inclut p)`. `_contient` reste réservé au champ multiple (§ 16.13).
 
@@ -982,8 +982,40 @@ Afficher le nombre d'invités puis les couleurs jointes par « , ».
 - `les couleurs jointes par « , »` (ou `joints`) est un texte : les éléments tels qu'`Afficher` les montre, un objet par sa clé (§ 22.1). `Afficher les couleurs.` les sépare par « , ».
 - Une valeur absente n'entre pas dans un ensemble : « … est absente ». Un ensemble ne se range pas dans un champ d'entité : le champ multiple (§ 16.13) existe pour cela.
 - Aucun mot réservé : `les` suivi d'un ensemble connu, `valent`, `deviennent`, `gagnent`, `perdent` ne valent qu'ainsi placés.
-- Les listes ordonnées avec doublons et positions (`le 3e élément de …`) ne sont pas faites : décision du 12 octobre 2026, l'ensemble d'abord, la liste si un programme réel la demande.
+- Les listes ordonnées, avec doublons, sont faites depuis la 2.89 (§ 13.10) : Écoutille les demandait pour les mots d'une transcription, les décodages WSJT et les réponses des services. Les rangs (`le 3e élément de …`) valent aussi pour un ensemble.
 - En forme compacte : `_les couleurs << « a » ; « b »`, `_les invités << _ensemble_vide`, `_les invités _gagnent m`, `_perdent`, `_deviennent`, `invités _contient m`, `_pour_chaque invité _parmi invités`, `_nombre_de invités`, `couleurs _jointes « , »`.
+
+### 13.10 Listes *(2.89)*
+
+```
+Les étapes valent la liste « tri », « lavage », « tri » et « séchage ».
+Les relevés valent une liste vide.
+Les relevés gagnent « FA014074000; ».
+Afficher le 3e élément des étapes.                          →  tri
+Afficher le premier élément des étapes puis le dernier élément des étapes.   →  tri séchage
+Afficher l'élément de rang n + 1 des étapes.
+Les morceaux valent les mots de la transcription.
+Les décodages valent les décodages WSJT.
+Les réservations valent les éléments du champ « collection » de la réponse.
+```
+
+- Une **liste** est un ensemble (§ 13.9) qui garde ses doublons. Elle se nomme au pluriel, avec `les`, et se crée avec `valent la liste` suivi des éléments, séparés par des virgules et un `et`, ou avec `valent une liste vide`. Les éléments restent dans l'ordre où ils sont arrivés : textes, nombres, dates, objets, mélangés au besoin.
+- Elle reprend tout le vocabulaire des ensembles : `parmi`, `Pour chaque … parmi les …`, `le nombre de …`, `jointes par`, `un élément au hasard parmi`, `deviennent`, la copie par `Les autres valent les étapes.` (une copie : changer l'une ne change pas l'autre).
+- **Gagner, perdre.** `Les relevés gagnent x.` ajoute `x` à la fin, même s'il y est déjà. `Les relevés perdent x.` retire **la première** occurrence de `x`, et rien s'il n'y est pas : perdre défait exactement un gain. Deux valeurs sont la même comme pour `=` (`2` et `2,0`, un objet par identité).
+- **Une liste reste une liste.** `deviennent` remplace le contenu sans changer la nature : `Les étapes deviennent « a » et « a ».` garde les deux « a », et la forme canonique écrit `la liste`. Un ensemble ne devient pas une liste : « « couleurs » est un ensemble : il ne devient pas une liste. » Une liste ne devient pas un ensemble non plus : `un ensemble vide` y est refusé (« « étapes » est une liste : « une liste vide ». »).
+- **Les rangs** valent pour une liste **et pour un ensemble**, puisque tous deux gardent l'ordre d'arrivée. Le premier élément a le rang 1.
+  - `le 3e élément des étapes`, `le 1er élément des étapes` : un rang écrit en chiffres, abrégé comme en typographie française : `1er`, puis `2e`, `3e`, `10e`. `élément` étant masculin, `1re` est refusé : « « élément » est masculin : écris « 1er ». » Les autres graphies sont refusées dès la lecture, avec la bonne : « « 3ème » s'écrit « 3e ». », de même pour `3eme`, `3è`, `3ième`, `2nd`, `2nde`, et `1e` (« « 1e » s'écrit « 1er ». »). Ces formes étaient déjà des erreurs (« un nombre ne peut pas être collé à un mot ») : aucun programme accepté hier n'est refusé.
+  - `le premier élément des étapes`, `le dernier élément des étapes`.
+  - `l'élément de rang k des étapes` : un rang calculé ; l'expression s'étend jusqu'à `des` (`de rang n + 1 des étapes`).
+  - Le rang est un nombre entier d'au moins 1 (`3,0` convient). Les refus, à l'exécution : « Un rang est un nombre entier à partir de 1, pas 2,5. » ; « Pas de 5e élément : il n'y en a que 3. » ; « Pas de premier élément : la liste est vide. » (de même pour le dernier) ; et sur autre chose qu'une liste ou un ensemble : « « le 3e élément de » se lit dans une liste ou un ensemble, pas dans un nombre. ». `le 0e élément` est refusé à l'analyse : « Le premier élément a le rang 1 : « le 1er élément ». »
+  - Après `des`, le nom d'une liste ou d'un ensemble déclaré : « « le 3e élément des … » : une liste ou un ensemble attendu (§ 13.9, § 13.10). »
+- **Les listes du langage se rangent.** `les mots de t` (§ 4.5), `les éléments du champ « … » de r` (§ 22.18) et `les décodages WSJT` (§ 22.26) sont des listes : elles se rangent dans une liste par `valent` ou `deviennent`, et ne se rangent que là. `Les morceaux valent les mots de t.` crée une liste, même sans `la liste`.
+- **Égalité.** Deux listes sont égales si elles ont les mêmes éléments, dans le même ordre, doublons compris. Deux ensembles le sont s'ils ont les mêmes éléments, dans un ordre quelconque. Une liste n'est jamais égale à un ensemble. Cela vaut aussi pour les exemples (§ 9.6).
+- Un calcul emploie librement les listes et les rangs : rien ne dépend de l'extérieur.
+- Une liste ne se range pas dans un champ d'entité, comme un ensemble.
+- Aucun mot réservé : `liste`, `élément`, `rang`, `premier`, `dernier` ne comptent qu'ainsi placés ; un nom, un calcul ou un champ déclaré l'emporte.
+- Reporté : trier une liste par un champ ou un calcul (`les étapes triées par …`), insérer ou retirer à un rang, une tranche (`les 3 premiers éléments`) ; ils suivront le découpage des textes, qui rend des listes.
+- En forme compacte : `_les étapes << _liste « tri » ; « lavage »`, `_les relevés << _liste_vide`, `_élément(étapes ; 3)`, `_premier(étapes)`, `_dernier(étapes)` ; `_les m << _mots t`, `_les d << _décodages_wsjt`, `_les r << _éléments « collection » réponse`. Un rang constant revient en forme littéraire en chiffres (`le 3e élément`), un rang calculé en `l'élément de rang … des …`.
 
 Un vrai affichage des objets reste à concevoir. L'absence de valeur est faite (§ 16.9).
 
@@ -2688,3 +2720,4 @@ Pour chaque d parmi les décodages WSJT du port 2238 :
 | 2.86 | 2026-11-05 | § 15.8 : `Amorcer la transcription avec t, en toute langue.` (la langue parlée reconnue par Whisper) et `la langue reconnue de t` (sept langues, par les mots outils) |
 | 2.87 | 2026-11-06 | § 16.19 : `Signer le journal avec t.`, l'auteur des lignes du journal ; l'historique le montre |
 | 2.88 | 2026-11-06 | § 22.26 : `les décodages WSJT [du port p]`, les décodages de WSJT-X reçus en UDP, en textes JSON |
+| 2.89 | 2026-11-06 | Nouveau § 13.10 : les listes (`Les étapes valent la liste … .`, `une liste vide`), qui gardent leurs doublons ; `gagnent` ajoute à la fin, `perdent` retire la première occurrence ; les rangs, dans une liste ou un ensemble : `le 3e élément des …`, `le 1er`, `le premier`, `le dernier`, `l'élément de rang k des …` (instructions `LISTE` et `RANG`) ; les ordinaux `1er`, `2e` au lexeur, et la bonne graphie proposée pour `3ème`, `2nd`… ; `les mots de t`, `les éléments du champ « … » de r` et `les décodages WSJT` se rangent dans une liste ; égalité des listes dans l'ordre ; correction : `les e = les f` entre deux ensembles plantait la machine. Formes compactes `_liste`, `_liste_vide`, `_élément(l ; k)`, `_premier(l)`, `_dernier(l)`, `_mots t`, `_éléments « c » r` |

@@ -94,6 +94,16 @@ int main(void) {
     FIXE("Les couleurs valent « a », « b » et « c ».\nLes couleurs perdent « b ».\nLes autres valent un ensemble vide.\n"
          "Les autres deviennent les couleurs.\nAfficher le nombre d'autres puis les couleurs jointes par « ; ».\n"
          "Pour chaque c parmi les couleurs, afficher c.\n");
+    FIXE("Les étapes valent la liste « a », « b » et « a ».\nLes v valent une liste vide.\nLes m valent les mots de « a b ».\n"
+         "Afficher le 3e élément des étapes puis le 1er élément des étapes.\n"
+         "Afficher le premier élément des étapes puis le dernier élément des m.\nAfficher l'élément de rang 1 + 1 des étapes.\n"
+         "Les étapes deviennent la liste « x » et « x ».\n");
+    LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
+         "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
+    COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"
+         "Afficher le premier élément des étapes puis le dernier élément des v puis l'élément de rang 1 + 1 des étapes.\n",
+         "_les étapes << _liste 1 ; 2\n_les v << _liste_vide\n_afficher _élément(étapes ; 2)\n"
+         "_afficher _premier(étapes) ; _dernier(v) ; _élément(étapes ; 1 + 1)\n");
     FIXE("Une personne a :\n    un nom.\nPour saluer une personne :\n    Afficher 1.\nLe p vaut une nouvelle personne :\n"
          "    Le nom vaut « a ».\nSaluer p comme une personne.\n");
     FIXE("Un membre, conservé, a :\n    un nom (texte).\nExporter les membres conservés, par nom décroissant, avec le nom, dans « m.csv ».\n"

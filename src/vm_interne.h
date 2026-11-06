@@ -21,6 +21,7 @@ typedef struct Liste {
     size_t n;
     struct Valeur *valeurs;   /* ensemble (V_ENSEMBLE, § 13.9) : ses n éléments, sans doublon ; NULL pour une recherche */
     size_t cap;
+    int doublons;             /* une liste (§ 13.10) : garde ses doublons ; 0 pour un ensemble et une recherche */
 } Liste;
 
 struct Objet;

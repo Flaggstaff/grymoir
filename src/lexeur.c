@@ -287,7 +287,7 @@ const char *type_jeton_nom(TypeJeton t) {
         "DIVISE", "PUISSANCE", "PAR_OUV", "PAR_FERM", "POINT", "VIRGULE",
         "DEUX_POINTS", "REMARQUE", "ÉGAL", "DIFFÉRENT", "INFÉRIEUR", "SUPÉRIEUR",
         "INFÉRIEUR_OU_ÉGAL", "SUPÉRIEUR_OU_ÉGAL", "CROCHETS", "DATE", "HEURE", "ARTICLE_IMPLICITE", "MOT_CLÉ",
-        "AFFECTE", "POINT_VIRGULE", "ERREUR"
+        "AFFECTE", "POINT_VIRGULE", "ORDINAL", "ERREUR"
     };
     return (t >= J_FIN && t <= J_ERREUR) ? NOMS[t] : "?";
 }
@@ -497,11 +497,35 @@ static Jeton lire_nombre(Lexeur *lx, size_t debut, int ligne, int col) {
         return echec(lx, debut, ligne, col, m);
     }
 
-    /* Nombre collé à un mot : « 3kg ». */
+    /* Nombre collé à un mot : « 3kg » ; sauf un rang abrégé, « 3e », « 1er » (§ 13.10). */
     if (reste(lx, 0) && est_lettre(voir(lx, 0))) {
-        free(t.d);
+        const size_t fin_chiffres = lx->pos;
         while (reste(lx, 0) && (est_lettre(voir(lx, 0)) || est_chiffre(voir(lx, 0)))) avancer(lx);
         char *texte = extrait(lx, debut, lx->pos);
+        if (!separateur_vu && t.d && !strchr(t.d, '.') && t.n) {
+            /* le suffixe, en minuscules (les lettres de l'abréviation sont toutes en ASCII ou « è ») */
+            char *suffixe = extrait(lx, fin_chiffres, lx->pos);
+            for (char *q = suffixe; *q; q++) if (*q >= 'A' && *q <= 'Z') *q = (char)(*q - 'A' + 'a');
+            const int un = strcmp(t.d, "1") == 0;
+            if ((!un && !strcmp(suffixe, "e")) || (un && (!strcmp(suffixe, "er") || !strcmp(suffixe, "re")))) {
+                free(texte);
+                Jeton o = faire(lx, J_ORDINAL, debut, ligne, col, formater("%s%s", t.d, suffixe));
+                free(suffixe);
+                free(t.d);
+                return o;
+            }
+            static const char *const FAUX[] = { "ème", "eme", "è", "ième", "ieme", "e", "er", "re", "nd", "nde", "ère", "ere" };
+            for (size_t q = 0; q < sizeof FAUX / sizeof *FAUX; q++) {
+                if (strcmp(suffixe, FAUX[q])) continue;
+                char *m = formater("« %s » s'écrit « %s%s ».", texte, t.d, un ? "er" : "e");
+                free(suffixe);
+                free(texte);
+                free(t.d);
+                return echec(lx, debut, ligne, col, m);
+            }
+            free(suffixe);
+        }
+        free(t.d);
         char *m = formater("« %s » : un nombre ne peut pas être collé à un mot. "
                            "Sépare-les par une espace.", texte);
         free(texte);

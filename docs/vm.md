@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.91 de la spécification, révisée le 20 octobre 2026.
+Version 1.93 de la spécification, révisée le 6 novembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -141,6 +141,9 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 98 | `SAUVEGARDER_COFFRE` | aucun | dépile un mot de passe, puis un chemin : comme `SAUVEGARDER`, la copie chiffrée par `coffre_fermer` (`src/coffre.c`, grammaire 2.30) |
 | 99 | `RESTAURER` | 1 avec un mot de passe, dépilé d'abord | dépile un chemin ou un fichier ; une copie chiffrée est ouverte par `coffre_ouvrir`, puis vérifiée par `base_verifier_copie` ; elle se planifie comme `ENREGISTRER` à `base.grymd.restaurer`, que `base_ouvrir` met à la place de la base, l'ancienne renommée (grammaire 2.30) |
 | 100 | `CHANGER_MDP_BASE` | — | dépile le nouveau mot de passe, puis l'ancien ; `base_changer_mot_de_passe` refait l'enveloppe du fichier des clés (la clé de la base ne change pas), et la machine garde le nouveau en mémoire ; erreur si la base n'est pas chiffrée ou si l'ancien est faux (grammaire 2.37, § 16.18) |
+| 101 à 125 | — | — | ajoutées de la grammaire 2.38 à 2.88 ; décrites dans `src/bytecode.h`, pas encore ici |
+| 126 | `LISTE` | nombre d'éléments n | dépile n valeurs ; empile la liste de ces valeurs, dans l'ordre, doublons compris (grammaire, § 13.10) |
+| 127 | `RANG` | 0 un rang, 1 le premier, 2 le dernier | forme 0 : dépile le rang, puis la liste ou l'ensemble ; formes 1 et 2 : la liste seule ; empile l'élément (le rang 1 est le premier) |
 
 ### 3.1 Boucles et Selon
 
@@ -469,3 +472,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.90 | 2026-10-20 | Instructions `SAUVEGARDER_COFFRE` (98) et `RESTAURER` (99) ; `base_ouvrir` applique une restauration en attente ; format version 69 |
 | 1.91 | 2026-10-20 | `ÉCRAN_TEXTE` 0xFFFF : le titre calculé de l'écran, passé à `ecran_texte` avec l'élément (size_t)−1 ; `APPARENCE` lit le format d'un logo pris en base (grammaire 2.33) |
 | 1.92 | 2026-10-21 | Instruction `CHANGER_MDP_BASE` (100) ; la marque « base chiffrée » du module (`base_chiffree`), un octet à la fin du fichier (bit 1) ; `machine_mot_de_passe_base`, `machine_demande_mot_de_passe` ; `base_ouvrir_chiffree` ; `SAUVEGARDER` d'une base chiffrée : un coffre de format 2 ; format version 70 (grammaire 2.37) |
+| 1.93 | 2026-11-06 | Instructions `LISTE` (126) et `RANG` (127) (grammaire 2.89, § 13.10) ; une `Liste` porte `doublons` : une liste garde ses doublons, `GAGNER` l'ajoute toujours à la fin ; l'égalité de deux listes suit l'ordre ; `ÉGAL` entre deux ensembles ne lit plus un texte absent ; format inchangé (71) |
