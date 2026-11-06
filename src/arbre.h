@@ -201,6 +201,12 @@ typedef enum {
     N_WSJTX,         /* « les décodages WSJT [du port p] » (2.88) : enfant facultatif : le port ; une liste de textes JSON */
     N_RANG,          /* « le 3e élément des étapes » (§ 13.10) : enfants[0] la liste ou l'ensemble, enfants[1] le rang (formes 0
                         et 1) ; forme 0 : en chiffres (« 3e »), 1 : « l'élément de rang k », 2 : « le premier », 3 : « le dernier » */
+    N_TABLE,         /* « la table où k vaut v et … », « une table vide » (§ 13.11) : enfants : clé, valeur, clé, valeur… ;
+                        texte : le nom de la table, pour les messages */
+    N_TABLE_LIRE,    /* « la valeur de k dans les t » (§ 13.11) : enfants[0] la clé, enfants[1] la table (N_NOM) */
+    N_TABLE_ECRIRE,  /* « Dans les t, k vaut v. » (forme 0), « devient » (1), « Les t perdent k. » (2) : enfants : la table
+                        (N_NOM), la clé, [la valeur] */
+    N_TABLE_LISTE,   /* « les clés des t » (forme 0), « les valeurs des t » (1) : enfant : la table (N_NOM) ; une liste */
     N_EXTRAIRE       /* découper un texte (§ 4.6) ; forme, et enfants : 0 « le 3e caractère de t » (t, k), 1 « le caractère de rang
                         k de t » (t, k), 2 « le premier caractère de t » (t), 3 « le dernier » (t), 4 « les n premiers caractères
                         de t » (t, n), 5 « les n derniers » (t, n), 6 « les caractères a à b de t » (t, a, b), 7 « t après x »

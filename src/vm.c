@@ -37,7 +37,7 @@ static char *morceau_de_zone(const char *s2, char sep);   /* plus bas, avec les 
 static const char *nom_type(TypeValeur t) {
     return t == V_NOMBRE ? "un nombre" : t == V_TEXTE ? "un texte" : t == V_BOOLEEN ? "un booléen"
          : t == V_DATE ? "une date" : t == V_HEURE ? "une heure" : t == V_ANNEE ? "une année" : t == V_FICHIER ? "un fichier" : t == V_LISTE ? "une liste"
-         : t == V_ABSENT ? "absente" : t == V_LIGNE ? "une ligne de tableau" : t == V_ENSEMBLE ? "un ensemble" : "un objet";
+         : t == V_ABSENT ? "absente" : t == V_LIGNE ? "une ligne de tableau" : t == V_ENSEMBLE ? "un ensemble" : t == V_TABLE ? "une table" : "un objet";
 }
 
 static Valeur valeur_copier(const Valeur *v) {
@@ -821,7 +821,7 @@ typedef struct {
 } Pile_objets;
 
 static void marquer(Pile_objets *p, const Valeur *v) {
-    if (v->type == V_ENSEMBLE && v->liste) {   /* les objets d'un ensemble restent vivants (§ 13.9) */
+    if ((v->type == V_ENSEMBLE || v->type == V_TABLE) && v->liste) {   /* les objets d'un ensemble, d'une table restent vivants (§ 13.9) */
         for (size_t k = 0; k < v->liste->n; k++) marquer(p, &v->liste->valeurs[k]);
         return;
     }
@@ -1107,6 +1107,19 @@ static char *texte_valeur(const Machine *m, const Valeur *v) {
             char *t = texte_valeur(m, &v->liste->valeurs[k]);
             chaine_ajouter(&c, t);
             free(t);
+        }
+        return chaine_rendre(&c);
+    }
+    case V_TABLE: {   /* « 7601 : 24, 7602 : 12 » (§ 13.11) */
+        Chaine c = {0};
+        for (size_t k = 0; v->liste && k + 1 < v->liste->n; k += 2) {
+            if (k) chaine_ajouter(&c, ", ");
+            char *cle = texte_valeur(m, &v->liste->valeurs[k]), *val = texte_valeur(m, &v->liste->valeurs[k + 1]);
+            chaine_ajouter(&c, cle);
+            chaine_ajouter(&c, " : ");
+            chaine_ajouter(&c, val);
+            free(cle);
+            free(val);
         }
         return chaine_rendre(&c);
     }
@@ -3642,6 +3655,17 @@ static int valeurs_identiques(const Valeur *a, const Valeur *b) {
     case V_DATE: case V_ANNEE: case V_HEURE: return a->jours == b->jours;
     case V_OBJET: return a->objet == b->objet;
     case V_FICHIER: return a->fichier == b->fichier;
+    case V_TABLE: {   /* les mêmes clés, aux mêmes valeurs, dans un ordre quelconque (§ 13.11) */
+        if (a->liste->n != b->liste->n) return 0;
+        for (size_t k = 0; k + 1 < a->liste->n; k += 2) {
+            int trouve = 0;
+            for (size_t q = 0; q + 1 < b->liste->n && !trouve; q += 2)
+                if (valeurs_identiques(&a->liste->valeurs[k], &b->liste->valeurs[q]))
+                    trouve = 1 + valeurs_identiques(&a->liste->valeurs[k + 1], &b->liste->valeurs[q + 1]);
+            if (trouve != 2) return 0;
+        }
+        return 1;
+    }
     case V_ENSEMBLE: {
         if (a->liste->n != b->liste->n) return 0;
         if (a->liste->doublons || b->liste->doublons) {   /* deux listes : dans l'ordre, doublons compris (§ 13.10) */
@@ -3708,6 +3732,42 @@ static char *caracteres_extraire(const char *s, size_t a, size_t b) {
     return r;
 }
 
+static void ensemble_seul(Valeur *e);
+
+/* Une clé dans un message : un texte entre guillemets, le reste comme Afficher l'écrit (§ 13.11). */
+static char *cle_ecrite(const Machine *m, const Valeur *x) {
+    if (x->type == V_TEXTE) return grym_formater("« %s »", x->texte ? x->texte : "");
+    return texte_valeur(m, x);
+}
+
+/* Une table vide (§ 13.11) : clé, valeur, clé, valeur… dans la liste d'un ensemble. */
+static Valeur table_vide(void) {
+    Valeur v = ensemble_vide();
+    v.type = V_TABLE;
+    return v;
+}
+
+/* Le rang de la paire de clé x dans la table t (0, 2, 4…), ou −1. */
+static long table_rang(const Valeur *t, const Valeur *x) {
+    for (size_t k = 0; k + 1 < t->liste->n; k += 2) if (valeurs_identiques(&t->liste->valeurs[k], x)) return (long)k;
+    return -1;
+}
+
+/* Ajoute la paire (k, v), dont elle prend possession, à la fin de la table, qu'elle rend seule à la tenir. */
+static void table_ajouter(Valeur *t, Valeur k, Valeur v) {
+    ensemble_seul(t);
+    Liste *l = t->liste;
+    if (l->n + 2 > l->cap) {
+        l->cap = l->cap * 2 + 2;
+        Valeur *nv = grym_allouer(l->cap * sizeof *nv);
+        if (l->n) memcpy(nv, l->valeurs, l->n * sizeof *nv);
+        free(l->valeurs);
+        l->valeurs = nv;
+    }
+    l->valeurs[l->n++] = k;
+    l->valeurs[l->n++] = v;
+}
+
 /* Une liste vide : un ensemble qui garde ses doublons (§ 13.10). */
 static Valeur liste_vide(void) {
     Valeur v = ensemble_vide();
@@ -3724,6 +3784,7 @@ static long ensemble_rang(const Valeur *e, const Valeur *x) {
 static void ensemble_seul(Valeur *e) {
     if (e->liste->references == 1) return;
     Valeur c = ensemble_vide();
+    c.type = e->type;   /* un ensemble, une liste ou une table (§ 13.11) */
     c.liste->doublons = e->liste->doublons;
     for (size_t k = 0; k < e->liste->n; k++) {
         if (c.liste->n == c.liste->cap) {
@@ -5112,7 +5173,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
                 int egaux = va.type == V_BOOLEEN ? va.vrai == vb.vrai
                           : va.type == V_OBJET  ? va.objet == vb.objet       /* identité */
                           : va.type == V_FICHIER ? fichiers_egaux(va.fichier, vb.fichier)
-                          : va.type == V_ENSEMBLE ? valeurs_identiques(&va, &vb)   /* § 13.9, § 13.10 ; plantait avant la 2.89 */
+                          : va.type == V_ENSEMBLE || va.type == V_TABLE ? valeurs_identiques(&va, &vb)   /* § 13.9, § 13.10 ; plantait avant la 2.89 */
                           : strcmp(va.texte ? va.texte : "", vb.texte ? vb.texte : "") == 0;
                 resultat = code == I_EGAL ? egaux : !egaux;
             }
@@ -6989,6 +7050,99 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, x);
             break;
         }
+        case I_TABLE: {   /* « la table où « a » vaut 1 et « b » vaut 2 », « une table vide » (§ 13.11) */
+            Valeur nom = depiler(&pile);
+            const size_t n = 2 * (size_t)op, base_pile = pile.n - n;
+            Valeur e = table_vide();
+            char *mp = NULL;
+            for (size_t k = 0; k < n; k += 2) {
+                Valeur *x = &pile.v[base_pile + k], *y = &pile.v[base_pile + k + 1];
+                if (!mp && (x->type == V_ABSENT || y->type == V_ABSENT)) mp = message_absent(x->type == V_ABSENT ? x : y);
+                else if (!mp && table_rang(&e, x) >= 0) {
+                    char *c = cle_ecrite(m, x);
+                    mp = grym_formater("%s est déjà une clé des %s.", c, nom.texte ? nom.texte : "");
+                    free(c);
+                }
+                if (mp) { valeur_liberer(x); valeur_liberer(y); }
+                else table_ajouter(&e, *x, *y);
+            }
+            pile.n = base_pile;
+            valeur_liberer(&nom);
+            if (mp) { valeur_liberer(&e); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, e);
+            break;
+        }
+        case I_TABLE_LIRE: {   /* « la valeur de « CQ » dans les compteurs » (§ 13.11) */
+            Valeur nom = depiler(&pile), e = depiler(&pile), x = depiler(&pile);
+            char *mp = NULL;
+            long k = -1;
+            if (x.type == V_ABSENT) mp = message_absent(&x);
+            else if (e.type != V_TABLE) mp = grym_formater("« la valeur de » se lit dans une table, pas dans %s.", nom_type(e.type));
+            else if ((k = table_rang(&e, &x)) < 0) {
+                char *c = cle_ecrite(m, &x);
+                mp = grym_formater("%s n'est pas une clé des %s.", c, nom.texte ? nom.texte : "");
+                free(c);
+            }
+            Valeur r = mp ? valeur_nombre(dec_zero()) : valeur_copier(&e.liste->valeurs[k + 1]);
+            valeur_liberer(&nom);
+            valeur_liberer(&e);
+            valeur_liberer(&x);
+            if (mp) { valeur_liberer(&r); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, r);
+            break;
+        }
+        case I_TABLE_ECRIRE: {   /* « Dans les t, k vaut v. » (0), « devient » (1), « Les t perdent k. » (2) (§ 13.11) */
+            Valeur nom = op == 2 ? vi_absent(NULL) : depiler(&pile);
+            Valeur v = op == 2 ? vi_absent(NULL) : depiler(&pile);
+            Valeur x = depiler(&pile), e = depiler(&pile);
+            char *mp = NULL;
+            const char *n = nom.type == V_TEXTE && nom.texte ? nom.texte : "";
+            if (e.type != V_TABLE) mp = grym_formater("Seule une table a des clés, pas %s.", nom_type(e.type));
+            else if (x.type == V_ABSENT) mp = message_absent(&x);
+            else if (op != 2 && v.type == V_ABSENT) mp = message_absent(&v);
+            if (!mp) {
+                const long k = table_rang(&e, &x);
+                char *c = cle_ecrite(m, &x);
+                if (op == 0 && k >= 0)
+                    mp = grym_formater("%s est déjà une clé des %s. Pour changer sa valeur, écris : Dans les %s, %s devient …", c, n, n, c);
+                else if (op == 1 && k < 0)
+                    mp = grym_formater("%s n'est pas une clé des %s. Pour l'ajouter, écris : Dans les %s, %s vaut …", c, n, n, c);
+                else if (op == 0) { table_ajouter(&e, x, v); x = vi_absent(NULL); v = vi_absent(NULL); }
+                else if (op == 1) {
+                    ensemble_seul(&e);
+                    valeur_liberer(&e.liste->valeurs[k + 1]);
+                    e.liste->valeurs[k + 1] = v;
+                    v = vi_absent(NULL);
+                } else if (k >= 0) {
+                    ensemble_seul(&e);
+                    valeur_liberer(&e.liste->valeurs[k]);
+                    valeur_liberer(&e.liste->valeurs[k + 1]);
+                    memmove(&e.liste->valeurs[k], &e.liste->valeurs[k + 2], (e.liste->n - (size_t)k - 2) * sizeof *e.liste->valeurs);
+                    e.liste->n -= 2;
+                }
+                free(c);
+            }
+            valeur_liberer(&nom);
+            valeur_liberer(&v);
+            valeur_liberer(&x);
+            if (mp) { valeur_liberer(&e); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, e);
+            break;
+        }
+        case I_TABLE_LISTE: {   /* « les clés des t » (0), « les valeurs des t » (1) : des listes (§ 13.11) */
+            Valeur e = depiler(&pile);
+            if (e.type != V_TABLE) {
+                char *mp = grym_formater("« les %s des » se lisent dans une table, pas dans %s.", op ? "valeurs" : "clés", nom_type(e.type));
+                valeur_liberer(&e);
+                ok = echouer(diag, b, debut, mp);
+                break;
+            }
+            Valeur r = liste_vide();
+            for (size_t k = op ? 1 : 0; k < e.liste->n; k += 2) ensemble_gagner(&r, valeur_copier(&e.liste->valeurs[k]));
+            valeur_liberer(&e);
+            empiler(&pile, r);
+            break;
+        }
         case I_EXTRAIRE: {   /* découper un texte (§ 4.6) ; op : la forme de N_EXTRAIRE */
             static const char *const TOURNURE[] = { "le 3e caractère de", "le caractère de rang k de", "le premier caractère de",
                                                     "le dernier caractère de", "les premiers caractères de",
@@ -7132,8 +7286,14 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, vi_booleen(r));
             break;
         }
-        case I_TAILLE_ENSEMBLE: {   /* « le nombre de couleurs » */
+        case I_TAILLE_ENSEMBLE: {   /* « le nombre de couleurs » ; d'une table : ses clés (§ 13.11) */
             Valeur e = depiler(&pile);
+            if (e.type == V_TABLE) {
+                Valeur r = valeur_nombre(dec_depuis_long((long)(e.liste->n / 2)));
+                valeur_liberer(&e);
+                empiler(&pile, r);
+                break;
+            }
             if (e.type != V_ENSEMBLE) {
                 char *mp = grym_formater("« le nombre de » compte un ensemble, pas %s.", nom_type(e.type));
                 valeur_liberer(&e);

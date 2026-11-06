@@ -11,7 +11,8 @@
 /* V_ABSENT : un champ facultatif sans valeur (grammaire, § 16.9) ; texte : le champ d'où elle vient, ou NULL. */
 /* V_ANNEE : une année du calendrier, de 1 à 9999, rangée dans `jours` (grammaire, § 14.5). */
 typedef enum { V_NOMBRE, V_TEXTE, V_BOOLEEN, V_OBJET, V_DATE, V_FICHIER, V_LISTE, V_ABSENT, V_ANNEE,
-               V_LIGNE, V_ENSEMBLE, V_HEURE } TypeValeur;   /* V_HEURE : jours = minutes depuis minuit (§ 14.7) */   /* V_LIGNE : un tableau lu (§ 15.5), texte : titres ␟, puis ␞ et les cellules de chaque ligne ␟ */
+               V_LIGNE, V_ENSEMBLE, V_HEURE, V_TABLE } TypeValeur;   /* V_TABLE : liste = clé, valeur, clé, valeur… (§ 13.11) */
+                  /* V_HEURE : jours = minutes depuis minuit (§ 14.7) */   /* V_LIGNE : un tableau lu (§ 15.5), texte : titres ␟, puis ␞ et les cellules de chaque ligne ␟ */
 
 /* Liste d'objets conservés, figée par une recherche (§ 16.4) : interne, jamais visible du langage. */
 typedef struct Liste {

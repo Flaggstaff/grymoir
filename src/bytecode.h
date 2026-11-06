@@ -159,11 +159,16 @@ typedef enum {
     I_WSJTX,            /* opérande 1 : dépile le port (sinon 2237) ; empile la liste des nouveaux décodages (2.88) */
     I_LISTE,            /* opérande : n ; dépile n valeurs, empile la liste de ces valeurs, doublons compris (§ 13.10) */
     I_RANG,             /* opérande 0 : dépile le rang, puis la liste ; 1 : le premier, 2 : le dernier ; empile l'élément (§ 13.10) */
-    I_EXTRAIRE          /* opérande : la forme de N_EXTRAIRE (0 à 10) ; dépile ses valeurs (dans l'ordre des enfants) ; empile un
+    I_EXTRAIRE,         /* opérande : la forme de N_EXTRAIRE (0 à 10) ; dépile ses valeurs (dans l'ordre des enfants) ; empile un
                            texte, un nombre (9 : la position) ou une liste (10 : les morceaux) (§ 4.6) */
+    I_TABLE,            /* opérande : n ; dépile le nom de la table, puis n paires clé, valeur ; empile la table (§ 13.11) */
+    I_TABLE_LIRE,       /* dépile le nom, la table, puis la clé ; empile la valeur ; erreur si la clé n'y est pas */
+    I_TABLE_ECRIRE,     /* opérande 0 (vaut : une clé nouvelle), 1 (devient : une clé présente) : dépile le nom, la valeur, la
+                           clé, puis la table ; 2 (perdre) : dépile la clé, puis la table ; empile la table changée */
+    I_TABLE_LISTE       /* opérande 0 : remplace la table par la liste de ses clés ; 1 : de ses valeurs (§ 13.11) */
 } CodeInstruction;
 
-#define I_DERNIER I_EXTRAIRE
+#define I_DERNIER I_TABLE_LISTE
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

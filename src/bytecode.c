@@ -252,6 +252,10 @@ const char *instruction_nom(CodeInstruction code) {
     case I_LISTE:          return "LISTE";
     case I_RANG:           return "RANG";
     case I_EXTRAIRE:       return "EXTRAIRE";
+    case I_TABLE:          return "TABLE";
+    case I_TABLE_LIRE:     return "TABLE_LIRE";
+    case I_TABLE_ECRIRE:   return "TABLE_ECRIRE";
+    case I_TABLE_LISTE:    return "TABLE_LISTE";
     case I_CHANGER_MDP_BASE: return "CHANGER_MDP_BASE";
     }
     return "INCONNUE";
@@ -271,7 +275,8 @@ int instruction_a_operande(CodeInstruction code) {
         || code == I_SIGLES || code == I_ECRAN_TEXTE || code == I_DOCUMENT || code == I_CODE_QR || code == I_RESTAURER
         || code == I_ENVOI || code == I_CHAMP_JSON || code == I_XML_DEBUT || code == I_XML_ELEMENT || code == I_XML_ATTRIBUT
         || code == I_ECRAN_FILTRE || code == I_JSON_LISTE || code == I_HISTORIQUE || code == I_WSJTX
-        || code == I_LISTE || code == I_RANG || code == I_EXTRAIRE;
+        || code == I_LISTE || code == I_RANG || code == I_EXTRAIRE
+        || code == I_TABLE || code == I_TABLE_LIRE || code == I_TABLE_ECRIRE || code == I_TABLE_LISTE;
 }
 
 static int est_saut(CodeInstruction code) {
@@ -349,6 +354,9 @@ int bloc_verifier(const Bloc *b, char **erreur) {
         else if ((c == I_DECALER && op > 5) || (c == I_ECART && op > 6))   /* ÉCART 6 : jours ouvrables (§ 14.6) */
             ok = refuser(erreur, grym_formater("%s : unité %u inconnue (octet %lu).", c == I_ECART ? "ÉCART" : "DÉCALER", op,
                                                (unsigned long)d));
+        else if ((c == I_TABLE_ECRIRE && op > 2) || (c == I_TABLE_LISTE && op > 1))   /* § 13.11 */
+            ok = refuser(erreur, grym_formater("%s : forme %u inconnue (octet %lu).", c == I_TABLE_ECRIRE ? "TABLE_ECRIRE" : "TABLE_LISTE",
+                                               op, (unsigned long)d));
         else if (c == I_EXTRAIRE && op > 10)   /* les onze formes de N_EXTRAIRE (§ 4.6) */
             ok = refuser(erreur, grym_formater("EXTRAIRE : forme %u inconnue (octet %lu).", op, (unsigned long)d));
         else if (c == I_RANG && op > 2)   /* 0 un rang, 1 le premier, 2 le dernier (§ 13.10) */
@@ -454,6 +462,10 @@ int bloc_verifier(const Bloc *b, char **erreur) {
             case I_LISTE: besoin = (long)op; effet = 1 - (long)op; break;
             case I_RANG: besoin = op ? 1 : 2; effet = op ? 0 : -1; break;
             case I_EXTRAIRE: besoin = op == 2 || op == 3 ? 1 : op == 6 ? 3 : 2; effet = 1 - besoin; break;
+            case I_TABLE: besoin = 2 * (long)op + 1; effet = 1 - besoin; break;
+            case I_TABLE_LIRE: besoin = 3; effet = -2; break;
+            case I_TABLE_ECRIRE: besoin = op == 2 ? 2 : 4; effet = 1 - besoin; break;
+            case I_TABLE_LISTE: besoin = 1; effet = 0; break;
             case I_REMPLACER: besoin = 3; effet = -2; break;
             case I_MOTS: besoin = 1; effet = 0; break;
             case I_PORTS: besoin = 0; effet = 1; break;

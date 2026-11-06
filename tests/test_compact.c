@@ -264,6 +264,12 @@ int main(void) {
                  "_afficher _position(« 4 » ; r)\n_les c << _morceaux(r ; « 0 »)\n", NULL);
     ERR("_afficher _caractère(« a »)\n", 1, 11, "« _caractère » s'écrit ainsi : _caractère(t ; 3).");
     ERR("_afficher _morceaux(« a » ; ; « b »)\n", 1, 11, "« _morceaux » s'écrit ainsi : _morceaux(t ; « ; »).");
+    ALLER_RETOUR("_les t << _table « a » _vaut 1 ; « b » _vaut 2\n_les v << _table_vide\n_dans v « x » _vaut 0\n"
+                 "_dans v « x » _devient _valeur(« x » ; v) + 1\n_afficher _clés(t) ; _valeurs(t)\n"
+                 "_pour_chaque k _parmi _clés(t)\n    _afficher k\n_fin\n_si _clés(t) _contient « a » _alors\n    _afficher 1\n_fin\n"
+                 "_les t _perdent « a »\n", NULL);
+    ERR("_les t << _table_vide\n_afficher _valeur(« a »)\n", 2, 11, "« _valeur » s'écrit ainsi : _valeur(« clé » ; tarifs).");
+    ERR("_les t << _table « a » 1\n", 1, 18, "Paire attendue : « « a » _vaut 1 ».");
     ERR("_les l << _liste 1 ; 2\n_afficher _élément(l)\n", 2, 11, "« _élément » prend la liste et le rang : _élément(étapes ; 3).");
     ERR("_les l << _liste 1 ; 2\n_afficher _premier(l ; 2)\n", 2, 11, "« _premier » prend la liste seule : _premier(étapes).");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"

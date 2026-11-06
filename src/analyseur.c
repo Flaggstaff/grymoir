@@ -39,6 +39,7 @@ typedef struct {
     char *classe;      /* méthode : classe de son premier paramètre (§ 13.6), sinon NULL */
     int ensemble;      /* variable qui contient un ensemble, nommée au pluriel avec « les » (§ 13.9) */
     int liste;         /* cet ensemble est une liste, qui garde ses doublons (§ 13.10) */
+    int table;         /* variable qui contient une table, nommée au pluriel avec « les » (§ 13.11) */
     int fichier;       /* fichier de la déclaration : 0 celui qu'on analyse, k le k-ième fichier utilisé (§ 21) */
     int rend;          /* une action qui rend une valeur (2.57) : « , qui donne … » à l'appel */
 } Symbole;
@@ -506,6 +507,8 @@ static void portee_declarer(Portee *p, const char *nom, Genre g, int ligne) {
     s->sorte = S_VARIABLE;
     s->lecture_seule = 0;
     s->ensemble = 0;
+    s->liste = 0;   /* oubli de la 2.89 : un ensemble pouvait se croire liste, selon la mémoire */
+    s->table = 0;   /* § 13.11 */
     s->classe = NULL;
     s->rend = 0;
     s->nb_parametres = 0;
@@ -1679,6 +1682,9 @@ static Symbole *ensemble_en(Analyse *a, size_t k, size_t *fin);
 static Noeud *expression_avant(Analyse *a, const char *m1, const char *m2);
 static Noeud *nom_ensemble(Analyse *a);
 static Noeud *mots_de(Analyse *a);
+static Symbole *table_en(Analyse *a, size_t k, size_t *fin);
+static int liste_de_table_en(Analyse *a, size_t k);
+static Noeud *phrase_dans(Analyse *a, const Jeton *t);
 
 static int contient_champ_dont(const Noeud *n) {
     if (n->type == N_CHAMP_DONT) return 1;
@@ -2854,7 +2860,42 @@ static Noeud *base(Analyse *a) {
     }
     {
         size_t fe;
-        if (est_mot(t, "les") && ensemble_en(a, a->i + 1, &fe)) return nom_ensemble(a);   /* « les couleurs » (§ 13.9) */
+        if (est_mot(t, "les") && (liste_de_table_en(a, a->i + 1) || ensemble_en(a, a->i + 1, &fe) || table_en(a, a->i + 1, &fe)))
+            return nom_ensemble(a);   /* « les couleurs » (§ 13.9), « les tarifs », « les clés des tarifs » (§ 13.11) */
+        {
+            /* « la valeur de k dans les tarifs » (§ 13.11) : seulement si « dans les » suivi d'une table vient plus loin
+             * dans la phrase, hors de toute parenthèse ; un champ « valeur » garde son sens ailleurs */
+            const int m_la = est_mot(t, "la") ? 1 : a->article_force == ART_LA ? 0 : -1;
+            int vu = 0;
+            if (m_la >= 0 && est_mot(voir(a, m_la), "valeur") && (de_ou_d(voir(a, m_la + 1)) || est_mot(voir(a, m_la + 1), "du"))) {
+                int p = 0;
+                for (size_t q = a->i + (size_t)m_la + 2; q + 2 < a->n && !vu; q++) {
+                    const Jeton *j = &a->j[q];
+                    if (j->type == J_POINT || j->type == J_FIN || j->type == J_DEUX_POINTS) break;
+                    if (j->type == J_PAR_OUV) p++;
+                    else if (j->type == J_PAR_FERM) { if (--p < 0) break; }
+                    else if (p == 0 && est_mot(j, "dans") && est_mot(&a->j[q + 1], "les") && table_en(a, q + 2, &fe)) vu = 1;
+                }
+            }
+            if (vu) {
+                Noeud *n = noeud_creer(N_TABLE_LIRE, t->ligne, t->colonne, t->debut);
+                a->article_force = ART_AUCUN;
+                for (int q = 0; q < m_la + 1; q++) avancer(a);   /* la valeur */
+                const Jeton *p = cour(a);
+                avancer(a);
+                if (est_mot(p, "du")) { a->article_force = ART_LE; a->jeton_force = p; }
+                Noeud *k = expression_avant(a, "dans", NULL);
+                a->article_force = ART_AUCUN;
+                if (!k) { noeud_liberer(n); return NULL; }
+                avancer(a);   /* dans */
+                Noeud *tb = nom_ensemble(a);
+                if (!tb) { noeud_liberer(k); noeud_liberer(n); return NULL; }
+                noeud_ajouter(n, k);
+                noeud_ajouter(n, tb);
+                n->fin = tb->fin;
+                return n;
+            }
+        }
         {
             /* Les rangs (§ 13.10) : « le 3e élément des étapes », « le premier élément des … », « le dernier élément
              * des … », « l'élément de rang k des … » ; aussi après « du », « de l' » (article forcé) */
@@ -2915,8 +2956,9 @@ static Noeud *base(Analyse *a) {
             Noeud *x = extraire(a);   /* découper un texte (§ 4.6) */
             if (x || a->echec) return x;
         }
-        if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2)) && ensemble_en(a, a->i + 3, &fe)) {
-            Noeud *n = noeud_creer(N_TAILLE, t->ligne, t->colonne, t->debut);   /* « le nombre de couleurs » */
+        if (est_mot(t, "le") && est_mot(voir(a, 1), "nombre") && de_ou_d(voir(a, 2))
+            && (ensemble_en(a, a->i + 3, &fe) || table_en(a, a->i + 3, &fe))) {
+            Noeud *n = noeud_creer(N_TAILLE, t->ligne, t->colonne, t->debut);   /* « le nombre de couleurs », « de tarifs » */
             a->i += 3;
             Noeud *x = nom_expression(a);
             if (!x) { noeud_liberer(n); return NULL; }
@@ -3590,9 +3632,45 @@ static Symbole *ensemble_en(Analyse *a, size_t k, size_t *fin) {
     return NULL;
 }
 
-/* « les couleurs » : le nom d'un ensemble, avec son article (§ 13.9). */
+/* Une table visible nommée à partir de l'index k (§ 13.11) : « tarifs » dans « les tarifs » ; *fin : sa fin. */
+static Symbole *table_en(Analyse *a, size_t k, size_t *fin) {
+    if (k >= a->n) return NULL;
+    if (a->j[k].type == J_CROCHETS) {
+        Symbole *s = visible(a, a->j[k].valeur);
+        if (s && s->table) { *fin = k + 1; return s; }
+        return NULL;
+    }
+    size_t f = k;
+    while (f < a->n && mot_de_nom(a, f)) f++;
+    for (size_t q = f; q > k; q--) {
+        char *c = cle(a, k, q);
+        Symbole *s = visible(a, c);
+        free(c);
+        if (s && s->table) { *fin = q; return s; }
+    }
+    return NULL;
+}
+
+/* « clés des tarifs », « valeurs des tarifs » à partir de l'index k : les clés ou les valeurs d'une table (§ 13.11). */
+static int liste_de_table_en(Analyse *a, size_t k) {
+    size_t fe;
+    return k + 2 < a->n && (est_mot(&a->j[k], "clés") || est_mot(&a->j[k], "valeurs")) && est_mot(&a->j[k + 1], "des")
+           && table_en(a, k + 2, &fe);
+}
+
+/* « les couleurs » : le nom d'un ensemble, avec son article (§ 13.9) ; « les clés des tarifs » (§ 13.11). */
 static Noeud *nom_ensemble(Analyse *a) {
     const Jeton *t = cour(a);
+    if (liste_de_table_en(a, a->i + 1)) {
+        Noeud *n = noeud_creer(N_TABLE_LISTE, t->ligne, t->colonne, t->debut);
+        n->forme = est_mot(voir(a, 1), "valeurs");
+        a->i += 2;   /* les clés */
+        Noeud *x = nom_ensemble(a);   /* « des tarifs » : « des » tient lieu de « les » */
+        if (!x) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, x);
+        n->fin = x->fin;
+        return n;
+    }
     avancer(a);   /* les */
     Noeud *n = nom_expression(a);
     if (!n) return NULL;
@@ -3721,7 +3799,15 @@ static Noeud *relation(Analyse *a, Noeud *sujet, int negation, const Jeton *test
     }
     if (a->dont) attendre_mot(a, a->i, "parmi les", 9);
     size_t fe;
-    if (!r && est_mot(t, "parmi") && est_mot(voir(a, 1), "les") && ensemble_en(a, a->i + 2, &fe)) {
+    if (!r && est_mot(t, "parmi") && est_mot(voir(a, 1), "les") && !liste_de_table_en(a, a->i + 2) && table_en(a, a->i + 2, &fe)) {
+        const Jeton *x = voir(a, 2);   /* « parmi les tarifs » : une table n'est pas un ensemble (§ 13.11) */
+        char *nt = x->type == J_CROCHETS ? grym_dupliquer(x->valeur) : cle(a, a->i + 2, fe);
+        noeud_liberer(sujet);
+        Noeud *e = erreur(a, x, grym_formater("« %s » est une table : « parmi les clés des %s ».", nt, nt));
+        free(nt);
+        return e;
+    }
+    if (!r && est_mot(t, "parmi") && est_mot(voir(a, 1), "les") && (liste_de_table_en(a, a->i + 2) || ensemble_en(a, a->i + 2, &fe))) {
         /* « m est parmi les élus » (§ 13.9) */
         avancer(a);
         Noeud *e = nom_ensemble(a);
@@ -5444,8 +5530,8 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
             n->fin = corps->fin;
             return n;
         }
-        if (k2 > d && est_mot(&a->j[k2], "parmi") && est_mot(&a->j[k2 + 1], "les") && ensemble_en(a, k2 + 2, &fe)
-            && article_de(&a->j[d]) == ART_AUCUN) {
+        if (k2 > d && est_mot(&a->j[k2], "parmi") && est_mot(&a->j[k2 + 1], "les")
+            && (liste_de_table_en(a, k2 + 2) || ensemble_en(a, k2 + 2, &fe)) && article_de(&a->j[d]) == ART_AUCUN) {
             /* « Pour chaque couleur parmi les couleurs : » (§ 13.9) : l'ensemble figé au début, parcouru dans l'ordre */
             char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, k2);
             if (visible(a, nom)) {
@@ -6738,7 +6824,7 @@ static int bloc_initialisation(Analyse *a, Noeud *nv, const Jeton *tphrase) {
 static int mot_de_construction(const Jeton *t) {
     static const char *const M[] = { "tant", "répéter", "chaque", "sortir", "passer", "selon", "cas",
                                      "autrement", "afficher", "si", "sinon", "pour", "rendre", "enregistrer", "effacer", "essayer", "saisir",
-                                     "conserver", "supprimer", "rétablir", "utiliser", "quand", "ouvrir", "fermer", "refuser", "signaler", "amorcer", "signer" };
+                                     "conserver", "supprimer", "rétablir", "utiliser", "quand", "ouvrir", "fermer", "refuser", "signaler", "amorcer", "signer", "dans" };
     for (size_t k = 0; k < sizeof M / sizeof *M; k++) if (est_mot(t, M[k])) return 1;
     return 0;
 }
@@ -9667,6 +9753,145 @@ static Noeud *exporter(Analyse *a, const Jeton *t) {
     return n;
 }
 
+/* « Dans les compteurs, « CQ » vaut 0. » crée une clé ; « devient » modifie sa valeur (§ 13.11). */
+static Noeud *phrase_dans(Analyse *a, const Jeton *t) {
+    size_t fe;
+    Symbole *s = est_mot(voir(a, 1), "les") ? table_en(a, a->i + 2, &fe) : NULL;
+    if (!s) return erreur(a, voir(a, 1), grym_dupliquer("« Dans » ouvre « Dans les tarifs, « a » vaut 1. » : une table attendue (§ 13.11)."));
+    if (s->lecture_seule) return erreur(a, t, grym_dupliquer("Un compteur de boucle ne se modifie pas."));
+    char *nom = a->j[a->i + 2].type == J_CROCHETS ? grym_dupliquer(a->j[a->i + 2].valeur) : cle(a, a->i + 2, fe);
+    a->i = fe;
+    if (cour(a)->type != J_VIRGULE) {
+        free(nom);
+        return erreur(a, cour(a), grym_dupliquer("Virgule attendue : « Dans les tarifs, « a » vaut 1. »"));
+    }
+    avancer(a);
+    Noeud *k = expression_avant(a, "vaut", "devient");
+    if (!k) { free(nom); return NULL; }
+    if (!est_mot(cour(a), "vaut") && !est_mot(cour(a), "devient")) {
+        noeud_liberer(k);
+        free(nom);
+        return erreur(a, cour(a), grym_dupliquer("« vaut » (une clé nouvelle) ou « devient » (une clé présente) attendu."));
+    }
+    const int devient = est_mot(cour(a), "devient");
+    avancer(a);
+    Noeud *v = valeur(a);
+    if (!v) { noeud_liberer(k); free(nom); return NULL; }
+    if (!fin_phrase(a, 0)) { noeud_liberer(k); noeud_liberer(v); free(nom); return NULL; }
+    Noeud *tn = noeud_creer(N_NOM, t->ligne, t->colonne, t->debut);
+    tn->texte = grym_dupliquer(nom);
+    tn->local = s->local;
+    tn->article = ART_LES;
+    Noeud *e = noeud_creer(N_TABLE_ECRIRE, t->ligne, t->colonne, t->debut);
+    e->forme = devient;
+    noeud_ajouter(e, tn);
+    noeud_ajouter(e, k);
+    noeud_ajouter(e, v);
+    e->fin = v->fin;
+    Noeud *n = noeud_creer(P_MODIFICATION, t->ligne, t->colonne, t->debut);
+    n->local = s->local;
+    n->texte = nom;
+    n->article = ART_LES;
+    noeud_ajouter(n, e);
+    n->fin = e->fin;
+    return n;
+}
+
+/* « Les tarifs valent la table où « a » vaut 1 et « b » vaut 2. », « une table vide », « Les autres valent les tarifs. »,
+ * « Les tarifs deviennent … », « Les tarifs perdent « a ». » (§ 13.11). NULL sans erreur si la phrase ne concerne pas une
+ * table, et nom reste à l'appelant ; sinon nom est pris. d : le premier mot du nom, v : le verbe. */
+static Noeud *phrase_table(Analyse *a, const Jeton *t, size_t d, size_t v, char *nom, Symbole *s) {
+    const Jeton *verbe = &a->j[v];
+    const int creer = est_mot(verbe, "valent"), changer = est_mot(verbe, "deviennent");
+    const int gagner = est_mot(verbe, "gagnent"), perdre = est_mot(verbe, "perdent");
+    const Jeton *x0 = v + 1 < a->n ? &a->j[v + 1] : verbe;
+    const int litteral = v + 3 < a->n && ((est_mot(x0, "une") && est_mot(&a->j[v + 2], "table") && est_mot(&a->j[v + 3], "vide"))
+                         || (est_mot(x0, "la") && est_mot(&a->j[v + 2], "table") && est_mot(&a->j[v + 3], "où")));
+    size_t fe = 0;
+    const int avec_les = est_mot(x0, "les");   /* « les tarifs », ou « tarifs » relu de la forme compacte */
+    Symbole *copie = table_en(a, v + 1 + (size_t)avec_les, &fe);
+    if (copie && !(fe < a->n && a->j[fe].type == J_POINT)) copie = NULL;
+    if (!(s && s->table) && !((creer || changer) && (litteral || copie))) return NULL;
+    if (creer && s) return NULL;   /* « … existe déjà » : phrase_ensemble le dit */
+    if (changer && !(s && s->table)) {
+        Noeud *x = erreur(a, &a->j[d], s ? grym_formater("« %s » n'est pas une table : il ne devient pas une table.", nom)
+                                         : grym_formater("« %s » n'existe pas. Pour le créer, écris : Les %s valent …", nom, nom));
+        free(nom);
+        return x;
+    }
+    if (s && s->lecture_seule) { free(nom); return erreur(a, &a->j[d], grym_dupliquer("Un compteur de boucle ne se modifie pas.")); }
+    if (gagner) {
+        Noeud *x = erreur(a, verbe, grym_formater("Une table ne gagne pas : écris « Dans les %s, … vaut … ».", nom));
+        free(nom);
+        return x;
+    }
+    a->i = v + 1;
+    Noeud *valeur_n;
+    if (perdre) {   /* « Les tarifs perdent « a ». » : la clé et sa valeur */
+        Noeud *k = valeur(a);
+        if (!k) { free(nom); return NULL; }
+        Noeud *tn = noeud_creer(N_NOM, t->ligne, t->colonne, t->debut);
+        tn->texte = grym_dupliquer(nom);
+        tn->local = s->local;
+        tn->article = ART_LES;
+        valeur_n = noeud_creer(N_TABLE_ECRIRE, t->ligne, t->colonne, t->debut);
+        valeur_n->forme = 2;
+        noeud_ajouter(valeur_n, tn);
+        noeud_ajouter(valeur_n, k);
+        valeur_n->fin = k->fin;
+    } else if (copie) {   /* « Les autres valent les tarifs. » : une copie */
+        if (!avec_les) a->i--;   /* nom_ensemble saute un « les » */
+        valeur_n = nom_ensemble(a);
+        if (!valeur_n) { free(nom); return NULL; }
+    } else if (!litteral) {
+        Noeud *x = erreur(a, x0, grym_formater("« %s » est une table : « une table vide » ou « la table où … vaut … ».", nom));
+        free(nom);
+        return x;
+    } else {
+        valeur_n = noeud_creer(N_TABLE, x0->ligne, x0->colonne, x0->debut);
+        valeur_n->texte = grym_dupliquer(nom);
+        if (est_mot(x0, "une")) {
+            valeur_n->fin = fin_jeton(&a->j[v + 3]);
+            a->i += 3;
+        } else {
+            a->i += 3;   /* la table où */
+            for (;;) {
+                Noeud *k = expression_avant(a, "vaut", NULL);
+                if (!k) { noeud_liberer(valeur_n); free(nom); return NULL; }
+                if (!est_mot(cour(a), "vaut")) {
+                    noeud_liberer(k);
+                    noeud_liberer(valeur_n);
+                    free(nom);
+                    return erreur(a, cour(a), grym_dupliquer("« vaut » attendu : « la table où « a » vaut 1 et « b » vaut 2 »."));
+                }
+                avancer(a);
+                Noeud *y = expression(a);
+                if (!y) { noeud_liberer(k); noeud_liberer(valeur_n); free(nom); return NULL; }
+                noeud_ajouter(valeur_n, k);
+                noeud_ajouter(valeur_n, y);
+                valeur_n->fin = y->fin;
+                if (cour(a)->type == J_VIRGULE || est_mot(cour(a), "et")) { avancer(a); continue; }
+                break;
+            }
+        }
+    }
+    if (!fin_phrase(a, 0)) { noeud_liberer(valeur_n); free(nom); return NULL; }
+    int local = -1;
+    if (creer) {
+        portee_declarer(a->portee, nom, GENRE_LIBRE, t->ligne);
+        Symbole *ns = &a->portee->s[a->portee->n - 1];
+        ns->table = 1;
+        if (a->formule) ns->local = local = a->nb_locaux++;
+    } else local = s->local;
+    Noeud *n = noeud_creer(creer ? P_CREATION : P_MODIFICATION, t->ligne, t->colonne, t->debut);
+    n->local = local;
+    n->texte = nom;
+    n->article = ART_LES;
+    noeud_ajouter(n, valeur_n);
+    n->fin = valeur_n->fin;
+    return n;
+}
+
 /* Phrases d'un ensemble (§ 13.9) : « Les couleurs valent « rouge » et « vert ». », « Les élus valent un ensemble
  * vide. », « Les élus deviennent les inscrits. », « Les élus gagnent m. », « Les élus perdent m. ». NULL sans erreur
  * si la phrase n'en est pas une (un champ multiple, § 16.13). */
@@ -9682,6 +9907,12 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
     if (!creer && !changer && !gagner && !perdre) return NULL;
     char *nom = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, v);
     Symbole *s = visible(a, nom);
+    {
+        const size_t avant = a->i;
+        Noeud *tb = phrase_table(a, t, d, v, nom, s);   /* § 13.11 ; prend nom s'il traite la phrase */
+        if (tb || a->echec) return tb;
+        a->i = avant;
+    }
     if ((gagner || perdre) && !(s && s->ensemble)) { free(nom); return NULL; }   /* un champ multiple */
     if (creer && s) {
         Noeud *x = erreur(a, &a->j[d], grym_formater("« %s » existe déjà (ligne %d). Pour le modifier, écris : Les %s "
@@ -9816,7 +10047,7 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
             noeud_liberer(valeur_n);
             valeur_n = x;
         } else if (valeur_n->nb_enfants == 1 && !ecrit_liste
-                   && (valeur_n->enfants[0]->type == N_WSJTX
+                   && (valeur_n->enfants[0]->type == N_WSJTX || valeur_n->enfants[0]->type == N_TABLE_LISTE
                        || (valeur_n->enfants[0]->type == N_EXTRAIRE && valeur_n->enfants[0]->forme == 10))) {
             /* « Les décodages valent les décodages WSJT. », « les morceaux de t séparés par « ; » » : la liste elle-même
              * (§ 13.10, 2.88, § 4.6) */
@@ -10089,6 +10320,7 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "les") && est_mot(voir(a, 1), "nombres")) return style_des_nombres(a, t);
     if (est_mot(t, "les") && est_mot(voir(a, 1), "écrans") && est_mot(voir(a, 2), "ont")) return apparence(a, t);
     if (est_mot(t, "exemple") && voir(a, 1)->type == J_DEUX_POINTS) return exemple(a, t);   /* § 9.6 */
+    if (est_mot(t, "dans")) return phrase_dans(a, t);   /* § 13.11 */
     if (est_mot(t, "les")) {
         Noeud *n = phrase_ensemble(a, t);   /* § 13.9 */
         if (n || a->echec) return n;

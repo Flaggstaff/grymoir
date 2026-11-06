@@ -2355,6 +2355,33 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* Tables (§ 13.11) */
+    PROG("Les tarifs valent la table où « 7601 » vaut 24 et « 7602 » vaut 12.\nLes compteurs valent une table vide.\n"
+         "Dans les compteurs, « CQ » vaut 0.\nDans les compteurs, « CQ » devient la valeur de « CQ » dans les compteurs + 1.\n"
+         "Afficher la valeur de « 7601 » dans les tarifs.\nPour chaque code parmi les clés des tarifs :\n"
+         "    Afficher code puis la valeur de code dans les tarifs.\n"
+         "Si « 7603 » n'est pas parmi les clés des tarifs, afficher « inconnu ».\nLes tarifs perdent « 7602 ».\n"
+         "Les tarifs perdent « absent ».\nAfficher le nombre de tarifs puis les tarifs.\n"
+         "Afficher les compteurs puis les valeurs des compteurs.",
+         "24\n7601 24\n7602 12\ninconnu\n1 7601 : 24\nCQ : 1 1");
+    PROG("Les t valent la table où 1 vaut « un » et 2 vaut « deux ».\nLes u valent les t.\nDans les u, 3 vaut « trois ».\n"
+         "Dans les t, 1,0 devient « UN ».\nAfficher les t puis les u.\n"
+         "Les a valent la table où 1 vaut 2 et 3 vaut 4.\nLes b valent la table où 3 vaut 4 et 1 vaut 2.\n"
+         "Les c valent la table où 1 vaut 2 et 3 vaut 5.\nAfficher (les a = les b) puis (les a = les c).\n"
+         "Les k valent les clés des a.\nAfficher le dernier élément des k.",
+         "1 : UN, 2 : deux 1 : un, 2 : deux, 3 : trois\nvrai faux\n3");
+    PROG("Un membre a : un nom.\nLe m vaut un nouveau membre :\n    Le nom vaut « Ana ».\nLes rôles valent une table vide.\n"
+         "Dans les rôles, m vaut « trésorière ».\nAfficher la valeur de m dans les rôles.", "trésorière");
+    PROG("La somme d'un n :\n    Les t valent une table vide.\n    Dans les t, « x » vaut n.\n"
+         "    Dans les t, « x » devient la valeur de « x » dans les t × 2.\n    Rendre la valeur de « x » dans les t.\n"
+         "Afficher la somme de 21.", "42");
+    PROG("Les t valent une table vide.\nDans les t, « a » vaut 1.\nDans les t, « a » vaut 2.",
+         "ERREUR 3:1 « a » est déjà une clé des t. Pour changer sa valeur, écris : Dans les t, « a » devient …");
+    PROG("Les t valent une table vide.\nDans les t, « a » devient 2.",
+         "ERREUR 2:1 « a » n'est pas une clé des t. Pour l'ajouter, écris : Dans les t, « a » vaut …");
+    PROG("Les t valent une table vide.\nAfficher la valeur de « z » dans les t.", "ERREUR 2:10 « z » n'est pas une clé des t.");
+    PROG("Les t valent la table où « a » vaut 1 et « a » vaut 2.", "ERREUR 1:14 « a » est déjà une clé des t.");
+    PROG("Les t valent la table où 2026 vaut 1 et 2026 vaut 2.", "ERREUR 1:14 2026 est déjà une clé des t.");
     /* Découper un texte (§ 4.6) */
     PROG("La r vaut « FA014074000; ».\nAfficher (la r après « FA » avant « ; ») en nombre.\nAfficher les caractères 3 à 11 de la r.\n"
          "Afficher les 2 premiers caractères de la r puis le dernier caractère de la r.\n"

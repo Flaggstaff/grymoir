@@ -465,6 +465,25 @@ static void expression(Compilation *c, const Noeud *n) {
         for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
         emettre(c, n->forme == 1 ? I_LISTE : I_ENSEMBLE, (long)n->nb_enfants, n->ligne, n->colonne);   /* liste : § 13.10 */
         return;
+    case N_TABLE: case N_TABLE_LIRE: case N_TABLE_ECRIRE: {
+        /* les enfants dans l'ordre, puis le nom de la table (pour les messages), puis TABLE n (les paires), TABLE_LIRE,
+         * TABLE_ECRIRE forme ; « perdent » (forme 2) n'a pas de message, donc pas de nom (§ 13.11) */
+        if (n->nb_enfants > 2 * 32767) { trop_grand(c, n); return; }
+        for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
+        if (!(n->type == N_TABLE_ECRIRE && n->forme == 2)) {
+            const char *nom = n->type == N_TABLE ? n->texte : n->type == N_TABLE_LIRE ? n->enfants[1]->texte : n->enfants[0]->texte;
+            long k = bloc_constante(c->b, C_TEXTE, nom ? nom : "");
+            if (k < 0) { trop_grand(c, n); return; }
+            emettre(c, I_CONSTANTE, k, n->ligne, n->colonne);
+        }
+        emettre(c, n->type == N_TABLE ? I_TABLE : n->type == N_TABLE_LIRE ? I_TABLE_LIRE : I_TABLE_ECRIRE,
+                n->type == N_TABLE ? (long)(n->nb_enfants / 2) : n->type == N_TABLE_ECRIRE ? n->forme : 0, n->ligne, n->colonne);
+        return;
+    }
+    case N_TABLE_LISTE:   /* la table, puis TABLE_LISTE 0 (les clés) ou 1 (les valeurs) (§ 13.11) */
+        expression(c, n->enfants[0]);
+        emettre(c, I_TABLE_LISTE, n->forme, n->ligne, n->colonne);
+        return;
     case N_EXTRAIRE:   /* les enfants dans l'ordre, puis EXTRAIRE forme (§ 4.6) */
         for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
         emettre(c, I_EXTRAIRE, n->forme, n->ligne, n->colonne);

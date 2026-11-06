@@ -106,6 +106,13 @@ int main(void) {
          "Les c valent les morceaux de la r séparés par « A ».\n",
          "_la r << « FA; »\n_afficher _caractère(r ; 2) ; _caractères(r ; 1 ; 2) ; r _après « F »\n"
          "_les c << _morceaux(r ; « A »)\n");
+    FIXE("Les t valent la table où « a » vaut 1, « b » vaut 2 et « c » vaut 3.\nLes v valent une table vide.\n"
+         "Dans les v, « x » vaut 0.\nDans les v, « x » devient la valeur de « x » dans les v + 1.\nLes t perdent « a ».\n"
+         "Afficher les clés des t puis les valeurs des t puis le nombre de t.\nLes w valent les t.\nLes w deviennent une table vide.\n");
+    COMP("Les t valent la table où « a » vaut 1 et « b » vaut 2.\nDans les t, « c » vaut 3.\nAfficher la valeur de « a » dans les t.\n"
+         "Si « a » n'est pas parmi les clés des t, afficher 1.\nLes t perdent « a ».\n",
+         "_les t << _table « a » _vaut 1 ; « b » _vaut 2\n_dans t « c » _vaut 3\n_afficher _valeur(« a » ; t)\n"
+         "_si _non (_clés(t) _contient « a ») _alors\n    _afficher 1\n_fin\n_les t _perdent « a »\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

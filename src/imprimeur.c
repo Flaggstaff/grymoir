@@ -937,6 +937,26 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, im->compact ? " _jointes " : n->forme ? " joints par " : " jointes par ");
         expression(im, n->enfants[1]);
         return;
+    case N_TABLE_LIRE:   /* « la valeur de k dans les t » ; « _valeur(k ; t) » (§ 13.11) */
+        if (im->compact) {
+            aj(im, "_valeur(");
+            expression(im, n->enfants[0]);
+            aj(im, " ; ");
+            ecrire_nom(im, n->enfants[1]->texte, 0);
+            aj(im, ")");
+            return;
+        }
+        aj(im, "la valeur ");
+        if (calcul_nu(n->enfants[0]) || n->enfants[0]->type == N_CHAMP) de_expression(im, n->enfants[0]);
+        else { aj(im, "de ("); expression(im, n->enfants[0]); aj(im, ")"); }
+        aj(im, " dans les ");
+        ecrire_nom(im, n->enfants[1]->texte, 0);
+        return;
+    case N_TABLE_LISTE:   /* « les clés des t » ; « _clés(t) » (§ 13.11) */
+        aj(im, im->compact ? (n->forme ? "_valeurs(" : "_clés(") : (n->forme ? "les valeurs des " : "les clés des "));
+        ecrire_nom(im, n->enfants[0]->texte, 0);
+        if (im->compact) aj(im, ")");
+        return;
     case N_EXTRAIRE: {   /* découper un texte (§ 4.6) ; forme compacte : « _caractère(t ; 3) », « t _après « x » »… */
         const int f = n->forme;
         const Noeud *tx = n->enfants[f == 9 ? 1 : 0];
@@ -1731,6 +1751,45 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
             im->variables[im->nb_var] = n->texte;
             im->genres_var[im->nb_var++] = n->article == ART_LA ? G_FEMININ : n->article == ART_LE ? G_MASCULIN
                                           : genre_article(n->article) != G_LIBRE ? genre_article(n->article) : G_MASCULIN;
+        }
+        if (n->article == ART_LES && n->enfants[0]->type == N_TABLE_ECRIRE && n->enfants[0]->forme < 2) {
+            /* « Dans les compteurs, « CQ » vaut 0. » ; « _dans compteurs « CQ » _vaut 0 » (§ 13.11) */
+            const Noeud *v = n->enfants[0];
+            aj(im, c ? "_dans " : "Dans les ");
+            ecrire_nom(im, n->texte, 0);
+            aj(im, c ? " " : ", ");
+            expression(im, v->enfants[1]);
+            aj(im, v->forme ? (c ? " _devient " : " devient ") : (c ? " _vaut " : " vaut "));
+            expression(im, v->enfants[2]);
+            aj(im, c ? "\n" : ".\n");
+            return;
+        }
+        if (n->article == ART_LES && n->enfants[0]->type == N_TABLE_ECRIRE) {   /* « Les tarifs perdent « a ». » (§ 13.11) */
+            aj(im, c ? "_les " : "Les ");
+            ecrire_nom(im, n->texte, 0);
+            aj(im, c ? " _perdent " : " perdent ");
+            expression(im, n->enfants[0]->enfants[1]);
+            aj(im, c ? "\n" : ".\n");
+            return;
+        }
+        if (n->article == ART_LES && n->enfants[0]->type == N_TABLE) {   /* « la table où … », « une table vide » (§ 13.11) */
+            const Noeud *v = n->enfants[0];
+            aj(im, c ? "_les " : "Les ");
+            ecrire_nom(im, n->texte, 0);
+            aj(im, n->type == P_CREATION ? (c ? " << " : " valent ") : (c ? " _deviennent " : " deviennent "));
+            if (v->nb_enfants == 0) aj(im, c ? "_table_vide" : "une table vide");
+            else {
+                aj(im, c ? "_table " : "la table où ");
+                for (size_t k = 0; k + 1 < v->nb_enfants; k += 2) {
+                    if (k) aj(im, c ? " ; " : k + 2 == v->nb_enfants ? " et " : ", ");
+                    expression(im, v->enfants[k]);
+                    aj(im, c ? " _vaut " : " vaut ");
+                    expression(im, v->enfants[k + 1]);
+                }
+            }
+            aj(im, c ? "\n" : ".\n");
+            if (n->type == P_CREATION) retenir(im, n->texte, G_LIBRE);
+            return;
         }
         if (n->article == ART_LES) {   /* ensembles (§ 13.9) */
             const Noeud *v = n->enfants[0];

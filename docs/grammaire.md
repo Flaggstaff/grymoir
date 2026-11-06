@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.90 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.91 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1041,6 +1041,35 @@ Les réservations valent les éléments du champ « collection » de la réponse
 - Aucun mot réservé : `liste`, `élément`, `rang`, `premier`, `dernier` ne comptent qu'ainsi placés ; un nom, un calcul ou un champ déclaré l'emporte.
 - Reporté : trier une liste par un champ ou un calcul (`les étapes triées par …`), insérer ou retirer à un rang, une tranche (`les 3 premiers éléments`) ; ils suivront le découpage des textes, qui rend des listes.
 - En forme compacte : `_les étapes << _liste « tri » ; « lavage »`, `_les relevés << _liste_vide`, `_élément(étapes ; 3)`, `_premier(étapes)`, `_dernier(étapes)` ; `_les m << _mots t`, `_les d << _décodages_wsjt`, `_les r << _éléments « collection » réponse`. Un rang constant revient en forme littéraire en chiffres (`le 3e élément`), un rang calculé en `l'élément de rang … des …`.
+
+### 13.11 Tables *(2.91)*
+
+```
+Les tarifs valent la table où « 7601 » vaut 24 et « 7602 » vaut 12.
+Les compteurs valent une table vide.
+Dans les compteurs, « CQ » vaut 0.
+Dans les compteurs, « CQ » devient la valeur de « CQ » dans les compteurs + 1.
+Afficher la valeur de « 7601 » dans les tarifs.                  →  24
+Pour chaque code parmi les clés des tarifs :
+    Afficher code puis la valeur de code dans les tarifs.
+Si « 7603 » n'est pas parmi les clés des tarifs, afficher « inconnu ».
+Les tarifs perdent « 7602 ».
+Afficher le nombre de tarifs puis les tarifs.                    →  1 7601 : 24
+```
+
+- Une **table** range des valeurs sous des clés : à chaque clé, une valeur. Elle se nomme au pluriel, avec `les`, comme un ensemble (§ 13.9), et se crée avec `valent une table vide` ou `valent la table où` suivi de paires `clé vaut valeur`, séparées par des virgules et un `et`. Une clé est un texte, un nombre, une date, une heure, une année, vrai ou faux, ou un objet ; une valeur, n'importe quelle valeur sauf absente. Deux clés sont la même si elles sont égales comme pour `=` : `2` et `2,0`, un objet par identité.
+- **Créer une clé, la modifier : deux verbes**, comme pour un nom (§ 2.1). `Dans les compteurs, « CQ » vaut 0.` ajoute la clé ; si elle y est déjà : « « CQ » est déjà une clé des compteurs. Pour changer sa valeur, écris : Dans les compteurs, « CQ » devient … » `Dans les compteurs, « CQ » devient 5.` change sa valeur ; si elle n'y est pas : « « CQ » n'est pas une clé des compteurs. Pour l'ajouter, écris : Dans les compteurs, « CQ » vaut … » Une faute de frappe dans une clé ne crée jamais d'entrée en silence. Dans `la table où`, une clé écrite deux fois est refusée de même.
+- **Lire.** `la valeur de « CQ » dans les compteurs`. Une clé absente est une erreur, rattrapable par `Essayer` : « « CQ » n'est pas une clé des compteurs. » ; la vérifier d'abord : `Si « CQ » est parmi les clés des compteurs`. La clé s'étend jusqu'à `dans`. La tournure ne vaut que si `dans les …` désigne une table déclarée, plus loin dans la phrase : un champ `valeur` garde son sens partout ailleurs.
+- **Retirer.** `Les compteurs perdent « CQ ».` retire la clé et sa valeur ; une clé absente ne change rien, comme pour un ensemble. `gagnent` n'existe pas pour une table : « Une table ne gagne pas : écris « Dans les compteurs, … vaut … ». »
+- **Les clés, les valeurs.** `les clés des tarifs`, `les valeurs des tarifs` sont des listes (§ 13.10), dans l'ordre où les clés sont arrivées ; une clé modifiée garde sa place. Elles se parcourent (`Pour chaque code parmi les clés des tarifs :`, la table figée au début de la boucle), se testent (`parmi`), se rangent (`Les codes valent les clés des tarifs.`).
+- `le nombre de tarifs` compte les clés. `Afficher les tarifs.` écrit `7601 : 24, 7602 : 12`. `Les autres valent les tarifs.` copie : changer l'une ne change pas l'autre. `Les tarifs deviennent …` remplace tout le contenu, par une table seulement.
+- **Égalité.** Deux tables sont égales si elles ont les mêmes clés, avec les mêmes valeurs, dans un ordre quelconque. Une table n'est égale qu'à une table.
+- Une table ne se mélange pas aux ensembles : `parmi les tarifs`, `le 2e élément des tarifs`, `les tarifs jointes par` sont refusés à l'analyse, avec la tournure de la table (« « tarifs » est une table : « parmi les clés des tarifs ». »).
+- Un calcul emploie une table librement, y compris une table locale qu'il remplit : elle n'est visible que de lui.
+- Une table ne se range pas dans un champ d'entité : une entité, avec un champ unique pour la clé, est la table conservée.
+- `dans`, en tête de phrase, devient un mot de construction (§ 10.7) : il ne commence plus le nom d'une action. Aucun programme du dépôt n'en avait.
+- Aucun autre mot réservé : `table`, `où`, `valeur`, `clés`, `valeurs` ne comptent qu'ainsi placés.
+- En forme compacte : `_les tarifs << _table « 7601 » _vaut 24 ; « 7602 » _vaut 12`, `_les c << _table_vide`, `_dans compteurs « CQ » _vaut 0`, `_dans compteurs « CQ » _devient 5`, `_valeur(« CQ » ; compteurs)`, `_clés(tarifs)`, `_valeurs(tarifs)`, `_les tarifs _perdent « 7602 »`.
 
 Un vrai affichage des objets reste à concevoir. L'absence de valeur est faite (§ 16.9).
 
@@ -2747,3 +2776,4 @@ Pour chaque d parmi les décodages WSJT du port 2238 :
 | 2.88 | 2026-11-06 | § 22.26 : `les décodages WSJT [du port p]`, les décodages de WSJT-X reçus en UDP, en textes JSON |
 | 2.89 | 2026-11-06 | Nouveau § 13.10 : les listes (`Les étapes valent la liste … .`, `une liste vide`), qui gardent leurs doublons ; `gagnent` ajoute à la fin, `perdent` retire la première occurrence ; les rangs, dans une liste ou un ensemble : `le 3e élément des …`, `le 1er`, `le premier`, `le dernier`, `l'élément de rang k des …` (instructions `LISTE` et `RANG`) ; les ordinaux `1er`, `2e` au lexeur, et la bonne graphie proposée pour `3ème`, `2nd`… ; `les mots de t`, `les éléments du champ « … » de r` et `les décodages WSJT` se rangent dans une liste ; égalité des listes dans l'ordre ; correction : `les e = les f` entre deux ensembles plantait la machine. Formes compactes `_liste`, `_liste_vide`, `_élément(l ; k)`, `_premier(l)`, `_dernier(l)`, `_mots t`, `_éléments « c » r` |
 | 2.90 | 2026-11-06 | Nouveau § 4.6 : découper un texte. `le 3e caractère de t`, `le premier`, `le dernier`, `le caractère de rang k de t` ; `les 5 premiers caractères de t`, `les 3 derniers` (un texte plus court se rend entier) ; `les caractères 3 à 7 de t` ; `t après « x »`, `t avant « x »` (la première occurrence ; absente, une erreur) ; `la position de « x » dans t` (0 si absente) ; `les morceaux de t séparés par « ; »`, une liste, vides compris (instruction `EXTRAIRE`). Comparaison exacte. Compatibilité (charte, art. 13.2) : `après` et `avant` suivis d'un texte, d'un nom entre crochets ou de `le`, `la`, `l'`, et `séparés par`, ferment désormais un nom, comme `sans` depuis la 2.64 ; aucun programme du dépôt n'en avait dans un nom. Formes compactes `_caractère`, `_premier_caractère`, `_dernier_caractère`, `_premiers_caractères`, `_derniers_caractères`, `_caractères`, `_après`, `_avant`, `_position`, `_morceaux` |
+| 2.91 | 2026-11-06 | Nouveau § 13.11 : les tables (`la table où « a » vaut 1 et « b » vaut 2`, `une table vide`) ; `Dans les t, k vaut v.` crée une clé, `devient` la modifie, l'un refusant ce que l'autre fait ; `la valeur de k dans les t` (clé absente : erreur) ; `les clés des t`, `les valeurs des t`, des listes ; `perdent` retire une clé ; `le nombre de t`. Type de valeur `V_TABLE` ; instructions `TABLE`, `TABLE_LIRE`, `TABLE_ECRIRE`, `TABLE_LISTE`. `dans` devient un mot de construction en tête de phrase. Correction : un symbole déclaré n'initialisait pas sa marque de liste (2.89), si bien qu'un ensemble pouvait garder ses doublons selon l'état de la mémoire. Formes compactes `_table`, `_table_vide`, `_dans t k _vaut v`, `_valeur(k ; t)`, `_clés(t)`, `_valeurs(t)` |

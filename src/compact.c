@@ -330,6 +330,61 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k++;
             continue;
         }
+        if ((est_cle(t, "clés") || est_cle(t, "valeurs")) && k + 3 < f && r->e[k + 1].type == J_PAR_OUV
+            && r->e[k + 2].type == J_CROCHETS && r->e[k + 3].type == J_PAR_FERM) {
+            /* _clés(tarifs) → les clés des tarifs ; _clés(tarifs) _contient x → x est parmi les clés des tarifs (§ 13.11) */
+            if (k + 4 < f && est_cle(&r->e[k + 4], "contient")) {
+                size_t e = k + 5;
+                int p = 0;
+                while (e < f && !(p == 0 && r->e[e].type == J_MOT_CLE
+                                  && (!strcmp(r->e[e].valeur, "et") || !strcmp(r->e[e].valeur, "ou")))) {
+                    if (r->e[e].type == J_PAR_OUV) p++;
+                    else if (r->e[e].type == J_PAR_FERM) p--;
+                    e++;
+                }
+                expression(r, k + 5, e);
+                mot(r, "est", &r->e[k + 4]);
+                mot(r, "parmi", &r->e[k + 4]);
+                mot(r, "les", t);
+                mot(r, t->valeur, t);
+                mot(r, "des", t);
+                copier(r, &r->e[k + 2]);
+                k = e - 1;
+                continue;
+            }
+            if (!(k > 0 && est_cle(&r->e[k - 1], "parmi"))) mot(r, "les", t);   /* « _parmi » a déjà écrit « parmi les » */
+            mot(r, t->valeur, t);
+            mot(r, "des", t);
+            copier(r, &r->e[k + 2]);
+            k += 3;
+            continue;
+        }
+        if (est_cle(t, "valeur") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
+            /* _valeur(k ; tarifs) → la valeur de (k) dans les tarifs (§ 13.11) */
+            size_t fin = fermante(r, k + 1, f), pv = 0;
+            if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+            int p = 0, nb = 0;
+            for (size_t q = k + 2; q < fin; q++) {
+                if (r->e[q].type == J_PAR_OUV) p++;
+                else if (r->e[q].type == J_PAR_FERM) p--;
+                else if (p == 0 && r->e[q].type == J_POINT_VIRGULE) { pv = q; nb++; }
+            }
+            if (nb != 1 || pv == k + 2 || pv + 2 != fin || r->e[pv + 1].type != J_CROCHETS) {
+                echouer(r, t, grym_dupliquer("« _valeur » s'écrit ainsi : _valeur(« clé » ; tarifs)."));
+                return;
+            }
+            mot(r, "la", t);
+            mot(r, "valeur", t);
+            mot(r, "de", t);
+            emettre(r, J_PAR_OUV, NULL, &r->e[k + 2], 1);
+            expression(r, k + 2, pv);
+            emettre(r, J_PAR_FERM, NULL, &r->e[pv], 1);
+            mot(r, "dans", &r->e[pv]);
+            mot(r, "les", &r->e[pv]);
+            copier(r, &r->e[pv + 1]);
+            k = fin;
+            continue;
+        }
         if (est_cle(t, "après") || est_cle(t, "avant")) {   /* r _après « FA » → r après « FA » (§ 4.6) */
             mot(r, t->valeur, t);
             continue;
@@ -962,6 +1017,22 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                     mot(r, "parmi", &r->e[k + 3]);
                     mot(r, "les", &r->e[k + 3]);
                     copier(r, &r->e[k + 2]);
+                    k = fin;
+                    continue;
+                }
+                if (!op && k + 7 < fin && (est_cle(&r->e[k + 2], "clés") || est_cle(&r->e[k + 2], "valeurs"))
+                    && r->e[k + 3].type == J_PAR_OUV && r->e[k + 4].type == J_CROCHETS && r->e[k + 5].type == J_PAR_FERM
+                    && est_cle(&r->e[k + 6], "contient")) {
+                    /* _non (_clés(tarifs) _contient x) → x n'est pas parmi les clés des tarifs (§ 13.11) */
+                    expression(r, k + 7, fin);
+                    emettre(r, J_ELISION, "n", &r->e[k + 6], 1);
+                    mot(r, "est", &r->e[k + 6]);
+                    mot(r, "pas", &r->e[k + 6]);
+                    mot(r, "parmi", &r->e[k + 6]);
+                    mot(r, "les", &r->e[k + 6]);
+                    mot(r, r->e[k + 2].valeur, &r->e[k + 2]);
+                    mot(r, "des", &r->e[k + 2]);
+                    copier(r, &r->e[k + 4]);
                     k = fin;
                     continue;
                 }
@@ -2815,6 +2886,35 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
                 mot(r, "un", &r->e[d + 3]);
                 mot(r, "ensemble", &r->e[d + 3]);
                 mot(r, "vide", &r->e[d + 3]);
+            } else if (d + 3 < f && est_cle(&r->e[d + 3], "table_vide") && d + 4 == f) {   /* § 13.11 */
+                mot(r, "une", &r->e[d + 3]);
+                mot(r, "table", &r->e[d + 3]);
+                mot(r, "vide", &r->e[d + 3]);
+            } else if (d + 4 < f && est_cle(&r->e[d + 3], "table") && (v->type == J_AFFECTE || est_cle(v, "deviennent"))) {
+                /* _table « a » _vaut 1 ; « b » _vaut 2 → la table où « a » vaut 1 et « b » vaut 2 (§ 13.11) */
+                mot(r, "la", &r->e[d + 3]);
+                mot(r, "table", &r->e[d + 3]);
+                mot(r, "où", &r->e[d + 3]);
+                size_t debut = d + 4;
+                int p = 0;
+                for (size_t q = d + 4; q <= f; q++) {
+                    if (q < f) {
+                        if (r->e[q].type == J_PAR_OUV) p++;
+                        else if (r->e[q].type == J_PAR_FERM) p--;
+                        if (!(p == 0 && r->e[q].type == J_POINT_VIRGULE)) continue;
+                    }
+                    size_t vaut = debut;
+                    while (vaut < q && !est_cle(&r->e[vaut], "vaut")) vaut++;
+                    if (vaut == q || vaut == debut || vaut + 1 == q) {
+                        echouer(r, &r->e[debut < f ? debut : f - 1], grym_dupliquer("Paire attendue : « « a » _vaut 1 »."));
+                        return;
+                    }
+                    if (debut > d + 4) emettre(r, J_VIRGULE, NULL, &r->e[debut - 1], 1);
+                    expression(r, debut, vaut);
+                    mot(r, "vaut", &r->e[vaut]);
+                    expression(r, vaut + 1, q);
+                    debut = q + 1;
+                }
             } else if (d + 3 < f && est_cle(&r->e[d + 3], "liste_vide") && d + 4 == f) {
                 mot(r, "une", &r->e[d + 3]);
                 mot(r, "liste", &r->e[d + 3]);
@@ -2842,6 +2942,22 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             } else {
                 expression(r, d + 3, f);
             }
+            point(r, f);
+        } else if (!strcmp(c, "dans") && d + 1 < f && r->e[d + 1].type == J_CROCHETS) {
+            /* _dans compteurs « CQ » _vaut 0 → Dans les compteurs, « CQ » vaut 0. (§ 13.11) */
+            size_t verbe = d + 2;
+            while (verbe < f && !est_cle(&r->e[verbe], "vaut") && !est_cle(&r->e[verbe], "devient")) verbe++;
+            if (verbe == f || verbe == d + 2 || verbe + 1 == f) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _dans compteurs « CQ » _vaut 0 »."));
+                return;
+            }
+            mot(r, "dans", t);
+            mot(r, "les", t);
+            copier(r, &r->e[d + 1]);
+            emettre(r, J_VIRGULE, NULL, &r->e[d + 1], 1);
+            expression(r, d + 2, verbe);
+            mot(r, r->e[verbe].valeur, &r->e[verbe]);
+            expression(r, verbe + 1, f);
             point(r, f);
         } else if (!strcmp(c, "exemple")) {   /* _exemple carré(7) << 49 → Exemple : le carré de 7 vaut 49. (§ 9.6) */
             size_t aff = d + 1;

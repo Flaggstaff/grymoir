@@ -206,6 +206,24 @@ int main(void) {
 
     /* --- Erreurs de référence (§ 6) --- */
     /* Listes et rangs (§ 13.10) */
+    /* Tables (§ 13.11) */
+    V("Les t valent la table où « a » vaut 1 et « b » vaut 2.\nLes v valent une table vide.\nDans les v, « x » vaut 0.\n"
+      "Dans les v, « x » devient la valeur de « x » dans les v + 1.\nLes t perdent « a ».\nAfficher les clés des t puis les valeurs des t.\n"
+      "Pour chaque k parmi les clés des t, afficher k.\nAfficher le nombre de t puis (« a » est parmi les clés des t).",
+      "(créer [t] (table «a» 1 «b» 2))\n(créer [v] (table))\n(modifier [v] (vaut-dans [v] «x» 0))\n"
+      "(modifier [v] (devient-dans [v] «x» (+ (valeur «x» [v]) 1)))\n(modifier [t] (perd-clé [t] «a»))\n"
+      "(afficher (clés [t]) (valeurs [t]))\n(pour-chaque-ligne [k] (clés [t]) (bloc (afficher [k])))\n"
+      "(afficher (nombre-de [t]) (groupe (? «a» (clés [t]))))");
+    V("Un client a : une valeur.\nLe c vaut un nouveau client.\nAfficher la valeur du c.",
+      "(classe [client] [valeur])\n(créer [c] (nouveau [client]))\n(afficher (champ [valeur] [c]))");
+    VE("Les t valent une table vide.\nLes t gagnent 1.", 2, 7, "Une table ne gagne pas : écris « Dans les t, … vaut … ».");
+    VE("Les t valent une table vide.\nSi 1 est parmi les t, afficher 1.", 2, 20, "« t » est une table : « parmi les clés des t ».");
+    VE("Les c valent 1 et 2.\nLes c deviennent une table vide.", 2, 5, "« c » n'est pas une table : il ne devient pas une table.");
+    VE("Les t valent une table vide.\nLes t deviennent 1 et 2.", 2, 18, "« t » est une table : « une table vide » ou « la table où … vaut … ».");
+    VE("Le x vaut 1.\nDans les x, 1 vaut 2.", 2, 6, "« Dans » ouvre « Dans les tarifs, « a » vaut 1. » : une table attendue (§ 13.11).");
+    VE("Les t valent une table vide.\nDans les t « a » vaut 1.", 2, 12, "Virgule attendue : « Dans les tarifs, « a » vaut 1. »");
+    VE("Les t valent une table vide.\nDans les t, « a » est 1.", 2, 19, "« vaut » (une clé nouvelle) ou « devient » (une clé présente) attendu.");
+    VE("Pour dans un x :\n    Afficher 1.", 1, 6, "« dans » commence une construction du langage");
     /* Découper un texte (§ 4.6) */
     V("La r vaut « FA; ».\nAfficher la r après « F » avant « ; ».\nAfficher les caractères 1 à 2 de la r.\n"
       "Afficher le 2e caractère de la r puis le dernier caractère de la r.\nAfficher les 2 premiers caractères de la r.\n"

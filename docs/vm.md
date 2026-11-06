@@ -1,6 +1,6 @@
 # Machine virtuelle et bytecode de GrymoiR
 
-Version 1.94 de la spécification, révisée le 6 novembre 2026.
+Version 1.95 de la spécification, révisée le 6 novembre 2026.
 Référence : Charte de GrymoiR v1.28, art. 2, 3, 7, 8, 10, 12 et 13 ; grammaire 1.36, § 3.3, § 4, § 5, § 9, § 10, § 13 à 19.
 Toute modification passe par une révision numérotée.
 
@@ -32,6 +32,7 @@ Règle de nommage : instructions, outils et messages s'écrivent en toutes lettr
 | année | année du calendrier, de 1 à 9999 (grammaire, § 14.5) ; s'affiche sans séparateur |
 | absent | valeur d'un champ facultatif sans valeur (grammaire, § 16.9) ; elle garde le nom du champ d'où elle vient, pour les messages |
 | fichier | contenu d'un fichier, son nom d'origine et son format d'image s'il est reconnu (grammaire, § 15). Immuable, partagé entre les valeurs qui le désignent, libéré quand plus aucune ne le désigne |
+| table | des clés et leurs valeurs, dans l'ordre d'arrivée des clés (grammaire, § 13.11) |
 
 Copier une valeur objet copie la référence, jamais l'objet. L'absence de valeur s'ajoutera avec les constructions qui en ont besoin.
 
@@ -145,6 +146,10 @@ Chaque instruction commence par un octet (son code). Un opérande, s'il existe, 
 | 126 | `LISTE` | nombre d'éléments n | dépile n valeurs ; empile la liste de ces valeurs, dans l'ordre, doublons compris (grammaire, § 13.10) |
 | 127 | `RANG` | 0 un rang, 1 le premier, 2 le dernier | forme 0 : dépile le rang, puis la liste ou l'ensemble ; formes 1 et 2 : la liste seule ; empile l'élément (le rang 1 est le premier) |
 | 128 | `EXTRAIRE` | la forme (0 à 10) | découpe un texte (grammaire, § 4.6) : dépile les valeurs de la tournure, dans l'ordre de la phrase (pour la position : le texte cherché, puis le texte) ; empile un texte, un nombre (forme 9) ou une liste (forme 10) |
+| 129 | `TABLE` | nombre de paires n | dépile le nom de la table, puis n paires clé, valeur ; empile la table ; une clé en double est une erreur (grammaire, § 13.11) |
+| 130 | `TABLE_LIRE` | aucun | dépile le nom, la table, puis la clé ; empile sa valeur ; une clé absente est une erreur |
+| 131 | `TABLE_ECRIRE` | 0 vaut, 1 devient, 2 perdre | formes 0 et 1 : dépile le nom, la valeur, la clé, puis la table ; 0 exige une clé nouvelle, 1 une clé présente ; forme 2 : dépile la clé, puis la table, et retire la paire si elle y est ; empile la table changée |
+| 132 | `TABLE_LISTE` | 0 les clés, 1 les valeurs | remplace la table par la liste de ses clés ou de ses valeurs, dans l'ordre d'arrivée des clés |
 
 ### 3.1 Boucles et Selon
 
@@ -475,3 +480,4 @@ Tout ce qui touche l'utilisateur passe par une interface (`src/interface.h`), qu
 | 1.92 | 2026-10-21 | Instruction `CHANGER_MDP_BASE` (100) ; la marque « base chiffrée » du module (`base_chiffree`), un octet à la fin du fichier (bit 1) ; `machine_mot_de_passe_base`, `machine_demande_mot_de_passe` ; `base_ouvrir_chiffree` ; `SAUVEGARDER` d'une base chiffrée : un coffre de format 2 ; format version 70 (grammaire 2.37) |
 | 1.93 | 2026-11-06 | Instructions `LISTE` (126) et `RANG` (127) (grammaire 2.89, § 13.10) ; une `Liste` porte `doublons` : une liste garde ses doublons, `GAGNER` l'ajoute toujours à la fin ; l'égalité de deux listes suit l'ordre ; `ÉGAL` entre deux ensembles ne lit plus un texte absent ; format inchangé (71) |
 | 1.94 | 2026-11-06 | Instruction `EXTRAIRE` (128) (grammaire 2.90, § 4.6) ; les caractères se comptent en UTF-8, un par caractère, comme `la longueur de` |
+| 1.95 | 2026-11-06 | Type de valeur `table` (`V_TABLE`, § 2) : la liste d'un ensemble, clé, valeur, clé, valeur… ; instructions `TABLE` (129), `TABLE_LIRE` (130), `TABLE_ECRIRE` (131), `TABLE_LISTE` (132) (grammaire 2.91, § 13.11) ; le nom de la table, empilé par le compilateur, ne sert qu'aux messages |
