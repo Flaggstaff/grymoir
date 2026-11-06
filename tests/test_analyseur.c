@@ -206,6 +206,12 @@ int main(void) {
 
     /* --- Erreurs de référence (§ 6) --- */
     /* Listes et rangs (§ 13.10) */
+    /* Le texte suivant (§ 4.7) */
+    V("Le n vaut 2.\nLe x vaut le texte suivant :\n    a {n + 1} {{b}}\nAfficher le texte suivant :\n    {x}",
+      "(créer [n] 2)\n(créer [x] (gabarit «a » (+ [n] 1) « {b}»))\n(afficher (gabarit [x]))");
+    V("Le texte vaut vrai.\nSi le texte :\n    Afficher 1.", "(créer [texte] vrai)\n(si [texte] (bloc (afficher 1)))");
+    VE("Le x vaut le texte suivant :\nAfficher x.", 1, 28, "« le texte suivant : » attend ses lignes à la suite, plus indentées.");
+    VE("Le x vaut le texte suivant :\n    a {1 2} b", 2, 10, "« } » attendu : une seule expression entre accolades");
     /* Les sortes d'échec (§ 18.2) */
     V("Essayer :\n    Afficher 1.\nEn cas d'échec d'unicité ou de réseau :\n    Afficher la sorte de l'échec.\nEn cas d'échec, afficher 2.",
       "(essayer (bloc (afficher 1)) échec-de unicité|réseau (bloc (afficher (sorte-échec))) échec (bloc (afficher 2)))");

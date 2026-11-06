@@ -38,6 +38,11 @@ typedef enum {
     J_AFFECTE,      /* forme compacte : << */
     J_POINT_VIRGULE,/* forme compacte : ; */
     J_ORDINAL,      /* « 3e », « 1er », « 1re » (§ 13.10) ; valeur : le nombre puis l'abréviation, en minuscules */
+    J_GABARIT_DEBUT,/* le bloc de « le texte suivant : » commence (§ 4.7) */
+    J_GABARIT,      /* un morceau de texte brut du bloc ; valeur : le texte, retours à la ligne compris */
+    J_ACC_OUV,      /* « { » dans le bloc : une expression suit */
+    J_ACC_FERM,     /* « } » qui la ferme */
+    J_GABARIT_FIN,  /* le bloc finit ; en forme littéraire, un point synthétique suit */
     J_ERREUR        /* valeur : message en français */
 } TypeJeton;
 

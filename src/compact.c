@@ -330,6 +330,26 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k++;
             continue;
         }
+        if (est_cle(t, "texte_suivant") && k + 1 < f && r->e[k + 1].type == J_GABARIT_DEBUT) {
+            /* _texte_suivant et son bloc → le texte suivant : et le même bloc, chaque accolade relue (§ 4.7) */
+            mot(r, "le", t);
+            mot(r, "texte", t);
+            mot(r, "suivant", t);
+            emettre(r, J_DEUX_POINTS, NULL, t, 1);
+            size_t q = k + 1;
+            for (; q < f && r->e[q].type != J_GABARIT_FIN; q++) {
+                if (r->e[q].type != J_ACC_OUV) { copier(r, &r->e[q]); continue; }
+                size_t g = q + 1;
+                while (g < f && r->e[g].type != J_ACC_FERM) g++;
+                copier(r, &r->e[q]);
+                expression(r, q + 1, g);
+                if (g < f) copier(r, &r->e[g]);
+                q = g;
+            }
+            if (q < f) copier(r, &r->e[q]);
+            k = q;
+            continue;
+        }
         if ((est_cle(t, "clés") || est_cle(t, "valeurs")) && k + 3 < f && r->e[k + 1].type == J_PAR_OUV
             && r->e[k + 2].type == J_CROCHETS && r->e[k + 3].type == J_PAR_FERM) {
             /* _clés(tarifs) → les clés des tarifs ; _clés(tarifs) _contient x → x est parmi les clés des tarifs (§ 13.11) */
@@ -3342,9 +3362,10 @@ int compact_vers_litteraire(Jeton *e, size_t n, Jeton **sortie, size_t *nb_sorti
         int p = 0;
         k++;
         if (e[d].type == J_PAR_OUV) p++;
-        while (k < n && e[k].type != J_FIN && (p > 0 || e[k].ligne == e[k - 1].ligne) && e[d].type != J_REMARQUE) {
-            if (e[k].type == J_PAR_OUV) p++;
-            else if (e[k].type == J_PAR_FERM) p--;
+        while (k < n && e[k].type != J_FIN && (p > 0 || e[k].ligne == e[k - 1].ligne || e[k].type == J_GABARIT_DEBUT)
+               && !(p == 0 && e[k - 1].type == J_GABARIT_FIN) && e[d].type != J_REMARQUE) {
+            if (e[k].type == J_PAR_OUV || e[k].type == J_GABARIT_DEBUT) p++;   /* le bloc d'un texte suivant (§ 4.7) */
+            else if (e[k].type == J_PAR_FERM || e[k].type == J_GABARIT_FIN) p--;
             k++;
         }
         instruction(&r, d, k);

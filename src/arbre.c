@@ -219,6 +219,11 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->nb_enfants) decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_GABARIT:   /* (gabarit «Bonjour » [prénom] «,») (§ 4.7) */
+        chaine_ajouter(c, "(gabarit");
+        for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }
+        chaine_ajouter(c, ")");
+        return;
     case N_TABLE: case N_TABLE_LIRE: case N_TABLE_ECRIRE: case N_TABLE_LISTE: {   /* (table k v …), (valeur k t), (dans t k vaut v)… */
         const char *nom = n->type == N_TABLE ? "table" : n->type == N_TABLE_LIRE ? "valeur"
                         : n->type == N_TABLE_LISTE ? (n->forme ? "valeurs" : "clés")

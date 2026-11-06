@@ -418,6 +418,16 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[1]);
         emettre(c, I_CADRER, (long)n->forme, n->op_ligne, n->op_colonne);
         return;
+    case N_GABARIT: {   /* « le texte suivant : » : un texte vide, puis chaque morceau collé, comme « suivi de » (§ 4.7) */
+        long k = bloc_constante(c->b, C_TEXTE, "");
+        if (k < 0) { trop_grand(c, n); return; }
+        emettre(c, I_CONSTANTE, k, n->ligne, n->colonne);
+        for (size_t q = 0; q < n->nb_enfants; q++) {
+            expression(c, n->enfants[q]);
+            emettre(c, I_COLLER, 0, n->enfants[q]->ligne, n->enfants[q]->colonne);
+        }
+        return;
+    }
     case N_COLLAGE:   /* « a suivi de b » : COLLER (§ 4.4) */
         expression(c, n->enfants[0]);
         expression(c, n->enfants[1]);

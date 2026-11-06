@@ -161,6 +161,12 @@ int main(void) {
     VM("2er", "« 2er » s'écrit « 2e ».");
     VM("3,5e", "collé à un mot");
     VM("1'000e", "collé à un mot");
+    /* Le texte suivant (§ 4.7) : le bloc en texte brut, les accolades en jetons */
+    V("Le x vaut le texte suivant :\n    a : {n}, b\n    c\nAfficher x.",
+      "MOT(le) MOT(x) MOT(vaut) MOT(le) MOT(texte) MOT(suivant) DEUX_POINTS GABARIT_DÉBUT GABARIT(a : ) ACC_OUV MOT(n) ACC_FERM "
+      "GABARIT(, b\nc) GABARIT_FIN POINT MOT(afficher) MOT(x) POINT");
+    VM("Le x vaut le texte suivant :\n    a {1\n", "Une expression entre accolades tient sur une ligne");
+    VM("Le x vaut le texte suivant :\n    a } b\n", "« } » seul dans un texte suivant");
 
     /* --- Mots, casse, élision --- */
     V("SOLDE Solde solde", "MOT(solde) MOT(solde) MOT(solde)");

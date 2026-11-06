@@ -273,6 +273,8 @@ int main(void) {
     ALLER_RETOUR("_essayer\n    _afficher 1 ÷ 0\n_échec_de division _ou nombre\n    _afficher _sorte\n_échec_de absence\n    _afficher 2\n"
                  "_échec\n    _afficher _motif\n_fin\n", NULL);
     ERR("_échec_de réseau\n", 1, 1, "« _échec_de » hors d'un « _essayer ».");
+    ALLER_RETOUR("_le n << 2\n_le x << _texte_suivant\n    a : {_nu n + 1}, {{b}}\n\n      c\n_si _nu n > 1 _alors\n"
+                 "    _afficher _texte_suivant\n        {_nu x} fin\n_fin\n_afficher _nu n\n", NULL);
     ERR("_les l << _liste 1 ; 2\n_afficher _élément(l)\n", 2, 11, "« _élément » prend la liste et le rang : _élément(étapes ; 3).");
     ERR("_les l << _liste 1 ; 2\n_afficher _premier(l ; 2)\n", 2, 11, "« _premier » prend la liste seule : _premier(étapes).");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"

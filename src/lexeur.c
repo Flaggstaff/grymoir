@@ -19,6 +19,12 @@ struct Lexeur {
     int debut_ligne;   /* vrai si seuls des blancs précèdent pos sur la ligne */
     int termine;
     int compact;       /* forme compacte (§ 11.1) */
+    /* le texte suivant (§ 4.7) : les deux derniers mots vus, et l'état du bloc */
+    int vu_texte, vu_suivant;
+    int gabarit;       /* 0 hors du bloc ; 1 : DÉBUT à émettre ; 2 : texte brut ; 3 : expression entre accolades ;
+                          4 : ACC_OUV à émettre ; 5 : FIN à émettre ; 6 : le point synthétique à émettre */
+    int gab_base, gab_bloc;   /* retrait de la ligne qui ouvre le bloc, et de sa première ligne */
+    int gab_premier;          /* le premier morceau du bloc : ses lignes vides de tête tombent */
 };
 
 /* ---------------------------------------------------------------- */
@@ -253,6 +259,7 @@ Lexeur *lexeur_creer(const char *source, size_t taille, char **erreur) {
     if (!decoder_utf8((const unsigned char *)source, taille, &cp, &n, erreur))
         return NULL;
     Lexeur *lx = allouer(sizeof *lx);
+    memset(lx, 0, sizeof *lx);   /* tout champ ajouté naît à zéro (le texte suivant, § 4.7, en a ajouté cinq) */
     lx->cp = cp;
     lx->n = normaliser(cp, n);
     lx->pos = 0;
@@ -287,7 +294,7 @@ const char *type_jeton_nom(TypeJeton t) {
         "DIVISE", "PUISSANCE", "PAR_OUV", "PAR_FERM", "POINT", "VIRGULE",
         "DEUX_POINTS", "REMARQUE", "ÉGAL", "DIFFÉRENT", "INFÉRIEUR", "SUPÉRIEUR",
         "INFÉRIEUR_OU_ÉGAL", "SUPÉRIEUR_OU_ÉGAL", "CROCHETS", "DATE", "HEURE", "ARTICLE_IMPLICITE", "MOT_CLÉ",
-        "AFFECTE", "POINT_VIRGULE", "ORDINAL", "ERREUR"
+        "AFFECTE", "POINT_VIRGULE", "ORDINAL", "GABARIT_DÉBUT", "GABARIT", "ACC_OUV", "ACC_FERM", "GABARIT_FIN", "ERREUR"
     };
     return (t >= J_FIN && t <= J_ERREUR) ? NOMS[t] : "?";
 }
@@ -676,7 +683,7 @@ static Jeton lire_compact(Lexeur *lx, size_t debut, int ligne, int col) {
 
 /* ---------- Aiguillage ---------- */
 
-Jeton lexeur_suivant(Lexeur *lx) {
+static Jeton suivant_brut(Lexeur *lx) {
     if (!lx->termine)
         while (reste(lx, 0) && est_blanc(voir(lx, 0))) {
             /* L'indentation délimite les blocs (§ 5) : pas de tabulation en début de ligne. */
@@ -784,4 +791,155 @@ Jeton lexeur_suivant(Lexeur *lx) {
     char *m = formater("Caractère inattendu « %s ».", car);
     free(car);
     return echec(lx, debut, ligne, col, m);
+}
+
+/* ---------- Le texte suivant (§ 4.7) ---------- */
+
+/* Le retrait (en colonnes, à partir de 1) de la ligne qui contient la position p. */
+static int retrait_de_ligne(const Lexeur *lx, size_t p) {
+    size_t d = p;
+    while (d > 0 && lx->cp[d - 1] != '\n') d--;
+    int r = 1;
+    while (d < lx->n && lx->cp[d] == ' ') { d++; r++; }
+    return r;
+}
+
+/* Après « le texte suivant : » ou « _texte_suivant » : vrai si le reste de la ligne est blanc et si la prochaine ligne non
+ * blanche est plus indentée ; *bloc reçoit son retrait. */
+static int bloc_suit(const Lexeur *lx, int base, int *bloc) {
+    size_t p = lx->pos;
+    while (p < lx->n && lx->cp[p] != '\n') { if (!est_blanc(lx->cp[p])) return 0; p++; }
+    while (p < lx->n) {
+        p++;   /* le retour à la ligne */
+        int r = 1;
+        while (p < lx->n && lx->cp[p] == ' ') { p++; r++; }
+        if (p >= lx->n) return 0;
+        if (lx->cp[p] == '\n' || est_blanc(lx->cp[p])) { while (p < lx->n && lx->cp[p] != '\n') p++; continue; }
+        if (r <= base) return 0;
+        *bloc = r;
+        return 1;
+    }
+    return 0;
+}
+
+/* Un morceau de texte brut du bloc, jusqu'à « { » ou à la fin du bloc. La position part du début d'une ligne du bloc, ou
+ * de juste après « } ». */
+static Jeton lire_gabarit(Lexeur *lx) {
+    Tampon t = {0};
+    size_t debut = lx->pos;
+    int ligne = lx->ligne, col = lx->colonne;
+    int sauts = 0, contenu = !lx->gab_premier;   /* après « } », un saut de ligne compte */
+    lx->gab_premier = 0;
+    for (;;) {
+        if (lx->colonne == 1) {   /* début d'une ligne : son retrait, ou la fin du bloc */
+            size_t p = lx->pos;
+            int r = 1;
+            while (p < lx->n && lx->cp[p] == ' ') { p++; r++; }
+            const int blanche = p >= lx->n || lx->cp[p] == '\n';
+            if (p < lx->n && lx->cp[p] == '\t')
+                return echec(lx, p, lx->ligne, r, formater("Tabulation en début de ligne : indente avec des espaces."));
+            if (!blanche && r <= lx->gab_base) {   /* la fin du bloc : les sauts de ligne de la fin tombent */
+                lx->gabarit = 5;
+                lx->debut_ligne = 1;
+                return faire(lx, J_GABARIT, debut, ligne, col, tampon_rendre(&t));
+            }
+            if (p >= lx->n) {
+                while (lx->pos < p) avancer(lx);
+                lx->gabarit = 5;
+                return faire(lx, J_GABARIT, debut, ligne, col, tampon_rendre(&t));
+            }
+            int a_sauter = r - 1 < lx->gab_bloc - 1 ? r - 1 : lx->gab_bloc - 1;
+            if (blanche) a_sauter = r - 1;
+            for (int k = 0; k < a_sauter; k++) avancer(lx);
+            if (!contenu) sauts = 0;   /* les sauts en attente ne s'écrivent qu'avec un vrai caractère : ceux de la fin tombent */
+        }
+        if (lx->pos >= lx->n) {
+            lx->gabarit = 5;
+            return faire(lx, J_GABARIT, debut, ligne, col, tampon_rendre(&t));
+        }
+        uint32_t c = lx->cp[lx->pos];
+        if (c == '\n') {
+            sauts++;
+            avancer(lx);
+            continue;
+        }
+        if (!contenu) contenu = 1;
+        for (; sauts > 0; sauts--) tampon_octet(&t, '\n');
+        if (c == '{' && voir(lx, 1) == '{') { avancer(lx); avancer(lx); tampon_octet(&t, '{'); continue; }
+        if (c == '}' && voir(lx, 1) == '}') { avancer(lx); avancer(lx); tampon_octet(&t, '}'); continue; }
+        if (c == '}') {
+            free(t.d);
+            return echec(lx, lx->pos, lx->ligne, lx->colonne,
+                         formater("« } » seul dans un texte suivant : écris « }} » pour une accolade, ou ouvre l'expression par « { »."));
+        }
+        if (c == '{') {
+            Jeton j = faire(lx, J_GABARIT, debut, ligne, col, tampon_rendre(&t));
+            lx->gabarit = 4;
+            return j;
+        }
+        tampon_cp(&t, c);
+        avancer(lx);
+    }
+}
+
+Jeton lexeur_suivant(Lexeur *lx) {
+    switch (lx->gabarit) {
+    case 1: {   /* le bloc commence, à la ligne suivante */
+        while (lx->pos < lx->n && lx->cp[lx->pos] != '\n') avancer(lx);
+        avancer(lx);
+        lx->gabarit = 2;
+        lx->gab_premier = 1;
+        return faire(lx, J_GABARIT_DEBUT, lx->pos, lx->ligne, lx->colonne, NULL);
+    }
+    case 2: return lire_gabarit(lx);
+    case 4: {   /* « { » : une expression, sur la même ligne */
+        size_t d = lx->pos;
+        int l = lx->ligne, c = lx->colonne;
+        avancer(lx);
+        lx->gabarit = 3;
+        return faire(lx, J_ACC_OUV, d, l, c, NULL);
+    }
+    case 3: {
+        while (lx->pos < lx->n && (lx->cp[lx->pos] == ' ' || lx->cp[lx->pos] == '\t')) avancer(lx);
+        if (lx->pos >= lx->n || lx->cp[lx->pos] == '\n')
+            return echec(lx, lx->pos, lx->ligne, lx->colonne,
+                         formater("Une expression entre accolades tient sur une ligne : « } » manque."));
+        if (lx->cp[lx->pos] == '}') {
+            size_t d = lx->pos;
+            int l = lx->ligne, c = lx->colonne;
+            avancer(lx);
+            lx->gabarit = 2;
+            return faire(lx, J_ACC_FERM, d, l, c, NULL);
+        }
+        lx->debut_ligne = 0;
+        return suivant_brut(lx);
+    }
+    case 5:
+        lx->gabarit = lx->compact ? 0 : 6;
+        return faire(lx, J_GABARIT_FIN, lx->pos, lx->ligne, lx->colonne, NULL);
+    case 6: {   /* le point de la phrase, que le bloc remplace */
+        lx->gabarit = 0;
+        Jeton j = faire(lx, J_POINT, lx->pos, lx->ligne, lx->colonne, NULL);
+        j.synthetique = 1;
+        return j;
+    }
+    default: break;
+    }
+    Jeton j = suivant_brut(lx);
+    /* vu_texte : le jeton précédent était « texte » ; vu_suivant : c'était « suivant », après « texte » */
+    const int declencheur = lx->compact ? j.type == J_MOT_CLE && j.valeur && strcmp(j.valeur, "texte_suivant") == 0
+                                        : j.type == J_DEUX_POINTS && lx->vu_suivant;
+    const int est_mot_ = j.type == J_MOT && j.valeur;
+    lx->vu_suivant = est_mot_ && strcmp(j.valeur, "suivant") == 0 && lx->vu_texte;
+    lx->vu_texte = est_mot_ && strcmp(j.valeur, "texte") == 0;
+    if (declencheur) {
+        const int base = retrait_de_ligne(lx, j.debut);
+        int bloc;
+        if (bloc_suit(lx, base, &bloc)) {
+            lx->gabarit = 1;
+            lx->gab_base = base;
+            lx->gab_bloc = bloc;
+        }
+    }
+    return j;
 }

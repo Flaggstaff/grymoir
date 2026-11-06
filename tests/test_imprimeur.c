@@ -55,10 +55,33 @@ static void verifier_point_fixe(int l, const char *src) {
 #define COMP(src, att)  verifier(__LINE__, src, att, 1)
 #define FIXE(src)       verifier_point_fixe(__LINE__, src)
 
+/* Les marques de l'atelier (« \x01actif\x01 », 2.33) traversent l'imprimeur intactes, texte suivant ou non : la 2.93 les
+ * effaçait (sa marque de fin de bloc était aussi \x01), et quatorze essais de l'atelier sont tombés (6 novembre 2026). */
+static void essai_marques_atelier(void) {
+    const char *src = "Le x vaut « a ».\nLe y vaut le texte suivant :\n    b {x}\n";
+    Portee *p = portee_creer();
+    Programme prog;
+    Diagnostic d;
+    total++;
+    if (!analyser(src, strlen(src), p, 0, &prog, &d)) { echecs++; printf("ÉCHEC marques : %s\n", d.message); diagnostic_liberer(&d); portee_detruire(p); return; }
+    Noeud *t = prog.phrases[0]->enfants[0];
+    free(t->texte);
+    t->texte = grym_dupliquer("\x01" "actif" "\x01");
+    char *r = imprimer_litteraire(&prog);
+    if (!strstr(r, "« \x01" "actif" "\x01 »") || !strstr(r, "    b {x}\n") || strstr(r, "{x}\n.")) {
+        echecs++;
+        printf("ÉCHEC (essai_marques_atelier) : marque perdue ou point resté\n  obtenu : %s\n", r);
+    }
+    free(r);
+    programme_liberer(&prog);
+    portee_detruire(p);
+}
+
 int main(void) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
+    essai_marques_atelier();
     /* --- Forme littéraire canonique (§ 12) : présentation normalisée, programme conservé --- */
     LITT("le  TOTAL   vaut 1\u00a0000.   Afficher \"x\" puis TOTAL.\n\n\n\nsi total > 3 :\n      afficher \" a \".\n"
          "SINON, afficher “b”.",
@@ -117,6 +140,10 @@ int main(void) {
          "En cas d'échec de division, afficher 2.\nEn cas d'échec, afficher le motif de l'échec.\n");
     COMP("Essayer :\n    Afficher 1.\nEn cas d'échec d'unicité ou de réseau :\n    Afficher la sorte de l'échec.\nEn cas d'échec :\n    Afficher 2.\n",
          "_essayer\n    _afficher 1\n_échec_de unicité _ou réseau\n    _afficher _sorte\n_échec\n    _afficher 2\n_fin\n");
+    FIXE("Le n vaut 2.\nLe x vaut le texte suivant :\n    a : {n + 1}, {{b}}\n\n      c\nSi n > 1 :\n    Afficher le texte suivant :\n"
+         "        {x} fin\nAfficher n.\n");
+    COMP("Le n vaut 2.\nLe x vaut le texte suivant :\n    a {n}\n    b\nAfficher x.\n",
+         "_le n << 2\n_le x << _texte_suivant\n    a {_nu n}\n    b\n_afficher _nu x\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

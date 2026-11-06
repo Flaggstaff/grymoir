@@ -2355,6 +2355,18 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* Le texte suivant (§ 4.7) : retrait de la première ligne, retrait plus grand gardé, lignes vides du milieu gardées,
+     * de la fin ôtées, saut de ligne après une accolade gardé (un défaut de la première version le perdait) */
+    PROG("Une séance a : un prénom, une date, une heure, un tarif.\nLa s vaut une nouvelle séance :\n    Le prénom vaut « Ana ».\n"
+         "    La date vaut 13.11.2026.\n    L'heure vaut 9:30.\n    Le tarif vaut 1200.\nLe rappel vaut le texte suivant :\n"
+         "    Bonjour {prénom de la s},\n\n    Votre séance du {date de la s en toutes lettres} à {heure de la s}\n"
+         "    est confirmée : {tarif de la s} CHF.\n      Merci.\n    Les {{accolades}} doublées.\n\n\nAfficher le rappel.\n"
+         "Afficher la longueur du rappel.",
+         "Bonjour Ana,\n\nVotre séance du vendredi 13 novembre 2026 à 09:30\nest confirmée : 1200 CHF.\n  Merci.\n"
+         "Les {accolades} doublées.\n124");
+    PROG("Le x vaut le texte suivant :\n    {1}\n    {2}\nAfficher x puis « | ».", "1\n2 |");
+    PROG("Une n a : une note, facultative.\nLe m vaut une nouvelle n.\nAfficher le texte suivant :\n    {note du m}",
+         "ERREUR 4:6 Le champ « note » est absent : vérifie-le d'abord avec « est présent ».");
     /* Les sortes d'échec (§ 18.2) : une par sorte, car la sorte est promise et le motif ne l'est pas */
     PROG("Essayer :\n    Afficher 1 ÷ 0.\nEn cas d'échec, afficher la sorte de l'échec.", "division");
     PROG("Essayer :\n    Afficher 2 ^ 0,5.\nEn cas d'échec, afficher la sorte de l'échec.", "nombre");

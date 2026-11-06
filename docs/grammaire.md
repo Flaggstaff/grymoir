@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.92 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.93 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -51,7 +51,7 @@ Périmètre : nommer (§ 2), calculer (§ 3), afficher et mettre en forme (§ 4)
 - Délimité par `« »`, par `“ ”` (guillemets anglais, insérés par Word) ou par `" "`.
 - Les espaces placées à l'intérieur des guillemets français ne font pas partie du texte : `« Bonjour »` vaut `Bonjour`. Les autres guillemets conservent leurs espaces.
 - Le guillemet `„` est refusé.
-- Un texte tient sur une ligne.
+- Un texte tient sur une ligne. Plusieurs lignes : le texte suivant (§ 4.7).
 
 ### 1.6 Comparaisons, crochets, indentation
 
@@ -347,6 +347,29 @@ Afficher le nombre de cellules puis le 4e élément des cellules.           → 
 - Un calcul les emploie librement.
 - Aucun mot réservé : `caractère`, `caractères`, `premiers`, `derniers`, `après`, `avant`, `position`, `morceaux`, `séparés` ne comptent qu'ainsi placés ; un nom, un calcul ou un champ déclaré l'emporte.
 - En forme compacte : `_caractère(t ; 3)`, `_premier_caractère(t)`, `_dernier_caractère(t)`, `_premiers_caractères(t ; 5)`, `_derniers_caractères(t ; 3)`, `_caractères(t ; 3 ; 7)`, `t _après « FA »`, `t _avant « ; »`, `_position(« x » ; t)`, `_les c << _morceaux(t ; « ; »)`. Un rang constant revient en chiffres (`le 3e caractère`), un rang calculé en `le caractère de rang … de …`.
+
+### 4.7 Le texte suivant *(2.93)*
+
+```
+Le rappel vaut le texte suivant :
+    Bonjour {prénom du patient},
+
+    Votre séance du {date de la séance en toutes lettres} à {heure de la séance}
+    est confirmée. Le tarif reste de {tarif de la séance} CHF.
+
+    Les {{accolades}} s'écrivent doublées.
+Afficher le rappel.
+```
+
+- `le texte suivant :` en fin de ligne ouvre un **texte sur plusieurs lignes** : les lignes qui suivent, plus indentées, en sont le contenu, tel qu'écrit. Apostrophes, deux-points, guillemets, ponctuation : rien n'y est un mot du langage. Le texte finit à la première ligne non vide qui n'est plus indentée ; il remplace le point final de la phrase.
+- Le retrait de la **première** ligne est celui du texte : il est retiré de chaque ligne, et un retrait plus grand reste (`      Merci.` sous des lignes à quatre espaces garde deux espaces). Les lignes vides du milieu restent ; celles de la fin tombent. Les lignes se séparent par un retour à la ligne, la dernière n'en a pas.
+- **Les accolades.** `{expression}` insère une valeur, écrite comme `suivi de` l'écrit (§ 4.4) : un nombre au style du programme, une date au format suisse, une valeur absente est une erreur. L'expression tient sur une ligne : « Une expression entre accolades tient sur une ligne : « } » manque. ». Une seule expression : « « } » attendu : une seule expression entre accolades, « {prénom du patient} ». ». `{{` et `}}` écrivent une accolade ; une accolade fermante seule est une erreur.
+- C'est une valeur comme une autre : elle se range (`vaut`, `devient`), s'affiche, se passe en argument. Elle finit toujours sa phrase : `Afficher le texte suivant :` puis le bloc.
+- Sans lignes plus indentées : « « le texte suivant : » attend ses lignes à la suite, plus indentées. »
+- `suivant`, après `le texte` et avant `:` en fin de ligne, ne compte qu'ainsi : une variable `texte` garde son sens (`Selon le texte :`). Aucun mot réservé.
+- Le texte se compile comme une suite de `suivi de` : rien de nouveau dans la machine.
+- Un texte entre guillemets tient toujours sur une ligne (§ 1.5) : le texte suivant est la seule manière d'écrire plusieurs lignes.
+- En forme compacte : `_le rappel << _texte_suivant`, puis le même bloc, plus indenté, les accolades en forme compacte (`{patient.prénom}`) ; pas de `_fin`.
 
 ## 5. Décider
 
@@ -2822,3 +2845,4 @@ Pour chaque d parmi les décodages WSJT du port 2238 :
 | 2.90 | 2026-11-06 | Nouveau § 4.6 : découper un texte. `le 3e caractère de t`, `le premier`, `le dernier`, `le caractère de rang k de t` ; `les 5 premiers caractères de t`, `les 3 derniers` (un texte plus court se rend entier) ; `les caractères 3 à 7 de t` ; `t après « x »`, `t avant « x »` (la première occurrence ; absente, une erreur) ; `la position de « x » dans t` (0 si absente) ; `les morceaux de t séparés par « ; »`, une liste, vides compris (instruction `EXTRAIRE`). Comparaison exacte. Compatibilité (charte, art. 13.2) : `après` et `avant` suivis d'un texte, d'un nom entre crochets ou de `le`, `la`, `l'`, et `séparés par`, ferment désormais un nom, comme `sans` depuis la 2.64 ; aucun programme du dépôt n'en avait dans un nom. Formes compactes `_caractère`, `_premier_caractère`, `_dernier_caractère`, `_premiers_caractères`, `_derniers_caractères`, `_caractères`, `_après`, `_avant`, `_position`, `_morceaux` |
 | 2.91 | 2026-11-06 | Nouveau § 13.11 : les tables (`la table où « a » vaut 1 et « b » vaut 2`, `une table vide`) ; `Dans les t, k vaut v.` crée une clé, `devient` la modifie, l'un refusant ce que l'autre fait ; `la valeur de k dans les t` (clé absente : erreur) ; `les clés des t`, `les valeurs des t`, des listes ; `perdent` retire une clé ; `le nombre de t`. Type de valeur `V_TABLE` ; instructions `TABLE`, `TABLE_LIRE`, `TABLE_ECRIRE`, `TABLE_LISTE`. `dans` devient un mot de construction en tête de phrase. Correction : un symbole déclaré n'initialisait pas sa marque de liste (2.89), si bien qu'un ensemble pouvait garder ses doublons selon l'état de la mémoire. Formes compactes `_table`, `_table_vide`, `_dans t k _vaut v`, `_valeur(k ; t)`, `_clés(t)`, `_valeurs(t)` |
 | 2.92 | 2026-11-06 | Nouveau § 18.2 : les sortes d'échec (`division`, `nombre`, `lecture`, `absence`, `clé`, `rang`, `texte`, `unicité`, `lien`, `fichier`, `réseau`, `port`, `saisie`, `refus`, `autre`), promises, contrairement au motif ; `En cas d'échec de réseau ou de fichier :`, plusieurs blocs, le premier qui convient ; sans bloc qui convienne, l'échec remonte ; `la sorte de l'échec`. Instructions `SORTE_ECHEC` et `RELANCER`. Formes compactes `_échec_de`, `_sorte` |
+| 2.93 | 2026-11-06 | Nouveau § 4.7 : le texte suivant (`Le rappel vaut le texte suivant :` puis un bloc plus indenté, texte brut, `{expression}` insérée comme par `suivi de`, `{{` et `}}` pour une accolade) ; le lexeur découpe le bloc (jetons `GABARIT_DÉBUT`, `GABARIT`, `ACC_OUV`, `ACC_FERM`, `GABARIT_FIN`), aucune instruction nouvelle. Forme compacte `_texte_suivant` |

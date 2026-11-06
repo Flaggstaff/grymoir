@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define FIN_GABARIT "\x02\x03"   /* la fin du bloc d'un texte suivant (§ 4.7) : voir sans_marques */
+
 /* ---------------------------------------------------------------- */
 /* Genres connus : pour régénérer articles et accords               */
 /* ---------------------------------------------------------------- */
@@ -45,6 +47,8 @@ typedef struct {
     int champ_nu;          /* on écrit l'objet d'un champ resté sans article : il reste nu aussi (« longueur de n ») */
     int garder_groupe;     /* le membre gauche d'une opération : ses parenthèses restent (« de (… dont …) − … ») */
     int sans_marque;       /* l'objet d'un champ compact (`c.nom`) : pas de « _nu » ni d'article devant lui (2.35) */
+    int niveau;            /* le niveau de la phrase en cours : le bloc d'un texte suivant s'écrit un cran plus loin (§ 4.7) */
+
     int sans_marque_objet; /* « o.genres _gagne … » : pas de marque devant l'objet d'un champ en tête de phrase (2.36) */
     char **variables;      /* les variables créées avec un article (« L'effectif vaut 12. ») et leur genre (§ 11.4) */
     Genre *genres_var;
@@ -937,6 +941,31 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, im->compact ? " _jointes " : n->forme ? " joints par " : " jointes par ");
         expression(im, n->enfants[1]);
         return;
+    case N_GABARIT: {   /* « le texte suivant : » puis le bloc, un cran plus loin ; « _texte_suivant » (§ 4.7) */
+        aj(im, im->compact ? "_texte_suivant\n" : "le texte suivant :\n");
+        const int niveau = im->niveau + 1;
+        int debut_ligne = 1;
+        for (size_t k = 0; k < n->nb_enfants; k++) {
+            const Noeud *e = n->enfants[k];
+            if (e->type == N_TEXTE && e->forme == 1) {   /* un morceau brut : les accolades doublées */
+                for (const char *q = e->texte ? e->texte : ""; *q; q++) {
+                    if (*q == '\n') { aj(im, "\n"); debut_ligne = 1; continue; }
+                    if (debut_ligne) { retrait(im, niveau); debut_ligne = 0; }
+                    if (*q == '{') aj(im, "{{");
+                    else if (*q == '}') aj(im, "}}");
+                    else { char u[2] = { *q, 0 }; aj(im, u); }
+                }
+            } else {
+                if (debut_ligne) { retrait(im, niveau); debut_ligne = 0; }
+                aj(im, "{");
+                expression(im, e);
+                aj(im, "}");
+            }
+        }
+        if (debut_ligne && n->nb_enfants) retrait(im, niveau);
+        aj(im, "\n" FIN_GABARIT);   /* ici, la fin de la phrase (son point, son saut de ligne) tombera */
+        return;
+    }
     case N_TABLE_LIRE:   /* « la valeur de k dans les t » ; « _valeur(k ; t) » (§ 13.11) */
         if (im->compact) {
             aj(im, "_valeur(");
@@ -1691,6 +1720,7 @@ static void etats_ecran(Impression *im, const Noeud *el, int feminin) {
 }
 
 static void phrase(Impression *im, const Noeud *n, int niveau) {
+    im->niveau = niveau;
     int c = im->compact;
     retrait(im, niveau);
     switch (n->type) {
@@ -3029,6 +3059,24 @@ static void bloc(Impression *im, const Noeud *b, int niveau) {
 
 static void apprendre(Impression *im, Noeud *const *phrases, size_t nb, const Noeud *sauf);
 
+/* Après un texte suivant (§ 4.7), la marque FIN_GABARIT : le point et le saut de ligne de la phrase tombent, le bloc les
+ * remplace. La marque voyage avec le texte quand l'imprimeur réécrit une phrase (forme courte d'un « Si ») ; elle est faite
+ * de deux caractères qu'aucune autre marque n'emploie : l'atelier écrit des « \x01actif\x01 » qu'il remplace ensuite, et
+ * la première version de ce code, qui marquait par \x01 et retirait tous les \x01, les effaçait (6 novembre 2026). */
+static char *sans_marques(char *s) {
+    if (!s) return s;
+    const size_t lm = strlen(FIN_GABARIT);
+    char *e = s;
+    for (const char *l = s; *l;) {
+        if (strncmp(l, FIN_GABARIT, lm) != 0) { *e++ = *l++; continue; }
+        l += lm;
+        if (l[0] == '.' && l[1] == '\n') l += 2;
+        else if (l[0] == '.' || l[0] == '\n') l += 1;
+    }
+    *e = 0;
+    return s;
+}
+
 static char *imprimer(const Programme *p, int compact) {
     Impression im;
     memset(&im, 0, sizeof im);
@@ -3054,7 +3102,7 @@ static char *imprimer(const Programme *p, int compact) {
     free(im.parties);
     for (size_t k = 0; k < im.nb_a_liberer; k++) free(im.a_liberer[k]);
     free(im.a_liberer);
-    return chaine_rendre(&im.c);
+    return sans_marques(chaine_rendre(&im.c));
 }
 
 /* Imprime, sans les garder, les déclarations du contexte : l'impression apprend ainsi genres et aptitudes. */
@@ -3082,7 +3130,7 @@ char *imprimer_phrase(const Programme *contexte, const Noeud *n, int compact) {
     free(im.singuliers);
     for (size_t k = 0; k < im.nb_a_liberer; k++) free(im.a_liberer[k]);
     free(im.a_liberer);
-    return chaine_rendre(&im.c);
+    return sans_marques(chaine_rendre(&im.c));
 }
 
 char *imprimer_litteraire(const Programme *p) { return imprimer(p, 0); }

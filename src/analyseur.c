@@ -876,7 +876,7 @@ static const char *type_statique(const Noeud *n) {
     case N_COLLAGE: case N_ELISION: case N_SANS: case N_REMPLACER: return "texte";   /* N_SANS : 2.64 ; N_REMPLACER : 2.81 */
     case N_EXTRAIRE: return n->forme == 9 ? "nombre entier" : n->forme == 10 ? NULL : "texte";   /* § 4.6 */
     case N_REPONSE: return n->texte2;
-    case N_MOTIF: case N_SORTE: return "texte";
+    case N_MOTIF: case N_SORTE: case N_GABARIT: return "texte";
     case N_CONVERSION: return n->entier == 11 ? "date" : n->entier == 12 ? "heure" : n->entier == 14 ? "fichier"
                               : n->entier <= 1 || n->entier == 8 || n->entier >= 10 ? "texte" : n->texte2;
     case N_NOUVEAU: return n->texte;
@@ -2952,6 +2952,42 @@ static Noeud *base(Analyse *a) {
                 n->fin = l->fin;
                 return n;
             }
+        }
+        if (est_mot(t, "le") && est_mot(voir(a, 1), "texte") && est_mot(voir(a, 2), "suivant") && voir(a, 3)->type == J_DEUX_POINTS) {
+            /* « le texte suivant : » et son bloc, plus indenté (§ 4.7) : le lexeur a découpé le texte brut et les accolades */
+            if (voir(a, 4)->type != J_GABARIT_DEBUT)
+                return erreur(a, voir(a, 3), grym_dupliquer("« le texte suivant : » attend ses lignes à la suite, plus indentées."));
+            Noeud *n = noeud_creer(N_GABARIT, t->ligne, t->colonne, t->debut);
+            a->i += 5;
+            for (;;) {
+                const Jeton *j = cour(a);
+                if (j->type == J_GABARIT_FIN) { n->fin = fin_jeton(j); avancer(a); break; }
+                if (j->type == J_GABARIT) {
+                    if (j->valeur && *j->valeur) {
+                        Noeud *m = feuille(N_TEXTE, j);
+                        m->forme = 1;   /* un morceau brut, que l'imprimeur écrit tel quel */
+                        noeud_ajouter(n, m);
+                    }
+                    avancer(a);
+                    continue;
+                }
+                if (j->type == J_ACC_OUV) {
+                    avancer(a);
+                    Noeud *x = expression(a);
+                    if (!x) { noeud_liberer(n); return NULL; }
+                    if (cour(a)->type != J_ACC_FERM) {
+                        noeud_liberer(x);
+                        noeud_liberer(n);
+                        return erreur(a, cour(a), grym_dupliquer("« } » attendu : une seule expression entre accolades, « {prénom du patient} »."));
+                    }
+                    noeud_ajouter(n, x);
+                    avancer(a);
+                    continue;
+                }
+                noeud_liberer(n);
+                return erreur(a, j, grym_dupliquer("Texte suivant mal formé."));
+            }
+            return n;
         }
         {
             Noeud *x = extraire(a);   /* découper un texte (§ 4.6) */
