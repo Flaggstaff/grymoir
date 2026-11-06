@@ -206,6 +206,11 @@ int main(void) {
 
     /* --- Erreurs de référence (§ 6) --- */
     /* Listes et rangs (§ 13.10) */
+    /* Trier (§ 13.12) ; le genre écrit ne paraît pas dans l'arbre */
+    V("Les n valent la liste 2 et 1.\nAfficher les n triées puis les n triés par ordre décroissant puis les n triés par nom décroissant.\n"
+      "Pour chaque x parmi les n triés, afficher x.",
+      "(créer [n] (liste 2 1))\n(afficher (tri [n]) (tri-décroissant [n]) (tri-décroissant [n] nom))\n"
+      "(pour-chaque-ligne [x] (tri [n]) (bloc (afficher [x])))");
     /* § 3.7 */
     V("Les n valent la liste 1 et 2.\nAfficher la racine carrée de 2 puis le plus grand de 1, de 2 et de 3.\n"
       "Afficher la somme des n puis la moyenne des n puis le plus grand élément des n puis le plus petit élément des n.",

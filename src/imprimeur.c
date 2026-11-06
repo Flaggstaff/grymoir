@@ -941,6 +941,31 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, im->compact ? " _jointes " : n->forme ? " joints par " : " jointes par ");
         expression(im, n->enfants[1]);
         return;
+    case N_TRI: {   /* « les notes triées [par ordre décroissant] », « triés par nom [décroissant] » ; compacte : « _trier(notes ;
+                     * nom ; _décroissant) » (§ 13.12) */
+        const Noeud *l = n->enfants[0];
+        const int paren = l->type == N_OPERATION || l->type == N_COLLAGE || l->type == N_COMPARAISON || l->type == N_LOGIQUE
+                          || l->type == N_NEGATION;
+        if (im->compact) {
+            aj(im, "_trier(");
+            expression(im, l);
+            if (n->texte) { aj(im, " ; "); ecrire_nom(im, n->texte, 0); }
+            if (n->forme & 1) aj(im, " ; _décroissant");
+            aj(im, ")");
+            return;
+        }
+        if (paren) aj(im, "(");
+        expression(im, l);
+        if (paren) aj(im, ")");
+        aj(im, n->forme & 2 ? " triées" : " triés");
+        if (n->texte) {
+            aj(im, " par ");
+            ecrire_nom(im, n->texte, 0);
+            if (n->forme & 1) aj(im, " décroissant");
+            else if (n->forme & 8) aj(im, " croissant");
+        } else if (n->forme & 4) aj(im, n->forme & 1 ? " par ordre décroissant" : " par ordre croissant");
+        return;
+    }
     case N_MATH: {   /* § 3.7 ; compacte : « _racine(x) », « _plus_grand(a ; b) », « _somme(notes) »… */
         static const char *const LIT[] = { "la racine carrée", "le plus grand", "le plus petit", "la somme des ", "la moyenne des ",
                                            "le plus grand élément des ", "le plus petit élément des " };

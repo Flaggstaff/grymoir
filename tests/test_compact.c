@@ -282,6 +282,9 @@ int main(void) {
     ALLER_RETOUR("_le x << 9\n_les n << _liste 1 ; 2\n_afficher _racine(_nu x) ; _plus_grand((_nu x + 1) ; 2 ; 3)\n"
                  "_afficher _somme(n) ; _moyenne(n) ; _plus_grand_élément(n) ; _plus_petit_élément(n)\n", NULL);
     ERR("_afficher _plus_grand(1)\n", 1, 11, "« _plus_grand » s'écrit ainsi : _plus_grand(a ; b).");
+    ALLER_RETOUR("_les notes << _liste 2 ; 1\n_afficher _trier(notes) ; _trier(notes ; _décroissant) ; _trier(notes ; nom)\n"
+                 "_pour_chaque x _parmi _trier(notes ; nom ; _décroissant)\n    _afficher x\n_fin\n", NULL);
+    ERR("_afficher _trier(notes ; _croissant ; nom)\n", 1, 11, "« _trier » s'écrit ainsi : _trier(notes), _trier(inscrits ; nom ; _décroissant).");
     ERR("_les l << _liste 1 ; 2\n_afficher _élément(l)\n", 2, 11, "« _élément » prend la liste et le rang : _élément(étapes ; 3).");
     ERR("_les l << _liste 1 ; 2\n_afficher _premier(l ; 2)\n", 2, 11, "« _premier » prend la liste seule : _premier(étapes).");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"

@@ -382,6 +382,51 @@ static void expression(Reecriture *r, size_t d, size_t f) {
                 continue;
             }
         }
+        if (est_cle(t, "trier") && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
+            /* _trier(notes) → les notes triés ; _trier(notes ; _décroissant) → … triés par ordre décroissant ;
+             * _trier(inscrits ; nom ; _décroissant) → … triés par nom décroissant (§ 13.12) */
+            size_t fin = fermante(r, k + 1, f);
+            if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+            size_t pv[3], nb = 0;
+            int p = 0;
+            for (size_t q = k + 2; q < fin; q++) {
+                if (r->e[q].type == J_PAR_OUV) p++;
+                else if (r->e[q].type == J_PAR_FERM) p--;
+                else if (p == 0 && r->e[q].type == J_POINT_VIRGULE && nb < 3) pv[nb++] = q;
+            }
+            const size_t fin0 = nb ? pv[0] : fin;
+            const Jeton *champ = NULL;
+            int decroissant = 0, bon = fin0 > k + 2 && nb <= 2;
+            for (size_t q = 0; q < nb && bon; q++) {
+                const size_t d0 = pv[q] + 1, f0 = q + 1 < nb ? pv[q + 1] : fin;
+                if (f0 != d0 + 1) bon = 0;
+                else if (est_cle(&r->e[d0], "décroissant")) decroissant = 1;
+                else if (r->e[d0].type == J_CROCHETS && !champ && !decroissant) champ = &r->e[d0];
+                else bon = 0;
+            }
+            if (!bon) {
+                echouer(r, t, grym_dupliquer("« _trier » s'écrit ainsi : _trier(notes), _trier(inscrits ; nom ; _décroissant)."));
+                return;
+            }
+            if (fin0 == k + 3 && r->e[k + 2].type == J_CROCHETS) copier(r, &r->e[k + 2]);   /* un nom : « parmi les inscrits triés » */
+            else {
+                emettre(r, J_PAR_OUV, NULL, &r->e[k + 2], 1);
+                expression(r, k + 2, fin0);
+                emettre(r, J_PAR_FERM, NULL, &r->e[fin0], 1);
+            }
+            mot(r, "triés", t);
+            if (champ) {
+                mot(r, "par", t);
+                copier(r, champ);
+                if (decroissant) mot(r, "décroissant", t);
+            } else if (decroissant) {
+                mot(r, "par", t);
+                mot(r, "ordre", t);
+                mot(r, "décroissant", t);
+            }
+            k = fin;
+            continue;
+        }
         if (est_cle(t, "texte_suivant") && k + 1 < f && r->e[k + 1].type == J_GABARIT_DEBUT) {
             /* _texte_suivant et son bloc → le texte suivant : et le même bloc, chaque accolade relue (§ 4.7) */
             mot(r, "le", t);

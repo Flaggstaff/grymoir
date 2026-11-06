@@ -2399,6 +2399,29 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* Trier (§ 13.12) : une nouvelle liste ; les textes dans l'ordre de la base (sans accents ni casse) ; stable */
+    PROG("Les notes valent la liste 6, 4,5 et 5.\nAfficher les notes triées.\nAfficher les notes triées par ordre décroissant.\n"
+         "Afficher les notes triées par ordre croissant puis les notes.\nLes noms valent la liste « élodie », « Zoé », « Émile » et « eve ».\n"
+         "Afficher les noms triés.\nLes d valent 15.03.2026 et 01.01.2026.\nAfficher les d triés.\nLes v valent une liste vide.\n"
+         "Les w valent les v triés.\nAfficher le nombre de w.",
+         "4,5, 5, 6\n6, 5, 4,5\n4,5, 5, 6 6, 4,5, 5\nélodie, Émile, eve, Zoé\n01.01.2026, 15.03.2026\n0");
+    PROG("Un inscrit a : un nom, un prénom, une cotisation, une remarque, facultative.\n"
+         "Le a vaut un nouvel inscrit :\n    Le nom vaut « Roth ».\n    Le prénom vaut « Zoé ».\n    La cotisation vaut 10.\n"
+         "Le b vaut un nouvel inscrit :\n    Le nom vaut « Ammann ».\n    Le prénom vaut « Léa ».\n    La cotisation vaut 30.\n"
+         "Le c vaut un nouvel inscrit :\n    Le nom vaut « Roth ».\n    Le prénom vaut « Ana ».\n    La cotisation vaut 10.\n"
+         "Les inscrits valent la liste a, b et c.\nLes p valent les inscrits triés par prénom.\nLes r valent les p triés par nom.\n"
+         "Pour chaque i parmi les r, afficher prénom du i.\n"
+         "Pour chaque i parmi les inscrits triés par cotisation décroissant, afficher prénom du i.\n"
+         "Afficher prénom du premier élément des r.",
+         "Léa\nAna\nZoé\nLéa\nZoé\nAna\nLéa");
+    PROG("Les v valent la liste 1 et « a ».\nAfficher les v triés.", "ERREUR 2:16 Tri impossible : un nombre et un texte ne se comparent pas.");
+    PROG("Un x a : un nom.\nLe a vaut un nouveau x.\nLes v valent la liste a et a.\nAfficher les v triés.",
+         "ERREUR 4:16 Tri impossible : un objet ne se trie pas.");   /* sans champ : « triés par nom » */
+    PROG("Les v valent la liste 1 et 2.\nAfficher les v triés par nom.", "ERREUR 2:16 « nom » : l'élément 1 n'a pas ce champ.");
+    PROG("Un inscrit a : un nom, une remarque, facultative.\nLe a vaut un nouvel inscrit :\n    Le nom vaut « x ».\n"
+         "Les i valent la liste a.\nEssayer :\n    Afficher les i triés par remarque.\nEn cas d'échec d'absence, afficher le motif de l'échec.",
+         "Le champ « remarque » est absent : vérifie-le d'abord avec « est présent ».");
+    PROG("Les dossiers triés manuellement valent la liste 2 et 1.\nAfficher les dossiers triés manuellement triés.", "1, 2");
     /* Racine carrée, plus grand, plus petit, somme et moyenne d'une liste (§ 3.7) ; les racines comparées à Python : la
      * grammaire ; ici, des valeurs exactes, des zéros de queue, des extrêmes */
     PROG("Afficher la racine carrée de 2,25 puis la racine carrée de 2.\n"

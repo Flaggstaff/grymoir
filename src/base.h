@@ -146,4 +146,8 @@ int base_journaliser(Base *b, const char *entite, long objet, const char *design
                      const char *apres, const char *auteur, char **erreur);
 int base_journal(Base *b, const char *entite, long objet, size_t max, char ****lignes, size_t *n, char **erreur);
 
+/* Deux textes dans l'ordre de la base, celui de « par nom » : le dictionnaire, sans accents ni casse, puis les octets
+ * (collation GRYM_TEXTE) ; −1, 0, 1. Le tri des listes l'emploie (grammaire, § 13.12). */
+int base_comparer_textes(const char *a, const char *b);
+
 #endif

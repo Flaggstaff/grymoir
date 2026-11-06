@@ -153,6 +153,11 @@ int main(void) {
          "Afficher le plus grand élément des n puis le plus petit élément des n.\n");
     COMP("Les n valent la liste 1 et 2.\nAfficher la racine carrée de 2 puis le plus petit de 1 et de 2 puis la somme des n.\n",
          "_les n << _liste 1 ; 2\n_afficher _racine(2) ; _plus_petit(1 ; 2) ; _somme(n)\n");
+    FIXE("Les notes valent la liste 2 et 1.\nAfficher les notes triées puis les notes triés par ordre décroissant.\n"
+         "Afficher les notes triées par ordre croissant puis les notes triées par nom puis les notes triés par date décroissant.\n"
+         "Les c valent les notes triées.\n");
+    COMP("Les notes valent la liste 2 et 1.\nAfficher les notes triées puis les notes triées par nom décroissant.\n",
+         "_les notes << _liste 2 ; 1\n_afficher _trier(notes) ; _trier(notes ; nom ; _décroissant)\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

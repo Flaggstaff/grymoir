@@ -2779,6 +2779,11 @@ static int collation_texte(void *ctx, int na, const void *a, int nb, const void 
     return c ? c : (na > nb) - (na < nb);
 }
 
+int base_comparer_textes(const char *a, const char *b) {
+    const int c = collation_texte(NULL, (int)strlen(a), a, (int)strlen(b), b);
+    return (c > 0) - (c < 0);
+}
+
 /* grym_contient(champ, partie, sens) : « dont le nom contient « mül » », « commence par », « finit par »
  * (grammaire, § 4.5) ; NULL si le champ est absent, que la condition écarte. */
 static void fonction_contient(sqlite3_context *ctx, int n, sqlite3_value **v) {

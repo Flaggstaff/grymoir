@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.95 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.96 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -1080,7 +1080,7 @@ Les réservations valent les éléments du champ « collection » de la réponse
 - Un calcul emploie librement les listes et les rangs : rien ne dépend de l'extérieur.
 - Une liste ne se range pas dans un champ d'entité, comme un ensemble.
 - Aucun mot réservé : `liste`, `élément`, `rang`, `premier`, `dernier` ne comptent qu'ainsi placés ; un nom, un calcul ou un champ déclaré l'emporte.
-- Reporté : trier une liste par un champ ou un calcul (`les étapes triées par …`), insérer ou retirer à un rang, une tranche (`les 3 premiers éléments`) ; ils suivront le découpage des textes, qui rend des listes.
+- Trier : § 13.12. Reporté : insérer ou retirer à un rang, une tranche (`les 3 premiers éléments`) ; ils suivront le découpage des textes, qui rend des listes.
 - En forme compacte : `_les étapes << _liste « tri » ; « lavage »`, `_les relevés << _liste_vide`, `_élément(étapes ; 3)`, `_premier(étapes)`, `_dernier(étapes)` ; `_les m << _mots t`, `_les d << _décodages_wsjt`, `_les r << _éléments « collection » réponse`. Un rang constant revient en forme littéraire en chiffres (`le 3e élément`), un rang calculé en `l'élément de rang … des …`.
 
 ### 13.11 Tables *(2.91)*
@@ -1111,6 +1111,27 @@ Afficher le nombre de tarifs puis les tarifs.                    →  1 7601 : 2
 - `dans`, en tête de phrase, devient un mot de construction (§ 10.7) : il ne commence plus le nom d'une action. Aucun programme du dépôt n'en avait.
 - Aucun autre mot réservé : `table`, `où`, `valeur`, `clés`, `valeurs` ne comptent qu'ainsi placés.
 - En forme compacte : `_les tarifs << _table « 7601 » _vaut 24 ; « 7602 » _vaut 12`, `_les c << _table_vide`, `_dans compteurs « CQ » _vaut 0`, `_dans compteurs « CQ » _devient 5`, `_valeur(« CQ » ; compteurs)`, `_clés(tarifs)`, `_valeurs(tarifs)`, `_les tarifs _perdent « 7602 »`.
+
+### 13.12 Trier *(2.96)*
+
+```
+Les notes valent la liste 6, 4,5 et 5.
+Afficher les notes triées.                                 →  4,5, 5, 6
+Afficher les notes triées par ordre décroissant.           →  6, 5, 4,5
+Les noms valent la liste « élodie », « Zoé » et « Émile ».
+Afficher les noms triés.                                   →  élodie, Émile, Zoé
+Afficher les inscrits triés par nom puis les inscrits triés par cotisation décroissant.
+```
+
+- **`les notes triées`** rend une **nouvelle liste**, triée du plus petit au plus grand ; la liste d'origine ne change pas. Elle se range (`Les classées valent les notes triées.`), s'affiche, se parcourt. Un ensemble se trie aussi, et rend une liste. `triés` ou `triées`, selon le genre du nom : les deux s'acceptent, et la forme canonique garde celui qui est écrit.
+- **`par ordre décroissant`**, du plus grand au plus petit ; `par ordre croissant`, l'ordre par défaut, s'écrit au besoin.
+- **`par nom`** trie une liste d'objets par un champ, comme `, par nom` trie une recherche (§ 16.4) ; `par cotisation décroissant` à l'envers (`décroissant` invariable, comme dans la base). Un élément qui n'est pas un objet, ou dont l'entité n'a pas ce champ : « « nom » : l'élément 3 n'a pas ce champ. » ; un champ absent : « Le champ « nom » est absent : vérifie-le d'abord avec « est présent ». » (sorte `absence`).
+- **Ce qui se trie** : des nombres, des dates, des heures, et **des textes, dans l'ordre du dictionnaire, sans tenir compte des accents ni de la casse**, exactement comme la base trie un champ texte (collation `GRYM_TEXTE`, la même fonction) : `élodie`, `Émile`, `Zoé`. Tous de la même sorte : « Tri impossible : un nombre et un texte ne se comparent pas. » Vrai ou faux, un objet, un fichier ne se trient pas.
+- **Stable** : deux éléments égaux gardent leur ordre d'arrivée, comme dans la base. Deux tris successifs font donc un tri sur deux clés : trier par prénom, puis le résultat par nom, range par nom puis par prénom.
+- Un calcul trie librement.
+- `triés` et `triées` ne comptent qu'ainsi placés, après une liste ou un ensemble ; aucun mot réservé.
+- Reporté, à la 2.97 : trier par un calcul (`triés par le calcul poids`), qui appelle le calcul pour chaque élément.
+- En forme compacte : `_trier(notes)`, `_trier(notes ; _décroissant)`, `_trier(inscrits ; nom)`, `_trier(inscrits ; cotisation ; _décroissant)`. La forme compacte ne garde pas le genre : `triés` revient par défaut.
 
 Un vrai affichage des objets reste à concevoir. L'absence de valeur est faite (§ 16.9).
 
@@ -2893,3 +2914,4 @@ Pour rappeler un patient :
 | 2.93 | 2026-11-06 | Nouveau § 4.7 : le texte suivant (`Le rappel vaut le texte suivant :` puis un bloc plus indenté, texte brut, `{expression}` insérée comme par `suivi de`, `{{` et `}}` pour une accolade) ; le lexeur découpe le bloc (jetons `GABARIT_DÉBUT`, `GABARIT`, `ACC_OUV`, `ACC_FERM`, `GABARIT_FIN`), aucune instruction nouvelle. Forme compacte `_texte_suivant` |
 | 2.94 | 2026-11-06 | Nouveau § 22.27 : les courriels, `Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t.` ; la messagerie, un objet aux champs `adresse de courriel`, `serveur de courriel`, `compte de courriel`, `clé de courriel (secret)` ; SMTP sur TLS implicite (465), `AUTH PLAIN` ; dans l'atelier et les applications fabriquées (fonction d'interface `courriel`, `src/atelier/courriel.cpp`) ; instruction `COURRIEL` ; refus de sorte `réseau`. Forme compacte `_envoyer_courriel` |
 | 2.95 | 2026-11-06 | Nouveau § 3.7 : `la racine carrée de x` (exacte si finie, sinon 28 chiffres, comparée à Python) ; `le plus grand de a et de b`, `le plus petit de …` ; sur une liste ou un ensemble, `la somme des notes`, `la moyenne des notes`, `le plus grand élément des notes`, `le plus petit élément des notes` (instruction `MATH`). Formes compactes `_racine`, `_plus_grand`, `_plus_petit`, `_somme`, `_moyenne`, `_plus_grand_élément`, `_plus_petit_élément` |
+| 2.96 | 2026-11-06 | Nouveau § 13.12 : trier une liste ou un ensemble, `les notes triées`, `par ordre décroissant`, `les inscrits triés par nom [décroissant]` ; une nouvelle liste, tri stable ; les textes dans l'ordre de la base (collation `GRYM_TEXTE`, même fonction). Instruction `TRIER`. Forme compacte `_trier(l ; champ ; _décroissant)` |

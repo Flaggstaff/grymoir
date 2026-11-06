@@ -3787,6 +3787,31 @@ static char *cle_ecrite(const Machine *m, const Valeur *x) {
     return texte_valeur(m, x);
 }
 
+/* Le tri des listes (§ 13.12) : deux clés de même sorte, nombres, dates, heures ou textes (ordre de la base). */
+static int cle_comparer(const Valeur *a, const Valeur *b) {
+    if (a->type == V_NOMBRE) return dec_comparer(&a->nombre, &b->nombre);
+    if (a->type == V_TEXTE) return base_comparer_textes(a->texte ? a->texte : "", b->texte ? b->texte : "");
+    return (a->jours > b->jours) - (a->jours < b->jours);   /* une date, une heure */
+}
+
+/* Tri par fusion, stable : idx[d..f) selon cles, à l'envers si decroissant ; tmp de même taille. */
+static void trier_indices(size_t *idx, size_t *tmp, size_t d, size_t f, const Valeur *const *cles, int decroissant) {
+    if (f - d < 2) return;
+    const size_t m = d + (f - d) / 2;
+    trier_indices(idx, tmp, d, m, cles, decroissant);
+    trier_indices(idx, tmp, m, f, cles, decroissant);
+    size_t i = d, j = m, k = d;
+    while (i < m && j < f) {
+        const int c = cle_comparer(cles[idx[j]], cles[idx[i]]);
+        /* le second ne passe devant que s'il est strictement avant : à égalité, l'ordre d'arrivée reste */
+        if (decroissant ? c > 0 : c < 0) tmp[k++] = idx[j++];
+        else tmp[k++] = idx[i++];
+    }
+    while (i < m) tmp[k++] = idx[i++];
+    while (j < f) tmp[k++] = idx[j++];
+    memcpy(idx + d, tmp + d, (f - d) * sizeof *idx);
+}
+
 /* Une table vide (§ 13.11) : clé, valeur, clé, valeur… dans la liste d'un ensemble. */
 static Valeur table_vide(void) {
     Valeur v = ensemble_vide();
@@ -7096,6 +7121,51 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&e);
             if (mp) { valeur_liberer(&x); ok = echouer(diag, b, debut, mp); break; }
             empiler(&pile, x);
+            break;
+        }
+        case I_TRIER: {   /* « les notes triées [par ordre décroissant] », « triés par nom [décroissant] » (§ 13.12) */
+            Valeur champ = op & 2 ? depiler(&pile) : vi_absent(NULL), l = depiler(&pile);
+            char *mp = NULL;
+            const char *nc = champ.type == V_TEXTE && champ.texte ? champ.texte : NULL;
+            if (l.type == V_ABSENT) mp = message_absent(&l);
+            else if (l.type != V_ENSEMBLE) mp = grym_formater("Seule une liste ou un ensemble se trie, pas %s.", nom_type(l.type));
+            const size_t n = mp ? 0 : l.liste->n;
+            const Valeur **cles = grym_allouer((n ? n : 1) * sizeof *cles);
+            for (size_t q = 0; q < n && !mp; q++) {
+                const Valeur *x = &l.liste->valeurs[q];
+                if (nc) {   /* par un champ : un objet qui l'a */
+                    size_t k = 0;
+                    if (x->type == V_OBJET) while (k < x->objet->classe->nb_champs && strcmp(x->objet->classe->champs[k], nc) != 0) k++;
+                    if (x->type != V_OBJET || k == x->objet->classe->nb_champs)
+                        mp = grym_formater("« %s » : l'élément %lu n'a pas ce champ.", nc, (unsigned long)q + 1);
+                    else if (!x->objet->definis[k] || x->objet->champs[k].type == V_ABSENT)
+                        mp = grym_formater("Le champ « %s » est absent : vérifie-le d'abord avec « est présent ».", nc);
+                    else x = &x->objet->champs[k];
+                }
+                if (mp) break;
+                if (x->type == V_ABSENT) { mp = message_absent(x); break; }
+                if (x->type != V_NOMBRE && x->type != V_TEXTE && x->type != V_DATE && x->type != V_HEURE)
+                    mp = grym_formater("Tri impossible : %s ne se trie pas.", nom_type(x->type));
+                else if (q && x->type != cles[0]->type)
+                    mp = grym_formater("Tri impossible : %s et %s ne se comparent pas.", nom_type(cles[0]->type), nom_type(x->type));
+                cles[q] = x;
+            }
+            Valeur r = valeur_nombre(dec_zero());
+            if (!mp) {
+                size_t *idx = grym_allouer((n ? n : 1) * sizeof *idx), *tmp = grym_allouer((n ? n : 1) * sizeof *tmp);
+                for (size_t q = 0; q < n; q++) idx[q] = q;
+                trier_indices(idx, tmp, 0, n, cles, (int)(op & 1));
+                valeur_liberer(&r);
+                r = liste_vide();
+                for (size_t q = 0; q < n; q++) ensemble_gagner(&r, valeur_copier(&l.liste->valeurs[idx[q]]));
+                free(idx);
+                free(tmp);
+            }
+            free(cles);
+            valeur_liberer(&champ);
+            valeur_liberer(&l);
+            if (mp) { valeur_liberer(&r); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, r);
             break;
         }
         case I_MATH: {   /* la racine carrée, le plus grand, le plus petit, la somme, la moyenne (§ 3.7) */

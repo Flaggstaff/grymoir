@@ -219,6 +219,12 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->nb_enfants) decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_TRI:   /* (tri l), (tri-décroissant l nom) (§ 13.12) ; le genre écrit n'y paraît pas */
+        chaine_ajouter(c, n->forme & 1 ? "(tri-décroissant " : "(tri ");
+        decrire(n->enfants[0], c);
+        if (n->texte) { chaine_ajouter(c, " "); chaine_ajouter(c, n->texte); }
+        chaine_ajouter(c, ")");
+        return;
     case N_MATH: {   /* (racine x), (plus-grand a b), (somme l)… (§ 3.7) */
         static const char *const NOMS[] = { "racine", "plus-grand", "plus-petit", "somme", "moyenne", "plus-grand-élément",
                                             "plus-petit-élément" };

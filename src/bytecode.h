@@ -169,11 +169,13 @@ typedef enum {
     I_SORTE_ECHEC,      /* empile la sorte de l'échec que le dernier essai a rattrapé, un texte (§ 18.2) */
     I_RELANCER,         /* dépile la sorte, puis le motif : l'échec repart, avec sa position d'origine (§ 18.2) */
     I_COURRIEL,         /* dépile le texte, la messagerie, l'objet, puis le destinataire ; envoie le courriel (§ 22.27) */
-    I_MATH              /* opérande : la forme de N_MATH (3 bits) | le nombre d'arguments × 8 ; dépile les arguments, empile le
+    I_MATH,             /* opérande : la forme de N_MATH (3 bits) | le nombre d'arguments × 8 ; dépile les arguments, empile le
                            résultat (§ 3.7) */
+    I_TRIER             /* opérande : 1 décroissant | 2 par un champ ; dépile [le nom du champ, puis] la liste ; empile la liste
+                           triée, nouvelle (§ 13.12) */
 } CodeInstruction;
 
-#define I_DERNIER I_MATH
+#define I_DERNIER I_TRIER
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

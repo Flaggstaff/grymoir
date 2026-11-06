@@ -744,6 +744,11 @@ static int mot_de_nom(const Analyse *a, size_t k) {
             || (u->type == J_ELISION && strcmp(u->valeur, "l") == 0))
             return 0;
     }
+    /* « triés », « triées » ferment le nom d'une liste (« les notes triées. », « … triées par nom », § 13.12), sauf si un
+     * autre mot du nom suit : « les dossiers triés manuellement » reste un nom */
+    if (t->type == J_MOT && (est_mot(t, "triés") || est_mot(t, "triées"))
+        && !(k + 1 < a->n && a->j[k + 1].type == J_MOT && !est_mot(&a->j[k + 1], "par") && mot_de_nom(a, k + 1)))
+        return 0;
     /* « séparés par » ferme le texte de « les morceaux de t séparés par « ; » » (§ 4.6), hors du nom */
     if (t->type == J_MOT && est_mot(t, "séparés") && k + 1 < a->n && est_mot(&a->j[k + 1], "par")) return 0;
     /* « après », « avant » suivis d'un texte, d'un nom entre crochets ou d'un article singulier ouvrent « … après « FA » »
@@ -1687,6 +1692,7 @@ static Symbole *table_en(Analyse *a, size_t k, size_t *fin);
 static int liste_de_table_en(Analyse *a, size_t k);
 static Noeud *phrase_dans(Analyse *a, const Jeton *t);
 static Noeud *phrase_courriel(Analyse *a, const Jeton *t);
+static Noeud *trier_apres(Analyse *a, Noeud *g);
 
 static int contient_champ_dont(const Noeud *n) {
     if (n->type == N_CHAMP_DONT) return 1;
@@ -2352,6 +2358,43 @@ static Noeud *math(Analyse *a) {
         noeud_liberer(n);
         return erreur(a, cour(a), grym_formater("« et de » attendu : « le plus %s de a et de b ».", forme == 1 ? "grand" : "petit"));
     }
+}
+
+/* « g triés [par ordre croissant | décroissant] », « g triés par nom [décroissant] » (§ 13.12) : g trié ; NULL sur une
+ * erreur (g libéré). Le jeton courant est « triés » ou « triées ». */
+static Noeud *trier_apres(Analyse *a, Noeud *g) {
+    /* « les notes triées [par ordre croissant | décroissant] », « les inscrits triés par nom [décroissant] » (§ 13.12) */
+    Noeud *n = noeud_creer(N_TRI, g->ligne, g->colonne, g->debut);
+    n->op_ligne = cour(a)->ligne;
+    n->op_colonne = cour(a)->colonne;
+    if (est_mot(cour(a), "triées")) n->forme |= 2;
+    n->fin = fin_jeton(cour(a));
+    avancer(a);
+    if (est_mot(cour(a), "par") && est_mot(voir(a, 1), "ordre")
+        && (est_mot(voir(a, 2), "croissant") || est_mot(voir(a, 2), "décroissant"))) {
+        n->forme |= 4 | (est_mot(voir(a, 2), "décroissant") ? 1 : 8);
+        n->fin = fin_jeton(voir(a, 2));
+        a->i += 3;
+    } else if (est_mot(cour(a), "par") && (voir(a, 1)->type == J_CROCHETS || mot_de_nom(a, a->i + 1))) {
+        size_t d = a->i + 1, f = d;
+        if (a->j[d].type == J_CROCHETS) f = d + 1;
+        else while (f < a->n && mot_de_nom(a, f) && !est_mot(&a->j[f], "croissant") && !est_mot(&a->j[f], "décroissant")) f++;
+        if (f == d) {
+            noeud_liberer(n);
+            noeud_liberer(g);
+            return erreur(a, voir(a, 1), grym_dupliquer("Un champ attendu après « par » : « triés par nom »."));
+        }
+        n->texte = a->j[d].type == J_CROCHETS ? grym_dupliquer(a->j[d].valeur) : cle(a, d, f);
+        n->fin = fin_jeton(&a->j[f - 1]);
+        a->i = f;
+        if (est_mot(cour(a), "croissant") || est_mot(cour(a), "décroissant")) {
+            n->forme |= est_mot(cour(a), "décroissant") ? 1 : 8;
+            n->fin = fin_jeton(cour(a));
+            avancer(a);
+        }
+    }
+    noeud_ajouter(n, g);
+    return n;
 }
 
 /* Le texte après « de », « d' » ou « du » (§ 4.6), comme « les mots de » ; NULL si la préposition manque. */
@@ -3449,6 +3492,11 @@ static Noeud *conversion(Analyse *a, Noeud *g) {
             noeud_ajouter(n, x);
             n->fin = x->fin;
             g = n;
+            continue;
+        }
+        if (g && (est_mot(cour(a), "triés") || est_mot(cour(a), "triées"))) {   /* § 13.12 */
+            g = trier_apres(a, g);
+            if (!g) return NULL;
             continue;
         }
         if (g && (est_mot(cour(a), "après") || est_mot(cour(a), "avant"))
@@ -5708,6 +5756,10 @@ static Noeud *pour_chaque(Analyse *a, int colonne) {
             a->i = k2 + 1;
             Noeud *source = nom_ensemble(a);
             if (!source) { free(nom); return NULL; }
+            while (est_mot(cour(a), "triés") || est_mot(cour(a), "triées")) {   /* « parmi les inscrits triés par nom » (§ 13.12) */
+                source = trier_apres(a, source);
+                if (!source) { free(nom); return NULL; }
+            }
             size_t sauve = a->portee->n;
             portee_declarer(a->portee, nom, GENRE_LIBRE, t->ligne);
             Symbole *s = &a->portee->s[a->portee->n - 1];
@@ -10253,6 +10305,7 @@ static Noeud *phrase_ensemble(Analyse *a, const Jeton *t) {
             valeur_n = x;
         } else if (valeur_n->nb_enfants == 1 && !ecrit_liste
                    && (valeur_n->enfants[0]->type == N_WSJTX || valeur_n->enfants[0]->type == N_TABLE_LISTE
+                       || valeur_n->enfants[0]->type == N_TRI
                        || (valeur_n->enfants[0]->type == N_EXTRAIRE && valeur_n->enfants[0]->forme == 10))) {
             /* « Les décodages valent les décodages WSJT. », « les morceaux de t séparés par « ; » » : la liste elle-même
              * (§ 13.10, 2.88, § 4.6) */

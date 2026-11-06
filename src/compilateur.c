@@ -418,6 +418,16 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[1]);
         emettre(c, I_CADRER, (long)n->forme, n->op_ligne, n->op_colonne);
         return;
+    case N_TRI: {   /* la liste, [le nom du champ], puis TRIER 1 décroissant | 2 par un champ (§ 13.12) */
+        expression(c, n->enfants[0]);
+        if (n->texte) {
+            long k = bloc_constante(c->b, C_TEXTE, n->texte);
+            if (k < 0) { trop_grand(c, n); return; }
+            emettre(c, I_CONSTANTE, k, n->ligne, n->colonne);
+        }
+        emettre(c, I_TRIER, (n->forme & 1) | (n->texte ? 2 : 0), n->op_ligne ? n->op_ligne : n->ligne, n->op_ligne ? n->op_colonne : n->colonne);
+        return;
+    }
     case N_MATH:   /* les arguments, puis MATH forme | nombre d'arguments × 8 (§ 3.7) */
         if (n->nb_enfants > 4000) { trop_grand(c, n); return; }
         for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
