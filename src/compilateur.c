@@ -418,6 +418,11 @@ static void expression(Compilation *c, const Noeud *n) {
         expression(c, n->enfants[1]);
         emettre(c, I_CADRER, (long)n->forme, n->op_ligne, n->op_colonne);
         return;
+    case N_MATH:   /* les arguments, puis MATH forme | nombre d'arguments × 8 (§ 3.7) */
+        if (n->nb_enfants > 4000) { trop_grand(c, n); return; }
+        for (size_t k = 0; k < n->nb_enfants; k++) expression(c, n->enfants[k]);
+        emettre(c, I_MATH, (long)n->forme | (long)(n->nb_enfants << 3), n->ligne, n->colonne);
+        return;
     case N_GABARIT: {   /* « le texte suivant : » : un texte vide, puis chaque morceau collé, comme « suivi de » (§ 4.7) */
         long k = bloc_constante(c->b, C_TEXTE, "");
         if (k < 0) { trop_grand(c, n); return; }

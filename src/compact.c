@@ -330,6 +330,58 @@ static void expression(Reecriture *r, size_t d, size_t f) {
             k++;
             continue;
         }
+        {
+            /* § 3.7 : _racine(x) → la racine carrée de (x) ; _plus_grand(a ; b ; c) → le plus grand de (a), de (b) et de (c) ;
+             * _somme(notes) → la somme des notes ; _plus_grand_élément(notes) → le plus grand élément des notes */
+            static const char *const CLES[] = { "racine", "plus_grand", "plus_petit", "somme", "moyenne", "plus_grand_élément",
+                                                "plus_petit_élément" };
+            int qf = -1;
+            for (int q = 0; q < 7; q++) if (est_cle(t, CLES[q])) qf = q;
+            if (qf >= 0 && k + 1 < f && r->e[k + 1].type == J_PAR_OUV) {
+                size_t fin = fermante(r, k + 1, f);
+                if (fin == f) { echouer(r, &r->e[k + 1], grym_dupliquer("Parenthèse fermante manquante.")); return; }
+                size_t bornes[64], nb = 0;
+                int p = 0;
+                bornes[0] = k + 1;
+                for (size_t q = k + 2; q <= fin && nb < 63; q++) {
+                    if (q < fin && r->e[q].type == J_PAR_OUV) p++;
+                    else if (q < fin && r->e[q].type == J_PAR_FERM) p--;
+                    else if (q == fin || (p == 0 && r->e[q].type == J_POINT_VIRGULE)) bornes[++nb] = q;
+                }
+                int vide = 0;
+                for (size_t q = 0; q < nb; q++) if (bornes[q + 1] == bornes[q] + 1) vide = 1;
+                const int bon = qf == 0 ? nb == 1 : qf <= 2 ? nb >= 2 : nb == 1 && bornes[1] == k + 3 && r->e[k + 2].type == J_CROCHETS;
+                if (!bon || vide) {
+                    static const char *const MODELE[] = { "_racine(x)", "_plus_grand(a ; b)", "_plus_petit(a ; b)", "_somme(notes)",
+                                                          "_moyenne(notes)", "_plus_grand_élément(notes)", "_plus_petit_élément(notes)" };
+                    echouer(r, t, grym_formater("« _%s » s'écrit ainsi : %s.", CLES[qf], MODELE[qf]));
+                    return;
+                }
+                if (qf >= 3) {
+                    mot(r, qf <= 4 ? "la" : "le", t);
+                    if (qf <= 4) mot(r, qf == 3 ? "somme" : "moyenne", t);
+                    else { mot(r, "plus", t); mot(r, qf == 5 ? "grand" : "petit", t); mot(r, "élément", t); }
+                    mot(r, "des", t);
+                    copier(r, &r->e[k + 2]);
+                } else {
+                    mot(r, qf == 0 ? "la" : "le", t);
+                    if (qf == 0) { mot(r, "racine", t); mot(r, "carrée", t); }
+                    else { mot(r, "plus", t); mot(r, qf == 1 ? "grand" : "petit", t); }
+                    for (size_t q = 0; q < nb; q++) {
+                        if (q) {
+                            if (q + 1 == nb) mot(r, "et", &r->e[bornes[q]]);
+                            else emettre(r, J_VIRGULE, NULL, &r->e[bornes[q]], 1);
+                        }
+                        mot(r, "de", &r->e[bornes[q]]);
+                        emettre(r, J_PAR_OUV, NULL, &r->e[bornes[q] + 1], 1);
+                        expression(r, bornes[q] + 1, bornes[q + 1]);
+                        emettre(r, J_PAR_FERM, NULL, &r->e[bornes[q + 1]], 1);
+                    }
+                }
+                k = fin;
+                continue;
+            }
+        }
         if (est_cle(t, "texte_suivant") && k + 1 < f && r->e[k + 1].type == J_GABARIT_DEBUT) {
             /* _texte_suivant et son bloc → le texte suivant : et le même bloc, chaque accolade relue (§ 4.7) */
             mot(r, "le", t);

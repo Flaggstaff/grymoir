@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.94 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.95 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -235,6 +235,24 @@ Le gagnant vaut un élément au hasard parmi les inscrits.
 - En forme compacte : `_hasard(1 ; 6)`, `_hasard_parmi(inscrits)`.
 
 ---
+
+### 3.7 Racine carrée, plus grand, plus petit, et les nombres d'une liste *(2.95)*
+
+```
+Afficher la racine carrée de 2,25 puis la racine carrée de 2.            →  1,5 1,414213562373095048801688724
+Afficher le plus grand de 3 et de 7 puis le plus petit de 3, de 7 et de 2.     →  7 2
+Les notes valent la liste 4,5, 5 et 6.
+Afficher la somme des notes puis la moyenne des notes.                  →  15,5 5,166666666666666666666666667
+Afficher le plus grand élément des notes puis le plus petit élément des notes.   →  6 4,5
+```
+
+- **`la racine carrée de x`** suit la règle de la division (§ 3.2) : une racine finie reste exacte (`2,25` donne `1,5`, `100` donne `10`) ; une racine non finie est arrondie à 28 chiffres significatifs, au plus proche. D'un nombre négatif : « La racine carrée de −4 n'existe pas : un nombre négatif n'a pas de racine carrée réelle. » (sorte `nombre`, § 18.2). Vérification (6 novembre 2026) : 5 000 racines tirées au hasard, un quart de carrés parfaits, des entiers jusqu'à 10²⁰ et des décimaux de 10⁻⁴⁰ à 10³⁰, comparées à `Decimal.sqrt` du module `decimal` de Python en précision 28 : mêmes valeurs et mêmes exposants, zéros de queue compris (`√1,00` donne `1,0`, comme Python).
+- **`le plus grand de a et de b`**, **`le plus petit de a et de b`** : deux valeurs ou plus (`de a, de b et de c`) : des nombres, des dates ou des heures, toutes de la même sorte, comparées comme par `<` (§ 5.1), qui n'ordonne pas les textes. Chaque argument se lit comme celui d'un calcul (§ 9), au plus court : un calcul dans un argument se parenthèse, `le plus grand de (x + 1) et de y` ; sans parenthèses, `le plus grand de x + 1 et de y` est refusé (« « et de » attendu »), comme un calcul déclaré refuse `la moyenne de x + 1 et de y`. Des sortes différentes : « Comparaison impossible entre un nombre et une date. »
+- **Les nombres d'une liste ou d'un ensemble** (§ 13.9, § 13.10) : `la somme des notes`, `la moyenne des notes`, `le plus grand élément des notes`, `le plus petit élément des notes`. La somme d'une liste vide vaut 0 ; sa moyenne, son plus grand et son plus petit élément sont des erreurs de sorte `absence` (« La moyenne d'une liste vide n'existe pas. »), jamais 0, comme les agrégats de la base (§ 16.4). La somme et la moyenne veulent des nombres (« La somme d'une liste : « abc » est un texte, pas un nombre. ») ; le plus grand et le plus petit élément, des nombres, des dates ou des heures d'une même sorte, comme ci-dessus. La moyenne divise selon la règle de la division.
+- Ces tournures ne se confondent pas avec celles de la base : `la somme des montants des factures conservées` (§ 16.4) reste un agrégat de la base, puisqu'après le nom vient `des` ; `le plus grand solde des clients conservés` n'a pas le mot `élément`.
+- Elles se comportent comme des calculs que le langage déclare d'avance (§ 9) : un calcul de l'utilisateur nommé `racine carrée`, `plus grand` ou `plus petit` l'emporte. Aucun mot réservé.
+- Un calcul les emploie librement.
+- En forme compacte : `_racine(x)`, `_plus_grand(a ; b ; c)`, `_plus_petit(a ; b)`, `_somme(notes)`, `_moyenne(notes)`, `_plus_grand_élément(notes)`, `_plus_petit_élément(notes)`.
 
 ## 4. Afficher
 
@@ -2874,3 +2892,4 @@ Pour rappeler un patient :
 | 2.92 | 2026-11-06 | Nouveau § 18.2 : les sortes d'échec (`division`, `nombre`, `lecture`, `absence`, `clé`, `rang`, `texte`, `unicité`, `lien`, `fichier`, `réseau`, `port`, `saisie`, `refus`, `autre`), promises, contrairement au motif ; `En cas d'échec de réseau ou de fichier :`, plusieurs blocs, le premier qui convient ; sans bloc qui convienne, l'échec remonte ; `la sorte de l'échec`. Instructions `SORTE_ECHEC` et `RELANCER`. Formes compactes `_échec_de`, `_sorte` |
 | 2.93 | 2026-11-06 | Nouveau § 4.7 : le texte suivant (`Le rappel vaut le texte suivant :` puis un bloc plus indenté, texte brut, `{expression}` insérée comme par `suivi de`, `{{` et `}}` pour une accolade) ; le lexeur découpe le bloc (jetons `GABARIT_DÉBUT`, `GABARIT`, `ACC_OUV`, `ACC_FERM`, `GABARIT_FIN`), aucune instruction nouvelle. Forme compacte `_texte_suivant` |
 | 2.94 | 2026-11-06 | Nouveau § 22.27 : les courriels, `Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t.` ; la messagerie, un objet aux champs `adresse de courriel`, `serveur de courriel`, `compte de courriel`, `clé de courriel (secret)` ; SMTP sur TLS implicite (465), `AUTH PLAIN` ; dans l'atelier et les applications fabriquées (fonction d'interface `courriel`, `src/atelier/courriel.cpp`) ; instruction `COURRIEL` ; refus de sorte `réseau`. Forme compacte `_envoyer_courriel` |
+| 2.95 | 2026-11-06 | Nouveau § 3.7 : `la racine carrée de x` (exacte si finie, sinon 28 chiffres, comparée à Python) ; `le plus grand de a et de b`, `le plus petit de …` ; sur une liste ou un ensemble, `la somme des notes`, `la moyenne des notes`, `le plus grand élément des notes`, `le plus petit élément des notes` (instruction `MATH`). Formes compactes `_racine`, `_plus_grand`, `_plus_petit`, `_somme`, `_moyenne`, `_plus_grand_élément`, `_plus_petit_élément` |

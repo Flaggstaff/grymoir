@@ -148,6 +148,11 @@ int main(void) {
          "Envoyer un courriel à « a@b.ch », avec l'objet « o », depuis m, et le texte suivant :\n    Bonjour {m}.\nAfficher m.\n");
     COMP("Le m vaut 1.\nEnvoyer un courriel à « a@b.ch », avec l'objet « o », depuis m, et le texte « t ».\n",
          "_le m << 1\n_envoyer_courriel _à « a@b.ch » _objet « o » _depuis _nu m _texte « t »\n");
+    FIXE("Le x vaut 9.\nLes n valent la liste 1 et 2.\nAfficher la racine carrée du x puis le plus grand de (x + 1), de 2 et de 3.\n"
+         "Afficher le plus petit de (la racine carrée de 2) et de x.\nAfficher la somme des n puis la moyenne des n.\n"
+         "Afficher le plus grand élément des n puis le plus petit élément des n.\n");
+    COMP("Les n valent la liste 1 et 2.\nAfficher la racine carrée de 2 puis le plus petit de 1 et de 2 puis la somme des n.\n",
+         "_les n << _liste 1 ; 2\n_afficher _racine(2) ; _plus_petit(1 ; 2) ; _somme(n)\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

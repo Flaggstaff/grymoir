@@ -941,6 +941,38 @@ static void expression(Impression *im, const Noeud *n) {
         aj(im, im->compact ? " _jointes " : n->forme ? " joints par " : " jointes par ");
         expression(im, n->enfants[1]);
         return;
+    case N_MATH: {   /* § 3.7 ; compacte : « _racine(x) », « _plus_grand(a ; b) », « _somme(notes) »… */
+        static const char *const LIT[] = { "la racine carrée", "le plus grand", "le plus petit", "la somme des ", "la moyenne des ",
+                                           "le plus grand élément des ", "le plus petit élément des " };
+        static const char *const COMP[] = { "_racine(", "_plus_grand(", "_plus_petit(", "_somme(", "_moyenne(",
+                                            "_plus_grand_élément(", "_plus_petit_élément(" };
+        const int f = n->forme;
+        if (im->compact) {
+            aj(im, COMP[f]);
+            for (size_t k = 0; k < n->nb_enfants; k++) {
+                if (k) aj(im, " ; ");
+                if (f >= 3) ecrire_nom(im, n->enfants[k]->texte, 0);
+                else expression(im, n->enfants[k]);
+            }
+            aj(im, ")");
+            return;
+        }
+        aj(im, LIT[f]);
+        if (f >= 3) { ecrire_nom(im, n->enfants[0]->texte, 0); return; }
+        for (size_t k = 0; k < n->nb_enfants; k++) {   /* comme les arguments d'un appel : « de x, de y et de z » */
+            aj(im, k == 0 ? " " : k + 1 == n->nb_enfants ? " et " : ", ");
+            const Noeud *x = n->enfants[k];
+            const Noeud *xi = x->type == N_GROUPE && x->nb_enfants == 1 ? x->enfants[0] : x;
+            const int appel_suivi = k + 1 < n->nb_enfants && (xi->type == N_APPEL || xi->type == N_MATH) && xi->nb_enfants > 0;
+            if (argument_simple(x) && !appel_suivi) preposition(im, "de", x);
+            else {
+                aj(im, "de (");
+                expression(im, xi);
+                aj(im, ")");
+            }
+        }
+        return;
+    }
     case N_GABARIT: {   /* « le texte suivant : » puis le bloc, un cran plus loin ; « _texte_suivant » (§ 4.7) */
         aj(im, im->compact ? "_texte_suivant\n" : "le texte suivant :\n");
         const int niveau = im->niveau + 1;

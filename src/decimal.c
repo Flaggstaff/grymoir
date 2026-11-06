@@ -612,3 +612,103 @@ char *dec_canonique(const Decimal *a) {
     free(f);
     return r;
 }
+
+/* ---------------------------------------------------------------- */
+/* Racine carrée (grammaire, § 3.7)                                 */
+/* ---------------------------------------------------------------- */
+
+/* 10^k */
+static Decimal dec_dix_puissance(long k) {
+    Decimal u = dec_depuis_canonique("1");
+    u.exp = k;
+    return u;
+}
+
+/* La position du chiffre de tête : 10^p ≤ |a| < 10^(p+1). a non nul. */
+static long dec_tete(const Decimal *a) {
+    size_t n = a->n;
+    while (n > 1 && a->ch[n - 1] == 0) n--;
+    return (long)n - 1 + a->exp;
+}
+
+/* x² comparé à a : −1, 0, 1 (exact). */
+static int dec_carre_compare(const Decimal *x, const Decimal *a) {
+    Decimal c;
+    if (dec_multiplication(x, x, &c) != DEC_OK) return 1;
+    const int s = dec_comparer(&c, a);
+    dec_liberer(&c);
+    return s;
+}
+
+StatutDecimal dec_racine(const Decimal *a, Decimal *r) {
+    Decimal zero = dec_zero();
+    const int signe = dec_comparer(a, &zero);
+    dec_liberer(&zero);
+    if (signe < 0) return DEC_EXPOSANT_NON_ENTIER;
+    if (signe == 0) { *r = dec_zero(); r->exp = a->exp >= 0 ? a->exp / 2 : -((-a->exp + 1) / 2); return DEC_OK; }
+    /* 1. a ramené entre 1 et 100 (a × 10^−2k) : les très grands et très petits nombres se traitent comme les autres */
+    const long tete_a = dec_tete(a);
+    const long k = tete_a >= 0 ? tete_a / 2 : -((-tete_a + 1) / 2);
+    Decimal ar = dec_copier(a);
+    ar.exp -= 2 * k;
+    /* 2. Newton depuis 3, à un facteur 3,4 près de la racine : x ← (x + ar ÷ x) ÷ 2, jusqu'à ce que x ne bouge plus
+     * (la convergence double les chiffres justes à chaque tour : une dizaine de tours au plus) */
+    Decimal x = dec_depuis_canonique("3");
+    Decimal deux = dec_depuis_canonique("2");
+    for (int i = 0; i < 60; i++) {
+        Decimal q, somme, nx;
+        if (dec_division(&ar, &x, &q) != DEC_OK) break;
+        dec_addition(&x, &q, &somme);
+        dec_division(&somme, &deux, &nx);
+        dec_liberer(&q);
+        dec_liberer(&somme);
+        const int pareil = dec_comparer(&nx, &x) == 0;
+        dec_liberer(&x);
+        x = nx;
+        if (pareil) break;
+    }
+    /* 3. x arrondi à 28 chiffres, puis ajusté par des carrés exacts : c est juste si (c − ½u)² ≤ ar < (c + ½u)² */
+    long tete = dec_tete(&x);
+    Decimal u = dec_dix_puissance(tete - (DEC_PRECISION - 1));
+    Decimal c;
+    dec_arrondir(&x, &u, DEC_PAIR, &c);
+    dec_liberer(&x);
+    for (int garde = 0; garde < 8; garde++) {
+        tete = dec_tete(&c);
+        dec_liberer(&u);
+        u = dec_dix_puissance(tete - (DEC_PRECISION - 1));
+        Decimal demi, bas, haut, cinq = dec_depuis_canonique("5");
+        dec_multiplication(&u, &cinq, &demi);
+        demi.exp -= 1;   /* ½u */
+        dec_liberer(&cinq);
+        dec_soustraction(&c, &demi, &bas);
+        dec_addition(&c, &demi, &haut);
+        const int sous_bas = dec_carre_compare(&bas, &ar) > 0, atteint_haut = dec_carre_compare(&haut, &ar) <= 0;
+        dec_liberer(&demi);
+        dec_liberer(&bas);
+        dec_liberer(&haut);
+        if (!sous_bas && !atteint_haut) break;
+        Decimal nc;
+        if (sous_bas) dec_soustraction(&c, &u, &nc);
+        else dec_addition(&c, &u, &nc);
+        dec_liberer(&c);
+        c = nc;
+    }
+    dec_liberer(&u);
+    dec_liberer(&deux);
+    /* 4. une racine exacte perd ses zéros de queue, jusqu'à l'exposant de Python : la moitié de celui de a */
+    if (dec_carre_compare(&c, &ar) == 0) {
+        const long ideal = (ar.exp >= 0 ? ar.exp / 2 : -((-ar.exp + 1) / 2));
+        size_t z = 0;
+        while (z < c.n && c.ch[z] == 0 && c.exp + (long)z < ideal) z++;
+        if (z && z < c.n) {
+            memmove(c.ch, c.ch + z, c.n - z);
+            c.n -= z;
+            c.exp += (long)z;
+        }
+    }
+    dec_liberer(&ar);
+    c.exp += k;   /* × 10^k */
+    *r = c;
+    return DEC_OK;
+}

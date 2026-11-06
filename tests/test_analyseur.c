@@ -206,6 +206,11 @@ int main(void) {
 
     /* --- Erreurs de référence (§ 6) --- */
     /* Listes et rangs (§ 13.10) */
+    /* § 3.7 */
+    V("Les n valent la liste 1 et 2.\nAfficher la racine carrée de 2 puis le plus grand de 1, de 2 et de 3.\n"
+      "Afficher la somme des n puis la moyenne des n puis le plus grand élément des n puis le plus petit élément des n.",
+      "(créer [n] (liste 1 2))\n(afficher (racine 2) (plus-grand 1 2 3))\n"
+      "(afficher (somme [n]) (moyenne [n]) (plus-grand-élément [n]) (plus-petit-élément [n]))");
     /* Le texte suivant (§ 4.7) */
     V("Le n vaut 2.\nLe x vaut le texte suivant :\n    a {n + 1} {{b}}\nAfficher le texte suivant :\n    {x}",
       "(créer [n] 2)\n(créer [x] (gabarit «a » (+ [n] 1) « {b}»))\n(afficher (gabarit [x]))");

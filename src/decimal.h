@@ -51,6 +51,10 @@ typedef enum { DEC_PROCHE, DEC_VERS_LE_BAS, DEC_VERS_LE_HAUT, DEC_PAIR, DEC_VERS
 StatutDecimal dec_arrondir(const Decimal *a, const Decimal *pas, ModeArrondi mode, Decimal *r);
 /* Reste de la division entière de a par b, du signe de a : −7 et 3 donnent −1 (§ 3.4). */
 StatutDecimal dec_reste(const Decimal *a, const Decimal *b, Decimal *r);
+/* La racine carrée (grammaire, § 3.7) : exacte si elle est finie et tient en 28 chiffres, sinon arrondie à 28 chiffres
+ * significatifs, au plus proche ; l'exposant d'une racine exacte est celui de Python, la moitié (par défaut) de celui de a.
+ * Rend DEC_EXPOSANT_NON_ENTIER pour un nombre négatif (l'appelant le dit). */
+StatutDecimal dec_racine(const Decimal *a, Decimal *r);
 
 /* Style suisse (§ 4.1) : 1'234,50 ; négatif avec le signe − (U+2212). */
 char *dec_formater(const Decimal *a);

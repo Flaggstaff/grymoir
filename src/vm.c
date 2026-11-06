@@ -792,6 +792,7 @@ static const struct { const char *fragment, *sorte; } SORTES[] = {
     { "n'est pas une année", "lecture" }, { "Un texte vide n'est pas", "lecture" }, { "Réponds par oui ou non", "lecture" },
     { "introuvable ou illisible", "fichier" }, { "n'est jamais écrasé", "fichier" }, { "ce fichier est absent", "fichier" },
     { "Saisie annulée", "saisie" },
+    { "pas de racine carrée réelle", "nombre" }, { "d'une liste vide n'existe pas", "absence" },   /* § 3.7 */
     { "absent", "absence" },
 };
 
@@ -7095,6 +7096,86 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             valeur_liberer(&e);
             if (mp) { valeur_liberer(&x); ok = echouer(diag, b, debut, mp); break; }
             empiler(&pile, x);
+            break;
+        }
+        case I_MATH: {   /* la racine carrée, le plus grand, le plus petit, la somme, la moyenne (§ 3.7) */
+            const unsigned forme = op & 7;
+            const size_t n = op >> 3;
+            const size_t base_pile = pile.n - n;
+            Valeur *v = &pile.v[base_pile];
+            char *mp = NULL;
+            Valeur r = valeur_nombre(dec_zero());
+            for (size_t q = 0; q < n && !mp; q++) if (v[q].type == V_ABSENT) mp = message_absent(&v[q]);
+            if (!mp && forme == 0) {   /* la racine carrée */
+                if (v[0].type != V_NOMBRE) mp = grym_formater("La racine carrée se calcule d'un nombre : la valeur est %s.", nom_type(v[0].type));
+                else {
+                    Decimal x;
+                    if (dec_racine(&v[0].nombre, &x) != DEC_OK) {
+                        char *t = dec_afficher(&v[0].nombre);
+                        mp = grym_formater("La racine carrée de %s n'existe pas : un nombre négatif n'a pas de racine carrée réelle.", t);
+                        free(t);
+                    } else { valeur_liberer(&r); r = valeur_nombre(x); }
+                }
+            } else if (!mp && (forme == 1 || forme == 2)) {   /* le plus grand, le plus petit de a et de b… */
+                size_t meilleur = 0;
+                for (size_t q = 0; q < n && !mp; q++) {
+                    if (v[q].type != V_NOMBRE && v[q].type != V_DATE && v[q].type != V_HEURE)
+                        mp = grym_formater("Seuls des nombres, des dates ou des heures se comparent par ordre : la valeur est %s.",
+                                           nom_type(v[q].type));
+                    else if (q && v[q].type != v[0].type)
+                        mp = grym_formater("Comparaison impossible entre %s et %s.", nom_type(v[0].type), nom_type(v[q].type));
+                    else if (q) {
+                        const int c = v[q].type != V_NOMBRE ? (v[q].jours > v[meilleur].jours) - (v[q].jours < v[meilleur].jours)
+                                                           : dec_comparer(&v[q].nombre, &v[meilleur].nombre);
+                        if (forme == 1 ? c > 0 : c < 0) meilleur = q;
+                    }
+                }
+                if (!mp) { valeur_liberer(&r); r = valeur_copier(&v[meilleur]); }
+            } else if (!mp) {   /* sur une liste ou un ensemble */
+                static const char *const QUOI[] = { "", "", "", "La somme", "La moyenne", "Le plus grand élément", "Le plus petit élément" };
+                if (v[0].type != V_ENSEMBLE) mp = grym_formater("%s se lit dans une liste ou un ensemble, pas dans %s.", QUOI[forme], nom_type(v[0].type));
+                else {
+                    const Liste *l = v[0].liste;
+                    if (l->n == 0 && forme != 3) mp = grym_formater("%s d'une liste vide n'existe pas.", QUOI[forme]);
+                    size_t meilleur = 0;
+                    Decimal somme = dec_zero();
+                    for (size_t q = 0; q < l->n && !mp; q++) {
+                        const Valeur *x = &l->valeurs[q];
+                        if (forme <= 4) {
+                            if (x->type != V_NOMBRE) {
+                                char *t = texte_valeur(m, x);
+                                mp = grym_formater("%s d'une liste : « %s » est %s, pas un nombre.", QUOI[forme], t, nom_type(x->type));
+                                free(t);
+                            } else {
+                                Decimal s2;
+                                if (dec_addition(&somme, &x->nombre, &s2) != DEC_OK) mp = message_statut(DEC_TROP_GRAND);
+                                else { dec_liberer(&somme); somme = s2; }
+                            }
+                        } else if (x->type != V_NOMBRE && x->type != V_DATE && x->type != V_HEURE)
+                            mp = grym_formater("Seuls des nombres, des dates ou des heures se comparent par ordre : la valeur est %s.", nom_type(x->type));
+                        else if (q && x->type != l->valeurs[0].type)
+                            mp = grym_formater("Comparaison impossible entre %s et %s.", nom_type(l->valeurs[0].type), nom_type(x->type));
+                        else if (q) {
+                            const Valeur *y = &l->valeurs[meilleur];
+                            const int c = x->type != V_NOMBRE ? (x->jours > y->jours) - (x->jours < y->jours) : dec_comparer(&x->nombre, &y->nombre);
+                            if (forme == 5 ? c > 0 : c < 0) meilleur = q;
+                        }
+                    }
+                    if (!mp && forme == 3) { valeur_liberer(&r); r = valeur_nombre(somme); somme = dec_zero(); }
+                    else if (!mp && forme == 4) {
+                        Decimal nb = dec_depuis_long((long)l->n), moy;
+                        const StatutDecimal st = dec_division(&somme, &nb, &moy);
+                        dec_liberer(&nb);
+                        if (st != DEC_OK) mp = message_statut(st);
+                        else { valeur_liberer(&r); r = valeur_nombre(moy); }
+                    } else if (!mp) { valeur_liberer(&r); r = valeur_copier(&l->valeurs[meilleur]); }
+                    dec_liberer(&somme);
+                }
+            }
+            for (size_t q = 0; q < n; q++) valeur_liberer(&v[q]);
+            pile.n = base_pile;
+            if (mp) { valeur_liberer(&r); ok = echouer(diag, b, debut, mp); break; }
+            empiler(&pile, r);
             break;
         }
         case I_COURRIEL: {   /* « Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t. » (§ 22.27) */

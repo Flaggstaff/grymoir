@@ -2399,6 +2399,33 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* Racine carrée, plus grand, plus petit, somme et moyenne d'une liste (§ 3.7) ; les racines comparées à Python : la
+     * grammaire ; ici, des valeurs exactes, des zéros de queue, des extrêmes */
+    PROG("Afficher la racine carrée de 2,25 puis la racine carrée de 2.\n"
+         "Afficher le plus grand de 3 et de 7 puis le plus petit de 3, de 7 et de 2.\nLes notes valent la liste 4,5, 5 et 6.\n"
+         "Afficher la somme des notes puis la moyenne des notes.\n"
+         "Afficher le plus grand élément des notes puis le plus petit élément des notes.\nLe x vaut 9.\n"
+         "Afficher la racine carrée du x puis le plus grand de (x + 1) et de 2.\nAfficher le plus grand de 01.01.2026 et de 15.03.2026.",
+         "1,5 1,414213562373095048801688724\n7 2\n15,5 5,166666666666666666666666667\n6 4,5\n3 10\n15.03.2026");
+    PROG("Afficher la racine carrée de 100 puis la racine carrée de 1,00 puis la racine carrée de 0 puis la racine carrée de 0,0001.\n"
+         "Afficher la racine carrée de 1000000000000000000000000000000000000000000000000000000000000.\n"
+         "Les v valent une liste vide.\nAfficher la somme des v.\nLes c valent 3 et 3.\nAfficher la somme des c.",
+         "10 1,0 0 0,01\n1'000'000'000'000'000'000'000'000'000'000\n0\n3");
+    PROG("Une facture, conservée, a : un montant (nombre).\nLes montants valent la liste 1 et 2.\nLa f vaut une nouvelle facture :\n"
+         "    Le montant vaut 40.\nConserver f.\nAfficher la somme des montants des factures conservées puis la somme des montants.\n"
+         "La moyenne d'un a et d'un b vaut (a + b) / 2.\nAfficher la moyenne de 4 et de 6 puis la moyenne des montants.\n"
+         "Le plus grand d'un a et d'un b vaut 99.\nAfficher le plus grand de 1 et de 2.", "40 3\n5 1,5\n99");
+    PROG("Le x vaut 0 - 4.\nAfficher la racine carrée du x.",
+         "ERREUR 2:10 La racine carrée de −4 n'existe pas : un nombre négatif n'a pas de racine carrée réelle.");
+    PROG("Les v valent une liste vide.\nAfficher la moyenne des v.", "ERREUR 2:10 La moyenne d'une liste vide n'existe pas.");
+    PROG("Les v valent la liste 1 et « a ».\nAfficher la somme des v.", "ERREUR 2:10 La somme d'une liste : « a » est un texte, pas un nombre.");
+    PROG("Afficher le plus grand de 1 et de 01.01.2026.", "ERREUR 1:10 Comparaison impossible entre un nombre et une date.");
+    PROG("Afficher le plus petit de « a » et de « b ».",
+         "ERREUR 1:10 Seuls des nombres, des dates ou des heures se comparent par ordre : la valeur est un texte.");
+    PROG("Le x vaut 1.\nAfficher le plus grand de x + 1 et de 2.", "ERREUR 2:29 « et de » attendu : « le plus grand de a et de b ».");
+    PROG("Le x vaut 0 - 4.\nLes v valent une liste vide.\nEssayer :\n    Afficher la racine carrée du x.\n"
+         "En cas d'échec de nombre, afficher la sorte de l'échec.\nEssayer :\n    Afficher le plus petit élément des v.\n"
+         "En cas d'échec d'absence, afficher la sorte de l'échec.", "nombre\nabsence");
     /* Les courriels (§ 22.27) : ce que l'interface reçoit ; la clé, lue par l'instruction seule ; les refus, de sorte réseau */
     COURRIEL("La base est chiffrée.\nUne messagerie, conservée, a :\n    une adresse de courriel (texte),\n    un serveur de courriel (texte),\n    un compte de courriel (texte),\n    une clé de courriel (secret).\nLa m vaut une nouvelle messagerie :\n    L'adresse de courriel vaut « cabinet@exemple.ch ».\n    Le serveur de courriel vaut « mail.exemple.ch ».\n    Le compte de courriel vaut « compte ».\n    La clé de courriel vaut « s3cret ».\nLe prénom vaut « Ana ».\nEnvoyer un courriel à « ana@exemple.ch », avec l'objet « Votre séance », depuis m, et le texte suivant :\n"
              "    Bonjour {prénom},\n    à bientôt.\nAfficher « parti ».",

@@ -219,6 +219,15 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         if (n->nb_enfants) decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case N_MATH: {   /* (racine x), (plus-grand a b), (somme l)… (§ 3.7) */
+        static const char *const NOMS[] = { "racine", "plus-grand", "plus-petit", "somme", "moyenne", "plus-grand-élément",
+                                            "plus-petit-élément" };
+        chaine_ajouter(c, "(");
+        chaine_ajouter(c, n->forme >= 0 && n->forme <= 6 ? NOMS[n->forme] : "?");
+        for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }
+        chaine_ajouter(c, ")");
+        return;
+    }
     case N_GABARIT:   /* (gabarit «Bonjour » [prénom] «,») (§ 4.7) */
         chaine_ajouter(c, "(gabarit");
         for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }

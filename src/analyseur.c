@@ -2293,6 +2293,67 @@ static int nom_declare_en(Analyse *a, size_t k) {
     return 0;
 }
 
+/* § 3.7 : « la racine carrée de x », « le plus grand de a et de b », « le plus petit de a, de b et de c », « la somme des
+ * notes », « la moyenne des notes », « le plus grand élément des notes », « le plus petit élément des notes ». NULL sans
+ * erreur si rien de tel ne commence ici, ou si un calcul déclaré du même nom l'emporte. */
+static Noeud *math(Analyse *a) {
+    const Jeton *t = cour(a);
+    const int m_le = est_mot(t, "le") ? 1 : a->article_force == ART_LE ? 0 : -1;
+    const int m_la = est_mot(t, "la") ? 1 : a->article_force == ART_LA ? 0 : -1;
+    int forme = -1, saut = 0;
+    size_t fe;
+    if (m_la >= 0 && est_mot(voir(a, m_la), "racine") && est_mot(voir(a, m_la + 1), "carrée")
+        && (de_ou_d(voir(a, m_la + 2)) || est_mot(voir(a, m_la + 2), "du")) && !visible(a, "racine carrée"))
+        { forme = 0; saut = m_la + 2; }
+    else if (m_le >= 0 && est_mot(voir(a, m_le), "plus") && (est_mot(voir(a, m_le + 1), "grand") || est_mot(voir(a, m_le + 1), "petit"))) {
+        const int grand = est_mot(voir(a, m_le + 1), "grand");
+        if ((de_ou_d(voir(a, m_le + 2)) || est_mot(voir(a, m_le + 2), "du")) && !visible(a, grand ? "plus grand" : "plus petit"))
+            { forme = grand ? 1 : 2; saut = m_le + 2; }
+        else if (est_mot(voir(a, m_le + 2), "élément") && est_mot(voir(a, m_le + 3), "des") && ensemble_en(a, a->i + (size_t)m_le + 4, &fe))
+            { forme = grand ? 5 : 6; saut = m_le + 3; }
+    } else if (m_la >= 0 && (est_mot(voir(a, m_la), "somme") || est_mot(voir(a, m_la), "moyenne")) && est_mot(voir(a, m_la + 1), "des")
+               && ensemble_en(a, a->i + (size_t)m_la + 2, &fe)) {
+        /* « la somme des montants des factures conservées » reste un agrégat de la base (§ 16.4) : après le nom, « des » */
+        const Jeton *apres = fe < a->n ? &a->j[fe] : t;
+        if (!(est_mot(apres, "des") || est_mot(apres, "du") || de_ou_d(apres)))
+            { forme = est_mot(voir(a, m_la), "somme") ? 3 : 4; saut = m_la + 1; }
+    }
+    if (forme < 0) return NULL;
+    Noeud *n = noeud_creer(N_MATH, t->ligne, t->colonne, t->debut);
+    n->forme = forme;
+    a->article_force = ART_AUCUN;
+    for (int q = 0; q < saut; q++) avancer(a);
+    if (forme >= 3) {   /* « des notes » : « des » tient lieu de « les » */
+        Noeud *l = nom_ensemble(a);
+        if (!l) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, l);
+        n->fin = l->fin;
+        return n;
+    }
+    for (;;) {   /* « de x », puis pour le plus grand et le plus petit « , de y » et « et de z » */
+        Noeud *x = mots_de(a);
+        if (!x) { noeud_liberer(n); return NULL; }
+        noeud_ajouter(n, x);
+        n->fin = x->fin;
+        if (forme == 0) return n;
+        const Jeton *suite = voir(a, 1);
+        if ((cour(a)->type == J_VIRGULE || est_mot(cour(a), "et")) && (de_ou_d(suite) || est_mot(suite, "du"))) {
+            const int fin = est_mot(cour(a), "et");
+            avancer(a);
+            if (fin) {
+                Noeud *y = mots_de(a);
+                if (!y) { noeud_liberer(n); return NULL; }
+                noeud_ajouter(n, y);
+                n->fin = y->fin;
+                return n;
+            }
+            continue;
+        }
+        noeud_liberer(n);
+        return erreur(a, cour(a), grym_formater("« et de » attendu : « le plus %s de a et de b ».", forme == 1 ? "grand" : "petit"));
+    }
+}
+
 /* Le texte après « de », « d' » ou « du » (§ 4.6), comme « les mots de » ; NULL si la préposition manque. */
 static Noeud *texte_apres_de(Analyse *a, const char *tournure) {
     if (!(de_ou_d(cour(a)) || est_mot(cour(a), "du")))
@@ -2953,6 +3014,10 @@ static Noeud *base(Analyse *a) {
                 n->fin = l->fin;
                 return n;
             }
+        }
+        {
+            Noeud *x = math(a);   /* racine carrée, plus grand, plus petit, somme et moyenne d'une liste (§ 3.7) */
+            if (x || a->echec) return x;
         }
         if (est_mot(t, "le") && est_mot(voir(a, 1), "texte") && est_mot(voir(a, 2), "suivant") && voir(a, 3)->type == J_DEUX_POINTS) {
             /* « le texte suivant : » et son bloc, plus indenté (§ 4.7) : le lexeur a découpé le texte brut et les accolades */
