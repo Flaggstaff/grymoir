@@ -2421,6 +2421,48 @@ static void instruction(Reecriture *r, size_t d, size_t f) {
             emettre(r, J_DEUX_POINTS, marque, &r->e[f - 1], 1);
             return;
         }
+        if (!strcmp(c, "envoyer_courriel")) {
+            /* _envoyer_courriel _à a _objet o _depuis m _texte t → Envoyer un courriel à a, avec l'objet o, depuis m, et le
+             * texte t. ; « _texte_suivant » et son bloc à la place de « _texte t » (§ 22.27) */
+            size_t pos[4] = { 0, 0, 0, 0 };
+            static const char *const CLES[] = { "à", "objet", "depuis", "texte" };
+            int p = 0;
+            for (size_t q = d + 1; q < f; q++) {
+                if (r->e[q].type == J_PAR_OUV || r->e[q].type == J_GABARIT_DEBUT) p++;
+                else if (r->e[q].type == J_PAR_FERM || r->e[q].type == J_GABARIT_FIN) p--;
+                else if (p == 0)
+                    for (int c4 = 0; c4 < 4; c4++)
+                        if (!pos[c4] && est_cle(&r->e[q], CLES[c4])) pos[c4] = q;
+                if (p == 0 && !pos[3] && est_cle(&r->e[q], "texte_suivant")) pos[3] = q;
+            }
+            if (!pos[0] || pos[0] != d + 1 || !pos[1] || !pos[2] || !pos[3] || !(pos[0] < pos[1] && pos[1] < pos[2] && pos[2] < pos[3])) {
+                echouer(r, t, grym_dupliquer("Forme attendue : « _envoyer_courriel _à a _objet o _depuis m _texte t »."));
+                return;
+            }
+            mot(r, "envoyer", t);
+            mot(r, "un", t);
+            mot(r, "courriel", t);
+            mot(r, "à", t);
+            expression(r, pos[0] + 1, pos[1]);
+            emettre(r, J_VIRGULE, NULL, &r->e[pos[1]], 1);
+            mot(r, "avec", &r->e[pos[1]]);
+            emettre(r, J_ELISION, "l", &r->e[pos[1]], 1);
+            mot(r, "objet", &r->e[pos[1]]);
+            expression(r, pos[1] + 1, pos[2]);
+            emettre(r, J_VIRGULE, NULL, &r->e[pos[2]], 1);
+            mot(r, "depuis", &r->e[pos[2]]);
+            expression(r, pos[2] + 1, pos[3]);
+            emettre(r, J_VIRGULE, NULL, &r->e[pos[3]], 1);
+            mot(r, "et", &r->e[pos[3]]);
+            if (est_cle(&r->e[pos[3]], "texte_suivant")) expression(r, pos[3], f);
+            else {
+                mot(r, "le", &r->e[pos[3]]);
+                mot(r, "texte", &r->e[pos[3]]);
+                expression(r, pos[3] + 1, f);
+            }
+            point(r, f);
+            return;
+        }
         if (!strcmp(c, "échec_de")) {   /* _échec_de réseau _ou fichier → En cas d'échec de réseau ou de fichier : (§ 18.2) */
             if (!haut || haut->type != O_ESSAI) {
                 echouer(r, t, grym_dupliquer("« _échec_de » hors d'un « _essayer »."));

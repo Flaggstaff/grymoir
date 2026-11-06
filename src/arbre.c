@@ -407,6 +407,11 @@ static void decrire_noeud(const Noeud *n, Chaine *c) {
         decrire(n->enfants[0], c);
         chaine_ajouter(c, ")");
         return;
+    case P_COURRIEL:   /* (courriel a o m t) (§ 22.27) */
+        chaine_ajouter(c, "(courriel");
+        for (size_t k = 0; k < n->nb_enfants; k++) { chaine_ajouter(c, " "); decrire(n->enfants[k], c); }
+        chaine_ajouter(c, ")");
+        return;
     case P_CAS_ECHEC:   /* décrit par son P_ESSAYER ; seul, son bloc */
         decrire(n->enfants[0], c);
         return;

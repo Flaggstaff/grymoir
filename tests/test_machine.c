@@ -250,7 +250,7 @@ static void page_effacer(void *contexte, Chaine *sortie) { (void)sortie; ((Page 
 /* Exécute src avec l'interface page ; rend la sortie suivie du journal (à libérer). */
 static char *avec_page(const char *src, const char *const *reponses, size_t n, int *effacements) {
     Page pg = { reponses, n, 0, {0}, 0 };
-    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL };
+    Interface i = { &pg, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     machine_interface(m, &i);
@@ -1214,6 +1214,50 @@ static void scene_image(void *contexte, size_t k, const unsigned char *octets, s
     free(x);
 }
 
+/* Les courriels (§ 22.27) : une fausse interface note ce qu'elle reçoit, ou refuse comme un serveur le ferait. */
+static Chaine courriels;
+static int courriel_refuse, courriel_absent;
+static int faux_courriel(void *contexte, const char *serveur, const char *compte, const char *cle, const char *de, const char *a,
+                         const char *objet, const char *texte, char **erreur) {
+    (void)contexte;
+    if (courriel_refuse) { *erreur = grym_dupliquer("Le destinataire est refusé : le serveur a répondu 550 Boîte inconnue"); return 0; }
+    char *l = grym_formater("[%s|%s|%s|%s|%s|%s|%s]", serveur, compte, cle, de, a, objet, texte);
+    chaine_ajouter(&courriels, l);
+    free(l);
+    return 1;
+}
+static char *avec_courriel(const char *src) {
+    Interface i;
+    memset(&i, 0, sizeof i);
+    i.disponible = page_disponible;
+    i.formulaire = page_formulaire;
+    i.effacer = page_effacer;
+    i.courriel = courriel_absent ? NULL : faux_courriel;
+    const char *b = "_essai_courriel.grymd";   /* la clé est un secret : une base chiffrée, le temps de l'essai */
+    effacer_base(b);
+    Portee *p = portee_creer();
+    Machine *m = machine_creer();
+    machine_interface(m, &i);
+    machine_base(m, b);
+    machine_mot_de_passe_base(m, "essai-essai");
+    char *r = executer_source(p, m, src, 0);
+    machine_detruire(m);
+    portee_detruire(p);
+    effacer_base(b);
+    char *c = chaine_rendre(&courriels);
+    memset(&courriels, 0, sizeof courriels);
+    char *tout = grym_formater("%s%s", c ? c : "", r);
+    free(c);
+    free(r);
+    return tout;
+}
+#define COURRIEL(src, att) do { \
+        total++; \
+        char *r_ = avec_courriel(src); \
+        if (strcmp(r_, att) != 0) signaler(__LINE__, src, att, r_); \
+        free(r_); \
+    } while (0)
+
 static int transcrire_vraiment = 0;   /* essai de l'écoute : un transcripteur factice (2.69) */
 static char *scene_transcrire(void *contexte, const unsigned char *octets, size_t taille, char **erreur) {
     (void)contexte; (void)octets; (void)erreur;
@@ -1225,7 +1269,7 @@ static char *avec_ecrans(const char *src, const char *const *ev, size_t nev, con
     Interface i = { &sc, page_disponible, page_formulaire, page_effacer, 0, NULL, NULL,
                     scene_ouvrir, scene_lignes, scene_attendre, scene_erreur, scene_fermer, scene_valeurs,
                     scene_apparence, scene_etats, scene_image, NULL, NULL, NULL, NULL, scene_theme, scene_signature,
-                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL };
+                    NULL, NULL, NULL, NULL, NULL, 1, scene_signaler, scene_amorcer, NULL, NULL };
     Portee *p = portee_creer();
     Machine *m = machine_creer();
     if (transcrire_vraiment) i.transcrire = scene_transcrire;
@@ -2355,6 +2399,32 @@ int main(void) {
     PROG("Les x valent 1.\nAfficher 3 est parmi les x.", "faux");
     PROG("Le t vaut 1.\nLes t deviennent 2.", "ERREUR 2:5 « t » n'est pas un ensemble.");
     /* Listes (§ 13.10) : doublons gardés, gagner à la fin, perdre la première occurrence, rangs */
+    /* Les courriels (§ 22.27) : ce que l'interface reçoit ; la clé, lue par l'instruction seule ; les refus, de sorte réseau */
+    COURRIEL("La base est chiffrée.\nUne messagerie, conservée, a :\n    une adresse de courriel (texte),\n    un serveur de courriel (texte),\n    un compte de courriel (texte),\n    une clé de courriel (secret).\nLa m vaut une nouvelle messagerie :\n    L'adresse de courriel vaut « cabinet@exemple.ch ».\n    Le serveur de courriel vaut « mail.exemple.ch ».\n    Le compte de courriel vaut « compte ».\n    La clé de courriel vaut « s3cret ».\nLe prénom vaut « Ana ».\nEnvoyer un courriel à « ana@exemple.ch », avec l'objet « Votre séance », depuis m, et le texte suivant :\n"
+             "    Bonjour {prénom},\n    à bientôt.\nAfficher « parti ».",
+             "[mail.exemple.ch|compte|s3cret|cabinet@exemple.ch|ana@exemple.ch|Votre séance|Bonjour Ana,\nà bientôt.]parti");
+    COURRIEL("La base est chiffrée.\nUne messagerie, conservée, a :\n    une adresse de courriel (texte),\n    un serveur de courriel (texte),\n    un compte de courriel (texte),\n    une clé de courriel (secret).\nLa m vaut une nouvelle messagerie :\n    L'adresse de courriel vaut « cabinet@exemple.ch ».\n    Le serveur de courriel vaut « mail.exemple.ch ».\n    Le compte de courriel vaut « compte ».\n    La clé de courriel vaut « s3cret ».\nAfficher la clé de courriel de m.", "ERREUR 12:10 « clé de courriel » est un secret : il ne se lit que pour être envoyé.");
+    COURRIEL("La base est chiffrée.\nUne messagerie, conservée, a :\n    une adresse de courriel (texte),\n    un serveur de courriel (texte),\n    un compte de courriel (texte),\n    une clé de courriel (secret).\nLa m vaut une nouvelle messagerie :\n    L'adresse de courriel vaut « cabinet@exemple.ch ».\n    Le serveur de courriel vaut « mail.exemple.ch ».\n    Le compte de courriel vaut « compte ».\n    La clé de courriel vaut « s3cret ».\nEssayer :\n    Envoyer un courriel à « ana », avec l'objet « o », depuis m, et le texte « t ».\n"
+             "En cas d'échec de réseau, afficher le motif de l'échec.", "« ana » n'est pas une adresse de courriel.");
+    COURRIEL("La base est chiffrée.\nUne messagerie, conservée, a :\n    une adresse de courriel (texte),\n    un serveur de courriel (texte),\n    un compte de courriel (texte),\n    une clé de courriel (secret).\nLa m vaut une nouvelle messagerie :\n    L'adresse de courriel vaut « cabinet@exemple.ch ».\n    Le serveur de courriel vaut « mail.exemple.ch ».\n    Le compte de courriel vaut « compte ».\n    La clé de courriel vaut « s3cret ».\nLe t vaut le texte suivant :\n    a\n    b\nEnvoyer un courriel à « a@b.ch », avec l'objet t, depuis m, et le texte « x ».",
+             "ERREUR 15:1 L'objet d'un courriel tient sur une ligne.");
+    COURRIEL("La base est chiffrée.\nUne messagerie, conservée, a :\n    une adresse de courriel (texte),\n    un serveur de courriel (texte),\n    un compte de courriel (texte),\n"
+             "    une clé de courriel (texte).\nLa m vaut une nouvelle messagerie.\n"
+             "Envoyer un courriel à « a@b.ch », avec l'objet « o », depuis m, et le texte « x ».",
+             "ERREUR 8:1 « clé de courriel » est un secret : écris « une clé de courriel (secret) ».");
+    COURRIEL("Un patient a : un nom.\nLe p vaut un nouveau patient.\n"
+             "Envoyer un courriel à « a@b.ch », avec l'objet « o », depuis p, et le texte « x ».",
+             "ERREUR 3:1 La messagerie n'a pas de champ « adresse de courriel ».");
+    courriel_absent = 1;
+    COURRIEL("La base est chiffrée.\nUne messagerie, conservée, a :\n    une adresse de courriel (texte),\n    un serveur de courriel (texte),\n    un compte de courriel (texte),\n    une clé de courriel (secret).\nLa m vaut une nouvelle messagerie :\n    L'adresse de courriel vaut « cabinet@exemple.ch ».\n    Le serveur de courriel vaut « mail.exemple.ch ».\n    Le compte de courriel vaut « compte ».\n    La clé de courriel vaut « s3cret ».\nEnvoyer un courriel à « a@b.ch », avec l'objet « o », depuis m, et le texte « x ».",
+         "ERREUR 12:1 Un courriel s'envoie dans l'atelier ou dans une application fabriquée.");
+    courriel_absent = 0;
+    courriel_refuse = 1;
+    COURRIEL("La base est chiffrée.\nUne messagerie, conservée, a :\n    une adresse de courriel (texte),\n    un serveur de courriel (texte),\n    un compte de courriel (texte),\n    une clé de courriel (secret).\nLa m vaut une nouvelle messagerie :\n    L'adresse de courriel vaut « cabinet@exemple.ch ».\n    Le serveur de courriel vaut « mail.exemple.ch ».\n    Le compte de courriel vaut « compte ».\n    La clé de courriel vaut « s3cret ».\nEssayer :\n    Envoyer un courriel à « a@b.ch », avec l'objet « o », depuis m, et le texte « x ».\n"
+             "En cas d'échec de réseau, afficher le motif de l'échec.", "Le destinataire est refusé : le serveur a répondu 550 Boîte inconnue");
+    courriel_refuse = 0;
+    PROG("Le carré d'un n :\n    Envoyer un courriel à « a@b.ch », avec l'objet « o », depuis n, et le texte « x ».\n    Rendre n.",
+         "ERREUR 2:5 Un calcul n'envoie rien : envoie le courriel dans une action.");
     /* Le texte suivant (§ 4.7) : retrait de la première ligne, retrait plus grand gardé, lignes vides du milieu gardées,
      * de la fin ôtées, saut de ligne après une accolade gardé (un défaut de la première version le perdait) */
     PROG("Une séance a : un prénom, une date, une heure, un tarif.\nLa s vaut une nouvelle séance :\n    Le prénom vaut « Ana ».\n"

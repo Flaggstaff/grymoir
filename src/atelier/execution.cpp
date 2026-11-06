@@ -1,4 +1,5 @@
 // GrymoiR : l'atelier, exécution d'un programme dans sa propre fenêtre.
+#include "courriel.h"
 #include "execution.h"
 #include "agenda.h"
 #include "ecoute.h"
@@ -252,6 +253,18 @@ static void iface_ecran_theme(void *contexte, const char *const *noms, const cha
 static void iface_montrer_document(void *contexte, const unsigned char *octets, size_t taille, const char *nom) {   // 2.25, 2.26
     emit static_cast<Travail *>(contexte)->document(QByteArray(reinterpret_cast<const char *>(octets), (qsizetype)taille),
                                                     QString::fromUtf8(nom ? nom : "document.pdf"));
+}
+
+// « Envoyer un courriel à … » (2.94, § 22.27) : SMTP sur TLS implicite, attendu sur place, dans src/atelier/courriel.cpp
+static int iface_courriel(void *contexte, const char *serveur, const char *compte, const char *cle, const char *de,
+                          const char *a, const char *objet, const char *texte, char **erreur) {
+    (void)contexte;
+    QString e;
+    if (grym_courriel(QString::fromUtf8(serveur), QString::fromUtf8(compte), QString::fromUtf8(cle), QString::fromUtf8(de),
+                      QString::fromUtf8(a), QString::fromUtf8(objet), QString::fromUtf8(texte), &e))
+        return 1;
+    *erreur = grym_dupliquer(e.toUtf8().constData());
+    return 0;
 }
 
 // « l'envoi à … de : », « la lecture de … » (2.42) : dans le fil de l'exécution, une requête HTTPS attendue sur place, 15 s
@@ -657,7 +670,7 @@ void Travail::run() {
                    iface_transcrire, iface_ecran_theme, iface_ecran_signature, iface_ecran_texte,
                    iface_montrer_document, iface_ouvrir_adresse, iface_envoyer, iface_ecran_transcrire,
                    1,    // les écoutes captent le son (2.69)
-                   iface_ecran_signaler, iface_amorcer, iface_ecran_choix};
+                   iface_ecran_signaler, iface_amorcer, iface_ecran_choix, iface_courriel};
     machine_interface(m, &i);
     machine_demande_mot_de_passe(m, atelier_demander_mot_de_passe, nullptr);   // « La base est chiffrée. » (2.37)
     machine_essais_mot_de_passe(m, 5);   // un mot de passe faux se redemande, sans relancer l'application (6 novembre 2026)

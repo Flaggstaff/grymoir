@@ -2326,6 +2326,20 @@ static void phrase(Impression *im, const Noeud *n, int niveau) {
         expression(im, n->enfants[0]);
         aj(im, c ? "\n" : ".\n");
         return;
+    case P_COURRIEL: {   /* « Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t. » ; compacte :
+                          * « _envoyer_courriel _à a _objet o _depuis m _texte t » (§ 22.27) */
+        const int gabarit = n->enfants[3]->type == N_GABARIT;
+        aj(im, c ? "_envoyer_courriel _à " : "Envoyer un courriel à ");
+        expression(im, n->enfants[0]);
+        aj(im, c ? " _objet " : ", avec l'objet ");
+        expression(im, n->enfants[1]);
+        aj(im, c ? " _depuis " : ", depuis ");
+        expression(im, n->enfants[2]);
+        aj(im, gabarit ? (c ? " " : ", et ") : (c ? " _texte " : ", et le texte "));
+        expression(im, n->enfants[3]);
+        aj(im, c ? "\n" : ".\n");
+        return;
+    }
     case P_ESSAYER:   /* « Essayer : … En cas d'échec : … » ; « _essayer … _échec … _fin » (§ 18) */
         aj(im, c ? "_essayer" : "Essayer");
         branche(im, n->enfants[0], 0, niveau);

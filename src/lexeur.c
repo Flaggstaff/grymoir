@@ -25,6 +25,7 @@ struct Lexeur {
                           4 : ACC_OUV à émettre ; 5 : FIN à émettre ; 6 : le point synthétique à émettre */
     int gab_base, gab_bloc;   /* retrait de la ligne qui ouvre le bloc, et de sa première ligne */
     int gab_premier;          /* le premier morceau du bloc : ses lignes vides de tête tombent */
+    int gab_der_ligne, gab_der_col;   /* juste après le dernier contenu du bloc : la place de sa fin et du point */
 };
 
 /* ---------------------------------------------------------------- */
@@ -865,6 +866,8 @@ static Jeton lire_gabarit(Lexeur *lx) {
         }
         if (!contenu) contenu = 1;
         for (; sauts > 0; sauts--) tampon_octet(&t, '\n');
+        lx->gab_der_ligne = lx->ligne;
+        lx->gab_der_col = lx->colonne + 1;
         if (c == '{' && voir(lx, 1) == '{') { avancer(lx); avancer(lx); tampon_octet(&t, '{'); continue; }
         if (c == '}' && voir(lx, 1) == '}') { avancer(lx); avancer(lx); tampon_octet(&t, '}'); continue; }
         if (c == '}') {
@@ -889,6 +892,8 @@ Jeton lexeur_suivant(Lexeur *lx) {
         avancer(lx);
         lx->gabarit = 2;
         lx->gab_premier = 1;
+        lx->gab_der_ligne = lx->ligne - 1;   /* un bloc vide : la fin reste sur la ligne qui l'ouvre */
+        lx->gab_der_col = 1;
         return faire(lx, J_GABARIT_DEBUT, lx->pos, lx->ligne, lx->colonne, NULL);
     }
     case 2: return lire_gabarit(lx);
@@ -909,17 +914,23 @@ Jeton lexeur_suivant(Lexeur *lx) {
             int l = lx->ligne, c = lx->colonne;
             avancer(lx);
             lx->gabarit = 2;
+            lx->gab_der_ligne = l;
+            lx->gab_der_col = c + 1;
             return faire(lx, J_ACC_FERM, d, l, c, NULL);
         }
         lx->debut_ligne = 0;
         return suivant_brut(lx);
     }
-    case 5:
+    case 5: {   /* la fin, et le point, à la place du dernier contenu : le mot qui suit reste premier de sa ligne */
         lx->gabarit = lx->compact ? 0 : 6;
-        return faire(lx, J_GABARIT_FIN, lx->pos, lx->ligne, lx->colonne, NULL);
+        Jeton j = faire(lx, J_GABARIT_FIN, lx->pos, lx->gab_der_ligne, lx->gab_der_col, NULL);
+        j.longueur = 0;
+        return j;
+    }
     case 6: {   /* le point de la phrase, que le bloc remplace */
         lx->gabarit = 0;
-        Jeton j = faire(lx, J_POINT, lx->pos, lx->ligne, lx->colonne, NULL);
+        Jeton j = faire(lx, J_POINT, lx->pos, lx->gab_der_ligne, lx->gab_der_col, NULL);
+        j.longueur = 0;
         j.synthetique = 1;
         return j;
     }

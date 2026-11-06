@@ -275,6 +275,10 @@ int main(void) {
     ERR("_échec_de réseau\n", 1, 1, "« _échec_de » hors d'un « _essayer ».");
     ALLER_RETOUR("_le n << 2\n_le x << _texte_suivant\n    a : {_nu n + 1}, {{b}}\n\n      c\n_si _nu n > 1 _alors\n"
                  "    _afficher _texte_suivant\n        {_nu x} fin\n_fin\n_afficher _nu n\n", NULL);
+    ALLER_RETOUR("_le m << 1\n_envoyer_courriel _à « a@b.ch » _objet « o » _depuis _nu m _texte_suivant\n    Bonjour {_nu m}.\n"
+                 "_afficher _nu m\n", NULL);
+    ERR("_le m << 1\n_envoyer_courriel _à « a@b.ch » _depuis _nu m _texte « t »\n", 2, 1,
+        "Forme attendue : « _envoyer_courriel _à a _objet o _depuis m _texte t ».");
     ERR("_les l << _liste 1 ; 2\n_afficher _élément(l)\n", 2, 11, "« _élément » prend la liste et le rang : _élément(étapes ; 3).");
     ERR("_les l << _liste 1 ; 2\n_afficher _premier(l ; 2)\n", 2, 11, "« _premier » prend la liste seule : _premier(étapes).");
     ALLER_RETOUR("_classe _une personne\n    _un nom\n_fin\n_action saluer(_une personne)\n    _afficher personne.nom\n_fin\n"

@@ -1031,6 +1031,10 @@ static void phrase(Compilation *c, const Noeud *ph) {
         expression(c, ph->enfants[0]);
         emettre(c, I_RESAISIR, 0, ph->ligne, ph->colonne);
         return;
+    case P_COURRIEL:   /* le destinataire, l'objet, la messagerie, le texte, puis COURRIEL (§ 22.27) */
+        for (size_t k = 0; k < ph->nb_enfants; k++) expression(c, ph->enfants[k]);
+        emettre(c, I_COURRIEL, 0, ph->ligne, ph->colonne);
+        return;
     case P_ESSAYER: {
         /* ESSAYER → échec ; corps ; FIN_ESSAI ; → fin ; échec : motif → case ; bloc « En cas d'échec » ; fin (§ 18) */
         size_t vers_echec = bloc_emettre_saut(c->b, I_ESSAYER, ph->ligne, ph->colonne);

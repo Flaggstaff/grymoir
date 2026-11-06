@@ -1686,6 +1686,7 @@ static Noeud *mots_de(Analyse *a);
 static Symbole *table_en(Analyse *a, size_t k, size_t *fin);
 static int liste_de_table_en(Analyse *a, size_t k);
 static Noeud *phrase_dans(Analyse *a, const Jeton *t);
+static Noeud *phrase_courriel(Analyse *a, const Jeton *t);
 
 static int contient_champ_dont(const Noeud *n) {
     if (n->type == N_CHAMP_DONT) return 1;
@@ -9853,6 +9854,45 @@ static Noeud *exporter(Analyse *a, const Jeton *t) {
     return n;
 }
 
+/* « Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t. », ou « et le texte suivant : » et son bloc
+ * (§ 22.27). */
+static Noeud *phrase_courriel(Analyse *a, const Jeton *t) {
+    if (a->formule == 1) return erreur(a, t, grym_dupliquer("Un calcul n'envoie rien : envoie le courriel dans une action."));
+    static const char *const FORME = "Forme attendue : « Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t. »";
+    a->i += 4;
+    Noeud *n = noeud_creer(P_COURRIEL, t->ligne, t->colonne, t->debut);
+    Noeud *x = expression(a);
+    if (!x) { noeud_liberer(n); return NULL; }
+    noeud_ajouter(n, x);
+    if (!(cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "avec") && voir(a, 2)->type == J_ELISION
+          && strcmp(voir(a, 2)->valeur, "l") == 0 && est_mot(voir(a, 3), "objet"))) {
+        noeud_liberer(n);
+        return erreur(a, cour(a), grym_dupliquer(FORME));
+    }
+    a->i += 4;
+    if (!(x = expression(a))) { noeud_liberer(n); return NULL; }
+    noeud_ajouter(n, x);
+    if (!(cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "depuis"))) {
+        noeud_liberer(n);
+        return erreur(a, cour(a), grym_dupliquer(FORME));
+    }
+    a->i += 2;
+    if (!(x = expression(a))) { noeud_liberer(n); return NULL; }
+    noeud_ajouter(n, x);
+    if (!(cour(a)->type == J_VIRGULE && est_mot(voir(a, 1), "et") && est_mot(voir(a, 2), "le") && est_mot(voir(a, 3), "texte"))) {
+        noeud_liberer(n);
+        return erreur(a, cour(a), grym_dupliquer(FORME));
+    }
+    a->i += 2;   /* « , et » : « le texte suivant : » se lit en entier ; sinon « le texte » puis la valeur */
+    if (est_mot(voir(a, 2), "suivant") && voir(a, 3)->type == J_DEUX_POINTS) x = base(a);
+    else { a->i += 2; x = expression(a); }
+    if (!x) { noeud_liberer(n); return NULL; }
+    noeud_ajouter(n, x);
+    n->fin = x->fin;
+    if (!fin_phrase(a, 0)) { noeud_liberer(n); return NULL; }
+    return n;
+}
+
 /* « Dans les compteurs, « CQ » vaut 0. » crée une clé ; « devient » modifie sa valeur (§ 13.11). */
 static Noeud *phrase_dans(Analyse *a, const Jeton *t) {
     size_t fe;
@@ -10421,6 +10461,9 @@ static Noeud *phrase(Analyse *a, int colonne) {
     if (est_mot(t, "les") && est_mot(voir(a, 1), "écrans") && est_mot(voir(a, 2), "ont")) return apparence(a, t);
     if (est_mot(t, "exemple") && voir(a, 1)->type == J_DEUX_POINTS) return exemple(a, t);   /* § 9.6 */
     if (est_mot(t, "dans")) return phrase_dans(a, t);   /* § 13.11 */
+    if (est_mot(t, "envoyer") && est_mot(voir(a, 1), "un") && est_mot(voir(a, 2), "courriel") && est_mot(voir(a, 3), "à")
+        && !visible(a, "envoyer un courriel"))
+        return phrase_courriel(a, t);   /* § 22.27 */
     if (est_mot(t, "les")) {
         Noeud *n = phrase_ensemble(a, t);   /* § 13.9 */
         if (n || a->echec) return n;

@@ -1,0 +1,30 @@
+#!/bin/sh
+# Les courriels (§ 22.27, 6 novembre 2026) : le client SMTP de l'atelier, contre un faux serveur local en TLS
+# (tests/faux_smtp.py), avec un certificat fait maison ; un envoi réussi, puis un compte refusé et un destinataire refusé.
+# Sans test_courriel construit, sans python3 ou sans openssl, l'essai se dit sauté.
+racine=$(cd "$(dirname "$0")/.." && pwd)
+essai="$racine/construction/test_courriel"
+[ -x "$essai" ] || essai="$racine/test_courriel"
+if [ ! -x "$essai" ]; then echo "courriel : sauté (test_courriel absent)"; exit 0; fi
+command -v python3 >/dev/null 2>&1 && command -v openssl >/dev/null 2>&1 || { echo "courriel : sauté (python3 ou openssl absent)"; exit 0; }
+d=$(mktemp -d)
+trap 'kill $serveur 2>/dev/null; rm -rf "$d"' EXIT
+openssl req -x509 -newkey rsa:2048 -nodes -subj "/CN=127.0.0.1" -days 1 -keyout "$d/cle.pem" -out "$d/cert.pem" >/dev/null 2>&1
+port=$((20000 + $$ % 20000))
+echecs=0
+servir() {   # mode, connexions
+    python3 "$racine/tests/faux_smtp.py" "$port" "$d/cert.pem" "$d/cle.pem" "$d/recu.txt" "$1" "$2" > "$d/pret.txt" 2>&1 &
+    serveur=$!
+    i=0; while [ $i -lt 50 ] && ! grep -q prêt "$d/pret.txt" 2>/dev/null; do sleep 0.1; i=$((i + 1)); done
+}
+rm -f "$d/recu.txt"; servir ok 2
+QT_QPA_PLATFORM=offscreen "$essai" "$port" "$d/recu.txt" || echecs=$((echecs + 1))
+wait $serveur 2>/dev/null
+for mode in refuse_auth refuse_rcpt; do
+    port=$((port + 1)); rm -f "$d/recu.txt"; servir "$mode" 1
+    QT_QPA_PLATFORM=offscreen "$essai" "$port" "$d/recu.txt" "$(echo $mode | sed 's/refuse_/refus_/')" > "$d/sortie.txt" 2>&1 \
+        || echecs=$((echecs + 1))
+    cat "$d/sortie.txt"
+    wait $serveur 2>/dev/null
+done
+[ $echecs -eq 0 ] && echo "courriel : réussi" || { echo "courriel : $echecs échec(s)"; exit 1; }

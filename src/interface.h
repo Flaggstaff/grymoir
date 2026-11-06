@@ -258,6 +258,10 @@ typedef struct {
      * ajouté par un autre écran) : ses clés, comme à l'ouverture (3 novembre 2026). NULL : le menu garde celles de
      * l'ouverture. */
     void (*ecran_choix)(void *contexte, size_t element, const char *const *choix, size_t n);
+    /* « Envoyer un courriel à … » (2.94, § 22.27) : SMTP sur TLS implicite ; serveur : « hôte » ou « hôte:port ». Rend 1 ;
+     * 0 et *erreur (allouée) sinon. NULL : la machine refuse (console, navigateur). */
+    int (*courriel)(void *contexte, const char *serveur, const char *compte, const char *cle, const char *de, const char *a,
+                    const char *objet, const char *texte, char **erreur);
 } Interface;
 
 /* Forme console d'un champ : « Titre [L'Offrande musicale] (- pour vider) ? », ou la question telle quelle.

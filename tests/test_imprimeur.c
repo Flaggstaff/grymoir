@@ -144,6 +144,10 @@ int main(void) {
          "        {x} fin\nAfficher n.\n");
     COMP("Le n vaut 2.\nLe x vaut le texte suivant :\n    a {n}\n    b\nAfficher x.\n",
          "_le n << 2\n_le x << _texte_suivant\n    a {_nu n}\n    b\n_afficher _nu x\n");
+    FIXE("Le m vaut 1.\nEnvoyer un courriel à « a@b.ch », avec l'objet « o », depuis m, et le texte « t ».\n"
+         "Envoyer un courriel à « a@b.ch », avec l'objet « o », depuis m, et le texte suivant :\n    Bonjour {m}.\nAfficher m.\n");
+    COMP("Le m vaut 1.\nEnvoyer un courriel à « a@b.ch », avec l'objet « o », depuis m, et le texte « t ».\n",
+         "_le m << 1\n_envoyer_courriel _à « a@b.ch » _objet « o » _depuis _nu m _texte « t »\n");
     LITT("Les étapes valent la liste 1.\nLes étapes deviennent 2 et 2.\n",
          "Les étapes valent la liste 1.\nLes étapes deviennent la liste 2 et 2.\n");   /* une liste reste une liste (§ 13.10) */
     COMP("Les étapes valent la liste 1 et 2.\nLes v valent une liste vide.\nAfficher le 2e élément des étapes.\n"

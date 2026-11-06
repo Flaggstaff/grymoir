@@ -167,10 +167,11 @@ typedef enum {
                            clé, puis la table ; 2 (perdre) : dépile la clé, puis la table ; empile la table changée */
     I_TABLE_LISTE,      /* opérande 0 : remplace la table par la liste de ses clés ; 1 : de ses valeurs (§ 13.11) */
     I_SORTE_ECHEC,      /* empile la sorte de l'échec que le dernier essai a rattrapé, un texte (§ 18.2) */
-    I_RELANCER          /* dépile la sorte, puis le motif : l'échec repart, avec sa position d'origine (§ 18.2) */
+    I_RELANCER,         /* dépile la sorte, puis le motif : l'échec repart, avec sa position d'origine (§ 18.2) */
+    I_COURRIEL          /* dépile le texte, la messagerie, l'objet, puis le destinataire ; envoie le courriel (§ 22.27) */
 } CodeInstruction;
 
-#define I_DERNIER I_RELANCER
+#define I_DERNIER I_COURRIEL
 
 /* Paramètres d'un descripteur de recherche (le plus grand « ?n »), ou −1 s'il est mal formé. */
 long requete_parametres(const char *descripteur);

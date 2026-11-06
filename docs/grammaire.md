@@ -1,6 +1,6 @@
 # Grammaire littéraire de GrymoiR
 
-Version 2.93 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
+Version 2.94 de la spécification, révisée le 6 novembre 2026. Tout ce qui suit est implémenté.
 Référence : Charte de GrymoiR v1.36, art. 4, 5, 7, 8, 9 et 12.
 Toute modification passe par une révision numérotée.
 
@@ -2649,6 +2649,33 @@ Pour chaque d parmi les décodages WSJT du port 2238 :
 - **Les refus** (rattrapables) : « Le port UDP 2237 ne s'ouvre pas : un autre logiciel l'écoute peut-être déjà (JTAlert, GridTracker). … » ; un port hors de 1 à 65535 : « Le port de WSJT-X est un nombre entier de 1 à 65535 (2237, celui de WSJT-X). » ; `WSJT-X` écrit avec son trait d'union : « « les décodages WSJT » s'écrit sans « -X » : un trait d'union est une soustraction. ». Pas dans un calcul.
 - **Le format** est celui des messages UDP de WSJT-X (NetworkMessage.hpp dans ses sources), décrit ici de mémoire et vérifié seulement contre des messages fabriqués : les messages « Status » (1) donnent la fréquence et le mode, chaque « Decode » (2) un décodage ; les autres sont ignorés. Le mode d'un décodage vient du dernier Status ; sans lui, du caractère du Decode (« ~ » FT8, « + » FT4).
 - Forme compacte : `_décodages_wsjt [p]`.
+### 22.27 Les courriels *(2.94)*
+
+```
+La base est chiffrée.
+Un cabinet, conservé, a :
+    un nom (texte), unique,
+    une adresse de courriel (texte),
+    un serveur de courriel (texte),
+    un compte de courriel (texte),
+    une clé de courriel (secret).
+Pour rappeler un patient :
+    Envoyer un courriel à l'adresse du patient, avec l'objet « Votre séance », depuis le cabinet conservé, et le texte suivant :
+        Bonjour {prénom du patient},
+
+        Votre séance du {date de la prochaine séance du patient en toutes lettres} est confirmée.
+```
+
+- `Envoyer un courriel à A, avec l'objet O, depuis M, et le texte T.` envoie un courriel au format texte, en UTF-8. `A` est l'adresse du destinataire ; `O`, l'objet ; `T`, le contenu, en général un texte suivant (§ 4.7), qui finit alors la phrase.
+- **La messagerie** `M` est un objet dont l'entité a quatre champs, reconnus par leur nom : `adresse de courriel` (texte, l'expéditeur), `serveur de courriel` (texte, `mail.infomaniak.com`), `compte de courriel` (texte, l'identifiant de connexion, souvent l'adresse elle-même) et `clé de courriel` (secret, § 22.17 : le mot de passe de la messagerie, dans une base chiffrée). La clé ne se lit nulle part ailleurs : l'instruction la lit elle-même, au moment d'envoyer.
+- **Le serveur** se joint en SMTP sur TLS implicite, port 465, avec les certificats du système ; `mail.infomaniak.com:465` choisit le port. L'authentification est `AUTH PLAIN`. STARTTLS (port 587) n'est pas fait : les grands fournisseurs (Infomaniak, Gmail, Outlook) offrent le port 465 (de mémoire, à vérifier chez chacun).
+- **Où.** Comme un envoi web (§ 22.18), un courriel part de l'atelier et des applications fabriquées ; la console et le navigateur refusent : « Un courriel s'envoie dans l'atelier ou dans une application fabriquée. »
+- **Les refus**, tous de sorte `réseau` (§ 18.2), donc rattrapables : une adresse sans `@`, ou qui contient une espace ou un retour à la ligne ; un objet sur plusieurs lignes (« L'objet d'un courriel tient sur une ligne. ») ; une messagerie à qui il manque un champ (« La messagerie n'a pas de champ « clé de courriel ». ») ou dont la clé n'est pas un secret (« « clé de courriel » est un secret : écris « une clé de courriel (secret) ». ») ; le serveur injoignable, un certificat refusé, une authentification refusée, un destinataire refusé, chacun avec la réponse du serveur. Rien n'est réessayé en silence : `Essayer … En cas d'échec de réseau` décide.
+- **Une transaction n'annule pas un courriel parti.** Un courriel envoyé dans un `Essayer` dont la suite échoue reste envoyé : comme l'envoi web, c'est un effet hors de la base. Envoyer en dernier ce qui ne doit partir qu'après réussite.
+- Un calcul n'envoie rien (§ 9.4).
+- `Envoyer` n'est pas un mot réservé : une action déclarée « envoyer un courriel … » l'emporte.
+- En forme compacte : `_envoyer_courriel _à a _objet o _depuis m _texte t`, ou `_texte_suivant` et son bloc à la place de `_texte t`.
+
 ## Journal des révisions
 
 | Version | Date | Changement |
@@ -2846,3 +2873,4 @@ Pour chaque d parmi les décodages WSJT du port 2238 :
 | 2.91 | 2026-11-06 | Nouveau § 13.11 : les tables (`la table où « a » vaut 1 et « b » vaut 2`, `une table vide`) ; `Dans les t, k vaut v.` crée une clé, `devient` la modifie, l'un refusant ce que l'autre fait ; `la valeur de k dans les t` (clé absente : erreur) ; `les clés des t`, `les valeurs des t`, des listes ; `perdent` retire une clé ; `le nombre de t`. Type de valeur `V_TABLE` ; instructions `TABLE`, `TABLE_LIRE`, `TABLE_ECRIRE`, `TABLE_LISTE`. `dans` devient un mot de construction en tête de phrase. Correction : un symbole déclaré n'initialisait pas sa marque de liste (2.89), si bien qu'un ensemble pouvait garder ses doublons selon l'état de la mémoire. Formes compactes `_table`, `_table_vide`, `_dans t k _vaut v`, `_valeur(k ; t)`, `_clés(t)`, `_valeurs(t)` |
 | 2.92 | 2026-11-06 | Nouveau § 18.2 : les sortes d'échec (`division`, `nombre`, `lecture`, `absence`, `clé`, `rang`, `texte`, `unicité`, `lien`, `fichier`, `réseau`, `port`, `saisie`, `refus`, `autre`), promises, contrairement au motif ; `En cas d'échec de réseau ou de fichier :`, plusieurs blocs, le premier qui convient ; sans bloc qui convienne, l'échec remonte ; `la sorte de l'échec`. Instructions `SORTE_ECHEC` et `RELANCER`. Formes compactes `_échec_de`, `_sorte` |
 | 2.93 | 2026-11-06 | Nouveau § 4.7 : le texte suivant (`Le rappel vaut le texte suivant :` puis un bloc plus indenté, texte brut, `{expression}` insérée comme par `suivi de`, `{{` et `}}` pour une accolade) ; le lexeur découpe le bloc (jetons `GABARIT_DÉBUT`, `GABARIT`, `ACC_OUV`, `ACC_FERM`, `GABARIT_FIN`), aucune instruction nouvelle. Forme compacte `_texte_suivant` |
+| 2.94 | 2026-11-06 | Nouveau § 22.27 : les courriels, `Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t.` ; la messagerie, un objet aux champs `adresse de courriel`, `serveur de courriel`, `compte de courriel`, `clé de courriel (secret)` ; SMTP sur TLS implicite (465), `AUTH PLAIN` ; dans l'atelier et les applications fabriquées (fonction d'interface `courriel`, `src/atelier/courriel.cpp`) ; instruction `COURRIEL` ; refus de sorte `réseau`. Forme compacte `_envoyer_courriel` |

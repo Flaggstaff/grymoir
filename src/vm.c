@@ -7097,6 +7097,58 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             empiler(&pile, x);
             break;
         }
+        case I_COURRIEL: {   /* « Envoyer un courriel à a, avec l'objet o, depuis m, et le texte t. » (§ 22.27) */
+            Valeur t = depiler(&pile), mess = depiler(&pile), o = depiler(&pile), a = depiler(&pile);
+            char *mp = NULL;
+            static const char *const CHAMPS[] = { "adresse de courriel", "serveur de courriel", "compte de courriel", "clé de courriel" };
+            const char *v[4] = { NULL, NULL, NULL, NULL };
+            const Valeur *tous[3] = { &a, &o, &t };
+            for (int q = 0; q < 3 && !mp; q++)
+                if (tous[q]->type == V_ABSENT) mp = message_absent(tous[q]);
+                else if (tous[q]->type != V_TEXTE)
+                    mp = grym_formater("%s d'un courriel est un texte, pas %s.", q == 0 ? "L'adresse" : q == 1 ? "L'objet" : "Le texte",
+                                       nom_type(tous[q]->type));
+            if (!mp && mess.type != V_OBJET)
+                mp = grym_formater("La messagerie d'un courriel est un objet, avec ses champs « adresse de courriel », « serveur de "
+                                   "courriel », « compte de courriel » et « clé de courriel », pas %s.", nom_type(mess.type));
+            size_t rang[4] = { 0, 0, 0, 0 };
+            for (int q = 0; q < 4 && !mp; q++) {   /* la forme de la messagerie d'abord, ses valeurs ensuite */
+                const struct ClasseVM *cl = mess.objet->classe;
+                size_t k = 0;
+                while (k < cl->nb_champs && strcmp(cl->champs[k], CHAMPS[q]) != 0) k++;
+                if (k == cl->nb_champs) mp = grym_formater("La messagerie n'a pas de champ « %s ».", CHAMPS[q]);
+                else if (q == 3 && !type_secret(cl->types[k]))
+                    mp = grym_dupliquer("« clé de courriel » est un secret : écris « une clé de courriel (secret) ».");
+                rang[q] = k;
+            }
+            for (int q = 0; q < 4 && !mp; q++) {
+                const size_t k = rang[q];
+                if (!mess.objet->definis[k] || mess.objet->champs[k].type != V_TEXTE || !mess.objet->champs[k].texte)
+                    mp = grym_formater("Le champ « %s » de la messagerie est vide.", CHAMPS[q]);
+                else v[q] = mess.objet->champs[k].texte;
+            }
+            if (!mp) {
+                const char *ad = a.texte ? a.texte : "";
+                if (!strchr(ad, '@') || strpbrk(ad, " \t\r\n<>"))
+                    mp = grym_formater("« %s » n'est pas une adresse de courriel.", ad);
+                else if (strpbrk(v[0], " \t\r\n<>") || !strchr(v[0], '@'))
+                    mp = grym_formater("L'adresse de courriel de la messagerie, « %s », n'en est pas une.", v[0]);
+                else if (o.texte && strpbrk(o.texte, "\r\n")) mp = grym_dupliquer("L'objet d'un courriel tient sur une ligne.");
+                else if (!m->iface.courriel)
+                    mp = grym_dupliquer("Un courriel s'envoie dans l'atelier ou dans une application fabriquée.");
+                else {
+                    char *e = NULL;
+                    if (!m->iface.courriel(m->iface.contexte, v[1], v[2], v[3], v[0], ad, o.texte ? o.texte : "", t.texte ? t.texte : "", &e))
+                        mp = e ? e : grym_dupliquer("Le courriel n'est pas parti.");
+                }
+            }
+            valeur_liberer(&t);
+            valeur_liberer(&mess);
+            valeur_liberer(&o);
+            valeur_liberer(&a);
+            if (mp) ok = echouer(diag, b, debut, mp);
+            break;
+        }
         case I_SORTE_ECHEC:   /* « la sorte de l'échec » (§ 18.2) */
             empiler(&pile, vi_texte(m->sorte_echec ? m->sorte_echec : "autre"));
             break;
@@ -8301,7 +8353,7 @@ int machine_executer(Machine *m, Module *module, Chaine *sortie, Diagnostic *dia
             break;
         }
         if (!ok && !m->sorte_fixee) {   /* les instructions au contexte sans ambiguïté fixent la sorte (§ 18.2) */
-            if (code == I_ENVOI) m->sorte_fixee = "réseau";
+            if (code == I_ENVOI || code == I_COURRIEL) m->sorte_fixee = "réseau";
             else if (code == I_PORTS || code == I_PORT_SERIE || code == I_WSJTX) m->sorte_fixee = "port";
             else if (code == I_REFUSER) m->sorte_fixee = "refus";
             else if (code == I_LIRE_FICHIER || code == I_ENREGISTRER) m->sorte_fixee = "fichier";
